@@ -1,0 +1,195 @@
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String      @id @default(cuid())
+  email     String      @unique
+  password  String
+  nickname  String      @unique
+  buyoutPaid Boolean    @default(false)
+  buyoutPaidAt DateTime?
+  sets      ExerciseSet[]
+  fines     FineRecord[]
+  sallyUps  MonthlyChallengeEntry[]
+  badges    BadgeOwnership[]
+  eventsFrom BadgeEvent[] @relation("EventFrom")
+  eventsTo   BadgeEvent[] @relation("EventTo")
+  eventLikes BadgeEventLike[]
+  potEvents PotEvent[]
+  wallMessages WallMessage[]
+  statuses   UserStatus[]
+  statusLikes StatusLike[]
+  medicalCertificates MedicalCertificate[]
+  xpAdjustments XpAdjustment[]
+  league    String      @default("POMPES")
+  alterEgoId String?     @unique
+  alterEgo   User?       @relation("AlterEgo", fields: [alterEgoId], references: [id])
+  originalProfile User?  @relation("AlterEgo")
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+model ExerciseSet {
+  id        String   @id @default(cuid())
+  reps      Int
+  exercise  String   // "PUSHUP", "PULLUP", "SQUAT"
+  date      String   // YYYY-MM-DD
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, date])
+  @@index([date, exercise])
+}
+
+model FineRecord {
+  id        String   @id @default(cuid())
+  amountEur Int      @default(2)
+  date      String   // YYYY-MM-DD
+  status    String   @default("unpaid") // "unpaid", "paid"
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  paidAt    DateTime?
+
+  @@unique([userId, date])
+}
+
+model MonthlyChallengeEntry {
+  id        String   @id @default(cuid())
+  date      String   // YYYY-MM-DD (Last day of month)
+  type      String   @default("SALLY_UP")
+  seconds   Int
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, date, type])
+}
+
+model MedicalCertificate {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startDateISO    String
+  endDateISO      String
+  createdAt       DateTime @default(now())
+  createdMonthKey String   // YYYY-MM (unique per user/month)
+  note            String?
+
+  @@unique([userId, createdMonthKey])
+}
+
+model PotEvent {
+  id        String   @id @default(cuid())
+  type      String   // "BUYOUT"
+  amountEur Int
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      String   // YYYY-MM-DD
+  createdAt DateTime @default(now())
+}
+
+model BadgeDefinition {
+  key           String   @id
+  name          String
+  description   String
+  isUnique      Boolean  @default(false)
+  isTransferable Boolean @default(true)
+  metricType    String   // "MAX_REPS", "BONUS_STREAK", "SERIES_COUNT", etc.
+  exerciseScope String   // "PUSHUPS", "PULLUPS", "SQUATS", "ALL"
+  threshold     Int?
+  seriesTarget  Int?
+  emoji         String   @default("🏅")
+  ownership     BadgeOwnership?
+  events        BadgeEvent[]
+}
+
+model BadgeOwnership {
+  badgeKey      String   @id
+  badge         BadgeDefinition @relation(fields: [badgeKey], references: [key], onDelete: Cascade)
+  currentUserId String?
+  currentUser   User?    @relation(fields: [currentUserId], references: [id], onDelete: SetNull)
+  currentValue  Float    @default(0)
+  achievedAt    DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  locked        Boolean  @default(false)
+}
+
+model BadgeEvent {
+  id            String   @id @default(cuid())
+  badgeKey      String
+  badge         BadgeDefinition @relation(fields: [badgeKey], references: [key], onDelete: Cascade)
+  fromUserId    String?
+  fromUser      User?    @relation("EventFrom", fields: [fromUserId], references: [id], onDelete: SetNull)
+  toUserId      String?
+  toUser        User?    @relation("EventTo", fields: [toUserId], references: [id], onDelete: SetNull)
+  eventType     String   // "CLAIM", "STEAL", "UNIQUE_AWARDED"
+  previousValue Float?
+  newValue      Float?
+  metadata      String?  // JSON string for additional info
+  likes         BadgeEventLike[]
+  createdAt     DateTime @default(now())
+}
+
+model BadgeEventLike {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     BadgeEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([eventId, userId])
+}
+
+model WallMessage {
+  id        String   @id @default(cuid())
+  content   String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model UserStatus {
+  id        String   @id @default(cuid())
+  content   String
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  likes     StatusLike[]
+}
+
+model StatusLike {
+  id        String   @id @default(cuid())
+  statusId  String
+  status    UserStatus @relation(fields: [statusId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([statusId, userId])
+}
+
+model XpAdjustment {
+  id        String   @id @default(cuid())
+  amount    Int
+  reason    String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      String   // YYYY-MM-DD
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
