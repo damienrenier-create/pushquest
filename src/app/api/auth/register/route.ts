@@ -48,24 +48,12 @@ export async function POST(req: Request) {
             )
         }
 
-        // Assure that the default league exists
-        await prisma.leagues.upsert({
-            where: { id: "default" },
-            update: {},
-            create: {
-                id: "default",
-                name: "Standard",
-                baseRepsRequired: 50,
-            }
-        })
 
         const user = await prisma.user.create({
             data: {
                 email,
                 password: code, // On stocke en clair car c'est un "code" volontairement faible par design
                 nickname,
-                leagueId: "default", // Assignation explicite
-                avatarUrl: "/file.svg", // Default avatar string
             },
             select: {
                 id: true,
