@@ -31,8 +31,20 @@ export async function GET(req: Request) {
         const userId = session.user.id;
         const league = (session.user as any).league || "POMPES";
 
+        // --- 1. Global Cleanup (A15) ---
+        // Force-delete any unpaid fines before the new start date for ALL users
+        try {
+            await (prisma as any).fineRecord.deleteMany({
+                where: {
+                    date: { lt: FINE_START_DATE },
+                    status: 'unpaid'
+                }
+            });
+        } catch (e) {
+            console.error("Cleanup Error:", e);
+        }
+
         // --- 1. Fetch data for last 30 days (personal + group) ---
-        const last30DaysRange = [];
         const d30 = new Date();
         d30.setDate(d30.getDate() - 29);
         const startDate30 = formatDateISO(d30);
@@ -58,16 +70,6 @@ export async function GET(req: Request) {
         for (const u of allUsers) {
             if (u.nickname === 'modo') continue;
             const uLeague = (u as any).league || "POMPES";
-
-            // Add cleanup for any old fines before the new March 11 start date that might still be in the DB
-            for (const oldFine of (u.fines || [])) {
-                if (oldFine.date < FINE_START_DATE && oldFine.status === 'unpaid') {
-                    try {
-                        await (prisma as any).fineRecord.delete({ where: { id: oldFine.id } });
-                        u.fines = u.fines.filter((f: any) => f.id !== oldFine.id);
-                    } catch (e) { }
-                }
-            }
 
             for (const d of fineDates) {
                 const existingFine = u.fines?.find((f: any) => f.date === d);
