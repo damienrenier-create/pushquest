@@ -228,8 +228,13 @@ export default function ChallengeDashboard() {
             if (res.ok) {
                 showToast("Mood partagé ! ✨", "success")
                 fetchStatuses()
+            } else {
+                const data = await res.json().catch(() => ({}));
+                console.error("Save Mood error data:", data);
+                showToast(data?.message || "Erreur serveur lors du partage", "error")
             }
         } catch (err) {
+            console.error("Save Mood fetch error:", err);
             showToast("Erreur lors du partage du mood", "error")
         }
     }
