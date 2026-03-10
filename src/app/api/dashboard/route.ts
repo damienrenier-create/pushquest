@@ -59,6 +59,16 @@ export async function GET(req: Request) {
             if (u.nickname === 'modo') continue;
             const uLeague = (u as any).league || "POMPES";
 
+            // Add cleanup for any old fines before the new March 11 start date that might still be in the DB
+            for (const oldFine of (u.fines || [])) {
+                if (oldFine.date < FINE_START_DATE && oldFine.status === 'unpaid') {
+                    try {
+                        await (prisma as any).fineRecord.delete({ where: { id: oldFine.id } });
+                        u.fines = u.fines.filter((f: any) => f.id !== oldFine.id);
+                    } catch (e) { }
+                }
+            }
+
             for (const d of fineDates) {
                 const existingFine = u.fines?.find((f: any) => f.date === d);
                 // We no longer continue here to allow checking for fine deletion if reps were added later.

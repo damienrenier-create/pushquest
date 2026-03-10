@@ -1,5 +1,5 @@
 export const CHALLENGE_START_DATE = "2026-01-01";
-export const FINE_START_DATE = "2026-03-01";
+export const FINE_START_DATE = "2026-03-11";
 
 /**
  * Returns today's date in YYYY-MM-DD format (local time)
