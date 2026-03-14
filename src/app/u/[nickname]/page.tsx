@@ -72,9 +72,19 @@ export default function UserProfilePage() {
     });
     const isVeteran = user.buyoutPaid;
 
+    const rarityStyles: Record<string, string> = {
+        COMMON: "border-gray-100 bg-white text-gray-400",
+        RARE: "border-blue-200 bg-blue-50/30 text-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.05)]",
+        EPIC: "border-purple-200 bg-purple-50/50 text-purple-600 shadow-[0_0_20px_rgba(168,85,247,0.1)]",
+        LEGENDARY: "border-orange-200 bg-orange-50 text-orange-700 shadow-[0_0_25px_rgba(249,115,22,0.15)] ring-1 ring-orange-200/50",
+    };
+
+    const hallOfFame = (user.badges || []).filter((b: any) => b.badge.rarity === 'LEGENDARY' || b.badge.rarity === 'EPIC');
+
     return (
         <div className="max-w-4xl mx-auto p-4 space-y-8 pb-24 lg:pt-8">
             {/* Hero Section */}
+            {/* ... (keep existing hero code) */}
             <div className="relative overflow-hidden bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 sm:p-12 shadow-2xl">
                 <div className="absolute top-0 right-0 -mt-20 -mr-20 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl opacity-50" />
                 <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl opacity-50" />
@@ -126,6 +136,42 @@ export default function UserProfilePage() {
                     </div>
                 </div>
             </div>
+
+            {/* Hall of Fame */}
+            {hallOfFame.length > 0 && (
+                <section className="space-y-6">
+                    <h2 className="text-2xl font-black italic uppercase tracking-tighter flex items-center gap-3 px-2">
+                        <span className="text-yellow-500">✨</span> Hall of Fame
+                    </h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        {hallOfFame.map((ownership: any) => (
+                            <div
+                                key={ownership.id}
+                                onClick={() => setRewardDetail({
+                                    ...ownership.badge,
+                                    holder: user.nickname,
+                                    achievedAt: ownership.achievedAt,
+                                    currentValue: ownership.currentValue,
+                                    type: 'LÉGENDAIRE'
+                                })}
+                                className={`relative group overflow-hidden border-2 rounded-[2.5rem] p-8 transition-all hover:scale-[1.02] cursor-pointer ${rarityStyles[ownership.badge.rarity]}`}
+                            >
+                                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:rotate-12 transition-transform">
+                                    <Sparkles size={48} />
+                                </div>
+                                <div className="flex items-center gap-6">
+                                    <div className="text-6xl filter drop-shadow-xl">{ownership.badge.emoji}</div>
+                                    <div>
+                                        <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">{ownership.badge.rarity}</span>
+                                        <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight leading-none mt-1">{ownership.badge.name}</h3>
+                                        <p className="text-xs font-bold text-gray-500 mt-2 line-clamp-2">{ownership.badge.description}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
 
             {/* distribution Chart */}
             <section className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100 space-y-8">
@@ -189,15 +235,15 @@ export default function UserProfilePage() {
                                     currentValue: ownership.currentValue,
                                     type: ownership.badge.metricType === 'TOTAL_REPS' ? 'PALIER' : 'COMPÉTITION'
                                 })}
-                                className="group bg-white border border-gray-100 rounded-[2rem] p-6 text-center hover:border-indigo-400 transition-all hover:shadow-xl hover:-translate-y-1 cursor-pointer active:scale-95 shadow-sm"
+                                className={`group border-2 rounded-[2rem] p-6 text-center transition-all hover:-translate-y-1 cursor-pointer active:scale-95 ${rarityStyles[ownership.badge.rarity]}`}
                             >
                                 <div className="text-5xl mb-4 filter drop-shadow-md group-hover:scale-110 transition-transform">
                                     {ownership.badge.emoji}
                                 </div>
-                                <h3 className="text-xs font-black text-gray-800 uppercase tracking-tight line-clamp-1">
+                                <h3 className="text-xs font-black text-gray-900 uppercase tracking-tight line-clamp-1">
                                     {ownership.badge.name}
                                 </h3>
-                                <p className="text-[9px] font-bold text-indigo-500 uppercase mt-1">
+                                <p className="text-[9px] font-bold opacity-60 uppercase mt-1 italic">
                                     {new Date(ownership.achievedAt).toLocaleDateString("fr-FR", { month: 'short', year: 'numeric' })}
                                 </p>
                             </div>
@@ -256,3 +302,4 @@ export default function UserProfilePage() {
         </div>
     )
 }
+import { Sparkles } from "lucide-react"

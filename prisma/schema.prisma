@@ -15,6 +15,7 @@ model User {
   nickname  String      @unique
   buyoutPaid Boolean    @default(false)
   buyoutPaidAt DateTime?
+  featuredClaimsCount Int @default(0)
   sets      ExerciseSet[]
   fines     FineRecord[]
   sallyUps  MonthlyChallengeEntry[]
@@ -34,6 +35,14 @@ model User {
   originalProfile User?  @relation("AlterEgo")
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
+}
+
+// Existing tables ...
+
+model GlobalConfig {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }
 
 model ExerciseSet {

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npx prisma generate --schema=./prisma/schema.prisma && npx prisma migrate deploy --schema=./prisma/schema.prisma && next build",
+    "build": "npx prisma generate --schema=./prisma/schema.prisma && npx prisma db push --schema=./prisma/schema.prisma --accept-data-loss && next build",
     "start": "next start",
     "lint": "eslint",
     "reset:db": "npx prisma db push --accept-data-loss --schema=./prisma/schema.prisma && npx prisma generate --schema=./prisma/schema.prisma",

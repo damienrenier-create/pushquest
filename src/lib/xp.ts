@@ -1,6 +1,7 @@
 import { getUserSummaries } from "./badges";
 import { BADGE_DEFINITIONS } from "@/config/badges";
 import { getRequiredRepsForDate } from "./challenge";
+import prisma from "./prisma";
 
 export const XP_ANIMALS = [
     { level: 1, name: "Moustique", emoji: "🦟" },
@@ -140,7 +141,11 @@ export function calculateLevel(xp: number) {
 import { MONTH_MULTIPLIERS } from "./xp-constants";
 export { MONTH_MULTIPLIERS };
 
-export function calculateAllUsersXP(users: any[], badgesOwnerships: any[]) {
+export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[]) {
+    // 0. Fetch Featured Badge from GlobalConfig
+    const featuredConfig = await (prisma as any).globalConfig.findUnique({ where: { key: "featuredBadgeKey" } });
+    const featuredBadgeKey = featuredConfig?.value;
+
     const summaries = getUserSummaries(users, []);
 
     // 1. Gather Global Records
@@ -148,15 +153,13 @@ export function calculateAllUsersXP(users: any[], badgesOwnerships: any[]) {
     let maxVolMonth = 0, maxVolMonthUser: string | null = null;
     let maxVolYear = 0, maxVolYearUser: string | null = null;
 
-    const maxSumDay = 0; // The actual sum of day
-
     const now = new Date();
     const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const currentYearPrefix = `${now.getFullYear()}`;
     const todayStr = now.toISOString().split("T")[0];
 
     // Compute Volumetrics first to find Record Holders
-    const volStats = users.map(u => {
+    users.forEach(u => {
         const sets = u.sets || [];
         const volDay = sets.filter((s: any) => s.date === todayStr).reduce((a: any, b: any) => a + b.reps, 0);
         const volMonth = sets.filter((s: any) => s.date.startsWith(currentMonthPrefix)).reduce((a: any, b: any) => a + b.reps, 0);
@@ -165,8 +168,6 @@ export function calculateAllUsersXP(users: any[], badgesOwnerships: any[]) {
         if (volDay > maxVolDay) { maxVolDay = volDay; maxVolDayUser = u.id; }
         if (volMonth > maxVolMonth) { maxVolMonth = volMonth; maxVolMonthUser = u.id; }
         if (volYear > maxVolYear) { maxVolYear = volYear; maxVolYearUser = u.id; }
-
-        return { id: u.id, volDay, volMonth, volYear };
     });
 
     // 2. Compute specific XP for each user
@@ -179,7 +180,6 @@ export function calculateAllUsersXP(users: any[], badgesOwnerships: any[]) {
         const pushups = sets.filter((s: any) => s.exercise === "PUSHUP").reduce((sum: number, s: any) => sum + s.reps, 0);
         const pullups = sets.filter((s: any) => s.exercise === "PULLUP").reduce((sum: number, s: any) => sum + s.reps, 0);
         const squats = sets.filter((s: any) => s.exercise === "SQUAT").reduce((sum: number, s: any) => sum + s.reps, 0);
-        const planks = sets.filter((s: any) => s.exercise === "PLANK").reduce((sum: number, s: any) => sum + s.reps, 0);
 
         const league = u.league || "POMPES";
         const marvinBonusDate = "2026-03-08";
@@ -188,12 +188,8 @@ export function calculateAllUsersXP(users: any[], badgesOwnerships: any[]) {
         let pushupsXPContribution = 0;
         let pullupsXPContribution = 0;
         let squatsXPContribution = 0;
-        let planksXPContribution = 0;
 
-        if (league === "GAINAGE") {
-            planksXPContribution = planks * (isMarvinDay ? 2 : 1);
-            totalXP += planksXPContribution;
-        } else {
+        if (league !== "GAINAGE") {
             pushupsXPContribution = pushups * (isMarvinDay ? 2 : 1);
             pullupsXPContribution = pullups * (isMarvinDay ? 6 : 3);
             squatsXPContribution = squats * (isMarvinDay ? 2 : 1);
@@ -212,23 +208,16 @@ export function calculateAllUsersXP(users: any[], badgesOwnerships: any[]) {
                     totalXP += 200; // Jour parfait
                 } else {
                     totalXP += 100; // Jour validé
-
-                    // Calcul du Surplus Flex
                     const surplus = total - req;
                     const step10Percent = Math.max(1, Math.floor(req * 0.1));
-
                     let flexXP = 0;
                     for (let i = 0; i < surplus; i++) {
                         const tier = Math.floor(i / step10Percent);
-                        flexXP += (tier + 1); // 1 XP pour les 10 premiers %, 2 XP pour les suivants...
+                        flexXP += (tier + 1);
                     }
                     totalXP += flexXP;
                 }
-
-                // Saint Marvin Validation Bonus
-                if (d === marvinBonusDate) {
-                    totalXP += 500;
-                }
+                if (d === marvinBonusDate) totalXP += 500;
             }
         });
 
@@ -237,63 +226,64 @@ export function calculateAllUsersXP(users: any[], badgesOwnerships: any[]) {
         userBadges.forEach(b => {
             const def = BADGE_DEFINITIONS.find(d => d.key === b.badgeKey);
             if (def) {
+                let badgeXP = 0;
                 const monthIndex = b.achievedAt ? new Date(b.achievedAt).getMonth() : new Date().getMonth();
                 const timeBonus = MONTH_MULTIPLIERS[monthIndex] || 500;
 
                 if (def.type === "COMPETITIVE") {
-                    totalXP += timeBonus; // Value increases later in the year
+                    badgeXP = timeBonus;
                 } else if (def.type === "LEGENDARY") {
-                    if (def.key === "unique_pushups_50") totalXP += 1000;
-                    if (def.key === "unique_pushups_80") totalXP += 2500;
-                    if (def.key === "unique_pushups_100") totalXP += 5000;
-                    if (def.key === "legendary_pullups_20") totalXP += 3000;
-                    if (def.key === "legendary_pullups_30") totalXP += 7500;
-                    if (def.key === "legendary_squats_150") totalXP += 2000;
-                    if (def.key === "legendary_squats_300") totalXP += 8000;
+                    if (def.key === "unique_pushups_50") badgeXP = 1000;
+                    if (def.key === "unique_pushups_80") badgeXP = 2500;
+                    if (def.key === "unique_pushups_100") badgeXP = 5000;
+                    if (def.key === "legendary_pullups_20") badgeXP = 3000;
+                    if (def.key === "legendary_pullups_30") badgeXP = 7500;
+                    if (def.key === "legendary_squats_150") badgeXP = 2000;
+                    if (def.key === "legendary_squats_300") badgeXP = 8000;
                 } else if (def.type === "MILESTONE") {
-                    // Weight them depending on the distance
-                    // We just give +250 base, + progressively more depending on the milestone tier
                     if (def.metricType === "MILESTONE_TOTAL" && def.threshold) {
-                        // NOUVEAU SYSTÈME EXPONENTIEL ET COHÉRENT : 25% du montant du seuil. 
-                        // Ex: 1k -> 250 XP | 5k -> 1 250 XP | 10k -> 2 500 XP | 100k -> 25 000 XP
-                        totalXP += Math.floor(def.threshold * 0.25);
+                        badgeXP = Math.floor(def.threshold * 0.25);
                     } else if (def.metricType === "MILESTONE_SET") {
-                        // Le Centurion
-                        totalXP += 100;
+                        badgeXP = 100;
                     } else {
-                        // time_award, survivor, etc form their base
-                        totalXP += 100;
+                        badgeXP = 100;
                     }
 
-                    if (def.key === "survivor_15d") totalXP += 500;
-                    if (def.key === "survivor_30d") totalXP += 1500;
-                    if (def.key === "survivor_60d") totalXP += 3500;
-                    if (def.key === "survivor_90d") totalXP += 5000;
-                    if (def.key === "survivor_120d") totalXP += 10000;
+                    if (def.key === "survivor_15d") badgeXP += 400; // +100 base = 500 total
+                    if (def.key === "survivor_30d") badgeXP += 1400;
+                    if (def.key === "survivor_60d") badgeXP += 3400;
+                    if (def.key === "survivor_90d") badgeXP += 4900;
+                    if (def.key === "survivor_120d") badgeXP += 9900;
 
-                    // Sprinter
-                    if (def.key === "sprinter_1") totalXP += 100;
-                    if (def.key === "sprinter_5") totalXP += 250;
-                    if (def.key === "sprinter_10") totalXP += 500;
-                    if (def.key === "sprinter_30") totalXP += 1500;
-                    if (def.key === "sprinter_50") totalXP += 3000;
-                    if (def.key === "sprinter_100") totalXP += 7500;
+                    if (def.key === "sprinter_1") badgeXP += 0;
+                    if (def.key === "sprinter_5") badgeXP += 150;
+                    if (def.key === "sprinter_10") badgeXP += 400;
+                    if (def.key === "sprinter_30") badgeXP += 1400;
+                    if (def.key === "sprinter_50") badgeXP += 2900;
+                    if (def.key === "sprinter_100") badgeXP += 7400;
                 } else if (def.type === "EVENT") {
-                    totalXP += timeBonus; // + events give current month value
+                    badgeXP = timeBonus;
                 }
+
+                // Headhunter XP Bonus (50% extra if featured)
+                if (featuredBadgeKey === def.key) {
+                    badgeXP += Math.floor(badgeXP * 0.5);
+                }
+
+                totalXP += badgeXP;
             }
         });
 
         // D. Fines
         const finesAmount = summary ? summary.totalFinesAmount : 0;
-        totalXP += (finesAmount * 50); // +50 XP per Euro paid
+        totalXP += (finesAmount * 50);
 
-        // E. Records Temporels Volatiles (Giga-Chads)
+        // E. Records Temporels Volatiles
         if (u.id === maxVolDayUser) totalXP += 250;
         if (u.id === maxVolMonthUser) totalXP += 1000;
         if (u.id === maxVolYearUser) totalXP += 2500;
 
-        // F. Ajustements Manuels (Moderateur)
+        // F. Ajustements Manuels
         const manualXP = (u.xpAdjustments || []).reduce((acc: number, adj: any) => acc + adj.amount, 0);
         totalXP += manualXP;
 
@@ -304,50 +294,6 @@ export function calculateAllUsersXP(users: any[], badgesOwnerships: any[]) {
         const xpCurrentLvl = getXPForLevel(level);
         const xpNextLvl = getXPForLevel(level + 1);
         const progress = Math.min(100, Math.max(0, ((totalXP - xpCurrentLvl) / (xpNextLvl - xpCurrentLvl)) * 100));
-
-        // Details Breakdown for Gazette
-        const repsXP = pushupsXPContribution + pullupsXPContribution + squatsXPContribution + planksXPContribution;
-        const finesXP = (finesAmount * 50);
-
-        // Calculate Badge XP separately to match the logic above
-        let badgesXP = 0;
-        userBadges.forEach(b => {
-            const def = BADGE_DEFINITIONS.find(d => d.key === b.badgeKey);
-            if (def) {
-                const monthIndex = b.achievedAt ? new Date(b.achievedAt).getMonth() : new Date().getMonth();
-                const timeBonus = MONTH_MULTIPLIERS[monthIndex] || 500;
-                if (def.type === "COMPETITIVE") badgesXP += timeBonus;
-                else if (def.type === "LEGENDARY") {
-                    if (def.key === "unique_pushups_50") badgesXP += 1000;
-                    if (def.key === "unique_pushups_80") badgesXP += 2500;
-                    if (def.key === "unique_pushups_100") badgesXP += 5000;
-                    if (def.key === "legendary_pullups_20") badgesXP += 3000;
-                    if (def.key === "legendary_pullups_30") badgesXP += 7500;
-                    if (def.key === "legendary_squats_150") badgesXP += 2000;
-                    if (def.key === "legendary_squats_300") badgesXP += 8000;
-                } else if (def.type === "MILESTONE") {
-                    if (def.metricType === "MILESTONE_TOTAL" && def.threshold) badgesXP += Math.floor(def.threshold * 0.25);
-                    else badgesXP += 100;
-                    if (["survivor_15d", "survivor_30d", "survivor_60d", "survivor_90d", "survivor_120d", "sprinter_1", "sprinter_5", "sprinter_10", "sprinter_30", "sprinter_50", "sprinter_100"].includes(def.key)) {
-                        // Add extra if matching certain keys
-                        if (def.key === "survivor_15d") badgesXP += 500;
-                        if (def.key === "survivor_30d") badgesXP += 1500;
-                        if (def.key === "survivor_60d") badgesXP += 3500;
-                        if (def.key === "survivor_90d") badgesXP += 5000;
-                        if (def.key === "survivor_120d") badgesXP += 10000;
-                        if (def.key === "sprinter_1") badgesXP += 100;
-                        if (def.key === "sprinter_5") badgesXP += 250;
-                        if (def.key === "sprinter_10") badgesXP += 500;
-                        if (def.key === "sprinter_30") badgesXP += 1500;
-                        if (def.key === "sprinter_50") badgesXP += 3000;
-                        if (def.key === "sprinter_100") badgesXP += 7500;
-                    }
-                } else if (def.type === "EVENT") badgesXP += timeBonus;
-            }
-        });
-
-        const recordsXP = (u.id === maxVolDayUser ? 250 : 0) + (u.id === maxVolMonthUser ? 1000 : 0) + (u.id === maxVolYearUser ? 2500 : 0);
-        const flexXP = totalXP - repsXP - finesXP - badgesXP - recordsXP; // Residual is Flex/Regularity
 
         xpUserMap.set(u.id, {
             id: u.id,
@@ -363,11 +309,9 @@ export function calculateAllUsersXP(users: any[], badgesOwnerships: any[]) {
             xpNextLvl,
             progress: Math.floor(progress),
             details: {
-                repsXP,
-                finesXP,
-                badgesXP,
-                recordsXP,
-                flexXP: Math.max(0, flexXP),
+                repsXP: pushupsXPContribution + pullupsXPContribution + squatsXPContribution,
+                finesXP: (finesAmount * 50),
+                recordsXP: (u.id === maxVolDayUser ? 250 : 0) + (u.id === maxVolMonthUser ? 1000 : 0) + (u.id === maxVolYearUser ? 2500 : 0),
                 manualXP
             }
         });

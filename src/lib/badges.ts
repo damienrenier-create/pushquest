@@ -5,7 +5,8 @@ import { BADGE_DEFINITIONS } from "@/config/badges";
 
 export async function initBadges() {
     for (const def of BADGE_DEFINITIONS) {
-        const { type, condition, ...dbDef } = def as any;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { type, condition, rarity, ...dbDef } = def as any;
         await (prisma as any).badgeDefinition.upsert({
             where: { key: dbDef.key },
             update: { ...dbDef },
@@ -195,6 +196,7 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
                 return acc;
             }, { cur: 0, max: 0 }).max,
             sprinterCount: sprinterCounts[u.id] || 0,
+            headhunterCount: u.featuredClaimsCount || 0,
         };
     });
 }
@@ -364,6 +366,9 @@ export async function updateBadgesPostSave(userId: string) {
                 }
             }
             continue;
+        } else if (def.metricType === "HEADHUNTER_COUNT") {
+            for (const s of summaries) { if (s.headhunterCount >= def.threshold!) await awardMilestone(s.id, def.key, 1); }
+            continue;
         } else if (def.metricType === "FIRST_REACH") {
             const scope = def.exerciseScope === "PUSHUPS" ? "maxSetPushups" : def.exerciseScope === "PULLUPS" ? "maxSetPullups" : "maxSetSquats";
             summaries.forEach((s: any) => { if (s[scope] >= def.threshold!) { bestValue = s[scope]; bestUser = s; } });
@@ -410,8 +415,49 @@ export async function updateBadgesPostSave(userId: string) {
                     newValue: bestValue
                 }
             });
+
+            // Featured Badge Logic
+            const featured = await (prisma as any).globalConfig.findUnique({ where: { key: "featuredBadgeKey" } });
+            if (featured && featured.value === def.key) {
+                // Increment count
+                await (prisma as any).user.update({
+                    where: { id: (bestUser as any).id },
+                    data: { featuredClaimsCount: { increment: 1 } }
+                });
+                // Rotate immediately
+                await rotateFeaturedBadge();
+            }
         }
     }
+
+    // Auto-rotate Featured Badge after 7 days
+    const featured = await (prisma as any).globalConfig.findUnique({ where: { key: "featuredBadgeKey" } });
+    if (!featured) {
+        await rotateFeaturedBadge();
+    } else {
+        const lastUpdate = new Date(featured.updatedAt).getTime();
+        const now = Date.now();
+        if (now - lastUpdate > 7 * 24 * 60 * 60 * 1000) {
+            await rotateFeaturedBadge();
+        }
+    }
+}
+
+export async function rotateFeaturedBadge() {
+    // Pick a random badge that is NOT unique or legendary or event
+    const possibleBadges = BADGE_DEFINITIONS.filter(b => 
+        !b.isUnique && 
+        b.type !== "LEGENDARY" && 
+        b.type !== "EVENT" &&
+        b.metricType !== "HEADHUNTER_COUNT"
+    );
+    const randomBadge = possibleBadges[Math.floor(Math.random() * possibleBadges.length)];
+    
+    await (prisma as any).globalConfig.upsert({
+        where: { key: "featuredBadgeKey" },
+        update: { value: randomBadge.key, updatedAt: new Date() },
+        create: { key: "featuredBadgeKey", value: randomBadge.key },
+    });
 }
 
 async function awardMilestone(userId: string, badgeKey: string, value: number = 1) {

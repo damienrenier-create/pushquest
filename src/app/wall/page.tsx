@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import WallClient from "./WallClient";
 import GazetteXP from "./GazetteXP";
 import MoodFeed from "@/components/MoodFeed";
+import FeaturedBadge from "@/components/FeaturedBadge";
 
 export const metadata = {
     title: "Place Publique - Pompes entre potes",
@@ -28,6 +29,7 @@ export default async function WallPage() {
                     </p>
                 </div>
 
+                <FeaturedBadge />
                 <MoodFeed />
                 <WallClient nickname={nickname} />
                 <GazetteXP />

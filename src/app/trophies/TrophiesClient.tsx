@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Trophy, Clock, Shield, History, Flame, TrendingUp, AlertTriangle, Crown, Star, ChevronRight } from "lucide-react"
+import { Trophy, Clock, Star, ChevronRight, Timer, Sparkles } from "lucide-react"
 import RewardLink from "@/components/RewardLink"
 import RewardDetailSheet from "@/components/RewardDetailSheet"
 import { getXPForReward } from "@/lib/rewards"
@@ -12,11 +12,19 @@ interface BadgeDef {
     name: string
     emoji: string
     description: string
+    rarity: 'COMMON' | 'RARE' | 'EPIC' | 'LEGENDARY'
     isUnique?: boolean
     threshold?: number
     exerciseScope?: string
     metricType?: string
 }
+
+const rarityStyles: Record<string, string> = {
+    COMMON: "border-slate-800 bg-slate-900/50 text-slate-400",
+    RARE: "border-blue-500/30 bg-blue-500/5 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.1)]",
+    EPIC: "border-purple-500/40 bg-purple-500/10 text-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.15)]",
+    LEGENDARY: "border-orange-500/50 bg-orange-500/15 text-orange-400 shadow-[0_0_30px_rgba(249,115,22,0.25)] ring-1 ring-orange-500/20",
+};
 
 interface UserStats {
     totalPushups: number
@@ -24,11 +32,12 @@ interface UserStats {
     totalSquats: number
     totalAll: number
     maxSetAll: number
+    headhunterCount?: number
 }
 
 interface BadgeLog {
     id: string
-    eventType: 'CLAIM' | 'STEAL' | 'UNLOCK'
+    eventType: 'CLAIM' | 'STEAL' | 'UNLOCK' | 'UNIQUE_AWARDED'
     badge: BadgeDef
     fromUser?: { nickname: string }
     toUser: { nickname: string }
@@ -101,15 +110,11 @@ export default function TrophiesClient({
         .map(b => {
             let current = 0
             if (b.metricType === "MILESTONE_TOTAL") {
-                current = userStats.totalAll
+                current = (b.exerciseScope === "PUSHUPS" ? userStats.totalPushups : b.exerciseScope === "PULLUPS" ? userStats.totalPullups : b.exerciseScope === "SQUATS" ? userStats.totalSquats : userStats.totalAll)
             } else if (b.metricType === "MILESTONE_SET") {
                 current = userStats.maxSetAll
-            } else if (b.exerciseScope === "PUSHUPS") {
-                current = userStats.totalPushups
-            } else if (b.exerciseScope === "PULLUPS") {
-                current = userStats.totalPullups
-            } else if (b.exerciseScope === "SQUATS") {
-                current = userStats.totalSquats
+            } else if (b.metricType === "HEADHUNTER_COUNT") {
+                current = userStats.headhunterCount || 0
             }
 
             const progress = Math.min(100, (current / (b.threshold || 1)) * 100)
@@ -121,17 +126,22 @@ export default function TrophiesClient({
     const BadgeItem = ({ badge, isEarned = false }: { badge: BadgeDef, isEarned?: boolean }) => (
         <div
             onClick={() => setSelectedBadge(badge)}
-            className={`cursor-pointer p-4 rounded-3xl border transition-all ${isEarned ? 'bg-indigo-600/10 border-indigo-500/20 hover:bg-indigo-600/20 shadow-lg' : 'bg-slate-900 border-slate-800 hover:border-slate-700 opacity-60 grayscale'}`}
+            className={`cursor-pointer p-4 rounded-3xl border transition-all ${isEarned 
+                ? `${rarityStyles[badge.rarity]} hover:scale-[1.02]` 
+                : 'bg-slate-950 border-slate-900 opacity-40 grayscale hover:opacity-60'}`}
         >
             <div className="flex items-center gap-4">
-                <span className="text-3xl">{badge.emoji}</span>
+                <div className={`w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-2xl shadow-inner ${isEarned ? 'animate-pulse-slow' : ''}`}>
+                    {badge.emoji}
+                </div>
                 <div>
-                    <p className="text-[11px] font-black text-white uppercase leading-none mb-1">{badge.name}</p>
-                    {isEarned ? (
-                        <span className="text-[8px] font-bold text-indigo-400 uppercase tracking-widest">Acquis ✅</span>
-                    ) : (
-                        <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Verrouillé</span>
-                    )}
+                    <p className="text-[11px] font-black text-white uppercase leading-tight mb-0.5">{badge.name}</p>
+                    <div className="flex items-center gap-2">
+                        <span className={`text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${isEarned ? 'bg-white/10' : 'bg-slate-800'}`}>
+                            {badge.rarity}
+                        </span>
+                        {isEarned && <span className="text-[7px] font-bold text-green-400 uppercase tracking-widest">Acquis</span>}
+                    </div>
                 </div>
             </div>
         </div>
@@ -175,19 +185,10 @@ export default function TrophiesClient({
                         {recentEvents.map(ev => (
                             <div key={ev.id} className="bg-white/5 p-4 rounded-2xl border border-white/5 transition-all hover:bg-white/10 group">
                                 <p className="text-[11px] font-bold text-white leading-relaxed">
-                                    {ev.eventType === 'STEAL' ? (
-                                        <>
-                                            <Link href={`/u/${encodeURIComponent(ev.toUser.nickname)}`} className="text-orange-400 hover:underline">{ev.toUser.nickname}</Link> a volé <RewardLink badge={ev.badge} xp={getXPForReward(ev.badge.key, ev.createdAt)} onClick={() => handleRewardClick(ev.badge.key)} /> à <Link href={`/u/${encodeURIComponent(ev.fromUser?.nickname || '')}`} className="hover:underline">{ev.fromUser?.nickname}</Link>
-                                        </>
-                                    ) : ev.eventType === 'CLAIM' ? (
-                                        <>
-                                            <Link href={`/u/${encodeURIComponent(ev.toUser.nickname)}`} className="text-green-400 hover:underline">{ev.toUser.nickname}</Link> a obtenu <RewardLink badge={ev.badge} xp={getXPForReward(ev.badge.key, ev.createdAt)} onClick={() => handleRewardClick(ev.badge.key)} />
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Link href={`/u/${encodeURIComponent(ev.toUser.nickname)}`} className="text-yellow-400 hover:underline">{ev.toUser.nickname}</Link> a débloqué <RewardLink badge={ev.badge} xp={getXPForReward(ev.badge.key, ev.createdAt)} onClick={() => handleRewardClick(ev.badge.key)} />
-                                        </>
-                                    )}
+                                    <Link href={`/u/${encodeURIComponent(ev.toUser.nickname)}`} className="text-indigo-400 hover:underline">{ev.toUser.nickname}</Link> 
+                                    {ev.eventType === 'STEAL' ? " a volé " : " a obtenu "} 
+                                    <RewardLink badge={ev.badge} xp={getXPForReward(ev.badge.key, ev.createdAt)} onClick={() => handleRewardClick(ev.badge.key)} />
+                                    {ev.eventType === 'STEAL' && <> à <Link href={`/u/${encodeURIComponent(ev.fromUser?.nickname || '')}`} className="hover:underline">{ev.fromUser?.nickname}</Link></>}
                                 </p>
                                 <p className="text-[9px] text-slate-500 font-bold uppercase mt-1">Il y a {Math.round((new Date().getTime() - new Date(ev.createdAt).getTime()) / 60000)} min</p>
                             </div>
@@ -219,12 +220,6 @@ export default function TrophiesClient({
                                 </div>
                             </div>
                         ))}
-                        {dangerList.length === 0 && (
-                            <div className="h-full flex flex-col items-center justify-center text-center py-12">
-                                <span className="text-4xl mb-4">🛡️</span>
-                                <p className="text-xs font-black text-slate-500 uppercase">Tout est sous contrôle. <br /> La hiérarchie est stable.</p>
-                            </div>
-                        )}
                     </div>
                 </div>
             </div>
@@ -244,7 +239,7 @@ export default function TrophiesClient({
                             </div>
                             <div>
                                 <p className="text-sm font-black text-white uppercase">{b.name}</p>
-                                <p className="text-[10px] font-bold text-slate-500 uppercase mt-1">{b.current} / {b.threshold} Reps</p>
+                                <p className="text-[10px] font-bold text-slate-500 uppercase mt-1">{b.current} / {b.threshold}</p>
                             </div>
                             <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
                                 <div className="h-full bg-indigo-600 rounded-full transition-all duration-1000" style={{ width: `${b.progress}%` }} />
@@ -257,17 +252,19 @@ export default function TrophiesClient({
             {/* 👑 VUE GLOBALE DES DETENTEURS (Competitive & Unique) */}
             <section className="space-y-6">
                 <div className="bg-slate-900 border border-white/5 rounded-[2.5rem] p-8 shadow-2xl">
-                    <h2 className="text-xl font-black text-white mb-8 border-l-4 border-indigo-600 pl-4">🏆 Tableau de Chasse Mondial</h2>
+                    <h2 className="text-xl font-black text-white mb-8 border-l-4 border-indigo-600 pl-4 uppercase tracking-tight">🏆 Tableau des Chasseurs</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {badgeDefinitions.filter(b => b.key.includes('unique') || b.key.includes('flex') || b.key.includes('king') || b.key === 'centurion').map(b => {
+                        {badgeDefinitions.filter(b => b.rarity === 'LEGENDARY' || b.metricType === 'MAX_SET' || b.metricType === 'MAX_BONUS').map(b => {
                             const ownership = badgeOwnerships.find(bo => bo.badgeKey === b.key)
                             return (
-                                <div key={b.key} onClick={() => setSelectedBadge(b)} className="bg-white/5 p-5 rounded-3xl border border-white/5 hover:border-white/10 transition-all cursor-pointer group">
+                                <div key={b.key} onClick={() => setSelectedBadge(b)} className={`p-5 rounded-3xl border transition-all cursor-pointer group ${rarityStyles[b.rarity]}`}>
                                     <div className="flex items-center gap-4 mb-3">
-                                        <span className="text-3xl group-hover:rotate-12 transition-transform">{b.emoji}</span>
+                                        <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-3xl shadow-inner group-hover:scale-110 transition-transform">
+                                            {b.emoji}
+                                        </div>
                                         <div>
                                             <p className="text-[10px] font-black text-white uppercase leading-tight">{b.name}</p>
-                                            {b.isUnique && <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest">Légendaire</span>}
+                                            <span className="text-[7px] font-black uppercase tracking-widest opacity-60">{b.rarity}</span>
                                         </div>
                                     </div>
                                     <div className="pt-3 border-t border-white/5">
@@ -287,11 +284,11 @@ export default function TrophiesClient({
                 </div>
             </section>
 
-            {/* 🔥 TOUS LES AUTRES (Milestones etc.) */}
+            {/* 🎖️ TOUS LES BADGES */}
             <section className="space-y-4">
-                <h2 className="text-xl font-black text-white px-2">🎖️ Médailles & Milestones</h2>
+                <h2 className="text-xl font-black text-white px-2 uppercase tracking-tight">🎖️ Médailles & Milestones</h2>
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                    {badgeDefinitions.filter(b => !b.key.includes('unique') && !b.key.includes('flex') && !b.key.includes('king') && b.key !== 'centurion').map(b => (
+                    {badgeDefinitions.filter(b => b.rarity !== 'LEGENDARY' && b.metricType !== 'MAX_SET' && b.metricType !== 'MAX_BONUS').map(b => (
                         <BadgeItem key={b.key} badge={b} isEarned={earnedBadges.includes(b.key)} />
                     ))}
                 </div>
@@ -300,9 +297,9 @@ export default function TrophiesClient({
             {/* 🎉 EVENTS */}
             <section className="space-y-6">
                 <div className="bg-gradient-to-br from-indigo-900/40 to-slate-900 border border-indigo-500/20 rounded-[2.5rem] p-8">
-                    <h2 className="text-xl font-black text-white mb-6">🎉 Events à venir</h2>
+                    <h2 className="text-xl font-black text-white mb-6 uppercase tracking-tight">🎉 Events à venir</h2>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {UPCOMING_EVENTS.filter(e => getDaysUntil(e.startDate) >= 0).sort((a, b) => getDaysUntil(a.startDate) - getDaysUntil(b.startDate)).map(e => (
+                        {UPCOMING_EVENTS.filter(e => getDaysUntil(e.startDate) >= 0).sort((a: any, b: any) => getDaysUntil(a.startDate) - getDaysUntil(b.startDate)).map((e: any) => (
                             <div key={e.name} className="flex gap-4 items-center bg-white/5 p-4 rounded-3xl border border-white/5">
                                 <span className="text-4xl">{e.emoji}</span>
                                 <div>
