@@ -177,6 +177,20 @@ export default async function GazetteXP() {
                     </div>
                 </div>
 
+                <a 
+                    href="/faq?tab=news" 
+                    className="flex items-center justify-between p-4 bg-pink-500/10 border border-pink-500/30 rounded-2xl group hover:bg-pink-500/20 transition-all"
+                >
+                    <div className="flex items-center gap-3">
+                        <span className="text-2xl animate-pulse">💎</span>
+                        <div>
+                            <p className="text-sm font-black text-white uppercase tracking-wide">Nouveaux Trophées Disponibles !</p>
+                            <p className="text-[10px] font-bold text-pink-300 uppercase tracking-widest">Découvre les derniers badges dans la FAQ</p>
+                        </div>
+                    </div>
+                    <span className="text-pink-500 group-hover:translate-x-1 transition-transform">→</span>
+                </a>
+
                 <div className="space-y-4">
                     {displayEvents.map((event: any, idx: number) => {
                         let metaDataObj: any = null;

@@ -66,8 +66,8 @@ import { Suspense } from "react"
 
 function FAQContent() {
     const searchParams = useSearchParams();
-    const initialTab = (searchParams.get('tab') as 'rules' | 'bestiary' | 'catalogue') || 'rules';
-    const [activeTab, setActiveTab] = useState<'rules' | 'bestiary' | 'catalogue'>(initialTab);
+    const initialTab = (searchParams.get('tab') as 'rules' | 'bestiary' | 'catalogue' | 'news') || 'rules';
+    const [activeTab, setActiveTab] = useState<'rules' | 'bestiary' | 'catalogue' | 'news'>(initialTab);
 
     useEffect(() => {
         const hash = window.location.hash;
@@ -124,6 +124,13 @@ function FAQContent() {
                     >
                         <BookOpen size={16} />
                         Catalogue
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('news')}
+                        className={`flex-1 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2 ${activeTab === 'news' ? 'bg-pink-600 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}
+                    >
+                        <Zap size={16} />
+                        Nouveautés
                     </button>
                 </div>
 
@@ -365,6 +372,49 @@ function FAQContent() {
                                                     </div>
                                                 );
                                             })}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+                {activeTab === 'news' && (
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
+                        <section className="bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-[2.5rem] p-8 shadow-xl relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-8 opacity-10 text-8xl pointer-events-none italic font-black">NEW</div>
+                            <div className="relative z-10 space-y-2">
+                                <h2 className="text-2xl font-black uppercase italic tracking-tighter">Dernières Mises à Jour</h2>
+                                <p className="text-pink-100 font-bold text-sm">Découvrez les nouveaux trophées et les bonus d'XP fraîchement intégrés !</p>
+                            </div>
+                        </section>
+
+                        <div className="grid grid-cols-1 gap-4">
+                            {[...BADGE_DEFINITIONS].reverse().slice(0, 10).map(badge => {
+                                const xp = getXPForReward(badge.key);
+                                return (
+                                    <div key={badge.key} className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex items-center justify-between group hover:border-pink-200 transition-all">
+                                        <div className="flex items-center gap-4">
+                                            <span className="text-4xl group-hover:scale-110 transition-transform">{badge.emoji}</span>
+                                            <div>
+                                                <h4 className="font-black text-gray-900 uppercase text-sm italic">{badge.name}</h4>
+                                                <p className="text-[10px] font-bold text-gray-500 mt-1 leading-tight">{badge.description}</p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="block font-black text-pink-600">+{xp} XP</span>
+                                            <button 
+                                                onClick={() => {
+                                                    setActiveTab('catalogue');
+                                                    setTimeout(() => {
+                                                        const el = document.getElementById(`item-${badge.key}`);
+                                                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                    }, 100);
+                                                }}
+                                                className="text-[9px] font-black text-gray-400 uppercase tracking-widest hover:text-pink-600 transition-colors"
+                                            >
+                                                Voir détails →
+                                            </button>
                                         </div>
                                     </div>
                                 );

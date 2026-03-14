@@ -201,6 +201,26 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             getDayMaxSet: (date: string, exo?: string) => {
                 const daySets = sets.filter((s: any) => s.date === date && (!exo || s.exercise === exo));
                 return daySets.length ? Math.max(...daySets.map((s: any) => s.reps)) : 0;
+            },
+            getMonthTotal: (monthISO: string, exo?: string) => sets.filter((s: any) => s.date.startsWith(monthISO) && (!exo || s.exercise === exo)).reduce((sum: number, s: any) => sum + s.reps, 0),
+            getMonthMaxSet: (monthISO: string, exo?: string) => {
+                const monthSets = sets.filter((s: any) => s.date.startsWith(monthISO) && (!exo || s.exercise === exo));
+                return monthSets.length ? Math.max(...monthSets.map((s: any) => s.reps)) : 0;
+            },
+            hasTrinityGold: (dateISO: string) => {
+                const daySets = sets.filter((s: any) => s.date === dateISO);
+                const total = daySets.reduce((sum: number, s: any) => sum + s.reps, 0);
+                const req = getRequiredRepsForDate(dateISO);
+                const hasEach = ["PUSHUP", "PULLUP", "SQUAT"].every(exo => daySets.some((s: any) => s.exercise === exo));
+                return total >= 3 * req && req > 0 && hasEach;
+            },
+            hasTrinityUltimate: (dateISO: string) => {
+                const daySets = sets.filter((s: any) => s.date === dateISO);
+                const req = getRequiredRepsForDate(dateISO);
+                return ["PUSHUP", "PULLUP", "SQUAT"].every(exo => {
+                    const exoTotal = daySets.filter((s: any) => s.exercise === exo).reduce((sum: number, s: any) => sum + s.reps, 0);
+                    return exoTotal >= req;
+                }) && req > 0;
             }
         };
     });
@@ -406,6 +426,40 @@ export async function updateBadgesPostSave(userId: string) {
                     bestValue = val; bestUser = s;
                 }
             });
+        } else if (def.metricType === "MONTH_TOP_VOLUME") {
+            const currentMonth = getTodayISO().substring(0, 7); // "YYYY-MM"
+            summaries.forEach((s: any) => {
+                const val = s.getMonthTotal(currentMonth);
+                if (val > bestValue || (val === bestValue && bestValue > 0 && isBetterTieBreak(s, bestUser, "totalAll"))) {
+                    bestValue = val; bestUser = s;
+                }
+            });
+        } else if (def.metricType === "MONTH_TOP_SET") {
+            const currentMonth = getTodayISO().substring(0, 7);
+            const exo = def.exerciseScope === "PUSHUPS" ? "PUSHUP" : def.exerciseScope === "PULLUPS" ? "PULLUP" : "SQUAT";
+            summaries.forEach((s: any) => {
+                const val = s.getMonthMaxSet(currentMonth, exo);
+                if (val > bestValue || (val === bestValue && bestValue > 0 && isBetterTieBreak(s, bestUser, "totalAll"))) {
+                    bestValue = val; bestUser = s;
+                }
+            });
+        } else if (def.metricType === "MONTH_TOTAL_EXO") {
+            const currentMonth = getTodayISO().substring(0, 7);
+            const exo = def.exerciseScope === "PUSHUPS" ? "PUSHUP" : def.exerciseScope === "PULLUPS" ? "PULLUP" : "SQUAT";
+            summaries.forEach((s: any) => {
+                const val = s.getMonthTotal(currentMonth, exo);
+                if (val > bestValue || (val === bestValue && bestValue > 0 && isBetterTieBreak(s, bestUser, "totalAll"))) {
+                    bestValue = val; bestUser = s;
+                }
+            });
+        } else if (def.metricType === "TRINITY_GOLD") {
+            const today = getTodayISO();
+            for (const s of summaries) { if (s.hasTrinityGold(today)) await awardMilestone(s.id, def.key, 1); }
+            continue;
+        } else if (def.metricType === "TRINITY_ULTIMATE") {
+            const today = getTodayISO();
+            for (const s of summaries) { if (s.hasTrinityUltimate(today)) await awardMilestone(s.id, def.key, 1); }
+            continue;
         } else if (def.metricType === "FIRST_REACH") {
             const scope = def.exerciseScope === "PUSHUPS" ? "maxSetPushups" : def.exerciseScope === "PULLUPS" ? "maxSetPullups" : "maxSetSquats";
             summaries.forEach((s: any) => { if (s[scope] >= def.threshold!) { bestValue = s[scope]; bestUser = s; } });
