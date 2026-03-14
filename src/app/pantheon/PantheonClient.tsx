@@ -143,9 +143,10 @@ export default function PantheonClient({
             .map(([date, info]) => ({
                 id: date,
                 date: new Date(date).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" }),
-                name: info.label,
-                emoji: info.emoji,
-                description: `Série(s) obligatoire(s) lors du ${info.label}`
+                name: (info as any).label,
+                emoji: (info as any).emoji,
+                description: (info as any).description,
+                reward: (info as any).reward
             }));
     }, []);
 
@@ -642,6 +643,18 @@ export default function PantheonClient({
                                 <p className="text-slate-500 font-medium leading-relaxed mb-8">
                                     {selectedEvent.description}
                                 </p>
+
+                                {selectedEvent.reward && (
+                                    <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 mb-6 flex items-center gap-3 text-left">
+                                        <div className="p-2 bg-indigo-100 text-indigo-600 rounded-xl shrink-0">
+                                            <Trophy size={20} />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest leading-none mb-1">Butin à gagner</p>
+                                            <p className="text-xs font-bold text-indigo-900">{selectedEvent.reward}</p>
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div className="bg-slate-50 rounded-3xl p-6 mb-8 text-left border border-slate-100">
                                     <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Conditions d'obtention</h4>
