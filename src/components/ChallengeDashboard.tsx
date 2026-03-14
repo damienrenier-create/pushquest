@@ -119,7 +119,7 @@ export default function ChallengeDashboard() {
         planks: [""],
     })
     const [sallyReps, setSallyReps] = useState<number>(0)
-    const [showHonorPopup, setShowHonorPopup] = useState<{ badge: any; type: string } | null>(null)
+    const [showHonorPopup, setShowHonorPopup] = useState<{ badge: any; holder: string; recordValue: number; myValue: number; type: string } | null>(null)
     const [honorChecked, setHonorChecked] = useState(false)
     const [graphPeriod, setGraphPeriod] = useState<'30' | '365'>('30')
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
@@ -308,25 +308,56 @@ export default function ChallengeDashboard() {
             return;
         }
 
-        // Potential badge check (A12) - Client side preview
-        const willEarnCompetitive = data.badges.competitive.ownerships.some(bo => {
-            if (bo.locked) return false;
+        // Potential badge check (A12) - Client side preview with Noise Filter & Context
+        let beatenRecord: any = null;
+        let myBestValue = 0;
+
+        data.badges.competitive.ownerships.forEach(bo => {
+            if (bo.locked) return;
             const def = bo.badge;
-            const currentTotalAll = data.leaderboard.find(u => (u as any).id === (session?.user as any)?.id)?.totalRepsAllTime || 0;
-            const newTotalAll = currentTotalAll + total;
 
             if (def.metricType === "MAX_SET") {
-                const maxInLocal = Math.max(0, ...allReps);
-                return maxInLocal > bo.currentValue;
+                const scope = def.exerciseScope;
+                let maxInLocal = 0;
+                let threshold = 0;
+
+                if (scope === "PUSHUPS") {
+                    maxInLocal = Math.max(0, ...localSets.pushups.map(r => Number(r) || 0));
+                    threshold = 40;
+                } else if (scope === "PULLUPS") {
+                    maxInLocal = Math.max(0, ...localSets.pullups.map(r => Number(r) || 0));
+                    threshold = 10;
+                } else if (scope === "SQUATS") {
+                    maxInLocal = Math.max(0, ...localSets.squats.map(r => Number(r) || 0));
+                    threshold = 100;
+                } else if (scope === "ALL") {
+                    const mp = Math.max(0, ...localSets.pushups.map(r => Number(r) || 0));
+                    const mt = Math.max(0, ...localSets.pullups.map(r => Number(r) || 0));
+                    const ms = Math.max(0, ...localSets.squats.map(r => Number(r) || 0));
+                    const mg = Math.max(0, ...localSets.planks.map(r => Number(r) || 0));
+                    maxInLocal = Math.max(mp, mt, ms, mg);
+                    threshold = 40;
+                    if (mt === maxInLocal) threshold = 10;
+                    if (ms === maxInLocal) threshold = 100;
+                }
+
+                if (maxInLocal > bo.currentValue && maxInLocal >= threshold) {
+                    beatenRecord = bo;
+                    myBestValue = maxInLocal;
+                }
             }
-            // Simple check for main competitive metrics
-            return false;
         });
 
         const isHonorConfirmed = forceHonor === true || honorChecked;
 
-        if (willEarnCompetitive && !isHonorConfirmed) {
-            setShowHonorPopup({ badge: null, type: 'pre-save' });
+        if (beatenRecord && !isHonorConfirmed) {
+            setShowHonorPopup({
+                badge: beatenRecord.badge,
+                holder: beatenRecord.currentUser?.nickname || "Personne",
+                recordValue: beatenRecord.currentValue,
+                myValue: myBestValue,
+                type: 'pre-save'
+            });
             return;
         }
 
@@ -1110,40 +1141,78 @@ export default function ChallengeDashboard() {
             }
 
 
-            {/* HONOR POPUP (A12) */}
+            {/* PREMIUM HONOR POPUP (A12) */}
             {
                 showHonorPopup && (
-                    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-                        <div className="bg-white rounded-[3rem] p-8 max-w-sm w-full space-y-6 shadow-2xl animate-in zoom-in-95 duration-300">
-                            <div className="text-center">
-                                <span className="text-6xl mb-4 block">🏆</span>
-                                <h2 className="text-2xl font-black italic uppercase tracking-tighter text-gray-900">PROUESSE DÉTECTÉE</h2>
-                                <p className="text-xs font-bold text-gray-400 uppercase mt-2">Vous êtes sur le point de marquer l'histoire.</p>
-                            </div>
+                    <div className="fixed inset-0 bg-slate-900/95 backdrop-blur-xl z-[100] flex items-center justify-center p-4 animate-in fade-in duration-500">
+                        {/* Animated background particles/glow */}
+                        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px] animate-pulse"></div>
+                            <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-yellow-500/10 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }}></div>
+                        </div>
 
-                            <div className="bg-yellow-50 p-4 rounded-2xl border border-yellow-100">
-                                <p className="text-sm text-yellow-800 font-bold leading-relaxed">
-                                    Je jure sur l'honneur que les répétitions saisies ont été effectuées avec une forme exemplaire.
-                                </p>
-                            </div>
+                        <div className="bg-gradient-to-b from-slate-800 to-slate-900 rounded-[3rem] p-1 border border-yellow-500/30 max-w-sm w-full shadow-2xl shadow-yellow-500/40 relative z-10 animate-in zoom-in-95 duration-500 spring-bounce transform-gpu">
+                            <div className="bg-slate-900 rounded-[2.8rem] p-8 space-y-8 relative overflow-hidden text-center">
+                                {/* Badge Preview Header */}
+                                <div className="space-y-4">
+                                    <div className="relative inline-block">
+                                        <span className="text-8xl drop-shadow-[0_0_30px_rgba(234,179,8,0.6)] block animate-bounce-slow">{showHonorPopup.badge?.emoji || '🏆'}</span>
+                                        <div className="absolute -inset-6 bg-yellow-400/20 blur-2xl rounded-full -z-10 animate-pulse"></div>
+                                    </div>
+                                    <div>
+                                        <h2 className="text-2xl font-black italic uppercase tracking-tighter bg-gradient-to-br from-white via-yellow-200 to-yellow-500 bg-clip-text text-transparent">
+                                            {showHonorPopup.badge?.name || 'VÉRITABLE EXPLOIT'}
+                                        </h2>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-1">Détection de Niveau S</p>
+                                    </div>
+                                </div>
 
-                            <label className="flex items-center gap-3 cursor-pointer group">
-                                <input
-                                    type="checkbox"
-                                    checked={honorChecked}
-                                    onChange={(e) => {
-                                        setHonorChecked(e.target.checked);
-                                        if (e.target.checked) {
+                                {/* Contextual Info Box */}
+                                <div className="bg-white/5 backdrop-blur-sm p-6 rounded-3xl border border-white/10 space-y-4 transform hover:scale-[1.02] transition-transform">
+                                    <div className="flex items-center justify-between text-left border-b border-white/5 pb-3">
+                                        <div className="flex flex-col">
+                                            <span className="text-[9px] font-black text-slate-500 uppercase">Détrône</span>
+                                            <span className="text-sm font-black text-white">{showHonorPopup.holder}</span>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="text-[9px] font-black text-slate-500 uppercase">Record Actuel</span>
+                                            <span className="text-sm font-black text-slate-400">{showHonorPopup.recordValue}</span>
+                                        </div>
+                                    </div>
+                                    <div className="pt-1">
+                                        <p className="text-lg font-black text-white italic">
+                                            VOTRE NOUVEAU RECORD : <span className="text-yellow-400 text-2xl">{showHonorPopup.myValue}</span>
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* The Oath */}
+                                <div className="space-y-4">
+                                    <p className="text-[11px] text-slate-400 font-bold leading-relaxed px-2">
+                                        "Je scelle ce résultat par mon honneur. Ma forme était <span className="text-white">stricte</span>, ma volonté <span className="text-white">inflexible</span>."
+                                    </p>
+                                    
+                                    <button
+                                        onClick={() => {
+                                            setHonorChecked(true);
                                             saveLogs(true);
-                                        }
-                                    }}
-                                    className="w-6 h-6 rounded-lg border-2 border-gray-200 checked:bg-blue-600 transition-all font-black"
-                                />
-                                <span className="font-bold text-sm text-gray-600 group-hover:text-blue-600 transition-colors uppercase">Je le jure</span>
-                            </label>
+                                        }}
+                                        className="w-full relative group overflow-hidden rounded-full p-0.5"
+                                    >
+                                        <span className="absolute inset-0 bg-gradient-to-r from-yellow-400 via-orange-500 to-yellow-400 rounded-full opacity-70 group-hover:opacity-100 blur-sm transition-opacity duration-300 animate-gradient-x"></span>
+                                        <div className="relative bg-slate-900 px-8 py-5 rounded-full flex items-center justify-center gap-3 transition-all duration-300 group-hover:bg-slate-800/80 group-active:scale-95 border border-yellow-500/30">
+                                            <span className="text-xl">⚔️</span>
+                                            <span className="font-black text-xs text-white uppercase tracking-[0.2em]">
+                                                Signer mon Exploit
+                                            </span>
+                                        </div>
+                                    </button>
+                                </div>
 
-                            <div className="flex flex-col gap-2">
-                                <button onClick={() => setShowHonorPopup(null)} className="w-full py-2 text-xs font-bold text-gray-400 uppercase hover:text-gray-600">
+                                <button
+                                    onClick={() => setShowHonorPopup(null)}
+                                    className="text-[9px] font-black text-slate-600 uppercase tracking-widest hover:text-slate-400 transition-colors"
+                                >
                                     Fermer sans enregistrer
                                 </button>
                             </div>
