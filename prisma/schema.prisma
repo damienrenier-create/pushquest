@@ -29,6 +29,7 @@ model User {
   statusLikes StatusLike[]
   medicalCertificates MedicalCertificate[]
   xpAdjustments XpAdjustment[]
+  specialWorkoutEntries SpecialWorkoutEntry[]
   league    String      @default("POMPES")
   alterEgoId String?     @unique
   alterEgo   User?       @relation("AlterEgo", fields: [alterEgoId], references: [id])
@@ -201,4 +202,20 @@ model XpAdjustment {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+model SpecialWorkoutEntry {
+  id              String   @id @default(cuid())
+  workoutId       String   // ID from specialWorkouts.ts
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  data            Json     // { exercises: { burpees: 50, run_m: 1000 }, time_sec: 450 }
+  totalScore      Float?   // Calculated score for ranking if needed
+  completionTime  Int?     // Seconds
+  date            String   // YYYY-MM-DD
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, workoutId])
+  @@index([workoutId, totalScore])
 }

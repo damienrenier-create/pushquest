@@ -542,8 +542,13 @@ export default function ChallengeDashboard() {
                                             <span className="text-sm">🔄</span>
                                         </button>
                                     )}
-                                    <Link href="/faq" className="flex items-center gap-1.5 text-indigo-400 px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-xl transition-all group" title="Comment ça marche ?">
-                                        <HelpCircle size={14} />
+                                    <Link 
+                                        href="/faq" 
+                                        className="flex items-center gap-2 text-indigo-100 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-2xl transition-all group shadow-lg shadow-indigo-900/20 border border-indigo-400/30" 
+                                        title="Comment ça marche ?"
+                                    >
+                                        <HelpCircle size={14} className="group-hover:rotate-12 transition-transform" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest leading-none">Guide & Aide</span>
                                     </Link>
                                 </div>
                             </div>

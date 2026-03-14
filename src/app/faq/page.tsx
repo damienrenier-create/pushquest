@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { Shield, Zap, Info, Trophy, Target, AlertCircle, Calculator, BookOpen } from "lucide-react"
+import { Shield, Zap, Info, Trophy, Target, AlertCircle, Calculator, BookOpen, Search, Calendar, HelpCircle } from "lucide-react"
 import { BADGE_DEFINITIONS } from "@/config/badges"
 import { getXPForReward } from "@/lib/rewards"
 import { useSearchParams } from "next/navigation"
@@ -68,6 +68,8 @@ function FAQContent() {
     const searchParams = useSearchParams();
     const initialTab = (searchParams.get('tab') as 'rules' | 'bestiary' | 'catalogue' | 'news') || 'rules';
     const [activeTab, setActiveTab] = useState<'rules' | 'bestiary' | 'catalogue' | 'news'>(initialTab);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [filter, setFilter] = useState<'ALL' | 'COMPETITIVE' | 'LEGENDARY' | 'MILESTONE' | 'EVENT'>('ALL');
 
     useEffect(() => {
         const hash = window.location.hash;
@@ -311,16 +313,56 @@ function FAQContent() {
                         {/* Catalogue Header */}
                         <section className="bg-indigo-600 text-white rounded-[2.5rem] p-8 shadow-xl relative overflow-hidden">
                             <div className="absolute top-0 right-0 p-8 opacity-10 text-8xl pointer-events-none italic font-black">100+</div>
-                            <div className="relative z-10 space-y-2">
-                                <h2 className="text-2xl font-black uppercase italic tracking-tighter">Catalogue des Récompenses</h2>
-                                <p className="text-indigo-100 font-bold text-sm">Découvrez comment débloquer chaque badge et la gloire qu'il rapporte.</p>
+                            <div className="relative z-10 space-y-6">
+                                <div>
+                                    <h2 className="text-2xl font-black uppercase italic tracking-tighter">Catalogue de la Gloire</h2>
+                                    <p className="text-indigo-100 font-bold text-sm">Maîtrisez chaque défi pour régner sur le classement.</p>
+                                </div>
+                                
+                                {/* Search & Filters Bar */}
+                                <div className="flex flex-col sm:flex-row gap-4">
+                                    <div className="relative flex-1">
+                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-300" size={18} />
+                                        <input 
+                                            type="text"
+                                            placeholder="Rechercher un badge..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            className="w-full bg-white/10 border border-white/20 rounded-2xl py-3 pl-12 pr-4 text-white placeholder:text-indigo-200 focus:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/30 transition-all font-bold text-sm"
+                                        />
+                                    </div>
+                                    <div className="flex bg-white/10 border border-white/20 p-1 rounded-2xl overflow-x-auto no-scrollbar shadow-inner">
+                                        {[
+                                            { id: 'ALL', label: 'Tous', icon: <Zap size={12}/> },
+                                            { id: 'COMPETITIVE', label: 'Compétitifs', icon: <Zap size={12}/> },
+                                            { id: 'LEGENDARY', label: 'Légendaires', icon: <Trophy size={12}/> },
+                                            { id: 'MILESTONE', label: 'Progression', icon: <Target size={12}/> },
+                                            { id: 'EVENT', label: 'Spéciaux', icon: <Calendar size={12}/> }
+                                        ].map(f => (
+                                            <button
+                                                key={f.id}
+                                                onClick={() => setFilter(f.id as any)}
+                                                className={`whitespace-nowrap px-4 py-2 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all flex items-center gap-2 ${filter === f.id ? 'bg-white text-indigo-600 shadow-md' : 'text-indigo-100 hover:bg-white/5'}`}
+                                            >
+                                                {f.icon}
+                                                {f.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
                         </section>
 
                         {/* Catalogue Grid */}
-                        <div className="grid grid-cols-1 gap-12">
-                            {["COMPETITIVE", "LEGENDARY", "MILESTONE", "EVENT"].map(type => {
-                                const badges = BADGE_DEFINITIONS.filter(b => b.type === type);
+                        <div className="space-y-12">
+                            {["COMPETITIVE", "LEGENDARY", "MILESTONE", "EVENT"].filter(t => filter === 'ALL' || filter === t).map(type => {
+                                const badges = BADGE_DEFINITIONS.filter(b => 
+                                    b.type === type && 
+                                    (searchQuery === "" || 
+                                     b.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                     b.description.toLowerCase().includes(searchQuery.toLowerCase()))
+                                );
+                                
                                 if (badges.length === 0) return null;
 
                                 return (
@@ -338,36 +380,45 @@ function FAQContent() {
                                             <div className="h-px bg-gray-200 flex-1" />
                                         </div>
 
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                             {badges.map(badge => {
                                                 const xp = getXPForReward(badge.key);
                                                 return (
                                                     <div
                                                         key={badge.key}
                                                         id={`item-${badge.key}`}
-                                                        className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all group scroll-mt-24"
+                                                        className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm hover:border-indigo-200 hover:shadow-md transition-all group scroll-mt-24 flex flex-col justify-between"
                                                     >
-                                                        <div className="flex items-start justify-between mb-4">
-                                                            <div className="flex items-center gap-3">
-                                                                <span className="text-4xl group-hover:scale-110 transition-transform">{badge.emoji}</span>
-                                                                <div>
-                                                                    <h4 className="font-black text-gray-900 uppercase text-sm leading-tight italic">{badge.name}</h4>
-                                                                    <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mt-0.5">+{xp} XP</p>
+                                                        <div>
+                                                            <div className="flex items-start justify-between mb-3">
+                                                                <div className="flex items-center gap-3">
+                                                                    <span className="text-4xl group-hover:scale-110 transition-transform">{badge.emoji}</span>
+                                                                    <div>
+                                                                        <h4 className="font-black text-gray-900 uppercase text-xs leading-tight italic">{badge.name}</h4>
+                                                                        <div className="flex items-center gap-2 mt-1">
+                                                                            <span className="font-black text-pink-500 text-[10px] tracking-widest leading-none">+{xp} XP</span>
+                                                                            <span className={`text-[7px] px-1 py-0.5 rounded font-black uppercase border ${
+                                                                                badge.rarity === 'LEGENDARY' ? 'bg-indigo-50 border-indigo-100 text-indigo-500' :
+                                                                                badge.rarity === 'EPIC' ? 'bg-pink-50 border-pink-100 text-pink-500' :
+                                                                                'bg-gray-50 border-gray-100 text-gray-400'
+                                                                            }`}>
+                                                                                {badge.rarity}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
                                                             </div>
+                                                            <p className="text-[10px] font-bold text-gray-500 leading-relaxed italic border-l-2 border-indigo-100 pl-3 py-1 mb-4">"{badge.description}"</p>
                                                         </div>
 
-                                                        <div className="space-y-3">
-                                                            <div className="bg-gray-50 rounded-2xl p-4 border border-gray-50 group-hover:bg-indigo-50/30 group-hover:border-indigo-100/50 transition-colors">
-                                                                <p className="text-xs font-bold text-gray-600 leading-relaxed italic mb-2">"{badge.description}"</p>
-                                                                <div className="flex items-start gap-2">
-                                                                    <Target size={12} className="text-indigo-400 mt-0.5 shrink-0" />
-                                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tight leading-none">Condition :</p>
-                                                                </div>
-                                                                <p className="text-[11px] font-black text-indigo-600 mt-1 pl-5">
-                                                                    {badge.condition || "Non spécifié"}
-                                                                </p>
+                                                        <div className="bg-gray-50 rounded-2xl p-3 border border-gray-50">
+                                                            <div className="flex items-center gap-1.5 mb-1">
+                                                                <Target size={10} className="text-indigo-400" />
+                                                                <p className="text-[8px] font-black text-indigo-400 uppercase tracking-widest">Condition :</p>
                                                             </div>
+                                                            <p className="text-[10px] font-black text-gray-700 leading-tight pl-4">
+                                                                {badge.condition || "Non spécifié"}
+                                                            </p>
                                                         </div>
                                                     </div>
                                                 );
