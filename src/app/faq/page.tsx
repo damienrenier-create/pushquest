@@ -397,7 +397,16 @@ function FAQContent() {
                                         <div className="flex items-center gap-4">
                                             <span className="text-4xl group-hover:scale-110 transition-transform">{badge.emoji}</span>
                                             <div>
-                                                <h4 className="font-black text-gray-900 uppercase text-sm italic">{badge.name}</h4>
+                                                <div className="flex items-center gap-2">
+                                                    <h4 className="font-black text-gray-900 uppercase text-sm italic">{badge.name}</h4>
+                                                    <span className={`text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-tighter ${
+                                                        badge.rarity === 'LEGENDARY' ? 'bg-indigo-100 text-indigo-600' :
+                                                        badge.rarity === 'EPIC' ? 'bg-pink-100 text-pink-600' :
+                                                        'bg-gray-100 text-gray-500'
+                                                    }`}>
+                                                        {badge.rarity}
+                                                    </span>
+                                                </div>
                                                 <p className="text-[10px] font-bold text-gray-500 mt-1 leading-tight">{badge.description}</p>
                                             </div>
                                         </div>

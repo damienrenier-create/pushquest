@@ -219,7 +219,7 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
                 const req = getRequiredRepsForDate(dateISO);
                 return ["PUSHUP", "PULLUP", "SQUAT"].every(exo => {
                     const exoTotal = daySets.filter((s: any) => s.exercise === exo).reduce((sum: number, s: any) => sum + s.reps, 0);
-                    return exoTotal >= req;
+                    return exoTotal >= 3 * req;
                 }) && req > 0;
             }
         };
@@ -467,7 +467,14 @@ export async function updateBadgesPostSave(userId: string) {
 
         if (bestUser && bestValue > 0) {
             const isSameUser = ownership?.currentUserId === bestUser.id;
-            const isBetterValue = bestValue > (ownership?.currentValue || 0);
+            
+            // Pro Logic: Reset comparison if it's a monthly badge and month has changed
+            const currentMonth = getTodayISO().substring(0, 7);
+            const ownershipMonth = ownership?.achievedAt ? new Date(ownership.achievedAt).toISOString().substring(0, 7) : null;
+            const isMonthlyMetric = def.metricType.startsWith("MONTH_");
+            const isDifferentMonth = isMonthlyMetric && ownershipMonth !== currentMonth;
+
+            const isBetterValue = isDifferentMonth || bestValue > (ownership?.currentValue || 0);
 
             if (isSameUser && !isBetterValue) continue;
 
