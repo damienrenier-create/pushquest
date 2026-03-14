@@ -16,7 +16,7 @@ export const SPECIAL_DAYS: Record<string, SpecialDay> = {
         label: "Saint-Patrick", 
         emoji: "🍀", 
         description: "Célébration irlandaise, tout le monde en vert !", 
-        reward: "Badge Trèfle de Chance + Bonus XP sur les Squats. HARDCORE: Trèfle d'Or (Légendaire) pour le quota total." 
+        reward: "Badges Chance & Or. COMPET: Trèfles Diamant (Volume), Émeraude (Pompes), Rubis (Squats) & Saphir (Tractions)." 
     },
     "2026-04-01": { 
         label: "1er Avril", 

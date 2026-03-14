@@ -197,6 +197,11 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             }, { cur: 0, max: 0 }).max,
             sprinterCount: sprinterCounts[u.id] || 0,
             headhunterCount: u.featuredClaimsCount || 0,
+            getDayTotal: (date: string) => sets.filter((s: any) => s.date === date).reduce((sum: number, s: any) => sum + s.reps, 0),
+            getDayMaxSet: (date: string, exo?: string) => {
+                const daySets = sets.filter((s: any) => s.date === date && (!exo || s.exercise === exo));
+                return daySets.length ? Math.max(...daySets.map((s: any) => s.reps)) : 0;
+            }
         };
     });
 }
@@ -369,6 +374,38 @@ export async function updateBadgesPostSave(userId: string) {
         } else if (def.metricType === "HEADHUNTER_COUNT") {
             for (const s of summaries) { if (s.headhunterCount >= def.threshold!) await awardMilestone(s.id, def.key, 1); }
             continue;
+        } else if (def.metricType === "DATE_COMPETITIVE_REPS") {
+            const target = "2026-03-17";
+            summaries.forEach((s: any) => {
+                const val = s.getDayTotal(target);
+                if (val > bestValue || (val === bestValue && bestValue > 0 && isBetterTieBreak(s, bestUser, "totalAll"))) {
+                    bestValue = val; bestUser = s;
+                }
+            });
+        } else if (def.metricType === "DATE_COMPETITIVE_SET_PUSHUPS") {
+            const target = "2026-03-17";
+            summaries.forEach((s: any) => {
+                const val = s.getDayMaxSet(target, "PUSHUP");
+                if (val > bestValue || (val === bestValue && bestValue > 0 && isBetterTieBreak(s, bestUser, "totalPushups"))) {
+                    bestValue = val; bestUser = s;
+                }
+            });
+        } else if (def.metricType === "DATE_COMPETITIVE_SET_PULLUPS") {
+            const target = "2026-03-17";
+            summaries.forEach((s: any) => {
+                const val = s.getDayMaxSet(target, "PULLUP");
+                if (val > bestValue || (val === bestValue && bestValue > 0 && isBetterTieBreak(s, bestUser, "totalPullups"))) {
+                    bestValue = val; bestUser = s;
+                }
+            });
+        } else if (def.metricType === "DATE_COMPETITIVE_SET_SQUATS") {
+            const target = "2026-03-17";
+            summaries.forEach((s: any) => {
+                const val = s.getDayMaxSet(target, "SQUAT");
+                if (val > bestValue || (val === bestValue && bestValue > 0 && isBetterTieBreak(s, bestUser, "totalSquats"))) {
+                    bestValue = val; bestUser = s;
+                }
+            });
         } else if (def.metricType === "FIRST_REACH") {
             const scope = def.exerciseScope === "PUSHUPS" ? "maxSetPushups" : def.exerciseScope === "PULLUPS" ? "maxSetPullups" : "maxSetSquats";
             summaries.forEach((s: any) => { if (s[scope] >= def.threshold!) { bestValue = s[scope]; bestUser = s; } });
