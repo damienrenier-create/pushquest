@@ -389,41 +389,64 @@ function FAQContent() {
                             </div>
                         </section>
 
-                        <div className="grid grid-cols-1 gap-4">
-                            {[...BADGE_DEFINITIONS].reverse().slice(0, 10).map(badge => {
-                                const xp = getXPForReward(badge.key);
+                        <div className="space-y-12">
+                            {["COMPETITIVE", "LEGENDARY", "MILESTONE", "EVENT"].map(type => {
+                                const tenDaysAgo = new Date();
+                                tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+                                const tenDaysAgoISO = tenDaysAgo.toISOString().split('T')[0];
+
+                                const newsFromType = BADGE_DEFINITIONS.filter(b => 
+                                    b.type === type && b.addedAt && b.addedAt >= tenDaysAgoISO
+                                );
+                                
+                                if (newsFromType.length === 0) return null;
+
                                 return (
-                                    <div key={badge.key} className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex items-center justify-between group hover:border-pink-200 transition-all">
-                                        <div className="flex items-center gap-4">
-                                            <span className="text-4xl group-hover:scale-110 transition-transform">{badge.emoji}</span>
-                                            <div>
-                                                <div className="flex items-center gap-2">
-                                                    <h4 className="font-black text-gray-900 uppercase text-sm italic">{badge.name}</h4>
-                                                    <span className={`text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-tighter ${
-                                                        badge.rarity === 'LEGENDARY' ? 'bg-indigo-100 text-indigo-600' :
-                                                        badge.rarity === 'EPIC' ? 'bg-pink-100 text-pink-600' :
-                                                        'bg-gray-100 text-gray-500'
-                                                    }`}>
-                                                        {badge.rarity}
-                                                    </span>
-                                                </div>
-                                                <p className="text-[10px] font-bold text-gray-500 mt-1 leading-tight">{badge.description}</p>
-                                            </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <span className="block font-black text-pink-600">+{xp} XP</span>
-                                            <button 
-                                                onClick={() => {
-                                                    setActiveTab('catalogue');
-                                                    setTimeout(() => {
-                                                        const el = document.getElementById(`item-${badge.key}`);
-                                                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                                    }, 100);
-                                                }}
-                                                className="text-[9px] font-black text-gray-400 uppercase tracking-widest hover:text-pink-600 transition-colors"
-                                            >
-                                                Voir détails →
-                                            </button>
+                                    <div key={type} className="space-y-4">
+                                        <h3 className="text-xs font-black uppercase tracking-widest text-indigo-400 px-2">
+                                            {type === "COMPETITIVE" ? "Compétition" :
+                                             type === "LEGENDARY" ? "Légendaire" :
+                                             type === "MILESTONE" ? "Progression" : "Événements"}
+                                        </h3>
+                                        <div className="grid grid-cols-1 gap-4">
+                                            {newsFromType.reverse().map(badge => {
+                                                const xp = getXPForReward(badge.key);
+                                                return (
+                                                    <div key={badge.key} className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex items-center justify-between group hover:border-pink-200 transition-all">
+                                                        <div className="flex items-center gap-4">
+                                                            <span className="text-4xl group-hover:scale-110 transition-transform">{badge.emoji}</span>
+                                                            <div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <h4 className="font-black text-gray-900 uppercase text-sm italic">{badge.name}</h4>
+                                                                    <span className={`text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-tighter ${
+                                                                        badge.rarity === 'LEGENDARY' ? 'bg-indigo-100 text-indigo-600' :
+                                                                        badge.rarity === 'EPIC' ? 'bg-pink-100 text-pink-600' :
+                                                                        'bg-gray-100 text-gray-500'
+                                                                    }`}>
+                                                                        {badge.rarity}
+                                                                    </span>
+                                                                </div>
+                                                                <p className="text-[10px] font-bold text-gray-500 mt-1 leading-tight">{badge.description}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <span className="block font-black text-pink-600">+{xp} XP</span>
+                                                            <button 
+                                                                onClick={() => {
+                                                                    setActiveTab('catalogue');
+                                                                    setTimeout(() => {
+                                                                        const el = document.getElementById(`item-${badge.key}`);
+                                                                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                                    }, 100);
+                                                                }}
+                                                                className="text-[9px] font-black text-gray-400 uppercase tracking-widest hover:text-pink-600 transition-colors"
+                                                            >
+                                                                Voir détails →
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 );
