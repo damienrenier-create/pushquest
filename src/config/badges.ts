@@ -88,7 +88,8 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
 
     // Special Events (EPIC)
     { key: "level_up", name: "Montée de Niveau", emoji: "⭐", rarity: "RARE", metricType: "LEVEL_UP", type: "EVENT", exerciseScope: "ALL", description: "Est passé au niveau supérieur", condition: "Gagner assez d'XP pour progresser d'un niveau." },
-    { key: "st_patrick", name: "La Saint-Patrick", emoji: "🍀", rarity: "EPIC", metricType: "DATE_AWARD_HARD", type: "EVENT", exerciseScope: "ALL", description: "S'être entraîné le 17 mars", condition: "Réaliser au moins une série le jour de la Saint-Patrick (17 mars)." },
+    { key: "st_patrick", name: "Trèfle de Chance", emoji: "🍀", rarity: "EPIC", metricType: "DATE_AWARD_HARD", type: "EVENT", exerciseScope: "ALL", description: "S'être entraîné le 17 mars", condition: "Réaliser au moins une série le jour de la Saint-Patrick (17 mars)." },
+    { key: "st_patrick_gold", name: "Trèfle d'Or", emoji: "☘️", rarity: "LEGENDARY", metricType: "DATE_AWARD_HARD_GOLD", type: "EVENT", exerciseScope: "ALL", description: "Quota total validé le 17 mars", condition: "Atteindre le quota total du jour le jour de la Saint-Patrick." },
     { key: "st_marvin", name: "Saint Marvin", emoji: "🔥", rarity: "EPIC", metricType: "MARVIN_AWARD", type: "EVENT", exerciseScope: "ALL", description: "Avoir égalé ou battu EMBI le 08 Mars", condition: "Le 8 mars, égaler ou dépasser le volume de répétitions d'EMBI." },
     { key: "april_fools_1", name: "Mégalo-Carcharodon", emoji: "🦈", rarity: "EPIC", metricType: "APRIL_FOOLS_TIER", type: "EVENT", exerciseScope: "ALL", description: "Top 1 volume du 1er avril", condition: "Terminer à la 1ère place du classement de volume le 1er avril." },
 ];
