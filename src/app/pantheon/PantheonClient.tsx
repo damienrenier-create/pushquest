@@ -454,59 +454,34 @@ export default function PantheonClient({
 
                 {/* SECTION E: ENTRAÎNEMENTS DE LÉGENDE */}
                 <div className="mb-12">
-                    <div className="flex items-center gap-3 mb-8">
-                        <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
-                            <Zap size={20} fill="currentColor" />
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
+                                <Zap size={20} fill="currentColor" />
+                            </div>
+                            <h2 className="text-2xl font-black uppercase tracking-tight text-center md:text-left">Défis à la Carte</h2>
                         </div>
-                        <h2 className="text-2xl font-black uppercase tracking-tight">Entraînements de Légende</h2>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-indigo-400 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100 mx-auto md:mx-0">
+                            En préparation ⚙️
+                        </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {SPECIAL_WORKOUTS.map((workout) => (
-                            <Link 
-                                key={workout.id}
-                                href={`/workouts/${workout.slug}`}
-                                className="group relative bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:scale-[1.02] transition-all flex flex-col justify-between overflow-hidden"
-                            >
-                                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                                    <Trophy size={80} />
-                                </div>
-                                
-                                <div className="relative z-10 space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <div className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-indigo-100">
-                                            {workout.date === today ? "🔥 AUJOURD'HUI" : workout.date}
-                                        </div>
-                                        <div className="text-amber-500 font-black text-xs">
-                                            +{workout.xpBonus} XP
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <h3 className="text-xl font-black text-slate-900 uppercase leading-none mb-2">{workout.name}</h3>
-                                        <p className="text-slate-500 text-xs font-medium line-clamp-2">{workout.description}</p>
-                                    </div>
-
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {workout.exercises.slice(0, 3).map((exo, idx) => (
-                                            <span key={idx} className="text-[9px] font-bold bg-slate-50 text-slate-500 px-2 py-0.5 rounded-lg border border-slate-100 uppercase">
-                                                {exo.label}
-                                            </span>
-                                        ))}
-                                        {workout.exercises.length > 3 && (
-                                            <span className="text-[9px] font-bold bg-slate-50 text-slate-500 px-2 py-0.5 rounded-lg border border-slate-100">
-                                                +{workout.exercises.length - 3}
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="mt-6 flex items-center justify-between pt-4 border-t border-slate-50">
-                                    <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Participer</span>
-                                    <ArrowRight size={16} className="text-indigo-600 group-hover:translate-x-1 transition-transform" />
-                                </div>
-                            </Link>
-                        ))}
+                    <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-[2.5rem] p-8 md:p-12 text-center space-y-4">
+                        <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mx-auto text-indigo-400 mb-4 scale-125 rotate-3">
+                            <Trophy size={32} />
+                        </div>
+                        <h3 className="text-xl font-black uppercase italic tracking-tighter">Bientôt de nouveaux exploits !</h3>
+                        <p className="text-slate-500 font-medium max-w-md mx-auto text-sm leading-relaxed">
+                            Nous préparons une série de défis multi-exercices (Gainage, Burpees, Running, etc.). 
+                            <br/><span className="text-indigo-600 font-bold">Quels exercices et quels objectifs aimeriez-vous voir ici ?</span>
+                        </p>
+                        <div className="flex flex-wrap justify-center gap-3 pt-4">
+                            {['Gainage', 'Burpees', 'Pistol Squats', 'Sprint'].map(label => (
+                                <span key={label} className="text-[9px] font-black uppercase tracking-widest bg-white px-3 py-1.5 rounded-lg border border-slate-100 text-slate-400">
+                                    {label}
+                                </span>
+                            ))}
+                        </div>
                     </div>
                 </div>
 

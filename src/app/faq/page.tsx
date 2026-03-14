@@ -320,29 +320,30 @@ function FAQContent() {
                                 </div>
                                 
                                 {/* Search & Filters Bar */}
-                                <div className="flex flex-col sm:flex-row gap-4">
-                                    <div className="relative flex-1">
+                                <div className="space-y-4">
+                                    <div className="relative max-w-md mx-auto">
                                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-300" size={18} />
                                         <input 
                                             type="text"
-                                            placeholder="Rechercher un badge..."
+                                            placeholder="Trouver un badge..."
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
-                                            className="w-full bg-white/10 border border-white/20 rounded-2xl py-3 pl-12 pr-4 text-white placeholder:text-indigo-200 focus:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/30 transition-all font-bold text-sm"
+                                            className="w-full bg-indigo-950/30 border border-white/20 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-indigo-200 focus:bg-indigo-950/50 focus:outline-none focus:ring-2 focus:ring-indigo-400/50 transition-all font-bold text-sm text-center shadow-inner"
                                         />
                                     </div>
-                                    <div className="flex bg-white/10 border border-white/20 p-1 rounded-2xl overflow-x-auto no-scrollbar shadow-inner">
+                                    
+                                    <div className="flex flex-wrap justify-center gap-2">
                                         {[
-                                            { id: 'ALL', label: 'Tous', icon: <Zap size={12}/> },
-                                            { id: 'COMPETITIVE', label: 'Compétitifs', icon: <Zap size={12}/> },
-                                            { id: 'LEGENDARY', label: 'Légendaires', icon: <Trophy size={12}/> },
-                                            { id: 'MILESTONE', label: 'Progression', icon: <Target size={12}/> },
-                                            { id: 'EVENT', label: 'Spéciaux', icon: <Calendar size={12}/> }
+                                            { id: 'ALL', label: 'Tout voir', icon: <Zap size={14}/> },
+                                            { id: 'COMPETITIVE', label: 'Compétitifs', icon: <Zap size={14}/> },
+                                            { id: 'LEGENDARY', label: 'Légendaires', icon: <Trophy size={14}/> },
+                                            { id: 'MILESTONE', label: 'Progression', icon: <Target size={14}/> },
+                                            { id: 'EVENT', label: 'Spéciaux', icon: <Calendar size={14}/> }
                                         ].map(f => (
                                             <button
                                                 key={f.id}
                                                 onClick={() => setFilter(f.id as any)}
-                                                className={`whitespace-nowrap px-4 py-2 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all flex items-center gap-2 ${filter === f.id ? 'bg-white text-indigo-600 shadow-md' : 'text-indigo-100 hover:bg-white/5'}`}
+                                                className={`px-4 py-2 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all flex items-center gap-2 border ${filter === f.id ? 'bg-white text-indigo-600 border-white shadow-xl scale-105' : 'bg-white/5 text-indigo-100 border-white/10 hover:bg-white/10'}`}
                                             >
                                                 {f.icon}
                                                 {f.label}
