@@ -32,7 +32,7 @@ export default async function LeaderboardPage({
             include: { sets: true, xpAdjustments: true } // FORCE TO GET NICKNAME
         });
         const badgeOwnerships = await (prisma as any).badgeOwnership.findMany();
-        const xpScores = calculateAllUsersXP(allUsers, badgeOwnerships);
+        const xpScores = await calculateAllUsersXP(allUsers, badgeOwnerships);
 
         // Find max XP to scale the bar correctly if percentage is not wanted
         const maxXP = xpScores.length > 0 ? xpScores[0].totalXP : 1;

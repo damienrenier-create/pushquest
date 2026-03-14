@@ -383,7 +383,7 @@ export async function GET(req: Request) {
         });
 
         // Calcul des XP (Leaderboard XP V3)
-        const xpScores = calculateAllUsersXP(allUsers, badgeOwnerships);
+        const xpScores = await calculateAllUsersXP(allUsers, badgeOwnerships);
         const currentUserXP = xpScores.find(x => x.id === userId);
 
         const recentEvents = (await (prisma as any).badgeEvent.findMany({

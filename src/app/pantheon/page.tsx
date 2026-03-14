@@ -147,7 +147,7 @@ export default async function PantheonPage() {
         hour12: false
     }).format(new Date());
 
-    const xpScores = calculateAllUsersXP(allUsers, badgeOwnerships);
+    const xpScores = await calculateAllUsersXP(allUsers, badgeOwnerships);
 
     return (
         <PantheonClient

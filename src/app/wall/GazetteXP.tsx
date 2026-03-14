@@ -112,7 +112,7 @@ export default async function GazetteXP() {
         select: { id: true, nickname: true, sets: true, createdAt: true, xpAdjustments: true }
     });
     const badgeOwnerships = await (prisma as any).badgeOwnership.findMany();
-    const xpScores = calculateAllUsersXP(allUsers, badgeOwnerships);
+    const xpScores = await calculateAllUsersXP(allUsers, badgeOwnerships);
 
     const rawEvents = await (prisma as any).badgeEvent.findMany({
         where: {

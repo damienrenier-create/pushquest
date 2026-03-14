@@ -36,7 +36,7 @@ export async function POST(req: Request) {
             include: { sets: true, xpAdjustments: true }
         });
         const badgeOwnershipsOld = await (prisma as any).badgeOwnership.findMany();
-        const allXpOld = calculateAllUsersXP(allUsersOld, badgeOwnershipsOld);
+        const allXpOld = await calculateAllUsersXP(allUsersOld, badgeOwnershipsOld);
         const oldXp = allXpOld.find(x => x.id === userId);
 
         // 2. Transaction: delete existing for this date and user, then create new
@@ -62,7 +62,7 @@ export async function POST(req: Request) {
             include: { sets: true, xpAdjustments: true }
         });
         const badgeOwnershipsNew = await (prisma as any).badgeOwnership.findMany();
-        const allXpNew = calculateAllUsersXP(allUsersNew, badgeOwnershipsNew);
+        const allXpNew = await calculateAllUsersXP(allUsersNew, badgeOwnershipsNew);
 
         for (const newXp of allXpNew) {
             const oldXp = allXpOld.find((x: any) => x.id === newXp.id);
