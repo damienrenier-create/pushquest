@@ -7,10 +7,11 @@ import Link from "next/link"
 import { SPECIAL_WORKOUTS, SpecialWorkout, WorkoutExercise } from "@/config/specialWorkouts"
 import { useSession } from "next-auth/react"
 
-export default function WorkoutPage({ params }: { params: { slug: string } }) {
+export default function WorkoutPage({ params }: { params: Promise<{ slug: string }> }) {
     const router = useRouter()
     const { data: session } = useSession()
-    const workout = SPECIAL_WORKOUTS.find(w => w.slug === params.slug)
+    const resolvedParams = React.use(params)
+    const workout = SPECIAL_WORKOUTS.find(w => w.slug === resolvedParams.slug)
     
     const [formData, setFormData] = useState<Record<string, number>>({})
     const [completionTime, setCompletionTime] = useState<number>(0)
