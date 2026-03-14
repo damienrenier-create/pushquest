@@ -21,22 +21,16 @@ export async function POST(req: Request) {
 
         const userId = session.user.id;
 
-        // Save the special workout entry
-        // We use an upsert-like logic: if user already has an entry for this workout, update it
-        const result = await prisma.specialWorkoutEntry.upsert({
-            where: {
-                userId_workoutId: {
-                    userId,
-                    workoutId
-                }
-            },
+        // 1. Save or Update the workout entry
+        const entry = await prisma.specialWorkoutEntry.upsert({
+            where: { userId_workoutId: { userId, workoutId } },
             create: {
                 userId,
                 workoutId,
                 data,
                 completionTime,
                 date,
-                totalScore: completionTime ? -completionTime : 0 // Negative time for easier sorting (smaller time is better)
+                totalScore: completionTime ? -completionTime : 0
             },
             update: {
                 data,
@@ -46,9 +40,55 @@ export async function POST(req: Request) {
             }
         });
 
+        // 2. Dynamic Badge Keys
+        const participationBadgeKey = `workout_${workoutId}_std`;
+        const platinumBadgeKey = `workout_${workoutId}_plat`;
+
+        // 3. Assign Participation Badge (everyone who completes it)
+        // Note: Special badge keys are used, which may not exist in static BadgeDefinition
+        // but BadgeOwnership can still store them.
+        await prisma.badgeOwnership.upsert({
+            where: {
+                badgeKey: participationBadgeKey
+            },
+            create: {
+                badgeKey: participationBadgeKey,
+                currentUserId: userId,
+                currentValue: 1,
+                achievedAt: new Date()
+            },
+            update: {} // Basic participation doesn't change once achieved
+        });
+
+        // 4. Handle Platinum Badge (Record Holder - Transferable)
+        const bestEntry = await prisma.specialWorkoutEntry.findFirst({
+            where: { workoutId },
+            orderBy: { totalScore: 'desc' }
+        });
+
+        if (bestEntry && bestEntry.userId === userId) {
+            // Update or Reassign the record badge to the current winner
+            await prisma.badgeOwnership.upsert({
+                where: {
+                    badgeKey: platinumBadgeKey
+                },
+                create: {
+                    badgeKey: platinumBadgeKey,
+                    currentUserId: userId,
+                    currentValue: entry.totalScore || 0,
+                    achievedAt: new Date()
+                },
+                update: {
+                    currentUserId: userId,
+                    currentValue: entry.totalScore || 0,
+                    achievedAt: new Date()
+                }
+            });
+        }
+
         return NextResponse.json({ 
-            entry: result, 
-            message: "Entraînement enregistré avec succès !" 
+            entry, 
+            message: "Entraînement et badges mis à jour avec succès !" 
         }, { status: 200 })
     } catch (error) {
         console.error(error)

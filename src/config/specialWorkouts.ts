@@ -21,45 +21,30 @@ export interface SpecialWorkout {
     slug: string;
     name: string;
     description: string;
-    date: string; // YYYY-MM-DD
+    date: string; // YYYY-MM-DD (Start date)
     exercises: WorkoutExercise[];
     scoringType: 'TIME' | 'REPS' | 'COMPOSITE';
-    standardBadgeKey: string;
-    platinumBadgeKey: string;
     xpBonus: number;
+    isActive?: boolean;
 }
 
 export const SPECIAL_WORKOUTS: SpecialWorkout[] = [
     {
-        id: 'the-gauntlet-01',
-        slug: 'le-gantelet',
-        name: 'Le Gantelet de Printemps',
-        description: 'Enchaînez les exercices le plus vite possible. Le meilleur temps décroche le Platine.',
-        date: '2026-03-21',
+        id: 'workout-01-the-first',
+        slug: 'premier-exploit',
+        name: 'Premier Exploit',
+        description: 'L\'entraînement inaugural : un défi complet mêlant endurance et puissance.',
+        date: '2026-03-14',
+        isActive: true,
         exercises: [
-            { type: 'BURPEES', label: 'Burpees', goal: 50, unit: 'REPS' },
-            { type: 'SQUAT_JUMP', label: 'Squat Jumps', goal: 50, unit: 'REPS' },
-            { type: 'PISTOL_SQUAT', label: 'Pistol Squats', goal: 20, unit: 'REPS' },
-            { type: 'PLANK', label: 'Gainage', goal: 60, unit: 'SECONDS' },
-            { type: 'RUN', label: 'Sprint', goal: 400, unit: 'METERS' }
+            { type: 'PLANK', label: 'Gainage', goal: 120, unit: 'SECONDS' },
+            { type: 'RUN', label: 'Course', goal: 2000, unit: 'METERS' },
+            { type: 'BURPEES', label: 'Burpees', goal: 20, unit: 'REPS' },
+            { type: 'JUMP_ROPE', label: 'Corde à sauter', goal: 200, unit: 'REPS' },
+            { type: 'PISTOL_SQUAT', label: 'Pistol Squat', goal: 2, unit: 'REPS' },
+            { type: 'SQUAT_JUMP', label: 'Squat Jumps', goal: 20, unit: 'REPS' }
         ],
         scoringType: 'TIME',
-        standardBadgeKey: 'workout_gauntlet_std',
-        platinumBadgeKey: 'workout_gauntlet_plat',
         xpBonus: 1000
-    },
-    {
-        id: 'rope-master-01',
-        slug: 'maitre-de-la-corde',
-        name: 'Maître de la Corde',
-        description: 'Maximum de sauts à la corde en 5 minutes.',
-        date: '2026-03-28',
-        exercises: [
-            { type: 'JUMP_ROPE', label: 'Corde à sauter', unit: 'REPS' }
-        ],
-        scoringType: 'REPS',
-        standardBadgeKey: 'workout_rope_std',
-        platinumBadgeKey: 'workout_rope_plat',
-        xpBonus: 800
     }
 ];

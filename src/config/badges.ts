@@ -108,12 +108,4 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
     { key: "month_total_pushups", name: "Usine à Pompes", emoji: "🛠️", rarity: "RARE", metricType: "MONTH_TOTAL_EXO", type: "COMPETITIVE", exerciseScope: "PUSHUPS", description: "Volume de pompes le plus élevé du mois", condition: "Cumuler le plus de répétitions en pompes au cours du mois.", addedAt: "2026-03-14" },
     { key: "month_total_pullups", name: "Acrobate du Mois", emoji: "🎪", rarity: "RARE", metricType: "MONTH_TOTAL_EXO", type: "COMPETITIVE", exerciseScope: "PULLUPS", description: "Volume de tractions le plus élevé du mois", condition: "Cumuler le plus de répétitions en tractions au cours du mois.", addedAt: "2026-03-14" },
     { key: "month_total_squats", name: "Atlas du Mois", emoji: "🌍", rarity: "RARE", metricType: "MONTH_TOTAL_EXO", type: "COMPETITIVE", exerciseScope: "SQUATS", description: "Volume de squats le plus élevé du mois", condition: "Cumuler le plus de répétitions en squats au cours du mois.", addedAt: "2026-03-14" },
-
-    // Special Workouts - Standard (MILESTONE)
-    { key: "workout_gauntlet_std", name: "Guerrier du Gantelet", emoji: "🛡️", rarity: "RARE", metricType: "SPECIAL_WORKOUT_FINISHER", type: "MILESTONE", exerciseScope: "ALL", description: "A terminé l'entraînement 'Le Gantelet'", condition: "Valider tous les exercices de l'entraînement spécial 'Le Gantelet'.", addedAt: "2026-03-14" },
-    { key: "workout_rope_std", name: "Sauteur de Corde", emoji: "➰", rarity: "COMMON", metricType: "SPECIAL_WORKOUT_FINISHER", type: "MILESTONE", exerciseScope: "ALL", description: "A terminé l'entraînement 'Maître de la Corde'", condition: "Valider l'épreuve de corde à sauter.", addedAt: "2026-03-14" },
-
-    // Special Workouts - Platinum (LEGENDARY)
-    { key: "workout_gauntlet_plat", name: "Légende du Gantelet", emoji: "🌌", rarity: "LEGENDARY", metricType: "SPECIAL_WORKOUT_PLATINUM", type: "COMPETITIVE", exerciseScope: "ALL", description: "Meilleur temps sur 'Le Gantelet'", condition: "Détenir le record de temps sur l'entraînement 'Le Gantelet'.", addedAt: "2026-03-14" },
-    { key: "workout_rope_plat", name: "Maître Suprême de la Corde", emoji: "✨", rarity: "LEGENDARY", metricType: "SPECIAL_WORKOUT_PLATINUM", type: "COMPETITIVE", exerciseScope: "ALL", description: "Record de sauts sur 'Maître de la Corde'", condition: "Détenir le record de répétitions sur l'épreuve de corde à sauter.", addedAt: "2026-03-14" },
 ];
