@@ -134,7 +134,7 @@ export default function ChallengeDashboard() {
         setTimeout(() => setToast(null), 3000)
     }, [setToast])
 
-    const getTodayISO = () => getLocalISO()
+    const getTodayISO = useCallback(() => getLocalISO(), [])
 
     const fetchStatuses = useCallback(async () => {
         try {
@@ -264,7 +264,7 @@ export default function ChallengeDashboard() {
         }
     }
 
-    const getTodayISO = () => getLocalISO()
+
 
 
     const handleDateChange = (date: string) => {
