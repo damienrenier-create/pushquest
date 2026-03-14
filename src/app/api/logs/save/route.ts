@@ -70,7 +70,7 @@ export async function POST(req: Request) {
                 const isLevelUp = newXp.level > oldXp.level;
                 const xpDiff = newXp.totalXP - oldXp.totalXP;
 
-                let reasonsArr = [];
+                const reasonsArr = [];
 
                 if (newXp.details.repsXP !== oldXp.details.repsXP) {
                     const diff = newXp.details.repsXP - oldXp.details.repsXP;

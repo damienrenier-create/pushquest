@@ -18,28 +18,28 @@ export default function UserProfilePage() {
     const [rewardDetail, setRewardDetail] = useState<any | null>(null)
 
     useEffect(() => {
+        const fetchUserData = async () => {
+            try {
+                const res = await fetch(`/api/user/profile/${nickname}`)
+                if (res.ok) {
+                    const data = await res.json()
+                    setUser(data)
+                } else {
+                    console.error("User not found")
+                }
+            } catch (err) {
+                console.error(err)
+            } finally {
+                setLoading(false)
+            }
+        }
+
         if (session === null) {
             router.push("/login")
         } else {
             fetchUserData()
         }
-    }, [session, nickname])
-
-    const fetchUserData = async () => {
-        try {
-            const res = await fetch(`/api/user/profile/${nickname}`)
-            if (res.ok) {
-                const data = await res.json()
-                setUser(data)
-            } else {
-                console.error("User not found")
-            }
-        } catch (err) {
-            console.error(err)
-        } finally {
-            setLoading(false)
-        }
-    }
+    }, [session, nickname, router])
 
     if (loading) return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50">

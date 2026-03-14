@@ -13,7 +13,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ message: "Non autorisé" }, { status: 401 })
         }
 
-        const { workoutId, data, completionTime, date } = await req.json()
+        const { workoutId, data, completionTime, date, proofUrl } = await req.json()
 
         if (!workoutId || !data || !date) {
             return NextResponse.json({ message: "Données manquantes" }, { status: 400 })
@@ -29,12 +29,14 @@ export async function POST(req: Request) {
                 workoutId,
                 data,
                 completionTime,
+                proofUrl,
                 date,
                 totalScore: completionTime ? -completionTime : 0
             },
             update: {
                 data,
                 completionTime,
+                proofUrl,
                 date,
                 totalScore: completionTime ? -completionTime : 0
             }

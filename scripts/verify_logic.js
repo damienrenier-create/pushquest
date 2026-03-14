@@ -1,6 +1,8 @@
-
 // Mocking logic to test challenge.ts
+/* eslint-disable @typescript-eslint/no-require-imports */
 const { getDayOfYear, getRequiredRepsForDate, getFineAmountForMonth } = require('./src/lib/challenge');
+/* eslint-disable @typescript-eslint/no-require-imports */
+const { PrismaClient } = require('@prisma/client')
 
 function test() {
     console.log("--- Testing dayOfYear ---");

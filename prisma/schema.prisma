@@ -212,6 +212,7 @@ model SpecialWorkoutEntry {
   data            Json     // { exercises: { burpees: 50, run_m: 1000 }, time_sec: 450 }
   totalScore      Float?   // Calculated score for ranking if needed
   completionTime  Int?     // Seconds
+  proofUrl        String?  // Optional link to photo/video proof
   date            String   // YYYY-MM-DD
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

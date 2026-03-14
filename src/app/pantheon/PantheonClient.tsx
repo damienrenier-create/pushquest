@@ -151,7 +151,7 @@ export default function PantheonClient({
                 description: (info as any).description,
                 reward: (info as any).reward
             }));
-    }, []);
+    }, [today]);
 
     return (
         <>

@@ -5,7 +5,6 @@ import { BADGE_DEFINITIONS } from "@/config/badges";
 
 export async function initBadges() {
     for (const def of BADGE_DEFINITIONS) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { type, condition, rarity, ...dbDef } = def as any;
         await (prisma as any).badgeDefinition.upsert({
             where: { key: dbDef.key },

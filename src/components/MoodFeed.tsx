@@ -7,25 +7,34 @@ export default function MoodFeed() {
     const [statuses, setStatuses] = useState<any[]>([])
 
     useEffect(() => {
+        const fetchStatuses = async () => {
+            try {
+                const res = await fetch("/api/status")
+                if (res.ok) {
+                    const s = await res.json()
+                    setStatuses(s)
+                }
+            } catch (err) {
+                console.error(err)
+            }
+        }
         fetchStatuses()
     }, [])
-
-    async function fetchStatuses() {
-        try {
-            const res = await fetch("/api/status")
-            if (res.ok) {
-                const s = await res.json()
-                setStatuses(s)
-            }
-        } catch (err) {
-            console.error(err)
-        }
-    }
 
     const toggleLike = async (id: string) => {
         try {
             const res = await fetch(`/api/status/${id}/like`, { method: "POST" })
-            if (res.ok) fetchStatuses()
+            if (res.ok) {
+                // Refresh statuses
+                const refresh = async () => {
+                    const res = await fetch("/api/status")
+                    if (res.ok) {
+                        const s = await res.json()
+                        setStatuses(s)
+                    }
+                }
+                refresh()
+            }
         } catch (err) {
             console.error(err)
         }

@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
+const { PrismaClient } = require('@prisma/client');
 const { spawn } = require('child_process');
 const server = spawn('cmd', ['/c', 'npm', 'run', 'dev'], { stdio: 'ignore' });
 console.log("Starting Next.js Dev Server to delete 'modo'...");

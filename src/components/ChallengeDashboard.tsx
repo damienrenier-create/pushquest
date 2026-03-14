@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useSession, signIn } from "next-auth/react"
 import { HelpCircle } from "lucide-react"
@@ -129,12 +129,29 @@ export default function ChallengeDashboard() {
 
     const lastInputRef = useRef<HTMLInputElement | null>(null)
 
-    const showToast = (message: string, type: 'success' | 'error') => {
+    const showToast = useCallback((message: string, type: 'success' | 'error') => {
         setToast({ message, type })
         setTimeout(() => setToast(null), 3000)
-    }
+    }, [setToast])
 
-    const fetchData = async (dateISO?: string) => {
+    const getTodayISO = () => getLocalISO()
+
+    const fetchStatuses = useCallback(async () => {
+        try {
+            const res = await fetch("/api/status")
+            if (res.ok) {
+                const s = await res.json()
+                setStatuses(s)
+                // If current user has a status, pre-fill the mood input
+                const myStatus = s.find((x: any) => x.userId === (session?.user as any)?.id)
+                if (myStatus) setMood(myStatus.content)
+            }
+        } catch (err) {
+            console.error("Fetch Statuses Error:", err)
+        }
+    }, [session?.user, setStatuses, setMood]) // session.user is a dependency because of myStatus check
+
+    const fetchData = useCallback(async (dateISO?: string) => {
         try {
             const url = dateISO ? `/api/dashboard?date=${dateISO}` : "/api/dashboard"
             const res = await fetch(url)
@@ -173,7 +190,18 @@ export default function ChallengeDashboard() {
             setLoading(false)
             fetchStatuses()
         }
-    }
+    }, [session?.user, showToast, setData, setSelectedDate, setSallyReps, setLocalSets, fetchStatuses, getTodayISO])
+
+    useEffect(() => {
+        const tab = searchParams.get('tab')
+        if (tab && ['saisie', 'graphs', 'cagnotte', 'trophees'].includes(tab)) {
+            setActiveTab(tab as any)
+        }
+    }, [searchParams]) // React on search params change
+
+    useEffect(() => {
+        fetchData()
+    }, [fetchData])
 
     const handleSwitchEgo = async () => {
         const currentLeague = (session?.user as any)?.league || "POMPES";
@@ -202,20 +230,6 @@ export default function ChallengeDashboard() {
         }
     };
 
-    const fetchStatuses = async () => {
-        try {
-            const res = await fetch("/api/status")
-            if (res.ok) {
-                const s = await res.json()
-                setStatuses(s)
-                // If current user has a status, pre-fill the mood input
-                const myStatus = s.find((x: any) => x.userId === (session?.user as any)?.id)
-                if (myStatus) setMood(myStatus.content)
-            }
-        } catch (err) {
-            console.error("Fetch Statuses Error:", err)
-        }
-    }
 
     const saveMood = async () => {
         if (!mood.trim()) return
@@ -252,16 +266,6 @@ export default function ChallengeDashboard() {
 
     const getTodayISO = () => getLocalISO()
 
-    useEffect(() => {
-        const tab = searchParams.get('tab')
-        if (tab && ['saisie', 'graphs', 'cagnotte', 'trophees'].includes(tab)) {
-            setActiveTab(tab as any)
-        }
-    }, [searchParams]) // React on search params change
-
-    useEffect(() => {
-        fetchData()
-    }, [])
 
     const handleDateChange = (date: string) => {
         setLoading(true)

@@ -74,8 +74,9 @@ function FAQContent() {
     useEffect(() => {
         const hash = window.location.hash;
         if (hash.startsWith('#item-')) {
-            setActiveTab('catalogue');
+            // Use setTimeout to avoid synchronous setState in effect body
             setTimeout(() => {
+                setActiveTab('catalogue');
                 const element = document.getElementById(hash.substring(1));
                 if (element) {
                     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
