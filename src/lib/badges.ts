@@ -5,7 +5,7 @@ import { BADGE_DEFINITIONS } from "@/config/badges";
 
 export async function initBadges() {
     for (const def of BADGE_DEFINITIONS) {
-        const { type, condition, rarity, ...dbDef } = def as any;
+        const { type, condition, rarity, addedAt, ...dbDef } = def as any;
         await (prisma as any).badgeDefinition.upsert({
             where: { key: dbDef.key },
             update: { ...dbDef },
@@ -313,7 +313,7 @@ export async function updateBadgesPostSave(userId: string) {
             continue;
         } else if (def.metricType === "TOTAL_FINES_AMOUNT") {
             summaries.forEach((s: any) => {
-                if (s.totalFinesAmount > bestValue) {
+                if (s.totalFinesAmount > bestValue || (s.totalFinesAmount === bestValue && bestValue > 0 && isBetterTieBreak(s, bestUser, "totalAll"))) {
                     bestValue = s.totalFinesAmount; bestUser = s;
                 }
             });
@@ -461,7 +461,13 @@ export async function updateBadgesPostSave(userId: string) {
             continue;
         } else if (def.metricType === "FIRST_REACH") {
             const scope = def.exerciseScope === "PUSHUPS" ? "maxSetPushups" : def.exerciseScope === "PULLUPS" ? "maxSetPullups" : "maxSetSquats";
-            summaries.forEach((s: any) => { if (s[scope] >= def.threshold!) { bestValue = s[scope]; bestUser = s; } });
+            summaries.forEach((s: any) => {
+                if (s[scope] >= def.threshold!) {
+                    if (s[scope] > bestValue || (s[scope] === bestValue && isBetterTieBreak(s, bestUser, "totalAll"))) {
+                        bestValue = s[scope]; bestUser = s;
+                    }
+                }
+            });
         }
 
         if (bestUser && bestValue > 0) {
