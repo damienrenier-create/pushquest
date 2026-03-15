@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Flame, Trophy, Crown, Timer } from "lucide-react";
+import { Flame, Trophy, Crown, Timer, Info } from "lucide-react";
 
 interface PossessionData {
     today: {
