@@ -73,10 +73,10 @@ export default function UserProfilePage() {
     const isVeteran = user.buyoutPaid;
 
     const rarityStyles: Record<string, string> = {
-        COMMON: "border-gray-100 bg-white text-gray-400",
-        RARE: "border-blue-200 bg-blue-50/30 text-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.05)]",
-        EPIC: "border-purple-200 bg-purple-50/50 text-purple-600 shadow-[0_0_20px_rgba(168,85,247,0.1)]",
-        LEGENDARY: "border-orange-200 bg-orange-50 text-orange-700 shadow-[0_0_25px_rgba(249,115,22,0.15)] ring-1 ring-orange-200/50",
+        COMMON: "border-slate-100 bg-white text-slate-400 hover:border-indigo-200",
+        RARE: "border-blue-100 bg-blue-50/30 text-blue-500 hover:border-blue-300 shadow-sm shadow-blue-900/5",
+        EPIC: "border-purple-100 bg-purple-50/40 text-purple-600 hover:border-purple-300 shadow-sm shadow-purple-900/5",
+        LEGENDARY: "border-orange-100 bg-orange-50/50 text-orange-700 hover:border-orange-300 shadow-lg shadow-orange-900/5 ring-1 ring-orange-100/10",
     };
 
     const hallOfFame = (user.badges || []).filter((b: any) => b.badge.rarity === 'LEGENDARY' || b.badge.rarity === 'EPIC');

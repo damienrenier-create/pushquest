@@ -26,6 +26,8 @@ export function getXPForReward(key: string, achievedAt?: Date | string): number 
 
     if (def.type === "COMPETITIVE") {
         xp = timeBonus;
+        // Boost Trinity streak (difficult to maintain)
+        if (def.key === "trinity") xp += 500;
     } else if (def.type === "LEGENDARY") {
         if (def.key === "unique_pushups_50") xp = 1000;
         else if (def.key === "unique_pushups_80") xp = 2500;
@@ -40,6 +42,17 @@ export function getXPForReward(key: string, achievedAt?: Date | string): number 
              xp = Math.min(Math.floor(def.threshold * 0.1), 10000); // 10% volume capped at 10k
         } else if (def.metricType === "MILESTONE_SET") {
             xp = 100;
+        } else if (def.key.startsWith("headhunter_")) {
+            // High boost for headhunters
+            if (def.key === "headhunter_1") xp = 500;
+            else if (def.key === "headhunter_3") xp = 1500;
+            else if (def.key === "headhunter_10") xp = 3500;
+            else if (def.key === "headhunter_50") xp = 7500;
+            else if (def.key === "headhunter_100") xp = 15000;
+        } else if (def.key === "trinity_gold") {
+            xp = 2500;
+        } else if (def.key === "trinity_ultimate") {
+            xp = 7500;
         } else {
             xp = 100;
         }
@@ -49,16 +62,16 @@ export function getXPForReward(key: string, achievedAt?: Date | string): number 
         else if (def.key === "survivor_90d") xp += 4000;
 
         // Tiered habit streaks
-        if (def.key.includes("_3")) xp += 50;
+        if (def.key.includes("_3") && !def.key.includes("headhunter")) xp += 50;
         else if (def.key.includes("_7")) xp += 150;
         else if (def.key.includes("_14")) xp += 400;
         else if (def.key.includes("_30")) xp += 1000;
 
         if (def.key.includes("sprinter_5")) xp += 150;
-        else if (def.key.includes("sprinter_10")) xp += 400;
+        else if (def.key.includes("sprinter_10") && !def.key.includes("headhunter")) xp += 400;
         else if (def.key.includes("sprinter_30")) xp += 1400;
         else if (def.key.includes("sprinter_50")) xp += 2900;
-        else if (def.key.includes("sprinter_100")) xp += 7400;
+        else if (def.key.includes("sprinter_100") && !def.key.includes("headhunter")) xp += 7400;
 
         // Torch Legacy (Base XP, bonus calc is in xp.ts but FAQ uses this for static display)
         if (def.key === "torch_legacy") xp = 500; 

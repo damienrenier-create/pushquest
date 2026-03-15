@@ -413,21 +413,21 @@ function FAQContent() {
                                             <span>{type === "COMPETITIVE" ? "Compétitifs" : type === "LEGENDARY" ? "Légendaires" : type === "MILESTONE" ? "Milestones" : "Spéciaux"}</span>
                                             <div className="h-px bg-gray-200 flex-1" />
                                         </div>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                                             {badges.map(badge => (
-                                                <div key={badge.key} id={`item-${badge.key}`} className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm hover:border-indigo-200 transition-all group flex flex-col justify-between scroll-mt-24">
+                                                <div key={badge.key} id={`item-${badge.key}`} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:border-indigo-200 transition-all group flex flex-col justify-between scroll-mt-24">
                                                     <div>
-                                                        <div className="flex items-center gap-3 mb-3">
-                                                            <span className="text-4xl group-hover:scale-110 transition-transform">{badge.emoji}</span>
-                                                            <div>
-                                                                <h4 className="font-black text-gray-900 uppercase text-xs italic leading-none">{badge.name}</h4>
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <span className="text-3xl group-hover:scale-110 transition-transform shrink-0">{badge.emoji}</span>
+                                                            <div className="min-w-0">
+                                                                <h4 className="font-black text-gray-900 uppercase text-[10px] italic leading-none truncate">{badge.name}</h4>
                                                                 <span className="text-[8px] font-black text-pink-500">+{getXPForReward(badge.key)} XP</span>
                                                             </div>
                                                         </div>
-                                                        <p className="text-[10px] font-bold text-gray-500 italic mb-4">"{badge.description}"</p>
+                                                        <p className="text-[9px] font-bold text-gray-500 italic mb-3 line-clamp-2">"{badge.description}"</p>
                                                     </div>
-                                                    <div className="bg-gray-50 rounded-2xl p-3 border border-gray-100 text-[9px] font-black text-gray-700 leading-tight">
-                                                        <span className="text-indigo-400 block uppercase mb-1">Condition :</span>
+                                                    <div className="bg-gray-50 rounded-xl p-2 border border-gray-100 text-[8px] font-black text-gray-700 leading-tight">
+                                                        <span className="text-indigo-400 block uppercase mb-0.5 text-[7px]">Condition :</span>
                                                         {badge.condition || "Secret"}
                                                     </div>
                                                 </div>

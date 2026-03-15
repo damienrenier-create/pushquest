@@ -5,6 +5,7 @@ import WallClient from "./WallClient";
 import GazetteXP from "./GazetteXP";
 import MoodFeed from "@/components/MoodFeed";
 import FeaturedBadge from "@/components/FeaturedBadge";
+import PossessionSection from "@/components/PossessionSection";
 
 export const metadata = {
     title: "Place Publique - Pompes entre potes",
@@ -30,6 +31,7 @@ export default async function WallPage() {
                 </div>
 
                 <FeaturedBadge />
+                <PossessionSection />
                 <MoodFeed />
                 <WallClient nickname={nickname} />
                 <GazetteXP />

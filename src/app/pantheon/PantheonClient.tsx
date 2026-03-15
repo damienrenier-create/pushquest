@@ -73,9 +73,9 @@ export default function PantheonClient({
     const [selectedEvent, setSelectedEvent] = useState<any>(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [localEvents, setLocalEvents] = useState(recentEvents);
-    const router = useRouter();
-
     const [selectedReward, setSelectedReward] = useState<any>(null);
+    const [dangerSearch, setDangerSearch] = useState("");
+    const router = useRouter();
 
     React.useEffect(() => {
         setLocalEvents(recentEvents);
@@ -132,6 +132,15 @@ export default function PantheonClient({
             return matchesSearch && matchesType;
         });
     }, [searchTerm, filterType, badgeDefinitions]);
+
+    // Filtered Danger List
+    const filteredDangerList = useMemo(() => {
+        return dangerList.filter(d => 
+            d.badgeName.toLowerCase().includes(dangerSearch.toLowerCase()) ||
+            d.holder.toLowerCase().includes(dangerSearch.toLowerCase()) ||
+            d.challenger.toLowerCase().includes(dangerSearch.toLowerCase())
+        );
+    }, [dangerSearch, dangerList]);
 
     // Current User's Virtual Status
     const userVirtualData = virtualizedData.find(v => v.userId === currentUser?.id);
@@ -282,35 +291,44 @@ export default function PantheonClient({
                         <div className="lg:col-span-7 flex flex-col gap-6">
 
                             {/* Menaces Imminentes */}
-                            <div className="bg-white rounded-3xl p-8 shadow-xl shadow-slate-200/50 border border-slate-100">
-                                <div className="flex items-center justify-between mb-6">
+                            <div className="bg-white rounded-3xl p-8 shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col h-full">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                                     <div className="flex items-center gap-3">
                                         <div className="p-2.5 bg-red-50 text-red-600 rounded-xl">
                                             <Shield size={20} />
                                         </div>
                                         <h2 className="text-lg font-black uppercase tracking-tight">Menaces de Vol</h2>
                                     </div>
-                                    {serverTime && <span className="text-[10px] font-bold text-slate-400 mt-1 block tracking-widest uppercase">Snapshot : {serverTime}</span>}
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                                        <input 
+                                            type="text"
+                                            placeholder="Filtrer..."
+                                            value={dangerSearch}
+                                            onChange={(e) => setDangerSearch(e.target.value)}
+                                            className="bg-slate-50 border border-slate-100 rounded-xl pl-9 pr-4 py-1.5 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-red-500/10 transition-all w-full sm:w-40"
+                                        />
+                                    </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {dangerList.length > 0 ? dangerList.map((danger, i) => (
-                                        <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-red-50/50 border border-red-100 group">
-                                            <div>
-                                                <p className="text-[10px] font-black text-red-600 uppercase mb-0.5">{danger.badgeName}</p>
-                                                <p className="text-xs text-slate-600 font-bold">
-                                                    Détenteur: <span className="text-slate-900">{danger.holder}</span>
+                                <div className="space-y-2 overflow-y-auto max-h-[300px] pr-2 custom-scrollbar flex-1">
+                                    {filteredDangerList.length > 0 ? filteredDangerList.map((danger, i) => (
+                                        <div key={i} className="flex items-center justify-between p-3 rounded-2xl bg-red-50/30 border border-red-100/50 group hover:bg-red-50 transition-colors">
+                                            <div className="min-w-0 pr-2">
+                                                <p className="text-[9px] font-black text-red-600 uppercase mb-0.5 truncate">{danger.badgeName}</p>
+                                                <p className="text-[10px] text-slate-600 font-bold truncate">
+                                                    <span className="opacity-60">Roi:</span> {danger.holder}
                                                 </p>
                                             </div>
-                                            <div className="text-right">
-                                                <p className="text-[10px] font-black text-red-400 uppercase">Écart: {danger.diff} <span className="text-[8px] text-red-300">({danger.currentValue} vs {danger.challengerValue})</span></p>
-                                                <p className="text-[11px] font-bold text-red-700">⚔️ {danger.challenger}</p>
+                                            <div className="text-right shrink-0">
+                                                <p className="text-[9px] font-black text-red-400 uppercase">Écart: {danger.diff}</p>
+                                                <p className="text-[10px] font-bold text-red-700">⚔️ {danger.challenger}</p>
                                             </div>
                                         </div>
                                     )) : (
-                                        <div className="md:col-span-2 py-6 text-center">
-                                            <CheckCircle2 className="mx-auto text-green-200 mb-2" size={32} />
-                                            <p className="text-slate-400 text-sm font-bold uppercase tracking-widest">Tous les rois dorment tranquilles</p>
+                                        <div className="py-10 text-center">
+                                            <CheckCircle2 className="mx-auto text-green-200 mb-2" size={24} />
+                                            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">RAS sur le front</p>
                                         </div>
                                     )}
                                 </div>
@@ -335,7 +353,95 @@ export default function PantheonClient({
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 mb-16">
+                {/* SECTION E: VITRINE DES CONCURRENTS (Moved up & Lightened) */}
+                <div id="vitrine" className="bg-white rounded-[3rem] p-10 border border-slate-100 shadow-xl shadow-slate-200/50 mb-16 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 rounded-full blur-[120px] opacity-40 -mr-32 -mt-32"></div>
+                    
+                    <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-10">
+                        <div>
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="p-2.5 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-200">
+                                    <Users size={20} />
+                                </div>
+                                <h2 className="text-3xl font-black uppercase tracking-tight text-slate-900">Vitrine des Concurrents</h2>
+                            </div>
+                            <p className="text-slate-500 font-medium text-sm">L'inventaire complet de la communauté. Cliquez sur un profil pour voir ses exploits.</p>
+                        </div>
+                    </div>
+
+                    <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {allUsers.map((user, i) => {
+                            const userXP = xpScores?.find(x => x.id === user.id);
+                            const userOwnerships = badgeOwnerships.filter(bo => bo.currentUserId === user.id && bo.badge?.type === 'COMPETITIVE');
+                            const virtuals = virtualizedData.find(v => v.userId === user.id)?.virtualBadges || {};
+                            const virtualScore = Object.values(virtuals).filter(Boolean).length;
+
+                            return (
+                                <Link
+                                    key={i}
+                                    href={`/u/${encodeURIComponent(user.nickname)}`}
+                                    className="bg-slate-50/50 border border-slate-100 p-5 rounded-3xl hover:bg-white hover:border-indigo-200 hover:shadow-lg transition-all group"
+                                >
+                                    <div className="flex items-start justify-between mb-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center font-black text-white text-sm shrink-0 shadow-md shadow-indigo-100">
+                                                {userXP ? userXP.emoji : user.nickname.charAt(0).toUpperCase()}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <h3 className="font-black text-slate-900 uppercase group-hover:text-indigo-600 transition-colors truncate text-sm">
+                                                    {userXP ? <span className="text-[10px] text-slate-400 font-bold mr-1" title={userXP.animal}>Lv.{userXP.level}</span> : null}
+                                                    {user.nickname}
+                                                </h3>
+                                                <div className="flex items-center gap-2 mt-0.5 mb-1">
+                                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{userOwnerships.length + virtualScore} Titre(s)</p>
+                                                    {userXP && <span className="text-[8px] font-black text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded uppercase"> {userXP.totalXP.toLocaleString('fr-FR')} XP</span>}
+                                                </div>
+                                                {userXP && (
+                                                    <div className="w-full max-w-[100px]" title={`Prochain niveau : Lv.${userXP.level + 1} ${userXP.nextAnimal} ${userXP.nextEmoji}`}>
+                                                        <div className="h-1 w-full bg-slate-200 rounded-full overflow-hidden">
+                                                            <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${userXP.progress}%` }} />
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-wrap gap-1.5 group-hover:cursor-help" title="Cliquez pour les détails">
+                                        {userOwnerships.slice(0, 4).map((bo, j) => (
+                                            <span
+                                                key={j}
+                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRewardClick(bo.badge?.key || ''); }}
+                                                className="text-base bg-white border border-slate-100 w-7 h-7 flex items-center justify-center rounded-lg hover:scale-125 hover:shadow-md transition-all cursor-pointer"
+                                                title={bo.badge?.name}
+                                            >
+                                                {bo.badge?.emoji}
+                                            </span>
+                                        ))}
+                                        {Object.entries(virtuals).filter(([_, v]) => !!v).slice(0, 4 - Math.min(4, userOwnerships.length)).map(([key, _]: [string, any], j) => {
+                                            const def = badgeDefinitions.find(d => d.key === key);
+                                            return (
+                                                <span
+                                                    key={`v-${j}`}
+                                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRewardClick(key); }}
+                                                    className="text-base bg-white border border-slate-100 w-7 h-7 flex items-center justify-center rounded-lg grayscale opacity-50 hover:grayscale-0 hover:opacity-100 transition-all hover:scale-125 hover:shadow-md cursor-pointer"
+                                                    title={def?.name}
+                                                >
+                                                    {def?.emoji}
+                                                </span>
+                                            );
+                                        })}
+                                        {(userOwnerships.length + virtualScore > 4) && (
+                                            <span className="text-[8px] font-black text-slate-400 flex items-center justify-center px-1">+{userOwnerships.length + virtualScore - 4}</span>
+                                        )}
+                                    </div>
+                                </Link>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     {/* SECTION B: MES DISTINCTIONS */}
                     <div className="lg:col-span-8">
                         <div className="flex items-center gap-3 mb-8">
@@ -594,94 +700,6 @@ export default function PantheonClient({
                     </div>
                 </div>
 
-                {/* SECTION E: VITRINE DES CONCURRENTS */}
-                <div id="vitrine" className="bg-slate-900 rounded-[3rem] p-12 text-white relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500 rounded-full blur-[120px] opacity-20 -mr-32 -mt-32"></div>
-                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-500 rounded-full blur-[100px] opacity-10 -ml-24 -mb-24"></div>
-
-                    <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-12">
-                        <div>
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className="p-2.5 bg-white/10 text-white rounded-xl backdrop-blur-md">
-                                    <Users size={20} />
-                                </div>
-                                <h2 className="text-3xl font-black uppercase tracking-tight">Vitrine des Concurrents</h2>
-                            </div>
-                            <p className="text-slate-400 font-medium">L'inventaire complet de la communauté. Cliquez sur un profil pour voir ses exploits.</p>
-                        </div>
-                    </div>
-
-                    <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {allUsers.map((user, i) => {
-                            const userXP = xpScores?.find(x => x.id === user.id);
-                            const userOwnerships = badgeOwnerships.filter(bo => bo.currentUserId === user.id && bo.badge?.type === 'COMPETITIVE');
-                            const virtuals = virtualizedData.find(v => v.userId === user.id)?.virtualBadges || {};
-                            const virtualScore = Object.values(virtuals).filter(Boolean).length;
-
-                            return (
-                                <Link
-                                    key={i}
-                                    href={`/u/${encodeURIComponent(user.nickname)}`}
-                                    className="bg-white/5 border border-white/10 backdrop-blur-md p-6 rounded-[2rem] hover:bg-white/10 hover:border-white/20 transition-all group"
-                                >
-                                    <div className="flex items-start justify-between mb-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center font-black text-sm shrink-0">
-                                                {userXP ? userXP.emoji : user.nickname.charAt(0).toUpperCase()}
-                                            </div>
-                                            <div>
-                                                <h3 className="font-black text-white uppercase group-hover:text-indigo-400 transition-colors">
-                                                    {userXP ? <span className="text-xs text-slate-400 font-bold mr-1.5" title={userXP.animal}>Lv.{userXP.level}</span> : null}
-                                                    {user.nickname}
-                                                </h3>
-                                                <div className="flex items-center gap-2 mt-0.5 mb-1.5">
-                                                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{userOwnerships.length + virtualScore} Titre(s)</p>
-                                                    {userXP && <span className="text-[8px] font-black text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded uppercase"> {userXP.totalXP.toLocaleString('fr-FR')} XP</span>}
-                                                </div>
-                                                {userXP && (
-                                                    <div className="w-full max-w-[120px]" title={`Prochain niveau : Lv.${userXP.level + 1} ${userXP.nextAnimal} ${userXP.nextEmoji}`}>
-                                                        <div className="h-1 w-full bg-slate-800/50 rounded-full overflow-hidden">
-                                                            <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${userXP.progress}%` }} />
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex flex-wrap gap-2 group-hover:cursor-help" title="Cliquez pour les détails">
-                                        {userOwnerships.slice(0, 3).map((bo, j) => (
-                                            <span
-                                                key={j}
-                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRewardClick(bo.badge?.key || ''); }}
-                                                className="text-lg bg-white/5 w-8 h-8 flex items-center justify-center rounded-lg hover:scale-125 transition-transform cursor-pointer"
-                                                title={bo.badge?.name}
-                                            >
-                                                {bo.badge?.emoji}
-                                            </span>
-                                        ))}
-                                        {Object.entries(virtuals).filter(([_, v]) => !!v).slice(0, 3).map(([key, _]: [string, any], j) => {
-                                            const def = badgeDefinitions.find(d => d.key === key);
-                                            return (
-                                                <span
-                                                    key={`v-${j}`}
-                                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRewardClick(key); }}
-                                                    className="text-lg bg-white/5 w-8 h-8 flex items-center justify-center rounded-lg grayscale opacity-50 hover:grayscale-0 hover:opacity-100 transition-all hover:scale-125 cursor-pointer"
-                                                    title={def?.name}
-                                                >
-                                                    {def?.emoji}
-                                                </span>
-                                            );
-                                        })}
-                                        {(userOwnerships.length + virtualScore > 6) && (
-                                            <span className="text-[9px] font-black text-slate-600 flex items-center justify-center px-1">+{userOwnerships.length + virtualScore - 6}</span>
-                                        )}
-                                    </div>
-                                </Link>
-                            );
-                        })}
-                    </div>
-                </div>
             </div>
 
             {/* Event Modal */}

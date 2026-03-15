@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Trophy, Timer, Sparkles } from "lucide-react";
 
 interface FeaturedBadgeData {
@@ -76,14 +77,17 @@ export default function FeaturedBadge() {
             
             <div className="relative flex flex-col sm:flex-row items-center gap-6">
                 {/* Badge Visual */}
-                <div className="relative flex-shrink-0">
-                    <div className="w-20 h-20 rounded-2xl bg-white shadow-inner flex items-center justify-center text-4xl border-2 border-current/10">
+                <Link 
+                    href={`/faq?tab=catalogue#item-${data.key}`}
+                    className="relative flex-shrink-0 group/badge"
+                >
+                    <div className="w-20 h-20 rounded-2xl bg-white shadow-inner flex items-center justify-center text-4xl border-2 border-current/10 transition-transform group-hover/badge:scale-110">
                         {data.emoji}
                     </div>
                     <div className="absolute -top-2 -right-2 bg-yellow-400 text-white p-1.5 rounded-lg shadow-sm">
                         <Sparkles size={16} fill="currentColor" />
                     </div>
-                </div>
+                </Link>
 
                 {/* Content */}
                 <div className="flex-grow text-center sm:text-left">
@@ -97,7 +101,7 @@ export default function FeaturedBadge() {
                         </span>
                     </div>
                     
-                    <p className="text-gray-900 font-bold text-lg mb-1">{data.name}</p>
+                    <Link href={`/faq?tab=catalogue#item-${data.key}`} className="text-gray-900 font-bold text-lg mb-1 hover:underline decoration-2 underline-offset-4">{data.name}</Link>
                     <p className="text-gray-500 text-xs font-medium leading-relaxed max-w-md">
                         {data.description}. <br/>
                         <span className="text-orange-600 font-black tracking-tight uppercase">Bonus: +50% XP sur ce badge !</span>

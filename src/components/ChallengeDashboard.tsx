@@ -829,7 +829,7 @@ export default function ChallengeDashboard() {
                                                 <div className="flex flex-col items-end gap-1">
                                                     {(pRec?.[ex]?.top3Volume || []).map((s: any, idx: number) => (
                                                         <div key={idx} className={`flex items-center gap-1.5 justify-end ${idx === 0 ? '' : 'opacity-60'}`}>
-                                                            <p className="text-[8px] font-bold text-gray-400 truncate max-w-[50px] uppercase tracking-tighter">{s.nickname}</p>
+                                                            <Link href={`/u/${encodeURIComponent(s.nickname || '')}`} className="text-[8px] font-bold text-gray-400 truncate max-w-[50px] uppercase tracking-tighter hover:text-blue-500 underline decoration-gray-200">{s.nickname}</Link>
                                                             <p className={`font-black text-gray-800 leading-none ${idx === 0 ? 'text-xs text-blue-600' : 'text-[10px]'}`}>{s.totalVolume}</p>
                                                             <span className="text-[8px]">{idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'}</span>
                                                         </div>
@@ -859,9 +859,9 @@ export default function ChallengeDashboard() {
                                 <button onClick={saveSally} className="h-14 px-8 bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-black rounded-2xl transition-all shadow-md">OK</button>
                             </div>
                             <div className="grid grid-cols-1 gap-2 mt-4 pt-4 border-t border-yellow-200">
-                                {(data?.sallyUp?.monthPodium || []).length > 0 ? data.sallyUp.monthPodium.map((p, i) => (
+                                {(data?.sallyUp?.monthPodium || []).length > 0 ? data.sallyUp.monthPodium.map((p: any, i: number) => (
                                     <div key={i} className="flex justify-between items-center px-4 py-2 bg-white/50 rounded-xl">
-                                        <span className="font-bold text-yellow-900">{i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉"} {p?.nickname || 'Anonyme'}</span>
+                                        <Link href={`/u/${encodeURIComponent(p?.nickname || '')}`} className="font-bold text-yellow-900 hover:underline">{i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉"} {p?.nickname || 'Anonyme'}</Link>
                                         <div className="text-right">
                                             <p className="font-black text-yellow-700 text-sm">{p?.reps ?? 0} reps</p>
                                         </div>
@@ -1039,20 +1039,22 @@ export default function ChallengeDashboard() {
                                     (data?.badges?.competitive?.events || []).slice(0, 15).map((ev: any) => (
                                         <div key={ev.id} className="bg-white/5 p-4 rounded-2xl border border-white/5 transition-all hover:bg-white/10 group flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                             <div className="flex gap-4 items-center">
-                                                <span className="text-3xl sm:text-4xl shrink-0 group-hover:scale-110 transition-transform">{ev.badge?.emoji}</span>
+                                                <span className="text-3xl sm:text-4xl shrink-0 group-hover:scale-110 transition-transform cursor-pointer" onClick={() => setRewardDetail({ ...ev.badge, type: 'Bataille', holder: ev.toUser?.nickname, achievedAt: ev.createdAt, currentValue: ev.newValue })}>
+                                                    {ev.badge?.emoji}
+                                                </span>
                                                 <div>
                                                     <p className="text-[11px] font-bold text-white leading-relaxed">
                                                         {ev.eventType === 'STEAL' ? (
                                                             <>
-                                                                <Link href={`/u/${encodeURIComponent(ev.toUser?.nickname || '')}`} className="text-orange-400 hover:underline">{ev.toUser?.nickname}</Link> a volé <span className="text-blue-400 cursor-pointer hover:bg-white/5 rounded px-1 transition-colors" onClick={() => setRewardDetail({ ...ev.badge, type: 'BADGE COMPÉTITIF', holder: ev.toUser?.nickname, achievedAt: ev.createdAt, currentValue: ev.newValue })}>[{ev.badge?.name}]</span> à <Link href={`/u/${encodeURIComponent(ev.fromUser?.nickname || '')}`} className="hover:underline">{ev.fromUser?.nickname}</Link>
+                                                                <Link href={`/u/${encodeURIComponent(ev.toUser?.nickname || '')}`} className="text-orange-400 hover:underline">{ev.toUser?.nickname}</Link> a volé <Link href={`/faq?tab=catalogue#item-${ev.badge?.key}`} className="text-blue-400 hover:underline">[{ev.badge?.name}]</Link> à <Link href={`/u/${encodeURIComponent(ev.fromUser?.nickname || '')}`} className="hover:underline">{ev.fromUser?.nickname}</Link>
                                                             </>
                                                         ) : ev.eventType === 'CLAIM' ? (
                                                             <>
-                                                                <Link href={`/u/${encodeURIComponent(ev.toUser?.nickname || '')}`} className="text-green-400 hover:underline">{ev.toUser?.nickname}</Link> a obtenu <span className="text-blue-400 cursor-pointer hover:bg-white/5 rounded px-1 transition-colors" onClick={() => setRewardDetail({ ...ev.badge, type: 'BADGE PERSONNEL', holder: ev.toUser?.nickname, achievedAt: ev.createdAt, currentValue: ev.newValue })}>[{ev.badge?.name}]</span>
+                                                                <Link href={`/u/${encodeURIComponent(ev.toUser?.nickname || '')}`} className="text-green-400 hover:underline">{ev.toUser?.nickname}</Link> a obtenu <Link href={`/faq?tab=catalogue#item-${ev.badge?.key}`} className="text-blue-400 hover:underline">[{ev.badge?.name}]</Link>
                                                             </>
                                                         ) : (
                                                             <>
-                                                                <Link href={`/u/${encodeURIComponent(ev.toUser?.nickname || '')}`} className="text-yellow-400 hover:underline">{ev.toUser?.nickname}</Link> a débloqué <span className="text-blue-400 cursor-pointer hover:bg-white/5 rounded px-1 transition-colors" onClick={() => setRewardDetail({ ...ev.badge, type: 'ÉVÉNEMENT', holder: ev.toUser?.nickname, achievedAt: ev.createdAt, currentValue: ev.newValue })}>[{ev.badge?.name}]</span>
+                                                                <Link href={`/u/${encodeURIComponent(ev.toUser?.nickname || '')}`} className="text-yellow-400 hover:underline">{ev.toUser?.nickname}</Link> a débloqué <Link href={`/faq?tab=catalogue#item-${ev.badge?.key}`} className="text-blue-400 hover:underline">[{ev.badge?.name}]</Link>
                                                             </>
                                                         )}
                                                     </p>

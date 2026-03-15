@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Send, Clock, CircleDashed, AlertTriangle } from "lucide-react";
 
 interface Message {
@@ -146,14 +147,17 @@ export default function WallClient({ nickname }: { nickname: string }) {
                                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-xs shadow-sm">
                                         {msg.nickname?.charAt(0).toUpperCase()}
                                     </div>
-                                    <div>
-                                        <p className="font-black text-sm text-gray-900 group-hover:text-blue-600 transition-colors uppercase tracking-tight">
-                                            {msg.nickname}
-                                        </p>
-                                        <p className="text-[10px] text-gray-400 font-bold uppercase">
-                                            {formatDate(msg.createdAt)}
-                                        </p>
-                                    </div>
+                                     <div>
+                                         <Link 
+                                             href={`/u/${encodeURIComponent(msg.nickname || '')}`}
+                                             className="font-black text-sm text-gray-900 hover:text-blue-600 transition-colors uppercase tracking-tight"
+                                         >
+                                             {msg.nickname}
+                                         </Link>
+                                         <p className="text-[10px] text-gray-400 font-bold uppercase">
+                                             {formatDate(msg.createdAt)}
+                                         </p>
+                                     </div>
                                 </div>
                                 <p className="text-gray-700 text-sm whitespace-pre-wrap ml-11">
                                     {msg.message}

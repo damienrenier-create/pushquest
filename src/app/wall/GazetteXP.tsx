@@ -3,6 +3,7 @@ import React from "react";
 import { calculateAllUsersXP } from "@/lib/xp";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import Link from "next/link";
 import GazetteLikeButton from "./GazetteLikeButton";
 
 function getTimeAgo(dateString: string) {
@@ -218,9 +219,9 @@ export default async function GazetteXP() {
                                     </div>
                                     <div className="flex-1 space-y-1">
                                         <div className="flex justify-between items-start gap-2">
-                                            <h3 className="font-bold text-white text-base leading-tight">
-                                                <span className={`${isLevelUp ? 'text-indigo-400' : 'text-red-400'} font-black`}>{nickname}</span> {isLevelUp ? 'a atteint le niveau' : 'a été rétrogradé au niveau'} <span className={`${isLevelUp ? 'text-yellow-400' : 'text-red-400'} font-black text-lg`}>{level}</span> !
-                                            </h3>
+                                             <h3 className="font-bold text-white text-base leading-tight">
+                                                 <Link href={`/u/${encodeURIComponent(nickname)}`} className={`${isLevelUp ? 'text-indigo-400' : 'text-red-400'} font-black hover:underline`}>{nickname}</Link> {isLevelUp ? 'a atteint le niveau' : 'a été rétrogradé au niveau'} <span className={`${isLevelUp ? 'text-yellow-400' : 'text-red-400'} font-black text-lg`}>{level}</span> !
+                                             </h3>
                                             <span className="text-[10px] font-bold text-slate-400 whitespace-nowrap bg-slate-800 px-2 py-1 rounded-full">
                                                 {timeAgo}
                                             </span>
