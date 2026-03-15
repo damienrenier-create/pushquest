@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { updateBadgesPostSave } from "@/lib/badges";
+import { updateBadgesPostSave, initBadges } from "@/lib/badges";
 import prisma from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +16,7 @@ export async function GET() {
         }
 
         console.log("Forcing full badge update via user:", someUser.nickname);
+        await initBadges();
         await updateBadgesPostSave(someUser.id);
 
         return NextResponse.json({ 

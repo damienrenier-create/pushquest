@@ -1,5 +1,5 @@
 import prisma from "./prisma";
-import { getRequiredRepsForDate, getTodayISO } from "./challenge";
+import { getRequiredRepsForDate, getTodayISO, isLastDayOfMonth } from "./challenge";
 
 import { BADGE_DEFINITIONS } from "@/config/badges";
 
@@ -20,67 +20,137 @@ export async function initBadges() {
 }
 
 export function getUserSummaries(allUsers: any[], allEvents: any[]) {
-    // 1. Calculate global sprinter stats (First to reach daily target)
-    const allDays = Array.from(new Set(allUsers.flatMap(u => (u.sets || []).map((s: any) => s.date)))).sort() as string[];
+    // 1. Pre-process sprinter stats more efficiently
     const sprinterCounts: Record<string, number> = {};
     allUsers.forEach(u => sprinterCounts[u.id] = 0);
 
-    allDays.forEach(date => {
+    // Group sets by date for global processing
+    const setsByDate: Record<string, any[]> = {};
+    allUsers.forEach(u => {
+        (u.sets || []).forEach((s: any) => {
+            if (!setsByDate[s.date]) setsByDate[s.date] = [];
+            setsByDate[s.date].push({ ...s, userId: u.id });
+        });
+    });
+
+    Object.entries(setsByDate).forEach(([date, daySets]) => {
         const req = getRequiredRepsForDate(date);
         if (req <= 0) return;
 
-        let earliestTime = Infinity;
-        let winnerId: string | null = null;
+        // Sort day sets once by creation time
+        daySets.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
-        allUsers.forEach(u => {
-            const daySets = (u.sets || []).filter((s: { date: string, createdAt: Date }) => s.date === date)
-                .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-            let sum = 0;
-            for (const s of daySets) {
-                sum += s.reps;
-                if (sum >= req) {
-                    const time = new Date(s.createdAt).getTime();
-                    if (time < earliestTime) {
-                        earliestTime = time;
-                        winnerId = u.id;
-                    }
-                    break;
-                }
+        const userProgress: Record<string, number> = {};
+        for (const s of daySets) {
+            userProgress[s.userId] = (userProgress[s.userId] || 0) + s.reps;
+            if (userProgress[s.userId] >= req) {
+                sprinterCounts[s.userId]++;
+                break; // Day winner found
             }
-        });
-
-        if (winnerId) {
-            sprinterCounts[winnerId]++;
         }
+    });
+
+    // 2. Process each user's summaries
+    const stealEventsByToUser: Record<string, any[]> = {};
+    allEvents.forEach(e => {
+        if (!stealEventsByToUser[e.toUserId]) stealEventsByToUser[e.toUserId] = [];
+        stealEventsByToUser[e.toUserId].push(e);
     });
 
     return allUsers.map((u: any) => {
         const sets = u.sets || [];
-        const pushups = sets.filter((s: any) => s.exercise === "PUSHUP");
-        const pullups = sets.filter((s: any) => s.exercise === "PULLUP");
-        const squats = sets.filter((s: any) => s.exercise === "SQUAT");
-
-        // Streaks & Bonus
         const days = Array.from(new Set(sets.map((s: any) => s.date))).sort() as string[];
-        let currentStreak = 0;
-        let maxBonusStreak = 0;
-        let perfectStreak = 0;
-        let maxPerfectStreak = 0;
+        const finesByDate: Record<string, any[]> = {};
+        (u.fines || []).forEach((f: any) => {
+            if (!finesByDate[f.date]) finesByDate[f.date] = [];
+            finesByDate[f.date].push(f);
+        });
+
+        // Statistics to compute in a single pass over days/sets
         let maxBonus = 0;
-        let monoExoStreak = 0;
+        let maxBonusStreak = 0;
+        let currentBonusStreak = 0;
+        let maxPerfectStreak = 0;
+        let currentPerfectStreak = 0;
         let maxMonoExoStreak = 0;
-        let triExoStreak = 0;
+        let currentMonoExoStreak = 0;
         let maxTriExoStreak = 0;
+        let currentTriExoStreak = 0;
+        
+        let totalPushups = 0;
+        let totalPullups = 0;
+        let totalSquats = 0;
+        let maxSetPushups = 0;
+        let maxSetPullups = 0;
+        let maxSetSquats = 0;
+        let maxSetAll = 0;
+        
+        const setsByExoTarget: Record<string, number> = {};
+        
+        let earlyStreakMax = 0;
+        let earlyStreakCur = 0;
+        let lateStreakMax = 0;
+        let lateStreakCur = 0;
+        let noonStreakMax = 0;
+        let noonStreakCur = 0;
+        let fineFreeStreakMax = 0;
+        let fineFreeStreakCur = 0;
+
+        const datePlayedMap: Record<string, boolean> = {};
 
         days.forEach((d: string) => {
             const daySets = sets.filter((s: any) => s.date === d);
-            const total = daySets.reduce((sum: number, s: any) => sum + s.reps, 0);
             const req = getRequiredRepsForDate(d);
-            const bonus = total - req;
+            let dayTotal = 0;
+            let dayPushups = 0;
+            let dayPullups = 0;
+            let daySquats = 0;
+            let hasEarly = false;
+            let hasLate = false;
+            let hasNoon = false;
 
-            const dayPushups = daySets.filter((s: any) => s.exercise === "PUSHUP").reduce((sum: number, s: any) => sum + s.reps, 0);
-            const dayPullups = daySets.filter((s: any) => s.exercise === "PULLUP").reduce((sum: number, s: any) => sum + s.reps, 0);
-            const daySquats = daySets.filter((s: any) => s.exercise === "SQUAT").reduce((sum: number, s: any) => sum + s.reps, 0);
+            datePlayedMap[d] = true;
+
+            daySets.forEach((s: any) => {
+                dayTotal += s.reps;
+                if (s.reps > maxSetAll) maxSetAll = s.reps;
+
+                const key = `${s.exercise}_${s.reps}`;
+                setsByExoTarget[key] = (setsByExoTarget[key] || 0) + 1;
+
+                const hour = new Date(s.createdAt).getHours();
+                const minutes = new Date(s.createdAt).getMinutes();
+                if (hour < 6) hasEarly = true;
+                if (hour >= 22) hasLate = true;
+                if (hour === 12 && minutes === 0) hasNoon = true;
+
+                if (s.exercise === "PUSHUP") {
+                    dayPushups += s.reps;
+                    totalPushups += s.reps;
+                    if (s.reps > maxSetPushups) maxSetPushups = s.reps;
+                } else if (s.exercise === "PULLUP") {
+                    dayPullups += s.reps;
+                    totalPullups += s.reps;
+                    if (s.reps > maxSetPullups) maxSetPullups = s.reps;
+                } else if (s.exercise === "SQUAT") {
+                    daySquats += s.reps;
+                    totalSquats += s.reps;
+                    if (s.reps > maxSetSquats) maxSetSquats = s.reps;
+                }
+            });
+
+            // Streaks
+            const bonus = dayTotal - req;
+            if (bonus > 0) {
+                currentBonusStreak++;
+                if (bonus > maxBonus) maxBonus = bonus;
+            } else { currentBonusStreak = 0; }
+            if (currentBonusStreak > maxBonusStreak) maxBonusStreak = currentBonusStreak;
+
+            if (dayTotal === req && req > 0) {
+                currentPerfectStreak++;
+            } else { currentPerfectStreak = 0; }
+            if (currentPerfectStreak > maxPerfectStreak) maxPerfectStreak = currentPerfectStreak;
 
             let activeExos = 0;
             if (dayPushups > 0) activeExos++;
@@ -88,38 +158,32 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             if (daySquats > 0) activeExos++;
 
             if (activeExos === 1) {
-                monoExoStreak++;
-                if (monoExoStreak > maxMonoExoStreak) maxMonoExoStreak = monoExoStreak;
-            } else { monoExoStreak = 0; }
+                currentMonoExoStreak++;
+            } else { currentMonoExoStreak = 0; }
+            if (currentMonoExoStreak > maxMonoExoStreak) maxMonoExoStreak = currentMonoExoStreak;
 
-            if (total > 0 && dayPushups >= 0.3 * total && dayPullups >= 0.3 * total && daySquats >= 0.3 * total) {
-                triExoStreak++;
-                if (triExoStreak > maxTriExoStreak) maxTriExoStreak = triExoStreak;
-            } else { triExoStreak = 0; }
+            if (dayTotal > 0 && dayPushups >= 0.3 * dayTotal && dayPullups >= 0.3 * dayTotal && daySquats >= 0.3 * dayTotal) {
+                currentTriExoStreak++;
+            } else { currentTriExoStreak = 0; }
+            if (currentTriExoStreak > maxTriExoStreak) maxTriExoStreak = currentTriExoStreak;
 
-            if (bonus > 0) {
-                currentStreak++;
-                if (bonus > maxBonus) maxBonus = bonus;
-            } else { currentStreak = 0; }
-            if (currentStreak > maxBonusStreak) maxBonusStreak = currentStreak;
+            // Time streaks
+            if (hasEarly) earlyStreakCur++; else earlyStreakCur = 0;
+            earlyStreakMax = Math.max(earlyStreakMax, earlyStreakCur);
+            if (hasLate) lateStreakCur++; else lateStreakCur = 0;
+            lateStreakMax = Math.max(lateStreakMax, lateStreakCur);
+            if (hasNoon) noonStreakCur++; else noonStreakCur = 0;
+            noonStreakMax = Math.max(noonStreakMax, noonStreakCur);
 
-            if (total === req && req > 0) {
-                perfectStreak++;
-                if (perfectStreak > maxPerfectStreak) maxPerfectStreak = perfectStreak;
-            } else { perfectStreak = 0; }
+            // Fine free streak
+            if (!finesByDate[d] || finesByDate[d].length === 0) fineFreeStreakCur++; else fineFreeStreakCur = 0;
+            fineFreeStreakMax = Math.max(fineFreeStreakMax, fineFreeStreakCur);
         });
 
-        // Steal count
-        const stealCount = allEvents.filter((e: any) => e.toUserId === u.id).length;
-
-        // Fines (Only paid ones for Mécène badges)
-        const paidFines = u.fines ? u.fines.filter((f: any) => f.status === 'paid') : [];
+        // Post-processing
+        const stealCount = stealEventsByToUser[u.id]?.length || 0;
+        const paidFines = (u.fines || []).filter((f: any) => f.status === 'paid');
         const totalFinesAmount = paidFines.reduce((sum: number, f: any) => sum + (f.amountEur || 2), 0);
-
-        const totalPushups = pushups.reduce((a: number, b: any) => a + b.reps, 0);
-        const totalPullups = pullups.reduce((a: number, b: any) => a + b.reps, 0);
-        const totalSquats = squats.reduce((a: number, b: any) => a + b.reps, 0);
-        const totalAll = sets.reduce((a: number, b: any) => a + b.reps, 0);
 
         let balanceRatio = 0;
         if (totalPushups + totalSquats >= 500 && totalPushups > 0 && totalSquats > 0) {
@@ -136,44 +200,22 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             maxMonoExoStreak,
             maxTriExoStreak,
             balanceRatio,
-            maxSetPushups: pushups.length ? Math.max(...pushups.map((s: any) => s.reps)) : 0,
-            maxSetPullups: pullups.length ? Math.max(...pullups.map((s: any) => s.reps)) : 0,
-            maxSetSquats: squats.length ? Math.max(...squats.map((s: any) => s.reps)) : 0,
-            maxSetAll: sets.length ? Math.max(...sets.map((s: any) => s.reps)) : 0,
+            maxSetPushups,
+            maxSetPullups,
+            maxSetSquats,
+            maxSetAll,
             totalFinesAmount,
             totalPushups,
             totalPullups,
             totalSquats,
-            totalAll,
-            setsByTarget: (exo: string, target: number) => sets.filter((s: any) => s.exercise === exo && s.reps === target).length,
-            // Time awards (Evolutive Streaks)
-            earlyStreak: days.reduce((acc: { cur: number; max: number }, d: string) => {
-                const daySets = sets.filter((s: any) => s.date === d);
-                if (daySets.some((s: any) => new Date(s.createdAt).getHours() < 6)) acc.cur++; else acc.cur = 0;
-                acc.max = Math.max(acc.max, acc.cur);
-                return acc;
-            }, { cur: 0, max: 0 }).max,
-            lateStreak: days.reduce((acc: { cur: number; max: number }, d: string) => {
-                const daySets = sets.filter((s: any) => s.date === d);
-                if (daySets.some((s: any) => new Date(s.createdAt).getHours() >= 22)) acc.cur++; else acc.cur = 0;
-                acc.max = Math.max(acc.max, acc.cur);
-                return acc;
-            }, { cur: 0, max: 0 }).max,
-            noonStreak: days.reduce((acc: { cur: number; max: number }, d: string) => {
-                const daySets = sets.filter((s: any) => s.date === d);
-                if (daySets.some((s: any) => {
-                    const dt = new Date(s.createdAt);
-                    return dt.getHours() === 12 && dt.getMinutes() === 0;
-                })) acc.cur++; else acc.cur = 0;
-                acc.max = Math.max(acc.max, acc.cur);
-                return acc;
-            }, { cur: 0, max: 0 }).max,
-
-            // Date awards (Soft conditions now)
+            totalAll: totalPushups + totalPullups + totalSquats,
+            setsByTarget: (exo: string, target: number) => setsByExoTarget[`${exo}_${target}`] || 0,
+            earlyStreak: earlyStreakMax,
+            lateStreak: lateStreakMax,
+            noonStreak: noonStreakMax,
             checkDatePlayed: (dateStr: string) => {
                 const target = dateStr.startsWith('-') ? "2026" + dateStr : dateStr;
-                const daySets = sets.filter((s: any) => s.date === target);
-                return daySets.length > 0;
+                return !!datePlayedMap[target];
             },
             hasStPatrickGold: () => {
                 const target = "2026-03-17";
@@ -188,12 +230,7 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             },
             hasStDamien: sets.some((s: any) => s.date.endsWith("-12-18")),
             hasStNicolas: sets.some((s: any) => s.date.endsWith("-12-06")),
-            fineFreeStreak: days.reduce((acc: { cur: number; max: number }, d: string) => {
-                const hasFine = u.fines?.some((f: any) => f.date === d);
-                if (hasFine) acc.cur = 0; else acc.cur++;
-                acc.max = Math.max(acc.max, acc.cur);
-                return acc;
-            }, { cur: 0, max: 0 }).max,
+            fineFreeStreak: fineFreeStreakMax,
             sprinterCount: sprinterCounts[u.id] || 0,
             headhunterCount: u.featuredClaimsCount || 0,
             getDayTotal: (date: string) => sets.filter((s: any) => s.date === date).reduce((sum: number, s: any) => sum + s.reps, 0),
@@ -220,14 +257,14 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
                     const exoTotal = daySets.filter((s: any) => s.exercise === exo).reduce((sum: number, s: any) => sum + s.reps, 0);
                     return exoTotal >= 3 * req;
                 }) && req > 0;
-            }
+            },
+            getDaySum: (date: string, exo: string) => sets.filter((s: any) => s.date === date && s.exercise === exo).reduce((sum: number, s: any) => sum + s.reps, 0),
+            getScaleReps: (date: string) => Array.from(new Set(sets.filter((s: any) => s.date === date).map((s: any) => s.reps))) as number[]
         };
     });
 }
 
 export async function updateBadgesPostSave(userId: string) {
-    await initBadges();
-
     const [allUsers, steals] = await Promise.all([
         (prisma as any).user.findMany({ where: { nickname: { not: 'modo' } }, include: { sets: true, fines: true, badges: true } }),
         (prisma as any).badgeEvent.findMany({ where: { eventType: "STEAL" } })
@@ -426,6 +463,7 @@ export async function updateBadgesPostSave(userId: string) {
                 }
             });
         } else if (def.metricType === "MONTH_TOP_VOLUME") {
+            if (!isLastDayOfMonth(getTodayISO())) continue;
             const currentMonth = getTodayISO().substring(0, 7); // "YYYY-MM"
             summaries.forEach((s: any) => {
                 const val = s.getMonthTotal(currentMonth);
@@ -434,6 +472,7 @@ export async function updateBadgesPostSave(userId: string) {
                 }
             });
         } else if (def.metricType === "MONTH_TOP_SET") {
+            if (!isLastDayOfMonth(getTodayISO())) continue;
             const currentMonth = getTodayISO().substring(0, 7);
             const exo = def.exerciseScope === "PUSHUPS" ? "PUSHUP" : def.exerciseScope === "PULLUPS" ? "PULLUP" : "SQUAT";
             summaries.forEach((s: any) => {
@@ -443,6 +482,7 @@ export async function updateBadgesPostSave(userId: string) {
                 }
             });
         } else if (def.metricType === "MONTH_TOTAL_EXO") {
+            if (!isLastDayOfMonth(getTodayISO())) continue;
             const currentMonth = getTodayISO().substring(0, 7);
             const exo = def.exerciseScope === "PUSHUPS" ? "PUSHUP" : def.exerciseScope === "PULLUPS" ? "PULLUP" : "SQUAT";
             summaries.forEach((s: any) => {
@@ -473,13 +513,8 @@ export async function updateBadgesPostSave(userId: string) {
         if (bestUser && bestValue > 0) {
             const isSameUser = ownership?.currentUserId === bestUser.id;
             
-            // Pro Logic: Reset comparison if it's a monthly badge and month has changed
-            const currentMonth = getTodayISO().substring(0, 7);
-            const ownershipMonth = ownership?.achievedAt ? new Date(ownership.achievedAt).toISOString().substring(0, 7) : null;
-            const isMonthlyMetric = def.metricType.startsWith("MONTH_");
-            const isDifferentMonth = isMonthlyMetric && ownershipMonth !== currentMonth;
-
-            const isBetterValue = isDifferentMonth || bestValue > (ownership?.currentValue || 0);
+            // Historical Record Logic: Only award if strictly better than the current record
+            const isBetterValue = bestValue > (ownership?.currentValue || 0);
 
             if (isSameUser && !isBetterValue) continue;
 

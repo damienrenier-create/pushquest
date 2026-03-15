@@ -148,76 +148,88 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[])
 
     const summaries = getUserSummaries(users, []);
 
-    // 1. Gather Global Records
+    // 1. Gather Global Records from summaries
     let maxVolDay = 0, maxVolDayUser: string | null = null;
     let maxVolMonth = 0, maxVolMonthUser: string | null = null;
     let maxVolYear = 0, maxVolYearUser: string | null = null;
 
     const now = new Date();
     const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const currentYearPrefix = `${now.getFullYear()}`;
-    const todayStr = now.toISOString().split("T")[0];
+    const todayISO = now.toISOString().split("T")[0];
 
-    // Compute Volumetrics first to find Record Holders
-    users.forEach(u => {
-        const sets = u.sets || [];
-        const volDay = sets.filter((s: any) => s.date === todayStr).reduce((a: any, b: any) => a + b.reps, 0);
-        const volMonth = sets.filter((s: any) => s.date.startsWith(currentMonthPrefix)).reduce((a: any, b: any) => a + b.reps, 0);
-        const volYear = sets.filter((s: any) => s.date.startsWith(currentYearPrefix)).reduce((a: any, b: any) => a + b.reps, 0);
+    summaries.forEach(s => {
+        const volDay = s.getDayTotal(todayISO);
+        const volMonth = s.getMonthTotal(currentMonthPrefix);
+        const volYear = s.totalAll; 
 
-        if (volDay > maxVolDay) { maxVolDay = volDay; maxVolDayUser = u.id; }
-        if (volMonth > maxVolMonth) { maxVolMonth = volMonth; maxVolMonthUser = u.id; }
-        if (volYear > maxVolYear) { maxVolYear = volYear; maxVolYearUser = u.id; }
+        if (volDay > maxVolDay) { maxVolDay = volDay; maxVolDayUser = s.id; }
+        if (volMonth > maxVolMonth) { maxVolMonth = volMonth; maxVolMonthUser = s.id; }
+        if (volYear > maxVolYear) { maxVolYear = volYear; maxVolYearUser = s.id; }
     });
 
     // 2. Compute specific XP for each user
     const xpUserMap = new Map();
 
     users.forEach(u => {
+        const summary = summaries.find(s => s.id === u.id);
+        if (!summary) return;
+
         let totalXP = 0;
         const sets = u.sets || [];
-        const summary = summaries.find(s => s.id === u.id);
-        const pushups = sets.filter((s: any) => s.exercise === "PUSHUP").reduce((sum: number, s: any) => sum + s.reps, 0);
-        const pullups = sets.filter((s: any) => s.exercise === "PULLUP").reduce((sum: number, s: any) => sum + s.reps, 0);
-        const squats = sets.filter((s: any) => s.exercise === "SQUAT").reduce((sum: number, s: any) => sum + s.reps, 0);
-
-        const league = u.league || "POMPES";
+        
         const marvinBonusDate = "2026-03-08";
-        const isMarvinDay = todayStr === marvinBonusDate;
+        const isMarvinDay = todayISO === marvinBonusDate;
 
-        let pushupsXPContribution = 0;
-        let pullupsXPContribution = 0;
-        let squatsXPContribution = 0;
-
-        if (league !== "GAINAGE") {
-            pushupsXPContribution = pushups * (isMarvinDay ? 2 : 1);
-            pullupsXPContribution = pullups * (isMarvinDay ? 6 : 3);
-            squatsXPContribution = squats * (isMarvinDay ? 2 : 1);
-            totalXP += pushupsXPContribution + pullupsXPContribution + squatsXPContribution;
-        }
+        let pushupsXPContribution = summary.totalPushups * (isMarvinDay ? 2 : 1);
+        let pullupsXPContribution = summary.totalPullups * (isMarvinDay ? 6 : 3);
+        let squatsXPContribution = summary.totalSquats * (isMarvinDay ? 2 : 1);
+        totalXP += pushupsXPContribution + pullupsXPContribution + squatsXPContribution;
 
         // B. Régularité et Flex par Jour
-        const days = Array.from(new Set(sets.map((s: any) => s.date))).sort() as string[];
-        days.forEach(d => {
-            const daySets = sets.filter((s: any) => s.date === d);
-            const total = daySets.reduce((sum: number, s: any) => sum + s.reps, 0);
+        const daysWithActivity = Array.from(new Set(sets.map((s: any) => s.date))).sort() as string[];
+        daysWithActivity.forEach(d => {
+            const dayTotal = summary.getDayTotal(d);
             const req = getRequiredRepsForDate(d);
 
-            if (req > 0 && total >= req) {
-                if (total === req) {
+            if (req > 0 && dayTotal >= req) {
+                if (dayTotal === req) {
                     totalXP += 200; // Jour parfait
                 } else {
                     totalXP += 100; // Jour validé
-                    const surplus = total - req;
+                    const surplus = dayTotal - req;
                     const step10Percent = Math.max(1, Math.floor(req * 0.1));
                     let flexXP = 0;
                     for (let i = 0; i < surplus; i++) {
                         const tier = Math.floor(i / step10Percent);
                         flexXP += (tier + 1);
                     }
-                    totalXP += flexXP;
+                    totalXP += Math.min(flexXP, 1000); // Flex XP capped at 1000 per day
                 }
+                
+                // Specific Event XP
                 if (d === marvinBonusDate) totalXP += 500;
+                
+                // --- Chronological/Surgical Event Logic ---
+                if (d === "2026-03-20" || d === "2026-09-22") { // Equinoxes
+                    const p = summary.getDaySum(d, "PUSHUP");
+                    const s = summary.getDaySum(d, "SQUAT");
+                    if (p > 0 && p === s) totalXP += 250; 
+                }
+                if (d === "2026-04-05") { // Pâques
+                    const dayReps = summary.getScaleReps(d);
+                    if (dayReps.includes(10) && dayReps.includes(20) && dayReps.includes(30)) totalXP += 750;
+                }
+                if (d === "2026-06-21" && dayTotal >= 900) totalXP += 500; // Solstice Eté
+                if (d === "2026-12-06" && dayTotal % 10 === 6) totalXP += 500; // St Nicolas
+                if (d === "2026-12-21") { // Solstice Hiver
+                    const hoursWithReps = new Set(sets.filter((s:any) => s.date === d).map((s:any) => new Date(s.createdAt).getHours()));
+                    if (hoursWithReps.size >= 12) totalXP += 500;
+                }
+                if (d === "2026-12-25") { // Noël
+                    const dayReps = summary.getScaleReps(d);
+                    const hasScale = [1,2,3,4,5,6,7,8,9,10,11,12].every(n => dayReps.includes(n));
+                    if (hasScale) totalXP += 2000;
+                }
             }
         });
 
@@ -233,39 +245,41 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[])
                 if (def.type === "COMPETITIVE") {
                     badgeXP = timeBonus;
                 } else if (def.type === "LEGENDARY") {
-                    if (def.key === "unique_pushups_50") badgeXP = 1000;
-                    if (def.key === "unique_pushups_80") badgeXP = 2500;
-                    if (def.key === "unique_pushups_100") badgeXP = 5000;
-                    if (def.key === "legendary_pullups_20") badgeXP = 3000;
-                    if (def.key === "legendary_pullups_30") badgeXP = 7500;
-                    if (def.key === "legendary_squats_150") badgeXP = 2000;
-                    if (def.key === "legendary_squats_300") badgeXP = 8000;
+                    if (def.key.includes("pushups_50")) badgeXP = 1000;
+                    else if (def.key.includes("pushups_80")) badgeXP = 2500;
+                    else if (def.key.includes("pushups_100")) badgeXP = 5000;
+                    else if (def.key.includes("pullups_20")) badgeXP = 3000;
+                    else if (def.key.includes("pullups_30")) badgeXP = 7500;
+                    else if (def.key.includes("squats_150")) badgeXP = 2000;
+                    else if (def.key.includes("squats_300")) badgeXP = 8000;
+                    else if (def.key === "murph_hero") badgeXP = 2500;
                 } else if (def.type === "MILESTONE") {
                     if (def.metricType === "MILESTONE_TOTAL" && def.threshold) {
-                        badgeXP = Math.floor(def.threshold * 0.25);
-                    } else if (def.metricType === "MILESTONE_SET") {
-                        badgeXP = 100;
+                        badgeXP = Math.min(Math.floor(def.threshold * 0.1), 10000); 
                     } else {
                         badgeXP = 100;
                     }
 
-                    if (def.key === "survivor_15d") badgeXP += 400; // +100 base = 500 total
-                    if (def.key === "survivor_30d") badgeXP += 1400;
-                    if (def.key === "survivor_60d") badgeXP += 3400;
-                    if (def.key === "survivor_90d") badgeXP += 4900;
-                    if (def.key === "survivor_120d") badgeXP += 9900;
+                    if (def.key === "survivor_30d") badgeXP += 1000;
+                    if (def.key === "survivor_90d") badgeXP += 4000;
 
-                    if (def.key === "sprinter_1") badgeXP += 0;
-                    if (def.key === "sprinter_5") badgeXP += 150;
-                    if (def.key === "sprinter_10") badgeXP += 400;
-                    if (def.key === "sprinter_30") badgeXP += 1400;
-                    if (def.key === "sprinter_50") badgeXP += 2900;
-                    if (def.key === "sprinter_100") badgeXP += 7400;
+                    if (def.key.includes("_3")) badgeXP += 50;
+                    if (def.key.includes("_7")) badgeXP += 150;
+                    if (def.key.includes("_14")) badgeXP += 400;
+                    if (def.key.includes("_30")) badgeXP += 1000;
+
+                    if (def.key === "torch_legacy" && b.currentValue) {
+                        badgeXP += b.currentValue * 50;
+                    }
                 } else if (def.type === "EVENT") {
                     badgeXP = timeBonus;
+                    if (def.key.includes("st_kevin") || def.key.includes("st_thomas") || def.key.includes("st_damien") || def.key.includes("st_xavier")) {
+                         badgeXP += 500;
+                    }
+                    if (def.key === "sally_participation") badgeXP = 250;
+                    if (def.key === "sally_podium_1") badgeXP = 1000;
                 }
 
-                // Headhunter XP Bonus (50% extra if featured)
                 if (featuredBadgeKey === def.key) {
                     badgeXP += Math.floor(badgeXP * 0.5);
                 }
@@ -275,8 +289,7 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[])
         });
 
         // D. Fines
-        const finesAmount = summary ? summary.totalFinesAmount : 0;
-        totalXP += (finesAmount * 50);
+        totalXP += (summary.totalFinesAmount * 50);
 
         // E. Records Temporels Volatiles
         if (u.id === maxVolDayUser) totalXP += 250;
@@ -310,7 +323,7 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[])
             progress: Math.floor(progress),
             details: {
                 repsXP: pushupsXPContribution + pullupsXPContribution + squatsXPContribution,
-                finesXP: (finesAmount * 50),
+                finesXP: (summary.totalFinesAmount * 50),
                 recordsXP: (u.id === maxVolDayUser ? 250 : 0) + (u.id === maxVolMonthUser ? 1000 : 0) + (u.id === maxVolYearUser ? 2500 : 0),
                 manualXP
             }

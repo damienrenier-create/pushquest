@@ -30,13 +30,14 @@ export function getXPForReward(key: string, achievedAt?: Date | string): number 
         if (def.key === "unique_pushups_50") xp = 1000;
         else if (def.key === "unique_pushups_80") xp = 2500;
         else if (def.key === "unique_pushups_100") xp = 5000;
-        else if (def.key === "legendary_pullups_20") xp = 3000;
-        else if (def.key === "legendary_pullups_30") xp = 7500;
-        else if (def.key === "legendary_squats_150") xp = 2000;
-        else if (def.key === "legendary_squats_300") xp = 8000;
+        else if (def.key.includes("pullups_20")) xp = 3000;
+        else if (def.key.includes("pullups_30")) xp = 7500;
+        else if (def.key.includes("squats_150")) xp = 2000;
+        else if (def.key.includes("squats_300")) xp = 8000;
+        else if (def.key === "murph_hero") xp = 2500;
     } else if (def.type === "MILESTONE") {
         if (def.metricType === "MILESTONE_TOTAL" && def.threshold) {
-            xp = Math.floor(def.threshold * 0.25);
+             xp = Math.min(Math.floor(def.threshold * 0.1), 10000); // 10% volume capped at 10k
         } else if (def.metricType === "MILESTONE_SET") {
             xp = 100;
         } else {
@@ -44,31 +45,31 @@ export function getXPForReward(key: string, achievedAt?: Date | string): number 
         }
 
         // Special survivors & sprinters
-        if (def.key === "survivor_15d") xp += 500;
-        else if (def.key === "survivor_30d") xp += 1500;
-        else if (def.key === "survivor_60d") xp += 3500;
-        else if (def.key === "survivor_90d") xp += 5000;
-        else if (def.key === "survivor_120d") xp += 10000;
-        else if (def.key === "sprinter_1") xp += 100;
-        else if (def.key === "sprinter_5") xp += 250;
-        else if (def.key === "sprinter_10") xp += 500;
-        else if (def.key === "sprinter_30") xp += 1500;
-        else if (def.key === "sprinter_50") xp += 3000;
-        else if (def.key === "sprinter_100") xp += 7500;
-        else if (def.key === "mecene_50") xp = 200;
-        else if (def.key === "mecene_100") xp = 400;
-        else if (def.key === "early_bird_1" || def.key === "night_owl_1") xp = 100;
-        else if (def.key === "early_bird_3" || def.key === "night_owl_3") xp = 150;
-        else if (def.key === "early_bird_7" || def.key === "night_owl_7") xp = 300;
-        else if (def.key === "early_bird_30" || def.key === "night_owl_30") xp = 500;
+        if (def.key === "survivor_30d") xp += 1000;
+        else if (def.key === "survivor_90d") xp += 4000;
+
+        // Tiered habit streaks
+        if (def.key.includes("_3")) xp += 50;
+        else if (def.key.includes("_7")) xp += 150;
+        else if (def.key.includes("_14")) xp += 400;
+        else if (def.key.includes("_30")) xp += 1000;
+
+        if (def.key.includes("sprinter_5")) xp += 150;
+        else if (def.key.includes("sprinter_10")) xp += 400;
+        else if (def.key.includes("sprinter_30")) xp += 1400;
+        else if (def.key.includes("sprinter_50")) xp += 2900;
+        else if (def.key.includes("sprinter_100")) xp += 7400;
+
+        // Torch Legacy (Base XP, bonus calc is in xp.ts but FAQ uses this for static display)
+        if (def.key === "torch_legacy") xp = 500; 
     } else if (def.type === "EVENT") {
         if (def.key === "april_fools_1") xp = 1000;
-        else if (def.key === "april_fools_2") xp = 700;
-        else if (def.key === "april_fools_3") xp = 500;
-        else if (def.key === "april_fools_4") xp = 300;
-        else if (def.key === "april_fools_5") xp = 150;
-        else if (def.key === "april_fools_6") xp = 50;
         else if (def.key === "st_marvin") xp = 1500;
+        else if (def.key.includes("st_kevin") || def.key.includes("st_thomas") || def.key.includes("st_damien") || def.key.includes("st_xavier")) {
+            xp = timeBonus + 500;
+        } else if (def.key === "sally_participation") xp = 250;
+        else if (def.key === "sally_podium_1") xp = 1000;
+        else if (def.key.includes("equinox") || def.key.includes("solstice")) xp = 250;
         else xp = timeBonus;
     }
 
