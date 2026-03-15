@@ -33,6 +33,13 @@ body {
     animation: gradient-x 3s ease infinite;
     background-size: 200% 200%;
   }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }
 
 @keyframes bounce-slow {

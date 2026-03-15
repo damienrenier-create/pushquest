@@ -87,49 +87,49 @@ function FAQContent() {
     }, [searchParams]);
 
     return (
-        <main className="min-h-screen bg-gray-50 py-12 px-4 pb-24">
-            <div className="max-w-3xl mx-auto space-y-12">
+        <main className="min-h-screen bg-gray-50 py-6 sm:py-12 px-3 sm:px-4 pb-24">
+            <div className="max-w-3xl mx-auto space-y-6 sm:space-y-12">
                 {/* Header */}
                 <div className="text-center space-y-4">
                     <div className="inline-block p-3 bg-indigo-100 rounded-2xl text-indigo-600 mb-2">
                         <Info size={32} />
                     </div>
-                    <h1 className="text-4xl sm:text-5xl font-black text-gray-900 uppercase italic tracking-tighter leading-none">
+                    <h1 className="text-2xl sm:text-5xl font-black text-gray-900 uppercase italic tracking-tight sm:tracking-tighter leading-tight sm:leading-none px-2">
                         Guide Suprême du Pompes App
                     </h1>
-                    <p className="text-gray-500 font-bold text-sm uppercase tracking-widest">
+                    <p className="text-gray-500 font-bold text-[9px] sm:text-sm uppercase tracking-widest px-4">
                         Règles, XP, Badges et Hiérarchie Animale
                     </p>
                 </div>
 
                 {/* Tabs Navigation */}
-                <div className="flex bg-white p-2 rounded-3xl shadow-sm border border-gray-100 gap-2">
+                <div className="flex bg-white p-1.5 sm:p-2 rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 gap-1 sm:gap-2 overflow-x-auto no-scrollbar scroll-smooth w-full">
                     <button
                         onClick={() => setActiveTab('rules')}
-                        className={`flex-1 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2 ${activeTab === 'rules' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}
+                        className={`flex-none sm:flex-1 px-5 sm:px-0 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-black uppercase tracking-widest text-[10px] sm:text-xs transition-all flex items-center justify-center gap-2 whitespace-nowrap ${activeTab === 'rules' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}
                     >
-                        <Zap size={16} />
-                        Règles
+                        <Zap size={14} className="shrink-0" />
+                        <span>Règles</span>
                     </button>
                     <button
                         onClick={() => setActiveTab('bestiary')}
-                        className={`flex-1 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2 ${activeTab === 'bestiary' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}
+                        className={`flex-none sm:flex-1 px-4 sm:px-0 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-black uppercase tracking-widest text-[10px] sm:text-xs transition-all flex items-center justify-center gap-2 whitespace-nowrap ${activeTab === 'bestiary' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}
                     >
-                        <Shield size={16} />
+                        <Shield size={14} />
                         Bestiaire
                     </button>
                     <button
                         onClick={() => setActiveTab('catalogue')}
-                        className={`flex-1 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2 ${activeTab === 'catalogue' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}
+                        className={`flex-none sm:flex-1 px-4 sm:px-0 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-black uppercase tracking-widest text-[10px] sm:text-xs transition-all flex items-center justify-center gap-2 whitespace-nowrap ${activeTab === 'catalogue' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}
                     >
-                        <BookOpen size={16} />
+                        <BookOpen size={14} />
                         Catalogue
                     </button>
                     <button
                         onClick={() => setActiveTab('news')}
-                        className={`flex-1 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2 ${activeTab === 'news' ? 'bg-pink-600 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}
+                        className={`flex-none sm:flex-1 px-4 sm:px-0 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-black uppercase tracking-widest text-[10px] sm:text-xs transition-all flex items-center justify-center gap-2 whitespace-nowrap ${activeTab === 'news' ? 'bg-pink-600 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}
                     >
-                        <Zap size={16} />
+                        <Zap size={14} />
                         Nouveautés
                     </button>
                 </div>
@@ -137,10 +137,10 @@ function FAQContent() {
                 {activeTab === 'rules' && (
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-10">
                         {/* Gain d'XP de base */}
-                        <section className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100 space-y-6">
-                            <div className="flex items-center gap-3 border-b border-gray-50 pb-4">
+                        <section className="bg-white rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-8 shadow-sm border border-gray-100 space-y-4 sm:space-y-6">
+                            <div className="flex items-center gap-3 border-b border-gray-50 pb-3 sm:pb-4">
                                 <Zap className="text-yellow-500" size={24} />
-                                <h2 className="text-2xl font-black uppercase italic tracking-tighter">Gain d'XP de base</h2>
+                                <h2 className="text-xl sm:text-2xl font-black uppercase italic tracking-tighter">Gain d'XP de base</h2>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <div className="p-4 bg-blue-50 rounded-2xl text-center">
@@ -274,15 +274,22 @@ function FAQContent() {
                                 <h2 className="text-2xl font-black uppercase italic tracking-tighter">Valeurs des Badges</h2>
                             </div>
                             <div className="grid grid-cols-1 gap-4 text-sm">
-                                <div className="p-5 border border-gray-100 rounded-3xl flex flex-col group hover:bg-yellow-50 transition-colors">
+                                <div className="p-4 sm:p-5 border border-gray-100 rounded-2xl sm:rounded-3xl flex flex-col group hover:bg-yellow-50 transition-colors">
                                     <div className="flex justify-between items-center mb-3">
-                                        <h4 className="font-black text-gray-900 uppercase tracking-tight">Compétitifs 🏅</h4>
-                                        <span className="text-xs font-black text-yellow-600 bg-yellow-100 px-3 py-1 rounded-full">Variable</span>
+                                        <h4 className="font-black text-gray-900 uppercase tracking-tight text-xs sm:text-sm">Compétitifs 🏅</h4>
+                                        <span className="text-[9px] sm:text-xs font-black text-yellow-600 bg-yellow-100 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full">Variable</span>
                                     </div>
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[8px] font-black text-yellow-800 uppercase tabular-nums">
-                                         <span>🔹 T1 : 500</span> <span>🔹 Avr : 650</span> <span>🔹 Mai : 800</span> <span>🔹 Juin : 1000</span>
-                                         <span>🔹 Juil : 1250</span> <span>🔹 Août : 1500</span> <span>🔹 Sept : 1800</span> <span>🔹 Oct : 2200</span>
-                                         <span className="col-span-2">🔹 Nov : 2600</span> <span className="col-span-2 text-yellow-900 ring-1 ring-yellow-300 p-1 text-center">🔥 Déc : 3000</span>
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 text-[10px] font-black text-yellow-800 uppercase tabular-nums">
+                                         <div className="flex justify-between"><span>🔹 T1</span><span>500</span></div>
+                                         <div className="flex justify-between"><span>🔹 Avr</span><span>650</span></div>
+                                         <div className="flex justify-between"><span>🔹 Mai</span><span>800</span></div>
+                                         <div className="flex justify-between"><span>🔹 Juin</span><span>1000</span></div>
+                                         <div className="flex justify-between"><span>🔹 Juil</span><span>1250</span></div>
+                                         <div className="flex justify-between"><span>🔹 Août</span><span>1500</span></div>
+                                         <div className="flex justify-between"><span>🔹 Sept</span><span>1800</span></div>
+                                         <div className="flex justify-between"><span>🔹 Oct</span><span>2200</span></div>
+                                         <div className="flex justify-between col-span-2"><span>🔹 Nov</span><span>2600</span></div>
+                                         <div className="flex justify-between col-span-2 text-yellow-900 ring-1 ring-yellow-300 p-1 text-center bg-yellow-400/10 rounded-lg"><span>🔥 Déc</span><span>3000 XP</span></div>
                                     </div>
                                 </div>
                                 <div className="p-5 border border-gray-100 rounded-3xl flex justify-between items-center bg-gray-50/50">
@@ -408,27 +415,57 @@ function FAQContent() {
                                 );
                                 if (badges.length === 0) return null;
                                 return (
-                                    <div key={type} className="space-y-6">
+                                    <div key={type} className="space-y-8">
                                         <div className="flex items-center gap-4 px-2 font-black uppercase italic tracking-tighter text-gray-900 text-lg">
                                             <span>{type === "COMPETITIVE" ? "Compétitifs" : type === "LEGENDARY" ? "Légendaires" : type === "MILESTONE" ? "Milestones" : "Spéciaux"}</span>
                                             <div className="h-px bg-gray-200 flex-1" />
                                         </div>
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                                        <div className="grid grid-cols-1 gap-6">
                                             {badges.map(badge => (
-                                                <div key={badge.key} id={`item-${badge.key}`} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:border-indigo-200 transition-all group flex flex-col justify-between scroll-mt-24">
-                                                    <div>
-                                                        <div className="flex items-center gap-2 mb-2">
-                                                            <span className="text-3xl group-hover:scale-110 transition-transform shrink-0">{badge.emoji}</span>
-                                                            <div className="min-w-0">
-                                                                <h4 className="font-black text-gray-900 uppercase text-[10px] italic leading-none truncate">{badge.name}</h4>
-                                                                <span className="text-[8px] font-black text-pink-500">+{getXPForReward(badge.key)} XP</span>
+                                                <div 
+                                                    key={badge.key} 
+                                                    id={`item-${badge.key}`} 
+                                                    className={`group bg-white rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 shadow-sm border-2 transition-all hover:shadow-xl scroll-mt-24 ${badge.rarity === 'LEGENDARY' ? 'border-orange-100/50 hover:border-orange-200' : badge.rarity === 'EPIC' ? 'border-purple-100/50 hover:border-purple-200' : 'border-gray-50 hover:border-indigo-100'}`}
+                                                >
+                                                    <div className="flex flex-col sm:flex-row gap-6 sm:gap-10">
+                                                        <div className={`w-24 h-24 sm:w-32 sm:h-32 rounded-3xl sm:rounded-[2.5rem] flex items-center justify-center text-5xl sm:text-7xl shadow-inner shrink-0 ${badge.rarity === 'LEGENDARY' ? 'bg-orange-50/50' : badge.rarity === 'EPIC' ? 'bg-purple-50/50' : 'bg-gray-50'}`}>
+                                                            {badge.emoji}
+                                                        </div>
+                                                        <div className="flex-1 space-y-4 sm:space-y-6">
+                                                            <div className="space-y-2">
+                                                                <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+                                                                    <h3 className="text-xl sm:text-3xl font-black text-gray-900 uppercase italic tracking-tighter">{badge.name}</h3>
+                                                                    <span className={`px-3 py-1 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest ${badge.rarity === 'LEGENDARY' ? 'bg-orange-600 text-white' : badge.rarity === 'EPIC' ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                                                                        {badge.rarity} {badge.isUnique ? "(UNIQUE)" : ""}
+                                                                    </span>
+                                                                </div>
+                                                                <p className="text-gray-500 font-medium italic text-sm sm:text-lg leading-relaxed">"{badge.description}"</p>
+                                                            </div>
+
+                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                                                                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-start gap-4">
+                                                                    <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+                                                                        <Trophy size={16} />
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest leading-none mb-1">Condition d'obtention</p>
+                                                                        <p className="text-xs font-bold text-gray-700">{badge.condition || "Secret"}</p>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="bg-yellow-50/50 p-4 rounded-2xl border border-yellow-100/50 flex items-start gap-4">
+                                                                    <div className="w-8 h-8 rounded-lg bg-yellow-100 text-yellow-700 flex items-center justify-center shrink-0">
+                                                                        <Zap size={16} />
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="text-[10px] font-black text-yellow-600 uppercase tracking-widest leading-none mb-1">Valeur de Prestige</p>
+                                                                        <p className="text-xs font-bold text-yellow-800">
+                                                                            {badge.rarity === 'LEGENDARY' ? "Haut Prestige + Gain XP Record" : badge.rarity === 'EPIC' ? "Prestige Élevé + Bonus XP" : "Progression Globale + XP"}
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                        <p className="text-[9px] font-bold text-gray-500 italic mb-3 line-clamp-2">"{badge.description}"</p>
-                                                    </div>
-                                                    <div className="bg-gray-50 rounded-xl p-2 border border-gray-100 text-[8px] font-black text-gray-700 leading-tight">
-                                                        <span className="text-indigo-400 block uppercase mb-0.5 text-[7px]">Condition :</span>
-                                                        {badge.condition || "Secret"}
                                                     </div>
                                                 </div>
                                             ))}

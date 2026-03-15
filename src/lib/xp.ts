@@ -1,6 +1,7 @@
 import { getUserSummaries } from "./badges";
 import { BADGE_DEFINITIONS } from "@/config/badges";
 import { getRequiredRepsForDate } from "./challenge";
+import { getXPForReward } from "./rewards";
 import prisma from "./prisma";
 
 export const XP_ANIMALS = [
@@ -234,58 +235,19 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[])
         });
 
         // C. Badges (Gloire)
+        let badgeXPContribution = 0;
         const userBadges = badgesOwnerships.filter(b => b.currentUserId === u.id);
         userBadges.forEach(b => {
-            const def = BADGE_DEFINITIONS.find(d => d.key === b.badgeKey);
-            if (def) {
-                let badgeXP = 0;
-                const monthIndex = b.achievedAt ? new Date(b.achievedAt).getMonth() : new Date().getMonth();
-                const timeBonus = MONTH_MULTIPLIERS[monthIndex] || 500;
-
-                if (def.type === "COMPETITIVE") {
-                    badgeXP = timeBonus;
-                } else if (def.type === "LEGENDARY") {
-                    if (def.key.includes("pushups_50")) badgeXP = 1000;
-                    else if (def.key.includes("pushups_80")) badgeXP = 2500;
-                    else if (def.key.includes("pushups_100")) badgeXP = 5000;
-                    else if (def.key.includes("pullups_20")) badgeXP = 3000;
-                    else if (def.key.includes("pullups_30")) badgeXP = 7500;
-                    else if (def.key.includes("squats_150")) badgeXP = 2000;
-                    else if (def.key.includes("squats_300")) badgeXP = 8000;
-                    else if (def.key === "murph_hero") badgeXP = 2500;
-                } else if (def.type === "MILESTONE") {
-                    if (def.metricType === "MILESTONE_TOTAL" && def.threshold) {
-                        badgeXP = Math.min(Math.floor(def.threshold * 0.1), 10000); 
-                    } else {
-                        badgeXP = 100;
-                    }
-
-                    if (def.key === "survivor_30d") badgeXP += 1000;
-                    if (def.key === "survivor_90d") badgeXP += 4000;
-
-                    if (def.key.includes("_3")) badgeXP += 50;
-                    if (def.key.includes("_7")) badgeXP += 150;
-                    if (def.key.includes("_14")) badgeXP += 400;
-                    if (def.key.includes("_30")) badgeXP += 1000;
-
-                    if (def.key === "torch_legacy" && b.currentValue) {
-                        badgeXP += b.currentValue * 50;
-                    }
-                } else if (def.type === "EVENT") {
-                    badgeXP = timeBonus;
-                    if (def.key.includes("st_kevin") || def.key.includes("st_thomas") || def.key.includes("st_damien") || def.key.includes("st_xavier")) {
-                         badgeXP += 500;
-                    }
-                    if (def.key === "sally_participation") badgeXP = 250;
-                    if (def.key === "sally_podium_1") badgeXP = 1000;
-                }
-
-                if (featuredBadgeKey === def.key) {
-                    badgeXP += Math.floor(badgeXP * 0.5);
-                }
-
-                totalXP += badgeXP;
+            const badgeXP = getXPForReward(b.badgeKey, b.achievedAt);
+            
+            // Featured badge bonus
+            let finalBadgeXP = badgeXP;
+            if (featuredBadgeKey === b.badgeKey) {
+                finalBadgeXP += Math.floor(badgeXP * 0.5);
             }
+
+            badgeXPContribution += finalBadgeXP;
+            totalXP += finalBadgeXP;
         });
 
         // D. Fines
@@ -323,6 +285,7 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[])
             progress: Math.floor(progress),
             details: {
                 repsXP: pushupsXPContribution + pullupsXPContribution + squatsXPContribution,
+                badgesXP: badgeXPContribution,
                 finesXP: (summary.totalFinesAmount * 50),
                 recordsXP: (u.id === maxVolDayUser ? 250 : 0) + (u.id === maxVolMonthUser ? 1000 : 0) + (u.id === maxVolYearUser ? 2500 : 0),
                 manualXP

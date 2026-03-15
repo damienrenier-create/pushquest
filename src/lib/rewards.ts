@@ -43,16 +43,16 @@ export function getXPForReward(key: string, achievedAt?: Date | string): number 
         } else if (def.metricType === "MILESTONE_SET") {
             xp = 100;
         } else if (def.key.startsWith("headhunter_")) {
-            // High boost for headhunters
-            if (def.key === "headhunter_1") xp = 500;
-            else if (def.key === "headhunter_3") xp = 1500;
-            else if (def.key === "headhunter_10") xp = 3500;
-            else if (def.key === "headhunter_50") xp = 7500;
-            else if (def.key === "headhunter_100") xp = 15000;
+            // Rebalanced: Lower values
+            if (def.key === "headhunter_1") xp = 250;
+            else if (def.key === "headhunter_3") xp = 750;
+            else if (def.key === "headhunter_10") xp = 1750;
+            else if (def.key === "headhunter_50") xp = 4000;
+            else if (def.key === "headhunter_100") xp = 8000;
         } else if (def.key === "trinity_gold") {
-            xp = 2500;
+            xp = 800; // Was 2500
         } else if (def.key === "trinity_ultimate") {
-            xp = 7500;
+            xp = 2500; // Was 7500
         } else {
             xp = 100;
         }

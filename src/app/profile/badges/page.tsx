@@ -43,19 +43,19 @@ export default async function BadgesPage() {
     });
 
     return (
-        <div className="max-w-6xl mx-auto p-4 space-y-8 pb-20">
-            <header className="flex flex-col sm:flex-row items-center justify-between gap-6">
-                <div>
-                    <h1 className="text-4xl font-black tracking-tighter text-white uppercase italic">
+        <div className="max-w-6xl mx-auto p-3 sm:p-4 space-y-4 sm:space-y-8 pb-20">
+            <header className="flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-6">
+                <div className="text-center sm:text-left">
+                    <h1 className="text-2xl sm:text-4xl font-black tracking-tighter text-white uppercase italic">
                         Le Panthéon <span className="text-indigo-500">des Badges</span>
                     </h1>
-                    <p className="mt-2 text-sm font-bold text-slate-400 uppercase tracking-widest">
+                    <p className="mt-1 text-[10px] sm:text-sm font-bold text-slate-400 uppercase tracking-widest">
                         Exploits, distinctions et vitrine de la gloire.
                     </p>
                 </div>
                 <Link
                     href="/"
-                    className="w-full sm:w-auto px-6 py-3 text-xs font-black uppercase tracking-widest text-white bg-slate-800 rounded-2xl hover:bg-slate-700 transition-all border border-slate-700 shadow-xl"
+                    className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white bg-slate-800 rounded-xl sm:rounded-2xl hover:bg-slate-700 transition-all border border-slate-700 shadow-xl text-center"
                 >
                     ← Retour
                 </Link>
