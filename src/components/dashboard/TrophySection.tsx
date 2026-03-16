@@ -74,12 +74,20 @@ export default function TrophySection({ data, setRewardDetail, toggleLike, sessi
                                         </div>
                                     </div>
                                     <div className="flex flex-col sm:flex-row sm:items-center gap-3 shrink-0">
-                                        {ev.newValue > 0 && (
-                                            <div className="text-right sm:text-center shrink-0 border-r sm:border-r-0 sm:border-l border-white/10 pr-3 sm:pr-0 sm:pl-3">
-                                                <p className="font-black text-white text-lg leading-none">{ev.newValue}</p>
-                                                <p className="text-[7px] font-black text-slate-500 uppercase tracking-widest mt-1">Record</p>
-                                            </div>
-                                        )}
+                                        <div className="text-right sm:text-center shrink-0 border-r sm:border-r-0 sm:border-l border-white/10 pr-3 sm:pr-0 sm:pl-3">
+                                            <p className="font-black text-white text-base leading-none">
+                                                {(() => {
+                                                    const mt = ev.badge?.metricType;
+                                                    const val = ev.newValue;
+                                                    if (mt === 'SERIES_COUNT') return `${val} SÉRIES`;
+                                                    if (mt?.includes('STREAK')) return `${val} JOURS`;
+                                                    if (mt?.includes('SET') || mt?.includes('REPS') || mt?.includes('VOLUME')) return `${val} REPS`;
+                                                    if (mt === 'TOTAL_FINES_AMOUNT') return `${val} €`;
+                                                    return `${val} XP`;
+                                                })()}
+                                            </p>
+                                            <p className="text-[7px] font-black text-slate-500 uppercase tracking-widest mt-1">Valeur</p>
+                                        </div>
                                         <button
                                             onClick={() => toggleLike(ev.id)}
                                             className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl transition-all font-black text-sm shrink-0 shadow-sm ${hasLiked ? 'bg-indigo-500/20 border border-indigo-500/50 text-indigo-200' : 'bg-white/5 border border-white/10 text-slate-400 hover:bg-white/10'}`}
