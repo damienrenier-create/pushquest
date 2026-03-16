@@ -95,9 +95,20 @@ export default async function PantheonPage() {
                 const scope = def.exerciseScope === "PUSHUPS" ? "maxSetPushups" : def.exerciseScope === "PULLUPS" ? "maxSetPullups" : "maxSetSquats";
                 isEarned = s[scope] >= threshold;
             } else if (def.metricType === "DATE_AWARD_HARD" || def.metricType === "DATE_AWARD") {
-                const dateMap: any = { 'st_patrick': '-03-17', 'st_marvin': '-03-08', 'noel_sapin': '-12-25' };
-                const target = dateMap[def.key] || (def as any).addedAt;
-                if (target) isEarned = s.checkDatePlayed(target);
+                if (def.key === "equinox_ratio") {
+                    isEarned = s.hasEquinoxRatio("2026-03-20");
+                } else if (def.key === "solstice_summer") {
+                    isEarned = s.getHistoricalMaxVolume(1, "ALL") >= 900;
+                } else if (def.key === "noel_sapin") {
+                    isEarned = s.hasChristmasSapin("2026-12-25");
+                } else if (def.key === "saint_nicolas") {
+                    isEarned = s.hasSaintNicolasSix("2026-12-06");
+                } else {
+                    const dateMap: any = { 'st_patrick': '-03-17', 'st_marvin': '-03-08' };
+                    const target = dateMap[def.key] || (def as any).addedAt;
+                    if (target) isEarned = s.checkDatePlayed(target);
+                }
+            } else if (def.metricType === "VOLUME_STREAK") {
                 const days = def.key.includes("week") ? 7 : 1;
                 const exo = def.exerciseScope === "PUSHUPS" ? "PUSHUP" : "SQUAT";
                 isEarned = s.getHistoricalMaxVolume(days, exo) >= threshold;

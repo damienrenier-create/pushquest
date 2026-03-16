@@ -4,8 +4,9 @@ import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { Sparkles, Trophy, Zap, Activity, PieChart, BarChart3, TrendingUp } from "lucide-react"
+import { Sparkles, Trophy, Zap, Activity, PieChart, BarChart3, TrendingUp, History, Info } from "lucide-react"
 import RewardDetailSheet from "@/components/RewardDetailSheet"
+import GraphsSection from "@/components/dashboard/GraphsSection"
 
 export default function UserProfilePage() {
     const { data: session } = useSession()
@@ -18,6 +19,8 @@ export default function UserProfilePage() {
     const [loading, setLoading] = useState(true)
     const [rewardDetail, setRewardDetail] = useState<any | null>(null)
     const [analyticsData, setAnalyticsData] = useState<any>(null)
+    const [activeTab, setActiveTab] = useState<'stats' | 'history'>('stats')
+    const [graphPeriod, setGraphPeriod] = useState<'30' | '365'>('30')
 
     useEffect(() => {
         const fetchUserData = async () => {
@@ -174,18 +177,39 @@ export default function UserProfilePage() {
                 </section>
             )}
 
+            {/* Navigation Tabs */}
+            <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200 w-fit mx-auto sm:mx-0">
+                <button 
+                    onClick={() => setActiveTab('stats')}
+                    className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'stats' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                    <Activity size={14} />
+                    Résumé
+                </button>
+                <button 
+                    onClick={() => setActiveTab('history')}
+                    className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'history' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                    <History size={14} />
+                    Historique
+                </button>
+            </div>
+
             {/* Analytics Section */}
             <section className="bg-white rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 shadow-sm border border-gray-100 space-y-10">
                 <div className="flex items-center justify-between border-b border-gray-50 pb-6">
                     <h2 className="text-xl sm:text-2xl font-black uppercase tracking-normal flex items-center gap-3 text-slate-900">
-                        <span className="p-2 bg-blue-100/50 rounded-2xl text-xl">📊</span> Statistiques & Analytics
+                        <span className="p-2 bg-blue-100/50 rounded-2xl text-xl">{activeTab === 'stats' ? '📊' : '📈'}</span> 
+                        {activeTab === 'stats' ? 'Statistiques & Analytics' : 'Courbe de Progression'}
                     </h2>
                 </div>
+
+                {activeTab === 'stats' ? (
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
                     {/* Reps Distribution Wheel */}
                     <div className="flex flex-col items-center space-y-6">
-                        <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400">Répartition des Efforts</h3>
+                        <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-800 bg-slate-50 px-3 py-1 rounded-full">Répartition des Efforts</h3>
                         <div className="relative w-48 h-48 sm:w-56 sm:h-56">
                             <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
                                 {(() => {
@@ -225,7 +249,7 @@ export default function UserProfilePage() {
                             </svg>
                             <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
                                 <span className="text-2xl sm:text-3xl font-black text-slate-900 leading-none">{totalReps.toLocaleString()}</span>
-                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">TOTAL REPS</span>
+                                <span className="text-[8px] font-black text-slate-700 uppercase tracking-widest mt-1">TOTAL REPS</span>
                             </div>
                         </div>
                         <div className="flex flex-wrap justify-center gap-4 text-[9px] font-black uppercase tracking-wider">
@@ -237,7 +261,7 @@ export default function UserProfilePage() {
 
                     {/* XP Distribution Wheel */}
                     <div className="flex flex-col items-center space-y-6">
-                        <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400">Origine du Prestige (XP)</h3>
+                        <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-800 bg-indigo-50 px-3 py-1 rounded-full">Origine du Prestige (XP)</h3>
                         <div className="relative w-48 h-48 sm:w-56 sm:h-56">
                             <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
                                 {(() => {
@@ -283,7 +307,7 @@ export default function UserProfilePage() {
                             </svg>
                             <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
                                 <span className="text-2xl sm:text-3xl font-black text-indigo-600 leading-none">{(analyticsData?.totalXP || 0).toLocaleString()}</span>
-                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">TOTAL XP</span>
+                                <span className="text-[8px] font-black text-indigo-700 uppercase tracking-widest mt-1">TOTAL XP</span>
                             </div>
                         </div>
                         <div className="flex flex-wrap justify-center gap-4 text-[9px] font-black uppercase tracking-wider max-w-sm">
@@ -296,9 +320,21 @@ export default function UserProfilePage() {
                 </div>
 
 
+                ) : (
+                    <div className="animate-in fade-in duration-500">
+                        <GraphsSection 
+                            data={analyticsData}
+                            graphPeriod={graphPeriod}
+                            setGraphPeriod={setGraphPeriod}
+                        />
+                    </div>
+                )}
+
                 <div className="pt-8 border-t border-gray-50 flex flex-col items-center">
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center max-w-sm">
-                        Les graphiques détaillés de progression et les échelles de performance sont disponibles dans votre espace personnel.
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest text-center max-w-lg">
+                        {activeTab === 'stats' 
+                            ? "Ces données reflètent l'ensemble des records et sessions enregistrées sur ce profil."
+                            : "Consultez l'historique complet pour identifier les plateaux de progression et les pics de forme."}
                     </p>
                 </div>
             </section>

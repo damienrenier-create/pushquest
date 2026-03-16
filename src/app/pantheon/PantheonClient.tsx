@@ -396,47 +396,55 @@ export default function PantheonClient({
                                 <Link
                                     key={i}
                                     href={`/u/${encodeURIComponent(user.nickname)}`}
-                                    className="bg-slate-50/50 border border-slate-100 p-5 rounded-3xl hover:bg-white hover:border-indigo-200 hover:shadow-lg transition-all group"
+                                    className="bg-white border-2 border-slate-50 p-6 rounded-[2.5rem] hover:border-indigo-500/30 hover:shadow-2xl hover:shadow-indigo-500/10 transition-all group relative overflow-hidden"
                                 >
-                                    <div className="flex items-start justify-between mb-3">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center font-black text-white text-sm shrink-0 shadow-md shadow-indigo-100">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50/50 rounded-full blur-3xl -mr-16 -mt-16 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                    
+                                    <div className="flex items-start justify-between mb-5 relative z-10">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center font-black text-white text-base shrink-0 shadow-lg shadow-indigo-200 group-hover:scale-110 transition-transform">
                                                 {userXP ? userXP.emoji : user.nickname.charAt(0).toUpperCase()}
                                             </div>
                                             <div className="min-w-0">
                                                 <h3 className="font-black text-slate-900 uppercase group-hover:text-indigo-600 transition-colors truncate text-sm">
-                                                    {userXP ? <span className="text-[10px] text-slate-400 font-bold mr-1" title={userXP.animal}>Lv.{userXP.level}</span> : null}
                                                     {user.nickname}
                                                 </h3>
-                                                <div className="flex items-center gap-2 mt-0.5 mb-1">
-                                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{userOwnerships.length + virtualScore} Titre(s)</p>
-                                                    {userXP && <span className="text-[8px] font-black text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded uppercase"> {userXP.totalXP.toLocaleString('fr-FR')} XP</span>}
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full uppercase">Lv.{userXP?.level || 1}</span>
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{userOwnerships.length + virtualScore} Titre(s)</p>
                                                 </div>
-                                                {userXP && (
-                                                    <div className="w-full max-w-[100px]" title={`Prochain niveau : Lv.${userXP.level + 1} ${userXP.nextAnimal} ${userXP.nextEmoji}`}>
-                                                        <div className="h-1 w-full bg-slate-200 rounded-full overflow-hidden">
-                                                            <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${userXP.progress}%` }} />
-                                                        </div>
-                                                    </div>
-                                                )}
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="flex flex-wrap gap-1.5 group-hover:cursor-help" title="Cliquez pour les détails">
-                                        {showcase.map((badge, j) => (
-                                            <span
-                                                key={j}
-                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRewardClick(badge.key); }}
-                                                className={`text-base bg-white border border-slate-100 w-7 h-7 flex items-center justify-center rounded-lg hover:scale-125 hover:shadow-md transition-all cursor-pointer ${!badge.isCompetitive ? 'grayscale opacity-70 hover:grayscale-0 hover:opacity-100' : ''}`}
-                                                title={`${badge.name} (${getXPForReward(badge.key)} XP)`}
-                                            >
-                                                {badge.emoji}
-                                            </span>
-                                        ))}
-                                        {allConquered.length > 12 && (
-                                            <span className="text-[8px] font-black text-slate-400 flex items-center justify-center px-1">+{allConquered.length - 12}</span>
+                                    <div className="space-y-4 relative z-10">
+                                        {userXP && (
+                                            <div className="space-y-1.5">
+                                                <div className="flex justify-between items-end">
+                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Progression</span>
+                                                    <span className="text-[10px] font-black text-indigo-600">{userXP.totalXP.toLocaleString('fr-FR')} XP</span>
+                                                </div>
+                                                <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                                                    <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" style={{ width: `${userXP.progress}%` }} />
+                                                </div>
+                                            </div>
                                         )}
+
+                                        <div className="flex flex-wrap gap-2 group-hover:cursor-help">
+                                            {showcase.map((badge, j) => (
+                                                <span
+                                                    key={j}
+                                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRewardClick(badge.key); }}
+                                                    className={`text-xl bg-slate-50 border border-slate-100 w-9 h-9 flex items-center justify-center rounded-xl hover:scale-125 hover:shadow-xl hover:bg-white hover:border-indigo-200 transition-all cursor-pointer ${!badge.isCompetitive ? 'grayscale opacity-60 hover:grayscale-0 hover:opacity-100' : 'shadow-sm shadow-orange-500/10'}`}
+                                                    title={`${badge.name} (${getXPForReward(badge.key)} XP)`}
+                                                >
+                                                    {badge.emoji}
+                                                </span>
+                                            ))}
+                                            {allConquered.length > 12 && (
+                                                <span className="text-[9px] font-black text-slate-400 flex items-center justify-center px-1">+{allConquered.length - 12}</span>
+                                            )}
+                                        </div>
                                     </div>
                                 </Link>
                             );

@@ -299,6 +299,30 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
                     return maxWeekAll;
                 }
                 return 0;
+            },
+            hasEquinoxRatio: (dateISO: string) => {
+                const daySets = sets.filter((s: any) => s.date === dateISO);
+                const dayPushups = daySets.filter((s: any) => s.exercise === "PUSHUP").reduce((sum: number, s: any) => sum + s.reps, 0);
+                const daySquats = daySets.filter((s: any) => s.exercise === "SQUAT").reduce((sum: number, s: any) => sum + s.reps, 0);
+                const dayTotal = dayPushups + daySquats;
+                return dayTotal >= 50 && dayPushups === daySquats;
+            },
+            hasChristmasSapin: (dateISO: string) => {
+                const daySets = sets.filter((s: any) => s.date === dateISO);
+                return ["PUSHUP", "PULLUP", "SQUAT"].every(exo => {
+                    const exoSets = daySets.filter((s: any) => s.exercise === exo).map((s: any) => s.reps);
+                    // Check if they did exactly one of each from 1 to 15? or just that they hit the target?
+                    // The description says "Série Sapin (1 à 15 sur CHAQUE exo)". 
+                    // Let's assume it means they have sets of 1, 2, 3... 15.
+                    for (let i = 1; i <= 15; i++) {
+                        if (!exoSets.includes(i)) return false;
+                    }
+                    return true;
+                });
+            },
+            hasSaintNicolasSix: (dateISO: string) => {
+                const dayTotal = sets.filter((s: any) => s.date === dateISO).reduce((sum: number, s: any) => sum + s.reps, 0);
+                return dayTotal > 0 && dayTotal % 10 === 6;
             }
         };
     });
