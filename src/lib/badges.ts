@@ -323,6 +323,31 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             hasSaintNicolasSix: (dateISO: string) => {
                 const dayTotal = sets.filter((s: any) => s.date === dateISO).reduce((sum: number, s: any) => sum + s.reps, 0);
                 return dayTotal > 0 && dayTotal % 10 === 6;
+            },
+            hasSolsticeWinter: (dateISO: string) => {
+                const daySets = sets.filter((s: any) => s.date === dateISO);
+                const activeHours = new Set(daySets.map((s: any) => {
+                    const date = new Date(s.createdAt);
+                    return date.getHours();
+                }));
+                
+                if (activeHours.size < 12) return false;
+                
+                const sortedHours = Array.from(activeHours).sort((a: any, b: any) => (a as number) - (b as number));
+                let maxStreak = 0;
+                let currentStreak = 0;
+                let lastHour = -2;
+                
+                for (const h of sortedHours) {
+                    if ((h as number) === lastHour + 1) {
+                        currentStreak++;
+                    } else {
+                        currentStreak = 1;
+                    }
+                    maxStreak = Math.max(maxStreak, currentStreak);
+                    lastHour = h as number;
+                }
+                return maxStreak >= 12;
             }
         };
     });
