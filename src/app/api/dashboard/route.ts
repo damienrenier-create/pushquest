@@ -12,7 +12,7 @@ import {
     isLastDayOfMonth
 } from "@/lib/challenge";
 import { SPECIAL_DAYS } from "@/config/specialDays";
-import { initBadges } from "@/lib/badges";
+import { initBadges, getUserSummaries } from "@/lib/badges";
 import { BADGE_DEFINITIONS } from "@/config/badges";
 import { calculateAllUsersXP } from "@/lib/xp";
 
@@ -382,8 +382,11 @@ export async function GET(req: Request) {
             }
         });
 
+        // Pre-compute summaries once — shared between XP and badge risk calculations
+        const sharedSummaries = getUserSummaries(allUsers, []);
+
         // Calcul des XP (Leaderboard XP V3)
-        const xpScores = await calculateAllUsersXP(allUsers, badgeOwnerships);
+        const xpScores = await calculateAllUsersXP(allUsers, badgeOwnerships, sharedSummaries);
         const currentUserXP = xpScores.find(x => x.id === userId);
 
         const recentEvents = (await (prisma as any).badgeEvent.findMany({

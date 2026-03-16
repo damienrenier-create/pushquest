@@ -255,7 +255,7 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
                 const req = getRequiredRepsForDate(dateISO);
                 return ["PUSHUP", "PULLUP", "SQUAT"].every(exo => {
                     const exoTotal = daySets.filter((s: any) => s.exercise === exo).reduce((sum: number, s: any) => sum + s.reps, 0);
-                    return exoTotal >= 3 * req;
+                    return exoTotal >= req;
                 }) && req > 0;
             },
             getDaySum: (date: string, exo: string) => sets.filter((s: any) => s.date === date && s.exercise === exo).reduce((sum: number, s: any) => sum + s.reps, 0),
@@ -264,16 +264,20 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
     });
 }
 
-export async function updateBadgesPostSave(userId: string) {
-    const [allUsers, steals] = await Promise.all([
+export async function updateBadgesPostSave(userId: string, precomputedSummaries?: any[]) {
+    const [allUsers, steals, allOwnerships] = await Promise.all([
         (prisma as any).user.findMany({ where: { nickname: { not: 'modo' } }, include: { sets: true, fines: true, badges: true } }),
-        (prisma as any).badgeEvent.findMany({ where: { eventType: "STEAL" } })
+        (prisma as any).badgeEvent.findMany({ where: { eventType: "STEAL" } }),
+        (prisma as any).badgeOwnership.findMany()
     ]);
 
-    const summaries = getUserSummaries(allUsers, steals);
+    const summaries = precomputedSummaries ?? getUserSummaries(allUsers, steals);
+
+    // Build a Map for O(1) ownership lookup — replaces N individual findUnique queries
+    const ownershipMap = new Map<string, any>(allOwnerships.map((o: any) => [o.badgeKey, o]));
 
     for (const def of BADGE_DEFINITIONS) {
-        const ownership = await (prisma as any).badgeOwnership.findUnique({ where: { badgeKey: def.key } });
+        const ownership = ownershipMap.get(def.key) ?? null;
         if (ownership?.locked) continue;
 
         let bestUser: any = null;

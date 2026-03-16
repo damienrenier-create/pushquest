@@ -142,12 +142,12 @@ export function calculateLevel(xp: number) {
 import { MONTH_MULTIPLIERS } from "./xp-constants";
 export { MONTH_MULTIPLIERS };
 
-export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[]) {
+export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[], precomputedSummaries?: any[]) {
     // 0. Fetch Featured Badge from GlobalConfig
     const featuredConfig = await (prisma as any).globalConfig.findUnique({ where: { key: "featuredBadgeKey" } });
     const featuredBadgeKey = featuredConfig?.value;
 
-    const summaries = getUserSummaries(users, []);
+    const summaries = precomputedSummaries ?? getUserSummaries(users, []);
 
     // 1. Gather Global Records from summaries
     let maxVolDay = 0, maxVolDayUser: string | null = null;
