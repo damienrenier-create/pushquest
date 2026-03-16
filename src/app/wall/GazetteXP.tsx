@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import React from "react";
 import { calculateAllUsersXP } from "@/lib/xp";
+import { getUserSummaries } from "@/lib/badges";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import Link from "next/link";
@@ -112,8 +113,9 @@ export default async function GazetteXP() {
         },
         select: { id: true, nickname: true, sets: true, createdAt: true, xpAdjustments: true }
     });
+    const summaries = getUserSummaries(allUsers, []); // Standardized summaries
     const badgeOwnerships = await (prisma as any).badgeOwnership.findMany();
-    const xpScores = await calculateAllUsersXP(allUsers, badgeOwnerships);
+    const xpScores = await calculateAllUsersXP(allUsers, badgeOwnerships, summaries);
 
     const rawEvents = await (prisma as any).badgeEvent.findMany({
         where: {
@@ -126,36 +128,40 @@ export default async function GazetteXP() {
         }
     });
 
-    const displayEvents = xpScores.map(userXP => {
-        // Find the latest real event for this user
-        const realEvent = rawEvents.find((e: any) => e.toUserId === userXP.id);
+    // Strategy: One article per user, prioritizing real events
+    const displayEvents = allUsers.map((user: any) => {
+        const userXP = (xpScores as any[]).find((x: any) => x.id === user.id);
+        const realEvents = rawEvents.filter((e: any) => e.toUserId === user.id);
+        const latestReal = realEvents[0];
 
-        if (realEvent) {
+        // If we have a real event but it shows an OLDER level than current XP score, 
+        // we might still prefer it but with a "simulated" reason if it's too old
+        // OR we just generate a consistent simulated event if no real event matches the current level.
+        
+        if (latestReal && latestReal.newValue === userXP.level) {
             return {
-                ...realEvent,
-                toUser: { nickname: userXP.nickname }, // Ensure nickname is present
-                // We keep the real event as is
+                ...latestReal,
+                toUser: { nickname: user.nickname },
             };
         }
 
-        // Fallback: Generate a simulated event based on current status
+        // Fallback: Generate a simulated event based on current status (Guaranteed up-to-date)
         const reasonsArr = [];
         if (userXP.details?.repsXP > 0) reasonsArr.push(`un entraînement acharné (+${Math.round(userXP.details.repsXP)} XP)`);
         if (userXP.details?.badgesXP > 0) reasonsArr.push(`des badges et trophées (+${Math.round(userXP.details.badgesXP)} XP)`);
-        if (userXP.details?.flexXP > 0) reasonsArr.push(`un bonus de régularité Flex (+${Math.round(userXP.details.flexXP)} XP)`);
         if (userXP.details?.recordsXP > 0) reasonsArr.push(`un record majestueux (+${Math.round(userXP.details.recordsXP)} XP)`);
         if (userXP.details?.manualXP !== 0) reasonsArr.push(`un ajustement manuel (${userXP.details.manualXP > 0 ? '+' : ''}${Math.round(userXP.details.manualXP)} XP)`);
 
         const reason = reasonsArr.length > 0 ? `grâce à : ` + reasonsArr.join(", ") : "pour l'ensemble de son parcours";
 
         return {
-            id: `fallback-${userXP.id}`,
-            toUserId: userXP.id,
-            toUser: { nickname: userXP.nickname },
+            id: `current-${user.id}`,
+            toUserId: user.id,
+            toUser: { nickname: user.nickname },
             newValue: userXP.level,
             eventType: "LEVEL_UP",
-            createdAt: userXP.createdAt || new Date().toISOString(),
-            likes: [],
+            createdAt: latestReal?.createdAt || user.createdAt || new Date().toISOString(),
+            likes: latestReal?.likes || [],
             metadata: JSON.stringify({
                 animal: userXP.animal,
                 emoji: userXP.emoji,
@@ -163,7 +169,7 @@ export default async function GazetteXP() {
                 reason: reason
             })
         };
-    }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     return (
         <div className="bg-gradient-to-br from-indigo-900 via-slate-900 to-slate-900 rounded-[2rem] p-6 sm:p-8 shadow-xl border border-indigo-500/20 relative overflow-hidden mt-8">

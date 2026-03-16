@@ -98,10 +98,9 @@ export default async function PantheonPage() {
                 const dateMap: any = { 'st_patrick': '-03-17', 'st_marvin': '-03-08', 'noel_sapin': '-12-25' };
                 const target = dateMap[def.key] || (def as any).addedAt;
                 if (target) isEarned = s.checkDatePlayed(target);
-            } else if (def.metricType === "PERIOD_VOLUME") {
                 const days = def.key.includes("week") ? 7 : 1;
                 const exo = def.exerciseScope === "PUSHUPS" ? "PUSHUP" : "SQUAT";
-                isEarned = s.getPeriodVolume(days, exo) >= threshold;
+                isEarned = s.getHistoricalMaxVolume(days, exo) >= threshold;
             }
             
             if (isEarned) virtualBadges[def.key] = true;
@@ -182,7 +181,7 @@ export default async function PantheonPage() {
         hour12: false
     }).format(new Date());
 
-    const xpScores = await calculateAllUsersXP(allUsers, badgeOwnerships);
+    const xpScores = await calculateAllUsersXP(allUsers, badgeOwnerships, summaries, allEvents);
 
     return (
         <PantheonClient
