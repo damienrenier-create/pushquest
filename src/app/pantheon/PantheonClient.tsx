@@ -216,7 +216,7 @@ export default function PantheonClient({
                                     <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
                                         <History size={20} />
                                     </div>
-                                    <h2 className="text-lg font-black uppercase tracking-tight">Journal de Gloire</h2>
+                                    <h2 className="text-lg font-black uppercase tracking-normal">Journal de Gloire</h2>
                                 </div>
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Temps réel</span>
                             </div>
@@ -297,7 +297,7 @@ export default function PantheonClient({
                                         <div className="p-2.5 bg-red-50 text-red-600 rounded-xl">
                                             <Shield size={20} />
                                         </div>
-                                        <h2 className="text-lg font-black uppercase tracking-tight">Menaces de Vol</h2>
+                                        <h2 className="text-lg font-black uppercase tracking-normal">Menaces de Vol</h2>
                                     </div>
                                     <div className="relative">
                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
@@ -366,7 +366,7 @@ export default function PantheonClient({
                                 <div className="p-2.5 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-200">
                                     <Users size={20} />
                                 </div>
-                                <h2 className="text-3xl font-black uppercase tracking-tight text-slate-900">Vitrine des Concurrents</h2>
+                                <h2 className="text-3xl font-black uppercase tracking-normal text-slate-900">Vitrine des Concurrents</h2>
                             </div>
                             <p className="text-slate-500 font-medium text-sm">L'inventaire complet de la communauté. Cliquez sur un profil pour voir ses exploits.</p>
                         </div>
@@ -451,7 +451,7 @@ export default function PantheonClient({
                             <div className="p-2.5 bg-yellow-50 text-yellow-600 rounded-xl">
                                 <Star size={20} />
                             </div>
-                            <h2 className="text-2xl font-black uppercase tracking-tight">Mes Distinctions Personnel</h2>
+                            <h2 className="text-2xl font-black uppercase tracking-normal">Mes Distinctions Personnel</h2>
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -501,9 +501,9 @@ export default function PantheonClient({
                                 <div className="grid grid-cols-1 gap-3">
                                     {Object.entries(userVirtualData?.virtualBadges || {}).map(([key, value]: [string, any], i) => {
                                         const def = badgeDefinitions.find(d => d.key === key);
-                                        if (!def) return null;
+                                        if (!def || !value) return null; // Hide unearned badges
                                         return (
-                                            <div key={i} className={`group relative p-4 rounded-2xl border transition-all flex items-center justify-between cursor-help ${value ? 'bg-indigo-50/50 border-indigo-100 opacity-100 shadow-sm' : 'bg-white border-slate-100 opacity-60 grayscale shadow-none hover:grayscale-0'}`}>
+                                            <div key={i} className="group relative p-4 rounded-2xl border transition-all flex items-center justify-between cursor-help bg-indigo-50/50 border-indigo-100 opacity-100 shadow-sm">
                                                 <div className="flex items-center gap-3">
                                                     <span className="text-xl">{def.emoji}</span>
                                                     <div>
@@ -534,7 +534,7 @@ export default function PantheonClient({
                             <div className="p-2.5 bg-purple-50 text-purple-600 rounded-xl">
                                 <Calendar size={20} />
                             </div>
-                            <h2 className="text-2xl font-black uppercase tracking-tight">Calendrier</h2>
+                            <h2 className="text-2xl font-black uppercase tracking-normal">Calendrier</h2>
                         </div>
 
                         <div className="space-y-4">
@@ -567,7 +567,7 @@ export default function PantheonClient({
                         <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
                             <Zap size={20} fill="currentColor" />
                         </div>
-                        <h2 className="text-2xl font-black uppercase tracking-tight">Défis à la Carte</h2>
+                        <h2 className="text-2xl font-black uppercase tracking-normal">Défis à la Carte</h2>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -626,7 +626,7 @@ export default function PantheonClient({
                             <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
                                 <Target size={20} />
                             </div>
-                            <h2 className="text-2xl font-black uppercase tracking-tight">Le Catalogue de Distinctions</h2>
+                            <h2 className="text-2xl font-black uppercase tracking-normal">Le Catalogue de Distinctions</h2>
                         </div>
 
                         <div className="flex flex-col sm:flex-row gap-4">

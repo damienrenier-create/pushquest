@@ -96,6 +96,13 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
         let fineFreeStreakMax = 0;
         let fineFreeStreakCur = 0;
 
+        let maxDayPushups = 0;
+        let maxDaySquats = 0;
+        let maxDayAll = 0;
+        let maxWeekPushups = 0;
+        let maxWeekSquats = 0;
+        let maxWeekAll = 0;
+
         const datePlayedMap: Record<string, boolean> = {};
 
         days.forEach((d: string) => {
@@ -139,6 +146,10 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
                 }
             });
 
+            if (dayPushups > maxDayPushups) maxDayPushups = dayPushups;
+            if (daySquats > maxDaySquats) maxDaySquats = daySquats;
+            if (dayTotal > maxDayAll) maxDayAll = dayTotal;
+
             // Streaks
             const bonus = dayTotal - req;
             if (bonus > 0) {
@@ -178,6 +189,21 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             // Fine free streak
             if (!finesByDate[d] || finesByDate[d].length === 0) fineFreeStreakCur++; else fineFreeStreakCur = 0;
             fineFreeStreakMax = Math.max(fineFreeStreakMax, fineFreeStreakCur);
+
+            // Weekly rolling volume
+            const currentDate = new Date(d);
+            const weekBack = new Date(currentDate);
+            weekBack.setDate(weekBack.getDate() - 6);
+            const weekBackISO = weekBack.toISOString().split('T')[0];
+
+            const weekSets = sets.filter((s: any) => s.date >= weekBackISO && s.date <= d);
+            const weekPushups = weekSets.filter((s: any) => s.exercise === "PUSHUP").reduce((sum: number, s: any) => sum + s.reps, 0);
+            const weekSquats = weekSets.filter((s: any) => s.exercise === "SQUAT").reduce((sum: number, s: any) => sum + s.reps, 0);
+            const weekAll = weekSets.reduce((sum: number, s: any) => sum + s.reps, 0);
+            
+            if (weekPushups > maxWeekPushups) maxWeekPushups = weekPushups;
+            if (weekSquats > maxWeekSquats) maxWeekSquats = weekSquats;
+            if (weekAll > maxWeekAll) maxWeekAll = weekAll;
         });
 
         // Post-processing
@@ -261,13 +287,18 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             getDaySum: (date: string, exo: string) => sets.filter((s: any) => s.date === date && s.exercise === exo).reduce((sum: number, s: any) => sum + s.reps, 0),
             getScaleReps: (date: string) => Array.from(new Set(sets.filter((s: any) => s.date === date).map((s: any) => s.reps))) as number[],
             getScaleRepsByExo: (date: string, exo: string) => Array.from(new Set(sets.filter((s: any) => s.date === date && s.exercise === exo).map((s: any) => s.reps))) as number[],
-            getPeriodVolume: (daysBack: number, exo?: string) => {
-                const cutoff = new Date();
-                cutoff.setDate(cutoff.getDate() - daysBack);
-                return sets.filter((s: any) => {
-                    const setDate = new Date(s.createdAt);
-                    return setDate >= cutoff && (!exo || s.exercise === exo);
-                }).reduce((sum: number, s: any) => sum + s.reps, 0);
+            getHistoricalMaxVolume: (days: number, exo?: string) => {
+                if (days === 1) {
+                    if (exo === "PUSHUP") return maxDayPushups;
+                    if (exo === "SQUAT") return maxDaySquats;
+                    return maxDayAll;
+                }
+                if (days === 7) {
+                    if (exo === "PUSHUP") return maxWeekPushups;
+                    if (exo === "SQUAT") return maxWeekSquats;
+                    return maxWeekAll;
+                }
+                return 0;
             }
         };
     });
@@ -411,7 +442,7 @@ export async function updateBadgesPostSave(userId: string, precomputedSummaries?
         } else if (def.metricType === "PERIOD_VOLUME") {
             const days = def.key.includes("week") ? 7 : 1; // day or week
             const exo = def.exerciseScope === "PUSHUPS" ? "PUSHUP" : "SQUAT";
-            for (const s of summaries) { if (s.getPeriodVolume(days, exo) >= def.threshold!) await awardMilestone(s.id, def.key, 1); }
+            for (const s of summaries) { if (s.getHistoricalMaxVolume(days, exo) >= def.threshold!) await awardMilestone(s.id, def.key, 1); }
             continue;
         } else if (def.metricType === "APRIL_FOOLS_TIER") {
             // Evaluated explicitly on April 1st.
@@ -662,11 +693,18 @@ async function awardMilestone(userId: string, badgeKey: string, value: number = 
     // Only use Event table as a high-watermark for milestones since Ownership is strictly 1-to-1 unique
     const existingEvents = await (prisma as any).badgeEvent.findMany({
         where: { badgeKey, toUserId: userId },
-        orderBy: { newValue: 'desc' }
+        orderBy: { newValue: 'desc' },
+        take: 1
     });
     const maxValue = existingEvents[0]?.newValue || 0;
 
     if (value > maxValue) {
+        // Anti-spam: check if an identical event (any value) was created very recently for this user
+        const recentEvent = await (prisma as any).badgeEvent.findFirst({
+            where: { toUserId: userId, createdAt: { gte: new Date(Date.now() - 2000) } }
+        });
+        if (recentEvent && recentEvent.badgeKey === badgeKey) return; 
+
         await (prisma as any).badgeEvent.create({
             data: { badgeKey, fromUserId: null, toUserId: userId, eventType: "UNIQUE_AWARDED", previousValue: maxValue, newValue: value }
         });

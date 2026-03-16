@@ -142,12 +142,12 @@ export function calculateLevel(xp: number) {
 import { MONTH_MULTIPLIERS } from "./xp-constants";
 export { MONTH_MULTIPLIERS };
 
-export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[], precomputedSummaries?: any[]) {
+export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[], precomputedSummaries?: any[], events: any[] = []) {
     // 0. Fetch Featured Badge from GlobalConfig
     const featuredConfig = await (prisma as any).globalConfig.findUnique({ where: { key: "featuredBadgeKey" } });
     const featuredBadgeKey = featuredConfig?.value;
 
-    const summaries = precomputedSummaries ?? getUserSummaries(users, []);
+    const summaries = precomputedSummaries ?? getUserSummaries(users, events);
 
     // 1. Gather Global Records from summaries
     let maxVolDay = 0, maxVolDayUser: string | null = null;
@@ -208,9 +208,10 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
                     dayXP += Math.min(flexXP, 1000); // Flex XP capped at 1000 per day
                 }
 
-                // Birthday Triple XP Logic (Nov 17th for Milka, Sept 26th for Mools)
-                const isMilkaBday = d.endsWith("-11-17") && (u.nickname?.toLowerCase().includes("milka") || u.nickname?.toLowerCase().includes("milkardashian"));
-                const isMoolsBday = d.endsWith("-09-26") && (u.nickname?.toLowerCase() === "mools" || u.nickname?.toLowerCase() === "commissaire");
+                // Birthday Triple XP Logic
+                const userNickname = (u.nickname || "").toLowerCase();
+                const isMilkaBday = d.endsWith("-11-17") && (userNickname.includes("milka") || userNickname.includes("milkardashian"));
+                const isMoolsBday = d.endsWith("-09-26") && (userNickname === "mools" || userNickname === "commissaire");
                 
                 if (isMilkaBday || isMoolsBday) {
                     // Check if they were #1 that day

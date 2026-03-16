@@ -104,7 +104,7 @@ export default function UserProfilePage() {
                     <div className="text-center sm:text-left space-y-2 sm:space-y-3">
                         <div className="inline-block bg-indigo-500/20 text-indigo-400 px-3 py-1 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest mb-1">PROFIL SOLDAT</div>
                         <div className="flex flex-col sm:flex-row items-center sm:items-end gap-2 sm:gap-3">
-                            <h1 className="text-3xl sm:text-6xl font-black text-white tracking-tighter italic uppercase leading-none">
+                            <h1 className="text-3xl sm:text-6xl font-black text-white tracking-normal uppercase leading-none">
                                 {user.nickname}
                             </h1>
                             <div className="flex gap-2">
@@ -123,21 +123,21 @@ export default function UserProfilePage() {
                     <div className="bg-slate-800/40 backdrop-blur-md p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-white/5 group hover:bg-slate-800/60 transition-colors">
                         <span className="text-slate-500 text-[9px] sm:text-[10px] font-black uppercase tracking-widest">Total Reps</span>
                         <div className="flex items-baseline gap-2 mt-1">
-                            <span className="text-2xl sm:text-4xl font-black text-white tracking-tighter italic">{totalReps.toLocaleString()}</span>
+                            <span className="text-2xl sm:text-4xl font-black text-white tracking-normal">{totalReps.toLocaleString()}</span>
                             <span className="text-slate-600 font-bold text-[10px] sm:text-xs uppercase">Reps</span>
                         </div>
                     </div>
                     <div className="bg-slate-800/40 backdrop-blur-md p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-white/5 group hover:bg-slate-800/60 transition-colors">
                         <span className="text-slate-500 text-[9px] sm:text-[10px] font-black uppercase tracking-widest">Distinctions</span>
                         <div className="flex items-baseline gap-2 mt-1">
-                            <span className="text-2xl sm:text-4xl font-black text-indigo-400 tracking-tighter italic">{user.badges?.length || 0}</span>
+                            <span className="text-2xl sm:text-4xl font-black text-indigo-400 tracking-normal">{user.badges?.length || 0}</span>
                             <span className="text-slate-600 font-bold text-[10px] sm:text-xs uppercase">Badges</span>
                         </div>
                     </div>
                     <div className="bg-slate-800/40 backdrop-blur-md p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-white/5 group hover:bg-slate-800/60 transition-colors">
                         <span className="text-slate-500 text-[9px] sm:text-[10px] font-black uppercase tracking-widest">Amendes Dues</span>
                         <div className="flex items-baseline gap-2 mt-1">
-                            <span className="text-2xl sm:text-4xl font-black text-rose-500 tracking-tighter italic">{unpaidFinesPot}€</span>
+                            <span className="text-2xl sm:text-4xl font-black text-rose-500 tracking-normal">{unpaidFinesPot}€</span>
                             <span className="text-slate-600 font-bold text-[10px] sm:text-xs uppercase">💸</span>
                         </div>
                     </div>
@@ -147,7 +147,7 @@ export default function UserProfilePage() {
             {/* Hall of Fame */}
             {hallOfFame.length > 0 && (
                 <section className="space-y-4 sm:space-y-6">
-                    <h2 className="text-xl sm:text-2xl font-black italic uppercase tracking-tighter flex items-center gap-3 px-2 text-slate-900">
+                    <h2 className="text-xl sm:text-2xl font-black uppercase tracking-normal flex items-center gap-3 px-2 text-slate-900">
                         <span className="text-yellow-500">✨</span> Hall of Fame
                     </h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
@@ -164,7 +164,7 @@ export default function UserProfilePage() {
                                     <div className="text-3xl sm:text-4xl filter drop-shadow-lg shrink-0">{ownership.badge.emoji}</div>
                                     <div className="min-w-0">
                                         <span className="text-[7px] sm:text-[8px] font-black uppercase tracking-widest opacity-60 leading-none">{ownership.badge.rarity}</span>
-                                        <h3 className="text-sm sm:text-base font-black text-gray-900 uppercase tracking-tighter leading-tight mt-0.5 truncate">{ownership.badge.name}</h3>
+                                        <h3 className="text-sm sm:text-base font-black text-gray-900 uppercase tracking-normal leading-tight mt-0.5 truncate">{ownership.badge.name}</h3>
                                         <p className="text-[9px] sm:text-[10px] font-bold text-gray-500 mt-1 line-clamp-1 italic">"{ownership.badge.description}"</p>
                                     </div>
                                 </div>
@@ -177,7 +177,7 @@ export default function UserProfilePage() {
             {/* Analytics Section */}
             <section className="bg-white rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 shadow-sm border border-gray-100 space-y-10">
                 <div className="flex items-center justify-between border-b border-gray-50 pb-6">
-                    <h2 className="text-xl sm:text-2xl font-black uppercase italic tracking-tighter flex items-center gap-3 text-slate-900">
+                    <h2 className="text-xl sm:text-2xl font-black uppercase tracking-normal flex items-center gap-3 text-slate-900">
                         <span className="p-2 bg-blue-100/50 rounded-2xl text-xl">📊</span> Statistiques & Analytics
                     </h2>
                 </div>
@@ -229,9 +229,9 @@ export default function UserProfilePage() {
                             </div>
                         </div>
                         <div className="flex flex-wrap justify-center gap-4 text-[9px] font-black uppercase tracking-wider">
-                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Pompes</div>
-                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-orange-500"></span> Tractions</div>
-                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Squats</div>
+                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span> {pushups.toLocaleString()} Pompes</div>
+                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-orange-500"></span> {pullups.toLocaleString()} Tractions</div>
+                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> {squats.toLocaleString()} Squats</div>
                         </div>
                     </div>
 
@@ -286,11 +286,11 @@ export default function UserProfilePage() {
                                 <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">TOTAL XP</span>
                             </div>
                         </div>
-                        <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-[9px] font-black uppercase tracking-wider max-w-[280px]">
-                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-indigo-500"></span> Reps</div>
-                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Badges</div>
-                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-purple-500"></span> Records</div>
-                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Bonus</div>
+                        <div className="flex flex-wrap justify-center gap-4 text-[9px] font-black uppercase tracking-wider max-w-sm">
+                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-indigo-500"></span> {Math.round(analyticsData.xpBreakdown.repsXP).toLocaleString()} Entraînement</div>
+                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span> {Math.round(analyticsData.xpBreakdown.badgesXP).toLocaleString()} Trophées</div>
+                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span> {Math.round(analyticsData.xpBreakdown.recordsXP).toLocaleString()} Records</div>
+                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-slate-400"></span> {Math.round(analyticsData.xpBreakdown.finesXP + (analyticsData.xpBreakdown.manualXP || 0)).toLocaleString()} Bonus/Dons</div>
                         </div>
                     </div>
                 </div>
@@ -306,7 +306,7 @@ export default function UserProfilePage() {
             {/* Badges Section */}
             <section className="space-y-4 sm:space-y-6">
                 <div className="flex items-center justify-between px-2">
-                    <h2 className="text-xl sm:text-2xl font-black italic uppercase tracking-tighter flex items-center gap-3 text-slate-900">
+                    <h2 className="text-xl sm:text-2xl font-black uppercase tracking-normal flex items-center gap-3 text-slate-900">
                         <span className="p-1.5 sm:p-2 bg-indigo-100 rounded-xl sm:rounded-2xl text-lg sm:text-xl">🎖️</span> Vitrine
                     </h2>
                 </div>
@@ -344,7 +344,7 @@ export default function UserProfilePage() {
             {/* Fines & Certificates */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pb-12">
                 <section className="space-y-4">
-                    <h2 className="text-xl font-black uppercase italic tracking-tighter px-2 text-slate-900">💸 Dernières Prunes</h2>
+                    <h2 className="text-xl font-black uppercase tracking-normal px-2 text-slate-900">💸 Dernières Prunes</h2>
                     <div className="bg-gray-50 rounded-[2.5rem] p-4 space-y-3 border border-gray-100">
                         {user.fines?.map((fine: any) => (
                             <div key={fine.id} className="bg-white p-5 rounded-2xl flex justify-between items-center shadow-sm border border-gray-100 transition-all hover:bg-gray-50">
@@ -367,7 +367,7 @@ export default function UserProfilePage() {
                 </section>
 
                 <section className="space-y-4">
-                    <h2 className="text-xl font-black uppercase italic tracking-tighter px-2 text-slate-900">🏥 Infirmerie</h2>
+                    <h2 className="text-xl font-black uppercase tracking-normal px-2 text-slate-900">🏥 Infirmerie</h2>
                     <div className="bg-gray-50 rounded-[2.5rem] p-4 space-y-3 border border-gray-100">
                         {user.medicalCertificates?.map((cert: any) => (
                             <div key={cert.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 relative group transition-all hover:bg-gray-50">

@@ -53,15 +53,24 @@ export default function GraphsSection({ data, graphPeriod, setGraphPeriod }: Gra
                                     {/* Y Axis Labels */}
                                     <div className="absolute -left-10 top-0 bottom-0 flex flex-col justify-between text-[8px] font-black text-slate-400 text-right pr-2">
                                         <span>{maxVal}</span>
+                                        <span>{Math.round(maxVal * 0.75)}</span>
                                         <span>{Math.round(maxVal / 2)}</span>
+                                        <span>{Math.round(maxVal * 0.25)}</span>
                                         <span>0</span>
                                     </div>
 
                                     {/* Horizontal Grid */}
-                                    <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-20">
-                                        <div className="w-full h-px bg-slate-300" />
-                                        <div className="w-full h-px bg-slate-200 border-dashed border-t" />
-                                        <div className="w-full" />
+                                    <div className="absolute inset-x-0 top-0 bottom-0 flex flex-col justify-between pointer-events-none">
+                                        {[0, 0.25, 0.5, 0.75, 1].map((p) => (
+                                            <div key={p} className="w-full h-px bg-slate-200/50" />
+                                        ))}
+                                    </div>
+                                    
+                                    {/* Vertical Grid (Time intervals) */}
+                                    <div className="absolute inset-0 flex justify-between pointer-events-none opacity-20">
+                                        {Array.from({ length: graphPeriod === '365' ? 12 : 4 }).map((_, i) => (
+                                            <div key={i} className="h-full w-px bg-slate-300" />
+                                        ))}
                                     </div>
 
                                     {/* Line SVG */}
@@ -95,12 +104,33 @@ export default function GraphsSection({ data, graphPeriod, setGraphPeriod }: Gra
                                             strokeLinejoin="round"
                                             className="drop-shadow-[0_4px_12px_rgba(59,130,246,0.3)]"
                                         />
+                                        {/* Data Points (Dots) */}
+                                        {daily.map((d: any, i: number) => {
+                                            const x = (i / Math.max(1, daily.length - 1)) * 1000;
+                                            const y = 100 - ((d.total || 0) / maxVal) * 100;
+                                            // Only show dots if there are not too many points
+                                            if (graphPeriod === '365' && i % 7 !== 0) return null;
+                                            return (
+                                                <circle 
+                                                    key={i} 
+                                                    cx={x} 
+                                                    cy={y} 
+                                                    r={graphPeriod === '30' ? "4" : "3"} 
+                                                    fill="white" 
+                                                    stroke="#3b82f6" 
+                                                    strokeWidth="2"
+                                                />
+                                            );
+                                        })}
                                     </svg>
                                 </div>
 
                                 {/* X Axis Labels */}
                                 <div className="absolute inset-x-8 bottom-6 flex justify-between text-[8px] font-black text-slate-400 uppercase tracking-widest pt-4">
                                     <span>{daily[0]?.date ? new Date(daily[0].date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : ''}</span>
+                                    {graphPeriod === '30' && daily.length > 15 && (
+                                        <span>{new Date(daily[Math.floor(daily.length/2)].date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
+                                    )}
                                     <span className="text-blue-500">AUJOURD'HUI</span>
                                 </div>
                             </div>

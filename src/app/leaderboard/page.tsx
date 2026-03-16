@@ -120,7 +120,7 @@ export default async function LeaderboardPage({
                 <div className="inline-flex items-center gap-2 sm:gap-3 bg-slate-900 border border-slate-800 px-4 sm:px-6 py-1.5 sm:py-2 rounded-full mt-2 sm:mt-4">
                     <span className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse" />
                     <span className="text-slate-300 font-mono text-[10px] sm:text-sm uppercase tracking-widest">
-                        Total {selectedExercise} : <span className="text-white font-bold">{totalGroupReps.toLocaleString()}</span> REPS
+                        Total {selectedExercise} : <span className="text-white font-bold">{totalGroupReps.toLocaleString()}</span> {selectedExercise === 'XP' ? 'XP' : 'REPS'}
                     </span>
                 </div>
             </header>
@@ -216,7 +216,7 @@ export default async function LeaderboardPage({
                                 <td className="px-3 sm:px-6 py-4 sm:py-6 text-right">
                                     <div className="flex flex-col items-end">
                                         <span className="text-base sm:text-2xl font-black text-white font-mono">{entry.totalReps.toLocaleString('fr-FR')}</span>
-                                        <span className="text-[8px] sm:text-[10px] font-bold text-slate-500 tracking-tighter uppercase whitespace-nowrap">{selectedExercise === 'XP' ? 'Points XP' : selectedExercise}</span>
+                                        <span className="text-[8px] sm:text-[10px] font-bold text-slate-500 tracking-tighter uppercase whitespace-nowrap">{selectedExercise === 'XP' ? 'XP' : selectedExercise}</span>
                                     </div>
                                 </td>
                             </tr>

@@ -504,7 +504,7 @@ export default function ChallengeDashboard() {
             <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-3xl font-black italic tracking-tighter text-blue-600 leading-none">POMPES APP</h1>
+                        <h1 className="text-3xl font-black tracking-normal text-blue-600 leading-none">POMPES APP</h1>
                         <p className="text-[10px] font-black text-gray-400 mt-1 uppercase tracking-widest">Version 3.1 • Clean State</p>
                     </div>
                 </div>
@@ -567,7 +567,7 @@ export default function ChallengeDashboard() {
                     {data?.sallyUp?.enabledForSelectedDate && (
                         <div className="bg-yellow-50 rounded-3xl p-6 border-2 border-yellow-200 space-y-4">
                             <div className="flex justify-between items-center text-yellow-800">
-                                <h3 className="font-black uppercase italic tracking-tighter">Bring Sally Up 💪</h3>
+                                <h3 className="font-black uppercase tracking-normal">Bring Sally Up 💪</h3>
                                 <span className="bg-yellow-200 px-3 py-1 rounded-full text-[10px] font-black uppercase">Challenge Mensuel</span>
                             </div>
                             <div className="flex gap-4 items-end">
@@ -585,7 +585,7 @@ export default function ChallengeDashboard() {
                                             <p className="font-black text-yellow-700 text-sm">{p?.reps ?? 0} reps</p>
                                         </div>
                                     </div>
-                                )) : <p className="text-center font-black text-yellow-600 text-[10px] uppercase italic">Pas encore de record</p>}
+                                )) : <p className="text-center font-black text-yellow-600 text-[10px] uppercase tracking-normal">Pas encore de record</p>}
                             </div>
                         </div>
                     )}
@@ -643,7 +643,7 @@ export default function ChallengeDashboard() {
                                         <div className="absolute -inset-6 bg-yellow-400/20 blur-2xl rounded-full -z-10 animate-pulse"></div>
                                     </div>
                                     <div>
-                                        <h2 className="text-2xl font-black italic uppercase tracking-tighter bg-gradient-to-br from-white via-yellow-200 to-yellow-500 bg-clip-text text-transparent">
+                                        <h2 className="text-2xl font-black uppercase tracking-normal bg-gradient-to-br from-white via-yellow-200 to-yellow-500 bg-clip-text text-transparent">
                                             {showHonorPopup.badge?.name || 'VÉRITABLE EXPLOIT'}
                                         </h2>
                                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-1">Détection de Niveau S</p>
