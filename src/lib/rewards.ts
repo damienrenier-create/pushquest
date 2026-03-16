@@ -26,16 +26,26 @@ export function getXPForReward(key: string, achievedAt?: Date | string): number 
 
     if (def.type === "COMPETITIVE") {
         xp = timeBonus;
+        // Evolutive streaks for Perfect Soldier
+        if (def.key === "perfect_soldier") {
+            const streak = (achievedAt as any)?.currentStreak || 0; // Passed via context or detected
+            if (streak >= 50) xp = timeBonus * 3;
+            else if (streak >= 30) xp = timeBonus * 2;
+            else if (streak >= 10) xp = timeBonus * 1.5;
+        }
         // Boost Trinity streak (difficult to maintain)
         if (def.key === "trinity") xp += 500;
     } else if (def.type === "LEGENDARY") {
         if (def.key === "unique_pushups_50") xp = 1000;
         else if (def.key === "unique_pushups_80") xp = 2500;
-        else if (def.key === "unique_pushups_100") xp = 5000;
+        else if (def.key.includes("100")) xp = 5000;
         else if (def.key.includes("pullups_20")) xp = 3000;
-        else if (def.key.includes("pullups_30")) xp = 7500;
+        else if (def.key.includes("pullups_30")) xp = 5000;
         else if (def.key.includes("squats_150")) xp = 2000;
-        else if (def.key.includes("squats_300")) xp = 8000;
+        else if (def.key.includes("squats_300")) xp = 5000;
+        else if (def.key.includes("squats_1k_day")) xp = 5000;
+        else if (def.key.includes("pushups_1k_week")) xp = 5000;
+        else if (def.key.includes("pushups_1k_day")) xp = 5000;
         else if (def.key === "murph_hero") xp = 2500;
     } else if (def.type === "MILESTONE") {
         if (def.metricType === "MILESTONE_TOTAL" && def.threshold) {
@@ -82,6 +92,8 @@ export function getXPForReward(key: string, achievedAt?: Date | string): number 
             xp = timeBonus + 500;
         } else if (def.key === "sally_participation") xp = 250;
         else if (def.key === "sally_podium_1") xp = 1000;
+        else if (def.key === "solstice_summer") xp = 900;
+        else if (def.key === "noel_sapin") xp = 500;
         else if (def.key.includes("equinox") || def.key.includes("solstice")) xp = 250;
         else xp = timeBonus;
     }

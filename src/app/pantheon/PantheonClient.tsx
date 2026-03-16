@@ -205,7 +205,7 @@ export default function PantheonClient({
                     </div>
                 </div>
 
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12">
                     {/* SECTION A: PANTHÉON GLOBAL (À LA UNE) */}
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
 
@@ -315,7 +315,10 @@ export default function PantheonClient({
                                     {filteredDangerList.length > 0 ? filteredDangerList.map((danger, i) => (
                                         <div key={i} className="flex items-center justify-between p-3 rounded-2xl bg-red-50/30 border border-red-100/50 group hover:bg-red-50 transition-colors">
                                             <div className="min-w-0 pr-2">
-                                                <p className="text-[9px] font-black text-red-600 uppercase mb-0.5 truncate">{danger.badgeName}</p>
+                                                <Link href="/faq?tab=catalogue" className="text-[9px] font-black text-red-600 uppercase mb-0.5 truncate hover:underline flex items-center gap-1">
+                                                    <span>{danger.emoji}</span>
+                                                    <span>{danger.badgeName}</span>
+                                                </Link>
                                                 <p className="text-[10px] text-slate-600 font-bold truncate">
                                                     <span className="opacity-60">Roi:</span> {danger.holder}
                                                 </p>
@@ -376,6 +379,19 @@ export default function PantheonClient({
                             const virtuals = virtualizedData.find(v => v.userId === user.id)?.virtualBadges || {};
                             const virtualScore = Object.values(virtuals).filter(Boolean).length;
 
+                            // Combine and sort all earned badges by XP value
+                            const allConquered = [
+                                ...userOwnerships.map(bo => ({ key: bo.badgeKey, emoji: bo.badge?.emoji, name: bo.badge?.name, isCompetitive: true })),
+                                ...Object.entries(virtuals)
+                                    .filter(([_, earned]) => earned)
+                                    .map(([key, _]) => {
+                                        const def = badgeDefinitions.find(d => d.key === key);
+                                        return { key, emoji: def?.emoji, name: def?.name, isCompetitive: false };
+                                    })
+                            ].sort((a, b) => getXPForReward(b.key) - getXPForReward(a.key));
+
+                            const showcase = allConquered.slice(0, 12);
+
                             return (
                                 <Link
                                     key={i}
@@ -408,31 +424,18 @@ export default function PantheonClient({
                                     </div>
 
                                     <div className="flex flex-wrap gap-1.5 group-hover:cursor-help" title="Cliquez pour les détails">
-                                        {userOwnerships.slice(0, 4).map((bo, j) => (
+                                        {showcase.map((badge, j) => (
                                             <span
                                                 key={j}
-                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRewardClick(bo.badge?.key || ''); }}
-                                                className="text-base bg-white border border-slate-100 w-7 h-7 flex items-center justify-center rounded-lg hover:scale-125 hover:shadow-md transition-all cursor-pointer"
-                                                title={bo.badge?.name}
+                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRewardClick(badge.key); }}
+                                                className={`text-base bg-white border border-slate-100 w-7 h-7 flex items-center justify-center rounded-lg hover:scale-125 hover:shadow-md transition-all cursor-pointer ${!badge.isCompetitive ? 'grayscale opacity-70 hover:grayscale-0 hover:opacity-100' : ''}`}
+                                                title={`${badge.name} (${getXPForReward(badge.key)} XP)`}
                                             >
-                                                {bo.badge?.emoji}
+                                                {badge.emoji}
                                             </span>
                                         ))}
-                                        {Object.entries(virtuals).filter(([_, v]) => !!v).slice(0, 4 - Math.min(4, userOwnerships.length)).map(([key, _]: [string, any], j) => {
-                                            const def = badgeDefinitions.find(d => d.key === key);
-                                            return (
-                                                <span
-                                                    key={`v-${j}`}
-                                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRewardClick(key); }}
-                                                    className="text-base bg-white border border-slate-100 w-7 h-7 flex items-center justify-center rounded-lg grayscale opacity-50 hover:grayscale-0 hover:opacity-100 transition-all hover:scale-125 hover:shadow-md cursor-pointer"
-                                                    title={def?.name}
-                                                >
-                                                    {def?.emoji}
-                                                </span>
-                                            );
-                                        })}
-                                        {(userOwnerships.length + virtualScore > 4) && (
-                                            <span className="text-[8px] font-black text-slate-400 flex items-center justify-center px-1">+{userOwnerships.length + virtualScore - 4}</span>
+                                        {allConquered.length > 12 && (
+                                            <span className="text-[8px] font-black text-slate-400 flex items-center justify-center px-1">+{allConquered.length - 12}</span>
                                         )}
                                     </div>
                                 </Link>

@@ -62,20 +62,55 @@ export default async function PantheonPage() {
 
     const summaries = getUserSummaries(allUsers, allEvents);
 
-    // Calculate virtual milestones for everyone
+    // Calculate all potential badges (Milestones, Events, Legendary) for everyone
     const virtualizedData = summaries.map((s: any) => {
+        const virtualBadges: Record<string, boolean> = {};
+        
+        BADGE_DEFINITIONS.forEach(def => {
+            if (def.type === "COMPETITIVE") return;
+            
+            let isEarned = false;
+            const threshold = def.threshold || 0;
+
+            if (def.metricType === "MILESTONE_SET") {
+                isEarned = s.maxSetAll >= threshold;
+            } else if (def.metricType === "MILESTONE_TOTAL") {
+                const scopeField = def.exerciseScope === "PUSHUPS" ? "totalPushups" : def.exerciseScope === "PULLUPS" ? "totalPullups" : def.exerciseScope === "SQUATS" ? "totalSquats" : "totalAll";
+                isEarned = s[scopeField] >= threshold;
+            } else if (def.metricType === "STREAK_NO_FINES") {
+                isEarned = s.fineFreeStreak >= threshold;
+            } else if (def.metricType === "TIME_AWARD") {
+                isEarned = s.earlyStreak >= (threshold || 1);
+            } else if (def.metricType === "TIME_AWARD_LATE") {
+                isEarned = s.lateStreak >= (threshold || 1);
+            } else if (def.metricType === "SPRINTER_COUNT") {
+                isEarned = s.sprinterCount >= threshold;
+            } else if (def.metricType === "TRINITY_GOLD") {
+                isEarned = s.hasTrinityGold(new Date().toISOString().split('T')[0]);
+            } else if (def.metricType === "TRINITY_ULTIMATE") {
+                isEarned = s.hasTrinityUltimate(new Date().toISOString().split('T')[0]);
+            } else if (def.metricType === "HEADHUNTER_COUNT") {
+                isEarned = s.headhunterCount >= threshold;
+            } else if (def.metricType === "FIRST_REACH") {
+                const scope = def.exerciseScope === "PUSHUPS" ? "maxSetPushups" : def.exerciseScope === "PULLUPS" ? "maxSetPullups" : "maxSetSquats";
+                isEarned = s[scope] >= threshold;
+            } else if (def.metricType === "DATE_AWARD_HARD" || def.metricType === "DATE_AWARD") {
+                const dateMap: any = { 'st_patrick': '-03-17', 'st_marvin': '-03-08', 'noel_sapin': '-12-25' };
+                const target = dateMap[def.key] || (def as any).addedAt;
+                if (target) isEarned = s.checkDatePlayed(target);
+            } else if (def.metricType === "PERIOD_VOLUME") {
+                const days = def.key.includes("week") ? 7 : 1;
+                const exo = def.exerciseScope === "PUSHUPS" ? "PUSHUP" : "SQUAT";
+                isEarned = s.getPeriodVolume(days, exo) >= threshold;
+            }
+            
+            if (isEarned) virtualBadges[def.key] = true;
+        });
+
         return {
             userId: s.id,
             nickname: s.nickname,
-            virtualBadges: {
-                centurion: s.maxSetAll >= 100,
-                general_10k: s.totalAll >= 10000,
-                survivor_30d: s.fineFreeStreak >= 30,
-                early_bird: s.earlyStreak >= 1,
-                night_owl: s.lateStreak >= 1,
-                high_noon: s.noonStreak >= 1,
-                master_thief: s.stealCount > 0
-            }
+            virtualBadges
         };
     });
 

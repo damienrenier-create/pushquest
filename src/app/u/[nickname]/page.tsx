@@ -175,141 +175,131 @@ export default function UserProfilePage() {
             )}
 
             {/* Analytics Section */}
-            <section className="bg-white rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-8 shadow-sm border border-gray-100 space-y-8">
+            <section className="bg-white rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 shadow-sm border border-gray-100 space-y-10">
                 <div className="flex items-center justify-between border-b border-gray-50 pb-6">
                     <h2 className="text-xl sm:text-2xl font-black uppercase italic tracking-tighter flex items-center gap-3 text-slate-900">
                         <span className="p-2 bg-blue-100/50 rounded-2xl text-xl">📊</span> Statistiques & Analytics
                     </h2>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12">
-                    {/* XP Breakdown Chart */}
-                    <div className="space-y-6">
-                        <div className="flex items-center gap-2">
-                           <PieChart size={16} className="text-gray-400" />
-                           <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400">Répartition des XP</h3>
-                        </div>
-                        {analyticsData?.xpBreakdown && (
-                            <div className="space-y-4">
-                                {Object.entries(analyticsData.xpBreakdown).map(([label, value]: [string, any]) => {
-                                    if (value === 0 || label === "id") return null;
-                                    const percentage = (value / analyticsData.totalXP) * 100;
-                                    const labelMap: Record<string, { name: string, color: string }> = {
-                                        repsXP: { name: "Répétitions", color: "bg-blue-500" },
-                                        badgesXP: { name: "Badges & Trophées", color: "bg-amber-500" },
-                                        finesXP: { name: "Assiduité (Bonus)", color: "bg-emerald-500" },
-                                        recordsXP: { name: "Records", color: "bg-purple-500" },
-                                        manualXP: { name: "Ajustements", color: "bg-slate-400" }
-                                    };
-                                    const info = labelMap[label] || { name: label, color: "bg-gray-400" };
-                                    return (
-                                        <div key={label} className="space-y-1.5">
-                                            <div className="flex justify-between text-[10px] font-black uppercase tracking-tight">
-                                                <span className="text-gray-500">{info.name}</span>
-                                                <span className="text-gray-900 font-bold">{value.toLocaleString()} XP</span>
-                                            </div>
-                                            <div className="h-2 w-full bg-gray-50 rounded-full overflow-hidden border border-gray-100">
-                                                <div className={`h-full ${info.color} rounded-full transition-all duration-1000 shadow-[0_0_8px_rgba(0,0,0,0.05)]`} style={{ width: `${percentage}%` }}></div>
-                                            </div>
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Max Series Evolution */}
-                    <div className="space-y-6">
-                        <div className="flex items-center gap-2">
-                           <TrendingUp size={16} className="text-gray-400" />
-                           <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400">Max Séries (30j)</h3>
-                        </div>
-                        <div className="h-44 w-full bg-gray-50 rounded-[2rem] border border-gray-100 p-5 relative flex items-end gap-1.5">
-                            {analyticsData?.maxSeriesData?.length > 0 ? (
-                                analyticsData.maxSeriesData.map((d: any, idx: number) => {
-                                    const maxVal = Math.max(...analyticsData.maxSeriesData.map((x: any) => Math.max(x.PUSHUP, x.PULLUP, x.SQUAT))) || 1;
-                                    const hP = (d.PUSHUP / maxVal) * 100;
-                                    const hT = (d.PULLUP / maxVal) * 100;
-                                    const hS = (d.SQUAT / maxVal) * 100;
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                    {/* Reps Distribution Wheel */}
+                    <div className="flex flex-col items-center space-y-6">
+                        <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400">Répartition des Efforts</h3>
+                        <div className="relative w-48 h-48 sm:w-56 sm:h-56">
+                            <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+                                {(() => {
+                                    const total = pushups + pullups + squats || 1;
+                                    const p = (pushups / total) * 100;
+                                    const t = (pullups / total) * 100;
+                                    const s = (squats / total) * 100;
                                     
+                                    let offset = 0;
+                                    const createSegment = (val: number, color: string) => {
+                                        const dashArray = `${val} ${100 - val}`;
+                                        const dashOffset = -offset;
+                                        offset += val;
+                                        return (
+                                            <circle
+                                                cx="50" cy="50" r="40"
+                                                fill="transparent"
+                                                stroke={color}
+                                                strokeWidth="12"
+                                                strokeDasharray={dashArray}
+                                                strokeDashoffset={dashOffset}
+                                                strokeLinecap="round"
+                                                className="transition-all duration-1000"
+                                            />
+                                        );
+                                    };
+
                                     return (
-                                        <div key={idx} className="flex-1 h-full flex flex-col justify-end items-center gap-0.5 group relative">
-                                            <div className="w-full bg-blue-500/80 rounded-t-sm transition-all group-hover:bg-blue-600" style={{ height: `${hP}%` }}></div>
-                                            <div className="w-full bg-rose-500/80 rounded-t-sm transition-all group-hover:bg-rose-600" style={{ height: `${hT}%` }}></div>
-                                            <div className="w-full bg-purple-500/80 rounded-t-sm transition-all group-hover:bg-purple-600" style={{ height: `${hS}%` }}></div>
-                                            
-                                            <div className="absolute bottom-full mb-2 hidden group-hover:block bg-gray-900 text-white text-[7px] p-2 rounded-lg z-20 whitespace-nowrap font-bold shadow-xl">
-                                                {new Date(d.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}<br/>
-                                                P:{d.PUSHUP} | T:{d.PULLUP} | S:{d.SQUAT}
-                                            </div>
-                                        </div>
-                                    )
-                                })
-                            ) : (
-                                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 opacity-30">
-                                    <BarChart3 size={24} />
-                                    <span className="text-[9px] font-black uppercase tracking-widest">En attente de données</span>
-                                </div>
-                            )}
+                                        <>
+                                            <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f1f5f9" strokeWidth="12" />
+                                            {pushups > 0 && createSegment(p, "#3b82f6")}
+                                            {pullups > 0 && createSegment(t, "#f97316")}
+                                            {squats > 0 && createSegment(s, "#10b981")}
+                                        </>
+                                    );
+                                })()}
+                            </svg>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                                <span className="text-2xl sm:text-3xl font-black text-slate-900 leading-none">{totalReps.toLocaleString()}</span>
+                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">TOTAL REPS</span>
+                            </div>
                         </div>
-                        <div className="flex justify-center gap-4 text-[8px] font-black uppercase tracking-[0.2em] text-gray-400">
-                            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-500"></span> Pompes</span>
-                            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-rose-500"></span> Tractions</span>
-                            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-purple-500"></span> Squats</span>
+                        <div className="flex flex-wrap justify-center gap-4 text-[9px] font-black uppercase tracking-wider">
+                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Pompes</div>
+                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-orange-500"></span> Tractions</div>
+                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Squats</div>
                         </div>
                     </div>
 
-                    {/* XP Progression Area */}
-                    <div className="lg:col-span-2 space-y-6">
-                        <div className="flex items-center gap-2">
-                           <Activity size={16} className="text-gray-400" />
-                           <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400">Activité & Progression</h3>
-                        </div>
-                        <div className="h-48 sm:h-64 w-full bg-slate-900 rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-8 relative overflow-hidden group border border-slate-800">
-                           <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '20px 20px' }}></div>
-                           
-                            {analyticsData?.progressionData?.length > 1 ? (
-                                <svg className="w-full h-full relative z-10 overflow-visible" viewBox="0 0 1000 300" preserveAspectRatio="none">
-                                    <defs>
-                                        <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.4" />
-                                            <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
-                                        </linearGradient>
-                                    </defs>
-                                    <path 
-                                        d={`M 0 300 ${analyticsData.progressionData.map((d: any, i: number) => {
-                                            const x = (i / (analyticsData.progressionData.length - 1)) * 1000;
-                                            const y = 300 - ((d.reps + d.badges * 50) / Math.max(...analyticsData.progressionData.map((p:any) => Math.max(1, p.reps + p.badges * 50)))) * 240;
-                                            return `L ${x} ${y}`;
-                                        }).join(' ')} L 1000 300 Z`}
-                                        fill="url(#areaGrad)"
-                                    />
-                                    <path 
-                                        d={analyticsData.progressionData.map((d: any, i: number) => {
-                                            const x = (i / (analyticsData.progressionData.length - 1)) * 1000;
-                                            const y = 300 - ((d.reps + d.badges * 50) / Math.max(...analyticsData.progressionData.map((p:any) => Math.max(1, p.reps + p.badges * 50)))) * 240;
-                                            return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
-                                        }).join(' ')}
-                                        fill="none"
-                                        stroke="#3b82f6"
-                                        strokeWidth="4"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        className="drop-shadow-[0_0_10px_rgba(59,130,246,0.3)]"
-                                    />
-                                </svg>
-                            ) : (
-                                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 opacity-20">
-                                    <Activity size={32} className="animate-pulse" />
-                                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white">Initialisation du flux...</span>
-                                </div>
-                            )}
-                            
-                            <div className="absolute bottom-4 left-0 right-0 flex justify-center text-[7px] font-black text-blue-400/30 uppercase tracking-[0.5em]">
-                                VOLUME CUMULÉ (30 DERNIERS JOURS)
+                    {/* XP Distribution Wheel */}
+                    <div className="flex flex-col items-center space-y-6">
+                        <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400">Origine du Prestige (XP)</h3>
+                        <div className="relative w-48 h-48 sm:w-56 sm:h-56">
+                            <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+                                {(() => {
+                                    if (!analyticsData?.xpBreakdown) return <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f1f5f9" strokeWidth="12" />;
+                                    
+                                    const breakdown = analyticsData.xpBreakdown;
+                                    const total = analyticsData.totalXP || 1;
+                                    const labels: any = {
+                                        repsXP: "#6366f1",
+                                        badgesXP: "#f59e0b",
+                                        recordsXP: "#a855f7",
+                                        finesXP: "#10b981",
+                                        manualXP: "#94a3b8"
+                                    };
+
+                                    let offset = 0;
+                                    return (
+                                        <>
+                                            <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f1f5f9" strokeWidth="12" />
+                                            {Object.entries(breakdown).map(([key, val]: [string, any]) => {
+                                                if (val <= 0 || !labels[key]) return null;
+                                                const p = (val / total) * 100;
+                                                const dashArray = `${p} ${100 - p}`;
+                                                const dashOffset = -offset;
+                                                offset += p;
+                                                return (
+                                                    <circle
+                                                        key={key}
+                                                        cx="50" cy="50" r="40"
+                                                        fill="transparent"
+                                                        stroke={labels[key]}
+                                                        strokeWidth="12"
+                                                        strokeDasharray={dashArray}
+                                                        strokeDashoffset={dashOffset}
+                                                        strokeLinecap="round"
+                                                        className="transition-all duration-1000"
+                                                    />
+                                                );
+                                            })}
+                                        </>
+                                    );
+                                })()}
+                            </svg>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                                <span className="text-2xl sm:text-3xl font-black text-indigo-600 leading-none">{(analyticsData?.totalXP || 0).toLocaleString()}</span>
+                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">TOTAL XP</span>
                             </div>
                         </div>
+                        <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-[9px] font-black uppercase tracking-wider max-w-[280px]">
+                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-indigo-500"></span> Reps</div>
+                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Badges</div>
+                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-purple-500"></span> Records</div>
+                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Bonus</div>
+                        </div>
                     </div>
+                </div>
+
+
+                <div className="pt-8 border-t border-gray-50 flex flex-col items-center">
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center max-w-sm">
+                        Les graphiques détaillés de progression et les échelles de performance sont disponibles dans votre espace personnel.
+                    </p>
                 </div>
             </section>
 

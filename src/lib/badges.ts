@@ -259,7 +259,16 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
                 }) && req > 0;
             },
             getDaySum: (date: string, exo: string) => sets.filter((s: any) => s.date === date && s.exercise === exo).reduce((sum: number, s: any) => sum + s.reps, 0),
-            getScaleReps: (date: string) => Array.from(new Set(sets.filter((s: any) => s.date === date).map((s: any) => s.reps))) as number[]
+            getScaleReps: (date: string) => Array.from(new Set(sets.filter((s: any) => s.date === date).map((s: any) => s.reps))) as number[],
+            getScaleRepsByExo: (date: string, exo: string) => Array.from(new Set(sets.filter((s: any) => s.date === date && s.exercise === exo).map((s: any) => s.reps))) as number[],
+            getPeriodVolume: (daysBack: number, exo?: string) => {
+                const cutoff = new Date();
+                cutoff.setDate(cutoff.getDate() - daysBack);
+                return sets.filter((s: any) => {
+                    const setDate = new Date(s.createdAt);
+                    return setDate >= cutoff && (!exo || s.exercise === exo);
+                }).reduce((sum: number, s: any) => sum + s.reps, 0);
+            }
         };
     });
 }
@@ -398,6 +407,11 @@ export async function updateBadgesPostSave(userId: string, precomputedSummaries?
                 const isAwarded = (def.key === 'st_damien' && s.hasStDamien) || (def.key === 'st_nicolas' && s.hasStNicolas);
                 if (isAwarded) await awardMilestone(s.id, def.key, 1);
             }
+            continue;
+        } else if (def.metricType === "PERIOD_VOLUME") {
+            const days = def.key.includes("week") ? 7 : 1; // day or week
+            const exo = def.exerciseScope === "PUSHUPS" ? "PUSHUP" : "SQUAT";
+            for (const s of summaries) { if (s.getPeriodVolume(days, exo) >= def.threshold!) await awardMilestone(s.id, def.key, 1); }
             continue;
         } else if (def.metricType === "APRIL_FOOLS_TIER") {
             // Evaluated explicitly on April 1st.
@@ -557,6 +571,48 @@ export async function updateBadgesPostSave(userId: string, precomputedSummaries?
                     newValue: bestValue
                 }
             });
+
+            // --- VENDETTA BONUS LOGIC ---
+            if (eventType === "STEAL" && !isSameUser && ownership?.currentUserId) {
+                // Find if the person who just stole it (bestUser.id) was the one who lost it previously
+                const lastEvents = await (prisma as any).badgeEvent.findMany({
+                    where: { badgeKey: def.key },
+                    orderBy: { createdAt: 'desc' },
+                    take: 3 // Current one + the one where bestUser lost it + maybe one before
+                });
+
+                // lastEvents[0] is the one we just created.
+                // lastEvents[1] should be the one where ownership.currentUserId stole it from bestUser.id
+                const prevEvent = lastEvents[1];
+                if (prevEvent && prevEvent.fromUserId === bestUser.id && prevEvent.toUserId === ownership.currentUserId) {
+                    const timeSinceLoss = Date.now() - new Date(prevEvent.createdAt).getTime();
+                    if (timeSinceLoss < 24 * 60 * 60 * 1000) {
+                        // Vendetta confirmed! 
+                        // We need the duration bestUser held it *before* losing it.
+                        // We look for the event where bestUser gained it lastEvents[2] or older
+                        const gainEvent = await (prisma as any).badgeEvent.findFirst({
+                            where: { badgeKey: def.key, toUserId: bestUser.id, createdAt: { lt: prevEvent.createdAt } },
+                            orderBy: { createdAt: 'desc' }
+                        });
+                        
+                        if (gainEvent) {
+                            const heldDurationMs = new Date(prevEvent.createdAt).getTime() - new Date(gainEvent.createdAt).getTime();
+                            const heldDays = Math.max(1, Math.floor(heldDurationMs / (24 * 60 * 60 * 1000)));
+                            const bonusXP = Math.min(heldDays * 50, 1000);
+
+                            // Award XP Adjustment
+                            await (prisma as any).xpAdjustment.create({
+                                data: {
+                                    userId: bestUser.id,
+                                    amount: bonusXP,
+                                    reason: `Vendetta : Récupération du badge ${def.name} (${heldDays}j de possession vengés)`
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+            // --- END VENDETTA ---
 
             // Featured Badge Logic
             const featured = await (prisma as any).globalConfig.findUnique({ where: { key: "featuredBadgeKey" } });

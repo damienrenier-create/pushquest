@@ -15,6 +15,7 @@ import { SPECIAL_DAYS } from "@/config/specialDays";
 import { initBadges, getUserSummaries } from "@/lib/badges";
 import { BADGE_DEFINITIONS } from "@/config/badges";
 import { calculateAllUsersXP } from "@/lib/xp";
+import { getXPForReward } from "@/lib/rewards";
 
 export const dynamic = "force-dynamic";
 
@@ -441,7 +442,9 @@ export async function GET(req: Request) {
             if (challenger && bo.currentValue >= 0) {
                 const diff = bo.currentValue - challengerValue;
                 const percent = (challengerValue / bo.currentValue);
+                // Criteria: challenger is at 90%+ or within 2 units (reps/streak/count)
                 if (percent >= 0.9 || diff <= 2) {
+                    const xpAtRisk = getXPForReward(bo.badgeKey);
                     dangerList.push({
                         badgeKey: bo.badgeKey,
                         badgeName: bo.badge.name,
@@ -450,11 +453,16 @@ export async function GET(req: Request) {
                         challenger: challenger.nickname,
                         currentValue: bo.currentValue,
                         challengerValue,
-                        diff
+                        diff,
+                        percent,
+                        xpAtRisk
                     });
                 }
             }
         });
+
+        // Sort by criticality: percentage descending (closer to 1 = more dangerous)
+        dangerList.sort((a, b) => b.percent - a.percent);
 
         return NextResponse.json({
             todayISO: today,

@@ -193,10 +193,11 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
             const req = getRequiredRepsForDate(d);
 
             if (req > 0 && dayTotal >= req) {
+                let dayXP = 0;
                 if (dayTotal === req) {
-                    totalXP += 200; // Jour parfait
+                    dayXP = 200; // Jour parfait
                 } else {
-                    totalXP += 100; // Jour validé
+                    dayXP = 100; // Jour validé
                     const surplus = dayTotal - req;
                     const step10Percent = Math.max(1, Math.floor(req * 0.1));
                     let flexXP = 0;
@@ -204,8 +205,20 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
                         const tier = Math.floor(i / step10Percent);
                         flexXP += (tier + 1);
                     }
-                    totalXP += Math.min(flexXP, 1000); // Flex XP capped at 1000 per day
+                    dayXP += Math.min(flexXP, 1000); // Flex XP capped at 1000 per day
                 }
+
+                // Birthday Triple XP Logic (Nov 17th for Milka, Sept 26th for Mools)
+                const isMilkaBday = d.endsWith("-11-17") && (u.nickname?.toLowerCase().includes("milka") || u.nickname?.toLowerCase().includes("milkardashian"));
+                const isMoolsBday = d.endsWith("-09-26") && (u.nickname?.toLowerCase() === "mools" || u.nickname?.toLowerCase() === "commissaire");
+                
+                if (isMilkaBday || isMoolsBday) {
+                    // Check if they were #1 that day
+                    const isWinner = summaries.every(s => s.id === u.id || s.getDayTotal(d) < dayTotal);
+                    if (isWinner) dayXP *= 3;
+                }
+
+                totalXP += dayXP;
                 
                 // Specific Event XP
                 if (d === marvinBonusDate) totalXP += 500;
@@ -220,16 +233,21 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
                     const dayReps = summary.getScaleReps(d);
                     if (dayReps.includes(10) && dayReps.includes(20) && dayReps.includes(30)) totalXP += 750;
                 }
-                if (d === "2026-06-21" && dayTotal >= 900) totalXP += 500; // Solstice Eté
+                if (d === "2026-06-21" && dayTotal >= 900) totalXP += 900; // Solstice Eté
                 if (d === "2026-12-06" && dayTotal % 10 === 6) totalXP += 500; // St Nicolas
                 if (d === "2026-12-21") { // Solstice Hiver
                     const hoursWithReps = new Set(sets.filter((s:any) => s.date === d).map((s:any) => new Date(s.createdAt).getHours()));
                     if (hoursWithReps.size >= 12) totalXP += 500;
                 }
                 if (d === "2026-12-25") { // Noël
-                    const dayReps = summary.getScaleReps(d);
-                    const hasScale = [1,2,3,4,5,6,7,8,9,10,11,12].every(n => dayReps.includes(n));
-                    if (hasScale) totalXP += 2000;
+                    const scalePushups = (summary as any).getScaleRepsByExo(d, "PUSHUP");
+                    const scalePullups = (summary as any).getScaleRepsByExo(d, "PULLUP");
+                    const scaleSquats = (summary as any).getScaleRepsByExo(d, "SQUAT");
+                    const target = Array.from({ length: 15 }, (_, i) => i + 1);
+                    const hasScale = target.every(n => scalePushups.includes(n)) &&
+                                     target.every(n => scalePullups.includes(n)) &&
+                                     target.every(n => scaleSquats.includes(n));
+                    if (hasScale) totalXP += 500;
                 }
             }
         });
@@ -237,8 +255,19 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
         // C. Badges (Gloire)
         let badgeXPContribution = 0;
         const userBadges = badgesOwnerships.filter(b => b.currentUserId === u.id);
-        userBadges.forEach(b => {
-            const badgeXP = getXPForReward(b.badgeKey, b.achievedAt);
+        const processedBadges = userBadges.map(b => {
+            const streak = summary.perfectTargetStreak || 0;
+            let displayBadge = { ...b };
+
+            // Perfect Soldier Tier Names
+            if (b.badgeKey === "perfect_soldier") {
+                if (streak >= 50) displayBadge.name = "Hitler himself";
+                else if (streak >= 30) displayBadge.name = "Der Kanzler";
+                else if (streak >= 10) displayBadge.name = "Le parfait SS";
+                else displayBadge.name = "Le bon petit nazi";
+            }
+
+            const badgeXP = getXPForReward(b.badgeKey, { ...b, currentStreak: streak } as any);
             
             // Featured badge bonus
             let finalBadgeXP = badgeXP;
@@ -248,6 +277,8 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
 
             badgeXPContribution += finalBadgeXP;
             totalXP += finalBadgeXP;
+            
+            return { ...displayBadge, xp: finalBadgeXP };
         });
 
         // D. Fines

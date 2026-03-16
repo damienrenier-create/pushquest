@@ -22,9 +22,8 @@ export default function MobileNav() {
                     href="/pantheon"
                     className={`flex flex-col items-center gap-1 group relative ${pathname?.startsWith('/pantheon') ? 'text-indigo-600' : 'text-gray-400'}`}
                 >
-                    <div className={`p-2 rounded-2xl -mt-6 backdrop-blur-md shadow-sm border transition-all group-hover:-translate-y-1 ${pathname?.startsWith('/pantheon') ? 'bg-indigo-600 text-white border-indigo-500' : 'bg-white border-gray-100'}`}>
-                        <Star size={24} fill={pathname?.startsWith('/pantheon') ? "currentColor" : "none"} />
-                    </div>
+                    <Star size={22} className={`group-hover:scale-110 transition-transform ${pathname?.startsWith('/pantheon') ? 'stroke-[2.5px] fill-current' : ''}`} />
+                    <span className="text-[10px] font-black uppercase tracking-wider">Panthéon</span>
                 </Link>
 
                 <Link
