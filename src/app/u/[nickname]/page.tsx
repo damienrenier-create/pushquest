@@ -267,7 +267,7 @@ export default function UserProfilePage() {
             {/* Hall of Fame */}
             {hallOfFame.length > 0 && (
                 <section className="space-y-4 sm:space-y-6">
-                    <h2 className="text-xl sm:text-2xl font-black uppercase tracking-normal flex items-center gap-3 px-2 text-white">
+                    <h2 className="text-xl sm:text-2xl font-black uppercase tracking-normal flex items-center gap-3 px-2 text-slate-900">
                         <span className="text-yellow-500">✨</span> Hall of Fame
                     </h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
@@ -321,7 +321,7 @@ export default function UserProfilePage() {
             {/* Analytics Section */}
             <section className="bg-white rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 shadow-sm border border-gray-100 space-y-10">
                 <div className="flex items-center justify-between border-b border-gray-50 pb-6">
-                    <h2 className="text-xl sm:text-2xl font-black uppercase tracking-normal flex items-center gap-3 text-white">
+                    <h2 className="text-xl sm:text-2xl font-black uppercase tracking-normal flex items-center gap-3 text-slate-900">
                         <span className="p-2 bg-blue-100/50 rounded-2xl text-xl">{activeTab === 'stats' ? '📊' : '📈'}</span> 
                         {activeTab === 'stats' ? 'Statistiques & Analytics' : 'Courbe de Progression'}
                     </h2>
@@ -330,55 +330,67 @@ export default function UserProfilePage() {
                 {activeTab === 'stats' ? (
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-                    {/* Reps Distribution Wheel */}
-                    <div className="flex flex-col items-center space-y-6">
-                        <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-800 bg-slate-50 px-3 py-1 rounded-full">Répartition des Efforts</h3>
-                        <div className="relative w-48 h-48 sm:w-56 sm:h-56">
-                            <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+                    {/* Skills Radar Chart (Balanced View) */}
+                    <div className="flex flex-col items-center space-y-8">
+                        <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-800 bg-slate-50 px-4 py-1.5 rounded-full border border-slate-100">Équilibre des Forces</h3>
+                        <div className="relative w-56 h-56 sm:w-64 sm:h-64">
+                            <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible drop-shadow-2xl">
+                                {/* Base Grids */}
+                                {[0.2, 0.4, 0.6, 0.8, 1].map((scale) => {
+                                    const r = 42 * scale;
+                                    const p1 = { x: 50, y: 50 - r };
+                                    const p2 = { x: 50 + r * 0.866, y: 50 + r * 0.5 };
+                                    const p3 = { x: 50 - r * 0.866, y: 50 + r * 0.5 };
+                                    return (
+                                        <polygon
+                                            key={scale}
+                                            points={`${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y}`}
+                                            fill="none"
+                                            stroke="#f1f5f9"
+                                            strokeWidth="1"
+                                            className="transition-all duration-1000"
+                                        />
+                                    );
+                                })}
+                                {/* Labels & Axis */}
+                                <line x1="50" y1="50" x2="50" y2="8" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="2 2" />
+                                <line x1="50" y1="50" x2={50 + 42 * 0.866} y2={50 + 21} stroke="#f1f5f9" strokeWidth="1" strokeDasharray="2 2" />
+                                <line x1="50" y1="50" x2={50 - 42 * 0.866} y2={50 + 21} stroke="#f1f5f9" strokeWidth="1" strokeDasharray="2 2" />
+
                                 {(() => {
-                                    const total = pushups + pullups + squats || 1;
-                                    const p = (pushups / total) * 100;
-                                    const t = (pullups / total) * 100;
-                                    const s = (squats / total) * 100;
-                                    
-                                    let offset = 0;
-                                    const createSegment = (val: number, color: string) => {
-                                        const dashArray = `${val} ${100 - val}`;
-                                        const dashOffset = -offset;
-                                        offset += val;
-                                        return (
-                                            <circle
-                                                cx="50" cy="50" r="40"
-                                                fill="transparent"
-                                                stroke={color}
-                                                strokeWidth="12"
-                                                strokeDasharray={dashArray}
-                                                strokeDashoffset={dashOffset}
-                                                strokeLinecap="round"
+                                    const max = Math.max(pushups, pullups, squats, 1);
+                                    const pScale = pushups / max;
+                                    const tScale = pullups / max;
+                                    const sScale = squats / max;
+                                    const r = 42;
+                                    const p1 = { x: 50, y: 50 - r * pScale };
+                                    const p2 = { x: 50 + (r * tScale) * 0.866, y: 50 + (r * tScale) * 0.5 };
+                                    const p3 = { x: 50 - (r * sScale) * 0.866, y: 50 + (r * sScale) * 0.5 };
+                                    return (
+                                        <g>
+                                            <polygon
+                                                points={`${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y}`}
+                                                fill="rgba(99, 102, 241, 0.25)"
+                                                stroke="#4f46e5"
+                                                strokeWidth="2.5"
+                                                strokeLinejoin="round"
                                                 className="transition-all duration-1000"
                                             />
-                                        );
-                                    };
-
-                                    return (
-                                        <>
-                                            <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f1f5f9" strokeWidth="12" />
-                                            {pushups > 0 && createSegment(p, "#3b82f6")}
-                                            {pullups > 0 && createSegment(t, "#f97316")}
-                                            {squats > 0 && createSegment(s, "#10b981")}
-                                        </>
+                                            <circle cx={p1.x} cy={p1.y} r="3" fill="#3b82f6" className="transition-all duration-1000" />
+                                            <circle cx={p2.x} cy={p2.y} r="3" fill="#f97316" className="transition-all duration-1000" />
+                                            <circle cx={p3.x} cy={p3.y} r="3" fill="#10b981" className="transition-all duration-1000" />
+                                        </g>
                                     );
                                 })()}
+                                
+                                <text x="50" y="3" textAnchor="middle" className="text-[6px] font-black fill-blue-600 uppercase tracking-widest leading-none">Force (Pompes)</text>
+                                <text x="96" y="58" textAnchor="start" className="text-[6px] font-black fill-orange-500 uppercase tracking-widest">Tirage (Tractions)</text>
+                                <text x="4" y="58" textAnchor="end" className="text-[6px] font-black fill-emerald-600 uppercase tracking-widest">Base (Squats)</text>
                             </svg>
-                            <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                                <span className="text-2xl sm:text-3xl font-black text-slate-900 leading-none">{totalReps.toLocaleString()}</span>
-                                <span className="text-[8px] font-black text-slate-700 uppercase tracking-widest mt-1">TOTAL REPS</span>
-                            </div>
                         </div>
-                        <div className="flex flex-wrap justify-center gap-4 text-[9px] font-black uppercase tracking-wider">
-                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span> {pushups.toLocaleString()} Pompes</div>
-                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-orange-500"></span> {pullups.toLocaleString()} Tractions</div>
-                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> {squats.toLocaleString()} Squats</div>
+                        <div className="text-center group">
+                            <span className="text-4xl font-black text-slate-900 tracking-tighter block leading-none">{totalReps.toLocaleString()}</span>
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mt-2 block">Volume Cumulative</span>
                         </div>
                     </div>
 
@@ -399,7 +411,7 @@ export default function UserProfilePage() {
                                         finesXP: "#10b981",
                                         manualXP: "#94a3b8"
                                     };
-
+                                    
                                     let offset = 0;
                                     return (
                                         <>
@@ -434,10 +446,10 @@ export default function UserProfilePage() {
                             </div>
                         </div>
                         <div className="flex flex-wrap justify-center gap-4 text-[9px] font-black uppercase tracking-wider max-w-sm">
-                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-indigo-500"></span> {Math.round(analyticsData.xpBreakdown.repsXP).toLocaleString()} Entraînement</div>
-                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span> {Math.round(analyticsData.xpBreakdown.badgesXP).toLocaleString()} Trophées</div>
-                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span> {Math.round(analyticsData.xpBreakdown.recordsXP).toLocaleString()} Records</div>
-                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-slate-400"></span> {Math.round(analyticsData.xpBreakdown.finesXP + (analyticsData.xpBreakdown.manualXP || 0)).toLocaleString()} Bonus/Dons</div>
+                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-indigo-500"></span> {Math.round(analyticsData.xpBreakdown?.repsXP || 0).toLocaleString()} Entraînement</div>
+                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span> {Math.round(analyticsData.xpBreakdown?.badgesXP || 0).toLocaleString()} Trophées</div>
+                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span> {Math.round(analyticsData.xpBreakdown?.recordsXP || 0).toLocaleString()} Records</div>
+                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-slate-400"></span> {Math.round((analyticsData.xpBreakdown?.finesXP || 0) + (analyticsData.xpBreakdown?.manualXP || 0)).toLocaleString()} Bonus</div>
                         </div>
                     </div>
                 </div>
@@ -465,7 +477,7 @@ export default function UserProfilePage() {
             {/* Badges Section */}
             <section className="space-y-4 sm:space-y-6">
                 <div className="flex items-center justify-between px-2">
-                    <h2 className="text-xl sm:text-2xl font-black uppercase tracking-normal flex items-center gap-3 text-white">
+                    <h2 className="text-xl sm:text-2xl font-black uppercase tracking-normal flex items-center gap-3 text-slate-900">
                         <span className="p-1.5 sm:p-2 bg-indigo-100 rounded-xl sm:rounded-2xl text-lg sm:text-xl">🎖️</span> Vitrine
                     </h2>
                 </div>
@@ -516,7 +528,7 @@ export default function UserProfilePage() {
             {/* Fines & Certificates */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pb-12">
                 <section className="space-y-4">
-                    <h2 className="text-xl font-black uppercase tracking-normal px-2 text-white">💸 Dernières Prunes</h2>
+                    <h2 className="text-xl font-black uppercase tracking-normal px-2 text-slate-900">💸 Dernières Prunes</h2>
                     <div className="bg-gray-50 rounded-[2.5rem] p-4 space-y-3 border border-gray-100">
                         {user.fines?.map((fine: any) => (
                             <div key={fine.id} className="bg-white p-5 rounded-2xl flex justify-between items-center shadow-sm border border-gray-100 transition-all hover:bg-gray-50">
@@ -539,7 +551,7 @@ export default function UserProfilePage() {
                 </section>
 
                 <section className="space-y-4">
-                    <h2 className="text-xl font-black uppercase tracking-normal px-2 text-white">🏥 Infirmerie</h2>
+                    <h2 className="text-xl font-black uppercase tracking-normal px-2 text-slate-900">🏥 Infirmerie</h2>
                     <div className="bg-gray-50 rounded-[2.5rem] p-4 space-y-3 border border-gray-100">
                         {user.medicalCertificates?.map((cert: any) => (
                             <div key={cert.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 relative group transition-all hover:bg-gray-50">
