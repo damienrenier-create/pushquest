@@ -95,6 +95,8 @@ export function getXPForReward(key: string, achievedAt?: Date | string): number 
         else if (def.key === "solstice_summer") xp = 900;
         else if (def.key === "noel_sapin") xp = 500;
         else if (def.key.includes("equinox") || def.key.includes("solstice")) xp = 250;
+        else if (def.key.startsWith("workout_") && def.key.endsWith("_std")) xp = 0; // XP is handled via XpAdjustment
+        else if (def.key.startsWith("workout_") && def.key.endsWith("_plat")) xp = timeBonus; 
         else xp = timeBonus;
     }
 

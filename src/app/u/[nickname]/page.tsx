@@ -17,6 +17,7 @@ export default function UserProfilePage() {
 
     const [user, setUser] = useState<any>(null)
     const [loading, setLoading] = useState(true)
+    const [errorInfo, setErrorInfo] = useState<any>(null)
     const [rewardDetail, setRewardDetail] = useState<any | null>(null)
     const [analyticsData, setAnalyticsData] = useState<any>(null)
     const [activeTab, setActiveTab] = useState<'stats' | 'history'>('stats')
@@ -36,13 +37,17 @@ export default function UserProfilePage() {
                     const data = await resUser.json()
                     setUser(data)
                     setStatusDraft(data.status?.content || "")
+                } else {
+                    const errorData = await resUser.json().catch(() => ({ message: "Inconnu" }))
+                    setErrorInfo(errorData)
                 }
                 if (resAnalytics.ok) {
                     const data = await resAnalytics.json()
                     setAnalyticsData(data)
                 }
-            } catch (err) {
+            } catch (err: any) {
                 console.error(err)
+                setErrorInfo({ message: err.message, stack: err.stack })
             } finally {
                 setLoading(false)
             }
@@ -117,7 +122,14 @@ export default function UserProfilePage() {
     if (!user) return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-6 text-center">
             <h1 className="text-4xl font-black text-gray-900 mb-4">MEC INTROUVABLE 🕵️‍♂️</h1>
-            <p className="text-gray-500 font-bold mb-8 uppercase text-xs">Ce soldat n'est pas dans nos registres.</p>
+            <p className="text-gray-500 font-bold mb-4 uppercase text-xs">Ce soldat n'est pas dans nos registres.</p>
+            {errorInfo && (
+                <div className="mb-8 p-4 bg-red-50 text-red-600 rounded-xl text-left max-w-md mx-auto overflow-auto border border-red-100">
+                    <p className="font-black text-[10px] uppercase mb-1">Détails techniques :</p>
+                    <p className="text-sm font-bold">{errorInfo.message || errorInfo.error}</p>
+                    {errorInfo.stack && <pre className="text-[8px] mt-2 opacity-50 font-mono leading-tight">{errorInfo.stack.substring(0, 500)}...</pre>}
+                </div>
+            )}
             <Link href="/" className="bg-slate-900 text-white font-black px-8 py-4 rounded-2xl uppercase tracking-widest text-xs">Retour au Front</Link>
         </div>
     )

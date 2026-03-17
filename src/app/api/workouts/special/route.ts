@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
+import { SPECIAL_WORKOUTS } from "@/config/specialWorkouts"
+import { BADGE_DEFINITIONS } from "@/config/badges"
 
 export const dynamic = "force-dynamic"
 
@@ -17,6 +19,32 @@ export async function POST(req: Request) {
 
         if (!workoutId || !data || !date) {
             return NextResponse.json({ message: "Données manquantes" }, { status: 400 })
+        }
+
+        // --- DB SEED CHECK (Ensure dynamic badge definitions exist in DB) ---
+        const workoutKeys = [`workout_${workoutId}_std`, `workout_${workoutId}_plat` ];
+        for (const k of workoutKeys) {
+            const def = BADGE_DEFINITIONS.find(d => d.key === k);
+            if (def) {
+                await prisma.badgeDefinition.upsert({
+                    where: { key: k },
+                    create: {
+                        key: def.key,
+                        name: def.name,
+                        description: def.description,
+                        emoji: def.emoji,
+                        metricType: def.metricType,
+                        exerciseScope: def.exerciseScope,
+                        isUnique: def.isUnique || false,
+                        isTransferable: def.isTransferable !== false
+                    },
+                    update: {
+                        name: def.name,
+                        description: def.description,
+                        emoji: def.emoji
+                    }
+                });
+            }
         }
 
         const userId = session.user.id;
@@ -87,6 +115,30 @@ export async function POST(req: Request) {
                 }
             });
         }
+
+        // 5. XP Reward Logic (1000 XP via XpAdjustment)
+        const workout = SPECIAL_WORKOUTS.find(w => w.id === workoutId);
+        if (workout) {
+            const reason = `Special Workout: ${workout.name}`;
+            const existingAdj = await prisma.xpAdjustment.findFirst({
+                where: { userId, reason }
+            });
+
+            if (!existingAdj) {
+                await prisma.xpAdjustment.create({
+                    data: {
+                        userId,
+                        amount: workout.xpBonus || 1000,
+                        reason,
+                        date: date
+                    }
+                });
+            }
+        }
+
+        // 6. Retroactive Check for OTHERS (Optional but good: check if anyone else is missing XP)
+        // For simplicity, we just handle the current user. 
+        // If Mools submits again, he'll get his XP.
 
         return NextResponse.json({ 
             entry, 

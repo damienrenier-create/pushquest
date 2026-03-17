@@ -10,10 +10,16 @@ export async function GET(
 ) {
     try {
         const { nickname } = await params
-        const decodedNickname = decodeURIComponent(nickname)
+        const decodedNickname = decodeURIComponent(nickname).trim()
 
-        const user = await prisma.user.findFirst({
-            where: { nickname: { equals: decodedNickname, mode: "insensitive" } },
+        // Re-try with different variations if needed
+        const user = await (prisma.user as any).findFirst({
+            where: { 
+                OR: [
+                    { nickname: { equals: decodedNickname, mode: "insensitive" } },
+                    { nickname: { equals: nickname.trim(), mode: "insensitive" } }
+                ]
+            },
             include: {
                 statuses: {
                     include: {
@@ -52,7 +58,13 @@ export async function GET(
         })
 
         if (!user) {
-            return NextResponse.json({ message: "Utilisateur non trouvé" }, { status: 404 })
+            const allCount = await prisma.user.count();
+            return NextResponse.json({ 
+                message: "Utilisateur non trouvé", 
+                searched: decodedNickname,
+                original: nickname,
+                totalUsersInDB: allCount
+            }, { status: 404 })
         }
 
         // Fetch stats
@@ -67,19 +79,19 @@ export async function GET(
         const squats = statsGroup.find(s => s.exercise === "SQUAT")?._sum.reps || 0
 
         return NextResponse.json({
-            id: user.id,
-            nickname: user.nickname,
-            createdAt: user.createdAt,
-            buyoutPaid: user.buyoutPaid,
-            badges: user.badges,
-            status: user.statuses[0] || null,
-            fines: user.fines.map((f: any) => ({
+            id: (user as any).id,
+            nickname: (user as any).nickname,
+            createdAt: (user as any).createdAt,
+            buyoutPaid: (user as any).buyoutPaid,
+            badges: (user as any).badges,
+            status: (user as any).statuses[0] || null,
+            fines: (user as any).fines.map((f: any) => ({
                 id: f.id,
                 amountEur: f.amountEur,
                 date: f.date,
                 status: f.status
             })),
-            medicalCertificates: user.medicalCertificates,
+            medicalCertificates: (user as any).medicalCertificates,
             stats: {
                 pushups,
                 pullups,
@@ -87,8 +99,12 @@ export async function GET(
                 total: pushups + pullups + squats
             }
         })
-    } catch (error) {
+    } catch (error: any) {
         console.error("Public Profile API Error:", error)
-        return NextResponse.json({ message: "Erreur" }, { status: 500 })
+        return NextResponse.json({ 
+            message: "Erreur serveur", 
+            error: error.message,
+            stack: error.stack
+        }, { status: 500 })
     }
 }
