@@ -400,24 +400,24 @@ export default function UserProfilePage() {
                                     );
                                 })()}
                                 
-                                <text x="50" y="3" textAnchor="middle" className="text-[6px] font-black fill-blue-600 uppercase tracking-widest leading-none">Force (Pompes)</text>
-                                <text x="96" y="58" textAnchor="start" className="text-[6px] font-black fill-orange-500 uppercase tracking-widest">Tirage (Tractions)</text>
-                                <text x="4" y="58" textAnchor="end" className="text-[6px] font-black fill-emerald-600 uppercase tracking-widest">Base (Squats)</text>
+                                <text x="50" y="-8" textAnchor="middle" className="text-[5.5px] font-black fill-blue-600 uppercase tracking-widest leading-none">Force (Pompes)</text>
+                                <text x="96" y="65" textAnchor="middle" className="text-[5.5px] font-black fill-orange-500 uppercase tracking-widest">Tirage (Tractions)</text>
+                                <text x="4" y="65" textAnchor="middle" className="text-[5.5px] font-black fill-emerald-600 uppercase tracking-widest">Base (Squats)</text>
                             </svg>
                         </div>
-                        <div className="text-center group">
+                        <div className="text-center group pt-4">
                             <span className="text-4xl font-black text-slate-900 tracking-tighter block leading-none">{totalReps.toLocaleString()}</span>
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mt-2 block">Volume Cumulative</span>
                         </div>
                     </div>
 
-                    {/* XP Distribution Wheel */}
+                    {/* XP Pie Chart (Full Camembert) */}
                     <div className="flex flex-col items-center space-y-6">
-                        <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-800 bg-indigo-50 px-3 py-1 rounded-full">Origine du Prestige (XP)</h3>
+                        <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-800 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">Origine du Prestige (XP)</h3>
                         <div className="relative w-48 h-48 sm:w-56 sm:h-56">
-                            <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+                            <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90 drop-shadow-xl overflow-visible">
                                 {(() => {
-                                    if (!analyticsData?.xpBreakdown) return <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f1f5f9" strokeWidth="12" />;
+                                    if (!analyticsData?.xpBreakdown) return <circle cx="50" cy="50" r="40" fill="#f1f5f9" />;
                                     
                                     const breakdown = analyticsData.xpBreakdown;
                                     const total = analyticsData.totalXP || 1;
@@ -429,26 +429,30 @@ export default function UserProfilePage() {
                                         manualXP: "#94a3b8"
                                     };
                                     
-                                    let offset = 0;
+                                    let cumulativePercent = 0;
                                     return (
                                         <>
-                                            <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f1f5f9" strokeWidth="12" />
+                                            {/* Background base */}
+                                            <circle cx="50" cy="50" r="44" fill="#f8fafc" />
+                                            
                                             {Object.entries(breakdown).map(([key, val]: [string, any]) => {
                                                 if (val <= 0 || !labels[key]) return null;
                                                 const p = (val / total) * 100;
+                                                // Using large strokeWidth for "Pie" effect (filled donut)
+                                                const strokeWidth = 44; // Half of r*2 to fill center
+                                                const radius = 22; // Midpoint for stroke
                                                 const dashArray = `${p} ${100 - p}`;
-                                                const dashOffset = -offset;
-                                                offset += p;
+                                                const dashOffset = -cumulativePercent;
+                                                cumulativePercent += p;
                                                 return (
                                                     <circle
                                                         key={key}
-                                                        cx="50" cy="50" r="40"
+                                                        cx="50" cy="50" r={radius}
                                                         fill="transparent"
                                                         stroke={labels[key]}
-                                                        strokeWidth="12"
+                                                        strokeWidth={strokeWidth}
                                                         strokeDasharray={dashArray}
                                                         strokeDashoffset={dashOffset}
-                                                        strokeLinecap="round"
                                                         className="transition-all duration-1000"
                                                     />
                                                 );
@@ -457,16 +461,18 @@ export default function UserProfilePage() {
                                     );
                                 })()}
                             </svg>
-                            <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                                <span className="text-2xl sm:text-3xl font-black text-indigo-600 leading-none">{(analyticsData?.totalXP || 0).toLocaleString()}</span>
-                                <span className="text-[8px] font-black text-indigo-700 uppercase tracking-widest mt-1">TOTAL XP</span>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+                                <div className="bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-2xl shadow-sm border border-white/50">
+                                    <span className="text-xl sm:text-2xl font-black text-indigo-900 leading-none">{(analyticsData?.totalXP || 0).toLocaleString()}</span>
+                                    <span className="text-[7px] font-black text-indigo-400 uppercase tracking-[0.2em] mt-0.5 block">TOTAL XP</span>
+                                </div>
                             </div>
                         </div>
-                        <div className="flex flex-wrap justify-center gap-4 text-[9px] font-black uppercase tracking-wider max-w-sm">
-                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-indigo-500"></span> {Math.round(analyticsData.xpBreakdown?.repsXP || 0).toLocaleString()} Entraînement</div>
-                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span> {Math.round(analyticsData.xpBreakdown?.badgesXP || 0).toLocaleString()} Trophées</div>
-                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span> {Math.round(analyticsData.xpBreakdown?.recordsXP || 0).toLocaleString()} Records</div>
-                            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-slate-400"></span> {Math.round((analyticsData.xpBreakdown?.finesXP || 0) + (analyticsData.xpBreakdown?.manualXP || 0)).toLocaleString()} Bonus</div>
+                        <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-[9px] font-black uppercase tracking-wider max-w-sm px-4">
+                            <div className="flex items-center gap-2 text-indigo-600"><span className="w-2 h-2 rounded-full bg-indigo-500"></span> {Math.round(analyticsData.xpBreakdown?.repsXP || 0).toLocaleString()} Entraînement</div>
+                            <div className="flex items-center gap-2 text-amber-600"><span className="w-2 h-2 rounded-full bg-amber-500"></span> {Math.round(analyticsData.xpBreakdown?.badgesXP || 0).toLocaleString()} Trophées</div>
+                            <div className="flex items-center gap-2 text-rose-600"><span className="w-2 h-2 rounded-full bg-rose-500"></span> {Math.round(analyticsData.xpBreakdown?.recordsXP || 0).toLocaleString()} Records</div>
+                            <div className="flex items-center gap-2 text-slate-500"><span className="w-2 h-2 rounded-full bg-slate-400"></span> {Math.round((analyticsData.xpBreakdown?.finesXP || 0) + (analyticsData.xpBreakdown?.manualXP || 0)).toLocaleString()} Bonus</div>
                         </div>
                     </div>
                 </div>
@@ -494,8 +500,8 @@ export default function UserProfilePage() {
             {/* Badges Section */}
             <section className="space-y-4 sm:space-y-6">
                 <div className="flex items-center justify-between px-2">
-                    <h2 className="text-xl sm:text-2xl font-black uppercase tracking-normal flex items-center gap-3 text-slate-900">
-                        <span className="p-1.5 sm:p-2 bg-indigo-100 rounded-xl sm:rounded-2xl text-lg sm:text-xl">🎖️</span> Vitrine
+                    <h2 className="text-xl sm:text-2xl font-black uppercase tracking-normal flex items-center gap-3 text-white">
+                        <span className="p-1.5 sm:p-2 bg-indigo-100/10 rounded-xl sm:rounded-2xl text-lg sm:text-xl">🎖️</span> Vitrine
                     </h2>
                 </div>
 
