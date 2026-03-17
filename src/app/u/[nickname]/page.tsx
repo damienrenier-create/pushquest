@@ -267,7 +267,7 @@ export default function UserProfilePage() {
             {/* Hall of Fame */}
             {hallOfFame.length > 0 && (
                 <section className="space-y-4 sm:space-y-6">
-                    <h2 className="text-xl sm:text-2xl font-black uppercase tracking-normal flex items-center gap-3 px-2 text-slate-900">
+                    <h2 className="text-xl sm:text-2xl font-black uppercase tracking-normal flex items-center gap-3 px-2 text-white">
                         <span className="text-yellow-500">✨</span> Hall of Fame
                     </h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
@@ -321,7 +321,7 @@ export default function UserProfilePage() {
             {/* Analytics Section */}
             <section className="bg-white rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 shadow-sm border border-gray-100 space-y-10">
                 <div className="flex items-center justify-between border-b border-gray-50 pb-6">
-                    <h2 className="text-xl sm:text-2xl font-black uppercase tracking-normal flex items-center gap-3 text-slate-900">
+                    <h2 className="text-xl sm:text-2xl font-black uppercase tracking-normal flex items-center gap-3 text-white">
                         <span className="p-2 bg-blue-100/50 rounded-2xl text-xl">{activeTab === 'stats' ? '📊' : '📈'}</span> 
                         {activeTab === 'stats' ? 'Statistiques & Analytics' : 'Courbe de Progression'}
                     </h2>
@@ -465,7 +465,7 @@ export default function UserProfilePage() {
             {/* Badges Section */}
             <section className="space-y-4 sm:space-y-6">
                 <div className="flex items-center justify-between px-2">
-                    <h2 className="text-xl sm:text-2xl font-black uppercase tracking-normal flex items-center gap-3 text-slate-900">
+                    <h2 className="text-xl sm:text-2xl font-black uppercase tracking-normal flex items-center gap-3 text-white">
                         <span className="p-1.5 sm:p-2 bg-indigo-100 rounded-xl sm:rounded-2xl text-lg sm:text-xl">🎖️</span> Vitrine
                     </h2>
                 </div>
@@ -516,7 +516,7 @@ export default function UserProfilePage() {
             {/* Fines & Certificates */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pb-12">
                 <section className="space-y-4">
-                    <h2 className="text-xl font-black uppercase tracking-normal px-2 text-slate-900">💸 Dernières Prunes</h2>
+                    <h2 className="text-xl font-black uppercase tracking-normal px-2 text-white">💸 Dernières Prunes</h2>
                     <div className="bg-gray-50 rounded-[2.5rem] p-4 space-y-3 border border-gray-100">
                         {user.fines?.map((fine: any) => (
                             <div key={fine.id} className="bg-white p-5 rounded-2xl flex justify-between items-center shadow-sm border border-gray-100 transition-all hover:bg-gray-50">
@@ -539,7 +539,7 @@ export default function UserProfilePage() {
                 </section>
 
                 <section className="space-y-4">
-                    <h2 className="text-xl font-black uppercase tracking-normal px-2 text-slate-900">🏥 Infirmerie</h2>
+                    <h2 className="text-xl font-black uppercase tracking-normal px-2 text-white">🏥 Infirmerie</h2>
                     <div className="bg-gray-50 rounded-[2.5rem] p-4 space-y-3 border border-gray-100">
                         {user.medicalCertificates?.map((cert: any) => (
                             <div key={cert.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 relative group transition-all hover:bg-gray-50">

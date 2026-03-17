@@ -68,62 +68,57 @@ export default function GraphsSection({ data, graphPeriod, setGraphPeriod }: Gra
                                     
                                     {/* Vertical Grid (Time intervals) */}
                                     <div className="absolute inset-0 flex justify-between pointer-events-none opacity-20">
-                                        {Array.from({ length: graphPeriod === 'all' ? 10 : (graphPeriod === '365' ? 12 : 4) }).map((_, i) => (
+                                        {Array.from({ length: graphPeriod === 'all' ? 10 : (graphPeriod === '365' ? 12 : 7) }).map((_, i) => (
                                             <div key={i} className="h-full w-px bg-slate-300" />
                                         ))}
                                     </div>
 
-                                    {/* Line SVG */}
+                                    {/* Bar Chart SVG */}
                                     <svg viewBox="0 0 1000 100" className="flex-1 h-full w-full overflow-visible" preserveAspectRatio="none">
                                         <defs>
-                                            <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.3" />
-                                                <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+                                            <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.8" />
+                                                <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.4" />
                                             </linearGradient>
                                         </defs>
-                                        <path
-                                            d={`M 0 100 ${daily.map((d: any, i: number) => {
-                                                const x = (i / Math.max(1, daily.length - 1)) * 1000;
-                                                const y = 100 - ((d.reps || d.total || 0) / maxVal) * 100;
-                                                return `L ${x} ${y}`;
-                                            }).join(' ')} L 1000 100 Z`}
-                                            fill="url(#lineGrad)"
-                                        />
-                                        <path
-                                            d={`M ${daily.map((d: any, i: number) => {
-                                                const x = (i / Math.max(1, daily.length - 1)) * 1000;
-                                                const y = 100 - ((d.reps || d.total || 0) / maxVal) * 100;
-                                                return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
-                                            }).join(' ')}`}
-                                            fill="none"
-                                            stroke="#3b82f6"
-                                            strokeWidth="3"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            className="drop-shadow-[0_4px_12px_rgba(59,130,246,0.3)]"
-                                        />
-                                        {daily.length < 100 && daily.map((d: any, i: number) => {
-                                            const x = (i / Math.max(1, daily.length - 1)) * 1000;
-                                            const y = 100 - ((d.reps || d.total || 0) / maxVal) * 100;
+                                        {daily.map((d: any, i: number) => {
+                                            const barWidth = 1000 / (daily.length || 1) * 0.8;
+                                            const x = (i / daily.length) * 1000 + (1000 / daily.length * 0.1);
+                                            const valHeight = ((d.reps || d.total || 0) / maxVal) * 100;
+                                            const y = 100 - valHeight;
                                             return (
-                                                <circle 
-                                                    key={i} 
-                                                    cx={x} 
-                                                    cy={y} 
-                                                    r="4" 
-                                                    fill="white" 
-                                                    stroke="#3b82f6" 
-                                                    strokeWidth="2"
+                                                <rect
+                                                    key={i}
+                                                    x={x}
+                                                    y={y}
+                                                    width={barWidth}
+                                                    height={Math.max(2, valHeight)}
+                                                    fill="url(#barGrad)"
+                                                    rx={barWidth / 4}
+                                                    className="transition-all duration-500 hover:fill-blue-500"
                                                 />
                                             );
                                         })}
                                     </svg>
                                 </div>
 
-                                {/* X Axis Labels */}
-                                <div className="absolute inset-x-8 bottom-6 flex justify-between text-[8px] font-black text-slate-400 uppercase tracking-widest pt-4">
-                                    <span>{daily[0]?.date ? new Date(daily[0].date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : ''}</span>
-                                    <span className="text-blue-500">AUJOURD'HUI</span>
+                                {/* X Axis Labels (More frequent) */}
+                                <div className="absolute inset-x-8 bottom-6 flex justify-between text-[7px] font-black text-slate-400 uppercase tracking-widest pt-4">
+                                    {(() => {
+                                        const labelCount = graphPeriod === '30' ? 4 : (graphPeriod === 'all' ? 5 : 6);
+                                        return Array.from({ length: labelCount }).map((_, i) => {
+                                            const idx = Math.floor((i / (labelCount - 1)) * (daily.length - 1));
+                                            const d = daily[idx];
+                                            if (!d?.date) return null;
+                                            const dateStr = new Date(d.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+                                            const isLast = i === labelCount - 1;
+                                            return (
+                                                <span key={i} className={isLast ? "text-blue-500" : ""}>
+                                                    {isLast ? "AUJOURD'HUI" : dateStr}
+                                                </span>
+                                            );
+                                        });
+                                    })()}
                                 </div>
                             </div>
 
