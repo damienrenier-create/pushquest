@@ -25,6 +25,11 @@ export default function UserProfilePage() {
     const [isEditingStatus, setIsEditingStatus] = useState(false)
     const [statusDraft, setStatusDraft] = useState("")
     const [isStatusLoading, setIsStatusLoading] = useState(false)
+    const [allUsers, setAllUsers] = useState<any[]>([])
+
+    useEffect(() => {
+        fetch("/api/users/list").then(res => res.json()).then(setAllUsers).catch(console.error)
+    }, [])
 
     useEffect(() => {
         const fetchUserData = async () => {
@@ -209,25 +214,37 @@ export default function UserProfilePage() {
                                     </div>
                                 </div>
                             ) : (
-                                <div className="group relative">
-                                    <div className="flex items-start gap-3">
-                                        <p className="text-slate-300 text-xs sm:text-sm font-bold italic leading-relaxed">
-                                            {user.status?.content ? `"${user.status.content}"` : (session?.user?.email === user.email ? "Aucun statut. Édicte tes ordres." : "")}
-                                        </p>
-                                        {user.status && (
-                                            <button 
-                                                onClick={handleLikeStatus}
-                                                className="flex items-center gap-1.5 px-2 py-1 bg-slate-800/50 hover:bg-slate-800 rounded-full border border-slate-700 transition-colors"
-                                            >
-                                                <span className={`${(user.status.likes || []).some((l: any) => l.userId === (session?.user as any).id) ? 'text-rose-500' : 'text-slate-400'}`}>❤️</span>
-                                                <span className="text-[9px] font-bold text-slate-300">{(user.status.likes || []).length}</span>
-                                            </button>
-                                        )}
-                                        {session?.user?.email === user.email && (
-                                            <button onClick={() => setIsEditingStatus(true)} className="opacity-0 group-hover:opacity-100 transition-opacity text-blue-400 hover:text-blue-300">
-                                                <Activity size={12} />
-                                            </button>
-                                        )}
+                                <div className="group relative mt-4">
+                                    <div className="bg-slate-800/80 backdrop-blur-sm border border-slate-700/50 p-4 sm:p-6 rounded-2xl sm:rounded-3xl relative">
+                                        {/* Decorative Quote Mark */}
+                                        <div className="absolute -top-3 -left-2 text-4xl text-indigo-500/30 font-serif leading-none">“</div>
+                                        
+                                        <div className="flex items-start gap-4">
+                                            <p className="text-slate-100 text-sm sm:text-base font-bold italic leading-relaxed flex-1">
+                                                {user.status?.content ? user.status.content : (session?.user?.email === user.email ? "Aucun statut. Édicte tes ordres." : "Ce soldat est silencieux...")}
+                                            </p>
+                                            
+                                            <div className="flex flex-col gap-2 shrink-0">
+                                                {user.status && (
+                                                    <button 
+                                                        onClick={handleLikeStatus}
+                                                        className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-slate-700/50 hover:bg-slate-700 rounded-full border border-slate-600 transition-all active:scale-95"
+                                                    >
+                                                        <span className={`${(user.status.likes || []).some((l: any) => l.userId === (session?.user as any).id) ? 'text-rose-500' : 'text-slate-400'}`}>❤️</span>
+                                                        <span className="text-[10px] font-black text-slate-100">{(user.status.likes || []).length}</span>
+                                                    </button>
+                                                )}
+                                                {session?.user?.email === user.email && (
+                                                    <button 
+                                                        onClick={() => setIsEditingStatus(true)} 
+                                                        className="p-2 bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-400 rounded-full border border-indigo-500/30 transition-all active:scale-95"
+                                                        title="Éditer mon petit mot"
+                                                    >
+                                                        <Activity size={14} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -572,6 +589,31 @@ export default function UserProfilePage() {
             </div>
 
             <RewardDetailSheet detail={rewardDetail} onClose={() => setRewardDetail(null)} />
+
+            {/* Quick Teammates Navigation */}
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-2xl z-50 animate-in slide-in-from-bottom-10 duration-700">
+                <div className="bg-slate-900/90 backdrop-blur-xl border border-white/10 p-2 rounded-3xl shadow-2xl flex items-center gap-2 overflow-x-auto scrollbar-hide no-scrollbar">
+                    <div className="px-3 py-1 border-r border-white/10 shrink-0">
+                        <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest block">Camarades</span>
+                    </div>
+                    {allUsers.filter(u => u.nickname !== decodedNickname).map((u) => (
+                        <Link
+                            key={u.nickname}
+                            href={`/u/${encodeURIComponent(u.nickname)}`}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all group shrink-0"
+                        >
+                            <span className="text-lg group-hover:scale-125 transition-transform">{u.emoji}</span>
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-black text-white leading-none">{u.nickname}</span>
+                                <span className="text-[7px] font-bold text-slate-400 uppercase tracking-tighter">{u.animal}</span>
+                            </div>
+                        </Link>
+                    ))}
+                    {allUsers.length <= 1 && (
+                        <span className="text-[8px] font-bold text-slate-600 uppercase px-4 italic">Seul au front...</span>
+                    )}
+                </div>
+            </div>
         </div>
     )
 }
