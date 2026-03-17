@@ -4,8 +4,8 @@ import { Activity } from "lucide-react"
 
 interface GraphsSectionProps {
     data: any
-    graphPeriod: '30' | '365'
-    setGraphPeriod: (period: '30' | '365') => void
+    graphPeriod: '30' | '365' | 'all'
+    setGraphPeriod: (period: '30' | '365' | 'all') => void
 }
 
 export default function GraphsSection({ data, graphPeriod, setGraphPeriod }: GraphsSectionProps) {
@@ -17,33 +17,33 @@ export default function GraphsSection({ data, graphPeriod, setGraphPeriod }: Gra
                         <h3 className="font-black text-xs text-slate-900 uppercase tracking-widest mb-1 flex items-center gap-2">
                              📈 Évolution du Volume
                         </h3>
-                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-tight">Performance sur les {graphPeriod} derniers jours</p>
+                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-tight">
+                            {graphPeriod === 'all' ? 'Performance depuis le lancement' : `Performance sur les ${graphPeriod} derniers jours`}
+                        </p>
                     </div>
                     <div className="flex gap-1 bg-gray-50 p-1 rounded-xl border border-gray-100">
                         <button onClick={() => setGraphPeriod('30')} className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all ${graphPeriod === '30' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>30J</button>
                         <button onClick={() => setGraphPeriod('365')} className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all ${graphPeriod === '365' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>365J</button>
+                        <button onClick={() => setGraphPeriod('all')} className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all ${graphPeriod === 'all' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>TOUT</button>
                     </div>
                 </div>
 
                 {(() => {
-                    const dataset = graphPeriod === '365' ? data?.graphs?.myDaily365 : data?.graphs?.myDaily;
-                    const daily = dataset || [];
+                    const daily = data?.progressionData || data?.graphs?.myDaily || [];
                     const t = daily.reduce((acc: any, d: any) => ({
-                        pushups: acc.pushups + (d?.pushups || 0),
-                        pullups: acc.pullups + (d?.pullups || 0),
-                        squats: acc.squats + (d?.squats || 0),
-                        all: acc.all + (d?.total || 0)
-                    }), { pushups: 0, pullups: 0, squats: 0, all: 0 })
+                        reps: acc.reps + (d?.reps || d?.total || 0),
+                        badges: acc.badges + (d?.badges || 0)
+                    }), { reps: 0, badges: 0 })
 
-                    if (t.all === 0) return (
+                    if (daily.length === 0) return (
                         <div className="py-20 flex flex-col items-center justify-center text-center opacity-30 grayscale space-y-4">
                             <Activity size={48} className="animate-pulse" />
                             <p className="font-black uppercase text-xs tracking-[0.2em]">Données insuffisantes</p>
                         </div>
                     );
 
-                    const maxVal = Math.max(...daily.map((d: any) => d.total || 0), 1);
-                    const avg = Math.round(t.all / (daily.length || 1));
+                    const maxVal = Math.max(...daily.map((d: any) => d.reps || d.total || 0), 1);
+                    const avg = Math.round(t.reps / (daily.length || 1));
 
                     return (
                         <div className="space-y-10">
@@ -68,7 +68,7 @@ export default function GraphsSection({ data, graphPeriod, setGraphPeriod }: Gra
                                     
                                     {/* Vertical Grid (Time intervals) */}
                                     <div className="absolute inset-0 flex justify-between pointer-events-none opacity-20">
-                                        {Array.from({ length: graphPeriod === '365' ? 12 : 4 }).map((_, i) => (
+                                        {Array.from({ length: graphPeriod === 'all' ? 10 : (graphPeriod === '365' ? 12 : 4) }).map((_, i) => (
                                             <div key={i} className="h-full w-px bg-slate-300" />
                                         ))}
                                     </div>
@@ -81,20 +81,18 @@ export default function GraphsSection({ data, graphPeriod, setGraphPeriod }: Gra
                                                 <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
                                             </linearGradient>
                                         </defs>
-                                        {/* Area fill */}
                                         <path
                                             d={`M 0 100 ${daily.map((d: any, i: number) => {
                                                 const x = (i / Math.max(1, daily.length - 1)) * 1000;
-                                                const y = 100 - ((d.total || 0) / maxVal) * 100;
+                                                const y = 100 - ((d.reps || d.total || 0) / maxVal) * 100;
                                                 return `L ${x} ${y}`;
                                             }).join(' ')} L 1000 100 Z`}
                                             fill="url(#lineGrad)"
                                         />
-                                        {/* Main Line */}
                                         <path
                                             d={`M ${daily.map((d: any, i: number) => {
                                                 const x = (i / Math.max(1, daily.length - 1)) * 1000;
-                                                const y = 100 - ((d.total || 0) / maxVal) * 100;
+                                                const y = 100 - ((d.reps || d.total || 0) / maxVal) * 100;
                                                 return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
                                             }).join(' ')}`}
                                             fill="none"
@@ -104,18 +102,15 @@ export default function GraphsSection({ data, graphPeriod, setGraphPeriod }: Gra
                                             strokeLinejoin="round"
                                             className="drop-shadow-[0_4px_12px_rgba(59,130,246,0.3)]"
                                         />
-                                        {/* Data Points (Dots) */}
-                                        {daily.map((d: any, i: number) => {
+                                        {daily.length < 100 && daily.map((d: any, i: number) => {
                                             const x = (i / Math.max(1, daily.length - 1)) * 1000;
-                                            const y = 100 - ((d.total || 0) / maxVal) * 100;
-                                            // Only show dots if there are not too many points
-                                            if (graphPeriod === '365' && i % 7 !== 0) return null;
+                                            const y = 100 - ((d.reps || d.total || 0) / maxVal) * 100;
                                             return (
                                                 <circle 
                                                     key={i} 
                                                     cx={x} 
                                                     cy={y} 
-                                                    r={graphPeriod === '30' ? "4" : "3"} 
+                                                    r="4" 
                                                     fill="white" 
                                                     stroke="#3b82f6" 
                                                     strokeWidth="2"
@@ -128,35 +123,39 @@ export default function GraphsSection({ data, graphPeriod, setGraphPeriod }: Gra
                                 {/* X Axis Labels */}
                                 <div className="absolute inset-x-8 bottom-6 flex justify-between text-[8px] font-black text-slate-400 uppercase tracking-widest pt-4">
                                     <span>{daily[0]?.date ? new Date(daily[0].date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : ''}</span>
-                                    {graphPeriod === '30' && daily.length > 15 && (
-                                        <span>{new Date(daily[Math.floor(daily.length/2)].date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
-                                    )}
                                     <span className="text-blue-500">AUJOURD'HUI</span>
                                 </div>
                             </div>
 
                             {/* Detailed Breakdown */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-4">
-                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Mix d'Entraînement</h4>
-                                    <div className="h-4 w-full flex rounded-full overflow-hidden shadow-inner font-black text-white text-[8px]">
-                                        {t.pushups > 0 && <div className="bg-blue-500 h-full flex items-center justify-center border-r border-white/10" style={{ width: `${(t.pushups / t.all) * 100}%` }}>{Math.round((t.pushups / t.all) * 100)}%</div>}
-                                        {t.pullups > 0 && <div className="bg-orange-500 h-full flex items-center justify-center border-r border-white/10" style={{ width: `${(t.pullups / t.all) * 100}%` }}>{Math.round((t.pullups / t.all) * 100)}%</div>}
-                                        {t.squats > 0 && <div className="bg-emerald-500 h-full flex items-center justify-center" style={{ width: `${(t.squats / t.all) * 100}%` }}>{Math.round((t.squats / t.all) * 100)}%</div>}
+                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                        🕒 Pic d'Activité (H)
+                                    </h4>
+                                    <div className="h-24 w-full flex items-end gap-1 px-2 pt-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                        {(data?.hourlyData || []).map((h: any, i: number) => {
+                                            const maxH = Math.max(...(data?.hourlyData || []).map((hd: any) => hd.reps), 1);
+                                            const height = (h.reps / maxH) * 100;
+                                            return (
+                                                <div 
+                                                    key={i} 
+                                                    className="flex-1 bg-indigo-500/20 rounded-t-sm hover:bg-indigo-500 transition-colors relative group"
+                                                    style={{ height: `${Math.max(4, height)}%` }}
+                                                >
+                                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block bg-slate-900 text-white text-[8px] px-1.5 py-0.5 rounded-md whitespace-nowrap z-10">
+                                                        {h.hour}h: {h.reps} reps
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
                                     </div>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        <div className="bg-slate-50 p-2 rounded-xl text-center">
-                                            <p className="text-xs font-black text-slate-700">{t.pushups}</p>
-                                            <p className="text-[7px] font-bold text-slate-400 uppercase">Pompes</p>
-                                        </div>
-                                        <div className="bg-slate-50 p-2 rounded-xl text-center">
-                                            <p className="text-xs font-black text-slate-700">{t.pullups}</p>
-                                            <p className="text-[7px] font-bold text-slate-400 uppercase">Tractions</p>
-                                        </div>
-                                        <div className="bg-slate-50 p-2 rounded-xl text-center">
-                                            <p className="text-xs font-black text-slate-700">{t.squats}</p>
-                                            <p className="text-[7px] font-bold text-slate-400 uppercase">Squats</p>
-                                        </div>
+                                    <div className="flex justify-between text-[7px] font-black text-slate-400 px-1 uppercase">
+                                        <span>00h</span>
+                                        <span>06h</span>
+                                        <span>12h</span>
+                                        <span>18h</span>
+                                        <span>23h</span>
                                     </div>
                                 </div>
 
@@ -168,7 +167,7 @@ export default function GraphsSection({ data, graphPeriod, setGraphPeriod }: Gra
                                     </div>
                                     <div className="bg-white rounded-3xl p-5 text-center flex flex-col justify-center border border-slate-100 shadow-sm">
                                         <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Volume Total</p>
-                                        <p className="text-3xl font-black text-slate-900 tracking-tighter italic">{t.all.toLocaleString()}</p>
+                                        <p className="text-3xl font-black text-slate-900 tracking-tighter italic">{t.reps.toLocaleString()}</p>
                                         <p className="text-[8px] font-black text-blue-500 uppercase mt-1">REPS</p>
                                     </div>
                                 </div>

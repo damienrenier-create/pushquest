@@ -128,7 +128,7 @@ export default function ChallengeDashboard() {
     const [sallyReps, setSallyReps] = useState<number>(0)
     const [showHonorPopup, setShowHonorPopup] = useState<{ badge: any; holder: string; recordValue: number; myValue: number; type: string } | null>(null)
     const [honorChecked, setHonorChecked] = useState(false)
-    const [graphPeriod, setGraphPeriod] = useState<'30' | '365'>('30')
+    const [graphPeriod, setGraphPeriod] = useState<'30' | '365' | 'all'>('30')
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
     const [mood, setMood] = useState("")
     const [statuses, setStatuses] = useState<any[]>([])

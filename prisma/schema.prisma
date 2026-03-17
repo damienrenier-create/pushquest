@@ -27,6 +27,7 @@ model User {
   wallMessages WallMessage[]
   statuses   UserStatus[]
   statusLikes StatusLike[]
+  badgeLikes  BadgeLike[]
   medicalCertificates MedicalCertificate[]
   xpAdjustments XpAdjustment[]
   specialWorkoutEntries SpecialWorkoutEntry[]
@@ -132,6 +133,18 @@ model BadgeOwnership {
   achievedAt    DateTime @default(now())
   updatedAt     DateTime @updatedAt
   locked        Boolean  @default(false)
+  likes         BadgeLike[]
+}
+
+model BadgeLike {
+  id        String   @id @default(cuid())
+  badgeKey  String
+  badge     BadgeOwnership @relation(fields: [badgeKey], references: [badgeKey], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([badgeKey, userId])
 }
 
 model BadgeEvent {

@@ -15,9 +15,25 @@ export async function GET(
         const user = await prisma.user.findFirst({
             where: { nickname: { equals: decodedNickname, mode: "insensitive" } },
             include: {
+                statuses: {
+                    include: {
+                        likes: {
+                            select: { userId: true }
+                        }
+                    },
+                    orderBy: { createdAt: "desc" },
+                    take: 1
+                },
                 badges: {
                     include: {
-                        badge: true
+                        badge: true,
+                        likes: {
+                            include: {
+                                user: {
+                                    select: { nickname: true }
+                                }
+                            }
+                        }
                     },
                     orderBy: {
                         achievedAt: "desc"
@@ -51,10 +67,12 @@ export async function GET(
         const squats = statsGroup.find(s => s.exercise === "SQUAT")?._sum.reps || 0
 
         return NextResponse.json({
+            id: user.id,
             nickname: user.nickname,
             createdAt: user.createdAt,
             buyoutPaid: user.buyoutPaid,
             badges: user.badges,
+            status: user.statuses[0] || null,
             fines: user.fines.map((f: any) => ({
                 id: f.id,
                 amountEur: f.amountEur,

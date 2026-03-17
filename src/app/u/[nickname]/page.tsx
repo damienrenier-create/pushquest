@@ -20,18 +20,22 @@ export default function UserProfilePage() {
     const [rewardDetail, setRewardDetail] = useState<any | null>(null)
     const [analyticsData, setAnalyticsData] = useState<any>(null)
     const [activeTab, setActiveTab] = useState<'stats' | 'history'>('stats')
-    const [graphPeriod, setGraphPeriod] = useState<'30' | '365'>('30')
+    const [graphPeriod, setGraphPeriod] = useState<'30' | '365' | 'all'>('30')
+    const [isEditingStatus, setIsEditingStatus] = useState(false)
+    const [statusDraft, setStatusDraft] = useState("")
+    const [isStatusLoading, setIsStatusLoading] = useState(false)
 
     useEffect(() => {
         const fetchUserData = async () => {
             try {
                 const [resUser, resAnalytics] = await Promise.all([
                     fetch(`/api/user/profile/${nickname}`),
-                    fetch(`/api/user/analytics/${nickname}`)
+                    fetch(`/api/user/analytics/${nickname}?period=${graphPeriod}`)
                 ])
                 if (resUser.ok) {
                     const data = await resUser.json()
                     setUser(data)
+                    setStatusDraft(data.status?.content || "")
                 }
                 if (resAnalytics.ok) {
                     const data = await resAnalytics.json()
@@ -49,7 +53,60 @@ export default function UserProfilePage() {
         } else {
             fetchUserData()
         }
-    }, [session, nickname, router])
+    }, [session, nickname, router, graphPeriod])
+
+    const handleUpdateStatus = async () => {
+        setIsStatusLoading(true)
+        try {
+            const res = await fetch("/api/user/status", {
+                method: "POST",
+                body: JSON.stringify({ content: statusDraft })
+            })
+            if (res.ok) {
+                const updatedStatus = await res.json()
+                setUser({ ...user, status: updatedStatus })
+                setIsEditingStatus(false)
+            }
+        } catch (err) {
+            console.error(err)
+        } finally {
+            setIsStatusLoading(false)
+        }
+    }
+
+    const handleLikeStatus = async () => {
+        if (!user.status) return
+        try {
+            const res = await fetch("/api/user/status/like", {
+                method: "POST",
+                body: JSON.stringify({ statusId: user.status.id })
+            })
+            if (res.ok) {
+                const data = await res.json()
+                // Refresh user data to get updated likes
+                const resUser = await fetch(`/api/user/profile/${nickname}`)
+                if (resUser.ok) setUser(await resUser.json())
+            }
+        } catch (err) {
+            console.error(err)
+        }
+    }
+
+    const handleLikeBadge = async (badgeKey: string) => {
+        try {
+            const res = await fetch("/api/user/badge/like", {
+                method: "POST",
+                body: JSON.stringify({ badgeKey })
+            })
+            if (res.ok) {
+                // Refresh user data to get updated likes
+                const resUser = await fetch(`/api/user/profile/${nickname}`)
+                if (resUser.ok) setUser(await resUser.json())
+            }
+        } catch (err) {
+            console.error(err)
+        }
+    }
 
     if (loading) return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -104,19 +161,67 @@ export default function UserProfilePage() {
                         {user.nickname.charAt(0).toUpperCase()}
                     </div>
 
-                    <div className="text-center sm:text-left space-y-2 sm:space-y-3">
+                    <div className="text-center sm:text-left space-y-2 sm:space-y-3 flex-1 min-w-0">
                         <div className="inline-block bg-indigo-500/20 text-indigo-400 px-3 py-1 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest mb-1">PROFIL SOLDAT</div>
                         <div className="flex flex-col sm:flex-row items-center sm:items-end gap-2 sm:gap-3">
                             <h1 className="text-3xl sm:text-6xl font-black text-white tracking-normal uppercase leading-none">
                                 {user.nickname}
                             </h1>
                             <div className="flex gap-2">
-                                {isInjured && <span className="text-xl sm:text-2xl animate-pulse cursor-help" title="Blessé / Mise à pied">🚑</span>}
-                                {isVeteran && <span className="text-xl sm:text-2xl cursor-help" title="Vétéran / Libéré du service">🕊️</span>}
                                 {!isInjured && !isVeteran && <span className="text-xl sm:text-2xl opacity-30 grayscale" title="Apte au service">✅</span>}
                             </div>
                         </div>
-                        <p className="text-slate-400 text-[10px] sm:text-xs font-bold uppercase tracking-tight">
+                        
+                        {/* Status Area */}
+                        <div className="mt-4 max-w-lg">
+                            {isEditingStatus ? (
+                                <div className="flex flex-col gap-2">
+                                    <textarea
+                                        value={statusDraft}
+                                        onChange={(e) => setStatusDraft(e.target.value.substring(0, 300))}
+                                        className="bg-slate-800 border border-slate-700 text-white rounded-xl p-3 text-xs font-bold focus:ring-2 focus:ring-blue-500 outline-none min-h-[80px]"
+                                        placeholder="Quelles sont les nouvelles, soldat ?"
+                                    />
+                                    <div className="flex justify-between items-center px-1">
+                                        <span className="text-[10px] text-slate-500 font-bold">{statusDraft.length}/300</span>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => setIsEditingStatus(false)} className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Annuler</button>
+                                            <button 
+                                                onClick={handleUpdateStatus} 
+                                                disabled={isStatusLoading}
+                                                className="bg-blue-600 text-white px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
+                                            >
+                                                {isStatusLoading ? 'Appel...' : 'Poster'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="group relative">
+                                    <div className="flex items-start gap-3">
+                                        <p className="text-slate-300 text-xs sm:text-sm font-bold italic leading-relaxed">
+                                            {user.status?.content ? `"${user.status.content}"` : (session?.user?.email === user.email ? "Aucun statut. Édicte tes ordres." : "")}
+                                        </p>
+                                        {user.status && (
+                                            <button 
+                                                onClick={handleLikeStatus}
+                                                className="flex items-center gap-1.5 px-2 py-1 bg-slate-800/50 hover:bg-slate-800 rounded-full border border-slate-700 transition-colors"
+                                            >
+                                                <span className={`${(user.status.likes || []).some((l: any) => l.userId === (session?.user as any).id) ? 'text-rose-500' : 'text-slate-400'}`}>❤️</span>
+                                                <span className="text-[9px] font-bold text-slate-300">{(user.status.likes || []).length}</span>
+                                            </button>
+                                        )}
+                                        {session?.user?.email === user.email && (
+                                            <button onClick={() => setIsEditingStatus(true)} className="opacity-0 group-hover:opacity-100 transition-opacity text-blue-400 hover:text-blue-300">
+                                                <Activity size={12} />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <p className="text-slate-300 text-[10px] sm:text-xs font-black uppercase tracking-tight mt-4">
                             Membre depuis le {new Date(user.createdAt).toLocaleDateString("fr-FR")}
                         </p>
                     </div>
@@ -165,8 +270,14 @@ export default function UserProfilePage() {
                                 </div>
                                 <div className="flex items-center gap-3 sm:gap-4">
                                     <div className="text-3xl sm:text-4xl filter drop-shadow-lg shrink-0">{ownership.badge.emoji}</div>
-                                    <div className="min-w-0">
-                                        <span className="text-[7px] sm:text-[8px] font-black uppercase tracking-widest opacity-60 leading-none">{ownership.badge.rarity}</span>
+                                    <div className="min-w-0 flex-1">
+                                        <div className="flex justify-between items-start">
+                                            <span className="text-[7px] sm:text-[8px] font-black uppercase tracking-widest opacity-60 leading-none">{ownership.badge.rarity}</span>
+                                            <div className="flex items-center gap-1 bg-white/50 px-1.5 py-0.5 rounded-full text-[8px] font-black">
+                                                <span>❤️</span>
+                                                <span>{(ownership.likes || []).length}</span>
+                                            </div>
+                                        </div>
                                         <h3 className="text-sm sm:text-base font-black text-gray-900 uppercase tracking-normal leading-tight mt-0.5 truncate">{ownership.badge.name}</h3>
                                         <p className="text-[9px] sm:text-[10px] font-bold text-gray-500 mt-1 line-clamp-1 italic">"{ownership.badge.description}"</p>
                                     </div>
@@ -366,6 +477,19 @@ export default function UserProfilePage() {
                                     <h3 className="text-[9px] sm:text-xs font-black text-gray-900 uppercase tracking-tight line-clamp-1">
                                         {ownership.badge.name}
                                     </h3>
+                                    <div className="mt-2 flex items-center justify-center gap-2">
+                                        <button 
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                handleLikeBadge(ownership.badgeKey);
+                                            }}
+                                            className="flex items-center gap-1 px-2 py-0.5 bg-slate-50 hover:bg-slate-100 rounded-full border border-slate-200 transition-colors"
+                                        >
+                                            <span className={`${(ownership.likes || []).some((l: any) => l.userId === (session?.user as any).id) ? 'text-rose-500' : 'text-slate-400'}`}>❤️</span>
+                                            <span className="text-[8px] font-black text-slate-900">{(ownership.likes || []).length}</span>
+                                        </button>
+                                    </div>
                                     <p className="text-[8px] sm:text-[9px] font-bold text-gray-400 uppercase mt-1 italic">
                                         {new Date(ownership.achievedAt).toLocaleDateString("fr-FR", { month: 'short', year: 'numeric' })}
                                     </p>
@@ -390,11 +514,11 @@ export default function UserProfilePage() {
                                     </div>
                                     <div>
                                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">{fine.date}</p>
-                                        <p className="text-xs font-bold text-gray-600">Amende de retard</p>
+                                        <p className="text-xs font-black text-gray-900">Amende de retard</p>
                                     </div>
                                 </div>
-                                <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${fine.status === 'paid' ? 'bg-green-100 text-green-600' : 'bg-rose-100 text-rose-600'}`}>
-                                    {fine.status === 'paid' ? 'Réglée' : 'Impayée'}
+                                <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${fine.status === 'paid' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-500 text-white shadow-lg shadow-rose-200'}`}>
+                                    {fine.status === 'paid' ? 'Réglée' : 'À RÉGLER'}
                                 </span>
                             </div>
                         ))}
@@ -408,10 +532,10 @@ export default function UserProfilePage() {
                         {user.medicalCertificates?.map((cert: any) => (
                             <div key={cert.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 relative group transition-all hover:bg-gray-50">
                                 <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-xl">🩹</div>
+                                    <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-xl shadow-inner">🩹</div>
                                     <div>
-                                        <p className="text-xs font-black text-gray-800 leading-tight uppercase tracking-tight">{cert.note || "Arrêt Sportif"}</p>
-                                        <p className="text-[10px] font-bold text-blue-500 uppercase mt-1">
+                                        <p className="text-xs font-black text-slate-900 leading-tight uppercase tracking-tight">{cert.note || "Arrêt Sportif"}</p>
+                                        <p className="text-[10px] font-black text-blue-600 uppercase mt-1">
                                             Jusqu'au {new Date(cert.endDateISO).toLocaleDateString("fr-FR", { day: 'numeric', month: 'long' })}
                                         </p>
                                     </div>

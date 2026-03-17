@@ -27,7 +27,11 @@ export async function GET(
             return NextResponse.json({ message: "Utilisateur non trouvé" }, { status: 404 })
         }
 
+        const { searchParams } = new URL(req.url)
+        const period = searchParams.get('period') || '30'
+        
         // 1. Get XP Breakdown using the existing logic (snapshot today)
+        // (Keep existing code for userXPInfo...)
         const allUsers = await prisma.user.findMany({
             include: {
                 sets: true,
@@ -41,20 +45,26 @@ export async function GET(
         const rankings = await calculateAllUsersXP(allUsers, allBadges)
         const userXPInfo = rankings.find(r => r.id === user.id)
 
-        // 2. Evolution of Max Series per day (last 30 days)
-        const thirtyDaysAgo = new Date()
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+        // 2. Evolution of Max Series per day
+        let dateLimit: Date | null = null;
+        if (period !== 'all') {
+            dateLimit = new Date()
+            dateLimit.setDate(dateLimit.getDate() - parseInt(period))
+        }
         
         const setsByDay = await prisma.exerciseSet.findMany({
             where: {
                 userId: user.id,
-                createdAt: { gte: thirtyDaysAgo }
+                ...(dateLimit ? { createdAt: { gte: dateLimit } } : {})
             },
             orderBy: { createdAt: "asc" }
         })
 
         const maxSeriesHistory: Record<string, { PUSHUP: number, PULLUP: number, SQUAT: number }> = {}
+        const hourlyDistribution: Record<number, number> = {}
+
         setsByDay.forEach(set => {
+            // Max Series
             const date = set.date
             if (!maxSeriesHistory[date]) {
                 maxSeriesHistory[date] = { PUSHUP: 0, PULLUP: 0, SQUAT: 0 }
@@ -63,6 +73,10 @@ export async function GET(
             if (set.reps > maxSeriesHistory[date][exercise]) {
                 maxSeriesHistory[date][exercise] = set.reps
             }
+
+            // Hourly distribution
+            const hour = new Date(set.createdAt).getHours()
+            hourlyDistribution[hour] = (hourlyDistribution[hour] || 0) + set.reps
         })
 
         const maxSeriesData = Object.entries(maxSeriesHistory).map(([date, values]) => ({
@@ -70,8 +84,7 @@ export async function GET(
             ...values
         })).sort((a, b) => a.date.localeCompare(b.date))
 
-        // 3. XP Progression (simulated by daily aggregates)
-        // For simplicity, we'll return the daily sum of reps and badges achieved each day
+        // 3. XP Progression / Daily volume
         const dailyActivity: Record<string, { reps: number, badgesCount: number }> = {}
         
         setsByDay.forEach(set => {
@@ -82,7 +95,8 @@ export async function GET(
 
         user.badges.forEach(b => {
              const date = new Date(b.achievedAt).toISOString().split('T')[0]
-             if (new Date(b.achievedAt) >= thirtyDaysAgo) {
+             const isRecentEnough = !dateLimit || new Date(b.achievedAt) >= dateLimit
+             if (isRecentEnough) {
                  if (!dailyActivity[date]) dailyActivity[date] = { reps: 0, badgesCount: 0 }
                  dailyActivity[date].badgesCount += 1
              }
@@ -94,10 +108,17 @@ export async function GET(
             badges: val.badgesCount
         })).sort((a, b) => a.date.localeCompare(b.date))
 
+        // Hourly Array for frontend
+        const hourlyData = Array.from({ length: 24 }, (_, i) => ({
+            hour: i,
+            reps: hourlyDistribution[i] || 0
+        }))
+
         return NextResponse.json({
             xpBreakdown: userXPInfo?.details || {},
             maxSeriesData,
             progressionData,
+            hourlyData,
             totalXP: userXPInfo?.totalXP || 0
         })
     } catch (error) {
