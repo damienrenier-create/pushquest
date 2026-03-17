@@ -176,6 +176,7 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
         if (!summary) return;
 
         let totalXP = 0;
+        let regularityXP = 0;
         const sets = u.sets || [];
         
         const marvinBonusDate = "2026-03-08";
@@ -219,26 +220,45 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
                     if (isWinner) dayXP *= 3;
                 }
 
+                regularityXP += dayXP;
                 totalXP += dayXP;
                 
                 // Specific Event XP
-                if (d === marvinBonusDate) totalXP += 500;
+                if (d === marvinBonusDate) {
+                    regularityXP += 500;
+                    totalXP += 500;
+                }
                 
                 // --- Chronological/Surgical Event Logic ---
                 if (d === "2026-03-20" || d === "2026-09-22") { // Equinoxes
                     const p = summary.getDaySum(d, "PUSHUP");
                     const s = summary.getDaySum(d, "SQUAT");
-                    if (p > 0 && p === s) totalXP += 250; 
+                    if (p > 0 && p === s) {
+                        regularityXP += 250;
+                        totalXP += 250;
+                    } 
                 }
                 if (d === "2026-04-05") { // Pâques
                     const dayReps = summary.getScaleReps(d);
-                    if (dayReps.includes(10) && dayReps.includes(20) && dayReps.includes(30)) totalXP += 750;
+                    if (dayReps.includes(10) && dayReps.includes(20) && dayReps.includes(30)) {
+                        regularityXP += 750;
+                        totalXP += 750;
+                    }
                 }
-                if (d === "2026-06-21" && dayTotal >= 900) totalXP += 900; // Solstice Eté
-                if (d === "2026-12-06" && dayTotal % 10 === 6) totalXP += 500; // St Nicolas
+                if (d === "2026-06-21" && dayTotal >= 900) {
+                    regularityXP += 900;
+                    totalXP += 900;
+                } // Solstice Eté
+                if (d === "2026-12-06" && dayTotal % 10 === 6) {
+                    regularityXP += 500;
+                    totalXP += 500;
+                } // St Nicolas
                 if (d === "2026-12-21") { // Solstice Hiver
                     const hoursWithReps = new Set(sets.filter((s:any) => s.date === d).map((s:any) => new Date(s.createdAt).getHours()));
-                    if (hoursWithReps.size >= 12) totalXP += 500;
+                    if (hoursWithReps.size >= 12) {
+                        regularityXP += 500;
+                        totalXP += 500;
+                    }
                 }
                 if (d === "2026-12-25") { // Noël
                     const scalePushups = (summary as any).getScaleRepsByExo(d, "PUSHUP");
@@ -248,7 +268,10 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
                     const hasScale = target.every(n => scalePushups.includes(n)) &&
                                      target.every(n => scalePullups.includes(n)) &&
                                      target.every(n => scaleSquats.includes(n));
-                    if (hasScale) totalXP += 500;
+                    if (hasScale) {
+                        regularityXP += 500;
+                        totalXP += 500;
+                    }
                 }
             }
         });
@@ -317,6 +340,7 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
             progress: Math.floor(progress),
             details: {
                 repsXP: pushupsXPContribution + pullupsXPContribution + squatsXPContribution,
+                regularityXP,
                 badgesXP: badgeXPContribution,
                 finesXP: (summary.totalFinesAmount * 50),
                 recordsXP: (u.id === maxVolDayUser ? 250 : 0) + (u.id === maxVolMonthUser ? 1000 : 0) + (u.id === maxVolYearUser ? 2500 : 0),

@@ -422,11 +422,11 @@ export default function UserProfilePage() {
                                     const breakdown = analyticsData.xpBreakdown;
                                     const total = analyticsData.totalXP || 1;
                                     const labels: any = {
-                                        repsXP: "#6366f1",
-                                        badgesXP: "#f59e0b",
-                                        recordsXP: "#a855f7",
-                                        finesXP: "#10b981",
-                                        manualXP: "#94a3b8"
+                                        repsXP: "#6366f1", // Indigo
+                                        regularityXP: "#10b981", // Emerald
+                                        badgesXP: "#f59e0b", // Amber
+                                        recordsXP: "#f43f5e", // Rose (Matches legend)
+                                        manualXP: "#94a3b8"  // Slate
                                     };
                                     
                                     let cumulativePercent = 0;
@@ -439,8 +439,8 @@ export default function UserProfilePage() {
                                                 if (val <= 0 || !labels[key]) return null;
                                                 const p = (val / total) * 100;
                                                 // Using large strokeWidth for "Pie" effect (filled donut)
-                                                const strokeWidth = 44; // Half of r*2 to fill center
-                                                const radius = 22; // Midpoint for stroke
+                                                const strokeWidth = 44; 
+                                                const radius = 22; 
                                                 const dashArray = `${p} ${100 - p}`;
                                                 const dashOffset = -cumulativePercent;
                                                 cumulativePercent += p;
@@ -468,11 +468,14 @@ export default function UserProfilePage() {
                                 </div>
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-[9px] font-black uppercase tracking-wider max-w-sm px-4">
+                        <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-[8px] font-black uppercase tracking-wider max-w-sm px-4">
                             <div className="flex items-center gap-2 text-indigo-600"><span className="w-2 h-2 rounded-full bg-indigo-500"></span> {Math.round(analyticsData.xpBreakdown?.repsXP || 0).toLocaleString()} Entraînement</div>
+                            <div className="flex items-center gap-2 text-emerald-600"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> {Math.round(analyticsData.xpBreakdown?.regularityXP || 0).toLocaleString()} Régularité</div>
                             <div className="flex items-center gap-2 text-amber-600"><span className="w-2 h-2 rounded-full bg-amber-500"></span> {Math.round(analyticsData.xpBreakdown?.badgesXP || 0).toLocaleString()} Trophées</div>
                             <div className="flex items-center gap-2 text-rose-600"><span className="w-2 h-2 rounded-full bg-rose-500"></span> {Math.round(analyticsData.xpBreakdown?.recordsXP || 0).toLocaleString()} Records</div>
-                            <div className="flex items-center gap-2 text-slate-500"><span className="w-2 h-2 rounded-full bg-slate-400"></span> {Math.round((analyticsData.xpBreakdown?.finesXP || 0) + (analyticsData.xpBreakdown?.manualXP || 0)).toLocaleString()} Bonus</div>
+                            <div className="flex items-center gap-x-2 text-slate-500 col-span-2 justify-center mt-1 border-t border-slate-100 pt-2">
+                                <span className="w-2 h-2 rounded-full bg-slate-400"></span> Bonus de Prestige : {Math.round((analyticsData.xpBreakdown?.finesXP || 0) + (analyticsData.xpBreakdown?.manualXP || 0)).toLocaleString()} XP
+                            </div>
                         </div>
                     </div>
                 </div>
