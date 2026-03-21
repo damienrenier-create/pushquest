@@ -570,7 +570,7 @@ export default function PantheonClient({
 
 
                 {/* SECTION E: ENTRAÎNEMENTS DE LÉGENDE */}
-                <div className="mb-12">
+                <div id="challenges" className="mb-12">
                     <div className="flex items-center gap-3 mb-8">
                         <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
                             <Zap size={20} fill="currentColor" />

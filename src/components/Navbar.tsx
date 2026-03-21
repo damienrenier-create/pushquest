@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useSession, signOut } from "next-auth/react"
 import { useEffect } from "react"
-import { Home, Users, User, LogOut, Camera, ShieldCheck, Star, MessageSquare } from "lucide-react"
+import { Home, Users, User, LogOut, Camera, ShieldCheck, Star, MessageSquare, Zap } from "lucide-react"
 
 export default function Navbar() {
     const { data: session } = useSession()
@@ -36,6 +36,14 @@ export default function Navbar() {
                                 >
                                     <Star size={14} fill="currentColor" />
                                     Panthéon
+                                </Link>
+                                <div className="h-4 w-[1px] bg-gray-100 mx-2" />
+                                <Link
+                                    href="/pantheon#challenges"
+                                    className="flex items-center gap-1.5 text-amber-600 bg-amber-50 hover:bg-amber-100 font-black px-3 py-2 rounded-xl transition-all text-xs uppercase tracking-wider border border-amber-100 shadow-sm"
+                                >
+                                    <Zap size={14} fill="currentColor" />
+                                    Défis
                                 </Link>
                                 <div className="h-4 w-[1px] bg-gray-100 mx-2" />
                                 <Link

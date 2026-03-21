@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Trophy, Users, Star, User, MessageSquare } from "lucide-react"
+import { Home, Trophy, Users, Star, User, MessageSquare, Zap } from "lucide-react"
 
 export default function MobileNav() {
     const pathname = usePathname()
@@ -24,6 +24,14 @@ export default function MobileNav() {
                 >
                     <Star size={22} className={`group-hover:scale-110 transition-transform ${pathname?.startsWith('/pantheon') ? 'stroke-[2.5px] fill-current' : ''}`} />
                     <span className="text-[10px] font-black uppercase tracking-wider">Panthéon</span>
+                </Link>
+                
+                <Link
+                    href="/pantheon#challenges"
+                    className={`flex flex-col items-center gap-1 group relative ${pathname === '/pantheon' ? 'text-amber-600' : 'text-gray-400'}`}
+                >
+                    <Zap size={22} className={`group-hover:scale-110 transition-transform ${pathname === '/pantheon' ? 'stroke-[2.5px] fill-current' : ''}`} />
+                    <span className="text-[10px] font-black uppercase tracking-wider text-center">Défis</span>
                 </Link>
 
                 <Link
