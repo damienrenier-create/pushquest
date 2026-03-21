@@ -118,6 +118,11 @@ export default async function PantheonPage() {
                 isEarned = s.getHistoricalMaxVolume(days, exo) >= threshold;
             }
             
+            if (isEarned && def.isUnique) {
+                const ownership = badgeOwnerships.find((bo: any) => bo.badgeKey === def.key);
+                if (ownership?.currentUserId !== s.id) isEarned = false;
+            }
+
             if (isEarned) virtualBadges[def.key] = true;
         });
 
