@@ -26,6 +26,7 @@ export interface SpecialWorkout {
     scoringType: 'TIME' | 'REPS' | 'COMPOSITE';
     xpBonus: number;
     isActive?: boolean;
+    endDate?: string; // YYYY-MM-DD
 }
 
 export const SPECIAL_WORKOUTS: SpecialWorkout[] = [
@@ -43,6 +44,24 @@ export const SPECIAL_WORKOUTS: SpecialWorkout[] = [
             { type: 'JUMP_ROPE', label: 'Corde à sauter', goal: 200, unit: 'REPS' },
             { type: 'PISTOL_SQUAT', label: 'Pistol Squat', goal: 2, unit: 'REPS' },
             { type: 'SQUAT_JUMP', label: 'Squat Jumps', goal: 20, unit: 'REPS' }
+        ],
+        scoringType: 'TIME',
+        xpBonus: 1000,
+        endDate: '2026-03-31'
+    },
+    {
+        id: 'workout-02-spring',
+        slug: 'le-souffle-du-printemps',
+        name: 'Le Souffle du Printemps',
+        description: 'Célébrez l\'équinoxe avec ce défi d\'endurance. Note : les exercices peuvent être faits dans n\'importe quel ordre et par séries, mais vous devez terminer toutes les répétitions d\'un exercice avant de passer au suivant.',
+        date: '2026-03-21',
+        endDate: '2026-04-21',
+        isActive: true,
+        exercises: [
+            { type: 'RUN', label: 'Course', goal: 10000, unit: 'METERS' },
+            { type: 'SQUATS', label: 'Squats', goal: 100, unit: 'REPS' },
+            { type: 'PLANK', label: 'Gainage', goal: 100, unit: 'SECONDS' },
+            { type: 'BURPEES', label: 'Burpees', goal: 10, unit: 'REPS' }
         ],
         scoringType: 'TIME',
         xpBonus: 1000

@@ -139,4 +139,8 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
     // Special Workouts - Premier Exploit
     { key: "workout_workout-01-the-first_std", name: "Explorateur de l'Exploit", emoji: "🧭", rarity: "RARE", metricType: "SPECIAL_WORKOUT", type: "EVENT", exerciseScope: "ALL", description: "A complété l'entraînement 'Premier Exploit'", condition: "Réaliser l'intégralité des exercices de l'entraînement spécial inaugural.", addedAt: "2026-03-17" },
     { key: "workout_workout-01-the-first_plat", name: "Platine : Premier Exploit", emoji: "💎", rarity: "LEGENDARY", metricType: "SPECIAL_WORKOUT", type: "COMPETITIVE", exerciseScope: "ALL", description: "Détenteur du record sur l'entraînement 'Premier Exploit'", condition: "Détenir le meilleur temps sur l'entraînement 'Premier Exploit'. Le titre est transférable si le record est battu.", addedAt: "2026-03-17" },
+    
+    // Special Workouts - Le Souffle du Printemps
+    { key: "workout_workout-02-spring_std", name: "Explorateur du Printemps", emoji: "🍃", rarity: "RARE", metricType: "SPECIAL_WORKOUT", type: "EVENT", exerciseScope: "ALL", description: "A complété l'entraînement 'Le Souffle du Printemps'", condition: "Réaliser l'intégralité des exercices de l'entraînement spécial du printemps.", addedAt: "2026-03-21" },
+    { key: "workout_workout-02-spring_plat", name: "Zéphir d'Or", emoji: "🌬️", rarity: "LEGENDARY", metricType: "SPECIAL_WORKOUT", type: "COMPETITIVE", exerciseScope: "ALL", description: "Détenteur du record sur l'entraînement 'Le Souffle du Printemps'", condition: "Détenir le meilleur temps sur l'entraînement 'Le Souffle du Printemps'. Le titre est transférable si le record est battu.", addedAt: "2026-03-21" },
 ];

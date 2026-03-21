@@ -591,8 +591,18 @@ export default function PantheonClient({
                                 
                                 <div className="relative z-10 space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <div className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-indigo-100">
-                                            {workout.date === today ? "🔥 ACTIF" : workout.date}
+                                        <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                                            today <= (workout.endDate || '9999-12-31') && today >= workout.date
+                                            ? "bg-indigo-50 text-indigo-600 border-indigo-100"
+                                            : today > (workout.endDate || '9999-12-31')
+                                            ? "bg-slate-100 text-slate-400 border-slate-200"
+                                            : "bg-amber-50 text-amber-600 border-amber-100"
+                                        }`}>
+                                            {today <= (workout.endDate || '9999-12-31') && today >= workout.date 
+                                                ? "🔥 ACTIF" 
+                                                : today > (workout.endDate || '9999-12-31')
+                                                ? "⌛ TERMINÉ"
+                                                : `📅 LE ${new Date(workout.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}`}
                                         </div>
                                         <div className="text-amber-500 font-black text-xs">
                                             +{workout.xpBonus} XP
@@ -616,6 +626,13 @@ export default function PantheonClient({
                                             </span>
                                         )}
                                     </div>
+
+                                    {workout.endDate && (
+                                        <div className="flex items-center gap-1.5 mt-2 text-[9px] font-black text-red-500 uppercase tracking-tighter">
+                                            <Clock size={10} />
+                                            Finit le {new Date(workout.endDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="mt-6 flex items-center justify-between pt-4 border-t border-slate-50">
