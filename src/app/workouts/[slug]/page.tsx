@@ -256,7 +256,9 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
                                                 className="w-20 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right font-black text-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-slate-900"
                                                 onChange={(e) => setFormData(prev => ({ ...prev, [exo.type]: parseInt(e.target.value) || 0 }))}
                                             />
-                                            <span className="text-[10px] font-black text-slate-400 uppercase w-10">{exo.unit === 'REPS' ? 'Reps' : exo.unit === 'SECONDS' ? 'Sec' : 'M'}</span>
+                                            <span className="text-[10px] font-black text-slate-400 uppercase w-10">
+                                                {exo.unit === 'REPS' ? 'Reps' : exo.unit === 'SECONDS' ? 'Sec' : exo.unit === 'KILOMETERS' ? 'KM' : 'M'}
+                                            </span>
                                         </div>
                                     </div>
                                 ))}

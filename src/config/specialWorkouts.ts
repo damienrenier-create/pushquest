@@ -13,7 +13,7 @@ export interface WorkoutExercise {
     type: ExerciseType;
     label: string;
     goal?: number;
-    unit: 'REPS' | 'SECONDS' | 'METERS';
+    unit: 'REPS' | 'SECONDS' | 'METERS' | 'KILOMETERS';
 }
 
 export interface SpecialWorkout {
@@ -58,7 +58,7 @@ export const SPECIAL_WORKOUTS: SpecialWorkout[] = [
         endDate: '2026-04-21',
         isActive: true,
         exercises: [
-            { type: 'RUN', label: 'Course', goal: 10000, unit: 'METERS' },
+            { type: 'RUN', label: 'Course', goal: 10, unit: 'KILOMETERS' },
             { type: 'SQUATS', label: 'Squats', goal: 100, unit: 'REPS' },
             { type: 'PLANK', label: 'Gainage', goal: 100, unit: 'SECONDS' },
             { type: 'BURPEES', label: 'Burpees', goal: 10, unit: 'REPS' }
