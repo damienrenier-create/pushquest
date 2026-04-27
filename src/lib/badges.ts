@@ -794,6 +794,10 @@ export async function updateBadgesPostSave(userId: string, precomputedSummaries?
 }
 
 export async function rotateFeaturedBadge() {
+    // Fetch all current ownerships to see what's taken
+    const allOwnerships = await (prisma as any).badgeOwnership.findMany();
+    const ownedKeys = new Set(allOwnerships.map((o: any) => o.badgeKey));
+
     // Pick a random badge that is NOT unique or legendary or event
     const possibleBadges = BADGE_DEFINITIONS.filter(b =>
         !b.isUnique &&
@@ -801,7 +805,26 @@ export async function rotateFeaturedBadge() {
         b.type !== "EVENT" &&
         b.metricType !== "HEADHUNTER_COUNT"
     );
-    const randomBadge = possibleBadges[Math.floor(Math.random() * possibleBadges.length)];
+
+    // Prioritization:
+    // 1. Competitive badges (stealable)
+    // 2. Badges that nobody has yet
+    const competitiveBadges = possibleBadges.filter(b => b.type === "COMPETITIVE");
+    const unownedBadges = possibleBadges.filter(b => !ownedKeys.has(b.key));
+
+    let candidates = possibleBadges;
+    if (competitiveBadges.length > 0) {
+        // 70% chance to pick a competitive one to encourage "stealing"
+        if (Math.random() < 0.7) {
+            candidates = competitiveBadges;
+        } else if (unownedBadges.length > 0) {
+            candidates = unownedBadges;
+        }
+    } else if (unownedBadges.length > 0) {
+        candidates = unownedBadges;
+    }
+
+    const randomBadge = candidates[Math.floor(Math.random() * candidates.length)];
 
     await (prisma as any).globalConfig.upsert({
         where: { key: "featuredBadgeKey" },

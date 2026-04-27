@@ -33,7 +33,7 @@ export default function UpcomingEvent() {
         Object.entries(SPECIAL_DAYS).forEach(([date, day]) => {
             allEvents.push({
                 type: 'DAY',
-                key: date,
+                key: day.badgeKey || date,
                 date: date,
                 label: day.label,
                 emoji: day.emoji,
@@ -142,7 +142,7 @@ export default function UpcomingEvent() {
                 {/* Action */}
                 <div className="flex-shrink-0">
                     <Link
-                        href={`/faq?tab=catalogue`}
+                        href={nextEvent.type === 'WORKOUT' ? `/workouts/${nextEvent.key}` : `/faq?tab=catalogue#item-${nextEvent.key}`}
                         className={`group flex items-center justify-center w-12 h-12 rounded-full bg-white shadow-sm border border-current/10 transition-colors ${isActive ? 'text-purple-600 hover:bg-purple-600 hover:text-white' : 'text-blue-600 hover:bg-blue-600 hover:text-white'}`}
                     >
                         <ChevronRight size={24} className="transform group-hover:translate-x-0.5 transition-transform" />

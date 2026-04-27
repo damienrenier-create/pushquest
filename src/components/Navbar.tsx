@@ -4,15 +4,55 @@ import Link from "next/link"
 import { useSession, signOut } from "next-auth/react"
 import { useEffect } from "react"
 import { Home, Users, User, LogOut, Camera, ShieldCheck, Star, MessageSquare, Zap } from "lucide-react"
+import { usePathname } from "next/navigation"
+import { useState } from "react"
 
 export default function Navbar() {
     const { data: session } = useSession()
+    const pathname = usePathname()
+    const [hasNewOnWall, setHasNewOnWall] = useState(false)
 
     useEffect(() => {
         if (session?.user?.expired) {
             signOut({ callbackUrl: "/login?expired=true" })
         }
     }, [session])
+
+    // Notification Logic for Place Publique
+    useEffect(() => {
+        if (!session) return;
+
+        const checkAlerts = async () => {
+            try {
+                const res = await fetch('/api/wall/alerts');
+                const data = await res.json();
+
+                if (data.error) return;
+
+                const lastSeen = JSON.parse(localStorage.getItem('wall_alerts_seen') || '{}');
+                const hasNew = (
+                    (data.featuredBadge && data.featuredBadge !== lastSeen.featuredBadge) ||
+                    (data.guardian && data.guardian !== lastSeen.guardian) ||
+                    (data.activeEvent && data.activeEvent !== lastSeen.activeEvent)
+                );
+
+                setHasNewOnWall(hasNew);
+
+                // If we are currently on the wall page, mark as seen
+                if (pathname === '/wall' && hasNew) {
+                    localStorage.setItem('wall_alerts_seen', JSON.stringify(data));
+                    setHasNewOnWall(false);
+                }
+            } catch (e) {
+                console.error("Alerts check failed", e);
+            }
+        };
+
+        checkAlerts();
+        // Check every 5 minutes
+        const interval = setInterval(checkAlerts, 5 * 60 * 1000);
+        return () => clearInterval(interval);
+    }, [session, pathname]);
 
     return (
         <nav className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-50">
@@ -56,10 +96,13 @@ export default function Navbar() {
                                 <div className="h-4 w-[1px] bg-gray-100 mx-2" />
                                 <Link
                                     href="/wall"
-                                    className="flex items-center gap-1.5 text-gray-500 hover:text-blue-600 font-bold px-3 py-2 rounded-xl transition-all text-xs uppercase tracking-wider"
+                                    className="flex items-center gap-1.5 text-gray-500 hover:text-blue-600 font-bold px-3 py-2 rounded-xl transition-all text-xs uppercase tracking-wider relative"
                                 >
                                     <MessageSquare size={14} />
                                     Place publique
+                                    {hasNewOnWall && (
+                                        <span className="absolute top-1.5 right-0.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white animate-pulse" />
+                                    )}
                                 </Link>
                             </div>
                         )}
