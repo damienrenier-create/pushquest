@@ -15,7 +15,7 @@ export default function GraphsSection({ data, graphPeriod, setGraphPeriod }: Gra
                 <div className="flex justify-between items-center mb-8 border-b border-gray-50 pb-4">
                     <div>
                         <h3 className="font-black text-xs text-slate-900 uppercase tracking-widest mb-1 flex items-center gap-2">
-                             📈 Évolution du Volume
+                            📈 Évolution du Volume
                         </h3>
                         <p className="text-[9px] font-bold text-gray-400 uppercase tracking-tight">
                             {graphPeriod === 'all' ? 'Performance depuis le lancement' : `Performance sur les ${graphPeriod} derniers jours`}
@@ -29,7 +29,16 @@ export default function GraphsSection({ data, graphPeriod, setGraphPeriod }: Gra
                 </div>
 
                 {(() => {
-                    const daily = data?.progressionData || data?.graphs?.myDaily || [];
+                    let daily = [];
+                    if (data?.progressionData) {
+                        daily = [...data.progressionData];
+                        if (graphPeriod !== 'all') {
+                            const days = graphPeriod === '30' ? 30 : 365;
+                            daily = daily.slice(-days);
+                        }
+                    } else if (data?.graphs) {
+                        daily = graphPeriod === '30' ? (data.graphs.myDaily || []) : (data.graphs.myDaily365 || data.graphs.myDaily || []);
+                    }
                     const t = daily.reduce((acc: any, d: any) => ({
                         reps: acc.reps + (d?.reps || d?.total || 0),
                         badges: acc.badges + (d?.badges || 0)
@@ -65,7 +74,7 @@ export default function GraphsSection({ data, graphPeriod, setGraphPeriod }: Gra
                                             <div key={p} className="w-full h-px bg-slate-200/50" />
                                         ))}
                                     </div>
-                                    
+
                                     {/* Vertical Grid (Time intervals) */}
                                     <div className="absolute inset-0 flex justify-between pointer-events-none opacity-20">
                                         {Array.from({ length: graphPeriod === 'all' ? 10 : (graphPeriod === '365' ? 12 : 7) }).map((_, i) => (
@@ -133,8 +142,8 @@ export default function GraphsSection({ data, graphPeriod, setGraphPeriod }: Gra
                                             const maxH = Math.max(...(data?.hourlyData || []).map((hd: any) => hd.reps), 1);
                                             const height = (h.reps / maxH) * 100;
                                             return (
-                                                <div 
-                                                    key={i} 
+                                                <div
+                                                    key={i}
                                                     className="flex-1 bg-indigo-500/20 rounded-t-sm hover:bg-indigo-500 transition-colors relative group"
                                                     style={{ height: `${Math.max(4, height)}%` }}
                                                 >
