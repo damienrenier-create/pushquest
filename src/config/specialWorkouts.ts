@@ -65,5 +65,41 @@ export const SPECIAL_WORKOUTS: SpecialWorkout[] = [
         ],
         scoringType: 'TIME',
         xpBonus: 1000
+    },
+    {
+        id: 'workout-03-pyramid',
+        slug: 'la-grande-pyramide',
+        name: 'La Grande Pyramide',
+        description: 'Un défi infernal en pyramide avec une ascension vers le sommet de l\'effort puis une descente vers la base.',
+        date: '2026-04-28',
+        endDate: '2026-05-28',
+        isActive: true,
+        exercises: [
+            { type: 'PLANK', label: 'Gainage', goal: 30, unit: 'SECONDS' },
+            { type: 'SQUATS', label: 'Squats', goal: 10, unit: 'REPS' },
+            { type: 'PUSHUPS', label: 'Pompes', goal: 10, unit: 'REPS' },
+            { type: 'RUN', label: 'Course', goal: 1, unit: 'KILOMETERS' },
+            { type: 'PLANK', label: 'Gainage', goal: 60, unit: 'SECONDS' },
+            { type: 'SQUATS', label: 'Squats', goal: 20, unit: 'REPS' },
+            { type: 'PUSHUPS', label: 'Pompes', goal: 20, unit: 'REPS' },
+            { type: 'RUN', label: 'Course', goal: 2, unit: 'KILOMETERS' },
+            { type: 'PLANK', label: 'Gainage', goal: 90, unit: 'SECONDS' },
+            { type: 'SQUATS', label: 'Squats', goal: 30, unit: 'REPS' },
+            { type: 'PUSHUPS', label: 'Pompes', goal: 30, unit: 'REPS' },
+            { type: 'RUN', label: 'Course', goal: 3, unit: 'KILOMETERS' },
+            { type: 'PLANK', label: 'Gainage', goal: 90, unit: 'SECONDS' },
+            { type: 'SQUATS', label: 'Squats', goal: 30, unit: 'REPS' },
+            { type: 'PUSHUPS', label: 'Pompes', goal: 30, unit: 'REPS' },
+            { type: 'RUN', label: 'Course', goal: 2, unit: 'KILOMETERS' },
+            { type: 'PLANK', label: 'Gainage', goal: 60, unit: 'SECONDS' },
+            { type: 'SQUATS', label: 'Squats', goal: 20, unit: 'REPS' },
+            { type: 'PUSHUPS', label: 'Pompes', goal: 20, unit: 'REPS' },
+            { type: 'RUN', label: 'Course', goal: 1, unit: 'KILOMETERS' },
+            { type: 'PLANK', label: 'Gainage', goal: 30, unit: 'SECONDS' },
+            { type: 'SQUATS', label: 'Squats', goal: 10, unit: 'REPS' },
+            { type: 'PUSHUPS', label: 'Pompes', goal: 10, unit: 'REPS' }
+        ],
+        scoringType: 'TIME',
+        xpBonus: 1000
     }
 ];

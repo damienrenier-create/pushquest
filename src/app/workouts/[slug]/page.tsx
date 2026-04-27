@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, Timer, Send, CheckCircle2, Zap, Trophy, History, Image as ImageIcon, ExternalLink, Medal, Camera } from "lucide-react"
+import { ChevronLeft, Timer, Send, CheckCircle2, Zap, Trophy, History, Image as ImageIcon, ExternalLink, Medal, Camera, Clock } from "lucide-react"
 import Link from "next/link"
 import { SPECIAL_WORKOUTS } from "@/config/specialWorkouts"
 import { useSession } from "next-auth/react"
@@ -12,7 +12,12 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
     const { data: session } = useSession()
     const resolvedParams = React.use(params)
     const workout = SPECIAL_WORKOUTS.find(w => w.slug === resolvedParams.slug)
-    
+
+    const today = new Date().toISOString().split('T')[0];
+    const isStarted = workout ? today >= workout.date : false;
+    const isEnded = workout?.endDate ? today > workout.endDate : false;
+    const isAvailable = isStarted && !isEnded;
+
     // Form state
     const [formData, setFormData] = useState<Record<string, number>>({})
     const [manualMinutes, setManualMinutes] = useState<string>("")
@@ -20,12 +25,12 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
     const [proofUrl, setProofUrl] = useState<string>("")
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [success, setSuccess] = useState(false)
-    
+
     // Chrono state
     const [startTime, setStartTime] = useState<number | null>(null)
     const [timerActive, setTimerActive] = useState(false)
     const [elapsed, setElapsed] = useState(0)
-    
+
     // Ranking state
     const [ranking, setRanking] = useState<any[]>([])
     const [loadingRanking, setLoadingRanking] = useState(true)
@@ -87,12 +92,13 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!session) return alert("Vous devez être connecté")
-        
+        if (!isAvailable) return alert("Ce défi n'est pas actif actuellement")
+
         setIsSubmitting(true)
-        
+
         // Calculate final time from manual inputs (priority) or elapsed
         const finalTime = (parseInt(manualMinutes) || 0) * 60 + (parseInt(manualSeconds) || 0)
-        
+
         try {
             const res = await fetch("/api/workouts/special", {
                 method: "POST",
@@ -136,7 +142,7 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
                         <ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
                         <span className="font-bold uppercase tracking-widest text-[10px]">Retour au Panthéon</span>
                     </Link>
-                    
+
                     <div className="space-y-2">
                         <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full border border-indigo-200 text-[10px] font-black uppercase tracking-wider">
                             <Zap size={12} fill="currentColor" />
@@ -159,6 +165,28 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
                         <h2 className="text-2xl font-black uppercase italic text-slate-900">Exploit Validé !</h2>
                         <p className="text-slate-500 font-bold">Vos résultats ont été enregistrés. Redirection...</p>
                     </div>
+                ) : !isStarted ? (
+                    <div className="bg-amber-50 border border-amber-200 rounded-3xl p-12 text-center space-y-4 shadow-sm relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-8 opacity-5">
+                            <Clock size={120} />
+                        </div>
+                        <div className="relative z-10 w-20 h-20 bg-amber-500 rounded-full flex items-center justify-center mx-auto shadow-lg shadow-amber-500/20">
+                            <Timer size={40} className="text-white" />
+                        </div>
+                        <h2 className="relative z-10 text-2xl font-black uppercase italic text-amber-900">Pas si vite !</h2>
+                        <p className="relative z-10 text-amber-700 font-bold">Ce défi ne commence que le <strong>{new Date(workout.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}</strong>. Préparez-vous bien d'ici là !</p>
+                    </div>
+                ) : isEnded ? (
+                    <div className="bg-slate-100 border border-slate-200 rounded-3xl p-12 text-center space-y-4 shadow-sm relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-8 opacity-5">
+                            <History size={120} />
+                        </div>
+                        <div className="relative z-10 w-20 h-20 bg-slate-400 rounded-full flex items-center justify-center mx-auto shadow-lg shadow-slate-400/20">
+                            <History size={40} className="text-white" />
+                        </div>
+                        <h2 className="relative z-10 text-2xl font-black uppercase italic text-slate-700">Défi Terminé</h2>
+                        <p className="relative z-10 text-slate-500 font-bold">Navré, ce défi s'est terminé le <strong>{new Date(workout.endDate!).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}</strong>.</p>
+                    </div>
                 ) : (
                     <form onSubmit={handleSubmit} className="space-y-8">
                         {/* Timer Section - Lighter Design */}
@@ -179,7 +207,7 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
                             <div className="space-y-4">
                                 <div className="grid grid-cols-2 gap-3">
                                     {!timerActive ? (
-                                        <button 
+                                        <button
                                             type="button"
                                             onClick={handleStart}
                                             className="flex items-center justify-center gap-2 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase tracking-widest transition-all shadow-lg shadow-indigo-600/20"
@@ -187,7 +215,7 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
                                             {elapsed > 0 ? "Reprendre" : "Démarrer Chrono"}
                                         </button>
                                     ) : (
-                                        <button 
+                                        <button
                                             type="button"
                                             onClick={handleStop}
                                             className="flex items-center justify-center gap-2 py-4 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black uppercase tracking-widest transition-all shadow-lg shadow-red-600/20"
@@ -195,7 +223,7 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
                                             Stop
                                         </button>
                                     )}
-                                    <button 
+                                    <button
                                         type="button"
                                         onClick={handleReset}
                                         className="flex items-center justify-center gap-2 py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl font-black uppercase tracking-widest transition-all"
@@ -212,7 +240,7 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
 
                                 <div className="flex items-center gap-3">
                                     <div className="flex-1 flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
-                                        <input 
+                                        <input
                                             type="number"
                                             placeholder="Min"
                                             className="w-full bg-transparent font-black text-center outline-none text-slate-900"
@@ -222,7 +250,7 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
                                         <span className="font-bold text-slate-400">m</span>
                                     </div>
                                     <div className="flex-1 flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
-                                        <input 
+                                        <input
                                             type="number"
                                             placeholder="Sec"
                                             className="w-full bg-transparent font-black text-center outline-none text-slate-900"
@@ -248,7 +276,7 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
                                             )}
                                         </div>
                                         <div className="flex items-center gap-3">
-                                            <input 
+                                            <input
                                                 type="number"
                                                 required
                                                 min="0"
@@ -272,9 +300,9 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
                                     <ImageIcon size={18} />
                                     <span className="font-black uppercase tracking-wider text-[10px]">Preuve de l'exploit (facultatif)</span>
                                 </div>
-                                <a 
-                                    href="https://photos.app.goo.gl/FrtN2kjDRY8vGQVP6" 
-                                    target="_blank" 
+                                <a
+                                    href="https://photos.app.goo.gl/FrtN2kjDRY8vGQVP6"
+                                    target="_blank"
                                     rel="noopener noreferrer"
                                     className="flex items-center gap-1.5 px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-tight hover:bg-indigo-100 transition-colors"
                                 >
@@ -283,7 +311,7 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
                                 </a>
                             </div>
                             <div className="space-y-2">
-                                <input 
+                                <input
                                     type="url"
                                     placeholder="Lien vers votre photo/vidéo dans l'album"
                                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all text-slate-900"
@@ -297,7 +325,7 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
                         </div>
 
                         {/* Submit Button */}
-                        <button 
+                        <button
                             disabled={isSubmitting}
                             className="w-full flex items-center justify-center gap-3 py-6 bg-slate-900 hover:bg-black text-white disabled:opacity-50 disabled:cursor-not-allowed rounded-3xl font-black text-xl uppercase italic tracking-tighter transition-all shadow-xl shadow-slate-900/20 group"
                         >
@@ -319,7 +347,7 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
                         <Trophy size={16} className="text-amber-500" />
                         <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Hall of Fame : {workout.name}</h2>
                     </div>
-                    
+
                     <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
                         {loadingRanking ? (
                             <div className="p-8 text-center text-slate-400 text-xs font-bold animate-pulse">Chargement des records...</div>
@@ -331,9 +359,9 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
                                     <div key={idx} className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors">
                                         <div className="flex items-center gap-4">
                                             <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shadow-sm
-                                                ${idx === 0 ? 'bg-amber-100 text-amber-700' : 
-                                                  idx === 1 ? 'bg-slate-100 text-slate-600' : 
-                                                  idx === 2 ? 'bg-orange-100 text-orange-700' : 'bg-slate-50 text-slate-400'}`}>
+                                                ${idx === 0 ? 'bg-amber-100 text-amber-700' :
+                                                    idx === 1 ? 'bg-slate-100 text-slate-600' :
+                                                        idx === 2 ? 'bg-orange-100 text-orange-700' : 'bg-slate-50 text-slate-400'}`}>
                                                 {idx + 1}
                                             </div>
                                             <div className="space-y-0.5 text-left">

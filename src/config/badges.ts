@@ -129,7 +129,7 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
     { key: "solstice_winter", name: "Guerrier du Froid", emoji: "❄️", rarity: "EPIC", metricType: "DATE_AWARD_HARD", type: "EVENT", exerciseScope: "ALL", description: "1 rep/h pendant 12h le 21 Décembre", condition: "Réaliser au moins une répétition par heure pendant 12 heures consécutives le jour du solstice d'hiver.", addedAt: "2026-03-15" },
     { key: "noel_sapin", name: "Cadeau Suprême", emoji: "🎄", rarity: "LEGENDARY", metricType: "DATE_AWARD_HARD", type: "EVENT", exerciseScope: "ALL", description: "Série Sapin (1 à 15 sur CHAQUE exo) le 25 Décembre", condition: "Le jour de Noël, réaliser une série de 1 à 15 répétitions sur les pompes, les tractions ET les squats.", addedAt: "2026-03-15" },
     { key: "st_nicolas_6", name: "Petit Saint", emoji: "🍊", rarity: "EPIC", metricType: "DATE_AWARD_HARD", type: "EVENT", exerciseScope: "ALL", description: "Total fini par 6 le 6 Décembre", condition: "Le jour de la Saint-Nicolas, avoir un total quotidien finissant par le chiffre 6.", addedAt: "2026-03-15" },
-    
+
     // Sally Up & Flambeau
     { key: "sally_participation", name: "Soldat de Sally", emoji: "🎶", rarity: "RARE", metricType: "SALLY_PART", type: "EVENT", exerciseScope: "ALL", description: "A participé au challenge Bring Sally Up", condition: "Participer au défi mensuel 'Bring Sally Up' le dernier jour du mois.", addedAt: "2026-03-15" },
     { key: "sally_podium_1", name: "Légende de Sally", emoji: "🏆", rarity: "LEGENDARY", metricType: "SALLY_PODIUM", type: "EVENT", exerciseScope: "ALL", description: "Top 1 Bring Sally Up du mois", condition: "Terminer à la 1ère place du classement 'Bring Sally Up' du mois.", addedAt: "2026-03-15" },
@@ -139,8 +139,12 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
     // Special Workouts - Premier Exploit
     { key: "workout_workout-01-the-first_std", name: "Explorateur de l'Exploit", emoji: "🧭", rarity: "RARE", metricType: "SPECIAL_WORKOUT", type: "EVENT", exerciseScope: "ALL", description: "A complété l'entraînement 'Premier Exploit'", condition: "Réaliser l'intégralité des exercices de l'entraînement spécial inaugural.", addedAt: "2026-03-17" },
     { key: "workout_workout-01-the-first_plat", name: "Platine : Premier Exploit", emoji: "💎", rarity: "LEGENDARY", metricType: "SPECIAL_WORKOUT", type: "COMPETITIVE", exerciseScope: "ALL", description: "Détenteur du record sur l'entraînement 'Premier Exploit'", condition: "Détenir le meilleur temps sur l'entraînement 'Premier Exploit'. Le titre est transférable si le record est battu.", addedAt: "2026-03-17" },
-    
+
     // Special Workouts - Le Souffle du Printemps
     { key: "workout_workout-02-spring_std", name: "Explorateur du Printemps", emoji: "🍃", rarity: "RARE", metricType: "SPECIAL_WORKOUT", type: "EVENT", exerciseScope: "ALL", description: "A complété l'entraînement 'Le Souffle du Printemps'", condition: "Réaliser l'intégralité des exercices de l'entraînement spécial du printemps.", addedAt: "2026-03-21" },
     { key: "workout_workout-02-spring_plat", name: "Zéphir d'Or", emoji: "🌬️", rarity: "LEGENDARY", metricType: "SPECIAL_WORKOUT", type: "COMPETITIVE", exerciseScope: "ALL", description: "Détenteur du record sur l'entraînement 'Le Souffle du Printemps'", condition: "Détenir le meilleur temps sur l'entraînement 'Le Souffle du Printemps'. Le titre est transférable si le record est battu.", addedAt: "2026-03-21" },
+
+    // Special Workouts - La Grande Pyramide
+    { key: "workout_workout-03-pyramid_std", name: "Explorateur de la Pyramide", emoji: "🏜️", rarity: "RARE", metricType: "SPECIAL_WORKOUT", type: "EVENT", exerciseScope: "ALL", description: "A complété l'entraînement 'La Grande Pyramide'", condition: "Réaliser l'intégralité des exercices de l'entraînement spécial pyramidal.", addedAt: "2026-04-27" },
+    { key: "workout_workout-03-pyramid_plat", name: "Le Pharaon", emoji: "👑", rarity: "LEGENDARY", metricType: "SPECIAL_WORKOUT", type: "COMPETITIVE", exerciseScope: "ALL", description: "Détenteur du record sur l'entraînement 'La Grande Pyramide'", condition: "Détenir le meilleur temps sur l'entraînement 'La Grande Pyramide'. Le titre est transférable si le record est battu.", addedAt: "2026-04-27" }
 ];
