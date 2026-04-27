@@ -39,6 +39,14 @@ export default function GraphsSection({ data, graphPeriod, setGraphPeriod }: Gra
                     } else if (data?.graphs) {
                         daily = graphPeriod === '30' ? (data.graphs.myDaily || []) : (data.graphs.myDaily365 || data.graphs.myDaily || []);
                     }
+
+                    // Remove leading zeroes for long-term views to zoom on actual activity
+                    if (graphPeriod !== '30' && daily.length > 0) {
+                        const firstActiveIndex = daily.findIndex((d: any) => (d.reps || d.total || 0) > 0);
+                        if (firstActiveIndex > 0) {
+                            daily = daily.slice(firstActiveIndex);
+                        }
+                    }
                     const t = daily.reduce((acc: any, d: any) => ({
                         reps: acc.reps + (d?.reps || d?.total || 0),
                         badges: acc.badges + (d?.badges || 0)
