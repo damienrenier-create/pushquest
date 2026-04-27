@@ -8,6 +8,7 @@ import { Sparkles, Trophy, Zap, Activity, PieChart, BarChart3, TrendingUp, Histo
 import RewardDetailSheet from "@/components/RewardDetailSheet"
 import GraphsSection from "@/components/dashboard/GraphsSection"
 import YesterdayXpRecap from "@/components/profile/YesterdayXpRecap"
+import BadgeContainer from "@/components/profile/badges/BadgeContainer"
 
 export default function UserProfilePage() {
     const { data: session } = useSession()
@@ -508,50 +509,11 @@ export default function UserProfilePage() {
             <section className="space-y-4 sm:space-y-6">
                 <div className="flex items-center justify-between px-2">
                     <h2 className="text-xl sm:text-2xl font-black uppercase tracking-normal flex items-center gap-3 text-white">
-                        <span className="p-1.5 sm:p-2 bg-indigo-100/10 rounded-xl sm:rounded-2xl text-lg sm:text-xl">🎖️</span> Vitrine
+                        <span className="p-1.5 sm:p-2 bg-indigo-100/10 rounded-xl sm:rounded-2xl text-lg sm:text-xl">🎖️</span> Distinction & Challenges
                     </h2>
                 </div>
 
-                <div className="bg-gray-50 rounded-[2rem] sm:rounded-[2.5rem] p-4 sm:p-6 border border-gray-100">
-                    {!user.badges || user.badges.length === 0 ? (
-                        <div className="bg-white border-2 border-dashed border-gray-100 rounded-[1.5rem] py-12 sm:py-16 text-center">
-                            <p className="text-gray-300 font-bold uppercase text-[10px] sm:text-xs tracking-widest">Aucune médaille 🫡</p>
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 sm:gap-4">
-                            {user.badges.map((ownership: any) => (
-                                <Link
-                                    key={ownership.id}
-                                    href={`/faq?tab=catalogue#item-${ownership.badgeKey}`}
-                                    className={`group border rounded-[1.5rem] sm:rounded-[2rem] p-3 sm:p-6 text-center transition-all hover:-translate-y-1 cursor-pointer active:scale-95 bg-white ${rarityStyles[ownership.badge.rarity]}`}
-                                >
-                                    <div className="text-3xl sm:text-5xl mb-2 sm:mb-4 filter drop-shadow-md group-hover:scale-110 transition-transform">
-                                        {ownership.badge.emoji}
-                                    </div>
-                                    <h3 className="text-[9px] sm:text-xs font-black text-gray-900 uppercase tracking-tight line-clamp-1">
-                                        {ownership.badge.name}
-                                    </h3>
-                                    <div className="mt-2 flex items-center justify-center gap-2">
-                                        <button
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                handleLikeBadge(ownership.badgeKey);
-                                            }}
-                                            className="flex items-center gap-1 px-2 py-0.5 bg-slate-50 hover:bg-slate-100 rounded-full border border-slate-200 transition-colors"
-                                        >
-                                            <span className={`${(ownership.likes || []).some((l: any) => l.userId === (session?.user as any).id) ? 'text-rose-500' : 'text-slate-400'}`}>❤️</span>
-                                            <span className="text-[8px] font-black text-slate-900">{(ownership.likes || []).length}</span>
-                                        </button>
-                                    </div>
-                                    <p className="text-[8px] sm:text-[9px] font-bold text-gray-400 uppercase mt-1 italic">
-                                        {new Date(ownership.achievedAt).toLocaleDateString("fr-FR", { month: 'short', year: 'numeric' })}
-                                    </p>
-                                </Link>
-                            ))}
-                        </div>
-                    )}
-                </div>
+                <BadgeContainer nickname={decodedNickname} />
             </section>
 
 

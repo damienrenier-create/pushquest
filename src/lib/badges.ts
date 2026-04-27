@@ -864,3 +864,92 @@ function isBetterTieBreak(current: any, best: any, totalKey: string) {
     if (current[totalKey] > best[totalKey]) return true;
     return false;
 }
+
+export function calculateBadgeProgress(def: any, summary: any) {
+    if (def.type === "COMPETITIVE") return 0; // Competitive badges are binary or record-based
+
+    let current = 0;
+    let target = def.threshold || 1;
+
+    switch (def.metricType) {
+        case "MILESTONE_TOTAL":
+            const scope = def.exerciseScope === "PUSHUPS" ? "totalPushups" : def.exerciseScope === "PULLUPS" ? "totalPullups" : def.exerciseScope === "SQUATS" ? "totalSquats" : "totalAll";
+            current = summary[scope] || 0;
+            break;
+        case "MILESTONE_SET":
+            current = summary.maxSetAll || 0;
+            break;
+        case "STREAK_NO_FINES":
+            current = summary.fineFreeStreak || 0;
+            break;
+        case "TIME_AWARD":
+            current = summary.earlyStreak || 0;
+            break;
+        case "TIME_AWARD_LATE":
+            current = summary.lateStreak || 0;
+            break;
+        case "TIME_AWARD_EXACT":
+            current = summary.noonStreak || 0;
+            break;
+        case "BONUS_STREAK":
+            current = summary.maxBonusStreak || 0;
+            break;
+        case "PERFECT_TARGET_STREAK":
+            current = summary.maxPerfectStreak || 0;
+            break;
+        case "MONO_EXO_STREAK":
+            current = summary.maxMonoExoStreak || 0;
+            break;
+        case "TRI_EXO_STREAK":
+            current = summary.maxTriExoStreak || 0;
+            break;
+        case "SERIES_COUNT":
+            const exo = def.exerciseScope === "PUSHUPS" ? "PUSHUP" : def.exerciseScope === "PULLUPS" ? "PULLUP" : "SQUAT";
+            current = summary.setsByTarget(exo, def.seriesTarget!);
+            break;
+        case "PERIOD_VOLUME":
+            const days = def.key.includes("week") ? 7 : 1;
+            const exoPeriod = def.exerciseScope === "PUSHUPS" ? "PUSHUP" : "SQUAT";
+            current = summary.getHistoricalMaxVolume(days, exoPeriod);
+            break;
+        default:
+            return 0;
+    }
+
+    return Math.min(100, Math.floor((current / target) * 100));
+}
+
+export function getShowcaseData(summary: any, earnedBadgeKeys: string[]) {
+    const earnedSet = new Set(earnedBadgeKeys);
+
+    // Group badges by category
+    const categories: Record<string, any> = {
+        HOLISTIQUE: { id: "HOLISTIQUE", label: "Holistique", emoji: "💎", earned: [], pending: [] },
+        REGULARITY: { id: "REGULARITY", label: "Régularité", emoji: "🔥", earned: [], pending: [] },
+        PUSHUPS: { id: "PUSHUPS", label: "Pompes", emoji: "🦾", earned: [], pending: [] },
+        PULLUPS: { id: "PULLUPS", label: "Tractions", emoji: "🧗", earned: [], pending: [] },
+        SQUATS: { id: "SQUATS", label: "Squats", emoji: "🗿", earned: [], pending: [] },
+        GLOBAL: { id: "GLOBAL", label: "Global & Event", emoji: "🌍", earned: [], pending: [] },
+    };
+
+    BADGE_DEFINITIONS.forEach(def => {
+        const cat = categories[def.category || "GLOBAL"];
+        if (!cat) return;
+
+        if (earnedSet.has(def.key)) {
+            cat.earned.push(def);
+        } else {
+            const progress = calculateBadgeProgress(def, summary);
+            // Only show pending badges that have some progress or are low threshold?
+            // Actually, showing all unearned badges in the category is better for the "catalogue" feel
+            cat.pending.push({ ...def, progress });
+        }
+    });
+
+    // Sort pending by progress (most advanced first)
+    Object.values(categories).forEach((cat: any) => {
+        cat.pending.sort((a: any, b: any) => b.progress - a.progress);
+    });
+
+    return Object.values(categories);
+}
