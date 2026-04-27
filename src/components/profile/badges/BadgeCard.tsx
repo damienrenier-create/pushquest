@@ -6,9 +6,14 @@ import { BadgeCheck, Lock, Target } from "lucide-react";
 interface BadgeCardProps {
     badge: any;
     isPending?: boolean;
+    holder?: {
+        nickname: string;
+        value: number;
+    } | null;
+    personalRecord?: number;
 }
 
-const BadgeCard: React.FC<BadgeCardProps> = ({ badge, isPending = false }) => {
+const BadgeCard: React.FC<BadgeCardProps> = ({ badge, isPending = false, holder = null, personalRecord }) => {
     const progress = badge.progress || 0;
     const isComplete = progress >= 100;
 
@@ -71,12 +76,32 @@ const BadgeCard: React.FC<BadgeCardProps> = ({ badge, isPending = false }) => {
                     </div>
                 )}
 
-                {/* Rarity Tag */}
-                <div className={`mt-auto pt-3 text-[8px] font-black uppercase tracking-widest
-          ${badge.rarity === 'LEGENDARY' ? 'text-amber-500' :
-                        badge.rarity === 'EPIC' ? 'text-purple-400' :
-                            badge.rarity === 'RARE' ? 'text-blue-400' : 'text-slate-500'}`}>
-                    {badge.rarity}
+                {/* Rarity/Type Tag */}
+                <div className="mt-auto w-full pt-3 space-y-2">
+                    {holder ? (
+                        <div className="flex flex-col items-center">
+                            <p className="text-[7px] font-black text-rose-500 uppercase tracking-widest mb-1 leading-none">Champion</p>
+                            <p className="text-[10px] font-black text-white uppercase truncate max-w-full leading-tight">{holder.nickname}</p>
+                            <p className="text-[8px] font-bold text-slate-500 mt-0.5">Sc: {holder.value}</p>
+                        </div>
+                    ) : (
+                        <div className={`text-[8px] font-black uppercase tracking-widest
+                            ${badge.rarity === 'LEGENDARY' ? 'text-amber-500' :
+                                badge.rarity === 'EPIC' ? 'text-purple-400' :
+                                    badge.rarity === 'RARE' ? 'text-blue-400' : 'text-slate-500'}`}>
+                            {badge.rarity}
+                        </div>
+                    )}
+
+                    {/* Personal Record Comparison */}
+                    {personalRecord !== undefined && (
+                        <div className="pt-2 border-t border-slate-800/50">
+                            <div className="flex justify-between items-center bg-indigo-500/10 px-2 py-1 rounded-lg border border-indigo-500/10">
+                                <span className="text-[7px] font-black text-indigo-400 uppercase tracking-tighter">Mon Record</span>
+                                <span className="text-[9px] font-black text-indigo-400">{personalRecord}</span>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

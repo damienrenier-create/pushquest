@@ -7,8 +7,10 @@ interface YesterdayXpRecapProps {
     recap: {
         repsXP: number
         regularityXP: number
+        regularityDetail: { base: number, flex: number }
         badgesXP: number
-        badgesDetail: { name: string, xp: number, emoji: string }[]
+        badgesDetail: { name: string, xp: number, emoji: string, label?: string }[]
+        recordsXP: number
         manualXP: number
         total: number
     } | null
@@ -54,7 +56,7 @@ export default function YesterdayXpRecap({ recap }: YesterdayXpRecapProps) {
                     <div className="relative inline-block">
                         <div className="absolute -inset-4 bg-indigo-500/20 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
                         <div className="relative flex items-baseline gap-4">
-                            <span className="text-6xl sm:text-7xl font-black text-white tracking-tighter drop-shadow-[0_0_30px_rgba(255,255,255,0.1)]">
+                            <span className="text-64xl sm:text-7xl font-black text-white tracking-tighter drop-shadow-[0_0_30px_rgba(255,255,255,0.1)]">
                                 +{recap.total.toLocaleString()}
                             </span>
                             <div className="flex flex-col">
@@ -78,13 +80,19 @@ export default function YesterdayXpRecap({ recap }: YesterdayXpRecapProps) {
                     </div>
 
                     {/* Regularity Card */}
-                    <div className="bg-slate-800/30 backdrop-blur-sm border border-white/5 rounded-3xl p-5 flex items-center gap-5 transition-all hover:bg-slate-800/50 hover:border-white/10 group/card shadow-inner">
+                    <div className="bg-slate-800/30 backdrop-blur-sm border border-white/5 rounded-3xl p-5 flex items-center gap-5 transition-all hover:bg-slate-800/50 hover:border-white/10 group/card shadow-inner relative">
                         <div className="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-400 border border-emerald-500/10 group-hover/card:scale-110 transition-transform">
                             <Zap className="w-6 h-6" />
                         </div>
                         <div>
                             <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Régularité</p>
-                            <p className="text-lg font-black text-white leading-none">+{recap.regularityXP} <span className="text-[10px] text-slate-500">XP</span></p>
+                            <div className="flex flex-col">
+                                <p className="text-lg font-black text-white leading-none">+{recap.regularityXP} <span className="text-[10px] text-slate-500">XP</span></p>
+                                <p className="text-[8px] font-bold text-emerald-500/60 uppercase tracking-tighter mt-1">
+                                    {recap.regularityDetail?.base > 0 && <span>QUOTA: {recap.regularityDetail.base}</span>}
+                                    {recap.regularityDetail?.flex > 0 && <span> • FLEX: {recap.regularityDetail.flex}</span>}
+                                </p>
+                            </div>
                         </div>
                     </div>
 
@@ -102,30 +110,50 @@ export default function YesterdayXpRecap({ recap }: YesterdayXpRecapProps) {
                         </div>
 
                         {recap.badgesDetail.length > 0 && (
-                            <div className="flex flex-wrap gap-2 pt-2 border-t border-white/5">
+                            <div className="flex flex-col gap-2 pt-2 border-t border-white/5">
                                 {recap.badgesDetail.map((b, i) => (
-                                    <div key={i} className="flex items-center gap-2 bg-slate-900/60 px-3 py-1.5 rounded-xl border border-white/5 text-[10px] font-black text-slate-200 transition-all hover:bg-slate-950 hover:border-indigo-500/30">
-                                        <span className="text-base">{b.emoji}</span>
-                                        <span>{b.name}</span>
-                                        <span className="text-indigo-400 font-black">+{b.xp}</span>
+                                    <div key={i} className="flex items-center justify-between bg-slate-900/60 px-4 py-2 rounded-xl border border-white/5 transition-all hover:bg-slate-950 hover:border-indigo-500/30">
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-base">{b.emoji}</span>
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] font-black text-slate-200">{b.name}</span>
+                                                {b.label && <span className="text-[8px] font-bold text-amber-500/70 uppercase tracking-tight">{b.label}</span>}
+                                            </div>
+                                        </div>
+                                        <span className="text-xs font-black text-indigo-400">+{b.xp} <span className="text-[8px] text-slate-500">XP</span></span>
                                     </div>
                                 ))}
                             </div>
                         )}
                     </div>
 
-                    {/* Bonus Card */}
-                    {recap.manualXP !== 0 && (
-                        <div className="bg-slate-800/30 backdrop-blur-sm border border-white/5 rounded-3xl p-5 flex items-center gap-5 sm:col-span-2 transition-all hover:bg-slate-800/50 hover:border-white/10 group/card shadow-inner">
-                            <div className="w-12 h-12 bg-purple-500/10 rounded-2xl flex items-center justify-center text-purple-400 border border-purple-500/10 group-hover/card:scale-110 transition-transform">
-                                <Award className="w-6 h-6" />
+                    {/* Record & Bonus Cards */}
+                    <div className="flex flex-col gap-4 sm:col-span-2">
+                        {recap.recordsXP > 0 && (
+                            <div className="bg-emerald-500/5 backdrop-blur-sm border border-emerald-500/10 rounded-3xl p-5 flex items-center gap-5 transition-all hover:bg-emerald-500/10 hover:border-emerald-500/20 group/card shadow-inner">
+                                <div className="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-400 border border-emerald-500/10 group-hover/card:scale-110 transition-transform">
+                                    <TrendingUp className="w-6 h-6" />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-[10px] font-black text-emerald-500/60 uppercase tracking-widest mb-0.5 text-glow">Titulaire du Panthéon</p>
+                                    <p className="text-lg font-black text-white leading-none">+250 <span className="text-[10px] text-slate-500">XP Record du Jour</span></p>
+                                </div>
+                                <div className="bg-emerald-500/20 text-emerald-400 text-[8px] font-black px-2 py-1 rounded-lg border border-emerald-500/30">VOLUME #1</div>
                             </div>
-                            <div>
-                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Bonus de Prestige</p>
-                                <p className="text-lg font-black text-white leading-none">{recap.manualXP > 0 ? '+' : ''}{recap.manualXP} <span className="text-[10px] text-slate-500">XP Bonus</span></p>
+                        )}
+
+                        {recap.manualXP !== 0 && (
+                            <div className="bg-slate-800/30 backdrop-blur-sm border border-white/5 rounded-3xl p-5 flex items-center gap-5 transition-all hover:bg-slate-800/50 hover:border-white/10 group/card shadow-inner">
+                                <div className="w-12 h-12 bg-purple-500/10 rounded-2xl flex items-center justify-center text-purple-400 border border-purple-500/10 group-hover/card:scale-110 transition-transform">
+                                    <Award className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Ajustement Personnel</p>
+                                    <p className="text-lg font-black text-white leading-none">{recap.manualXP > 0 ? '+' : ''}{recap.manualXP} <span className="text-[10px] text-slate-500">XP Bonus</span></p>
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
             </div>
 

@@ -240,21 +240,43 @@ export function calculateDailyXPGainForUser(
 
     // 4. Adjustments
     const adjustments = (user.xpAdjustments || []).filter((a: any) => {
-        const d = a.date || a.createdAt.toISOString().split('T')[0];
+        const d = a.date || (a.createdAt instanceof Date ? a.createdAt.toISOString().split('T')[0] : a.createdAt?.split('T')[0]);
         return d === dateISO;
     });
     const manualXP = adjustments.reduce((acc: number, a: any) => acc + a.amount, 0);
     totalXP += manualXP;
 
-    // 5. Records (If were held on that day? Tricky. For now let's assume current records if date is today)
-    // Actually, for "yesterday" report, we only show standard gains.
-    // However, if we want to be exact, we should include records only if date is today and they are holders.
+    // 5. Records (Bonus for being #1)
+    let recordsXP = 0;
+    if (user.id === globalRecords.maxVolDayUser) recordsXP += 250;
+    totalXP += recordsXP;
 
     return {
         repsXP,
         regularityXP,
+        regularityDetail: {
+            base: dayTotal >= req ? (dayTotal === req ? 200 : 100) : 0,
+            flex: Math.max(0, regularityXP - (dayTotal >= req ? (dayTotal === req ? 200 : 100) : 0))
+        },
         badgesXP,
-        badgesDetail,
+        badgesDetail: dayBadges.map((b: any) => {
+            const def = BADGE_DEFINITIONS.find(d => d.key === b.badgeKey);
+            const streak = summary.perfectTargetStreak || 0;
+            let badgeXP = getXPForReward(b.badgeKey, { ...b, currentStreak: streak } as any);
+            if (featuredBadgeKey === b.badgeKey) badgeXP += Math.floor(badgeXP * 0.5);
+
+            let label = "Succès Débloqué";
+            if (def?.type === "COMPETITIVE") label = "Record Capturé !";
+            if (def?.type === "EVENT") label = "Bonus Événement";
+
+            return {
+                name: b.badge?.name || b.name || b.badgeKey,
+                xp: badgeXP,
+                emoji: b.badge?.emoji || b.emoji,
+                label
+            };
+        }),
+        recordsXP,
         manualXP,
         total: totalXP
     };

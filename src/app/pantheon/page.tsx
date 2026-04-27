@@ -3,7 +3,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import PantheonClient from "@/app/pantheon/PantheonClient";
-import { getUserSummaries } from "@/lib/badges";
+import { getUserSummaries, getShowcaseData } from "@/lib/badges";
 import { BADGE_DEFINITIONS } from "@/config/badges";
 import { getRequiredRepsForDate } from "@/lib/challenge";
 import { calculateAllUsersXP } from "@/lib/xp";
@@ -65,10 +65,10 @@ export default async function PantheonPage() {
     // Calculate all potential badges (Milestones, Events, Legendary) for everyone
     const virtualizedData = summaries.map((s: any) => {
         const virtualBadges: Record<string, boolean> = {};
-        
+
         BADGE_DEFINITIONS.forEach(def => {
             if (def.type === "COMPETITIVE") return;
-            
+
             let isEarned = false;
             const threshold = def.threshold || 0;
 
@@ -117,7 +117,7 @@ export default async function PantheonPage() {
                 const exo = def.exerciseScope === "PUSHUPS" ? "PUSHUP" : "SQUAT";
                 isEarned = s.getHistoricalMaxVolume(days, exo) >= threshold;
             }
-            
+
             if (isEarned && def.isUnique) {
                 const ownership = badgeOwnerships.find((bo: any) => bo.badgeKey === def.key);
                 if (ownership?.currentUserId !== s.id) isEarned = false;
@@ -137,6 +137,7 @@ export default async function PantheonPage() {
     const dangerList = badgeOwnerships
         .filter((bo: any) => {
             const def = BADGE_DEFINITIONS.find(d => d.key === bo.badgeKey);
+            // Show only if it's a real competition or close threat
             return def && def.type === "COMPETITIVE" && bo.currentUserId && bo.currentValue >= 0;
         })
         .map((bo: any) => {
@@ -163,6 +164,9 @@ export default async function PantheonPage() {
                     return s.setsByTarget ? s.setsByTarget(exo, def.seriesTarget!) : 0;
                 }
                 if (def.metricType === "TOTAL_FINES_AMOUNT") return s.totalFinesAmount || 0;
+                if (def.metricType === "TRINITY_GOLD" || def.metricType === "TRINITY_ULTIMATE") {
+                    return s.getDayTotal(new Date().toISOString().split('T')[0]) || 0;
+                }
                 return 0;
             };
 
@@ -177,22 +181,32 @@ export default async function PantheonPage() {
             const challengerValue = getScore(challenger);
             const diff = bo.currentValue - challengerValue;
 
-            // Show if it's a competitive badge and we have a valid challenger
-            if (challenger) {
-                return {
-                    badgeKey: bo.badgeKey,
-                    badgeName: bo.badge?.name,
-                    emoji: bo.badge?.emoji,
-                    holder: bo.currentUser?.nickname,
-                    challenger: challenger.nickname,
-                    currentValue: bo.currentValue,
-                    challengerValue,
-                    diff
-                };
-            }
-            return null;
+            // Define meaningful units
+            const unit = def.metricType === "SERIES_COUNT" ? "Séries" :
+                def.metricType.includes("STREAK") ? "Jours" :
+                    def.metricType === "VOLUME_STREAK" ? "Reps" : "Pts";
+
+            // Only show as "Danger" if the gap is small (threshold: < 25 reps or < 20% or < 5 days)
+            const isDanger = (unit === "Séries" && diff <= 10) ||
+                (unit === "Jours" && diff <= 5) ||
+                (unit === "Reps" && diff <= 50) ||
+                (diff <= bo.currentValue * 0.2);
+
+            return {
+                badgeKey: bo.badgeKey,
+                badgeName: bo.badge?.name,
+                emoji: bo.badge?.emoji,
+                holder: bo.currentUser?.nickname,
+                challenger: challenger.nickname,
+                currentValue: bo.currentValue,
+                challengerValue,
+                diff,
+                unit,
+                isDanger
+            };
         })
-        .filter(Boolean);
+        .filter(Boolean)
+        .sort((a: any, b: any) => a.diff - b.diff); // Most dangerous first
 
     const serverTime = new Intl.DateTimeFormat('fr-FR', {
         hour: '2-digit',
@@ -202,6 +216,44 @@ export default async function PantheonPage() {
     }).format(new Date());
 
     const xpScores = await calculateAllUsersXP(allUsers, badgeOwnerships, summaries, allEvents);
+
+    const currentUserSummary = summaries.find(s => s.id === userId);
+
+    // Calculate Personal Records for all competitive badges
+    const currentUserRecords: Record<string, number> = {};
+    BADGE_DEFINITIONS.filter(d => d.type === "COMPETITIVE").forEach(def => {
+        if (!currentUserSummary) return;
+
+        const getScore = (s: any) => {
+            if (def.metricType === "MAX_BONUS") return s.maxBonus || 0;
+            if (def.metricType === "BONUS_STREAK") return s.maxBonusStreak || 0;
+            if (def.metricType === "PERFECT_TARGET_STREAK") return s.maxPerfectStreak || 0;
+            if (def.metricType === "STEAL_COUNT") return s.stealCount || 0;
+            if (def.metricType === "BALANCE_RATIO") return s.balanceRatio || 0;
+            if (def.metricType === "MONO_EXO_STREAK") return s.maxMonoExoStreak || 0;
+            if (def.metricType === "TRI_EXO_STREAK") return s.maxTriExoStreak || 0;
+            if (def.metricType === "MAX_SET") {
+                if (def.exerciseScope === "PUSHUPS") return s.maxSetPushups || 0;
+                if (def.exerciseScope === "PULLUPS") return s.maxSetPullups || 0;
+                if (def.exerciseScope === "SQUATS") return s.maxSetSquats || 0;
+                return s.maxSetAll || 0;
+            }
+            if (def.metricType === "SERIES_COUNT") {
+                const exo = def.exerciseScope === "PUSHUPS" ? "PUSHUP" : def.exerciseScope === "PULLUPS" ? "PULLUP" : "SQUAT";
+                return s.setsByTarget ? s.setsByTarget(exo, def.seriesTarget!) : 0;
+            }
+            if (def.metricType === "TOTAL_FINES_AMOUNT") return s.totalFinesAmount || 0;
+            if (def.metricType === "TRINITY_GOLD" || def.metricType === "TRINITY_ULTIMATE") {
+                return s.getDayTotal(new Date().toISOString().split('T')[0]) || 0;
+            }
+            return 0;
+        };
+
+        currentUserRecords[def.key] = getScore(currentUserSummary);
+    });
+
+    const earnedBadgeKeys = allUsers.find((u: any) => u.id === userId)?.badges.map((b: any) => b.badgeKey) || [];
+    const showcaseData = getShowcaseData(currentUserSummary, earnedBadgeKeys);
 
     return (
         <PantheonClient
@@ -214,6 +266,8 @@ export default async function PantheonPage() {
             dangerList={dangerList as any}
             serverTime={serverTime}
             xpScores={xpScores}
+            showcaseData={showcaseData}
+            currentUserRecords={currentUserRecords}
         />
     );
 }

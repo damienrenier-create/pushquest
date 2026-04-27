@@ -8,9 +8,11 @@ import BadgeCard from "./BadgeCard";
 interface BadgeShowcaseProps {
     category: any;
     defaultOpen?: boolean;
+    badgeOwnerships?: any[];
+    currentUserRecords?: Record<string, number>;
 }
 
-const BadgeShowcase: React.FC<BadgeShowcaseProps> = ({ category, defaultOpen = false }) => {
+const BadgeShowcase: React.FC<BadgeShowcaseProps> = ({ category, defaultOpen = false, badgeOwnerships = [], currentUserRecords = {} }) => {
     const [isOpen, setIsOpen] = useState(defaultOpen);
 
     const earnedCount = category.earned.length;
@@ -55,9 +57,11 @@ const BadgeShowcase: React.FC<BadgeShowcaseProps> = ({ category, defaultOpen = f
                     {/* Floor 1: Earned */}
                     {earnedCount > 0 ? (
                         <BadgeCarousel title="Exploits Réalisés" subtitle="Vos trophées durement gagnés">
-                            {category.earned.map((badge: any) => (
-                                <BadgeCard key={badge.key} badge={badge} isPending={false} />
-                            ))}
+                            {category.earned.map((badge: any) => {
+                                const bo = badgeOwnerships.find(o => o.badgeKey === badge.key);
+                                const holder = bo ? { nickname: bo.currentUser?.nickname, value: bo.currentValue } : null;
+                                return <BadgeCard key={badge.key} badge={badge} isPending={false} holder={holder} personalRecord={currentUserRecords[badge.key]} />;
+                            })}
                         </BadgeCarousel>
                     ) : (
                         <div className="py-8 text-center text-slate-600 italic text-sm">
@@ -75,9 +79,11 @@ const BadgeShowcase: React.FC<BadgeShowcaseProps> = ({ category, defaultOpen = f
                     {/* Floor 2: Pending */}
                     {pendingCount > 0 ? (
                         <BadgeCarousel title="Prochains Défis" subtitle="Ce qu'il vous reste à conquérir">
-                            {category.pending.map((badge: any) => (
-                                <BadgeCard key={badge.key} badge={badge} isPending={true} />
-                            ))}
+                            {category.pending.map((badge: any) => {
+                                const bo = badgeOwnerships.find(o => o.badgeKey === badge.key);
+                                const holder = bo ? { nickname: bo.currentUser?.nickname, value: bo.currentValue } : null;
+                                return <BadgeCard key={badge.key} badge={badge} isPending={true} holder={holder} personalRecord={currentUserRecords[badge.key]} />;
+                            })}
                         </BadgeCarousel>
                     ) : (
                         <div className="py-8 text-center text-slate-600 italic text-sm">

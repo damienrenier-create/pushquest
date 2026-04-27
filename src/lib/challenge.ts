@@ -11,6 +11,15 @@ export function getTodayISO(): string {
 }
 
 /**
+ * Returns yesterday's date in YYYY-MM-DD format (local time)
+ */
+export function getYesterdayISO(): string {
+    const d = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Paris" }));
+    d.setDate(d.getDate() - 1);
+    return formatDateISO(d);
+}
+
+/**
  * Returns the day of the year (1-366)
  * Correctly handles leap years.
  */

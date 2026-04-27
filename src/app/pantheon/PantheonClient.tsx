@@ -28,6 +28,7 @@ import RewardLink from "@/components/RewardLink";
 import RewardDetailSheet from "@/components/RewardDetailSheet";
 import { getXPForReward } from "@/lib/rewards";
 import { SPECIAL_WORKOUTS } from "@/config/specialWorkouts";
+import BadgeShowcase from "@/components/profile/badges/BadgeShowcase";
 
 // Replace date-fns with native Intl
 const formatTime = (dateStr: any) => {
@@ -55,6 +56,8 @@ interface PantheonClientProps {
     dangerList: any[];
     serverTime?: string;
     xpScores?: any[];
+    showcaseData?: any[];
+    currentUserRecords?: Record<string, number>;
 }
 
 export default function PantheonClient({
@@ -66,7 +69,9 @@ export default function PantheonClient({
     virtualizedData,
     dangerList,
     serverTime,
-    xpScores
+    xpScores,
+    showcaseData = [],
+    currentUserRecords = {}
 }: PantheonClientProps) {
     const [searchTerm, setSearchTerm] = useState("");
     const [filterType, setFilterType] = useState<string | null>(null);
@@ -75,6 +80,7 @@ export default function PantheonClient({
     const [localEvents, setLocalEvents] = useState(recentEvents);
     const [selectedReward, setSelectedReward] = useState<any>(null);
     const [dangerSearch, setDangerSearch] = useState("");
+    const [showAllPersonalBadges, setShowAllPersonalBadges] = useState(false);
     const router = useRouter();
 
     React.useEffect(() => {
@@ -135,7 +141,7 @@ export default function PantheonClient({
 
     // Filtered Danger List
     const filteredDangerList = useMemo(() => {
-        return dangerList.filter(d => 
+        return dangerList.filter(d =>
             d.badgeName.toLowerCase().includes(dangerSearch.toLowerCase()) ||
             d.holder.toLowerCase().includes(dangerSearch.toLowerCase()) ||
             d.challenger.toLowerCase().includes(dangerSearch.toLowerCase())
@@ -301,7 +307,7 @@ export default function PantheonClient({
                                     </div>
                                     <div className="relative">
                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                                        <input 
+                                        <input
                                             type="text"
                                             placeholder="Filtrer..."
                                             value={dangerSearch}
@@ -312,20 +318,28 @@ export default function PantheonClient({
                                 </div>
 
                                 <div className="space-y-2 overflow-y-auto max-h-[300px] pr-2 custom-scrollbar flex-1">
-                                    {filteredDangerList.length > 0 ? filteredDangerList.map((danger, i) => (
-                                        <div key={i} className="flex items-center justify-between p-3 rounded-2xl bg-red-50/30 border border-red-100/50 group hover:bg-red-50 transition-colors">
+                                    {filteredDangerList.length > 0 ? filteredDangerList.map((danger: any, i: number) => (
+                                        <div key={i} className={`flex items-center justify-between p-3 rounded-2xl border transition-colors ${danger.isDanger ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-slate-50 border-slate-100 opacity-80'}`}>
                                             <div className="min-w-0 pr-2">
-                                                <Link href="/faq?tab=catalogue" className="text-[9px] font-black text-red-600 uppercase mb-0.5 truncate hover:underline flex items-center gap-1">
+                                                <Link href="/faq?tab=catalogue" className="text-[9px] font-black text-slate-800 uppercase mb-0.5 truncate hover:underline flex items-center gap-1">
                                                     <span>{danger.emoji}</span>
                                                     <span>{danger.badgeName}</span>
                                                 </Link>
-                                                <p className="text-[10px] text-slate-600 font-bold truncate">
-                                                    <span className="opacity-60">Roi:</span> {danger.holder}
-                                                </p>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-[10px] text-slate-600 font-bold truncate">
+                                                        <span className="opacity-60 text-[8px]">Roi:</span> {danger.holder}
+                                                    </p>
+                                                    <span className="text-[8px] px-1.5 py-0.5 bg-white/60 rounded border border-slate-100 text-slate-500 font-mono">{danger.currentValue} {danger.unit}</span>
+                                                </div>
                                             </div>
                                             <div className="text-right shrink-0">
-                                                <p className="text-[9px] font-black text-red-400 uppercase">Écart: {danger.diff}</p>
-                                                <p className="text-[10px] font-bold text-red-700">⚔️ {danger.challenger}</p>
+                                                <p className={`text-[9px] font-black uppercase ${danger.isDanger ? 'text-red-500 animate-pulse' : 'text-slate-400'}`}>
+                                                    {danger.isDanger ? 'MENACE' : 'ÉCART'}: {danger.diff}
+                                                </p>
+                                                <div className="flex items-center justify-end gap-1.5">
+                                                    <span className="text-[10px] font-bold text-slate-700">{danger.challenger}</span>
+                                                    {danger.isDanger && <Zap size={10} className="text-amber-500 fill-amber-500" />}
+                                                </div>
                                             </div>
                                         </div>
                                     )) : (
@@ -359,7 +373,7 @@ export default function PantheonClient({
                 {/* SECTION E: VITRINE DES CONCURRENTS (Moved up & Lightened) */}
                 <div id="vitrine" className="bg-white rounded-[3rem] p-10 border border-slate-100 shadow-xl shadow-slate-200/50 mb-16 relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 rounded-full blur-[120px] opacity-40 -mr-32 -mt-32"></div>
-                    
+
                     <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-10">
                         <div>
                             <div className="flex items-center gap-3 mb-3">
@@ -399,7 +413,7 @@ export default function PantheonClient({
                                     className="bg-white border-2 border-slate-50 p-6 rounded-[2.5rem] hover:border-indigo-500/30 hover:shadow-2xl hover:shadow-indigo-500/10 transition-all group relative overflow-hidden"
                                 >
                                     <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50/50 rounded-full blur-3xl -mr-16 -mt-16 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                                    
+
                                     <div className="flex items-start justify-between mb-5 relative z-10">
                                         <div className="flex items-center gap-4">
                                             <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center font-black text-white text-base shrink-0 shadow-lg shadow-indigo-200 group-hover:scale-110 transition-transform">
@@ -455,22 +469,59 @@ export default function PantheonClient({
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     {/* SECTION B: MES DISTINCTIONS */}
                     <div className="lg:col-span-8">
-                        <div className="flex items-center gap-3 mb-8">
-                            <div className="p-2.5 bg-yellow-50 text-yellow-600 rounded-xl">
-                                <Star size={20} />
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 bg-yellow-50 text-yellow-600 rounded-xl">
+                                    <Star size={20} />
+                                </div>
+                                <h2 className="text-2xl font-black uppercase tracking-normal">Mes Distinctions Personnel</h2>
                             </div>
-                            <h2 className="text-2xl font-black uppercase tracking-normal">Mes Distinctions Personnel</h2>
+
+                            <button
+                                onClick={() => setShowAllPersonalBadges(!showAllPersonalBadges)}
+                                className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-indigo-600 hover:border-indigo-100 hover:bg-indigo-50 transition-all shadow-sm"
+                            >
+                                {showAllPersonalBadges ? (
+                                    <>
+                                        <Filter size={14} />
+                                        Voir les 4 plus chauds
+                                    </>
+                                ) : (
+                                    <>
+                                        <Zap size={14} className="text-orange-500" />
+                                        Tout voir
+                                    </>
+                                )}
+                            </button>
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                             {/* Transferable / Earned Badges */}
                             <div className="space-y-4">
-                                <p className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Titres Possédés</p>
+                                <div className="flex items-center justify-between mb-4">
+                                    <p className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Titres Possédés</p>
+                                    {!showAllPersonalBadges && (
+                                        <span className="text-[10px] font-black text-orange-500 bg-orange-50 px-2 py-0.5 rounded-full animate-pulse">DERNIER EXPLOITS</span>
+                                    )}
+                                </div>
                                 {(() => {
-                                    const personalBadges = badgeOwnerships.filter(bo => bo.currentUserId === currentUser?.id);
+                                    const allPersonal = badgeOwnerships
+                                        .filter(bo => bo.currentUserId === currentUser?.id)
+                                        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+
+                                    const personalBadges = showAllPersonalBadges ? allPersonal : allPersonal.slice(0, 4);
+
                                     return personalBadges.length > 0 ? personalBadges.map((b: any, i: number) => (
                                         <div key={i} className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow group relative cursor-help">
-                                            <span className="text-3xl">{b.badge?.emoji}</span>
+                                            <div className="relative shrink-0">
+                                                <span className="text-3xl">{b.badge?.emoji}</span>
+                                                {i === 0 && !showAllPersonalBadges && (
+                                                    <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                                                        <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
+                                                    </span>
+                                                )}
+                                            </div>
                                             <div>
                                                 <div className="flex items-center gap-2 mb-0.5">
                                                     <h3 className="text-sm font-black text-slate-900 uppercase">{b.badge?.name}</h3>
@@ -580,7 +631,7 @@ export default function PantheonClient({
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {SPECIAL_WORKOUTS.map((workout) => (
-                            <Link 
+                            <Link
                                 key={workout.id}
                                 href={`/workouts/${workout.slug}`}
                                 className="group relative bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:scale-[1.02] transition-all flex flex-col justify-between overflow-hidden"
@@ -588,21 +639,20 @@ export default function PantheonClient({
                                 <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                                     <Trophy size={80} />
                                 </div>
-                                
+
                                 <div className="relative z-10 space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                                            today <= (workout.endDate || '9999-12-31') && today >= workout.date
+                                        <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${today <= (workout.endDate || '9999-12-31') && today >= workout.date
                                             ? "bg-indigo-50 text-indigo-600 border-indigo-100"
                                             : today > (workout.endDate || '9999-12-31')
-                                            ? "bg-slate-100 text-slate-400 border-slate-200"
-                                            : "bg-amber-50 text-amber-600 border-amber-100"
-                                        }`}>
-                                            {today <= (workout.endDate || '9999-12-31') && today >= workout.date 
-                                                ? "🔥 ACTIF" 
+                                                ? "bg-slate-100 text-slate-400 border-slate-200"
+                                                : "bg-amber-50 text-amber-600 border-amber-100"
+                                            }`}>
+                                            {today <= (workout.endDate || '9999-12-31') && today >= workout.date
+                                                ? "🔥 ACTIF"
                                                 : today > (workout.endDate || '9999-12-31')
-                                                ? "⌛ TERMINÉ"
-                                                : `📅 LE ${new Date(workout.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}`}
+                                                    ? "⌛ TERMINÉ"
+                                                    : `📅 LE ${new Date(workout.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}`}
                                         </div>
                                         <div className="text-amber-500 font-black text-xs">
                                             +{workout.xpBonus} XP
@@ -644,9 +694,9 @@ export default function PantheonClient({
                     </div>
                 </div>
 
-                {/* SECTION C: CATALOGUE COMPLET */}
+                {/* SECTION C: CATALOGUE COMPLET (VITRINES) */}
                 <div className="mb-20">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
                         <div className="flex items-center gap-3">
                             <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
                                 <Target size={20} />
@@ -678,51 +728,31 @@ export default function PantheonClient({
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {filteredCatalog.map((def, i) => {
-                            const holder = badgeOwnerships.find(bo => bo.badgeKey === def.key && bo.currentUserId);
+                    <div className="space-y-8">
+                        {showcaseData.map((cat, i) => {
+                            // Filter badges within each category based on search/type
+                            const filteredEarned = cat.earned.filter((def: any) => {
+                                const matchesSearch = def.name.toLowerCase().includes(searchTerm.toLowerCase());
+                                const matchesType = !filterType || def.type === filterType;
+                                return matchesSearch && matchesType;
+                            });
+
+                            const filteredPending = cat.pending.filter((def: any) => {
+                                const matchesSearch = def.name.toLowerCase().includes(searchTerm.toLowerCase());
+                                const matchesType = !filterType || def.type === filterType;
+                                return matchesSearch && matchesType;
+                            });
+
+                            if (filteredEarned.length === 0 && filteredPending.length === 0) return null;
+
                             return (
-                                <div key={i} className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-indigo-100 transition-all flex flex-col h-full relative overflow-hidden group">
-                                    <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity">
-                                        <Trophy size={120} />
-                                    </div>
-
-                                    <div className="flex items-center justify-between mb-6">
-                                        <div className="text-5xl group-hover:scale-110 transition-transform origin-left">{def.emoji}</div>
-                                        <span className={`text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-widest ${def.type === 'LEGENDARY' ? 'bg-indigo-100 text-indigo-700' :
-                                            def.type === 'COMPETITIVE' ? 'bg-orange-100 text-orange-700' :
-                                                def.type === 'EVENT' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-700'
-                                            }`}>
-                                            {def.type}
-                                        </span>
-                                    </div>
-
-                                    <div className="flex-1">
-                                        <h3 className="text-base font-black text-slate-900 uppercase mb-2 tracking-tight leading-tight">{def.name}</h3>
-                                        <p className="text-[11px] font-medium text-slate-500 leading-relaxed italic mb-4">"{def.description}"</p>
-                                    </div>
-
-                                    {def.type === 'COMPETITIVE' && (
-                                        <div className="pt-6 border-t border-slate-50">
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Détenteur actuel</p>
-                                            {holder ? (
-                                                <div className="flex items-center gap-2 group/h">
-                                                    <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-600">
-                                                        {(holder.currentUser?.nickname as string || "U").charAt(0)}
-                                                    </div>
-                                                    <div className="flex flex-col">
-                                                        <span className="text-xs font-black text-slate-800 uppercase group-hover/h:text-indigo-600 transition-colors">
-                                                            {holder.currentUser?.nickname}
-                                                        </span>
-                                                        <span className="text-[9px] font-bold text-slate-400">Score: {holder.currentValue}</span>
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <span className="text-[10px] font-bold text-slate-300 italic">Personne pour le moment</span>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
+                                <BadgeShowcase
+                                    key={i}
+                                    category={{ ...cat, earned: filteredEarned, pending: filteredPending }}
+                                    defaultOpen={searchTerm !== "" || i === 0}
+                                    badgeOwnerships={badgeOwnerships}
+                                    currentUserRecords={currentUserRecords}
+                                />
                             );
                         })}
                     </div>

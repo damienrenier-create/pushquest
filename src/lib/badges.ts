@@ -1,5 +1,5 @@
 import prisma from "./prisma";
-import { getRequiredRepsForDate, getTodayISO, isLastDayOfMonth } from "./challenge";
+import { getRequiredRepsForDate, getTodayISO, isLastDayOfMonth, getYesterdayISO } from "./challenge";
 
 import { BADGE_DEFINITIONS } from "@/config/badges";
 
@@ -632,14 +632,20 @@ export async function updateBadgesPostSave(userId: string, precomputedSummaries?
                     bestValue = val; bestUser = s;
                 }
             });
-        } else if (def.metricType === "TRINITY_GOLD") {
+        } else if (def.metricType === "TRINITY_GOLD" || def.metricType === "TRINITY_ULTIMATE") {
             const today = getTodayISO();
-            for (const s of summaries) { if (s.hasTrinityGold(today)) await awardMilestone(s.id, def.key, 1); }
-            continue;
-        } else if (def.metricType === "TRINITY_ULTIMATE") {
-            const today = getTodayISO();
-            for (const s of summaries) { if (s.hasTrinityUltimate(today)) await awardMilestone(s.id, def.key, 1); }
-            continue;
+            const yesterday = getYesterdayISO();
+            summaries.forEach((s: any) => {
+                const hasToday = def.metricType === "TRINITY_GOLD" ? s.hasTrinityGold(today) : s.hasTrinityUltimate(today);
+                const hasYesterday = def.metricType === "TRINITY_GOLD" ? s.hasTrinityGold(yesterday) : s.hasTrinityUltimate(yesterday);
+
+                if (hasToday || hasYesterday) {
+                    const val = hasToday ? s.getDayTotal(today) : s.getDayTotal(yesterday);
+                    if (val > bestValue || (val === bestValue && bestValue > 0 && isBetterTieBreak(s, bestUser, "totalAll"))) {
+                        bestValue = val; bestUser = s;
+                    }
+                }
+            });
         } else if (def.metricType === "SALLY_PART") {
             const today = getTodayISO();
             if (isLastDayOfMonth(today)) {
