@@ -165,103 +165,107 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
                         <h2 className="text-2xl font-black uppercase italic text-slate-900">Exploit Validé !</h2>
                         <p className="text-slate-500 font-bold">Vos résultats ont été enregistrés. Redirection...</p>
                     </div>
-                ) : !isStarted ? (
-                    <div className="bg-amber-50 border border-amber-200 rounded-3xl p-12 text-center space-y-4 shadow-sm relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-8 opacity-5">
-                            <Clock size={120} />
-                        </div>
-                        <div className="relative z-10 w-20 h-20 bg-amber-500 rounded-full flex items-center justify-center mx-auto shadow-lg shadow-amber-500/20">
-                            <Timer size={40} className="text-white" />
-                        </div>
-                        <h2 className="relative z-10 text-2xl font-black uppercase italic text-amber-900">Pas si vite !</h2>
-                        <p className="relative z-10 text-amber-700 font-bold">Ce défi ne commence que le <strong>{new Date(workout.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}</strong>. Préparez-vous bien d'ici là !</p>
-                    </div>
-                ) : isEnded ? (
-                    <div className="bg-slate-100 border border-slate-200 rounded-3xl p-12 text-center space-y-4 shadow-sm relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-8 opacity-5">
-                            <History size={120} />
-                        </div>
-                        <div className="relative z-10 w-20 h-20 bg-slate-400 rounded-full flex items-center justify-center mx-auto shadow-lg shadow-slate-400/20">
-                            <History size={40} className="text-white" />
-                        </div>
-                        <h2 className="relative z-10 text-2xl font-black uppercase italic text-slate-700">Défi Terminé</h2>
-                        <p className="relative z-10 text-slate-500 font-bold">Navré, ce défi s'est terminé le <strong>{new Date(workout.endDate!).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}</strong>.</p>
-                    </div>
                 ) : (
                     <form onSubmit={handleSubmit} className="space-y-8">
-                        {/* Timer Section - Lighter Design */}
-                        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
-                                        <Timer size={20} />
-                                    </div>
-                                    <span className="font-black uppercase tracking-wider text-xs text-slate-500">Temps de l'exploit</span>
+                        {!isStarted && (
+                            <div className="bg-amber-50 border border-amber-200 rounded-3xl p-12 text-center space-y-4 shadow-sm relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-8 opacity-5">
+                                    <Clock size={120} />
                                 </div>
-                                <div className="text-3xl font-mono font-black text-indigo-600 tabular-nums">
-                                    {formatTime(elapsed || (parseInt(manualMinutes) || 0) * 60 + (parseInt(manualSeconds) || 0))}
+                                <div className="relative z-10 w-20 h-20 bg-amber-500 rounded-full flex items-center justify-center mx-auto shadow-lg shadow-amber-500/20">
+                                    <Timer size={40} className="text-white" />
                                 </div>
+                                <h2 className="relative z-10 text-2xl font-black uppercase italic text-amber-900">Pas si vite !</h2>
+                                <p className="relative z-10 text-amber-700 font-bold">Ce défi ne commence que le <strong>{new Date(workout.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}</strong>. Préparez-vous bien d'ici là, voici ce qui vous attend !</p>
                             </div>
+                        )}
+                        {isEnded && (
+                            <div className="bg-slate-100 border border-slate-200 rounded-3xl p-12 text-center space-y-4 shadow-sm relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-8 opacity-5">
+                                    <History size={120} />
+                                </div>
+                                <div className="relative z-10 w-20 h-20 bg-slate-400 rounded-full flex items-center justify-center mx-auto shadow-lg shadow-slate-400/20">
+                                    <History size={40} className="text-white" />
+                                </div>
+                                <h2 className="relative z-10 text-2xl font-black uppercase italic text-slate-700">Défi Terminé</h2>
+                                <p className="relative z-10 text-slate-500 font-bold">Navré, ce défi s'est terminé le <strong>{new Date(workout.endDate!).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}</strong>.</p>
+                            </div>
+                        )}
 
-                            {/* Manual Entry or Chrono */}
-                            <div className="space-y-4">
-                                <div className="grid grid-cols-2 gap-3">
-                                    {!timerActive ? (
+                        {isAvailable && (
+                            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+                                            <Timer size={20} />
+                                        </div>
+                                        <span className="font-black uppercase tracking-wider text-xs text-slate-500">Temps de l'exploit</span>
+                                    </div>
+                                    <div className="text-3xl font-mono font-black text-indigo-600 tabular-nums">
+                                        {formatTime(elapsed || (parseInt(manualMinutes) || 0) * 60 + (parseInt(manualSeconds) || 0))}
+                                    </div>
+                                </div>
+
+                                {/* Manual Entry or Chrono */}
+                                <div className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {!timerActive ? (
+                                            <button
+                                                type="button"
+                                                onClick={handleStart}
+                                                className="flex items-center justify-center gap-2 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase tracking-widest transition-all shadow-lg shadow-indigo-600/20"
+                                            >
+                                                {elapsed > 0 ? "Reprendre" : "Démarrer Chrono"}
+                                            </button>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                onClick={handleStop}
+                                                className="flex items-center justify-center gap-2 py-4 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black uppercase tracking-widest transition-all shadow-lg shadow-red-600/20"
+                                            >
+                                                Stop
+                                            </button>
+                                        )}
                                         <button
                                             type="button"
-                                            onClick={handleStart}
-                                            className="flex items-center justify-center gap-2 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase tracking-widest transition-all shadow-lg shadow-indigo-600/20"
+                                            onClick={handleReset}
+                                            className="flex items-center justify-center gap-2 py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl font-black uppercase tracking-widest transition-all"
                                         >
-                                            {elapsed > 0 ? "Reprendre" : "Démarrer Chrono"}
+                                            Reset
                                         </button>
-                                    ) : (
-                                        <button
-                                            type="button"
-                                            onClick={handleStop}
-                                            className="flex items-center justify-center gap-2 py-4 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black uppercase tracking-widest transition-all shadow-lg shadow-red-600/20"
-                                        >
-                                            Stop
-                                        </button>
-                                    )}
-                                    <button
-                                        type="button"
-                                        onClick={handleReset}
-                                        className="flex items-center justify-center gap-2 py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl font-black uppercase tracking-widest transition-all"
-                                    >
-                                        Reset
-                                    </button>
-                                </div>
-
-                                <div className="relative py-2 flex items-center gap-3">
-                                    <div className="flex-1 h-px bg-slate-200"></div>
-                                    <span className="text-[10px] font-black text-slate-400 uppercase">Ou saisie manuelle</span>
-                                    <div className="flex-1 h-px bg-slate-200"></div>
-                                </div>
-
-                                <div className="flex items-center gap-3">
-                                    <div className="flex-1 flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
-                                        <input
-                                            type="number"
-                                            placeholder="Min"
-                                            className="w-full bg-transparent font-black text-center outline-none text-slate-900"
-                                            value={manualMinutes}
-                                            onChange={(e) => setManualMinutes(e.target.value)}
-                                        />
-                                        <span className="font-bold text-slate-400">m</span>
                                     </div>
-                                    <div className="flex-1 flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
-                                        <input
-                                            type="number"
-                                            placeholder="Sec"
-                                            className="w-full bg-transparent font-black text-center outline-none text-slate-900"
-                                            value={manualSeconds}
-                                            onChange={(e) => setManualSeconds(e.target.value)}
-                                        />
-                                        <span className="font-bold text-slate-400">s</span>
+
+                                    <div className="relative py-2 flex items-center gap-3">
+                                        <div className="flex-1 h-px bg-slate-200"></div>
+                                        <span className="text-[10px] font-black text-slate-400 uppercase">Ou saisie manuelle</span>
+                                        <div className="flex-1 h-px bg-slate-200"></div>
+                                    </div>
+
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex-1 flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
+                                            <input
+                                                type="number"
+                                                placeholder="Min"
+                                                className="w-full bg-transparent font-black text-center outline-none text-slate-900"
+                                                value={manualMinutes}
+                                                onChange={(e) => setManualMinutes(e.target.value)}
+                                            />
+                                            <span className="font-bold text-slate-400">m</span>
+                                        </div>
+                                        <div className="flex-1 flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
+                                            <input
+                                                type="number"
+                                                placeholder="Sec"
+                                                className="w-full bg-transparent font-black text-center outline-none text-slate-900"
+                                                value={manualSeconds}
+                                                onChange={(e) => setManualSeconds(e.target.value)}
+                                            />
+                                            <span className="font-bold text-slate-400">s</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
 
                         {/* Exercises List - Light Theme */}
                         <div className="space-y-4">
@@ -281,7 +285,8 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
                                                 required
                                                 min="0"
                                                 placeholder="0"
-                                                className="w-20 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right font-black text-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-slate-900"
+                                                className={`w-20 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right font-black text-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-slate-900 disabled:opacity-50 disabled:bg-slate-100`}
+                                                disabled={!isAvailable}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, [exo.type]: parseInt(e.target.value) || 0 }))}
                                             />
                                             <span className="text-[10px] font-black text-slate-400 uppercase w-10">
@@ -293,51 +298,55 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
                             </div>
                         </div>
 
-                        {/* Proof Link Section with Google Photos redirect */}
-                        <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm space-y-4">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3 text-slate-500">
-                                    <ImageIcon size={18} />
-                                    <span className="font-black uppercase tracking-wider text-[10px]">Preuve de l'exploit (facultatif)</span>
+                        {isAvailable && (
+                            <>
+                                {/* Proof Link Section with Google Photos redirect */}
+                                <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3 text-slate-500">
+                                            <ImageIcon size={18} />
+                                            <span className="font-black uppercase tracking-wider text-[10px]">Preuve de l'exploit (facultatif)</span>
+                                        </div>
+                                        <a
+                                            href="https://photos.app.goo.gl/FrtN2kjDRY8vGQVP6"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-1.5 px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-tight hover:bg-indigo-100 transition-colors"
+                                        >
+                                            <Camera size={12} />
+                                            Album Records
+                                        </a>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <input
+                                            type="url"
+                                            placeholder="Lien vers votre photo/vidéo dans l'album"
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all text-slate-900"
+                                            value={proofUrl}
+                                            onChange={(e) => setProofUrl(e.target.value)}
+                                        />
+                                        <p className="text-[9px] text-slate-400 font-medium px-2 italic text-left">
+                                            Astuce : Téléchargez votre preuve sur l'album Google Photos et collez le lien ici.
+                                        </p>
+                                    </div>
                                 </div>
-                                <a
-                                    href="https://photos.app.goo.gl/FrtN2kjDRY8vGQVP6"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-1.5 px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-tight hover:bg-indigo-100 transition-colors"
-                                >
-                                    <Camera size={12} />
-                                    Album Records
-                                </a>
-                            </div>
-                            <div className="space-y-2">
-                                <input
-                                    type="url"
-                                    placeholder="Lien vers votre photo/vidéo dans l'album"
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all text-slate-900"
-                                    value={proofUrl}
-                                    onChange={(e) => setProofUrl(e.target.value)}
-                                />
-                                <p className="text-[9px] text-slate-400 font-medium px-2 italic text-left">
-                                    Astuce : Téléchargez votre preuve sur l'album Google Photos et collez le lien ici.
-                                </p>
-                            </div>
-                        </div>
 
-                        {/* Submit Button */}
-                        <button
-                            disabled={isSubmitting}
-                            className="w-full flex items-center justify-center gap-3 py-6 bg-slate-900 hover:bg-black text-white disabled:opacity-50 disabled:cursor-not-allowed rounded-3xl font-black text-xl uppercase italic tracking-tighter transition-all shadow-xl shadow-slate-900/20 group"
-                        >
-                            {isSubmitting ? (
-                                <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
-                            ) : (
-                                <>
-                                    Soumettre l'Exploit
-                                    <Send size={20} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                                </>
-                            )}
-                        </button>
+                                {/* Submit Button */}
+                                <button
+                                    disabled={isSubmitting}
+                                    className="w-full flex items-center justify-center gap-3 py-6 bg-slate-900 hover:bg-black text-white disabled:opacity-50 disabled:cursor-not-allowed rounded-3xl font-black text-xl uppercase italic tracking-tighter transition-all shadow-xl shadow-slate-900/20 group"
+                                >
+                                    {isSubmitting ? (
+                                        <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                    ) : (
+                                        <>
+                                            Soumettre l'Exploit
+                                            <Send size={20} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                                        </>
+                                    )}
+                                </button>
+                            </>
+                        )}
                     </form>
                 )}
 
@@ -402,6 +411,6 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
                     </div>
                 </div>
             </div>
-        </main>
+        </main >
     )
 }
