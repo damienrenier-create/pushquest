@@ -7,6 +7,7 @@ import Link from "next/link"
 import { Sparkles, Trophy, Zap, Activity, PieChart, BarChart3, TrendingUp, History, Info } from "lucide-react"
 import RewardDetailSheet from "@/components/RewardDetailSheet"
 import GraphsSection from "@/components/dashboard/GraphsSection"
+import YesterdayXpRecap from "@/components/profile/YesterdayXpRecap"
 
 export default function UserProfilePage() {
     const { data: session } = useSession()
@@ -188,7 +189,7 @@ export default function UserProfilePage() {
                                 {!isInjured && !isVeteran && <span className="text-xl sm:text-2xl opacity-30 grayscale" title="Apte au service">✅</span>}
                             </div>
                         </div>
-                        
+
                         {/* Status Area */}
                         <div className="mt-4 max-w-lg">
                             {isEditingStatus ? (
@@ -203,8 +204,8 @@ export default function UserProfilePage() {
                                         <span className="text-[10px] text-slate-500 font-bold">{statusDraft.length}/300</span>
                                         <div className="flex gap-2">
                                             <button onClick={() => setIsEditingStatus(false)} className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Annuler</button>
-                                            <button 
-                                                onClick={handleUpdateStatus} 
+                                            <button
+                                                onClick={handleUpdateStatus}
                                                 disabled={isStatusLoading}
                                                 className="bg-blue-600 text-white px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
                                             >
@@ -218,15 +219,15 @@ export default function UserProfilePage() {
                                     <div className="bg-slate-800/80 backdrop-blur-sm border border-slate-700/50 p-4 sm:p-6 rounded-2xl sm:rounded-3xl relative">
                                         {/* Decorative Quote Mark */}
                                         <div className="absolute -top-3 -left-2 text-4xl text-indigo-500/30 font-serif leading-none">“</div>
-                                        
+
                                         <div className="flex items-start gap-4">
                                             <p className="text-slate-100 text-sm sm:text-base font-bold italic leading-relaxed flex-1">
                                                 {user.status?.content ? user.status.content : (session?.user?.email === user.email ? "Aucun statut. Édicte tes ordres." : "Ce soldat est silencieux...")}
                                             </p>
-                                            
+
                                             <div className="flex flex-col gap-2 shrink-0">
                                                 {user.status && (
-                                                    <button 
+                                                    <button
                                                         onClick={handleLikeStatus}
                                                         className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-slate-700/50 hover:bg-slate-700 rounded-full border border-slate-600 transition-all active:scale-95"
                                                     >
@@ -235,8 +236,8 @@ export default function UserProfilePage() {
                                                     </button>
                                                 )}
                                                 {session?.user?.email === user.email && (
-                                                    <button 
-                                                        onClick={() => setIsEditingStatus(true)} 
+                                                    <button
+                                                        onClick={() => setIsEditingStatus(true)}
                                                         className="p-2 bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-400 rounded-full border border-indigo-500/30 transition-all active:scale-95"
                                                         title="Éditer mon petit mot"
                                                     >
@@ -319,14 +320,14 @@ export default function UserProfilePage() {
 
             {/* Navigation Tabs */}
             <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200 w-fit mx-auto sm:mx-0">
-                <button 
+                <button
                     onClick={() => setActiveTab('stats')}
                     className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'stats' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                 >
                     <Activity size={14} />
                     Résumé
                 </button>
-                <button 
+                <button
                     onClick={() => setActiveTab('history')}
                     className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'history' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                 >
@@ -335,155 +336,158 @@ export default function UserProfilePage() {
                 </button>
             </div>
 
+            {/* Yesterday Recap Section */}
+            <YesterdayXpRecap recap={analyticsData?.yesterdayRecap} />
+
             {/* Analytics Section */}
             <section className="bg-white rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 shadow-sm border border-gray-100 space-y-10">
                 <div className="flex items-center justify-between border-b border-gray-50 pb-6">
                     <h2 className="text-xl sm:text-2xl font-black uppercase tracking-normal flex items-center gap-3 text-slate-900">
-                        <span className="p-2 bg-blue-100/50 rounded-2xl text-xl">{activeTab === 'stats' ? '📊' : '📈'}</span> 
+                        <span className="p-2 bg-blue-100/50 rounded-2xl text-xl">{activeTab === 'stats' ? '📊' : '📈'}</span>
                         {activeTab === 'stats' ? 'Statistiques & Analytics' : 'Courbe de Progression'}
                     </h2>
                 </div>
 
                 {activeTab === 'stats' ? (
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-                    {/* Skills Radar Chart (Balanced View) */}
-                    <div className="flex flex-col items-center space-y-8">
-                        <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-800 bg-slate-50 px-4 py-1.5 rounded-full border border-slate-100">Équilibre des Forces</h3>
-                        <div className="relative w-56 h-56 sm:w-64 sm:h-64">
-                            <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible drop-shadow-2xl">
-                                {/* Base Grids */}
-                                {[0.2, 0.4, 0.6, 0.8, 1].map((scale) => {
-                                    const r = 42 * scale;
-                                    const p1 = { x: 50, y: 50 - r };
-                                    const p2 = { x: 50 + r * 0.866, y: 50 + r * 0.5 };
-                                    const p3 = { x: 50 - r * 0.866, y: 50 + r * 0.5 };
-                                    return (
-                                        <polygon
-                                            key={scale}
-                                            points={`${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y}`}
-                                            fill="none"
-                                            stroke="#f1f5f9"
-                                            strokeWidth="1"
-                                            className="transition-all duration-1000"
-                                        />
-                                    );
-                                })}
-                                {/* Labels & Axis */}
-                                <line x1="50" y1="50" x2="50" y2="8" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="2 2" />
-                                <line x1="50" y1="50" x2={50 + 42 * 0.866} y2={50 + 21} stroke="#f1f5f9" strokeWidth="1" strokeDasharray="2 2" />
-                                <line x1="50" y1="50" x2={50 - 42 * 0.866} y2={50 + 21} stroke="#f1f5f9" strokeWidth="1" strokeDasharray="2 2" />
-
-                                {(() => {
-                                    const max = Math.max(pushups, pullups, squats, 1);
-                                    const pScale = pushups / max;
-                                    const tScale = pullups / max;
-                                    const sScale = squats / max;
-                                    const r = 42;
-                                    const p1 = { x: 50, y: 50 - r * pScale };
-                                    const p2 = { x: 50 + (r * tScale) * 0.866, y: 50 + (r * tScale) * 0.5 };
-                                    const p3 = { x: 50 - (r * sScale) * 0.866, y: 50 + (r * sScale) * 0.5 };
-                                    return (
-                                        <g>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                        {/* Skills Radar Chart (Balanced View) */}
+                        <div className="flex flex-col items-center space-y-8">
+                            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-800 bg-slate-50 px-4 py-1.5 rounded-full border border-slate-100">Équilibre des Forces</h3>
+                            <div className="relative w-56 h-56 sm:w-64 sm:h-64">
+                                <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible drop-shadow-2xl">
+                                    {/* Base Grids */}
+                                    {[0.2, 0.4, 0.6, 0.8, 1].map((scale) => {
+                                        const r = 42 * scale;
+                                        const p1 = { x: 50, y: 50 - r };
+                                        const p2 = { x: 50 + r * 0.866, y: 50 + r * 0.5 };
+                                        const p3 = { x: 50 - r * 0.866, y: 50 + r * 0.5 };
+                                        return (
                                             <polygon
+                                                key={scale}
                                                 points={`${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y}`}
-                                                fill="rgba(99, 102, 241, 0.25)"
-                                                stroke="#4f46e5"
-                                                strokeWidth="2.5"
-                                                strokeLinejoin="round"
+                                                fill="none"
+                                                stroke="#f1f5f9"
+                                                strokeWidth="1"
                                                 className="transition-all duration-1000"
                                             />
-                                            <circle cx={p1.x} cy={p1.y} r="3" fill="#3b82f6" className="transition-all duration-1000" />
-                                            <circle cx={p2.x} cy={p2.y} r="3" fill="#f97316" className="transition-all duration-1000" />
-                                            <circle cx={p3.x} cy={p3.y} r="3" fill="#10b981" className="transition-all duration-1000" />
-                                        </g>
-                                    );
-                                })()}
-                                
-                                <text x="50" y="-8" textAnchor="middle" className="text-[5.5px] font-black fill-blue-600 uppercase tracking-widest leading-none">Force (Pompes)</text>
-                                <text x="96" y="65" textAnchor="middle" className="text-[5.5px] font-black fill-orange-500 uppercase tracking-widest">Tirage (Tractions)</text>
-                                <text x="4" y="65" textAnchor="middle" className="text-[5.5px] font-black fill-emerald-600 uppercase tracking-widest">Base (Squats)</text>
-                            </svg>
-                        </div>
-                        <div className="text-center group pt-4">
-                            <span className="text-4xl font-black text-slate-900 tracking-tighter block leading-none">{totalReps.toLocaleString()}</span>
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mt-2 block">Volume Cumulative</span>
-                        </div>
-                    </div>
+                                        );
+                                    })}
+                                    {/* Labels & Axis */}
+                                    <line x1="50" y1="50" x2="50" y2="8" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="2 2" />
+                                    <line x1="50" y1="50" x2={50 + 42 * 0.866} y2={50 + 21} stroke="#f1f5f9" strokeWidth="1" strokeDasharray="2 2" />
+                                    <line x1="50" y1="50" x2={50 - 42 * 0.866} y2={50 + 21} stroke="#f1f5f9" strokeWidth="1" strokeDasharray="2 2" />
 
-                    {/* XP Pie Chart (Full Camembert) */}
-                    <div className="flex flex-col items-center space-y-6">
-                        <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-800 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">Origine du Prestige (XP)</h3>
-                        <div className="relative w-48 h-48 sm:w-56 sm:h-56">
-                            <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90 drop-shadow-xl overflow-visible">
-                                {(() => {
-                                    if (!analyticsData?.xpBreakdown) return <circle cx="50" cy="50" r="40" fill="#f1f5f9" />;
-                                    
-                                    const breakdown = analyticsData.xpBreakdown;
-                                    const total = analyticsData.totalXP || 1;
-                                    const labels: any = {
-                                        repsXP: "#6366f1", // Indigo
-                                        regularityXP: "#10b981", // Emerald
-                                        badgesXP: "#f59e0b", // Amber
-                                        recordsXP: "#f43f5e", // Rose (Matches legend)
-                                        manualXP: "#94a3b8"  // Slate
-                                    };
-                                    
-                                    let cumulativePercent = 0;
-                                    return (
-                                        <>
-                                            {/* Background base */}
-                                            <circle cx="50" cy="50" r="44" fill="#f8fafc" />
-                                            
-                                            {Object.entries(breakdown).map(([key, val]: [string, any]) => {
-                                                if (val <= 0 || !labels[key]) return null;
-                                                const p = (val / total) * 100;
-                                                // Using large strokeWidth for "Pie" effect (filled donut)
-                                                const strokeWidth = 44; 
-                                                const radius = 22; 
-                                                const dashArray = `${p} ${100 - p}`;
-                                                const dashOffset = -cumulativePercent;
-                                                cumulativePercent += p;
-                                                return (
-                                                    <circle
-                                                        key={key}
-                                                        cx="50" cy="50" r={radius}
-                                                        fill="transparent"
-                                                        stroke={labels[key]}
-                                                        strokeWidth={strokeWidth}
-                                                        strokeDasharray={dashArray}
-                                                        strokeDashoffset={dashOffset}
-                                                        className="transition-all duration-1000"
-                                                    />
-                                                );
-                                            })}
-                                        </>
-                                    );
-                                })()}
-                            </svg>
-                            <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
-                                <div className="bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-2xl shadow-sm border border-white/50">
-                                    <span className="text-xl sm:text-2xl font-black text-indigo-900 leading-none">{(analyticsData?.totalXP || 0).toLocaleString()}</span>
-                                    <span className="text-[7px] font-black text-indigo-400 uppercase tracking-[0.2em] mt-0.5 block">TOTAL XP</span>
+                                    {(() => {
+                                        const max = Math.max(pushups, pullups, squats, 1);
+                                        const pScale = pushups / max;
+                                        const tScale = pullups / max;
+                                        const sScale = squats / max;
+                                        const r = 42;
+                                        const p1 = { x: 50, y: 50 - r * pScale };
+                                        const p2 = { x: 50 + (r * tScale) * 0.866, y: 50 + (r * tScale) * 0.5 };
+                                        const p3 = { x: 50 - (r * sScale) * 0.866, y: 50 + (r * sScale) * 0.5 };
+                                        return (
+                                            <g>
+                                                <polygon
+                                                    points={`${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y}`}
+                                                    fill="rgba(99, 102, 241, 0.25)"
+                                                    stroke="#4f46e5"
+                                                    strokeWidth="2.5"
+                                                    strokeLinejoin="round"
+                                                    className="transition-all duration-1000"
+                                                />
+                                                <circle cx={p1.x} cy={p1.y} r="3" fill="#3b82f6" className="transition-all duration-1000" />
+                                                <circle cx={p2.x} cy={p2.y} r="3" fill="#f97316" className="transition-all duration-1000" />
+                                                <circle cx={p3.x} cy={p3.y} r="3" fill="#10b981" className="transition-all duration-1000" />
+                                            </g>
+                                        );
+                                    })()}
+
+                                    <text x="50" y="-8" textAnchor="middle" className="text-[5.5px] font-black fill-blue-600 uppercase tracking-widest leading-none">Force (Pompes)</text>
+                                    <text x="96" y="65" textAnchor="middle" className="text-[5.5px] font-black fill-orange-500 uppercase tracking-widest">Tirage (Tractions)</text>
+                                    <text x="4" y="65" textAnchor="middle" className="text-[5.5px] font-black fill-emerald-600 uppercase tracking-widest">Base (Squats)</text>
+                                </svg>
+                            </div>
+                            <div className="text-center group pt-4">
+                                <span className="text-4xl font-black text-slate-900 tracking-tighter block leading-none">{totalReps.toLocaleString()}</span>
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mt-2 block">Volume Cumulative</span>
+                            </div>
+                        </div>
+
+                        {/* XP Pie Chart (Full Camembert) */}
+                        <div className="flex flex-col items-center space-y-6">
+                            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-800 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">Origine du Prestige (XP)</h3>
+                            <div className="relative w-48 h-48 sm:w-56 sm:h-56">
+                                <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90 drop-shadow-xl overflow-visible">
+                                    {(() => {
+                                        if (!analyticsData?.xpBreakdown) return <circle cx="50" cy="50" r="40" fill="#f1f5f9" />;
+
+                                        const breakdown = analyticsData.xpBreakdown;
+                                        const total = analyticsData.totalXP || 1;
+                                        const labels: any = {
+                                            repsXP: "#6366f1", // Indigo
+                                            regularityXP: "#10b981", // Emerald
+                                            badgesXP: "#f59e0b", // Amber
+                                            recordsXP: "#f43f5e", // Rose (Matches legend)
+                                            manualXP: "#94a3b8"  // Slate
+                                        };
+
+                                        let cumulativePercent = 0;
+                                        return (
+                                            <>
+                                                {/* Background base */}
+                                                <circle cx="50" cy="50" r="44" fill="#f8fafc" />
+
+                                                {Object.entries(breakdown).map(([key, val]: [string, any]) => {
+                                                    if (val <= 0 || !labels[key]) return null;
+                                                    const p = (val / total) * 100;
+                                                    // Using large strokeWidth for "Pie" effect (filled donut)
+                                                    const strokeWidth = 44;
+                                                    const radius = 22;
+                                                    const dashArray = `${p} ${100 - p}`;
+                                                    const dashOffset = -cumulativePercent;
+                                                    cumulativePercent += p;
+                                                    return (
+                                                        <circle
+                                                            key={key}
+                                                            cx="50" cy="50" r={radius}
+                                                            fill="transparent"
+                                                            stroke={labels[key]}
+                                                            strokeWidth={strokeWidth}
+                                                            strokeDasharray={dashArray}
+                                                            strokeDashoffset={dashOffset}
+                                                            className="transition-all duration-1000"
+                                                        />
+                                                    );
+                                                })}
+                                            </>
+                                        );
+                                    })()}
+                                </svg>
+                                <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+                                    <div className="bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-2xl shadow-sm border border-white/50">
+                                        <span className="text-xl sm:text-2xl font-black text-indigo-900 leading-none">{(analyticsData?.totalXP || 0).toLocaleString()}</span>
+                                        <span className="text-[7px] font-black text-indigo-400 uppercase tracking-[0.2em] mt-0.5 block">TOTAL XP</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-[8px] font-black uppercase tracking-wider max-w-sm px-4">
+                                <div className="flex items-center gap-2 text-indigo-600"><span className="w-2 h-2 rounded-full bg-indigo-500"></span> {Math.round(analyticsData.xpBreakdown?.repsXP || 0).toLocaleString()} Entraînement</div>
+                                <div className="flex items-center gap-2 text-emerald-600"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> {Math.round(analyticsData.xpBreakdown?.regularityXP || 0).toLocaleString()} Régularité</div>
+                                <div className="flex items-center gap-2 text-amber-600"><span className="w-2 h-2 rounded-full bg-amber-500"></span> {Math.round(analyticsData.xpBreakdown?.badgesXP || 0).toLocaleString()} Trophées</div>
+                                <div className="flex items-center gap-2 text-rose-600"><span className="w-2 h-2 rounded-full bg-rose-500"></span> {Math.round(analyticsData.xpBreakdown?.recordsXP || 0).toLocaleString()} Records</div>
+                                <div className="flex items-center gap-x-2 text-slate-500 col-span-2 justify-center mt-1 border-t border-slate-100 pt-2">
+                                    <span className="w-2 h-2 rounded-full bg-slate-400"></span> Bonus de Prestige : {Math.round((analyticsData.xpBreakdown?.finesXP || 0) + (analyticsData.xpBreakdown?.manualXP || 0)).toLocaleString()} XP
                                 </div>
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-[8px] font-black uppercase tracking-wider max-w-sm px-4">
-                            <div className="flex items-center gap-2 text-indigo-600"><span className="w-2 h-2 rounded-full bg-indigo-500"></span> {Math.round(analyticsData.xpBreakdown?.repsXP || 0).toLocaleString()} Entraînement</div>
-                            <div className="flex items-center gap-2 text-emerald-600"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> {Math.round(analyticsData.xpBreakdown?.regularityXP || 0).toLocaleString()} Régularité</div>
-                            <div className="flex items-center gap-2 text-amber-600"><span className="w-2 h-2 rounded-full bg-amber-500"></span> {Math.round(analyticsData.xpBreakdown?.badgesXP || 0).toLocaleString()} Trophées</div>
-                            <div className="flex items-center gap-2 text-rose-600"><span className="w-2 h-2 rounded-full bg-rose-500"></span> {Math.round(analyticsData.xpBreakdown?.recordsXP || 0).toLocaleString()} Records</div>
-                            <div className="flex items-center gap-x-2 text-slate-500 col-span-2 justify-center mt-1 border-t border-slate-100 pt-2">
-                                <span className="w-2 h-2 rounded-full bg-slate-400"></span> Bonus de Prestige : {Math.round((analyticsData.xpBreakdown?.finesXP || 0) + (analyticsData.xpBreakdown?.manualXP || 0)).toLocaleString()} XP
-                            </div>
-                        </div>
                     </div>
-                </div>
 
 
                 ) : (
                     <div className="animate-in fade-in duration-500">
-                        <GraphsSection 
+                        <GraphsSection
                             data={analyticsData}
                             graphPeriod={graphPeriod}
                             setGraphPeriod={setGraphPeriod}
@@ -493,7 +497,7 @@ export default function UserProfilePage() {
 
                 <div className="pt-8 border-t border-gray-50 flex flex-col items-center">
                     <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest text-center max-w-lg">
-                        {activeTab === 'stats' 
+                        {activeTab === 'stats'
                             ? "Ces données reflètent l'ensemble des records et sessions enregistrées sur ce profil."
                             : "Consultez l'historique complet pour identifier les plateaux de progression et les pics de forme."}
                     </p>
@@ -528,7 +532,7 @@ export default function UserProfilePage() {
                                         {ownership.badge.name}
                                     </h3>
                                     <div className="mt-2 flex items-center justify-center gap-2">
-                                        <button 
+                                        <button
                                             onClick={(e) => {
                                                 e.preventDefault();
                                                 e.stopPropagation();

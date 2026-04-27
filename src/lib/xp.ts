@@ -142,6 +142,124 @@ export function calculateLevel(xp: number) {
 import { MONTH_MULTIPLIERS } from "./xp-constants";
 export { MONTH_MULTIPLIERS };
 
+/**
+ * Calculates the XP gain for a specific user on a specific date.
+ * Returns a detailed breakdown for transparency.
+ */
+export function calculateDailyXPGainForUser(
+    user: any,
+    dateISO: string,
+    summaries: any[],
+    badgesOwnerships: any[],
+    globalRecords: { maxVolDayUser: string | null, maxVolMonthUser: string | null, maxVolYearUser: string | null },
+    featuredBadgeKey?: string
+) {
+    const summary = summaries.find(s => s.id === user.id);
+    if (!summary) return null;
+
+    let totalXP = 0;
+
+    // 1. Reps XP
+    const sets = (user.sets || []).filter((s: any) => s.date === dateISO);
+    const marvinBonusDate = "2026-03-08";
+    const isMarvinDay = dateISO === marvinBonusDate;
+
+    const p = sets.filter((s: any) => s.exercise === "PUSHUP").reduce((acc: number, s: any) => acc + s.reps, 0);
+    const u = sets.filter((s: any) => s.exercise === "PULLUP").reduce((acc: number, s: any) => acc + s.reps, 0);
+    const q = sets.filter((s: any) => s.exercise === "SQUAT").reduce((acc: number, s: any) => acc + s.reps, 0);
+
+    const repsXP = (p * (isMarvinDay ? 2 : 1)) + (u * (isMarvinDay ? 6 : 3)) + (q * (isMarvinDay ? 2 : 1));
+    totalXP += repsXP;
+
+    // 2. Regularity & Flex
+    let regularityXP = 0;
+    const dayTotal = p + u + q;
+    const req = getRequiredRepsForDate(dateISO);
+
+    if (req > 0 && dayTotal >= req) {
+        let dayXP = 0;
+        if (dayTotal === req) dayXP = 200;
+        else {
+            dayXP = 100;
+            const surplus = dayTotal - req;
+            const step10Percent = Math.max(1, Math.floor(req * 0.1));
+            let flexXP = 0;
+            for (let i = 0; i < surplus; i++) {
+                const tier = Math.floor(i / step10Percent);
+                flexXP += (tier + 1);
+            }
+            dayXP += Math.min(flexXP, 1000);
+        }
+
+        // Birthday Triple XP Logic
+        const userNickname = (user.nickname || "").toLowerCase();
+        const isMilkaBday = dateISO.endsWith("-11-17") && (userNickname.includes("milka") || userNickname.includes("milkardashian"));
+        const isMoolsBday = dateISO.endsWith("-09-26") && (userNickname === "mools" || userNickname === "commissaire");
+        if (isMilkaBday || isMoolsBday) {
+            const isWinner = summaries.every(s => s.id === user.id || s.getDayTotal(dateISO) < dayTotal);
+            if (isWinner) dayXP *= 3;
+        }
+
+        regularityXP += dayXP;
+
+        // Events
+        if (dateISO === marvinBonusDate) regularityXP += 500;
+        if (dateISO === "2026-03-20" || dateISO === "2026-09-22") { // Equinoxes
+            const dayPushups = sets.filter((s: any) => s.exercise === "PUSHUP").reduce((acc: number, s: any) => acc + s.reps, 0);
+            const daySquats = sets.filter((s: any) => s.exercise === "SQUAT").reduce((acc: number, s: any) => acc + s.reps, 0);
+            if (dayPushups > 0 && dayPushups === daySquats) regularityXP += 250;
+        }
+        if (dateISO === "2026-04-05") { // Pâques
+            const dayReps = summary.getScaleReps(dateISO);
+            if (dayReps.includes(10) && dayReps.includes(20) && dayReps.includes(30)) regularityXP += 750;
+        }
+        if (dateISO === "2026-06-21" && dayTotal >= 900) regularityXP += 900;
+        if (dateISO === "2026-12-06" && dayTotal % 10 === 6) regularityXP += 500;
+        if (dateISO === "2026-12-21") { // Solstice Hiver
+            const hoursWithReps = new Set(sets.map((s: any) => new Date(s.createdAt).getHours()));
+            if (hoursWithReps.size >= 12) regularityXP += 500;
+        }
+    }
+    totalXP += regularityXP;
+
+    // 3. Badges earned on this day
+    let badgesXP = 0;
+    const dayBadges = (user.badges || user.badgesOwnerships || []).filter((b: any) => {
+        const achievedAt = b.achievedAt || b.createdAt;
+        return achievedAt && new Date(achievedAt).toISOString().split('T')[0] === dateISO;
+    });
+
+    const badgesDetail = dayBadges.map((b: any) => {
+        const streak = summary.perfectTargetStreak || 0;
+        let badgeXP = getXPForReward(b.badgeKey, { ...b, currentStreak: streak } as any);
+        if (featuredBadgeKey === b.badgeKey) badgeXP += Math.floor(badgeXP * 0.5);
+        return { name: b.badge?.name || b.name || b.badgeKey, xp: badgeXP, emoji: b.badge?.emoji || b.emoji };
+    });
+    badgesXP = badgesDetail.reduce((acc: number, b: any) => acc + b.xp, 0);
+    totalXP += badgesXP;
+
+    // 4. Adjustments
+    const adjustments = (user.xpAdjustments || []).filter((a: any) => {
+        const d = a.date || a.createdAt.toISOString().split('T')[0];
+        return d === dateISO;
+    });
+    const manualXP = adjustments.reduce((acc: number, a: any) => acc + a.amount, 0);
+    totalXP += manualXP;
+
+    // 5. Records (If were held on that day? Tricky. For now let's assume current records if date is today)
+    // Actually, for "yesterday" report, we only show standard gains.
+    // However, if we want to be exact, we should include records only if date is today and they are holders.
+
+    return {
+        repsXP,
+        regularityXP,
+        badgesXP,
+        badgesDetail,
+        manualXP,
+        total: totalXP
+    };
+}
+
 export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[], precomputedSummaries?: any[], events: any[] = []) {
     // 0. Fetch Featured Badge from GlobalConfig
     const featuredConfig = await (prisma as any).globalConfig.findUnique({ where: { key: "featuredBadgeKey" } });
