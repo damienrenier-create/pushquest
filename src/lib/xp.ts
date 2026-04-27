@@ -283,12 +283,24 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
             const streak = summary.perfectTargetStreak || 0;
             let displayBadge = { ...b };
 
-            // Perfect Soldier Tier Names
+            // Perfect Soldier Tier Names, Emojis, and Descriptions
             if (b.badgeKey === "perfect_soldier") {
-                if (streak >= 50) displayBadge.name = "Hitler himself";
-                else if (streak >= 30) displayBadge.name = "Der Kanzler";
-                else if (streak >= 10) displayBadge.name = "Le parfait SS";
-                else displayBadge.name = "Le bon petit nazi";
+                if (streak >= 50) {
+                    displayBadge.name = "Hitler himself";
+                    displayBadge.emoji = "☠️";
+                    displayBadge.description = "L'incarnation de la précision macabre. Plus de 50 jours parfaits.";
+                } else if (streak >= 30) {
+                    displayBadge.name = "Der Kanzler";
+                    displayBadge.emoji = "🦅";
+                    displayBadge.description = "Main de fer sur l'objectif. Plus de 30 jours parfaits.";
+                } else if (streak >= 10) {
+                    displayBadge.name = "Le parfait SS";
+                    displayBadge.emoji = "⚡";
+                    displayBadge.description = "Discipline militaire allemande. Plus de 10 jours parfaits.";
+                } else {
+                    displayBadge.name = "Le bon petit nazi";
+                    // keep default emoji and description for < 10
+                }
             }
 
             const badgeXP = getXPForReward(b.badgeKey, { ...b, currentStreak: streak } as any);

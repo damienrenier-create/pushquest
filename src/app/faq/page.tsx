@@ -167,7 +167,7 @@ function FAQContent() {
                                 <Shield className="text-indigo-400" size={24} />
                                 <h2 className="text-2xl font-black uppercase italic tracking-tighter">Mécaniques Uniques</h2>
                             </div>
-                            
+
                             <div className="grid grid-cols-1 gap-6">
                                 <div className="space-y-3">
                                     <div className="flex items-center gap-2">
@@ -236,6 +236,7 @@ function FAQContent() {
                                     <div>
                                         <h4 className="font-black text-gray-900 uppercase text-sm">Le Jour Parfait (+200 XP)</h4>
                                         <p className="text-xs font-bold text-gray-500 mt-1 leading-snug">Objectif atteint pile poil.</p>
+                                        <p className="text-[10px] uppercase font-black text-indigo-400 mt-2 italic flex items-center gap-1"><Info size={12} /> Le badge évolue secrètement si la série parfaite se prolonge...</p>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-4 p-5 bg-indigo-50 rounded-3xl border border-indigo-100 shadow-sm transition-transform hover:scale-[1.02]">
@@ -280,16 +281,16 @@ function FAQContent() {
                                         <span className="text-[9px] sm:text-xs font-black text-yellow-600 bg-yellow-100 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full">Variable</span>
                                     </div>
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 text-[10px] font-black text-yellow-800 uppercase tabular-nums">
-                                         <div className="flex justify-between"><span>🔹 T1</span><span>500</span></div>
-                                         <div className="flex justify-between"><span>🔹 Avr</span><span>650</span></div>
-                                         <div className="flex justify-between"><span>🔹 Mai</span><span>800</span></div>
-                                         <div className="flex justify-between"><span>🔹 Juin</span><span>1000</span></div>
-                                         <div className="flex justify-between"><span>🔹 Juil</span><span>1250</span></div>
-                                         <div className="flex justify-between"><span>🔹 Août</span><span>1500</span></div>
-                                         <div className="flex justify-between"><span>🔹 Sept</span><span>1800</span></div>
-                                         <div className="flex justify-between"><span>🔹 Oct</span><span>2200</span></div>
-                                         <div className="flex justify-between col-span-2"><span>🔹 Nov</span><span>2600</span></div>
-                                         <div className="flex justify-between col-span-2 text-yellow-900 ring-1 ring-yellow-300 p-1 text-center bg-yellow-400/10 rounded-lg"><span>🔥 Déc</span><span>3000 XP</span></div>
+                                        <div className="flex justify-between"><span>🔹 T1</span><span>500</span></div>
+                                        <div className="flex justify-between"><span>🔹 Avr</span><span>650</span></div>
+                                        <div className="flex justify-between"><span>🔹 Mai</span><span>800</span></div>
+                                        <div className="flex justify-between"><span>🔹 Juin</span><span>1000</span></div>
+                                        <div className="flex justify-between"><span>🔹 Juil</span><span>1250</span></div>
+                                        <div className="flex justify-between"><span>🔹 Août</span><span>1500</span></div>
+                                        <div className="flex justify-between"><span>🔹 Sept</span><span>1800</span></div>
+                                        <div className="flex justify-between"><span>🔹 Oct</span><span>2200</span></div>
+                                        <div className="flex justify-between col-span-2"><span>🔹 Nov</span><span>2600</span></div>
+                                        <div className="flex justify-between col-span-2 text-yellow-900 ring-1 ring-yellow-300 p-1 text-center bg-yellow-400/10 rounded-lg"><span>🔥 Déc</span><span>3000 XP</span></div>
                                     </div>
                                 </div>
                                 <div className="p-5 border border-gray-100 rounded-3xl flex justify-between items-center bg-gray-50/50">
@@ -385,7 +386,7 @@ function FAQContent() {
                                 <div className="space-y-4">
                                     <div className="relative max-w-md mx-auto">
                                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-300" size={18} />
-                                        <input 
+                                        <input
                                             type="text"
                                             placeholder="Trouver un badge..."
                                             value={searchQuery}
@@ -410,7 +411,7 @@ function FAQContent() {
 
                         <div className="space-y-12">
                             {["COMPETITIVE", "LEGENDARY", "MILESTONE", "EVENT"].filter(t => filter === 'ALL' || filter === t).map(type => {
-                                const badges = BADGE_DEFINITIONS.filter(b => 
+                                const badges = BADGE_DEFINITIONS.filter(b =>
                                     b.type === type && (searchQuery === "" || b.name.toLowerCase().includes(searchQuery.toLowerCase()) || b.description.toLowerCase().includes(searchQuery.toLowerCase()))
                                 );
                                 if (badges.length === 0) return null;
@@ -422,9 +423,9 @@ function FAQContent() {
                                         </div>
                                         <div className="grid grid-cols-1 gap-6">
                                             {badges.map(badge => (
-                                                <div 
-                                                    key={badge.key} 
-                                                    id={`item-${badge.key}`} 
+                                                <div
+                                                    key={badge.key}
+                                                    id={`item-${badge.key}`}
                                                     className={`group bg-white rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 shadow-sm border-2 transition-all hover:shadow-xl scroll-mt-24 ${badge.rarity === 'LEGENDARY' ? 'border-orange-100/50 hover:border-orange-200' : badge.rarity === 'EPIC' ? 'border-purple-100/50 hover:border-purple-200' : 'border-gray-50 hover:border-indigo-100'}`}
                                                 >
                                                     <div className="flex flex-col sm:flex-row gap-6 sm:gap-10">
@@ -484,8 +485,8 @@ function FAQContent() {
                             <h2 className="text-2xl font-black uppercase italic tracking-tighter">Dernières Mises à Jour</h2>
                         </section>
                         <div className="space-y-6">
-                             <p className="text-center font-black text-gray-400 uppercase tracking-widest text-[10px]">Découvrez les nouveaux trophées récemment ajoutés !</p>
-                             <div className="grid grid-cols-1 gap-4">
+                            <p className="text-center font-black text-gray-400 uppercase tracking-widest text-[10px]">Découvrez les nouveaux trophées récemment ajoutés !</p>
+                            <div className="grid grid-cols-1 gap-4">
                                 {BADGE_DEFINITIONS.filter(b => b.addedAt).sort((a, b) => b.addedAt!.localeCompare(a.addedAt!)).slice(0, 5).map(badge => (
                                     <div key={badge.key} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex items-center justify-between group hover:border-pink-200 transition-all">
                                         <div className="flex items-center gap-4">
@@ -495,7 +496,7 @@ function FAQContent() {
                                                 <p className="text-[9px] font-bold text-gray-500">{badge.description}</p>
                                             </div>
                                         </div>
-                                        <button 
+                                        <button
                                             onClick={() => {
                                                 setActiveTab('catalogue');
                                                 setTimeout(() => {
@@ -509,7 +510,7 @@ function FAQContent() {
                                         </button>
                                     </div>
                                 ))}
-                             </div>
+                            </div>
                         </div>
                     </div>
                 )}
