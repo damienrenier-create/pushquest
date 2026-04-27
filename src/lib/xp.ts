@@ -161,7 +161,7 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
     summaries.forEach(s => {
         const volDay = s.getDayTotal(todayISO);
         const volMonth = s.getMonthTotal(currentMonthPrefix);
-        const volYear = s.totalAll; 
+        const volYear = s.totalAll;
 
         if (volDay > maxVolDay) { maxVolDay = volDay; maxVolDayUser = s.id; }
         if (volMonth > maxVolMonth) { maxVolMonth = volMonth; maxVolMonthUser = s.id; }
@@ -178,7 +178,7 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
         let totalXP = 0;
         let regularityXP = 0;
         const sets = u.sets || [];
-        
+
         const marvinBonusDate = "2026-03-08";
         const isMarvinDay = todayISO === marvinBonusDate;
 
@@ -213,7 +213,7 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
                 const userNickname = (u.nickname || "").toLowerCase();
                 const isMilkaBday = d.endsWith("-11-17") && (userNickname.includes("milka") || userNickname.includes("milkardashian"));
                 const isMoolsBday = d.endsWith("-09-26") && (userNickname === "mools" || userNickname === "commissaire");
-                
+
                 if (isMilkaBday || isMoolsBday) {
                     // Check if they were #1 that day
                     const isWinner = summaries.every(s => s.id === u.id || s.getDayTotal(d) < dayTotal);
@@ -222,13 +222,13 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
 
                 regularityXP += dayXP;
                 totalXP += dayXP;
-                
+
                 // Specific Event XP
                 if (d === marvinBonusDate) {
                     regularityXP += 500;
                     totalXP += 500;
                 }
-                
+
                 // --- Chronological/Surgical Event Logic ---
                 if (d === "2026-03-20" || d === "2026-09-22") { // Equinoxes
                     const p = summary.getDaySum(d, "PUSHUP");
@@ -236,7 +236,7 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
                     if (p > 0 && p === s) {
                         regularityXP += 250;
                         totalXP += 250;
-                    } 
+                    }
                 }
                 if (d === "2026-04-05") { // Pâques
                     const dayReps = summary.getScaleReps(d);
@@ -254,7 +254,7 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
                     totalXP += 500;
                 } // St Nicolas
                 if (d === "2026-12-21") { // Solstice Hiver
-                    const hoursWithReps = new Set(sets.filter((s:any) => s.date === d).map((s:any) => new Date(s.createdAt).getHours()));
+                    const hoursWithReps = new Set(sets.filter((s: any) => s.date === d).map((s: any) => new Date(s.createdAt).getHours()));
                     if (hoursWithReps.size >= 12) {
                         regularityXP += 500;
                         totalXP += 500;
@@ -266,8 +266,8 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
                     const scaleSquats = (summary as any).getScaleRepsByExo(d, "SQUAT");
                     const target = Array.from({ length: 15 }, (_, i) => i + 1);
                     const hasScale = target.every(n => scalePushups.includes(n)) &&
-                                     target.every(n => scalePullups.includes(n)) &&
-                                     target.every(n => scaleSquats.includes(n));
+                        target.every(n => scalePullups.includes(n)) &&
+                        target.every(n => scaleSquats.includes(n));
                     if (hasScale) {
                         regularityXP += 500;
                         totalXP += 500;
@@ -292,7 +292,7 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
             }
 
             const badgeXP = getXPForReward(b.badgeKey, { ...b, currentStreak: streak } as any);
-            
+
             // Featured badge bonus
             let finalBadgeXP = badgeXP;
             if (featuredBadgeKey === b.badgeKey) {
@@ -301,7 +301,7 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
 
             badgeXPContribution += finalBadgeXP;
             totalXP += finalBadgeXP;
-            
+
             return { ...displayBadge, xp: finalBadgeXP };
         });
 
@@ -316,6 +316,10 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
         // F. Ajustements Manuels
         const manualXP = (u.xpAdjustments || []).reduce((acc: number, adj: any) => acc + adj.amount, 0);
         totalXP += manualXP;
+
+        // Le Flambeau (+100 XP par flambeau remporté - Cumulatif)
+        const flambeauXP = (summary.sprinterCount || 0) * 100;
+        totalXP += flambeauXP;
 
         // G. Final Level Calc
         const level = calculateLevel(totalXP);
@@ -344,6 +348,7 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
                 badgesXP: badgeXPContribution,
                 finesXP: (summary.totalFinesAmount * 50),
                 recordsXP: (u.id === maxVolDayUser ? 250 : 0) + (u.id === maxVolMonthUser ? 1000 : 0) + (u.id === maxVolYearUser ? 2500 : 0),
+                flambeauXP,
                 manualXP
             }
         });

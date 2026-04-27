@@ -376,6 +376,15 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
                     lastHour = h as number;
                 }
                 return maxStreak >= 12;
+            },
+            hasSallyUpParticipation: (dateISO: string) => {
+                const sUps = u.sallyUps || [];
+                return sUps.some((s: any) => s.date === dateISO && s.seconds > 0);
+            },
+            getSallyUpSeconds: (dateISO: string) => {
+                const sUps = u.sallyUps || [];
+                const record = sUps.find((s: any) => s.date === dateISO);
+                return record ? record.seconds : 0;
             }
         };
     });
@@ -383,7 +392,7 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
 
 export async function updateBadgesPostSave(userId: string, precomputedSummaries?: any[]) {
     const [allUsers, steals, allOwnerships] = await Promise.all([
-        (prisma as any).user.findMany({ where: { nickname: { not: 'modo' } }, include: { sets: true, fines: true, badges: true } }),
+        (prisma as any).user.findMany({ where: { nickname: { not: 'modo' } }, include: { sets: true, fines: true, badges: true, sallyUps: true } }),
         (prisma as any).badgeEvent.findMany({ where: { eventType: "STEAL" } }),
         (prisma as any).badgeOwnership.findMany()
     ]);
@@ -631,6 +640,24 @@ export async function updateBadgesPostSave(userId: string, precomputedSummaries?
             const today = getTodayISO();
             for (const s of summaries) { if (s.hasTrinityUltimate(today)) await awardMilestone(s.id, def.key, 1); }
             continue;
+        } else if (def.metricType === "SALLY_PART") {
+            const today = getTodayISO();
+            if (isLastDayOfMonth(today)) {
+                for (const s of summaries) {
+                    if (s.hasSallyUpParticipation(today)) await awardMilestone(s.id, def.key, 1);
+                }
+            }
+            continue;
+        } else if (def.metricType === "SALLY_PODIUM") {
+            const today = getTodayISO();
+            if (isLastDayOfMonth(today)) {
+                summaries.forEach((s: any) => {
+                    const val = s.getSallyUpSeconds(today);
+                    if (val > bestValue || (val === bestValue && bestValue > 0 && isBetterTieBreak(s, bestUser, "totalAll"))) {
+                        bestValue = val; bestUser = s;
+                    }
+                });
+            }
         } else if (def.metricType === "FIRST_REACH") {
             const scope = def.exerciseScope === "PUSHUPS" ? "maxSetPushups" : def.exerciseScope === "PULLUPS" ? "maxSetPullups" : "maxSetSquats";
             summaries.forEach((s: any) => {
