@@ -464,6 +464,18 @@ export async function GET(req: Request) {
         // Sort by criticality: percentage descending (closer to 1 = more dangerous)
         dangerList.sort((a, b) => b.percent - a.percent);
 
+        // --- Hourly Distribution (Pic d'activité) ---
+        const hourlyDistribution: Record<number, number> = {};
+        (currentUser.sets || []).forEach((set: any) => {
+            const hour = new Date(set.createdAt).getHours();
+            hourlyDistribution[hour] = (hourlyDistribution[hour] || 0) + (set.reps || 0);
+        });
+
+        const hourlyData = Array.from({ length: 24 }, (_, i) => ({
+            hour: i,
+            reps: hourlyDistribution[i] || 0
+        }));
+
         return NextResponse.json({
             todayISO: today,
             selectedDateISO: selectedDate,
@@ -524,7 +536,8 @@ export async function GET(req: Request) {
             graphs: {
                 myDaily: myDaily30,
                 myDaily365: myDaily365
-            }
+            },
+            hourlyData
         });
 
     } catch (error) {
