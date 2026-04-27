@@ -318,6 +318,9 @@ export default function UserProfilePage() {
                 </section>
             )}
 
+            {/* Yesterday Recap Section */}
+            <YesterdayXpRecap recap={analyticsData?.yesterdayRecap} />
+
             {/* Navigation Tabs */}
             <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200 w-fit mx-auto sm:mx-0">
                 <button
@@ -335,9 +338,6 @@ export default function UserProfilePage() {
                     Historique
                 </button>
             </div>
-
-            {/* Yesterday Recap Section */}
-            <YesterdayXpRecap recap={analyticsData?.yesterdayRecap} />
 
             {/* Analytics Section */}
             <section className="bg-white rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 shadow-sm border border-gray-100 space-y-10">
