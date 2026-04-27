@@ -549,9 +549,9 @@ export default function PantheonClient({
                                             </div>
 
                                             {/* Tooltip Hover */}
-                                            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 bg-slate-900 text-white text-[10px] font-bold p-3 rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 shadow-xl">
-                                                <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 rotate-45"></div>
-                                                <p className="text-indigo-300 mb-1">{b.badge?.name}</p>
+                                            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 bg-white border border-slate-100 text-slate-800 text-[10px] font-bold p-3 rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 shadow-xl">
+                                                <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white border-t border-l border-slate-100 rotate-45"></div>
+                                                <p className="text-indigo-600 mb-1">{b.badge?.name}</p>
                                                 {b.badge?.description}
                                             </div>
                                         </div>
@@ -583,9 +583,9 @@ export default function PantheonClient({
                                                 {!!value && <Star className="text-yellow-400 fill-yellow-400" size={14} />}
 
                                                 {/* Tooltip Hover */}
-                                                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 bg-slate-900 text-white text-[10px] font-bold p-3 rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 shadow-xl">
-                                                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 rotate-45"></div>
-                                                    <p className="text-purple-300 mb-1">{def.name}</p>
+                                                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 bg-white border border-slate-100 text-slate-800 text-[10px] font-bold p-3 rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 shadow-xl">
+                                                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white border-t border-l border-slate-100 rotate-45"></div>
+                                                    <p className="text-purple-600 mb-1">{def.name}</p>
                                                     {def.description}
                                                     {!value && <p className="mt-2 text-slate-400 font-normal italic">Objectif non rempli.</p>}
                                                 </div>

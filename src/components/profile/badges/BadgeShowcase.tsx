@@ -20,74 +20,78 @@ const BadgeShowcase: React.FC<BadgeShowcaseProps> = ({ category, defaultOpen = f
     const totalCount = earnedCount + pendingCount;
 
     return (
-        <div className="mb-6 border border-slate-800/60 rounded-3xl overflow-hidden bg-slate-900/40 backdrop-blur-md shadow-2xl transition-all duration-500">
+        <div className="mb-8 border border-slate-100 rounded-[2.5rem] overflow-hidden bg-white/50 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-500">
             {/* Header / Accordion Trigger */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full px-6 py-6 flex items-center justify-between hover:bg-slate-800/30 transition-colors"
+                className="w-full px-6 py-6 flex items-center justify-between hover:bg-slate-50/80 transition-colors"
             >
-                <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center text-2xl shadow-lg border border-slate-700/30">
+                <div className="flex items-center gap-5">
+                    <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-3xl shadow-inner border border-slate-100">
                         {category.emoji}
                     </div>
                     <div className="text-left">
-                        <h2 className="text-xl font-black text-slate-100 tracking-tight">{category.label}</h2>
-                        <div className="flex items-center gap-3 mt-1">
-                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-slate-800/50 px-2 py-0.5 rounded-full border border-slate-700/30 flex items-center gap-1">
-                                <Trophy size={10} className="text-amber-500" />
+                        <h2 className="text-2xl font-black text-slate-900 tracking-tight leading-none mb-2">{category.label}</h2>
+                        <div className="flex items-center gap-3">
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-white px-2.5 py-1 rounded-xl border border-slate-100 flex items-center gap-1.5 shadow-sm">
+                                <Trophy size={11} className="text-amber-500" />
                                 {earnedCount} ACQUIS
                             </span>
-                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-slate-800/50 px-2 py-0.5 rounded-full border border-slate-700/30 flex items-center gap-1">
-                                <Sparkles size={10} className="text-blue-500" />
-                                {pendingCount} DEFIS
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-white px-2.5 py-1 rounded-xl border border-slate-100 flex items-center gap-1.5 shadow-sm">
+                                <Sparkles size={11} className="text-indigo-500" />
+                                {pendingCount} À CONQUÉRIR
                             </span>
                         </div>
                     </div>
                 </div>
 
-                <div className={`p-2 rounded-full bg-slate-800/80 text-slate-400 transition-transform duration-500 ${isOpen ? 'rotate-180' : ''}`}>
+                <div className={`p-2.5 rounded-full bg-slate-50 text-slate-400 border border-slate-100 transition-transform duration-500 ${isOpen ? 'rotate-180 text-indigo-600 border-indigo-100 bg-indigo-50' : ''}`}>
                     <ChevronDown size={20} />
                 </div>
             </button>
 
             {/* Content */}
-            <div className={`transition-all duration-700 ease-in-out ${isOpen ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                <div className="p-4 border-t border-slate-800/40 space-y-2">
+            <div className={`transition-all duration-700 ease-in-out ${isOpen ? 'max-h-[3000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                <div className="p-6 border-t border-slate-50 space-y-4">
 
                     {/* Floor 1: Earned */}
                     {earnedCount > 0 ? (
-                        <BadgeCarousel title="Exploits Réalisés" subtitle="Vos trophées durement gagnés">
-                            {category.earned.map((badge: any) => {
-                                const bo = badgeOwnerships.find(o => o.badgeKey === badge.key);
-                                const holder = bo ? { nickname: bo.currentUser?.nickname, value: bo.currentValue } : null;
-                                return <BadgeCard key={badge.key} badge={badge} isPending={false} holder={holder} personalRecord={currentUserRecords[badge.key]} />;
-                            })}
-                        </BadgeCarousel>
+                        <div className="bg-white/40 rounded-3xl p-2 border border-slate-50 shadow-inner">
+                            <BadgeCarousel title="Trophées Acquis" subtitle="Tes victoires éclatantes">
+                                {category.earned.map((badge: any) => {
+                                    const bo = badgeOwnerships.find(o => o.badgeKey === badge.key);
+                                    const holder = bo ? { nickname: bo.currentUser?.nickname, value: bo.currentValue } : null;
+                                    return <BadgeCard key={badge.key} badge={badge} isPending={false} holder={holder} personalRecord={currentUserRecords[badge.key]} />;
+                                })}
+                            </BadgeCarousel>
+                        </div>
                     ) : (
-                        <div className="py-8 text-center text-slate-600 italic text-sm">
-                            Aucun exploit dans cette catégorie pour le moment...
+                        <div className="py-12 text-center text-slate-400 font-bold uppercase tracking-widest text-[10px] bg-slate-50/50 rounded-3xl border border-dashed border-slate-200">
+                            Aucun exploit dans cette vitrine...
                         </div>
                     )}
 
                     {/* Divider */}
-                    <div className="relative h-px w-full bg-gradient-to-r from-transparent via-slate-800 to-transparent my-2">
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-4 bg-slate-900 text-[10px] font-black text-slate-700 uppercase tracking-widest">
-                            Arsenal & Défis
+                    <div className="relative h-px w-full bg-slate-100 my-6">
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-6 bg-white text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">
+                            CHALLENGES
                         </div>
                     </div>
 
                     {/* Floor 2: Pending */}
                     {pendingCount > 0 ? (
-                        <BadgeCarousel title="Prochains Défis" subtitle="Ce qu'il vous reste à conquérir">
-                            {category.pending.map((badge: any) => {
-                                const bo = badgeOwnerships.find(o => o.badgeKey === badge.key);
-                                const holder = bo ? { nickname: bo.currentUser?.nickname, value: bo.currentValue } : null;
-                                return <BadgeCard key={badge.key} badge={badge} isPending={true} holder={holder} personalRecord={currentUserRecords[badge.key]} />;
-                            })}
-                        </BadgeCarousel>
+                        <div className="bg-white/40 rounded-3xl p-2 border border-slate-50 shadow-inner">
+                            <BadgeCarousel title="Prochains Défis" subtitle="Ce qu'il te reste à accomplir">
+                                {category.pending.map((badge: any) => {
+                                    const bo = badgeOwnerships.find(o => o.badgeKey === badge.key);
+                                    const holder = bo ? { nickname: bo.currentUser?.nickname, value: bo.currentValue } : null;
+                                    return <BadgeCard key={badge.key} badge={badge} isPending={true} holder={holder} personalRecord={currentUserRecords[badge.key]} />;
+                                })}
+                            </BadgeCarousel>
+                        </div>
                     ) : (
-                        <div className="py-8 text-center text-slate-600 italic text-sm">
-                            Félicitations, vous avez conquis tous les défis de cette vitrine !
+                        <div className="py-12 text-center text-indigo-400 font-black uppercase tracking-widest text-[10px] bg-indigo-50/30 rounded-3xl border border-dashed border-indigo-100">
+                            👏 VITRINE COMPLÉTÉE 👏
                         </div>
                     )}
                 </div>
