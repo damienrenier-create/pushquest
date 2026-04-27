@@ -51,7 +51,7 @@ async function audit() {
         console.log(`- Badges XP: ${report?.badgesXP}`);
         console.log(`- Manual XP: ${report?.manualXP}`);
 
-        if (report?.badgesDetail.length > 0) {
+        if (report && report.badgesDetail && report.badgesDetail.length > 0) {
             console.log("Badges Detail:");
             report.badgesDetail.forEach((b: any) => {
                 console.log(`  * ${b.emoji} ${b.name}: +${b.xp} XP`);

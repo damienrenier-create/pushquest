@@ -20,7 +20,8 @@ import {
     CircleDashed,
     RefreshCw,
     Zap,
-    ArrowRight
+    ArrowRight,
+    ChevronDown
 } from "lucide-react";
 import { SPECIAL_DAYS } from "@/config/specialDays";
 import { useRouter } from "next/navigation";
@@ -499,10 +500,19 @@ export default function PantheonClient({
                             {/* Transferable / Earned Badges */}
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between mb-4">
-                                    <p className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Titres Possédés</p>
-                                    {!showAllPersonalBadges && (
-                                        <span className="text-[10px] font-black text-orange-500 bg-orange-50 px-2 py-0.5 rounded-full animate-pulse">DERNIER EXPLOITS</span>
-                                    )}
+                                    <div className="flex items-baseline gap-3">
+                                        <p className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Titres Possédés</p>
+                                        {!showAllPersonalBadges && (
+                                            <span className="text-[10px] font-black text-orange-500 bg-orange-50 px-2 py-0.5 rounded-full animate-pulse">LES + CHAUDS</span>
+                                        )}
+                                    </div>
+                                    <button
+                                        onClick={() => setShowAllPersonalBadges(!showAllPersonalBadges)}
+                                        className="text-[9px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-full transition-colors flex items-center gap-1.5"
+                                    >
+                                        {showAllPersonalBadges ? "Réduire" : `Voir tout (${badgeOwnerships.filter(bo => bo.currentUserId === currentUser?.id).length})`}
+                                        <ChevronDown size={10} className={`transition-transform ${showAllPersonalBadges ? 'rotate-180' : ''}`} />
+                                    </button>
                                 </div>
                                 {(() => {
                                     const allPersonal = badgeOwnerships

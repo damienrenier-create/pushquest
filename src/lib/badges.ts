@@ -698,13 +698,17 @@ export async function updateBadgesPostSave(userId: string, precomputedSummaries?
                 ? (def.isUnique ? "UNIQUE_AWARDED" : "CLAIM")
                 : (isSameUser ? "CLAIM" : "STEAL");
 
+            const isSameRecord = ownership &&
+                ownership.currentUserId === (bestUser as any).id &&
+                ownership.currentValue === bestValue;
+
             try {
                 await (prisma as any).badgeOwnership.upsert({
                     where: { badgeKey: def.key },
                     update: {
                         currentUserId: (bestUser as any).id,
                         currentValue: bestValue,
-                        achievedAt: new Date(),
+                        achievedAt: isSameRecord ? ownership.achievedAt : new Date(),
                         locked: def.isUnique
                     },
                     create: {
