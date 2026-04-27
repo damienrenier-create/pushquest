@@ -22,6 +22,7 @@ export async function initBadges() {
 export function getUserSummaries(allUsers: any[], allEvents: any[]) {
     // 1. Pre-process sprinter stats more efficiently
     const sprinterCounts: Record<string, number> = {};
+    const winnersByDate: Record<string, string> = {};
     allUsers.forEach(u => sprinterCounts[u.id] = 0);
 
     // Group sets by date for global processing
@@ -45,6 +46,7 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             userProgress[s.userId] = (userProgress[s.userId] || 0) + s.reps;
             if (userProgress[s.userId] >= req) {
                 sprinterCounts[s.userId]++;
+                winnersByDate[date] = s.userId;
                 break; // Day winner found
             }
         }
@@ -56,6 +58,8 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
         if (!stealEventsByToUser[e.toUserId]) stealEventsByToUser[e.toUserId] = [];
         stealEventsByToUser[e.toUserId].push(e);
     });
+
+    const sortedWinningDates = Object.keys(winnersByDate).sort();
 
     return allUsers.map((u: any) => {
         const sets = u.sets || [];
@@ -76,7 +80,7 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
         let currentMonoExoStreak = 0;
         let maxTriExoStreak = 0;
         let currentTriExoStreak = 0;
-        
+
         let totalPushups = 0;
         let totalPullups = 0;
         let totalSquats = 0;
@@ -84,9 +88,9 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
         let maxSetPullups = 0;
         let maxSetSquats = 0;
         let maxSetAll = 0;
-        
+
         const setsByExoTarget: Record<string, number> = {};
-        
+
         let earlyStreakMax = 0;
         let earlyStreakCur = 0;
         let lateStreakMax = 0;
@@ -95,6 +99,28 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
         let noonStreakCur = 0;
         let fineFreeStreakMax = 0;
         let fineFreeStreakCur = 0;
+
+        let maxTorchStreak = 0;
+        let currentTorchStreak = 0;
+        let lastWinDate: Date | null = null;
+
+        sortedWinningDates.forEach(dateStr => {
+            if (winnersByDate[dateStr] === u.id) {
+                const dateObj = new Date(dateStr);
+                if (lastWinDate) {
+                    const diffDays = Math.round((dateObj.getTime() - lastWinDate.getTime()) / (1000 * 3600 * 24));
+                    if (diffDays === 1) currentTorchStreak++;
+                    else currentTorchStreak = 1;
+                } else {
+                    currentTorchStreak = 1;
+                }
+                lastWinDate = dateObj;
+                if (currentTorchStreak > maxTorchStreak) maxTorchStreak = currentTorchStreak;
+            } else {
+                currentTorchStreak = 0;
+                lastWinDate = null;
+            }
+        });
 
         let maxDayPushups = 0;
         let maxDaySquats = 0;
@@ -200,7 +226,7 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             const weekPushups = weekSets.filter((s: any) => s.exercise === "PUSHUP").reduce((sum: number, s: any) => sum + s.reps, 0);
             const weekSquats = weekSets.filter((s: any) => s.exercise === "SQUAT").reduce((sum: number, s: any) => sum + s.reps, 0);
             const weekAll = weekSets.reduce((sum: number, s: any) => sum + s.reps, 0);
-            
+
             if (weekPushups > maxWeekPushups) maxWeekPushups = weekPushups;
             if (weekSquats > maxWeekSquats) maxWeekSquats = weekSquats;
             if (weekAll > maxWeekAll) maxWeekAll = weekAll;
@@ -240,6 +266,7 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             lateStreak: lateStreakMax,
             noonStreak: noonStreakMax,
             checkDatePlayed: (dateStr: string) => {
+                if (!dateStr) return false;
                 const target = dateStr.startsWith('-') ? "2026" + dateStr : dateStr;
                 return !!datePlayedMap[target];
             },
@@ -257,6 +284,7 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             hasStDamien: sets.some((s: any) => s.date.endsWith("-12-18")),
             hasStNicolas: sets.some((s: any) => s.date.endsWith("-12-06")),
             fineFreeStreak: fineFreeStreakMax,
+            maxTorchStreak,
             sprinterCount: sprinterCounts[u.id] || 0,
             headhunterCount: u.featuredClaimsCount || 0,
             getDayTotal: (date: string) => sets.filter((s: any) => s.date === date).reduce((sum: number, s: any) => sum + s.reps, 0),
@@ -330,14 +358,14 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
                     const date = new Date(s.createdAt);
                     return date.getHours();
                 }));
-                
+
                 if (activeHours.size < 12) return false;
-                
+
                 const sortedHours = Array.from(activeHours).sort((a: any, b: any) => (a as number) - (b as number));
                 let maxStreak = 0;
                 let currentStreak = 0;
                 let lastHour = -2;
-                
+
                 for (const h of sortedHours) {
                     if ((h as number) === lastHour + 1) {
                         currentStreak++;
@@ -429,6 +457,12 @@ export async function updateBadgesPostSave(userId: string, precomputedSummaries?
                 const count = s.setsByTarget(exo, def.seriesTarget!);
                 if (count > bestValue || (count === bestValue && bestValue > 0 && isBetterTieBreak(s, bestUser, totalKey))) {
                     bestValue = count; bestUser = s;
+                }
+            });
+        } else if (def.metricType === "TORCH_STREAK") {
+            summaries.forEach((s: any) => {
+                if (s.maxTorchStreak > bestValue || (s.maxTorchStreak === bestValue && bestValue > 0 && isBetterTieBreak(s, bestUser, "totalAll"))) {
+                    bestValue = s.maxTorchStreak; bestUser = s;
                 }
             });
         } else if (def.metricType === "MILESTONE_SET") {
@@ -610,7 +644,7 @@ export async function updateBadgesPostSave(userId: string, precomputedSummaries?
 
         if (bestUser && bestValue > 0) {
             const isSameUser = ownership?.currentUserId === bestUser.id;
-            
+
             // Historical Record Logic: Only award if strictly better than the current record
             const isBetterValue = bestValue > (ownership?.currentValue || 0);
 
@@ -631,79 +665,90 @@ export async function updateBadgesPostSave(userId: string, precomputedSummaries?
                 ? (def.isUnique ? "UNIQUE_AWARDED" : "CLAIM")
                 : (isSameUser ? "CLAIM" : "STEAL");
 
-            await (prisma as any).badgeOwnership.update({
-                where: { badgeKey: def.key },
-                data: {
-                    currentUserId: (bestUser as any).id,
-                    currentValue: bestValue,
-                    achievedAt: new Date(),
-                    locked: def.isUnique
-                }
-            });
-
-            await (prisma as any).badgeEvent.create({
-                data: {
-                    badgeKey: def.key,
-                    fromUserId: isSameUser ? null : ownership?.currentUserId,
-                    toUserId: (bestUser as any).id,
-                    eventType,
-                    previousValue: ownership?.currentValue,
-                    newValue: bestValue
-                }
-            });
-
-            // --- VENDETTA BONUS LOGIC ---
-            if (eventType === "STEAL" && !isSameUser && ownership?.currentUserId) {
-                // Find if the person who just stole it (bestUser.id) was the one who lost it previously
-                const lastEvents = await (prisma as any).badgeEvent.findMany({
+            try {
+                await (prisma as any).badgeOwnership.upsert({
                     where: { badgeKey: def.key },
-                    orderBy: { createdAt: 'desc' },
-                    take: 3 // Current one + the one where bestUser lost it + maybe one before
+                    update: {
+                        currentUserId: (bestUser as any).id,
+                        currentValue: bestValue,
+                        achievedAt: new Date(),
+                        locked: def.isUnique
+                    },
+                    create: {
+                        badgeKey: def.key,
+                        currentUserId: (bestUser as any).id,
+                        currentValue: bestValue,
+                        achievedAt: new Date(),
+                        locked: def.isUnique
+                    }
                 });
 
-                // lastEvents[0] is the one we just created.
-                // lastEvents[1] should be the one where ownership.currentUserId stole it from bestUser.id
-                const prevEvent = lastEvents[1];
-                if (prevEvent && prevEvent.fromUserId === bestUser.id && prevEvent.toUserId === ownership.currentUserId) {
-                    const timeSinceLoss = Date.now() - new Date(prevEvent.createdAt).getTime();
-                    if (timeSinceLoss < 24 * 60 * 60 * 1000) {
-                        // Vendetta confirmed! 
-                        // We need the duration bestUser held it *before* losing it.
-                        // We look for the event where bestUser gained it lastEvents[2] or older
-                        const gainEvent = await (prisma as any).badgeEvent.findFirst({
-                            where: { badgeKey: def.key, toUserId: bestUser.id, createdAt: { lt: prevEvent.createdAt } },
-                            orderBy: { createdAt: 'desc' }
-                        });
-                        
-                        if (gainEvent) {
-                            const heldDurationMs = new Date(prevEvent.createdAt).getTime() - new Date(gainEvent.createdAt).getTime();
-                            const heldDays = Math.max(1, Math.floor(heldDurationMs / (24 * 60 * 60 * 1000)));
-                            const bonusXP = Math.min(heldDays * 50, 1000);
+                await (prisma as any).badgeEvent.create({
+                    data: {
+                        badgeKey: def.key,
+                        fromUserId: isSameUser ? null : ownership?.currentUserId,
+                        toUserId: (bestUser as any).id,
+                        eventType,
+                        previousValue: ownership?.currentValue,
+                        newValue: bestValue
+                    }
+                });
 
-                            // Award XP Adjustment
-                            await (prisma as any).xpAdjustment.create({
-                                data: {
-                                    userId: bestUser.id,
-                                    amount: bonusXP,
-                                    reason: `Vendetta : Récupération du badge ${def.name} (${heldDays}j de possession vengés)`
-                                }
+                // --- VENDETTA BONUS LOGIC ---
+                if (eventType === "STEAL" && !isSameUser && ownership?.currentUserId) {
+                    // Find if the person who just stole it (bestUser.id) was the one who lost it previously
+                    const lastEvents = await (prisma as any).badgeEvent.findMany({
+                        where: { badgeKey: def.key },
+                        orderBy: { createdAt: 'desc' },
+                        take: 3 // Current one + the one where bestUser lost it + maybe one before
+                    });
+
+                    // lastEvents[0] is the one we just created.
+                    // lastEvents[1] should be the one where ownership.currentUserId stole it from bestUser.id
+                    const prevEvent = lastEvents[1];
+                    if (prevEvent && prevEvent.fromUserId === bestUser.id && prevEvent.toUserId === ownership.currentUserId) {
+                        const timeSinceLoss = Date.now() - new Date(prevEvent.createdAt).getTime();
+                        if (timeSinceLoss < 24 * 60 * 60 * 1000) {
+                            // Vendetta confirmed! 
+                            // We need the duration bestUser held it *before* losing it.
+                            // We look for the event where bestUser gained it lastEvents[2] or older
+                            const gainEvent = await (prisma as any).badgeEvent.findFirst({
+                                where: { badgeKey: def.key, toUserId: bestUser.id, createdAt: { lt: prevEvent.createdAt } },
+                                orderBy: { createdAt: 'desc' }
                             });
+
+                            if (gainEvent) {
+                                const heldDurationMs = new Date(prevEvent.createdAt).getTime() - new Date(gainEvent.createdAt).getTime();
+                                const heldDays = Math.max(1, Math.floor(heldDurationMs / (24 * 60 * 60 * 1000)));
+                                const bonusXP = Math.min(heldDays * 50, 1000);
+
+                                // Award XP Adjustment
+                                await (prisma as any).xpAdjustment.create({
+                                    data: {
+                                        userId: bestUser.id,
+                                        amount: bonusXP,
+                                        reason: `Vendetta : Récupération du badge ${def.name} (${heldDays}j de possession vengés)`
+                                    }
+                                });
+                            }
                         }
                     }
                 }
-            }
-            // --- END VENDETTA ---
+                // --- END VENDETTA ---
 
-            // Featured Badge Logic
-            const featured = await (prisma as any).globalConfig.findUnique({ where: { key: "featuredBadgeKey" } });
-            if (featured && featured.value === def.key) {
-                // Increment count
-                await (prisma as any).user.update({
-                    where: { id: (bestUser as any).id },
-                    data: { featuredClaimsCount: { increment: 1 } }
-                });
-                // Rotate immediately
-                await rotateFeaturedBadge();
+                // Featured Badge Logic
+                const featured = await (prisma as any).globalConfig.findUnique({ where: { key: "featuredBadgeKey" } });
+                if (featured && featured.value === def.key) {
+                    // Increment count
+                    await (prisma as any).user.update({
+                        where: { id: (bestUser as any).id },
+                        data: { featuredClaimsCount: { increment: 1 } }
+                    });
+                    // Rotate immediately
+                    await rotateFeaturedBadge();
+                }
+            } catch (error) {
+                console.error(`Error updating unique badge ownership for ${def.key}:`, error);
             }
         }
     }
@@ -723,14 +768,14 @@ export async function updateBadgesPostSave(userId: string, precomputedSummaries?
 
 export async function rotateFeaturedBadge() {
     // Pick a random badge that is NOT unique or legendary or event
-    const possibleBadges = BADGE_DEFINITIONS.filter(b => 
-        !b.isUnique && 
-        b.type !== "LEGENDARY" && 
+    const possibleBadges = BADGE_DEFINITIONS.filter(b =>
+        !b.isUnique &&
+        b.type !== "LEGENDARY" &&
         b.type !== "EVENT" &&
         b.metricType !== "HEADHUNTER_COUNT"
     );
     const randomBadge = possibleBadges[Math.floor(Math.random() * possibleBadges.length)];
-    
+
     await (prisma as any).globalConfig.upsert({
         where: { key: "featuredBadgeKey" },
         update: { value: randomBadge.key, updatedAt: new Date() },
@@ -739,24 +784,28 @@ export async function rotateFeaturedBadge() {
 }
 
 async function awardMilestone(userId: string, badgeKey: string, value: number = 1) {
-    // Only use Event table as a high-watermark for milestones since Ownership is strictly 1-to-1 unique
-    const existingEvents = await (prisma as any).badgeEvent.findMany({
-        where: { badgeKey, toUserId: userId },
-        orderBy: { newValue: 'desc' },
-        take: 1
-    });
-    const maxValue = existingEvents[0]?.newValue || 0;
-
-    if (value > maxValue) {
-        // Anti-spam: check if an identical event (any value) was created very recently for this user
-        const recentEvent = await (prisma as any).badgeEvent.findFirst({
-            where: { toUserId: userId, createdAt: { gte: new Date(Date.now() - 2000) } }
+    try {
+        // Only use Event table as a high-watermark for milestones since Ownership is strictly 1-to-1 unique
+        const existingEvents = await (prisma as any).badgeEvent.findMany({
+            where: { badgeKey, toUserId: userId },
+            orderBy: { newValue: 'desc' },
+            take: 1
         });
-        if (recentEvent && recentEvent.badgeKey === badgeKey) return; 
+        const maxValue = existingEvents[0]?.newValue || 0;
 
-        await (prisma as any).badgeEvent.create({
-            data: { badgeKey, fromUserId: null, toUserId: userId, eventType: "UNIQUE_AWARDED", previousValue: maxValue, newValue: value }
-        });
+        if (value > maxValue) {
+            // Anti-spam: check if an identical event (any value) was created very recently for this user
+            const recentEvent = await (prisma as any).badgeEvent.findFirst({
+                where: { toUserId: userId, createdAt: { gte: new Date(Date.now() - 2000) } }
+            });
+            if (recentEvent && recentEvent.badgeKey === badgeKey) return;
+
+            await (prisma as any).badgeEvent.create({
+                data: { badgeKey, fromUserId: null, toUserId: userId, eventType: "UNIQUE_AWARDED", previousValue: maxValue, newValue: value }
+            });
+        }
+    } catch (error) {
+        console.error(`Failed to award milestone ${badgeKey} to ${userId}:`, error);
     }
 }
 
