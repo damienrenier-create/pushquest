@@ -1,7 +1,7 @@
 "use client"
 
 import React from 'react'
-import { Zap, Trophy, Target, Award, Sparkles, TrendingUp } from 'lucide-react'
+import { Zap, Trophy, Target, Award, Sparkles, TrendingUp, History } from 'lucide-react'
 
 interface YesterdayXpRecapProps {
     recap: {
@@ -16,120 +16,130 @@ interface YesterdayXpRecapProps {
 
 export default function YesterdayXpRecap({ recap }: YesterdayXpRecapProps) {
     if (!recap || recap.total === 0) return (
-        <div className="bg-slate-900 border border-slate-800 rounded-[2rem] p-8 text-center">
-            <p className="text-slate-500 font-black uppercase text-[10px] tracking-widest">Rapport de la veille</p>
-            <p className="text-slate-600 font-bold mt-2 italic text-sm">Aucun XP gagné hier. Repos du guerrier ? 🛌</p>
+        <div className="bg-slate-900 border border-slate-800 rounded-[2rem] p-10 text-center relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent opacity-50" />
+            <div className="relative">
+                <p className="text-slate-500 font-black uppercase text-[10px] tracking-[0.2em] mb-3">Rapport de la veille</p>
+                <div className="w-12 h-12 bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-slate-700/50">
+                    <History className="w-6 h-6 text-slate-600" />
+                </div>
+                <p className="text-slate-400 font-bold italic text-sm">Repos du guerrier hier. Pas d'XP détecté. 🛌</p>
+            </div>
         </div>
     )
 
     return (
-        <section className="relative overflow-hidden bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 sm:p-10 shadow-2xl group">
-            {/* Background effects */}
-            <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-500/20 transition-all duration-700" />
-            <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl group-hover:bg-indigo-500/20 transition-all duration-700" />
+        <section className="relative overflow-hidden bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 sm:p-12 shadow-[0_20px_50px_rgba(0,0,0,0.5)] group transition-all duration-500 hover:border-slate-700">
+            {/* Glossy Overlay Effect */}
+            <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/10 via-transparent to-purple-500/5 opacity-30" />
 
-            <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-8">
-                <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-indigo-500/20 rounded-xl text-indigo-400">
-                            <HistoryIcon className="w-5 h-5" />
+            {/* Animated Spotlights */}
+            <div className="absolute top-0 right-0 -mt-20 -mr-20 w-80 h-80 bg-blue-600/10 rounded-full blur-[100px] group-hover:bg-blue-600/20 transition-all duration-1000" />
+            <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-80 h-80 bg-indigo-600/10 rounded-full blur-[100px] group-hover:bg-indigo-600/20 transition-all duration-1000" />
+
+            <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-10">
+                <div className="space-y-6">
+                    <div className="flex items-center gap-4">
+                        <div className="p-2.5 bg-indigo-500/15 rounded-2xl text-indigo-400 border border-indigo-500/20 shadow-[0_0_20px_rgba(99,102,241,0.1)]">
+                            <History size={22} className="group-hover:rotate-[-10deg] transition-transform duration-500" />
                         </div>
-                        <h2 className="text-xl font-black text-white uppercase tracking-tight">Rapport de la Veille</h2>
+                        <div className="space-y-0.5">
+                            <h2 className="text-xl font-black text-white uppercase tracking-tight flex items-center gap-2">
+                                Rapport de Combat <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-500/30">CERTIFIÉ</span>
+                            </h2>
+                            <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.1em]">Activité de Minuit à Minuit (Hier)</p>
+                        </div>
                     </div>
 
-                    <div className="flex items-baseline gap-3">
-                        <span className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-indigo-200 to-slate-400 tracking-tighter">
-                            +{recap.total.toLocaleString()}
-                        </span>
-                        <span className="text-indigo-400 font-black text-xs uppercase tracking-widest">XP TOTAUX</span>
+                    <div className="relative inline-block">
+                        <div className="absolute -inset-4 bg-indigo-500/20 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+                        <div className="relative flex items-baseline gap-4">
+                            <span className="text-6xl sm:text-7xl font-black text-white tracking-tighter drop-shadow-[0_0_30px_rgba(255,255,255,0.1)]">
+                                +{recap.total.toLocaleString()}
+                            </span>
+                            <div className="flex flex-col">
+                                <span className="text-indigo-400 font-black text-sm uppercase tracking-widest leading-none">XP</span>
+                                <span className="text-slate-500 font-bold text-[10px] uppercase tracking-tighter mt-1">TOTAL GAGNÉ</span>
+                            </div>
+                        </div>
                     </div>
-
-                    <p className="text-slate-500 text-xs font-bold leading-relaxed max-w-sm">
-                        Voici le détail chirurgical de ta progression de minuit à minuit. Chaque répétition compte pour la gloire.
-                    </p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full md:max-w-md">
-                    {/* Reps */}
-                    <div className="bg-slate-800/40 border border-white/5 rounded-2xl p-4 flex items-center gap-4">
-                        <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-400 shadow-inner">
-                            <Target className="w-5 h-5" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full lg:max-w-md animate-in slide-in-from-right-10 duration-700">
+                    {/* Reps Card */}
+                    <div className="bg-slate-800/30 backdrop-blur-sm border border-white/5 rounded-3xl p-5 flex items-center gap-5 transition-all hover:bg-slate-800/50 hover:border-white/10 group/card shadow-inner">
+                        <div className="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-400 border border-blue-500/10 group-hover/card:scale-110 transition-transform">
+                            <Target className="w-6 h-6" />
                         </div>
                         <div>
-                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Répétitions</p>
-                            <p className="text-sm font-black text-white">+{recap.repsXP} XP</p>
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Entraînement</p>
+                            <p className="text-lg font-black text-white leading-none">+{recap.repsXP} <span className="text-[10px] text-slate-500">XP</span></p>
                         </div>
                     </div>
 
-                    {/* Regularity */}
-                    <div className="bg-slate-800/40 border border-white/5 rounded-2xl p-4 flex items-center gap-4">
-                        <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-400 shadow-inner">
-                            <Zap className="w-5 h-5" />
+                    {/* Regularity Card */}
+                    <div className="bg-slate-800/30 backdrop-blur-sm border border-white/5 rounded-3xl p-5 flex items-center gap-5 transition-all hover:bg-slate-800/50 hover:border-white/10 group/card shadow-inner">
+                        <div className="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-400 border border-emerald-500/10 group-hover/card:scale-110 transition-transform">
+                            <Zap className="w-6 h-6" />
                         </div>
                         <div>
-                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Régularité</p>
-                            <p className="text-sm font-black text-white">+{recap.regularityXP} XP</p>
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Régularité</p>
+                            <p className="text-lg font-black text-white leading-none">+{recap.regularityXP} <span className="text-[10px] text-slate-500">XP</span></p>
                         </div>
                     </div>
 
-                    {/* Badges / Trophies */}
-                    <div className="bg-slate-800/40 border border-white/5 rounded-2xl p-4 flex items-center gap-4 sm:col-span-2 relative group/item">
-                        <div className="w-10 h-10 bg-amber-500/10 rounded-xl flex items-center justify-center text-amber-400 shadow-inner">
-                            <Trophy className="w-5 h-5" />
+                    {/* Trophies & Badges Card */}
+                    <div className="bg-slate-800/30 backdrop-blur-sm border border-white/5 rounded-3xl p-6 flex flex-col gap-4 sm:col-span-2 transition-all hover:bg-slate-800/50 hover:border-white/10 group/card shadow-inner relative">
+                        <div className="flex items-center gap-5">
+                            <div className="w-12 h-12 bg-amber-500/10 rounded-2xl flex items-center justify-center text-amber-400 border border-amber-500/10 group-hover/card:rotate-12 transition-transform">
+                                <Trophy className="w-6 h-6" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Succès & Distinction</p>
+                                <p className="text-lg font-black text-white leading-none">+{recap.badgesXP} <span className="text-[10px] text-slate-500">XP Trophées</span></p>
+                            </div>
+                            <Sparkles className="text-amber-500/30 group-hover/card:text-amber-500 group-hover/card:animate-pulse transition-all" size={20} />
                         </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Trophées & Badges</p>
-                            <p className="text-sm font-black text-white">+{recap.badgesXP} XP</p>
-                            {recap.badgesDetail.length > 0 && (
-                                <div className="mt-2 flex flex-wrap gap-2">
-                                    {recap.badgesDetail.map((b, i) => (
-                                        <div key={i} className="flex items-center gap-1 bg-slate-900/50 px-2 py-1 rounded-lg border border-white/5 text-[9px] font-bold text-slate-300">
-                                            <span>{b.emoji}</span>
-                                            <span>{b.name}</span>
-                                            <span className="text-amber-400">+{b.xp}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                        <Sparkles className="absolute right-4 top-4 w-4 h-4 text-amber-500/20 group-hover/item:text-amber-500/50 transition-colors" />
+
+                        {recap.badgesDetail.length > 0 && (
+                            <div className="flex flex-wrap gap-2 pt-2 border-t border-white/5">
+                                {recap.badgesDetail.map((b, i) => (
+                                    <div key={i} className="flex items-center gap-2 bg-slate-900/60 px-3 py-1.5 rounded-xl border border-white/5 text-[10px] font-black text-slate-200 transition-all hover:bg-slate-950 hover:border-indigo-500/30">
+                                        <span className="text-base">{b.emoji}</span>
+                                        <span>{b.name}</span>
+                                        <span className="text-indigo-400 font-black">+{b.xp}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
-                    {/* Bonus / Manual */}
+                    {/* Bonus Card */}
                     {recap.manualXP !== 0 && (
-                        <div className="bg-slate-800/40 border border-white/5 rounded-2xl p-4 flex items-center gap-4 sm:col-span-2">
-                            <div className="w-10 h-10 bg-purple-500/10 rounded-xl flex items-center justify-center text-purple-400 shadow-inner">
-                                <Award className="w-5 h-5" />
+                        <div className="bg-slate-800/30 backdrop-blur-sm border border-white/5 rounded-3xl p-5 flex items-center gap-5 sm:col-span-2 transition-all hover:bg-slate-800/50 hover:border-white/10 group/card shadow-inner">
+                            <div className="w-12 h-12 bg-purple-500/10 rounded-2xl flex items-center justify-center text-purple-400 border border-purple-500/10 group-hover/card:scale-110 transition-transform">
+                                <Award className="w-6 h-6" />
                             </div>
                             <div>
-                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Bonus & Ajustements</p>
-                                <p className="text-sm font-black text-white">{recap.manualXP > 0 ? '+' : ''}{recap.manualXP} XP</p>
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Bonus de Prestige</p>
+                                <p className="text-lg font-black text-white leading-none">{recap.manualXP > 0 ? '+' : ''}{recap.manualXP} <span className="text-[10px] text-slate-500">XP Bonus</span></p>
                             </div>
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Bottom Accent */}
-            <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <TrendingUp className="w-3 h-3 text-indigo-400" />
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Progression Validée</span>
+            {/* Bottom Status Bar */}
+            <div className="mt-12 pt-6 border-t border-white/5 flex items-center justify-between opacity-60 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(99,102,241,1)]" />
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Progression synchronisée par Antigravity</span>
                 </div>
-                <div className="px-3 py-1 bg-indigo-500/10 rounded-full border border-indigo-500/20">
-                    <span className="text-[9px] font-black text-indigo-300 uppercase tracking-widest">Mission Accomplie</span>
+                <div className="flex items-center gap-2">
+                    <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Performance Validée</span>
                 </div>
             </div>
         </section>
-    )
-}
-
-function HistoryIcon({ className }: { className?: string }) {
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-            <path d="M3 3v5h5" />
-            <path d="M12 7v5l4 2" />
-        </svg>
     )
 }
