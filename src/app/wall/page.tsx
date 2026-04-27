@@ -6,6 +6,7 @@ import GazetteXP from "./GazetteXP";
 import MoodFeed from "@/components/MoodFeed";
 import FeaturedBadge from "@/components/FeaturedBadge";
 import PossessionSection from "@/components/PossessionSection";
+import UpcomingEvent from "@/components/UpcomingEvent";
 
 export const metadata = {
     title: "Place Publique - Pompes entre potes",
@@ -30,6 +31,7 @@ export default async function WallPage() {
                     </p>
                 </div>
 
+                <UpcomingEvent />
                 <FeaturedBadge />
                 <PossessionSection />
                 <MoodFeed />
