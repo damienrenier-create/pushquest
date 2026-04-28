@@ -99,13 +99,19 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
         // Calculate final time from manual inputs (priority) or elapsed
         const finalTime = (parseInt(manualMinutes) || 0) * 60 + (parseInt(manualSeconds) || 0)
 
+        // Automatically mock exercises completion if scoring is TIME
+        let finalDataExercises = formData;
+        if (workout.scoringType === 'TIME') {
+            finalDataExercises = workout.exercises.reduce((acc, exo, idx) => ({ ...acc, [`${exo.type}_${idx}`]: exo.goal || 0 }), {});
+        }
+
         try {
             const res = await fetch("/api/workouts/special", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     workoutId: workout.id,
-                    data: { exercises: formData },
+                    data: { exercises: finalDataExercises },
                     completionTime: finalTime || elapsed,
                     proofUrl,
                     date: new Date().toISOString().split('T')[0]
@@ -269,33 +275,49 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
 
                         {/* Exercises List - Light Theme */}
                         <div className="space-y-4">
-                            <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-2">Données de l'entraînement</h2>
-                            <div className="grid gap-3">
-                                {workout.exercises.map((exo) => (
-                                    <div key={exo.type} className="group relative bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between hover:border-indigo-200 transition-all shadow-sm">
-                                        <div className="space-y-0.5">
-                                            <span className="block font-black text-sm uppercase tracking-tight text-slate-800">{exo.label}</span>
+                            <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-2">Programmation du défi</h2>
+                            {workout.scoringType === 'TIME' ? (
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                    {workout.exercises.map((exo, idx) => (
+                                        <div key={idx} className="bg-white border border-slate-200 shadow-sm rounded-xl p-3 flex flex-col items-center justify-center text-center">
+                                            <span className="text-[10px] font-black uppercase text-slate-400">Étape {idx + 1}</span>
+                                            <span className="font-black text-slate-800 text-sm mt-1">{exo.label}</span>
                                             {exo.goal && (
-                                                <span className="text-[10px] font-bold text-indigo-500 uppercase">Obj: {exo.goal} {exo.unit.toLowerCase()}</span>
+                                                <span className="text-indigo-600 font-black text-xs mt-0.5 tracking-tight uppercase bg-indigo-50 px-2 py-0.5 rounded-full">
+                                                    {exo.goal} {exo.unit === 'REPS' ? 'reps' : exo.unit === 'SECONDS' ? 'sec' : exo.unit === 'KILOMETERS' ? 'km' : 'm'}
+                                                </span>
                                             )}
                                         </div>
-                                        <div className="flex items-center gap-3">
-                                            <input
-                                                type="number"
-                                                required
-                                                min="0"
-                                                placeholder="0"
-                                                className={`w-20 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right font-black text-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-slate-900 disabled:opacity-50 disabled:bg-slate-100`}
-                                                disabled={!isAvailable}
-                                                onChange={(e) => setFormData(prev => ({ ...prev, [exo.type]: parseInt(e.target.value) || 0 }))}
-                                            />
-                                            <span className="text-[10px] font-black text-slate-400 uppercase w-10">
-                                                {exo.unit === 'REPS' ? 'Reps' : exo.unit === 'SECONDS' ? 'Sec' : exo.unit === 'KILOMETERS' ? 'KM' : 'M'}
-                                            </span>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="grid gap-3">
+                                    {workout.exercises.map((exo, idx) => (
+                                        <div key={idx} className="group relative bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between hover:border-indigo-200 transition-all shadow-sm">
+                                            <div className="space-y-0.5">
+                                                <span className="block font-black text-sm uppercase tracking-tight text-slate-800">{exo.label}</span>
+                                                {exo.goal && (
+                                                    <span className="text-[10px] font-bold text-indigo-500 uppercase">Obj: {exo.goal} {exo.unit.toLowerCase()}</span>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <input
+                                                    type="number"
+                                                    required
+                                                    min="0"
+                                                    placeholder="0"
+                                                    className={`w-20 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right font-black text-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-slate-900 disabled:opacity-50 disabled:bg-slate-100`}
+                                                    disabled={!isAvailable}
+                                                    onChange={(e) => setFormData(prev => ({ ...prev, [`${exo.type}_${idx}`]: parseInt(e.target.value) || 0 }))}
+                                                />
+                                                <span className="text-[10px] font-black text-slate-400 uppercase w-10">
+                                                    {exo.unit === 'REPS' ? 'Reps' : exo.unit === 'SECONDS' ? 'Sec' : exo.unit === 'KILOMETERS' ? 'KM' : 'M'}
+                                                </span>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         {isAvailable && (

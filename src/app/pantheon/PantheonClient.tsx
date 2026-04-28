@@ -81,6 +81,7 @@ export default function PantheonClient({
     const [localEvents, setLocalEvents] = useState(recentEvents);
     const [selectedReward, setSelectedReward] = useState<any>(null);
     const [dangerSearch, setDangerSearch] = useState("");
+    const [dangerSort, setDangerSort] = useState<"hot" | "gap_asc" | "gap_desc">("hot");
     const [showAllPersonalBadges, setShowAllPersonalBadges] = useState(false);
     const router = useRouter();
 
@@ -142,12 +143,30 @@ export default function PantheonClient({
 
     // Filtered Danger List
     const filteredDangerList = useMemo(() => {
-        return dangerList.filter(d =>
+        let list = dangerList.filter(d =>
             d.badgeName.toLowerCase().includes(dangerSearch.toLowerCase()) ||
             d.holder.toLowerCase().includes(dangerSearch.toLowerCase()) ||
             d.challenger.toLowerCase().includes(dangerSearch.toLowerCase())
         );
-    }, [dangerSearch, dangerList]);
+
+        if (dangerSort === "gap_asc") {
+            list = list.sort((a, b) => a.diff - b.diff);
+        } else if (dangerSort === "gap_desc") {
+            list = list.sort((a, b) => b.diff - a.diff);
+        } else {
+            // "hot" : prioritize isDanger, then by gap
+            list = list.sort((a, b) => {
+                if (a.isDanger && !b.isDanger) return -1;
+                if (!a.isDanger && b.isDanger) return 1;
+                return a.diff - b.diff; // small gap first
+            });
+        }
+        return list;
+    }, [dangerSearch, dangerSort, dangerList]);
+
+    const myTargets = useMemo(() => {
+        return dangerList.filter(d => d.challenger === currentUser?.nickname).sort((a, b) => a.diff - b.diff);
+    }, [dangerList, currentUser]);
 
     // Current User's Virtual Status
     const userVirtualData = virtualizedData.find(v => v.userId === currentUser?.id);
@@ -297,56 +316,103 @@ export default function PantheonClient({
                         {/* Danger List & Kings */}
                         <div className="lg:col-span-7 flex flex-col gap-6">
 
-                            {/* Menaces Imminentes */}
-                            <div className="bg-white rounded-3xl p-8 shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col h-full">
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2.5 bg-red-50 text-red-600 rounded-xl">
-                                            <Shield size={20} />
+                            {/* Cibles Prioritaires */}
+                            {myTargets.length > 0 && (
+                                <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl p-8 shadow-xl shadow-indigo-200 border border-indigo-400/50 flex flex-col text-white">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="p-2.5 bg-white/20 text-white rounded-xl backdrop-blur-sm">
+                                            <Target size={20} />
                                         </div>
-                                        <h2 className="text-lg font-black uppercase tracking-normal">Menaces de Vol</h2>
+                                        <div>
+                                            <h2 className="text-lg font-black uppercase tracking-normal">Vos Cibles Prioritaires</h2>
+                                            <p className="text-indigo-100 text-xs font-medium">Vous êtes le challenger le plus proche pour ces titres !</p>
+                                        </div>
                                     </div>
-                                    <div className="relative">
-                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                                        <input
-                                            type="text"
-                                            placeholder="Filtrer..."
-                                            value={dangerSearch}
-                                            onChange={(e) => setDangerSearch(e.target.value)}
-                                            className="bg-slate-50 border border-slate-100 rounded-xl pl-9 pr-4 py-1.5 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-red-500/10 transition-all w-full sm:w-40"
-                                        />
+                                    <div className="space-y-3">
+                                        {myTargets.slice(0, 3).map((target: any, i: number) => (
+                                            <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 hover:bg-white/20 transition-colors">
+                                                <div className="mb-2 sm:mb-0">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span className="text-2xl">{target.emoji}</span>
+                                                        <h3 className="font-black text-sm uppercase">{target.badgeName}</h3>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 text-xs text-indigo-100">
+                                                        <span>Roi act. : <span className="font-bold text-white">{target.holder}</span> ({target.currentValue} {target.unit})</span>
+                                                    </div>
+                                                </div>
+                                                <div className="shrink-0 text-right">
+                                                    <div className="inline-flex items-center gap-2 bg-white text-indigo-600 px-3 py-1.5 rounded-xl text-sm font-black shadow-sm">
+                                                        <Zap size={14} className="fill-indigo-600" />
+                                                        ECART : {target.diff}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Menaces Globales */}
+                            <div className="bg-white rounded-3xl p-8 shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col h-full">
+                                <div className="flex flex-col gap-4 mb-6">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2.5 bg-red-50 text-red-600 rounded-xl">
+                                                <Shield size={20} />
+                                            </div>
+                                            <h2 className="text-lg font-black uppercase tracking-normal">Guerre des Trônes</h2>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col sm:flex-row gap-2">
+                                        <div className="relative flex-1">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                                            <input
+                                                type="text"
+                                                placeholder="Filtrer un badge ou un utilisateur..."
+                                                value={dangerSearch}
+                                                onChange={(e) => setDangerSearch(e.target.value)}
+                                                className="bg-slate-50 border border-slate-100 rounded-xl pl-10 pr-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-500/10 transition-all w-full"
+                                            />
+                                        </div>
+                                        <select
+                                            value={dangerSort}
+                                            onChange={(e) => setDangerSort(e.target.value as any)}
+                                            className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 outline-none hover:bg-slate-100 transition-colors"
+                                        >
+                                            <option value="hot">🔥 Les plus chauds</option>
+                                            <option value="gap_asc">📈 Écart réduit</option>
+                                            <option value="gap_desc">📉 Écart grandissant</option>
+                                        </select>
                                     </div>
                                 </div>
 
-                                <div className="space-y-2 overflow-y-auto max-h-[300px] pr-2 custom-scrollbar flex-1">
+                                <div className="space-y-3 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar flex-1">
                                     {filteredDangerList.length > 0 ? filteredDangerList.map((danger: any, i: number) => (
-                                        <div key={i} className={`flex items-center justify-between p-3 rounded-2xl border transition-colors ${danger.isDanger ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-slate-50 border-slate-100 opacity-80'}`}>
-                                            <div className="min-w-0 pr-2">
-                                                <Link href="/faq?tab=catalogue" className="text-[9px] font-black text-slate-800 uppercase mb-0.5 truncate hover:underline flex items-center gap-1">
-                                                    <span>{danger.emoji}</span>
+                                        <div key={i} className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border transition-colors ${danger.isDanger ? 'bg-red-50/50 border-red-200 hover:bg-red-50' : 'bg-slate-50 border-slate-100 opacity-90 hover:opacity-100'}`}>
+                                            <div className="mb-3 sm:mb-0 min-w-0 pr-4 flex-1">
+                                                <Link href="/faq?tab=catalogue" className="text-sm font-black text-slate-800 uppercase mb-1 truncate hover:text-indigo-600 transition-colors flex items-center gap-2">
+                                                    <span className="text-lg">{danger.emoji}</span>
                                                     <span>{danger.badgeName}</span>
                                                 </Link>
-                                                <div className="flex items-center gap-2">
-                                                    <p className="text-[10px] text-slate-600 font-bold truncate">
-                                                        <span className="opacity-60 text-[8px]">Roi:</span> {danger.holder}
-                                                    </p>
-                                                    <span className="text-[8px] px-1.5 py-0.5 bg-white/60 rounded border border-slate-100 text-slate-500 font-mono">{danger.currentValue} {danger.unit}</span>
+                                                <div className="flex flex-wrap items-center gap-y-1 gap-x-3 text-xs text-slate-600">
+                                                    <span>👑 <span className="font-bold text-slate-800">{danger.holder}</span></span>
+                                                    <span className="px-2 py-0.5 bg-white rounded border border-slate-200 text-slate-700 font-bold">{danger.currentValue} {danger.unit}</span>
                                                 </div>
                                             </div>
-                                            <div className="text-right shrink-0">
-                                                <p className={`text-[9px] font-black uppercase ${danger.isDanger ? 'text-red-500 animate-pulse' : 'text-slate-400'}`}>
+                                            <div className="text-right shrink-0 flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 sm:border-l border-slate-200/60 pt-3 sm:pt-0 sm:pl-4">
+                                                <div className="flex items-center gap-1.5 mb-0 sm:mb-1">
+                                                    <span className="text-xs font-bold text-slate-700 uppercase">{danger.challenger}</span>
+                                                    {danger.isDanger && <Zap size={14} className="text-amber-500 fill-amber-500 animate-pulse" />}
+                                                </div>
+                                                <div className={`px-2 py-1 rounded text-xs font-black uppercase inline-flex items-center ${danger.isDanger ? 'bg-red-100 text-red-600' : 'bg-slate-200/50 text-slate-500'}`}>
                                                     {danger.isDanger ? 'MENACE' : 'ÉCART'}: {danger.diff}
-                                                </p>
-                                                <div className="flex items-center justify-end gap-1.5">
-                                                    <span className="text-[10px] font-bold text-slate-700">{danger.challenger}</span>
-                                                    {danger.isDanger && <Zap size={10} className="text-amber-500 fill-amber-500" />}
                                                 </div>
                                             </div>
                                         </div>
                                     )) : (
                                         <div className="py-10 text-center">
-                                            <CheckCircle2 className="mx-auto text-green-200 mb-2" size={24} />
-                                            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">RAS sur le front</p>
+                                            <CheckCircle2 className="mx-auto text-green-200 mb-2" size={32} />
+                                            <p className="text-slate-400 text-sm font-black uppercase tracking-widest">RAS sur le front</p>
                                         </div>
                                     )}
                                 </div>
