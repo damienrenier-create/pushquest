@@ -311,14 +311,21 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
                                                 stages.push(workout.exercises.slice(i, i + 4));
                                             }
                                             return stages.map((stageExercises, stageIdx) => (
-                                                <div key={stageIdx} className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm space-y-4 hover:border-indigo-200 transition-all">
-                                                    <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-2">
-                                                        <h3 className="text-xs font-black uppercase tracking-[0.2em] text-indigo-600">
-                                                            Étape {stageIdx + 1} {stageIdx === 2 && workout.id === 'workout-03-pyramid' ? '— SOMMET' : ''}
-                                                        </h3>
-                                                        <span className="text-[10px] font-bold text-slate-400 italic">4 exercices</span>
+                                                <div key={stageIdx} className="bg-white border border-slate-200 rounded-[2rem] overflow-hidden shadow-sm hover:shadow-md hover:border-indigo-300 transition-all group/stage">
+                                                    <div className="bg-slate-50 border-b border-slate-100 px-5 py-3 flex items-center justify-between">
+                                                        <div className="flex flex-col">
+                                                            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600">
+                                                                Étape {stageIdx + 1}
+                                                            </h3>
+                                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                                                                {stageIdx === 0 || stageIdx === 4 ? 'Palier de base' : stageIdx === 2 ? '🔥 LE SOMMET' : `Multiplicateur x${stageIdx === 1 || stageIdx === 3 ? 2 : 1}`}
+                                                            </span>
+                                                        </div>
+                                                        <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-xs font-black text-slate-400 group-hover/stage:text-indigo-500 group-hover/stage:border-indigo-200 transition-colors">
+                                                            {stageIdx + 1}
+                                                        </div>
                                                     </div>
-                                                    <div className="grid grid-cols-2 gap-3">
+                                                    <div className="p-5 grid grid-cols-2 gap-4">
                                                         {stageExercises.map((exo, idxInStage) => {
                                                             const globalIdx = stageIdx * 4 + idxInStage;
                                                             const icons: Record<string, string> = {
@@ -326,23 +333,25 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
                                                                 PLANK: '🛡️', RUN: '🏃'
                                                             };
                                                             return (
-                                                                <div key={idxInStage} className="space-y-1.5">
-                                                                    <div className="flex items-center gap-1.5 min-h-[14px]">
-                                                                        <span className="text-xs">{icons[exo.type] || '⚡'}</span>
-                                                                        <span className="text-[9px] font-black uppercase tracking-tighter text-slate-700 truncate">{exo.label}</span>
-                                                                    </div>
+                                                                <div key={idxInStage} className="space-y-2">
                                                                     <div className="flex items-center gap-1.5">
+                                                                        <span className="text-sm shrink-0">{icons[exo.type] || '⚡'}</span>
+                                                                        <span className="text-[10px] font-black uppercase tracking-tight text-slate-700 leading-none">{exo.label}</span>
+                                                                    </div>
+                                                                    <div className="relative">
                                                                         <input
                                                                             type="number"
                                                                             required
                                                                             min="0"
                                                                             placeholder="0"
-                                                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5 text-right font-black text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                                                                            className="w-full bg-slate-50 border border-slate-100 rounded-xl px-2 py-2 text-right font-black text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
                                                                             disabled={!isAvailable}
                                                                             defaultValue={workout.scoringType === 'TIME' ? exo.goal : 0}
                                                                             onChange={(e) => setFormData(prev => ({ ...prev, [`${exo.type}_${globalIdx}`]: parseInt(e.target.value) || 0 }))}
                                                                         />
-                                                                        <span className="text-[8px] font-black text-slate-400 uppercase w-4">{exo.unit === 'REPS' ? 'R' : exo.unit === 'SECONDS' ? 'S' : 'K'}</span>
+                                                                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-300 uppercase pointer-events-none">
+                                                                            {exo.unit === 'REPS' ? 'R' : exo.unit === 'SECONDS' ? 'S' : 'K'}
+                                                                        </span>
                                                                     </div>
                                                                 </div>
                                                             );
