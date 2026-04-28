@@ -101,11 +101,7 @@ export async function GET(req: Request) {
 
                 const daySets = u.sets?.filter((s: any) => s.date === d) || [];
                 const dayTotal = daySets
-                    .filter((s: any) => {
-                        if (uLeague === "GAINAGE") return s.exercise === "PLANK";
-                        return ["PUSHUP", "PULLUP", "SQUAT"].includes(s.exercise);
-                    })
-                    .reduce((sum: number, s: any) => sum + s.reps, 0);
+                    .reduce((sum: number, s: any) => sum + (s.exercise === "PLANK" ? Math.floor(s.reps / 5) : s.reps), 0);
 
                 const req = getRequiredRepsForDate(d);
 
@@ -169,11 +165,7 @@ export async function GET(req: Request) {
                 const d = dates30[i];
                 const daySets = uSets.filter((s: any) => s.date === d);
                 const dayTotal = daySets
-                    .filter((s: any) => {
-                        if (u.league === "GAINAGE") return s.exercise === "PLANK";
-                        return ["PUSHUP", "PULLUP", "SQUAT"].includes(s.exercise);
-                    })
-                    .reduce((sum: number, s: any) => sum + s.reps, 0);
+                    .reduce((sum: number, s: any) => sum + (s.exercise === "PLANK" ? Math.floor(s.reps / 5) : s.reps), 0);
 
                 const req = getRequiredRepsForDate(d);
 
@@ -303,7 +295,8 @@ export async function GET(req: Request) {
                     if (u.totalPerfectDays >= t.threshold) hasIt = true;
                 } else if (trophy.type === "flex") {
                     const hasFlex = (u.sets || []).some((s: any) => {
-                        const dayTotal = (u.sets || []).filter((ss: any) => ss.date === s.date).reduce((sum: number, ss: any) => sum + ss.reps, 0);
+                        const dayTotal = (u.sets || []).filter((ss: any) => ss.date === s.date)
+                            .reduce((sum: number, ss: any) => sum + (ss.exercise === "PLANK" ? Math.floor(ss.reps / 5) : ss.reps), 0);
                         return dayTotal >= (getRequiredRepsForDate(s.date) + 50);
                     });
                     if (hasFlex) hasIt = true;
@@ -323,7 +316,8 @@ export async function GET(req: Request) {
         let availableSpecialDays: any[] = [];
         Object.entries(SPECIAL_DAYS).forEach(([date, info]) => {
             const winners = leaderboard.filter(u => {
-                const dayTotal = (u.sets || []).filter((s: any) => s.date === date).reduce((sum: number, s: any) => sum + s.reps, 0);
+                const dayTotal = (u.sets || []).filter((s: any) => s.date === date)
+                    .reduce((sum: number, s: any) => sum + (s.exercise === "PLANK" ? Math.floor(s.reps / 5) : s.reps), 0);
                 return dayTotal >= getRequiredRepsForDate(date);
             }).map(u => u.nickname);
 
@@ -499,11 +493,7 @@ export async function GET(req: Request) {
                 squats: (currentUserLB?.sets || []).filter((s: any) => s.date === selectedDate && s.exercise === "SQUAT").reduce((sum: number, s: any) => sum + s.reps, 0),
                 planks: (currentUserLB?.sets || []).filter((s: any) => s.date === selectedDate && s.exercise === "PLANK").reduce((sum: number, s: any) => sum + s.reps, 0),
                 total: (currentUserLB?.sets || []).filter((s: any) => s.date === selectedDate)
-                    .filter((s: any) => {
-                        if (league === "GAINAGE") return s.exercise === "PLANK";
-                        return ["PUSHUP", "PULLUP", "SQUAT"].includes(s.exercise);
-                    })
-                    .reduce((sum: number, s: any) => sum + s.reps, 0)
+                    .reduce((sum: number, s: any) => sum + (s.exercise === "PLANK" ? Math.floor(s.reps / 5) : s.reps), 0)
             },
             leaderboard: leaderboard.map(({ sets, ...rest }) => rest),
             records: recordsData,

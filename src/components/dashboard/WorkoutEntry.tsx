@@ -62,9 +62,16 @@ export default function WorkoutEntry({ league, localSets, setLocalSets, saving, 
                             <span className="text-2xl">🛡️</span>
                             <span className="font-black text-gray-800 uppercase text-xs">Gainage (Secondes)</span>
                         </div>
-                        <span className="font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full text-xs">
-                            {sumSets(localSets.planks)}s
-                        </span>
+                        <div className="flex flex-col items-end gap-1">
+                            <span className="font-black text-blue-600 bg-blue-50 px-3 py-0.5 rounded-full text-xs">
+                                {sumSets(localSets.planks)}s
+                            </span>
+                            {sumSets(localSets.planks) > 0 && (
+                                <span className="text-[10px] font-bold text-indigo-500 flex items-center gap-1">
+                                    🛡️ {Math.floor(sumSets(localSets.planks) / 5)} units
+                                </span>
+                            )}
+                        </div>
                     </div>
                     {/* ... */}
                 </div>
@@ -76,9 +83,16 @@ export default function WorkoutEntry({ league, localSets, setLocalSets, saving, 
                                 <span className="text-2xl">{type === 'pushups' ? '💪' : type === 'pullups' ? '🦍' : type === 'squats' ? '🦵' : '🛡️'}</span>
                                 <span className="font-black text-gray-800 uppercase text-xs">{type === 'pushups' ? 'Pompes' : type === 'pullups' ? 'Tractions' : type === 'squats' ? 'Squats' : 'Gainage (s)'}</span>
                             </div>
-                            <span className="font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full text-xs">
-                                {sumSets(localSets[type])} {type === 'planks' ? 's' : 'reps'}
-                            </span>
+                            <div className="flex flex-col items-end gap-1">
+                                <span className="font-black text-blue-600 bg-blue-50 px-3 py-0.5 rounded-full text-xs">
+                                    {sumSets(localSets[type])} {type === 'planks' ? 's' : 'reps'}
+                                </span>
+                                {type === 'planks' && sumSets(localSets[type]) > 0 && (
+                                    <span className="text-[10px] font-bold text-indigo-500 flex items-center gap-1">
+                                        🛡️ {Math.floor(sumSets(localSets[type]) / 5)} units
+                                    </span>
+                                )}
+                            </div>
                         </div>
                         <div className="flex flex-wrap gap-3">
                             {(localSets[type] || []).map((val, idx) => (

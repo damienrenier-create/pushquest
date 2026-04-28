@@ -43,7 +43,8 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
 
         const userProgress: Record<string, number> = {};
         for (const s of daySets) {
-            userProgress[s.userId] = (userProgress[s.userId] || 0) + s.reps;
+            const effort = s.exercise === "PLANK" ? Math.floor(s.reps / 5) : s.reps;
+            userProgress[s.userId] = (userProgress[s.userId] || 0) + effort;
             if (userProgress[s.userId] >= req) {
                 sprinterCounts[s.userId]++;
                 winnersByDate[date] = s.userId;
@@ -148,7 +149,6 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             datePlayedMap[d] = true;
 
             daySets.forEach((s: any) => {
-                dayTotal += s.reps;
                 if (s.reps > maxSetAll) maxSetAll = s.reps;
 
                 const key = `${s.exercise}_${s.reps}`;
@@ -315,7 +315,7 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             },
             hasTrinityGold: (dateISO: string) => {
                 const daySets = sets.filter((s: any) => s.date === dateISO);
-                const total = daySets.reduce((sum: number, s: any) => sum + s.reps, 0);
+                const total = daySets.reduce((sum: number, s: any) => sum + (s.exercise === 'PLANK' ? Math.floor(s.reps / 5) : s.reps), 0);
                 const req = getRequiredRepsForDate(dateISO);
                 const hasEach = ["PUSHUP", "PULLUP", "SQUAT"].every(exo => daySets.some((s: any) => s.exercise === exo));
                 return total >= 3 * req && req > 0 && hasEach;
@@ -389,7 +389,7 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
                 });
             },
             hasSaintNicolasSix: (dateISO: string) => {
-                const dayTotal = sets.filter((s: any) => s.date === dateISO).reduce((sum: number, s: any) => sum + s.reps, 0);
+                const dayTotal = sets.filter((s: any) => s.date === dateISO).reduce((sum: number, s: any) => sum + (s.exercise === 'PLANK' ? Math.floor(s.reps / 5) : s.reps), 0);
                 return dayTotal > 0 && dayTotal % 10 === 6;
             },
             hasSolsticeWinter: (dateISO: string) => {

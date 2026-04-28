@@ -13,6 +13,7 @@ import TrophySection from "./dashboard/TrophySection"
 import GraphsSection from "./dashboard/GraphsSection"
 import CagnotteSection from "./dashboard/CagnotteSection"
 import RecordsAssiduiteSection from "./dashboard/RecordsAssiduiteSection"
+import FeatureDiscoveryCarousel from "./FeatureDiscoveryCarousel"
 
 interface DashboardData {
     todayISO: string
@@ -495,6 +496,7 @@ export default function ChallengeDashboard() {
 
     return (
         <div className="max-w-4xl mx-auto p-4 space-y-6 pb-20">
+            <FeatureDiscoveryCarousel />
             {toast && (
                 <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full shadow-lg text-white font-bold transition-all ${toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}>
                     {toast.message}
@@ -509,7 +511,7 @@ export default function ChallengeDashboard() {
                     </div>
                 </div>
 
-                <StatCards 
+                <StatCards
                     xp={data.xp}
                     todayISO={data.todayISO}
                     selectedDate={selectedDate}
@@ -544,7 +546,7 @@ export default function ChallengeDashboard() {
 
             {activeTab === 'saisie' && (
                 <>
-                    <WorkoutEntry 
+                    <WorkoutEntry
                         league={(session?.user as any)?.league}
                         localSets={localSets}
                         setLocalSets={setLocalSets}
@@ -552,7 +554,7 @@ export default function ChallengeDashboard() {
                         saveLogs={saveLogs}
                     />
 
-                    <SocialFeed 
+                    <SocialFeed
                         mood={mood}
                         setMood={setMood}
                         saveMood={saveMood}
@@ -590,7 +592,7 @@ export default function ChallengeDashboard() {
                         </div>
                     )}
 
-                    <RecordsAssiduiteSection 
+                    <RecordsAssiduiteSection
                         data={data}
                         setRewardDetail={setRewardDetail}
                         session={session}
@@ -601,7 +603,7 @@ export default function ChallengeDashboard() {
             )}
 
             {activeTab === 'graphs' && (
-                <GraphsSection 
+                <GraphsSection
                     graphPeriod={graphPeriod}
                     setGraphPeriod={setGraphPeriod}
                     data={data}
@@ -609,13 +611,13 @@ export default function ChallengeDashboard() {
             )}
 
             {activeTab === 'cagnotte' && (
-                <CagnotteSection 
+                <CagnotteSection
                     data={data}
                 />
             )}
 
             {activeTab === 'trophees' && (
-                <TrophySection 
+                <TrophySection
                     data={data}
                     setRewardDetail={setRewardDetail}
                     session={session}
@@ -674,7 +676,7 @@ export default function ChallengeDashboard() {
                                     <p className="text-[11px] text-slate-400 font-bold leading-relaxed px-2">
                                         "Je scelle ce résultat par mon honneur. Ma forme était <span className="text-white">stricte</span>, ma volonté <span className="text-white">inflexible</span>."
                                     </p>
-                                    
+
                                     <button
                                         onClick={() => {
                                             setHonorChecked(true);
