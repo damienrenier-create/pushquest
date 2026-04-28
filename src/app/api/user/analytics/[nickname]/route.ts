@@ -133,7 +133,7 @@ export async function GET(
                 { maxVolDayUser: null, maxVolMonthUser: null, maxVolYearUser: null },
                 featuredBadgeKey
             );
-            if (recap && recap.total > 0) {
+            if (recap && (recap.total || 0) > 0) {
                 last7DaysRecaps.push({ date: dISO, ...recap });
             }
         }
@@ -151,7 +151,7 @@ export async function GET(
                 featuredBadgeKey
             );
             return { date: dISO, ...recap };
-        }).filter(r => r.total > 0).sort((a, b) => b.total - a.total);
+        }).filter(r => (r.total || 0) > 0).sort((a, b) => (b.total || 0) - (a.total || 0));
 
         const top3Recaps = allTimeRecaps.slice(0, 3);
 
