@@ -7,6 +7,7 @@ import { getUserSummaries, getShowcaseData } from "@/lib/badges";
 import { BADGE_DEFINITIONS } from "@/config/badges";
 import { getRequiredRepsForDate } from "@/lib/challenge";
 import { calculateAllUsersXP } from "@/lib/xp";
+import { getCompetitiveDangerList } from "@/lib/competitive-danger";
 
 export const dynamic = "force-dynamic";
 
@@ -192,72 +193,15 @@ export default async function PantheonPage() {
     };
 
     // Get recent thefts to mark as "Hot"
-    const recentStealEvents = allEvents.filter((e: any) => e.eventType === "STEAL");
+    const recentStealEvents = allEvents.filter((e: any) => e.eventType === "STEAL"); // kept for reference
+    void recentStealEvents;
 
-    // Calculate Danger List (Badges close to being stolen)
-    const dangerList = badgeOwnerships
-        .filter((bo: any) => {
-            const def = BADGE_DEFINITIONS.find(d => d.key === bo.badgeKey);
-            if (!def || def.type !== "COMPETITIVE" || !bo.currentUserId || bo.currentValue < 0) return false;
-
-            // Skip date-locked competitive badges from the daily threats
-            if (def.metricType.startsWith("DATE_COMPETITIVE")) return false;
-
-            return true;
-        })
-        .map((bo: any) => {
-            const def = BADGE_DEFINITIONS.find(d => d.key === bo.badgeKey);
-            if (!def) return null;
-
-            // Find BEST challenger (excluding current holder)
-            const sortedChallengers = summaries
-                .filter(s => s.id !== bo.currentUserId)
-                .sort((a: any, b: any) => calculateScore(b, def) - calculateScore(a, def));
-
-            const challenger = sortedChallengers[0] as any;
-            if (!challenger) return null;
-
-            const challengerValue = calculateScore(challenger, def);
-            const diff = bo.currentValue - challengerValue;
-
-            // Recent steal check
-            const recentSteal = recentStealEvents.find((e: any) => e.badgeKey === bo.badgeKey);
-            const isRecentSteal = recentSteal && (new Date().getTime() - new Date(recentSteal.createdAt).getTime() < 1000 * 3600 * 24 * 3); // Last 3 days
-
-            // Narrow gap logic
-            const unit = def.metricType === "SERIES_COUNT" ? "Séries" :
-                def.metricType.includes("STREAK") ? "Jours" :
-                    def.metricType.includes("VOLUME") || def.metricType.includes("SET") ? (def.exerciseScope === "PLANK" ? "Secs" : "Reps") : "Pts";
-
-            const isNarrowGap = (unit === "Séries" && diff <= 5) ||
-                (unit === "Jours" && diff <= 2) ||
-                (unit === "Reps" && diff <= 20) ||
-                (unit === "Secs" && diff <= 30) ||
-                (diff <= bo.currentValue * 0.1);
-
-            return {
-                badgeKey: bo.badgeKey,
-                badgeName: bo.badge?.name,
-                emoji: bo.badge?.emoji,
-                holder: bo.currentUser?.nickname,
-                challenger: challenger.nickname,
-                currentValue: bo.currentValue,
-                challengerValue,
-                diff,
-                unit,
-                isDanger: isNarrowGap || isRecentSteal,
-                isRecentSteal
-            };
-        })
-        .filter(Boolean)
-        .sort((a: any, b: any) => {
-            // Sort by: Recent Steal (Hot) > Narrow Gap (Hot) > Diff
-            if (a.isRecentSteal && !b.isRecentSteal) return -1;
-            if (!a.isRecentSteal && b.isRecentSteal) return 1;
-            if (a.isDanger && !b.isDanger) return -1;
-            if (!a.isDanger && b.isDanger) return 1;
-            return a.diff - b.diff;
-        });
+    // Calculate Danger List — uses shared helper (same as Dashboard)
+    const dangerList = getCompetitiveDangerList({
+        badgeOwnerships,
+        summaries,
+        allEvents,
+    });
 
     const serverTime = new Intl.DateTimeFormat('fr-FR', {
         hour: '2-digit',

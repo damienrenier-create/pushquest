@@ -16,6 +16,7 @@ import { initBadges, getUserSummaries } from "@/lib/badges";
 import { BADGE_DEFINITIONS } from "@/config/badges";
 import { calculateAllUsersXP } from "@/lib/xp";
 import { getXPForReward } from "@/lib/rewards";
+import { getCompetitiveDangerList } from "@/lib/competitive-danger";
 
 export const dynamic = "force-dynamic";
 
@@ -399,68 +400,13 @@ export async function GET(req: Request) {
             }
         }))?.filter((ev: any) => ev.fromUserId !== ev.toUserId) || [];
 
-        // Logic for "Badges in Danger" (Challengers #2)
-        const dangerList: any[] = [];
-        badgeOwnerships.forEach((bo: any) => {
-            if (!bo.currentUserId || bo.locked) return;
-
-            const def = BADGE_DEFINITIONS.find(d => d.key === bo.badgeKey);
-            if (!def || def.type !== "COMPETITIVE") return;
-
-            // Find #2. We can look at our 'leaderboard' data (which already has some aggregated stats)
-            // or perform a specific search. For performance, let's use what we have.
-            let challenger: any = null;
-            let challengerValue = -1;
-
-            leaderboard.forEach(u => {
-                if (u.id === bo.currentUserId) return;
-
-                let val = 0;
-                if (def.metricType === "MAX_SET") {
-                    if (def.exerciseScope === "PUSHUPS") val = u.totalPushupsAllTime; // Wait, metric should be max single set
-                    // Re-calculate or use u.maxSingleSet/u.sets
-                    const uSets = (u as any).sets || [];
-                    if (def.exerciseScope === "PUSHUPS") val = Math.max(0, ...uSets.filter((s: any) => s.exercise === "PUSHUP").map((s: any) => s.reps));
-                    else if (def.exerciseScope === "PULLUPS") val = Math.max(0, ...uSets.filter((s: any) => s.exercise === "PULLUP").map((s: any) => s.reps));
-                    else if (def.exerciseScope === "SQUATS") val = Math.max(0, ...uSets.filter((s: any) => s.exercise === "SQUAT").map((s: any) => s.reps));
-                    else val = u.maxSingleSet;
-                } else if (def.metricType === "SERIES_COUNT") {
-                    const uSets = (u as any).sets || [];
-                    const exo = def.exerciseScope === "PUSHUPS" ? "PUSHUP" : def.exerciseScope === "PULLUPS" ? "PULLUP" : "SQUAT";
-                    val = uSets.filter((s: any) => s.exercise === exo && s.reps === def.seriesTarget).length;
-                }
-                // Add more metric types if needed (BONUS_STREAK etc.)
-
-                if (val > challengerValue) {
-                    challengerValue = val;
-                    challenger = u;
-                }
-            });
-
-            if (challenger && bo.currentValue >= 0) {
-                const diff = bo.currentValue - challengerValue;
-                const percent = (challengerValue / bo.currentValue);
-                // Criteria: challenger is at 90%+ or within 2 units (reps/streak/count)
-                if (percent >= 0.9 || diff <= 2) {
-                    const xpAtRisk = getXPForReward(bo.badgeKey);
-                    dangerList.push({
-                        badgeKey: bo.badgeKey,
-                        badgeName: bo.badge.name,
-                        emoji: bo.badge.emoji,
-                        holder: bo.currentUser?.nickname,
-                        challenger: challenger.nickname,
-                        currentValue: bo.currentValue,
-                        challengerValue,
-                        diff,
-                        percent,
-                        xpAtRisk
-                    });
-                }
-            }
-        });
-
-        // Sort by criticality: percentage descending (closer to 1 = more dangerous)
-        dangerList.sort((a, b) => b.percent - a.percent);
+        // Logic for "Badges in Danger" — uses shared helper (same as Pantheon)
+        const dangerList = getCompetitiveDangerList({
+            badgeOwnerships,
+            summaries: sharedSummaries,
+            allEvents: recentEvents,
+            getXPForReward,
+        }).slice(0, 5); // Dashboard shows max 5
 
         // --- Hourly Distribution (Pic d'activité) ---
         const hourlyDistribution: Record<number, number> = {};

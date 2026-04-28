@@ -15,10 +15,18 @@ export default function TrophySection({ data, setRewardDetail, toggleLike, sessi
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
             {/* Compteur de Gloire */}
             <div className="flex justify-between items-center px-2">
-                <h3 className="font-black text-xs text-slate-500 uppercase tracking-widest">Compteur de gloire</h3>
-                <span className="text-blue-600 font-black text-sm">
-                    {(data?.badges?.competitive?.ownerships || []).filter((o: any) => o.currentUser?.nickname).length} / {(data?.badges?.competitive?.ownerships || []).length}
-                </span>
+                <div>
+                    <h3 className="font-black text-xs text-slate-500 uppercase tracking-widest">Titres attribués</h3>
+                    <p className="text-[9px] text-slate-400 font-medium mt-0.5">Badges compétitifs avec détenteur actuel</p>
+                </div>
+                <div className="text-right">
+                    <span className="text-blue-600 font-black text-sm">
+                        {(data?.badges?.competitive?.ownerships || []).filter((o: any) => o.currentUser?.nickname).length} / {(data?.badges?.competitive?.ownerships || []).length}
+                    </span>
+                    <Link href="/pantheon" className="block text-[9px] text-indigo-500 hover:underline font-bold uppercase mt-0.5">
+                        Voir le Panthéon →
+                    </Link>
+                </div>
             </div>
 
             {/* Activité Récente (Duplicate for this tab but styled differently in original) */}
@@ -28,10 +36,13 @@ export default function TrophySection({ data, setRewardDetail, toggleLike, sessi
                         <span className="p-1 px-2 bg-indigo-500 rounded-lg text-xs not-italic">LIVE</span>
                         Activité Récente
                     </h2>
+                    <Link href="/pantheon#journal" className="text-[9px] font-black text-slate-400 hover:text-indigo-300 uppercase tracking-widest transition-colors">
+                        Journal complet →
+                    </Link>
                 </div>
                 <div className="space-y-4 max-h-[400px] overflow-y-auto no-scrollbar relative z-10 pr-2">
                     {(data?.badges?.competitive?.events || []).length > 0 ? (
-                        (data?.badges?.competitive?.events || []).slice(0, 15).map((ev: any) => {
+                        (data?.badges?.competitive?.events || []).slice(0, 5).map((ev: any) => {
                             const currentUserId = (session?.user as any)?.id;
                             const likes = ev.likes || [];
                             const count = likes.length;
@@ -107,13 +118,18 @@ export default function TrophySection({ data, setRewardDetail, toggleLike, sessi
 
             {/* Badges en Danger */}
             <div className="bg-red-50 rounded-[2.5rem] p-6 lg:p-8 space-y-6 shadow-sm border border-red-100">
-                <h2 className="text-sm lg:text-lg font-black text-red-600 uppercase tracking-tighter italic flex items-center gap-2">
-                    <span className="p-1 px-2 bg-red-100 rounded-lg text-xs not-italic">⚠️</span>
-                    Badges en Danger
-                </h2>
+                <div className="flex items-center justify-between">
+                    <h2 className="text-sm lg:text-lg font-black text-red-600 uppercase tracking-tighter italic flex items-center gap-2">
+                        <span className="p-1 px-2 bg-red-100 rounded-lg text-xs not-italic">⚠️</span>
+                        Badges en Danger
+                    </h2>
+                    <Link href="/pantheon#thrones" className="text-[9px] font-black text-red-400 hover:text-red-600 uppercase tracking-widest transition-colors">
+                        Guerre des Trônes →
+                    </Link>
+                </div>
                 <div className="space-y-3">
                     {(data?.badges?.competitive?.danger || []).length > 0 ? (
-                        (data?.badges?.competitive?.danger || []).map((d: any) => (
+                        (data?.badges?.competitive?.danger || []).slice(0, 5).map((d: any) => (
                             <div
                                 key={d.badgeKey}
                                 onClick={() => setRewardDetail({

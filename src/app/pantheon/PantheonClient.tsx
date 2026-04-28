@@ -238,7 +238,7 @@ export default function PantheonClient({
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
 
                         {/* Activité Récente */}
-                        <div className="lg:col-span-5 bg-white rounded-3xl p-8 shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col h-full">
+                        <div id="journal" className="lg:col-span-5 bg-white rounded-3xl p-8 shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col h-full">
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex items-center gap-3">
                                     <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
@@ -246,7 +246,7 @@ export default function PantheonClient({
                                     </div>
                                     <h2 className="text-lg font-black uppercase tracking-normal">Journal de Gloire</h2>
                                 </div>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Temps réel</span>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Derniers mouvements</span>
                             </div>
 
                             <div className="space-y-4 flex-1 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar">
@@ -320,7 +320,7 @@ export default function PantheonClient({
 
                             {/* Cibles Prioritaires */}
                             {myTargets.length > 0 && (
-                                <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl p-8 shadow-xl shadow-indigo-200 border border-indigo-400/50 flex flex-col text-white">
+                                <div id="targets" className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl p-8 shadow-xl shadow-indigo-200 border border-indigo-400/50 flex flex-col text-white">
                                     <div className="flex items-center gap-3 mb-6">
                                         <div className="p-2.5 bg-white/20 text-white rounded-xl backdrop-blur-sm">
                                             <Target size={20} />
@@ -355,7 +355,7 @@ export default function PantheonClient({
                             )}
 
                             {/* Menaces Globales */}
-                            <div className="bg-white rounded-3xl p-8 shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col h-full">
+                            <div id="thrones" className="bg-white rounded-3xl p-8 shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col h-full">
                                 <div className="flex flex-col gap-4 mb-6">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
@@ -393,7 +393,7 @@ export default function PantheonClient({
                                         <div key={i} className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border transition-all ${danger.isRecentSteal ? 'bg-orange-50/70 border-orange-200 ring-2 ring-orange-500/10' : danger.isDanger ? 'bg-red-50/50 border-red-200 hover:bg-red-50' : 'bg-slate-50 border-slate-100 opacity-90 hover:opacity-100'}`}>
                                             <div className="mb-3 sm:mb-0 min-w-0 pr-4 flex-1">
                                                 <div className="flex items-center gap-2 mb-1">
-                                                    <Link href="/faq?tab=catalogue" className="text-sm font-black text-slate-800 uppercase truncate hover:text-indigo-600 transition-colors flex items-center gap-2">
+                                                    <Link href={`/faq?tab=catalogue#item-${danger.badgeKey}`} className="text-sm font-black text-slate-800 uppercase truncate hover:text-indigo-600 transition-colors flex items-center gap-2">
                                                         <span className="text-lg">{danger.emoji}</span>
                                                         <span>{danger.badgeName}</span>
                                                     </Link>
