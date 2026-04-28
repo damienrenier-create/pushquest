@@ -21,7 +21,7 @@ interface YesterdayXpRecapProps {
     topRecaps?: RecapData[]
 }
 
-export default function YesterdayXpRecap({ recap, weeklyRecaps = [], topRecaps = [] }) {
+export default function YesterdayXpRecap({ recap, weeklyRecaps = [], topRecaps = [] }: YesterdayXpRecapProps) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const reports = weeklyRecaps.length > 0 ? weeklyRecaps : (recap ? [recap] : []);
 
