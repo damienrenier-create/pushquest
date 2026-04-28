@@ -108,12 +108,18 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
         let lastWinDate: Date | null = null;
 
         sortedWinningDates.forEach(dateStr => {
+            const dateObj = new Date(dateStr);
             if (winnersByDate[dateStr] === u.id) {
-                const dateObj = new Date(dateStr);
                 if (lastWinDate) {
-                    const diffDays = Math.round((dateObj.getTime() - lastWinDate.getTime()) / (1000 * 3600 * 24));
-                    if (diffDays === 1) currentTorchStreak++;
-                    else currentTorchStreak = 1;
+                    // Calculate difference in days (handling potential timezone shifts with 12h buffer)
+                    const diffMs = dateObj.getTime() - lastWinDate.getTime();
+                    const diffDays = Math.round(diffMs / (1000 * 3600 * 24));
+                    
+                    if (diffDays === 1) {
+                        currentTorchStreak++;
+                    } else {
+                        currentTorchStreak = 1;
+                    }
                 } else {
                     currentTorchStreak = 1;
                 }

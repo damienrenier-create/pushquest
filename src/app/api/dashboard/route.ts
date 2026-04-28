@@ -56,13 +56,21 @@ export async function GET(req: Request) {
                 nickname: { not: 'modo' },
                 league: league
             },
-            include: {
+            select: {
+                id: true,
+                nickname: true,
+                email: true,
+                image: true,
+                buyoutPaid: true,
+                buyoutPaidAt: true,
                 sets: true,
                 fines: true,
                 sallyUps: true,
                 medicalCertificates: true,
                 potEvents: true,
-                xpAdjustments: true
+                xpAdjustments: true,
+                league: true,
+                createdAt: true
             }
         })) as any[];
 
@@ -186,6 +194,7 @@ export async function GET(req: Request) {
             return {
                 id: u.id,
                 nickname: u.nickname,
+                image: u.image,
                 buyoutPaid: u.buyoutPaid,
                 isInjured,
                 isVeteran,
@@ -378,7 +387,7 @@ export async function GET(req: Request) {
         const badgeOwnerships = await (prisma as any).badgeOwnership.findMany({
             include: {
                 badge: true,
-                currentUser: { select: { nickname: true } }
+                currentUser: { select: { nickname: true, image: true } }
             }
         });
 
@@ -394,8 +403,8 @@ export async function GET(req: Request) {
             orderBy: { createdAt: "desc" },
             include: {
                 badge: true,
-                fromUser: { select: { nickname: true } },
-                toUser: { select: { nickname: true } },
+                fromUser: { select: { nickname: true, image: true } },
+                toUser: { select: { nickname: true, image: true } },
                 likes: { select: { userId: true } }
             }
         }))?.filter((ev: any) => ev.fromUserId !== ev.toUserId) || [];

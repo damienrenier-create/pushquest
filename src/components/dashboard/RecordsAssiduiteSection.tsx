@@ -122,11 +122,21 @@ export default function RecordsAssiduiteSection({
                             <div key={u.nickname || i} className="flex justify-between items-center p-4 hover:bg-gray-50/50 transition-colors">
                                 <div className="flex items-center gap-3">
                                     <span className={`w-6 text-center font-black ${i < 3 ? 'text-blue-500' : 'text-gray-300'}`}>{i + 1}</span>
+                                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-sm border border-gray-100 overflow-hidden shrink-0">
+                                        {u.image ? (
+                                            <img src={u.image} alt={u.nickname} className="w-full h-full object-cover" />
+                                        ) : (
+                                            (() => {
+                                                const userXP = data?.xp?.leaderboard.find((x: any) => x.id === u.id);
+                                                return userXP ? userXP.emoji : '👤';
+                                            })()
+                                        )}
+                                    </div>
                                     <div>
                                         <div className="flex items-center gap-1.5">
                                             {(() => {
                                                 const userXP = data?.xp?.leaderboard.find((x: any) => x.id === u.id);
-                                                return userXP ? <span className="text-xs font-black text-slate-400" title={userXP.animal}>[Lv.{userXP.level} {userXP.emoji}]</span> : null;
+                                                return userXP ? <span className="text-[10px] font-black text-slate-400" title={userXP.animal}>Lv.{userXP.level}</span> : null;
                                             })()}
                                             <Link href={`/u/${encodeURIComponent(u.nickname || '')}`} className="font-black text-gray-900 text-sm leading-none hover:text-blue-600 hover:underline transition-color shrink-0" title={`Visiter le profil de ${u.nickname}`}>
                                                 {u.nickname || 'Anonyme'}

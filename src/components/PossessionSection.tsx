@@ -8,10 +8,12 @@ interface PossessionData {
     today: {
         holder: string;
         time: string | null;
+        image: string | null;
         req: number;
     };
     legacy: {
         holder: string;
+        image: string | null;
         record: number;
         badge: {
             name: string;
@@ -58,8 +60,12 @@ export default function PossessionSection() {
                     <div className="absolute -top-4 -right-4 w-24 h-24 bg-orange-500 opacity-5 rounded-full blur-2xl group-hover:opacity-10 transition-opacity" />
                     
                     <div className="relative flex items-center gap-4">
-                        <div className="w-14 h-14 rounded-2xl bg-orange-50 flex items-center justify-center text-3xl shadow-inner border border-orange-100">
-                            🔥
+                        <div className="w-14 h-14 rounded-2xl bg-orange-50 flex items-center justify-center text-3xl shadow-inner border border-orange-100 overflow-hidden shrink-0">
+                            {data.today.image ? (
+                                <img src={data.today.image} alt={data.today.holder} className="w-full h-full object-cover" />
+                            ) : (
+                                "🔥"
+                            )}
                         </div>
                         <div>
                             <p className="text-[10px] font-black uppercase tracking-widest text-orange-600 mb-1 flex items-center gap-1">
@@ -94,8 +100,12 @@ export default function PossessionSection() {
                     </div>
                     
                     <div className="relative flex items-center gap-4">
-                        <Link href={`/faq?tab=catalogue#item-torch_legacy`} className="w-14 h-14 rounded-2xl bg-purple-50 flex items-center justify-center text-3xl shadow-inner border border-purple-100 transition-transform hover:scale-110">
-                            {data.legacy.badge?.emoji || "🚩"}
+                        <Link href={`/faq?tab=catalogue#item-torch_legacy`} className="w-14 h-14 rounded-2xl bg-purple-50 flex items-center justify-center text-3xl shadow-inner border border-purple-100 transition-transform hover:scale-110 overflow-hidden shrink-0">
+                            {data.legacy.image ? (
+                                <img src={data.legacy.image} alt={data.legacy.holder} className="w-full h-full object-cover" />
+                            ) : (
+                                data.legacy.badge?.emoji || "🚩"
+                            )}
                         </Link>
                         <div>
                             <Link href={`/faq?tab=catalogue#item-torch_legacy`} className="text-[10px] font-black uppercase tracking-widest text-purple-600 mb-1 flex items-center gap-1 hover:underline">

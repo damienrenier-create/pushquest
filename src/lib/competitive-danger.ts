@@ -19,7 +19,9 @@ export type CompetitiveDangerItem = {
     badgeName: string;
     emoji?: string;
     holder: string;
+    holderImage?: string | null;
     challenger: string;
+    challengerImage?: string | null;
     currentValue: number;
     challengerValue: number;
     diff: number;
@@ -34,13 +36,14 @@ type BadgeOwnership = {
     currentUserId: string | null;
     currentValue: number;
     locked?: boolean;
-    currentUser?: { nickname: string } | null;
+    currentUser?: { nickname: string; image?: string | null } | null;
     badge?: { name: string; emoji: string } | null;
 };
 
 type UserSummary = {
     id: string;
     nickname: string;
+    image?: string | null;
     maxBonus?: number;
     maxBonusStreak?: number;
     maxPerfectStreak?: number;
@@ -184,7 +187,9 @@ export function getCompetitiveDangerList(input: CompetitiveDangerInput): Competi
                 badgeName: bo.badge?.name || bo.badgeKey,
                 emoji: bo.badge?.emoji,
                 holder: bo.currentUser?.nickname || "?",
+                holderImage: bo.currentUser?.image,
                 challenger: challenger.nickname,
+                challengerImage: challenger.image,
                 currentValue: bo.currentValue,
                 challengerValue,
                 diff,

@@ -19,7 +19,8 @@ export async function GET() {
                 user: {
                     select: {
                         nickname: true,
-                        id: true
+                        id: true,
+                        image: true
                     }
                 },
                 likes: true
@@ -35,6 +36,7 @@ export async function GET() {
             createdAt: s.createdAt,
             userId: s.userId,
             nickname: s.user.nickname,
+            image: s.user.image,
             likeCount: s.likes.length,
             hasLiked: userId ? s.likes.some((l: any) => l.userId === userId) : false
         }));

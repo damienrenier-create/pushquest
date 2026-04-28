@@ -32,6 +32,7 @@ model User {
   xpAdjustments XpAdjustment[]
   specialWorkoutEntries SpecialWorkoutEntry[]
   league    String      @default("POMPES")
+  image     String?     // URL to profile picture
   alterEgoId String?     @unique
   alterEgo   User?       @relation("AlterEgo", fields: [alterEgoId], references: [id])
   originalProfile User?  @relation("AlterEgo")

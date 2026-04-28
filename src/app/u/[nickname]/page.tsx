@@ -176,8 +176,12 @@ export default function UserProfilePage() {
                 <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl opacity-50" />
 
                 <div className="relative flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
-                    <div className="w-20 h-20 sm:w-32 sm:h-32 bg-slate-800 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-center text-3xl sm:text-5xl shadow-2xl border border-slate-700/50 font-black text-white shrink-0">
-                        {user.nickname.charAt(0).toUpperCase()}
+                    <div className="w-20 h-20 sm:w-32 sm:h-32 bg-slate-800 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-center text-3xl sm:text-5xl shadow-2xl border border-slate-700/50 font-black text-white shrink-0 overflow-hidden">
+                        {user.image ? (
+                            <img src={user.image} alt={user.nickname} className="w-full h-full object-cover" />
+                        ) : (
+                            user.nickname.charAt(0).toUpperCase()
+                        )}
                     </div>
 
                     <div className="text-center sm:text-left space-y-2 sm:space-y-3 flex-1 min-w-0">
@@ -584,7 +588,11 @@ export default function UserProfilePage() {
                             href={`/u/${encodeURIComponent(u.nickname)}`}
                             className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all group shrink-0"
                         >
-                            <span className="text-lg group-hover:scale-125 transition-transform">{u.emoji}</span>
+                            {u.image ? (
+                                <img src={u.image} alt={u.nickname} className="w-6 h-6 rounded-lg object-cover group-hover:scale-110 transition-transform" />
+                            ) : (
+                                <span className="text-lg group-hover:scale-125 transition-transform">{u.emoji}</span>
+                            )}
                             <div className="flex flex-col">
                                 <span className="text-[10px] font-black text-white leading-none">{u.nickname}</span>
                                 <span className="text-[7px] font-bold text-slate-400 uppercase tracking-tighter">{u.animal}</span>

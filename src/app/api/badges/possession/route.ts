@@ -16,16 +16,18 @@ export async function GET() {
             const daySets = await (prisma as any).exerciseSet.findMany({
                 where: { date: today },
                 orderBy: { createdAt: "asc" },
-                include: { user: { select: { nickname: true } } }
+                include: { user: { select: { nickname: true, image: true } } }
             });
 
             const userProgress: Record<string, number> = {};
             for (const s of daySets) {
-                userProgress[s.userId] = (userProgress[s.userId] || 0) + s.reps;
+                const effort = s.exercise === "PLANK" ? Math.floor(s.reps / 5) : s.reps;
+                userProgress[s.userId] = (userProgress[s.userId] || 0) + effort;
                 if (userProgress[s.userId] >= req) {
                     currentTorchbearer = {
                         nickname: s.user.nickname,
-                        time: s.createdAt
+                        time: s.createdAt,
+                        image: s.user.image
                     };
                     break;
                 }
@@ -35,20 +37,27 @@ export async function GET() {
         // 2. Find Torch Legacy Record Holder
         const torchLegacyOwnership = await (prisma as any).badgeOwnership.findUnique({
             where: { badgeKey: "torch_legacy" },
-            include: { currentUser: { select: { nickname: true } } }
+            include: { currentUser: { select: { nickname: true, image: true } } }
         });
 
         const torchDef = BADGE_DEFINITIONS.find(d => d.key === "torch_legacy");
+        
+        // Fallback: If no legacy record exists but we have a torchbearer today, they are the de-facto guardian
+        const legacyHolder = torchLegacyOwnership?.currentUser?.nickname || (currentTorchbearer ? currentTorchbearer.nickname : "Inconnu");
+        const legacyImage = torchLegacyOwnership?.currentUser?.image || (currentTorchbearer ? currentTorchbearer.image : null);
+        const legacyRecord = torchLegacyOwnership ? torchLegacyOwnership.currentValue : (currentTorchbearer ? 1 : 0);
 
         return NextResponse.json({
             today: {
                 holder: currentTorchbearer?.nickname || "Personne pour le moment",
                 time: currentTorchbearer?.time || null,
+                image: (currentTorchbearer as any)?.image || null,
                 req
             },
             legacy: {
-                holder: torchLegacyOwnership?.currentUser?.nickname || "Inconnu",
-                record: torchLegacyOwnership?.currentValue || 0,
+                holder: legacyHolder,
+                image: legacyImage,
+                record: legacyRecord,
                 badge: torchDef
             }
         });

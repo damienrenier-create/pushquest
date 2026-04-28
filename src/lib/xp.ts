@@ -486,6 +486,7 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
         xpUserMap.set(u.id, {
             id: u.id,
             nickname: u.nickname,
+            image: u.image,
             totalXP,
             level,
             animal: details.name,

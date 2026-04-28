@@ -57,9 +57,18 @@ export default function TrophySection({ data, setRewardDetail, toggleLike, sessi
                             return (
                                 <div key={ev.id} className="bg-white/5 p-4 rounded-2xl border border-white/5 transition-all hover:bg-white/10 group flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                     <div className="flex gap-4 items-center">
-                                        <span className="text-3xl sm:text-4xl shrink-0 group-hover:scale-110 transition-transform cursor-pointer" onClick={() => setRewardDetail({ ...ev.badge, type: 'Bataille', holder: ev.toUser?.nickname, achievedAt: ev.createdAt, currentValue: ev.newValue })}>
-                                            {ev.badge?.emoji}
-                                        </span>
+                                        <div className="relative shrink-0">
+                                            <span className="text-3xl sm:text-4xl block group-hover:scale-110 transition-transform cursor-pointer" onClick={() => setRewardDetail({ ...ev.badge, type: 'Bataille', holder: ev.toUser?.nickname, achievedAt: ev.createdAt, currentValue: ev.newValue })}>
+                                                {ev.badge?.emoji}
+                                            </span>
+                                            <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-slate-900 bg-slate-800 overflow-hidden">
+                                                {ev.toUser?.image ? (
+                                                    <img src={ev.toUser.image} alt={ev.toUser.nickname} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <span className="text-[8px] font-black text-white flex items-center justify-center h-full uppercase">{ev.toUser?.nickname?.charAt(0)}</span>
+                                                )}
+                                            </div>
+                                        </div>
                                         <div>
                                             <p className="text-[11px] font-bold text-white leading-relaxed">
                                                 {ev.eventType === 'STEAL' ? (
@@ -144,9 +153,18 @@ export default function TrophySection({ data, setRewardDetail, toggleLike, sessi
                                 className="bg-white p-4 rounded-3xl border border-red-100 flex justify-between items-center group shadow-sm hover:shadow-md transition-shadow cursor-pointer active:scale-[0.98]"
                             >
                                 <div className="flex items-center gap-4">
-                                    <Link href={`/faq?tab=catalogue#item-${d.badgeKey}`} className="text-3xl sm:text-4xl hover:scale-110 transition-transform">
-                                        {d.emoji}
-                                    </Link>
+                                    <div className="relative">
+                                        <Link href={`/faq?tab=catalogue#item-${d.badgeKey}`} className="text-3xl sm:text-4xl hover:scale-110 transition-transform block">
+                                            {d.emoji}
+                                        </Link>
+                                        <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white bg-slate-100 overflow-hidden shadow-sm">
+                                            {d.holderImage ? (
+                                                <img src={d.holderImage} alt={d.holder} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <span className="text-[8px] font-black text-gray-400 flex items-center justify-center h-full uppercase">{d.holder?.charAt(0)}</span>
+                                            )}
+                                        </div>
+                                    </div>
                                     <div>
                                         <Link href={`/faq?tab=catalogue#item-${d.badgeKey}`} className="text-[10px] font-black text-slate-900 uppercase hover:underline">
                                             {d.badgeName}

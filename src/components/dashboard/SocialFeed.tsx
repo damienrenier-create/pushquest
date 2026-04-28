@@ -68,8 +68,15 @@ export default function SocialFeed({
                     <div className="flex gap-3 overflow-x-auto no-scrollbar scroll-smooth">
                         {statuses.map((s: any) => (
                             <div key={s.id} className="flex-shrink-0 bg-white p-3 rounded-2xl border border-gray-100 shadow-sm min-w-[140px] max-w-[200px] relative group transition-all hover:shadow-md">
-                                <div className="flex items-center justify-between mb-2">
-                                    <Link href={`/u/${s.nickname}`} className="text-[9px] font-black text-blue-600 hover:underline truncate uppercase">{s.nickname}</Link>
+                                <div className="flex items-center gap-2 mb-2 min-w-0">
+                                    <div className="w-5 h-5 rounded-full bg-slate-100 overflow-hidden shrink-0 border border-gray-100">
+                                        {s.image ? (
+                                            <img src={s.image} alt={s.nickname} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <span className="text-[8px] font-black text-gray-400 flex items-center justify-center h-full uppercase">{s.nickname.charAt(0)}</span>
+                                        )}
+                                    </div>
+                                    <Link href={`/u/${s.nickname}`} className="text-[9px] font-black text-blue-600 hover:underline truncate uppercase flex-1">{s.nickname}</Link>
                                     <button
                                         onClick={() => toggleStatusLike(s.id)}
                                         className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full transition-all ${s.hasLiked ? 'bg-red-50 text-red-500' : 'bg-gray-50 text-gray-400 hover:bg-gray-100'}`}
