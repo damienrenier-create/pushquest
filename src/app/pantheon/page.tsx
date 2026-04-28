@@ -114,8 +114,15 @@ export default async function PantheonPage() {
                 }
             } else if (def.metricType === "VOLUME_STREAK") {
                 const days = def.key.includes("week") ? 7 : 1;
-                const exo = def.exerciseScope === "PUSHUPS" ? "PUSHUP" : "SQUAT";
+                const exo = def.exerciseScope === "PUSHUPS" ? "PUSHUP" : def.exerciseScope === "SQUATS" ? "SQUAT" : def.exerciseScope === "PLANK" ? "PLANK" : "ALL";
                 isEarned = s.getHistoricalMaxVolume(days, exo) >= threshold;
+            } else if (def.metricType === "QUATUOR_STREAK") {
+                // Approximate for virtualized view: does the user have enough history?
+                // Actually s.maxQuatuorStreak is what we need. Let's assume s has it.
+                isEarned = (s as any).maxQuatuorStreak >= threshold;
+            } else if (def.metricType === "QUATUOR_GOLD" || def.metricType === "QUATUOR_ULTIMATE") {
+                const today = new Date().toISOString().split('T')[0];
+                isEarned = def.metricType === "QUATUOR_GOLD" ? s.hasQuatuorGold(today) : s.hasQuatuorUltimate(today);
             }
 
             if (isEarned && def.isUnique) {
@@ -166,20 +173,34 @@ export default async function PantheonPage() {
             return s.getMonthTotal(currentMonth) || 0;
         }
         if (def.metricType === "MONTH_TOP_SET") {
-            const exo = def.exerciseScope === "PUSHUPS" ? "PUSHUP" : def.exerciseScope === "PULLUPS" ? "PULLUP" : "SQUAT";
+            const exo = def.exerciseScope === "PUSHUPS" ? "PUSHUP" : def.exerciseScope === "PULLUPS" ? "PULLUP" : def.exerciseScope === "PLANK" ? "PLANK" : "SQUAT";
             return s.getMonthMaxSet(currentMonth, exo) || 0;
+        }
+        if (def.metricType === "QUATUOR_STREAK") return s.maxQuatuorStreak || 0;
+        if (def.metricType === "QUATUOR_GOLD" || def.metricType === "QUATUOR_ULTIMATE") {
+            return s.getDayTotal(todayISO) || 0;
+        }
+        if (def.metricType === "FIRST_REACH") {
+            const scopeField = def.exerciseScope === "PUSHUPS" ? "maxSetPushups" : def.exerciseScope === "PULLUPS" ? "maxSetPullups" : def.exerciseScope === "PLANK" ? "maxSetPlanks" : "maxSetSquats";
+            return s[scopeField] || 0;
+        }
+        if (def.metricType === "FIRST_REACH_TOTAL") {
+            const scopeField = def.exerciseScope === "PUSHUPS" ? "totalPushups" : def.exerciseScope === "PULLUPS" ? "totalPullups" : def.exerciseScope === "PLANK" ? "totalPlanks" : "totalSquats";
+            return s[scopeField] || 0;
         }
         return 0;
     };
+
+    // Get recent thefts to mark as "Hot"
+    const recentStealEvents = allEvents.filter((e: any) => e.eventType === "STEAL");
 
     // Calculate Danger List (Badges close to being stolen)
     const dangerList = badgeOwnerships
         .filter((bo: any) => {
             const def = BADGE_DEFINITIONS.find(d => d.key === bo.badgeKey);
-            // Show only if it's a real competition or close threat
             if (!def || def.type !== "COMPETITIVE" || !bo.currentUserId || bo.currentValue < 0) return false;
 
-            // Skip date-locked competitive badges from the daily threats entirely
+            // Skip date-locked competitive badges from the daily threats
             if (def.metricType.startsWith("DATE_COMPETITIVE")) return false;
 
             return true;
@@ -188,7 +209,7 @@ export default async function PantheonPage() {
             const def = BADGE_DEFINITIONS.find(d => d.key === bo.badgeKey);
             if (!def) return null;
 
-            // Find best challenger (excluding current holder)
+            // Find BEST challenger (excluding current holder)
             const sortedChallengers = summaries
                 .filter(s => s.id !== bo.currentUserId)
                 .sort((a: any, b: any) => calculateScore(b, def) - calculateScore(a, def));
@@ -199,16 +220,20 @@ export default async function PantheonPage() {
             const challengerValue = calculateScore(challenger, def);
             const diff = bo.currentValue - challengerValue;
 
-            // Define meaningful units
+            // Recent steal check
+            const recentSteal = recentStealEvents.find((e: any) => e.badgeKey === bo.badgeKey);
+            const isRecentSteal = recentSteal && (new Date().getTime() - new Date(recentSteal.createdAt).getTime() < 1000 * 3600 * 24 * 3); // Last 3 days
+
+            // Narrow gap logic
             const unit = def.metricType === "SERIES_COUNT" ? "Séries" :
                 def.metricType.includes("STREAK") ? "Jours" :
-                    def.metricType === "VOLUME_STREAK" ? "Reps" : "Pts";
+                    def.metricType.includes("VOLUME") || def.metricType.includes("SET") ? (def.exerciseScope === "PLANK" ? "Secs" : "Reps") : "Pts";
 
-            // Only show as "Danger" if the gap is small (threshold: < 25 reps or < 20% or < 5 days)
-            const isDanger = (unit === "Séries" && diff <= 10) ||
-                (unit === "Jours" && diff <= 5) ||
-                (unit === "Reps" && diff <= 50) ||
-                (diff <= bo.currentValue * 0.2);
+            const isNarrowGap = (unit === "Séries" && diff <= 5) ||
+                (unit === "Jours" && diff <= 2) ||
+                (unit === "Reps" && diff <= 20) ||
+                (unit === "Secs" && diff <= 30) ||
+                (diff <= bo.currentValue * 0.1);
 
             return {
                 badgeKey: bo.badgeKey,
@@ -220,11 +245,19 @@ export default async function PantheonPage() {
                 challengerValue,
                 diff,
                 unit,
-                isDanger
+                isDanger: isNarrowGap || isRecentSteal,
+                isRecentSteal
             };
         })
         .filter(Boolean)
-        .sort((a: any, b: any) => a.diff - b.diff); // Most dangerous first
+        .sort((a: any, b: any) => {
+            // Sort by: Recent Steal (Hot) > Narrow Gap (Hot) > Diff
+            if (a.isRecentSteal && !b.isRecentSteal) return -1;
+            if (!a.isRecentSteal && b.isRecentSteal) return 1;
+            if (a.isDanger && !b.isDanger) return -1;
+            if (!a.isDanger && b.isDanger) return 1;
+            return a.diff - b.diff;
+        });
 
     const serverTime = new Intl.DateTimeFormat('fr-FR', {
         hour: '2-digit',

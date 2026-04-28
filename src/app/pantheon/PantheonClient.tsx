@@ -154,8 +154,10 @@ export default function PantheonClient({
         } else if (dangerSort === "gap_desc") {
             list = list.sort((a, b) => b.diff - a.diff);
         } else {
-            // "hot" : prioritize isDanger, then by gap
+            // "hot" : prioritize isRecentSteal, then isDanger, then by gap
             list = list.sort((a, b) => {
+                if (a.isRecentSteal && !b.isRecentSteal) return -1;
+                if (!a.isRecentSteal && b.isRecentSteal) return 1;
                 if (a.isDanger && !b.isDanger) return -1;
                 if (!a.isDanger && b.isDanger) return 1;
                 return a.diff - b.diff; // small gap first
@@ -388,12 +390,15 @@ export default function PantheonClient({
 
                                 <div className="space-y-3 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar flex-1">
                                     {filteredDangerList.length > 0 ? filteredDangerList.map((danger: any, i: number) => (
-                                        <div key={i} className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border transition-colors ${danger.isDanger ? 'bg-red-50/50 border-red-200 hover:bg-red-50' : 'bg-slate-50 border-slate-100 opacity-90 hover:opacity-100'}`}>
+                                        <div key={i} className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border transition-all ${danger.isRecentSteal ? 'bg-orange-50/70 border-orange-200 ring-2 ring-orange-500/10' : danger.isDanger ? 'bg-red-50/50 border-red-200 hover:bg-red-50' : 'bg-slate-50 border-slate-100 opacity-90 hover:opacity-100'}`}>
                                             <div className="mb-3 sm:mb-0 min-w-0 pr-4 flex-1">
-                                                <Link href="/faq?tab=catalogue" className="text-sm font-black text-slate-800 uppercase mb-1 truncate hover:text-indigo-600 transition-colors flex items-center gap-2">
-                                                    <span className="text-lg">{danger.emoji}</span>
-                                                    <span>{danger.badgeName}</span>
-                                                </Link>
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <Link href="/faq?tab=catalogue" className="text-sm font-black text-slate-800 uppercase truncate hover:text-indigo-600 transition-colors flex items-center gap-2">
+                                                        <span className="text-lg">{danger.emoji}</span>
+                                                        <span>{danger.badgeName}</span>
+                                                    </Link>
+                                                    {danger.isRecentSteal && <span className="bg-orange-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full animate-pulse uppercase tracking-widest">VOL RÉCENT</span>}
+                                                </div>
                                                 <div className="flex flex-wrap items-center gap-y-1 gap-x-3 text-xs text-slate-600">
                                                     <span>👑 <span className="font-bold text-slate-800">{danger.holder}</span></span>
                                                     <span className="px-2 py-0.5 bg-white rounded border border-slate-200 text-slate-700 font-bold">{danger.currentValue} {danger.unit}</span>
@@ -401,11 +406,11 @@ export default function PantheonClient({
                                             </div>
                                             <div className="text-right shrink-0 flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 sm:border-l border-slate-200/60 pt-3 sm:pt-0 sm:pl-4">
                                                 <div className="flex items-center gap-1.5 mb-0 sm:mb-1">
-                                                    <span className="text-xs font-bold text-slate-700 uppercase">{danger.challenger}</span>
-                                                    {danger.isDanger && <Zap size={14} className="text-amber-500 fill-amber-500 animate-pulse" />}
+                                                    <span className="text-xs font-bold text-slate-700 uppercase">{danger.challenger} (<span className="text-indigo-600">{danger.challengerValue}</span>)</span>
+                                                    {danger.isDanger && <Zap size={14} className={`${danger.isRecentSteal ? 'text-orange-500' : 'text-amber-500'} fill-current animate-pulse`} />}
                                                 </div>
-                                                <div className={`px-2 py-1 rounded text-xs font-black uppercase inline-flex items-center ${danger.isDanger ? 'bg-red-100 text-red-600' : 'bg-slate-200/50 text-slate-500'}`}>
-                                                    {danger.isDanger ? 'MENACE' : 'ÉCART'}: {danger.diff}
+                                                <div className={`px-2 py-1 rounded text-xs font-black uppercase inline-flex items-center ${danger.isRecentSteal ? 'bg-orange-100 text-orange-600' : danger.isDanger ? 'bg-red-100 text-red-600' : 'bg-slate-200/50 text-slate-500'}`}>
+                                                    {danger.isRecentSteal ? 'À REPRENDRE' : danger.isDanger ? 'DANGER' : 'DISTANCE'}: {danger.diff} {danger.unit}
                                                 </div>
                                             </div>
                                         </div>

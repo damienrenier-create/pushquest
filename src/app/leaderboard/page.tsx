@@ -106,13 +106,13 @@ export default async function LeaderboardPage({
                 </h1>
 
                 <div className="flex justify-center flex-wrap gap-1.5 sm:gap-2 mt-2 sm:mt-4">
-                    {(['ALL', 'PUSHUP', 'PULLUP', 'SQUAT', 'XP'] as const).map(ex => (
+                    {(['ALL', 'PUSHUP', 'PULLUP', 'SQUAT', 'PLANK', 'XP'] as const).map(ex => (
                         <Link
                             key={ex}
                             href={`/leaderboard?exercise=${ex}`}
                             className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black transition-all ${selectedExercise === ex ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'}`}
                         >
-                            {ex}
+                            {ex === 'PLANK' ? 'GAINAGE' : ex}
                         </Link>
                     ))}
                 </div>

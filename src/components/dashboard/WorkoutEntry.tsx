@@ -59,7 +59,7 @@ export default function WorkoutEntry({ league, localSets, setLocalSets, saving, 
                 <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
                     <div className="flex justify-between items-center mb-4">
                         <div className="flex items-center gap-2">
-                            <span className="text-2xl">🧘</span>
+                            <span className="text-2xl">🛡️</span>
                             <span className="font-black text-gray-800 uppercase text-xs">Gainage (Secondes)</span>
                         </div>
                         <span className="font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full text-xs">
@@ -73,7 +73,7 @@ export default function WorkoutEntry({ league, localSets, setLocalSets, saving, 
                     <div key={type} className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
                         <div className="flex justify-between items-center mb-4">
                             <div className="flex items-center gap-2">
-                                <span className="text-2xl">{type === 'pushups' ? '💪' : type === 'pullups' ? '🦍' : type === 'squats' ? '🦵' : '🧘'}</span>
+                                <span className="text-2xl">{type === 'pushups' ? '💪' : type === 'pullups' ? '🦍' : type === 'squats' ? '🦵' : '🛡️'}</span>
                                 <span className="font-black text-gray-800 uppercase text-xs">{type === 'pushups' ? 'Pompes' : type === 'pullups' ? 'Tractions' : type === 'squats' ? 'Squats' : 'Gainage (s)'}</span>
                             </div>
                             <span className="font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full text-xs">

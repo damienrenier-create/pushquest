@@ -100,7 +100,7 @@ export default function StatCards({
                         <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Cible {selectedDate === todayISO ? "Aujourd'hui" : selectedDate}</p>
                         <div className="flex items-baseline gap-2">
                             <span className="text-6xl font-black">{requiredReps}</span>
-                            <span className="text-slate-500 font-bold uppercase text-xs">{(session?.user as any)?.league === 'GAINAGE' ? 'secondes' : 'reps'}</span>
+                            <span className="text-slate-500 font-bold uppercase text-xs">{(session?.user as any)?.league === 'GAINAGE' ? 'secondes 🛡️' : 'reps'}</span>
                         </div>
                         <div className="mt-2 text-xs font-bold text-slate-400 uppercase tracking-tighter">
                             Effectué : <span className="text-white">{currentTotal} pts (éq.)</span>

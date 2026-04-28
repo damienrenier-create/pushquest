@@ -47,9 +47,9 @@ export default function RecordsAssiduiteSection({
                                     <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full uppercase">{pid === 'day' ? 'Jour' : pid === 'week' ? 'Semaine' : pid === 'month' ? 'Mois' : 'Année'}</span>
                                     <Link href="/faq?tab=catalogue" className="text-lg hover:scale-110 transition-transform">{pRec?.badge ?? '-'}</Link>
                                 </div>
-                                {(['pushups', 'pullups', 'squats'] as const).map(ex => (
+                                {(['pushups', 'pullups', 'squats', 'planks'] as const).map(ex => (
                                     <div key={ex} className="flex justify-between items-start mb-2 border-b border-gray-100/50 pb-2 last:border-0 last:pb-0">
-                                        <span className="text-md opacity-90 mt-1">{ex === 'pushups' ? '💪' : ex === 'pullups' ? '🦍' : '🦵'}</span>
+                                        <span className="text-md opacity-90 mt-1">{ex === 'pushups' ? '💪' : ex === 'pullups' ? '🦍' : ex === 'squats' ? '🦵' : '🛡️'}</span>
                                         <div className="flex flex-col items-end gap-1">
                                             {(pRec?.[ex]?.top3Sets || []).map((s: any, idx: number) => (
                                                 <div key={idx} className={`flex items-center justify-end gap-1.5 ${idx === 0 ? '' : 'opacity-60'}`}>
@@ -88,9 +88,9 @@ export default function RecordsAssiduiteSection({
                                     <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full uppercase">{pid === 'day' ? 'Jour' : pid === 'week' ? 'Semaine' : pid === 'month' ? 'Mois' : 'Année'}</span>
                                     <Link href="/faq?tab=catalogue" className="text-lg hover:scale-110 transition-transform">{pRec?.badge ?? '-'}</Link>
                                 </div>
-                                {(['pushups', 'pullups', 'squats'] as const).map(ex => (
+                                {(['pushups', 'pullups', 'squats', 'planks'] as const).map(ex => (
                                     <div key={`vol-${ex}`} className="flex justify-between items-start mb-2 border-b border-gray-100/50 pb-2 last:border-0 last:pb-0">
-                                        <span className="text-md opacity-90 mt-1">{ex === 'pushups' ? '💪' : ex === 'pullups' ? '🦍' : '🦵'}</span>
+                                        <span className="text-md opacity-90 mt-1">{ex === 'pushups' ? '💪' : ex === 'pullups' ? '🦍' : ex === 'squats' ? '🦵' : '🛡️'}</span>
                                         <div className="flex flex-col items-end gap-1">
                                             {(pRec?.[ex]?.top3Volume || []).map((s: any, idx: number) => (
                                                 <div key={idx} className={`flex items-center gap-1.5 justify-end ${idx === 0 ? '' : 'opacity-60'}`}>

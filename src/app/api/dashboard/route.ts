@@ -271,6 +271,7 @@ export async function GET(req: Request) {
             ...milestonePaliers.map(p => ({ id: `pushups_${p}`, threshold: p, ex: "PUSHUP", label: `${p} Pompes`, emoji: p >= 10000 ? "💎" : "💪" })),
             ...milestonePaliers.map(p => ({ id: `pullups_${p}`, threshold: p, ex: "PULLUP", label: `${p} Tractions`, emoji: p >= 5000 ? "🦍" : "🧗" })),
             ...milestonePaliers.map(p => ({ id: `squats_${p}`, threshold: p, ex: "SQUAT", label: `${p} Squats`, emoji: p >= 10000 ? "🦾" : "🦵" })),
+            ...milestonePaliers.map(p => ({ id: `planks_${p}`, threshold: p, ex: "PLANK", label: `${p}s Gainage`, emoji: "🛡️" })),
             { id: "streak_7", type: "streak", threshold: 7, label: "7j d'Assiduité", emoji: "🌱" },
             { id: "streak_30", type: "streak", threshold: 30, label: "30j d'Assiduité", emoji: "🔥" },
             { id: "streak_100", type: "streak", threshold: 100, label: "100j d'Assiduité", emoji: "👑" },
