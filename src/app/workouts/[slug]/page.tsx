@@ -299,45 +299,96 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
                                     ))}
                                 </div>
                             ) : (
-                                <div className={workout.exercises.length > 12
-                                    ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2"
-                                    : "grid gap-3"
+                                <div className={(workout.id === 'workout-03-pyramid' || workout.id === 'workout-08-kheops-fullbody')
+                                    ? "grid grid-cols-1 md:grid-cols-2 gap-4"
+                                    : (workout.exercises.length > 12 ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2" : "grid gap-3")
                                 }>
-                                    {workout.exercises.map((exo, idx) => {
-                                        const isCompact = workout.exercises.length > 12;
-                                        return (
-                                            <div key={idx} className={`group relative bg-white border border-slate-200 rounded-xl flex items-center justify-between hover:border-indigo-200 transition-all shadow-sm ${isCompact ? "p-2" : "p-4"
-                                                }`}>
-                                                <div className="space-y-0.5">
-                                                    <span className={`block font-black uppercase tracking-tight text-slate-800 ${isCompact ? "text-[8px] leading-tight" : "text-sm"
-                                                        }`}>
-                                                        {exo.label}
-                                                    </span>
-                                                    {exo.goal && !isCompact && (
-                                                        <span className="text-[10px] font-bold text-indigo-500 uppercase">Obj: {exo.goal} {exo.unit.toLowerCase()}</span>
-                                                    )}
+                                    {/* --- Special Grouping for Stages of 4 --- */}
+                                    {(workout.id === 'workout-03-pyramid' || workout.id === 'workout-08-kheops-fullbody') ? (
+                                        (() => {
+                                            const stages = [];
+                                            for (let i = 0; i < workout.exercises.length; i += 4) {
+                                                stages.push(workout.exercises.slice(i, i + 4));
+                                            }
+                                            return stages.map((stageExercises, stageIdx) => (
+                                                <div key={stageIdx} className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm space-y-4 hover:border-indigo-200 transition-all">
+                                                    <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-2">
+                                                        <h3 className="text-xs font-black uppercase tracking-[0.2em] text-indigo-600">
+                                                            Étape {stageIdx + 1} {stageIdx === 2 && workout.id === 'workout-03-pyramid' ? '— SOMMET' : ''}
+                                                        </h3>
+                                                        <span className="text-[10px] font-bold text-slate-400 italic">4 exercices</span>
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        {stageExercises.map((exo, idxInStage) => {
+                                                            const globalIdx = stageIdx * 4 + idxInStage;
+                                                            const icons: Record<string, string> = {
+                                                                PUSHUPS: '💪', PULLUPS: '🏋️', SQUATS: '🦵',
+                                                                PLANK: '🛡️', RUN: '🏃'
+                                                            };
+                                                            return (
+                                                                <div key={idxInStage} className="space-y-1.5">
+                                                                    <div className="flex items-center gap-1.5 min-h-[14px]">
+                                                                        <span className="text-xs">{icons[exo.type] || '⚡'}</span>
+                                                                        <span className="text-[9px] font-black uppercase tracking-tighter text-slate-700 truncate">{exo.label}</span>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <input
+                                                                            type="number"
+                                                                            required
+                                                                            min="0"
+                                                                            placeholder="0"
+                                                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5 text-right font-black text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                                                                            disabled={!isAvailable}
+                                                                            defaultValue={workout.scoringType === 'TIME' ? exo.goal : 0}
+                                                                            onChange={(e) => setFormData(prev => ({ ...prev, [`${exo.type}_${globalIdx}`]: parseInt(e.target.value) || 0 }))}
+                                                                        />
+                                                                        <span className="text-[8px] font-black text-slate-400 uppercase w-4">{exo.unit === 'REPS' ? 'R' : exo.unit === 'SECONDS' ? 'S' : 'K'}</span>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
                                                 </div>
-
-                                                <div className="flex items-center gap-1">
-                                                    <input
-                                                        type="number"
-                                                        required
-                                                        min="0"
-                                                        placeholder="0"
-                                                        className={`${isCompact ? "w-12 px-1 py-1 text-xs" : "w-20 px-3 py-2 text-lg"} bg-slate-50 border border-slate-200 rounded-lg text-right font-black focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-slate-900 disabled:opacity-50`}
-                                                        disabled={!isAvailable}
-                                                        defaultValue={workout.scoringType === 'TIME' ? exo.goal : 0}
-                                                        onChange={(e) => setFormData(prev => ({ ...prev, [`${exo.type}_${idx}`]: parseInt(e.target.value) || 0 }))}
-                                                    />
-                                                    {!isCompact && (
-                                                        <span className="text-[10px] font-black text-slate-400 uppercase w-10">
-                                                            {exo.unit === 'REPS' ? 'Reps' : exo.unit === 'SECONDS' ? 'Sec' : exo.unit === 'KILOMETERS' ? 'KM' : 'M'}
+                                            ));
+                                        })()
+                                    ) : (
+                                        /* --- Normal List / Grid --- */
+                                        workout.exercises.map((exo, idx) => {
+                                            const isCompact = workout.exercises.length > 12;
+                                            return (
+                                                <div key={idx} className={`group relative bg-white border border-slate-200 rounded-xl flex items-center justify-between hover:border-indigo-200 transition-all shadow-sm ${isCompact ? "p-2" : "p-4"
+                                                    }`}>
+                                                    <div className="space-y-0.5 text-left">
+                                                        <span className={`block font-black uppercase tracking-tight text-slate-800 ${isCompact ? "text-[8px] leading-tight" : "text-sm"
+                                                            }`}>
+                                                            {exo.label}
                                                         </span>
-                                                    )}
+                                                        {exo.goal && !isCompact && (
+                                                            <span className="text-[10px] font-bold text-indigo-500 uppercase">Obj: {exo.goal} {exo.unit.toLowerCase()}</span>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="flex items-center gap-1">
+                                                        <input
+                                                            type="number"
+                                                            required
+                                                            min="0"
+                                                            placeholder="0"
+                                                            className={`${isCompact ? "w-12 px-1 py-1 text-xs" : "w-20 px-3 py-2 text-lg"} bg-slate-50 border border-slate-200 rounded-lg text-right font-black focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-slate-900 disabled:opacity-50`}
+                                                            disabled={!isAvailable}
+                                                            defaultValue={workout.scoringType === 'TIME' ? exo.goal : 0}
+                                                            onChange={(e) => setFormData(prev => ({ ...prev, [`${exo.type}_${idx}`]: parseInt(e.target.value) || 0 }))}
+                                                        />
+                                                        {!isCompact && (
+                                                            <span className="text-[10px] font-black text-slate-400 uppercase w-10">
+                                                                {exo.unit === 'REPS' ? 'Reps' : exo.unit === 'SECONDS' ? 'Sec' : exo.unit === 'KILOMETERS' ? 'KM' : 'M'}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        );
-                                    })}
+                                            );
+                                        })
+                                    )}
                                 </div>
                             )}
                         </div>
