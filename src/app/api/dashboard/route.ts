@@ -152,7 +152,7 @@ export async function GET(req: Request) {
             const totalPullupsAllTime = uSets.filter((s: any) => s.exercise === "PULLUP").reduce((sum: number, s: any) => sum + s.reps, 0);
             const totalSquatsAllTime = uSets.filter((s: any) => s.exercise === "SQUAT").reduce((sum: number, s: any) => sum + s.reps, 0);
             const totalPlanksAllTime = uSets.filter((s: any) => s.exercise === "PLANK").reduce((sum: number, s: any) => sum + s.reps, 0);
-            const totalRepsAllTime = totalPushupsAllTime + totalPullupsAllTime + totalSquatsAllTime + totalPlanksAllTime;
+            const totalRepsAllTime = totalPushupsAllTime + totalPullupsAllTime + totalSquatsAllTime + Math.floor(totalPlanksAllTime / 5);
 
             const isInjured = u.medicalCertificates?.some((c: any) => today >= c.startDateISO && today <= c.endDateISO);
             const currentMedicalNote = u.medicalCertificates?.find((c: any) => today >= c.startDateISO && today <= c.endDateISO)?.note || null;
@@ -206,8 +206,11 @@ export async function GET(req: Request) {
                 totalSquatsAllTime,
                 totalPlanksAllTime,
                 totalRepsAllTime,
+                maxSetPushups: Math.max(0, ...uSets.filter((s: any) => s.exercise === "PUSHUP").map((s: any) => s.reps)),
                 sprinterCount: allSprinterEvents.filter((ev: any) => ev.toUserId === u.id).length,
-                repsToday: uSets.filter((s: any) => s.date === today).reduce((sum: number, s: any) => sum + s.reps, 0),
+                repsToday:
+                    uSets.filter((s: any) => s.date === today && s.exercise !== "PLANK").reduce((sum: number, s: any) => sum + s.reps, 0) +
+                    Math.floor(uSets.filter((s: any) => s.date === today && s.exercise === "PLANK").reduce((sum: number, s: any) => sum + s.reps, 0) / 5),
                 finesDueEur: (u.fines || []).filter((f: any) => f.status === "unpaid").reduce((sum: number, f: any) => sum + f.amountEur, 0),
                 finesPaidEur: (u.fines || []).filter((f: any) => f.status === "paid").reduce((sum: number, f: any) => sum + f.amountEur, 0),
                 potEventsEur: (u.potEvents || []).reduce((sum: number, e: any) => sum + e.amountEur, 0),
@@ -291,7 +294,7 @@ export async function GET(req: Request) {
                 let hasIt = false;
                 const trophy = t as any;
                 if (trophy.ex) {
-                    const total = trophy.ex === "PUSHUP" ? u.totalPushupsAllTime : trophy.ex === "PULLUP" ? u.totalPullupsAllTime : u.totalSquatsAllTime;
+                    const total = trophy.ex === "PUSHUP" ? u.totalPushupsAllTime : trophy.ex === "PULLUP" ? u.totalPullupsAllTime : trophy.ex === "PLANK" ? u.totalPlanksAllTime : u.totalSquatsAllTime;
                     if (total >= t.threshold) hasIt = true;
                 } else if (trophy.type === "streak") {
                     if (u.streakCurrent >= t.threshold) hasIt = true;
@@ -530,6 +533,7 @@ export async function GET(req: Request) {
                     nickname: u.nickname,
                     reps: s.seconds,
                     totalPushupsAllTime: (u.sets || []).filter((ss: any) => ss.exercise === "PUSHUP").reduce((sum: number, ss: any) => sum + ss.reps, 0),
+                    totalPlanksAllTime: (u.sets || []).filter((ss: any) => ss.exercise === "PLANK").reduce((sum: number, ss: any) => sum + ss.reps, 0),
                     createdAt: s.createdAt
                 }))).sort((a: any, b: any) => b.reps - a.reps || b.totalPushupsAllTime - a.totalPushupsAllTime || new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).slice(0, 3)
             },

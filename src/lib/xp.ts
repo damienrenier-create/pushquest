@@ -167,13 +167,14 @@ export function calculateDailyXPGainForUser(
     const p = sets.filter((s: any) => s.exercise === "PUSHUP").reduce((acc: number, s: any) => acc + s.reps, 0);
     const u = sets.filter((s: any) => s.exercise === "PULLUP").reduce((acc: number, s: any) => acc + s.reps, 0);
     const q = sets.filter((s: any) => s.exercise === "SQUAT").reduce((acc: number, s: any) => acc + s.reps, 0);
+    const k = sets.filter((s: any) => s.exercise === "PLANK").reduce((acc: number, s: any) => acc + s.reps, 0);
 
-    const repsXP = (p * (isMarvinDay ? 2 : 1)) + (u * (isMarvinDay ? 6 : 3)) + (q * (isMarvinDay ? 2 : 1));
+    const repsXP = (p * (isMarvinDay ? 2 : 1)) + (u * (isMarvinDay ? 6 : 3)) + (q * (isMarvinDay ? 2 : 1)) + Math.floor(k / 5);
     totalXP += repsXP;
 
     // 2. Regularity & Flex
     let regularityXP = 0;
-    const dayTotal = p + u + q;
+    const dayTotal = p + u + q + Math.floor(k / 5);
     const req = getRequiredRepsForDate(dateISO);
 
     if (req > 0 && dayTotal >= req) {
@@ -325,7 +326,8 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
         let pushupsXPContribution = summary.totalPushups * (isMarvinDay ? 2 : 1);
         let pullupsXPContribution = summary.totalPullups * (isMarvinDay ? 6 : 3);
         let squatsXPContribution = summary.totalSquats * (isMarvinDay ? 2 : 1);
-        totalXP += pushupsXPContribution + pullupsXPContribution + squatsXPContribution;
+        let planksXPContribution = Math.floor(summary.totalPlanks / 5);
+        totalXP += pushupsXPContribution + pullupsXPContribution + squatsXPContribution + planksXPContribution;
 
         // B. Régularité et Flex par Jour
         const daysWithActivity = Array.from(new Set(sets.map((s: any) => s.date))).sort() as string[];
@@ -495,7 +497,7 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
             xpNextLvl,
             progress: Math.floor(progress),
             details: {
-                repsXP: pushupsXPContribution + pullupsXPContribution + squatsXPContribution,
+                repsXP: pushupsXPContribution + pullupsXPContribution + squatsXPContribution + planksXPContribution,
                 regularityXP,
                 badgesXP: badgeXPContribution,
                 finesXP: (summary.totalFinesAmount * 50),

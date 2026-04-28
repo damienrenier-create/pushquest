@@ -141,8 +141,8 @@ export default function UserProfilePage() {
         </div>
     )
 
-    const stats = user.stats || { pushups: 0, pullups: 0, squats: 0, total: 0 }
-    const { pushups, pullups, squats, total: totalReps } = stats
+    const stats = user.stats || { pushups: 0, pullups: 0, squats: 0, planks: 0, total: 0 }
+    const { pushups, pullups, squats, planks = 0, total: totalReps } = stats
 
     const pushupPct = totalReps > 0 ? (pushups / totalReps) * 100 : 0
     const pullupPct = totalReps > 0 ? (pullups / totalReps) * 100 : 0
@@ -258,26 +258,33 @@ export default function UserProfilePage() {
                     </div>
                 </div>
 
-                <div className="relative mt-8 sm:mt-12 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                <div className="relative mt-8 sm:mt-12 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                     <div className="bg-slate-800/40 backdrop-blur-md p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-white/5 group hover:bg-slate-800/60 transition-colors">
-                        <span className="text-slate-500 text-[9px] sm:text-[10px] font-black uppercase tracking-widest">Total Reps</span>
+                        <span className="text-slate-500 text-[9px] sm:text-[10px] font-black uppercase tracking-widest">Total Éq. Reps</span>
                         <div className="flex items-baseline gap-2 mt-1">
-                            <span className="text-2xl sm:text-4xl font-black text-white tracking-normal">{totalReps.toLocaleString()}</span>
-                            <span className="text-slate-600 font-bold text-[10px] sm:text-xs uppercase">Reps</span>
+                            <span className="text-xl sm:text-3xl font-black text-white tracking-normal">{totalReps.toLocaleString()}</span>
+                            <span className="text-slate-600 font-bold text-[9px] sm:text-[10px] uppercase">Reps</span>
+                        </div>
+                    </div>
+                    <div className="bg-slate-800/40 backdrop-blur-md p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-white/5 group hover:bg-slate-800/60 transition-colors">
+                        <span className="text-slate-500 text-[9px] sm:text-[10px] font-black uppercase tracking-widest">Gainage Total</span>
+                        <div className="flex items-baseline gap-2 mt-1">
+                            <span className="text-xl sm:text-3xl font-black text-white tracking-normal">{planks.toLocaleString()}</span>
+                            <span className="text-slate-600 font-bold text-[9px] sm:text-[10px] uppercase">Secs</span>
                         </div>
                     </div>
                     <div className="bg-slate-800/40 backdrop-blur-md p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-white/5 group hover:bg-slate-800/60 transition-colors">
                         <span className="text-slate-500 text-[9px] sm:text-[10px] font-black uppercase tracking-widest">Distinctions</span>
                         <div className="flex items-baseline gap-2 mt-1">
-                            <span className="text-2xl sm:text-4xl font-black text-indigo-400 tracking-normal">{user.badges?.length || 0}</span>
-                            <span className="text-slate-600 font-bold text-[10px] sm:text-xs uppercase">Badges</span>
+                            <span className="text-xl sm:text-3xl font-black text-indigo-400 tracking-normal">{user.badges?.length || 0}</span>
+                            <span className="text-slate-600 font-bold text-[9px] sm:text-[10px] uppercase">Badges</span>
                         </div>
                     </div>
                     <div className="bg-slate-800/40 backdrop-blur-md p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-white/5 group hover:bg-slate-800/60 transition-colors">
                         <span className="text-slate-500 text-[9px] sm:text-[10px] font-black uppercase tracking-widest">Amendes Dues</span>
                         <div className="flex items-baseline gap-2 mt-1">
-                            <span className="text-2xl sm:text-4xl font-black text-rose-500 tracking-normal">{unpaidFinesPot}€</span>
-                            <span className="text-slate-600 font-bold text-[10px] sm:text-xs uppercase">💸</span>
+                            <span className="text-xl sm:text-3xl font-black text-rose-500 tracking-normal">{unpaidFinesPot}€</span>
+                            <span className="text-slate-600 font-bold text-[9px] sm:text-[10px] uppercase">💸</span>
                         </div>
                     </div>
                 </div>

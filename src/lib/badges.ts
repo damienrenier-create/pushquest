@@ -84,9 +84,11 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
         let totalPushups = 0;
         let totalPullups = 0;
         let totalSquats = 0;
+        let totalPlanks = 0;
         let maxSetPushups = 0;
         let maxSetPullups = 0;
         let maxSetSquats = 0;
+        let maxSetPlanks = 0;
         let maxSetAll = 0;
 
         const setsByExoTarget: Record<string, number> = {};
@@ -138,6 +140,7 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             let dayPushups = 0;
             let dayPullups = 0;
             let daySquats = 0;
+            let dayPlanks = 0;
             let hasEarly = false;
             let hasLate = false;
             let hasNoon = false;
@@ -161,15 +164,25 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
                     dayPushups += s.reps;
                     totalPushups += s.reps;
                     if (s.reps > maxSetPushups) maxSetPushups = s.reps;
+                    dayTotal += s.reps;
                 } else if (s.exercise === "PULLUP") {
                     dayPullups += s.reps;
                     totalPullups += s.reps;
                     if (s.reps > maxSetPullups) maxSetPullups = s.reps;
+                    dayTotal += s.reps;
                 } else if (s.exercise === "SQUAT") {
                     daySquats += s.reps;
                     totalSquats += s.reps;
                     if (s.reps > maxSetSquats) maxSetSquats = s.reps;
+                    dayTotal += s.reps;
+                } else if (s.exercise === "PLANK") {
+                    dayPlanks += s.reps;
+                    totalPlanks += s.reps;
+                    if (s.reps > maxSetPlanks) maxSetPlanks = s.reps;
+                    dayTotal += Math.floor(s.reps / 5);
                 }
+
+                if (s.reps > maxSetAll && s.exercise !== "PLANK") maxSetAll = s.reps;
             });
 
             if (dayPushups > maxDayPushups) maxDayPushups = dayPushups;
@@ -193,6 +206,7 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             if (dayPushups > 0) activeExos++;
             if (dayPullups > 0) activeExos++;
             if (daySquats > 0) activeExos++;
+            if (dayPlanks > 0) activeExos++;
 
             if (activeExos === 1) {
                 currentMonoExoStreak++;
@@ -255,12 +269,14 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             maxSetPushups,
             maxSetPullups,
             maxSetSquats,
+            maxSetPlanks,
             maxSetAll,
             totalFinesAmount,
             totalPushups,
             totalPullups,
             totalSquats,
-            totalAll: totalPushups + totalPullups + totalSquats,
+            totalPlanks,
+            totalAll: totalPushups + totalPullups + totalSquats + Math.floor(totalPlanks / 5),
             setsByTarget: (exo: string, target: number) => setsByExoTarget[`${exo}_${target}`] || 0,
             earlyStreak: earlyStreakMax,
             lateStreak: lateStreakMax,
@@ -287,7 +303,7 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             maxTorchStreak,
             sprinterCount: sprinterCounts[u.id] || 0,
             headhunterCount: u.featuredClaimsCount || 0,
-            getDayTotal: (date: string) => sets.filter((s: any) => s.date === date).reduce((sum: number, s: any) => sum + s.reps, 0),
+            getDayTotal: (date: string) => sets.filter((s: any) => s.date === date).reduce((sum: number, s: any) => sum + (s.exercise === 'PLANK' ? Math.floor(s.reps / 5) : s.reps), 0),
             getDayMaxSet: (date: string, exo?: string) => {
                 const daySets = sets.filter((s: any) => s.date === date && (!exo || s.exercise === exo));
                 return daySets.length ? Math.max(...daySets.map((s: any) => s.reps)) : 0;
@@ -309,6 +325,30 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
                 const req = getRequiredRepsForDate(dateISO);
                 return ["PUSHUP", "PULLUP", "SQUAT"].every(exo => {
                     const exoTotal = daySets.filter((s: any) => s.exercise === exo).reduce((sum: number, s: any) => sum + s.reps, 0);
+                    return exoTotal >= req;
+                }) && req > 0;
+            },
+            hasQuatuorStreak: (dateISO: string) => {
+                const daySets = sets.filter((s: any) => s.date === dateISO);
+                const dayPushups = daySets.filter((s: any) => s.exercise === "PUSHUP").reduce((sum: number, s: any) => sum + s.reps, 0);
+                const dayPullups = daySets.filter((s: any) => s.exercise === "PULLUP").reduce((sum: number, s: any) => sum + s.reps, 0);
+                const daySquats = daySets.filter((s: any) => s.exercise === "SQUAT").reduce((sum: number, s: any) => sum + s.reps, 0);
+                const dayPlanks = daySets.filter((s: any) => s.exercise === "PLANK").reduce((sum: number, s: any) => sum + Math.floor(s.reps / 5), 0);
+                const dayTotal = dayPushups + dayPullups + daySquats + dayPlanks;
+                return dayTotal > 0 && dayPushups >= 0.25 * dayTotal && dayPullups >= 0.25 * dayTotal && daySquats >= 0.25 * dayTotal && dayPlanks >= 0.25 * dayTotal;
+            },
+            hasQuatuorGold: (dateISO: string) => {
+                const daySets = sets.filter((s: any) => s.date === dateISO);
+                const total = daySets.reduce((sum: number, s: any) => sum + (s.exercise === 'PLANK' ? Math.floor(s.reps / 5) : s.reps), 0);
+                const req = getRequiredRepsForDate(dateISO);
+                const hasEach = ["PUSHUP", "PULLUP", "SQUAT", "PLANK"].every(exo => daySets.some((s: any) => s.exercise === exo));
+                return total >= 4 * req && req > 0 && hasEach;
+            },
+            hasQuatuorUltimate: (dateISO: string) => {
+                const daySets = sets.filter((s: any) => s.date === dateISO);
+                const req = getRequiredRepsForDate(dateISO);
+                return ["PUSHUP", "PULLUP", "SQUAT", "PLANK"].every(exo => {
+                    const exoTotal = daySets.filter((s: any) => s.exercise === exo).reduce((sum: number, s: any) => sum + (exo === 'PLANK' ? Math.floor(s.reps / 5) : s.reps), 0);
                     return exoTotal >= req;
                 }) && req > 0;
             },
@@ -451,17 +491,49 @@ export async function updateBadgesPostSave(userId: string, precomputedSummaries?
                     bestValue = s.maxTriExoStreak; bestUser = s;
                 }
             });
+        } else if (def.metricType === "QUATUOR_STREAK") {
+            // Computed on the fly using check function across all dates
+            summaries.forEach((s: any) => {
+                let maxStreak = 0;
+                let currentStreak = 0;
+                const days = Object.keys(s.setsByTarget).map(k => k); // Not accurate, we need dates. We can just iterate backwards from today
+                // Simple version: check user's sets dates array
+                const uniqueDates = Array.from(new Set(allUsers.find((u: any) => u.id === s.id)?.sets?.map((set: any) => set.date) || [])).sort() as string[];
+                for (let i = 0; i < uniqueDates.length; i++) {
+                    const d = uniqueDates[i];
+                    if (s.hasQuatuorStreak(d)) {
+                        currentStreak++;
+                    } else {
+                        currentStreak = 0;
+                    }
+                    if (currentStreak > maxStreak) maxStreak = currentStreak;
+
+                    // Break if streak missed? No, we check consecutive days played.
+                    // Actually if they miss a day, it also breaks. 
+                    if (i > 0) {
+                        const prevDate = new Date(uniqueDates[i - 1]);
+                        const currDate = new Date(d);
+                        if ((currDate.getTime() - prevDate.getTime()) > (1000 * 3600 * 24 * 1.5)) {
+                            currentStreak = 0;
+                        }
+                    }
+                }
+
+                if (maxStreak > bestValue || (maxStreak === bestValue && bestValue > 0 && isBetterTieBreak(s, bestUser, "totalAll"))) {
+                    bestValue = maxStreak; bestUser = s;
+                }
+            });
         } else if (def.metricType === "MAX_SET") {
             summaries.forEach((s: any) => {
-                const val = def.exerciseScope === "PUSHUPS" ? s.maxSetPushups : def.exerciseScope === "PULLUPS" ? s.maxSetPullups : def.exerciseScope === "SQUATS" ? s.maxSetSquats : s.maxSetAll;
-                const totalKey = def.exerciseScope === "PUSHUPS" ? "totalPushups" : def.exerciseScope === "PULLUPS" ? "totalPullups" : def.exerciseScope === "SQUATS" ? "totalSquats" : "totalAll";
+                const val = def.exerciseScope === "PUSHUPS" ? s.maxSetPushups : def.exerciseScope === "PULLUPS" ? s.maxSetPullups : def.exerciseScope === "SQUATS" ? s.maxSetSquats : def.exerciseScope === "PLANK" ? s.maxSetPlanks : s.maxSetAll;
+                const totalKey = def.exerciseScope === "PUSHUPS" ? "totalPushups" : def.exerciseScope === "PULLUPS" ? "totalPullups" : def.exerciseScope === "SQUATS" ? "totalSquats" : def.exerciseScope === "PLANK" ? "totalPlanks" : "totalAll";
                 if (val > bestValue || (val === bestValue && bestValue > 0 && isBetterTieBreak(s, bestUser, totalKey))) {
                     bestValue = val; bestUser = s;
                 }
             });
         } else if (def.metricType === "SERIES_COUNT") {
-            const exo = def.exerciseScope === "PUSHUPS" ? "PUSHUP" : def.exerciseScope === "PULLUPS" ? "PULLUP" : "SQUAT";
-            const totalKey = def.exerciseScope === "PUSHUPS" ? "totalPushups" : def.exerciseScope === "PULLUPS" ? "totalPullups" : "totalSquats";
+            const exo = def.exerciseScope === "PUSHUPS" ? "PUSHUP" : def.exerciseScope === "PULLUPS" ? "PULLUP" : def.exerciseScope === "PLANK" ? "PLANK" : "SQUAT";
+            const totalKey = def.exerciseScope === "PUSHUPS" ? "totalPushups" : def.exerciseScope === "PULLUPS" ? "totalPullups" : def.exerciseScope === "PLANK" ? "totalPlanks" : "totalSquats";
             summaries.forEach((s: any) => {
                 const count = s.setsByTarget(exo, def.seriesTarget!);
                 if (count > bestValue || (count === bestValue && bestValue > 0 && isBetterTieBreak(s, bestUser, totalKey))) {
@@ -478,7 +550,7 @@ export async function updateBadgesPostSave(userId: string, precomputedSummaries?
             for (const s of summaries) { if (s.maxSetAll >= def.threshold!) await awardMilestone(s.id, def.key, 1); }
             continue;
         } else if (def.metricType === "MILESTONE_TOTAL") {
-            const scopeField = def.exerciseScope === "PUSHUPS" ? "totalPushups" : def.exerciseScope === "PULLUPS" ? "totalPullups" : def.exerciseScope === "SQUATS" ? "totalSquats" : "totalAll";
+            const scopeField = def.exerciseScope === "PUSHUPS" ? "totalPushups" : def.exerciseScope === "PULLUPS" ? "totalPullups" : def.exerciseScope === "SQUATS" ? "totalSquats" : def.exerciseScope === "PLANK" ? "totalPlanks" : "totalAll";
             for (const s of summaries) { if (s[scopeField] >= def.threshold!) await awardMilestone(s.id, def.key, 1); }
             continue;
         } else if (def.metricType === "FINES_AMOUNT") {
@@ -615,7 +687,7 @@ export async function updateBadgesPostSave(userId: string, precomputedSummaries?
         } else if (def.metricType === "MONTH_TOP_SET") {
             if (!isLastDayOfMonth(getTodayISO())) continue;
             const currentMonth = getTodayISO().substring(0, 7);
-            const exo = def.exerciseScope === "PUSHUPS" ? "PUSHUP" : def.exerciseScope === "PULLUPS" ? "PULLUP" : "SQUAT";
+            const exo = def.exerciseScope === "PUSHUPS" ? "PUSHUP" : def.exerciseScope === "PULLUPS" ? "PULLUP" : def.exerciseScope === "PLANK" ? "PLANK" : "SQUAT";
             summaries.forEach((s: any) => {
                 const val = s.getMonthMaxSet(currentMonth, exo);
                 if (val > bestValue || (val === bestValue && bestValue > 0 && isBetterTieBreak(s, bestUser, "totalAll"))) {
@@ -625,19 +697,19 @@ export async function updateBadgesPostSave(userId: string, precomputedSummaries?
         } else if (def.metricType === "MONTH_TOTAL_EXO") {
             if (!isLastDayOfMonth(getTodayISO())) continue;
             const currentMonth = getTodayISO().substring(0, 7);
-            const exo = def.exerciseScope === "PUSHUPS" ? "PUSHUP" : def.exerciseScope === "PULLUPS" ? "PULLUP" : "SQUAT";
+            const exo = def.exerciseScope === "PUSHUPS" ? "PUSHUP" : def.exerciseScope === "PULLUPS" ? "PULLUP" : def.exerciseScope === "PLANK" ? "PLANK" : "SQUAT";
             summaries.forEach((s: any) => {
                 const val = s.getMonthTotal(currentMonth, exo);
                 if (val > bestValue || (val === bestValue && bestValue > 0 && isBetterTieBreak(s, bestUser, "totalAll"))) {
                     bestValue = val; bestUser = s;
                 }
             });
-        } else if (def.metricType === "TRINITY_GOLD" || def.metricType === "TRINITY_ULTIMATE") {
+        } else if (def.metricType === "TRINITY_GOLD" || def.metricType === "TRINITY_ULTIMATE" || def.metricType === "QUATUOR_GOLD" || def.metricType === "QUATUOR_ULTIMATE") {
             const today = getTodayISO();
             const yesterday = getYesterdayISO();
             summaries.forEach((s: any) => {
-                const hasToday = def.metricType === "TRINITY_GOLD" ? s.hasTrinityGold(today) : s.hasTrinityUltimate(today);
-                const hasYesterday = def.metricType === "TRINITY_GOLD" ? s.hasTrinityGold(yesterday) : s.hasTrinityUltimate(yesterday);
+                const hasToday = def.metricType === "TRINITY_GOLD" ? s.hasTrinityGold(today) : def.metricType === "TRINITY_ULTIMATE" ? s.hasTrinityUltimate(today) : def.metricType === "QUATUOR_GOLD" ? s.hasQuatuorGold(today) : s.hasQuatuorUltimate(today);
+                const hasYesterday = def.metricType === "TRINITY_GOLD" ? s.hasTrinityGold(yesterday) : def.metricType === "TRINITY_ULTIMATE" ? s.hasTrinityUltimate(yesterday) : def.metricType === "QUATUOR_GOLD" ? s.hasQuatuorGold(yesterday) : s.hasQuatuorUltimate(yesterday);
 
                 if (hasToday || hasYesterday) {
                     const val = hasToday ? s.getDayTotal(today) : s.getDayTotal(yesterday);
@@ -665,7 +737,16 @@ export async function updateBadgesPostSave(userId: string, precomputedSummaries?
                 });
             }
         } else if (def.metricType === "FIRST_REACH") {
-            const scope = def.exerciseScope === "PUSHUPS" ? "maxSetPushups" : def.exerciseScope === "PULLUPS" ? "maxSetPullups" : "maxSetSquats";
+            const scope = def.exerciseScope === "PUSHUPS" ? "maxSetPushups" : def.exerciseScope === "PULLUPS" ? "maxSetPullups" : def.exerciseScope === "PLANK" ? "maxSetPlanks" : "maxSetSquats";
+            summaries.forEach((s: any) => {
+                if (s[scope] >= def.threshold!) {
+                    if (s[scope] > bestValue || (s[scope] === bestValue && isBetterTieBreak(s, bestUser, "totalAll"))) {
+                        bestValue = s[scope]; bestUser = s;
+                    }
+                }
+            });
+        } else if (def.metricType === "FIRST_REACH_TOTAL") {
+            const scope = def.exerciseScope === "PUSHUPS" ? "totalPushups" : def.exerciseScope === "PULLUPS" ? "totalPullups" : def.exerciseScope === "PLANK" ? "totalPlanks" : "totalSquats";
             summaries.forEach((s: any) => {
                 if (s[scope] >= def.threshold!) {
                     if (s[scope] > bestValue || (s[scope] === bestValue && isBetterTieBreak(s, bestUser, "totalAll"))) {

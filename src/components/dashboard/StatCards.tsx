@@ -71,9 +71,9 @@ export default function StatCards({
                                         <span className="text-sm">🔄</span>
                                     </button>
                                 )}
-                                <Link 
-                                    href="/faq" 
-                                    className="flex items-center gap-2 text-indigo-100 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-2xl transition-all group shadow-lg shadow-indigo-900/20 border border-indigo-400/30" 
+                                <Link
+                                    href="/faq"
+                                    className="flex items-center gap-2 text-indigo-100 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-2xl transition-all group shadow-lg shadow-indigo-900/20 border border-indigo-400/30"
                                     title="Comment ça marche ?"
                                 >
                                     <HelpCircle size={14} className="group-hover:rotate-12 transition-transform" />
@@ -103,7 +103,7 @@ export default function StatCards({
                             <span className="text-slate-500 font-bold uppercase text-xs">{(session?.user as any)?.league === 'GAINAGE' ? 'secondes' : 'reps'}</span>
                         </div>
                         <div className="mt-2 text-xs font-bold text-slate-400 uppercase tracking-tighter">
-                            Effectué : <span className="text-white">{currentTotal} {(session?.user as any)?.league === 'GAINAGE' ? 'secondes' : 'reps'}</span>
+                            Effectué : <span className="text-white">{currentTotal} pts (éq.)</span>
                             {currentTotal > requiredReps && (
                                 <span className="ml-2 text-green-400">+{currentTotal - requiredReps} bonus {(session?.user as any)?.league === 'GAINAGE' ? 's' : '💪'}</span>
                             )}
@@ -113,7 +113,7 @@ export default function StatCards({
                         {missing > 0 ? (
                             <div className="flex flex-col items-end">
                                 <span className="text-3xl font-black text-orange-400">-{missing}</span>
-                                <span className="text-[10px] font-black text-slate-400 italic uppercase">{(session?.user as any)?.league === 'GAINAGE' ? 'SECONDES' : 'À FAIRE'}</span>
+                                <span className="text-[10px] font-black text-slate-400 italic uppercase">POINTS/REPS À FAIRE</span>
                             </div>
                         ) : (
                             <div className="bg-green-500 text-white px-4 py-2 rounded-full font-black text-sm shadow-lg animate-bounce">VALIDÉ ✅</div>

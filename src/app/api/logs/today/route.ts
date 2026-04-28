@@ -34,7 +34,8 @@ export async function POST(req: Request) {
         const processExo = (exoSets: number[], type: string) => {
             if (Array.isArray(exoSets)) {
                 exoSets.forEach((reps) => {
-                    const val = Math.min(500, Math.max(0, Number(reps) || 0));
+                    const maxLimit = type === 'PLANK' ? 7200 : 500;
+                    const val = Math.min(maxLimit, Math.max(0, Number(reps) || 0));
                     if (val > 0) {
                         newSetsData.push({
                             userId,
@@ -50,6 +51,7 @@ export async function POST(req: Request) {
         processExo(sets.pushups, "PUSHUP");
         processExo(sets.pullups, "PULLUP");
         processExo(sets.squats, "SQUAT");
+        processExo(sets.planks, "PLANK");
 
         // 2. atomic delete and recreate sets for that user and that date
         await prisma.$transaction([
@@ -66,8 +68,9 @@ export async function POST(req: Request) {
             pushups: sets.pushups?.reduce((a: number, b: number) => a + (Number(b) || 0), 0) || 0,
             pullups: sets.pullups?.reduce((a: number, b: number) => a + (Number(b) || 0), 0) || 0,
             squats: sets.squats?.reduce((a: number, b: number) => a + (Number(b) || 0), 0) || 0,
+            planks: sets.planks?.reduce((a: number, b: number) => a + (Number(b) || 0), 0) || 0,
         };
-        const totalGlobal = totals.pushups + totals.pullups + totals.squats;
+        const totalGlobal = totals.pushups + totals.pullups + totals.squats + Math.floor(totals.planks / 5);
         const isComplete = totalGlobal >= requiredReps;
 
         const formattedDate = targetDate.split('-').reverse().join('/');

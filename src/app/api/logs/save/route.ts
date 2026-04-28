@@ -50,6 +50,7 @@ export async function POST(req: Request) {
                     ...(sets.pushups || []).map((reps: number) => ({ userId, date, exercise: "PUSHUP", reps: Math.min(500, Math.max(0, Number(reps) || 0)) })),
                     ...(sets.pullups || []).map((reps: number) => ({ userId, date, exercise: "PULLUP", reps: Math.min(500, Math.max(0, Number(reps) || 0)) })),
                     ...(sets.squats || []).map((reps: number) => ({ userId, date, exercise: "SQUAT", reps: Math.min(500, Math.max(0, Number(reps) || 0)) })),
+                    ...(sets.planks || []).map((reps: number) => ({ userId, date, exercise: "PLANK", reps: Math.min(7200, Math.max(0, Number(reps) || 0)) })),
                 ]
             })
         ]);

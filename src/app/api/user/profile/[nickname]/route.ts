@@ -14,7 +14,7 @@ export async function GET(
 
         // Re-try with different variations if needed
         const user = await (prisma.user as any).findFirst({
-            where: { 
+            where: {
                 OR: [
                     { nickname: { equals: decodedNickname, mode: "insensitive" } },
                     { nickname: { equals: nickname.trim(), mode: "insensitive" } }
@@ -59,8 +59,8 @@ export async function GET(
 
         if (!user) {
             const allCount = await prisma.user.count();
-            return NextResponse.json({ 
-                message: "Utilisateur non trouvé", 
+            return NextResponse.json({
+                message: "Utilisateur non trouvé",
                 searched: decodedNickname,
                 original: nickname,
                 totalUsersInDB: allCount
@@ -77,6 +77,7 @@ export async function GET(
         const pushups = statsGroup.find(s => s.exercise === "PUSHUP")?._sum.reps || 0
         const pullups = statsGroup.find(s => s.exercise === "PULLUP")?._sum.reps || 0
         const squats = statsGroup.find(s => s.exercise === "SQUAT")?._sum.reps || 0
+        const planks = statsGroup.find(s => s.exercise === "PLANK")?._sum.reps || 0
 
         return NextResponse.json({
             id: (user as any).id,
@@ -96,13 +97,14 @@ export async function GET(
                 pushups,
                 pullups,
                 squats,
-                total: pushups + pullups + squats
+                planks,
+                total: pushups + pullups + squats + Math.floor(planks / 5)
             }
         })
     } catch (error: any) {
         console.error("Public Profile API Error:", error)
-        return NextResponse.json({ 
-            message: "Erreur serveur", 
+        return NextResponse.json({
+            message: "Erreur serveur",
             error: error.message,
             stack: error.stack
         }, { status: 500 })

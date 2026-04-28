@@ -66,39 +66,18 @@ export default function WorkoutEntry({ league, localSets, setLocalSets, saving, 
                             {sumSets(localSets.planks)}s
                         </span>
                     </div>
-                    <div className="flex flex-wrap gap-3">
-                        {localSets.planks.map((val, idx) => (
-                            <div key={idx} className="flex flex-col items-center gap-2">
-                                <div className="relative group">
-                                    <input
-                                        type="number"
-                                        inputMode="numeric"
-                                        value={val}
-                                        placeholder="0"
-                                        onChange={(e) => handleSetChange('planks', idx, e.target.value)}
-                                        className="w-20 h-16 bg-gray-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl text-center font-black text-gray-900 transition-all text-xl outline-none"
-                                    />
-                                    <button onClick={() => removeSet('planks', idx)} className="absolute -top-2 -right-2 w-6 h-6 bg-red-400 text-white rounded-full text-xs font-black opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-lg">✕</button>
-                                </div>
-                                <div className="flex gap-1">
-                                    <button onClick={() => adjustSet('planks', idx, -10)} className="w-8 h-8 bg-gray-100 rounded-lg font-black text-gray-500">-10</button>
-                                    <button onClick={() => adjustSet('planks', idx, 10)} className="w-8 h-8 bg-blue-50 rounded-lg font-black text-blue-600">+10</button>
-                                </div>
-                            </div>
-                        ))}
-                        <button onClick={() => addSet('planks')} className="w-20 h-16 rounded-2xl border-2 border-dashed border-gray-200 text-gray-300 hover:text-blue-500 hover:border-blue-300 transition-all font-black text-2xl flex items-center justify-center">+</button>
-                    </div>
+                    {/* ... */}
                 </div>
             ) : (
-                (['pushups', 'pullups', 'squats'] as const).map(type => (
+                (['pushups', 'pullups', 'squats', 'planks'] as const).map(type => (
                     <div key={type} className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
                         <div className="flex justify-between items-center mb-4">
                             <div className="flex items-center gap-2">
-                                <span className="text-2xl">{type === 'pushups' ? '💪' : type === 'pullups' ? '🦍' : '🦵'}</span>
-                                <span className="font-black text-gray-800 uppercase text-xs">{type === 'pushups' ? 'Pompes' : type === 'pullups' ? 'Tractions' : 'Squats'}</span>
+                                <span className="text-2xl">{type === 'pushups' ? '💪' : type === 'pullups' ? '🦍' : type === 'squats' ? '🦵' : '🧘'}</span>
+                                <span className="font-black text-gray-800 uppercase text-xs">{type === 'pushups' ? 'Pompes' : type === 'pullups' ? 'Tractions' : type === 'squats' ? 'Squats' : 'Gainage (s)'}</span>
                             </div>
                             <span className="font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full text-xs">
-                                {sumSets(localSets[type])} reps
+                                {sumSets(localSets[type])} {type === 'planks' ? 's' : 'reps'}
                             </span>
                         </div>
                         <div className="flex flex-wrap gap-3">
@@ -114,12 +93,12 @@ export default function WorkoutEntry({ league, localSets, setLocalSets, saving, 
                                             onChange={(e) => handleSetChange(type, idx, e.target.value)}
                                             className="w-20 h-16 bg-gray-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl text-center font-black text-gray-900 transition-all text-xl outline-none"
                                         />
-                                        {getSetEmoji(Number(val) || 0) && <span className="absolute -bottom-1 -left-1 text-xs">{getSetEmoji(Number(val) || 0)}</span>}
+                                        {getSetEmoji(Number(val) || 0) && type !== 'planks' && <span className="absolute -bottom-1 -left-1 text-xs">{getSetEmoji(Number(val) || 0)}</span>}
                                         <button onClick={() => removeSet(type, idx)} className="absolute -top-2 -right-2 w-6 h-6 bg-red-400 text-white rounded-full text-xs font-black opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-lg">✕</button>
                                     </div>
                                     <div className="flex gap-1">
-                                        <button onClick={() => adjustSet(type, idx, -5)} className="w-8 h-8 bg-gray-100 rounded-lg font-black text-gray-500">-5</button>
-                                        <button onClick={() => adjustSet(type, idx, 5)} className="w-8 h-8 bg-blue-50 rounded-lg font-black text-blue-600">+5</button>
+                                        <button onClick={() => adjustSet(type, idx, type === 'planks' ? -10 : -5)} className="w-8 h-8 bg-gray-100 rounded-lg font-black text-gray-500">{type === 'planks' ? '-10' : '-5'}</button>
+                                        <button onClick={() => adjustSet(type, idx, type === 'planks' ? 10 : 5)} className="w-8 h-8 bg-blue-50 rounded-lg font-black text-blue-600">{type === 'planks' ? '+10' : '+5'}</button>
                                     </div>
                                 </div>
                             ))}
