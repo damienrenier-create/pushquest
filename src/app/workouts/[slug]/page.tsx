@@ -284,122 +284,122 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
                         {/* Exercises List - Light Theme */}
                         <div className="space-y-4">
                             <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-2">Programmation du défi</h2>
-                            {workout.scoringType === 'TIME' ? (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                    {workout.exercises.map((exo, idx) => (
-                                        <div key={idx} className="bg-white border border-slate-200 shadow-sm rounded-xl p-3 flex flex-col items-center justify-center text-center">
-                                            <span className="text-[10px] font-black uppercase text-slate-400">Étape {idx + 1}</span>
-                                            <span className="font-black text-slate-800 text-sm mt-1">{exo.label}</span>
-                                            {exo.goal && (
-                                                <span className="text-indigo-600 font-black text-xs mt-0.5 tracking-tight uppercase bg-indigo-50 px-2 py-0.5 rounded-full">
-                                                    {exo.goal} {exo.unit === 'REPS' ? 'reps' : exo.unit === 'SECONDS' ? 'sec' : exo.unit === 'KILOMETERS' ? 'km' : 'm'}
-                                                </span>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className={(workout.id === 'workout-03-pyramid' || workout.id === 'workout-08-kheops-fullbody')
-                                    ? "grid grid-cols-1 md:grid-cols-2 gap-4"
-                                    : (workout.exercises.length > 12 ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2" : "grid gap-3")
-                                }>
-                                    {/* --- Special Grouping for Stages of 4 --- */}
-                                    {(workout.id === 'workout-03-pyramid' || workout.id === 'workout-08-kheops-fullbody') ? (
-                                        (() => {
-                                            const stages = [];
-                                            for (let i = 0; i < workout.exercises.length; i += 4) {
-                                                stages.push(workout.exercises.slice(i, i + 4));
-                                            }
-                                            return stages.map((stageExercises, stageIdx) => (
-                                                <div key={stageIdx} className="bg-white border border-slate-200 rounded-[2rem] overflow-hidden shadow-sm hover:shadow-md hover:border-indigo-300 transition-all group/stage">
-                                                    <div className="bg-slate-50 border-b border-slate-100 px-5 py-3 flex items-center justify-between">
-                                                        <div className="flex flex-col">
-                                                            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600">
-                                                                Étape {stageIdx + 1}
-                                                            </h3>
-                                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
-                                                                {stageIdx === 0 || stageIdx === 4 ? 'Palier de base' : stageIdx === 2 ? '🔥 LE SOMMET' : `Multiplicateur x${stageIdx === 1 || stageIdx === 3 ? 2 : 1}`}
-                                                            </span>
-                                                        </div>
-                                                        <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-xs font-black text-slate-400 group-hover/stage:text-indigo-500 group-hover/stage:border-indigo-200 transition-colors">
-                                                            {stageIdx + 1}
-                                                        </div>
-                                                    </div>
-                                                    <div className="p-5 grid grid-cols-2 gap-4">
-                                                        {stageExercises.map((exo, idxInStage) => {
-                                                            const globalIdx = stageIdx * 4 + idxInStage;
-                                                            const icons: Record<string, string> = {
-                                                                PUSHUPS: '💪', PULLUPS: '🏋️', SQUATS: '🦵',
-                                                                PLANK: '🛡️', RUN: '🏃'
-                                                            };
-                                                            return (
-                                                                <div key={idxInStage} className="space-y-2">
-                                                                    <div className="flex items-center gap-1.5">
-                                                                        <span className="text-sm shrink-0">{icons[exo.type] || '⚡'}</span>
-                                                                        <span className="text-[10px] font-black uppercase tracking-tight text-slate-700 leading-none">{exo.label}</span>
-                                                                    </div>
-                                                                    <div className="relative">
-                                                                        <input
-                                                                            type="number"
-                                                                            required
-                                                                            min="0"
-                                                                            placeholder="0"
-                                                                            className="w-full bg-slate-50 border border-slate-100 rounded-xl px-2 py-2 text-right font-black text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
-                                                                            disabled={!isAvailable}
-                                                                            defaultValue={workout.scoringType === 'TIME' ? exo.goal : 0}
-                                                                            onChange={(e) => setFormData(prev => ({ ...prev, [`${exo.type}_${globalIdx}`]: parseInt(e.target.value) || 0 }))}
-                                                                        />
-                                                                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-300 uppercase pointer-events-none">
-                                                                            {exo.unit === 'REPS' ? 'R' : exo.unit === 'SECONDS' ? 'S' : 'K'}
-                                                                        </span>
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            ));
-                                        })()
-                                    ) : (
-                                        /* --- Normal List / Grid --- */
-                                        workout.exercises.map((exo, idx) => {
-                                            const isCompact = workout.exercises.length > 12;
-                                            return (
-                                                <div key={idx} className={`group relative bg-white border border-slate-200 rounded-xl flex items-center justify-between hover:border-indigo-200 transition-all shadow-sm ${isCompact ? "p-2" : "p-4"
-                                                    }`}>
-                                                    <div className="space-y-0.5 text-left">
-                                                        <span className={`block font-black uppercase tracking-tight text-slate-800 ${isCompact ? "text-[8px] leading-tight" : "text-sm"
-                                                            }`}>
-                                                            {exo.label}
-                                                        </span>
-                                                        {exo.goal && !isCompact && (
-                                                            <span className="text-[10px] font-bold text-indigo-500 uppercase">Obj: {exo.goal} {exo.unit.toLowerCase()}</span>
-                                                        )}
-                                                    </div>
 
-                                                    <div className="flex items-center gap-1">
-                                                        <input
-                                                            type="number"
-                                                            required
-                                                            min="0"
-                                                            placeholder="0"
-                                                            className={`${isCompact ? "w-12 px-1 py-1 text-xs" : "w-20 px-3 py-2 text-lg"} bg-slate-50 border border-slate-200 rounded-lg text-right font-black focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-slate-900 disabled:opacity-50`}
-                                                            disabled={!isAvailable}
-                                                            defaultValue={workout.scoringType === 'TIME' ? exo.goal : 0}
-                                                            onChange={(e) => setFormData(prev => ({ ...prev, [`${exo.type}_${idx}`]: parseInt(e.target.value) || 0 }))}
-                                                        />
-                                                        {!isCompact && (
-                                                            <span className="text-[10px] font-black text-slate-400 uppercase w-10">
-                                                                {exo.unit === 'REPS' ? 'Reps' : exo.unit === 'SECONDS' ? 'Sec' : exo.unit === 'KILOMETERS' ? 'KM' : 'M'}
-                                                            </span>
-                                                        )}
+                            <div className={(workout.id === 'workout-03-pyramid' || workout.id === 'workout-08-kheops-fullbody')
+                                ? "grid grid-cols-1 md:grid-cols-2 gap-4"
+                                : (workout.exercises.length > 12 ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2" : "grid gap-3")
+                            }>
+                                {/* --- Special Grouping for Stages of 4 --- */}
+                                {(workout.id === 'workout-03-pyramid' || workout.id === 'workout-08-kheops-fullbody') ? (
+                                    (() => {
+                                        const stages = [];
+                                        for (let i = 0; i < workout.exercises.length; i += 4) {
+                                            stages.push(workout.exercises.slice(i, i + 4));
+                                        }
+                                        return stages.map((stageExercises, stageIdx) => (
+                                            <div key={stageIdx} className="bg-white border border-slate-200 rounded-[2rem] overflow-hidden shadow-sm hover:shadow-md hover:border-indigo-300 transition-all group/stage">
+                                                <div className="bg-slate-50 border-b border-slate-100 px-5 py-3 flex items-center justify-between">
+                                                    <div className="flex flex-col">
+                                                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600">
+                                                            Étape {stageIdx + 1}
+                                                        </h3>
+                                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                                                            {stageIdx === 0 || stageIdx === 4 ? 'Palier de base' : stageIdx === 2 ? '🔥 LE SOMMET' : `Multiplicateur x${stageIdx === 1 || stageIdx === 3 ? 2 : 1}`}
+                                                        </span>
+                                                    </div>
+                                                    <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-xs font-black text-slate-400 group-hover/stage:text-indigo-500 group-hover/stage:border-indigo-200 transition-colors">
+                                                        {stageIdx + 1}
                                                     </div>
                                                 </div>
-                                            );
-                                        })
-                                    )}
-                                </div>
-                            )}
+                                                <div className="p-5 grid grid-cols-2 gap-4">
+                                                    {stageExercises.map((exo, idxInStage) => {
+                                                        const globalIdx = stageIdx * 4 + idxInStage;
+                                                        const icons: Record<string, string> = {
+                                                            PUSHUPS: '💪', PULLUPS: '🏋️', SQUATS: '🦵',
+                                                            PLANK: '🛡️', RUN: '🏃'
+                                                        };
+                                                        return (
+                                                            <div key={idxInStage} className="space-y-2">
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <span className="text-sm shrink-0">{icons[exo.type] || '⚡'}</span>
+                                                                    <span className="text-[10px] font-black uppercase tracking-tight text-slate-700 leading-none">{exo.label}</span>
+                                                                </div>
+                                                                <div className="relative">
+                                                                    {workout.scoringType === 'TIME' ? (
+                                                                        <div className="bg-slate-50 border border-slate-100 rounded-xl px-2 py-2 text-right font-black text-sm text-slate-900 flex justify-between items-center">
+                                                                            <span className="text-[10px] text-slate-300 uppercase">{exo.unit === 'REPS' ? 'R' : exo.unit === 'SECONDS' ? 'S' : 'K'}</span>
+                                                                            {exo.goal}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <>
+                                                                            <input
+                                                                                type="number"
+                                                                                required
+                                                                                min="0"
+                                                                                placeholder="0"
+                                                                                className="w-full bg-slate-50 border border-slate-100 rounded-xl px-2 py-2 text-right font-black text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                                                                                disabled={!isAvailable}
+                                                                                onChange={(e) => setFormData(prev => ({ ...prev, [`${exo.type}_${globalIdx}`]: parseInt(e.target.value) || 0 }))}
+                                                                            />
+                                                                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-300 uppercase pointer-events-none">
+                                                                                {exo.unit === 'REPS' ? 'R' : exo.unit === 'SECONDS' ? 'S' : 'K'}
+                                                                            </span>
+                                                                        </>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        ));
+                                    })()
+                                ) : (
+                                    /* --- Normal List / Grid --- */
+                                    workout.exercises.map((exo, idx) => {
+                                        const isCompact = workout.exercises.length > 12;
+                                        return (
+                                            <div key={idx} className={`group relative bg-white border border-slate-200 rounded-xl flex items-center justify-between hover:border-indigo-200 transition-all shadow-sm ${isCompact ? "p-2" : "p-4"
+                                                }`}>
+                                                <div className="space-y-0.5 text-left">
+                                                    <span className={`block font-black uppercase tracking-tight text-slate-800 ${isCompact ? "text-[8px] leading-tight" : "text-sm"
+                                                        }`}>
+                                                        {exo.label}
+                                                    </span>
+                                                    {exo.goal && !isCompact && (
+                                                        <span className="text-[10px] font-bold text-indigo-500 uppercase">Obj: {exo.goal} {exo.unit.toLowerCase()}</span>
+                                                    )}
+                                                </div>
+
+                                                <div className="flex items-center gap-1">
+                                                    {workout.scoringType === 'TIME' ? (
+                                                        <div className="bg-slate-50 border border-slate-100 rounded-lg px-2 py-1 text-right font-black text-sm text-indigo-600">
+                                                            {exo.goal} <span className="text-[10px] text-slate-300">{exo.unit === 'REPS' ? 'R' : exo.unit === 'SECONDS' ? 'S' : 'K'}</span>
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <input
+                                                                type="number"
+                                                                required
+                                                                min="0"
+                                                                placeholder="0"
+                                                                className={`${isCompact ? "w-12 px-1 py-1 text-xs" : "w-20 px-3 py-2 text-lg"} bg-slate-50 border border-slate-200 rounded-lg text-right font-black focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-slate-900 disabled:opacity-50`}
+                                                                disabled={!isAvailable}
+                                                                onChange={(e) => setFormData(prev => ({ ...prev, [`${exo.type}_${idx}`]: parseInt(e.target.value) || 0 }))}
+                                                            />
+                                                            {!isCompact && (
+                                                                <span className="text-[10px] font-black text-slate-400 uppercase w-10">
+                                                                    {exo.unit === 'REPS' ? 'Reps' : exo.unit === 'SECONDS' ? 'Sec' : exo.unit === 'KILOMETERS' ? 'KM' : 'M'}
+                                                                </span>
+                                                            )}
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
                         </div>
 
                         {isAvailable && (
