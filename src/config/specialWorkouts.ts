@@ -114,7 +114,7 @@ export const SPECIAL_WORKOUTS: SpecialWorkout[] = [
         name: 'Khéops — Pompes',
         description: '225 pompes en pyramide : montée de 1 à 15, descente de 14 à 1.',
         date: '2026-05-01',
-        endDate: '2026-05-31',
+        endDate: '2026-06-30',
         exercises: [
             ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map(n => ({
                 type: 'PUSHUPS' as const, label: `Pompes ×${n}`, goal: n, unit: 'REPS' as const
@@ -129,7 +129,7 @@ export const SPECIAL_WORKOUTS: SpecialWorkout[] = [
         name: 'Khéops — Squats',
         description: '225 squats en pyramide : montée de 1 à 15, descente de 14 à 1.',
         date: '2026-05-01',
-        endDate: '2026-05-31',
+        endDate: '2026-06-30',
         exercises: [
             ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map(n => ({
                 type: 'SQUATS' as const, label: `Squats ×${n}`, goal: n, unit: 'REPS' as const
@@ -144,7 +144,7 @@ export const SPECIAL_WORKOUTS: SpecialWorkout[] = [
         name: 'Khéops — Tractions',
         description: '100 tractions en pyramide : montée de 1 à 10, descente de 9 à 1. Pour élites seulement.',
         date: '2026-05-01',
-        endDate: '2026-05-31',
+        endDate: '2026-06-30',
         exercises: [
             ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map(n => ({
                 type: 'PULLUPS' as const, label: `Tractions ×${n}`, goal: n, unit: 'REPS' as const
@@ -159,7 +159,7 @@ export const SPECIAL_WORKOUTS: SpecialWorkout[] = [
         name: 'Khéops — Gainage',
         description: '720s cumulées de gainage (12 min) en pyramide de 5s en 5s. Rappel : 5s = 1 unité d\'effort.',
         date: '2026-05-01',
-        endDate: '2026-05-31',
+        endDate: '2026-06-30',
         exercises: [
             ...[5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 55, 50, 45, 40, 35, 30, 25, 20, 15, 10, 5].map(n => ({
                 type: 'PLANK' as const, label: `Gainage ${n}s`, goal: n, unit: 'SECONDS' as const
@@ -174,7 +174,7 @@ export const SPECIAL_WORKOUTS: SpecialWorkout[] = [
         name: 'Khéops — Full Body',
         description: 'Le défi ultime : pyramide de 1à 10 (étage X = X pompes + X squats + X tractions + X×5s gainage). 100+100+100+500s.',
         date: '2026-05-01',
-        endDate: '2026-05-31',
+        endDate: '2026-06-30',
         exercises: [
             ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1].flatMap(n => [
                 { type: 'PUSHUPS' as const, label: `Pompes ×${n}`, goal: n, unit: 'REPS' as const },
