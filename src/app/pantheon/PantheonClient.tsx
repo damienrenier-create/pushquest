@@ -701,78 +701,111 @@ export default function PantheonClient({
                 </div>
 
 
-                {/* SECTION E: ENTRAÎNEMENTS DE LÉGENDE */}
+                {/* SECTION E: DÉFIS À LA CARTE */}
                 <div id="challenges" className="mb-12">
-                    <div className="flex items-center gap-3 mb-8">
+                    <div className="flex items-center gap-3 mb-4">
                         <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
                             <Zap size={20} fill="currentColor" />
                         </div>
                         <h2 className="text-2xl font-black uppercase tracking-normal">Défis à la Carte</h2>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {SPECIAL_WORKOUTS.map((workout) => (
-                            <Link
-                                key={workout.id}
-                                href={`/workouts/${workout.slug}`}
-                                className="group relative bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:scale-[1.02] transition-all flex flex-col justify-between overflow-hidden"
-                            >
-                                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                                    <Trophy size={80} />
-                                </div>
-
-                                <div className="relative z-10 space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${today <= (workout.endDate || '9999-12-31') && today >= workout.date
-                                            ? "bg-indigo-50 text-indigo-600 border-indigo-100"
-                                            : today > (workout.endDate || '9999-12-31')
-                                                ? "bg-slate-100 text-slate-400 border-slate-200"
-                                                : "bg-amber-50 text-amber-600 border-amber-100"
-                                            }`}>
-                                            {today <= (workout.endDate || '9999-12-31') && today >= workout.date
-                                                ? "🔥 ACTIF"
-                                                : today > (workout.endDate || '9999-12-31')
-                                                    ? "⌛ TERMINÉ"
-                                                    : `📅 LE ${new Date(workout.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}`}
-                                        </div>
-                                        <div className="text-amber-500 font-black text-xs">
-                                            +{workout.xpBonus} XP
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <h3 className="text-xl font-black text-slate-900 uppercase leading-none mb-2">{workout.name}</h3>
-                                        <p className="text-slate-500 text-xs font-medium line-clamp-2">{workout.description}</p>
-                                    </div>
-
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {workout.exercises.slice(0, 3).map((exo, idx) => (
-                                            <span key={idx} className="text-[9px] font-bold bg-slate-50 text-slate-500 px-2 py-0.5 rounded-lg border border-slate-100 uppercase">
-                                                {exo.label}
-                                            </span>
-                                        ))}
-                                        {workout.exercises.length > 3 && (
-                                            <span className="text-[9px] font-bold bg-slate-50 text-slate-500 px-2 py-0.5 rounded-lg border border-slate-100">
-                                                +{workout.exercises.length - 3}
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    {workout.endDate && (
-                                        <div className="flex items-center gap-1.5 mt-2 text-[9px] font-black text-red-500 uppercase tracking-tighter">
-                                            <Clock size={10} />
-                                            Finit le {new Date(workout.endDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="mt-6 flex items-center justify-between pt-4 border-t border-slate-50">
-                                    <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Relever le défi</span>
-                                    <ArrowRight size={16} className="text-indigo-600 group-hover:translate-x-1 transition-transform" />
-                                </div>
-                            </Link>
-                        ))}
+                    {/* ⚠️ Avertissement comptage automatique */}
+                    <div className="mb-6 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
+                        <span className="text-lg shrink-0 mt-0.5">⚠️</span>
+                        <p className="text-xs text-amber-800 font-medium">
+                            Les répétitions réalisées dans un défi <strong>ne sont pas automatiquement comptées</strong> dans ton total du jour.
+                            {' '}N&apos;oublie pas de les encoder via le <Link href="/" className="text-indigo-600 underline font-bold">menu principal</Link>.
+                        </p>
                     </div>
+
+                    {(() => {
+                        const active = SPECIAL_WORKOUTS.filter(w => today >= w.date && today <= (w.endDate || '9999-12-31'));
+                        const upcoming = SPECIAL_WORKOUTS.filter(w => today < w.date);
+                        const ended = SPECIAL_WORKOUTS.filter(w => !!w.endDate && today > w.endDate!);
+
+                        const typeLabels: Record<string, string> = {
+                            PUSHUPS: '💪 Pompes', PULLUPS: '🏋️ Tractions', SQUATS: '🦵 Squats',
+                            PLANK: '🛡️ Gainage', RUN: '🏃 Course', BURPEES: '🔥 Burpees',
+                            JUMP_ROPE: '🪢 Corde', PISTOL_SQUAT: '🎯 Pistol', SQUAT_JUMP: '⚡ Squat Jump'
+                        };
+
+                        const WorkoutCard = ({ workout, variant }: { workout: typeof SPECIAL_WORKOUTS[0], variant: 'active' | 'upcoming' | 'ended' }) => {
+                            const uniqueTypes = [...new Set(workout.exercises.map(e => e.type))];
+                            return (
+                                <Link href={`/workouts/${workout.slug}`}
+                                    className={`group relative p-4 rounded-2xl border transition-all flex flex-col gap-2 ${variant === 'active' ? 'bg-white border-indigo-200 shadow-md hover:shadow-lg hover:scale-[1.015]' :
+                                            variant === 'upcoming' ? 'bg-amber-50/60 border-amber-200 hover:bg-amber-50 hover:shadow-md' :
+                                                'bg-slate-50 border-slate-100 opacity-65 hover:opacity-90'
+                                        }`}>
+                                    <div className="flex items-center justify-between">
+                                        <div className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${variant === 'active' ? 'bg-indigo-100 text-indigo-700' :
+                                                variant === 'upcoming' ? 'bg-amber-100 text-amber-700' :
+                                                    'bg-slate-200 text-slate-500'
+                                            }`}>
+                                            {variant === 'active' ? '🔥 ACTIF' :
+                                                variant === 'upcoming' ? `📅 ${new Date(workout.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}` :
+                                                    '⌛ TERMINÉ'}
+                                        </div>
+                                        <span className="text-[10px] font-black text-amber-500">+{workout.xpBonus} XP</span>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-sm font-black text-slate-900 uppercase leading-tight">{workout.name}</h3>
+                                        <p className="text-[10px] text-slate-500 font-medium line-clamp-1 mt-0.5">{workout.description}</p>
+                                    </div>
+                                    <div className="flex flex-wrap gap-1">
+                                        {uniqueTypes.slice(0, 4).map((t, i) => (
+                                            <span key={i} className="text-[8px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded uppercase">{typeLabels[t] || t}</span>
+                                        ))}
+                                        {uniqueTypes.length > 4 && <span className="text-[8px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">+{uniqueTypes.length - 4}</span>}
+                                    </div>
+                                    <div className="flex items-center justify-between pt-2 border-t border-slate-100/70 mt-auto">
+                                        {variant === 'active' && workout.endDate ? (
+                                            <span className="text-[8px] font-black text-red-400 uppercase tracking-tighter flex items-center gap-1"><Clock size={9} />Finit le {new Date(workout.endDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
+                                        ) : <span />}
+                                        <span className="text-[9px] font-black text-indigo-600 uppercase tracking-wider flex items-center gap-1 ml-auto group-hover:gap-2 transition-all">
+                                            {variant === 'ended' ? 'Voir' : 'Relever'} <ArrowRight size={11} />
+                                        </span>
+                                    </div>
+                                </Link>
+                            );
+                        };
+
+                        return (
+                            <div className="space-y-8">
+                                {active.length > 0 && (
+                                    <div>
+                                        <p className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse inline-block" />En cours ({active.length})
+                                        </p>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                                            {active.map(w => <WorkoutCard key={w.id} workout={w} variant="active" />)}
+                                        </div>
+                                    </div>
+                                )}
+                                {upcoming.length > 0 && (
+                                    <div>
+                                        <p className="text-[10px] font-black text-amber-600 uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
+                                            <Calendar size={12} />À venir ({upcoming.length})
+                                        </p>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                                            {upcoming.map(w => <WorkoutCard key={w.id} workout={w} variant="upcoming" />)}
+                                        </div>
+                                    </div>
+                                )}
+                                {ended.length > 0 && (
+                                    <details className="group/arch">
+                                        <summary className="cursor-pointer text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2 select-none list-none">
+                                            <ChevronDown size={12} className="group-open/arch:rotate-180 transition-transform" />Archives — Défis terminés ({ended.length})
+                                        </summary>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mt-3">
+                                            {ended.map(w => <WorkoutCard key={w.id} workout={w} variant="ended" />)}
+                                        </div>
+                                    </details>
+                                )}
+                            </div>
+                        );
+                    })()}
                 </div>
 
                 {/* SECTION C: CATALOGUE COMPLET (VITRINES) */}

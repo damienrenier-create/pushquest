@@ -160,6 +160,14 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
                         <p className="text-slate-600 text-sm font-medium max-w-md">
                             {workout.description}
                         </p>
+                        {/* ⚠️ Les reps du défi ne sont PAS comptées automatiquement */}
+                        <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-xs max-w-md">
+                            <span className="shrink-0 mt-0.5">⚠️</span>
+                            <p className="text-amber-800 font-medium">
+                                Tes répétitions ici <strong>ne sont pas comptées</strong> dans ton total du jour.{' '}
+                                <Link href="/" className="text-indigo-600 underline font-bold">Encode-les manuellement</Link> après le défi.
+                            </p>
+                        </div>
                     </div>
                 </div>
 
@@ -291,31 +299,45 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
                                     ))}
                                 </div>
                             ) : (
-                                <div className="grid gap-3">
-                                    {workout.exercises.map((exo, idx) => (
-                                        <div key={idx} className="group relative bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between hover:border-indigo-200 transition-all shadow-sm">
-                                            <div className="space-y-0.5">
-                                                <span className="block font-black text-sm uppercase tracking-tight text-slate-800">{exo.label}</span>
-                                                {exo.goal && (
-                                                    <span className="text-[10px] font-bold text-indigo-500 uppercase">Obj: {exo.goal} {exo.unit.toLowerCase()}</span>
-                                                )}
+                                <div className={workout.exercises.length > 12
+                                    ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2"
+                                    : "grid gap-3"
+                                }>
+                                    {workout.exercises.map((exo, idx) => {
+                                        const isCompact = workout.exercises.length > 12;
+                                        return (
+                                            <div key={idx} className={`group relative bg-white border border-slate-200 rounded-xl flex items-center justify-between hover:border-indigo-200 transition-all shadow-sm ${isCompact ? "p-2" : "p-4"
+                                                }`}>
+                                                <div className="space-y-0.5">
+                                                    <span className={`block font-black uppercase tracking-tight text-slate-800 ${isCompact ? "text-[8px] leading-tight" : "text-sm"
+                                                        }`}>
+                                                        {exo.label}
+                                                    </span>
+                                                    {exo.goal && !isCompact && (
+                                                        <span className="text-[10px] font-bold text-indigo-500 uppercase">Obj: {exo.goal} {exo.unit.toLowerCase()}</span>
+                                                    )}
+                                                </div>
+
+                                                <div className="flex items-center gap-1">
+                                                    <input
+                                                        type="number"
+                                                        required
+                                                        min="0"
+                                                        placeholder="0"
+                                                        className={`${isCompact ? "w-12 px-1 py-1 text-xs" : "w-20 px-3 py-2 text-lg"} bg-slate-50 border border-slate-200 rounded-lg text-right font-black focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-slate-900 disabled:opacity-50`}
+                                                        disabled={!isAvailable}
+                                                        defaultValue={workout.scoringType === 'TIME' ? exo.goal : 0}
+                                                        onChange={(e) => setFormData(prev => ({ ...prev, [`${exo.type}_${idx}`]: parseInt(e.target.value) || 0 }))}
+                                                    />
+                                                    {!isCompact && (
+                                                        <span className="text-[10px] font-black text-slate-400 uppercase w-10">
+                                                            {exo.unit === 'REPS' ? 'Reps' : exo.unit === 'SECONDS' ? 'Sec' : exo.unit === 'KILOMETERS' ? 'KM' : 'M'}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <div className="flex items-center gap-3">
-                                                <input
-                                                    type="number"
-                                                    required
-                                                    min="0"
-                                                    placeholder="0"
-                                                    className={`w-20 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-right font-black text-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-slate-900 disabled:opacity-50 disabled:bg-slate-100`}
-                                                    disabled={!isAvailable}
-                                                    onChange={(e) => setFormData(prev => ({ ...prev, [`${exo.type}_${idx}`]: parseInt(e.target.value) || 0 }))}
-                                                />
-                                                <span className="text-[10px] font-black text-slate-400 uppercase w-10">
-                                                    {exo.unit === 'REPS' ? 'Reps' : exo.unit === 'SECONDS' ? 'Sec' : exo.unit === 'KILOMETERS' ? 'KM' : 'M'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
