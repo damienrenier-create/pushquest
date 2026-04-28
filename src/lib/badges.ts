@@ -268,6 +268,7 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             maxBonus,
             maxBonusStreak,
             maxPerfectStreak,
+            currentPerfectStreak,
             stealCount,
             maxMonoExoStreak,
             maxTriExoStreak,

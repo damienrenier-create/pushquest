@@ -21,6 +21,7 @@ export async function GET(
                 ]
             },
             include: {
+                sets: true,
                 statuses: {
                     include: {
                         likes: {
@@ -79,13 +80,18 @@ export async function GET(
         const squats = statsGroup.find(s => s.exercise === "SQUAT")?._sum.reps || 0
         const planks = statsGroup.find(s => s.exercise === "PLANK")?._sum.reps || 0
 
+        const { getUserSummaries } = require("@/lib/badges");
+        const summary = getUserSummaries([user], [])[0];
+
         return NextResponse.json({
             id: (user as any).id,
             nickname: (user as any).nickname,
+            image: (user as any).image,
             createdAt: (user as any).createdAt,
             buyoutPaid: (user as any).buyoutPaid,
             badges: (user as any).badges,
             status: (user as any).statuses[0] || null,
+            currentPerfectStreak: summary?.currentPerfectStreak || 0,
             fines: (user as any).fines.map((f: any) => ({
                 id: f.id,
                 amountEur: f.amountEur,

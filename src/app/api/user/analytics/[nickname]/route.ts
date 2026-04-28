@@ -113,24 +113,47 @@ export async function GET(
             reps: hourlyDistribution[i] || 0
         }))
 
-        // 4. Yesterday's XP Recap
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayISO = yesterday.toISOString().split('T')[0];
-
+        // 4. Combat Reports (Last 7 days + Top 3 Ever)
         const { getUserSummaries } = require("@/lib/badges");
         const summaries = getUserSummaries(allUsers, []);
         const featuredConfig = await (prisma as any).globalConfig.findUnique({ where: { key: "featuredBadgeKey" } });
         const featuredBadgeKey = featuredConfig?.value;
 
-        const realYesterdayRecap = calculateDailyXPGainForUser(
-            user,
-            yesterdayISO,
-            summaries,
-            allBadges,
-            { maxVolDayUser: null, maxVolMonthUser: null, maxVolYearUser: null },
-            featuredBadgeKey
-        );
+        // Last 7 days
+        const last7DaysRecaps = [];
+        for (let i = 1; i <= 7; i++) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            const dISO = d.toISOString().split('T')[0];
+            const recap = calculateDailyXPGainForUser(
+                user,
+                dISO,
+                summaries,
+                allBadges,
+                { maxVolDayUser: null, maxVolMonthUser: null, maxVolYearUser: null },
+                featuredBadgeKey
+            );
+            if (recap && recap.total > 0) {
+                last7DaysRecaps.push({ date: dISO, ...recap });
+            }
+        }
+
+        // Top 3 Ever
+        // Get all unique dates for this user
+        const allUserDates = Array.from(new Set(user.sets.map((s: any) => s.date))).sort().reverse();
+        const allTimeRecaps = allUserDates.map(dISO => {
+            const recap = calculateDailyXPGainForUser(
+                user,
+                dISO,
+                summaries,
+                allBadges,
+                { maxVolDayUser: null, maxVolMonthUser: null, maxVolYearUser: null },
+                featuredBadgeKey
+            );
+            return { date: dISO, ...recap };
+        }).filter(r => r.total > 0).sort((a, b) => b.total - a.total);
+
+        const top3Recaps = allTimeRecaps.slice(0, 3);
 
         return NextResponse.json({
             xpBreakdown: userXPInfo?.details || {},
@@ -138,7 +161,9 @@ export async function GET(
             progressionData,
             hourlyData,
             totalXP: userXPInfo?.totalXP || 0,
-            yesterdayRecap: realYesterdayRecap
+            yesterdayRecap: last7DaysRecaps[0] || null,
+            weeklyRecaps: last7DaysRecaps,
+            topRecaps: top3Recaps
         })
     } catch (error) {
         console.error("Analytics API Error:", error)

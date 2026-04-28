@@ -262,33 +262,42 @@ export default function UserProfilePage() {
                     </div>
                 </div>
 
-                <div className="relative mt-8 sm:mt-12 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                    <div className="bg-slate-800/40 backdrop-blur-md p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-white/5 group hover:bg-slate-800/60 transition-colors">
-                        <span className="text-slate-500 text-[9px] sm:text-[10px] font-black uppercase tracking-widest">Total Éq. Reps</span>
-                        <div className="flex items-baseline gap-2 mt-1">
-                            <span className="text-xl sm:text-3xl font-black text-white tracking-normal">{totalReps.toLocaleString()}</span>
-                            <span className="text-slate-600 font-bold text-[9px] sm:text-[10px] uppercase">Reps</span>
+                <div className="relative mt-6 grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3">
+                    <div className="bg-slate-800/40 backdrop-blur-md p-3 sm:p-4 rounded-[1.2rem] sm:rounded-[1.5rem] border border-white/5 group hover:bg-slate-800/60 transition-colors">
+                        <span className="text-slate-500 text-[8px] sm:text-[9px] font-black uppercase tracking-widest">Total Éq. Reps</span>
+                        <div className="flex items-baseline gap-1.5 mt-1">
+                            <span className="text-lg sm:text-2xl font-black text-white tracking-normal">{totalReps.toLocaleString()}</span>
+                            <span className="text-slate-600 font-bold text-[8px] sm:text-[9px] uppercase">Reps</span>
                         </div>
                     </div>
-                    <div className="bg-slate-800/40 backdrop-blur-md p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-white/5 group hover:bg-slate-800/60 transition-colors">
-                        <span className="text-slate-500 text-[9px] sm:text-[10px] font-black uppercase tracking-widest">Gainage Total</span>
-                        <div className="flex items-baseline gap-2 mt-1">
-                            <span className="text-xl sm:text-3xl font-black text-white tracking-normal">{planks.toLocaleString()}</span>
-                            <span className="text-slate-600 font-bold text-[9px] sm:text-[10px] uppercase">Secs</span>
+                    <div className="bg-slate-800/40 backdrop-blur-md p-3 sm:p-4 rounded-[1.2rem] sm:rounded-[1.5rem] border border-white/5 group hover:bg-slate-800/60 transition-colors">
+                        <span className="text-slate-500 text-[8px] sm:text-[9px] font-black uppercase tracking-widest">Gainage Total</span>
+                        <div className="flex items-baseline gap-1.5 mt-1">
+                            <span className="text-lg sm:text-2xl font-black text-white tracking-normal">{planks.toLocaleString()}</span>
+                            <span className="text-slate-600 font-bold text-[8px] sm:text-[9px] uppercase">Secs</span>
                         </div>
                     </div>
-                    <div className="bg-slate-800/40 backdrop-blur-md p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-white/5 group hover:bg-slate-800/60 transition-colors">
-                        <span className="text-slate-500 text-[9px] sm:text-[10px] font-black uppercase tracking-widest">Distinctions</span>
-                        <div className="flex items-baseline gap-2 mt-1">
-                            <span className="text-xl sm:text-3xl font-black text-indigo-400 tracking-normal">{user.badges?.length || 0}</span>
-                            <span className="text-slate-600 font-bold text-[9px] sm:text-[10px] uppercase">Badges</span>
+                    <div className="bg-indigo-500/10 backdrop-blur-md p-3 sm:p-4 rounded-[1.2rem] sm:rounded-[1.5rem] border border-indigo-500/20 group hover:bg-indigo-500/20 transition-colors">
+                        <span className="text-indigo-400 text-[8px] sm:text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                            <Sparkles size={10} /> SÉRIE PARFAITE
+                        </span>
+                        <div className="flex items-baseline gap-1.5 mt-1">
+                            <span className="text-lg sm:text-2xl font-black text-white tracking-normal">{user.currentPerfectStreak || 0}</span>
+                            <span className="text-indigo-400 font-bold text-[8px] sm:text-[9px] uppercase">JOURS</span>
                         </div>
                     </div>
-                    <div className="bg-slate-800/40 backdrop-blur-md p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-white/5 group hover:bg-slate-800/60 transition-colors">
-                        <span className="text-slate-500 text-[9px] sm:text-[10px] font-black uppercase tracking-widest">Amendes Dues</span>
-                        <div className="flex items-baseline gap-2 mt-1">
-                            <span className="text-xl sm:text-3xl font-black text-rose-500 tracking-normal">{unpaidFinesPot}€</span>
-                            <span className="text-slate-600 font-bold text-[9px] sm:text-[10px] uppercase">💸</span>
+                    <div className="bg-slate-800/40 backdrop-blur-md p-3 sm:p-4 rounded-[1.2rem] sm:rounded-[1.5rem] border border-white/5 group hover:bg-slate-800/60 transition-colors">
+                        <span className="text-slate-500 text-[8px] sm:text-[9px] font-black uppercase tracking-widest">Distinctions</span>
+                        <div className="flex items-baseline gap-1.5 mt-1">
+                            <span className="text-lg sm:text-2xl font-black text-indigo-400 tracking-normal">{user.badges?.length || 0}</span>
+                            <span className="text-slate-600 font-bold text-[8px] sm:text-[9px] uppercase">Badges</span>
+                        </div>
+                    </div>
+                    <div className="bg-slate-800/40 backdrop-blur-md p-3 sm:p-4 rounded-[1.2rem] sm:rounded-[1.5rem] border border-white/5 group hover:bg-slate-800/60 transition-colors">
+                        <span className="text-slate-500 text-[8px] sm:text-[9px] font-black uppercase tracking-widest">Amendes Dues</span>
+                        <div className="flex items-baseline gap-1.5 mt-1">
+                            <span className="text-lg sm:text-2xl font-black text-rose-500 tracking-normal">{unpaidFinesPot}€</span>
+                            <span className="text-slate-600 font-bold text-[8px] sm:text-[9px] uppercase">💸</span>
                         </div>
                     </div>
                 </div>
@@ -296,32 +305,28 @@ export default function UserProfilePage() {
 
             {/* Hall of Fame */}
             {hallOfFame.length > 0 && (
-                <section className="space-y-4 sm:space-y-6">
-                    <h2 className="text-xl sm:text-2xl font-black uppercase tracking-normal flex items-center gap-3 px-2 text-slate-900">
+                <section className="space-y-3 sm:space-y-4">
+                    <h2 className="text-lg sm:text-xl font-black uppercase tracking-normal flex items-center gap-3 px-2 text-slate-900">
                         <span className="text-yellow-500">✨</span> Hall of Fame
                     </h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
                         {hallOfFame.map((ownership: any) => (
                             <Link
                                 key={ownership.id}
                                 href={`/faq?tab=catalogue#item-${ownership.badgeKey}`}
-                                className={`relative group overflow-hidden border rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-5 transition-all hover:scale-[1.02] cursor-pointer bg-white ${rarityStyles[ownership.badge.rarity]}`}
+                                className={`relative group overflow-hidden border rounded-[1.2rem] sm:rounded-[1.5rem] p-3 sm:p-4 transition-all hover:scale-[1.02] cursor-pointer bg-white ${rarityStyles[ownership.badge.rarity]}`}
                             >
-                                <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:rotate-12 transition-transform">
-                                    <Sparkles size={32} />
+                                <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:rotate-12 transition-transform">
+                                    <Sparkles size={24} />
                                 </div>
-                                <div className="flex items-center gap-3 sm:gap-4">
-                                    <div className="text-3xl sm:text-4xl filter drop-shadow-lg shrink-0">{ownership.badge.emoji}</div>
+                                <div className="flex items-center gap-3">
+                                    <div className="text-2xl sm:text-3xl filter drop-shadow-lg shrink-0">{ownership.badge.emoji}</div>
                                     <div className="min-w-0 flex-1">
                                         <div className="flex justify-between items-start">
-                                            <span className="text-[7px] sm:text-[8px] font-black uppercase tracking-widest opacity-60 leading-none">{ownership.badge.rarity}</span>
-                                            <div className="flex items-center gap-1 bg-white/50 px-1.5 py-0.5 rounded-full text-[8px] font-black">
-                                                <span>❤️</span>
-                                                <span>{(ownership.likes || []).length}</span>
-                                            </div>
+                                            <span className="text-[6px] sm:text-[7px] font-black uppercase tracking-widest opacity-60 leading-none">{ownership.badge.rarity}</span>
                                         </div>
-                                        <h3 className="text-sm sm:text-base font-black text-gray-900 uppercase tracking-normal leading-tight mt-0.5 truncate">{ownership.badge.name}</h3>
-                                        <p className="text-[9px] sm:text-[10px] font-bold text-gray-500 mt-1 line-clamp-1 italic">"{ownership.badge.description}"</p>
+                                        <h3 className="text-[10px] sm:text-xs font-black text-gray-900 uppercase tracking-normal leading-tight mt-0.5 truncate">{ownership.badge.name}</h3>
+                                        <p className="text-[8px] font-bold text-gray-500 mt-0.5 line-clamp-1 italic">"{ownership.badge.description}"</p>
                                     </div>
                                 </div>
                             </Link>
@@ -331,7 +336,11 @@ export default function UserProfilePage() {
             )}
 
             {/* Yesterday Recap Section */}
-            <YesterdayXpRecap recap={analyticsData?.yesterdayRecap} />
+            <YesterdayXpRecap
+                recap={analyticsData?.yesterdayRecap}
+                weeklyRecaps={analyticsData?.weeklyRecaps}
+                topRecaps={analyticsData?.topRecaps}
+            />
 
             {/* Navigation Tabs */}
             <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200 w-fit mx-auto sm:mx-0">

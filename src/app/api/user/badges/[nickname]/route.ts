@@ -43,11 +43,23 @@ export async function GET(
             return NextResponse.json({ message: "Erreur calcul summary" }, { status: 500 })
         }
 
-        // 3. Get showcase data
-        const earnedBadgeKeys = user.badges.map(b => b.badgeKey)
-        const showcases = getShowcaseData(userSummary, earnedBadgeKeys)
+        const globalOwnerships = await prisma.badgeOwnership.findMany({
+            include: { currentUser: true }
+        });
 
-        return NextResponse.json({ showcases })
+        // 3. Get showcase data
+        const { getXPForReward } = require("@/lib/rewards");
+        const earnedBadgeKeys = user.badges.map(b => b.badgeKey);
+        let showcases = getShowcaseData(userSummary, earnedBadgeKeys);
+
+        // Add XP to badges
+        showcases = showcases.map(cat => ({
+            ...cat,
+            earned: cat.earned.map((b: any) => ({ ...b, xp: getXPForReward(b.key) })),
+            pending: cat.pending.map((b: any) => ({ ...b, xp: getXPForReward(b.key) }))
+        }));
+
+        return NextResponse.json({ showcases, badgeOwnerships: user.badges, globalOwnerships })
     } catch (error) {
         console.error("Badges API Error:", error)
         return NextResponse.json({ message: "Erreur" }, { status: 500 })

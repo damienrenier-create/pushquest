@@ -60,7 +60,7 @@ const BadgeShowcase: React.FC<BadgeShowcaseProps> = ({ category, defaultOpen = f
                             <BadgeCarousel title="Trophées Acquis" subtitle="Tes victoires éclatantes">
                                 {category.earned.map((badge: any) => {
                                     const bo = badgeOwnerships.find(o => o.badgeKey === badge.key);
-                                    const holder = bo ? { nickname: bo.currentUser?.nickname, value: bo.currentValue } : null;
+                                    const holder = bo ? { nickname: bo.currentUser?.nickname, value: bo.currentValue, achievedAt: bo.achievedAt } : null;
                                     return <BadgeCard key={badge.key} badge={badge} isPending={false} holder={holder} personalRecord={currentUserRecords[badge.key]} />;
                                 })}
                             </BadgeCarousel>
@@ -84,7 +84,7 @@ const BadgeShowcase: React.FC<BadgeShowcaseProps> = ({ category, defaultOpen = f
                             <BadgeCarousel title="Prochains Défis" subtitle="Ce qu'il te reste à accomplir">
                                 {category.pending.map((badge: any) => {
                                     const bo = badgeOwnerships.find(o => o.badgeKey === badge.key);
-                                    const holder = bo ? { nickname: bo.currentUser?.nickname, value: bo.currentValue } : null;
+                                    const holder = bo ? { nickname: bo.currentUser?.nickname, value: bo.currentValue, achievedAt: bo.achievedAt } : null;
                                     return <BadgeCard key={badge.key} badge={badge} isPending={true} holder={holder} personalRecord={currentUserRecords[badge.key]} />;
                                 })}
                             </BadgeCarousel>

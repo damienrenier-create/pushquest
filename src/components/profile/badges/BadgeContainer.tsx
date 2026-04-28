@@ -10,6 +10,8 @@ interface BadgeContainerProps {
 
 const BadgeContainer: React.FC<BadgeContainerProps> = ({ nickname }) => {
     const [showcases, setShowcases] = useState<any[]>([]);
+    const [ownerships, setOwnerships] = useState<any[]>([]);
+    const [globalOwnerships, setGlobalOwnerships] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -19,6 +21,8 @@ const BadgeContainer: React.FC<BadgeContainerProps> = ({ nickname }) => {
                 const data = await res.json();
                 if (data.showcases) {
                     setShowcases(data.showcases);
+                    setOwnerships(data.badgeOwnerships || []);
+                    setGlobalOwnerships(data.globalOwnerships || []);
                 }
             } catch (error) {
                 console.error("Failed to fetch badges:", error);
@@ -53,7 +57,8 @@ const BadgeContainer: React.FC<BadgeContainerProps> = ({ nickname }) => {
                 <BadgeShowcase
                     key={showcase.id}
                     category={showcase}
-                    defaultOpen={index === 0} // Open the first one by default
+                    badgeOwnerships={globalOwnerships} // Pass global ones here
+                    defaultOpen={false} // Closed by default
                 />
             ))}
         </div>
