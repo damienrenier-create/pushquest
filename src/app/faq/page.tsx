@@ -1,10 +1,11 @@
 "use client"
 
 import React, { useState, useEffect, Suspense } from "react"
-import { Shield, Zap, Info, Trophy, Target, AlertCircle, Calculator, BookOpen, Search, Calendar, ChevronRight } from "lucide-react"
+import { Shield, Zap, Info, Trophy, Target, AlertCircle, Calculator, BookOpen, Search, Calendar, ChevronRight, X } from "lucide-react"
 import { BADGE_DEFINITIONS } from "@/config/badges"
 import { getXPForReward } from "@/lib/rewards"
 import { useSearchParams } from "next/navigation"
+import RewardDetailSheet from "@/components/RewardDetailSheet"
 
 // XP formula: 250 * (Lvl-1) + 50 * (Lvl-1)^2
 function getXPForLevel(level: number) {
@@ -68,6 +69,7 @@ function FAQContent() {
     const [activeTab, setActiveTab] = useState<'rules' | 'bestiary' | 'catalogue' | 'news'>(initialTab);
     const [searchQuery, setSearchQuery] = useState("");
     const [filter, setFilter] = useState<'ALL' | 'COMPETITIVE' | 'LEGENDARY' | 'MILESTONE' | 'EVENT'>('ALL');
+    const [selectedBadge, setSelectedBadge] = useState<any>(null);
 
     useEffect(() => {
         const hash = window.location.hash;
@@ -416,59 +418,39 @@ function FAQContent() {
                                 );
                                 if (badges.length === 0) return null;
                                 return (
-                                    <div key={type} className="space-y-8">
+                                    <div key={type} className="space-y-6">
                                         <div className="flex items-center gap-4 px-2 font-black uppercase italic tracking-tighter text-gray-900 text-lg">
                                             <span>{type === "COMPETITIVE" ? "Compétitifs" : type === "LEGENDARY" ? "Légendaires" : type === "MILESTONE" ? "Milestones" : "Spéciaux"}</span>
                                             <div className="h-px bg-gray-200 flex-1" />
                                         </div>
-                                        <div className="grid grid-cols-1 gap-6">
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
                                             {badges.map(badge => (
-                                                <div
+                                                <button
                                                     key={badge.key}
                                                     id={`item-${badge.key}`}
-                                                    className={`group bg-white rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 shadow-sm border-2 transition-all hover:shadow-xl scroll-mt-24 ${badge.rarity === 'LEGENDARY' ? 'border-orange-100/50 hover:border-orange-200' : badge.rarity === 'EPIC' ? 'border-purple-100/50 hover:border-purple-200' : 'border-gray-50 hover:border-indigo-100'}`}
+                                                    onClick={() => setSelectedBadge({
+                                                        ...badge,
+                                                        xp: getXPForReward(badge.key)
+                                                    })}
+                                                    className={`group relative bg-white rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-5 border-2 transition-all hover:scale-[1.02] hover:shadow-xl active:scale-95 scroll-mt-24 text-left flex flex-col items-center justify-center gap-2 sm:gap-3 ${badge.rarity === 'LEGENDARY' ? 'border-orange-100 hover:border-orange-300 bg-orange-50/5' : badge.rarity === 'EPIC' ? 'border-purple-100 hover:border-purple-300 bg-purple-50/5' : 'border-gray-50 hover:border-indigo-200'}`}
                                                 >
-                                                    <div className="flex flex-col sm:flex-row gap-6 sm:gap-10">
-                                                        <div className={`w-24 h-24 sm:w-32 sm:h-32 rounded-3xl sm:rounded-[2.5rem] flex items-center justify-center text-5xl sm:text-7xl shadow-inner shrink-0 ${badge.rarity === 'LEGENDARY' ? 'bg-orange-50/50' : badge.rarity === 'EPIC' ? 'bg-purple-50/50' : 'bg-gray-50'}`}>
-                                                            {badge.emoji}
-                                                        </div>
-                                                        <div className="flex-1 space-y-4 sm:space-y-6">
-                                                            <div className="space-y-2">
-                                                                <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-                                                                    <h3 className="text-xl sm:text-3xl font-black text-gray-900 uppercase italic tracking-tighter">{badge.name}</h3>
-                                                                    <span className={`px-3 py-1 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest ${badge.rarity === 'LEGENDARY' ? 'bg-orange-600 text-white' : badge.rarity === 'EPIC' ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
-                                                                        {badge.rarity} {badge.isUnique ? "(UNIQUE)" : ""}
-                                                                    </span>
-                                                                </div>
-                                                                <p className="text-gray-500 font-medium italic text-sm sm:text-lg leading-relaxed">"{badge.description}"</p>
-                                                            </div>
-
-                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                                                                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-start gap-4">
-                                                                    <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
-                                                                        <Trophy size={16} />
-                                                                    </div>
-                                                                    <div>
-                                                                        <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest leading-none mb-1">Condition d'obtention</p>
-                                                                        <p className="text-xs font-bold text-gray-700">{badge.condition || "Secret"}</p>
-                                                                    </div>
-                                                                </div>
-
-                                                                <div className="bg-yellow-50/50 p-4 rounded-2xl border border-yellow-100/50 flex items-start gap-4">
-                                                                    <div className="w-8 h-8 rounded-lg bg-yellow-100 text-yellow-700 flex items-center justify-center shrink-0">
-                                                                        <Zap size={16} />
-                                                                    </div>
-                                                                    <div>
-                                                                        <p className="text-[10px] font-black text-yellow-600 uppercase tracking-widest leading-none mb-1">Valeur de Prestige</p>
-                                                                        <p className="text-xs font-bold text-yellow-800">
-                                                                            {badge.rarity === 'LEGENDARY' ? "Haut Prestige + Gain XP Record" : badge.rarity === 'EPIC' ? "Prestige Élevé + Bonus XP" : "Progression Globale + XP"}
-                                                                        </p>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
+                                                    <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center text-2xl sm:text-4xl shadow-inner shrink-0 transition-transform group-hover:scale-110 group-hover:rotate-3 ${badge.rarity === 'LEGENDARY' ? 'bg-orange-100/50' : badge.rarity === 'EPIC' ? 'bg-purple-100/50' : 'bg-gray-100'}`}>
+                                                        {badge.emoji}
+                                                    </div>
+                                                    <div className="text-center w-full">
+                                                        <h3 className="text-[10px] sm:text-xs font-black text-gray-900 uppercase italic tracking-tight line-clamp-2 leading-tight">
+                                                            {badge.name}
+                                                        </h3>
+                                                        <div className={`mt-1.5 inline-block px-1.5 py-0.5 rounded-full text-[7px] font-black uppercase tracking-widest ${badge.rarity === 'LEGENDARY' ? 'bg-orange-600 text-white' : badge.rarity === 'EPIC' ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                                                            {badge.rarity}
                                                         </div>
                                                     </div>
-                                                </div>
+
+                                                    {/* Hover Overlay info hint */}
+                                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <Info size={12} className="text-gray-300" />
+                                                    </div>
+                                                </button>
                                             ))}
                                         </div>
                                     </div>
@@ -477,6 +459,12 @@ function FAQContent() {
                         </div>
                     </div>
                 )}
+
+                {/* Badge Detail Modal */}
+                <RewardDetailSheet
+                    detail={selectedBadge}
+                    onClose={() => setSelectedBadge(null)}
+                />
 
                 {activeTab === 'news' && (
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
