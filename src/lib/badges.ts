@@ -5,7 +5,20 @@ import { BADGE_DEFINITIONS } from "@/config/badges";
 
 export async function initBadges() {
     for (const def of BADGE_DEFINITIONS) {
-        const { type, condition, rarity, addedAt, ...dbDef } = def as any;
+        // Filter out fields that are NOT in the Prisma model
+        const dbDef = {
+            key: def.key,
+            name: def.name,
+            emoji: def.emoji,
+            description: def.description,
+            metricType: def.metricType,
+            exerciseScope: def.exerciseScope,
+            threshold: def.threshold,
+            seriesTarget: def.seriesTarget,
+            isUnique: def.isUnique ?? false,
+            isTransferable: def.isTransferable ?? true
+        };
+
         await (prisma as any).badgeDefinition.upsert({
             where: { key: dbDef.key },
             update: { ...dbDef },
@@ -42,6 +55,7 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             if (meta && meta.date) {
                 winnersByDate[meta.date] = e.toUserId;
                 // Important: also count this for sprinter badges
+                if (sprinterCounts[e.toUserId] === undefined) sprinterCounts[e.toUserId] = 0;
                 sprinterCounts[e.toUserId]++;
             }
         } catch (err) {
@@ -271,7 +285,7 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
         });
 
         // Post-processing
-        const stealCount = stealEventsByToUser[u.id]?.length || 0;
+        const stealCount = (stealEventsByToUser[u.id] || []).filter(e => e.eventType === "STEAL").length;
         const paidFines = (u.fines || []).filter((f: any) => f.status === 'paid');
         const totalFinesAmount = paidFines.reduce((sum: number, f: any) => sum + (f.amountEur || 2), 0);
 
@@ -287,6 +301,7 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             maxBonusStreak,
             maxPerfectStreak,
             currentPerfectStreak,
+            perfectTargetStreak: currentPerfectStreak,
             stealCount,
             maxMonoExoStreak,
             maxTriExoStreak,
