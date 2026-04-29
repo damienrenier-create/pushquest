@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getTodayISO, getRequiredRepsForDate } from "@/lib/challenge";
+import { getTorchWinnerForDate } from "@/lib/torch";
 import { BADGE_DEFINITIONS } from "@/config/badges";
 
 export const dynamic = "force-dynamic";
@@ -10,29 +11,13 @@ export async function GET() {
         const today = getTodayISO();
         const req = getRequiredRepsForDate(today);
 
-        // 1. Find Current Torchbearer (First to finish today)
-        let currentTorchbearer = null;
-        if (req > 0) {
-            const daySets = await (prisma as any).exerciseSet.findMany({
-                where: { date: today },
-                orderBy: { createdAt: "asc" },
-                include: { user: { select: { nickname: true, image: true } } }
-            });
-
-            const userProgress: Record<string, number> = {};
-            for (const s of daySets) {
-                const effort = s.exercise === "PLANK" ? Math.floor(s.reps / 5) : s.reps;
-                userProgress[s.userId] = (userProgress[s.userId] || 0) + effort;
-                if (userProgress[s.userId] >= req) {
-                    currentTorchbearer = {
-                        nickname: s.user.nickname,
-                        time: s.createdAt,
-                        image: s.user.image
-                    };
-                    break;
-                }
-            }
-        }
+        // 1. Find Current Torchbearer (First to finish today - PERSISTENT)
+        const winner = await getTorchWinnerForDate(today);
+        let currentTorchbearer = winner ? {
+            nickname: winner.nickname,
+            time: winner.achievedAt,
+            image: winner.image
+        } : null;
 
         // 2. Find Torch Legacy Record Holder
         const torchLegacyOwnership = await (prisma as any).badgeOwnership.findUnique({

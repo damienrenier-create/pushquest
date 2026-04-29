@@ -32,7 +32,7 @@ export async function GET(
         })
 
         const allEvents = await prisma.badgeEvent.findMany({
-            where: { eventType: "STEAL" }
+            where: { eventType: { in: ["STEAL", "TORCH_CLAIM"] } }
         })
 
         // 2. Calculate summary for the user

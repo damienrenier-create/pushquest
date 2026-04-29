@@ -114,8 +114,11 @@ export async function GET(
         }))
 
         // 4. Combat Reports (Last 7 days + Top 3 Ever)
+        const allEvents = await prisma.badgeEvent.findMany({
+            where: { eventType: { in: ["STEAL", "TORCH_CLAIM"] } }
+        });
         const { getUserSummaries } = require("@/lib/badges");
-        const summaries = getUserSummaries(allUsers, []);
+        const summaries = getUserSummaries(allUsers, allEvents);
         const featuredConfig = await (prisma as any).globalConfig.findUnique({ where: { key: "featuredBadgeKey" } });
         const featuredBadgeKey = featuredConfig?.value;
 

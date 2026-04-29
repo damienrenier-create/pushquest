@@ -394,8 +394,12 @@ export async function GET(req: Request) {
             }
         });
 
+        const allTorchAndStealEvents = await (prisma as any).badgeEvent.findMany({
+            where: { eventType: { in: ["STEAL", "TORCH_CLAIM"] } }
+        });
+
         // Pre-compute summaries once — shared between XP and badge risk calculations
-        const sharedSummaries = getUserSummaries(allUsers, []);
+        const sharedSummaries = getUserSummaries(allUsers, allTorchAndStealEvents);
 
         // Calcul des XP (Leaderboard XP V3)
         const xpScores = await calculateAllUsersXP(allUsers, badgeOwnerships, sharedSummaries);

@@ -34,7 +34,25 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
         });
     });
 
+    // --- NEW: Persistent Torch Winners from Events ---
+    const torchEvents = allEvents.filter(e => e.eventType === "TORCH_CLAIM" && e.badgeKey === "torch_daily");
+    torchEvents.forEach(e => {
+        try {
+            const meta = typeof e.metadata === 'string' ? JSON.parse(e.metadata) : e.metadata;
+            if (meta && meta.date) {
+                winnersByDate[meta.date] = e.toUserId;
+                // Important: also count this for sprinter badges
+                sprinterCounts[e.toUserId]++;
+            }
+        } catch (err) {
+            console.error("Error parsing torch event metadata:", err);
+        }
+    });
+
     Object.entries(setsByDate).forEach(([date, daySets]) => {
+        // If we already have a persistent winner for this date, don't recalculate from sets
+        if (winnersByDate[date]) return;
+
         const req = getRequiredRepsForDate(date);
         if (req <= 0) return;
 
@@ -438,13 +456,17 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
 }
 
 export async function updateBadgesPostSave(userId: string, precomputedSummaries?: any[]) {
-    const [allUsers, steals, allOwnerships] = await Promise.all([
+    const [allUsers, events, allOwnerships] = await Promise.all([
         (prisma as any).user.findMany({ where: { nickname: { not: 'modo' } }, include: { sets: true, fines: true, badges: true, sallyUps: true } }),
-        (prisma as any).badgeEvent.findMany({ where: { eventType: "STEAL" } }),
+        (prisma as any).badgeEvent.findMany({ 
+            where: { 
+                eventType: { in: ["STEAL", "TORCH_CLAIM"] } 
+            } 
+        }),
         (prisma as any).badgeOwnership.findMany()
     ]);
 
-    const summaries = precomputedSummaries ?? getUserSummaries(allUsers, steals);
+    const summaries = precomputedSummaries ?? getUserSummaries(allUsers, events);
 
     // Build a Map for O(1) ownership lookup — replaces N individual findUnique queries
     const ownershipMap = new Map<string, any>(allOwnerships.map((o: any) => [o.badgeKey, o]));

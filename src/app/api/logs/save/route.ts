@@ -6,6 +6,7 @@ import { getAllowedEncodingDates } from "@/lib/challenge";
 import { initBadges } from "@/lib/badges";
 import { BADGE_DEFINITIONS } from "@/config/badges";
 import { updateBadgesPostSave } from "@/lib/badges";
+import { checkAndClaimTorch } from "@/lib/torch";
 import { calculateAllUsersXP } from "@/lib/xp";
 
 export async function POST(req: Request) {
@@ -57,6 +58,7 @@ export async function POST(req: Request) {
 
         // 3. Trigger badge calculation
         await updateBadgesPostSave(userId);
+        await checkAndClaimTorch(userId, date);
 
         // 4. Check for Level Up/Down for ALL users (since badges could be stolen from others)
         const allUsersNew = await (prisma as any).user.findMany({
