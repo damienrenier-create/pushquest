@@ -33,6 +33,9 @@ export async function GET(req: Request) {
         const userId = session.user.id;
         const league = (session.user as any).league || "POMPES";
 
+        // --- 0. Init Badges (Ensures DB matches config) ---
+        await initBadges();
+
         // --- 1. Global Cleanup (A15) ---
         // Force-delete any unpaid fines before the new start date for ALL users
         try {
