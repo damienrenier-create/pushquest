@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { getTodayISO, getRequiredRepsForDate, getAllowedEncodingDates } from "@/lib/challenge";
+import { getTodayISO, getDailyTargetForUserOnDate, getAllowedEncodingDates } from "@/lib/challenge";
 
 export async function POST(req: Request) {
     try {
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
         }
 
         const userId = session.user.id;
-        const requiredReps = getRequiredRepsForDate(targetDate);
+        const requiredReps = getDailyTargetForUserOnDate(session.user, targetDate);
 
         // 1. Prepare new sets
         const newSetsData: any[] = [];

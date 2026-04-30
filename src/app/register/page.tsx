@@ -1,12 +1,15 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { signIn } from "next-auth/react"
 import Link from "next/link"
 
-export default function RegisterPage() {
+function RegisterForm() {
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const promoCode = searchParams.get("promoCode") || ""
+
     const [formData, setFormData] = useState({
         nickname: "",
         email: "",
@@ -25,7 +28,10 @@ export default function RegisterPage() {
             const res = await fetch("/api/auth/register", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(formData),
+                body: JSON.stringify({
+                    ...formData,
+                    promoCode
+                }),
             })
 
             const data = await res.json()
@@ -43,7 +49,6 @@ export default function RegisterPage() {
             })
 
             if (signInRes?.error) {
-                // Technically shouldn't happen right after a successful registration
                 router.push("/login?registered=true")
             } else {
                 router.push("/")
@@ -130,3 +135,12 @@ export default function RegisterPage() {
         </div>
     )
 }
+
+export default function RegisterPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Chargement...</div>}>
+            <RegisterForm />
+        </Suspense>
+    )
+}
+

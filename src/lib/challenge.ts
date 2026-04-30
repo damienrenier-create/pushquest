@@ -53,6 +53,56 @@ export function getRequiredRepsForDate(dateISO: string): number {
 }
 
 /**
+ * Returns the onboarding quota based on the start date and target date
+ * Rule: Day 1 = 30, then +3/day, except Sunday (+2)
+ */
+export function calculateOnboardingQuota(startDateISO: string, targetDateISO: string): number {
+    const start = new Date(startDateISO);
+    const target = new Date(targetDateISO);
+    
+    // Si la date cible est avant le début, on renvoie le quota initial
+    if (target < start) return 30;
+
+    // Reset hours to compare dates only
+    start.setHours(0, 0, 0, 0);
+    target.setHours(0, 0, 0, 0);
+
+    const diffTime = target.getTime() - start.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+    let quota = 30;
+    for (let i = 0; i < diffDays; i++) {
+        const current = new Date(start);
+        current.setDate(current.getDate() + i + 1);
+        const dayOfWeek = current.getDay(); // 0 = Sunday
+        quota += (dayOfWeek === 0 ? 2 : 3);
+    }
+    return quota;
+}
+
+/**
+ * Main source of truth for user daily target.
+ * Combines standard logic and onboarding logic.
+ */
+export function getDailyTargetForUserOnDate(user: any, dateISO: string): number {
+    const standardTarget = getRequiredRepsForDate(dateISO);
+    
+    if (!user || !user.onboardingStartedAt) {
+        return standardTarget;
+    }
+
+    // Normaliser la date de début en YYYY-MM-DD
+    const startISO = typeof user.onboardingStartedAt === 'string' 
+        ? user.onboardingStartedAt.split('T')[0]
+        : formatDateISO(new Date(user.onboardingStartedAt));
+
+    const onboardingTarget = calculateOnboardingQuota(startISO, dateISO);
+    
+    // On prend le minimum pour "rejoindre" le standard sans le dépasser
+    return Math.min(onboardingTarget, standardTarget);
+}
+
+/**
  * Returns the fine amount based on the month of the date
  */
 export function getFineAmountForMonth(dateISO: string): number {

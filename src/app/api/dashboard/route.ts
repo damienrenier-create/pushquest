@@ -7,6 +7,7 @@ import {
     formatDateISO,
     getDatesInRangeToToday,
     getRequiredRepsForDate,
+    getDailyTargetForUserOnDate,
     getFineAmountForMonth,
     FINE_START_DATE,
     isLastDayOfMonth
@@ -73,24 +74,36 @@ export async function GET(req: Request) {
                 potEvents: true,
                 xpAdjustments: true,
                 league: true,
+                onboardingStartedAt: true,
                 createdAt: true
             }
         })) as any[];
 
-        // --- 2. Lazy Fine Calculation (Simplified/Optimized) ---
+        // --- 2. Fetch events and compute summaries early (for streaks and fines) ---
+        const allTorchAndStealEvents = await (prisma as any).badgeEvent.findMany({
+            where: { eventType: { in: ["STEAL", "TORCH_CLAIM"] } }
+        });
+        const sharedSummaries = getUserSummaries(allUsers, allTorchAndStealEvents);
+
+        // --- 3. Lazy Fine Calculation ---
         const fineDates = getDatesInRangeToToday(FINE_START_DATE).filter(d => d < today).slice(-7);
 
         for (const u of allUsers) {
-            if (u.nickname === 'modo') continue;
-            const uLeague = (u as any).league || "POMPES";
-
+            const summary = sharedSummaries.find(s => s.id === u.id);
+            const uMaxSuccessStreak = summary?.maxSuccessStreak || 0;
+            
             for (const d of fineDates) {
                 const existingFine = u.fines?.find((f: any) => f.date === d);
-                // We no longer continue here to allow checking for fine deletion if reps were added later.
 
                 // --- Exemption Check ---
                 let isExempt = false;
-                if (u.buyoutPaid && u.buyoutPaidAt) {
+
+                // Onboarding exemption: no fines before 21 consecutive successful days
+                if (u.onboardingStartedAt && uMaxSuccessStreak < 21) {
+                    isExempt = true;
+                }
+
+                if (!isExempt && u.buyoutPaid && u.buyoutPaidAt) {
                     const buyoutDay = formatDateISO(new Date(u.buyoutPaidAt));
                     if (buyoutDay <= d) isExempt = true;
                 }
@@ -179,7 +192,7 @@ export async function GET(req: Request) {
                 const dayTotal = daySets
                     .reduce((sum: number, s: any) => sum + (s.exercise === "PLANK" ? Math.floor(s.reps / 5) : s.reps), 0);
 
-                const req = getRequiredRepsForDate(d);
+                const req = getDailyTargetForUserOnDate(u, d);
 
                 // For rate/streak, injury or buyout counts as "completed" or "excused"
                 const hasExcise = isVeteran || (u.medicalCertificates?.some((c: any) => d >= c.startDateISO && d <= c.endDateISO));
@@ -394,16 +407,38 @@ export async function GET(req: Request) {
             }
         });
 
-        const allTorchAndStealEvents = await (prisma as any).badgeEvent.findMany({
-            where: { eventType: { in: ["STEAL", "TORCH_CLAIM"] } }
-        });
+        // summaries already computed above
 
-        // Pre-compute summaries once — shared between XP and badge risk calculations
-        const sharedSummaries = getUserSummaries(allUsers, allTorchAndStealEvents);
 
         // Calcul des XP (Leaderboard XP V3)
         const xpScores = await calculateAllUsersXP(allUsers, badgeOwnerships, sharedSummaries);
         const currentUserXP = xpScores.find(x => x.id === userId);
+
+        // --- 4. Onboarding December Bonus ---
+        if (today >= "2026-12-01") {
+            const minXP = xpScores.length > 0 ? xpScores[xpScores.length - 1].totalXP : 0;
+            for (const u of allUsers) {
+                if (u.onboardingStartedAt) {
+                    const userXP = xpScores.find(x => x.id === u.id)?.totalXP || 0;
+                    if (userXP > minXP) {
+                        const hasBonus = u.xpAdjustments?.some((a: any) => a.reason === "ONBOARDING_DECEMBER_BONUS");
+                        if (!hasBonus) {
+                            try {
+                                await (prisma as any).xpAdjustment.create({
+                                    data: {
+                                        userId: u.id,
+                                        amount: 10000,
+                                        reason: "ONBOARDING_DECEMBER_BONUS",
+                                        date: today
+                                    }
+                                });
+                            } catch (e) { }
+                        }
+                    }
+                }
+            }
+        }
+
 
         const recentEvents = (await (prisma as any).badgeEvent.findMany({
             take: 30,
@@ -440,8 +475,8 @@ export async function GET(req: Request) {
             todayISO: today,
             selectedDateISO: selectedDate,
             requiredReps: {
-                selected: getRequiredRepsForDate(selectedDate),
-                today: getRequiredRepsForDate(today)
+                selected: getDailyTargetForUserOnDate(currentUser, selectedDate),
+                today: getDailyTargetForUserOnDate(currentUser, today)
             },
             setsSelected: {
                 pushups: (currentUserLB?.sets || []).filter((s: any) => s.date === selectedDate && s.exercise === "PUSHUP").map((s: any) => s.reps),

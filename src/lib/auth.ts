@@ -41,7 +41,8 @@ export const authOptions: NextAuthOptions = {
                     name: user.nickname,
                     remember: remember,
                     league: (user as any).league,
-                    alterEgoId: (user as any).alterEgoId
+                    alterEgoId: (user as any).alterEgoId,
+                    onboardingStartedAt: user.onboardingStartedAt
                 } as any
             }
         })
@@ -59,6 +60,7 @@ export const authOptions: NextAuthOptions = {
                 token.remember = u.remember
                 token.league = u.league
                 token.alterEgoId = u.alterEgoId
+                token.onboardingStartedAt = u.onboardingStartedAt
                 // Calculer l'expiration logique : 30j si remember, sinon 1j
                 const duration = u.remember ? 30 * 24 * 60 * 60 : 1 * 24 * 60 * 60
                 token.expiresAt = Math.floor(Date.now() / 1000) + duration
@@ -84,6 +86,7 @@ export const authOptions: NextAuthOptions = {
                 user.isAdmin = token.isAdmin as boolean;
                 user.league = token.league as string;
                 user.alterEgoId = token.alterEgoId as string;
+                user.onboardingStartedAt = token.onboardingStartedAt as string;
             }
             return session
         }

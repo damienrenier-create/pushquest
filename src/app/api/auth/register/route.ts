@@ -8,7 +8,7 @@ export async function POST(req: Request) {
     console.log("[DB_URL_SCHEME]", (process.env.DATABASE_URL || "").split(":")[0]);
     console.log("[DIRECT_URL_SCHEME]", (process.env.DIRECT_URL || "").split(":")[0]);
     try {
-        const { email, code, nickname } = await req.json()
+        const { email, code, nickname, promoCode } = await req.json()
 
         if (!email || !code || !nickname) {
             return NextResponse.json(
@@ -48,12 +48,14 @@ export async function POST(req: Request) {
             )
         }
 
+        const onboardingStartedAt = promoCode === "WELCOME2026" ? new Date() : null;
 
         const user = await prisma.user.create({
             data: {
                 email,
                 password: code, // On stocke en clair car c'est un "code" volontairement faible par design
                 nickname,
+                onboardingStartedAt
             },
             select: {
                 id: true,

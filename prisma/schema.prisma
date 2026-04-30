@@ -36,6 +36,7 @@ model User {
   alterEgoId String?     @unique
   alterEgo   User?       @relation("AlterEgo", fields: [alterEgoId], references: [id])
   originalProfile User?  @relation("AlterEgo")
+  onboardingStartedAt DateTime?
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 }

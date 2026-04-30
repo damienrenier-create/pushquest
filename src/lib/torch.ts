@@ -1,5 +1,5 @@
 import prisma from "./prisma";
-import { getRequiredRepsForDate } from "./challenge";
+import { getRequiredRepsForDate, getDailyTargetForUserOnDate } from "./challenge";
 
 export function getEffortValue(set: { exercise: string; reps: number }): number {
     if (set.exercise === "PLANK") {
@@ -14,7 +14,10 @@ export function getEffortValue(set: { exercise: string; reps: number }): number 
  * If yes, creates a persistent TORCH_CLAIM event.
  */
 export async function checkAndClaimTorch(userId: string, date: string): Promise<boolean> {
-    const req = getRequiredRepsForDate(date);
+    const user = await (prisma as any).user.findUnique({ where: { id: userId } });
+    if (!user) return false;
+
+    const req = getDailyTargetForUserOnDate(user, date);
     if (req <= 0) return false;
 
     // 1. Check if a claim already exists for this date
