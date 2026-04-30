@@ -74,6 +74,7 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
         // Sort day sets once by creation time
         daySets.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
+        const userProgress: Record<string, number> = {};
         for (const s of daySets) {
             const effort = s.exercise === "PLANK" ? Math.floor(s.reps / 5) : s.reps;
             userProgress[s.userId] = (userProgress[s.userId] || 0) + effort;
