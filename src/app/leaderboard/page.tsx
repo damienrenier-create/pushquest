@@ -26,8 +26,7 @@ export default async function LeaderboardPage({
     if (selectedExercise === "XP") {
         const allUsers = await (prisma.user as any).findMany({
             where: {
-                nickname: { not: 'modo' },
-                league: league
+                nickname: { not: 'modo' }
             },
             include: { sets: true, xpAdjustments: true } // FORCE TO GET NICKNAME
         });
@@ -59,8 +58,7 @@ export default async function LeaderboardPage({
         // Query 2: Fetch all relevant users to get nicknames
         const users = await (prisma.user as any).findMany({
             where: {
-                nickname: { not: 'modo' },
-                league: league
+                nickname: { not: 'modo' }
             },
             select: {
                 id: true,

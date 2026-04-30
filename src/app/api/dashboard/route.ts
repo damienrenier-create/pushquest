@@ -57,8 +57,7 @@ export async function GET(req: Request) {
 
         const allUsers = (await (prisma.user as any).findMany({
             where: {
-                nickname: { not: 'modo' },
-                league: league
+                nickname: { not: 'modo' }
             },
             select: {
                 id: true,
@@ -74,10 +73,7 @@ export async function GET(req: Request) {
                 potEvents: true,
                 xpAdjustments: true,
                 league: true,
-                createdAt: true,
-                onboardingMode: true,
-                onboardingStartISO: true,
-                finesEnabledDate: true
+                createdAt: true
             }
         })) as any[];
 
@@ -436,7 +432,7 @@ export async function GET(req: Request) {
             const currentUserXPIndex = xpScores.findIndex(x => x.id === userId);
             const isNotLast = xpScores.length > 1 && currentUserXPIndex !== -1 && currentUserXPIndex < xpScores.length - 1;
             
-            if (currentUser.onboardingMode && isNotLast) {
+            if (currentUser?.onboardingMode && isNotLast) {
                 const alreadyClaimed = currentUser.xpAdjustments?.some((a: any) => a.reason === "DECEMBER_BONUS_2026");
                 if (!alreadyClaimed) {
                     await (prisma.xpAdjustment as any).create({

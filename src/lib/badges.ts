@@ -350,6 +350,15 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             totalSquats,
             totalPlanks,
             totalAll: totalPushups + totalPullups + totalSquats + Math.floor(totalPlanks / 5),
+            getDayTotal: (dateStr: string) => {
+                const daySets = sets.filter((s: any) => s.date === dateStr);
+                let total = 0;
+                daySets.forEach((s: any) => {
+                    if (s.exercise === "PLANK") total += Math.floor(s.reps / 5);
+                    else total += s.reps;
+                });
+                return total;
+            },
             setsByTarget: (exo: string, target: number) => setsByExoTarget[`${exo}_${target}`] || 0,
             earlyStreak: earlyStreakMax,
             lateStreak: lateStreakMax,
