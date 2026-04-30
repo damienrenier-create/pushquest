@@ -469,7 +469,7 @@ export default function ChallengeDashboard() {
     }
 
     const sumSets = (sets: (number | "")[]) => sets.reduce<number>((a, b) => a + (Number(b) || 0), 0)
-    const currentTotal = sumSets(localSets?.pushups || []) + sumSets(localSets?.pullups || []) + sumSets(localSets?.squats || []) + sumSets(localSets?.planks || [])
+    const currentTotal = sumSets(localSets?.pushups || []) + sumSets(localSets?.pullups || []) + sumSets(localSets?.squats || []) + Math.floor(sumSets(localSets?.planks || []) / 5)
     const missing = Math.max(0, (data?.requiredReps?.selected ?? 0) - currentTotal)
 
     const totalSquatsAllTime = data.leaderboard.find(u => (u as any).id === (session?.user as any)?.id)?.totalSquatsAllTime || 0;
