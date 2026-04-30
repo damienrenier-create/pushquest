@@ -405,7 +405,9 @@ export async function GET(req: Request) {
         });
 
         // Pre-compute summaries once — shared between XP and badge risk calculations
-        const sharedSummaries = getUserSummaries(allUsers, allTorchAndStealEvents);
+        const { summaries: sharedSummaries, winnersByDate } = getUserSummaries(allUsers, allTorchAndStealEvents);
+        const torchWinnerId = winnersByDate[today];
+        const torchWinner = sharedSummaries.find(s => s.id === torchWinnerId);
 
         // --- 5. Onboarding Fine Activation & December Bonus ---
         for (const u of allUsers) {
@@ -508,6 +510,11 @@ export async function GET(req: Request) {
                     .reduce((sum: number, s: any) => sum + (s.exercise === "PLANK" ? Math.floor(s.reps / 5) : s.reps), 0)
             },
             leaderboard: leaderboard.map(({ sets, ...rest }) => rest),
+            torchWinner: torchWinner ? {
+                id: torchWinner.id,
+                nickname: torchWinner.nickname,
+                time: (allTorchAndStealEvents.find(e => e.eventType === "TORCH_CLAIM" && e.toUserId === torchWinner.id && e.createdAt.toISOString().split('T')[0] === today)?.createdAt) || null
+            } : null,
             records: recordsData,
             xp: {
                 leaderboard: xpScores,

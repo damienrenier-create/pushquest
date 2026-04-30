@@ -289,7 +289,8 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
     const featuredConfig = await (prisma as any).globalConfig.findUnique({ where: { key: "featuredBadgeKey" } });
     const featuredBadgeKey = featuredConfig?.value;
 
-    const summaries = precomputedSummaries ?? getUserSummaries(users, events);
+    const summariesResult = precomputedSummaries ? { summaries: precomputedSummaries, winnersByDate: {} } : getUserSummaries(users, events);
+    const summaries = summariesResult.summaries;
 
     // 1. Gather Global Records from summaries
     let maxVolDay = 0, maxVolDayUser: string | null = null;

@@ -26,8 +26,7 @@ export default async function PantheonPage() {
     ] = await Promise.all([
         (prisma as any).user.findMany({
             where: {
-                nickname: { not: 'modo' },
-                league: league
+                nickname: { not: 'modo' }
             },
             include: {
                 sets: true,
@@ -37,18 +36,14 @@ export default async function PantheonPage() {
             }
         }),
         (prisma as any).badgeOwnership.findMany({
-            where: {
-                currentUser: { league: league }
-            },
+            where: {},
             include: {
                 currentUser: true,
                 badge: true,
             }
         }),
         (prisma as any).badgeEvent.findMany({
-            where: {
-                toUser: { league: league }
-            },
+            where: {},
             take: 30,
             orderBy: { createdAt: "desc" },
             include: {
@@ -61,7 +56,7 @@ export default async function PantheonPage() {
         (prisma as any).badgeDefinition.findMany(),
     ]);
 
-    const summaries = getUserSummaries(allUsers, allEvents);
+    const { summaries } = getUserSummaries(allUsers, allEvents);
 
     // Calculate all potential badges (Milestones, Events, Legendary) for everyone
     const virtualizedData = summaries.map((s: any) => {

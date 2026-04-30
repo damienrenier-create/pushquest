@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { getTodayISO, getRequiredRepsForDate, getDailyTargetForUserOnDate, getAllowedEncodingDates } from "@/lib/challenge";
+import { checkAndClaimTorch } from "@/lib/torch";
 
 export async function POST(req: Request) {
     try {
@@ -69,6 +70,9 @@ export async function POST(req: Request) {
                 data: newSetsData,
             }),
         ]);
+        
+        // 2b. Torch Battle Logic
+        await checkAndClaimTorch(userId, targetDate);
 
         // 3. Calculate stats for response
         const totals = {

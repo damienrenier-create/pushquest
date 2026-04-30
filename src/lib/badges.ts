@@ -120,6 +120,8 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
         let currentMonoExoStreak = 0;
         let maxTriExoStreak = 0;
         let currentTriExoStreak = 0;
+        let maxQuatuorStreak = 0;
+        let currentQuatuorStreak = 0;
 
         let totalPushups = 0;
         let totalPullups = 0;
@@ -191,6 +193,7 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
                     currentSuccessStreak = 0;
                     currentMonoExoStreak = 0;
                     currentTriExoStreak = 0;
+                    currentQuatuorStreak = 0;
                     earlyStreakCur = 0;
                     lateStreakCur = 0;
                     noonStreakCur = 0;
@@ -287,6 +290,11 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             } else { currentTriExoStreak = 0; }
             if (currentTriExoStreak > maxTriExoStreak) maxTriExoStreak = currentTriExoStreak;
 
+            if (dayTotal > 0 && dayPushups >= 0.25 * dayTotal && dayPullups >= 0.25 * dayTotal && daySquats >= 0.25 * dayTotal && dayPlanks >= 0.25 * dayTotal) {
+                currentQuatuorStreak++;
+            } else { currentQuatuorStreak = 0; }
+            if (currentQuatuorStreak > maxQuatuorStreak) maxQuatuorStreak = currentQuatuorStreak;
+
             // Time streaks
             if (hasEarly) earlyStreakCur++; else earlyStreakCur = 0;
             earlyStreakMax = Math.max(earlyStreakMax, earlyStreakCur);
@@ -350,6 +358,7 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             totalSquats,
             totalPlanks,
             totalAll: totalPushups + totalPullups + totalSquats + Math.floor(totalPlanks / 5),
+            maxQuatuorStreak,
             getDayTotal: (dateStr: string) => {
                 const daySets = sets.filter((s: any) => s.date === dateStr);
                 let total = 0;
@@ -509,6 +518,8 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             }
         };
     });
+
+    return { summaries, winnersByDate };
 }
 
 export async function updateBadgesPostSave(userId: string, precomputedSummaries?: any[]) {
@@ -522,7 +533,8 @@ export async function updateBadgesPostSave(userId: string, precomputedSummaries?
         (prisma as any).badgeOwnership.findMany()
     ]);
 
-    const summaries = precomputedSummaries ?? getUserSummaries(allUsers, events);
+    const result = precomputedSummaries ? { summaries: precomputedSummaries, winnersByDate: {} } : getUserSummaries(allUsers, events);
+    const summaries = result.summaries;
 
     // Build a Map for O(1) ownership lookup — replaces N individual findUnique queries
     const ownershipMap = new Map<string, any>(allOwnerships.map((o: any) => [o.badgeKey, o]));
