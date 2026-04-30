@@ -81,7 +81,8 @@ export async function GET(
         const planks = statsGroup.find(s => s.exercise === "PLANK")?._sum.reps || 0
 
         const { getUserSummaries } = require("@/lib/badges");
-        const summary = getUserSummaries([user], [])[0];
+        const { summaries } = getUserSummaries([user], []);
+        const summary = summaries[0];
 
         return NextResponse.json({
             id: (user as any).id,

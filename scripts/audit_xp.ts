@@ -22,7 +22,7 @@ async function audit() {
         include: { badge: true, fromUser: true, toUser: true }
     });
 
-    const summaries = getUserSummaries(users, allEvents);
+    const { summaries } = getUserSummaries(users, allEvents);
     const badgesOwnerships = await prisma.badgeOwnership.findMany({
         include: { badge: true, currentUser: true }
     });

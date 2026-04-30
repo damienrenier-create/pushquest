@@ -36,7 +36,7 @@ export async function GET(
         })
 
         // 2. Calculate summary for the user
-        const summaries = getUserSummaries(allUsers, allEvents)
+        const { summaries } = getUserSummaries(allUsers, allEvents)
         const userSummary = summaries.find(s => s.id === user.id)
 
         if (!userSummary) {

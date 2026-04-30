@@ -108,19 +108,17 @@ export default async function GazetteXP() {
 
     const allUsers = await (prisma.user as any).findMany({
         where: {
-            nickname: { not: 'modo' },
-            league: league
+            nickname: { not: 'modo' }
         },
         select: { id: true, nickname: true, sets: true, createdAt: true, xpAdjustments: true }
     });
-    const summaries = getUserSummaries(allUsers, []); // Standardized summaries
+    const { summaries } = getUserSummaries(allUsers, []); // Standardized summaries
     const badgeOwnerships = await (prisma as any).badgeOwnership.findMany();
     const xpScores = await calculateAllUsersXP(allUsers, badgeOwnerships, summaries);
 
     const rawEvents = await (prisma as any).badgeEvent.findMany({
         where: {
-            eventType: { in: ["LEVEL_UP", "LEVEL_DOWN"] },
-            toUser: { league: league }
+            eventType: { in: ["LEVEL_UP", "LEVEL_DOWN"] }
         },
         orderBy: { createdAt: "desc" },
         include: {

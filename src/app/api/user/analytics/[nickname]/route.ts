@@ -118,7 +118,7 @@ export async function GET(
             where: { eventType: { in: ["STEAL", "TORCH_CLAIM"] } }
         });
         const { getUserSummaries } = require("@/lib/badges");
-        const summaries = getUserSummaries(allUsers, allEvents);
+        const { summaries } = getUserSummaries(allUsers, allEvents);
         const featuredConfig = await (prisma as any).globalConfig.findUnique({ where: { key: "featuredBadgeKey" } });
         const featuredBadgeKey = featuredConfig?.value;
 
