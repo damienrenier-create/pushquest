@@ -238,7 +238,9 @@ export default function AdminClient({ user }: { user: any }) {
                                 className="bg-white/10 text-[10px] font-black uppercase rounded border border-white/20 outline-none focus:bg-white/20 transition-all"
                             >
                                 <option value="POMPES" className="bg-slate-900">POMPES</option>
-                                <option value="GAINAGE" className="bg-slate-900">GAINAGE</option>
+                                {profileData.league === "GAINAGE" && (
+                                    <option value="GAINAGE" className="bg-slate-900">GAINAGE</option>
+                                )}
                             </select>
                         </div>
                     </div>

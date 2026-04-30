@@ -59,7 +59,7 @@ export default function StatCards({
                         <div className="flex flex-col items-end gap-2">
                             <span className="text-white font-black text-xl tracking-tight">Lv. {xp.currentUser.level}</span>
                             <div className="flex gap-2">
-                                {((session?.user as any)?.name === 'Dam' || (session?.user as any)?.email === 'damien.renier@gmail.com' || league === 'GAINAGE') && (
+                                {league === 'GAINAGE' && (
                                     <button
                                         onClick={handleSwitchEgo}
                                         className="flex items-center gap-1.5 text-emerald-400 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-xl transition-all group"

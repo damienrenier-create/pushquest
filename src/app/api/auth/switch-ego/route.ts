@@ -29,7 +29,11 @@ export async function POST(req: Request) {
             return NextResponse.json({ message: "Utilisateur introuvable" }, { status: 404 });
         }
 
-        const newLeague = user.league === "GAINAGE" ? "POMPES" : "GAINAGE";
+        if (user.league !== "GAINAGE") {
+            return NextResponse.json({ message: "La ligue GAINAGE est désormais fermée aux nouvelles entrées." }, { status: 403 });
+        }
+
+        const newLeague = "POMPES";
 
         await (prisma.user as any).update({
             where: { id: session.user.id },
