@@ -1,5 +1,5 @@
 import prisma from "./prisma";
-import { getRequiredRepsForDate, getTodayISO, isLastDayOfMonth, getYesterdayISO } from "./challenge";
+import { getRequiredRepsForDate, getTodayISO, isLastDayOfMonth, getYesterdayISO, getDailyTargetForUserOnDate } from "./challenge";
 
 import { BADGE_DEFINITIONS } from "@/config/badges";
 
@@ -36,6 +36,7 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
     // 1. Pre-process sprinter stats more efficiently
     const sprinterCounts: Record<string, number> = {};
     const winnersByDate: Record<string, string> = {};
+    const userMap = new Map<string, any>(allUsers.map(u => [u.id, u]));
     allUsers.forEach(u => sprinterCounts[u.id] = 0);
 
     // Group sets by date for global processing
@@ -73,11 +74,14 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
         // Sort day sets once by creation time
         daySets.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
-        const userProgress: Record<string, number> = {};
         for (const s of daySets) {
             const effort = s.exercise === "PLANK" ? Math.floor(s.reps / 5) : s.reps;
             userProgress[s.userId] = (userProgress[s.userId] || 0) + effort;
-            if (userProgress[s.userId] >= req) {
+            
+            const u = userMap.get(s.userId);
+            const userReq = getDailyTargetForUserOnDate(u, date).target;
+            
+            if (userReq > 0 && userProgress[s.userId] >= userReq) {
                 sprinterCounts[s.userId]++;
                 winnersByDate[date] = s.userId;
                 break; // Day winner found
@@ -109,6 +113,8 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
         let currentBonusStreak = 0;
         let maxPerfectStreak = 0;
         let currentPerfectStreak = 0;
+        let maxSuccessStreak = 0;
+        let currentSuccessStreak = 0;
         let maxMonoExoStreak = 0;
         let currentMonoExoStreak = 0;
         let maxTriExoStreak = 0;
@@ -171,10 +177,29 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
         let maxWeekAll = 0;
 
         const datePlayedMap: Record<string, boolean> = {};
+        let lastDayISO: string | null = null;
 
         days.forEach((d: string) => {
+            if (lastDayISO) {
+                const lastDate = new Date(lastDayISO);
+                const currDate = new Date(d);
+                const diffDays = Math.round((currDate.getTime() - lastDate.getTime()) / (1000 * 3600 * 24));
+                if (diffDays > 1) {
+                    currentBonusStreak = 0;
+                    currentPerfectStreak = 0;
+                    currentSuccessStreak = 0;
+                    currentMonoExoStreak = 0;
+                    currentTriExoStreak = 0;
+                    earlyStreakCur = 0;
+                    lateStreakCur = 0;
+                    noonStreakCur = 0;
+                    fineFreeStreakCur = 0;
+                }
+            }
+            lastDayISO = d;
+
             const daySets = sets.filter((s: any) => s.date === d);
-            const req = getRequiredRepsForDate(d);
+            const req = getDailyTargetForUserOnDate(u, d).target;
             let dayTotal = 0;
             let dayPushups = 0;
             let dayPullups = 0;
@@ -240,6 +265,11 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             } else { currentPerfectStreak = 0; }
             if (currentPerfectStreak > maxPerfectStreak) maxPerfectStreak = currentPerfectStreak;
 
+            if (dayTotal >= req && req > 0) {
+                currentSuccessStreak++;
+            } else { currentSuccessStreak = 0; }
+            if (currentSuccessStreak > maxSuccessStreak) maxSuccessStreak = currentSuccessStreak;
+
             let activeExos = 0;
             if (dayPushups > 0) activeExos++;
             if (dayPullups > 0) activeExos++;
@@ -302,6 +332,8 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             maxPerfectStreak,
             currentPerfectStreak,
             perfectTargetStreak: currentPerfectStreak,
+            maxSuccessStreak,
+            currentSuccessStreak,
             stealCount,
             maxMonoExoStreak,
             maxTriExoStreak,
@@ -330,7 +362,7 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
                 const target = "2026-03-17";
                 const daySets = sets.filter((s: any) => s.date === target);
                 const total = daySets.reduce((sum: number, s: any) => sum + s.reps, 0);
-                return total >= getRequiredRepsForDate(target);
+                return total >= getDailyTargetForUserOnDate(u, target).target;
             },
             getMarvinReps: () => {
                 const target = "2026-03-08";
@@ -356,13 +388,13 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             hasTrinityGold: (dateISO: string) => {
                 const daySets = sets.filter((s: any) => s.date === dateISO);
                 const total = daySets.reduce((sum: number, s: any) => sum + (s.exercise === 'PLANK' ? Math.floor(s.reps / 5) : s.reps), 0);
-                const req = getRequiredRepsForDate(dateISO);
+                const req = getDailyTargetForUserOnDate(u, dateISO).target;
                 const hasEach = ["PUSHUP", "PULLUP", "SQUAT"].every(exo => daySets.some((s: any) => s.exercise === exo));
                 return total >= 3 * req && req > 0 && hasEach;
             },
             hasTrinityUltimate: (dateISO: string) => {
                 const daySets = sets.filter((s: any) => s.date === dateISO);
-                const req = getRequiredRepsForDate(dateISO);
+                const req = getDailyTargetForUserOnDate(u, dateISO).target;
                 return ["PUSHUP", "PULLUP", "SQUAT"].every(exo => {
                     const exoTotal = daySets.filter((s: any) => s.exercise === exo).reduce((sum: number, s: any) => sum + s.reps, 0);
                     return exoTotal >= req;
@@ -380,13 +412,13 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             hasQuatuorGold: (dateISO: string) => {
                 const daySets = sets.filter((s: any) => s.date === dateISO);
                 const total = daySets.reduce((sum: number, s: any) => sum + (s.exercise === 'PLANK' ? Math.floor(s.reps / 5) : s.reps), 0);
-                const req = getRequiredRepsForDate(dateISO);
+                const req = getDailyTargetForUserOnDate(u, dateISO).target;
                 const hasEach = ["PUSHUP", "PULLUP", "SQUAT", "PLANK"].every(exo => daySets.some((s: any) => s.exercise === exo));
                 return total >= 4 * req && req > 0 && hasEach;
             },
             hasQuatuorUltimate: (dateISO: string) => {
                 const daySets = sets.filter((s: any) => s.date === dateISO);
-                const req = getRequiredRepsForDate(dateISO);
+                const req = getDailyTargetForUserOnDate(u, dateISO).target;
                 return ["PUSHUP", "PULLUP", "SQUAT", "PLANK"].every(exo => {
                     const exoTotal = daySets.filter((s: any) => s.exercise === exo).reduce((sum: number, s: any) => sum + (exo === 'PLANK' ? Math.floor(s.reps / 5) : s.reps), 0);
                     return exoTotal >= req;

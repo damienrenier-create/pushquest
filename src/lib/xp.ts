@@ -1,6 +1,6 @@
 import { getUserSummaries } from "./badges";
 import { BADGE_DEFINITIONS } from "@/config/badges";
-import { getRequiredRepsForDate } from "./challenge";
+import { getRequiredRepsForDate, getDailyTargetForUserOnDate } from "./challenge";
 import { getXPForReward } from "./rewards";
 import prisma from "./prisma";
 
@@ -175,7 +175,8 @@ export function calculateDailyXPGainForUser(
     // 2. Regularity & Flex
     let regularityXP = 0;
     const dayTotal = p + u + q + Math.floor(k / 5);
-    const req = getRequiredRepsForDate(dateISO);
+    const targetResult = getDailyTargetForUserOnDate(user, dateISO);
+    const req = targetResult.target;
 
     if (req > 0 && dayTotal >= req) {
         let dayXP = 0;
@@ -333,7 +334,8 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
         const daysWithActivity = Array.from(new Set(sets.map((s: any) => s.date))).sort() as string[];
         daysWithActivity.forEach(d => {
             const dayTotal = summary.getDayTotal(d);
-            const req = getRequiredRepsForDate(d);
+            const targetResult = getDailyTargetForUserOnDate(u, d);
+            const req = targetResult.target;
 
             if (req > 0 && dayTotal >= req) {
                 let dayXP = 0;

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { getTodayISO, getRequiredRepsForDate, getAllowedEncodingDates } from "@/lib/challenge";
+import { getTodayISO, getRequiredRepsForDate, getDailyTargetForUserOnDate, getAllowedEncodingDates } from "@/lib/challenge";
 
 export async function POST(req: Request) {
     try {
@@ -26,7 +26,14 @@ export async function POST(req: Request) {
         }
 
         const userId = session.user.id;
-        const requiredReps = getRequiredRepsForDate(targetDate);
+        
+        // Fetch user for onboarding quota
+        const user = await (prisma.user as any).findUnique({
+            where: { id: userId },
+            select: { onboardingMode: true, onboardingStartISO: true }
+        });
+
+        const requiredReps = getDailyTargetForUserOnDate(user, targetDate).target;
 
         // 1. Prepare new sets
         const newSetsData: any[] = [];

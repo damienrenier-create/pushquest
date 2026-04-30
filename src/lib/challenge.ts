@@ -52,6 +52,50 @@ export function getRequiredRepsForDate(dateISO: string): number {
     return getDayOfYear(dateISO);
 }
 
+export interface DailyTargetResult {
+    target: number;
+    mode: 'STANDARD' | 'ONBOARDING';
+    onboardingFinished: boolean;
+}
+
+/**
+ * Returns the daily target for a user on a given date.
+ * Handles standard and onboarding modes.
+ */
+export function getDailyTargetForUserOnDate(user: any, dateISO: string): DailyTargetResult {
+    const standardTarget = getRequiredRepsForDate(dateISO);
+
+    if (!user?.onboardingMode || !user?.onboardingStartISO || dateISO < user.onboardingStartISO) {
+        return { target: standardTarget, mode: 'STANDARD', onboardingFinished: true };
+    }
+
+    // Onboarding Calculation
+    let current = new Date(user.onboardingStartISO);
+    const target = new Date(dateISO);
+    let onboardingTarget = 30;
+
+    while (current < target) {
+        current.setDate(current.getDate() + 1);
+        const dayOfWeek = current.getDay(); // 0 = Sunday
+        if (dayOfWeek === 0) {
+            onboardingTarget += 2;
+        } else {
+            onboardingTarget += 3;
+        }
+    }
+
+    // Catch-up logic
+    if (onboardingTarget >= standardTarget) {
+        return { target: standardTarget, mode: 'STANDARD', onboardingFinished: true };
+    }
+
+    return { 
+        target: onboardingTarget, 
+        mode: 'ONBOARDING', 
+        onboardingFinished: false 
+    };
+}
+
 /**
  * Returns the fine amount based on the month of the date
  */

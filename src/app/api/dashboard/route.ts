@@ -7,6 +7,7 @@ import {
     formatDateISO,
     getDatesInRangeToToday,
     getRequiredRepsForDate,
+    getDailyTargetForUserOnDate,
     getFineAmountForMonth,
     FINE_START_DATE,
     isLastDayOfMonth
@@ -73,7 +74,10 @@ export async function GET(req: Request) {
                 potEvents: true,
                 xpAdjustments: true,
                 league: true,
-                createdAt: true
+                createdAt: true,
+                onboardingMode: true,
+                onboardingStartISO: true,
+                finesEnabledDate: true
             }
         })) as any[];
 
@@ -100,6 +104,12 @@ export async function GET(req: Request) {
                     if (hasCert) isExempt = true;
                 }
 
+                // --- Onboarding Exemption Check ---
+                if (!isExempt && u.onboardingMode) {
+                    if (!u.finesEnabledDate) isExempt = true;
+                    else if (d < u.finesEnabledDate) isExempt = true;
+                }
+
                 // If exempt but has a fine, delete it
                 if (isExempt) {
                     if (existingFine && existingFine.status === 'unpaid') {
@@ -115,7 +125,7 @@ export async function GET(req: Request) {
                 const dayTotal = daySets
                     .reduce((sum: number, s: any) => sum + (s.exercise === "PLANK" ? Math.floor(s.reps / 5) : s.reps), 0);
 
-                const req = getRequiredRepsForDate(d);
+                const req = getDailyTargetForUserOnDate(u, d).target;
 
                 if (existingFine) {
                     // If fine exists but requirement met, delete it
@@ -179,7 +189,7 @@ export async function GET(req: Request) {
                 const dayTotal = daySets
                     .reduce((sum: number, s: any) => sum + (s.exercise === "PLANK" ? Math.floor(s.reps / 5) : s.reps), 0);
 
-                const req = getRequiredRepsForDate(d);
+                const req = getDailyTargetForUserOnDate(u, d).target;
 
                 // For rate/streak, injury or buyout counts as "completed" or "excused"
                 const hasExcise = isVeteran || (u.medicalCertificates?.some((c: any) => d >= c.startDateISO && d <= c.endDateISO));
@@ -310,7 +320,7 @@ export async function GET(req: Request) {
                     const hasFlex = (u.sets || []).some((s: any) => {
                         const dayTotal = (u.sets || []).filter((ss: any) => ss.date === s.date)
                             .reduce((sum: number, ss: any) => sum + (ss.exercise === "PLANK" ? Math.floor(ss.reps / 5) : ss.reps), 0);
-                        return dayTotal >= (getRequiredRepsForDate(s.date) + 50);
+                        return dayTotal >= (getDailyTargetForUserOnDate(u, s.date).target + 50);
                     });
                     if (hasFlex) hasIt = true;
                 } else if (trophy.type === "sprinter") {
@@ -331,7 +341,7 @@ export async function GET(req: Request) {
             const winners = leaderboard.filter(u => {
                 const dayTotal = (u.sets || []).filter((s: any) => s.date === date)
                     .reduce((sum: number, s: any) => sum + (s.exercise === "PLANK" ? Math.floor(s.reps / 5) : s.reps), 0);
-                return dayTotal >= getRequiredRepsForDate(date);
+                return dayTotal >= getDailyTargetForUserOnDate(u, date).target;
             }).map(u => u.nickname);
 
             if (winners.length > 0) earnedSpecialDays.push({ date, ...info, winners });
@@ -401,8 +411,52 @@ export async function GET(req: Request) {
         // Pre-compute summaries once — shared between XP and badge risk calculations
         const sharedSummaries = getUserSummaries(allUsers, allTorchAndStealEvents);
 
+        // --- 5. Onboarding Fine Activation & December Bonus ---
+        for (const u of allUsers) {
+            const summary = sharedSummaries.find(s => s.id === u.id);
+            if (!summary) continue;
+
+            // 5a. Fine Activation (21 days success streak)
+            if (u.onboardingMode && !u.finesEnabledDate && (summary.maxSuccessStreak || 0) >= 21) {
+                // Find today or yesterday as activation date
+                // To be safe and avoid retroactivity, we enable from today
+                await (prisma.user as any).update({
+                    where: { id: u.id },
+                    data: { finesEnabledDate: today }
+                });
+                u.finesEnabledDate = today;
+            }
+        }
+
         // Calcul des XP (Leaderboard XP V3)
         const xpScores = await calculateAllUsersXP(allUsers, badgeOwnerships, sharedSummaries);
+
+        // 5b. December Bonus (One-time, not last in league)
+        if (today >= "2026-12-01") {
+            const currentUserXPIndex = xpScores.findIndex(x => x.id === userId);
+            const isNotLast = xpScores.length > 1 && currentUserXPIndex !== -1 && currentUserXPIndex < xpScores.length - 1;
+            
+            if (currentUser.onboardingMode && isNotLast) {
+                const alreadyClaimed = currentUser.xpAdjustments?.some((a: any) => a.reason === "DECEMBER_BONUS_2026");
+                if (!alreadyClaimed) {
+                    await (prisma.xpAdjustment as any).create({
+                        data: {
+                            userId: userId,
+                            amount: 10000,
+                            reason: "DECEMBER_BONUS_2026",
+                            date: today
+                        }
+                    });
+                    // Refresh XP scores for the response if needed, or just let it be for next load
+                    // For immediate feedback, we could manually adjust the scores array
+                    if (xpScores[currentUserXPIndex]) {
+                        xpScores[currentUserXPIndex].totalXP += 10000;
+                        xpScores[currentUserXPIndex].details.manualXP += 10000;
+                    }
+                }
+            }
+        }
+
         const currentUserXP = xpScores.find(x => x.id === userId);
 
         const recentEvents = (await (prisma as any).badgeEvent.findMany({
@@ -440,8 +494,8 @@ export async function GET(req: Request) {
             todayISO: today,
             selectedDateISO: selectedDate,
             requiredReps: {
-                selected: getRequiredRepsForDate(selectedDate),
-                today: getRequiredRepsForDate(today)
+                selected: getDailyTargetForUserOnDate(currentUser, selectedDate).target,
+                today: getDailyTargetForUserOnDate(currentUser, today).target
             },
             setsSelected: {
                 pushups: (currentUserLB?.sets || []).filter((s: any) => s.date === selectedDate && s.exercise === "PUSHUP").map((s: any) => s.reps),

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { getTodayISO, getRequiredRepsForDate } from "@/lib/challenge";
+import { getTodayISO, getRequiredRepsForDate, getDailyTargetForUserOnDate } from "@/lib/challenge";
 import { getTorchWinnerForDate } from "@/lib/torch";
 import { BADGE_DEFINITIONS } from "@/config/badges";
 
@@ -8,8 +10,18 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
     try {
+        const session = await getServerSession(authOptions);
         const today = getTodayISO();
-        const req = getRequiredRepsForDate(today);
+        
+        let req = getRequiredRepsForDate(today);
+
+        if (session?.user?.id) {
+            const user = await (prisma.user as any).findUnique({
+                where: { id: session.user.id },
+                select: { onboardingMode: true, onboardingStartISO: true }
+            });
+            req = getDailyTargetForUserOnDate(user, today).target;
+        }
 
         // 1. Find Current Torchbearer (First to finish today - PERSISTENT)
         const winner = await getTorchWinnerForDate(today);
