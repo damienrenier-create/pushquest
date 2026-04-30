@@ -385,7 +385,6 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             maxTorchStreak,
             sprinterCount: sprinterCounts[u.id] || 0,
             headhunterCount: u.featuredClaimsCount || 0,
-            getDayTotal: (date: string) => sets.filter((s: any) => s.date === date).reduce((sum: number, s: any) => sum + (s.exercise === 'PLANK' ? Math.floor(s.reps / 5) : s.reps), 0),
             getDayMaxSet: (date: string, exo?: string) => {
                 const daySets = sets.filter((s: any) => s.date === date && (!exo || s.exercise === exo));
                 return daySets.length ? Math.max(...daySets.map((s: any) => s.reps)) : 0;
