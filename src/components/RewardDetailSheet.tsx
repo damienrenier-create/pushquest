@@ -59,7 +59,7 @@ export default function RewardDetailSheet({ detail, onClose }: RewardDetailSheet
                             <Target size={14} className="text-indigo-500" />
                             <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Description</span>
                         </div>
-                        <p className="text-gray-600 font-bold leading-relaxed">
+                        <p className="text-gray-600 font-bold leading-relaxed whitespace-pre-wrap">
                             {detail.description}
                         </p>
                     </div>

@@ -1,7 +1,4 @@
-
-"use client"
-
-import Link from "next/link"
+import { groupRecentEvents } from "@/lib/event-utils"
 
 interface TrophySectionProps {
     data: any
@@ -11,6 +8,9 @@ interface TrophySectionProps {
 }
 
 export default function TrophySection({ data, setRewardDetail, toggleLike, session }: TrophySectionProps) {
+    const rawEvents = data?.badges?.competitive?.events || [];
+    const events = groupRecentEvents(rawEvents);
+
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
             {/* Compteur de Gloire */}
@@ -41,8 +41,8 @@ export default function TrophySection({ data, setRewardDetail, toggleLike, sessi
                     </Link>
                 </div>
                 <div className="space-y-4 max-h-[400px] overflow-y-auto no-scrollbar relative z-10 pr-2">
-                    {(data?.badges?.competitive?.events || []).length > 0 ? (
-                        (data?.badges?.competitive?.events || []).slice(0, 5).map((ev: any) => {
+                    {events.length > 0 ? (
+                        events.slice(0, 5).map((ev: any) => {
                             const currentUserId = (session?.user as any)?.id;
                             const likes = ev.likes || [];
                             const count = likes.length;
@@ -61,6 +61,11 @@ export default function TrophySection({ data, setRewardDetail, toggleLike, sessi
                                             <span className="text-3xl sm:text-4xl block group-hover:scale-110 transition-transform cursor-pointer" onClick={() => setRewardDetail({ ...ev.badge, type: 'Bataille', holder: ev.toUser?.nickname, achievedAt: ev.createdAt, currentValue: ev.newValue })}>
                                                 {ev.badge?.emoji}
                                             </span>
+                                            {ev.displayCount > 1 && (
+                                                <div className="absolute -top-1 -left-1 bg-indigo-600 text-white text-[10px] font-black px-1.5 py-0.5 rounded-lg shadow-lg animate-pulse border border-indigo-400">
+                                                    ×{ev.displayCount}
+                                                </div>
+                                            )}
                                             <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-slate-900 bg-slate-800 overflow-hidden">
                                                 {ev.toUser?.image ? (
                                                     <img src={ev.toUser.image} alt={ev.toUser.nickname} className="w-full h-full object-cover" />
@@ -84,6 +89,7 @@ export default function TrophySection({ data, setRewardDetail, toggleLike, sessi
                                                         <Link href={`/u/${encodeURIComponent(ev.toUser?.nickname || '')}`} className="text-yellow-400 hover:underline">{ev.toUser?.nickname}</Link> a débloqué <Link href={`/faq?tab=catalogue#item-${ev.badge?.key}`} className="text-blue-400 hover:underline">[{ev.badge?.name}]</Link>
                                                     </>
                                                 )}
+                                                {ev.displayCount > 1 && <span className="ml-1 text-slate-500 italic text-[10px]">(mis à jour)</span>}
                                             </p>
                                             <p className="text-[9px] text-slate-500 font-bold uppercase mt-1">
                                                 {new Date().getTime() - new Date(ev.createdAt).getTime() < 86400000

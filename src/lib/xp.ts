@@ -1,7 +1,7 @@
 import { getUserSummaries } from "./badges";
 import { BADGE_DEFINITIONS } from "@/config/badges";
 import { getRequiredRepsForDate, getDailyTargetForUserOnDate } from "./challenge";
-import { getXPForReward } from "./rewards";
+import { getXPForReward, getTorchPalier, getRewardInfo } from "./rewards";
 import prisma from "./prisma";
 
 export const XP_ANIMALS = [
@@ -232,9 +232,20 @@ export function calculateDailyXPGainForUser(
 
     const badgesDetail = dayBadges.map((b: any) => {
         const streak = summary.perfectTargetStreak || 0;
+        const rewardData = getRewardInfo(b.badgeKey, { 
+            ...b, 
+            currentStreak: streak,
+            newValue: b.currentValue || b.newValue || 0
+        } as any);
+        
         let badgeXP = getXPForReward(b.badgeKey, { ...b, currentStreak: streak } as any);
         if (featuredBadgeKey === b.badgeKey) badgeXP += Math.floor(badgeXP * 0.5);
-        return { name: b.badge?.name || b.name || b.badgeKey, xp: badgeXP, emoji: b.badge?.emoji || b.emoji };
+        
+        return { 
+            name: rewardData?.name || b.badge?.name || b.name || b.badgeKey, 
+            xp: badgeXP, 
+            emoji: rewardData?.emoji || b.badge?.emoji || b.emoji 
+        };
     });
     badgesXP = badgesDetail.reduce((acc: number, b: any) => acc + b.xp, 0);
     totalXP += badgesXP;
@@ -443,6 +454,14 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
                     displayBadge.name = "Le bon petit nazi";
                     // keep default emoji and description for < 10
                 }
+            }
+
+            if (b.badgeKey === "torch_legacy") {
+                const streak = b.newValue || b.currentValue || 0;
+                const palier = getTorchPalier(streak);
+                displayBadge.name = palier.name;
+                displayBadge.emoji = palier.emoji;
+                displayBadge.description = palier.description;
             }
 
             const badgeXP = getXPForReward(b.badgeKey, { ...b, currentStreak: streak } as any);

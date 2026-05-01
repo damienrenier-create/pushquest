@@ -11,6 +11,14 @@ export interface RewardInfo {
     condition?: string;
 }
 
+export function getTorchPalier(streak: number) {
+    if (streak >= 30) return { name: "Feu Sacré", emoji: "🔥", description: "Légende éternelle. Plus de 30 flambeaux consécutifs.", xp: 3000 };
+    if (streak >= 14) return { name: "Seigneur des Braises", emoji: "🌋", description: "Domine la forge. Plus de 14 flambeaux consécutifs.", xp: 1800 };
+    if (streak >= 7) return { name: "Sentinelle de l’Aube", emoji: "🌅", description: "Gardien de la lumière. Plus de 7 flambeaux consécutifs.", xp: 1000 };
+    if (streak >= 3) return { name: "Gardien du Flambeau", emoji: "🏮", description: "Protecteur de la flamme. Plus de 3 flambeaux consécutifs.", xp: 500 };
+    return { name: "Éclaireur du Flambeau", emoji: "🔦", description: "Le premier à s'élancer. Moins de 3 flambeaux consécutifs.", xp: 300 };
+}
+
 export function getXPForReward(key: string, achievedAt?: Date | string): number {
     const def = BADGE_DEFINITIONS.find(d => d.key === key);
     if (!def) return 0;
@@ -25,16 +33,25 @@ export function getXPForReward(key: string, achievedAt?: Date | string): number 
     }
 
     if (def.type === "COMPETITIVE") {
-        xp = timeBonus;
-        // Evolutive streaks for Perfect Soldier
-        if (def.key === "perfect_soldier") {
-            const streak = (achievedAt as any)?.currentStreak || 0; // Passed via context or detected
-            if (streak >= 50) xp = timeBonus * 3;
-            else if (streak >= 30) xp = timeBonus * 2;
-            else if (streak >= 10) xp = timeBonus * 1.5;
+        const isMonthly = def.key.startsWith("month_");
+        const monthStartISO = "2026-05";
+        const currentMonthISO = date.toISOString().substring(0, 7);
+
+        if (isMonthly && currentMonthISO >= monthStartISO) {
+            // New economy: Volatile core is fixed at 500 XP, surplus is captured monthly
+            xp = 500;
+        } else {
+            xp = timeBonus;
+            // Evolutive streaks for Perfect Soldier
+            if (def.key === "perfect_soldier") {
+                const streak = (achievedAt as any)?.currentStreak || 0; 
+                if (streak >= 50) xp = timeBonus * 3;
+                else if (streak >= 30) xp = timeBonus * 2;
+                else if (streak >= 10) xp = timeBonus * 1.5;
+            }
+            // Boost Trinity streak
+            if (def.key === "trinity") xp += 500;
         }
-        // Boost Trinity streak (difficult to maintain)
-        if (def.key === "trinity") xp += 500;
     } else if (def.type === "LEGENDARY") {
         if (def.key === "unique_pushups_50") xp = 1000;
         else if (def.key === "unique_pushups_80") xp = 2500;
@@ -63,6 +80,14 @@ export function getXPForReward(key: string, achievedAt?: Date | string): number 
             xp = 800; // Was 2500
         } else if (def.key === "trinity_ultimate") {
             xp = 2500; // Was 7500
+        } else if (def.key.startsWith("early_bird_p") || def.key.startsWith("night_owl_p")) {
+            if (def.key.endsWith("p1")) xp = 200;
+            else if (def.key.endsWith("p2")) xp = 500;
+            else if (def.key.endsWith("p3")) xp = 1200;
+        } else if (def.key.includes("_balance_")) {
+            if (def.key.endsWith("_bronze")) xp = 200;
+            else if (def.key.endsWith("_silver")) xp = 450;
+            else if (def.key.endsWith("_gold")) xp = 800;
         } else {
             xp = 100;
         }
@@ -84,7 +109,10 @@ export function getXPForReward(key: string, achievedAt?: Date | string): number 
         else if (def.key.includes("sprinter_100") && !def.key.includes("headhunter")) xp += 7400;
 
         // Torch Legacy (Base XP, bonus calc is in xp.ts but FAQ uses this for static display)
-        if (def.key === "torch_legacy") xp = 500; 
+        if (def.key === "torch_legacy") {
+            const streak = (achievedAt as any)?.newValue || (achievedAt as any)?.currentValue || (achievedAt as any)?.currentStreak || 0;
+            xp = getTorchPalier(streak).xp;
+        }
     } else if (def.type === "EVENT") {
         if (def.key === "april_fools_1") xp = 1000;
         else if (def.key === "st_marvin") xp = 1500;
@@ -107,7 +135,7 @@ export function getRewardInfo(key: string, achievedAt?: Date | string): RewardIn
     const def = BADGE_DEFINITIONS.find(d => d.key === key);
     if (!def) return null;
 
-    return {
+    const info: RewardInfo = {
         key: def.key,
         name: def.name,
         emoji: def.emoji,
@@ -116,4 +144,28 @@ export function getRewardInfo(key: string, achievedAt?: Date | string): RewardIn
         xp: getXPForReward(def.key, achievedAt),
         condition: (def as any).condition // If available in definition
     };
+
+    // Dynamic Torch Legacy details
+    if (key === "torch_legacy") {
+        const streak = (achievedAt as any)?.newValue || (achievedAt as any)?.currentValue || (achievedAt as any)?.currentStreak || 0;
+        const palier = getTorchPalier(streak);
+        info.name = palier.name;
+        info.emoji = palier.emoji;
+        info.description = palier.description;
+        info.xp = palier.xp;
+    }
+
+    // Monthly split clarification
+    const isMonthly = key.startsWith("month_");
+    const dateObj = (achievedAt instanceof Date) ? achievedAt : (typeof achievedAt === 'string' ? new Date(achievedAt) : new Date());
+    if (isMonthly && dateObj.toISOString().substring(0, 7) >= "2026-05") {
+        const monthIndex = dateObj.getMonth();
+        const fullValue = MONTH_MULTIPLIERS[monthIndex] || 500;
+        const capture = Math.max(0, fullValue - 500);
+        if (capture > 0) {
+            info.description += `\n\n✨ Capture de Gloire : À la clôture du mois, +${capture} XP seront définitivement acquis.`;
+        }
+    }
+
+    return info;
 }

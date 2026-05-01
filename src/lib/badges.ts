@@ -1,7 +1,12 @@
 import prisma from "./prisma";
 import { getRequiredRepsForDate, getDailyTargetForUserOnDate, getTodayISO, isLastDayOfMonth, getYesterdayISO } from "./challenge";
+import { MONTH_MULTIPLIERS } from "./xp-constants";
 
 import { BADGE_DEFINITIONS } from "@/config/badges";
+
+const EARLY_NIGHT_PROGRESSIVE_START_ISO = "2026-05-01";
+const BALANCE_BADGES_START_ISO = "2026-05-01";
+const COMPETITIVE_MONTHLY_PRIME_START_MONTH = "2026-05";
 
 export async function initBadges() {
     for (const def of BADGE_DEFINITIONS) {
@@ -140,6 +145,13 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
         let fineFreeStreakMax = 0;
         let fineFreeStreakCur = 0;
 
+        let earlyCountV2 = 0;
+        let earlyStreakV2Max = 0;
+        let earlyStreakV2Cur = 0;
+        let lateCountV2 = 0;
+        let lateStreakV2Max = 0;
+        let lateStreakV2Cur = 0;
+
         let maxTorchStreak = 0;
         let currentTorchStreak = 0;
         let lastWinDate: Date | null = null;
@@ -276,6 +288,25 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             if (hasNoon) noonStreakCur++; else noonStreakCur = 0;
             noonStreakMax = Math.max(noonStreakMax, noonStreakCur);
 
+            // Progressive Early/Late (V2) - Only after start date
+            if (d >= EARLY_NIGHT_PROGRESSIVE_START_ISO) {
+                if (hasEarly) {
+                    earlyCountV2++;
+                    earlyStreakV2Cur++;
+                } else {
+                    earlyStreakV2Cur = 0;
+                }
+                earlyStreakV2Max = Math.max(earlyStreakV2Max, earlyStreakV2Cur);
+
+                if (hasLate) {
+                    lateCountV2++;
+                    lateStreakV2Cur++;
+                } else {
+                    lateStreakV2Cur = 0;
+                }
+                lateStreakV2Max = Math.max(lateStreakV2Max, lateStreakV2Cur);
+            }
+
             // Fine free streak
             if (!finesByDate[d] || finesByDate[d].length === 0) fineFreeStreakCur++; else fineFreeStreakCur = 0;
             fineFreeStreakMax = Math.max(fineFreeStreakMax, fineFreeStreakCur);
@@ -335,6 +366,10 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             earlyStreak: earlyStreakMax,
             lateStreak: lateStreakMax,
             noonStreak: noonStreakMax,
+            earlyCountV2,
+            earlyStreakV2: earlyStreakV2Max,
+            lateCountV2,
+            lateStreakV2: lateStreakV2Max,
             checkDatePlayed: (dateStr: string) => {
                 if (!dateStr) return false;
                 const target = dateStr.startsWith('-') ? "2026" + dateStr : dateStr;
@@ -476,12 +511,114 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
                 return sUps.some((s: any) => s.date === dateISO && s.seconds > 0);
             },
             getSallyUpSeconds: (dateISO: string) => {
-                const sUps = u.sallyUps || [];
-                const record = sUps.find((s: any) => s.date === dateISO);
+                const record = (u.sallyUps || []).find((s: any) => s.date === dateISO);
                 return record ? record.seconds : 0;
+            },
+            hasBalanceTrinity: (dateISO: string, minPct: number, minVol: number) => {
+                if (dateISO < BALANCE_BADGES_START_ISO) return false;
+                const daySets = sets.filter((s: any) => s.date === dateISO);
+                const p = daySets.filter((s: any) => s.exercise === "PUSHUP").reduce((sum: number, s: any) => sum + s.reps, 0);
+                const t = daySets.filter((s: any) => s.exercise === "PULLUP").reduce((sum: number, s: any) => sum + s.reps, 0);
+                const s = daySets.filter((s: any) => s.exercise === "SQUAT").reduce((sum: number, s: any) => sum + s.reps, 0);
+                const total = p + t + s;
+                if (total < minVol) return false;
+                if (p < 10 || t < 10 || s < 10) return false;
+                const ratio = minPct / 100;
+                return (p / total >= ratio) && (t / total >= ratio) && (s / total >= ratio);
+            },
+            hasBalanceQuatuor: (dateISO: string, minPct: number, minVol: number) => {
+                if (dateISO < BALANCE_BADGES_START_ISO) return false;
+                const daySets = sets.filter((s: any) => s.date === dateISO);
+                const p = daySets.filter((s: any) => s.exercise === "PUSHUP").reduce((sum: number, s: any) => sum + s.reps, 0);
+                const t = daySets.filter((s: any) => s.exercise === "PULLUP").reduce((sum: number, s: any) => sum + s.reps, 0);
+                const s = daySets.filter((s: any) => s.exercise === "SQUAT").reduce((sum: number, s: any) => sum + s.reps, 0);
+                const g = daySets.filter((s: any) => s.exercise === "PLANK").reduce((sum: number, s: any) => sum + Math.floor(s.reps / 5), 0);
+                const total = p + t + s + g;
+                if (total < minVol) return false;
+                if (p < 10 || t < 10 || s < 10 || g < 10) return false;
+                const ratio = minPct / 100;
+                return (p / total >= ratio) && (t / total >= ratio) && (s / total >= ratio) && (g / total >= ratio);
             }
         };
     });
+}
+
+/**
+ * On-Demand settlement of monthly competitive badges.
+ * Identifies winners of the previous month and awards a permanent XP prime (capture).
+ * Robust against concurrency via GlobalConfig unique lock.
+ */
+async function settlePreviousMonth(summaries: any[], todayISO: string) {
+    const d = new Date(todayISO);
+    d.setDate(0); // Move to last day of previous month
+    const prevMonthISO = d.toISOString().substring(0, 7); // "YYYY-MM"
+    
+    if (prevMonthISO < COMPETITIVE_MONTHLY_PRIME_START_MONTH) return;
+
+    // Only process monthly competitive badges (Volume & Best Sets)
+    const monthlyDefs = BADGE_DEFINITIONS.filter(b => 
+        b.metricType === "MONTH_TOP_VOLUME" || 
+        b.metricType === "MONTH_TOP_SET" || 
+        b.metricType === "MONTH_TOTAL_EXO"
+    );
+
+    for (const def of monthlyDefs) {
+        const lockKey = `settlement_done:${prevMonthISO}:${def.key}`;
+        
+        // Fast check to skip if already done
+        const existing = await (prisma as any).globalConfig.findUnique({ where: { key: lockKey } });
+        if (existing) continue;
+
+        // Calculate legitimate winner for the past month
+        let bestVal = 0;
+        let winner: any = null;
+        
+        const exo = def.exerciseScope === "PUSHUPS" ? "PUSHUP" : 
+                    def.exerciseScope === "PULLUPS" ? "PULLUP" : 
+                    def.exerciseScope === "PLANK" ? "PLANK" : 
+                    (def.exerciseScope === "SQUATS" ? "SQUAT" : null);
+
+        summaries.forEach(s => {
+            let val = 0;
+            if (def.metricType === "MONTH_TOP_VOLUME") val = s.getMonthTotal(prevMonthISO);
+            else if (def.metricType === "MONTH_TOP_SET") val = s.getMonthMaxSet(prevMonthISO, exo);
+            else if (def.metricType === "MONTH_TOTAL_EXO") val = s.getMonthTotal(prevMonthISO, exo);
+
+            if (val > bestVal || (val === bestVal && bestVal > 0 && isBetterTieBreak(s, winner, "totalAll"))) {
+                bestVal = val; winner = s;
+            }
+        });
+
+        if (winner && bestVal > 0) {
+            // XP Capture calculation: Multiplier - VolatileCore(500)
+            const monthIndex = new Date(prevMonthISO + "-01").getMonth();
+            const fullValue = MONTH_MULTIPLIERS[monthIndex] || 500;
+            const volatileCore = 500;
+            const captureAmount = Math.max(0, fullValue - volatileCore);
+
+            if (captureAmount > 0) {
+                try {
+                    // Atomic transaction: lock + pay
+                    await (prisma as any).$transaction([
+                        (prisma as any).globalConfig.create({ data: { key: lockKey, value: winner.id } }),
+                        (prisma as any).xpAdjustment.create({
+                            data: {
+                                amount: captureAmount,
+                                reason: `🏆 Prime Mensuelle : ${def.name} (${prevMonthISO})`,
+                                userId: winner.id,
+                                date: todayISO
+                            }
+                        })
+                    ]);
+                    console.log(`[ECONOMY] Monthly Settlement: ${winner.nickname} captured ${captureAmount} XP for ${def.key} (${prevMonthISO})`);
+                } catch (e: any) {
+                    // P2002 means another request already settled this month/badge. Skip silently.
+                    if (e.code === 'P2002') continue;
+                    console.error(`[ECONOMY] Failed to settle ${def.key} for ${prevMonthISO}`, e);
+                }
+            }
+        }
+    }
 }
 
 export async function updateBadgesPostSave(userId: string, precomputedSummaries?: any[]) {
@@ -496,6 +633,9 @@ export async function updateBadgesPostSave(userId: string, precomputedSummaries?
     ]);
 
     const summaries = precomputedSummaries ?? getUserSummaries(allUsers, events);
+
+    // 0. Trigger Monthly Settlement (On-Demand)
+    await settlePreviousMonth(summaries, getTodayISO());
 
     // Build a Map for O(1) ownership lookup — replaces N individual findUnique queries
     const ownershipMap = new Map<string, any>(allOwnerships.map((o: any) => [o.badgeKey, o]));
@@ -599,11 +739,10 @@ export async function updateBadgesPostSave(userId: string, precomputedSummaries?
                 }
             });
         } else if (def.metricType === "TORCH_STREAK") {
-            summaries.forEach((s: any) => {
-                if (s.maxTorchStreak > bestValue || (s.maxTorchStreak === bestValue && bestValue > 0 && isBetterTieBreak(s, bestUser, "totalAll"))) {
-                    bestValue = s.maxTorchStreak; bestUser = s;
-                }
-            });
+            for (const s of summaries) {
+                if (s.maxTorchStreak > 0) await awardMilestone(s.id, def.key, s.maxTorchStreak);
+            }
+            continue;
         } else if (def.metricType === "MILESTONE_SET") {
             for (const s of summaries) { if (s.maxSetAll >= def.threshold!) await awardMilestone(s.id, def.key, 1); }
             continue;
@@ -629,6 +768,18 @@ export async function updateBadgesPostSave(userId: string, precomputedSummaries?
         } else if (def.metricType === "TIME_AWARD_EXACT") {
             for (const s of summaries) { if (s.noonStreak >= (def.threshold || 1)) await awardMilestone(s.id, def.key, s.noonStreak); }
             continue;
+        } else if (def.metricType === "EARLY_COUNT") {
+            for (const s of summaries) { if (s.earlyCountV2 >= (def.threshold || 1)) await awardMilestone(s.id, def.key, s.earlyCountV2); }
+            continue;
+        } else if (def.metricType === "EARLY_STREAK") {
+            for (const s of summaries) { if (s.earlyStreakV2 >= (def.threshold || 1)) await awardMilestone(s.id, def.key, s.earlyStreakV2); }
+            continue;
+        } else if (def.metricType === "LATE_COUNT") {
+            for (const s of summaries) { if (s.lateCountV2 >= (def.threshold || 1)) await awardMilestone(s.id, def.key, s.lateCountV2); }
+            continue;
+        } else if (def.metricType === "LATE_STREAK") {
+            for (const s of summaries) { if (s.lateStreakV2 >= (def.threshold || 1)) await awardMilestone(s.id, def.key, s.lateStreakV2); }
+            continue;
         } else if (def.metricType === "STREAK_NO_FINES") {
             for (const s of summaries) { if (s.fineFreeStreak >= def.threshold!) await awardMilestone(s.id, def.key, s.fineFreeStreak); }
             continue;
@@ -645,6 +796,22 @@ export async function updateBadgesPostSave(userId: string, precomputedSummaries?
         } else if (def.metricType === "DATE_AWARD_HARD_GOLD") {
             if (def.key === "st_patrick_gold") {
                 for (const s of summaries) { if (s.hasStPatrickGold()) await awardMilestone(s.id, def.key, 1); }
+            }
+            continue;
+        } else if (def.metricType === "BALANCE_TRINITY" || def.metricType === "BALANCE_QUATUOR") {
+            const minPct = def.key.includes("bronze") ? 15 : def.key.includes("silver") ? (def.metricType === "BALANCE_TRINITY" ? 22 : 20) : (def.metricType === "BALANCE_TRINITY" ? 28 : 23);
+            for (const s of summaries) {
+                const userSets = allUsers.find((u: any) => u.id === s.id)?.sets || [];
+                const uniqueDates = Array.from(new Set(userSets.map((set: any) => set.date))).filter(d => d >= BALANCE_BADGES_START_ISO) as string[];
+                for (const d of uniqueDates) {
+                    const hasIt = def.metricType === "BALANCE_TRINITY" 
+                        ? s.hasBalanceTrinity(d, minPct, def.threshold!)
+                        : s.hasBalanceQuatuor(d, minPct, def.threshold!);
+                    if (hasIt) {
+                        await awardMilestone(s.id, def.key, 1);
+                        break;
+                    }
+                }
             }
             continue;
         } else if (def.metricType === "MARVIN_AWARD") {
@@ -1060,6 +1227,18 @@ export function calculateBadgeProgress(def: any, summary: any) {
             const days = def.key.includes("week") ? 7 : 1;
             const exoPeriod = def.exerciseScope === "PUSHUPS" ? "PUSHUP" : "SQUAT";
             current = summary.getHistoricalMaxVolume(days, exoPeriod);
+            break;
+        case "EARLY_COUNT":
+            current = summary.earlyCountV2 || 0;
+            break;
+        case "EARLY_STREAK":
+            current = summary.earlyStreakV2 || 0;
+            break;
+        case "LATE_COUNT":
+            current = summary.lateCountV2 || 0;
+            break;
+        case "LATE_STREAK":
+            current = summary.lateStreakV2 || 0;
             break;
         default:
             return 0;

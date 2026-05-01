@@ -27,9 +27,10 @@ import { SPECIAL_DAYS } from "@/config/specialDays";
 import { useRouter } from "next/navigation";
 import RewardLink from "@/components/RewardLink";
 import RewardDetailSheet from "@/components/RewardDetailSheet";
-import { getXPForReward } from "@/lib/rewards";
+import { getXPForReward, getRewardInfo } from "@/lib/rewards";
 import { SPECIAL_WORKOUTS } from "@/config/specialWorkouts";
 import BadgeShowcase from "@/components/profile/badges/BadgeShowcase";
+import { groupRecentEvents } from "@/lib/event-utils";
 
 // Replace date-fns with native Intl
 const formatTime = (dateStr: any) => {
@@ -88,6 +89,8 @@ export default function PantheonClient({
     React.useEffect(() => {
         setLocalEvents(recentEvents);
     }, [recentEvents]);
+
+    const groupedEvents = useMemo(() => groupRecentEvents(localEvents), [localEvents]);
 
     const handleRewardClick = (badgeKey: string) => {
         const def = badgeDefinitions.find(d => d.key === badgeKey);
@@ -250,7 +253,7 @@ export default function PantheonClient({
                             </div>
 
                             <div className="space-y-4 flex-1 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar">
-                                {localEvents.length > 0 ? localEvents.map((event: any, i: number) => {
+                                {groupedEvents.length > 0 ? groupedEvents.map((event: any, i: number) => {
                                     const currentUserId = currentUser?.id;
                                     const likes = event.likes || [];
                                     const count = likes.length;
@@ -268,10 +271,28 @@ export default function PantheonClient({
                                         if (event.metadata) metaDataObj = JSON.parse(event.metadata);
                                     } catch (e) { }
 
+                                    const rewardData = getRewardInfo(event.badge?.key, { 
+                                        ...event, 
+                                        newValue: event.newValue || event.previousValue 
+                                    } as any);
+                                    const displayBadge = {
+                                        ...event.badge,
+                                        name: rewardData?.name || event.badge?.name,
+                                        emoji: rewardData?.emoji || event.badge?.emoji,
+                                        description: rewardData?.description || event.badge?.description
+                                    };
+
                                     return (
                                         <div key={i} className={`flex gap-4 p-4 rounded-2xl border bg-slate-50/50 hover:bg-white hover:shadow-md transition-all group ${isLevelUp ? 'border-indigo-100' : 'border-slate-50'}`}>
-                                            <div className="text-2xl mt-0.5 group-hover:scale-110 transition-transform">
-                                                {isLevelUp ? '⭐' : event.badge?.emoji}
+                                            <div className="relative shrink-0">
+                                                <div className="text-2xl mt-0.5 group-hover:scale-110 transition-transform">
+                                                    {isLevelUp ? '⭐' : displayBadge.emoji}
+                                                </div>
+                                                {event.displayCount > 1 && (
+                                                    <div className="absolute -top-1 -left-1 bg-indigo-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-lg shadow-lg border border-indigo-400">
+                                                        ×{event.displayCount}
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className="flex-1">
                                                 <div className="flex items-center justify-between mb-1">
@@ -281,22 +302,23 @@ export default function PantheonClient({
                                                         ) : isLevelUp ? (
                                                             <React.Fragment><span className="text-indigo-600">{event.toUser?.nickname}</span></React.Fragment>
                                                         ) : <span className="text-green-600">{event.toUser?.nickname}</span>}
-                                                    </p>
-                                                    <span className="text-[9px] font-bold text-slate-300">{formatTime(event.createdAt)}</span>
-                                                </div>
-                                                <p className="text-sm text-slate-600 font-medium">
-                                                    {event.eventType === 'STEAL' ? (
-                                                        <React.Fragment>Le badge <RewardLink badge={event.badge} xp={getXPForReward(event.badge?.key, event.createdAt)} onClick={() => handleRewardClick(event.badge?.key)} /> à {event.fromUser?.nickname}</React.Fragment>
-                                                    ) : isLevelUp ? (
-                                                        <React.Fragment>
-                                                            A atteint le Niveau <span className="font-black text-indigo-600">{event.newValue}</span>
-                                                            {metaDataObj?.animal && <span className="text-xs font-bold text-slate-500 ml-1">[{metaDataObj.animal} {metaDataObj.emoji}]</span>}
-                                                        </React.Fragment>
-                                                    ) : (
-                                                        <React.Fragment>A débloqué la distinction <RewardLink badge={event.badge} xp={getXPForReward(event.badge?.key, event.createdAt)} onClick={() => handleRewardClick(event.badge?.key)} /></React.Fragment>
-                                                    )}
-                                                </p>
-                                            </div>
+                                                     </p>
+                                                     <span className="text-[9px] font-bold text-slate-300">{formatTime(event.createdAt)}</span>
+                                                 </div>
+                                                 <p className="text-sm text-slate-600 font-medium">
+                                                     {event.eventType === 'STEAL' ? (
+                                                         <React.Fragment>Le badge <RewardLink badge={displayBadge} xp={rewardData?.xp || 0} onClick={() => handleRewardClick(displayBadge.key)} /> à {event.fromUser?.nickname}</React.Fragment>
+                                                     ) : isLevelUp ? (
+                                                         <React.Fragment>
+                                                             A atteint le Niveau <span className="font-black text-indigo-600">{event.newValue}</span>
+                                                             {metaDataObj?.animal && <span className="text-xs font-bold text-slate-500 ml-1">[{metaDataObj.animal} {metaDataObj.emoji}]</span>}
+                                                         </React.Fragment>
+                                                     ) : (
+                                                         <React.Fragment>A débloqué la distinction <RewardLink badge={displayBadge} xp={rewardData?.xp || 0} onClick={() => handleRewardClick(displayBadge.key)} /></React.Fragment>
+                                                     )}
+                                                     {event.displayCount > 1 && <span className="ml-1 text-slate-400 italic text-[11px]">(mis à jour)</span>}
+                                                 </p>
+                                             </div>
                                             <div className="flex items-center justify-center shrink-0 border-l border-slate-100 pl-4 ml-2">
                                                 <button
                                                     onClick={(e) => toggleLike(event.id, e)}
@@ -309,7 +331,6 @@ export default function PantheonClient({
                                         </div>
                                     );
                                 }) : (
-
                                     <p className="text-slate-400 text-center py-10 font-medium italic">Aucun mouvement récent...</p>
                                 )}
                             </div>

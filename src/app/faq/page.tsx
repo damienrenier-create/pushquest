@@ -200,9 +200,17 @@ function FAQContent() {
                                         Le premier utilisateur qui valide ses répétitions quotidiennes devient le <span className="text-yellow-400 font-black italic">Porteur du Flambeau</span>.
                                     </p>
                                     <ul className="text-[10px] font-black text-indigo-200 uppercase tracking-widest space-y-1 pl-4 border-l-2 border-indigo-500/30">
-                                        <li>🔥 Bonus de +100 XP immédiat</li>
+                                        <li>🔥 Bonus de +100 XP immédiat par jour</li>
                                         <li>📊 Incrémente ton compteur "Sprinter"</li>
-                                        <li>🛡️ Débloque le badge "Le Flambeau" affichant ton record consécutif</li>
+                                        <li>🛡️ Badge Record évolutif après perte :
+                                            <div className="grid grid-cols-1 gap-0.5 mt-2 ml-2 normal-case font-bold text-indigo-300">
+                                                <div className="flex justify-between"><span>🔦 Éclaireur (1j+)</span><span>300 XP</span></div>
+                                                <div className="flex justify-between"><span>🏮 Gardien (3j+)</span><span>500 XP</span></div>
+                                                <div className="flex justify-between"><span>🌅 Sentinelle (7j+)</span><span>1000 XP</span></div>
+                                                <div className="flex justify-between"><span>🌋 Seigneur (14j+)</span><span>1800 XP</span></div>
+                                                <div className="flex justify-between"><span>🔥 Feu Sacré (30j+)</span><span>3000 XP</span></div>
+                                            </div>
+                                        </li>
                                     </ul>
                                 </div>
 
@@ -223,23 +231,21 @@ function FAQContent() {
                                 <div className="space-y-3 pt-4 border-t border-white/5">
                                     <div className="flex items-center gap-2">
                                         <span className="text-2xl">🌪️</span>
-                                        <h3 className="text-lg font-black uppercase tracking-tight text-blue-400">Records Temporaires</h3>
+                                        <h3 className="text-lg font-black uppercase tracking-tight text-blue-400">Capture de Gloire</h3>
                                     </div>
                                     <p className="text-sm font-bold text-indigo-100 leading-relaxed">
-                                        L'XP volatile liée au classement. <span className="text-red-400 uppercase font-black">Attention</span> : si on te dépasse, tu perds cet XP !
+                                        Les records mensuels sont désormais scindés pour sécuriser vos efforts. <span className="text-blue-300 font-black italic">Plus le mois avance dans l'année, plus la capture est importante !</span>
                                     </p>
-                                    <div className="grid grid-cols-3 gap-2 mt-2">
-                                        <div className="p-2 bg-white/5 rounded-2xl text-center border border-white/5">
-                                            <span className="block font-black text-blue-400 text-[8px]">JOUR</span>
-                                            <span className="block font-black text-[10px]">+250</span>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+                                        <div className="p-3 bg-white/5 rounded-2xl border border-white/5">
+                                            <span className="block font-black text-blue-400 text-[9px] uppercase tracking-widest mb-1">En Jeu (Volatile)</span>
+                                            <span className="block font-black text-xl">+500 XP</span>
+                                            <p className="text-[10px] text-indigo-200/60 leading-tight mt-1">XP flottante tant que vous détenez le record. Perdue si quelqu'un vous dépasse.</p>
                                         </div>
-                                        <div className="p-2 bg-white/5 rounded-2xl text-center border border-white/5">
-                                            <span className="block font-black text-blue-400 text-[8px]">MOIS</span>
-                                            <span className="block font-black text-[10px]">+1000</span>
-                                        </div>
-                                        <div className="p-2 bg-white/5 rounded-2xl text-center border border-white/5">
-                                            <span className="block font-black text-blue-400 text-[8px]">AN</span>
-                                            <span className="block font-black text-[10px]">+2500</span>
+                                        <div className="p-3 bg-indigo-500/10 rounded-2xl border border-indigo-400/20">
+                                            <span className="block font-black text-indigo-300 text-[9px] uppercase tracking-widest mb-1">Acquis (Définitif)</span>
+                                            <span className="block font-black text-xl">+200 à +2500 XP</span>
+                                            <p className="text-[10px] text-indigo-200/60 leading-tight mt-1">Prime versée définitivement lors de la clôture du mois. Sécurisée à vie.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -283,11 +289,78 @@ function FAQContent() {
                                     <div className="p-2 bg-orange-200 rounded-xl text-orange-700">🌅</div>
                                     <div>
                                         <h4 className="font-black text-orange-900 uppercase text-sm">Habitudes Tiers</h4>
-                                        <p className="text-xs font-bold text-orange-800 mt-1 leading-snug">
-                                            Les bonus "Lève-tôt" et "Oiseau de Nuit" évoluent : <span className="font-black">3j (+50), 7j (+150), 14j (+350), 30j (+1000)</span>.
-                                        </p>
+                                        <div className="text-[10px] font-bold text-orange-800 mt-1 leading-snug space-y-2">
+                                            <p>
+                                                Les bonus "Lève-tôt" (<span className="text-[8px]">AVANT 6H</span>) et "Oiseau de Nuit" (<span className="text-[8px]">APRÈS 22H</span>) deviennent progressifs :
+                                            </p>
+                                            <div className="grid grid-cols-1 gap-1">
+                                                <div className="flex justify-between p-2 bg-white/50 rounded-lg"><span>Niv. 1 : 7 fois au total</span><span className="font-black text-orange-600">+200 XP</span></div>
+                                                <div className="flex justify-between p-2 bg-white/50 rounded-lg"><span>Niv. 2 : 3j consécutifs</span><span className="font-black text-orange-600">+500 XP</span></div>
+                                                <div className="flex justify-between p-2 bg-white/50 rounded-lg"><span>Niv. 3 : 7j consécutifs</span><span className="font-black text-orange-600">+1200 XP</span></div>
+                                            </div>
+                                            <p className="text-[8px] italic opacity-70 italic flex items-center gap-1"><Info size={10} /> Activé le 1er mai 2026. Non rétroactif sur l'historique passé.</p>
+                                        </div>
                                     </div>
                                 </div>
+                            </div>
+                        </section>
+                        
+                        {/* L'ÉQUILIBRE (BALANCE) */}
+                        <section className="bg-indigo-50 rounded-[2.5rem] p-8 shadow-sm border border-indigo-100 space-y-6">
+                            <div className="flex items-center gap-3 border-b border-indigo-100 pb-4">
+                                <Trophy className="text-indigo-600" size={24} />
+                                <h2 className="text-2xl font-black uppercase italic tracking-tighter text-indigo-900">L'Équilibre (Balance)</h2>
+                            </div>
+                            <p className="text-xs font-bold text-indigo-800 leading-relaxed">
+                                Complémentaires aux badges Prestige (Trinité/Quatuor d'Or), ces badges récompensent une répartition harmonieuse de l'effort sur une seule journée.
+                            </p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="p-5 bg-white rounded-3xl border border-indigo-100 shadow-sm">
+                                    <h4 className="font-black text-indigo-900 uppercase text-xs mb-3 flex items-center gap-2">
+                                        <span>🔺</span> Trinité Balance
+                                    </h4>
+                                    <ul className="text-[10px] font-black text-indigo-700 space-y-2 uppercase tracking-wide">
+                                        <li className="flex justify-between items-center">
+                                            <span>🥉 Bronze (15%)</span>
+                                            <span className="bg-indigo-100 px-2 py-0.5 rounded-full text-[8px]">+200 XP</span>
+                                        </li>
+                                        <li className="flex justify-between items-center">
+                                            <span>🥈 Argent (22%)</span>
+                                            <span className="bg-indigo-100 px-2 py-0.5 rounded-full text-[8px]">+450 XP</span>
+                                        </li>
+                                        <li className="flex justify-between items-center">
+                                            <span>🥇 Or (28%)</span>
+                                            <span className="bg-indigo-100 px-2 py-0.5 rounded-full text-[8px]">+800 XP</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div className="p-5 bg-white rounded-3xl border border-indigo-100 shadow-sm">
+                                    <h4 className="font-black text-indigo-900 uppercase text-xs mb-3 flex items-center gap-2">
+                                        <span>💠</span> Quatuor Balance
+                                    </h4>
+                                    <ul className="text-[10px] font-black text-indigo-700 space-y-2 uppercase tracking-wide">
+                                        <li className="flex justify-between items-center">
+                                            <span>🥉 Bronze (15%)</span>
+                                            <span className="bg-indigo-100 px-2 py-0.5 rounded-full text-[8px]">+200 XP</span>
+                                        </li>
+                                        <li className="flex justify-between items-center">
+                                            <span>🥈 Argent (20%)</span>
+                                            <span className="bg-indigo-100 px-2 py-0.5 rounded-full text-[8px]">+450 XP</span>
+                                        </li>
+                                        <li className="flex justify-between items-center">
+                                            <span>🥇 Or (23%)</span>
+                                            <span className="bg-indigo-100 px-2 py-0.5 rounded-full text-[8px]">+800 XP</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div className="p-4 bg-white/50 rounded-2xl border border-indigo-100">
+                                <h5 className="text-[10px] font-black text-indigo-900 uppercase mb-2">Règles d'Éligibilité</h5>
+                                <ul className="text-[9px] font-bold text-indigo-700 space-y-1">
+                                    <li>• Volume min. : <span className="font-black">10 reps</span> (ou 50s 🛡️) par discipline.</li>
+                                    <li>• Seuil total : <span className="font-black">60 à 160 unités</span> selon le niveau.</li>
+                                    <li>• Non rétroactif : Actif depuis le <span className="font-black">1er mai 2026</span>.</li>
+                                </ul>
                             </div>
                         </section>
 
@@ -323,6 +396,16 @@ function FAQContent() {
                                     <div className="text-right">
                                         <span className="block font-black text-indigo-600">10% du seuil</span>
                                         <span className="block text-[8px] font-black text-indigo-400 uppercase tracking-widest">Capé à 10k XP</span>
+                                    </div>
+                                </div>
+                                <div className="p-5 border border-gray-100 rounded-3xl flex justify-between items-center bg-blue-50/30">
+                                    <div>
+                                        <h4 className="font-black text-gray-900 uppercase tracking-tight text-xs sm:text-sm">Participations 🏅</h4>
+                                        <p className="text-[10px] font-bold text-gray-500 italic">Workouts spéciaux.</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="block font-black text-blue-600">0 XP</span>
+                                        <span className="block text-[8px] font-black text-blue-400 uppercase tracking-widest">Valeur incluse dans le défi</span>
                                     </div>
                                 </div>
                             </div>

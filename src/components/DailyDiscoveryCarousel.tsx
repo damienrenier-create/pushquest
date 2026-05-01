@@ -46,14 +46,24 @@ export default function DailyDiscoveryCarousel() {
     const currentSlide: DailyCarouselSlide = activeCarousel.slides[currentIndex];
     const isLastSlide = currentIndex === activeCarousel.slides.length - 1;
 
-    const closeForSession = () => {
+    const saveDismissal = () => {
+        try {
+            const now = new Date();
+            const day = now.getDate();
+            const lsKey = `${LS_KEY_PREFIX}${day}_202604`;
+            localStorage.setItem(lsKey, "true");
+        } catch (e) {
+            console.error("LocalStorage error:", e);
+        }
+    };
+
+    const closePermanently = () => {
+        saveDismissal();
         setIsVisible(false);
     };
 
     const markAsSeen = () => {
-        const now = new Date();
-        const day = now.getDate();
-        localStorage.setItem(`${LS_KEY_PREFIX}${day}_202604`, "true");
+        saveDismissal();
         setIsVisible(false);
 
         // If there's a href, navigate to it
@@ -89,7 +99,7 @@ export default function DailyDiscoveryCarousel() {
                         </span>
                     </div>
                     <button
-                        onClick={closeForSession}
+                        onClick={closePermanently}
                         className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all active:scale-90"
                     >
                         <X size={20} strokeWidth={3} />

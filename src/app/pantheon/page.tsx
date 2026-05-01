@@ -125,6 +125,8 @@ export default async function PantheonPage() {
             } else if (def.metricType === "QUATUOR_GOLD" || def.metricType === "QUATUOR_ULTIMATE") {
                 const today = new Date().toISOString().split('T')[0];
                 isEarned = def.metricType === "QUATUOR_GOLD" ? s.hasQuatuorGold(today) : s.hasQuatuorUltimate(today);
+            } else if (def.metricType === "TORCH_STREAK") {
+                isEarned = s.maxTorchStreak > 0;
             } else if (def.metricType === "SPECIAL_WORKOUT") {
                 const workoutId = def.key.replace('workout_', '').replace('_std', '');
                 const userObj = allUsers.find((u: any) => u.id === s.id);
