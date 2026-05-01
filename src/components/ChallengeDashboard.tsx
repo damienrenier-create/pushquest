@@ -520,6 +520,7 @@ export default function ChallengeDashboard() {
                     league={(session?.user as any)?.league}
                     handleSwitchEgo={handleSwitchEgo}
                     session={session}
+                    currentUserStats={data.leaderboard.find(u => (u as any).id === (session?.user as any)?.id)}
                 />
 
                 <div className="flex bg-white rounded-2xl p-1 shadow-sm border border-gray-100 overflow-x-auto no-scrollbar">

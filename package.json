@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "eslint",
     "reset:db": "npx prisma db push --accept-data-loss --schema=./prisma/schema.prisma && npx prisma generate --schema=./prisma/schema.prisma",
-    "postinstall": "prisma generate --schema=./prisma/schema.prisma"
+    "postinstall": "prisma generate --schema=./prisma/schema.prisma",
+    "verify": "node scripts/safety-net.js"
   },
   "prisma": {
     "schema": "prisma/schema.prisma"

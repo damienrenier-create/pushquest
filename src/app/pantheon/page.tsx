@@ -33,7 +33,8 @@ export default async function PantheonPage() {
                 sets: true,
                 fines: true,
                 badges: true,
-                xpAdjustments: true
+                xpAdjustments: true,
+                specialWorkoutEntries: true
             }
         }),
         (prisma as any).badgeOwnership.findMany({
@@ -124,6 +125,10 @@ export default async function PantheonPage() {
             } else if (def.metricType === "QUATUOR_GOLD" || def.metricType === "QUATUOR_ULTIMATE") {
                 const today = new Date().toISOString().split('T')[0];
                 isEarned = def.metricType === "QUATUOR_GOLD" ? s.hasQuatuorGold(today) : s.hasQuatuorUltimate(today);
+            } else if (def.metricType === "SPECIAL_WORKOUT") {
+                const workoutId = def.key.replace('workout_', '').replace('_std', '');
+                const userObj = allUsers.find((u: any) => u.id === s.id);
+                isEarned = userObj?.specialWorkoutEntries?.some((e: any) => e.workoutId === workoutId) || false;
             }
 
             if (isEarned && def.isUnique) {

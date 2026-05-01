@@ -160,6 +160,26 @@ function FAQContent() {
                                     <span className="block font-black text-green-900">1 Squat</span>
                                     <span className="text-green-600 font-bold">+1 XP</span>
                                 </div>
+                                <div className="p-4 bg-indigo-50 rounded-2xl text-center">
+                                    <span className="block text-2xl mb-1">🛡️</span>
+                                    <span className="block font-black text-indigo-900">5s Gainage</span>
+                                    <span className="text-indigo-600 font-bold">+1 XP</span>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                                <div className="p-5 bg-gray-50 rounded-3xl border border-gray-100">
+                                    <h4 className="font-black text-gray-900 uppercase text-xs mb-2">Quota du jour</h4>
+                                    <ul className="text-[10px] font-bold text-gray-500 space-y-1">
+                                        <li>• Journée validée (surplus) : <span className="text-indigo-600">+100 XP</span></li>
+                                        <li>• Journée parfaite (pile poil) : <span className="text-green-600">+200 XP</span></li>
+                                    </ul>
+                                </div>
+                                <div className="p-5 bg-gray-50 rounded-3xl border border-gray-100">
+                                    <h4 className="font-black text-gray-900 uppercase text-xs mb-2">Le Flex</h4>
+                                    <p className="text-[10px] font-bold text-gray-500 leading-tight">
+                                        Dépassement récompensé par paliers de 10% de la cible. Plus vous en faites, plus l'XP par répétition augmente (jusqu'à 1000 XP/jour).
+                                    </p>
+                                </div>
                             </div>
                         </section>
 

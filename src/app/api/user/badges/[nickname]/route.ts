@@ -31,8 +31,14 @@ export async function GET(
             include: { sets: true, fines: true, sallyUps: true }
         })
 
+        // Fetch events including UNIQUE_AWARDED to detect workout participations
         const allEvents = await prisma.badgeEvent.findMany({
-            where: { eventType: { in: ["STEAL", "TORCH_CLAIM"] } }
+            where: { 
+                OR: [
+                    { eventType: { in: ["STEAL", "TORCH_CLAIM"] } },
+                    { toUserId: user.id, eventType: "UNIQUE_AWARDED" }
+                ]
+            }
         })
 
         // 2. Calculate summary for the user
@@ -49,8 +55,16 @@ export async function GET(
 
         // 3. Get showcase data
         const { getXPForReward } = require("@/lib/rewards");
-        const earnedBadgeKeys = user.badges.map(b => b.badgeKey);
-        let showcases = getShowcaseData(userSummary, earnedBadgeKeys);
+        
+        // Combine badges from BadgeOwnership AND participations from BadgeEvent
+        const earnedBadgeKeys = new Set([
+            ...user.badges.map(b => b.badgeKey),
+            ...allEvents
+                .filter(e => e.toUserId === user.id && e.eventType === "UNIQUE_AWARDED")
+                .map(e => e.badgeKey)
+        ]);
+
+        let showcases = getShowcaseData(userSummary, Array.from(earnedBadgeKeys));
 
         // Add XP to badges
         showcases = showcases.map(cat => ({

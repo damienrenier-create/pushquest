@@ -175,10 +175,12 @@ export default function TrophySection({ data, setRewardDetail, toggleLike, sessi
                                     </div>
                                 </div>
                                 <div className="text-right shrink-0">
-                                    <p className="text-[10px] font-black text-red-600 uppercase">Menace: {d.challenger}</p>
+                                    <p className={`text-[10px] font-black uppercase ${d.isDanger ? 'text-red-600 animate-pulse' : 'text-slate-400'}`}>
+                                        {d.isDanger ? '⚠️ Imminent' : `Menace: ${d.challenger}`}
+                                    </p>
                                     <div className="flex flex-col items-end gap-1 mt-1">
-                                        <p className="text-[8px] font-black text-red-400 uppercase tracking-widest bg-red-50 inline-block px-2 py-0.5 rounded-full">
-                                            {d.diff === 0 ? "Égalité" : `Écart: ${d.diff}`}
+                                        <p className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${d.isDanger ? 'bg-red-600 text-white' : 'bg-red-50 text-red-400'}`}>
+                                            {d.diff === 0 ? "Égalité" : `+${d.diff} ${d.unit} pour voler`}
                                         </p>
                                         <p className="text-[8px] font-black text-orange-500 uppercase tracking-widest">{d.xpAtRisk} XP EN JEU</p>
                                     </div>
@@ -189,6 +191,9 @@ export default function TrophySection({ data, setRewardDetail, toggleLike, sessi
                         <p className="text-slate-500 text-xs font-bold text-center italic py-4 bg-white/50 rounded-2xl border border-dashed border-red-200">Tous les records sont hors d'atteinte... pour l'instant.</p>
                     )}
                 </div>
+                <p className="text-[9px] text-center font-bold text-red-400 uppercase tracking-tight italic mt-4 opacity-70">
+                    💡 Le vol de titre transfère l'XP du badge immédiatement.
+                </p>
             </div>
         </div>
     )

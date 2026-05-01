@@ -338,14 +338,18 @@ export default function PantheonClient({
                                                         <span className="text-2xl">{target.emoji}</span>
                                                         <h3 className="font-black text-sm uppercase">{target.badgeName}</h3>
                                                     </div>
-                                                    <div className="flex items-center gap-2 text-xs text-indigo-100">
-                                                        <span>Roi act. : <span className="font-bold text-white">{target.holder}</span> ({target.currentValue} {target.unit})</span>
+                                                    <div className="flex items-center gap-2 text-[10px] text-indigo-100 uppercase tracking-tight">
+                                                        <span>Roi : <span className="font-black text-white">{target.holder}</span> ({target.currentValue})</span>
+                                                        <span className="opacity-40">|</span>
+                                                        <span>Vous : <span className="font-black text-white">{target.challengerValue}</span></span>
+                                                        <span className="opacity-40">|</span>
+                                                        <span className="text-yellow-400">+{target.xpAtRisk} XP</span>
                                                     </div>
                                                 </div>
                                                 <div className="shrink-0 text-right">
-                                                    <div className="inline-flex items-center gap-2 bg-white text-indigo-600 px-3 py-1.5 rounded-xl text-sm font-black shadow-sm">
-                                                        <Zap size={14} className="fill-indigo-600" />
-                                                        ECART : {target.diff}
+                                                    <div className="inline-flex items-center gap-2 bg-white text-indigo-600 px-3 py-1.5 rounded-xl text-sm font-black shadow-sm group-hover:scale-105 transition-transform">
+                                                        <Zap size={14} className="fill-indigo-600 animate-pulse" />
+                                                        CIBLE : +{target.diff} {target.unit}
                                                     </div>
                                                 </div>
                                             </div>

@@ -75,20 +75,27 @@ export async function POST(req: Request) {
         const platinumBadgeKey = `workout_${workoutId}_plat`;
 
         // 3. Assign Participation Badge (everyone who completes it)
-        // Note: Special badge keys are used, which may not exist in static BadgeDefinition
-        // but BadgeOwnership can still store them.
-        await prisma.badgeOwnership.upsert({
+        // FIX: Use BadgeEvent instead of BadgeOwnership to allow multiple participants
+        const existingParticipation = await prisma.badgeEvent.findFirst({
             where: {
-                badgeKey: participationBadgeKey
-            },
-            create: {
                 badgeKey: participationBadgeKey,
-                currentUserId: userId,
-                currentValue: 1,
-                achievedAt: new Date()
-            },
-            update: {} // Basic participation doesn't change once achieved
+                toUserId: userId,
+                eventType: "UNIQUE_AWARDED"
+            }
         });
+
+        if (!existingParticipation) {
+            await prisma.badgeEvent.create({
+                data: {
+                    badgeKey: participationBadgeKey,
+                    toUserId: userId,
+                    fromUserId: null,
+                    eventType: "UNIQUE_AWARDED",
+                    newValue: 1,
+                    previousValue: 0
+                }
+            });
+        }
 
         // 4. Handle Platinum Badge (Record Holder - Transferable)
         const bestEntry = await prisma.specialWorkoutEntry.findFirst({

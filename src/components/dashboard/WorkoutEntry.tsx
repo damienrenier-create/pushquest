@@ -122,6 +122,21 @@ export default function WorkoutEntry({ league, localSets, setLocalSets, saving, 
                 ))
             )}
 
+            <div className="flex justify-center gap-6 py-2 border-t border-gray-50 mt-4">
+                <div className="flex items-center gap-1.5 opacity-40">
+                    <span className="text-[10px]">💪</span>
+                    <span className="text-[9px] font-black uppercase tracking-tighter">Pompe/Squat = 1 Pt</span>
+                </div>
+                <div className="flex items-center gap-1.5 opacity-40">
+                    <span className="text-[10px]">🦍</span>
+                    <span className="text-[9px] font-black uppercase tracking-tighter">Traction = 3 Pts</span>
+                </div>
+                <div className="flex items-center gap-1.5 opacity-40">
+                    <span className="text-[10px]">🛡️</span>
+                    <span className="text-[9px] font-black uppercase tracking-tighter">5s Gainage = 1 Pt</span>
+                </div>
+            </div>
+
             <button
                 onClick={() => saveLogs()}
                 disabled={saving}

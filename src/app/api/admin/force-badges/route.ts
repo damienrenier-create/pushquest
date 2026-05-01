@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { updateBadgesPostSave, initBadges } from "@/lib/badges";
 import prisma from "@/lib/prisma";
 
@@ -6,6 +8,11 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
     try {
+        const session = await getServerSession(authOptions);
+        if (!(session?.user as any)?.isAdmin) {
+            return NextResponse.json({ message: "Non autorisé" }, { status: 401 });
+        }
+
         // Trigger for a random real user to refresh everything
         const someUser = await (prisma as any).user.findFirst({
             where: { nickname: { not: 'modo' } }
