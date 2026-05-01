@@ -227,7 +227,10 @@ export function calculateDailyXPGainForUser(
     let badgesXP = 0;
     const dayBadges = (user.badges || user.badgesOwnerships || []).filter((b: any) => {
         const achievedAt = b.achievedAt || b.createdAt;
-        return achievedAt && new Date(achievedAt).toISOString().split('T')[0] === dateISO;
+        if (!achievedAt) return false;
+        const d = new Date(achievedAt);
+        if (isNaN(d.getTime())) return false;
+        return d.toISOString().split('T')[0] === dateISO;
     });
 
     const badgesDetail = dayBadges.map((b: any) => {

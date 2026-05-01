@@ -62,6 +62,54 @@ interface PantheonClientProps {
     currentUserRecords?: Record<string, number>;
 }
 
+const typeLabels: Record<string, string> = {
+    PUSHUPS: '💪 Pompes', PULLUPS: '🏋️ Tractions', SQUATS: '🦵 Squats',
+    PLANK: '🛡️ Gainage', RUN: '🏃 Course', BURPEES: '🔥 Burpees',
+    JUMP_ROPE: '🪢 Corde', PISTOL_SQUAT: '🎯 Pistol', SQUAT_JUMP: '⚡ Squat Jump'
+};
+
+const WorkoutCard = ({ workout, variant }: { workout: typeof SPECIAL_WORKOUTS[0], variant: 'active' | 'upcoming' | 'ended' }) => {
+    const exercises = workout.exercises || [];
+    const uniqueTypes = [...new Set(exercises.map(e => e.type))];
+    return (
+        <Link href={`/workouts/${workout.slug}`}
+            className={`group relative p-4 rounded-2xl border transition-all flex flex-col gap-2 ${variant === 'active' ? 'bg-white border-indigo-200 shadow-md hover:shadow-lg hover:scale-[1.015]' :
+                variant === 'upcoming' ? 'bg-amber-50/60 border-amber-200 hover:bg-amber-50 hover:shadow-md' :
+                    'bg-slate-50 border-slate-100 opacity-65 hover:opacity-90'
+                }`}>
+            <div className="flex items-center justify-between">
+                <div className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${variant === 'active' ? 'bg-indigo-100 text-indigo-700' :
+                    variant === 'upcoming' ? 'bg-amber-100 text-amber-700' :
+                        'bg-slate-200 text-slate-500'
+                    }`}>
+                    {variant === 'active' ? '🔥 ACTIF' :
+                        variant === 'upcoming' ? `📅 ${new Date(workout.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}` :
+                            '⌛ TERMINÉ'}
+                </div>
+                <span className="text-[10px] font-black text-amber-500">+{workout.xpBonus} XP</span>
+            </div>
+            <div>
+                <h3 className="text-sm font-black text-slate-900 uppercase leading-tight">{workout.name}</h3>
+                <p className="text-[10px] text-slate-500 font-medium line-clamp-1 mt-0.5">{workout.description}</p>
+            </div>
+            <div className="flex flex-wrap gap-1">
+                {uniqueTypes.slice(0, 4).map((t, i) => (
+                    <span key={i} className="text-[8px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded uppercase">{typeLabels[t] || t}</span>
+                ))}
+                {uniqueTypes.length > 4 && <span className="text-[8px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">+{uniqueTypes.length - 4}</span>}
+            </div>
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100/70 mt-auto">
+                {variant === 'active' && workout.endDate ? (
+                    <span className="text-[8px] font-black text-red-400 uppercase tracking-tighter flex items-center gap-1"><Clock size={9} />Finit le {new Date(workout.endDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
+                ) : <span />}
+                <span className="text-[9px] font-black text-indigo-600 uppercase tracking-wider flex items-center gap-1 ml-auto group-hover:gap-2 transition-all">
+                    {variant === 'ended' ? 'Voir' : 'Relever'} <ArrowRight size={11} />
+                </span>
+            </div>
+        </Link>
+    );
+};
+
 export default function PantheonClient({
     currentUser,
     allUsers,
@@ -271,10 +319,11 @@ export default function PantheonClient({
                                         if (event.metadata) metaDataObj = JSON.parse(event.metadata);
                                     } catch (e) { }
 
-                                    const rewardData = getRewardInfo(event.badge?.key, { 
+                                    const badgeKey = event.badgeKey || event.badge?.key;
+                                    const rewardData = badgeKey ? getRewardInfo(badgeKey, { 
                                         ...event, 
                                         newValue: event.newValue || event.previousValue 
-                                    } as any);
+                                    } as any) : null;
                                     const displayBadge = {
                                         ...event.badge,
                                         name: rewardData?.name || event.badge?.name,
@@ -745,56 +794,10 @@ export default function PantheonClient({
                     </div>
 
                     {(() => {
-                        const active = SPECIAL_WORKOUTS.filter(w => today >= w.date && today <= (w.endDate || '9999-12-31'));
-                        const upcoming = SPECIAL_WORKOUTS.filter(w => today < w.date);
-                        const ended = SPECIAL_WORKOUTS.filter(w => !!w.endDate && today > w.endDate!);
+                        const active = (SPECIAL_WORKOUTS || []).filter(w => today >= w.date && today <= (w.endDate || '9999-12-31'));
+                        const upcoming = (SPECIAL_WORKOUTS || []).filter(w => today < w.date);
+                        const ended = (SPECIAL_WORKOUTS || []).filter(w => !!w.endDate && today > w.endDate!);
 
-                        const typeLabels: Record<string, string> = {
-                            PUSHUPS: '💪 Pompes', PULLUPS: '🏋️ Tractions', SQUATS: '🦵 Squats',
-                            PLANK: '🛡️ Gainage', RUN: '🏃 Course', BURPEES: '🔥 Burpees',
-                            JUMP_ROPE: '🪢 Corde', PISTOL_SQUAT: '🎯 Pistol', SQUAT_JUMP: '⚡ Squat Jump'
-                        };
-
-                        const WorkoutCard = ({ workout, variant }: { workout: typeof SPECIAL_WORKOUTS[0], variant: 'active' | 'upcoming' | 'ended' }) => {
-                            const uniqueTypes = [...new Set(workout.exercises.map(e => e.type))];
-                            return (
-                                <Link href={`/workouts/${workout.slug}`}
-                                    className={`group relative p-4 rounded-2xl border transition-all flex flex-col gap-2 ${variant === 'active' ? 'bg-white border-indigo-200 shadow-md hover:shadow-lg hover:scale-[1.015]' :
-                                            variant === 'upcoming' ? 'bg-amber-50/60 border-amber-200 hover:bg-amber-50 hover:shadow-md' :
-                                                'bg-slate-50 border-slate-100 opacity-65 hover:opacity-90'
-                                        }`}>
-                                    <div className="flex items-center justify-between">
-                                        <div className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${variant === 'active' ? 'bg-indigo-100 text-indigo-700' :
-                                                variant === 'upcoming' ? 'bg-amber-100 text-amber-700' :
-                                                    'bg-slate-200 text-slate-500'
-                                            }`}>
-                                            {variant === 'active' ? '🔥 ACTIF' :
-                                                variant === 'upcoming' ? `📅 ${new Date(workout.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}` :
-                                                    '⌛ TERMINÉ'}
-                                        </div>
-                                        <span className="text-[10px] font-black text-amber-500">+{workout.xpBonus} XP</span>
-                                    </div>
-                                    <div>
-                                        <h3 className="text-sm font-black text-slate-900 uppercase leading-tight">{workout.name}</h3>
-                                        <p className="text-[10px] text-slate-500 font-medium line-clamp-1 mt-0.5">{workout.description}</p>
-                                    </div>
-                                    <div className="flex flex-wrap gap-1">
-                                        {uniqueTypes.slice(0, 4).map((t, i) => (
-                                            <span key={i} className="text-[8px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded uppercase">{typeLabels[t] || t}</span>
-                                        ))}
-                                        {uniqueTypes.length > 4 && <span className="text-[8px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">+{uniqueTypes.length - 4}</span>}
-                                    </div>
-                                    <div className="flex items-center justify-between pt-2 border-t border-slate-100/70 mt-auto">
-                                        {variant === 'active' && workout.endDate ? (
-                                            <span className="text-[8px] font-black text-red-400 uppercase tracking-tighter flex items-center gap-1"><Clock size={9} />Finit le {new Date(workout.endDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
-                                        ) : <span />}
-                                        <span className="text-[9px] font-black text-indigo-600 uppercase tracking-wider flex items-center gap-1 ml-auto group-hover:gap-2 transition-all">
-                                            {variant === 'ended' ? 'Voir' : 'Relever'} <ArrowRight size={11} />
-                                        </span>
-                                    </div>
-                                </Link>
-                            );
-                        };
 
                         return (
                             <div className="space-y-8">

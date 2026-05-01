@@ -462,7 +462,10 @@ export async function GET(req: Request) {
         // --- Hourly Distribution (Pic d'activité) ---
         const hourlyDistribution: Record<number, number> = {};
         (currentUser.sets || []).forEach((set: any) => {
-            const hour = new Date(set.createdAt).getHours();
+            if (!set.createdAt) return;
+            const d = new Date(set.createdAt);
+            if (isNaN(d.getTime())) return;
+            const hour = d.getHours();
             hourlyDistribution[hour] = (hourlyDistribution[hour] || 0) + (set.reps || 0);
         });
 
@@ -492,6 +495,7 @@ export async function GET(req: Request) {
                 total: (currentUserLB?.sets || []).filter((s: any) => s.date === selectedDate)
                     .reduce((sum: number, s: any) => sum + (s.exercise === "PLANK" ? Math.floor(s.reps / 5) : s.reps), 0)
             },
+
             leaderboard: leaderboard.map(({ sets, ...rest }) => rest),
             records: recordsData,
             xp: {
@@ -523,7 +527,11 @@ export async function GET(req: Request) {
                     totalPushupsAllTime: (u.sets || []).filter((ss: any) => ss.exercise === "PUSHUP").reduce((sum: number, ss: any) => sum + ss.reps, 0),
                     totalPlanksAllTime: (u.sets || []).filter((ss: any) => ss.exercise === "PLANK").reduce((sum: number, ss: any) => sum + ss.reps, 0),
                     createdAt: s.createdAt
-                }))).sort((a: any, b: any) => b.reps - a.reps || b.totalPushupsAllTime - a.totalPushupsAllTime || new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).slice(0, 3)
+                }))).sort((a: any, b: any) => {
+                    const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                    const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                    return b.reps - a.reps || b.totalPushupsAllTime - a.totalPushupsAllTime || aTime - bTime;
+                }).slice(0, 3)
             },
             graphs: {
                 myDaily: myDaily30,

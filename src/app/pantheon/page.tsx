@@ -26,8 +26,7 @@ export default async function PantheonPage() {
     ] = await Promise.all([
         (prisma as any).user.findMany({
             where: {
-                nickname: { not: 'modo' },
-                league: league
+                nickname: { not: 'modo' }
             },
             include: {
                 sets: true,
@@ -38,18 +37,14 @@ export default async function PantheonPage() {
             }
         }),
         (prisma as any).badgeOwnership.findMany({
-            where: {
-                currentUser: { league: league }
-            },
+            where: {},
             include: {
                 currentUser: true,
                 badge: true,
             }
         }),
         (prisma as any).badgeEvent.findMany({
-            where: {
-                toUser: { league: league }
-            },
+            where: {},
             take: 30,
             orderBy: { createdAt: "desc" },
             include: {
@@ -234,8 +229,8 @@ export default async function PantheonPage() {
 
     return (
         <PantheonClient
-            currentUser={allUsers.find((u: any) => u.id === userId)}
-            allUsers={allUsers.map((u: any) => ({ id: u.id, nickname: u.nickname }))}
+            currentUser={allUsers.find((u: any) => u.id === userId) || { id: userId, nickname: session.user.name, image: session.user.image }}
+            allUsers={allUsers}
             badgeDefinitions={BADGE_DEFINITIONS}
             badgeOwnerships={badgeOwnerships}
             recentEvents={allEvents}

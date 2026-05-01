@@ -93,13 +93,17 @@ export async function GET(
         })
 
         user.badges.forEach(b => {
-            const date = new Date(b.achievedAt).toISOString().split('T')[0]
-            const isRecentEnough = !dateLimit || new Date(b.achievedAt) >= dateLimit
+            if (!b.achievedAt) return;
+            const dObj = new Date(b.achievedAt);
+            if (isNaN(dObj.getTime())) return;
+            
+            const date = dObj.toISOString().split('T')[0];
+            const isRecentEnough = !dateLimit || dObj >= dateLimit;
             if (isRecentEnough) {
-                if (!dailyActivity[date]) dailyActivity[date] = { reps: 0, badgesCount: 0 }
-                dailyActivity[date].badgesCount += 1
+                if (!dailyActivity[date]) dailyActivity[date] = { reps: 0, badgesCount: 0 };
+                dailyActivity[date].badgesCount += 1;
             }
-        })
+        });
 
         const progressionData = Object.entries(dailyActivity).map(([date, val]) => ({
             date,
