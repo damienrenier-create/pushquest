@@ -802,7 +802,7 @@ export async function updateBadgesPostSave(userId: string, precomputedSummaries?
             const minPct = def.key.includes("bronze") ? 15 : def.key.includes("silver") ? (def.metricType === "BALANCE_TRINITY" ? 22 : 20) : (def.metricType === "BALANCE_TRINITY" ? 28 : 23);
             for (const s of summaries) {
                 const userSets = allUsers.find((u: any) => u.id === s.id)?.sets || [];
-                const uniqueDates = Array.from(new Set(userSets.map((set: any) => set.date))).filter(d => d >= BALANCE_BADGES_START_ISO) as string[];
+                const uniqueDates = (Array.from(new Set(userSets.map((set: any) => set.date))) as string[]).filter(d => d >= BALANCE_BADGES_START_ISO);
                 for (const d of uniqueDates) {
                     const hasIt = def.metricType === "BALANCE_TRINITY" 
                         ? s.hasBalanceTrinity(d, minPct, def.threshold!)
