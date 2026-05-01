@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { groupRecentEvents } from "@/lib/event-utils"
 
 interface TrophySectionProps {
