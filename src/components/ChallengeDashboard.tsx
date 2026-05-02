@@ -14,6 +14,8 @@ import GraphsSection from "./dashboard/GraphsSection"
 import CagnotteSection from "./dashboard/CagnotteSection"
 import RecordsAssiduiteSection from "./dashboard/RecordsAssiduiteSection"
 import FeatureDiscoveryCarousel from "./FeatureDiscoveryCarousel"
+import NotificationToast from "./NotificationToast"
+import { REACTION_PHRASES } from "@/config/notifications"
 
 interface DashboardData {
     todayISO: string
@@ -130,7 +132,7 @@ export default function ChallengeDashboard() {
     const [showHonorPopup, setShowHonorPopup] = useState<{ badge: any; holder: string; recordValue: number; myValue: number; type: string } | null>(null)
     const [honorChecked, setHonorChecked] = useState(false)
     const [graphPeriod, setGraphPeriod] = useState<'30' | '365' | 'all'>('30')
-    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+    const [notification, setNotification] = useState<{ id: string; message: string; type: 'success' | 'error' | 'competitive'; subType?: 'loss' | 'thief' | 'reaction'; event?: any } | null>(null)
     const [mood, setMood] = useState("")
     const [statuses, setStatuses] = useState<any[]>([])
     const [rewardDetail, setRewardDetail] = useState<any | null>(null)
@@ -138,9 +140,8 @@ export default function ChallengeDashboard() {
     const lastInputRef = useRef<HTMLInputElement | null>(null)
 
     const showToast = useCallback((message: string, type: 'success' | 'error') => {
-        setToast({ message, type })
-        setTimeout(() => setToast(null), 3000)
-    }, [setToast])
+        setNotification({ id: Date.now().toString(), message, type })
+    }, [setNotification])
 
     const getTodayISO = useCallback(() => getLocalISO(), [])
 
@@ -166,17 +167,55 @@ export default function ChallengeDashboard() {
             if (res.ok) {
                 const d: DashboardData = await res.json()
 
-                // --- Stolen Badge Toast Detection ---
+                // --- Competitive Notifications Detection ---
                 if (d.badges?.competitive?.events?.length > 0) {
-                    const latestSteal = d.badges.competitive.events.find((ev: any) =>
-                        ev.eventType === 'STEAL' &&
-                        ev.fromUserId === (session?.user as any)?.id &&
+                    const myId = (session?.user as any)?.id;
+                    const latestEvents = d.badges.competitive.events.filter((ev: any) =>
                         new Date(ev.createdAt).getTime() > lastFetchTime.current
-                    )
-                    if (latestSteal) {
-                        // Increased display time for the "Devil" message (A11)
-                        setToast({ message: `On t'a volé [${latestSteal.badge?.name}] 😈`, type: 'error' })
-                        setTimeout(() => setToast(null), 8000)
+                    );
+
+                    if (latestEvents.length > 0) {
+                        // Priority 1: I lost a badge (Victim)
+                        const loss = latestEvents.find((ev: any) => ev.eventType === 'STEAL' && ev.fromUserId === myId);
+                        if (loss) {
+                            setNotification({
+                                id: loss.id,
+                                message: `On t'a volé [${loss.badge?.name}] par ${loss.toUser?.nickname} ! 😈`,
+                                type: 'competitive',
+                                subType: 'loss',
+                                event: loss
+                            });
+                        } else {
+                            // Priority 2: Someone reacted to my theft
+                            const reaction = latestEvents.find((ev: any) => ev.eventType === 'STEAL_REACTION' && ev.toUserId === myId);
+                            if (reaction) {
+                                let content = "Quelqu'un a réagi à ton vol !";
+                                try {
+                                    const meta = JSON.parse(reaction.metadata || "{}");
+                                    content = `${reaction.fromUser?.nickname} : "${meta.message}"`;
+                                } catch (e) { }
+
+                                setNotification({
+                                    id: reaction.id,
+                                    message: content,
+                                    type: 'competitive',
+                                    subType: 'reaction',
+                                    event: reaction
+                                });
+                            } else {
+                                // Priority 3: I stole a badge (Thief)
+                                const theft = latestEvents.find((ev: any) => ev.eventType === 'STEAL' && ev.toUserId === myId);
+                                if (theft) {
+                                    setNotification({
+                                        id: theft.id,
+                                        message: `Tu as dépouillé ${theft.fromUser?.nickname} de son badge [${theft.badge?.name}] ! 🏴‍☠️`,
+                                        type: 'competitive',
+                                        subType: 'thief',
+                                        event: theft
+                                    });
+                                }
+                            }
+                        }
                     }
                 }
                 lastFetchTime.current = Date.now()
@@ -449,6 +488,29 @@ export default function ChallengeDashboard() {
         }
     }
 
+    const handleReact = async (category: 'well_played' | 'revenge') => {
+        if (!notification?.event) return;
+        const phrases = REACTION_PHRASES[category];
+        const message = phrases[Math.floor(Math.random() * phrases.length)];
+
+        try {
+            await fetch("/api/badges/react", {
+                method: "POST",
+                body: JSON.stringify({
+                    badgeKey: notification.event.badgeKey,
+                    toUserId: notification.event.toUserId, // Thief is the recipient
+                    message,
+                    category
+                }),
+                headers: { "Content-Type": "application/json" }
+            });
+            setNotification(null);
+            showToast("Réponse envoyée ! 🫡", "success");
+        } catch (e) {
+            showToast("Erreur d'envoi", "error");
+        }
+    }
+
     if (loading && !data?.todayISO) return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -497,10 +559,12 @@ export default function ChallengeDashboard() {
     return (
         <div className="max-w-4xl mx-auto p-4 space-y-6 pb-20">
             <FeatureDiscoveryCarousel />
-            {toast && (
-                <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full shadow-lg text-white font-bold transition-all ${toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}>
-                    {toast.message}
-                </div>
+            {notification && (
+                <NotificationToast
+                    notification={notification}
+                    onClose={() => setNotification(null)}
+                    onReact={handleReact}
+                />
             )}
 
             <div className="flex flex-col gap-4">
