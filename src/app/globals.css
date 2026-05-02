@@ -74,3 +74,12 @@ body {
     background-position: 200% 0;
   }
 }
+
+@keyframes draw {
+  from {
+    stroke-dashoffset: 5000;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
