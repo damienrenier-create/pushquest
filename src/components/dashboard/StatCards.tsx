@@ -2,6 +2,7 @@
 
 import { HelpCircle } from "lucide-react"
 import Link from "next/link"
+import { getProgressionMessage } from "@/config/progressionMessages"
 
 interface StatCardsProps {
     xp: any
@@ -100,59 +101,131 @@ export default function StatCards({
                 </div>
             )}
 
-            <div className="bg-slate-900 rounded-[2rem] p-6 text-white relative overflow-hidden">
-                <div className="relative z-10 flex justify-between items-center">
-                    <div>
-                        <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">
-                            Cible {selectedDate === todayISO ? "Aujourd'hui" : selectedDate}
-                            <span className="ml-2 text-[8px] text-blue-300/50 normal-case font-bold tracking-tight">(Pile poil = +200 XP)</span>
-                        </p>
-                        <div className="flex items-baseline gap-2">
-                            <span className="text-6xl font-black">{requiredReps}</span>
-                            <span className="text-slate-500 font-bold uppercase text-xs">Points</span>
+            <div className={`relative overflow-hidden rounded-[2.5rem] p-8 text-white transition-all duration-500 shadow-2xl border-2 ${
+                currentTotal === 0 ? 'bg-slate-900 border-slate-800' :
+                currentTotal < requiredReps ? 'bg-slate-900 border-indigo-500/20' :
+                currentTotal === requiredReps ? 'bg-slate-900 border-emerald-500/40 shadow-emerald-500/10' :
+                'bg-slate-900 border-amber-500/30'
+            }`}>
+                {/* Background Glows */}
+                <div className={`absolute top-0 right-0 w-64 h-64 rounded-full blur-[100px] -mr-32 -mt-32 transition-colors duration-1000 opacity-20 ${
+                    currentTotal === 0 ? 'bg-slate-700' :
+                    currentTotal < requiredReps ? 'bg-indigo-600' :
+                    currentTotal === requiredReps ? 'bg-emerald-500' :
+                    'bg-amber-600'
+                }`}></div>
+
+                <div className="relative z-10">
+                    <div className="flex justify-between items-start mb-6">
+                        <div>
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">
+                                    {selectedDate === todayISO ? "Aujourd'hui" : selectedDate}
+                                </span>
+                            </div>
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Objectif du jour</p>
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-5xl font-black tracking-tighter">{requiredReps}</span>
+                                <span className="text-slate-500 font-bold uppercase text-xs tracking-widest">Efforts</span>
+                            </div>
                         </div>
-                        <div className="mt-2 text-[10px] font-bold text-slate-400 uppercase tracking-tighter space-y-1.5">
-                            <div>Score : <span className="text-white">{currentTotal} Points</span></div>
-                            <div className="flex flex-col gap-1 text-[8px] text-slate-500 font-black border-l-2 border-slate-800 pl-2 mt-2">
-                                <p>• Bonus +50% XP si badge "à l'honneur"</p>
-                                <p>• +100 XP au premier validé (Flambeau)</p>
+                        <div className="text-right">
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Score Actuel</p>
+                            <div className="flex items-baseline justify-end gap-2">
+                                <span className={`text-4xl font-black tracking-tighter transition-colors ${
+                                    currentTotal >= requiredReps ? 'text-emerald-400' : 'text-white'
+                                }`}>{currentTotal}</span>
+                                <span className="text-slate-500 font-bold uppercase text-[10px]">Efforts</span>
                             </div>
                         </div>
                     </div>
-                    <div className="text-right shrink-0">
-                        {missing > 0 ? (
-                            <div className="flex flex-col items-end">
-                                <span className="text-3xl font-black text-orange-400">-{missing}</span>
-                                <span className="text-[10px] font-black text-slate-400 italic uppercase">POINTS/REPS À FAIRE</span>
+
+                    {/* Progression Bar */}
+                    <div className="space-y-4 mb-6">
+                        <div className="h-4 w-full bg-slate-800/50 rounded-2xl overflow-hidden p-1 border border-white/5">
+                            <div 
+                                className={`h-full rounded-xl transition-all duration-1000 ease-out relative ${
+                                    currentTotal === 0 ? 'bg-slate-700' :
+                                    currentTotal < requiredReps ? 'bg-gradient-to-r from-indigo-600 to-blue-500' :
+                                    currentTotal === requiredReps ? 'bg-gradient-to-r from-emerald-500 to-teal-400 shadow-[0_0_20px_rgba(16,185,129,0.4)]' :
+                                    'bg-gradient-to-r from-amber-500 to-orange-400'
+                                }`}
+                                style={{ width: `${Math.min(100, (requiredReps > 0 ? (currentTotal / requiredReps) * 100 : 0))}%` }}
+                            >
+                                {currentTotal >= requiredReps && (
+                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"></div>
+                                )}
                             </div>
-                        ) : (
-                            <div className="bg-green-500 text-white px-4 py-2 rounded-full font-black text-sm shadow-lg animate-bounce">VALIDÉ ✅</div>
+                        </div>
+
+                        {/* Dynamic Message */}
+                        <div className="flex items-center gap-3 min-h-[40px]">
+                            <div className={`shrink-0 w-8 h-8 rounded-xl flex items-center justify-center text-sm shadow-sm transition-all ${
+                                currentTotal >= requiredReps ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-400'
+                            }`}>
+                                {currentTotal === 0 ? '🥚' : 
+                                 currentTotal < requiredReps ? '⚡' : 
+                                 currentTotal === requiredReps ? '🎯' : '🔥'}
+                            </div>
+                            <p className={`text-xs font-bold leading-tight italic ${
+                                currentTotal >= requiredReps ? 'text-emerald-300' : 'text-slate-300'
+                            }`}>
+                                {getProgressionMessage(requiredReps > 0 ? (currentTotal / requiredReps) * 100 : 0)}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Status & Actions */}
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-white/5">
+                        <div className="flex items-center gap-4">
+                            {currentTotal >= requiredReps ? (
+                                <div className="flex items-center gap-2 bg-emerald-500 text-white px-4 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-emerald-900/20 animate-in zoom-in duration-300">
+                                    <span>VALIDÉ</span>
+                                    <span className="text-xs">✅</span>
+                                </div>
+                            ) : (
+                                <div className="text-[10px] font-black text-orange-400 uppercase tracking-widest flex items-center gap-2 bg-orange-500/10 px-3 py-1.5 rounded-xl border border-orange-500/20">
+                                    <span>En attente</span>
+                                    <span className="animate-pulse">⏳</span>
+                                </div>
+                            )}
+
+                            {selectedDate === todayISO && (
+                                <div className="h-4 w-[1px] bg-slate-800 hidden sm:block"></div>
+                            )}
+
+                            {selectedDate === todayISO && (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Protection</span>
+                                    {currentUserStats?.isVeteran ? (
+                                        <div className="flex items-center gap-1.5 text-emerald-400 text-[9px] font-black uppercase tracking-tight bg-emerald-500/10 px-2 py-1 rounded-lg border border-emerald-500/20">
+                                            <span className="w-1 h-1 rounded-full bg-emerald-500"></span>
+                                            Vétéran
+                                        </div>
+                                    ) : currentUserStats?.isInjured ? (
+                                        <div className="flex items-center gap-1.5 text-amber-400 text-[9px] font-black uppercase tracking-tight bg-amber-500/10 px-2 py-1 rounded-lg border border-amber-500/20">
+                                            <span className="w-1 h-1 rounded-full bg-amber-500"></span>
+                                            Blessé
+                                        </div>
+                                    ) : (
+                                        <div className="text-slate-500 text-[9px] font-black uppercase tracking-tight bg-slate-800 px-2 py-1 rounded-lg border border-white/5">
+                                            Aucune
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {missing > 0 && (
+                            <div className="text-right">
+                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Manquant : </span>
+                                <span className="text-sm font-black text-orange-400">{missing} efforts</span>
+                            </div>
                         )}
                     </div>
                 </div>
-
-                {/* État de Protection */}
-                {selectedDate === todayISO && (
-                    <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Protection Amendes</span>
-                        {currentUserStats?.isVeteran ? (
-                            <span className="flex items-center gap-1.5 text-emerald-400 text-[10px] font-black uppercase tracking-tight bg-emerald-500/10 px-2 py-1 rounded-lg">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                Couvert (Buyout)
-                            </span>
-                        ) : currentUserStats?.isInjured ? (
-                            <span className="flex items-center gap-1.5 text-amber-400 text-[10px] font-black uppercase tracking-tight bg-amber-500/10 px-2 py-1 rounded-lg">
-                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                                Protégé (Certificat)
-                            </span>
-                        ) : (
-                            <span className="text-slate-500 text-[10px] font-black uppercase tracking-tight border border-white/5 px-2 py-1 rounded-lg">
-                                Non couvert ⚠️
-                            </span>
-                        )}
-                    </div>
-                )}
             </div>
+
         </div>
     )
 }

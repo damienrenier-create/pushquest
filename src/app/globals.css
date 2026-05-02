@@ -40,6 +40,10 @@ body {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+  .animate-shimmer {
+    animation: shimmer 2s infinite linear;
+    background-size: 200% 100%;
+  }
 }
 
 @keyframes bounce-slow {
@@ -59,5 +63,14 @@ body {
   }
   50% {
     background-position: 100% 50%;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
   }
 }
