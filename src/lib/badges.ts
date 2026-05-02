@@ -1008,6 +1008,18 @@ export async function updateBadgesPostSave(userId: string, precomputedSummaries?
                 ownership.currentUserId === (bestUser as any).id &&
                 ownership.currentValue === bestValue;
 
+            if (isSameUser && isBetterValue) {
+                // Update ownership silently (no event) to record the new record
+                await (prisma as any).badgeOwnership.update({
+                    where: { badgeKey: def.key },
+                    data: {
+                        currentValue: bestValue,
+                        updatedAt: new Date()
+                    }
+                });
+                continue;
+            }
+
             try {
                 await (prisma as any).badgeOwnership.upsert({
                     where: { badgeKey: def.key },
@@ -1159,15 +1171,17 @@ async function awardMilestone(userId: string, badgeKey: string, value: number = 
         });
         const maxValue = existingEvents[0]?.newValue || 0;
 
-        if (value > maxValue) {
-            // Anti-spam: check if an identical event (any value) was created very recently for this user
-            const recentEvent = await (prisma as any).badgeEvent.findFirst({
-                where: { toUserId: userId, createdAt: { gte: new Date(Date.now() - 2000) } }
-            });
-            if (recentEvent && recentEvent.badgeKey === badgeKey) return;
-
+        // ONLY create event if it's the FIRST time for this user (maxValue === 0)
+        if (value > 0 && maxValue === 0) {
             await (prisma as any).badgeEvent.create({
-                data: { badgeKey, fromUserId: null, toUserId: userId, eventType: "UNIQUE_AWARDED", previousValue: maxValue, newValue: value }
+                data: { 
+                    badgeKey, 
+                    fromUserId: null, 
+                    toUserId: userId, 
+                    eventType: "UNIQUE_AWARDED", 
+                    previousValue: 0, 
+                    newValue: value 
+                }
             });
         }
     } catch (error) {

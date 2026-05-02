@@ -67,8 +67,11 @@ export default function NotificationToast({ notification, onClose, onReact }: No
 
     return (
         <div 
-            className={`fixed top-4 left-1/2 -translate-x-1/2 z-[100] w-[95%] max-w-sm transition-all duration-300 ${isClosing ? 'opacity-0 -translate-y-full scale-95' : 'opacity-100 scale-100'}`}
-            style={{ transform: `translate(-50%, ${offsetY}px)` }}
+            className={`fixed left-1/2 -translate-x-1/2 z-[100] w-[95%] max-w-sm transition-all duration-300 ${isClosing ? 'opacity-0 -translate-y-full scale-95' : 'opacity-100 scale-100'}`}
+            style={{ 
+                transform: `translate(-50%, ${offsetY}px)`,
+                top: `calc(5rem + env(safe-area-inset-top))` 
+            }}
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
