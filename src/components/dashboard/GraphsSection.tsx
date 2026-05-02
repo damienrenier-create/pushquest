@@ -344,7 +344,7 @@ export default function GraphsSection({ data, graphPeriod, setGraphPeriod }: Gra
 
                                 {/* Interactive Legend */}
                                 <div className="flex flex-wrap gap-3 justify-center">
-                                    {filteredProgression.map(user => {
+                                    {filteredProgression.map((user: any) => {
                                         const isHidden = hiddenUsers.has(user.id);
                                         return (
                                             <button
@@ -370,7 +370,7 @@ export default function GraphsSection({ data, graphPeriod, setGraphPeriod }: Gra
 
             <style jsx>{`
                 @keyframes draw {
-                    from { stroke-dashoffset: 1000; }
+                    from { stroke-dashoffset: 5000; }
                     to { stroke-dashoffset: 0; }
                 }
             `}</style>

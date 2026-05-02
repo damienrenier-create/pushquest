@@ -59,10 +59,10 @@ export async function GET(req: Request) {
 
         // Precompute daily winners for XP bonus accuracy
         const dailyWinners = new Map<string, string>();
-        dates.forEach(date => {
+        dates.forEach((date: string) => {
             let maxTotal = 0;
             let winnerId = null;
-            users.forEach(u => {
+            users.forEach((u: any) => {
                 const total = (u.sets || []).filter((s: any) => s.date === date)
                     .reduce((sum: number, s: any) => sum + (s.exercise === "PLANK" ? Math.floor(s.reps / 5) : s.reps), 0);
                 if (total > maxTotal) {
@@ -78,14 +78,14 @@ export async function GET(req: Request) {
         const featuredBadgeKey = featuredConfig?.value;
 
         // Process data for each user
-        const result = users.map(user => {
+        const result = users.map((user: any) => {
             let cumulativePushups = 0;
             let cumulativePullups = 0;
             let cumulativeSquats = 0;
             let cumulativePlanks = 0;
             let cumulativeXP = 0;
 
-            const timeline = dates.map(date => {
+            const timeline = dates.map((date: string) => {
                 const daySets = (user.sets || []).filter((s: any) => s.date === date);
                 
                 const p = daySets.filter((s: any) => s.exercise === "PUSHUP").reduce((sum: number, s: any) => sum + s.reps, 0);
