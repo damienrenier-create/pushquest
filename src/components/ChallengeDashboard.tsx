@@ -532,15 +532,29 @@ export default function ChallengeDashboard() {
 
                 {activeTab === 'saisie' && (
                     <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                        {allowedDates.map(d => (
-                            <button
-                                key={d.iso}
-                                onClick={() => handleDateChange(d.iso)}
-                                className={`flex-1 min-w-[100px] py-3 rounded-2xl font-black text-xs border-2 transition-all ${selectedDate === d.iso ? 'bg-blue-600 border-blue-600 text-white shadow-lg' : 'bg-white border-gray-100 text-gray-400 hover:border-blue-200'}`}
-                            >
-                                {d.label}
-                            </button>
-                        ))}
+                        {allowedDates.map((d, idx) => {
+                            const dayInfo = data.graphs.myDaily.find(day => day.date === d.iso);
+                            // Only alert for past days (J-1, J-2, J-3) if not validated
+                            const showAlert = idx > 0 && dayInfo && (dayInfo as any).isValidated === false;
+
+                            return (
+                                <button
+                                    key={d.iso}
+                                    onClick={() => handleDateChange(d.iso)}
+                                    className={`relative flex-1 min-w-[100px] py-3 rounded-2xl font-black text-xs border-2 transition-all ${selectedDate === d.iso
+                                        ? 'bg-blue-600 border-blue-600 text-white shadow-lg'
+                                        : showAlert
+                                            ? 'bg-red-50 border-red-100 text-red-500 hover:border-red-300'
+                                            : 'bg-white border-gray-100 text-gray-400 hover:border-blue-200'
+                                        }`}
+                                >
+                                    {d.label}
+                                    {showAlert && (
+                                        <span className="absolute top-1 right-1 flex h-2 w-2 rounded-full bg-red-500 shadow-sm shadow-red-200"></span>
+                                    )}
+                                </button>
+                            );
+                        })}
                     </div>
                 )}
             </div>

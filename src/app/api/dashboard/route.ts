@@ -375,14 +375,26 @@ export async function GET(req: Request) {
         const nextReward = rewardsTiers.find(r => r.min > potEur);
 
         // Graphs (Simplified)
+        const currentUserSummary = sharedSummaries.find(s => s.id === userId);
+        const currentUserMaxStreak = currentUserSummary?.maxSuccessStreak || 0;
+
         const myDaily30 = getDatesInRangeToToday(startDate30).map(date => {
             const daySets = (currentUserLB?.sets || []).filter((s: any) => s.date === date);
+            const total = daySets.reduce((sum: number, s: any) => sum + (s.exercise === "PLANK" ? Math.floor(s.reps / 5) : s.reps), 0);
+            const req = getDailyTargetForUserOnDate(currentUser, date);
+            
+            // Exemption logic (consistent with fine calculation)
+            const isOnboardingExempt = currentUser.onboardingStartedAt && currentUserMaxStreak < 21;
+            const isExcused = isOnboardingExempt || currentUser.buyoutPaid || (currentUser.medicalCertificates?.some((c: any) => date >= c.startDateISO && date <= c.endDateISO));
+
             return {
                 date,
                 pushups: daySets.filter((s: any) => s.exercise === "PUSHUP").reduce((sum: number, s: any) => (sum || 0) + (s.reps || 0), 0),
                 pullups: daySets.filter((s: any) => s.exercise === "PULLUP").reduce((sum: number, s: any) => (sum || 0) + (s.reps || 0), 0),
                 squats: daySets.filter((s: any) => s.exercise === "SQUAT").reduce((sum: number, s: any) => (sum || 0) + (s.reps || 0), 0),
-                total: daySets.reduce((sum: number, s: any) => (sum || 0) + (s.reps || 0), 0)
+                total,
+                requirement: req,
+                isValidated: total >= req || isExcused
             };
         });
 
@@ -390,12 +402,21 @@ export async function GET(req: Request) {
         startDate365.setDate(startDate365.getDate() - 365);
         const myDaily365 = getDatesInRangeToToday(formatDateISO(startDate365)).map(date => {
             const daySets = (currentUserLB?.sets || []).filter((s: any) => s.date === date);
+            const total = daySets.reduce((sum: number, s: any) => sum + (s.exercise === "PLANK" ? Math.floor(s.reps / 5) : s.reps), 0);
+            const req = getDailyTargetForUserOnDate(currentUser, date);
+            
+            // Exemption logic (consistent with fine calculation)
+            const isOnboardingExempt = currentUser.onboardingStartedAt && currentUserMaxStreak < 21;
+            const isExcused = isOnboardingExempt || currentUser.buyoutPaid || (currentUser.medicalCertificates?.some((c: any) => date >= c.startDateISO && date <= c.endDateISO));
+
             return {
                 date,
                 pushups: daySets.filter((s: any) => s.exercise === "PUSHUP").reduce((sum: number, s: any) => (sum || 0) + (s.reps || 0), 0),
                 pullups: daySets.filter((s: any) => s.exercise === "PULLUP").reduce((sum: number, s: any) => (sum || 0) + (s.reps || 0), 0),
                 squats: daySets.filter((s: any) => s.exercise === "SQUAT").reduce((sum: number, s: any) => (sum || 0) + (s.reps || 0), 0),
-                total: daySets.reduce((sum: number, s: any) => (sum || 0) + (s.reps || 0), 0)
+                total,
+                requirement: req,
+                isValidated: total >= req || isExcused
             };
         });
 
