@@ -138,8 +138,8 @@ export default function FeatureDiscoveryCarousel() {
         setIsVisible(false);
     };
 
-    const closeForSession = () => {
-        setIsVisible(false);
+    const closePermanently = () => {
+        markAsSeen();
     };
 
     if (!isVisible) return null;
@@ -169,8 +169,8 @@ export default function FeatureDiscoveryCarousel() {
                         {currentIndex + 1} / {SLIDES.length}
                     </span>
                     <button
-                        onClick={closeForSession}
-                        aria-label="Fermer temporairement"
+                        onClick={closePermanently}
+                        aria-label="Fermer définitivement"
                         className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all active:scale-90"
                     >
                         <X size={20} strokeWidth={3} />

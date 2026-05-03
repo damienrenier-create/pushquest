@@ -73,11 +73,23 @@ export async function GET(req: Request) {
                 potEvents: true,
                 xpAdjustments: true,
                 league: true,
-                createdAt: true
+                createdAt: true,
+                onboardingMode: true,
+                onboardingStartISO: true,
+                finesEnabledDate: true
             }
         })) as any[];
 
-        // --- 2. Lazy Fine Calculation (Simplified/Optimized) ---
+        // --- 2. Data Preparation for Fines & Badges ---
+        const allTorchAndStealEvents = await (prisma as any).badgeEvent.findMany({
+            where: { 
+                eventType: { in: ['STEAL', 'TORCH_CLAIM'] }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+        const { summaries: sharedSummaries, winnersByDate } = getUserSummaries(allUsers, allTorchAndStealEvents);
+
+        // --- 3. Lazy Fine Calculation (Surgical v2 Injections) ---
         const fineDates = getDatesInRangeToToday(FINE_START_DATE).filter(d => d < today).slice(-7);
 
         for (const u of allUsers) {
@@ -86,11 +98,15 @@ export async function GET(req: Request) {
 
             for (const d of fineDates) {
                 const existingFine = u.fines?.find((f: any) => f.date === d);
-                // We no longer continue here to allow checking for fine deletion if reps were added later.
-
+                
                 // --- Exemption Check ---
                 let isExempt = false;
-                if (u.buyoutPaid && u.buyoutPaidAt) {
+
+                // Garde-fou A : Pas d'amende avant la création du compte
+                const userCreatedAt = formatDateISO(new Date(u.createdAt));
+                if (d < userCreatedAt) isExempt = true;
+
+                if (!isExempt && u.buyoutPaid && u.buyoutPaidAt) {
                     const buyoutDay = formatDateISO(new Date(u.buyoutPaidAt));
                     if (buyoutDay <= d) isExempt = true;
                 }
@@ -100,10 +116,18 @@ export async function GET(req: Request) {
                     if (hasCert) isExempt = true;
                 }
 
-                // --- Onboarding Exemption Check ---
+                // --- Onboarding Exemption Check (3-field system) ---
                 if (!isExempt && u.onboardingMode) {
-                    if (!u.finesEnabledDate) isExempt = true;
-                    else if (d < u.finesEnabledDate) isExempt = true;
+                    // Garde-fou B : finesEnabledDate (activation manuelle)
+                    if (!u.finesEnabledDate || d < u.finesEnabledDate) {
+                        isExempt = true;
+                    } 
+                    // Garde-fou C : Protection 21 jours (robustesse v2)
+                    else {
+                        const summary = sharedSummaries.find((s: any) => s.id === u.id);
+                        const uMaxSuccessStreak = summary?.maxSuccessStreak || 0;
+                        if (uMaxSuccessStreak < 21) isExempt = true;
+                    }
                 }
 
                 // If exempt but has a fine, delete it
