@@ -96,10 +96,10 @@ export async function GET(req: Request) {
                 const existingFine = u.fines?.find((f: any) => f.date === d);
 
                 // --- Exemption Check ---
-                let isExempt = false;
+                let isExempt = d < formatDateISO(new Date(u.createdAt));
 
                 // Onboarding exemption: no fines before 21 consecutive successful days
-                if (u.onboardingStartedAt && uMaxSuccessStreak < 21) {
+                if (!isExempt && u.onboardingStartedAt && uMaxSuccessStreak < 21) {
                     isExempt = true;
                 }
 
@@ -128,7 +128,7 @@ export async function GET(req: Request) {
                 const dayTotal = daySets
                     .reduce((sum: number, s: any) => sum + (s.exercise === "PLANK" ? Math.floor(s.reps / 5) : s.reps), 0);
 
-                const req = getRequiredRepsForDate(d);
+                const req = getDailyTargetForUserOnDate(u, d);
 
                 if (existingFine) {
                     // If fine exists but requirement met, delete it
