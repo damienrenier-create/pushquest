@@ -50,7 +50,7 @@ export async function GET(req: Request) {
         const summaries = getUserSummaries(users, allEvents);
 
         // Find the overall start date
-        const firstSet = await (prisma as any).set.findFirst({
+        const firstSet = await (prisma as any).exerciseSet.findFirst({
             orderBy: { date: 'asc' },
             select: { date: true }
         });
