@@ -1,5 +1,15 @@
 import prisma from "./prisma";
-import { getRequiredRepsForDate, getTodayISO, isLastDayOfMonth, getYesterdayISO, getDailyTargetForUserOnDate } from "./challenge";
+import { 
+    getRequiredRepsForDate, 
+    getTodayISO, 
+    isLastDayOfMonth, 
+    getYesterdayISO, 
+    getDailyTargetForUserOnDate,
+    getDatesInRangeToYesterday,
+    CHALLENGE_START_DATE,
+    formatDateISO,
+    getDatesInRangeToToday
+} from "./challenge";
 
 import { BADGE_DEFINITIONS } from "@/config/badges";
 
@@ -99,7 +109,7 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
 
     const sortedWinningDates = Object.keys(winnersByDate).sort();
 
-    return allUsers.map((u: any) => {
+    const summaries = allUsers.map((u: any) => {
         const sets = u.sets || [];
         const days = Array.from(new Set(sets.map((s: any) => s.date))).sort() as string[];
         const finesByDate: Record<string, any[]> = {};
@@ -182,26 +192,9 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
         const datePlayedMap: Record<string, boolean> = {};
         let lastDayISO: string | null = null;
 
-        days.forEach((d: string) => {
-            if (lastDayISO) {
-                const lastDate = new Date(lastDayISO);
-                const currDate = new Date(d);
-                const diffDays = Math.round((currDate.getTime() - lastDate.getTime()) / (1000 * 3600 * 24));
-                if (diffDays > 1) {
-                    currentBonusStreak = 0;
-                    currentPerfectStreak = 0;
-                    currentSuccessStreak = 0;
-                    currentMonoExoStreak = 0;
-                    currentTriExoStreak = 0;
-                    currentQuatuorStreak = 0;
-                    earlyStreakCur = 0;
-                    lateStreakCur = 0;
-                    noonStreakCur = 0;
-                    fineFreeStreakCur = 0;
-                }
-            }
-            lastDayISO = d;
-
+        const allDays = getDatesInRangeToYesterday(CHALLENGE_START_DATE);
+        
+        allDays.forEach((d: string) => {
             const daySets = sets.filter((s: any) => s.date === d);
             const req = getDailyTargetForUserOnDate(u, d).target;
             let dayTotal = 0;
@@ -908,6 +901,28 @@ export async function updateBadgesPostSave(userId: string, precomputedSummaries?
                         newValue: bestValue
                     }
                 });
+
+                // --- NEW: Vendetta Notification (Surgical v2 Injection) ---
+                if (eventType === "STEAL" && ownership?.currentUserId) {
+                    const fromId = ownership.currentUserId;
+                    if (fromId !== (bestUser as any).id) {
+                        const { REACTION_PHRASES } = await import("@/config/notifications");
+                        const phrases = REACTION_PHRASES.well_played;
+                        const randomPhrase = phrases[Math.floor(Math.random() * phrases.length)];
+                        await (prisma as any).potEvent.create({
+                            data: {
+                                userId: fromId,
+                                type: "BADGE_STOLEN",
+                                amount: 0,
+                                metadata: JSON.stringify({
+                                    badgeKey: def.key,
+                                    stolenBy: (bestUser as any).nickname,
+                                    phrase: randomPhrase
+                                })
+                            }
+                        });
+                    }
+                }
 
                 // --- VENDETTA BONUS LOGIC ---
                 if (eventType === "STEAL" && !isSameUser && ownership?.currentUserId) {

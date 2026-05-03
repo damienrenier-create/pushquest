@@ -416,22 +416,15 @@ export async function GET(req: Request) {
             };
         });
 
-        // --- 4. Badge Competition Data ---
+        // --- 4. Badge Competition Data (Reusing existing sharedSummaries) ---
         const badgeOwnerships = await (prisma as any).badgeOwnership.findMany({
             include: {
                 badge: true,
                 currentUser: { select: { nickname: true, image: true } }
             }
         });
-
-        const allTorchAndStealEvents = await (prisma as any).badgeEvent.findMany({
-            where: { eventType: { in: ["STEAL", "TORCH_CLAIM"] } }
-        });
-
-        // Pre-compute summaries once — shared between XP and badge risk calculations
-        const { summaries: sharedSummaries, winnersByDate } = getUserSummaries(allUsers, allTorchAndStealEvents);
         const torchWinnerId = winnersByDate[today];
-        const torchWinner = sharedSummaries.find(s => s.id === torchWinnerId);
+        const torchWinner = sharedSummaries.find((s: any) => s.id === torchWinnerId);
 
         // --- 5. Onboarding Fine Activation & December Bonus ---
         for (const u of allUsers) {
@@ -537,7 +530,7 @@ export async function GET(req: Request) {
             torchWinner: torchWinner ? {
                 id: torchWinner.id,
                 nickname: torchWinner.nickname,
-                time: (allTorchAndStealEvents.find(e => e.eventType === "TORCH_CLAIM" && e.toUserId === torchWinner.id && e.createdAt.toISOString().split('T')[0] === today)?.createdAt) || null
+                time: (allTorchAndStealEvents.find((e: any) => e.eventType === "TORCH_CLAIM" && e.toUserId === torchWinner.id && e.createdAt.toISOString().split('T')[0] === today)?.createdAt) || null
             } : null,
             records: recordsData,
             xp: {

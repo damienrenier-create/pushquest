@@ -290,7 +290,7 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
     const featuredBadgeKey = featuredConfig?.value;
 
     const summariesResult = precomputedSummaries ? { summaries: precomputedSummaries, winnersByDate: {} } : getUserSummaries(users, events);
-    const summaries = summariesResult.summaries;
+    const summaries = (summariesResult as any).summaries || summariesResult;
 
     // 1. Gather Global Records from summaries
     let maxVolDay = 0, maxVolDayUser: string | null = null;
@@ -301,7 +301,7 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
     const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const todayISO = now.toISOString().split("T")[0];
 
-    summaries.forEach(s => {
+    summaries.forEach((s: any) => {
         const volDay = s.getDayTotal(todayISO);
         const volMonth = s.getMonthTotal(currentMonthPrefix);
         const volYear = s.totalAll;
@@ -315,7 +315,7 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
     const xpUserMap = new Map();
 
     users.forEach(u => {
-        const summary = summaries.find(s => s.id === u.id);
+        const summary = summaries.find((s: any) => s.id === u.id);
         if (!summary) return;
 
         let totalXP = 0;
@@ -361,7 +361,7 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
 
                 if (isMilkaBday || isMoolsBday) {
                     // Check if they were #1 that day
-                    const isWinner = summaries.every(s => s.id === u.id || s.getDayTotal(d) < dayTotal);
+                    const isWinner = summaries.every((s: any) => s.id === u.id || s.getDayTotal(d) < dayTotal);
                     if (isWinner) dayXP *= 3;
                 }
 
