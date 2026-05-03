@@ -143,6 +143,24 @@ export default function ChallengeDashboard() {
         setNotification({ id: Date.now().toString(), message, type })
     }, [setNotification])
 
+    const fetchQuickData = useCallback(async () => {
+        try {
+            const res = await fetch("/api/dashboard/quick")
+            if (res.ok) {
+                const q = await res.json()
+                setData(prev => ({
+                    ...prev,
+                    todayISO: q.todayISO,
+                    selectedDateISO: q.todayISO,
+                    requiredReps: { selected: q.requiredReps, today: q.requiredReps },
+                    totalsSelected: { ...prev.totalsSelected, total: q.currentTotal }
+                }))
+            }
+        } catch (err) {
+            // silencieux — fetchData prendra le relais
+        }
+    }, [setData])
+
     const getTodayISO = useCallback(() => getLocalISO(), [])
 
     const fetchStatuses = useCallback(async () => {
@@ -247,8 +265,9 @@ export default function ChallengeDashboard() {
     }, [searchParams]) // React on search params change
 
     useEffect(() => {
+        fetchQuickData()
         fetchData()
-    }, [fetchData])
+    }, [fetchData, fetchQuickData])
 
     const handleSwitchEgo = async () => {
         const currentLeague = (session?.user as any)?.league || "POMPES";
