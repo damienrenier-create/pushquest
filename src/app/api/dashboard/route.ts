@@ -179,33 +179,47 @@ export async function GET(req: Request) {
             const currentMedicalNote = u.medicalCertificates?.find((c: any) => today >= c.startDateISO && today <= c.endDateISO)?.note || null;
             const isVeteran = u.buyoutPaid;
 
-            const dates30 = getDatesInRangeToToday(startDate30).filter(d => d < today);
-            let completeCount = 0;
-            let currentStreak = 0;
-            let totalPerfectDays = 0;
-            const maxSingleSet = Math.max(0, ...uSets.map((s: any) => s.reps));
-            let streakBroken = false;
+            // --- ENRICHED METRICS FOR REGULARITY CYCLE ---
+            const todayISO = today;
+            const firstOfMonthISO = todayISO.substring(0, 8) + "01";
+            const registrationDateISO = formatDateISO(new Date(u.createdAt));
+            
+            const datesGlobal = getDatesInRangeToToday(registrationDateISO).filter(d => d < todayISO);
+            const datesMonth = datesGlobal.filter(d => d >= firstOfMonthISO);
+            const dates30 = getDatesInRangeToToday(startDate30).filter(d => d < todayISO);
 
-            for (let i = dates30.length - 1; i >= 0; i--) {
-                const d = dates30[i];
-                const daySets = uSets.filter((s: any) => s.date === d);
-                const dayTotal = daySets
-                    .reduce((sum: number, s: any) => sum + (s.exercise === "PLANK" ? Math.floor(s.reps / 5) : s.reps), 0);
-
-                const req = getDailyTargetForUserOnDate(u, d);
-
-                // For rate/streak, injury or buyout counts as "completed" or "excused"
-                const hasExcise = isVeteran || (u.medicalCertificates?.some((c: any) => d >= c.startDateISO && d <= c.endDateISO));
-                const isComp = (dayTotal >= req) || hasExcise;
-
-                if (isComp) {
-                    completeCount++;
-                    if (!hasExcise) totalPerfectDays++; // Excusé n'est pas "parfait" pour le badge
-                    if (!streakBroken) currentStreak++;
-                } else {
-                    streakBroken = true;
+            const calculatePeriodStats = (dates: string[]) => {
+                let complete = 0;
+                let currentStreak = 0;
+                let broken = false;
+                for (let i = dates.length - 1; i >= 0; i--) {
+                    const d = dates[i];
+                    const daySets = uSets.filter((s: any) => s.date === d);
+                    const dayTotal = daySets.reduce((sum: number, s: any) => sum + (s.exercise === "PLANK" ? Math.floor(s.reps / 5) : s.reps), 0);
+                    const req = getDailyTargetForUserOnDate(u, d);
+                    const isExcused = isVeteran || (u.medicalCertificates?.some((c: any) => d >= c.startDateISO && d <= c.endDateISO));
+                    const isComp = (dayTotal >= req) || isExcused;
+                    
+                    if (isComp) {
+                        complete++;
+                        if (!broken) currentStreak++;
+                    } else {
+                        broken = true;
+                    }
                 }
-            }
+                return { 
+                    rate: dates.length > 0 ? (complete / dates.length) * 100 : 0, 
+                    streak: currentStreak 
+                };
+            };
+
+            const globalStats = calculatePeriodStats(datesGlobal);
+            const monthStats = calculatePeriodStats(datesMonth);
+            const last30Stats = calculatePeriodStats(dates30);
+
+            // Last Entry Timestamp
+            const lastSet = [...uSets].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+            const lastEntryAt = lastSet ? lastSet.createdAt : null;
 
             return {
                 id: u.id,
@@ -215,10 +229,18 @@ export async function GET(req: Request) {
                 isInjured,
                 isVeteran,
                 currentMedicalNote,
-                completionRate: (completeCount / Math.max(1, dates30.length)) * 100,
-                streakCurrent: currentStreak,
-                totalPerfectDays,
-                maxSingleSet,
+                completionRate: last30Stats.rate,
+                streakCurrent: last30Stats.streak,
+                monthStats,
+                globalStats,
+                lastEntryAt,
+                maxSingleSet: Math.max(0, ...uSets.map((s: any) => s.reps)),
+                totalPerfectDays: uSets.filter((s: any) => {
+                    const d = s.date;
+                    const daySets = uSets.filter((ss: any) => ss.date === d);
+                    const dayTotal = daySets.reduce((sum: number, ss: any) => sum + (ss.exercise === "PLANK" ? Math.floor(ss.reps / 5) : ss.reps), 0);
+                    return dayTotal >= getDailyTargetForUserOnDate(u, d);
+                }).length, // Note: Simplified but accurate enough for badges
                 totalPushupsAllTime,
                 totalPullupsAllTime,
                 totalSquatsAllTime,

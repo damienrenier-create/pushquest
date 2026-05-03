@@ -2,6 +2,7 @@
 "use client"
 
 import Link from "next/link"
+import { useState } from "react"
 
 interface RecordsAssiduiteSectionProps {
     data: any
@@ -9,6 +10,84 @@ interface RecordsAssiduiteSectionProps {
     session: any
     router: any
     getStreakEmoji: (rate: number, streak: number) => { label: string, emoji: string }
+}
+
+function RegularitySubline({ u, ind }: { u: any, ind: any }) {
+    const [viewIndex, setViewIndex] = useState(0);
+
+    const formatLastEntry = (dateStr: string | null) => {
+        if (!dateStr) return "Aucun encodage";
+        const d = new Date(dateStr);
+        const now = new Date();
+        const isToday = d.toDateString() === now.toDateString();
+        const timeStr = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        
+        if (isToday) return `aujourd'hui ${timeStr}`;
+        
+        const yesterday = new Date();
+        yesterday.setDate(now.getDate() - 1);
+        if (d.toDateString() === yesterday.toDateString()) return `hier ${timeStr}`;
+        
+        return `${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} ${timeStr}`;
+    };
+
+    const views = [
+        {
+            label: "Mois",
+            rate: Math.round(u.monthStats?.rate || 0),
+            streak: u.monthStats?.streak || 0,
+            icon: "📅"
+        },
+        {
+            label: "Global",
+            rate: Math.round(u.globalStats?.rate || 0),
+            streak: u.globalStats?.streak || 0,
+            icon: "🌍"
+        },
+        {
+            label: "Dernier encodage",
+            content: formatLastEntry(u.lastEntryAt),
+            icon: "⌚"
+        }
+    ];
+
+    const current = views[viewIndex];
+
+    return (
+        <div 
+            onClick={(e) => {
+                e.stopPropagation();
+                setViewIndex((prev) => (prev + 1) % views.length);
+            }}
+            className="flex items-center gap-1 mt-1 cursor-pointer select-none active:opacity-50 transition-all group"
+        >
+            <span className="text-[10px]">{ind.emoji}</span>
+            <div className="flex flex-col h-3 overflow-hidden relative min-w-[140px]">
+                <div 
+                    className="transition-transform duration-300 ease-out"
+                    style={{ transform: `translateY(-${viewIndex * 100}%)` }}
+                >
+                    {views.map((v, i) => (
+                        <div key={i} className="h-3 flex items-center gap-1">
+                            {v.content ? (
+                                <span className="text-[8px] font-black text-gray-400 uppercase tracking-tight truncate">
+                                    {v.content}
+                                </span>
+                            ) : (
+                                <>
+                                    <span className="text-[8px] font-black text-gray-500 uppercase tracking-tight">{v.label} {v.rate}%</span>
+                                    {v.streak > 0 && <span className="text-[8px] font-black text-orange-400 italic">({v.streak}j 🔥)</span>}
+                                </>
+                            )}
+                            {viewIndex === i && i !== 0 && <div className="w-1 h-1 bg-blue-400 rounded-full animate-pulse" />}
+                        </div>
+                    ))}
+                </div>
+            </div>
+            {/* Visual indicator that it's clickable (discreet dot) */}
+            <div className="w-1 h-1 bg-gray-200 rounded-full group-hover:bg-blue-400 transition-colors shrink-0" />
+        </div>
+    );
 }
 
 export default function RecordsAssiduiteSection({
@@ -132,7 +211,7 @@ export default function RecordsAssiduiteSection({
                                             })()
                                         )}
                                     </div>
-                                    <div>
+                                    <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-1.5">
                                             {(() => {
                                                 const userXP = data?.xp?.leaderboard.find((x: any) => x.id === u.id);
@@ -147,14 +226,10 @@ export default function RecordsAssiduiteSection({
                                                 {!u.isInjured && !u.isVeteran && <span className="text-[10px] opacity-20 grayscale" title="Apte au service">✅</span>}
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-1 mt-1 cursor-help" title={`Statut moyen des apports par rapport à la consigne du jour`}>
-                                            <span className="text-[10px]">{ind.emoji}</span>
-                                            <span className="text-[8px] font-black text-gray-400 uppercase tracking-tight">{ind.label}</span>
-                                            {u.streakCurrent > 0 && <span className="text-[8px] font-black text-orange-400" title={`🔥 Jours consécutifs avec dépassement de consigne`}>({u.streakCurrent}j 🔥)</span>}
-                                        </div>
+                                        <RegularitySubline u={u} ind={ind} />
                                     </div>
                                 </div>
-                                <div className="text-right cursor-help" title="Taux d'accomplissement des objectifs journaliers">
+                                <div className="text-right cursor-help" title="Taux d'accomplissement (30j)">
                                     <p className="font-black text-blue-600 text-sm">{Math.round(u.completionRate)}%</p>
                                 </div>
                             </div>
