@@ -646,6 +646,9 @@ export async function updateBadgesPostSave(userId: string, precomputedSummaries?
 
         let bestUser: any = null;
         let bestValue = 0;
+        let isTemporalBadge = false;
+        let temporalToday = "";
+        let temporalYesterday = "";
 
         if (def.metricType === "MAX_BONUS") {
             summaries.forEach((s: any) => {
@@ -930,14 +933,15 @@ export async function updateBadgesPostSave(userId: string, precomputedSummaries?
                 }
             });
         } else if (def.metricType === "TRINITY_GOLD" || def.metricType === "TRINITY_ULTIMATE" || def.metricType === "QUATUOR_GOLD" || def.metricType === "QUATUOR_ULTIMATE") {
-            const today = getTodayISO();
-            const yesterday = getYesterdayISO();
+            isTemporalBadge = true;
+            temporalToday = getTodayISO();
+            temporalYesterday = getYesterdayISO();
             summaries.forEach((s: any) => {
-                const hasToday = def.metricType === "TRINITY_GOLD" ? s.hasTrinityGold(today) : def.metricType === "TRINITY_ULTIMATE" ? s.hasTrinityUltimate(today) : def.metricType === "QUATUOR_GOLD" ? s.hasQuatuorGold(today) : s.hasQuatuorUltimate(today);
-                const hasYesterday = def.metricType === "TRINITY_GOLD" ? s.hasTrinityGold(yesterday) : def.metricType === "TRINITY_ULTIMATE" ? s.hasTrinityUltimate(yesterday) : def.metricType === "QUATUOR_GOLD" ? s.hasQuatuorGold(yesterday) : s.hasQuatuorUltimate(yesterday);
+                const hasToday = def.metricType === "TRINITY_GOLD" ? s.hasTrinityGold(temporalToday) : def.metricType === "TRINITY_ULTIMATE" ? s.hasTrinityUltimate(temporalToday) : def.metricType === "QUATUOR_GOLD" ? s.hasQuatuorGold(temporalToday) : s.hasQuatuorUltimate(temporalToday);
+                const hasYesterday = def.metricType === "TRINITY_GOLD" ? s.hasTrinityGold(temporalYesterday) : def.metricType === "TRINITY_ULTIMATE" ? s.hasTrinityUltimate(temporalYesterday) : def.metricType === "QUATUOR_GOLD" ? s.hasQuatuorGold(temporalYesterday) : s.hasQuatuorUltimate(temporalYesterday);
 
                 if (hasToday || hasYesterday) {
-                    const val = hasToday ? s.getDayTotal(today) : s.getDayTotal(yesterday);
+                    const val = hasToday ? s.getDayTotal(temporalToday) : s.getDayTotal(temporalYesterday);
                     if (val > bestValue || (val === bestValue && bestValue > 0 && isBetterTieBreak(s, bestUser, "totalAll"))) {
                         bestValue = val; bestUser = s;
                     }
@@ -984,8 +988,20 @@ export async function updateBadgesPostSave(userId: string, precomputedSummaries?
         if (bestUser && bestValue > 0) {
             const isSameUser = ownership?.currentUserId === bestUser.id;
 
-            // Historical Record Logic: Only award if strictly better than the current record
-            const isBetterValue = bestValue > (ownership?.currentValue || 0);
+            // Bug 1 fix — For temporal badges, compare against the holder's CURRENT day total
+            // not the stale stored currentValue (which may be from a previous day)
+            let isBetterValue: boolean;
+            if (isTemporalBadge) {
+                const currentHolderSummary = ownership?.currentUserId
+                    ? summaries.find((s: any) => s.id === ownership.currentUserId)
+                    : null;
+                const currentHolderValue = currentHolderSummary
+                    ? (currentHolderSummary.getDayTotal(temporalToday) || currentHolderSummary.getDayTotal(temporalYesterday))
+                    : 0;
+                isBetterValue = bestValue > Math.max(currentHolderValue, ownership?.currentValue || 0);
+            } else {
+                isBetterValue = bestValue > (ownership?.currentValue || 0);
+            }
 
             if (isSameUser && !isBetterValue) continue;
 
@@ -999,6 +1015,15 @@ export async function updateBadgesPostSave(userId: string, precomputedSummaries?
                 }
             });
             if (recentSameEvent) continue;
+
+            // Bug 2 fix — Optimistic lock: re-read ownership before writing to catch race conditions
+            const freshOwnership = await (prisma as any).badgeOwnership.findUnique({
+                where: { badgeKey: def.key }
+            });
+            if (freshOwnership?.currentUserId === (bestUser as any).id &&
+                freshOwnership?.currentValue >= bestValue) {
+                continue; // Already handled by a concurrent call
+            }
 
             const eventType = !ownership?.currentUserId
                 ? (def.isUnique ? "UNIQUE_AWARDED" : "CLAIM")

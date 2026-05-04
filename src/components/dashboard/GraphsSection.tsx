@@ -319,7 +319,7 @@ export default function GraphsSection({ data, graphPeriod, setGraphPeriod }: Gra
                         ) : (
                             <div className="space-y-12">
                                 {/* Multi-Line Area Chart */}
-                                <div className="relative h-[28rem] w-full bg-gradient-to-b from-slate-50/30 to-white rounded-[3rem] p-10 border border-slate-100 shadow-inner overflow-visible">
+                                <div className="relative h-[28rem] w-full bg-gradient-to-b from-slate-50/30 to-white rounded-2xl p-6 border border-slate-100 shadow-inner overflow-visible">
                                     {(() => {
                                         const visibleUsers = filteredProgression.filter(u => !hiddenUsers.has(u.id));
                                         const allValues = visibleUsers.flatMap(u => u.timeline.map((t: any) => t[selectedMetric]));
@@ -356,8 +356,8 @@ export default function GraphsSection({ data, graphPeriod, setGraphPeriod }: Gra
                                                         <defs>
                                                             {visibleUsers.map(user => (
                                                                 <linearGradient key={`grad-${user.id}`} id={`grad-${user.id}`} x1="0" y1="0" x2="0" y2="1">
-                                                                    <stop offset="0%" stopColor={user.color} stopOpacity="0.15" />
-                                                                    <stop offset="100%" stopColor={user.color} stopOpacity="0" />
+                                                                    <stop offset="0%" stopColor={user.color} stopOpacity="0.12" />
+                                                                    <stop offset="100%" stopColor={user.color} stopOpacity="0.0" />
                                                                 </linearGradient>
                                                             ))}
                                                             <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
@@ -388,7 +388,7 @@ export default function GraphsSection({ data, graphPeriod, setGraphPeriod }: Gra
                                                                         className="transition-all duration-700"
                                                                     />
                                                                     <path
-                                                                        d={smoothPath} fill="none" stroke={user.color} strokeWidth="3.5"
+                                                                        d={smoothPath} fill="none" stroke={user.color} strokeWidth="1.5"
                                                                         strokeLinecap="round" strokeLinejoin="round"
                                                                         filter="url(#glow)"
                                                                         className="drop-shadow-lg transition-all duration-700"
@@ -399,7 +399,7 @@ export default function GraphsSection({ data, graphPeriod, setGraphPeriod }: Gra
                                                                         <circle 
                                                                             cx={(hoveredIndex / (dateCount - 1)) * 1000} 
                                                                             cy={100 - (user.timeline[hoveredIndex][selectedMetric] / maxVal) * 100} 
-                                                                            r="5" fill="white" stroke={user.color} strokeWidth="2.5"
+                                                                            r="3.5" fill="white" stroke={user.color} strokeWidth="1.5"
                                                                             className="shadow-xl transition-all duration-100"
                                                                         />
                                                                     )}
