@@ -31,6 +31,14 @@ model User {
   medicalCertificates MedicalCertificate[]
   xpAdjustments XpAdjustment[]
   specialWorkoutEntries SpecialWorkoutEntry[]
+  betsCreated            Bet[]            @relation("BetsCreated")
+  betsTargeted           Bet[]            @relation("BetsTargeted")
+  betEntries             BetEntry[]
+  betEvents              BetEvent[]
+  betEventLikesGiven     BetEventLike[]
+  coinAdjustments        CoinAdjustment[]
+  quotaModifiersGiven    QuotaModifier[]  @relation("QuotaModifierSource")
+  quotaModifiersReceived QuotaModifier[]  @relation("QuotaModifierTarget")
   league    String      @default("POMPES")
   image     String?     // URL to profile picture
   alterEgoId String?     @unique
@@ -234,4 +242,138 @@ model SpecialWorkoutEntry {
 
   @@unique([userId, workoutId])
   @@index([workoutId, totalScore])
+}
+
+// ─── SYSTÈME DE PARIS ────────────────────────────────────────────────────────────────────
+
+model Bet {
+  id               String      @id @default(cuid())
+  type             String      // "PRONOSTIC" | "DUEL" | "COURSE"
+  subType          String      @default("BINARY") // "BINARY" | "MULTI" | "NUMERIC" | "PLAYER_RACE"
+  title            String
+  description      String?
+  options          String      // JSON : [{ key: string, label: string, emoji?: string }]
+  status           String      @default("DRAFT") // "DRAFT" | "OPEN" | "LOCKED" | "RESOLVED" | "CANCELLED"
+  openAt           DateTime?
+  closeAt          DateTime?
+  lockAt           DateTime?
+  resolvedAt       DateTime?
+  resolvedOption   String?
+  resolvedByUserId String?
+  createdByUserId  String
+  createdBy        User        @relation("BetsCreated", fields: [createdByUserId], references: [id])
+  targetUserId     String?
+  targetUser       User?       @relation("BetsTargeted", fields: [targetUserId], references: [id])
+  metadata         String?     // JSON extensible
+  entries          BetEntry[]
+  events           BetEvent[]
+  result           BetResult?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@index([status])
+  @@index([closeAt])
+}
+
+model BetEntry {
+  id          String    @id @default(cuid())
+  betId       String
+  bet         Bet       @relation(fields: [betId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  option      String
+  xpStaked    Int
+  multiplier  Float
+  ecStaked    Int       @default(0)
+  withdrawn   Boolean   @default(false)
+  withdrawnAt DateTime?
+  xpReturned  Int?
+  ecReturned  Int?
+  placedAt    DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([betId, userId])
+  @@index([betId])
+  @@index([userId])
+}
+
+model BetEvent {
+  id         String         @id @default(cuid())
+  betId      String
+  bet        Bet            @relation(fields: [betId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventType  String         // "STAKE" | "INCREASE" | "WITHDRAW" | "RESOLVE" | "CANCEL" | "DUEL_SENT" | "DUEL_ACCEPTED" | "DUEL_DECLINED"
+  xpAmount   Int            @default(0)
+  ecAmount   Int            @default(0)
+  option     String?
+  multiplier Float?
+  metadata   String?
+  likes      BetEventLike[]
+  createdAt  DateTime       @default(now())
+
+  @@index([betId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model BetEventLike {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     BetEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([eventId, userId])
+}
+
+model BetResult {
+  id                   String   @id @default(cuid())
+  betId                String   @unique
+  bet                  Bet      @relation(fields: [betId], references: [id], onDelete: Cascade)
+  winnerOption         String?
+  resolvedAt           DateTime @default(now())
+  resolvedByUserId     String
+  distributionSnapshot String?  // JSON snapshot des gains distribués
+  note                 String?
+}
+
+// ─── ÉCONOMIE EMBERCOINS ───────────────────────────────────────────────────────────────────
+
+model CoinAdjustment {
+  id        String   @id @default(cuid())
+  amount    Int      // positif = gain, négatif = dépense
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reason    String   // "BET_WIN" | "BET_STAKE" | "BET_WITHDRAW" | "BET_CANCELLED" | "BET_DECLINED" | "BADGE_REWARD" | "QUOTA_MODIFIER" | "SPECIAL_ACTION"
+  refId     String?  // betId, badgeKey, etc.
+  date      String   // YYYY-MM-DD
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([date])
+}
+
+// ─── MODIFICATEURS DE QUOTA ────────────────────────────────────────────────────────────────
+
+model QuotaModifier {
+  id               String   @id @default(cuid())
+  type             String   // "REDUCE_SELF" | "INCREASE_OTHER"
+  sourceUserId     String
+  sourceUser       User     @relation("QuotaModifierSource", fields: [sourceUserId], references: [id])
+  targetUserId     String
+  targetUser       User     @relation("QuotaModifierTarget", fields: [targetUserId], references: [id])
+  targetDateISO    String   // YYYY-MM-DD — jamais le jour de la dépense
+  repsDelta        Int      // négatif pour REDUCE_SELF, positif pour INCREASE_OTHER
+  ecCost           Int
+  baseEcPerRep     Int      @default(10)
+  demandMultiplier Float    @default(1.0)
+  status           String   @default("PENDING") // "PENDING" | "APPLIED" | "CANCELLED"
+  createdAt        DateTime @default(now())
+  appliedAt        DateTime?
+
+  @@index([targetUserId, targetDateISO])
+  @@index([sourceUserId])
+  @@index([targetDateISO, status])
 }
