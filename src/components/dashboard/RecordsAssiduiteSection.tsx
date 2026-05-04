@@ -13,7 +13,7 @@ interface RecordsAssiduiteSectionProps {
 }
 
 function RegularitySubline({ u, ind }: { u: any, ind: any }) {
-    const [viewIndex, setViewIndex] = useState(0);
+    const [showGlobal, setShowGlobal] = useState(false);
 
     const formatLastEntry = (dateStr: string | null) => {
         if (!dateStr) return "Aucun encodage";
@@ -21,71 +21,40 @@ function RegularitySubline({ u, ind }: { u: any, ind: any }) {
         const now = new Date();
         const isToday = d.toDateString() === now.toDateString();
         const timeStr = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-        
         if (isToday) return `aujourd'hui ${timeStr}`;
-        
         const yesterday = new Date();
         yesterday.setDate(now.getDate() - 1);
         if (d.toDateString() === yesterday.toDateString()) return `hier ${timeStr}`;
-        
         return `${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} ${timeStr}`;
     };
 
-    const views = [
-        {
-            label: "Mois",
-            rate: Math.round(u.monthStats?.rate || 0),
-            streak: u.monthStats?.streak || 0,
-            icon: "📅"
-        },
-        {
-            label: "Global",
-            rate: Math.round(u.globalStats?.rate || 0),
-            streak: u.globalStats?.streak || 0,
-            icon: "🌍"
-        },
-        {
-            label: "Dernier encodage",
-            content: formatLastEntry(u.lastEntryAt),
-            icon: "⌚"
-        }
-    ];
+    const monthRate = Math.round(u.monthStats?.rate || 0);
+    const globalRate = Math.round(u.globalStats?.rate || 0);
+    const monthStreak = u.monthStats?.streak || 0;
+    const globalStreak = u.globalStats?.streak || 0;
 
-    const current = views[viewIndex];
+    const rate = showGlobal ? globalRate : monthRate;
+    const streak = showGlobal ? globalStreak : monthStreak;
+    const label = showGlobal ? "GLOBAL" : "MOIS";
 
     return (
-        <div 
-            onClick={(e) => {
-                e.stopPropagation();
-                setViewIndex((prev) => (prev + 1) % views.length);
-            }}
-            className="flex items-center gap-1 mt-1 cursor-pointer select-none active:opacity-50 transition-all group"
-        >
-            <span className="text-[10px]">{ind.emoji}</span>
-            <div className="flex flex-col h-3 overflow-hidden relative min-w-[140px]">
-                <div 
-                    className="transition-transform duration-300 ease-out"
-                    style={{ transform: `translateY(-${viewIndex * 100}%)` }}
-                >
-                    {views.map((v, i) => (
-                        <div key={i} className="h-3 flex items-center gap-1">
-                            {v.content ? (
-                                <span className="text-[8px] font-black text-gray-400 uppercase tracking-tight truncate">
-                                    {v.content}
-                                </span>
-                            ) : (
-                                <>
-                                    <span className="text-[8px] font-black text-gray-500 uppercase tracking-tight">{v.label} {v.rate}%</span>
-                                    {v.streak > 0 && <span className="text-[8px] font-black text-orange-400 italic">({v.streak}j 🔥)</span>}
-                                </>
-                            )}
-                            {viewIndex === i && i !== 0 && <div className="w-1 h-1 bg-blue-400 rounded-full animate-pulse" />}
-                        </div>
-                    ))}
-                </div>
-            </div>
-            {/* Visual indicator that it's clickable (discreet dot) */}
-            <div className="w-1 h-1 bg-gray-200 rounded-full group-hover:bg-blue-400 transition-colors shrink-0" />
+        <div className="flex items-center gap-2 mt-1">
+            <span className="text-[11px]">{ind.emoji}</span>
+            <button
+                onClick={(e) => { e.stopPropagation(); setShowGlobal(v => !v); }}
+                className="flex items-center gap-1 select-none active:opacity-50"
+            >
+                <span className="text-[11px] font-bold text-gray-500 uppercase">
+                    {label} {rate}%
+                </span>
+                {streak > 0 && (
+                    <span className="text-[11px] font-bold text-orange-400">· 🔥{streak}j</span>
+                )}
+                <span className="text-[11px] text-gray-300 font-bold">›</span>
+            </button>
+            <span className="text-[11px] text-gray-400 italic truncate">
+                ⌚ {formatLastEntry(u.lastEntryAt)}
+            </span>
         </div>
     );
 }
