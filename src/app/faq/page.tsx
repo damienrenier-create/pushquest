@@ -411,6 +411,124 @@ function FAQContent() {
                             </div>
                         </section>
 
+                        {/* LES PARIS */}
+                        <section id="paris" className="bg-amber-50 rounded-[2.5rem] p-8 shadow-sm border border-amber-100 space-y-6">
+                            <div className="flex items-center gap-3 border-b border-amber-100 pb-4">
+                                <span className="text-2xl">🎲</span>
+                                <h2 className="text-2xl font-black uppercase italic tracking-tighter text-amber-900">Les Paris</h2>
+                            </div>
+                            <div className="space-y-4">
+
+                                {/* C'est quoi */}
+                                <div className="flex items-start gap-4 p-5 bg-white rounded-3xl border border-amber-100">
+                                    <div className="p-2 bg-amber-100 rounded-xl text-amber-600">🎯</div>
+                                    <div>
+                                        <h4 className="font-black text-gray-900 uppercase text-sm">C'est quoi un pari ?</h4>
+                                        <p className="text-xs font-bold text-gray-500 mt-1 leading-snug">
+                                            Des événements créés sur la vie du groupe — qui va tenir, qui va craquer, qui va dominer ce mois-ci. Tu mises des XP sur l'issue que tu penses correcte. Si tu as raison, tu récupères ta mise plus une part de la pool des perdants.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Miser tôt */}
+                                <div className="flex items-start gap-4 p-5 bg-amber-100 rounded-3xl border border-amber-200 shadow-sm">
+                                    <div className="p-2 bg-amber-200 rounded-xl text-amber-700">⚡</div>
+                                    <div>
+                                        <h4 className="font-black text-amber-900 uppercase text-sm">Miser tôt, ça rapporte plus</h4>
+                                        <p className="text-xs font-bold text-amber-800 mt-1 leading-snug">
+                                            Plus tu mises tôt après l'ouverture du pari, plus ton multiplicateur est élevé. Les premiers parieurs prennent le plus de risque — et sont les mieux récompensés si ils ont raison.
+                                        </p>
+                                        <div className="mt-3 space-y-1">
+                                            <div className="flex items-center justify-between px-3 py-1.5 bg-white/60 rounded-xl text-[10px] font-black">
+                                                <span>Dans les premières heures</span>
+                                                <span className="text-amber-700">× 2.0</span>
+                                            </div>
+                                            <div className="flex items-center justify-between px-3 py-1.5 bg-white/60 rounded-xl text-[10px] font-black">
+                                                <span>Première moitié du pari</span>
+                                                <span className="text-amber-700">× 1.6</span>
+                                            </div>
+                                            <div className="flex items-center justify-between px-3 py-1.5 bg-white/60 rounded-xl text-[10px] font-black">
+                                                <span>Deuxième moitié</span>
+                                                <span className="text-amber-600">× 1.3</span>
+                                            </div>
+                                            <div className="flex items-center justify-between px-3 py-1.5 bg-white/40 rounded-xl text-[10px] font-black">
+                                                <span>Dernière heure</span>
+                                                <span className="text-red-500">× 0.85 ⚠️</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Se retirer */}
+                                <div className="flex items-start gap-4 p-5 bg-white rounded-3xl border border-amber-100">
+                                    <div className="p-2 bg-orange-100 rounded-xl text-orange-600">🚪</div>
+                                    <div>
+                                        <h4 className="font-black text-gray-900 uppercase text-sm">Tu peux te retirer… mais ça coûte</h4>
+                                        <p className="text-xs font-bold text-gray-500 mt-1 leading-snug">
+                                            Tu as misé mais tu changes d'avis ? Tu peux récupérer une partie de ta mise — mais pas tout. Plus tu attends pour te retirer, plus tu perds.
+                                        </p>
+                                        <div className="mt-3 space-y-1">
+                                            <div className="flex items-center justify-between px-3 py-1.5 bg-gray-50 rounded-xl text-[10px] font-black">
+                                                <span>Retrait rapide (début)</span>
+                                                <span className="text-green-600">90% récupérés</span>
+                                            </div>
+                                            <div className="flex items-center justify-between px-3 py-1.5 bg-gray-50 rounded-xl text-[10px] font-black">
+                                                <span>Retrait en milieu de pari</span>
+                                                <span className="text-orange-500">60% récupérés</span>
+                                            </div>
+                                            <div className="flex items-center justify-between px-3 py-1.5 bg-gray-50 rounded-xl text-[10px] font-black">
+                                                <span>Retrait tardif</span>
+                                                <span className="text-red-500">30% récupérés</span>
+                                            </div>
+                                            <div className="flex items-center justify-between px-3 py-1.5 bg-red-50 rounded-xl text-[10px] font-black">
+                                                <span>Dernière heure</span>
+                                                <span className="text-red-600">Retrait impossible ❌</span>
+                                            </div>
+                                        </div>
+                                        <p className="text-[10px] uppercase font-black text-amber-500 mt-2 italic">
+                                            Les XP perdus au retrait alimentent la pool — ils profitent aux gagnants.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Distribution */}
+                                <div className="flex items-start gap-4 p-5 bg-white rounded-3xl border border-amber-100">
+                                    <div className="p-2 bg-green-100 rounded-xl text-green-600">💰</div>
+                                    <div>
+                                        <h4 className="font-black text-gray-900 uppercase text-sm">Comment sont distribués les gains ?</h4>
+                                        <p className="text-xs font-bold text-gray-500 mt-1 leading-snug">
+                                            Les XP de tous les perdants (et les malus de retraits) forment une pool commune redistribuée aux gagnants. Les gagnants qui ont misé tôt reçoivent une part plus grande grâce à leur multiplicateur.
+                                        </p>
+                                        <p className="text-[10px] uppercase font-black text-red-400 mt-2 italic">
+                                            Si personne ne mise sur l'option gagnante, la pool est perdue pour tout le monde.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Règles rapides */}
+                                <div className="flex items-start gap-4 p-5 bg-amber-900 rounded-3xl">
+                                    <div className="p-2 bg-amber-700 rounded-xl text-white">📋</div>
+                                    <div>
+                                        <h4 className="font-black text-white uppercase text-sm">Les règles en bref</h4>
+                                        <ul className="mt-2 space-y-1">
+                                            {[
+                                                "Ta mise est débitée immédiatement — ton XP baisse dès que tu parions",
+                                                "Une seule position par pari — tu peux augmenter ta mise mais pas changer d'option",
+                                                "Les paris sont créés et résolus par l'admin",
+                                                "En cas d'annulation, tout le monde est remboursé intégralement"
+                                            ].map((rule, i) => (
+                                                <li key={i} className="flex items-start gap-2 text-[10px] font-bold text-amber-100">
+                                                    <span className="text-amber-400 mt-0.5">→</span>
+                                                    {rule}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </section>
+
                         <section className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100 space-y-6">
                             <div className="flex items-center gap-3 border-b border-gray-50 pb-4">
                                 <Calendar className="text-pink-500" size={24} />

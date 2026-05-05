@@ -47,6 +47,18 @@ export default function BetsSection({ session }: { session: any }) {
             <CoinsBalance userId={session?.user?.id} />
 
             <div className="bg-white rounded-[2rem] p-4 sm:p-6 shadow-sm border border-gray-100">
+                {/* ENCART EXPLICATION */}
+                <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 mb-4">
+                    <p className="text-[11px] font-black text-amber-800 uppercase tracking-wide mb-1">🎲 Comment ça marche ?</p>
+                    <p className="text-[11px] font-bold text-amber-700 leading-snug">
+                        Mise des XP sur l'issue que tu penses correcte. Plus tu mises tôt, plus le multiplicateur est élevé (jusqu'à ×2). 
+                        Ta mise est débitée immédiatement. Les gagnants se partagent la pool des perdants.
+                    </p>
+                    <a href="/faq#paris" className="text-[10px] font-black text-amber-600 uppercase mt-2 inline-block hover:underline">
+                        Lire les règles complètes →
+                    </a>
+                </div>
+
                 <h2 className="text-xl font-black uppercase mb-6 flex items-center gap-2 text-slate-800">
                     🎲 PARIS EN COURS
                 </h2>
