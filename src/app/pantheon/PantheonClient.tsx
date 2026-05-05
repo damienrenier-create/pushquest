@@ -401,29 +401,40 @@ export default function PantheonClient({
                                         </div>
                                     </div>
                                     <div className="space-y-3">
-                                        {myTargets.slice(0, 3).map((target: any, i: number) => (
-                                            <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 hover:bg-white/20 transition-colors">
-                                                <div className="mb-2 sm:mb-0">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <span className="text-2xl">{target.emoji}</span>
-                                                        <h3 className="font-black text-sm uppercase">{target.badgeName}</h3>
+                                        {myTargets.slice(0, 3).map((target: any, i: number) => {
+                                            const isAlreadyAhead = target.challengerValue > target.currentValue;
+                                            const gap = Math.abs(target.diff);
+                                            return (
+                                                <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 hover:bg-white/20 transition-colors">
+                                                    <div className="mb-2 sm:mb-0">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <span className="text-2xl">{target.emoji}</span>
+                                                            <h3 className="font-black text-sm uppercase">{target.badgeName}</h3>
+                                                        </div>
+                                                        <div className="flex items-center gap-2 text-[10px] text-indigo-100 uppercase tracking-tight">
+                                                            <span>Roi : <span className="font-black text-white">{target.holder}</span> ({target.currentValue})</span>
+                                                            <span className="opacity-40">|</span>
+                                                            <span>Vous : <span className="font-black text-white">{target.challengerValue}</span></span>
+                                                            <span className="opacity-40">|</span>
+                                                            <span className="text-yellow-400">+{target.xpAtRisk} XP</span>
+                                                        </div>
                                                     </div>
-                                                    <div className="flex items-center gap-2 text-[10px] text-indigo-100 uppercase tracking-tight">
-                                                        <span>Roi : <span className="font-black text-white">{target.holder}</span> ({target.currentValue})</span>
-                                                        <span className="opacity-40">|</span>
-                                                        <span>Vous : <span className="font-black text-white">{target.challengerValue}</span></span>
-                                                        <span className="opacity-40">|</span>
-                                                        <span className="text-yellow-400">+{target.xpAtRisk} XP</span>
+                                                    <div className="shrink-0 text-right">
+                                                        {isAlreadyAhead ? (
+                                                            <div className="inline-flex items-center gap-2 bg-green-400 text-green-900 px-3 py-1.5 rounded-xl text-sm font-black shadow-sm">
+                                                                <Zap size={14} className="fill-green-900" />
+                                                                VOUS MENEZ +{gap} {target.unit}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="inline-flex items-center gap-2 bg-white text-indigo-600 px-3 py-1.5 rounded-xl text-sm font-black shadow-sm group-hover:scale-105 transition-transform">
+                                                                <Zap size={14} className="fill-indigo-600 animate-pulse" />
+                                                                ENCORE +{gap} {target.unit}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
-                                                <div className="shrink-0 text-right">
-                                                    <div className="inline-flex items-center gap-2 bg-white text-indigo-600 px-3 py-1.5 rounded-xl text-sm font-black shadow-sm group-hover:scale-105 transition-transform">
-                                                        <Zap size={14} className="fill-indigo-600 animate-pulse" />
-                                                        CIBLE : +{target.diff} {target.unit}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             )}
