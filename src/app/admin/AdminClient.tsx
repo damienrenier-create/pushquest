@@ -31,6 +31,24 @@ export default function AdminClient({ user }: { user: any }) {
     const [badgeKeyToReset, setBadgeKeyToReset] = useState("");
     const [alterEgoIdToLink, setAlterEgoIdToLink] = useState("");
 
+    // Paris admin
+    const [bets, setBets] = useState<any[]>([]);
+    const [betsLoading, setBetsLoading] = useState(false);
+    const [showBetsPanel, setShowBetsPanel] = useState(false);
+    const [newBet, setNewBet] = useState({
+        type: "PRONOSTIC",
+        subType: "MULTI",
+        title: "",
+        description: "",
+        options: [{ key: "opt1", label: "" }, { key: "opt2", label: "" }],
+        closeAt: "",
+        targetUserId: ""
+    });
+    const [betAction, setBetAction] = useState<{ betId: string; action: string } | null>(null);
+    const [resolveOption, setResolveOption] = useState("");
+    const [resolveNote, setResolveNote] = useState("");
+    const [betMessage, setBetMessage] = useState<string | null>(null);
+
     const deleteSet = async (setId: string) => {
         if (!confirm("Supprimer cette série ? Action irréversible.")) return;
         setLoading(setId);
@@ -208,6 +226,87 @@ export default function AdminClient({ user }: { user: any }) {
             } else alert("Erreur lors du lien");
         } catch (e) { alert("Erreur réseau"); }
         finally { setLoading(null); }
+    };
+
+    const loadBets = async () => {
+        setBetsLoading(true);
+        try {
+            const res = await fetch("/api/bets");
+            const data = await res.json();
+            setBets(data.bets || data || []);
+        } catch (e) {
+            setBetMessage("Erreur de chargement des paris");
+        } finally {
+            setBetsLoading(false);
+        }
+    };
+
+    const handleCreateBet = async () => {
+        if (!newBet.title || !newBet.closeAt) return setBetMessage("Titre et date de clôture requis");
+        if (newBet.options.some(o => !o.label)) return setBetMessage("Toutes les options doivent avoir un label");
+        try {
+            const res = await fetch("/api/bets", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    type: newBet.type,
+                    subType: newBet.subType,
+                    title: newBet.title,
+                    description: newBet.description || undefined,
+                    options: newBet.options,
+                    closeAt: new Date(newBet.closeAt).toISOString(),
+                    targetUserId: newBet.type === "DUEL" ? newBet.targetUserId : undefined
+                })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setBetMessage("✅ Pari créé en brouillon");
+                setNewBet({ type: "PRONOSTIC", subType: "MULTI", title: "", description: "",
+                            options: [{ key: "opt1", label: "" }, { key: "opt2", label: "" }],
+                            closeAt: "", targetUserId: "" });
+                loadBets();
+            } else {
+                setBetMessage("❌ " + (data.message || "Erreur"));
+            }
+        } catch (e) {
+            setBetMessage("❌ Erreur réseau");
+        }
+    };
+
+    const handlePublishBet = async (betId: string) => {
+        if (!confirm("Publier ce pari ? Les joueurs pourront miser.")) return;
+        const res = await fetch(`/api/bets/${betId}/publish`, { method: "POST" });
+        const data = await res.json();
+        setBetMessage(res.ok ? "✅ Pari publié" : "❌ " + data.message);
+        loadBets();
+    };
+
+    const handleResolveBet = async (betId: string) => {
+        if (!resolveOption) return setBetMessage("Sélectionnez l'option gagnante");
+        if (!confirm(`Résoudre sur "${resolveOption}" ? Les gains seront distribués immédiatement.`)) return;
+        const res = await fetch(`/api/bets/${betId}/resolve`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ winnerOption: resolveOption, note: resolveNote || undefined })
+        });
+        const data = await res.json();
+        setBetMessage(res.ok ? `✅ Résolu — ${data.distribution?.length || 0} gagnants` : "❌ " + data.message);
+        setBetAction(null);
+        setResolveOption("");
+        setResolveNote("");
+        loadBets();
+    };
+
+    const handleCancelBet = async (betId: string) => {
+        if (!confirm("Annuler ce pari ? Toutes les mises seront remboursées intégralement.")) return;
+        const res = await fetch(`/api/bets/${betId}/cancel`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ note: "Annulé par l'admin" })
+        });
+        const data = await res.json();
+        setBetMessage(res.ok ? `✅ Annulé — ${data.reimbursedCount} remboursements` : "❌ " + data.message);
+        loadBets();
     };
 
     return (
@@ -418,6 +517,219 @@ export default function AdminClient({ user }: { user: any }) {
                         <button onClick={handleLinkAlterEgo} disabled={loading === "link-ego"} className="w-full py-2 bg-emerald-600 text-white font-bold text-xs uppercase rounded-xl hover:bg-emerald-700 disabled:opacity-50">Lier l'Alter Ego</button>
                     </div>
                 </section>
+            </div>
+
+            {/* GESTION DES PARIS */}
+            <div className="mt-8">
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-black uppercase tracking-tighter text-slate-800">
+                        🎲 Gestion des Paris
+                    </h2>
+                    <button
+                        onClick={() => { setShowBetsPanel(!showBetsPanel); if (!showBetsPanel) loadBets(); }}
+                        className="px-4 py-2 bg-amber-500 text-white font-black text-xs uppercase rounded-xl hover:bg-amber-600"
+                    >
+                        {showBetsPanel ? "Fermer" : "Gérer les paris"}
+                    </button>
+                </div>
+
+                {showBetsPanel && (
+                    <div className="space-y-6">
+
+                        {/* MESSAGE FEEDBACK */}
+                        {betMessage && (
+                            <div className={`p-3 rounded-xl text-sm font-bold ${betMessage.startsWith("✅") ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
+                                {betMessage}
+                                <button onClick={() => setBetMessage(null)} className="ml-2 text-xs underline">Fermer</button>
+                            </div>
+                        )}
+
+                        {/* CRÉER UN NOUVEAU PARI */}
+                        <section className="bg-slate-50 rounded-3xl p-6 border border-slate-200">
+                            <h3 className="font-black text-[10px] text-slate-400 uppercase tracking-widest mb-4">
+                                Créer un nouveau pari
+                            </h3>
+                            <div className="space-y-3">
+                                {/* Type */}
+                                <div className="flex gap-2">
+                                    <select value={newBet.type} onChange={e => setNewBet({...newBet, type: e.target.value})}
+                                        className="flex-1 px-3 py-2 text-sm rounded-xl border border-slate-200 outline-none">
+                                        <option value="PRONOSTIC">Pronostic</option>
+                                        <option value="DUEL">Duel</option>
+                                        <option value="COURSE">Course</option>
+                                    </select>
+                                    <select value={newBet.subType} onChange={e => setNewBet({...newBet, subType: e.target.value})}
+                                        className="flex-1 px-3 py-2 text-sm rounded-xl border border-slate-200 outline-none">
+                                        <option value="BINARY">Binaire (Oui/Non)</option>
+                                        <option value="MULTI">Choix multiple</option>
+                                        <option value="PLAYER_RACE">Course entre joueurs</option>
+                                    </select>
+                                </div>
+
+                                {/* Titre */}
+                                <input type="text" placeholder="Titre du pari" value={newBet.title}
+                                    onChange={e => setNewBet({...newBet, title: e.target.value})}
+                                    className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 outline-none" />
+
+                                {/* Description */}
+                                <input type="text" placeholder="Description (optionnel)" value={newBet.description}
+                                    onChange={e => setNewBet({...newBet, description: e.target.value})}
+                                    className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 outline-none" />
+
+                                {/* Options */}
+                                <div className="space-y-2">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase">Options</p>
+                                    {newBet.options.map((opt, i) => (
+                                        <div key={i} className="flex gap-2">
+                                            <input type="text" placeholder={`Option ${i + 1}`} value={opt.label}
+                                                onChange={e => {
+                                                    const opts = [...newBet.options];
+                                                    opts[i] = { ...opts[i], label: e.target.value };
+                                                    setNewBet({...newBet, options: opts});
+                                                }}
+                                                className="flex-1 px-3 py-2 text-sm rounded-xl border border-slate-200 outline-none" />
+                                            {newBet.options.length > 2 && (
+                                                <button onClick={() => setNewBet({...newBet, options: newBet.options.filter((_, j) => j !== i)})}
+                                                    className="px-3 py-2 text-red-400 hover:text-red-600 text-sm font-bold">✕</button>
+                                            )}
+                                        </div>
+                                    ))}
+                                    {newBet.options.length < 6 && (
+                                        <button onClick={() => setNewBet({...newBet, options: [...newBet.options, { key: `opt${newBet.options.length + 1}`, label: "" }]})}
+                                            className="text-xs text-amber-600 font-bold hover:underline">
+                                            + Ajouter une option
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Date de clôture */}
+                                <input type="datetime-local" value={newBet.closeAt}
+                                    onChange={e => setNewBet({...newBet, closeAt: e.target.value})}
+                                    className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 outline-none" />
+
+                                {/* Target user pour DUEL */}
+                                {newBet.type === "DUEL" && (
+                                    <input type="text" placeholder="UserID du joueur ciblé (pour le duel)"
+                                        value={newBet.targetUserId}
+                                        onChange={e => setNewBet({...newBet, targetUserId: e.target.value})}
+                                        className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 outline-none" />
+                                )}
+
+                                <button onClick={handleCreateBet} disabled={loading === "create-bet"}
+                                    className="w-full py-2 bg-amber-500 text-white font-black text-xs uppercase rounded-xl hover:bg-amber-600 disabled:opacity-50">
+                                    Créer en brouillon
+                                </button>
+                            </div>
+                        </section>
+
+                        {/* LISTE DES PARIS EXISTANTS */}
+                        <section className="bg-white rounded-3xl border border-gray-100 overflow-hidden">
+                            <div className="p-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
+                                <h3 className="font-black text-[10px] text-gray-400 uppercase tracking-widest">
+                                    Paris existants
+                                </h3>
+                                <button onClick={loadBets} className="text-xs text-amber-600 font-bold hover:underline">
+                                    Rafraîchir
+                                </button>
+                            </div>
+
+                            {betsLoading && <p className="p-6 text-center text-gray-400 text-sm">Chargement...</p>}
+
+                            <div className="divide-y divide-gray-50">
+                                {bets.map((bet: any) => {
+                                    const options = typeof bet.options === "string" ? JSON.parse(bet.options) : bet.options;
+                                    const statusColors: Record<string, string> = {
+                                        DRAFT: "bg-gray-100 text-gray-600",
+                                        OPEN: "bg-green-100 text-green-700",
+                                        LOCKED: "bg-amber-100 text-amber-700",
+                                        RESOLVED: "bg-blue-100 text-blue-700",
+                                        CANCELLED: "bg-red-100 text-red-600"
+                                    };
+                                    return (
+                                        <div key={bet.id} className="p-4 hover:bg-gray-50 transition-colors">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${statusColors[bet.status] || "bg-gray-100 text-gray-600"}`}>
+                                                            {bet.status}
+                                                        </span>
+                                                        <span className="text-[10px] text-gray-400 font-bold uppercase">{bet.type}</span>
+                                                    </div>
+                                                    <p className="font-bold text-sm text-gray-800">{bet.title}</p>
+                                                    <p className="text-[10px] text-gray-400 mt-0.5">
+                                                        Clôture : {bet.closeAt ? new Date(bet.closeAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : "—"}
+                                                        {" · "}{bet.entries?.length || 0} parieurs
+                                                    </p>
+                                                </div>
+
+                                                {/* Actions selon statut */}
+                                                <div className="flex flex-col gap-1.5 shrink-0">
+                                                    {bet.status === "DRAFT" && (
+                                                        <button onClick={() => handlePublishBet(bet.id)}
+                                                            className="px-3 py-1.5 bg-green-600 text-white font-black text-[10px] uppercase rounded-xl hover:bg-green-700">
+                                                            Publier
+                                                        </button>
+                                                    )}
+                                                    {(bet.status === "OPEN" || bet.status === "LOCKED") && (
+                                                        <>
+                                                            <button onClick={() => setBetAction({ betId: bet.id, action: "resolve" })}
+                                                                className="px-3 py-1.5 bg-blue-600 text-white font-black text-[10px] uppercase rounded-xl hover:bg-blue-700">
+                                                                Résoudre
+                                                            </button>
+                                                            <button onClick={() => handleCancelBet(bet.id)}
+                                                                className="px-3 py-1.5 bg-red-500 text-white font-black text-[10px] uppercase rounded-xl hover:bg-red-600">
+                                                                Annuler
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                    {bet.status === "RESOLVED" && (
+                                                        <span className="text-[10px] text-blue-600 font-bold">
+                                                            ✅ {bet.resolvedOption}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Panel de résolution inline */}
+                                            {betAction?.betId === bet.id && betAction?.action === "resolve" && (
+                                                <div className="mt-3 p-3 bg-blue-50 rounded-2xl border border-blue-100 space-y-2">
+                                                    <p className="text-[10px] font-black text-blue-600 uppercase">Option gagnante</p>
+                                                    <select value={resolveOption} onChange={e => setResolveOption(e.target.value)}
+                                                        className="w-full px-3 py-2 text-sm rounded-xl border border-blue-200 outline-none">
+                                                        <option value="">Sélectionner...</option>
+                                                        {options.map((opt: any) => (
+                                                            <option key={opt.key} value={opt.key}>{opt.label}</option>
+                                                        ))}
+                                                    </select>
+                                                    <input type="text" placeholder="Note (optionnel)" value={resolveNote}
+                                                        onChange={e => setResolveNote(e.target.value)}
+                                                        className="w-full px-3 py-2 text-sm rounded-xl border border-blue-200 outline-none" />
+                                                    <div className="flex gap-2">
+                                                        <button onClick={() => handleResolveBet(bet.id)}
+                                                            className="flex-1 py-2 bg-blue-600 text-white font-black text-xs uppercase rounded-xl hover:bg-blue-700">
+                                                            Confirmer et distribuer
+                                                        </button>
+                                                        <button onClick={() => { setBetAction(null); setResolveOption(""); setResolveNote(""); }}
+                                                            className="px-4 py-2 bg-gray-200 text-gray-600 font-black text-xs uppercase rounded-xl hover:bg-gray-300">
+                                                            Annuler
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+
+                                {!betsLoading && bets.length === 0 && (
+                                    <p className="p-8 text-center text-gray-400 font-bold uppercase text-xs italic">
+                                        Aucun pari créé pour l'instant.
+                                    </p>
+                                )}
+                            </div>
+                        </section>
+
+                    </div>
+                )}
             </div>
 
             {/* DANGER ZONE */}
