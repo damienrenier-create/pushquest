@@ -44,7 +44,7 @@ export default function BetsSection({ session }: { session: any }) {
 
     return (
         <div className="space-y-6">
-            <CoinsBalance userId={session?.user?.id} />
+            {/* <CoinsBalance userId={session?.user?.id} /> */}
 
             <div className="bg-white rounded-[2rem] p-4 sm:p-6 shadow-sm border border-gray-100">
                 {/* ENCART EXPLICATION */}

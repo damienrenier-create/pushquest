@@ -26,7 +26,8 @@ export default async function PantheonPage() {
     ] = await Promise.all([
         (prisma as any).user.findMany({
             where: {
-                nickname: { not: 'modo' }
+                nickname: { not: 'modo' },
+                isSystem: false
             },
             include: {
                 sets: true,

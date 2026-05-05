@@ -97,7 +97,7 @@ export async function GET(req: Request) {
                 const existingFine = u.fines?.find((f: any) => f.date === d);
 
                 // --- Exemption Check ---
-                let isExempt = d < formatDateISO(new Date(u.createdAt));
+                let isExempt = d <= formatDateISO(new Date(u.createdAt));
 
                 // Onboarding exemption: no fines before 21 consecutive successful days
                 if (!isExempt && u.onboardingStartedAt && uMaxSuccessStreak < 21) {

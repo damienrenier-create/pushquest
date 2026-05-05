@@ -91,7 +91,7 @@ export function calculateWinnings(
 ): WinningDistribution[] {
     // Pool totale = toutes les mises - XP retournés aux retirés
     const totalStaked = entries.reduce((sum, e) => sum + e.xpStaked, 0);
-    const totalReturned = entries.reduce((sum, e) => sum + (e.xpReturned || 0), 0);
+    const totalReturned = entries.reduce((sum, e) => sum + (e.xpReturned ?? 0), 0);
     const pool = totalStaked - totalReturned;
 
     // Gagnants = non retirés + bonne option
