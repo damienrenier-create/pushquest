@@ -23,7 +23,7 @@ async function getApproxAvailableXP(userId: string, tx: any): Promise<number> {
 
 export async function POST(
     req: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await getServerSession(authOptions);
@@ -31,7 +31,7 @@ export async function POST(
             return NextResponse.json({ message: "Non autorisé" }, { status: 401 });
         }
         const userId = (session.user as any).id;
-        const { id } = params;
+        const { id } = await params;
 
         const body = await req.json();
         const { option, xpAmount } = body;

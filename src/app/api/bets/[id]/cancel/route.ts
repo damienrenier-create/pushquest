@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(
     req: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await getServerSession(authOptions);
@@ -21,7 +21,7 @@ export async function POST(
             return NextResponse.json({ message: "Accès admin requis" }, { status: 403 });
         }
 
-        const { id } = params;
+        const { id } = await params;
         const body = await req.json().catch(() => ({}));
         const { note } = body;
 
