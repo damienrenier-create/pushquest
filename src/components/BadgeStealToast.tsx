@@ -2,9 +2,36 @@
 
 import { useEffect, useState } from "react";
 import { X, ShieldAlert } from "lucide-react";
+import { REACTION_PHRASES } from "@/config/notifications";
 
 export default function BadgeStealToast() {
     const [stolenBadges, setStolenBadges] = useState<any[]>([]);
+    const [reactedIds, setReactedIds] = useState<Set<string>>(new Set());
+    const [sendingId, setSendingId] = useState<string | null>(null);
+
+    const handleReact = async (ev: any, category: 'well_played' | 'revenge') => {
+        if (reactedIds.has(ev.id) || sendingId) return;
+        setSendingId(ev.id);
+        try {
+            const phrases = REACTION_PHRASES[category];
+            const message = phrases[Math.floor(Math.random() * phrases.length)];
+            await fetch("/api/badges/react", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    badgeKey: ev.badgeKey,
+                    toUserId: ev.toUserId, // le voleur reçoit la réaction
+                    message,
+                    category
+                })
+            });
+            setReactedIds(prev => new Set([...prev, ev.id]));
+        } catch (e) {
+            console.error("Erreur réaction", e);
+        } finally {
+            setSendingId(null);
+        }
+    };
 
     useEffect(() => {
         // Fetch recent stolen badges for current user
@@ -67,6 +94,32 @@ export default function BadgeStealToast() {
                             <span className="text-red-700">{ev.toUser?.nickname}</span> a battu votre record de <span className="font-black text-slate-900">{ev.badge?.name}</span> {ev.badge?.emoji}
                         </p>
                         <p className="text-xs text-red-500/80 font-medium italic mt-1">Vous l'avez perdu...</p>
+
+                        {/* Boutons de réaction */}
+                        {!reactedIds.has(ev.id) ? (
+                            <div className="mt-3 grid grid-cols-2 gap-2">
+                                <button
+                                    onClick={() => handleReact(ev, 'well_played')}
+                                    disabled={sendingId === ev.id}
+                                    className="flex flex-col items-center justify-center p-2 rounded-xl bg-red-100 border border-red-200 hover:bg-red-200 transition-all group disabled:opacity-50"
+                                >
+                                    <span className="text-lg group-hover:scale-110 transition-transform">😌</span>
+                                    <span className="text-[9px] font-black uppercase text-red-500 mt-0.5">Bien joué</span>
+                                </button>
+                                <button
+                                    onClick={() => handleReact(ev, 'revenge')}
+                                    disabled={sendingId === ev.id}
+                                    className="flex flex-col items-center justify-center p-2 rounded-xl bg-red-100 border border-red-200 hover:bg-red-200 transition-all group disabled:opacity-50"
+                                >
+                                    <span className="text-lg group-hover:scale-110 transition-transform">😈</span>
+                                    <span className="text-[9px] font-black uppercase text-red-500 mt-0.5">Je reviens</span>
+                                </button>
+                            </div>
+                        ) : (
+                            <p className="mt-2 text-[10px] font-black text-red-400 italic text-center">
+                                ✓ Réponse envoyée
+                            </p>
+                        )}
                     </div>
                 </div>
             ))}
