@@ -8,34 +8,64 @@ export const dynamic = "force-dynamic";
 
 // ─── Helper — fetch real stat value for a user ────────────────────────────────
 
-async function fetchStatValue(userId: string, statType: string, now: Date): Promise<{ value: number; label: string }> {
+async function fetchStatValue(statUserId: string, statType: string, now: Date): Promise<{ value: number; label: string }> {
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
     switch (statType) {
         case "torch_count_30d": {
-            const count = await (prisma as any).torchEvent.count({
-                where: { userId, createdAt: { gte: thirtyDaysAgo } }
+            // Flambeaux stockés dans badgeEvent avec toUserId + TORCH_CLAIM
+            const count = await (prisma as any).badgeEvent.count({
+                where: {
+                    badgeKey: "torch_daily",
+                    eventType: "TORCH_CLAIM",
+                    toUserId: statUserId,
+                    createdAt: { gte: thirtyDaysAgo }
+                }
             });
             return { value: count, label: `${count} flambeaux / 30j` };
         }
         case "completion_rate_30d": {
             const logs = await (prisma as any).dailyLog.findMany({
-                where: { userId, date: { gte: thirtyDaysAgo.toISOString().slice(0, 10) } },
+                where: { userId: statUserId, date: { gte: thirtyDaysAgo.toISOString().slice(0, 10) } },
                 select: { validated: true }
             });
             const rate = logs.length > 0 ? Math.round((logs.filter((l: any) => l.validated).length / logs.length) * 100) : 0;
             return { value: rate, label: `${rate}% complétion / 30j` };
         }
         case "total_pushups_30d": {
-            const logs = await (prisma as any).dailyLog.findMany({
-                where: { userId, date: { gte: thirtyDaysAgo.toISOString().slice(0, 10) } },
-                select: { pushups: true }
+            const sets = await (prisma as any).exerciseSet.findMany({
+                where: { userId: statUserId, exercise: "PUSH_UP", date: { gte: thirtyDaysAgo.toISOString().slice(0, 10) } },
+                select: { reps: true }
             });
-            const total = logs.reduce((sum: number, l: any) => sum + (l.pushups || 0), 0);
+            const total = sets.reduce((sum: number, s: any) => sum + (s.reps || 0), 0);
             return { value: total, label: `${total} pompes / 30j` };
         }
+        case "total_pullups_30d": {
+            const sets = await (prisma as any).exerciseSet.findMany({
+                where: { userId: statUserId, exercise: "PULL_UP", date: { gte: thirtyDaysAgo.toISOString().slice(0, 10) } },
+                select: { reps: true }
+            });
+            const total = sets.reduce((sum: number, s: any) => sum + (s.reps || 0), 0);
+            return { value: total, label: `${total} tractions / 30j` };
+        }
+        case "total_squats_30d": {
+            const sets = await (prisma as any).exerciseSet.findMany({
+                where: { userId: statUserId, exercise: "SQUAT", date: { gte: thirtyDaysAgo.toISOString().slice(0, 10) } },
+                select: { reps: true }
+            });
+            const total = sets.reduce((sum: number, s: any) => sum + (s.reps || 0), 0);
+            return { value: total, label: `${total} squats / 30j` };
+        }
+        case "total_reps_30d": {
+            const sets = await (prisma as any).exerciseSet.findMany({
+                where: { userId: statUserId, date: { gte: thirtyDaysAgo.toISOString().slice(0, 10) } },
+                select: { reps: true }
+            });
+            const total = sets.reduce((sum: number, s: any) => sum + (s.reps || 0), 0);
+            return { value: total, label: `${total} reps / 30j` };
+        }
         case "current_xp": {
-            const user = await (prisma as any).user.findUnique({ where: { id: userId }, select: { xp: true } });
+            const user = await (prisma as any).user.findUnique({ where: { id: statUserId }, select: { xp: true } });
             const xp = user?.xp || 0;
             return { value: xp, label: `${xp} XP total` };
         }
