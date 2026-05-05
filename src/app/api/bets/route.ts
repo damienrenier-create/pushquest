@@ -34,7 +34,7 @@ async function fetchStatValue(statUserId: string, statType: string, now: Date): 
         }
         case "total_pushups_30d": {
             const sets = await (prisma as any).exerciseSet.findMany({
-                where: { userId: statUserId, exercise: "PUSH_UP", date: { gte: thirtyDaysAgo.toISOString().slice(0, 10) } },
+                where: { userId: statUserId, exercise: "PUSHUP", date: { gte: thirtyDaysAgo.toISOString().slice(0, 10) } },
                 select: { reps: true }
             });
             const total = sets.reduce((sum: number, s: any) => sum + (s.reps || 0), 0);
@@ -42,7 +42,7 @@ async function fetchStatValue(statUserId: string, statType: string, now: Date): 
         }
         case "total_pullups_30d": {
             const sets = await (prisma as any).exerciseSet.findMany({
-                where: { userId: statUserId, exercise: "PULL_UP", date: { gte: thirtyDaysAgo.toISOString().slice(0, 10) } },
+                where: { userId: statUserId, exercise: "PULLUP", date: { gte: thirtyDaysAgo.toISOString().slice(0, 10) } },
                 select: { reps: true }
             });
             const total = sets.reduce((sum: number, s: any) => sum + (s.reps || 0), 0);
