@@ -294,21 +294,21 @@ export default function BetCard({
                         <span className="text-[10px] text-amber-500 font-black">
                             Ma mise : {myEntry.xpStaked} XP
                         </span>
-                        <button 
+                        {/* <button 
                             disabled={actionLoading}
                             onClick={handleWithdraw}
                             className="text-[10px] text-red-400 hover:text-red-300 border border-red-400/20 rounded px-2 py-1"
                             style={{ display: 'none' }}
                         >
                             Retirer
-                        </button>
+                        </button> */}
                     </div>
                 )}
-                {myEntry?.withdrawn && (
+                {/* myEntry?.withdrawn && (
                     <span className="text-[10px] text-slate-500 font-bold">
                         Position retirée ({myEntry.xpReturned || 0} XP récupérés)
                     </span>
-                )}
+                ) */}
             </div>
 
             {/* Feedback message */}
