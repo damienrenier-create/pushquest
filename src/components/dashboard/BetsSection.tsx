@@ -48,13 +48,25 @@ export default function BetsSection({ session }: { session: any }) {
 
             <div className="bg-white rounded-[2rem] p-4 sm:p-6 shadow-sm border border-gray-100">
                 {/* ENCART EXPLICATION */}
-                <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 mb-4">
-                    <p className="text-[11px] font-black text-amber-800 uppercase tracking-wide mb-1">🎲 Comment ça marche ?</p>
-                    <p className="text-[11px] font-bold text-amber-700 leading-snug">
-                        Mise des XP sur l'issue que tu penses correcte. Plus tu mises tôt, plus le multiplicateur est élevé (jusqu'à ×2). 
-                        Ta mise est débitée immédiatement. Les gagnants se partagent la pool des perdants.
+                <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 mb-5">
+                    <p className="text-[11px] font-black text-amber-800 uppercase tracking-wide mb-2">
+                        🎲 Comment ça marche ?
                     </p>
-                    <a href="/faq#paris" className="text-[10px] font-black text-amber-600 uppercase mt-2 inline-block hover:underline">
+                    <div className="space-y-1.5">
+                        <p className="text-[11px] font-bold text-amber-700 leading-snug">
+                            <span className="font-black">Mise des XP</span> sur l'option que tu penses gagnante.
+                            Ton XP baisse immédiatement — c'est un vrai risque.
+                        </p>
+                        <p className="text-[11px] font-bold text-amber-700 leading-snug">
+                            <span className="font-black">⚡ Early Bird :</span> miser dans les premières 24h booste ta cote (jusqu'à ×1.5 sur un pari de 30 jours).
+                            Ta cote est figée au moment où tu mises.
+                        </p>
+                        <p className="text-[11px] font-bold text-amber-700 leading-snug">
+                            <span className="font-black">Les cotes</span> sont calculées depuis les vraies stats des joueurs sur 30 jours.
+                            Le favori a la cote la plus basse — miser sur lui rapporte moins mais c'est plus sûr.
+                        </p>
+                    </div>
+                    <a href="/faq#paris" className="text-[10px] font-black text-amber-600 uppercase mt-3 inline-block hover:underline">
                         Lire les règles complètes →
                     </a>
                 </div>
