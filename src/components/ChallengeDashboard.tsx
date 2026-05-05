@@ -10,6 +10,7 @@ import WorkoutEntry from "./dashboard/WorkoutEntry"
 import StatCards from "./dashboard/StatCards"
 import SocialFeed from "./dashboard/SocialFeed"
 import TrophySection from "./dashboard/TrophySection"
+import BetsSection from "./dashboard/BetsSection"
 import GraphsSection from "./dashboard/GraphsSection"
 import CagnotteSection from "./dashboard/CagnotteSection"
 import RecordsAssiduiteSection from "./dashboard/RecordsAssiduiteSection"
@@ -119,7 +120,7 @@ export default function ChallengeDashboard() {
     const [data, setData] = useState<DashboardData>(DEFAULT_DASHBOARD_DATA)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
-    const [activeTab, setActiveTab] = useState<'saisie' | 'graphs' | 'cagnotte' | 'trophees'>('saisie')
+    const [activeTab, setActiveTab] = useState<'saisie' | 'graphs' | 'cagnotte' | 'trophees' | 'paris'>('saisie')
     const [selectedDate, setSelectedDate] = useState<string>(DEFAULT_DASHBOARD_DATA.selectedDateISO)
     const lastFetchTime = useRef<number>(Date.now())
     const [localSets, setLocalSets] = useState<{ pushups: (number | "")[]; pullups: (number | "")[]; squats: (number | "")[]; planks: (number | "")[] }>({
@@ -611,6 +612,7 @@ export default function ChallengeDashboard() {
                     <button onClick={() => setActiveTab('graphs')} className={`flex-1 min-w-[80px] py-3 text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition-all ${activeTab === 'graphs' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'}`}>Graphiques</button>
                     <button onClick={() => setActiveTab('cagnotte')} className={`flex-1 min-w-[80px] py-3 text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition-all ${activeTab === 'cagnotte' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'}`}>Cagnotte</button>
                     <button onClick={() => setActiveTab('trophees')} className={`flex-1 min-w-[80px] py-3 text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition-all ${activeTab === 'trophees' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'}`}>Trophées</button>
+                    <button onClick={() => setActiveTab('paris')} className={`flex-1 min-w-[80px] py-3 text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition-all ${activeTab === 'paris' ? 'bg-amber-500 text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'}`}>🎲 Paris</button>
                 </div>
 
                 {activeTab === 'saisie' && (
@@ -721,6 +723,10 @@ export default function ChallengeDashboard() {
                     session={session}
                     toggleLike={toggleLike}
                 />
+            )}
+
+            {activeTab === 'paris' && (
+                <BetsSection session={session} />
             )}
 
 
