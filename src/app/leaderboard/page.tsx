@@ -27,7 +27,8 @@ export default async function LeaderboardPage({
         const allUsers = await (prisma.user as any).findMany({
             where: {
                 nickname: { not: 'modo' },
-                league: league
+                league: league,
+                isSystem: false
             },
             include: { sets: true, xpAdjustments: true } // FORCE TO GET NICKNAME
         });
@@ -60,7 +61,8 @@ export default async function LeaderboardPage({
         const users = await (prisma.user as any).findMany({
             where: {
                 nickname: { not: 'modo' },
-                league: league
+                league: league,
+                isSystem: false
             },
             select: {
                 id: true,

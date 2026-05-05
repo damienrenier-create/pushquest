@@ -2,9 +2,59 @@
 
 import { useEffect, useState } from "react";
 import { X, ShieldAlert } from "lucide-react";
+import { REACTION_PHRASES } from "@/config/notifications";
+
+function pickRandomPhrase(category: 'well_played' | 'revenge'): string {
+    const phrases = REACTION_PHRASES[category];
+    return phrases[Math.floor(Math.random() * phrases.length)];
+}
 
 export default function BadgeStealToast() {
     const [stolenBadges, setStolenBadges] = useState<any[]>([]);
+    const [reactedIds, setReactedIds] = useState<Set<string>>(new Set());
+    const [sendingId, setSendingId] = useState<string | null>(null);
+    const [proposedPhrases, setProposedPhrases] = useState<
+        Record<string, { well_played: string; revenge: string }>
+    >({});
+
+    useEffect(() => {
+        setProposedPhrases(prev => {
+            const next = { ...prev };
+            stolenBadges.forEach(ev => {
+                if (!next[ev.id]) {
+                    next[ev.id] = {
+                        well_played: pickRandomPhrase('well_played'),
+                        revenge: pickRandomPhrase('revenge')
+                    };
+                }
+            });
+            return next;
+        });
+    }, [stolenBadges]);
+
+    const handleReact = async (ev: any, category: 'well_played' | 'revenge') => {
+        if (reactedIds.has(ev.id) || sendingId) return;
+        const message = proposedPhrases[ev.id]?.[category];
+        if (!message) return;
+        setSendingId(ev.id);
+        try {
+            await fetch("/api/badges/react", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    badgeKey: ev.badgeKey,
+                    toUserId: ev.toUserId,
+                    message,
+                    category
+                })
+            });
+            setReactedIds(prev => new Set([...prev, ev.id]));
+        } catch (e) {
+            console.error("Erreur réaction", e);
+        } finally {
+            setSendingId(null);
+        }
+    };
 
     useEffect(() => {
         // Fetch recent stolen badges for current user
@@ -67,6 +117,42 @@ export default function BadgeStealToast() {
                             <span className="text-red-700">{ev.toUser?.nickname}</span> a battu votre record de <span className="font-black text-slate-900">{ev.badge?.name}</span> {ev.badge?.emoji}
                         </p>
                         <p className="text-xs text-red-500/80 font-medium italic mt-1">Vous l'avez perdu...</p>
+
+                        {/* Boutons de réaction avec phrases visibles */}
+                        {proposedPhrases[ev.id] && (
+                            !reactedIds.has(ev.id) ? (
+                                <div className="mt-3 flex flex-col gap-2">
+                                    <button
+                                        onClick={() => handleReact(ev, 'well_played')}
+                                        disabled={sendingId === ev.id}
+                                        className="w-full text-left px-3 py-2 rounded-xl bg-red-100 border border-red-200 hover:bg-red-200 transition-all disabled:opacity-50 group"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-base group-hover:scale-110 transition-transform">😌</span>
+                                            <span className="text-[10px] font-bold text-red-700 italic leading-snug">
+                                                "{proposedPhrases[ev.id].well_played}"
+                                            </span>
+                                        </div>
+                                    </button>
+                                    <button
+                                        onClick={() => handleReact(ev, 'revenge')}
+                                        disabled={sendingId === ev.id}
+                                        className="w-full text-left px-3 py-2 rounded-xl bg-red-100 border border-red-200 hover:bg-red-200 transition-all disabled:opacity-50 group"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-base group-hover:scale-110 transition-transform">😈</span>
+                                            <span className="text-[10px] font-bold text-red-700 italic leading-snug">
+                                                "{proposedPhrases[ev.id].revenge}"
+                                            </span>
+                                        </div>
+                                    </button>
+                                </div>
+                            ) : (
+                                <p className="mt-2 text-[10px] font-black text-red-400 italic text-center">
+                                    ✓ Réponse envoyée
+                                </p>
+                            )
+                        )}
                     </div>
                 </div>
             ))}

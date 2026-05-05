@@ -411,6 +411,126 @@ function FAQContent() {
                             </div>
                         </section>
 
+                        {/* LES PARIS */}
+                        <section id="paris" className="bg-amber-50 rounded-[2.5rem] p-8 shadow-sm border border-amber-100 space-y-6">
+                            <div className="flex items-center gap-3 border-b border-amber-100 pb-4">
+                                <span className="text-2xl">🎲</span>
+                                <h2 className="text-2xl font-black uppercase italic tracking-tighter text-amber-900">Les Paris</h2>
+                            </div>
+                            <div className="space-y-4">
+
+                                {/* C'est quoi */}
+                                <div className="flex items-start gap-4 p-5 bg-white rounded-3xl border border-amber-100">
+                                    <div className="p-2 bg-amber-100 rounded-xl text-amber-600">🎯</div>
+                                    <div>
+                                        <h4 className="font-black text-gray-900 uppercase text-sm">C'est quoi un pari ?</h4>
+                                        <p className="text-xs font-bold text-gray-500 mt-1 leading-snug">
+                                            Des événements créés sur la vie du groupe — qui va tenir, qui va craquer, qui va dominer.
+                                            Tu mises des XP sur l'issue que tu penses correcte. Si tu as raison, tu récupères ta mise
+                                            plus une part des XP des perdants. Tes XP sont débités dès que tu mises — c'est réel.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Early Bird */}
+                                <div className="flex items-start gap-4 p-5 bg-amber-100 rounded-3xl border border-amber-200 shadow-sm">
+                                    <div className="p-2 bg-amber-200 rounded-xl text-amber-700">⚡</div>
+                                    <div>
+                                        <h4 className="font-black text-amber-900 uppercase text-sm">Early Bird — miser tôt, ça rapporte plus</h4>
+                                        <p className="text-xs font-bold text-amber-800 mt-1 leading-snug">
+                                            Chaque pari a une cote de base calculée depuis les stats réelles des joueurs sur 30 jours.
+                                            Cette cote est ensuite boostée par un multiplicateur Early Bird qui récompense les parieurs rapides.
+                                        </p>
+                                        <div className="mt-3 p-3 bg-white/60 rounded-2xl space-y-2">
+                                            <p className="text-[10px] font-black text-amber-800 uppercase">Multiplicateur selon la durée du pari :</p>
+                                            {[
+                                                { label: "Pari de 1 à 7 jours", max: "×1.2 pendant 24h" },
+                                                { label: "Pari de 8 à 30 jours", max: "×1.5 pendant 24h" },
+                                                { label: "Pari de 1 à 3 mois", max: "×2.0 pendant 24h" },
+                                                { label: "Pari de 3 à 6 mois", max: "×3.0 pendant 24h" },
+                                            ].map((row, i) => (
+                                                <div key={i} className="flex items-center justify-between text-[10px] font-black">
+                                                    <span className="text-amber-700">{row.label}</span>
+                                                    <span className="text-amber-900">{row.max}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <p className="text-[10px] font-bold text-amber-700 mt-2 leading-snug">
+                                            Après les premières 24h, le multiplicateur baisse progressivement jusqu'à ×1.0 à la clôture.
+                                            La cote affichée au moment où tu cliques sur "Parier" est <span className="font-black">figée définitivement</span> — même si les cotes changent après.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Les cotes */}
+                                <div className="flex items-start gap-4 p-5 bg-white rounded-3xl border border-amber-100">
+                                    <div className="p-2 bg-blue-100 rounded-xl text-blue-600">📊</div>
+                                    <div>
+                                        <h4 className="font-black text-gray-900 uppercase text-sm">Comment sont calculées les cotes ?</h4>
+                                        <p className="text-xs font-bold text-gray-500 mt-1 leading-snug">
+                                            Les cotes de chaque option sont calculées depuis les vraies stats des joueurs sur les 30 derniers jours —
+                                            nombre de flambeaux, taux de complétion, total de pompes, etc.
+                                            Plus un joueur est régulier sur la stat concernée, plus sa cote est basse (il est favori).
+                                            La cote est ensuite boostée par le multiplicateur Early Bird.
+                                        </p>
+                                        <p className="text-[10px] font-black text-blue-600 mt-2">
+                                            Exemple : Xa a eu le Flambeau 12 fois sur 30 jours → il est favori → cote 1.4 × Early Bird = cote finale 1.68 dans les premières 24h.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Distribution */}
+                                <div className="flex items-start gap-4 p-5 bg-white rounded-3xl border border-amber-100">
+                                    <div className="p-2 bg-green-100 rounded-xl text-green-600">💰</div>
+                                    <div>
+                                        <h4 className="font-black text-gray-900 uppercase text-sm">Comment sont distribués les gains ?</h4>
+                                        <p className="text-xs font-bold text-gray-500 mt-1 leading-snug">
+                                            Deux mécanismes jouent ensemble :
+                                        </p>
+                                        <ul className="mt-2 space-y-1">
+                                            {[
+                                                "La pool parimutuelle : les XP misés par les perdants sont redistribués aux gagnants proportionnellement à leur mise et leur multiplicateur.",
+                                                "Le gain garanti : ta cote figée te garantit un gain minimum. Si la pool ne suffit pas, les XP manquants sont créés par la maison.",
+                                                "Les gagnants qui ont misé tôt (Early Bird) reçoivent toujours plus que ceux qui ont misé tard."
+                                            ].map((item, i) => (
+                                                <li key={i} className="flex items-start gap-2 text-[10px] font-bold text-gray-500">
+                                                    <span className="text-green-400 mt-0.5">→</span>
+                                                    {item}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                        <p className="text-[10px] uppercase font-black text-red-400 mt-2 italic">
+                                            Si personne ne mise sur l'option gagnante, la pool est perdue pour tout le monde.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Règles en bref */}
+                                <div className="flex items-start gap-4 p-5 bg-amber-900 rounded-3xl">
+                                    <div className="p-2 bg-amber-700 rounded-xl text-white">📋</div>
+                                    <div>
+                                        <h4 className="font-black text-white uppercase text-sm">Les règles en bref</h4>
+                                        <ul className="mt-2 space-y-1">
+                                            {[
+                                                "Ta mise est débitée immédiatement — ton XP baisse dès que tu mises",
+                                                "Ta cote est figée au moment de ta mise — elle ne changera plus pour toi",
+                                                "Une seule position par pari — tu peux augmenter ta mise mais pas changer d'option",
+                                                "Mise maximum : 800 XP en mai (augmente chaque mois)",
+                                                "Les paris sont créés et résolus par l'admin",
+                                                "En cas d'annulation du pari, tout le monde est remboursé intégralement"
+                                            ].map((rule, i) => (
+                                                <li key={i} className="flex items-start gap-2 text-[10px] font-bold text-amber-100">
+                                                    <span className="text-amber-400 mt-0.5">→</span>
+                                                    {rule}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </section>
+
                         <section className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100 space-y-6">
                             <div className="flex items-center gap-3 border-b border-gray-50 pb-4">
                                 <Calendar className="text-pink-500" size={24} />

@@ -109,7 +109,8 @@ export default async function GazetteXP() {
     const allUsers = await (prisma.user as any).findMany({
         where: {
             nickname: { not: 'modo' },
-            league: league
+            league: league,
+            isSystem: false
         },
         select: { id: true, nickname: true, sets: true, createdAt: true, xpAdjustments: true }
     });
