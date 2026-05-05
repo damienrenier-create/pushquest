@@ -25,6 +25,7 @@ export default async function BadgesPage() {
     const allUsersWithBadges = await prisma.user.findMany({
         where: {
             nickname: { not: 'modo' },
+            isSystem: false,
             badges: { some: {} }
         },
         select: {

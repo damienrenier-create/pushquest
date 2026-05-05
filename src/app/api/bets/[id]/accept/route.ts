@@ -9,13 +9,35 @@ export const dynamic = "force-dynamic";
 
 // ─── Calcul XP disponible (approximation légère, sans calculateAllUsersXP) ───
 
-async function getApproxAvailableXP(userId: string, tx: any): Promise<number> {
-    const adjustments = await (tx as any).xpAdjustment.findMany({
-        where: { userId },
-        select: { amount: true }
+async function getRealAvailableXP(userId: string, tx: any): Promise<number> {
+    const user = await (tx as any).user.findUnique({
+        where: { id: userId },
+        include: {
+            sets: true,
+            xpAdjustments: true,
+            medicalCertificates: true,
+            fines: true,
+            badges: {
+                include: { badge: true }
+            }
+        }
     });
-    const adjustmentsTotal = adjustments.reduce((sum: number, a: any) => sum + a.amount, 0);
-    return Math.max(0, adjustmentsTotal + 500);
+
+    if (!user) return 0;
+
+    // Calcul simplifié mais honnête :
+    // 1. XP des reps (1 XP par rep)
+    const repsXP = (user.sets || []).reduce((sum: number, s: any) => {
+        return sum + (s.exercise === 'PLANK' ? Math.floor(s.reps / 5) : s.reps);
+    }, 0);
+
+    // 2. XP des ajustements (paris, bonus manuels)
+    const adjustmentsXP = (user.xpAdjustments || []).reduce(
+        (sum: number, a: any) => sum + a.amount, 0
+    );
+
+    // Total approximatif fiable
+    return Math.max(0, repsXP + adjustmentsXP);
 }
 
 // ─── POST — Accepter un duel (targetUser uniquement) ─────────────────────────
@@ -65,7 +87,7 @@ export async function POST(
         const xpAmount = creatorEntry.xpStaked;
 
         // ─── Vérifier XP disponible ───────────────────────────────────────────
-        const available = await getApproxAvailableXP(userId, prisma);
+        const available = await getRealAvailableXP(userId, prisma);
         if (xpAmount > available) {
             return NextResponse.json({
                 message: `XP insuffisant pour accepter ce duel (requis : ${xpAmount}, disponible approximatif : ${available})`

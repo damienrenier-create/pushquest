@@ -19,7 +19,7 @@ export default async function TrophiesPage() {
     const [sets, allUsers, badgeOwnerships, recentEvents] = await Promise.all([
         prisma.exerciseSet.findMany({ where: { userId } }),
         prisma.user.findMany({
-            where: { nickname: { not: 'modo' } },
+            where: { nickname: { not: 'modo' }, isSystem: false },
             include: { sets: true }
         }),
         prisma.badgeOwnership.findMany({

@@ -4,19 +4,41 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { getTodayISO } from "@/lib/challenge";
 import { calculateEntryMultiplier, calculateWeightedMultiplier } from "@/lib/bets";
+import { MONTH_MULTIPLIERS } from "@/lib/xp-constants";
 
 export const dynamic = "force-dynamic";
 
 // ─── Calcul XP disponible (approximation légère, sans calculateAllUsersXP) ───
 
-async function getApproxAvailableXP(userId: string, tx: any): Promise<number> {
-    const adjustments = await (tx as any).xpAdjustment.findMany({
-        where: { userId },
-        select: { amount: true }
+async function getRealAvailableXP(userId: string, tx: any): Promise<number> {
+    const user = await (tx as any).user.findUnique({
+        where: { id: userId },
+        include: {
+            sets: true,
+            xpAdjustments: true,
+            medicalCertificates: true,
+            fines: true,
+            badges: {
+                include: { badge: true }
+            }
+        }
     });
-    const adjustmentsTotal = adjustments.reduce((sum: number, a: any) => sum + a.amount, 0);
-    // Buffer conservateur pour les reps de base non capturés dans les ajustements
-    return Math.max(0, adjustmentsTotal + 500);
+
+    if (!user) return 0;
+
+    // Calcul simplifié mais honnête :
+    // 1. XP des reps (1 XP par rep)
+    const repsXP = (user.sets || []).reduce((sum: number, s: any) => {
+        return sum + (s.exercise === 'PLANK' ? Math.floor(s.reps / 5) : s.reps);
+    }, 0);
+
+    // 2. XP des ajustements (paris, bonus manuels)
+    const adjustmentsXP = (user.xpAdjustments || []).reduce(
+        (sum: number, a: any) => sum + a.amount, 0
+    );
+
+    // Total approximatif fiable
+    return Math.max(0, repsXP + adjustmentsXP);
 }
 
 // ─── POST — Placer ou augmenter une mise ─────────────────────────────────────
@@ -38,6 +60,16 @@ export async function POST(
 
         if (!option || !xpAmount || typeof xpAmount !== "number" || xpAmount <= 0 || !Number.isInteger(xpAmount)) {
             return NextResponse.json({ message: "option et xpAmount (entier > 0) requis" }, { status: 400 });
+        }
+
+        // Plafond de mise = MONTH_MULTIPLIER du mois courant
+        const currentMonthIndex = new Date().getMonth(); // 0 = Jan, 4 = Mai
+        const maxBet = MONTH_MULTIPLIERS[currentMonthIndex] || 500;
+        if (xpAmount > maxBet) {
+            return NextResponse.json(
+                { message: `Mise maximum : ${maxBet} XP ce mois-ci` },
+                { status: 400 }
+            );
         }
 
         // ─── Charger le Bet ───────────────────────────────────────────────────
@@ -88,7 +120,7 @@ export async function POST(
         const multiplier = calculateEntryMultiplier(new Date(bet.openAt), new Date(bet.closeAt), new Date());
 
         // ─── Vérifier XP disponible ───────────────────────────────────────────
-        const available = await getApproxAvailableXP(userId, prisma);
+        const available = await getRealAvailableXP(userId, prisma);
         if (xpAmount > available) {
             return NextResponse.json({ message: `XP insuffisant (disponible approximatif : ${available})` }, { status: 400 });
         }

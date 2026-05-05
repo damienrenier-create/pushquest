@@ -11,6 +11,7 @@ datasource db {
 model User {
   id        String      @id @default(cuid())
   email     String      @unique
+  isSystem  Boolean     @default(false)
   password  String
   nickname  String      @unique
   buyoutPaid Boolean    @default(false)

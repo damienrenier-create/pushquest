@@ -33,7 +33,7 @@ export async function POST(req: Request) {
 
         // 1. Pre-calculate XP to intercept Level Up (BEFORE transaction)
         const allUsersOld = await (prisma as any).user.findMany({
-            where: { league },
+            where: { league, isSystem: false },
             include: { sets: true, xpAdjustments: true }
         });
         const badgeOwnershipsOld = await (prisma as any).badgeOwnership.findMany();
@@ -62,7 +62,7 @@ export async function POST(req: Request) {
 
         // 4. Check for Level Up/Down for ALL users (since badges could be stolen from others)
         const allUsersNew = await (prisma as any).user.findMany({
-            where: { league },
+            where: { league, isSystem: false },
             include: { sets: true, xpAdjustments: true }
         });
         const badgeOwnershipsNew = await (prisma as any).badgeOwnership.findMany();

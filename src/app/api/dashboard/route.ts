@@ -58,7 +58,8 @@ export async function GET(req: Request) {
         const allUsers = (await (prisma.user as any).findMany({
             where: {
                 nickname: { not: 'modo' },
-                league: league
+                league: league,
+                isSystem: false
             },
             select: {
                 id: true,
