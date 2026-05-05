@@ -2,9 +2,47 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { calculateOddsDisplay } from "@/lib/bets";
+import { calculateOddsDisplay, calculateBookmakerOdds, calculateEarlyBirdMultiplier, calculateFinalOdd, StatOddsInput } from "@/lib/bets";
 
 export const dynamic = "force-dynamic";
+
+// ─── Helper — fetch real stat value for a user ────────────────────────────────
+
+async function fetchStatValue(userId: string, statType: string, now: Date): Promise<{ value: number; label: string }> {
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    switch (statType) {
+        case "torch_count_30d": {
+            const count = await (prisma as any).torchEvent.count({
+                where: { userId, createdAt: { gte: thirtyDaysAgo } }
+            });
+            return { value: count, label: `${count} flambeaux / 30j` };
+        }
+        case "completion_rate_30d": {
+            const logs = await (prisma as any).dailyLog.findMany({
+                where: { userId, date: { gte: thirtyDaysAgo.toISOString().slice(0, 10) } },
+                select: { validated: true }
+            });
+            const rate = logs.length > 0 ? Math.round((logs.filter((l: any) => l.validated).length / logs.length) * 100) : 0;
+            return { value: rate, label: `${rate}% complétion / 30j` };
+        }
+        case "total_pushups_30d": {
+            const logs = await (prisma as any).dailyLog.findMany({
+                where: { userId, date: { gte: thirtyDaysAgo.toISOString().slice(0, 10) } },
+                select: { pushups: true }
+            });
+            const total = logs.reduce((sum: number, l: any) => sum + (l.pushups || 0), 0);
+            return { value: total, label: `${total} pompes / 30j` };
+        }
+        case "current_xp": {
+            const user = await (prisma as any).user.findUnique({ where: { id: userId }, select: { xp: true } });
+            const xp = user?.xp || 0;
+            return { value: xp, label: `${xp} XP total` };
+        }
+        default:
+            return { value: 1, label: "stat inconnue" };
+    }
+}
 
 // ─── GET — Liste des paris OPEN et LOCKED ────────────────────────────────────
 
@@ -39,7 +77,7 @@ export async function GET() {
 
         const now = new Date();
 
-        const formatted = bets.map((bet: any) => {
+        const formatted = await Promise.all(bets.map(async (bet: any) => {
             const options = (() => {
                 try { return JSON.parse(bet.options); } catch { return []; }
             })();
@@ -53,6 +91,46 @@ export async function GET() {
                 : [];
 
             const myEntry = bet.entries.find((e: any) => e.userId === userId) || null;
+
+            // ── Bookmaker odds — calculées depuis les stats réelles ──────────────
+            let bookmakerOdds: any[] = [];
+            if ((bet.status === "OPEN" || bet.status === "LOCKED") && bet.openAt && bet.closeAt && bet.metadata) {
+                try {
+                    const metadata = typeof bet.metadata === "string" ? JSON.parse(bet.metadata) : bet.metadata;
+                    const statsConfig: Array<{ key: string; label: string; statType: string; userId: string; isInverse?: boolean }> = metadata.statsConfig || [];
+
+                    if (statsConfig.length > 0) {
+                        const inputs: StatOddsInput[] = await Promise.all(
+                            statsConfig.map(async (cfg) => {
+                                const { value, label: statLabel } = await fetchStatValue(cfg.userId, cfg.statType, now);
+                                return {
+                                    key: cfg.key,
+                                    label: cfg.label,
+                                    statValue: value,
+                                    statLabel,
+                                    isInverse: cfg.isInverse || false,
+                                } as StatOddsInput;
+                            })
+                        );
+
+                        const baseOdds = calculateBookmakerOdds(inputs);
+                        const earlyBirdMultiplier = calculateEarlyBirdMultiplier(
+                            new Date(bet.openAt),
+                            new Date(bet.closeAt),
+                            now
+                        );
+
+                        bookmakerOdds = baseOdds.map(o => ({
+                            ...o,
+                            earlyBirdMultiplier: parseFloat(earlyBirdMultiplier.toFixed(2)),
+                            finalOdd: calculateFinalOdd(o.odd, earlyBirdMultiplier),
+                            impliedGainFinal: Math.round(100 * calculateFinalOdd(o.odd, earlyBirdMultiplier)),
+                        }));
+                    }
+                } catch (e) {
+                    // Silently ignore — bookmakerOdds stays []
+                }
+            }
 
             return {
                 id: bet.id,
@@ -70,12 +148,14 @@ export async function GET() {
                 createdAt: bet.createdAt,
                 totalPool,
                 oddsDisplay,
+                bookmakerOdds,
                 myEntry,
                 result: bet.result || null,
             };
-        });
+        }));
 
         return NextResponse.json(formatted);
+
 
     } catch (error) {
         console.error("GET /api/bets error:", error);
