@@ -182,3 +182,42 @@ export function formatDateISO(date: Date): string {
     return `${year}-${month}-${day}`;
 }
 
+// ─── QUOTA AVEC MODIFICATEURS ────────────────────────────────────────────────
+
+/**
+ * Version async de getDailyTargetForUserOnDate qui inclut les QuotaModifiers.
+ * Utilisée dans les routes qui ont accès à Prisma.
+ * NE PAS remplacer getDailyTargetForUserOnDate — les deux coexistent.
+ */
+export async function getDailyTargetWithModifiers(
+    user: any,
+    dateISO: string,
+    prismaClient: any
+): Promise<{ target: number; baseTarget: number; modifiers: any[] }> {
+    // 1. Calculer le quota de base (logique existante)
+    const baseTarget = getDailyTargetForUserOnDate(user, dateISO);
+
+    // 2. Récupérer les QuotaModifiers actifs pour ce user et cette date
+    const modifiers = await (prismaClient as any).quotaModifier.findMany({
+        where: {
+            targetUserId: user.id,
+            targetDateISO: dateISO,
+            status: "PENDING"
+        },
+        include: {
+            sourceUser: { select: { nickname: true } }
+        }
+    });
+
+    // 3. Calculer le delta total
+    const totalDelta = modifiers.reduce((sum: number, m: any) => sum + m.repsDelta, 0);
+
+    // 4. Appliquer les contraintes :
+    //    - Plancher : 0 (on peut descendre jusqu'à 0)
+    //    - Plafond : quota standard du jour × 2
+    const standardTarget = getRequiredRepsForDate(dateISO);
+    const maxTarget = standardTarget * 2;
+    const target = Math.min(maxTarget, Math.max(0, baseTarget + totalDelta));
+
+    return { target, baseTarget, modifiers };
+}
