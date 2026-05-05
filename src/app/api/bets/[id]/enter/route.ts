@@ -132,10 +132,10 @@ export async function POST(
         let lockedOdd: number | null = null;
 
         const betMeta = (() => { try { return JSON.parse(bet.metadata || '{}'); } catch { return {}; } })();
+        const now = new Date();
 
-        if (betMeta.statsConfig && Array.isArray(betMeta.statsConfig)) {
-            // Recalculer les stats en temps réel
-            const now = new Date();
+        if (betMeta.statsConfig && Array.isArray(betMeta.statsConfig) && betMeta.statsConfig.length > 0) {
+            // Cotes dynamiques calculées depuis les vraies stats
             const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
             const thirtyDaysAgoISO = thirtyDaysAgo.toISOString().split('T')[0];
 
@@ -198,7 +198,20 @@ export async function POST(
             if (optionOdd) {
                 lockedOdd = calculateFinalOdd(optionOdd.odd, earlyBirdMult);
             }
+
+        } else if (betMeta.manualOdds && Array.isArray(betMeta.manualOdds) && betMeta.manualOdds.length > 0) {
+            // Cotes manuelles admin — Early Bird appliqué par-dessus
+            const manualOption = betMeta.manualOdds.find((o: any) => o.key === option);
+            if (manualOption) {
+                const earlyBirdMult = calculateEarlyBirdMultiplier(
+                    new Date(bet.openAt),
+                    new Date(bet.closeAt),
+                    now
+                );
+                lockedOdd = calculateFinalOdd(manualOption.odd, earlyBirdMult);
+            }
         }
+
 
         // ─── Transaction atomique ─────────────────────────────────────────────
         await (prisma as any).$transaction(async (tx: any) => {
