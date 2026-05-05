@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { getTodayISO } from "@/lib/challenge";
-import { calculateEntryMultiplier, calculateWeightedMultiplier } from "@/lib/bets";
+import { calculateEntryMultiplier, calculateWeightedMultiplier, calculateBookmakerOdds, calculateEarlyBirdMultiplier, calculateFinalOdd } from "@/lib/bets";
 import { MONTH_MULTIPLIERS } from "@/lib/xp-constants";
 
 export const dynamic = "force-dynamic";
@@ -128,6 +128,78 @@ export async function POST(
         const today = getTodayISO();
         let finalEntry: any;
 
+        // Calculer la cote bookmaker figée pour cette mise
+        let lockedOdd: number | null = null;
+
+        const betMeta = (() => { try { return JSON.parse(bet.metadata || '{}'); } catch { return {}; } })();
+
+        if (betMeta.statsConfig && Array.isArray(betMeta.statsConfig)) {
+            // Recalculer les stats en temps réel
+            const now = new Date();
+            const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            const thirtyDaysAgoISO = thirtyDaysAgo.toISOString().split('T')[0];
+
+            const statInputs: any[] = await Promise.all(
+                betMeta.statsConfig.map(async (cfg: any) => {
+                    let statValue = 0;
+                    let statLabel = "";
+
+                    if (cfg.statType === "torch_count_30d") {
+                        const count = await (prisma as any).badgeEvent.count({
+                            where: {
+                                toUserId: cfg.userId,
+                                eventType: "TORCH_CLAIM",
+                                badgeKey: "torch_daily",
+                                createdAt: { gte: thirtyDaysAgo }
+                            }
+                        });
+                        statValue = count;
+                        statLabel = `${count} flambeaux / 30j`;
+                    } else if (cfg.statType === "completion_rate_30d") {
+                        const user = await prisma.user.findUnique({
+                            where: { id: cfg.userId },
+                            include: { sets: { where: { date: { gte: thirtyDaysAgoISO } } } }
+                        });
+                        if (user) {
+                            const setsByDate = (user.sets || []).reduce((acc: Record<string, number>, s: any) => {
+                                acc[s.date] = (acc[s.date] || 0) + (s.exercise === 'PLANK' ? Math.floor(s.reps / 5) : s.reps);
+                                return acc;
+                            }, {});
+                            statValue = Object.values(setsByDate).filter((t: any) => t > 0).length;
+                            statLabel = `${statValue} jours validés / 30j`;
+                        }
+                    } else if (cfg.statType === "total_pushups_30d") {
+                        const result = await (prisma as any).exerciseSet.aggregate({
+                            where: { userId: cfg.userId, exercise: "PUSHUP", date: { gte: thirtyDaysAgoISO } },
+                            _sum: { reps: true }
+                        });
+                        statValue = result._sum?.reps || 0;
+                        statLabel = `${statValue} pompes / 30j`;
+                    } else if (cfg.statType === "total_reps_30d") {
+                        const result = await (prisma as any).exerciseSet.aggregate({
+                            where: { userId: cfg.userId, date: { gte: thirtyDaysAgoISO } },
+                            _sum: { reps: true }
+                        });
+                        statValue = result._sum?.reps || 0;
+                        statLabel = `${statValue} reps / 30j`;
+                    }
+
+                    return { key: cfg.key, label: cfg.label || cfg.key, statValue, statLabel, isInverse: cfg.isInverse || false };
+                })
+            );
+
+            const baseOdds = calculateBookmakerOdds(statInputs, 0.10);
+            const earlyBirdMult = calculateEarlyBirdMultiplier(
+                new Date(bet.openAt),
+                new Date(bet.closeAt),
+                now
+            );
+            const optionOdd = baseOdds.find(o => o.key === option);
+            if (optionOdd) {
+                lockedOdd = calculateFinalOdd(optionOdd.odd, earlyBirdMult);
+            }
+        }
+
         // ─── Transaction atomique ─────────────────────────────────────────────
         await (prisma as any).$transaction(async (tx: any) => {
 
@@ -140,6 +212,7 @@ export async function POST(
                         option,
                         xpStaked: xpAmount,
                         multiplier,
+                        lockedOdd,
                         placedAt: new Date(),
                     }
                 });
@@ -209,6 +282,7 @@ export async function POST(
             message: mode === "NEW" ? "Mise placée avec succès" : "Mise augmentée avec succès",
             entry: finalEntry,
             multiplier,
+            lockedOdd,
             xpStaked: finalEntry.xpStaked,
         });
 

@@ -285,6 +285,7 @@ model BetEntry {
   option      String
   xpStaked    Int
   multiplier  Float
+  lockedOdd   Float?    // cote bookmaker figée au moment de la mise (null si pas de config stats)
   ecStaked    Int       @default(0)
   withdrawn   Boolean   @default(false)
   withdrawnAt DateTime?

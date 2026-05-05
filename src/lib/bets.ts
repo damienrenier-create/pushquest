@@ -175,3 +175,155 @@ export function calculateOddsDisplay(
         };
     });
 }
+
+// ─── SYSTÈME DE COTES BOOKMAKER ──────────────────────────────────────────────
+
+export interface StatOddsInput {
+    key: string
+    label: string
+    statValue: number   // valeur brute de la stat (ex: 12 flambeaux sur 30j)
+    statLabel: string   // texte affiché (ex: "12 flambeaux / 30j")
+    isInverse?: boolean // true pour l'option "Non" d'un pari binaire
+}
+
+export interface BookmakerOdds {
+    key: string
+    label: string
+    statLabel: string
+    probability: number  // probabilité estimée (0-1)
+    odd: number          // cote affichée arrondie à 2 décimales
+    impliedGain: number  // gain pour une mise de 100 XP
+}
+
+/**
+ * Calcule les cotes bookmaker depuis des stats réelles.
+ * Pour les paris binaires (Oui/Non), l'option marquée isInverse=true
+ * reçoit P(inverse) = 1 - P(principale).
+ * margin = marge de la maison (0.10 = 10%)
+ * Plancher de probabilité à 0.05 pour éviter des cotes absurdes.
+ */
+export function calculateBookmakerOdds(
+    inputs: StatOddsInput[],
+    margin: number = 0.10
+): BookmakerOdds[] {
+    if (inputs.length === 0) return [];
+
+    // Séparer les options normales des options inverses (binaire Non)
+    const normalInputs = inputs.filter(i => !i.isInverse);
+    const inverseInputs = inputs.filter(i => i.isInverse);
+
+    // Valeurs brutes — plancher à 1
+    const values = normalInputs.map(i => Math.max(i.statValue, 1));
+    const total = values.reduce((sum, v) => sum + v, 0);
+    const rawProbs: number[] = values.map(v => Math.max(v / total, 0.05));
+
+    // Normaliser pour que la somme = 1
+    const probSum = rawProbs.reduce((s, p) => s + p, 0);
+    const normalizedProbs = rawProbs.map(p => p / probSum);
+
+    const result: BookmakerOdds[] = normalInputs.map((input, i) => {
+        const probability = normalizedProbs[i];
+        const odd = Math.max(1.05, parseFloat((1 / (probability * (1 + margin))).toFixed(2)));
+        return {
+            key: input.key,
+            label: input.label,
+            statLabel: input.statLabel,
+            probability: parseFloat(probability.toFixed(3)),
+            odd,
+            impliedGain: Math.round(100 * odd)
+        };
+    });
+
+    // Options inverses : P(inverse) = 1 - P(principale correspondante)
+    // Pour un binaire Oui/Non : Non = 1 - P(Oui)
+    for (const inv of inverseInputs) {
+        // La principale est la première option normale
+        const mainProb = normalizedProbs[0] || 0.5;
+        const invProb = Math.max(1 - mainProb, 0.05);
+        const odd = Math.max(1.05, parseFloat((1 / (invProb * (1 + margin))).toFixed(2)));
+        result.push({
+            key: inv.key,
+            label: inv.label,
+            statLabel: inv.statLabel,
+            probability: parseFloat(invProb.toFixed(3)),
+            odd,
+            impliedGain: Math.round(100 * odd)
+        });
+    }
+
+    return result;
+}
+
+// ─── MULTIPLICATEUR EARLY BIRD ────────────────────────────────────────────────
+
+/**
+ * Calcule le multiplicateur Early Bird selon la durée totale du pari
+ * et le temps écoulé depuis l'ouverture.
+ *
+ * Règles :
+ * - Période de grâce de 24h : multiplicateur au maximum (Mmax)
+ * - Après 24h : déclin linéaire de Mmax à 1.0 jusqu'à closeAt
+ *
+ * Mmax selon durée totale du pari :
+ * - 1-7 jours   : 1.2
+ * - 8-30 jours  : 1.5
+ * - 31-90 jours : 2.0
+ * - 91-180 jours: 3.0
+ * - > 180 jours : 5.0
+ */
+export function calculateEarlyBirdMultiplier(
+    openAt: Date,
+    closeAt: Date,
+    now: Date
+): number {
+    const totalMs = closeAt.getTime() - openAt.getTime();
+    const totalDays = totalMs / (1000 * 60 * 60 * 24);
+    const elapsedMs = now.getTime() - openAt.getTime();
+
+    // Déterminer Mmax selon durée totale
+    let mMax: number;
+    if (totalDays <= 7)   mMax = 1.2;
+    else if (totalDays <= 30)  mMax = 1.5;
+    else if (totalDays <= 90)  mMax = 2.0;
+    else if (totalDays <= 180) mMax = 3.0;
+    else mMax = 5.0;
+
+    // Période de grâce : premières 24h
+    const gracePeriodMs = 24 * 60 * 60 * 1000;
+    if (elapsedMs <= gracePeriodMs) {
+        return mMax;
+    }
+
+    // Après la période de grâce : déclin linéaire de Mmax à 1.0
+    const remainingMs = totalMs - gracePeriodMs;
+    const elapsedAfterGrace = elapsedMs - gracePeriodMs;
+    const ratio = Math.min(1, elapsedAfterGrace / remainingMs);
+    const multiplier = mMax - (mMax - 1.0) * ratio;
+
+    return parseFloat(Math.max(1.0, multiplier).toFixed(4));
+}
+
+/**
+ * Calcule la cote finale = cote bookmaker × multiplicateur Early Bird.
+ * C'est cette valeur qui est figée (lockedOdd) au moment de la mise.
+ */
+export function calculateFinalOdd(
+    bookmakerOdd: number,
+    earlyBirdMultiplier: number
+): number {
+    return parseFloat((bookmakerOdd * earlyBirdMultiplier).toFixed(2));
+}
+
+/**
+ * Calcule le bonus XP que la maison doit créer si le gain parimutuel
+ * est inférieur à la cote garantie.
+ * Retourne 0 si la pool parimutuelle est suffisante.
+ */
+export function calculateBookmakerBonus(
+    xpStaked: number,
+    lockedOdd: number,
+    xpGainParimutuel: number
+): number {
+    const guaranteedGain = Math.floor(xpStaked * lockedOdd);
+    return Math.max(0, guaranteedGain - xpGainParimutuel);
+}

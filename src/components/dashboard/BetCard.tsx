@@ -190,6 +190,49 @@ export default function BetCard({
                                     style={{ width: `${Math.max(2, percentage)}%` }}
                                 ></div>
                             </div>
+
+                            {/* Cotes bookmaker — si disponibles */}
+                            {(() => {
+                                const bOdd = bet.bookmakerOdds?.find((o: any) => o.key === opt.key);
+                                if (!bOdd) return null;
+                                return (
+                                    <div className="mt-1.5 space-y-1">
+                                        <div className="flex items-center justify-between px-1">
+                                            <span className="text-[10px] text-slate-500 font-bold">
+                                                📊 {bOdd.statLabel}
+                                            </span>
+                                            <div className="text-right">
+                                                <span className="text-[10px] font-black text-amber-400">
+                                                    Cote {bOdd.finalOdd}
+                                                </span>
+                                                <span className="text-[10px] text-slate-500 font-bold ml-1">
+                                                    · {bOdd.impliedGainFinal} XP / 100 misés
+                                                </span>
+                                            </div>
+                                        </div>
+                                        {/* Early bird indicator */}
+                                        {bOdd.earlyBirdMultiplier > 1.01 && (
+                                            <div className="flex items-center gap-1 px-1">
+                                                <span className="text-[9px] font-black text-green-400">
+                                                    ⚡ Early Bird ×{bOdd.earlyBirdMultiplier.toFixed(2)}
+                                                </span>
+                                                <span className="text-[9px] text-slate-600">
+                                                    (cote de base : {bOdd.odd})
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
+
+                            {/* Ma cote figée si j'ai déjà misé */}
+                            {myEntry && myEntry.option === opt.key && myEntry.lockedOdd && (
+                                <div className="mt-1 px-1 py-1 bg-amber-500/10 rounded-lg">
+                                    <span className="text-[9px] font-black text-amber-400">
+                                        🔒 Votre cote figée : {myEntry.lockedOdd} · gain garanti : {Math.floor(myEntry.xpStaked * myEntry.lockedOdd)} XP
+                                    </span>
+                                </div>
+                            )}
                             
                             {/* Action pari */}
                             {!isResolvedOrCancelled && bet.status === "OPEN" && (!myEntry || myEntry.withdrawn || myEntry.option === opt.key) && !isDuelPending && bet.createdByUserId !== currentUserId && (

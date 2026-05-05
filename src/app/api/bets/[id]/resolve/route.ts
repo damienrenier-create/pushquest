@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { getTodayISO } from "@/lib/challenge";
-import { calculateWinnings } from "@/lib/bets";
+import { calculateWinnings, calculateBookmakerBonus } from "@/lib/bets";
 
 export const dynamic = "force-dynamic";
 
@@ -113,17 +113,24 @@ export async function POST(
                         date: today,
                     }
                 });
-                // EC (Embercoins)
-                if (winner.ecGain > 0) {
-                    await tx.coinAdjustment.create({
-                        data: {
-                            userId: winner.userId,
-                            amount: winner.ecGain,
-                            reason: "BET_WIN",
-                            refId: id,
-                            date: today,
-                        }
-                    });
+                // 2. Bonus bookmaker si cote figée supérieure au gain parimutuel
+                const winnerEntry = bet.entries.find((e: any) => e.userId === winner.userId && !e.withdrawn);
+                if (winnerEntry?.lockedOdd) {
+                    const bonus = calculateBookmakerBonus(
+                        winnerEntry.xpStaked,
+                        winnerEntry.lockedOdd,
+                        winner.xpGain
+                    );
+                    if (bonus > 0) {
+                        await tx.xpAdjustment.create({
+                            data: {
+                                userId: winner.userId,
+                                amount: bonus,
+                                reason: `BET_BONUS:${id}:${bet.title}`,
+                                date: today,
+                            }
+                        });
+                    }
                 }
             }
 

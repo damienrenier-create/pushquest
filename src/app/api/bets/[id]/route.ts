@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { calculateOddsDisplay } from "@/lib/bets";
+import { calculateOddsDisplay, calculateBookmakerOdds, calculateEarlyBirdMultiplier, calculateFinalOdd } from "@/lib/bets";
 
 export const dynamic = "force-dynamic";
 
@@ -61,6 +61,95 @@ export async function GET(
 
         const myEntry = bet.entries.find((e: any) => e.userId === userId) || null;
 
+        let bookmakerOdds: any[] | null = null;
+        let currentFinalOdd: number | null = null;
+
+        const meta = (() => { try { return JSON.parse(bet.metadata || '{}'); } catch { return {}; } })();
+
+        if (meta.statsConfig && Array.isArray(meta.statsConfig)) {
+            const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            const thirtyDaysAgoISO = thirtyDaysAgo.toISOString().split('T')[0];
+
+            const statInputs: any[] = await Promise.all(
+                meta.statsConfig.map(async (cfg: any) => {
+                    let statValue = 0;
+                    let statLabel = "";
+
+                    if (cfg.statType === "torch_count_30d") {
+                        const count = await (prisma as any).badgeEvent.count({
+                            where: {
+                                toUserId: cfg.userId,
+                                eventType: "TORCH_CLAIM",
+                                badgeKey: "torch_daily",
+                                createdAt: { gte: thirtyDaysAgo }
+                            }
+                        });
+                        statValue = count;
+                        statLabel = `${count} flambeau${count > 1 ? 'x' : ''} / 30j`;
+
+                    } else if (cfg.statType === "completion_rate_30d") {
+                        const user = await prisma.user.findUnique({
+                            where: { id: cfg.userId },
+                            include: {
+                                sets: { where: { date: { gte: thirtyDaysAgoISO } } },
+                                medicalCertificates: true,
+                                fines: true
+                            }
+                        });
+                        if (user) {
+                            const setsByDate = (user.sets || []).reduce((acc: Record<string, number>, s: any) => {
+                                acc[s.date] = (acc[s.date] || 0) + (s.exercise === 'PLANK' ? Math.floor(s.reps / 5) : s.reps);
+                                return acc;
+                            }, {});
+                            const validatedDays = Object.values(setsByDate).filter((total: any) => total > 0).length;
+                            statValue = validatedDays;
+                            statLabel = `${validatedDays} jours validés / 30j`;
+                        }
+
+                    } else if (cfg.statType === "total_pushups_30d") {
+                        const result = await (prisma as any).exerciseSet.aggregate({
+                            where: { userId: cfg.userId, exercise: "PUSHUP", date: { gte: thirtyDaysAgoISO } },
+                            _sum: { reps: true }
+                        });
+                        statValue = result._sum?.reps || 0;
+                        statLabel = `${statValue} pompes / 30j`;
+
+                    } else if (cfg.statType === "total_reps_30d") {
+                        const result = await (prisma as any).exerciseSet.aggregate({
+                            where: { userId: cfg.userId, date: { gte: thirtyDaysAgoISO } },
+                            _sum: { reps: true }
+                        });
+                        statValue = result._sum?.reps || 0;
+                        statLabel = `${statValue} reps / 30j`;
+                    }
+
+                    return {
+                        key: cfg.key,
+                        label: cfg.label || cfg.key,
+                        statValue,
+                        statLabel,
+                        isInverse: cfg.isInverse || false
+                    };
+                })
+            );
+
+            const baseOdds = calculateBookmakerOdds(statInputs, 0.10);
+            const earlyBirdMult = calculateEarlyBirdMultiplier(
+                new Date(bet.openAt),
+                new Date(bet.closeAt),
+                now
+            );
+
+            bookmakerOdds = baseOdds.map(o => ({
+                ...o,
+                earlyBirdMultiplier: earlyBirdMult,
+                finalOdd: calculateFinalOdd(o.odd, earlyBirdMult),
+                impliedGainFinal: Math.round(100 * calculateFinalOdd(o.odd, earlyBirdMult))
+            }));
+
+            currentFinalOdd = earlyBirdMult;
+        }
+
         return NextResponse.json({
             id: bet.id,
             type: bet.type,
@@ -85,6 +174,8 @@ export async function GET(
             oddsDisplay,
             myEntry,
             result: bet.result || null,
+            bookmakerOdds,
+            currentEarlyBirdMultiplier: currentFinalOdd,
         });
 
     } catch (error) {
