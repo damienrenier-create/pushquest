@@ -128,8 +128,16 @@ export async function GET() {
                 try {
                     const metadata = typeof bet.metadata === "string" ? JSON.parse(bet.metadata) : bet.metadata;
                     const statsConfig: Array<{ key: string; label: string; statType: string; userId: string; isInverse?: boolean }> = metadata.statsConfig || [];
+                    const manualOdds: Array<{ key: string; label: string; odd: number; statLabel: string }> = metadata.manualOdds || [];
+
+                    const earlyBirdMultiplier = calculateEarlyBirdMultiplier(
+                        new Date(bet.openAt),
+                        new Date(bet.closeAt),
+                        now
+                    );
 
                     if (statsConfig.length > 0) {
+                        // Cotes calculées depuis les vraies stats
                         const inputs: StatOddsInput[] = await Promise.all(
                             statsConfig.map(async (cfg) => {
                                 const { value, label: statLabel } = await fetchStatValue(cfg.userId, cfg.statType, now);
@@ -144,14 +152,22 @@ export async function GET() {
                         );
 
                         const baseOdds = calculateBookmakerOdds(inputs);
-                        const earlyBirdMultiplier = calculateEarlyBirdMultiplier(
-                            new Date(bet.openAt),
-                            new Date(bet.closeAt),
-                            now
-                        );
-
                         bookmakerOdds = baseOdds.map(o => ({
                             ...o,
+                            earlyBirdMultiplier: parseFloat(earlyBirdMultiplier.toFixed(2)),
+                            finalOdd: calculateFinalOdd(o.odd, earlyBirdMultiplier),
+                            impliedGainFinal: Math.round(100 * calculateFinalOdd(o.odd, earlyBirdMultiplier)),
+                        }));
+
+                    } else if (manualOdds.length > 0) {
+                        // Cotes manuelles définies par l'admin — Early Bird appliqué par-dessus
+                        bookmakerOdds = manualOdds.map(o => ({
+                            key: o.key,
+                            label: o.label,
+                            statLabel: o.statLabel,
+                            probability: parseFloat((1 / o.odd).toFixed(3)),
+                            odd: o.odd,
+                            impliedGain: Math.round(100 * o.odd),
                             earlyBirdMultiplier: parseFloat(earlyBirdMultiplier.toFixed(2)),
                             finalOdd: calculateFinalOdd(o.odd, earlyBirdMultiplier),
                             impliedGainFinal: Math.round(100 * calculateFinalOdd(o.odd, earlyBirdMultiplier)),
@@ -161,6 +177,7 @@ export async function GET() {
                     // Silently ignore — bookmakerOdds stays []
                 }
             }
+
 
             return {
                 id: bet.id,
