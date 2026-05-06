@@ -273,9 +273,39 @@ export default function BetCard({
                                             ✕
                                         </button>
                                     </div>
-                                    <p className="text-[10px] text-slate-400 mt-2 text-center">
-                                        Multiplicateur actuel : <span className="text-amber-400">×{opt.currentMultiplier || 1}</span>
-                                    </p>
+                                    {(() => {
+                                        const bOdd = bet.bookmakerOdds?.find((o: any) => o.key === opt.key);
+                                        const finalOdd = bOdd?.finalOdd || opt.currentMultiplier || 1;
+                                        const amount = typeof stakeAmount === 'number' && stakeAmount > 0 ? stakeAmount : 0;
+                                        const estimatedGain = amount > 0 ? Math.floor(amount * finalOdd) : 0;
+                                        const profit = estimatedGain - amount;
+                                        return (
+                                            <div className="mt-3 space-y-1.5 bg-slate-900/50 rounded-xl p-3 border border-slate-700">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-[10px] text-slate-400 font-bold uppercase">Cote figée</span>
+                                                    <span className="text-[10px] font-black text-amber-400">×{finalOdd}</span>
+                                                </div>
+                                                {amount > 0 ? (
+                                                    <>
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-[10px] text-slate-400 font-bold uppercase">Gain garanti</span>
+                                                            <span className="text-[10px] font-black text-green-400">{estimatedGain} XP</span>
+                                                        </div>
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-[10px] text-slate-400 font-bold uppercase">Bénéfice net</span>
+                                                            <span className={`text-[10px] font-black ${profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                                                {profit >= 0 ? '+' : ''}{profit} XP
+                                                            </span>
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <p className="text-[10px] text-slate-500 text-center italic">
+                                                        Saisissez un montant pour voir le gain
+                                                    </p>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             )}
                         </div>

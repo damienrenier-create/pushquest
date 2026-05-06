@@ -25,12 +25,20 @@ async function fetchStatValue(statUserId: string, statType: string, now: Date): 
             return { value: count, label: `${count} flambeaux / 30j` };
         }
         case "completion_rate_30d": {
-            const logs = await (prisma as any).dailyLog.findMany({
-                where: { userId: statUserId, date: { gte: thirtyDaysAgo.toISOString().slice(0, 10) } },
-                select: { validated: true }
+            const thirtyDaysAgoISO = thirtyDaysAgo.toISOString().split('T')[0];
+            const user = await prisma.user.findUnique({
+                where: { id: statUserId },
+                include: {
+                    sets: { where: { date: { gte: thirtyDaysAgoISO } } }
+                }
             });
-            const rate = logs.length > 0 ? Math.round((logs.filter((l: any) => l.validated).length / logs.length) * 100) : 0;
-            return { value: rate, label: `${rate}% complétion / 30j` };
+            if (!user) return { value: 1, label: "0 jours validés / 30j" };
+            const setsByDate = (user.sets || []).reduce((acc: Record<string, number>, s: any) => {
+                acc[s.date] = (acc[s.date] || 0) + (s.exercise === 'PLANK' ? Math.floor(s.reps / 5) : s.reps);
+                return acc;
+            }, {});
+            const validatedDays = Object.values(setsByDate).filter((total: any) => (total as number) > 0).length;
+            return { value: validatedDays, label: `${validatedDays} jours validés / 30j` };
         }
         case "total_pushups_30d": {
             const sets = await (prisma as any).exerciseSet.findMany({
@@ -65,9 +73,19 @@ async function fetchStatValue(statUserId: string, statType: string, now: Date): 
             return { value: total, label: `${total} reps / 30j` };
         }
         case "current_xp": {
-            const user = await (prisma as any).user.findUnique({ where: { id: statUserId }, select: { xp: true } });
-            const xp = user?.xp || 0;
-            return { value: xp, label: `${xp} XP total` };
+            const user = await prisma.user.findUnique({
+                where: { id: statUserId },
+                include: {
+                    sets: true,
+                    xpAdjustments: true,
+                }
+            });
+            if (!user) return { value: 0, label: "0 XP" };
+            const repsXP = (user.sets || []).reduce((sum: number, s: any) =>
+                sum + (s.exercise === 'PLANK' ? Math.floor(s.reps / 5) : s.reps), 0);
+            const adjXP = (user.xpAdjustments || []).reduce((sum: number, a: any) => sum + a.amount, 0);
+            const total = Math.max(0, repsXP + adjXP);
+            return { value: total, label: `${total} XP total` };
         }
         default:
             return { value: 1, label: "stat inconnue" };
@@ -94,6 +112,7 @@ export async function GET() {
                         option: true,
                         xpStaked: true,
                         multiplier: true,
+                        lockedOdd: true,
                         ecStaked: true,
                         withdrawn: true,
                         xpReturned: true,

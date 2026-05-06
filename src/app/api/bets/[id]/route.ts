@@ -148,6 +148,26 @@ export async function GET(
             }));
 
             currentFinalOdd = earlyBirdMult;
+
+        } else if (meta.manualOdds && Array.isArray(meta.manualOdds) && meta.manualOdds.length > 0) {
+            // Cotes manuelles définies par l'admin — Early Bird appliqué par-dessus
+            const earlyBirdMult = calculateEarlyBirdMultiplier(
+                new Date(bet.openAt),
+                new Date(bet.closeAt),
+                now
+            );
+            bookmakerOdds = meta.manualOdds.map((o: any) => ({
+                key: o.key,
+                label: o.label,
+                statLabel: o.statLabel || "",
+                probability: parseFloat((1 / o.odd).toFixed(3)),
+                odd: o.odd,
+                impliedGain: Math.round(100 * o.odd),
+                earlyBirdMultiplier: parseFloat(earlyBirdMult.toFixed(2)),
+                finalOdd: calculateFinalOdd(o.odd, earlyBirdMult),
+                impliedGainFinal: Math.round(100 * calculateFinalOdd(o.odd, earlyBirdMult)),
+            }));
+            currentFinalOdd = earlyBirdMult;
         }
 
         return NextResponse.json({
