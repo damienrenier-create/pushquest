@@ -672,7 +672,11 @@ export default function AdminClient({ user }: { user: any }) {
                                                     )}
                                                     {(bet.status === "OPEN" || bet.status === "LOCKED") && (
                                                         <>
-                                                            <button onClick={() => setBetAction({ betId: bet.id, action: "resolve" })}
+                                                            <button onClick={() => {
+                                                                setResolveOption("");
+                                                                setResolveNote("");
+                                                                setBetAction({ betId: bet.id, action: "resolve" });
+                                                            }}
                                                                 className="px-3 py-1.5 bg-blue-600 text-white font-black text-[10px] uppercase rounded-xl hover:bg-blue-700">
                                                                 Résoudre
                                                             </button>

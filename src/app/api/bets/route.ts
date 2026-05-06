@@ -212,6 +212,8 @@ export async function GET() {
                 resolvedAt: bet.resolvedAt,
                 resolvedOption: bet.resolvedOption,
                 createdAt: bet.createdAt,
+                createdByUserId: bet.createdByUserId,
+                targetUserId: bet.targetUserId || null,
                 totalPool,
                 oddsDisplay,
                 bookmakerOdds,

@@ -139,9 +139,33 @@ export default function BetCard({
                 <div className="mb-4 bg-green-500/10 border border-green-500/20 rounded-xl p-3 text-center">
                     <p className="text-green-400 font-black text-xs uppercase mb-1">✅ Terminé</p>
                     <p className="text-white font-bold text-sm">Option gagnante : {bet.options.find((o: any) => o.key === bet.resolvedOption)?.label || bet.resolvedOption}</p>
-                    {myEntry && myEntry.option === bet.resolvedOption && !myEntry.withdrawn && (
-                        <p className="text-green-400 font-bold text-xs mt-2">Vous avez gagné 🎉</p>
-                    )}
+                    {myEntry && myEntry.option === bet.resolvedOption && !myEntry.withdrawn && (() => {
+                        let gainXP: number | null = null;
+                        try {
+                            const snapshot = bet.result?.distributionSnapshot
+                                ? JSON.parse(bet.result.distributionSnapshot)
+                                : null;
+                            if (snapshot) {
+                                const myWin = snapshot.find((w: any) => w.userId === myEntry.userId);
+                                if (myWin) gainXP = myWin.xpGain;
+                            }
+                        } catch {}
+                        return (
+                            <div className="mt-2 space-y-1">
+                                <p className="text-green-400 font-bold text-xs">🎉 Vous avez gagné !</p>
+                                {gainXP !== null && (
+                                    <p className="text-green-300 font-black text-sm">
+                                        +{gainXP} XP
+                                        {myEntry.lockedOdd && (
+                                            <span className="text-[10px] text-green-500 font-bold ml-1">
+                                                (cote ×{myEntry.lockedOdd})
+                                            </span>
+                                        )}
+                                    </p>
+                                )}
+                            </div>
+                        );
+                    })()}
                     {myEntry && myEntry.option !== bet.resolvedOption && !myEntry.withdrawn && (
                         <p className="text-red-400 font-bold text-xs mt-2">Vous avez perdu votre mise.</p>
                     )}
