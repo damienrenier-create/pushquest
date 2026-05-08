@@ -49,6 +49,11 @@ export default function AdminClient({ user }: { user: any }) {
     const [resolveNote, setResolveNote] = useState("");
     const [betMessage, setBetMessage] = useState<string | null>(null);
 
+    // Correct-odd state
+    const [correctOddForm, setCorrectOddForm] = useState<{ betId: string; entryId: string; userId: string } | null>(null);
+    const [correctOddValue, setCorrectOddValue] = useState("");
+    const [correctOddReason, setCorrectOddReason] = useState("");
+
     const deleteSet = async (setId: string) => {
         if (!confirm("Supprimer cette série ? Action irréversible.")) return;
         setLoading(setId);
@@ -261,9 +266,11 @@ export default function AdminClient({ user }: { user: any }) {
             const data = await res.json();
             if (res.ok) {
                 setBetMessage("✅ Pari créé en brouillon");
-                setNewBet({ type: "PRONOSTIC", subType: "MULTI", title: "", description: "",
-                            options: [{ key: "opt1", label: "" }, { key: "opt2", label: "" }],
-                            closeAt: "", targetUserId: "" });
+                setNewBet({
+                    type: "PRONOSTIC", subType: "MULTI", title: "", description: "",
+                    options: [{ key: "opt1", label: "" }, { key: "opt2", label: "" }],
+                    closeAt: "", targetUserId: ""
+                });
                 loadBets();
             } else {
                 setBetMessage("❌ " + (data.message || "Erreur"));
@@ -294,6 +301,22 @@ export default function AdminClient({ user }: { user: any }) {
         setBetAction(null);
         setResolveOption("");
         setResolveNote("");
+        loadBets();
+    };
+
+    const handleCorrectOdd = async (betId: string, userId: string) => {
+        const newOdd = parseFloat(correctOddValue);
+        if (!newOdd || newOdd <= 0 || !correctOddReason) return setBetMessage("Cote et raison requises");
+        const res = await fetch(`/api/admin/bets/${betId}/correct-odd`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId, lockedOdd: newOdd, reason: correctOddReason })
+        });
+        const data = await res.json();
+        setBetMessage(res.ok ? `✅ ${data.message}` : "❌ " + data.message);
+        setCorrectOddForm(null);
+        setCorrectOddValue("");
+        setCorrectOddReason("");
         loadBets();
     };
 
@@ -552,13 +575,13 @@ export default function AdminClient({ user }: { user: any }) {
                             <div className="space-y-3">
                                 {/* Type */}
                                 <div className="flex gap-2">
-                                    <select value={newBet.type} onChange={e => setNewBet({...newBet, type: e.target.value})}
+                                    <select value={newBet.type} onChange={e => setNewBet({ ...newBet, type: e.target.value })}
                                         className="flex-1 px-3 py-2 text-sm rounded-xl border border-slate-200 outline-none">
                                         <option value="PRONOSTIC">Pronostic</option>
                                         <option value="DUEL">Duel</option>
                                         <option value="COURSE">Course</option>
                                     </select>
-                                    <select value={newBet.subType} onChange={e => setNewBet({...newBet, subType: e.target.value})}
+                                    <select value={newBet.subType} onChange={e => setNewBet({ ...newBet, subType: e.target.value })}
                                         className="flex-1 px-3 py-2 text-sm rounded-xl border border-slate-200 outline-none">
                                         <option value="BINARY">Binaire (Oui/Non)</option>
                                         <option value="MULTI">Choix multiple</option>
@@ -568,12 +591,12 @@ export default function AdminClient({ user }: { user: any }) {
 
                                 {/* Titre */}
                                 <input type="text" placeholder="Titre du pari" value={newBet.title}
-                                    onChange={e => setNewBet({...newBet, title: e.target.value})}
+                                    onChange={e => setNewBet({ ...newBet, title: e.target.value })}
                                     className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 outline-none" />
 
                                 {/* Description */}
                                 <input type="text" placeholder="Description (optionnel)" value={newBet.description}
-                                    onChange={e => setNewBet({...newBet, description: e.target.value})}
+                                    onChange={e => setNewBet({ ...newBet, description: e.target.value })}
                                     className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 outline-none" />
 
                                 {/* Options */}
@@ -585,17 +608,17 @@ export default function AdminClient({ user }: { user: any }) {
                                                 onChange={e => {
                                                     const opts = [...newBet.options];
                                                     opts[i] = { ...opts[i], label: e.target.value };
-                                                    setNewBet({...newBet, options: opts});
+                                                    setNewBet({ ...newBet, options: opts });
                                                 }}
                                                 className="flex-1 px-3 py-2 text-sm rounded-xl border border-slate-200 outline-none" />
                                             {newBet.options.length > 2 && (
-                                                <button onClick={() => setNewBet({...newBet, options: newBet.options.filter((_, j) => j !== i)})}
+                                                <button onClick={() => setNewBet({ ...newBet, options: newBet.options.filter((_, j) => j !== i) })}
                                                     className="px-3 py-2 text-red-400 hover:text-red-600 text-sm font-bold">✕</button>
                                             )}
                                         </div>
                                     ))}
                                     {newBet.options.length < 6 && (
-                                        <button onClick={() => setNewBet({...newBet, options: [...newBet.options, { key: `opt${newBet.options.length + 1}`, label: "" }]})}
+                                        <button onClick={() => setNewBet({ ...newBet, options: [...newBet.options, { key: `opt${newBet.options.length + 1}`, label: "" }] })}
                                             className="text-xs text-amber-600 font-bold hover:underline">
                                             + Ajouter une option
                                         </button>
@@ -604,14 +627,14 @@ export default function AdminClient({ user }: { user: any }) {
 
                                 {/* Date de clôture */}
                                 <input type="datetime-local" value={newBet.closeAt}
-                                    onChange={e => setNewBet({...newBet, closeAt: e.target.value})}
+                                    onChange={e => setNewBet({ ...newBet, closeAt: e.target.value })}
                                     className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 outline-none" />
 
                                 {/* Target user pour DUEL */}
                                 {newBet.type === "DUEL" && (
                                     <input type="text" placeholder="UserID du joueur ciblé (pour le duel)"
                                         value={newBet.targetUserId}
-                                        onChange={e => setNewBet({...newBet, targetUserId: e.target.value})}
+                                        onChange={e => setNewBet({ ...newBet, targetUserId: e.target.value })}
                                         className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 outline-none" />
                                 )}
 
@@ -638,6 +661,7 @@ export default function AdminClient({ user }: { user: any }) {
                             <div className="divide-y divide-gray-50">
                                 {bets.map((bet: any) => {
                                     const options = typeof bet.options === "string" ? JSON.parse(bet.options) : bet.options;
+                                    const betMeta = (() => { try { return JSON.parse(bet.metadata || '{}'); } catch { return {}; } })();
                                     const statusColors: Record<string, string> = {
                                         DRAFT: "bg-gray-100 text-gray-600",
                                         OPEN: "bg-green-100 text-green-700",
@@ -645,6 +669,19 @@ export default function AdminClient({ user }: { user: any }) {
                                         RESOLVED: "bg-blue-100 text-blue-700",
                                         CANCELLED: "bg-red-100 text-red-600"
                                     };
+
+                                    // Détecter cotes incohérentes : par option, si ratio max/min > 2
+                                    const activeEntries: any[] = (bet.entries || []).filter((e: any) => !e.withdrawn);
+                                    const hasIncoherentOdds = options.some((opt: any) => {
+                                        const odds = activeEntries
+                                            .filter((e: any) => e.option === opt.key && e.lockedOdd)
+                                            .map((e: any) => e.lockedOdd as number);
+                                        if (odds.length < 2) return false;
+                                        const maxOdd = Math.max(...odds);
+                                        const minOdd = Math.min(...odds);
+                                        return minOdd > 0 && maxOdd / minOdd > 2;
+                                    });
+
                                     return (
                                         <div key={bet.id} className="p-4 hover:bg-gray-50 transition-colors">
                                             <div className="flex items-start justify-between gap-3">
@@ -654,12 +691,98 @@ export default function AdminClient({ user }: { user: any }) {
                                                             {bet.status}
                                                         </span>
                                                         <span className="text-[10px] text-gray-400 font-bold uppercase">{bet.type}</span>
+                                                        {hasIncoherentOdds && (
+                                                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-orange-100 text-orange-700" title="Deux entrées sur la même option ont des cotes dont le ratio dépasse 2×">
+                                                                ⚠️ Cotes incohérentes
+                                                            </span>
+                                                        )}
                                                     </div>
                                                     <p className="font-bold text-sm text-gray-800">{bet.title}</p>
                                                     <p className="text-[10px] text-gray-400 mt-0.5">
                                                         Clôture : {bet.closeAt ? new Date(bet.closeAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : "—"}
                                                         {" · "}{bet.entries?.length || 0} parieurs
                                                     </p>
+
+                                                    {/* Instructions de résolution depuis metadata */}
+                                                    {betMeta.resolveInstructions && (
+                                                        <p className="mt-1.5 text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1 font-bold">
+                                                            📋 {betMeta.resolveInstructions}
+                                                        </p>
+                                                    )}
+
+                                                    {/* Entrées actives avec lockedOdd */}
+                                                    {activeEntries.length > 0 && (
+                                                        <div className="mt-2 space-y-1">
+                                                            {activeEntries.map((entry: any) => {
+                                                                const optLabel = options.find((o: any) => o.key === entry.option)?.label || entry.option;
+                                                                return (
+                                                                    <div key={entry.id} className="flex items-center justify-between gap-2 bg-gray-50 rounded-lg px-2 py-1">
+                                                                        <span className="text-[10px] font-bold text-gray-600 truncate max-w-[120px]" title={entry.userId}>
+                                                                            {entry.userId.slice(0, 8)}…
+                                                                        </span>
+                                                                        <span className="text-[10px] font-black text-blue-600 uppercase">{optLabel}</span>
+                                                                        <span className="text-[10px] font-bold text-gray-700">{entry.xpStaked} XP</span>
+                                                                        <span className="text-[10px] font-bold text-purple-700">
+                                                                            ×{entry.lockedOdd?.toFixed(2) ?? "—"}
+                                                                        </span>
+                                                                        {(bet.status === "OPEN" || bet.status === "LOCKED") && (
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    setCorrectOddForm({ betId: bet.id, entryId: entry.id, userId: entry.userId });
+                                                                                    setCorrectOddValue(entry.lockedOdd?.toString() ?? "");
+                                                                                    setCorrectOddReason("");
+                                                                                }}
+                                                                                className="text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full hover:bg-orange-100 transition-colors whitespace-nowrap"
+                                                                            >
+                                                                                Corriger la cote
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Mini-formulaire correction de cote */}
+                                                    {correctOddForm?.betId === bet.id && (
+                                                        <div className="mt-2 p-3 bg-orange-50 rounded-2xl border border-orange-200 space-y-2">
+                                                            <p className="text-[10px] font-black text-orange-700 uppercase">
+                                                                Corriger la cote — user {correctOddForm.userId.slice(0, 8)}…
+                                                            </p>
+                                                            <div className="flex gap-2">
+                                                                <input
+                                                                    type="number"
+                                                                    step="0.01"
+                                                                    min="1.01"
+                                                                    placeholder="Nouvelle cote (ex: 2.50)"
+                                                                    value={correctOddValue}
+                                                                    onChange={e => setCorrectOddValue(e.target.value)}
+                                                                    className="flex-1 px-3 py-1.5 text-sm rounded-xl border border-orange-200 outline-none"
+                                                                />
+                                                            </div>
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Raison de la correction"
+                                                                value={correctOddReason}
+                                                                onChange={e => setCorrectOddReason(e.target.value)}
+                                                                className="w-full px-3 py-1.5 text-sm rounded-xl border border-orange-200 outline-none"
+                                                            />
+                                                            <div className="flex gap-2">
+                                                                <button
+                                                                    onClick={() => handleCorrectOdd(correctOddForm.betId, correctOddForm.userId)}
+                                                                    className="flex-1 py-1.5 bg-orange-600 text-white font-black text-xs uppercase rounded-xl hover:bg-orange-700"
+                                                                >
+                                                                    Appliquer
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => { setCorrectOddForm(null); setCorrectOddValue(""); setCorrectOddReason(""); }}
+                                                                    className="px-4 py-1.5 bg-gray-200 text-gray-600 font-black text-xs uppercase rounded-xl hover:bg-gray-300"
+                                                                >
+                                                                    Annuler
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
 
                                                 {/* Actions selon statut */}

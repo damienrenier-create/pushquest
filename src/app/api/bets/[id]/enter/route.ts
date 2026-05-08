@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma";
 import { getTodayISO } from "@/lib/challenge";
 import { calculateEntryMultiplier, calculateWeightedMultiplier, calculateBookmakerOdds, calculateEarlyBirdMultiplier, calculateFinalOdd } from "@/lib/bets";
 import { MONTH_MULTIPLIERS } from "@/lib/xp-constants";
+import { getDailyTargetForUserOnDate } from "@/lib/challenge";
 
 export const dynamic = "force-dynamic";
 
@@ -165,7 +166,7 @@ export async function POST(
                                 acc[s.date] = (acc[s.date] || 0) + (s.exercise === 'PLANK' ? Math.floor(s.reps / 5) : s.reps);
                                 return acc;
                             }, {});
-                            statValue = Object.values(setsByDate).filter((t: any) => t > 0).length;
+                            statValue = Object.entries(setsByDate).filter(([date, t]) => (t as number) >= getDailyTargetForUserOnDate(user, date)).length;
                             statLabel = `${statValue} jours validés / 30j`;
                         }
                     } else if (cfg.statType === "total_pushups_30d") {
@@ -176,11 +177,12 @@ export async function POST(
                         statValue = result._sum?.reps || 0;
                         statLabel = `${statValue} pompes / 30j`;
                     } else if (cfg.statType === "total_reps_30d") {
-                        const result = await (prisma as any).exerciseSet.aggregate({
+                        const sets = await (prisma as any).exerciseSet.findMany({
                             where: { userId: cfg.userId, date: { gte: thirtyDaysAgoISO } },
-                            _sum: { reps: true }
+                            select: { reps: true, exercise: true }
                         });
-                        statValue = result._sum?.reps || 0;
+                        statValue = sets.reduce((sum: number, s: any) => 
+                            sum + (s.exercise === 'PLANK' ? Math.floor(s.reps / 5) : (s.reps || 0)), 0);
                         statLabel = `${statValue} reps / 30j`;
                     }
 

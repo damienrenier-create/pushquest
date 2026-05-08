@@ -318,12 +318,19 @@ export function calculateFinalOdd(
  * Calcule le bonus XP que la maison doit créer si le gain parimutuel
  * est inférieur à la cote garantie.
  * Retourne 0 si la pool parimutuelle est suffisante.
+ *
+ * maxBonusMultiplier (défaut : 3) — plafond anti-abus single-bettor :
+ *   La garantie bookmaker est limitée à stake × maxBonusMultiplier.
+ *   Exemple : stake=500, lockedOdd=11.13 → guaranteedGain=min(5565, 1500)=1500
+ *   BET_BONUS = max(0, 1500 - parimutuel) au lieu de max(0, 5565 - parimutuel).
  */
 export function calculateBookmakerBonus(
     xpStaked: number,
     lockedOdd: number,
-    xpGainParimutuel: number
+    xpGainParimutuel: number,
+    maxBonusMultiplier: number = 3
 ): number {
-    const guaranteedGain = Math.floor(xpStaked * lockedOdd);
-    return Math.max(0, guaranteedGain - xpGainParimutuel);
+    const rawGuaranteedGain = Math.floor(xpStaked * lockedOdd);
+    const cappedGuaranteedGain = Math.min(rawGuaranteedGain, xpStaked * maxBonusMultiplier);
+    return Math.max(0, cappedGuaranteedGain - xpGainParimutuel);
 }

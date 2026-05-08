@@ -77,6 +77,12 @@ export async function POST(
         const resolvedByUserId = (session.user as any).id;
         const today = getTodayISO();
 
+        // ─── Détection single-bettor sur l'option gagnante ────────────────────
+        const activeWinners = bet.entries.filter((e: any) => !e.withdrawn && e.option === winnerOption);
+        const isSingleBettor = activeWinners.length === 1;
+        // Plafond standard : ×3. Appliqué dans tous les cas ; critique pour le single-bettor.
+        const maxBonusMultiplier = 3;
+
         // ─── Transaction atomique ─────────────────────────────────────────────
         await (prisma as any).$transaction(async (tx: any) => {
 
@@ -87,7 +93,10 @@ export async function POST(
                     winnerOption,
                     resolvedByUserId,
                     distributionSnapshot: JSON.stringify(distribution),
-                    note: note || null,
+                    note: [
+                        note || null,
+                        isSingleBettor ? 'single_bettor_capped' : null,
+                    ].filter(Boolean).join(' | ') || null,
                 }
             });
 
@@ -119,7 +128,8 @@ export async function POST(
                     const bonus = calculateBookmakerBonus(
                         winnerEntry.xpStaked,
                         winnerEntry.lockedOdd,
-                        winner.xpGain
+                        winner.xpGain,
+                        maxBonusMultiplier
                     );
                     if (bonus > 0) {
                         await tx.xpAdjustment.create({

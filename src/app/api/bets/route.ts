@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { calculateOddsDisplay, calculateBookmakerOdds, calculateEarlyBirdMultiplier, calculateFinalOdd, StatOddsInput } from "@/lib/bets";
+import { getDailyTargetForUserOnDate } from "@/lib/challenge";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,9 @@ async function fetchStatValue(statUserId: string, statType: string, now: Date): 
                 acc[s.date] = (acc[s.date] || 0) + (s.exercise === 'PLANK' ? Math.floor(s.reps / 5) : s.reps);
                 return acc;
             }, {});
-            const validatedDays = Object.values(setsByDate).filter((total: any) => (total as number) > 0).length;
+            const validatedDays = Object.entries(setsByDate).filter(([date, total]) =>
+                (total as number) >= getDailyTargetForUserOnDate(user, date)
+            ).length;
             return { value: validatedDays, label: `${validatedDays} jours validés / 30j` };
         }
         case "total_pushups_30d": {
@@ -67,9 +70,10 @@ async function fetchStatValue(statUserId: string, statType: string, now: Date): 
         case "total_reps_30d": {
             const sets = await (prisma as any).exerciseSet.findMany({
                 where: { userId: statUserId, date: { gte: thirtyDaysAgo.toISOString().slice(0, 10) } },
-                select: { reps: true }
+                select: { reps: true, exercise: true }
             });
-            const total = sets.reduce((sum: number, s: any) => sum + (s.reps || 0), 0);
+            const total = sets.reduce((sum: number, s: any) =>
+                sum + (s.exercise === 'PLANK' ? Math.floor(s.reps / 5) : (s.reps || 0)), 0);
             return { value: total, label: `${total} reps / 30j` };
         }
         case "current_xp": {
