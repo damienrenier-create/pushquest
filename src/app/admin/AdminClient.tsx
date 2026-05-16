@@ -747,7 +747,7 @@ export default function AdminClient({ user }: { user: any }) {
                                                     {correctOddForm?.betId === bet.id && (
                                                         <div className="mt-2 p-3 bg-orange-50 rounded-2xl border border-orange-200 space-y-2">
                                                             <p className="text-[10px] font-black text-orange-700 uppercase">
-                                                                Corriger la cote — user {correctOddForm.userId.slice(0, 8)}…
+                                                                Corriger la cote — user {correctOddForm?.userId?.slice(0, 8)}…
                                                             </p>
                                                             <div className="flex gap-2">
                                                                 <input
@@ -769,7 +769,9 @@ export default function AdminClient({ user }: { user: any }) {
                                                             />
                                                             <div className="flex gap-2">
                                                                 <button
-                                                                    onClick={() => handleCorrectOdd(correctOddForm.betId, correctOddForm.userId)}
+                                                                    onClick={() => {
+                                                                        if (correctOddForm) handleCorrectOdd(correctOddForm.betId, correctOddForm.userId);
+                                                                    }}
                                                                     className="flex-1 py-1.5 bg-orange-600 text-white font-black text-xs uppercase rounded-xl hover:bg-orange-700"
                                                                 >
                                                                     Appliquer
