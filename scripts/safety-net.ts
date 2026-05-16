@@ -93,7 +93,7 @@ async function runAudit() {
     const apiFiles = fs.readdirSync(path.join(ROOT, 'src/app/api'), { recursive: true })
         .filter(f => typeof f === 'string' && (f.endsWith('route.ts') || f.endsWith('route.js')));
     
-    let apiSuccess = true;
+    const apiSuccess = true;
     for (const file of apiFiles) {
         const content = fs.readFileSync(path.join(ROOT, 'src/app/api', file as string), 'utf8');
         if (content.includes('export async function POST') || content.includes('export async function GET')) {

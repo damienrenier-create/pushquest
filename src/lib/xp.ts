@@ -337,10 +337,10 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
         const marvinBonusDate = "2026-03-08";
         const isMarvinDay = todayISO === marvinBonusDate;
 
-        let pushupsXPContribution = summary.totalPushups * (isMarvinDay ? 2 : 1);
-        let pullupsXPContribution = summary.totalPullups * (isMarvinDay ? 6 : 3);
-        let squatsXPContribution = summary.totalSquats * (isMarvinDay ? 2 : 1);
-        let planksXPContribution = Math.floor(summary.totalPlanks / 5);
+        const pushupsXPContribution = summary.totalPushups * (isMarvinDay ? 2 : 1);
+        const pullupsXPContribution = summary.totalPullups * (isMarvinDay ? 6 : 3);
+        const squatsXPContribution = summary.totalSquats * (isMarvinDay ? 2 : 1);
+        const planksXPContribution = Math.floor(summary.totalPlanks / 5);
         totalXP += pushupsXPContribution + pullupsXPContribution + squatsXPContribution + planksXPContribution;
 
         // B. Régularité et Flex par Jour
@@ -437,7 +437,7 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
         const userBadges = badgesOwnerships.filter(b => b.currentUserId === u.id);
         const processedBadges = userBadges.map(b => {
             const streak = summary.perfectTargetStreak || 0;
-            let displayBadge = { ...b };
+            const displayBadge = { ...b };
 
             // Perfect Soldier Tier Names, Emojis, and Descriptions
             if (b.badgeKey === "perfect_soldier") {

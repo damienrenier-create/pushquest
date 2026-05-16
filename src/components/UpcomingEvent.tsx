@@ -27,7 +27,7 @@ export default function UpcomingEvent() {
         setIsMounted(true);
         const today = getTodayISO();
 
-        let allEvents: UnifiedEvent[] = [];
+        const allEvents: UnifiedEvent[] = [];
 
         // Add Special Days
         Object.entries(SPECIAL_DAYS).forEach(([date, day]) => {
@@ -58,7 +58,7 @@ export default function UpcomingEvent() {
 
         // Determine the next or active event
         let activeEvent = null;
-        let upcomingEvents = [];
+        const upcomingEvents = [];
 
         for (const ev of allEvents) {
             if (ev.endDate) {

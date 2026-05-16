@@ -1224,7 +1224,7 @@ export function calculateBadgeProgress(def: any, summary: any) {
     if (def.type === "COMPETITIVE") return 0; // Competitive badges are binary or record-based
 
     let current = 0;
-    let target = def.threshold || 1;
+    const target = def.threshold || 1;
 
     switch (def.metricType) {
         case "MILESTONE_TOTAL":

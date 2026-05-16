@@ -13,7 +13,7 @@ export async function GET() {
 
         // 1. Find Current Torchbearer (First to finish today - PERSISTENT)
         const winner = await getTorchWinnerForDate(today);
-        let currentTorchbearer = winner ? {
+        const currentTorchbearer = winner ? {
             nickname: winner.nickname,
             time: winner.achievedAt,
             image: winner.image
