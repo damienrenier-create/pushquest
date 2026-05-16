@@ -15,6 +15,49 @@ export type DailyCarousel = {
     slides: DailyCarouselSlide[];
 };
 
+export type SpecialCarousel = DailyCarousel & { 
+  specialEventId: string; 
+  permanent: boolean;
+};
+
+export const specialCarousels: SpecialCarousel[] = [
+  {
+    id: "fsm-redistribution",
+    specialEventId: "fsm_redistribution_may2026",
+    day: 0,
+    theme: "Le Monstre en Spaghetti Volant",
+    priority: "high",
+    permanent: false,
+    area: "Univers",
+    slides: [
+      {
+        emoji: "🍝",
+        title: "Il a tendu Ses Nouilles Sacrées",
+        text: "Le Monstre en Spaghetti Volant a observé les événements récents. Il a jugé. Il a agi.",
+        cta: "Écoute Sa parole"
+      },
+      {
+        emoji: "⚖️",
+        title: "Xa a refusé le butin",
+        text: "Xa, dont l'astuce avait déclenché une pluie d'XP imméritée, a choisi l'honneur plutôt que la richesse. Il a tout rendu.",
+        cta: "L'honneur avant tout"
+      },
+      {
+        emoji: "✨",
+        title: "Le FSM redistribue Ses grâces",
+        text: "En récompense de la bravoure collective, le Monstre a béni chaque joueur d'une part égale des offrandes. Vérifiez votre XP.",
+        cta: "Recevoir la bénédiction"
+      },
+      {
+        emoji: "🙏",
+        title: "RAmen.",
+        text: "Que Ses Nouilles vous guident. Que Ses Boulettes vous protègent. Le Monstre veille sur PushQuest.",
+        cta: "RAmen 🍝"
+      }
+    ]
+  }
+];
+
 export const priorityDailyCarousels: DailyCarousel[] = [
     {
         id: "flambeau",

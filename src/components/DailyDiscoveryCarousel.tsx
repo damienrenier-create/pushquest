@@ -3,17 +3,30 @@
 import React, { useState, useEffect } from "react";
 import { X, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { dailyCarousels, DailyCarouselSlide } from "@/config/dailyCarousels";
+import { dailyCarousels, specialCarousels, DailyCarouselSlide, SpecialCarousel } from "@/config/dailyCarousels";
 
 const LS_KEY_PREFIX = "pushquest_daily_seen_";
 
 export default function DailyDiscoveryCarousel() {
     const router = useRouter();
-    const [activeCarousel, setActiveCarousel] = useState<typeof dailyCarousels[0] | null>(null);
+    const [activeCarousel, setActiveCarousel] = useState<typeof dailyCarousels[0] | SpecialCarousel | null>(null);
+    const [isSpecial, setIsSpecial] = useState(false);
+    const [showConfetti, setShowConfetti] = useState(false);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
+        // First check special carousels
+        for (const special of specialCarousels) {
+            const lsKey = `pushquest_special_seen_${special.specialEventId}`;
+            if (localStorage.getItem(lsKey) !== "true") {
+                setActiveCarousel(special);
+                setIsSpecial(true);
+                setIsVisible(true);
+                return; // Stop checking further, show special priority
+            }
+        }
+
         // Logic to determine which carousel to show based on date
         // Target: May 1st to May 10th, 2026
         const now = new Date();
@@ -48,10 +61,15 @@ export default function DailyDiscoveryCarousel() {
 
     const saveDismissal = () => {
         try {
-            const now = new Date();
-            const day = now.getDate();
-            const lsKey = `${LS_KEY_PREFIX}${day}_202604`;
-            localStorage.setItem(lsKey, "true");
+            if (isSpecial && activeCarousel && "specialEventId" in activeCarousel) {
+                const lsKey = `pushquest_special_seen_${(activeCarousel as SpecialCarousel).specialEventId}`;
+                localStorage.setItem(lsKey, "true");
+            } else {
+                const now = new Date();
+                const day = now.getDate();
+                const lsKey = `${LS_KEY_PREFIX}${day}_202604`;
+                localStorage.setItem(lsKey, "true");
+            }
         } catch (e) {
             console.error("LocalStorage error:", e);
         }
@@ -64,11 +82,19 @@ export default function DailyDiscoveryCarousel() {
 
     const markAsSeen = () => {
         saveDismissal();
-        setIsVisible(false);
-
-        // If there's a href, navigate to it
-        if (activeCarousel.href) {
-            router.push(activeCarousel.href);
+        if (isSpecial) {
+            setShowConfetti(true);
+            setTimeout(() => {
+                setIsVisible(false);
+                if (activeCarousel?.href) {
+                    router.push(activeCarousel.href);
+                }
+            }, 2500);
+        } else {
+            setIsVisible(false);
+            if (activeCarousel?.href) {
+                router.push(activeCarousel.href);
+            }
         }
     };
 
@@ -86,7 +112,12 @@ export default function DailyDiscoveryCarousel() {
 
     return (
         <div className="fixed inset-0 z-[210] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="bg-white max-w-sm w-full rounded-[2.5rem] shadow-2xl relative overflow-hidden flex flex-col transform-gpu animate-in zoom-in-95 duration-300 spring-bounce-200 border-4 border-indigo-500/20">
+            {showConfetti && (
+                <div className="absolute inset-0 flex items-center justify-center z-[300] pointer-events-none">
+                    <div className="text-8xl animate-bounce">🍝✨🎉</div>
+                </div>
+            )}
+            <div className={`bg-white max-w-sm w-full rounded-[2.5rem] shadow-2xl relative overflow-hidden flex flex-col transform-gpu animate-in zoom-in-95 duration-300 spring-bounce-200 border-4 border-indigo-500/20 ${showConfetti ? 'opacity-0 scale-90' : ''}`}>
 
                 {/* Header with progress and close */}
                 <div className="flex justify-between items-center px-6 pt-6 mb-2">
@@ -95,7 +126,7 @@ export default function DailyDiscoveryCarousel() {
                             <Sparkles size={14} strokeWidth={3} />
                         </div>
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                            Découverte {currentIndex + 1} / 3
+                            Découverte {currentIndex + 1} / {activeCarousel.slides.length}
                         </span>
                     </div>
                     <button
@@ -156,7 +187,7 @@ export default function DailyDiscoveryCarousel() {
                 <div className="absolute bottom-0 left-0 h-1.5 bg-slate-50 w-full">
                     <div
                         className="h-full bg-gradient-to-r from-indigo-500 to-blue-500 transition-all duration-500 ease-out"
-                        style={{ width: `${((currentIndex + 1) / 3) * 100}%` }}
+                        style={{ width: `${((currentIndex + 1) / activeCarousel.slides.length) * 100}%` }}
                     ></div>
                 </div>
             </div>
