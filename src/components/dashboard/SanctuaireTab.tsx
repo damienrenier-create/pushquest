@@ -3,13 +3,12 @@
 import React, { useState, useEffect, useRef } from 'react'
 import dialogueData from '@/data/fsm_dialogue.json'
 
-const DUO_DONE_KEY = 'fsm_duolingo_done'
-
+const DUO_DONE_KEY = 'fsm_duolingo_done';
 const GRADE_EMOJIS: Record<string, string> = {
   APPRENTI_HALTERE: "🏋️", APPRENTI_RENARD: "🦊",
   APPRENTI_CAMARADE: "✊", LOUP_DE_PATE_STREET: "🐺",
   SAGE_APATHIQUE: "😶", APPRENTI_LINGUISTE_PASTAFARIEN: "🦉",
-}
+};
 
 type Scores = {
   capital: number; collectif: number; sueur: number
@@ -35,6 +34,10 @@ export default function SanctuaireTab({ nickname, userId }: Props) {
   })
   const [isIdleTimerActive, setIsIdleTimerActive] = useState(true)
   const idleTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  const clickTimestamps = useRef<number[]>([]);
+  const condescendanceCount = useRef<number>(0);
+  const resumeNodeRef = useRef<string>('start');
 
   useEffect(() => {
     try {
@@ -95,6 +98,23 @@ export default function SanctuaireTab({ nickname, userId }: Props) {
   const renderText = (text: string) => text.replace('{{nickname}}', nickname)
 
   const handleChoice = (choice: any) => {
+    const now = Date.now();
+    clickTimestamps.current = [...clickTimestamps.current.slice(-2), now];
+    if (clickTimestamps.current.length === 3 && clickTimestamps.current[2] - clickTimestamps.current[0] < 2000) {
+      condescendanceCount.current += 1;
+      const tier = condescendanceCount.current;
+      const pool = tier <= 2
+        ? ['inter_condescendance_1','inter_condescendance_2','inter_condescendance_3']
+        : tier <= 4
+        ? ['inter_condescendance_4','inter_condescendance_5','inter_condescendance_6']
+        : ['inter_condescendance_7','inter_condescendance_8','inter_condescendance_9'];
+      const picked = pool[Math.floor(Math.random() * pool.length)];
+      resumeNodeRef.current = fsmState.currentNodeId;
+      clickTimestamps.current = [];
+      setFsmState(prev => ({ ...prev, currentNodeId: picked }));
+      return;
+    }
+
     const newScores: Scores = {
       capital:   fsmState.scores.capital   + (choice.impact?.capital   || 0),
       collectif: fsmState.scores.collectif + (choice.impact?.collectif || 0),
@@ -111,7 +131,7 @@ export default function SanctuaireTab({ nickname, userId }: Props) {
 
     if (choice.trigger === 'GRANT_DISCIPLE') {
       if (choice.discipleType === 'APPRENTI_LINGUISTE_PASTAFARIEN') {
-        try { localStorage.setItem(DUO_DONE_KEY, 'true') } catch { /* ignore */ }
+        try { localStorage.setItem(DUO_DONE_KEY, 'true'); } catch { /* ignore */ }
       }
       setFsmState({ currentNodeId: choice.nextNodeId, scores: newScores, status: 'DISCIPLE', discipleType: choice.discipleType })
       return
@@ -125,13 +145,20 @@ export default function SanctuaireTab({ nickname, userId }: Props) {
       return
     }
 
+    if (choice.trigger === 'RESUME_CURRENT') {
+      setFsmState(prev => ({ ...prev, currentNodeId: resumeNodeRef.current, scores: newScores }));
+      return;
+    }
+    if (choice.trigger === 'CLOSE_NEXUS') {
+      try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+      setFsmState({ currentNodeId: 'start', scores: { capital:0, collectif:0, sueur:0, chill:0, logique:0, chaos:0 }, status: 'IDLE' });
+      setIsIdleTimerActive(true);
+      return;
+    }
     if (choice.nextNodeId === 'duo_entry') {
-      const hasDone = (() => {
-        try { return localStorage.getItem(DUO_DONE_KEY) === 'true' }
-        catch { return false }
-      })()
-      setFsmState(prev => ({ ...prev, currentNodeId: hasDone ? 'duo_quick_test' : 'duo_1', scores: newScores }))
-      return
+      const hasDone = (() => { try { return localStorage.getItem(DUO_DONE_KEY)==='true'; } catch { return false; } })();
+      setFsmState(prev => ({ ...prev, currentNodeId: hasDone ? 'duo_quick_test' : 'duo_1', scores: newScores }));
+      return;
     }
 
     let nextNode = choice.nextNodeId
@@ -145,12 +172,8 @@ export default function SanctuaireTab({ nickname, userId }: Props) {
     }
 
     if (nextNode === choice.nextNodeId && (choice as any).randomFallback) {
-      const rand = Math.random()
-      let cumulative = 0
-      for (const route of (choice as any).randomFallback) {
-        cumulative += route.weight
-        if (rand < cumulative) { nextNode = route.nextNodeId; break }
-      }
+      const rand = Math.random(); let cum = 0;
+      for (const r of (choice as any).randomFallback) { cum += r.weight; if (rand < cum) { nextNode = r.nextNodeId; break; } }
     }
 
     setFsmState(prev => ({ ...prev, currentNodeId: nextNode, scores: newScores }))
@@ -194,7 +217,7 @@ export default function SanctuaireTab({ nickname, userId }: Props) {
         {fsmState.status === 'DISCIPLE' && fsmState.discipleType && (
           <div className="text-center mb-4">
             <span className="text-yellow-500 text-xs font-mono tracking-widest uppercase border border-yellow-800/50 px-3 py-1 rounded-full bg-yellow-950/30">
-              {GRADE_EMOJIS[fsmState.discipleType] ?? "🍝"} {fsmState.discipleType.replace(/_/g, " ")}
+              {GRADE_EMOJIS[fsmState.discipleType ?? ''] ?? '🍝'} {fsmState.discipleType?.replace(/_/g, ' ')}
             </span>
           </div>
         )}
