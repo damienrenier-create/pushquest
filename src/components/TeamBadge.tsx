@@ -1,3 +1,5 @@
+"use client";
+
 import { getTeamBadge, isTeamPeriodActive } from "@/lib/teamBadge";
 
 export default function TeamBadge({ userId }: { userId: string }) {

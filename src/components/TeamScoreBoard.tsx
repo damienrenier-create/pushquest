@@ -198,22 +198,8 @@ export default function TeamScoreBoard({ bets }: { bets: any[] }) {
 
   if (teamBets.length === 0) return null
 
-  if (loading && Object.keys(scores).length === 0) {
-    return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-        {teamBets.map((tb) => (
-          <div key={tb.id} className="h-48 bg-stone-900/60 rounded-2xl animate-pulse border border-stone-800" />
-        ))}
-      </div>
-    )
-  }
-
   const scoreList = Object.values(scores)
-  if (scoreList.length === 0) return null
-
-  // If a clan has 0 reps everywhere, hide scoreboard block as per guidelines
-  const hasAnyActivity = scoreList.some(s => s.jaune.total > 0 || s.rouge.total > 0)
-  if (!hasAnyActivity) return null
+  const hasAnyActivity = scoreList.length > 0 && scoreList.some(s => s.jaune.total > 0 || s.rouge.total > 0)
 
   // Sort score cards in descending order of the leading team's total
   const sortedScoreList = [...scoreList].sort((a, b) => {
@@ -224,22 +210,48 @@ export default function TeamScoreBoard({ bets }: { bets: any[] }) {
 
   return (
     <div className="mb-8 space-y-4">
-      <div className="flex items-center justify-between border-b border-stone-800 pb-2">
-        <h3 className="text-amber-400 font-bold uppercase tracking-wider text-xs font-mono">
-          ⚔️ Tableau des Scores (Semaine des Équipes)
-        </h3>
-        {lastUpdated && (
-          <span className="text-[10px] text-slate-500 font-mono">
-            Màj: {lastUpdated.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-          </span>
-        )}
+      {/* Composition des équipes */}
+      <div className="bg-stone-800 rounded-lg p-3 mb-4 grid grid-cols-2 gap-4 font-mono text-sm">
+        <div>
+          <div className="text-amber-400 font-bold mb-1">🟡 Équipe Jaune</div>
+          <div className="text-slate-300">Xa</div>
+          <div className="text-slate-300">Embi</div>
+          <div className="text-slate-300">Gg</div>
+        </div>
+        <div>
+          <div className="text-red-400 font-bold mb-1">🔴 Équipe Rouge</div>
+          <div className="text-slate-300">Neuneu</div>
+          <div className="text-slate-300">Mools</div>
+          <div className="text-slate-300">Milka</div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {sortedScoreList.map((s) => (
-          <ScoreCard key={s.betId} data={s} title={s.betTitle} />
-        ))}
-      </div>
+      {loading && scoreList.length === 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {teamBets.map((tb) => (
+            <div key={tb.id} className="h-48 bg-stone-900/60 rounded-2xl animate-pulse border border-stone-800" />
+          ))}
+        </div>
+      ) : hasAnyActivity ? (
+        <>
+          <div className="flex items-center justify-between border-b border-stone-800 pb-2">
+            <h3 className="text-amber-400 font-bold uppercase tracking-wider text-xs font-mono">
+              ⚔️ Tableau des Scores (Semaine des Équipes)
+            </h3>
+            {lastUpdated && (
+              <span className="text-[10px] text-slate-500 font-mono">
+                Màj: {lastUpdated.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {sortedScoreList.map((s) => (
+              <ScoreCard key={s.betId} data={s} title={s.betTitle} />
+            ))}
+          </div>
+        </>
+      ) : null}
     </div>
   )
 }
