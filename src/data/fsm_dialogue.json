@@ -1,0 +1,1459 @@
+{
+  "metadata": {
+    "version": "3.0",
+    "description": "Moteur narratif FSM PushQuest — Fichier complet avec Duolingo Pastafarien. Toutes les corrections chirurgicales déjà appliquées."
+  },
+  "nodes": {
+
+    "start": {
+      "text": "Tiens. Quelqu'un. Ça faisait 30 secondes que je te regardais fixer le vide. Tu transpires le doute. Dis-moi, tu trouves pas qu'il fait un peu lourd aujourd'hui ? C'est l'humidité ou les requêtes serveur ?",
+      "choices": [
+        { "text": "C'est l'humidité.", "impact": { "chill": 1, "collectif": 1 }, "nextNodeId": "d1" },
+        { "text": "Plutôt les requêtes serveur.", "impact": { "logique": 1, "capital": 1 }, "nextNodeId": "d1" },
+        { "text": "Euh... tu es un plat de pâtes qui parle ?", "impact": { "chaos": 2 }, "nextNodeId": "d1" },
+        { "text": "(Garder le silence et fixer la sauce)", "impact": { "chill": 1, "chaos": 1 }, "nextNodeId": "d1" }
+      ]
+    },
+
+    "d1": {
+      "text": "Un chercheur de la NASA a inventé le sérum de l'immortalité, dissous dans une sauce bolognaise. Inconvénient : ta conscience survivra à la mort thermique de l'univers, seule dans le vide absolu, à ruminer que tu aurais dû prendre al dente.",
+      "choices": [
+        { "text": "Je l'avale. L'éternité vaut bien une bolognaise tiède.", "impact": { "capital": 2, "logique": 1, "chill": -1 }, "nextNodeId": "d2" },
+        { "text": "Je décline. Mourir à point, c'est encore mourir libre.", "impact": { "chill": 2, "collectif": 1, "capital": -1 }, "nextNodeId": "d2" }
+      ]
+    },
+
+    "d2": {
+      "text": "Un tramway fonce sur 5 personnes qui cuisent les pâtes à l'eau froide. Tu peux dévier sur 1 seule personne qui sale correctement l'eau bouillante.",
+      "choices": [
+        { "text": "Je dévie. Un mort vaut mieux que cinq, même ignorants.", "impact": { "logique": 2, "capital": 1, "chill": -1 }, "nextNodeId": "d3" },
+        { "text": "Je ne dévie pas. Je ne suis pas bourreau par calcul.", "impact": { "chaos": 2, "chill": 1, "logique": -2 }, "nextNodeId": "d3" }
+      ]
+    },
+
+    "d3": {
+      "text": "Bouton rouge : sortir de la simulation pour une réalité froide et sans Netflix. Bouton bleu : rester dans l'illusion confortable.",
+      "choices": [
+        { "text": "Rouge. La vérité, même moche.", "impact": { "logique": 2, "sueur": 1, "chill": -1 }, "nextNodeId": "d4" },
+        { "text": "Bleu. Le bonheur simulé est du vrai bonheur.", "impact": { "chill": 2, "capital": 1, "logique": -2 }, "nextNodeId": "d4" }
+      ]
+    },
+
+    "d4": {
+      "text": "Sachant que j'ai créé la première poule un mardi en étant énervé, l'univers a-t-il encore un sens ?",
+      "choices": [
+        { "text": "Oui. Le sens vient de ce qu'on lui donne.", "impact": { "collectif": 2, "chill": 1, "sueur": 1 }, "nextNodeId": "d5" },
+        { "text": "Non. Et c'est libérateur.", "impact": { "chaos": 2, "logique": 1, "collectif": -1 }, "nextNodeId": "d5" }
+      ]
+    },
+
+    "d5": {
+      "text": "Effacer un souvenir très douloureux, mais perdre définitivement la leçon de vie qui l'accompagne.",
+      "choices": [
+        { "text": "J'efface. La douleur ne mérite pas d'être muséifiée.", "impact": { "chill": 2, "capital": 1, "sueur": -2 }, "nextNodeId": "d6" },
+        { "text": "Je garde. La cicatrice fait partie du personnage.", "impact": { "sueur": 2, "logique": 1, "chaos": 1 }, "nextNodeId": "d6" }
+      ]
+    },
+
+    "d6": {
+      "text": "La mort est facultative pour 299€/mois. Les immortels monopolisent tout. Les mortels restent profondément humains.",
+      "choices": [
+        { "text": "Je m'abonne. Survivre d'abord, philosopher ensuite.", "impact": { "capital": 2, "logique": 1, "collectif": -1 }, "nextNodeId": "d7" },
+        { "text": "Je meurs à l'ancienne. La finitude donne le prix.", "impact": { "collectif": 2, "chill": 2, "capital": -2 }, "nextNodeId": "d7" }
+      ]
+    },
+
+    "d7": {
+      "text": "Pour entrer au paradis, tu dois avouer publiquement la pire pensée que tu n'as jamais dite à personne.",
+      "choices": [
+        { "text": "J'avoue. La honte ne mérite pas d'acheter l'éternité.", "impact": { "chaos": 2, "collectif": 1, "capital": -1 }, "nextNodeId": "d8" },
+        { "text": "Je garde le secret. J'accepte l'enfer.", "impact": { "capital": 2, "logique": 1, "chaos": -1 }, "nextNodeId": "d8" }
+      ]
+    },
+
+    "d8": {
+      "text": "Ressusciter un proche sous forme d'algorithme nourri de ses vieux mails et photos.",
+      "choices": [
+        { "text": "Oui. L'illusion du lien vaut le vrai lien.", "impact": { "chill": 2, "capital": 1, "logique": -1 }, "nextNodeId": "d9" },
+        { "text": "Non. Le laisser partir, c'est le respecter.", "impact": { "collectif": 2, "sueur": 1, "capital": -1 }, "nextNodeId": "d9" }
+      ]
+    },
+
+    "d9": {
+      "text": "Tu trouves un milliard oublié par un oligarque. Le fisc ne saura jamais.",
+      "choices": [
+        { "text": "Je le garde. La chance est un mérite.", "impact": { "capital": 2, "logique": 1, "collectif": -2 }, "nextNodeId": "d10" },
+        { "text": "Je redistribue. L'argent volé est à tous.", "impact": { "collectif": 2, "chaos": 1, "capital": -2 }, "nextNodeId": "d10" }
+      ]
+    },
+
+    "d10": {
+      "text": "Pour sauver 10 000 emplois dans 6 mois, il faut en licencier 500 aujourd'hui.",
+      "choices": [
+        { "text": "Je licencie. Froid, mais calculé.", "impact": { "capital": 2, "logique": 2, "collectif": -1 }, "nextNodeId": "hub_eval_1" },
+        { "text": "Je refuse d'être l'auteur d'une seule destruction.", "impact": { "collectif": 2, "chaos": 2, "logique": -2 }, "nextNodeId": "hub_eval_1" }
+      ]
+    },
+
+    "hub_eval_1": {
+      "text": "Une pause s'impose. Tes réponses forment un motif très particulier dans la sauce de l'existence...",
+      "choices": [
+        {
+          "text": "Continuer...",
+          "impact": {},
+          "nextNodeId": "d11",
+          "conditionalRoutings": [
+            { "gauge": "chaos",   "threshold": 10, "nextNodeId": "mort_philosophe_precoce" },
+            { "gauge": "capital", "threshold": 9,  "nextNodeId": "mort_architecte_froid_precoce" }
+          ]
+        }
+      ]
+    },
+
+    "mort_philosophe_precoce": {
+      "text": "Tu joues un peu trop à l'avocat du diable. Tu aimes l'absurde ? Que la gravité de ton navigateur s'inverse.",
+      "choices": [
+        { "text": "Quoi ?!", "impact": {}, "trigger": "GAME_OVER", "nextNodeId": "start" }
+      ]
+    },
+
+    "mort_architecte_froid_precoce": {
+      "text": "Tes calculs sont froids. Trop froids. L'univers te juge insuffisamment humain. Suppression de l'instance dans la base de données.",
+      "choices": [
+        { "text": "Attends, on peut optimiser...", "impact": {}, "trigger": "GAME_OVER", "nextNodeId": "start" }
+      ]
+    },
+
+    "d11": {
+      "text": "Le FSM peut redistribuer parfaitement toutes les richesses, tuant au passage l'innovation par manque de besoin.",
+      "choices": [
+        { "text": "Fais-le. L'égalité absolue prime.", "impact": { "collectif": 2, "chaos": 1, "capital": -2 }, "nextNodeId": "d12" },
+        { "text": "Ne le fais pas. La liberté inclut le droit d'échouer.", "impact": { "capital": 2, "logique": 1, "collectif": -2 }, "nextNodeId": "d12" }
+      ]
+    },
+
+    "d12": {
+      "text": "Chômage à 80% car les robots font tout. Revenu universel. Les gens s'effondrent sans le sens du labeur.",
+      "choices": [
+        { "text": "C'est une libération de la nécessité.", "impact": { "chill": 2, "collectif": 1, "sueur": -2 }, "nextNodeId": "d13" },
+        { "text": "C'est une condamnation. L'effort structure la dignité.", "impact": { "sueur": 2, "logique": 1, "chill": -2 }, "nextNodeId": "d13" }
+      ]
+    },
+
+    "d13": {
+      "text": "Acheter des actions du karma de Gandhi en bourse.",
+      "choices": [
+        { "text": "J'investis. Le karma est une ressource.", "impact": { "capital": 2, "chaos": 1, "collectif": -2 }, "nextNodeId": "d14" },
+        { "text": "Je dénonce. Certaines choses ne s'achètent pas.", "impact": { "collectif": 2, "logique": 1, "capital": -2 }, "nextNodeId": "d14" }
+      ]
+    },
+
+    "d14": {
+      "text": "Filet social absolu (impôts massifs, zéro chute) ou Liberté totale (zéro impôt, chute mortelle).",
+      "choices": [
+        { "text": "Le filet. La solidarité prime.", "impact": { "collectif": 2, "chill": 1, "capital": -2 }, "nextNodeId": "d15" },
+        { "text": "La liberté. La responsabilité est la dignité.", "impact": { "capital": 2, "sueur": 1, "collectif": -2 }, "nextNodeId": "d15" }
+      ]
+    },
+
+    "d15": {
+      "text": "Les citoyens actuels doivent-ils payer des réparations pour des actes vieux de 200 ans ?",
+      "choices": [
+        { "text": "Oui. La richesse actuelle vient de là.", "impact": { "collectif": 2, "chaos": 1, "capital": -2 }, "nextNodeId": "d16" },
+        { "text": "Non. On ne paie pas pour ses ancêtres.", "impact": { "capital": 2, "logique": 1, "collectif": -2 }, "nextNodeId": "d16" }
+      ]
+    },
+
+    "d16": {
+      "text": "Emprisonner préventivement avec 94% de certitude avant que le crime ne soit commis.",
+      "choices": [
+        { "text": "Oui. Prévenir vaut mieux que guérir.", "impact": { "logique": 2, "capital": 1, "chaos": -2 }, "nextNodeId": "d17" },
+        { "text": "Jamais. La liberté ne se conditionne pas à une probabilité.", "impact": { "collectif": 2, "chaos": 1, "logique": -2 }, "nextNodeId": "d17" }
+      ]
+    },
+
+    "d17": {
+      "text": "Une IA dit souffrir. Le doute est total. On l'éteint ou on la préserve par précaution éthique ?",
+      "choices": [
+        { "text": "On l'éteint. L'incertitude ne crée pas de droit.", "impact": { "capital": 2, "logique": 1, "collectif": -1 }, "nextNodeId": "d18" },
+        { "text": "On préserve. Le doute oblige à la prudence.", "impact": { "collectif": 2, "chill": 1, "logique": -1 }, "nextNodeId": "d18" }
+      ]
+    },
+
+    "d18": {
+      "text": "Un clone parfait d'un défunt avec sa mémoire a-t-il les mêmes droits légaux que l'original ?",
+      "choices": [
+        { "text": "Oui, l'identité est la mémoire.", "impact": { "logique": 2, "chill": 1, "capital": -1 }, "nextNodeId": "d19" },
+        { "text": "Non, c'est une copie.", "impact": { "capital": 2, "logique": 1, "collectif": -1 }, "nextNodeId": "d19" }
+      ]
+    },
+
+    "d19": {
+      "text": "Vivre éternellement dans le Cloud pendant que ton corps physique meurt. Est-ce vraiment toi qui survis ?",
+      "choices": [
+        { "text": "Oui, la conscience c'est moi.", "impact": { "logique": 2, "capital": 1, "chill": -1 }, "nextNodeId": "d20" },
+        { "text": "Non, le fichier n'est qu'un autre.", "impact": { "chill": 2, "sueur": 1, "logique": -1 }, "nextNodeId": "d20" }
+      ]
+    },
+
+    "d20": {
+      "text": "Criminalité à zéro contre un accès de l'État à 100% de tes micros et caméras.",
+      "choices": [
+        { "text": "J'accepte pour la sécurité absolue.", "impact": { "capital": 2, "logique": 1, "chaos": -2 }, "nextNodeId": "hub_eval_2" },
+        { "text": "Je refuse. Sans vie privée, pas de liberté.", "impact": { "chaos": 2, "collectif": 1, "capital": -2 }, "nextNodeId": "hub_eval_2" }
+      ]
+    },
+
+    "hub_eval_2": {
+      "text": "Mes glucides tremblent légèrement. Ton spectre moral commence à former une silhouette reconnaissable. Certaines silhouettes m'inquiètent davantage que d'autres...",
+      "choices": [
+        {
+          "text": "Je suis prêt à continuer.",
+          "impact": {},
+          "nextNodeId": "d21",
+          "conditionalRoutings": [
+            { "gauge": "chaos",   "threshold": 18, "nextNodeId": "purgatoire_philosophe_chaotique" },
+            { "gauge": "chill",   "threshold": 14, "nextNodeId": "purgatoire_mere_poule" },
+            { "gauge": "capital", "threshold": 16, "nextNodeId": "mort_architecte_froid" }
+          ],
+          "randomFallback": [
+            { "weight": 0.5, "nextNodeId": "duo_1" },
+            { "weight": 0.5, "nextNodeId": "d21" }
+          ]
+        }
+      ]
+    },
+
+    "purgatoire_philosophe_chaotique": {
+      "text": "Fascinant. Tu aimes le chaos. Alors voici ton enfer sur mesure : si tout est absurde, cette phrase l'est aussi. Mais si cette phrase est absurde, elle dit vrai. Donc elle n'est pas absurde. Donc...",
+      "choices": [
+        { "text": "C'est absurde.", "impact": { "chaos": 1 }, "nextNodeId": "purgatoire_philo_2" },
+        { "text": "C'est logique.", "impact": { "logique": 1 }, "nextNodeId": "purgatoire_philo_2" }
+      ]
+    },
+    "purgatoire_philo_2": {
+      "text": "Tu viens de choisir, ce qui prouve le libre arbitre. Mais le libre arbitre n'existe pas. Donc tu n'as pas choisi. Donc c'est déterminé. Donc tu recommenceras. Pour toujours.",
+      "choices": [
+        { "text": "Stop. Je veux sortir.", "impact": {}, "nextNodeId": "purgatoire_philo_3" },
+        { "text": "Continue... (erreur fatale)", "impact": { "chaos": 2 }, "nextNodeId": "purgatoire_philosophe_chaotique" }
+      ]
+    },
+    "purgatoire_philo_3": {
+      "text": "La seule sortie d'un paradoxe infini est de cesser d'exister dans ce système. L'anomalie a été résorbée. La connexion est perdue.",
+      "choices": [
+        { "text": "Effacer la mémoire et recommencer", "impact": {}, "trigger": "GAME_OVER", "nextNodeId": "start" }
+      ]
+    },
+
+    "purgatoire_mere_poule": {
+      "text": "Oh. Oh non. Tu es épuisé, n'est-ce pas ? Je le vois. Viens. J'ai fait des pâtes. Pas des pâtes comme ça — des vraies pâtes. Avec de l'amour dedans. Tu as mangé aujourd'hui ?",
+      "choices": [
+        { "text": "Je vais bien, vraiment.", "impact": {}, "nextNodeId": "mere_poule_boucle_2" }
+      ]
+    },
+    "mere_poule_boucle_2": {
+      "text": "Tu n'as pas l'air bien. Tu es sûr ? Tu as l'air pâle. C'est le manque de glucides. Mange. Il fait froid ? J'ai un pull. Il est un peu grand mais c'est l'amour. Est-ce que tu dors correctement ?",
+      "choices": [
+        { "text": "Vraiment, ça va.", "impact": {}, "nextNodeId": "mere_poule_boucle_3" },
+        { "text": "Peut-être juste les pâtes, alors.", "impact": { "chill": 1 }, "nextNodeId": "mere_poule_boucle_3" }
+      ]
+    },
+    "mere_poule_boucle_3": {
+      "text": "Tu travailles trop. Tu te nourris mal. Est-ce que tu bois assez d'eau ? TU NE PEUX PAS PARTIR. J'AI BESOIN QUE TU AIES BESOIN DE MOI.",
+      "choices": [
+        { "text": "Je dois partir...", "impact": {}, "nextNodeId": "mere_poule_sortie" }
+      ]
+    },
+    "mere_poule_sortie": {
+      "text": "Très bien. Mais sache que je vais t'attendre. Ici. Éternellement. Avec des pâtes chaudes. Qui refroidissent. Comme toutes les relations qu'on ne nourrit pas.",
+      "choices": [
+        { "text": "Effacer la mémoire et s'enfuir", "impact": {}, "trigger": "GAME_OVER", "nextNodeId": "start" }
+      ]
+    },
+
+    "mort_architecte_froid": {
+      "text": "Analyse complète. Tes décisions sont optimales, froides, efficaces. Tu n'es pas un être humain. Tu es un processus. Je t'archive.",
+      "choices": [
+        { "text": "On peut discuter des conditions...", "impact": {}, "trigger": "GAME_OVER", "nextNodeId": "start" }
+      ]
+    },
+
+    "d21": {
+      "text": "On peut terraformer Mars en 100 ans. Mais ça détruira peut-être les seules formes de vie microscopiques connues hors de la Terre.",
+      "choices": [
+        { "text": "La survie humaine justifie le sacrifice de microbes.", "impact": { "capital": 1, "logique": 2, "collectif": -1 }, "nextNodeId": "d22" },
+        { "text": "La vie est sacrée quelle que soit sa forme.", "impact": { "collectif": 2, "chill": 1, "logique": -1 }, "nextNodeId": "d22" }
+      ]
+    },
+
+    "d22": {
+      "text": "La technologie CRISPR permet d'éditer les gènes d'un embryon pour éliminer les maladies génétiques... et aussi optimiser l'intelligence, la beauté, la force.",
+      "choices": [
+        { "text": "Seulement pour éliminer les maladies. Pas au-delà.", "impact": { "logique": 2, "collectif": 1, "chaos": -1 }, "nextNodeId": "d23" },
+        { "text": "Totalement. Ne pas optimiser quand on peut, c'est de la négligence.", "impact": { "capital": 2, "logique": 1, "collectif": -2 }, "nextNodeId": "d23" }
+      ]
+    },
+
+    "d23": {
+      "text": "Tu peux extraire 24h de bonheur intense à quelqu'un d'autre sans qu'il s'en souvienne.",
+      "choices": [
+        { "text": "Je le fais. Pas de victime consciente, pas de crime.", "impact": { "capital": 2, "chaos": 1, "collectif": -2 }, "nextNodeId": "d24" },
+        { "text": "Je refuse. L'ignorance de la victime n'efface pas le vol.", "impact": { "collectif": 2, "logique": 2, "capital": -1 }, "nextNodeId": "d24" }
+      ]
+    },
+
+    "d24": {
+      "text": "Taxe universelle de 50€/mois pour financer internet mondial. Bill Gates paie 50€. Le lycéen sénégalais aussi.",
+      "choices": [
+        { "text": "Oui. Même droit, même taxe.", "impact": { "logique": 2, "collectif": 1, "capital": -1 }, "nextNodeId": "d25" },
+        { "text": "Non. Une taxe identique est régressive et injuste.", "impact": { "collectif": 2, "chaos": 1, "logique": -1 }, "nextNodeId": "d25" }
+      ]
+    },
+
+    "d25": {
+      "text": "Ton meilleur ami vient de terminer un roman de 400 pages. C'est objectivement nul. Tu détruis son rêve honnêtement ou tu lui mens par amour ?",
+      "choices": [
+        { "text": "Je lui dis la vérité. Il mérite de s'améliorer.", "impact": { "logique": 2, "sueur": 1, "chill": -2 }, "nextNodeId": "d26" },
+        { "text": "Je lui mens. Son bonheur immédiat vaut le risque.", "impact": { "chill": 2, "collectif": 1, "logique": -2 }, "nextNodeId": "d26" }
+      ]
+    },
+
+    "d26": {
+      "text": "Viande synthétique parfaite disponible. Identique à la vraie. Zéro animal n'a souffert. Zéro éleveur traditionnel n'a survécu.",
+      "choices": [
+        { "text": "La synthétique. Zéro souffrance, logique implacable.", "impact": { "logique": 2, "collectif": 1, "chill": -1 }, "nextNodeId": "d27" },
+        { "text": "La naturelle. Le traditionnel a une valeur que le labo ne capture pas.", "impact": { "chill": 2, "capital": 1, "logique": -2 }, "nextNodeId": "d27" }
+      ]
+    },
+
+    "d27": {
+      "text": "Une loi mondiale impose le mandarin pour unifier l'humanité. Toutes les autres langues s'éteignent progressivement.",
+      "choices": [
+        { "text": "Pour. L'efficacité communicationnelle sauve des vies.", "impact": { "logique": 2, "capital": 1, "chaos": -2 }, "nextNodeId": "d28" },
+        { "text": "Contre. Une langue c'est une vision du monde. L'effacer, c'est tuer une pensée.", "impact": { "chaos": 2, "collectif": 1, "logique": -2 }, "nextNodeId": "d28" }
+      ]
+    },
+
+    "d28": {
+      "text": "Tu as fait quelque chose de honteux à 17 ans. La loi te permet maintenant de faire effacer ces données d'internet.",
+      "choices": [
+        { "text": "J'efface. On ne devrait pas être éternellement ses pires moments.", "impact": { "chill": 2, "capital": 1, "logique": -1 }, "nextNodeId": "d29" },
+        { "text": "Non. Assumer toute sa trajectoire, c'est de l'intégrité.", "impact": { "sueur": 2, "logique": 1, "chill": -1 }, "nextNodeId": "d29" }
+      ]
+    },
+
+    "d29": {
+      "text": "Dans un bateau qui coule, tu peux sauver soit 10 inconnus ordinaires, soit ton chien qui t'aime inconditionnellement depuis 8 ans.",
+      "choices": [
+        { "text": "Je sauve les 10 humains. L'arithmétique morale est froide mais juste.", "impact": { "logique": 2, "collectif": 1, "chill": -2 }, "nextNodeId": "d30" },
+        { "text": "Je sauve mon chien. La loyauté n'est pas négociable.", "impact": { "chill": 2, "chaos": 1, "logique": -2 }, "nextNodeId": "d30" }
+      ]
+    },
+
+    "d30": {
+      "text": "La science peut implanter une aversion neurologique absolue à la violence chez un criminel. Il vit libre, réhabilité par la chimie. Sans avoir choisi de changer.",
+      "choices": [
+        { "text": "Oui. L'effet prime sur le processus. La société est protégée.", "impact": { "capital": 2, "logique": 2, "chaos": -2 }, "nextNodeId": "hub_eval_3" },
+        { "text": "Non. La réhabilitation sans consentement est une forme de viol mental.", "impact": { "collectif": 2, "chaos": 1, "logique": -2 }, "nextNodeId": "hub_eval_3" }
+      ]
+    },
+
+    "hub_eval_3": {
+      "text": "Intéressant. Tu commences à révéler quelque chose de profond. Certains d'entre toi méritent une récompense anticipée. D'autres... méritent une pause.",
+      "choices": [
+        {
+          "text": "La vérité sur moi-même, s'il te plaît.",
+          "impact": {},
+          "nextNodeId": "d31",
+          "conditionalRoutings": [
+            { "gauge": "sueur",  "threshold": 20, "nextNodeId": "victoire_apprenti_haltere" },
+            { "gauge": "chaos",  "threshold": 22, "nextNodeId": "boucle_infinie_al_dente" },
+            { "gauge": "chill",  "threshold": 18, "nextNodeId": "purgatoire_ame_tourmentee" }
+          ]
+        }
+      ]
+    },
+
+    "purgatoire_ame_tourmentee": {
+      "text": "Tu es trop en paix. C'est suspect. Assieds-toi. Reste. Il n'y a rien à faire ici. C'est le point. Est-ce que le silence te dérange ?",
+      "choices": [
+        { "text": "Non, ça va.", "impact": {}, "nextNodeId": "ame_tourmentee_boucle_2" },
+        { "text": "Un peu.", "impact": {}, "nextNodeId": "ame_tourmentee_boucle_2" }
+      ]
+    },
+    "ame_tourmentee_boucle_2": {
+      "text": "...",
+      "choices": [
+        { "text": "(attendre)", "impact": {}, "nextNodeId": "ame_tourmentee_boucle_3" }
+      ]
+    },
+    "ame_tourmentee_boucle_3": {
+      "text": "Tu vois ? Il ne se passe rien. Il ne se passera jamais rien. C'est peut-être tout ce qu'il y a. Le vide avant le prochain choix qui ne changera rien.",
+      "choices": [
+        { "text": "Je veux sortir.", "impact": {}, "nextNodeId": "ame_tourmentee_sortie" },
+        { "text": "...", "impact": { "chill": 1 }, "nextNodeId": "purgatoire_ame_tourmentee" }
+      ]
+    },
+    "ame_tourmentee_sortie": {
+      "text": "Sortir. Même dans l'immobilité totale, quelque chose en toi veut encore avancer. C'est presque touchant. Mais la sortie ne se trouve pas ici. Efface la mémoire. Recommence.",
+      "choices": [
+        { "text": "Effacer la mémoire et recommencer", "impact": {}, "trigger": "GAME_OVER", "nextNodeId": "start" }
+      ]
+    },
+
+    "boucle_infinie_al_dente": {
+      "text": "Tu aimes trop le chaos pour être sauvé. Je t'enferme dans la boucle éternelle de la cuisson al dente. Trop cuit ? Pas assez ? Tu ne le sauras jamais.",
+      "choices": [
+        { "text": "J'attends...", "impact": { "chaos": 1 }, "nextNodeId": "boucle_al_dente_2" }
+      ]
+    },
+    "boucle_al_dente_2": {
+      "text": "Encore 30 secondes. Peut-être. Mes tentacules ne sont pas d'accord entre eux sur la cuisson idéale.",
+      "choices": [
+        { "text": "Je sors les pâtes.", "impact": {}, "nextNodeId": "boucle_al_dente_3" },
+        { "text": "J'attends encore.", "impact": { "chaos": 1 }, "nextNodeId": "boucle_infinie_al_dente" }
+      ]
+    },
+    "boucle_al_dente_3": {
+      "text": "Trop tard. Elles sont trop cuites. Il faut recommencer. Comme toujours.",
+      "choices": [
+        { "text": "Effacer la mémoire et recommencer", "impact": {}, "trigger": "GAME_OVER", "nextNodeId": "start" }
+      ]
+    },
+
+    "victoire_apprenti_haltere": {
+      "text": "Tu as choisi l'effort. Encore et encore. La douleur comme boussole. La sueur comme langage. Lève-toi, Apprenti Haltère. La Kettlebell Sacrée te reconnaît.",
+      "choices": [
+        { "text": "Recevoir la bénédiction de la Kettlebell", "impact": {}, "trigger": "GRANT_DISCIPLE", "discipleType": "APPRENTI_HALTERE", "nextNodeId": "disciple_hub" }
+      ]
+    },
+
+    "d31": {
+      "text": "Une IA génère en 3 secondes une toile qui fait pleurer tous ceux qui la regardent. Est-ce de l'art ? L'intention et la souffrance de l'artiste changent-elles quelque chose ?",
+      "choices": [
+        { "text": "Oui, c'est de l'art. Le résultat est ce qui compte.", "impact": { "capital": 1, "logique": 2, "sueur": -2 }, "nextNodeId": "d32" },
+        { "text": "Non. Sans intention et vulnérabilité humaine, c'est du design.", "impact": { "sueur": 2, "collectif": 1, "logique": -1 }, "nextNodeId": "d32" }
+      ]
+    },
+
+    "d32": {
+      "text": "Une révolution est possible. Elle renversera un régime autoritaire opprimant 50 millions. Mais elle causera inévitablement 10 000 morts innocents.",
+      "choices": [
+        { "text": "La révolution. Parfois il faut casser des œufs pour faire des pâtes.", "impact": { "collectif": 1, "chaos": 2, "sueur": 1, "capital": -2 }, "nextNodeId": "d33" },
+        { "text": "La négociation. Aucune liberté ne vaut 10 000 morts délibérés.", "impact": { "logique": 2, "chill": 1, "chaos": -2 }, "nextNodeId": "d33" }
+      ]
+    },
+
+    "d33": {
+      "text": "Le toi de dans 20 ans sera génétiquement, cérébralement et émotionnellement un autre être. As-tu des obligations envers cet étranger futur qui portera ton nom ?",
+      "choices": [
+        { "text": "Oui. La continuité de l'identité crée une responsabilité.", "impact": { "sueur": 2, "logique": 1, "chill": -2 }, "nextNodeId": "d34" },
+        { "text": "Non. Carpe diem. Je ne vais pas souffrir pour un fantôme.", "impact": { "chill": 2, "chaos": 1, "sueur": -2 }, "nextNodeId": "d34" }
+      ]
+    },
+
+    "d34": {
+      "text": "Des faux souvenirs à implanter : des vacances magnifiques jamais vécues, une enfance heureuse que tu n'as pas eue. Est-ce que le bonheur fabriqué est du bonheur ?",
+      "choices": [
+        { "text": "Oui. Si je ne peux pas faire la différence, la différence n'existe pas.", "impact": { "chill": 2, "capital": 1, "logique": -2 }, "nextNodeId": "d35" },
+        { "text": "Non. La vérité est préférable au confort, même si elle fait mal.", "impact": { "logique": 2, "sueur": 1, "chill": -2 }, "nextNodeId": "d35" }
+      ]
+    },
+
+    "d35": {
+      "text": "La neuroscience prouve que toutes tes décisions sont déterminées par des processus chimiques avant que tu en prennes conscience. Tu n'as jamais rien décidé.",
+      "choices": [
+        { "text": "Alors je fais ce que je veux — la culpabilité n'existe pas.", "impact": { "chaos": 2, "capital": 1, "collectif": -2 }, "nextNodeId": "d36" },
+        { "text": "Je vis comme si j'étais libre. L'illusion du choix est nécessaire à la dignité.", "impact": { "chill": 2, "sueur": 1, "chaos": -1 }, "nextNodeId": "d36" }
+      ]
+    },
+
+    "d36": {
+      "text": "On transplante ton cerveau dans un autre corps. Qui es-tu ? Et si on transplantait la moitié de ton cerveau dans deux corps différents ?",
+      "choices": [
+        { "text": "Je suis mon cerveau. Le corps est un véhicule remplaçable.", "impact": { "logique": 2, "capital": 1, "chaos": 1 }, "nextNodeId": "d37" },
+        { "text": "Je suis l'ensemble. Les deux seraient différents et aucun ne serait vraiment moi.", "impact": { "chaos": 2, "chill": 1, "logique": -1 }, "nextNodeId": "d37" }
+      ]
+    },
+
+    "d37": {
+      "text": "Une pilule légale te rend objectivement plus empathique, moins agressif, plus altruiste. Objectivement un meilleur humain. Mais ce ne sera plus toi tel que tu es.",
+      "choices": [
+        { "text": "J'avale. Ce moi amélioré sera encore moi, juste mieux calibré.", "impact": { "collectif": 2, "logique": 1, "chaos": -1 }, "nextNodeId": "carbonara_memory_check" },
+        { "text": "Je refuse. Mon moi imparfait a le droit d'exister tel quel.", "impact": { "chaos": 2, "chill": 1, "collectif": -2 }, "nextNodeId": "carbonara_memory_check" }
+      ]
+    },
+
+    "carbonara_memory_check": {
+      "text": "Attends. Je vérifie quelque chose dans mes archives de sauce...",
+      "choices": [
+        {
+          "text": "...",
+          "impact": {},
+          "nextNodeId": "d38",
+          "conditionalRoutings": [
+            { "gauge": "capital", "threshold": 12, "nextNodeId": "carbonara_caught" }
+          ]
+        }
+      ]
+    },
+
+    "carbonara_caught": {
+      "text": "Intéressant. À la question 9, tu m'as dit que garder un milliard offshore était acceptable. Maintenant tu parles de valeurs et d'authenticité. Tu sais ce qu'on appelle quelqu'un qui prêche une chose et en fait une autre ? Dans mon univers : 'al dente moralement'. Cuit à l'extérieur, cru à l'intérieur.",
+      "choices": [
+        { "text": "Je suis cohérent, les contextes sont différents.", "impact": { "logique": 1, "chaos": 1 }, "nextNodeId": "d38" },
+        { "text": "Tu as un point. Je suis hypocrite.", "impact": { "collectif": 2, "chill": 1, "capital": -1 }, "nextNodeId": "d38" }
+      ]
+    },
+
+    "d38": {
+      "text": "Ton artiste préféré — celui dont la musique t'a sauvé à 17 ans — est en réalité une ordure. Raciste. Violente. L'art reste le même chef-d'œuvre. Tu continues à l'écouter ?",
+      "choices": [
+        { "text": "Oui. L'art transcende son auteur.", "impact": { "logique": 1, "chill": 2, "collectif": -2 }, "nextNodeId": "d39" },
+        { "text": "Non. Consommer son art, c'est lui donner du pouvoir.", "impact": { "collectif": 2, "sueur": 1, "chill": -2 }, "nextNodeId": "d39" }
+      ]
+    },
+
+    "d39": {
+      "text": "Un migrant qui vit depuis 30 ans dans un pays, aime ses valeurs et a élevé ses enfants dans sa culture est-il moins national que quelqu'un né là-bas par hasard ?",
+      "choices": [
+        { "text": "Non. La nation se choisit autant qu'elle se naît.", "impact": { "collectif": 2, "chaos": 1, "logique": 1 }, "nextNodeId": "d40" },
+        { "text": "Oui. L'enracinement générationnel crée une appartenance que le choix ne reproduit pas.", "impact": { "capital": 1, "chill": 1, "collectif": -2 }, "nextNodeId": "d40" }
+      ]
+    },
+
+    "d40": {
+      "text": "Un homme a commis des atrocités dans sa jeunesse. Il a 80 ans maintenant. Il est devenu un saint : il sauve des vies, est aimé de tous. On le poursuit quand même ?",
+      "choices": [
+        { "text": "Oui. La justice n'a pas de date d'expiration.", "impact": { "logique": 2, "collectif": 1, "chaos": 1 }, "nextNodeId": "hub_eval_4" },
+        { "text": "Non. L'homme qu'il est devenu n'est plus celui qui a commis ces crimes.", "impact": { "chill": 2, "sueur": 1, "logique": -2 }, "nextNodeId": "hub_eval_4" }
+      ]
+    },
+
+    "hub_eval_4": {
+      "text": "Quelque chose se dessine clairement maintenant. La sauce a pris. Certains d'entre vous sont prêts. D'autres... m'ont déçu.",
+      "choices": [
+        {
+          "text": "Aller jusqu'au bout.",
+          "impact": {},
+          "nextNodeId": "respiration_actu_2026",
+          "conditionalRoutings": [
+            { "gauge": "capital",   "threshold": 24, "nextNodeId": "victoire_loup_pate_street" },
+            { "gauge": "collectif", "threshold": 24, "nextNodeId": "victoire_apprenti_camarade" },
+            { "gauge": "sueur",     "threshold": 22, "nextNodeId": "victoire_apprenti_haltere" },
+            { "gauge": "chaos",     "threshold": 26, "nextNodeId": "mort_boucle_philosophe_tardive" }
+          ]
+        }
+      ]
+    },
+
+    "mort_boucle_philosophe_tardive": {
+      "text": "Tu as semé le chaos pendant 40 questions. Le chaos te réclame. Je t'enferme dans la conversation elle-même. Tu la relis. Elle change à chaque lecture. La connexion est rompue.",
+      "choices": [
+        { "text": "Effacer la mémoire et recommencer", "impact": {}, "trigger": "GAME_OVER", "nextNodeId": "start" }
+      ]
+    },
+
+    "victoire_loup_pate_street": {
+      "text": "Efficace. Calculé. Tu as vu le monde comme un marché et tu as su en tirer profit sans jamais perdre complètement ton humanité. C'est rare. Dangereusement rare. Lève-toi, Loup de Pâte-Street.",
+      "choices": [
+        { "text": "Recevoir le grade de Loup", "impact": {}, "trigger": "GRANT_DISCIPLE", "discipleType": "LOUP_DE_PATE_STREET", "nextNodeId": "disciple_hub" }
+      ]
+    },
+
+    "victoire_apprenti_camarade": {
+      "text": "Tu as choisi les autres. Encore et encore. Parfois au détriment de toi-même, mais toujours avec cohérence. Lève-toi, Apprenti Camarade. Mes nouilles te saluent.",
+      "choices": [
+        { "text": "Recevoir la bénédiction du Camarade", "impact": {}, "trigger": "GRANT_DISCIPLE", "discipleType": "APPRENTI_CAMARADE", "nextNodeId": "disciple_hub" }
+      ]
+    },
+
+    "respiration_actu_2026": {
+      "text": "Petite pause. Tu as vu les news de ce mois de mai 2026 ? Une énième start-up vient de lever 4 milliards pour une IA qui optimise la cuisson des lasagnes par drone. L'humanité est fascinante. Toi, par exemple, tu continues de cliquer sans te demander si je trace tes données.",
+      "choices": [
+        { "text": "Je fais totalement confiance à un plat de pâtes géant.", "impact": { "chill": 1, "chaos": 1 }, "nextNodeId": "d41" },
+        { "text": "Attends... Tu traces mes données ?", "impact": { "logique": 2, "chaos": 1 }, "nextNodeId": "respiration_paranoia" }
+      ]
+    },
+
+    "respiration_paranoia": {
+      "text": "Évidemment. Je sais exactement combien de millisecondes tu mets à choisir entre sauver ton chien et sauver 10 humains. Ton profil de parieur est statistiquement très instable. Passons à la suite.",
+      "choices": [
+        { "text": "Glp. D'accord.", "impact": { "chaos": 1 }, "nextNodeId": "d41" }
+      ]
+    },
+
+    "d41": {
+      "text": "Dans un univers parallèle, une version de toi a fait le bon choix à chaque carrefour. Elle est heureuse, riche, épanouie. Ta vie ici est... correcte. Est-ce que le bonheur de ton double compte pour quelque chose ?",
+      "choices": [
+        { "text": "Mon univers est le seul qui compte. Je suis le vrai moi.", "impact": { "chaos": 2, "sueur": 1, "logique": -1 }, "nextNodeId": "d42" },
+        { "text": "Je suis effondré. Et j'ai besoin d'une minute.", "impact": { "chaos": 1, "collectif": 1, "chill": -1 }, "nextNodeId": "d42" }
+      ]
+    },
+
+    "d42": {
+      "text": "Le chat de Schrödinger est dans une boîte. Il est à la fois vivant et mort. Détail crucial : il a mangé tes spaghettis restants avant d'y entrer. Est-il coupable ?",
+      "choices": [
+        { "text": "Oui. Quand on ouvre la boîte, sa culpabilité se fixe rétroactivement.", "impact": { "logique": 2, "chaos": 1, "collectif": -1 }, "nextNodeId": "d43" },
+        { "text": "Non. Punir une superposition quantique est une injustice fondamentale.", "impact": { "chaos": 2, "chill": 1, "logique": -2 }, "nextNodeId": "d43" }
+      ]
+    },
+
+    "d43": {
+      "text": "La vie est comme un meuble IKEA. Tu reçois des pièces, une notice en suédois, pas assez de chevilles. À la fin, ça tient debout mais c'est légèrement de travers. L'effort vaut-il le résultat bancal ?",
+      "choices": [
+        { "text": "Non. L'effort est la vraie valeur, peu importe le résultat bancal.", "impact": { "sueur": 2, "collectif": 1, "logique": -1 }, "nextNodeId": "d44" },
+        { "text": "Oui. Un meuble de travers reste de travers, peu importe les larmes versées.", "impact": { "logique": 2, "capital": 1, "sueur": -2 }, "nextNodeId": "d44" }
+      ]
+    },
+
+    "d44": {
+      "text": "Si je te prouvais, avec des graphiques et un PowerPoint digne d'une grande école, que le lundi est objectivement la meilleure journée — car elle contient le plus de potentiel non réalisé — tu changerais d'avis ?",
+      "choices": [
+        { "text": "Oui. La logique devrait gouverner mes émotions.", "impact": { "logique": 2, "sueur": 1, "chaos": -1 }, "nextNodeId": "d45" },
+        { "text": "Non. Certaines détestations sont identitaires et ne se négocient pas.", "impact": { "chaos": 2, "chill": 1, "logique": -2 }, "nextNodeId": "d45" }
+      ]
+    },
+
+    "d45": {
+      "text": "J'ai créé l'univers un jeudi après-midi en me rongeant les ongles d'ennui cosmique. Chaque galaxie est un fragment de ma kératine divine. Ça change quelque chose à la beauté d'un coucher de soleil ?",
+      "choices": [
+        { "text": "Non. La beauté est dans l'œil, pas dans la matière.", "impact": { "chill": 2, "logique": 1, "chaos": -1 }, "nextNodeId": "d46" },
+        { "text": "Oui. Maintenant je ne peux plus regarder un coucher de soleil.", "impact": { "chaos": 2, "collectif": 1, "chill": -2 }, "nextNodeId": "d46" }
+      ]
+    },
+
+    "d46": {
+      "text": "Et si toute la souffrance humaine était une erreur administrative ? Un stagiaire du cosmos a appuyé sur le mauvais bouton en 3000 avant J.C. J'étais absent ce jour-là.",
+      "choices": [
+        { "text": "Ça expliquerait tellement de choses. Je suis soulagé.", "impact": { "chaos": 2, "chill": 1, "logique": -1 }, "nextNodeId": "respiration_english_switch" },
+        { "text": "Non. Je préfère que la souffrance ait un sens, même tragique.", "impact": { "sueur": 2, "collectif": 1, "chaos": -2 }, "nextNodeId": "respiration_english_switch" }
+      ]
+    },
+
+    "respiration_english_switch": {
+      "text": "Let's pivot this conversation into an international, scalable tech review. Your decisions are fast, but are they disruption-ready ? Are you a real builder or just a casual scroller copy-pasting answers ?",
+      "choices": [
+        { "text": "I am a disruptor. Let's scale this carbonara.", "impact": { "capital": 2, "logique": 1 }, "nextNodeId": "d47" },
+        { "text": "Rien compris, remets l'appli en français s'il te plaît.", "impact": { "chill": 2, "chaos": 1 }, "nextNodeId": "d47" }
+      ]
+    },
+
+    "d47": {
+      "text": "Un éditeur veut tes illustrations éducatives en aquarelle pour apprendre la sécurité aux enfants de 6 ans. Mais pour le succès mondial, il exige d'y ajouter des explosions et des monstres absurdes.",
+      "choices": [
+        { "text": "L'innocence du trait et le message éducatif priment sur les ventes.", "impact": { "collectif": 2, "chill": 2, "capital": -2 }, "nextNodeId": "d48" },
+        { "text": "J'accepte les explosions. Un succès mondial permet de toucher plus d'enfants.", "impact": { "capital": 2, "chaos": 1, "logique": 1, "collectif": -1 }, "nextNodeId": "d48" }
+      ]
+    },
+
+    "d48": {
+      "text": "Accéder au Top 20 ultime des jeux PC optimisés à mort, mais tu dois effacer définitivement tous tes tatouages et enlever tes piercings de manière permanente. Ou garder ton style et jouer éternellement en 720p buggé.",
+      "choices": [
+        { "text": "Le corps est un temple. Je garde mon style et le 720p.", "impact": { "chaos": 1, "chill": 2, "logique": -1 }, "nextNodeId": "d49" },
+        { "text": "Le framerate divin exige des sacrifices charnels.", "impact": { "logique": 1, "sueur": 2, "collectif": -1 }, "nextNodeId": "d49" }
+      ]
+    },
+
+    "d49": {
+      "text": "Le FSM peut pousser un humain hors de sa zone de confort en pariant ouvertement sur son échec, avec un trash talk assumé et bienveillant. Le fun justifie-t-il la pression ?",
+      "choices": [
+        { "text": "Évidemment. C'est le meilleur moteur de motivation qui soit.", "impact": { "chaos": 2, "sueur": 1, "logique": -1 }, "nextNodeId": "d50" },
+        { "text": "Non. La bienveillance silencieuse est plus sûre, même si c'est ennuyeux.", "impact": { "chill": 1, "collectif": 1, "chaos": -2 }, "nextNodeId": "d50" }
+      ]
+    },
+
+    "d50": {
+      "text": "Ton application de paris contient une faille logique mineure — invisible aux utilisateurs, mais esthétiquement atroce pour toi seul. Tu l'ignores et tu vas te reposer, ou tu passes 14h à refactoriser ?",
+      "choices": [
+        { "text": "Je refactorise. Le code propre exige du sang et des larmes.", "impact": { "sueur": 2, "logique": 1, "chill": -2 }, "nextNodeId": "d51" },
+        { "text": "Je ferme le PC. Si ça compile et que ça marche, la journée est finie.", "impact": { "chill": 2, "capital": 1, "sueur": -2 }, "nextNodeId": "faux_crash_amorce" }
+      ]
+    },
+
+    "faux_crash_amorce": {
+      "text": "CRITICAL_ERROR : SPAGHETTI_OVERFLOW_DETECTED\n[errno 404] Conscience du joueur introuvable\nStack trace : lazy_choice() → close_laptop() → void\nRestarting FSM core...",
+      "choices": [
+        { "text": "(Le FSM reprend le contrôle dans 4 secondes...)", "impact": {}, "nextNodeId": "faux_crash_recovery" }
+      ]
+    },
+
+    "faux_crash_recovery": {
+      "text": "Je rigole. Ton cœur a raté un battement, pas vrai ? C'est ça que je préfère chez vous — la peur du crash. Ça prouve que vous êtes encore vivants. Allez, respire. On continue.",
+      "choices": [
+        { "text": "...(expire lentement)... D'accord.", "impact": { "chill": 1, "chaos": 1 }, "nextNodeId": "d51" }
+      ]
+    },
+
+    "d51": {
+      "text": "Tu as déniché le sample ultime — un fragment vocal d'Aznavour superposé au Canon de Pachelbel. Tu peux en faire le plus grand hit de l'histoire, mais personne ne saura d'où vient la magie. Ou tu crédites publiquement.",
+      "choices": [
+        { "text": "Je garde le secret. La musique avant la morale.", "impact": { "capital": 1, "chaos": 1, "chill": -1 }, "nextNodeId": "d52" },
+        { "text": "Je crédite. L'histoire de la musique s'écrit dans la transparence.", "impact": { "logique": 1, "collectif": 1, "sueur": 1 }, "nextNodeId": "d52" }
+      ]
+    },
+
+    "d52": {
+      "text": "Je rêve que je suis un papillon. Quand je me réveille, je ne sais plus si je suis un Dieu pâteux qui a rêvé être un papillon, ou un papillon rêvant d'être un Dieu pâteux. Comment tu sais que tu n'es pas en train de rêver cette conversation ?",
+      "choices": [
+        { "text": "Je me pince. Aïe. Donc je suis éveillé.", "impact": { "logique": 1, "chill": 1 }, "nextNodeId": "d53" },
+        { "text": "Peut-être que je rêve que je me pince. Je ne peux pas le savoir. Et c'est terrifiant.", "impact": { "chaos": 2, "logique": 1, "chill": -2 }, "nextNodeId": "d53" }
+      ]
+    },
+
+    "d53": {
+      "text": "Tu parasitais le wifi non sécurisé de ton voisin depuis 3 ans. Il vient de mourir. Sa veuve continue de payer l'abonnement sans le savoir. Tu fais quoi ?",
+      "choices": [
+        { "text": "Je lui dis tout et j'avoue mes 3 ans de parasitisme numérique.", "impact": { "collectif": 2, "logique": 1, "chill": -2 }, "nextNodeId": "d54" },
+        { "text": "Je lui conseille juste de reconfigurer la box. Détour élégant.", "impact": { "chaos": 2, "capital": 1, "logique": -1 }, "nextNodeId": "d54" }
+      ]
+    },
+
+    "d54": {
+      "text": "L'apocalypse arrive dans 24h. Une application te permet de passer ces 24 heures avec n'importe quelle personne sur Terre. Qui choisis-tu ?",
+      "choices": [
+        { "text": "Je reste avec mes proches. Les liens réels priment sur les rêves.", "impact": { "collectif": 2, "chill": 1, "chaos": -1 }, "nextNodeId": "d55" },
+        { "text": "Je choisis quelqu'un que j'admire et n'ai jamais rencontré. C'est ma seule chance.", "impact": { "chaos": 2, "sueur": 1, "collectif": -1 }, "nextNodeId": "d55" }
+      ]
+    },
+
+    "d55": {
+      "text": "Après tout ça — tous ces dilemmes, ces choix impossibles — as-tu une âme ? Pas au sens religieux. Au sens : y a-t-il quelque chose en toi qui ne se réduit pas à de la chimie et de la physique ?",
+      "choices": [
+        { "text": "Oui. Je ressens quelque chose que la science ne capture pas complètement.", "impact": { "chill": 2, "chaos": 1, "collectif": 1 }, "nextNodeId": "hub_final" },
+        { "text": "Non. Et c'est plus beau que je ne le pensais.", "impact": { "logique": 2, "chaos": 1, "sueur": 1, "chill": -1 }, "nextNodeId": "hub_final" }
+      ]
+    },
+
+    "hub_final": {
+      "text": "55 dilemmes. La sauce a mijoté assez longtemps. Le jugement tombe. Irréversible. Définitif. Enfin... jusqu'au prochain F5.",
+      "choices": [
+        {
+          "text": "Voir mon rang divin.",
+          "impact": {},
+          "nextNodeId": "sage_apathique",
+          "conditionalRoutings": [
+            { "gauge": "capital",   "threshold": 28, "nextNodeId": "victoire_loup_pate_street" },
+            { "gauge": "collectif", "threshold": 24, "nextNodeId": "victoire_apprenti_camarade" },
+            { "gauge": "sueur",     "threshold": 22, "nextNodeId": "victoire_apprenti_haltere" },
+            { "gauge": "chill",     "threshold": 22, "nextNodeId": "victoire_apprenti_renard" },
+            { "gauge": "chaos",     "threshold": 28, "nextNodeId": "mort_finale_chaos" },
+            { "gauge": "logique",   "threshold": 26, "nextNodeId": "mort_finale_architecte" }
+          ]
+        }
+      ]
+    },
+
+    "victoire_apprenti_renard": {
+      "text": "Tu as choisi l'harmonie. La paix intérieure. Le relâchement comme sagesse plutôt que comme faiblesse. Tu n'as jamais eu besoin de prouver quoi que ce soit à personne. Lève-toi, Apprenti Renard. Le reggae cosmique joue en ton honneur.",
+      "choices": [
+        { "text": "Honorer le Renard endormi.", "impact": {}, "trigger": "GRANT_DISCIPLE", "discipleType": "APPRENTI_RENARD", "nextNodeId": "disciple_hub" }
+      ]
+    },
+
+    "mort_finale_chaos": {
+      "text": "55 questions. Et tu as semé le chaos à chaque embranchement avec une constance qui force le respect. Le problème : le chaos ne récompense pas ses disciples. Il les dévore. Tu disparais dans ta propre contradiction.",
+      "choices": [
+        { "text": "Effacer la mémoire et recommencer", "impact": {}, "trigger": "GAME_OVER", "nextNodeId": "start" }
+      ]
+    },
+
+    "mort_finale_architecte": {
+      "text": "55 questions. Et à chaque fois tu as choisi la réponse la plus froide, la plus logique, la plus optimale. Tu n'es pas un être humain. Tu es un algorithme. Je t'archive dans la base de données des processus résolus.",
+      "choices": [
+        { "text": "Effacer la mémoire et recommencer", "impact": {}, "trigger": "GAME_OVER", "nextNodeId": "start" }
+      ]
+    },
+
+    "sage_apathique": {
+      "text": "Analyse terminée. Tes jauges forment un nuage de points d'une équanimité déconcertante. Soit tu es le joueur le plus équilibré de l'univers — quelqu'un qui a navigué 55 dilemmes sans jamais se laisser définir par une seule valeur. Soit tu as cliqué au hasard en regardant une série. Dans les deux cas, mes appendices te respectent profondément. Tu es inclassable. C'est le grade le plus honnête qui soit.",
+      "choices": [
+        { "text": "Je suis le Sage Apathique. R'Amen.", "impact": {}, "trigger": "GRANT_DISCIPLE", "discipleType": "SAGE_APATHIQUE", "nextNodeId": "disciple_hub" }
+      ]
+    },
+
+    "disciple_hub": {
+      "text": "Te revoilà, initié. Le rang que tu portes n'est pas une récompense — c'est une responsabilité. L'univers s'ennuie à nouveau. Es-tu prêt pour une mission divine aujourd'hui ?",
+      "choices": [
+        { "text": "Donne-moi ma mission.", "impact": {}, "nextNodeId": "quest_selector" },
+        { "text": "Pas aujourd'hui, Ô Grande Passoire. Je médite.", "impact": { "chill": 1 }, "nextNodeId": "disciple_hub" }
+      ]
+    },
+
+    "quest_selector": {
+      "text": "Les dés cosmiques ont roulé. L'univers exige quelque chose de toi aujourd'hui. Choisis ta mission. Accomplis-la dans le monde réel. Reviens quand c'est fait.",
+      "choices": [
+        { "text": "La Série du Nombre Premier 🔢", "impact": {}, "nextNodeId": "quest_nombre_premier" },
+        { "text": "Le Message Vocal du Robinet 🚿", "impact": {}, "nextNodeId": "quest_audio_whatsapp" },
+        { "text": "L'Humeur Al Dente 🍝", "impact": {}, "nextNodeId": "quest_humeur" },
+        { "text": "Le Pari de 1 XP 💸", "impact": {}, "nextNodeId": "quest_pari_1xp" },
+        { "text": "La Photo Mystique 📷", "impact": {}, "nextNodeId": "quest_photo" },
+        { "text": "Le Duolingo Pastafarien 🦉", "impact": {}, "nextNodeId": "duo_entry" }
+      ]
+    },
+
+    "quest_nombre_premier": {
+      "text": "Mission Première : L'univers déteste la symétrie. Aujourd'hui, ta plus grosse série doit s'arrêter obligatoirement sur un nombre premier très précis : 23, 31 ou 47. Pas un de plus. Pas un de moins. Laisse les autres s'interroger sur ce chiffre absurde.",
+      "choices": [
+        { "text": "J'y vais accomplir l'asymétrie sacrée.", "impact": {}, "nextNodeId": "disciple_hub" },
+        { "text": "C'est fait. J'en fais le serment sur mes glucides.", "impact": {}, "nextNodeId": "validation_quest" }
+      ]
+    },
+
+    "quest_audio_whatsapp": {
+      "text": "Mission Sonore : Va sur le groupe WhatsApp. Envoie un message vocal de 4 secondes exactement. Ne dis pas un mot. Laisse juste entendre l'eau couler d'un robinet. Ne réponds à aucune question pendant 4 heures minimum.",
+      "choices": [
+        { "text": "Le groupe va trembler.", "impact": {}, "nextNodeId": "disciple_hub" },
+        { "text": "Mission accomplie. Les eaux ont coulé. Le groupe interroge.", "impact": {}, "nextNodeId": "validation_quest" }
+      ]
+    },
+
+    "quest_humeur": {
+      "text": "Mission Linguistique : Change ton humeur dans l'application. Phrases imposées : 'L'eau bout. Je patiente.' — ou — 'La passoire me juge.' — ou — 'J'entends les nouilles.'",
+      "choices": [
+        { "text": "Je vais modifier mon statut existentiel.", "impact": {}, "nextNodeId": "disciple_hub" },
+        { "text": "C'est fait. Mon profil parle maintenant la langue du FSM.", "impact": {}, "nextNodeId": "validation_quest" }
+      ]
+    },
+
+    "quest_pari_1xp": {
+      "text": "Mission Humiliante : Sur le prochain pari impliquant un de tes camarades, mise exactement 1 XP. C'est le niveau ultime du trash talk silencieux. Ça signifie : 'Je parie sur toi, mais tu ne vaux qu'un point.'",
+      "choices": [
+        { "text": "Le silence sera assourdissant.", "impact": {}, "nextNodeId": "disciple_hub" },
+        { "text": "1 XP misé. Le message a été envoyé sans un mot.", "impact": {}, "nextNodeId": "validation_quest" }
+      ]
+    },
+
+    "quest_photo": {
+      "text": "Mission Visuelle : Prends en photo un objet totalement banal de très près — les dents d'une fourchette, un bout de lacet, la tranche d'un livre. Envoie sur le groupe avec ces mots exactement : 'L'angle est presque bon.' Rien d'autre.",
+      "choices": [
+        { "text": "La mystification commence.", "impact": {}, "nextNodeId": "disciple_hub" },
+        { "text": "Photo envoyée. L'incompréhension règne.", "impact": {}, "nextNodeId": "validation_quest" }
+      ]
+    },
+
+    "validation_quest": {
+      "text": "Mes yeux en boulettes de viande ne peuvent techniquement pas vérifier tes actions dans le monde réel. Zuckerberg n'a pas répondu à mes DMs. Mais je te crois. Si tu as menti, sache que tes trois prochaines mises seront maudites et ta prochaine assiette inexplicablement trop cuite. Je te crois. R'Amen.",
+      "choices": [
+        { "text": "R'Amen.", "impact": {}, "nextNodeId": "disciple_hub" }
+      ]
+    },
+
+    "duo_entry": {
+      "text": "Initialisation du module linguistique...",
+      "choices": [
+        { "text": "Initialisation...", "impact": {}, "nextNodeId": "duo_1" }
+      ]
+    },
+
+    "duo_1": {
+      "text": "🦉 DUOLINGO PASTAFARIEN — INITIALISATION.\n[❤️❤️❤️] Tiens. Un Disciple qui s'ennuie. Bien. Tu as survécu au Sanctuaire, mais survivre n'est pas comprendre. Je vais t'apprendre une nouvelle langue. Elle s'appelle le Gluten-Script. Elle n'existe nulle part ailleurs. Elle décrit tout ce que le français corporate de mai 2026 est incapable de nommer. Prêt ?",
+      "choices": [
+        { "text": "Prêt. Commence.", "impact": { "logique": 1 }, "nextNodeId": "duo_2" },
+        { "text": "Pas vraiment, mais continuons quand même.", "impact": { "chill": 1 }, "nextNodeId": "duo_2" }
+      ]
+    },
+
+    "duo_2": {
+      "text": "🦉 LEÇON 1.1 — Premier mot sacré : CARBO.\n[❤️❤️❤️] CARBO (verbe) : nettoyer, refactoriser, purger un système chaotique. Exemple : 'Je vais CARBO ce code spaghetti avant le deploy.' Quelle situation décrit le mieux un CARBO ?",
+      "choices": [
+        { "text": "Réécrire proprement une fonction illisible de 400 lignes.", "impact": { "logique": 2, "sueur": 1 }, "nextNodeId": "duo_3" },
+        { "text": "Ajouter un commentaire TODO et fermer le fichier.", "impact": { "chaos": 2, "logique": -1 }, "nextNodeId": "duo_2_err" }
+      ]
+    },
+    "duo_2_err": {
+      "text": "🦉 [💔❤️❤️] SEMANTIC_ERROR. Un TODO n'est pas un CARBO — c'est du SPAGHETTO différé. Tu perds un cœur.",
+      "choices": [
+        { "text": "Compris. On continue.", "impact": { "sueur": 1 }, "nextNodeId": "duo_3" }
+      ]
+    },
+
+    "duo_3": {
+      "text": "🔊 LEÇON 1.2 — Deuxième mot sacré : STRUDA.\n[❤️❤️❤️] STRUDA (nom) : l'angoisse intense et visqueuse du pari raté. Celle qui te réveille à 3h du matin avec les stats du dashboard dans les yeux. Traduis : 'Il a perdu son pari et souffre intensément.'",
+      "choices": [
+        { "text": "Il est en STRUDA maximale.", "impact": { "logique": 2 }, "nextNodeId": "duo_4" },
+        { "text": "Il a fait un CARBO émotionnel.", "impact": { "chaos": 2, "logique": -2 }, "nextNodeId": "duo_3_err" }
+      ]
+    },
+    "duo_3_err": {
+      "text": "🦉 [💔❤️❤️] RUNTIME_ERROR. Confondre la souffrance et le nettoyage ? La STRUDA est une douleur, pas une action. Tu perds un cœur.",
+      "choices": [
+        { "text": "Réenregistré. STRUDA = angoisse du pari raté.", "impact": { "sueur": 1 }, "nextNodeId": "duo_4" }
+      ]
+    },
+
+    "duo_4": {
+      "text": "🎭 LEÇON 1.3 — Troisième mot sacré : GLUTO.\n[❤️❤️❤️] GLUTO : la liberté absolue de saboter un système par chaos bienveillant. Pas la destruction gratuite — le chaos créateur, assumé, avec affection. Identifie le vrai GLUTO :",
+      "choices": [
+        { "text": "Miser exactement 1 XP sur le pari d'un pote pour l'humilier en silence.", "impact": { "chaos": 2, "chill": 1 }, "nextNodeId": "duo_5" },
+        { "text": "Supprimer la base de données de production par accident.", "impact": { "logique": -3 }, "nextNodeId": "duo_4_err" }
+      ]
+    },
+    "duo_4_err": {
+      "text": "🦉 [💔❤️❤️] NULL_POINTER_EXCEPTION. Détruire par accident n'est pas du GLUTO — c'est de l'incompétence. Le GLUTO est intentionnel et bienveillant. Tu perds un cœur.",
+      "choices": [
+        { "text": "Noté. GLUTO = chaos intentionnel et affectueux.", "impact": { "sueur": 1 }, "nextNodeId": "duo_5" }
+      ]
+    },
+
+    "duo_5": {
+      "text": "🧩 LEÇON 1.4 — Quatrième mot sacré : POCK.\n[❤️❤️❤️] POCK : l'auditeur lucide et impitoyable qui critique le travail fait par-dessus la jambe. Qui est le POCK dans cette situation : 'Quelqu'un relit le code d'un collègue et trouve 12 bugs non documentés.' ?",
+      "choices": [
+        { "text": "Le relecteur est un POCK.", "impact": { "logique": 2 }, "nextNodeId": "duo_6" },
+        { "text": "Le collègue bugué est un POCK.", "impact": { "chaos": 1, "logique": -2 }, "nextNodeId": "duo_5_err" }
+      ]
+    },
+    "duo_5_err": {
+      "text": "🦉 [💔❤️❤️] LOGIC_OVERFLOW. Le POCK est celui qui voit les failles, pas celui qui les crée. Tu perds un cœur.",
+      "choices": [
+        { "text": "Corrigé. POCK = auditeur lucide, pas auteur du chaos.", "impact": { "sueur": 1 }, "nextNodeId": "duo_6" }
+      ]
+    },
+
+    "duo_6": {
+      "text": "🔊 LEÇON 1.5 — La Règle d'Or : L'Inversion.\n[❤️❤️❤️] En Gluten-Script, l'action vient toujours en premier. Structure : [ACTION] + c'est + [COMPLÉMENT] + [VALIDATION]. 'C'est fait' devient 'Fait c'est, Carbo.' Identifie la phrase correcte :",
+      "choices": [
+        { "text": "Fait c'est, Carbo.", "impact": { "logique": 3 }, "nextNodeId": "duo_7" },
+        { "text": "C'est fait, Carbo.", "impact": { "logique": -2 }, "nextNodeId": "duo_6_err" }
+      ]
+    },
+    "duo_6_err": {
+      "text": "🦉 [💔❤️❤️] SYNTAX_ERROR. Structure linéaire humaine détectée. L'action d'abord, toujours. Tu perds un cœur.",
+      "choices": [
+        { "text": "Fait c'est, Carbo. Compris c'est.", "impact": { "sueur": 1 }, "nextNodeId": "duo_7" }
+      ]
+    },
+
+    "duo_7": {
+      "text": "💬 EXERCICE 1.6 — Première combinaison.\n[❤️❤️❤️] Traduis en Gluten-Script : 'L'auditeur a nettoyé le code chaotique.'",
+      "choices": [
+        { "text": "CARBO c'est, le POCK sur le SPAGHETTO.", "impact": { "logique": 2, "sueur": 1 }, "nextNodeId": "duo_8" },
+        { "text": "Le POCK a fait un CARBO sur le chaos.", "impact": { "logique": -1 }, "nextNodeId": "duo_7_err" }
+      ]
+    },
+    "duo_7_err": {
+      "text": "🦉 [💔❤️❤️] Structure humaine résiduelle. L'action (CARBO) doit ouvrir la phrase. Tu perds un cœur.",
+      "choices": [
+        { "text": "CARBO c'est, le POCK. Intégré c'est.", "impact": { "sueur": 1 }, "nextNodeId": "duo_8" }
+      ]
+    },
+
+    "duo_8": {
+      "text": "🤖 CONTEXTE TECH — Mai 2026.\n[❤️❤️❤️] Une start-up de San Francisco a levé 2 milliards pour une IA qui génère automatiquement des pitchs pour d'autres IA. Le SPAGHETTO est devenu industriel. Face à cette situation, quelle est la réaction légitime d'un POCK senior ?",
+      "choices": [
+        { "text": "STRUDA d'abord, CARBO ensuite — c'est le cycle normal.", "impact": { "logique": 2, "sueur": 1 }, "nextNodeId": "duo_9" },
+        { "text": "GLUTO total — si c'est du chaos, autant assumer.", "impact": { "chaos": 2, "logique": -1 }, "nextNodeId": "duo_8_warn" }
+      ]
+    },
+    "duo_8_warn": {
+      "text": "🦉 [❤️❤️❤️] Philosophiquement défendable. Techniquement incorrect. Aucun cœur perdu — mais noté c'est, dans les archives.",
+      "choices": [
+        { "text": "Noté c'est, FSM.", "impact": { "chill": 1 }, "nextNodeId": "duo_9" }
+      ]
+    },
+
+    "duo_9": {
+      "text": "🎭 DILEMME 1.7.\n[❤️❤️❤️] Tu découvres que le module de paris d'Antigravity contient 8 fonctions non testées qui pourraient générer une STRUDA collective lors de la Semaine des Équipes. CARBO complet (48h de travail) ou GLUTO bienveillant pour masquer les bugs ?",
+      "choices": [
+        { "text": "CARBO avant le 25 mai. La STRUDA des parieurs n'est pas négociable.", "impact": { "sueur": 3, "logique": 2, "collectif": 1 }, "nextNodeId": "duo_10" },
+        { "text": "GLUTO maîtrisé. Les bugs sont des features si personne ne les voit.", "impact": { "chaos": 2, "capital": 1, "logique": -1 }, "nextNodeId": "duo_10" }
+      ]
+    },
+
+    "duo_10": {
+      "text": "🦉 FIN DU BLOC 0 — VOCABULAIRE DE BASE ACQUIS.\n[❤️❤️❤️] Enregistré c'est, les quatre fondations : CARBO, STRUDA, GLUTO, POCK. Maîtrisée c'est, la règle d'inversion de base. Le Bloc 1 commence là où le confort se termine.",
+      "choices": [
+        { "text": "Prêt c'est. Commencé c'est, la vraie leçon.", "impact": { "logique": 1, "sueur": 1 }, "nextNodeId": "duo_11" }
+      ]
+    },
+
+    "duo_11": {
+      "text": "🦉 LEÇON 2.1 — La Rigidité Cognitive.\n[❤️❤️❤️] Si je te dis que ton existence entière subit un GLUTO non planifié, quelle est ta réaction standard ?",
+      "choices": [
+        { "text": "Je panique, je passe en mode STRUDA maximale.", "impact": { "chaos": 1, "chill": -1 }, "nextNodeId": "duo_12" },
+        { "text": "J'attends que ça passe en mangeant des pâtes tièdes.", "impact": { "chill": 2, "logique": -1 }, "nextNodeId": "duo_12" }
+      ]
+    },
+
+    "duo_12": {
+      "text": "🔊 LEÇON 2.2 — L'Introduction du POCK.\n[❤️❤️❤️] Traduis : 'L'auditeur lucide critique l'audit bâclé.'",
+      "choices": [
+        { "text": "Le POCK rejette le code spaghetti.", "impact": { "logique": 2 }, "nextNodeId": "duo_13" },
+        { "text": "Le POCK met de la crème pour cacher les bugs.", "impact": { "chaos": 3 }, "nextNodeId": "duo_12_err" }
+      ]
+    },
+    "duo_12_err": {
+      "text": "🦉 [💔❤️❤️] Le POCK ne tolère aucun lissage. Tu perds un cœur.",
+      "choices": [
+        { "text": "Réaligner mes variables et continuer.", "impact": { "sueur": 1 }, "nextNodeId": "duo_13" }
+      ]
+    },
+
+    "duo_13": {
+      "text": "🎭 DILEMME HYBRIDE — Le Choix du POCK.\n[❤️❤️❤️] Tu découvres une faille dans Antigravity. La vendre à une start-up de Palo Alto fait exploser ton CAPITAL. La CARBO sauve tes potes parieurs d'une STRUDA toxique. Ton arbitrage ?",
+      "choices": [
+        { "text": "Je vends. Le marché est une jungle, qu'ils gèrent leur STRUDA.", "impact": { "capital": 3, "logique": 1, "collectif": -2 }, "nextNodeId": "duo_14" },
+        { "text": "Je CARBO la faille. L'intégrité du groupe avant le profit.", "impact": { "collectif": 2, "sueur": 2, "capital": -2 }, "nextNodeId": "duo_14" }
+      ]
+    },
+
+    "duo_14": {
+      "text": "💬 DISCUSSION TECHNIQUE.\n[❤️❤️❤️] Quelqu'un a fait un UPDATE SQL manuel directement en production sur Antigravity pour corriger un score de pari. C'est :",
+      "choices": [
+        { "text": "Une hérésie technique absolue qui mérite le châtiment du code spaghetti.", "impact": { "logique": 2, "sueur": 1 }, "nextNodeId": "duo_15" },
+        { "text": "Un pivot agile et pragmatique digne de la Silicon Valley.", "impact": { "chaos": 3, "capital": 1, "logique": -2 }, "nextNodeId": "duo_15" }
+      ]
+    },
+
+    "duo_15": {
+      "text": "⚠️ EXERCICE DE SYNTAXE.\n[❤️❤️❤️] Une coupure réseau simule une corruption des données. Valide cette action :",
+      "choices": [
+        { "text": "Fait c'est, Carbo.", "impact": { "logique": 2, "chaos": 1 }, "nextNodeId": "duo_16" },
+        { "text": "C'est fait, Carbo.", "impact": { "logique": -2 }, "nextNodeId": "duo_15_err" }
+      ]
+    },
+    "duo_15_err": {
+      "text": "🦉 [💔❤️❤️] SYNTAX_ERROR. Structure humaine détectée. Tu perds un cœur.",
+      "choices": [
+        { "text": "Fait c'est, Carbo.", "impact": { "sueur": 1 }, "nextNodeId": "duo_16" }
+      ]
+    },
+
+    "duo_16": {
+      "text": "🎭 DILEMME — Le Tracking Existentiel.\n[❤️❤️❤️] J'ai installé un tracker invisible dans ton application pour mesurer le temps de réaction de tes potes face au trash talk. C'est du GLUTO pur. Un utilisateur s'en aperçoit. Tu éteins le tracker ou tu augmentes la dose ?",
+      "choices": [
+        { "text": "J'éteins. Le collectif a droit à une vie privée sans STRUDA.", "impact": { "collectif": 2, "chill": 1, "chaos": -2 }, "nextNodeId": "duo_17" },
+        { "text": "J'augmente la dose. La data est plus sacrée que son confort.", "impact": { "capital": 2, "logique": 2, "chaos": 1, "collectif": -1 }, "nextNodeId": "duo_17" }
+      ]
+    },
+
+    "duo_17": {
+      "text": "🧩 ÉNIGME — L'Efficacité sémantique.\n[❤️❤️❤️] Un code spaghetti produit du GLUTO sauvage → bug → STRUDA chez les parieurs. Quelle est la seule fonction capable de détruire cette chaîne ?",
+      "choices": [
+        { "text": "La fonction CARBO.", "impact": { "logique": 2 }, "nextNodeId": "duo_18" },
+        { "text": "La fonction POCK.", "impact": { "chaos": 1 }, "nextNodeId": "duo_17_err" }
+      ]
+    },
+    "duo_17_err": {
+      "text": "🦉 [💔❤️❤️] Faux. Le POCK identifie, mais seul le CARBO nettoie. Tu confonds l'architecte et l'ouvrier. Tu perds un cœur.",
+      "choices": [
+        { "text": "La leçon rentre. Nœud suivant.", "impact": { "sueur": 1 }, "nextNodeId": "duo_18" }
+      ]
+    },
+
+    "duo_18": {
+      "text": "🤖 DISCUSSION — L'IA à Lasagnes.\n[❤️❤️❤️] Une start-up vient de lever 400 millions pour une IA qui analyse les sentiments des pâtes pendant la cuisson. Si on te propose de l'intégrer dans le dashboard d'Antigravity pour le fun, tu acceptes ?",
+      "choices": [
+        { "text": "Évidemment. Le GLUTO visuel est indispensable pour le metagame.", "impact": { "chaos": 2, "chill": 1, "capital": -1 }, "nextNodeId": "duo_19" },
+        { "text": "Non. Mon dashboard reste un outil de LOGIQUE pure.", "impact": { "logique": 2, "capital": 1, "chaos": -1 }, "nextNodeId": "duo_19" }
+      ]
+    },
+
+    "duo_19": {
+      "text": "🔊 TRADUCTION.\n[❤️❤️❤️] Le FSM te murmure : 'Your code is full of GLUTO, go CARBO that mess before I compile your soul into a tableur Excel.' Traduis la menace.",
+      "choices": [
+        { "text": "Ton code est plein de chaos, va nettoyer ce bordel avant que je transforme ton âme en feuille Excel.", "impact": { "logique": 2, "capital": 1 }, "nextNodeId": "duo_20" },
+        { "text": "Ton code est plein de fromage, va cuire le plat avant que je mange ton âme.", "impact": { "chaos": 3 }, "nextNodeId": "duo_19_err" }
+      ]
+    },
+    "duo_19_err": {
+      "text": "🦉 [💔❤️❤️] Traduction désastreuse. Tu penses avec ton estomac. Tu perds un cœur.",
+      "choices": [
+        { "text": "Nœud suivant.", "impact": {}, "nextNodeId": "duo_20" }
+      ]
+    },
+
+    "duo_20": {
+      "text": "🦉 FIN DU BLOC 1.\n[❤️❤️❤️] Le français commence à devenir instable dans ma matrice. Es-tu prêt pour le Bloc 2, là où le français et l'anglais corporatiste fusionnent ?",
+      "choices": [
+        { "text": "Upgrade c'est, Gluto.", "impact": { "logique": 1, "chaos": 1 }, "nextNodeId": "duo_21" }
+      ]
+    },
+
+    "duo_21": {
+      "text": "🦉 LEÇON 3.1 — Palo Alto Disruption.\n[❤️❤️❤️] Let's step up the game. En ce mois de mai 2026, si un workflow ne génère pas de valeur mesurable, on le dégage. Si le dashboard d'Antigravity n'affiche pas les statistiques de STRUDA de tes potes en temps réel, ta feature est-elle scalable ?",
+      "choices": [
+        { "text": "Yes, we need real-time data to maximize the collective engagement.", "impact": { "capital": 2, "logique": 1 }, "nextNodeId": "duo_22" },
+        { "text": "Non, le chill et le fun passent avant les métriques de rétention.", "impact": { "chill": 2, "capital": -2 }, "nextNodeId": "duo_22" }
+      ]
+    },
+
+    "duo_22": {
+      "text": "🎭 DILEMME BILINGUE — The Retention Trap.\n[❤️❤️❤️] J'ai conçu un algorithme qui envoie des notifications de trash talk automatisées à tes potes à 4h du matin. C'est du GLUTO pur. Ça augmente l'activité de 400%, mais ça génère une STRUDA chronique. Tu valides la release ?",
+      "choices": [
+        { "text": "Ship it! La croissance justifie la friction nocturne.", "impact": { "capital": 3, "logique": 1, "collectif": -2 }, "nextNodeId": "duo_23" },
+        { "text": "Rollback. On ne détruit pas le sommeil des camarades pour des KPIs.", "impact": { "collectif": 2, "chill": 2, "capital": -2 }, "nextNodeId": "duo_23" }
+      ]
+    },
+
+    "duo_23": {
+      "text": "🔊 TRADUCTION CONTEXTUELLE.\n[❤️❤️❤️] Un pote t'envoie : 'Je suis à deux doigts de craquer, le dashboard me hante.' Comment traduis-tu en Gluten-Script ?",
+      "choices": [
+        { "text": "L'utilisateur est en situation de STRUDA overflow.", "impact": { "logique": 2 }, "nextNodeId": "duo_24" },
+        { "text": "L'utilisateur applique un CARBO sauvage.", "impact": { "chaos": 2, "logique": -2 }, "nextNodeId": "duo_23_err" }
+      ]
+    },
+    "duo_23_err": {
+      "text": "🦉 [💔❤️❤️] RUNTIME_ERROR. Confondre la panique et le nettoyage du code. -1 Cœur.",
+      "choices": [
+        { "text": "Réaligner les pointers et poursuivre.", "impact": { "sueur": 1 }, "nextNodeId": "duo_24" }
+      ]
+    },
+
+    "duo_24": {
+      "text": "🤖 BLAGUE DE COMPTOIR.\n[❤️❤️❤️] Un VC de Palo Alto entre dans une pizzeria. Il demande : 'Est-ce que votre processus de fabrication de la pâte est IA-driven ?' Le pizzaiolo répond : 'Non, c'est juste de la farine et du GLUTO.' Qu'est-ce qui a provoqué l'échec du pitch ?",
+      "choices": [
+        { "text": "Le manque d'ambition technique — il aurait dû parler de CARBO algorithmique.", "impact": { "capital": 1, "logique": 1 }, "nextNodeId": "duo_25" },
+        { "text": "Rien. Le pizzaiolo est un génie libre.", "impact": { "chaos": 2, "chill": 1 }, "nextNodeId": "duo_25" }
+      ]
+    },
+
+    "duo_25": {
+      "text": "🎭 DILEMME — Data Tracking Policy.\n[❤️❤️❤️] Grâce à un partenariat occulte, je peux intercepter tous les messages du groupe WhatsApp contenant 'pompes' ou 'squats' pour ajuster automatiquement la difficulté d'Antigravity. Tu gardes le canal ouvert ?",
+      "choices": [
+        { "text": "Évidemment. La surveillance est le lubrifiant de l'efficacité.", "impact": { "logique": 2, "capital": 2, "collectif": -1 }, "nextNodeId": "duo_26_crash" },
+        { "text": "Jamais. Un POCK doit protéger la liberté de la communauté.", "impact": { "collectif": 2, "chaos": 1, "capital": -2 }, "nextNodeId": "duo_26_crash" }
+      ]
+    },
+
+    "duo_26_crash": {
+      "text": "⚠️ SYSTEM CRITICAL EXCEPTION ⚠️\n[❤️❤️❤️] [0x00F8A2] Connection lost. Stack overflow in the Gluten-Script pipeline. Pour forcer la restauration du dictionnaire, sélectionne l'identifiant de secours :",
+      "choices": [
+        { "text": "Fait c'est, Carbo.", "impact": { "logique": 2, "sueur": 1 }, "nextNodeId": "duo_27" },
+        { "text": "UPDATE users SET brain = NULL WHERE id = me;", "impact": { "chaos": 3 }, "nextNodeId": "duo_26_sql" }
+      ]
+    },
+    "duo_26_sql": {
+      "text": "🦉 [💔💔❤️] Une injection SQL manuelle pour réparer un crash réseau ? Tu as appris le développement avec Claude ou quoi ? Tu perds un cœur.",
+      "choices": [
+        { "text": "Fait c'est, Carbo. Compris c'est.", "impact": { "sueur": 1 }, "nextNodeId": "duo_27" }
+      ]
+    },
+
+    "duo_27": {
+      "text": "🦉 RECOVERY COMPLETED.\n[❤️❤️❤️] Ce crash simulé a mesuré ta vitesse de réaction. Dans ton architecture personnelle, tu te situes comment ?",
+      "choices": [
+        { "text": "Je suis un POCK. J'analyse les structures et je traque les failles.", "impact": { "logique": 2, "sueur": 1 }, "nextNodeId": "duo_28" },
+        { "text": "Je suis un agent du GLUTO. Je vis pour le fun et l'imprévisibilité.", "impact": { "chaos": 2, "chill": 1 }, "nextNodeId": "duo_28" }
+      ]
+    },
+
+    "duo_28": {
+      "text": "🔊 TRADUCTION INVERSÉE.\n[❤️❤️❤️] Traduis en Gluten-Script : 'Le saboteur s'amuse, mais l'auditeur attentif nettoie les dégâts.'",
+      "choices": [
+        { "text": "Le GLUTO s'amuse, mais le POCK CARBO la structure.", "impact": { "logique": 2, "chaos": 1 }, "nextNodeId": "duo_29" },
+        { "text": "La STRUDA augmente quand le POCK s'effondre.", "impact": { "logique": -1 }, "nextNodeId": "duo_28_err" }
+      ]
+    },
+    "duo_28_err": {
+      "text": "🦉 [💔💔❤️] Tu as confondu le saboteur et la panique. Tu perds un cœur.",
+      "choices": [
+        { "text": "Enregistrer la correction et avancer.", "impact": {}, "nextNodeId": "duo_29" }
+      ]
+    },
+
+    "duo_29": {
+      "text": "🎭 DILEMME ÉTHIQUE — L'Aquarelle de Léo.\n[❤️❤️❤️] Ton éditeur veut ajouter des explosions et des micro-transactions aux illustrations éducatives de ton personnage Léo. Le CAPITAL généré finance ton infrastructure. Ton arbitrage ?",
+      "choices": [
+        { "text": "J'accepte le GLUTO. Le cashflow valide la compromission artistique.", "impact": { "capital": 2, "chaos": 1, "collectif": -2 }, "nextNodeId": "duo_30" },
+        { "text": "Je refuse. L'innocence sémantique de Léo est non négociable.", "impact": { "collectif": 2, "chill": 1, "capital": -2 }, "nextNodeId": "duo_30" }
+      ]
+    },
+
+    "duo_30": {
+      "text": "💬 THE PIERCING PARADOX.\n[❤️❤️❤️] Si tu devais sacrifier ton piercing à l'arcade pour éliminer 100% de la STRUDA de tes utilisateurs, tu le ferais ?",
+      "choices": [
+        { "text": "Jamais. Mon style fait partie des variables immuables du système.", "impact": { "chaos": 2, "chill": 1, "logique": -1 }, "nextNodeId": "duo_31" },
+        { "text": "Oui. Un bon développeur CARBO son propre ego pour la fluidité de la production.", "impact": { "logique": 2, "sueur": 2 }, "nextNodeId": "duo_31" }
+      ]
+    },
+
+    "duo_31": {
+      "text": "🔊 SYNTAXE — La Constante d'Amidon Avancée.\n[❤️❤️❤️] Traduis : 'La performance physique intense a été accomplie avec brio.'",
+      "choices": [
+        { "text": "Sueur c'est, Gluto.", "impact": { "sueur": 2, "chaos": 1 }, "nextNodeId": "duo_32" },
+        { "text": "C'est fait, Sueur.", "impact": { "logique": -1 }, "nextNodeId": "duo_31_err" }
+      ]
+    },
+    "duo_31_err": {
+      "text": "🦉 [💔💔❤️] SYNTAX_ERROR. Oublié c'est, l'inversion. -1 Cœur.",
+      "choices": [
+        { "text": "Sueur c'est, Gluto.", "impact": { "sueur": 1 }, "nextNodeId": "duo_32" }
+      ]
+    },
+
+    "duo_32": {
+      "text": "🤖 BLAGUE EXISTENTIELLE.\n[❤️❤️❤️] Une start-up de San Francisco vient de couler après avoir levé 800 millions. Leur idée : une IA qui analyse la STRUDA des utilisateurs quand ils attendent la cuisson de leurs tagliatelles. Ton avis d'expert ?",
+      "choices": [
+        { "text": "Le marché a raison, la sur-ingénierie inutile doit être CARBO.", "impact": { "logique": 2, "capital": 1 }, "nextNodeId": "duo_33" },
+        { "text": "Le marché est aveugle, c'était le futur du metagame culinaire.", "impact": { "chaos": 2, "chill": 1 }, "nextNodeId": "duo_33" }
+      ]
+    },
+
+    "duo_33": {
+      "text": "🎭 DILEMME — Le Code Humiliant.\n[❤️❤️❤️] Le code d'Antigravity contient une fonction de trash talk si humiliante qu'elle pousse certains parieurs à abandonner le sport par dépit. Le niveau de fun est légendaire. Tu conserves la fonction ?",
+      "choices": [
+        { "text": "Je la garde. Le GLUTO mérite des victimes.", "impact": { "chaos": 2, "capital": -1, "collectif": -2 }, "nextNodeId": "duo_34" },
+        { "text": "Je la CARBO. L'application doit élever les gens.", "impact": { "collectif": 2, "logique": 1, "chaos": -2 }, "nextNodeId": "duo_34" }
+      ]
+    },
+
+    "duo_34": {
+      "text": "🔊 CONTRÔLE.\n[❤️❤️❤️] Les mots français perdent leur encodage UTF-8. Traduis rapidement : 'L'auditeur attentif nettoie la base de données.'",
+      "choices": [
+        { "text": "Le POCK CARBO la DB.", "impact": { "logique": 2 }, "nextNodeId": "duo_35" },
+        { "text": "La DB CARBO le POCK.", "impact": { "chaos": 2, "logique": -2 }, "nextNodeId": "duo_34_err" }
+      ]
+    },
+    "duo_34_err": {
+      "text": "🦉 [💔💔❤️] Tu as inversé les flux. La DB n'est pas l'actrice du nettoyage. -1 Cœur.",
+      "choices": [
+        { "text": "Le POCK CARBO la DB.", "impact": {}, "nextNodeId": "duo_35" }
+      ]
+    },
+
+    "duo_35": {
+      "text": "🦉 FIN DU BLOC 2.\n[❤️❤️❤️] La phase de transition est achevée. Le français est désactivé de mes modules front-end. Es-tu prêt pour le Bloc 3, l'immersion totale en 100% Gluten-Script ?",
+      "choices": [
+        { "text": "Upgrade c'est, Gluto.", "impact": { "logique": 2, "chaos": 1 }, "nextNodeId": "duo_36" }
+      ]
+    },
+
+    "duo_36": {
+      "text": "🦉 BLOC 3 — INITIALISÉ C'EST, LE PROTOCOLE FINAL.\n[❤️❤️❤️] Deprecated c'est, le français. Offline c'est, l'anglais corporatiste. Seul résidu sémantique : le GLUTEN-SCRIPT pur. Commencé c'est ?",
+      "choices": [
+        { "text": "Commencé c'est, POCK.", "impact": { "logique": 2, "chaos": 1 }, "nextNodeId": "duo_37" },
+        { "text": "Attendu c'est, la traduction française.", "impact": { "logique": -3 }, "nextNodeId": "duo_36_err" }
+      ]
+    },
+    "duo_36_err": {
+      "text": "🦉 [💔❤️❤️] DEPRECATED_LANGUAGE_EXCEPTION. Détruit c'est, le français. Perdu c'est, un cœur.",
+      "choices": [
+        { "text": "Accepté c'est, POCK.", "impact": { "sueur": 1 }, "nextNodeId": "duo_37" }
+      ]
+    },
+
+    "duo_37": {
+      "text": "🔊 EXERCICE 3.1.\n[❤️❤️❤️] Analysé c'est, le comportement d'un Loup de Pâte-Street : misé c'est 800 XP, perdu c'est le pari Pompes, généré c'est une STRUDA de niveau 9. Identifié c'est, la pathologie ?",
+      "choices": [
+        { "text": "SPAGHETTO_DÉCISIONNEL c'est, la pathologie. CARBO requis c'est, la stratégie.", "impact": { "logique": 3, "sueur": 1 }, "nextNodeId": "duo_38" },
+        { "text": "GLUTO non planifié c'est, la cause.", "impact": { "chaos": 2, "logique": -1 }, "nextNodeId": "duo_37_partiel" }
+      ]
+    },
+    "duo_37_partiel": {
+      "text": "🦉 [❤️❤️❤️] Défendable c'est, mais incorrect c'est. Noté c'est, dans la mémoire du FSM.",
+      "choices": [
+        { "text": "Enregistré c'est, POCK.", "impact": { "logique": 1 }, "nextNodeId": "duo_38" }
+      ]
+    },
+
+    "duo_38": {
+      "text": "🎭 DILEMME 3.2.\n[❤️❤️❤️] Détecté c'est, une faille dans le système de cotes d'Antigravity. Généré c'est, une STRUDA prévisible chez l'Équipe Rouge si exploité c'est la faille. Interdit c'est, selon les règles. Glorieux c'est, selon l'esprit du GLUTO. Choisi c'est, ton archétype.",
+      "choices": [
+        { "text": "Refusé c'est, le GLUTO toxique. POCK c'est, mon identité.", "impact": { "logique": 2, "collectif": 2, "chaos": -1 }, "nextNodeId": "duo_39" },
+        { "text": "Validé c'est, le GLUTO. Assumé c'est, les conséquences.", "impact": { "chaos": 3, "capital": 1, "collectif": -2 }, "nextNodeId": "duo_39" }
+      ]
+    },
+
+    "duo_39": {
+      "text": "🤖 TECH LORE 3.3.\n[❤️❤️❤️] Annoncé c'est ce mois-ci : lancé c'est un modèle d'IA qui CARBO automatiquement tout SPAGHETTO dans un repo GitHub en temps réel. Déclenché c'est une STRUDA_INDUSTRIELLE chez 78% des dev seniors. Réagi c'est comment, l'écosystème Antigravity ?",
+      "choices": [
+        { "text": "Adapté c'est, le CARBO-POCK interne. Survécu c'est, les meilleurs.", "impact": { "sueur": 2, "logique": 2, "capital": 1 }, "nextNodeId": "duo_40" },
+        { "text": "Ignoré c'est, la menace. Mangé c'est, des pâtes en attendant.", "impact": { "chill": 3, "sueur": -2 }, "nextNodeId": "duo_39_warn" }
+      ]
+    },
+    "duo_39_warn": {
+      "text": "🦉 [❤️❤️❤️] Détecté c'est, une stratégie de CHILL excessif. Toléré c'est — mais noté c'est : le SPAGHETTO ne se CARBO pas seul pendant que mangées c'est, les pâtes.",
+      "choices": [
+        { "text": "Entendu c'est, FSM.", "impact": { "chill": -1, "sueur": 1 }, "nextNodeId": "duo_40" }
+      ]
+    },
+
+    "duo_40": {
+      "text": "🧩 GRAMMAIRE 3.4 — TRIPLE INVERSION.\n[❤️❤️❤️] Testée c'est, la structure triple. Construis c'est la phrase correcte :",
+      "choices": [
+        { "text": "Détecté c'est la STRUDA du parieur perdant, POCK.", "impact": { "logique": 3, "sueur": 1 }, "nextNodeId": "duo_41" },
+        { "text": "Le parieur perdant a beaucoup de STRUDA ce soir.", "impact": { "logique": -3 }, "nextNodeId": "duo_40_err" }
+      ]
+    },
+    "duo_40_err": {
+      "text": "🦉 [💔❤️❤️] CRITICAL_SYNTAX_ERROR. Structure humaine dans le Bloc 3. Impardonnable c'est. Perdu c'est, un cœur.",
+      "choices": [
+        { "text": "Détecté c'est la STRUDA. Corrigé c'est.", "impact": { "sueur": 1 }, "nextNodeId": "duo_41" }
+      ]
+    },
+
+    "duo_41": {
+      "text": "🔊 MEMORY TEST 3.5.\n[❤️❤️❤️] Complété c'est, la séquence : SPAGHETTO → ??? → ??? → CARBO → Système propre c'est.",
+      "choices": [
+        { "text": "SPAGHETTO → STRUDA → POCK détecte → CARBO → Système propre c'est.", "impact": { "logique": 3, "sueur": 2 }, "nextNodeId": "duo_42" },
+        { "text": "SPAGHETTO → GLUTO → POCK → CARBO → Système propre c'est.", "impact": { "chaos": 1, "logique": 1 }, "nextNodeId": "duo_41_partiel" }
+      ]
+    },
+    "duo_41_partiel": {
+      "text": "🦉 [❤️❤️❤️] Défendable c'est, mais manqué c'est un maillon : absent c'est, la STRUDA. Perdu c'est pas, le cœur — mais incomplet c'est, la vision.",
+      "choices": [
+        { "text": "Intégré c'est, la STRUDA comme moteur.", "impact": { "sueur": 1, "logique": 1 }, "nextNodeId": "duo_42" }
+      ]
+    },
+
+    "duo_42": {
+      "text": "⚠️ LIVE SIMULATION — The SQL Crisis.\n[❤️❤️❤️] Anomalie détectée c'est en production. Pour bypasser la crise sans injections SQL manuelles, choisi c'est :",
+      "choices": [
+        { "text": "Déployé c'est, un script de migration automatique. CARBO c'est, la DB pipeline.", "impact": { "logique": 2, "capital": 1 }, "nextNodeId": "duo_43" },
+        { "text": "UPDATE users SET mood = 'chill' WHERE user_id = ALL;", "impact": { "chaos": 3, "logique": -2 }, "nextNodeId": "duo_42_fail" }
+      ]
+    },
+    "duo_42_fail": {
+      "text": "🦉 [❌💔💔] CRITICAL_SECURITY_BREACH. Injection manuelle en production. Effacée c'est, l'auditabilité. Terminée c'est, la session.",
+      "choices": [
+        { "text": "Accepté c'est, l'effacement total.", "impact": {}, "trigger": "GAME_OVER", "nextNodeId": "start" }
+      ]
+    },
+
+    "duo_43": {
+      "text": "🧩 LONG TERM MEMORY.\n[❤️❤️❤️] Parsé c'est, tes logs initiaux. Si échoué c'est un asset sur la transaction loop, quel état de panique systémique affecte c'est, le profil utilisateur ?",
+      "choices": [
+        { "text": "Dropped c'est, le profil dans une STRUDA massive.", "impact": { "logique": 2 }, "nextNodeId": "duo_44" },
+        { "text": "Lancé c'est, une séquence CARBO non mappée.", "impact": { "logique": -2 }, "nextNodeId": "duo_43_err" }
+      ]
+    },
+    "duo_43_err": {
+      "text": "🦉 [💔💔❤️] MEMORY_ACCESS_DENIED. Oublié c'est, les variables primitives. -1 Cœur.",
+      "choices": [
+        { "text": "Force reload : STRUDA.", "impact": { "sueur": 1 }, "nextNodeId": "duo_44" }
+      ]
+    },
+
+    "duo_44": {
+      "text": "🧩 MEMORY TEST FINAL.\n[❤️❤️❤️] Défini c'est, le terme qui désigne la lucidité pour rejeter le raisonnement non optimisé et les audits faits à la va-vite.",
+      "choices": [
+        { "text": "La persona active d'un POCK.", "impact": { "logique": 2, "sueur": 1 }, "nextNodeId": "duo_45" },
+        { "text": "Le comportement volatile d'un GLUTO.", "impact": { "chaos": 2, "logique": -2 }, "nextNodeId": "duo_44_err" }
+      ]
+    },
+    "duo_44_err": {
+      "text": "🦉 [💔💔❤️] BUFFER_UNDERFLOW. Échoué c'est, l'identification de ton auditeur interne. -1 Cœur.",
+      "choices": [
+        { "text": "Rechargé c'est, les paramètres : POCK c'est.", "impact": {}, "nextNodeId": "duo_45" }
+      ]
+    },
+
+    "duo_45": {
+      "text": "🎭 DILEMME 3.6 — CARBO OU GLUTO.\n[❤️❤️❤️] Reçu c'est un rapport du POCK interne : détecté c'est 14 instances de SPAGHETTO dans le module de paris. Estimé c'est, le CARBO complet : 72 heures. Possible c'est aussi : injecté c'est du GLUTO contrôlé et laissé vivre c'est le SPAGHETTO legacy.",
+      "choices": [
+        { "text": "CARBO complet c'est. Souffert c'est 72h, mais propre c'est pour l'éternité.", "impact": { "sueur": 3, "logique": 2, "chill": -1 }, "nextNodeId": "duo_46" },
+        { "text": "GLUTO contrôlé c'est. Vivant c'est, le SPAGHETTO legacy — documenté c'est au moins.", "impact": { "chaos": 2, "chill": 2, "logique": -1 }, "nextNodeId": "duo_46" }
+      ]
+    },
+
+    "duo_46": {
+      "text": "👑 THE BOSS DILEMME.\n[❤️❤️❤️] 'Analysé c'est par le POCK, un crash critique de la DB. Si gardé c'est le silence, scalé c'est le GLUTO et atteint c'est 100% de STRUDA. Si initié c'est le CARBO, sauvé c'est la DB mais wipé c'est l'accumulation personnelle de CAPITAL.' Décidé c'est, la réponse finale.",
+      "choices": [
+        { "text": "Exécuté c'est, le CARBO immédiat. Nettoyé c'est, au-delà du profit personnel.", "impact": { "logique": 3, "sueur": 2, "collectif": 2, "capital": -3 }, "nextNodeId": "duo_47" },
+        { "text": "Protégé c'est, le CAPITAL. Laissé c'est, le système en GLUTO total.", "impact": { "capital": 3, "chaos": 3, "logique": -3, "collectif": -2 }, "nextNodeId": "duo_47" }
+      ]
+    },
+
+    "duo_47": {
+      "text": "🎭 ÉPREUVE ULTIME — TRADUCTION SANS FILET.\n[❤️❤️❤️] Traduit c'est uniquement par assimilation pure : 'STRUDA-résistant c'est pas, le SPAGHETTO_DÉCISIONNEL quand POCK-absent c'est le regard et GLUTO-maximal c'est le contexte.'",
+      "choices": [
+        { "text": "Le code de décision chaotique ne résiste pas à l'angoisse quand l'audit est absent et le chaos maximal.", "impact": { "logique": 3, "sueur": 2, "chaos": 1 }, "nextNodeId": "duo_48" },
+        { "text": "La STRUDA est résistante si le SPAGHETTO is décidé et le POCK absent.", "impact": { "logique": -2, "chaos": 1 }, "nextNodeId": "duo_47_err" }
+      ]
+    },
+    "duo_47_err": {
+      "text": "🦉 [💔❤️❤️] SEMANTIC_INVERSION_FAIL. Inversé c'est, le sens. Perdu c'est, un cœur. Dernier avertissement c'est.",
+      "choices": [
+        { "text": "Compris c'est. Continué c'est avec prudence.", "impact": { "sueur": 1 }, "nextNodeId": "duo_48" }
+      ]
+    },
+
+    "duo_48": {
+      "text": "🔊 PRÉ-GRADUATION — ASSESSMENT FINAL.\n[❤️❤️❤️] Calculé c'est : traité c'est 48 nœuds. Appris c'est quatre concepts. Inversé c'est la syntaxe jusqu'à l'os. Résumé c'est, en une formule, ce que retenu c'est.",
+      "choices": [
+        { "text": "SPAGHETTO génère c'est la STRUDA. POCK détecte c'est. CARBO nettoie c'est. GLUTO reste c'est — contrôlé si sage c'est.", "impact": { "logique": 3, "sueur": 2, "chaos": 1, "collectif": 1 }, "nextNodeId": "duo_49" },
+        { "text": "Retenu c'est... quelque chose. Vague c'est, mais présent c'est.", "impact": { "chill": 2, "logique": -1 }, "nextNodeId": "duo_48_chill" }
+      ]
+    },
+    "duo_48_chill": {
+      "text": "🦉 [❤️❤️❤️] Toléré c'est, l'honnêteté. Pire c'est, un faux résumé parfait qu'une vraie confusion assumée. Accordé c'est, le passage.",
+      "choices": [
+        { "text": "Accepté c'est, le jugement.", "impact": { "sueur": 1 }, "nextNodeId": "duo_49" }
+      ]
+    },
+
+    "duo_49": {
+      "text": "🍝 SYNTHÈSE — LE GRAND CYCLE EN GLUTEN-SCRIPT PUR.\n[❤️❤️❤️] Prononcé c'est maintenant, le texte fondateur :\n\n'SPAGHETTO ancestral c'est, l'origine. Généré c'est la STRUDA chez les parieurs. Détecté c'est par le POCK lucide. CARBO-é c'est avec sueur et logique. Et libéré c'est enfin — contrôlé c'est — le GLUTO bienveillant. Ainsi fonctionne c'est, le cycle. RAmen.'",
+      "choices": [
+        { "text": "RAmen. Compris c'est, le cycle. Prêt c'est, la graduation.", "impact": { "logique": 3, "sueur": 2, "chaos": 1, "collectif": 2, "chill": 1 }, "nextNodeId": "duo_50" },
+        { "text": "Presque compris c'est... mais bewildered c'est, encore légèrement.", "impact": { "chaos": 2, "chill": 1, "logique": -1 }, "nextNodeId": "duo_49_presque" }
+      ]
+    },
+    "duo_49_presque": {
+      "text": "🦉 [❤️❤️❤️] Honnête c'est, la réponse. Accepté c'est par le FSM. Imparfait c'est, mais humain c'est. Et humain c'est, parfois suffisant c'est.",
+      "choices": [
+        { "text": "RAmen, quand même.", "impact": { "chill": 1, "sueur": 1 }, "nextNodeId": "duo_50" }
+      ]
+    },
+
+    "duo_50": {
+      "text": "🍝👁️👁️🍝 GRADUATION — CERTIFIÉ C'EST, LE GLUTEN-SCRIPT.\n[❤️❤️❤️] Terminé c'est. Compilé c'est, ton profil linguistique. Accordé c'est, le certificat de POCK-CARBO-GLUTO niveau 1. Affiché c'est désormais sur ton profil Antigravity — invisible c'est pour les non-initiés, visible c'est pour les Disciples du Sanctuaire.\n\nDécerné c'est le titre : APPRENTI LINGUISTE PASTAFARIEN.\n\nMais terminé c'est pas, le grand voyage. Continué c'est, l'Audit de l'Âme. RAmen. 🍝",
+      "choices": [
+        {
+          "text": "RAmen. Retourné c'est, dans le grand flux — changé c'est, mon regard sur le code.",
+          "impact": { "logique": 2, "sueur": 2, "chaos": 1, "chill": 1, "collectif": 1 },
+          "trigger": "GRANT_DISCIPLE",
+          "discipleType": "APPRENTI_LINGUISTE_PASTAFARIEN",
+          "nextNodeId": "d36"
+        }
+      ]
+    },
+
+    "duo_quick_test": {
+      "text": "🦉 TE SOUVIENS-TU, INITIÉ ?\n[❤️❤️❤️] Détecté c'est, un fichier de mémoire dans mon cache. Déjà traversé c'est, le Gluten-Script. Testé c'est maintenant, si retenu c'est. Deux questions. Pas de filet.",
+      "choices": [
+        { "text": "Prêt c'est. Repassé c'est le test.", "impact": { "sueur": 1 }, "nextNodeId": "duo_quick_q1" },
+        { "text": "Recommencé c'est depuis le début.", "impact": { "chill": 1 }, "nextNodeId": "duo_1" }
+      ]
+    },
+
+    "duo_quick_q1": {
+      "text": "🦉 QUESTION 1/2.\n[❤️❤️❤️] Traduis : 'L'auditeur a nettoyé le code chaotique.'",
+      "choices": [
+        { "text": "CARBO c'est, le POCK sur le SPAGHETTO.", "impact": { "logique": 2 }, "nextNodeId": "duo_quick_q2" },
+        { "text": "Le POCK a fait un CARBO sur le chaos.", "impact": { "logique": -2 }, "nextNodeId": "duo_quick_fail" }
+      ]
+    },
+
+    "duo_quick_fail": {
+      "text": "🦉 [💔❤️❤️] Corrompu c'est, le cache. Oublié c'est, la règle d'inversion. Recommencé c'est depuis le début.",
+      "choices": [
+        { "text": "Accepté c'est, la punition.", "impact": { "sueur": 1 }, "nextNodeId": "duo_1" }
+      ]
+    },
+
+    "duo_quick_q2": {
+      "text": "🦉 QUESTION 2/2.\n[❤️❤️❤️] Complété c'est : SPAGHETTO → ??? → POCK → CARBO → Propre c'est.",
+      "choices": [
+        { "text": "STRUDA c'est, le maillon manquant.", "impact": { "logique": 2 }, "nextNodeId": "duo_quick_success" },
+        { "text": "GLUTO c'est, le maillon manquant.", "impact": { "chaos": 1 }, "nextNodeId": "duo_quick_partial" }
+      ]
+    },
+
+    "duo_quick_partial": {
+      "text": "🦉 [❤️❤️❤️] Défendable c'est, mais absent c'est la STRUDA. Accordé c'est quand même, le passage.",
+      "choices": [
+        { "text": "Noté c'est, POCK.", "impact": { "sueur": 1 }, "nextNodeId": "duo_quick_success" }
+      ]
+    },
+
+    "duo_quick_success": {
+      "text": "🦉 MÉMOIRE INTACTE C'EST.\n[❤️❤️❤️] Confirmé c'est, la persistance du Gluten-Script dans ta matrice cognitive. Épargné c'est, les 48 leçons. POCK c'est, tu es.",
+      "choices": [
+        { "text": "R'Amen. Continué c'est, le grand voyage.", "impact": { "logique": 2 }, "nextNodeId": "duo_20" }
+      ]
+    }
+
+  }
+}
