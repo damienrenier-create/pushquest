@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { calculateAllUsersXP } from "@/lib/xp";
+import TeamBadge from "@/components/TeamBadge";
 
 export default async function LeaderboardPage({
     searchParams,
@@ -200,6 +201,7 @@ export default async function LeaderboardPage({
                                             >
                                                 {entry.nickname}
                                             </Link>
+                                            <TeamBadge userId={entry.userId} />
                                         </div>
                                         {selectedExercise === 'XP' && entry.xpNextLvl && (
                                             <div className="mt-1 sm:mt-2 w-full max-w-[120px] sm:max-w-[200px]">

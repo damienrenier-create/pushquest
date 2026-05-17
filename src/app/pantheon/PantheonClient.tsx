@@ -31,6 +31,9 @@ import { getXPForReward, getRewardInfo } from "@/lib/rewards";
 import { SPECIAL_WORKOUTS } from "@/config/specialWorkouts";
 import BadgeShowcase from "@/components/profile/badges/BadgeShowcase";
 import { groupRecentEvents } from "@/lib/event-utils";
+import { getTeamBadge, isTeamPeriodActive } from "@/lib/teamBadge";
+
+const showTeamBadges = isTeamPeriodActive(new Date());
 
 // Replace date-fns with native Intl
 const formatTime = (dateStr: any) => {
@@ -517,7 +520,10 @@ export default function PantheonClient({
                                         <div key={i} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center group hover:-translate-y-1 transition-transform relative">
                                             <span className="text-4xl mb-3 group-hover:scale-125 transition-transform">{bo.badge?.emoji}</span>
                                             <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mb-1">{bo.badge?.name}</p>
-                                            <p className="text-xs font-black text-slate-800 uppercase">{bo.currentUser?.nickname}</p>
+                                            <p className="text-xs font-black text-slate-800 uppercase">
+                                               {bo.currentUser?.nickname}
+                                               {showTeamBadges && bo.currentUser?.id && getTeamBadge(bo.currentUser.id)}
+                                            </p>
                                             <div className="absolute top-2 right-2 text-[9px] font-black text-slate-300">VAL: {bo.currentValue}</div>
                                         </div>
                                     ))
@@ -577,9 +583,10 @@ export default function PantheonClient({
                                                 {userXP ? userXP.emoji : user.nickname.charAt(0).toUpperCase()}
                                             </div>
                                             <div className="min-w-0">
-                                                <h3 className="font-black text-slate-900 uppercase group-hover:text-indigo-600 transition-colors truncate text-sm">
-                                                    {user.nickname}
-                                                </h3>
+                                                 <h3 className="font-black text-slate-900 uppercase group-hover:text-indigo-600 transition-colors truncate text-sm flex items-center gap-1">
+                                                     {user.nickname}
+                                                     {showTeamBadges && <span>{getTeamBadge(user.id)}</span>}
+                                                 </h3>
                                                 <div className="flex items-center gap-2 mt-1">
                                                     <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full uppercase">Lv.{userXP?.level || 1}</span>
                                                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{userOwnerships.length + virtualScore} Titre(s)</p>

@@ -1,8 +1,10 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import CoinsBalance from "./CoinsBalance"
 import BetCard from "./BetCard"
+import TeamLore from "./TeamLore"
+import TeamScoreBoard from "./TeamScoreBoard"
 
 export default function BetsSection({ session }: { session: any }) {
     const [bets, setBets] = useState<any[]>([])
@@ -42,11 +44,22 @@ export default function BetsSection({ session }: { session: any }) {
     const activeBets = bets.filter(b => b.status === "OPEN" || b.status === "LOCKED" || b.status === "DRAFT")
     const resolvedBets = bets.filter(b => b.status === "RESOLVED" || b.status === "CANCELLED")
 
+    // Détecte les paris d'équipe pour activer le thème jungle + scoreboard
+    const teamBets = useMemo(() => bets.filter(b => {
+        try { return JSON.parse(b.metadata || '{}')?.teamBet === true } catch { return false }
+    }), [bets])
+    const isJungleTheme = teamBets.length > 0
+    const teamBetIds = useMemo(() => teamBets.map((b: any) => b.id), [teamBets])
+
     return (
-        <div className="space-y-6">
+        <div className={`space-y-6 transition-colors duration-500 ${isJungleTheme ? 'rounded-3xl p-3 bg-gradient-to-b from-green-950 via-green-900/40 to-emerald-950/30' : ''}`}>
             {/* <CoinsBalance userId={session?.user?.id} /> */}
 
-            <div className="bg-white rounded-[2rem] p-4 sm:p-6 shadow-sm border border-gray-100">
+            <div className={`rounded-[2rem] p-4 sm:p-6 shadow-sm ${
+                isJungleTheme
+                    ? 'bg-green-950/80 border border-green-700/40 backdrop-blur-sm'
+                    : 'bg-white border border-gray-100'
+            }`}>
                 {/* ENCART EXPLICATION */}
                 <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 mb-5">
                     <p className="text-[11px] font-black text-amber-800 uppercase tracking-wide mb-2">
@@ -71,9 +84,19 @@ export default function BetsSection({ session }: { session: any }) {
                     </a>
                 </div>
 
-                <h2 className="text-xl font-black uppercase mb-6 flex items-center gap-2 text-slate-800">
-                    🎲 PARIS EN COURS
+                <h2 className={`text-xl font-black uppercase mb-6 flex items-center gap-2 ${
+                    isJungleTheme ? 'text-amber-400' : 'text-slate-800'
+                }`}>
+                    {isJungleTheme ? '🌿' : '🎲'} PARIS EN COURS
                 </h2>
+
+                {/* Bloc lore FSM — visible uniquement en mode jungle */}
+                {isJungleTheme && <TeamLore />}
+
+                {/* Tableau de scores — visible dès qu'un teamBet existe */}
+                {isJungleTheme && teamBetIds.length > 0 && (
+                    <TeamScoreBoard teamBetIds={teamBetIds} />
+                )}
 
                 {loading ? (
                     <div className="space-y-4">
