@@ -4,6 +4,7 @@ import { HelpCircle } from "lucide-react"
 import Link from "next/link"
 import { getProgressionMessage } from "@/config/progressionMessages"
 import TeamBadge from "@/components/TeamBadge"
+import { getTeamBadge, isTeamPeriodActive } from "@/lib/teamBadge"
 
 interface StatCardsProps {
     xp: any
@@ -35,6 +36,30 @@ export default function StatCards({
 }: StatCardsProps) {
     const missing = Math.max(0, requiredReps - currentTotal)
 
+    const userTeam = session?.user?.id ? getTeamBadge(session.user.id) : null
+    const isTeamActive = isTeamPeriodActive(new Date())
+
+    const getBannerStyles = () => {
+        if (!isTeamActive || !userTeam) {
+            return {
+                cardClass: "bg-slate-900 border-slate-800 shadow-xl",
+                textClass: "text-indigo-400"
+            }
+        }
+        if (userTeam === "🟡") {
+            return {
+                cardClass: "bg-gradient-to-br from-amber-950/45 via-stone-900 to-yellow-950/50 border-yellow-500/30 shadow-yellow-950/20 shadow-2xl",
+                textClass: "text-amber-400 font-bold"
+            }
+        }
+        return {
+            cardClass: "bg-gradient-to-br from-red-950/45 via-stone-900 to-rose-950/50 border-red-500/30 shadow-red-950/20 shadow-2xl",
+            textClass: "text-red-400 font-bold"
+        }
+    }
+
+    const { cardClass, textClass } = getBannerStyles()
+
     return (
         <div className="flex flex-col gap-4">
             {todayISO === "2026-03-08" && (
@@ -53,7 +78,7 @@ export default function StatCards({
             )}
 
             {xp && xp.currentUser && (
-                <div className="bg-slate-900 rounded-3xl p-5 shadow-xl border border-slate-800 relative overflow-hidden flex flex-col gap-3">
+                <div className={`rounded-3xl p-5 relative overflow-hidden flex flex-col gap-3 border ${cardClass}`}>
                     <div className="flex items-center justify-between relative z-10">
                         <div className="flex items-center gap-3">
                             <Link href="/faq" className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-2xl shadow-inner border border-white/10 shrink-0 hover:scale-110 transition-transform">
@@ -62,9 +87,9 @@ export default function StatCards({
                             <div>
                                 <div className="flex items-center gap-1">
                                     <Link href="/faq" className="text-white font-black text-lg uppercase tracking-tight leading-none hover:underline">{xp.currentUser.animal}</Link>
-                                    {session?.user?.id && <TeamBadge userId={session.user.id} />}
+                                    {session?.user?.id && <TeamBadge userId={session.user.id} showText={true} />}
                                 </div>
-                                <p className="text-indigo-400 text-[9px] font-bold uppercase tracking-widest leading-none mt-1">{xp.currentUser.belt}</p>
+                                <p className={`text-[9px] font-bold uppercase tracking-widest leading-none mt-1 ${textClass}`}>{xp.currentUser.belt}</p>
                             </div>
                         </div>
                         <div className="flex flex-col items-end gap-2">
