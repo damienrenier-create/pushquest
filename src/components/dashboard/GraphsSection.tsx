@@ -319,7 +319,7 @@ export default function GraphsSection({ data, graphPeriod, setGraphPeriod }: Gra
                         ) : (
                             <div className="space-y-12">
                                 {/* Multi-Line Area Chart */}
-                                <div className="relative h-[28rem] w-full bg-gradient-to-b from-slate-50/30 to-white rounded-2xl p-6 border border-slate-100 shadow-inner overflow-visible">
+                                <div className="relative h-[32rem] w-full bg-gradient-to-b from-slate-50/30 to-white rounded-2xl p-6 border border-slate-100 shadow-inner overflow-visible">
                                     {(() => {
                                         const visibleUsers = filteredProgression.filter(u => !hiddenUsers.has(u.id));
                                         const allValues = visibleUsers.flatMap(u => u.timeline.map((t: any) => t[selectedMetric]));
@@ -356,7 +356,7 @@ export default function GraphsSection({ data, graphPeriod, setGraphPeriod }: Gra
                                                         <defs>
                                                             {visibleUsers.map(user => (
                                                                 <linearGradient key={`grad-${user.id}`} id={`grad-${user.id}`} x1="0" y1="0" x2="0" y2="1">
-                                                                    <stop offset="0%" stopColor={user.color} stopOpacity="0.12" />
+                                                                    <stop offset="0%" stopColor={user.color} stopOpacity="0.04" />
                                                                     <stop offset="100%" stopColor={user.color} stopOpacity="0.0" />
                                                                 </linearGradient>
                                                             ))}
@@ -376,6 +376,37 @@ export default function GraphsSection({ data, graphPeriod, setGraphPeriod }: Gra
                                                                 className="transition-all duration-100"
                                                             />
                                                         )}
+
+                                                        {/* FSM Redistribution Reference Line */}
+                                                        {(() => {
+                                                            const timeline = filteredProgression[0]?.timeline || [];
+                                                            const fsmIndex = timeline.findIndex((t: any) => t.date === "2026-05-16");
+                                                            if (fsmIndex === -1) return null;
+                                                            const fsmX = (fsmIndex / (timeline.length - 1)) * 1000;
+                                                            const isNearRight = fsmX > 800;
+                                                            return (
+                                                                <g>
+                                                                    <line 
+                                                                        x1={fsmX} 
+                                                                        x2={fsmX} 
+                                                                        y1="0" y2="100" 
+                                                                        stroke="#d97706" strokeWidth="1.5" strokeDasharray="4 3"
+                                                                    />
+                                                                    <text
+                                                                        x={isNearRight ? fsmX - 8 : fsmX + 8}
+                                                                        y="15"
+                                                                        fill="#d97706"
+                                                                        fontSize="6"
+                                                                        fontStyle="italic"
+                                                                        fontWeight="bold"
+                                                                        textAnchor={isNearRight ? "end" : "start"}
+                                                                        className="select-none font-sans"
+                                                                    >
+                                                                        Le Monstre redistribue les faveurs 🍝
+                                                                    </text>
+                                                                </g>
+                                                            );
+                                                        })()}
 
                                                         {visibleUsers.map((user) => {
                                                             const smoothPath = getSmoothPath(user.timeline.map((t: any) => t[selectedMetric]), maxVal);
@@ -399,7 +430,7 @@ export default function GraphsSection({ data, graphPeriod, setGraphPeriod }: Gra
                                                                         <circle 
                                                                             cx={(hoveredIndex / (dateCount - 1)) * 1000} 
                                                                             cy={100 - (user.timeline[hoveredIndex][selectedMetric] / maxVal) * 100} 
-                                                                            r="3.5" fill="white" stroke={user.color} strokeWidth="1.5"
+                                                                            r="3" fill="white" stroke={user.color} strokeWidth="1.5"
                                                                             className="shadow-xl transition-all duration-100"
                                                                         />
                                                                     )}
