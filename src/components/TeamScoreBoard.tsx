@@ -208,21 +208,124 @@ export default function TeamScoreBoard({ bets }: { bets: any[] }) {
     return maxB - maxA
   })
 
+  // Map all scores keyed by exercise
+  const scoresByExercise = useMemo(() => {
+    const map: Record<string, TeamScoreData> = {}
+    for (const s of Object.values(scores)) {
+      map[s.exercise] = s
+    }
+    return map
+  }, [scores])
+
+  const DEFAULT_MEMBERS_JAUNE = { "Xa": 0, "Embi": 0, "Gg": 0 }
+  const DEFAULT_MEMBERS_ROUGE = { "Neuneu": 0, "Mools": 0, "Milka": 0 }
+
+  const getExerciseData = (ex: string): TeamScoreData => {
+    return scoresByExercise[ex] || {
+      betId: "",
+      betTitle: "",
+      exercise: ex,
+      competitionStart: "2026-05-25",
+      competitionEnd: "2026-06-01",
+      jaune: { total: 0, members: DEFAULT_MEMBERS_JAUNE },
+      rouge: { total: 0, members: DEFAULT_MEMBERS_ROUGE },
+      leader: null,
+      unit: ex === "PLANK" ? "s" : ""
+    }
+  }
+
+  const EXERCISES = [
+    { key: "PUSHUP", label: "💪 Pompes" },
+    { key: "PULLUP", label: "🐴 Tractions" },
+    { key: "SQUAT", label: "🦵 Squats" },
+    { key: "PLANK", label: "🛡️ Gainage" },
+  ] as const
+
   return (
-    <div className="mb-8 space-y-4">
-      {/* Composition des équipes */}
-      <div className="bg-stone-800 rounded-lg p-3 mb-4 grid grid-cols-2 gap-4 font-mono text-sm">
-        <div>
-          <div className="text-amber-400 font-bold mb-1">🟡 Équipe Jaune</div>
-          <div className="text-slate-300">Xa</div>
-          <div className="text-slate-300">Embi</div>
-          <div className="text-slate-300">Gg</div>
+    <div className="mb-8 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      
+      {/* Tableau dynamique de composition des équipes & volumes */}
+      <div className="bg-stone-900 border border-stone-800 rounded-3xl p-4 sm:p-6 space-y-5 font-mono text-xs sm:text-sm text-slate-300">
+        
+        {/* Table Header */}
+        <div className="grid grid-cols-2 gap-4 border-b border-stone-800 pb-3 font-bold text-center">
+          <div className="text-amber-400 text-sm sm:text-base flex items-center justify-center gap-1.5 uppercase font-black">
+            <span>🟡</span> ÉQUIPE JAUNE
+          </div>
+          <div className="text-red-400 text-sm sm:text-base flex items-center justify-center gap-1.5 uppercase font-black">
+            <span>🔴</span> ÉQUIPE ROUGE
+          </div>
         </div>
-        <div>
-          <div className="text-red-400 font-bold mb-1">🔴 Équipe Rouge</div>
-          <div className="text-slate-300">Neuneu</div>
-          <div className="text-slate-300">Mools</div>
-          <div className="text-slate-300">Milka</div>
+
+        {/* Exercises Grid */}
+        <div className="space-y-5">
+          {EXERCISES.map((ex) => {
+            const data = getExerciseData(ex.key)
+            const { jaune, rouge, leader } = data
+            const formatVal = (v: number) => {
+              if (ex.key === "PLANK") {
+                return `${v.toLocaleString("fr-FR")}s`
+              }
+              return `${v.toLocaleString("fr-FR")}`
+            }
+
+            return (
+              <div key={ex.key} className="border-b border-stone-850/60 pb-5 last:border-0 last:pb-0">
+                {/* Exercise Title */}
+                <div className="text-center font-black text-slate-400 mb-3 text-xs sm:text-sm uppercase tracking-wide bg-stone-950/40 py-1 rounded-xl border border-stone-800/40 flex items-center justify-center gap-2">
+                  <span>{ex.label}</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Jaune Column */}
+                  <div className={`p-3 rounded-2xl border transition-colors ${
+                    leader === "jaune" ? "bg-yellow-950/15 border-yellow-500/20" : "bg-stone-950/50 border-stone-850/50"
+                  }`}>
+                    <div className="space-y-1">
+                      {Object.entries(jaune.members)
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([name, val]) => (
+                          <div key={name} className="flex justify-between items-center text-slate-400 text-[10px] sm:text-xs">
+                            <span className="truncate">{name}</span>
+                            <span className="text-slate-200 font-bold">{formatVal(val)}</span>
+                          </div>
+                        ))}
+                    </div>
+                    <div className="flex justify-between items-center border-t border-stone-800/40 pt-1.5 mt-1.5 font-bold">
+                      <span className="text-amber-400/80 text-[10px] sm:text-xs">TOTAL</span>
+                      <span className="text-amber-400 text-xs sm:text-sm flex items-center gap-0.5 font-black">
+                        {formatVal(jaune.total)}
+                        {leader === "jaune" && <span className="animate-pulse">🔥</span>}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Rouge Column */}
+                  <div className={`p-3 rounded-2xl border transition-colors ${
+                    leader === "rouge" ? "bg-red-950/15 border-red-500/20" : "bg-stone-950/50 border-stone-850/50"
+                  }`}>
+                    <div className="space-y-1">
+                      {Object.entries(rouge.members)
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([name, val]) => (
+                          <div key={name} className="flex justify-between items-center text-slate-400 text-[10px] sm:text-xs">
+                            <span className="truncate">{name}</span>
+                            <span className="text-slate-200 font-bold">{formatVal(val)}</span>
+                          </div>
+                        ))}
+                    </div>
+                    <div className="flex justify-between items-center border-t border-stone-800/40 pt-1.5 mt-1.5 font-bold">
+                      <span className="text-red-400/80 text-[10px] sm:text-xs">TOTAL</span>
+                      <span className="text-red-400 text-xs sm:text-sm flex items-center gap-0.5 font-black">
+                        {formatVal(rouge.total)}
+                        {leader === "rouge" && <span className="animate-pulse">🔥</span>}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
         </div>
       </div>
 
