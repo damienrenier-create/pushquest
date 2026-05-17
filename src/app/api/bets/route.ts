@@ -223,6 +223,7 @@ export async function GET() {
                 bookmakerOdds,
                 myEntry,
                 result: bet.result || null,
+                metadata: bet.metadata ?? null,
             };
         }));
 
