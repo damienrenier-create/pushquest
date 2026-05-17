@@ -150,7 +150,10 @@ export default async function LeaderboardPage({
                         return (
                             <div key={entry.userId} className="space-y-1">
                                 <div className="flex justify-between text-sm font-medium">
-                                    <span className="text-slate-300">{entry.nickname}</span>
+                                    <span className="text-slate-300">
+                                        {entry.nickname}
+                                        <TeamBadge userId={entry.userId} />
+                                    </span>
                                     <span className="text-indigo-400 font-mono">{displayValue}</span>
                                 </div>
                                 <div className="h-4 w-full bg-slate-800 rounded-full overflow-hidden">

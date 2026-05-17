@@ -15,6 +15,7 @@ export async function GET() {
             include: {
                 user: {
                     select: {
+                        id: true,
                         nickname: true
                     }
                 }
@@ -23,6 +24,7 @@ export async function GET() {
 
         const formattedMessages = messages.map((m: any) => ({
             id: m.id,
+            userId: m.user.id,
             nickname: m.user.nickname,
             message: m.content,
             createdAt: m.createdAt.toISOString()

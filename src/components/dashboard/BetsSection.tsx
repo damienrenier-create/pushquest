@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import CoinsBalance from "./CoinsBalance"
 import BetCard from "./BetCard"
-import TeamLore from "./TeamLore"
-import TeamScoreBoard from "./TeamScoreBoard"
+import TeamLore from "@/components/TeamLore"
+import TeamScoreBoard from "@/components/TeamScoreBoard"
 
 export default function BetsSection({ session }: { session: any }) {
     const [bets, setBets] = useState<any[]>([])
@@ -52,7 +52,7 @@ export default function BetsSection({ session }: { session: any }) {
     const teamBetIds = useMemo(() => teamBets.map((b: any) => b.id), [teamBets])
 
     return (
-        <div className={`space-y-6 transition-colors duration-500 ${isJungleTheme ? 'rounded-3xl p-3 bg-gradient-to-b from-green-950 via-green-900/40 to-emerald-950/30' : ''}`}>
+        <div className={`space-y-6 transition-colors duration-500 ${isJungleTheme ? 'rounded-3xl p-3 bg-gradient-to-b from-green-950 via-green-900 to-emerald-950' : ''}`}>
             {/* <CoinsBalance userId={session?.user?.id} /> */}
 
             <div className={`rounded-[2rem] p-4 sm:p-6 shadow-sm ${
@@ -94,8 +94,8 @@ export default function BetsSection({ session }: { session: any }) {
                 {isJungleTheme && <TeamLore />}
 
                 {/* Tableau de scores — visible dès qu'un teamBet existe */}
-                {isJungleTheme && teamBetIds.length > 0 && (
-                    <TeamScoreBoard teamBetIds={teamBetIds} />
+                {isJungleTheme && (
+                    <TeamScoreBoard bets={bets} />
                 )}
 
                 {loading ? (

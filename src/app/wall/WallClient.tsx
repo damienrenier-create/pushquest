@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Send, Clock, CircleDashed, AlertTriangle } from "lucide-react";
+import TeamBadge from "@/components/TeamBadge";
 
 interface Message {
+    userId?: string;
     nickname: string;
     message: string;
     createdAt: string;
@@ -148,12 +150,15 @@ export default function WallClient({ nickname }: { nickname: string }) {
                                         {msg.nickname?.charAt(0).toUpperCase()}
                                     </div>
                                      <div>
-                                         <Link 
-                                             href={`/u/${encodeURIComponent(msg.nickname || '')}`}
-                                             className="font-black text-sm text-gray-900 hover:text-blue-600 transition-colors uppercase tracking-tight"
-                                         >
-                                             {msg.nickname}
-                                         </Link>
+                                         <div className="flex items-center gap-0.5">
+                                             <Link 
+                                                 href={`/u/${encodeURIComponent(msg.nickname || '')}`}
+                                                 className="font-black text-sm text-gray-900 hover:text-blue-600 transition-colors uppercase tracking-tight"
+                                             >
+                                                 {msg.nickname}
+                                             </Link>
+                                             {msg.userId && <TeamBadge userId={msg.userId} />}
+                                         </div>
                                          <p className="text-[10px] text-gray-400 font-bold uppercase">
                                              {formatDate(msg.createdAt)}
                                          </p>

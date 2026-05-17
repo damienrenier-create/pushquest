@@ -1,6 +1,14 @@
 "use client"
 
 import { useState } from "react"
+import TeamBadge from "@/components/TeamBadge"
+
+const TEAM_BET_TAGLINES: Record<string, string> = {
+  "PUSHUP": "Les bras qui plient décident du destin.",
+  "PULLUP": "S'élever ou périr — la gravité ne pardonne pas.",
+  "SQUAT":  "Les jambes portent les empires.",
+  "PLANK":  "La tempête s'en prend aux faibles. Les forts tiennent.",
+};
 
 export default function BetCard({
     bet,
@@ -109,8 +117,24 @@ export default function BetCard({
     const isResolvedOrCancelled = bet.status === "RESOLVED" || bet.status === "CANCELLED"
     const myEntry = bet.myEntry
 
+    let isTeamBet = false;
+    let exercise = "";
+    if (bet.metadata) {
+        try {
+            const meta = typeof bet.metadata === 'string' ? JSON.parse(bet.metadata) : bet.metadata;
+            isTeamBet = meta.teamBet === true;
+            exercise = meta.teamConfig?.exercise || "";
+        } catch (e) {}
+    }
+
     return (
-        <div className={`rounded-2xl p-4 sm:p-5 border shadow-sm transition-all relative ${isResolvedOrCancelled ? 'bg-slate-800/50 border-slate-700/50 grayscale-[50%]' : 'bg-slate-900 border-white/10'}`}>
+        <div className={`rounded-2xl p-4 sm:p-5 border shadow-sm transition-all relative ${
+            isResolvedOrCancelled 
+                ? 'bg-slate-800/50 border-slate-700/50 grayscale-[50%]' 
+                : isTeamBet
+                    ? 'bg-green-900/50 border-green-700/40 text-emerald-100'
+                    : 'bg-slate-900 border-white/10'
+        }`}>
             {/* Header */}
             <div className="flex justify-between items-start mb-3">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -131,7 +155,12 @@ export default function BetCard({
             </div>
 
             {/* Title & Description */}
-            <h3 className="text-white font-black text-sm sm:text-base leading-tight mb-1">{bet.title}</h3>
+            <h3 className={`font-black text-sm sm:text-base leading-tight mb-1 ${isTeamBet ? 'text-amber-400 font-serif' : 'text-white'}`}>{bet.title}</h3>
+            {isTeamBet && exercise && TEAM_BET_TAGLINES[exercise] && (
+                <p className="text-amber-400/70 italic text-xs mb-2">
+                    {TEAM_BET_TAGLINES[exercise]}
+                </p>
+            )}
             {bet.description && <p className="text-slate-400 text-xs mb-4">{bet.description}</p>}
 
             {/* Resolved Banner */}
@@ -149,7 +178,7 @@ export default function BetCard({
                                 const myWin = snapshot.find((w: any) => w.userId === myEntry.userId);
                                 if (myWin) gainXP = myWin.xpGain;
                             }
-                        } catch {}
+                        } catch { }
                         return (
                             <div className="mt-2 space-y-1">
                                 <p className="text-green-400 font-bold text-xs">🎉 Vous avez gagné !</p>
@@ -171,7 +200,7 @@ export default function BetCard({
                     )}
                 </div>
             )}
-            
+
             {bet.status === "CANCELLED" && (
                 <div className="mb-4 bg-slate-800 border border-slate-700 rounded-xl p-3 text-center">
                     <p className="text-slate-400 font-black text-xs uppercase">🚫 Pari annulé</p>
@@ -197,7 +226,7 @@ export default function BetCard({
                     const percentage = opt.percentage || 0;
                     const isMyOption = myEntry?.option === opt.key && !myEntry?.withdrawn;
                     const isWinning = bet.status === "RESOLVED" && bet.resolvedOption === opt.key;
-                    
+
                     return (
                         <div key={opt.key} className="relative">
                             <div className="flex justify-between items-end mb-1 relative z-10 px-1">
@@ -209,7 +238,7 @@ export default function BetCard({
                                 </span>
                             </div>
                             <div className="h-6 w-full bg-slate-800 rounded-lg overflow-hidden relative border border-slate-700">
-                                <div 
+                                <div
                                     className={`h-full absolute left-0 top-0 transition-all duration-500 ${isMyOption ? 'bg-amber-500/50' : isWinning ? 'bg-green-500/50' : 'bg-slate-600/50'}`}
                                     style={{ width: `${Math.max(2, percentage)}%` }}
                                 ></div>
@@ -257,11 +286,11 @@ export default function BetCard({
                                     </span>
                                 </div>
                             )}
-                            
+
                             {/* Action pari */}
                             {!isResolvedOrCancelled && bet.status === "OPEN" && (!myEntry || myEntry.withdrawn || myEntry.option === opt.key) && !isDuelPending && bet.createdByUserId !== currentUserId && (
                                 <div className="mt-2 text-right">
-                                    <button 
+                                    <button
                                         onClick={() => setShowBetPanel({ option: opt.key })}
                                         className="text-[10px] font-black uppercase text-amber-500 hover:text-amber-400"
                                     >
@@ -275,22 +304,22 @@ export default function BetCard({
                                 <div className="mt-2 bg-slate-800 border border-slate-700 p-3 rounded-xl animate-in slide-in-from-top-2">
                                     <label className="block text-[10px] text-slate-400 uppercase font-black mb-2">Montant (XP)</label>
                                     <div className="flex gap-2">
-                                        <input 
-                                            type="number" 
+                                        <input
+                                            type="number"
                                             value={stakeAmount}
                                             onChange={(e) => setStakeAmount(e.target.value ? parseInt(e.target.value) : '')}
                                             className="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
                                             placeholder="Ex: 100"
                                             min="1"
                                         />
-                                        <button 
+                                        <button
                                             disabled={actionLoading || !stakeAmount || stakeAmount <= 0}
                                             onClick={() => handleEnter(opt.key, stakeAmount as number)}
                                             className="bg-amber-500 hover:bg-amber-600 text-white font-black text-xs px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
                                             Confirmer
                                         </button>
-                                        <button 
+                                        <button
                                             onClick={() => setShowBetPanel(null)}
                                             className="bg-slate-700 hover:bg-slate-600 text-white font-black text-xs px-3 rounded-lg"
                                         >

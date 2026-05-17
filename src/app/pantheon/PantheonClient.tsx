@@ -31,9 +31,7 @@ import { getXPForReward, getRewardInfo } from "@/lib/rewards";
 import { SPECIAL_WORKOUTS } from "@/config/specialWorkouts";
 import BadgeShowcase from "@/components/profile/badges/BadgeShowcase";
 import { groupRecentEvents } from "@/lib/event-utils";
-import { getTeamBadge, isTeamPeriodActive } from "@/lib/teamBadge";
-
-const showTeamBadges = isTeamPeriodActive(new Date());
+import TeamBadge from "@/components/TeamBadge";
 
 // Replace date-fns with native Intl
 const formatTime = (dateStr: any) => {
@@ -350,16 +348,16 @@ export default function PantheonClient({
                                                 <div className="flex items-center justify-between mb-1">
                                                     <p className="text-xs font-black text-slate-800 uppercase tracking-tight">
                                                         {event.eventType === 'STEAL' ? (
-                                                            <React.Fragment><span className="text-orange-600">{event.toUser?.nickname}</span> a <span className="underline decoration-orange-200">volé</span></React.Fragment>
+                                                            <React.Fragment><span className="text-orange-600">{event.toUser?.nickname}</span><TeamBadge userId={event.toUser?.id} /> a <span className="underline decoration-orange-200">volé</span></React.Fragment>
                                                         ) : isLevelUp ? (
-                                                            <React.Fragment><span className="text-indigo-600">{event.toUser?.nickname}</span></React.Fragment>
-                                                        ) : <span className="text-green-600">{event.toUser?.nickname}</span>}
+                                                            <React.Fragment><span className="text-indigo-600">{event.toUser?.nickname}</span><TeamBadge userId={event.toUser?.id} /></React.Fragment>
+                                                        ) : <React.Fragment><span className="text-green-600">{event.toUser?.nickname}</span><TeamBadge userId={event.toUser?.id} /></React.Fragment>}
                                                      </p>
                                                      <span className="text-[9px] font-bold text-slate-300">{formatTime(event.createdAt)}</span>
                                                  </div>
                                                  <p className="text-sm text-slate-600 font-medium">
                                                      {event.eventType === 'STEAL' ? (
-                                                         <React.Fragment>Le badge <RewardLink badge={displayBadge} xp={rewardData?.xp || 0} onClick={() => handleRewardClick(displayBadge.key)} /> à {event.fromUser?.nickname}</React.Fragment>
+                                                         <React.Fragment>Le badge <RewardLink badge={displayBadge} xp={rewardData?.xp || 0} onClick={() => handleRewardClick(displayBadge.key)} /> à {event.fromUser?.nickname}<TeamBadge userId={event.fromUser?.id} /></React.Fragment>
                                                      ) : isLevelUp ? (
                                                          <React.Fragment>
                                                              A atteint le Niveau <span className="font-black text-indigo-600">{event.newValue}</span>
@@ -415,7 +413,7 @@ export default function PantheonClient({
                                                             <h3 className="font-black text-sm uppercase">{target.badgeName}</h3>
                                                         </div>
                                                         <div className="flex items-center gap-2 text-[10px] text-indigo-100 uppercase tracking-tight">
-                                                            <span>Roi : <span className="font-black text-white">{target.holder}</span> ({target.currentValue})</span>
+                                                            <span>Roi : <span className="font-black text-white">{target.holder}</span><TeamBadge userId={allUsers.find((u: any) => u.nickname === target.holder)?.id || ""} /> ({target.currentValue})</span>
                                                             <span className="opacity-40">|</span>
                                                             <span>Vous : <span className="font-black text-white">{target.challengerValue}</span></span>
                                                             <span className="opacity-40">|</span>
@@ -488,13 +486,13 @@ export default function PantheonClient({
                                                     {danger.isRecentSteal && <span className="bg-orange-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full animate-pulse uppercase tracking-widest">VOL RÉCENT</span>}
                                                 </div>
                                                 <div className="flex flex-wrap items-center gap-y-1 gap-x-3 text-xs text-slate-600">
-                                                    <span>👑 <span className="font-bold text-slate-800">{danger.holder}</span></span>
+                                                    <span>👑 <span className="font-bold text-slate-800">{danger.holder}</span><TeamBadge userId={allUsers.find((u: any) => u.nickname === danger.holder)?.id || ""} /></span>
                                                     <span className="px-2 py-0.5 bg-white rounded border border-slate-200 text-slate-700 font-bold">{danger.currentValue} {danger.unit}</span>
                                                 </div>
                                             </div>
                                             <div className="text-right shrink-0 flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 sm:border-l border-slate-200/60 pt-3 sm:pt-0 sm:pl-4">
                                                 <div className="flex items-center gap-1.5 mb-0 sm:mb-1">
-                                                    <span className="text-xs font-bold text-slate-700 uppercase">{danger.challenger} (<span className="text-indigo-600">{danger.challengerValue}</span>)</span>
+                                                    <span className="text-xs font-bold text-slate-700 uppercase flex items-center gap-0.5">{danger.challenger}<TeamBadge userId={allUsers.find((u: any) => u.nickname === danger.challenger)?.id || ""} /> (<span className="text-indigo-600">{danger.challengerValue}</span>)</span>
                                                     {danger.isDanger && <Zap size={14} className={`${danger.isRecentSteal ? 'text-orange-500' : 'text-amber-500'} fill-current animate-pulse`} />}
                                                 </div>
                                                 <div className={`px-2 py-1 rounded text-xs font-black uppercase inline-flex items-center ${danger.isRecentSteal ? 'bg-orange-100 text-orange-600' : danger.isDanger ? 'bg-red-100 text-red-600' : 'bg-slate-200/50 text-slate-500'}`}>
@@ -522,7 +520,7 @@ export default function PantheonClient({
                                             <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mb-1">{bo.badge?.name}</p>
                                             <p className="text-xs font-black text-slate-800 uppercase">
                                                {bo.currentUser?.nickname}
-                                               {showTeamBadges && bo.currentUser?.id && getTeamBadge(bo.currentUser.id)}
+                                               {bo.currentUser?.id && <TeamBadge userId={bo.currentUser.id} />}
                                             </p>
                                             <div className="absolute top-2 right-2 text-[9px] font-black text-slate-300">VAL: {bo.currentValue}</div>
                                         </div>
@@ -585,7 +583,7 @@ export default function PantheonClient({
                                             <div className="min-w-0">
                                                  <h3 className="font-black text-slate-900 uppercase group-hover:text-indigo-600 transition-colors truncate text-sm flex items-center gap-1">
                                                      {user.nickname}
-                                                     {showTeamBadges && <span>{getTeamBadge(user.id)}</span>}
+                                                     <TeamBadge userId={user.id} />
                                                  </h3>
                                                 <div className="flex items-center gap-2 mt-1">
                                                     <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full uppercase">Lv.{userXP?.level || 1}</span>

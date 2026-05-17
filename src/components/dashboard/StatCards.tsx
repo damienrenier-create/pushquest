@@ -3,6 +3,7 @@
 import { HelpCircle } from "lucide-react"
 import Link from "next/link"
 import { getProgressionMessage } from "@/config/progressionMessages"
+import TeamBadge from "@/components/TeamBadge"
 
 interface StatCardsProps {
     xp: any
@@ -59,7 +60,10 @@ export default function StatCards({
                                 {xp.currentUser.emoji}
                             </Link>
                             <div>
-                                <Link href="/faq" className="text-white font-black text-lg uppercase tracking-tight leading-none hover:underline">{xp.currentUser.animal}</Link>
+                                <div className="flex items-center gap-1">
+                                    <Link href="/faq" className="text-white font-black text-lg uppercase tracking-tight leading-none hover:underline">{xp.currentUser.animal}</Link>
+                                    {session?.user?.id && <TeamBadge userId={session.user.id} />}
+                                </div>
                                 <p className="text-indigo-400 text-[9px] font-bold uppercase tracking-widest leading-none mt-1">{xp.currentUser.belt}</p>
                             </div>
                         </div>
