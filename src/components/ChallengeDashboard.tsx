@@ -19,6 +19,16 @@ import NotificationToast from "./NotificationToast"
 import { REACTION_PHRASES } from "@/config/notifications"
 import SanctuaireTab from "@/components/dashboard/SanctuaireTab"
 
+interface UserStats {
+  xpTotal: number;
+  rivalName: string;
+  lastWodDate: string;
+  lastScore: number;
+  lastExercise: string;
+  rank: number;
+  daysStreak: number;
+}
+
 interface DashboardData {
     todayISO: string
     selectedDateISO: string
@@ -122,6 +132,14 @@ export default function ChallengeDashboard() {
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [activeTab, setActiveTab] = useState<'saisie' | 'graphs' | 'cagnotte' | 'trophees' | 'paris' | 'sanctuaire'>('saisie')
+    const [nexusStats, setNexusStats] = useState<UserStats | null>(null);
+
+    useEffect(() => {
+      fetch('/api/user/nexus-stats')
+        .then(r => r.json())
+        .then(data => setNexusStats(data))
+        .catch(() => {});
+    }, []);
     const [selectedDate, setSelectedDate] = useState<string>(DEFAULT_DASHBOARD_DATA.selectedDateISO)
     const lastFetchTime = useRef<number>(Date.now())
     const [localSets, setLocalSets] = useState<{ pushups: (number | "")[]; pullups: (number | "")[]; squats: (number | "")[]; planks: (number | "")[] }>({
@@ -735,6 +753,7 @@ export default function ChallengeDashboard() {
                 <SanctuaireTab
                     nickname={(session?.user as any)?.name ?? 'Aventurier'}
                     userId={(session?.user as any)?.id ?? ''}
+                    userStats={nexusStats}
                 />
             )}
 

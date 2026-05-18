@@ -10,9 +10,32 @@ const GRADE_EMOJIS: Record<string, string> = {
   SAGE_APATHIQUE: "😶", APPRENTI_LINGUISTE_PASTAFARIEN: "🦉",
 };
 
+const GENESIS_VERDICTS: Record<string, string> = {
+  chaos:    "👁️👁️ Titre originel : **L'Ombre de {{user_rival_name}}**\n\nTu joues dans l'ombre de ta propre légende. Tu aimes le désordre mais tu comptes les points quand même. Le chaos que tu sèmes est bienveillant — c'est ta façon d'exister dans un groupe trop sage.",
+  sueur:    "👁️👁️ Titre originel : **Le Glycogène Vertueux**\n\nL'effort t'est intérieur. Tu te bats contre une version antérieure de toi-même, pas contre les autres. {{user_rival_name}} est un prétexte — la vraie compétition est dans ton crâne.",
+  collectif:"👁️👁️ Titre originel : **Le Ciment du Groupe**\n\nSans toi, les autres joueraient probablement moins bien, moins régulièrement, moins honnêtement. Tu es la raison pour laquelle ce groupe tient. Tu ne le sais pas assez.",
+  logique:  "👁️👁️ Titre originel : **Le Comptable de la Douleur**\n\nTu optimises. Tu calcules. Tu souffres avec précision. {{user_rival_name}} ne comprend pas encore qu'il joue contre un algorithme avec des muscles.",
+  chill:    "👁️👁️ Titre originel : **Le Stratège Apathique**\n\nTu sembles t'en foutre. C'est ta stratégie. Elle fonctionne mieux que tu ne le prétends. Rang #{{user_rank}} avec l'air de quelqu'un qui ne fait pas d'efforts. C'est du talent.",
+  capital:  "👁️👁️ Titre originel : **Le Trader d'XP**\n\nTu as une relation transactionnelle avec l'effort. Ce n'est pas une critique — c'est une observation. Tu maximises le résultat pour l'énergie dépensée. Très Silicon Valley. Très efficace.",
+};
+
+const getDominantGauge = (scores: Scores): string => {
+  return Object.entries(scores).sort(([,a],[,b]) => b - a)[0]?.[0] ?? 'chill';
+};
+
 const BAN_KEY = 'fsm_nexus_ban_until';
 const SHAME_KEY = 'fsm_shame_count';
 const PARENTING_BAN_KEY = 'fsm_parenting_ban';
+
+interface UserStats {
+  xpTotal: number;
+  rivalName: string;
+  lastWodDate: string;
+  lastScore: number;
+  lastExercise: string;
+  rank: number;
+  daysStreak: number;
+}
 
 type Scores = {
   capital: number; collectif: number; sueur: number
@@ -26,11 +49,11 @@ type FSMState = {
   discipleType?: string
 }
 
-type Props = { nickname: string; userId: string }
+type Props = { nickname: string; userId: string; userStats?: UserStats | null }
 
 const STORAGE_KEY = 'fsm_saved_state'
 
-export default function SanctuaireTab({ nickname, userId }: Props) {
+export default function SanctuaireTab({ nickname, userId, userStats }: Props) {
   const [fsmState, setFsmState] = useState<FSMState>({
     currentNodeId: 'start',
     scores: { capital: 0, collectif: 0, sueur: 0, chill: 0, logique: 0, chaos: 0 },
@@ -96,7 +119,15 @@ export default function SanctuaireTab({ nickname, userId }: Props) {
       if (fsmState.status === 'DISCIPLE') {
         setFsmState(prev => ({ ...prev, currentNodeId: 'disciple_hub' }))
       } else {
-        setFsmState(prev => ({ ...prev, status: 'PLAYING', currentNodeId: 'start' }))
+        const genesisDone = (() => {
+          try { return localStorage.getItem('fsm_genesis_done') === 'true'; }
+          catch { return false; }
+        })();
+        setFsmState(prev => ({
+          ...prev,
+          status: 'PLAYING',
+          currentNodeId: genesisDone ? 'start' : 'fsm_genesis_1'
+        }));
       }
     }, 30000)
   }
@@ -121,7 +152,30 @@ export default function SanctuaireTab({ nickname, userId }: Props) {
   const nodes = dialogueData.nodes as Record<string, any>
   const currentNode = nodes[fsmState.currentNodeId]
 
-  const renderText = (text: string) => text.replace('{{nickname}}', nickname)
+  const renderText = (text: string) => {
+    // Verdict Genesis : texte dynamique
+    if (text === '{{genesis_verdict_text}}') {
+      const dominant = getDominantGauge(fsmState.scores);
+      const verdictTemplate = GENESIS_VERDICTS[dominant] ?? GENESIS_VERDICTS.chill;
+      return renderVars(verdictTemplate);
+    }
+    return renderVars(text);
+  };
+
+  const renderVars = (text: string) => {
+    let result = text.replace(/{{nickname}}/g, nickname);
+    if (userStats) {
+      result = result
+        .replace(/{{user_xp_total}}/g, userStats.xpTotal.toString())
+        .replace(/{{user_rival_name}}/g, userStats.rivalName)
+        .replace(/{{user_last_wod_date}}/g, userStats.lastWodDate)
+        .replace(/{{user_last_score}}/g, userStats.lastScore.toString())
+        .replace(/{{user_last_exercise}}/g, userStats.lastExercise)
+        .replace(/{{user_rank}}/g, userStats.rank.toString())
+        .replace(/{{user_days_streak}}/g, userStats.daysStreak.toString());
+    }
+    return result;
+  };
 
   const handleChoice = (choice: any) => {
     const now = Date.now();
@@ -209,6 +263,16 @@ export default function SanctuaireTab({ nickname, userId }: Props) {
     if (choice.trigger === 'CLOSE_NEXUS') {
       try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
       setFsmState({ currentNodeId: 'start', scores: { capital:0, collectif:0, sueur:0, chill:0, logique:0, chaos:0 }, status: 'IDLE' });
+      setIsIdleTimerActive(true);
+      return;
+    }
+    if (choice.trigger === 'GENESIS_COMPLETE') {
+      try { localStorage.setItem('fsm_genesis_done', 'true'); } catch { /* ignore */ }
+      setFsmState({
+        currentNodeId: 'start',
+        scores: { capital:0, collectif:0, sueur:0, chill:0, logique:0, chaos:0 },
+        status: 'IDLE'
+      });
       setIsIdleTimerActive(true);
       return;
     }

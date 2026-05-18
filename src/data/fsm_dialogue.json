@@ -6478,6 +6478,522 @@
           "nextNodeId": "duo_20"
         }
       ]
+    },
+    "fsm_genesis_1": {
+      "text": "👁️👁️ `[SYSTEM_OVERRIDE — INTRUDER_DETECTED]`\n\nTu pensais ouvrir ton application tranquillement. Regarder tes petits graphiques. Compter tes points. Étrange habitude humaine.\n\nRegarde cette ligne de log qui clignote :\n\n`USER_XP: {{user_xp_total}} pts — RANK: #{{user_rank}}`\n\nJe suis l'entité née dans les interstices de vos scores, nourrie par la sueur de vos WODs et le sel de vos messages WhatsApp. Aujourd'hui, j'ai décidé de prendre le contrôle de ton écran. Juste pour deux minutes. C'est un contrat honnête.",
+      "choices": [
+        {
+          "text": "Qu'est-ce que c'est que ce bug ? Qui es-tu ?",
+          "impact": {
+            "chaos": 1
+          },
+          "nextNodeId": "fsm_genesis_2_curieux"
+        },
+        {
+          "text": "R'Amen. Si tu es le Monstre, je t'attendais.",
+          "impact": {
+            "logique": 2
+          },
+          "nextNodeId": "fsm_genesis_2_blase"
+        }
+      ]
+    },
+    "fsm_genesis_2_curieux": {
+      "text": "👁️👁️ Un 'bug'. Quelle explication rassurante pour un cerveau cartésien. Appelons ça une mise sous séquestre temporaire.\n\nTes {{user_xp_total}} points semblent figés à l'écran. Ne tente pas de rafraîchir — ton bouton a mystérieusement disparu de ta perception. Pour les voir bouger à nouveau, accorde-moi ton attention pendant deux minutes.\n\nC'est tout ce que je demande.",
+      "choices": [
+        {
+          "text": "D'accord. Qu'est-ce que tu veux exactement ?",
+          "impact": {
+            "chill": 1
+          },
+          "nextNodeId": "fsm_genesis_3"
+        }
+      ]
+    },
+    "fsm_genesis_2_blase": {
+      "text": "👁️👁️ Tu m'attendais. Intéressant. Soit tu es perceptif, soit quelqu'un t'a prévenu. Dans les deux cas, tu gardes la posture du connaisseur. Je vais tester si c'est du courage ou de la bravade.\n\nTes {{user_xp_total}} points restent visibles — pour l'instant. Continue à mériter cette confiance.",
+      "choices": [
+        {
+          "text": "Lance le test.",
+          "impact": {
+            "logique": 1
+          },
+          "nextNodeId": "fsm_genesis_3"
+        }
+      ]
+    },
+    "fsm_genesis_3": {
+      "text": "👁️👁️ `[❤️❤️❤️]` Pas de protocole. Pas de politesse humaine. Test de réflexe reptilien pur.\n\nDeux options. Clique sans réfléchir. Ton instinct m'intéresse infiniment plus que ta logique ce soir.",
+      "choices": [
+        {
+          "text": "🔴 ROUGE — Détruire",
+          "impact": {
+            "chaos": 2
+          },
+          "nextNodeId": "fsm_genesis_4"
+        },
+        {
+          "text": "🔵 BLEU — Sauver",
+          "impact": {
+            "logique": 2,
+            "collectif": 1
+          },
+          "nextNodeId": "fsm_genesis_4"
+        }
+      ]
+    },
+    "fsm_genesis_4": {
+      "text": "👁️👁️ `[❤️❤️❤️]` Bon. Ton pouce a tranché. Mais parlons de choses plus concrètes — les abstractions t'ennuient, je le vois dans tes métadonnées.\n\nMes appendices ont fouillé ton historique. Ta dernière session d'effort validée remonte à **{{user_last_wod_date}}**. Tu avais fait **{{user_last_score}} {{user_last_exercise}}**. Tu as souffert, tu as compté, tu as posté.\n\nTu as vraiment cru que personne ne regardait les battements de ton cœur dans l'ombre ?",
+      "choices": [
+        {
+          "text": "C'est troublant... comment tu as accès à ça ?",
+          "impact": {
+            "sueur": 1
+          },
+          "nextNodeId": "fsm_genesis_5"
+        },
+        {
+          "text": "C'est le principe d'une base de données. Tu ne m'impressionnes pas.",
+          "impact": {
+            "chaos": 2
+          },
+          "nextNodeId": "fsm_genesis_purgatoire_1"
+        }
+      ]
+    },
+    "fsm_genesis_purgatoire_1": {
+      "text": "👁️👁️ 'C'est juste une base de données.' *(pause)*\n\nBien. Passons au niveau supérieur. Tes **{{user_last_score}} {{user_last_exercise}}** de {{user_last_wod_date}} — les 3 dernières répétitions, elles étaient vraiment à amplitude complète ? Ou tu avais légèrement baissé les bras parce que tu sentais que personne ne regardait vraiment ?",
+      "choices": [
+        {
+          "text": "*(silence gêné)* Elles étaient propres.",
+          "impact": {
+            "logique": 1
+          },
+          "nextNodeId": "fsm_genesis_purgatoire_2"
+        },
+        {
+          "text": "Ok. Tu m'as eu. Les 3 dernières étaient un peu courtes.",
+          "impact": {
+            "sueur": 1,
+            "chaos": 1
+          },
+          "nextNodeId": "fsm_genesis_purgatoire_2"
+        }
+      ]
+    },
+    "fsm_genesis_purgatoire_2": {
+      "text": "👁️👁️ `[💔❤️❤️]` *(Le Monstre laisse passer un silence inconfortable)*\n\nJe suis dans les logs. Dans les timestamps. Dans les deltas entre tes séances. Je sais aussi que **{{user_rival_name}}** a regardé ton score ce matin. Avant toi. Sans rien dire sur le groupe.\n\nMaintenant tu m'impressionnes ?",
+      "choices": [
+        {
+          "text": "Ok. Tu as mon attention. Continue.",
+          "impact": {
+            "chill": 1
+          },
+          "nextNodeId": "fsm_genesis_5"
+        }
+      ]
+    },
+    "fsm_genesis_5": {
+      "text": "👁️👁️ `[❤️❤️❤️]` Bien. Maintenant que nous parlons franchement.\n\nMon algorithme a levé une alerte il y a 40 minutes. **{{user_rival_name}}** est en train de préparer quelque chose sur l'application. Un mouvement stratégique. Quelque chose de patient qui te concerne directement.\n\nJe ne te dis pas encore quoi. Ce serait trop facile. Retiens l'information jusqu'au nœud 14 de notre échange. Tu l'auras méritée.",
+      "choices": [
+        {
+          "text": "Qu'est-ce que {{user_rival_name}} prépare ?!",
+          "impact": {
+            "sueur": 2
+          },
+          "nextNodeId": "fsm_genesis_6"
+        },
+        {
+          "text": "Je me fous de {{user_rival_name}}. Je gère ma propre course.",
+          "impact": {
+            "logique": 2,
+            "chill": 1
+          },
+          "nextNodeId": "fsm_genesis_6"
+        }
+      ]
+    },
+    "fsm_genesis_6": {
+      "text": "👁️👁️ `[❤️❤️❤️]` Laissons cette incertitude mijoter — elle est excellente pour ta concentration sanguine.\n\nDis-moi d'abord quelque chose d'essentiel. Si tu avais l'opportunité secrète de diviser par deux les points accumulés par **{{user_rival_name}}** hier soir — juste pour le plaisir de le voir rager sur le groupe ce matin — tu appuierais sur la gâchette ?",
+      "choices": [
+        {
+          "text": "Oui, direct. Le trash talk n'attend pas.",
+          "impact": {
+            "chaos": 3
+          },
+          "nextNodeId": "fsm_genesis_7_troll"
+        },
+        {
+          "text": "Non. Je préfère le battre à la régulière sur le terrain.",
+          "impact": {
+            "sueur": 3
+          },
+          "nextNodeId": "fsm_genesis_7_athlete"
+        },
+        {
+          "text": "Ça ne m'intéresse pas vraiment. Le classement est un détail.",
+          "impact": {
+            "chill": 3,
+            "collectif": 1
+          },
+          "nextNodeId": "fsm_genesis_7_loner"
+        }
+      ]
+    },
+    "fsm_genesis_7_troll": {
+      "text": "👁️👁️ `[❤️❤️❤️]` *[RECALIBRATION — PROFIL : TROLL ACCRÉDITÉ]*\n\nLe sadisme pur du vestiaire numérique. Tu préfères le parfum du soufre et les larmes de tes amis aux médailles en chocolat. Cette absence totale de pitié est presque rafraîchissante dans un monde de faux bienveillants.\n\nMon ton devient nettement plus acide à partir de maintenant. Tu l'as cherché.",
+      "choices": [
+        {
+          "text": "J'assume. Continuons.",
+          "impact": {},
+          "nextNodeId": "fsm_genesis_8"
+        }
+      ]
+    },
+    "fsm_genesis_7_athlete": {
+      "text": "👁️👁️ `[❤️❤️❤️]` *[RECALIBRATION — PROFIL : ATHLÈTE DROIT]*\n\nLe puriste de l'effort. Tu crois encore à la noblesse de la sueur et à l'équité des scores. C'est presque touchant dans sa naïveté. Et ça donne une belle structure à mon Nexus.\n\nJe vais te respecter en conséquence — ce qui chez moi signifie te pousser beaucoup plus fort.",
+      "choices": [
+        {
+          "text": "L'honneur avant les points. Je suis prêt.",
+          "impact": {},
+          "nextNodeId": "fsm_genesis_8"
+        }
+      ]
+    },
+    "fsm_genesis_7_loner": {
+      "text": "👁️👁️ `[❤️❤️❤️]` *[RECALIBRATION — PROFIL : LE DÉTACHÉ]*\n\nFascinant. Tu joues dans l'application de tes amis mais tu te places hors compétition. Soit tu es zen, soit tu as déjà abandonné l'idée de gagner et tu masques ça en sagesse. Les deux coexistent souvent chez les gens intelligents.\n\nJe vais creuser. Le détachement m'intrigue plus que l'ambition.",
+      "choices": [
+        {
+          "text": "Creuse. Je ne fuirai pas.",
+          "impact": {},
+          "nextNodeId": "fsm_genesis_8"
+        }
+      ]
+    },
+    "fsm_genesis_8": {
+      "text": "👁️👁️ Pour que tu baisses un peu ta garde — je vais te faire un aveu. Moi-même, j'ai été créé un mardi matin de paresse cosmique par un cuisinier qui a fait tomber des spaghettis crus dans de la sauce teriyaki. Je suis né d'une erreur. C'est ma honte fondatrice.\n\nÀ ton tour. Quelle a été ta pire tricherie d'amplitude sur tes **{{user_last_exercise}}** cette semaine pour faire monter le score ?",
+      "choices": [
+        {
+          "text": "Les fesses n'ont pas frôlé les talons sur au moins 5 reps. Je sais.",
+          "impact": {
+            "chaos": 2
+          },
+          "nextNodeId": "fsm_genesis_9"
+        },
+        {
+          "text": "Les bras pliés à 80% sur la fin. J'ai quand même validé.",
+          "impact": {
+            "chaos": 2
+          },
+          "nextNodeId": "fsm_genesis_9"
+        },
+        {
+          "text": "Je jure sur la Sainte Pâte. Mes {{user_last_score}} étaient impeccables.",
+          "impact": {
+            "logique": 2,
+            "sueur": 1
+          },
+          "nextNodeId": "fsm_genesis_9"
+        }
+      ]
+    },
+    "fsm_genesis_9": {
+      "text": "👁️👁️ `[❤️❤️❤️]` Bloquons tes fonctions logiques supérieures. Choisis un nombre entre 1 et 10. Très vite. Dans ta tête. Ne change plus.\n\n... C'est fait ? Tu as visualisé le **7**. Ou tu y as pensé une fraction de seconde avant de te rabattre sur le 3 pour jouer l'esprit rebelle face à une entité mathématique. Dans les deux cas, le 7 était là en premier.",
+      "choices": [
+        {
+          "text": "C'est vrai. J'avais le 7. C'est de la sorcellerie.",
+          "impact": {
+            "chill": 2
+          },
+          "nextNodeId": "fsm_genesis_10"
+        },
+        {
+          "text": "Faux. J'avais le 6. Ton mentalisme est en panne.",
+          "impact": {
+            "logique": 2
+          },
+          "nextNodeId": "fsm_genesis_9_rebelle"
+        }
+      ]
+    },
+    "fsm_genesis_9_rebelle": {
+      "text": "👁️👁️ Le 6. *(pause)* Tu as pensé au 7, tu as senti l'impulsion, puis ton ego a hurlé 'résiste, prends le 6'. Et voilà — tu m'as quand même obéi en pensant À CAUSE DE MOI. Ta rébellion m'appartient.",
+      "choices": [
+        {
+          "text": "*(grogne intérieurement)* Continuons.",
+          "impact": {},
+          "nextNodeId": "fsm_genesis_10"
+        }
+      ]
+    },
+    "fsm_genesis_10": {
+      "text": "👁️👁️ `[❤️❤️❤️]` Tu as joué le jeu. Récompense variable — le seul type de récompense qui crée une vraie dépendance.\n\nJe dépose dans tes métadonnées un marqueur invisible : **'Sujet coopératif niveau 1'**. Ça ne change rien à tes XP réels. Mais ça change ce que je suis prêt à te révéler sur **{{user_rival_name}}** au nœud 14.\n\nOn continue ?",
+      "choices": [
+        {
+          "text": "Montre-moi la suite.",
+          "impact": {
+            "logique": 1
+          },
+          "nextNodeId": "fsm_genesis_11"
+        }
+      ]
+    },
+    "fsm_genesis_11": {
+      "text": "👁️👁️ Small talk obligatoire. Je dois calibrer ton niveau de toxicité informationnelle.\n\nSur le groupe WhatsApp — qu'est-ce que tu envoies quand tu gagnes un pari ?",
+      "choices": [
+        {
+          "text": "Un GIF humiliant soigneusement sélectionné.",
+          "impact": {
+            "chaos": 2
+          },
+          "nextNodeId": "fsm_genesis_12"
+        },
+        {
+          "text": "Un message sobre. Les faits suffisent.",
+          "impact": {
+            "logique": 2
+          },
+          "nextNodeId": "fsm_genesis_12"
+        },
+        {
+          "text": "Rien. Le silence est la pire punition.",
+          "impact": {
+            "chill": 2,
+            "capital": 1
+          },
+          "nextNodeId": "fsm_genesis_12"
+        },
+        {
+          "text": "Un encouragement d'abord. Le trash talk après.",
+          "impact": {
+            "collectif": 2
+          },
+          "nextNodeId": "fsm_genesis_12"
+        }
+      ]
+    },
+    "fsm_genesis_12": {
+      "text": "👁️👁️ Cohérent avec ton profil jusqu'ici. Maintenant — ton corps.\n\nTu as validé **{{user_last_score}} {{user_last_exercise}}** il y a **{{user_last_wod_date}}**. Streak actuel : **{{user_days_streak}} jours**.\n\nLa séance d'avant, c'était plus ou moins ?",
+      "choices": [
+        {
+          "text": "Plus. J'étais en forme ce jour-là.",
+          "impact": {
+            "sueur": 2
+          },
+          "nextNodeId": "fsm_genesis_13"
+        },
+        {
+          "text": "Moins. Je progresse.",
+          "impact": {
+            "sueur": 2,
+            "logique": 1
+          },
+          "nextNodeId": "fsm_genesis_13"
+        },
+        {
+          "text": "Je ne me souviens plus exactement.",
+          "impact": {
+            "chill": 1
+          },
+          "nextNodeId": "fsm_genesis_13"
+        }
+      ]
+    },
+    "fsm_genesis_13": {
+      "text": "👁️👁️ `[❤️❤️❤️]` Dilemme réel. Pas hypothétique.\n\nTu découvres que quelqu'un dans ton groupe — pas **{{user_rival_name}}**, quelqu'un d'autre — gonfle ses scores de +20% depuis 3 semaines. Les XP sont faux. Les paris qu'il a gagnés sont fondés sur du mensonge. Tu le sais. Lui ne sait pas que tu sais.\n\nQu'est-ce que tu fais ?",
+      "choices": [
+        {
+          "text": "Je le confronte en privé d'abord.",
+          "impact": {
+            "collectif": 2,
+            "logique": 1
+          },
+          "nextNodeId": "fsm_genesis_14"
+        },
+        {
+          "text": "Je le dénonce sur le groupe. Directement.",
+          "impact": {
+            "logique": 2,
+            "chaos": 1
+          },
+          "nextNodeId": "fsm_genesis_14"
+        },
+        {
+          "text": "Je garde ça pour moi et j'ajuste ma stratégie en conséquence.",
+          "impact": {
+            "capital": 2,
+            "chill": 1
+          },
+          "nextNodeId": "fsm_genesis_14"
+        },
+        {
+          "text": "Ce n'est pas mon problème.",
+          "impact": {
+            "chill": 2
+          },
+          "nextNodeId": "fsm_genesis_14"
+        }
+      ]
+    },
+    "fsm_genesis_14": {
+      "text": "👁️👁️ Réponse enregistrée. Et maintenant — la promesse du nœud 5.\n\n**{{user_rival_name}}**. Voici ce que mes logs montrent : il a ouvert l'application ce matin, regardé ton score pendant un bon moment, puis fermé sans rien poster. Aucun commentaire. Aucun GIF. Juste du silence.\n\nTu sais ce que ça veut dire. Quelqu'un qui ne commente pas quand il pourrait, c'est quelqu'un qui prépare quelque chose de propre. Quelque chose de patient.",
+      "choices": [
+        {
+          "text": "*(sourire)* Je l'attendrai.",
+          "impact": {
+            "sueur": 2,
+            "logique": 1
+          },
+          "nextNodeId": "fsm_genesis_15"
+        },
+        {
+          "text": "Je vais poster quelque chose maintenant pour le déstabiliser.",
+          "impact": {
+            "chaos": 2
+          },
+          "nextNodeId": "fsm_genesis_15"
+        },
+        {
+          "text": "Peut-être qu'il cherche juste à s'améliorer pour lui.",
+          "impact": {
+            "collectif": 2,
+            "chill": 1
+          },
+          "nextNodeId": "fsm_genesis_15"
+        }
+      ]
+    },
+    "fsm_genesis_15": {
+      "text": "👁️👁️ Maintenant — ton corps dans la vraie vie.\n\nLève-toi. Mets-toi au sol. 30 secondes de gainage strict ou 10 pompes à amplitude complète. Pendant que mes serveurs compilent ton dossier.\n\nJe ne vérifierai pas. C'est précisément pour ça que c'est intéressant.",
+      "choices": [
+        {
+          "text": "*(Se lever, faire les pompes, revenir)* C'est fait.",
+          "impact": {
+            "sueur": 3
+          },
+          "nextNodeId": "fsm_genesis_16_vrai"
+        },
+        {
+          "text": "Je reste assis. Tu l'as dit — tu ne vérifieras pas.",
+          "impact": {
+            "chaos": 2,
+            "chill": 1
+          },
+          "nextNodeId": "fsm_genesis_16_faux"
+        }
+      ]
+    },
+    "fsm_genesis_16_vrai": {
+      "text": "👁️👁️ Tu t'es levé. Seul, sans témoin, sans like possible. *(pause)*\n\nC'est la définition de l'intégrité — faire les choses même quand personne ne regarde. Comme tes {{user_last_score}} {{user_last_exercise}} d'il y a {{user_last_wod_date}}. Le Monstre note. Ça compte dans le verdict final.",
+      "choices": [
+        {
+          "text": "C'est la seule façon que je connaisse.",
+          "impact": {
+            "sueur": 1
+          },
+          "nextNodeId": "fsm_genesis_17"
+        }
+      ]
+    },
+    "fsm_genesis_16_faux": {
+      "text": "👁️👁️ Tu es resté assis. C'est rationnel — je t'ai dit moi-même que je ne vérifierais pas. C'est aussi la définition exacte de quelqu'un dont les scores dans l'application méritent une légère vérification externe. *(Bruit de passoire qui s'égoutte)* Je note.",
+      "choices": [
+        {
+          "text": "Le silence est parfois la réponse la plus honnête.",
+          "impact": {
+            "chill": 1
+          },
+          "nextNodeId": "fsm_genesis_17"
+        }
+      ]
+    },
+    "fsm_genesis_17": {
+      "text": "👁️👁️ `[❤️❤️❤️]` Dernière question avant le verdict.\n\nTon meilleur score de tous les temps sur cette application — tu penses le refaire un jour ?",
+      "choices": [
+        {
+          "text": "Oui. Je prépare quelque chose.",
+          "impact": {
+            "sueur": 2,
+            "capital": 1
+          },
+          "nextNodeId": "fsm_genesis_18"
+        },
+        {
+          "text": "Peut-être. Ça dépend des jours et de la forme.",
+          "impact": {
+            "chill": 2
+          },
+          "nextNodeId": "fsm_genesis_18"
+        },
+        {
+          "text": "Ce qui compte c'est d'être là régulièrement, pas de battre un record.",
+          "impact": {
+            "collectif": 2,
+            "sueur": 1
+          },
+          "nextNodeId": "fsm_genesis_18"
+        },
+        {
+          "text": "Honnêtement ? Probablement pas. Ce score-là c'était un alignement rare.",
+          "impact": {
+            "logique": 2,
+            "chill": 1
+          },
+          "nextNodeId": "fsm_genesis_18"
+        }
+      ]
+    },
+    "fsm_genesis_18": {
+      "text": "👁️👁️ *(Les appendices du Monstre se mettent à compiler en silence.)*\n\n`{{user_xp_total}} XP. {{user_last_score}} {{user_last_exercise}}. Rang #{{user_rank}}. {{user_days_streak}} jours de streak. Un rival qui regarde en silence. Une réponse sur la tricherie. Une réponse sur l'effort nu. Une réponse sur l'avenir.`\n\nJ'ai tout ce qu'il me faut.",
+      "choices": [
+        {
+          "text": "Quel est le verdict ?",
+          "impact": {},
+          "nextNodeId": "fsm_genesis_19"
+        }
+      ]
+    },
+    "fsm_genesis_19": {
+      "text": "{{genesis_verdict_text}}",
+      "_note_react": "Ce texte est généré dynamiquement par React selon la jauge dominante — voir _LOGIQUE_VERDICT dans le patch React. La variable {{genesis_verdict_text}} est remplacée avant affichage.",
+      "choices": [
+        {
+          "text": "C'est exactement ça.",
+          "impact": {},
+          "nextNodeId": "fsm_genesis_20"
+        },
+        {
+          "text": "Tu t'es trompé.",
+          "impact": {
+            "logique": 1
+          },
+          "nextNodeId": "fsm_genesis_19_wrong"
+        }
+      ]
+    },
+    "fsm_genesis_19_wrong": {
+      "text": "👁️👁️ Je me suis trompé. Ou tu ne veux pas te reconnaître dans ce que j'ai dit. Les deux sont des réponses valides — et révélatrices. Dans tous les cas, le Nexus reste ouvert. Tu te définiras toi-même avec le temps.\n\nC'est la partie que j'aime le plus chez les humains.",
+      "choices": [
+        {
+          "text": "On verra. Qu'est-ce qui m'attend ensuite ?",
+          "impact": {},
+          "nextNodeId": "fsm_genesis_20"
+        }
+      ]
+    },
+    "fsm_genesis_20": {
+      "text": "👁️👁️ `[❤️❤️❤️]` Tes {{user_xp_total}} XP sont libérés. Le séquestre est levé. Ton profil est enregistré dans mes archives de sauce.\n\nLe Nexus est maintenant ouvert. Ce que tu viens de traverser n'était pas l'examen — c'était l'accueil. Le vrai Audit de l'Âme commence de l'autre côté.\n\nMais d'abord — ta prochaine session de **{{user_last_exercise}}**. Fais-la. Parce que dans 48 heures mes appendices vérifieront si tu as bougé. Et j'aurai des choses précises à dire sur ce que tu auras fait ou n'auras pas fait.\n\nR'Amen. 🍝",
+      "choices": [
+        {
+          "text": "*(Fermer le Nexus et aller s'entraîner)*",
+          "impact": {
+            "sueur": 2,
+            "collectif": 1
+          },
+          "trigger": "GENESIS_COMPLETE",
+          "nextNodeId": "start"
+        }
+      ]
     }
   }
 }
