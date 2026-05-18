@@ -114,22 +114,44 @@ export default function SanctuaireTab({ nickname, userId, userStats }: Props) {
   const resetIdleTimer = () => {
     if (!isIdleTimerActive) return
     if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current)
+    const isPostGenesis = (() => {
+      try { return localStorage.getItem('fsm_post_genesis_pending') === 'true'; }
+      catch { return false; }
+    })();
+
+    const delay = isPostGenesis ? 5000 : 30000;
+
     idleTimeoutRef.current = setTimeout(() => {
-      setIsIdleTimerActive(false)
+      setIsIdleTimerActive(false);
+
       if (fsmState.status === 'DISCIPLE') {
-        setFsmState(prev => ({ ...prev, currentNodeId: 'disciple_hub' }))
-      } else {
-        const genesisDone = (() => {
-          try { return localStorage.getItem('fsm_genesis_done') === 'true'; }
-          catch { return false; }
-        })();
-        setFsmState(prev => ({
-          ...prev,
-          status: 'PLAYING',
-          currentNodeId: genesisDone ? 'start' : 'fsm_genesis_1'
-        }));
+        setFsmState(prev => ({ ...prev, currentNodeId: 'disciple_hub' }));
+        return;
       }
-    }, 30000)
+
+      const genesisDone = (() => {
+        try { return localStorage.getItem('fsm_genesis_done') === 'true'; }
+        catch { return false; }
+      })();
+
+      if (!genesisDone) {
+        setFsmState(prev => ({ ...prev, status: 'PLAYING', currentNodeId: 'fsm_genesis_1' }));
+        return;
+      }
+
+      if (isPostGenesis) {
+        try { localStorage.removeItem('fsm_post_genesis_pending'); } catch {}
+        const profile = (() => {
+          try { return localStorage.getItem('fsm_genesis_profile') ?? 'default'; }
+          catch { return 'default'; }
+        })();
+        const profileNode = `start_post_genesis_${profile}`;
+        setFsmState(prev => ({ ...prev, status: 'PLAYING', currentNodeId: profileNode }));
+        return;
+      }
+
+      setFsmState(prev => ({ ...prev, status: 'PLAYING', currentNodeId: 'start' }));
+    }, delay);
   }
 
   useEffect(() => {
@@ -267,10 +289,16 @@ export default function SanctuaireTab({ nickname, userId, userStats }: Props) {
       return;
     }
     if (choice.trigger === 'GENESIS_COMPLETE') {
-      try { localStorage.setItem('fsm_genesis_done', 'true'); } catch { /* ignore */ }
+      const dominant = getDominantGauge(newScores);
+      try {
+        localStorage.setItem('fsm_genesis_done', 'true');
+        localStorage.setItem('fsm_genesis_profile', dominant);
+        localStorage.setItem('fsm_post_genesis_pending', 'true');
+      } catch { /* ignore */ }
+      // Conserver les scores Genesis dans le FSM
       setFsmState({
         currentNodeId: 'start',
-        scores: { capital:0, collectif:0, sueur:0, chill:0, logique:0, chaos:0 },
+        scores: newScores,  // PAS de reset à 0
         status: 'IDLE'
       });
       setIsIdleTimerActive(true);

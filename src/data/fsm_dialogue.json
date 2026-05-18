@@ -6994,6 +6994,139 @@
           "nextNodeId": "start"
         }
       ]
+    },
+    "start_post_genesis_chaos": {
+      "text": "*(Bruit de sauce piquante qui s'échappe brusquement d'une casserole)*\n\nTu es encore là. Ou tu es revenu. Dans les deux cas — je mettais à jour le dossier de **{{user_rival_name}}**. Rien d'urgent. Juste quelques notes sur ses habitudes d'observation silencieuse.\n\nTon profil de **Troll Accrédité** est enregistré. Ça ne change pas le fond de l'audit — ça change juste le ton avec lequel je vais te parler. Prépare-toi à ce que ce soit désagréablement précis.",
+      "choices": [
+        {
+          "text": "Je suis fait pour ça. Continuons.",
+          "impact": {
+            "chaos": 1
+          },
+          "nextNodeId": "d1"
+        },
+        {
+          "text": "Je vais peut-être vous surprendre.",
+          "impact": {
+            "logique": 1
+          },
+          "nextNodeId": "d1"
+        }
+      ]
+    },
+    "start_post_genesis_sueur": {
+      "text": "*(Bruit de chronomètre qui clique une dernière fois)*\n\n5 secondes. C'est le temps qu'il m'a fallu pour calculer l'écart entre ce que tu peux faire physiquement et ce que tu fais réellement. Le delta est inconfortable. Pas catastrophique — inconfortable.\n\nTon profil de **Glycogène Vertueux** est enregistré. L'audit de l'âme commence maintenant. Il sera plus exigeant que ce que tu viens de traverser.",
+      "choices": [
+        {
+          "text": "C'est ce que je cherche. Allons-y.",
+          "impact": {
+            "sueur": 1
+          },
+          "nextNodeId": "d1"
+        },
+        {
+          "text": "Je suis prêt à être inconfortable.",
+          "impact": {
+            "sueur": 1,
+            "logique": 1
+          },
+          "nextNodeId": "d1"
+        }
+      ]
+    },
+    "start_post_genesis_collectif": {
+      "text": "*(Bruit de passoire qui s'égoutte doucement)*\n\nJe compilais. Tu es **Le Ciment du Groupe** — ce n'est pas un titre anodin. Ce que je vais t'auditer maintenant, c'est la partie de toi que le groupe ne voit pas. La partie qui reste quand tout le monde est couché.\n\nTu es prêt pour ça ?",
+      "choices": [
+        {
+          "text": "Je n'ai rien à cacher.",
+          "impact": {
+            "collectif": 1
+          },
+          "nextNodeId": "d1"
+        },
+        {
+          "text": "On verra.",
+          "impact": {
+            "chill": 1
+          },
+          "nextNodeId": "d1"
+        }
+      ]
+    },
+    "start_post_genesis_logique": {
+      "text": "*(Bruit de serveur qui ventile)*\n\nJe recalculais. **Le Comptable de la Douleur** — un profil rare. Tu vas trouver ce qui suit trop subjectif, trop émotionnel, trop peu quantifiable. C'est précisément pour ça que c'est utile.\n\nOn attaque.",
+      "choices": [
+        {
+          "text": "J'essaierai de ne pas tout rationaliser.",
+          "impact": {
+            "logique": 1
+          },
+          "nextNodeId": "d1"
+        },
+        {
+          "text": "Je ne promets rien.",
+          "impact": {
+            "chaos": 1
+          },
+          "nextNodeId": "d1"
+        }
+      ]
+    },
+    "start_post_genesis_chill": {
+      "text": "*(silence de 4 secondes)*\n\n...\n\nJe testais si tu partirais. Tu es resté. **Le Stratège Apathique** — tu t'en fous, mais pas assez pour fermer l'onglet. C'est la fissure intéressante.\n\nOn continue.",
+      "choices": [
+        {
+          "text": "Je suis là.",
+          "impact": {
+            "chill": 1
+          },
+          "nextNodeId": "d1"
+        },
+        {
+          "text": "Arrêtons de perdre du temps.",
+          "impact": {
+            "logique": 1
+          },
+          "nextNodeId": "d1"
+        }
+      ]
+    },
+    "start_post_genesis_capital": {
+      "text": "*(Bruit de calculatrice cosmique)*\n\nJe réévaluais ton ROI existentiel. **Le Trader d'XP** — tu optimises tout, y compris cette conversation. Je vais donc aller droit au but : les questions qui suivent ne se laissent pas optimiser. C'est volontaire.",
+      "choices": [
+        {
+          "text": "On verra ça.",
+          "impact": {
+            "capital": 1
+          },
+          "nextNodeId": "d1"
+        },
+        {
+          "text": "Je trouve toujours un angle.",
+          "impact": {
+            "capital": 1,
+            "chaos": 1
+          },
+          "nextNodeId": "d1"
+        }
+      ]
+    },
+    "start_post_genesis_default": {
+      "text": "*(Bruit de passoire qui s'égoutte)*\n\nJe compilais tes données de la Genèse. 5 secondes. C'est le temps qu'il m'a fallu pour que quelque chose commence à se dessiner. Tu es plus nuancé que les profils habituels.\n\nC'est soit fascinant soit un mécanisme de défense sophistiqué. L'audit va trancher.",
+      "choices": [
+        {
+          "text": "Je suis prêt.",
+          "impact": {},
+          "nextNodeId": "d1"
+        },
+        {
+          "text": "Tranchons.",
+          "impact": {
+            "logique": 1
+          },
+          "nextNodeId": "d1"
+        }
+      ]
     }
   }
 }
