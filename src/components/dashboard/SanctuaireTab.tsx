@@ -408,7 +408,7 @@ export default function SanctuaireTab({ nickname, userId, userStats }: Props) {
               <button key={index} onClick={() => handleChoice(choice)}
                 className="w-full text-left p-4 sm:p-5 bg-slate-800/50 hover:bg-yellow-900/40 border border-slate-700 hover:border-yellow-700/50 rounded-xl transition-all duration-200 group">
                 <span className="text-yellow-500/40 mr-3 group-hover:text-yellow-500 transition-colors">▶</span>
-                <span className="text-slate-300 text-sm sm:text-base">{choice.text}</span>
+                <span className="text-slate-300 text-sm sm:text-base">{renderText(choice.text)}</span>
               </button>
             ))}
           </div>
