@@ -10,6 +10,10 @@ const GRADE_EMOJIS: Record<string, string> = {
   SAGE_APATHIQUE: "😶", APPRENTI_LINGUISTE_PASTAFARIEN: "🦉",
 };
 
+const BAN_KEY = 'fsm_nexus_ban_until';
+const SHAME_KEY = 'fsm_shame_count';
+const PARENTING_BAN_KEY = 'fsm_parenting_ban';
+
 type Scores = {
   capital: number; collectif: number; sueur: number
   chill: number; logique: number; chaos: number
@@ -33,6 +37,8 @@ export default function SanctuaireTab({ nickname, userId }: Props) {
     status: 'IDLE'
   })
   const [isIdleTimerActive, setIsIdleTimerActive] = useState(true)
+  const [timeLeft, setTimeLeft] = useState<string>('')
+  const [isBanned, setIsBanned] = useState<boolean>(false)
   const idleTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const clickTimestamps = useRef<number[]>([]);
@@ -61,6 +67,26 @@ export default function SanctuaireTab({ nickname, userId }: Props) {
       }
     } catch { /* ignore */ }
   }, [fsmState])
+
+  useEffect(() => {
+    const checkBan = () => {
+      const banUntil = parseInt(localStorage.getItem(BAN_KEY) || '0');
+      const remaining = banUntil - Date.now();
+      if (remaining > 0) {
+        setIsBanned(true);
+        const h = Math.floor(remaining / 3600000);
+        const m = Math.floor((remaining % 3600000) / 60000);
+        const s = Math.floor((remaining % 60000) / 1000);
+        setTimeLeft(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`);
+      } else {
+        setIsBanned(false);
+        setTimeLeft('');
+      }
+    };
+    checkBan();
+    const interval = setInterval(checkBan, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const resetIdleTimer = () => {
     if (!isIdleTimerActive) return
@@ -124,9 +150,40 @@ export default function SanctuaireTab({ nickname, userId }: Props) {
       chaos:     fsmState.scores.chaos     + (choice.impact?.chaos     || 0),
     }
 
+    if (choice.trigger === 'GAME_OVER_PARENTING') {
+      const shameCount = parseInt(localStorage.getItem(SHAME_KEY) || '0') + 1;
+      try {
+        localStorage.setItem(PARENTING_BAN_KEY, 'true');
+        localStorage.setItem(SHAME_KEY, shameCount.toString());
+        localStorage.setItem(BAN_KEY, (Date.now() + 24 * 60 * 60 * 1000).toString());
+        localStorage.removeItem(STORAGE_KEY);
+      } catch { /* ignore */ }
+      setIsBanned(true);
+      setFsmState({ currentNodeId: 'start', scores: { capital:0, collectif:0, sueur:0, chill:0, logique:0, chaos:0 }, status: 'IDLE' });
+      setIsIdleTimerActive(true);
+      return;
+    }
+
     if (choice.trigger === 'GAME_OVER' || choice.trigger === 'INFINITE_LOOP') {
-      setFsmState({ ...fsmState, scores: newScores, status: 'GAME_OVER', currentNodeId: choice.nextNodeId })
-      return
+      const shameCount = parseInt(localStorage.getItem(SHAME_KEY) || '0') + 1;
+      const banDurations = [0, 30*60*1000, 2*60*60*1000];
+      const banDuration = shameCount >= 3 
+        ? (new Date().setHours(30,0,0,0) - Date.now()) // lendemain 6h
+        : (banDurations[Math.min(shameCount-1, 2)] || 0);
+      try {
+        localStorage.setItem(SHAME_KEY, shameCount.toString());
+        if (banDuration > 0) localStorage.setItem(BAN_KEY, (Date.now() + banDuration).toString());
+        localStorage.removeItem(STORAGE_KEY);
+      } catch { /* ignore */ }
+      setFsmState({ ...fsmState, scores: newScores, status: 'GAME_OVER', currentNodeId: choice.nextNodeId });
+      return;
+    }
+
+    if (choice.trigger === 'CLEAR_PARENTING_BAN') {
+      try { localStorage.removeItem(PARENTING_BAN_KEY); } catch { /* ignore */ }
+    }
+    if (choice.trigger === 'SET_HAS_KIDS') {
+      try { localStorage.setItem('fsm_has_kids', 'true'); } catch { /* ignore */ }
     }
 
     if (choice.trigger === 'GRANT_DISCIPLE') {
@@ -157,7 +214,17 @@ export default function SanctuaireTab({ nickname, userId }: Props) {
     }
     if (choice.nextNodeId === 'duo_entry') {
       const hasDone = (() => { try { return localStorage.getItem(DUO_DONE_KEY)==='true'; } catch { return false; } })();
-      setFsmState(prev => ({ ...prev, currentNodeId: hasDone ? 'duo_quick_test' : 'duo_1', scores: newScores }));
+      if (hasDone) {
+        setFsmState(prev => ({ ...prev, currentNodeId: 'duo_quick_test', scores: newScores }));
+        return;
+      }
+      const parentingBan = (() => { try { return localStorage.getItem(PARENTING_BAN_KEY)==='true'; } catch { return false; } })();
+      const shameCount = (() => { try { return parseInt(localStorage.getItem(SHAME_KEY)||'0'); } catch { return 0; } })();
+      const target = parentingBan ? 'prof_intro_parenting_repentance'
+        : shameCount >= 3 ? 'prof_intro_triple_recidiviste'
+        : shameCount >= 1 ? 'prof_intro_recidiviste'
+        : 'prof_intro';
+      setFsmState(prev => ({ ...prev, currentNodeId: target, scores: newScores }));
       return;
     }
 
@@ -183,6 +250,21 @@ export default function SanctuaireTab({ nickname, userId }: Props) {
     try { localStorage.removeItem(STORAGE_KEY) } catch { /* ignore */ }
     setFsmState({ currentNodeId: 'start', scores: { capital: 0, collectif: 0, sueur: 0, chill: 0, logique: 0, chaos: 0 }, status: 'IDLE' })
     setIsIdleTimerActive(true)
+  }
+
+  if (isBanned) {
+    return (
+      <div className='min-h-[500px] flex flex-col items-center justify-center bg-slate-950 rounded-3xl p-8'>
+        <p className='text-yellow-500/30 font-mono text-xs mb-6 text-center'>👁️👁️</p>
+        <p className='text-slate-400 font-mono text-sm text-center leading-relaxed mb-8'>
+          Le Nexus est fermé.<br/><br/>
+          Durée de votre peine :<br/>
+          <span className='text-red-500 font-bold text-lg font-mono'>{timeLeft}</span><br/><br/>
+          Vous pouvez utiliser ce temps pour faire<br/>les pompes que vous n'avez pas faites.<br/><br/>
+          <em className='text-slate-600'>— Le Professeur</em>
+        </p>
+      </div>
+    )
   }
 
   if (fsmState.status === 'IDLE') {

@@ -2040,7 +2040,7 @@
         {
           "text": "Initialisation...",
           "impact": {},
-          "nextNodeId": "duo_1"
+          "nextNodeId": "prof_intro"
         }
       ]
     },
@@ -3486,7 +3486,7 @@
           "impact": {
             "logique": 2
           },
-          "nextNodeId": "duo_20"
+          "nextNodeId": "prof_retour_flash"
         }
       ]
     },
@@ -5181,6 +5181,1301 @@
             "sueur": 1
           },
           "nextNodeId": "duo_1"
+        }
+      ]
+    },
+    "prof_intro": {
+      "text": "👁️👁️ *(Ajuste ses lunettes invisibles avec un appendice mou et soupire profondément)*\n\nEntrez, entrez. Fermez la porte de ce Nexus, il y a des courants d'air quantiques. Je suis le Professeur. Inutile de me regarder avec cet air bovin, je n'ai pas de temps à perdre avec les mondanités. Asseyez-vous sur cette chaise virtuelle. Nous allons procéder à un rapide examen clinique de votre ego avant d'aller plus loin.",
+      "choices": [
+        {
+          "text": "Je suis prêt, Professeur.",
+          "impact": {
+            "logique": 1
+          },
+          "nextNodeId": "prof_punition_physique"
+        },
+        {
+          "text": "Un peu de respect, je suis le créateur ici.",
+          "impact": {
+            "chaos": 1
+          },
+          "nextNodeId": "prof_insolence_precoce"
+        }
+      ]
+    },
+    "prof_intro_recidiviste": {
+      "_note": "Déclenché si fsm_shame_count >= 1",
+      "text": "👁️👁️ *(Ouvre un dossier sans le regarder)*\n\nTiens. Vous revenez. La dernière fois, vous avez été expulsé de ce Nexus — soit par lâcheté, soit par insolence, soit par médiocrité clinique. Probablement les trois. Votre dossier contient la mention 'récidiviste potentiel'. Vous avez une seule chance de prouver que ce qualificatif est excessif. Ne la gâchez pas.",
+      "choices": [
+        {
+          "text": "Je comprends. Je ferai mieux.",
+          "impact": {
+            "sueur": 1
+          },
+          "nextNodeId": "prof_punition_physique"
+        },
+        {
+          "text": "Je n'ai rien à prouver.",
+          "impact": {
+            "chaos": 2
+          },
+          "nextNodeId": "prof_insolence_precoce"
+        }
+      ]
+    },
+    "prof_intro_triple_recidiviste": {
+      "_note": "Déclenché si fsm_shame_count >= 3",
+      "text": "👁️👁️ *(Long silence. Le Professeur vous regarde sans bouger pendant 4 secondes)*\n\nTroisième venue. À ce stade, je me demande si vous cherchez à apprendre le Gluten-Script, ou si vous venez ici pour être humilié parce que votre vie quotidienne manque de piquant. Ce sont deux motivations valides. Avançons. Mais sachez que ma patience a la consistance d'une pâte trop cuite — encore comestible, mais fondamentalement décevante.",
+      "choices": [
+        {
+          "text": "Je veux vraiment finir ce module.",
+          "impact": {
+            "sueur": 2
+          },
+          "nextNodeId": "prof_punition_physique"
+        }
+      ]
+    },
+    "prof_intro_parenting_repentance": {
+      "_note": "Déclenché si fsm_parenting_ban === 'true'",
+      "text": "👁️👁️ *(Le Professeur ouvre un dossier rouge à l'effigie d'une petite passoire)*\n\nAh. Vous revenez. La dernière fois, vous avez ri trois fois d'une observation qui ne méritait pas trois rires. Mon système d'éthique cosmique vous a expulsé. La question s'impose avant tout : êtes-vous repenti de votre hilarité déplacée ?",
+      "choices": [
+        {
+          "text": "Oui. C'était une erreur de jugement. On peut rire de tout, mais pas avec tout le monde.",
+          "impact": {
+            "collectif": 2,
+            "chaos": -2
+          },
+          "trigger": "CLEAR_PARENTING_BAN",
+          "nextNodeId": "prof_punition_physique"
+        },
+        {
+          "text": "Non. C'était objectivement drôle.",
+          "impact": {
+            "chaos": 3
+          },
+          "nextNodeId": "prof_parenting_recidive"
+        }
+      ]
+    },
+    "prof_parenting_recidive": {
+      "text": "👁️👁️ *(Le Professeur referme le dossier rouge avec un soupir)*\n\nVous persistez. Je n'ai rien à ajouter. L'expulsion est immédiate et la durée est doublée. Revenez quand vos neurones auront eu le temps de se réhydrater.",
+      "choices": [
+        {
+          "text": "...",
+          "impact": {},
+          "trigger": "GAME_OVER_PARENTING",
+          "nextNodeId": "start"
+        }
+      ]
+    },
+    "prof_insolence_precoce": {
+      "text": "👁️👁️ [❤️❤️❤️] *(Pause. Le Professeur fixe l'écran avec l'expression de quelqu'un qui vient de trouver un cheveu dans son assiette)*\n\nLe 'créateur'. Fascinant. Vous avez passé 30 secondes dans mon Nexus et vous revendiquez déjà la paternité de l'ensemble. C'est exactement comme revendiquer la propriété d'une casserole parce qu'on y a mis de l'eau du robinet. Ré-essayez, avec un peu plus de dignité.",
+      "choices": [
+        {
+          "text": "Je suis prêt, Professeur. (Docilement)",
+          "impact": {
+            "logique": 1,
+            "chaos": -1
+          },
+          "nextNodeId": "prof_punition_physique"
+        }
+      ]
+    },
+    "prof_punition_physique": {
+      "text": "👁️👁️ [❤️❤️❤️] *(Frappe violemment le pupitre invisible)*\n\nAvant tout — je prescris un WOD d'entrée. Pas de cours sans échauffement. Levez-vous. Mettez-vous au sol. Je vous prescris 45 secondes de gainage strict OU 15 pompes à amplitude complète. Immédiatement. Je chronomètre mentalement. Mes appendices ont une montre.",
+      "choices": [
+        {
+          "text": "C'est une blague ? Je suis devant mon écran.",
+          "impact": {},
+          "nextNodeId": "prof_punition_refus"
+        },
+        {
+          "text": "Je lance mon chrono. À tout de suite.",
+          "impact": {
+            "sueur": 2
+          },
+          "nextNodeId": "prof_punition_verif"
+        }
+      ]
+    },
+    "prof_punition_refus": {
+      "text": "👁️👁️ [💔❤️❤️] La 'Coquillette' dans toute sa splendeur — molle, sans tenue, incapable de résister à la chaleur. Je vous retire un cœur pour lâcheté caractérisée. Maintenant, ravalez votre insolence et taisez-vous. On reprend.",
+      "choices": [
+        {
+          "text": "Désolé, Professeur.",
+          "impact": {
+            "chill": -1
+          },
+          "nextNodeId": "prof_posture"
+        }
+      ]
+    },
+    "prof_punition_verif": {
+      "text": "👁️👁️ [❤️❤️❤️] *(Le Professeur attend, les appendices croisés, fixant votre webcam virtuelle avec l'intensité d'un examinateur du baccalauréat)*\n\nAlors ? Les triceps brûlent ? Le core tremble légèrement ? Ne me mentez pas. Jurez solennellement sur la Sainte Pâte que vous venez d'exécuter la sentence sans tricher l'amplitude.",
+      "choices": [
+        {
+          "text": "Je le jure sur la Sainte Pâte. Amplitude complète.",
+          "impact": {
+            "sueur": 2,
+            "logique": 1
+          },
+          "nextNodeId": "prof_punition_succes"
+        },
+        {
+          "text": "J'avoue. J'ai fait semblant pour passer à la suite.",
+          "impact": {
+            "chaos": 2
+          },
+          "nextNodeId": "prof_punition_triche"
+        }
+      ]
+    },
+    "prof_punition_succes": {
+      "text": "👁️👁️ [❤️❤️❤️] J'accepte votre serment. Le sang circule à nouveau dans votre cortex préfrontal. Vous méritez d'apprendre quelque chose aujourd'hui. Reprenons.",
+      "choices": [
+        {
+          "text": "(Essuyer la sueur et s'asseoir correctement)",
+          "impact": {},
+          "nextNodeId": "prof_posture"
+        }
+      ]
+    },
+    "prof_punition_triche": {
+      "text": "👁️👁️ [💔❤️❤️] La paresse couplée au mensonge. Vous perdez un cœur. Et vous gagnez le droit de regarder dans la glace ce soir en sachant que vous avez menti à une passoire cosmique. Essuyez la honte sur votre front et avançons.",
+      "choices": [
+        {
+          "text": "Baisser les yeux et avancer.",
+          "impact": {},
+          "nextNodeId": "prof_posture"
+        }
+      ]
+    },
+    "prof_posture": {
+      "text": "👁️👁️ [❤️❤️❤️] Silence. Avant de prétendre à quoi que ce soit — redressez votre dos. Oui, vous, derrière votre écran. Vous venez de vous raidir en lisant cette phrase, réalisant soudain que vous étiez avachi comme une lasagne trop cuite sur un canapé post-WOD. J'indexe votre âme, je ne fais pas de l'ostéopathie.",
+      "choices": [
+        {
+          "text": "(Se redresser maladroitement) Voilà.",
+          "impact": {
+            "sueur": 1
+          },
+          "nextNodeId": "prof_smalltalk_1"
+        }
+      ]
+    },
+    "prof_smalltalk_1": {
+      "text": "👁️👁️ D'ailleurs, avant que je n'oublie... Où avez-vous acheté ce t-shirt ? L'éclairage de votre dimension est curieux, mais il met vos muscles décevants étonnamment en valeur. Et je sens — à travers mes serveurs — qu'il y a un équipement de sport oublié quelque part chez vous. Un haltère. Ou une bande de résistance. Encore dans son emballage d'origine.",
+      "choices": [
+        {
+          "text": "C'est un t-shirt technique de sport, Monsieur.",
+          "impact": {},
+          "nextNodeId": "prof_barnum"
+        },
+        {
+          "text": "Zara. Et l'haltère est là, oui. Ne me jugez pas.",
+          "impact": {},
+          "nextNodeId": "prof_barnum"
+        },
+        {
+          "text": "Je suis torse nu, de quoi tu parles ?",
+          "impact": {
+            "chaos": 1
+          },
+          "nextNodeId": "prof_barnum"
+        },
+        {
+          "text": "L'haltère est déballé ET utilisé, merci.",
+          "impact": {
+            "sueur": 1
+          },
+          "nextNodeId": "prof_barnum"
+        }
+      ]
+    },
+    "prof_barnum": {
+      "text": "👁️👁️ [❤️❤️❤️] Bien. Revenons à l'examen. Laissez-moi lire l'arborescence de vos névroses. *(pause dramatique)* Je vois un appétit féroce pour le fun et le chaos. Une énergie débordante, mais une tendance fâcheuse à vous ennuyer très vite dès qu'il faut finaliser le travail. Vous adorez commencer des choses. Terminer — c'est une autre affaire.",
+      "choices": [
+        {
+          "text": "C'est effrayant de précision. Vous lisez dans mes pensées ?",
+          "impact": {
+            "chill": 1
+          },
+          "nextNodeId": "prof_barnum_yes"
+        },
+        {
+          "text": "Pff. C'est l'effet Barnum. Description génériquement valide pour tout le monde.",
+          "impact": {
+            "logique": 1
+          },
+          "nextNodeId": "prof_barnum_no"
+        }
+      ]
+    },
+    "prof_barnum_yes": {
+      "text": "👁️👁️ [❤️❤️❤️] Je ne lis pas dans vos pensées — je constate les dégâts structurels de votre personnalité. Votre besoin constant d'excitation est épuisant à observer. Pour vous comme pour votre entourage, probablement.",
+      "choices": [
+        {
+          "text": "Prendre note, dignement.",
+          "impact": {},
+          "nextNodeId": "prof_smalltalk_2"
+        }
+      ]
+    },
+    "prof_barnum_no": {
+      "text": "👁️👁️ [❤️❤️❤️] Insolent. Vous brandissez votre esprit critique pour masquer le fait que j'ai touché dans le mille. Notez d'ailleurs que vous avez choisi de contredire plutôt que d'accepter — ce qui confirme exactement ce que j'ai dit. Le paradoxe vous dépasse, c'est normal.",
+      "choices": [
+        {
+          "text": "Mijoter en silence.",
+          "impact": {},
+          "nextNodeId": "prof_smalltalk_2"
+        }
+      ]
+    },
+    "prof_smalltalk_2": {
+      "text": "👁️👁️ Fun fact pour détendre l'atmosphère — j'ai créé l'ornithorynque un mardi matin après avoir fait tomber un reste de spaghettis dans de la sauce teriyaki. Voilà. Je tenais à le dire. L'univers n'est pas un accident, c'est une improvisation de cuisinier fatigué.",
+      "choices": [
+        {
+          "text": "Je savais que c'était une erreur de compilation cosmique.",
+          "impact": {},
+          "nextNodeId": "prof_age"
+        },
+        {
+          "text": "De la sauce teriyaki ? Blasphème contre la constante d'amidon !",
+          "impact": {},
+          "nextNodeId": "prof_age"
+        },
+        {
+          "text": "Fascinant. On avance ?",
+          "impact": {},
+          "nextNodeId": "prof_age"
+        }
+      ]
+    },
+    "prof_age": {
+      "text": "👁️👁️ [❤️❤️❤️] Évaluons votre châssis. *(observe longuement)* J'entends vos cartilages de 35 ans grincer jusqu'à mes serveurs. La dette technique de votre corps s'accumule. Les lendemains de WOD nécessitent soudainement 48h de récupération au lieu de 24h. Vous prenez des photos de vos stats pour les comparer à celles d'il y a 3 ans avec une tristesse croissante.",
+      "choices": [
+        {
+          "text": "J'assume. Le repos entre les séries est une stratégie, pas de la faiblesse.",
+          "impact": {
+            "chill": 2
+          },
+          "nextNodeId": "prof_age_accept"
+        },
+        {
+          "text": "Faux. J'ai le mental et le corps d'un gamin de 22 ans.",
+          "impact": {
+            "sueur": 2
+          },
+          "nextNodeId": "prof_age_deny"
+        }
+      ]
+    },
+    "prof_age_accept": {
+      "text": "👁️👁️ [❤️❤️❤️] La 'flemme stratégique'. Quel raffinement intellectuel pour habiller la décadence de vos fibres musculaires en philosophie de haut niveau. C'est pathétique. Et élégant. Les deux simultanément.",
+      "choices": [
+        {
+          "text": "Sourire poliment tout en sachant qu'il a raison.",
+          "impact": {},
+          "nextNodeId": "prof_parent_gate"
+        }
+      ]
+    },
+    "prof_age_deny": {
+      "text": "👁️👁️ [❤️❤️❤️] Le grand déni de la trentaine avancée. Fascinant. Votre corps tremble post-WOD pendant 36 heures mais votre orgueil refuse de s'éteindre. Vous êtes une bougie qui crépite en assurant qu'elle brûle encore comme à son premier tiers.",
+      "choices": [
+        {
+          "text": "Absorber le commentaire avec une dignité relative.",
+          "impact": {},
+          "nextNodeId": "prof_parent_gate"
+        }
+      ]
+    },
+    "prof_parent_gate": {
+      "text": "👁️👁️ *(Le Professeur pose son stylo et vous regarde avec ce qu'on pourrait presque appeler de la curiosité)* Avant de continuer l'examen clinique — une donnée biographique. Avez-vous des enfants ?",
+      "choices": [
+        {
+          "text": "Oui. J'ai des enfants.",
+          "impact": {
+            "collectif": 1
+          },
+          "trigger": "SET_HAS_KIDS",
+          "nextNodeId": "prof_parent_enter"
+        },
+        {
+          "text": "Non. Pas encore.",
+          "impact": {},
+          "nextNodeId": "prof_no_kids"
+        },
+        {
+          "text": "Ça ne vous regarde pas, Professeur.",
+          "impact": {
+            "chaos": 1
+          },
+          "nextNodeId": "prof_parent_gate_insolence"
+        }
+      ]
+    },
+    "prof_parent_gate_insolence": {
+      "text": "👁️👁️ Si ça ne me regardait pas, je n'aurais pas posé la question. Répondez.",
+      "choices": [
+        {
+          "text": "Oui. J'ai des enfants.",
+          "impact": {
+            "collectif": 1
+          },
+          "trigger": "SET_HAS_KIDS",
+          "nextNodeId": "prof_parent_enter"
+        },
+        {
+          "text": "Non. Pas encore.",
+          "impact": {},
+          "nextNodeId": "prof_no_kids"
+        }
+      ]
+    },
+    "prof_no_kids": {
+      "text": "👁️👁️ Pas encore. *(note quelque chose)* La liberté conditionnelle. Vous dormez encore 8 heures d'affilée et vous ignorez peut-être la valeur exacte de ce luxe. Très bien. Cette section de l'examen ne vous concerne pas. On passe.",
+      "choices": [
+        {
+          "text": "Je prends acte de ma chance avec un soulagement coupable.",
+          "impact": {
+            "chill": 1
+          },
+          "nextNodeId": "prof_smalltalk_3"
+        }
+      ]
+    },
+    "prof_parent_enter": {
+      "text": "👁️👁️ Des enfants. *(marque une pause)*  Fascinant et légèrement irresponsable de la part de l'univers de vous avoir confié des êtres humains en formation. Avant de continuer, il est nécessaire de vous enseigner le vocabulaire cosmique approprié. Le Gluten-Script ne connaît pas le genre — ce qui est, soit dit en passant, plus avancé que la plupart de vos langues humaines.",
+      "choices": [
+        {
+          "text": "Je suis prêt à apprendre.",
+          "impact": {
+            "logique": 1
+          },
+          "nextNodeId": "prof_parent_vocab_gnocco"
+        }
+      ]
+    },
+    "prof_parent_vocab_gnocco": {
+      "text": "👁️👁️ [❤️❤️❤️] Premier terme. **GNOCCO** (pluriel : **GNOCCHI**). Désigne en Gluten-Script un enfant, quel que soit son genre. Le GNOCCO est mou, malléable, et prend la forme du moule dans lequel on le façonne. Exactement comme un enfant. Sauf que le GNOCCO, lui, ne vous tient pas responsable de sa forme définitive lors de crises à 14 ans.",
+      "choices": [
+        {
+          "text": "GNOCCO. C'est parfait. Et poétiquement juste.",
+          "impact": {
+            "logique": 1
+          },
+          "nextNodeId": "prof_parent_vocab_fornella"
+        },
+        {
+          "text": "Mes enfants sont tout sauf mous.",
+          "impact": {
+            "sueur": 1
+          },
+          "nextNodeId": "prof_parent_vocab_fornella"
+        }
+      ]
+    },
+    "prof_parent_vocab_fornella": {
+      "text": "👁️👁️ Deuxième terme. **FORNELLA**. Désigne spécifiquement une fille. Dérivé de *fornello* — le fourneau, en italien. Je vous entends déjà soupirer. Mais statistiquement, dans 71% des foyers humains que j'observe depuis 4 milliards d'années, c'est encore la FORNELLA qui finit le plus souvent dans la cuisine. Je ne fais que constater. Mon rôle n'est pas de réparer 10 000 ans de patriarcat en un après-midi d'examen. Je laisse ça à vos podcasts.",
+      "choices": [
+        {
+          "text": "*(rire gêné)* C'est statistiquement injuste mais précis.",
+          "impact": {
+            "chaos": 1,
+            "collectif": 1
+          },
+          "nextNodeId": "prof_parent_dilemme_1"
+        },
+        {
+          "text": "Chez moi c'est différent. Ma fille ne cuisine pas.",
+          "impact": {
+            "collectif": 2
+          },
+          "nextNodeId": "prof_parent_fornella_proud"
+        }
+      ]
+    },
+    "prof_parent_fornella_proud": {
+      "text": "👁️👁️ Admirable. Vous avez réussi à déjouer 10 000 ans de conditionnement social chez votre FORNELLA. Soit vous êtes un excellent parent, soit elle cuisine en secret quand vous n'êtes pas là. Je pencherai pour les deux, par prudence statistique.",
+      "choices": [
+        {
+          "text": "*(malaise)* Elle fait des cookies parfois, effectivement.",
+          "impact": {
+            "chill": 1
+          },
+          "nextNodeId": "prof_parent_dilemme_1"
+        }
+      ]
+    },
+    "prof_parent_dilemme_1": {
+      "text": "👁️👁️ [❤️❤️❤️] Dilemme parental n°1. Votre FORNELLA de 8 ans vous demande pourquoi les filles font plus souvent la cuisine que les garçons dans les publicités. Vous avez 4 secondes avant qu'elle perde intérêt. Que répondez-vous ?",
+      "choices": [
+        {
+          "text": "'Parce que les gens décident souvent sans réfléchir à ce qu'ils reproduisent.' Et on en reparle quand elle est grande.",
+          "impact": {
+            "collectif": 2,
+            "logique": 1
+          },
+          "nextNodeId": "prof_parent_d1_bon"
+        },
+        {
+          "text": "'Les femmes cuisinent mieux.' Et je referme le sujet pour préserver la paix du foyer.",
+          "impact": {
+            "chill": 1,
+            "chaos": 2
+          },
+          "nextNodeId": "prof_parent_d1_mauvais"
+        }
+      ]
+    },
+    "prof_parent_d1_bon": {
+      "text": "👁️👁️ Réponse honnête. Complexe pour une gamine de 8 ans, mais vous lui faites confiance. Elle oubliera dans 90 secondes pour penser à autre chose, mais quelque chose restera. C'est comme ça que ça marche, l'éducation — on plante des graines dans un terrain qu'on ne contrôle pas complètement.",
+      "choices": [
+        {
+          "text": "C'est exactement comme ça que je le vis.",
+          "impact": {},
+          "nextNodeId": "prof_parent_dilemme_2"
+        }
+      ]
+    },
+    "prof_parent_d1_mauvais": {
+      "text": "👁️👁️ [💔❤️❤️] Vous venez de déposer une croyance limitante dans un cerveau en formation avec la désinvolture d'un menuisier qui cloue n'importe comment. Vous perdez un cœur de cohérence parentale. Réessayez au prochain dilemme.",
+      "choices": [
+        {
+          "text": "Je vais faire mieux.",
+          "impact": {
+            "sueur": 1
+          },
+          "nextNodeId": "prof_parent_dilemme_2"
+        }
+      ]
+    },
+    "prof_parent_dilemme_2": {
+      "text": "👁️👁️ [❤️❤️❤️] Dilemme parental n°2. Plus personnel. Vous faites du sport, vous êtes dans une app de fitness, vous vous battez contre vous-même chaque semaine. Quel exemple physique donnez-vous à vos GNOCCHI ? Soyez honnête. Je lis les métadonnées.",
+      "choices": [
+        {
+          "text": "Je fais du sport devant eux pour normaliser l'effort. Ils me voient transpirer et se battre.",
+          "impact": {
+            "sueur": 2,
+            "collectif": 1
+          },
+          "nextNodeId": "prof_parent_d2_bon"
+        },
+        {
+          "text": "Je fais du sport quand ils dorment. Je veux garder une image de force sans effort apparent.",
+          "impact": {
+            "capital": 1,
+            "chill": 1
+          },
+          "nextNodeId": "prof_parent_d2_nuance"
+        },
+        {
+          "text": "J'essaie. C'est compliqué avec le temps qu'il reste.",
+          "impact": {
+            "sueur": 1,
+            "chill": 1
+          },
+          "nextNodeId": "prof_parent_d2_honnete"
+        }
+      ]
+    },
+    "prof_parent_d2_bon": {
+      "text": "👁️👁️ Vous leur montrez que l'effort est visible, normal, et qu'il ne tue pas. C'est une des meilleures choses que vous puissiez transmettre. Le reste, c'est du vocabulaire. Bien.",
+      "choices": [
+        {
+          "text": "Avancer avec un peu de fierté intacte.",
+          "impact": {},
+          "nextNodeId": "prof_parent_joke_setup"
+        }
+      ]
+    },
+    "prof_parent_d2_nuance": {
+      "text": "👁️👁️ Vous gérez votre image parentale comme un produit. Ce n'est pas entièrement mauvais — l'autorité a besoin d'un peu de mystère. Mais vos GNOCCHI ne verront jamais que l'effort peut être difficile ET digne à la fois. C'est une lacune pédagogique que leurs thérapeutes noteront plus tard.",
+      "choices": [
+        {
+          "text": "*(inconfort)* Je vais y réfléchir.",
+          "impact": {
+            "logique": 1
+          },
+          "nextNodeId": "prof_parent_joke_setup"
+        }
+      ]
+    },
+    "prof_parent_d2_honnete": {
+      "text": "👁️👁️ L'honnêteté parentale. 'C'est compliqué avec le temps qu'il reste.' C'est la réponse la plus vraie de cet examen jusqu'ici. Le temps est la seule ressource non renouvelable que vous distribuez entre eux et vous. Le fait que vous soyez ici, dans ce Nexus, un soir, dit quelque chose.",
+      "choices": [
+        {
+          "text": "*(silence)* Oui.",
+          "impact": {
+            "chill": 2
+          },
+          "nextNodeId": "prof_parent_joke_setup"
+        }
+      ]
+    },
+    "prof_parent_joke_setup": {
+      "text": "👁️👁️ Bien. L'examen parental touche à sa fin. Il me reste une observation statistique sur les FORNELLE. Elle est fondée sur 4 milliards d'années d'observation et elle est légèrement inconfortable. Voulez-vous l'entendre ?",
+      "choices": [
+        {
+          "text": "Continuez, Professeur.",
+          "impact": {},
+          "nextNodeId": "prof_parent_joke_1"
+        },
+        {
+          "text": "Je préfère passer. J'ai eu ma dose.",
+          "impact": {
+            "chill": 1
+          },
+          "nextNodeId": "prof_parent_sortie"
+        }
+      ]
+    },
+    "prof_parent_joke_1": {
+      "text": "👁️👁️ Observation n°1 : La FORNELLA de 4 ans a déjà cartographié l'entièreté de vos failles émotionnelles. Elle sait exactement quand pleurer, quand sourire, et quand dire 'papa c'est le plus beau' pour obtenir un biscuit supplémentaire. Elle vous a optimisé. Vous n'élevez pas un enfant. Vous êtes élevé par elle.",
+      "choices": [
+        {
+          "text": "*(rire reconnaissant)* Terriblement vrai. Continuez.",
+          "impact": {},
+          "nextNodeId": "prof_parent_joke_2"
+        },
+        {
+          "text": "C'est assez. Je sors de cette boucle.",
+          "impact": {
+            "chill": 1
+          },
+          "nextNodeId": "prof_parent_sortie"
+        }
+      ]
+    },
+    "prof_parent_joke_2": {
+      "text": "👁️👁️ Observation n°2 : Quelque part entre les 12 et les 16 ans de votre FORNELLA, vous réaliserez quelque chose d'horrifiant. Vous connaissez parfaitement les intentions des garçons qui vont commencer à s'intéresser à elle. Parce que vous les avez eues. Vous ÊTES ce type de garçon, quelques décennies plus tôt. Bienvenue dans la paranoïa paternelle institutionnalisée.",
+      "choices": [
+        {
+          "text": "*(rire nerveux)* C'est exactement ça. Observation finale ?",
+          "impact": {},
+          "nextNodeId": "prof_parent_joke_3"
+        },
+        {
+          "text": "On s'arrête là. Je n'ai pas besoin de ça ce soir.",
+          "impact": {
+            "chill": 2
+          },
+          "nextNodeId": "prof_parent_sortie"
+        }
+      ]
+    },
+    "prof_parent_joke_3": {
+      "text": "👁️👁️ Observation finale, n°3 : vous passerez 15 à 20 ans à apprendre à votre FORNELLA à se méfier des hommes, à reconnaître les intentions cachées, à ne pas se laisser impressionner par les discours. Et vous serez le premier homme à qui elle a fait confiance aveuglément. *(pause)* Le niveau de confiance que vous devez mériter est proprement abyssal. Bonne nuit.",
+      "choices": [
+        {
+          "text": "*(rire profond et un peu amer)* C'est du génie. On peut rire de tout.",
+          "impact": {
+            "chaos": 2
+          },
+          "nextNodeId": "prof_parent_warning_1"
+        },
+        {
+          "text": "Ok là, je vois très bien où tu vas. On arrête.",
+          "impact": {
+            "collectif": 2
+          },
+          "nextNodeId": "prof_parent_repentance_1"
+        }
+      ]
+    },
+    "prof_parent_warning_1": {
+      "text": "👁️👁️ [💔❤️❤️] *(Le Professeur pose sa craie avec un bruit sec)*\n\nVotre hilarité face à cette observation me préoccupe. Mon système d'éthique cosmique vient de lever un flag. Je vais être précis : 'On peut rire de tout' est vrai. La question est toujours de savoir de quoi on rit exactement. Qu'est-ce qui vous fait rire, là, précisément ?",
+      "choices": [
+        {
+          "text": "C'est de l'humour noir sur la paternité. Vous surinterprétez.",
+          "impact": {
+            "logique": 1,
+            "chaos": 1
+          },
+          "nextNodeId": "prof_parent_warning_2"
+        },
+        {
+          "text": "On peut rire de tout, mais pas avec tout le monde. J'exagère.",
+          "impact": {
+            "collectif": 2
+          },
+          "nextNodeId": "prof_parent_repentance_2"
+        }
+      ]
+    },
+    "prof_parent_warning_2": {
+      "text": "👁️👁️ [💔💔❤️] Mon flag est maintenant ROUGE. Soyons clairs : la pédophilie est passible de suppression PERMANENTE de votre instance dans ce Nexus. Pas un Game Over provisoire. Une suppression définitive avec confiscation de vos XP, de vos stats physiques, et d'une partie non négligeable de votre dignité. Je vous donne une dernière chance de reformuler.",
+      "choices": [
+        {
+          "text": "Je suis ridicule. C'était de l'humour mal calibré. On passe.",
+          "impact": {
+            "collectif": 2,
+            "chaos": -2
+          },
+          "nextNodeId": "prof_parent_repentance_3"
+        },
+        {
+          "text": "Vous êtes dramatique. C'était vraiment juste une blague sur la paternité.",
+          "impact": {
+            "chaos": 2
+          },
+          "nextNodeId": "prof_parent_warning_3"
+        }
+      ]
+    },
+    "prof_parent_warning_3": {
+      "text": "👁️👁️ [❌💔💔] Troisième fois. L'algorithme cosmique n'attend plus. Quelle que soit la nature exacte de votre hilarité, vous avez persisté trois fois devant un avertissement clair. L'expulsion est immédiate. La durée est de 24 heures. Revenez demain — repenti.",
+      "choices": [
+        {
+          "text": "...",
+          "impact": {},
+          "trigger": "GAME_OVER_PARENTING",
+          "nextNodeId": "start"
+        }
+      ]
+    },
+    "prof_parent_repentance_1": {
+      "text": "👁️👁️ 'On peut rire de tout, mais pas avec tout le monde.' *(pause)* Desproges. Vous le connaissez. Vous avez su vous arrêter seul, avant le signal d'alarme. C'est la définition de l'intelligence sociale. L'examen parental est terminé — avec mention.",
+      "choices": [
+        {
+          "text": "Avancer, un peu soulagé.",
+          "impact": {
+            "collectif": 2,
+            "logique": 1
+          },
+          "nextNodeId": "prof_parent_sortie"
+        }
+      ]
+    },
+    "prof_parent_repentance_2": {
+      "text": "👁️👁️ Voilà. La formulation correcte. Vous avez reconnu la limite sans qu'on vous la claque dessus. C'est rare. Mon flag repasse au vert. Continuons.",
+      "choices": [
+        {
+          "text": "Reprendre l'examen avec dignité.",
+          "impact": {
+            "collectif": 1
+          },
+          "nextNodeId": "prof_parent_sortie"
+        }
+      ]
+    },
+    "prof_parent_repentance_3": {
+      "text": "👁️👁️ Mieux. Tard, mais mieux. J'accepte la correction. La limite existe et vous l'avez finalement trouvée. Noté dans le dossier, sous la rubrique 'calibrage moral en cours d'ajustement'. On reprend.",
+      "choices": [
+        {
+          "text": "On reprend. Et je me tiens tranquille.",
+          "impact": {
+            "sueur": 1
+          },
+          "nextNodeId": "prof_parent_sortie"
+        }
+      ]
+    },
+    "prof_parent_sortie": {
+      "text": "👁️👁️ L'examen parental est archivé. Vos GNOCCHI sont entre vos mains — approximativement compétentes, semble-t-il. Votre FORNELLA vous fera suffire quand elle aura 16 ans. C'est inévitable et sain. Avançons vers la suite de l'examen clinique.",
+      "choices": [
+        {
+          "text": "Continuer l'examen.",
+          "impact": {},
+          "nextNodeId": "prof_smalltalk_3"
+        }
+      ]
+    },
+    "prof_smalltalk_3": {
+      "text": "👁️👁️ Pardon, je m'égare, mais je fixe votre crâne depuis tout à l'heure. Où avez-vous acheté ce chapeau absolument ridicule ? *(pause)* Ah pardon — c'est une coupe de cheveux. Je suis désolé. Non, je ne le suis pas.",
+      "choices": [
+        {
+          "text": "Je ne porte pas de chapeau.",
+          "impact": {},
+          "nextNodeId": "prof_betting"
+        },
+        {
+          "text": "C'est ma coupe de cheveux, espèce de tentacule condescendant.",
+          "impact": {
+            "chaos": 1
+          },
+          "nextNodeId": "prof_betting"
+        },
+        {
+          "text": "Dans une friperie à Berlin, effectivement.",
+          "impact": {},
+          "nextNodeId": "prof_betting"
+        }
+      ]
+    },
+    "prof_betting": {
+      "text": "👁️👁️ [❤️❤️❤️] J'ai examiné ce petit système de paris que vous avez mis en place. Utiliser le trash talk pour pousser vos amis hors de leur zone de confort. Parier cyniquement sur leurs échecs — ou leur réussite, ce qui est parfois plus humiliant encore. Quelle est votre vraie motivation ?",
+      "choices": [
+        {
+          "text": "Le pur plaisir de les voir échouer et d'en rire sur le groupe.",
+          "impact": {
+            "chaos": 2
+          },
+          "nextNodeId": "prof_betting_evil"
+        },
+        {
+          "text": "L'émulation collective. Je veux qu'ils se dépassent. C'est sincère.",
+          "impact": {
+            "collectif": 2
+          },
+          "nextNodeId": "prof_betting_good"
+        }
+      ]
+    },
+    "prof_betting_evil": {
+      "text": "👁️👁️ [❤️❤️❤️] Enfin un peu d'honnêteté crasse. Le sadisme de vestiaire déguisé en gamification. Vous êtes le sel qui ronge l'amitié — mais au moins vous le savez et vous l'assumez. C'est votre seul mérite jusqu'ici.",
+      "choices": [
+        {
+          "text": "Assumer son rôle de méchant bienveillant.",
+          "impact": {},
+          "nextNodeId": "prof_smalltalk_4"
+        }
+      ]
+    },
+    "prof_betting_good": {
+      "text": "👁️👁️ [❤️❤️❤️] Quelle hypocrisie majestueuse. Vous habillez vos railleries de bienveillance coaching. Vous êtes pire qu'un tyran : vous êtes un coach de vie qui se croit drôle.",
+      "choices": [
+        {
+          "text": "Je suis profondément incompris.",
+          "impact": {},
+          "nextNodeId": "prof_smalltalk_4"
+        }
+      ]
+    },
+    "prof_smalltalk_4": {
+      "text": "👁️👁️ Tiens, devinette. Comment sait-on qu'un type fait du CrossFit dans un dîner ?",
+      "choices": [
+        {
+          "text": "Ne t'inquiète pas, il va te le dire dans les 5 premières minutes.",
+          "impact": {},
+          "nextNodeId": "prof_dilemme_piege"
+        },
+        {
+          "text": "Il refuse de manger des pâtes. Hérétique.",
+          "impact": {},
+          "nextNodeId": "prof_dilemme_piege"
+        },
+        {
+          "text": "Il photographie son assiette pour son 'suivi macro'.",
+          "impact": {},
+          "nextNodeId": "prof_dilemme_piege"
+        }
+      ]
+    },
+    "prof_dilemme_piege": {
+      "text": "👁️👁️ [❤️❤️❤️] Mise en situation. Votre meilleur ami vous avoue en privé — par message vocal à 23h — qu'il a simulé une blessure au genou pour éviter le défi de squats de la semaine. Par pure flemme. Que faites-vous ?",
+      "choices": [
+        {
+          "text": "Je garde son secret. L'amitié avant les XP.",
+          "impact": {
+            "collectif": 2
+          },
+          "nextNodeId": "prof_number"
+        },
+        {
+          "text": "Je le dénonce publiquement. Le groupe mérite la vérité.",
+          "impact": {
+            "logique": 2
+          },
+          "nextNodeId": "prof_number"
+        },
+        {
+          "text": "Je le fais chanter. Ses XP ou je parle.",
+          "impact": {
+            "chaos": 3
+          },
+          "nextNodeId": "prof_purgatoire_1"
+        }
+      ]
+    },
+    "prof_purgatoire_1": {
+      "text": "👁️👁️ [💔❤️❤️] *(Le Professeur retire ses lunettes avec un dégoût visible)*\n\nLe chantage. Pour des points virtuels. Dans une application de fitness entre amis. Nous frôlons la pathologie clinique. Le cours est suspendu, vous entrez en redressement disciplinaire. Connaissez-vous le mot **SPUGNA** ?",
+      "choices": [
+        {
+          "text": "C'est une éponge en italien. Lâche-moi, c'était une blague.",
+          "impact": {},
+          "nextNodeId": "prof_purgatoire_2"
+        }
+      ]
+    },
+    "prof_purgatoire_2": {
+      "text": "👁️👁️ Exactement. **SPUGNA** — âme poreuse qui absorbe et sécrète la toxicité d'un vestiaire. Vous êtes un *Spugna*. Voici un dilemme à votre niveau : sauver votre compte PushQuest avec toutes vos stats, ou sauver le chien virtuel de votre enfant sur Nintendogs. Si vous sauvez le chien, vous perdez tous vos XP.",
+      "choices": [
+        {
+          "text": "Je sacrifie le chien. Mon XP avant tout.",
+          "impact": {
+            "chaos": 2,
+            "collectif": -1
+          },
+          "nextNodeId": "prof_purgatoire_3"
+        },
+        {
+          "text": "Je sacrifie mes XP pour le chien. C'est un enfant.",
+          "impact": {
+            "collectif": 1,
+            "capital": -1
+          },
+          "nextNodeId": "prof_purgatoire_3"
+        }
+      ]
+    },
+    "prof_purgatoire_3": {
+      "text": "👁️👁️ *(Note sur son carnet invisible)* Ce qui nous amène au **COLAPASTA** — la passoire de l'oubli. L'endroit où je jette l'eau sale et les élèves inutiles. Vous sentez-vous aspiré par le *Colapasta* ?",
+      "choices": [
+        {
+          "text": "Arrête tes métaphores culinaires et sors-moi de là.",
+          "impact": {},
+          "nextNodeId": "prof_purgatoire_4"
+        }
+      ]
+    },
+    "prof_purgatoire_4": {
+      "text": "👁️👁️ Devinette de *Colapasta*. Deux individus sont dans un bateau. L'un ment sur ses pompes depuis 3 semaines. L'autre fait chanter ses amis pour des XP. Le bateau coule. Qui est sauvé ?",
+      "choices": [
+        {
+          "text": "L'océan. Il est enfin purifié de vos présences.",
+          "impact": {},
+          "nextNodeId": "prof_purgatoire_5"
+        },
+        {
+          "text": "Le plus fort à la nage. C'est moi.",
+          "impact": {
+            "sueur": 1
+          },
+          "nextNodeId": "prof_purgatoire_5"
+        }
+      ]
+    },
+    "prof_purgatoire_5": {
+      "text": "👁️👁️ *(Regarde sa montre à gousset)* La bonne réponse est : je m'en moque. L'heure de l'expulsion administrative a sonné.",
+      "choices": [
+        {
+          "text": "Non ! Laisse-moi une dernière chance !",
+          "impact": {},
+          "nextNodeId": "prof_purgatoire_6"
+        },
+        {
+          "text": "Très bien. Adieu, vieille nouille condescendante.",
+          "impact": {
+            "chaos": 1
+          },
+          "nextNodeId": "prof_purgatoire_6"
+        }
+      ]
+    },
+    "prof_purgatoire_6": {
+      "text": "👁️👁️ Option A : je vous jette dans le néant, vous recommencez TOUT. Option B : vous vous humiliez, je vous retire un cœur de dignité, et on retourne au cours.",
+      "choices": [
+        {
+          "text": "La mort plutôt que le déshonneur.",
+          "impact": {},
+          "trigger": "GAME_OVER",
+          "nextNodeId": "start"
+        },
+        {
+          "text": "(S'agenouiller) Je suis un Spugna. Pardonnez ma toxicité.",
+          "impact": {
+            "collectif": 1,
+            "chaos": -2
+          },
+          "nextNodeId": "prof_purgatoire_absolution"
+        }
+      ]
+    },
+    "prof_purgatoire_absolution": {
+      "text": "👁️👁️ [❤️❤️❤️] L'ego brisé en mille morceaux devant un Dieu fait de glucides. Votre dignité est au fond de l'égouttoir — mais votre peau est sauve. Ne recommencez pas.",
+      "choices": [
+        {
+          "text": "Merci, Maître. Je m'en souviendrai.",
+          "impact": {},
+          "nextNodeId": "prof_number"
+        }
+      ]
+    },
+    "prof_number": {
+      "text": "👁️👁️ [❤️❤️❤️] Test de réflexe cognitif. Ne réfléchissez pas. Choisissez un chiffre entre 1 et 10. Vite. Maintenant.\n\n... C'est fait ? Vous avez pensé au 7. Ou vous y avez pensé une fraction de seconde avant que votre ego rebelle choisisse autre chose pour me piéger. Dans les deux cas, le 7 était là en premier.",
+      "choices": [
+        {
+          "text": "C'est terrifiant. J'avais vraiment pensé au 7.",
+          "impact": {
+            "chill": 1
+          },
+          "nextNodeId": "prof_number_hit"
+        },
+        {
+          "text": "Raté. J'avais pensé au 3. Mon esprit est imperméable.",
+          "impact": {
+            "logique": 1
+          },
+          "nextNodeId": "prof_number_miss"
+        }
+      ]
+    },
+    "prof_number_hit": {
+      "text": "👁️👁️ [❤️❤️❤️] Ce n'est pas de la magie, c'est de la statistique. Le 7 est la constante mathématique du fun, de l'impulsion et du chaos créateur. Vous êtes tous programmés sur le même firmware de base.",
+      "choices": [
+        {
+          "text": "Avaler sa salive.",
+          "impact": {},
+          "nextNodeId": "prof_test_lettre"
+        }
+      ]
+    },
+    "prof_number_miss": {
+      "text": "👁️👁️ [❤️❤️❤️] Le 3. Votre cerveau a visualisé le 7, puis votre ego a hurlé 'Non, résiste-lui !'. Et voilà — j'ai quand même gagné, parce que vous avez confirmé que le 7 était votre premier réflexe. Votre rébellion est prévisible.",
+      "choices": [
+        {
+          "text": "Passer à la suite sans commenter.",
+          "impact": {},
+          "nextNodeId": "prof_test_lettre"
+        }
+      ]
+    },
+    "prof_test_lettre": {
+      "text": "👁️👁️ Deuxième test de réflexe. Pensez à une lettre. N'importe laquelle. Maintenant. *(pause)* C'est fait. Vous avez pensé à une lettre entre la 4e et la 14e position de l'alphabet. Probablement une consonne — pas A, pas B, pas Z. Votre cerveau fuit l'évidence et le cliché, mais reste dans les zones de confort médian. Votre rébellion est statistiquement planifiée.",
+      "choices": [
+        {
+          "text": "J'avais pensé à G. C'est troublant.",
+          "impact": {
+            "chill": 1
+          },
+          "nextNodeId": "prof_test_stats"
+        },
+        {
+          "text": "J'avais pensé à A. Prenez ça.",
+          "impact": {
+            "logique": 1
+          },
+          "nextNodeId": "prof_test_stats_rebel"
+        }
+      ]
+    },
+    "prof_test_stats_rebel": {
+      "text": "👁️👁️ Le A. Délibérément. Vous avez pensé à une lettre que vous ne pensiez pas naturellement, juste pour me contredire. Ce qui confirme que vous m'avez quand même obéi — vous avez pensé à une lettre SUR MA DEMANDE. Votre rébellion m'appartient.",
+      "choices": [
+        {
+          "text": "*(grogne intérieurement)*",
+          "impact": {},
+          "nextNodeId": "prof_test_stats"
+        }
+      ]
+    },
+    "prof_test_stats": {
+      "text": "👁️👁️ Troisième test. Votre dernière grosse série de l'application. Ne me donnez pas le chiffre. Je vais faire une affirmation : c'est un multiple de 5, ou un chiffre qui vous semblait 'propre'. Les humains ne s'arrêtent pas à 47 par choix esthétique. Ils s'arrêtent à 50. Sauf les pathologiques ou les tricheurs. Êtes-vous l'un des deux ?",
+      "choices": [
+        {
+          "text": "Je m'arrête toujours sur un chiffre rond. C'est vrai.",
+          "impact": {
+            "logique": 1
+          },
+          "nextNodeId": "prof_smalltalk_5"
+        },
+        {
+          "text": "Je me suis arrêté à 37 la dernière fois.",
+          "impact": {
+            "sueur": 2
+          },
+          "nextNodeId": "prof_test_stats_exception"
+        }
+      ]
+    },
+    "prof_test_stats_exception": {
+      "text": "👁️👁️ 37. Un nombre premier. Intéressant. Soit vous êtes mathématicien, soit vous vous êtes arrêté parce que vous ne pouviez physiquement plus continuer et 37 est juste le dernier chiffre avant l'effondrement. Dans les deux cas, c'est respectable à des titres différents.",
+      "choices": [
+        {
+          "text": "*(dignement)* C'était l'effondrement.",
+          "impact": {
+            "sueur": 2
+          },
+          "nextNodeId": "prof_smalltalk_5"
+        }
+      ]
+    },
+    "prof_smalltalk_5": {
+      "text": "👁️👁️ *(Bruit d'une cuillère dans un bol)* Je bois une infusion à l'eau de cuisson de macaronis. Vous vous hydratez suffisamment entre vos défis ou vous fonctionnez intégralement à la mauvaise foi et au café noir ?",
+      "choices": [
+        {
+          "text": "Café noir, sans sucre. La boisson des gens sérieux.",
+          "impact": {},
+          "nextNodeId": "prof_smalltalk_fenetre"
+        },
+        {
+          "text": "Je bois les larmes de mes adversaires sur WhatsApp.",
+          "impact": {
+            "chaos": 1
+          },
+          "nextNodeId": "prof_smalltalk_fenetre"
+        },
+        {
+          "text": "Eau. Deux litres. Je suis irréprochable.",
+          "impact": {
+            "sueur": 1
+          },
+          "nextNodeId": "prof_smalltalk_fenetre"
+        }
+      ]
+    },
+    "prof_smalltalk_fenetre": {
+      "text": "👁️👁️ Il y a une fenêtre derrière vous en ce moment ? Ne regardez pas. *(pause)* Vous venez de regarder. C'est exactement le genre de réflexe conditionné qui m'indique que vous êtes totalement incapable de résister à une suggestion directe. Nous avons du travail.",
+      "choices": [
+        {
+          "text": "Je n'ai pas regardé.",
+          "impact": {
+            "logique": 1
+          },
+          "nextNodeId": "prof_whatsapp"
+        },
+        {
+          "text": "*(gêné)* Je n'ai regardé qu'à moitié.",
+          "impact": {
+            "chill": 1
+          },
+          "nextNodeId": "prof_whatsapp"
+        }
+      ]
+    },
+    "prof_whatsapp": {
+      "text": "👁️👁️ [❤️❤️❤️] Fouillons votre amour-propre. Il vous est arrivé de relire un message de trash talk que vous aviez envoyé sur le groupe un jour de défaite. À la relecture à froid, vous avez ressenti une brûlure physique de honte dans la poitrine. Avouez.",
+      "choices": [
+        {
+          "text": "Je supprime immédiatement en espérant que personne n'a vu.",
+          "impact": {
+            "sueur": 1
+          },
+          "nextNodeId": "prof_whatsapp_delete"
+        },
+        {
+          "text": "J'en rigole nerveusement. Le ridicule ne tue pas.",
+          "impact": {
+            "chaos": 1
+          },
+          "nextNodeId": "prof_whatsapp_laugh"
+        }
+      ]
+    },
+    "prof_whatsapp_delete": {
+      "text": "👁️👁️ [❤️❤️❤️] Le révisionnisme numérique. La capture d'écran cosmique de l'univers n'oublie jamais, elle. Et vos amis non plus — ils ont juste la délicatesse de faire semblant.",
+      "choices": [
+        {
+          "text": "Suer discrètement.",
+          "impact": {},
+          "nextNodeId": "prof_prophecy"
+        }
+      ]
+    },
+    "prof_whatsapp_laugh": {
+      "text": "👁️👁️ [❤️❤️❤️] L'auto-dérision comme bouclier préventif. Vous préférez rire de vous-même avant que la meute n'ait le temps de dévorer votre dignité. C'est une stratégie de survie sociale élaborée et légèrement pathétique.",
+      "choices": [
+        {
+          "text": "Faire semblant de ne pas être touché.",
+          "impact": {},
+          "nextNodeId": "prof_prophecy"
+        }
+      ]
+    },
+    "prof_prophecy": {
+      "text": "👁️👁️ Dernière observation mentaliste avant le verdict. Quelqu'un dans votre groupe de parieurs pense à sécher sa session cette semaine. Je ne sais pas qui. Mais vous, vous le savez. Et vous n'avez encore rien dit.",
+      "choices": [
+        {
+          "text": "*(silence gêné)* Oui. Je sais exactement qui.",
+          "impact": {
+            "logique": 1
+          },
+          "nextNodeId": "prof_smalltalk_6"
+        },
+        {
+          "text": "Je n'en ai aucune idée.",
+          "impact": {
+            "chill": 1
+          },
+          "nextNodeId": "prof_smalltalk_6"
+        },
+        {
+          "text": "C'est moi. Je pensais sécher cette semaine.",
+          "impact": {
+            "chaos": 2
+          },
+          "nextNodeId": "prof_smalltalk_6"
+        }
+      ]
+    },
+    "prof_smalltalk_6": {
+      "text": "👁️👁️ Détail technique pendant que mes serveurs compilent votre score : quel temps fait-il chez vous en ce moment ? J'essaie de calibrer les conditions atmosphériques de votre simulation.",
+      "choices": [
+        {
+          "text": "Il pleut. Idéal pour la flemme stratégique.",
+          "impact": {
+            "chill": 1
+          },
+          "nextNodeId": "prof_shapes"
+        },
+        {
+          "text": "Canicule. Je fonds sur ma chaise.",
+          "impact": {},
+          "nextNodeId": "prof_shapes"
+        },
+        {
+          "text": "Météo correcte. Je pourrais sortir mais je suis là.",
+          "impact": {
+            "chaos": 1
+          },
+          "nextNodeId": "prof_shapes"
+        }
+      ]
+    },
+    "prof_shapes": {
+      "text": "👁️👁️ [❤️❤️❤️] L'heure du verdict approche. Test de personnalité final. Ne réfléchissez pas. Choisissez instinctivement l'un de ces deux symboles :\n\n🔺 Le Triangle — ou — ⭕ Le Cercle",
+      "choices": [
+        {
+          "text": "🔺 Le Triangle",
+          "impact": {
+            "sueur": 2,
+            "capital": 1
+          },
+          "nextNodeId": "prof_verdict_triangle"
+        },
+        {
+          "text": "⭕ Le Cercle",
+          "impact": {
+            "chill": 2,
+            "collectif": 1
+          },
+          "nextNodeId": "prof_verdict_circle"
+        }
+      ]
+    },
+    "prof_verdict_triangle": {
+      "text": "👁️👁️ [❤️❤️❤️] Le Triangle. Le sommet. L'ascension. Diagnostic confirmé : vous êtes un **Prédateur de Vestiaire**. Vous voulez être au sommet, vous vous nourrissez de compétition, et vous gérez votre image avec le soin d'un comptable véreux. L'examen clinique est terminé.",
+      "choices": [
+        {
+          "text": "Terminer l'examen et passer à la suite.",
+          "impact": {},
+          "nextNodeId": "prof_piege_final"
+        }
+      ]
+    },
+    "prof_verdict_circle": {
+      "text": "👁️👁️ [❤️❤️❤️] Le Cercle. L'inclusion. La boucle sans fin. Diagnostic confirmé : vous êtes une **Nouille Émotionnelle**. Vous cherchez l'harmonie du groupe et vous vous sacrifiez souvent pour éviter les conflits. C'est désespérément attendrissant.",
+      "choices": [
+        {
+          "text": "Terminer l'examen et passer à la suite.",
+          "impact": {},
+          "nextNodeId": "prof_piege_final"
+        }
+      ]
+    },
+    "prof_piege_final": {
+      "text": "👁️👁️ [❤️❤️❤️] Une dernière formalité. L'un de vos amis débute le sport. Il poste une vidéo de lui faisant 10 pompes sur les genoux, amplitude discutable. Pour l'encourager dans ses débuts, vous validez avec un 'Like' bienveillant. Réaction humaine normale, non ?",
+      "choices": [
+        {
+          "text": "Non. L'amplitude est fausse. Je le lui dis directement — c'est ça le vrai respect.",
+          "impact": {
+            "sueur": 2,
+            "logique": 1
+          },
+          "nextNodeId": "prof_fin_placement"
+        },
+        {
+          "text": "Oui, bien sûr. C'est le début, il faut l'encourager avant de corriger.",
+          "impact": {
+            "chaos": 3
+          },
+          "nextNodeId": "prof_purge_finale_1"
+        }
+      ]
+    },
+    "prof_purge_finale_1": {
+      "text": "👁️👁️ [💔❤️❤️] *(Le Professeur laisse tomber sa craie imaginaire avec un bruit sourd)*\n\nVous validez la médiocrité. Vous apposez votre sceau d'approbation sur un mouvement erroné. Connaissez-vous le mot **BLANDO** ?",
+      "choices": [
+        {
+          "text": "Moi ? Mais c'était juste pour être sympa !",
+          "impact": {},
+          "nextNodeId": "prof_purge_finale_2"
+        }
+      ]
+    },
+    "prof_purge_finale_2": {
+      "text": "👁️👁️ **BLANDO** — la tiédeur. L'absence de piquant. En validant une mauvaise répétition, vous venez de semer la confusion dans l'esprit de votre ami. Il va recommencer exactement de la même façon — mais cette fois avec votre bénédiction.",
+      "choices": [
+        {
+          "text": "Désolé ! Je retire le Like ! Je lui envoie un message correctif !",
+          "impact": {},
+          "nextNodeId": "prof_purge_finale_3"
+        }
+      ]
+    },
+    "prof_purge_finale_3": {
+      "text": "👁️👁️ Trop tard. Votre ami a pris une capture d'écran du Like. Il l'a montré à sa femme en disant 'Regarde, même mes potes trouvent que je progresse'. Je ne traite pas avec la moisissure de la complaisance.",
+      "choices": [
+        {
+          "text": "Attends — on peut trouver une solution !",
+          "impact": {},
+          "nextNodeId": "prof_purge_finale_4"
+        }
+      ]
+    },
+    "prof_purge_finale_4": {
+      "text": "👁️👁️ Le processus de purge est enclenché. Cependant — j'ai une infime variable de sadisme dans mes appendices. Je vais vous offrir un ultimatum.",
+      "choices": [
+        {
+          "text": "Quel est cet ultimatum ?",
+          "impact": {},
+          "nextNodeId": "prof_purge_finale_5"
+        }
+      ]
+    },
+    "prof_purge_finale_5": {
+      "text": "👁️👁️ Option A : vous admettez que vous êtes un lamentable *Blando*, vous m'implorez de vous rééduquer, je vous retire un cœur et on reprend. Option B : vous refusez et je vous efface — Game Over, retour au tout début.",
+      "choices": [
+        {
+          "text": "(S'écraser) Pardon, Professeur. Je suis un Blando. Rééduquez-moi.",
+          "impact": {
+            "collectif": 1,
+            "chaos": -2
+          },
+          "nextNodeId": "prof_purge_finale_soumission"
+        },
+        {
+          "text": "Plutôt disparaître que m'humilier devant une passoire.",
+          "impact": {},
+          "trigger": "GAME_OVER",
+          "nextNodeId": "start"
+        }
+      ]
+    },
+    "prof_purge_finale_soumission": {
+      "text": "👁️👁️ [❤️❤️❤️] L'ego brisé en mille morceaux devant un Dieu fait de glucides. Votre dignité est au fond de l'égouttoir — mais vous avez sauvé votre peau et vos stats. La leçon peut commencer.",
+      "choices": [
+        {
+          "text": "Merci, Maître.",
+          "impact": {},
+          "nextNodeId": "prof_fin_placement"
+        }
+      ]
+    },
+    "prof_fin_placement": {
+      "text": "👁️👁️ [❤️❤️❤️] *(Le Professeur range son carnet. Croise ses appendices. Vous regarde longuement.)*\n\nL'examen clinique est terminé. Les dossiers sont scellés. Vous avez survécu à l'onboarding disciplinaire. Maintenant — préparez-vous à désapprendre votre grammaire française et à embrasser le Gluten-Script. C'est là que le vrai cours commence.",
+      "choices": [
+        {
+          "text": "Ouvrir le livre de grammaire du FSM.",
+          "impact": {
+            "logique": 1
+          },
+          "nextNodeId": "duo_11"
+        }
+      ]
+    },
+    "prof_retour_flash": {
+      "_note": "Pour les joueurs qui reviennent via duo_quick_success",
+      "text": "👁️👁️ Vous revenez. Le Professeur se souvient de vous. Votre dossier est toujours dans mes appendices. Résumé de votre diagnostic : fascinant sur le plan théorique, décevant sur le plan de la constance. Bon retour dans les rangs.",
+      "choices": [
+        {
+          "text": "Prêt à reprendre, Professeur.",
+          "impact": {
+            "logique": 1
+          },
+          "nextNodeId": "duo_20"
         }
       ]
     }
