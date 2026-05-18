@@ -2,85 +2,112 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { NextResponse } from 'next/server';
+import { calculateAllUsersXP } from '@/lib/xp';
+import { getUserSummaries } from '@/lib/badges';
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const userId = (session.user as any).id;
 
-    // Dernière séance
+    // ── XP : utiliser le même calcul dynamique que le bandeau dashboard ──
+    const allUsers = await prisma.user.findMany({
+      where: {
+        nickname: { not: 'modo' },
+        isSystem: false
+      },
+      select: {
+        id: true,
+        nickname: true,
+        email: true,
+        image: true,
+        buyoutPaid: true,
+        buyoutPaidAt: true,
+        sets: true,
+        fines: true,
+        sallyUps: true,
+        medicalCertificates: true,
+        potEvents: true,
+        xpAdjustments: true,
+        league: true,
+        onboardingStartedAt: true,
+        createdAt: true
+      }
+    });
+
+    const badgeOwnerships = await prisma.badgeOwnership.findMany({
+      include: {
+        badge: true,
+        currentUser: { select: { nickname: true, image: true } }
+      }
+    });
+
+    const allTorchAndStealEvents = await prisma.badgeEvent.findMany({
+      where: { eventType: { in: ["STEAL", "TORCH_CLAIM"] } }
+    });
+    const sharedSummaries = getUserSummaries(allUsers, allTorchAndStealEvents);
+
+    const xpScores = await calculateAllUsersXP(allUsers, badgeOwnerships, sharedSummaries);
+
+    // Tri par XP décroissant
+    const sorted = [...xpScores].sort(
+      (a: any, b: any) => (b.totalXP ?? 0) - (a.totalXP ?? 0)
+    );
+    
+    const currentUserScore = sorted.find((u: any) => u.id === userId);
+    const xpTotal = currentUserScore?.totalXP ?? 0;
+    const rank = sorted.findIndex((u: any) => u.id === userId) + 1;
+
+    // ── Rival : la personne juste au-dessus dans le classement ──
+    // Si l'utilisateur est #1, prendre le #2
+    const rivalIndex = rank <= 1 ? 1 : rank - 2;
+    const rivalUser = sorted[rivalIndex];
+    const rivalName = (rivalUser as any)?.nickname ?? 'ton rival';
+
+    // ── Dernière séance ──
     const lastSet = await prisma.exerciseSet.findFirst({
       where: { userId },
       orderBy: { createdAt: 'desc' }
     });
 
-    // Calcul du meilleur exercice de la dernière séance
-    let lastExercise = 'pompes';
-    let lastScore = 0;
-    if (lastSet) {
-      lastScore = lastSet.reps;
-      const exoMap: Record<string, string> = {
-        'PUSHUP': 'pompes',
-        'PULLUP': 'tractions',
-        'SQUAT': 'squats',
-        'PLANK': 'gainage'
-      };
-      lastExercise = exoMap[lastSet.exercise] || 'pompes';
-    }
+    const exerciseMap: Record<string, string> = {
+      PUSHUP: 'pompes',
+      PULLUP: 'tractions',
+      SQUAT: 'squats',
+      PLANK: 'gainage',
+    };
+    const lastExercise = lastSet
+      ? (exerciseMap[lastSet.exercise] ?? lastSet.exercise.toLowerCase())
+      : 'pompes';
+    const lastScore = lastSet?.reps ?? 0;
 
-    // Date lisible
     const daysSince = lastSet
-      ? Math.floor((Date.now() - lastSet.createdAt.getTime()) / (1000 * 60 * 60 * 24))
+      ? Math.floor((Date.now() - new Date(lastSet.createdAt).getTime()) / 86400000)
       : 99;
     const lastWodDate =
       daysSince === 0 ? "aujourd'hui"
       : daysSince === 1 ? "hier"
       : `il y a ${daysSince} jours`;
 
-    // Tous les users pour le ranking
-    const allUsers = await prisma.user.findMany({
-      select: { id: true, nickname: true }
-    });
-
-    // XP total via les ExerciseSets (somme de tous les scores)
-    const userSets = await prisma.exerciseSet.findMany({ where: { userId } });
-    const xpTotal = userSets.reduce((acc: number, s: any) => {
-      return acc + s.reps;
-    }, 0);
-
-    // Streak (jours consécutifs)
+    // ── Streak ──
     const recentSets = await prisma.exerciseSet.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
-      take: 30
+      take: 60,
     });
     let streak = 0;
     let checkDate = new Date();
     checkDate.setHours(0, 0, 0, 0);
-    for (const set of recentSets) {
-      const setDate = new Date(set.createdAt);
-      setDate.setHours(0, 0, 0, 0);
-      const diff = Math.floor((checkDate.getTime() - setDate.getTime()) / (1000 * 60 * 60 * 24));
-      if (diff <= 1) { streak++; checkDate = setDate; }
+    for (const s of recentSets) {
+      const d = new Date(s.createdAt);
+      d.setHours(0, 0, 0, 0);
+      const diff = Math.floor((checkDate.getTime() - d.getTime()) / 86400000);
+      if (diff <= 1) { streak++; checkDate = d; }
       else break;
     }
-
-    // Rival : user le plus proche au classement
-    const allXP = await Promise.all(
-      allUsers.filter((u: any) => u.id !== userId).map(async (u: any) => {
-        const sets = await prisma.exerciseSet.findMany({ where: { userId: u.id } });
-        const xp = sets.reduce((acc: number, s: any) => acc + s.reps, 0);
-        return { id: u.id, name: u.nickname ?? 'Inconnu', xp };
-      })
-    );
-
-    const sorted = [...allXP, { id: userId, name: '', xp: xpTotal }]
-      .sort((a: any, b: any) => b.xp - a.xp);
-    const rank = sorted.findIndex((u: any) => u.id === userId) + 1;
-    const rival = allXP.sort((a: any, b: any) => Math.abs(a.xp - xpTotal) - Math.abs(b.xp - xpTotal))[0];
-    const rivalName = rival?.name ?? 'ton rival';
 
     return NextResponse.json({
       xpTotal,
@@ -89,12 +116,11 @@ export async function GET() {
       lastScore,
       lastExercise,
       rank,
-      daysStreak: streak
+      daysStreak: streak,
     });
 
   } catch (error) {
-    console.error('nexus-stats error:', error);
-    // Fallback gracieux — ne jamais bloquer le Nexus
+    console.error('[nexus-stats]', error);
     return NextResponse.json({
       xpTotal: 0,
       rivalName: 'ton rival',
@@ -102,7 +128,7 @@ export async function GET() {
       lastScore: 0,
       lastExercise: 'pompes',
       rank: 1,
-      daysStreak: 0
+      daysStreak: 0,
     });
   }
 }
