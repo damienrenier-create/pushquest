@@ -17,7 +17,21 @@ import RecordsAssiduiteSection from "./dashboard/RecordsAssiduiteSection"
 import FeatureDiscoveryCarousel from "./FeatureDiscoveryCarousel"
 import NotificationToast from "./NotificationToast"
 import { REACTION_PHRASES } from "@/config/notifications"
-import SanctuaireTab from "@/components/dashboard/SanctuaireTab"
+import dynamic from "next/dynamic"
+
+const SanctuaireTab = dynamic(
+  () => import("@/components/dashboard/SanctuaireTab"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center min-h-[500px] bg-slate-950 rounded-3xl">
+        <p className="text-yellow-500/50 font-mono text-xs tracking-widest animate-pulse">
+          🍝 Ouverture du Nexus...
+        </p>
+      </div>
+    ),
+  }
+)
 
 interface UserStats {
   xpTotal: number;
@@ -135,11 +149,12 @@ export default function ChallengeDashboard() {
     const [nexusStats, setNexusStats] = useState<UserStats | null>(null);
 
     useEffect(() => {
+      if (activeTab !== 'sanctuaire' || nexusStats) return;
       fetch('/api/user/nexus-stats')
         .then(r => r.json())
         .then(data => setNexusStats(data))
         .catch(() => {});
-    }, []);
+    }, [activeTab, nexusStats]);
     const [selectedDate, setSelectedDate] = useState<string>(DEFAULT_DASHBOARD_DATA.selectedDateISO)
     const lastFetchTime = useRef<number>(Date.now())
     const [localSets, setLocalSets] = useState<{ pushups: (number | "")[]; pullups: (number | "")[]; squats: (number | "")[]; planks: (number | "")[] }>({
