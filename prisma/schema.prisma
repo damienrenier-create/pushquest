@@ -26,6 +26,7 @@ model User {
   eventLikes BadgeEventLike[]
   potEvents PotEvent[]
   wallMessages WallMessage[]
+  gamebookProgress GamebookProgress[]
   statuses   UserStatus[]
   statusLikes StatusLike[]
   badgeLikes  BadgeLike[]
@@ -378,4 +379,23 @@ model QuotaModifier {
   @@index([targetUserId, targetDateISO])
   @@index([sourceUserId])
   @@index([targetDateISO, status])
+}
+
+model GamebookProgress {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chapterId     String
+  currentNodeId String
+  mood          String   @default("NEUTRE")
+  mbtiScores    Json     @default("{}")
+  temperaments  Json     @default("{}")
+  flags         Json     @default("{}")
+  history       Json     @default("[]")
+  isCompleted   Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, chapterId])
+  @@index([userId])
 }

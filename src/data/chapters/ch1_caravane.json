@@ -1,0 +1,202 @@
+{
+  "chapterId": "ch1_caravane",
+  "title": "La Caravane Égarée",
+  "version": 1,
+  "entryNodeId": "g1_eveil",
+  "description": "Premier chapitre du gamebook PushQuest. Le joueur rencontre le Monstre Spaghetti Volant et accepte de convoyer une caravane de Bagolio à Risoletto. Profilage MBTI en sous-marin.",
+  "nodes": {
+    "g1_eveil": {
+      "kind": "genese",
+      "body": "Tu ouvres les yeux. Tu ne sais pas comment tu es arrivé là.\n\nUne grotte. Sol humide. Une lueur orange clignote au fond, plus loin que tu n'arrives à voir. Ça sent la tomate cuite. Ça sent la tomate cuite dans une grotte, ce qui est très spécifiquement perturbant.\n\nTu te lèves. Tes vêtements sont propres. Tu n'as mal nulle part. Mais tu n'as aucun souvenir de la dernière minute, de la dernière heure, ni d'ailleurs des dix dernières années de ta vie en regardant bien.\n\nUne voix, lointaine mais étonnamment claire, prononce ton prénom.\n\n— {nickname} ? T'es là ? Bouge un peu. Avance vers la lumière. Pas par symbolisme. Juste parce que je te vois pas.",
+      "choices": [
+        {
+          "id": "c_g1_avance",
+          "text": "Tu avances.",
+          "tag": "neutral",
+          "mbti": {},
+          "temperaments": {},
+          "monsterComment": null,
+          "nextNodeId": "g2_rencontre"
+        }
+      ]
+    },
+    "g2_rencontre": {
+      "kind": "genese",
+      "body": "Tu marches une minute. La lueur s'agrandit. Tu débouches dans une cavité plus large, éclairée par une marmite suspendue qui brûle sans support visible.\n\nAu centre, flottant à un mètre du sol, il y a quelque chose. Tu ne sais pas comment décrire ça. Tu vois des appendices, mais quand tu fixes ton regard ils disparaissent. Tu vois un visage, mais quand tu clignes il a changé. La seule constante, c'est une odeur — sauce dominicale, sauce avec des heures dedans, sauce que ta grand-mère faisait peut-être si tu avais eu cette chance.\n\nTu comprends, sans qu'on te le dise, que c'est lui qui t'a appelé.\n\n— Voilà. Approche encore un peu. Pas trop. Là, bien. Bon. {nickname}, je vais être direct avec toi parce que j'ai pas une éternité. Si, en fait, j'ai littéralement l'éternité. Mais j'ai pas envie de la passer à t'expliquer trois fois la même chose.\n\nIl prend une pause théâtrale. Tu jurerais qu'il a fait exprès.\n\n— Je t'ai choisi. Pour une mission. Pas une grosse mission, hein, faut pas que tu te montes la tête. Une mission de calibrage. Pour voir ce que tu vaux. À la fin, si tu t'en sors, tu deviens mon apprenti. Mes apprentis ont des avantages. Ils gagnent de l'expérience. Ils débloquent des choses. Ils ont une vie meilleure, statistiquement. Bref.",
+      "choices": [
+        {
+          "id": "c_g2_de_quoi",
+          "text": "De quoi parles-tu ?",
+          "tag": "neutral",
+          "mbti": {},
+          "temperaments": {},
+          "monsterComment": null,
+          "nextNodeId": "g3_briefing"
+        }
+      ]
+    },
+    "g3_briefing": {
+      "kind": "genese",
+      "body": "— De quoi je parle, oui, bonne question, on y arrive. Tu vas convoyer une caravane. Quatorze marchands, deux mulets, trois tonnes de victuailles diverses. De Bagolio jusqu'à Risoletto. Trois jours de route. Tu connais pas ces noms, c'est normal, ils sont à moi. J'aime bien nommer des trucs.\n\nIl fait flotter une carte devant toi. Elle est dessinée à la main, mal. Tu vois quand même les deux villages reliés par un sentier qui serpente.\n\n— Pourquoi cette mission ? Parce que je veux voir comment tu te comportes avec des gens. Comment tu réagis quand ça part en sucette. Quels choix tu fais quand y a pas de bonne réponse. C'est une formalité, en théorie. En pratique, je sais pas, j'ai jamais eu un apprenti qui me ressemble. Tu vas peut-être tout rater. Ça fera une bonne histoire à raconter.\n\nIl a dit ça avec une affection bizarre, comme s'il espérait presque que tu rates pour le drame.\n\n— Une dernière chose. Je serai pas physiquement avec toi pendant le voyage. Mais je vais te commenter. En permanence. Tu m'entendras dans ta tête. Considère-moi comme une voix off un peu agaçante mais avec de bonnes intentions. Approximativement de bonnes intentions.",
+      "choices": [
+        {
+          "id": "c_g3_refuser",
+          "text": "Et si je refuse ?",
+          "tag": "neutral",
+          "mbti": {},
+          "temperaments": {},
+          "monsterComment": null,
+          "nextNodeId": "g4_faux_choix"
+        }
+      ]
+    },
+    "g4_faux_choix": {
+      "kind": "genese",
+      "body": "Il rit. Un rire bref, sec, qui n'est pas méchant mais qui n'est pas non plus rassurant.\n\n— Refuser. Refuser. Tu veux refuser. {nickname}, regarde autour de toi. Tu es dans une grotte. Tu sais pas comment tu y es arrivé. Tu sais pas où elle est dans le monde. Tu sais pas si elle a une sortie autre que par moi. Tu peux refuser, hein. Sincèrement. Mais ce sera une expérience longue et inintéressante.\n\nIl se rapproche de toi sans bouger. Tu sens la chaleur de la marmite plus forte. L'odeur de sauce devient presque solide.\n\n— Bon. Je vais te demander une dernière fois, mais cette fois c'est pour de vrai. La mission, tu la prends ?",
+      "choices": [
+        {
+          "id": "c_g4_prend",
+          "text": "Je la prends.",
+          "tag": "bold",
+          "mbti": {},
+          "temperaments": { "courage": 0.5 },
+          "monsterComment": "Voilà. Excellent. Ferme les yeux une seconde. Quand tu les rouvres, t'es à Bagolio. Et essaye de pas tout casser.",
+          "nextNodeId": "s1_bagolio"
+        }
+      ]
+    },
+    "s1_bagolio": {
+      "kind": "scene_porte",
+      "axis": "E/I",
+      "body": "Tu apparais dans la cour de l'auberge de Bagolio. La grotte s'est dissipée comme un mauvais rêve. Devant toi, quatorze marchands attablés autour d'un grand feu central. Des odeurs de viande grillée, de tabac, de vin renversé.\n\nIls ont remarqué ton arrivée. Plusieurs ont arrêté de manger. Tu sens quatorze regards, certains curieux, d'autres méfiants. Personne ne parle. Personne ne te connaît.\n\nAu fond, près d'une charrette, un homme âgé brasse une marmite en silence. Il ne te regarde pas. Il y a aussi deux enfants qui jouent avec un caillou plus loin.\n\nLa voix du Monstre, dans ta tête :\n\n— Voilà ton équipe. Pas tous des lumières mais ils ont signé pour le voyage. Ils attendent que tu te présentes. À toi de jouer.",
+      "choices": [
+        {
+          "id": "c_s1_A1",
+          "text": "Tu te plantes au milieu de la cour, tu lèves les bras, et tu te présentes à tout le monde en parlant fort.",
+          "tag": "bold",
+          "mbti": { "E": 2 },
+          "temperaments": { "courage": 1 },
+          "monsterComment": null,
+          "nextNodeId": "t_s1_A1"
+        },
+        {
+          "id": "c_s1_A2",
+          "text": "Tu te diriges vers la table la plus animée, tu salues, tu te glisses dans la conversation.",
+          "tag": "bold",
+          "mbti": { "E": 1 },
+          "temperaments": { "courage": 0.5, "compassion": 0.5 },
+          "monsterComment": null,
+          "nextNodeId": "t_s1_A2"
+        },
+        {
+          "id": "c_s1_B2",
+          "text": "Tu fais le tour discrètement, tu observes qui parle à qui, tu essaies de comprendre les dynamiques.",
+          "tag": "clever",
+          "mbti": { "I": 1 },
+          "temperaments": { "malice": 0.5 },
+          "monsterComment": null,
+          "nextNodeId": "t_s1_B2"
+        },
+        {
+          "id": "c_s1_B1",
+          "text": "Tu t'installes près du feu en silence, tu attends que quelqu'un vienne te voir.",
+          "tag": "safe",
+          "mbti": { "I": 2 },
+          "temperaments": { "courage": -0.5 },
+          "monsterComment": null,
+          "nextNodeId": "t_s1_B1"
+        }
+      ]
+    },
+    "t_s1_A1": {
+      "kind": "tampon",
+      "body": "Ta voix porte. Trop, peut-être. Le silence qui suit ta présentation est gênant.\n\n« Eh ben au moins on sait qui c'est », lâche un marchand grognon avec une cicatrice sur le front. Plusieurs ricanements. Un autre marchand, jeune et souriant, applaudit gentiment. « Bien parlé. Moi c'est Penne. » Il te serre la main fort.\n\nUne femme aux cheveux blancs, assise à part, ne te regarde pas mais murmure à sa voisine quelque chose qui te concerne. Tu n'entends pas. La voisine glousse.\n\n— Bon. Soit ils vont t'adorer, soit te détester, en tout cas ils t'ont remarqué. Je dis ça je dis rien.",
+      "flags": {
+        "addAllies": ["Penne"],
+        "addRivals": ["Grogno"]
+      },
+      "choices": [
+        {
+          "id": "c_t_s1_A1_continue",
+          "text": "Tu rejoins le feu pour discuter de la suite.",
+          "tag": "neutral",
+          "mbti": {},
+          "temperaments": {},
+          "monsterComment": null,
+          "nextNodeId": "s2_planification"
+        }
+      ]
+    },
+    "t_s1_A2": {
+      "kind": "tampon",
+      "body": "Tu t'assois à la table la plus bruyante. Trois marchands, un broc de vin, une partie de dés en cours. « Tiens, un nouveau ! » Le plus âgé te tend un verre. « Tu joues ? »\n\nTu décides ou non. En quelques minutes, tu sais leur nom : Penne (le jeune souriant), Linguini (l'âgé rusé), et Risotto (le silencieux qui gagne tout). Ils te résument la caravane en deux phrases : « Y a des bons, y a des cons. Tu vas voir. »\n\nTu remarques au passage que personne d'autre n'est venu se présenter. Tu as fait une bande de 3 amis en 5 minutes. Le reste de la caravane t'ignore poliment.\n\n— Trois amis sur quatorze, c'est une stratégie. Petite, mais cohérente.",
+      "flags": {
+        "addAllies": ["Penne", "Linguini", "Risotto"]
+      },
+      "choices": [
+        {
+          "id": "c_t_s1_A2_continue",
+          "text": "Le soir tombe, il faut planifier la route.",
+          "tag": "neutral",
+          "mbti": {},
+          "temperaments": {},
+          "monsterComment": null,
+          "nextNodeId": "s2_planification"
+        }
+      ]
+    },
+    "t_s1_B2": {
+      "kind": "tampon",
+      "body": "Tu fais lentement le tour de la cour, l'air de rien. Tu écoutes plus que tu ne parles. En quinze minutes d'observation, tu as compris :\n\n- Les marchands sont divisés en deux clans. L'un autour de Linguini (l'âgé rusé), l'autre autour de Penne (le jeune souriant). Les deux ne s'aiment pas.\n- Le vieux cuisinier près de la charrette s'appelle Brodo. Personne ne lui parle. Il a l'air d'aimer ça.\n- La femme aux cheveux blancs est Cannella. Elle est riche. Les autres marchands la respectent mais en ont peur.\n- Les deux enfants appartiennent à un marchand absent, qui doit rejoindre la caravane à la prochaine étape.\n\nTu n'as parlé à personne. Mais tu sais déjà à qui parler en premier quand il faudra.\n\n— Tu m'as un peu impressionné, là. Un peu seulement. Faut pas s'enflammer.",
+      "flags": {
+        "discovered": ["Penne", "Linguini", "Brodo", "Cannella"],
+        "knowsClans": true
+      },
+      "choices": [
+        {
+          "id": "c_t_s1_B2_continue",
+          "text": "Tu t'approches du feu, prêt à organiser la suite.",
+          "tag": "neutral",
+          "mbti": {},
+          "temperaments": {},
+          "monsterComment": null,
+          "nextNodeId": "s2_planification"
+        }
+      ]
+    },
+    "t_s1_B1": {
+      "kind": "tampon",
+      "body": "Tu t'assois sur un banc près du feu. Tu ne dis rien.\n\nTrois minutes. Cinq minutes. Dix minutes. Personne ne vient te voir. Les marchands continuent leurs affaires comme si tu n'existais pas.\n\nTu commences à te dire que c'était peut-être pas la meilleure stratégie. Mais à la quinzième minute, le vieux cuisinier — celui qui brassait la marmite — se lève lentement, traverse la cour, et vient s'asseoir à côté de toi. Sans un mot, il te tend une gamelle de soupe.\n\nIl s'appelle Brodo, finit-il par dire après que tu aies fini la moitié. « Moi non plus j'aime pas le bruit. T'es le nouveau convoyeur, je suppose. Pose pas de questions ce soir. Tu auras tout le temps demain. »\n\nIl te tape sur l'épaule, se relève, et retourne à sa marmite.\n\n— Tu sais que tu viens de gagner Brodo, là, hein ? Tu le sais ? Bon. C'est presque mieux que tous les autres réunis.",
+      "flags": {
+        "addAllies": ["Brodo"],
+        "brodoSpecialBond": true
+      },
+      "choices": [
+        {
+          "id": "c_t_s1_B1_continue",
+          "text": "Tu finis ta soupe et tu te prépares pour le lendemain.",
+          "tag": "neutral",
+          "mbti": {},
+          "temperaments": {},
+          "monsterComment": null,
+          "nextNodeId": "s2_planification"
+        }
+      ]
+    },
+    "s2_planification": {
+      "kind": "scene_porte_placeholder",
+      "body": "[Scène 2 — Le Convoi se Met en Route. Cette scène sera écrite dans une future itération. Pour l'instant, ce nœud sert de point de fin du test.]\n\nLa nuit tombe sur Bagolio. Demain, la route. Tu fermes les yeux.\n\n— Bon. Tu m'as déjà appris des choses sur toi. C'est intéressant. On se voit demain.\n\nFIN DU TEST DE LA SCÈNE 1.",
+      "choices": [
+        {
+          "id": "c_s2_restart",
+          "text": "Recommencer le test (retour à la Genèse).",
+          "tag": "neutral",
+          "mbti": {},
+          "temperaments": {},
+          "monsterComment": null,
+          "nextNodeId": "g1_eveil"
+        }
+      ]
+    }
+  }
+}

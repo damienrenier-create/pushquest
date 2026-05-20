@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
-import dialogueData from '@/data/fsm_dialogue.json'
+import dialogueData from './fsm_dialogue.json'
 
 const DUO_DONE_KEY = 'fsm_duolingo_done';
 const GRADE_EMOJIS: Record<string, string> = {
