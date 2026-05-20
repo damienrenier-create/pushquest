@@ -223,31 +223,86 @@
       "id": "t_s2_A1_inter2",
       "kind": "tampon",
       "body": "Au petit matin, l'aube se lève sur Bagolio. Linguini recompte les effectifs. Deux marchands secondaires, terrifiés par votre régime autoritaire, ont fait leurs paquets pendant la nuit et sont rentrés chez eux.",
-      "choices": [ { "id": "c1", "text": "La caravane s'ébranle", "tag": "neutral", "nextNodeId": "s3_confidence_placeholder", "monsterComment": "Tu as voulu diriger cette caravane comme un camp de redressement. Résultat : des déserteurs. Bref. Le soleil se lève.", "mbti": {}, "temperaments": {} } ]
+      "choices": [ { "id": "c1", "text": "La caravane s'ébranle", "tag": "neutral", "nextNodeId": "s3_confidence", "monsterComment": "Tu as voulu diriger cette caravane comme un camp de redressement. Résultat : des déserteurs. Bref. Le soleil se lève.", "mbti": {}, "temperaments": {} } ]
     },
     "t_s2_A2": {
       "id": "t_s2_A2",
       "kind": "tampon",
       "body": "Cannella approuve votre pragmatisme. La caravane s'endort sans heurts.",
-      "choices": [ { "id": "c1", "text": "Le lendemain", "tag": "neutral", "nextNodeId": "s3_confidence_placeholder", "mbti": {}, "temperaments": {} } ]
+      "choices": [ { "id": "c1", "text": "Le lendemain", "tag": "neutral", "nextNodeId": "s3_confidence", "mbti": {}, "temperaments": {} } ]
     },
     "t_s2_B2": {
       "id": "t_s2_B2",
       "kind": "tampon",
       "body": "Penne vous tape dans le dos, ravi de cette flexibilité. Vous dormez à la belle étoile.",
-      "choices": [ { "id": "c1", "text": "Le lendemain", "tag": "neutral", "nextNodeId": "s3_confidence_placeholder", "mbti": {}, "temperaments": {} } ]
+      "choices": [ { "id": "c1", "text": "Le lendemain", "tag": "neutral", "nextNodeId": "s3_confidence", "mbti": {}, "temperaments": {} } ]
     },
     "t_s2_B1": {
       "id": "t_s2_B1",
       "kind": "tampon",
       "body": "Votre refus de planifier effraie. Au petit matin, deux marchands secondaires, redoutant le pire, ont plié bagage.",
-      "choices": [ { "id": "c1", "text": "La caravane s'ébranle", "tag": "neutral", "nextNodeId": "s3_confidence_placeholder", "monsterComment": "Ton laxisme a fait fuir des figurants. C'est dommage, l'un d'eux avait une belle moustache. On avance.", "mbti": {}, "temperaments": {} } ]
+      "choices": [ { "id": "c1", "text": "La caravane s'ébranle", "tag": "neutral", "nextNodeId": "s3_confidence", "monsterComment": "Ton laxisme a fait fuir des figurants. C'est dommage, l'un d'eux avait une belle moustache. On avance.", "mbti": {}, "temperaments": {} } ]
     },
-    "s3_confidence_placeholder": {
-      "id": "s3_confidence_placeholder",
+    "s3_confidence": {
+      "id": "s3_confidence",
+      "kind": "scene_porte",
+      "body": "Premier jour de route. Pendant une pause au bord d'un ruisseau, le jeune Penne vient vous trouver à l'écart, le visage fermé. « Ma petite sœur est gravement malade à Bagolio... Je suis déchiré. Je devrais rentrer, mais j'ai absolument besoin de la prime de cette livraison pour payer un médecin. »",
+      "choices": [
+        { "id": "A1", "text": "« Si tu pars, tu perds la prime. Reste, termine la livraison et soigne-la après. »", "tag": "clever", "nextNodeId": "t_s3_A1", "monsterComment": "Clinique. Implacable. Tu as l'empathie d'un caillou, {nickname}.", "mbti": {"T": 2}, "temperaments": {} },
+        { "id": "A2", "text": "« Je peux t'avancer une partie de l'argent de ma propre prime, si ça t'aide. »", "tag": "bold", "nextNodeId": "t_s3_A2", "monsterComment": "Un compromis pragmatique. Très bien.", "mbti": {"T": 1}, "temperaments": {} },
+        { "id": "B2", "text": "« C'est terrible. Je comprends ta douleur, c'est un choix impossible... »", "tag": "safe", "nextNodeId": "t_s3_B2", "monsterComment": "Beaucoup de mots tendres, aucune solution matérielle. J'adore.", "mbti": {"F": 1}, "temperaments": {} },
+        { "id": "B1", "text": "« Ne t'inquiète pas. Je te promets d'aller moi-même m'occuper de ta sœur après la mission. »", "tag": "wrong", "nextNodeId": "t_s3_B1", "monsterComment": "Oh. La promesse intenable du chevalier blanc.", "mbti": {"F": 2}, "temperaments": {} }
+      ]
+    },
+    "t_s3_A1": {
+      "id": "t_s3_A1",
+      "kind": "tampon",
+      "body": "Penne vous regarde, sidéré par la froideur de votre logique mathématique. Il s'éloigne sans un mot, les poings serrés.",
+      "choices": [ { "id": "c1", "text": "Continuer", "tag": "neutral", "nextNodeId": "t_s3_A1_inter1", "mbti": {}, "temperaments": {} } ]
+    },
+    "t_s3_A1_inter1": {
+      "id": "t_s3_A1_inter1",
+      "kind": "tampon",
+      "body": "Alors que Penne s'éloigne, le temps se fige. Le Monstre apparaît, un boulier imaginaire dans les mains.\n« Puisqu'on gère les émotions sur un tableur, qu'est-ce qu'on optimise d'autre aujourd'hui ? »",
+      "choices": [
+        { "id": "c1", "text": "Calculer le retour sur investissement du deuil de Penne.", "tag": "neutral", "nextNodeId": "s4_traces_placeholder", "mbti": {}, "temperaments": {} },
+        { "id": "c2", "text": "Proposer de facturer ses larmes au litre.", "tag": "neutral", "nextNodeId": "s4_traces_placeholder", "mbti": {}, "temperaments": {} },
+        { "id": "c3", "text": "Planifier la revente des biens de sa sœur, \"au cas où\".", "tag": "neutral", "nextNodeId": "s4_traces_placeholder", "mbti": {}, "temperaments": {} }
+      ]
+    },
+    "t_s3_A2": {
+      "id": "t_s3_A2",
+      "kind": "tampon",
+      "body": "Penne semble soulagé par cette solution concrète. Il retourne vers sa charrette avec une étincelle d'espoir.",
+      "choices": [ { "id": "c1", "text": "Reprendre la route", "tag": "neutral", "nextNodeId": "s4_traces_placeholder", "mbti": {}, "temperaments": {} } ]
+    },
+    "t_s3_B2": {
+      "id": "t_s3_B2",
+      "kind": "tampon",
+      "body": "Penne pleure un instant sur votre épaule. Le problème financier reste entier, mais il se sent moins seul.",
+      "choices": [ { "id": "c1", "text": "Reprendre la route", "tag": "neutral", "nextNodeId": "s4_traces_placeholder", "mbti": {}, "temperaments": {} } ]
+    },
+    "t_s3_B1": {
+      "id": "t_s3_B1",
+      "kind": "tampon",
+      "body": "Penne vous serre les mains, les larmes aux yeux. « Merci, convoyeur ! Je vous en devrai une toute ma vie ! »",
+      "choices": [ { "id": "c1", "text": "Continuer", "tag": "neutral", "nextNodeId": "t_s3_B1_inter1", "mbti": {}, "temperaments": {} } ]
+    },
+    "t_s3_B1_inter1": {
+      "id": "t_s3_B1_inter1",
+      "kind": "tampon",
+      "body": "Penne repart en courant. Le Monstre flotte au-dessus de vous, l'air consterné.\n« C'est ça. Promets de sauver tout le monde. Tu veux que je te rajoute une auréole tout de suite ? Qui d'autre vas-tu sauver aujourd'hui ? »",
+      "choices": [
+        { "id": "c1", "text": "Promettre de soigner le genou arthritique de Linguini.", "tag": "neutral", "nextNodeId": "s4_traces_placeholder", "mbti": {}, "temperaments": {} },
+        { "id": "c2", "text": "Jurer de repeindre personnellement la charrette de Cannella.", "tag": "neutral", "nextNodeId": "s4_traces_placeholder", "mbti": {}, "temperaments": {} },
+        { "id": "c3", "text": "Proposer d'adopter légalement tous les enfants des marchands.", "tag": "neutral", "nextNodeId": "s4_traces_placeholder", "mbti": {}, "temperaments": {} }
+      ]
+    },
+    "s4_traces_placeholder": {
+      "id": "s4_traces_placeholder",
       "kind": "scene_porte_placeholder",
-      "body": "[PROCHAIN PATCH] Le convoi prend la route. Lors d'une halte, un marchand viendra se confier à vous...",
-      "choices": [ { "id": "c1", "text": "Attendre le prochain chapitre", "tag": "neutral", "nextNodeId": "s3_confidence_placeholder", "mbti": {}, "temperaments": {} } ]
+      "body": "[PROCHAIN PATCH] Le convoi reprend sa route. Bientôt, vous tomberez sur d'étranges traces sur le sentier...",
+      "choices": [ { "id": "c1", "text": "Attendre le prochain chapitre", "tag": "neutral", "nextNodeId": "s4_traces_placeholder", "mbti": {}, "temperaments": {} } ]
     }
   }
 }
