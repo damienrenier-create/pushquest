@@ -50,7 +50,7 @@ type Props = {
     userId: string
 }
 
-type Slide = "intro" | "body" | "outro"
+type Slide = "intro" | "body"
 
 export default function GamebookClient({ nickname, userId }: Props) {
     const [data, setData] = useState<ApiResponse | null>(null)
@@ -107,15 +107,10 @@ export default function GamebookClient({ nickname, userId }: Props) {
         setLoading(false)
     }
 
-    // Sélection d'un choix : on stocke le choix en attente, on bascule en slide outro
-    function handleChoice(c: Choice) {
+    // Sélection d'un choix : on envoie le choix au serveur, on passe directement au nœud suivant
+    async function handleChoice(c: Choice) {
+        if (!data) return
         setPendingChoice(c)
-        setSlide("outro")
-    }
-
-    // Validation de l'outro : on envoie le choix au serveur, on récupère le nouveau nœud
-    async function commitChoice() {
-        if (!data || !pendingChoice) return
         setLoading(true)
         try {
             const res = await fetch("/api/gamebook/progress", {
@@ -123,7 +118,7 @@ export default function GamebookClient({ nickname, userId }: Props) {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     chapterId: data.progress.chapterId,
-                    choiceId: pendingChoice.id,
+                    choiceId: c.id,
                 }),
             })
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -177,15 +172,6 @@ export default function GamebookClient({ nickname, userId }: Props) {
     const monsterCommentOnPrevious = data.previousChoice?.monsterComment
         ? renderText(data.previousChoice.monsterComment, renderCtx)
         : null
-    const outroPhrase = renderText(
-        pickPhrase(
-            PHRASES,
-            pendingChoice ? moodFromTag(pendingChoice.tag) : "NEUTRE",
-            "outros",
-            seed + ":out"
-        ),
-        renderCtx
-    )
 
     return (
         <div className="min-h-screen bg-amber-50 font-mono">
@@ -221,7 +207,14 @@ export default function GamebookClient({ nickname, userId }: Props) {
                                 Le Monstre
                             </p>
                             {slide === "intro" && (
-                                <p className="text-sm leading-relaxed italic">{introPhrase}</p>
+                                <>
+                                    {monsterCommentOnPrevious && (
+                                        <p className="text-sm leading-relaxed mb-2">
+                                            {monsterCommentOnPrevious}
+                                        </p>
+                                    )}
+                                    <p className="text-sm leading-relaxed italic">{introPhrase}</p>
+                                </>
                             )}
                             {slide === "body" && (
                                 <p className="text-sm leading-relaxed italic text-amber-200/60">
@@ -229,33 +222,15 @@ export default function GamebookClient({ nickname, userId }: Props) {
                                     (Le Monstre observe en silence.)
                                 </p>
                             )}
-                            {slide === "outro" && (
-                                <>
-                                    {monsterCommentOnPrevious && (
-                                        <p className="text-sm leading-relaxed mb-2">
-                                            {monsterCommentOnPrevious}
-                                        </p>
-                                    )}
-                                    <p className="text-sm leading-relaxed italic">{outroPhrase}</p>
-                                </>
-                            )}
                         </div>
                     </div>
                 </div>
 
                 {/* Théâtre narratif */}
                 <div className="mb-6 p-6 bg-white border-2 border-black rounded-md shadow-[4px_4px_0_rgba(0,0,0,1)]">
-                    {slide !== "outro" && (
-                        <div className="whitespace-pre-line text-slate-900 text-[15px] leading-relaxed">
-                            {bodyText}
-                        </div>
-                    )}
-
-                    {slide === "outro" && pendingChoice && (
-                        <div className="text-slate-700 text-sm italic">
-                            Tu as choisi : <span className="font-bold not-italic">{pendingChoice.text}</span>
-                        </div>
-                    )}
+                    <div className="whitespace-pre-line text-slate-900 text-[15px] leading-relaxed">
+                        {bodyText}
+                    </div>
                 </div>
 
                 {/* Navigation entre slides + choix */}
@@ -280,20 +255,10 @@ export default function GamebookClient({ nickname, userId }: Props) {
                                 → {c.text}
                             </button>
                         ))}
-
-                    {slide === "outro" && (
-                        <button
-                            onClick={commitChoice}
-                            disabled={loading}
-                            className="w-full p-3 bg-slate-900 text-amber-100 border-2 border-black rounded-md shadow-[2px_2px_0_rgba(0,0,0,1)] hover:shadow-[4px_4px_0_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all font-bold text-sm uppercase tracking-wider disabled:opacity-50"
-                        >
-                            {loading ? "..." : "Suite →"}
-                        </button>
-                    )}
                 </div>
 
                 {/* Debug / Stats (visible mais discret) */}
-                <div className="mt-8 text-[10px] text-slate-400 tracking-wide">
+                <div className="mt-8 text-[10px] text-amber-50 tracking-wide">
                     <p>Nœud : {data.progress.currentNodeId} · Humeur : {data.progress.mood}</p>
                 </div>
             </div>
