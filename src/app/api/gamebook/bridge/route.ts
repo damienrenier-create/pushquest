@@ -152,7 +152,10 @@ async function challengePnj(userId: string, pnjId: string) {
     } else if (challenge.kind === "topYesterday") {
         const yesterday = getYesterdayISO()
         const allYesterday = await prisma.exerciseSet.findMany({
-            where: { date: yesterday },
+            where: {
+                date: yesterday,
+                user: { isSystem: false }
+            },
         })
         const sumsByUser: Record<string, number> = {}
         for (const s of allYesterday) {
