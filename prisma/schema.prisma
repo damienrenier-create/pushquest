@@ -396,6 +396,26 @@ model GamebookProgress {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  // === Champs ajoutés pour PushQuest v3 (carte Pokémon-style) ===
+  mapId                String   @default("bourgpates")
+  posX                 Int      @default(7)
+  posY                 Int      @default(12)
+  direction            String   @default("up")
+  phase                String   @default("explore")
+  introStep            Int      @default(0)
+  hasEnteredTallGrass  Boolean  @default(false)
+  monsterCaveRevealed  Boolean  @default(false)
+  hasSeenWelcomeScreen Boolean  @default(false)
+  lastSeen             DateTime @default(now())
+
+  // === Champs ajoutés pour PushQuest v3.1 (Route 1 + Pont Pépite d'Azuria) ===
+  treeObstacleCleared       Boolean @default(false)
+  pioneerBadgeAwarded       Boolean @default(false)
+  bridgePnjDefeated         Json    @default("[]")
+  bridgePnjLastBeatenDate   Json    @default("{}")
+
   @@unique([userId, chapterId])
   @@index([userId])
+  @@index([mapId])
+  @@index([lastSeen(sort: Desc)])
 }

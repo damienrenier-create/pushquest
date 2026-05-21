@@ -1,0 +1,191 @@
+// src/app/api/gamebook/state/route.ts
+//
+// GET  /api/gamebook/state  -> lit (ou crée) le GamebookProgress + reps du jour
+// POST /api/gamebook/state  -> sauvegarde le nouvel état
+// DELETE /api/gamebook/state -> reset (debug)
+
+import { NextRequest, NextResponse } from "next/server"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
+import prisma from "@/lib/prisma"
+import { getTodayISO } from "@/lib/challenge"
+import { INITIAL_SPAWN } from "@/lib/gamebook/maps"
+
+export const dynamic = "force-dynamic"
+
+const CHAPTER_ID = "map_v3"
+
+async function getTodayReps(userId: string): Promise<number> {
+    const today = getTodayISO()
+    const sets = await prisma.exerciseSet.findMany({
+        where: { userId, date: today },
+    })
+    return sets.reduce((sum: number, s: { reps: number }) => sum + s.reps, 0)
+}
+
+export async function GET() {
+    const session = await getServerSession(authOptions)
+    if (!session?.user || !(session.user as { id?: string }).id) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    const userId = (session.user as { id: string }).id
+
+    let progress = await prisma.gamebookProgress.findUnique({
+        where: { userId_chapterId: { userId, chapterId: CHAPTER_ID } },
+    })
+
+    if (!progress) {
+        progress = await prisma.gamebookProgress.create({
+            data: {
+                userId,
+                chapterId: CHAPTER_ID,
+                currentNodeId: "map",
+                mapId: INITIAL_SPAWN.mapId,
+                posX: INITIAL_SPAWN.posX,
+                posY: INITIAL_SPAWN.posY,
+                direction: INITIAL_SPAWN.direction,
+                phase: "explore",
+                introStep: 0,
+                hasEnteredTallGrass: false,
+                monsterCaveRevealed: false,
+                hasSeenWelcomeScreen: false,
+                treeObstacleCleared: false,
+                pioneerBadgeAwarded: false,
+                bridgePnjDefeated: [],
+                bridgePnjLastBeatenDate: {},
+            },
+        })
+    } else {
+        await prisma.gamebookProgress.update({
+            where: { id: progress.id },
+            data: { lastSeen: new Date() },
+        })
+    }
+
+    const todayReps = await getTodayReps(userId)
+
+    return NextResponse.json({
+        state: {
+            mapId: progress.mapId,
+            posX: progress.posX,
+            posY: progress.posY,
+            direction: progress.direction,
+            phase: progress.phase,
+            introStep: progress.introStep,
+            hasEnteredTallGrass: progress.hasEnteredTallGrass,
+            monsterCaveRevealed: progress.monsterCaveRevealed,
+            hasSeenWelcomeScreen: progress.hasSeenWelcomeScreen,
+            treeObstacleCleared: progress.treeObstacleCleared,
+            pioneerBadgeAwarded: progress.pioneerBadgeAwarded,
+            bridgePnjDefeated: progress.bridgePnjDefeated,
+            bridgePnjLastBeatenDate: progress.bridgePnjLastBeatenDate,
+        },
+        todayReps,
+    })
+}
+
+export async function POST(req: NextRequest) {
+    const session = await getServerSession(authOptions)
+    if (!session?.user || !(session.user as { id?: string }).id) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    const userId = (session.user as { id: string }).id
+
+    let body: Record<string, unknown>
+    try {
+        body = await req.json()
+    } catch {
+        return NextResponse.json({ error: "Invalid body" }, { status: 400 })
+    }
+
+    const mapId = typeof body.mapId === "string" ? body.mapId : null
+    const posX = typeof body.posX === "number" ? body.posX : null
+    const posY = typeof body.posY === "number" ? body.posY : null
+    const direction = typeof body.direction === "string" ? body.direction : null
+    const phase = typeof body.phase === "string" ? body.phase : null
+
+    if (
+        !mapId ||
+        posX === null ||
+        posY === null ||
+        !direction ||
+        !phase ||
+        !["bourgpates", "gym", "casino", "cave", "route1"].includes(mapId) ||
+        !["up", "down", "left", "right"].includes(direction) ||
+        !["explore", "introMonster", "playing"].includes(phase) ||
+        posX < 0 || posX > 30 ||
+        posY < 0 || posY > 30
+    ) {
+        return NextResponse.json({ error: "Invalid state" }, { status: 400 })
+    }
+
+    const introStep = typeof body.introStep === "number" ? body.introStep : 0
+    const hasEnteredTallGrass = body.hasEnteredTallGrass === true
+    const monsterCaveRevealed = body.monsterCaveRevealed === true
+    const hasSeenWelcomeScreen = body.hasSeenWelcomeScreen === true
+    const treeObstacleCleared = body.treeObstacleCleared === true
+    const pioneerBadgeAwarded = body.pioneerBadgeAwarded === true
+    const bridgePnjDefeated = Array.isArray(body.bridgePnjDefeated)
+        ? (body.bridgePnjDefeated as string[]).filter((x) => typeof x === "string")
+        : []
+    const bridgePnjLastBeatenDate =
+        body.bridgePnjLastBeatenDate &&
+        typeof body.bridgePnjLastBeatenDate === "object" &&
+        !Array.isArray(body.bridgePnjLastBeatenDate)
+            ? (body.bridgePnjLastBeatenDate as Record<string, string>)
+            : {}
+
+    const updated = await prisma.gamebookProgress.upsert({
+        where: { userId_chapterId: { userId, chapterId: CHAPTER_ID } },
+        update: {
+            mapId,
+            posX,
+            posY,
+            direction,
+            phase,
+            introStep,
+            hasEnteredTallGrass,
+            monsterCaveRevealed,
+            hasSeenWelcomeScreen,
+            treeObstacleCleared,
+            pioneerBadgeAwarded,
+            bridgePnjDefeated,
+            bridgePnjLastBeatenDate,
+            lastSeen: new Date(),
+        },
+        create: {
+            userId,
+            chapterId: CHAPTER_ID,
+            currentNodeId: "map",
+            mapId,
+            posX,
+            posY,
+            direction,
+            phase,
+            introStep,
+            hasEnteredTallGrass,
+            monsterCaveRevealed,
+            hasSeenWelcomeScreen,
+            treeObstacleCleared,
+            pioneerBadgeAwarded,
+            bridgePnjDefeated,
+            bridgePnjLastBeatenDate,
+        },
+    })
+
+    return NextResponse.json({ ok: true, state: updated })
+}
+
+export async function DELETE() {
+    const session = await getServerSession(authOptions)
+    if (!session?.user || !(session.user as { id?: string }).id) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    const userId = (session.user as { id: string }).id
+
+    await prisma.gamebookProgress.deleteMany({
+        where: { userId, chapterId: CHAPTER_ID },
+    })
+
+    return NextResponse.json({ ok: true })
+}
