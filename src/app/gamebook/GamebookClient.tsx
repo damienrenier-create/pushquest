@@ -258,9 +258,12 @@ export default function GamebookClient({ nickname, userId }: Props) {
                 </div>
 
                 {/* Théâtre narratif */}
-                <div className="mb-6 p-6 bg-white border-2 border-black rounded-md shadow-[4px_4px_0_rgba(0,0,0,1)]">
+                <div className="mb-6 p-6 bg-white border-2 border-black rounded-md shadow-[4px_4px_0_rgba(0,0,0,1)] relative group">
                     <div className="whitespace-pre-line text-slate-900 text-[15px] leading-relaxed">
                         {bodyText}
+                    </div>
+                    <div className="absolute bottom-1 right-2 text-[9px] text-slate-300 opacity-30 group-hover:opacity-100 transition-opacity select-all" title="Copier pour rapporter un bug">
+                        #{data.progress.currentNodeId}
                     </div>
                 </div>
 
