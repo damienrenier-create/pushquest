@@ -56,7 +56,6 @@ export default function GamebookClient({ nickname, userId }: Props) {
     const [data, setData] = useState<ApiResponse | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const [slide, setSlide] = useState<Slide>("intro")
     const [pendingChoice, setPendingChoice] = useState<Choice | null>(null)
 
     // Contexte pour le rendu des variables {nickname} etc.
@@ -77,7 +76,6 @@ export default function GamebookClient({ nickname, userId }: Props) {
                 const json = (await res.json()) as ApiResponse
                 if (!cancelled) {
                     setData(json)
-                    setSlide("intro")
                     setLoading(false)
                 }
             } catch (e: any) {
@@ -102,7 +100,6 @@ export default function GamebookClient({ nickname, userId }: Props) {
         })
         const json = (await res.json()) as ApiResponse
         setData(json)
-        setSlide("intro")
         setPendingChoice(null)
         setLoading(false)
     }
@@ -139,7 +136,6 @@ export default function GamebookClient({ nickname, userId }: Props) {
             const json = (await res.json()) as ApiResponse
             setData(json)
             setPendingChoice(null)
-            setSlide("intro")
         } catch (e: any) {
             setError(e?.message ?? "Erreur inconnue")
         } finally {
@@ -234,28 +230,22 @@ export default function GamebookClient({ nickname, userId }: Props) {
                     </button>
                 </div>
 
-                {/* Bandeau Monstre */}
-                <div className="mb-6 p-4 bg-slate-900 text-amber-100 rounded-md shadow-[4px_4px_0_rgba(0,0,0,1)] border-2 border-black">
-                    <div className="flex items-start gap-3">
-                        <span className="text-2xl select-none">👁️</span>
-                        <div className="flex-1">
-                            <p className="text-[10px] uppercase tracking-widest text-amber-300/70 mb-1">
-                                Le Monstre
-                            </p>
-                            {slide === "intro" && (
+                {/* Bandeau Monstre (Caché pendant la genèse) */}
+                {data.node.kind !== "genese" && (
+                    <div className="mb-6 p-4 bg-slate-900 text-amber-100 rounded-md shadow-[4px_4px_0_rgba(0,0,0,1)] border-2 border-black">
+                        <div className="flex items-start gap-3">
+                            <span className="text-2xl select-none">👁️</span>
+                            <div className="flex-1">
+                                <p className="text-[10px] uppercase tracking-widest text-amber-300/70 mb-1">
+                                    Le Monstre
+                                </p>
                                 <p className="text-sm leading-relaxed italic">
                                     {monsterCommentOnPrevious ? `${monsterCommentOnPrevious} ${introPhrase}` : introPhrase}
                                 </p>
-                            )}
-                            {slide === "body" && (
-                                <p className="text-sm leading-relaxed italic text-amber-200/60">
-                                    {/* Pendant la lecture du corps, le Monstre se tait */}
-                                    (Le Monstre observe en silence.)
-                                </p>
-                            )}
+                            </div>
                         </div>
                     </div>
-                </div>
+                )}
 
                 {/* Théâtre narratif */}
                 <div className="mb-6 p-6 bg-white border-2 border-black rounded-md shadow-[4px_4px_0_rgba(0,0,0,1)] relative group">
@@ -267,19 +257,9 @@ export default function GamebookClient({ nickname, userId }: Props) {
                     </div>
                 </div>
 
-                {/* Navigation entre slides + choix */}
+                {/* Choix (Toujours visibles maintenant) */}
                 <div className="space-y-2">
-                    {slide === "intro" && (
-                        <button
-                            onClick={() => setSlide("body")}
-                            className="w-full p-3 bg-white border-2 border-black rounded-md shadow-[2px_2px_0_rgba(0,0,0,1)] hover:shadow-[4px_4px_0_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all font-bold text-sm uppercase tracking-wider"
-                        >
-                            Continuer →
-                        </button>
-                    )}
-
-                    {slide === "body" &&
-                        data.node.choices.filter((c) => {
+                    {data.node.choices.filter((c) => {
                             if (!c.condition) return true;
                             const flagValue = !!data.progress.flags[c.condition.flag];
                             return flagValue === c.condition.expected;
