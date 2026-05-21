@@ -146,16 +146,38 @@ export default function GamebookClient({ nickname, userId }: Props) {
     if (error) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-amber-50 font-mono">
-                <div className="max-w-md p-6 border-2 border-black bg-white rounded-md shadow-[4px_4px_0_rgba(0,0,0,1)]">
-                    <p className="text-red-700 font-bold mb-2">Erreur</p>
-                    <p className="text-sm text-slate-700 mb-4">{error}</p>
-                    <Link
-                        href="/"
-                        className="inline-flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-black"
-                    >
-                        <ArrowLeft className="w-4 h-4" />
-                        Retour au Dashboard
-                    </Link>
+                <div className="max-w-md w-full mx-4 p-6 border-2 border-black bg-white rounded-md shadow-[4px_4px_0_rgba(0,0,0,1)] flex flex-col gap-4">
+                    <div>
+                        <p className="text-red-700 font-bold mb-2">Erreur système</p>
+                        <p className="text-sm text-slate-700 leading-relaxed mb-4">{error}</p>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-4 border-t-2 border-slate-100 pt-4">
+                        <Link
+                            href="/"
+                            className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-black transition-colors"
+                        >
+                            <ArrowLeft className="w-4 h-4" />
+                            Retour
+                        </Link>
+                        <button
+                            onClick={async () => {
+                                if (!confirm("Réinitialiser la progression et recommencer le chapitre ?")) return
+                                setError(null)
+                                setLoading(true)
+                                try {
+                                    await fetch("/api/gamebook/progress?chapterId=ch1_caravane", { method: "DELETE" })
+                                    window.location.reload()
+                                } catch(e: any) {
+                                    setError("Impossible de réinitialiser la partie.")
+                                    setLoading(false)
+                                }
+                            }}
+                            className="inline-flex items-center gap-2 text-sm font-bold text-red-600 hover:text-red-800 transition-colors"
+                        >
+                            <RotateCcw className="w-4 h-4" />
+                            Réinitialiser la partie
+                        </button>
+                    </div>
                 </div>
             </div>
         )

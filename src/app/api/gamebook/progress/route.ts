@@ -69,12 +69,34 @@ export async function GET(req: NextRequest) {
         })
     }
 
-    const currentNode = chapter.nodes[progress.currentNodeId]
+    let currentNode = chapter.nodes[progress.currentNodeId]
     if (!currentNode) {
-        return NextResponse.json(
-            { error: `Invalid current node: ${progress.currentNodeId}` },
-            { status: 500 }
-        )
+        const fallbackId = progress.currentNodeId.replace("_placeholder", "")
+        if (progress.currentNodeId.endsWith("_placeholder") && chapter.nodes[fallbackId]) {
+            // Soft heal: point the placeholder to the actual node
+            progress.currentNodeId = fallbackId
+            currentNode = chapter.nodes[fallbackId]
+            await prisma.gamebookProgress.update({
+                where: { userId_chapterId: { userId, chapterId: chapter.chapterId } },
+                data: { currentNodeId: fallbackId }
+            })
+        } else {
+            // Hard heal: reset the progression to the beginning
+            const init = initialState(chapter)
+            progress = await prisma.gamebookProgress.update({
+                where: { userId_chapterId: { userId, chapterId: chapter.chapterId } },
+                data: {
+                    currentNodeId: init.currentNodeId,
+                    mood: init.mood,
+                    mbtiScores: init.mbtiScores as any,
+                    temperaments: init.temperaments as any,
+                    flags: init.flags as any,
+                    history: init.history as any,
+                    isCompleted: init.isCompleted,
+                }
+            })
+            currentNode = chapter.nodes[progress.currentNodeId]
+        }
     }
 
     return NextResponse.json({
