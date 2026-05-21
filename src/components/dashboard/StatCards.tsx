@@ -196,7 +196,7 @@ export default function StatCards({
                                  currentTotal < requiredReps ? '⚡' : 
                                  currentTotal === requiredReps ? '🎯' : '🔥'}
                             </div>
-                            <p className={`text-xs font-bold leading-tight italic ${
+                            <p suppressHydrationWarning className={`text-xs font-bold leading-tight italic ${
                                 currentTotal >= requiredReps ? 'text-emerald-300' : 'text-slate-300'
                             }`}>
                                 {getProgressionMessage(requiredReps > 0 ? (currentTotal / requiredReps) * 100 : 0)}
