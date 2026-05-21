@@ -1,0 +1,171 @@
+{
+  "s3_confidence": {
+    "kind": "scene_porte",
+    "body": "Premier jour de route. Pendant une pause au bord d'un ruisseau, le jeune Penne vient vous trouver à l'écart, le visage fermé. « Ma petite sœur est gravement malade à Bagolio... Je suis déchiré. Je devrais rentrer, mais j'ai absolument besoin de la prime de cette livraison pour payer un médecin. »",
+    "choices": [
+      {
+        "id": "A1",
+        "text": "« Si tu pars, tu perds la prime. Reste, termine la livraison et soigne-la après. »",
+        "tag": "clever",
+        "nextNodeId": "t_s3_A1",
+        "monsterComment": "Clinique. Implacable. Tu as l'empathie d'un caillou, {nickname}.",
+        "mbti": {
+          "T": 2
+        },
+        "temperaments": {
+          "compassion": -1
+        }
+      },
+      {
+        "id": "A2",
+        "text": "« Je peux t'avancer une partie de l'argent de ma propre prime, si ça t'aide. »",
+        "tag": "bold",
+        "nextNodeId": "t_s3_A2",
+        "monsterComment": "Un compromis pragmatique. Très bien.",
+        "mbti": {
+          "T": 1
+        },
+        "temperaments": {}
+      },
+      {
+        "id": "B2",
+        "text": "« C'est terrible. Je comprends ta douleur, c'est un choix impossible... »",
+        "tag": "safe",
+        "nextNodeId": "t_s3_B2",
+        "monsterComment": "Beaucoup de mots tendres, aucune solution matérielle. J'adore.",
+        "mbti": {
+          "F": 1
+        },
+        "temperaments": {
+          "compassion": 0.5
+        }
+      },
+      {
+        "id": "B1",
+        "text": "« Ne t'inquiète pas. Je te promets d'aller moi-même m'occuper de ta sœur après la mission. »",
+        "tag": "wrong",
+        "nextNodeId": "t_s3_B1",
+        "monsterComment": "Oh. La promesse intenable du chevalier blanc.",
+        "mbti": {
+          "F": 2
+        },
+        "temperaments": {
+          "compassion": 1,
+          "malice": -0.5
+        }
+      }
+    ],
+    "axis": "T/F",
+    "id": "s3_confidence"
+  },
+  "t_s3_A1": {
+    "kind": "tampon",
+    "body": "Penne vous regarde, sidéré par la froideur de votre logique mathématique. Il s'éloigne sans un mot, les poings serrés.\n\nAlors que Penne s'éloigne, le temps se fige.",
+    "flags": {
+      "penne_angry": true
+    },
+    "choices": [
+      {
+        "id": "c1",
+        "text": "Calculer le retour sur investissement du deuil de Penne.",
+        "tag": "wrong",
+        "nextNodeId": "t_s3_nuit1",
+        "mbti": {},
+        "temperaments": {}
+      },
+      {
+        "id": "c2",
+        "text": "Proposer de facturer ses larmes au litre.",
+        "tag": "wrong",
+        "nextNodeId": "t_s3_nuit1",
+        "mbti": {},
+        "temperaments": {}
+      },
+      {
+        "id": "c3",
+        "text": "Planifier la revente des biens de sa sœur, \"au cas où\".",
+        "tag": "wrong",
+        "nextNodeId": "t_s3_nuit1",
+        "mbti": {},
+        "temperaments": {}
+      }
+    ],
+    "id": "t_s3_A1"
+  },
+  "t_s3_A2": {
+    "kind": "tampon",
+    "body": "Penne semble soulagé par cette solution concrète. Il retourne vers sa charrette avec une étincelle d'espoir.",
+    "choices": [
+      {
+        "id": "c1",
+        "text": "Reprendre la route",
+        "tag": "neutral",
+        "nextNodeId": "t_s3_nuit1",
+        "mbti": {},
+        "temperaments": {}
+      }
+    ],
+    "id": "t_s3_A2"
+  },
+  "t_s3_B2": {
+    "kind": "tampon",
+    "body": "Penne pleure un instant sur votre épaule. Le problème financier reste entier, mais il se sent moins seul.",
+    "choices": [
+      {
+        "id": "c1",
+        "text": "Reprendre la route",
+        "tag": "neutral",
+        "nextNodeId": "t_s3_nuit1",
+        "mbti": {},
+        "temperaments": {}
+      }
+    ],
+    "id": "t_s3_B2"
+  },
+  "t_s3_B1": {
+    "kind": "tampon",
+    "body": "Penne vous serre les mains, les larmes aux yeux. « Merci, convoyeur ! Je vous en devrai une toute ma vie ! »\n\nPenne repart en courant.",
+    "choices": [
+      {
+        "id": "c1",
+        "text": "Promettre de soigner le genou arthritique de Linguini.",
+        "tag": "neutral",
+        "nextNodeId": "t_s3_nuit1",
+        "mbti": {},
+        "temperaments": {}
+      },
+      {
+        "id": "c2",
+        "text": "Jurer de repeindre personnellement la charrette de Cannella.",
+        "tag": "neutral",
+        "nextNodeId": "t_s3_nuit1",
+        "mbti": {},
+        "temperaments": {}
+      },
+      {
+        "id": "c3",
+        "text": "Proposer d'adopter légalement tous les enfants des marchands.",
+        "tag": "neutral",
+        "nextNodeId": "t_s3_nuit1",
+        "mbti": {},
+        "temperaments": {}
+      }
+    ],
+    "id": "t_s3_B1"
+  },
+  "t_s3_nuit1": {
+    "kind": "tampon",
+    "body": "Le reste de la journée s'écoule dans un silence pesant, rythmé par le grincement des essieux. La caravane établit son premier campement sous un ciel sans lune. Au petit matin du deuxième jour, l'air est vif et le convoi se remet en marche.",
+    "choices": [
+      {
+        "id": "c1",
+        "text": "Reprendre la route",
+        "tag": "neutral",
+        "nextNodeId": "s4_traces",
+        "mbti": {},
+        "temperaments": {}
+      }
+    ],
+    "id": "t_s3_nuit1"
+  }
+}

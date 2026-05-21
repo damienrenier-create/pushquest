@@ -501,7 +501,7 @@
     },
     "t_s3_A1": {
       "kind": "tampon",
-      "body": "Penne vous regarde, sidéré par la froideur de votre logique mathématique. Il s'éloigne sans un mot, les poings serrés.\n\nAlors que Penne s'éloigne, le temps se fige.",
+      "body": "Penne vous regarde, sidéré par la froideur de votre logique mathématique. Il s'éloigne sans un mot, les poings serrés.\n\nAlors que Penne s'éloigne, le temps se fige. Le Monstre apparaît, un boulier imaginaire dans les mains.\n« Puisqu'on gère les émotions sur un tableur, qu'est-ce qu'on optimise d'autre aujourd'hui ? »",
       "flags": {
         "penne_angry": true
       },
@@ -510,38 +510,41 @@
           "id": "c1",
           "text": "Calculer le retour sur investissement du deuil de Penne.",
           "tag": "wrong",
-          "nextNodeId": "t_s3_nuit1",
+          "nextNodeId": "t_s3_A1_nuit",
           "mbti": {},
-          "temperaments": {}
+          "temperaments": {},
+          "monsterComment": ""
         },
         {
           "id": "c2",
           "text": "Proposer de facturer ses larmes au litre.",
           "tag": "wrong",
-          "nextNodeId": "t_s3_nuit1",
+          "nextNodeId": "t_s3_A1_nuit",
           "mbti": {},
-          "temperaments": {}
+          "temperaments": {},
+          "monsterComment": ""
         },
         {
           "id": "c3",
           "text": "Planifier la revente des biens de sa sœur, \"au cas où\".",
           "tag": "wrong",
-          "nextNodeId": "t_s3_nuit1",
+          "nextNodeId": "t_s3_A1_nuit",
           "mbti": {},
-          "temperaments": {}
+          "temperaments": {},
+          "monsterComment": ""
         }
       ],
       "id": "t_s3_A1"
     },
     "t_s3_A2": {
       "kind": "tampon",
-      "body": "Penne semble soulagé par cette solution concrète. Il retourne vers sa charrette avec une étincelle d'espoir.",
+      "body": "Penne semble soulagé par cette solution concrète. Il retourne vers sa charrette avec une étincelle d'espoir.\n\nLe reste de la journée s'écoule dans un silence pesant, rythmé par le grincement des essieux. La caravane établit son premier campement sous un ciel sans lune. Au petit matin du deuxième jour, l'air est vif et le convoi se remet en marche.",
       "choices": [
         {
           "id": "c1",
           "text": "Reprendre la route",
           "tag": "neutral",
-          "nextNodeId": "t_s3_nuit1",
+          "nextNodeId": "s4_traces",
           "mbti": {},
           "temperaments": {}
         }
@@ -550,13 +553,13 @@
     },
     "t_s3_B2": {
       "kind": "tampon",
-      "body": "Penne pleure un instant sur votre épaule. Le problème financier reste entier, mais il se sent moins seul.",
+      "body": "Penne pleure un instant sur votre épaule. Le problème financier reste entier, mais il se sent moins seul.\n\nLe reste de la journée s'écoule dans un silence pesant, rythmé par le grincement des essieux. La caravane établit son premier campement sous un ciel sans lune. Au petit matin du deuxième jour, l'air est vif et le convoi se remet en marche.",
       "choices": [
         {
           "id": "c1",
           "text": "Reprendre la route",
           "tag": "neutral",
-          "nextNodeId": "t_s3_nuit1",
+          "nextNodeId": "s4_traces",
           "mbti": {},
           "temperaments": {}
         }
@@ -565,31 +568,34 @@
     },
     "t_s3_B1": {
       "kind": "tampon",
-      "body": "Penne vous serre les mains, les larmes aux yeux. « Merci, convoyeur ! Je vous en devrai une toute ma vie ! »\n\nPenne repart en courant.",
+      "body": "Penne vous serre les mains, les larmes aux yeux. « Merci, convoyeur ! Je vous en devrai une toute ma vie ! »\n\nPenne repart en courant. Le temps se fige. Le Monstre flotte au-dessus de vous, l'air consterné.\n« C'est ça. Promets de sauver tout le monde. Tu veux que je te rajoute une auréole tout de suite ? Qui d'autre vas-tu sauver aujourd'hui ? »",
       "choices": [
         {
           "id": "c1",
           "text": "Promettre de soigner le genou arthritique de Linguini.",
           "tag": "neutral",
-          "nextNodeId": "t_s3_nuit1",
+          "nextNodeId": "t_s3_B1_nuit",
           "mbti": {},
-          "temperaments": {}
+          "temperaments": {},
+          "monsterComment": ""
         },
         {
           "id": "c2",
           "text": "Jurer de repeindre personnellement la charrette de Cannella.",
           "tag": "neutral",
-          "nextNodeId": "t_s3_nuit1",
+          "nextNodeId": "t_s3_B1_nuit",
           "mbti": {},
-          "temperaments": {}
+          "temperaments": {},
+          "monsterComment": ""
         },
         {
           "id": "c3",
           "text": "Proposer d'adopter légalement tous les enfants des marchands.",
           "tag": "neutral",
-          "nextNodeId": "t_s3_nuit1",
+          "nextNodeId": "t_s3_B1_nuit",
           "mbti": {},
-          "temperaments": {}
+          "temperaments": {},
+          "monsterComment": ""
         }
       ],
       "id": "t_s3_B1"
@@ -2359,21 +2365,6 @@
       ],
       "id": "t_s9_funnel"
     },
-    "t_s3_nuit1": {
-      "kind": "tampon",
-      "body": "Le reste de la journée s'écoule dans un silence pesant, rythmé par le grincement des essieux. La caravane établit son premier campement sous un ciel sans lune. Au petit matin du deuxième jour, l'air est vif et le convoi se remet en marche.",
-      "choices": [
-        {
-          "id": "c1",
-          "text": "Reprendre la route",
-          "tag": "neutral",
-          "nextNodeId": "s4_traces",
-          "mbti": {},
-          "temperaments": {}
-        }
-      ],
-      "id": "t_s3_nuit1"
-    },
     "t_s5_bivouac_risotto": {
       "kind": "tampon",
       "body": "Linguini lève les yeux de son registre, le visage blême. « Il manque quelqu'un. Où est Risotto ? » Un frisson parcourt la caravane. Vous montrez le dé en os trouvé dans la forêt. Cannella étouffe un cri de terreur. Personne ne dormira vraiment cette nuit.",
@@ -2625,6 +2616,32 @@
         }
       ],
       "id": "t_s5_bivouac_deuil"
+    },
+    "t_s3_A1_nuit": {
+      "kind": "tampon",
+      "body": "Le Monstre lève les yeux au ciel et claque des doigts. Le temps reprend son cours.\n\nLe reste de la journée s'écoule dans un silence pesant, rythmé par le grincement des essieux. La caravane établit son premier campement sous un ciel sans lune. Au petit matin du deuxième jour, l'air est vif et le convoi se remet en marche.",
+      "choices": [
+        {
+          "id": "c1",
+          "text": "Reprendre la route",
+          "tag": "neutral",
+          "nextNodeId": "s4_traces"
+        }
+      ],
+      "id": "t_s3_A1_nuit"
+    },
+    "t_s3_B1_nuit": {
+      "kind": "tampon",
+      "body": "Le Monstre lève les yeux au ciel et claque des doigts. Le temps reprend son cours.\n\nLe reste de la journée s'écoule dans un silence pesant, rythmé par le grincement des essieux. La caravane établit son premier campement sous un ciel sans lune. Au petit matin du deuxième jour, l'air est vif et le convoi se remet en marche.",
+      "choices": [
+        {
+          "id": "c1",
+          "text": "Reprendre la route",
+          "tag": "neutral",
+          "nextNodeId": "s4_traces"
+        }
+      ],
+      "id": "t_s3_B1_nuit"
     }
   }
 }
