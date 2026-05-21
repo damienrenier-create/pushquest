@@ -110,6 +110,20 @@ export default function GamebookClient({ nickname, userId }: Props) {
     // Sélection d'un choix : on envoie le choix au serveur, on passe directement au nœud suivant
     async function handleChoice(c: Choice) {
         if (!data) return
+
+        if (c.action === "reset") {
+            setLoading(true)
+            try {
+                await fetch("/api/gamebook/progress?chapterId=ch1_caravane", { method: "DELETE" })
+                window.location.reload()
+            } catch (err: any) {
+                console.error(err)
+                setError("Impossible de réinitialiser la partie.")
+                setLoading(false)
+            }
+            return
+        }
+
         setPendingChoice(c)
         setLoading(true)
         try {
@@ -229,14 +243,9 @@ export default function GamebookClient({ nickname, userId }: Props) {
                                 Le Monstre
                             </p>
                             {slide === "intro" && (
-                                <>
-                                    {monsterCommentOnPrevious && (
-                                        <p className="text-sm leading-relaxed mb-2">
-                                            {monsterCommentOnPrevious}
-                                        </p>
-                                    )}
-                                    <p className="text-sm leading-relaxed italic">{introPhrase}</p>
-                                </>
+                                <p className="text-sm leading-relaxed italic">
+                                    {monsterCommentOnPrevious ? `${monsterCommentOnPrevious} ${introPhrase}` : introPhrase}
+                                </p>
                             )}
                             {slide === "body" && (
                                 <p className="text-sm leading-relaxed italic text-amber-200/60">
@@ -267,7 +276,11 @@ export default function GamebookClient({ nickname, userId }: Props) {
                     )}
 
                     {slide === "body" &&
-                        data.node.choices.map((c) => (
+                        data.node.choices.filter((c) => {
+                            if (!c.condition) return true;
+                            const flagValue = !!data.progress.flags[c.condition.flag];
+                            return flagValue === c.condition.expected;
+                        }).map((c) => (
                             <button
                                 key={c.id}
                                 onClick={() => handleChoice(c)}
@@ -279,8 +292,8 @@ export default function GamebookClient({ nickname, userId }: Props) {
                         ))}
                 </div>
 
-                {/* Debug / Stats (visible mais discret) */}
-                <div className="mt-8 text-[10px] text-amber-50 tracking-wide">
+                {/* Debug / Stats (invisible mais sélectionnable) */}
+                <div className="mt-8 text-[10px] text-amber-50 bg-amber-50 select-text tracking-wide">
                     <p>Nœud : {data.progress.currentNodeId} · Humeur : {data.progress.mood}</p>
                 </div>
             </div>

@@ -51,6 +51,8 @@ export type Choice = {
     temperaments: Temperaments
     monsterComment: string | null
     nextNodeId: string
+    condition?: { flag: string; expected: boolean }
+    action?: "reset"
 }
 
 export type ChapterNode = {
