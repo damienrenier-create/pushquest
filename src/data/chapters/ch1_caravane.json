@@ -206,23 +206,7 @@
     },
     "t_s1_B1": {
       "kind": "tampon",
-      "body": "Vous vous installez dans un coin de l'auberge, à l'écart, sans un mot.",
-      "choices": [
-        {
-          "id": "c1",
-          "text": "Continuer",
-          "tag": "neutral",
-          "nextNodeId": "t_s1_B1_inter1",
-          "monsterComment": "Bon. Tu t'assois. Tu ne dis rien. Très bien. On fait du théâtre contemplatif, je respecte le parti pris.",
-          "mbti": {},
-          "temperaments": {}
-        }
-      ],
-      "id": "t_s1_B1"
-    },
-    "t_s1_B1_inter1": {
-      "kind": "tampon",
-      "body": "Penne rit fort, Linguini recompte des pièces, Grogno crache par terre. Et vous... vous ne faites rien.",
+      "body": "Vous vous installez dans un coin de l'auberge, à l'écart, sans un mot.\n\nPenne rit fort, Linguini recompte des pièces, Grogno crache par terre. Et vous... vous ne faites rien.",
       "choices": [
         {
           "id": "c1",
@@ -260,7 +244,7 @@
           "temperaments": {}
         }
       ],
-      "id": "t_s1_B1_inter1"
+      "id": "t_s1_B1"
     },
     "t_s1_B1_inter2": {
       "kind": "tampon",
@@ -365,22 +349,7 @@
     },
     "t_s2_A1": {
       "kind": "tampon",
-      "body": "Linguini hoche la tête, impressionné, tandis que Penne lève les yeux au ciel en voyant votre rigidité.",
-      "choices": [
-        {
-          "id": "c1",
-          "text": "Continuer",
-          "tag": "neutral",
-          "nextNodeId": "t_s2_A1_inter1",
-          "mbti": {},
-          "temperaments": {}
-        }
-      ],
-      "id": "t_s2_A1"
-    },
-    "t_s2_A1_inter1": {
-      "kind": "tampon",
-      "body": "L'encre est à peine sèche que vous ressentez le besoin d'imposer votre nouvelle discipline au campement pour garantir le départ à 4h00 du matin.",
+      "body": "Linguini hoche la tête, impressionné, tandis que Penne lève les yeux au ciel en voyant votre rigidité.\n\nL'encre est à peine sèche que vous ressentez le besoin d'imposer votre nouvelle discipline au campement pour garantir le départ à 4h00 du matin.",
       "choices": [
         {
           "id": "c1",
@@ -407,7 +376,7 @@
           "temperaments": {}
         }
       ],
-      "id": "t_s2_A1_inter1"
+      "id": "t_s2_A1"
     },
     "t_s2_A1_inter2": {
       "kind": "tampon",
@@ -532,25 +501,10 @@
     },
     "t_s3_A1": {
       "kind": "tampon",
-      "body": "Penne vous regarde, sidéré par la froideur de votre logique mathématique. Il s'éloigne sans un mot, les poings serrés.",
+      "body": "Penne vous regarde, sidéré par la froideur de votre logique mathématique. Il s'éloigne sans un mot, les poings serrés.\n\nAlors que Penne s'éloigne, le temps se fige.",
       "flags": {
         "penne_angry": true
       },
-      "choices": [
-        {
-          "id": "c1",
-          "text": "Continuer",
-          "tag": "neutral",
-          "nextNodeId": "t_s3_A1_inter1",
-          "mbti": {},
-          "temperaments": {}
-        }
-      ],
-      "id": "t_s3_A1"
-    },
-    "t_s3_A1_inter1": {
-      "kind": "tampon",
-      "body": "Alors que Penne s'éloigne, le temps se fige. Le Monstre apparaît, un boulier imaginaire dans les mains.\n« Puisqu'on gère les émotions sur un tableur, qu'est-ce qu'on optimise d'autre aujourd'hui ? »",
       "choices": [
         {
           "id": "c1",
@@ -577,7 +531,7 @@
           "temperaments": {}
         }
       ],
-      "id": "t_s3_A1_inter1"
+      "id": "t_s3_A1"
     },
     "t_s3_A2": {
       "kind": "tampon",
@@ -611,22 +565,7 @@
     },
     "t_s3_B1": {
       "kind": "tampon",
-      "body": "Penne vous serre les mains, les larmes aux yeux. « Merci, convoyeur ! Je vous en devrai une toute ma vie ! »",
-      "choices": [
-        {
-          "id": "c1",
-          "text": "Continuer",
-          "tag": "neutral",
-          "nextNodeId": "t_s3_B1_inter1",
-          "mbti": {},
-          "temperaments": {}
-        }
-      ],
-      "id": "t_s3_B1"
-    },
-    "t_s3_B1_inter1": {
-      "kind": "tampon",
-      "body": "Penne repart en courant. Le Monstre flotte au-dessus de vous, l'air consterné.\n« C'est ça. Promets de sauver tout le monde. Tu veux que je te rajoute une auréole tout de suite ? Qui d'autre vas-tu sauver aujourd'hui ? »",
+      "body": "Penne vous serre les mains, les larmes aux yeux. « Merci, convoyeur ! Je vous en devrai une toute ma vie ! »\n\nPenne repart en courant.",
       "choices": [
         {
           "id": "c1",
@@ -653,7 +592,7 @@
           "temperaments": {}
         }
       ],
-      "id": "t_s3_B1_inter1"
+      "id": "t_s3_B1"
     },
     "s4_traces": {
       "kind": "scene_porte",
@@ -722,14 +661,15 @@
           "tag": "neutral",
           "nextNodeId": "t_s4_A1_inter1",
           "mbti": {},
-          "temperaments": {}
+          "temperaments": {},
+          "monsterComment": "Tu veux qu'on mesure le pH de la terre aussi, {nickname} ? Puisqu'on est dans la science pure, que fais-tu de plus ?"
         }
       ],
       "id": "t_s4_A1"
     },
     "t_s4_A1_inter1": {
       "kind": "tampon",
-      "body": "Le Monstre flotte au-dessus de vous. « Tu veux qu'on mesure le pH de la terre aussi, {nickname} ? Puisqu'on est dans la science pure, que fais-tu de plus ? »",
+      "body": "",
       "choices": [
         {
           "id": "c1",
@@ -828,28 +768,46 @@
           "temperaments": {}
         },
         {
-          "id": "c3",
-          "text": "Parier 5 pièces avec Penne qu'il n'osera pas y mettre la tête.",
-          "tag": "neutral",
-          "nextNodeId": "s5_pont_effondre",
-          "monsterComment": "L'intimidation amicale. J'aime bien. On y va.",
-          "mbti": {},
-          "temperaments": {}
-        },
-        {
           "id": "c4",
           "text": "Parier avec Penne que vous pouvez sauter dedans et atterrir en douceur.",
           "tag": "wrong",
           "nextNodeId": "t_s4_A2_inter2",
           "mbti": {},
-          "temperaments": {}
+          "temperaments": {},
+          "monsterComment": "L'acteur principal vient de se jeter dans un trou pour un pari. Formidable. Fermez le rideau. Remboursez le public... Non, je plaisante. Ouvre les yeux, {nickname}."
+        },
+        {
+          "id": "c3_friend",
+          "text": "[Penne est loyal] Parier 5 pièces avec Penne qu'il n'osera pas y mettre la tête.",
+          "tag": "neutral",
+          "nextNodeId": "s5_pont_effondre",
+          "monsterComment": "L'intimidation amicale. J'aime bien. On y va.",
+          "mbti": {},
+          "temperaments": {},
+          "condition": {
+            "flag": "penne_angry",
+            "expected": false
+          }
+        },
+        {
+          "id": "c3_angry",
+          "text": "[Penne est rancunier] Te tourner vers Penne. Il détourne le regard, glacial, et refuse de te parler.",
+          "tag": "safe",
+          "nextNodeId": "s5_pont_effondre",
+          "monsterComment": "Le silence pesant d'une amitié brisée devant un trou béant. C'est poétique. Allez, avance.",
+          "mbti": {},
+          "temperaments": {},
+          "condition": {
+            "flag": "penne_angry",
+            "expected": true
+          }
         }
       ],
       "id": "t_s4_A2_inter1"
     },
     "t_s4_A2_inter2": {
       "kind": "tampon",
-      "body": "Vous prenez votre élan et sautez. Vous tombez. La lumière disparaît. Vous chutez dans une obscurité glaciale pendant une éternité. Puis, le choc. Le froid absolu. La mort.\nLe Monstre apparaît : « L'acteur principal vient de se jeter dans un trou pour un pari. Formidable. Fermez le rideau. Remboursez le public... Non, je plaisante. Ouvre les yeux, {nickname}. »",
+      "body": "Vous prenez votre élan et sautez. Vous tombez. La lumière disparaît. Vous chutez dans une obscurité glaciale pendant une éternité. Puis, le choc. Le froid absolu. La mort.",
       "choices": [
         {
           "id": "c1",
@@ -864,7 +822,7 @@
     },
     "t_s4_A2_inter3": {
       "kind": "tampon",
-      "body": "Vous reprenez une inspiration violente et trébuchez en arrière. Vous n'êtes pas mort. Vous n'avez pas sauté. Penne vous tient par l'épaule sur le sentier principal : « Tout va bien ? Tu dormais debout en fixant ces cendres ! »\nLa caravane reprend sa route, vous laissant complètement secoué.",
+      "body": "La sensation de chute disparaît. Quelqu'un secoue votre épaule. C'est Penne, ou peut-être un autre marchand. Vous étiez simplement hypnotisé par l'obscurité du gouffre, titubant sur le bord. Vous reculez en trébuchant.",
       "choices": [
         {
           "id": "c1",
@@ -904,7 +862,7 @@
     },
     "t_s4_B2_inter1": {
       "kind": "tampon",
-      "body": "La lumière décline sous la canopée épaisse. Les traces deviennent erratiques. Risotto s'accroupit près d'un buisson d'épines, le visage soudain crispé.\nLe Monstre flotte au-dessus : « Le décor se referme. J'aime beaucoup cette tension. »",
+      "body": "La lumière décline sous la canopée épaisse. Les traces deviennent erratiques. Risotto s'accroupit près d'un buisson d'épines, le visage soudain crispé.",
       "choices": [
         {
           "id": "c1",
@@ -943,7 +901,8 @@
           "tag": "neutral",
           "nextNodeId": "t_s4_B2_inter3",
           "mbti": {},
-          "temperaments": {}
+          "temperaments": {},
+          "monsterComment": "... Ce n'était pas dans mon script, ça. Rentre au campement, {nickname}. Tout de suite. Ne te retourne pas."
         },
         {
           "id": "c2",
@@ -951,14 +910,15 @@
           "tag": "neutral",
           "nextNodeId": "t_s4_B2_inter3",
           "mbti": {},
-          "temperaments": {}
+          "temperaments": {},
+          "monsterComment": "... Ce n'était pas dans mon script, ça. Rentre au campement, {nickname}. Tout de suite. Ne te retourne pas."
         }
       ],
       "id": "t_s4_B2_inter2"
     },
     "t_s4_B2_inter3": {
       "kind": "tampon",
-      "body": "Rien. Le silence de la forêt est revenu, lourd et poisseux. Risotto s'est volatilisé. Vous retrouvez seulement son dé en os.\nLe Monstre apparaît, la voix anormalement grave : « ... Ce n'était pas dans mon script, ça. Rentre au campement, {nickname}. Tout de suite. Ne te retourne pas. »",
+      "body": "Rien. Le silence de la forêt est revenu, lourd et poisseux. Risotto s'est volatilisé. Vous retrouvez seulement son dé en os.",
       "flags": {
         "risotto_missing": true
       },
@@ -984,14 +944,15 @@
           "tag": "neutral",
           "nextNodeId": "t_s4_B1_inter1",
           "mbti": {},
-          "temperaments": {}
+          "temperaments": {},
+          "monsterComment": "Et si c'était juste un sanglier ? Comment communiques-tu ton immense découverte ?"
         }
       ],
       "id": "t_s4_B1"
     },
     "t_s4_B1_inter1": {
       "kind": "tampon",
-      "body": "Le Monstre se moque : « Et si c'était juste un sanglier ? Comment communiques-tu ton immense découverte ? »",
+      "body": "",
       "choices": [
         {
           "id": "c1",
@@ -1095,7 +1056,7 @@
     },
     "t_s6_A1_confirm": {
       "kind": "tampon",
-      "body": "Penne est écrasé. Non seulement il a tort, mais son seul ami l'humilie publiquement au nom de la logique.\nLe Monstre apparaît : « Tu as le scalpel en main, {nickname}. On s'arrête là, ou on l'achève ? »",
+      "body": "Penne est écrasé. Non seulement il a tort, mais son seul ami l'humilie publiquement au nom de la logique.",
       "choices": [
         {
           "id": "c1",
@@ -1167,11 +1128,14 @@
           "temperaments": {}
         }
       ],
-      "id": "t_s6_A1_climax"
+      "id": "t_s6_A1_climax",
+      "flags": {
+        "sceau_guilde": true
+      }
     },
     "t_s6_A2_confirm": {
       "kind": "tampon",
-      "body": "Les deux hommes sont frustrés mais se plient à votre nouvelle réglementation martiale.\nLe Monstre observe : « C'est efficace. On maintient la discipline militaire ? »",
+      "body": "Les deux hommes sont frustrés mais se plient à votre nouvelle réglementation martiale.",
       "choices": [
         {
           "id": "c1",
@@ -1245,7 +1209,7 @@
     },
     "t_s6_B2_confirm": {
       "kind": "tampon",
-      "body": "Il vous faut deux heures de discussions épuisantes pour apaiser les cœurs.\nLe Monstre s'ennuie : « Merveilleux. Une thérapie de groupe. On va plus loin dans les sentiments ? »",
+      "body": "Il vous faut deux heures de discussions épuisantes pour apaiser les cœurs.",
       "choices": [
         {
           "id": "c1",
@@ -1307,7 +1271,7 @@
     },
     "t_s6_B1_confirm": {
       "kind": "tampon",
-      "body": "Linguini, insulté par votre irrationalité absolue, refuse de continuer. Il plie bagage avec trois marchands qui ne jurent que par lui.\nLe Monstre est ravi : « Tu viens de briser le groupe. Tu assumes ta subjectivité ? »",
+      "body": "Linguini, insulté par votre irrationalité absolue, refuse de continuer. Il plie bagage avec trois marchands qui ne jurent que par lui.",
       "flags": {
         "linguini_left": true
       },
@@ -1460,7 +1424,10 @@
           "temperaments": {}
         }
       ],
-      "id": "t_s5_A1"
+      "id": "t_s5_A1",
+      "flags": {
+        "corde_ingenieur": true
+      }
     },
     "t_s5_A2": {
       "kind": "tampon",
@@ -1484,14 +1451,15 @@
       "kind": "tampon",
       "body": "La progression est brutale. Soudain, un essieu lâche dans une ravine. La charrette de Grogno bascule. Il est entraîné et meurt écrasé sous ses marchandises. Cannella tombe dans un mutisme de terreur absolue. Vous récupérez la Machette du défunt.",
       "flags": {
-        "grogno_dead": true
+        "grogno_dead": true,
+        "machette_grogno": true
       },
       "choices": [
         {
           "id": "c1",
           "text": "Laisser le corps et avancer dans le silence",
           "tag": "neutral",
-          "nextNodeId": "t_s5_bivouac",
+          "nextNodeId": "t_s5_bivouac_deuil",
           "mbti": {},
           "temperaments": {}
         }
@@ -1508,14 +1476,15 @@
           "tag": "neutral",
           "nextNodeId": "t_s5_B2_trouvaille",
           "mbti": {},
-          "temperaments": {}
+          "temperaments": {},
+          "monsterComment": "Prendre le temps de fouiller les poubelles de la rivière en frôlant la mort. J'adore. Que fais-tu de cette découverte, {nickname} ?"
         }
       ],
       "id": "t_s5_B2"
     },
     "t_s5_B2_trouvaille": {
       "kind": "tampon",
-      "body": "Le Monstre flotte au-dessus de l'eau glaciale. « Prendre le temps de fouiller les poubelles de la rivière en frôlant la mort. J'adore. Que fais-tu de cette découverte, {nickname} ? »",
+      "body": "",
       "choices": [
         {
           "id": "c1",
@@ -1759,7 +1728,7 @@
     },
     "t_s7_A1_hid": {
       "kind": "tampon",
-      "body": "Vous sortez la boussole ternie. Autour du feu, l'aiguille se met à tourner follement dès que vous la pointez vers la charrette de Cannella. Quelque chose de lourdement magnétique (ou pire) y est dissimulé.\nLe Monstre apparaît : « Tiens. Ton déchet rocailleux sert finalement à quelque chose. L'intrigue s'épaissit, {nickname}. Garde cette information pour demain. »",
+      "body": "Vous sortez la boussole ternie. Autour du feu, l'aiguille se met à tourner follement dès que vous la pointez vers la charrette de Cannella. Quelque chose de lourdement magnétique (ou pire) y est dissimulé.",
       "choices": [
         {
           "id": "c1",
@@ -1789,7 +1758,7 @@
     },
     "t_s7_A2_hid": {
       "kind": "tampon",
-      "body": "Vous sortez le registre de l'exilé Linguini à la lueur des flammes. Vous pointez une anomalie : 100 kilos de « soieries » non justifiées sont déclarés dans le chariot de Penne. Brodo fronce les sourcils.\nLe Monstre flotte dans l'ombre : « Tu as chassé le comptable pour devenir le comptable. Et tu as trouvé une belle anomalie dans leur mascarade. Bravo. »",
+      "body": "Vous sortez le registre de l'exilé Linguini à la lueur des flammes. Vous pointez une anomalie : 100 kilos de « soieries » non justifiées sont déclarés dans le chariot de Penne. Brodo fronce les sourcils.",
       "choices": [
         {
           "id": "c1",
@@ -1819,7 +1788,7 @@
     },
     "t_s7_B2_hid": {
       "kind": "tampon",
-      "body": "Flatté que vous utilisiez son cadeau, Brodo brise son habituel mutisme. Il s'approche et vous glisse à l'oreille : « Ne bois pas le vin que Cannella t'offrira demain. Elle a menti sur la région dont elle vient. »\nLe Monstre sourit : « La paranoïa s'installe doucement. J'aime beaucoup la tournure de cette pièce. »",
+      "body": "Flatté que vous utilisiez son cadeau, Brodo brise son habituel mutisme. Il s'approche et vous glisse à l'oreille : « Ne bois pas le vin que Cannella t'offrira demain. Elle a menti sur la région dont elle vient. »",
       "choices": [
         {
           "id": "c1",
@@ -1834,7 +1803,7 @@
     },
     "t_s7_B1_std": {
       "kind": "tampon",
-      "body": "Les marchands épuisés soupirent face à cette leçon morale.\nLe Monstre pouffe : « Une fable poétique à des gens qui dorment dans la boue ? Tu as perdu ton auditoire, poète. »",
+      "body": "Les marchands épuisés soupirent face à cette leçon morale.",
       "choices": [
         {
           "id": "c1",
@@ -1849,7 +1818,7 @@
     },
     "t_s7_B1_hid": {
       "kind": "tampon",
-      "body": "Votre tirade morale exaspère Grogno. « Des conneries de poète ! » crache-t-il. « Je vais vérifier ma propre came, au moins l'or ne ment pas. » Il s'éloigne dans l'obscurité pour fouiller sa charrette. Soudain, un bruit de rupture sèche retentit. Les lourds rondins mal arrimés de son chariot s'effondrent sur lui. Il meurt écrasé.\nLe Monstre apparaît, estomaqué : « Voilà. Tu as littéralement tué un homme avec de la mauvaise philosophie, {nickname}. Je n'aurais pas osé. Rideau pour Grogno. »",
+      "body": "Votre tirade morale exaspère Grogno. « Des conneries de poète ! » crache-t-il. « Je vais vérifier ma propre came, au moins l'or ne ment pas. » Il s'éloigne dans l'obscurité pour fouiller sa charrette. Soudain, un bruit de rupture sèche retentit. Les lourds rondins mal arrimés de son chariot s'effondrent sur lui. Il meurt écrasé.",
       "flags": {
         "grogno_dead": true
       },
@@ -2135,7 +2104,7 @@
     },
     "t_s8_A2_grogno": {
       "kind": "tampon",
-      "body": "Vous ordonnez d'accélérer en vous allégeant, comme le fait Vittorio. Mais Grogno, consumé par l'avidité et la jalousie, refuse de jeter ses surplus. En tentant de tenir le rythme dans un lacet serré, sa roue surchargée percute un roc. La charrette se retourne avec fracas. Grogno est écrasé sous son propre or.\nLe Monstre apparaît : « La jalousie et la gravité. Un cocktail mortel. Adieu, Grogno. »",
+      "body": "Vous ordonnez d'accélérer en vous allégeant, comme le fait Vittorio. Mais Grogno, consumé par l'avidité et la jalousie, refuse de jeter ses surplus. En tentant de tenir le rythme dans un lacet serré, sa roue surchargée percute un roc. La charrette se retourne avec fracas. Grogno est écrasé sous son propre or.",
       "flags": {
         "grogno_dead": true
       },
@@ -2305,7 +2274,7 @@
     },
     "t_s9_A1_grogno": {
       "kind": "tampon",
-      "body": "Vous refusez. Grogno, furieux qu'on lui réclame son or, force le passage et bouscule la vieille femme. En reculant violemment, il pose le pied sur une poutre pourrie. Le bois cède. Grogno disparaît dans les douves avec un long hurlement. La veuve s'écarte, satisfaite. Le péage de sang est payé.\nLe Monstre flotte au-dessus du pont : « Eh bien. Sa radinerie aura finalement été utile à la communauté. Paix à son âme. Bref, on avance. »",
+      "body": "Vous refusez. Grogno, furieux qu'on lui réclame son or, force le passage et bouscule la vieille femme. En reculant violemment, il pose le pied sur une poutre pourrie. Le bois cède. Grogno disparaît dans les douves avec un long hurlement. La veuve s'écarte, satisfaite. Le péage de sang est payé.",
       "flags": {
         "grogno_dead": true
       },
@@ -2371,7 +2340,7 @@
     },
     "t_s9_B1_suicide": {
       "kind": "tampon",
-      "body": "Vous vous avancez sur le parapet de pierre. Penne hurle votre nom, mais c'est trop tard. Pour le salut de la caravane, vous vous laissez tomber dans les eaux tumultueuses en contrebas. Le noir vous engloutit.\nLe Monstre apparaît, complètement abasourdi : « Tu te sacrifies pour des figurants ? C'est la fin la plus absurde, la plus illogique et la plus magnifique que j'aie jamais vue. Rien ne t'y obligeait. Chapeau bas, l'artiste. Rideau. »",
+      "body": "Vous vous avancez sur le parapet de pierre. Penne hurle votre nom, mais c'est trop tard. Pour le salut de la caravane, vous vous laissez tomber dans les eaux tumultueuses en contrebas. Le noir vous engloutit.",
       "choices": [
         {
           "id": "c1",
@@ -2393,29 +2362,13 @@
           "id": "c1",
           "text": "Entrer dans la ville",
           "tag": "neutral",
-          "nextNodeId": "s10_foire_placeholder",
+          "nextNodeId": "s10_foire",
           "monsterComment": "On y est. La ligne d'arrivée. Profite de la fête, {nickname}. La dernière scène approche.",
           "mbti": {},
           "temperaments": {}
         }
       ],
       "id": "t_s9_funnel"
-    },
-    "s10_foire_placeholder": {
-      "id": "s10_foire_placeholder",
-      "kind": "scene_porte_placeholder",
-      "body": "Les portes de Risoletto se referment derrière vous. Les festivités battent leur plein, l'air est chargé de musique et d'épices. Vous prenez une grande inspiration, la caravane est en sécurité.\n\n(Fin temporaire du Chapitre 1. Le grand final arrivera dans le prochain déploiement !)",
-      "choices": [
-        {
-          "id": "c1",
-          "text": "Recommencer l'aventure",
-          "tag": "neutral",
-          "nextNodeId": "g1_eveil",
-          "action": "reset",
-          "mbti": {},
-          "temperaments": {}
-        }
-      ]
     },
     "t_s3_nuit1": {
       "kind": "tampon",
@@ -2446,6 +2399,243 @@
         }
       ],
       "id": "t_s5_bivouac_risotto"
+    },
+    "s10_foire": {
+      "kind": "scene_porte",
+      "axis": "E/I",
+      "body": "Les portes massives de Risoletto se referment derrière vous. La ville est en ébullition : c'est la Nuit des Masques. Des acrobates crachent du feu, les tavernes débordent de chants et de vin épicé. La caravane est garée en sécurité, la mission est terminée. Penne (s'il est encore là) soupire de soulagement. Il est temps de toucher votre prime et de célébrer... ou pas.",
+      "choices": [
+        {
+          "id": "A1",
+          "text": "Payer une tournée générale dans la taverne la plus bruyante.",
+          "tag": "bold",
+          "nextNodeId": "t_s10_A1",
+          "monsterComment": "L'Extraverti absolu. Tu as soif de bruit et de reconnaissance.",
+          "mbti": {
+            "E": 2
+          },
+          "temperaments": {
+            "courage": 0.5,
+            "compassion": 0.5
+          }
+        },
+        {
+          "id": "A2",
+          "text": "Partager un dernier repas calme avec la caravane, puis partir.",
+          "tag": "neutral",
+          "nextNodeId": "t_s10_A2",
+          "monsterComment": "La sociabilité mesurée. C'est propre, c'est pro.",
+          "mbti": {
+            "E": 1
+          },
+          "temperaments": {}
+        },
+        {
+          "id": "B2",
+          "text": "Prendre votre or et vous éclipser seul dans les ruelles sombres.",
+          "tag": "safe",
+          "nextNodeId": "t_s10_B2",
+          "monsterComment": "L'Introverti. La foule t'épuise, la mission est faite.",
+          "mbti": {
+            "I": 2
+          },
+          "temperaments": {}
+        },
+        {
+          "id": "B1_sceau",
+          "text": "[Sceau de Linguini] Utiliser le passe-droit pour enquêter sur la marchandise maudite.",
+          "tag": "clever",
+          "nextNodeId": "t_s10_B1_sceau",
+          "monsterComment": "La soif de vérité l'emporte sur la fête. Inspecteur {nickname}.",
+          "condition": {
+            "flag": "sceau_guilde",
+            "expected": true
+          },
+          "mbti": {
+            "I": 1
+          },
+          "temperaments": {
+            "malice": 1
+          }
+        },
+        {
+          "id": "B1_medaillon",
+          "text": "[Médaillon de la Veuve] Offrir le talisman à Cannella pour apaiser ses peurs.",
+          "tag": "safe",
+          "nextNodeId": "t_s10_B1_medaillon",
+          "monsterComment": "Un geste d'une pureté absolue pour clore ce voyage.",
+          "condition": {
+            "flag": "medaillon_veuve",
+            "expected": true
+          },
+          "mbti": {
+            "E": 1
+          },
+          "temperaments": {
+            "compassion": 2
+          }
+        }
+      ],
+      "id": "s10_foire"
+    },
+    "t_s10_A1": {
+      "kind": "tampon",
+      "body": "Vous montez sur une table et hurlez votre joie. Les marchands vous acclament, l'alcool coule à flots. C'est une nuit de gloire éphémère qui résonnera longtemps dans les mémoires de Risoletto.",
+      "choices": [
+        {
+          "id": "c1",
+          "text": "Sortir prendre l'air",
+          "tag": "neutral",
+          "nextNodeId": "s10_verdict"
+        }
+      ],
+      "id": "t_s10_A1"
+    },
+    "t_s10_A2": {
+      "kind": "tampon",
+      "body": "Autour d'un ragoût chaud, vous échangez de discrets hochements de tête avec ceux qui ont survécu à la route. Une conclusion digne et sereine.",
+      "choices": [
+        {
+          "id": "c1",
+          "text": "Aller vous coucher",
+          "tag": "neutral",
+          "nextNodeId": "s10_verdict"
+        }
+      ],
+      "id": "t_s10_A2"
+    },
+    "t_s10_B2": {
+      "kind": "tampon",
+      "body": "Vous glissez dans l'ombre, laissant les cris de joie derrière vous. Le silence d'une ruelle isolée est votre seule récompense. Et elle vous suffit amplement.",
+      "choices": [
+        {
+          "id": "c1",
+          "text": "S'asseoir dans l'ombre",
+          "tag": "neutral",
+          "nextNodeId": "s10_verdict"
+        }
+      ],
+      "id": "t_s10_B2"
+    },
+    "t_s10_B1_sceau": {
+      "kind": "tampon",
+      "body": "Le sceau vous ouvre les portes de l'entrepôt douanier. Vous découvrez que les 'soieries' de Cannella cachaient des armes de contrebande. Brodo avait raison, le danger venait de l'intérieur. Vous gardez ce lourd secret pour vous.",
+      "choices": [
+        {
+          "id": "c1",
+          "text": "Se retirer dans la nuit",
+          "tag": "neutral",
+          "nextNodeId": "s10_verdict"
+        }
+      ],
+      "id": "t_s10_B1_sceau"
+    },
+    "t_s10_B1_medaillon": {
+      "kind": "tampon",
+      "body": "Cannella, tremblante, accepte le médaillon en bois. Son visage durci par la paranoïa se détend enfin. Elle vous remercie d'une voix brisée, libérée d'un fardeau invisible. Vous venez de sauver une âme.",
+      "choices": [
+        {
+          "id": "c1",
+          "text": "Sourire et vous éloigner",
+          "tag": "neutral",
+          "nextNodeId": "s10_verdict"
+        }
+      ],
+      "id": "t_s10_B1_medaillon"
+    },
+    "s10_verdict": {
+      "kind": "scene_porte",
+      "body": "La nuit s'apaise. Vous vous retrouvez seul, face à vous-même, dans le calme d'une petite chambre louée pour la nuit. Une présence froide envahit la pièce. Le Monstre apparaît, sans sarcasme cette fois. Il vous observe intensément, évaluant tout ce que vous avez accompli depuis Bagolio.",
+      "choices": [
+        {
+          "id": "v1_chaos",
+          "text": "[Écouter le Verdict du Chaos]",
+          "tag": "bold",
+          "nextNodeId": "t_s10_end_chaos",
+          "condition": {
+            "flag": "grogno_dead",
+            "expected": true
+          },
+          "monsterComment": "Tu as laissé des cadavres sur la route. Tu as brisé des vies pour avancer."
+        },
+        {
+          "id": "v2_order",
+          "text": "[Écouter le Verdict de l'Ordre]",
+          "tag": "clever",
+          "nextNodeId": "t_s10_end_order",
+          "condition": {
+            "flag": "linguini_left",
+            "expected": false
+          },
+          "monsterComment": "La méthode et la procédure t'ont maintenu en vie, mais à quel prix émotionnel ?"
+        },
+        {
+          "id": "v3_standard",
+          "text": "[Écouter le Verdict du Survivant]",
+          "tag": "safe",
+          "nextNodeId": "t_s10_end_standard",
+          "monsterComment": "Tu as survécu. C'est déjà plus que beaucoup d'autres."
+        }
+      ],
+      "id": "s10_verdict"
+    },
+    "t_s10_end_chaos": {
+      "kind": "tampon",
+      "body": "« La route t'a révélé, {nickname}. Tu es une tempête. Partout où tu passes, les structures s'effondrent. C'est fascinant et terrifiant. » Le Monstre s'incline respectueusement. « Repose-toi. Le Chapitre 2 sera bien plus... exigeant. »\n\n(FIN DU CHAPITRE 1)",
+      "choices": [
+        {
+          "id": "c1",
+          "text": "Boucler la boucle (Reset)",
+          "tag": "neutral",
+          "nextNodeId": "g1_eveil",
+          "action": "reset"
+        }
+      ],
+      "id": "t_s10_end_chaos"
+    },
+    "t_s10_end_order": {
+      "kind": "tampon",
+      "body": "« L'architecte... Tu penses que tout peut être calculé, pesé, prévu. Tu as gardé la cohésion par la force de ta rationalité. Mais l'imprévu te rattrapera. » Le Monstre sourit lentement. « Repose-toi. Le Chapitre 2 brisera tes certitudes. »\n\n(FIN DU CHAPITRE 1)",
+      "choices": [
+        {
+          "id": "c1",
+          "text": "Boucler la boucle (Reset)",
+          "tag": "neutral",
+          "nextNodeId": "g1_eveil",
+          "action": "reset"
+        }
+      ],
+      "id": "t_s10_end_order"
+    },
+    "t_s10_end_standard": {
+      "kind": "tampon",
+      "body": "« Tu as marché sur la ligne, essayant de faire de ton mieux. Ni un tyran, ni un poète. Juste un convoyeur essayant de survivre. C'est noble, à défaut d'être grandiose. » Le Monstre s'efface dans l'ombre. « Repose-toi. Le Chapitre 2 t'attend. »\n\n(FIN DU CHAPITRE 1)",
+      "choices": [
+        {
+          "id": "c1",
+          "text": "Boucler la boucle (Reset)",
+          "tag": "neutral",
+          "nextNodeId": "g1_eveil",
+          "action": "reset"
+        }
+      ],
+      "id": "t_s10_end_standard"
+    },
+    "t_s5_bivouac_deuil": {
+      "kind": "tampon",
+      "body": "La nuit tombe enfin. Le campement se monte dans un silence de mort. Le corps de Grogno a été enveloppé à la hâte dans une vieille toile de tente. Autour du maigre feu, personne n'ose croiser votre regard. Vous avez forcé l'allure, et le prix a été payé en sang. Cannella, traumatisée, s'est enfermée dans sa charrette.",
+      "choices": [
+        {
+          "id": "c1",
+          "text": "Essayer de dormir malgré tout",
+          "tag": "neutral",
+          "nextNodeId": "s6_conflit",
+          "monsterComment": "Un mort le deuxième jour. Ta gestion d'équipe est brutale, mais efficace. Repose-toi, boucher.",
+          "mbti": {},
+          "temperaments": {}
+        }
+      ],
+      "id": "t_s5_bivouac_deuil"
     }
   }
 }
