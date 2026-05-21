@@ -16,7 +16,7 @@
           "mbti": {},
           "temperaments": {},
           "monsterComment": null,
-          "nextNodeId": "g2_rencontre"
+          "nextNodeId": "t_g1_avance"
         },
         {
           "id": "c_g1_reste",
@@ -24,15 +24,15 @@
           "tag": "neutral",
           "mbti": {},
           "temperaments": {},
-          "monsterComment": "Tu peux rester assis aussi longtemps que tu veux, mais la lumière ne viendra pas à toi.",
-          "nextNodeId": "g2_rencontre"
+          "monsterComment": null,
+          "nextNodeId": "t_g1_reste"
         }
       ],
       "id": "g1_eveil"
     },
     "g2_rencontre": {
       "kind": "genese",
-      "body": "Tu marches une minute. La lueur s'agrandit. Tu débouches dans une cavité plus large, éclairée par une marmite suspendue qui brûle sans support visible.\n\nAu centre, flottant à un mètre du sol, il y a quelque chose. Tu ne sais pas comment décrire ça. Tu vois des appendices, mais quand tu fixes ton regard ils disparaissent. Tu vois un visage, mais quand tu clignes il a changé. La seule constante, c'est une odeur — sauce dominicale, sauce avec des heures dedans, sauce que ta grand-mère faisait peut-être si tu avais eu cette chance.\n\nTu comprends, sans qu'on te le dise, que c'est lui qui t'a appelé.\n\n— Voilà. Approche encore un peu. Pas trop. Là, bien. Bon. {nickname}, je vais être direct avec toi parce que j'ai pas une éternité. Si, en fait, j'ai littéralement l'éternité. Mais j'ai pas envie de la passer à t'expliquer trois fois la même chose.\n\nIl prend une pause théâtrale. Tu jurerais qu'il a fait exprès.\n\n— Je t'ai choisi. Pour une mission. Pas une grosse mission, hein, faut pas que tu te montes la tête. Une mission de calibrage. Pour voir ce que tu vaux. À la fin, si tu t'en sors, tu deviens mon apprenti. Mes apprentis ont des avantages. Ils gagnent de l'expérience. Ils débloquent des choses. Ils ont une vie meilleure, statistiquement. Bref.",
+      "body": "Tu finis par déboucher dans une cavité plus large, éclairée par une marmite suspendue qui brûle sans support visible.\n\nAu centre, flottant à un mètre du sol, il y a quelque chose. Tu ne sais pas comment décrire ça. Tu vois des appendices, mais quand tu fixes ton regard ils disparaissent. Tu vois un visage, mais quand tu clignes il a changé. La seule constante, c'est une odeur — sauce dominicale, sauce avec des heures dedans, sauce que ta grand-mère faisait peut-être si tu avais eu cette chance.\n\nTu comprends, sans qu'on te le dise, que c'est lui qui t'a appelé.\n\n— Voilà. Approche encore un peu. Pas trop. Là, bien. Bon. {nickname}, je vais être direct avec toi parce que j'ai pas une éternité. Si, en fait, j'ai littéralement l'éternité. Mais j'ai pas envie de la passer à t'expliquer trois fois la même chose.\n\nIl prend une pause théâtrale. Tu jurerais qu'il a fait exprès.\n\n— Je t'ai choisi. Pour une mission. Pas une grosse mission, hein, faut pas que tu te montes la tête. Une mission de calibrage. Pour voir ce que tu vaux. À la fin, si tu t'en sors, tu deviens mon apprenti. Mes apprentis ont des avantages. Ils gagnent de l'expérience. Ils débloquent des choses. Ils ont une vie meilleure, statistiquement. Bref.",
       "choices": [
         {
           "id": "c_g2_de_quoi",
@@ -2669,6 +2669,32 @@
         }
       ],
       "id": "t_s3_B1_nuit"
+    },
+    "t_g1_avance": {
+      "kind": "tampon",
+      "body": "Tu te lèves docilement et tu te mets en marche vers la source de lumière. L'odeur de sauce devient plus forte à chaque pas.",
+      "choices": [
+        {
+          "id": "c1",
+          "text": "Continuer",
+          "tag": "neutral",
+          "nextNodeId": "g2_rencontre"
+        }
+      ],
+      "id": "t_g1_avance"
+    },
+    "t_g1_reste": {
+      "kind": "tampon",
+      "body": "Tu décides que la meilleure chose à faire est de rester assis dans le noir.\n\nLa voix lâche un soupir si théâtral qu'il fait trembler les stalactites. Soudain, une force invisible te saisit par le col de ta chemise et te traîne de force le long du boyau.",
+      "choices": [
+        {
+          "id": "c1",
+          "text": "Se laisser traîner",
+          "tag": "neutral",
+          "nextNodeId": "g2_rencontre"
+        }
+      ],
+      "id": "t_g1_reste"
     }
   }
 }
