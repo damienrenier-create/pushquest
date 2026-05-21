@@ -1064,9 +1064,7 @@
           "tag": "clever",
           "nextNodeId": "t_s6_A1_extend",
           "monsterComment": "Magnifique. Une cruauté parfaitement procédurière.",
-          "mbti": {
-            "T": 1
-          },
+          "mbti": {},
           "temperaments": {}
         },
         {
@@ -1075,9 +1073,7 @@
           "tag": "wrong",
           "nextNodeId": "t_s6_funnel",
           "monsterComment": "Tu tranches avec la loi et tu mets un pansement affectif ? Quelle inconstance. Bref, on avance.",
-          "mbti": {
-            "F": 1
-          },
+          "mbti": {},
           "temperaments": {}
         }
       ],
@@ -1093,9 +1089,7 @@
           "tag": "clever",
           "nextNodeId": "t_s6_A1_climax",
           "monsterComment": "Tranchant jusqu'à l'os. Tu n'as pas de cœur, tu as un boulier.",
-          "mbti": {
-            "T": 1
-          },
+          "mbti": {},
           "temperaments": {}
         },
         {
@@ -1104,9 +1098,7 @@
           "tag": "neutral",
           "nextNodeId": "t_s6_funnel",
           "monsterComment": "Un tout petit sursaut d'empathie à la dernière seconde ? C'est noté.",
-          "mbti": {
-            "F": 1
-          },
+          "mbti": {},
           "temperaments": {
             "compassion": 0.5
           }
@@ -1143,9 +1135,7 @@
           "tag": "clever",
           "nextNodeId": "t_s6_A2_extend",
           "monsterComment": "L'intendant suprême. J'aime l'excès de zèle.",
-          "mbti": {
-            "T": 1
-          },
+          "mbti": {},
           "temperaments": {}
         },
         {
@@ -1154,9 +1144,7 @@
           "tag": "wrong",
           "nextNodeId": "t_s6_funnel",
           "monsterComment": "Un législateur ne fait pas le clown, {nickname}. Pitoyable. On avance.",
-          "mbti": {
-            "F": 1
-          },
+          "mbti": {},
           "temperaments": {}
         }
       ],
@@ -1172,9 +1160,7 @@
           "tag": "clever",
           "nextNodeId": "t_s6_A2_climax",
           "monsterComment": "L'égalité mathématique absolue. Implacable.",
-          "mbti": {
-            "T": 1
-          },
+          "mbti": {},
           "temperaments": {}
         },
         {
@@ -1183,9 +1169,7 @@
           "tag": "safe",
           "nextNodeId": "t_s6_funnel",
           "monsterComment": "La règle pure a ses petites exceptions de confort, apparemment.",
-          "mbti": {
-            "F": 1
-          },
+          "mbti": {},
           "temperaments": {}
         }
       ],
@@ -1217,9 +1201,7 @@
           "tag": "safe",
           "nextNodeId": "t_s6_B2_extend",
           "monsterComment": "C'est beau. On dirait presque du vrai cinéma.",
-          "mbti": {
-            "F": 1
-          },
+          "mbti": {},
           "temperaments": {}
         },
         {
@@ -1228,9 +1210,7 @@
           "tag": "wrong",
           "nextNodeId": "t_s6_funnel",
           "monsterComment": "Tu passes deux heures sur leurs sentiments pour finir en pointeuse d'usine ? Ridicule. Bref.",
-          "mbti": {
-            "T": 1
-          },
+          "mbti": {},
           "temperaments": {}
         }
       ],
@@ -1246,9 +1226,7 @@
           "tag": "safe",
           "nextNodeId": "t_s6_funnel",
           "monsterComment": "Maman oiseau force ses petits à manger. On atteint des sommets d'assistanat.",
-          "mbti": {
-            "F": 1
-          },
+          "mbti": {},
           "temperaments": {
             "compassion": 0.5
           }
@@ -1259,9 +1237,7 @@
           "tag": "bold",
           "nextNodeId": "t_s6_funnel",
           "monsterComment": "Tu sais t'arrêter avant l'indigestion émotionnelle. Et tu as un bouillon gratuit.",
-          "mbti": {
-            "T": 1
-          },
+          "mbti": {},
           "temperaments": {
             "malice": 0.5
           }
@@ -1282,9 +1258,7 @@
           "tag": "bold",
           "nextNodeId": "t_s6_B1_extend",
           "monsterComment": "Totalement toxique. Formidable. Bon débarras.",
-          "mbti": {
-            "F": 1
-          },
+          "mbti": {},
           "temperaments": {
             "malice": 0.5
           }
@@ -1295,9 +1269,7 @@
           "tag": "wrong",
           "nextNodeId": "t_s6_funnel",
           "monsterComment": "Tu es en plein déni. Il crache sur ta fausse logique. Il part.",
-          "mbti": {
-            "T": 1
-          },
+          "mbti": {},
           "temperaments": {}
         }
       ],
@@ -1316,9 +1288,7 @@
             "map_lost": true
           },
           "monsterComment": "Le panache avant la survie. Vous voilà perdus, mais intègres.",
-          "mbti": {
-            "F": 1
-          },
+          "mbti": {},
           "temperaments": {
             "courage": 0.5
           }
@@ -1329,9 +1299,7 @@
           "tag": "wrong",
           "nextNodeId": "t_s6_funnel",
           "monsterComment": "Voleur et mauvais ami. Linguini crache par terre. J'adore ton pragmatisme de caniveau.",
-          "mbti": {
-            "T": 1
-          },
+          "mbti": {},
           "temperaments": {
             "malice": 0.5
           }
@@ -1589,7 +1557,7 @@
           "text": "« Ils ont été négligents. Ils n'ont pas fouillé physiquement leurs propres charrettes. »",
           "tag": "clever",
           "nextNodeId": "t_s7_A1_std",
-          "monsterComment": "Un pragmatisme pur et dur. L'œil de l'inspecteur.",
+          "monsterComment": "Il vient de te donner la clé de la ville. Pense à le remercier un jour.",
           "mbti": {
             "S": 2
           },
@@ -1619,7 +1587,7 @@
           "text": "« Une erreur de registre. Ils n'ont pas vérifié leur manifeste de cargaison. »",
           "tag": "neutral",
           "nextNodeId": "t_s7_A2_std",
-          "monsterComment": "La bureaucratie avant tout. Tu aurais fait un bon greffier.",
+          "monsterComment": "L'administration gagne toujours à la fin.",
           "mbti": {
             "S": 1
           },
@@ -1649,7 +1617,7 @@
           "text": "« Ils ont fait confiance à la mauvaise personne. Le danger vient toujours de l'intérieur. »",
           "tag": "safe",
           "nextNodeId": "t_s7_B2_std",
-          "monsterComment": "L'intuition relationnelle. Tu lis les gens, pas les cartes.",
+          "monsterComment": "La paranoïa est une excellente compagne de voyage.",
           "mbti": {
             "N": 1
           },
@@ -1852,7 +1820,7 @@
     },
     "s8_philosophie": {
       "kind": "scene_porte",
-      "body": "Une caravane majestueuse vous rattrape. Ses bêtes sont disciplinées, ses roues silencieuses. Son chef, l'illustre Vittorio, fait stopper son convoi à votre niveau. Il descend, observe votre groupe boueux, et vous tend une outre d'eau fraîche avec un sourire respectueux. « Une question, confrère... » dit-il. « Tirez-vous ces charrettes pour l'amour et la maîtrise de la route, ou simplement pour l'or qui vous attend à l'arrivée ? » Penne vous regarde, buvant vos paroles.",
+      "body": "Une caravane majestueuse vous rattrape. Ses bêtes sont disciplinées, ses roues silencieuses. Son chef, l'illustre Vittorio, fait stopper son convoi à votre niveau. Il descend, observe votre groupe boueux, et vous tend une outre d'eau fraîche avec un sourire respectueux. « Une question, confrère... » dit-il. « Tirez-vous ces charrettes pour l'amour et la maîtrise de la route, ou simplement pour l'or qui vous attend à l'arrivée ? » Le vieux Brodo suspend son geste, écoutant attentivement votre réponse.",
       "choices": [
         {
           "id": "A1",
@@ -1860,7 +1828,9 @@
           "tag": "clever",
           "nextNodeId": "t_s8_phil_or",
           "monsterComment": "Un pragmatisme assumé. Tu as le cœur aussi sec qu'un livre de comptes.",
-          "mbti": {},
+          "mbti": {
+            "T": 1
+          },
           "temperaments": {
             "malice": 0.5
           }
@@ -1871,7 +1841,9 @@
           "tag": "bold",
           "nextNodeId": "t_s8_phil_maitrise",
           "monsterComment": "L'idéaliste prend la parole. Une belle phrase pour quelqu'un couvert de boue.",
-          "mbti": {},
+          "mbti": {
+            "I": 1
+          },
           "temperaments": {
             "courage": 0.5
           }
@@ -1882,7 +1854,9 @@
           "tag": "safe",
           "nextNodeId": "t_s8_phil_gens",
           "monsterComment": "Le berger et son troupeau. C'est presque émouvant, {nickname}.",
-          "mbti": {},
+          "mbti": {
+            "F": 1
+          },
           "temperaments": {
             "compassion": 1
           }
@@ -1893,7 +1867,9 @@
           "tag": "wrong",
           "nextNodeId": "t_s8_phil_rien",
           "monsterComment": "La crise existentielle au milieu de la poussière. Merveilleux.",
-          "mbti": {},
+          "mbti": {
+            "P": 1
+          },
           "temperaments": {}
         }
       ],
@@ -2035,7 +2011,7 @@
           },
           "temperaments": {},
           "condition": {
-            "flag": "boussole_ternie",
+            "flag": "map_lost",
             "expected": false
           }
         },
@@ -2067,6 +2043,19 @@
           },
           "temperaments": {
             "courage": 0.5
+          }
+        },
+        {
+          "id": "B2_lost",
+          "text": "[Carte Perdue] Avancer à l'aveugle. Sans Linguini et sans carte, c'est le seul choix.",
+          "tag": "wrong",
+          "nextNodeId": "t_s8_B1_std",
+          "monsterComment": "Pas de carte. Pas de guide. Le brouillard. C'est ce qu'on appelle la sélection naturelle.",
+          "mbti": {},
+          "temperaments": {},
+          "condition": {
+            "flag": "map_lost",
+            "expected": true
           }
         }
       ],
@@ -2199,7 +2188,7 @@
     "s9_veuve": {
       "kind": "scene_porte",
       "axis": "T/F",
-      "body": "Sur le pont de pierre menant aux portes de Risoletto, une vieille femme vêtue de noir bloque silencieusement le passage. Elle fixe le vide. « La route m'a pris mon mari il y a vingt ans », murmure-t-elle. « La route a une dette. Un péage de sang ou d'or. Une pièce par marchand... ou une âme. » La caravane se fige.",
+      "body": "Sur le pont de pierre menant aux portes de Risoletto, une vieille femme vêtue de noir bloque silencieusement le passage. Elle fixe le vide. « La route m'a pris mon mari il y a vingt ans », murmure-t-elle. « La route a une dette. Un péage de sang ou d'or. Une pièce par marchand — ou une âme. » La caravane se fige.",
       "choices": [
         {
           "id": "A1_grogno",
