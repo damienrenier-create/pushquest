@@ -533,6 +533,9 @@
     "t_s3_A1": {
       "kind": "tampon",
       "body": "Penne vous regarde, sidéré par la froideur de votre logique mathématique. Il s'éloigne sans un mot, les poings serrés.",
+      "flags": {
+        "penne_angry": true
+      },
       "choices": [
         {
           "id": "c1",
@@ -553,7 +556,7 @@
           "id": "c1",
           "text": "Calculer le retour sur investissement du deuil de Penne.",
           "tag": "wrong",
-          "nextNodeId": "s4_traces",
+          "nextNodeId": "t_s3_nuit1",
           "mbti": {},
           "temperaments": {}
         },
@@ -561,7 +564,7 @@
           "id": "c2",
           "text": "Proposer de facturer ses larmes au litre.",
           "tag": "wrong",
-          "nextNodeId": "s4_traces",
+          "nextNodeId": "t_s3_nuit1",
           "mbti": {},
           "temperaments": {}
         },
@@ -569,7 +572,7 @@
           "id": "c3",
           "text": "Planifier la revente des biens de sa sœur, \"au cas où\".",
           "tag": "wrong",
-          "nextNodeId": "s4_traces",
+          "nextNodeId": "t_s3_nuit1",
           "mbti": {},
           "temperaments": {}
         }
@@ -584,7 +587,7 @@
           "id": "c1",
           "text": "Reprendre la route",
           "tag": "neutral",
-          "nextNodeId": "s4_traces",
+          "nextNodeId": "t_s3_nuit1",
           "mbti": {},
           "temperaments": {}
         }
@@ -599,7 +602,7 @@
           "id": "c1",
           "text": "Reprendre la route",
           "tag": "neutral",
-          "nextNodeId": "s4_traces",
+          "nextNodeId": "t_s3_nuit1",
           "mbti": {},
           "temperaments": {}
         }
@@ -629,7 +632,7 @@
           "id": "c1",
           "text": "Promettre de soigner le genou arthritique de Linguini.",
           "tag": "neutral",
-          "nextNodeId": "s4_traces",
+          "nextNodeId": "t_s3_nuit1",
           "mbti": {},
           "temperaments": {}
         },
@@ -637,7 +640,7 @@
           "id": "c2",
           "text": "Jurer de repeindre personnellement la charrette de Cannella.",
           "tag": "neutral",
-          "nextNodeId": "s4_traces",
+          "nextNodeId": "t_s3_nuit1",
           "mbti": {},
           "temperaments": {}
         },
@@ -645,7 +648,7 @@
           "id": "c3",
           "text": "Proposer d'adopter légalement tous les enfants des marchands.",
           "tag": "neutral",
-          "nextNodeId": "s4_traces",
+          "nextNodeId": "t_s3_nuit1",
           "mbti": {},
           "temperaments": {}
         }
@@ -956,6 +959,9 @@
     "t_s4_B2_inter3": {
       "kind": "tampon",
       "body": "Rien. Le silence de la forêt est revenu, lourd et poisseux. Risotto s'est volatilisé. Vous retrouvez seulement son dé en os.\nLe Monstre apparaît, la voix anormalement grave : « ... Ce n'était pas dans mon script, ça. Rentre au campement, {nickname}. Tout de suite. Ne te retourne pas. »",
+      "flags": {
+        "risotto_missing": true
+      },
       "choices": [
         {
           "id": "c1",
@@ -1582,6 +1588,22 @@
           "tag": "neutral",
           "nextNodeId": "s6_conflit",
           "monsterComment": "Repose-toi, {nickname}. Écoute ce silence. C'est lourd, c'est froid, et tout le monde se regarde en chiens de faïence. Un vrai régal. Bref, dors.",
+          "mbti": {},
+          "temperaments": {},
+          "condition": {
+            "flag": "risotto_missing",
+            "expected": false
+          }
+        },
+        {
+          "id": "c2",
+          "text": "Annoncer la disparition de Risotto",
+          "tag": "neutral",
+          "nextNodeId": "t_s5_bivouac_risotto",
+          "condition": {
+            "flag": "risotto_missing",
+            "expected": true
+          },
           "mbti": {},
           "temperaments": {}
         }
@@ -2394,6 +2416,36 @@
           "temperaments": {}
         }
       ]
+    },
+    "t_s3_nuit1": {
+      "kind": "tampon",
+      "body": "Le reste de la journée s'écoule dans un silence pesant, rythmé par le grincement des essieux. La caravane établit son premier campement sous un ciel sans lune. Au petit matin du deuxième jour, l'air est vif et le convoi se remet en marche.",
+      "choices": [
+        {
+          "id": "c1",
+          "text": "Reprendre la route",
+          "tag": "neutral",
+          "nextNodeId": "s4_traces",
+          "mbti": {},
+          "temperaments": {}
+        }
+      ],
+      "id": "t_s3_nuit1"
+    },
+    "t_s5_bivouac_risotto": {
+      "kind": "tampon",
+      "body": "Linguini lève les yeux de son registre, le visage blême. « Il manque quelqu'un. Où est Risotto ? » Un frisson parcourt la caravane. Vous montrez le dé en os trouvé dans la forêt. Cannella étouffe un cri de terreur. Personne ne dormira vraiment cette nuit.",
+      "choices": [
+        {
+          "id": "c1",
+          "text": "Se taire et attendre l'aube",
+          "tag": "neutral",
+          "nextNodeId": "s6_conflit",
+          "mbti": {},
+          "temperaments": {}
+        }
+      ],
+      "id": "t_s5_bivouac_risotto"
     }
   }
 }
