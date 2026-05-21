@@ -59,7 +59,9 @@
           "text": "Je la prends.",
           "tag": "bold",
           "mbti": {},
-          "temperaments": { "courage": 0.5 },
+          "temperaments": {
+            "courage": 0.5
+          },
           "monsterComment": "Voilà. Excellent. Ferme les yeux une seconde. Quand tu les rouvres, t'es à Bagolio. Et essaye de pas tout casser.",
           "nextNodeId": "s1_bagolio"
         }
@@ -74,8 +76,12 @@
           "id": "c_s1_A1",
           "text": "Tu te plantes au milieu de la cour, tu lèves les bras, et tu te présentes à tout le monde en parlant fort.",
           "tag": "bold",
-          "mbti": { "E": 2 },
-          "temperaments": { "courage": 1 },
+          "mbti": {
+            "E": 2
+          },
+          "temperaments": {
+            "courage": 1
+          },
           "monsterComment": null,
           "nextNodeId": "t_s1_A1"
         },
@@ -83,8 +89,13 @@
           "id": "c_s1_A2",
           "text": "Tu te diriges vers la table la plus animée, tu salues, tu te glisses dans la conversation.",
           "tag": "bold",
-          "mbti": { "E": 1 },
-          "temperaments": { "courage": 0.5, "compassion": 0.5 },
+          "mbti": {
+            "E": 1
+          },
+          "temperaments": {
+            "courage": 0.5,
+            "compassion": 0.5
+          },
           "monsterComment": null,
           "nextNodeId": "t_s1_A2"
         },
@@ -92,8 +103,12 @@
           "id": "c_s1_B2",
           "text": "Tu fais le tour discrètement, tu observes qui parle à qui, tu essaies de comprendre les dynamiques.",
           "tag": "clever",
-          "mbti": { "I": 1 },
-          "temperaments": { "malice": 0.5 },
+          "mbti": {
+            "I": 1
+          },
+          "temperaments": {
+            "malice": 0.5
+          },
           "monsterComment": null,
           "nextNodeId": "t_s1_B2"
         },
@@ -101,8 +116,12 @@
           "id": "c_s1_B1",
           "text": "Tu t'installes près du feu en silence, tu attends que quelqu'un vienne te voir.",
           "tag": "safe",
-          "mbti": { "I": 2 },
-          "temperaments": { "courage": -0.5 },
+          "mbti": {
+            "I": 2
+          },
+          "temperaments": {
+            "courage": -0.5
+          },
           "monsterComment": null,
           "nextNodeId": "t_s1_B1"
         }
@@ -112,8 +131,12 @@
       "kind": "tampon",
       "body": "Ta voix porte. Trop, peut-être. Le silence qui suit ta présentation est gênant.\n\n« Eh ben au moins on sait qui c'est », lâche un marchand grognon avec une cicatrice sur le front. Plusieurs ricanements. Un autre marchand, jeune et souriant, applaudit gentiment. « Bien parlé. Moi c'est Penne. » Il te serre la main fort.\n\nUne femme aux cheveux blancs, assise à part, ne te regarde pas mais murmure à sa voisine quelque chose qui te concerne. Tu n'entends pas. La voisine glousse.\n\n— Bon. Soit ils vont t'adorer, soit te détester, en tout cas ils t'ont remarqué. Je dis ça je dis rien.",
       "flags": {
-        "addAllies": ["Penne"],
-        "addRivals": ["Grogno"]
+        "addAllies": [
+          "Penne"
+        ],
+        "addRivals": [
+          "Grogno"
+        ]
       },
       "choices": [
         {
@@ -131,7 +154,11 @@
       "kind": "tampon",
       "body": "Tu t'assois à la table la plus bruyante. Trois marchands, un broc de vin, une partie de dés en cours. « Tiens, un nouveau ! » Le plus âgé te tend un verre. « Tu joues ? »\n\nTu décides ou non. En quelques minutes, tu sais leur nom : Penne (le jeune souriant), Linguini (l'âgé rusé), et Risotto (le silencieux qui gagne tout). Ils te résument la caravane en deux phrases : « Y a des bons, y a des cons. Tu vas voir. »\n\nTu remarques au passage que personne d'autre n'est venu se présenter. Tu as fait une bande de 3 amis en 5 minutes. Le reste de la caravane t'ignore poliment.\n\n— Trois amis sur quatorze, c'est une stratégie. Petite, mais cohérente.",
       "flags": {
-        "addAllies": ["Penne", "Linguini", "Risotto"]
+        "addAllies": [
+          "Penne",
+          "Linguini",
+          "Risotto"
+        ]
       },
       "choices": [
         {
@@ -149,7 +176,12 @@
       "kind": "tampon",
       "body": "Tu fais lentement le tour de la cour, l'air de rien. Tu écoutes plus que tu ne parles. En quinze minutes d'observation, tu as compris :\n\n- Les marchands sont divisés en deux clans. L'un autour de Linguini (l'âgé rusé), l'autre autour de Penne (le jeune souriant). Les deux ne s'aiment pas.\n- Le vieux cuisinier près de la charrette s'appelle Brodo. Personne ne lui parle. Il a l'air d'aimer ça.\n- La femme aux cheveux blancs est Cannella. Elle est riche. Les autres marchands la respectent mais en ont peur.\n- Les deux enfants appartiennent à un marchand absent, qui doit rejoindre la caravane à la prochaine étape.\n\nTu n'as parlé à personne. Mais tu sais déjà à qui parler en premier quand il faudra.\n\n— Tu m'as un peu impressionné, là. Un peu seulement. Faut pas s'enflammer.",
       "flags": {
-        "discovered": ["Penne", "Linguini", "Brodo", "Cannella"],
+        "discovered": [
+          "Penne",
+          "Linguini",
+          "Brodo",
+          "Cannella"
+        ],
         "knowsClans": true
       },
       "choices": [
@@ -165,268 +197,811 @@
       ]
     },
     "t_s1_B1": {
-      "id": "t_s1_B1",
       "kind": "tampon",
       "body": "Vous vous installez dans un coin de l'auberge, à l'écart, sans un mot.",
-      "choices": [ { "id": "c1", "text": "Continuer", "tag": "neutral", "nextNodeId": "t_s1_B1_inter1", "monsterComment": "Bon. Tu t'assois. Tu ne dis rien. Très bien. On fait du théâtre contemplatif, je respecte le parti pris.", "mbti": {}, "temperaments": {} } ]
+      "choices": [
+        {
+          "id": "c1",
+          "text": "Continuer",
+          "tag": "neutral",
+          "nextNodeId": "t_s1_B1_inter1",
+          "monsterComment": "Bon. Tu t'assois. Tu ne dis rien. Très bien. On fait du théâtre contemplatif, je respecte le parti pris.",
+          "mbti": {},
+          "temperaments": {}
+        }
+      ]
     },
     "t_s1_B1_inter1": {
-      "id": "t_s1_B1_inter1",
       "kind": "tampon",
       "body": "Penne rit fort, Linguini recompte des pièces, Grogno crache par terre. Et vous... vous ne faites rien.",
       "choices": [
-        { "id": "c1", "text": "Écouter distraitement la conversation de Penne.", "tag": "neutral", "nextNodeId": "s2_planification", "monsterComment": "C'est passif, mais au moins tu utilises tes oreilles. Bref, la nuit tombe.", "mbti": {}, "temperaments": {} },
-        { "id": "c2", "text": "Nettoyer la terre sous vos ongles.", "tag": "neutral", "nextNodeId": "s2_planification", "monsterComment": "Passionnant. Quel développement de personnage. On avance.", "mbti": {}, "temperaments": {} },
-        { "id": "c3", "text": "Fixer le fond de votre chope vide.", "tag": "neutral", "nextNodeId": "s2_planification", "monsterComment": "Très bien, le cliché du rôdeur mystérieux. Ça passe. La suite.", "mbti": {}, "temperaments": {} },
-        { "id": "c4", "text": "S'enfoncer dans une immobilité et un mutisme absolus.", "tag": "safe", "nextNodeId": "t_s1_B1_inter2", "mbti": {}, "temperaments": {} }
+        {
+          "id": "c1",
+          "text": "Écouter distraitement la conversation de Penne.",
+          "tag": "neutral",
+          "nextNodeId": "s2_planification",
+          "monsterComment": "C'est passif, mais au moins tu utilises tes oreilles. Bref, la nuit tombe.",
+          "mbti": {},
+          "temperaments": {}
+        },
+        {
+          "id": "c2",
+          "text": "Nettoyer la terre sous vos ongles.",
+          "tag": "neutral",
+          "nextNodeId": "s2_planification",
+          "monsterComment": "Passionnant. Quel développement de personnage. On avance.",
+          "mbti": {},
+          "temperaments": {}
+        },
+        {
+          "id": "c3",
+          "text": "Fixer le fond de votre chope vide.",
+          "tag": "neutral",
+          "nextNodeId": "s2_planification",
+          "monsterComment": "Très bien, le cliché du rôdeur mystérieux. Ça passe. La suite.",
+          "mbti": {},
+          "temperaments": {}
+        },
+        {
+          "id": "c4",
+          "text": "S'enfoncer dans une immobilité et un mutisme absolus.",
+          "tag": "safe",
+          "nextNodeId": "t_s1_B1_inter2",
+          "mbti": {},
+          "temperaments": {}
+        }
       ]
     },
     "t_s1_B1_inter2": {
-      "id": "t_s1_B1_inter2",
       "kind": "tampon",
       "body": "Les marchands finissent par totalement vous oublier. Vous êtes seul face à votre propre inertie.",
       "choices": [
-        { "id": "c1", "text": "Méditer intensément sur le grain du bois de la table.", "tag": "neutral", "nextNodeId": "s2_planification", "monsterComment": "Magnifique. Une masterclass d'inaction. Heureusement que j'ai le contrôle de l'horloge. Le décor se transforme doucement.", "mbti": {}, "temperaments": {} },
-        { "id": "c2", "text": "Se demander si l'aubergiste remarque votre immobilité.", "tag": "neutral", "nextNodeId": "s2_planification", "monsterComment": "Magnifique. Une masterclass d'inaction. Heureusement que j'ai le contrôle de l'horloge. Le décor se transforme doucement.", "mbti": {}, "temperaments": {} },
-        { "id": "c3", "text": "Apprécier n'avoir aucune responsabilité pour l'instant.", "tag": "neutral", "nextNodeId": "s2_planification", "monsterComment": "Magnifique. Une masterclass d'inaction. Heureusement que j'ai le contrôle de l'horloge. Le décor se transforme doucement.", "mbti": {}, "temperaments": {} },
-        { "id": "c4", "text": "Maintenir cette paralysie pour voir qui du temps ou de vous cèdera.", "tag": "neutral", "nextNodeId": "s2_planification", "monsterComment": "Magnifique. Une masterclass d'inaction. Heureusement que j'ai le contrôle de l'horloge. Le décor se transforme doucement.", "mbti": {}, "temperaments": {} }
+        {
+          "id": "c1",
+          "text": "Méditer intensément sur le grain du bois de la table.",
+          "tag": "neutral",
+          "nextNodeId": "s2_planification",
+          "monsterComment": "Magnifique. Une masterclass d'inaction. Heureusement que j'ai le contrôle de l'horloge. Le décor se transforme doucement.",
+          "mbti": {},
+          "temperaments": {}
+        },
+        {
+          "id": "c2",
+          "text": "Se demander si l'aubergiste remarque votre immobilité.",
+          "tag": "neutral",
+          "nextNodeId": "s2_planification",
+          "monsterComment": "Magnifique. Une masterclass d'inaction. Heureusement que j'ai le contrôle de l'horloge. Le décor se transforme doucement.",
+          "mbti": {},
+          "temperaments": {}
+        },
+        {
+          "id": "c3",
+          "text": "Apprécier n'avoir aucune responsabilité pour l'instant.",
+          "tag": "neutral",
+          "nextNodeId": "s2_planification",
+          "monsterComment": "Magnifique. Une masterclass d'inaction. Heureusement que j'ai le contrôle de l'horloge. Le décor se transforme doucement.",
+          "mbti": {},
+          "temperaments": {}
+        },
+        {
+          "id": "c4",
+          "text": "Maintenir cette paralysie pour voir qui du temps ou de vous cèdera.",
+          "tag": "neutral",
+          "nextNodeId": "s2_planification",
+          "monsterComment": "Magnifique. Une masterclass d'inaction. Heureusement que j'ai le contrôle de l'horloge. Le décor se transforme doucement.",
+          "mbti": {},
+          "temperaments": {}
+        }
       ]
     },
     "s2_planification": {
-      "id": "s2_planification",
       "kind": "scene_porte",
-      "body": "Le soir est tombé sur la cour de l'auberge. Linguini déroule une carte sur une table, vous tend un fusain et vous annonce : « À toi de tracer la route, convoyeur. »",
+      "body": "Le soir est tombé sur la cour de l'auberge, il est environ {currentHour}h. Linguini déroule une carte sur une table, vous tend un fusain et vous annonce : « À toi de tracer la route, convoyeur. »",
       "choices": [
-        { "id": "A1", "text": "Tracer un itinéraire complet, heure par heure (20 min).", "tag": "clever", "nextNodeId": "t_s2_A1", "monsterComment": "Tu viens de transformer mon aventure en tableur comptable, {nickname}.", "mbti": {"J": 2}, "temperaments": {} },
-        { "id": "A2", "text": "Fixer 3 grandes étapes, et garder le reste flexible.", "tag": "bold", "nextNodeId": "t_s2_A2", "monsterComment": "Un compromis de centriste. Pourquoi pas.", "mbti": {"J": 1}, "temperaments": {} },
-        { "id": "B2", "text": "Donner une direction générale, on décidera en route.", "tag": "bold", "nextNodeId": "t_s2_B2", "monsterComment": "L'improvisation. J'aime l'idée, même si Cannella te regarde de travers.", "mbti": {"P": 1}, "temperaments": {} },
-        { "id": "B1", "text": "« On verra bien demain matin. »", "tag": "safe", "nextNodeId": "t_s2_B1", "monsterComment": "Le chaos absolu. Magnifique.", "mbti": {"P": 2}, "temperaments": {} }
-      ]
+        {
+          "id": "A1",
+          "text": "Tracer un itinéraire complet, heure par heure (20 min).",
+          "tag": "clever",
+          "nextNodeId": "t_s2_A1",
+          "monsterComment": "Tu viens de transformer mon aventure en tableur comptable, {nickname}.",
+          "mbti": {
+            "J": 2
+          },
+          "temperaments": {
+            "malice": 0.5
+          }
+        },
+        {
+          "id": "A2",
+          "text": "Fixer 3 grandes étapes, et garder le reste flexible.",
+          "tag": "bold",
+          "nextNodeId": "t_s2_A2",
+          "monsterComment": "Un compromis de centriste. Pourquoi pas.",
+          "mbti": {
+            "J": 1
+          },
+          "temperaments": {}
+        },
+        {
+          "id": "B2",
+          "text": "Donner une direction générale, on décidera en route.",
+          "tag": "bold",
+          "nextNodeId": "t_s2_B2",
+          "monsterComment": "L'improvisation. J'aime l'idée, même si Cannella te regarde de travers.",
+          "mbti": {
+            "P": 1
+          },
+          "temperaments": {
+            "courage": 0.5
+          }
+        },
+        {
+          "id": "B1",
+          "text": "« On verra bien demain matin. »",
+          "tag": "safe",
+          "nextNodeId": "t_s2_B1",
+          "monsterComment": "Le chaos absolu. Magnifique.",
+          "mbti": {
+            "P": 2
+          },
+          "temperaments": {
+            "courage": -0.5
+          }
+        }
+      ],
+      "axis": "J/P"
     },
     "t_s2_A1": {
-      "id": "t_s2_A1",
       "kind": "tampon",
       "body": "Linguini hoche la tête, impressionné, tandis que Penne lève les yeux au ciel en voyant votre rigidité.",
-      "choices": [ { "id": "c1", "text": "Continuer", "tag": "neutral", "nextNodeId": "t_s2_A1_inter1", "mbti": {}, "temperaments": {} } ]
+      "choices": [
+        {
+          "id": "c1",
+          "text": "Continuer",
+          "tag": "neutral",
+          "nextNodeId": "t_s2_A1_inter1",
+          "mbti": {},
+          "temperaments": {}
+        }
+      ]
     },
     "t_s2_A1_inter1": {
-      "id": "t_s2_A1_inter1",
       "kind": "tampon",
       "body": "L'encre est à peine sèche que vous ressentez le besoin d'imposer votre nouvelle discipline au campement pour garantir le départ à 4h00 du matin.",
       "choices": [
-        { "id": "c1", "text": "Imposer un couvre-feu immédiat.", "tag": "neutral", "nextNodeId": "t_s2_A1_inter2", "mbti": {}, "temperaments": {} },
-        { "id": "c2", "text": "Assigner des tours de garde avec mots de passe.", "tag": "neutral", "nextNodeId": "t_s2_A1_inter2", "mbti": {}, "temperaments": {} },
-        { "id": "c3", "text": "Confisquer la flasque de vin de Penne.", "tag": "neutral", "nextNodeId": "t_s2_A1_inter2", "mbti": {}, "temperaments": {} }
+        {
+          "id": "c1",
+          "text": "Imposer un couvre-feu immédiat.",
+          "tag": "neutral",
+          "nextNodeId": "t_s2_A1_inter2",
+          "mbti": {},
+          "temperaments": {}
+        },
+        {
+          "id": "c2",
+          "text": "Assigner des tours de garde avec mots de passe.",
+          "tag": "neutral",
+          "nextNodeId": "t_s2_A1_inter2",
+          "mbti": {},
+          "temperaments": {}
+        },
+        {
+          "id": "c3",
+          "text": "Confisquer la flasque de vin de Penne.",
+          "tag": "neutral",
+          "nextNodeId": "t_s2_A1_inter2",
+          "mbti": {},
+          "temperaments": {}
+        }
       ]
     },
     "t_s2_A1_inter2": {
-      "id": "t_s2_A1_inter2",
       "kind": "tampon",
       "body": "Au petit matin, l'aube se lève sur Bagolio. Linguini recompte les effectifs. Deux marchands secondaires, terrifiés par votre régime autoritaire, ont fait leurs paquets pendant la nuit et sont rentrés chez eux.",
-      "choices": [ { "id": "c1", "text": "La caravane s'ébranle", "tag": "neutral", "nextNodeId": "s3_confidence", "monsterComment": "Tu as voulu diriger cette caravane comme un camp de redressement. Résultat : des déserteurs. Bref. Le soleil se lève.", "mbti": {}, "temperaments": {} } ]
+      "choices": [
+        {
+          "id": "c1",
+          "text": "La caravane s'ébranle",
+          "tag": "neutral",
+          "nextNodeId": "s3_confidence",
+          "monsterComment": "Tu as voulu diriger cette caravane comme un camp de redressement. Résultat : des déserteurs. Bref. Le soleil se lève.",
+          "mbti": {},
+          "temperaments": {}
+        }
+      ]
     },
     "t_s2_A2": {
-      "id": "t_s2_A2",
       "kind": "tampon",
       "body": "Cannella approuve votre pragmatisme. La caravane s'endort sans heurts.",
-      "choices": [ { "id": "c1", "text": "Le lendemain", "tag": "neutral", "nextNodeId": "s3_confidence", "mbti": {}, "temperaments": {} } ]
+      "choices": [
+        {
+          "id": "c1",
+          "text": "Le lendemain",
+          "tag": "neutral",
+          "nextNodeId": "s3_confidence",
+          "mbti": {},
+          "temperaments": {}
+        }
+      ]
     },
     "t_s2_B2": {
-      "id": "t_s2_B2",
       "kind": "tampon",
       "body": "Penne vous tape dans le dos, ravi de cette flexibilité. Vous dormez à la belle étoile.",
-      "choices": [ { "id": "c1", "text": "Le lendemain", "tag": "neutral", "nextNodeId": "s3_confidence", "mbti": {}, "temperaments": {} } ]
+      "choices": [
+        {
+          "id": "c1",
+          "text": "Le lendemain",
+          "tag": "neutral",
+          "nextNodeId": "s3_confidence",
+          "mbti": {},
+          "temperaments": {}
+        }
+      ]
     },
     "t_s2_B1": {
-      "id": "t_s2_B1",
       "kind": "tampon",
       "body": "Votre refus de planifier effraie. Au petit matin, deux marchands secondaires, redoutant le pire, ont plié bagage.",
-      "choices": [ { "id": "c1", "text": "La caravane s'ébranle", "tag": "neutral", "nextNodeId": "s3_confidence", "monsterComment": "Ton laxisme a fait fuir des figurants. C'est dommage, l'un d'eux avait une belle moustache. On avance.", "mbti": {}, "temperaments": {} } ]
+      "choices": [
+        {
+          "id": "c1",
+          "text": "La caravane s'ébranle",
+          "tag": "neutral",
+          "nextNodeId": "s3_confidence",
+          "monsterComment": "Ton laxisme a fait fuir des figurants. C'est dommage, l'un d'eux avait une belle moustache. On avance.",
+          "mbti": {},
+          "temperaments": {}
+        }
+      ]
     },
     "s3_confidence": {
-      "id": "s3_confidence",
       "kind": "scene_porte",
       "body": "Premier jour de route. Pendant une pause au bord d'un ruisseau, le jeune Penne vient vous trouver à l'écart, le visage fermé. « Ma petite sœur est gravement malade à Bagolio... Je suis déchiré. Je devrais rentrer, mais j'ai absolument besoin de la prime de cette livraison pour payer un médecin. »",
       "choices": [
-        { "id": "A1", "text": "« Si tu pars, tu perds la prime. Reste, termine la livraison et soigne-la après. »", "tag": "clever", "nextNodeId": "t_s3_A1", "monsterComment": "Clinique. Implacable. Tu as l'empathie d'un caillou, {nickname}.", "mbti": {"T": 2}, "temperaments": {} },
-        { "id": "A2", "text": "« Je peux t'avancer une partie de l'argent de ma propre prime, si ça t'aide. »", "tag": "bold", "nextNodeId": "t_s3_A2", "monsterComment": "Un compromis pragmatique. Très bien.", "mbti": {"T": 1}, "temperaments": {} },
-        { "id": "B2", "text": "« C'est terrible. Je comprends ta douleur, c'est un choix impossible... »", "tag": "safe", "nextNodeId": "t_s3_B2", "monsterComment": "Beaucoup de mots tendres, aucune solution matérielle. J'adore.", "mbti": {"F": 1}, "temperaments": {} },
-        { "id": "B1", "text": "« Ne t'inquiète pas. Je te promets d'aller moi-même m'occuper de ta sœur après la mission. »", "tag": "wrong", "nextNodeId": "t_s3_B1", "monsterComment": "Oh. La promesse intenable du chevalier blanc.", "mbti": {"F": 2}, "temperaments": {} }
-      ]
+        {
+          "id": "A1",
+          "text": "« Si tu pars, tu perds la prime. Reste, termine la livraison et soigne-la après. »",
+          "tag": "clever",
+          "nextNodeId": "t_s3_A1",
+          "monsterComment": "Clinique. Implacable. Tu as l'empathie d'un caillou, {nickname}.",
+          "mbti": {
+            "T": 2
+          },
+          "temperaments": {
+            "compassion": -1
+          }
+        },
+        {
+          "id": "A2",
+          "text": "« Je peux t'avancer une partie de l'argent de ma propre prime, si ça t'aide. »",
+          "tag": "bold",
+          "nextNodeId": "t_s3_A2",
+          "monsterComment": "Un compromis pragmatique. Très bien.",
+          "mbti": {
+            "T": 1
+          },
+          "temperaments": {}
+        },
+        {
+          "id": "B2",
+          "text": "« C'est terrible. Je comprends ta douleur, c'est un choix impossible... »",
+          "tag": "safe",
+          "nextNodeId": "t_s3_B2",
+          "monsterComment": "Beaucoup de mots tendres, aucune solution matérielle. J'adore.",
+          "mbti": {
+            "F": 1
+          },
+          "temperaments": {
+            "compassion": 0.5
+          }
+        },
+        {
+          "id": "B1",
+          "text": "« Ne t'inquiète pas. Je te promets d'aller moi-même m'occuper de ta sœur après la mission. »",
+          "tag": "wrong",
+          "nextNodeId": "t_s3_B1",
+          "monsterComment": "Oh. La promesse intenable du chevalier blanc.",
+          "mbti": {
+            "F": 2
+          },
+          "temperaments": {
+            "compassion": 1,
+            "malice": -0.5
+          }
+        }
+      ],
+      "axis": "T/F"
     },
     "t_s3_A1": {
-      "id": "t_s3_A1",
       "kind": "tampon",
       "body": "Penne vous regarde, sidéré par la froideur de votre logique mathématique. Il s'éloigne sans un mot, les poings serrés.",
-      "choices": [ { "id": "c1", "text": "Continuer", "tag": "neutral", "nextNodeId": "t_s3_A1_inter1", "mbti": {}, "temperaments": {} } ]
+      "choices": [
+        {
+          "id": "c1",
+          "text": "Continuer",
+          "tag": "neutral",
+          "nextNodeId": "t_s3_A1_inter1",
+          "mbti": {},
+          "temperaments": {}
+        }
+      ]
     },
     "t_s3_A1_inter1": {
-      "id": "t_s3_A1_inter1",
       "kind": "tampon",
       "body": "Alors que Penne s'éloigne, le temps se fige. Le Monstre apparaît, un boulier imaginaire dans les mains.\n« Puisqu'on gère les émotions sur un tableur, qu'est-ce qu'on optimise d'autre aujourd'hui ? »",
       "choices": [
-        { "id": "c1", "text": "Calculer le retour sur investissement du deuil de Penne.", "tag": "neutral", "nextNodeId": "s4_traces", "mbti": {}, "temperaments": {} },
-        { "id": "c2", "text": "Proposer de facturer ses larmes au litre.", "tag": "neutral", "nextNodeId": "s4_traces", "mbti": {}, "temperaments": {} },
-        { "id": "c3", "text": "Planifier la revente des biens de sa sœur, \"au cas où\".", "tag": "neutral", "nextNodeId": "s4_traces", "mbti": {}, "temperaments": {} }
+        {
+          "id": "c1",
+          "text": "Calculer le retour sur investissement du deuil de Penne.",
+          "tag": "wrong",
+          "nextNodeId": "s4_traces",
+          "mbti": {},
+          "temperaments": {}
+        },
+        {
+          "id": "c2",
+          "text": "Proposer de facturer ses larmes au litre.",
+          "tag": "wrong",
+          "nextNodeId": "s4_traces",
+          "mbti": {},
+          "temperaments": {}
+        },
+        {
+          "id": "c3",
+          "text": "Planifier la revente des biens de sa sœur, \"au cas où\".",
+          "tag": "wrong",
+          "nextNodeId": "s4_traces",
+          "mbti": {},
+          "temperaments": {}
+        }
       ]
     },
     "t_s3_A2": {
-      "id": "t_s3_A2",
       "kind": "tampon",
       "body": "Penne semble soulagé par cette solution concrète. Il retourne vers sa charrette avec une étincelle d'espoir.",
-      "choices": [ { "id": "c1", "text": "Reprendre la route", "tag": "neutral", "nextNodeId": "s4_traces", "mbti": {}, "temperaments": {} } ]
+      "choices": [
+        {
+          "id": "c1",
+          "text": "Reprendre la route",
+          "tag": "neutral",
+          "nextNodeId": "s4_traces",
+          "mbti": {},
+          "temperaments": {}
+        }
+      ]
     },
     "t_s3_B2": {
-      "id": "t_s3_B2",
       "kind": "tampon",
       "body": "Penne pleure un instant sur votre épaule. Le problème financier reste entier, mais il se sent moins seul.",
-      "choices": [ { "id": "c1", "text": "Reprendre la route", "tag": "neutral", "nextNodeId": "s4_traces", "mbti": {}, "temperaments": {} } ]
+      "choices": [
+        {
+          "id": "c1",
+          "text": "Reprendre la route",
+          "tag": "neutral",
+          "nextNodeId": "s4_traces",
+          "mbti": {},
+          "temperaments": {}
+        }
+      ]
     },
     "t_s3_B1": {
-      "id": "t_s3_B1",
       "kind": "tampon",
       "body": "Penne vous serre les mains, les larmes aux yeux. « Merci, convoyeur ! Je vous en devrai une toute ma vie ! »",
-      "choices": [ { "id": "c1", "text": "Continuer", "tag": "neutral", "nextNodeId": "t_s3_B1_inter1", "mbti": {}, "temperaments": {} } ]
+      "choices": [
+        {
+          "id": "c1",
+          "text": "Continuer",
+          "tag": "neutral",
+          "nextNodeId": "t_s3_B1_inter1",
+          "mbti": {},
+          "temperaments": {}
+        }
+      ]
     },
     "t_s3_B1_inter1": {
-      "id": "t_s3_B1_inter1",
       "kind": "tampon",
       "body": "Penne repart en courant. Le Monstre flotte au-dessus de vous, l'air consterné.\n« C'est ça. Promets de sauver tout le monde. Tu veux que je te rajoute une auréole tout de suite ? Qui d'autre vas-tu sauver aujourd'hui ? »",
       "choices": [
-        { "id": "c1", "text": "Promettre de soigner le genou arthritique de Linguini.", "tag": "neutral", "nextNodeId": "s4_traces", "mbti": {}, "temperaments": {} },
-        { "id": "c2", "text": "Jurer de repeindre personnellement la charrette de Cannella.", "tag": "neutral", "nextNodeId": "s4_traces", "mbti": {}, "temperaments": {} },
-        { "id": "c3", "text": "Proposer d'adopter légalement tous les enfants des marchands.", "tag": "neutral", "nextNodeId": "s4_traces", "mbti": {}, "temperaments": {} }
+        {
+          "id": "c1",
+          "text": "Promettre de soigner le genou arthritique de Linguini.",
+          "tag": "neutral",
+          "nextNodeId": "s4_traces",
+          "mbti": {},
+          "temperaments": {}
+        },
+        {
+          "id": "c2",
+          "text": "Jurer de repeindre personnellement la charrette de Cannella.",
+          "tag": "neutral",
+          "nextNodeId": "s4_traces",
+          "mbti": {},
+          "temperaments": {}
+        },
+        {
+          "id": "c3",
+          "text": "Proposer d'adopter légalement tous les enfants des marchands.",
+          "tag": "neutral",
+          "nextNodeId": "s4_traces",
+          "mbti": {},
+          "temperaments": {}
+        }
       ]
     },
     "s4_traces": {
-      "id": "s4_traces",
       "kind": "scene_porte",
       "body": "Deuxième jour de route. Vous tombez sur d'étranges traces sur le sentier : des empreintes, une branche cassée et des cendres récentes. Risotto les observe en silence.",
       "choices": [
-        { "id": "A1", "text": "Examiner minutieusement chaque trace (taille, profondeur).", "tag": "clever", "nextNodeId": "t_s4_A1", "monsterComment": "Une analyse digne d'un médecin légiste de la forêt.", "mbti": {"S": 2}, "temperaments": {} },
-        { "id": "A2", "text": "Faire un relevé rapide des faits, puis continuer.", "tag": "neutral", "nextNodeId": "t_s4_A2", "monsterComment": "Rapide, pragmatique. Mais ton œil est attiré par autre chose...", "mbti": {"S": 1}, "temperaments": {} },
-        { "id": "B2", "text": "Relier ces indices pour essayer de deviner un pattern.", "tag": "bold", "nextNodeId": "t_s4_B2", "monsterComment": "L'appel du hors-piste. Vas-y, montre-moi ce que tu vaux en improvisation pure, {nickname}.", "mbti": {"N": 1}, "temperaments": {} },
-        { "id": "B1", "text": "Imaginer immédiatement un scénario global dramatique.", "tag": "wrong", "nextNodeId": "t_s4_B1", "monsterComment": "Ah, l'imagination. Sans aucune preuve, tu viens d'inventer une conspiration.", "mbti": {"N": 2}, "temperaments": {} }
-      ]
+        {
+          "id": "A1",
+          "text": "Examiner minutieusement chaque trace (taille, profondeur).",
+          "tag": "clever",
+          "nextNodeId": "t_s4_A1",
+          "monsterComment": "Une analyse digne d'un médecin légiste de la forêt.",
+          "mbti": {
+            "S": 2
+          },
+          "temperaments": {}
+        },
+        {
+          "id": "A2",
+          "text": "Faire un relevé rapide des faits, puis continuer.",
+          "tag": "neutral",
+          "nextNodeId": "t_s4_A2",
+          "monsterComment": "Rapide, pragmatique. Mais ton œil est attiré par autre chose...",
+          "mbti": {
+            "S": 1
+          },
+          "temperaments": {}
+        },
+        {
+          "id": "B2",
+          "text": "Relier ces indices pour essayer de deviner un pattern.",
+          "tag": "bold",
+          "nextNodeId": "t_s4_B2",
+          "monsterComment": "L'appel du hors-piste. Vas-y, montre-moi ce que tu vaux en improvisation pure, {nickname}.",
+          "mbti": {
+            "N": 1
+          },
+          "temperaments": {
+            "courage": 1,
+            "compassion": 0.5
+          }
+        },
+        {
+          "id": "B1",
+          "text": "Imaginer immédiatement un scénario global dramatique.",
+          "tag": "wrong",
+          "nextNodeId": "t_s4_B1",
+          "monsterComment": "Ah, l'imagination. Sans aucune preuve, tu viens d'inventer une conspiration.",
+          "mbti": {
+            "N": 2
+          },
+          "temperaments": {
+            "courage": -0.5
+          }
+        }
+      ],
+      "axis": "S/N"
     },
     "t_s4_A1": {
-      "id": "t_s4_A1",
       "kind": "tampon",
       "body": "Vous sortez vos outils et commencez à tout mesurer. Linguini soupire. « On n'a pas toute la journée... »",
-      "choices": [ { "id": "c1", "text": "Continuer l'analyse", "tag": "neutral", "nextNodeId": "t_s4_A1_inter1", "mbti": {}, "temperaments": {} } ]
+      "choices": [
+        {
+          "id": "c1",
+          "text": "Continuer l'analyse",
+          "tag": "neutral",
+          "nextNodeId": "t_s4_A1_inter1",
+          "mbti": {},
+          "temperaments": {}
+        }
+      ]
     },
     "t_s4_A1_inter1": {
-      "id": "t_s4_A1_inter1",
       "kind": "tampon",
       "body": "Le Monstre flotte au-dessus de vous. « Tu veux qu'on mesure le pH de la terre aussi, {nickname} ? Puisqu'on est dans la science pure, que fais-tu de plus ? »",
       "choices": [
-        { "id": "c1", "text": "Goûter la cendre pour estimer l'heure exacte du feu.", "tag": "neutral", "nextNodeId": "t_s4_A1_inter2", "mbti": {}, "temperaments": {} },
-        { "id": "c2", "text": "Mesurer l'angle de la branche avec un rapporteur imaginaire.", "tag": "neutral", "nextNodeId": "t_s4_A1_inter2", "mbti": {}, "temperaments": {} },
-        { "id": "c3", "text": "Cataloguer l'espèce de chaque brin d'herbe écrasé.", "tag": "neutral", "nextNodeId": "t_s4_A1_inter2", "mbti": {}, "temperaments": {} }
+        {
+          "id": "c1",
+          "text": "Goûter la cendre pour estimer l'heure exacte du feu.",
+          "tag": "wrong",
+          "nextNodeId": "t_s4_A1_inter2",
+          "mbti": {},
+          "temperaments": {}
+        },
+        {
+          "id": "c2",
+          "text": "Mesurer l'angle de la branche avec un rapporteur imaginaire.",
+          "tag": "wrong",
+          "nextNodeId": "t_s4_A1_inter2",
+          "mbti": {},
+          "temperaments": {}
+        },
+        {
+          "id": "c3",
+          "text": "Cataloguer l'espèce de chaque brin d'herbe écrasé.",
+          "tag": "wrong",
+          "nextNodeId": "t_s4_A1_inter2",
+          "mbti": {},
+          "temperaments": {}
+        }
       ]
     },
     "t_s4_A1_inter2": {
-      "id": "t_s4_A1_inter2",
       "kind": "tampon",
       "body": "Risotto vous observe faire avec un profond soupir. Vous avez accumulé des dizaines de données inutiles et fait perdre 20 minutes au groupe sans rien déduire de concret.",
-      "choices": [ { "id": "c1", "text": "Reprendre la route", "tag": "neutral", "nextNodeId": "s5_pont_effondre_placeholder", "monsterComment": "Merveilleux. La science a parlé, et elle n'a rien dit.", "mbti": {}, "temperaments": {} } ]
+      "choices": [
+        {
+          "id": "c1",
+          "text": "Reprendre la route",
+          "tag": "neutral",
+          "nextNodeId": "s5_pont_effondre_placeholder",
+          "monsterComment": "Merveilleux. La science a parlé, et elle n'a rien dit.",
+          "mbti": {},
+          "temperaments": {}
+        }
+      ]
     },
     "t_s4_A2": {
-      "id": "t_s4_A2",
       "kind": "tampon",
       "body": "Vous analysez rapidement les cendres. Rien de bien menaçant. Mais en vous relevant, vous remarquez un étrange affaissement du terrain derrière des buissons denses, à l'écart du campement. Vous faites quelques pas pour vous isoler et voir de plus près.",
-      "choices": [ { "id": "c1", "text": "Écarter les buissons", "tag": "neutral", "nextNodeId": "t_s4_A2_hole", "mbti": {}, "temperaments": {} } ]
+      "choices": [
+        {
+          "id": "c1",
+          "text": "Écarter les buissons",
+          "tag": "neutral",
+          "nextNodeId": "t_s4_A2_hole",
+          "mbti": {},
+          "temperaments": {}
+        }
+      ]
     },
     "t_s4_A2_hole": {
-      "id": "t_s4_A2_hole",
       "kind": "tampon",
       "body": "Cachée aux yeux de la caravane, une cavité parfaitement circulaire s'ouvre au pied d'un grand arbre mort. Un trou d'un noir d'encre, sans fond visible.",
-      "choices": [ { "id": "c1", "text": "S'approcher", "tag": "neutral", "nextNodeId": "t_s4_A2_inter1", "monsterComment": "Un trou géant et mystérieux au milieu de nulle part. C'est un classique de la mise en scène. La vraie question c'est : qu'est-ce que tu vas faire de ça ?", "mbti": {}, "temperaments": {} } ]
+      "choices": [
+        {
+          "id": "c1",
+          "text": "S'approcher",
+          "tag": "neutral",
+          "nextNodeId": "t_s4_A2_inter1",
+          "monsterComment": "Un trou géant et mystérieux au milieu de nulle part. C'est un classique de la mise en scène. La vraie question c'est : qu'est-ce que tu vas faire de ça ?",
+          "mbti": {},
+          "temperaments": {}
+        }
+      ]
     },
     "t_s4_A2_inter1": {
-      "id": "t_s4_A2_inter1",
       "kind": "tampon",
       "body": "Vous vous penchez au-dessus du gouffre. Penne, qui vous a suivi discrètement, s'approche, curieux lui aussi.",
       "choices": [
-        { "id": "c1", "text": "Lancer un caillou et attendre le \"plouf\".", "tag": "neutral", "nextNodeId": "s5_pont_effondre_placeholder", "monsterComment": "Puéril, mais prudent. On reprend la route.", "mbti": {}, "temperaments": {} },
-        { "id": "c2", "text": "Hurler dedans pour réveiller ce qui y dort.", "tag": "neutral", "nextNodeId": "s5_pont_effondre_placeholder", "monsterComment": "Écho pathétique. Bref, on avance.", "mbti": {}, "temperaments": {} },
-        { "id": "c3", "text": "Parier 5 pièces avec Penne qu'il n'osera pas y mettre la tête.", "tag": "neutral", "nextNodeId": "s5_pont_effondre_placeholder", "monsterComment": "L'intimidation amicale. J'aime bien. On y va.", "mbti": {}, "temperaments": {} },
-        { "id": "c4", "text": "Parier avec Penne que vous pouvez sauter dedans et atterrir en douceur.", "tag": "wrong", "nextNodeId": "t_s4_A2_inter2", "mbti": {}, "temperaments": {} }
+        {
+          "id": "c1",
+          "text": "Lancer un caillou et attendre le \"plouf\".",
+          "tag": "neutral",
+          "nextNodeId": "s5_pont_effondre_placeholder",
+          "monsterComment": "Puéril, mais prudent. On reprend la route.",
+          "mbti": {},
+          "temperaments": {}
+        },
+        {
+          "id": "c2",
+          "text": "Hurler dedans pour réveiller ce qui y dort.",
+          "tag": "neutral",
+          "nextNodeId": "s5_pont_effondre_placeholder",
+          "monsterComment": "Écho pathétique. Bref, on avance.",
+          "mbti": {},
+          "temperaments": {}
+        },
+        {
+          "id": "c3",
+          "text": "Parier 5 pièces avec Penne qu'il n'osera pas y mettre la tête.",
+          "tag": "neutral",
+          "nextNodeId": "s5_pont_effondre_placeholder",
+          "monsterComment": "L'intimidation amicale. J'aime bien. On y va.",
+          "mbti": {},
+          "temperaments": {}
+        },
+        {
+          "id": "c4",
+          "text": "Parier avec Penne que vous pouvez sauter dedans et atterrir en douceur.",
+          "tag": "wrong",
+          "nextNodeId": "t_s4_A2_inter2",
+          "mbti": {},
+          "temperaments": {}
+        }
       ]
     },
     "t_s4_A2_inter2": {
-      "id": "t_s4_A2_inter2",
       "kind": "tampon",
       "body": "Vous prenez votre élan et sautez. Vous tombez. La lumière disparaît. Vous chutez dans une obscurité glaciale pendant une éternité. Puis, le choc. Le froid absolu. La mort.\nLe Monstre apparaît : « L'acteur principal vient de se jeter dans un trou pour un pari. Formidable. Fermez le rideau. Remboursez le public... Non, je plaisante. Ouvre les yeux, {nickname}. »",
-      "choices": [ { "id": "c1", "text": "Ouvrir les yeux", "tag": "neutral", "nextNodeId": "t_s4_A2_inter3", "mbti": {}, "temperaments": {} } ]
+      "choices": [
+        {
+          "id": "c1",
+          "text": "Ouvrir les yeux",
+          "tag": "wrong",
+          "nextNodeId": "t_s4_A2_inter3",
+          "mbti": {},
+          "temperaments": {}
+        }
+      ]
     },
     "t_s4_A2_inter3": {
-      "id": "t_s4_A2_inter3",
       "kind": "tampon",
       "body": "Vous reprenez une inspiration violente et trébuchez en arrière. Vous n'êtes pas mort. Vous n'avez pas sauté. Penne vous tient par l'épaule sur le sentier principal : « Tout va bien ? Tu dormais debout en fixant ces cendres ! »\nLa caravane reprend sa route, vous laissant complètement secoué.",
-      "choices": [ { "id": "c1", "text": "Rejoindre le convoi", "tag": "neutral", "nextNodeId": "s5_pont_effondre_placeholder", "mbti": {}, "temperaments": {} } ]
+      "choices": [
+        {
+          "id": "c1",
+          "text": "Rejoindre le convoi",
+          "tag": "neutral",
+          "nextNodeId": "s5_pont_effondre_placeholder",
+          "mbti": {},
+          "temperaments": {}
+        }
+      ]
     },
     "t_s4_B2": {
-      "id": "t_s4_B2",
       "kind": "tampon",
       "body": "Vous assemblez mentalement les indices. Cela forme une piste qui s'enfonce dans les bois, loin du sentier. Le silencieux Risotto pointe cette direction et s'y engage.",
       "choices": [
-        { "id": "c1", "text": "Faire demi-tour, c'est trop risqué.", "tag": "neutral", "nextNodeId": "s5_pont_effondre_placeholder", "monsterComment": "Sage décision. L'histoire principale t'attend de toute façon.", "mbti": {}, "temperaments": {} },
-        { "id": "c2", "text": "Suivre Risotto dans les bois.", "tag": "neutral", "nextNodeId": "t_s4_B2_inter1", "mbti": {}, "temperaments": {} }
+        {
+          "id": "c1",
+          "text": "Faire demi-tour, c'est trop risqué.",
+          "tag": "neutral",
+          "nextNodeId": "s5_pont_effondre_placeholder",
+          "monsterComment": "Sage décision. L'histoire principale t'attend de toute façon.",
+          "mbti": {},
+          "temperaments": {}
+        },
+        {
+          "id": "c2",
+          "text": "Suivre Risotto dans les bois.",
+          "tag": "neutral",
+          "nextNodeId": "t_s4_B2_inter1",
+          "mbti": {},
+          "temperaments": {},
+          "monsterComment": "Tu t'enfonces dans les ténèbres, {nickname}. Très bien."
+        }
       ]
     },
     "t_s4_B2_inter1": {
-      "id": "t_s4_B2_inter1",
       "kind": "tampon",
       "body": "La lumière décline sous la canopée épaisse. Les traces deviennent erratiques. Risotto s'accroupit près d'un buisson d'épines, le visage soudain crispé.\nLe Monstre flotte au-dessus : « Le décor se referme. J'aime beaucoup cette tension. »",
       "choices": [
-        { "id": "c1", "text": "Examiner le buisson d'épines.", "tag": "neutral", "nextNodeId": "t_s4_B2_inter2", "mbti": {}, "temperaments": {} },
-        { "id": "c2", "text": "Demander à Risotto ce qu'il voit.", "tag": "neutral", "nextNodeId": "t_s4_B2_inter2", "mbti": {}, "temperaments": {} },
-        { "id": "c3", "text": "Dégainer votre arme, aux aguets.", "tag": "neutral", "nextNodeId": "t_s4_B2_inter2", "mbti": {}, "temperaments": {} }
+        {
+          "id": "c1",
+          "text": "Examiner le buisson d'épines.",
+          "tag": "neutral",
+          "nextNodeId": "t_s4_B2_inter2",
+          "mbti": {},
+          "temperaments": {}
+        },
+        {
+          "id": "c2",
+          "text": "Demander à Risotto ce qu'il voit.",
+          "tag": "neutral",
+          "nextNodeId": "t_s4_B2_inter2",
+          "mbti": {},
+          "temperaments": {}
+        },
+        {
+          "id": "c3",
+          "text": "Dégainer votre arme, aux aguets.",
+          "tag": "neutral",
+          "nextNodeId": "t_s4_B2_inter2",
+          "mbti": {},
+          "temperaments": {}
+        }
       ]
     },
     "t_s4_B2_inter2": {
-      "id": "t_s4_B2_inter2",
       "kind": "tampon",
       "body": "Un bruissement sourd résonne en hauteur. Risotto se lève d'un bond. Le regard déformé par la terreur, il lâche sa lanterne et s'élance à corps perdu dans l'obscurité dense.",
       "choices": [
-        { "id": "c1", "text": "Courir aveuglément après Risotto.", "tag": "neutral", "nextNodeId": "t_s4_B2_inter3", "mbti": {}, "temperaments": {} },
-        { "id": "c2", "text": "Hurler son nom dans la forêt.", "tag": "neutral", "nextNodeId": "t_s4_B2_inter3", "mbti": {}, "temperaments": {} }
+        {
+          "id": "c1",
+          "text": "Courir aveuglément après Risotto.",
+          "tag": "neutral",
+          "nextNodeId": "t_s4_B2_inter3",
+          "mbti": {},
+          "temperaments": {}
+        },
+        {
+          "id": "c2",
+          "text": "Hurler son nom dans la forêt.",
+          "tag": "neutral",
+          "nextNodeId": "t_s4_B2_inter3",
+          "mbti": {},
+          "temperaments": {}
+        }
       ]
     },
     "t_s4_B2_inter3": {
-      "id": "t_s4_B2_inter3",
       "kind": "tampon",
       "body": "Rien. Le silence de la forêt est revenu, lourd et poisseux. Risotto s'est volatilisé. Vous retrouvez seulement son dé en os.\nLe Monstre apparaît, la voix anormalement grave : « ... Ce n'était pas dans mon script, ça. Rentre au campement, {nickname}. Tout de suite. Ne te retourne pas. »",
-      "choices": [ { "id": "c1", "text": "Fuir vers le sentier", "tag": "neutral", "nextNodeId": "s5_pont_effondre_placeholder", "mbti": {}, "temperaments": {} } ]
+      "choices": [
+        {
+          "id": "c1",
+          "text": "Fuir vers le sentier",
+          "tag": "neutral",
+          "nextNodeId": "s5_pont_effondre_placeholder",
+          "mbti": {},
+          "temperaments": {}
+        }
+      ]
     },
     "t_s4_B1": {
-      "id": "t_s4_B1",
       "kind": "tampon",
       "body": "C'est une évidence : ces traces sont le prélude d'une attaque imminente !",
-      "choices": [ { "id": "c1", "text": "Donner l'alerte", "tag": "neutral", "nextNodeId": "t_s4_B1_inter1", "mbti": {}, "temperaments": {} } ]
+      "choices": [
+        {
+          "id": "c1",
+          "text": "Donner l'alerte",
+          "tag": "neutral",
+          "nextNodeId": "t_s4_B1_inter1",
+          "mbti": {},
+          "temperaments": {}
+        }
+      ]
     },
     "t_s4_B1_inter1": {
-      "id": "t_s4_B1_inter1",
       "kind": "tampon",
       "body": "Le Monstre se moque : « Et si c'était juste un sanglier ? Comment communiques-tu ton immense découverte ? »",
       "choices": [
-        { "id": "c1", "text": "Hurler \"EMBUSCADE !\" et forcer la mise en cercle.", "tag": "neutral", "nextNodeId": "t_s4_B1_inter2", "mbti": {}, "temperaments": {} },
-        { "id": "c2", "text": "Affirmer à Cannella qu'une secte cannibale approche.", "tag": "neutral", "nextNodeId": "t_s4_B1_inter2", "mbti": {}, "temperaments": {} },
-        { "id": "c3", "text": "Dégainer une arme et charger les buissons au hasard.", "tag": "neutral", "nextNodeId": "t_s4_B1_inter2", "mbti": {}, "temperaments": {} }
+        {
+          "id": "c1",
+          "text": "Hurler \"EMBUSCADE !\" et forcer la mise en cercle.",
+          "tag": "wrong",
+          "nextNodeId": "t_s4_B1_inter2",
+          "mbti": {},
+          "temperaments": {}
+        },
+        {
+          "id": "c2",
+          "text": "Affirmer à Cannella qu'une secte cannibale approche.",
+          "tag": "wrong",
+          "nextNodeId": "t_s4_B1_inter2",
+          "mbti": {},
+          "temperaments": {}
+        },
+        {
+          "id": "c3",
+          "text": "Dégainer une arme et charger les buissons au hasard.",
+          "tag": "wrong",
+          "nextNodeId": "t_s4_B1_inter2",
+          "mbti": {},
+          "temperaments": {}
+        }
       ]
     },
     "t_s4_B1_inter2": {
-      "id": "t_s4_B1_inter2",
       "kind": "tampon",
       "body": "Cette fausse alerte crée une panique totale. Après 30 minutes de chaos, Linguini découvre qu'il s'agissait du passage de simples bûcherons. Vous subissez ses moqueries devant toute la caravane.",
-      "choices": [ { "id": "c1", "text": "Reprendre la route, honteux", "tag": "neutral", "nextNodeId": "s5_pont_effondre_placeholder", "monsterComment": "Quel grand chef de guerre tu fais. Allez, on avance.", "mbti": {}, "temperaments": {} } ]
+      "choices": [
+        {
+          "id": "c1",
+          "text": "Reprendre la route, honteux",
+          "tag": "neutral",
+          "nextNodeId": "s5_pont_effondre_placeholder",
+          "monsterComment": "Quel grand chef de guerre tu fais. Allez, on avance.",
+          "mbti": {},
+          "temperaments": {}
+        }
+      ]
     },
     "s5_pont_effondre_placeholder": {
-      "id": "s5_pont_effondre_placeholder",
       "kind": "scene_porte_placeholder",
       "body": "[PROCHAIN PATCH] Le convoi arrive face à un pont de pierre qui a été emporté par une crue...",
-      "choices": [ { "id": "c1", "text": "Attendre le prochain chapitre", "tag": "neutral", "nextNodeId": "s5_pont_effondre_placeholder", "mbti": {}, "temperaments": {} } ]
+      "choices": [
+        {
+          "id": "c1",
+          "text": "Attendre le prochain chapitre",
+          "tag": "neutral",
+          "nextNodeId": "s5_pont_effondre_placeholder",
+          "mbti": {},
+          "temperaments": {}
+        }
+      ]
     }
   }
 }
