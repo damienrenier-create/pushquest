@@ -9,6 +9,7 @@
 
 import { useEffect, useState } from "react"
 import BlackScreen from "./BlackScreen"
+import FrozenScreen from "./FrozenScreen"
 import MapClient from "./MapClient"
 import type { PlayerMapState } from "@/lib/gamebook/mapEngine"
 
@@ -22,12 +23,17 @@ interface StatePayload {
     todayReps: number
     availableEnergy: number
     energySpentToday: number
+    // v3.6 — anti-cheat
+    frozen?: boolean
+    frozenUntil?: string | null
 }
 
 export default function GamebookClient({ nickname, userId }: Props) {
     const [payload, setPayload] = useState<StatePayload | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [showBlack, setShowBlack] = useState<boolean | null>(null)
+    // v3.6 — incrémenté quand le countdown frozen atteint 0, force un refetch du state
+    const [reloadKey, setReloadKey] = useState(0)
 
     useEffect(() => {
         let cancelled = false
@@ -69,7 +75,7 @@ export default function GamebookClient({ nickname, userId }: Props) {
         return () => {
             cancelled = true
         }
-    }, [])
+    }, [reloadKey])
 
     const handleBlackDone = async () => {
         if (!payload) return
@@ -131,6 +137,16 @@ export default function GamebookClient({ nickname, userId }: Props) {
 
     if (showBlack) {
         return <BlackScreen onDone={handleBlackDone} />
+    }
+
+    // v3.6 — Si le user est frozen (anti-triche actif), afficher l'overlay au lieu du jeu
+    if (payload.frozen && payload.frozenUntil) {
+        return (
+            <FrozenScreen
+                frozenUntil={payload.frozenUntil}
+                onUnfrozen={() => setReloadKey((k) => k + 1)}
+            />
+        )
     }
 
     return (
