@@ -67,6 +67,9 @@ export interface PlayerMapState {
     pioneerBadgeAwarded: boolean       // badge "Pionnier" donné par le Monstre
     bridgePnjDefeated: string[]        // ids des PNJ du pont vaincus
     bridgePnjLastBeatenDate: Record<string, string>  // pnjId → YYYY-MM-DD du dernier passage
+    // === v3.3 : NPCs de Bourg-Boulette ===
+    gymGuyEnergyGiven: boolean         // le PNJ muscu a donné ses 100 reps de surplus
+    npcsTalkedTo: string[]             // ids des PNJ déjà rencontrés (pour ne pas relancer le 1er dialogue)
 }
 
 // Snapshot d'un autre joueur affiché sur la carte
@@ -205,6 +208,24 @@ export function tryComputeMove(
         const b = buildingAt(buildings, nx, ny)
         if (b && !(nx === b.x + b.doorX && ny === b.y + b.doorY)) {
             return { blocked: true, reason: "Un mur." }
+        }
+        // === v3.3 : entrée AUTOMATIQUE quand on marche sur la porte ===
+        if (b && nx === b.x + b.doorX && ny === b.y + b.doorY) {
+            const targetMapId = b.kind === "gym" ? "gym"
+                : b.kind === "casino" ? "casino"
+                    : "cave"
+            return {
+                nextState: {
+                    ...current,
+                    mapId: targetMapId,
+                    posX: 4,  // milieu de la pièce
+                    posY: 6,  // près de la sortie (pour pouvoir ressortir)
+                    direction: "up",
+                },
+                repsCost: current.phase === "playing" ? COST_MOVE : 0,
+                triggersIntro: false,
+                enteredBuilding: b.kind,
+            }
         }
     }
 

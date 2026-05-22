@@ -414,6 +414,14 @@ model GamebookProgress {
   bridgePnjDefeated         Json    @default("[]")
   bridgePnjLastBeatenDate   Json    @default("{}")
 
+  // === Champs ajoutés pour PushQuest v3.3 (PNJ de Bourg-Boulette) ===
+  gymGuyEnergyGiven         Boolean @default(false)
+  npcsTalkedTo              Json    @default("[]")
+
+  // === Champs ajoutés pour PushQuest v3.4a (fix énergie persistante) ===
+  energySpentToday          Int     @default(0)
+  energySpentDate           String  @default("")
+
   @@unique([userId, chapterId])
   @@index([userId])
   @@index([mapId])

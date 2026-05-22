@@ -53,6 +53,8 @@ export async function GET() {
                 pioneerBadgeAwarded: false,
                 bridgePnjDefeated: [],
                 bridgePnjLastBeatenDate: {},
+                gymGuyEnergyGiven: false,
+                npcsTalkedTo: [],
             },
         })
     } else {
@@ -63,6 +65,15 @@ export async function GET() {
     }
 
     const todayReps = await getTodayReps(userId)
+
+    // === v3.4a : calcul de l'énergie consommée du jour (reset à minuit) ===
+    const today = getTodayISO()
+    const storedDate = (progress as { energySpentDate?: string }).energySpentDate ?? ""
+    const storedSpent = (progress as { energySpentToday?: number }).energySpentToday ?? 0
+    // Si la date stockée n'est pas aujourd'hui, le compteur est obsolète → reset à 0
+    const energySpentToday = storedDate === today ? storedSpent : 0
+    // Énergie réellement disponible = reps totales - énergie déjà consommée
+    const availableEnergy = Math.max(0, todayReps - energySpentToday)
 
     return NextResponse.json({
         state: {
@@ -79,8 +90,12 @@ export async function GET() {
             pioneerBadgeAwarded: progress.pioneerBadgeAwarded,
             bridgePnjDefeated: progress.bridgePnjDefeated,
             bridgePnjLastBeatenDate: progress.bridgePnjLastBeatenDate,
+            gymGuyEnergyGiven: (progress as { gymGuyEnergyGiven?: boolean }).gymGuyEnergyGiven ?? false,
+            npcsTalkedTo: (progress as { npcsTalkedTo?: string[] }).npcsTalkedTo ?? [],
         },
         todayReps,
+        energySpentToday,
+        availableEnergy,
     })
 }
 
@@ -134,6 +149,10 @@ export async function POST(req: NextRequest) {
         !Array.isArray(body.bridgePnjLastBeatenDate)
             ? (body.bridgePnjLastBeatenDate as Record<string, string>)
             : {}
+    const gymGuyEnergyGiven = body.gymGuyEnergyGiven === true
+    const npcsTalkedTo = Array.isArray(body.npcsTalkedTo)
+        ? (body.npcsTalkedTo as string[]).filter((x) => typeof x === "string")
+        : []
 
     const updated = await prisma.gamebookProgress.upsert({
         where: { userId_chapterId: { userId, chapterId: CHAPTER_ID } },
@@ -151,6 +170,8 @@ export async function POST(req: NextRequest) {
             pioneerBadgeAwarded,
             bridgePnjDefeated,
             bridgePnjLastBeatenDate,
+            gymGuyEnergyGiven,
+            npcsTalkedTo,
             lastSeen: new Date(),
         },
         create: {
@@ -170,6 +191,8 @@ export async function POST(req: NextRequest) {
             pioneerBadgeAwarded,
             bridgePnjDefeated,
             bridgePnjLastBeatenDate,
+            gymGuyEnergyGiven,
+            npcsTalkedTo,
         },
     })
 

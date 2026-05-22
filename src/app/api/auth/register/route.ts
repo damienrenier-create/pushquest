@@ -48,7 +48,7 @@ export async function POST(req: Request) {
             )
         }
 
-        const onboardingStartedAt = promoCode === "WELCOME2026" ? new Date() : null;
+        const onboardingStartedAt = new Date();
 
         const user = await prisma.user.create({
             data: {

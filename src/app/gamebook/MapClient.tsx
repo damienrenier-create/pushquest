@@ -43,6 +43,13 @@ import {
     MONSTER_PIONEER_DIALOGUE,
     PIONEER_LAST_STEP,
 } from "@/lib/gamebook/dialogue"
+import {
+    type NpcDefinition,
+    getNpcsForMap,
+    getNpcCurrentPosition,
+    getNpcDialogue,
+    WANDER_TICK_MS,
+} from "@/lib/gamebook/npcs"
 import TileCell from "./TileCell"
 import PlayerSprite from "./PlayerSprite"
 
@@ -51,6 +58,8 @@ interface Props {
     userId: string
     initialState: PlayerMapState
     initialTodayReps: number
+    initialAvailableEnergy: number
+    initialEnergySpent: number
 }
 
 const GHOST_COLORS = ["#4080d8", "#d840a0", "#48a830", "#f08020", "#9050d0", "#d8c020", "#20a8c8"]
@@ -71,15 +80,37 @@ type Popup =
 
 type Cinematic =
     | { kind: "pioneer"; step: number }
+    | { kind: "npcDialogue"; npcId: string; npcName: string; step: number; lines: string[]; energyReward?: number }
     | null
 
-export default function MapClient({ nickname, userId, initialState, initialTodayReps }: Props) {
+// Ticker partagé entre tous les NPCs wanderers pour synchroniser leurs déplacements
+function useWanderTicker() {
+    const [tick, setTick] = useState<number>(() => Math.floor(Date.now() / WANDER_TICK_MS))
+    useEffect(() => {
+        const id = setInterval(() => {
+            setTick(Math.floor(Date.now() / WANDER_TICK_MS))
+        }, 1000)
+        return () => clearInterval(id)
+    }, [])
+    return tick
+}
+
+export default function MapClient({
+    nickname,
+    userId,
+    initialState,
+    initialTodayReps,
+    initialAvailableEnergy,
+    initialEnergySpent,
+}: Props) {
     // ============================================================
     // STATE
     // ============================================================
     const [state, setState] = useState<PlayerMapState>(initialState)
-    const [reps, setReps] = useState<number>(initialTodayReps)
+    // === v3.4a : énergie disponible = reps du jour - déjà consommé (persisté) ===
+    const [reps, setReps] = useState<number>(initialAvailableEnergy)
     const [totalRepsToday] = useState<number>(initialTodayReps)
+    const [energySpent, setEnergySpent] = useState<number>(initialEnergySpent)
     const [otherPlayers, setOtherPlayers] = useState<PlayerSnapshot[]>([])
     const [popup, setPopup] = useState<Popup>(null)
     const [cinematic, setCinematic] = useState<Cinematic>(null)
@@ -164,7 +195,79 @@ export default function MapClient({ nickname, userId, initialState, initialToday
     // BLOQUEURS POUR LE MOUVEMENT (autres joueurs sur la même map)
     // ============================================================
     const otherPlayersOnThisMap = otherPlayers.filter((p) => p.mapId === state.mapId)
-    const blockingPositions = otherPlayersOnThisMap.map((p) => ({ x: p.posX, y: p.posY }))
+
+    // ============================================================
+    // NPCs sur la map courante (positions calculées en temps réel)
+    // ============================================================
+    const wanderTick = useWanderTicker()
+    const npcsOnMap = getNpcsForMap(state.mapId)
+    const npcsWithPos = npcsOnMap.map((npc) => {
+        const pos = getNpcCurrentPosition(npc, wanderTick * WANDER_TICK_MS, map)
+        return { npc, x: pos.x, y: pos.y, direction: pos.direction }
+    })
+
+    // Les NPCs interceptors qui se déclenchent automatiquement quand le joueur arrive à côté
+    // (les Bridge PNJs sont gérés séparément dans handleA, ceux-ci sont les NPCs de map courante)
+    const npcBlockingPositions = npcsWithPos.map((n) => ({ x: n.x, y: n.y }))
+
+    // Combine joueurs + NPCs pour le calcul de blocage
+    const blockingPositions = [
+        ...otherPlayersOnThisMap.map((p) => ({ x: p.posX, y: p.posY })),
+        ...npcBlockingPositions,
+    ]
+
+    // ============================================================
+    // DÉCLENCHER LE DIALOGUE D'UN NPC
+    // ============================================================
+    const triggerNpcDialogue = useCallback(
+        (npc: NpcDefinition) => {
+            const lines = getNpcDialogue(npc, state.phase)
+            setCinematic({
+                kind: "npcDialogue",
+                npcId: npc.id,
+                npcName: npc.name,
+                step: 0,
+                lines,
+                energyReward: npc.energyReward,
+            })
+        },
+        [state.phase]
+    )
+
+    // ============================================================
+    // v3.4a : SPEND ENERGY (appel API serveur, source de vérité)
+    // ============================================================
+    const spendEnergy = useCallback(async (amount: number, reason: string): Promise<boolean> => {
+        if (amount <= 0) return true
+        try {
+            const res = await fetch("/api/gamebook/spend", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ amount, reason }),
+            })
+            const data = await res.json()
+            if (!data.ok) {
+                // Resync depuis le serveur en cas de désaccord
+                if (typeof data.availableEnergy === "number") {
+                    setReps(data.availableEnergy)
+                }
+                setToast(data.reason || "Pas assez d'énergie.")
+                return false
+            }
+            // Succès : on aligne le state local sur le serveur
+            if (typeof data.availableEnergy === "number") {
+                setReps(data.availableEnergy)
+            }
+            if (typeof data.energySpentToday === "number") {
+                setEnergySpent(data.energySpentToday)
+            }
+            return true
+        } catch (e) {
+            console.warn("[MapClient] spendEnergy failed", e)
+            setToast("Erreur réseau, réessaie.")
+            return false
+        }
+    }, [])
 
     // ============================================================
     // DÉPLACEMENT
@@ -180,6 +283,11 @@ export default function MapClient({ nickname, userId, initialState, initialToday
             if (state.phase === "introMonster") return
             if (popup) {
                 setPopup(null)
+                return
+            }
+            // Si une cinématique est en cours (NPC ou Pionnier), on l'avance plutôt que de bouger
+            if (cinematic) {
+                pressA()
                 return
             }
 
@@ -199,16 +307,52 @@ export default function MapClient({ nickname, userId, initialState, initialToday
                         setToast(`L'arbre coûte ${COST_TREE_OBSTACLE} reps. T'en as ${reps}.`)
                         return
                     }
-                    // Pousser l'arbre
-                    setReps((r) => r - COST_TREE_OBSTACLE)
-                    setState((s) => ({ ...s, treeObstacleCleared: true, direction: d }))
-                    setToast(`Tu pousses l'arbre. -${COST_TREE_OBSTACLE} reps.`)
-                    // Déclencher la cinématique Pionnier APRÈS la fin de cet update
-                    setTimeout(() => {
-                        if (!state.pioneerBadgeAwarded) {
-                            setCinematic({ kind: "pioneer", step: 0 })
-                        }
-                    }, 400)
+                    // Pousser l'arbre : on tente le débit côté serveur
+                    ; (async () => {
+                        const ok = await spendEnergy(COST_TREE_OBSTACLE, "tree_obstacle")
+                        if (!ok) return
+                        setState((s) => ({ ...s, treeObstacleCleared: true, direction: d }))
+                        setToast(`Tu pousses l'arbre. -${COST_TREE_OBSTACLE} reps.`)
+                        // Déclencher la cinématique Pionnier
+                        setTimeout(() => {
+                            if (!state.pioneerBadgeAwarded) {
+                                setCinematic({ kind: "pioneer", step: 0 })
+                            }
+                        }, 400)
+                    })()
+                    return
+                }
+
+                // === v3.3 : si bloqué par un NPC, on peut le pousser (comme un joueur) ===
+                let dx = 0, dy = 0
+                if (d === "up") dy = -1
+                else if (d === "down") dy = 1
+                else if (d === "left") dx = -1
+                else if (d === "right") dx = 1
+                const targetX = state.posX + dx
+                const targetY = state.posY + dy
+                const blockingNpc = npcsWithPos.find((n) => n.x === targetX && n.y === targetY)
+                if (blockingNpc) {
+                    // Le PNJ "interceptor" déclenche son dialogue automatiquement
+                    if (blockingNpc.npc.interaction === "interceptor") {
+                        triggerNpcDialogue(blockingNpc.npc)
+                        return
+                    }
+                    // Sinon (interactive), on tente de le pousser comme un joueur
+                    if (state.phase !== "playing") {
+                        setToast(`${blockingNpc.npc.name} te regarde. Va falloir lui parler (appuie sur A).`)
+                        return
+                    }
+                    if (reps < COST_PUSH) {
+                        setToast(`Pousser ${blockingNpc.npc.name} coûte ${COST_PUSH} reps. T'en as ${reps}.`)
+                        return
+                    }
+                    // On consomme 30 reps via l'API serveur (source de vérité)
+                    ; (async () => {
+                        const ok = await spendEnergy(COST_PUSH, "push_npc")
+                        if (!ok) return
+                        setToast(`Tu pousses ${blockingNpc.npc.name}. -${COST_PUSH} reps.`)
+                    })()
                     return
                 }
 
@@ -225,10 +369,24 @@ export default function MapClient({ nickname, userId, initialState, initialToday
 
             // Apply
             setState(result.nextState)
-            if (result.repsCost > 0) setReps((r) => Math.max(0, r - result.repsCost))
+            if (result.repsCost > 0) {
+                // Débit local immédiat pour la fluidité
+                setReps((r) => Math.max(0, r - result.repsCost))
+                // Persistance serveur en arrière-plan (fire and forget, resync si échec)
+                spendEnergy(result.repsCost, "move").catch(() => {/* silent */ })
+            }
 
             if (result.leftToOutdoor) {
                 setToast(`Tu sors.`)
+            }
+
+            // === v3.3 : entrée AUTOMATIQUE dans un bâtiment ===
+            if (result.enteredBuilding) {
+                const targetMap = getMap(
+                    result.enteredBuilding === "monsterCave" ? "cave" : result.enteredBuilding
+                )
+                setToast(`Tu entres : ${targetMap.name}`)
+                return
             }
 
             // Trigger intro Monstre (première fois dans les hautes herbes)
@@ -264,7 +422,7 @@ export default function MapClient({ nickname, userId, initialState, initialToday
                 }, 200)
             }
         },
-        [state, map, buildings, blockingPositions, reps, popup]
+        [state, map, buildings, blockingPositions, reps, popup, cinematic, npcsWithPos, triggerNpcDialogue]
     )
 
     // ============================================================
@@ -302,6 +460,57 @@ export default function MapClient({ nickname, userId, initialState, initialToday
                 return
             }
             setCinematic({ kind: "pioneer", step: next })
+            return
+        }
+
+        // === v3.3 : Cinématique dialogue NPC ===
+        if (cinematic?.kind === "npcDialogue") {
+            const next = cinematic.step + 1
+            if (next >= cinematic.lines.length) {
+                // Fin du dialogue : appliquer la récompense d'énergie si applicable
+                const npcId = cinematic.npcId
+                const energyReward = cinematic.energyReward
+                const isGymGuy = npcId === "gym_guy"
+
+                // Mémoriser qu'on a parlé à ce NPC
+                setState((s) => {
+                    const newTalked = s.npcsTalkedTo.includes(npcId)
+                        ? s.npcsTalkedTo
+                        : [...s.npcsTalkedTo, npcId]
+                    return { ...s, npcsTalkedTo: newTalked }
+                })
+
+                // === v3.4a : récompense gym guy via API serveur (source de vérité) ===
+                if (isGymGuy && energyReward && state.phase === "playing" && !state.gymGuyEnergyGiven) {
+                    const rewardNpcName = cinematic.npcName
+                    ; (async () => {
+                        try {
+                            const res = await fetch("/api/gamebook/grant-gym-energy", {
+                                method: "POST",
+                            })
+                            const data = await res.json()
+                            if (data.ok) {
+                                if (typeof data.availableEnergy === "number") {
+                                    setReps(data.availableEnergy)
+                                }
+                                if (typeof data.energySpentToday === "number") {
+                                    setEnergySpent(data.energySpentToday)
+                                }
+                                setState((s) => ({ ...s, gymGuyEnergyGiven: true }))
+                                setToast(`+${data.reward ?? energyReward} reps offerts par ${rewardNpcName} !`)
+                            } else {
+                                setToast(data.reason || "BUFFY hausse les épaules.")
+                            }
+                        } catch (e) {
+                            console.warn("[MapClient] grant-gym-energy failed", e)
+                        }
+                    })()
+                }
+
+                setCinematic(null)
+                return
+            }
+            setCinematic({ ...cinematic, step: next })
             return
         }
 
@@ -425,27 +634,15 @@ export default function MapClient({ nickname, userId, initialState, initialToday
             return
         }
 
-        // Porte ?
+        // === v3.3 : NPC devant ? ===
+        const npcInFront = npcsWithPos.find((n) => n.x === front.x && n.y === front.y)
+        if (npcInFront) {
+            triggerNpcDialogue(npcInFront.npc)
+            return
+        }
+
+        // Panneau ? (Bourg-Boulette uniquement, l'ouverture des portes est devenue automatique)
         if (state.mapId === "bourgpates") {
-            const door = doorAt(buildings, front.x, front.y)
-            if (door) {
-                const targetMapId =
-                    door.kind === "gym" ? "gym"
-                        : door.kind === "casino" ? "casino"
-                            : "cave"
-                const targetMap = getMap(targetMapId)
-                const spawnX = Math.floor(targetMap.width / 2)
-                const spawnY = targetMap.height - 2
-                setState((s) => ({
-                    ...s,
-                    mapId: targetMapId,
-                    posX: spawnX,
-                    posY: spawnY,
-                    direction: "up",
-                }))
-                setToast(`Tu entres : ${targetMap.name}`)
-                return
-            }
             const sign = OUTDOOR_SIGNS.find((s) => s.x === front.x && s.y === front.y)
             if (sign) {
                 setPopup({ kind: "sign", text: sign.text })
@@ -468,7 +665,7 @@ export default function MapClient({ nickname, userId, initialState, initialToday
         if (tile === "monsterDesk") return setPopup({ kind: "info", text: "Le bureau du Monstre.\n\nDes parchemins, un encrier renversé, une fiole de sauce." })
 
         setToast("Rien d'intéressant.")
-    }, [state, map, buildings, otherPlayersOnThisMap, popup, cinematic])
+    }, [state, map, buildings, otherPlayersOnThisMap, popup, cinematic, npcsWithPos, triggerNpcDialogue, reps])
 
     // ============================================================
     // EXERCICES (la salle de muscu : pour l'instant juste un texte)
@@ -513,8 +710,9 @@ export default function MapClient({ nickname, userId, initialState, initialToday
             setToast(`${target.nickname} ne peut pas reculer plus.`)
             return
         }
-        // Appliquer (côté client uniquement pour le proto — pas de persistance des autres joueurs poussés)
+        // Appliquer : débit local + persistance serveur
         setReps((r) => r - COST_PUSH)
+        spendEnergy(COST_PUSH, "push_player").catch(() => {/* silent */ })
         setOtherPlayers((ps) =>
             ps.map((p) => (p.id === target.id ? { ...p, posX: newTarget.x, posY: newTarget.y } : p))
         )
@@ -705,6 +903,20 @@ export default function MapClient({ nickname, userId, initialState, initialToday
                             )
                         })}
 
+                    {/* === v3.3 : NPCs sur la map courante === */}
+                    {npcsWithPos.map((n) => (
+                        <NpcSprite
+                            key={n.npc.id}
+                            npc={n.npc}
+                            x={n.x}
+                            y={n.y}
+                            direction={n.direction}
+                            mapW={map.width}
+                            mapH={map.height}
+                            animStep={animStep}
+                        />
+                    ))}
+
                     {/* Monstre pendant intro */}
                     {state.phase === "introMonster" &&
                         state.introStep < INTRO_STEP_TELEPORT_TO_CAVE + 1 &&
@@ -772,6 +984,15 @@ export default function MapClient({ nickname, userId, initialState, initialToday
                         <DialogueBox
                             speaker="MONSTRE SPAGHETTI"
                             text={MONSTER_PIONEER_DIALOGUE[cinematic.step]}
+                            onNext={pressA}
+                        />
+                    )}
+
+                    {/* === v3.3 : DIALOGUE NPC === */}
+                    {cinematic?.kind === "npcDialogue" && (
+                        <DialogueBox
+                            speaker={cinematic.npcName}
+                            text={cinematic.lines[cinematic.step]}
                             onNext={pressA}
                         />
                     )}
@@ -1214,6 +1435,62 @@ function BridgePnjSprite({
                 {dimmed ? `${pnj.name} ✓` : `⚔ ${pnj.name}`}
             </div>
             <PlayerSprite direction="down" animStep={animStep} color={pnj.color} />
+        </div>
+    )
+}
+
+function NpcSprite({
+    npc,
+    x,
+    y,
+    direction,
+    mapW,
+    mapH,
+    animStep,
+}: {
+    npc: NpcDefinition
+    x: number
+    y: number
+    direction: Direction
+    mapW: number
+    mapH: number
+    animStep: number
+}) {
+    return (
+        <div
+            style={{
+                position: "absolute",
+                left: `${(x / mapW) * 100}%`,
+                top: `${(y / mapH) * 100}%`,
+                width: `${(1 / mapW) * 100}%`,
+                height: `${(1 / mapH) * 100}%`,
+                zIndex: 9,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "left 0.4s ease, top 0.4s ease",
+            }}
+        >
+            <div
+                style={{
+                    position: "absolute",
+                    top: "-32%",
+                    background: "rgba(0,0,0,0.7)",
+                    color: "#fff",
+                    fontSize: "7px",
+                    padding: "1px 4px",
+                    borderRadius: "2px",
+                    whiteSpace: "nowrap",
+                    fontFamily: "monospace",
+                    pointerEvents: "none",
+                    border: npc.interaction === "interceptor"
+                        ? "1px solid #ffd700"
+                        : "1px solid #88ccff",
+                }}
+            >
+                {npc.interaction === "interceptor" ? `⚔ ${npc.name}` : `${npc.name}`}
+            </div>
+            <PlayerSprite direction={direction} animStep={animStep} color={npc.sprite.color} />
         </div>
     )
 }

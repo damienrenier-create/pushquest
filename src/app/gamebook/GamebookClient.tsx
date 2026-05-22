@@ -20,6 +20,8 @@ interface Props {
 interface StatePayload {
     state: PlayerMapState
     todayReps: number
+    availableEnergy: number
+    energySpentToday: number
 }
 
 export default function GamebookClient({ nickname, userId }: Props) {
@@ -35,7 +37,7 @@ export default function GamebookClient({ nickname, userId }: Props) {
                     if (!res.ok) throw new Error(`HTTP ${res.status}`)
                     const json = (await res.json()) as StatePayload
                     if (cancelled) return
-                    // Garantir que les champs v3.1 ont une valeur par défaut côté client
+                    // Garantir que les champs v3.1 + v3.3 ont une valeur par défaut côté client
                     const safeState: PlayerMapState = {
                         ...json.state,
                         treeObstacleCleared: json.state.treeObstacleCleared ?? false,
@@ -48,8 +50,17 @@ export default function GamebookClient({ nickname, userId }: Props) {
                             typeof json.state.bridgePnjLastBeatenDate === "object"
                                 ? json.state.bridgePnjLastBeatenDate
                                 : {},
+                        gymGuyEnergyGiven: json.state.gymGuyEnergyGiven ?? false,
+                        npcsTalkedTo: Array.isArray(json.state.npcsTalkedTo)
+                            ? json.state.npcsTalkedTo
+                            : [],
                     }
-                    setPayload({ ...json, state: safeState })
+                    setPayload({
+                        ...json,
+                        state: safeState,
+                        availableEnergy: json.availableEnergy ?? json.todayReps ?? 0,
+                        energySpentToday: json.energySpentToday ?? 0,
+                    })
                     setShowBlack(!safeState.hasSeenWelcomeScreen)
                 } catch (e) {
                     if (!cancelled) setError(e instanceof Error ? e.message : "Erreur inconnue")
@@ -128,6 +139,8 @@ export default function GamebookClient({ nickname, userId }: Props) {
             userId={userId}
             initialState={payload.state}
             initialTodayReps={payload.todayReps}
+            initialAvailableEnergy={payload.availableEnergy}
+            initialEnergySpent={payload.energySpentToday}
         />
     )
 }
