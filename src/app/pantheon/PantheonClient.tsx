@@ -882,6 +882,7 @@ export default function PantheonClient({
                                 <option value="LEGENDARY">Légendaire</option>
                                 <option value="MILESTONE">Milestone</option>
                                 <option value="EVENT">Événement</option>
+                                <option value="GAMEBOOK">🍝 Gamebook</option>
                             </select>
                         </div>
                     </div>

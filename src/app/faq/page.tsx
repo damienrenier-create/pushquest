@@ -68,7 +68,7 @@ function FAQContent() {
     const initialTab = (searchParams.get('tab') as 'rules' | 'bestiary' | 'catalogue' | 'news') || 'rules';
     const [activeTab, setActiveTab] = useState<'rules' | 'bestiary' | 'catalogue' | 'news'>(initialTab);
     const [searchQuery, setSearchQuery] = useState("");
-    const [filter, setFilter] = useState<'ALL' | 'COMPETITIVE' | 'LEGENDARY' | 'MILESTONE' | 'EVENT'>('ALL');
+    const [filter, setFilter] = useState<'ALL' | 'COMPETITIVE' | 'LEGENDARY' | 'MILESTONE' | 'EVENT' | 'GAMEBOOK'>('ALL');
     const [selectedBadge, setSelectedBadge] = useState<any>(null);
 
     useEffect(() => {
@@ -620,13 +620,13 @@ function FAQContent() {
                                         />
                                     </div>
                                     <div className="flex flex-wrap justify-center gap-2">
-                                        {['ALL', 'COMPETITIVE', 'LEGENDARY', 'MILESTONE', 'EVENT'].map(f => (
+                                        {['ALL', 'COMPETITIVE', 'LEGENDARY', 'MILESTONE', 'EVENT', 'GAMEBOOK'].map(f => (
                                             <button
                                                 key={f}
                                                 onClick={() => setFilter(f as any)}
                                                 className={`px-4 py-2 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all border ${filter === f ? 'bg-white text-indigo-600 shadow-xl' : 'bg-white/5 text-indigo-100 border-white/10'}`}
                                             >
-                                                {f}
+                                                {f === 'GAMEBOOK' ? '🍝 GAMEBOOK' : f}
                                             </button>
                                         ))}
                                     </div>
@@ -635,7 +635,7 @@ function FAQContent() {
                         </section>
 
                         <div className="space-y-12">
-                            {["COMPETITIVE", "LEGENDARY", "MILESTONE", "EVENT"].filter(t => filter === 'ALL' || filter === t).map(type => {
+                            {["COMPETITIVE", "LEGENDARY", "MILESTONE", "EVENT", "GAMEBOOK"].filter(t => filter === 'ALL' || filter === t).map(type => {
                                 const badges = BADGE_DEFINITIONS.filter(b =>
                                     b.type === type && (searchQuery === "" || b.name.toLowerCase().includes(searchQuery.toLowerCase()) || b.description.toLowerCase().includes(searchQuery.toLowerCase()))
                                 );
@@ -643,7 +643,7 @@ function FAQContent() {
                                 return (
                                     <div key={type} className="space-y-6">
                                         <div className="flex items-center gap-4 px-2 font-black uppercase italic tracking-tighter text-gray-900 text-lg">
-                                            <span>{type === "COMPETITIVE" ? "Compétitifs" : type === "LEGENDARY" ? "Légendaires" : type === "MILESTONE" ? "Milestones" : "Spéciaux"}</span>
+                                            <span>{type === "COMPETITIVE" ? "Compétitifs" : type === "LEGENDARY" ? "Légendaires" : type === "MILESTONE" ? "Milestones" : type === "GAMEBOOK" ? "🍝 Gamebook (Easter eggs)" : "Spéciaux"}</span>
                                             <div className="h-px bg-gray-200 flex-1" />
                                         </div>
                                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
@@ -655,17 +655,17 @@ function FAQContent() {
                                                         ...badge,
                                                         xp: getXPForReward(badge.key)
                                                     })}
-                                                    className={`group relative bg-white rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-5 border-2 transition-all hover:scale-[1.02] hover:shadow-xl active:scale-95 scroll-mt-24 text-left flex flex-col items-center justify-center gap-2 sm:gap-3 ${badge.rarity === 'LEGENDARY' ? 'border-orange-100 hover:border-orange-300 bg-orange-50/5' : badge.rarity === 'EPIC' ? 'border-purple-100 hover:border-purple-300 bg-purple-50/5' : 'border-gray-50 hover:border-indigo-200'}`}
+                                                    className={`group relative bg-white rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-5 border-2 transition-all hover:scale-[1.02] hover:shadow-xl active:scale-95 scroll-mt-24 text-left flex flex-col items-center justify-center gap-2 sm:gap-3 ${badge.rarity === 'LEGENDARY' ? 'border-orange-100 hover:border-orange-300 bg-orange-50/5' : badge.rarity === 'EPIC' ? 'border-purple-100 hover:border-purple-300 bg-purple-50/5' : badge.rarity === 'EASTEREGG' ? 'border-pink-100 hover:border-pink-300 bg-pink-50/5' : 'border-gray-50 hover:border-indigo-200'}`}
                                                 >
-                                                    <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center text-2xl sm:text-4xl shadow-inner shrink-0 transition-transform group-hover:scale-110 group-hover:rotate-3 ${badge.rarity === 'LEGENDARY' ? 'bg-orange-100/50' : badge.rarity === 'EPIC' ? 'bg-purple-100/50' : 'bg-gray-100'}`}>
+                                                    <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center text-2xl sm:text-4xl shadow-inner shrink-0 transition-transform group-hover:scale-110 group-hover:rotate-3 ${badge.rarity === 'LEGENDARY' ? 'bg-orange-100/50' : badge.rarity === 'EPIC' ? 'bg-purple-100/50' : badge.rarity === 'EASTEREGG' ? 'bg-pink-100/50' : 'bg-gray-100'}`}>
                                                         {badge.emoji}
                                                     </div>
                                                     <div className="text-center w-full">
                                                         <h3 className="text-[10px] sm:text-xs font-black text-gray-900 uppercase italic tracking-tight line-clamp-2 leading-tight">
                                                             {badge.name}
                                                         </h3>
-                                                        <div className={`mt-1.5 inline-block px-1.5 py-0.5 rounded-full text-[7px] font-black uppercase tracking-widest ${badge.rarity === 'LEGENDARY' ? 'bg-orange-600 text-white' : badge.rarity === 'EPIC' ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
-                                                            {badge.rarity}
+                                                        <div className={`mt-1.5 inline-block px-1.5 py-0.5 rounded-full text-[7px] font-black uppercase tracking-widest ${badge.rarity === 'LEGENDARY' ? 'bg-orange-600 text-white' : badge.rarity === 'EPIC' ? 'bg-purple-600 text-white' : badge.rarity === 'EASTEREGG' ? 'bg-pink-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                                                            {badge.rarity === 'EASTEREGG' ? '🥚' : badge.rarity}
                                                         </div>
                                                     </div>
 

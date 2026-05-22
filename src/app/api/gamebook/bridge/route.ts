@@ -5,11 +5,13 @@
 // POST /api/gamebook/bridge
 //   body: { action: "challengePnj" | "claimPioneerBadge", pnjId?: string }
 //
-//   "challengePnj" : tente de battre un PNJ (vérifie les conditions, marque comme battu)
+//   "challengePnj" : tente de battre un PNJ (vérifie côté serveur, marque comme battu)
 //   "claimPioneerBadge" : donne le badge Pionnier (200 XP) si pas déjà fait
 //
-// La logique anti-triche est côté serveur : on relit les vraies données
-// depuis prisma.exerciseSet avant de valider.
+// IMPORTANT v3.2 : la création de badge utilise enfin le bon modèle Prisma :
+//   - badgeKey (pas badgeId)
+//   - BadgeEvent type=UNIQUE_AWARDED pour permettre plusieurs détenteurs
+//   - XpAdjustment.date obligatoire
 
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
@@ -20,6 +22,9 @@ import { getTodayISO, getYesterdayISO } from "@/lib/challenge"
 export const dynamic = "force-dynamic"
 
 const CHAPTER_ID = "map_v3"
+
+const BADGE_KEY_PIONNIER = "gamebook_pionnier"
+const XP_REWARD_PIONNIER = 200
 
 // PNJ et leurs défis (doit matcher BRIDGE_PNJS dans maps.ts)
 type BridgeChallenge =
@@ -78,40 +83,86 @@ async function claimPioneerBadge(userId: string) {
         return NextResponse.json({ ok: false, reason: "Badge déjà reçu." })
     }
 
-    // Marquer comme attribué
+    // Vérifier que la BadgeDefinition existe (si initBadges a tourné depuis le déploiement)
+    let badgeDefExists = false
+    try {
+        const def = await (prisma as { badgeDefinition: { findUnique: (a: unknown) => Promise<unknown> } }).badgeDefinition.findUnique({
+            where: { key: BADGE_KEY_PIONNIER },
+        })
+        badgeDefExists = !!def
+    } catch (e) {
+        console.warn("[bridge] could not check badge definition", e)
+    }
+
+    // Marquer comme attribué côté gamebook
     await prisma.gamebookProgress.update({
         where: { id: progress.id },
         data: { pioneerBadgeAwarded: true },
     })
 
-    // Ajouter le badge si la BadgeDefinition existe
-    try {
-        const badgeDef = await (prisma as { badgeDefinition: { findFirst: (a: unknown) => Promise<unknown> } }).badgeDefinition.findFirst({
-            where: { id: "pionnier_pushquest" },
-        })
-        if (badgeDef) {
-            await (prisma as { badgeOwnership: { create: (a: unknown) => Promise<unknown> } }).badgeOwnership.create({
-                data: { userId, badgeId: "pionnier_pushquest" },
+    // Créer un BadgeEvent UNIQUE_AWARDED (pattern des badges non-transférables type "Premier 50 pompes")
+    // Ça permet d'avoir plusieurs détenteurs sans toucher au BadgeOwnership singleton.
+    if (badgeDefExists) {
+        try {
+            // Vérifier qu'on n'a pas déjà attribué (idempotence)
+            const existing = await (prisma as { badgeEvent: { findFirst: (a: unknown) => Promise<unknown> } }).badgeEvent.findFirst({
+                where: {
+                    badgeKey: BADGE_KEY_PIONNIER,
+                    toUserId: userId,
+                    eventType: "UNIQUE_AWARDED",
+                },
             })
+            if (!existing) {
+                await (prisma as { badgeEvent: { create: (a: unknown) => Promise<unknown> } }).badgeEvent.create({
+                    data: {
+                        badgeKey: BADGE_KEY_PIONNIER,
+                        fromUserId: null,
+                        toUserId: userId,
+                        eventType: "UNIQUE_AWARDED",
+                        previousValue: 0,
+                        newValue: 1,
+                        metadata: JSON.stringify({
+                            source: "gamebook_route1_tree",
+                            xpReward: XP_REWARD_PIONNIER,
+                        }),
+                    },
+                })
+            }
+        } catch (e) {
+            console.warn("[bridge] could not create BadgeEvent", e)
         }
-    } catch (e) {
-        console.warn("[bridge] could not create badge ownership", e)
     }
 
-    // XP via XpAdjustment (pattern existant dans l'app)
+    // XP via XpAdjustment (champ `date` OBLIGATOIRE, c'était le bug v3.1)
     try {
-        await (prisma as { xpAdjustment: { create: (a: unknown) => Promise<unknown> } }).xpAdjustment.create({
-            data: {
+        const today = getTodayISO()
+        // Vérifier qu'on n'a pas déjà donné les XP (idempotence)
+        const existingXp = await (prisma as { xpAdjustment: { findFirst: (a: unknown) => Promise<unknown> } }).xpAdjustment.findFirst({
+            where: {
                 userId,
-                amount: 200,
                 reason: "BADGE_PIONNIER_GAMEBOOK",
             },
         })
+        if (!existingXp) {
+            await (prisma as { xpAdjustment: { create: (a: unknown) => Promise<unknown> } }).xpAdjustment.create({
+                data: {
+                    userId,
+                    amount: XP_REWARD_PIONNIER,
+                    reason: "BADGE_PIONNIER_GAMEBOOK",
+                    date: today,
+                },
+            })
+        }
     } catch (e) {
-        console.warn("[bridge] could not create xp adjustment", e)
+        console.warn("[bridge] could not create XpAdjustment", e)
     }
 
-    return NextResponse.json({ ok: true, awarded: true, xp: 200 })
+    return NextResponse.json({
+        ok: true,
+        awarded: true,
+        xp: XP_REWARD_PIONNIER,
+        badgeKey: BADGE_KEY_PIONNIER,
+    })
 }
 
 // =====================================================
@@ -151,10 +202,11 @@ async function challengePnj(userId: string, pnjId: string) {
         }
     } else if (challenge.kind === "topYesterday") {
         const yesterday = getYesterdayISO()
+        // IMPORTANT : exclure les comptes système (sinon le compte test fausse le classement)
         const allYesterday = await prisma.exerciseSet.findMany({
             where: {
                 date: yesterday,
-                user: { isSystem: false }
+                user: { isSystem: false },
             },
         })
         const sumsByUser: Record<string, number> = {}

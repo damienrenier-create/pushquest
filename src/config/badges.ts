@@ -1,4 +1,4 @@
-export type BadgeRarity = 'COMMON' | 'RARE' | 'EPIC' | 'LEGENDARY';
+export type BadgeRarity = 'COMMON' | 'RARE' | 'EPIC' | 'LEGENDARY' | 'EASTEREGG';
 
 export interface BadgeDefinition {
     key: string;
@@ -10,7 +10,7 @@ export interface BadgeDefinition {
     type: string;
     condition: string;
     rarity: BadgeRarity;
-    category?: 'HOLISTIQUE' | 'REGULARITY' | 'PUSHUPS' | 'PULLUPS' | 'SQUATS' | 'PLANK' | 'GLOBAL';
+    category?: 'HOLISTIQUE' | 'REGULARITY' | 'PUSHUPS' | 'PULLUPS' | 'SQUATS' | 'PLANK' | 'GLOBAL' | 'GAMEBOOK';
     threshold?: number;
     seriesTarget?: number;
     isUnique?: boolean;
@@ -174,5 +174,12 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
 
     // Special Workouts - La Grande Pyramide
     { key: "workout_workout-03-pyramid_std", name: "Explorateur de la Pyramide", emoji: "🏜️", rarity: "RARE", category: "GLOBAL", metricType: "SPECIAL_WORKOUT", type: "EVENT", exerciseScope: "ALL", description: "Badge de participation (0 XP). A complété l'entraînement 'La Grande Pyramide'.", condition: "Réaliser l'intégralité des exercices de l'entraînement spécial pyramidal.", addedAt: "2026-04-27" },
-    { key: "workout_workout-03-pyramid_plat", name: "Le Pharaon", emoji: "👑", rarity: "LEGENDARY", category: "GLOBAL", metricType: "SPECIAL_WORKOUT", type: "COMPETITIVE", exerciseScope: "ALL", description: "Détenteur du record sur l'entraînement 'La Grande Pyramide'", condition: "Détenir le meilleur temps sur l'entraînement 'La Grande Pyramide'. Le titre est transférable si le record est battu.", addedAt: "2026-04-27" }
+    { key: "workout_workout-03-pyramid_plat", name: "Le Pharaon", emoji: "👑", rarity: "LEGENDARY", category: "GLOBAL", metricType: "SPECIAL_WORKOUT", type: "COMPETITIVE", exerciseScope: "ALL", description: "Détenteur du record sur l'entraînement 'La Grande Pyramide'", condition: "Détenir le meilleur temps sur l'entraînement 'La Grande Pyramide'. Le titre est transférable si le record est battu.", addedAt: "2026-04-27" },
+
+    // ============================================================
+    // GAMEBOOK BADGES (Easter eggs narratifs)
+    // Attribués par le moteur du Gamebook /gamebook, pas par le recalcul automatique.
+    // metricType "GAMEBOOK_AWARD" est volontairement ignoré par lib/badges.ts.
+    // ============================================================
+    { key: "gamebook_pionnier", name: "Pionnier", emoji: "🌳", rarity: "EASTEREGG", category: "GAMEBOOK", metricType: "GAMEBOOK_AWARD", type: "GAMEBOOK", exerciseScope: "ALL", description: "A poussé l'arbre tombé de la Route 1 et franchi le seuil du monde sauvage. (Easter egg du Gamebook)", condition: "Franchir l'arbre obstacle de la Route 1 dans le Gamebook (coûte 150 reps). Tous les joueurs peuvent l'obtenir, il n'est pas transférable.", isUnique: false, isTransferable: false, threshold: 150, addedAt: "2026-05-21" }
 ];

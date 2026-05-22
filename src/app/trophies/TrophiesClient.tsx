@@ -12,7 +12,7 @@ interface BadgeDef {
     name: string
     emoji: string
     description: string
-    rarity: 'COMMON' | 'RARE' | 'EPIC' | 'LEGENDARY'
+    rarity: 'COMMON' | 'RARE' | 'EPIC' | 'LEGENDARY' | 'EASTEREGG'
     isUnique?: boolean
     threshold?: number
     exerciseScope?: string
@@ -24,6 +24,7 @@ const rarityStyles: Record<string, string> = {
     RARE: "border-blue-500/30 bg-blue-500/5 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.1)]",
     EPIC: "border-purple-500/40 bg-purple-500/10 text-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.15)]",
     LEGENDARY: "border-orange-500/50 bg-orange-500/15 text-orange-400 shadow-[0_0_30px_rgba(249,115,22,0.25)] ring-1 ring-orange-500/20",
+    EASTEREGG: "border-pink-500/40 bg-pink-500/10 text-pink-400 shadow-[0_0_20px_rgba(236,72,153,0.18)]",
 };
 
 interface UserStats {
@@ -254,7 +255,7 @@ export default function TrophiesClient({
                 <div className="bg-slate-900 border border-white/5 rounded-[2.5rem] p-8 shadow-2xl">
                     <h2 className="text-xl font-black text-white mb-8 border-l-4 border-indigo-600 pl-4 uppercase tracking-tight">🏆 Tableau des Chasseurs</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {badgeDefinitions.filter(b => b.rarity === 'LEGENDARY' || b.metricType === 'MAX_SET' || b.metricType === 'MAX_BONUS').map(b => {
+                        {badgeDefinitions.filter(b => b.rarity === 'LEGENDARY' || b.rarity === 'EASTEREGG' || b.metricType === 'MAX_SET' || b.metricType === 'MAX_BONUS').map(b => {
                             const ownership = badgeOwnerships.find(bo => bo.badgeKey === b.key)
                             return (
                                 <div key={b.key} onClick={() => setSelectedBadge(b)} className={`p-5 rounded-3xl border transition-all cursor-pointer group ${rarityStyles[b.rarity]}`}>
@@ -288,7 +289,7 @@ export default function TrophiesClient({
             <section className="space-y-4">
                 <h2 className="text-xl font-black text-white px-2 uppercase tracking-tight">🎖️ Médailles & Milestones</h2>
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                    {badgeDefinitions.filter(b => b.rarity !== 'LEGENDARY' && b.metricType !== 'MAX_SET' && b.metricType !== 'MAX_BONUS').map(b => (
+                    {badgeDefinitions.filter(b => b.rarity !== 'LEGENDARY' && b.rarity !== 'EASTEREGG' && b.metricType !== 'MAX_SET' && b.metricType !== 'MAX_BONUS').map(b => (
                         <BadgeItem key={b.key} badge={b} isEarned={earnedBadges.includes(b.key)} />
                     ))}
                 </div>

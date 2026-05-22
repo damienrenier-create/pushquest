@@ -9,7 +9,7 @@ interface FeaturedBadgeData {
     name: string;
     emoji: string;
     description: string;
-    rarity: "COMMON" | "RARE" | "EPIC" | "LEGENDARY";
+    rarity: "COMMON" | "RARE" | "EPIC" | "LEGENDARY" | "EASTEREGG";
     updatedAt: string;
 }
 
@@ -61,6 +61,7 @@ export default function FeaturedBadge() {
         RARE: "border-blue-200 bg-blue-50 text-blue-600",
         EPIC: "border-purple-200 bg-purple-50 text-purple-600",
         LEGENDARY: "border-orange-200 bg-orange-50 text-orange-600",
+        EASTEREGG: "border-pink-200 bg-pink-50 text-pink-600",
     };
 
     const rarityGlow = {
@@ -68,6 +69,7 @@ export default function FeaturedBadge() {
         RARE: "shadow-[0_0_15px_rgba(59,130,246,0.2)]",
         EPIC: "shadow-[0_0_20px_rgba(168,85,247,0.3)]",
         LEGENDARY: "shadow-[0_0_25px_rgba(249,115,22,0.4)] animate-pulse",
+        EASTEREGG: "shadow-[0_0_20px_rgba(236,72,153,0.3)]",
     };
 
     return (
@@ -97,7 +99,7 @@ export default function FeaturedBadge() {
                             Badge à l'Honneur
                         </h3>
                         <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-current/10 ${rarityColors[data.rarity]}`}>
-                            {data.rarity}
+                            {data.rarity === 'EASTEREGG' ? '🥚 EASTEREGG' : data.rarity}
                         </span>
                     </div>
                     

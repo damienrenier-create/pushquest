@@ -644,6 +644,11 @@ export async function updateBadgesPostSave(userId: string, precomputedSummaries?
         const ownership = ownershipMap.get(def.key) ?? null;
         if (ownership?.locked) continue;
 
+        // Skip explicit pour les badges du Gamebook :
+        // ils sont attribués manuellement par le moteur du Gamebook (/api/gamebook/bridge)
+        // et ne doivent JAMAIS être touchés par le recalcul automatique.
+        if (def.metricType === "GAMEBOOK_AWARD") continue;
+
         let bestUser: any = null;
         let bestValue = 0;
         let isTemporalBadge = false;
@@ -1156,7 +1161,9 @@ export async function rotateFeaturedBadge() {
         !b.isUnique &&
         b.type !== "LEGENDARY" &&
         b.type !== "EVENT" &&
-        b.metricType !== "HEADHUNTER_COUNT"
+        b.type !== "GAMEBOOK" &&
+        b.metricType !== "HEADHUNTER_COUNT" &&
+        b.metricType !== "GAMEBOOK_AWARD"
     );
 
     // Prioritization:

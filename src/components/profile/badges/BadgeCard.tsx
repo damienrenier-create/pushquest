@@ -36,7 +36,8 @@ const BadgeCard: React.FC<BadgeCardProps> = ({ badge, isPending = false, holder 
             <div className={`absolute inset-0 rounded-[1.5rem] blur-xl opacity-0 group-hover:opacity-20 transition duration-500
                 ${badge.rarity === 'LEGENDARY' ? 'bg-amber-500 shadow-amber-500' :
                     badge.rarity === 'EPIC' ? 'bg-purple-500 shadow-purple-500' :
-                        badge.rarity === 'RARE' ? 'bg-blue-500 shadow-blue-500' : 'bg-slate-400 shadow-slate-400'}`}
+                        badge.rarity === 'RARE' ? 'bg-blue-500 shadow-blue-500' :
+                            badge.rarity === 'EASTEREGG' ? 'bg-pink-500 shadow-pink-500' : 'bg-slate-400 shadow-slate-400'}`}
             ></div>
 
             <div className="relative bg-white border border-slate-100 rounded-[1.5rem] p-4 flex flex-col items-center text-center h-full shadow-sm group-hover:shadow-lg group-hover:border-slate-200 transition-all duration-300 overflow-hidden">
@@ -53,7 +54,8 @@ const BadgeCard: React.FC<BadgeCardProps> = ({ badge, isPending = false, holder 
                 <div className={`absolute top-0 right-0 w-16 h-16 rounded-full blur-2xl -mr-8 -mt-8 opacity-10 
                     ${badge.rarity === 'LEGENDARY' ? 'bg-amber-400' :
                         badge.rarity === 'EPIC' ? 'bg-purple-400' :
-                            badge.rarity === 'RARE' ? 'bg-blue-400' : 'bg-slate-200'}`}
+                            badge.rarity === 'RARE' ? 'bg-blue-400' :
+                                badge.rarity === 'EASTEREGG' ? 'bg-pink-400' : 'bg-slate-200'}`}
                 ></div>
 
                 {/* Badge Icon/Emoji */}
@@ -122,8 +124,9 @@ const BadgeCard: React.FC<BadgeCardProps> = ({ badge, isPending = false, holder 
                         <div className={`text-[7px] font-black uppercase tracking-[0.2em] py-0.5 px-2 rounded-full inline-block
                             ${badge.rarity === 'LEGENDARY' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
                                 badge.rarity === 'EPIC' ? 'bg-purple-50 text-purple-600 border border-purple-100' :
-                                    badge.rarity === 'RARE' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-slate-50 text-slate-500 border border-slate-100'}`}>
-                            {badge.rarity}
+                                    badge.rarity === 'RARE' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
+                                        badge.rarity === 'EASTEREGG' ? 'bg-pink-50 text-pink-600 border border-pink-100' : 'bg-slate-50 text-slate-500 border border-slate-100'}`}>
+                            {badge.rarity === 'EASTEREGG' ? '🥚 EASTEREGG' : badge.rarity}
                         </div>
                     )}
 
