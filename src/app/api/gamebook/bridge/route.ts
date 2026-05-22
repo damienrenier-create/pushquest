@@ -177,14 +177,19 @@ async function challengePnj(userId: string, pnjId: string) {
         return NextResponse.json({ error: "No progress" }, { status: 400 })
     }
 
-    const today = getTodayISO()
-    const lastBeaten = (progress.bridgePnjLastBeatenDate as Record<string, string>) ?? {}
-    if (lastBeaten[pnjId] === today) {
+    // v3.5 : si déjà vaincu, on accepte juste le passage sans validation (vaincu = pour toujours)
+    const alreadyDefeated = Array.isArray(progress.bridgePnjDefeated)
+        ? (progress.bridgePnjDefeated as string[])
+        : []
+    if (alreadyDefeated.includes(pnjId)) {
         return NextResponse.json({
-            ok: false,
-            reason: "Tu as déjà battu ce PNJ aujourd'hui. Reviens demain.",
+            ok: true,
+            reason: "Déjà vaincu.",
+            defeated: alreadyDefeated,
         })
     }
+
+    const today = getTodayISO()
 
     // ============= Validation de la condition =============
     if (challenge.kind === "exercise") {
@@ -231,12 +236,11 @@ async function challengePnj(userId: string, pnjId: string) {
         }
     }
 
-    // ============= Marquer comme battu =============
-    const defeated = Array.isArray(progress.bridgePnjDefeated)
-        ? (progress.bridgePnjDefeated as string[])
-        : []
-    const newDefeated = defeated.includes(pnjId) ? defeated : [...defeated, pnjId]
-    const newLastBeaten = { ...lastBeaten, [pnjId]: today }
+    // ============= Marquer comme battu (v3.5 : pour toujours) =============
+    const newDefeated = alreadyDefeated.includes(pnjId) ? alreadyDefeated : [...alreadyDefeated, pnjId]
+    // bridgePnjLastBeatenDate gardé pour rétrocompat mais n'a plus d'effet
+    const existingLastBeaten = (progress.bridgePnjLastBeatenDate as Record<string, string>) ?? {}
+    const newLastBeaten = { ...existingLastBeaten, [pnjId]: today }
 
     await prisma.gamebookProgress.update({
         where: { id: progress.id },

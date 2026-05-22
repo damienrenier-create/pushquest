@@ -195,47 +195,51 @@ function buildRoute1(): TileType[][] {
     // Tapis d'entrée en bas (sortie vers Bourg-Boulette)
     m[ROUTE1_H - 1][5] = "doorMat"
 
-    // Chemin vertical
-    for (let y = 1; y < ROUTE1_H - 1; y++) {
+    // Chemin vertical sud (de y=12 à y=16)
+    for (let y = 12; y < ROUTE1_H - 1; y++) {
         m[y][5] = "path"
     }
 
-    // === ZONE BAS : forêt clairsemée ===
+    // === ZONE BAS : forêt clairsemée (sous l'arbre) ===
     m[15][2] = "tree"
     m[15][8] = "tree"
     m[14][3] = "grassTall"
     m[14][7] = "grassTall"
     m[13][2] = "tree"
 
-    // === MILIEU : ARBRE OBSTACLE === (y=10, milieu du chemin)
-    m[10][5] = "treeObstacle"
-    // Arbres autour pour forcer le passage par l'obstacle
-    m[10][4] = "tree"
-    m[10][6] = "tree"
-    m[10][3] = "tree"
-    m[10][7] = "tree"
-    m[10][2] = "tree"
-    m[10][8] = "tree"
-
-    // === ZONE HAUT : PONT PÉPITE D'AZURIA ===
-    // Ravin de chaque côté du chemin pour forcer le passage en file
-    for (let y = 3; y <= 7; y++) {
-        m[y][1] = "ravine"
-        m[y][2] = "ravine"
-        m[y][3] = "ravine"
-        m[y][4] = "ravine"
-        m[y][6] = "ravine"
-        m[y][7] = "ravine"
-        m[y][8] = "ravine"
-        m[y][9] = "ravine"
-        // Le centre (x=5) reste path
-        m[y][5] = "bridgePlank"
+    // === MILIEU : ARBRE OBSTACLE === (y=11, juste avant le pont)
+    // v3.5b : mur DOUBLE garanti par boucle - impossible de contourner
+    // Ligne y=11 : entièrement bloquée (tree partout sauf l'obstacle au centre)
+    for (let x = 0; x < ROUTE1_W; x++) {
+        if (x === 5) {
+            m[11][x] = "treeObstacle"
+        } else {
+            m[11][x] = "tree"
+        }
+    }
+    // Ligne y=12 : double mur (tree partout sauf au centre pour laisser le chemin sud accessible)
+    for (let x = 0; x < ROUTE1_W; x++) {
+        if (x !== 5) {
+            m[12][x] = "tree"
+        }
     }
 
-    // Tapis d'entrée du pont (sud)
-    m[8][5] = "bridgePlank"
-    // Fin nord du pont
-    m[2][5] = "bridgePlank"
+    // === ZONE HAUT : PONT PÉPITE D'AZURIA (y=2 à y=10) ===
+    // Pont large de 5 cases (colonnes 3-7) avec cours d'eau bleu de chaque côté
+    for (let y = 2; y <= 10; y++) {
+        // Cours d'eau à gauche (colonnes 1-2)
+        m[y][1] = "water"
+        m[y][2] = "water"
+        // Pont (colonnes 3-7)
+        m[y][3] = "bridgePlank"
+        m[y][4] = "bridgePlank"
+        m[y][5] = "bridgePlank"
+        m[y][6] = "bridgePlank"
+        m[y][7] = "bridgePlank"
+        // Cours d'eau à droite (colonnes 8-9)
+        m[y][8] = "water"
+        m[y][9] = "water"
+    }
 
     // Espace en haut (après le pont, futur extension)
     m[1][5] = "path"
@@ -245,6 +249,12 @@ function buildRoute1(): TileType[][] {
 
 // PNJ du pont — positions fixes sur le chemin du pont
 // Ils sont les "ghosts" système, pas des joueurs réels
+// PNJ du pont — positions en ZIGZAG (v3.5)
+// Le pont fait colonnes 3-7 x lignes 2-10
+// Chaque PNJ surveille toute sa ligne ET toute sa colonne (cf. mapEngine.ts)
+// Le joueur doit zigzaguer pour les éviter, ou les affronter pour passer.
+//
+// IDs identiques à v3.4 pour préserver les bridgePnjDefeated existants en DB.
 export const BRIDGE_PNJS: Array<{
     id: string
     name: string
@@ -253,10 +263,10 @@ export const BRIDGE_PNJS: Array<{
     color: string
     challenge: BridgeChallenge
 }> = [
-    { id: "pnj_pompo",   name: "POMPO",   x: 5, y: 7, color: "#d84030", challenge: { kind: "exercise", exercise: "PUSHUP", reps: 100 } },
-    { id: "pnj_squatto", name: "SQUATTO", x: 5, y: 6, color: "#4080d8", challenge: { kind: "exercise", exercise: "SQUAT",  reps: 100 } },
-    { id: "pnj_gainax",  name: "GAINAX",  x: 5, y: 5, color: "#48a830", challenge: { kind: "exercise", exercise: "GAINAGE", reps: 100 } },
-    { id: "pnj_champio", name: "CHAMPIO", x: 5, y: 4, color: "#a040d8", challenge: { kind: "topYesterday" } },
+    { id: "pnj_pompo",   name: "POMPO",   x: 3, y: 9, color: "#d84030", challenge: { kind: "exercise", exercise: "PUSHUP", reps: 100 } },
+    { id: "pnj_squatto", name: "SQUATTO", x: 7, y: 7, color: "#4080d8", challenge: { kind: "exercise", exercise: "SQUAT",  reps: 100 } },
+    { id: "pnj_gainax",  name: "GAINAX",  x: 3, y: 5, color: "#48a830", challenge: { kind: "exercise", exercise: "GAINAGE", reps: 100 } },
+    { id: "pnj_champio", name: "CHAMPIO", x: 5, y: 3, color: "#a040d8", challenge: { kind: "topYesterday" } },
 ]
 
 export type BridgeChallenge =

@@ -33,6 +33,7 @@ import {
     tryComputeMove,
     frontTile,
     computePushTarget,
+    bridgePnjSeeingPlayer,
     COST_PUSH,
     COST_TREE_OBSTACLE,
 } from "@/lib/gamebook/mapEngine"
@@ -323,6 +324,34 @@ export default function MapClient({
     )
 
     // ============================================================
+    // v3.5 : DÉCLENCHER UN DÉFI DE PNJ DU PONT
+    // ============================================================
+    const triggerBridgePnjChallenge = useCallback(
+        (bridgePnj: (typeof BRIDGE_PNJS)[number]) => {
+            const challenge = bridgePnj.challenge
+            let challengeText = ""
+            if (challenge.kind === "exercise") {
+                const label =
+                    challenge.exercise === "PUSHUP" ? "pompes"
+                        : challenge.exercise === "SQUAT" ? "squats"
+                            : challenge.exercise === "GAINAGE" ? "secondes de gainage"
+                                : challenge.exercise === "PULLUP" ? "tractions"
+                                    : "cardio"
+                challengeText = `${bridgePnj.name} t'interpelle !\n\n"Fais ${challenge.reps} ${label} aujourd'hui et je te laisse passer pour de bon."\n\nAppuie sur A pour tenter le défi.`
+            } else {
+                challengeText = `${bridgePnj.name} t'interpelle !\n\n"Je ne combats que le TOP REPS de la veille. Es-tu lui ?"\n\nAppuie sur A pour tenter.`
+            }
+            setPopup({
+                kind: "pnjChallenge",
+                pnjId: bridgePnj.id,
+                pnjName: bridgePnj.name,
+                text: challengeText,
+            })
+        },
+        []
+    )
+
+    // ============================================================
     // v3.4a : SPEND ENERGY (appel API serveur, source de vérité)
     // ============================================================
     const spendEnergy = useCallback(async (amount: number, reason: string): Promise<boolean> => {
@@ -502,6 +531,27 @@ export default function MapClient({
                 direction: result.nextState.direction,
             })
 
+            // === v3.5 : DÉTECTION LIGNE DE VUE DES PNJ DU PONT ===
+            // Quand le joueur arrive sur une case partageant la ligne ou colonne
+            // d'un PNJ du pont non vaincu, ce PNJ l'interpelle.
+            if (result.nextState.mapId === "route1") {
+                const defeated = result.nextState.bridgePnjDefeated ?? []
+                const watcher = bridgePnjSeeingPlayer(
+                    BRIDGE_PNJS,
+                    defeated,
+                    result.nextState.posX,
+                    result.nextState.posY,
+                )
+                if (watcher) {
+                    // On a un PNJ qui interpelle. Délai léger pour que le mouvement s'affiche d'abord.
+                    setTimeout(() => {
+                        const fullPnj = BRIDGE_PNJS.find((p) => p.id === watcher.id)
+                        if (fullPnj) triggerBridgePnjChallenge(fullPnj)
+                    }, 200)
+                    return
+                }
+            }
+
             if (result.leftToOutdoor) {
                 setToast(`Tu sors.`)
             }
@@ -548,7 +598,7 @@ export default function MapClient({
                 }, 200)
             }
         },
-        [state, map, buildings, blockingPositions, reps, popup, cinematic, npcsWithPos, triggerNpcDialogue, broadcast, spendEnergy]
+        [state, map, buildings, blockingPositions, reps, popup, cinematic, npcsWithPos, triggerNpcDialogue, triggerBridgePnjChallenge, broadcast, spendEnergy]
     )
 
     // ============================================================
@@ -733,36 +783,17 @@ export default function MapClient({
         if (state.mapId === "route1") {
             const bridgePnj = BRIDGE_PNJS.find((p) => p.x === front.x && p.y === front.y)
             if (bridgePnj) {
-                // Déjà battu aujourd'hui ?
-                const lastBeaten = state.bridgePnjLastBeatenDate ?? {}
-                const today = new Date().toISOString().split("T")[0]
-                if (lastBeaten[bridgePnj.id] === today) {
+                // v3.5 : vaincu = pour toujours (plus de reset quotidien)
+                const defeated = state.bridgePnjDefeated ?? []
+                if (defeated.includes(bridgePnj.id)) {
                     setPopup({
                         kind: "info",
-                        text: `${bridgePnj.name} dort.\n\nTu l'as déjà battu aujourd'hui. Reviens demain.`,
+                        text: `${bridgePnj.name} te reconnaît.\n\n"Passe, champion. Tu as déjà gagné ton respect ici."`,
                     })
                     return
                 }
                 // Afficher le défi
-                const challenge = bridgePnj.challenge
-                let challengeText = ""
-                if (challenge.kind === "exercise") {
-                    const label =
-                        challenge.exercise === "PUSHUP" ? "pompes"
-                            : challenge.exercise === "SQUAT" ? "squats"
-                                : challenge.exercise === "GAINAGE" ? "secondes de gainage"
-                                    : challenge.exercise === "PULLUP" ? "tractions"
-                                        : "cardio"
-                    challengeText = `${bridgePnj.name} bloque le passage.\n\n"Fais ${challenge.reps} ${label} aujourd'hui et je m'écarte."\n\nAppuie sur A pour tenter le défi.`
-                } else {
-                    challengeText = `${bridgePnj.name} bloque le passage.\n\n"Je ne combats que le TOP REPS de la veille. Es-tu lui ?"\n\nAppuie sur A pour tenter.`
-                }
-                setPopup({
-                    kind: "pnjChallenge",
-                    pnjId: bridgePnj.id,
-                    pnjName: bridgePnj.name,
-                    text: challengeText,
-                })
+                triggerBridgePnjChallenge(bridgePnj)
                 return
             }
         }
@@ -805,7 +836,7 @@ export default function MapClient({
         if (tile === "monsterDesk") return setPopup({ kind: "info", text: "Le bureau du Monstre.\n\nDes parchemins, un encrier renversé, une fiole de sauce." })
 
         setToast("Rien d'intéressant.")
-    }, [state, map, buildings, otherPlayersOnThisMap, popup, cinematic, npcsWithPos, triggerNpcDialogue, reps, broadcast])
+    }, [state, map, buildings, otherPlayersOnThisMap, popup, cinematic, npcsWithPos, triggerNpcDialogue, triggerBridgePnjChallenge, reps, broadcast])
 
     // ============================================================
     // EXERCICES (la salle de muscu : pour l'instant juste un texte)
@@ -1035,8 +1066,8 @@ export default function MapClient({
                     {/* PNJ du pont (Route 1 uniquement) */}
                     {state.mapId === "route1" &&
                         BRIDGE_PNJS.map((pnj) => {
-                            const today = new Date().toISOString().split("T")[0]
-                            const beatenToday = (state.bridgePnjLastBeatenDate ?? {})[pnj.id] === today
+                            // v3.5 : vaincu = pour toujours (dimmed définitivement)
+                            const defeatedForever = (state.bridgePnjDefeated ?? []).includes(pnj.id)
                             return (
                                 <BridgePnjSprite
                                     key={pnj.id}
@@ -1044,7 +1075,7 @@ export default function MapClient({
                                     mapW={map.width}
                                     mapH={map.height}
                                     animStep={animStep}
-                                    dimmed={beatenToday}
+                                    dimmed={defeatedForever}
                                 />
                             )
                         })}

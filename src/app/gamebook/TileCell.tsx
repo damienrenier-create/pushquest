@@ -137,21 +137,50 @@ export default function TileCell({ tile, x, y }: { tile: TileType; x: number; y:
         )
     }
 
-    // === ARBRE OBSTACLE (tronc tombé en travers du chemin) ===
+    // === ARBRE OBSTACLE (gros tronc tombé avec branches stylisées) ===
     if (tile === "treeObstacle") {
         return (
-            <div style={{ position: "relative", background: C.path, overflow: "hidden" }}>
+            <div style={{ position: "relative", background: C.path, overflow: "visible" }}>
+                {/* Tronc principal horizontal (épais) */}
                 <div style={{
-                    position: "absolute", left: "0%", right: "0%", top: "30%", bottom: "30%",
-                    background: "#603018",
-                    border: "2px solid #2a1408",
-                    boxShadow: "inset -2px -3px 0 #2a1408, inset 2px 2px 0 #a07040",
+                    position: "absolute", left: "-5%", right: "-5%", top: "22%", bottom: "22%",
+                    background: "linear-gradient(180deg, #7a4220 0%, #5a2e10 50%, #3a1808 100%)",
+                    border: "2px solid #1f0a04",
+                    borderRadius: "4px",
+                    boxShadow: "inset -2px -3px 0 #1f0a04, inset 2px 3px 0 #b88056, 0 2px 4px rgba(0,0,0,0.4)",
                 }}>
-                    {/* Annneaux de l'écorce */}
-                    <div style={{ position: "absolute", top: "20%", bottom: "20%", left: "10%", width: "8%", background: "#2a1408", borderRadius: "50%" }} />
-                    <div style={{ position: "absolute", top: "30%", bottom: "30%", left: "45%", width: "5%", background: "#2a1408", borderRadius: "50%" }} />
-                    <div style={{ position: "absolute", top: "20%", bottom: "20%", right: "10%", width: "8%", background: "#2a1408", borderRadius: "50%" }} />
+                    {/* Anneaux de croissance (cernes du bois) */}
+                    <div style={{ position: "absolute", top: "12%", bottom: "12%", left: "6%", width: "14%", border: "2px solid #2a1408", borderRadius: "50%", background: "#3a1f10" }} />
+                    <div style={{ position: "absolute", top: "20%", bottom: "20%", left: "9%", width: "8%", border: "1px solid #1f0a04", borderRadius: "50%" }} />
+                    {/* Anneaux côté droit */}
+                    <div style={{ position: "absolute", top: "12%", bottom: "12%", right: "6%", width: "14%", border: "2px solid #2a1408", borderRadius: "50%", background: "#3a1f10" }} />
+                    <div style={{ position: "absolute", top: "20%", bottom: "20%", right: "9%", width: "8%", border: "1px solid #1f0a04", borderRadius: "50%" }} />
+                    {/* Texture écorce (lignes verticales) */}
+                    <div style={{ position: "absolute", top: "10%", bottom: "10%", left: "30%", width: "2px", background: "#2a1408", opacity: 0.7 }} />
+                    <div style={{ position: "absolute", top: "10%", bottom: "10%", left: "40%", width: "1px", background: "#2a1408", opacity: 0.5 }} />
+                    <div style={{ position: "absolute", top: "10%", bottom: "10%", left: "55%", width: "2px", background: "#2a1408", opacity: 0.7 }} />
+                    <div style={{ position: "absolute", top: "10%", bottom: "10%", left: "67%", width: "1px", background: "#2a1408", opacity: 0.5 }} />
                 </div>
+                {/* Petite branche feuillue qui dépasse en haut à droite */}
+                <div style={{
+                    position: "absolute", right: "8%", top: "5%",
+                    width: "18%", height: "22%",
+                    background: "radial-gradient(circle at 30% 30%, #5cb030, #2a7012)",
+                    borderRadius: "60% 40% 70% 30%",
+                    border: "1.5px solid #1a4008",
+                    boxShadow: "inset -1px -2px 0 #1a4008",
+                    transform: "rotate(-15deg)",
+                }} />
+                {/* Petite branche feuillue en bas à gauche */}
+                <div style={{
+                    position: "absolute", left: "6%", bottom: "5%",
+                    width: "16%", height: "20%",
+                    background: "radial-gradient(circle at 50% 30%, #6cc040, #2a7012)",
+                    borderRadius: "40% 60% 30% 70%",
+                    border: "1.5px solid #1a4008",
+                    boxShadow: "inset 1px -2px 0 #1a4008",
+                    transform: "rotate(10deg)",
+                }} />
             </div>
         )
     }
