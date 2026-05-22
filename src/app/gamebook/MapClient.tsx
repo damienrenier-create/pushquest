@@ -27,6 +27,11 @@ import {
     PEPITEVILLE_SPAWN_FROM_SOUTH,
     ROUTE1_NORTH_GATE,
     PEPITEVILLE_APPLE_TREES,
+    HAUTESPATES_BUILDINGS,
+    HAUTESPATES_SIGNS,
+    HAUTESPATES_SPAWN_FROM_SOUTH,
+    PEPITEVILLE_NORTH_GATE,
+    TOWER_STAIRS_SQUATS_THRESHOLD,
 } from "@/lib/gamebook/maps"
 import {
     type Direction,
@@ -78,6 +83,8 @@ interface Props {
     initialHasBag: boolean
     // v3.8.1 — { treeId → fruits déjà cueillis aujourd'hui par CE user }
     initialFruitCounts: Record<string, number>
+    // v3.8.2 — plus haut étage atteint dans la Tour
+    initialTowerFloorReached: number
 }
 
 const GHOST_COLORS = ["#4080d8", "#d840a0", "#48a830", "#f08020", "#9050d0", "#d8c020", "#20a8c8"]
@@ -125,6 +132,7 @@ export default function MapClient({
     initialInventory,
     initialHasBag,
     initialFruitCounts,
+    initialTowerFloorReached,
 }: Props) {
     // ============================================================
     // STATE
@@ -148,6 +156,8 @@ export default function MapClient({
     const [showShop, setShowShop] = useState(false)
     // === v3.8.1 : fruits cueillis aujourd'hui (par CE user). Drive le rendu vide/plein des arbres. ===
     const [fruitCounts, setFruitCounts] = useState<Record<string, number>>(initialFruitCounts)
+    // === v3.8.2 : plus haut étage atteint dans la Tour. Drive le bypass-check des escaliers. ===
+    const [towerFloorReached, setTowerFloorReached] = useState<number>(initialTowerFloorReached)
 
     const moveLockRef = useRef(false)
     const aLockRef = useRef(false)
@@ -158,6 +168,7 @@ export default function MapClient({
     // v3.8 — Bâtiments dynamiques selon la map courante
     // - bourgpates : OUTDOOR_BUILDINGS_BASE (grotte du Monstre visible selon flag)
     // - pepiteville : PEPITEVILLE_BUILDINGS (toujours visibles)
+    // - hautespates : HAUTESPATES_BUILDINGS (tour visible)
     // - ailleurs : aucun bâtiment (intérieurs)
     const buildings: Building[] =
         state.mapId === "bourgpates"
@@ -166,13 +177,16 @@ export default function MapClient({
             )
             : state.mapId === "pepiteville"
                 ? PEPITEVILLE_BUILDINGS
-                : []
+                : state.mapId === "hautespates"
+                    ? HAUTESPATES_BUILDINGS
+                    : []
 
     // v3.8 — Signs selon la map courante
     const signs =
         state.mapId === "bourgpates" ? OUTDOOR_SIGNS
             : state.mapId === "pepiteville" ? PEPITEVILLE_SIGNS
-                : []
+                : state.mapId === "hautespates" ? HAUTESPATES_SIGNS
+                    : []
 
     // ============================================================
     // LOAD AUTRES JOUEURS (polling fallback si Pusher off)
@@ -678,6 +692,25 @@ export default function MapClient({
                     setToast("Tu sens qu'il te manque quelque chose avant de passer.")
                 }
             }
+
+            // === v3.8.2 : Transition Pépiteville nord → Hautes-Pâtes ===
+            // Pas de gating, accès libre une fois qu'on est dans Pépiteville.
+            if (
+                state.mapId === "pepiteville" &&
+                result.nextState.posX === PEPITEVILLE_NORTH_GATE.x &&
+                result.nextState.posY === PEPITEVILLE_NORTH_GATE.y
+            ) {
+                setTimeout(() => {
+                    setState((s) => ({
+                        ...s,
+                        mapId: HAUTESPATES_SPAWN_FROM_SOUTH.mapId,
+                        posX: HAUTESPATES_SPAWN_FROM_SOUTH.posX,
+                        posY: HAUTESPATES_SPAWN_FROM_SOUTH.posY,
+                        direction: HAUTESPATES_SPAWN_FROM_SOUTH.direction,
+                    }))
+                    setToast("HAUTES-PÂTES")
+                }, 200)
+            }
         },
         [state, map, buildings, blockingPositions, reps, popup, cinematic, npcsWithPos, triggerNpcDialogue, triggerBridgePnjChallenge, broadcast, spendEnergy]
     )
@@ -974,6 +1007,40 @@ export default function MapClient({
 
         // Interaction avec une tuile
         const tile = map.tiles[front.y][front.x]
+
+        // v3.8.2 — Escalier devant ? (Tour des Pâtes Aiguës)
+        if (tile === "stairsUp" || tile === "stairsDown") {
+            const direction: "up" | "down" = tile === "stairsUp" ? "up" : "down"
+            ; (async () => {
+                try {
+                    const res = await fetch("/api/gamebook/tower/climb", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ direction }),
+                    })
+                    const data = await res.json()
+                    if (data.ok && data.spawn) {
+                        setState((s) => ({
+                            ...s,
+                            mapId: data.spawn.mapId,
+                            posX: data.spawn.posX,
+                            posY: data.spawn.posY,
+                            direction: data.spawn.direction,
+                        }))
+                        if (typeof data.towerFloorReached === "number") {
+                            setTowerFloorReached(data.towerFloorReached)
+                        }
+                        setToast(direction === "up" ? `Tu montes (étage ${data.floor}).` : `Tu descends (étage ${data.floor}).`)
+                    } else {
+                        setToast(data.reason || "Tu ne peux pas monter.")
+                    }
+                } catch (e) {
+                    console.warn("[MapClient] tower/climb failed", e)
+                    setToast("Erreur réseau, réessaie.")
+                }
+            })()
+            return
+        }
 
         // v3.8.1 — Arbre fruitier devant ?
         if (tile === "appleTree") {
@@ -1713,6 +1780,57 @@ function BuildingSprite({
                     background: "#000", borderRadius: "40% 40% 0 0",
                 }} />
             </div>
+        )
+    }
+
+    // v3.8.2 — Tour des Pâtes Aiguës : sprite étroit et haut avec créneaux
+    if (building.kind === "tower") {
+        return (
+            <>
+                <div style={{ position: "absolute", left, top, width, height, display: "flex", flexDirection: "column" }}>
+                    {/* Créneaux du toit */}
+                    <div style={{
+                        background: "transparent", height: "12%", position: "relative",
+                        display: "flex", justifyContent: "space-around", alignItems: "flex-end",
+                    }}>
+                        <div style={{ background: "#5a5a6a", width: "18%", height: "100%", border: "1px solid #3a3a48" }} />
+                        <div style={{ background: "#5a5a6a", width: "18%", height: "100%", border: "1px solid #3a3a48" }} />
+                        <div style={{ background: "#5a5a6a", width: "18%", height: "100%", border: "1px solid #3a3a48" }} />
+                        <div style={{ background: "#5a5a6a", width: "18%", height: "100%", border: "1px solid #3a3a48" }} />
+                    </div>
+                    {/* Corps de la tour : pierre grise avec ouvertures */}
+                    <div style={{
+                        background: "#7a7a8a", flex: 1, border: "2px solid #3a3a48", position: "relative",
+                        backgroundImage: "repeating-linear-gradient(0deg, transparent 0, transparent 8px, rgba(0,0,0,0.15) 8px, rgba(0,0,0,0.15) 9px)",
+                    }}>
+                        {/* Petite fenêtre haute */}
+                        <div style={{
+                            position: "absolute", top: "15%", left: "40%", right: "40%", height: "12%",
+                            background: "#88c8f0",
+                            border: "1px solid #3a3a48",
+                            borderRadius: "30% 30% 0 0",
+                        }} />
+                        {/* Plaque du nom */}
+                        <div style={{
+                            position: "absolute", top: "45%", left: "10%", right: "10%",
+                            textAlign: "center", fontSize: "6px", color: "#2a2a38", fontWeight: "bold", letterSpacing: "0.5px",
+                        }}>
+                            TOUR
+                        </div>
+                    </div>
+                </div>
+                {/* Porte de la tour */}
+                <div style={{
+                    position: "absolute", left: doorLeft, top: doorTop, width: cellW, height: cellH,
+                    background: "#603018", border: "1px solid #000", zIndex: 3,
+                    borderRadius: "30% 30% 0 0",
+                }}>
+                    <div style={{
+                        position: "absolute", right: "25%", top: "45%", width: "10%", height: "10%",
+                        background: "#ffe838", borderRadius: "50%",
+                    }} />
+                </div>
+            </>
         )
     }
 

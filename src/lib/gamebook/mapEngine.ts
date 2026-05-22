@@ -30,6 +30,12 @@ export type TileType =
     // === v3.8.1 : Arbres fruitiers de Pépiteville ===
     | "appleTree"     // arbre fruitier avec fruits visibles (bloquant)
     | "appleTreeEmpty" // même arbre, mais déjà cueilli par CE user (rendu côté client uniquement)
+    // === v3.8.2 : Tour des Pâtes Aiguës (Hautes-Pâtes) ===
+    | "towerWall"     // mur de pierre intérieur de la tour (bloquant)
+    | "towerFloor"    // sol pierre de la tour (non-bloquant)
+    | "stairsUp"      // escalier montant (interaction A : check squats du jour)
+    | "stairsDown"    // escalier descendant (interaction A : descente libre)
+    | "towerWindow"   // fenêtre décorative (bloquant)
 
 export interface Building {
     x: number
@@ -37,7 +43,7 @@ export interface Building {
     w: number
     h: number
     /** Identité visuelle du bâtiment (sprite/façade). */
-    kind: "gym" | "casino" | "monsterCave" | "shop"
+    kind: "gym" | "casino" | "monsterCave" | "shop" | "tower"
     doorX: number
     doorY: number
     visible: boolean
@@ -122,6 +128,12 @@ export const BLOCKING_TILES: TileType[] = [
     // appleTreeEmpty est juste une variante visuelle côté client (pas dans la grille map).
     "appleTree",
     "appleTreeEmpty",
+    // v3.8.2 — décor tour des Pâtes Aiguës
+    "towerWall",
+    "towerWindow",
+    // Escaliers bloquants par défaut : on les approche pour interagir avec A
+    "stairsUp",
+    "stairsDown",
 ]
 
 export function isBlockingTile(tile: TileType): boolean {
@@ -240,7 +252,8 @@ export function tryComputeMove(
                 ?? (b.kind === "gym" ? "gym"
                     : b.kind === "casino" ? "casino"
                         : b.kind === "shop" ? "shop_interior"
-                            : "cave")
+                            : b.kind === "tower" ? "tower_floor_1"
+                                : "cave")
             return {
                 nextState: {
                     ...current,

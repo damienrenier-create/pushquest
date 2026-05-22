@@ -86,6 +86,8 @@ export async function GET() {
     const hasBag = (progress as { hasBag?: boolean }).hasBag === true
     // v3.8.1 — fruits cueillis aujourd'hui (par user, reset à minuit côté take-fruit)
     const fruitsTaken = (progress as { fruitsTaken?: unknown }).fruitsTaken ?? {}
+    // v3.8.2 — plus haut étage atteint dans la Tour des Pâtes Aiguës (1..5)
+    const towerFloorReached = (progress as { towerFloorReached?: number }).towerFloorReached ?? 1
 
     return NextResponse.json({
         state: {
@@ -116,6 +118,8 @@ export async function GET() {
         hasBag,
         // v3.8.1
         fruitsTaken,
+        // v3.8.2
+        towerFloorReached,
     })
 }
 
@@ -145,8 +149,8 @@ export async function POST(req: NextRequest) {
         posY === null ||
         !direction ||
         !phase ||
-        // v3.8 — Pépiteville et ses bâtiments ajoutés à la whitelist
-        !["bourgpates", "gym", "casino", "cave", "route1", "pepiteville", "gym_pepite", "casino_pepite", "shop_interior"].includes(mapId) ||
+        // v3.8 — Pépiteville et ses bâtiments + v3.8.2 — Hautes-Pâtes et tour des Pâtes Aiguës
+        !["bourgpates", "gym", "casino", "cave", "route1", "pepiteville", "gym_pepite", "casino_pepite", "shop_interior", "hautespates", "tower_floor_1", "tower_floor_2", "tower_floor_3", "tower_floor_4", "tower_floor_5"].includes(mapId) ||
         !["up", "down", "left", "right"].includes(direction) ||
         !["explore", "introMonster", "playing"].includes(phase) ||
         posX < 0 || posX > 30 ||

@@ -436,6 +436,9 @@ model GamebookProgress {
   // v3.8.1 — fruits cueillis sur les arbres de Pépiteville (3/jour/arbre).
   // Format : { date: "YYYY-MM-DD", counts: { "apple_tree_1": 2, "apple_tree_2": 1 } }
   fruitsTaken               Json    @default("{}")
+  // v3.8.2 — plus haut étage atteint dans la Tour des Pâtes Aiguës (1 = rez-de-chaussée, 5 = sommet).
+  // Une fois un étage validé via le check squats, accès libre permanent (jusqu'à reset anti-cheat).
+  towerFloorReached         Int     @default(1)
 
   @@unique([userId, chapterId])
   @@index([userId])

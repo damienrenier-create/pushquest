@@ -464,6 +464,91 @@ export default function TileCell({ tile, x, y }: { tile: TileType; x: number; y:
         )
     }
 
+    // === v3.8.2 : TOUR DES PÂTES AIGUËS ===
+    if (tile === "towerWall") {
+        return (
+            <div style={{ position: "relative", background: "#5a5a6a", overflow: "hidden" }}>
+                <div style={{
+                    position: "absolute", inset: 0,
+                    backgroundImage:
+                        `linear-gradient(0deg, transparent 49%, #3a3a48 49%, #3a3a48 51%, transparent 51%), ` +
+                        `linear-gradient(90deg, transparent 49%, #3a3a48 49%, #3a3a48 51%, transparent 51%)`,
+                    backgroundSize: "12px 8px",
+                    opacity: 0.7,
+                }} />
+                {/* Léger highlight haut-gauche */}
+                <div style={{
+                    position: "absolute", left: 0, top: 0, width: "30%", height: "30%",
+                    background: "rgba(255,255,255,0.08)",
+                }} />
+            </div>
+        )
+    }
+    if (tile === "towerFloor") {
+        return (
+            <div style={{ position: "relative", background: "#9a9088", overflow: "hidden" }}>
+                <div style={{
+                    position: "absolute", inset: 0,
+                    backgroundImage:
+                        `linear-gradient(0deg, transparent 48%, #786a60 48%, #786a60 52%, transparent 52%), ` +
+                        `linear-gradient(90deg, transparent 48%, #786a60 48%, #786a60 52%, transparent 52%)`,
+                    backgroundSize: "16px 16px",
+                    opacity: 0.4,
+                }} />
+            </div>
+        )
+    }
+    if (tile === "towerWindow") {
+        return (
+            <div style={{ position: "relative", background: "#5a5a6a", overflow: "hidden" }}>
+                <div style={{
+                    position: "absolute", inset: "20% 25% 40% 25%",
+                    background: "linear-gradient(180deg, #88c8f0 0%, #5090d8 100%)",
+                    border: "2px solid #3a3a48",
+                    borderRadius: "50% 50% 0 0",
+                }}>
+                    {/* Croix de la fenêtre */}
+                    <div style={{ position: "absolute", top: "0", bottom: "0", left: "48%", right: "48%", background: "#3a3a48" }} />
+                    <div style={{ position: "absolute", left: "10%", right: "10%", top: "48%", bottom: "48%", background: "#3a3a48" }} />
+                </div>
+            </div>
+        )
+    }
+    if (tile === "stairsUp") {
+        return (
+            <div style={{ position: "relative", background: "#9a9088", overflow: "hidden" }}>
+                {/* Marches qui montent (perspective Pokémon) */}
+                <div style={{ position: "absolute", left: "10%", right: "10%", top: "60%", bottom: "5%", background: "#786a60", border: "1px solid #483a30" }} />
+                <div style={{ position: "absolute", left: "15%", right: "15%", top: "40%", height: "20%", background: "#8a7a70", border: "1px solid #483a30" }} />
+                <div style={{ position: "absolute", left: "20%", right: "20%", top: "20%", height: "20%", background: "#9a8a80", border: "1px solid #483a30" }} />
+                {/* Flèche montante */}
+                <div style={{
+                    position: "absolute", top: "5%", left: 0, right: 0,
+                    textAlign: "center", color: "#fff", fontSize: "10px", fontWeight: "bold",
+                    textShadow: "0 0 2px #000",
+                    animation: "gbBlink 1s infinite",
+                }}>↑</div>
+            </div>
+        )
+    }
+    if (tile === "stairsDown") {
+        return (
+            <div style={{ position: "relative", background: "#9a9088", overflow: "hidden" }}>
+                {/* Marches qui descendent (inversées) */}
+                <div style={{ position: "absolute", left: "10%", right: "10%", top: "5%", bottom: "60%", background: "#5a4a40", border: "1px solid #2a1810" }} />
+                <div style={{ position: "absolute", left: "15%", right: "15%", top: "40%", height: "20%", background: "#6a5a50", border: "1px solid #2a1810" }} />
+                <div style={{ position: "absolute", left: "20%", right: "20%", top: "60%", height: "20%", background: "#7a6a60", border: "1px solid #2a1810" }} />
+                {/* Flèche descendante */}
+                <div style={{
+                    position: "absolute", bottom: "5%", left: 0, right: 0,
+                    textAlign: "center", color: "#fff", fontSize: "10px", fontWeight: "bold",
+                    textShadow: "0 0 2px #000",
+                    animation: "gbBlink 1s infinite",
+                }}>↓</div>
+            </div>
+        )
+    }
+
     // === v3.8.1 : ARBRE FRUITIER (cueillette avec A) ===
     if (tile === "appleTree" || tile === "appleTreeEmpty") {
         const harvested = tile === "appleTreeEmpty"

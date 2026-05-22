@@ -32,6 +32,8 @@ interface StatePayload {
     hasBag?: boolean
     // v3.8.1 — fruits cueillis aujourd'hui par cet user (rendu visuel)
     fruitsTaken?: unknown
+    // v3.8.2 — plus haut étage atteint dans la Tour des Pâtes Aiguës
+    towerFloorReached?: number
 }
 
 export default function GamebookClient({ nickname, userId }: Props) {
@@ -172,6 +174,10 @@ export default function GamebookClient({ nickname, userId }: Props) {
         return out
     })()
 
+    const initialTowerFloorReached: number = typeof payload.towerFloorReached === "number"
+        ? Math.max(1, Math.min(5, Math.floor(payload.towerFloorReached)))
+        : 1
+
     return (
         <MapClient
             nickname={nickname}
@@ -183,6 +189,7 @@ export default function GamebookClient({ nickname, userId }: Props) {
             initialInventory={initialInventory}
             initialHasBag={initialHasBag}
             initialFruitCounts={initialFruitsTaken}
+            initialTowerFloorReached={initialTowerFloorReached}
         />
     )
 }

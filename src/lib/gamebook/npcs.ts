@@ -247,6 +247,32 @@ export const NPCS: NpcDefinition[] = [
         ],
         energyReward: 50,
     },
+
+    // ============================================================
+    // v3.8.2 — TOUR DES PÂTES AIGUËS (Hautes-Pâtes)
+    // ============================================================
+
+    // -------------------------------
+    // PIAFFINI — l'oiseau de JOJO, au sommet de la Tour (étage 5)
+    // (interactif uniquement, statique sur son perchoir au centre du sommet)
+    // -------------------------------
+    {
+        id: "piaffini",
+        name: "PIAFFINI",
+        mapId: "tower_floor_5",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#f0d040", emoji: "🐦" },
+        initialX: 3,
+        initialY: 3,
+        dialoguesAfter: [
+            "(Un petit oiseau duveteux te regarde, intrigué.)",
+            "PIAFFINI : Pwip ! Pwip ! Pwiiiiip ?",
+            "PIAFFINI : (Il fait un petit saut excité sur son perchoir.)",
+            "(Tu reconnais sans doute l'oiseau que JOJO et JOJETTE cherchent depuis le début.)",
+            "(Pour l'instant, il ne veut pas descendre. Reviens avec une idée pour le convaincre.)",
+        ],
+    },
 ]
 
 // ============================================================

@@ -301,6 +301,11 @@ function buildPepiteville(): TileType[][] {
     // Sortie sud (doorMat → route1 nord post-pont)
     m[PEPITEVILLE_H - 2][8] = "doorMat"
 
+    // v3.8.2 — Sortie nord vers Hautes-Pâtes (la case (8, 1) reste un path,
+    // la transition est gérée dans MapClient via PEPITEVILLE_NORTH_GATE).
+    // On enlève le sign "Cette zone n'est pas encore explorée" puisque c'est maintenant exploré.
+    // (Le sign sera retiré côté PEPITEVILLE_SIGNS plus bas.)
+
     return m
 }
 
@@ -324,7 +329,8 @@ export const PEPITEVILLE_SIGNS: Sign[] = [
     { x: 4, y: 7, text: "GYMNASE DE PÉPITEVILLE\nUn certain DURUM y traîne." },
     { x: 10, y: 7, text: "BOUTIQUE\nSpécialités locales. Sac obligatoire." },
     { x: 4, y: 15, text: "CASINO DE PÉPITEVILLE\nMêmes règles, autre adresse." },
-    { x: 8, y: 1, text: "↑ ROUTE 2\nCette zone n'est pas encore explorée." },
+    // v3.8.2 — Le sign route2 placeholder est remplacé : la zone est désormais explorée
+    { x: 8, y: 1, text: "↑ HAUTES-PÂTES\nUn petit hameau coiffé d'une tour étrange." },
     { x: 9, y: 9, text: "Bassin aux Lasagnes." },
     // v3.8.1 — panneau près des arbres
     { x: 4, y: 12, text: "ARBRES À PÂTES-FRUITS\nMax 3 fruits par arbre par jour." },
@@ -371,6 +377,111 @@ function buildShopInterior(): TileType[][] {
     m[5][4] = "doorMat"
 
     return m
+}
+
+// ============================================================
+// v3.8.2 — HAUTES-PÂTES (ville d'à côté, accessible depuis Pépiteville nord)
+// 11 × 13
+// ============================================================
+const HAUTESPATES_W = 11
+const HAUTESPATES_H = 13
+
+function buildHautesPates(): TileType[][] {
+    const m: TileType[][] = []
+    for (let y = 0; y < HAUTESPATES_H; y++) {
+        const row: TileType[] = []
+        for (let x = 0; x < HAUTESPATES_W; x++) {
+            if (x === 0 || x === HAUTESPATES_W - 1 || y === 0 || y === HAUTESPATES_H - 1) {
+                row.push("tree")
+            } else {
+                row.push("grass")
+            }
+        }
+        m.push(row)
+    }
+
+    // Chemin vertical central (colonne 5, du nord au sud)
+    for (let y = 1; y < HAUTESPATES_H - 1; y++) m[y][5] = "path"
+
+    // Petits parterres autour
+    m[9][2] = "flowerR"; m[9][3] = "flowerY"
+    m[9][7] = "flowerY"; m[9][8] = "flowerR"
+
+    // Sortie sud (doorMat → retour Pépiteville nord)
+    m[HAUTESPATES_H - 2][5] = "doorMat"
+
+    return m
+}
+
+export const HAUTESPATES_BUILDINGS: Building[] = [
+    // Tour : 3×4, porte en bas-centre (1, 3). Position (4, 2)..(6, 5).
+    { x: 4, y: 2, w: 3, h: 4, kind: "tower", doorX: 1, doorY: 3, visible: true, targetMapId: "tower_floor_1" },
+]
+
+export const HAUTESPATES_SIGNS: Sign[] = [
+    { x: 4, y: 7, text: "TOUR DES PÂTES AIGUËS\nCelle dont parle FUSILLI...\nQuelque chose duveteux y vit, paraît-il." },
+    { x: 5, y: 10, text: "HAUTES-PÂTES\nUn hameau perdu au nord. Le silence règne, sauf au sommet." },
+]
+
+// ============================================================
+// v3.8.2 — TOUR : 5 ÉTAGES (tailles décroissantes)
+// Chaque étage : murs en pierre, sol pierre, escaliers up/down.
+// Floor 1 a une sortie doorMat vers Hautes-Pâtes. Floor 5 a PIAFFINI.
+// ============================================================
+
+function buildTowerFloor(size: number, hasDownStairs: boolean, hasUpStairs: boolean, hasExit: boolean): TileType[][] {
+    const W = size, H = size
+    const m: TileType[][] = []
+    for (let y = 0; y < H; y++) {
+        const row: TileType[] = []
+        for (let x = 0; x < W; x++) {
+            if (x === 0 || x === W - 1 || y === 0 || y === H - 1) {
+                row.push("towerWall")
+            } else {
+                row.push("towerFloor")
+            }
+        }
+        m.push(row)
+    }
+    // Quelques fenêtres décoratives (parois nord)
+    if (W >= 7) {
+        m[0][Math.floor(W / 4)] = "towerWindow"
+        m[0][Math.floor((3 * W) / 4)] = "towerWindow"
+    }
+
+    // Escalier montant : centré en haut (juste sous la paroi nord)
+    if (hasUpStairs) {
+        m[1][Math.floor(W / 2)] = "stairsUp"
+    }
+    // Escalier descendant : centré en bas (juste au-dessus de la paroi sud)
+    if (hasDownStairs) {
+        m[H - 2][Math.floor(W / 2)] = "stairsDown"
+    }
+    // doorMat sortie vers Hautes-Pâtes (uniquement floor 1)
+    if (hasExit) {
+        m[H - 1][Math.floor(W / 2)] = "doorMat"
+    }
+
+    return m
+}
+
+function buildTowerFloor1(): TileType[][] {
+    // 11x11 — rez-de-chaussée : sortie doorMat + stairsUp, pas de stairsDown
+    return buildTowerFloor(11, false, true, true)
+}
+function buildTowerFloor2(): TileType[][] {
+    // 10x10 — stairsDown + stairsUp
+    return buildTowerFloor(10, true, true, false)
+}
+function buildTowerFloor3(): TileType[][] {
+    return buildTowerFloor(9, true, true, false)
+}
+function buildTowerFloor4(): TileType[][] {
+    return buildTowerFloor(8, true, true, false)
+}
+function buildTowerFloor5(): TileType[][] {
+    // 7x7 — sommet : stairsDown uniquement (l'oiseau PIAFFINI est ailleurs en NPC)
+    return buildTowerFloor(7, true, false, false)
 }
 
 // PNJ du pont — positions fixes sur le chemin du pont
@@ -476,6 +587,51 @@ export const MAPS: Record<string, MapData> = {
         height: 7,
         exitTarget: { mapId: "pepiteville", x: 11, y: 8 },  // devant la porte du shop
     },
+    // === v3.8.2 — Hautes-Pâtes et sa Tour ===
+    hautespates: {
+        id: "hautespates",
+        name: "HAUTES-PÂTES",
+        tiles: buildHautesPates(),
+        width: HAUTESPATES_W,
+        height: HAUTESPATES_H,
+        exitTarget: { mapId: "pepiteville", x: 8, y: 1 },  // retour Pépiteville sortie nord
+    },
+    tower_floor_1: {
+        id: "tower_floor_1",
+        name: "TOUR — REZ-DE-CHAUSSÉE",
+        tiles: buildTowerFloor1(),
+        width: 11,
+        height: 11,
+        exitTarget: { mapId: "hautespates", x: 5, y: 6 },  // devant la porte de la tour
+    },
+    tower_floor_2: {
+        id: "tower_floor_2",
+        name: "TOUR — ÉTAGE 2",
+        tiles: buildTowerFloor2(),
+        width: 10,
+        height: 10,
+    },
+    tower_floor_3: {
+        id: "tower_floor_3",
+        name: "TOUR — ÉTAGE 3",
+        tiles: buildTowerFloor3(),
+        width: 9,
+        height: 9,
+    },
+    tower_floor_4: {
+        id: "tower_floor_4",
+        name: "TOUR — ÉTAGE 4",
+        tiles: buildTowerFloor4(),
+        width: 8,
+        height: 8,
+    },
+    tower_floor_5: {
+        id: "tower_floor_5",
+        name: "TOUR — SOMMET",
+        tiles: buildTowerFloor5(),
+        width: 7,
+        height: 7,
+    },
 }
 
 export function getMap(mapId: string): MapData {
@@ -511,3 +667,24 @@ export const PEPITEVILLE_SPAWN_FROM_SOUTH = {
 // v3.8 — Coordonnées de la "case de transition" sud → Pépiteville en haut de route1.
 // Sert dans MapClient pour intercepter le mouvement et faire le gating CHAMPIO.
 export const ROUTE1_NORTH_GATE = { x: 5, y: 1 }
+
+// v3.8.2 — Coordonnées de la case nord de Pépiteville qui mène vers Hautes-Pâtes.
+// Le joueur marche sur cette case → téléport vers Hautes-Pâtes spawn sud.
+export const PEPITEVILLE_NORTH_GATE = { x: 8, y: 1 }
+
+// Spawn quand on arrive à Hautes-Pâtes depuis Pépiteville (sortie sud de Hautes-Pâtes)
+export const HAUTESPATES_SPAWN_FROM_SOUTH = {
+    mapId: "hautespates",
+    posX: 5,
+    posY: HAUTESPATES_H - 3,
+    direction: "up" as const,
+}
+
+// v3.8.2 — Seuils de squats du jour requis pour franchir chaque escalier de la Tour.
+// Index = étage de départ (1 → 2 = 50 squats, 2 → 3 = 75, etc.)
+export const TOWER_STAIRS_SQUATS_THRESHOLD: Record<number, number> = {
+    1: 50,
+    2: 75,
+    3: 100,
+    4: 150,
+}
