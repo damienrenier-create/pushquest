@@ -52,6 +52,7 @@ import {
 } from "@/lib/gamebook/npcs"
 import TileCell from "./TileCell"
 import PlayerSprite from "./PlayerSprite"
+import { getPusherClient, PUSHER_CLIENT_ENABLED } from "@/lib/pusher-client"
 
 interface Props {
     nickname: string
@@ -130,7 +131,7 @@ export default function MapClient({
     )
 
     // ============================================================
-    // LOAD AUTRES JOUEURS
+    // LOAD AUTRES JOUEURS (polling fallback si Pusher off)
     // ============================================================
     const loadOtherPlayers = useCallback(async () => {
         try {
@@ -139,17 +140,104 @@ export default function MapClient({
             const json = await res.json()
             setOtherPlayers(json.players || [])
         } catch (e) {
-            // silencieux : pas critique
             console.warn("[MapClient] loadOtherPlayers failed", e)
         }
     }, [])
 
+    // ============================================================
+    // v3.4b : WebSocket Pusher
+    // ============================================================
     useEffect(() => {
+        // Chargement initial des positions (toujours fait, peu importe Pusher)
         loadOtherPlayers()
-        // Refresh toutes les 30s pour avoir des mises à jour
-        const t = setInterval(loadOtherPlayers, 30_000)
-        return () => clearInterval(t)
-    }, [loadOtherPlayers])
+
+        const pusherClient = getPusherClient()
+
+        // Si Pusher n'est pas configuré côté client, fallback sur polling 30s
+        if (!pusherClient || !PUSHER_CLIENT_ENABLED) {
+            const t = setInterval(loadOtherPlayers, 30_000)
+            return () => clearInterval(t)
+        }
+
+        // Pusher activé : on subscribe au canal de la map courante
+        const channelName = `gamebook-${state.mapId}`
+        const channel = pusherClient.subscribe(channelName)
+
+        // Receveur des mouvements d'autres joueurs
+        const onMove = (data: {
+            userId: string
+            nickname?: string
+            posX?: number
+            posY?: number
+            direction?: string
+            mapId?: string
+        }) => {
+            // Ignorer ses propres events (echo)
+            if (data.userId === userId) return
+            if (data.posX === undefined || data.posY === undefined) return
+            setOtherPlayers((prev) => {
+                const existing = prev.find((p) => p.id === data.userId)
+                if (existing) {
+                    return prev.map((p) =>
+                        p.id === data.userId
+                            ? { ...p, posX: data.posX!, posY: data.posY!, direction: (data.direction as PlayerSnapshot["direction"]) ?? p.direction }
+                            : p
+                    )
+                }
+                // Nouveau joueur jamais vu : on déclenche un refresh complet pour avoir son nickname/emoji
+                loadOtherPlayers()
+                return prev
+            })
+        }
+
+        // Receveur des pushs (un pote pousse un autre)
+        const onPush = (data: {
+            userId: string
+            nickname?: string
+            targetUserId?: string
+        }) => {
+            if (data.userId === userId) return
+            // Visualiser le push : on rafraîchit pour avoir les nouvelles positions
+            loadOtherPlayers()
+            if (data.nickname) {
+                setToast(`${data.nickname} pousse quelqu'un.`)
+            }
+        }
+
+        // Receveur des déclenchements de cinématiques (ex: pote bat CHAMPIO)
+        const onCinematic = (data: {
+            userId: string
+            nickname?: string
+            cinematicId?: string
+        }) => {
+            if (data.userId === userId) return
+            const name = data.nickname ?? "Quelqu'un"
+            if (data.cinematicId === "champio_defeated") {
+                setToast(`🏆 ${name} a vaincu CHAMPIO !`)
+            } else if (data.cinematicId === "tree_cleared") {
+                setToast(`🌳 ${name} vient de franchir l'arbre.`)
+            } else if (data.cinematicId === "pionnier_badge") {
+                setToast(`🏅 ${name} a reçu le badge Pionnier !`)
+            } else if (data.cinematicId) {
+                setToast(`${name} déclenche un événement.`)
+            }
+        }
+
+        channel.bind("player:move", onMove)
+        channel.bind("player:push", onPush)
+        channel.bind("cinematic:trigger", onCinematic)
+
+        // Polling de sécurité moins fréquent en cas de désync (toutes les 60s)
+        const safetyPoll = setInterval(loadOtherPlayers, 60_000)
+
+        return () => {
+            channel.unbind("player:move", onMove)
+            channel.unbind("player:push", onPush)
+            channel.unbind("cinematic:trigger", onCinematic)
+            pusherClient.unsubscribe(channelName)
+            clearInterval(safetyPoll)
+        }
+    }, [state.mapId, userId, loadOtherPlayers])
 
     // ============================================================
     // SAUVEGARDE DEBOUNCED
@@ -270,6 +358,29 @@ export default function MapClient({
     }, [])
 
     // ============================================================
+    // v3.4b : BROADCAST via Pusher (fire and forget, no-op si Pusher off)
+    // ============================================================
+    const broadcast = useCallback(async (payload: {
+        type: "player:move" | "player:push" | "cinematic:trigger"
+        mapId: string
+        posX?: number
+        posY?: number
+        direction?: string
+        targetUserId?: string
+        cinematicId?: string
+    }) => {
+        try {
+            await fetch("/api/gamebook/broadcast", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            })
+        } catch {
+            // silent : si le broadcast échoue, on continue (les autres verront au prochain poll)
+        }
+    }, [])
+
+    // ============================================================
     // DÉPLACEMENT
     // ============================================================
     const tryMove = useCallback(
@@ -313,6 +424,12 @@ export default function MapClient({
                         if (!ok) return
                         setState((s) => ({ ...s, treeObstacleCleared: true, direction: d }))
                         setToast(`Tu pousses l'arbre. -${COST_TREE_OBSTACLE} reps.`)
+                        // v3.4b : broadcast (premier à franchir l'arbre = événement)
+                        broadcast({
+                            type: "cinematic:trigger",
+                            mapId: state.mapId,
+                            cinematicId: "tree_cleared",
+                        })
                         // Déclencher la cinématique Pionnier
                         setTimeout(() => {
                             if (!state.pioneerBadgeAwarded) {
@@ -376,6 +493,15 @@ export default function MapClient({
                 spendEnergy(result.repsCost, "move").catch(() => {/* silent */ })
             }
 
+            // v3.4b : broadcast Pusher (fire and forget)
+            broadcast({
+                type: "player:move",
+                mapId: result.nextState.mapId,
+                posX: result.nextState.posX,
+                posY: result.nextState.posY,
+                direction: result.nextState.direction,
+            })
+
             if (result.leftToOutdoor) {
                 setToast(`Tu sors.`)
             }
@@ -422,7 +548,7 @@ export default function MapClient({
                 }, 200)
             }
         },
-        [state, map, buildings, blockingPositions, reps, popup, cinematic, npcsWithPos, triggerNpcDialogue]
+        [state, map, buildings, blockingPositions, reps, popup, cinematic, npcsWithPos, triggerNpcDialogue, broadcast, spendEnergy]
     )
 
     // ============================================================
@@ -451,6 +577,12 @@ export default function MapClient({
                         if (data.ok && data.awarded) {
                             setState((s) => ({ ...s, pioneerBadgeAwarded: true }))
                             setToast("Badge PIONNIER reçu ! +200 XP")
+                            // v3.4b : broadcast pour notifier les autres joueurs
+                            broadcast({
+                                type: "cinematic:trigger",
+                                mapId: state.mapId,
+                                cinematicId: "pionnier_badge",
+                            })
                         }
                     } catch (e) {
                         console.warn("[MapClient] claimPioneerBadge failed", e)
@@ -565,6 +697,14 @@ export default function MapClient({
                                 kind: "info",
                                 text: `${pnjName} s'incline et te laisse passer.\n\nReviens demain pour le rebattre.`,
                             })
+                            // v3.4b : broadcast CHAMPIO uniquement (les autres sont triviaux)
+                            if (pnjId === "pnj_champio") {
+                                broadcast({
+                                    type: "cinematic:trigger",
+                                    mapId: state.mapId,
+                                    cinematicId: "champio_defeated",
+                                })
+                            }
                         } else {
                             setPopup({
                                 kind: "info",
@@ -665,7 +805,7 @@ export default function MapClient({
         if (tile === "monsterDesk") return setPopup({ kind: "info", text: "Le bureau du Monstre.\n\nDes parchemins, un encrier renversé, une fiole de sauce." })
 
         setToast("Rien d'intéressant.")
-    }, [state, map, buildings, otherPlayersOnThisMap, popup, cinematic, npcsWithPos, triggerNpcDialogue, reps])
+    }, [state, map, buildings, otherPlayersOnThisMap, popup, cinematic, npcsWithPos, triggerNpcDialogue, reps, broadcast])
 
     // ============================================================
     // EXERCICES (la salle de muscu : pour l'instant juste un texte)
@@ -717,6 +857,12 @@ export default function MapClient({
             ps.map((p) => (p.id === target.id ? { ...p, posX: newTarget.x, posY: newTarget.y } : p))
         )
         setToast(`Tu pousses ${target.nickname}. -${COST_PUSH} reps.`)
+        // v3.4b : broadcast Pusher
+        broadcast({
+            type: "player:push",
+            mapId: state.mapId,
+            targetUserId: target.id,
+        })
     }
 
     // ============================================================
