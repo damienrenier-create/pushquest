@@ -22,6 +22,10 @@ import {
     getMap,
     BRIDGE_PNJS,
     ROUTE1_SPAWN_FROM_SOUTH,
+    PEPITEVILLE_BUILDINGS,
+    PEPITEVILLE_SIGNS,
+    PEPITEVILLE_SPAWN_FROM_SOUTH,
+    ROUTE1_NORTH_GATE,
 } from "@/lib/gamebook/maps"
 import {
     type Direction,
@@ -54,6 +58,11 @@ import {
 import TileCell from "./TileCell"
 import PlayerSprite from "./PlayerSprite"
 import { getPusherClient, PUSHER_CLIENT_ENABLED } from "@/lib/pusher-client"
+import StartMenu from "./StartMenu"
+import InventoryModal from "./InventoryModal"
+import ShopModal from "./ShopModal"
+import { parseInventory, type InventoryEntry } from "@/lib/gamebook/inventory"
+import { PEPITO_DIALOGUE_FIRST } from "@/lib/gamebook/dialogue"
 
 interface Props {
     nickname: string
@@ -62,6 +71,9 @@ interface Props {
     initialTodayReps: number
     initialAvailableEnergy: number
     initialEnergySpent: number
+    // v3.8
+    initialInventory: InventoryEntry[]
+    initialHasBag: boolean
 }
 
 const GHOST_COLORS = ["#4080d8", "#d840a0", "#48a830", "#f08020", "#9050d0", "#d8c020", "#20a8c8"]
@@ -83,6 +95,8 @@ type Popup =
 type Cinematic =
     | { kind: "pioneer"; step: number }
     | { kind: "npcDialogue"; npcId: string; npcName: string; step: number; lines: string[]; energyReward?: number }
+    // v3.8 — Cinématique PEPITO offre le sac
+    | { kind: "pepitoBag"; step: number }
     | null
 
 // Ticker partagé entre tous les NPCs wanderers pour synchroniser leurs déplacements
@@ -104,6 +118,8 @@ export default function MapClient({
     initialTodayReps,
     initialAvailableEnergy,
     initialEnergySpent,
+    initialInventory,
+    initialHasBag,
 }: Props) {
     // ============================================================
     // STATE
@@ -119,6 +135,12 @@ export default function MapClient({
     const [toast, setToast] = useState<string | null>(null)
     const [animStep, setAnimStep] = useState(0)
     const [errorMsg] = useState<string | null>(null)
+    // === v3.8 : inventaire, sac, menu START ===
+    const [inventory, setInventory] = useState<InventoryEntry[]>(initialInventory)
+    const [hasBag, setHasBag] = useState<boolean>(initialHasBag)
+    const [showStartMenu, setShowStartMenu] = useState(false)
+    const [showInventory, setShowInventory] = useState(false)
+    const [showShop, setShowShop] = useState(false)
 
     const moveLockRef = useRef(false)
     const aLockRef = useRef(false)
@@ -126,10 +148,24 @@ export default function MapClient({
 
     const map = getMap(state.mapId)
 
-    // Bâtiments avec la grotte du Monstre visible/cachée
-    const buildings: Building[] = OUTDOOR_BUILDINGS_BASE.map((b) =>
-        b.kind === "monsterCave" ? { ...b, visible: state.monsterCaveRevealed } : b
-    )
+    // v3.8 — Bâtiments dynamiques selon la map courante
+    // - bourgpates : OUTDOOR_BUILDINGS_BASE (grotte du Monstre visible selon flag)
+    // - pepiteville : PEPITEVILLE_BUILDINGS (toujours visibles)
+    // - ailleurs : aucun bâtiment (intérieurs)
+    const buildings: Building[] =
+        state.mapId === "bourgpates"
+            ? OUTDOOR_BUILDINGS_BASE.map((b) =>
+                b.kind === "monsterCave" ? { ...b, visible: state.monsterCaveRevealed } : b
+            )
+            : state.mapId === "pepiteville"
+                ? PEPITEVILLE_BUILDINGS
+                : []
+
+    // v3.8 — Signs selon la map courante
+    const signs =
+        state.mapId === "bourgpates" ? OUTDOOR_SIGNS
+            : state.mapId === "pepiteville" ? PEPITEVILLE_SIGNS
+                : []
 
     // ============================================================
     // LOAD AUTRES JOUEURS (polling fallback si Pusher off)
@@ -597,6 +633,31 @@ export default function MapClient({
                     setToast("ROUTE 1 — Pont Pépite d'Azuria")
                 }, 200)
             }
+
+            // === v3.8 : Transition Route 1 nord → Pépiteville (gate CHAMPIO) ===
+            // Quand le joueur arrive sur la case ROUTE1_NORTH_GATE (sortie nord du pont),
+            // on vérifie qu'il a vaincu CHAMPIO. Sinon, il reste là avec un message.
+            if (
+                state.mapId === "route1" &&
+                result.nextState.posX === ROUTE1_NORTH_GATE.x &&
+                result.nextState.posY === ROUTE1_NORTH_GATE.y
+            ) {
+                const defeated = result.nextState.bridgePnjDefeated ?? []
+                if (defeated.includes("pnj_champio")) {
+                    setTimeout(() => {
+                        setState((s) => ({
+                            ...s,
+                            mapId: PEPITEVILLE_SPAWN_FROM_SOUTH.mapId,
+                            posX: PEPITEVILLE_SPAWN_FROM_SOUTH.posX,
+                            posY: PEPITEVILLE_SPAWN_FROM_SOUTH.posY,
+                            direction: PEPITEVILLE_SPAWN_FROM_SOUTH.direction,
+                        }))
+                        setToast("PÉPITEVILLE")
+                    }, 200)
+                } else {
+                    setToast("Tu sens qu'il te manque quelque chose avant de passer.")
+                }
+            }
         },
         [state, map, buildings, blockingPositions, reps, popup, cinematic, npcsWithPos, triggerNpcDialogue, triggerBridgePnjChallenge, broadcast, spendEnergy]
     )
@@ -610,6 +671,36 @@ export default function MapClient({
         setTimeout(() => {
             aLockRef.current = false
         }, 300)
+
+        // v3.8 — si une modal est ouverte, le A est géré par la modal elle-même
+        if (showStartMenu || showInventory || showShop) return
+
+        // v3.8 — Cinématique PEPITO (offre le sac)
+        if (cinematic?.kind === "pepitoBag") {
+            const next = cinematic.step + 1
+            if (next > PEPITO_DIALOGUE_FIRST.length - 1) {
+                // Fin de cinématique : call grant-bag côté serveur
+                ; (async () => {
+                    try {
+                        const res = await fetch("/api/gamebook/grant-bag", { method: "POST" })
+                        const data = await res.json()
+                        if (data.ok && data.hasBag === true) {
+                            setHasBag(true)
+                            setToast("Tu reçois un sac. Utilise START pour l'ouvrir.")
+                        } else if (data.reason) {
+                            setToast(data.reason)
+                        }
+                    } catch (e) {
+                        console.warn("[MapClient] grant-bag failed", e)
+                        setToast("Erreur réseau, réessaie.")
+                    }
+                })()
+                setCinematic(null)
+                return
+            }
+            setCinematic({ kind: "pepitoBag", step: next })
+            return
+        }
 
         // Cinématique Pionnier (après l'arbre)
         if (cinematic?.kind === "pioneer") {
@@ -685,6 +776,26 @@ export default function MapClient({
                             }
                         } catch (e) {
                             console.warn("[MapClient] grant-gym-energy failed", e)
+                        }
+                    })()
+                }
+
+                // === v3.8 : récompense DURUM (gym_pepite) via route dédiée (idempotente serveur) ===
+                if (npcId === "durum" && energyReward && state.phase === "playing") {
+                    const rewardNpcName = cinematic.npcName
+                    ; (async () => {
+                        try {
+                            const res = await fetch("/api/gamebook/grant-durum-energy", { method: "POST" })
+                            const data = await res.json()
+                            if (data.ok) {
+                                if (typeof data.availableEnergy === "number") setReps(data.availableEnergy)
+                                if (typeof data.energySpentToday === "number") setEnergySpent(data.energySpentToday)
+                                setToast(`+${data.reward ?? energyReward} reps offerts par ${rewardNpcName} !`)
+                            } else if (data.reason) {
+                                // No-op si déjà donné, on n'affiche pas pour ne pas spammer
+                            }
+                        } catch (e) {
+                            console.warn("[MapClient] grant-durum-energy failed", e)
                         }
                     })()
                 }
@@ -808,13 +919,33 @@ export default function MapClient({
         // === v3.3 : NPC devant ? ===
         const npcInFront = npcsWithPos.find((n) => n.x === front.x && n.y === front.y)
         if (npcInFront) {
+            const npcId = npcInFront.npc.id
+            // === v3.8 : interactions spéciales ===
+            // PEPITO : si le sac n'a pas encore été donné, déclencher la cinématique d'offre
+            if (npcId === "pepito" && !hasBag) {
+                setCinematic({ kind: "pepitoBag", step: 0 })
+                return
+            }
+            // NUTRIPATES (vendeur) : ouvre le shop si on a un sac, sinon dialogue de refus
+            if (npcId === "shop_keeper") {
+                if (!hasBag) {
+                    setPopup({
+                        kind: "info",
+                        text: "NUTRIPATES te toise.\n\n\"Pas de sac, pas de service. C'est la base du commerce. Va voir PEPITO dehors.\"",
+                    })
+                    return
+                }
+                setShowShop(true)
+                return
+            }
             triggerNpcDialogue(npcInFront.npc)
             return
         }
 
-        // Panneau ? (Bourg-Boulette uniquement, l'ouverture des portes est devenue automatique)
-        if (state.mapId === "bourgpates") {
-            const sign = OUTDOOR_SIGNS.find((s) => s.x === front.x && s.y === front.y)
+        // Panneau ? (Bourg-Boulette ou Pépiteville — partout où signs n'est pas vide)
+        // L'ouverture des portes est automatique via le moteur, géré ailleurs.
+        if (signs.length > 0) {
+            const sign = signs.find((s) => s.x === front.x && s.y === front.y)
             if (sign) {
                 setPopup({ kind: "sign", text: sign.text })
                 return
@@ -836,7 +967,7 @@ export default function MapClient({
         if (tile === "monsterDesk") return setPopup({ kind: "info", text: "Le bureau du Monstre.\n\nDes parchemins, un encrier renversé, une fiole de sauce." })
 
         setToast("Rien d'intéressant.")
-    }, [state, map, buildings, otherPlayersOnThisMap, popup, cinematic, npcsWithPos, triggerNpcDialogue, triggerBridgePnjChallenge, reps, broadcast])
+    }, [state, map, buildings, otherPlayersOnThisMap, popup, cinematic, npcsWithPos, triggerNpcDialogue, triggerBridgePnjChallenge, reps, broadcast, hasBag, showStartMenu, showInventory, showShop])
 
     // ============================================================
     // EXERCICES (la salle de muscu : pour l'instant juste un texte)
@@ -901,6 +1032,10 @@ export default function MapClient({
     // ============================================================
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
+            // v3.8 — si une modal v3.8 est ouverte, on ne gère pas les touches ici
+            // (StartMenu/InventoryModal/ShopModal écoutent leurs propres events)
+            if (showStartMenu || showInventory || showShop) return
+
             if (state.phase === "introMonster") {
                 if (e.key === "Enter" || e.key === " " || e.key.toLowerCase() === "a") {
                     e.preventDefault()
@@ -926,7 +1061,7 @@ export default function MapClient({
         }
         window.addEventListener("keydown", handler)
         return () => window.removeEventListener("keydown", handler)
-    }, [state.phase, popup, tryMove, pressA])
+    }, [state.phase, popup, tryMove, pressA, showStartMenu, showInventory, showShop])
 
     // ============================================================
     // RESET
@@ -1039,17 +1174,22 @@ export default function MapClient({
                         )}
                     </div>
 
-                    {/* Bâtiments */}
-                    {state.mapId === "bourgpates" &&
-                        buildings.map((b) =>
-                            b.visible ? <BuildingSprite key={b.kind} building={b} mapW={map.width} mapH={map.height} /> : null
-                        )}
+                    {/* Bâtiments (Bourg-Boulette + Pépiteville — v3.8) */}
+                    {buildings.map((b) =>
+                        b.visible ? (
+                            <BuildingSprite
+                                key={`${b.kind}-${b.x}-${b.y}`}
+                                building={b}
+                                mapW={map.width}
+                                mapH={map.height}
+                            />
+                        ) : null
+                    )}
 
-                    {/* Panneaux */}
-                    {state.mapId === "bourgpates" &&
-                        OUTDOOR_SIGNS.map((s, i) => (
-                            <SignSpriteR key={i} x={s.x} y={s.y} mapW={map.width} mapH={map.height} />
-                        ))}
+                    {/* Panneaux (Bourg-Boulette + Pépiteville — v3.8) */}
+                    {signs.map((s, i) => (
+                        <SignSpriteR key={`sign-${i}-${s.x}-${s.y}`} x={s.x} y={s.y} mapW={map.width} mapH={map.height} />
+                    ))}
 
                     {/* Autres joueurs */}
                     {otherPlayersOnThisMap.map((g) => (
@@ -1174,13 +1314,22 @@ export default function MapClient({
                         />
                     )}
 
+                    {/* === v3.8 : DIALOGUE PEPITO (offre le sac) === */}
+                    {cinematic?.kind === "pepitoBag" && (
+                        <DialogueBox
+                            speaker="PEPITO"
+                            text={PEPITO_DIALOGUE_FIRST[cinematic.step]}
+                            onNext={pressA}
+                        />
+                    )}
+
                     {/* POPUP */}
                     {popup && <PopupBox text={popup.text} onClose={() => setPopup(null)} />}
                 </div>
             </div>
 
             {/* CONTROLS */}
-            <div style={{ display: "flex", alignItems: "center", gap: "20px", marginTop: "2px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "2px" }}>
                 <div
                     style={{
                         display: "grid",
@@ -1199,6 +1348,39 @@ export default function MapClient({
                     <DPad dir="down" onPress={() => tryMove("down")} active={state.direction === "down"} />
                     <div />
                 </div>
+
+                {/* v3.8 — Bouton START (gris, plus petit, à gauche du A). Désactivé si pas encore de sac. */}
+                <button
+                    onClick={(e) => {
+                        e.preventDefault()
+                        if (hasBag) setShowStartMenu(true)
+                    }}
+                    onTouchStart={(e) => {
+                        e.preventDefault()
+                        if (hasBag) setShowStartMenu(true)
+                    }}
+                    disabled={!hasBag}
+                    style={{
+                        background: hasBag ? "#666" : "#3a3a3a",
+                        color: hasBag ? "#fff" : "#777",
+                        border: "2px solid #fff",
+                        width: "44px",
+                        height: "44px",
+                        fontSize: "8px",
+                        fontFamily: "'Courier New', monospace",
+                        fontWeight: "bold",
+                        letterSpacing: 1,
+                        cursor: hasBag ? "pointer" : "not-allowed",
+                        touchAction: "manipulation",
+                        userSelect: "none",
+                        borderRadius: "50%",
+                        boxShadow: hasBag ? "0 3px 0 #333, 0 4px 8px rgba(0,0,0,0.4)" : "none",
+                        opacity: hasBag ? 1 : 0.55,
+                    }}
+                    title={hasBag ? "Ouvrir le menu" : "Trouve un sac d'abord."}
+                >
+                    START
+                </button>
 
                 <button
                     onClick={(e) => { e.preventDefault(); pressA() }}
@@ -1222,6 +1404,74 @@ export default function MapClient({
                     A
                 </button>
             </div>
+
+            {/* v3.8 — Modals : StartMenu, InventoryModal, ShopModal */}
+            {showStartMenu && (
+                <StartMenu
+                    onSelect={(entry) => {
+                        if (entry === "bag") {
+                            setShowStartMenu(false)
+                            setShowInventory(true)
+                        }
+                    }}
+                    onClose={() => setShowStartMenu(false)}
+                />
+            )}
+            {showInventory && (
+                <InventoryModal
+                    inventory={inventory}
+                    availableEnergy={reps}
+                    onUse={async (itemKey, action, amount) => {
+                        try {
+                            const res = await fetch("/api/gamebook/inventory/use", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ itemKey, action, amount }),
+                            })
+                            const data = await res.json()
+                            if (data.ok) {
+                                if (Array.isArray(data.inventory)) setInventory(data.inventory)
+                                if (typeof data.availableEnergy === "number") setReps(data.availableEnergy)
+                                if (typeof data.energySpentToday === "number") setEnergySpent(data.energySpentToday)
+                            } else {
+                                setToast(data.reason || "Action impossible.")
+                            }
+                        } catch (e) {
+                            console.warn("[MapClient] inventory/use failed", e)
+                            setToast("Erreur réseau, réessaie.")
+                        }
+                    }}
+                    onClose={() => setShowInventory(false)}
+                />
+            )}
+            {showShop && (
+                <ShopModal
+                    inventory={inventory}
+                    availableEnergy={reps}
+                    onBuy={async (itemKey) => {
+                        try {
+                            const res = await fetch("/api/gamebook/shop/buy", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ itemKey }),
+                            })
+                            const data = await res.json()
+                            if (data.ok) {
+                                if (Array.isArray(data.inventory)) setInventory(data.inventory)
+                                if (typeof data.availableEnergy === "number") setReps(data.availableEnergy)
+                                if (typeof data.energySpentToday === "number") setEnergySpent(data.energySpentToday)
+                                setToast("Achat réussi.")
+                            } else {
+                                setToast(data.reason || "Achat impossible.")
+                            }
+                        } catch (e) {
+                            console.warn("[MapClient] shop/buy failed", e)
+                            setToast("Erreur réseau, réessaie.")
+                        }
+                    }}
+                    onClose={() => setShowShop(false)}
+                />
+            )}
 
             {/* FOOTER DEBUG */}
             <div style={{ marginTop: "3px", display: "flex", gap: "8px", alignItems: "center" }}>
@@ -1398,18 +1648,24 @@ function BuildingSprite({
         )
     }
 
+    // v3.8 : kind="shop" → toit bleu + label SHOP
+    // Sinon (gym, casino) → toit rouge classique
     const isGym = building.kind === "gym"
+    const isShop = building.kind === "shop"
+    const roofColor = isShop ? "#3060c0" : "#c84838"
+    const roofDarkColor = isShop ? "#1a3878" : "#883020"
+    const label = isGym ? "MUSCU" : isShop ? "SHOP" : "CASINO"
     return (
         <>
             <div style={{ position: "absolute", left, top, width, height, display: "flex", flexDirection: "column" }}>
                 <div style={{
-                    background: "#c84838", height: "40%",
-                    borderTop: "2px solid #883020", borderLeft: "2px solid #883020", borderRight: "2px solid #883020",
+                    background: roofColor, height: "40%",
+                    borderTop: `2px solid ${roofDarkColor}`, borderLeft: `2px solid ${roofDarkColor}`, borderRight: `2px solid ${roofDarkColor}`,
                     position: "relative",
                 }}>
                     <div style={{
                         position: "absolute", inset: 0,
-                        backgroundImage: "repeating-linear-gradient(90deg, transparent 0, transparent 6px, #883020 6px, #883020 7px)",
+                        backgroundImage: `repeating-linear-gradient(90deg, transparent 0, transparent 6px, ${roofDarkColor} 6px, ${roofDarkColor} 7px)`,
                     }} />
                 </div>
                 <div style={{
@@ -1427,9 +1683,9 @@ function BuildingSprite({
                     }} />
                     <div style={{
                         position: "absolute", top: "55%", left: 0, right: 0,
-                        textAlign: "center", fontSize: "7px", color: "#883020", fontWeight: "bold", letterSpacing: "1px",
+                        textAlign: "center", fontSize: "7px", color: roofDarkColor, fontWeight: "bold", letterSpacing: "1px",
                     }}>
-                        {isGym ? "MUSCU" : "CASINO"}
+                        {label}
                     </div>
                 </div>
             </div>

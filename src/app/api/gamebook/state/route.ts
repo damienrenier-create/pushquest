@@ -73,12 +73,17 @@ export async function GET() {
     const storedSpent = (progress as { energySpentToday?: number }).energySpentToday ?? 0
     // Si la date stockée n'est pas aujourd'hui, le compteur est obsolète → reset à 0
     const energySpentToday = storedDate === today ? storedSpent : 0
+    // v3.8 : pas de plafond — energySpentToday peut être négatif si la gourde a été bue.
     // Énergie réellement disponible = reps totales - énergie déjà consommée
-    const availableEnergy = Math.max(0, todayReps - energySpentToday)
+    const availableEnergy = todayReps - energySpentToday
 
     // v3.6 — expose frozenUntil pour que le client puisse afficher l'overlay anti-triche
     const frozenUntil = (progress as { gamebookFrozenUntil?: Date | null }).gamebookFrozenUntil ?? null
     const frozen = isGamebookFrozen(progress as { gamebookFrozenUntil?: Date | null })
+
+    // v3.8 — inventaire et hasBag
+    const inventory = (progress as { inventory?: unknown }).inventory ?? []
+    const hasBag = (progress as { hasBag?: boolean }).hasBag === true
 
     return NextResponse.json({
         state: {
@@ -104,6 +109,9 @@ export async function GET() {
         availableEnergy,
         frozen,
         frozenUntil,
+        // v3.8
+        inventory,
+        hasBag,
     })
 }
 
@@ -133,7 +141,8 @@ export async function POST(req: NextRequest) {
         posY === null ||
         !direction ||
         !phase ||
-        !["bourgpates", "gym", "casino", "cave", "route1"].includes(mapId) ||
+        // v3.8 — Pépiteville et ses bâtiments ajoutés à la whitelist
+        !["bourgpates", "gym", "casino", "cave", "route1", "pepiteville", "gym_pepite", "casino_pepite", "shop_interior"].includes(mapId) ||
         !["up", "down", "left", "right"].includes(direction) ||
         !["explore", "introMonster", "playing"].includes(phase) ||
         posX < 0 || posX > 30 ||

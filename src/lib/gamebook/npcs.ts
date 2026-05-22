@@ -97,6 +97,132 @@ export const NPCS: NpcDefinition[] = [
             "(Tu sens qu'il a quelque chose en réserve pour toi si tu reviens avec...)",
         ],
     },
+
+    // ============================================================
+    // v3.8 — NPCs de PÉPITEVILLE
+    // ============================================================
+
+    // -------------------------------
+    // PEPITO — donne le sac au premier passage
+    // -------------------------------
+    {
+        id: "pepito",
+        name: "PEPITO",
+        mapId: "pepiteville",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#a06030" },
+        initialX: 8,
+        initialY: 16,
+        dialoguesAfter: [
+            // Dialogue par défaut (post-don de sac). Le dialogue de don est géré
+            // séparément dans MapClient via la route grant-bag pour l'idempotence.
+            "Tu reviens. T'as ton sac, c'est l'essentiel.",
+            "Va dépenser ton énergie utilement. Ou pas. Je m'en tape.",
+        ],
+    },
+
+    // -------------------------------
+    // JOJETTE — sœur de JOJO, cherche l'animal de son frère
+    // -------------------------------
+    {
+        id: "pet_seeker_sister",
+        name: "JOJETTE",
+        mapId: "pepiteville",
+        kind: "wanderer",
+        interaction: "interactive",
+        sprite: { color: "#d050a0" },
+        initialX: 5,
+        initialY: 11,
+        wanderRadius: 2,
+        dialoguesAfter: [
+            "Salut !",
+            "Mon frère JOJO m'a envoyée chercher son animal jusqu'ici.",
+            "Apparemment il l'aurait vu traîner près du Pont Pépite.",
+            "S'il te dit quoi que ce soit, fais-moi remonter l'info.",
+            "(Elle te sourit, manifestement plus calme que JOJO.)",
+        ],
+    },
+
+    // -------------------------------
+    // RAVIOLI — wanderer décoratif
+    // -------------------------------
+    {
+        id: "ravioli",
+        name: "RAVIOLI",
+        mapId: "pepiteville",
+        kind: "wanderer",
+        interaction: "interactive",
+        sprite: { color: "#f0a050" },
+        initialX: 11,
+        initialY: 11,
+        wanderRadius: 2,
+        dialoguesAfter: [
+            "Pépiteville, c'est petit mais c'est joli.",
+            "Le bassin aux lasagnes est moins profond qu'il en a l'air.",
+            "Si tu veux des sensations, va au casino. Si tu veux te muscler, va au gymnase.",
+        ],
+    },
+
+    // -------------------------------
+    // LINGUINI — wanderer décoratif
+    // -------------------------------
+    {
+        id: "linguini",
+        name: "LINGUINI",
+        mapId: "pepiteville",
+        kind: "wanderer",
+        interaction: "interactive",
+        sprite: { color: "#90b040" },
+        initialX: 12,
+        initialY: 16,
+        wanderRadius: 2,
+        dialoguesAfter: [
+            "Je suis LINGUINI, mais on m'appelle aussi 'Le Long'.",
+            "Pas de raison particulière. C'est comme ça.",
+            "Tu cherches quelque chose ? Le shop est à droite.",
+        ],
+    },
+
+    // -------------------------------
+    // NUTRIPATES — vendeur du shop, statique derrière le comptoir
+    // -------------------------------
+    {
+        id: "shop_keeper",
+        name: "NUTRIPATES",
+        mapId: "shop_interior",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#8050d0" },
+        initialX: 4,
+        initialY: 2,
+        dialoguesAfter: [
+            // Dialogue par défaut. La logique d'ouverture du shop vs refus (pas de sac)
+            // est gérée dans MapClient via le check `hasBag` et le rendu de ShopModal.
+            "Bienvenue dans la boutique. Que veux-tu ?",
+        ],
+    },
+
+    // -------------------------------
+    // DURUM — donneur d'énergie (style BUFFY) dans gym_pepite
+    // -------------------------------
+    {
+        id: "durum",
+        name: "DURUM",
+        mapId: "gym_pepite",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#c0d030" },
+        initialX: 5,
+        initialY: 4,
+        dialoguesAfter: [
+            "Yo. Bienvenue dans MON gymnase.",
+            "BUFFY de Bourg-Boulette, c'est mon cousin. On a tous les deux trop d'énergie.",
+            "Tiens, 50 reps en cadeau. Pas plus, faut bien que je garde mon style.",
+            "Maintenant fous le camp, j'ai des biceps à entretenir.",
+        ],
+        energyReward: 50,
+    },
 ]
 
 // ============================================================

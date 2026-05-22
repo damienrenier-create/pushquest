@@ -44,3 +44,25 @@ export const MONSTER_PIONEER_DIALOGUE: string[] = [
 ]
 
 export const PIONEER_LAST_STEP = MONSTER_PIONEER_DIALOGUE.length - 1
+
+// =====================================================
+// v3.8 — PEPITO : donneur de sac à l'entrée de Pépiteville
+// Premier passage : il offre le sac.
+// =====================================================
+export const PEPITO_DIALOGUE_FIRST: string[] = [
+    "Hé toi ! T'as l'air d'arriver de loin.",
+    "T'as pas bougé le pont à mains nues quand même ?",
+    "Bon. Ici à Pépiteville, on porte des sacs. Sinon comment veux-tu acheter quoi que ce soit ?",
+    "Tiens, je t'en file un. Il est gratuit, n'en abuse pas.",
+    "Maintenant tu peux faire tes courses. Et utiliser le bouton START pour ouvrir ton sac.",
+    "Allez, va voir NUTRIPATES dans la boutique. Et arrête de tout regarder comme un touriste.",
+]
+
+export const PEPITO_LAST_STEP_FIRST = PEPITO_DIALOGUE_FIRST.length - 1
+
+// Pour les rencontres suivantes, dialogue court (sans donner de sac)
+export const PEPITO_DIALOGUE_AFTER: string[] = [
+    "Tu reviens. T'as ton sac, c'est l'essentiel.",
+    "Va dépenser ton énergie utilement. Ou pas. Je m'en tape.",
+]
+

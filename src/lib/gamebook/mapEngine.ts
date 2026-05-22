@@ -23,16 +23,28 @@ export type TileType =
     | "rouletteWheel" | "slotMachine"
     // Grotte
     | "bookshelf" | "caveWall" | "caveFloor" | "potion" | "monsterDesk"
+    // === v3.8 : Shop de Pépiteville ===
+    | "shopShelf"     // étagères du shop (bloquant)
+    | "shopCounter"   // comptoir du shop (bloquant, le vendeur est derrière)
+    | "floorChecker"  // sol damier du shop (non-bloquant, décoratif)
 
 export interface Building {
     x: number
     y: number
     w: number
     h: number
-    kind: "gym" | "casino" | "monsterCave"
+    /** Identité visuelle du bâtiment (sprite/façade). */
+    kind: "gym" | "casino" | "monsterCave" | "shop"
     doorX: number
     doorY: number
     visible: boolean
+    /**
+     * v3.8 : map cible quand on entre par la porte.
+     * Si absent, fallback sur la convention historique (kind → mapId implicite).
+     * Permet d'avoir plusieurs bâtiments de même `kind` qui mènent à des maps différentes
+     * (ex : `gym` à Bourg-Boulette → "gym", `gym` à Pépiteville → "gym_pepite").
+     */
+    targetMapId?: string
 }
 
 export interface Sign {
@@ -101,6 +113,8 @@ export const BLOCKING_TILES: TileType[] = [
     "table", "chairBlueUp", "chairBlueDown", "chairRedUp", "chairRedDown",
     "rouletteWheel", "slotMachine",
     "bookshelf", "caveWall", "potion", "monsterDesk",
+    // v3.8 — shop de Pépiteville
+    "shopShelf", "shopCounter",
 ]
 
 export function isBlockingTile(tile: TileType): boolean {
@@ -167,7 +181,7 @@ export interface MoveResult {
     nextState: PlayerMapState
     repsCost: number
     triggersIntro: boolean   // true si on vient de marcher dans les hautes herbes
-    enteredBuilding?: "gym" | "casino" | "monsterCave"
+    enteredBuilding?: Building["kind"]
     leftToOutdoor?: boolean  // vrai si on est sorti par un doorMat
     reason?: string          // message si bloqué
 }
@@ -204,16 +218,20 @@ export function tryComputeMove(
     }
 
     // Bâtiment (mur, pas porte)
-    if (current.mapId === "bourgpates") {
+    // v3.8 : géré sur toute map qui a un buildings non vide (pas seulement bourgpates)
+    if (buildings.length > 0) {
         const b = buildingAt(buildings, nx, ny)
         if (b && !(nx === b.x + b.doorX && ny === b.y + b.doorY)) {
             return { blocked: true, reason: "Un mur." }
         }
         // === v3.3 : entrée AUTOMATIQUE quand on marche sur la porte ===
         if (b && nx === b.x + b.doorX && ny === b.y + b.doorY) {
-            const targetMapId = b.kind === "gym" ? "gym"
-                : b.kind === "casino" ? "casino"
-                    : "cave"
+            // v3.8 : si targetMapId est défini, il prime sur la convention historique
+            const targetMapId = b.targetMapId
+                ?? (b.kind === "gym" ? "gym"
+                    : b.kind === "casino" ? "casino"
+                        : b.kind === "shop" ? "shop_interior"
+                            : "cave")
             return {
                 nextState: {
                     ...current,

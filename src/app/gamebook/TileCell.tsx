@@ -419,5 +419,50 @@ export default function TileCell({ tile, x, y }: { tile: TileType; x: number; y:
         )
     }
 
+    // === v3.8 : SHOP DE PÉPITEVILLE ===
+    if (tile === "shopShelf") {
+        return (
+            <div style={{ position: "relative", background: C.floorTile, overflow: "hidden" }}>
+                <div style={{ position: "absolute", inset: "5% 5% 20% 5%", background: C.bookshelf, border: "1px solid #000" }}>
+                    <div style={{ display: "flex", height: "100%", padding: "8%", gap: "1px" }}>
+                        <div style={{ flex: 1, background: "#d04040" }} />
+                        <div style={{ flex: 1, background: "#48a830" }} />
+                        <div style={{ flex: 1, background: "#3060c0" }} />
+                        <div style={{ flex: 1, background: "#f8d048" }} />
+                    </div>
+                </div>
+            </div>
+        )
+    }
+    if (tile === "shopCounter") {
+        return (
+            <div style={{ position: "relative", background: C.floorTile, overflow: "hidden" }}>
+                <div style={{
+                    position: "absolute", left: 0, right: 0, top: "20%", bottom: "20%",
+                    background: C.table, border: "1px solid #000",
+                }}>
+                    <div style={{
+                        position: "absolute", inset: "15%",
+                        background: C.tableLight,
+                        backgroundImage: "linear-gradient(0deg, transparent 49%, #604020 49%, #604020 51%, transparent 51%)",
+                    }} />
+                </div>
+            </div>
+        )
+    }
+    if (tile === "floorChecker") {
+        return (
+            <div style={{ position: "relative", background: C.floorTile, overflow: "hidden" }}>
+                <div style={{
+                    position: "absolute", inset: 0,
+                    backgroundImage: `linear-gradient(45deg, ${C.floorTileDark} 25%, transparent 25%, transparent 75%, ${C.floorTileDark} 75%), linear-gradient(45deg, ${C.floorTileDark} 25%, transparent 25%, transparent 75%, ${C.floorTileDark} 75%)`,
+                    backgroundSize: "16px 16px",
+                    backgroundPosition: "0 0, 8px 8px",
+                    opacity: 0.4,
+                }} />
+            </div>
+        )
+    }
+
     return <div style={{ background: C.grass }} />
 }

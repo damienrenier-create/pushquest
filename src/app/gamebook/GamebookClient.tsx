@@ -12,6 +12,7 @@ import BlackScreen from "./BlackScreen"
 import FrozenScreen from "./FrozenScreen"
 import MapClient from "./MapClient"
 import type { PlayerMapState } from "@/lib/gamebook/mapEngine"
+import { parseInventory, type InventoryEntry } from "@/lib/gamebook/inventory"
 
 interface Props {
     nickname: string
@@ -26,6 +27,9 @@ interface StatePayload {
     // v3.6 — anti-cheat
     frozen?: boolean
     frozenUntil?: string | null
+    // v3.8 — inventaire et sac
+    inventory?: unknown
+    hasBag?: boolean
 }
 
 export default function GamebookClient({ nickname, userId }: Props) {
@@ -149,6 +153,10 @@ export default function GamebookClient({ nickname, userId }: Props) {
         )
     }
 
+    // v3.8 — parse l'inventaire (tolérant aux formats)
+    const initialInventory: InventoryEntry[] = parseInventory(payload.inventory)
+    const initialHasBag: boolean = payload.hasBag === true
+
     return (
         <MapClient
             nickname={nickname}
@@ -157,6 +165,8 @@ export default function GamebookClient({ nickname, userId }: Props) {
             initialTodayReps={payload.todayReps}
             initialAvailableEnergy={payload.availableEnergy}
             initialEnergySpent={payload.energySpentToday}
+            initialInventory={initialInventory}
+            initialHasBag={initialHasBag}
         />
     )
 }

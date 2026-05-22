@@ -426,6 +426,14 @@ model GamebookProgress {
   // null = pas frozen. Sinon, instant après lequel le joueur récupère ses mouvements Gamebook.
   gamebookFrozenUntil       DateTime?
 
+  // === Champs ajoutés pour PushQuest v3.8 (Pépiteville + Inventaire) ===
+  // Inventaire JSON. Format: Array<{ itemKey: string, quantity: number, data?: Record<string, unknown> }>
+  inventory                 Json    @default("[]")
+  // true une fois que PEPITO a offert le sac. Conditionne l'accès au shop + au menu START.
+  hasBag                    Boolean @default(false)
+  // true une fois que DURUM (gym_pepite) a donné ses 50 reps. Pendant idempotence-flag similaire à gymGuyEnergyGiven.
+  durumEnergyGiven          Boolean @default(false)
+
   @@unique([userId, chapterId])
   @@index([userId])
   @@index([mapId])
