@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
+import { captureRepsSnapshot, detectRepsDropAndPenalize } from "@/lib/gamebook/antiCheat"
 
 export const dynamic = "force-dynamic"
 
@@ -25,6 +26,9 @@ export async function POST(req: Request) {
 
         const userId = session.user.id;
 
+        // v3.6 — Snapshot AVANT delete+create pour détecter une baisse de reps
+        const cheatSnapshot = await captureRepsSnapshot(userId, [date]);
+
         // Atomic delete and recreate for this specific date and exercise type
         const result = await prisma.$transaction(async (tx) => {
             await tx.exerciseSet.deleteMany({
@@ -45,7 +49,14 @@ export async function POST(req: Request) {
             });
         });
 
-        return NextResponse.json({ log: result, message: "Pompes enregistrées pour aujourd'hui" }, { status: 200 })
+        // v3.6 — Détection anti-triche : si le total reps du jour a baissé → freeze Gamebook
+        const cheatResult = await detectRepsDropAndPenalize(userId, cheatSnapshot);
+
+        return NextResponse.json({
+            log: result,
+            message: "Pompes enregistrées pour aujourd'hui",
+            ...(cheatResult.triggered ? { gamebookPenaltyTriggered: true } : {}),
+        }, { status: 200 })
     } catch (error) {
         console.error(error)
         return NextResponse.json(

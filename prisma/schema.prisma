@@ -422,6 +422,10 @@ model GamebookProgress {
   energySpentToday          Int     @default(0)
   energySpentDate           String  @default("")
 
+  // === Champs ajoutés pour PushQuest v3.6 (anti-triche suppression de reps) ===
+  // null = pas frozen. Sinon, instant après lequel le joueur récupère ses mouvements Gamebook.
+  gamebookFrozenUntil       DateTime?
+
   @@unique([userId, chapterId])
   @@index([userId])
   @@index([mapId])

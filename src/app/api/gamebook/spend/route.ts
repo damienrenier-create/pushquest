@@ -13,6 +13,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { getTodayISO } from "@/lib/challenge"
+import { isGamebookFrozen } from "@/lib/gamebook/antiCheat"
 
 export const dynamic = "force-dynamic"
 
@@ -53,6 +54,16 @@ export async function POST(req: NextRequest) {
     })
     if (!progress) {
         return NextResponse.json({ error: "No progress" }, { status: 400 })
+    }
+
+    // v3.6 — Si le user est frozen (anti-triche actif), refuser tout débit d'énergie
+    if (isGamebookFrozen(progress as { gamebookFrozenUntil?: Date | null })) {
+        return NextResponse.json({
+            ok: false,
+            reason: "Gamebook gelé suite à une suppression de reps. Reviens plus tard.",
+            frozen: true,
+            frozenUntil: (progress as { gamebookFrozenUntil?: Date | null }).gamebookFrozenUntil,
+        }, { status: 200 })
     }
 
     const today = getTodayISO()

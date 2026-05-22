@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { getTodayISO, getDailyTargetForUserOnDate, getAllowedEncodingDates } from "@/lib/challenge";
+import { captureRepsSnapshot, detectRepsDropAndPenalize } from "@/lib/gamebook/antiCheat";
 
 export async function POST(req: Request) {
     try {
@@ -53,6 +54,9 @@ export async function POST(req: Request) {
         processExo(sets.squats, "SQUAT");
         processExo(sets.planks, "PLANK");
 
+        // v3.6 — Snapshot AVANT delete+create pour détecter une baisse de reps
+        const cheatSnapshot = await captureRepsSnapshot(userId, [targetDate]);
+
         // 2. atomic delete and recreate sets for that user and that date
         await prisma.$transaction([
             prisma.exerciseSet.deleteMany({
@@ -62,6 +66,9 @@ export async function POST(req: Request) {
                 data: newSetsData,
             }),
         ]);
+
+        // v3.6 — Détection anti-triche : si le total reps du jour a baissé → freeze Gamebook
+        const cheatResult = await detectRepsDropAndPenalize(userId, cheatSnapshot);
 
         // 3. Calculate stats for response
         const totals = {
@@ -81,7 +88,8 @@ export async function POST(req: Request) {
             totals,
             totalGlobal,
             isComplete,
-            date: targetDate
+            date: targetDate,
+            ...(cheatResult.triggered ? { gamebookPenaltyTriggered: true } : {}),
         });
     } catch (error) {
         console.error("Error saving sets:", error);

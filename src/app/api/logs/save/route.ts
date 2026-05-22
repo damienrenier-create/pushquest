@@ -8,6 +8,7 @@ import { BADGE_DEFINITIONS } from "@/config/badges";
 import { updateBadgesPostSave } from "@/lib/badges";
 import { checkAndClaimTorch } from "@/lib/torch";
 import { calculateAllUsersXP } from "@/lib/xp";
+import { captureRepsSnapshot, detectRepsDropAndPenalize } from "@/lib/gamebook/antiCheat";
 
 export async function POST(req: Request) {
     try {
@@ -30,6 +31,9 @@ export async function POST(req: Request) {
 
         const userId = session.user.id;
         const league = (session.user as any).league || "POMPES";
+
+        // v3.6 — Snapshot AVANT delete+create pour détecter une baisse de reps sur cette date
+        const cheatSnapshot = await captureRepsSnapshot(userId, [date]);
 
         // 1. Pre-calculate XP to intercept Level Up (BEFORE transaction)
         const allUsersOld = await (prisma as any).user.findMany({
@@ -136,7 +140,13 @@ export async function POST(req: Request) {
             }
         }
 
-        return NextResponse.json({ message: "Séries enregistrées ✅" });
+        // v3.6 — Détection anti-triche : si le total reps du jour a baissé → freeze Gamebook
+        const cheatResult = await detectRepsDropAndPenalize(userId, cheatSnapshot);
+
+        return NextResponse.json({
+            message: "Séries enregistrées ✅",
+            ...(cheatResult.triggered ? { gamebookPenaltyTriggered: true } : {}),
+        });
 
     } catch (error) {
         console.error("Save Logs Error:", error);

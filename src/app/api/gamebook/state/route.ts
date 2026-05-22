@@ -10,6 +10,7 @@ import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { getTodayISO } from "@/lib/challenge"
 import { INITIAL_SPAWN } from "@/lib/gamebook/maps"
+import { isGamebookFrozen } from "@/lib/gamebook/antiCheat"
 
 export const dynamic = "force-dynamic"
 
@@ -75,6 +76,10 @@ export async function GET() {
     // Énergie réellement disponible = reps totales - énergie déjà consommée
     const availableEnergy = Math.max(0, todayReps - energySpentToday)
 
+    // v3.6 — expose frozenUntil pour que le client puisse afficher l'overlay anti-triche
+    const frozenUntil = (progress as { gamebookFrozenUntil?: Date | null }).gamebookFrozenUntil ?? null
+    const frozen = isGamebookFrozen(progress as { gamebookFrozenUntil?: Date | null })
+
     return NextResponse.json({
         state: {
             mapId: progress.mapId,
@@ -92,10 +97,13 @@ export async function GET() {
             bridgePnjLastBeatenDate: progress.bridgePnjLastBeatenDate,
             gymGuyEnergyGiven: (progress as { gymGuyEnergyGiven?: boolean }).gymGuyEnergyGiven ?? false,
             npcsTalkedTo: (progress as { npcsTalkedTo?: string[] }).npcsTalkedTo ?? [],
+            gamebookFrozenUntil: frozenUntil,
         },
         todayReps,
         energySpentToday,
         availableEnergy,
+        frozen,
+        frozenUntil,
     })
 }
 
@@ -153,6 +161,20 @@ export async function POST(req: NextRequest) {
     const npcsTalkedTo = Array.isArray(body.npcsTalkedTo)
         ? (body.npcsTalkedTo as string[]).filter((x) => typeof x === "string")
         : []
+
+    // v3.6 — Si frozen, ne pas appliquer le write (mais renvoyer l'état actuel sans erreur)
+    const existing = await prisma.gamebookProgress.findUnique({
+        where: { userId_chapterId: { userId, chapterId: CHAPTER_ID } },
+    })
+    if (existing && isGamebookFrozen(existing as { gamebookFrozenUntil?: Date | null })) {
+        return NextResponse.json({
+            ok: false,
+            frozen: true,
+            frozenUntil: (existing as { gamebookFrozenUntil?: Date | null }).gamebookFrozenUntil,
+            reason: "Gamebook gelé suite à une suppression de reps.",
+            state: existing,
+        })
+    }
 
     const updated = await prisma.gamebookProgress.upsert({
         where: { userId_chapterId: { userId, chapterId: CHAPTER_ID } },
