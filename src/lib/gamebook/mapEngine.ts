@@ -28,7 +28,8 @@ export type TileType =
     | "shopCounter"   // comptoir du shop (bloquant, le vendeur est derrière)
     | "floorChecker"  // sol damier du shop (non-bloquant, décoratif)
     // === v3.8.1 : Arbres fruitiers de Pépiteville ===
-    | "appleTree"     // arbre fruitier (bloquant, on appuie A devant pour cueillir)
+    | "appleTree"     // arbre fruitier avec fruits visibles (bloquant)
+    | "appleTreeEmpty" // même arbre, mais déjà cueilli par CE user (rendu côté client uniquement)
 
 export interface Building {
     x: number
@@ -117,8 +118,10 @@ export const BLOCKING_TILES: TileType[] = [
     "bookshelf", "caveWall", "potion", "monsterDesk",
     // v3.8 — shop de Pépiteville
     "shopShelf", "shopCounter",
-    // v3.8.1 — arbres fruitiers (bloquants, on les approche pour cueillir avec A)
+    // v3.8.1 — arbres fruitiers (bloquants, on les approche pour cueillir avec A).
+    // appleTreeEmpty est juste une variante visuelle côté client (pas dans la grille map).
     "appleTree",
+    "appleTreeEmpty",
 ]
 
 export function isBlockingTile(tile: TileType): boolean {

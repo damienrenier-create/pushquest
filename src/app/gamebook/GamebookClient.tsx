@@ -30,6 +30,8 @@ interface StatePayload {
     // v3.8 — inventaire et sac
     inventory?: unknown
     hasBag?: boolean
+    // v3.8.1 — fruits cueillis aujourd'hui par cet user (rendu visuel)
+    fruitsTaken?: unknown
 }
 
 export default function GamebookClient({ nickname, userId }: Props) {
@@ -157,6 +159,19 @@ export default function GamebookClient({ nickname, userId }: Props) {
     const initialInventory: InventoryEntry[] = parseInventory(payload.inventory)
     const initialHasBag: boolean = payload.hasBag === true
 
+    // v3.8.1 — parse fruitsTaken défensivement
+    const initialFruitsTaken: Record<string, number> = (() => {
+        const raw = payload.fruitsTaken
+        if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {}
+        const counts = (raw as Record<string, unknown>).counts
+        if (!counts || typeof counts !== "object" || Array.isArray(counts)) return {}
+        const out: Record<string, number> = {}
+        for (const [k, v] of Object.entries(counts)) {
+            if (typeof v === "number" && Number.isFinite(v)) out[k] = Math.max(0, Math.floor(v))
+        }
+        return out
+    })()
+
     return (
         <MapClient
             nickname={nickname}
@@ -167,6 +182,7 @@ export default function GamebookClient({ nickname, userId }: Props) {
             initialEnergySpent={payload.energySpentToday}
             initialInventory={initialInventory}
             initialHasBag={initialHasBag}
+            initialFruitCounts={initialFruitsTaken}
         />
     )
 }

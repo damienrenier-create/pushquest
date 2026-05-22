@@ -76,6 +76,8 @@ interface Props {
     // v3.8
     initialInventory: InventoryEntry[]
     initialHasBag: boolean
+    // v3.8.1 — { treeId → fruits déjà cueillis aujourd'hui par CE user }
+    initialFruitCounts: Record<string, number>
 }
 
 const GHOST_COLORS = ["#4080d8", "#d840a0", "#48a830", "#f08020", "#9050d0", "#d8c020", "#20a8c8"]
@@ -122,6 +124,7 @@ export default function MapClient({
     initialEnergySpent,
     initialInventory,
     initialHasBag,
+    initialFruitCounts,
 }: Props) {
     // ============================================================
     // STATE
@@ -143,6 +146,8 @@ export default function MapClient({
     const [showStartMenu, setShowStartMenu] = useState(false)
     const [showInventory, setShowInventory] = useState(false)
     const [showShop, setShowShop] = useState(false)
+    // === v3.8.1 : fruits cueillis aujourd'hui (par CE user). Drive le rendu vide/plein des arbres. ===
+    const [fruitCounts, setFruitCounts] = useState<Record<string, number>>(initialFruitCounts)
 
     const moveLockRef = useRef(false)
     const aLockRef = useRef(false)
@@ -985,6 +990,13 @@ export default function MapClient({
                         if (data.ok) {
                             if (typeof data.availableEnergy === "number") setReps(data.availableEnergy)
                             if (typeof data.energySpentToday === "number") setEnergySpent(data.energySpentToday)
+                            // v3.8.1 hybride — sync local des compteurs pour le rendu visuel
+                            if (data.fruitsTaken && typeof data.fruitsTaken === "object") {
+                                const counts = (data.fruitsTaken as { counts?: Record<string, number> }).counts
+                                if (counts && typeof counts === "object") {
+                                    setFruitCounts({ ...counts })
+                                }
+                            }
                             const remaining = typeof data.remaining === "number" ? data.remaining : 0
                             setToast(`Tu cueilles un fruit. +${data.reward} reps. (Reste ${remaining}/3 sur cet arbre)`)
                         } else {
@@ -1215,7 +1227,18 @@ export default function MapClient({
                         }}
                     >
                         {map.tiles.map((row, y) =>
-                            row.map((tile, x) => <TileCell key={`${x}-${y}`} tile={tile} x={x} y={y} />)
+                            row.map((tile, x) => {
+                                // v3.8.1 — arbre fruitier déjà cueilli 3 fois aujourd'hui par cet user
+                                // → on rend la variante "vide" (sans fruits). Compteur perso, visuel perso.
+                                let effectiveTile = tile
+                                if (tile === "appleTree") {
+                                    const tree = PEPITEVILLE_APPLE_TREES.find((t) => t.x === x && t.y === y)
+                                    if (tree && (fruitCounts[tree.id] ?? 0) >= 3) {
+                                        effectiveTile = "appleTreeEmpty"
+                                    }
+                                }
+                                return <TileCell key={`${x}-${y}`} tile={effectiveTile} x={x} y={y} />
+                            })
                         )}
                     </div>
 

@@ -84,6 +84,8 @@ export async function GET() {
     // v3.8 — inventaire et hasBag
     const inventory = (progress as { inventory?: unknown }).inventory ?? []
     const hasBag = (progress as { hasBag?: boolean }).hasBag === true
+    // v3.8.1 — fruits cueillis aujourd'hui (par user, reset à minuit côté take-fruit)
+    const fruitsTaken = (progress as { fruitsTaken?: unknown }).fruitsTaken ?? {}
 
     return NextResponse.json({
         state: {
@@ -112,6 +114,8 @@ export async function GET() {
         // v3.8
         inventory,
         hasBag,
+        // v3.8.1
+        fruitsTaken,
     })
 }
 
