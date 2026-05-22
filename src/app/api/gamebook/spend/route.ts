@@ -14,6 +14,7 @@ import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { getTodayISO } from "@/lib/challenge"
 import { isGamebookFrozen } from "@/lib/gamebook/antiCheat"
+import { parseInventory, wearItem, hasIntactItem } from "@/lib/gamebook/inventory"
 
 export const dynamic = "force-dynamic"
 
@@ -44,6 +45,8 @@ export async function POST(req: NextRequest) {
 
     const amount = typeof body.amount === "number" ? body.amount : null
     const reason = typeof body.reason === "string" ? body.reason : "unknown"
+    // v3.8.1 — si wearBoots=true et que l'user a les baskets intactes, on décrémente leur durabilité
+    const wearBoots = body.wearBoots === true
 
     if (amount === null || !Number.isFinite(amount) || amount < 0 || amount > MAX_SPEND_PER_CALL) {
         return NextResponse.json({ error: "Invalid amount" }, { status: 400 })
@@ -87,11 +90,25 @@ export async function POST(req: NextRequest) {
 
     // Débiter
     const newSpent = currentSpent + amount
-    await prisma.gamebookProgress.update({
+
+    // v3.8.1 — Usure des baskets (si demandé et possédées intactes)
+    const currentInventory = parseInventory((progress as { inventory?: unknown }).inventory)
+    let updatedInventory = currentInventory
+    let bootsBroken = false
+    if (wearBoots && hasIntactItem(currentInventory, "boots")) {
+        updatedInventory = wearItem(currentInventory, "boots", 1)
+        // Détecter si on vient juste de casser les baskets
+        const wasIntact = hasIntactItem(currentInventory, "boots")
+        const stillIntact = hasIntactItem(updatedInventory, "boots")
+        bootsBroken = wasIntact && !stillIntact
+    }
+
+    await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
         data: {
             energySpentToday: newSpent,
             energySpentDate: today,
+            inventory: updatedInventory,
             lastSeen: new Date(),
         },
     })
@@ -102,5 +119,7 @@ export async function POST(req: NextRequest) {
         energySpentToday: newSpent,
         amount,
         reason,
+        inventory: updatedInventory,
+        bootsBroken,
     })
 }

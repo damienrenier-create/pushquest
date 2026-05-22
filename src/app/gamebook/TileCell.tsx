@@ -464,5 +464,43 @@ export default function TileCell({ tile, x, y }: { tile: TileType; x: number; y:
         )
     }
 
+    // === v3.8.1 : ARBRE FRUITIER (cueillette avec A) ===
+    if (tile === "appleTree") {
+        return (
+            <div style={{ position: "relative", background: C.grass, overflow: "visible" }}>
+                {/* Feuillage (similaire à tree mais plus arrondi et plus clair) */}
+                <div style={{
+                    position: "absolute", inset: "8% 5% 25% 5%",
+                    background: `radial-gradient(circle at 50% 40%, ${C.treeLight} 0%, ${C.tree} 60%, ${C.treeDark} 100%)`,
+                    borderRadius: "50% 50% 45% 45%",
+                    boxShadow: `inset -2px -3px 0 ${C.treeDark}, inset 2px 2px 0 ${C.treeLight}`,
+                }}>
+                    {/* Fruits rouges (3 pommes visibles) */}
+                    <div style={{
+                        position: "absolute", top: "30%", left: "20%", width: "16%", height: "16%",
+                        background: "#d83030", borderRadius: "50%",
+                        boxShadow: "inset -1px -1px 0 #802020, inset 1px 1px 0 #f06868",
+                    }} />
+                    <div style={{
+                        position: "absolute", top: "20%", left: "55%", width: "16%", height: "16%",
+                        background: "#d83030", borderRadius: "50%",
+                        boxShadow: "inset -1px -1px 0 #802020, inset 1px 1px 0 #f06868",
+                    }} />
+                    <div style={{
+                        position: "absolute", top: "55%", left: "40%", width: "16%", height: "16%",
+                        background: "#d83030", borderRadius: "50%",
+                        boxShadow: "inset -1px -1px 0 #802020, inset 1px 1px 0 #f06868",
+                    }} />
+                </div>
+                {/* Tronc */}
+                <div style={{
+                    position: "absolute", left: "42%", right: "42%", top: "65%", bottom: "5%",
+                    background: "linear-gradient(180deg, #7a4220 0%, #5a2e10 100%)",
+                    border: "1px solid #1f0a04",
+                }} />
+            </div>
+        )
+    }
+
     return <div style={{ background: C.grass }} />
 }

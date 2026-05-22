@@ -433,6 +433,9 @@ model GamebookProgress {
   hasBag                    Boolean @default(false)
   // true une fois que DURUM (gym_pepite) a donné ses 50 reps. Pendant idempotence-flag similaire à gymGuyEnergyGiven.
   durumEnergyGiven          Boolean @default(false)
+  // v3.8.1 — fruits cueillis sur les arbres de Pépiteville (3/jour/arbre).
+  // Format : { date: "YYYY-MM-DD", counts: { "apple_tree_1": 2, "apple_tree_2": 1 } }
+  fruitsTaken               Json    @default("{}")
 
   @@unique([userId, chapterId])
   @@index([userId])

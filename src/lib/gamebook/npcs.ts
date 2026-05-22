@@ -185,6 +185,30 @@ export const NPCS: NpcDefinition[] = [
     },
 
     // -------------------------------
+    // v3.8.1 — FUSILLI : wanderer qui parle de la Tour des Pâtes Aiguës
+    // (indice narratif — c'est là que l'animal de JOJO se cache)
+    // -------------------------------
+    {
+        id: "fusilli",
+        name: "FUSILLI",
+        mapId: "pepiteville",
+        kind: "wanderer",
+        interaction: "interactive",
+        sprite: { color: "#e8a050" },
+        initialX: 9,
+        initialY: 4,
+        wanderRadius: 3,
+        dialoguesAfter: [
+            "Eh ! Toi là !",
+            "Tu sais quoi ? J'ai vu un drôle d'oiseau au sommet de la TOUR DES PÂTES AIGUËS.",
+            "Bon, en vrai, je suis pas sûr que ce soit un oiseau.",
+            "Plutôt un truc... duveteux. Bizarre. Avec un regard qui dit 'sauve-moi'.",
+            "Si tu trouves la Tour un jour, monte. Tu m'en diras des nouvelles.",
+            "(Il repart en chantonnant, l'air rêveur.)",
+        ],
+    },
+
+    // -------------------------------
     // NUTRIPATES — vendeur du shop, statique derrière le comptoir
     // -------------------------------
     {

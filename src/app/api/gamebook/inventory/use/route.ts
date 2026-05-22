@@ -16,7 +16,7 @@ import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { getTodayISO } from "@/lib/challenge"
 import { isGamebookFrozen } from "@/lib/gamebook/antiCheat"
-import { getItem, readStored } from "@/lib/gamebook/items"
+import { getItem, readStored, readMaxCapacity } from "@/lib/gamebook/items"
 import { parseInventory, findItem, setItemData } from "@/lib/gamebook/inventory"
 
 export const dynamic = "force-dynamic"
@@ -85,7 +85,12 @@ export async function POST(req: NextRequest) {
     // === GOURDE ===
     if (itemKey === "flask") {
         const stored = readStored(entry.data)
-        const capacity = itemDef.capabilities.canStore?.maxCapacity ?? 0
+        // v3.8.1 — capacité actuelle (peut avoir décrû via l'usure)
+        const capacity = readMaxCapacity(entry.data, itemDef)
+
+        if (capacity <= 0) {
+            return NextResponse.json({ ok: false, reason: "Gourde cassée. Va t'en racheter une chez NUTRIPATES." })
+        }
 
         const today = getTodayISO()
         const storedDate = (progress as { energySpentDate?: string }).energySpentDate ?? ""
@@ -107,7 +112,7 @@ export async function POST(req: NextRequest) {
                 return NextResponse.json({ ok: false, reason: "Gourde déjà pleine ou rien à transvaser." })
             }
             const newSpent = currentSpent + amount
-            const newInventory = setItemData(inventory, itemKey, { stored: stored + amount })
+            const newInventory = setItemData(inventory, itemKey, { stored: stored + amount, maxCapacity: capacity })
             await (prisma as any).gamebookProgress.update({
                 where: { id: progress.id },
                 data: {
@@ -132,8 +137,11 @@ export async function POST(req: NextRequest) {
                 return NextResponse.json({ ok: false, reason: "Gourde vide." })
             }
             // On vide tout d'un trait. energySpentToday peut devenir négatif (= surplus).
+            // v3.8.1 — la gourde s'use de wearOnDrink (10 par défaut) à chaque boire
             const newSpent = currentSpent - stored
-            const newInventory = setItemData(inventory, itemKey, { stored: 0 })
+            const wear = itemDef.capabilities.canStore?.wearOnDrink ?? 0
+            const newMaxCapacity = Math.max(0, capacity - wear)
+            const newInventory = setItemData(inventory, itemKey, { stored: 0, maxCapacity: newMaxCapacity })
             await (prisma as any).gamebookProgress.update({
                 where: { id: progress.id },
                 data: {
@@ -150,6 +158,8 @@ export async function POST(req: NextRequest) {
                 energySpentToday: newSpent,
                 drank: stored,
                 stored: 0,
+                maxCapacity: newMaxCapacity,
+                broken: newMaxCapacity <= 0,
             })
         }
 

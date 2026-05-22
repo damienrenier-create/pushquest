@@ -27,6 +27,8 @@ export type TileType =
     | "shopShelf"     // étagères du shop (bloquant)
     | "shopCounter"   // comptoir du shop (bloquant, le vendeur est derrière)
     | "floorChecker"  // sol damier du shop (non-bloquant, décoratif)
+    // === v3.8.1 : Arbres fruitiers de Pépiteville ===
+    | "appleTree"     // arbre fruitier (bloquant, on appuie A devant pour cueillir)
 
 export interface Building {
     x: number
@@ -115,6 +117,8 @@ export const BLOCKING_TILES: TileType[] = [
     "bookshelf", "caveWall", "potion", "monsterDesk",
     // v3.8 — shop de Pépiteville
     "shopShelf", "shopCounter",
+    // v3.8.1 — arbres fruitiers (bloquants, on les approche pour cueillir avec A)
+    "appleTree",
 ]
 
 export function isBlockingTile(tile: TileType): boolean {
@@ -127,6 +131,8 @@ export function isBlockingTile(tile: TileType): boolean {
 export const COST_MOVE = 10       // 10 reps pour bouger d'une case
 export const COST_PUSH = 30       // 30 reps pour pousser un autre joueur
 export const COST_TREE_OBSTACLE = 150  // arbre tombé sur la route 1
+// v3.8.1 — réduction du coût de mouvement avec les baskets
+export const BOOTS_MOVE_COST_REDUCTION = 2
 
 // ============================================================
 // Formatage temps relatif "il y a X min"

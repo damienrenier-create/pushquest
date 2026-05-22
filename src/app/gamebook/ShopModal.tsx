@@ -7,7 +7,7 @@
 
 import { useState } from "react"
 import { ITEMS } from "@/lib/gamebook/items"
-import { hasItem, type InventoryEntry } from "@/lib/gamebook/inventory"
+import { hasIntactItem, type InventoryEntry } from "@/lib/gamebook/inventory"
 
 interface Props {
     inventory: InventoryEntry[]
@@ -81,12 +81,13 @@ export default function ShopModal({ inventory, availableEnergy, onBuy, onClose }
                 </div>
 
                 {ITEMS.map((item) => {
-                    const alreadyOwned = hasItem(inventory, item.key) && item.maxQuantity === 1
+                    // v3.8.1 — on autorise le rachat si l'item existant est cassé
+                    const alreadyIntact = hasIntactItem(inventory, item.key) && item.maxQuantity === 1
                     const canAfford = availableEnergy >= item.priceReps
-                    const disabled = alreadyOwned || !canAfford || busy
+                    const disabled = alreadyIntact || !canAfford || busy
 
                     let cta = "ACHETER"
-                    if (alreadyOwned) cta = "DÉJÀ POSSÉDÉ"
+                    if (alreadyIntact) cta = "DÉJÀ POSSÉDÉ"
                     else if (!canAfford) cta = "TROP CHER"
 
                     return (

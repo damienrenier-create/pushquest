@@ -5,7 +5,7 @@
 // L'inventory est une Array<InventoryEntry> sérialisée en JSONB côté DB.
 // Aucun call DB ici — les routes API sont responsables de la lecture/écriture.
 
-import { getItem, readStored } from "./items"
+import { getItem, readStored, readMaxCapacity, readDurability, isBrokenItem, getInitialItemData } from "./items"
 
 export interface InventoryEntry {
     itemKey: string
@@ -46,7 +46,10 @@ export function findItem(inv: InventoryEntry[], itemKey: string): InventoryEntry
 
 /**
  * Retourne un nouvel inventory avec l'item ajouté (en respectant maxQuantity).
- * Si l'item est déjà au max, retourne l'inventory tel quel.
+ * Si l'item est déjà au max ET pas cassé, retourne l'inventory tel quel.
+ *
+ * v3.8.1 — Si l'item existant est cassé (maxCapacity=0 / durability=0),
+ * il est REMPLACÉ par une nouvelle instance avec data initial frais.
  */
 export function addItem(
     inv: InventoryEntry[],
@@ -58,13 +61,22 @@ export function addItem(
 
     const existing = inv.find((e) => e.itemKey === itemKey)
     if (existing) {
+        // v3.8.1 — si l'item existant est cassé, on le remplace par une instance neuve
+        if (isBrokenItem(existing.data, def)) {
+            return inv.map((e) =>
+                e.itemKey === itemKey
+                    ? { ...e, quantity: 1, data: initialData ?? getInitialItemData(def) }
+                    : e
+            )
+        }
+        // Sinon, on respecte la maxQuantity et on n'ajoute rien si on est au plafond
         if (existing.quantity >= def.maxQuantity) return inv
         return inv.map((e) =>
             e.itemKey === itemKey ? { ...e, quantity: e.quantity + 1 } : e
         )
     }
 
-    return [...inv, { itemKey, quantity: 1, data: initialData }]
+    return [...inv, { itemKey, quantity: 1, data: initialData ?? getInitialItemData(def) }]
 }
 
 /**
@@ -89,4 +101,54 @@ export function getStoredAmount(inv: InventoryEntry[], itemKey: string): number 
     const entry = findItem(inv, itemKey)
     if (!entry) return 0
     return readStored(entry.data)
+}
+
+/**
+ * v3.8.1 — Lit la capacité max actuelle d'un item storable (peut décroître).
+ */
+export function getMaxCapacity(inv: InventoryEntry[], itemKey: string): number {
+    const entry = findItem(inv, itemKey)
+    if (!entry) return 0
+    const def = getItem(itemKey)
+    if (!def) return 0
+    return readMaxCapacity(entry.data, def)
+}
+
+/**
+ * v3.8.1 — Lit la durabilité actuelle d'un item wearable (baskets).
+ */
+export function getDurability(inv: InventoryEntry[], itemKey: string): number {
+    const entry = findItem(inv, itemKey)
+    if (!entry) return 0
+    const def = getItem(itemKey)
+    if (!def) return 0
+    return readDurability(entry.data, def)
+}
+
+/**
+ * v3.8.1 — true si l'item est possédé ET cassé.
+ * Distinct de hasItem qui retourne true même pour un item cassé.
+ */
+export function hasIntactItem(inv: InventoryEntry[], itemKey: string): boolean {
+    const entry = findItem(inv, itemKey)
+    if (!entry || entry.quantity <= 0) return false
+    const def = getItem(itemKey)
+    if (!def) return false
+    return !isBrokenItem(entry.data, def)
+}
+
+/**
+ * v3.8.1 — Décrémente la durabilité d'un wearable. Retourne le nouvel inventory.
+ * Si durability arrive à 0, le data reste là (item cassé, pas supprimé — pour qu'on
+ * puisse afficher "Cassée" et autoriser le rachat).
+ */
+export function wearItem(inv: InventoryEntry[], itemKey: string, amount: number = 1): InventoryEntry[] {
+    const def = getItem(itemKey)
+    if (!def?.capabilities.canWear) return inv
+    return inv.map((e) => {
+        if (e.itemKey !== itemKey) return e
+        const current = readDurability(e.data, def)
+        const next = Math.max(0, current - amount)
+        return { ...e, data: { ...(e.data ?? {}), durability: next } }
+    })
 }

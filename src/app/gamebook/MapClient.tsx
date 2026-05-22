@@ -26,6 +26,7 @@ import {
     PEPITEVILLE_SIGNS,
     PEPITEVILLE_SPAWN_FROM_SOUTH,
     ROUTE1_NORTH_GATE,
+    PEPITEVILLE_APPLE_TREES,
 } from "@/lib/gamebook/maps"
 import {
     type Direction,
@@ -40,6 +41,7 @@ import {
     bridgePnjSeeingPlayer,
     COST_PUSH,
     COST_TREE_OBSTACLE,
+    BOOTS_MOVE_COST_REDUCTION,
 } from "@/lib/gamebook/mapEngine"
 import {
     MONSTER_INTRO_DIALOGUE,
@@ -61,7 +63,7 @@ import { getPusherClient, PUSHER_CLIENT_ENABLED } from "@/lib/pusher-client"
 import StartMenu from "./StartMenu"
 import InventoryModal from "./InventoryModal"
 import ShopModal from "./ShopModal"
-import { parseInventory, type InventoryEntry } from "@/lib/gamebook/inventory"
+import { parseInventory, hasIntactItem, type InventoryEntry } from "@/lib/gamebook/inventory"
 import { PEPITO_DIALOGUE_FIRST } from "@/lib/gamebook/dialogue"
 
 interface Props {
@@ -389,14 +391,15 @@ export default function MapClient({
 
     // ============================================================
     // v3.4a : SPEND ENERGY (appel API serveur, source de vérité)
+    // v3.8.1 : accepte un flag wearBoots pour décrémenter la durabilité des baskets côté serveur
     // ============================================================
-    const spendEnergy = useCallback(async (amount: number, reason: string): Promise<boolean> => {
+    const spendEnergy = useCallback(async (amount: number, reason: string, wearBoots = false): Promise<boolean> => {
         if (amount <= 0) return true
         try {
             const res = await fetch("/api/gamebook/spend", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ amount, reason }),
+                body: JSON.stringify({ amount, reason, wearBoots }),
             })
             const data = await res.json()
             if (!data.ok) {
@@ -413,6 +416,13 @@ export default function MapClient({
             }
             if (typeof data.energySpentToday === "number") {
                 setEnergySpent(data.energySpentToday)
+            }
+            // v3.8.1 : resync inventory (usure baskets)
+            if (Array.isArray(data.inventory)) {
+                setInventory(data.inventory)
+            }
+            if (data.bootsBroken === true) {
+                setToast("Tes baskets viennent de céder. Faut en racheter une paire.")
             }
             return true
         } catch (e) {
@@ -552,10 +562,15 @@ export default function MapClient({
             // Apply
             setState(result.nextState)
             if (result.repsCost > 0) {
+                // v3.8.1 — Si l'user a des baskets intactes, réduction de COST_MOVE
+                const hasBoots = hasIntactItem(inventory, "boots")
+                const adjustedCost = hasBoots
+                    ? Math.max(0, result.repsCost - BOOTS_MOVE_COST_REDUCTION)
+                    : result.repsCost
                 // Débit local immédiat pour la fluidité
-                setReps((r) => Math.max(0, r - result.repsCost))
+                setReps((r) => Math.max(0, r - adjustedCost))
                 // Persistance serveur en arrière-plan (fire and forget, resync si échec)
-                spendEnergy(result.repsCost, "move").catch(() => {/* silent */ })
+                spendEnergy(adjustedCost, "move", hasBoots).catch(() => {/* silent */ })
             }
 
             // v3.4b : broadcast Pusher (fire and forget)
@@ -954,6 +969,36 @@ export default function MapClient({
 
         // Interaction avec une tuile
         const tile = map.tiles[front.y][front.x]
+
+        // v3.8.1 — Arbre fruitier devant ?
+        if (tile === "appleTree") {
+            const tree = PEPITEVILLE_APPLE_TREES.find((t) => t.x === front.x && t.y === front.y)
+            if (tree) {
+                ; (async () => {
+                    try {
+                        const res = await fetch("/api/gamebook/take-fruit", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ treeId: tree.id }),
+                        })
+                        const data = await res.json()
+                        if (data.ok) {
+                            if (typeof data.availableEnergy === "number") setReps(data.availableEnergy)
+                            if (typeof data.energySpentToday === "number") setEnergySpent(data.energySpentToday)
+                            const remaining = typeof data.remaining === "number" ? data.remaining : 0
+                            setToast(`Tu cueilles un fruit. +${data.reward} reps. (Reste ${remaining}/3 sur cet arbre)`)
+                        } else {
+                            setToast(data.reason || "L'arbre ne donne rien.")
+                        }
+                    } catch (e) {
+                        console.warn("[MapClient] take-fruit failed", e)
+                        setToast("Erreur réseau, réessaie.")
+                    }
+                })()
+                return
+            }
+        }
+
         if (tile === "machineSquat") return doExercise("Squats")
         if (tile === "machinePushup") return doExercise("Pompes")
         if (tile === "machinePullup") return doExercise("Tractions")

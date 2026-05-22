@@ -17,8 +17,8 @@ import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { getTodayISO } from "@/lib/challenge"
 import { isGamebookFrozen } from "@/lib/gamebook/antiCheat"
-import { getItem } from "@/lib/gamebook/items"
-import { parseInventory, addItem, hasItem } from "@/lib/gamebook/inventory"
+import { getItem, getInitialItemData } from "@/lib/gamebook/items"
+import { parseInventory, addItem, hasIntactItem } from "@/lib/gamebook/inventory"
 
 export const dynamic = "force-dynamic"
 
@@ -77,8 +77,10 @@ export async function POST(req: NextRequest) {
     }
 
     const currentInventory = parseInventory(progress.inventory)
-    if (hasItem(currentInventory, itemKey)) {
-        return NextResponse.json({ ok: false, reason: "Tu en as déjà un." })
+    // v3.8.1 — refuse l'achat uniquement si on possède un exemplaire INTACT (non-cassé).
+    // Un item cassé peut être remplacé par une nouvelle instance neuve.
+    if (hasIntactItem(currentInventory, itemKey)) {
+        return NextResponse.json({ ok: false, reason: "Tu en as déjà un en état de marche." })
     }
 
     // Calcul de l'énergie disponible
@@ -100,8 +102,8 @@ export async function POST(req: NextRequest) {
 
     // Transaction : débit + ajout à inventory
     const newSpent = currentSpent + itemDef.priceReps
-    // Initial data selon le type d'item
-    const initialData = itemDef.capabilities.canStore ? { stored: 0 } : undefined
+    // v3.8.1 — data initial dépend des capabilities (canStore = gourde, canWear = baskets...)
+    const initialData = getInitialItemData(itemDef)
     const newInventory = addItem(currentInventory, itemKey, initialData)
 
     await (prisma as any).gamebookProgress.update({

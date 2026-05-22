@@ -2,11 +2,11 @@
 
 // src/app/gamebook/InventoryModal.tsx
 //
-// v3.8 — Modal du sac. Liste les items possédés.
-// Pour la gourde : affiche le niveau de remplissage + actions Remplir/Boire.
+// v3.8 — Modal du sac.
+// v3.8.1 — Gère maxCapacity dynamique de la gourde + état "Cassé" + baskets (durabilité).
 
 import { useState } from "react"
-import { ITEMS, readStored, type ItemDefinition } from "@/lib/gamebook/items"
+import { ITEMS, readStored, readMaxCapacity, readDurability, isBrokenItem, type ItemDefinition } from "@/lib/gamebook/items"
 import type { InventoryEntry } from "@/lib/gamebook/inventory"
 
 interface Props {
@@ -106,8 +106,17 @@ function ItemRow({
     const [busy, setBusy] = useState(false)
 
     const isStorable = !!def.capabilities.canStore
+    const isWearable = !!def.capabilities.canWear
+    const broken = isBrokenItem(entry.data, def)
+
+    // v3.8.1 — capacité dynamique pour la gourde (peut décroître)
     const stored = isStorable ? readStored(entry.data) : 0
-    const capacity = def.capabilities.canStore?.maxCapacity ?? 0
+    const capacity = isStorable ? readMaxCapacity(entry.data, def) : 0
+
+    // v3.8.1 — durabilité pour les baskets
+    const durability = isWearable ? readDurability(entry.data, def) : 0
+    const initialDurability = def.capabilities.canWear?.initialDurability ?? 0
+    const durabilityPct = initialDurability > 0 ? (durability / initialDurability) * 100 : 0
 
     const doAction = async (action: "fill" | "drink") => {
         if (busy) return
@@ -124,10 +133,11 @@ function ItemRow({
         <div
             style={{
                 background: "#222",
-                border: "1px solid #555",
+                border: broken ? "1px solid #c83838" : "1px solid #555",
                 padding: 10,
                 marginBottom: 8,
                 borderRadius: 4,
+                opacity: broken ? 0.6 : 1,
             }}
         >
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
@@ -135,7 +145,8 @@ function ItemRow({
                 <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 12, fontWeight: "bold", letterSpacing: 2 }}>
                         {def.name.toUpperCase()}
-                        {isStorable && ` — ${stored}/${capacity}`}
+                        {isStorable && (broken ? " — 🪦 CASSÉE" : ` — ${stored}/${capacity}`)}
+                        {isWearable && (broken ? " — 🪦 CASSÉES" : "")}
                     </div>
                     <div style={{ fontSize: 9, opacity: 0.6, marginTop: 2, lineHeight: 1.4 }}>
                         {def.description}
@@ -143,7 +154,30 @@ function ItemRow({
                 </div>
             </div>
 
-            {isStorable && (
+            {/* v3.8.1 — barre de durabilité pour les baskets */}
+            {isWearable && !broken && (
+                <div style={{ marginTop: 6 }}>
+                    <div style={{ fontSize: 9, opacity: 0.7, marginBottom: 2 }}>
+                        Usure : {durability}/{initialDurability} pas restants
+                    </div>
+                    <div style={{ background: "#111", height: 6, borderRadius: 3, overflow: "hidden", border: "1px solid #444" }}>
+                        <div
+                            style={{
+                                width: `${durabilityPct}%`,
+                                height: "100%",
+                                background:
+                                    durabilityPct > 50 ? "#48a830"
+                                        : durabilityPct > 20 ? "#f0a050"
+                                            : "#c83838",
+                                transition: "width 0.3s",
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* Actions pour la gourde (uniquement si pas cassée) */}
+            {isStorable && !broken && (
                 <div style={{ display: "flex", gap: 4, alignItems: "center", marginTop: 8, flexWrap: "wrap" }}>
                     <input
                         type="number"
@@ -176,6 +210,13 @@ function ItemRow({
                     >
                         BOIRE TOUT
                     </button>
+                </div>
+            )}
+
+            {/* Hint pour items cassés */}
+            {broken && (
+                <div style={{ fontSize: 9, opacity: 0.7, marginTop: 6, fontStyle: "italic" }}>
+                    Va t'en racheter un(e) chez NUTRIPATES.
                 </div>
             )}
         </div>

@@ -294,11 +294,22 @@ function buildPepiteville(): TileType[][] {
     m[9][11] = "water"; m[9][12] = "water"
     m[10][11] = "water"; m[10][12] = "water"
 
+    // v3.8.1 — 2 arbres fruitiers (cueillette de fruits, +80 reps, 3 fois/jour/arbre)
+    m[11][5] = "appleTree"   // apple_tree_1 (gauche du chemin central)
+    m[11][10] = "appleTree"  // apple_tree_2 (droite du chemin central)
+
     // Sortie sud (doorMat → route1 nord post-pont)
     m[PEPITEVILLE_H - 2][8] = "doorMat"
 
     return m
 }
+
+// v3.8.1 — Coordonnées des arbres fruitiers (utilisées par MapClient pour identifier
+// quel arbre est devant le joueur quand il appuie sur A).
+export const PEPITEVILLE_APPLE_TREES: Array<{ id: string; x: number; y: number }> = [
+    { id: "apple_tree_1", x: 5, y: 11 },
+    { id: "apple_tree_2", x: 10, y: 11 },
+]
 
 export const PEPITEVILLE_BUILDINGS: Building[] = [
     // Gym Pépiteville : 4×3 en (1, 5)–(4, 7), porte en (2, 7)
@@ -315,6 +326,8 @@ export const PEPITEVILLE_SIGNS: Sign[] = [
     { x: 4, y: 15, text: "CASINO DE PÉPITEVILLE\nMêmes règles, autre adresse." },
     { x: 8, y: 1, text: "↑ ROUTE 2\nCette zone n'est pas encore explorée." },
     { x: 9, y: 9, text: "Bassin aux Lasagnes." },
+    // v3.8.1 — panneau près des arbres
+    { x: 4, y: 12, text: "ARBRES À PÂTES-FRUITS\nMax 3 fruits par arbre par jour." },
 ]
 
 // ============================================================
