@@ -28,6 +28,11 @@ export interface ItemCapabilities {
         /** Combien de reps économisés par case (10 - moveCostReduction). */
         moveCostReduction: number
     }
+    /** v3.8.3 — Item consultable qui ouvre une vue côté UI (ne se consomme pas, infinie). */
+    canView?: {
+        /** Identifiant du modal à ouvrir côté client. */
+        kind: "playerMap"
+    }
 }
 
 export interface ItemDefinition {
@@ -62,6 +67,17 @@ export const ITEMS: ItemDefinition[] = [
         maxQuantity: 1,
         capabilities: {
             canWear: { initialDurability: 250, moveCostReduction: 2 },
+        },
+    },
+    {
+        key: "map",
+        name: "Carte des Joueurs",
+        emoji: "🗺️",
+        description: "Affiche en temps quasi-réel la position de tous les joueurs. Offerte par PEPITO avec le sac.",
+        priceReps: 0,  // non achetable — donnée par PEPITO en bonus au sac
+        maxQuantity: 1,
+        capabilities: {
+            canView: { kind: "playerMap" },
         },
     },
 ]

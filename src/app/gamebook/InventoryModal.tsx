@@ -13,10 +13,11 @@ interface Props {
     inventory: InventoryEntry[]
     availableEnergy: number
     onUse: (itemKey: string, action: "fill" | "drink", amount?: number) => Promise<void>
+    onView?: (itemKey: string, kind: "playerMap") => void
     onClose: () => void
 }
 
-export default function InventoryModal({ inventory, availableEnergy, onUse, onClose }: Props) {
+export default function InventoryModal({ inventory, availableEnergy, onUse, onView, onClose }: Props) {
     const owned = inventory
         .map((e) => {
             const def = ITEMS.find((i) => i.key === e.itemKey)
@@ -84,6 +85,7 @@ export default function InventoryModal({ inventory, availableEnergy, onUse, onCl
                         def={def}
                         availableEnergy={availableEnergy}
                         onUse={onUse}
+                        onView={onView}
                     />
                 ))}
             </div>
@@ -96,17 +98,20 @@ function ItemRow({
     def,
     availableEnergy,
     onUse,
+    onView,
 }: {
     entry: InventoryEntry
     def: ItemDefinition
     availableEnergy: number
     onUse: (itemKey: string, action: "fill" | "drink", amount?: number) => Promise<void>
+    onView?: (itemKey: string, kind: "playerMap") => void
 }) {
     const [fillInput, setFillInput] = useState<string>("10")
     const [busy, setBusy] = useState(false)
 
     const isStorable = !!def.capabilities.canStore
     const isWearable = !!def.capabilities.canWear
+    const isViewable = !!def.capabilities.canView
     const broken = isBrokenItem(entry.data, def)
 
     // v3.8.1 — capacité dynamique pour la gourde (peut décroître)
@@ -217,6 +222,18 @@ function ItemRow({
             {broken && (
                 <div style={{ fontSize: 9, opacity: 0.7, marginTop: 6, fontStyle: "italic" }}>
                     Va t'en racheter un(e) chez NUTRIPATES.
+                </div>
+            )}
+
+            {/* v3.8.3 — Actions de consultation pour items canView (ex: carte des joueurs) */}
+            {isViewable && def.capabilities.canView && onView && (
+                <div style={{ marginTop: 8 }}>
+                    <button
+                        onClick={() => onView(def.key, def.capabilities.canView!.kind)}
+                        style={btnStyle(false, "#4080d8")}
+                    >
+                        CONSULTER
+                    </button>
                 </div>
             )}
         </div>

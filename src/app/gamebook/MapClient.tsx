@@ -68,6 +68,7 @@ import { getPusherClient, PUSHER_CLIENT_ENABLED } from "@/lib/pusher-client"
 import StartMenu from "./StartMenu"
 import InventoryModal from "./InventoryModal"
 import ShopModal from "./ShopModal"
+import PlayerMapModal from "./PlayerMapModal"
 import { parseInventory, hasIntactItem, type InventoryEntry } from "@/lib/gamebook/inventory"
 import { PEPITO_DIALOGUE_FIRST } from "@/lib/gamebook/dialogue"
 
@@ -154,6 +155,8 @@ export default function MapClient({
     const [showStartMenu, setShowStartMenu] = useState(false)
     const [showInventory, setShowInventory] = useState(false)
     const [showShop, setShowShop] = useState(false)
+    // v3.8.3 — Modal de consultation de la carte des joueurs (item map dans l'inventaire)
+    const [showPlayerMap, setShowPlayerMap] = useState(false)
     // === v3.8.1 : fruits cueillis aujourd'hui (par CE user). Drive le rendu vide/plein des arbres. ===
     const [fruitCounts, setFruitCounts] = useState<Record<string, number>>(initialFruitCounts)
     // === v3.8.2 : plus haut étage atteint dans la Tour. Drive le bypass-check des escaliers. ===
@@ -726,7 +729,7 @@ export default function MapClient({
         }, 300)
 
         // v3.8 — si une modal est ouverte, le A est géré par la modal elle-même
-        if (showStartMenu || showInventory || showShop) return
+        if (showStartMenu || showInventory || showShop || showPlayerMap) return
 
         // v3.8 — Cinématique PEPITO (offre le sac)
         if (cinematic?.kind === "pepitoBag") {
@@ -1091,7 +1094,7 @@ export default function MapClient({
         if (tile === "monsterDesk") return setPopup({ kind: "info", text: "Le bureau du Monstre.\n\nDes parchemins, un encrier renversé, une fiole de sauce." })
 
         setToast("Rien d'intéressant.")
-    }, [state, map, buildings, otherPlayersOnThisMap, popup, cinematic, npcsWithPos, triggerNpcDialogue, triggerBridgePnjChallenge, reps, broadcast, hasBag, showStartMenu, showInventory, showShop])
+    }, [state, map, buildings, otherPlayersOnThisMap, popup, cinematic, npcsWithPos, triggerNpcDialogue, triggerBridgePnjChallenge, reps, broadcast, hasBag, showStartMenu, showInventory, showShop, showPlayerMap])
 
     // ============================================================
     // EXERCICES (la salle de muscu : pour l'instant juste un texte)
@@ -1156,9 +1159,9 @@ export default function MapClient({
     // ============================================================
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
-            // v3.8 — si une modal v3.8 est ouverte, on ne gère pas les touches ici
-            // (StartMenu/InventoryModal/ShopModal écoutent leurs propres events)
-            if (showStartMenu || showInventory || showShop) return
+            // v3.8 — si une modal est ouverte, on ne gère pas les touches ici
+            // (StartMenu/InventoryModal/ShopModal/PlayerMapModal écoutent leurs propres events)
+            if (showStartMenu || showInventory || showShop || showPlayerMap) return
 
             if (state.phase === "introMonster") {
                 if (e.key === "Enter" || e.key === " " || e.key.toLowerCase() === "a") {
@@ -1185,7 +1188,7 @@ export default function MapClient({
         }
         window.addEventListener("keydown", handler)
         return () => window.removeEventListener("keydown", handler)
-    }, [state.phase, popup, tryMove, pressA, showStartMenu, showInventory, showShop])
+    }, [state.phase, popup, tryMove, pressA, showStartMenu, showInventory, showShop, showPlayerMap])
 
     // ============================================================
     // RESET
@@ -1556,6 +1559,12 @@ export default function MapClient({
                 <InventoryModal
                     inventory={inventory}
                     availableEnergy={reps}
+                    onView={(_itemKey, kind) => {
+                        if (kind === "playerMap") {
+                            setShowInventory(false)
+                            setShowPlayerMap(true)
+                        }
+                    }}
                     onUse={async (itemKey, action, amount) => {
                         try {
                             const res = await fetch("/api/gamebook/inventory/use", {
@@ -1579,6 +1588,11 @@ export default function MapClient({
                     onClose={() => setShowInventory(false)}
                 />
             )}
+            {/* v3.8.3 — Carte des joueurs */}
+            {showPlayerMap && (
+                <PlayerMapModal onClose={() => setShowPlayerMap(false)} />
+            )}
+
             {showShop && (
                 <ShopModal
                     inventory={inventory}
