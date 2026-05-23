@@ -161,6 +161,10 @@ export async function GET() {
             // v3.19b — Bestioles attack mechanic
             bestiolesFirstEncountered: (progress as { bestiolesFirstEncountered?: boolean }).bestiolesFirstEncountered === true,
             bestiolesSpeciesName: (progress as { bestiolesSpeciesName?: string | null }).bestiolesSpeciesName ?? null,
+            // v3.21 — Casino mini-jeu : compteur paris du jour + lastLuckTalkDate
+            casinoBetsDate: (progress as { casinoBetsDate?: string }).casinoBetsDate ?? "",
+            casinoBetsToday: (progress as { casinoBetsToday?: number }).casinoBetsToday ?? 0,
+            lastLuckTalkDate: (progress as { lastLuckTalkDate?: string }).lastLuckTalkDate ?? "",
         },
         todayReps,
         energySpentToday,

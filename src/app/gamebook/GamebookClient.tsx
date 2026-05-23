@@ -85,6 +85,12 @@ export default function GamebookClient({ nickname, userId }: Props) {
                         // v3.19b — bestioles
                         bestiolesFirstEncountered: (json.state as { bestiolesFirstEncountered?: boolean }).bestiolesFirstEncountered === true,
                         bestiolesSpeciesName: (json.state as { bestiolesSpeciesName?: string | null }).bestiolesSpeciesName ?? null,
+                        // v3.21 — casino
+                        casinoBetsDate: (json.state as { casinoBetsDate?: string }).casinoBetsDate ?? "",
+                        casinoBetsToday: typeof (json.state as { casinoBetsToday?: number }).casinoBetsToday === "number"
+                            ? (json.state as { casinoBetsToday: number }).casinoBetsToday
+                            : 0,
+                        lastLuckTalkDate: (json.state as { lastLuckTalkDate?: string }).lastLuckTalkDate ?? "",
                     }
                     setPayload({
                         ...json,

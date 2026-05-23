@@ -111,6 +111,10 @@ export interface PlayerMapState {
     // === v3.19b : Bestioles attack ===
     bestiolesFirstEncountered?: boolean
     bestiolesSpeciesName?: string | null
+    // === v3.21 : Casino mini-jeu ===
+    casinoBetsDate?: string
+    casinoBetsToday?: number
+    lastLuckTalkDate?: string
 }
 
 // Snapshot d'un autre joueur affiché sur la carte

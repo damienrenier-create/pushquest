@@ -470,6 +470,10 @@ model GamebookProgress {
   // v3.19b — Nom donné à l'espèce de bestiole par le joueur (premier contact).
   bestiolesSpeciesName      String?
 
+  // v3.21 — Mini-jeu casino roulette rouge/noir. Compteur de paris du jour (max 10/jour).
+  casinoBetsDate            String  @default("")
+  casinoBetsToday           Int     @default(0)
+
   @@unique([userId, chapterId])
   @@index([userId])
   @@index([mapId])

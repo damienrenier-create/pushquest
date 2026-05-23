@@ -89,6 +89,7 @@ import TamagotchiModal from "./TamagotchiModal"
 import type { TamagotchiView } from "@/lib/gamebook/tamagotchi"
 import BibliothequeModal from "./BibliothequeModal"
 import BestioleNamingModal from "./BestioleNamingModal"
+import CasinoModal from "./CasinoModal"
 import { getLevelDetails } from "@/lib/xp"
 
 interface Props {
@@ -200,6 +201,8 @@ export default function MapClient({
     const [showBibliotheque, setShowBibliotheque] = useState(false)
     // v3.19b — Modal nommage des bestioles à la première rencontre
     const [showBestioleNaming, setShowBestioleNaming] = useState(false)
+    // v3.21 — Modal mini-jeu casino roulette
+    const [showCasino, setShowCasino] = useState(false)
     // === v3.8.1 : fruits cueillis aujourd'hui (par CE user). Drive le rendu vide/plein des arbres. ===
     const [fruitCounts, setFruitCounts] = useState<Record<string, number>>(initialFruitCounts)
     // === v3.8.2 : plus haut étage atteint dans la Tour. Drive le bypass-check des escaliers. ===
@@ -1163,7 +1166,7 @@ export default function MapClient({
         }, 300)
 
         // v3.8 — si une modal est ouverte, le A est géré par la modal elle-même
-        if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming) return
+        if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino) return
 
         // v3.11 — Cinématique PIAFFINI (dialogue au sommet, puis vol)
         if (cinematic?.kind === "piaffini" && cinematic.stage === "dialog") {
@@ -1656,6 +1659,12 @@ export default function MapClient({
             return
         }
 
+        // v3.21 — Roulette des casinos : presser A sur la rouletteWheel ouvre le mini-jeu
+        if ((state.mapId === "casino" || state.mapId === "casino_pepite") && tile === "rouletteWheel") {
+            setShowCasino(true)
+            return
+        }
+
         // v3.18 — Dans la bibliothèque : interactions sur bookshelf / statue / lectern via BIBLIOTHEQUE_TOPICS
         if (state.mapId === "bibliotheque" && (tile === "bookshelf" || tile === "statue" || tile === "lectern" || tile === "shopShelf")) {
             const topic = BIBLIOTHEQUE_TOPICS.find((t) => t.x === front.x && t.y === front.y)
@@ -1883,7 +1892,7 @@ export default function MapClient({
         const handler = (e: KeyboardEvent) => {
             // v3.8 — si une modal est ouverte, on ne gère pas les touches ici
             // (StartMenu/InventoryModal/ShopModal/PlayerMapModal écoutent leurs propres events)
-            if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming) return
+            if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino) return
 
             if (state.phase === "introMonster") {
                 if (e.key === "Enter" || e.key === " " || e.key.toLowerCase() === "a") {
@@ -2385,6 +2394,37 @@ export default function MapClient({
             {/* v3.18 — Modal de la bibliothèque (BIBLIO) */}
             {showBibliotheque && (
                 <BibliothequeModal onClose={() => setShowBibliotheque(false)} />
+            )}
+
+            {/* v3.21 — Mini-jeu casino roulette rouge/noir */}
+            {showCasino && (
+                <CasinoModal
+                    availableEnergy={reps}
+                    isLucky={(state as { lastLuckTalkDate?: string }).lastLuckTalkDate === new Date().toISOString().slice(0, 10)}
+                    betsToday={(state as { casinoBetsToday?: number }).casinoBetsToday ?? 0}
+                    maxBets={10}
+                    onBet={async (color) => {
+                        try {
+                            const res = await fetch("/api/gamebook/casino/bet", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ color }),
+                            })
+                            const data = await res.json()
+                            if (data.ok) {
+                                if (typeof data.availableEnergy === "number") setReps(data.availableEnergy)
+                                if (typeof data.energySpentToday === "number") setEnergySpent(data.energySpentToday)
+                                setState((s) => ({ ...s, casinoBetsToday: data.betsToday } as PlayerMapState))
+                                return data
+                            } else {
+                                return { error: data.reason || "Pari impossible." }
+                            }
+                        } catch {
+                            return { error: "Erreur réseau, réessaie." }
+                        }
+                    }}
+                    onClose={() => setShowCasino(false)}
+                />
             )}
 
             {/* v3.19b — Modal nommage des bestioles (première rencontre) */}
