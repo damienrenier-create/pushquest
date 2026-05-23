@@ -90,6 +90,26 @@ export default function InventoryModal({ inventory, availableEnergy, onUse, onVi
                         onView={onView}
                     />
                 ))}
+
+                {/* v3.21.1 — Gros bouton QUITTER en bas */}
+                <button
+                    onClick={onClose}
+                    style={{
+                        marginTop: 12,
+                        width: "100%",
+                        background: "#444",
+                        color: "#fff",
+                        border: "2px solid #fff",
+                        padding: "10px 12px",
+                        fontFamily: "'Courier New', monospace",
+                        fontSize: 12,
+                        fontWeight: "bold",
+                        letterSpacing: 3,
+                        cursor: "pointer",
+                    }}
+                >
+                    QUITTER
+                </button>
             </div>
         </div>
     )

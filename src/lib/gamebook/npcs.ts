@@ -575,7 +575,7 @@ export const NPCS: NpcDefinition[] = [
         interaction: "interactive",
         sprite: { color: "#a07060" },
         initialX: 4,
-        initialY: 14,
+        initialY: 9,
         dialoguesAfter: [
             "*Soupire bruyamment.* T'es nouveau ici ?",
             "Tout va mal. Le concours est annulé. Les bestioles bloquent le sud.",
@@ -596,7 +596,7 @@ export const NPCS: NpcDefinition[] = [
         interaction: "interactive",
         sprite: { color: "#8090b0" },
         initialX: 5,
-        initialY: 15,
+        initialY: 10,
         dialoguesAfter: [
             "Données du concours intersalle : 142 inscriptions perdues cette année.",
             "Record sur 8 ans. Les bestioles bloquent l'accès aux athlètes.",
@@ -617,7 +617,7 @@ export const NPCS: NpcDefinition[] = [
         interaction: "interactive",
         sprite: { color: "#b0a090" },
         initialX: 8,
-        initialY: 15,
+        initialY: 10,
         dialoguesAfter: [
             "*Regarde vaguement vers l'horizon.* Y'a une silhouette qui flotte au large...",
             "Personne ne sait qui c'est. Un naufragé, peut-être.",
@@ -638,7 +638,7 @@ export const NPCS: NpcDefinition[] = [
         interaction: "interactive",
         sprite: { color: "#80b0a0" },
         initialX: 8,
-        initialY: 14,
+        initialY: 9,
         dialoguesAfter: [
             "J'aurais GAGNÉ ce concours, j'te dis. Mes pectoraux étaient prêts à explosion.",
             "Et puis BAM, annulé. Pfff.",
@@ -658,8 +658,8 @@ export const NPCS: NpcDefinition[] = [
         kind: "static",
         interaction: "interactive",
         sprite: { color: "#c0a0a0" },
-        initialX: 7,
-        initialY: 16,
+        initialX: 10,
+        initialY: 12,
         dialoguesAfter: [
             "Oh ! Bonjour ! C'est sympa que tu sois là.",
             "Mon coach dit que le concours va revenir. Il sait toujours, mon coach.",
@@ -806,6 +806,7 @@ export const NPCS: NpcDefinition[] = [
 
     // -------------------------------
     // V3T — vétérinaire de Macaron'île
+    // v3.21.1 — Repositionnée derrière le nouveau comptoir central (y=5) → V3T à (6, 4)
     // -------------------------------
     {
         id: "veterinaire_keeper",
@@ -814,13 +815,12 @@ export const NPCS: NpcDefinition[] = [
         kind: "static",
         interaction: "interactive",
         sprite: { color: "#80c090" },
-        initialX: 5,
-        initialY: 2,
+        initialX: 6,
+        initialY: 4,
         dialoguesAfter: [
-            "Bienvenue chez la vétérinaire de Macaron'île.",
-            "Tu as un animal blessé ? Un compagnon à examiner ?",
-            "(Elle regarde derrière toi.)",
-            "Tu n'as personne avec toi. Repasse quand tu auras un copain à plumes ou à pâtes.",
+            "Bienvenue à la Clinique des Compagnons Totem.",
+            "Ici, je m'occupe des animaux qui choisissent leurs humains — pas l'inverse.",
+            "Approche du comptoir pour rencontrer le tien.",
         ],
     },
 

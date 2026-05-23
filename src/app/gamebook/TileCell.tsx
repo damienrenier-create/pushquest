@@ -425,6 +425,29 @@ export default function TileCell({ tile, x, y }: { tile: TileType; x: number; y:
             </div>
         )
     }
+    // v3.21.1 — Cage d'animal (Vétérinaire)
+    if (tile === "animalCage") {
+        return (
+            <div style={{ position: "relative", background: "#e8d8b8", overflow: "hidden", border: "1px solid #604020" }}>
+                {/* Cage métallique : barres verticales */}
+                <div style={{ position: "absolute", inset: "8%", background: "#404048", borderRadius: 2 }}>
+                    {/* Fond intérieur */}
+                    <div style={{ position: "absolute", inset: "10%", background: "#806848", borderRadius: 1 }} />
+                    {/* Barres */}
+                    <div style={{ position: "absolute", inset: "10%", display: "flex", justifyContent: "space-around" }}>
+                        <div style={{ width: "8%", background: "#606870", borderRadius: 1 }} />
+                        <div style={{ width: "8%", background: "#606870", borderRadius: 1 }} />
+                        <div style={{ width: "8%", background: "#606870", borderRadius: 1 }} />
+                        <div style={{ width: "8%", background: "#606870", borderRadius: 1 }} />
+                    </div>
+                    {/* Petit emoji animal centré */}
+                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "60%", lineHeight: 1, pointerEvents: "none" }}>
+                        🐾
+                    </div>
+                </div>
+            </div>
+        )
+    }
     // v3.18 — Pupitre de lecture (Bibliothèque)
     if (tile === "lectern") {
         return (

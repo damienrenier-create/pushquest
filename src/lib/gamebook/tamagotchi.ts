@@ -33,7 +33,8 @@ export interface Tamagotchi {
 }
 
 // Constantes
-export const TAMAGOTCHI_ADOPT_COST = 50
+// v3.21.1 — Adoption gratuite : c'est le véto qui décide à la libération si l'animal nous suit (post-7 défis).
+export const TAMAGOTCHI_ADOPT_COST = 0
 export const TAMAGOTCHI_FEED_COST = 20
 export const TAMAGOTCHI_FEED_HAPPINESS_BOOST = 30
 export const TAMAGOTCHI_HAPPINESS_MAX = 100

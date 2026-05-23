@@ -102,10 +102,12 @@ export default function CasinoModal({ availableEnergy, isLucky, betsToday, maxBe
                 </div>
 
                 <div style={{ fontSize: 10, opacity: 0.7, marginBottom: 14, lineHeight: 1.5 }}>
-                    Mise <strong>10 reps</strong>. Gagne <strong>+10 reps net</strong>. Chance de gagner :{" "}
-                    <strong style={{ color: isLucky ? "#48a868" : "#fff" }}>
-                        {isLucky ? "60 %" : "30 %"}{isLucky && " ✨ (LINGUINI t'a tapé sur l'épaule aujourd'hui)"}
-                    </strong>
+                    Mise <strong>10 reps</strong>. Gagne <strong>+10 reps net</strong>.
+                    {isLucky && (
+                        <span style={{ marginLeft: 6, color: "#48a868", fontStyle: "italic" }}>
+                            ✨ Tu te sens étrangement chanceux aujourd'hui.
+                        </span>
+                    )}
                 </div>
 
                 <div style={{ fontSize: 9, opacity: 0.6, marginBottom: 12 }}>

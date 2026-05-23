@@ -145,7 +145,7 @@ export const ITEMS: ItemDefinition[] = [
         key: "lunettes",
         name: "Lunettes",
         emoji: "🕶️",
-        description: "Stylées. Les marchands te font -10%. Les surprises (trésors, défis) te donnent +10% d'énergie. S'usent au bout de 500 pas.",
+        description: "Stylées. On dit qu'elles changent la manière dont les autres te perçoivent. Mais elles ne sont pas indestructibles.",
         priceReps: 50,
         maxQuantity: 1,
         availableAt: "trenette",

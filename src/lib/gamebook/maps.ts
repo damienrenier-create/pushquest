@@ -368,25 +368,25 @@ function buildCasinoPepite(): TileType[][] {
 // ============================================================
 // ============================================================
 // v3.12 — MACARON'ÎLE (île au sud de Bourg-Boulette, via le canal)
-// 14 × 18 cases :
-//   - y=0      : bordure tree
-//   - y=1..10  : canal waterShallow (au centre, col 6-7) entouré d'eau bloquante
-//   - y=11..12 : plage de sable (sand)
-//   - y=13..15 : ville Macaron'île 1ère rangée (shop TRENETTE + vétérinaire)
-//   - y=16     : chemin horizontal d'accès aux portes
-//   - y=17..19 : ville Macaron'île 2ème rangée (bibliothèque — v3.15)
-//   - y=20     : chemin horizontal sud + fleurs
-//   - y=21     : bordure tree
+// v3.21.1 — Canal raccourci (10 → 5 rows) pour réduire la monotonie
+// 14 × 17 cases :
+//   - y=0      : bordure tree (avec waterShallow en col 7 = trigger retour)
+//   - y=1..5   : canal waterShallow (au centre, col 6-7) entouré d'eau bloquante (5 cases)
+//   - y=6..7   : plage de sable (sand)
+//   - y=8..10  : ville Macaron'île 1ère rangée (shop TRENETTE + vétérinaire)
+//   - y=11     : chemin horizontal d'accès aux portes rangée 1
+//   - y=12..14 : ville Macaron'île 2ème rangée (bibliothèque)
+//   - y=15     : chemin horizontal sud + fleurs
+//   - y=16     : bordure tree (avec grassTall en cols 6,7 = trigger vers grass_sud)
 // ============================================================
 const MACARONILE_W = 14
-const MACARONILE_H = 22
+const MACARONILE_H = 17
 
 function buildMacaronIle(): TileType[][] {
     const m: TileType[][] = []
     for (let y = 0; y < MACARONILE_H; y++) {
         const row: TileType[] = []
         for (let x = 0; x < MACARONILE_W; x++) {
-            // Bordures tree (nord, sud, ouest, est)
             if (x === 0 || x === MACARONILE_W - 1 || y === 0 || y === MACARONILE_H - 1) {
                 row.push("tree")
             } else {
@@ -396,13 +396,11 @@ function buildMacaronIle(): TileType[][] {
         m.push(row)
     }
 
-    // v3.12 — Sortie nord du canal vers Bourg-Boulette : on autorise (7, 0) comme waterShallow
-    // (sinon la bordure tree empêche le retour).
+    // Sortie nord du canal vers la_mer : on autorise (7, 0) comme waterShallow
     m[0][7] = "waterShallow"
 
-    // Canal vertical waterShallow au centre (col 6-7) sur y=1..10 (10 cases de hauteur).
-    // Les colonnes 1-5 et 8-12 sur ces mêmes lignes sont de l'eau "profonde" bloquante.
-    for (let y = 1; y <= 10; y++) {
+    // Canal vertical waterShallow au centre (col 6-7) sur y=1..5 (5 cases). Eau profonde bloquante autour.
+    for (let y = 1; y <= 5; y++) {
         for (let x = 1; x <= MACARONILE_W - 2; x++) {
             if (x === 6 || x === 7) {
                 m[y][x] = "waterShallow"
@@ -412,32 +410,31 @@ function buildMacaronIle(): TileType[][] {
         }
     }
 
-    // Plage (sand) sur y=11, y=12 — zone d'arrivée du canal
+    // Plage (sand) sur y=6, y=7 — zone d'arrivée du canal
     for (let x = 1; x <= MACARONILE_W - 2; x++) {
-        m[11][x] = "sand"
-        m[12][x] = "sand"
+        m[6][x] = "sand"
+        m[7][x] = "sand"
     }
 
-    // v3.13 — Chemin central vertical (cols 6-7) du canal jusqu'au sud de la ville
-    for (let y = 11; y <= MACARONILE_H - 2; y++) {
+    // Chemin central vertical (cols 6-7) du canal jusqu'au sud de la ville
+    for (let y = 6; y <= MACARONILE_H - 2; y++) {
         m[y][6] = "path"
         m[y][7] = "path"
     }
 
-    // v3.13 — Chemin horizontal d'accès aux portes des bâtiments rangée 1 (y=16)
-    for (let x = 1; x <= MACARONILE_W - 2; x++) m[16][x] = "path"
+    // Chemin horizontal d'accès aux portes des bâtiments rangée 1 (y=11)
+    for (let x = 1; x <= MACARONILE_W - 2; x++) m[11][x] = "path"
 
-    // v3.15 — Chemin horizontal d'accès rangée 2 (y=20)
-    for (let x = 1; x <= MACARONILE_W - 2; x++) m[20][x] = "path"
+    // Chemin horizontal d'accès rangée 2 (y=15)
+    for (let x = 1; x <= MACARONILE_W - 2; x++) m[15][x] = "path"
 
     // Quelques fleurs déco
-    m[15][4] = "flowerR"
-    m[15][9] = "flowerY"
-    m[19][9] = "flowerY"
-    m[19][10] = "flowerR"
+    m[10][4] = "flowerR"
+    m[10][9] = "flowerY"
+    m[14][9] = "flowerY"
+    m[14][10] = "flowerR"
 
-    // v3.16 — Sortie sud vers les Hautes Herbes du Sud (chapitre Muscuville)
-    // GrassTall sur la rangée tree (y=21) au centre du chemin (cols 6,7)
+    // Sortie sud vers grass_sud (cols 6,7 sur la rangée tree y=16)
     m[MACARONILE_H - 1][6] = "grassTall"
     m[MACARONILE_H - 1][7] = "grassTall"
 
@@ -550,21 +547,22 @@ function buildMuscuville(): TileType[][] {
 }
 
 // v3.13/v3.15 — Bâtiments de Macaron'île ville (sud de l'île).
+// v3.21.1 — Coords rebasées sur MACARONILE_H=17 (canal raccourci à 5 rows).
 // 3 bâtiments visibles : Shop frère TRENETTE + Vétérinaire (rangée 1) + Bibliothèque (rangée 2).
 export const MACARONILE_BUILDINGS: Building[] = [
     // Shop du frère NUTRIPATES (TRENETTE) — gauche rangée 1
-    { x: 1, y: 13, w: 3, h: 3, kind: "shop", doorX: 1, doorY: 2, visible: true, targetMapId: "shop_macaron" },
+    { x: 1, y: 8, w: 3, h: 3, kind: "shop", doorX: 1, doorY: 2, visible: true, targetMapId: "shop_macaron" },
     // Vétérinaire — droite rangée 1
-    { x: 9, y: 13, w: 3, h: 3, kind: "veterinaire", doorX: 1, doorY: 2, visible: true, targetMapId: "veterinaire" },
-    // v3.15 — Bibliothèque — gauche rangée 2
-    { x: 1, y: 17, w: 3, h: 3, kind: "bibliotheque", doorX: 1, doorY: 2, visible: true, targetMapId: "bibliotheque" },
+    { x: 9, y: 8, w: 3, h: 3, kind: "veterinaire", doorX: 1, doorY: 2, visible: true, targetMapId: "veterinaire" },
+    // Bibliothèque — gauche rangée 2
+    { x: 1, y: 12, w: 3, h: 3, kind: "bibliotheque", doorX: 1, doorY: 2, visible: true, targetMapId: "bibliotheque" },
 ]
 
 export const MACARONILE_SIGNS: Sign[] = [
-    { x: 4, y: 15, text: "BOUTIQUE DE TRENETTE\nCorned Pâtes, Lunettes et autres trouvailles." },
-    { x: 8, y: 15, text: "VÉTÉRINAIRE\nPour tous tes amis à plumes, à poils, à pâtes." },
-    { x: 9, y: 11, text: "PLAGE DE SABLE PÂTE\nProfite avant la marée." },
-    { x: 4, y: 19, text: "BIBLIOTHÈQUE\nSavoirs anciens, livres poussiéreux, silence requis." },
+    { x: 4, y: 10, text: "BOUTIQUE DE TRENETTE\nCorned Pâtes, Lunettes et autres trouvailles." },
+    { x: 8, y: 10, text: "VÉTÉRINAIRE\nPour tous tes amis à plumes, à poils, à pâtes." },
+    { x: 9, y: 6, text: "PLAGE DE SABLE PÂTE\nProfite avant la marée." },
+    { x: 4, y: 14, text: "BIBLIOTHÈQUE\nSavoirs anciens, livres poussiéreux, silence requis." },
 ]
 
 // v3.13 — Builders pour les nouveaux intérieurs Macaron'île
@@ -709,9 +707,10 @@ export const BIBLIOTHEQUE_TOPICS: BiblioTopic[] = [
         text: "Le canal entre Bourg-Boulette et Macaron'île. Plein de courants imprévisibles. Un nageur s'y promène, il dit chercher le ONE PIECE. Un naufragé y attend depuis trop longtemps.",
     },
 ]
-// veterinaire : intérieur 11x8, sol bois, comptoir au fond, "vitres" (decoratifs via shopShelf)
+// v3.21.1 — Vétérinaire redesigné : map plus grande (13×10) avec cages d'animaux visibles
+// + comptoir central V3T + tapis + plantes (statues décor) pour donner l'ambiance "clinique animale".
 function buildVeterinaire(): TileType[][] {
-    const W = 11, H = 8
+    const W = 13, H = 10
     const m: TileType[][] = []
     for (let y = 0; y < H; y++) {
         const row: TileType[] = []
@@ -722,12 +721,31 @@ function buildVeterinaire(): TileType[][] {
         }
         m.push(row)
     }
-    // Vitrines d'animaux (réutilise shopShelf comme décoratif)
-    for (let x = 1; x < W - 1; x++) m[1][x] = "shopShelf"
-    // Comptoir du véto
-    for (let x = 2; x <= W - 3; x++) m[3][x] = "shopCounter"
+    // Rangée nord (y=1) : cages d'animaux (cols 2..10) — chaque cage est interactive
+    for (let x = 2; x <= W - 3; x++) m[1][x] = "animalCage"
+    // 2 plantes décoratives aux coins (réutilise statue rendu)
+    m[1][1] = "statue"
+    m[1][W - 2] = "statue"
+
+    // Rangée 3 : 2 cages supplémentaires + tapis au centre
+    m[3][2] = "animalCage"
+    m[3][W - 3] = "animalCage"
+    m[3][5] = "rug"
+    m[3][6] = "rug"
+    m[3][7] = "rug"
+
+    // Rangée 5 : comptoir V3T central
+    m[5][5] = "shopCounter"
+    m[5][6] = "shopCounter"
+    m[5][7] = "shopCounter"
+
+    // Rangée 7 : 2 cages basses + tapis
+    m[7][2] = "animalCage"
+    m[7][W - 3] = "animalCage"
+
     // Sortie sud
-    m[H - 1][5] = "doorMat"
+    m[H - 1][Math.floor(W / 2)] = "doorMat"
+
     return m
 }
 
@@ -1105,30 +1123,31 @@ export const MAPS: Record<string, MapData> = {
         // exitTarget non utilisé : on a une transition via canal en MapClient
     },
     // v3.13 — Bâtiments intérieurs de Macaron'île (shop frère TRENETTE + Vétérinaire)
+    // v3.21.1 — exitTargets rebasées sur MACARONILE_H=17 (canal court)
     shop_macaron: {
         id: "shop_macaron",
         name: "BOUTIQUE DE TRENETTE",
         tiles: buildShopMacaron(),
         width: 9,
         height: 8,
-        exitTarget: { mapId: "macaron_ile", x: 2, y: 16 },
+        exitTarget: { mapId: "macaron_ile", x: 2, y: 11 },
     },
     veterinaire: {
         id: "veterinaire",
         name: "VÉTÉRINAIRE",
         tiles: buildVeterinaire(),
-        width: 11,
-        height: 8,
-        exitTarget: { mapId: "macaron_ile", x: 10, y: 16 },
+        width: 13,
+        height: 10,
+        exitTarget: { mapId: "macaron_ile", x: 10, y: 11 },
     },
     // v3.15 — Bibliothèque (rangée 2 de Macaron'île)
     bibliotheque: {
         id: "bibliotheque",
         name: "BIBLIOTHÈQUE",
         tiles: buildBibliotheque(),
-        width: 11,
-        height: 8,
-        exitTarget: { mapId: "macaron_ile", x: 2, y: 20 },
+        width: 13,
+        height: 10,
+        exitTarget: { mapId: "macaron_ile", x: 2, y: 15 },
     },
     // v3.17c — La mer (canal navigable inséré entre Bourg-Boulette et Macaron'île)
     la_mer: {
@@ -1326,10 +1345,11 @@ export const GRASS_SUD_SPAWN_FROM_NORTH = {
     direction: "down" as const,
 }
 // Retour vers Macaron'île depuis le nord de grass_sud (y=0)
+// v3.21.1 — Rebasé sur MACARONILE_H=17 : spawn juste au-dessus du grassTall sud (y=16), sur le chemin (y=15)
 export const MACARONILE_SPAWN_FROM_GRASS_SUD = {
     mapId: "macaron_ile",
     posX: 6,
-    posY: 19,  // case juste au-dessus de la grassTall sud (y=21), sur le chemin (y=20)
+    posY: 14,
     direction: "up" as const,
 }
 // Quand le joueur marche sur la grassTall (4, 13) au sud de grass_sud → entrée dans Muscuville

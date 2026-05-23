@@ -200,6 +200,7 @@ export default function ShopModal({ inventory, availableEnergy, nickname, diffic
                     Énergie dispo : <strong style={{ color: "#ffe3a8" }}>{availableEnergy} reps</strong>
                 </div>
 
+                {/* v3.21.1 — Rappel énergie au-dessus de la liste */}
                 {shopItems.map((item) => {
                     // v3.8.1 — on autorise le rachat si l'item existant est cassé
                     const alreadyIntact = hasIntactItem(inventory, item.key) && item.maxQuantity === 1
@@ -246,8 +247,8 @@ export default function ShopModal({ inventory, availableEnergy, nickname, diffic
                                 </div>
                             </div>
                             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}>
-                                <div style={{ fontSize: 11, letterSpacing: 2 }}>
-                                    💪 <strong>{displayedPrice}</strong> reps
+                                <div style={{ fontSize: 13, letterSpacing: 2 }}>
+                                    💪 <strong style={{ color: "#ffe3a8", fontSize: 14 }}>{displayedPrice}</strong> <span style={{ fontSize: 10 }}>reps</span>
                                     {displayedPrice < item.priceReps && (
                                         <span style={{ marginLeft: 4, fontSize: 9, opacity: 0.5, textDecoration: "line-through" }}>
                                             {item.priceReps}
@@ -276,6 +277,26 @@ export default function ShopModal({ inventory, availableEnergy, nickname, diffic
                         </div>
                     )
                 })}
+
+                {/* v3.21.1 — Gros bouton QUITTER en bas */}
+                <button
+                    onClick={handleClose}
+                    style={{
+                        marginTop: 12,
+                        width: "100%",
+                        background: "#444",
+                        color: "#fff",
+                        border: "2px solid #fff",
+                        padding: "10px 12px",
+                        fontFamily: "'Courier New', monospace",
+                        fontSize: 12,
+                        fontWeight: "bold",
+                        letterSpacing: 3,
+                        cursor: "pointer",
+                    }}
+                >
+                    QUITTER
+                </button>
             </div>
         </div>
     )

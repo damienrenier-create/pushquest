@@ -1081,7 +1081,7 @@ export default function MapClient({
             // Macaron'île sud (grassTall col 6/7 ligne 21) → grass_sud
             if (
                 state.mapId === "macaron_ile" &&
-                result.nextState.posY === 21 &&
+                result.nextState.posY === map.height - 1 &&
                 (result.nextState.posX === 6 || result.nextState.posX === 7) &&
                 map.tiles[result.nextState.posY]?.[result.nextState.posX] === "grassTall"
             ) {
@@ -1650,6 +1650,15 @@ export default function MapClient({
         // v3.14 — Chez le vétérinaire V3T, parler via le comptoir = ouvrir le modal Tamagotchi.
         if (state.mapId === "veterinaire" && tile === "shopCounter") {
             setShowTamagotchi(true)
+            return
+        }
+
+        // v3.21.1 — Cage d'animal : popup descriptif
+        if (state.mapId === "veterinaire" && tile === "animalCage") {
+            setPopup({
+                kind: "info",
+                text: "Une cage métallique. À l'intérieur, un petit compagnon se repose.\n\nV3T t'observe : \"Chaque cage abrite un animal qui attend l'humain qui saura le mériter. Approche du comptoir si tu veux rencontrer le tien.\"",
+            })
             return
         }
 
@@ -2888,8 +2897,9 @@ function BuildingSprite({
                         backgroundImage: "linear-gradient(90deg, transparent 49%, #c8a868 49%, #c8a868 51%, transparent 51%), linear-gradient(0deg, transparent 49%, #c8a868 49%, #c8a868 51%, transparent 51%)",
                     }} />
                     <div style={{
-                        position: "absolute", top: "55%", left: 0, right: 0,
-                        textAlign: "center", fontSize: "7px", color: roofDarkColor, fontWeight: "bold", letterSpacing: "1px",
+                        position: "absolute", top: "52%", left: 0, right: 0,
+                        textAlign: "center", fontSize: "11px", color: roofDarkColor, fontWeight: 900, letterSpacing: "1.5px",
+                        textShadow: "0 1px 0 #f8e8b8, 0 -1px 0 #f8e8b8, 1px 0 0 #f8e8b8, -1px 0 0 #f8e8b8",
                     }}>
                         {label}
                     </div>
