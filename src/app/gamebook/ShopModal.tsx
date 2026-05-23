@@ -48,10 +48,11 @@ function article(itemName: string): string {
 }
 
 export default function ShopModal({ inventory, availableEnergy, nickname, difficultyRatio, onBuy, onClose }: Props) {
-    // v3.10 — Helper local : applique le ratio à un prix de base
+    // v3.10 — Helper local : applique le ratio à un prix de base (Math.round neutre).
+    // Doit rester aligné avec applyRatio() dans src/lib/gamebook/difficulty.ts.
     const adjustPrice = (base: number): number => {
         if (difficultyRatio >= 1) return base
-        return Math.max(1, Math.ceil(base * difficultyRatio))
+        return Math.max(1, Math.round(base * difficultyRatio))
     }
     const [busy, setBusy] = useState(false)
     const [purchaseMade, setPurchaseMade] = useState(false)

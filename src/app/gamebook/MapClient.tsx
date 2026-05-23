@@ -167,10 +167,11 @@ export default function MapClient({
     // === v3.10 : ratio de difficulté (multiplie tous les coûts du Gamebook, sauf rewards). ===
     const [difficultyRatio] = useState<number>(initialDifficultyRatio)
 
-    // v3.10 — Helper pour appliquer le ratio (arrondi à l'entier supérieur, min 1)
+    // v3.10 — Helper pour appliquer le ratio (Math.round neutre + min 1).
+    // Doit rester aligné avec applyRatio() dans src/lib/gamebook/difficulty.ts.
     const applyDifficultyRatio = (baseValue: number): number => {
         if (difficultyRatio >= 1) return baseValue
-        return Math.max(1, Math.ceil(baseValue * difficultyRatio))
+        return Math.max(1, Math.round(baseValue * difficultyRatio))
     }
 
     const moveLockRef = useRef(false)

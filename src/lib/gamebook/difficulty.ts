@@ -37,10 +37,14 @@ export async function getUserDifficultyRatio(userId: string): Promise<number> {
 }
 
 /**
- * Applique un ratio à un coût/seuil. Arrondi à l'entier supérieur,
- * minimum 1 (jamais 0 pour ne pas casser les checks "amount > 0").
+ * Applique un ratio à un coût/seuil. Arrondi mathématique (Math.round) pour rester
+ * statistiquement neutre, avec un minimum de 1 (jamais 0 pour ne pas casser les
+ * checks "amount > 0" ni offrir des actions gratuites).
+ *
+ * Note : avec Math.round, sur 1000 mouvements un onboarding gagne/perd ~0.5 reps
+ * par opération en moyenne, soit ~0 net. Math.ceil aurait pénalisé sur les coûts.
  */
 export function applyRatio(baseValue: number, ratio: number): number {
     if (ratio >= 1.0) return baseValue
-    return Math.max(1, Math.ceil(baseValue * ratio))
+    return Math.max(1, Math.round(baseValue * ratio))
 }
