@@ -18,6 +18,7 @@ import prisma from "@/lib/prisma"
 import { getTodayISO } from "@/lib/challenge"
 import { isGamebookFrozen } from "@/lib/gamebook/antiCheat"
 import { isCreatorAccount, padAvailableEnergyForCreator } from "@/lib/gamebook/creator"
+import { getUserDifficultyRatio, applyRatio } from "@/lib/gamebook/difficulty"
 
 export const dynamic = "force-dynamic"
 
@@ -114,8 +115,12 @@ export async function POST(req: NextRequest) {
     const currentSpent = storedDate === today ? storedSpent : 0
     const todayReps = await getTodayReps(userId)
 
-    // Crédit immédiat : energySpentToday -= 80 (peut devenir négatif → surplus, cohérent v3.8)
-    const newSpent = currentSpent - FRUIT_REWARD
+    // v3.10.1 — Reward ajusté au ratio de difficulté pour cohérence (onboarding reçoit moins
+    // en absolu, mais le même % par rapport à son quota quotidien).
+    const ratio = await getUserDifficultyRatio(userId)
+    const reward = applyRatio(FRUIT_REWARD, ratio)
+    // Crédit immédiat : energySpentToday -= reward (peut devenir négatif → surplus, cohérent v3.8)
+    const newSpent = currentSpent - reward
     const newState: FruitsTakenState = {
         date: today,
         counts: { ...state.counts, [treeId]: taken + 1 },
@@ -135,7 +140,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
         ok: true,
         treeId,
-        reward: FRUIT_REWARD,
+        reward,  // v3.10.1 — ajusté au ratio (le client affiche cette valeur, pas FRUIT_REWARD)
         remaining: MAX_FRUITS_PER_TREE_PER_DAY - (taken + 1),
         availableEnergy: padAvailableEnergyForCreator(todayReps - newSpent, isCreator),
         energySpentToday: newSpent,

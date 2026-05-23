@@ -11,6 +11,7 @@ import prisma from "@/lib/prisma"
 import { getTodayISO } from "@/lib/challenge"
 import { isGamebookFrozen } from "@/lib/gamebook/antiCheat"
 import { isCreatorAccount, padAvailableEnergyForCreator } from "@/lib/gamebook/creator"
+import { getUserDifficultyRatio, applyRatio } from "@/lib/gamebook/difficulty"
 
 export const dynamic = "force-dynamic"
 
@@ -58,8 +59,11 @@ export async function POST() {
     const currentSpent = storedDate === today ? storedSpent : 0
     const todayReps = await getTodayReps(userId)
 
-    // Crédite +50 : energySpentToday -= 50 (peut devenir négatif → cohérent v3.8)
-    const newSpent = currentSpent - REWARD
+    // v3.10.1 — Reward ajusté au ratio de difficulté
+    const ratio = await getUserDifficultyRatio(userId)
+    const reward = applyRatio(REWARD, ratio)
+    // Crédite `reward` : energySpentToday -= reward (peut devenir négatif → cohérent v3.8)
+    const newSpent = currentSpent - reward
     await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
         data: {
@@ -73,7 +77,7 @@ export async function POST() {
     const isCreator = await isCreatorAccount(userId)
     return NextResponse.json({
         ok: true,
-        reward: REWARD,
+        reward,
         availableEnergy: padAvailableEnergyForCreator(todayReps - newSpent, isCreator),
         energySpentToday: newSpent,
     })

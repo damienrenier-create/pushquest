@@ -12,6 +12,7 @@ import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { getTodayISO } from "@/lib/challenge"
 import { isCreatorAccount, padAvailableEnergyForCreator } from "@/lib/gamebook/creator"
+import { getUserDifficultyRatio, applyRatio } from "@/lib/gamebook/difficulty"
 
 export const dynamic = "force-dynamic"
 
@@ -57,10 +58,11 @@ export async function POST() {
     const storedDate = (progress as { energySpentDate?: string }).energySpentDate ?? ""
     const storedSpent = (progress as { energySpentToday?: number }).energySpentToday ?? 0
     const currentSpent = storedDate === today ? storedSpent : 0
-    // On retire 100 (l'énergie devient "moins consommée" d'autant)
-    // Math.max pour ne pas aller en négatif aujourd'hui — mais on autorise les energySpentToday négatifs
-    // pour que l'effet reste si l'utilisateur n'a encore rien dépensé
-    const newSpent = currentSpent - GYM_GUY_REWARD
+    // v3.10.1 — Reward ajusté au ratio de difficulté
+    const ratio = await getUserDifficultyRatio(userId)
+    const reward = applyRatio(GYM_GUY_REWARD, ratio)
+    // On retire `reward` (l'énergie devient "moins consommée" d'autant)
+    const newSpent = currentSpent - reward
 
     await prisma.gamebookProgress.update({
         where: { id: progress.id },
@@ -80,6 +82,6 @@ export async function POST() {
         ok: true,
         availableEnergy,
         energySpentToday: newSpent,
-        reward: GYM_GUY_REWARD,
+        reward,
     })
 }
