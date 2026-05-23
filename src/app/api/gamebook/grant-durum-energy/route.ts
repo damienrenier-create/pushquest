@@ -10,6 +10,7 @@ import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { getTodayISO } from "@/lib/challenge"
 import { isGamebookFrozen } from "@/lib/gamebook/antiCheat"
+import { isCreatorAccount, padAvailableEnergyForCreator } from "@/lib/gamebook/creator"
 
 export const dynamic = "force-dynamic"
 
@@ -69,10 +70,11 @@ export async function POST() {
         },
     })
 
+    const isCreator = await isCreatorAccount(userId)
     return NextResponse.json({
         ok: true,
         reward: REWARD,
-        availableEnergy: todayReps - newSpent,
+        availableEnergy: padAvailableEnergyForCreator(todayReps - newSpent, isCreator),
         energySpentToday: newSpent,
     })
 }

@@ -30,7 +30,7 @@ import {
     HAUTESPATES_BUILDINGS,
     HAUTESPATES_SIGNS,
     HAUTESPATES_SPAWN_FROM_SOUTH,
-    PEPITEVILLE_NORTH_GATE,
+    PEPITEVILLE_SPAWN_FROM_NORTH,
     TOWER_STAIRS_SQUATS_THRESHOLD,
 } from "@/lib/gamebook/maps"
 import {
@@ -721,12 +721,14 @@ export default function MapClient({
                 }
             }
 
-            // === v3.8.2 : Transition Pépiteville nord → Hautes-Pâtes ===
-            // Pas de gating, accès libre une fois qu'on est dans Pépiteville.
+            // === v3.8.7 : Transition Pépiteville nord ↔ Hautes-Pâtes via hautes herbes ===
+            // Le joueur marche sur une case grassTall :
+            //  - Depuis pepiteville → spawn dans Hautes-Pâtes (au-dessus de la bande sud)
+            //  - Depuis hautespates → spawn dans Pépiteville (sous la bande nord)
+            // Pas de gating (accès libre une fois Pépiteville atteinte).
             if (
                 state.mapId === "pepiteville" &&
-                result.nextState.posX === PEPITEVILLE_NORTH_GATE.x &&
-                result.nextState.posY === PEPITEVILLE_NORTH_GATE.y
+                map.tiles[result.nextState.posY]?.[result.nextState.posX] === "grassTall"
             ) {
                 setTimeout(() => {
                     setState((s) => ({
@@ -737,6 +739,21 @@ export default function MapClient({
                         direction: HAUTESPATES_SPAWN_FROM_SOUTH.direction,
                     }))
                     setToast("HAUTES-PÂTES")
+                }, 200)
+            }
+            if (
+                state.mapId === "hautespates" &&
+                map.tiles[result.nextState.posY]?.[result.nextState.posX] === "grassTall"
+            ) {
+                setTimeout(() => {
+                    setState((s) => ({
+                        ...s,
+                        mapId: PEPITEVILLE_SPAWN_FROM_NORTH.mapId,
+                        posX: PEPITEVILLE_SPAWN_FROM_NORTH.posX,
+                        posY: PEPITEVILLE_SPAWN_FROM_NORTH.posY,
+                        direction: PEPITEVILLE_SPAWN_FROM_NORTH.direction,
+                    }))
+                    setToast("PÉPITEVILLE")
                 }, 200)
             }
         },
@@ -1035,6 +1052,21 @@ export default function MapClient({
 
         // Interaction avec une tuile
         const tile = map.tiles[front.y][front.x]
+
+        // v3.8.8 — Dans le shop, parler à NUTRIPATES via son comptoir.
+        // (NUTRIPATES est en (4, 2), le comptoir en y=3 entre lui et le joueur.
+        // Donc le joueur s'approche du comptoir et appuie A devant.)
+        if (state.mapId === "shop_interior" && tile === "shopCounter") {
+            if (!hasBag) {
+                setPopup({
+                    kind: "info",
+                    text: "NUTRIPATES te toise depuis son comptoir.\n\n\"Pas de sac, pas de service. C'est la base du commerce. Va voir PEPITO dehors.\"",
+                })
+                return
+            }
+            setShowShop(true)
+            return
+        }
 
         // v3.8.2 — Escalier devant ? (Tour des Pâtes Aiguës)
         if (tile === "stairsUp" || tile === "stairsDown") {
@@ -1379,6 +1411,7 @@ export default function MapClient({
                                     mapH={map.height}
                                     animStep={animStep}
                                     dimmed={defeatedForever}
+                                    direction={pnj.facing}
                                 />
                             )
                         })}
@@ -1622,6 +1655,7 @@ export default function MapClient({
                 <ShopModal
                     inventory={inventory}
                     availableEnergy={reps}
+                    nickname={nickname}
                     onBuy={async (itemKey) => {
                         try {
                             const res = await fetch("/api/gamebook/shop/buy", {
@@ -1634,7 +1668,7 @@ export default function MapClient({
                                 if (Array.isArray(data.inventory)) setInventory(data.inventory)
                                 if (typeof data.availableEnergy === "number") setReps(data.availableEnergy)
                                 if (typeof data.energySpentToday === "number") setEnergySpent(data.energySpentToday)
-                                setToast("Achat réussi.")
+                                setToast("NUTRIPATES note dans son carnet. \"Bon choix. Ou pas, on verra.\"")
                             } else {
                                 setToast(data.reason || "Achat impossible.")
                             }
@@ -1643,7 +1677,19 @@ export default function MapClient({
                             setToast("Erreur réseau, réessaie.")
                         }
                     }}
-                    onClose={() => setShowShop(false)}
+                    onClose={(purchaseMade) => {
+                        setShowShop(false)
+                        if (!purchaseMade) {
+                            // v3.8.9 — sarcasme NUTRIPATES quand on ferme sans rien acheter
+                            const sarcasms = [
+                                "NUTRIPATES soupire. \"Tu reviendras quand tu sauras ce que tu veux.\"",
+                                "NUTRIPATES : \"Encore un curieux. Au moins t'as fait l'aller-retour, c'est de l'exercice.\"",
+                                "NUTRIPATES : \"Pas pressé ? Moi non plus, j'ai toute la décennie.\"",
+                                "NUTRIPATES marmonne. \"On vient, on regarde, on repart. La vraie pâte, c'est de poser ses sous.\"",
+                            ]
+                            setToast(sarcasms[Math.floor(Math.random() * sarcasms.length)])
+                        }
+                    }}
                 />
             )}
 
@@ -2053,12 +2099,14 @@ function BridgePnjSprite({
     mapH,
     animStep,
     dimmed,
+    direction,
 }: {
     pnj: { id: string; name: string; x: number; y: number; color: string }
     mapW: number
     mapH: number
     animStep: number
     dimmed: boolean
+    direction: "left" | "right"
 }) {
     return (
         <div
@@ -2092,7 +2140,7 @@ function BridgePnjSprite({
             >
                 {dimmed ? `${pnj.name} ✓` : `⚔ ${pnj.name}`}
             </div>
-            <PlayerSprite direction="down" animStep={animStep} color={pnj.color} />
+            <PlayerSprite direction={direction} animStep={animStep} color={pnj.color} />
         </div>
     )
 }
@@ -2114,6 +2162,11 @@ function NpcSprite({
     mapH: number
     animStep: number
 }) {
+    // v3.8.9 — Si le NPC définit un sprite.emoji, on l'affiche tel quel
+    // (au lieu d'un sprite humain coloré). Utile pour PIAFFINI (🐦) et autres
+    // créatures qui ne sont pas des humains.
+    const hasEmoji = typeof npc.sprite.emoji === "string" && npc.sprite.emoji.length > 0
+
     return (
         <div
             style={{
@@ -2148,7 +2201,21 @@ function NpcSprite({
             >
                 {npc.interaction === "interceptor" ? `⚔ ${npc.name}` : `${npc.name}`}
             </div>
-            <PlayerSprite direction={direction} animStep={animStep} color={npc.sprite.color} />
+            {hasEmoji ? (
+                <div
+                    style={{
+                        fontSize: "180%",
+                        lineHeight: 1,
+                        filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.5))",
+                        animation: "bobUp 1.4s infinite ease-in-out",
+                        userSelect: "none",
+                    }}
+                >
+                    {npc.sprite.emoji}
+                </div>
+            ) : (
+                <PlayerSprite direction={direction} animStep={animStep} color={npc.sprite.color} />
+            )}
         </div>
     )
 }

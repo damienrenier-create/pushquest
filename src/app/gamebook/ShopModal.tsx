@@ -4,26 +4,86 @@
 //
 // v3.8 — Modal d'achat ouvert quand on parle à NUTRIPATES avec le sac.
 // Liste les items achetables, leur prix, leur disponibilité.
+// v3.8.9 — Header dynamique NUTRIPATES + remerciement à l'achat + tracker des achats.
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { ITEMS } from "@/lib/gamebook/items"
 import { hasIntactItem, type InventoryEntry } from "@/lib/gamebook/inventory"
+import { formatTimeAgo } from "@/lib/gamebook/mapEngine"
+
+interface LastPurchase {
+    userId: string
+    nickname: string
+    itemKey: string
+    itemName: string
+    at: string
+}
 
 interface Props {
     inventory: InventoryEntry[]
     availableEnergy: number
+    nickname: string
     onBuy: (itemKey: string) => Promise<void>
-    onClose: () => void
+    /** v3.8.9 — notifie le parent à la fermeture du modal, en indiquant si un achat a été fait. */
+    onClose: (purchaseMade: boolean) => void
 }
 
-export default function ShopModal({ inventory, availableEnergy, onBuy, onClose }: Props) {
+// Phrases d'accueil de NUTRIPATES (4 variantes selon l'état des news)
+function greetingFor(lastPurchase: LastPurchase | null, currentNickname: string): string {
+    if (!lastPurchase) {
+        return "NUTRIPATES essuie son comptoir, l'air abattu. \"Personne ne vient plus acheter quoi que ce soit. La crise, sans doute. Ou alors c'est moi.\""
+    }
+    const ago = formatTimeAgo(lastPurchase.at)
+    if (lastPurchase.nickname === currentNickname) {
+        return `NUTRIPATES te reconnaît. "Ah, c'est encore toi. Ton dernier achat (${lastPurchase.itemName.toLowerCase()}, ${ago}) m'a fait plaisir. T'en veux un autre ?"`
+    }
+    return `NUTRIPATES sourit légèrement. "Le dernier client était ${lastPurchase.nickname}, ${ago}. Il a pris ${article(lastPurchase.itemName)}. Et toi, tu prends quoi ?"`
+}
+
+function article(itemName: string): string {
+    const first = itemName.charAt(0).toLowerCase()
+    return /[aeiouéèêh]/.test(first) ? `un·e ${itemName.toLowerCase()}` : `un·e ${itemName.toLowerCase()}`
+}
+
+export default function ShopModal({ inventory, availableEnergy, nickname, onBuy, onClose }: Props) {
     const [busy, setBusy] = useState(false)
+    const [purchaseMade, setPurchaseMade] = useState(false)
+    const [lastPurchase, setLastPurchase] = useState<LastPurchase | null>(null)
+    const [loadingInfo, setLoadingInfo] = useState(true)
+
+    // Charger les news du shop au montage
+    useEffect(() => {
+        let cancelled = false
+        ; (async () => {
+            try {
+                const res = await fetch("/api/gamebook/shop/info", { cache: "no-store" })
+                if (!res.ok) throw new Error(`HTTP ${res.status}`)
+                const json = await res.json()
+                if (!cancelled) setLastPurchase(json.lastPurchase ?? null)
+            } catch {
+                // silent : on tombera sur le dialogue "personne n'achète"
+            } finally {
+                if (!cancelled) setLoadingInfo(false)
+            }
+        })()
+        return () => { cancelled = true }
+    }, [])
+
+    const greeting = useMemo(
+        () => greetingFor(lastPurchase, nickname),
+        [lastPurchase, nickname]
+    )
+
+    const handleClose = () => {
+        onClose(purchaseMade)
+    }
 
     const doBuy = async (itemKey: string) => {
         if (busy) return
         setBusy(true)
         try {
             await onBuy(itemKey)
+            setPurchaseMade(true)
         } finally {
             setBusy(false)
         }
@@ -43,7 +103,7 @@ export default function ShopModal({ inventory, availableEnergy, onBuy, onClose }
                 justifyContent: "center",
                 padding: 16,
             }}
-            onClick={onClose}
+            onClick={handleClose}
         >
             <div
                 onClick={(e) => e.stopPropagation()}
@@ -57,10 +117,10 @@ export default function ShopModal({ inventory, availableEnergy, onBuy, onClose }
                     width: "100%",
                 }}
             >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                     <div style={{ fontSize: 12, letterSpacing: 4, fontWeight: "bold" }}>🛒 BOUTIQUE</div>
                     <button
-                        onClick={onClose}
+                        onClick={handleClose}
                         style={{
                             background: "transparent",
                             border: "1px solid #fff",
@@ -74,6 +134,24 @@ export default function ShopModal({ inventory, availableEnergy, onBuy, onClose }
                     >
                         FERMER
                     </button>
+                </div>
+
+                {/* v3.8.9 — Dialogue d'accueil de NUTRIPATES */}
+                <div
+                    style={{
+                        background: "#2a2a2a",
+                        border: "1px solid #555",
+                        borderLeft: "3px solid #8050d0",
+                        padding: "8px 10px",
+                        marginBottom: 12,
+                        fontSize: 10,
+                        lineHeight: 1.5,
+                        fontStyle: "italic",
+                        color: "#dcd0a0",
+                        minHeight: 38,
+                    }}
+                >
+                    {loadingInfo ? "..." : greeting}
                 </div>
 
                 <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 12, padding: "4px 8px" }}>

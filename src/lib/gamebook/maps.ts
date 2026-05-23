@@ -213,17 +213,18 @@ function buildRoute1(): TileType[][] {
 
     // === MILIEU : ARBRE OBSTACLE === (y=11, juste avant le pont)
     // v3.5b : mur DOUBLE garanti par boucle - impossible de contourner
-    // Ligne y=11 : entièrement bloquée (tree partout sauf l'obstacle au centre)
+    // v3.8.6 : tronc élargi à 3 cases (x=4, 5, 6) pour permettre à plusieurs
+    //          joueurs de passer côte à côte sans se bloquer mutuellement.
     for (let x = 0; x < ROUTE1_W; x++) {
-        if (x === 5) {
+        if (x === 4 || x === 5 || x === 6) {
             m[11][x] = "treeObstacle"
         } else {
             m[11][x] = "tree"
         }
     }
-    // Ligne y=12 : double mur (tree partout sauf au centre pour laisser le chemin sud accessible)
+    // Ligne y=12 : double mur, ouverture de 3 cases en face des 3 arbres
     for (let x = 0; x < ROUTE1_W; x++) {
-        if (x !== 5) {
+        if (x < 4 || x > 6) {
             m[12][x] = "tree"
         }
     }
@@ -301,10 +302,12 @@ function buildPepiteville(): TileType[][] {
     // Sortie sud (doorMat → route1 nord post-pont)
     m[PEPITEVILLE_H - 2][8] = "doorMat"
 
-    // v3.8.2 — Sortie nord vers Hautes-Pâtes (la case (8, 1) reste un path,
-    // la transition est gérée dans MapClient via PEPITEVILLE_NORTH_GATE).
-    // On enlève le sign "Cette zone n'est pas encore explorée" puisque c'est maintenant exploré.
-    // (Le sign sera retiré côté PEPITEVILLE_SIGNS plus bas.)
+    // v3.8.7 — Sortie nord vers Hautes-Pâtes : hautes herbes au lieu de path simple.
+    // Bande de 3 cases grassTall au nord du chemin central (x=7, 8, 9). Le joueur
+    // marche dessus → transition automatique vers Hautes-Pâtes (cf. MapClient).
+    m[1][7] = "grassTall"
+    m[1][8] = "grassTall"
+    m[1][9] = "grassTall"
 
     return m
 }
@@ -353,10 +356,11 @@ function buildCasinoPepite(): TileType[][] {
 
 // ============================================================
 // v3.8 — SHOP INTERIOR (boutique de Pépiteville, NUTRIPATES dedans)
-// 9 × 7
+// 9 × 8 (v3.8.7 — élargi pour matcher le pattern de spawn (4, 6) de tryComputeMove
+//        qui sinon atterrissait sur le mur sud)
 // ============================================================
 function buildShopInterior(): TileType[][] {
-    const W = 9, H = 7
+    const W = 9, H = 8
     const m: TileType[][] = []
     for (let y = 0; y < H; y++) {
         const row: TileType[] = []
@@ -373,8 +377,10 @@ function buildShopInterior(): TileType[][] {
     for (let x = 1; x < W - 1; x++) m[3][x] = "shopCounter"
     // Sol damier ailleurs : déjà floorChecker partout par défaut
 
-    // Sortie sud (doorMat) en (4, 5) → pepiteville devant la porte shop
-    m[5][4] = "doorMat"
+    // v3.8.7 — Sortie sud (doorMat) en (4, 7) → pepiteville devant la porte shop.
+    // (Avant : H=7 et doorMat en y=5, mais le spawn générique tryComputeMove pose
+    // le joueur en (4, 6) qui était le mur sud → bloqué. Avec H=8, (4, 6) = floor.)
+    m[H - 1][4] = "doorMat"
 
     return m
 }
@@ -407,8 +413,11 @@ function buildHautesPates(): TileType[][] {
     m[9][2] = "flowerR"; m[9][3] = "flowerY"
     m[9][7] = "flowerY"; m[9][8] = "flowerR"
 
-    // Sortie sud (doorMat → retour Pépiteville nord)
-    m[HAUTESPATES_H - 2][5] = "doorMat"
+    // v3.8.7 — Sortie sud vers Pépiteville : hautes herbes (transition automatique).
+    // Bande de 3 cases grassTall au sud (cohérent avec l'entrée nord de Pépiteville).
+    m[HAUTESPATES_H - 2][4] = "grassTall"
+    m[HAUTESPATES_H - 2][5] = "grassTall"
+    m[HAUTESPATES_H - 2][6] = "grassTall"
 
     return m
 }
@@ -484,12 +493,14 @@ function buildTowerFloor5(): TileType[][] {
     return buildTowerFloor(7, true, false, false)
 }
 
-// PNJ du pont — positions fixes sur le chemin du pont
-// Ils sont les "ghosts" système, pas des joueurs réels
-// PNJ du pont — positions en ZIGZAG (v3.5)
-// Le pont fait colonnes 3-7 x lignes 2-10
-// Chaque PNJ surveille toute sa ligne ET toute sa colonne (cf. mapEngine.ts)
-// Le joueur doit zigzaguer pour les éviter, ou les affronter pour passer.
+// PNJ du pont — postés sur les bords du pont (v3.8.6).
+//
+// Le pont fait colonnes 3-7 (5 cases) × lignes 2-10. Chaque PNJ est posté sur
+// l'une des deux colonnes-bord (x=3 ou x=7), juste à côté du cours d'eau, et
+// regarde HORIZONTALEMENT vers l'intérieur du pont. Il surveille toute sa ligne.
+//
+// Comme les PNJ sont aux extrémités, il est impossible de passer "derrière" :
+// la seule façon de franchir leur ligne est de les affronter (ou de reculer).
 //
 // IDs identiques à v3.4 pour préserver les bridgePnjDefeated existants en DB.
 export const BRIDGE_PNJS: Array<{
@@ -498,12 +509,14 @@ export const BRIDGE_PNJS: Array<{
     x: number
     y: number
     color: string
+    /** Direction horizontale du regard (visuel + cohérence narrative). */
+    facing: "left" | "right"
     challenge: BridgeChallenge
 }> = [
-    { id: "pnj_pompo",   name: "POMPO",   x: 3, y: 9, color: "#d84030", challenge: { kind: "exercise", exercise: "PUSHUP", reps: 100 } },
-    { id: "pnj_squatto", name: "SQUATTO", x: 7, y: 7, color: "#4080d8", challenge: { kind: "exercise", exercise: "SQUAT",  reps: 100 } },
-    { id: "pnj_gainax",  name: "GAINAX",  x: 3, y: 5, color: "#48a830", challenge: { kind: "exercise", exercise: "GAINAGE", reps: 100 } },
-    { id: "pnj_champio", name: "CHAMPIO", x: 5, y: 3, color: "#a040d8", challenge: { kind: "topYesterday" } },
+    { id: "pnj_pompo",   name: "POMPO",   x: 3, y: 9, color: "#d84030", facing: "right", challenge: { kind: "exercise", exercise: "PUSHUP", reps: 100 } },
+    { id: "pnj_squatto", name: "SQUATTO", x: 7, y: 7, color: "#4080d8", facing: "left",  challenge: { kind: "exercise", exercise: "SQUAT",  reps: 100 } },
+    { id: "pnj_gainax",  name: "GAINAX",  x: 3, y: 5, color: "#48a830", facing: "right", challenge: { kind: "exercise", exercise: "GAINAGE", reps: 100 } },
+    { id: "pnj_champio", name: "CHAMPIO", x: 7, y: 3, color: "#a040d8", facing: "left",  challenge: { kind: "topYesterday" } },
 ]
 
 export type BridgeChallenge =
@@ -587,7 +600,7 @@ export const MAPS: Record<string, MapData> = {
         name: "BOUTIQUE",
         tiles: buildShopInterior(),
         width: 9,
-        height: 7,
+        height: 8,
         exitTarget: { mapId: "pepiteville", x: 11, y: 8 },  // devant la porte du shop
     },
     // === v3.8.2 — Hautes-Pâtes et sa Tour ===
@@ -671,16 +684,27 @@ export const PEPITEVILLE_SPAWN_FROM_SOUTH = {
 // Sert dans MapClient pour intercepter le mouvement et faire le gating CHAMPIO.
 export const ROUTE1_NORTH_GATE = { x: 5, y: 1 }
 
-// v3.8.2 — Coordonnées de la case nord de Pépiteville qui mène vers Hautes-Pâtes.
-// Le joueur marche sur cette case → téléport vers Hautes-Pâtes spawn sud.
+// v3.8.7 — La transition Pépiteville ↔ Hautes-Pâtes passe par des hautes herbes (grassTall),
+// pas par une gate fixée à une case précise. PEPITEVILLE_NORTH_GATE est conservé en
+// référence historique mais MapClient utilise désormais la détection grassTall.
 export const PEPITEVILLE_NORTH_GATE = { x: 8, y: 1 }
 
 // Spawn quand on arrive à Hautes-Pâtes depuis Pépiteville (sortie sud de Hautes-Pâtes)
+// Le joueur arrive UN cran AU-DESSUS de la bande grassTall sud pour ne pas re-trigger
+// la transition vers Pépiteville immédiatement (sinon boucle infinie).
 export const HAUTESPATES_SPAWN_FROM_SOUTH = {
     mapId: "hautespates",
     posX: 5,
     posY: HAUTESPATES_H - 3,
     direction: "up" as const,
+}
+
+// Spawn quand on revient à Pépiteville depuis Hautes-Pâtes (au sud de la bande grassTall nord).
+export const PEPITEVILLE_SPAWN_FROM_NORTH = {
+    mapId: "pepiteville",
+    posX: 8,
+    posY: 2,  // case juste sous la bande grassTall en y=1
+    direction: "down" as const,
 }
 
 // v3.8.2 — Seuils de squats du jour requis pour franchir chaque escalier de la Tour.

@@ -10,23 +10,12 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { getTodayISO } from "@/lib/challenge"
-import { XP_ANIMALS } from "@/lib/xp"
+import { calculateAllUsersXP } from "@/lib/xp"
 import { formatTimeAgo, type PlayerSnapshot } from "@/lib/gamebook/mapEngine"
 
 export const dynamic = "force-dynamic"
 
 const CHAPTER_ID = "map_v3"
-
-// ============================================================
-// Niveau approximatif basé sur les reps totales
-// (suffisant pour afficher un emoji, pas pour de l'XP fine)
-// ============================================================
-function getAnimalForReps(totalReps: number): { animal: string; emoji: string; level: number } {
-    // Approximation simple : 1 niveau = 100 reps cumulées historiques
-    const level = Math.min(XP_ANIMALS.length, Math.max(1, Math.floor(totalReps / 100) + 1))
-    const a = XP_ANIMALS[level - 1] ?? XP_ANIMALS[0]
-    return { animal: a.name, emoji: a.emoji, level }
-}
 
 export async function GET() {
     const session = await getServerSession(authOptions)
@@ -50,54 +39,62 @@ export async function GET() {
                 select: {
                     id: true,
                     nickname: true,
-                    sets: true,
                 },
             },
         },
     })
 
-    // 2. Calculer le classement des reps du jour pour TOUS les users actifs
-    const today = getTodayISO()
-    const allActiveUsers = await prisma.user.findMany({
+    // 2. Charger tous les users actifs avec leurs sets + adjustments pour calculer l'XP réelle
+    // (utilisé pour animal/emoji/level — autrefois c'était une approximation /100 reps qui
+    // donnait des niveaux 100 à tous les vétérans, d'où le bug d'affichage Léviathan partout.)
+    const allActiveUsers = await (prisma.user as any).findMany({
         where: {
             isSystem: false,
             nickname: { not: "modo" },
         },
-        select: {
-            id: true,
-            sets: {
-                where: { date: today },
-            },
+        include: {
+            sets: true,
+            xpAdjustments: true,
+            badges: true,
         },
     })
 
-    const repsToday: Record<string, number> = {}
-    for (const u of allActiveUsers as Array<{ id: string; sets: Array<{ reps: number }> }>) {
-        const sum = u.sets.reduce((s: number, x: { reps: number }) => s + x.reps, 0)
-        repsToday[u.id] = sum
+    // 3. Calcul XP réel via le moteur partagé avec /api/dashboard et /api/users/list
+    const badgeOwnerships = await (prisma as any).badgeOwnership.findMany()
+    const allEvents = await (prisma as any).badgeEvent.findMany()
+    const xpData = await calculateAllUsersXP(allActiveUsers, badgeOwnerships, undefined, allEvents)
+
+    // Map userId → { animal, emoji, level } pour lookup rapide
+    const xpByUser: Record<string, { animal: string; emoji: string; level: number }> = {}
+    for (const x of xpData as Array<{ id: string; animal: string; emoji: string; level: number }>) {
+        xpByUser[x.id] = { animal: x.animal, emoji: x.emoji, level: x.level }
     }
 
-    // Classement décroissant
+    // 4. Classement reps du jour
+    const today = getTodayISO()
+    const repsToday: Record<string, number> = {}
+    for (const u of allActiveUsers as Array<{ id: string; sets: Array<{ reps: number; date: string }> }>) {
+        const sum = u.sets
+            .filter((s) => s.date === today)
+            .reduce((acc: number, x: { reps: number }) => acc + x.reps, 0)
+        repsToday[u.id] = sum
+    }
     const ranking = Object.entries(repsToday)
         .filter(([, reps]) => reps > 0)
         .sort((a, b) => b[1] - a[1])
         .map(([userId], idx) => ({ userId, rank: idx + 1 }))
-
     const rankByUser: Record<string, number> = {}
     for (const r of ranking) rankByUser[r.userId] = r.rank
 
-    // 3. Construire les snapshots
+    // 5. Construire les snapshots avec le vrai niveau XP
     const snapshots: PlayerSnapshot[] = progresses.map((p: any) => {
-        // Reps cumulés historiques pour le niveau (animal)
-        const totalReps = p.user.sets.reduce((s: number, x: { reps: number }) => s + x.reps, 0)
-        const animalInfo = getAnimalForReps(totalReps)
-
+        const xpInfo = xpByUser[p.user.id] ?? { animal: "?", emoji: "❔", level: 1 }
         return {
             id: p.user.id,
             nickname: p.user.nickname,
-            emoji: animalInfo.emoji,
-            animal: animalInfo.animal,
-            level: animalInfo.level,
+            emoji: xpInfo.emoji,
+            animal: xpInfo.animal,
+            level: xpInfo.level,
             mapId: p.mapId,
             posX: p.posX,
             posY: p.posY,

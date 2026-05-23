@@ -19,6 +19,7 @@ import { getTodayISO } from "@/lib/challenge"
 import { isGamebookFrozen } from "@/lib/gamebook/antiCheat"
 import { getItem, getInitialItemData } from "@/lib/gamebook/items"
 import { parseInventory, addItem, hasIntactItem } from "@/lib/gamebook/inventory"
+import { isCreatorAccount, padAvailableEnergyForCreator } from "@/lib/gamebook/creator"
 
 export const dynamic = "force-dynamic"
 
@@ -90,7 +91,9 @@ export async function POST(req: NextRequest) {
     const currentSpent = storedDate === today ? storedSpent : 0
 
     const todayReps = await getTodayReps(userId)
-    const availableEnergy = todayReps - currentSpent
+    const isCreator = await isCreatorAccount(userId)
+    // v3.8.5 — pad pour créateur (achat toujours possible avec godmode)
+    const availableEnergy = padAvailableEnergyForCreator(todayReps - currentSpent, isCreator)
 
     if (availableEnergy < itemDef.priceReps) {
         return NextResponse.json({
@@ -116,10 +119,37 @@ export async function POST(req: NextRequest) {
         },
     })
 
+    // v3.8.9 — Tracker le dernier achat pour le dialogue NUTRIPATES.
+    // On exclut les comptes créateur (isSystem=true) sinon le compte test pollue les news.
+    if (!isCreator) {
+        try {
+            const buyer = await (prisma as any).user.findUnique({
+                where: { id: userId },
+                select: { nickname: true },
+            })
+            if (buyer?.nickname) {
+                const payload = JSON.stringify({
+                    userId,
+                    nickname: buyer.nickname,
+                    itemKey,
+                    itemName: itemDef.name,
+                    at: new Date().toISOString(),
+                })
+                await (prisma as any).globalConfig.upsert({
+                    where: { key: "lastShopPurchase" },
+                    update: { value: payload },
+                    create: { key: "lastShopPurchase", value: payload },
+                })
+            }
+        } catch (e) {
+            console.warn("[shop/buy] could not update lastShopPurchase", e)
+        }
+    }
+
     return NextResponse.json({
         ok: true,
         inventory: newInventory,
-        availableEnergy: todayReps - newSpent,
+        availableEnergy: padAvailableEnergyForCreator(todayReps - newSpent, isCreator),
         energySpentToday: newSpent,
         purchased: itemKey,
     })

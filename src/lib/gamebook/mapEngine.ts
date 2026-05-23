@@ -358,17 +358,15 @@ export function computePushTarget(
 }
 
 // ============================================================
-// v3.5 : LIGNE DE VUE DES PNJ DU PONT
+// v3.8.6 : LIGNE DE VUE DES PNJ DU PONT
 // ============================================================
 //
-// Un PNJ surveille toute sa LIGNE et toute sa COLONNE.
-// Si le joueur arrive sur une case partageant la même ligne OU colonne, le PNJ
-// l'interpelle.
+// Les PNJ sont postés aux extrémités du pont (x=3 ou x=7) et regardent
+// HORIZONTALEMENT vers l'intérieur. Chacun surveille TOUTE sa ligne (y).
 //
-// Le rayon de vue est limité par les autres PNJ : POMPO ne voit pas plus loin
-// que SQUATTO si SQUATTO est entre lui et le joueur, et inversement.
-// Pour rester simple, on ne tient pas compte des autres PNJ comme obstacles
-// (chaque PNJ est sur une ligne/colonne propre dans le zigzag actuel).
+// Plus de check de colonne (devenu inutile vu que les PNJ sont sur les bords,
+// le joueur ne peut donc pas passer derrière) — la seule façon de franchir
+// une ligne avec un PNJ vivant est de l'affronter ou de battre en retraite.
 
 export interface BridgePnjLike {
     id: string
@@ -378,6 +376,7 @@ export interface BridgePnjLike {
 
 /**
  * Retourne le PNJ du pont qui voit le joueur à cette position (parmi ceux non vaincus).
+ * Surveille uniquement la ligne y (le PNJ est posté sur le bord, regarde horizontalement).
  * Renvoie null si aucun PNJ ne voit le joueur.
  */
 export function bridgePnjSeeingPlayer(
@@ -388,8 +387,7 @@ export function bridgePnjSeeingPlayer(
 ): BridgePnjLike | null {
     for (const pnj of pnjs) {
         if (defeated.includes(pnj.id)) continue
-        // Surveille toute sa ligne OU toute sa colonne
-        if (pnj.x === playerX) return pnj
+        // v3.8.6 — surveille uniquement la ligne (le PNJ regarde horizontalement)
         if (pnj.y === playerY) return pnj
     }
     return null

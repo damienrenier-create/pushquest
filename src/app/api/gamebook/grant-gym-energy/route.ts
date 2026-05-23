@@ -11,6 +11,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { getTodayISO } from "@/lib/challenge"
+import { isCreatorAccount, padAvailableEnergyForCreator } from "@/lib/gamebook/creator"
 
 export const dynamic = "force-dynamic"
 
@@ -72,7 +73,8 @@ export async function POST() {
     })
 
     const todayReps = await getTodayReps(userId)
-    const availableEnergy = Math.max(0, todayReps - newSpent)
+    const isCreator = await isCreatorAccount(userId)
+    const availableEnergy = padAvailableEnergyForCreator(Math.max(0, todayReps - newSpent), isCreator)
 
     return NextResponse.json({
         ok: true,

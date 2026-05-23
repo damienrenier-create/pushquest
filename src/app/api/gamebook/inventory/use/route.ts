@@ -18,6 +18,7 @@ import { getTodayISO } from "@/lib/challenge"
 import { isGamebookFrozen } from "@/lib/gamebook/antiCheat"
 import { getItem, readStored, readMaxCapacity } from "@/lib/gamebook/items"
 import { parseInventory, findItem, setItemData } from "@/lib/gamebook/inventory"
+import { isCreatorAccount, padAvailableEnergyForCreator } from "@/lib/gamebook/creator"
 
 export const dynamic = "force-dynamic"
 
@@ -97,7 +98,9 @@ export async function POST(req: NextRequest) {
         const storedSpent = (progress as { energySpentToday?: number }).energySpentToday ?? 0
         const currentSpent = storedDate === today ? storedSpent : 0
         const todayReps = await getTodayReps(userId)
-        const availableEnergy = todayReps - currentSpent
+        const isCreator = await isCreatorAccount(userId)
+        // v3.8.5 — pad pour créateur (action use toujours possible avec godmode)
+        const availableEnergy = padAvailableEnergyForCreator(todayReps - currentSpent, isCreator)
 
         if (action === "fill") {
             if (requestedAmount <= 0) {
@@ -125,7 +128,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({
                 ok: true,
                 inventory: newInventory,
-                availableEnergy: todayReps - newSpent,
+                availableEnergy: padAvailableEnergyForCreator(todayReps - newSpent, isCreator),
                 energySpentToday: newSpent,
                 filled: amount,
                 stored: stored + amount,
@@ -154,7 +157,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({
                 ok: true,
                 inventory: newInventory,
-                availableEnergy: todayReps - newSpent,
+                availableEnergy: padAvailableEnergyForCreator(todayReps - newSpent, isCreator),
                 energySpentToday: newSpent,
                 drank: stored,
                 stored: 0,

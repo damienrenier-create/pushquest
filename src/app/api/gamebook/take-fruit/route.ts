@@ -17,6 +17,7 @@ import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { getTodayISO } from "@/lib/challenge"
 import { isGamebookFrozen } from "@/lib/gamebook/antiCheat"
+import { isCreatorAccount, padAvailableEnergyForCreator } from "@/lib/gamebook/creator"
 
 export const dynamic = "force-dynamic"
 
@@ -130,12 +131,13 @@ export async function POST(req: NextRequest) {
         },
     })
 
+    const isCreator = await isCreatorAccount(userId)
     return NextResponse.json({
         ok: true,
         treeId,
         reward: FRUIT_REWARD,
         remaining: MAX_FRUITS_PER_TREE_PER_DAY - (taken + 1),
-        availableEnergy: todayReps - newSpent,
+        availableEnergy: padAvailableEnergyForCreator(todayReps - newSpent, isCreator),
         energySpentToday: newSpent,
         fruitsTaken: newState,
     })
