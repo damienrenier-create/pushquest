@@ -399,6 +399,26 @@ export default function TileCell({ tile, x, y }: { tile: TileType; x: number; y:
             </div>
         )
     }
+    // v3.18 — Statue décorative (Bibliothèque)
+    if (tile === "statue") {
+        return (
+            <div style={{ position: "relative", background: "#d8c8a0", overflow: "hidden" }}>
+                <div style={{ position: "absolute", left: "20%", right: "20%", bottom: "5%", height: "20%", background: "#a89060", border: "1px solid #604020" }} />
+                <div style={{ position: "absolute", left: "30%", right: "30%", top: "30%", bottom: "25%", background: "#c8b890", border: "1px solid #604020" }} />
+                <div style={{ position: "absolute", left: "35%", right: "35%", top: "12%", height: "22%", background: "#d8c8a0", border: "1px solid #604020", borderRadius: "40% 40% 30% 30%" }} />
+            </div>
+        )
+    }
+    // v3.18 — Pupitre de lecture (Bibliothèque)
+    if (tile === "lectern") {
+        return (
+            <div style={{ position: "relative", background: "#f0e0c0", overflow: "hidden" }}>
+                <div style={{ position: "absolute", left: "45%", right: "45%", top: "30%", bottom: "5%", background: "#8a5028", border: "1px solid #4a2818" }} />
+                <div style={{ position: "absolute", left: "20%", right: "20%", top: "20%", height: "20%", background: "#a86838", border: "1px solid #4a2818" }} />
+                <div style={{ position: "absolute", left: "28%", right: "28%", top: "23%", height: "12%", background: "#f8f0d8", border: "1px solid #8a5028" }} />
+            </div>
+        )
+    }
     if (tile === "potion") {
         return (
             <div style={{ position: "relative", background: C.caveFloor, overflow: "hidden" }}>

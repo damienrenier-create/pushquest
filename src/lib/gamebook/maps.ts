@@ -572,9 +572,21 @@ export const MACARONILE_SIGNS: Sign[] = [
 function buildShopMacaron(): TileType[][] {
     return buildShopInterior()
 }
-// v3.15 — bibliotheque : 11x8 avec sol bois et étagères de livres (bookshelf)
+// v3.15 — bibliotheque : 11x8 avec sol bois et étagères de livres
+// v3.18 — Bibliothèque agrandie 13x10, plus belle avec statues + pupitres + comptoir central.
+// Layout :
+//   y=0 : wall nord
+//   y=1 : rangée nord de 9 bookshelves "Animaux des joueurs" (1 par anim-joueur actif)
+//   y=2 : passage
+//   y=3 : 3 bookshelves thématiques (Casinos / Bestioles / Défis) + 2 pupitres de lecture
+//   y=4 : passage central (avec lustre virtuel rendu via TileCell décor)
+//   y=5 : 2 statues décoratives + comptoir BIBLIO au centre
+//   y=6 : passage
+//   y=7 : bookshelves "Archives" (4)
+//   y=8 : passage + doorMat sortie
+//   y=9 : wall sud
 function buildBibliotheque(): TileType[][] {
-    const W = 11, H = 8
+    const W = 13, H = 10
     const m: TileType[][] = []
     for (let y = 0; y < H; y++) {
         const row: TileType[] = []
@@ -585,18 +597,118 @@ function buildBibliotheque(): TileType[][] {
         }
         m.push(row)
     }
-    // Rangées d'étagères de livres
-    for (let x = 1; x < W - 1; x++) m[1][x] = "bookshelf"
-    m[3][1] = "bookshelf"; m[3][2] = "bookshelf"
-    m[3][W - 2] = "bookshelf"; m[3][W - 3] = "bookshelf"
-    m[5][1] = "bookshelf"; m[5][2] = "bookshelf"
-    m[5][W - 2] = "bookshelf"; m[5][W - 3] = "bookshelf"
-    // Comptoir de la bibliothécaire (col 5-6 sur y=3)
-    m[3][5] = "shopCounter"; m[3][6] = "shopCounter"
+    // Rangée nord (y=1) : 9 bookshelves "Animaux des joueurs" (cols 2..10)
+    for (let x = 2; x <= W - 3; x++) m[1][x] = "bookshelf"
+    // Petits gaps esthétiques aux coins
+    m[1][1] = "shopShelf"
+    m[1][W - 2] = "shopShelf"
+
+    // Rangée thématique (y=3)
+    m[3][2] = "bookshelf"   // Casinos
+    m[3][6] = "bookshelf"   // Bestioles (centre)
+    m[3][W - 3] = "bookshelf"  // Défis adoption animaux
+    // 2 pupitres de lecture aux côtés (y=3)
+    m[3][4] = "lectern"
+    m[3][W - 5] = "lectern"
+
+    // 2 statues décoratives (y=5)
+    m[5][2] = "statue"
+    m[5][W - 3] = "statue"
+    // Comptoir BIBLIO central (col 5-6-7 sur y=5)
+    m[5][5] = "shopCounter"
+    m[5][6] = "shopCounter"
+    m[5][7] = "shopCounter"
+
+    // Archives (y=7) : 4 bookshelves de lore général
+    m[7][2] = "bookshelf"
+    m[7][5] = "bookshelf"
+    m[7][7] = "bookshelf"
+    m[7][W - 3] = "bookshelf"
+
     // Sortie sud
-    m[H - 1][5] = "doorMat"
+    m[H - 1][Math.floor(W / 2)] = "doorMat"
+
     return m
 }
+
+// v3.18 — Configuration des topics par bookshelf de la bibliothèque.
+// Le client (MapClient) cherche cette config pour rendre le contenu du popup quand A
+// est pressé sur un bookshelf de la bibliothèque.
+export interface BiblioTopic {
+    x: number
+    y: number
+    /** Identifiant logique du topic (consommé par BibliothequeModal pour switch sur sections riches). */
+    kind: "casinos" | "bestioles" | "defis_adoption" | "animal_joueur" | "archives"
+    /** Titre court affiché en popup. */
+    title: string
+    /** Texte du popup (markdown light). Pour kind=animal_joueur, le contenu est résolu dynamiquement. */
+    text: string
+    /** Index pour kind=animal_joueur (0..N-1) — utilisé pour mapper sur la liste d'animaux des joueurs. */
+    animalSlotIndex?: number
+}
+
+export const BIBLIOTHEQUE_TOPICS: BiblioTopic[] = [
+    // Rangée nord (y=1) : 9 slots pour animaux joueurs (cols 2..10). Le contenu est dynamique.
+    ...Array.from({ length: 9 }, (_, i) => ({
+        x: 2 + i,
+        y: 1,
+        kind: "animal_joueur" as const,
+        title: `Animal du joueur #${i + 1}`,
+        text: "*Le rayon attend qu'un animal y soit ajouté...*",
+        animalSlotIndex: i,
+    })),
+    // Rangée thématique (y=3)
+    {
+        x: 2,
+        y: 3,
+        kind: "casinos",
+        title: "Les Casinos de l'archipel",
+        text: "Deux casinos officiels : un à Bourg-Boulette, un à Pépiteville.\n\nRumeur : des pièces tombées par terre attendent celui qui inspecte sous les machines... (un dit même qu'une roulette rouge/noir va bientôt ouvrir).",
+    },
+    {
+        x: 6,
+        y: 3,
+        kind: "bestioles",
+        title: "Bestioles des Hautes Herbes du Sud",
+        text: "Créatures non identifiées. Vivent dans les hautes herbes au sud de Macaron'île.\n\nElles attaquent ceux qui n'ont pas d'animal compagnon. Première morsure = douleur sans perte. Suivantes = -10 reps par passage.\n\nUn animal du bestiaire bien préparé les fait fuir.",
+    },
+    {
+        x: 10,  // W-3 with W=13
+        y: 3,
+        kind: "defis_adoption",
+        title: "Défis d'adoption (chez le vétérinaire V3T)",
+        text: "Pour libérer ton animal, tous ont les MÊMES 7 défis (ordre différent par animal) :\n\n1. Aller le voir\n2. Lui donner à boire (gourde)\n3. Lui offrir des pâtes (corned_pates)\n4. Le visiter matin ET après-midi\n5. 180s de gainage\n6. 200 pompes APRÈS le gainage\n7. 300 squats APRÈS les pompes\n\nLes seuils sont ajustés au ratio onboarding.",
+    },
+    // Archives (y=7)
+    {
+        x: 2,
+        y: 7,
+        kind: "archives",
+        title: "Chronique du Monstre",
+        text: "Récits anciens du Monstre de Bourg-Boulette. On dit qu'il accepte de recevoir ceux qui ont leur sac. Et qu'il offre parfois un cadeau aux courageux...",
+    },
+    {
+        x: 5,
+        y: 7,
+        kind: "archives",
+        title: "Chronique du Pont d'Azuria",
+        text: "Le Pont est gardé par 4 PNJ légendaires : POMPO, SQUATTO, GAINAX et CHAMPIO. Chacun teste un type d'effort. Vaincre les quatre = badge Pionnier.",
+    },
+    {
+        x: 7,
+        y: 7,
+        kind: "archives",
+        title: "Chronique de PIAFFINI",
+        text: "Un petit oiseau perdu au sommet de la Tour. Recueilli par JOJO grâce à un sauveur audacieux. Depuis, on dit qu'il chante de nouveau au-dessus de Bourg-Boulette.",
+    },
+    {
+        x: 10,
+        y: 7,
+        kind: "archives",
+        title: "Chronique de la Mer",
+        text: "Le canal entre Bourg-Boulette et Macaron'île. Plein de courants imprévisibles. Un nageur s'y promène, il dit chercher le ONE PIECE. Un naufragé y attend depuis trop longtemps.",
+    },
+]
 // veterinaire : intérieur 11x8, sol bois, comptoir au fond, "vitres" (decoratifs via shopShelf)
 function buildVeterinaire(): TileType[][] {
     const W = 11, H = 8

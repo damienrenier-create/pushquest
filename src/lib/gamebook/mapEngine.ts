@@ -41,6 +41,9 @@ export type TileType =
     | "sand"          // plage de Macaron'île (non-bloquant, décoratif)
     // === v3.17c : Polish narratif ===
     | "painting"      // tableau accroché à un mur (bloquant, interactif via A — Tour des Pâtes Aiguës)
+    // === v3.18 : Bibliothèque de Macaron'île ===
+    | "statue"        // statue décorative (bloquant, interactif via A — Bibliothèque)
+    | "lectern"       // pupitre de lecture (bloquant, interactif via A — Bibliothèque)
 
 export interface Building {
     x: number
@@ -150,6 +153,9 @@ export const BLOCKING_TILES: TileType[] = [
     "stairsDown",
     // v3.17c — tableaux accrochés aux murs (bloquant, on les regarde avec A)
     "painting",
+    // v3.18 — Décor bibliothèque
+    "statue",
+    "lectern",
 ]
 
 export function isBlockingTile(tile: TileType): boolean {

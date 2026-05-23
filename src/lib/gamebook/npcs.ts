@@ -757,6 +757,8 @@ export const NPCS: NpcDefinition[] = [
 
     // -------------------------------
     // v3.15 — BIBLIO : bibliothécaire de Macaron'île
+    // v3.18 — Repositionnée derrière le nouveau comptoir central + ouvre le BibliothequeModal
+    //         (les dialogues classiques restent en fallback)
     // -------------------------------
     {
         id: "bibliotheque_keeper",
@@ -765,14 +767,12 @@ export const NPCS: NpcDefinition[] = [
         kind: "static",
         interaction: "interactive",
         sprite: { color: "#a07090" },
-        initialX: 5,
-        initialY: 2,
+        initialX: 6,
+        initialY: 4,
         dialoguesAfter: [
-            "Chuuut... Bienvenue dans la bibliothèque.",
-            "Tu cherches un savoir ancien sur les hautes herbes du sud ?",
-            "Aucun livre ne donne LA réponse, mais beaucoup parlent d'un animal capable d'effrayer les bestioles.",
-            "(Elle te tend un livre poussiéreux intitulé 'BESTIOLES & TERROIRS'.)",
-            "Reviens quand tu auras un compagnon assez grand pour les défier.",
+            "Bienvenue dans la bibliothèque de Macaron'île.",
+            "Le savoir y est ordonné. Approche du comptoir, je t'oriente vers le bon rayon.",
+            "(Elle te désigne le comptoir devant elle.)",
         ],
     },
 

@@ -43,6 +43,7 @@ import {
     MACARONILE_SPAWN_FROM_LAMER,
     LAMER_SPAWN_FROM_MACARONILE,
     PAPA_TABLEAUX,
+    BIBLIOTHEQUE_TOPICS,
 } from "@/lib/gamebook/maps"
 import {
     type Direction,
@@ -86,6 +87,7 @@ import { findActiveWearableForTile, applySocialDiscount, hasIntactLunettes } fro
 import { PEPITO_DIALOGUE_FIRST } from "@/lib/gamebook/dialogue"
 import TamagotchiModal from "./TamagotchiModal"
 import type { TamagotchiView } from "@/lib/gamebook/tamagotchi"
+import BibliothequeModal from "./BibliothequeModal"
 
 interface Props {
     nickname: string
@@ -186,6 +188,8 @@ export default function MapClient({
     // v3.14 — Modal du vétérinaire (V3T) : adoption / nourrissage du tamagotchi
     const [showTamagotchi, setShowTamagotchi] = useState(false)
     const [tamagotchi, setTamagotchi] = useState<TamagotchiView | null>(initialTamagotchi)
+    // v3.18 — Modal de la bibliothèque (BIBLIO ou comptoir) : navigation hybride
+    const [showBibliotheque, setShowBibliotheque] = useState(false)
     // === v3.8.1 : fruits cueillis aujourd'hui (par CE user). Drive le rendu vide/plein des arbres. ===
     const [fruitCounts, setFruitCounts] = useState<Record<string, number>>(initialFruitCounts)
     // === v3.8.2 : plus haut étage atteint dans la Tour. Drive le bypass-check des escaliers. ===
@@ -1113,7 +1117,7 @@ export default function MapClient({
         }, 300)
 
         // v3.8 — si une modal est ouverte, le A est géré par la modal elle-même
-        if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi) return
+        if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque) return
 
         // v3.11 — Cinématique PIAFFINI (dialogue au sommet, puis vol)
         if (cinematic?.kind === "piaffini" && cinematic.stage === "dialog") {
@@ -1486,6 +1490,11 @@ export default function MapClient({
                 setShowTamagotchi(true)
                 return
             }
+            // v3.18 — BIBLIO (bibliothécaire) : ouvre la modal Bibliothèque
+            if (npcId === "bibliotheque_keeper") {
+                setShowBibliotheque(true)
+                return
+            }
             // v3.14 — TRENETTE : même mécanique que NUTRIPATES (ouvre le shop, requiert un sac)
             if (npcId === "shop_keeper_macaron") {
                 if (!hasBag) {
@@ -1551,6 +1560,39 @@ export default function MapClient({
         // v3.14 — Chez le vétérinaire V3T, parler via le comptoir = ouvrir le modal Tamagotchi.
         if (state.mapId === "veterinaire" && tile === "shopCounter") {
             setShowTamagotchi(true)
+            return
+        }
+
+        // v3.18 — Chez BIBLIO (bibliothèque), parler via le comptoir = ouvrir le modal Bibliothèque.
+        if (state.mapId === "bibliotheque" && tile === "shopCounter") {
+            setShowBibliotheque(true)
+            return
+        }
+
+        // v3.18 — Dans la bibliothèque : interactions sur bookshelf / statue / lectern via BIBLIOTHEQUE_TOPICS
+        if (state.mapId === "bibliotheque" && (tile === "bookshelf" || tile === "statue" || tile === "lectern" || tile === "shopShelf")) {
+            const topic = BIBLIOTHEQUE_TOPICS.find((t) => t.x === front.x && t.y === front.y)
+            if (topic) {
+                if (topic.kind === "animal_joueur") {
+                    setPopup({
+                        kind: "info",
+                        text: `${topic.title}\n\nCe rayon est dédié aux animaux du bestiaire correspondant aux joueurs actifs.\n\nPour la liste à jour + les défis d'adoption, va voir BIBLIO au comptoir central.`,
+                    })
+                } else {
+                    setPopup({ kind: "info", text: `${topic.title}\n\n${topic.text}` })
+                }
+                return
+            }
+            // Tile sans topic dédié
+            if (tile === "statue") {
+                setPopup({ kind: "info", text: "Une statue de pierre. Visage neutre, posture impassible. Elle veille sur les rayons depuis des siècles." })
+                return
+            }
+            if (tile === "lectern") {
+                setPopup({ kind: "info", text: "Un pupitre de lecture. Quelques pages ouvertes. Tu pourrais consulter ici si tu avais un livre en main." })
+                return
+            }
+            setPopup({ kind: "info", text: "Un rayon de livres. Trop poussiéreux pour distinguer un titre précis." })
             return
         }
 
@@ -1683,7 +1725,7 @@ export default function MapClient({
         if (tile === "monsterDesk") return setPopup({ kind: "info", text: "Le bureau du Monstre.\n\nDes parchemins, un encrier renversé, une fiole de sauce." })
 
         setToast("Rien d'intéressant.")
-    }, [state, map, buildings, otherPlayersOnThisMap, popup, cinematic, npcsWithPos, triggerNpcDialogue, triggerBridgePnjChallenge, reps, broadcast, hasBag, showStartMenu, showInventory, showShop, showPlayerMap, showTamagotchi])
+    }, [state, map, buildings, otherPlayersOnThisMap, popup, cinematic, npcsWithPos, triggerNpcDialogue, triggerBridgePnjChallenge, reps, broadcast, hasBag, showStartMenu, showInventory, showShop, showPlayerMap, showTamagotchi, showBibliotheque, nickname])
 
     // ============================================================
     // EXERCICES (la salle de muscu : pour l'instant juste un texte)
@@ -1754,7 +1796,7 @@ export default function MapClient({
         const handler = (e: KeyboardEvent) => {
             // v3.8 — si une modal est ouverte, on ne gère pas les touches ici
             // (StartMenu/InventoryModal/ShopModal/PlayerMapModal écoutent leurs propres events)
-            if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi) return
+            if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque) return
 
             if (state.phase === "introMonster") {
                 if (e.key === "Enter" || e.key === " " || e.key.toLowerCase() === "a") {
@@ -1781,7 +1823,7 @@ export default function MapClient({
         }
         window.addEventListener("keydown", handler)
         return () => window.removeEventListener("keydown", handler)
-    }, [state.phase, popup, tryMove, pressA, showStartMenu, showInventory, showShop, showPlayerMap, showTamagotchi])
+    }, [state.phase, popup, tryMove, pressA, showStartMenu, showInventory, showShop, showPlayerMap, showTamagotchi, showBibliotheque])
 
     // ============================================================
     // RESET
@@ -2216,6 +2258,11 @@ export default function MapClient({
             {/* v3.8.3 — Carte des joueurs */}
             {showPlayerMap && (
                 <PlayerMapModal onClose={() => setShowPlayerMap(false)} />
+            )}
+
+            {/* v3.18 — Modal de la bibliothèque (BIBLIO) */}
+            {showBibliotheque && (
+                <BibliothequeModal onClose={() => setShowBibliotheque(false)} />
             )}
 
             {/* v3.14 — Modal du vétérinaire (V3T) : Tamagotchi */}
