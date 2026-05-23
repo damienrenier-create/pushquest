@@ -2307,6 +2307,41 @@ export default function MapClient({
                             setToast("Erreur réseau, réessaie.")
                         }
                     }}
+                    onCheckDefis={async () => {
+                        try {
+                            const res = await fetch("/api/gamebook/tamagotchi/check-defis", { method: "POST" })
+                            const data = await res.json()
+                            if (data.ok) {
+                                if (data.tamagotchi) setTamagotchi(data.tamagotchi)
+                                const newlyDone: number[] = Array.isArray(data.newlyCompleted) ? data.newlyCompleted : []
+                                if (newlyDone.length > 0) {
+                                    setToast(`✨ ${newlyDone.length} défi(s) validé(s) !`)
+                                } else {
+                                    setToast("Aucun nouveau défi validé pour l'instant.")
+                                }
+                            } else {
+                                setToast(data.reason || "Vérification impossible.")
+                            }
+                        } catch (e) {
+                            console.warn("[MapClient] tamagotchi/check-defis failed", e)
+                            setToast("Erreur réseau, réessaie.")
+                        }
+                    }}
+                    onLiberer={async () => {
+                        try {
+                            const res = await fetch("/api/gamebook/tamagotchi/liberer", { method: "POST" })
+                            const data = await res.json()
+                            if (data.ok) {
+                                if (data.tamagotchi) setTamagotchi(data.tamagotchi)
+                                setToast(`🎉 Ton animal te suit désormais ! +${data.xp ?? 100} XP (Badge Animal Totem)`)
+                            } else {
+                                setToast(data.reason || "Libération impossible.")
+                            }
+                        } catch (e) {
+                            console.warn("[MapClient] tamagotchi/liberer failed", e)
+                            setToast("Erreur réseau, réessaie.")
+                        }
+                    }}
                     onClose={() => setShowTamagotchi(false)}
                 />
             )}

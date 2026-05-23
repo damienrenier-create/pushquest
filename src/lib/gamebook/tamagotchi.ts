@@ -21,6 +21,15 @@ export interface Tamagotchi {
     happiness: number       // 0..100 (valeur stockée, AVANT decay)
     /** Level du tamagotchi : suit le level XP du joueur quand happy, figé quand sad. */
     currentLevel: number
+    // v3.19 — Tracking des 7 défis d'adoption (indices 0..6 = canoniques cf. CANONICAL_DEFIS).
+    // Clés numériques as strings (JSON safe). Valeur true = défi complété.
+    defiProgress?: Record<string, true>
+    // v3.19 — true une fois que les 7 défis sont validés et que le joueur "libère" l'animal.
+    recovered?: boolean
+    recoveredAt?: string    // ISO timestamp
+    // v3.19 — Tracking timestamps de visite (pour défi 4 : matin + après-midi)
+    lastMorningVisitDate?: string    // YYYY-MM-DD du dernier matin (avant 12h) où on a vu V3T
+    lastAfternoonVisitDate?: string  // YYYY-MM-DD du dernier après-midi (après 12h)
 }
 
 // Constantes
@@ -45,12 +54,25 @@ export function parseTamagotchi(raw: unknown): Tamagotchi | null {
     const currentLevelRaw = typeof o.currentLevel === "number" && Number.isFinite(o.currentLevel)
         ? o.currentLevel
         : 1
+    // v3.19 — defiProgress + recovered (parsing défensif)
+    let defiProgress: Record<string, true> | undefined
+    if (o.defiProgress && typeof o.defiProgress === "object" && !Array.isArray(o.defiProgress)) {
+        defiProgress = {}
+        for (const [k, v] of Object.entries(o.defiProgress as Record<string, unknown>)) {
+            if (v === true) defiProgress[k] = true
+        }
+    }
     return {
         name: o.name,
         adoptedAt: o.adoptedAt,
         lastFedAt: o.lastFedAt,
         happiness: Math.max(0, Math.min(TAMAGOTCHI_HAPPINESS_MAX, Math.floor(happinessRaw))),
         currentLevel: Math.max(1, Math.min(100, Math.floor(currentLevelRaw))),
+        defiProgress,
+        recovered: o.recovered === true,
+        recoveredAt: typeof o.recoveredAt === "string" ? o.recoveredAt : undefined,
+        lastMorningVisitDate: typeof o.lastMorningVisitDate === "string" ? o.lastMorningVisitDate : undefined,
+        lastAfternoonVisitDate: typeof o.lastAfternoonVisitDate === "string" ? o.lastAfternoonVisitDate : undefined,
     }
 }
 
@@ -86,15 +108,27 @@ export interface TamagotchiView extends Tamagotchi {
     displayLevel: number
     /** True si le tamagotchi est gelé (happiness=0) → refuse d'évoluer. */
     isFrozen: boolean
+    // v3.19 — Progression d'adoption
+    defisDone: number
+    defisTotal: number
+    /** Ordre des défis pour CET animal (permutation déterministe). */
+    defiOrder: number[]
+    /** True quand les 7 défis sont validés et qu'on peut libérer. */
+    eligibleToRecover: boolean
+    /** Narrative actuelle de V3T (lore-style, jamais de chiffres). */
+    v3tNarrative: string
 }
 
 /**
- * Vue prête à afficher (happiness + level recalculés).
+ * Vue prête à afficher (happiness + level recalculés + progression défis).
  * Ne dépend pas de xp.ts pour rester côté client safe (l'animal est résolu côté UI).
  */
 export function viewTamagotchi(tam: Tamagotchi, userLevel: number, nowMs: number = Date.now()): TamagotchiView {
     const displayHappiness = effectiveHappiness(tam, nowMs)
     const displayLevel = effectiveLevel(tam, userLevel, nowMs)
+    const defisDone = countDefisDone(tam)
+    const defisTotal = CANONICAL_DEFIS.length
+    const recovered = tam.recovered === true
     return {
         ...tam,
         happiness: displayHappiness,
@@ -102,6 +136,11 @@ export function viewTamagotchi(tam: Tamagotchi, userLevel: number, nowMs: number
         displayHappiness,
         displayLevel,
         isFrozen: displayHappiness === 0,
+        defisDone,
+        defisTotal,
+        defiOrder: getDefiOrderForAnimalLevel(displayLevel),
+        eligibleToRecover: defisDone === defisTotal && !recovered,
+        v3tNarrative: v3tNarrativeForProgress(defisDone, defisTotal, recovered),
     }
 }
 
@@ -144,4 +183,78 @@ export function isValidTamagotchiName(name: string): boolean {
     const trimmed = name.trim()
     if (trimmed.length === 0 || trimmed.length > 16) return false
     return /^[\p{L}\p{N} '-]+$/u.test(trimmed)
+}
+
+// ============================================================
+// v3.19 — DÉFIS D'ADOPTION (les 7 défis canoniques)
+// ============================================================
+
+export interface CanonicalDefi {
+    index: number  // 0..6
+    code: string   // identifiant logique
+    title: string  // libellé court
+    description: string  // libellé détaillé pour la BIBLIO et le modal V3T
+    /** Seuil de base (en reps ou secondes), à multiplier par ratio onboarding côté serveur. */
+    baseThreshold?: number
+}
+
+export const CANONICAL_DEFIS: CanonicalDefi[] = [
+    { index: 0, code: "VISIT", title: "Aller le voir", description: "Rends visite à ton tamagotchi chez le vétérinaire V3T (Macaron'île)." },
+    { index: 1, code: "DRINK", title: "Lui donner à boire", description: "Bois ta gourde pendant que tu es chez V3T avec ton tamagotchi." },
+    { index: 2, code: "PATES", title: "Lui offrir des pâtes", description: "Consomme une Corned Pâtes (TRENETTE) chez V3T pour la partager avec ton tamagotchi." },
+    { index: 3, code: "DAY_HALVES", title: "Le voir matin ET après-midi", description: "Visite V3T une fois avant midi ET une fois après midi le même jour." },
+    { index: 4, code: "PLANK_180", title: "180 secondes de gainage", description: "Encode 180 secondes de gainage aujourd'hui (ajusté au ratio onboarding).", baseThreshold: 180 },
+    { index: 5, code: "PUSHUP_200", title: "200 pompes APRÈS le gainage", description: "Encode 200 pompes aujourd'hui APRÈS ton premier set de gainage (séquence stricte par timestamp).", baseThreshold: 200 },
+    { index: 6, code: "SQUAT_300", title: "300 squats APRÈS les pompes", description: "Encode 300 squats aujourd'hui APRÈS ton premier set de pompes (lui-même post-gainage).", baseThreshold: 300 },
+]
+
+/**
+ * Permutation déterministe (Fisher-Yates seedé) des 7 indices de défis pour un animal donné.
+ * L'ordre dépend du level de l'animal du joueur — chaque animal a son propre ordre.
+ */
+export function getDefiOrderForAnimalLevel(animalLevel: number): number[] {
+    const arr = [0, 1, 2, 3, 4, 5, 6]
+    // Mulberry32 seedé par level
+    let seed = (animalLevel * 2654435761) >>> 0
+    const rand = () => {
+        seed = (seed + 0x6D2B79F5) | 0
+        let t = Math.imul(seed ^ (seed >>> 15), 1 | seed)
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+    }
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(rand() * (i + 1))
+            ;[arr[i], arr[j]] = [arr[j], arr[i]]
+    }
+    return arr
+}
+
+/**
+ * Compte combien de défis ont été complétés.
+ */
+export function countDefisDone(tam: Tamagotchi): number {
+    if (!tam.defiProgress) return 0
+    let n = 0
+    for (let i = 0; i < CANONICAL_DEFIS.length; i++) {
+        if (tam.defiProgress[String(i)] === true) n++
+    }
+    return n
+}
+
+export function isDefiDone(tam: Tamagotchi, index: number): boolean {
+    return tam.defiProgress?.[String(index)] === true
+}
+
+/**
+ * Renvoie un texte narratif pour V3T en fonction de la progression (lore-style, jamais de %).
+ */
+export function v3tNarrativeForProgress(done: number, total: number, recovered: boolean): string {
+    if (recovered) return "Ton animal te suit partout maintenant. Il a confiance."
+    if (done === 0) return "Il te regarde de loin. Il ne te connaît pas encore."
+    if (done === total) return "Il est prêt. Reviens quand tu veux le récupérer."
+    const pct = done / total
+    if (pct < 0.25) return "Il commence à reconnaître ton odeur. Mais il garde ses distances."
+    if (pct < 0.5) return "Il s'approche quand tu entres. Bon signe."
+    if (pct < 0.75) return "Il te suit des yeux. Il attend autre chose de toi."
+    return "Il s'agite quand tu arrives. Il est presque prêt. Encore un effort."
 }
