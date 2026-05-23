@@ -77,6 +77,8 @@ import PiaffiniFlightScreen from "./PiaffiniFlightScreen"
 import { PIAFFINI_RESCUE_DIALOGUE } from "@/lib/gamebook/dialogue"
 import { parseInventory, hasIntactItem, type InventoryEntry } from "@/lib/gamebook/inventory"
 import { PEPITO_DIALOGUE_FIRST } from "@/lib/gamebook/dialogue"
+import TamagotchiModal from "./TamagotchiModal"
+import type { Tamagotchi } from "@/lib/gamebook/tamagotchi"
 
 interface Props {
     nickname: string
@@ -94,6 +96,8 @@ interface Props {
     initialTowerFloorReached: number
     // v3.10 — ratio de difficulté (1.0 vétéran, < 1.0 onboarding)
     initialDifficultyRatio: number
+    // v3.14 — Tamagotchi (vue avec happiness + stage recalculés, null si pas adopté)
+    initialTamagotchi: Tamagotchi | null
 }
 
 const GHOST_COLORS = ["#4080d8", "#d840a0", "#48a830", "#f08020", "#9050d0", "#d8c020", "#20a8c8"]
@@ -146,6 +150,7 @@ export default function MapClient({
     initialFruitCounts,
     initialTowerFloorReached,
     initialDifficultyRatio,
+    initialTamagotchi,
 }: Props) {
     // ============================================================
     // STATE
@@ -169,6 +174,9 @@ export default function MapClient({
     const [showShop, setShowShop] = useState(false)
     // v3.8.3 — Modal de consultation de la carte des joueurs (item map dans l'inventaire)
     const [showPlayerMap, setShowPlayerMap] = useState(false)
+    // v3.14 — Modal du vétérinaire (V3T) : adoption / nourrissage du tamagotchi
+    const [showTamagotchi, setShowTamagotchi] = useState(false)
+    const [tamagotchi, setTamagotchi] = useState<Tamagotchi | null>(initialTamagotchi)
     // === v3.8.1 : fruits cueillis aujourd'hui (par CE user). Drive le rendu vide/plein des arbres. ===
     const [fruitCounts, setFruitCounts] = useState<Record<string, number>>(initialFruitCounts)
     // === v3.8.2 : plus haut étage atteint dans la Tour. Drive le bypass-check des escaliers. ===
@@ -884,7 +892,7 @@ export default function MapClient({
         }, 300)
 
         // v3.8 — si une modal est ouverte, le A est géré par la modal elle-même
-        if (showStartMenu || showInventory || showShop || showPlayerMap) return
+        if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi) return
 
         // v3.11 — Cinématique PIAFFINI (dialogue au sommet, puis vol)
         if (cinematic?.kind === "piaffini" && cinematic.stage === "dialog") {
@@ -1197,6 +1205,23 @@ export default function MapClient({
                 setShowShop(true)
                 return
             }
+            // v3.14 — V3T (vétérinaire) : ouvre la modal Tamagotchi (adoption ou suivi)
+            if (npcId === "veterinaire_keeper") {
+                setShowTamagotchi(true)
+                return
+            }
+            // v3.14 — TRENETTE : même mécanique que NUTRIPATES (ouvre le shop, requiert un sac)
+            if (npcId === "shop_keeper_macaron") {
+                if (!hasBag) {
+                    setPopup({
+                        kind: "info",
+                        text: "TRENETTE hausse un sourcil.\n\n\"T'as pas de sac, comment tu veux que je te file quoi que ce soit ? Demande à mon frère NUTRIPATES.\"",
+                    })
+                    return
+                }
+                setShowShop(true)
+                return
+            }
             triggerNpcDialogue(npcInFront.npc)
             return
         }
@@ -1226,6 +1251,25 @@ export default function MapClient({
                 return
             }
             setShowShop(true)
+            return
+        }
+
+        // v3.13 — Dans le shop de Macaron'île, TRENETTE est au même endroit.
+        if (state.mapId === "shop_macaron" && tile === "shopCounter") {
+            if (!hasBag) {
+                setPopup({
+                    kind: "info",
+                    text: "TRENETTE hausse un sourcil.\n\n\"T'as pas de sac, comment tu veux que je te file quoi que ce soit ?\"",
+                })
+                return
+            }
+            setShowShop(true)
+            return
+        }
+
+        // v3.14 — Chez le vétérinaire V3T, parler via le comptoir = ouvrir le modal Tamagotchi.
+        if (state.mapId === "veterinaire" && tile === "shopCounter") {
+            setShowTamagotchi(true)
             return
         }
 
@@ -1312,7 +1356,7 @@ export default function MapClient({
         if (tile === "monsterDesk") return setPopup({ kind: "info", text: "Le bureau du Monstre.\n\nDes parchemins, un encrier renversé, une fiole de sauce." })
 
         setToast("Rien d'intéressant.")
-    }, [state, map, buildings, otherPlayersOnThisMap, popup, cinematic, npcsWithPos, triggerNpcDialogue, triggerBridgePnjChallenge, reps, broadcast, hasBag, showStartMenu, showInventory, showShop, showPlayerMap])
+    }, [state, map, buildings, otherPlayersOnThisMap, popup, cinematic, npcsWithPos, triggerNpcDialogue, triggerBridgePnjChallenge, reps, broadcast, hasBag, showStartMenu, showInventory, showShop, showPlayerMap, showTamagotchi])
 
     // ============================================================
     // EXERCICES (la salle de muscu : pour l'instant juste un texte)
@@ -1381,7 +1425,7 @@ export default function MapClient({
         const handler = (e: KeyboardEvent) => {
             // v3.8 — si une modal est ouverte, on ne gère pas les touches ici
             // (StartMenu/InventoryModal/ShopModal/PlayerMapModal écoutent leurs propres events)
-            if (showStartMenu || showInventory || showShop || showPlayerMap) return
+            if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi) return
 
             if (state.phase === "introMonster") {
                 if (e.key === "Enter" || e.key === " " || e.key.toLowerCase() === "a") {
@@ -1408,7 +1452,7 @@ export default function MapClient({
         }
         window.addEventListener("keydown", handler)
         return () => window.removeEventListener("keydown", handler)
-    }, [state.phase, popup, tryMove, pressA, showStartMenu, showInventory, showShop, showPlayerMap])
+    }, [state.phase, popup, tryMove, pressA, showStartMenu, showInventory, showShop, showPlayerMap, showTamagotchi])
 
     // ============================================================
     // RESET
@@ -1821,6 +1865,52 @@ export default function MapClient({
             {/* v3.8.3 — Carte des joueurs */}
             {showPlayerMap && (
                 <PlayerMapModal onClose={() => setShowPlayerMap(false)} />
+            )}
+
+            {/* v3.14 — Modal du vétérinaire (V3T) : Tamagotchi */}
+            {showTamagotchi && (
+                <TamagotchiModal
+                    tamagotchi={tamagotchi}
+                    availableEnergy={reps}
+                    onAdopt={async (name) => {
+                        try {
+                            const res = await fetch("/api/gamebook/tamagotchi/adopt", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ name }),
+                            })
+                            const data = await res.json()
+                            if (data.ok) {
+                                if (data.tamagotchi) setTamagotchi(data.tamagotchi)
+                                if (typeof data.availableEnergy === "number") setReps(data.availableEnergy)
+                                if (typeof data.energySpentToday === "number") setEnergySpent(data.energySpentToday)
+                                setToast(`Tu adoptes ${data.tamagotchi?.name ?? "ton tamagotchi"}.`)
+                            } else {
+                                setToast(data.reason || "Adoption impossible.")
+                            }
+                        } catch (e) {
+                            console.warn("[MapClient] tamagotchi/adopt failed", e)
+                            setToast("Erreur réseau, réessaie.")
+                        }
+                    }}
+                    onFeed={async () => {
+                        try {
+                            const res = await fetch("/api/gamebook/tamagotchi/feed", { method: "POST" })
+                            const data = await res.json()
+                            if (data.ok) {
+                                if (data.tamagotchi) setTamagotchi(data.tamagotchi)
+                                if (typeof data.availableEnergy === "number") setReps(data.availableEnergy)
+                                if (typeof data.energySpentToday === "number") setEnergySpent(data.energySpentToday)
+                            } else {
+                                setToast(data.reason || "Nourrissage impossible.")
+                            }
+                        } catch (e) {
+                            console.warn("[MapClient] tamagotchi/feed failed", e)
+                            setToast("Erreur réseau, réessaie.")
+                        }
+                    }}
+                    onClose={() => setShowTamagotchi(false)}
+                />
             )}
 
             {/* v3.11 — Cinématique vol PIAFFINI vers Bourg-Boulette */}

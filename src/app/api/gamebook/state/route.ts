@@ -120,6 +120,11 @@ export async function GET() {
     const { getUserDifficultyRatio } = await import("@/lib/gamebook/difficulty")
     const difficultyRatio = await getUserDifficultyRatio(userId)
 
+    // v3.14 — Tamagotchi : on renvoie la vue (happiness + stage recalculés) ou null
+    const { parseTamagotchi, viewTamagotchi } = await import("@/lib/gamebook/tamagotchi")
+    const tam = parseTamagotchi((progress as { tamagotchi?: unknown }).tamagotchi)
+    const tamagotchi = tam ? viewTamagotchi(tam) : null
+
     return NextResponse.json({
         state: {
             mapId: progress.mapId,
@@ -157,6 +162,8 @@ export async function GET() {
         towerFloorReached,
         // v3.10 — facteur de difficulté pour l'affichage côté client
         difficultyRatio,
+        // v3.14 — Tamagotchi (null si pas adopté)
+        tamagotchi,
     })
 }
 

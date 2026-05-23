@@ -447,6 +447,11 @@ model GamebookProgress {
   // Sans ce flag, même avec swim_set, le joueur reste bloqué sur la berge ("trop froide").
   firstSwimDone             Boolean @default(false)
 
+  // v3.14 — Tamagotchi adopté chez le vétérinaire de Macaron'île. JSON nullable.
+  // Format : { name, adoptedAt, lastFedAt, happiness (0-100), feedCount, stage ("egg"|"baby"|"adult") }
+  // null = pas encore adopté. Une fois adopté, l'objet n'est plus jamais effacé.
+  tamagotchi                Json?
+
   @@unique([userId, chapterId])
   @@index([userId])
   @@index([mapId])
