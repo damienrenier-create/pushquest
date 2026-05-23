@@ -46,7 +46,7 @@ export interface Building {
     w: number
     h: number
     /** Identité visuelle du bâtiment (sprite/façade). */
-    kind: "gym" | "casino" | "monsterCave" | "shop" | "tower"
+    kind: "gym" | "casino" | "monsterCave" | "shop" | "tower" | "veterinaire" | "bibliotheque"
     doorX: number
     doorY: number
     visible: boolean
@@ -260,7 +260,9 @@ export function tryComputeMove(
                     : b.kind === "casino" ? "casino"
                         : b.kind === "shop" ? "shop_interior"
                             : b.kind === "tower" ? "tower_floor_1"
-                                : "cave")
+                                : b.kind === "veterinaire" ? "veterinaire"
+                                    : b.kind === "bibliotheque" ? "bibliotheque"
+                                        : "cave")
             return {
                 nextState: {
                     ...current,

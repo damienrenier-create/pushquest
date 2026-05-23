@@ -393,6 +393,10 @@ function buildMacaronIle(): TileType[][] {
         m.push(row)
     }
 
+    // v3.12 — Sortie nord du canal vers Bourg-Boulette : on autorise (7, 0) comme waterShallow
+    // (sinon la bordure tree empêche le retour).
+    m[0][7] = "waterShallow"
+
     // Canal vertical waterShallow au centre (col 6-7) sur y=1..10 (10 cases de hauteur).
     // Les colonnes 1-5 et 8-12 sur ces mêmes lignes sont de l'eau "profonde" bloquante.
     for (let y = 1; y <= 10; y++) {
@@ -411,17 +415,62 @@ function buildMacaronIle(): TileType[][] {
         m[12][x] = "sand"
     }
 
-    // Quelques fleurs et flore décorative sur la ville
-    m[14][3] = "flowerR"
-    m[14][4] = "flowerY"
-    m[14][10] = "flowerY"
-    m[14][11] = "flowerR"
-
-    // Chemin central horizontal pour traverser la ville (y=14)
-    for (let x = 1; x <= MACARONILE_W - 2; x++) {
-        if (x >= 5 && x <= 8) m[14][x] = "path"
+    // v3.13 — Chemins de la ville (croix horizontale + vertical pour atteindre chaque bâtiment)
+    for (let x = 5; x <= 8; x++) m[13][x] = "path"
+    for (let y = 11; y <= 16; y++) {
+        m[y][6] = "path"
+        m[y][7] = "path"
     }
 
+    // Quelques fleurs déco
+    m[16][2] = "flowerR"
+    m[16][3] = "flowerY"
+    m[16][10] = "flowerY"
+    m[16][11] = "flowerR"
+
+    return m
+}
+
+// v3.13 — Bâtiments de Macaron'île ville (sud de l'île).
+// v3.13 ship : 2 bâtiments visibles (Shop frère TRENETTE + Vétérinaire).
+// La bibliothèque et le casino seront ajoutés dans un patch ultérieur.
+export const MACARONILE_BUILDINGS: Building[] = [
+    // Shop du frère NUTRIPATES (TRENETTE) — gauche
+    { x: 1, y: 13, w: 3, h: 3, kind: "shop", doorX: 1, doorY: 2, visible: true, targetMapId: "shop_macaron" },
+    // Vétérinaire — droite
+    { x: 9, y: 13, w: 3, h: 3, kind: "veterinaire", doorX: 1, doorY: 2, visible: true, targetMapId: "veterinaire" },
+]
+
+export const MACARONILE_SIGNS: Sign[] = [
+    { x: 4, y: 15, text: "BOUTIQUE DE TRENETTE\nCorned Pâtes, Lunettes et autres trouvailles." },
+    { x: 8, y: 15, text: "VÉTÉRINAIRE\nPour tous tes amis à plumes, à poils, à pâtes." },
+    { x: 9, y: 11, text: "PLAGE DE SABLE PÂTE\nProfite avant la marée." },
+]
+
+// v3.13 — Builders pour les nouveaux intérieurs Macaron'île
+// shop_macaron : copie de shop_interior (9x8 floorChecker + étagères + comptoir)
+function buildShopMacaron(): TileType[][] {
+    return buildShopInterior()
+}
+// veterinaire : intérieur 11x8, sol bois, comptoir au fond, "vitres" (decoratifs via shopShelf)
+function buildVeterinaire(): TileType[][] {
+    const W = 11, H = 8
+    const m: TileType[][] = []
+    for (let y = 0; y < H; y++) {
+        const row: TileType[] = []
+        for (let x = 0; x < W; x++) {
+            if (y === 0) row.push("wallH")
+            else if (x === 0 || x === W - 1 || y === H - 1) row.push("wallV")
+            else row.push("floorWood")
+        }
+        m.push(row)
+    }
+    // Vitrines d'animaux (réutilise shopShelf comme décoratif)
+    for (let x = 1; x < W - 1; x++) m[1][x] = "shopShelf"
+    // Comptoir du véto
+    for (let x = 2; x <= W - 3; x++) m[3][x] = "shopCounter"
+    // Sortie sud
+    m[H - 1][5] = "doorMat"
     return m
 }
 
@@ -669,14 +718,32 @@ export const MAPS: Record<string, MapData> = {
         height: 8,
         exitTarget: { mapId: "pepiteville", x: 11, y: 8 },  // devant la porte du shop
     },
-    // v3.12 — Macaron'île : canal au nord + plage + ville (extension prévue v3.13+)
+    // v3.12 — Macaron'île : canal au nord + plage + ville (extension v3.13)
+    // eslint-disable-next-line
     macaron_ile: {
         id: "macaron_ile",
         name: "MACARON'ÎLE",
         tiles: buildMacaronIle(),
         width: MACARONILE_W,
         height: MACARONILE_H,
-        // exitTarget non utilisé : on a une transition via grassTall/canal en MapClient
+        // exitTarget non utilisé : on a une transition via canal en MapClient
+    },
+    // v3.13 — Bâtiments intérieurs de Macaron'île (shop frère TRENETTE + Vétérinaire)
+    shop_macaron: {
+        id: "shop_macaron",
+        name: "BOUTIQUE DE TRENETTE",
+        tiles: buildShopMacaron(),
+        width: 9,
+        height: 8,
+        exitTarget: { mapId: "macaron_ile", x: 2, y: 16 },
+    },
+    veterinaire: {
+        id: "veterinaire",
+        name: "VÉTÉRINAIRE",
+        tiles: buildVeterinaire(),
+        width: 11,
+        height: 8,
+        exitTarget: { mapId: "macaron_ile", x: 10, y: 16 },
     },
     // === v3.8.2 — Hautes-Pâtes et sa Tour ===
     hautespates: {

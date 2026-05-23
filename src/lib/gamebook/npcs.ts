@@ -412,7 +412,7 @@ export const NPCS: NpcDefinition[] = [
         kind: "static",
         interaction: "interactive",
         sprite: { color: "#a07060" },
-        initialX: 3,
+        initialX: 4,
         initialY: 14,
         dialoguesAfter: [
             "Cette année, le concours est annulé...",
@@ -454,7 +454,7 @@ export const NPCS: NpcDefinition[] = [
         kind: "static",
         interaction: "interactive",
         sprite: { color: "#80b0a0" },
-        initialX: 10,
+        initialX: 8,
         initialY: 14,
         dialoguesAfter: [
             "J'avais tellement préparé mes pectoraux pour rien...",
@@ -476,6 +476,51 @@ export const NPCS: NpcDefinition[] = [
             "Bof, c'est mort de toute façon.",
         ],
     },
+
+    // ============================================================
+    // v3.13 — PNJ DE MACARON'ÎLE VILLE
+    // ============================================================
+
+    // -------------------------------
+    // TRENETTE — vendeur du shop_macaron, frère de NUTRIPATES
+    // -------------------------------
+    {
+        id: "shop_keeper_macaron",
+        name: "TRENETTE",
+        mapId: "shop_macaron",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#6090d0" },
+        initialX: 4,
+        initialY: 2,
+        dialoguesAfter: [
+            "Yo. Moi c'est TRENETTE.",
+            "Mon frère NUTRIPATES tient le shop à Pépiteville. Lui c'est le sérieux.",
+            "Moi je vends ce qu'il refuse de vendre. Trucs exotiques, gadgets, conserves.",
+            "Sers-toi.",
+        ],
+    },
+
+    // -------------------------------
+    // V3T — vétérinaire de Macaron'île
+    // -------------------------------
+    {
+        id: "veterinaire_keeper",
+        name: "V3T",
+        mapId: "veterinaire",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#80c090" },
+        initialX: 5,
+        initialY: 2,
+        dialoguesAfter: [
+            "Bienvenue chez la vétérinaire de Macaron'île.",
+            "Tu as un animal blessé ? Un compagnon à examiner ?",
+            "(Elle regarde derrière toi.)",
+            "Tu n'as personne avec toi. Repasse quand tu auras un copain à plumes ou à pâtes.",
+        ],
+    },
+
 ]
 
 // ============================================================

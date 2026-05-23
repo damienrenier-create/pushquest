@@ -34,6 +34,8 @@ import {
     TOWER_STAIRS_SQUATS_THRESHOLD,
     MACARONILE_CANAL_ENTRY_FROM_NORTH,
     BOURGPATES_SPAWN_FROM_MACARONILE,
+    MACARONILE_BUILDINGS,
+    MACARONILE_SIGNS,
 } from "@/lib/gamebook/maps"
 import {
     type Direction,
@@ -201,14 +203,17 @@ export default function MapClient({
                 ? PEPITEVILLE_BUILDINGS
                 : state.mapId === "hautespates"
                     ? HAUTESPATES_BUILDINGS
-                    : []
+                    : state.mapId === "macaron_ile"
+                        ? MACARONILE_BUILDINGS
+                        : []
 
     // v3.8 — Signs selon la map courante
     const signs =
         state.mapId === "bourgpates" ? OUTDOOR_SIGNS
             : state.mapId === "pepiteville" ? PEPITEVILLE_SIGNS
                 : state.mapId === "hautespates" ? HAUTESPATES_SIGNS
-                    : []
+                    : state.mapId === "macaron_ile" ? MACARONILE_SIGNS
+                        : []
 
     // ============================================================
     // LOAD AUTRES JOUEURS (polling fallback si Pusher off)
@@ -2128,12 +2133,14 @@ function BuildingSprite({
     }
 
     // v3.8 : kind="shop" → toit bleu + label SHOP
+    // v3.13 : kind="veterinaire" → toit vert + label VÉTO
     // Sinon (gym, casino) → toit rouge classique
     const isGym = building.kind === "gym"
     const isShop = building.kind === "shop"
-    const roofColor = isShop ? "#3060c0" : "#c84838"
-    const roofDarkColor = isShop ? "#1a3878" : "#883020"
-    const label = isGym ? "MUSCU" : isShop ? "SHOP" : "CASINO"
+    const isVet = building.kind === "veterinaire"
+    const roofColor = isShop ? "#3060c0" : isVet ? "#48a868" : "#c84838"
+    const roofDarkColor = isShop ? "#1a3878" : isVet ? "#205838" : "#883020"
+    const label = isGym ? "MUSCU" : isShop ? "SHOP" : isVet ? "VÉTO" : "CASINO"
     return (
         <>
             <div style={{ position: "absolute", left, top, width, height, display: "flex", flexDirection: "column" }}>

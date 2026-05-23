@@ -11,6 +11,7 @@ import prisma from "@/lib/prisma"
 import { getTodayISO } from "@/lib/challenge"
 import { INITIAL_SPAWN } from "@/lib/gamebook/maps"
 import { isGamebookFrozen } from "@/lib/gamebook/antiCheat"
+import { ensureCreatorBootstrap } from "@/lib/gamebook/creator"
 
 export const dynamic = "force-dynamic"
 
@@ -46,6 +47,13 @@ export async function GET() {
     let progress = await prisma.gamebookProgress.findUnique({
         where: { userId_chapterId: { userId, chapterId: CHAPTER_ID } },
     })
+
+    // v3.13 — Auto-bootstrap des comptes créateur (isSystem) avec les flags narratifs
+    // majeurs (piaffiniRescued, firstSwimDone) et les items équipement (swim_set).
+    // Idempotent : si déjà fait, no-op.
+    if (progress) {
+        progress = await ensureCreatorBootstrap(userId, progress)
+    }
 
     if (!progress) {
         progress = await prisma.gamebookProgress.create({
@@ -178,8 +186,8 @@ export async function POST(req: NextRequest) {
         posY === null ||
         !direction ||
         !phase ||
-        // v3.8 — Pépiteville et ses bâtiments + v3.8.2 — Hautes-Pâtes et tour des Pâtes Aiguës + v3.12 — Macaron'île
-        !["bourgpates", "gym", "casino", "cave", "route1", "pepiteville", "gym_pepite", "casino_pepite", "shop_interior", "hautespates", "tower_floor_1", "tower_floor_2", "tower_floor_3", "tower_floor_4", "tower_floor_5", "macaron_ile"].includes(mapId) ||
+        // v3.8 — Pépiteville et ses bâtiments + v3.8.2 — Hautes-Pâtes et tour des Pâtes Aiguës + v3.12 — Macaron'île + v3.13 — bâtiments Macaron'île
+        !["bourgpates", "gym", "casino", "cave", "route1", "pepiteville", "gym_pepite", "casino_pepite", "shop_interior", "hautespates", "tower_floor_1", "tower_floor_2", "tower_floor_3", "tower_floor_4", "tower_floor_5", "macaron_ile", "shop_macaron", "veterinaire"].includes(mapId) ||
         !["up", "down", "left", "right"].includes(direction) ||
         !["explore", "introMonster", "playing"].includes(phase) ||
         posX < 0 || posX > 30 ||

@@ -9,10 +9,12 @@ import { useState } from "react"
 import { ITEMS, readStored, readMaxCapacity, readDurability, isBrokenItem, type ItemDefinition } from "@/lib/gamebook/items"
 import type { InventoryEntry } from "@/lib/gamebook/inventory"
 
+type UseAction = "fill" | "drink" | "consume"
+
 interface Props {
     inventory: InventoryEntry[]
     availableEnergy: number
-    onUse: (itemKey: string, action: "fill" | "drink", amount?: number) => Promise<void>
+    onUse: (itemKey: string, action: UseAction, amount?: number) => Promise<void>
     onView?: (itemKey: string, kind: "playerMap") => void
     onClose: () => void
 }
@@ -103,7 +105,7 @@ function ItemRow({
     entry: InventoryEntry
     def: ItemDefinition
     availableEnergy: number
-    onUse: (itemKey: string, action: "fill" | "drink", amount?: number) => Promise<void>
+    onUse: (itemKey: string, action: UseAction, amount?: number) => Promise<void>
     onView?: (itemKey: string, kind: "playerMap") => void
 }) {
     const [fillInput, setFillInput] = useState<string>("10")
@@ -112,6 +114,7 @@ function ItemRow({
     const isStorable = !!def.capabilities.canStore
     const isWearable = !!def.capabilities.canWear
     const isViewable = !!def.capabilities.canView
+    const isConsumable = !!def.capabilities.canConsume
     const broken = isBrokenItem(entry.data, def)
 
     // v3.8.1 — capacité dynamique pour la gourde (peut décroître)
@@ -123,7 +126,7 @@ function ItemRow({
     const initialDurability = def.capabilities.canWear?.initialDurability ?? 0
     const durabilityPct = initialDurability > 0 ? (durability / initialDurability) * 100 : 0
 
-    const doAction = async (action: "fill" | "drink") => {
+    const doAction = async (action: UseAction) => {
         if (busy) return
         setBusy(true)
         try {
@@ -233,6 +236,19 @@ function ItemRow({
                         style={btnStyle(false, "#4080d8")}
                     >
                         CONSULTER
+                    </button>
+                </div>
+            )}
+
+            {/* v3.13 — Action consommer (corned pâtes, etc.) */}
+            {isConsumable && (
+                <div style={{ marginTop: 8 }}>
+                    <button
+                        onClick={() => doAction("consume")}
+                        disabled={busy}
+                        style={btnStyle(busy, "#d06030")}
+                    >
+                        CONSOMMER
                     </button>
                 </div>
             )}

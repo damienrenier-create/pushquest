@@ -33,6 +33,16 @@ export interface ItemCapabilities {
         /** Identifiant du modal à ouvrir côté client. */
         kind: "playerMap"
     }
+    /** v3.13 — Item consommable instantané. Une utilisation = l'item disparaît du sac. */
+    canConsume?: {
+        /** Effet à l'utilisation côté serveur. */
+        effect: "doubleEnergy" | "fillFlask"
+    }
+    /** v3.13 — Item cosmétique visible sur le sprite du joueur. Pas de consommation. */
+    canCosmetic?: {
+        /** Slot d'équipement (pour ne pas en porter deux du même type). */
+        slot: "head" | "face" | "body"
+    }
 }
 
 export interface ItemDefinition {
@@ -88,6 +98,29 @@ export const ITEMS: ItemDefinition[] = [
         priceReps: 0,  // non achetable — donné par JOJO après PIAFFINI sauvé
         maxQuantity: 1,
         capabilities: {},  // pas de capability propre — l'item est juste un "gate" vérifié dans les check waterShallow (v3.12)
+    },
+    // v3.13 — Items vendus par TRENETTE (frère de NUTRIPATES) à Macaron'île
+    {
+        key: "corned_pates",
+        name: "Corned Pâtes",
+        emoji: "🥫",
+        description: "Conserve de pâtes énergétique. Double instantanément ton énergie disponible. Disparaît à l'usage.",
+        priceReps: 80,
+        maxQuantity: 1,  // 1 à la fois (rachat après consommation)
+        capabilities: {
+            canConsume: { effect: "doubleEnergy" },
+        },
+    },
+    {
+        key: "lunettes",
+        name: "Lunettes",
+        emoji: "🕶️",
+        description: "Lunettes stylées. Cosmétique. Tout le monde verra que tu en portes.",
+        priceReps: 50,
+        maxQuantity: 1,
+        capabilities: {
+            canCosmetic: { slot: "face" },
+        },
     },
 ]
 

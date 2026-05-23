@@ -169,5 +169,45 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: false, reason: "Action invalide pour la gourde." }, { status: 400 })
     }
 
+    // === v3.13 : CORNED PÂTES (consommable, double l'énergie) ===
+    if (itemKey === "corned_pates" && action === "consume") {
+        const today = getTodayISO()
+        const storedDate = (progress as { energySpentDate?: string }).energySpentDate ?? ""
+        const storedSpent = (progress as { energySpentToday?: number }).energySpentToday ?? 0
+        const currentSpent = storedDate === today ? storedSpent : 0
+        const todayReps = await getTodayReps(userId)
+        const isCreator = await isCreatorAccount(userId)
+        const availableEnergy = padAvailableEnergyForCreator(todayReps - currentSpent, isCreator)
+
+        if (availableEnergy <= 0) {
+            return NextResponse.json({ ok: false, reason: "Tu n'as pas d'énergie à doubler. Reviens plus tard." })
+        }
+
+        // Doubler l'énergie disponible = ajouter un bonus égal à availableEnergy → soustraire de energySpentToday
+        const bonus = availableEnergy
+        const newSpent = currentSpent - bonus
+        // Retirer l'item de l'inventaire (Corned Pâtes consommé)
+        const newInventory = inventory.filter((e) => e.itemKey !== "corned_pates")
+
+        await (prisma as any).gamebookProgress.update({
+            where: { id: progress.id },
+            data: {
+                energySpentToday: newSpent,
+                energySpentDate: today,
+                inventory: newInventory,
+                lastSeen: new Date(),
+            },
+        })
+
+        return NextResponse.json({
+            ok: true,
+            inventory: newInventory,
+            availableEnergy: padAvailableEnergyForCreator(todayReps - newSpent, isCreator),
+            energySpentToday: newSpent,
+            consumed: itemKey,
+            bonus,
+        })
+    }
+
     return NextResponse.json({ ok: false, reason: "Aucune action gérée pour cet objet." }, { status: 400 })
 }
