@@ -452,6 +452,12 @@ model GamebookProgress {
   // null = pas encore adopté. Une fois adopté, l'objet n'est plus jamais effacé.
   tamagotchi                Json?
 
+  // v3.17 — Chance accumulée en parlant à LINGUINI (1×/jour). Stocké en compteur.
+  // Sera utilisé en v3.20 pour booster les odds du mini-jeu casino.
+  luck                      Int     @default(0)
+  // v3.17 — Date du dernier "tap" de LINGUINI (format YYYY-MM-DD). Vide = jamais parlé.
+  lastLuckTalkDate          String  @default("")
+
   @@unique([userId, chapterId])
   @@index([userId])
   @@index([mapId])

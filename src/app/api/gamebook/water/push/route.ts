@@ -77,13 +77,9 @@ export async function POST(req: NextRequest) {
         })
     }
 
-    // Check : la cible ne doit PAS déjà avoir firstSwimDone (sinon push inutile)
-    if ((targetProgress as { firstSwimDone?: boolean }).firstSwimDone === true) {
-        return NextResponse.json({
-            ok: false,
-            reason: "Ta cible sait déjà nager seule. Pas besoin de la pousser.",
-        })
-    }
+    // v3.17 — Q27 : suppression du blocage "déjà firstSwimDone".
+    // Désormais on peut pousser ses potes autant de fois qu'on veut, tant qu'ils
+    // sont à Bourg-Boulette avec leur swim_set. Push reste atomique : téléport canal nord à chaque fois.
 
     // Check : la cible doit être actuellement sur bourgpates (sinon ce n'est pas
     // près du canal de Bourg-Boulette). On accepte n'importe quelle position

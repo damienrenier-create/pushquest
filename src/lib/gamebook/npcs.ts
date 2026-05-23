@@ -42,6 +42,9 @@ export interface NpcDefinition {
     // v3.11 — pool de dialogues aléatoires : si défini, on tire un random à chaque
     // interaction. Prime sur dialoguesAfter. Utilisé par le Blagueur de la Tour.
     randomDialogues?: string[][]
+    // v3.17 — dialogue utilisé quand le joueur a DÉJÀ parlé au NPC (revisit).
+    // Permet aux 5 PNJ tristes de révéler des indices la 2e fois.
+    dialoguesAfterRevisit?: string[]
     // Récompense unique (ex: gym guy donne 100 reps)
     energyReward?: number        // si défini, donne X reps une fois
 }
@@ -170,6 +173,7 @@ export const NPCS: NpcDefinition[] = [
     // -------------------------------
     // RAVIOLI — wanderer décoratif
     // -------------------------------
+    // v3.17 — RAVIOLI : hint sur les arbres fruitiers cachés du monde
     {
         id: "ravioli",
         name: "RAVIOLI",
@@ -181,14 +185,19 @@ export const NPCS: NpcDefinition[] = [
         initialY: 11,
         wanderRadius: 2,
         dialoguesAfter: [
-            "Pépiteville, c'est petit mais c'est joli.",
-            "Le bassin aux lasagnes est moins profond qu'il en a l'air.",
-            "Si tu veux des sensations, va au casino. Si tu veux te muscler, va au gymnase.",
+            "Hé ! Tu veux savoir un truc cool ?",
+            "Y a plein d'arbres à pâtes-fruits planqués partout dans le monde.",
+            "Chacun donne 3 fruits par jour, et chaque fruit c'est +80 reps. C'est gratos quoi.",
+            "Cherche bien à Pépiteville, à Hautes-Pâtes, partout. Y en a même qui sont à moitié cachés.",
+        ],
+        dialoguesAfterRevisit: [
+            "Encore toi ? OK, indice bonus : un arbre est planqué près des fleurs à Hautes-Pâtes.",
+            "Bon courage.",
         ],
     },
 
     // -------------------------------
-    // LINGUINI — wanderer décoratif
+    // LINGUINI — wanderer "porte-bonheur" (v3.17 : donne +1 luck/jour)
     // -------------------------------
     {
         id: "linguini",
@@ -201,9 +210,14 @@ export const NPCS: NpcDefinition[] = [
         initialY: 16,
         wanderRadius: 2,
         dialoguesAfter: [
-            "Je suis LINGUINI, mais on m'appelle aussi 'Le Long'.",
-            "Pas de raison particulière. C'est comme ça.",
-            "Tu cherches quelque chose ? Le shop est à droite.",
+            "Je suis LINGUINI. On dit que je porte chance à qui me parle.",
+            "Tiens, prends-en un peu. *Te tape sur l'épaule.*",
+            "Bonne journée. Reviens demain si t'en veux encore.",
+        ],
+        dialoguesAfterRevisit: [
+            "Re-bonjour ! Une nouvelle dose de chance pour toi ?",
+            "*Te tape sur l'épaule, encore.*",
+            "C'est offert. Pas de pression. Reviens demain si jamais.",
         ],
     },
 
@@ -299,6 +313,28 @@ export const NPCS: NpcDefinition[] = [
     // v3.11 — PNJ de foreshadowing dans la Tour des Pâtes Aiguës
     // ============================================================
 
+    // v3.17 — Gardien à l'entrée de la Tour (Floor 1) — débordé par les fientes de PIAFFINI
+    {
+        id: "tower_gardien",
+        name: "GARDIEN",
+        mapId: "tower_floor_1",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#a89058" },
+        initialX: 2,
+        initialY: 8,
+        dialoguesAfter: [
+            "Ah ! Quelqu'un ! Regarde-moi ce sol... *montre par terre avec dégoût.*",
+            "C'est le piaf en haut de la tour. Il défèque partout. J'arrête pas de nettoyer.",
+            "JOJO refuse de monter le récupérer, peur des hauteurs, paraît-il.",
+            "Si tu pouvais juste... lui dire de partir. Je t'en serais éternellement reconnaissant.",
+        ],
+        // Post-PIAFFINI : remerciement
+        dialoguesAfterPiaffini: [
+            "Toi ! C'est toi qui as embarqué le piaf, hein ?",
+            "Enfin une vie normale. Le sol redevient propre. Merci, vraiment.",
+        ],
+    },
     {
         id: "tower_rumeur_oiseau",
         name: "RUMEUR",
@@ -400,11 +436,18 @@ export const NPCS: NpcDefinition[] = [
             "Mais sans maillot ni palmes, impossible d'y arriver.",
             "Si tu trouvais ça quelque part, tu pourrais explorer là-bas.",
         ],
+        // v3.17 — Post-PIAFFINI : reconnaît le swim_set offert par JOJO
+        dialoguesAfterPiaffini: [
+            "Oh ! T'as ton set de nage ! JOJO te l'a filé, hein ?",
+            "Si t'es bien équipé, descends au sud, traverse le canal, et tu trouveras Macaron'île.",
+            "C'est là-bas que le concours se passe d'habitude. Va voir TRENETTE au passage, son shop est fourni.",
+        ],
     },
 
     // ============================================================
     // v3.12 — PNJ tristes de MACARON'ÎLE (concours annulé)
     // ============================================================
+    // v3.17 — PENNE le pessimiste général
     {
         id: "macaron_triste_1",
         name: "PENNE",
@@ -415,10 +458,17 @@ export const NPCS: NpcDefinition[] = [
         initialX: 4,
         initialY: 14,
         dialoguesAfter: [
-            "Cette année, le concours est annulé...",
-            "Quelle déception.",
+            "*Soupire bruyamment.* T'es nouveau ici ?",
+            "Tout va mal. Le concours est annulé. Les bestioles bloquent le sud.",
+            "Les hautes herbes te bouffent l'énergie si t'as pas de compagnon.",
+            "À ta place, je rentrerais chez moi. Mais bon, t'es libre.",
+        ],
+        dialoguesAfterRevisit: [
+            "Tu reviens ? Sérieux ?",
+            "Y a vraiment rien à faire ici. Mais bon, fais comme tu veux.",
         ],
     },
+    // v3.17 — RIGATO le factuel/statisticien
     {
         id: "macaron_triste_2",
         name: "RIGATO",
@@ -429,10 +479,17 @@ export const NPCS: NpcDefinition[] = [
         initialX: 5,
         initialY: 15,
         dialoguesAfter: [
-            "Des bestioles ont infesté la route du sud.",
-            "Personne ne peut amener les inscriptions au village muscu.",
+            "Données du concours intersalle : 142 inscriptions perdues cette année.",
+            "Record sur 8 ans. Les bestioles bloquent l'accès aux athlètes.",
+            "Macaron'île économise normalement 12 % de son PIB grâce au tourisme du concours.",
+            "Cette année on est en chute libre.",
+        ],
+        dialoguesAfterRevisit: [
+            "Statistique mise à jour : tu es la 4e personne à m'avoir reparlé ce mois.",
+            "Marge d'erreur ±0,3 %.",
         ],
     },
+    // v3.17 — FARFALL le romantique-rêveur — foreshadow naufragé
     {
         id: "macaron_triste_3",
         name: "FARFALL",
@@ -443,10 +500,17 @@ export const NPCS: NpcDefinition[] = [
         initialX: 8,
         initialY: 15,
         dialoguesAfter: [
-            "On dit qu'il faudrait un animal spécial pour les faire fuir.",
-            "Mais lequel ? Personne ne sait.",
+            "*Regarde vaguement vers l'horizon.* Y'a une silhouette qui flotte au large...",
+            "Personne ne sait qui c'est. Un naufragé, peut-être.",
+            "S'il pouvait juste raconter d'où il vient. *Il soupire.*",
+        ],
+        dialoguesAfterRevisit: [
+            "Le naufragé est toujours là-bas. Je le sens.",
+            "Si tu vas vers la plage et que tu regardes attentivement, peut-être que tu le verras.",
+            "*Il a les yeux brillants.*",
         ],
     },
+    // v3.17 — ORZO l'arrogant-frustré — foreshadow trésor casino
     {
         id: "macaron_triste_4",
         name: "ORZO",
@@ -457,10 +521,17 @@ export const NPCS: NpcDefinition[] = [
         initialX: 8,
         initialY: 14,
         dialoguesAfter: [
-            "J'avais tellement préparé mes pectoraux pour rien...",
-            "*Il soupire profondément.*",
+            "J'aurais GAGNÉ ce concours, j'te dis. Mes pectoraux étaient prêts à explosion.",
+            "Et puis BAM, annulé. Pfff.",
+            "Note bien : je suis le seul vrai athlète de cette île de mollassons.",
+        ],
+        dialoguesAfterRevisit: [
+            "Ah, tu reviens vers le grand champion ?",
+            "Tiens, un secret : à Bourg-Boulette, dans le casino, y a un coin où des pièces sont tombées par terre.",
+            "J'aurais bien été chercher, mais c'est pas digne d'un champion. *Il bombe le torse.*",
         ],
     },
+    // v3.17 — BUCATINI le naïf-optimiste
     {
         id: "macaron_triste_5",
         name: "BUCATINI",
@@ -471,9 +542,13 @@ export const NPCS: NpcDefinition[] = [
         initialX: 7,
         initialY: 16,
         dialoguesAfter: [
-            "Si seulement quelqu'un de courageux pouvait nous aider...",
-            "*Il te regarde avec espoir, puis se ravise.*",
-            "Bof, c'est mort de toute façon.",
+            "Oh ! Bonjour ! C'est sympa que tu sois là.",
+            "Mon coach dit que le concours va revenir. Il sait toujours, mon coach.",
+            "J'arrête pas de m'entraîner au cas où. Toi aussi tu t'entraînes ? On pourrait s'entraîner ensemble peut-être ?",
+        ],
+        dialoguesAfterRevisit: [
+            "T'es revenu ! Coach dit que les gens qui reviennent ont de la chance.",
+            "Du coup tu vas réussir un truc cool, c'est obligé. *Il sourit.*",
         ],
     },
 
@@ -569,6 +644,23 @@ export const NPCS: NpcDefinition[] = [
             "Coach GLUTOS, à ton service.",
             "Si un jour le concours reprend, viens t'entraîner ici.",
             "Pour l'instant je perfectionne mes deadlifts. Tout seul.",
+        ],
+    },
+    // v3.17 — Veilleur à l'orée de la forêt hantée (foreshadow seulement, pas de map au-delà encore)
+    {
+        id: "muscuville_veilleur",
+        name: "VEILLEUR",
+        mapId: "muscuville",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#404858" },
+        initialX: 11,
+        initialY: 5,
+        dialoguesAfter: [
+            "*Il tremble légèrement.*",
+            "Tu sens ? À l'est, derrière les arbres... la forêt hantée.",
+            "Personne n'ose s'en approcher. Ceux qui ont essayé sont revenus en courant, le regard vide.",
+            "*Il pose la main sur ton épaule.* Si tu tiens à toi, n'y va pas.",
         ],
     },
 
@@ -715,6 +807,9 @@ export function getNpcsForMap(mapId: string): NpcDefinition[] {
 export interface NpcDialogueFlags {
     /** v3.11 — true si le joueur a sauvé PIAFFINI (override JOJO et JOJETTE) */
     piaffiniRescued?: boolean
+    /** v3.17 — IDs des NPCs déjà rencontrés au moins une fois.
+     *  Quand l'id du NPC est inclus + dialoguesAfterRevisit défini → on utilise dialoguesAfterRevisit. */
+    npcsTalkedTo?: string[]
 }
 
 /**
@@ -740,6 +835,10 @@ export function getNpcDialogue(
     }
     if (flags.piaffiniRescued && npc.dialoguesAfterPiaffini) {
         return npc.dialoguesAfterPiaffini
+    }
+    // v3.17 — Si le joueur a déjà parlé au NPC, utilise le dialogue revisit (s'il existe)
+    if (flags.npcsTalkedTo?.includes(npc.id) && npc.dialoguesAfterRevisit) {
+        return npc.dialoguesAfterRevisit
     }
     return npc.dialoguesAfter
 }

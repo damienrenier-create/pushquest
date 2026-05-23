@@ -413,9 +413,11 @@ export default function MapClient({
     // ============================================================
     const triggerNpcDialogue = useCallback(
         (npc: NpcDefinition) => {
-            // v3.11 — Passer les flags du joueur pour les dialogues conditionnels (JOJO/JOJETTE post-PIAFFINI)
+            // v3.11 — Flags conditionnels (JOJO/JOJETTE post-PIAFFINI)
+            // v3.17 — Flag npcsTalkedTo pour basculer sur dialoguesAfterRevisit (5 PNJ tristes, RAVIOLI, LINGUINI...)
             const lines = getNpcDialogue(npc, state.phase, {
                 piaffiniRescued: state.piaffiniRescued === true,
+                npcsTalkedTo: state.npcsTalkedTo ?? [],
             })
             setCinematic({
                 kind: "npcDialogue",
@@ -426,7 +428,7 @@ export default function MapClient({
                 energyReward: npc.energyReward,
             })
         },
-        [state.phase, state.piaffiniRescued]
+        [state.phase, state.piaffiniRescued, state.npcsTalkedTo]
     )
 
     // ============================================================
@@ -1085,6 +1087,23 @@ export default function MapClient({
                         : [...s.npcsTalkedTo, npcId]
                     return { ...s, npcsTalkedTo: newTalked }
                 })
+
+                // v3.17 — LINGUINI : +1 luck par jour (idempotent serveur)
+                if (npcId === "linguini") {
+                    ; (async () => {
+                        try {
+                            const res = await fetch("/api/gamebook/luck/talk", { method: "POST" })
+                            const data = await res.json()
+                            if (data.ok && data.granted === true) {
+                                setToast(`+1 ✨ chance ! (Total : ${data.luck})`)
+                            } else if (data.ok && data.granted === false) {
+                                setToast("LINGUINI a besoin de recharger ses vibes. Reviens demain.")
+                            }
+                        } catch (e) {
+                            console.warn("[MapClient] luck/talk failed", e)
+                        }
+                    })()
+                }
 
                 // === v3.4a : récompense gym guy via API serveur (source de vérité) ===
                 if (isGymGuy && energyReward && state.phase === "playing" && !state.gymGuyEnergyGiven) {

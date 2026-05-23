@@ -679,13 +679,17 @@ function buildTowerFloor(size: number, hasDownStairs: boolean, hasUpStairs: bool
         m[0][Math.floor((3 * W) / 4)] = "towerWindow"
     }
 
-    // Escalier montant : centré en haut (juste sous la paroi nord)
+    // v3.17 — Escaliers triplés (3 cases adjacentes) pour ne pas bloquer entre joueurs
+    const mid = Math.floor(W / 2)
     if (hasUpStairs) {
-        m[1][Math.floor(W / 2)] = "stairsUp"
+        m[1][mid] = "stairsUp"
+        if (mid - 1 >= 1) m[1][mid - 1] = "stairsUp"
+        if (mid + 1 <= W - 2) m[1][mid + 1] = "stairsUp"
     }
-    // Escalier descendant : centré en bas (juste au-dessus de la paroi sud)
     if (hasDownStairs) {
-        m[H - 2][Math.floor(W / 2)] = "stairsDown"
+        m[H - 2][mid] = "stairsDown"
+        if (mid - 1 >= 1) m[H - 2][mid - 1] = "stairsDown"
+        if (mid + 1 <= W - 2) m[H - 2][mid + 1] = "stairsDown"
     }
     // doorMat sortie vers Hautes-Pâtes (uniquement floor 1)
     if (hasExit) {
