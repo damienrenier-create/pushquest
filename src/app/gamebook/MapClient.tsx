@@ -86,6 +86,8 @@ interface Props {
     initialFruitCounts: Record<string, number>
     // v3.8.2 — plus haut étage atteint dans la Tour
     initialTowerFloorReached: number
+    // v3.10 — ratio de difficulté (1.0 vétéran, < 1.0 onboarding)
+    initialDifficultyRatio: number
 }
 
 const GHOST_COLORS = ["#4080d8", "#d840a0", "#48a830", "#f08020", "#9050d0", "#d8c020", "#20a8c8"]
@@ -134,6 +136,7 @@ export default function MapClient({
     initialHasBag,
     initialFruitCounts,
     initialTowerFloorReached,
+    initialDifficultyRatio,
 }: Props) {
     // ============================================================
     // STATE
@@ -161,6 +164,14 @@ export default function MapClient({
     const [fruitCounts, setFruitCounts] = useState<Record<string, number>>(initialFruitCounts)
     // === v3.8.2 : plus haut étage atteint dans la Tour. Drive le bypass-check des escaliers. ===
     const [towerFloorReached, setTowerFloorReached] = useState<number>(initialTowerFloorReached)
+    // === v3.10 : ratio de difficulté (multiplie tous les coûts du Gamebook, sauf rewards). ===
+    const [difficultyRatio] = useState<number>(initialDifficultyRatio)
+
+    // v3.10 — Helper pour appliquer le ratio (arrondi à l'entier supérieur, min 1)
+    const applyDifficultyRatio = (baseValue: number): number => {
+        if (difficultyRatio >= 1) return baseValue
+        return Math.max(1, Math.ceil(baseValue * difficultyRatio))
+    }
 
     const moveLockRef = useRef(false)
     const aLockRef = useRef(false)
@@ -539,16 +550,18 @@ export default function MapClient({
                         setToast("L'arbre te bloque. Pousse-le après l'intro du Monstre.")
                         return
                     }
-                    if (reps < COST_TREE_OBSTACLE) {
-                        setToast(`L'arbre coûte ${COST_TREE_OBSTACLE} reps. T'en as ${reps}.`)
+                    // v3.10 — coût ajusté selon le ratio de difficulté
+                    const adjustedTreeCost = applyDifficultyRatio(COST_TREE_OBSTACLE)
+                    if (reps < adjustedTreeCost) {
+                        setToast(`L'arbre coûte ${adjustedTreeCost} reps. T'en as ${reps}.`)
                         return
                     }
                     // Pousser l'arbre : on tente le débit côté serveur
                     ; (async () => {
-                        const ok = await spendEnergy(COST_TREE_OBSTACLE, "tree_obstacle")
+                        const ok = await spendEnergy(adjustedTreeCost, "tree_obstacle")
                         if (!ok) return
                         setState((s) => ({ ...s, treeObstacleCleared: true, direction: d }))
-                        setToast(`Tu pousses l'arbre. -${COST_TREE_OBSTACLE} reps.`)
+                        setToast(`Tu pousses l'arbre. -${adjustedTreeCost} reps.`)
                         // v3.4b : broadcast (premier à franchir l'arbre = événement)
                         broadcast({
                             type: "cinematic:trigger",
@@ -585,13 +598,15 @@ export default function MapClient({
                         setToast(`${blockingNpc.npc.name} te regarde. Va falloir lui parler (appuie sur A).`)
                         return
                     }
-                    if (reps < COST_PUSH) {
-                        setToast(`Pousser ${blockingNpc.npc.name} coûte ${COST_PUSH} reps. T'en as ${reps}.`)
+                    // v3.10 — coût push ajusté selon le ratio
+                    const adjustedPushCost = applyDifficultyRatio(COST_PUSH)
+                    if (reps < adjustedPushCost) {
+                        setToast(`Pousser ${blockingNpc.npc.name} coûte ${adjustedPushCost} reps. T'en as ${reps}.`)
                         return
                     }
-                    // On consomme 30 reps via l'API serveur (source de vérité)
+                    // On consomme `adjustedPushCost` reps via l'API serveur (source de vérité)
                     ; (async () => {
-                        const ok = await spendEnergy(COST_PUSH, "push_npc")
+                        const ok = await spendEnergy(adjustedPushCost, "push_npc")
                         if (!ok) return
                         setToast(`Tu pousses ${blockingNpc.npc.name}. -${COST_PUSH} reps.`)
                     })()
@@ -614,9 +629,11 @@ export default function MapClient({
             if (result.repsCost > 0) {
                 // v3.8.1 — Si l'user a des baskets intactes, réduction de COST_MOVE
                 const hasBoots = hasIntactItem(inventory, "boots")
-                const adjustedCost = hasBoots
+                const baseCost = hasBoots
                     ? Math.max(0, result.repsCost - BOOTS_MOVE_COST_REDUCTION)
                     : result.repsCost
+                // v3.10 — Ratio de difficulté (onboarding paye moins de reps par case)
+                const adjustedCost = applyDifficultyRatio(baseCost)
                 // Débit local immédiat pour la fluidité
                 setReps((r) => Math.max(0, r - adjustedCost))
                 // Persistance serveur en arrière-plan (fire and forget, resync si échec)
@@ -1179,10 +1196,12 @@ export default function MapClient({
             })
             return
         }
-        if (reps < COST_PUSH) {
+        // v3.10 — coût ajusté selon le ratio
+        const adjustedPushCostForPlayer = applyDifficultyRatio(COST_PUSH)
+        if (reps < adjustedPushCostForPlayer) {
             setPopup({
                 kind: "ghost",
-                text: `${target.nickname}\n\nIl te bloque le passage.\n\nIl faut ${COST_PUSH} reps pour le pousser. Tu en as ${reps}.`,
+                text: `${target.nickname}\n\nIl te bloque le passage.\n\nIl faut ${adjustedPushCostForPlayer} reps pour le pousser. Tu en as ${reps}.`,
             })
             return
         }
@@ -1201,13 +1220,13 @@ export default function MapClient({
             setToast(`${target.nickname} ne peut pas reculer plus.`)
             return
         }
-        // Appliquer : débit local + persistance serveur
-        setReps((r) => r - COST_PUSH)
-        spendEnergy(COST_PUSH, "push_player").catch(() => {/* silent */ })
+        // Appliquer : débit local + persistance serveur (coût ajusté v3.10)
+        setReps((r) => r - adjustedPushCostForPlayer)
+        spendEnergy(adjustedPushCostForPlayer, "push_player").catch(() => {/* silent */ })
         setOtherPlayers((ps) =>
             ps.map((p) => (p.id === target.id ? { ...p, posX: newTarget.x, posY: newTarget.y } : p))
         )
-        setToast(`Tu pousses ${target.nickname}. -${COST_PUSH} reps.`)
+        setToast(`Tu pousses ${target.nickname}. -${adjustedPushCostForPlayer} reps.`)
         // v3.4b : broadcast Pusher
         broadcast({
             type: "player:push",
@@ -1661,6 +1680,7 @@ export default function MapClient({
                     inventory={inventory}
                     availableEnergy={reps}
                     nickname={nickname}
+                    difficultyRatio={difficultyRatio}
                     onBuy={async (itemKey) => {
                         try {
                             const res = await fetch("/api/gamebook/shop/buy", {

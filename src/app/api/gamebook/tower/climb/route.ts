@@ -17,6 +17,7 @@ import prisma from "@/lib/prisma"
 import { getTodayISO } from "@/lib/challenge"
 import { isGamebookFrozen } from "@/lib/gamebook/antiCheat"
 import { TOWER_STAIRS_SQUATS_THRESHOLD, MAPS } from "@/lib/gamebook/maps"
+import { getUserDifficultyRatio, applyRatio } from "@/lib/gamebook/difficulty"
 
 export const dynamic = "force-dynamic"
 
@@ -99,10 +100,13 @@ export async function POST(req: NextRequest) {
             const isCreator = creatorCheck?.isSystem === true
 
             if (!isCreator) {
-                const threshold = TOWER_STAIRS_SQUATS_THRESHOLD[currentFloor]
-                if (typeof threshold !== "number") {
+                const baseThreshold = TOWER_STAIRS_SQUATS_THRESHOLD[currentFloor]
+                if (typeof baseThreshold !== "number") {
                     return NextResponse.json({ ok: false, reason: "Pas de seuil défini pour cet étage." })
                 }
+                // v3.10 — Ratio onboarding appliqué sur le seuil
+                const ratio = await getUserDifficultyRatio(userId)
+                const threshold = applyRatio(baseThreshold, ratio)
                 const squatsToday = await getTodaySquats(userId)
                 if (squatsToday < threshold) {
                     return NextResponse.json({

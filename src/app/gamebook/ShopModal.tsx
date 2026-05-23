@@ -23,6 +23,8 @@ interface Props {
     inventory: InventoryEntry[]
     availableEnergy: number
     nickname: string
+    /** v3.10 — ratio de difficulté pour ajuster l'affichage des prix (onboarding paye moins) */
+    difficultyRatio: number
     onBuy: (itemKey: string) => Promise<void>
     /** v3.8.9 — notifie le parent à la fermeture du modal, en indiquant si un achat a été fait. */
     onClose: (purchaseMade: boolean) => void
@@ -45,7 +47,12 @@ function article(itemName: string): string {
     return /[aeiouéèêh]/.test(first) ? `un·e ${itemName.toLowerCase()}` : `un·e ${itemName.toLowerCase()}`
 }
 
-export default function ShopModal({ inventory, availableEnergy, nickname, onBuy, onClose }: Props) {
+export default function ShopModal({ inventory, availableEnergy, nickname, difficultyRatio, onBuy, onClose }: Props) {
+    // v3.10 — Helper local : applique le ratio à un prix de base
+    const adjustPrice = (base: number): number => {
+        if (difficultyRatio >= 1) return base
+        return Math.max(1, Math.ceil(base * difficultyRatio))
+    }
     const [busy, setBusy] = useState(false)
     const [purchaseMade, setPurchaseMade] = useState(false)
     const [lastPurchase, setLastPurchase] = useState<LastPurchase | null>(null)
@@ -161,7 +168,9 @@ export default function ShopModal({ inventory, availableEnergy, nickname, onBuy,
                 {ITEMS.map((item) => {
                     // v3.8.1 — on autorise le rachat si l'item existant est cassé
                     const alreadyIntact = hasIntactItem(inventory, item.key) && item.maxQuantity === 1
-                    const canAfford = availableEnergy >= item.priceReps
+                    // v3.10 — prix affiché ajusté par le ratio de difficulté
+                    const displayedPrice = adjustPrice(item.priceReps)
+                    const canAfford = availableEnergy >= displayedPrice
                     const disabled = alreadyIntact || !canAfford || busy
 
                     let cta = "ACHETER"
@@ -192,7 +201,12 @@ export default function ShopModal({ inventory, availableEnergy, nickname, onBuy,
                             </div>
                             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}>
                                 <div style={{ fontSize: 11, letterSpacing: 2 }}>
-                                    💪 <strong>{item.priceReps}</strong> reps
+                                    💪 <strong>{displayedPrice}</strong> reps
+                                    {displayedPrice !== item.priceReps && (
+                                        <span style={{ marginLeft: 4, fontSize: 9, opacity: 0.5, textDecoration: "line-through" }}>
+                                            {item.priceReps}
+                                        </span>
+                                    )}
                                 </div>
                                 <button
                                     onClick={() => doBuy(item.key)}

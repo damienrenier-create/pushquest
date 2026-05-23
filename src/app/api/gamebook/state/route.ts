@@ -107,6 +107,10 @@ export async function GET() {
     const fruitsTaken = (progress as { fruitsTaken?: unknown }).fruitsTaken ?? {}
     // v3.8.2 — plus haut étage atteint dans la Tour des Pâtes Aiguës (1..5)
     const towerFloorReached = (progress as { towerFloorReached?: number }).towerFloorReached ?? 1
+    // v3.10 — Ratio de difficulté (1.0 vétéran, < 1.0 onboarding).
+    // Le client multiplie tous les coûts par ce ratio pour afficher des valeurs adaptées.
+    const { getUserDifficultyRatio } = await import("@/lib/gamebook/difficulty")
+    const difficultyRatio = await getUserDifficultyRatio(userId)
 
     return NextResponse.json({
         state: {
@@ -139,6 +143,8 @@ export async function GET() {
         fruitsTaken,
         // v3.8.2
         towerFloorReached,
+        // v3.10 — facteur de difficulté pour l'affichage côté client
+        difficultyRatio,
     })
 }
 

@@ -18,6 +18,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { getTodayISO, getYesterdayISO } from "@/lib/challenge"
+import { getUserDifficultyRatio, applyRatio } from "@/lib/gamebook/difficulty"
 
 export const dynamic = "force-dynamic"
 
@@ -262,7 +263,11 @@ async function challengePnj(userId: string, pnjId: string) {
         // v3.9 — Seuil dégressif basé sur le nombre de victoires cumulées de CE PNJ
         const victories = await readBridgeVictories()
         const victoryCount = victories[pnjId] ?? 0
-        const threshold = thresholdForVictories(victoryCount)
+        const baseThreshold = thresholdForVictories(victoryCount)
+
+        // v3.10 — Ratio onboarding appliqué APRÈS la décroissance globale
+        const ratio = await getUserDifficultyRatio(userId)
+        const threshold = applyRatio(baseThreshold, ratio)
         thresholdUsed = threshold
 
         const sets = await prisma.exerciseSet.findMany({

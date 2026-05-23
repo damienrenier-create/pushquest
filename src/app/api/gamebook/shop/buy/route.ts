@@ -20,6 +20,7 @@ import { isGamebookFrozen } from "@/lib/gamebook/antiCheat"
 import { getItem, getInitialItemData } from "@/lib/gamebook/items"
 import { parseInventory, addItem, hasIntactItem } from "@/lib/gamebook/inventory"
 import { isCreatorAccount, padAvailableEnergyForCreator } from "@/lib/gamebook/creator"
+import { getUserDifficultyRatio, applyRatio } from "@/lib/gamebook/difficulty"
 
 export const dynamic = "force-dynamic"
 
@@ -95,16 +96,20 @@ export async function POST(req: NextRequest) {
     // v3.8.5 — pad pour créateur (achat toujours possible avec godmode)
     const availableEnergy = padAvailableEnergyForCreator(todayReps - currentSpent, isCreator)
 
-    if (availableEnergy < itemDef.priceReps) {
+    // v3.10 — prix ajusté selon le ratio de difficulté (onboarding paye moins)
+    const ratio = await getUserDifficultyRatio(userId)
+    const adjustedPrice = applyRatio(itemDef.priceReps, ratio)
+
+    if (availableEnergy < adjustedPrice) {
         return NextResponse.json({
             ok: false,
-            reason: `${itemDef.name} coûte ${itemDef.priceReps} reps. Tu en as ${availableEnergy}.`,
+            reason: `${itemDef.name} coûte ${adjustedPrice} reps. Tu en as ${availableEnergy}.`,
             availableEnergy,
         })
     }
 
-    // Transaction : débit + ajout à inventory
-    const newSpent = currentSpent + itemDef.priceReps
+    // Transaction : débit + ajout à inventory (utilise le prix ajusté)
+    const newSpent = currentSpent + adjustedPrice
     // v3.8.1 — data initial dépend des capabilities (canStore = gourde, canWear = baskets...)
     const initialData = getInitialItemData(itemDef)
     const newInventory = addItem(currentInventory, itemKey, initialData)

@@ -34,6 +34,8 @@ interface StatePayload {
     fruitsTaken?: unknown
     // v3.8.2 — plus haut étage atteint dans la Tour des Pâtes Aiguës
     towerFloorReached?: number
+    // v3.10 — ratio de difficulté (1.0 vétéran, < 1.0 onboarding réduit)
+    difficultyRatio?: number
 }
 
 export default function GamebookClient({ nickname, userId }: Props) {
@@ -178,6 +180,10 @@ export default function GamebookClient({ nickname, userId }: Props) {
         ? Math.max(1, Math.min(5, Math.floor(payload.towerFloorReached)))
         : 1
 
+    const initialDifficultyRatio: number = typeof payload.difficultyRatio === "number" && payload.difficultyRatio > 0
+        ? Math.min(1, payload.difficultyRatio)
+        : 1
+
     return (
         <MapClient
             nickname={nickname}
@@ -190,6 +196,7 @@ export default function GamebookClient({ nickname, userId }: Props) {
             initialHasBag={initialHasBag}
             initialFruitCounts={initialFruitsTaken}
             initialTowerFloorReached={initialTowerFloorReached}
+            initialDifficultyRatio={initialDifficultyRatio}
         />
     )
 }
