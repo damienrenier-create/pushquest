@@ -49,13 +49,16 @@ export const PIONEER_LAST_STEP = MONSTER_PIONEER_DIALOGUE.length - 1
 // v3.8 — PEPITO : donneur de sac à l'entrée de Pépiteville
 // Premier passage : il offre le sac.
 // =====================================================
+// v3.22 — Dialogue utilisé par MAMAN (Bourg-Boulette sortie cave) OU PEPITO (Pépiteville backup).
+// Le ton est volontairement à la fois maternel et taquin pour fonctionner avec les deux personnages.
+// Don : SAC + BASKETS au premier passage.
 export const PEPITO_DIALOGUE_FIRST: string[] = [
-    "Hé toi ! T'as l'air d'arriver de loin.",
-    "T'as pas bougé le pont à mains nues quand même ?",
-    "Bon. Ici à Pépiteville, on porte des sacs. Sinon comment veux-tu acheter quoi que ce soit ?",
-    "Tiens, je t'en file un. Il est gratuit, n'en abuse pas.",
-    "Maintenant tu peux faire tes courses. Et utiliser le bouton START pour ouvrir ton sac.",
-    "Allez, va voir NUTRIPATES dans la boutique. Et arrête de tout regarder comme un touriste.",
+    "Te voilà ! Je t'attendais.",
+    "T'es parti faire des trucs sans sac. Sans chaussures. Comme un sauvage.",
+    "*Te tend un sac.* Tiens, prends ça. Tu pourras y ranger tes affaires.",
+    "*Sort une paire de baskets.* Et ces baskets-là. Tes pieds vont te remercier.",
+    "Avec ça tu marches moins fatigué. Appuie sur START pour ouvrir ton sac.",
+    "Allez, va. Et fais attention à toi, hein.",
 ]
 
 export const PEPITO_LAST_STEP_FIRST = PEPITO_DIALOGUE_FIRST.length - 1

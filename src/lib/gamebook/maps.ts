@@ -294,6 +294,14 @@ function buildPepiteville(): TileType[][] {
     m[2][11] = "flowerR"; m[2][12] = "flowerY"; m[2][13] = "flowerR"
     m[3][11] = "flowerY"; m[3][12] = "flowerR"; m[3][13] = "flowerY"
 
+    // v3.22 — Arbres décoratifs additionnels pour casser la monotonie
+    m[5][2] = "tree"
+    m[8][14] = "tree"
+    m[14][2] = "tree"
+    m[16][14] = "tree"
+    m[6][3] = "flowerR"
+    m[16][3] = "flowerY"
+
     // Petite mare mignonne (à gauche du chemin, entre le gym et le casino)
     m[9][3] = "water"; m[9][4] = "water"; m[9][5] = "water"
     m[10][3] = "water"; m[10][4] = "water"; m[10][5] = "water"
@@ -368,19 +376,19 @@ function buildCasinoPepite(): TileType[][] {
 // ============================================================
 // ============================================================
 // v3.12 — MACARON'ÎLE (île au sud de Bourg-Boulette, via le canal)
-// v3.21.2 — Canal ultra-court (1 ligne) + bâtiments 4x4 pour labels lisibles
-// 14 × 15 cases :
-//   - y=0      : bordure tree (avec waterShallow en col 7 = trigger retour la_mer)
-//   - y=1      : canal waterShallow 1 ligne (cols 6,7 — 2 cases swim entry)
+// v3.22 — Bâtiments 5x5 (au lieu de 4x4) pour labels vraiment lisibles
+// 14 × 17 cases :
+//   - y=0      : bordure tree + waterShallow (7,0) trigger retour la_mer
+//   - y=1      : canal waterShallow 1 ligne (cols 6,7 — swim entry)
 //   - y=2..3   : plage de sable (sand)
-//   - y=4..7   : ville rangée 1 (shop 4x4 + vétérinaire 4x4)
-//   - y=8      : chemin horizontal d'accès aux portes rangée 1
-//   - y=9..12  : ville rangée 2 (bibliothèque 4x4)
-//   - y=13     : chemin horizontal sud + grassTall cols 6,7 = trigger grass_sud
-//   - y=14     : bordure tree
+//   - y=4..8   : ville rangée 1 (shop 5x5 + vétérinaire 5x5)
+//   - y=9      : chemin horizontal d'accès aux portes rangée 1
+//   - y=10..14 : ville rangée 2 (bibliothèque 5x5)
+//   - y=15     : chemin horizontal sud + grassTall cols 6,7 = trigger grass_sud
+//   - y=16     : bordure tree
 // ============================================================
 const MACARONILE_W = 14
-const MACARONILE_H = 15
+const MACARONILE_H = 17
 
 function buildMacaronIle(): TileType[][] {
     const m: TileType[][] = []
@@ -414,23 +422,27 @@ function buildMacaronIle(): TileType[][] {
         m[3][x] = "sand"
     }
 
-    // Chemin vertical central cols 6,7 de y=2 à y=13
+    // Chemin vertical central cols 6,7 de y=2 à y=15
     for (let y = 2; y <= MACARONILE_H - 2; y++) {
         m[y][6] = "path"
         m[y][7] = "path"
     }
 
-    // Chemin horizontal d'accès rangée 1 (y=8)
-    for (let x = 1; x <= MACARONILE_W - 2; x++) m[8][x] = "path"
+    // Chemin horizontal d'accès rangée 1 (y=9)
+    for (let x = 1; x <= MACARONILE_W - 2; x++) m[9][x] = "path"
 
-    // Chemin horizontal sud (y=13)
-    for (let x = 1; x <= MACARONILE_W - 2; x++) m[13][x] = "path"
+    // Chemin horizontal sud (y=15)
+    for (let x = 1; x <= MACARONILE_W - 2; x++) m[15][x] = "path"
 
-    // Fleurs déco
-    m[7][5] = "flowerR"
-    m[7][8] = "flowerY"
-    m[12][8] = "flowerY"
-    m[12][9] = "flowerR"
+    // Fleurs déco + quelques arbres pour casser la monotonie
+    m[8][6] = "flowerR"  // entre les buildings
+    m[8][7] = "flowerY"
+    m[14][8] = "flowerY"
+    m[14][9] = "flowerR"
+    // Arbres décoratifs (cols 8-12 sud, hors bbox biblio)
+    m[10][8] = "tree"
+    m[12][12] = "tree"
+    m[13][9] = "tree"
 
     // Sortie sud vers grass_sud (cols 6,7 sur la rangée tree y=14)
     m[MACARONILE_H - 1][6] = "grassTall"
@@ -544,23 +556,22 @@ function buildMuscuville(): TileType[][] {
     return m
 }
 
-// v3.13/v3.15 — Bâtiments de Macaron'île ville.
-// v3.21.2 — Bâtiments 4×4 (au lieu de 3×3) pour labels lisibles.
-// 3 bâtiments visibles : Shop TRENETTE + Vétérinaire (rangée 1) + Bibliothèque (rangée 2).
+// v3.22 — Bâtiments 5×5 avec displayName (label custom rendu à droite du bâtiment).
 export const MACARONILE_BUILDINGS: Building[] = [
-    // Shop TRENETTE — rangée 1 gauche (cols 1..4)
-    { x: 1, y: 4, w: 4, h: 4, kind: "shop", doorX: 1, doorY: 3, visible: true, targetMapId: "shop_macaron" },
-    // Vétérinaire — rangée 1 droite (cols 9..12)
-    { x: 9, y: 4, w: 4, h: 4, kind: "veterinaire", doorX: 1, doorY: 3, visible: true, targetMapId: "veterinaire" },
-    // Bibliothèque — rangée 2 gauche (cols 1..4)
-    { x: 1, y: 9, w: 4, h: 4, kind: "bibliotheque", doorX: 1, doorY: 3, visible: true, targetMapId: "bibliotheque" },
+    // Shop TRENETTE — rangée 1 gauche (cols 1..5, rows 4..8) ; door centrée (3, 8)
+    { x: 1, y: 4, w: 5, h: 5, kind: "shop", doorX: 2, doorY: 4, visible: true, targetMapId: "shop_macaron", displayName: "TRENETTE" },
+    // Vétérinaire — rangée 1 droite (cols 8..12, rows 4..8) ; door centrée (10, 8)
+    { x: 8, y: 4, w: 5, h: 5, kind: "veterinaire", doorX: 2, doorY: 4, visible: true, targetMapId: "veterinaire", displayName: "VÉTO" },
+    // Bibliothèque — rangée 2 gauche (cols 1..5, rows 10..14) ; door centrée (3, 14)
+    { x: 1, y: 10, w: 5, h: 5, kind: "bibliotheque", doorX: 2, doorY: 4, visible: true, targetMapId: "bibliotheque", displayName: "BIBLIO" },
 ]
 
+// Signs sur le chemin, à côté des portes des buildings (jamais en travers du flux principal)
 export const MACARONILE_SIGNS: Sign[] = [
-    { x: 5, y: 7, text: "BOUTIQUE DE TRENETTE\nCorned Pâtes, Lunettes et autres trouvailles." },
-    { x: 8, y: 7, text: "VÉTÉRINAIRE\nPour tous tes amis à plumes, à poils, à pâtes." },
-    { x: 5, y: 3, text: "PLAGE DE SABLE PÂTE\nProfite avant la marée." },
-    { x: 5, y: 12, text: "BIBLIOTHÈQUE\nSavoirs anciens, livres poussiéreux, silence requis." },
+    { x: 4, y: 9, text: "BOUTIQUE DE TRENETTE\nCorned Pâtes, Lunettes et autres trouvailles." },
+    { x: 11, y: 9, text: "VÉTÉRINAIRE\nPour tous tes amis à plumes, à poils, à pâtes." },
+    { x: 8, y: 3, text: "PLAGE DE SABLE PÂTE\nProfite avant la marée." },
+    { x: 4, y: 15, text: "BIBLIOTHÈQUE\nSavoirs anciens, livres poussiéreux, silence requis." },
 ]
 
 // v3.13 — Builders pour les nouveaux intérieurs Macaron'île
@@ -1129,15 +1140,14 @@ export const MAPS: Record<string, MapData> = {
         height: MACARONILE_H,
         // exitTarget non utilisé : on a une transition via canal en MapClient
     },
-    // v3.13 — Bâtiments intérieurs de Macaron'île
-    // v3.21.2 — exitTargets rebasées sur MACARONILE_H=15 + buildings 4×4 (doors à y+3)
+    // v3.22 — Bâtiments 5x5 → doors aux nouvelles positions
     shop_macaron: {
         id: "shop_macaron",
         name: "BOUTIQUE DE TRENETTE",
         tiles: buildShopMacaron(),
         width: 9,
         height: 8,
-        exitTarget: { mapId: "macaron_ile", x: 2, y: 8 },
+        exitTarget: { mapId: "macaron_ile", x: 3, y: 9 },
     },
     veterinaire: {
         id: "veterinaire",
@@ -1145,7 +1155,7 @@ export const MAPS: Record<string, MapData> = {
         tiles: buildVeterinaire(),
         width: 13,
         height: 10,
-        exitTarget: { mapId: "macaron_ile", x: 10, y: 8 },
+        exitTarget: { mapId: "macaron_ile", x: 10, y: 9 },
     },
     bibliotheque: {
         id: "bibliotheque",
@@ -1153,7 +1163,7 @@ export const MAPS: Record<string, MapData> = {
         tiles: buildBibliotheque(),
         width: 13,
         height: 10,
-        exitTarget: { mapId: "macaron_ile", x: 2, y: 13 },
+        exitTarget: { mapId: "macaron_ile", x: 3, y: 15 },
     },
     // v3.17c — La mer (canal navigable inséré entre Bourg-Boulette et Macaron'île)
     la_mer: {
@@ -1342,6 +1352,53 @@ export const LAMER_SPAWN_FROM_MACARONILE = {
     direction: "up" as const,
 }
 
+// ============================================================
+// v3.22 — INDOOR MAPS (mouvement gratuit) + FAST TRAVEL
+// ============================================================
+// Maps "intérieures" : les déplacements y sont gratuits (0 reps/case).
+// L'idée : une fois que tu es dans un bâtiment, tu te déplaces librement pour interagir.
+export const INDOOR_MAP_IDS = new Set([
+    "gym",
+    "casino",
+    "cave",
+    "gym_pepite",
+    "casino_pepite",
+    "shop_interior",
+    "shop_macaron",
+    "veterinaire",
+    "bibliotheque",
+    "tower_floor_1",
+    "tower_floor_2",
+    "tower_floor_3",
+    "tower_floor_4",
+    "tower_floor_5",
+])
+
+export function isIndoorMap(mapId: string): boolean {
+    return INDOOR_MAP_IDS.has(mapId)
+}
+
+// Villes que le joueur peut visiter (et donc débloquer pour fast travel)
+export const TRAVEL_TOWN_IDS = ["bourgpates", "pepiteville", "hautespates", "macaron_ile", "muscuville"] as const
+export type TravelTownId = typeof TRAVEL_TOWN_IDS[number]
+
+export interface TownSpawn {
+    mapId: string
+    name: string
+    posX: number
+    posY: number
+    direction: "up" | "down" | "left" | "right"
+}
+
+// Points de spawn pour le fast travel — choisi à l'endroit où "tout commence" dans chaque ville
+export const TOWN_SPAWN_POINTS: Record<TravelTownId, TownSpawn> = {
+    bourgpates: { mapId: "bourgpates", name: "Bourg-Boulette", posX: 7, posY: 12, direction: "down" },
+    pepiteville: { mapId: "pepiteville", name: "Pépiteville", posX: 8, posY: 16, direction: "up" },
+    hautespates: { mapId: "hautespates", name: "Hautes-Pâtes", posX: 5, posY: 11, direction: "up" },
+    macaron_ile: { mapId: "macaron_ile", name: "Macaron'île", posX: 6, posY: 11, direction: "up" },
+    muscuville: { mapId: "muscuville", name: "Muscuville", posX: 6, posY: 5, direction: "down" },
+}
+
 // v3.16 — Transitions sud Macaron'île ↔ grass_sud ↔ Muscuville
 // Quand le joueur marche sur la grassTall (6 ou 7, 21) de Macaron'île → entrée dans grass_sud
 export const GRASS_SUD_SPAWN_FROM_NORTH = {
@@ -1350,12 +1407,11 @@ export const GRASS_SUD_SPAWN_FROM_NORTH = {
     posY: 2,
     direction: "down" as const,
 }
-// Retour vers Macaron'île depuis le nord de grass_sud (y=0)
-// v3.21.2 — Rebasé sur MACARONILE_H=15 : spawn juste au-dessus du grassTall sud (y=14), sur le chemin (y=13)
+// v3.22 — Rebasé sur MACARONILE_H=17 : spawn juste au-dessus du grassTall sud (y=15) sur path
 export const MACARONILE_SPAWN_FROM_GRASS_SUD = {
     mapId: "macaron_ile",
     posX: 6,
-    posY: 12,
+    posY: 14,
     direction: "up" as const,
 }
 // Quand le joueur marche sur la grassTall (4, 13) au sud de grass_sud → entrée dans Muscuville

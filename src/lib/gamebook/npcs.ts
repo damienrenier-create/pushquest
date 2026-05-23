@@ -123,7 +123,63 @@ export const NPCS: NpcDefinition[] = [
     // ============================================================
 
     // -------------------------------
-    // PEPITO — donne le sac au premier passage
+    // v3.22 — MAMAN : nouveau NPC à Bourg-Boulette, juste à la sortie de la cave du Monstre.
+    // Offre SAC + BASKETS au premier passage. Empathique, taquine, maternelle.
+    // -------------------------------
+    {
+        id: "maman",
+        name: "MAMAN",
+        mapId: "bourgpates",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#d050a0" },
+        initialX: 12,
+        initialY: 14,
+        dialoguesAfter: [
+            "*Maman te sourit, soulagée.*",
+            "Tu manges assez ? Tu dors assez ?",
+            "Allez, va. Je vais préparer des pâtes pour ton retour.",
+        ],
+    },
+
+    // v3.22 — GUIDE INTÉRIEUR : explique que les déplacements dans les bâtiments sont gratuits
+    {
+        id: "indoor_guide",
+        name: "ROULETTE",
+        mapId: "bourgpates",
+        kind: "wanderer",
+        interaction: "interactive",
+        sprite: { color: "#90b0c0" },
+        initialX: 5,
+        initialY: 10,
+        wanderRadius: 2,
+        dialoguesAfter: [
+            "Tu sais, le truc cool dans cet archipel ?",
+            "Dès que tu entres dans un bâtiment, marcher devient GRATUIT.",
+            "Aucune idée pourquoi. Mais profites-en pour explorer les boutiques sans flipper.",
+        ],
+    },
+
+    // v3.22 — GUIDE VOYAGE : explique le fast travel
+    {
+        id: "travel_guide",
+        name: "VAGABOND",
+        mapId: "bourgpates",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#8060d0" },
+        initialX: 3,
+        initialY: 13,
+        dialoguesAfter: [
+            "*Le vagabond te regarde avec un sourire entendu.*",
+            "Une fois que tu as marché jusqu'à une ville, tu peux y revenir gratis.",
+            "Ouvre ton menu (bouton START), choisis VOYAGE, sélectionne la ville. Pouf, t'y es.",
+            "Pas besoin de retraverser tout l'archipel à pied à chaque fois.",
+        ],
+    },
+
+    // -------------------------------
+    // PEPITO — donne le sac au premier passage (roue de secours pour ceux qui n'ont pas vu MAMAN)
     // -------------------------------
     {
         id: "pepito",
@@ -135,8 +191,6 @@ export const NPCS: NpcDefinition[] = [
         initialX: 8,
         initialY: 16,
         dialoguesAfter: [
-            // Dialogue par défaut (post-don de sac). Le dialogue de don est géré
-            // séparément dans MapClient via la route grant-bag pour l'idempotence.
             "Tu reviens. T'as ton sac, c'est l'essentiel.",
             "Va dépenser ton énergie utilement. Ou pas. Je m'en tape.",
         ],
@@ -574,8 +628,8 @@ export const NPCS: NpcDefinition[] = [
         kind: "static",
         interaction: "interactive",
         sprite: { color: "#a07060" },
-        initialX: 5,
-        initialY: 5,
+        initialX: 9,
+        initialY: 11,
         dialoguesAfter: [
             "*Soupire bruyamment.* T'es nouveau ici ?",
             "Tout va mal. Le concours est annulé. Les bestioles bloquent le sud.",
@@ -595,8 +649,8 @@ export const NPCS: NpcDefinition[] = [
         kind: "static",
         interaction: "interactive",
         sprite: { color: "#8090b0" },
-        initialX: 8,
-        initialY: 5,
+        initialX: 11,
+        initialY: 11,
         dialoguesAfter: [
             "Données du concours intersalle : 142 inscriptions perdues cette année.",
             "Record sur 8 ans. Les bestioles bloquent l'accès aux athlètes.",
@@ -616,8 +670,8 @@ export const NPCS: NpcDefinition[] = [
         kind: "static",
         interaction: "interactive",
         sprite: { color: "#b0a090" },
-        initialX: 5,
-        initialY: 6,
+        initialX: 10,
+        initialY: 13,
         dialoguesAfter: [
             "*Regarde vaguement vers l'horizon.* Y'a une silhouette qui flotte au large...",
             "Personne ne sait qui c'est. Un naufragé, peut-être.",
@@ -638,7 +692,7 @@ export const NPCS: NpcDefinition[] = [
         interaction: "interactive",
         sprite: { color: "#80b0a0" },
         initialX: 8,
-        initialY: 6,
+        initialY: 11,
         dialoguesAfter: [
             "J'aurais GAGNÉ ce concours, j'te dis. Mes pectoraux étaient prêts à explosion.",
             "Et puis BAM, annulé. Pfff.",
@@ -658,8 +712,8 @@ export const NPCS: NpcDefinition[] = [
         kind: "static",
         interaction: "interactive",
         sprite: { color: "#c0a0a0" },
-        initialX: 10,
-        initialY: 10,
+        initialX: 12,
+        initialY: 13,
         dialoguesAfter: [
             "Oh ! Bonjour ! C'est sympa que tu sois là.",
             "Mon coach dit que le concours va revenir. Il sait toujours, mon coach.",

@@ -474,6 +474,10 @@ model GamebookProgress {
   casinoBetsDate            String  @default("")
   casinoBetsToday           Int     @default(0)
 
+  // v3.22 — Villes débloquées pour le fast travel. Stocké en JSON array de mapIds.
+  // Auto-ajout dès qu'on visite : bourgpates / pepiteville / hautespates / macaron_ile / muscuville.
+  visitedTowns              Json    @default("[]")
+
   @@unique([userId, chapterId])
   @@index([userId])
   @@index([mapId])

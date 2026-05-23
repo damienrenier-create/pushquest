@@ -66,6 +66,8 @@ export interface Building {
      * (ex : `gym` à Bourg-Boulette → "gym", `gym` à Pépiteville → "gym_pepite").
      */
     targetMapId?: string
+    /** v3.22 : nom spécifique affiché sur le bâtiment (à la droite). Override le label par kind. */
+    displayName?: string
 }
 
 export interface Sign {
@@ -119,6 +121,8 @@ export interface PlayerMapState {
     casinoBetsDate?: string
     casinoBetsToday?: number
     lastLuckTalkDate?: string
+    // === v3.22 : Fast travel — villes débloquées ===
+    visitedTowns?: string[]
 }
 
 // Snapshot d'un autre joueur affiché sur la carte

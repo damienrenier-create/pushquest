@@ -91,6 +91,10 @@ export default function GamebookClient({ nickname, userId }: Props) {
                             ? (json.state as { casinoBetsToday: number }).casinoBetsToday
                             : 0,
                         lastLuckTalkDate: (json.state as { lastLuckTalkDate?: string }).lastLuckTalkDate ?? "",
+                        // v3.22 — fast travel : visitedTowns
+                        visitedTowns: Array.isArray((json.state as { visitedTowns?: unknown }).visitedTowns)
+                            ? (json.state as { visitedTowns: string[] }).visitedTowns
+                            : [],
                     }
                     setPayload({
                         ...json,

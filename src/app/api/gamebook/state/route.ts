@@ -165,6 +165,10 @@ export async function GET() {
             casinoBetsDate: (progress as { casinoBetsDate?: string }).casinoBetsDate ?? "",
             casinoBetsToday: (progress as { casinoBetsToday?: number }).casinoBetsToday ?? 0,
             lastLuckTalkDate: (progress as { lastLuckTalkDate?: string }).lastLuckTalkDate ?? "",
+            // v3.22 — Fast travel : villes débloquées
+            visitedTowns: Array.isArray((progress as { visitedTowns?: unknown }).visitedTowns)
+                ? (progress as { visitedTowns: string[] }).visitedTowns
+                : [],
         },
         todayReps,
         energySpentToday,
@@ -265,6 +269,16 @@ export async function POST(req: NextRequest) {
     // v3.12 — Idem pour firstSwimDone (one-way)
     const existingFirstSwim = (existing as { firstSwimDone?: boolean })?.firstSwimDone === true
     const finalFirstSwimDone = existingFirstSwim || firstSwimDone
+
+    // v3.22 — Auto-track visitedTowns : on ajoute mapId à la liste si c'est une ville et qu'elle n'y est pas déjà
+    const TRAVEL_TOWN_IDS_SERVER = new Set(["bourgpates", "pepiteville", "hautespates", "macaron_ile", "muscuville"])
+    const existingVisited: string[] = Array.isArray((existing as { visitedTowns?: unknown })?.visitedTowns)
+        ? (existing as { visitedTowns: string[] }).visitedTowns
+        : []
+    let finalVisitedTowns = existingVisited
+    if (TRAVEL_TOWN_IDS_SERVER.has(mapId) && !existingVisited.includes(mapId)) {
+        finalVisitedTowns = [...existingVisited, mapId]
+    }
 
     // Cast en `any` pour le `data` afin de bypasser le check TS strict sur les nouveaux
     // champs Prisma tant que le client n'est pas régénéré côté CI. Le pattern est cohérent

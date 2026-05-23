@@ -175,12 +175,12 @@ export const ITEMS: ItemDefinition[] = [
         key: "chaussures_course",
         name: "Chaussures de course",
         emoji: "🥾",
-        description: "Chaussures de pro. -4 reps/case (6 au lieu de 10). Durent 500 pas. Incompatibles avec les baskets.",
+        description: "Chaussures de pro. -8 reps/case (2 au lieu de 10) — efficacité ×2 vs baskets. Durée ×4 (2000 pas). Incompatibles avec les baskets.",
         priceReps: 400,
         maxQuantity: 1,
         availableAt: "trenette",
         capabilities: {
-            canWear: { initialDurability: 500, moveCostReduction: 4 },
+            canWear: { initialDurability: 2000, moveCostReduction: 8 },
         },
     },
     {

@@ -44,6 +44,7 @@ import {
     LAMER_SPAWN_FROM_MACARONILE,
     PAPA_TABLEAUX,
     BIBLIOTHEQUE_TOPICS,
+    INDOOR_MAP_IDS,
 } from "@/lib/gamebook/maps"
 import {
     type Direction,
@@ -90,6 +91,7 @@ import type { TamagotchiView } from "@/lib/gamebook/tamagotchi"
 import BibliothequeModal from "./BibliothequeModal"
 import BestioleNamingModal from "./BestioleNamingModal"
 import CasinoModal from "./CasinoModal"
+import FastTravelModal from "./FastTravelModal"
 import { getLevelDetails } from "@/lib/xp"
 
 interface Props {
@@ -203,6 +205,8 @@ export default function MapClient({
     const [showBestioleNaming, setShowBestioleNaming] = useState(false)
     // v3.21 — Modal mini-jeu casino roulette
     const [showCasino, setShowCasino] = useState(false)
+    // v3.22 — Modal fast travel
+    const [showFastTravel, setShowFastTravel] = useState(false)
     // === v3.8.1 : fruits cueillis aujourd'hui (par CE user). Drive le rendu vide/plein des arbres. ===
     const [fruitCounts, setFruitCounts] = useState<Record<string, number>>(initialFruitCounts)
     // === v3.8.2 : plus haut étage atteint dans la Tour. Drive le bypass-check des escaliers. ===
@@ -825,7 +829,8 @@ export default function MapClient({
                 })()
             }
 
-            if (result.repsCost > 0) {
+            // v3.22 — Mouvement gratuit dans les intérieurs (bâtiments) : skip cost
+            if (result.repsCost > 0 && !INDOOR_MAP_IDS.has(state.mapId)) {
                 // v3.17 — On résout le wearable actif pour la tile sur laquelle on entre.
                 // - waterShallow : brassards (tile-restricted) priorité, sinon boots/chaussures
                 // - autre tile   : boots ou chaussures_course (plus haute moveCostReduction gagne)
@@ -1166,7 +1171,7 @@ export default function MapClient({
         }, 300)
 
         // v3.8 — si une modal est ouverte, le A est géré par la modal elle-même
-        if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino) return
+        if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showFastTravel) return
 
         // v3.11 — Cinématique PIAFFINI (dialogue au sommet, puis vol)
         if (cinematic?.kind === "piaffini" && cinematic.stage === "dialog") {
@@ -1538,8 +1543,8 @@ export default function MapClient({
         if (npcInFront) {
             const npcId = npcInFront.npc.id
             // === v3.8 : interactions spéciales ===
-            // PEPITO : si le sac n'a pas encore été donné, déclencher la cinématique d'offre
-            if (npcId === "pepito" && !hasBag) {
+            // PEPITO (Pépiteville, backup) ou MAMAN (Bourg-Boulette, sortie cave) : si pas de sac, cinématique d'offre
+            if ((npcId === "pepito" || npcId === "maman") && !hasBag) {
                 setCinematic({ kind: "pepitoBag", step: 0 })
                 return
             }
@@ -1901,7 +1906,7 @@ export default function MapClient({
         const handler = (e: KeyboardEvent) => {
             // v3.8 — si une modal est ouverte, on ne gère pas les touches ici
             // (StartMenu/InventoryModal/ShopModal/PlayerMapModal écoutent leurs propres events)
-            if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino) return
+            if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showFastTravel) return
 
             if (state.phase === "introMonster") {
                 if (e.key === "Enter" || e.key === " " || e.key.toLowerCase() === "a") {
@@ -2351,9 +2356,47 @@ export default function MapClient({
                         if (entry === "bag") {
                             setShowStartMenu(false)
                             setShowInventory(true)
+                        } else if (entry === "travel") {
+                            setShowStartMenu(false)
+                            setShowFastTravel(true)
                         }
                     }}
                     onClose={() => setShowStartMenu(false)}
+                />
+            )}
+
+            {/* v3.22 — Modal fast travel (villes débloquées) */}
+            {showFastTravel && (
+                <FastTravelModal
+                    visitedTowns={(state as { visitedTowns?: string[] }).visitedTowns ?? []}
+                    currentMapId={state.mapId}
+                    onTravel={async (townId) => {
+                        try {
+                            const res = await fetch("/api/gamebook/travel", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ townId }),
+                            })
+                            const data = await res.json()
+                            if (data.ok && data.spawn) {
+                                setState((s) => ({
+                                    ...s,
+                                    mapId: data.spawn.mapId,
+                                    posX: data.spawn.posX,
+                                    posY: data.spawn.posY,
+                                    direction: data.spawn.direction,
+                                }))
+                                setShowFastTravel(false)
+                                setToast(`Voyage rapide effectué.`)
+                            } else if (data.reason) {
+                                setToast(data.reason)
+                            }
+                        } catch (e) {
+                            console.warn("[MapClient] travel failed", e)
+                            setToast("Erreur réseau, réessaie.")
+                        }
+                    }}
+                    onClose={() => setShowFastTravel(false)}
                 />
             )}
             {showInventory && (
@@ -2866,13 +2909,15 @@ function BuildingSprite({
     // v3.13 : kind="veterinaire" → toit vert + label VÉTO
     // v3.15 : kind="bibliotheque" → toit violet + label BIBLIO
     // Sinon (gym, casino) → toit rouge classique
+    // v3.22 : displayName custom (TRENETTE / VÉTO / BIBLIO...) + label rendu sur la DROITE en gros
     const isGym = building.kind === "gym"
     const isShop = building.kind === "shop"
     const isVet = building.kind === "veterinaire"
     const isBiblio = building.kind === "bibliotheque"
     const roofColor = isShop ? "#3060c0" : isVet ? "#48a868" : isBiblio ? "#8050a0" : "#c84838"
     const roofDarkColor = isShop ? "#1a3878" : isVet ? "#205838" : isBiblio ? "#502868" : "#883020"
-    const label = isGym ? "MUSCU" : isShop ? "SHOP" : isVet ? "VÉTO" : isBiblio ? "BIBLIO" : "CASINO"
+    const fallbackLabel = isGym ? "MUSCU" : isShop ? "SHOP" : isVet ? "VÉTO" : isBiblio ? "BIBLIO" : "CASINO"
+    const label = building.displayName ?? fallbackLabel
     return (
         <>
             <div style={{ position: "absolute", left, top, width, height, display: "flex", flexDirection: "column" }}>
@@ -2899,10 +2944,23 @@ function BuildingSprite({
                         background: "#5878d8", border: "1px solid #c8a868",
                         backgroundImage: "linear-gradient(90deg, transparent 49%, #c8a868 49%, #c8a868 51%, transparent 51%), linear-gradient(0deg, transparent 49%, #c8a868 49%, #c8a868 51%, transparent 51%)",
                     }} />
+                    {/* v3.22 — Label déporté à droite du bâtiment, fond blanc opaque pour lisibilité maximale */}
                     <div style={{
-                        position: "absolute", top: "52%", left: 0, right: 0,
-                        textAlign: "center", fontSize: "11px", color: roofDarkColor, fontWeight: 900, letterSpacing: "1.5px",
-                        textShadow: "0 1px 0 #f8e8b8, 0 -1px 0 #f8e8b8, 1px 0 0 #f8e8b8, -1px 0 0 #f8e8b8",
+                        position: "absolute",
+                        top: "55%",
+                        left: "100%",
+                        marginLeft: "4px",
+                        background: "rgba(255, 255, 255, 0.95)",
+                        color: roofDarkColor,
+                        padding: "2px 6px",
+                        fontSize: "12px",
+                        fontWeight: 900,
+                        letterSpacing: "1px",
+                        whiteSpace: "nowrap",
+                        border: `2px solid ${roofDarkColor}`,
+                        borderRadius: "3px",
+                        zIndex: 4,
+                        pointerEvents: "none",
                     }}>
                         {label}
                     </div>
