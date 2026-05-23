@@ -17,7 +17,7 @@ import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { getTodayISO } from "@/lib/challenge"
 import { isGamebookFrozen } from "@/lib/gamebook/antiCheat"
-import { getItem, getInitialItemData } from "@/lib/gamebook/items"
+import { getItem, getInitialItemData, applySocialDiscount, isBrokenItem } from "@/lib/gamebook/items"
 import { parseInventory, addItem, hasIntactItem } from "@/lib/gamebook/inventory"
 import { isCreatorAccount, padAvailableEnergyForCreator } from "@/lib/gamebook/creator"
 import { getUserDifficultyRatio, applyRatio } from "@/lib/gamebook/difficulty"
@@ -85,6 +85,25 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: false, reason: "Tu en as déjà un en état de marche." })
     }
 
+    // v3.17 — Refuse l'achat d'un wearable non-tile-restricted (boots/chaussures) si un autre intact existe.
+    // Permet de coexister avec brassards (tile-restricted) sans conflit.
+    if (itemDef.capabilities.canWear && !itemDef.capabilities.canWear.tileRestriction) {
+        const conflict = currentInventory.find((entry) => {
+            if (entry.itemKey === itemKey) return false
+            const otherDef = getItem(entry.itemKey)
+            if (!otherDef?.capabilities.canWear) return false
+            if (otherDef.capabilities.canWear.tileRestriction) return false
+            return !isBrokenItem(entry.data, otherDef)
+        })
+        if (conflict) {
+            const conflictDef = getItem(conflict.itemKey)
+            return NextResponse.json({
+                ok: false,
+                reason: `Tu portes déjà ${(conflictDef?.name ?? "un autre équipement").toLowerCase()}. Use-les jusqu'à la cassure d'abord.`,
+            })
+        }
+    }
+
     // Calcul de l'énergie disponible
     const today = getTodayISO()
     const storedDate = (progress as { energySpentDate?: string }).energySpentDate ?? ""
@@ -98,18 +117,20 @@ export async function POST(req: NextRequest) {
 
     // v3.10 — prix ajusté selon le ratio de difficulté (onboarding paye moins)
     const ratio = await getUserDifficultyRatio(userId)
-    const adjustedPrice = applyRatio(itemDef.priceReps, ratio)
+    const ratioPrice = applyRatio(itemDef.priceReps, ratio)
+    // v3.17 — discount social (Lunettes) appliqué après le ratio
+    const finalPrice = applySocialDiscount(ratioPrice, currentInventory)
 
-    if (availableEnergy < adjustedPrice) {
+    if (availableEnergy < finalPrice) {
         return NextResponse.json({
             ok: false,
-            reason: `${itemDef.name} coûte ${adjustedPrice} reps. Tu en as ${availableEnergy}.`,
+            reason: `${itemDef.name} coûte ${finalPrice} reps. Tu en as ${availableEnergy}.`,
             availableEnergy,
         })
     }
 
-    // Transaction : débit + ajout à inventory (utilise le prix ajusté)
-    const newSpent = currentSpent + adjustedPrice
+    // Transaction : débit + ajout à inventory (utilise le prix final post-discount)
+    const newSpent = currentSpent + finalPrice
     // v3.8.1 — data initial dépend des capabilities (canStore = gourde, canWear = baskets...)
     const initialData = getInitialItemData(itemDef)
     const newInventory = addItem(currentInventory, itemKey, initialData)

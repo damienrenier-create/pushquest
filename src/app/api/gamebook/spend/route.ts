@@ -46,7 +46,12 @@ export async function POST(req: NextRequest) {
     const amount = typeof body.amount === "number" ? body.amount : null
     const reason = typeof body.reason === "string" ? body.reason : "unknown"
     // v3.8.1 — si wearBoots=true et que l'user a les baskets intactes, on décrémente leur durabilité
-    const wearBoots = body.wearBoots === true
+    // v3.17 — wearItemKey (string) prend le pas : permet de wear chaussures_course / brassards / etc.
+    //         Backward compat : wearBoots=true équivaut à wearItemKey="boots".
+    const wearItemKey: string | null =
+        typeof body.wearItemKey === "string" && body.wearItemKey.length > 0
+            ? body.wearItemKey
+            : (body.wearBoots === true ? "boots" : null)
 
     if (amount === null || !Number.isFinite(amount) || amount < 0 || amount > MAX_SPEND_PER_CALL) {
         return NextResponse.json({ error: "Invalid amount" }, { status: 400 })
@@ -102,16 +107,16 @@ export async function POST(req: NextRequest) {
     // Débiter
     const newSpent = currentSpent + amount
 
-    // v3.8.1 — Usure des baskets (si demandé et possédées intactes)
+    // v3.8.1 / v3.17 — Usure du wearable utilisé (baskets, chaussures de course, brassards...)
     const currentInventory = parseInventory((progress as { inventory?: unknown }).inventory)
     let updatedInventory = currentInventory
-    let bootsBroken = false
-    if (wearBoots && hasIntactItem(currentInventory, "boots")) {
-        updatedInventory = wearItem(currentInventory, "boots", 1)
-        // Détecter si on vient juste de casser les baskets
-        const wasIntact = hasIntactItem(currentInventory, "boots")
-        const stillIntact = hasIntactItem(updatedInventory, "boots")
-        bootsBroken = wasIntact && !stillIntact
+    let wearableBroken = false
+    let brokenItemKey: string | null = null
+    if (wearItemKey && hasIntactItem(currentInventory, wearItemKey)) {
+        updatedInventory = wearItem(currentInventory, wearItemKey, 1)
+        const stillIntact = hasIntactItem(updatedInventory, wearItemKey)
+        wearableBroken = !stillIntact  // wasIntact est forcément true vu le check ci-dessus
+        if (wearableBroken) brokenItemKey = wearItemKey
     }
 
     await (prisma as any).gamebookProgress.update({
@@ -135,6 +140,9 @@ export async function POST(req: NextRequest) {
         amount,
         reason,
         inventory: updatedInventory,
-        bootsBroken,
+        // v3.17 — bootsBroken conservé pour compat client. brokenItemKey est plus précis.
+        bootsBroken: brokenItemKey === "boots",
+        wearableBroken,
+        brokenItemKey,
     })
 }

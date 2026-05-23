@@ -3,6 +3,11 @@
 // v3.8 — Catalogue extensible des items achetables au shop de Pépiteville.
 // v3.8.1 — Ajout boots (baskets) avec capability canWear (durabilité + réduction COST_MOVE)
 //        + flask qui s'use (-10 maxCapacity par drink)
+// v3.13 — Ajout corned_pates (canConsume) + lunettes (canCosmetic)
+// v3.17 — Ajout grande_gourde, chaussures_course, brassards, carte_tresor.
+//        canWear.tileRestriction permet de limiter la réduction à une tile (brassards = waterShallow).
+//        ItemDefinition.availableAt sépare le catalogue NUTRIPATES (basique) du catalogue TRENETTE (exotique/upgrade).
+//        Lunettes ont maintenant un effet : -10% sur les coûts "sociaux" (cf applyLunettesDiscount).
 //
 // Pour ajouter un nouvel item :
 //   1. Ajoute une entrée dans ITEMS ci-dessous
@@ -11,6 +16,9 @@
 //   4. Si action spécifique → étends le switch dans /api/gamebook/inventory/use
 //
 // Aucune dépendance Prisma ou React. Lib pure réutilisable côté serveur ET client.
+
+import type { TileType } from "./mapEngine"
+import type { InventoryEntry } from "./inventory"
 
 export interface ItemCapabilities {
     /** Item qui peut stocker de l'énergie (gourde). */
@@ -27,11 +35,13 @@ export interface ItemCapabilities {
         initialDurability: number
         /** Combien de reps économisés par case (10 - moveCostReduction). */
         moveCostReduction: number
+        /** v3.17 — Si défini, la réduction ne s'applique que quand on entre sur cette tile. */
+        tileRestriction?: TileType
     }
     /** v3.8.3 — Item consultable qui ouvre une vue côté UI (ne se consomme pas, infinie). */
     canView?: {
         /** Identifiant du modal à ouvrir côté client. */
-        kind: "playerMap"
+        kind: "playerMap" | "treasureMap"
     }
     /** v3.13 — Item consommable instantané. Une utilisation = l'item disparaît du sac. */
     canConsume?: {
@@ -42,6 +52,8 @@ export interface ItemCapabilities {
     canCosmetic?: {
         /** Slot d'équipement (pour ne pas en porter deux du même type). */
         slot: "head" | "face" | "body"
+        /** v3.17 — Si défini, applique un discount automatique sur certains coûts sociaux. */
+        socialDiscount?: number  // 0.1 = -10%
     }
 }
 
@@ -53,6 +65,9 @@ export interface ItemDefinition {
     priceReps: number
     /** Quantité maximale qu'un joueur peut posséder. 1 = item unique. */
     maxQuantity: number
+    /** v3.17 — Catalogue d'origine : "nutripates" (Pépiteville), "trenette" (Macaron'île),
+     * "both" (les deux shops), "gift" (donné, pas vendu). Par défaut "both" si non spécifié. */
+    availableAt?: "nutripates" | "trenette" | "both" | "gift"
     capabilities: ItemCapabilities
 }
 
@@ -64,6 +79,7 @@ export const ITEMS: ItemDefinition[] = [
         description: "Stocke jusqu'à 100 reps. Bois pour récupérer toute l'énergie d'un trait. Elle s'use de 10 à chaque gorgée.",
         priceReps: 50,
         maxQuantity: 1,
+        availableAt: "nutripates",
         capabilities: {
             canStore: { maxCapacity: 100, unit: "reps", wearOnDrink: 10 },
         },
@@ -75,6 +91,7 @@ export const ITEMS: ItemDefinition[] = [
         description: "Réduit le coût de déplacement de 10 à 8 reps par case. S'usent au fil des pas.",
         priceReps: 200,
         maxQuantity: 1,
+        availableAt: "nutripates",
         capabilities: {
             canWear: { initialDurability: 250, moveCostReduction: 2 },
         },
@@ -84,8 +101,9 @@ export const ITEMS: ItemDefinition[] = [
         name: "Carte des Joueurs",
         emoji: "🗺️",
         description: "Affiche en temps quasi-réel la position de tous les joueurs. Offerte par PEPITO avec le sac.",
-        priceReps: 0,  // non achetable — donnée par PEPITO en bonus au sac
+        priceReps: 0,
         maxQuantity: 1,
+        availableAt: "gift",
         capabilities: {
             canView: { kind: "playerMap" },
         },
@@ -95,18 +113,20 @@ export const ITEMS: ItemDefinition[] = [
         name: "Set de Nage",
         emoji: "🏊",
         description: "Maillot et palmes hérités de la grand-mère de JOJO. Indispensable pour traverser les eaux du sud.",
-        priceReps: 0,  // non achetable — donné par JOJO après PIAFFINI sauvé
+        priceReps: 0,
         maxQuantity: 1,
-        capabilities: {},  // pas de capability propre — l'item est juste un "gate" vérifié dans les check waterShallow (v3.12)
+        availableAt: "gift",
+        capabilities: {},
     },
-    // v3.13 — Items vendus par TRENETTE (frère de NUTRIPATES) à Macaron'île
+    // v3.13 — Items TRENETTE (frère de NUTRIPATES) — Macaron'île
     {
         key: "corned_pates",
         name: "Corned Pâtes",
         emoji: "🥫",
         description: "Conserve de pâtes énergétique. Double instantanément ton énergie disponible. Disparaît à l'usage.",
         priceReps: 80,
-        maxQuantity: 1,  // 1 à la fois (rachat après consommation)
+        maxQuantity: 1,
+        availableAt: "trenette",
         capabilities: {
             canConsume: { effect: "doubleEnergy" },
         },
@@ -115,17 +135,80 @@ export const ITEMS: ItemDefinition[] = [
         key: "lunettes",
         name: "Lunettes",
         emoji: "🕶️",
-        description: "Lunettes stylées. Cosmétique. Tout le monde verra que tu en portes.",
+        description: "Tout le monde te complimente quand tu les portes. Du coup les marchands et le véto te font -10% sur leurs prix.",
         priceReps: 50,
         maxQuantity: 1,
+        availableAt: "trenette",
         capabilities: {
-            canCosmetic: { slot: "face" },
+            canCosmetic: { slot: "face", socialDiscount: 0.1 },
+        },
+    },
+    // v3.17 — Nouveaux items TRENETTE (Macaron'île)
+    {
+        key: "grande_gourde",
+        name: "Grande Gourde",
+        emoji: "⛲",
+        description: "Une grande gourde, capacité 200 reps. Plus gros stockage. S'use de 10 par boire (idem la normale).",
+        priceReps: 200,
+        maxQuantity: 1,
+        availableAt: "trenette",
+        capabilities: {
+            canStore: { maxCapacity: 200, unit: "reps", wearOnDrink: 10 },
+        },
+    },
+    {
+        key: "chaussures_course",
+        name: "Chaussures de course",
+        emoji: "🥾",
+        description: "Chaussures de pro. -4 reps/case (6 au lieu de 10). Durent 500 pas. Incompatibles avec les baskets.",
+        priceReps: 400,
+        maxQuantity: 1,
+        availableAt: "trenette",
+        capabilities: {
+            canWear: { initialDurability: 500, moveCostReduction: 4 },
+        },
+    },
+    {
+        key: "brassards",
+        name: "Brassards de nage",
+        emoji: "🟠",
+        description: "Brassards orange flashy. -2 reps/case quand tu nages (waterShallow). Cumulable avec tes baskets/chaussures.",
+        priceReps: 100,
+        maxQuantity: 1,
+        availableAt: "trenette",
+        capabilities: {
+            canWear: { initialDurability: 500, moveCostReduction: 2, tileRestriction: "waterShallow" },
+        },
+    },
+    {
+        key: "carte_tresor",
+        name: "Carte aux trésors",
+        emoji: "📜",
+        description: "Vieux parchemin froissé. Quand tu l'as sur toi, tu remarques des détails étranges au sol de certains lieux.",
+        priceReps: 150,
+        maxQuantity: 1,
+        availableAt: "trenette",
+        capabilities: {
+            canView: { kind: "treasureMap" },
         },
     },
 ]
 
 export function getItem(key: string): ItemDefinition | null {
     return ITEMS.find((i) => i.key === key) ?? null
+}
+
+/**
+ * v3.17 — Items disponibles à l'achat dans un shop donné.
+ * "both" est inclus dans les deux shops. "gift" est exclu.
+ */
+export function itemsAvailableAtShop(shop: "nutripates" | "trenette"): ItemDefinition[] {
+    return ITEMS.filter((i) => {
+        const at = i.availableAt ?? "both"
+        if (at === "gift") return false
+        if (at === "both") return true
+        return at === shop
+    })
 }
 
 // ============================================================
@@ -153,7 +236,7 @@ export function readMaxCapacity(data: unknown, def: ItemDefinition): number {
 }
 
 // ============================================================
-// Helpers pour les items équipables (baskets)
+// Helpers pour les items équipables (baskets / chaussures / brassards)
 // ============================================================
 
 /**
@@ -183,8 +266,8 @@ export function getInitialItemData(def: ItemDefinition): Record<string, unknown>
 
 /**
  * v3.8.1 — Renvoie true si l'item est cassé / inutilisable.
- *   - flask : maxCapacity ≤ 0
- *   - boots : durability ≤ 0
+ *   - flask / grande_gourde : maxCapacity ≤ 0
+ *   - boots / chaussures / brassards : durability ≤ 0
  */
 export function isBrokenItem(data: unknown, def: ItemDefinition): boolean {
     if (def.capabilities.canStore) {
@@ -194,4 +277,64 @@ export function isBrokenItem(data: unknown, def: ItemDefinition): boolean {
         return readDurability(data, def) <= 0
     }
     return false
+}
+
+// ============================================================
+// v3.17 — Helpers pour le système d'équipement étendu (boots/chaussures/brassards)
+// ============================================================
+
+/**
+ * v3.17 — Trouve le meilleur wearable intact applicable à une tile donnée.
+ * - On filtre les items dont canWear est défini, intact, et compatible avec la tile.
+ * - On retourne celui avec la plus grande moveCostReduction (le meilleur).
+ * Returns { entry, def } or null.
+ */
+export function findActiveWearableForTile(
+    inventory: InventoryEntry[],
+    enteringTile: TileType,
+): { entry: InventoryEntry; def: ItemDefinition } | null {
+    const candidates: Array<{ entry: InventoryEntry; def: ItemDefinition; reduction: number }> = []
+    for (const entry of inventory) {
+        const def = getItem(entry.itemKey)
+        if (!def?.capabilities.canWear) continue
+        if (isBrokenItem(entry.data, def)) continue
+        const tileRestriction = def.capabilities.canWear.tileRestriction
+        if (tileRestriction && tileRestriction !== enteringTile) continue
+        // Si tileRestriction est défini ET ne match pas, skip. Si non défini, applicable partout.
+        candidates.push({
+            entry,
+            def,
+            reduction: def.capabilities.canWear.moveCostReduction,
+        })
+    }
+    if (candidates.length === 0) return null
+    candidates.sort((a, b) => b.reduction - a.reduction)
+    return { entry: candidates[0].entry, def: candidates[0].def }
+}
+
+/**
+ * v3.17 — Vérifie si le joueur a au moins un item avec canCosmetic.socialDiscount.
+ * Retourne le facteur multiplicatif à appliquer (ex: 0.9 pour -10%) ou 1.0 si aucun.
+ * Note : actuellement seul "lunettes" propose ce discount.
+ */
+export function getSocialDiscountMultiplier(inventory: InventoryEntry[]): number {
+    let totalDiscount = 0
+    for (const entry of inventory) {
+        const def = getItem(entry.itemKey)
+        if (!def?.capabilities.canCosmetic?.socialDiscount) continue
+        totalDiscount += def.capabilities.canCosmetic.socialDiscount
+    }
+    // Clamp pour éviter qu'un cumul fasse passer le facteur sous 0
+    return Math.max(0, 1 - Math.min(0.9, totalDiscount))
+}
+
+/**
+ * v3.17 — Applique le discount social (lunettes) à un coût en reps.
+ * Round to nearest, min 1.
+ */
+export function applySocialDiscount(cost: number, inventory: InventoryEntry[]): number {
+    if (cost <= 0) return cost
+    const mult = getSocialDiscountMultiplier(inventory)
+    if (mult >= 1) return cost
+    return Math.max(1, Math.round(cost * mult))
 }

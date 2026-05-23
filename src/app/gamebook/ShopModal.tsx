@@ -5,9 +5,12 @@
 // v3.8 — Modal d'achat ouvert quand on parle à NUTRIPATES avec le sac.
 // Liste les items achetables, leur prix, leur disponibilité.
 // v3.8.9 — Header dynamique NUTRIPATES + remerciement à l'achat + tracker des achats.
+// v3.17 — Prop `shop` pour différencier NUTRIPATES (Pépiteville) vs TRENETTE (Macaron'île).
+//        Filtre des items via itemsAvailableAtShop. Applique le discount social (Lunettes -10%) à l'affichage.
+//        Détection du conflit boots/chaussures (item bloqué si autre wearable non-tile-restricted intact).
 
 import { useEffect, useMemo, useState } from "react"
-import { ITEMS } from "@/lib/gamebook/items"
+import { applySocialDiscount, itemsAvailableAtShop, getItem, isBrokenItem } from "@/lib/gamebook/items"
 import { hasIntactItem, type InventoryEntry } from "@/lib/gamebook/inventory"
 import { formatTimeAgo } from "@/lib/gamebook/mapEngine"
 
@@ -25,13 +28,15 @@ interface Props {
     nickname: string
     /** v3.10 — ratio de difficulté pour ajuster l'affichage des prix (onboarding paye moins) */
     difficultyRatio: number
+    /** v3.17 — Quel shop est ouvert (NUTRIPATES Pépiteville ou TRENETTE Macaron'île). Par défaut nutripates. */
+    shop?: "nutripates" | "trenette"
     onBuy: (itemKey: string) => Promise<void>
     /** v3.8.9 — notifie le parent à la fermeture du modal, en indiquant si un achat a été fait. */
     onClose: (purchaseMade: boolean) => void
 }
 
 // Phrases d'accueil de NUTRIPATES (4 variantes selon l'état des news)
-function greetingFor(lastPurchase: LastPurchase | null, currentNickname: string): string {
+function greetingNutripates(lastPurchase: LastPurchase | null, currentNickname: string): string {
     if (!lastPurchase) {
         return "NUTRIPATES essuie son comptoir, l'air abattu. \"Personne ne vient plus acheter quoi que ce soit. La crise, sans doute. Ou alors c'est moi.\""
     }
@@ -42,12 +47,24 @@ function greetingFor(lastPurchase: LastPurchase | null, currentNickname: string)
     return `NUTRIPATES sourit légèrement. "Le dernier client était ${lastPurchase.nickname}, ${ago}. Il a pris ${article(lastPurchase.itemName)}. Et toi, tu prends quoi ?"`
 }
 
+// v3.17 — Greeting TRENETTE (frère de NUTRIPATES, shop Macaron'île)
+function greetingTrenette(lastPurchase: LastPurchase | null, currentNickname: string): string {
+    if (!lastPurchase) {
+        return "TRENETTE pianote sur son comptoir. \"Yo. T'as fait tout ce chemin jusqu'ici, alors te plains pas des prix. Regarde ce que j'ai, mon frère NUTRIPATES en serait jaloux.\""
+    }
+    const ago = formatTimeAgo(lastPurchase.at)
+    if (lastPurchase.nickname === currentNickname) {
+        return `TRENETTE t'accueille avec un sourire malin. "T'es revenu. Ton dernier achat (${lastPurchase.itemName.toLowerCase()}, ${ago}) — pas mal, hein ? J'ai d'autres trucs qui valent le détour."`
+    }
+    return `TRENETTE hoche la tête. "${lastPurchase.nickname} est passé y'a ${ago}, a pris ${article(lastPurchase.itemName)}. T'en veux quoi toi ?"`
+}
+
 function article(itemName: string): string {
     const first = itemName.charAt(0).toLowerCase()
     return /[aeiouéèêh]/.test(first) ? `un·e ${itemName.toLowerCase()}` : `un·e ${itemName.toLowerCase()}`
 }
 
-export default function ShopModal({ inventory, availableEnergy, nickname, difficultyRatio, onBuy, onClose }: Props) {
+export default function ShopModal({ inventory, availableEnergy, nickname, difficultyRatio, shop = "nutripates", onBuy, onClose }: Props) {
     // v3.10 — Helper local : applique le ratio à un prix de base (Math.round neutre).
     // Doit rester aligné avec applyRatio() dans src/lib/gamebook/difficulty.ts.
     const adjustPrice = (base: number): number => {
@@ -78,9 +95,24 @@ export default function ShopModal({ inventory, availableEnergy, nickname, diffic
     }, [])
 
     const greeting = useMemo(
-        () => greetingFor(lastPurchase, nickname),
-        [lastPurchase, nickname]
+        () => shop === "trenette" ? greetingTrenette(lastPurchase, nickname) : greetingNutripates(lastPurchase, nickname),
+        [lastPurchase, nickname, shop]
     )
+
+    // v3.17 — Items filtrés par shop courant
+    const shopItems = useMemo(() => itemsAvailableAtShop(shop), [shop])
+
+    // v3.17 — Détecte si un autre wearable non-tile-restricted est intact dans l'inventaire (conflit boots/chaussures)
+    const intactLandWearableKey = useMemo(() => {
+        for (const entry of inventory) {
+            const def = getItem(entry.itemKey)
+            if (!def?.capabilities.canWear) continue
+            if (def.capabilities.canWear.tileRestriction) continue
+            if (isBrokenItem(entry.data, def)) continue
+            return entry.itemKey
+        }
+        return null
+    }, [inventory])
 
     const handleClose = () => {
         onClose(purchaseMade)
@@ -126,7 +158,9 @@ export default function ShopModal({ inventory, availableEnergy, nickname, diffic
                 }}
             >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                    <div style={{ fontSize: 12, letterSpacing: 4, fontWeight: "bold" }}>🛒 BOUTIQUE</div>
+                    <div style={{ fontSize: 12, letterSpacing: 4, fontWeight: "bold" }}>
+                        🛒 {shop === "trenette" ? "BOUTIQUE DE TRENETTE" : "BOUTIQUE"}
+                    </div>
                     <button
                         onClick={handleClose}
                         style={{
@@ -166,16 +200,27 @@ export default function ShopModal({ inventory, availableEnergy, nickname, diffic
                     Énergie dispo : <strong style={{ color: "#ffe3a8" }}>{availableEnergy} reps</strong>
                 </div>
 
-                {ITEMS.map((item) => {
+                {shopItems.map((item) => {
                     // v3.8.1 — on autorise le rachat si l'item existant est cassé
                     const alreadyIntact = hasIntactItem(inventory, item.key) && item.maxQuantity === 1
-                    // v3.10 — prix affiché ajusté par le ratio de difficulté
-                    const displayedPrice = adjustPrice(item.priceReps)
+                    // v3.10 — prix de base ajusté par le ratio de difficulté (onboarding)
+                    const ratioPrice = adjustPrice(item.priceReps)
+                    // v3.17 — discount social (Lunettes) appliqué APRÈS le ratio
+                    const displayedPrice = applySocialDiscount(ratioPrice, inventory)
                     const canAfford = availableEnergy >= displayedPrice
-                    const disabled = alreadyIntact || !canAfford || busy
+                    // v3.17 — conflit boots/chaussures : si on essaie d'acheter un wearable non-tile-restricted
+                    // alors qu'on en porte déjà un autre intact, on bloque.
+                    const isLandWearable =
+                        !!item.capabilities.canWear && !item.capabilities.canWear.tileRestriction
+                    const hasConflict =
+                        isLandWearable &&
+                        intactLandWearableKey !== null &&
+                        intactLandWearableKey !== item.key
+                    const disabled = alreadyIntact || !canAfford || hasConflict || busy
 
                     let cta = "ACHETER"
                     if (alreadyIntact) cta = "DÉJÀ POSSÉDÉ"
+                    else if (hasConflict) cta = "INCOMPATIBLE"
                     else if (!canAfford) cta = "TROP CHER"
 
                     return (
@@ -203,7 +248,7 @@ export default function ShopModal({ inventory, availableEnergy, nickname, diffic
                             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}>
                                 <div style={{ fontSize: 11, letterSpacing: 2 }}>
                                     💪 <strong>{displayedPrice}</strong> reps
-                                    {displayedPrice !== item.priceReps && (
+                                    {displayedPrice < item.priceReps && (
                                         <span style={{ marginLeft: 4, fontSize: 9, opacity: 0.5, textDecoration: "line-through" }}>
                                             {item.priceReps}
                                         </span>

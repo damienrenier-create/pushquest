@@ -54,7 +54,6 @@ import {
     bridgePnjSeeingPlayer,
     COST_PUSH,
     COST_TREE_OBSTACLE,
-    BOOTS_MOVE_COST_REDUCTION,
 } from "@/lib/gamebook/mapEngine"
 import {
     MONSTER_INTRO_DIALOGUE,
@@ -80,6 +79,7 @@ import PlayerMapModal from "./PlayerMapModal"
 import PiaffiniFlightScreen from "./PiaffiniFlightScreen"
 import { PIAFFINI_RESCUE_DIALOGUE } from "@/lib/gamebook/dialogue"
 import { parseInventory, hasIntactItem, type InventoryEntry } from "@/lib/gamebook/inventory"
+import { findActiveWearableForTile, applySocialDiscount } from "@/lib/gamebook/items"
 import { PEPITO_DIALOGUE_FIRST } from "@/lib/gamebook/dialogue"
 import TamagotchiModal from "./TamagotchiModal"
 import type { TamagotchiView } from "@/lib/gamebook/tamagotchi"
@@ -463,14 +463,15 @@ export default function MapClient({
     // ============================================================
     // v3.4a : SPEND ENERGY (appel API serveur, source de vérité)
     // v3.8.1 : accepte un flag wearBoots pour décrémenter la durabilité des baskets côté serveur
+    // v3.17 : wearItemKey remplace wearBoots — supporte boots / chaussures_course / brassards
     // ============================================================
-    const spendEnergy = useCallback(async (amount: number, reason: string, wearBoots = false): Promise<boolean> => {
+    const spendEnergy = useCallback(async (amount: number, reason: string, wearItemKey: string | null = null): Promise<boolean> => {
         if (amount <= 0) return true
         try {
             const res = await fetch("/api/gamebook/spend", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ amount, reason, wearBoots }),
+                body: JSON.stringify({ amount, reason, wearItemKey }),
             })
             const data = await res.json()
             if (!data.ok) {
@@ -488,12 +489,16 @@ export default function MapClient({
             if (typeof data.energySpentToday === "number") {
                 setEnergySpent(data.energySpentToday)
             }
-            // v3.8.1 : resync inventory (usure baskets)
+            // v3.8.1 : resync inventory (usure baskets/chaussures/brassards)
             if (Array.isArray(data.inventory)) {
                 setInventory(data.inventory)
             }
-            if (data.bootsBroken === true) {
-                setToast("Tes baskets viennent de céder. Faut en racheter une paire.")
+            if (data.wearableBroken === true || data.bootsBroken === true) {
+                const brokenKey = data.brokenItemKey ?? "boots"
+                const label = brokenKey === "chaussures_course" ? "Tes chaussures de course viennent de céder."
+                    : brokenKey === "brassards" ? "Tes brassards de nage viennent de lâcher."
+                        : "Tes baskets viennent de céder."
+                setToast(`${label} Faut en racheter.`)
             }
             return true
         } catch (e) {
@@ -605,7 +610,9 @@ export default function MapClient({
                         return
                     }
                     // v3.10 — coût ajusté selon le ratio de difficulté
-                    const adjustedTreeCost = applyDifficultyRatio(COST_TREE_OBSTACLE)
+                    // v3.17 — + discount social Lunettes
+                    const ratioTreeCost = applyDifficultyRatio(COST_TREE_OBSTACLE)
+                    const adjustedTreeCost = applySocialDiscount(ratioTreeCost, inventory)
                     if (reps < adjustedTreeCost) {
                         setToast(`L'arbre coûte ${adjustedTreeCost} reps. T'en as ${reps}.`)
                         return
@@ -653,7 +660,9 @@ export default function MapClient({
                         return
                     }
                     // v3.10 — coût push ajusté selon le ratio
-                    const adjustedPushCost = applyDifficultyRatio(COST_PUSH)
+                    // v3.17 — + discount social Lunettes
+                    const ratioPushCost = applyDifficultyRatio(COST_PUSH)
+                    const adjustedPushCost = applySocialDiscount(ratioPushCost, inventory)
                     if (reps < adjustedPushCost) {
                         setToast(`Pousser ${blockingNpc.npc.name} coûte ${adjustedPushCost} reps. T'en as ${reps}.`)
                         return
@@ -662,7 +671,7 @@ export default function MapClient({
                     ; (async () => {
                         const ok = await spendEnergy(adjustedPushCost, "push_npc")
                         if (!ok) return
-                        setToast(`Tu pousses ${blockingNpc.npc.name}. -${COST_PUSH} reps.`)
+                        setToast(`Tu pousses ${blockingNpc.npc.name}. -${adjustedPushCost} reps.`)
                     })()
                     return
                 }
@@ -681,17 +690,24 @@ export default function MapClient({
             // Apply
             setState(result.nextState)
             if (result.repsCost > 0) {
-                // v3.8.1 — Si l'user a des baskets intactes, réduction de COST_MOVE
-                const hasBoots = hasIntactItem(inventory, "boots")
-                const baseCost = hasBoots
-                    ? Math.max(0, result.repsCost - BOOTS_MOVE_COST_REDUCTION)
-                    : result.repsCost
+                // v3.17 — On résout le wearable actif pour la tile sur laquelle on entre.
+                // - waterShallow : brassards (tile-restricted) priorité, sinon boots/chaussures
+                // - autre tile   : boots ou chaussures_course (plus haute moveCostReduction gagne)
+                const enteringTile = map.tiles[result.nextState.posY]?.[result.nextState.posX]
+                const activeWearable = enteringTile
+                    ? findActiveWearableForTile(inventory, enteringTile)
+                    : null
+                const reduction = activeWearable?.def.capabilities.canWear?.moveCostReduction ?? 0
+                const baseCost = Math.max(0, result.repsCost - reduction)
                 // v3.10 — Ratio de difficulté (onboarding paye moins de reps par case)
-                const adjustedCost = applyDifficultyRatio(baseCost)
+                const ratioCost = applyDifficultyRatio(baseCost)
+                // v3.17 — Discount social (Lunettes -10%)
+                const adjustedCost = applySocialDiscount(ratioCost, inventory)
                 // Débit local immédiat pour la fluidité
                 setReps((r) => Math.max(0, r - adjustedCost))
                 // Persistance serveur en arrière-plan (fire and forget, resync si échec)
-                spendEnergy(adjustedCost, "move", hasBoots).catch(() => {/* silent */ })
+                const wearKey = activeWearable?.entry.itemKey ?? null
+                spendEnergy(adjustedCost, "move", wearKey).catch(() => {/* silent */ })
             }
 
             // v3.4b : broadcast Pusher (fire and forget)
@@ -1466,7 +1482,9 @@ export default function MapClient({
             return
         }
         // v3.10 — coût ajusté selon le ratio
-        const adjustedPushCostForPlayer = applyDifficultyRatio(COST_PUSH)
+        // v3.17 — + discount social Lunettes
+        const ratioPushCostForPlayer = applyDifficultyRatio(COST_PUSH)
+        const adjustedPushCostForPlayer = applySocialDiscount(ratioPushCostForPlayer, inventory)
         if (reps < adjustedPushCostForPlayer) {
             setPopup({
                 kind: "ghost",
@@ -1924,6 +1942,12 @@ export default function MapClient({
                             setShowInventory(false)
                             setShowPlayerMap(true)
                         }
+                        // v3.17 — "treasureMap" : la carte aux trésors n'a pas de modal dédié,
+                        // elle agit passivement (marker visuel quand on entre dans le casino).
+                        // On affiche juste un hint à l'utilisateur.
+                        if (kind === "treasureMap") {
+                            setToast("La carte indique des lieux. Va explorer les casinos avec attention.")
+                        }
                     }}
                     onUse={async (itemKey, action, amount) => {
                         try {
@@ -2045,6 +2069,7 @@ export default function MapClient({
                     availableEnergy={reps}
                     nickname={nickname}
                     difficultyRatio={difficultyRatio}
+                    shop={state.mapId === "shop_macaron" ? "trenette" : "nutripates"}
                     onBuy={async (itemKey) => {
                         try {
                             const res = await fetch("/api/gamebook/shop/buy", {
