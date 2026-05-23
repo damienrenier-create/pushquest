@@ -409,6 +409,22 @@ export default function TileCell({ tile, x, y }: { tile: TileType; x: number; y:
             </div>
         )
     }
+    // v3.17c — Tableau accroché au mur (Tour des Pâtes Aiguës)
+    if (tile === "painting") {
+        return (
+            <div style={{ position: "relative", background: "#5a5a6a", overflow: "hidden" }}>
+                {/* Cadre doré */}
+                <div style={{ position: "absolute", inset: "12%", background: "#c8a050", border: "1px solid #604020", boxShadow: "0 2px 0 #4a2818" }}>
+                    {/* Toile sépia */}
+                    <div style={{ position: "absolute", inset: "10%", background: "#f0d8a8", border: "1px solid #604020" }}>
+                        {/* Silhouette générique (tête + buste) */}
+                        <div style={{ position: "absolute", left: "35%", right: "35%", top: "15%", height: "25%", background: "#7a5028", borderRadius: "40% 40% 30% 30%" }} />
+                        <div style={{ position: "absolute", left: "25%", right: "25%", top: "40%", bottom: "20%", background: "#7a5028" }} />
+                    </div>
+                </div>
+            </div>
+        )
+    }
     // v3.18 — Pupitre de lecture (Bibliothèque)
     if (tile === "lectern") {
         return (
