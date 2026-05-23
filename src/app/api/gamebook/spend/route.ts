@@ -76,7 +76,18 @@ export async function POST(req: NextRequest) {
 
     const todayReps = await getTodayReps(userId)
     // v3.8 : pas de plafond à 0 — peut être négatif si gourde bue (énergie en surplus).
-    const availableEnergy = todayReps - currentSpent
+    let availableEnergy = todayReps - currentSpent
+
+    // v3.8.5 — Mode créateur (isSystem) : on autorise toujours le débit.
+    // L'énergie disponible renvoyée au client est paddée à 1000+ minimum.
+    const creatorCheck = await (prisma as any).user.findUnique({
+        where: { id: userId },
+        select: { isSystem: true },
+    })
+    const isCreator = creatorCheck?.isSystem === true
+    if (isCreator) {
+        availableEnergy = Math.max(availableEnergy, 1000)
+    }
 
     // Vérifier qu'il y a assez d'énergie pour le débit
     if (amount > availableEnergy) {
@@ -113,9 +124,13 @@ export async function POST(req: NextRequest) {
         },
     })
 
+    const reportedAvailable = isCreator
+        ? Math.max(todayReps - newSpent, 1000)
+        : (todayReps - newSpent)
+
     return NextResponse.json({
         ok: true,
-        availableEnergy: todayReps - newSpent,
+        availableEnergy: reportedAvailable,
         energySpentToday: newSpent,
         amount,
         reason,

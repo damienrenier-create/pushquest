@@ -91,18 +91,27 @@ export async function POST(req: NextRequest) {
     if (direction === "up") {
         const alreadyReached = (progress.towerFloorReached ?? 1) >= targetFloor
         if (!alreadyReached) {
-            const threshold = TOWER_STAIRS_SQUATS_THRESHOLD[currentFloor]
-            if (typeof threshold !== "number") {
-                return NextResponse.json({ ok: false, reason: "Pas de seuil défini pour cet étage." })
-            }
-            const squatsToday = await getTodaySquats(userId)
-            if (squatsToday < threshold) {
-                return NextResponse.json({
-                    ok: false,
-                    reason: `Il te manque des squats : ${squatsToday}/${threshold} aujourd'hui.`,
-                    threshold,
-                    squatsToday,
-                })
+            // v3.8.5 — Mode créateur (isSystem) : bypass check squats.
+            const creatorCheck = await (prisma as any).user.findUnique({
+                where: { id: userId },
+                select: { isSystem: true },
+            })
+            const isCreator = creatorCheck?.isSystem === true
+
+            if (!isCreator) {
+                const threshold = TOWER_STAIRS_SQUATS_THRESHOLD[currentFloor]
+                if (typeof threshold !== "number") {
+                    return NextResponse.json({ ok: false, reason: "Pas de seuil défini pour cet étage." })
+                }
+                const squatsToday = await getTodaySquats(userId)
+                if (squatsToday < threshold) {
+                    return NextResponse.json({
+                        ok: false,
+                        reason: `Il te manque des squats : ${squatsToday}/${threshold} aujourd'hui.`,
+                        threshold,
+                        squatsToday,
+                    })
+                }
             }
         }
     }

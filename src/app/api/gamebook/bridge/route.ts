@@ -191,6 +191,26 @@ async function challengePnj(userId: string, pnjId: string) {
 
     const today = getTodayISO()
 
+    // v3.8.5 — Mode créateur (isSystem) : bypass tous les checks de défi.
+    const creatorCheck = await (prisma as any).user.findUnique({
+        where: { id: userId },
+        select: { isSystem: true },
+    })
+    const isCreator = creatorCheck?.isSystem === true
+    if (isCreator) {
+        const newDefeated = [...alreadyDefeated, pnjId]
+        const existingLastBeaten = (progress.bridgePnjLastBeatenDate as Record<string, string>) ?? {}
+        const newLastBeaten = { ...existingLastBeaten, [pnjId]: today }
+        await prisma.gamebookProgress.update({
+            where: { id: progress.id },
+            data: {
+                bridgePnjDefeated: newDefeated,
+                bridgePnjLastBeatenDate: newLastBeaten,
+            },
+        })
+        return NextResponse.json({ ok: true, defeated: newDefeated, creator: true })
+    }
+
     // ============= Validation de la condition =============
     if (challenge.kind === "exercise") {
         const sets = await prisma.exerciseSet.findMany({

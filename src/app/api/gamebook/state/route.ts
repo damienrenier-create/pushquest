@@ -24,6 +24,18 @@ async function getTodayReps(userId: string): Promise<number> {
     return sets.reduce((sum: number, s: { reps: number }) => sum + s.reps, 0)
 }
 
+// v3.8.5 — Comptes "créateur" (isSystem=true) : godmode pour tester la map
+// sans affecter les classements (isSystem est filtré partout ailleurs).
+const CREATOR_MIN_ENERGY = 1000
+
+async function isCreatorAccount(userId: string): Promise<boolean> {
+    const u = await (prisma as any).user.findUnique({
+        where: { id: userId },
+        select: { isSystem: true },
+    })
+    return u?.isSystem === true
+}
+
 export async function GET() {
     const session = await getServerSession(authOptions)
     if (!session?.user || !(session.user as { id?: string }).id) {
@@ -75,7 +87,14 @@ export async function GET() {
     const energySpentToday = storedDate === today ? storedSpent : 0
     // v3.8 : pas de plafond — energySpentToday peut être négatif si la gourde a été bue.
     // Énergie réellement disponible = reps totales - énergie déjà consommée
-    const availableEnergy = todayReps - energySpentToday
+    let availableEnergy = todayReps - energySpentToday
+
+    // v3.8.5 — Mode créateur (isSystem) : énergie minimum 1000 pour tester la map.
+    // Ne touche pas aux données réelles : on override juste la valeur renvoyée au client.
+    const isCreator = await isCreatorAccount(userId)
+    if (isCreator && availableEnergy < CREATOR_MIN_ENERGY) {
+        availableEnergy = CREATOR_MIN_ENERGY
+    }
 
     // v3.6 — expose frozenUntil pour que le client puisse afficher l'overlay anti-triche
     const frozenUntil = (progress as { gamebookFrozenUntil?: Date | null }).gamebookFrozenUntil ?? null
