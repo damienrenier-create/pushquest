@@ -439,6 +439,9 @@ model GamebookProgress {
   // v3.8.2 — plus haut étage atteint dans la Tour des Pâtes Aiguës (1 = rez-de-chaussée, 5 = sommet).
   // Une fois un étage validé via le check squats, accès libre permanent (jusqu'à reset anti-cheat).
   towerFloorReached         Int     @default(1)
+  // v3.11 — PIAFFINI sauvé : flag persistant à vie une fois donné. Débloque JOJO post-quête,
+  // JOJETTE félicitations, et conditionnera l'accès à l'eau coopérative (v3.12).
+  piaffiniRescued           Boolean @default(false)
 
   @@unique([userId, chapterId])
   @@index([userId])

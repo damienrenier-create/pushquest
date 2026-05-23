@@ -70,6 +70,8 @@ export default function GamebookClient({ nickname, userId }: Props) {
                         npcsTalkedTo: Array.isArray(json.state.npcsTalkedTo)
                             ? json.state.npcsTalkedTo
                             : [],
+                        // v3.11
+                        piaffiniRescued: json.state.piaffiniRescued === true,
                     }
                     setPayload({
                         ...json,

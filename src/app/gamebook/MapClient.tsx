@@ -69,6 +69,8 @@ import StartMenu from "./StartMenu"
 import InventoryModal from "./InventoryModal"
 import ShopModal from "./ShopModal"
 import PlayerMapModal from "./PlayerMapModal"
+import PiaffiniFlightScreen from "./PiaffiniFlightScreen"
+import { PIAFFINI_RESCUE_DIALOGUE } from "@/lib/gamebook/dialogue"
 import { parseInventory, hasIntactItem, type InventoryEntry } from "@/lib/gamebook/inventory"
 import { PEPITO_DIALOGUE_FIRST } from "@/lib/gamebook/dialogue"
 
@@ -111,6 +113,9 @@ type Cinematic =
     | { kind: "npcDialogue"; npcId: string; npcName: string; step: number; lines: string[]; energyReward?: number }
     // v3.8 — Cinématique PEPITO offre le sac
     | { kind: "pepitoBag"; step: number }
+    // v3.11 — Cinématique PIAFFINI : dialogue puis vol vers Bourg-Boulette
+    | { kind: "piaffini"; stage: "dialog"; step: number }
+    | { kind: "piaffini"; stage: "flight" }
     | null
 
 // Ticker partagé entre tous les NPCs wanderers pour synchroniser leurs déplacements
@@ -382,7 +387,10 @@ export default function MapClient({
     // ============================================================
     const triggerNpcDialogue = useCallback(
         (npc: NpcDefinition) => {
-            const lines = getNpcDialogue(npc, state.phase)
+            // v3.11 — Passer les flags du joueur pour les dialogues conditionnels (JOJO/JOJETTE post-PIAFFINI)
+            const lines = getNpcDialogue(npc, state.phase, {
+                piaffiniRescued: state.piaffiniRescued === true,
+            })
             setCinematic({
                 kind: "npcDialogue",
                 npcId: npc.id,
@@ -392,7 +400,7 @@ export default function MapClient({
                 energyReward: npc.energyReward,
             })
         },
-        [state.phase]
+        [state.phase, state.piaffiniRescued]
     )
 
     // ============================================================
@@ -742,6 +750,26 @@ export default function MapClient({
                 }
             }
 
+            // === v3.11 : Détection PIAFFINI au sommet de la Tour ===
+            // Si le joueur arrive sur une case adjacente à PIAFFINI (en (3,3) sur tower_floor_5)
+            // et n'a pas encore sauvé PIAFFINI, on déclenche la cinématique automatiquement.
+            if (
+                result.nextState.mapId === "tower_floor_5" &&
+                !result.nextState.piaffiniRescued
+            ) {
+                const px = result.nextState.posX
+                const py = result.nextState.posY
+                const adjacentToPiaffini =
+                    (px === 3 && py === 2) || (px === 3 && py === 4) ||
+                    (px === 2 && py === 3) || (px === 4 && py === 3)
+                if (adjacentToPiaffini) {
+                    setTimeout(() => {
+                        setCinematic({ kind: "piaffini", stage: "dialog", step: 0 })
+                    }, 200)
+                    return
+                }
+            }
+
             // === v3.8.7 : Transition Pépiteville nord ↔ Hautes-Pâtes via hautes herbes ===
             // Le joueur marche sur une case grassTall :
             //  - Depuis pepiteville → spawn dans Hautes-Pâtes (au-dessus de la bande sud)
@@ -793,6 +821,18 @@ export default function MapClient({
 
         // v3.8 — si une modal est ouverte, le A est géré par la modal elle-même
         if (showStartMenu || showInventory || showShop || showPlayerMap) return
+
+        // v3.11 — Cinématique PIAFFINI (dialogue au sommet, puis vol)
+        if (cinematic?.kind === "piaffini" && cinematic.stage === "dialog") {
+            const next = cinematic.step + 1
+            if (next > PIAFFINI_RESCUE_DIALOGUE.length - 1) {
+                // Fin du dialogue → on bascule en mode "flight" (l'écran de vol)
+                setCinematic({ kind: "piaffini", stage: "flight" })
+                return
+            }
+            setCinematic({ kind: "piaffini", stage: "dialog", step: next })
+            return
+        }
 
         // v3.8 — Cinématique PEPITO (offre le sac)
         if (cinematic?.kind === "pepitoBag") {
@@ -1544,6 +1584,15 @@ export default function MapClient({
                         />
                     )}
 
+                    {/* === v3.11 : DIALOGUE PIAFFINI (rencontre au sommet) === */}
+                    {cinematic?.kind === "piaffini" && cinematic.stage === "dialog" && (
+                        <DialogueBox
+                            speaker="PIAFFINI"
+                            text={PIAFFINI_RESCUE_DIALOGUE[cinematic.step]}
+                            onNext={pressA}
+                        />
+                    )}
+
                     {/* POPUP */}
                     {popup && <PopupBox text={popup.text} onClose={() => setPopup(null)} />}
                 </div>
@@ -1674,6 +1723,46 @@ export default function MapClient({
             {/* v3.8.3 — Carte des joueurs */}
             {showPlayerMap && (
                 <PlayerMapModal onClose={() => setShowPlayerMap(false)} />
+            )}
+
+            {/* v3.11 — Cinématique vol PIAFFINI vers Bourg-Boulette */}
+            {cinematic?.kind === "piaffini" && cinematic.stage === "flight" && (
+                <PiaffiniFlightScreen
+                    onDone={async () => {
+                        try {
+                            const res = await fetch("/api/gamebook/piaffini/rescue", { method: "POST" })
+                            const data = await res.json()
+                            if (data.ok && data.spawn) {
+                                // Téléport + flag piaffiniRescued + ajout swim_set à l'inventaire local
+                                setState((s) => ({
+                                    ...s,
+                                    mapId: data.spawn.mapId,
+                                    posX: data.spawn.posX,
+                                    posY: data.spawn.posY,
+                                    direction: data.spawn.direction,
+                                    piaffiniRescued: true,
+                                }))
+                                if (Array.isArray(data.inventory)) {
+                                    setInventory(data.inventory)
+                                }
+                                setCinematic(null)
+                                // Popup post-cinématique : JOJO accourt et explique le cadeau
+                                if (!data.alreadyRescued) {
+                                    setPopup({
+                                        kind: "info",
+                                        text: "JOJO accourt vers toi.\n\n\"Pioupiou ! Tu m'as ramené PIAFFINI ! Tiens, c'était le maillot et les palmes de ma grand-mère. Avec ça, tu pourras explorer les eaux du sud.\"\n\n(Tu reçois le Set de Nage 🏊 et 200 XP.)",
+                                    })
+                                }
+                            } else {
+                                console.warn("[MapClient] piaffini/rescue failed", data)
+                                setCinematic(null)
+                            }
+                        } catch (e) {
+                            console.warn("[MapClient] piaffini/rescue failed", e)
+                            setCinematic(null)
+                        }
+                    }}
+                />
             )}
 
             {showShop && (

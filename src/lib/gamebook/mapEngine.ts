@@ -91,6 +91,8 @@ export interface PlayerMapState {
     // === v3.3 : NPCs de Bourg-Boulette ===
     gymGuyEnergyGiven: boolean         // le PNJ muscu a donné ses 100 reps de surplus
     npcsTalkedTo: string[]             // ids des PNJ déjà rencontrés (pour ne pas relancer le 1er dialogue)
+    // === v3.11 : sauvetage de PIAFFINI ===
+    piaffiniRescued: boolean           // true = cinématique au sommet de la Tour déclenchée, JOJO a donné le Set de Nage
 }
 
 // Snapshot d'un autre joueur affiché sur la carte

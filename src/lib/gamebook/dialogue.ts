@@ -66,3 +66,81 @@ export const PEPITO_DIALOGUE_AFTER: string[] = [
     "Va dépenser ton énergie utilement. Ou pas. Je m'en tape.",
 ]
 
+// =====================================================
+// v3.11 — PIAFFINI : cinématique de sauvetage au sommet de la Tour
+// =====================================================
+export const PIAFFINI_RESCUE_DIALOGUE: string[] = [
+    "PIAFFINI : Pioupiou ? *Il te regarde avec ses grands yeux fatigués*",
+    "PIAFFINI : Tu... tu viens me chercher ? JOJO t'a envoyé ?",
+    "(Tu hoches la tête, intimidé.)",
+    "PIAFFINI : Je suis perdu depuis si longtemps...",
+    "PIAFFINI : Allez ! Accroche-toi à mes plumes !",
+]
+export const PIAFFINI_RESCUE_LAST_STEP = PIAFFINI_RESCUE_DIALOGUE.length - 1
+
+// v3.11 — JOJO change de dialogue une fois PIAFFINI sauvé (cadeau Set de Nage)
+export const JOJO_POST_PIAFFINI_DIALOGUE: string[] = [
+    "Pioupiou ! Tu m'as ramené PIAFFINI ! Je ne sais comment te remercier !",
+    "Tiens, prends ça. C'était le maillot et les palmes de ma grand-mère.",
+    "Elle adorait nager. Avec ça, tu pourras explorer les eaux du sud.",
+    "(Tu reçois le Set de Nage 🏊.)",
+]
+
+// v3.11 — Dialogue court une fois que JOJO a déjà donné le Set
+export const JOJO_AFTER_GIFT_DIALOGUE: string[] = [
+    "Merci encore d'avoir ramené PIAFFINI. Va profiter de ton équipement de nage !",
+]
+
+// v3.11 — JOJETTE félicitations chaleureuses post-PIAFFINI (clôture narrative)
+export const JOJETTE_POST_PIAFFINI_DIALOGUE: string[] = [
+    "J'ai entendu pour PIAFFINI ! C'est merveilleux.",
+    "Mon frère devait être tellement heureux de le revoir.",
+    "Profite bien de tes cadeaux !",
+]
+
+// =====================================================
+// v3.11 — Rumeurs des PNJ de la Tour (foreshadowing arcs futurs)
+// =====================================================
+export const RUMEUR_OISEAU_DIALOGUE: string[] = [
+    "On raconte qu'au sommet de cette tour, il y aurait un oiseau triste...",
+    "...qui chante des mélodies tristes.",
+    "Personne ne l'a vu, mais on l'entend parfois.",
+]
+export const RUMEUR_HERBES_DIALOGUE: string[] = [
+    "Méfie-toi des hautes herbes du sud, plus loin que la mer.",
+    "Mon cousin a essayé de les traverser une fois.",
+    "Il est revenu plein de morsures de bestioles. Plus jamais.",
+]
+export const RUMEUR_CONCOURS_DIALOGUE: string[] = [
+    "Tu sais qu'il y a un concours intersalle de muscu chaque année ?",
+    "Sur une île au sud de Bourg-Boulette.",
+    "Cette année il paraît qu'il est annulé. Bizarre, hein ?",
+]
+
+// v3.11 — Blagueur de la Tour : 4 blagues, choix aléatoire à chaque interaction
+export const TOWER_JOKES: string[][] = [
+    [
+        "*Il se tient là, l'air sérieux.*",
+        "Pourquoi est-ce que les pâtes sont sportives ?",
+        "...",
+        "Parce qu'elles ont la forme.",
+        "*Personne ne rit.*",
+    ],
+    [
+        "Pourquoi le penne avait honte ?",
+        "Parce qu'il avait vu l'orec-chiette.",
+        "*Il rit tout seul. Tu fais semblant de partir.*",
+    ],
+    [
+        "Mon père m'a dit un jour :",
+        "\"Mon fils, ne joue pas avec la nourriture.\"",
+        "Du coup, je joue avec MOI. *clin d'œil*",
+    ],
+    [
+        "Sais-tu pourquoi les fettucine sont mauvaises au foot ?",
+        "Parce qu'elles font toujours des passes mal.",
+        "Bon je sors.",
+    ],
+]
+
+

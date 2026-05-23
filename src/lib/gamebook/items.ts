@@ -80,6 +80,15 @@ export const ITEMS: ItemDefinition[] = [
             canView: { kind: "playerMap" },
         },
     },
+    {
+        key: "swim_set",
+        name: "Set de Nage",
+        emoji: "🏊",
+        description: "Maillot et palmes hérités de la grand-mère de JOJO. Indispensable pour traverser les eaux du sud.",
+        priceReps: 0,  // non achetable — donné par JOJO après PIAFFINI sauvé
+        maxQuantity: 1,
+        capabilities: {},  // pas de capability propre — l'item est juste un "gate" vérifié dans les check waterShallow (v3.12)
+    },
 ]
 
 export function getItem(key: string): ItemDefinition | null {

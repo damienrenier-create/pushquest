@@ -130,6 +130,8 @@ export async function GET() {
             gymGuyEnergyGiven: (progress as { gymGuyEnergyGiven?: boolean }).gymGuyEnergyGiven ?? false,
             npcsTalkedTo: (progress as { npcsTalkedTo?: string[] }).npcsTalkedTo ?? [],
             gamebookFrozenUntil: frozenUntil,
+            // v3.11 — PIAFFINI sauvé (débloque dialogues post-quête JOJO/JOJETTE)
+            piaffiniRescued: (progress as { piaffiniRescued?: boolean }).piaffiniRescued === true,
         },
         todayReps,
         energySpentToday,
@@ -190,6 +192,8 @@ export async function POST(req: NextRequest) {
     const hasSeenWelcomeScreen = body.hasSeenWelcomeScreen === true
     const treeObstacleCleared = body.treeObstacleCleared === true
     const pioneerBadgeAwarded = body.pioneerBadgeAwarded === true
+    // v3.11 — flag piaffiniRescued (one-way : false → true, jamais l'inverse)
+    const piaffiniRescued = body.piaffiniRescued === true
     const bridgePnjDefeated = Array.isArray(body.bridgePnjDefeated)
         ? (body.bridgePnjDefeated as string[]).filter((x) => typeof x === "string")
         : []
@@ -218,7 +222,14 @@ export async function POST(req: NextRequest) {
         })
     }
 
-    const updated = await prisma.gamebookProgress.upsert({
+    // v3.11 — On préserve piaffiniRescued=true si déjà true en DB (one-way flag).
+    const existingPiaffini = (existing as { piaffiniRescued?: boolean })?.piaffiniRescued === true
+    const finalPiaffiniRescued = existingPiaffini || piaffiniRescued
+
+    // Cast en `any` pour le `data` afin de bypasser le check TS strict sur les nouveaux
+    // champs Prisma tant que le client n'est pas régénéré côté CI. Le pattern est cohérent
+    // avec le reste du code qui utilise `(prisma as any)` régulièrement.
+    const updated = await (prisma as any).gamebookProgress.upsert({
         where: { userId_chapterId: { userId, chapterId: CHAPTER_ID } },
         update: {
             mapId,
@@ -236,6 +247,7 @@ export async function POST(req: NextRequest) {
             bridgePnjLastBeatenDate,
             gymGuyEnergyGiven,
             npcsTalkedTo,
+            piaffiniRescued: finalPiaffiniRescued,
             lastSeen: new Date(),
         },
         create: {
@@ -257,9 +269,12 @@ export async function POST(req: NextRequest) {
             bridgePnjLastBeatenDate,
             gymGuyEnergyGiven,
             npcsTalkedTo,
+            piaffiniRescued: finalPiaffiniRescued,
         },
     })
 
+    // (variable `existing` est référencée ci-dessus pour préserver piaffiniRescued)
+    void existing
     return NextResponse.json({ ok: true, state: updated })
 }
 

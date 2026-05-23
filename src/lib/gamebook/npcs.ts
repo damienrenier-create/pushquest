@@ -36,6 +36,12 @@ export interface NpcDefinition {
     // Dialogues
     dialoguesBefore?: string[]   // avant la rencontre du Monstre
     dialoguesAfter: string[]     // après la rencontre du Monstre (ou phase "playing")
+    // v3.11 — dialogue conditionnel : utilisé à la place de dialoguesAfter si
+    // le flag piaffiniRescued du joueur est true (clôture narrative JOJO/JOJETTE).
+    dialoguesAfterPiaffini?: string[]
+    // v3.11 — pool de dialogues aléatoires : si défini, on tire un random à chaque
+    // interaction. Prime sur dialoguesAfter. Utilisé par le Blagueur de la Tour.
+    randomDialogues?: string[][]
     // Récompense unique (ex: gym guy donne 100 reps)
     energyReward?: number        // si défini, donne X reps une fois
 }
@@ -78,6 +84,10 @@ export const NPCS: NpcDefinition[] = [
 
     // -------------------------------
     // PNJ CHERCHEUR D'ANIMAL (Bourg-Boulette, baladeur)
+    // v3.11 — Dialogue conditionnel selon piaffiniRescued :
+    //   - false : il cherche son animal (dialogue d'attente)
+    //   - true (1ère fois post-rescue) : géré inline dans MapClient (cadeau Set de Nage)
+    //   - true (visites suivantes) : dialogue court de remerciement
     // -------------------------------
     {
         id: "pet_seeker",
@@ -95,6 +105,13 @@ export const NPCS: NpcDefinition[] = [
             "Il est parti je sais pas où, sûrement vers le nord.",
             "Si tu le trouves, ramène-le moi. Ça fera plaisir à tout le monde.",
             "(Tu sens qu'il a quelque chose en réserve pour toi si tu reviens avec...)",
+        ],
+        // v3.11 — après le sauvetage de PIAFFINI, dialogue par défaut (visites répétées)
+        // Le 1er passage déclenche le cadeau Set de Nage via une cinématique spéciale gérée
+        // dans MapClient (pas dans dialoguesAfterPiaffini, qui sert pour les visites suivantes).
+        dialoguesAfterPiaffini: [
+            "Merci encore d'avoir ramené PIAFFINI.",
+            "Va profiter de ton équipement de nage !",
         ],
     },
 
@@ -124,6 +141,7 @@ export const NPCS: NpcDefinition[] = [
 
     // -------------------------------
     // JOJETTE — sœur de JOJO, cherche l'animal de son frère
+    // v3.11 — Dialogue conditionnel selon piaffiniRescued (clôture narrative)
     // -------------------------------
     {
         id: "pet_seeker_sister",
@@ -141,6 +159,11 @@ export const NPCS: NpcDefinition[] = [
             "Apparemment il l'aurait vu traîner près du Pont Pépite.",
             "S'il te dit quoi que ce soit, fais-moi remonter l'info.",
             "(Elle te sourit, manifestement plus calme que JOJO.)",
+        ],
+        dialoguesAfterPiaffini: [
+            "J'ai entendu pour PIAFFINI ! C'est merveilleux.",
+            "Mon frère devait être tellement heureux de le revoir.",
+            "Profite bien de tes cadeaux !",
         ],
     },
 
@@ -254,7 +277,9 @@ export const NPCS: NpcDefinition[] = [
 
     // -------------------------------
     // PIAFFINI — l'oiseau de JOJO, au sommet de la Tour (étage 5)
-    // (interactif uniquement, statique sur son perchoir au centre du sommet)
+    // v3.11 — Cinématique de sauvetage déclenchée automatiquement quand le joueur
+    // arrive à 1 case de PIAFFINI (gérée dans MapClient). Le dialogue ci-dessous
+    // ne sert plus que pour les visites POST-rescue (visite touristique).
     // -------------------------------
     {
         id: "piaffini",
@@ -266,11 +291,94 @@ export const NPCS: NpcDefinition[] = [
         initialX: 3,
         initialY: 3,
         dialoguesAfter: [
-            "(Un petit oiseau duveteux te regarde, intrigué.)",
-            "PIAFFINI : Pwip ! Pwip ! Pwiiiiip ?",
-            "PIAFFINI : (Il fait un petit saut excité sur son perchoir.)",
-            "(Tu reconnais sans doute l'oiseau que JOJO et JOJETTE cherchent depuis le début.)",
-            "(Pour l'instant, il ne veut pas descendre. Reviens avec une idée pour le convaincre.)",
+            "(Le perchoir est vide. PIAFFINI est rentré avec toi à Bourg-Boulette.)",
+        ],
+    },
+
+    // ============================================================
+    // v3.11 — PNJ de foreshadowing dans la Tour des Pâtes Aiguës
+    // ============================================================
+
+    {
+        id: "tower_rumeur_oiseau",
+        name: "RUMEUR",
+        mapId: "tower_floor_2",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#a0a8d0" },
+        initialX: 3,
+        initialY: 5,
+        dialoguesAfter: [
+            "On raconte qu'au sommet de cette tour, il y aurait un oiseau triste...",
+            "...qui chante des mélodies tristes.",
+            "Personne ne l'a vu, mais on l'entend parfois.",
+        ],
+    },
+    {
+        id: "tower_blagueur",
+        name: "PASTAFAR",
+        mapId: "tower_floor_3",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#f0c050" },
+        initialX: 2,
+        initialY: 5,
+        dialoguesAfter: [
+            "(Il prépare une blague en silence.)",
+        ],
+        randomDialogues: [
+            [
+                "*Il se tient là, l'air sérieux.*",
+                "Pourquoi est-ce que les pâtes sont sportives ?",
+                "...",
+                "Parce qu'elles ont la forme.",
+                "*Personne ne rit.*",
+            ],
+            [
+                "Pourquoi le penne avait honte ?",
+                "Parce qu'il avait vu l'orec-chiette.",
+                "*Il rit tout seul.*",
+            ],
+            [
+                "Mon père m'a dit un jour :",
+                "\"Mon fils, ne joue pas avec la nourriture.\"",
+                "Du coup, je joue avec MOI. *clin d'œil*",
+            ],
+            [
+                "Sais-tu pourquoi les fettucine sont mauvaises au foot ?",
+                "Parce qu'elles font toujours des passes mal.",
+                "Bon je sors.",
+            ],
+        ],
+    },
+    {
+        id: "tower_rumeur_herbes",
+        name: "RUMEUR",
+        mapId: "tower_floor_3",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#a0d0a0" },
+        initialX: 6,
+        initialY: 5,
+        dialoguesAfter: [
+            "Méfie-toi des hautes herbes du sud, plus loin que la mer.",
+            "Mon cousin a essayé de les traverser une fois.",
+            "Il est revenu plein de morsures de bestioles. Plus jamais.",
+        ],
+    },
+    {
+        id: "tower_rumeur_concours",
+        name: "RUMEUR",
+        mapId: "tower_floor_4",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#d0a0a0" },
+        initialX: 5,
+        initialY: 4,
+        dialoguesAfter: [
+            "Tu sais qu'il y a un concours intersalle de muscu chaque année ?",
+            "Sur une île au sud de Bourg-Boulette.",
+            "Cette année il paraît qu'il est annulé. Bizarre, hein ?",
         ],
     },
 ]
@@ -372,15 +480,34 @@ export function getNpcsForMap(mapId: string): NpcDefinition[] {
     return NPCS.filter((n) => n.mapId === mapId)
 }
 
+export interface NpcDialogueFlags {
+    /** v3.11 — true si le joueur a sauvé PIAFFINI (override JOJO et JOJETTE) */
+    piaffiniRescued?: boolean
+}
+
 /**
- * Sélectionne les dialogues pour un PNJ selon la phase du joueur
+ * Sélectionne les dialogues pour un PNJ selon la phase du joueur et ses flags.
+ *
+ * Ordre de priorité :
+ *   1. phase "explore" + dialoguesBefore défini → dialoguesBefore
+ *   2. randomDialogues défini → pick aléatoire dans le pool
+ *   3. flag piaffiniRescued + dialoguesAfterPiaffini défini → dialoguesAfterPiaffini
+ *   4. fallback → dialoguesAfter
  */
 export function getNpcDialogue(
     npc: NpcDefinition,
     playerPhase: "explore" | "introMonster" | "playing",
+    flags: NpcDialogueFlags = {},
 ): string[] {
     if (playerPhase !== "playing" && npc.dialoguesBefore) {
         return npc.dialoguesBefore
+    }
+    if (npc.randomDialogues && npc.randomDialogues.length > 0) {
+        const pool = npc.randomDialogues
+        return pool[Math.floor(Math.random() * pool.length)]
+    }
+    if (flags.piaffiniRescued && npc.dialoguesAfterPiaffini) {
+        return npc.dialoguesAfterPiaffini
     }
     return npc.dialoguesAfter
 }
