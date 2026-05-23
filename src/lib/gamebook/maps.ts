@@ -372,11 +372,14 @@ function buildCasinoPepite(): TileType[][] {
 //   - y=0      : bordure tree
 //   - y=1..10  : canal waterShallow (au centre, col 6-7) entouré d'eau bloquante
 //   - y=11..12 : plage de sable (sand)
-//   - y=13..16 : ville Macaron'île (PNJ tristes, bâtiments visuels en placeholder pour v3.13+)
-//   - y=17     : bordure tree
+//   - y=13..15 : ville Macaron'île 1ère rangée (shop TRENETTE + vétérinaire)
+//   - y=16     : chemin horizontal d'accès aux portes
+//   - y=17..19 : ville Macaron'île 2ème rangée (bibliothèque — v3.15)
+//   - y=20     : chemin horizontal sud + fleurs
+//   - y=21     : bordure tree
 // ============================================================
 const MACARONILE_W = 14
-const MACARONILE_H = 18
+const MACARONILE_H = 22
 
 function buildMacaronIle(): TileType[][] {
     const m: TileType[][] = []
@@ -415,42 +418,74 @@ function buildMacaronIle(): TileType[][] {
         m[12][x] = "sand"
     }
 
-    // v3.13 — Chemins de la ville (croix horizontale + vertical pour atteindre chaque bâtiment)
-    for (let x = 5; x <= 8; x++) m[13][x] = "path"
-    for (let y = 11; y <= 16; y++) {
+    // v3.13 — Chemin central vertical (cols 6-7) du canal jusqu'au sud de la ville
+    for (let y = 11; y <= MACARONILE_H - 2; y++) {
         m[y][6] = "path"
         m[y][7] = "path"
     }
 
+    // v3.13 — Chemin horizontal d'accès aux portes des bâtiments rangée 1 (y=16)
+    for (let x = 1; x <= MACARONILE_W - 2; x++) m[16][x] = "path"
+
+    // v3.15 — Chemin horizontal d'accès rangée 2 (y=20)
+    for (let x = 1; x <= MACARONILE_W - 2; x++) m[20][x] = "path"
+
     // Quelques fleurs déco
-    m[16][2] = "flowerR"
-    m[16][3] = "flowerY"
-    m[16][10] = "flowerY"
-    m[16][11] = "flowerR"
+    m[15][4] = "flowerR"
+    m[15][9] = "flowerY"
+    m[19][9] = "flowerY"
+    m[19][10] = "flowerR"
 
     return m
 }
 
-// v3.13 — Bâtiments de Macaron'île ville (sud de l'île).
-// v3.13 ship : 2 bâtiments visibles (Shop frère TRENETTE + Vétérinaire).
-// La bibliothèque et le casino seront ajoutés dans un patch ultérieur.
+// v3.13/v3.15 — Bâtiments de Macaron'île ville (sud de l'île).
+// 3 bâtiments visibles : Shop frère TRENETTE + Vétérinaire (rangée 1) + Bibliothèque (rangée 2).
 export const MACARONILE_BUILDINGS: Building[] = [
-    // Shop du frère NUTRIPATES (TRENETTE) — gauche
+    // Shop du frère NUTRIPATES (TRENETTE) — gauche rangée 1
     { x: 1, y: 13, w: 3, h: 3, kind: "shop", doorX: 1, doorY: 2, visible: true, targetMapId: "shop_macaron" },
-    // Vétérinaire — droite
+    // Vétérinaire — droite rangée 1
     { x: 9, y: 13, w: 3, h: 3, kind: "veterinaire", doorX: 1, doorY: 2, visible: true, targetMapId: "veterinaire" },
+    // v3.15 — Bibliothèque — gauche rangée 2
+    { x: 1, y: 17, w: 3, h: 3, kind: "bibliotheque", doorX: 1, doorY: 2, visible: true, targetMapId: "bibliotheque" },
 ]
 
 export const MACARONILE_SIGNS: Sign[] = [
     { x: 4, y: 15, text: "BOUTIQUE DE TRENETTE\nCorned Pâtes, Lunettes et autres trouvailles." },
     { x: 8, y: 15, text: "VÉTÉRINAIRE\nPour tous tes amis à plumes, à poils, à pâtes." },
     { x: 9, y: 11, text: "PLAGE DE SABLE PÂTE\nProfite avant la marée." },
+    { x: 4, y: 19, text: "BIBLIOTHÈQUE\nSavoirs anciens, livres poussiéreux, silence requis." },
 ]
 
 // v3.13 — Builders pour les nouveaux intérieurs Macaron'île
 // shop_macaron : copie de shop_interior (9x8 floorChecker + étagères + comptoir)
 function buildShopMacaron(): TileType[][] {
     return buildShopInterior()
+}
+// v3.15 — bibliotheque : 11x8 avec sol bois et étagères de livres (bookshelf)
+function buildBibliotheque(): TileType[][] {
+    const W = 11, H = 8
+    const m: TileType[][] = []
+    for (let y = 0; y < H; y++) {
+        const row: TileType[] = []
+        for (let x = 0; x < W; x++) {
+            if (y === 0) row.push("wallH")
+            else if (x === 0 || x === W - 1 || y === H - 1) row.push("wallV")
+            else row.push("floorWood")
+        }
+        m.push(row)
+    }
+    // Rangées d'étagères de livres
+    for (let x = 1; x < W - 1; x++) m[1][x] = "bookshelf"
+    m[3][1] = "bookshelf"; m[3][2] = "bookshelf"
+    m[3][W - 2] = "bookshelf"; m[3][W - 3] = "bookshelf"
+    m[5][1] = "bookshelf"; m[5][2] = "bookshelf"
+    m[5][W - 2] = "bookshelf"; m[5][W - 3] = "bookshelf"
+    // Comptoir de la bibliothécaire (col 5-6 sur y=3)
+    m[3][5] = "shopCounter"; m[3][6] = "shopCounter"
+    // Sortie sud
+    m[H - 1][5] = "doorMat"
+    return m
 }
 // veterinaire : intérieur 11x8, sol bois, comptoir au fond, "vitres" (decoratifs via shopShelf)
 function buildVeterinaire(): TileType[][] {
@@ -744,6 +779,15 @@ export const MAPS: Record<string, MapData> = {
         width: 11,
         height: 8,
         exitTarget: { mapId: "macaron_ile", x: 10, y: 16 },
+    },
+    // v3.15 — Bibliothèque (rangée 2 de Macaron'île)
+    bibliotheque: {
+        id: "bibliotheque",
+        name: "BIBLIOTHÈQUE",
+        tiles: buildBibliotheque(),
+        width: 11,
+        height: 8,
+        exitTarget: { mapId: "macaron_ile", x: 2, y: 20 },
     },
     // === v3.8.2 — Hautes-Pâtes et sa Tour ===
     hautespates: {

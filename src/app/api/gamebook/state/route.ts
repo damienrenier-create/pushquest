@@ -120,10 +120,16 @@ export async function GET() {
     const { getUserDifficultyRatio } = await import("@/lib/gamebook/difficulty")
     const difficultyRatio = await getUserDifficultyRatio(userId)
 
-    // v3.14 — Tamagotchi : on renvoie la vue (happiness + stage recalculés) ou null
+    // v3.14 — Tamagotchi : on renvoie la vue (happiness + level recalculés) ou null
+    // v3.15 — Le level est aligné sur le level XP réel du joueur (catch-up si happy)
     const { parseTamagotchi, viewTamagotchi } = await import("@/lib/gamebook/tamagotchi")
     const tam = parseTamagotchi((progress as { tamagotchi?: unknown }).tamagotchi)
-    const tamagotchi = tam ? viewTamagotchi(tam) : null
+    let tamagotchi = null
+    if (tam) {
+        const { getUserLevelForGamebook } = await import("@/lib/gamebook/userLevel")
+        const userLevel = await getUserLevelForGamebook(userId)
+        tamagotchi = viewTamagotchi(tam, userLevel)
+    }
 
     return NextResponse.json({
         state: {
@@ -193,8 +199,8 @@ export async function POST(req: NextRequest) {
         posY === null ||
         !direction ||
         !phase ||
-        // v3.8 — Pépiteville et ses bâtiments + v3.8.2 — Hautes-Pâtes et tour des Pâtes Aiguës + v3.12 — Macaron'île + v3.13 — bâtiments Macaron'île
-        !["bourgpates", "gym", "casino", "cave", "route1", "pepiteville", "gym_pepite", "casino_pepite", "shop_interior", "hautespates", "tower_floor_1", "tower_floor_2", "tower_floor_3", "tower_floor_4", "tower_floor_5", "macaron_ile", "shop_macaron", "veterinaire"].includes(mapId) ||
+        // v3.8 — Pépiteville et ses bâtiments + v3.8.2 — Hautes-Pâtes et tour des Pâtes Aiguës + v3.12 — Macaron'île + v3.13 — bâtiments Macaron'île + v3.15 — bibliothèque
+        !["bourgpates", "gym", "casino", "cave", "route1", "pepiteville", "gym_pepite", "casino_pepite", "shop_interior", "hautespates", "tower_floor_1", "tower_floor_2", "tower_floor_3", "tower_floor_4", "tower_floor_5", "macaron_ile", "shop_macaron", "veterinaire", "bibliotheque"].includes(mapId) ||
         !["up", "down", "left", "right"].includes(direction) ||
         !["explore", "introMonster", "playing"].includes(phase) ||
         posX < 0 || posX > 30 ||

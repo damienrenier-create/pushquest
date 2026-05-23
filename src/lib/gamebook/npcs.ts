@@ -502,6 +502,27 @@ export const NPCS: NpcDefinition[] = [
     },
 
     // -------------------------------
+    // v3.15 — BIBLIO : bibliothécaire de Macaron'île
+    // -------------------------------
+    {
+        id: "bibliotheque_keeper",
+        name: "BIBLIO",
+        mapId: "bibliotheque",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#a07090" },
+        initialX: 5,
+        initialY: 2,
+        dialoguesAfter: [
+            "Chuuut... Bienvenue dans la bibliothèque.",
+            "Tu cherches un savoir ancien sur les hautes herbes du sud ?",
+            "Aucun livre ne donne LA réponse, mais beaucoup parlent d'un animal capable d'effrayer les bestioles.",
+            "(Elle te tend un livre poussiéreux intitulé 'BESTIOLES & TERROIRS'.)",
+            "Reviens quand tu auras un compagnon assez grand pour les défier.",
+        ],
+    },
+
+    // -------------------------------
     // V3T — vétérinaire de Macaron'île
     // -------------------------------
     {

@@ -27,6 +27,7 @@ import {
     TAMAGOTCHI_ADOPT_COST,
     viewTamagotchi,
 } from "@/lib/gamebook/tamagotchi"
+import { getUserLevelForGamebook } from "@/lib/gamebook/userLevel"
 
 export const dynamic = "force-dynamic"
 
@@ -83,10 +84,11 @@ export async function POST(req: NextRequest) {
     // Idempotence : déjà adopté ?
     const existing = parseTamagotchi(progress.tamagotchi)
     if (existing) {
+        const userLevel = await getUserLevelForGamebook(userId)
         return NextResponse.json({
             ok: false,
             reason: "Tu as déjà un tamagotchi.",
-            tamagotchi: viewTamagotchi(existing),
+            tamagotchi: viewTamagotchi(existing, userLevel),
         })
     }
 
@@ -107,7 +109,8 @@ export async function POST(req: NextRequest) {
     }
 
     const newSpent = currentSpent + TAMAGOTCHI_ADOPT_COST
-    const tam = createTamagotchi(name)
+    const userLevel = await getUserLevelForGamebook(userId)
+    const tam = createTamagotchi(name, userLevel)
 
     await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
@@ -121,7 +124,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
         ok: true,
-        tamagotchi: viewTamagotchi(tam),
+        tamagotchi: viewTamagotchi(tam, userLevel),
         availableEnergy: padAvailableEnergyForCreator(todayReps - newSpent, isCreator),
         energySpentToday: newSpent,
     })

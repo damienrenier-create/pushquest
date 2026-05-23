@@ -25,6 +25,7 @@ import {
     TAMAGOTCHI_FEED_COST,
     viewTamagotchi,
 } from "@/lib/gamebook/tamagotchi"
+import { getUserLevelForGamebook } from "@/lib/gamebook/userLevel"
 
 export const dynamic = "force-dynamic"
 
@@ -86,7 +87,8 @@ export async function POST() {
     }
 
     const newSpent = currentSpent + TAMAGOTCHI_FEED_COST
-    const fed = applyFeed(existing)
+    const userLevel = await getUserLevelForGamebook(userId)
+    const fed = applyFeed(existing, userLevel)
 
     await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
@@ -100,7 +102,7 @@ export async function POST() {
 
     return NextResponse.json({
         ok: true,
-        tamagotchi: viewTamagotchi(fed),
+        tamagotchi: viewTamagotchi(fed, userLevel),
         availableEnergy: padAvailableEnergyForCreator(todayReps - newSpent, isCreator),
         energySpentToday: newSpent,
     })

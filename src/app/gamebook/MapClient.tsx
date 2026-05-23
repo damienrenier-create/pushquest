@@ -78,7 +78,7 @@ import { PIAFFINI_RESCUE_DIALOGUE } from "@/lib/gamebook/dialogue"
 import { parseInventory, hasIntactItem, type InventoryEntry } from "@/lib/gamebook/inventory"
 import { PEPITO_DIALOGUE_FIRST } from "@/lib/gamebook/dialogue"
 import TamagotchiModal from "./TamagotchiModal"
-import type { Tamagotchi } from "@/lib/gamebook/tamagotchi"
+import type { TamagotchiView } from "@/lib/gamebook/tamagotchi"
 
 interface Props {
     nickname: string
@@ -96,8 +96,8 @@ interface Props {
     initialTowerFloorReached: number
     // v3.10 — ratio de difficulté (1.0 vétéran, < 1.0 onboarding)
     initialDifficultyRatio: number
-    // v3.14 — Tamagotchi (vue avec happiness + stage recalculés, null si pas adopté)
-    initialTamagotchi: Tamagotchi | null
+    // v3.14 — Tamagotchi (vue avec happiness + level recalculés, null si pas adopté)
+    initialTamagotchi: TamagotchiView | null
 }
 
 const GHOST_COLORS = ["#4080d8", "#d840a0", "#48a830", "#f08020", "#9050d0", "#d8c020", "#20a8c8"]
@@ -176,7 +176,7 @@ export default function MapClient({
     const [showPlayerMap, setShowPlayerMap] = useState(false)
     // v3.14 — Modal du vétérinaire (V3T) : adoption / nourrissage du tamagotchi
     const [showTamagotchi, setShowTamagotchi] = useState(false)
-    const [tamagotchi, setTamagotchi] = useState<Tamagotchi | null>(initialTamagotchi)
+    const [tamagotchi, setTamagotchi] = useState<TamagotchiView | null>(initialTamagotchi)
     // === v3.8.1 : fruits cueillis aujourd'hui (par CE user). Drive le rendu vide/plein des arbres. ===
     const [fruitCounts, setFruitCounts] = useState<Record<string, number>>(initialFruitCounts)
     // === v3.8.2 : plus haut étage atteint dans la Tour. Drive le bypass-check des escaliers. ===
@@ -2224,13 +2224,15 @@ function BuildingSprite({
 
     // v3.8 : kind="shop" → toit bleu + label SHOP
     // v3.13 : kind="veterinaire" → toit vert + label VÉTO
+    // v3.15 : kind="bibliotheque" → toit violet + label BIBLIO
     // Sinon (gym, casino) → toit rouge classique
     const isGym = building.kind === "gym"
     const isShop = building.kind === "shop"
     const isVet = building.kind === "veterinaire"
-    const roofColor = isShop ? "#3060c0" : isVet ? "#48a868" : "#c84838"
-    const roofDarkColor = isShop ? "#1a3878" : isVet ? "#205838" : "#883020"
-    const label = isGym ? "MUSCU" : isShop ? "SHOP" : isVet ? "VÉTO" : "CASINO"
+    const isBiblio = building.kind === "bibliotheque"
+    const roofColor = isShop ? "#3060c0" : isVet ? "#48a868" : isBiblio ? "#8050a0" : "#c84838"
+    const roofDarkColor = isShop ? "#1a3878" : isVet ? "#205838" : isBiblio ? "#502868" : "#883020"
+    const label = isGym ? "MUSCU" : isShop ? "SHOP" : isVet ? "VÉTO" : isBiblio ? "BIBLIO" : "CASINO"
     return (
         <>
             <div style={{ position: "absolute", left, top, width, height, display: "flex", flexDirection: "column" }}>

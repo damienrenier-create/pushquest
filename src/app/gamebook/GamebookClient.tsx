@@ -13,7 +13,7 @@ import FrozenScreen from "./FrozenScreen"
 import MapClient from "./MapClient"
 import type { PlayerMapState } from "@/lib/gamebook/mapEngine"
 import { parseInventory, type InventoryEntry } from "@/lib/gamebook/inventory"
-import type { Tamagotchi } from "@/lib/gamebook/tamagotchi"
+import type { TamagotchiView } from "@/lib/gamebook/tamagotchi"
 
 interface Props {
     nickname: string
@@ -37,8 +37,8 @@ interface StatePayload {
     towerFloorReached?: number
     // v3.10 — ratio de difficulté (1.0 vétéran, < 1.0 onboarding réduit)
     difficultyRatio?: number
-    // v3.14 — Tamagotchi (vue avec happiness + stage recalculés)
-    tamagotchi?: Tamagotchi | null
+    // v3.14 — Tamagotchi (vue avec happiness + level recalculés)
+    tamagotchi?: TamagotchiView | null
 }
 
 export default function GamebookClient({ nickname, userId }: Props) {
@@ -191,7 +191,7 @@ export default function GamebookClient({ nickname, userId }: Props) {
         ? Math.min(1, payload.difficultyRatio)
         : 1
 
-    const initialTamagotchi: Tamagotchi | null = payload.tamagotchi ?? null
+    const initialTamagotchi: TamagotchiView | null = payload.tamagotchi ?? null
 
     return (
         <MapClient

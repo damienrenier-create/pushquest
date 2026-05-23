@@ -2,36 +2,28 @@
 
 // src/app/gamebook/TamagotchiModal.tsx
 //
-// v3.14 — Modal du vétérinaire V3T. Affiche soit le formulaire d'adoption,
-// soit l'état actuel du tamagotchi avec un bouton pour le nourrir.
+// v3.14 — Modal du vétérinaire V3T : adoption + suivi du tamagotchi.
+// v3.15 — L'animal n'est plus egg/baby/adult mais l'animal du bestiaire correspondant
+// au level XP réel du joueur (cf. lib/xp.ts XP_ANIMALS / getLevelDetails).
+// Quand le tamagotchi est "frozen" (happiness=0), il garde son ancien level malgré la
+// progression XP du joueur dans l'app — il faut le nourrir pour qu'il évolue à nouveau.
 
 import { useState } from "react"
 import {
-    type Tamagotchi,
+    type TamagotchiView,
     TAMAGOTCHI_ADOPT_COST,
     TAMAGOTCHI_FEED_COST,
     TAMAGOTCHI_HAPPINESS_MAX,
     isValidTamagotchiName,
 } from "@/lib/gamebook/tamagotchi"
+import { getLevelDetails } from "@/lib/xp"
 
 interface Props {
-    tamagotchi: Tamagotchi | null
+    tamagotchi: TamagotchiView | null
     availableEnergy: number
     onAdopt: (name: string) => Promise<void>
     onFeed: () => Promise<void>
     onClose: () => void
-}
-
-const STAGE_EMOJI: Record<Tamagotchi["stage"], string> = {
-    egg: "🥚",
-    baby: "🐣",
-    adult: "🐤",
-}
-
-const STAGE_LABEL: Record<Tamagotchi["stage"], string> = {
-    egg: "ŒUF",
-    baby: "BÉBÉ",
-    adult: "ADULTE",
 }
 
 export default function TamagotchiModal({ tamagotchi, availableEnergy, onAdopt, onFeed, onClose }: Props) {
@@ -42,7 +34,7 @@ export default function TamagotchiModal({ tamagotchi, availableEnergy, onAdopt, 
     const doAdopt = async () => {
         const trimmed = name.trim()
         if (!isValidTamagotchiName(trimmed)) {
-            setError("Nom invalide (1 à 16 caractères, lettres et chiffres uniquement).")
+            setError("Nom invalide (1 à 16 caractères, lettres/chiffres uniquement).")
             return
         }
         if (busy) return
@@ -123,7 +115,7 @@ export default function TamagotchiModal({ tamagotchi, availableEnergy, onAdopt, 
                         onAdopt={doAdopt}
                     />
                 ) : (
-                    <TamagotchiView
+                    <TamagotchiCard
                         tamagotchi={tamagotchi}
                         availableEnergy={availableEnergy}
                         busy={busy}
@@ -150,7 +142,7 @@ function AdoptForm({
     return (
         <div>
             <div style={{ fontSize: 11, lineHeight: 1.5, marginBottom: 12, opacity: 0.85 }}>
-                V3T te tend un œuf chaud. "Si tu veux l'adopter, il te faudra {TAMAGOTCHI_ADOPT_COST} reps et un petit nom."
+                V3T te tend un compagnon adapté à ton niveau actuel. "Donne-lui un nom et nourris-le pour qu'il évolue avec toi."
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <label style={{ fontSize: 9, letterSpacing: 2, opacity: 0.7 }}>NOM (max 16)</label>
@@ -172,7 +164,7 @@ function AdoptForm({
                     }}
                 />
                 <div style={{ fontSize: 9, opacity: 0.6 }}>
-                    Coût : {TAMAGOTCHI_ADOPT_COST} reps. Tu en as {availableEnergy}.
+                    Coût d'adoption : {TAMAGOTCHI_ADOPT_COST} reps. Tu en as {availableEnergy}.
                 </div>
                 {error && (
                     <div style={{ fontSize: 10, color: "#f08080", marginTop: 4 }}>{error}</div>
@@ -200,16 +192,17 @@ function AdoptForm({
     )
 }
 
-function TamagotchiView({
+function TamagotchiCard({
     tamagotchi, availableEnergy, busy, error, onFeed,
 }: {
-    tamagotchi: Tamagotchi
+    tamagotchi: TamagotchiView
     availableEnergy: number
     busy: boolean
     error: string | null
     onFeed: () => Promise<void>
 }) {
-    const happinessPct = (tamagotchi.happiness / TAMAGOTCHI_HAPPINESS_MAX) * 100
+    const details = getLevelDetails(tamagotchi.displayLevel)
+    const happinessPct = (tamagotchi.displayHappiness / TAMAGOTCHI_HAPPINESS_MAX) * 100
     const happinessColor =
         happinessPct > 60 ? "#48a830"
             : happinessPct > 25 ? "#f0a050"
@@ -218,19 +211,24 @@ function TamagotchiView({
     return (
         <div>
             <div style={{ textAlign: "center", marginBottom: 10 }}>
-                <div style={{ fontSize: 48, lineHeight: 1 }}>{STAGE_EMOJI[tamagotchi.stage]}</div>
+                <div style={{ fontSize: 48, lineHeight: 1, filter: tamagotchi.isFrozen ? "grayscale(0.8) brightness(0.7)" : "none" }}>
+                    {details.emoji}
+                </div>
                 <div style={{ fontSize: 14, fontWeight: "bold", letterSpacing: 2, marginTop: 6 }}>
                     {tamagotchi.name.toUpperCase()}
                 </div>
-                <div style={{ fontSize: 9, opacity: 0.6, letterSpacing: 2 }}>
-                    STADE : {STAGE_LABEL[tamagotchi.stage]} ({tamagotchi.feedCount} repas)
+                <div style={{ fontSize: 9, opacity: 0.7, letterSpacing: 1, marginTop: 2 }}>
+                    {details.name} — Lv. {tamagotchi.displayLevel}
+                </div>
+                <div style={{ fontSize: 8, opacity: 0.55, letterSpacing: 1, marginTop: 2 }}>
+                    {details.belt}
                 </div>
             </div>
 
             <div style={{ marginBottom: 12 }}>
                 <div style={{ fontSize: 9, opacity: 0.7, marginBottom: 4, display: "flex", justifyContent: "space-between" }}>
                     <span>BONHEUR</span>
-                    <span>{tamagotchi.happiness}/{TAMAGOTCHI_HAPPINESS_MAX}</span>
+                    <span>{tamagotchi.displayHappiness}/{TAMAGOTCHI_HAPPINESS_MAX}</span>
                 </div>
                 <div style={{ background: "#111", height: 10, borderRadius: 4, overflow: "hidden", border: "1px solid #444" }}>
                     <div
@@ -244,10 +242,14 @@ function TamagotchiView({
                 </div>
             </div>
 
-            <div style={{ fontSize: 10, opacity: 0.7, marginBottom: 10, lineHeight: 1.5 }}>
-                {tamagotchi.happiness < 20 && "Il a l'air triste. Une bouchée lui ferait du bien."}
-                {tamagotchi.happiness >= 20 && tamagotchi.happiness < 70 && "Il pourrait être plus heureux."}
-                {tamagotchi.happiness >= 70 && "Il a l'air en forme !"}
+            <div style={{ fontSize: 10, opacity: 0.75, marginBottom: 10, lineHeight: 1.5 }}>
+                {tamagotchi.isFrozen
+                    ? "Il a faim et refuse d'évoluer. Nourris-le pour qu'il rattrape ton niveau."
+                    : tamagotchi.displayHappiness < 30
+                        ? "Il a faim. Une bouchée lui ferait du bien."
+                        : tamagotchi.displayHappiness < 70
+                            ? "Il pourrait être plus heureux."
+                            : "Il a l'air en forme !"}
             </div>
 
             {error && (
