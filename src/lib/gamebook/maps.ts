@@ -436,6 +436,77 @@ function buildMacaronIle(): TileType[][] {
     m[19][9] = "flowerY"
     m[19][10] = "flowerR"
 
+    // v3.16 — Sortie sud vers les Hautes Herbes du Sud (chapitre Muscuville)
+    // GrassTall sur la rangée tree (y=21) au centre du chemin (cols 6,7)
+    m[MACARONILE_H - 1][6] = "grassTall"
+    m[MACARONILE_H - 1][7] = "grassTall"
+
+    return m
+}
+
+// ============================================================
+// v3.16 — HAUTES HERBES DU SUD (corridor entre Macaron'île et Muscuville)
+// Bloqué par des BESTIOLES sauf si le tamagotchi du joueur est level >= 23.
+// ============================================================
+const GRASS_SUD_W = 9
+const GRASS_SUD_H = 14
+
+function buildGrassSud(): TileType[][] {
+    const m: TileType[][] = []
+    for (let y = 0; y < GRASS_SUD_H; y++) {
+        const row: TileType[] = []
+        for (let x = 0; x < GRASS_SUD_W; x++) {
+            if (x === 0 || x === GRASS_SUD_W - 1 || y === 0 || y === GRASS_SUD_H - 1) {
+                row.push("tree")
+            } else {
+                row.push("grass")
+            }
+        }
+        m.push(row)
+    }
+    // Entrées grassTall nord et sud (col 4 centre)
+    m[0][4] = "grassTall"
+    m[GRASS_SUD_H - 1][4] = "grassTall"
+    // Chemin vertical central
+    for (let y = 1; y < GRASS_SUD_H - 1; y++) m[y][4] = "path"
+    // Touffes de hautes herbes décoratives sur les côtés
+    m[3][2] = "grassTall"; m[3][6] = "grassTall"
+    m[6][2] = "grassTall"; m[6][6] = "grassTall"
+    m[10][2] = "grassTall"; m[10][6] = "grassTall"
+    return m
+}
+
+// ============================================================
+// v3.16 — MUSCUVILLE (stub : village des athlètes, sud du corridor)
+// 13 × 12, croix de chemins. Pas de bâtiment pour l'instant (v3.17).
+// ============================================================
+const MUSCUVILLE_W = 13
+const MUSCUVILLE_H = 12
+
+function buildMuscuville(): TileType[][] {
+    const m: TileType[][] = []
+    for (let y = 0; y < MUSCUVILLE_H; y++) {
+        const row: TileType[] = []
+        for (let x = 0; x < MUSCUVILLE_W; x++) {
+            if (x === 0 || x === MUSCUVILLE_W - 1 || y === 0 || y === MUSCUVILLE_H - 1) {
+                row.push("tree")
+            } else {
+                row.push("grass")
+            }
+        }
+        m.push(row)
+    }
+    // Entrée grassTall nord (col 6)
+    m[0][6] = "grassTall"
+    // Chemin vertical central
+    for (let y = 1; y < MUSCUVILLE_H - 1; y++) m[y][6] = "path"
+    // Chemin horizontal au milieu
+    for (let x = 1; x < MUSCUVILLE_W - 1; x++) m[6][x] = "path"
+    // Fleurs déco
+    m[3][2] = "flowerR"
+    m[3][10] = "flowerY"
+    m[9][2] = "flowerY"
+    m[9][10] = "flowerR"
     return m
 }
 
@@ -789,6 +860,21 @@ export const MAPS: Record<string, MapData> = {
         height: 8,
         exitTarget: { mapId: "macaron_ile", x: 2, y: 20 },
     },
+    // v3.16 — Hautes herbes du sud + Muscuville
+    grass_sud: {
+        id: "grass_sud",
+        name: "HAUTES HERBES DU SUD",
+        tiles: buildGrassSud(),
+        width: GRASS_SUD_W,
+        height: GRASS_SUD_H,
+    },
+    muscuville: {
+        id: "muscuville",
+        name: "MUSCUVILLE",
+        tiles: buildMuscuville(),
+        width: MUSCUVILLE_W,
+        height: MUSCUVILLE_H,
+    },
     // === v3.8.2 — Hautes-Pâtes et sa Tour ===
     hautespates: {
         id: "hautespates",
@@ -922,3 +1008,33 @@ export const BOURGPATES_SPAWN_FROM_MACARONILE = {
 // le joueur arrive sur la 1ère case du canal et nage les 9 suivantes pour atteindre la ville.
 // Les coordonnées du canal sud (entrée vers la plage) sont (7, 10), (6, 10).
 export const MACARONILE_NORTH_GATE = { x: 7, y: 0 }  // case juste au-dessus du canal nord (déclenche retour)
+
+// v3.16 — Transitions sud Macaron'île ↔ grass_sud ↔ Muscuville
+// Quand le joueur marche sur la grassTall (6 ou 7, 21) de Macaron'île → entrée dans grass_sud
+export const GRASS_SUD_SPAWN_FROM_NORTH = {
+    mapId: "grass_sud",
+    posX: 4,
+    posY: 2,
+    direction: "down" as const,
+}
+// Retour vers Macaron'île depuis le nord de grass_sud (y=0)
+export const MACARONILE_SPAWN_FROM_GRASS_SUD = {
+    mapId: "macaron_ile",
+    posX: 6,
+    posY: 19,  // case juste au-dessus de la grassTall sud (y=21), sur le chemin (y=20)
+    direction: "up" as const,
+}
+// Quand le joueur marche sur la grassTall (4, 13) au sud de grass_sud → entrée dans Muscuville
+export const MUSCUVILLE_SPAWN_FROM_NORTH = {
+    mapId: "muscuville",
+    posX: 6,
+    posY: 2,
+    direction: "down" as const,
+}
+// Retour vers grass_sud depuis Muscuville (grassTall en (6, 0))
+export const GRASS_SUD_SPAWN_FROM_SOUTH = {
+    mapId: "grass_sud",
+    posX: 4,
+    posY: GRASS_SUD_H - 3,
+    direction: "up" as const,
+}

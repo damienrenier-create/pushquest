@@ -199,8 +199,8 @@ export async function POST(req: NextRequest) {
         posY === null ||
         !direction ||
         !phase ||
-        // v3.8 — Pépiteville et ses bâtiments + v3.8.2 — Hautes-Pâtes et tour des Pâtes Aiguës + v3.12 — Macaron'île + v3.13 — bâtiments Macaron'île + v3.15 — bibliothèque
-        !["bourgpates", "gym", "casino", "cave", "route1", "pepiteville", "gym_pepite", "casino_pepite", "shop_interior", "hautespates", "tower_floor_1", "tower_floor_2", "tower_floor_3", "tower_floor_4", "tower_floor_5", "macaron_ile", "shop_macaron", "veterinaire", "bibliotheque"].includes(mapId) ||
+        // v3.8 — Pépiteville et ses bâtiments + v3.8.2 — Hautes-Pâtes et tour des Pâtes Aiguës + v3.12 — Macaron'île + v3.13 — bâtiments Macaron'île + v3.15 — bibliothèque + v3.16 — Hautes herbes du sud + Muscuville
+        !["bourgpates", "gym", "casino", "cave", "route1", "pepiteville", "gym_pepite", "casino_pepite", "shop_interior", "hautespates", "tower_floor_1", "tower_floor_2", "tower_floor_3", "tower_floor_4", "tower_floor_5", "macaron_ile", "shop_macaron", "veterinaire", "bibliotheque", "grass_sud", "muscuville"].includes(mapId) ||
         !["up", "down", "left", "right"].includes(direction) ||
         !["explore", "introMonster", "playing"].includes(phase) ||
         posX < 0 || posX > 30 ||

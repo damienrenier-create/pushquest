@@ -36,6 +36,10 @@ import {
     BOURGPATES_SPAWN_FROM_MACARONILE,
     MACARONILE_BUILDINGS,
     MACARONILE_SIGNS,
+    GRASS_SUD_SPAWN_FROM_NORTH,
+    MACARONILE_SPAWN_FROM_GRASS_SUD,
+    MUSCUVILLE_SPAWN_FROM_NORTH,
+    GRASS_SUD_SPAWN_FROM_SOUTH,
 } from "@/lib/gamebook/maps"
 import {
     type Direction,
@@ -379,9 +383,16 @@ export default function MapClient({
 
     // ============================================================
     // NPCs sur la map courante (positions calculées en temps réel)
+    // v3.16 — Les bestioles de grass_sud fuient si le tamagotchi du joueur est level >= 23
     // ============================================================
     const wanderTick = useWanderTicker()
-    const npcsOnMap = getNpcsForMap(state.mapId)
+    const tamLevel = tamagotchi?.displayLevel ?? 0
+    const BESTIOLE_THRESHOLD = 23
+    const bestiolesFlee = tamLevel >= BESTIOLE_THRESHOLD
+    const npcsOnMap = getNpcsForMap(state.mapId).filter((npc) => {
+        if (npc.id.startsWith("bestiole_") && bestiolesFlee) return false
+        return true
+    })
     const npcsWithPos = npcsOnMap.map((npc) => {
         const pos = getNpcCurrentPosition(npc, wanderTick * WANDER_TICK_MS, map)
         return { npc, x: pos.x, y: pos.y, direction: pos.direction }
@@ -877,8 +888,83 @@ export default function MapClient({
                     setToast("PÉPITEVILLE")
                 }, 200)
             }
+
+            // === v3.16 : Transitions sud Macaron'île ↔ grass_sud ↔ Muscuville ===
+            // Macaron'île sud (grassTall col 6/7 ligne 21) → grass_sud
+            if (
+                state.mapId === "macaron_ile" &&
+                result.nextState.posY === 21 &&
+                (result.nextState.posX === 6 || result.nextState.posX === 7) &&
+                map.tiles[result.nextState.posY]?.[result.nextState.posX] === "grassTall"
+            ) {
+                setTimeout(() => {
+                    setState((s) => ({
+                        ...s,
+                        mapId: GRASS_SUD_SPAWN_FROM_NORTH.mapId,
+                        posX: GRASS_SUD_SPAWN_FROM_NORTH.posX,
+                        posY: GRASS_SUD_SPAWN_FROM_NORTH.posY,
+                        direction: GRASS_SUD_SPAWN_FROM_NORTH.direction,
+                    }))
+                    if (bestiolesFlee) {
+                        setToast("Les bestioles s'écartent à la vue de ton compagnon.")
+                    } else {
+                        setToast("HAUTES HERBES DU SUD")
+                    }
+                }, 200)
+            }
+            // grass_sud nord (grassTall col 4 ligne 0) → retour Macaron'île
+            if (
+                state.mapId === "grass_sud" &&
+                result.nextState.posY === 0 &&
+                result.nextState.posX === 4
+            ) {
+                setTimeout(() => {
+                    setState((s) => ({
+                        ...s,
+                        mapId: MACARONILE_SPAWN_FROM_GRASS_SUD.mapId,
+                        posX: MACARONILE_SPAWN_FROM_GRASS_SUD.posX,
+                        posY: MACARONILE_SPAWN_FROM_GRASS_SUD.posY,
+                        direction: MACARONILE_SPAWN_FROM_GRASS_SUD.direction,
+                    }))
+                    setToast("MACARON'ÎLE")
+                }, 200)
+            }
+            // grass_sud sud (grassTall col 4 ligne H-1) → Muscuville
+            if (
+                state.mapId === "grass_sud" &&
+                result.nextState.posY === map.height - 1 &&
+                result.nextState.posX === 4
+            ) {
+                setTimeout(() => {
+                    setState((s) => ({
+                        ...s,
+                        mapId: MUSCUVILLE_SPAWN_FROM_NORTH.mapId,
+                        posX: MUSCUVILLE_SPAWN_FROM_NORTH.posX,
+                        posY: MUSCUVILLE_SPAWN_FROM_NORTH.posY,
+                        direction: MUSCUVILLE_SPAWN_FROM_NORTH.direction,
+                    }))
+                    setToast("MUSCUVILLE")
+                }, 200)
+            }
+            // Muscuville nord (grassTall col 6 ligne 0) → retour grass_sud
+            if (
+                state.mapId === "muscuville" &&
+                result.nextState.posY === 0 &&
+                result.nextState.posX === 6
+            ) {
+                setTimeout(() => {
+                    setState((s) => ({
+                        ...s,
+                        mapId: GRASS_SUD_SPAWN_FROM_SOUTH.mapId,
+                        posX: GRASS_SUD_SPAWN_FROM_SOUTH.posX,
+                        posY: GRASS_SUD_SPAWN_FROM_SOUTH.posY,
+                        direction: GRASS_SUD_SPAWN_FROM_SOUTH.direction,
+                    }))
+                    setToast("HAUTES HERBES DU SUD")
+                }, 200)
+            }
         },
-        [state, map, buildings, blockingPositions, reps, popup, cinematic, npcsWithPos, triggerNpcDialogue, triggerBridgePnjChallenge, broadcast, spendEnergy]
+        [state, map, buildings, blockingPositions, reps, popup, cinematic, npcsWithPos, triggerNpcDialogue, triggerBridgePnjChallenge, broadcast, spendEnergy, bestiolesFlee]
     )
 
     // ============================================================

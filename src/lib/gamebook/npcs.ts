@@ -501,6 +501,77 @@ export const NPCS: NpcDefinition[] = [
         ],
     },
 
+    // ============================================================
+    // v3.16 — HAUTES HERBES DU SUD (bestioles bloqueuses)
+    // ============================================================
+    {
+        id: "bestiole_centrale",
+        name: "BESTIOLE",
+        mapId: "grass_sud",
+        kind: "static",
+        interaction: "interceptor",
+        sprite: { color: "#806040", emoji: "🐛" },
+        initialX: 4,
+        initialY: 7,
+        dialoguesAfter: [
+            "BZZZ BZZ ! Tu vas où comme ça ?",
+            "T'as pas l'air assez impressionnant pour nous faire fuir.",
+            "Reviens quand tu auras un compagnon plus costaud.",
+        ],
+    },
+
+    // ============================================================
+    // v3.16 — MUSCUVILLE (village des athlètes, stub)
+    // ============================================================
+    {
+        id: "muscuman_greeter",
+        name: "MUSCUMAN",
+        mapId: "muscuville",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#a06030" },
+        initialX: 4,
+        initialY: 5,
+        dialoguesAfter: [
+            "Bienvenue à MUSCUVILLE, athlète !",
+            "Tu as franchi les hautes herbes — personne n'avait osé depuis des mois.",
+            "Le concours intersalle est toujours annulé... mais peut-être qu'avec toi, on pourrait le relancer.",
+            "(Il te regarde, plein d'espoir, mais ne dit rien de plus.)",
+        ],
+    },
+    {
+        id: "muscuville_athlete",
+        name: "GRAS-DOUBLE",
+        mapId: "muscuville",
+        kind: "wanderer",
+        interaction: "interactive",
+        sprite: { color: "#c08030" },
+        initialX: 8,
+        initialY: 5,
+        wanderRadius: 2,
+        dialoguesAfter: [
+            "Yo nouveau ! Tu te dopes aux pâtes ?",
+            "Les meilleures années, on organisait des concours énormes ici.",
+            "Pectoraux contre pectoraux, abdos contre abdos.",
+            "Là c'est annulé. Snif.",
+        ],
+    },
+    {
+        id: "muscuville_coach",
+        name: "GLUTOS",
+        mapId: "muscuville",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#604020" },
+        initialX: 2,
+        initialY: 9,
+        dialoguesAfter: [
+            "Coach GLUTOS, à ton service.",
+            "Si un jour le concours reprend, viens t'entraîner ici.",
+            "Pour l'instant je perfectionne mes deadlifts. Tout seul.",
+        ],
+    },
+
     // -------------------------------
     // v3.15 — BIBLIO : bibliothécaire de Macaron'île
     // -------------------------------
