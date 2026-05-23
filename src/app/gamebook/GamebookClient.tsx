@@ -72,6 +72,8 @@ export default function GamebookClient({ nickname, userId }: Props) {
                             : [],
                         // v3.11
                         piaffiniRescued: json.state.piaffiniRescued === true,
+                        // v3.12
+                        firstSwimDone: (json.state as { firstSwimDone?: boolean }).firstSwimDone === true,
                     }
                     setPayload({
                         ...json,

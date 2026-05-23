@@ -32,6 +32,8 @@ import {
     HAUTESPATES_SPAWN_FROM_SOUTH,
     PEPITEVILLE_SPAWN_FROM_NORTH,
     TOWER_STAIRS_SQUATS_THRESHOLD,
+    MACARONILE_CANAL_ENTRY_FROM_NORTH,
+    BOURGPATES_SPAWN_FROM_MACARONILE,
 } from "@/lib/gamebook/maps"
 import {
     type Direction,
@@ -524,6 +526,25 @@ export default function MapClient({
 
             const result = tryComputeMove(state, d, map, buildings, blockingPositions)
 
+            // v3.12 — Check waterShallow (canal) : conditions d'entrée selon swim_set + firstSwimDone
+            if (!("blocked" in result)) {
+                const targetTile = map.tiles[result.nextState.posY]?.[result.nextState.posX]
+                if (targetTile === "waterShallow") {
+                    const hasSwimSet = hasIntactItem(inventory, "swim_set")
+                    if (!hasSwimSet) {
+                        setToast("Tu n'as pas l'équipement pour nager. Va voir JOJO.")
+                        setState((s) => ({ ...s, direction: d }))
+                        return
+                    }
+                    if (!state.firstSwimDone) {
+                        setToast("Brrr ! L'eau est trop froide. T'oseras pas y aller seul...")
+                        setState((s) => ({ ...s, direction: d }))
+                        return
+                    }
+                    // OK : le joueur peut entrer dans l'eau, le mouvement se poursuit normalement.
+                }
+            }
+
             // v3.8.4 — Bloquer le contournement des PNJ du pont via Échap-popup.
             // Si le joueur EST déjà dans la ligne de vue d'un PNJ non-vaincu, il ne
             // peut quitter cette zone qu'en : (a) restant dans la ligne de vue du
@@ -768,6 +789,44 @@ export default function MapClient({
                     }, 200)
                     return
                 }
+            }
+
+            // === v3.12 : Transition Bourg-Boulette sud ↔ Macaron'île canal ===
+            // Quand le joueur (équipé + firstSwimDone) marche sur la case waterShallow au sud
+            // de Bourg-Boulette (y=H-1, x=7 ou 8), on téléporte au nord du canal de Macaron'île.
+            if (
+                state.mapId === "bourgpates" &&
+                result.nextState.posY === 15 &&  // OUTDOOR_H - 1 = 15
+                (result.nextState.posX === 7 || result.nextState.posX === 8) &&
+                map.tiles[result.nextState.posY]?.[result.nextState.posX] === "waterShallow"
+            ) {
+                setTimeout(() => {
+                    setState((s) => ({
+                        ...s,
+                        mapId: MACARONILE_CANAL_ENTRY_FROM_NORTH.mapId,
+                        posX: MACARONILE_CANAL_ENTRY_FROM_NORTH.posX,
+                        posY: MACARONILE_CANAL_ENTRY_FROM_NORTH.posY,
+                        direction: MACARONILE_CANAL_ENTRY_FROM_NORTH.direction,
+                    }))
+                    setToast("MACARON'ÎLE — Canal nord")
+                }, 200)
+            }
+            // Retour : si on est sur macaron_ile (7, 0) → bourgpates
+            if (
+                state.mapId === "macaron_ile" &&
+                result.nextState.posY === 0 &&
+                result.nextState.posX === 7
+            ) {
+                setTimeout(() => {
+                    setState((s) => ({
+                        ...s,
+                        mapId: BOURGPATES_SPAWN_FROM_MACARONILE.mapId,
+                        posX: BOURGPATES_SPAWN_FROM_MACARONILE.posX,
+                        posY: BOURGPATES_SPAWN_FROM_MACARONILE.posY,
+                        direction: BOURGPATES_SPAWN_FROM_MACARONILE.direction,
+                    }))
+                    setToast("BOURG-BOULETTE")
+                }, 200)
             }
 
             // === v3.8.7 : Transition Pépiteville nord ↔ Hautes-Pâtes via hautes herbes ===
@@ -1073,6 +1132,40 @@ export default function MapClient({
         // Joueur devant (autre user)
         const ghostInFront = otherPlayersOnThisMap.find((p) => p.posX === front.x && p.posY === front.y)
         if (ghostInFront) {
+            // v3.12 — Push à l'eau : si la case où A serait poussé est waterShallow,
+            // on tente le "push to water" plutôt que le push normal (qui coûte 30 reps).
+            // Le serveur vérifiera côté target : a swim_set, n'a pas firstSwimDone, est sur bourgpates.
+            const dx = state.direction === "left" ? -1 : state.direction === "right" ? 1 : 0
+            const dy = state.direction === "up" ? -1 : state.direction === "down" ? 1 : 0
+            const tileWhereTargetGoes = map.tiles[ghostInFront.posY + dy]?.[ghostInFront.posX + dx]
+            if (tileWhereTargetGoes === "waterShallow" && state.mapId === "bourgpates") {
+                ; (async () => {
+                    try {
+                        const res = await fetch("/api/gamebook/water/push", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ targetUserId: ghostInFront.id }),
+                        })
+                        const data = await res.json()
+                        if (data.ok) {
+                            // Refresh des autres joueurs pour voir A disparaître de la map
+                            loadOtherPlayers()
+                            const ecText = data.ecAwarded ? `+${data.ecAwarded} EmberCoins.` : ""
+                            const badgeText = data.badgeAwarded ? ` Badge Pousseur de potes +${data.xp ?? 100} XP !` : ""
+                            setPopup({
+                                kind: "info",
+                                text: `Tu pousses ${ghostInFront.nickname} dans le canal !\n\n${ecText}${badgeText}`,
+                            })
+                        } else {
+                            setPopup({ kind: "info", text: data.reason || "Tu ne peux pas pousser cette personne dans l'eau." })
+                        }
+                    } catch (e) {
+                        console.warn("[MapClient] water/push failed", e)
+                        setToast("Erreur réseau, réessaie.")
+                    }
+                })()
+                return
+            }
             handlePushAttempt(ghostInFront)
             return
         }

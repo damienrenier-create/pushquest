@@ -132,6 +132,8 @@ export async function GET() {
             gamebookFrozenUntil: frozenUntil,
             // v3.11 — PIAFFINI sauvé (débloque dialogues post-quête JOJO/JOJETTE)
             piaffiniRescued: (progress as { piaffiniRescued?: boolean }).piaffiniRescued === true,
+            // v3.12 — Première baignade faite (débloque traversée canal seul)
+            firstSwimDone: (progress as { firstSwimDone?: boolean }).firstSwimDone === true,
         },
         todayReps,
         energySpentToday,
@@ -176,8 +178,8 @@ export async function POST(req: NextRequest) {
         posY === null ||
         !direction ||
         !phase ||
-        // v3.8 — Pépiteville et ses bâtiments + v3.8.2 — Hautes-Pâtes et tour des Pâtes Aiguës
-        !["bourgpates", "gym", "casino", "cave", "route1", "pepiteville", "gym_pepite", "casino_pepite", "shop_interior", "hautespates", "tower_floor_1", "tower_floor_2", "tower_floor_3", "tower_floor_4", "tower_floor_5"].includes(mapId) ||
+        // v3.8 — Pépiteville et ses bâtiments + v3.8.2 — Hautes-Pâtes et tour des Pâtes Aiguës + v3.12 — Macaron'île
+        !["bourgpates", "gym", "casino", "cave", "route1", "pepiteville", "gym_pepite", "casino_pepite", "shop_interior", "hautespates", "tower_floor_1", "tower_floor_2", "tower_floor_3", "tower_floor_4", "tower_floor_5", "macaron_ile"].includes(mapId) ||
         !["up", "down", "left", "right"].includes(direction) ||
         !["explore", "introMonster", "playing"].includes(phase) ||
         posX < 0 || posX > 30 ||
@@ -194,6 +196,8 @@ export async function POST(req: NextRequest) {
     const pioneerBadgeAwarded = body.pioneerBadgeAwarded === true
     // v3.11 — flag piaffiniRescued (one-way : false → true, jamais l'inverse)
     const piaffiniRescued = body.piaffiniRescued === true
+    // v3.12 — flag firstSwimDone (one-way : false → true, jamais l'inverse)
+    const firstSwimDone = body.firstSwimDone === true
     const bridgePnjDefeated = Array.isArray(body.bridgePnjDefeated)
         ? (body.bridgePnjDefeated as string[]).filter((x) => typeof x === "string")
         : []
@@ -225,6 +229,9 @@ export async function POST(req: NextRequest) {
     // v3.11 — On préserve piaffiniRescued=true si déjà true en DB (one-way flag).
     const existingPiaffini = (existing as { piaffiniRescued?: boolean })?.piaffiniRescued === true
     const finalPiaffiniRescued = existingPiaffini || piaffiniRescued
+    // v3.12 — Idem pour firstSwimDone (one-way)
+    const existingFirstSwim = (existing as { firstSwimDone?: boolean })?.firstSwimDone === true
+    const finalFirstSwimDone = existingFirstSwim || firstSwimDone
 
     // Cast en `any` pour le `data` afin de bypasser le check TS strict sur les nouveaux
     // champs Prisma tant que le client n'est pas régénéré côté CI. Le pattern est cohérent
@@ -248,6 +255,7 @@ export async function POST(req: NextRequest) {
             gymGuyEnergyGiven,
             npcsTalkedTo,
             piaffiniRescued: finalPiaffiniRescued,
+            firstSwimDone: finalFirstSwimDone,
             lastSeen: new Date(),
         },
         create: {
@@ -270,6 +278,7 @@ export async function POST(req: NextRequest) {
             gymGuyEnergyGiven,
             npcsTalkedTo,
             piaffiniRescued: finalPiaffiniRescued,
+            firstSwimDone: finalFirstSwimDone,
         },
     })
 

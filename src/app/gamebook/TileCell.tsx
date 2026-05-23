@@ -549,6 +549,49 @@ export default function TileCell({ tile, x, y }: { tile: TileType; x: number; y:
         )
     }
 
+    // === v3.12 : WATERSHALLOW (canal traversable, bleu clair avec vaguelettes) ===
+    if (tile === "waterShallow") {
+        return (
+            <div style={{ position: "relative", background: "#7cc0e8", overflow: "hidden" }}>
+                <div style={{
+                    position: "absolute", inset: 0,
+                    backgroundImage:
+                        `repeating-linear-gradient(90deg, #7cc0e8 0, #7cc0e8 3px, #a8d8f0 3px, #a8d8f0 5px)`,
+                    opacity: 0.85,
+                }} />
+                {/* Petites vagues qui ondulent */}
+                <div style={{
+                    position: "absolute", top: "30%", left: "20%",
+                    width: "20%", height: "4px",
+                    background: "rgba(255,255,255,0.5)",
+                    borderRadius: "50%",
+                }} />
+                <div style={{
+                    position: "absolute", top: "65%", left: "55%",
+                    width: "18%", height: "3px",
+                    background: "rgba(255,255,255,0.4)",
+                    borderRadius: "50%",
+                }} />
+            </div>
+        )
+    }
+
+    // === v3.12 : SAND (plage de Macaron'île) ===
+    if (tile === "sand") {
+        return (
+            <div style={{ position: "relative", background: "#f0d8a0", overflow: "hidden" }}>
+                <div style={{
+                    position: "absolute", inset: 0,
+                    backgroundImage:
+                        `radial-gradient(circle at 30% 30%, #d8b878 0.5px, transparent 1px), ` +
+                        `radial-gradient(circle at 70% 70%, #b89858 0.5px, transparent 1px)`,
+                    backgroundSize: "6px 6px, 8px 8px",
+                    opacity: 0.5,
+                }} />
+            </div>
+        )
+    }
+
     // === v3.8.1 : ARBRE FRUITIER (cueillette avec A) ===
     if (tile === "appleTree" || tile === "appleTreeEmpty") {
         const harvested = tile === "appleTreeEmpty"

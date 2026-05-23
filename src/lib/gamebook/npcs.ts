@@ -381,6 +381,101 @@ export const NPCS: NpcDefinition[] = [
             "Cette année il paraît qu'il est annulé. Bizarre, hein ?",
         ],
     },
+
+    // ============================================================
+    // v3.12 — PÊCHEUR (foreshadowing du canal au sud de Bourg-Boulette)
+    // ============================================================
+    {
+        id: "fisher",
+        name: "MORUE",
+        mapId: "bourgpates",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#5080a8" },
+        initialX: 9,
+        initialY: 14,
+        dialoguesAfter: [
+            "J'aurais tellement voulu aller au concours de muscu cette année...",
+            "Il paraît qu'il y a une île magnifique de l'autre côté de cette mer.",
+            "Mais sans maillot ni palmes, impossible d'y arriver.",
+            "Si tu trouvais ça quelque part, tu pourrais explorer là-bas.",
+        ],
+    },
+
+    // ============================================================
+    // v3.12 — PNJ tristes de MACARON'ÎLE (concours annulé)
+    // ============================================================
+    {
+        id: "macaron_triste_1",
+        name: "PENNE",
+        mapId: "macaron_ile",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#a07060" },
+        initialX: 3,
+        initialY: 14,
+        dialoguesAfter: [
+            "Cette année, le concours est annulé...",
+            "Quelle déception.",
+        ],
+    },
+    {
+        id: "macaron_triste_2",
+        name: "RIGATO",
+        mapId: "macaron_ile",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#8090b0" },
+        initialX: 5,
+        initialY: 15,
+        dialoguesAfter: [
+            "Des bestioles ont infesté la route du sud.",
+            "Personne ne peut amener les inscriptions au village muscu.",
+        ],
+    },
+    {
+        id: "macaron_triste_3",
+        name: "FARFALL",
+        mapId: "macaron_ile",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#b0a090" },
+        initialX: 8,
+        initialY: 15,
+        dialoguesAfter: [
+            "On dit qu'il faudrait un animal spécial pour les faire fuir.",
+            "Mais lequel ? Personne ne sait.",
+        ],
+    },
+    {
+        id: "macaron_triste_4",
+        name: "ORZO",
+        mapId: "macaron_ile",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#80b0a0" },
+        initialX: 10,
+        initialY: 14,
+        dialoguesAfter: [
+            "J'avais tellement préparé mes pectoraux pour rien...",
+            "*Il soupire profondément.*",
+        ],
+    },
+    {
+        id: "macaron_triste_5",
+        name: "BUCATINI",
+        mapId: "macaron_ile",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#c0a0a0" },
+        initialX: 7,
+        initialY: 16,
+        dialoguesAfter: [
+            "Si seulement quelqu'un de courageux pouvait nous aider...",
+            "*Il te regarde avec espoir, puis se ravise.*",
+            "Bof, c'est mort de toute façon.",
+        ],
+    },
 ]
 
 // ============================================================

@@ -36,6 +36,9 @@ export type TileType =
     | "stairsUp"      // escalier montant (interaction A : check squats du jour)
     | "stairsDown"    // escalier descendant (interaction A : descente libre)
     | "towerWindow"   // fenêtre décorative (bloquant)
+    // === v3.12 : Eau coopérative + Macaron'île ===
+    | "waterShallow"  // canal traversable (bleu clair). Bloquant conditionnel (check swim_set + firstSwimDone côté MapClient).
+    | "sand"          // plage de Macaron'île (non-bloquant, décoratif)
 
 export interface Building {
     x: number
@@ -93,6 +96,8 @@ export interface PlayerMapState {
     npcsTalkedTo: string[]             // ids des PNJ déjà rencontrés (pour ne pas relancer le 1er dialogue)
     // === v3.11 : sauvetage de PIAFFINI ===
     piaffiniRescued: boolean           // true = cinématique au sommet de la Tour déclenchée, JOJO a donné le Set de Nage
+    // === v3.12 : première baignade ===
+    firstSwimDone: boolean             // true = a déjà été poussé dans le canal au moins une fois → peut nager seul
 }
 
 // Snapshot d'un autre joueur affiché sur la carte

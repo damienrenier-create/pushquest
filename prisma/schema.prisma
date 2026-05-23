@@ -442,6 +442,10 @@ model GamebookProgress {
   // v3.11 — PIAFFINI sauvé : flag persistant à vie une fois donné. Débloque JOJO post-quête,
   // JOJETTE félicitations, et conditionnera l'accès à l'eau coopérative (v3.12).
   piaffiniRescued           Boolean @default(false)
+  // v3.12 — première baignade faite : le joueur a été poussé dans l'eau au moins une fois,
+  // il peut désormais traverser librement les cases waterShallow (avec coût de mouvement).
+  // Sans ce flag, même avec swim_set, le joueur reste bloqué sur la berge ("trop froide").
+  firstSwimDone             Boolean @default(false)
 
   @@unique([userId, chapterId])
   @@index([userId])

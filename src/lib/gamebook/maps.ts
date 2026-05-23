@@ -54,6 +54,13 @@ function buildOutdoor(): TileType[][] {
     m[OUTDOOR_H - 2][5] = "water"
     m[OUTDOOR_H - 2][6] = "water"
 
+    // v3.12 — Canal d'entrée vers Macaron'île (case waterShallow au sud, sur le chemin central).
+    // Quand le joueur (équipé du swim_set + firstSwimDone) marche dessus → transition vers
+    // le canal de macaron_ile (10 cases de waterShallow à traverser).
+    // Sans swim_set : bloquant. Avec swim_set mais sans firstSwimDone : "trop froide".
+    m[OUTDOOR_H - 1][7] = "waterShallow"
+    m[OUTDOOR_H - 1][8] = "waterShallow"
+
     // Jardin de fleurs
     m[12][2] = "flowerR"
     m[12][3] = "flowerY"
@@ -359,6 +366,65 @@ function buildCasinoPepite(): TileType[][] {
 // 9 × 8 (v3.8.7 — élargi pour matcher le pattern de spawn (4, 6) de tryComputeMove
 //        qui sinon atterrissait sur le mur sud)
 // ============================================================
+// ============================================================
+// v3.12 — MACARON'ÎLE (île au sud de Bourg-Boulette, via le canal)
+// 14 × 18 cases :
+//   - y=0      : bordure tree
+//   - y=1..10  : canal waterShallow (au centre, col 6-7) entouré d'eau bloquante
+//   - y=11..12 : plage de sable (sand)
+//   - y=13..16 : ville Macaron'île (PNJ tristes, bâtiments visuels en placeholder pour v3.13+)
+//   - y=17     : bordure tree
+// ============================================================
+const MACARONILE_W = 14
+const MACARONILE_H = 18
+
+function buildMacaronIle(): TileType[][] {
+    const m: TileType[][] = []
+    for (let y = 0; y < MACARONILE_H; y++) {
+        const row: TileType[] = []
+        for (let x = 0; x < MACARONILE_W; x++) {
+            // Bordures tree (nord, sud, ouest, est)
+            if (x === 0 || x === MACARONILE_W - 1 || y === 0 || y === MACARONILE_H - 1) {
+                row.push("tree")
+            } else {
+                row.push("grass")
+            }
+        }
+        m.push(row)
+    }
+
+    // Canal vertical waterShallow au centre (col 6-7) sur y=1..10 (10 cases de hauteur).
+    // Les colonnes 1-5 et 8-12 sur ces mêmes lignes sont de l'eau "profonde" bloquante.
+    for (let y = 1; y <= 10; y++) {
+        for (let x = 1; x <= MACARONILE_W - 2; x++) {
+            if (x === 6 || x === 7) {
+                m[y][x] = "waterShallow"
+            } else {
+                m[y][x] = "water"
+            }
+        }
+    }
+
+    // Plage (sand) sur y=11, y=12 — zone d'arrivée du canal
+    for (let x = 1; x <= MACARONILE_W - 2; x++) {
+        m[11][x] = "sand"
+        m[12][x] = "sand"
+    }
+
+    // Quelques fleurs et flore décorative sur la ville
+    m[14][3] = "flowerR"
+    m[14][4] = "flowerY"
+    m[14][10] = "flowerY"
+    m[14][11] = "flowerR"
+
+    // Chemin central horizontal pour traverser la ville (y=14)
+    for (let x = 1; x <= MACARONILE_W - 2; x++) {
+        if (x >= 5 && x <= 8) m[14][x] = "path"
+    }
+
+    return m
+}
+
 function buildShopInterior(): TileType[][] {
     const W = 9, H = 8
     const m: TileType[][] = []
@@ -603,6 +669,15 @@ export const MAPS: Record<string, MapData> = {
         height: 8,
         exitTarget: { mapId: "pepiteville", x: 11, y: 8 },  // devant la porte du shop
     },
+    // v3.12 — Macaron'île : canal au nord + plage + ville (extension prévue v3.13+)
+    macaron_ile: {
+        id: "macaron_ile",
+        name: "MACARON'ÎLE",
+        tiles: buildMacaronIle(),
+        width: MACARONILE_W,
+        height: MACARONILE_H,
+        // exitTarget non utilisé : on a une transition via grassTall/canal en MapClient
+    },
     // === v3.8.2 — Hautes-Pâtes et sa Tour ===
     hautespates: {
         id: "hautespates",
@@ -715,3 +790,24 @@ export const TOWER_STAIRS_SQUATS_THRESHOLD: Record<number, number> = {
     3: 100,
     4: 150,
 }
+
+// v3.12 — Spawn quand on arrive à Macaron'île depuis Bourg-Boulette (poussé dans le canal nord)
+export const MACARONILE_CANAL_ENTRY_FROM_NORTH = {
+    mapId: "macaron_ile",
+    posX: 7,
+    posY: 1,  // 1ère case du canal côté nord
+    direction: "down" as const,
+}
+
+// v3.12 — Quand on quitte Macaron'île par le nord (depuis la 1ère case du canal), retour à Bourg-Boulette
+export const BOURGPATES_SPAWN_FROM_MACARONILE = {
+    mapId: "bourgpates",
+    posX: 7,
+    posY: OUTDOOR_H - 2,  // case grass juste au-dessus du canal sud de Bourg-Boulette
+    direction: "up" as const,
+}
+
+// v3.12 — Quand on entre dans Macaron'île depuis Bourg-Boulette par mouvement (et pas push)
+// le joueur arrive sur la 1ère case du canal et nage les 9 suivantes pour atteindre la ville.
+// Les coordonnées du canal sud (entrée vers la plage) sont (7, 10), (6, 10).
+export const MACARONILE_NORTH_GATE = { x: 7, y: 0 }  // case juste au-dessus du canal nord (déclenche retour)
