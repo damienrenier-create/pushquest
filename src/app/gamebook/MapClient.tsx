@@ -88,6 +88,8 @@ import { PEPITO_DIALOGUE_FIRST } from "@/lib/gamebook/dialogue"
 import TamagotchiModal from "./TamagotchiModal"
 import type { TamagotchiView } from "@/lib/gamebook/tamagotchi"
 import BibliothequeModal from "./BibliothequeModal"
+import BestioleNamingModal from "./BestioleNamingModal"
+import { getLevelDetails } from "@/lib/xp"
 
 interface Props {
     nickname: string
@@ -110,6 +112,12 @@ interface Props {
 }
 
 const GHOST_COLORS = ["#4080d8", "#d840a0", "#48a830", "#f08020", "#9050d0", "#d8c020", "#20a8c8"]
+
+// v3.19b — Maps où le compagnon tamagotchi est visible (outdoor uniquement)
+const OUTDOOR_MAP_IDS = new Set([
+    "bourgpates", "route1", "pepiteville", "hautespates",
+    "macaron_ile", "grass_sud", "muscuville", "la_mer",
+])
 
 function colorForUser(id: string): string {
     let hash = 0
@@ -190,6 +198,8 @@ export default function MapClient({
     const [tamagotchi, setTamagotchi] = useState<TamagotchiView | null>(initialTamagotchi)
     // v3.18 — Modal de la bibliothèque (BIBLIO ou comptoir) : navigation hybride
     const [showBibliotheque, setShowBibliotheque] = useState(false)
+    // v3.19b — Modal nommage des bestioles à la première rencontre
+    const [showBestioleNaming, setShowBestioleNaming] = useState(false)
     // === v3.8.1 : fruits cueillis aujourd'hui (par CE user). Drive le rendu vide/plein des arbres. ===
     const [fruitCounts, setFruitCounts] = useState<Record<string, number>>(initialFruitCounts)
     // === v3.8.2 : plus haut étage atteint dans la Tour. Drive le bypass-check des escaliers. ===
@@ -392,12 +402,11 @@ export default function MapClient({
 
     // ============================================================
     // NPCs sur la map courante (positions calculées en temps réel)
-    // v3.16 — Les bestioles de grass_sud fuient si le tamagotchi du joueur est level >= 23
+    // v3.16 — Les bestioles de grass_sud fuient si le tamagotchi du joueur est libéré (recovered)
+    // v3.19b — Critère mis à jour : recovered (et non plus level >= 23)
     // ============================================================
     const wanderTick = useWanderTicker()
-    const tamLevel = tamagotchi?.displayLevel ?? 0
-    const BESTIOLE_THRESHOLD = 23
-    const bestiolesFlee = tamLevel >= BESTIOLE_THRESHOLD
+    const bestiolesFlee = tamagotchi?.recovered === true
     const npcsOnMap = getNpcsForMap(state.mapId).filter((npc) => {
         if (npc.id.startsWith("bestiole_") && bestiolesFlee) return false
         return true
@@ -470,6 +479,38 @@ export default function MapClient({
         },
         []
     )
+
+    // ============================================================
+    // v3.19b — Bestioles : attack mechanic + naming
+    // - 1re rencontre : ouvre le modal nommage (puis API encounter + popup "Aïe sans perte")
+    // - Suivantes : appel direct API + popup "-10 reps"
+    // ============================================================
+    const triggerBestioleEncounter = useCallback(() => {
+        const firstEncountered = (state as { bestiolesFirstEncountered?: boolean }).bestiolesFirstEncountered === true
+        if (!firstEncountered) {
+            setShowBestioleNaming(true)
+            return
+        }
+        ; (async () => {
+            try {
+                const res = await fetch("/api/gamebook/bestiole/encounter", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({}),
+                })
+                const data = await res.json()
+                if (data.ok) {
+                    if (typeof data.availableEnergy === "number") setReps(data.availableEnergy)
+                    if (typeof data.energySpentToday === "number") setEnergySpent(data.energySpentToday)
+                    setToast(data.message || "Les bestioles te mordent.")
+                } else if (data.reason) {
+                    setToast(data.reason)
+                }
+            } catch (e) {
+                console.warn("[MapClient] bestiole/encounter failed", e)
+            }
+        })()
+    }, [state])
 
     // ============================================================
     // v3.17c — NAGEUR (la_mer) : 3 niveaux de dialogue
@@ -711,6 +752,11 @@ export default function MapClient({
                 const targetY = state.posY + dy
                 const blockingNpc = npcsWithPos.find((n) => n.x === targetX && n.y === targetY)
                 if (blockingNpc) {
+                    // v3.19b — Bestiole rework : attack mechanic au lieu du dialog standard
+                    if (blockingNpc.npc.id.startsWith("bestiole_")) {
+                        triggerBestioleEncounter()
+                        return
+                    }
                     // Le PNJ "interceptor" déclenche son dialogue automatiquement
                     if (blockingNpc.npc.interaction === "interceptor") {
                         triggerNpcDialogue(blockingNpc.npc)
@@ -1117,7 +1163,7 @@ export default function MapClient({
         }, 300)
 
         // v3.8 — si une modal est ouverte, le A est géré par la modal elle-même
-        if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque) return
+        if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming) return
 
         // v3.11 — Cinématique PIAFFINI (dialogue au sommet, puis vol)
         if (cinematic?.kind === "piaffini" && cinematic.stage === "dialog") {
@@ -1796,7 +1842,7 @@ export default function MapClient({
         const handler = (e: KeyboardEvent) => {
             // v3.8 — si une modal est ouverte, on ne gère pas les touches ici
             // (StartMenu/InventoryModal/ShopModal/PlayerMapModal écoutent leurs propres events)
-            if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque) return
+            if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming) return
 
             if (state.phase === "introMonster") {
                 if (e.key === "Enter" || e.key === " " || e.key.toLowerCase() === "a") {
@@ -2031,6 +2077,41 @@ export default function MapClient({
                         hasLunettes={hasIntactLunettes(inventory)}
                     />
 
+                    {/* v3.19b — Compagnon tamagotchi (visible si récupéré, outdoor maps uniquement) */}
+                    {tamagotchi?.recovered && OUTDOOR_MAP_IDS.has(state.mapId) && (() => {
+                        const details = getLevelDetails(tamagotchi.displayLevel ?? tamagotchi.currentLevel)
+                        // Position : 1 case derrière le joueur (selon direction)
+                        let cx = state.posX
+                        let cy = state.posY
+                        if (state.direction === "up") cy = state.posY + 1
+                        else if (state.direction === "down") cy = state.posY - 1
+                        else if (state.direction === "left") cx = state.posX + 1
+                        else if (state.direction === "right") cx = state.posX - 1
+                        // Clamp dans la map (sinon on l'affiche pas)
+                        if (cx < 0 || cy < 0 || cx >= map.width || cy >= map.height) return null
+                        return (
+                            <div
+                                style={{
+                                    position: "absolute",
+                                    left: `${(cx / map.width) * 100}%`,
+                                    top: `${(cy / map.height) * 100}%`,
+                                    width: `${(1 / map.width) * 100}%`,
+                                    height: `${(1 / map.height) * 100}%`,
+                                    zIndex: 9,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    pointerEvents: "none",
+                                    transition: "left 0.15s, top 0.15s",
+                                    fontSize: "calc(min(100%, 1.4em))",
+                                }}
+                                title={`${tamagotchi.name} (${details.name})`}
+                            >
+                                <span style={{ fontSize: "70%", lineHeight: 1 }}>{details.emoji}</span>
+                            </div>
+                        )
+                    })()}
+
                     {/* Scanlines */}
                     <div
                         style={{
@@ -2263,6 +2344,38 @@ export default function MapClient({
             {/* v3.18 — Modal de la bibliothèque (BIBLIO) */}
             {showBibliotheque && (
                 <BibliothequeModal onClose={() => setShowBibliotheque(false)} />
+            )}
+
+            {/* v3.19b — Modal nommage des bestioles (première rencontre) */}
+            {showBestioleNaming && (
+                <BestioleNamingModal
+                    onClose={() => setShowBestioleNaming(false)}
+                    onSubmit={async (name) => {
+                        try {
+                            const res = await fetch("/api/gamebook/bestiole/encounter", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ name }),
+                            })
+                            const data = await res.json()
+                            if (data.ok) {
+                                setState((s) => ({
+                                    ...s,
+                                    bestiolesFirstEncountered: true,
+                                    bestiolesSpeciesName: data.speciesName ?? name,
+                                }))
+                                setToast(data.message || `Tu nommes l'espèce "${name}".`)
+                            } else if (data.reason) {
+                                setToast(data.reason)
+                            }
+                        } catch (e) {
+                            console.warn("[MapClient] bestiole/encounter (naming) failed", e)
+                            setToast("Erreur réseau, réessaie.")
+                        } finally {
+                            setShowBestioleNaming(false)
+                        }
+                    }}
+                />
             )}
 
             {/* v3.14 — Modal du vétérinaire (V3T) : Tamagotchi */}

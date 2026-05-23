@@ -158,6 +158,9 @@ export async function GET() {
             nageurDefiCompleted: (progress as { nageurDefiCompleted?: boolean }).nageurDefiCompleted === true,
             bourgCasinoCoinsFound: (progress as { bourgCasinoCoinsFound?: boolean }).bourgCasinoCoinsFound === true,
             luck: (progress as { luck?: number }).luck ?? 0,
+            // v3.19b — Bestioles attack mechanic
+            bestiolesFirstEncountered: (progress as { bestiolesFirstEncountered?: boolean }).bestiolesFirstEncountered === true,
+            bestiolesSpeciesName: (progress as { bestiolesSpeciesName?: string | null }).bestiolesSpeciesName ?? null,
         },
         todayReps,
         energySpentToday,

@@ -108,6 +108,9 @@ export interface PlayerMapState {
     nageurDefiCompleted?: boolean      // true = défi 50 pompes du Nageur de la mer validé (one-shot +100 reps)
     bourgCasinoCoinsFound?: boolean    // true = case cachée +50 reps du casino Bourg trouvée (one-shot)
     luck?: number                      // v3.17 — compteur de chance (LINGUINI tap, futur casino mini-jeu)
+    // === v3.19b : Bestioles attack ===
+    bestiolesFirstEncountered?: boolean
+    bestiolesSpeciesName?: string | null
 }
 
 // Snapshot d'un autre joueur affiché sur la carte

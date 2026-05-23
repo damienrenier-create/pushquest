@@ -464,6 +464,12 @@ model GamebookProgress {
   // v3.17c — Case cachée +50 reps du casino de Bourg-Boulette trouvée. One-shot.
   bourgCasinoCoinsFound     Boolean @default(false)
 
+  // v3.19b — Bestioles des hautes herbes : true = première rencontre passée (pas de perte).
+  // À false : la prochaine rencontre déclenche le modal nommage + premier "Aïe" sans perte.
+  bestiolesFirstEncountered Boolean @default(false)
+  // v3.19b — Nom donné à l'espèce de bestiole par le joueur (premier contact).
+  bestiolesSpeciesName      String?
+
   @@unique([userId, chapterId])
   @@index([userId])
   @@index([mapId])

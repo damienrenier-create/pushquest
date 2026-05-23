@@ -82,6 +82,9 @@ export default function GamebookClient({ nickname, userId }: Props) {
                         nageurDefiCompleted: (json.state as { nageurDefiCompleted?: boolean }).nageurDefiCompleted === true,
                         bourgCasinoCoinsFound: (json.state as { bourgCasinoCoinsFound?: boolean }).bourgCasinoCoinsFound === true,
                         luck: typeof (json.state as { luck?: number }).luck === "number" ? (json.state as { luck: number }).luck : 0,
+                        // v3.19b — bestioles
+                        bestiolesFirstEncountered: (json.state as { bestiolesFirstEncountered?: boolean }).bestiolesFirstEncountered === true,
+                        bestiolesSpeciesName: (json.state as { bestiolesSpeciesName?: string | null }).bestiolesSpeciesName ?? null,
                     }
                     setPayload({
                         ...json,
