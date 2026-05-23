@@ -32,14 +32,17 @@ import {
     HAUTESPATES_SPAWN_FROM_SOUTH,
     PEPITEVILLE_SPAWN_FROM_NORTH,
     TOWER_STAIRS_SQUATS_THRESHOLD,
-    MACARONILE_CANAL_ENTRY_FROM_NORTH,
-    BOURGPATES_SPAWN_FROM_MACARONILE,
     MACARONILE_BUILDINGS,
     MACARONILE_SIGNS,
     GRASS_SUD_SPAWN_FROM_NORTH,
     MACARONILE_SPAWN_FROM_GRASS_SUD,
     MUSCUVILLE_SPAWN_FROM_NORTH,
     GRASS_SUD_SPAWN_FROM_SOUTH,
+    LAMER_SPAWN_FROM_BOURG,
+    BOURG_SPAWN_FROM_LAMER,
+    MACARONILE_SPAWN_FROM_LAMER,
+    LAMER_SPAWN_FROM_MACARONILE,
+    PAPA_TABLEAUX,
 } from "@/lib/gamebook/maps"
 import {
     type Direction,
@@ -463,6 +466,48 @@ export default function MapClient({
     )
 
     // ============================================================
+    // v3.17c — NAGEUR (la_mer) : 3 niveaux de dialogue
+    // 1er visit : lore "cherche un trésor"
+    // 2e+ visit (avant défi réussi) : défi 50 pompes → +100 reps
+    // 2e+ visit (après défi réussi) : ONE PIECE + indices casinos
+    // ============================================================
+    const triggerNageurDialog = useCallback(() => {
+        const talked = state.npcsTalkedTo?.includes("lamer_nageur") === true
+        const defiDone = (state as { nageurDefiCompleted?: boolean }).nageurDefiCompleted === true
+        let lines: string[]
+        if (!talked) {
+            // 1er — lore
+            lines = [
+                "Salut salut ! Moi c'est NAGEUR.",
+                "Je me balade dans le coin. Je cherche un trésor, quelque part par ici.",
+                "Pas de détails. Si jamais tu trouves quelque chose qui brille, fais-moi signe.",
+            ]
+        } else if (!defiDone) {
+            // 2e — défi 50 pompes
+            lines = [
+                "Tu reviens ! T'as l'air en forme.",
+                "J'te propose un défi : si tu fais 50 pompes dans la journée, je te file mon économie : +100 reps.",
+                "Reviens me parler quand t'as fait les 50. Je vérifie en direct.",
+            ]
+        } else {
+            // 3e+ — ONE PIECE
+            lines = [
+                "Ahhh tu reviens encore ! Champion, vraiment.",
+                "Tu sais, moi le vrai truc que je cherche... c'est le ONE PIECE.",
+                "Les petits trésors planqués dans les casinos, c'est cool, mais le ONE PIECE c'est autre chose.",
+                "*Il regarde l'horizon, rêveur.* Un jour. Un jour je le trouverai.",
+            ]
+        }
+        setCinematic({
+            kind: "npcDialogue",
+            npcId: "lamer_nageur",
+            npcName: "NAGEUR",
+            step: 0,
+            lines,
+        })
+    }, [state])
+
+    // ============================================================
     // v3.4a : SPEND ENERGY (appel API serveur, source de vérité)
     // v3.8.1 : accepte un flag wearBoots pour décrémenter la durabilité des baskets côté serveur
     // v3.17 : wearItemKey remplace wearBoots — supporte boots / chaussures_course / brassards
@@ -691,6 +736,31 @@ export default function MapClient({
 
             // Apply
             setState(result.nextState)
+
+            // v3.17c — Détection de la case cachée du casino de Bourg-Boulette (5, 6).
+            // Si le joueur marche dessus pour la 1re fois → grant +50 reps via API.
+            if (
+                result.nextState.mapId === "casino" &&
+                result.nextState.posX === 5 &&
+                result.nextState.posY === 6 &&
+                !(state as { bourgCasinoCoinsFound?: boolean }).bourgCasinoCoinsFound
+            ) {
+                ; (async () => {
+                    try {
+                        const res = await fetch("/api/gamebook/casino/coin-found", { method: "POST" })
+                        const data = await res.json()
+                        if (data.ok && typeof data.reward === "number") {
+                            setToast(`J'ai trouvé de l'énergie, trop bien ! +${data.reward} reps.`)
+                            if (typeof data.availableEnergy === "number") setReps(data.availableEnergy)
+                            if (typeof data.energySpentToday === "number") setEnergySpent(data.energySpentToday)
+                            setState((s) => ({ ...s, bourgCasinoCoinsFound: true }))
+                        }
+                    } catch (e) {
+                        console.warn("[MapClient] casino/coin-found failed", e)
+                    }
+                })()
+            }
+
             if (result.repsCost > 0) {
                 // v3.17 — On résout le wearable actif pour la tile sur laquelle on entre.
                 // - waterShallow : brassards (tile-restricted) priorité, sinon boots/chaussures
@@ -833,9 +903,8 @@ export default function MapClient({
                 }
             }
 
-            // === v3.12 : Transition Bourg-Boulette sud ↔ Macaron'île canal ===
-            // Quand le joueur (équipé + firstSwimDone) marche sur la case waterShallow au sud
-            // de Bourg-Boulette (y=H-1, x=7 ou 8), on téléporte au nord du canal de Macaron'île.
+            // === v3.17c : Transition Bourg-Boulette sud → LA MER (nord) ===
+            // (avant v3.17c, on téléportait directement à Macaron'île — désormais on passe par la_mer)
             if (
                 state.mapId === "bourgpates" &&
                 result.nextState.posY === 15 &&  // OUTDOOR_H - 1 = 15
@@ -845,15 +914,50 @@ export default function MapClient({
                 setTimeout(() => {
                     setState((s) => ({
                         ...s,
-                        mapId: MACARONILE_CANAL_ENTRY_FROM_NORTH.mapId,
-                        posX: MACARONILE_CANAL_ENTRY_FROM_NORTH.posX,
-                        posY: MACARONILE_CANAL_ENTRY_FROM_NORTH.posY,
-                        direction: MACARONILE_CANAL_ENTRY_FROM_NORTH.direction,
+                        mapId: LAMER_SPAWN_FROM_BOURG.mapId,
+                        posX: LAMER_SPAWN_FROM_BOURG.posX,
+                        posY: LAMER_SPAWN_FROM_BOURG.posY,
+                        direction: LAMER_SPAWN_FROM_BOURG.direction,
+                    }))
+                    setToast("LA MER")
+                }, 200)
+            }
+            // === v3.17c : Transitions LA MER ↔ Bourg / Macaron'île ===
+            // la_mer (4, 0) → retour Bourg-Boulette
+            if (
+                state.mapId === "la_mer" &&
+                result.nextState.posY === 0 &&
+                result.nextState.posX === 4
+            ) {
+                setTimeout(() => {
+                    setState((s) => ({
+                        ...s,
+                        mapId: BOURG_SPAWN_FROM_LAMER.mapId,
+                        posX: BOURG_SPAWN_FROM_LAMER.posX,
+                        posY: BOURG_SPAWN_FROM_LAMER.posY,
+                        direction: BOURG_SPAWN_FROM_LAMER.direction,
+                    }))
+                    setToast("BOURG-BOULETTE")
+                }, 200)
+            }
+            // la_mer (4, H-1) → Macaron'île canal entry
+            if (
+                state.mapId === "la_mer" &&
+                result.nextState.posY === map.height - 1 &&
+                result.nextState.posX === 4
+            ) {
+                setTimeout(() => {
+                    setState((s) => ({
+                        ...s,
+                        mapId: MACARONILE_SPAWN_FROM_LAMER.mapId,
+                        posX: MACARONILE_SPAWN_FROM_LAMER.posX,
+                        posY: MACARONILE_SPAWN_FROM_LAMER.posY,
+                        direction: MACARONILE_SPAWN_FROM_LAMER.direction,
                     }))
                     setToast("MACARON'ÎLE — Canal nord")
                 }, 200)
             }
-            // Retour : si on est sur macaron_ile (7, 0) → bourgpates
+            // Retour : si on est sur macaron_ile (7, 0) → la_mer (au lieu de bourgpates direct)
             if (
                 state.mapId === "macaron_ile" &&
                 result.nextState.posY === 0 &&
@@ -862,12 +966,12 @@ export default function MapClient({
                 setTimeout(() => {
                     setState((s) => ({
                         ...s,
-                        mapId: BOURGPATES_SPAWN_FROM_MACARONILE.mapId,
-                        posX: BOURGPATES_SPAWN_FROM_MACARONILE.posX,
-                        posY: BOURGPATES_SPAWN_FROM_MACARONILE.posY,
-                        direction: BOURGPATES_SPAWN_FROM_MACARONILE.direction,
+                        mapId: LAMER_SPAWN_FROM_MACARONILE.mapId,
+                        posX: LAMER_SPAWN_FROM_MACARONILE.posX,
+                        posY: LAMER_SPAWN_FROM_MACARONILE.posY,
+                        direction: LAMER_SPAWN_FROM_MACARONILE.direction,
                     }))
-                    setToast("BOURG-BOULETTE")
+                    setToast("LA MER")
                 }, 200)
             }
 
@@ -1103,6 +1207,33 @@ export default function MapClient({
                             console.warn("[MapClient] luck/talk failed", e)
                         }
                     })()
+                }
+
+                // v3.17c — NAGEUR : si on a vu le dialogue défi (2e visite) et qu'on a fait 50 pompes
+                // aujourd'hui, on grant +100 reps via le serveur (idempotent via nageurDefiCompleted).
+                if (npcId === "lamer_nageur" && !(state as { nageurDefiCompleted?: boolean }).nageurDefiCompleted) {
+                    const talkedBefore = state.npcsTalkedTo?.includes("lamer_nageur") === true
+                    if (talkedBefore) {
+                        ; (async () => {
+                            try {
+                                const res = await fetch("/api/gamebook/nageur/defi", { method: "POST" })
+                                const data = await res.json()
+                                if (data.ok && typeof data.reward === "number") {
+                                    setToast(`Défi réussi ! +${data.reward} reps de la part du NAGEUR.`)
+                                    if (typeof data.availableEnergy === "number") setReps(data.availableEnergy)
+                                    if (typeof data.energySpentToday === "number") setEnergySpent(data.energySpentToday)
+                                    setState((s) => ({ ...s, nageurDefiCompleted: true }))
+                                } else if (data.reason) {
+                                    // Pas assez de pompes ou autre — silence sauf message explicite
+                                    if (data.pushupsToday !== undefined) {
+                                        setToast(`${data.reason}`)
+                                    }
+                                }
+                            } catch (e) {
+                                console.warn("[MapClient] nageur/defi failed", e)
+                            }
+                        })()
+                    }
                 }
 
                 // === v3.4a : récompense gym guy via API serveur (source de vérité) ===
@@ -1343,6 +1474,11 @@ export default function MapClient({
                 setShowShop(true)
                 return
             }
+            // v3.17c — NAGEUR (la_mer) : 3 niveaux de dialogue + défi 50 pompes
+            if (npcId === "lamer_nageur") {
+                triggerNageurDialog()
+                return
+            }
             triggerNpcDialogue(npcInFront.npc)
             return
         }
@@ -1391,6 +1527,52 @@ export default function MapClient({
         // v3.14 — Chez le vétérinaire V3T, parler via le comptoir = ouvrir le modal Tamagotchi.
         if (state.mapId === "veterinaire" && tile === "shopCounter") {
             setShowTamagotchi(true)
+            return
+        }
+
+        // v3.17c — Tableau dans la Tour : look up dans PAPA_TABLEAUX
+        if (tile === "painting") {
+            const tableau = PAPA_TABLEAUX.find(
+                (t) => t.mapId === state.mapId && t.x === front.x && t.y === front.y
+            )
+            if (tableau) {
+                const isMyPapa =
+                    tableau.nicknameMatch !== null &&
+                    tableau.nicknameMatch.toLowerCase() === nickname.toLowerCase()
+                const alreadyClaimed = (state as { papaBoostClaimed?: boolean }).papaBoostClaimed === true
+                if (isMyPapa && !alreadyClaimed) {
+                    // Grant +100 reps via API (idempotent serveur)
+                    ; (async () => {
+                        try {
+                            const res = await fetch("/api/gamebook/painting/papa-boost", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ nicknameMatch: tableau.nicknameMatch }),
+                            })
+                            const data = await res.json()
+                            if (data.ok && typeof data.reward === "number") {
+                                setPopup({
+                                    kind: "info",
+                                    text: `${tableau.lore}\n\n*Tu reconnais ton père ${tableau.papaName}. Tu te sens revigoré.*\n\n+${data.reward} reps`,
+                                })
+                                if (typeof data.availableEnergy === "number") setReps(data.availableEnergy)
+                                if (typeof data.energySpentToday === "number") setEnergySpent(data.energySpentToday)
+                                setState((s) => ({ ...s, papaBoostClaimed: true }))
+                            } else {
+                                setPopup({ kind: "info", text: tableau.lore })
+                            }
+                        } catch (e) {
+                            console.warn("[MapClient] papa-boost failed", e)
+                            setPopup({ kind: "info", text: tableau.lore })
+                        }
+                    })()
+                } else {
+                    setPopup({ kind: "info", text: tableau.lore })
+                }
+                return
+            }
+            // Pas dans PAPA_TABLEAUX → tableau décoratif générique
+            setPopup({ kind: "info", text: "Un tableau accroché au mur. La toile est trop ancienne pour deviner le sujet." })
             return
         }
 

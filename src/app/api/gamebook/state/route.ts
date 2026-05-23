@@ -153,6 +153,11 @@ export async function GET() {
             piaffiniRescued: (progress as { piaffiniRescued?: boolean }).piaffiniRescued === true,
             // v3.12 — Première baignade faite (débloque traversée canal seul)
             firstSwimDone: (progress as { firstSwimDone?: boolean }).firstSwimDone === true,
+            // v3.17c — Flags one-shot polish (papa boost, défi nageur, case cachée casino)
+            papaBoostClaimed: (progress as { papaBoostClaimed?: boolean }).papaBoostClaimed === true,
+            nageurDefiCompleted: (progress as { nageurDefiCompleted?: boolean }).nageurDefiCompleted === true,
+            bourgCasinoCoinsFound: (progress as { bourgCasinoCoinsFound?: boolean }).bourgCasinoCoinsFound === true,
+            luck: (progress as { luck?: number }).luck ?? 0,
         },
         todayReps,
         energySpentToday,
@@ -200,7 +205,7 @@ export async function POST(req: NextRequest) {
         !direction ||
         !phase ||
         // v3.8 — Pépiteville et ses bâtiments + v3.8.2 — Hautes-Pâtes et tour des Pâtes Aiguës + v3.12 — Macaron'île + v3.13 — bâtiments Macaron'île + v3.15 — bibliothèque + v3.16 — Hautes herbes du sud + Muscuville
-        !["bourgpates", "gym", "casino", "cave", "route1", "pepiteville", "gym_pepite", "casino_pepite", "shop_interior", "hautespates", "tower_floor_1", "tower_floor_2", "tower_floor_3", "tower_floor_4", "tower_floor_5", "macaron_ile", "shop_macaron", "veterinaire", "bibliotheque", "grass_sud", "muscuville"].includes(mapId) ||
+        !["bourgpates", "gym", "casino", "cave", "route1", "pepiteville", "gym_pepite", "casino_pepite", "shop_interior", "hautespates", "tower_floor_1", "tower_floor_2", "tower_floor_3", "tower_floor_4", "tower_floor_5", "macaron_ile", "shop_macaron", "veterinaire", "bibliotheque", "grass_sud", "muscuville", "la_mer"].includes(mapId) ||
         !["up", "down", "left", "right"].includes(direction) ||
         !["explore", "introMonster", "playing"].includes(phase) ||
         posX < 0 || posX > 30 ||

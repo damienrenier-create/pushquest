@@ -445,6 +445,45 @@ function buildMacaronIle(): TileType[][] {
 }
 
 // ============================================================
+// v3.17c — LA MER (canal navigable entre Bourg-Boulette et Macaron'île)
+// Petit map avec deux îlots de sable accueillant un naufragé et un nageur.
+// Path waterShallow 3 colonnes (3-4-5) pour permettre le détour sur les îlots.
+// ============================================================
+const LAMER_W = 9
+const LAMER_H = 10
+
+function buildLaMer(): TileType[][] {
+    const m: TileType[][] = []
+    for (let y = 0; y < LAMER_H; y++) {
+        const row: TileType[] = []
+        for (let x = 0; x < LAMER_W; x++) {
+            if (x === 0 || x === LAMER_W - 1 || y === 0 || y === LAMER_H - 1) {
+                row.push("tree")
+            } else {
+                row.push("water")  // eau profonde bloquante par défaut
+            }
+        }
+        m.push(row)
+    }
+    // Path central 3 colonnes (3-4-5) sur les rows 1..H-2 → waterShallow nageable
+    for (let y = 1; y <= LAMER_H - 2; y++) {
+        for (let x = 3; x <= 5; x++) {
+            m[y][x] = "waterShallow"
+        }
+    }
+    // Sorties nord/sud (col 4, y=0 et y=H-1) → triggers de transition
+    m[0][4] = "waterShallow"
+    m[LAMER_H - 1][4] = "waterShallow"
+    // Îlots de sable au milieu, sur les flancs du path
+    m[4][2] = "sand"
+    m[4][6] = "sand"
+    // Quelques touffes décoratives sur les côtés (illusion d'algues)
+    m[2][1] = "grassTall"
+    m[7][7] = "grassTall"
+    return m
+}
+
+// ============================================================
 // v3.16 — HAUTES HERBES DU SUD (corridor entre Macaron'île et Muscuville)
 // Bloqué par des BESTIOLES sauf si le tamagotchi du joueur est level >= 23.
 // ============================================================
@@ -630,9 +669,20 @@ function buildHautesPates(): TileType[][] {
     // Chemin vertical central (colonne 5, du nord au sud)
     for (let y = 1; y < HAUTESPATES_H - 1; y++) m[y][5] = "path"
 
-    // Petits parterres autour
+    // v3.17c — Décor enrichi : plus d'arbres + fleurs pour casser le côté désertique
+    m[2][1] = "tree"; m[2][9] = "tree"
+    m[3][2] = "flowerR"; m[3][8] = "flowerY"
+    m[4][1] = "tree"
+    m[6][9] = "tree"
+    m[7][2] = "flowerY"; m[7][8] = "flowerR"
+
+    // Petits parterres autour (existants)
     m[9][2] = "flowerR"; m[9][3] = "flowerY"
     m[9][7] = "flowerY"; m[9][8] = "flowerR"
+
+    // v3.17c — Nouvel arbre fruitier caché parmi les arbres (apple_tree_3)
+    // Position : (1, 7) — à l'écart du chemin central, demande de chercher
+    m[7][1] = "appleTree"
 
     // v3.8.7 — Sortie sud vers Pépiteville : hautes herbes (transition automatique).
     // Bande de 3 cases grassTall au sud (cohérent avec l'entrée nord de Pépiteville).
@@ -642,6 +692,11 @@ function buildHautesPates(): TileType[][] {
 
     return m
 }
+
+// v3.17c — Identifiant logique du nouvel arbre de Hautes-Pâtes (pattern fruitsTaken existant).
+export const HAUTESPATES_APPLE_TREES = [
+    { id: "apple_tree_3", x: 1, y: 7, mapId: "hautespates" },
+]
 
 export const HAUTESPATES_BUILDINGS: Building[] = [
     // Tour : 3×4, porte en bas-centre (1, 3). Position (4, 2)..(6, 5).
@@ -701,22 +756,87 @@ function buildTowerFloor(size: number, hasDownStairs: boolean, hasUpStairs: bool
 
 function buildTowerFloor1(): TileType[][] {
     // 11x11 — rez-de-chaussée : sortie doorMat + stairsUp, pas de stairsDown
-    return buildTowerFloor(11, false, true, true)
+    const m = buildTowerFloor(11, false, true, true)
+    // v3.17c — tableau du papa de franss (Philippe, champion de vélo)
+    m[5][10] = "painting"
+    return m
 }
 function buildTowerFloor2(): TileType[][] {
     // 10x10 — stairsDown + stairsUp
-    return buildTowerFloor(10, true, true, false)
+    const m = buildTowerFloor(10, true, true, false)
+    // v3.17c — tableau placeholder (en attente du nickname du joueur)
+    m[5][9] = "painting"
+    return m
 }
 function buildTowerFloor3(): TileType[][] {
-    return buildTowerFloor(9, true, true, false)
+    const m = buildTowerFloor(9, true, true, false)
+    // v3.17c — tableau placeholder
+    m[4][8] = "painting"
+    return m
 }
 function buildTowerFloor4(): TileType[][] {
-    return buildTowerFloor(8, true, true, false)
+    const m = buildTowerFloor(8, true, true, false)
+    // v3.17c — tableau placeholder
+    m[4][7] = "painting"
+    return m
 }
 function buildTowerFloor5(): TileType[][] {
     // 7x7 — sommet : stairsDown uniquement (l'oiseau PIAFFINI est ailleurs en NPC)
     return buildTowerFloor(7, true, false, false)
 }
+
+// v3.17c — Config des tableaux des papas dans la Tour.
+// Chaque tableau correspond à un joueur (nicknameMatch case insensitive). Quand un joueur
+// regarde SON tableau pour la première fois, il reçoit +100 reps (équivalent 10 pas).
+// Les tableaux non assignés sont décoratifs et affichent le lore générique.
+export interface PapaTableau {
+    mapId: string
+    x: number
+    y: number
+    /** nickname du joueur dont c'est le père. Null = tableau placeholder (lore générique). */
+    nicknameMatch: string | null
+    papaName: string
+    sport: string
+    lore: string
+}
+export const PAPA_TABLEAUX: PapaTableau[] = [
+    {
+        mapId: "tower_floor_1",
+        x: 10,
+        y: 5,
+        nicknameMatch: "franss",
+        papaName: "Philippe",
+        sport: "Champion de vélo",
+        lore: "Un portrait en sépia. Un homme jeune en maillot jaune, le sourire éclatant, posant sur un vélo. La plaque indique : « PHILIPPE — Champion de vélo. Une légende. »",
+    },
+    {
+        mapId: "tower_floor_2",
+        x: 9,
+        y: 5,
+        nicknameMatch: null,
+        papaName: "?",
+        sport: "?",
+        lore: "Un tableau ancien. La toile est trop noircie pour distinguer les traits. La plaque est illisible.",
+    },
+    {
+        mapId: "tower_floor_3",
+        x: 8,
+        y: 4,
+        nicknameMatch: null,
+        papaName: "?",
+        sport: "?",
+        lore: "Un portrait poussiéreux. Un homme à la silhouette athlétique, mais le nom est gratté.",
+    },
+    {
+        mapId: "tower_floor_4",
+        x: 7,
+        y: 4,
+        nicknameMatch: null,
+        papaName: "?",
+        sport: "?",
+        lore: "Une peinture à moitié effacée par le temps. On devine un trophée sans pouvoir lire le sport.",
+    },
+]
 
 // PNJ du pont — postés sur les bords du pont (v3.8.6).
 //
@@ -863,6 +983,14 @@ export const MAPS: Record<string, MapData> = {
         width: 11,
         height: 8,
         exitTarget: { mapId: "macaron_ile", x: 2, y: 20 },
+    },
+    // v3.17c — La mer (canal navigable inséré entre Bourg-Boulette et Macaron'île)
+    la_mer: {
+        id: "la_mer",
+        name: "LA MER",
+        tiles: buildLaMer(),
+        width: LAMER_W,
+        height: LAMER_H,
     },
     // v3.16 — Hautes herbes du sud + Muscuville
     grass_sud: {
@@ -1012,6 +1140,36 @@ export const BOURGPATES_SPAWN_FROM_MACARONILE = {
 // le joueur arrive sur la 1ère case du canal et nage les 9 suivantes pour atteindre la ville.
 // Les coordonnées du canal sud (entrée vers la plage) sont (7, 10), (6, 10).
 export const MACARONILE_NORTH_GATE = { x: 7, y: 0 }  // case juste au-dessus du canal nord (déclenche retour)
+
+// v3.17c — La mer s'insère entre Bourg-Boulette (sud) et Macaron'île (canal nord).
+// Bourg sud waterShallow (7,15)/(8,15) → la_mer (4, 1) heading down.
+// la_mer (4, 0) → retour Bourg (8, 14) heading up.
+// la_mer (4, H-1=9) → Macaron'île (7, 1) canal entry heading down.
+// Macaron'île (7, 0) → retour la_mer (4, H-2=8) heading up.
+export const LAMER_SPAWN_FROM_BOURG = {
+    mapId: "la_mer",
+    posX: 4,
+    posY: 1,
+    direction: "down" as const,
+}
+export const BOURG_SPAWN_FROM_LAMER = {
+    mapId: "bourgpates",
+    posX: 8,
+    posY: 14,
+    direction: "up" as const,
+}
+export const MACARONILE_SPAWN_FROM_LAMER = {
+    mapId: "macaron_ile",
+    posX: 7,
+    posY: 1,
+    direction: "down" as const,
+}
+export const LAMER_SPAWN_FROM_MACARONILE = {
+    mapId: "la_mer",
+    posX: 4,
+    posY: LAMER_H - 2,
+    direction: "up" as const,
+}
 
 // v3.16 — Transitions sud Macaron'île ↔ grass_sud ↔ Muscuville
 // Quand le joueur marche sur la grassTall (6 ou 7, 21) de Macaron'île → entrée dans grass_sud

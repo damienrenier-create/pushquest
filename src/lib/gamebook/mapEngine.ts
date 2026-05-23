@@ -39,6 +39,8 @@ export type TileType =
     // === v3.12 : Eau coopérative + Macaron'île ===
     | "waterShallow"  // canal traversable (bleu clair). Bloquant conditionnel (check swim_set + firstSwimDone côté MapClient).
     | "sand"          // plage de Macaron'île (non-bloquant, décoratif)
+    // === v3.17c : Polish narratif ===
+    | "painting"      // tableau accroché à un mur (bloquant, interactif via A — Tour des Pâtes Aiguës)
 
 export interface Building {
     x: number
@@ -98,6 +100,11 @@ export interface PlayerMapState {
     piaffiniRescued: boolean           // true = cinématique au sommet de la Tour déclenchée, JOJO a donné le Set de Nage
     // === v3.12 : première baignade ===
     firstSwimDone: boolean             // true = a déjà été poussé dans le canal au moins une fois → peut nager seul
+    // === v3.17c : flags polish ===
+    papaBoostClaimed?: boolean         // true = tableau du papa vu dans la Tour (one-shot +100 reps)
+    nageurDefiCompleted?: boolean      // true = défi 50 pompes du Nageur de la mer validé (one-shot +100 reps)
+    bourgCasinoCoinsFound?: boolean    // true = case cachée +50 reps du casino Bourg trouvée (one-shot)
+    luck?: number                      // v3.17 — compteur de chance (LINGUINI tap, futur casino mini-jeu)
 }
 
 // Snapshot d'un autre joueur affiché sur la carte
@@ -141,6 +148,8 @@ export const BLOCKING_TILES: TileType[] = [
     // Escaliers bloquants par défaut : on les approche pour interagir avec A
     "stairsUp",
     "stairsDown",
+    // v3.17c — tableaux accrochés aux murs (bloquant, on les regarde avec A)
+    "painting",
 ]
 
 export function isBlockingTile(tile: TileType): boolean {

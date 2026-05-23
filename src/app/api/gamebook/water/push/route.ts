@@ -35,8 +35,9 @@ const XP_REWARD_POUSSEUR = 100
 const EC_REWARD_POUSSEUR = 100
 const SWIM_SET_KEY = "swim_set"
 
-// Position de spawn quand A est poussé (1ère case nord du canal de Macaron'île)
-const CANAL_NORTH_SPAWN = { mapId: "macaron_ile", posX: 7, posY: 1, direction: "down" as const }
+// v3.17c — Position de spawn quand A est poussé : nord de LA MER (au lieu de macaron_ile direct).
+// La cible doit ensuite nager le canal pour atteindre Macaron'île (cohérent narrative "se réveille dans l'eau").
+const CANAL_NORTH_SPAWN = { mapId: "la_mer", posX: 4, posY: 1, direction: "down" as const }
 
 export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions)
@@ -106,21 +107,9 @@ export async function POST(req: NextRequest) {
         },
     })
 
-    // 2. Récompenser le pousseur (B) : 100 EmberCoins via CoinAdjustment
+    // v3.17c — Q m : plus de récompense en EmberCoins (décidée stop par l'utilisateur).
+    // Le push de joueur reste gratuit en reps, badge "Pousseur de potes" toujours octroyé 1×.
     const today = getTodayISO()
-    try {
-        await (prisma as any).coinAdjustment.create({
-            data: {
-                userId: pusherUserId,
-                amount: EC_REWARD_POUSSEUR,
-                reason: "GAMEBOOK_PUSH_TO_WATER",
-                refId: targetUserId,
-                date: today,
-            },
-        })
-    } catch (e) {
-        console.warn("[water/push] could not create CoinAdjustment", e)
-    }
 
     // 3. Badge "Pousseur de potes" pour le pousseur (idempotent : 1 fois max)
     let badgeAwarded = false

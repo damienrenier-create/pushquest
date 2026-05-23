@@ -77,6 +77,11 @@ export default function GamebookClient({ nickname, userId }: Props) {
                         piaffiniRescued: json.state.piaffiniRescued === true,
                         // v3.12
                         firstSwimDone: (json.state as { firstSwimDone?: boolean }).firstSwimDone === true,
+                        // v3.17c — flags polish
+                        papaBoostClaimed: (json.state as { papaBoostClaimed?: boolean }).papaBoostClaimed === true,
+                        nageurDefiCompleted: (json.state as { nageurDefiCompleted?: boolean }).nageurDefiCompleted === true,
+                        bourgCasinoCoinsFound: (json.state as { bourgCasinoCoinsFound?: boolean }).bourgCasinoCoinsFound === true,
+                        luck: typeof (json.state as { luck?: number }).luck === "number" ? (json.state as { luck: number }).luck : 0,
                     }
                     setPayload({
                         ...json,

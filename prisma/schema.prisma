@@ -457,6 +457,12 @@ model GamebookProgress {
   luck                      Int     @default(0)
   // v3.17 — Date du dernier "tap" de LINGUINI (format YYYY-MM-DD). Vide = jamais parlé.
   lastLuckTalkDate          String  @default("")
+  // v3.17c — Tableau "papa" récupéré dans la Tour (one-shot, +100 reps).
+  papaBoostClaimed          Boolean @default(false)
+  // v3.17c — Défi du Nageur (la_mer) : 50 pompes en une journée pour +100 reps. One-shot à vie.
+  nageurDefiCompleted       Boolean @default(false)
+  // v3.17c — Case cachée +50 reps du casino de Bourg-Boulette trouvée. One-shot.
+  bourgCasinoCoinsFound     Boolean @default(false)
 
   @@unique([userId, chapterId])
   @@index([userId])

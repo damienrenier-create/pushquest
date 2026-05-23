@@ -313,7 +313,8 @@ export const NPCS: NpcDefinition[] = [
     // v3.11 — PNJ de foreshadowing dans la Tour des Pâtes Aiguës
     // ============================================================
 
-    // v3.17 — Gardien à l'entrée de la Tour (Floor 1) — débordé par les fientes de PIAFFINI
+    // v3.17 — Gardien à l'entrée de la Tour (Floor 1)
+    // v3.17c — Ton corrigé : empathique vs PIAFFINI qui est déboussolé, pas dégoûté
     {
         id: "tower_gardien",
         name: "GARDIEN",
@@ -324,15 +325,15 @@ export const NPCS: NpcDefinition[] = [
         initialX: 2,
         initialY: 8,
         dialoguesAfter: [
-            "Ah ! Quelqu'un ! Regarde-moi ce sol... *montre par terre avec dégoût.*",
-            "C'est le piaf en haut de la tour. Il défèque partout. J'arrête pas de nettoyer.",
-            "JOJO refuse de monter le récupérer, peur des hauteurs, paraît-il.",
-            "Si tu pouvais juste... lui dire de partir. Je t'en serais éternellement reconnaissant.",
+            "Oh, salut. Tu viens monter la Tour ?",
+            "Le petit piaf en haut... c'est triste, en fait. Il est complètement déboussolé.",
+            "Il a perdu ses repères. Il bouge plus beaucoup, il chante plus. Juste là, immobile.",
+            "Si tu vois JOJO, dis-lui qu'on a besoin de le récupérer. Le piaf souffre tout seul là-haut.",
         ],
-        // Post-PIAFFINI : remerciement
+        // Post-PIAFFINI : remerciement empathique
         dialoguesAfterPiaffini: [
-            "Toi ! C'est toi qui as embarqué le piaf, hein ?",
-            "Enfin une vie normale. Le sol redevient propre. Merci, vraiment.",
+            "Tu as ramené PIAFFINI ! Le petit avait tellement besoin de retourner chez JOJO.",
+            "Il chante à nouveau, paraît-il. Je suis content pour lui. *Sourit doucement.*",
         ],
     },
     {
@@ -416,6 +417,96 @@ export const NPCS: NpcDefinition[] = [
             "Sur une île au sud de Bourg-Boulette.",
             "Cette année il paraît qu'il est annulé. Bizarre, hein ?",
         ],
+    },
+
+    // ============================================================
+    // v3.17c — CASINOS (Bourg-Boulette + Pépiteville)
+    // ============================================================
+    // QUESTIONNEUR : Bourg casino — foreshadow de la case cachée +50 reps
+    {
+        id: "casino_questionneur",
+        name: "QUESTIONNEUR",
+        mapId: "casino",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#806040" },
+        initialX: 3,
+        initialY: 4,
+        dialoguesAfter: [
+            "*Il regarde par terre, distrait.*",
+            "Hé toi ! T'aurais pas vu des pièces tombées par terre ?",
+            "Je suis SÛR qu'il y a en une planquée quelque part dans cette salle.",
+            "Si tu trouves, dis-moi rien, je veux la fierté de la trouver moi-même.",
+        ],
+        dialoguesAfterRevisit: [
+            "Toujours rien ? Mais bordel...",
+            "Peut-être sous le tapis ? Ou derrière une machine ?",
+        ],
+    },
+    // GAMBLEUR : Pépi casino — optimiste pathologique
+    {
+        id: "casino_gambleur",
+        name: "GAMBLEUR",
+        mapId: "casino_pepite",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#c08040" },
+        initialX: 3,
+        initialY: 4,
+        dialoguesAfter: [
+            "Salut frère ! J'ai gagné 5 fois cette semaine. CINQ.",
+            "Mon astuce ? Toujours rouge. Toujours. Le rouge gagne toujours.",
+            "Bon là j'ai perdu mes 5 derniers tours mais c'est statistique, ça va revenir.",
+            "Tu joues ? Reviens me voir après, j'te parie que je gagne encore.",
+        ],
+        dialoguesAfterRevisit: [
+            "ALORS ?! T'as joué ?",
+            "Moi j'ai perdu encore 3 fois. Mais c'est bon signe, ça revient.",
+            "*Il a l'air un peu vide dans les yeux.*",
+        ],
+    },
+
+    // ============================================================
+    // v3.17c — LA MER (îlots dans le canal entre Bourg-Boulette et Macaron'île)
+    // ============================================================
+    // Naufragé : foreshadow lié à FARFALL (Macaron'île). Flavor only.
+    {
+        id: "lamer_naufrage",
+        name: "NAUFRAGÉ",
+        mapId: "la_mer",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#9070a0" },
+        initialX: 2,
+        initialY: 4,
+        dialoguesAfter: [
+            "*Il est trempé, accroché à une planche.*",
+            "Mon bateau... il a coulé. Quelque part par là. *Il fait un geste vague vers le large.*",
+            "Si tu vois quoi que ce soit qui flotte, fais-moi signe. Je suis désespéré.",
+        ],
+        dialoguesAfterRevisit: [
+            "*Il grelotte toujours.*",
+            "Tu n'as pas vu mon bateau ? FARFALL à Macaron'île prétend l'avoir aperçu.",
+            "Si elle te dit quelque chose, dis-le moi. *Il a les yeux pleins d'espoir.*",
+        ],
+    },
+    // Nageur : 3 niveaux de dialogue (lore → défi 50 pompes → ONE PIECE + indices casinos).
+    // Le défi et son completion sont gérés en spécial-case dans MapClient.
+    {
+        id: "lamer_nageur",
+        name: "NAGEUR",
+        mapId: "la_mer",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#40b0d8" },
+        initialX: 6,
+        initialY: 4,
+        dialoguesAfter: [
+            "Salut salut ! Moi c'est NAGEUR.",
+            "Je me balade dans le coin. Je cherche un trésor, quelque part par ici.",
+            "Pas de détails. Si jamais tu trouves quelque chose qui brille, fais-moi signe.",
+        ],
+        // dialoguesAfterRevisit / 3rd-tier sont gérés inline dans MapClient (cf nageur défi).
     },
 
     // ============================================================
