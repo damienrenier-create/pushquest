@@ -9,12 +9,11 @@
 // progression XP du joueur dans l'app — il faut le nourrir pour qu'il évolue à nouveau.
 
 import { useState } from "react"
+import { useEffect, useMemo } from "react"
 import {
     type TamagotchiView,
-    TAMAGOTCHI_ADOPT_COST,
     TAMAGOTCHI_FEED_COST,
     TAMAGOTCHI_HAPPINESS_MAX,
-    CANONICAL_DEFIS,
     isValidTamagotchiName,
 } from "@/lib/gamebook/tamagotchi"
 import { getLevelDetails } from "@/lib/xp"
@@ -138,7 +137,7 @@ export default function TamagotchiModal({ tamagotchi, availableEnergy, onAdopt, 
 }
 
 function AdoptForm({
-    name, setName, availableEnergy, busy, error, onAdopt,
+    name, setName, busy, error, onAdopt,
 }: {
     name: string
     setName: (s: string) => void
@@ -147,14 +146,20 @@ function AdoptForm({
     error: string | null
     onAdopt: () => Promise<void>
 }) {
-    const canAdopt = availableEnergy >= TAMAGOTCHI_ADOPT_COST && isValidTamagotchiName(name.trim())
+    const canAdopt = isValidTamagotchiName(name.trim())
     return (
         <div>
-            <div style={{ fontSize: 11, lineHeight: 1.5, marginBottom: 12, opacity: 0.85 }}>
-                V3T te tend un compagnon adapté à ton niveau actuel. "Donne-lui un nom et nourris-le pour qu'il évolue avec toi."
+            <div style={{ fontSize: 11, lineHeight: 1.6, marginBottom: 12, opacity: 0.9, fontStyle: "italic" }}>
+                V3T se penche vers une des cages. "Un compagnon t'a remarqué. Il a senti ton odeur, ton souffle. Il n'attend que toi."
+            </div>
+            <div style={{ fontSize: 11, lineHeight: 1.6, marginBottom: 12, opacity: 0.85 }}>
+                "Pas de prix. Pas de contrat. Donne-lui juste un nom — c'est le début de la confiance."
+            </div>
+            <div style={{ fontSize: 10, lineHeight: 1.5, marginBottom: 12, opacity: 0.7 }}>
+                "Tu reviendras le voir, tu le nourriras, tu accompliras quelques épreuves... et un jour il décidera de te suivre. Va voir la bibliothécaire BIBLIO pour la liste précise des défis."
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <label style={{ fontSize: 9, letterSpacing: 2, opacity: 0.7 }}>NOM (max 16)</label>
+                <label style={{ fontSize: 9, letterSpacing: 2, opacity: 0.7 }}>SON NOM (max 16)</label>
                 <input
                     type="text"
                     value={name}
@@ -172,9 +177,6 @@ function AdoptForm({
                         letterSpacing: 1,
                     }}
                 />
-                <div style={{ fontSize: 9, opacity: 0.6 }}>
-                    Coût d'adoption : {TAMAGOTCHI_ADOPT_COST} reps. Tu en as {availableEnergy}.
-                </div>
                 {error && (
                     <div style={{ fontSize: 10, color: "#f08080", marginTop: 4 }}>{error}</div>
                 )}
@@ -194,7 +196,7 @@ function AdoptForm({
                         marginTop: 4,
                     }}
                 >
-                    ADOPTER
+                    ADOPTER (gratuit)
                 </button>
             </div>
         </div>
@@ -255,27 +257,14 @@ function TamagotchiCard({
                 </div>
             </div>
 
-            <div style={{ fontSize: 10, opacity: 0.85, marginBottom: 10, lineHeight: 1.5, fontStyle: "italic" }}>
-                V3T te regarde. "{tamagotchi.v3tNarrative}"
+            <div style={{ fontSize: 11, opacity: 0.95, marginBottom: 10, lineHeight: 1.6, fontStyle: "italic" }}>
+                V3T te regarde calmement. "{tamagotchi.v3tNarrative}"
             </div>
 
-            {/* v3.19 — Liste des 7 défis dans l'ordre spécifique à cet animal */}
+            {/* v3.21.1 — Progression discrète (sans révéler les défis) — c'est BIBLIO qui détient la liste */}
             {!tamagotchi.recovered && (
-                <div style={{ marginBottom: 12 }}>
-                    <div style={{ fontSize: 9, opacity: 0.7, letterSpacing: 2, marginBottom: 4 }}>
-                        DÉFIS D'ADOPTION ({tamagotchi.defisDone}/{tamagotchi.defisTotal})
-                    </div>
-                    <ol style={{ fontSize: 9, lineHeight: 1.5, paddingLeft: 20, marginBottom: 6 }}>
-                        {tamagotchi.defiOrder.map((defiIdx) => {
-                            const defi = CANONICAL_DEFIS[defiIdx]
-                            const done = tamagotchi.defiProgress?.[String(defiIdx)] === true
-                            return (
-                                <li key={defiIdx} style={{ opacity: done ? 0.5 : 1, textDecoration: done ? "line-through" : "none" }}>
-                                    {done ? "✅ " : "⬜ "}{defi.title}
-                                </li>
-                            )
-                        })}
-                    </ol>
+                <div style={{ marginBottom: 12, fontSize: 10, opacity: 0.75, lineHeight: 1.5 }}>
+                    Il faut accomplir des épreuves pour que ton compagnon te suive. Va consulter <strong>BIBLIO à la bibliothèque</strong> pour la liste des défis adaptés à ton animal.
                 </div>
             )}
 

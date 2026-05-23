@@ -2402,7 +2402,10 @@ export default function MapClient({
 
             {/* v3.18 — Modal de la bibliothèque (BIBLIO) */}
             {showBibliotheque && (
-                <BibliothequeModal onClose={() => setShowBibliotheque(false)} />
+                <BibliothequeModal
+                    currentPlayerTamagotchi={tamagotchi}
+                    onClose={() => setShowBibliotheque(false)}
+                />
             )}
 
             {/* v3.21 — Mini-jeu casino roulette rouge/noir */}

@@ -425,6 +425,34 @@ export default function TileCell({ tile, x, y }: { tile: TileType; x: number; y:
             </div>
         )
     }
+    // v3.21.1 — Plante en pot (Vétérinaire)
+    if (tile === "plant") {
+        return (
+            <div style={{ position: "relative", background: "#f0e0c0", overflow: "hidden" }}>
+                {/* Pot */}
+                <div style={{ position: "absolute", left: "28%", right: "28%", bottom: "10%", height: "30%", background: "#a05028", border: "1px solid #604018", borderRadius: "4px 4px 8px 8px" }} />
+                {/* Feuillage */}
+                <div style={{ position: "absolute", left: "20%", right: "20%", top: "10%", height: "55%", background: "#3a8038", border: "1px solid #1a4818", borderRadius: "50% 50% 30% 30%" }} />
+                <div style={{ position: "absolute", left: "32%", right: "32%", top: "6%", height: "30%", background: "#5aa838", border: "1px solid #1a4818", borderRadius: "50%" }} />
+            </div>
+        )
+    }
+    // v3.21.1 — Sac de croquettes (Vétérinaire)
+    if (tile === "foodBag") {
+        return (
+            <div style={{ position: "relative", background: "#f0e0c0", overflow: "hidden" }}>
+                {/* Sac brun */}
+                <div style={{ position: "absolute", left: "20%", right: "20%", top: "20%", bottom: "10%", background: "#8a5028", border: "1px solid #4a2818", borderRadius: "10% 10% 4px 4px" }}>
+                    {/* Bande étiquette */}
+                    <div style={{ position: "absolute", left: "5%", right: "5%", top: "30%", height: "20%", background: "#c8a050", border: "1px solid #604020" }} />
+                    {/* Petits emojis croquettes */}
+                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "flex-end", justifyContent: "center", paddingBottom: "5%", fontSize: "55%", color: "#000" }}>
+                        🥩
+                    </div>
+                </div>
+            </div>
+        )
+    }
     // v3.21.1 — Cage d'animal (Vétérinaire)
     if (tile === "animalCage") {
         return (

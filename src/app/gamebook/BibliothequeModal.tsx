@@ -9,6 +9,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { getLevelDetails } from "@/lib/xp"
+import { CANONICAL_DEFIS, getDefiOrderForAnimalLevel, type TamagotchiView } from "@/lib/gamebook/tamagotchi"
 
 interface PlayerInfo {
     id: string
@@ -19,22 +20,12 @@ interface PlayerInfo {
 }
 
 interface Props {
+    /** v3.21.1 — Tamagotchi du joueur courant (pour afficher ✅/⬜ sur son animal) */
+    currentPlayerTamagotchi?: TamagotchiView | null
     onClose: () => void
 }
 
-// Les 7 défis canoniques (ordre par défaut, à individualiser par animal en v3.19).
-// Les seuils affichés sont les seuils "vétéran" (ratio onboarding sera appliqué par le serveur).
-const CANONICAL_DEFIS = [
-    { n: 1, label: "Aller le voir au vétérinaire (V3T à Macaron'île)" },
-    { n: 2, label: "Lui donner à boire avec ta gourde (utilise REMPLIR + BOIRE TOUT)" },
-    { n: 3, label: "Lui offrir des Corned Pâtes (TRENETTE, Macaron'île)" },
-    { n: 4, label: "Le visiter matin (avant midi) ET après-midi (même jour)" },
-    { n: 5, label: "Encoder 180 secondes de gainage (ajusté au ratio onboarding)" },
-    { n: 6, label: "Encoder 200 pompes APRÈS le gainage (séquence stricte)" },
-    { n: 7, label: "Encoder 300 squats APRÈS les pompes (séquence stricte)" },
-]
-
-export default function BibliothequeModal({ onClose }: Props) {
+export default function BibliothequeModal({ currentPlayerTamagotchi, onClose }: Props) {
     const [section, setSection] = useState<"menu" | "casinos" | "bestioles" | "animaux">("menu")
     const [players, setPlayers] = useState<PlayerInfo[]>([])
     const [loading, setLoading] = useState(true)
@@ -143,6 +134,7 @@ export default function BibliothequeModal({ onClose }: Props) {
                         loading={loading}
                         animals={uniqueAnimals}
                         focusedLevel={focusedAnimalLevel}
+                        currentPlayerTamagotchi={currentPlayerTamagotchi}
                         onFocus={(level) => setFocusedAnimalLevel(level)}
                         onBack={() => {
                             if (focusedAnimalLevel !== null) setFocusedAnimalLevel(null)
@@ -219,11 +211,12 @@ function BestiolesView({ onBack }: { onBack: () => void }) {
 }
 
 function AnimauxView({
-    loading, animals, focusedLevel, onFocus, onBack,
+    loading, animals, focusedLevel, currentPlayerTamagotchi, onFocus, onBack,
 }: {
     loading: boolean
     animals: Array<{ level: number; nicknames: string[]; emoji: string; animal: string }>
     focusedLevel: number | null
+    currentPlayerTamagotchi?: TamagotchiView | null
     onFocus: (level: number | null) => void
     onBack: () => void
 }) {
@@ -245,6 +238,12 @@ function AnimauxView({
             )
         }
         const details = getLevelDetails(animal.level)
+        // v3.21.1 — Ordre spécifique des 7 défis pour CET animal (permutation Mulberry32 seedée par level)
+        const defiOrder = getDefiOrderForAnimalLevel(animal.level)
+        // Si c'est l'animal du joueur courant, on affiche son statut ✅/⬜
+        const isPlayerAnimal = currentPlayerTamagotchi
+            && (currentPlayerTamagotchi.displayLevel ?? currentPlayerTamagotchi.currentLevel) === animal.level
+        const recovered = currentPlayerTamagotchi?.recovered === true
         return (
             <div>
                 <div style={{ textAlign: "center", marginBottom: 12 }}>
@@ -258,18 +257,42 @@ function AnimauxView({
                     <div style={{ fontSize: 9, opacity: 0.6, marginTop: 4 }}>
                         Joueurs : {animal.nicknames.join(", ")}
                     </div>
+                    {isPlayerAnimal && (
+                        <div style={{ fontSize: 10, color: "#48a868", marginTop: 6, fontWeight: "bold" }}>
+                            ⭐ C'est ton animal totem !
+                        </div>
+                    )}
                 </div>
                 <div style={{ fontSize: 10, opacity: 0.9, lineHeight: 1.5, marginBottom: 10 }}>
-                    <strong>7 défis pour l'adopter</strong> (l'ordre exact varie par animal — la liste ci-dessous est canonique) :
+                    <strong>7 défis dans l'ordre spécifique à cet animal</strong> :
                 </div>
-                <ol style={{ fontSize: 9.5, lineHeight: 1.7, paddingLeft: 18 }}>
-                    {CANONICAL_DEFIS.map((d) => (
-                        <li key={d.n}>{d.label}</li>
-                    ))}
+                <ol style={{ fontSize: 10, lineHeight: 1.8, paddingLeft: 22 }}>
+                    {defiOrder.map((defiIdx) => {
+                        const defi = CANONICAL_DEFIS[defiIdx]
+                        const done = isPlayerAnimal && currentPlayerTamagotchi?.defiProgress?.[String(defiIdx)] === true
+                        return (
+                            <li
+                                key={defiIdx}
+                                style={{
+                                    opacity: done ? 0.55 : 1,
+                                    textDecoration: done ? "line-through" : "none",
+                                }}
+                            >
+                                {isPlayerAnimal ? (done ? "✅ " : "⬜ ") : ""}{defi.title}
+                                <div style={{ fontSize: 8.5, opacity: 0.65, marginTop: 2 }}>
+                                    {defi.description}
+                                </div>
+                            </li>
+                        )
+                    })}
                 </ol>
+                {isPlayerAnimal && recovered && (
+                    <div style={{ fontSize: 10, color: "#48a868", marginTop: 8, fontStyle: "italic" }}>
+                        Tu as déjà libéré ton animal. Il te suit partout maintenant.
+                    </div>
+                )}
                 <div style={{ fontSize: 9, opacity: 0.5, marginTop: 8, lineHeight: 1.5, fontStyle: "italic" }}>
-                    Les seuils en reps sont ajustés au ratio onboarding (les nouveaux joueurs paient moins).
-                    Les défis 5/6/7 doivent être séquentiels dans la journée (gainage → pompes → squats).
+                    Les seuils en reps sont ajustés au ratio onboarding. Les défis "après gainage/pompes" demandent l'ordre temporel strict (gainage → pompes → squats dans la journée).
                 </div>
                 <BackBtn onClick={onBack} label="← RETOUR À LA LISTE" />
             </div>

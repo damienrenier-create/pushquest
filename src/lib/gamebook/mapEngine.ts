@@ -44,8 +44,10 @@ export type TileType =
     // === v3.18 : Bibliothèque de Macaron'île ===
     | "statue"        // statue décorative (bloquant, interactif via A — Bibliothèque)
     | "lectern"       // pupitre de lecture (bloquant, interactif via A — Bibliothèque)
-    // === v3.21.1 : Cages d'animaux du vétérinaire ===
+    // === v3.21.1 : Décor vétérinaire ===
     | "animalCage"    // cage en grillage avec un animal du bestiaire à l'intérieur (bloquant + interactif A)
+    | "plant"         // plante en pot (bloquant, décoratif)
+    | "foodBag"       // sac de croquettes (bloquant, décoratif)
 
 export interface Building {
     x: number
@@ -165,8 +167,10 @@ export const BLOCKING_TILES: TileType[] = [
     // v3.18 — Décor bibliothèque
     "statue",
     "lectern",
-    // v3.21.1 — Décor vétérinaire (cages animaux)
+    // v3.21.1 — Décor vétérinaire (cages animaux + plantes + sacs croquettes)
     "animalCage",
+    "plant",
+    "foodBag",
 ]
 
 export function isBlockingTile(tile: TileType): boolean {
