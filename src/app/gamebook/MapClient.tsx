@@ -391,15 +391,18 @@ export default function MapClient({
             const challenge = bridgePnj.challenge
             let challengeText = ""
             if (challenge.kind === "exercise") {
+                // v3.9 — texte générique (le seuil exact dépend du nombre de joueurs déjà
+                // vaincus ; il sera communiqué via le message d'erreur en cas d'échec).
                 const label =
                     challenge.exercise === "PUSHUP" ? "pompes"
                         : challenge.exercise === "SQUAT" ? "squats"
                             : challenge.exercise === "GAINAGE" ? "secondes de gainage"
                                 : challenge.exercise === "PULLUP" ? "tractions"
                                     : "cardio"
-                challengeText = `${bridgePnj.name} t'interpelle !\n\n"Fais ${challenge.reps} ${label} aujourd'hui et je te laisse passer pour de bon."\n\nAppuie sur A pour tenter le défi.`
+                challengeText = `${bridgePnj.name} t'interpelle !\n\n"Fais ta séance de ${label} aujourd'hui et je te laisse passer pour de bon."\n\nAppuie sur A pour tenter le défi.`
             } else {
-                challengeText = `${bridgePnj.name} t'interpelle !\n\n"Je ne combats que le TOP REPS de la veille. Es-tu lui ?"\n\nAppuie sur A pour tenter.`
+                // v3.9 — CHAMPIO accepte 3 chemins (top1 hier + badge, top3 hier, top1 aujourd'hui)
+                challengeText = `${bridgePnj.name} te toise.\n\n"Pour passer, tu dois être :\n- le #1 cumulé d'HIER (+ badge Star)\n- ou top 3 d'HIER\n- ou le #1 cumulé d'AUJOURD'HUI"\n\nAppuie sur A pour tenter.`
             }
             setPopup({
                 kind: "pnjChallenge",
@@ -952,10 +955,12 @@ export default function MapClient({
                                 ...s,
                                 bridgePnjDefeated: data.defeated || [...(s.bridgePnjDefeated || []), pnjId],
                             }))
-                            setPopup({
-                                kind: "info",
-                                text: `${pnjName} s'incline et te laisse passer.\n\nReviens demain pour le rebattre.`,
-                            })
+                            // v3.9 — message spécial si CHAMPIO + badge Star reçu
+                            let victoryText = `${pnjName} s'incline et te laisse passer.`
+                            if (data.championStarAwarded) {
+                                victoryText = `${pnjName} s'incline avec un sifflement admiratif.\n\n"Star du Pont d'Hier — tiens, prends ce badge. +${data.xp ?? 200} XP."`
+                            }
+                            setPopup({ kind: "info", text: victoryText })
                             // v3.4b : broadcast CHAMPIO uniquement (les autres sont triviaux)
                             if (pnjId === "pnj_champio") {
                                 broadcast({

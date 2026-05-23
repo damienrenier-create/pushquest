@@ -26,16 +26,57 @@ const CHAPTER_ID = "map_v3"
 const BADGE_KEY_PIONNIER = "gamebook_pionnier"
 const XP_REWARD_PIONNIER = 200
 
+// v3.9 — Badge bonus pour CHAMPIO si vaincu en tant que #1 de la veille.
+const BADGE_KEY_CHAMPIO_STAR = "gamebook_champio_star"
+const XP_REWARD_CHAMPIO_STAR = 200
+
+// v3.9 — Seuils dégressifs pour les PNJ exercice du pont.
+// Base 100, -15 par victoire (cumul global du PNJ), minimum 25.
+const BRIDGE_PNJ_THRESHOLD_BASE = 100
+const BRIDGE_PNJ_THRESHOLD_STEP = 15
+const BRIDGE_PNJ_THRESHOLD_MIN = 25
+const BRIDGE_VICTORIES_KEY = "bridgePnjVictories"
+
 // PNJ et leurs défis (doit matcher BRIDGE_PNJS dans maps.ts)
 type BridgeChallenge =
-    | { kind: "exercise"; exercise: "PUSHUP" | "SQUAT" | "GAINAGE" | "PULLUP" | "CARDIO"; reps: number }
+    | { kind: "exercise"; exercise: "PUSHUP" | "SQUAT" | "GAINAGE" | "PULLUP" | "CARDIO" }
     | { kind: "topYesterday" }
 
 const BRIDGE_PNJS_SERVER: Record<string, BridgeChallenge> = {
-    pnj_pompo:   { kind: "exercise", exercise: "PUSHUP",  reps: 100 },
-    pnj_squatto: { kind: "exercise", exercise: "SQUAT",   reps: 100 },
-    pnj_gainax:  { kind: "exercise", exercise: "GAINAGE", reps: 100 },
+    pnj_pompo:   { kind: "exercise", exercise: "PUSHUP" },
+    pnj_squatto: { kind: "exercise", exercise: "SQUAT" },
+    pnj_gainax:  { kind: "exercise", exercise: "GAINAGE" },
     pnj_champio: { kind: "topYesterday" },
+}
+
+// v3.9 — Lit le compteur global de victoires pour chaque PNJ depuis GlobalConfig.
+async function readBridgeVictories(): Promise<Record<string, number>> {
+    const cfg = await (prisma as any).globalConfig.findUnique({
+        where: { key: BRIDGE_VICTORIES_KEY },
+    })
+    if (!cfg?.value) return {}
+    try {
+        const parsed = JSON.parse(cfg.value as string)
+        if (parsed && typeof parsed === "object") return parsed as Record<string, number>
+    } catch {/* fallback */ }
+    return {}
+}
+
+// Incrémente le compteur de victoires d'un PNJ (cumul global, sert au seuil dégressif).
+async function incrementBridgeVictory(pnjId: string): Promise<void> {
+    const current = await readBridgeVictories()
+    const next = { ...current, [pnjId]: (current[pnjId] ?? 0) + 1 }
+    const payload = JSON.stringify(next)
+    await (prisma as any).globalConfig.upsert({
+        where: { key: BRIDGE_VICTORIES_KEY },
+        update: { value: payload },
+        create: { key: BRIDGE_VICTORIES_KEY, value: payload },
+    })
+}
+
+// Calcule le seuil dynamique pour un PNJ exercice selon son compteur de victoires.
+function thresholdForVictories(victories: number): number {
+    return Math.max(BRIDGE_PNJ_THRESHOLD_MIN, BRIDGE_PNJ_THRESHOLD_BASE - BRIDGE_PNJ_THRESHOLD_STEP * victories)
 }
 
 export async function POST(req: NextRequest) {
@@ -211,49 +252,73 @@ async function challengePnj(userId: string, pnjId: string) {
         return NextResponse.json({ ok: true, defeated: newDefeated, creator: true })
     }
 
+    // v3.9 — Variables qui peuvent être renseignées pendant la validation
+    // (utilisées dans la réponse JSON finale)
+    let earnedChampioStarBadge = false
+    let thresholdUsed: number | null = null
+
     // ============= Validation de la condition =============
     if (challenge.kind === "exercise") {
+        // v3.9 — Seuil dégressif basé sur le nombre de victoires cumulées de CE PNJ
+        const victories = await readBridgeVictories()
+        const victoryCount = victories[pnjId] ?? 0
+        const threshold = thresholdForVictories(victoryCount)
+        thresholdUsed = threshold
+
         const sets = await prisma.exerciseSet.findMany({
             where: { userId, date: today, exercise: challenge.exercise },
         })
         const total = sets.reduce((sum: number, s: { reps: number }) => sum + s.reps, 0)
-        if (total < challenge.reps) {
+        if (total < threshold) {
             return NextResponse.json({
                 ok: false,
-                reason: `Il faut ${challenge.reps} ${labelExercise(challenge.exercise)} aujourd'hui. T'en as ${total}.`,
-                required: challenge.reps,
+                reason: `Il faut ${threshold} ${labelExercise(challenge.exercise)} aujourd'hui. T'en as ${total}.`,
+                required: threshold,
                 current: total,
             })
         }
     } else if (challenge.kind === "topYesterday") {
+        // v3.9 — CHAMPIO accepte 3 chemins de victoire :
+        //   1. #1 cumulés hier → passe + badge "Star du Pont d'Hier" (200 XP)
+        //   2. Top 3 cumulés hier → passe SANS badge
+        //   3. #1 cumulés aujourd'hui → passe SANS badge
         const yesterday = getYesterdayISO()
-        // IMPORTANT : exclure les comptes système (sinon le compte test fausse le classement)
+
+        // -- Hier (exclut isSystem)
         const allYesterday = await prisma.exerciseSet.findMany({
-            where: {
-                date: yesterday,
-                user: { isSystem: false },
-            },
+            where: { date: yesterday, user: { isSystem: false } },
         })
-        const sumsByUser: Record<string, number> = {}
+        const sumsYesterday: Record<string, number> = {}
         for (const s of allYesterday) {
-            sumsByUser[s.userId] = (sumsByUser[s.userId] ?? 0) + s.reps
+            sumsYesterday[s.userId] = (sumsYesterday[s.userId] ?? 0) + s.reps
         }
-        const sorted = Object.entries(sumsByUser).sort((a, b) => b[1] - a[1])
-        const topUserId = sorted[0]?.[0]
-        if (!topUserId) {
+        const sortedYesterday = Object.entries(sumsYesterday).sort((a, b) => b[1] - a[1])
+        const top3Yesterday = sortedYesterday.slice(0, 3).map(([id]) => id)
+        const isTopYesterday = sortedYesterday[0]?.[0] === userId
+        const isInTop3Yesterday = top3Yesterday.includes(userId)
+
+        // -- Aujourd'hui (exclut isSystem)
+        const allToday = await prisma.exerciseSet.findMany({
+            where: { date: today, user: { isSystem: false } },
+        })
+        const sumsToday: Record<string, number> = {}
+        for (const s of allToday) {
+            sumsToday[s.userId] = (sumsToday[s.userId] ?? 0) + s.reps
+        }
+        const sortedToday = Object.entries(sumsToday).sort((a, b) => b[1] - a[1])
+        const isTopToday = sortedToday[0]?.[0] === userId
+
+        const canPass = isTopYesterday || isInTop3Yesterday || isTopToday
+        if (!canPass) {
+            const myYesterday = sumsYesterday[userId] ?? 0
+            const myToday = sumsToday[userId] ?? 0
+            const topYesterdayReps = sortedYesterday[0]?.[1] ?? 0
             return NextResponse.json({
                 ok: false,
-                reason: "Personne n'a fait de reps hier. CHAMPIO te toise sans bouger.",
+                reason: `CHAMPIO te toise. "Sois #1 d'hier (toi: ${myYesterday}, le #1: ${topYesterdayReps}), ou top 3 d'hier, ou #1 d'aujourd'hui (toi: ${myToday}). Reviens."`,
             })
         }
-        if (topUserId !== userId) {
-            const myReps = sumsByUser[userId] ?? 0
-            const topReps = sorted[0][1]
-            return NextResponse.json({
-                ok: false,
-                reason: `CHAMPIO ne combat que le #1 de la veille. Toi : ${myReps} reps hier. Le #1 : ${topReps} reps. Reviens.`,
-            })
-        }
+        earnedChampioStarBadge = isTopYesterday
     }
 
     // ============= Marquer comme battu (v3.5 : pour toujours) =============
@@ -270,7 +335,80 @@ async function challengePnj(userId: string, pnjId: string) {
         },
     })
 
-    return NextResponse.json({ ok: true, defeated: newDefeated })
+    // v3.9 — Compteur global de victoires (uniquement pour PNJ exercice ; CHAMPIO n'a pas de seuil)
+    if (challenge.kind === "exercise") {
+        try {
+            await incrementBridgeVictory(pnjId)
+        } catch (e) {
+            console.warn("[bridge] could not increment victory counter", e)
+        }
+    }
+
+    // v3.9 — Badge "Star du Pont d'Hier" si CHAMPIO vaincu en tant que #1 de la veille
+    let championStarAwarded = false
+    if (earnedChampioStarBadge) {
+        try {
+            // Vérifier que la BadgeDefinition existe (initBadges() la crée au boot)
+            const def = await (prisma as { badgeDefinition: { findUnique: (a: unknown) => Promise<unknown> } }).badgeDefinition.findUnique({
+                where: { key: BADGE_KEY_CHAMPIO_STAR },
+            })
+            if (def) {
+                const existing = await (prisma as { badgeEvent: { findFirst: (a: unknown) => Promise<unknown> } }).badgeEvent.findFirst({
+                    where: {
+                        badgeKey: BADGE_KEY_CHAMPIO_STAR,
+                        toUserId: userId,
+                        eventType: "UNIQUE_AWARDED",
+                    },
+                })
+                if (!existing) {
+                    await (prisma as { badgeEvent: { create: (a: unknown) => Promise<unknown> } }).badgeEvent.create({
+                        data: {
+                            badgeKey: BADGE_KEY_CHAMPIO_STAR,
+                            fromUserId: null,
+                            toUserId: userId,
+                            eventType: "UNIQUE_AWARDED",
+                            previousValue: 0,
+                            newValue: 1,
+                            metadata: JSON.stringify({
+                                source: "gamebook_bridge_champio_top1_yesterday",
+                                xpReward: XP_REWARD_CHAMPIO_STAR,
+                            }),
+                        },
+                    })
+                    championStarAwarded = true
+                }
+            }
+        } catch (e) {
+            console.warn("[bridge] could not create CHAMPIO star BadgeEvent", e)
+        }
+
+        // XP via XpAdjustment (date obligatoire, idempotence par reason)
+        try {
+            const existingXp = await (prisma as { xpAdjustment: { findFirst: (a: unknown) => Promise<unknown> } }).xpAdjustment.findFirst({
+                where: { userId, reason: "BADGE_CHAMPIO_STAR_GAMEBOOK" },
+            })
+            if (!existingXp) {
+                await (prisma as { xpAdjustment: { create: (a: unknown) => Promise<unknown> } }).xpAdjustment.create({
+                    data: {
+                        userId,
+                        amount: XP_REWARD_CHAMPIO_STAR,
+                        reason: "BADGE_CHAMPIO_STAR_GAMEBOOK",
+                        date: today,
+                    },
+                })
+            }
+        } catch (e) {
+            console.warn("[bridge] could not create CHAMPIO star XpAdjustment", e)
+        }
+    }
+
+    return NextResponse.json({
+        ok: true,
+        defeated: newDefeated,
+        thresholdUsed: thresholdUsed ?? undefined,
+        championStarAwarded,
+        xp: championStarAwarded ? XP_REWARD_CHAMPIO_STAR : undefined,
+    })
 }
 
 function labelExercise(ex: string): string {
