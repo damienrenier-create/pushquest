@@ -46,12 +46,21 @@ export async function POST(req: NextRequest) {
     const amount = typeof body.amount === "number" ? body.amount : null
     const reason = typeof body.reason === "string" ? body.reason : "unknown"
     // v3.8.1 — si wearBoots=true et que l'user a les baskets intactes, on décrémente leur durabilité
-    // v3.17 — wearItemKey (string) prend le pas : permet de wear chaussures_course / brassards / etc.
-    //         Backward compat : wearBoots=true équivaut à wearItemKey="boots".
-    const wearItemKey: string | null =
-        typeof body.wearItemKey === "string" && body.wearItemKey.length > 0
-            ? body.wearItemKey
-            : (body.wearBoots === true ? "boots" : null)
+    // v3.17 — wearItemKey (string) : permet de wear chaussures_course / brassards / etc.
+    // v3.17d — wearItemKeys (array) : permet de wear plusieurs items en un appel (ex: chaussures + lunettes).
+    //          Backward compat : wearBoots=true équivaut à wearItemKey="boots".
+    const wearItemKeys: string[] = (() => {
+        if (Array.isArray(body.wearItemKeys)) {
+            return body.wearItemKeys.filter((k: unknown): k is string => typeof k === "string" && k.length > 0)
+        }
+        if (typeof body.wearItemKey === "string" && body.wearItemKey.length > 0) {
+            return [body.wearItemKey]
+        }
+        if (body.wearBoots === true) {
+            return ["boots"]
+        }
+        return []
+    })()
 
     if (amount === null || !Number.isFinite(amount) || amount < 0 || amount > MAX_SPEND_PER_CALL) {
         return NextResponse.json({ error: "Invalid amount" }, { status: 400 })
@@ -107,17 +116,19 @@ export async function POST(req: NextRequest) {
     // Débiter
     const newSpent = currentSpent + amount
 
-    // v3.8.1 / v3.17 — Usure du wearable utilisé (baskets, chaussures de course, brassards...)
+    // v3.8.1 / v3.17 / v3.17d — Usure de chaque wearable utilisé (baskets, chaussures, brassards, lunettes...)
     const currentInventory = parseInventory((progress as { inventory?: unknown }).inventory)
     let updatedInventory = currentInventory
-    let wearableBroken = false
-    let brokenItemKey: string | null = null
-    if (wearItemKey && hasIntactItem(currentInventory, wearItemKey)) {
-        updatedInventory = wearItem(currentInventory, wearItemKey, 1)
-        const stillIntact = hasIntactItem(updatedInventory, wearItemKey)
-        wearableBroken = !stillIntact  // wasIntact est forcément true vu le check ci-dessus
-        if (wearableBroken) brokenItemKey = wearItemKey
+    const brokenItemKeys: string[] = []
+    for (const wearKey of wearItemKeys) {
+        if (!hasIntactItem(updatedInventory, wearKey)) continue
+        updatedInventory = wearItem(updatedInventory, wearKey, 1)
+        if (!hasIntactItem(updatedInventory, wearKey)) {
+            brokenItemKeys.push(wearKey)
+        }
     }
+    const wearableBroken = brokenItemKeys.length > 0
+    const brokenItemKey: string | null = brokenItemKeys[0] ?? null
 
     await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
@@ -141,8 +152,10 @@ export async function POST(req: NextRequest) {
         reason,
         inventory: updatedInventory,
         // v3.17 — bootsBroken conservé pour compat client. brokenItemKey est plus précis.
-        bootsBroken: brokenItemKey === "boots",
+        bootsBroken: brokenItemKeys.includes("boots"),
         wearableBroken,
         brokenItemKey,
+        // v3.17d — Liste complète des items cassés à cet appel (peut être > 1 si chaussures + lunettes simultanées)
+        brokenItemKeys,
     })
 }

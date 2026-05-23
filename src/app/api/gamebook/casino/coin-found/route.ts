@@ -10,6 +10,8 @@ import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { getTodayISO } from "@/lib/challenge"
 import { isCreatorAccount, padAvailableEnergyForCreator } from "@/lib/gamebook/creator"
+import { parseInventory } from "@/lib/gamebook/inventory"
+import { applyRewardBonus } from "@/lib/gamebook/items"
 
 export const dynamic = "force-dynamic"
 
@@ -48,7 +50,10 @@ export async function POST() {
     const storedDate = (progress as { energySpentDate?: string }).energySpentDate ?? ""
     const storedSpent = (progress as { energySpentToday?: number }).energySpentToday ?? 0
     const currentSpent = storedDate === today ? storedSpent : 0
-    const newSpent = currentSpent - CASINO_HIDDEN_REWARD
+    // v3.17d — Bonus Lunettes : +10% si l'utilisateur a des lunettes intactes
+    const inventory = parseInventory((progress as { inventory?: unknown }).inventory)
+    const reward = applyRewardBonus(CASINO_HIDDEN_REWARD, inventory)
+    const newSpent = currentSpent - reward
 
     await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
@@ -66,7 +71,8 @@ export async function POST() {
 
     return NextResponse.json({
         ok: true,
-        reward: CASINO_HIDDEN_REWARD,
+        reward,
+        baseReward: CASINO_HIDDEN_REWARD,
         availableEnergy,
         energySpentToday: newSpent,
     })

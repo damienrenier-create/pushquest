@@ -11,10 +11,13 @@ export default function PlayerSprite({
     direction,
     animStep,
     color,
+    hasLunettes = false,
 }: {
     direction: Direction
     animStep: number
     color: string
+    /** v3.17d — Si true, overlay 🕶️ visible sur le visage du sprite. */
+    hasLunettes?: boolean
 }) {
     const skin = "#f8d8b0"
     const hair = "#382818"
@@ -60,6 +63,23 @@ export default function PlayerSprite({
                 )}
                 {direction === "right" && (
                     <div style={{ position: "absolute", top: "50%", right: "10%", width: "25%", height: "15%", background: "#000" }} />
+                )}
+                {/* v3.17d — Lunettes visibles si possédées intactes */}
+                {hasLunettes && (
+                    <div
+                        style={{
+                            position: "absolute",
+                            top: "45%",
+                            left: 0,
+                            right: 0,
+                            textAlign: "center",
+                            fontSize: "8px",
+                            lineHeight: 1,
+                            pointerEvents: "none",
+                        }}
+                    >
+                        🕶️
+                    </div>
                 )}
             </div>
             {/* Corps */}

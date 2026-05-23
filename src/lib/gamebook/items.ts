@@ -54,6 +54,11 @@ export interface ItemCapabilities {
         slot: "head" | "face" | "body"
         /** v3.17 — Si défini, applique un discount automatique sur certains coûts sociaux. */
         socialDiscount?: number  // 0.1 = -10%
+        /** v3.17d — Si défini, applique un bonus multiplicatif sur certaines récompenses bonus
+         *   (case cachée casino, défi du Nageur). 0.1 = +10%. */
+        rewardBonus?: number
+        /** v3.17d — Durabilité initiale (s'use d'1 par pas). À 0 → cassé, plus de bonus, sprite retiré. */
+        initialDurability?: number
     }
 }
 
@@ -135,12 +140,17 @@ export const ITEMS: ItemDefinition[] = [
         key: "lunettes",
         name: "Lunettes",
         emoji: "🕶️",
-        description: "Tout le monde te complimente quand tu les portes. Du coup les marchands et le véto te font -10% sur leurs prix.",
+        description: "Stylées. Les marchands te font -10%. Les surprises (trésors, défis) te donnent +10% d'énergie. S'usent au bout de 500 pas.",
         priceReps: 50,
         maxQuantity: 1,
         availableAt: "trenette",
         capabilities: {
-            canCosmetic: { slot: "face", socialDiscount: 0.1 },
+            canCosmetic: {
+                slot: "face",
+                socialDiscount: 0.1,
+                rewardBonus: 0.1,
+                initialDurability: 500,
+            },
         },
     },
     // v3.17 — Nouveaux items TRENETTE (Macaron'île)
@@ -253,6 +263,7 @@ export function readDurability(data: unknown, def: ItemDefinition): number {
 
 /**
  * v3.8.1 — Renvoie le data initial à associer à un item nouvellement acheté.
+ * v3.17d — Si canCosmetic a une initialDurability, on l'initialise aussi.
  */
 export function getInitialItemData(def: ItemDefinition): Record<string, unknown> | undefined {
     if (def.capabilities.canStore) {
@@ -260,6 +271,9 @@ export function getInitialItemData(def: ItemDefinition): Record<string, unknown>
     }
     if (def.capabilities.canWear) {
         return { durability: def.capabilities.canWear.initialDurability }
+    }
+    if (def.capabilities.canCosmetic?.initialDurability !== undefined) {
+        return { durability: def.capabilities.canCosmetic.initialDurability }
     }
     return undefined
 }
@@ -330,11 +344,99 @@ export function getSocialDiscountMultiplier(inventory: InventoryEntry[]): number
 
 /**
  * v3.17 — Applique le discount social (lunettes) à un coût en reps.
+ * v3.17d — Désormais utilise la version stricte qui vérifie la durabilité (cassées = pas de discount).
  * Round to nearest, min 1.
  */
 export function applySocialDiscount(cost: number, inventory: InventoryEntry[]): number {
     if (cost <= 0) return cost
-    const mult = getSocialDiscountMultiplier(inventory)
+    const mult = getSocialDiscountMultiplierStrict(inventory)
     if (mult >= 1) return cost
     return Math.max(1, Math.round(cost * mult))
+}
+
+/**
+ * v3.17d — Lunettes intactes ?
+ * True si l'inventaire contient des lunettes avec durability > 0 (ou pas de durability tracking).
+ */
+export function hasIntactLunettes(inventory: InventoryEntry[]): boolean {
+    for (const entry of inventory) {
+        const def = getItem(entry.itemKey)
+        if (!def?.capabilities.canCosmetic) continue
+        if (def.capabilities.canCosmetic.initialDurability === undefined) {
+            // Lunettes sans tracking durability → toujours intactes
+            return entry.itemKey === "lunettes" ? true : false
+        }
+        // Avec tracking : check durability
+        if (entry.itemKey === "lunettes") {
+            const data = entry.data
+            if (data && typeof data === "object" && "durability" in data) {
+                const v = (data as { durability: unknown }).durability
+                if (typeof v === "number" && Number.isFinite(v)) {
+                    return v > 0
+                }
+            }
+            // Pas de durability stockée = item ancien (acheté avant durability tracking) → intact par défaut
+            return true
+        }
+    }
+    return false
+}
+
+/**
+ * v3.17d — Recalcule le getSocialDiscountMultiplier en tenant compte de la durabilité.
+ * Si Lunettes cassées → pas de discount.
+ */
+export function getSocialDiscountMultiplierStrict(inventory: InventoryEntry[]): number {
+    let totalDiscount = 0
+    for (const entry of inventory) {
+        const def = getItem(entry.itemKey)
+        if (!def?.capabilities.canCosmetic?.socialDiscount) continue
+        // Si l'item a un tracking durabilité, on doit vérifier qu'il est intact
+        const durTracked = def.capabilities.canCosmetic.initialDurability !== undefined
+        if (durTracked) {
+            const data = entry.data
+            if (data && typeof data === "object" && "durability" in data) {
+                const v = (data as { durability: unknown }).durability
+                if (typeof v === "number" && Number.isFinite(v) && v <= 0) {
+                    // Cassé → skip
+                    continue
+                }
+            }
+        }
+        totalDiscount += def.capabilities.canCosmetic.socialDiscount
+    }
+    return Math.max(0, 1 - Math.min(0.9, totalDiscount))
+}
+
+/**
+ * v3.17d — Multiplicateur de récompense bonus (lunettes intactes → +10%).
+ * Retourne 1.0 si pas de bonus actif, 1.x sinon.
+ */
+export function getRewardBonusMultiplier(inventory: InventoryEntry[]): number {
+    let totalBonus = 0
+    for (const entry of inventory) {
+        const def = getItem(entry.itemKey)
+        if (!def?.capabilities.canCosmetic?.rewardBonus) continue
+        const durTracked = def.capabilities.canCosmetic.initialDurability !== undefined
+        if (durTracked) {
+            const data = entry.data
+            if (data && typeof data === "object" && "durability" in data) {
+                const v = (data as { durability: unknown }).durability
+                if (typeof v === "number" && Number.isFinite(v) && v <= 0) continue
+            }
+        }
+        totalBonus += def.capabilities.canCosmetic.rewardBonus
+    }
+    return 1 + totalBonus
+}
+
+/**
+ * v3.17d — Applique le bonus de récompense lunettes à une valeur de gain.
+ * Returns Math.round(value * (1 + bonus)).
+ */
+export function applyRewardBonus(value: number, inventory: InventoryEntry[]): number {
+    if (value <= 0) return value
+    const mult = getRewardBonusMultiplier(inventory)
+    if (mult <= 1) return value
+    return Math.round(value * mult)
 }

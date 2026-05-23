@@ -82,7 +82,7 @@ import PlayerMapModal from "./PlayerMapModal"
 import PiaffiniFlightScreen from "./PiaffiniFlightScreen"
 import { PIAFFINI_RESCUE_DIALOGUE } from "@/lib/gamebook/dialogue"
 import { parseInventory, hasIntactItem, type InventoryEntry } from "@/lib/gamebook/inventory"
-import { findActiveWearableForTile, applySocialDiscount } from "@/lib/gamebook/items"
+import { findActiveWearableForTile, applySocialDiscount, hasIntactLunettes } from "@/lib/gamebook/items"
 import { PEPITO_DIALOGUE_FIRST } from "@/lib/gamebook/dialogue"
 import TamagotchiModal from "./TamagotchiModal"
 import type { TamagotchiView } from "@/lib/gamebook/tamagotchi"
@@ -131,6 +131,8 @@ type Cinematic =
     // v3.11 — Cinématique PIAFFINI : dialogue puis vol vers Bourg-Boulette
     | { kind: "piaffini"; stage: "dialog"; step: number }
     | { kind: "piaffini"; stage: "flight" }
+    // v3.17d — Cinématique cassure des Lunettes (trip → fall → broken, 3 steps)
+    | { kind: "lunettesBreak"; step: number }
     | null
 
 // Ticker partagé entre tous les NPCs wanderers pour synchroniser leurs déplacements
@@ -511,14 +513,15 @@ export default function MapClient({
     // v3.4a : SPEND ENERGY (appel API serveur, source de vérité)
     // v3.8.1 : accepte un flag wearBoots pour décrémenter la durabilité des baskets côté serveur
     // v3.17 : wearItemKey remplace wearBoots — supporte boots / chaussures_course / brassards
+    // v3.17d : wearItemKeys (array) — supporte usure de plusieurs items en un appel (chaussures + lunettes)
     // ============================================================
-    const spendEnergy = useCallback(async (amount: number, reason: string, wearItemKey: string | null = null): Promise<boolean> => {
+    const spendEnergy = useCallback(async (amount: number, reason: string, wearItemKeys: string[] = []): Promise<boolean> => {
         if (amount <= 0) return true
         try {
             const res = await fetch("/api/gamebook/spend", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ amount, reason, wearItemKey }),
+                body: JSON.stringify({ amount, reason, wearItemKeys }),
             })
             const data = await res.json()
             if (!data.ok) {
@@ -540,11 +543,19 @@ export default function MapClient({
             if (Array.isArray(data.inventory)) {
                 setInventory(data.inventory)
             }
-            if (data.wearableBroken === true || data.bootsBroken === true) {
-                const brokenKey = data.brokenItemKey ?? "boots"
+            // v3.17d — Gestion des items cassés (peut inclure plusieurs items à la fois)
+            const brokenList: string[] = Array.isArray(data.brokenItemKeys) ? data.brokenItemKeys : []
+            // Lunettes : cinématique dédiée trip→fall→broken
+            if (brokenList.includes("lunettes")) {
+                setCinematic({ kind: "lunettesBreak", step: 0 })
+            }
+            // Autres wearables : toast simple
+            for (const brokenKey of brokenList) {
+                if (brokenKey === "lunettes") continue  // déjà géré par cinématique
                 const label = brokenKey === "chaussures_course" ? "Tes chaussures de course viennent de céder."
                     : brokenKey === "brassards" ? "Tes brassards de nage viennent de lâcher."
-                        : "Tes baskets viennent de céder."
+                        : brokenKey === "boots" ? "Tes baskets viennent de céder."
+                            : "Un de tes équipements vient de céder."
                 setToast(`${label} Faut en racheter.`)
             }
             return true
@@ -777,9 +788,11 @@ export default function MapClient({
                 const adjustedCost = applySocialDiscount(ratioCost, inventory)
                 // Débit local immédiat pour la fluidité
                 setReps((r) => Math.max(0, r - adjustedCost))
-                // Persistance serveur en arrière-plan (fire and forget, resync si échec)
-                const wearKey = activeWearable?.entry.itemKey ?? null
-                spendEnergy(adjustedCost, "move", wearKey).catch(() => {/* silent */ })
+                // v3.17d — Construction de la liste des wearables à user (actif + lunettes si intactes)
+                const wearKeys: string[] = []
+                if (activeWearable?.entry.itemKey) wearKeys.push(activeWearable.entry.itemKey)
+                if (hasIntactLunettes(inventory)) wearKeys.push("lunettes")
+                spendEnergy(adjustedCost, "move", wearKeys).catch(() => {/* silent */ })
             }
 
             // v3.4b : broadcast Pusher (fire and forget)
@@ -1111,6 +1124,17 @@ export default function MapClient({
                 return
             }
             setCinematic({ kind: "piaffini", stage: "dialog", step: next })
+            return
+        }
+
+        // v3.17d — Cinématique Lunettes cassée (3 étapes : trip → fall → broken)
+        if (cinematic?.kind === "lunettesBreak") {
+            const next = cinematic.step + 1
+            if (next >= 3) {
+                setCinematic(null)
+                return
+            }
+            setCinematic({ kind: "lunettesBreak", step: next })
             return
         }
 
@@ -1962,6 +1986,7 @@ export default function MapClient({
                         animStep={animStep}
                         mapW={map.width}
                         mapH={map.height}
+                        hasLunettes={hasIntactLunettes(inventory)}
                     />
 
                     {/* Scanlines */}
@@ -2036,6 +2061,21 @@ export default function MapClient({
                         <DialogueBox
                             speaker="PIAFFINI"
                             text={PIAFFINI_RESCUE_DIALOGUE[cinematic.step]}
+                            onNext={pressA}
+                        />
+                    )}
+
+                    {/* === v3.17d : CINÉMATIQUE LUNETTES CASSÉES (trip → fall → broken) === */}
+                    {cinematic?.kind === "lunettesBreak" && (
+                        <DialogueBox
+                            speaker="🕶️"
+                            text={
+                                cinematic.step === 0
+                                    ? "*Tu trébuches sur une pierre invisible.*"
+                                    : cinematic.step === 1
+                                        ? "*Tes lunettes glissent et tombent par terre dans un cliquetis.*"
+                                        : "*Elles sont brisées net. Plus de classe, plus de discount.*"
+                            }
                             onNext={pressA}
                         />
                     )}
@@ -2341,8 +2381,8 @@ export default function MapClient({
 // ============================================================
 
 function PlayerOnMap({
-    x, y, direction, animStep, mapW, mapH,
-}: { x: number; y: number; direction: Direction; animStep: number; mapW: number; mapH: number }) {
+    x, y, direction, animStep, mapW, mapH, hasLunettes,
+}: { x: number; y: number; direction: Direction; animStep: number; mapW: number; mapH: number; hasLunettes?: boolean }) {
     return (
         <div
             style={{
@@ -2358,7 +2398,7 @@ function PlayerOnMap({
                 justifyContent: "center",
             }}
         >
-            <PlayerSprite direction={direction} animStep={animStep} color="#c83838" />
+            <PlayerSprite direction={direction} animStep={animStep} color="#c83838" hasLunettes={hasLunettes} />
         </div>
     )
 }

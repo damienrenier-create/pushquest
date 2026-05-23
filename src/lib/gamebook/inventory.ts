@@ -144,10 +144,23 @@ export function hasIntactItem(inv: InventoryEntry[], itemKey: string): boolean {
  */
 export function wearItem(inv: InventoryEntry[], itemKey: string, amount: number = 1): InventoryEntry[] {
     const def = getItem(itemKey)
-    if (!def?.capabilities.canWear) return inv
+    if (!def) return inv
+    // v3.17d — supporte aussi les items canCosmetic avec initialDurability (lunettes)
+    const hasWearCap = !!def.capabilities.canWear
+    const hasCosmeticDur = def.capabilities.canCosmetic?.initialDurability !== undefined
+    if (!hasWearCap && !hasCosmeticDur) return inv
     return inv.map((e) => {
         if (e.itemKey !== itemKey) return e
-        const current = readDurability(e.data, def)
+        let current: number
+        const data = e.data
+        if (data && typeof data === "object" && "durability" in data) {
+            const v = (data as { durability: unknown }).durability
+            current = typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.floor(v)) : 0
+        } else if (hasWearCap) {
+            current = def.capabilities.canWear?.initialDurability ?? 0
+        } else {
+            current = def.capabilities.canCosmetic?.initialDurability ?? 0
+        }
         const next = Math.max(0, current - amount)
         return { ...e, data: { ...(e.data ?? {}), durability: next } }
     })

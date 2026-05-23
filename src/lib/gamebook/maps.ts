@@ -757,26 +757,29 @@ function buildTowerFloor(size: number, hasDownStairs: boolean, hasUpStairs: bool
 function buildTowerFloor1(): TileType[][] {
     // 11x11 — rez-de-chaussée : sortie doorMat + stairsUp, pas de stairsDown
     const m = buildTowerFloor(11, false, true, true)
-    // v3.17c — tableau du papa de franss (Philippe, champion de vélo)
-    m[5][10] = "painting"
+    // v3.17d — 2 tableaux : franss (Philippe) + mools (Jean)
+    m[5][10] = "painting"  // est
+    m[5][0] = "painting"   // ouest
     return m
 }
 function buildTowerFloor2(): TileType[][] {
     // 10x10 — stairsDown + stairsUp
     const m = buildTowerFloor(10, true, true, false)
-    // v3.17c — tableau placeholder (en attente du nickname du joueur)
+    // v3.17d — 2 tableaux : milkardashian (Etienne) + Xa (Ayrton)
     m[5][9] = "painting"
+    m[5][0] = "painting"
     return m
 }
 function buildTowerFloor3(): TileType[][] {
     const m = buildTowerFloor(9, true, true, false)
-    // v3.17c — tableau placeholder
+    // v3.17d — 2 tableaux : marvin (Marcello) + Gg (Kylian)
     m[4][8] = "painting"
+    m[4][0] = "painting"
     return m
 }
 function buildTowerFloor4(): TileType[][] {
     const m = buildTowerFloor(8, true, true, false)
-    // v3.17c — tableau placeholder
+    // v3.17d — 1 tableau placeholder (slot disponible pour futur 7e joueur)
     m[4][7] = "painting"
     return m
 }
@@ -800,6 +803,7 @@ export interface PapaTableau {
     lore: string
 }
 export const PAPA_TABLEAUX: PapaTableau[] = [
+    // Floor 1 — franss + mools
     {
         mapId: "tower_floor_1",
         x: 10,
@@ -810,23 +814,53 @@ export const PAPA_TABLEAUX: PapaTableau[] = [
         lore: "Un portrait en sépia. Un homme jeune en maillot jaune, le sourire éclatant, posant sur un vélo. La plaque indique : « PHILIPPE — Champion de vélo. Une légende. »",
     },
     {
+        mapId: "tower_floor_1",
+        x: 0,
+        y: 5,
+        nicknameMatch: "mools",
+        papaName: "Jean",
+        sport: "Champion de tennis de table",
+        lore: "Un portrait fier. Un homme tenant une raquette, la balle floue en plein vol. La plaque : « JEAN — Champion de tennis de table. Vitesse et précision. »",
+    },
+    // Floor 2 — milkardashian + Xa
+    {
         mapId: "tower_floor_2",
         x: 9,
         y: 5,
-        nicknameMatch: null,
-        papaName: "?",
-        sport: "?",
-        lore: "Un tableau ancien. La toile est trop noircie pour distinguer les traits. La plaque est illisible.",
+        nicknameMatch: "milkardashian",
+        papaName: "Etienne",
+        sport: "Champion de vélo",
+        lore: "Une photo d'époque. Un cycliste élégant en maillot multicolore, le mollet saillant. Plaque : « ETIENNE — Champion de vélo. Endurance pure. »",
     },
+    {
+        mapId: "tower_floor_2",
+        x: 0,
+        y: 5,
+        nicknameMatch: "Xa",
+        papaName: "Ayrton",
+        sport: "Champion automobile",
+        lore: "Un portrait dramatique. Un pilote, casque sous le bras, devant une monoplace rouge feu. Plaque : « AYRTON — Très grand champion automobile. Le maître des virages. »",
+    },
+    // Floor 3 — marvin + Gg
     {
         mapId: "tower_floor_3",
         x: 8,
         y: 4,
-        nicknameMatch: null,
-        papaName: "?",
-        sport: "?",
-        lore: "Un portrait poussiéreux. Un homme à la silhouette athlétique, mais le nom est gratté.",
+        nicknameMatch: "marvin",
+        papaName: "Marcello",
+        sport: "Le plus grand joueur de billard",
+        lore: "Un portrait calme. Un homme penché sur une table de billard, la queue parfaitement alignée. Plaque : « MARCELLO — Le plus grand joueur de billard de tous les temps. »",
     },
+    {
+        mapId: "tower_floor_3",
+        x: 0,
+        y: 4,
+        nicknameMatch: "Gg",
+        papaName: "Kylian",
+        sport: "Champion de trail",
+        lore: "Un cliché en pleine nature. Un coureur en montagne, transpirant mais souriant. Plaque : « KYLIAN — Très grand champion de trail. Pieds infatigables. »",
+    },
+    // Floor 4 — slot libre pour un futur 7e joueur
     {
         mapId: "tower_floor_4",
         x: 7,
@@ -834,7 +868,7 @@ export const PAPA_TABLEAUX: PapaTableau[] = [
         nicknameMatch: null,
         papaName: "?",
         sport: "?",
-        lore: "Une peinture à moitié effacée par le temps. On devine un trophée sans pouvoir lire le sport.",
+        lore: "Une toile ancienne, encore sans nom gravé. La place est réservée pour le prochain champion.",
     },
 ]
 
