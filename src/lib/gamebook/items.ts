@@ -98,12 +98,12 @@ export const ITEMS: ItemDefinition[] = [
         key: "boots",
         name: "Baskets",
         emoji: "👟",
-        description: "Réduit le coût de déplacement de 10 à 8 reps par case. S'usent au fil des pas.",
+        description: "Réduit le coût de déplacement de 10 à 8 reps par case. Durent 500 pas. Souvent offertes par MAMAN.",
         priceReps: 200,
         maxQuantity: 1,
         availableAt: "nutripates",
         capabilities: {
-            canWear: { initialDurability: 250, moveCostReduction: 2 },
+            canWear: { initialDurability: 500, moveCostReduction: 2 },
         },
     },
     {
