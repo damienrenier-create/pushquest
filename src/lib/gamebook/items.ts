@@ -51,7 +51,7 @@ export interface ItemCapabilities {
     /** v3.13 — Item cosmétique visible sur le sprite du joueur. Pas de consommation. */
     canCosmetic?: {
         /** Slot d'équipement (pour ne pas en porter deux du même type). */
-        slot: "head" | "face" | "body"
+        slot: "head" | "face" | "body" | "neck"
         /** v3.17 — Si défini, applique un discount automatique sur certains coûts sociaux. */
         socialDiscount?: number  // 0.1 = -10%
         /** v3.17d — Si défini, applique un bonus multiplicatif sur certaines récompenses bonus
@@ -59,6 +59,11 @@ export interface ItemCapabilities {
         rewardBonus?: number
         /** v3.17d — Durabilité initiale (s'use d'1 par pas). À 0 → cassé, plus de bonus, sprite retiré. */
         initialDurability?: number
+    }
+    /** v3.20 — Item qui préserve l'usure des autres wearables/storables.
+     *  Chaque wear a `wearSkipChance` % de chance d'être annulé. 0.5 = -50% wear en moyenne. */
+    canPreserve?: {
+        wearSkipChance: number
     }
 }
 
@@ -200,6 +205,19 @@ export const ITEMS: ItemDefinition[] = [
         availableAt: "trenette",
         capabilities: {
             canView: { kind: "treasureMap" },
+        },
+    },
+    // v3.20 — Cadeau du Monstre (gift only, non vendu)
+    {
+        key: "amulette_monstre",
+        name: "Amulette du Monstre",
+        emoji: "🦴",
+        description: "Cadeau du Monstre. Tant qu'elle est sur toi, tes équipements (gourdes, baskets, lunettes…) s'usent en moyenne deux fois moins vite.",
+        priceReps: 0,
+        maxQuantity: 1,
+        availableAt: "gift",
+        capabilities: {
+            canPreserve: { wearSkipChance: 0.5 },
         },
     },
 ]

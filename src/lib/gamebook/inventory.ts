@@ -149,6 +149,23 @@ export function wearItem(inv: InventoryEntry[], itemKey: string, amount: number 
     const hasWearCap = !!def.capabilities.canWear
     const hasCosmeticDur = def.capabilities.canCosmetic?.initialDurability !== undefined
     if (!hasWearCap && !hasCosmeticDur) return inv
+
+    // v3.20 — Amulette du Monstre : chaque wear a une chance d'être préservé (skip).
+    // Cherche un canPreserve actif dans l'inventaire (item non cassé).
+    let skipChance = 0
+    for (const e of inv) {
+        const otherDef = getItem(e.itemKey)
+        const preserve = otherDef?.capabilities.canPreserve
+        if (!preserve) continue
+        // Item amulette n'a pas de durabilité tracked actuellement → toujours actif
+        // Si on en ajoute une à l'avenir, on pourra check isBrokenItem ici.
+        skipChance = Math.max(skipChance, preserve.wearSkipChance)
+    }
+    if (skipChance > 0 && Math.random() < skipChance) {
+        // Wear préservé : on ne décrémente rien
+        return inv
+    }
+
     return inv.map((e) => {
         if (e.itemKey !== itemKey) return e
         let current: number

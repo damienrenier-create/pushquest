@@ -1266,6 +1266,27 @@ export default function MapClient({
                     return { ...s, npcsTalkedTo: newTalked }
                 })
 
+                // v3.20 — LE MONSTRE : grant amulette à la fin du dialogue (si hasBag + pas déjà reçue)
+                if (npcId === "le_monstre" && hasBag) {
+                    const hasAmuletteAlready = inventory.some((e) => e.itemKey === "amulette_monstre")
+                    if (!hasAmuletteAlready) {
+                        ; (async () => {
+                            try {
+                                const res = await fetch("/api/gamebook/monstre/grant-amulette", { method: "POST" })
+                                const data = await res.json()
+                                if (data.ok && Array.isArray(data.inventory)) {
+                                    setInventory(data.inventory)
+                                    setToast("🦴 Tu reçois l'Amulette du Monstre. Tes équipements s'useront moitié moins vite.")
+                                } else if (data.reason) {
+                                    setToast(data.reason)
+                                }
+                            } catch (e) {
+                                console.warn("[MapClient] monstre/grant-amulette failed", e)
+                            }
+                        })()
+                    }
+                }
+
                 // v3.17 — LINGUINI : +1 luck par jour (idempotent serveur)
                 if (npcId === "linguini") {
                     ; (async () => {
@@ -1539,6 +1560,26 @@ export default function MapClient({
             // v3.18 — BIBLIO (bibliothécaire) : ouvre la modal Bibliothèque
             if (npcId === "bibliotheque_keeper") {
                 setShowBibliotheque(true)
+                return
+            }
+            // v3.20 — LE MONSTRE : offre l'amulette si hasBag, sinon refuse
+            if (npcId === "le_monstre") {
+                if (!hasBag) {
+                    setPopup({
+                        kind: "info",
+                        text: "Le Monstre te regarde longuement.\n\n\"Reviens quand tu auras ton sac. Va voir PEPITO d'abord.\"",
+                    })
+                    return
+                }
+                const hasAmulette = inventory.some(
+                    (e) => e.itemKey === "amulette_monstre"
+                )
+                if (hasAmulette) {
+                    triggerNpcDialogue(npcInFront.npc)
+                    return
+                }
+                // Première visite avec sac : dialog cinématique + grant amulette à la fin
+                triggerNpcDialogue(npcInFront.npc)
                 return
             }
             // v3.14 — TRENETTE : même mécanique que NUTRIPATES (ouvre le shop, requiert un sac)

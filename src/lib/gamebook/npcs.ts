@@ -420,6 +420,34 @@ export const NPCS: NpcDefinition[] = [
     },
 
     // ============================================================
+    // v3.20 — LE MONSTRE (cave, post-bag) — offre l'Amulette
+    // Apparait sur la map "cave" quand hasBag=true. Les dialogues conditionnels
+    // sont gérés inline dans MapClient (cinematic dédiée).
+    // ============================================================
+    {
+        id: "le_monstre",
+        name: "LE MONSTRE",
+        mapId: "cave",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#48a830", emoji: "👹" },
+        initialX: 4,
+        initialY: 3,
+        dialoguesAfter: [
+            "*Le Monstre te regarde avec un sourire bienveillant.*",
+            "Tu reviens enfin. Tu as ton sac, donc tu es prêt.",
+            "Tiens, prends ceci. Une amulette que j'ai gardée pour toi. Elle préserve tes affaires.",
+            "(Il te tend une amulette d'os finement sculptée.)",
+        ],
+        // Dialog conditionnel après don : retour visiteur
+        dialoguesAfterRevisit: [
+            "*Le Monstre acquiesce calmement.*",
+            "Que veux-tu de plus ? L'amulette devrait te suffire.",
+            "Va. Continue ta route.",
+        ],
+    },
+
+    // ============================================================
     // v3.17c — CASINOS (Bourg-Boulette + Pépiteville)
     // ============================================================
     // QUESTIONNEUR : Bourg casino — foreshadow de la case cachée +50 reps
