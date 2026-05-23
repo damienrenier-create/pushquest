@@ -501,6 +501,31 @@ export default function MapClient({
 
             const result = tryComputeMove(state, d, map, buildings, blockingPositions)
 
+            // v3.8.4 — Bloquer le contournement des PNJ du pont via Échap-popup.
+            // Si le joueur EST déjà dans la ligne de vue d'un PNJ non-vaincu, il ne
+            // peut quitter cette zone qu'en : (a) restant dans la ligne de vue du
+            // MÊME PNJ, ou (b) reculant vers le sud.
+            if (state.mapId === "route1" && !("blocked" in result)) {
+                const defeated = state.bridgePnjDefeated ?? []
+                const currentWatcher = bridgePnjSeeingPlayer(BRIDGE_PNJS, defeated, state.posX, state.posY)
+                if (currentWatcher) {
+                    const nextWatcher = bridgePnjSeeingPlayer(
+                        BRIDGE_PNJS,
+                        defeated,
+                        result.nextState.posX,
+                        result.nextState.posY,
+                    )
+                    const sameWatcher = !!nextWatcher && nextWatcher.id === currentWatcher.id
+                    const isRetreatingSouth = d === "down"
+                    if (!sameWatcher && !isRetreatingSouth) {
+                        const pnjName = BRIDGE_PNJS.find((p) => p.id === currentWatcher.id)?.name ?? currentWatcher.id
+                        setToast(`${pnjName} t'a interpelé. Affronte-le (A) ou recule.`)
+                        setState((s) => ({ ...s, direction: d }))
+                        return
+                    }
+                }
+            }
+
             if ("blocked" in result) {
                 // On change quand même la direction du sprite
                 setState((s) => ({ ...s, direction: d }))

@@ -551,7 +551,10 @@ export const MAPS: Record<string, MapData> = {
         tiles: buildRoute1(),
         width: ROUTE1_W,
         height: ROUTE1_H,
-        exitTarget: { mapId: "bourgpates", x: 7, y: 1 },  // retour Bourg-Boulette par les hautes herbes
+        // v3.8.4 — fix : avant on arrivait en (7, 1) qui est `grassTall`, ce qui
+        // re-déclenchait immédiatement la transition vers route1 (boucle infinie).
+        // On atterrit maintenant en (7, 3) = `path`, juste sous les hautes herbes.
+        exitTarget: { mapId: "bourgpates", x: 7, y: 3 },
     },
     // === v3.8 — Pépiteville et ses bâtiments ===
     pepiteville: {
