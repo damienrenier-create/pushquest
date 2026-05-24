@@ -93,6 +93,7 @@ import type { TamagotchiView } from "@/lib/gamebook/tamagotchi"
 import BibliothequeModal from "./BibliothequeModal"
 import BestioleNamingModal from "./BestioleNamingModal"
 import CasinoModal from "./CasinoModal"
+import CasinoPatternModal from "./CasinoPatternModal"
 import FastTravelModal from "./FastTravelModal"
 import { getLevelDetails } from "@/lib/xp"
 import { getActiveBicycle } from "@/lib/gamebook/items"
@@ -227,6 +228,8 @@ export default function MapClient({
     const [showBestioleNaming, setShowBestioleNaming] = useState(false)
     // v3.21 — Modal mini-jeu casino roulette
     const [showCasino, setShowCasino] = useState(false)
+    // v3.24b — Modal casino pattern (Muscuville)
+    const [showCasinoPattern, setShowCasinoPattern] = useState(false)
     // v3.22 — Modal fast travel
     const [showFastTravel, setShowFastTravel] = useState(false)
     // v3.23b — Cadence sur le Mont Pasta-Ventoux : timestamps des derniers clics "pédale"
@@ -1300,7 +1303,7 @@ export default function MapClient({
         }, 300)
 
         // v3.8 — si une modal est ouverte, le A est géré par la modal elle-même
-        if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showFastTravel) return
+        if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel) return
 
         // v3.11 — Cinématique PIAFFINI (dialogue au sommet, puis vol)
         if (cinematic?.kind === "piaffini" && cinematic.stage === "dialog") {
@@ -1851,9 +1854,15 @@ export default function MapClient({
             return
         }
 
-        // v3.21 — Roulette des casinos : presser A sur la rouletteWheel ouvre le mini-jeu
+        // v3.21 — Roulette rouge/noir : casino Bourg-Boulette + casino Pépiteville
         if ((state.mapId === "casino" || state.mapId === "casino_pepite") && tile === "rouletteWheel") {
             setShowCasino(true)
+            return
+        }
+
+        // v3.24b — Roulette pattern : casino Muscuville
+        if (state.mapId === "casino_muscuville" && tile === "rouletteWheel") {
+            setShowCasinoPattern(true)
             return
         }
 
@@ -2084,7 +2093,7 @@ export default function MapClient({
         const handler = (e: KeyboardEvent) => {
             // v3.8 — si une modal est ouverte, on ne gère pas les touches ici
             // (StartMenu/InventoryModal/ShopModal/PlayerMapModal écoutent leurs propres events)
-            if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showFastTravel) return
+            if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel) return
 
             if (state.phase === "introMonster") {
                 if (e.key === "Enter" || e.key === " " || e.key.toLowerCase() === "a") {
@@ -2722,6 +2731,45 @@ export default function MapClient({
                         }
                     }}
                     onClose={() => setShowCasino(false)}
+                />
+            )}
+
+            {/* v3.24b — Casino pattern Muscuville */}
+            {showCasinoPattern && (
+                <CasinoPatternModal
+                    availableEnergy={reps}
+                    currentSpinIndex={(state as { casinoPatternSpinIndex?: number }).casinoPatternSpinIndex ?? 0}
+                    currentWinStreak={(state as { casinoPatternWinStreak?: number }).casinoPatternWinStreak ?? 0}
+                    bankruptUntil={(state as { casinoPatternBankruptUntil?: string | null }).casinoPatternBankruptUntil ?? null}
+                    onSpin={async (bets) => {
+                        try {
+                            const res = await fetch("/api/gamebook/casino/pattern-spin", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ bets }),
+                            })
+                            const data = await res.json()
+                            if (data.ok) {
+                                if (typeof data.availableEnergy === "number") setReps(data.availableEnergy)
+                                if (typeof data.energySpentToday === "number") setEnergySpent(data.energySpentToday)
+                                setState((s) => ({
+                                    ...s,
+                                    casinoPatternSpinIndex: data.newSpinIndex,
+                                    casinoPatternWinStreak: data.newWinStreak,
+                                    casinoPatternBankruptUntil: data.bankruptUntil ?? (s as { casinoPatternBankruptUntil?: string | null }).casinoPatternBankruptUntil ?? null,
+                                } as PlayerMapState))
+                                if (data.bankrupt) {
+                                    setToast("💰 CASINO EN BANQUEROUTE ! Badge Casseur de banque débloqué (+200 XP).")
+                                }
+                                return data
+                            } else {
+                                return { error: data.reason || "Spin impossible." }
+                            }
+                        } catch {
+                            return { error: "Erreur réseau, réessaie." }
+                        }
+                    }}
+                    onClose={() => setShowCasinoPattern(false)}
                 />
             )}
 

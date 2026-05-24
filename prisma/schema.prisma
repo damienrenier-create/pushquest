@@ -482,6 +482,16 @@ model GamebookProgress {
   // Vide = jamais réclamé. Les joueurs sans équipe (Franss) ne peuvent pas claim.
   lastTeamCaptainBonusDate  String  @default("")
 
+  // v3.24b — Casino pattern (Muscuville) : où en est le joueur dans le pattern de 20.
+  // Le pattern est fixe (cf src/lib/gamebook/casino.ts CASINO_PATTERN). L'index s'incrémente
+  // à chaque spin et boucle sur 20 (modulo). Reset après banqueroute (24h cooldown).
+  casinoPatternSpinIndex    Int     @default(0)
+  // Compteur de wins consécutifs (au moins 1 case gagnante sur le spin). Reset sur perte sèche.
+  // 5 consécutifs → banqueroute + badge Casseur de banque + cooldown 24h.
+  casinoPatternWinStreak    Int     @default(0)
+  // Cooldown du casino après une banqueroute (24h). Null = casino ouvert.
+  casinoPatternBankruptUntil DateTime?
+
   @@unique([userId, chapterId])
   @@index([userId])
   @@index([mapId])

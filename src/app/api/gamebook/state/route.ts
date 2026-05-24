@@ -171,6 +171,10 @@ export async function GET() {
                 : [],
             // v3.24a — Bonus quotidien du capitaine d'équipe
             lastTeamCaptainBonusDate: (progress as { lastTeamCaptainBonusDate?: string }).lastTeamCaptainBonusDate ?? "",
+            // v3.24b — Casino pattern Muscuville
+            casinoPatternSpinIndex: (progress as { casinoPatternSpinIndex?: number }).casinoPatternSpinIndex ?? 0,
+            casinoPatternWinStreak: (progress as { casinoPatternWinStreak?: number }).casinoPatternWinStreak ?? 0,
+            casinoPatternBankruptUntil: (progress as { casinoPatternBankruptUntil?: Date | null }).casinoPatternBankruptUntil ?? null,
         },
         todayReps,
         energySpentToday,

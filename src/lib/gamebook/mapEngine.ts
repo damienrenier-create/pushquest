@@ -125,6 +125,10 @@ export interface PlayerMapState {
     visitedTowns?: string[]
     // === v3.24a : Bonus quotidien du capitaine d'équipe (YYYY-MM-DD du dernier claim) ===
     lastTeamCaptainBonusDate?: string
+    // === v3.24b : Casino pattern Muscuville ===
+    casinoPatternSpinIndex?: number
+    casinoPatternWinStreak?: number
+    casinoPatternBankruptUntil?: Date | string | null
 }
 
 // Snapshot d'un autre joueur affiché sur la carte
