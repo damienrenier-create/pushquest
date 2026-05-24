@@ -8,22 +8,35 @@
 // "PIAFFINI t'emporte loin...". Après ~3s, callback onDone() qui déclenche
 // la route /api/gamebook/piaffini/rescue côté MapClient (téléport + récompenses).
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 const DURATION_MS = 3200
 
 export default function PiaffiniFlightScreen({ onDone }: { onDone: () => void }) {
     const [textVisible, setTextVisible] = useState(false)
 
+    // v3.23d FIX — Le parent (MapClient) re-rend toutes les ~400ms (animation jambes,
+    // Pusher, etc.), ce qui change la référence d'onDone à chaque render. Si on met
+    // onDone dans les deps de useEffect, le timeout est reset à zéro à chaque re-render
+    // du parent → DURATION_MS n'est JAMAIS atteint → onDone() jamais appelé →
+    // pas de téléport, pas de badge, pas de Set de Nage. Bug critique.
+    //
+    // Fix : on stocke onDone dans une ref (mise à jour à chaque render) et on lance
+    // les timeouts UNE seule fois au mount (deps = []). La ref garantit qu'on appellera
+    // la dernière version d'onDone à l'expiration.
+    const onDoneRef = useRef(onDone)
     useEffect(() => {
-        // Fade in du texte après le décollage initial
+        onDoneRef.current = onDone
+    }, [onDone])
+
+    useEffect(() => {
         const showText = setTimeout(() => setTextVisible(true), 500)
-        const done = setTimeout(() => onDone(), DURATION_MS)
+        const done = setTimeout(() => onDoneRef.current(), DURATION_MS)
         return () => {
             clearTimeout(showText)
             clearTimeout(done)
         }
-    }, [onDone])
+    }, [])  // Mount-only — ne pas remettre onDone dans les deps
 
     return (
         <div

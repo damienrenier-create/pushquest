@@ -27,6 +27,7 @@ import {
     PEPITEVILLE_SPAWN_FROM_SOUTH,
     ROUTE1_NORTH_GATE,
     PEPITEVILLE_APPLE_TREES,
+    HAUTESPATES_APPLE_TREES,
     HAUTESPATES_BUILDINGS,
     HAUTESPATES_SIGNS,
     HAUTESPATES_SPAWN_FROM_SOUTH,
@@ -2051,8 +2052,15 @@ export default function MapClient({
         }
 
         // v3.8.1 — Arbre fruitier devant ?
+        // v3.23d — Inclut aussi l'arbre caché de Hautes-Pâtes (apple_tree_3)
         if (tile === "appleTree") {
-            const tree = PEPITEVILLE_APPLE_TREES.find((t) => t.x === front.x && t.y === front.y)
+            const treeOnPepi = state.mapId === "pepiteville"
+                ? PEPITEVILLE_APPLE_TREES.find((t) => t.x === front.x && t.y === front.y)
+                : undefined
+            const treeOnHautes = state.mapId === "hautespates"
+                ? HAUTESPATES_APPLE_TREES.find((t) => t.x === front.x && t.y === front.y)
+                : undefined
+            const tree = treeOnPepi ?? treeOnHautes
             if (tree) {
                 ; (async () => {
                     try {
@@ -2374,9 +2382,16 @@ export default function MapClient({
                             row.map((tile, x) => {
                                 // v3.8.1 — arbre fruitier déjà cueilli 3 fois aujourd'hui par cet user
                                 // → on rend la variante "vide" (sans fruits). Compteur perso, visuel perso.
+                                // v3.23d — Inclut apple_tree_3 de Hautes-Pâtes.
                                 let effectiveTile = tile
                                 if (tile === "appleTree") {
-                                    const tree = PEPITEVILLE_APPLE_TREES.find((t) => t.x === x && t.y === y)
+                                    const treeOnPepi = state.mapId === "pepiteville"
+                                        ? PEPITEVILLE_APPLE_TREES.find((t) => t.x === x && t.y === y)
+                                        : undefined
+                                    const treeOnHautes = state.mapId === "hautespates"
+                                        ? HAUTESPATES_APPLE_TREES.find((t) => t.x === x && t.y === y)
+                                        : undefined
+                                    const tree = treeOnPepi ?? treeOnHautes
                                     if (tree && (fruitCounts[tree.id] ?? 0) >= 3) {
                                         effectiveTile = "appleTreeEmpty"
                                     }

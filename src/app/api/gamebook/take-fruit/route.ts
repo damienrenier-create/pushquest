@@ -23,7 +23,9 @@ import { getUserDifficultyRatio, applyRatio } from "@/lib/gamebook/difficulty"
 export const dynamic = "force-dynamic"
 
 const CHAPTER_ID = "map_v3"
-const VALID_TREE_IDS = ["apple_tree_1", "apple_tree_2"] as const
+// v3.23d — Ajout de apple_tree_3 (Hautes-Pâtes, à côté de la Tour). Géré côté client
+// via HAUTESPATES_APPLE_TREES en plus de PEPITEVILLE_APPLE_TREES.
+const VALID_TREE_IDS = ["apple_tree_1", "apple_tree_2", "apple_tree_3"] as const
 const MAX_FRUITS_PER_TREE_PER_DAY = 3
 const FRUIT_REWARD = 80
 
