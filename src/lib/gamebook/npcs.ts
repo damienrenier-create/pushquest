@@ -549,6 +549,55 @@ export const NPCS: NpcDefinition[] = [
     },
 
     // ============================================================
+    // v3.24a — CAPITAINES D'ÉQUIPE (casino de Pépiteville)
+    // ============================================================
+    // Les 2 capitaines distribuent +30 reps 1×/jour aux membres de leur équipe.
+    // Tout est géré en spécial-case côté MapClient + /api/gamebook/team/captain-bonus.
+    // Les joueurs sans équipe (Franss) sont accueillis mais ne reçoivent rien.
+    // - RED_CAPTAIN  : Mools, Milkardashian, Neuneu
+    // - YELLOW_CAPTAIN : Xa, Embi, Gg
+    {
+        id: "casino_captain_red",
+        name: "MARCO",
+        mapId: "casino_pepite",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#e74c3c" },
+        initialX: 1,
+        initialY: 5,
+        dialoguesAfter: [
+            "*Veste rouge sang, cigare au coin de la bouche.*",
+            "Je suis MARCO, capitaine de l'Équipe Rouge.",
+            "Mes troupes : Mools, Milkardashian, Neuneu.",
+            "Si t'es des miens, j'te file 30 reps par jour. Loyalty fee.",
+        ],
+        dialoguesAfterRevisit: [
+            "Reviens demain pour ton bonus, soldat.",
+            "Les Jaunes croient qu'ils sont mieux. Spoiler : ils ne le sont pas.",
+        ],
+    },
+    {
+        id: "casino_captain_yellow",
+        name: "POLO",
+        mapId: "casino_pepite",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#f1c40f" },
+        initialX: 8,
+        initialY: 5,
+        dialoguesAfter: [
+            "*Costard jaune banane, lunettes de soleil intérieures.*",
+            "POLO, capitaine de l'Équipe Jaune. Enchanté.",
+            "Mon roster : Xa, Embi, Gg. Trio doré.",
+            "Si t'es à moi, c'est 30 reps par jour. Discrétion garantie.",
+        ],
+        dialoguesAfterRevisit: [
+            "Le bonus, c'est 1× par 24h. Reviens demain.",
+            "MARCO ? Ce vieux schnock. Il croit encore que le rouge est la meilleure couleur.",
+        ],
+    },
+
+    // ============================================================
     // v3.17c — LA MER (îlots dans le canal entre Bourg-Boulette et Macaron'île)
     // ============================================================
     // Naufragé : foreshadow lié à FARFALL (Macaron'île). Flavor only.

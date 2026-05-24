@@ -123,6 +123,8 @@ export interface PlayerMapState {
     lastLuckTalkDate?: string
     // === v3.22 : Fast travel — villes débloquées ===
     visitedTowns?: string[]
+    // === v3.24a : Bonus quotidien du capitaine d'équipe (YYYY-MM-DD du dernier claim) ===
+    lastTeamCaptainBonusDate?: string
 }
 
 // Snapshot d'un autre joueur affiché sur la carte

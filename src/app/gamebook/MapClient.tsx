@@ -1441,6 +1441,30 @@ export default function MapClient({
                     })()
                 }
 
+                // v3.24a — MARCO / POLO : capitaines d'équipe, +30 reps 1×/jour
+                if (npcId === "casino_captain_red" || npcId === "casino_captain_yellow") {
+                    const targetTeam = npcId === "casino_captain_red" ? "RED" : "YELLOW"
+                    ; (async () => {
+                        try {
+                            const res = await fetch("/api/gamebook/team/captain-bonus", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ team: targetTeam }),
+                            })
+                            const data = await res.json()
+                            if (data.ok && typeof data.reward === "number") {
+                                if (typeof data.availableEnergy === "number") setReps(data.availableEnergy)
+                                if (typeof data.energySpentToday === "number") setEnergySpent(data.energySpentToday)
+                                setToast(`+${data.reward} reps de ${targetTeam === "RED" ? "MARCO" : "POLO"} !`)
+                            } else if (data.reason) {
+                                setToast(data.reason)
+                            }
+                        } catch (e) {
+                            console.warn("[MapClient] team/captain-bonus failed", e)
+                        }
+                    })()
+                }
+
                 // v3.17c — NAGEUR : si on a vu le dialogue défi (2e visite) et qu'on a fait 50 pompes
                 // aujourd'hui, on grant +100 reps via le serveur (idempotent via nageurDefiCompleted).
                 if (npcId === "lamer_nageur" && !(state as { nageurDefiCompleted?: boolean }).nageurDefiCompleted) {

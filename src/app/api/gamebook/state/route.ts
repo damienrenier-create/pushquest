@@ -169,6 +169,8 @@ export async function GET() {
             visitedTowns: Array.isArray((progress as { visitedTowns?: unknown }).visitedTowns)
                 ? (progress as { visitedTowns: string[] }).visitedTowns
                 : [],
+            // v3.24a — Bonus quotidien du capitaine d'équipe
+            lastTeamCaptainBonusDate: (progress as { lastTeamCaptainBonusDate?: string }).lastTeamCaptainBonusDate ?? "",
         },
         todayReps,
         energySpentToday,

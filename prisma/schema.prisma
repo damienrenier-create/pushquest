@@ -478,6 +478,10 @@ model GamebookProgress {
   // Auto-ajout dès qu'on visite : bourgpates / pepiteville / hautespates / macaron_ile / muscuville.
   visitedTowns              Json    @default("[]")
 
+  // v3.24a — Bonus quotidien du capitaine d'équipe. Format : YYYY-MM-DD du dernier claim.
+  // Vide = jamais réclamé. Les joueurs sans équipe (Franss) ne peuvent pas claim.
+  lastTeamCaptainBonusDate  String  @default("")
+
   @@unique([userId, chapterId])
   @@index([userId])
   @@index([mapId])
