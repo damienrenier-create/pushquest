@@ -917,7 +917,7 @@ export const NPCS: NpcDefinition[] = [
         ],
     },
     // 3 PNJ adversaires de la salle des concours (POMPATOR / SQUATILUS / TIROIR)
-    // Mécanique de défi à venir en v3.23c.
+    // v3.23c-2 — Mécanique de défi : chacun teste un exo, +100 reps one-shot si validé.
     {
         id: "contest_pompator",
         name: "POMPATOR",
@@ -929,7 +929,11 @@ export const NPCS: NpcDefinition[] = [
         initialY: 2,
         dialoguesAfter: [
             "POMPATOR, champion de pompes. *Il claque sa poitrine.*",
-            "Tu veux me défier ? Reviens quand tu auras conquis le Mont Pasta-Ventoux.",
+            "Tu veux me défier ? Très bien. Mon défi est simple : 200 pompes aujourd'hui.",
+            "Si tu y arrives, je te lègue 100 reps de surplus en hommage à ton effort.",
+        ],
+        dialoguesAfterRevisit: [
+            "POMPATOR hoche la tête. \"Le défi est passé. Ta poitrine est forgée.\"",
         ],
     },
     {
@@ -942,8 +946,12 @@ export const NPCS: NpcDefinition[] = [
         initialX: 5,
         initialY: 2,
         dialoguesAfter: [
-            "SQUATILUS, maître des squats. *Il fait flexion.*",
-            "Concours interdits sans badge du Mont. Je suis intransigeant.",
+            "SQUATILUS, maître des squats. *Il fait flexion lente.*",
+            "Mon défi à toi : 250 squats aujourd'hui. Cuisses brûlantes ou pas du tout.",
+            "Récompense : 100 reps de surplus si tu tiens.",
+        ],
+        dialoguesAfterRevisit: [
+            "SQUATILUS grogne d'approbation. \"Tes cuisses ont parlé. Respect.\"",
         ],
     },
     {
@@ -957,7 +965,11 @@ export const NPCS: NpcDefinition[] = [
         initialY: 2,
         dialoguesAfter: [
             "TIROIR, expert des tractions. *Il regarde la barre.*",
-            "Conquis le Mont d'abord, ensuite on en reparle.",
+            "Mon défi : 30 tractions aujourd'hui. C'est dur, je sais. C'est fait pour.",
+            "Tiens bon et tu auras 100 reps en cadeau d'amitié.",
+        ],
+        dialoguesAfterRevisit: [
+            "TIROIR sourit, silencieux. *Il te tape l'épaule.*",
         ],
     },
 

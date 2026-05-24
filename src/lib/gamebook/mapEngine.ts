@@ -131,6 +131,10 @@ export interface PlayerMapState {
     casinoPatternBankruptUntil?: Date | string | null
     // === v3.23c : Sommet du Mont Pasta-Ventoux atteint (one-shot) ===
     montSummitReached?: boolean
+    // === v3.23c-2 : Défis intersalle (one-shot par PNJ) ===
+    contestDefiPompatorDone?: boolean
+    contestDefiSquatilusDone?: boolean
+    contestDefiTiroirDone?: boolean
 }
 
 // Snapshot d'un autre joueur affiché sur la carte

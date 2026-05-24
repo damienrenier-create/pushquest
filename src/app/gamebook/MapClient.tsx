@@ -1485,6 +1485,35 @@ export default function MapClient({
                     })()
                 }
 
+                // v3.23c-2 — POMPATOR / SQUATILUS / TIROIR : défis intersalle, +100 reps one-shot
+                if (npcId === "contest_pompator" || npcId === "contest_squatilus" || npcId === "contest_tiroir") {
+                    const pnjShort = npcId === "contest_pompator" ? "pompator"
+                        : npcId === "contest_squatilus" ? "squatilus"
+                            : "tiroir"
+                    ; (async () => {
+                        try {
+                            const res = await fetch("/api/gamebook/contest/defi", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ pnjId: pnjShort }),
+                            })
+                            const data = await res.json()
+                            if (data.ok && typeof data.reward === "number") {
+                                if (typeof data.availableEnergy === "number") setReps(data.availableEnergy)
+                                if (typeof data.energySpentToday === "number") setEnergySpent(data.energySpentToday)
+                                setToast(`Défi relevé ! +${data.reward} reps offerts par ${cinematic?.kind === "npcDialogue" ? cinematic.npcName : pnjShort.toUpperCase()}.`)
+                            } else if (data.alreadyDone) {
+                                // Pas de toast pour "déjà fait" — le dialogue revisit suffit
+                            } else if (data.reason && data.required !== undefined) {
+                                // Pas assez de reps de l'exo → affiche le message
+                                setToast(data.reason)
+                            }
+                        } catch (e) {
+                            console.warn("[MapClient] contest/defi failed", e)
+                        }
+                    })()
+                }
+
                 // v3.24a — MARCO / POLO : capitaines d'équipe, +30 reps 1×/jour
                 if (npcId === "casino_captain_red" || npcId === "casino_captain_yellow") {
                     const targetTeam = npcId === "casino_captain_red" ? "RED" : "YELLOW"

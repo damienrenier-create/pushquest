@@ -177,6 +177,10 @@ export async function GET() {
             casinoPatternBankruptUntil: (progress as { casinoPatternBankruptUntil?: Date | null }).casinoPatternBankruptUntil ?? null,
             // v3.23c — Sommet du Mont Pasta-Ventoux atteint
             montSummitReached: (progress as { montSummitReached?: boolean }).montSummitReached === true,
+            // v3.23c-2 — Défis intersalle
+            contestDefiPompatorDone: (progress as { contestDefiPompatorDone?: boolean }).contestDefiPompatorDone === true,
+            contestDefiSquatilusDone: (progress as { contestDefiSquatilusDone?: boolean }).contestDefiSquatilusDone === true,
+            contestDefiTiroirDone: (progress as { contestDefiTiroirDone?: boolean }).contestDefiTiroirDone === true,
         },
         todayReps,
         energySpentToday,

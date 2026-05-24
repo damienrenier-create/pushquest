@@ -495,6 +495,10 @@ model GamebookProgress {
   // v3.23c — Sommet du Mont Pasta-Ventoux atteint au moins une fois.
   // One-shot ; déclenche cinématique + badge Conquérant 500 XP. Aussi unlock contest_hall.
   montSummitReached         Boolean @default(false)
+  // v3.23c-2 — Défis intersalle de Muscuville (contest_hall). Chacun one-shot +100 reps.
+  contestDefiPompatorDone   Boolean @default(false)
+  contestDefiSquatilusDone  Boolean @default(false)
+  contestDefiTiroirDone     Boolean @default(false)
 
   @@unique([userId, chapterId])
   @@index([userId])
