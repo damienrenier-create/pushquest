@@ -140,6 +140,8 @@ export interface PlayerMapState {
     contestDefiPompatorDone?: boolean
     contestDefiSquatilusDone?: boolean
     contestDefiTiroirDone?: boolean
+    // === v3.23e : Blague PIAFFINI unique pour Franss (one-shot) ===
+    franssJokeBirdDone?: boolean
 }
 
 // Snapshot d'un autre joueur affiché sur la carte

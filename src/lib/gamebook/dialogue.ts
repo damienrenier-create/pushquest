@@ -157,3 +157,21 @@ export const MONT_SUMMIT_LINES: string[] = [
     "(Badge Conquérant 🏔️ +500 XP — Le contest_hall de Muscuville est maintenant accessible.)",
 ]
 
+// =====================================================
+// v3.23e — Blague unique de PIAFFINI pour Franss
+// =====================================================
+// Compensation narrative pour le bug du téléport raté. Franss arrive quelque part,
+// fait son premier pas, et PIAFFINI réapparaît pour une dernière facétie.
+export const FRANSS_JOKE_INTRO_LINES: string[] = [
+    "*Un battement d'ailes derrière toi.* PIAFFINI ! 🐦",
+    "« Coucou Franss ! Tu m'as l'air un peu fatigué de ta longue marche ? »",
+    "« J'ai oublié de te dire un truc important. Suis-moi, on retourne à la Tour ! »",
+    "*PIAFFINI t'agrippe avant que tu puisses dire ouf.*",
+]
+export const FRANSS_JOKE_ATTOWER_LINES: string[] = [
+    "*PIAFFINI éclate de rire.* « AHAHAH ! »",
+    "« T'as cru quoi ? Que j'avais oublié quelque chose ? Non, c'était une blague ! »",
+    "« Bon, désolé pour la marche à pied de tout à l'heure. Je me rattrape. »",
+    "« Tiens, prends ces 30 reps en cadeau d'excuses. Direction JOJO, et cette fois pour de vrai. »",
+]
+

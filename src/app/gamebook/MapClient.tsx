@@ -88,7 +88,7 @@ import PiaffiniFlightScreen from "./PiaffiniFlightScreen"
 import { PIAFFINI_RESCUE_DIALOGUE } from "@/lib/gamebook/dialogue"
 import { parseInventory, hasIntactItem, type InventoryEntry } from "@/lib/gamebook/inventory"
 import { findActiveWearableForTile, applySocialDiscount, hasIntactLunettes } from "@/lib/gamebook/items"
-import { PEPITO_DIALOGUE_FIRST, MONT_SUMMIT_LINES } from "@/lib/gamebook/dialogue"
+import { PEPITO_DIALOGUE_FIRST, MONT_SUMMIT_LINES, FRANSS_JOKE_INTRO_LINES, FRANSS_JOKE_ATTOWER_LINES } from "@/lib/gamebook/dialogue"
 import TamagotchiModal from "./TamagotchiModal"
 import type { TamagotchiView } from "@/lib/gamebook/tamagotchi"
 import BibliothequeModal from "./BibliothequeModal"
@@ -120,6 +120,9 @@ interface Props {
 }
 
 const GHOST_COLORS = ["#4080d8", "#d840a0", "#48a830", "#f08020", "#9050d0", "#d8c020", "#20a8c8"]
+
+// v3.23e — UserId hardcodé de Franss pour la blague PIAFFINI unique
+const FRANSS_USER_ID = "cmpgu4uq5000069du4s19q5l9"
 
 // v3.19b — Maps où le compagnon tamagotchi est visible (outdoor uniquement)
 const OUTDOOR_MAP_IDS = new Set([
@@ -172,6 +175,8 @@ type Cinematic =
     | { kind: "lunettesBreak"; step: number }
     // v3.23c — Cinématique Mont Pasta-Ventoux : panorama + remise badge Conquérant
     | { kind: "montSummit"; step: number }
+    // v3.23e — Cinématique blague PIAFFINI pour Franss (2 phases : intro + atTower)
+    | { kind: "franssJoke"; phase: "intro" | "atTower"; step: number }
     | null
 
 // Ticker partagé entre tous les NPCs wanderers pour synchroniser leurs déplacements
@@ -702,6 +707,22 @@ export default function MapClient({
             if (state.phase === "introMonster") return
             if (popup) {
                 setPopup(null)
+                return
+            }
+            // v3.23e — Blague PIAFFINI unique pour Franss : intercepter le premier mouvement.
+            // Phase 1 : déclenche la cinematic d'intro (puis warp serveur vers la Tour).
+            // Phase 2 (déjà à la Tour, flag toujours false) : déclenche la cinematic atTower.
+            if (
+                !cinematic
+                && userId === FRANSS_USER_ID
+                && (state as { franssJokeBirdDone?: boolean }).franssJokeBirdDone === false
+            ) {
+                setState((s) => ({ ...s, direction: d }))
+                if (state.mapId === "tower_floor_5") {
+                    setCinematic({ kind: "franssJoke", phase: "atTower", step: 0 })
+                } else {
+                    setCinematic({ kind: "franssJoke", phase: "intro", step: 0 })
+                }
                 return
             }
             // Si une cinématique est en cours (NPC ou Pionnier), on l'avance plutôt que de bouger
@@ -1327,6 +1348,86 @@ export default function MapClient({
 
         // v3.8 — si une modal est ouverte, le A est géré par la modal elle-même
         if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel) return
+
+        // v3.23e — Blague PIAFFINI unique pour Franss : intercepter le premier A press (idem tryMove)
+        if (
+            !cinematic
+            && userId === FRANSS_USER_ID
+            && (state as { franssJokeBirdDone?: boolean }).franssJokeBirdDone === false
+        ) {
+            if (state.mapId === "tower_floor_5") {
+                setCinematic({ kind: "franssJoke", phase: "atTower", step: 0 })
+            } else {
+                setCinematic({ kind: "franssJoke", phase: "intro", step: 0 })
+            }
+            return
+        }
+
+        // v3.23e — Avancer dans la cinématique blague Franss (dialogue puis vol)
+        if (cinematic?.kind === "franssJoke") {
+            const lines = cinematic.phase === "intro" ? FRANSS_JOKE_INTRO_LINES : FRANSS_JOKE_ATTOWER_LINES
+            const next = cinematic.step + 1
+            if (next >= lines.length) {
+                // Fin du dialogue → appel API selon la phase
+                if (cinematic.phase === "intro") {
+                    // Phase 1 : warp serveur vers la Tour, puis on remet en attente
+                    ; (async () => {
+                        try {
+                            const res = await fetch("/api/gamebook/franss-joke", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ step: "warpToTower" }),
+                            })
+                            const data = await res.json()
+                            if (data.ok && data.spawn) {
+                                setState((s) => ({
+                                    ...s,
+                                    mapId: data.spawn.mapId,
+                                    posX: data.spawn.posX,
+                                    posY: data.spawn.posY,
+                                    direction: data.spawn.direction,
+                                }))
+                                setToast("🐦 Tu te retrouves au sommet de la Tour des Pâtes Aiguës ! WTF ?!")
+                            }
+                        } catch (e) {
+                            console.warn("[MapClient] franss-joke warpToTower failed", e)
+                        }
+                    })()
+                    setCinematic(null)
+                    return
+                }
+                // Phase 2 : warp vers JOJO + 30 reps + flag définitif
+                ; (async () => {
+                    try {
+                        const res = await fetch("/api/gamebook/franss-joke", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ step: "warpToJojoAndReward" }),
+                        })
+                        const data = await res.json()
+                        if (data.ok && data.spawn) {
+                            setState((s) => ({
+                                ...s,
+                                mapId: data.spawn.mapId,
+                                posX: data.spawn.posX,
+                                posY: data.spawn.posY,
+                                direction: data.spawn.direction,
+                                franssJokeBirdDone: true,
+                            } as PlayerMapState))
+                            if (typeof data.availableEnergy === "number") setReps(data.availableEnergy)
+                            if (typeof data.energySpentToday === "number") setEnergySpent(data.energySpentToday)
+                            setToast(`🐦 +${data.reward ?? 30} reps de PIAFFINI. Te voilà chez JOJO pour de vrai.`)
+                        }
+                    } catch (e) {
+                        console.warn("[MapClient] franss-joke warpToJojoAndReward failed", e)
+                    }
+                })()
+                setCinematic(null)
+                return
+            }
+            setCinematic({ kind: "franssJoke", phase: cinematic.phase, step: next })
+            return
+        }
 
         // v3.11 — Cinématique PIAFFINI (dialogue au sommet, puis vol)
         if (cinematic?.kind === "piaffini" && cinematic.stage === "dialog") {
@@ -2616,6 +2717,19 @@ export default function MapClient({
                         <DialogueBox
                             speaker="🏔️ SOMMET"
                             text={MONT_SUMMIT_LINES[cinematic.step]}
+                            onNext={pressA}
+                        />
+                    )}
+
+                    {/* === v3.23e : CINÉMATIQUE BLAGUE PIAFFINI POUR FRANSS === */}
+                    {cinematic?.kind === "franssJoke" && (
+                        <DialogueBox
+                            speaker="🐦 PIAFFINI"
+                            text={
+                                cinematic.phase === "intro"
+                                    ? FRANSS_JOKE_INTRO_LINES[cinematic.step]
+                                    : FRANSS_JOKE_ATTOWER_LINES[cinematic.step]
+                            }
                             onNext={pressA}
                         />
                     )}

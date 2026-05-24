@@ -181,6 +181,8 @@ export async function GET() {
             contestDefiPompatorDone: (progress as { contestDefiPompatorDone?: boolean }).contestDefiPompatorDone === true,
             contestDefiSquatilusDone: (progress as { contestDefiSquatilusDone?: boolean }).contestDefiSquatilusDone === true,
             contestDefiTiroirDone: (progress as { contestDefiTiroirDone?: boolean }).contestDefiTiroirDone === true,
+            // v3.23e — Blague PIAFFINI unique (Franss only)
+            franssJokeBirdDone: (progress as { franssJokeBirdDone?: boolean }).franssJokeBirdDone === true,
         },
         todayReps,
         energySpentToday,

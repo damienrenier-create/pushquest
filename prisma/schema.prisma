@@ -500,6 +500,11 @@ model GamebookProgress {
   contestDefiSquatilusDone  Boolean @default(false)
   contestDefiTiroirDone     Boolean @default(false)
 
+  // v3.23e — Blague unique pour Franss (cmpgu4uq5000069du4s19q5l9) suite au bug
+  // PIAFFINI : PIAFFINI le téléporte une dernière fois à la Tour (gag), puis à
+  // Bourg-Boulette chez JOJO + 30 reps cadeau. One-shot à vie, Franss only.
+  franssJokeBirdDone        Boolean @default(false)
+
   @@unique([userId, chapterId])
   @@index([userId])
   @@index([mapId])
