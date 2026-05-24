@@ -45,6 +45,10 @@ export interface NpcDefinition {
     // v3.17 — dialogue utilisé quand le joueur a DÉJÀ parlé au NPC (revisit).
     // Permet aux 5 PNJ tristes de révéler des indices la 2e fois.
     dialoguesAfterRevisit?: string[]
+    // v3.23c-3 — dialogue utilisé quand Macaron'île a été "réveillée" (les 3 défis
+    // intersalle ont été remportés au moins par un joueur, propagé via flag joueur).
+    // Prime sur dialoguesAfterRevisit / dialoguesAfter.
+    dialoguesAfterMacaronAwakened?: string[]
     // Récompense unique (ex: gym guy donne 100 reps)
     energyReward?: number        // si défini, donne X reps une fois
 }
@@ -689,6 +693,11 @@ export const NPCS: NpcDefinition[] = [
             "Tu reviens ? Sérieux ?",
             "Y a vraiment rien à faire ici. Mais bon, fais comme tu veux.",
         ],
+        dialoguesAfterMacaronAwakened: [
+            "*PENNE se tient bien droit, l'œil vif.* Tu as conquis le contest_hall ?!",
+            "Mon dieu... ça fait des années qu'on attendait ça. Tu sais, j'étais pas TOUJOURS pessimiste.",
+            "Tu nous as rendu une raison de croire en quelque chose. Merci.",
+        ],
     },
     // v3.17 — RIGATO le factuel/statisticien
     {
@@ -709,6 +718,11 @@ export const NPCS: NpcDefinition[] = [
         dialoguesAfterRevisit: [
             "Statistique mise à jour : tu es la 4e personne à m'avoir reparlé ce mois.",
             "Marge d'erreur ±0,3 %.",
+        ],
+        dialoguesAfterMacaronAwakened: [
+            "RIGATO recalcule, fébrile. \"Projections révisées : +47 % inscriptions, +12 % PIB, +∞ % moral.\"",
+            "\"Tu as débloqué une variable que mes modèles avaient mise à 0. Bravo.\"",
+            "*Il sourit, pour la première fois en 18 mois selon mes données.*",
         ],
     },
     // v3.17 — FARFALL le romantique-rêveur — foreshadow naufragé
@@ -731,6 +745,11 @@ export const NPCS: NpcDefinition[] = [
             "Si tu vas vers la plage et que tu regardes attentivement, peut-être que tu le verras.",
             "*Il a les yeux brillants.*",
         ],
+        dialoguesAfterMacaronAwakened: [
+            "FARFALL pleure doucement, ému. \"Le concours revient... mon naufragé pourra rentrer.\"",
+            "\"Tu as réveillé l'île. Tu sais que tu as réveillé bien plus, non ?\"",
+            "*Il regarde l'horizon, les yeux pleins d'espoir.*",
+        ],
     },
     // v3.17 — ORZO l'arrogant-frustré — foreshadow trésor casino
     {
@@ -752,6 +771,11 @@ export const NPCS: NpcDefinition[] = [
             "Tiens, un secret : à Bourg-Boulette, dans le casino, y a un coin où des pièces sont tombées par terre.",
             "J'aurais bien été chercher, mais c'est pas digne d'un champion. *Il bombe le torse.*",
         ],
+        dialoguesAfterMacaronAwakened: [
+            "ORZO te toise. \"Bon. T'as fait ce que JE n'ai pas pu faire. *Il avale sa fierté.*\"",
+            "\"Bien joué, hein. Voilà. Je l'ai dit. Ne le répète à personne.\"",
+            "*Il sourit malgré lui.* \"On s'entraîne ensemble la prochaine fois ?\"",
+        ],
     },
     // v3.17 — BUCATINI le naïf-optimiste
     {
@@ -771,6 +795,11 @@ export const NPCS: NpcDefinition[] = [
         dialoguesAfterRevisit: [
             "T'es revenu ! Coach dit que les gens qui reviennent ont de la chance.",
             "Du coup tu vas réussir un truc cool, c'est obligé. *Il sourit.*",
+        ],
+        dialoguesAfterMacaronAwakened: [
+            "BUCATINI saute de joie. \"Tu l'as fait ! T'AS FAIT ! Coach avait raison !!\"",
+            "\"Le concours revient ! Le concours revient ! Le concours REVIENT !\"",
+            "*Il sautille, incapable de tenir en place.* \"Merci merci merci ! Tu changes nos vies !\"",
         ],
     },
 
@@ -1215,6 +1244,9 @@ export interface NpcDialogueFlags {
     /** v3.17 — IDs des NPCs déjà rencontrés au moins une fois.
      *  Quand l'id du NPC est inclus + dialoguesAfterRevisit défini → on utilise dialoguesAfterRevisit. */
     npcsTalkedTo?: string[]
+    /** v3.23c-3 — true si le joueur a complété les 3 défis intersalle (POMPATOR + SQUATILUS + TIROIR).
+     *  Quand true + dialoguesAfterMacaronAwakened défini → on utilise ce dialogue (prime sur revisit). */
+    macaronAwakened?: boolean
 }
 
 /**
@@ -1240,6 +1272,10 @@ export function getNpcDialogue(
     }
     if (flags.piaffiniRescued && npc.dialoguesAfterPiaffini) {
         return npc.dialoguesAfterPiaffini
+    }
+    // v3.23c-3 — Macaron'île éveillée prime sur tout le reste (sauf piaffini)
+    if (flags.macaronAwakened && npc.dialoguesAfterMacaronAwakened) {
+        return npc.dialoguesAfterMacaronAwakened
     }
     // v3.17 — Si le joueur a déjà parlé au NPC, utilise le dialogue revisit (s'il existe)
     if (flags.npcsTalkedTo?.includes(npc.id) && npc.dialoguesAfterRevisit) {

@@ -479,9 +479,16 @@ export default function MapClient({
         (npc: NpcDefinition) => {
             // v3.11 — Flags conditionnels (JOJO/JOJETTE post-PIAFFINI)
             // v3.17 — Flag npcsTalkedTo pour basculer sur dialoguesAfterRevisit (5 PNJ tristes, RAVIOLI, LINGUINI...)
+            // v3.23c-3 — Flag macaronAwakened : si les 3 défis intersalle sont tous validés,
+            //            les 5 PNJ tristes de Macaron'île passent sur leur dialogue post-victoire.
+            const macaronAwakened =
+                (state as { contestDefiPompatorDone?: boolean }).contestDefiPompatorDone === true
+                && (state as { contestDefiSquatilusDone?: boolean }).contestDefiSquatilusDone === true
+                && (state as { contestDefiTiroirDone?: boolean }).contestDefiTiroirDone === true
             const lines = getNpcDialogue(npc, state.phase, {
                 piaffiniRescued: state.piaffiniRescued === true,
                 npcsTalkedTo: state.npcsTalkedTo ?? [],
+                macaronAwakened,
             })
             setCinematic({
                 kind: "npcDialogue",
