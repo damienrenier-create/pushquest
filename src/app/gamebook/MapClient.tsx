@@ -506,7 +506,7 @@ export default function MapClient({
                 const label =
                     challenge.exercise === "PUSHUP" ? "pompes"
                         : challenge.exercise === "SQUAT" ? "squats"
-                            : challenge.exercise === "GAINAGE" ? "secondes de gainage"
+                            : challenge.exercise === "PLANK" ? "secondes de gainage"
                                 : challenge.exercise === "PULLUP" ? "tractions"
                                     : "cardio"
                 challengeText = `${bridgePnj.name} t'interpelle !\n\n"Fais ta séance de ${label} aujourd'hui et je te laisse passer pour de bon."\n\nAppuie sur A pour tenter le défi.`
@@ -3222,15 +3222,19 @@ function BuildingSprite({
                         position: "absolute", inset: 0,
                         backgroundImage: `repeating-linear-gradient(90deg, transparent 0, transparent 6px, ${roofDarkColor} 6px, ${roofDarkColor} 7px)`,
                     }} />
-                    {/* v3.24a — Label sur le toit, ombre noire pour lisibilité maximale */}
+                    {/* v3.24c — Label sur le toit avec mini-bandeau blanc opaque pour lisibilité max */}
                     <div style={{
                         position: "relative",
-                        color: "#fff",
-                        fontSize: "11px",
+                        background: "rgba(255, 255, 255, 0.95)",
+                        color: roofDarkColor,
+                        fontSize: "12px",
                         fontWeight: 900,
                         letterSpacing: "1px",
                         whiteSpace: "nowrap",
-                        textShadow: "1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000, 0 0 4px rgba(0,0,0,0.8)",
+                        padding: "1px 5px",
+                        borderRadius: "2px",
+                        border: `1.5px solid ${roofDarkColor}`,
+                        boxShadow: "0 1px 2px rgba(0,0,0,0.5)",
                         zIndex: 4,
                         pointerEvents: "none",
                     }}>

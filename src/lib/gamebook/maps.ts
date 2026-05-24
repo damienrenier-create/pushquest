@@ -1194,12 +1194,12 @@ export const BRIDGE_PNJS: Array<{
 }> = [
     { id: "pnj_pompo",   name: "POMPO",   x: 3, y: 9, color: "#d84030", facing: "right", challenge: { kind: "exercise", exercise: "PUSHUP", reps: 100 } },
     { id: "pnj_squatto", name: "SQUATTO", x: 7, y: 7, color: "#4080d8", facing: "left",  challenge: { kind: "exercise", exercise: "SQUAT",  reps: 100 } },
-    { id: "pnj_gainax",  name: "GAINAX",  x: 3, y: 5, color: "#48a830", facing: "right", challenge: { kind: "exercise", exercise: "GAINAGE", reps: 100 } },
+    { id: "pnj_gainax",  name: "GAINAX",  x: 3, y: 5, color: "#48a830", facing: "right", challenge: { kind: "exercise", exercise: "PLANK", reps: 100 } },
     { id: "pnj_champio", name: "CHAMPIO", x: 7, y: 3, color: "#a040d8", facing: "left",  challenge: { kind: "topYesterday" } },
 ]
 
 export type BridgeChallenge =
-    | { kind: "exercise"; exercise: "PUSHUP" | "SQUAT" | "GAINAGE" | "PULLUP" | "CARDIO"; reps: number }
+    | { kind: "exercise"; exercise: "PUSHUP" | "SQUAT" | "PLANK" | "PULLUP" | "CARDIO"; reps: number }
     | { kind: "topYesterday" }
 
 // ============================================================

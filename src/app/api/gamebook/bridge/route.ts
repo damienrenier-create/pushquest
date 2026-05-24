@@ -39,14 +39,16 @@ const BRIDGE_PNJ_THRESHOLD_MIN = 25
 const BRIDGE_VICTORIES_KEY = "bridgePnjVictories"
 
 // PNJ et leurs défis (doit matcher BRIDGE_PNJS dans maps.ts)
+// v3.24c — Note : le gainage est stocké en DB comme `exercise: "PLANK"` (cf logs/save/route.ts).
+// On stocke donc "PLANK" ici, et l'UI le rend en "secondes de gainage".
 type BridgeChallenge =
-    | { kind: "exercise"; exercise: "PUSHUP" | "SQUAT" | "GAINAGE" | "PULLUP" | "CARDIO" }
+    | { kind: "exercise"; exercise: "PUSHUP" | "SQUAT" | "PLANK" | "PULLUP" | "CARDIO" }
     | { kind: "topYesterday" }
 
 const BRIDGE_PNJS_SERVER: Record<string, BridgeChallenge> = {
     pnj_pompo:   { kind: "exercise", exercise: "PUSHUP" },
     pnj_squatto: { kind: "exercise", exercise: "SQUAT" },
-    pnj_gainax:  { kind: "exercise", exercise: "GAINAGE" },
+    pnj_gainax:  { kind: "exercise", exercise: "PLANK" },
     pnj_champio: { kind: "topYesterday" },
 }
 
@@ -419,7 +421,7 @@ async function challengePnj(userId: string, pnjId: string) {
 function labelExercise(ex: string): string {
     if (ex === "PUSHUP") return "pompes"
     if (ex === "SQUAT") return "squats"
-    if (ex === "GAINAGE") return "secondes de gainage"
+    if (ex === "PLANK") return "secondes de gainage"
     if (ex === "PULLUP") return "tractions"
     if (ex === "CARDIO") return "cardio"
     return "reps"
