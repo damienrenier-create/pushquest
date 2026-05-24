@@ -87,7 +87,7 @@ import PiaffiniFlightScreen from "./PiaffiniFlightScreen"
 import { PIAFFINI_RESCUE_DIALOGUE } from "@/lib/gamebook/dialogue"
 import { parseInventory, hasIntactItem, type InventoryEntry } from "@/lib/gamebook/inventory"
 import { findActiveWearableForTile, applySocialDiscount, hasIntactLunettes } from "@/lib/gamebook/items"
-import { PEPITO_DIALOGUE_FIRST } from "@/lib/gamebook/dialogue"
+import { PEPITO_DIALOGUE_FIRST, MONT_SUMMIT_LINES } from "@/lib/gamebook/dialogue"
 import TamagotchiModal from "./TamagotchiModal"
 import type { TamagotchiView } from "@/lib/gamebook/tamagotchi"
 import BibliothequeModal from "./BibliothequeModal"
@@ -169,6 +169,8 @@ type Cinematic =
     | { kind: "piaffini"; stage: "flight" }
     // v3.17d — Cinématique cassure des Lunettes (trip → fall → broken, 3 steps)
     | { kind: "lunettesBreak"; step: number }
+    // v3.23c — Cinématique Mont Pasta-Ventoux : panorama + remise badge Conquérant
+    | { kind: "montSummit"; step: number }
     | null
 
 // Ticker partagé entre tous les NPCs wanderers pour synchroniser leurs déplacements
@@ -717,14 +719,17 @@ export default function MapClient({
                 }
                 const goingUp = d === "up"
                 const newY = goingUp ? state.posY - 1 : state.posY + 1
-                // Bounds : y=1 = sommet (cinematic v3.23c à venir), y=H-2 = entrée sud
+                // Bounds : y=1 = sommet, y=H-2 = entrée sud
                 if (newY < 1) {
-                    // Sommet atteint
+                    // v3.23c — Sommet atteint : trigger cinématique + badge Conquérant
                     setState((s) => ({ ...s, posY: 1, direction: "up" }))
-                    setPopup({
-                        kind: "info",
-                        text: "🏔️ TU ATTEINS LE SOMMET DU MONT PASTA-VENTOUX !\n\nLa vue est magnifique. Tu sens que tu as accompli quelque chose de grand.\n\n(Badge Conquérant + concours intersalle arrivent dans le prochain patch.)",
-                    })
+                    const alreadyReached = (state as { montSummitReached?: boolean }).montSummitReached === true
+                    if (alreadyReached) {
+                        // Déjà visité : juste un toast lyrique, pas de re-trigger
+                        setToast("🏔️ Tu es de retour au sommet. La vue te coupe toujours le souffle.")
+                    } else {
+                        setCinematic({ kind: "montSummit", step: 0 })
+                    }
                     return
                 }
                 if (newY > map.height - 2) {
@@ -750,6 +755,16 @@ export default function MapClient({
             }
 
             const result = tryComputeMove(state, d, map, buildings, blockingPositions)
+
+            // v3.23c — Gating du contest_hall : accessible uniquement après badge Conquérant
+            if (!("blocked" in result) && result.enteredBuilding === "shop" && result.nextState.mapId === "contest_hall") {
+                const conquered = (state as { montSummitReached?: boolean }).montSummitReached === true
+                if (!conquered) {
+                    setToast("🔒 « Tu dois d'abord conquérir le Mont Pasta-Ventoux pour entrer ici. »")
+                    setState((s) => ({ ...s, direction: d }))
+                    return
+                }
+            }
 
             // v3.12 — Check waterShallow (canal) : conditions d'entrée selon swim_set + firstSwimDone
             if (!("blocked" in result)) {
@@ -1325,6 +1340,32 @@ export default function MapClient({
                 return
             }
             setCinematic({ kind: "lunettesBreak", step: next })
+            return
+        }
+
+        // v3.23c — Cinématique sommet du Mont Pasta-Ventoux (4 étapes)
+        if (cinematic?.kind === "montSummit") {
+            const next = cinematic.step + 1
+            if (next >= MONT_SUMMIT_LINES.length) {
+                // Fin de cinématique : appel serveur pour award badge Conquérant
+                ; (async () => {
+                    try {
+                        const res = await fetch("/api/gamebook/mont/summit-reached", { method: "POST" })
+                        const data = await res.json()
+                        if (data.ok) {
+                            setState((s) => ({ ...s, montSummitReached: true } as PlayerMapState))
+                            if (data.badgeAwarded && data.xp) {
+                                setToast(`🏔️ Badge Conquérant débloqué ! +${data.xp} XP. Le contest_hall de Muscuville s'ouvre.`)
+                            }
+                        }
+                    } catch (e) {
+                        console.warn("[MapClient] mont/summit-reached failed", e)
+                    }
+                })()
+                setCinematic(null)
+                return
+            }
+            setCinematic({ kind: "montSummit", step: next })
             return
         }
 
@@ -2515,6 +2556,15 @@ export default function MapClient({
                                         ? "*Tes lunettes glissent et tombent par terre dans un cliquetis.*"
                                         : "*Elles sont brisées net. Plus de classe, plus de discount.*"
                             }
+                            onNext={pressA}
+                        />
+                    )}
+
+                    {/* === v3.23c : CINÉMATIQUE SOMMET DU MONT PASTA-VENTOUX === */}
+                    {cinematic?.kind === "montSummit" && (
+                        <DialogueBox
+                            speaker="🏔️ SOMMET"
+                            text={MONT_SUMMIT_LINES[cinematic.step]}
                             onNext={pressA}
                         />
                     )}

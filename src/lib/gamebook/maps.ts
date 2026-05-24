@@ -1160,15 +1160,15 @@ export const PAPA_TABLEAUX: PapaTableau[] = [
         sport: "Champion de trail",
         lore: "Un cliché en pleine nature. Un coureur en montagne, transpirant mais souriant. Plaque : « KYLIAN — Très grand champion de trail. Pieds infatigables. »",
     },
-    // Floor 4 — slot libre pour un futur 7e joueur
+    // Floor 4 — Neuneu
     {
         mapId: "tower_floor_4",
         x: 7,
         y: 4,
-        nicknameMatch: null,
-        papaName: "?",
-        sport: "?",
-        lore: "Une toile ancienne, encore sans nom gravé. La place est réservée pour le prochain champion.",
+        nicknameMatch: "Neuneu",
+        papaName: "Pierre",
+        sport: "Ingénieur du son",
+        lore: "Un portrait studio. Un homme aux cheveux argentés, casque sur les oreilles, derrière une console mixage géante. Plaque : « PIERRE — Ingénieur du son hors pair. Celui qui sculpte le silence. »",
     },
 ]
 

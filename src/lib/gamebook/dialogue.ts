@@ -146,4 +146,14 @@ export const TOWER_JOKES: string[][] = [
     ],
 ]
 
+// =====================================================
+// v3.23c — Cinématique du sommet du Mont Pasta-Ventoux
+// =====================================================
+export const MONT_SUMMIT_LINES: string[] = [
+    "🏔️ Tu poses pied au sommet du Mont Pasta-Ventoux.",
+    "Devant toi, l'horizon s'étend à perte de vue. Bourg-Boulette, Pépiteville, Macaron'île — tout te paraît minuscule.",
+    "Le vent siffle dans tes oreilles. Tes jambes tremblent.",
+    "Tu as conquis ce monstre de pierre. Personne ne pourra plus jamais te dire que tu n'en es pas capable.",
+    "(Badge Conquérant 🏔️ +500 XP — Le contest_hall de Muscuville est maintenant accessible.)",
+]
 

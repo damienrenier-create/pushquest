@@ -175,6 +175,8 @@ export async function GET() {
             casinoPatternSpinIndex: (progress as { casinoPatternSpinIndex?: number }).casinoPatternSpinIndex ?? 0,
             casinoPatternWinStreak: (progress as { casinoPatternWinStreak?: number }).casinoPatternWinStreak ?? 0,
             casinoPatternBankruptUntil: (progress as { casinoPatternBankruptUntil?: Date | null }).casinoPatternBankruptUntil ?? null,
+            // v3.23c — Sommet du Mont Pasta-Ventoux atteint
+            montSummitReached: (progress as { montSummitReached?: boolean }).montSummitReached === true,
         },
         todayReps,
         energySpentToday,

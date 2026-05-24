@@ -492,6 +492,10 @@ model GamebookProgress {
   // Cooldown du casino après une banqueroute (24h). Null = casino ouvert.
   casinoPatternBankruptUntil DateTime?
 
+  // v3.23c — Sommet du Mont Pasta-Ventoux atteint au moins une fois.
+  // One-shot ; déclenche cinématique + badge Conquérant 500 XP. Aussi unlock contest_hall.
+  montSummitReached         Boolean @default(false)
+
   @@unique([userId, chapterId])
   @@index([userId])
   @@index([mapId])

@@ -129,6 +129,8 @@ export interface PlayerMapState {
     casinoPatternSpinIndex?: number
     casinoPatternWinStreak?: number
     casinoPatternBankruptUntil?: Date | string | null
+    // === v3.23c : Sommet du Mont Pasta-Ventoux atteint (one-shot) ===
+    montSummitReached?: boolean
 }
 
 // Snapshot d'un autre joueur affiché sur la carte
