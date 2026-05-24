@@ -95,6 +95,7 @@ import BestioleNamingModal from "./BestioleNamingModal"
 import CasinoModal from "./CasinoModal"
 import FastTravelModal from "./FastTravelModal"
 import { getLevelDetails } from "@/lib/xp"
+import { getActiveBicycle } from "@/lib/gamebook/items"
 
 interface Props {
     nickname: string
@@ -122,7 +123,26 @@ const GHOST_COLORS = ["#4080d8", "#d840a0", "#48a830", "#f08020", "#9050d0", "#d
 const OUTDOOR_MAP_IDS = new Set([
     "bourgpates", "route1", "pepiteville", "hautespates",
     "macaron_ile", "grass_sud", "muscuville", "la_mer",
+    "mont_pasta_ventoux",
 ])
+
+// v3.23b — Mont Pasta-Ventoux : calcul BPM via fenêtre glissante de 6 secondes.
+function computeCadenceBPM(clicks: number[]): number {
+    const now = Date.now()
+    const windowMs = 6000
+    const recent = clicks.filter((t) => now - t < windowMs)
+    return Math.round((recent.length / 6) * 60)
+}
+
+// v3.23b — Multiplicateur de coût selon cadence (BPM réel)
+//   <30 : 3.0× (épuisement) | 30-59 : 1.5× | 60-80 : 0.5× (idéal) | 81-99 : 1.5× | ≥100 : 3.0×
+function cadenceCostMultiplier(bpm: number): number {
+    if (bpm < 30) return 3.0
+    if (bpm < 60) return 1.5
+    if (bpm <= 80) return 0.5
+    if (bpm < 100) return 1.5
+    return 3.0
+}
 
 function colorForUser(id: string): string {
     let hash = 0
@@ -209,6 +229,15 @@ export default function MapClient({
     const [showCasino, setShowCasino] = useState(false)
     // v3.22 — Modal fast travel
     const [showFastTravel, setShowFastTravel] = useState(false)
+    // v3.23b — Cadence sur le Mont Pasta-Ventoux : timestamps des derniers clics "pédale"
+    const [cadenceClicks, setCadenceClicks] = useState<number[]>([])
+    // Tick pour rafraîchir le BPM même si pas de nouveau click
+    const [, setBpmTick] = useState(0)
+    useEffect(() => {
+        if (state.mapId !== "mont_pasta_ventoux") return
+        const t = setInterval(() => setBpmTick((x) => x + 1), 500)
+        return () => clearInterval(t)
+    }, [state.mapId])
     // === v3.8.1 : fruits cueillis aujourd'hui (par CE user). Drive le rendu vide/plein des arbres. ===
     const [fruitCounts, setFruitCounts] = useState<Record<string, number>>(initialFruitCounts)
     // === v3.8.2 : plus haut étage atteint dans la Tour. Drive le bypass-check des escaliers. ===
@@ -665,6 +694,55 @@ export default function MapClient({
             // Si une cinématique est en cours (NPC ou Pionnier), on l'avance plutôt que de bouger
             if (cinematic) {
                 pressA()
+                return
+            }
+
+            // v3.23b — Mont Pasta-Ventoux : override movement logic
+            // - up : avance 1 case (cost = bike.costPerCase × cadenceMult) + ajoute click au cadence tracker
+            // - down : recule 1 case gratuit (descente volontaire, pas de click)
+            // - left/right : bloqué (reste sur le chemin)
+            if (state.mapId === "mont_pasta_ventoux") {
+                if (d === "left" || d === "right") {
+                    setState((s) => ({ ...s, direction: d }))
+                    setToast("Reste sur le chemin du Mont.")
+                    return
+                }
+                const activeBike = getActiveBicycle(inventory)
+                if (!activeBike) {
+                    setToast("Tu n'as pas de vélo. Comment es-tu arrivé ici ?")
+                    return
+                }
+                const goingUp = d === "up"
+                const newY = goingUp ? state.posY - 1 : state.posY + 1
+                // Bounds : y=1 = sommet (cinematic v3.23c à venir), y=H-2 = entrée sud
+                if (newY < 1) {
+                    // Sommet atteint
+                    setState((s) => ({ ...s, posY: 1, direction: "up" }))
+                    setPopup({
+                        kind: "info",
+                        text: "🏔️ TU ATTEINS LE SOMMET DU MONT PASTA-VENTOUX !\n\nLa vue est magnifique. Tu sens que tu as accompli quelque chose de grand.\n\n(Badge Conquérant + concours intersalle arrivent dans le prochain patch.)",
+                    })
+                    return
+                }
+                if (newY > map.height - 2) {
+                    setState((s) => ({ ...s, direction: d }))
+                    return
+                }
+                // Avancement
+                setState((s) => ({ ...s, posX: 3, posY: newY, direction: d }))
+                if (goingUp) {
+                    // Ajoute click au tracker cadence
+                    const now = Date.now()
+                    setCadenceClicks((prev) => [...prev.filter((t) => now - t < 10000), now])
+                    // Coût = bike.costPerCase × cadenceMultiplier
+                    const bpm = computeCadenceBPM(cadenceClicks)
+                    const mult = cadenceCostMultiplier(bpm)
+                    const baseCost = activeBike.def.capabilities.canRide?.costPerCase ?? 8
+                    const cost = Math.max(1, Math.round(baseCost * mult))
+                    setReps((r) => Math.max(0, r - cost))
+                    // Wear le vélo
+                    spendEnergy(cost, "mont_climb", [activeBike.entry.itemKey]).catch(() => { /* silent */ })
+                }
                 return
             }
 
@@ -1144,22 +1222,51 @@ export default function MapClient({
                     setToast("MUSCUVILLE")
                 }, 200)
             }
-            // v3.23a — Muscuville sud (grassTall col 8 ligne MUSCUVILLE_H-1=15) : Mont Pasta-Ventoux non implémenté
-            // Pour l'instant on bloque + popup. v3.23b débloquera avec gate vélo.
+            // v3.23b — Muscuville sud → Mont Pasta-Ventoux (gated par vélo)
             if (
                 state.mapId === "muscuville" &&
                 result.nextState.posY === map.height - 1 &&
                 result.nextState.posX === 8 &&
                 map.tiles[result.nextState.posY]?.[result.nextState.posX] === "grassTall"
             ) {
+                const activeBike = getActiveBicycle(inventory)
+                if (!activeBike) {
+                    setTimeout(() => {
+                        setState((s) => ({ ...s, posY: map.height - 2 }))
+                        setPopup({
+                            kind: "info",
+                            text: "⛰️ MONT PASTA-VENTOUX\n\nLa montagne se dresse devant toi. Tu ne peux pas la gravir à pied.\n\nVa voir PELOTON au magasin de vélos pour acheter une monture.",
+                        })
+                    }, 100)
+                } else {
+                    setTimeout(() => {
+                        setState((s) => ({
+                            ...s,
+                            mapId: "mont_pasta_ventoux",
+                            posX: 3,
+                            posY: 101,  // Sommet est à y=1 (MONT_H-3=101 = entrée sud)
+                            direction: "up",
+                        }))
+                        setToast(`🚴 Tu enfourches ton ${activeBike.def.name.toLowerCase()}. Direction le sommet !`)
+                    }, 200)
+                }
+            }
+            // v3.23b — Mont nord (cinematic au sommet à venir v3.23c) + retour Mont sud → Muscuville
+            if (
+                state.mapId === "mont_pasta_ventoux" &&
+                result.nextState.posY === map.height - 2 &&
+                map.tiles[result.nextState.posY]?.[result.nextState.posX] === "grassTall"
+            ) {
                 setTimeout(() => {
-                    // Reculer le joueur
-                    setState((s) => ({ ...s, posY: map.height - 2 }))
-                    setPopup({
-                        kind: "info",
-                        text: "⛰️ MONT PASTA-VENTOUX\n\nUne montagne immense se dresse devant toi.\nPour la gravir, il te faudra un vélo. Le magasin de PELOTON est juste là.\n\n(Mont accessible dans un prochain patch.)",
-                    })
-                }, 100)
+                    setState((s) => ({
+                        ...s,
+                        mapId: "muscuville",
+                        posX: 8,
+                        posY: 14,
+                        direction: "up",
+                    }))
+                    setToast("MUSCUVILLE")
+                }, 200)
             }
             // Muscuville nord (grassTall col 8 ligne 0) → retour grass_sud
             if (
@@ -2059,6 +2166,71 @@ export default function MapClient({
                     <div style={{ opacity: 0.6, fontSize: "9px" }}>EXPLORATION</div>
                 )}
             </div>
+
+            {/* v3.23b — Jauge cadence (BPM) visible uniquement sur le Mont Pasta-Ventoux */}
+            {state.mapId === "mont_pasta_ventoux" && (() => {
+                const bpm = computeCadenceBPM(cadenceClicks)
+                const mult = cadenceCostMultiplier(bpm)
+                const zoneColor =
+                    mult === 0.5 ? "#4cd964" :
+                        mult === 1.5 ? "#ffd43b" :
+                            "#ff5252"
+                const zoneLabel =
+                    mult === 0.5 ? "IDÉAL ×0.5" :
+                        mult === 1.5 ? (bpm < 60 ? "TROP LENT ×1.5" : "TROP RAPIDE ×1.5") :
+                            (bpm < 30 ? "ÉPUISEMENT ×3" : "EXPLOSION ×3")
+                // Position du curseur sur l'échelle 0-130 BPM (clampée)
+                const cursorPct = Math.max(0, Math.min(100, (Math.min(bpm, 130) / 130) * 100))
+                return (
+                    <div
+                        style={{
+                            width: "min(94vw, 380px)",
+                            background: "#1f1f1f",
+                            border: "2px solid #555",
+                            borderTop: "none",
+                            padding: "6px 10px",
+                            color: "#fff",
+                            fontSize: "10px",
+                            letterSpacing: "0.5px",
+                        }}
+                    >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                            <span style={{ fontWeight: "bold" }}>🚴 CADENCE</span>
+                            <span style={{ fontWeight: "bold", color: zoneColor }}>{bpm} BPM</span>
+                            <span style={{ fontSize: "9px", color: zoneColor }}>{zoneLabel}</span>
+                        </div>
+                        {/* Barre de zones : rouge 0-30 / orange 30-60 / vert 60-80 / orange 80-100 / rouge 100-130 */}
+                        <div style={{ position: "relative", height: 10, borderRadius: 2, overflow: "hidden", display: "flex" }}>
+                            <div style={{ width: `${(30 / 130) * 100}%`, background: "#ff5252" }} />
+                            <div style={{ width: `${(30 / 130) * 100}%`, background: "#ffd43b" }} />
+                            <div style={{ width: `${(20 / 130) * 100}%`, background: "#4cd964" }} />
+                            <div style={{ width: `${(20 / 130) * 100}%`, background: "#ffd43b" }} />
+                            <div style={{ width: `${(30 / 130) * 100}%`, background: "#ff5252" }} />
+                            {/* Curseur */}
+                            <div
+                                style={{
+                                    position: "absolute",
+                                    top: -2,
+                                    left: `${cursorPct}%`,
+                                    width: 2,
+                                    height: 14,
+                                    background: "#fff",
+                                    boxShadow: "0 0 4px rgba(255,255,255,0.8)",
+                                    transform: "translateX(-1px)",
+                                }}
+                            />
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "8px", color: "#888", marginTop: 2 }}>
+                            <span>0</span>
+                            <span>30</span>
+                            <span>60</span>
+                            <span style={{ color: "#4cd964" }}>80</span>
+                            <span>100</span>
+                            <span>130</span>
+                        </div>
+                    </div>
+                )
+            })()}
 
             {/* ÉCRAN */}
             <div

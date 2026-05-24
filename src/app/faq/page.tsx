@@ -555,6 +555,47 @@ function FAQContent() {
                                 ))}
                             </div>
                         </section>
+
+                        {/* === v3.22 — Section Nexus === */}
+                        <section className="bg-gradient-to-br from-emerald-700 to-emerald-900 text-white rounded-[2.5rem] p-8 shadow-xl relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-8 opacity-10 text-7xl italic font-black">🗺️</div>
+                            <div className="relative z-10 space-y-4">
+                                <div className="flex items-center gap-3">
+                                    <BookOpen size={24} />
+                                    <h2 className="text-2xl font-black uppercase italic tracking-tighter">Le Nexus</h2>
+                                </div>
+                                <p className="text-emerald-100 text-sm leading-relaxed">
+                                    Le <strong>Nexus</strong> (alias <em>gamebook</em>) est une carte explorable style Pokémon où ton avatar progresse à travers un archipel narratif. Chaque case coûte des reps — pousse-toi à faire plus d'exercices pour explorer plus loin.
+                                </p>
+                                <div className="grid grid-cols-2 gap-3 text-[11px]">
+                                    <div className="bg-white/10 p-3 rounded-2xl">
+                                        <div className="text-emerald-200 font-black uppercase mb-1">🌐 5 villes</div>
+                                        <div className="text-emerald-100">Bourg-Boulette · Pépiteville · Hautes-Pâtes · Macaron'île · Muscuville</div>
+                                    </div>
+                                    <div className="bg-white/10 p-3 rounded-2xl">
+                                        <div className="text-emerald-200 font-black uppercase mb-1">👥 ~40 PNJ</div>
+                                        <div className="text-emerald-100">Marchands, défis, foreshadowing, animaux compagnons</div>
+                                    </div>
+                                    <div className="bg-white/10 p-3 rounded-2xl">
+                                        <div className="text-emerald-200 font-black uppercase mb-1">🏆 5 badges</div>
+                                        <div className="text-emerald-100">Pionnier (150 XP) · Star (200) · Sauveur PIAFFINI (200) · Pousseur (100) · Animal Totem (100)</div>
+                                    </div>
+                                    <div className="bg-white/10 p-3 rounded-2xl">
+                                        <div className="text-emerald-200 font-black uppercase mb-1">⚖️ Anti-cheat</div>
+                                        <div className="text-emerald-100">Suppression de reps = gamebook gelé. Comptes isSystem invisibles aux autres.</div>
+                                    </div>
+                                </div>
+                                <div className="bg-white/5 border-l-4 border-emerald-300 pl-4 py-2 text-[11px] text-emerald-100">
+                                    <strong>Coût mouvement</strong> : 10 reps/case en outdoor, gratuit en intérieur. Réductions possibles : <em>baskets</em> (-2), <em>chaussures de course</em> (-8), <em>lunettes</em> (-10%). Ratio onboarding pour les nouveaux joueurs.
+                                </div>
+                                <div className="bg-white/5 border-l-4 border-pink-300 pl-4 py-2 text-[11px] text-emerald-100">
+                                    <strong>Fast travel</strong> : une fois une ville visitée à pied, voyage gratuit depuis le menu START.
+                                </div>
+                                <a href="/gamebook" className="inline-flex items-center gap-2 mt-2 bg-white text-emerald-700 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-emerald-50 transition-colors">
+                                    Ouvrir le Nexus <ChevronRight size={14} />
+                                </a>
+                            </div>
+                        </section>
                     </div>
                 )}
 

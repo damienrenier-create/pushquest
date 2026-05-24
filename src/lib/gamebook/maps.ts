@@ -452,6 +452,67 @@ function buildMacaronIle(): TileType[][] {
 }
 
 // ============================================================
+// v3.23b — MONT PASTA-VENTOUX (montagne verticale au sud de Muscuville)
+// 7×104 cases : corridor vertical de 100 cases d'ascension + buffers.
+//   - y=0     : tree (sommet, avec marker spécial)
+//   - y=1     : sommet flowery + cinematic trigger
+//   - y=2..101: 100 cases de path vertical (ascension)
+//   - y=102   : entrée sud (grassTall trigger depuis Muscuville)
+//   - y=103   : tree (limite sud)
+// ============================================================
+const MONT_W = 7
+const MONT_H = 104
+export const MONT_SUMMIT_Y = 1
+
+function buildMontPastaVentoux(): TileType[][] {
+    const m: TileType[][] = []
+    for (let y = 0; y < MONT_H; y++) {
+        const row: TileType[] = []
+        for (let x = 0; x < MONT_W; x++) {
+            if (x === 0 || x === MONT_W - 1 || y === 0 || y === MONT_H - 1) {
+                row.push("tree")
+            } else {
+                row.push("grass")
+            }
+        }
+        m.push(row)
+    }
+    // Sommet : fleurs + statues (col 3 center)
+    m[1][3] = "flowerR"
+    m[1][2] = "flowerY"
+    m[1][4] = "flowerY"
+    // Chemin vertical central (col 3) sur toute la hauteur
+    for (let y = 2; y <= MONT_H - 3; y++) m[y][3] = "path"
+    // Entrée sud : grassTall (col 3, y=H-2=102) = trigger depuis Muscuville
+    m[MONT_H - 2][3] = "grassTall"
+    // Décor latéral : arbres + fleurs tous les 10 cases pour donner du visuel
+    for (let y = 10; y < MONT_H - 5; y += 10) {
+        m[y][1] = "tree"
+        m[y][MONT_W - 2] = "tree"
+        if (y + 5 < MONT_H - 5) {
+            m[y + 5][1] = "flowerR"
+            m[y + 5][MONT_W - 2] = "flowerY"
+        }
+    }
+    return m
+}
+
+// v3.23b — Spawn dans le Mont depuis Muscuville (entrée sud du Mont = y=H-2)
+export const MONT_SPAWN_FROM_MUSCUVILLE = {
+    mapId: "mont_pasta_ventoux",
+    posX: 3,
+    posY: MONT_H - 3,  // juste au-dessus de la grassTall d'entrée
+    direction: "up" as const,
+}
+// Retour vers Muscuville depuis le Mont (sortie sud du Mont = grassTall y=H-2)
+export const MUSCUVILLE_SPAWN_FROM_MONT = {
+    mapId: "muscuville",
+    posX: 8,
+    posY: 14,  // juste au-dessus de la grassTall sud Muscuville
+    direction: "up" as const,
+}
+
+// ============================================================
 // v3.17c — LA MER (canal navigable entre Bourg-Boulette et Macaron'île)
 // Petit map avec deux îlots de sable accueillant un naufragé et un nageur.
 // Path waterShallow 3 colonnes (3-4-5) pour permettre le détour sur les îlots.
@@ -1255,6 +1316,14 @@ export const MAPS: Record<string, MapData> = {
         width: 13,
         height: 10,
         exitTarget: { mapId: "macaron_ile", x: 3, y: 15 },
+    },
+    // v3.23b — Mont Pasta-Ventoux (montagne verticale au sud de Muscuville)
+    mont_pasta_ventoux: {
+        id: "mont_pasta_ventoux",
+        name: "MONT PASTA-VENTOUX",
+        tiles: buildMontPastaVentoux(),
+        width: MONT_W,
+        height: MONT_H,
     },
     // v3.17c — La mer (canal navigable inséré entre Bourg-Boulette et Macaron'île)
     la_mer: {
