@@ -28,8 +28,8 @@ interface Props {
     nickname: string
     /** v3.10 — ratio de difficulté pour ajuster l'affichage des prix (onboarding paye moins) */
     difficultyRatio: number
-    /** v3.17 — Quel shop est ouvert (NUTRIPATES Pépiteville ou TRENETTE Macaron'île). Par défaut nutripates. */
-    shop?: "nutripates" | "trenette"
+    /** v3.17 — Quel shop est ouvert. v3.23 : ajout "muscuville_bikes". Par défaut nutripates. */
+    shop?: "nutripates" | "trenette" | "muscuville_bikes"
     onBuy: (itemKey: string) => Promise<void>
     /** v3.8.9 — notifie le parent à la fermeture du modal, en indiquant si un achat a été fait. */
     onClose: (purchaseMade: boolean) => void
@@ -45,6 +45,11 @@ function greetingNutripates(lastPurchase: LastPurchase | null, currentNickname: 
         return `NUTRIPATES te reconnaît. "Ah, c'est encore toi. Ton dernier achat (${lastPurchase.itemName.toLowerCase()}, ${ago}) m'a fait plaisir. T'en veux un autre ?"`
     }
     return `NUTRIPATES sourit légèrement. "Le dernier client était ${lastPurchase.nickname}, ${ago}. Il a pris ${article(lastPurchase.itemName)}. Et toi, tu prends quoi ?"`
+}
+
+// v3.23 — Greeting du magasin de vélos (PELOTON à Muscuville)
+function greetingBikeShop(): string {
+    return "PELOTON polit une selle. \"Le Mont Pasta-Ventoux ? Faut un vélo. Pas le choix. Choisis bien — ce que tu paies, tu le récupères au sommet.\""
 }
 
 // v3.17 — Greeting TRENETTE (frère de NUTRIPATES, shop Macaron'île)
@@ -94,10 +99,11 @@ export default function ShopModal({ inventory, availableEnergy, nickname, diffic
         return () => { cancelled = true }
     }, [])
 
-    const greeting = useMemo(
-        () => shop === "trenette" ? greetingTrenette(lastPurchase, nickname) : greetingNutripates(lastPurchase, nickname),
-        [lastPurchase, nickname, shop]
-    )
+    const greeting = useMemo(() => {
+        if (shop === "trenette") return greetingTrenette(lastPurchase, nickname)
+        if (shop === "muscuville_bikes") return greetingBikeShop()
+        return greetingNutripates(lastPurchase, nickname)
+    }, [lastPurchase, nickname, shop])
 
     // v3.17 — Items filtrés par shop courant
     const shopItems = useMemo(() => itemsAvailableAtShop(shop), [shop])

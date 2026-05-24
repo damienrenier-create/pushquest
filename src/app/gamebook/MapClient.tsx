@@ -34,6 +34,8 @@ import {
     TOWER_STAIRS_SQUATS_THRESHOLD,
     MACARONILE_BUILDINGS,
     MACARONILE_SIGNS,
+    MUSCUVILLE_BUILDINGS,
+    MUSCUVILLE_SIGNS,
     GRASS_SUD_SPAWN_FROM_NORTH,
     MACARONILE_SPAWN_FROM_GRASS_SUD,
     MUSCUVILLE_SPAWN_FROM_NORTH,
@@ -243,7 +245,9 @@ export default function MapClient({
                     ? HAUTESPATES_BUILDINGS
                     : state.mapId === "macaron_ile"
                         ? MACARONILE_BUILDINGS
-                        : []
+                        : state.mapId === "muscuville"
+                            ? MUSCUVILLE_BUILDINGS
+                            : []
 
     // v3.8 — Signs selon la map courante
     const signs =
@@ -251,7 +255,8 @@ export default function MapClient({
             : state.mapId === "pepiteville" ? PEPITEVILLE_SIGNS
                 : state.mapId === "hautespates" ? HAUTESPATES_SIGNS
                     : state.mapId === "macaron_ile" ? MACARONILE_SIGNS
-                        : []
+                        : state.mapId === "muscuville" ? MUSCUVILLE_SIGNS
+                            : []
 
     // ============================================================
     // LOAD AUTRES JOUEURS (polling fallback si Pusher off)
@@ -1139,11 +1144,28 @@ export default function MapClient({
                     setToast("MUSCUVILLE")
                 }, 200)
             }
-            // Muscuville nord (grassTall col 6 ligne 0) → retour grass_sud
+            // v3.23a — Muscuville sud (grassTall col 8 ligne MUSCUVILLE_H-1=15) : Mont Pasta-Ventoux non implémenté
+            // Pour l'instant on bloque + popup. v3.23b débloquera avec gate vélo.
+            if (
+                state.mapId === "muscuville" &&
+                result.nextState.posY === map.height - 1 &&
+                result.nextState.posX === 8 &&
+                map.tiles[result.nextState.posY]?.[result.nextState.posX] === "grassTall"
+            ) {
+                setTimeout(() => {
+                    // Reculer le joueur
+                    setState((s) => ({ ...s, posY: map.height - 2 }))
+                    setPopup({
+                        kind: "info",
+                        text: "⛰️ MONT PASTA-VENTOUX\n\nUne montagne immense se dresse devant toi.\nPour la gravir, il te faudra un vélo. Le magasin de PELOTON est juste là.\n\n(Mont accessible dans un prochain patch.)",
+                    })
+                }, 100)
+            }
+            // Muscuville nord (grassTall col 8 ligne 0) → retour grass_sud
             if (
                 state.mapId === "muscuville" &&
                 result.nextState.posY === 0 &&
-                result.nextState.posX === 6
+                result.nextState.posX === 8
             ) {
                 setTimeout(() => {
                     setState((s) => ({
@@ -1602,6 +1624,18 @@ export default function MapClient({
                 setShowShop(true)
                 return
             }
+            // v3.23 — PELOTON (bike seller) : ouvre le shop des vélos
+            if (npcId === "bike_seller") {
+                if (!hasBag) {
+                    setPopup({
+                        kind: "info",
+                        text: "PELOTON te regarde. \"Sans sac, pas de vélo. Va voir MAMAN d'abord.\"",
+                    })
+                    return
+                }
+                setShowShop(true)
+                return
+            }
             // v3.17c — NAGEUR (la_mer) : 3 niveaux de dialogue + défi 50 pompes
             if (npcId === "lamer_nageur") {
                 triggerNageurDialog()
@@ -1645,6 +1679,19 @@ export default function MapClient({
                 setPopup({
                     kind: "info",
                     text: "TRENETTE hausse un sourcil.\n\n\"T'as pas de sac, comment tu veux que je te file quoi que ce soit ?\"",
+                })
+                return
+            }
+            setShowShop(true)
+            return
+        }
+
+        // v3.23 — Dans le bike shop de Muscuville, PELOTON est derrière le comptoir
+        if (state.mapId === "bike_shop" && tile === "shopCounter") {
+            if (!hasBag) {
+                setPopup({
+                    kind: "info",
+                    text: "PELOTON te regarde. \"Sans sac, pas de vélo. Va voir MAMAN d'abord.\"",
                 })
                 return
             }
@@ -2641,7 +2688,7 @@ export default function MapClient({
                     availableEnergy={reps}
                     nickname={nickname}
                     difficultyRatio={difficultyRatio}
-                    shop={state.mapId === "shop_macaron" ? "trenette" : "nutripates"}
+                    shop={state.mapId === "shop_macaron" ? "trenette" : state.mapId === "bike_shop" ? "muscuville_bikes" : "nutripates"}
                     onBuy={async (itemKey) => {
                         try {
                             const res = await fetch("/api/gamebook/shop/buy", {

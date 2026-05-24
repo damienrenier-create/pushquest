@@ -523,11 +523,18 @@ function buildGrassSud(): TileType[][] {
 }
 
 // ============================================================
-// v3.16 — MUSCUVILLE (stub : village des athlètes, sud du corridor)
-// 13 × 12, croix de chemins. Pas de bâtiment pour l'instant (v3.17).
+// v3.16/v3.23 — MUSCUVILLE (village des athlètes, sud du corridor)
+// Agrandie à 17×16 pour accueillir 4 bâtiments + sortie sud vers Mont Pasta-Ventoux.
+//   - y=0     : tree + grassTall (col 8) trigger retour grass_sud
+//   - y=1..4  : zone d'entrée + ville haute (Bike Shop + Gym Muscuville)
+//   - y=5     : chemin horizontal
+//   - y=6..9  : ville milieu (Casino + Contest Hall) — Contest Hall verrouillée sans badge
+//   - y=10    : chemin horizontal
+//   - y=11..14: place du sud + statues
+//   - y=15    : tree + grassTall (col 8) trigger Mont Pasta-Ventoux
 // ============================================================
-const MUSCUVILLE_W = 13
-const MUSCUVILLE_H = 12
+const MUSCUVILLE_W = 17
+const MUSCUVILLE_H = 16
 
 function buildMuscuville(): TileType[][] {
     const m: TileType[][] = []
@@ -542,19 +549,45 @@ function buildMuscuville(): TileType[][] {
         }
         m.push(row)
     }
-    // Entrée grassTall nord (col 6)
-    m[0][6] = "grassTall"
-    // Chemin vertical central
-    for (let y = 1; y < MUSCUVILLE_H - 1; y++) m[y][6] = "path"
-    // Chemin horizontal au milieu
-    for (let x = 1; x < MUSCUVILLE_W - 1; x++) m[6][x] = "path"
-    // Fleurs déco
-    m[3][2] = "flowerR"
-    m[3][10] = "flowerY"
-    m[9][2] = "flowerY"
-    m[9][10] = "flowerR"
+    // Entrée grassTall nord (col 8) = trigger retour grass_sud
+    m[0][8] = "grassTall"
+    // Sortie sud grassTall (col 8) = trigger Mont Pasta-Ventoux
+    m[MUSCUVILLE_H - 1][8] = "grassTall"
+
+    // Chemin vertical central (col 8) sur toute la hauteur
+    for (let y = 1; y < MUSCUVILLE_H - 1; y++) m[y][8] = "path"
+
+    // Chemins horizontaux d'accès aux portes (y=5 et y=10)
+    for (let x = 1; x < MUSCUVILLE_W - 1; x++) m[5][x] = "path"
+    for (let x = 1; x < MUSCUVILLE_W - 1; x++) m[10][x] = "path"
+
+    // Décor : fleurs + arbres
+    m[12][2] = "flowerR"; m[12][3] = "flowerY"
+    m[12][13] = "flowerY"; m[12][14] = "flowerR"
+    m[13][4] = "tree"; m[13][12] = "tree"
+    m[2][6] = "flowerY"; m[2][10] = "flowerR"
     return m
 }
+
+// v3.23 — Bâtiments de Muscuville
+export const MUSCUVILLE_BUILDINGS: Building[] = [
+    // Magasin de vélos — rangée 1 gauche (5x5, cols 1..5, rows 1..5)
+    { x: 1, y: 1, w: 5, h: 4, kind: "shop", doorX: 2, doorY: 3, visible: true, targetMapId: "bike_shop", displayName: "VÉLOS" },
+    // Gym Muscuville — rangée 1 droite (cols 11..15, rows 1..4)
+    { x: 11, y: 1, w: 5, h: 4, kind: "gym", doorX: 2, doorY: 3, visible: true, targetMapId: "gym_muscuville", displayName: "MUSCU" },
+    // Casino Muscuville — rangée 2 gauche (cols 1..5, rows 6..9)
+    { x: 1, y: 6, w: 5, h: 4, kind: "casino", doorX: 2, doorY: 3, visible: true, targetMapId: "casino_muscuville", displayName: "CASINO" },
+    // Salle des concours — rangée 2 droite (cols 11..15, rows 6..9) — verrouillée sans badge Conquérant
+    { x: 11, y: 6, w: 5, h: 4, kind: "shop", doorX: 2, doorY: 3, visible: true, targetMapId: "contest_hall", displayName: "CONCOURS" },
+]
+
+export const MUSCUVILLE_SIGNS: Sign[] = [
+    { x: 4, y: 5, text: "MAGASIN DE VÉLOS\nVoir le marchand à l'intérieur. Indispensable pour gravir le Mont Pasta-Ventoux." },
+    { x: 14, y: 5, text: "GYMNASE DE MUSCUVILLE\nLa salle officielle des athlètes." },
+    { x: 4, y: 10, text: "CASINO DE MUSCUVILLE\nDernier casino de l'archipel." },
+    { x: 14, y: 10, text: "SALLE DES CONCOURS\nIntersalle annuel. Accès interdit aux non-conquérants du Mont." },
+    { x: 8, y: 14, text: "↓ MONT PASTA-VENTOUX\n100 cases jusqu'au sommet. Vélo obligatoire." },
+]
 
 // v3.22 — Bâtiments 5×5 avec displayName (label custom rendu à droite du bâtiment).
 export const MACARONILE_BUILDINGS: Building[] = [
@@ -764,6 +797,64 @@ function buildVeterinaire(): TileType[][] {
     // Sortie sud
     m[H - 1][Math.floor(W / 2)] = "doorMat"
 
+    return m
+}
+
+// v3.23 — BIKE_SHOP : intérieur du magasin de vélos de Muscuville (9x8)
+function buildBikeShop(): TileType[][] {
+    const W = 9, H = 8
+    const m: TileType[][] = []
+    for (let y = 0; y < H; y++) {
+        const row: TileType[] = []
+        for (let x = 0; x < W; x++) {
+            if (y === 0) row.push("wallH")
+            else if (x === 0 || x === W - 1 || y === H - 1) row.push("wallV")
+            else row.push("floorWood")
+        }
+        m.push(row)
+    }
+    // Étagères de vélos (réutilise shopShelf décoratif)
+    for (let x = 1; x < W - 1; x++) m[1][x] = "shopShelf"
+    // Comptoir
+    for (let x = 2; x <= W - 3; x++) m[3][x] = "shopCounter"
+    // Quelques sacs de pièces déco (foodBag réutilisé)
+    m[5][1] = "foodBag"
+    m[5][W - 2] = "foodBag"
+    m[H - 1][4] = "doorMat"
+    return m
+}
+
+// v3.23 — GYM_MUSCUVILLE : salle de muscu de Muscuville (10x8, copie de buildGym)
+function buildGymMuscuville(): TileType[][] {
+    return buildGym()
+}
+
+// v3.23 — CASINO_MUSCUVILLE : copie du casino
+function buildCasinoMuscuville(): TileType[][] {
+    return buildCasino()
+}
+
+// v3.23 — CONTEST_HALL : salle des concours intersalle (11x9). Stub : 3 PNJ adversaires + tapis central.
+function buildContestHall(): TileType[][] {
+    const W = 11, H = 9
+    const m: TileType[][] = []
+    for (let y = 0; y < H; y++) {
+        const row: TileType[] = []
+        for (let x = 0; x < W; x++) {
+            if (y === 0) row.push("wallH")
+            else if (x === 0 || x === W - 1 || y === H - 1) row.push("wallV")
+            else row.push("floorTile")
+        }
+        m.push(row)
+    }
+    // Tapis central (zone d'arène)
+    for (let y = 3; y <= 5; y++) {
+        for (let x = 3; x <= W - 4; x++) m[y][x] = "rug"
+    }
+    // Étagères de trophées sur le mur nord (décor)
+    for (let x = 1; x < W - 1; x++) m[1][x] = "shopShelf"
+    // Sortie sud
+    m[H - 1][Math.floor(W / 2)] = "doorMat"
     return m
 }
 
@@ -1188,6 +1279,39 @@ export const MAPS: Record<string, MapData> = {
         width: MUSCUVILLE_W,
         height: MUSCUVILLE_H,
     },
+    // v3.23 — Bâtiments intérieurs de Muscuville
+    bike_shop: {
+        id: "bike_shop",
+        name: "MAGASIN DE VÉLOS",
+        tiles: buildBikeShop(),
+        width: 9,
+        height: 8,
+        exitTarget: { mapId: "muscuville", x: 3, y: 5 },
+    },
+    gym_muscuville: {
+        id: "gym_muscuville",
+        name: "GYM DE MUSCUVILLE",
+        tiles: buildGymMuscuville(),
+        width: 10,
+        height: 8,
+        exitTarget: { mapId: "muscuville", x: 13, y: 5 },
+    },
+    casino_muscuville: {
+        id: "casino_muscuville",
+        name: "CASINO DE MUSCUVILLE",
+        tiles: buildCasinoMuscuville(),
+        width: 10,
+        height: 8,
+        exitTarget: { mapId: "muscuville", x: 3, y: 10 },
+    },
+    contest_hall: {
+        id: "contest_hall",
+        name: "SALLE DES CONCOURS",
+        tiles: buildContestHall(),
+        width: 11,
+        height: 9,
+        exitTarget: { mapId: "muscuville", x: 13, y: 10 },
+    },
     // === v3.8.2 — Hautes-Pâtes et sa Tour ===
     hautespates: {
         id: "hautespates",
@@ -1372,6 +1496,11 @@ export const INDOOR_MAP_IDS = new Set([
     "tower_floor_3",
     "tower_floor_4",
     "tower_floor_5",
+    // v3.23 — Bâtiments intérieurs de Muscuville
+    "bike_shop",
+    "gym_muscuville",
+    "casino_muscuville",
+    "contest_hall",
 ])
 
 export function isIndoorMap(mapId: string): boolean {
@@ -1414,10 +1543,10 @@ export const MACARONILE_SPAWN_FROM_GRASS_SUD = {
     posY: 14,
     direction: "up" as const,
 }
-// Quand le joueur marche sur la grassTall (4, 13) au sud de grass_sud → entrée dans Muscuville
+// v3.23 — Muscuville agrandie : grassTall nord en col 8, spawn juste en dessous
 export const MUSCUVILLE_SPAWN_FROM_NORTH = {
     mapId: "muscuville",
-    posX: 6,
+    posX: 8,
     posY: 2,
     direction: "down" as const,
 }

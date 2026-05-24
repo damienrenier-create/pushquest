@@ -65,6 +65,13 @@ export interface ItemCapabilities {
     canPreserve?: {
         wearSkipChance: number
     }
+    /** v3.23 — Vélo (monture). Permet de gravir le Mont Pasta-Ventoux.
+     *  costPerCase : coût de base par case sur le Mont (10 sans vélo = blocage, 8/4/2 selon vélo). */
+    canRide?: {
+        initialDurability: number
+        /** Coût en reps par case sur le Mont Pasta-Ventoux (avant modulation cadence). */
+        costPerCase: number
+    }
 }
 
 export interface ItemDefinition {
@@ -76,8 +83,9 @@ export interface ItemDefinition {
     /** Quantité maximale qu'un joueur peut posséder. 1 = item unique. */
     maxQuantity: number
     /** v3.17 — Catalogue d'origine : "nutripates" (Pépiteville), "trenette" (Macaron'île),
-     * "both" (les deux shops), "gift" (donné, pas vendu). Par défaut "both" si non spécifié. */
-    availableAt?: "nutripates" | "trenette" | "both" | "gift"
+     * "both" (les deux shops), "gift" (donné, pas vendu).
+     * v3.23 : ajout "muscuville_bikes" pour le magasin de vélos. */
+    availableAt?: "nutripates" | "trenette" | "both" | "gift" | "muscuville_bikes"
     capabilities: ItemCapabilities
 }
 
@@ -220,6 +228,43 @@ export const ITEMS: ItemDefinition[] = [
             canPreserve: { wearSkipChance: 0.5 },
         },
     },
+    // v3.23 — Vélos du magasin de Muscuville (3 tiers)
+    {
+        key: "velo_basique",
+        name: "Vieux Vélo",
+        emoji: "🚲",
+        description: "Un vélo rouillé mais fonctionnel. Permet l'ascension du Mont Pasta-Ventoux. Coût 8 reps/case (avant cadence). Durée 200 km.",
+        priceReps: 100,
+        maxQuantity: 1,
+        availableAt: "muscuville_bikes",
+        capabilities: {
+            canRide: { initialDurability: 200, costPerCase: 8 },
+        },
+    },
+    {
+        key: "velo_sport",
+        name: "Vélo Sport",
+        emoji: "🚴",
+        description: "Cadre alu, bonnes vitesses. Coût 4 reps/case sur le Mont. Durée 400 km. Pour les ambitieux.",
+        priceReps: 300,
+        maxQuantity: 1,
+        availableAt: "muscuville_bikes",
+        capabilities: {
+            canRide: { initialDurability: 400, costPerCase: 4 },
+        },
+    },
+    {
+        key: "velo_pro",
+        name: "Vélo Pro",
+        emoji: "🚵",
+        description: "Carbone, électronique. Coût 2 reps/case sur le Mont. Durée 800 km. Du matériel de champion.",
+        priceReps: 600,
+        maxQuantity: 1,
+        availableAt: "muscuville_bikes",
+        capabilities: {
+            canRide: { initialDurability: 800, costPerCase: 2 },
+        },
+    },
 ]
 
 export function getItem(key: string): ItemDefinition | null {
@@ -229,14 +274,35 @@ export function getItem(key: string): ItemDefinition | null {
 /**
  * v3.17 — Items disponibles à l'achat dans un shop donné.
  * "both" est inclus dans les deux shops. "gift" est exclu.
+ * v3.23 — Étendu pour supporter "muscuville_bikes" (magasin de vélos).
  */
-export function itemsAvailableAtShop(shop: "nutripates" | "trenette"): ItemDefinition[] {
+export function itemsAvailableAtShop(shop: "nutripates" | "trenette" | "muscuville_bikes"): ItemDefinition[] {
     return ITEMS.filter((i) => {
         const at = i.availableAt ?? "both"
         if (at === "gift") return false
+        if (shop === "muscuville_bikes") return at === "muscuville_bikes"
+        if (at === "muscuville_bikes") return false
         if (at === "both") return true
         return at === shop
     })
+}
+
+/**
+ * v3.23 — Vélo actif (le meilleur si plusieurs, mais maxQuantity=1 par type).
+ * Retourne le vélo avec le costPerCase le plus bas (= le meilleur), intact.
+ */
+export function getActiveBicycle(inventory: InventoryEntry[]): { entry: InventoryEntry; def: ItemDefinition } | null {
+    let best: { entry: InventoryEntry; def: ItemDefinition; cost: number } | null = null
+    for (const entry of inventory) {
+        const def = getItem(entry.itemKey)
+        if (!def?.capabilities.canRide) continue
+        if (isBrokenItem(entry.data, def)) continue
+        const cost = def.capabilities.canRide.costPerCase
+        if (!best || cost < best.cost) {
+            best = { entry, def, cost }
+        }
+    }
+    return best ? { entry: best.entry, def: best.def } : null
 }
 
 // ============================================================
@@ -293,6 +359,10 @@ export function getInitialItemData(def: ItemDefinition): Record<string, unknown>
     if (def.capabilities.canCosmetic?.initialDurability !== undefined) {
         return { durability: def.capabilities.canCosmetic.initialDurability }
     }
+    // v3.23 — vélos
+    if (def.capabilities.canRide) {
+        return { durability: def.capabilities.canRide.initialDurability }
+    }
     return undefined
 }
 
@@ -307,6 +377,14 @@ export function isBrokenItem(data: unknown, def: ItemDefinition): boolean {
     }
     if (def.capabilities.canWear) {
         return readDurability(data, def) <= 0
+    }
+    // v3.23 — vélos (canRide) ont aussi durabilité
+    if (def.capabilities.canRide) {
+        if (data && typeof data === "object" && "durability" in data) {
+            const v = (data as { durability: unknown }).durability
+            if (typeof v === "number" && Number.isFinite(v)) return v <= 0
+        }
+        return false
     }
     return false
 }

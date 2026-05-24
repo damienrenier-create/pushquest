@@ -778,8 +778,8 @@ export const NPCS: NpcDefinition[] = [
         kind: "static",
         interaction: "interactive",
         sprite: { color: "#a06030" },
-        initialX: 4,
-        initialY: 5,
+        initialX: 6,
+        initialY: 12,
         dialoguesAfter: [
             "Bienvenue à MUSCUVILLE, athlète !",
             "Tu as franchi les hautes herbes — personne n'avait osé depuis des mois.",
@@ -794,8 +794,8 @@ export const NPCS: NpcDefinition[] = [
         kind: "wanderer",
         interaction: "interactive",
         sprite: { color: "#c08030" },
-        initialX: 8,
-        initialY: 5,
+        initialX: 10,
+        initialY: 12,
         wanderRadius: 2,
         dialoguesAfter: [
             "Yo nouveau ! Tu te dopes aux pâtes ?",
@@ -811,14 +811,107 @@ export const NPCS: NpcDefinition[] = [
         kind: "static",
         interaction: "interactive",
         sprite: { color: "#604020" },
-        initialX: 2,
-        initialY: 9,
+        initialX: 4,
+        initialY: 13,
         dialoguesAfter: [
             "Coach GLUTOS, à ton service.",
             "Si un jour le concours reprend, viens t'entraîner ici.",
             "Pour l'instant je perfectionne mes deadlifts. Tout seul.",
         ],
     },
+    // ============================================================
+    // v3.23 — NPCs de MUSCUVILLE (bike shop + gym + casino + contest hall)
+    // ============================================================
+    {
+        id: "bike_seller",
+        name: "PELOTON",
+        mapId: "bike_shop",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#c84838" },
+        initialX: 4,
+        initialY: 2,
+        dialoguesAfter: [
+            "*Le vendeur lustre une selle.*",
+            "Bienvenue chez PELOTON, le meilleur vélociste de l'archipel.",
+            "Tu veux gravir le Mont Pasta-Ventoux ? Faut un vélo. Pas le choix.",
+            "Approche du comptoir, je te montre la gamme.",
+        ],
+    },
+    {
+        id: "muscuville_trainer",
+        name: "BICEPS",
+        mapId: "gym_muscuville",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#d8a020" },
+        initialX: 5,
+        initialY: 4,
+        dialoguesAfter: [
+            "BICEPS, coach personnel et personne ambulante.",
+            "Tu veux du muscle ? Faut bouger. Pas regarder.",
+            "Allez, file. Et reviens quand t'auras conquis le Mont.",
+        ],
+    },
+    {
+        id: "muscuville_casino_npc",
+        name: "MISEUR",
+        mapId: "casino_muscuville",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#a08040" },
+        initialX: 3,
+        initialY: 4,
+        dialoguesAfter: [
+            "Casino. Roulette. Rouge ou noir.",
+            "Comme partout. Mais ici les athlètes parient plus gros.",
+        ],
+    },
+    // 3 PNJ adversaires de la salle des concours (POMPATOR / SQUATILUS / TIROIR)
+    // Mécanique de défi à venir en v3.23c.
+    {
+        id: "contest_pompator",
+        name: "POMPATOR",
+        mapId: "contest_hall",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#c83838" },
+        initialX: 3,
+        initialY: 2,
+        dialoguesAfter: [
+            "POMPATOR, champion de pompes. *Il claque sa poitrine.*",
+            "Tu veux me défier ? Reviens quand tu auras conquis le Mont Pasta-Ventoux.",
+        ],
+    },
+    {
+        id: "contest_squatilus",
+        name: "SQUATILUS",
+        mapId: "contest_hall",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#3838c8" },
+        initialX: 5,
+        initialY: 2,
+        dialoguesAfter: [
+            "SQUATILUS, maître des squats. *Il fait flexion.*",
+            "Concours interdits sans badge du Mont. Je suis intransigeant.",
+        ],
+    },
+    {
+        id: "contest_tiroir",
+        name: "TIROIR",
+        mapId: "contest_hall",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { color: "#38c838" },
+        initialX: 7,
+        initialY: 2,
+        dialoguesAfter: [
+            "TIROIR, expert des tractions. *Il regarde la barre.*",
+            "Conquis le Mont d'abord, ensuite on en reparle.",
+        ],
+    },
+
     // v3.17 — Veilleur à l'orée de la forêt hantée (foreshadow seulement, pas de map au-delà encore)
     {
         id: "muscuville_veilleur",
@@ -827,8 +920,8 @@ export const NPCS: NpcDefinition[] = [
         kind: "static",
         interaction: "interactive",
         sprite: { color: "#404858" },
-        initialX: 11,
-        initialY: 5,
+        initialX: 13,
+        initialY: 12,
         dialoguesAfter: [
             "*Il tremble légèrement.*",
             "Tu sens ? À l'est, derrière les arbres... la forêt hantée.",
