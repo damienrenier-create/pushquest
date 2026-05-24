@@ -3168,11 +3168,26 @@ function BuildingSprite({
                     background: roofColor, height: "40%",
                     borderTop: `2px solid ${roofDarkColor}`, borderLeft: `2px solid ${roofDarkColor}`, borderRight: `2px solid ${roofDarkColor}`,
                     position: "relative",
+                    display: "flex", alignItems: "center", justifyContent: "center",
                 }}>
                     <div style={{
                         position: "absolute", inset: 0,
                         backgroundImage: `repeating-linear-gradient(90deg, transparent 0, transparent 6px, ${roofDarkColor} 6px, ${roofDarkColor} 7px)`,
                     }} />
+                    {/* v3.24a — Label sur le toit, ombre noire pour lisibilité maximale */}
+                    <div style={{
+                        position: "relative",
+                        color: "#fff",
+                        fontSize: "11px",
+                        fontWeight: 900,
+                        letterSpacing: "1px",
+                        whiteSpace: "nowrap",
+                        textShadow: "1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000, 0 0 4px rgba(0,0,0,0.8)",
+                        zIndex: 4,
+                        pointerEvents: "none",
+                    }}>
+                        {label}
+                    </div>
                 </div>
                 <div style={{
                     background: "#f8e8b8", flex: 1, border: "2px solid #c8a868", position: "relative",
@@ -3187,26 +3202,6 @@ function BuildingSprite({
                         background: "#5878d8", border: "1px solid #c8a868",
                         backgroundImage: "linear-gradient(90deg, transparent 49%, #c8a868 49%, #c8a868 51%, transparent 51%), linear-gradient(0deg, transparent 49%, #c8a868 49%, #c8a868 51%, transparent 51%)",
                     }} />
-                    {/* v3.22 — Label déporté à droite du bâtiment, fond blanc opaque pour lisibilité maximale */}
-                    <div style={{
-                        position: "absolute",
-                        top: "55%",
-                        left: "100%",
-                        marginLeft: "4px",
-                        background: "rgba(255, 255, 255, 0.95)",
-                        color: roofDarkColor,
-                        padding: "2px 6px",
-                        fontSize: "12px",
-                        fontWeight: 900,
-                        letterSpacing: "1px",
-                        whiteSpace: "nowrap",
-                        border: `2px solid ${roofDarkColor}`,
-                        borderRadius: "3px",
-                        zIndex: 4,
-                        pointerEvents: "none",
-                    }}>
-                        {label}
-                    </div>
                 </div>
             </div>
             <div style={{
