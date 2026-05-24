@@ -334,6 +334,79 @@ export const PEPITEVILLE_APPLE_TREES: Array<{ id: string; x: number; y: number }
     { id: "apple_tree_2", x: 10, y: 11 },
 ]
 
+// ============================================================
+// v3.23d — 5 types d'arbres fruitiers (catalogue centralisé)
+// ============================================================
+// Chaque type a son tile, son bonus, son max/jour, son emoji et son rendu visuel.
+// La source de vérité unique pour : take-fruit/route.ts (validation + reward),
+// MapClient (détection interaction + rendu vide), TileCell (sprite).
+//
+// Bonus croissant, max décroissant : plus l'arbre est rare, plus il donne.
+// ============================================================
+export type TreeKind = "apple" | "cherry" | "pear" | "peach" | "coconut"
+
+export interface TreeKindConfig {
+    kind: TreeKind
+    emoji: string
+    label: string
+    /** Tile placé sur la map (fruits présents). */
+    tile: TileType
+    /** Tile alternative côté client si déjà cueilli aujourd'hui. */
+    emptyTile: TileType
+    /** Bonus reps gagnés par fruit cueilli (avant ratio onboarding). */
+    bonusReps: number
+    /** Nombre max de fruits cueillables par jour sur cet arbre. */
+    maxPerDay: number
+}
+
+export const TREE_KIND_CONFIGS: Record<TreeKind, TreeKindConfig> = {
+    apple:    { kind: "apple",    emoji: "🍎", label: "Pommier",   tile: "appleTree",    emptyTile: "appleTreeEmpty",    bonusReps: 80,  maxPerDay: 3 },
+    cherry:   { kind: "cherry",   emoji: "🍒", label: "Cerisier",  tile: "cherryTree",   emptyTile: "cherryTreeEmpty",   bonusReps: 40,  maxPerDay: 5 },
+    pear:     { kind: "pear",     emoji: "🍐", label: "Poirier",   tile: "pearTree",     emptyTile: "pearTreeEmpty",     bonusReps: 60,  maxPerDay: 4 },
+    peach:    { kind: "peach",    emoji: "🍑", label: "Pêcher",    tile: "peachTree",    emptyTile: "peachTreeEmpty",    bonusReps: 100, maxPerDay: 2 },
+    coconut:  { kind: "coconut",  emoji: "🥥", label: "Cocotier",  tile: "coconutTree",  emptyTile: "coconutTreeEmpty",  bonusReps: 150, maxPerDay: 1 },
+}
+
+/** Lookup d'un config arbre par son tile (utile pour TileCell). */
+export function getTreeConfigByTile(tile: TileType): TreeKindConfig | null {
+    for (const c of Object.values(TREE_KIND_CONFIGS)) {
+        if (c.tile === tile || c.emptyTile === tile) return c
+    }
+    return null
+}
+
+/** Liste GLOBALE de tous les arbres du Nexus (toutes maps confondues). */
+export interface TreeInstance {
+    id: string
+    mapId: string
+    x: number
+    y: number
+    kind: TreeKind
+}
+
+export const ALL_TREES: TreeInstance[] = [
+    // === Pommiers (existants) ===
+    { id: "apple_tree_1", mapId: "pepiteville", x: 5,  y: 11, kind: "apple" },
+    { id: "apple_tree_2", mapId: "pepiteville", x: 10, y: 11, kind: "apple" },
+    { id: "apple_tree_3", mapId: "hautespates", x: 1,  y: 7,  kind: "apple" },
+    // === Cerisiers (commun, 40 reps × 5/j) ===
+    { id: "cherry_tree_1", mapId: "bourgpates",  x: 3,  y: 14, kind: "cherry" },
+    { id: "cherry_tree_2", mapId: "bourgpates",  x: 10, y: 14, kind: "cherry" },
+    { id: "cherry_tree_3", mapId: "pepiteville", x: 3,  y: 17, kind: "cherry" },
+    // === Poiriers (commun, 60 reps × 4/j) ===
+    { id: "pear_tree_1", mapId: "macaron_ile", x: 2, y: 14, kind: "pear" },
+    { id: "pear_tree_2", mapId: "muscuville",  x: 8, y: 14, kind: "pear" },
+    // === Pêcher (rare, 100 reps × 2/j — caché dans grass_sud) ===
+    { id: "peach_tree_1", mapId: "grass_sud", x: 7, y: 3, kind: "peach" },
+    // === Cocotier (ultra-rare, 150 reps × 1/j — sommet du Mont) ===
+    { id: "coconut_tree_1", mapId: "mont_pasta_ventoux", x: 5, y: 1, kind: "coconut" },
+]
+
+/** Helper : tous les arbres d'une map donnée. */
+export function getTreesForMap(mapId: string): TreeInstance[] {
+    return ALL_TREES.filter((t) => t.mapId === mapId)
+}
+
 export const PEPITEVILLE_BUILDINGS: Building[] = [
     // Gym Pépiteville : 4×3 en (1, 5)–(4, 7), porte en (2, 7)
     { x: 1, y: 5, w: 4, h: 3, kind: "gym", doorX: 1, doorY: 2, visible: true, targetMapId: "gym_pepite" },

@@ -27,9 +27,14 @@ export type TileType =
     | "shopShelf"     // étagères du shop (bloquant)
     | "shopCounter"   // comptoir du shop (bloquant, le vendeur est derrière)
     | "floorChecker"  // sol damier du shop (non-bloquant, décoratif)
-    // === v3.8.1 : Arbres fruitiers de Pépiteville ===
+    // === v3.8.1 : Arbres fruitiers (pommier = standard) ===
     | "appleTree"     // arbre fruitier avec fruits visibles (bloquant)
     | "appleTreeEmpty" // même arbre, mais déjà cueilli par CE user (rendu côté client uniquement)
+    // === v3.23d : 4 nouveaux types d'arbres (cerisier/poirier/pêcher/cocotier) ===
+    | "cherryTree" | "cherryTreeEmpty"        // 🍒 commun  : 40 reps × 5/jour
+    | "pearTree"   | "pearTreeEmpty"          // 🍐 commun  : 60 reps × 4/jour
+    | "peachTree"  | "peachTreeEmpty"         // 🍑 rare    : 100 reps × 2/jour
+    | "coconutTree" | "coconutTreeEmpty"      // 🥥 ultra-rare : 150 reps × 1/jour
     // === v3.8.2 : Tour des Pâtes Aiguës (Hautes-Pâtes) ===
     | "towerWall"     // mur de pierre intérieur de la tour (bloquant)
     | "towerFloor"    // sol pierre de la tour (non-bloquant)
@@ -172,6 +177,11 @@ export const BLOCKING_TILES: TileType[] = [
     // appleTreeEmpty est juste une variante visuelle côté client (pas dans la grille map).
     "appleTree",
     "appleTreeEmpty",
+    // v3.23d — 4 nouveaux types d'arbres fruitiers
+    "cherryTree", "cherryTreeEmpty",
+    "pearTree", "pearTreeEmpty",
+    "peachTree", "peachTreeEmpty",
+    "coconutTree", "coconutTreeEmpty",
     // v3.8.2 — décor tour des Pâtes Aiguës
     "towerWall",
     "towerWindow",
