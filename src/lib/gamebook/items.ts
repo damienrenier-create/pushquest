@@ -204,13 +204,16 @@ export const ITEMS: ItemDefinition[] = [
         },
     },
     {
+        // v3.23p — Retirée du shop TRENETTE. À obtenir plus tard via une quête narrative
+        // (probablement ORZO qui foreshadow déjà la case cachée du casino Bourg).
+        // Reste dans le catalogue pour ne pas casser les inventaires existants.
         key: "carte_tresor",
         name: "Carte aux trésors",
         emoji: "📜",
         description: "Vieux parchemin froissé. Quand tu l'as sur toi, tu remarques des détails étranges au sol de certains lieux.",
-        priceReps: 150,
+        priceReps: 0,
         maxQuantity: 1,
-        availableAt: "trenette",
+        availableAt: "gift",
         capabilities: {
             canView: { kind: "treasureMap" },
         },
