@@ -916,25 +916,11 @@ export default function MapClient({
                         triggerNpcDialogue(blockingNpc.npc)
                         return
                     }
-                    // Sinon (interactive), on tente de le pousser comme un joueur
-                    if (state.phase !== "playing") {
-                        setToast(`${blockingNpc.npc.name} te regarde. Va falloir lui parler (appuie sur A).`)
-                        return
-                    }
-                    // v3.10 — coût push ajusté selon le ratio
-                    // v3.17 — + discount social Lunettes
-                    const ratioPushCost = applyDifficultyRatio(COST_PUSH)
-                    const adjustedPushCost = applySocialDiscount(ratioPushCost, inventory)
-                    if (reps < adjustedPushCost) {
-                        setToast(`Pousser ${blockingNpc.npc.name} coûte ${adjustedPushCost} reps. T'en as ${reps}.`)
-                        return
-                    }
-                    // On consomme `adjustedPushCost` reps via l'API serveur (source de vérité)
-                    ; (async () => {
-                        const ok = await spendEnergy(adjustedPushCost, "push_npc")
-                        if (!ok) return
-                        setToast(`Tu pousses ${blockingNpc.npc.name}. -${adjustedPushCost} reps.`)
-                    })()
+                    // v3.23j — PNJ interactif (statique ou wanderer) : on bloque le mouvement
+                    // SANS COÛT et on suggère d'appuyer sur A pour parler. Le "push NPC" (-30 reps)
+                    // était un comportement legacy déconnant qui frustrait les joueurs (cf. RUMEUR
+                    // dans la Tour). Le push reste actif pour les AUTRES JOUEURS (cf. ligne ~2280).
+                    setToast(`${blockingNpc.npc.name} te bloque. Appuie sur A pour lui parler.`)
                     return
                 }
 
