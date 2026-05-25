@@ -24,7 +24,8 @@ async function getTodayReps(userId: string): Promise<number> {
     const sets = await prisma.exerciseSet.findMany({
         where: { userId, date: today },
     })
-    return sets.reduce((sum: number, s: { reps: number }) => sum + s.reps, 0)
+    // v3.23k — 1 sec de gainage = 1/5 énergie (cohérent avec scoring 5s=1pt)
+    return sets.reduce((sum: number, s: { exercise: string; reps: number }) => sum + (s.exercise === "PLANK" ? Math.floor(s.reps / 5) : s.reps), 0)
 }
 
 export async function POST() {

@@ -54,12 +54,13 @@ function buildOutdoor(): TileType[][] {
     m[OUTDOOR_H - 2][5] = "water"
     m[OUTDOOR_H - 2][6] = "water"
 
-    // v3.12 — Canal d'entrée vers Macaron'île (case waterShallow au sud, sur le chemin central).
-    // Quand le joueur (équipé du swim_set + firstSwimDone) marche dessus → transition vers
-    // le canal de macaron_ile (10 cases de waterShallow à traverser).
+    // v3.12 / v3.23k — Canal d'entrée vers Macaron'île (waterShallow au sud).
+    // 4 cases de large (x=6..9) pour qu'on puisse y entrer en biais, depuis la berge.
     // Sans swim_set : bloquant. Avec swim_set mais sans firstSwimDone : "trop froide".
+    m[OUTDOOR_H - 1][6] = "waterShallow"
     m[OUTDOOR_H - 1][7] = "waterShallow"
     m[OUTDOOR_H - 1][8] = "waterShallow"
+    m[OUTDOOR_H - 1][9] = "waterShallow"
 
     // Jardin de fleurs
     m[12][2] = "flowerR"
@@ -74,8 +75,9 @@ function buildOutdoor(): TileType[][] {
     m[11][5] = "fence"
 
     // v3.23d — 2 cerisiers communs (40 reps × 5/jour)
+    // v3.23k — cherry_tree_2 déplacé de (10, 14) → (12, 14) (hors du chemin du canal sud élargi)
     m[14][3] = "cherryTree"
-    m[14][10] = "cherryTree"
+    m[14][12] = "cherryTree"
 
     return m
 }
@@ -402,7 +404,7 @@ export const ALL_TREES: TreeInstance[] = [
     { id: "apple_tree_3", mapId: "hautespates", x: 1,  y: 7,  kind: "apple" },
     // === Cerisiers (commun, 40 reps × 5/j) ===
     { id: "cherry_tree_1", mapId: "bourgpates",  x: 3,  y: 14, kind: "cherry" },
-    { id: "cherry_tree_2", mapId: "bourgpates",  x: 10, y: 14, kind: "cherry" },
+    { id: "cherry_tree_2", mapId: "bourgpates",  x: 12, y: 14, kind: "cherry" },
     { id: "cherry_tree_3", mapId: "pepiteville", x: 3,  y: 17, kind: "cherry" },
     // === Poiriers (commun, 60 reps × 4/j) ===
     { id: "pear_tree_1", mapId: "macaron_ile", x: 10, y: 14, kind: "pear" },

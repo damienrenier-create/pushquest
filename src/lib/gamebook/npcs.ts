@@ -654,8 +654,9 @@ export const NPCS: NpcDefinition[] = [
         kind: "static",
         interaction: "interactive",
         sprite: { color: "#5080a8" },
-        initialX: 9,
-        initialY: 14,
+        // v3.23k — Déplacée de (9, 14) → (1, 13) pour libérer l'accès au canal sud élargi
+        initialX: 1,
+        initialY: 13,
         dialoguesAfter: [
             "J'aurais tellement voulu aller au concours de muscu cette année...",
             "Il paraît qu'il y a une île magnifique de l'autre côté de cette mer.",

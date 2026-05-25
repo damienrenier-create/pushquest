@@ -24,6 +24,28 @@
 import prisma from "@/lib/prisma"
 import { getTodayISO } from "@/lib/challenge"
 
+// v3.23k — Conversion gainage → énergie : 5 secondes = 1 énergie (cohérent avec le scoring).
+// Avant : 1 seconde = 1 énergie (trop généreux).
+export const PLANK_SECONDS_PER_ENERGY = 5
+
+/**
+ * Somme des reps du jour convertis en énergie utilisable dans le Nexus.
+ * Les pompes, squats, tractions comptent rep-pour-rep ; le gainage est divisé par
+ * PLANK_SECONDS_PER_ENERGY pour rester aligné avec le système de scoring.
+ */
+export async function getTodayRepsForEnergy(userId: string): Promise<number> {
+    const today = getTodayISO()
+    const sets = await prisma.exerciseSet.findMany({
+        where: { userId, date: today },
+    })
+    return sets.reduce((sum: number, s: { exercise: string; reps: number }) => {
+        const energyValue = s.exercise === "PLANK"
+            ? Math.floor(s.reps / PLANK_SECONDS_PER_ENERGY)
+            : s.reps
+        return sum + energyValue
+    }, 0)
+}
+
 interface EnergySnapshot {
     energySpentToday: number
     energySpentDate: string
