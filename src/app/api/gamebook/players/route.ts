@@ -71,12 +71,17 @@ export async function GET() {
     }
 
     // 4. Classement reps du jour
+    // v3.23q — Cohérence avec l'énergie : 1 sec de gainage = 1/5 d'énergie (cf energy.ts).
+    // Avant : 60s de gainage comptaient 60 reps → décalage entre la carte joueurs et l'énergie.
     const today = getTodayISO()
     const repsToday: Record<string, number> = {}
-    for (const u of allActiveUsers as Array<{ id: string; sets: Array<{ reps: number; date: string }> }>) {
+    for (const u of allActiveUsers as Array<{ id: string; sets: Array<{ reps: number; date: string; exercise: string }> }>) {
         const sum = u.sets
             .filter((s) => s.date === today)
-            .reduce((acc: number, x: { reps: number }) => acc + x.reps, 0)
+            .reduce((acc: number, x: { reps: number; exercise: string }) => {
+                const energyValue = x.exercise === "PLANK" ? Math.floor(x.reps / 5) : x.reps
+                return acc + energyValue
+            }, 0)
         repsToday[u.id] = sum
     }
     const ranking = Object.entries(repsToday)
