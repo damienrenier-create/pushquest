@@ -2,14 +2,17 @@
 
 // src/app/gamebook/TamagotchiModal.tsx
 //
-// v3.14 — Modal du vétérinaire V3T : adoption + suivi du tamagotchi.
-// v3.15 — L'animal n'est plus egg/baby/adult mais l'animal du bestiaire correspondant
-// au level XP réel du joueur (cf. lib/xp.ts XP_ANIMALS / getLevelDetails).
-// Quand le tamagotchi est "frozen" (happiness=0), il garde son ancien level malgré la
-// progression XP du joueur dans l'app — il faut le nourrir pour qu'il évolue à nouveau.
+// v3.23i — Refonte du modal V3T pour interaction directe avec l'animal.
+// L'animal devient cliquable → ouvre un tray d'actions contextuelles :
+//   - "Il a soif..."     [DONNER À BOIRE 💧]  si gourde avec stored > 0
+//   - "Il a faim..."     [PARTAGER LES PÂTES 🍝]  si corned_pates en inventaire
+//   - "Il s'ennuie..."   [LE CARESSER (gratuit, 0 reps mais lien)]
+//   - "Il a la dalle"    [NOURRIR (20 reps, +30 happiness)]
+//
+// Après chaque action, V3T fait un commentaire encourageant (bulle de dialogue).
+// Quand une étape est validée (drink, pates), un petit ✓ s'affiche.
 
 import { useState } from "react"
-import { useEffect, useMemo } from "react"
 import {
     type TamagotchiView,
     TAMAGOTCHI_FEED_COST,
@@ -17,23 +20,34 @@ import {
     isValidTamagotchiName,
 } from "@/lib/gamebook/tamagotchi"
 import { getLevelDetails } from "@/lib/xp"
+import type { InventoryEntry } from "@/lib/gamebook/inventory"
 
 interface Props {
     tamagotchi: TamagotchiView | null
     availableEnergy: number
+    inventory: InventoryEntry[]
     onAdopt: (name: string) => Promise<void>
     onFeed: () => Promise<void>
-    /** v3.19 — Vérifier les 7 défis chez V3T (renvoie liste des défis nouvellement complétés) */
+    onDrink?: () => Promise<{ ok: boolean; v3tComment?: string; reason?: string }>
+    onFeedPates?: () => Promise<{ ok: boolean; v3tComment?: string; reason?: string }>
     onCheckDefis?: () => Promise<void>
-    /** v3.19 — Libérer l'animal (les 7 défis doivent être validés) */
     onLiberer?: () => Promise<void>
     onClose: () => void
 }
 
-export default function TamagotchiModal({ tamagotchi, availableEnergy, onAdopt, onFeed, onCheckDefis, onLiberer, onClose }: Props) {
+export default function TamagotchiModal({
+    tamagotchi, availableEnergy, inventory,
+    onAdopt, onFeed, onDrink, onFeedPates, onCheckDefis, onLiberer, onClose,
+}: Props) {
     const [name, setName] = useState("")
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [v3tBubble, setV3tBubble] = useState<string | null>(null)
+
+    const showBubble = (text: string) => {
+        setV3tBubble(text)
+        setTimeout(() => setV3tBubble(null), 6000)
+    }
 
     const doAdopt = async () => {
         const trimmed = name.trim()
@@ -51,22 +65,10 @@ export default function TamagotchiModal({ tamagotchi, availableEnergy, onAdopt, 
         }
     }
 
-    const doFeed = async () => {
-        if (busy) return
-        setBusy(true)
-        setError(null)
-        try {
-            await onFeed()
-        } finally {
-            setBusy(false)
-        }
-    }
-
     return (
         <div
             style={{
-                position: "fixed",
-                inset: 0,
+                position: "fixed", inset: 0,
                 background: "rgba(0,0,0,0.85)",
                 color: "#fff",
                 fontFamily: "'Courier New', monospace",
@@ -86,8 +88,10 @@ export default function TamagotchiModal({ tamagotchi, availableEnergy, onAdopt, 
                     borderRadius: 6,
                     padding: 16,
                     minWidth: 280,
-                    maxWidth: 360,
+                    maxWidth: 380,
                     width: "100%",
+                    maxHeight: "90vh",
+                    overflowY: "auto",
                 }}
             >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
@@ -113,7 +117,6 @@ export default function TamagotchiModal({ tamagotchi, availableEnergy, onAdopt, 
                     <AdoptForm
                         name={name}
                         setName={setName}
-                        availableEnergy={availableEnergy}
                         busy={busy}
                         error={error}
                         onAdopt={doAdopt}
@@ -122,13 +125,48 @@ export default function TamagotchiModal({ tamagotchi, availableEnergy, onAdopt, 
                     <TamagotchiCard
                         tamagotchi={tamagotchi}
                         availableEnergy={availableEnergy}
+                        inventory={inventory}
                         busy={busy}
                         error={error}
-                        onFeed={doFeed}
-                        onCheckDefis={onCheckDefis}
-                        onLiberer={onLiberer}
-                        setBusy={setBusy}
-                        setError={setError}
+                        v3tBubble={v3tBubble}
+                        onFeed={async () => {
+                            if (busy) return
+                            setBusy(true)
+                            setError(null)
+                            try { await onFeed(); showBubble("V3T : « Il mange avec appétit. Bien. »") } finally { setBusy(false) }
+                        }}
+                        onDrink={async () => {
+                            if (!onDrink || busy) return
+                            setBusy(true)
+                            setError(null)
+                            try {
+                                const res = await onDrink()
+                                if (res.ok) showBubble(res.v3tComment ?? "V3T : « Belle attention. »")
+                                else setError(res.reason ?? "Impossible.")
+                            } finally { setBusy(false) }
+                        }}
+                        onFeedPates={async () => {
+                            if (!onFeedPates || busy) return
+                            setBusy(true)
+                            setError(null)
+                            try {
+                                const res = await onFeedPates()
+                                if (res.ok) showBubble(res.v3tComment ?? "V3T : « Tu lui as donné le meilleur. »")
+                                else setError(res.reason ?? "Impossible.")
+                            } finally { setBusy(false) }
+                        }}
+                        onCheckDefis={onCheckDefis ? async () => {
+                            if (busy) return
+                            setBusy(true)
+                            setError(null)
+                            try { await onCheckDefis(); showBubble("V3T inspecte ton journal. « Voyons où tu en es... »") } finally { setBusy(false) }
+                        } : undefined}
+                        onLiberer={onLiberer ? async () => {
+                            if (busy) return
+                            setBusy(true)
+                            setError(null)
+                            try { await onLiberer() } finally { setBusy(false) }
+                        } : undefined}
                     />
                 )}
             </div>
@@ -141,7 +179,6 @@ function AdoptForm({
 }: {
     name: string
     setName: (s: string) => void
-    availableEnergy: number
     busy: boolean
     error: string | null
     onAdopt: () => Promise<void>
@@ -150,13 +187,13 @@ function AdoptForm({
     return (
         <div>
             <div style={{ fontSize: 11, lineHeight: 1.6, marginBottom: 12, opacity: 0.9, fontStyle: "italic" }}>
-                V3T se penche vers une des cages. "Un compagnon t'a remarqué. Il a senti ton odeur, ton souffle. Il n'attend que toi."
+                V3T se penche vers une des cages. &quot;Un compagnon t&apos;a remarqué. Il a senti ton odeur, ton souffle. Il n&apos;attend que toi.&quot;
             </div>
             <div style={{ fontSize: 11, lineHeight: 1.6, marginBottom: 12, opacity: 0.85 }}>
-                "Pas de prix. Pas de contrat. Donne-lui juste un nom — c'est le début de la confiance."
+                &quot;Pas de prix. Pas de contrat. Donne-lui juste un nom — c&apos;est le début de la confiance.&quot;
             </div>
             <div style={{ fontSize: 10, lineHeight: 1.5, marginBottom: 12, opacity: 0.7 }}>
-                "Tu reviendras le voir, tu le nourriras, tu accompliras quelques épreuves... et un jour il décidera de te suivre. Va voir la bibliothécaire BIBLIO pour la liste précise des défis."
+                &quot;Tu reviendras le voir, tu le nourriras, tu accompliras quelques épreuves... et un jour il décidera de te suivre. Va voir la bibliothécaire BIBLIO pour la liste précise des défis.&quot;
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <label style={{ fontSize: 9, letterSpacing: 2, opacity: 0.7 }}>SON NOM (max 16)</label>
@@ -204,17 +241,20 @@ function AdoptForm({
 }
 
 function TamagotchiCard({
-    tamagotchi, availableEnergy, busy, error, onFeed, onCheckDefis, onLiberer, setBusy, setError,
+    tamagotchi, availableEnergy, inventory, busy, error, v3tBubble,
+    onFeed, onDrink, onFeedPates, onCheckDefis, onLiberer,
 }: {
     tamagotchi: TamagotchiView
     availableEnergy: number
+    inventory: InventoryEntry[]
     busy: boolean
     error: string | null
+    v3tBubble: string | null
     onFeed: () => Promise<void>
+    onDrink: () => Promise<void>
+    onFeedPates: () => Promise<void>
     onCheckDefis?: () => Promise<void>
     onLiberer?: () => Promise<void>
-    setBusy: (b: boolean) => void
-    setError: (e: string | null) => void
 }) {
     const details = getLevelDetails(tamagotchi.displayLevel)
     const happinessPct = (tamagotchi.displayHappiness / TAMAGOTCHI_HAPPINESS_MAX) * 100
@@ -223,12 +263,51 @@ function TamagotchiCard({
             : happinessPct > 25 ? "#f0a050"
                 : "#c83838"
     const canFeed = availableEnergy >= TAMAGOTCHI_FEED_COST
+
+    // Conditions pour boire/manger les pâtes
+    const flask = inventory.find((e) => e.itemKey === "flask" || e.itemKey === "grande_gourde")
+    const flaskStored = flask?.data && typeof (flask.data as { stored?: number }).stored === "number"
+        ? (flask.data as { stored: number }).stored
+        : 0
+    const canDrink = flaskStored >= 10
+    const cornedPates = inventory.find((e) => e.itemKey === "corned_pates" && e.quantity > 0)
+    const canFeedPates = !!cornedPates
+
+    // État des défis (pour afficher ✓ et raisons)
+    const drinkDone = tamagotchi.defiProgress?.["1"] === true
+    const patesDone = tamagotchi.defiProgress?.["2"] === true
+    const dayHalvesDone = tamagotchi.defiProgress?.["3"] === true
+    const plankDone = tamagotchi.defiProgress?.["4"] === true
+    const pushupDone = tamagotchi.defiProgress?.["5"] === true
+    const squatDone = tamagotchi.defiProgress?.["6"] === true
+
+    const [showActions, setShowActions] = useState(false)
+
     return (
         <div>
+            {/* Animal cliquable */}
             <div style={{ textAlign: "center", marginBottom: 10 }}>
-                <div style={{ fontSize: 48, lineHeight: 1, filter: tamagotchi.isFrozen ? "grayscale(0.8) brightness(0.7)" : "none" }}>
-                    {details.emoji}
-                </div>
+                <button
+                    onClick={() => setShowActions((s) => !s)}
+                    disabled={busy}
+                    style={{
+                        background: "transparent",
+                        border: "none",
+                        cursor: busy ? "wait" : "pointer",
+                        padding: 0,
+                    }}
+                >
+                    <div style={{
+                        fontSize: 56,
+                        lineHeight: 1,
+                        filter: tamagotchi.isFrozen ? "grayscale(0.8) brightness(0.7)" : "none",
+                        animation: showActions ? "none" : "bobUp 1.5s infinite ease-in-out",
+                        transition: "transform 0.2s",
+                        transform: showActions ? "scale(1.1)" : "scale(1)",
+                    }}>
+                        {details.emoji}
+                    </div>
+                </button>
                 <div style={{ fontSize: 14, fontWeight: "bold", letterSpacing: 2, marginTop: 6 }}>
                     {tamagotchi.name.toUpperCase()}
                 </div>
@@ -238,9 +317,13 @@ function TamagotchiCard({
                 <div style={{ fontSize: 8, opacity: 0.55, letterSpacing: 1, marginTop: 2 }}>
                     {details.belt}
                 </div>
+                <div style={{ fontSize: 9, opacity: 0.6, marginTop: 4, fontStyle: "italic" }}>
+                    {showActions ? "👆 Choisis une action" : "👆 Touche-le pour interagir"}
+                </div>
             </div>
 
-            <div style={{ marginBottom: 12 }}>
+            {/* Happiness bar */}
+            <div style={{ marginBottom: 10 }}>
                 <div style={{ fontSize: 9, opacity: 0.7, marginBottom: 4, display: "flex", justifyContent: "space-between" }}>
                     <span>BONHEUR</span>
                     <span>{tamagotchi.displayHappiness}/{TAMAGOTCHI_HAPPINESS_MAX}</span>
@@ -257,14 +340,88 @@ function TamagotchiCard({
                 </div>
             </div>
 
-            <div style={{ fontSize: 11, opacity: 0.95, marginBottom: 10, lineHeight: 1.6, fontStyle: "italic" }}>
-                V3T te regarde calmement. "{tamagotchi.v3tNarrative}"
-            </div>
+            {/* Bulle de dialogue V3T (temporaire post-action) */}
+            {v3tBubble && (
+                <div style={{
+                    background: "#0a3010",
+                    border: "1px solid #48a868",
+                    borderRadius: 6,
+                    padding: 8,
+                    marginBottom: 10,
+                    fontSize: 10,
+                    lineHeight: 1.5,
+                    fontStyle: "italic",
+                    animation: "fadeIn 0.3s ease",
+                }}>
+                    💬 {v3tBubble}
+                </div>
+            )}
 
-            {/* v3.21.1 — Progression discrète (sans révéler les défis) — c'est BIBLIO qui détient la liste */}
+            {/* Narrative V3T par défaut */}
+            {!v3tBubble && (
+                <div style={{ fontSize: 11, opacity: 0.85, marginBottom: 10, lineHeight: 1.5, fontStyle: "italic" }}>
+                    V3T te regarde calmement. &quot;{tamagotchi.v3tNarrative}&quot;
+                </div>
+            )}
+
+            {/* Tray d'actions (montré au clic sur l'animal) */}
+            {showActions && !tamagotchi.recovered && (
+                <div style={{
+                    background: "#0f0f0f",
+                    border: "1px solid #444",
+                    borderRadius: 4,
+                    padding: 8,
+                    marginBottom: 10,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 6,
+                }}>
+                    {/* DONNER À BOIRE */}
+                    <ActionRow
+                        emoji="💧"
+                        title={drinkDone ? "✓ Tu lui as déjà donné à boire" : "Il a l'air d'avoir soif..."}
+                        cta={canDrink ? "DONNER À BOIRE" : "Ta gourde est vide"}
+                        hint={!canDrink ? `Va remplir ta gourde à un point d'eau (stockée : ${flaskStored})` : "Gorgée de ta gourde (-10 stockés)"}
+                        disabled={!canDrink || drinkDone || busy}
+                        done={drinkDone}
+                        onClick={onDrink}
+                    />
+                    {/* PARTAGER LES PÂTES */}
+                    <ActionRow
+                        emoji="🍝"
+                        title={patesDone ? "✓ Tu as déjà partagé tes pâtes" : "Il a l'air d'avoir faim..."}
+                        cta={canFeedPates ? "PARTAGER LES PÂTES" : "Pas de Corned Pâtes"}
+                        hint={!canFeedPates ? "Va voir TRENETTE à Macaron'île" : "Consomme 1 Corned Pâtes"}
+                        disabled={!canFeedPates || patesDone || busy}
+                        done={patesDone}
+                        onClick={onFeedPates}
+                    />
+                    {/* NOURRIR GÉNÉRIQUE */}
+                    <ActionRow
+                        emoji="🥩"
+                        title="Il a la dalle..."
+                        cta={canFeed ? `NOURRIR (${TAMAGOTCHI_FEED_COST} reps)` : `Pas assez d'énergie (${TAMAGOTCHI_FEED_COST} reps)`}
+                        hint="+30 happiness (action illimitée)"
+                        disabled={!canFeed || busy}
+                        done={false}
+                        onClick={onFeed}
+                    />
+                </div>
+            )}
+
+            {/* Progression défis (compact, infos read-only) */}
             {!tamagotchi.recovered && (
-                <div style={{ marginBottom: 12, fontSize: 10, opacity: 0.75, lineHeight: 1.5 }}>
-                    Il faut accomplir des épreuves pour que ton compagnon te suive. Va consulter <strong>BIBLIO à la bibliothèque</strong> pour la liste des défis adaptés à ton animal.
+                <div style={{ marginBottom: 12, fontSize: 9, opacity: 0.75, lineHeight: 1.6 }}>
+                    <div style={{ fontWeight: "bold", marginBottom: 4 }}>
+                        Défis : {tamagotchi.defisDone}/{tamagotchi.defisTotal}
+                    </div>
+                    <DefiLine done={true} text="✓ Visite chez V3T (auto)" />
+                    <DefiLine done={drinkDone} text="Donner à boire (via la gourde)" />
+                    <DefiLine done={patesDone} text="Partager des Corned Pâtes" />
+                    <DefiLine done={dayHalvesDone} text="Visite matin ET après-midi (même jour)" />
+                    <DefiLine done={plankDone} text="180 sec de gainage (aujourd'hui)" />
+                    <DefiLine done={pushupDone} text="200 pompes APRÈS le gainage" />
+                    <DefiLine done={squatDone} text="300 squats APRÈS les pompes" />
                 </div>
             )}
 
@@ -272,34 +429,11 @@ function TamagotchiCard({
                 <div style={{ fontSize: 10, color: "#f08080", marginBottom: 6 }}>{error}</div>
             )}
 
+            {/* Boutons de contrôle */}
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <button
-                    onClick={onFeed}
-                    disabled={busy || !canFeed}
-                    style={{
-                        background: canFeed && !busy ? "#d06030" : "#333",
-                        color: "#fff",
-                        border: "1px solid #fff",
-                        padding: "8px 12px",
-                        fontFamily: "'Courier New', monospace",
-                        fontSize: 11,
-                        fontWeight: "bold",
-                        letterSpacing: 2,
-                        cursor: canFeed && !busy ? "pointer" : "not-allowed",
-                        width: "100%",
-                    }}
-                >
-                    NOURRIR ({TAMAGOTCHI_FEED_COST} reps)
-                </button>
-                {/* v3.19 — Vérifier les défis chez V3T */}
                 {!tamagotchi.recovered && onCheckDefis && (
                     <button
-                        onClick={async () => {
-                            if (busy) return
-                            setBusy(true)
-                            setError(null)
-                            try { await onCheckDefis() } finally { setBusy(false) }
-                        }}
+                        onClick={onCheckDefis}
                         disabled={busy}
                         style={{
                             background: busy ? "#333" : "#4080d8",
@@ -316,15 +450,9 @@ function TamagotchiCard({
                         VÉRIFIER MES PROGRÈS
                     </button>
                 )}
-                {/* v3.19 — Libérer (visible une fois 7/7) */}
                 {tamagotchi.eligibleToRecover && onLiberer && (
                     <button
-                        onClick={async () => {
-                            if (busy) return
-                            setBusy(true)
-                            setError(null)
-                            try { await onLiberer() } finally { setBusy(false) }
-                        }}
+                        onClick={onLiberer}
                         disabled={busy}
                         style={{
                             background: busy ? "#333" : "#48a868",
@@ -347,6 +475,65 @@ function TamagotchiCard({
             <div style={{ fontSize: 9, opacity: 0.6, marginTop: 6, textAlign: "center" }}>
                 Énergie disponible : {availableEnergy}
             </div>
+
+            <style jsx>{`
+                @keyframes fadeIn { from { opacity: 0; transform: translateY(-2px); } to { opacity: 1; transform: translateY(0); } }
+            `}</style>
+        </div>
+    )
+}
+
+function ActionRow({
+    emoji, title, cta, hint, disabled, done, onClick,
+}: {
+    emoji: string
+    title: string
+    cta: string
+    hint: string
+    disabled: boolean
+    done: boolean
+    onClick: () => Promise<void>
+}) {
+    return (
+        <div style={{
+            background: done ? "#0a2010" : "#1a1a1a",
+            border: `1px solid ${done ? "#48a868" : "#444"}`,
+            borderRadius: 3,
+            padding: 6,
+        }}>
+            <div style={{ fontSize: 10, marginBottom: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span>{emoji} {title}</span>
+            </div>
+            <button
+                onClick={onClick}
+                disabled={disabled}
+                style={{
+                    background: disabled ? "#333" : "#48a868",
+                    color: "#fff",
+                    border: "1px solid #fff",
+                    padding: "5px 8px",
+                    fontFamily: "'Courier New', monospace",
+                    fontSize: 9,
+                    fontWeight: "bold",
+                    letterSpacing: 1,
+                    cursor: disabled ? "not-allowed" : "pointer",
+                    width: "100%",
+                    opacity: done ? 0.6 : 1,
+                }}
+            >
+                {cta}
+            </button>
+            <div style={{ fontSize: 8, opacity: 0.55, marginTop: 3, fontStyle: "italic" }}>
+                {hint}
+            </div>
+        </div>
+    )
+}
+
+function DefiLine({ done, text }: { done: boolean; text: string }) {
+    return (
+        <div style={{ opacity: done ? 1 : 0.5, color: done ? "#48a868" : "#fff" }}>
+            {done ? "✓" : "•"} {text}
         </div>
     )
 }

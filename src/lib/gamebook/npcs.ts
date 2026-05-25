@@ -804,6 +804,66 @@ export const NPCS: NpcDefinition[] = [
         ],
     },
 
+    // v3.23i — ROMARIN : le jardinier de Pépiteville. Parle des arbres du Nexus à chaque
+    // visite (random pool de 7 lores : pommier, cerisier, poirier, pêcher, cocotier, Maléfica,
+    // teaser "il y a d'autres arbres ailleurs"). Place près du pommier_1 pour la cohérence.
+    {
+        id: "pepiteville_jardinier",
+        name: "ROMARIN",
+        mapId: "pepiteville",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🌿", color: "#5a8a3a" },
+        initialX: 6,
+        initialY: 12,
+        // dialoguesAfter requis par le type mais bypass par randomDialogues (cf getNpcDialogue priorité)
+        dialoguesAfter: ["*ROMARIN te salue d'un signe de tête.*"],
+        randomDialogues: [
+            // 🍎 Pommier
+            [
+                "*ROMARIN s'essuie le front avec un mouchoir terreux.* Le pommier... trois fruits par jour, comme les trois repas de la vie.",
+                "Sa pomme contient de l'acide malique. Bon pour les muscles qui ont trop donné. Mes anciens disaient que la pomme du matin guérit les sept péchés de la veille.",
+                "Va le voir, il te connaît déjà.",
+            ],
+            // 🍒 Cerisier
+            [
+                "*Il sort un panier en osier de derrière une racine.* Le cerisier, lui, c'est un sprinteur. Cinq cerises par jour, et il se vide d'un coup.",
+                "Mais regarde le rouge de sa chair — c'est l'anthocyane. Ça calme les courbatures comme la mer calme une pierre.",
+                "Mange-les vite, elles ne mentent jamais sur leur fraîcheur.",
+            ],
+            // 🍐 Poirier
+            [
+                "*ROMARIN cueille une feuille et la frotte entre ses doigts.* Le poirier est patient. Quatre fruits par jour, doux comme une berceuse.",
+                "À Macaron'île, on dit qu'une poire mangée avant la sieste te fait dormir comme un nouveau-né. Je n'ai jamais vérifié — je dors trop peu pour faire la sieste.",
+                "Ses fibres, par contre, je connais. Elles tiennent au ventre des heures.",
+            ],
+            // 🍑 Pêcher
+            [
+                "*Il pointe vers le sud, vers les hautes herbes.* Le pêcher est capricieux. Il ne pousse qu'au bord de la jungle, là où les bestioles font la loi.",
+                "Deux pêches par jour. Pas une de plus. Sa chair est gorgée de potassium — précieux pour les coureurs de fond.",
+                "Si tu en trouves un, tu sauras pourquoi je l'aime tant.",
+            ],
+            // 🥥 Cocotier
+            [
+                "*ROMARIN lève la tête vers les nuages.* Le cocotier, lui, ne pousse qu'au sommet du Mont Pasta-Ventoux. Une seule noix par jour.",
+                "Sa chair est dense en lipides, l'énergie pure des explorateurs. Sa présence là-haut n'est pas un hasard — c'est le couronnement, le repas du conquérant.",
+                "Si tu y arrives, mange-la lentement. Tu te souviendras de chaque bouchée.",
+            ],
+            // 💀 Maléfica
+            [
+                "*Son visage se durcit.* Méfie-toi de la Maléfica. Tu la reconnaîtras à ses fruits violets qui brillent dans la nuit.",
+                "Si tu en croques un, tu perds tes forces. Pas une farce — un vrai poison léger.",
+                "Les anciens du village disent qu'elle a poussé sur la tombe d'un mauvais entraîneur, celui qui faisait souffrir ses élèves pour rien. La terre ne pardonne pas.",
+            ],
+            // 🌳 Teaser — il ne connaît pas tous les arbres
+            [
+                "*ROMARIN te regarde par-dessus son binoculaire en bois.* Tu sais, je travaille à Pépiteville depuis trente ans, mais je n'ai pas tout vu.",
+                "On me dit qu'il y aurait d'autres arbres plus loin. Au-delà du brouillard, au-delà des mers du sud. Des essences que je n'ai jamais touchées.",
+                "Si tu en croises un, reviens me voir. Je voudrais apprendre encore. Un jardinier qui croit savoir est un jardinier mort.",
+            ],
+        ],
+    },
+
     // v3.23h — DINGO : le chien de BUCATINI, sprite emoji 🐕 (level 38 du bestiaire).
     // Sert d'accroche visuelle pour orienter le joueur vers BIBLIO puis V3T.
     {

@@ -3055,6 +3055,35 @@ export default function MapClient({
                 <TamagotchiModal
                     tamagotchi={tamagotchi}
                     availableEnergy={reps}
+                    inventory={inventory}
+                    onDrink={async () => {
+                        try {
+                            const res = await fetch("/api/gamebook/tamagotchi/drink", { method: "POST" })
+                            const data = await res.json()
+                            if (data.ok) {
+                                if (data.tamagotchi) setTamagotchi(data.tamagotchi)
+                                if (Array.isArray(data.inventory)) setInventory(data.inventory)
+                                return { ok: true, v3tComment: data.v3tComment }
+                            }
+                            return { ok: false, reason: data.reason || "Action impossible." }
+                        } catch {
+                            return { ok: false, reason: "Erreur réseau." }
+                        }
+                    }}
+                    onFeedPates={async () => {
+                        try {
+                            const res = await fetch("/api/gamebook/tamagotchi/feed-pates", { method: "POST" })
+                            const data = await res.json()
+                            if (data.ok) {
+                                if (data.tamagotchi) setTamagotchi(data.tamagotchi)
+                                if (Array.isArray(data.inventory)) setInventory(data.inventory)
+                                return { ok: true, v3tComment: data.v3tComment }
+                            }
+                            return { ok: false, reason: data.reason || "Action impossible." }
+                        } catch {
+                            return { ok: false, reason: "Erreur réseau." }
+                        }
+                    }}
                     onAdopt={async (name) => {
                         try {
                             const res = await fetch("/api/gamebook/tamagotchi/adopt", {

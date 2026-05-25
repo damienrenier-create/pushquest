@@ -80,6 +80,20 @@ export function addItem(
 }
 
 /**
+ * v3.23i — Retire `amount` unités d'un item de l'inventory.
+ * Si quantity tombe à 0, l'entry est supprimée.
+ * Si l'item n'existe pas, no-op.
+ */
+export function removeItem(inv: InventoryEntry[], itemKey: string, amount: number = 1): InventoryEntry[] {
+    return inv.flatMap((e) => {
+        if (e.itemKey !== itemKey) return [e]
+        const newQuantity = Math.max(0, e.quantity - amount)
+        if (newQuantity === 0) return []
+        return [{ ...e, quantity: newQuantity }]
+    })
+}
+
+/**
  * Met à jour le `data` d'un item existant (ex: contenu de la gourde).
  * Aucun effet si l'item n'existe pas dans l'inventory.
  */
