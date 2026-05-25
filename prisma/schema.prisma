@@ -495,6 +495,14 @@ model GamebookProgress {
   // v3.23c — Sommet du Mont Pasta-Ventoux atteint au moins une fois.
   // One-shot ; déclenche cinématique + badge Conquérant 500 XP. Aussi unlock contest_hall.
   montSummitReached         Boolean @default(false)
+
+  // v3.23f — Surplus de bonus persistant (jamais reset à minuit).
+  // Format : positif uniquement. Représente les reps de bonus encore non dépensés.
+  // Source de vérité pour l'énergie : availableEnergy = todayReps - energySpentToday + bonusSurplus
+  // Quand un bonus est gagné (pommier, BUFFY, papa, capitaine, etc.) → bonusSurplus += reward
+  // Quand de l'énergie est dépensée (mouvement, etc.) → consume bonusSurplus d'abord, puis energySpentToday
+  // À minuit : energySpentToday est wipé mais bonusSurplus persiste. Plus de perte de surplus.
+  bonusSurplus              Int     @default(0)
   // v3.23c-2 — Défis intersalle de Muscuville (contest_hall). Chacun one-shot +100 reps.
   contestDefiPompatorDone   Boolean @default(false)
   contestDefiSquatilusDone  Boolean @default(false)

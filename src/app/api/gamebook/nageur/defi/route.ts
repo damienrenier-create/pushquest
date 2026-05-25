@@ -78,35 +78,38 @@ export async function POST() {
     }
 
     const today = getTodayISO()
-    const storedDate = (progress as { energySpentDate?: string }).energySpentDate ?? ""
-    const storedSpent = (progress as { energySpentToday?: number }).energySpentToday ?? 0
-    const currentSpent = storedDate === today ? storedSpent : 0
     // v3.17d — Bonus Lunettes : +10% si l'utilisateur a des lunettes intactes
     // v3.23e — ratio appliqué au reward (doctrine A1) AVANT le bonus lunettes
     const inventory = parseInventory((progress as { inventory?: unknown }).inventory)
     const ratioedReward = applyRatioToReward(NAGEUR_DEFI_REWARD, ratio)
     const reward = applyRewardBonus(ratioedReward, inventory)
-    const newSpent = currentSpent - reward  // crédit = décrément
+
+    // v3.23f — Modèle bonusSurplus (reward persistant à minuit)
+    const { readEnergySnapshot, grantRewardOnSnapshot, computeAvailableEnergy } = await import("@/lib/gamebook/energy")
+    const snap = readEnergySnapshot(progress, today)
+    const nextSnap = grantRewardOnSnapshot(snap, reward, today)
 
     await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
         data: {
             nageurDefiCompleted: true,
-            energySpentToday: newSpent,
-            energySpentDate: today,
+            energySpentToday: nextSnap.energySpentToday,
+            energySpentDate: nextSnap.energySpentDate,
+            bonusSurplus: nextSnap.bonusSurplus,
             lastSeen: new Date(),
         },
     })
 
     const todayReps = await getTodayReps(userId)
     const isCreator = await isCreatorAccount(userId)
-    const availableEnergy = padAvailableEnergyForCreator(todayReps - newSpent, isCreator)
+    const availableEnergy = padAvailableEnergyForCreator(computeAvailableEnergy(todayReps, nextSnap), isCreator)
 
     return NextResponse.json({
         ok: true,
         reward,
         baseReward: NAGEUR_DEFI_REWARD,
         availableEnergy,
-        energySpentToday: newSpent,
+        energySpentToday: nextSnap.energySpentToday,
+        bonusSurplus: nextSnap.bonusSurplus,
     })
 }

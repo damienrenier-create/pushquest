@@ -116,14 +116,15 @@ export async function POST(req: NextRequest) {
 
     // Phase 2 : warp vers JOJO + bonus (si pas déjà joué) + rescue PIAFFINI
     const today = getTodayISO()
-    const storedDate = (progress as { energySpentDate?: string }).energySpentDate ?? ""
-    const storedSpent = (progress as { energySpentToday?: number }).energySpentToday ?? 0
-    const currentSpent = storedDate === today ? storedSpent : 0
     // v3.23e — ratio appliqué au reward (doctrine A1). Si la blague a déjà été jouée,
     // on ne redonne PAS les +30 reps (pas de double crédit, juste rescue rétroactif).
     const ratio = await getUserDifficultyRatio(userId)
     const reward = alreadyJoked ? 0 : applyRatioToReward(FRANSS_BONUS_REPS, ratio)
-    const newSpent = currentSpent - reward
+
+    // v3.23f — Modèle bonusSurplus
+    const { readEnergySnapshot, grantRewardOnSnapshot, computeAvailableEnergy } = await import("@/lib/gamebook/energy")
+    const snap = readEnergySnapshot(progress, today)
+    const nextSnap = grantRewardOnSnapshot(snap, reward, today)
 
     // v3.23e — La blague EST aussi un rescue PIAFFINI (sinon JOJO ne reconnaît pas Franss
     // et le dialogue post-piaffini ne s'affiche jamais). On set le flag, on ajoute le
@@ -149,8 +150,9 @@ export async function POST(req: NextRequest) {
             // v3.23e — synchronise l'arc PIAFFINI dans la même transaction
             piaffiniRescued: true,
             inventory: newInventory,
-            energySpentToday: newSpent,
-            energySpentDate: today,
+            energySpentToday: nextSnap.energySpentToday,
+            energySpentDate: nextSnap.energySpentDate,
+            bonusSurplus: nextSnap.bonusSurplus,
             lastSeen: new Date(),
         },
     })
@@ -206,7 +208,7 @@ export async function POST(req: NextRequest) {
 
     const todayReps = await getTodayReps(userId)
     const isCreator = await isCreatorAccount(userId)
-    const availableEnergy = padAvailableEnergyForCreator(todayReps - newSpent, isCreator)
+    const availableEnergy = padAvailableEnergyForCreator(computeAvailableEnergy(todayReps, nextSnap), isCreator)
 
     return NextResponse.json({
         ok: true,
@@ -214,7 +216,8 @@ export async function POST(req: NextRequest) {
         spawn: JOJO_SPAWN,
         reward,
         availableEnergy,
-        energySpentToday: newSpent,
+        energySpentToday: nextSnap.energySpentToday,
+        bonusSurplus: nextSnap.bonusSurplus,
         // v3.23e — sync inventaire côté client (Set de Nage ajouté)
         inventory: newInventory,
         piaffiniRescued: true,

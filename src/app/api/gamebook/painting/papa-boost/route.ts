@@ -69,32 +69,35 @@ export async function POST(req: NextRequest) {
     }
 
     const today = getTodayISO()
-    const storedDate = (progress as { energySpentDate?: string }).energySpentDate ?? ""
-    const storedSpent = (progress as { energySpentToday?: number }).energySpentToday ?? 0
-    const currentSpent = storedDate === today ? storedSpent : 0
     // v3.23e — ratio onboarding appliqué au reward (doctrine A1)
     const ratio = await getUserDifficultyRatio(userId)
     const reward = applyRatioToReward(PAPA_BOOST_REWARD, ratio)
-    const newSpent = currentSpent - reward
+
+    // v3.23f — Modèle bonusSurplus
+    const { readEnergySnapshot, grantRewardOnSnapshot, computeAvailableEnergy } = await import("@/lib/gamebook/energy")
+    const snap = readEnergySnapshot(progress, today)
+    const nextSnap = grantRewardOnSnapshot(snap, reward, today)
 
     await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
         data: {
             papaBoostClaimed: true,
-            energySpentToday: newSpent,
-            energySpentDate: today,
+            energySpentToday: nextSnap.energySpentToday,
+            energySpentDate: nextSnap.energySpentDate,
+            bonusSurplus: nextSnap.bonusSurplus,
             lastSeen: new Date(),
         },
     })
 
     const todayReps = await getTodayReps(userId)
     const isCreator = await isCreatorAccount(userId)
-    const availableEnergy = padAvailableEnergyForCreator(todayReps - newSpent, isCreator)
+    const availableEnergy = padAvailableEnergyForCreator(computeAvailableEnergy(todayReps, nextSnap), isCreator)
 
     return NextResponse.json({
         ok: true,
         reward,
         availableEnergy,
-        energySpentToday: newSpent,
+        energySpentToday: nextSnap.energySpentToday,
+        bonusSurplus: nextSnap.bonusSurplus,
     })
 }

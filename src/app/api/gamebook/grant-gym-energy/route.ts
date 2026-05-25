@@ -55,20 +55,21 @@ export async function POST() {
     }
 
     const today = getTodayISO()
-    const storedDate = (progress as { energySpentDate?: string }).energySpentDate ?? ""
-    const storedSpent = (progress as { energySpentToday?: number }).energySpentToday ?? 0
-    const currentSpent = storedDate === today ? storedSpent : 0
     // v3.10.1 — Reward ajusté au ratio de difficulté
     const ratio = await getUserDifficultyRatio(userId)
     const reward = applyRatio(GYM_GUY_REWARD, ratio)
-    // On retire `reward` (l'énergie devient "moins consommée" d'autant)
-    const newSpent = currentSpent - reward
 
-    await prisma.gamebookProgress.update({
+    // v3.23f — Modèle bonusSurplus : le reward s'accumule dans bonusSurplus (persistant)
+    const { readEnergySnapshot, grantRewardOnSnapshot, computeAvailableEnergy } = await import("@/lib/gamebook/energy")
+    const snap = readEnergySnapshot(progress, today)
+    const nextSnap = grantRewardOnSnapshot(snap, reward, today)
+
+    await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
         data: {
-            energySpentToday: newSpent,
-            energySpentDate: today,
+            energySpentToday: nextSnap.energySpentToday,
+            energySpentDate: nextSnap.energySpentDate,
+            bonusSurplus: nextSnap.bonusSurplus,
             gymGuyEnergyGiven: true,
             lastSeen: new Date(),
         },
@@ -76,12 +77,13 @@ export async function POST() {
 
     const todayReps = await getTodayReps(userId)
     const isCreator = await isCreatorAccount(userId)
-    const availableEnergy = padAvailableEnergyForCreator(Math.max(0, todayReps - newSpent), isCreator)
+    const availableEnergy = padAvailableEnergyForCreator(computeAvailableEnergy(todayReps, nextSnap), isCreator)
 
     return NextResponse.json({
         ok: true,
         availableEnergy,
-        energySpentToday: newSpent,
+        energySpentToday: nextSnap.energySpentToday,
+        bonusSurplus: nextSnap.bonusSurplus,
         reward,
     })
 }

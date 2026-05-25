@@ -145,15 +145,16 @@ export async function GET() {
 
     const todayReps = await getTodayReps(userId)
 
-    // === v3.4a : calcul de l'énergie consommée du jour (reset à minuit) ===
+    // === v3.4a / v3.23f : calcul de l'énergie disponible ===
+    // Modèle : availableEnergy = todayReps - energySpentToday + bonusSurplus
+    //   - energySpentToday : reset à minuit (date check)
+    //   - bonusSurplus     : persiste (jamais reset, fix bug v3.10)
     const today = getTodayISO()
-    const storedDate = (progress as { energySpentDate?: string }).energySpentDate ?? ""
-    const storedSpent = (progress as { energySpentToday?: number }).energySpentToday ?? 0
-    // Si la date stockée n'est pas aujourd'hui, le compteur est obsolète → reset à 0
-    const energySpentToday = storedDate === today ? storedSpent : 0
-    // v3.8 : pas de plafond — energySpentToday peut être négatif si la gourde a été bue.
-    // Énergie réellement disponible = reps totales - énergie déjà consommée
-    let availableEnergy = todayReps - energySpentToday
+    const { readEnergySnapshot, computeAvailableEnergy } = await import("@/lib/gamebook/energy")
+    const energySnap = readEnergySnapshot(progress, today)
+    const energySpentToday = energySnap.energySpentToday
+    const bonusSurplus = energySnap.bonusSurplus
+    let availableEnergy = computeAvailableEnergy(todayReps, energySnap)
 
     // v3.8.5 — Mode créateur (isSystem) : énergie minimum 1000 pour tester la map.
     // Ne touche pas aux données réelles : on override juste la valeur renvoyée au client.
@@ -244,6 +245,7 @@ export async function GET() {
         },
         todayReps,
         energySpentToday,
+        bonusSurplus,
         availableEnergy,
         frozen,
         frozenUntil,

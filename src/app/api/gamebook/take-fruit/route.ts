@@ -20,6 +20,7 @@ import { isGamebookFrozen } from "@/lib/gamebook/antiCheat"
 import { isCreatorAccount, padAvailableEnergyForCreator } from "@/lib/gamebook/creator"
 import { getUserDifficultyRatio, applyRatio } from "@/lib/gamebook/difficulty"
 import { ALL_TREES, TREE_KIND_CONFIGS } from "@/lib/gamebook/maps"
+import { readEnergySnapshot, grantRewardOnSnapshot, computeAvailableEnergy } from "@/lib/gamebook/energy"
 
 export const dynamic = "force-dynamic"
 
@@ -112,23 +113,20 @@ export async function POST(req: NextRequest) {
         })
     }
 
-    const storedDate = (progress as { energySpentDate?: string }).energySpentDate ?? ""
-    const storedSpent = (progress as { energySpentToday?: number }).energySpentToday ?? 0
-    const currentSpent = storedDate === today ? storedSpent : 0
     const todayReps = await getTodayReps(userId)
 
-    // v3.10.1 — Reward ajusté au ratio de difficulté pour cohérence (onboarding reçoit moins
-    // en absolu, mais le même % par rapport à son quota quotidien).
+    // v3.10.1 — Reward ajusté au ratio de difficulté pour cohérence
     // v3.23d — Bonus dépend du type d'arbre (apple 80, cherry 40, pear 60, peach 100, coconut 150).
-    //          Maléfica (poison) a un bonus NÉGATIF (-30) : on bypass applyRatio qui aurait
-    //          ramené le malus à 1 (à cause du Math.max(1, ...)).
+    //          Maléfica (poison) a un bonus NÉGATIF (-30) → bypass applyRatio.
     const ratio = await getUserDifficultyRatio(userId)
     const reward = treeConfig.bonusReps >= 0
         ? applyRatio(treeConfig.bonusReps, ratio)
-        : treeConfig.bonusReps  // malus à pleine intensité, même en onboarding
-    // Crédit immédiat : energySpentToday -= reward (peut devenir négatif → surplus, cohérent v3.8)
-    // Pour Maléfica, reward < 0 → newSpent augmente → énergie disponible diminue.
-    const newSpent = currentSpent - reward
+        : treeConfig.bonusReps  // malus à pleine intensité
+
+    // v3.23f — Modèle bonusSurplus : reward positif → bonusSurplus++. Reward négatif (Maléfica)
+    //          → consomme bonusSurplus d'abord puis spentToday. Plus de perte à minuit.
+    const snap = readEnergySnapshot(progress, today)
+    const nextSnap = grantRewardOnSnapshot(snap, reward, today)
     const newState: FruitsTakenState = {
         date: today,
         counts: { ...state.counts, [treeInstance.id]: taken + 1 },
@@ -137,8 +135,9 @@ export async function POST(req: NextRequest) {
     await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
         data: {
-            energySpentToday: newSpent,
-            energySpentDate: today,
+            energySpentToday: nextSnap.energySpentToday,
+            energySpentDate: nextSnap.energySpentDate,
+            bonusSurplus: nextSnap.bonusSurplus,
             fruitsTaken: newState,
             lastSeen: new Date(),
         },
@@ -149,10 +148,11 @@ export async function POST(req: NextRequest) {
         ok: true,
         treeId: treeInstance.id,
         treeKind: treeInstance.kind,
-        reward,  // v3.10.1 — ajusté au ratio (le client affiche cette valeur, pas FRUIT_REWARD)
+        reward,
         remaining: treeConfig.maxPerDay - (taken + 1),
-        availableEnergy: padAvailableEnergyForCreator(todayReps - newSpent, isCreator),
-        energySpentToday: newSpent,
+        availableEnergy: padAvailableEnergyForCreator(computeAvailableEnergy(todayReps, nextSnap), isCreator),
+        energySpentToday: nextSnap.energySpentToday,
+        bonusSurplus: nextSnap.bonusSurplus,
         fruitsTaken: newState,
     })
 }

@@ -84,16 +84,14 @@ export async function POST(req: NextRequest) {
     }
 
     const today = getTodayISO()
-    const storedDate = (progress as { energySpentDate?: string }).energySpentDate ?? ""
-    const storedSpent = (progress as { energySpentToday?: number }).energySpentToday ?? 0
-    const currentSpent = storedDate === today ? storedSpent : 0
+    // v3.23f — Modèle bonusSurplus : on consomme bonusSurplus d'abord, puis energySpentToday
+    const { readEnergySnapshot, spendEnergyOnSnapshot, computeAvailableEnergy } = await import("@/lib/gamebook/energy")
+    const snap = readEnergySnapshot(progress, today)
 
     const todayReps = await getTodayReps(userId)
-    // v3.8 : pas de plafond à 0 — peut être négatif si gourde bue (énergie en surplus).
-    let availableEnergy = todayReps - currentSpent
+    let availableEnergy = computeAvailableEnergy(todayReps, snap)
 
     // v3.8.5 — Mode créateur (isSystem) : on autorise toujours le débit.
-    // L'énergie disponible renvoyée au client est paddée à 1000+ minimum.
     const creatorCheck = await (prisma as any).user.findUnique({
         where: { id: userId },
         select: { isSystem: true },
@@ -113,8 +111,8 @@ export async function POST(req: NextRequest) {
         }, { status: 200 })
     }
 
-    // Débiter
-    const newSpent = currentSpent + amount
+    // Débiter (consomme bonusSurplus d'abord)
+    const nextSnap = spendEnergyOnSnapshot(snap, amount, today)
 
     // v3.8.1 / v3.17 / v3.17d — Usure de chaque wearable utilisé (baskets, chaussures, brassards, lunettes...)
     const currentInventory = parseInventory((progress as { inventory?: unknown }).inventory)
@@ -133,21 +131,24 @@ export async function POST(req: NextRequest) {
     await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
         data: {
-            energySpentToday: newSpent,
-            energySpentDate: today,
+            energySpentToday: nextSnap.energySpentToday,
+            energySpentDate: nextSnap.energySpentDate,
+            bonusSurplus: nextSnap.bonusSurplus,
             inventory: updatedInventory,
             lastSeen: new Date(),
         },
     })
 
+    const newAvailable = computeAvailableEnergy(todayReps, nextSnap)
     const reportedAvailable = isCreator
-        ? Math.max(todayReps - newSpent, 1000)
-        : (todayReps - newSpent)
+        ? Math.max(newAvailable, 1000)
+        : newAvailable
 
     return NextResponse.json({
         ok: true,
         availableEnergy: reportedAvailable,
-        energySpentToday: newSpent,
+        energySpentToday: nextSnap.energySpentToday,
+        bonusSurplus: nextSnap.bonusSurplus,
         amount,
         reason,
         inventory: updatedInventory,
