@@ -1243,6 +1243,56 @@ export const NPCS: NpcDefinition[] = [
         ],
     },
 
+    // ============================================================
+    // v3.24a — LASAGNAS VEGAS — PNJ
+    // ============================================================
+
+    // PÈRE PESTO : tout en haut de la ville, donne le "mot de passe" (en réalité juste un flag)
+    // pour entrer dans le bar de la Team Boulette honnêtement.
+    {
+        id: "pere_pesto",
+        name: "PÈRE PESTO",
+        mapId: "lasagnas_vegas",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🧙", color: "#48a868" },
+        // Position : tout en haut, à l'opposé du bar TB qui est sud-ouest
+        initialX: 22,
+        initialY: 2,
+        dialoguesAfter: [
+            "*Le vieillard te dévisage longuement.*",
+            "Mh. Tu sens la sueur honnête. Ça change.",
+            "Je vais te confier un secret. Murmure-le au videur du bar : c'est mon mot de passe.",
+            "Si tu mens, ils le sauront. Ils savent toujours. Et ils ne pardonnent pas.",
+            "*Il pose son doigt sur ses lèvres.* Va. Et reviens vivant.",
+        ],
+        dialoguesAfterRevisit: [
+            "Tu connais le secret. À toi de t'en servir avec sagesse.",
+        ],
+    },
+
+    // VIDEUR du bar Team Boulette : à l'entrée, demande le mot de passe.
+    // Logique de dialogue gérée dans MapClient (3 réponses possibles).
+    {
+        id: "tb_videur",
+        name: "PORTIER ARRABBIATA",
+        mapId: "lasagnas_vegas",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🕴️", color: "#202020" },
+        // Position : devant le bar TB (sud-ouest, opposé Père Pesto)
+        initialX: 2,
+        initialY: 18,
+        // Dialogue initial — la suite est gérée par MapClient (choix oui/non + flag pere_pesto)
+        dialoguesAfter: [
+            "*Le portier croise les bras et te toise.*",
+            "Hé, blanc-bec. Tu connais le mot de passe ?",
+        ],
+        dialoguesAfterRevisit: [
+            "*Il te reconnaît.* Allez, entre.",
+        ],
+    },
+
 ]
 
 // ============================================================

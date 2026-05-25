@@ -358,7 +358,7 @@ export const PEPITEVILLE_APPLE_TREES: Array<{ id: string; x: number; y: number }
 //
 // Bonus croissant, max décroissant : plus l'arbre est rare, plus il donne.
 // ============================================================
-export type TreeKind = "apple" | "cherry" | "pear" | "peach" | "coconut" | "poison"
+export type TreeKind = "apple" | "cherry" | "pear" | "peach" | "coconut" | "poison" | "olive"
 
 export interface TreeKindConfig {
     kind: TreeKind
@@ -383,6 +383,8 @@ export const TREE_KIND_CONFIGS: Record<TreeKind, TreeKindConfig> = {
     // 💀 Piège : bonus négatif. Le joueur naïf perd 30 reps par fruit, max 3 fois/jour (= -90 reps max).
     // Visuellement très différent (violet/noir) pour donner une chance aux joueurs attentifs de l'éviter.
     poison:   { kind: "poison",   emoji: "🟣", label: "Maléfica",    tile: "poisonTree",   emptyTile: "poisonTreeEmpty",   bonusReps: -30, maxPerDay: 3 },
+    // 🫒 Olivier de Lasagnas Vegas : généreux mais petites portions. 7×20 reps = 140/jour si on récolte tout.
+    olive:    { kind: "olive",    emoji: "🫒", label: "Olivier",     tile: "oliveTree",    emptyTile: "oliveTreeEmpty",    bonusReps: 20,  maxPerDay: 7 },
 }
 
 /** Lookup d'un config arbre par son tile (utile pour TileCell). */
@@ -421,6 +423,8 @@ export const ALL_TREES: TreeInstance[] = [
     // === 💀 Maléfica (piège, -30 reps × 3/j) — placé bien visible à Pépiteville
     //         pour piéger les naïfs (l'apparence violette doit suffire à dissuader les attentifs).
     { id: "poison_tree_1", mapId: "pepiteville", x: 12, y: 15, kind: "poison" },
+    // === 🫒 Olivier (Lasagnas Vegas) : 7 olives/jour à +20 reps chacune ===
+    { id: "olive_tree_1", mapId: "lasagnas_vegas", x: 10, y: 21, kind: "olive" },
 ]
 
 /** Helper : tous les arbres d'une map donnée. */
@@ -615,6 +619,156 @@ export const MUSCUVILLE_SPAWN_FROM_MONT = {
 }
 
 // ============================================================
+// v3.24a — LASAGNAS VEGAS (ville opulente à l'ouest de Muscuville)
+// 24 × 24 cases. Casinos, mafia Team Boulette, hôtel, 3 shops, route avec voitures.
+// Connexion : sortie OUEST de Muscuville (3 cases milieu-gauche) → entrée EST de Vegas.
+//
+// Layout :
+//   y=0       : tree boundary
+//   y=1-3     : néons / décor opulent (panneaux lumineux, marbre)
+//   y=4-9     : bâtiments NORD (Hôtel + Shop habits + Shop bouffe + Casino map A)
+//   y=10      : trottoir nord
+//   y=11-14   : ROUTE 4 voies (voitures qui circulent en boucle)
+//   y=15      : trottoir sud
+//   y=16-22   : bâtiments SUD (Bar Team Boulette + Shop rachat + Casino map B/C + fontaine)
+//   y=23      : tree boundary
+//
+// Connexions :
+//   - x=23 milieu (y=12,13) ← entrée depuis Muscuville (via sortie ouest Muscuville)
+//   - x=0  milieu (y=12,13) → sortie vers FUTURE ville (bloquée, panneau "construction")
+//   - Père Pesto : tout en haut, y=2, à l'opposé du bar Team Boulette
+// ============================================================
+export const LASAGNAS_W = 24
+export const LASAGNAS_H = 24
+
+function buildLasagnasVegas(): TileType[][] {
+    const m: TileType[][] = []
+    for (let y = 0; y < LASAGNAS_H; y++) {
+        const row: TileType[] = []
+        for (let x = 0; x < LASAGNAS_W; x++) {
+            if (x === 0 || x === LASAGNAS_W - 1 || y === 0 || y === LASAGNAS_H - 1) {
+                row.push("tree")
+            } else {
+                row.push("grass")
+            }
+        }
+        m.push(row)
+    }
+
+    // === Entrée EST depuis Muscuville (côté droit, milieu : y=12,13) ===
+    // 3 cases d'arrivée. Path central horizontal y=12 et y=13 sur toute la largeur.
+    m[12][LASAGNAS_W - 1] = "grassTall"
+    m[13][LASAGNAS_W - 1] = "grassTall"
+    // === Sortie OUEST (future ville, bloquée pour l'instant) ===
+    // On laisse un panneau là, mais pas de transition codée
+    m[12][0] = "tree"  // reste boundary, futur grassTall
+    m[13][0] = "tree"
+
+    // === Chemins horizontaux d'accès aux bâtiments ===
+    // Trottoir nord y=10 : full path
+    for (let x = 1; x < LASAGNAS_W - 1; x++) m[10][x] = "path"
+    // Trottoir sud y=15 : full path
+    for (let x = 1; x < LASAGNAS_W - 1; x++) m[15][x] = "path"
+    // Connexion verticale : 2 cases au centre vertical (x=11,12) entre trottoirs
+    // (déjà couvert par le path horizontal aux y=10 et y=15)
+
+    // === Route 4 voies y=11..14, avec passage piéton x=11,12 (cases path safe) ===
+    // Les tiles "road" sont décoratives ; les voitures seront animées côté client.
+    // Le passage piéton (x=11,12, y=11..14) reste path → pas d'écrasement.
+    for (let y = 11; y <= 14; y++) {
+        for (let x = 1; x < LASAGNAS_W - 1; x++) {
+            if (x === 11 || x === 12) {
+                m[y][x] = "path"  // passage piéton safe
+            } else {
+                m[y][x] = "road"
+            }
+        }
+    }
+
+    // === Décor opulent rangée nord (y=1..3) : néons et marbre ===
+    // Quelques fleurs jaunes pour les néons décoratifs
+    m[2][3] = "flowerY"; m[2][7] = "flowerY"; m[2][11] = "flowerY"; m[2][15] = "flowerY"; m[2][19] = "flowerY"
+
+    // === Décor sud (fontaines symbolisées par water petites) ===
+    m[20][6] = "water"; m[20][7] = "water"
+    m[20][16] = "water"; m[20][17] = "water"
+
+    // === 🫒 Olivier sud (entre les 2 fontaines), accessible depuis le trottoir y=15 ===
+    m[21][10] = "oliveTree"
+
+    // === Trottoirs d'accès aux portes des bâtiments ===
+    // Lignes verticales courtes entre y=10 (trottoir) et y=9 (face nord bâtiments)
+    // Les portes seront positionnées par Building, ces lignes sont juste le sol entre.
+
+    return m
+}
+
+// v3.24a — Placeholder pour les intérieurs Lasagnas Vegas non encore implémentés.
+// 7×6 box avec un panneau "construction" + doorMat de retour vers la ville.
+// Sera remplacé par les vrais intérieurs (hôtel, casino, etc.) dans les commits suivants.
+function buildLasagnasConstruction(): TileType[][] {
+    const W = 7, H = 6
+    const m: TileType[][] = []
+    for (let y = 0; y < H; y++) {
+        const row: TileType[] = []
+        for (let x = 0; x < W; x++) {
+            if (y === 0) row.push("wallH")
+            else if (x === 0 || x === W - 1 || y === H - 1) row.push("wallV")
+            else row.push("floorTile")
+        }
+        m.push(row)
+    }
+    // Panneau "construction" au centre
+    m[2][3] = "shopShelf"
+    // Sortie sud (doorMat)
+    m[H - 1][3] = "doorMat"
+    return m
+}
+
+// Bâtiments visibles de Lasagnas Vegas (8 au total).
+// v3.24a : tous pointent vers `lasagnas_construction` (placeholder) — sera remplacé
+// progressivement par les vrais intérieurs.
+//
+// Layout :
+//   Rangée NORD (y=4..7) :  Hôtel  ShopHabits  ShopBouffe  CasinoA
+//   Rangée SUD  (y=16..19): BarTB  ShopRachat  CasinoB     CasinoC(VIP)
+export const LASAGNAS_BUILDINGS: Building[] = [
+    // Nord
+    { x: 1,  y: 4,  w: 4, h: 4, kind: "shop",   doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_construction", displayName: "HOTEL" },
+    { x: 6,  y: 4,  w: 4, h: 4, kind: "shop",   doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_construction", displayName: "HABITS" },
+    { x: 11, y: 4,  w: 4, h: 4, kind: "shop",   doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_construction", displayName: "BOUFFE" },
+    { x: 17, y: 4,  w: 4, h: 4, kind: "casino", doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_construction", displayName: "CASINO" },
+    // Sud
+    { x: 1,  y: 16, w: 4, h: 4, kind: "casino", doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_construction", displayName: "BAR" },
+    { x: 6,  y: 16, w: 4, h: 4, kind: "shop",   doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_construction", displayName: "RACHAT" },
+    { x: 11, y: 16, w: 4, h: 4, kind: "casino", doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_construction", displayName: "JEUX" },
+    { x: 17, y: 16, w: 4, h: 4, kind: "casino", doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_construction", displayName: "VIP" },
+]
+
+export const LASAGNAS_SIGNS: Sign[] = [
+    { x: 11, y: 9, text: "LASAGNAS VEGAS\nLa ville qui ne dort jamais. Casinos, hôtel, et la mafia Team Boulette dans les ruelles…" },
+    { x: 1, y: 12, text: "🚧 ROUTE EN CONSTRUCTION 🚧\nVers une autre ville. Reviens plus tard." },
+    { x: 22, y: 1, text: "Vers le sommet : Père Pesto, le fidèle du Dieu Spaghetti." },
+    { x: 11, y: 11, text: "⚠️ ATTENTION : voitures sur la route. Utilise le passage piéton (cases jaunes)." },
+]
+
+// Spawns ===
+// Arrivée à Vegas depuis Muscuville (entrée est = x=W-1)
+export const LASAGNAS_SPAWN_FROM_MUSCUVILLE = {
+    mapId: "lasagnas_vegas",
+    posX: LASAGNAS_W - 2,  // juste à gauche de la grassTall
+    posY: 12,
+    direction: "left" as const,
+}
+// Retour à Muscuville depuis Vegas (sortie est de Vegas → entrée ouest Muscuville)
+export const MUSCUVILLE_SPAWN_FROM_LASAGNAS = {
+    mapId: "muscuville",
+    posX: 1,  // juste à droite de la grassTall ouest Muscuville
+    posY: 8,  // milieu de la sortie 3 cases
+    direction: "right" as const,
+}
+
+// ============================================================
 // v3.17c — LA MER (canal navigable entre Bourg-Boulette et Macaron'île)
 // Petit map avec deux îlots de sable accueillant un naufragé et un nageur.
 // Path waterShallow 3 colonnes (3-4-5) pour permettre le détour sur les îlots.
@@ -716,6 +870,10 @@ function buildMuscuville(): TileType[][] {
     m[0][8] = "grassTall"
     // Sortie sud grassTall (col 8) = trigger Mont Pasta-Ventoux
     m[MUSCUVILLE_H - 1][8] = "grassTall"
+    // v3.24a — Sortie OUEST (3 cases) vers Lasagnas Vegas. Côté gauche centre vertical.
+    m[7][0] = "grassTall"
+    m[8][0] = "grassTall"
+    m[9][0] = "grassTall"
 
     // Chemin vertical central (col 8) sur toute la hauteur
     for (let y = 1; y < MUSCUVILLE_H - 1; y++) m[y][8] = "path"
@@ -1427,6 +1585,24 @@ export const MAPS: Record<string, MapData> = {
         width: MONT_W,
         height: MONT_H,
     },
+    // v3.24a — Lasagnas Vegas (ville opulente à l'ouest de Muscuville, casinos + mafia)
+    lasagnas_vegas: {
+        id: "lasagnas_vegas",
+        name: "LASAGNAS VEGAS",
+        tiles: buildLasagnasVegas(),
+        width: LASAGNAS_W,
+        height: LASAGNAS_H,
+    },
+    // v3.24a — Placeholder unique pour les intérieurs Vegas non implémentés
+    // Sera remplacé par les vrais intérieurs (hôtel, 3 shops, 3 casinos, bar TB) dans les commits suivants.
+    lasagnas_construction: {
+        id: "lasagnas_construction",
+        name: "EN CONSTRUCTION",
+        tiles: buildLasagnasConstruction(),
+        width: 7,
+        height: 6,
+        exitTarget: { mapId: "lasagnas_vegas", x: 11, y: 10 },
+    },
     // v3.17c — La mer (canal navigable inséré entre Bourg-Boulette et Macaron'île)
     la_mer: {
         id: "la_mer",
@@ -1672,6 +1848,8 @@ export const INDOOR_MAP_IDS = new Set([
     "gym_muscuville",
     "casino_muscuville",
     "contest_hall",
+    // v3.24a — Lasagnas Vegas (placeholder + intérieurs à venir)
+    "lasagnas_construction",
 ])
 
 export function isIndoorMap(mapId: string): boolean {

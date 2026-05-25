@@ -39,6 +39,8 @@ import {
     MACARONILE_SIGNS,
     MUSCUVILLE_BUILDINGS,
     MUSCUVILLE_SIGNS,
+    LASAGNAS_BUILDINGS,
+    LASAGNAS_SIGNS,
     GRASS_SUD_SPAWN_FROM_NORTH,
     MACARONILE_SPAWN_FROM_GRASS_SUD,
     MUSCUVILLE_SPAWN_FROM_NORTH,
@@ -131,6 +133,8 @@ const OUTDOOR_MAP_IDS = new Set([
     "bourgpates", "route1", "pepiteville", "hautespates",
     "macaron_ile", "grass_sud", "muscuville", "la_mer",
     "mont_pasta_ventoux",
+    // v3.24a — Lasagnas Vegas (outdoor)
+    "lasagnas_vegas",
 ])
 
 // v3.23b — Mont Pasta-Ventoux : calcul BPM via fenêtre glissante de 6 secondes.
@@ -289,7 +293,9 @@ export default function MapClient({
                         ? MACARONILE_BUILDINGS
                         : state.mapId === "muscuville"
                             ? MUSCUVILLE_BUILDINGS
-                            : []
+                            : state.mapId === "lasagnas_vegas"
+                                ? LASAGNAS_BUILDINGS
+                                : []
 
     // v3.8 — Signs selon la map courante
     const signs =
@@ -298,7 +304,8 @@ export default function MapClient({
                 : state.mapId === "hautespates" ? HAUTESPATES_SIGNS
                     : state.mapId === "macaron_ile" ? MACARONILE_SIGNS
                         : state.mapId === "muscuville" ? MUSCUVILLE_SIGNS
-                            : []
+                            : state.mapId === "lasagnas_vegas" ? LASAGNAS_SIGNS
+                                : []
 
     // ============================================================
     // LOAD AUTRES JOUEURS (polling fallback si Pusher off)
@@ -1361,6 +1368,42 @@ export default function MapClient({
                         setToast(`🚴 Tu enfourches ton ${activeBike.def.name.toLowerCase()}. Direction le sommet !`)
                     }, 200)
                 }
+            }
+            // v3.24a — Muscuville ouest (3 cases milieu) → Lasagnas Vegas
+            if (
+                state.mapId === "muscuville" &&
+                result.nextState.posX === 0 &&
+                (result.nextState.posY === 7 || result.nextState.posY === 8 || result.nextState.posY === 9) &&
+                map.tiles[result.nextState.posY]?.[result.nextState.posX] === "grassTall"
+            ) {
+                setTimeout(() => {
+                    setState((s) => ({
+                        ...s,
+                        mapId: "lasagnas_vegas",
+                        posX: 22,   // LASAGNAS_W - 2
+                        posY: 12,
+                        direction: "left",
+                    }))
+                    setToast("🎰 LASAGNAS VEGAS 🎰")
+                }, 200)
+            }
+            // v3.24a — Lasagnas Vegas est (grassTall x=W-1) → Muscuville
+            if (
+                state.mapId === "lasagnas_vegas" &&
+                result.nextState.posX === 23 &&  // LASAGNAS_W - 1
+                (result.nextState.posY === 12 || result.nextState.posY === 13) &&
+                map.tiles[result.nextState.posY]?.[result.nextState.posX] === "grassTall"
+            ) {
+                setTimeout(() => {
+                    setState((s) => ({
+                        ...s,
+                        mapId: "muscuville",
+                        posX: 1,
+                        posY: 8,
+                        direction: "right",
+                    }))
+                    setToast("MUSCUVILLE")
+                }, 200)
             }
             // v3.23b — Mont nord (cinematic au sommet à venir v3.23c) + retour Mont sud → Muscuville
             if (

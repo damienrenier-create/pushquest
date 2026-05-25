@@ -91,6 +91,24 @@ export default function TileCell({ tile, x, y }: { tile: TileType; x: number; y:
             </div>
         )
     }
+    // v3.24a — Route asphalte (Lasagnas Vegas) avec lignes blanches discontinues
+    if (tile === "road") {
+        return (
+            <div style={{ position: "relative", background: "#383838", overflow: "hidden" }}>
+                {/* Texture asphalte */}
+                <div style={{
+                    position: "absolute", inset: 0,
+                    backgroundImage: `radial-gradient(circle at 50% 50%, #2a2a2a 0.5px, transparent 1px)`,
+                    backgroundSize: "4px 4px", opacity: 0.5,
+                }} />
+                {/* Ligne blanche discontinue au centre vertical (segmentée) */}
+                <div style={{
+                    position: "absolute", left: "48%", top: 0, bottom: 0, width: "4%",
+                    backgroundImage: "repeating-linear-gradient(0deg, #ffd54f 0, #ffd54f 30%, transparent 30%, transparent 60%)",
+                }} />
+            </div>
+        )
+    }
     if (tile === "water") {
         return (
             <div style={{ position: "relative", background: C.water, overflow: "hidden" }}>
@@ -811,6 +829,37 @@ export default function TileCell({ tile, x, y }: { tile: TileType; x: number; y:
                     )}
                 </div>
                 <div style={{ position: "absolute", left: "42%", right: "42%", top: "65%", bottom: "5%", background: "linear-gradient(180deg, #7a4220 0%, #5a2e10 100%)", border: "1px solid #1f0a04" }} />
+            </div>
+        )
+    }
+
+    // === v3.24a : OLIVIER 🫒 — petit feuillage argenté gris-vert + olives vert-olive ===
+    if (tile === "oliveTree" || tile === "oliveTreeEmpty") {
+        const harvested = tile === "oliveTreeEmpty"
+        return (
+            <div style={{ position: "relative", background: C.grass, overflow: "visible" }}>
+                <div style={{
+                    position: "absolute", inset: "10% 10% 25% 10%",
+                    background: harvested
+                        ? `radial-gradient(circle at 50% 40%, #607858 0%, #486848 60%, #283828 100%)`
+                        : `radial-gradient(circle at 50% 40%, #98b088 0%, #708868 60%, #486848 100%)`,
+                    borderRadius: "50% 50% 50% 50%",
+                    boxShadow: "inset -2px -3px 0 #283828, inset 2px 2px 0 #b0c898",
+                    opacity: harvested ? 0.7 : 1,
+                }}>
+                    {!harvested && (
+                        <>
+                            {/* 5 olives en cluster (les 2 autres sont cachées) */}
+                            <div style={{ position: "absolute", top: "30%", left: "20%", width: "11%", height: "14%", background: "#506830", borderRadius: "50%", boxShadow: "inset -1px -1px 0 #283818" }} />
+                            <div style={{ position: "absolute", top: "26%", left: "55%", width: "11%", height: "14%", background: "#506830", borderRadius: "50%", boxShadow: "inset -1px -1px 0 #283818" }} />
+                            <div style={{ position: "absolute", top: "45%", left: "25%", width: "11%", height: "14%", background: "#506830", borderRadius: "50%", boxShadow: "inset -1px -1px 0 #283818" }} />
+                            <div style={{ position: "absolute", top: "48%", left: "60%", width: "11%", height: "14%", background: "#506830", borderRadius: "50%", boxShadow: "inset -1px -1px 0 #283818" }} />
+                            <div style={{ position: "absolute", top: "55%", left: "42%", width: "11%", height: "14%", background: "#506830", borderRadius: "50%", boxShadow: "inset -1px -1px 0 #283818" }} />
+                        </>
+                    )}
+                </div>
+                {/* Tronc fin et noueux */}
+                <div style={{ position: "absolute", left: "45%", right: "45%", top: "65%", bottom: "5%", background: "linear-gradient(180deg, #98785a 0%, #5a4830 100%)", border: "1px solid #2a1808" }} />
             </div>
         )
     }

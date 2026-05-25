@@ -37,6 +37,10 @@ export type TileType =
     | "coconutTree" | "coconutTreeEmpty"      // 🥥 ultra-rare : 150 reps × 1/jour
     // === v3.23d : ARBRE EMPOISONNÉ — piège (-30 reps) ===
     | "poisonTree" | "poisonTreeEmpty"        // 💀 PIÈGE : -30 reps × 3/jour
+    // === v3.24a : Olivier (Lasagnas Vegas) — 7 olives/jour à +20 reps ===
+    | "oliveTree" | "oliveTreeEmpty"          // 🫒 commun généreux : 20 reps × 7/jour
+    // === v3.24a : Lasagnas Vegas — route asphalte (voitures circulent dessus, écrasement -50% reps) ===
+    | "road"
     // === v3.8.2 : Tour des Pâtes Aiguës (Hautes-Pâtes) ===
     | "towerWall"     // mur de pierre intérieur de la tour (bloquant)
     | "towerFloor"    // sol pierre de la tour (non-bloquant)
@@ -188,6 +192,10 @@ export const BLOCKING_TILES: TileType[] = [
     "coconutTree", "coconutTreeEmpty",
     // v3.23d — Arbre empoisonné (piège, -30 reps)
     "poisonTree", "poisonTreeEmpty",
+    // v3.24a — Olivier (Lasagnas Vegas)
+    "oliveTree", "oliveTreeEmpty",
+    // v3.24a — Route Vegas (voitures + écrasement)
+    "road",
     // v3.8.2 — décor tour des Pâtes Aiguës
     "towerWall",
     "towerWindow",
