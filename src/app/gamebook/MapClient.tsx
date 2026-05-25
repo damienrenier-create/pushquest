@@ -367,7 +367,36 @@ export default function MapClient({
             targetUserId?: string
         }) => {
             if (data.userId === userId) return
-            // Visualiser le push : on rafraîchit pour avoir les nouvelles positions
+            // v3.23r — Si JE suis la cible (poussé), je refresh mon propre state pour
+            // voir immédiatement ma nouvelle position (sans avoir besoin de refresh manuel).
+            if (data.targetUserId === userId) {
+                ; (async () => {
+                    try {
+                        const res = await fetch("/api/gamebook/state")
+                        const fresh = await res.json()
+                        if (fresh?.state) {
+                            setState((s) => ({
+                                ...s,
+                                mapId: fresh.state.mapId,
+                                posX: fresh.state.posX,
+                                posY: fresh.state.posY,
+                                direction: fresh.state.direction,
+                                firstSwimDone: fresh.state.firstSwimDone === true,
+                            }))
+                            if (data.nickname) {
+                                setToast(`${data.nickname} t'a poussé dans l'eau !`)
+                            } else {
+                                setToast("Tu as été poussé dans l'eau !")
+                            }
+                        }
+                    } catch {
+                        // Fallback : on demande un refresh manuel
+                        setToast("Tu as été poussé. Rafraîchis si rien ne change.")
+                    }
+                })()
+                return
+            }
+            // Sinon : push entre autres joueurs → on refresh juste leurs positions
             loadOtherPlayers()
             if (data.nickname) {
                 setToast(`${data.nickname} pousse quelqu'un.`)

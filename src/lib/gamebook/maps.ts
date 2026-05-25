@@ -61,6 +61,11 @@ function buildOutdoor(): TileType[][] {
     m[OUTDOOR_H - 1][7] = "waterShallow"
     m[OUTDOOR_H - 1][8] = "waterShallow"
     m[OUTDOOR_H - 1][9] = "waterShallow"
+    // v3.23r — Row buffer d'eau juste au-dessus de la transition (y=14). Permet au joueur
+    // d'apparaître DANS l'eau sur bourgpates après un push (au lieu de directement la_mer).
+    // Il nage ensuite vers le sud (y=15) pour déclencher la transition.
+    m[OUTDOOR_H - 2][7] = "waterShallow"
+    m[OUTDOOR_H - 2][8] = "waterShallow"
 
     // Jardin de fleurs
     m[12][2] = "flowerR"

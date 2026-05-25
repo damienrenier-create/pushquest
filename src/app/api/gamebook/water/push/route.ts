@@ -35,9 +35,10 @@ const XP_REWARD_POUSSEUR = 100
 const EC_REWARD_POUSSEUR = 100
 const SWIM_SET_KEY = "swim_set"
 
-// v3.17c — Position de spawn quand A est poussé : nord de LA MER (au lieu de macaron_ile direct).
-// La cible doit ensuite nager le canal pour atteindre Macaron'île (cohérent narrative "se réveille dans l'eau").
-const CANAL_NORTH_SPAWN = { mapId: "la_mer", posX: 4, posY: 1, direction: "down" as const }
+// v3.17c → v3.23r — Position de spawn quand A est poussé : bourgpates dans le canal
+// (y=14, juste au-dessus du transit). Le poussé voit qu'il est dans l'eau sur bourgpates
+// au lieu de zapper directement à la_mer (refresh bug + transition immédiate).
+const CANAL_NORTH_SPAWN = { mapId: "bourgpates", posX: 8, posY: 14, direction: "down" as const }
 
 export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions)

@@ -14,7 +14,9 @@
 //     n'existe (= l'appelant est le dernier)
 //
 // Effet :
-//   - L'appelant : firstSwimDone = true + spawn à la_mer (4, 1)
+//   - L'appelant : firstSwimDone = true + spawn sur bourgpates (8, 14) dans le canal
+//     (v3.23r : on ne téléporte plus directement à la_mer, le joueur voit qu'il est
+//     dans l'eau et descend lui-même vers la transition)
 //   - Renvoie le dialogue narratif de JOJO
 
 import { NextResponse } from "next/server"
@@ -28,7 +30,10 @@ export const dynamic = "force-dynamic"
 const CHAPTER_ID = "map_v3"
 const SWIM_SET_KEY = "swim_set"
 
-const CANAL_NORTH_SPAWN = { mapId: "la_mer", posX: 4, posY: 1, direction: "down" as const }
+// v3.23r — On spawn sur bourgpates dans le canal (y=14, juste au-dessus du transit) au lieu
+// de téléporter directement à la_mer. Le joueur voit qu'il est dans l'eau sur bourgpates,
+// puis avance vers le sud pour déclencher la transition existante (y=15 → la_mer).
+const BOURG_WATER_SPAWN = { mapId: "bourgpates", posX: 8, posY: 14, direction: "down" as const }
 
 const JOJO_PUSH_LINES = [
     "*Tu sens une main ferme se poser sur ton épaule.*",
@@ -97,10 +102,10 @@ export async function POST() {
         where: { id: progress.id },
         data: {
             firstSwimDone: true,
-            mapId: CANAL_NORTH_SPAWN.mapId,
-            posX: CANAL_NORTH_SPAWN.posX,
-            posY: CANAL_NORTH_SPAWN.posY,
-            direction: CANAL_NORTH_SPAWN.direction,
+            mapId: BOURG_WATER_SPAWN.mapId,
+            posX: BOURG_WATER_SPAWN.posX,
+            posY: BOURG_WATER_SPAWN.posY,
+            direction: BOURG_WATER_SPAWN.direction,
             lastSeen: new Date(),
         },
     })
@@ -108,7 +113,7 @@ export async function POST() {
     return NextResponse.json({
         ok: true,
         pushed: true,
-        spawn: CANAL_NORTH_SPAWN,
+        spawn: BOURG_WATER_SPAWN,
         lines: JOJO_PUSH_LINES,
     })
 }
