@@ -497,6 +497,7 @@ export default function MapClient({
                 piaffiniRescued: state.piaffiniRescued === true,
                 npcsTalkedTo: state.npcsTalkedTo ?? [],
                 macaronAwakened,
+                hasTamagotchi: tamagotchi !== null,
             })
             setCinematic({
                 kind: "npcDialogue",
@@ -808,12 +809,31 @@ export default function MapClient({
                         return
                     }
                     if (!state.firstSwimDone) {
-                        // v3.23g — Messages narratifs progressifs : la mécanique du push est
-                        // révélée graduellement. Le serveur incrémente le compteur et renvoie
-                        // le message adapté (le 5e mentionne explicitement le push d'un copain).
+                        // v3.23g — Messages narratifs progressifs (5 messages révélant le push).
+                        // v3.23n — D'abord on tente jojo-push : si le joueur est le DERNIER non-poussé,
+                        //          JOJO sort de chez lui et le pousse automatiquement (anti-deadlock).
+                        //          Sinon (il reste d'autres joueurs candidats), on incrémente le compteur
+                        //          d'attempts et on affiche le message narratif progressif.
                         setState((s) => ({ ...s, direction: d }))
                         ; (async () => {
                             try {
+                                const jojo = await fetch("/api/gamebook/water/jojo-push", { method: "POST" })
+                                const jojoData = await jojo.json()
+                                if (jojoData.ok && jojoData.pushed && jojoData.spawn) {
+                                    // JOJO a poussé le joueur → cinématique + téléport
+                                    setState((s) => ({
+                                        ...s,
+                                        firstSwimDone: true,
+                                        mapId: jojoData.spawn.mapId,
+                                        posX: jojoData.spawn.posX,
+                                        posY: jojoData.spawn.posY,
+                                        direction: jojoData.spawn.direction,
+                                    }))
+                                    const lines = Array.isArray(jojoData.lines) ? jojoData.lines : []
+                                    setPopup({ kind: "info", text: lines.join("\n\n") })
+                                    return
+                                }
+                                // Sinon : message narratif progressif standard
                                 const res = await fetch("/api/gamebook/water/attempt", { method: "POST" })
                                 const data = await res.json()
                                 if (data.ok && typeof data.message === "string") {

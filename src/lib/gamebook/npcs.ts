@@ -49,6 +49,10 @@ export interface NpcDefinition {
     // intersalle ont été remportés au moins par un joueur, propagé via flag joueur).
     // Prime sur dialoguesAfterRevisit / dialoguesAfter.
     dialoguesAfterMacaronAwakened?: string[]
+    // v3.23n — pool de dialogues aléatoires utilisé quand le joueur a déjà adopté
+    // un tamagotchi (via flag hasTamagotchi). Prime sur dialoguesAfter / Revisit.
+    // Ne prend PAS le pas sur dialoguesAfterMacaronAwakened ni dialoguesAfterPiaffini.
+    dialoguesAfterTamagotchiAdopted?: string[][]
     // Récompense unique (ex: gym guy donne 100 reps)
     energyReward?: number        // si défini, donne X reps une fois
 }
@@ -779,6 +783,8 @@ export const NPCS: NpcDefinition[] = [
         ],
     },
     // v3.17 — BUCATINI le naïf-optimiste (avec son chien Dingo à ses côtés depuis v3.23h)
+    // v3.23n — Déplacé près du canal nord (4, 2) pour accueillir le joueur qui arrive de la_mer.
+    //          Premier PNJ visible à l'arrivée, oriente vers BIBLIO puis V3T.
     {
         id: "macaron_triste_5",
         name: "BUCATINI",
@@ -786,8 +792,8 @@ export const NPCS: NpcDefinition[] = [
         kind: "static",
         interaction: "interactive",
         sprite: { color: "#c0a0a0" },
-        initialX: 12,
-        initialY: 13,
+        initialX: 4,
+        initialY: 2,
         dialoguesAfter: [
             "Oh ! Bonjour ! C'est sympa que tu sois là.",
             "*Il caresse son chien.* Voici Dingo, mon meilleur ami. Tu en veux un comme lui, non ?",
@@ -874,10 +880,30 @@ export const NPCS: NpcDefinition[] = [
         kind: "static",
         interaction: "interactive",
         sprite: { emoji: "🐕", color: "#a06030" },
-        initialX: 11,
-        initialY: 13,
+        // v3.23n — Suit BUCATINI près du canal nord (5, 2). Sur le sable, à côté de BUCATINI.
+        initialX: 5,
+        initialY: 2,
         dialoguesAfter: [
             "*Dingo te renifle, agite la queue, puis retourne près de BUCATINI.*",
+        ],
+        // v3.23n — Dialogues post-adoption (random pool, le pool se déclenche dès que
+        // le joueur a un tamagotchi adopté chez V3T). 2 pools : entretien + teaser apprentissage.
+        dialoguesAfterTamagotchiAdopted: [
+            // Pool 1 : prendre soin de l'animal
+            [
+                "*Dingo s'assoit, l'air sage.* Alors, tu en as adopté un toi aussi !",
+                "Bon, écoute bien. Un compagnon ça se nourrit, ça se hydrate, ça se câline.",
+                "Reviens souvent chez V3T pour le voir — clique sur lui pour le nourrir, lui donner ta gourde, ou partager des Corned Pâtes.",
+                "Plus tu prends soin de lui, plus son bonheur monte. S'il s'ennuie trop longtemps, il devient triste.",
+                "*Il te regarde droit dans les yeux.* Sois un bon humain pour lui. C'est tout ce qu'il demande.",
+            ],
+            // Pool 2 : teaser apprentissage / évolution
+            [
+                "*Dingo te fixe avec malice.* Tu sais quoi ?",
+                "Il paraît que les animaux d'ici peuvent apprendre PLEIN de choses si tu insistes.",
+                "Des trucs que personne ne soupçonne. Des trésors d'instinct, des secrets de meute.",
+                "*Il agite la queue, mystérieux.* Je n'en dis pas plus. À toi de découvrir.",
+            ],
         ],
     },
 
@@ -1325,6 +1351,9 @@ export interface NpcDialogueFlags {
     /** v3.23c-3 — true si le joueur a complété les 3 défis intersalle (POMPATOR + SQUATILUS + TIROIR).
      *  Quand true + dialoguesAfterMacaronAwakened défini → on utilise ce dialogue (prime sur revisit). */
     macaronAwakened?: boolean
+    /** v3.23n — true si le joueur a adopté un tamagotchi.
+     *  Quand true + dialoguesAfterTamagotchiAdopted défini → on utilise un dialogue de ce pool (rotation aléatoire). */
+    hasTamagotchi?: boolean
 }
 
 /**
@@ -1354,6 +1383,11 @@ export function getNpcDialogue(
     // v3.23c-3 — Macaron'île éveillée prime sur tout le reste (sauf piaffini)
     if (flags.macaronAwakened && npc.dialoguesAfterMacaronAwakened) {
         return npc.dialoguesAfterMacaronAwakened
+    }
+    // v3.23n — Si le joueur a adopté un tamagotchi et que le NPC a un pool dédié
+    if (flags.hasTamagotchi && npc.dialoguesAfterTamagotchiAdopted && npc.dialoguesAfterTamagotchiAdopted.length > 0) {
+        const pool = npc.dialoguesAfterTamagotchiAdopted
+        return pool[Math.floor(Math.random() * pool.length)]
     }
     // v3.17 — Si le joueur a déjà parlé au NPC, utilise le dialogue revisit (s'il existe)
     if (flags.npcsTalkedTo?.includes(npc.id) && npc.dialoguesAfterRevisit) {

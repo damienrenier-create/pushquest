@@ -497,12 +497,10 @@ function buildMacaronIle(): TileType[][] {
     m[0][7] = "waterShallow"
 
     // Canal 1 ligne (y=1) : water bloquant partout SAUF cols 6,7 = waterShallow (swim)
+    // v3.23n — Tout le canal nord est nageable : pas de raison de mettre des blocs.
+    // Le joueur arrive de la_mer et peut nager dans toute la largeur pour rejoindre la plage.
     for (let x = 1; x <= MACARONILE_W - 2; x++) {
-        if (x === 6 || x === 7) {
-            m[1][x] = "waterShallow"
-        } else {
-            m[1][x] = "water"
-        }
+        m[1][x] = "waterShallow"
     }
 
     // Plage sand y=2,3
@@ -538,9 +536,11 @@ function buildMacaronIle(): TileType[][] {
     // (accessible depuis le chemin central, à l'est de BIBLIO, sous l'orée VÉTO).
     m[14][10] = "pearTree"  // pear_tree_1
 
-    // Sortie sud vers grass_sud (cols 6,7 sur la rangée tree y=14)
+    // v3.23n — Sortie sud vers grass_sud élargie à 4 cases (cols 5..8) pour ne pas bloquer
+    m[MACARONILE_H - 1][5] = "grassTall"
     m[MACARONILE_H - 1][6] = "grassTall"
     m[MACARONILE_H - 1][7] = "grassTall"
+    m[MACARONILE_H - 1][8] = "grassTall"
 
     return m
 }
