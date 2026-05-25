@@ -75,9 +75,9 @@ function buildOutdoor(): TileType[][] {
     m[11][5] = "fence"
 
     // v3.23d — 2 cerisiers communs (40 reps × 5/jour)
-    // v3.23k — cherry_tree_2 déplacé de (10, 14) → (12, 14) (hors du chemin du canal sud élargi)
-    m[14][3] = "cherryTree"
-    m[14][12] = "cherryTree"
+    // v3.23l — cherry_tree_2 déplacé à (13, 3) tout en haut à droite (MAMAN était au même endroit)
+    m[14][3] = "cherryTree"   // cherry_tree_1 (sud-ouest, près de MORUE)
+    m[3][13] = "cherryTree"   // cherry_tree_2 (haut-droite, sous l'orée nord)
 
     return m
 }
@@ -404,7 +404,7 @@ export const ALL_TREES: TreeInstance[] = [
     { id: "apple_tree_3", mapId: "hautespates", x: 1,  y: 7,  kind: "apple" },
     // === Cerisiers (commun, 40 reps × 5/j) ===
     { id: "cherry_tree_1", mapId: "bourgpates",  x: 3,  y: 14, kind: "cherry" },
-    { id: "cherry_tree_2", mapId: "bourgpates",  x: 12, y: 14, kind: "cherry" },
+    { id: "cherry_tree_2", mapId: "bourgpates",  x: 13, y: 3,  kind: "cherry" },
     { id: "cherry_tree_3", mapId: "pepiteville", x: 3,  y: 17, kind: "cherry" },
     // === Poiriers (commun, 60 reps × 4/j) ===
     { id: "pear_tree_1", mapId: "macaron_ile", x: 10, y: 14, kind: "pear" },
