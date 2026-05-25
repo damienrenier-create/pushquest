@@ -13,16 +13,18 @@
 
 import { useEffect, useMemo, useState } from "react"
 
+// v3.23s — Phrases adoucies (gel passé de 24h à 5 min). Plus de reset position non plus :
+// le joueur reste là où il était, juste figé 5 min pour méditer son geste.
 const MONSTER_LINES = [
     "Tu as effacé des reps. Mes spaghettis sont profondément déçus.",
-    "Triche détectée. Le Monstre Spaghetti Volant siffle. Reviens demain.",
-    "On efface pas son passé chez moi, mon p'tit. Au coin pour 24h.",
+    "Triche détectée. Le Monstre Spaghetti Volant siffle. Cinq minutes au piquet.",
+    "On efface pas son passé chez moi, mon p'tit. Au coin pour 5 minutes.",
     "Tu pensais que je ne verrais pas ? Les nouilles voient tout.",
     "Réduire ses reps après coup, c'est niveau gainage moral : zéro.",
-    "Tu reviens à Bourg-Boulette. Le Pont Pépite ne te connaît plus.",
+    "Cinq minutes de pause. Tu restes où tu es. Médite tes pompes.",
     "Frauder devant le Monstre, c'est comme nager dans la sauce tomate : visible.",
-    "Tes mensonges valent 24h de réflexion forcée. Bon courage.",
-    "La carte est gelée. Toi aussi. Médite tes pompes.",
+    "Tes mensonges valent 5 minutes de réflexion forcée. Bon courage.",
+    "La carte est gelée. Toi aussi. Cinq minutes, ça passe vite.",
     "J'ai des yeux dans chaque brin de pâte. Tu n'as pas idée.",
 ]
 

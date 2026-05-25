@@ -965,11 +965,11 @@ export default function MapClient({
                         triggerNpcDialogue(blockingNpc.npc)
                         return
                     }
-                    // v3.23j — PNJ interactif (statique ou wanderer) : on bloque le mouvement
-                    // SANS COÛT et on suggère d'appuyer sur A pour parler. Le "push NPC" (-30 reps)
-                    // était un comportement legacy déconnant qui frustrait les joueurs (cf. RUMEUR
-                    // dans la Tour). Le push reste actif pour les AUTRES JOUEURS (cf. ligne ~2280).
-                    setToast(`${blockingNpc.npc.name} te bloque. Appuie sur A pour lui parler.`)
+                    // v3.23j → v3.23t — PNJ interactif : on déclenche directement le dialogue
+                    // (au lieu d'afficher un toast "appuie sur A"). Plus jamais de "push NPC" payant.
+                    // Le push reste actif uniquement entre JOUEURS (cf. ligne ~2280).
+                    setState((s) => ({ ...s, direction: d }))
+                    triggerNpcDialogue(blockingNpc.npc)
                     return
                 }
 
@@ -977,11 +977,23 @@ export default function MapClient({
                 return
             }
 
-            // Énergie suffisante ?
-            if (state.phase === "playing" && reps < result.repsCost) {
-                setState((s) => ({ ...s, direction: d }))
-                setToast("Plus d'énergie. File faire des reps.")
-                return
+            // v3.23t — Énergie suffisante ? On calcule le coût RÉEL (avec baskets, ratio
+            // onboarding, lunettes) AVANT le check, plus le seuil fixe arbitraire de 10.
+            // Indoor → coût 0, donc OK même à 0 énergie.
+            if (state.phase === "playing" && result.repsCost > 0 && !INDOOR_MAP_IDS.has(state.mapId)) {
+                const enteringTileForCheck = map.tiles[result.nextState.posY]?.[result.nextState.posX]
+                const activeWearableForCheck = enteringTileForCheck
+                    ? findActiveWearableForTile(inventory, enteringTileForCheck)
+                    : null
+                const reductionForCheck = activeWearableForCheck?.def.capabilities.canWear?.moveCostReduction ?? 0
+                const baseForCheck = Math.max(0, result.repsCost - reductionForCheck)
+                const ratioForCheck = applyDifficultyRatio(baseForCheck)
+                const realCost = applySocialDiscount(ratioForCheck, inventory)
+                if (reps < realCost) {
+                    setState((s) => ({ ...s, direction: d }))
+                    setToast(`Plus d'énergie (besoin de ${realCost}, t'en as ${reps}). File faire des reps.`)
+                    return
+                }
             }
 
             // Apply

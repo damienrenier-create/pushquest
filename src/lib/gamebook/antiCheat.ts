@@ -1,31 +1,33 @@
 // src/lib/gamebook/antiCheat.ts
 //
-// v3.6 — Anti-triche suppression de reps
+// v3.6 → v3.23s — Anti-triche suppression de reps (version adoucie).
 //
 // Quand un user réduit ses reps d'un jour (suppression de set, édition à la baisse,
 // ressaisie avec moins), on déclenche une pénalité Gamebook :
-//   - Reset position à Bourg-Boulette (INITIAL_SPAWN)
-//   - Reset les flags narratifs + Route 1 (arbre, pont)
-//   - Garde `pioneerBadgeAwarded` à true (l'historique du Panthéon est immuable)
-//   - Set `gamebookFrozenUntil` à now + 24h → bloque les mouvements
+//   - Set `gamebookFrozenUntil` à now + 5 min → bloque les mouvements
+//   - **PLUS DE RESET de position** (le joueur reste là où il était)
+//   - **PLUS DE RESET des flags narratifs** (progression préservée)
+//
+// La philosophie : on dissuade la triche par un "time-out" court, pas par une
+// punition cataclysmique. 5 minutes c'est assez pour décourager l'expérimentation,
+// mais ça ne flush pas l'arc narratif du joueur.
 //
 // Cas d'usage :
 //   1. Snapshot des reps AVANT l'opération destructive (par date impactée)
 //   2. Exécution de l'opération (delete/edit/upsert)
 //   3. detectRepsDropAndPenalize() compare AVANT vs APRÈS et déclenche si baisse
 //
-// Règles métier validées avec Sartay (v3.6) :
+// Règles métier :
 //   - Détection = "reps du jour ont baissé" (pas "set supprimé") — couvre tous les patterns
 //   - Admin exempté SAUF s'il agit sur son propre compte
 //   - Comptes `isSystem: true` exemptés
-//   - Reset complet incluant intro/dialogues (le user devra retraverser hautes herbes)
-//   - `pioneerBadgeAwarded` reste true (pas de doublon dans le Panthéon)
-//   - `gymGuyEnergyGiven` se reset (Sartay accepte l'exploit BUFFY +100 reps)
+//   - v3.23s : freeze 5 min, pas de reset, le joueur reprend où il était
 
 import prisma from "../prisma"
-import { INITIAL_SPAWN } from "./maps"
 
-export const FREEZE_DURATION_MS = 24 * 60 * 60 * 1000 // 24h
+// v3.23s — Durée du gel adoucie : 24h → 5 minutes. Suffisant pour dissuader
+// l'expérimentation sans flusher l'arc narratif.
+export const FREEZE_DURATION_MS = 5 * 60 * 1000 // 5 minutes
 const CHAPTER_ID = "map_v3"
 
 /**
@@ -55,8 +57,9 @@ export async function captureRepsSnapshot(
 }
 
 /**
- * Déclenche la pénalité : reset position, flags narratifs + Route 1, freeze 24h.
- * Idempotent : appelable plusieurs fois (reset toujours frozenUntil à now+24h).
+ * v3.23s — Déclenche la pénalité adoucie : freeze 5 minutes, SANS reset.
+ * Le joueur reprend exactement là où il était avec sa progression intacte.
+ * Idempotent : appelable plusieurs fois (reset toujours frozenUntil à now+5min).
  * No-op si l'user n'a pas de GamebookProgress (jamais joué).
  */
 export async function triggerCheatPenalty(userId: string): Promise<void> {
@@ -71,23 +74,6 @@ export async function triggerCheatPenalty(userId: string): Promise<void> {
     await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
         data: {
-            mapId: INITIAL_SPAWN.mapId,
-            posX: INITIAL_SPAWN.posX,
-            posY: INITIAL_SPAWN.posY,
-            direction: INITIAL_SPAWN.direction,
-            phase: "explore",
-            currentNodeId: "map",
-            mood: "NEUTRE",
-            introStep: 0,
-            hasEnteredTallGrass: false,
-            monsterCaveRevealed: false,
-            hasSeenWelcomeScreen: false,
-            treeObstacleCleared: false,
-            bridgePnjDefeated: [],
-            bridgePnjLastBeatenDate: {},
-            gymGuyEnergyGiven: false,
-            npcsTalkedTo: [],
-            // pioneerBadgeAwarded : préservé, pas reset (évite doublon BadgeEvent UNIQUE_AWARDED)
             gamebookFrozenUntil: frozenUntil,
             lastSeen: new Date(),
         },
