@@ -496,6 +496,15 @@ model GamebookProgress {
   // One-shot ; déclenche cinématique + badge Conquérant 500 XP. Aussi unlock contest_hall.
   montSummitReached         Boolean @default(false)
 
+  // v3.24a-2 — Hôtel Bellagiomato (Lasagnas Vegas) : dernière fois que le joueur a dormi.
+  // Format YYYY-MM-DD. Permet 1 sommeil/jour. Reset à minuit.
+  // Effet du sommeil :
+  //   - energySpentToday → 0 (récupération totale du jour)
+  //   - bonusSurplus non touché
+  //   - gourde stored non touchée
+  //   - tamagotchi happiness +30 + lastFedAt = now
+  lastHotelSleepDate        String  @default("")
+
   // v3.23h — Level XP du joueur au moment où il est entré pour la PREMIÈRE fois chez V3T.
   // Cette valeur est snapshot et JAMAIS modifiée → garantit que l'animal du tamagotchi
   // reste celui correspondant à ce level (le joueur ne le voit pas évoluer même s'il level up

@@ -703,6 +703,88 @@ function buildLasagnasVegas(): TileType[][] {
     return m
 }
 
+// v3.24a-2 — HÔTEL DE LASAGNAS VEGAS
+// 9×7. Hall d'accueil avec comptoir + 2 lits (gauche/droite). Sleep gratuit 1×/jour.
+function buildLasagnasHotel(): TileType[][] {
+    const W = 9, H = 7
+    const m: TileType[][] = []
+    for (let y = 0; y < H; y++) {
+        const row: TileType[] = []
+        for (let x = 0; x < W; x++) {
+            if (y === 0) row.push("wallH")
+            else if (x === 0 || x === W - 1 || y === H - 1) row.push("wallV")
+            else row.push("floorWood")
+        }
+        m.push(row)
+    }
+    // Comptoir d'accueil au nord
+    for (let x = 2; x <= W - 3; x++) m[1][x] = "shopCounter"
+    // 2 lits (représentés par rug ; le joueur appuie A dessus pour dormir)
+    m[3][2] = "rug"
+    m[3][6] = "rug"
+    // Sortie sud
+    m[H - 1][4] = "doorMat"
+    return m
+}
+
+// v3.24a-2 — SHOP HABITS (vêtements + casquette de flic anti-voiture)
+function buildLasagnasShopHabits(): TileType[][] {
+    const W = 9, H = 7
+    const m: TileType[][] = []
+    for (let y = 0; y < H; y++) {
+        const row: TileType[] = []
+        for (let x = 0; x < W; x++) {
+            if (y === 0) row.push("wallH")
+            else if (x === 0 || x === W - 1 || y === H - 1) row.push("wallV")
+            else row.push("floorChecker")
+        }
+        m.push(row)
+    }
+    for (let x = 1; x < W - 1; x++) m[1][x] = "shopShelf"
+    for (let x = 1; x < W - 1; x++) m[3][x] = "shopCounter"
+    m[H - 1][4] = "doorMat"
+    return m
+}
+
+// v3.24a-2 — SHOP BOUFFE (version premium TRENETTE)
+function buildLasagnasShopBouffe(): TileType[][] {
+    const W = 9, H = 7
+    const m: TileType[][] = []
+    for (let y = 0; y < H; y++) {
+        const row: TileType[] = []
+        for (let x = 0; x < W; x++) {
+            if (y === 0) row.push("wallH")
+            else if (x === 0 || x === W - 1 || y === H - 1) row.push("wallV")
+            else row.push("floorChecker")
+        }
+        m.push(row)
+    }
+    for (let x = 1; x < W - 1; x++) m[1][x] = "shopShelf"
+    for (let x = 1; x < W - 1; x++) m[3][x] = "shopCounter"
+    m[H - 1][4] = "doorMat"
+    return m
+}
+
+// v3.24a-2 — SHOP RACHAT (achète les objets cassés au joueur)
+function buildLasagnasShopRachat(): TileType[][] {
+    const W = 9, H = 7
+    const m: TileType[][] = []
+    for (let y = 0; y < H; y++) {
+        const row: TileType[] = []
+        for (let x = 0; x < W; x++) {
+            if (y === 0) row.push("wallH")
+            else if (x === 0 || x === W - 1 || y === H - 1) row.push("wallV")
+            else row.push("floorTile")
+        }
+        m.push(row)
+    }
+    // Décor recyclerie : étagères entassées
+    for (let x = 1; x < W - 1; x++) m[1][x] = "shopShelf"
+    m[3][3] = "shopCounter"; m[3][4] = "shopCounter"; m[3][5] = "shopCounter"
+    m[H - 1][4] = "doorMat"
+    return m
+}
+
 // v3.24a — Placeholder pour les intérieurs Lasagnas Vegas non encore implémentés.
 // 7×6 box avec un panneau "construction" + doorMat de retour vers la ville.
 // Sera remplacé par les vrais intérieurs (hôtel, casino, etc.) dans les commits suivants.
@@ -733,14 +815,14 @@ function buildLasagnasConstruction(): TileType[][] {
 //   Rangée NORD (y=4..7) :  Hôtel  ShopHabits  ShopBouffe  CasinoA
 //   Rangée SUD  (y=16..19): BarTB  ShopRachat  CasinoB     CasinoC(VIP)
 export const LASAGNAS_BUILDINGS: Building[] = [
-    // Nord
-    { x: 1,  y: 4,  w: 4, h: 4, kind: "shop",   doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_construction", displayName: "HOTEL" },
-    { x: 6,  y: 4,  w: 4, h: 4, kind: "shop",   doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_construction", displayName: "HABITS" },
-    { x: 11, y: 4,  w: 4, h: 4, kind: "shop",   doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_construction", displayName: "BOUFFE" },
+    // Nord — Hôtel + 2 shops fonctionnels + casino entrée (placeholder)
+    { x: 1,  y: 4,  w: 4, h: 4, kind: "shop",   doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_hotel",        displayName: "HOTEL" },
+    { x: 6,  y: 4,  w: 4, h: 4, kind: "shop",   doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_shop_habits",  displayName: "HABITS" },
+    { x: 11, y: 4,  w: 4, h: 4, kind: "shop",   doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_shop_bouffe",  displayName: "BOUFFE" },
     { x: 17, y: 4,  w: 4, h: 4, kind: "casino", doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_construction", displayName: "CASINO" },
-    // Sud
+    // Sud — Bar TB (placeholder), Shop rachat fonctionnel, 2 casinos (placeholder)
     { x: 1,  y: 16, w: 4, h: 4, kind: "casino", doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_construction", displayName: "BAR" },
-    { x: 6,  y: 16, w: 4, h: 4, kind: "shop",   doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_construction", displayName: "RACHAT" },
+    { x: 6,  y: 16, w: 4, h: 4, kind: "shop",   doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_shop_rachat",  displayName: "RACHAT" },
     { x: 11, y: 16, w: 4, h: 4, kind: "casino", doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_construction", displayName: "JEUX" },
     { x: 17, y: 16, w: 4, h: 4, kind: "casino", doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_construction", displayName: "VIP" },
 ]
@@ -1603,6 +1685,39 @@ export const MAPS: Record<string, MapData> = {
         height: 6,
         exitTarget: { mapId: "lasagnas_vegas", x: 11, y: 10 },
     },
+    // v3.24a-2 — Intérieurs de Lasagnas Vegas (4 d'entre eux ce commit)
+    lasagnas_hotel: {
+        id: "lasagnas_hotel",
+        name: "HÔTEL BELLAGIOMATO",
+        tiles: buildLasagnasHotel(),
+        width: 9,
+        height: 7,
+        exitTarget: { mapId: "lasagnas_vegas", x: 2, y: 8 },
+    },
+    lasagnas_shop_habits: {
+        id: "lasagnas_shop_habits",
+        name: "SHOP HABITS",
+        tiles: buildLasagnasShopHabits(),
+        width: 9,
+        height: 7,
+        exitTarget: { mapId: "lasagnas_vegas", x: 7, y: 8 },
+    },
+    lasagnas_shop_bouffe: {
+        id: "lasagnas_shop_bouffe",
+        name: "SHOP BOUFFE",
+        tiles: buildLasagnasShopBouffe(),
+        width: 9,
+        height: 7,
+        exitTarget: { mapId: "lasagnas_vegas", x: 12, y: 8 },
+    },
+    lasagnas_shop_rachat: {
+        id: "lasagnas_shop_rachat",
+        name: "RECYCLOMATO",
+        tiles: buildLasagnasShopRachat(),
+        width: 9,
+        height: 7,
+        exitTarget: { mapId: "lasagnas_vegas", x: 7, y: 20 },
+    },
     // v3.17c — La mer (canal navigable inséré entre Bourg-Boulette et Macaron'île)
     la_mer: {
         id: "la_mer",
@@ -1850,6 +1965,11 @@ export const INDOOR_MAP_IDS = new Set([
     "contest_hall",
     // v3.24a — Lasagnas Vegas (placeholder + intérieurs à venir)
     "lasagnas_construction",
+    // v3.24a-2 — Intérieurs fonctionnels Vegas
+    "lasagnas_hotel",
+    "lasagnas_shop_habits",
+    "lasagnas_shop_bouffe",
+    "lasagnas_shop_rachat",
 ])
 
 export function isIndoorMap(mapId: string): boolean {

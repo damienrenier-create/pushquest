@@ -2090,6 +2090,55 @@ export default function MapClient({
         const tile = map.tiles[front.y][front.x]
 
         // v3.8.8 — Dans le shop, parler à NUTRIPATES via son comptoir.
+        // v3.24a-2 — Hôtel Bellagiomato : appuyer A sur un lit (rug) → dormir
+        if (state.mapId === "lasagnas_hotel" && tile === "rug") {
+            ; (async () => {
+                try {
+                    const res = await fetch("/api/gamebook/hotel/sleep", { method: "POST" })
+                    const data = await res.json()
+                    if (data.ok) {
+                        setPopup({
+                            kind: "info",
+                            text: data.message || "Tu dors profondément.",
+                        })
+                        // Reset client : energy = todayReps + bonusSurplus, energySpent = 0
+                        setEnergySpent(0)
+                        // Le serveur a remis energySpentToday à 0, le reps disponible monte
+                        // On re-fetch state pour avoir le bon availableEnergy
+                        try {
+                            const stateRes = await fetch("/api/gamebook/state")
+                            const stateData = await stateRes.json()
+                            if (typeof stateData?.availableEnergy === "number") setReps(stateData.availableEnergy)
+                            if (stateData?.state?.tamagotchi) {
+                                // Le tamagotchi a été boosté, mais on n'a pas son view ici → on laisse le tamagotchi state du modal
+                            }
+                        } catch {/* silent */ }
+                    } else {
+                        setToast(data.reason || "Impossible de dormir ici.")
+                    }
+                } catch {
+                    setToast("Erreur réseau. Réessaie.")
+                }
+            })()
+            return
+        }
+
+        // v3.24a-2 — Shops Lasagnas Vegas : appuyer A sur shopCounter → modal shop (placeholder)
+        if (
+            (state.mapId === "lasagnas_shop_habits" || state.mapId === "lasagnas_shop_bouffe" || state.mapId === "lasagnas_shop_rachat") &&
+            tile === "shopCounter"
+        ) {
+            const shopLabel =
+                state.mapId === "lasagnas_shop_habits" ? "RAVIOL'STYLE (habits)"
+                    : state.mapId === "lasagnas_shop_bouffe" ? "LINGUINI L'ANCIEN (premium bouffe)"
+                        : "TONY RECYCLO (rachat usés)"
+            setPopup({
+                kind: "info",
+                text: `${shopLabel}\n\n"Catalogue arrive dans le patch suivant (v3.24a-3)."\n\nReviens bientôt.`,
+            })
+            return
+        }
+
         // (NUTRIPATES est en (4, 2), le comptoir en y=3 entre lui et le joueur.
         // Donc le joueur s'approche du comptoir et appuie A devant.)
         if (state.mapId === "shop_interior" && tile === "shopCounter") {

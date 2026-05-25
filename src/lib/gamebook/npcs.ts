@@ -1271,6 +1271,105 @@ export const NPCS: NpcDefinition[] = [
         ],
     },
 
+    // v3.24a-2 — CONCIERGE de l'hôtel Bellagiomato : accueille le joueur, propose le sommeil.
+    {
+        id: "lasagnas_concierge",
+        name: "CARBONARA",
+        mapId: "lasagnas_hotel",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🛎️", color: "#c89048" },
+        initialX: 4,
+        initialY: 2,
+        dialoguesAfter: [
+            "*Le concierge te sourit chaleureusement.*",
+            "Bienvenue au Bellagiomato. Vous voulez vous reposer ?",
+            "Le lit à votre droite ou à votre gauche, peu importe. Appuyez sur A face au lit.",
+            "Une nuit ici régénère toutes les reps dépensées dans la journée. Et votre animal sera plus heureux à votre réveil.",
+        ],
+    },
+
+    // v3.24a-2 — VENDEUR du shop habits (vêtements, casquettes, smoking VIP)
+    {
+        id: "lasagnas_vendeur_habits",
+        name: "RAVIOL'STYLE",
+        mapId: "lasagnas_shop_habits",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🧵", color: "#a05068" },
+        initialX: 4,
+        initialY: 2,
+        dialoguesAfter: [
+            "Bonjour, élégant !",
+            "Casquette de flic anti-voiture, smoking VIP pour le casino…",
+            "*(Stock : casquette de flic 200 reps. Le reste arrive bientôt.)*",
+        ],
+    },
+
+    // v3.24a-2 — VENDEUR du shop bouffe (version premium TRENETTE)
+    {
+        id: "lasagnas_vendeur_bouffe",
+        name: "LINGUINI L'ANCIEN",
+        mapId: "lasagnas_shop_bouffe",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🥖", color: "#d8a060" },
+        initialX: 4,
+        initialY: 2,
+        dialoguesAfter: [
+            "*Le vieux te tend une carte argentée.*",
+            "Bienvenue chez Linguini l'Ancien. Tout ce que vend ma cousine TRENETTE, j'en ai la version PREMIUM.",
+            "Plus cher mais plus durable, plus généreux, plus tout.",
+            "*(Catalogue premium arrive en v3.24a-3.)*",
+        ],
+    },
+
+    // v3.24a-2 — VENDEUR du shop rachat (Recyclomato)
+    // Si tu lui as parlé : rachat passe de 10% à 20% du prix d'achat
+    {
+        id: "lasagnas_vendeur_rachat",
+        name: "TONY RECYCLO",
+        mapId: "lasagnas_shop_rachat",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "♻️", color: "#788078" },
+        initialX: 4,
+        initialY: 2,
+        dialoguesAfter: [
+            "*Tony lève à peine les yeux de son comptoir.*",
+            "Tu as des trucs cassés à fourguer ? Bien.",
+            "Pour 10% du prix d'achat, c'est tout. Sauf si t'es un pote…",
+            "Tu sais quoi ? Tu as une bonne tronche. 20% pour toi. Reviens quand tu veux.",
+        ],
+        dialoguesAfterRevisit: [
+            "*Tony te reconnaît.* T'es de la famille, toi maintenant. 20% sur tout.",
+        ],
+    },
+
+    // v3.24a-2 — JARDINIER DE LASAGNAS (teaser mission cueillette)
+    // Mécanique complète (ordre exact + arrosoir item) à coder en v3.24a-3.
+    {
+        id: "lasagnas_jardinier",
+        name: "BASILICO",
+        mapId: "lasagnas_vegas",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🧑‍🌾", color: "#588038" },
+        initialX: 16,
+        initialY: 21,
+        dialoguesAfter: [
+            "*Le jardinier essuie son chapeau et te regarde avec une étrange intensité.*",
+            "Tu aimes les arbres ? Vraiment ? Alors écoute.",
+            "J'ai un arrosoir magique. Il permet aux fruits de repousser pour ceux qui savent traiter les arbres avec respect.",
+            "Pour te le mériter, tu dois cueillir certains fruits dans un ordre PRÉCIS. Mais je ne te dis pas l'ordre — c'est à toi de comprendre.",
+            "Reviens me voir quand tu penses avoir réussi. Bonne chance, jeune pousse.",
+        ],
+        dialoguesAfterRevisit: [
+            "*BASILICO sourit en silence. Il attend que tu trouves.*",
+            "*(Mécanique complète arrosoir + ordre des cueillettes arrive bientôt.)*",
+        ],
+    },
+
     // VIDEUR du bar Team Boulette : à l'entrée, demande le mot de passe.
     // Logique de dialogue gérée dans MapClient (3 réponses possibles).
     {
