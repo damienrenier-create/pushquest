@@ -90,15 +90,16 @@ export function effectiveHappiness(tam: Tamagotchi, nowMs: number = Date.now()):
 }
 
 /**
- * v3.15 — Calcule le level "affiché" du tamagotchi :
- *   - si happy (effectiveHappiness > 0) : suit le level XP du joueur (catch-up vers le haut)
- *   - si sad (happiness == 0) : reste figé à currentLevel stocké
+ * v3.23h — Calcule le level "affiché" du tamagotchi.
+ *
+ * Doctrine v3.23h (validée 2026-05-25) : l'animal ne ré-évolue JAMAIS après l'adoption.
+ * Il reste figé au niveau choisi au moment du 1er passage chez V3T (`vetFirstVisitLevel`,
+ * utilisé pour seed currentLevel à l'adoption). Le joueur peut level up dans l'app, son
+ * animal garde son apparence d'origine — c'est SON animal.
+ *
+ * (Avant v3.23h : le tamagotchi suivait le level XP du joueur quand happy.)
  */
-export function effectiveLevel(tam: Tamagotchi, userLevel: number, nowMs: number = Date.now()): number {
-    const hap = effectiveHappiness(tam, nowMs)
-    if (hap > 0) {
-        return Math.max(tam.currentLevel, Math.max(1, Math.min(100, Math.floor(userLevel))))
-    }
+export function effectiveLevel(tam: Tamagotchi): number {
     return tam.currentLevel
 }
 
@@ -121,12 +122,17 @@ export interface TamagotchiView extends Tamagotchi {
 }
 
 /**
- * Vue prête à afficher (happiness + level recalculés + progression défis).
+ * Vue prête à afficher (happiness recalculée + progression défis).
+ * v3.23h — Le level affiché est figé sur tam.currentLevel (= vetFirstVisitLevel à l'adoption).
  * Ne dépend pas de xp.ts pour rester côté client safe (l'animal est résolu côté UI).
+ *
+ * Le paramètre userLevel est conservé pour rétrocompat de signature mais ignoré
+ * pour le rendu de l'animal (l'animal ne suit plus le level du joueur).
  */
-export function viewTamagotchi(tam: Tamagotchi, userLevel: number, nowMs: number = Date.now()): TamagotchiView {
+export function viewTamagotchi(tam: Tamagotchi, _userLevel: number, nowMs: number = Date.now()): TamagotchiView {
+    void _userLevel  // intentionnellement ignoré depuis v3.23h
     const displayHappiness = effectiveHappiness(tam, nowMs)
-    const displayLevel = effectiveLevel(tam, userLevel, nowMs)
+    const displayLevel = effectiveLevel(tam)
     const defisDone = countDefisDone(tam)
     const defisTotal = CANONICAL_DEFIS.length
     const recovered = tam.recovered === true
@@ -161,17 +167,17 @@ export function createTamagotchi(name: string, userLevel: number, nowMs: number 
 
 /**
  * Applique un nourrissage : +30 happiness (clamp 100), lastFedAt = now.
- * En plus, currentLevel se met à jour vers le level XP réel si supérieur.
+ * v3.23h — currentLevel n'est PLUS modifié (l'animal est figé depuis l'adoption).
  */
-export function applyFeed(tam: Tamagotchi, userLevel: number, nowMs: number = Date.now()): Tamagotchi {
+export function applyFeed(tam: Tamagotchi, _userLevel: number, nowMs: number = Date.now()): Tamagotchi {
+    void _userLevel  // intentionnellement ignoré depuis v3.23h
     const currentHappiness = effectiveHappiness(tam, nowMs)
     const newHappiness = Math.min(TAMAGOTCHI_HAPPINESS_MAX, currentHappiness + TAMAGOTCHI_FEED_HAPPINESS_BOOST)
-    const safeUserLevel = Math.max(1, Math.min(100, Math.floor(userLevel)))
     return {
         ...tam,
         lastFedAt: new Date(nowMs).toISOString(),
         happiness: newHappiness,
-        currentLevel: Math.max(tam.currentLevel, safeUserLevel),
+        // currentLevel ne change pas — l'animal reste celui choisi au 1er passage chez V3T
     }
 }
 

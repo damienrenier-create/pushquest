@@ -496,6 +496,12 @@ model GamebookProgress {
   // One-shot ; déclenche cinématique + badge Conquérant 500 XP. Aussi unlock contest_hall.
   montSummitReached         Boolean @default(false)
 
+  // v3.23h — Level XP du joueur au moment où il est entré pour la PREMIÈRE fois chez V3T.
+  // Cette valeur est snapshot et JAMAIS modifiée → garantit que l'animal du tamagotchi
+  // reste celui correspondant à ce level (le joueur ne le voit pas évoluer même s'il level up
+  // dans l'app). Null = jamais entré chez V3T.
+  vetFirstVisitLevel        Int?
+
   // v3.23g — Nombre de fois où le joueur a tenté d'entrer dans l'eau avant son premier bain.
   // Sert à afficher des messages narratifs progressifs qui révèlent la mécanique du push
   // par un autre joueur. Reset jamais (sauf si on veut réécouter, ce qui n'est pas le cas).

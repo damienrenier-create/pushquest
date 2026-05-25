@@ -113,6 +113,26 @@ export async function GET() {
         }
     }
 
+    // v3.23h — Snapshot du level XP au PREMIER passage chez V3T (mapId = "veterinaire").
+    // Si vetFirstVisitLevel est null et qu'on est sur la map "veterinaire", on snapshot
+    // le level actuel et on le stocke à vie. L'animal du tamagotchi sera figé à ce level.
+    if (
+        progress
+        && (progress as { mapId?: string }).mapId === "veterinaire"
+        && ((progress as { vetFirstVisitLevel?: number | null }).vetFirstVisitLevel ?? null) === null
+    ) {
+        try {
+            const { getUserLevelForGamebook } = await import("@/lib/gamebook/userLevel")
+            const levelNow = await getUserLevelForGamebook(userId)
+            progress = await (prisma as any).gamebookProgress.update({
+                where: { id: progress.id },
+                data: { vetFirstVisitLevel: levelNow },
+            })
+        } catch (e) {
+            console.warn("[state vetFirstVisitLevel snapshot] failed", e)
+        }
+    }
+
     if (!progress) {
         progress = await prisma.gamebookProgress.create({
             data: {

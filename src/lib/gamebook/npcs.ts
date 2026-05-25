@@ -777,7 +777,7 @@ export const NPCS: NpcDefinition[] = [
             "*Il sourit malgré lui.* \"On s'entraîne ensemble la prochaine fois ?\"",
         ],
     },
-    // v3.17 — BUCATINI le naïf-optimiste
+    // v3.17 — BUCATINI le naïf-optimiste (avec son chien Dingo à ses côtés depuis v3.23h)
     {
         id: "macaron_triste_5",
         name: "BUCATINI",
@@ -789,17 +789,34 @@ export const NPCS: NpcDefinition[] = [
         initialY: 13,
         dialoguesAfter: [
             "Oh ! Bonjour ! C'est sympa que tu sois là.",
-            "Mon coach dit que le concours va revenir. Il sait toujours, mon coach.",
-            "J'arrête pas de m'entraîner au cas où. Toi aussi tu t'entraînes ? On pourrait s'entraîner ensemble peut-être ?",
+            "*Il caresse son chien.* Voici Dingo, mon meilleur ami. Tu en veux un comme lui, non ?",
+            "Va à la bibliothèque ! BIBLIO a tout un rayon sur les animaux. Tu y trouveras le tien et la liste des défis à faire pour qu'il t'aime.",
+            "Et après tu pourras passer chez V3T, le vétérinaire, pour adopter le tien. *Il sourit.*",
         ],
         dialoguesAfterRevisit: [
-            "T'es revenu ! Coach dit que les gens qui reviennent ont de la chance.",
-            "Du coup tu vas réussir un truc cool, c'est obligé. *Il sourit.*",
+            "T'es revenu ! Dingo aussi est content. *Il agite la queue.*",
+            "T'as fait un tour à la bibliothèque ? Si t'as ton animal, file chez V3T !",
         ],
         dialoguesAfterMacaronAwakened: [
             "BUCATINI saute de joie. \"Tu l'as fait ! T'AS FAIT ! Coach avait raison !!\"",
             "\"Le concours revient ! Le concours revient ! Le concours REVIENT !\"",
             "*Il sautille, incapable de tenir en place.* \"Merci merci merci ! Tu changes nos vies !\"",
+        ],
+    },
+
+    // v3.23h — DINGO : le chien de BUCATINI, sprite emoji 🐕 (level 38 du bestiaire).
+    // Sert d'accroche visuelle pour orienter le joueur vers BIBLIO puis V3T.
+    {
+        id: "macaron_dingo",
+        name: "Dingo",
+        mapId: "macaron_ile",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🐕", color: "#a06030" },
+        initialX: 11,
+        initialY: 13,
+        dialoguesAfter: [
+            "*Dingo te renifle, agite la queue, puis retourne près de BUCATINI.*",
         ],
     },
 

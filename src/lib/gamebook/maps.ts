@@ -405,7 +405,7 @@ export const ALL_TREES: TreeInstance[] = [
     { id: "cherry_tree_2", mapId: "bourgpates",  x: 10, y: 14, kind: "cherry" },
     { id: "cherry_tree_3", mapId: "pepiteville", x: 3,  y: 17, kind: "cherry" },
     // === Poiriers (commun, 60 reps × 4/j) ===
-    { id: "pear_tree_1", mapId: "macaron_ile", x: 2, y: 14, kind: "pear" },
+    { id: "pear_tree_1", mapId: "macaron_ile", x: 10, y: 14, kind: "pear" },
     { id: "pear_tree_2", mapId: "muscuville",  x: 8, y: 14, kind: "pear" },
     // === Pêcher (rare, 100 reps × 2/j — caché dans grass_sud) ===
     { id: "peach_tree_1", mapId: "grass_sud", x: 7, y: 3, kind: "peach" },
@@ -532,7 +532,9 @@ function buildMacaronIle(): TileType[][] {
     m[13][9] = "tree"
 
     // v3.23d — 1 poirier (60 reps × 4/jour)
-    m[14][2] = "pearTree"  // pear_tree_1
+    // v3.23h — Déplacé de (2, 14) qui était INSIDE le footprint de BIBLIO vers (10, 14)
+    // (accessible depuis le chemin central, à l'est de BIBLIO, sous l'orée VÉTO).
+    m[14][10] = "pearTree"  // pear_tree_1
 
     // Sortie sud vers grass_sud (cols 6,7 sur la rangée tree y=14)
     m[MACARONILE_H - 1][6] = "grassTall"

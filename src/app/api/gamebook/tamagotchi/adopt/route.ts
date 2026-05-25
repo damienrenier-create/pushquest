@@ -109,8 +109,13 @@ export async function POST(req: NextRequest) {
     }
 
     const newSpent = currentSpent + TAMAGOTCHI_ADOPT_COST
-    const userLevel = await getUserLevelForGamebook(userId)
-    const tam = createTamagotchi(name, userLevel)
+    // v3.23h — L'animal est figé sur le level du 1er passage chez V3T (snapshot dans state GET).
+    // Fallback : si le snapshot n'a pas été pris (race condition), on prend le level actuel.
+    const snapshotLevel = (progress as { vetFirstVisitLevel?: number | null }).vetFirstVisitLevel
+    const levelForAnimal = typeof snapshotLevel === "number" && snapshotLevel >= 1
+        ? snapshotLevel
+        : await getUserLevelForGamebook(userId)
+    const tam = createTamagotchi(name, levelForAnimal)
 
     await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
@@ -124,7 +129,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
         ok: true,
-        tamagotchi: viewTamagotchi(tam, userLevel),
+        tamagotchi: viewTamagotchi(tam, levelForAnimal),
         availableEnergy: padAvailableEnergyForCreator(todayReps - newSpent, isCreator),
         energySpentToday: newSpent,
     })
