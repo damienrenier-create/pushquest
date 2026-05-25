@@ -19,6 +19,7 @@ import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { getTodayISO } from "@/lib/challenge"
 import { isCreatorAccount, padAvailableEnergyForCreator } from "@/lib/gamebook/creator"
+import { getUserDifficultyRatio, applyRatioToReward, applyRatioToThreshold } from "@/lib/gamebook/ratio"
 
 export const dynamic = "force-dynamic"
 
@@ -85,13 +86,15 @@ export async function POST(req: NextRequest) {
         })
     }
 
-    // Vérifier le seuil
+    // v3.23e — ratio appliqué au seuil ET au reward (doctrine A1)
+    const ratio = await getUserDifficultyRatio(userId)
+    const threshold = applyRatioToThreshold(config.threshold, ratio)
     const total = await getTodayExerciseTotal(userId, config.exercise)
-    if (total < config.threshold) {
+    if (total < threshold) {
         return NextResponse.json({
             ok: false,
-            reason: `Il faut ${config.threshold} ${config.label} aujourd'hui. T'en as ${total}.`,
-            required: config.threshold,
+            reason: `Il faut ${threshold} ${config.label} aujourd'hui. T'en as ${total}.`,
+            required: threshold,
             current: total,
         })
     }
@@ -101,7 +104,8 @@ export async function POST(req: NextRequest) {
     const storedDate = (progress as { energySpentDate?: string }).energySpentDate ?? ""
     const storedSpent = (progress as { energySpentToday?: number }).energySpentToday ?? 0
     const currentSpent = storedDate === today ? storedSpent : 0
-    const newSpent = currentSpent - DEFI_REWARD_REPS
+    const reward = applyRatioToReward(DEFI_REWARD_REPS, ratio)
+    const newSpent = currentSpent - reward
 
     await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
@@ -123,7 +127,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
         ok: true,
         pnjId,
-        reward: DEFI_REWARD_REPS,
+        reward,
         availableEnergy,
         energySpentToday: newSpent,
     })

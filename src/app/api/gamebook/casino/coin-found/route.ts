@@ -12,6 +12,7 @@ import { getTodayISO } from "@/lib/challenge"
 import { isCreatorAccount, padAvailableEnergyForCreator } from "@/lib/gamebook/creator"
 import { parseInventory } from "@/lib/gamebook/inventory"
 import { applyRewardBonus } from "@/lib/gamebook/items"
+import { getUserDifficultyRatio, applyRatioToReward } from "@/lib/gamebook/ratio"
 
 export const dynamic = "force-dynamic"
 
@@ -51,8 +52,11 @@ export async function POST() {
     const storedSpent = (progress as { energySpentToday?: number }).energySpentToday ?? 0
     const currentSpent = storedDate === today ? storedSpent : 0
     // v3.17d — Bonus Lunettes : +10% si l'utilisateur a des lunettes intactes
+    // v3.23e — ratio appliqué AVANT le bonus lunettes (doctrine A1)
     const inventory = parseInventory((progress as { inventory?: unknown }).inventory)
-    const reward = applyRewardBonus(CASINO_HIDDEN_REWARD, inventory)
+    const ratio = await getUserDifficultyRatio(userId)
+    const ratioedReward = applyRatioToReward(CASINO_HIDDEN_REWARD, ratio)
+    const reward = applyRewardBonus(ratioedReward, inventory)
     const newSpent = currentSpent - reward
 
     await (prisma as any).gamebookProgress.update({

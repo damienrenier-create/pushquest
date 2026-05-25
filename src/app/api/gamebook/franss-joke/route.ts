@@ -20,12 +20,20 @@ import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { getTodayISO } from "@/lib/challenge"
 import { isCreatorAccount, padAvailableEnergyForCreator } from "@/lib/gamebook/creator"
+import { getUserDifficultyRatio, applyRatioToReward } from "@/lib/gamebook/ratio"
+import { parseInventory, addItem, hasIntactItem } from "@/lib/gamebook/inventory"
+import { getInitialItemData, getItem } from "@/lib/gamebook/items"
 
 export const dynamic = "force-dynamic"
 
 const CHAPTER_ID = "map_v3"
 const FRANSS_USER_ID = "cmpgu4uq5000069du4s19q5l9"
 const FRANSS_BONUS_REPS = 30
+// v3.23e — La blague est aussi un rescue PIAFFINI (Franss aurait dû le faire normalement).
+// JOJO doit reconnaître Franss → on set piaffiniRescued + Set de Nage + badge comme rescue normal.
+const BADGE_KEY_SAUVEUR_PIAFFINI = "gamebook_sauveur_piaffini"
+const XP_REWARD_SAUVEUR_PIAFFINI = 200
+const SWIM_SET_KEY = "swim_set"
 
 // Position au sommet de la Tour (tower_floor_5) : centrée, près de PIAFFINI mais
 // laisse la place de bouger. Le sommet est 7×7, milieu = (3, 3).
@@ -73,7 +81,12 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: false, reason: "No progress" }, { status: 400 })
     }
 
-    if ((progress as { franssJokeBirdDone?: boolean }).franssJokeBirdDone === true) {
+    // v3.23e — Si la blague a été jouée mais que piaffiniRescued n'a pas été propagé
+    // (cas de Franss en prod le jour de la sortie : la route ne faisait pas le rescue),
+    // on permet de rejouer la phase 2 pour rattraper. Sinon, no-op.
+    const alreadyJoked = (progress as { franssJokeBirdDone?: boolean }).franssJokeBirdDone === true
+    const alreadyRescuedFlag = (progress as { piaffiniRescued?: boolean }).piaffiniRescued === true
+    if (alreadyJoked && alreadyRescuedFlag) {
         return NextResponse.json({
             ok: false,
             alreadyDone: true,
@@ -101,12 +114,29 @@ export async function POST(req: NextRequest) {
         })
     }
 
-    // Phase 2 : warp vers JOJO + bonus + flag définitif
+    // Phase 2 : warp vers JOJO + bonus (si pas déjà joué) + rescue PIAFFINI
     const today = getTodayISO()
     const storedDate = (progress as { energySpentDate?: string }).energySpentDate ?? ""
     const storedSpent = (progress as { energySpentToday?: number }).energySpentToday ?? 0
     const currentSpent = storedDate === today ? storedSpent : 0
-    const newSpent = currentSpent - FRANSS_BONUS_REPS
+    // v3.23e — ratio appliqué au reward (doctrine A1). Si la blague a déjà été jouée,
+    // on ne redonne PAS les +30 reps (pas de double crédit, juste rescue rétroactif).
+    const ratio = await getUserDifficultyRatio(userId)
+    const reward = alreadyJoked ? 0 : applyRatioToReward(FRANSS_BONUS_REPS, ratio)
+    const newSpent = currentSpent - reward
+
+    // v3.23e — La blague EST aussi un rescue PIAFFINI (sinon JOJO ne reconnaît pas Franss
+    // et le dialogue post-piaffini ne s'affiche jamais). On set le flag, on ajoute le
+    // Set de Nage, et on crée le badge Sauveur de PIAFFINI comme le rescue normal.
+    const alreadyRescued = alreadyRescuedFlag
+    const currentInventory = parseInventory((progress as { inventory?: unknown }).inventory)
+    let newInventory = currentInventory
+    if (!alreadyRescued) {
+        const swimSetDef = getItem(SWIM_SET_KEY)
+        if (swimSetDef && !hasIntactItem(currentInventory, SWIM_SET_KEY)) {
+            newInventory = addItem(currentInventory, SWIM_SET_KEY, getInitialItemData(swimSetDef))
+        }
+    }
 
     await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
@@ -116,11 +146,63 @@ export async function POST(req: NextRequest) {
             posY: JOJO_SPAWN.posY,
             direction: JOJO_SPAWN.direction,
             franssJokeBirdDone: true,
+            // v3.23e — synchronise l'arc PIAFFINI dans la même transaction
+            piaffiniRescued: true,
+            inventory: newInventory,
             energySpentToday: newSpent,
             energySpentDate: today,
             lastSeen: new Date(),
         },
     })
+
+    // v3.23e — Crée le badge Sauveur de PIAFFINI (idempotent par UNIQUE_AWARDED + reason)
+    if (!alreadyRescued) {
+        try {
+            const def = await (prisma as any).badgeDefinition.findUnique({
+                where: { key: BADGE_KEY_SAUVEUR_PIAFFINI },
+            })
+            if (def) {
+                const existing = await (prisma as any).badgeEvent.findFirst({
+                    where: {
+                        badgeKey: BADGE_KEY_SAUVEUR_PIAFFINI,
+                        toUserId: userId,
+                        eventType: "UNIQUE_AWARDED",
+                    },
+                })
+                if (!existing) {
+                    await (prisma as any).badgeEvent.create({
+                        data: {
+                            badgeKey: BADGE_KEY_SAUVEUR_PIAFFINI,
+                            fromUserId: null,
+                            toUserId: userId,
+                            eventType: "UNIQUE_AWARDED",
+                            previousValue: 0,
+                            newValue: 1,
+                            metadata: JSON.stringify({
+                                source: "franss_joke_bypass_rescue",
+                                xpReward: XP_REWARD_SAUVEUR_PIAFFINI,
+                            }),
+                        },
+                    })
+                }
+            }
+            const existingXp = await (prisma as any).xpAdjustment.findFirst({
+                where: { userId, reason: "BADGE_SAUVEUR_PIAFFINI_GAMEBOOK" },
+            })
+            if (!existingXp) {
+                await (prisma as any).xpAdjustment.create({
+                    data: {
+                        userId,
+                        amount: XP_REWARD_SAUVEUR_PIAFFINI,
+                        reason: "BADGE_SAUVEUR_PIAFFINI_GAMEBOOK",
+                        date: today,
+                    },
+                })
+            }
+        } catch (e) {
+            console.warn("[franss-joke] could not award PIAFFINI badge", e)
+        }
+    }
 
     const todayReps = await getTodayReps(userId)
     const isCreator = await isCreatorAccount(userId)
@@ -130,8 +212,12 @@ export async function POST(req: NextRequest) {
         ok: true,
         step: "warpToJojoAndReward",
         spawn: JOJO_SPAWN,
-        reward: FRANSS_BONUS_REPS,
+        reward,
         availableEnergy,
         energySpentToday: newSpent,
+        // v3.23e — sync inventaire côté client (Set de Nage ajouté)
+        inventory: newInventory,
+        piaffiniRescued: true,
+        rescuedViaJoke: !alreadyRescued,
     })
 }

@@ -55,6 +55,64 @@ export async function GET() {
         progress = await ensureCreatorBootstrap(userId, progress)
     }
 
+    // v3.23e — Auto-heal : si un joueur a `franssJokeBirdDone = true` mais
+    // `piaffiniRescued = false` (= bug v3.23e initial où la blague ne propageait
+    // pas le rescue), on répare l'arc PIAFFINI silencieusement.
+    if (
+        progress
+        && (progress as { franssJokeBirdDone?: boolean }).franssJokeBirdDone === true
+        && (progress as { piaffiniRescued?: boolean }).piaffiniRescued !== true
+    ) {
+        try {
+            const { parseInventory: parseInv, addItem: addInvItem, hasIntactItem: hasInvItem } = await import("@/lib/gamebook/inventory")
+            const { getInitialItemData: getInitData, getItem: getItemDef } = await import("@/lib/gamebook/items")
+            const currentInv = parseInv((progress as { inventory?: unknown }).inventory)
+            let newInv = currentInv
+            const swimSetDef = getItemDef("swim_set")
+            if (swimSetDef && !hasInvItem(currentInv, "swim_set")) {
+                newInv = addInvItem(currentInv, "swim_set", getInitData(swimSetDef))
+            }
+            progress = await (prisma as any).gamebookProgress.update({
+                where: { id: progress.id },
+                data: { piaffiniRescued: true, inventory: newInv },
+            })
+            // Best-effort badge + XP
+            try {
+                const def = await (prisma as any).badgeDefinition.findUnique({ where: { key: "gamebook_sauveur_piaffini" } })
+                if (def) {
+                    const existing = await (prisma as any).badgeEvent.findFirst({
+                        where: { badgeKey: "gamebook_sauveur_piaffini", toUserId: userId, eventType: "UNIQUE_AWARDED" },
+                    })
+                    if (!existing) {
+                        await (prisma as any).badgeEvent.create({
+                            data: {
+                                badgeKey: "gamebook_sauveur_piaffini",
+                                fromUserId: null,
+                                toUserId: userId,
+                                eventType: "UNIQUE_AWARDED",
+                                previousValue: 0,
+                                newValue: 1,
+                                metadata: JSON.stringify({ source: "autoheal_franss_joke_arc", xpReward: 200 }),
+                            },
+                        })
+                    }
+                }
+                const existingXp = await (prisma as any).xpAdjustment.findFirst({
+                    where: { userId, reason: "BADGE_SAUVEUR_PIAFFINI_GAMEBOOK" },
+                })
+                if (!existingXp) {
+                    await (prisma as any).xpAdjustment.create({
+                        data: { userId, amount: 200, reason: "BADGE_SAUVEUR_PIAFFINI_GAMEBOOK", date: getTodayISO() },
+                    })
+                }
+            } catch (e) {
+                console.warn("[state autoheal] PIAFFINI badge create failed", e)
+            }
+        } catch (e) {
+            console.warn("[state autoheal] failed", e)
+        }
+    }
+
     if (!progress) {
         progress = await prisma.gamebookProgress.create({
             data: {

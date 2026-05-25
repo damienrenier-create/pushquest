@@ -20,6 +20,7 @@ import { getTodayISO } from "@/lib/challenge"
 import { isCreatorAccount, padAvailableEnergyForCreator } from "@/lib/gamebook/creator"
 import { parseInventory } from "@/lib/gamebook/inventory"
 import { applyRewardBonus } from "@/lib/gamebook/items"
+import { getUserDifficultyRatio, applyRatioToReward, applyRatioToThreshold } from "@/lib/gamebook/ratio"
 
 export const dynamic = "force-dynamic"
 
@@ -63,13 +64,16 @@ export async function POST() {
         return NextResponse.json({ ok: false, reason: "Tu as déjà réussi ce défi." })
     }
 
+    // v3.23e — ratio appliqué au seuil (doctrine A1 : seuils exo)
+    const ratio = await getUserDifficultyRatio(userId)
+    const threshold = applyRatioToThreshold(NAGEUR_DEFI_THRESHOLD, ratio)
     const pushupsToday = await getTodayPushups(userId)
-    if (pushupsToday < NAGEUR_DEFI_THRESHOLD) {
+    if (pushupsToday < threshold) {
         return NextResponse.json({
             ok: false,
-            reason: `Il te faut ${NAGEUR_DEFI_THRESHOLD} pompes aujourd'hui (tu en as ${pushupsToday}). Reviens quand t'es prêt.`,
+            reason: `Il te faut ${threshold} pompes aujourd'hui (tu en as ${pushupsToday}). Reviens quand t'es prêt.`,
             pushupsToday,
-            threshold: NAGEUR_DEFI_THRESHOLD,
+            threshold,
         })
     }
 
@@ -78,8 +82,10 @@ export async function POST() {
     const storedSpent = (progress as { energySpentToday?: number }).energySpentToday ?? 0
     const currentSpent = storedDate === today ? storedSpent : 0
     // v3.17d — Bonus Lunettes : +10% si l'utilisateur a des lunettes intactes
+    // v3.23e — ratio appliqué au reward (doctrine A1) AVANT le bonus lunettes
     const inventory = parseInventory((progress as { inventory?: unknown }).inventory)
-    const reward = applyRewardBonus(NAGEUR_DEFI_REWARD, inventory)
+    const ratioedReward = applyRatioToReward(NAGEUR_DEFI_REWARD, ratio)
+    const reward = applyRewardBonus(ratioedReward, inventory)
     const newSpent = currentSpent - reward  // crédit = décrément
 
     await (prisma as any).gamebookProgress.update({

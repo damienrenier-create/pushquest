@@ -35,6 +35,8 @@ export type TileType =
     | "pearTree"   | "pearTreeEmpty"          // 🍐 commun  : 60 reps × 4/jour
     | "peachTree"  | "peachTreeEmpty"         // 🍑 rare    : 100 reps × 2/jour
     | "coconutTree" | "coconutTreeEmpty"      // 🥥 ultra-rare : 150 reps × 1/jour
+    // === v3.23d : ARBRE EMPOISONNÉ — piège (-30 reps) ===
+    | "poisonTree" | "poisonTreeEmpty"        // 💀 PIÈGE : -30 reps × 3/jour
     // === v3.8.2 : Tour des Pâtes Aiguës (Hautes-Pâtes) ===
     | "towerWall"     // mur de pierre intérieur de la tour (bloquant)
     | "towerFloor"    // sol pierre de la tour (non-bloquant)
@@ -184,6 +186,8 @@ export const BLOCKING_TILES: TileType[] = [
     "pearTree", "pearTreeEmpty",
     "peachTree", "peachTreeEmpty",
     "coconutTree", "coconutTreeEmpty",
+    // v3.23d — Arbre empoisonné (piège, -30 reps)
+    "poisonTree", "poisonTreeEmpty",
     // v3.8.2 — décor tour des Pâtes Aiguës
     "towerWall",
     "towerWindow",

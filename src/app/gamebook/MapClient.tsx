@@ -28,6 +28,8 @@ import {
     ROUTE1_NORTH_GATE,
     PEPITEVILLE_APPLE_TREES,
     HAUTESPATES_APPLE_TREES,
+    ALL_TREES,
+    TREE_KIND_CONFIGS,
     HAUTESPATES_BUILDINGS,
     HAUTESPATES_SIGNS,
     HAUTESPATES_SPAWN_FROM_SOUTH,
@@ -1406,6 +1408,8 @@ export default function MapClient({
                         })
                         const data = await res.json()
                         if (data.ok && data.spawn) {
+                            // v3.23e — la blague set aussi piaffiniRescued + ajoute le Set de Nage,
+                            // pour que JOJO reconnaisse Franss et que l'arc PIAFFINI soit clôturé.
                             setState((s) => ({
                                 ...s,
                                 mapId: data.spawn.mapId,
@@ -1413,10 +1417,19 @@ export default function MapClient({
                                 posY: data.spawn.posY,
                                 direction: data.spawn.direction,
                                 franssJokeBirdDone: true,
+                                piaffiniRescued: true,
                             } as PlayerMapState))
+                            if (Array.isArray(data.inventory)) setInventory(data.inventory)
                             if (typeof data.availableEnergy === "number") setReps(data.availableEnergy)
                             if (typeof data.energySpentToday === "number") setEnergySpent(data.energySpentToday)
-                            setToast(`🐦 +${data.reward ?? 30} reps de PIAFFINI. Te voilà chez JOJO pour de vrai.`)
+                            if (data.rescuedViaJoke) {
+                                setPopup({
+                                    kind: "info",
+                                    text: "JOJO accourt vers toi.\n\n\"Pioupiou ! Tu m'as ramené PIAFFINI ! Tiens, c'était le maillot et les palmes de ma grand-mère. Avec ça, tu pourras explorer les eaux du sud.\"\n\n(Tu reçois le Set de Nage 🏊 et 200 XP. La blague est devenue ton scénario.)",
+                                })
+                            } else {
+                                setToast(`🐦 +${data.reward ?? 30} reps de PIAFFINI. Te voilà chez JOJO pour de vrai.`)
+                            }
                         }
                     } catch (e) {
                         console.warn("[MapClient] franss-joke warpToJojoAndReward failed", e)
@@ -2153,16 +2166,14 @@ export default function MapClient({
         }
 
         // v3.8.1 — Arbre fruitier devant ?
-        // v3.23d — Inclut aussi l'arbre caché de Hautes-Pâtes (apple_tree_3)
-        if (tile === "appleTree") {
-            const treeOnPepi = state.mapId === "pepiteville"
-                ? PEPITEVILLE_APPLE_TREES.find((t) => t.x === front.x && t.y === front.y)
-                : undefined
-            const treeOnHautes = state.mapId === "hautespates"
-                ? HAUTESPATES_APPLE_TREES.find((t) => t.x === front.x && t.y === front.y)
-                : undefined
-            const tree = treeOnPepi ?? treeOnHautes
+        // v3.23d — Détection unifiée pour tous les types d'arbres (apple/cherry/pear/peach/coconut/poison)
+        const TREE_TILES = ["appleTree", "cherryTree", "pearTree", "peachTree", "coconutTree", "poisonTree"]
+        if (TREE_TILES.includes(tile)) {
+            const tree = ALL_TREES.find(
+                (t) => t.mapId === state.mapId && t.x === front.x && t.y === front.y,
+            )
             if (tree) {
+                const treeConfig = TREE_KIND_CONFIGS[tree.kind]
                 ; (async () => {
                     try {
                         const res = await fetch("/api/gamebook/take-fruit", {
@@ -2174,7 +2185,6 @@ export default function MapClient({
                         if (data.ok) {
                             if (typeof data.availableEnergy === "number") setReps(data.availableEnergy)
                             if (typeof data.energySpentToday === "number") setEnergySpent(data.energySpentToday)
-                            // v3.8.1 hybride — sync local des compteurs pour le rendu visuel
                             if (data.fruitsTaken && typeof data.fruitsTaken === "object") {
                                 const counts = (data.fruitsTaken as { counts?: Record<string, number> }).counts
                                 if (counts && typeof counts === "object") {
@@ -2182,7 +2192,12 @@ export default function MapClient({
                                 }
                             }
                             const remaining = typeof data.remaining === "number" ? data.remaining : 0
-                            setToast(`Tu cueilles un fruit. +${data.reward} reps. (Reste ${remaining}/3 sur cet arbre)`)
+                            // v3.23d — Toast adapté au type : Maléfica = warning, sinon bonus
+                            if (tree.kind === "poison") {
+                                setToast(`☠️ Tu mords un fruit de Maléfica. ${data.reward} reps perdus ! (Reste ${remaining}/${treeConfig.maxPerDay})`)
+                            } else {
+                                setToast(`${treeConfig.emoji} Tu cueilles un fruit du ${treeConfig.label}. +${data.reward} reps. (Reste ${remaining}/${treeConfig.maxPerDay})`)
+                            }
                         } else {
                             setToast(data.reason || "L'arbre ne donne rien.")
                         }
@@ -2481,20 +2496,20 @@ export default function MapClient({
                     >
                         {map.tiles.map((row, y) =>
                             row.map((tile, x) => {
-                                // v3.8.1 — arbre fruitier déjà cueilli 3 fois aujourd'hui par cet user
+                                // v3.8.1 — arbre fruitier déjà cueilli maxPerDay fois aujourd'hui
                                 // → on rend la variante "vide" (sans fruits). Compteur perso, visuel perso.
-                                // v3.23d — Inclut apple_tree_3 de Hautes-Pâtes.
+                                // v3.23d — Détection unifiée pour les 6 types d'arbres via ALL_TREES.
                                 let effectiveTile = tile
-                                if (tile === "appleTree") {
-                                    const treeOnPepi = state.mapId === "pepiteville"
-                                        ? PEPITEVILLE_APPLE_TREES.find((t) => t.x === x && t.y === y)
-                                        : undefined
-                                    const treeOnHautes = state.mapId === "hautespates"
-                                        ? HAUTESPATES_APPLE_TREES.find((t) => t.x === x && t.y === y)
-                                        : undefined
-                                    const tree = treeOnPepi ?? treeOnHautes
-                                    if (tree && (fruitCounts[tree.id] ?? 0) >= 3) {
-                                        effectiveTile = "appleTreeEmpty"
+                                const TREE_TILE_NAMES = ["appleTree", "cherryTree", "pearTree", "peachTree", "coconutTree", "poisonTree"]
+                                if (TREE_TILE_NAMES.includes(tile)) {
+                                    const tree = ALL_TREES.find(
+                                        (t) => t.mapId === state.mapId && t.x === x && t.y === y,
+                                    )
+                                    if (tree) {
+                                        const cfg = TREE_KIND_CONFIGS[tree.kind]
+                                        if ((fruitCounts[tree.id] ?? 0) >= cfg.maxPerDay) {
+                                            effectiveTile = cfg.emptyTile
+                                        }
                                     }
                                 }
                                 return <TileCell key={`${x}-${y}`} tile={effectiveTile} x={x} y={y} />

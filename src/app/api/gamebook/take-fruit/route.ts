@@ -19,15 +19,13 @@ import { getTodayISO } from "@/lib/challenge"
 import { isGamebookFrozen } from "@/lib/gamebook/antiCheat"
 import { isCreatorAccount, padAvailableEnergyForCreator } from "@/lib/gamebook/creator"
 import { getUserDifficultyRatio, applyRatio } from "@/lib/gamebook/difficulty"
+import { ALL_TREES, TREE_KIND_CONFIGS } from "@/lib/gamebook/maps"
 
 export const dynamic = "force-dynamic"
 
 const CHAPTER_ID = "map_v3"
-// v3.23d — Ajout de apple_tree_3 (Hautes-Pâtes, à côté de la Tour). Géré côté client
-// via HAUTESPATES_APPLE_TREES en plus de PEPITEVILLE_APPLE_TREES.
-const VALID_TREE_IDS = ["apple_tree_1", "apple_tree_2", "apple_tree_3"] as const
-const MAX_FRUITS_PER_TREE_PER_DAY = 3
-const FRUIT_REWARD = 80
+// v3.23d — Source de vérité unique : ALL_TREES (catalogue centralisé incluant les 5 types).
+// Chaque arbre référence sa config kind via TREE_KIND_CONFIGS (bonus + maxPerDay).
 
 interface FruitsTakenState {
     date: string
@@ -81,9 +79,11 @@ export async function POST(req: NextRequest) {
     }
 
     const treeId = typeof body.treeId === "string" ? body.treeId : null
-    if (!treeId || !(VALID_TREE_IDS as readonly string[]).includes(treeId)) {
+    const treeInstance = treeId ? ALL_TREES.find((t) => t.id === treeId) : null
+    if (!treeInstance) {
         return NextResponse.json({ ok: false, reason: "Arbre inconnu." }, { status: 400 })
     }
+    const treeConfig = TREE_KIND_CONFIGS[treeInstance.kind]
 
     const progress = await (prisma as any).gamebookProgress.findUnique({
         where: { userId_chapterId: { userId, chapterId: CHAPTER_ID } },
@@ -103,8 +103,8 @@ export async function POST(req: NextRequest) {
 
     const today = getTodayISO()
     const state = parseFruitsTaken(progress.fruitsTaken, today)
-    const taken = state.counts[treeId] ?? 0
-    if (taken >= MAX_FRUITS_PER_TREE_PER_DAY) {
+    const taken = state.counts[treeInstance.id] ?? 0
+    if (taken >= treeConfig.maxPerDay) {
         return NextResponse.json({
             ok: false,
             reason: "Cet arbre est dépouillé pour aujourd'hui. Reviens demain.",
@@ -119,13 +119,19 @@ export async function POST(req: NextRequest) {
 
     // v3.10.1 — Reward ajusté au ratio de difficulté pour cohérence (onboarding reçoit moins
     // en absolu, mais le même % par rapport à son quota quotidien).
+    // v3.23d — Bonus dépend du type d'arbre (apple 80, cherry 40, pear 60, peach 100, coconut 150).
+    //          Maléfica (poison) a un bonus NÉGATIF (-30) : on bypass applyRatio qui aurait
+    //          ramené le malus à 1 (à cause du Math.max(1, ...)).
     const ratio = await getUserDifficultyRatio(userId)
-    const reward = applyRatio(FRUIT_REWARD, ratio)
+    const reward = treeConfig.bonusReps >= 0
+        ? applyRatio(treeConfig.bonusReps, ratio)
+        : treeConfig.bonusReps  // malus à pleine intensité, même en onboarding
     // Crédit immédiat : energySpentToday -= reward (peut devenir négatif → surplus, cohérent v3.8)
+    // Pour Maléfica, reward < 0 → newSpent augmente → énergie disponible diminue.
     const newSpent = currentSpent - reward
     const newState: FruitsTakenState = {
         date: today,
-        counts: { ...state.counts, [treeId]: taken + 1 },
+        counts: { ...state.counts, [treeInstance.id]: taken + 1 },
     }
 
     await (prisma as any).gamebookProgress.update({
@@ -141,9 +147,10 @@ export async function POST(req: NextRequest) {
     const isCreator = await isCreatorAccount(userId)
     return NextResponse.json({
         ok: true,
-        treeId,
+        treeId: treeInstance.id,
+        treeKind: treeInstance.kind,
         reward,  // v3.10.1 — ajusté au ratio (le client affiche cette valeur, pas FRUIT_REWARD)
-        remaining: MAX_FRUITS_PER_TREE_PER_DAY - (taken + 1),
+        remaining: treeConfig.maxPerDay - (taken + 1),
         availableEnergy: padAvailableEnergyForCreator(todayReps - newSpent, isCreator),
         energySpentToday: newSpent,
         fruitsTaken: newState,

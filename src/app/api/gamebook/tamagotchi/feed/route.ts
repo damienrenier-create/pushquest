@@ -26,6 +26,7 @@ import {
     viewTamagotchi,
 } from "@/lib/gamebook/tamagotchi"
 import { getUserLevelForGamebook } from "@/lib/gamebook/userLevel"
+import { getUserDifficultyRatio, applyRatioToCost } from "@/lib/gamebook/ratio"
 
 export const dynamic = "force-dynamic"
 
@@ -79,14 +80,18 @@ export async function POST() {
     const isCreator = await isCreatorAccount(userId)
     const availableEnergy = padAvailableEnergyForCreator(todayReps - currentSpent, isCreator)
 
-    if (availableEnergy < TAMAGOTCHI_FEED_COST) {
+    // v3.23e — ratio appliqué au coût (doctrine E1 : coût feed ratio-aware)
+    const ratio = await getUserDifficultyRatio(userId)
+    const feedCost = applyRatioToCost(TAMAGOTCHI_FEED_COST, ratio)
+
+    if (availableEnergy < feedCost) {
         return NextResponse.json({
             ok: false,
-            reason: `Nourrir : ${TAMAGOTCHI_FEED_COST} reps. Il t'en manque ${TAMAGOTCHI_FEED_COST - availableEnergy}.`,
+            reason: `Nourrir : ${feedCost} reps. Il t'en manque ${feedCost - availableEnergy}.`,
         })
     }
 
-    const newSpent = currentSpent + TAMAGOTCHI_FEED_COST
+    const newSpent = currentSpent + feedCost
     const userLevel = await getUserLevelForGamebook(userId)
     const fed = applyFeed(existing, userLevel)
 

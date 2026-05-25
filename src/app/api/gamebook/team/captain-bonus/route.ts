@@ -17,6 +17,7 @@ import prisma from "@/lib/prisma"
 import { getTodayISO } from "@/lib/challenge"
 import { isCreatorAccount, padAvailableEnergyForCreator } from "@/lib/gamebook/creator"
 import { getTeamForUser, TEAM_CAPTAIN_BONUS_REPS } from "@/lib/gamebook/teams"
+import { getUserDifficultyRatio, applyRatioToReward } from "@/lib/gamebook/ratio"
 
 export const dynamic = "force-dynamic"
 
@@ -82,7 +83,10 @@ export async function POST(req: NextRequest) {
     const storedDate = (progress as { energySpentDate?: string }).energySpentDate ?? ""
     const storedSpent = (progress as { energySpentToday?: number }).energySpentToday ?? 0
     const currentSpent = storedDate === today ? storedSpent : 0
-    const newSpent = currentSpent - TEAM_CAPTAIN_BONUS_REPS
+    // v3.23e — ratio appliqué au reward (doctrine A1)
+    const ratio = await getUserDifficultyRatio(userId)
+    const reward = applyRatioToReward(TEAM_CAPTAIN_BONUS_REPS, ratio)
+    const newSpent = currentSpent - reward
 
     await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
@@ -100,7 +104,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
         ok: true,
-        reward: TEAM_CAPTAIN_BONUS_REPS,
+        reward,
         team: playerTeam,
         availableEnergy,
         energySpentToday: newSpent,

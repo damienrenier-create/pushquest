@@ -725,5 +725,169 @@ export default function TileCell({ tile, x, y }: { tile: TileType; x: number; y:
         )
     }
 
+    // === v3.23d : CERISIER 🍒 — feuillage rose pâle + cerises rouge-vif en paires ===
+    if (tile === "cherryTree" || tile === "cherryTreeEmpty") {
+        const harvested = tile === "cherryTreeEmpty"
+        return (
+            <div style={{ position: "relative", background: C.grass, overflow: "visible" }}>
+                <div style={{
+                    position: "absolute", inset: "10% 8% 25% 8%",
+                    background: harvested
+                        ? `radial-gradient(circle at 50% 40%, #6a8848 0%, #486828 60%, #2a4818 100%)`
+                        : `radial-gradient(circle at 50% 40%, #b8e088 0%, #88c058 60%, #486828 100%)`,
+                    borderRadius: "50% 50% 50% 50%",
+                    boxShadow: "inset -2px -3px 0 #2a4818, inset 2px 2px 0 #c8f098",
+                    opacity: harvested ? 0.65 : 1,
+                }}>
+                    {!harvested && (
+                        <>
+                            {/* Paire de cerises 1 */}
+                            <div style={{ position: "absolute", top: "35%", left: "22%", width: "12%", height: "12%", background: "#d8203c", borderRadius: "50%", boxShadow: "inset -1px -1px 0 #801020" }} />
+                            <div style={{ position: "absolute", top: "42%", left: "31%", width: "12%", height: "12%", background: "#d8203c", borderRadius: "50%", boxShadow: "inset -1px -1px 0 #801020" }} />
+                            {/* Paire de cerises 2 */}
+                            <div style={{ position: "absolute", top: "30%", left: "58%", width: "12%", height: "12%", background: "#d8203c", borderRadius: "50%", boxShadow: "inset -1px -1px 0 #801020" }} />
+                            <div style={{ position: "absolute", top: "37%", left: "67%", width: "12%", height: "12%", background: "#d8203c", borderRadius: "50%", boxShadow: "inset -1px -1px 0 #801020" }} />
+                        </>
+                    )}
+                </div>
+                <div style={{ position: "absolute", left: "44%", right: "44%", top: "65%", bottom: "5%", background: "linear-gradient(180deg, #8a5230 0%, #5a3818 100%)", border: "1px solid #1f0a04" }} />
+            </div>
+        )
+    }
+
+    // === v3.23d : POIRIER 🍐 — feuillage vert moyen + poires jaune-vert allongées ===
+    if (tile === "pearTree" || tile === "pearTreeEmpty") {
+        const harvested = tile === "pearTreeEmpty"
+        return (
+            <div style={{ position: "relative", background: C.grass, overflow: "visible" }}>
+                <div style={{
+                    position: "absolute", inset: "8% 5% 25% 5%",
+                    background: harvested
+                        ? `radial-gradient(circle at 50% 40%, #486828 0%, #305020 60%, #1a3010 100%)`
+                        : `radial-gradient(circle at 50% 40%, #88b048 0%, #587828 60%, #305020 100%)`,
+                    borderRadius: "50% 50% 45% 45%",
+                    boxShadow: "inset -2px -3px 0 #1a3010, inset 2px 2px 0 #98c058",
+                    opacity: harvested ? 0.7 : 1,
+                }}>
+                    {!harvested && (
+                        <>
+                            {/* Poire 1 (ovale, jaune-vert) */}
+                            <div style={{ position: "absolute", top: "30%", left: "25%", width: "13%", height: "20%", background: "#d8c848", borderRadius: "50% 50% 50% 50% / 40% 40% 60% 60%", boxShadow: "inset -1px -1px 0 #807820" }} />
+                            {/* Poire 2 */}
+                            <div style={{ position: "absolute", top: "25%", left: "55%", width: "13%", height: "20%", background: "#d8c848", borderRadius: "50% 50% 50% 50% / 40% 40% 60% 60%", boxShadow: "inset -1px -1px 0 #807820" }} />
+                            {/* Poire 3 */}
+                            <div style={{ position: "absolute", top: "50%", left: "42%", width: "13%", height: "20%", background: "#d8c848", borderRadius: "50% 50% 50% 50% / 40% 40% 60% 60%", boxShadow: "inset -1px -1px 0 #807820" }} />
+                        </>
+                    )}
+                </div>
+                <div style={{ position: "absolute", left: "42%", right: "42%", top: "65%", bottom: "5%", background: "linear-gradient(180deg, #7a4220 0%, #5a2e10 100%)", border: "1px solid #1f0a04" }} />
+            </div>
+        )
+    }
+
+    // === v3.23d : PÊCHER 🍑 — feuillage vert tendre + pêches roses-orangées ===
+    if (tile === "peachTree" || tile === "peachTreeEmpty") {
+        const harvested = tile === "peachTreeEmpty"
+        return (
+            <div style={{ position: "relative", background: C.grass, overflow: "visible" }}>
+                <div style={{
+                    position: "absolute", inset: "8% 5% 25% 5%",
+                    background: harvested
+                        ? `radial-gradient(circle at 50% 40%, #587838 0%, #406028 60%, #284018 100%)`
+                        : `radial-gradient(circle at 50% 40%, #a8d878 0%, #78a838 60%, #406028 100%)`,
+                    borderRadius: "50% 50% 50% 45%",
+                    boxShadow: "inset -2px -3px 0 #284018, inset 2px 2px 0 #b8e898",
+                    opacity: harvested ? 0.7 : 1,
+                }}>
+                    {!harvested && (
+                        <>
+                            {/* Pêche 1 (gros fruit rose-orange) */}
+                            <div style={{ position: "absolute", top: "28%", left: "20%", width: "18%", height: "18%", background: "radial-gradient(circle at 35% 35%, #f8a868 30%, #d86848 100%)", borderRadius: "50%", boxShadow: "inset -2px -2px 0 #983020" }} />
+                            {/* Pêche 2 */}
+                            <div style={{ position: "absolute", top: "20%", left: "55%", width: "18%", height: "18%", background: "radial-gradient(circle at 35% 35%, #f8a868 30%, #d86848 100%)", borderRadius: "50%", boxShadow: "inset -2px -2px 0 #983020" }} />
+                            {/* Pêche 3 */}
+                            <div style={{ position: "absolute", top: "52%", left: "38%", width: "18%", height: "18%", background: "radial-gradient(circle at 35% 35%, #f8a868 30%, #d86848 100%)", borderRadius: "50%", boxShadow: "inset -2px -2px 0 #983020" }} />
+                        </>
+                    )}
+                </div>
+                <div style={{ position: "absolute", left: "42%", right: "42%", top: "65%", bottom: "5%", background: "linear-gradient(180deg, #7a4220 0%, #5a2e10 100%)", border: "1px solid #1f0a04" }} />
+            </div>
+        )
+    }
+
+    // === v3.23d : MALÉFICA 💀 — feuillage violet/noir tordu + fruits violets fluo (PIÈGE -30 reps) ===
+    if (tile === "poisonTree" || tile === "poisonTreeEmpty") {
+        const harvested = tile === "poisonTreeEmpty"
+        return (
+            <div style={{ position: "relative", background: C.grass, overflow: "visible" }}>
+                {/* Feuillage anguleux violet sombre (forme irrégulière, pas ronde) */}
+                <div style={{
+                    position: "absolute", inset: "5% 8% 28% 8%",
+                    background: harvested
+                        ? `radial-gradient(circle at 50% 40%, #382048 0%, #1e1030 60%, #0a0418 100%)`
+                        : `radial-gradient(circle at 50% 40%, #682898 0%, #3a1058 60%, #1e0830 100%)`,
+                    borderRadius: "20% 60% 30% 50% / 40% 30% 60% 50%",
+                    boxShadow: "inset -2px -3px 0 #0a0418, inset 2px 2px 0 #8838b8, 0 0 6px rgba(120, 40, 180, 0.5)",
+                    opacity: harvested ? 0.6 : 1,
+                    filter: harvested ? "saturate(0.4)" : "saturate(1.2)",
+                }}>
+                    {!harvested && (
+                        <>
+                            {/* 3 fruits violet fluo avec halo glow toxique */}
+                            <div style={{
+                                position: "absolute", top: "30%", left: "22%", width: "18%", height: "18%",
+                                background: "radial-gradient(circle at 35% 35%, #d868f8 30%, #6a18a8 100%)",
+                                borderRadius: "50%",
+                                boxShadow: "0 0 6px rgba(216, 104, 248, 0.9), inset -1px -1px 0 #3a0858",
+                            }} />
+                            <div style={{
+                                position: "absolute", top: "22%", left: "55%", width: "18%", height: "18%",
+                                background: "radial-gradient(circle at 35% 35%, #d868f8 30%, #6a18a8 100%)",
+                                borderRadius: "50%",
+                                boxShadow: "0 0 6px rgba(216, 104, 248, 0.9), inset -1px -1px 0 #3a0858",
+                            }} />
+                            <div style={{
+                                position: "absolute", top: "50%", left: "40%", width: "18%", height: "18%",
+                                background: "radial-gradient(circle at 35% 35%, #d868f8 30%, #6a18a8 100%)",
+                                borderRadius: "50%",
+                                boxShadow: "0 0 6px rgba(216, 104, 248, 0.9), inset -1px -1px 0 #3a0858",
+                            }} />
+                        </>
+                    )}
+                </div>
+                {/* Tronc tordu noir avec veines violettes */}
+                <div style={{
+                    position: "absolute", left: "42%", right: "42%", top: "65%", bottom: "5%",
+                    background: "linear-gradient(180deg, #2a1838 0%, #0a0418 100%)",
+                    border: "1px solid #6818a8",
+                    boxShadow: "inset -1px 0 0 #4a1868",
+                }} />
+            </div>
+        )
+    }
+
+    // === v3.23d : COCOTIER 🥥 — tronc long + palmes en éventail + noix de coco ===
+    if (tile === "coconutTree" || tile === "coconutTreeEmpty") {
+        const harvested = tile === "coconutTreeEmpty"
+        return (
+            <div style={{ position: "relative", background: C.grass, overflow: "visible" }}>
+                {/* Palmes (4 feuilles arquées) */}
+                <div style={{ position: "absolute", top: "5%", left: "0%", width: "55%", height: "30%", background: harvested ? "#3a5818" : "#588038", borderRadius: "100% 0 0 0", transform: "rotate(-15deg)", opacity: harvested ? 0.6 : 1, boxShadow: "inset -2px -1px 0 #2a3810" }} />
+                <div style={{ position: "absolute", top: "5%", right: "0%", width: "55%", height: "30%", background: harvested ? "#3a5818" : "#588038", borderRadius: "0 100% 0 0", transform: "rotate(15deg)", opacity: harvested ? 0.6 : 1, boxShadow: "inset 2px -1px 0 #2a3810" }} />
+                <div style={{ position: "absolute", top: "10%", left: "5%", width: "55%", height: "25%", background: harvested ? "#4a6828" : "#689048", borderRadius: "100% 0 0 100%", transform: "rotate(-30deg)", opacity: harvested ? 0.6 : 1 }} />
+                <div style={{ position: "absolute", top: "10%", right: "5%", width: "55%", height: "25%", background: harvested ? "#4a6828" : "#689048", borderRadius: "0 100% 100% 0", transform: "rotate(30deg)", opacity: harvested ? 0.6 : 1 }} />
+                {/* Cluster de noix de coco au centre */}
+                {!harvested && (
+                    <>
+                        <div style={{ position: "absolute", top: "30%", left: "38%", width: "14%", height: "14%", background: "#8a5028", borderRadius: "50%", boxShadow: "inset -1px -2px 0 #4a2810, inset 2px 2px 0 #b87038" }} />
+                        <div style={{ position: "absolute", top: "32%", left: "50%", width: "14%", height: "14%", background: "#8a5028", borderRadius: "50%", boxShadow: "inset -1px -2px 0 #4a2810, inset 2px 2px 0 #b87038" }} />
+                    </>
+                )}
+                {/* Tronc long incliné */}
+                <div style={{ position: "absolute", left: "44%", right: "44%", top: "32%", bottom: "0%", background: "linear-gradient(180deg, #a87440 0%, #6a4020 100%)", border: "1px solid #2a1808", borderRadius: "0 0 30% 30%" }} />
+            </div>
+        )
+    }
+
     return <div style={{ background: C.grass }} />
 }

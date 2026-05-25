@@ -73,6 +73,10 @@ function buildOutdoor(): TileType[][] {
     m[11][4] = "fence"
     m[11][5] = "fence"
 
+    // v3.23d — 2 cerisiers communs (40 reps × 5/jour)
+    m[14][3] = "cherryTree"
+    m[14][10] = "cherryTree"
+
     return m
 }
 
@@ -314,6 +318,10 @@ function buildPepiteville(): TileType[][] {
     m[11][5] = "appleTree"   // apple_tree_1 (gauche du chemin central)
     m[11][10] = "appleTree"  // apple_tree_2 (droite du chemin central)
 
+    // v3.23d — 1 cerisier commun + 1 Maléfica (piège -30 reps, look violet)
+    m[17][3] = "cherryTree"   // cherry_tree_3
+    m[15][12] = "poisonTree"  // poison_tree_1 : visible, joueur attentif évite
+
     // Sortie sud (doorMat → route1 nord post-pont)
     m[PEPITEVILLE_H - 2][8] = "doorMat"
 
@@ -343,7 +351,7 @@ export const PEPITEVILLE_APPLE_TREES: Array<{ id: string; x: number; y: number }
 //
 // Bonus croissant, max décroissant : plus l'arbre est rare, plus il donne.
 // ============================================================
-export type TreeKind = "apple" | "cherry" | "pear" | "peach" | "coconut"
+export type TreeKind = "apple" | "cherry" | "pear" | "peach" | "coconut" | "poison"
 
 export interface TreeKindConfig {
     kind: TreeKind
@@ -360,11 +368,14 @@ export interface TreeKindConfig {
 }
 
 export const TREE_KIND_CONFIGS: Record<TreeKind, TreeKindConfig> = {
-    apple:    { kind: "apple",    emoji: "🍎", label: "Pommier",   tile: "appleTree",    emptyTile: "appleTreeEmpty",    bonusReps: 80,  maxPerDay: 3 },
-    cherry:   { kind: "cherry",   emoji: "🍒", label: "Cerisier",  tile: "cherryTree",   emptyTile: "cherryTreeEmpty",   bonusReps: 40,  maxPerDay: 5 },
-    pear:     { kind: "pear",     emoji: "🍐", label: "Poirier",   tile: "pearTree",     emptyTile: "pearTreeEmpty",     bonusReps: 60,  maxPerDay: 4 },
-    peach:    { kind: "peach",    emoji: "🍑", label: "Pêcher",    tile: "peachTree",    emptyTile: "peachTreeEmpty",    bonusReps: 100, maxPerDay: 2 },
-    coconut:  { kind: "coconut",  emoji: "🥥", label: "Cocotier",  tile: "coconutTree",  emptyTile: "coconutTreeEmpty",  bonusReps: 150, maxPerDay: 1 },
+    apple:    { kind: "apple",    emoji: "🍎", label: "Pommier",     tile: "appleTree",    emptyTile: "appleTreeEmpty",    bonusReps: 80,  maxPerDay: 3 },
+    cherry:   { kind: "cherry",   emoji: "🍒", label: "Cerisier",    tile: "cherryTree",   emptyTile: "cherryTreeEmpty",   bonusReps: 40,  maxPerDay: 5 },
+    pear:     { kind: "pear",     emoji: "🍐", label: "Poirier",     tile: "pearTree",     emptyTile: "pearTreeEmpty",     bonusReps: 60,  maxPerDay: 4 },
+    peach:    { kind: "peach",    emoji: "🍑", label: "Pêcher",      tile: "peachTree",    emptyTile: "peachTreeEmpty",    bonusReps: 100, maxPerDay: 2 },
+    coconut:  { kind: "coconut",  emoji: "🥥", label: "Cocotier",    tile: "coconutTree",  emptyTile: "coconutTreeEmpty",  bonusReps: 150, maxPerDay: 1 },
+    // 💀 Piège : bonus négatif. Le joueur naïf perd 30 reps par fruit, max 3 fois/jour (= -90 reps max).
+    // Visuellement très différent (violet/noir) pour donner une chance aux joueurs attentifs de l'éviter.
+    poison:   { kind: "poison",   emoji: "💀", label: "Maléfica",    tile: "poisonTree",   emptyTile: "poisonTreeEmpty",   bonusReps: -30, maxPerDay: 3 },
 }
 
 /** Lookup d'un config arbre par son tile (utile pour TileCell). */
@@ -400,6 +411,9 @@ export const ALL_TREES: TreeInstance[] = [
     { id: "peach_tree_1", mapId: "grass_sud", x: 7, y: 3, kind: "peach" },
     // === Cocotier (ultra-rare, 150 reps × 1/j — sommet du Mont) ===
     { id: "coconut_tree_1", mapId: "mont_pasta_ventoux", x: 5, y: 1, kind: "coconut" },
+    // === 💀 Maléfica (piège, -30 reps × 3/j) — placé bien visible à Pépiteville
+    //         pour piéger les naïfs (l'apparence violette doit suffire à dissuader les attentifs).
+    { id: "poison_tree_1", mapId: "pepiteville", x: 12, y: 15, kind: "poison" },
 ]
 
 /** Helper : tous les arbres d'une map donnée. */
@@ -517,6 +531,9 @@ function buildMacaronIle(): TileType[][] {
     m[12][12] = "tree"
     m[13][9] = "tree"
 
+    // v3.23d — 1 poirier (60 reps × 4/jour)
+    m[14][2] = "pearTree"  // pear_tree_1
+
     // Sortie sud vers grass_sud (cols 6,7 sur la rangée tree y=14)
     m[MACARONILE_H - 1][6] = "grassTall"
     m[MACARONILE_H - 1][7] = "grassTall"
@@ -567,6 +584,9 @@ function buildMontPastaVentoux(): TileType[][] {
             m[y + 5][MONT_W - 2] = "flowerY"
         }
     }
+    // v3.23d — Cocotier au sommet (ultra-rare, 150 reps × 1/j)
+    // Remplace la flowerY centrale (m[1][3] reste flowerR pour décor du sommet)
+    m[1][5] = "coconutTree"
     return m
 }
 
