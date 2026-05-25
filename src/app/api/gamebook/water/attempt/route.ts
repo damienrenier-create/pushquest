@@ -16,10 +16,10 @@ const CHAPTER_ID = "map_v3"
 // 5 messages narratifs progressifs. Au-delà, on reste sur le message 5 (révélation faite).
 const ATTEMPT_MESSAGES = [
     "Brrrr… jamais je n'oserai sauter là-dedans, elle est bien trop froide. Je risque sûrement le choc thermique !",
-    "Peut-être que si je me mouillait la nuque ?",
-    "Non, décidément je n'ose vraiment pas.",
+    "Peut-être que si je me mouillais la nuque ?",
+    "Non, décidément, je n'ose vraiment pas.",
     "Faudrait surtout pas que quelqu'un me pousse dedans… Je vais remouiller ma nuque pour être sûr.",
-    "Bon en vrai, si un copain venait me pousser je n'aurais pas le choix…",
+    "Bon, en vrai, si un copain venait me pousser, je n'aurais pas le choix…",
 ] as const
 
 export async function POST() {
