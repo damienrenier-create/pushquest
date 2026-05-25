@@ -4,12 +4,20 @@
 //
 // v3.8 — Modal du sac.
 // v3.8.1 — Gère maxCapacity dynamique de la gourde + état "Cassé" + baskets (durabilité).
+// v3.23o — Refonte UX :
+//          - 2 onglets (poches) : "EN COURS" (fonctionnels) / "USÉS" (cassés)
+//          - Scroll mobile-friendly (overflow-y auto + max-height limité)
+//          - Bouton "REFERMER LE SAC" en bas
+//          - Limite affichée 15 par poche
 
 import { useState } from "react"
 import { ITEMS, readStored, readMaxCapacity, readDurability, isBrokenItem, type ItemDefinition } from "@/lib/gamebook/items"
 import type { InventoryEntry } from "@/lib/gamebook/inventory"
 
 type UseAction = "fill" | "drink" | "consume"
+type Pocket = "working" | "broken"
+
+export const POCKET_MAX_ITEMS = 15
 
 interface Props {
     inventory: InventoryEntry[]
@@ -20,12 +28,18 @@ interface Props {
 }
 
 export default function InventoryModal({ inventory, availableEnergy, onUse, onView, onClose }: Props) {
-    const owned = inventory
+    const [activePocket, setActivePocket] = useState<Pocket>("working")
+
+    const ownedAll = inventory
         .map((e) => {
             const def = ITEMS.find((i) => i.key === e.itemKey)
-            return def ? { entry: e, def } : null
+            return def ? { entry: e, def, broken: isBrokenItem(e.data, def) } : null
         })
-        .filter((x): x is { entry: InventoryEntry; def: ItemDefinition } => x !== null)
+        .filter((x): x is { entry: InventoryEntry; def: ItemDefinition; broken: boolean } => x !== null)
+
+    const working = ownedAll.filter((x) => !x.broken)
+    const broken = ownedAll.filter((x) => x.broken)
+    const visible = activePocket === "working" ? working : broken
 
     return (
         <div
@@ -39,7 +53,7 @@ export default function InventoryModal({ inventory, availableEnergy, onUse, onVi
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                padding: 16,
+                padding: 12,
             }}
             onClick={onClose}
         >
@@ -49,13 +63,17 @@ export default function InventoryModal({ inventory, availableEnergy, onUse, onVi
                     background: "#1a1a1a",
                     border: "3px solid #fff",
                     borderRadius: 6,
-                    padding: 16,
+                    padding: 12,
                     minWidth: 280,
-                    maxWidth: 360,
+                    maxWidth: 380,
                     width: "100%",
+                    maxHeight: "calc(100vh - 24px)",
+                    display: "flex",
+                    flexDirection: "column",
                 }}
             >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                {/* Header */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, flexShrink: 0 }}>
                     <div style={{ fontSize: 12, letterSpacing: 4, fontWeight: "bold" }}>🎒 SAC</div>
                     <button
                         onClick={onClose}
@@ -64,54 +82,119 @@ export default function InventoryModal({ inventory, availableEnergy, onUse, onVi
                             border: "1px solid #fff",
                             color: "#fff",
                             fontFamily: "monospace",
-                            padding: "2px 8px",
-                            fontSize: 10,
+                            padding: "4px 10px",
+                            fontSize: 11,
                             cursor: "pointer",
-                            letterSpacing: 2,
+                            letterSpacing: 1,
+                            minWidth: 32,
                         }}
+                        aria-label="Fermer"
                     >
-                        FERMER
+                        ✕
                     </button>
                 </div>
 
-                {owned.length === 0 && (
-                    <div style={{ fontSize: 11, opacity: 0.6, padding: 12, textAlign: "center" }}>
-                        Le sac est vide. Va voir NUTRIPATES à la boutique de Pépiteville.
-                    </div>
-                )}
-
-                {owned.map(({ entry, def }) => (
-                    <ItemRow
-                        key={def.key}
-                        entry={entry}
-                        def={def}
-                        availableEnergy={availableEnergy}
-                        onUse={onUse}
-                        onView={onView}
+                {/* Onglets (poches) */}
+                <div style={{ display: "flex", gap: 4, marginBottom: 8, flexShrink: 0 }}>
+                    <PocketTab
+                        active={activePocket === "working"}
+                        onClick={() => setActivePocket("working")}
+                        label={`🎒 EN COURS`}
+                        count={working.length}
                     />
-                ))}
+                    <PocketTab
+                        active={activePocket === "broken"}
+                        onClick={() => setActivePocket("broken")}
+                        label={`🪦 USÉS`}
+                        count={broken.length}
+                    />
+                </div>
 
-                {/* v3.21.1 — Gros bouton QUITTER en bas */}
+                {/* Contenu scrollable */}
+                <div
+                    style={{
+                        flex: 1,
+                        overflowY: "auto",
+                        WebkitOverflowScrolling: "touch",
+                        marginBottom: 10,
+                        paddingRight: 4,
+                    }}
+                >
+                    {visible.length === 0 && (
+                        <div style={{ fontSize: 11, opacity: 0.6, padding: 20, textAlign: "center" }}>
+                            {activePocket === "working"
+                                ? "Poche vide. Va voir NUTRIPATES à Pépiteville ou TRENETTE à Macaron'île."
+                                : "Aucun objet usé. Bien joué."}
+                        </div>
+                    )}
+
+                    {visible.map(({ entry, def }) => (
+                        <ItemRow
+                            key={def.key}
+                            entry={entry}
+                            def={def}
+                            availableEnergy={availableEnergy}
+                            onUse={onUse}
+                            onView={onView}
+                        />
+                    ))}
+                </div>
+
+                {/* Bouton "REFERMER LE SAC" en bas */}
                 <button
                     onClick={onClose}
                     style={{
-                        marginTop: 12,
                         width: "100%",
                         background: "#444",
                         color: "#fff",
                         border: "2px solid #fff",
-                        padding: "10px 12px",
+                        padding: "12px 12px",
                         fontFamily: "'Courier New', monospace",
                         fontSize: 12,
                         fontWeight: "bold",
-                        letterSpacing: 3,
+                        letterSpacing: 2,
                         cursor: "pointer",
+                        flexShrink: 0,
                     }}
                 >
-                    QUITTER
+                    REFERMER LE SAC
                 </button>
             </div>
         </div>
+    )
+}
+
+function PocketTab({
+    active, onClick, label, count,
+}: {
+    active: boolean
+    onClick: () => void
+    label: string
+    count: number
+}) {
+    const overLimit = count > POCKET_MAX_ITEMS
+    return (
+        <button
+            onClick={onClick}
+            style={{
+                flex: 1,
+                background: active ? "#48a868" : "#222",
+                color: "#fff",
+                border: active ? "2px solid #fff" : "1px solid #555",
+                padding: "8px 6px",
+                fontFamily: "'Courier New', monospace",
+                fontSize: 10,
+                fontWeight: "bold",
+                letterSpacing: 1,
+                cursor: "pointer",
+                borderRadius: 4,
+            }}
+        >
+            <div>{label}</div>
+            <div style={{ fontSize: 9, opacity: 0.8, marginTop: 2, color: overLimit ? "#f08080" : "#fff" }}>
+                {count} / {POCKET_MAX_ITEMS}
+            </div>
+        </button>
     )
 }
 
@@ -137,11 +220,9 @@ function ItemRow({
     const isConsumable = !!def.capabilities.canConsume
     const broken = isBrokenItem(entry.data, def)
 
-    // v3.8.1 — capacité dynamique pour la gourde (peut décroître)
     const stored = isStorable ? readStored(entry.data) : 0
     const capacity = isStorable ? readMaxCapacity(entry.data, def) : 0
 
-    // v3.8.1 — durabilité pour les baskets
     const durability = isWearable ? readDurability(entry.data, def) : 0
     const initialDurability = def.capabilities.canWear?.initialDurability ?? 0
     const durabilityPct = initialDurability > 0 ? (durability / initialDurability) * 100 : 0
@@ -169,7 +250,7 @@ function ItemRow({
             }}
         >
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                <span style={{ fontSize: 20 }}>{def.emoji}</span>
+                <span style={{ fontSize: 22 }}>{def.emoji}</span>
                 <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 12, fontWeight: "bold", letterSpacing: 2 }}>
                         {def.name.toUpperCase()}
@@ -182,7 +263,6 @@ function ItemRow({
                 </div>
             </div>
 
-            {/* v3.8.1 — barre de durabilité pour les baskets */}
             {isWearable && !broken && (
                 <div style={{ marginTop: 6 }}>
                     <div style={{ fontSize: 9, opacity: 0.7, marginBottom: 2 }}>
@@ -204,7 +284,6 @@ function ItemRow({
                 </div>
             )}
 
-            {/* Actions pour la gourde (uniquement si pas cassée) */}
             {isStorable && !broken && (
                 <div style={{ display: "flex", gap: 4, alignItems: "center", marginTop: 8, flexWrap: "wrap" }}>
                     <input
@@ -241,15 +320,13 @@ function ItemRow({
                 </div>
             )}
 
-            {/* Hint pour items cassés */}
             {broken && (
                 <div style={{ fontSize: 9, opacity: 0.7, marginTop: 6, fontStyle: "italic" }}>
-                    Va t'en racheter un(e) chez NUTRIPATES.
+                    Va t'en racheter un(e) chez NUTRIPATES ou TRENETTE.
                 </div>
             )}
 
-            {/* v3.8.3 — Actions de consultation pour items canView (ex: carte des joueurs) */}
-            {isViewable && def.capabilities.canView && onView && (
+            {isViewable && def.capabilities.canView && onView && !broken && (
                 <div style={{ marginTop: 8 }}>
                     <button
                         onClick={() => onView(def.key, def.capabilities.canView!.kind)}
@@ -260,8 +337,7 @@ function ItemRow({
                 </div>
             )}
 
-            {/* v3.13 — Action consommer (corned pâtes, etc.) */}
-            {isConsumable && (
+            {isConsumable && !broken && (
                 <div style={{ marginTop: 8 }}>
                     <button
                         onClick={() => doAction("consume")}

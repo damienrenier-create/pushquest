@@ -51,6 +51,10 @@ export function findItem(inv: InventoryEntry[], itemKey: string): InventoryEntry
  * v3.8.1 — Si l'item existant est cassé (maxCapacity=0 / durability=0),
  * il est REMPLACÉ par une nouvelle instance avec data initial frais.
  */
+// v3.23o — Limite max d'entries par "poche" (fonctionnels OU usés). Si l'ajout
+// dépasserait la limite, on refuse silencieusement (le serveur retourne ok=false côté shop).
+export const POCKET_MAX_ITEMS_SERVER = 15
+
 export function addItem(
     inv: InventoryEntry[],
     itemKey: string,
@@ -59,7 +63,19 @@ export function addItem(
     const def = getItem(itemKey)
     if (!def) return inv
 
+    // v3.23o — Refus si la poche "EN COURS" (items non-cassés) est pleine ET qu'on essaye
+    // d'ajouter un NOUVEL item (pas d'incrément). Les items cassés ne comptent pas dans cette poche.
     const existing = inv.find((e) => e.itemKey === itemKey)
+    if (!existing) {
+        const workingCount = inv.filter((e) => {
+            const d = getItem(e.itemKey)
+            return d ? !isBrokenItem(e.data, d) : false
+        }).length
+        if (workingCount >= POCKET_MAX_ITEMS_SERVER) {
+            // Poche pleine : ne pas ajouter le nouvel item
+            return inv
+        }
+    }
     if (existing) {
         // v3.8.1 — si l'item existant est cassé, on le remplace par une instance neuve
         if (isBrokenItem(existing.data, def)) {
