@@ -808,8 +808,23 @@ export default function MapClient({
                         return
                     }
                     if (!state.firstSwimDone) {
-                        setToast("Brrr ! L'eau est trop froide. T'oseras pas y aller seul...")
+                        // v3.23g — Messages narratifs progressifs : la mécanique du push est
+                        // révélée graduellement. Le serveur incrémente le compteur et renvoie
+                        // le message adapté (le 5e mentionne explicitement le push d'un copain).
                         setState((s) => ({ ...s, direction: d }))
+                        ; (async () => {
+                            try {
+                                const res = await fetch("/api/gamebook/water/attempt", { method: "POST" })
+                                const data = await res.json()
+                                if (data.ok && typeof data.message === "string") {
+                                    setPopup({ kind: "info", text: data.message })
+                                } else {
+                                    setToast("Brrr ! L'eau est trop froide.")
+                                }
+                            } catch {
+                                setToast("Brrr ! L'eau est trop froide.")
+                            }
+                        })()
                         return
                     }
                     // OK : le joueur peut entrer dans l'eau, le mouvement se poursuit normalement.

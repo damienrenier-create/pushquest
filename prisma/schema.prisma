@@ -496,6 +496,11 @@ model GamebookProgress {
   // One-shot ; déclenche cinématique + badge Conquérant 500 XP. Aussi unlock contest_hall.
   montSummitReached         Boolean @default(false)
 
+  // v3.23g — Nombre de fois où le joueur a tenté d'entrer dans l'eau avant son premier bain.
+  // Sert à afficher des messages narratifs progressifs qui révèlent la mécanique du push
+  // par un autre joueur. Reset jamais (sauf si on veut réécouter, ce qui n'est pas le cas).
+  waterShallowAttempts      Int     @default(0)
+
   // v3.23f — Surplus de bonus persistant (jamais reset à minuit).
   // Format : positif uniquement. Représente les reps de bonus encore non dépensés.
   // Source de vérité pour l'énergie : availableEnergy = todayReps - energySpentToday + bonusSurplus
