@@ -2195,7 +2195,7 @@ export default function MapClient({
                             const remaining = typeof data.remaining === "number" ? data.remaining : 0
                             // v3.23d — Toast adapté au type : Maléfica = warning, sinon bonus
                             if (tree.kind === "poison") {
-                                setToast(`☠️ Tu mords un fruit de Maléfica. ${data.reward} reps perdus ! (Reste ${remaining}/${treeConfig.maxPerDay})`)
+                                setToast(`⚫ Tu mords un fruit de Maléfica. ${data.reward} reps perdus ! (Reste ${remaining}/${treeConfig.maxPerDay})`)
                             } else {
                                 setToast(`${treeConfig.emoji} Tu cueilles un fruit du ${treeConfig.label}. +${data.reward} reps. (Reste ${remaining}/${treeConfig.maxPerDay})`)
                             }

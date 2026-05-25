@@ -377,7 +377,7 @@ export const TREE_KIND_CONFIGS: Record<TreeKind, TreeKindConfig> = {
     coconut:  { kind: "coconut",  emoji: "🥥", label: "Cocotier",    tile: "coconutTree",  emptyTile: "coconutTreeEmpty",  bonusReps: 150, maxPerDay: 1 },
     // 💀 Piège : bonus négatif. Le joueur naïf perd 30 reps par fruit, max 3 fois/jour (= -90 reps max).
     // Visuellement très différent (violet/noir) pour donner une chance aux joueurs attentifs de l'éviter.
-    poison:   { kind: "poison",   emoji: "💀", label: "Maléfica",    tile: "poisonTree",   emptyTile: "poisonTreeEmpty",   bonusReps: -30, maxPerDay: 3 },
+    poison:   { kind: "poison",   emoji: "🟣", label: "Maléfica",    tile: "poisonTree",   emptyTile: "poisonTreeEmpty",   bonusReps: -30, maxPerDay: 3 },
 }
 
 /** Lookup d'un config arbre par son tile (utile pour TileCell). */
