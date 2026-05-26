@@ -93,6 +93,9 @@ export async function GET() {
             recovered: d.recovered,
             inBag: d.inBag,
             origin: d.origin,
+            // v4.0 Phase 1.D.bis — gate sérum
+            unlocked: d.unlockedAt !== null && d.unlockedAt !== undefined,
+            unlockedAt: d.unlockedAt ?? null,
             // Tracking Saiyan (visible côté UI)
             saiyan: {
                 energySpentThisLevel: d.energySpentThisLevel,

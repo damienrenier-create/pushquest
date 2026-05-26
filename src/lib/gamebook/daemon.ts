@@ -247,6 +247,11 @@ export async function ensureDaemonForTamagotchi(
             attacksEquipped: ["charge"],
             origin: "pastavegas",
             lastFedAt: tam.lastFedAt ? new Date(tam.lastFedAt) : null,
+            // v4.0 Phase 1.D.bis — grandfather : les compagnons existants
+            // (avant que l'arc Pastagone/sérum existe) restent déverrouillés.
+            // Les NOUVEAUX animaux adoptés via le flux mafia (post-arc) auront
+            // unlockedAt = null jusqu'à use-serum.
+            unlockedAt: new Date(),
         },
     })
 }

@@ -131,6 +131,11 @@ model Daemon {
   inBag           Boolean  @default(false)
   // Lien d'origine narratif : "pastavegas" (animal #1), "pastagone_boss_volt/vol/psy", "pastagone_bolognion"
   origin          String   @default("pastavegas")
+  // Sérum gate (v4.0 Phase 1.D.bis) :
+  //   null  = compagnon 🐾 ANIMAL (stats/type/combat masqués côté UI)
+  //   set   = 👾 DAEMON déverrouillé après usage du Sérum de Poussière
+  //           (drop du chef mafia Team Boulette, pré-Pastagone)
+  unlockedAt      DateTime?
   // Timestamps
   lastFedAt       DateTime?
   lastKoAt        DateTime?

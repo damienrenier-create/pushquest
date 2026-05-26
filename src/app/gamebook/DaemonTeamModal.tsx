@@ -38,6 +38,9 @@ interface DaemonView {
     recovered: boolean
     inBag: boolean
     origin: string
+    // v4.0 Phase 1.D.bis — gate sérum
+    unlocked: boolean
+    unlockedAt: string | null
 }
 
 interface Props {
@@ -110,12 +113,20 @@ export default function DaemonTeamModal({ onClose }: Props) {
                     maxHeight: "92vh", overflowY: "auto", WebkitOverflowScrolling: "touch",
                 }}
             >
-                <div style={{ fontSize: 14, fontWeight: "bold", marginBottom: 4, letterSpacing: 2 }}>
-                    👾 ÉQUIPE DAEMON
-                </div>
-                <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 12 }}>
-                    {daemons.length} / 6 slots · Leader = slot 1
-                </div>
+                {(() => {
+                    const anyUnlocked = daemons.some((d) => d.unlocked)
+                    return (
+                        <>
+                            <div style={{ fontSize: 14, fontWeight: "bold", marginBottom: 4, letterSpacing: 2 }}>
+                                {anyUnlocked ? "👾 ÉQUIPE DAEMON" : "🐾 ANIMAUX"}
+                            </div>
+                            <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 12 }}>
+                                {daemons.length} / 6 slots · Leader = slot 1
+                                {!anyUnlocked && daemons.length > 0 && " · Sérum requis pour révéler les stats"}
+                            </div>
+                        </>
+                    )
+                })()}
 
                 {loading && <div style={{ fontSize: 11, opacity: 0.7 }}>Chargement…</div>}
 
@@ -141,13 +152,27 @@ export default function DaemonTeamModal({ onClose }: Props) {
                             <div style={{ flex: 1 }}>
                                 <div style={{ fontSize: 12, fontWeight: "bold" }}>
                                     {d.name} {d.slotIndex === 1 && <span style={{ fontSize: 9, color: "#ffd54f" }}>⭐ LEADER</span>}
+                                    {!d.unlocked && <span style={{ fontSize: 9, color: "#80a0d0", marginLeft: 4 }}>🔒</span>}
                                 </div>
-                                <div style={{ fontSize: 9, opacity: 0.7 }}>
-                                    Combat Lv {d.combatLevel} · {d.type} · {d.morphology}
-                                </div>
-                                <div style={{ fontSize: 9, opacity: 0.7, marginTop: 2 }}>
-                                    HP {d.currentHp}/{d.maxHp} · ♥ {d.happiness}/100 {d.inBag && " · 🎒 en sac"}
-                                </div>
+                                {d.unlocked ? (
+                                    <>
+                                        <div style={{ fontSize: 9, opacity: 0.7 }}>
+                                            Combat Lv {d.combatLevel} · {d.type} · {d.morphology}
+                                        </div>
+                                        <div style={{ fontSize: 9, opacity: 0.7, marginTop: 2 }}>
+                                            HP {d.currentHp}/{d.maxHp} · ♥ {d.happiness}/100 {d.inBag && " · 🎒 en sac"}
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div style={{ fontSize: 9, opacity: 0.7 }}>
+                                            Compagnon — sérum requis
+                                        </div>
+                                        <div style={{ fontSize: 9, opacity: 0.7, marginTop: 2 }}>
+                                            ♥ {d.happiness}/100 {d.inBag && " · 🎒 en sac"}
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -169,46 +194,70 @@ export default function DaemonTeamModal({ onClose }: Props) {
                         <div style={{ background: "#2a2a2a", border: "1px solid #555", padding: 10, marginBottom: 8 }}>
                             <div style={{ fontSize: 14, fontWeight: "bold", marginBottom: 4 }}>
                                 {getEmojiForLevel(focused.speciesLevel)} {focused.name}
+                                {!focused.unlocked && <span style={{ fontSize: 10, color: "#80a0d0", marginLeft: 6 }}>🔒 verrouillé</span>}
                             </div>
-                            <div style={{ fontSize: 10, opacity: 0.7 }}>
-                                {focused.type} · {focused.morphology} · Slot {focused.slotIndex} · Origin: {focused.origin}
-                            </div>
-                            <div style={{ fontSize: 10, opacity: 0.7, marginTop: 2 }}>
-                                Combat Lv {focused.combatLevel} · XP {focused.combatXp} / {focused.xpToNextLevel}
-                            </div>
-                            <div style={{
-                                background: "#111", height: 5, marginTop: 4, border: "1px solid #444", overflow: "hidden",
-                            }}>
-                                <div style={{
-                                    width: `${focused.xpProgressPct}%`, height: "100%",
-                                    background: "linear-gradient(90deg, #4080d8, #80a0d0)",
-                                }} />
-                            </div>
-                        </div>
-
-                        <div style={{ background: "#2a2a2a", border: "1px solid #555", padding: 10, marginBottom: 8 }}>
-                            <div style={{ fontSize: 11, fontWeight: "bold", marginBottom: 6 }}>STATS (×{focused.happinessMultiplier.toFixed(2)} bonheur)</div>
-                            <StatRow label="HP" cur={focused.currentHp} max={focused.maxHp} color="#c83838" />
-                            <StatRow label="FORCE" cur={focused.effectiveStats.force} max={100} color="#d08030" />
-                            <StatRow label="VITESSE" cur={focused.effectiveStats.vitesse} max={100} color="#80a0d0" />
-                            <StatRow label="DÉFENSE" cur={focused.effectiveStats.defense} max={100} color="#a0a0a0" />
-                            <StatRow label="INTEL" cur={focused.effectiveStats.intelligence} max={100} color="#a060d0" />
-                            <StatRow label="ENDURANCE" cur={focused.effectiveStats.endurance} max={100} color="#80c060" />
-                            <div style={{ marginTop: 4, fontSize: 10, opacity: 0.7 }}>
-                                ♥ Bonheur {focused.happiness}/100 · 💥 Crit {(focused.critRate * 100).toFixed(0)}%
-                            </div>
-                        </div>
-
-                        <div style={{ background: "#2a2a2a", border: "1px solid #555", padding: 10, marginBottom: 8 }}>
-                            <div style={{ fontSize: 11, fontWeight: "bold", marginBottom: 6 }}>ATTAQUES ÉQUIPÉES ({focused.attacksEquipped.length}/4)</div>
-                            {focused.attacksEquipped.length === 0 ? (
-                                <div style={{ fontSize: 9, opacity: 0.6 }}>Aucune attaque apprise.</div>
+                            {focused.unlocked ? (
+                                <>
+                                    <div style={{ fontSize: 10, opacity: 0.7 }}>
+                                        {focused.type} · {focused.morphology} · Slot {focused.slotIndex} · Origin: {focused.origin}
+                                    </div>
+                                    <div style={{ fontSize: 10, opacity: 0.7, marginTop: 2 }}>
+                                        Combat Lv {focused.combatLevel} · XP {focused.combatXp} / {focused.xpToNextLevel}
+                                    </div>
+                                    <div style={{
+                                        background: "#111", height: 5, marginTop: 4, border: "1px solid #444", overflow: "hidden",
+                                    }}>
+                                        <div style={{
+                                            width: `${focused.xpProgressPct}%`, height: "100%",
+                                            background: "linear-gradient(90deg, #4080d8, #80a0d0)",
+                                        }} />
+                                    </div>
+                                </>
                             ) : (
-                                focused.attacksEquipped.map((a, i) => (
-                                    <div key={i} style={{ fontSize: 10, padding: 2 }}>• {a}</div>
-                                ))
+                                <div style={{ fontSize: 10, opacity: 0.7 }}>
+                                    Slot {focused.slotIndex} · Compagnon non éveillé.<br />
+                                    Le <em>Sérum de Poussière</em> révèlera son vrai potentiel.
+                                </div>
                             )}
                         </div>
+
+                        {focused.unlocked && (
+                            <div style={{ background: "#2a2a2a", border: "1px solid #555", padding: 10, marginBottom: 8 }}>
+                                <div style={{ fontSize: 11, fontWeight: "bold", marginBottom: 6 }}>STATS (×{focused.happinessMultiplier.toFixed(2)} bonheur)</div>
+                                <StatRow label="HP" cur={focused.currentHp} max={focused.maxHp} color="#c83838" />
+                                <StatRow label="FORCE" cur={focused.effectiveStats.force} max={100} color="#d08030" />
+                                <StatRow label="VITESSE" cur={focused.effectiveStats.vitesse} max={100} color="#80a0d0" />
+                                <StatRow label="DÉFENSE" cur={focused.effectiveStats.defense} max={100} color="#a0a0a0" />
+                                <StatRow label="INTEL" cur={focused.effectiveStats.intelligence} max={100} color="#a060d0" />
+                                <StatRow label="ENDURANCE" cur={focused.effectiveStats.endurance} max={100} color="#80c060" />
+                                <div style={{ marginTop: 4, fontSize: 10, opacity: 0.7 }}>
+                                    ♥ Bonheur {focused.happiness}/100 · 💥 Crit {(focused.critRate * 100).toFixed(0)}%
+                                </div>
+                            </div>
+                        )}
+
+                        {!focused.unlocked && (
+                            <div style={{ background: "#2a2a2a", border: "1px solid #555", padding: 10, marginBottom: 8 }}>
+                                <div style={{ fontSize: 11, fontWeight: "bold", marginBottom: 6 }}>♥ BONHEUR</div>
+                                <StatRow label="BONHEUR" cur={focused.happiness} max={100} color="#e060a0" />
+                                <div style={{ fontSize: 9, opacity: 0.6, marginTop: 6 }}>
+                                    Nourris-le et donne-lui à boire pour garder son bonheur élevé.
+                                </div>
+                            </div>
+                        )}
+
+                        {focused.unlocked && (
+                            <div style={{ background: "#2a2a2a", border: "1px solid #555", padding: 10, marginBottom: 8 }}>
+                                <div style={{ fontSize: 11, fontWeight: "bold", marginBottom: 6 }}>ATTAQUES ÉQUIPÉES ({focused.attacksEquipped.length}/4)</div>
+                                {focused.attacksEquipped.length === 0 ? (
+                                    <div style={{ fontSize: 9, opacity: 0.6 }}>Aucune attaque apprise.</div>
+                                ) : (
+                                    focused.attacksEquipped.map((a, i) => (
+                                        <div key={i} style={{ fontSize: 10, padding: 2 }}>• {a}</div>
+                                    ))
+                                )}
+                            </div>
+                        )}
 
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
                             <ActionButton label="🍝 Nourrir" onClick={() => callAction("/api/gamebook/daemon/feed", { daemonId: focused.id })} busy={busy} />
