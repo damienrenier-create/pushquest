@@ -1887,6 +1887,33 @@ export default function MapClient({
                     return
                 }
 
+                // v3.29 — ORNITHOLOGUE : bonus +50 énergies si animal = oiseau (1×)
+                if (npcId === "ornithologue") {
+                    ; (async () => {
+                        try {
+                            const res = await fetch("/api/gamebook/ornithologue/talk", { method: "POST" })
+                            const data = await res.json()
+                            if (data.ok && data.line) {
+                                setPopup({ kind: "info", text: data.line })
+                                if (typeof data.bonus === "number" && data.bonus > 0) {
+                                    // Rafraîchir l'énergie après bonus
+                                    try {
+                                        const sRes = await fetch("/api/gamebook/state")
+                                        if (sRes.ok) {
+                                            const sData = await sRes.json()
+                                            if (typeof sData.availableEnergy === "number") setReps(sData.availableEnergy)
+                                            if (typeof sData.energySpentToday === "number") setEnergySpent(sData.energySpentToday)
+                                        }
+                                    } catch { /* silent */ }
+                                }
+                            }
+                        } catch (e) {
+                            console.warn("[MapClient] ornithologue failed", e)
+                        }
+                    })()
+                    return
+                }
+
                 // v3.24c-7 — IL CAPO : 4 défis ordonnés (squat / pompes / hier / 2 jours)
                 if (npcId === "tb_boss") {
                     ; (async () => {

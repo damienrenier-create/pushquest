@@ -107,6 +107,22 @@ export const XP_ANIMALS = [
     { level: 100, name: "Léviathan", emoji: "🐋" }
 ];
 
+/**
+ * v3.29 — true si l'animal du level donné est un oiseau (volatile).
+ * Utilisé par l'Ornithologue pour décider du dialogue + récompense.
+ */
+export function isAnimalBird(level: number): boolean {
+    // Martin-pêcheur (16) → Condor des Andes (22)
+    if (level >= 16 && level <= 22) return true
+    // Autruche (57) → Manchot empereur (60)
+    if (level >= 57 && level <= 60) return true
+    // Griffon (93) — chimère partiellement oiseau
+    if (level === 93) return true
+    // Phénix (95)
+    if (level === 95) return true
+    return false
+}
+
 // Returns the details for a given level
 export function getLevelDetails(level: number) {
     const safeLevel = Math.max(1, Math.min(100, level));

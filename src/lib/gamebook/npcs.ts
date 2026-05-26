@@ -950,6 +950,51 @@ export const NPCS: NpcDefinition[] = [
         ],
     },
 
+    // v3.29 — Gamin chasseur de chenilles (jaloux de l'animal du joueur)
+    {
+        id: "chenille_kid",
+        name: "GAMIN AUX CHENILLES",
+        mapId: "grass_sud",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🧒", color: "#90a040" },
+        initialX: 3,
+        initialY: 4,
+        dialoguesAfter: [
+            "*Le gamin te regarde de travers, une chenille dans la main.*",
+            "C'est quoi ton animal ? Il est plus gros que mes chenilles, c'est pas juste.",
+            "Moi j'aurai bientôt LA chenille parfaite, et elle me suivra elle aussi.",
+            "Tu verras. Elle sera mieux que tout ce que t'as.",
+        ],
+        dialoguesAfterRevisit: [
+            "*Le gamin t'ignore et continue de fouiller les hautes herbes.*",
+            "T'es encore là ? Va voir ailleurs avec ta bestiole de luxe.",
+        ],
+    },
+
+    // v3.29 — Ornithologue (donne +50 énergies si l'animal du joueur est un oiseau)
+    {
+        id: "ornithologue",
+        name: "ORNITHOLOGUE",
+        mapId: "grass_sud",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🧓", color: "#506080" },
+        initialX: 5,
+        initialY: 9,
+        dialoguesAfter: [
+            "*Le vieil ornithologue lève les yeux de ses jumelles.*",
+            "Approche, jeune. Je suis l'ORNITHOLOGUE. J'écris un livre sur les volatiles du Nexus.",
+            "Tu sais qu'on raconte qu'un oiseau légendaire vit au-delà de Muscuville ?",
+            "Et que PIAFFINI, l'oiseau de JOJO, est lié à lui par le sang. Mais je n'en sais rien.",
+            "Si tu observes bien les arbres, parfois on y voit un oiseau dedans. Et parfois, ils nous suivent et deviennent nos amis.",
+        ],
+        dialoguesAfterRevisit: [
+            "*L'ornithologue range ses jumelles, songeur.*",
+            "Reviens me voir si ton compagnon devient un oiseau. Je te ferai un cadeau.",
+        ],
+    },
+
     // ============================================================
     // v3.16 — MUSCUVILLE (village des athlètes, stub)
     // ============================================================

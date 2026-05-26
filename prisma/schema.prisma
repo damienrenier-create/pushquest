@@ -530,6 +530,8 @@ model GamebookProgress {
   // v3.28 — Cinématique des hautes herbes du sud (fin de l'arc Macaron'île).
   // Affichée une seule fois quand le joueur entre dans grass_sud avec son animal récupéré.
   grassSudCutsceneShown     Boolean @default(false)
+  // v3.29 — Ornithologue (grass_sud) : bonus +50 énergies remis 1 fois si animal = oiseau.
+  ornithologueBirdBonusGiven Boolean @default(false)
 
   // v3.24a-4 — Mission jardinier BASILICO (Lasagnas Vegas).
   // jardinierMissionActive : true depuis qu'on a parlé à BASILICO la 1ère fois (= mission acceptée).
