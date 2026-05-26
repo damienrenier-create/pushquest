@@ -135,7 +135,13 @@ export async function GET() {
     }
 
     if (!progress) {
-        progress = await prisma.gamebookProgress.create({
+        // v3.32 — Compte tester (GUIGUI) : init bonusSurplus à 1000 (banque énergie god mod).
+        const tester = await (prisma as any).user.findUnique({
+            where: { id: userId },
+            select: { isTester: true },
+        })
+        const initialBonusSurplus = tester?.isTester === true ? 1000 : 0
+        progress = await (prisma as any).gamebookProgress.create({
             data: {
                 userId,
                 chapterId: CHAPTER_ID,
@@ -155,6 +161,7 @@ export async function GET() {
                 bridgePnjLastBeatenDate: {},
                 gymGuyEnergyGiven: false,
                 npcsTalkedTo: [],
+                bonusSurplus: initialBonusSurplus,
             },
         })
     } else {
@@ -179,8 +186,17 @@ export async function GET() {
 
     // v3.8.5 — Mode créateur (isSystem) : énergie minimum 1000 pour tester la map.
     // Ne touche pas aux données réelles : on override juste la valeur renvoyée au client.
-    const isCreator = await isCreatorAccount(userId)
-    if (isCreator && availableEnergy < CREATOR_MIN_ENERGY) {
+    // v3.32 — Compte tester (GUIGUI) : énergie plafonnée à 2000, banque renouvelable
+    //   (recharge à 1000 via /api/gamebook/guigui/recharge quand availableEnergy ≤ 0).
+    const userRow = await (prisma as any).user.findUnique({
+        where: { id: userId },
+        select: { isSystem: true, isTester: true },
+    })
+    const isCreator = userRow?.isSystem === true
+    const isTester = userRow?.isTester === true
+    if (isTester) {
+        availableEnergy = Math.max(0, Math.min(2000, availableEnergy))
+    } else if (isCreator && availableEnergy < CREATOR_MIN_ENERGY) {
         availableEnergy = CREATOR_MIN_ENERGY
     }
 
@@ -211,21 +227,22 @@ export async function GET() {
         tamagotchi = viewTamagotchi(tam, userLevel)
     }
 
+    const p: any = progress
     return NextResponse.json({
         state: {
-            mapId: progress.mapId,
-            posX: progress.posX,
-            posY: progress.posY,
-            direction: progress.direction,
-            phase: progress.phase,
-            introStep: progress.introStep,
-            hasEnteredTallGrass: progress.hasEnteredTallGrass,
-            monsterCaveRevealed: progress.monsterCaveRevealed,
-            hasSeenWelcomeScreen: progress.hasSeenWelcomeScreen,
-            treeObstacleCleared: progress.treeObstacleCleared,
-            pioneerBadgeAwarded: progress.pioneerBadgeAwarded,
-            bridgePnjDefeated: progress.bridgePnjDefeated,
-            bridgePnjLastBeatenDate: progress.bridgePnjLastBeatenDate,
+            mapId: p.mapId,
+            posX: p.posX,
+            posY: p.posY,
+            direction: p.direction,
+            phase: p.phase,
+            introStep: p.introStep,
+            hasEnteredTallGrass: p.hasEnteredTallGrass,
+            monsterCaveRevealed: p.monsterCaveRevealed,
+            hasSeenWelcomeScreen: p.hasSeenWelcomeScreen,
+            treeObstacleCleared: p.treeObstacleCleared,
+            pioneerBadgeAwarded: p.pioneerBadgeAwarded,
+            bridgePnjDefeated: p.bridgePnjDefeated,
+            bridgePnjLastBeatenDate: p.bridgePnjLastBeatenDate,
             gymGuyEnergyGiven: (progress as { gymGuyEnergyGiven?: boolean }).gymGuyEnergyGiven ?? false,
             npcsTalkedTo: (progress as { npcsTalkedTo?: string[] }).npcsTalkedTo ?? [],
             gamebookFrozenUntil: frozenUntil,
@@ -270,6 +287,8 @@ export async function GET() {
             treeBookGiven: (progress as { treeBookGiven?: boolean }).treeBookGiven === true,
             // v3.27 — Animal follower : rangé dans le sac (caché de la map)
             tamagotchiInBag: (progress as { tamagotchiInBag?: boolean }).tamagotchiInBag === true,
+            // v3.32 — Flag tester (GUIGUI) — affiche le popup recharge à 0 énergie
+            isTester,
             // v3.28 — Cinématique fin Macaron'île (ouverture chemin Muscuville)
             grassSudCutsceneShown: (progress as { grassSudCutsceneShown?: boolean }).grassSudCutsceneShown === true,
         },

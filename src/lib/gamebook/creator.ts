@@ -52,9 +52,12 @@ export async function ensureCreatorBootstrap(userId: string, progress: any): Pro
     if (!progress) return progress
     const u = await (prisma as any).user.findUnique({
         where: { id: userId },
-        select: { isSystem: true },
+        select: { isSystem: true, isTester: true },
     })
     if (u?.isSystem !== true) return progress
+    // v3.32 — Compte tester (GUIGUI) : on saute le bootstrap pour respecter la progression
+    // (le user doit refaire les flags depuis le début).
+    if (u?.isTester === true) return progress
 
     // Import dynamique pour éviter une cycle avec inventory/items qui pourraient
     // importer creator dans le futur.

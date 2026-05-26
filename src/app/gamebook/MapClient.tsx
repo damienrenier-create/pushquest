@@ -266,6 +266,9 @@ export default function MapClient({
     const [showStopOuEncore, setShowStopOuEncore] = useState(false)
     const [showCockfight, setShowCockfight] = useState(false)
     const [showSlotMachine, setShowSlotMachine] = useState(false)
+    // v3.32 — Compte tester GUIGUI : popup recharge à 0 énergie
+    const [isTester, setIsTester] = useState(false)
+    const [showGuiguiRecharge, setShowGuiguiRecharge] = useState(false)
     // v3.23b — Cadence sur le Mont Pasta-Ventoux : timestamps des derniers clics "pédale"
     const [cadenceClicks, setCadenceClicks] = useState<number[]>([])
     // Tick pour rafraîchir le BPM même si pas de nouveau click
@@ -341,7 +344,7 @@ export default function MapClient({
         }
     }, [])
 
-    // v3.27 — Lecture initiale du flag tamagotchiInBag (côté serveur)
+    // v3.27 — Lecture initiale du flag tamagotchiInBag + v3.32 isTester (côté serveur)
     useEffect(() => {
         ; (async () => {
             try {
@@ -350,10 +353,19 @@ export default function MapClient({
                     const j = await r.json()
                     const inBag = j?.state?.tamagotchiInBag
                     if (typeof inBag === "boolean") setTamagotchiInBag(inBag)
+                    const tester = j?.state?.isTester
+                    if (typeof tester === "boolean") setIsTester(tester)
                 }
             } catch { /* silent */ }
         })()
     }, [])
+
+    // v3.32 — Watch reps : si tester et énergie tombe à 0, propose la recharge
+    useEffect(() => {
+        if (isTester && reps <= 0 && !showGuiguiRecharge) {
+            setShowGuiguiRecharge(true)
+        }
+    }, [isTester, reps, showGuiguiRecharge])
 
     // ============================================================
     // v3.4b : WebSocket Pusher
@@ -3651,6 +3663,71 @@ export default function MapClient({
                         })()
                     }}
                 />
+            )}
+
+            {/* v3.32 — Popup recharge GUIGUI (énergie tombée à 0) */}
+            {showGuiguiRecharge && (
+                <div
+                    style={{
+                        position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        zIndex: 9500, padding: 16, fontFamily: "'Courier New', monospace",
+                    }}
+                >
+                    <div
+                        style={{
+                            background: "#1a1a1a", color: "#fff",
+                            border: "3px solid #c0a040", borderRadius: 6,
+                            padding: 18, maxWidth: 320, width: "100%",
+                        }}
+                    >
+                        <div style={{ fontSize: 14, fontWeight: "bold", marginBottom: 8, letterSpacing: 2 }}>
+                            ⚡ ÉNERGIE ÉPUISÉE
+                        </div>
+                        <div style={{ fontSize: 12, lineHeight: 1.6, marginBottom: 14, opacity: 0.9 }}>
+                            Compte test GUIGUI. Veux-tu récupérer 1000 énergies ?
+                        </div>
+                        <div style={{ display: "flex", gap: 8 }}>
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        const res = await fetch("/api/gamebook/guigui/recharge", { method: "POST" })
+                                        const data = await res.json()
+                                        if (data.ok) {
+                                            // Re-fetch state pour mettre à jour reps
+                                            const sRes = await fetch("/api/gamebook/state")
+                                            if (sRes.ok) {
+                                                const sData = await sRes.json()
+                                                if (typeof sData.availableEnergy === "number") setReps(sData.availableEnergy)
+                                                if (typeof sData.energySpentToday === "number") setEnergySpent(sData.energySpentToday)
+                                            }
+                                            setShowGuiguiRecharge(false)
+                                        }
+                                    } catch { /* silent */ }
+                                }}
+                                style={{
+                                    flex: 1, background: "#4a8030", color: "#fff",
+                                    border: "1px solid #fff", padding: 12,
+                                    fontSize: 12, fontWeight: "bold",
+                                    cursor: "pointer", fontFamily: "monospace",
+                                }}
+                            >
+                                OUI (+1000)
+                            </button>
+                            <button
+                                onClick={() => setShowGuiguiRecharge(false)}
+                                style={{
+                                    flex: 1, background: "#222", color: "#888",
+                                    border: "1px solid #555", padding: 12,
+                                    fontSize: 12, fontWeight: "bold",
+                                    cursor: "pointer", fontFamily: "monospace",
+                                }}
+                            >
+                                NON
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* v3.24b-4 — Modal Slot Machine */}

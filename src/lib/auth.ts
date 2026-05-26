@@ -34,6 +34,23 @@ export const authOptions: NextAuthOptions = {
                     return null
                 }
 
+                // v3.32 — Compte GUIGUI : autorisé uniquement si GUIGUI_LOGIN_ENABLED=true
+                // (variable d'env à définir dans .env.local — absente en prod).
+                // À chaque login : reset complet du gamebookProgress (= test depuis le début).
+                const isTester = (user as any).isTester === true
+                if (isTester) {
+                    if (process.env.GUIGUI_LOGIN_ENABLED !== "true") {
+                        return null
+                    }
+                    try {
+                        await (prisma as any).gamebookProgress.deleteMany({
+                            where: { userId: user.id },
+                        })
+                    } catch (e) {
+                        console.warn("[auth] tester reset failed", e)
+                    }
+                }
+
                 // Par design : pas de vérification de hash, juste longueur >= 3
                 return {
                     id: user.id,
