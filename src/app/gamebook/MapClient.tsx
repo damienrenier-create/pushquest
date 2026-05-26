@@ -100,6 +100,7 @@ import BestioleNamingModal from "./BestioleNamingModal"
 import CasinoModal from "./CasinoModal"
 import CasinoPatternModal from "./CasinoPatternModal"
 import FastTravelModal from "./FastTravelModal"
+import VideurModal from "./VideurModal"
 import { getLevelDetails } from "@/lib/xp"
 import { getActiveBicycle } from "@/lib/gamebook/items"
 
@@ -246,6 +247,8 @@ export default function MapClient({
     const [showCasinoPattern, setShowCasinoPattern] = useState(false)
     // v3.22 — Modal fast travel
     const [showFastTravel, setShowFastTravel] = useState(false)
+    // v3.24c-4 — Modal interactif du videur Team Boulette
+    const [showVideur, setShowVideur] = useState(false)
     // v3.23b — Cadence sur le Mont Pasta-Ventoux : timestamps des derniers clics "pédale"
     const [cadenceClicks, setCadenceClicks] = useState<number[]>([])
     // Tick pour rafraîchir le BPM même si pas de nouveau click
@@ -1494,7 +1497,7 @@ export default function MapClient({
         }, 300)
 
         // v3.8 — si une modal est ouverte, le A est géré par la modal elle-même
-        if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel) return
+        if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur) return
 
         // v3.23e — Blague PIAFFINI unique pour Franss : intercepter le premier A press (idem tryMove)
         if (
@@ -1751,17 +1754,33 @@ export default function MapClient({
                     // On laisse aussi tourner le dialogue normal (n'override pas)
                 }
 
-                // v3.24c-3 — VIDEUR : 3 choix oui_honest / yes_lying / no via popup interactif
+                // v3.24c-4 — VIDEUR : on tente d'abord validate-challenge (si un défi est en cours),
+                // sinon on ouvre le modal interactif (3 choix oui_honest / yes_lying / no)
                 if (npcId === "tb_videur") {
-                    // Le dialogue normal joue (dialoguesAfter), puis on attend que le user fasse un choix
-                    // via 3 boutons custom dans un popup spécial. Pour simplifier ici : on déclenche directement
-                    // une route avec un choix par défaut, mais idéalement il faut un modal interactif.
-                    // Pour le moment : on offre une popup avec 3 options en mode info (le user devra cliquer "OK"
-                    // pour fermer et puis le système se déclenchera via un sous-menu... à venir v3.24c-4).
-                    setPopup({
-                        kind: "info",
-                        text: "🕴️ Le PORTIER ARRABBIATA croise les bras.\n\n\"Tu connais le mot de passe ?\"\n\n(Choix à venir en patch suivant : « OUI honnête » / « OUI menteur » / « NON » → défi reps avant accès au bar.)",
-                    })
+                    ; (async () => {
+                        try {
+                            const res = await fetch("/api/gamebook/tb/validate-challenge", { method: "POST" })
+                            const data = await res.json()
+                            if (data.ok && data.canEnter) {
+                                // Le videur laisse entrer (déjà passé ou défi vient d'être validé)
+                                setPopup({ kind: "info", text: data.message })
+                                return
+                            }
+                            if (data.ok === false && data.state && data.state in {"honest_challenge": 1, "honest_pass_pending": 1, "lying_pursued": 1}) {
+                                // Défi en cours mais pas encore validé : on affiche la progression
+                                setPopup({
+                                    kind: "info",
+                                    text: data.message + (typeof data.progress === "number" ? `\n\nProgression : ${data.progress} / ${data.target} reps depuis le début du défi.` : ""),
+                                })
+                                return
+                            }
+                            // Pas de défi → ouvrir le modal 3 choix
+                            setShowVideur(true)
+                        } catch (e) {
+                            console.warn("[MapClient] videur interaction failed", e)
+                            setShowVideur(true)
+                        }
+                    })()
                     return
                 }
 
@@ -2598,7 +2617,7 @@ export default function MapClient({
         const handler = (e: KeyboardEvent) => {
             // v3.8 — si une modal est ouverte, on ne gère pas les touches ici
             // (StartMenu/InventoryModal/ShopModal/PlayerMapModal écoutent leurs propres events)
-            if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel) return
+            if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur) return
 
             if (state.phase === "introMonster") {
                 if (e.key === "Enter" || e.key === " " || e.key.toLowerCase() === "a") {
@@ -3149,6 +3168,34 @@ export default function MapClient({
                         }
                     }}
                     onClose={() => setShowStartMenu(false)}
+                />
+            )}
+
+            {/* v3.24c-4 — Modal interactif du videur Team Boulette (3 choix) */}
+            {showVideur && (
+                <VideurModal
+                    onChoose={async (choice) => {
+                        try {
+                            const res = await fetch("/api/gamebook/tb/videur", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ choice }),
+                            })
+                            const data = await res.json()
+                            if (data.ok && data.message) {
+                                setPopup({
+                                    kind: "info",
+                                    text: data.message + (typeof data.target === "number" ? `\n\nCible : ${data.target} reps depuis maintenant.` : ""),
+                                })
+                            } else if (data.message) {
+                                setPopup({ kind: "info", text: data.message })
+                            }
+                        } catch (e) {
+                            console.warn("[MapClient] tb/videur failed", e)
+                            setToast("Erreur réseau.")
+                        }
+                    }}
+                    onClose={() => setShowVideur(false)}
                 />
             )}
 
