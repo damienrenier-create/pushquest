@@ -833,6 +833,81 @@ export default function TileCell({ tile, x, y }: { tile: TileType; x: number; y:
         )
     }
 
+    // === v3.24e : ARBRE BOOST ✨ — feuillage doré/jaune éclatant + fruits dorés brillants ===
+    if (tile === "boostTree" || tile === "boostTreeEmpty") {
+        const harvested = tile === "boostTreeEmpty"
+        return (
+            <div style={{ position: "relative", background: C.grass, overflow: "visible" }}>
+                <div style={{
+                    position: "absolute", inset: "8% 5% 25% 5%",
+                    background: harvested
+                        ? `radial-gradient(circle at 50% 40%, #807060 0%, #5a4830 60%, #2a1810 100%)`
+                        : `radial-gradient(circle at 50% 40%, #ffe068 0%, #f0c038 60%, #a87820 100%)`,
+                    borderRadius: "50% 50% 45% 45%",
+                    boxShadow: harvested
+                        ? "inset -2px -3px 0 #2a1810, inset 2px 2px 0 #88684a"
+                        : "inset -2px -3px 0 #a87820, inset 2px 2px 0 #fff8a0, 0 0 8px rgba(255, 224, 104, 0.6)",
+                    opacity: harvested ? 0.6 : 1,
+                }}>
+                    {!harvested && (
+                        <>
+                            <div style={{ position: "absolute", top: "30%", left: "25%", width: "18%", height: "18%", background: "radial-gradient(circle at 35% 35%, #fffeb0 30%, #d8a020 100%)", borderRadius: "50%", boxShadow: "0 0 4px rgba(255, 254, 176, 0.9)" }} />
+                            <div style={{ position: "absolute", top: "22%", left: "55%", width: "18%", height: "18%", background: "radial-gradient(circle at 35% 35%, #fffeb0 30%, #d8a020 100%)", borderRadius: "50%", boxShadow: "0 0 4px rgba(255, 254, 176, 0.9)" }} />
+                            <div style={{ position: "absolute", top: "52%", left: "40%", width: "18%", height: "18%", background: "radial-gradient(circle at 35% 35%, #fffeb0 30%, #d8a020 100%)", borderRadius: "50%", boxShadow: "0 0 4px rgba(255, 254, 176, 0.9)" }} />
+                        </>
+                    )}
+                </div>
+                <div style={{ position: "absolute", left: "42%", right: "42%", top: "65%", bottom: "5%", background: "linear-gradient(180deg, #a87840 0%, #785020 100%)", border: "1px solid #2a1808" }} />
+            </div>
+        )
+    }
+
+    // === v3.24e : ARBRE DIVISOR ⚠️ — feuillage gris-pâle + fruits gris cassés (look trompeur, presque normal) ===
+    if (tile === "divisorTree" || tile === "divisorTreeEmpty") {
+        const harvested = tile === "divisorTreeEmpty"
+        return (
+            <div style={{ position: "relative", background: C.grass, overflow: "visible" }}>
+                <div style={{
+                    position: "absolute", inset: "8% 5% 25% 5%",
+                    background: harvested
+                        ? `radial-gradient(circle at 50% 40%, #585858 0%, #3a3a3a 60%, #1a1a1a 100%)`
+                        : `radial-gradient(circle at 50% 40%, #909090 0%, #686868 60%, #383838 100%)`,
+                    borderRadius: "50% 50% 45% 45%",
+                    boxShadow: "inset -2px -3px 0 #1a1a1a, inset 2px 2px 0 #b8b8b8",
+                    opacity: harvested ? 0.6 : 1,
+                }}>
+                    {!harvested && (
+                        <>
+                            {/* 3 fruits gris terne (presque normaux mais sans éclat) */}
+                            <div style={{ position: "absolute", top: "30%", left: "25%", width: "16%", height: "16%", background: "#888888", borderRadius: "50%", boxShadow: "inset -1px -1px 0 #404040" }} />
+                            <div style={{ position: "absolute", top: "20%", left: "55%", width: "16%", height: "16%", background: "#888888", borderRadius: "50%", boxShadow: "inset -1px -1px 0 #404040" }} />
+                            <div style={{ position: "absolute", top: "55%", left: "40%", width: "16%", height: "16%", background: "#888888", borderRadius: "50%", boxShadow: "inset -1px -1px 0 #404040" }} />
+                        </>
+                    )}
+                </div>
+                <div style={{ position: "absolute", left: "42%", right: "42%", top: "65%", bottom: "5%", background: "linear-gradient(180deg, #604030 0%, #3a2010 100%)", border: "1px solid #1a0808" }} />
+            </div>
+        )
+    }
+
+    // === v3.24e : FLEUR DU BONHEUR 🌸 — fleur rose vif avec halo lumineux ===
+    if (tile === "happyFlower") {
+        return (
+            <div style={{ position: "relative", background: C.grass, overflow: "visible" }}>
+                {/* Tige verte */}
+                <div style={{ position: "absolute", left: "47%", right: "47%", top: "55%", bottom: "10%", background: "#48a830" }} />
+                {/* 5 pétales rose vif */}
+                <div style={{ position: "absolute", top: "20%", left: "35%", width: "30%", height: "30%", background: "#ff80c8", borderRadius: "50%", boxShadow: "0 0 6px rgba(255, 128, 200, 0.7)" }} />
+                <div style={{ position: "absolute", top: "30%", left: "20%", width: "22%", height: "22%", background: "#ffa0d8", borderRadius: "50%" }} />
+                <div style={{ position: "absolute", top: "30%", left: "58%", width: "22%", height: "22%", background: "#ffa0d8", borderRadius: "50%" }} />
+                <div style={{ position: "absolute", top: "10%", left: "30%", width: "22%", height: "22%", background: "#ffa0d8", borderRadius: "50%" }} />
+                <div style={{ position: "absolute", top: "10%", left: "48%", width: "22%", height: "22%", background: "#ffa0d8", borderRadius: "50%" }} />
+                {/* Cœur jaune */}
+                <div style={{ position: "absolute", top: "27%", left: "42%", width: "16%", height: "16%", background: "#ffeb50", borderRadius: "50%", boxShadow: "inset -1px -1px 0 #c8a020" }} />
+            </div>
+        )
+    }
+
     // === v3.24a : OLIVIER 🫒 — petit feuillage argenté gris-vert + olives vert-olive ===
     if (tile === "oliveTree" || tile === "oliveTreeEmpty") {
         const harvested = tile === "oliveTreeEmpty"

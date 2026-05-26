@@ -358,7 +358,7 @@ export const PEPITEVILLE_APPLE_TREES: Array<{ id: string; x: number; y: number }
 //
 // Bonus croissant, max décroissant : plus l'arbre est rare, plus il donne.
 // ============================================================
-export type TreeKind = "apple" | "cherry" | "pear" | "peach" | "coconut" | "poison" | "olive"
+export type TreeKind = "apple" | "cherry" | "pear" | "peach" | "coconut" | "poison" | "olive" | "boost" | "divisor"
 
 export interface TreeKindConfig {
     kind: TreeKind
@@ -385,6 +385,10 @@ export const TREE_KIND_CONFIGS: Record<TreeKind, TreeKindConfig> = {
     poison:   { kind: "poison",   emoji: "🟣", label: "Maléfica",    tile: "poisonTree",   emptyTile: "poisonTreeEmpty",   bonusReps: -30, maxPerDay: 3 },
     // 🫒 Olivier de Lasagnas Vegas : généreux mais petites portions. 7×20 reps = 140/jour si on récolte tout.
     olive:    { kind: "olive",    emoji: "🫒", label: "Olivier",     tile: "oliveTree",    emptyTile: "oliveTreeEmpty",    bonusReps: 20,  maxPerDay: 7 },
+    // ✨ Arbre Boost : DOUBLE l'énergie actuelle. 1×/jour. bonusReps signal (0 = effet spécial géré côté serveur).
+    boost:    { kind: "boost",    emoji: "✨", label: "Arbre Boost", tile: "boostTree",    emptyTile: "boostTreeEmpty",    bonusReps: 0,   maxPerDay: 1 },
+    // ⚠️ Arbre Divisor : DIVISE l'énergie par 2. 1×/jour. Look trompeur (proche du boost) — joueur doit reconnaître.
+    divisor:  { kind: "divisor",  emoji: "⚠️", label: "Arbre Divisor", tile: "divisorTree", emptyTile: "divisorTreeEmpty",  bonusReps: 0,   maxPerDay: 1 },
 }
 
 /** Lookup d'un config arbre par son tile (utile pour TileCell). */
@@ -431,6 +435,15 @@ export const ALL_TREES: TreeInstance[] = [
     { id: "vegas_pear_1", mapId: "lasagnas_vegas", x: 3, y: 21, kind: "pear" },
     // === 🍑 Pêcher Vegas (sud-est près du casino VIP) ===
     { id: "vegas_peach_1", mapId: "lasagnas_vegas", x: 20, y: 21, kind: "peach" },
+    // === v3.24e — Arbres du parc grass_sud (entre Macaron'île et Muscuville) ===
+    { id: "park_cherry_1",  mapId: "grass_sud", x: 2, y: 2,  kind: "cherry" },
+    { id: "park_pear_1",    mapId: "grass_sud", x: 6, y: 2,  kind: "pear" },
+    { id: "park_peach_1",   mapId: "grass_sud", x: 2, y: 5,  kind: "peach" },
+    { id: "park_poison_1",  mapId: "grass_sud", x: 6, y: 5,  kind: "poison" },
+    { id: "park_poison_2",  mapId: "grass_sud", x: 2, y: 8,  kind: "poison" },
+    { id: "park_boost_1",   mapId: "grass_sud", x: 6, y: 8,  kind: "boost" },
+    { id: "park_divisor_1", mapId: "grass_sud", x: 2, y: 11, kind: "divisor" },
+    { id: "park_apple_1",   mapId: "grass_sud", x: 6, y: 11, kind: "apple" },
 ]
 
 /** Helper : tous les arbres d'une map donnée. */
@@ -1064,10 +1077,37 @@ function buildGrassSud(): TileType[][] {
     m[GRASS_SUD_H - 1][4] = "grassTall"
     // Chemin vertical central
     for (let y = 1; y < GRASS_SUD_H - 1; y++) m[y][4] = "path"
-    // Touffes de hautes herbes décoratives sur les côtés
-    m[3][2] = "grassTall"; m[3][6] = "grassTall"
-    m[6][2] = "grassTall"; m[6][6] = "grassTall"
-    m[10][2] = "grassTall"; m[10][6] = "grassTall"
+
+    // v3.24e — Rework "parc des hautes herbes" :
+    // - Touffes denses de grassTall partout (sauf chemin et arbres) pour rendu plus vivant
+    for (let y = 1; y < GRASS_SUD_H - 1; y++) {
+        for (let x = 1; x < GRASS_SUD_W - 1; x++) {
+            if (m[y][x] === "grass" && Math.abs(x - 4) > 1) {
+                // 60% de chance de touffe (deterministic-ish via x+y parity)
+                if ((x * 3 + y * 7) % 5 < 3) m[y][x] = "grassTall"
+            }
+        }
+    }
+
+    // === Arbres du parc ===
+    m[2][2] = "cherryTree"      // 🍒 cerisier nord-ouest
+    m[2][6] = "pearTree"        // 🍐 poirier nord-est
+    m[5][2] = "peachTree"       // 🍑 pêcher milieu-ouest
+    m[5][6] = "poisonTree"      // 🟣 maléfica 1 milieu-est (piège)
+    m[8][2] = "poisonTree"      // 🟣 maléfica 2 sud-ouest (piège)
+    m[8][6] = "boostTree"       // ✨ arbre BOOST sud-est (double énergie)
+    m[11][2] = "divisorTree"    // ⚠️ arbre DIVISOR sud-extrême-ouest (divise par 2)
+    m[11][6] = "appleTree"      // 🍎 pommier (bonus normal pour récompenser exploration)
+
+    // === Fleurs du parc ===
+    m[3][3] = "flowerR"; m[3][5] = "flowerY"
+    m[7][3] = "flowerY"; m[7][5] = "flowerR"
+    m[10][5] = "flowerR"
+
+    // === Fleur du bonheur (rare, +30 happiness pour tamagotchi qui s'arrête dessus) ===
+    m[6][3] = "happyFlower"     // 🌸 fleur magique, 1×/jour
+    m[9][5] = "happyFlower"     // 🌸 deuxième pour augmenter les chances
+
     return m
 }
 

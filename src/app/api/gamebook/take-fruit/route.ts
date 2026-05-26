@@ -119,14 +119,25 @@ export async function POST(req: NextRequest) {
     // v3.10.1 — Reward ajusté au ratio de difficulté pour cohérence
     // v3.23d — Bonus dépend du type d'arbre (apple 80, cherry 40, pear 60, peach 100, coconut 150).
     //          Maléfica (poison) a un bonus NÉGATIF (-30) → bypass applyRatio.
+    // v3.24e — Arbres BOOST et DIVISOR : effet spécial sur l'énergie actuelle (pas bonusReps fixe).
     const ratio = await getUserDifficultyRatio(userId)
-    const reward = treeConfig.bonusReps >= 0
-        ? applyRatio(treeConfig.bonusReps, ratio)
-        : treeConfig.bonusReps  // malus à pleine intensité
+    const snap = readEnergySnapshot(progress, today)
+    const currentAvailable = computeAvailableEnergy(todayReps, snap)
+    let reward: number
+    if (treeInstance.kind === "boost") {
+        // Boost : double l'énergie actuelle (= reward = currentAvailable)
+        reward = Math.max(1, currentAvailable)
+    } else if (treeInstance.kind === "divisor") {
+        // Divisor : divise par 2 → reward = -floor(currentAvailable / 2)
+        reward = -Math.floor(currentAvailable / 2)
+    } else if (treeConfig.bonusReps >= 0) {
+        reward = applyRatio(treeConfig.bonusReps, ratio)
+    } else {
+        reward = treeConfig.bonusReps  // malus à pleine intensité (Maléfica)
+    }
 
     // v3.23f — Modèle bonusSurplus : reward positif → bonusSurplus++. Reward négatif (Maléfica)
     //          → consomme bonusSurplus d'abord puis spentToday. Plus de perte à minuit.
-    const snap = readEnergySnapshot(progress, today)
     const nextSnap = grantRewardOnSnapshot(snap, reward, today)
     const newState: FruitsTakenState = {
         date: today,

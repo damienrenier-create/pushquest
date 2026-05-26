@@ -39,6 +39,11 @@ export type TileType =
     | "poisonTree" | "poisonTreeEmpty"        // 💀 PIÈGE : -30 reps × 3/jour
     // === v3.24a : Olivier (Lasagnas Vegas) — 7 olives/jour à +20 reps ===
     | "oliveTree" | "oliveTreeEmpty"          // 🫒 commun généreux : 20 reps × 7/jour
+    // === v3.24e : Arbres magiques de grass_sud ===
+    | "boostTree" | "boostTreeEmpty"          // ✨ DOUBLE l'énergie actuelle (1×/jour)
+    | "divisorTree" | "divisorTreeEmpty"      // ⚠️ DIVISE l'énergie par 2 (1×/jour, look trompeur)
+    // === v3.24e : Fleur du bonheur (pour le tamagotchi) ===
+    | "happyFlower"                            // 🌸 +30 happiness quand l'animal s'arrête dessus (1×/jour)
     // === v3.24a : Lasagnas Vegas — route asphalte (voitures circulent dessus, écrasement -50% reps) ===
     | "road"
     // === v3.8.2 : Tour des Pâtes Aiguës (Hautes-Pâtes) ===
@@ -194,6 +199,10 @@ export const BLOCKING_TILES: TileType[] = [
     "poisonTree", "poisonTreeEmpty",
     // v3.24a — Olivier (Lasagnas Vegas)
     "oliveTree", "oliveTreeEmpty",
+    // v3.24e — Arbres magiques grass_sud
+    "boostTree", "boostTreeEmpty",
+    "divisorTree", "divisorTreeEmpty",
+    "happyFlower",
     // v3.24a — Route Vegas (voitures + écrasement)
     "road",
     // v3.8.2 — décor tour des Pâtes Aiguës

@@ -2406,8 +2406,8 @@ export default function MapClient({
         // v3.8.1 — Arbre fruitier devant ?
         // v3.23d — Détection unifiée pour tous les types d'arbres (apple/cherry/pear/peach/coconut/poison/olive)
         // v3.24a-4 — Si arbre VIDE + arrosoir intact → propose d'arroser pour faire repousser
-        const TREE_TILES = ["appleTree", "cherryTree", "pearTree", "peachTree", "coconutTree", "poisonTree", "oliveTree"]
-        const TREE_EMPTY_TILES = ["appleTreeEmpty", "cherryTreeEmpty", "pearTreeEmpty", "peachTreeEmpty", "coconutTreeEmpty", "poisonTreeEmpty", "oliveTreeEmpty"]
+        const TREE_TILES = ["appleTree", "cherryTree", "pearTree", "peachTree", "coconutTree", "poisonTree", "oliveTree", "boostTree", "divisorTree"]
+        const TREE_EMPTY_TILES = ["appleTreeEmpty", "cherryTreeEmpty", "pearTreeEmpty", "peachTreeEmpty", "coconutTreeEmpty", "poisonTreeEmpty", "oliveTreeEmpty", "boostTreeEmpty", "divisorTreeEmpty"]
         if (TREE_EMPTY_TILES.includes(tile)) {
             const tree = ALL_TREES.find(
                 (t) => t.mapId === state.mapId && t.x === front.x && t.y === front.y,
@@ -2774,7 +2774,7 @@ export default function MapClient({
                                 // → on rend la variante "vide" (sans fruits). Compteur perso, visuel perso.
                                 // v3.23d — Détection unifiée pour les 6 types d'arbres via ALL_TREES.
                                 let effectiveTile = tile
-                                const TREE_TILE_NAMES = ["appleTree", "cherryTree", "pearTree", "peachTree", "coconutTree", "poisonTree"]
+                                const TREE_TILE_NAMES = ["appleTree", "cherryTree", "pearTree", "peachTree", "coconutTree", "poisonTree", "oliveTree", "boostTree", "divisorTree"]
                                 if (TREE_TILE_NAMES.includes(tile)) {
                                     const tree = ALL_TREES.find(
                                         (t) => t.mapId === state.mapId && t.x === x && t.y === y,
