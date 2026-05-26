@@ -1200,6 +1200,59 @@ export const MUSCUVILLE_SIGNS: Sign[] = [
     { x: 1, y: 6, text: "🪨 ROCHERS — PASSAGE VEGAS\nPrix : 4000 reps (–25% par champion d'arène battu).\n4/4 champions battus → passage GRATUIT." },
 ]
 
+// v3.39 — Topics de la BIBLIOTHÈQUE DE MUSCUVILLE (MIRABELLE, sœur de la bibliothécaire Macaron).
+// Layout identique à la biblio Macaron (cf. buildBibliothequeMuscuville).
+export const BIBLIOTHEQUE_MUSCU_TOPICS: BiblioTopic[] = [
+    // Rangée nord (y=1) : 9 slots pour ARBRES du Nexus
+    {
+        x: 2, y: 1, kind: "archives" as const,
+        title: "Arbres du Nexus — Vue d'ensemble",
+        text: "9 essences répertoriées dans le Nexus :\n\n🍎 Pommier (+80 reps × 3/jour)\n🍒 Cerisier (+40 × 5)\n🍐 Poirier (+60 × 4)\n🍑 Pêcher (+100 × 2)\n🥥 Cocotier (+150 × 1, ultra-rare)\n🟣 Maléfica (-30 × 3, piège)\n🫒 Olivier (+20 × 7, Vegas)\n✨ Arbre Boost (×2 énergie, 1×/jour, grass_sud)\n⚠️ Arbre Divisor (÷2, 1×/jour, look trompeur)\n\nDemande-moi le LIVRE DES ARBRES quand tu en auras croisé au moins 3.",
+    },
+    {
+        x: 6, y: 1, kind: "archives" as const,
+        title: "Règles du bonheur de l'animal",
+        text: "Le bonheur de ton compagnon évolue en continu :\n\n🟢 NOURRIR (Corned Pâtes) : +30\n🟢 DOC PROTÉINE (véto Muscu, 1×/jour) : reset 100\n🟢 HÔTEL Vegas (1×/jour) : +30\n🟢 ARÈNE Manouche victoire : +5\n🟢 ARBRE happyFlower (grass_sud) : +30\n🟢 BATTRE un défi PNJ : +10\n\n🔴 24h sans connexion : -10\n🔴 -1 par 50 pas (intérieurs compris)\n🔴 Animal en sac > 24h : -1/jour\n🔴 BOIRE ta gourde sans en donner : -1 (sac) ou -3 (visible)\n🔴 CRASH Stop ou Encore : -3\n🔴 FRUIT POISON mangé : -5\n🔴 BRUTE Vegas (lying) : -2\n\nSi le bonheur tombe à 0 : l'animal refuse d'évoluer.",
+    },
+    {
+        x: 10, y: 1, kind: "archives" as const,
+        title: "Mont Pasta-Ventoux — Records",
+        text: "100 cases verticales. Vélo obligatoire.\n\nCoût/case selon vélo :\n🚲 Vieux Vélo : 8 reps\n🚴 Vélo Sport : 4 reps\n🚵 Vélo Pro : 2 reps\n\nMultiplicateur cadence (BPM) :\n💀 <30 ou ≥100 : ×3.0 (épuisement/explosion)\n🐌 30-59 ou 81-99 : ×1.5 (mauvais rythme)\n✨ 60-80 : ×0.5 (ZONE IDÉALE)\n\nDescente : 1 pas down = 10 cases gratuites.\nSommet conquis = badge Conquérant 500 XP + accès arène Muscu.",
+    },
+    // Rangée thématique (y=3)
+    {
+        x: 2, y: 3, kind: "archives" as const,
+        title: "Champions de l'arène — Palmarès",
+        text: "4 champions historiques de Muscuville :\n\n🧱 Champion du Gainage (coin NO)\n💪 Champion des Pompes (coin NE)\n🪢 Championne des Tractions (coin SO)\n🦵 Champion des Squats (coin SE)\n\n1ʳᵉ confrontation : bats TON record all-time sur l'exo.\nRevanche (après 1ʳᵉ gagnée) : plus gros VOLUME du jour all-time → badge 800 XP.\n\nChaque champion battu = -25% sur le prix des rochers (4000 reps).",
+    },
+    {
+        x: 6, y: 3, kind: "archives" as const,
+        title: "Géographie de Muscuville",
+        text: "Le village des athlètes au sud du Nexus.\n\n🏠 Bâtiments :\n• Magasin de vélos (PELOTON) — indispensable pour le Mont\n• Gymnase (BICEPS)\n• Casino\n• Salle des concours (POMPATOR/SQUATILUS/TIROIR — accès après badge Conquérant)\n• Arène (4 champions — accès après badge Conquérant)\n• Bibliothèque (où tu es)\n\n🌍 Sorties :\n↓ Sud : Mont Pasta-Ventoux\n← Ouest : Rochers vers Lasagnas Vegas (prix progressif)\n→ Est : Forêt hantée (fermée)\n↑ Nord : grass_sud + Macaron'île",
+    },
+    {
+        x: 10, y: 3, kind: "archives" as const,
+        title: "Histoire de Muscuville",
+        text: "Fondée par les frères MUSCULON il y a 50 ans. Devenue capitale officielle des athlètes du Nexus.\n\nLe concours intersalle annuel attire toujours les meilleurs. Les rochers à l'ouest empêchent traditionnellement les non-conquérants de Mont d'aller à Vegas — une mesure de protection contre l'addiction au jeu.\n\n*MIRABELLE écrit ses propres chroniques. Demande-lui si elle accepte de te les lire.*",
+    },
+    // Archives (y=7)
+    {
+        x: 2, y: 7, kind: "archives" as const,
+        title: "Chronique du Mont — Première ascension",
+        text: "Personne ne sait qui a fait la première ascension. On dit que c'était une femme âgée, sans vélo, en sandales. Elle a regardé le sommet pendant 3 jours puis a marché jusqu'en haut.\n\nDepuis, le badge Conquérant porte son symbole — un sommet enneigé sur fond bleu.",
+    },
+    {
+        x: 6, y: 7, kind: "archives" as const,
+        title: "Chronique des Champions",
+        text: "Les 4 champions de l'arène ne sont pas natifs de Muscuville. Ils viennent d'horizons divers et se sont rencontrés au Mont, lors d'un entraînement collectif. Depuis, ils gardent l'arène ensemble.\n\nPersonne ne sait leurs vrais noms — ils n'utilisent que leurs disciplines.",
+    },
+    {
+        x: 10, y: 7, kind: "archives" as const,
+        title: "Index des biblios",
+        text: "Cette bibliothèque est gérée par MIRABELLE, érudite des arbres.\n\nSa sœur tient la BIBLIO de Macaron'île, spécialisée dans les animaux. Les deux soeurs se haïssent (légère rivalité fraternelle) mais respectent profondément leur travail mutuel.\n\nPour le LIVRE DES ARBRES : c'est ici, pas à Macaron. Sa sœur le consulte mais ne le donne pas.",
+    },
+]
+
 // v3.39 — Signs de la mini-map sommet du Mont
 export const MONT_SOMMET_SIGNS: Sign[] = [
     { x: 1, y: 2, text: "🌬️ VUE PANORAMIQUE\nDe ce sommet, tu vois tout l'archipel. Bourg-Boulette est minuscule au nord, Macaron'île à l'est, Vegas au loin." },

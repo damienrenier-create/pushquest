@@ -52,6 +52,7 @@ import {
     LAMER_SPAWN_FROM_MACARONILE,
     PAPA_TABLEAUX,
     BIBLIOTHEQUE_TOPICS,
+    BIBLIOTHEQUE_MUSCU_TOPICS,
     INDOOR_MAP_IDS,
 } from "@/lib/gamebook/maps"
 import {
@@ -2789,9 +2790,10 @@ export default function MapClient({
             return
         }
 
-        // v3.18 — Dans la bibliothèque : interactions sur bookshelf / statue / lectern via BIBLIOTHEQUE_TOPICS
-        if (state.mapId === "bibliotheque" && (tile === "bookshelf" || tile === "statue" || tile === "lectern" || tile === "shopShelf")) {
-            const topic = BIBLIOTHEQUE_TOPICS.find((t) => t.x === front.x && t.y === front.y)
+        // v3.18 / v3.39 — Bibliothèque Macaron OU Muscuville : interactions sur bookshelf / statue / lectern
+        if ((state.mapId === "bibliotheque" || state.mapId === "bibliotheque_muscuville") && (tile === "bookshelf" || tile === "statue" || tile === "lectern" || tile === "shopShelf")) {
+            const topicsSet = state.mapId === "bibliotheque_muscuville" ? BIBLIOTHEQUE_MUSCU_TOPICS : BIBLIOTHEQUE_TOPICS
+            const topic = topicsSet.find((t) => t.x === front.x && t.y === front.y)
             if (topic) {
                 if (topic.kind === "animal_joueur") {
                     setPopup({
