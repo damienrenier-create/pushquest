@@ -3050,7 +3050,12 @@ export default function MapClient({
                 <div
                     style={{
                         position: "relative",
-                        background: state.mapId === "cave" ? "#a89888" : "#7bb858",
+                        // v3.31 — Background spécial pour mont_pasta_ventoux : gradient ciel → terre
+                        background: state.mapId === "cave"
+                            ? "#a89888"
+                            : state.mapId === "mont_pasta_ventoux"
+                                ? "linear-gradient(180deg, #87ceeb 0%, #b0d8e8 30%, #d8c890 60%, #a08850 90%, #604030 100%)"
+                                : "#7bb858",
                         overflow: "hidden",
                         border: "2px solid #000",
                     }}
@@ -3159,6 +3164,68 @@ export default function MapClient({
                     {/* Monstre pendant cinématique pionnier (sur Route 1, près de l'arbre) */}
                     {cinematic?.kind === "pioneer" && state.mapId === "route1" && (
                         <MonsterSpriteR x={state.posX} y={state.posY - 1} mapW={map.width} mapH={map.height} />
+                    )}
+
+                    {/* v3.31 — Mont Pasta-Ventoux : overlays décor pseudo-3D
+                        - Nuages flottants en haut, montagnes lointaines, brume au sommet.
+                        - Donne une perception de profondeur en vue verticale. */}
+                    {state.mapId === "mont_pasta_ventoux" && (
+                        <>
+                            {/* Nuages en haut (proche du sommet) */}
+                            <div style={{
+                                position: "absolute", top: "2%", left: "5%",
+                                fontSize: "calc(min(2vw, 14px))", opacity: 0.7,
+                                pointerEvents: "none", zIndex: 6,
+                            }}>☁️</div>
+                            <div style={{
+                                position: "absolute", top: "5%", right: "8%",
+                                fontSize: "calc(min(2vw, 14px))", opacity: 0.6,
+                                pointerEvents: "none", zIndex: 6,
+                            }}>☁️</div>
+                            {/* Montagnes lointaines à mi-hauteur */}
+                            <div style={{
+                                position: "absolute", top: "10%", left: "2%",
+                                fontSize: "calc(min(3vw, 22px))", opacity: 0.4,
+                                pointerEvents: "none", zIndex: 5,
+                            }}>🏔️</div>
+                            <div style={{
+                                position: "absolute", top: "15%", right: "3%",
+                                fontSize: "calc(min(3vw, 22px))", opacity: 0.4,
+                                pointerEvents: "none", zIndex: 5,
+                            }}>⛰️</div>
+                            {/* Arbres décor en flanc (forêt sur les côtés) */}
+                            <div style={{
+                                position: "absolute", top: "35%", left: "1%",
+                                fontSize: "calc(min(2vw, 14px))", opacity: 0.6,
+                                pointerEvents: "none", zIndex: 5,
+                            }}>🌲</div>
+                            <div style={{
+                                position: "absolute", top: "45%", right: "1%",
+                                fontSize: "calc(min(2vw, 14px))", opacity: 0.6,
+                                pointerEvents: "none", zIndex: 5,
+                            }}>🌲</div>
+                            <div style={{
+                                position: "absolute", top: "60%", left: "2%",
+                                fontSize: "calc(min(2vw, 14px))", opacity: 0.7,
+                                pointerEvents: "none", zIndex: 5,
+                            }}>🌳</div>
+                            <div style={{
+                                position: "absolute", top: "70%", right: "2%",
+                                fontSize: "calc(min(2vw, 14px))", opacity: 0.7,
+                                pointerEvents: "none", zIndex: 5,
+                            }}>🌳</div>
+                            {/* Roches au pied du mont */}
+                            <div style={{
+                                position: "absolute", top: "85%", left: "5%",
+                                fontSize: "calc(min(2vw, 14px))", opacity: 0.8,
+                                pointerEvents: "none", zIndex: 5,
+                            }}>🪨</div>
+                            <div style={{
+                                position: "absolute", top: "88%", right: "6%",
+                                fontSize: "calc(min(2vw, 14px))", opacity: 0.8,
+                                pointerEvents: "none", zIndex: 5,
+                            }}>🪨</div>
+                        </>
                     )}
 
                     {/* Joueur principal */}
