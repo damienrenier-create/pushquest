@@ -96,6 +96,8 @@ export async function GET() {
             // v4.0 Phase 1.D.bis — gate sérum
             unlocked: d.unlockedAt !== null && d.unlockedAt !== undefined,
             unlockedAt: d.unlockedAt ?? null,
+            // v4.0 Phase 3 — Saiyan : points en attente de répartition
+            pendingStatPoints: d.pendingStatPoints ?? 0,
             // Tracking Saiyan (visible côté UI)
             saiyan: {
                 energySpentThisLevel: d.energySpentThisLevel,

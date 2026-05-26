@@ -136,6 +136,12 @@ model Daemon {
   //   set   = 👾 DAEMON déverrouillé après usage du Sérum de Poussière
   //           (drop du chef mafia Team Boulette, pré-Pastagone)
   unlockedAt      DateTime?
+  // Saiyan level up (v4.0 Phase 3) :
+  //   points en attente de répartition manuelle entre les 5 stats (F/V/D/I/E).
+  //   Crédités automatiquement au level up combat (5-9 points par level selon
+  //   effort = energySpentThisLevel + résilience = koCountThisLevel + difficulté).
+  //   Le joueur dépense via POST /api/gamebook/daemon/allocate-points.
+  pendingStatPoints Int @default(0)
   // Timestamps
   lastFedAt       DateTime?
   lastKoAt        DateTime?

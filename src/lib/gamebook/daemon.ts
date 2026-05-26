@@ -191,6 +191,37 @@ export function levelFromXp(xp: number): number {
 }
 
 // ============================================================
+// v4.0 Phase 3 — Saiyan : nb de points à répartir après un level up
+//
+// Base 7, modulé par l'effort + la résilience + la difficulté.
+// Clamp [5, 9].
+//
+//   - energySpentThisLevel ≥ 100 reps → +1 (effort prouvé)
+//   - koCountThisLevel ≥ 1            → +1 (résilience face à la défaite)
+//   - hardBattlesCount > easy×2       → +1 (a affronté du costaud ce level)
+//   - easyBattlesCount > hard×2       → −1 (n'a tapé que sur des sacs)
+//
+// Idée Saiyan : tu deviens plus fort en frôlant la mort.
+// ============================================================
+export const SAIYAN_POINTS_MIN = 5
+export const SAIYAN_POINTS_MAX = 9
+export const SAIYAN_POINTS_BASE = 7
+
+export function computeSaiyanPoints(d: {
+    energySpentThisLevel: number
+    koCountThisLevel: number
+    easyBattlesCount: number
+    hardBattlesCount: number
+}): number {
+    let pts = SAIYAN_POINTS_BASE
+    if (d.energySpentThisLevel >= 100) pts += 1
+    if (d.koCountThisLevel >= 1) pts += 1
+    if (d.hardBattlesCount > d.easyBattlesCount * 2) pts += 1
+    if (d.easyBattlesCount > d.hardBattlesCount * 2 && d.hardBattlesCount > 0) pts -= 1
+    return Math.max(SAIYAN_POINTS_MIN, Math.min(SAIYAN_POINTS_MAX, pts))
+}
+
+// ============================================================
 // Auto-migration : tamagotchi (Json) → Daemon row slot=1
 // ============================================================
 /**

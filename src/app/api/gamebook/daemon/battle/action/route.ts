@@ -39,6 +39,7 @@ import {
     computeMaxHp,
     happinessMultiplier,
     computeCritRate,
+    computeSaiyanPoints,
     type DaemonType,
     type Morphology,
 } from "@/lib/gamebook/daemon"
@@ -191,6 +192,7 @@ export async function POST(req: NextRequest) {
 
     // Si on a gagné de l'XP : ajoute + check level up
     let leveledUp = false
+    let saiyanPointsAwarded = 0
     let newCombatLevel = leader.combatLevel
     if (result.xpEarned > 0) {
         const newXp = (leader.combatXp ?? 0) + result.xpEarned
@@ -199,6 +201,17 @@ export async function POST(req: NextRequest) {
         if (newCombatLevel > leader.combatLevel) {
             playerData.combatLevel = newCombatLevel
             leveledUp = true
+            // v4.0 Phase 3 — Saiyan : calcule les points à répartir et crédite
+            saiyanPointsAwarded = computeSaiyanPoints({
+                energySpentThisLevel: (leader.energySpentThisLevel ?? 0) + result.energySpentDelta,
+                koCountThisLevel: leader.koCountThisLevel ?? 0,
+                easyBattlesCount: leader.easyBattlesCount ?? 0,
+                hardBattlesCount: leader.hardBattlesCount ?? 0,
+            })
+            playerData.pendingStatPoints = (leader.pendingStatPoints ?? 0) + saiyanPointsAwarded
+            // Reset trackers per-level
+            playerData.energySpentThisLevel = 0
+            playerData.koCountThisLevel = 0
         }
         playerData.battlesTotal = (leader.battlesTotal ?? 0) + 1
     } else if (newState.phase === "ended" && newState.result === "defeat") {
@@ -240,6 +253,7 @@ export async function POST(req: NextRequest) {
             leveledUp,
             newCombatLevel,
             nextLevelXp: xpForLevel(Math.min(DAEMON_LEVEL_MAX, newCombatLevel + 1)),
+            saiyanPointsAwarded,
         },
     })
 }

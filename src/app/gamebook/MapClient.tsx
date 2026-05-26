@@ -99,6 +99,7 @@ import { PEPITO_DIALOGUE_FIRST, MONT_SUMMIT_LINES, FRANSS_JOKE_INTRO_LINES, FRAN
 import TamagotchiModal from "./TamagotchiModal"
 import DaemonTeamModal from "./DaemonTeamModal"
 import BattleModal from "./BattleModal"
+import SaiyanLevelUpModal from "./SaiyanLevelUpModal"
 import type { BattleState } from "@/lib/gamebook/battleState"
 import type { TamagotchiView } from "@/lib/gamebook/tamagotchi"
 import BibliothequeModal from "./BibliothequeModal"
@@ -262,6 +263,8 @@ export default function MapClient({
     // v4.0 Phase 1.D.bis Option B — true si au moins un Daemon a reçu le sérum
     // (conditionne le label "🐾 ANIMAUX"/"👾 DAEMON" dans le StartMenu).
     const [hasUnlockedDaemon, setHasUnlockedDaemon] = useState<boolean>(false)
+    // v4.0 Phase 3 — Modal Saiyan level up (s'ouvre après combat si pending > 0)
+    const [showSaiyanModal, setShowSaiyanModal] = useState<boolean>(false)
     // v3.27 — Mode "rangé dans le sac" : si true, le sprite compagnon est caché de la map
     const [tamagotchiInBag, setTamagotchiInBag] = useState<boolean>(false)
     // v3.27 — Modal de choix (3ᵉ interaction dans la minute : Parler / Ranger)
@@ -1671,7 +1674,7 @@ export default function MapClient({
         }, 300)
 
         // v3.8 — si une modal est ouverte, le A est géré par la modal elle-même
-        if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore || showCockfight || showSlotMachine || showCasinoPatternVegas || showArena || showDaemonTeam || !!activeBattle) return
+        if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore || showCockfight || showSlotMachine || showCasinoPatternVegas || showArena || showDaemonTeam || !!activeBattle || showSaiyanModal) return
 
         // v3.23e — Blague PIAFFINI unique pour Franss : intercepter le premier A press (idem tryMove)
         if (
@@ -3131,7 +3134,7 @@ export default function MapClient({
         const handler = (e: KeyboardEvent) => {
             // v3.8 — si une modal est ouverte, on ne gère pas les touches ici
             // (StartMenu/InventoryModal/ShopModal/PlayerMapModal écoutent leurs propres events)
-            if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore || showCockfight || showSlotMachine || showCasinoPatternVegas || showArena || showDaemonTeam || !!activeBattle) return
+            if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore || showCockfight || showSlotMachine || showCasinoPatternVegas || showArena || showDaemonTeam || !!activeBattle || showSaiyanModal) return
 
             if (state.phase === "introMonster") {
                 if (e.key === "Enter" || e.key === " " || e.key.toLowerCase() === "a") {
@@ -3934,7 +3937,25 @@ export default function MapClient({
                             }
                         } catch { /* silent */ }
                     }}
-                    onClose={() => setActiveBattle(null)}
+                    onClose={async () => {
+                        setActiveBattle(null)
+                        // v4.0 Phase 3 — Si un Daemon a des points en attente, ouvre le modal Saiyan
+                        try {
+                            const r = await fetch("/api/gamebook/daemon/list", { cache: "no-store" })
+                            if (r.ok) {
+                                const j = await r.json()
+                                const hasPending = (j.daemons ?? []).some((d: { pendingStatPoints?: number }) => (d.pendingStatPoints ?? 0) > 0)
+                                if (hasPending) setShowSaiyanModal(true)
+                            }
+                        } catch { /* silent */ }
+                    }}
+                />
+            )}
+
+            {/* v4.0 Phase 3 — Modal Saiyan level up (répartition points) */}
+            {showSaiyanModal && (
+                <SaiyanLevelUpModal
+                    onClose={() => setShowSaiyanModal(false)}
                 />
             )}
 
