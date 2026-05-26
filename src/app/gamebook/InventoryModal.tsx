@@ -14,7 +14,7 @@ import { useState } from "react"
 import { ITEMS, readStored, readMaxCapacity, readDurability, isBrokenItem, type ItemDefinition } from "@/lib/gamebook/items"
 import type { InventoryEntry } from "@/lib/gamebook/inventory"
 
-type UseAction = "fill" | "drink" | "consume"
+type UseAction = "fill" | "drink" | "consume" | "feed_animal" | "drink_to_animal"
 type Pocket = "working" | "broken"
 
 export const POCKET_MAX_ITEMS = 15
@@ -25,9 +25,12 @@ interface Props {
     onUse: (itemKey: string, action: UseAction, amount?: number) => Promise<void>
     onView?: (itemKey: string, kind: "playerMap" | "treasureMap" | "tree_book") => void
     onClose: () => void
+    // v3.33 — Contexte pour activer les actions "donner à l'animal" chez le véto
+    mapId?: string
+    hasTamagotchi?: boolean
 }
 
-export default function InventoryModal({ inventory, availableEnergy, onUse, onView, onClose }: Props) {
+export default function InventoryModal({ inventory, availableEnergy, onUse, onView, onClose, mapId, hasTamagotchi }: Props) {
     const [activePocket, setActivePocket] = useState<Pocket>("working")
 
     const ownedAll = inventory
@@ -136,6 +139,8 @@ export default function InventoryModal({ inventory, availableEnergy, onUse, onVi
                             availableEnergy={availableEnergy}
                             onUse={onUse}
                             onView={onView}
+                            mapId={mapId}
+                            hasTamagotchi={hasTamagotchi}
                         />
                     ))}
                 </div>
@@ -204,12 +209,16 @@ function ItemRow({
     availableEnergy,
     onUse,
     onView,
+    mapId,
+    hasTamagotchi,
 }: {
     entry: InventoryEntry
     def: ItemDefinition
     availableEnergy: number
     onUse: (itemKey: string, action: UseAction, amount?: number) => Promise<void>
     onView?: (itemKey: string, kind: "playerMap" | "treasureMap" | "tree_book") => void
+    mapId?: string
+    hasTamagotchi?: boolean
 }) {
     const [fillInput, setFillInput] = useState<string>("10")
     const [busy, setBusy] = useState(false)
@@ -317,6 +326,16 @@ function ItemRow({
                     >
                         BOIRE TOUT
                     </button>
+                    {/* v3.33 — Donner à boire à l'animal (chez le véto uniquement) */}
+                    {mapId === "veterinaire" && hasTamagotchi && (
+                        <button
+                            onClick={() => doAction("drink_to_animal")}
+                            disabled={busy || stored < 10}
+                            style={btnStyle(busy || stored < 10, "#4a8030")}
+                        >
+                            🐾 DONNER À BOIRE
+                        </button>
+                    )}
                 </div>
             )}
 
@@ -338,7 +357,7 @@ function ItemRow({
             )}
 
             {isConsumable && !broken && (
-                <div style={{ marginTop: 8 }}>
+                <div style={{ marginTop: 8, display: "flex", gap: 4, flexWrap: "wrap" }}>
                     <button
                         onClick={() => doAction("consume")}
                         disabled={busy}
@@ -346,6 +365,16 @@ function ItemRow({
                     >
                         CONSOMMER
                     </button>
+                    {/* v3.33 — Donner à l'animal (corned_pates chez le véto) */}
+                    {mapId === "veterinaire" && hasTamagotchi && def.key === "corned_pates" && (
+                        <button
+                            onClick={() => doAction("feed_animal")}
+                            disabled={busy}
+                            style={btnStyle(busy, "#4a8030")}
+                        >
+                            🐾 DONNER À L'ANIMAL
+                        </button>
+                    )}
                 </div>
             )}
         </div>

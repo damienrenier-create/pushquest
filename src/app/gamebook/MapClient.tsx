@@ -3966,6 +3966,8 @@ export default function MapClient({
                 <InventoryModal
                     inventory={inventory}
                     availableEnergy={reps}
+                    mapId={state.mapId}
+                    hasTamagotchi={tamagotchi?.recovered === true}
                     onView={(_itemKey, kind) => {
                         if (kind === "playerMap") {
                             setShowInventory(false)
@@ -3995,6 +3997,31 @@ export default function MapClient({
                     }}
                     onUse={async (itemKey, action, amount) => {
                         try {
+                            // v3.33 — Actions "donner à l'animal" : routent vers les endpoints tamagotchi dédiés
+                            if (action === "feed_animal") {
+                                const res = await fetch("/api/gamebook/tamagotchi/feed-pates", { method: "POST" })
+                                const data = await res.json()
+                                if (data.ok) {
+                                    if (Array.isArray(data.inventory)) setInventory(data.inventory)
+                                    if (data.tamagotchi) setTamagotchi(data.tamagotchi)
+                                    if (data.message) setPopup({ kind: "info", text: data.message })
+                                } else {
+                                    setToast(data.reason || "Action impossible.")
+                                }
+                                return
+                            }
+                            if (action === "drink_to_animal") {
+                                const res = await fetch("/api/gamebook/tamagotchi/drink", { method: "POST" })
+                                const data = await res.json()
+                                if (data.ok) {
+                                    if (Array.isArray(data.inventory)) setInventory(data.inventory)
+                                    if (data.tamagotchi) setTamagotchi(data.tamagotchi)
+                                    if (data.message) setPopup({ kind: "info", text: data.message })
+                                } else {
+                                    setToast(data.reason || "Action impossible.")
+                                }
+                                return
+                            }
                             const res = await fetch("/api/gamebook/inventory/use", {
                                 method: "POST",
                                 headers: { "Content-Type": "application/json" },
