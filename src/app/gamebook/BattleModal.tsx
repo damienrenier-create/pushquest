@@ -30,7 +30,18 @@ interface ActionMeta {
     nextLevelXp: number
 }
 
-type MenuMode = "actions" | "attacks"
+type MenuMode = "actions" | "attacks" | "switch"
+
+interface TeamMember {
+    id: string
+    name: string
+    slotIndex: number
+    unlocked: boolean
+    currentHp: number
+    maxHp: number
+    type: string
+    combatLevel: number
+}
 
 export default function BattleModal({ initialState, onClose, onEnded }: Props) {
     const [state, setState] = useState<BattleState>(initialState)
@@ -38,12 +49,29 @@ export default function BattleModal({ initialState, onClose, onEnded }: Props) {
     const [menu, setMenu] = useState<MenuMode>("actions")
     const [lastMeta, setLastMeta] = useState<ActionMeta | null>(null)
     const [error, setError] = useState<string | null>(null)
+    const [team, setTeam] = useState<TeamMember[]>([])
 
     useEffect(() => {
         if (state.phase === "ended" && onEnded) {
             onEnded(state, lastMeta)
         }
     }, [state.phase])
+
+    // v4.0 Phase 2.D — Charge l'équipe Daemon une fois pour le menu switch.
+    useEffect(() => {
+        ; (async () => {
+            try {
+                const r = await fetch("/api/gamebook/daemon/list", { cache: "no-store" })
+                if (!r.ok) return
+                const j = await r.json()
+                const members: TeamMember[] = (j.daemons ?? []).map((d: { id: string; name: string; slotIndex: number; unlocked: boolean; currentHp: number; maxHp: number; type: string; combatLevel: number }) => ({
+                    id: d.id, name: d.name, slotIndex: d.slotIndex, unlocked: d.unlocked,
+                    currentHp: d.currentHp, maxHp: d.maxHp, type: d.type, combatLevel: d.combatLevel,
+                }))
+                setTeam(members)
+            } catch { /* silent */ }
+        })()
+    }, [state.playerDaemonId])
 
     const doAction = async (action: PlayerAction) => {
         if (busy || state.phase === "ended") return
@@ -138,13 +166,73 @@ export default function BattleModal({ initialState, onClose, onEnded }: Props) {
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                         <ActionBtn label="⚔️ ATTAQUE" onClick={() => setMenu("attacks")} busy={busy} />
                         <ActionBtn label="🎒 SAC" onClick={() => setError("Sac pas encore disponible en combat.")} busy={busy} />
-                        <ActionBtn label="🔄 DAEMON" onClick={() => setError("Switch pas encore disponible.")} busy={busy} />
+                        <ActionBtn
+                            label="🔄 DAEMON"
+                            onClick={() => setMenu("switch")}
+                            busy={busy}
+                            disabled={team.filter((t) => t.id !== state.playerDaemonId && t.unlocked && t.currentHp > 0).length === 0}
+                        />
                         <ActionBtn
                             label="🏃 FUITE"
                             onClick={() => doAction({ kind: "flee" })}
                             busy={busy}
                             disabled={!state.fleeAllowed}
                         />
+                    </div>
+                )}
+
+                {state.phase === "playerTurn" && menu === "switch" && (
+                    <div>
+                        <div style={{ fontSize: 10, opacity: 0.7, marginBottom: 6 }}>
+                            Choisis le Daemon qui prend le relais. L'ennemi attaquera gratuitement.
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 6 }}>
+                            {team.filter((t) => t.id !== state.playerDaemonId).map((t) => {
+                                const ko = t.currentHp <= 0
+                                const locked = !t.unlocked
+                                const disabled = ko || locked || busy
+                                return (
+                                    <button
+                                        key={t.id}
+                                        disabled={disabled}
+                                        onClick={() => doAction({ kind: "switch", daemonId: t.id })}
+                                        style={{
+                                            background: disabled ? "#333" : "#2a4a8a",
+                                            color: disabled ? "#666" : "#fff",
+                                            border: "1px solid " + (disabled ? "#555" : "#80a0d0"),
+                                            padding: 8, fontSize: 10, fontWeight: "bold",
+                                            cursor: disabled ? "not-allowed" : "pointer",
+                                            fontFamily: "monospace", textAlign: "left",
+                                        }}
+                                    >
+                                        <div>{t.name} (Slot {t.slotIndex})</div>
+                                        <div style={{ fontSize: 8, opacity: 0.7, marginTop: 2 }}>
+                                            {locked
+                                                ? "🔒 verrouillé"
+                                                : ko
+                                                    ? "💀 K.O."
+                                                    : <>HP {t.currentHp}/{t.maxHp} · Lv{t.combatLevel} · <span style={{ color: typeColor(t.type) }}>[{t.type}]</span></>}
+                                        </div>
+                                    </button>
+                                )
+                            })}
+                            {team.filter((t) => t.id !== state.playerDaemonId).length === 0 && (
+                                <div style={{ fontSize: 10, opacity: 0.7, gridColumn: "span 2", padding: 8 }}>
+                                    Pas d'autre Daemon dans l'équipe.
+                                </div>
+                            )}
+                        </div>
+                        <button
+                            onClick={() => setMenu("actions")}
+                            style={{
+                                width: "100%", background: "transparent",
+                                color: "#80a0d0", border: "1px solid #80a0d0",
+                                padding: 6, fontSize: 10, fontFamily: "monospace",
+                                cursor: "pointer",
+                            }}
+                        >
+                            ← Retour menu
+                        </button>
                     </div>
                 )}
 

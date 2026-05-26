@@ -203,10 +203,13 @@ export function applyPlayerAction(
     }
 
     // ============================================================
-    // SWITCH (Phase 2.B simplifié : pas encore géré, l'API renverra une erreur)
+    // SWITCH (Phase 2.D)
+    // Géré côté route /battle/action (besoin d'accès DB pour charger le Daemon
+    // cible). La transition pure ne sait pas faire de I/O. La route appelle
+    // applySwitchEnemyTurn() après avoir échangé state.player.
     // ============================================================
     if (action.kind === "switch") {
-        next.log.push({ kind: "info", text: "Switch pas encore implémenté." })
+        next.log.push({ kind: "info", text: "Switch traité côté route." })
         return { state: next, playerHpDelta, playerHappinessDelta, energySpentDelta, xpEarned }
     }
 
@@ -280,6 +283,34 @@ export function applyPlayerAction(
 
     next.turn += 1
     return { state: next, playerHpDelta, playerHappinessDelta, energySpentDelta, xpEarned }
+}
+
+// ============================================================
+// Phase 2.D — Après que la route a swappé state.player avec un autre Daemon,
+// l'ennemi attaque gratuitement (SWITCH_TURN_COST = 1).
+// ============================================================
+export function applySwitchEnemyTurn(
+    state: BattleState,
+    newPlayer: BattleActor,
+    rng: () => number = Math.random,
+): ApplyActionResult {
+    const next: BattleState = {
+        ...state,
+        log: [...state.log, { kind: "switch", text: `${newPlayer.name} entre dans l'arène !` }],
+        player: { ...newPlayer },
+        enemy: { ...state.enemy },
+        playerDaemonId: newPlayer.daemonId ?? state.playerDaemonId,
+    }
+    enemyAttackTurn(next, rng)
+    const playerHpDelta = next.player.currentHp - newPlayer.currentHp
+    if (next.player.currentHp <= 0) {
+        next.log.push({ kind: "faint", text: `${next.player.name} est K.O. !` })
+        next.log.push({ kind: "defeat", text: "Tu as perdu ce combat." })
+        next.phase = "ended"
+        next.result = "defeat"
+    }
+    next.turn += 1
+    return { state: next, playerHpDelta, playerHappinessDelta: 0, energySpentDelta: 0, xpEarned: 0 }
 }
 
 // ============================================================

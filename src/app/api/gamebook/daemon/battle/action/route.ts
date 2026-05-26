@@ -27,10 +27,21 @@ import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import {
     applyPlayerAction,
+    applySwitchEnemyTurn,
     type BattleState,
     type PlayerAction,
+    type BattleActor,
 } from "@/lib/gamebook/battleState"
-import { xpForLevel, levelFromXp, DAEMON_LEVEL_MAX } from "@/lib/gamebook/daemon"
+import {
+    xpForLevel,
+    levelFromXp,
+    DAEMON_LEVEL_MAX,
+    computeMaxHp,
+    happinessMultiplier,
+    computeCritRate,
+    type DaemonType,
+    type Morphology,
+} from "@/lib/gamebook/daemon"
 
 export const dynamic = "force-dynamic"
 
@@ -80,6 +91,88 @@ export async function POST(req: NextRequest) {
         player: { ...currentState.player, currentHp: leader.currentHp },
     }
 
+    // ============================================================
+    // Phase 2.D — SWITCH géré ici (besoin d'accès DB)
+    // ============================================================
+    if (body.action.kind === "switch") {
+        const targetDaemonId = body.action.daemonId
+        if (!targetDaemonId || targetDaemonId === leader.id) {
+            return NextResponse.json({ ok: false, reason: "Cible de switch invalide." }, { status: 400 })
+        }
+        const target = await (prisma as any).daemon.findUnique({ where: { id: targetDaemonId } })
+        if (!target || target.userId !== userId) {
+            return NextResponse.json({ ok: false, reason: "Daemon cible introuvable." }, { status: 404 })
+        }
+        if (!target.unlockedAt) {
+            return NextResponse.json({ ok: false, reason: `${target.name} n'est pas encore éveillé.` }, { status: 400 })
+        }
+        if (target.currentHp <= 0) {
+            return NextResponse.json({ ok: false, reason: `${target.name} est K.O.` }, { status: 400 })
+        }
+
+        // 1. Persiste le HP courant du Daemon sortant
+        await (prisma as any).daemon.update({
+            where: { id: leader.id },
+            data: { currentHp: leader.currentHp },
+        })
+
+        // 2. Construit le BattleActor du remplaçant (stats effectives + bonheur)
+        const happMult = happinessMultiplier(target.happiness)
+        const maxHp = computeMaxHp(target.baseEnd, target.combatLevel, target.bonusEnd)
+        const effI = Math.round((target.baseInt + target.bonusInt) * happMult)
+        const newPlayer: BattleActor = {
+            daemonId: target.id,
+            name: target.name,
+            type: target.type as DaemonType,
+            morphology: target.morphology as Morphology,
+            speciesLevel: target.speciesLevel,
+            combatLevel: target.combatLevel,
+            maxHp,
+            currentHp: target.currentHp,
+            force: Math.round((target.baseFor + target.bonusFor) * happMult),
+            vitesse: Math.round((target.baseVit + target.bonusVit) * happMult),
+            defense: Math.round((target.baseDef + target.bonusDef) * happMult),
+            intelligence: effI,
+            endurance: Math.round((target.baseEnd + target.bonusEnd) * happMult),
+            happiness: target.happiness,
+            critRate: computeCritRate(effI, target.happiness),
+            attacksEquipped: Array.isArray(target.attacksEquipped) ? target.attacksEquipped : ["charge"],
+        }
+
+        // 3. Switch + l'ennemi attaque le nouveau leader gratis (coût 1 tour)
+        const switchResult = applySwitchEnemyTurn(stateBefore, newPlayer)
+        const switchedState = switchResult.state
+
+        // 4. Persiste : HP du nouveau leader + activeBattle
+        const newTargetHp = Math.max(0, target.currentHp + switchResult.playerHpDelta)
+        await (prisma as any).daemon.update({
+            where: { id: target.id },
+            data: { currentHp: newTargetHp },
+        })
+
+        const switchProgressData: Record<string, unknown> = {}
+        if (switchedState.phase === "ended") {
+            switchProgressData.activeBattle = null
+        } else {
+            switchProgressData.activeBattle = switchedState as unknown as object
+        }
+        await (prisma as any).gamebookProgress.update({
+            where: { id: progress.id },
+            data: switchProgressData,
+        })
+
+        return NextResponse.json({
+            ok: true,
+            state: switchedState,
+            meta: { xpEarned: 0, energySpent: 0, playerHpDelta: switchResult.playerHpDelta,
+                playerHappinessDelta: 0, leveledUp: false,
+                newCombatLevel: target.combatLevel, nextLevelXp: xpForLevel(target.combatLevel + 1) },
+        })
+    }
+
+    // ============================================================
+    // Autres actions (attack / flee) — transition pure
+    // ============================================================
     const result = applyPlayerAction(stateBefore, body.action)
     const newState = result.state
 
