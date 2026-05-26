@@ -1319,6 +1319,53 @@ export const NPCS: NpcDefinition[] = [
     },
 
     // ============================================================
+    // v3.39 — Secrétaire de l'arène au sommet du Mont Pasta-Ventoux
+    // (mini-map mont_sommet, accessible après cinématique du sommet)
+    // ============================================================
+    {
+        id: "mont_secretaire",
+        name: "SECRÉTAIRE DE L'ARÈNE",
+        mapId: "mont_sommet",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "📋", color: "#8090a8" },
+        initialX: 3,
+        initialY: 3,
+        dialoguesAfter: [
+            "*Une silhouette en survêt, planchette à la main, t'attend au sommet.*",
+            "Tu as fait fort, athlète. Les 4 champions de Muscuville viennent juste de redescendre — ils ont fini leur échauffement ici en haut.",
+            "Va à l'arène centrale de Muscuville. Ils t'y attendent maintenant.",
+        ],
+        dialoguesAfterRevisit: [
+            "*Le secrétaire te salue d'un signe de tête.* Les champions sont à l'arène. Va les défier.",
+        ],
+    },
+
+    // ============================================================
+    // v3.39 — Réceptionniste de l'arène à Muscuville (devant la porte)
+    // Dialogue conditionnel selon montSummitReached.
+    // ============================================================
+    {
+        id: "arene_muscu_receptioniste",
+        name: "RÉCEPTIONNISTE DE L'ARÈNE",
+        mapId: "muscuville",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🛎️", color: "#a08040" },
+        // Devant la porte de l'arène (4, 13) — juste à côté
+        initialX: 3,
+        initialY: 14,
+        dialoguesAfter: [
+            "*La réceptionniste vérifie ses notes, l'air désolé.*",
+            "Les champions sont partis faire du vélo au Mont. Ils reviendront certainement plus tard.",
+            "Si tu veux les croiser, monte là-haut — peut-être tu pourras les conquérir avant qu'ils descendent.",
+        ],
+        dialoguesAfterRevisit: [
+            "*La réceptionniste te sourit.* Les champions sont à l'intérieur. Bon courage !",
+        ],
+    },
+
+    // ============================================================
     // v3.36 — Véto de Muscuville (DOC PROTÉINE) : remet happiness max 1×/jour
     // ============================================================
     {

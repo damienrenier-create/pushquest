@@ -145,6 +145,8 @@ const OUTDOOR_MAP_IDS = new Set([
     "mont_pasta_ventoux",
     // v3.24a — Lasagnas Vegas (outdoor)
     "lasagnas_vegas",
+    // v3.39 — Sommet du Mont (mini-map outdoor)
+    "mont_sommet",
 ])
 
 // v3.23b — Mont Pasta-Ventoux : calcul BPM via fenêtre glissante de 6 secondes.
@@ -891,11 +893,12 @@ export default function MapClient({
                     // Ajoute click au tracker cadence
                     const now = Date.now()
                     setCadenceClicks((prev) => [...prev.filter((t) => now - t < 10000), now])
-                    // Coût = bike.costPerCase × cadenceMultiplier
+                    // Coût = bike.costPerCase × cadenceMultiplier × ratio onboarding
                     const bpm = computeCadenceBPM(cadenceClicks)
                     const mult = cadenceCostMultiplier(bpm)
                     const baseCost = activeBike.def.capabilities.canRide?.costPerCase ?? 8
-                    const cost = Math.max(1, Math.round(baseCost * mult))
+                    // v3.39 — applyDifficultyRatio cohérent avec le reste du jeu (onboarding).
+                    const cost = applyDifficultyRatio(Math.max(1, Math.round(baseCost * mult)))
                     setReps((r) => Math.max(0, r - cost))
                     // Wear le vélo
                     spendEnergy(cost, "mont_climb", [activeBike.entry.itemKey]).catch(() => { /* silent */ })
@@ -921,6 +924,18 @@ export default function MapClient({
                 const conquered = (state as { montSummitReached?: boolean }).montSummitReached === true
                 if (!conquered) {
                     setToast("🔒 « Tu dois d'abord conquérir le Mont Pasta-Ventoux pour entrer ici. »")
+                    setState((s) => ({ ...s, direction: d }))
+                    return
+                }
+            }
+
+            // v3.39 — Gating de l'arène Muscuville : accessible uniquement après conquête du Mont
+            // (= badge Conquérant). Tant que !montSummitReached, les champions sont "partis faire
+            // du vélo" et la porte est fermée. Le réceptionniste devant la porte explique.
+            if (!("blocked" in result) && result.nextState.mapId === "arena_muscuville") {
+                const summit = (state as { montSummitReached?: boolean }).montSummitReached === true
+                if (!summit) {
+                    setToast("🔒 Les champions sont partis faire du vélo. Parle à la réceptionniste devant l'arène.")
                     setState((s) => ({ ...s, direction: d }))
                     return
                 }
@@ -1584,6 +1599,23 @@ export default function MapClient({
                     setToast("MUSCUVILLE")
                 }, 200)
             }
+            // v3.39 — Mont sommet (mini-map 6×6) sud → retour mont_pasta_ventoux (y=2)
+            if (
+                state.mapId === "mont_sommet" &&
+                result.nextState.posY === 6 &&
+                map.tiles[result.nextState.posY]?.[result.nextState.posX] === "grassTall"
+            ) {
+                setTimeout(() => {
+                    setState((s) => ({
+                        ...s,
+                        mapId: "mont_pasta_ventoux",
+                        posX: 3,
+                        posY: 2,
+                        direction: "down",
+                    }))
+                    setToast("🚴 Tu redescends du sommet.")
+                }, 200)
+            }
             // Muscuville nord (grassTall col 8 ligne 0) → retour grass_sud
             if (
                 state.mapId === "muscuville" &&
@@ -1732,19 +1764,27 @@ export default function MapClient({
             return
         }
 
-        // v3.23c — Cinématique sommet du Mont Pasta-Ventoux (4 étapes)
+        // v3.23c — Cinématique sommet du Mont Pasta-Ventoux (5 étapes)
+        // v3.39 — À la fin, on téléporte vers la mini-map mont_sommet (6×6).
         if (cinematic?.kind === "montSummit") {
             const next = cinematic.step + 1
             if (next >= MONT_SUMMIT_LINES.length) {
-                // Fin de cinématique : appel serveur pour award badge Conquérant
+                // Fin de cinématique : appel serveur pour award badge Conquérant + téléport sommet
                 ; (async () => {
                     try {
                         const res = await fetch("/api/gamebook/mont/summit-reached", { method: "POST" })
                         const data = await res.json()
                         if (data.ok) {
-                            setState((s) => ({ ...s, montSummitReached: true } as PlayerMapState))
+                            setState((s) => ({
+                                ...s,
+                                montSummitReached: true,
+                                mapId: "mont_sommet",
+                                posX: 3,
+                                posY: 5,
+                                direction: "up",
+                            } as PlayerMapState))
                             if (data.badgeAwarded && data.xp) {
-                                setToast(`🏔️ Badge Conquérant débloqué ! +${data.xp} XP. Le contest_hall de Muscuville s'ouvre.`)
+                                setToast(`🏔️ Badge Conquérant débloqué ! +${data.xp} XP.`)
                             }
                         }
                     } catch (e) {

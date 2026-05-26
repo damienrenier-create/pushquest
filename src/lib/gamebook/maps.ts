@@ -1469,6 +1469,31 @@ function buildContestHall(): TileType[][] {
     return m
 }
 
+// v3.39 — Mini-map sommet du Mont Pasta-Ventoux : 6×6, accessible une fois la cinématique
+// du sommet jouée. Contient le PNJ "Secrétaire de l'arène" qui prévient que les champions
+// viennent juste de redescendre.
+function buildMontSommet(): TileType[][] {
+    const W = 7, H = 7
+    const m: TileType[][] = []
+    for (let y = 0; y < H; y++) {
+        const row: TileType[] = []
+        for (let x = 0; x < W; x++) {
+            if (x === 0 || x === W - 1 || y === 0) row.push("tree")
+            else if (y === H - 1) row.push("grass")  // sud ouvert
+            else row.push("grass")
+        }
+        m.push(row)
+    }
+    // Sortie sud (descente vers le mont) : case path centrale
+    m[H - 1][Math.floor(W / 2)] = "grassTall"
+    // Décor : quelques fleurs et rochers (via flowerR/Y et tree)
+    m[2][1] = "flowerR"
+    m[2][W - 2] = "flowerY"
+    m[4][1] = "flowerY"
+    m[4][W - 2] = "flowerR"
+    return m
+}
+
 // v3.35 — Arène de Muscuville : 4 champions aux 4 coins, sortie sud centrale.
 function buildArenaMuscuville(): TileType[][] {
     const W = 11, H = 11
@@ -1957,6 +1982,15 @@ export const MAPS: Record<string, MapData> = {
         width: MONT_W,
         height: MONT_H,
     },
+    // v3.39 — Mini-map sommet du Mont (6×6 + secrétaire de l'arène)
+    mont_sommet: {
+        id: "mont_sommet",
+        name: "SOMMET DU MONT PASTA-VENTOUX",
+        tiles: buildMontSommet(),
+        width: 7,
+        height: 7,
+        exitTarget: { mapId: "mont_pasta_ventoux", x: 3, y: 2 },
+    },
     // v3.24a — Lasagnas Vegas (ville opulente à l'ouest de Muscuville, casinos + mafia)
     lasagnas_vegas: {
         id: "lasagnas_vegas",
@@ -2312,6 +2346,8 @@ export const INDOOR_MAP_IDS = new Set([
     // v3.35 — Arène et bibliothèque de Muscuville
     "arena_muscuville",
     "bibliotheque_muscuville",
+    // v3.39 — Sommet du Mont Pasta-Ventoux (mini-map)
+    "mont_sommet",
 ])
 
 export function isIndoorMap(mapId: string): boolean {
