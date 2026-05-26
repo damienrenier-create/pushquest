@@ -562,6 +562,17 @@ model GamebookProgress {
   serumIntelligenceConsumed  Int     @default(0)
   // v3.24d — Date du dernier combat à l'arène (limite 1/jour).
   lastArenaDate              String  @default("")
+  // v3.35 — Arène de Muscuville (4 champions + revanches).
+  // muscuvilleChampionsBeaten   : array des champions (1ʳᵉ confrontation) déjà battus ("plank"/"pushup"/"pullup"/"squat").
+  // muscuvilleChampionsBaseline : record max all-time snapshoté au 1er talk (Json par exo).
+  // muscuvilleChampionsRevanche : array des champions battus en revanche.
+  // muscuvilleRocksPassed       : true quand le joueur a payé/cassé les rochers (one-shot).
+  // muscuvilleInterpellatorTalked: true quand le PNJ interpellateur a parlé après le passage des rochers.
+  muscuvilleChampionsBeaten     Json    @default("[]")
+  muscuvilleChampionsBaseline   Json    @default("{}")
+  muscuvilleChampionsRevanche   Json    @default("[]")
+  muscuvilleRocksPassed         Boolean @default(false)
+  muscuvilleInterpellatorTalked Boolean @default(false)
 
   // v3.24a-4 — Mission jardinier BASILICO (Lasagnas Vegas).
   // jardinierMissionActive : true depuis qu'on a parlé à BASILICO la 1ère fois (= mission acceptée).

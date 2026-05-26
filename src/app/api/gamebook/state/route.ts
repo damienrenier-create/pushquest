@@ -291,6 +291,15 @@ export async function GET() {
             isTester,
             // v3.28 — Cinématique fin Macaron'île (ouverture chemin Muscuville)
             grassSudCutsceneShown: (progress as { grassSudCutsceneShown?: boolean }).grassSudCutsceneShown === true,
+            // v3.35 — Arène Muscuville (4 champions) + rochers de passage Vegas
+            muscuvilleChampionsBeaten: Array.isArray((progress as { muscuvilleChampionsBeaten?: unknown }).muscuvilleChampionsBeaten)
+                ? ((progress as { muscuvilleChampionsBeaten?: unknown }).muscuvilleChampionsBeaten as string[])
+                : [],
+            muscuvilleChampionsRevanche: Array.isArray((progress as { muscuvilleChampionsRevanche?: unknown }).muscuvilleChampionsRevanche)
+                ? ((progress as { muscuvilleChampionsRevanche?: unknown }).muscuvilleChampionsRevanche as string[])
+                : [],
+            muscuvilleRocksPassed: (progress as { muscuvilleRocksPassed?: boolean }).muscuvilleRocksPassed === true,
+            muscuvilleInterpellatorTalked: (progress as { muscuvilleInterpellatorTalked?: boolean }).muscuvilleInterpellatorTalked === true,
         },
         todayReps,
         energySpentToday,
@@ -339,7 +348,7 @@ export async function POST(req: NextRequest) {
         !direction ||
         !phase ||
         // v3.8 — Pépiteville et ses bâtiments + v3.8.2 — Hautes-Pâtes et tour des Pâtes Aiguës + v3.12 — Macaron'île + v3.13 — bâtiments Macaron'île + v3.15 — bibliothèque + v3.16 — Hautes herbes du sud + Muscuville
-        !["bourgpates", "gym", "casino", "cave", "route1", "pepiteville", "gym_pepite", "casino_pepite", "shop_interior", "hautespates", "tower_floor_1", "tower_floor_2", "tower_floor_3", "tower_floor_4", "tower_floor_5", "macaron_ile", "shop_macaron", "veterinaire", "bibliotheque", "grass_sud", "muscuville", "la_mer", "bike_shop", "gym_muscuville", "casino_muscuville", "contest_hall", "mont_pasta_ventoux", "lasagnas_vegas", "lasagnas_construction", "lasagnas_hotel", "lasagnas_shop_habits", "lasagnas_shop_bouffe", "lasagnas_shop_rachat", "lasagnas_casino_a", "lasagnas_casino_b", "lasagnas_casino_c", "lasagnas_tb_bar", "lasagnas_tb_bureau"].includes(mapId) ||
+        !["bourgpates", "gym", "casino", "cave", "route1", "pepiteville", "gym_pepite", "casino_pepite", "shop_interior", "hautespates", "tower_floor_1", "tower_floor_2", "tower_floor_3", "tower_floor_4", "tower_floor_5", "macaron_ile", "shop_macaron", "veterinaire", "bibliotheque", "grass_sud", "muscuville", "la_mer", "bike_shop", "gym_muscuville", "casino_muscuville", "contest_hall", "mont_pasta_ventoux", "lasagnas_vegas", "lasagnas_construction", "lasagnas_hotel", "lasagnas_shop_habits", "lasagnas_shop_bouffe", "lasagnas_shop_rachat", "lasagnas_casino_a", "lasagnas_casino_b", "lasagnas_casino_c", "lasagnas_tb_bar", "lasagnas_tb_bureau", "arena_muscuville", "bibliotheque_muscuville"].includes(mapId) ||
         !["up", "down", "left", "right"].includes(direction) ||
         !["explore", "introMonster", "playing"].includes(phase) ||
         posX < 0 || posX > 30 ||

@@ -1154,10 +1154,20 @@ function buildMuscuville(): TileType[][] {
     for (let x = 1; x < MUSCUVILLE_W - 1; x++) m[5][x] = "path"
     for (let x = 1; x < MUSCUVILLE_W - 1; x++) m[10][x] = "path"
 
-    // Décor : fleurs + arbres
-    m[12][2] = "flowerR"; m[12][3] = "flowerY"
-    m[12][13] = "flowerY"; m[12][14] = "flowerR"
-    m[13][4] = "tree"; m[13][12] = "tree"
+    // v3.35 — Rochers bloquant la sortie ouest vers Vegas (entre la porte et l'extérieur)
+    // Placés en col 1, y=7-9 (juste devant les 3 cases grassTall de sortie).
+    m[7][1] = "boulder"
+    m[8][1] = "boulder"
+    m[9][1] = "boulder"
+
+    // v3.35 — Chemin d'accès aux nouvelles portes ARÈNE/BIBLIO (y=13, comme y=5 et y=10)
+    for (let x = 1; x < MUSCUVILLE_W - 1; x++) {
+        if (m[13][x] === "grass") m[13][x] = "path"
+    }
+
+    // Décor : fleurs + arbres (déplacés pour éviter les bâtiments arène/biblio)
+    m[14][2] = "flowerR"; m[14][3] = "flowerY"
+    m[14][13] = "flowerY"; m[14][14] = "flowerR"
     m[2][6] = "flowerY"; m[2][10] = "flowerR"
     return m
 }
@@ -1172,6 +1182,10 @@ export const MUSCUVILLE_BUILDINGS: Building[] = [
     { x: 1, y: 6, w: 5, h: 4, kind: "casino", doorX: 2, doorY: 3, visible: true, targetMapId: "casino_muscuville", displayName: "CASINO" },
     // Salle des concours — rangée 2 droite (cols 11..15, rows 6..9) — verrouillée sans badge Conquérant
     { x: 11, y: 6, w: 5, h: 4, kind: "shop", doorX: 2, doorY: 3, visible: true, targetMapId: "contest_hall", displayName: "CONCOURS" },
+    // v3.35 — ARÈNE de Muscuville (rangée 3 gauche : cols 2..6, rows 11..13). Porte (4, 13).
+    { x: 2, y: 11, w: 5, h: 3, kind: "shop", doorX: 2, doorY: 2, visible: true, targetMapId: "arena_muscuville", displayName: "ARÈNE" },
+    // v3.35 — BIBLIOTHÈQUE de Muscuville (rangée 3 droite : cols 10..14, rows 11..13). Porte (12, 13).
+    { x: 10, y: 11, w: 5, h: 3, kind: "bibliotheque", doorX: 2, doorY: 2, visible: true, targetMapId: "bibliotheque_muscuville", displayName: "BIBLIO" },
 ]
 
 export const MUSCUVILLE_SIGNS: Sign[] = [
@@ -1182,8 +1196,8 @@ export const MUSCUVILLE_SIGNS: Sign[] = [
     { x: 8, y: 14, text: "↓ MONT PASTA-VENTOUX\n100 cases jusqu'au sommet. Vélo obligatoire." },
     // v3.30 — Forêt hantée (à l'est, accès bloqué — "tu as trop peur")
     { x: 16, y: 8, text: "→ FORÊT HANTÉE\n*Le panneau grince. Tu sens un frisson.*\n« Trop peur. Reviens quand tu te sentiras prêt. »" },
-    // v3.30 — Passage vers Lasagnas Vegas (à l'ouest, gating triple)
-    { x: 0, y: 8, text: "← LASAGNAS VEGAS\nPassage gardé. Trois preuves requises : Mont Pasta-Ventoux conquis + 3 défis intersalle." },
+    // v3.35 — Rochers à l'ouest : prix de passage progressif selon champions battus
+    { x: 1, y: 6, text: "🪨 ROCHERS — PASSAGE VEGAS\nPrix : 4000 reps (–25% par champion d'arène battu).\n4/4 champions battus → passage GRATUIT." },
 ]
 
 // v3.22 — Bâtiments 5×5 avec displayName (label custom rendu à droite du bâtiment).
@@ -1450,6 +1464,70 @@ function buildContestHall(): TileType[][] {
     }
     // Étagères de trophées sur le mur nord (décor)
     for (let x = 1; x < W - 1; x++) m[1][x] = "shopShelf"
+    // Sortie sud
+    m[H - 1][Math.floor(W / 2)] = "doorMat"
+    return m
+}
+
+// v3.35 — Arène de Muscuville : 4 champions aux 4 coins, sortie sud centrale.
+function buildArenaMuscuville(): TileType[][] {
+    const W = 11, H = 11
+    const m: TileType[][] = []
+    for (let y = 0; y < H; y++) {
+        const row: TileType[] = []
+        for (let x = 0; x < W; x++) {
+            if (y === 0) row.push("wallH")
+            else if (x === 0 || x === W - 1 || y === H - 1) row.push("wallV")
+            else row.push("arenaFloor")
+        }
+        m.push(row)
+    }
+    // Tapis central (zone de combat)
+    for (let y = 4; y <= 6; y++) {
+        for (let x = 4; x <= W - 5; x++) m[y][x] = "rug"
+    }
+    // Sortie sud (au centre)
+    m[H - 1][Math.floor(W / 2)] = "doorMat"
+    return m
+}
+
+// v3.35 — Bibliothèque de Muscuville : layout similaire à Macaron mais sœur érudite + plus de rayons.
+function buildBibliothequeMuscuville(): TileType[][] {
+    const W = 13, H = 10
+    const m: TileType[][] = []
+    for (let y = 0; y < H; y++) {
+        const row: TileType[] = []
+        for (let x = 0; x < W; x++) {
+            if (y === 0) row.push("wallH")
+            else if (x === 0 || x === W - 1 || y === H - 1) row.push("wallV")
+            else row.push("floorWood")
+        }
+        m.push(row)
+    }
+    // Rangée nord (y=1) : 9 bookshelves "Arbres du Nexus" (cols 2..10)
+    for (let x = 2; x <= W - 3; x++) m[1][x] = "bookshelf"
+    m[1][1] = "shopShelf"
+    m[1][W - 2] = "shopShelf"
+
+    // Rangée thématique (y=3) — "Géographie" / "Arène" / "Histoire"
+    m[3][2] = "bookshelf"
+    m[3][6] = "bookshelf"
+    m[3][W - 3] = "bookshelf"
+    m[3][4] = "lectern"
+    m[3][W - 5] = "lectern"
+
+    // Statues + comptoir central (y=5)
+    m[5][2] = "statue"
+    m[5][W - 3] = "statue"
+    m[5][5] = "shopCounter"
+    m[5][6] = "shopCounter"
+    m[5][7] = "shopCounter"
+
+    // Archives (y=7)
+    m[7][2] = "bookshelf"
+    m[7][6] = "bookshelf"
+    m[7][W - 3] = "bookshelf"
+
     // Sortie sud
     m[H - 1][Math.floor(W / 2)] = "doorMat"
     return m
@@ -1853,6 +1931,24 @@ export const MAPS: Record<string, MapData> = {
         height: 10,
         exitTarget: { mapId: "macaron_ile", x: 3, y: 15 },
     },
+    // v3.35 — Arène de Muscuville (4 champions + revanches)
+    arena_muscuville: {
+        id: "arena_muscuville",
+        name: "ARÈNE DE MUSCUVILLE",
+        tiles: buildArenaMuscuville(),
+        width: 11,
+        height: 11,
+        exitTarget: { mapId: "muscuville", x: 4, y: 14 },
+    },
+    // v3.35 — Bibliothèque de Muscuville (sœur de la bibliothécaire Macaron'île)
+    bibliotheque_muscuville: {
+        id: "bibliotheque_muscuville",
+        name: "BIBLIOTHÈQUE DE MUSCUVILLE",
+        tiles: buildBibliothequeMuscuville(),
+        width: 13,
+        height: 10,
+        exitTarget: { mapId: "muscuville", x: 12, y: 14 },
+    },
     // v3.23b — Mont Pasta-Ventoux (montagne verticale au sud de Muscuville)
     mont_pasta_ventoux: {
         id: "mont_pasta_ventoux",
@@ -2213,6 +2309,9 @@ export const INDOOR_MAP_IDS = new Set([
     // v3.24c — Bar Team Boulette + bureau Il Capo
     "lasagnas_tb_bar",
     "lasagnas_tb_bureau",
+    // v3.35 — Arène et bibliothèque de Muscuville
+    "arena_muscuville",
+    "bibliotheque_muscuville",
 ])
 
 export function isIndoorMap(mapId: string): boolean {

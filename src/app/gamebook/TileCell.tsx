@@ -91,6 +91,34 @@ export default function TileCell({ tile, x, y }: { tile: TileType; x: number; y:
             </div>
         )
     }
+    // v3.35 — Rocher bloquant (sortie ouest Muscuville vers Vegas)
+    if (tile === "boulder") {
+        return (
+            <div style={{
+                position: "relative", background: "#6a4a30",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                overflow: "hidden",
+            }}>
+                <div style={{ fontSize: "150%", lineHeight: 1, filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.7))" }}>
+                    🪨
+                </div>
+            </div>
+        )
+    }
+    // v3.35 — Sol arène Muscuville (sable orangé)
+    if (tile === "arenaFloor") {
+        return (
+            <div style={{
+                position: "relative", background: "#d8a868", overflow: "hidden",
+            }}>
+                <div style={{
+                    position: "absolute", inset: 0,
+                    backgroundImage: `radial-gradient(circle at 30% 70%, rgba(180, 140, 80, 0.4) 1px, transparent 2px), radial-gradient(circle at 70% 20%, rgba(180, 140, 80, 0.4) 1px, transparent 2px)`,
+                    backgroundSize: "6px 6px",
+                }} />
+            </div>
+        )
+    }
     // v3.24a — Route asphalte (Lasagnas Vegas) avec lignes blanches discontinues
     if (tile === "road") {
         return (

@@ -23,6 +23,9 @@ export const INTERIOR_ENTRY_POSITIONS: Record<string, { x: number; y: number; di
     gym_muscuville: { x: 6, y: 8, direction: "up" },
     casino_muscuville: { x: 6, y: 8, direction: "up" },
     contest_hall: { x: 6, y: 8, direction: "up" },
+    // v3.35 — Muscuville (arène + biblio)
+    arena_muscuville: { x: 5, y: 9, direction: "up" },
+    bibliotheque_muscuville: { x: 6, y: 8, direction: "up" },
 }
 
 export type TileType =
@@ -66,6 +69,10 @@ export type TileType =
     | "happyFlower"                            // 🌸 +30 happiness quand l'animal s'arrête dessus (1×/jour)
     // === v3.24a : Lasagnas Vegas — route asphalte (voitures circulent dessus, écrasement -50% reps) ===
     | "road"
+    // === v3.35 : Rochers bloquant la sortie ouest de Muscuville (vers Vegas) ===
+    | "boulder"
+    // === v3.35 : Sable de l'arène de Muscuville (sol intérieur) ===
+    | "arenaFloor"
     // === v3.8.2 : Tour des Pâtes Aiguës (Hautes-Pâtes) ===
     | "towerWall"     // mur de pierre intérieur de la tour (bloquant)
     | "towerFloor"    // sol pierre de la tour (non-bloquant)
@@ -225,6 +232,8 @@ export const BLOCKING_TILES: TileType[] = [
     "happyFlower",
     // v3.24a — Route Vegas (voitures + écrasement)
     "road",
+    // v3.35 — Rochers bloquant la sortie ouest de Muscuville
+    "boulder",
     // v3.8.2 — décor tour des Pâtes Aiguës
     "towerWall",
     "towerWindow",

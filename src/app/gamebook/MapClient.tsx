@@ -12,7 +12,7 @@
 //   - Pousser un joueur : coûte 30 reps, le pousse d'une case (si possible)
 //   - Bouton A : interagir avec ce qui est devant (porte, panneau, joueur, machine...)
 
-import { useEffect, useRef, useState, useCallback } from "react"
+import { useEffect, useRef, useState, useCallback, useMemo } from "react"
 import Link from "next/link"
 import { ArrowLeft, RotateCcw } from "lucide-react"
 import {
@@ -58,6 +58,7 @@ import {
     type PlayerMapState,
     type PlayerSnapshot,
     type Building,
+    type TileType,
     buildingAt,
     doorAt,
     tryComputeMove,
@@ -303,7 +304,19 @@ export default function MapClient({
     const aLockRef = useRef(false)
     const saveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-    const map = getMap(state.mapId)
+    // v3.35 — Si muscuvilleRocksPassed, les rochers de Muscuville sont remplacés par du chemin
+    // (walkable + visuel) dans la grille de rendu et de calcul de mouvement.
+    const rocksPassed = (state as { muscuvilleRocksPassed?: boolean }).muscuvilleRocksPassed === true
+    const map = useMemo(() => {
+        const m = getMap(state.mapId)
+        if (state.mapId === "muscuville" && rocksPassed) {
+            return {
+                ...m,
+                tiles: m.tiles.map((row: TileType[]) => row.map((t: TileType): TileType => t === "boulder" ? "path" : t)) as TileType[][],
+            }
+        }
+        return m
+    }, [state.mapId, rocksPassed])
 
     // v3.8 — Bâtiments dynamiques selon la map courante
     // - bourgpates : OUTDOOR_BUILDINGS_BASE (grotte du Monstre visible selon flag)
@@ -1517,31 +1530,14 @@ export default function MapClient({
                 }
             }
             // v3.24a — Muscuville ouest (3 cases milieu) → Lasagnas Vegas
-            // v3.30 — Gating TRIPLE : champion arène + 3 contests + sommet Mont
+            // v3.35 — Plus de gating triple : remplacé par les rochers physiques (interaction tile boulder).
+            //         Si le joueur arrive ici, c'est qu'il a déjà payé/cassé les rochers.
             if (
                 state.mapId === "muscuville" &&
                 result.nextState.posX === 0 &&
                 (result.nextState.posY === 7 || result.nextState.posY === 8 || result.nextState.posY === 9) &&
                 map.tiles[result.nextState.posY]?.[result.nextState.posX] === "grassTall"
             ) {
-                const summit = (state as { montSummitReached?: boolean }).montSummitReached === true
-                const contestPomp = (state as { contestDefiPompatorDone?: boolean }).contestDefiPompatorDone === true
-                const contestSquat = (state as { contestDefiSquatilusDone?: boolean }).contestDefiSquatilusDone === true
-                const contestTiroir = (state as { contestDefiTiroirDone?: boolean }).contestDefiTiroirDone === true
-                const allContests = contestPomp && contestSquat && contestTiroir
-                // Le "champion d'arène" n'existe pas encore — pour v3.30, on n'exige que summit + contests
-                // (l'arène sera implémentée en v3.24d, le check arenaUnlocked peut être ajouté ultérieurement).
-                if (!summit || !allContests) {
-                    const missing: string[] = []
-                    if (!summit) missing.push("le sommet du Mont Pasta-Ventoux")
-                    if (!allContests) missing.push("les 3 défis intersalle (POMPATOR + SQUATILUS + TIROIR)")
-                    setState((s) => ({ ...s, direction: d }))
-                    setPopup({
-                        kind: "info",
-                        text: `🛑 *Deux gardes musclés te barrent la route vers Lasagnas Vegas.*\n\n« Personne ne passe avant d'avoir prouvé sa valeur. Il te manque : ${missing.join(" et ")}. »`,
-                    })
-                    return
-                }
                 setTimeout(() => {
                     setState((s) => ({
                         ...s,
@@ -1979,9 +1975,28 @@ export default function MapClient({
                     setShowCockfight(true)
                     return
                 }
-                // v3.24d — MAESTRO MANOUCHE (arène) → ouvre modal combat
+                // v3.24d — MAESTRO MANOUCHE (arène Vegas) → ouvre modal combat
                 if (npcId === "arena_master") {
                     setShowArena(true)
+                    return
+                }
+
+                // v3.35 — 4 CHAMPIONS DE L'ARÈNE DE MUSCUVILLE
+                if (npcId.startsWith("champion_")) {
+                    const championKey = npcId.replace("champion_", "")  // plank / pushup / pullup / squat
+                    ; (async () => {
+                        try {
+                            const res = await fetch("/api/gamebook/muscuville/champion", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ championId: championKey }),
+                            })
+                            const data = await res.json()
+                            if (data.message) setPopup({ kind: "info", text: data.message })
+                        } catch (e) {
+                            console.warn("[MapClient] champion failed", e)
+                        }
+                    })()
                     return
                 }
 
@@ -2433,28 +2448,32 @@ export default function MapClient({
                 })()
                 return
             }
-            // v3.18 — BIBLIO (bibliothécaire) : ouvre la modal Bibliothèque
+            // v3.18 — BIBLIO (bibliothécaire Macaron) : ouvre la modal Bibliothèque
+            // v3.35 — Le don du Livre des Arbres a été déplacé vers Muscuville (MIRABELLE).
+            // La biblio Macaron permet seulement de CONSULTER (via le rayon "Animaux & Défis"
+            // et autres rayons existants). Pour avoir l'item, va voir la sœur à Muscuville.
             if (npcId === "bibliotheque_keeper") {
-                // v3.25 — Première visite : la bibliothécaire offre le Livre des Arbres
+                setShowBibliotheque(true)
+                return
+            }
+            // v3.35 — Bibliothécaire MIRABELLE de Muscuville : offre le Livre des Arbres
+            // si conditions remplies (≥3 arbres découverts + quota du jour non rempli).
+            if (npcId === "biblio_muscu_keeper") {
                 ; (async () => {
                     try {
-                        const res = await fetch("/api/gamebook/biblio/gift-tree-book", { method: "POST" })
+                        const res = await fetch("/api/gamebook/biblio-muscu/talk", { method: "POST" })
                         const data = await res.json()
-                        if (data.ok && data.gifted) {
-                            setPopup({ kind: "info", text: data.message })
-                            // Rafraîchir l'inventaire après ajout
+                        if (data.message) setPopup({ kind: "info", text: data.message })
+                        if (data.gifted) {
                             try {
                                 const sRes = await fetch("/api/gamebook/state")
                                 if (sRes.ok) {
                                     const sData = await sRes.json()
-                                    if (Array.isArray(sData.state?.inventory)) setInventory(sData.state.inventory)
+                                    if (Array.isArray(sData.inventory)) setInventory(sData.inventory)
                                 }
                             } catch { /* silent */ }
-                            return
                         }
                     } catch { /* silent */ }
-                    // Pas la 1ère visite : ouvre la BibliothequeModal normalement
-                    setShowBibliotheque(true)
                 })()
                 return
             }
@@ -2872,6 +2891,30 @@ export default function MapClient({
         if (tile === "machineCardio") return doExercise("Cardio")
         if (tile === "machineGainage") return doExercise("Gainage")
         if (tile === "table") return setPopup({ kind: "info", text: "Table de jeu.\n\nDes parieurs s'agitent. Pas pour toi pour l'instant." })
+        // v3.35 — Rochers Muscuville : tenter de payer le passage
+        if (tile === "boulder") {
+            ; (async () => {
+                try {
+                    const res = await fetch("/api/gamebook/muscuville/rocks-pay", { method: "POST" })
+                    const data = await res.json()
+                    if (data.message) setPopup({ kind: "info", text: data.message })
+                    if (data.paid || data.alreadyPassed) {
+                        // Refresh state pour mettre à jour l'énergie + flag rocksPassed
+                        try {
+                            const sRes = await fetch("/api/gamebook/state")
+                            if (sRes.ok) {
+                                const sData = await sRes.json()
+                                if (typeof sData.availableEnergy === "number") setReps(sData.availableEnergy)
+                                if (typeof sData.energySpentToday === "number") setEnergySpent(sData.energySpentToday)
+                            }
+                        } catch { /* silent */ }
+                    }
+                } catch (e) {
+                    console.warn("[MapClient] rocks-pay failed", e)
+                }
+            })()
+            return
+        }
         if (tile === "slotMachine") {
             // v3.24b-4 — Slot machines fonctionnelles à Lasagnas Vegas
             if (state.mapId === "lasagnas_casino_a" || state.mapId === "lasagnas_casino_b" || state.mapId === "lasagnas_casino_c") {

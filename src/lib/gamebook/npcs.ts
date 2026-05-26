@@ -1077,13 +1077,14 @@ export const NPCS: NpcDefinition[] = [
         kind: "static",
         interaction: "interactive",
         sprite: { color: "#a06030" },
-        initialX: 6,
-        initialY: 12,
+        // v3.35 — déplacé hors zone arène/biblio (rows 11-13)
+        initialX: 8,
+        initialY: 14,
         dialoguesAfter: [
             "Bienvenue à MUSCUVILLE, athlète !",
             "Tu as franchi les hautes herbes — personne n'avait osé depuis des mois.",
-            "Le concours intersalle est toujours annulé... mais peut-être qu'avec toi, on pourrait le relancer.",
-            "(Il te regarde, plein d'espoir, mais ne dit rien de plus.)",
+            "L'arène vient de rouvrir avec 4 nouveaux champions. Va les défier si t'es chaud !",
+            "(Il te regarde, plein d'espoir.)",
         ],
     },
     {
@@ -1093,14 +1094,14 @@ export const NPCS: NpcDefinition[] = [
         kind: "wanderer",
         interaction: "interactive",
         sprite: { color: "#c08030" },
-        initialX: 10,
-        initialY: 12,
-        wanderRadius: 2,
+        // v3.35 — déplacé hors zone arène (rows 11-13)
+        initialX: 9,
+        initialY: 14,
+        wanderRadius: 1,
         dialoguesAfter: [
             "Yo nouveau ! Tu te dopes aux pâtes ?",
-            "Les meilleures années, on organisait des concours énormes ici.",
-            "Pectoraux contre pectoraux, abdos contre abdos.",
-            "Là c'est annulé. Snif.",
+            "L'arène est centrale — 4 champions à battre pour réduire le prix du passage vers Vegas.",
+            "Plus tu en bats, plus c'est cheap. 4/4 = gratos.",
         ],
     },
     {
@@ -1110,12 +1111,13 @@ export const NPCS: NpcDefinition[] = [
         kind: "static",
         interaction: "interactive",
         sprite: { color: "#604020" },
-        initialX: 4,
+        // v3.35 — déplacé hors arène (était sur la porte de l'arène)
+        initialX: 15,
         initialY: 13,
         dialoguesAfter: [
             "Coach GLUTOS, à ton service.",
-            "Si un jour le concours reprend, viens t'entraîner ici.",
-            "Pour l'instant je perfectionne mes deadlifts. Tout seul.",
+            "Les champions de l'arène ? Ils sont durs. Bats leur record personnel et c'est gagné.",
+            "Et pour les vaincre en revanche, faut leur défoncer leur plus gros volume du jour all-time.",
         ],
     },
     // ============================================================
@@ -1231,13 +1233,128 @@ export const NPCS: NpcDefinition[] = [
         kind: "static",
         interaction: "interactive",
         sprite: { color: "#404858" },
-        initialX: 13,
+        // v3.35 — déplacé hors zone biblio
+        initialX: 15,
         initialY: 12,
         dialoguesAfter: [
             "*Il tremble légèrement.*",
             "Tu sens ? À l'est, derrière les arbres... la forêt hantée.",
             "Personne n'ose s'en approcher. Ceux qui ont essayé sont revenus en courant, le regard vide.",
             "*Il pose la main sur ton épaule.* Si tu tiens à toi, n'y va pas.",
+        ],
+    },
+
+    // ============================================================
+    // v3.35 — ARÈNE DE MUSCUVILLE : 4 champions aux 4 coins
+    // Premier défi : battre sa meilleure série all-time (1 encodage)
+    // Revanche : battre son plus gros VOLUME du jour all-time (optionnelle, badge 800 XP)
+    // ============================================================
+    {
+        id: "champion_plank",
+        name: "CHAMPION DU GAINAGE",
+        mapId: "arena_muscuville",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🧱", color: "#4080c0" },
+        initialX: 1,
+        initialY: 1,
+        dialoguesAfter: [
+            "*Le Champion du Gainage te toise, immobile comme une planche.*",
+            "Mon défi : bats ta meilleure série de gainage all-time. UN encodage.",
+        ],
+        dialoguesAfterRevisit: [
+            "*Il reste immobile.* Tu reviens pour la revanche ?",
+        ],
+    },
+    {
+        id: "champion_pushup",
+        name: "CHAMPION DES POMPES",
+        mapId: "arena_muscuville",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "💪", color: "#c84040" },
+        initialX: 9,
+        initialY: 1,
+        dialoguesAfter: [
+            "*Le Champion des Pompes claque sa poitrine.*",
+            "Bats ta meilleure série de pompes all-time. UN encodage. Pas deux.",
+        ],
+        dialoguesAfterRevisit: [
+            "Tu reviens pour la revanche ? *Il sourit, gêné.*",
+        ],
+    },
+    {
+        id: "champion_pullup",
+        name: "CHAMPIONNE DES TRACTIONS",
+        mapId: "arena_muscuville",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🪢", color: "#40c040" },
+        initialX: 1,
+        initialY: 9,
+        dialoguesAfter: [
+            "*La Championne des Tractions s'agrippe à une barre invisible.*",
+            "Mon défi : bats ta meilleure série de tractions all-time. UN encodage.",
+        ],
+        dialoguesAfterRevisit: [
+            "Encore toi ? *Elle relâche la barre.* Tu veux la revanche ?",
+        ],
+    },
+    {
+        id: "champion_squat",
+        name: "CHAMPION DES SQUATS",
+        mapId: "arena_muscuville",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🦵", color: "#a040c0" },
+        initialX: 9,
+        initialY: 9,
+        dialoguesAfter: [
+            "*Le Champion des Squats fait une flexion lente.*",
+            "Bats ta meilleure série de squats all-time. Une seule chance.",
+        ],
+        dialoguesAfterRevisit: [
+            "*Il grogne.* La revanche ? Volume du jour all-time. À toi de jouer.",
+        ],
+    },
+
+    // ============================================================
+    // v3.35 — Bibliothécaire de Muscuville (sœur de la bibliothécaire de Macaron'île)
+    // ============================================================
+    {
+        id: "biblio_muscu_keeper",
+        name: "MIRABELLE",
+        mapId: "bibliotheque_muscuville",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "👩‍🏫", color: "#4a8030" },
+        initialX: 6,
+        initialY: 4,
+        dialoguesAfter: [
+            "*MIRABELLE remonte ses lunettes en te voyant entrer.*",
+            "Ma sœur tient la biblio de Macaron'île. Elle s'occupe des animaux. Moi, c'est les arbres.",
+            "J'ai écrit un Livre des Arbres. Mais je le donne pas à n'importe qui — faut prouver que tu aimes lire.",
+        ],
+    },
+
+    // ============================================================
+    // v3.35 — Interpellateur Vegas : interpelle le joueur après les rochers
+    // ============================================================
+    {
+        id: "vegas_interpellator",
+        name: "TROTTINETTE",
+        mapId: "lasagnas_vegas",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🛴", color: "#80a0d0" },
+        // Position : juste après l'entrée est de Vegas (joueur arrive à 22, 12)
+        initialX: 20,
+        initialY: 13,
+        dialoguesAfter: [
+            "*Une silhouette en survêt s'approche, l'air sérieux.*",
+            "Hé toi. Tu pars déjà ? Il paraît que les champions de Muscuville ont été humiliés.",
+            "Ils veulent leur revanche. Volume du jour all-time, cette fois. Pas la plus grosse série — le VOLUME.",
+            "Retourne à l'arène. Chaque revanche gagnée = badge 800 XP.",
         ],
     },
 
