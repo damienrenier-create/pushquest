@@ -14,6 +14,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { getTodayISO } from "@/lib/challenge"
+import { getActiveBoost, applyBoostToPayout, consumeBoostPatch } from "@/lib/gamebook/casinoBoost"
 
 export const dynamic = "force-dynamic"
 
@@ -134,8 +135,10 @@ export async function POST(req: NextRequest) {
     if (!currentSession?.alive) {
         return NextResponse.json({ ok: false, reason: "Pas de session en cours." })
     }
-    // Crédit le pot - 0 (on a déjà débité le stake initial; on rend le pot complet via -currentPot)
-    const newSpent = Math.max(0, currentSpent - currentSession.currentPot)
+    const boost = getActiveBoost(progress as any)
+    const boostedPot = applyBoostToPayout(currentSession.currentPot, boost)
+    // Crédit le pot boosté
+    const newSpent = Math.max(0, currentSpent - boostedPot)
     const dead: StopSession = { ...currentSession, alive: false }
     const newData = { ...challengeData, stopSession: dead }
     await (prisma as any).gamebookProgress.update({
@@ -144,12 +147,15 @@ export async function POST(req: NextRequest) {
             energySpentToday: newSpent,
             energySpentDate: today,
             tbBarChallengeData: newData,
+            ...consumeBoostPatch(),
         },
     })
+    const boostNote = boost !== 0 ? ` (croupier ${boost > 0 ? "+" : ""}${boost}%)` : ""
     return NextResponse.json({
         ok: true,
         cashedOut: true,
-        amount: currentSession.currentPot,
-        message: `💰 Tu encaisses ${currentSession.currentPot} reps. Net : +${currentSession.currentPot - currentSession.stake} reps.`,
+        amount: boostedPot,
+        boost,
+        message: `💰 Tu encaisses ${boostedPot} reps. Net : +${boostedPot - currentSession.stake} reps${boostNote}.`,
     })
 }

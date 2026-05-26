@@ -12,6 +12,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { getTodayISO } from "@/lib/challenge"
+import { getActiveBoost, applyBoostToPayout, consumeBoostPatch } from "@/lib/gamebook/casinoBoost"
 
 export const dynamic = "force-dynamic"
 
@@ -61,7 +62,10 @@ export async function POST(req: NextRequest) {
     // Tirage
     const draw = Math.floor(Math.random() * 16)
     const won = draw === caseIndex
-    const netDelta = won ? -(PAYOUT_MULT * STAKE - STAKE) : STAKE
+    const boost = getActiveBoost(progress as any)
+    const rawPayout = won ? PAYOUT_MULT * STAKE : 0
+    const boostedPayout = applyBoostToPayout(rawPayout, boost)
+    const netDelta = won ? -(boostedPayout - STAKE) : STAKE
     const newSpent = currentSpent + netDelta
 
     await (prisma as any).gamebookProgress.update({
@@ -71,18 +75,21 @@ export async function POST(req: NextRequest) {
             energySpentDate: today,
             lottoPouleDate: today,
             ...(won ? { lottoPouleWonToday: true } : {}),
+            ...consumeBoostPatch(),
         },
     })
 
+    const boostNote = boost !== 0 && won ? ` (croupier ${boost > 0 ? "+" : ""}${boost}%)` : ""
     return NextResponse.json({
         ok: true,
         won,
         draw,
         caseIndex,
         stake: STAKE,
-        netReps: won ? PAYOUT_MULT * STAKE - STAKE : -STAKE,
+        boost,
+        netReps: won ? boostedPayout - STAKE : -STAKE,
         message: won
-            ? `🐔 LOTTO POULE GAGNANT ! Tu pioches la case ${caseIndex + 1}. Gain net : +${PAYOUT_MULT * STAKE - STAKE} reps.`
-            : `🐔 Le bon numéro était ${draw + 1}. Tu as misé sur ${caseIndex + 1}. -${STAKE} reps.`,
+            ? `🐔 LOTTO POULE GAGNANT ! Case ${caseIndex + 1}. Gain net : +${boostedPayout - STAKE} reps${boostNote}.`
+            : `🐔 Le bon numéro était ${draw + 1}. Tu avais misé sur ${caseIndex + 1}. -${STAKE} reps.`,
     })
 }

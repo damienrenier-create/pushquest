@@ -15,6 +15,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { getTodayISO } from "@/lib/challenge"
+import { getActiveBoost, applyBoostToPayout, consumeBoostPatch } from "@/lib/gamebook/casinoBoost"
 
 export const dynamic = "force-dynamic"
 
@@ -90,7 +91,10 @@ export async function POST(req: NextRequest) {
     // Override : si on a déterminé que le user gagne, on force son coq comme winnerId
     if (won) winnerId = cockId
 
-    const netDelta = won ? -(Math.round(stake * cock.payout) - stake) : stake
+    const boost = getActiveBoost(progress as any)
+    const rawPayout = won ? Math.round(stake * cock.payout) : 0
+    const boostedPayout = applyBoostToPayout(rawPayout, boost)
+    const netDelta = won ? -(boostedPayout - stake) : stake
     const newSpent = currentSpent + netDelta
 
     await (prisma as any).gamebookProgress.update({
@@ -99,9 +103,11 @@ export async function POST(req: NextRequest) {
             energySpentToday: newSpent,
             energySpentDate: today,
             cockfightDate: today,
+            ...consumeBoostPatch(),
         },
     })
 
+    const boostNote = boost !== 0 && won ? ` (croupier ${boost > 0 ? "+" : ""}${boost}%)` : ""
     return NextResponse.json({
         ok: true,
         won,
@@ -109,9 +115,10 @@ export async function POST(req: NextRequest) {
         winnerId,
         winnerName: COCKS[winnerId].name,
         stake,
-        payout: won ? Math.round(stake * cock.payout) : 0,
+        boost,
+        payout: won ? boostedPayout : 0,
         message: won
-            ? `🏆 ${cock.emoji} ${cock.name} gagne ! +${Math.round(stake * cock.payout) - stake} reps nets.`
+            ? `🏆 ${cock.emoji} ${cock.name} gagne ! +${boostedPayout - stake} reps nets${boostNote}.`
             : `💀 ${COCKS[winnerId].emoji} ${COCKS[winnerId].name} l'emporte. Tu perds ${stake} reps.`,
     })
 }

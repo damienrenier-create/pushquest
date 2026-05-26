@@ -1935,6 +1935,25 @@ export default function MapClient({
                     setShowLottoPoule(true)
                     return
                 }
+
+                // v3.24b-6 — CROUPIERS (6 PNJ Vegas) : arme boost/malus prochain pari
+                if (npcId.startsWith("croupier_")) {
+                    ; (async () => {
+                        try {
+                            const res = await fetch("/api/gamebook/casino/croupier-talk", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ croupierId: npcId }),
+                            })
+                            const data = await res.json()
+                            if (data.message) setPopup({ kind: "info", text: data.message })
+                            else if (data.reason) setToast(data.reason)
+                        } catch (e) {
+                            console.warn("[MapClient] croupier failed", e)
+                        }
+                    })()
+                    return
+                }
                 // v3.24b-2 — GUICHET STOP OU ENCORE → ouvre modal
                 if (npcId === "stop_keeper") {
                     setShowStopOuEncore(true)

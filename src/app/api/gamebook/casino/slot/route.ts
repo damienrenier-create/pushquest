@@ -16,6 +16,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { getTodayISO } from "@/lib/challenge"
+import { getActiveBoost, applyBoostToPayout, consumeBoostPatch } from "@/lib/gamebook/casinoBoost"
 
 export const dynamic = "force-dynamic"
 
@@ -85,7 +86,9 @@ export async function POST() {
 
     const reels = [pickSymbol(luckyBoost), pickSymbol(luckyBoost), pickSymbol(luckyBoost)]
     const { mult, combo } = computePayout(reels)
-    const payout = STAKE * mult
+    const rawPayout = STAKE * mult
+    const boost = getActiveBoost(progress as any)
+    const payout = applyBoostToPayout(rawPayout, boost)
     const netDelta = payout > 0 ? -(payout - STAKE) : STAKE
     const newSpent = currentSpent + netDelta
 
@@ -99,20 +102,23 @@ export async function POST() {
             energySpentDate: today,
             slotMachinesDate: today,
             slotMachinesPlayedToday: playsBefore + 1,
+            ...consumeBoostPatch(),
         },
     })
 
+    const boostNote = boost !== 0 && payout > 0 ? ` (croupier ${boost > 0 ? "+" : ""}${boost}%)` : ""
     return NextResponse.json({
         ok: true,
         reels,
         mult,
         combo,
+        boost,
         payout,
         net: payout - STAKE,
         message: mult === 0
             ? `${reels.join(" ")} — Rien. Tu perds ${STAKE} reps.`
             : mult === 1
                 ? `${reels.join(" ")} — ${combo}. Mise rendue.`
-                : `${reels.join(" ")} — ${combo} ! +${payout - STAKE} reps nets.`,
+                : `${reels.join(" ")} — ${combo} ! +${payout - STAKE} reps nets${boostNote}.`,
     })
 }

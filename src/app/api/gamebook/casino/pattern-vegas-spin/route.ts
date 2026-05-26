@@ -22,6 +22,7 @@ import {
     CASINO_BANKRUPT_COOLDOWN_HOURS,
     getCasinoVegasPatternForToday,
 } from "@/lib/gamebook/casino"
+import { getActiveBoost, applyBoostToPayout, consumeBoostPatch } from "@/lib/gamebook/casinoBoost"
 
 export const dynamic = "force-dynamic"
 
@@ -98,7 +99,9 @@ export async function POST(req: NextRequest) {
     const winningCase = pattern[spinIndex % CASINO_VEGAS_PATTERN_LENGTH]
 
     const winningBet = bets.find((b) => b.case === winningCase)
-    const totalWin = winningBet ? winningBet.amount * CASINO_VEGAS_WIN_MULTIPLIER : 0
+    const rawWin = winningBet ? winningBet.amount * CASINO_VEGAS_WIN_MULTIPLIER : 0
+    const boost = getActiveBoost(progress as any)
+    const totalWin = applyBoostToPayout(rawWin, boost)
     const netGain = totalWin - totalBet
     const won = totalWin > 0
 
@@ -116,6 +119,7 @@ export async function POST(req: NextRequest) {
             casinoPatternVegasIndex: newSpinIndex,
             casinoPatternVegasStreak: bankrupt ? 0 : newStreak,
             ...(bankrupt ? { casinoPatternVegasBankruptUntil: newBankruptUntil } : {}),
+            ...consumeBoostPatch(),
         },
     })
 
