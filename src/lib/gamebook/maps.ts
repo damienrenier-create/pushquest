@@ -1188,8 +1188,8 @@ export const MUSCUVILLE_SIGNS: Sign[] = [
 
 // v3.22 — Bâtiments 5×5 avec displayName (label custom rendu à droite du bâtiment).
 export const MACARONILE_BUILDINGS: Building[] = [
-    // Shop TRENETTE — rangée 1 gauche (cols 1..5, rows 4..8) ; door centrée (3, 8)
-    { x: 1, y: 4, w: 5, h: 5, kind: "shop", doorX: 2, doorY: 4, visible: true, targetMapId: "shop_macaron", displayName: "TRENETTE" },
+    // Shop TRENETTE — rangée 1 gauche (cols 1..5, rows 4..8) ; door centrée (3, 8). Labellé "SHOP" en façade.
+    { x: 1, y: 4, w: 5, h: 5, kind: "shop", doorX: 2, doorY: 4, visible: true, targetMapId: "shop_macaron", displayName: "SHOP" },
     // Vétérinaire — rangée 1 droite (cols 8..12, rows 4..8) ; door centrée (10, 8)
     { x: 8, y: 4, w: 5, h: 5, kind: "veterinaire", doorX: 2, doorY: 4, visible: true, targetMapId: "veterinaire", displayName: "VÉTO" },
     // Bibliothèque — rangée 2 gauche (cols 1..5, rows 10..14) ; door centrée (3, 14)

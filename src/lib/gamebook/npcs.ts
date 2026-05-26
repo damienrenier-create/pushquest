@@ -169,6 +169,9 @@ export const NPCS: NpcDefinition[] = [
     },
 
     // v3.22 — GUIDE VOYAGE : explique le fast travel
+    // v3.33 — Désactivé (fast travel mis en pause). PNJ retiré, ne pas rendre.
+    // (Conservé en commentaire pour réactivation future.)
+    /*
     {
         id: "travel_guide",
         name: "VAGABOND",
@@ -185,6 +188,7 @@ export const NPCS: NpcDefinition[] = [
             "Pas besoin de retraverser tout l'archipel à pied à chaque fois.",
         ],
     },
+    */
 
     // -------------------------------
     // PEPITO — donne le sac au premier passage (roue de secours pour ceux qui n'ont pas vu MAMAN)
@@ -820,7 +824,8 @@ export const NPCS: NpcDefinition[] = [
         mapId: "pepiteville",
         kind: "static",
         interaction: "interactive",
-        sprite: { emoji: "🌿", color: "#5a8a3a" },
+        // v3.33 — Sprite jardinier humain 🧑‍🌾 (style cohérent avec BASILICO de Vegas).
+        sprite: { emoji: "🧑‍🌾", color: "#5a8a3a" },
         initialX: 6,
         initialY: 12,
         // dialoguesAfter requis par le type mais bypass par randomDialogues (cf getNpcDialogue priorité)

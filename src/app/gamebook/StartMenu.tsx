@@ -16,9 +16,9 @@ interface Props {
     onClose: () => void
 }
 
+// v3.33 — VOYAGE désactivé (fast travel mis en pause).
 const ENTRIES: Array<{ key: StartMenuEntry; label: string }> = [
     { key: "bag", label: "🎒 SAC" },
-    { key: "travel", label: "🗺️ VOYAGE" },
     { key: "close", label: "↩ RETOUR" },
 ]
 

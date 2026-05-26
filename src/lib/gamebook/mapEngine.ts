@@ -5,6 +5,26 @@
 
 export type Direction = "up" | "down" | "left" | "right"
 
+// v3.33 — Position d'entrée dans chaque map intérieure (= juste au-dessus du doorMat).
+// Si une map n'est pas listée, fallback (4, 6, up) — peut casser le spawn ;
+// à compléter au fil des bug reports.
+export const INTERIOR_ENTRY_POSITIONS: Record<string, { x: number; y: number; direction: Direction }> = {
+    veterinaire: { x: 6, y: 8, direction: "up" },
+    shop_macaron: { x: 6, y: 5, direction: "up" },
+    bibliotheque: { x: 6, y: 8, direction: "up" },
+    shop_interior: { x: 5, y: 8, direction: "up" },
+    gym: { x: 4, y: 6, direction: "up" },
+    casino: { x: 4, y: 6, direction: "up" },
+    gym_pepite: { x: 4, y: 6, direction: "up" },
+    casino_pepite: { x: 4, y: 6, direction: "up" },
+    cave: { x: 4, y: 6, direction: "up" },
+    tower_floor_1: { x: 4, y: 6, direction: "up" },
+    bike_shop: { x: 6, y: 8, direction: "up" },
+    gym_muscuville: { x: 6, y: 8, direction: "up" },
+    casino_muscuville: { x: 6, y: 8, direction: "up" },
+    contest_hall: { x: 6, y: 8, direction: "up" },
+}
+
 export type TileType =
     // Extérieur
     | "grass" | "grassTall" | "path" | "water" | "tree" | "fence"
@@ -342,13 +362,16 @@ export function tryComputeMove(
                                 : b.kind === "veterinaire" ? "veterinaire"
                                     : b.kind === "bibliotheque" ? "bibliotheque"
                                         : "cave")
+            // v3.33 — Spawn position juste au-dessus du doorMat de la map cible
+            // (chaque intérieur a son doorMat au centre de la dernière ligne).
+            const entry = INTERIOR_ENTRY_POSITIONS[targetMapId] ?? { x: 4, y: 6, direction: "up" as const }
             return {
                 nextState: {
                     ...current,
                     mapId: targetMapId,
-                    posX: 4,  // milieu de la pièce
-                    posY: 6,  // près de la sortie (pour pouvoir ressortir)
-                    direction: "up",
+                    posX: entry.x,
+                    posY: entry.y,
+                    direction: entry.direction,
                 },
                 repsCost: current.phase === "playing" ? COST_MOVE : 0,
                 triggersIntro: false,

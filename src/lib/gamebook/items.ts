@@ -351,6 +351,7 @@ export const ITEMS: ItemDefinition[] = [
         description: "Capacité 1000 reps. Trophée d'IL CAPO. Ne s'achète pas — se gagne.",
         priceReps: 0,
         maxQuantity: 1,
+        availableAt: "gift",
         capabilities: {
             canStore: { maxCapacity: 1000, unit: "reps", wearOnDrink: 5 },
         },
@@ -362,6 +363,7 @@ export const ITEMS: ItemDefinition[] = [
         description: "Catalogue des essences d'arbres du Nexus. Rédigé par la bibliothécaire. Flou les espèces non rencontrées.",
         priceReps: 0,
         maxQuantity: 1,
+        availableAt: "gift",
         capabilities: {
             canView: { kind: "tree_book" },
         },
@@ -427,7 +429,9 @@ export function getItem(key: string): ItemDefinition | null {
  */
 export function itemsAvailableAtShop(shop: "nutripates" | "trenette" | "muscuville_bikes" | "vegas_habits" | "vegas_bouffe"): ItemDefinition[] {
     return ITEMS.filter((i) => {
-        const at = i.availableAt ?? "both"
+        // v3.33 — Si pas d'availableAt, l'item n'est pas vendu (= gift only).
+        if (!i.availableAt) return false
+        const at = i.availableAt
         if (at === "gift") return false
         if (shop === "muscuville_bikes") return at === "muscuville_bikes"
         if (shop === "vegas_habits") return at === "vegas_habits"
