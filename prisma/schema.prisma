@@ -555,6 +555,13 @@ model GamebookProgress {
   casinoPatternVegasIndex    Int     @default(0)
   casinoPatternVegasStreak   Int     @default(0)
   casinoPatternVegasBankruptUntil DateTime?
+  // v3.24d — Stats animal (bonus permanents au-dessus du level XP : force, vitesse, défense, HP, intelligence).
+  // Le bonheur reste dans tamagotchi.happiness (déjà existant).
+  tamagotchiStatBonus        Json    @default("{}")
+  // v3.24d — Compteur sérum d'intelligence consommé (par 1000 reps = +1 intelligence permanente).
+  serumIntelligenceConsumed  Int     @default(0)
+  // v3.24d — Date du dernier combat à l'arène (limite 1/jour).
+  lastArenaDate              String  @default("")
 
   // v3.24a-4 — Mission jardinier BASILICO (Lasagnas Vegas).
   // jardinierMissionActive : true depuis qu'on a parlé à BASILICO la 1ère fois (= mission acceptée).

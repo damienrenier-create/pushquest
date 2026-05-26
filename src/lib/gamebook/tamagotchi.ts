@@ -205,6 +205,52 @@ export interface CanonicalDefi {
     baseThreshold?: number
 }
 
+// v3.24d — 6 stats animales calculées depuis level + bonus.
+export interface AnimalStats {
+    force: number
+    vitesse: number
+    defense: number
+    hp: number
+    bonheur: number       // = happiness (0..100)
+    intelligence: number
+}
+
+export interface StatBonus {
+    force?: number
+    vitesse?: number
+    defense?: number
+    hp?: number
+    intelligence?: number
+}
+
+/**
+ * Calcule les 6 stats d'un animal à partir de son level, son bonheur,
+ * et des bonus permanents (sérum, gourde Capo, etc.).
+ *
+ * Formules :
+ *   force        = level
+ *   vitesse      = max(1, round(level * 0.8))
+ *   defense      = max(1, round(level * 0.6))
+ *   hp           = level * 10
+ *   intelligence = max(1, round(level * 0.5)) + serumBonus
+ *   bonheur      = happiness
+ */
+export function computeAnimalStats(
+    level: number,
+    happiness: number,
+    bonus: StatBonus = {},
+): AnimalStats {
+    const lv = Math.max(1, Math.floor(level))
+    return {
+        force:        lv + (bonus.force ?? 0),
+        vitesse:      Math.max(1, Math.round(lv * 0.8)) + (bonus.vitesse ?? 0),
+        defense:      Math.max(1, Math.round(lv * 0.6)) + (bonus.defense ?? 0),
+        hp:           lv * 10 + (bonus.hp ?? 0),
+        bonheur:      Math.max(0, Math.min(100, Math.round(happiness))),
+        intelligence: Math.max(1, Math.round(lv * 0.5)) + (bonus.intelligence ?? 0),
+    }
+}
+
 export const CANONICAL_DEFIS: CanonicalDefi[] = [
     { index: 0, code: "VISIT", title: "Aller le voir", description: "Rends visite à ton tamagotchi chez le vétérinaire V3T (Macaron'île)." },
     { index: 1, code: "DRINK", title: "Lui donner à boire", description: "Bois ta gourde pendant que tu es chez V3T avec ton tamagotchi." },

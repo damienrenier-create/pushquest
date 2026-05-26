@@ -996,6 +996,27 @@ export const NPCS: NpcDefinition[] = [
         ],
     },
 
+    // v3.24d — ARÈNE MANOUCHE (combats animaux) : accessible après défaite IL CAPO
+    {
+        id: "arena_master",
+        name: "MAESTRO MANOUCHE",
+        mapId: "lasagnas_vegas",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🎻", color: "#a06030" },
+        // Position : à côté du bar TB, sud-ouest de Vegas
+        initialX: 5,
+        initialY: 20,
+        dialoguesAfter: [
+            "*Un homme aux moustaches en pointe gratte un air de violon.*",
+            "ARÈNE MANOUCHE ! Ton animal contre un sauvage du Nexus. 1 combat par jour.",
+            "Victoire : +100 reps, +5 bonheur. Défaite : tu rentres bredouille.",
+        ],
+        dialoguesAfterRevisit: [
+            "Encore toi ? Reviens demain pour un nouveau combat.",
+        ],
+    },
+
     // v3.29 — Gamin chasseur de chenilles (jaloux de l'animal du joueur)
     {
         id: "chenille_kid",

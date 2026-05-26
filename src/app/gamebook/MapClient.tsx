@@ -107,6 +107,7 @@ import StopOuEncoreModal from "./StopOuEncoreModal"
 import CockfightModal from "./CockfightModal"
 import SlotMachineModal from "./SlotMachineModal"
 import CasinoPatternVegasModal from "./CasinoPatternVegasModal"
+import ArenaModal from "./ArenaModal"
 import { getLevelDetails } from "@/lib/xp"
 import { getActiveBicycle } from "@/lib/gamebook/items"
 
@@ -272,6 +273,8 @@ export default function MapClient({
     const [showGuiguiRecharge, setShowGuiguiRecharge] = useState(false)
     // v3.24b-5 — Modal casino pattern Vegas
     const [showCasinoPatternVegas, setShowCasinoPatternVegas] = useState(false)
+    // v3.24d — Modal Arène Manouche
+    const [showArena, setShowArena] = useState(false)
     // v3.23b — Cadence sur le Mont Pasta-Ventoux : timestamps des derniers clics "pédale"
     const [cadenceClicks, setCadenceClicks] = useState<number[]>([])
     // Tick pour rafraîchir le BPM même si pas de nouveau click
@@ -1605,7 +1608,7 @@ export default function MapClient({
         }, 300)
 
         // v3.8 — si une modal est ouverte, le A est géré par la modal elle-même
-        if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore || showCockfight || showSlotMachine || showCasinoPatternVegas) return
+        if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore || showCockfight || showSlotMachine || showCasinoPatternVegas || showArena) return
 
         // v3.23e — Blague PIAFFINI unique pour Franss : intercepter le premier A press (idem tryMove)
         if (
@@ -1962,6 +1965,11 @@ export default function MapClient({
                 // v3.24b-3 — GUICHET COMBATS DE COQS → ouvre modal
                 if (npcId === "cock_keeper") {
                     setShowCockfight(true)
+                    return
+                }
+                // v3.24d — MAESTRO MANOUCHE (arène) → ouvre modal combat
+                if (npcId === "arena_master") {
+                    setShowArena(true)
                     return
                 }
 
@@ -2937,7 +2945,7 @@ export default function MapClient({
         const handler = (e: KeyboardEvent) => {
             // v3.8 — si une modal est ouverte, on ne gère pas les touches ici
             // (StartMenu/InventoryModal/ShopModal/PlayerMapModal écoutent leurs propres events)
-            if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore || showCockfight || showSlotMachine || showCasinoPatternVegas) return
+            if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore || showCockfight || showSlotMachine || showCasinoPatternVegas || showArena) return
 
             if (state.phase === "introMonster") {
                 if (e.key === "Enter" || e.key === " " || e.key.toLowerCase() === "a") {
@@ -3770,6 +3778,26 @@ export default function MapClient({
                                     const j = await r.json()
                                     if (typeof j.availableEnergy === "number") setReps(j.availableEnergy)
                                     if (typeof j.energySpentToday === "number") setEnergySpent(j.energySpentToday)
+                                }
+                            } catch { /* silent */ }
+                        })()
+                    }}
+                />
+            )}
+
+            {/* v3.24d — Modal Arène Manouche */}
+            {showArena && (
+                <ArenaModal
+                    onClose={() => {
+                        setShowArena(false)
+                        ; (async () => {
+                            try {
+                                const r = await fetch("/api/gamebook/state")
+                                if (r.ok) {
+                                    const j = await r.json()
+                                    if (typeof j.availableEnergy === "number") setReps(j.availableEnergy)
+                                    if (typeof j.energySpentToday === "number") setEnergySpent(j.energySpentToday)
+                                    if (j.tamagotchi) setTamagotchi(j.tamagotchi)
                                 }
                             } catch { /* silent */ }
                         })()
