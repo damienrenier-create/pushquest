@@ -69,32 +69,41 @@ export async function POST() {
         return NextResponse.json({ ok: false, reason: "Tu n'as pas le Set de Nage." })
     }
 
-    // Check : suis-je le DERNIER ? On compte les autres users non-système qui ont
-    // swim_set mais pas firstSwimDone. Si count == 0 → je suis le dernier.
-    const allProgress = await (prisma as any).gamebookProgress.findMany({
-        where: {
-            chapterId: CHAPTER_ID,
-            userId: { not: userId },
-            firstSwimDone: false,
-        },
-        include: { user: { select: { isSystem: true } } },
+    // v3.32 — Court-circuit pour les comptes testers (GUIGUI) : JOJO pousse direct
+    // (pas de dépendance aux autres joueurs en prod, sinon test local impossible).
+    const me = await (prisma as any).user.findUnique({
+        where: { id: userId },
+        select: { isTester: true },
     })
+    const isTester = me?.isTester === true
 
-    const otherCandidates = (allProgress as Array<{
-        inventory: unknown
-        user: { isSystem: boolean } | null
-    }>).filter((p) => {
-        if (p.user?.isSystem === true) return false  // créateurs exclus
-        const pi = parseInventory(p.inventory)
-        return hasIntactItem(pi, SWIM_SET_KEY)  // ils peuvent encore nager
-    })
-
-    if (otherCandidates.length > 0) {
-        return NextResponse.json({
-            ok: false,
-            reason: "Il reste d'autres joueurs à pousser avant toi.",
-            othersCount: otherCandidates.length,
+    if (!isTester) {
+        // Logique normale : check qu'il ne reste personne à pousser parmi les autres
+        const allProgress = await (prisma as any).gamebookProgress.findMany({
+            where: {
+                chapterId: CHAPTER_ID,
+                userId: { not: userId },
+                firstSwimDone: false,
+            },
+            include: { user: { select: { isSystem: true } } },
         })
+
+        const otherCandidates = (allProgress as Array<{
+            inventory: unknown
+            user: { isSystem: boolean } | null
+        }>).filter((p) => {
+            if (p.user?.isSystem === true) return false  // créateurs exclus
+            const pi = parseInventory(p.inventory)
+            return hasIntactItem(pi, SWIM_SET_KEY)  // ils peuvent encore nager
+        })
+
+        if (otherCandidates.length > 0) {
+            return NextResponse.json({
+                ok: false,
+                reason: "Il reste d'autres joueurs à pousser avant toi.",
+                othersCount: otherCandidates.length,
+            })
+        }
     }
 
     // OK : je suis le dernier → JOJO me pousse
