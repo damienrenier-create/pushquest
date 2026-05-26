@@ -23,7 +23,7 @@ interface Props {
     inventory: InventoryEntry[]
     availableEnergy: number
     onUse: (itemKey: string, action: UseAction, amount?: number) => Promise<void>
-    onView?: (itemKey: string, kind: "playerMap" | "treasureMap") => void
+    onView?: (itemKey: string, kind: "playerMap" | "treasureMap" | "tree_book") => void
     onClose: () => void
 }
 
@@ -209,7 +209,7 @@ function ItemRow({
     def: ItemDefinition
     availableEnergy: number
     onUse: (itemKey: string, action: UseAction, amount?: number) => Promise<void>
-    onView?: (itemKey: string, kind: "playerMap" | "treasureMap") => void
+    onView?: (itemKey: string, kind: "playerMap" | "treasureMap" | "tree_book") => void
 }) {
     const [fillInput, setFillInput] = useState<string>("10")
     const [busy, setBusy] = useState(false)

@@ -520,6 +520,9 @@ model GamebookProgress {
   tbRewardClaimed           Boolean @default(false)
   serumIntelligenceReps     Int     @default(0)
   arenaUnlocked             Boolean @default(false)
+  // v3.25 — Pokédex des arbres : kinds découverts (apple/cherry/pear/peach/coconut/poison/olive/boost/divisor).
+  treesDiscovered           Json    @default("[]")
+  treeBookGiven             Boolean @default(false)
 
   // v3.24a-4 — Mission jardinier BASILICO (Lasagnas Vegas).
   // jardinierMissionActive : true depuis qu'on a parlé à BASILICO la 1ère fois (= mission acceptée).

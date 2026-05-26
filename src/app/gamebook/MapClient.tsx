@@ -101,6 +101,7 @@ import CasinoModal from "./CasinoModal"
 import CasinoPatternModal from "./CasinoPatternModal"
 import FastTravelModal from "./FastTravelModal"
 import VideurModal from "./VideurModal"
+import TreeBookModal from "./TreeBookModal"
 import { getLevelDetails } from "@/lib/xp"
 import { getActiveBicycle } from "@/lib/gamebook/items"
 
@@ -249,6 +250,9 @@ export default function MapClient({
     const [showFastTravel, setShowFastTravel] = useState(false)
     // v3.24c-4 — Modal interactif du videur Team Boulette
     const [showVideur, setShowVideur] = useState(false)
+    // v3.25 — Modal Pokédex des arbres (Livre des Arbres)
+    const [showTreeBook, setShowTreeBook] = useState(false)
+    const [treesDiscovered, setTreesDiscovered] = useState<string[]>([])
     // v3.23b — Cadence sur le Mont Pasta-Ventoux : timestamps des derniers clics "pédale"
     const [cadenceClicks, setCadenceClicks] = useState<number[]>([])
     // Tick pour rafraîchir le BPM même si pas de nouveau click
@@ -1517,7 +1521,7 @@ export default function MapClient({
         }, 300)
 
         // v3.8 — si une modal est ouverte, le A est géré par la modal elle-même
-        if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur) return
+        if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook) return
 
         // v3.23e — Blague PIAFFINI unique pour Franss : intercepter le premier A press (idem tryMove)
         if (
@@ -2247,7 +2251,27 @@ export default function MapClient({
             }
             // v3.18 — BIBLIO (bibliothécaire) : ouvre la modal Bibliothèque
             if (npcId === "bibliotheque_keeper") {
-                setShowBibliotheque(true)
+                // v3.25 — Première visite : la bibliothécaire offre le Livre des Arbres
+                ; (async () => {
+                    try {
+                        const res = await fetch("/api/gamebook/biblio/gift-tree-book", { method: "POST" })
+                        const data = await res.json()
+                        if (data.ok && data.gifted) {
+                            setPopup({ kind: "info", text: data.message })
+                            // Rafraîchir l'inventaire après ajout
+                            try {
+                                const sRes = await fetch("/api/gamebook/state")
+                                if (sRes.ok) {
+                                    const sData = await sRes.json()
+                                    if (Array.isArray(sData.state?.inventory)) setInventory(sData.state.inventory)
+                                }
+                            } catch { /* silent */ }
+                            return
+                        }
+                    } catch { /* silent */ }
+                    // Pas la 1ère visite : ouvre la BibliothequeModal normalement
+                    setShowBibliotheque(true)
+                })()
                 return
             }
             // v3.20 — LE MONSTRE : offre l'amulette si hasBag, sinon refuse
@@ -2563,6 +2587,18 @@ export default function MapClient({
             const tree = ALL_TREES.find(
                 (t) => t.mapId === state.mapId && t.x === front.x && t.y === front.y,
             )
+            // v3.25 — découverte de l'espèce dans le Pokédex (idempotent côté serveur)
+            if (tree) {
+                ; (async () => {
+                    try {
+                        await fetch("/api/gamebook/tree/discover", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ kind: tree.kind }),
+                        })
+                    } catch { /* silent */ }
+                })()
+            }
             if (tree && hasIntactItem(inventory, "arrosoir")) {
                 ; (async () => {
                     try {
@@ -2589,8 +2625,13 @@ export default function MapClient({
                 })()
                 return
             }
-            // Pas d'arrosoir → toast par défaut
-            setToast("L'arbre est dépouillé pour aujourd'hui. Reviens demain — ou utilise un arrosoir magique.")
+            // Pas d'arrosoir → toast avec espèce identifiée (v3.25)
+            if (tree) {
+                const treeConfig = TREE_KIND_CONFIGS[tree.kind]
+                setToast(`${treeConfig.emoji} ${treeConfig.label} — dépouillé pour aujourd'hui. Reviens demain ou arrose-le.`)
+            } else {
+                setToast("L'arbre est dépouillé pour aujourd'hui. Reviens demain — ou utilise un arrosoir magique.")
+            }
             return
         }
         if (TREE_TILES.includes(tile)) {
@@ -2719,7 +2760,7 @@ export default function MapClient({
         const handler = (e: KeyboardEvent) => {
             // v3.8 — si une modal est ouverte, on ne gère pas les touches ici
             // (StartMenu/InventoryModal/ShopModal/PlayerMapModal écoutent leurs propres events)
-            if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur) return
+            if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook) return
 
             if (state.phase === "introMonster") {
                 if (e.key === "Enter" || e.key === " " || e.key.toLowerCase() === "a") {
@@ -3273,6 +3314,14 @@ export default function MapClient({
                 />
             )}
 
+            {/* v3.25 — Modal Pokédex des arbres (Livre des Arbres) */}
+            {showTreeBook && (
+                <TreeBookModal
+                    discovered={treesDiscovered}
+                    onClose={() => setShowTreeBook(false)}
+                />
+            )}
+
             {/* v3.24c-4 — Modal interactif du videur Team Boulette (3 choix) */}
             {showVideur && (
                 <VideurModal
@@ -3349,6 +3398,21 @@ export default function MapClient({
                         // On affiche juste un hint à l'utilisateur.
                         if (kind === "treasureMap") {
                             setToast("La carte indique des lieux. Va explorer les casinos avec attention.")
+                        }
+                        // v3.25 — Livre des Arbres : fetch les découvertes puis ouvre TreeBookModal
+                        if (kind === "tree_book") {
+                            setShowInventory(false)
+                            ; (async () => {
+                                try {
+                                    const r = await fetch("/api/gamebook/state")
+                                    if (r.ok) {
+                                        const j = await r.json()
+                                        const d = j?.state?.treesDiscovered
+                                        if (Array.isArray(d)) setTreesDiscovered(d as string[])
+                                    }
+                                } catch { /* silent */ }
+                                setShowTreeBook(true)
+                            })()
                         }
                     }}
                     onUse={async (itemKey, action, amount) => {

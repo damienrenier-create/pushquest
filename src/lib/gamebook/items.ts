@@ -41,7 +41,7 @@ export interface ItemCapabilities {
     /** v3.8.3 — Item consultable qui ouvre une vue côté UI (ne se consomme pas, infinie). */
     canView?: {
         /** Identifiant du modal à ouvrir côté client. */
-        kind: "playerMap" | "treasureMap"
+        kind: "playerMap" | "treasureMap" | "tree_book"
     }
     /** v3.13 — Item consommable instantané. Une utilisation = l'item disparaît du sac. */
     canConsume?: {
@@ -353,6 +353,17 @@ export const ITEMS: ItemDefinition[] = [
         maxQuantity: 1,
         capabilities: {
             canStore: { maxCapacity: 1000, unit: "reps", wearOnDrink: 5 },
+        },
+    },
+    {
+        key: "tree_book",
+        name: "Livre des Arbres",
+        emoji: "📗",
+        description: "Catalogue des essences d'arbres du Nexus. Rédigé par la bibliothécaire. Flou les espèces non rencontrées.",
+        priceReps: 0,
+        maxQuantity: 1,
+        capabilities: {
+            canView: { kind: "tree_book" },
         },
     },
     {

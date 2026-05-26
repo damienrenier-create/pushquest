@@ -263,6 +263,11 @@ export async function GET() {
             contestDefiTiroirDone: (progress as { contestDefiTiroirDone?: boolean }).contestDefiTiroirDone === true,
             // v3.23e — Blague PIAFFINI unique (Franss only)
             franssJokeBirdDone: (progress as { franssJokeBirdDone?: boolean }).franssJokeBirdDone === true,
+            // v3.25 — Pokédex des arbres
+            treesDiscovered: Array.isArray((progress as { treesDiscovered?: unknown }).treesDiscovered)
+                ? ((progress as { treesDiscovered?: unknown }).treesDiscovered as string[])
+                : [],
+            treeBookGiven: (progress as { treeBookGiven?: boolean }).treeBookGiven === true,
         },
         todayReps,
         energySpentToday,

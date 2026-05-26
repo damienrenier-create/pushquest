@@ -157,6 +157,15 @@ export async function POST(req: NextRequest) {
         newJardinierFruitOrder = [...existing, treeInstance.kind]
     }
 
+    // v3.25 — Pokédex des arbres : on enregistre le kind dans treesDiscovered s'il n'y est pas déjà
+    const discoveredRaw = (progress as { treesDiscovered?: unknown }).treesDiscovered
+    const discovered: string[] = Array.isArray(discoveredRaw)
+        ? (discoveredRaw as unknown[]).filter((x): x is string => typeof x === "string")
+        : []
+    const newDiscovered = discovered.includes(treeInstance.kind)
+        ? undefined
+        : [...discovered, treeInstance.kind]
+
     await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
         data: {
@@ -165,6 +174,7 @@ export async function POST(req: NextRequest) {
             bonusSurplus: nextSnap.bonusSurplus,
             fruitsTaken: newState,
             ...(newJardinierFruitOrder !== undefined ? { jardinierFruitOrder: newJardinierFruitOrder } : {}),
+            ...(newDiscovered !== undefined ? { treesDiscovered: newDiscovered } : {}),
             lastSeen: new Date(),
         },
     })
