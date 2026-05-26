@@ -1030,6 +1030,31 @@ export default function MapClient({
                 })()
             }
 
+            // v3.24a-3 — Risque d'écrasement sur tile "road" à Lasagnas Vegas.
+            // Le passage piéton (x=11,12) reste safe (déjà géré au niveau tile = "path").
+            // Conditions immune : casquette de flic intacte.
+            // Risque : 15% de chance d'écrasement par case road. Perte = -50% énergie restante.
+            const enteredTile = map.tiles[result.nextState.posY]?.[result.nextState.posX]
+            if (enteredTile === "road" && state.mapId === "lasagnas_vegas") {
+                const hasCasquetteIntact = hasIntactItem(inventory, "casquette_flic")
+                if (hasCasquetteIntact) {
+                    // Casquette use : -1 durabilité. Pas d'écrasement.
+                    spendEnergy(0, "casquette_use", ["casquette_flic"]).catch(() => { /* silent */ })
+                } else {
+                    // 15% de chance d'être écrasé
+                    if (Math.random() < 0.15) {
+                        const lost = Math.floor(reps / 2)
+                        const remaining = reps - lost
+                        setReps(remaining)
+                        spendEnergy(lost, "car_crush").catch(() => { /* silent */ })
+                        setPopup({
+                            kind: "info",
+                            text: `💥 BAM ! Une voiture t'a écrasé.\n\nTu perds la moitié de ton énergie (-${lost} reps).\n\nAchète une casquette de flic chez RAVIOL'STYLE pour ne plus te faire écraser.`,
+                        })
+                    }
+                }
+            }
+
             // v3.22 — Mouvement gratuit dans les intérieurs (bâtiments) : skip cost
             if (result.repsCost > 0 && !INDOOR_MAP_IDS.has(state.mapId)) {
                 // v3.17 — On résout le wearable actif pour la tile sur laquelle on entre.
@@ -2123,18 +2148,26 @@ export default function MapClient({
             return
         }
 
-        // v3.24a-2 — Shops Lasagnas Vegas : appuyer A sur shopCounter → modal shop (placeholder)
+        // v3.24a-3 — Shops Vegas habits & bouffe : appuyer A sur shopCounter → ShopModal
         if (
-            (state.mapId === "lasagnas_shop_habits" || state.mapId === "lasagnas_shop_bouffe" || state.mapId === "lasagnas_shop_rachat") &&
+            (state.mapId === "lasagnas_shop_habits" || state.mapId === "lasagnas_shop_bouffe") &&
             tile === "shopCounter"
         ) {
-            const shopLabel =
-                state.mapId === "lasagnas_shop_habits" ? "RAVIOL'STYLE (habits)"
-                    : state.mapId === "lasagnas_shop_bouffe" ? "LINGUINI L'ANCIEN (premium bouffe)"
-                        : "TONY RECYCLO (rachat usés)"
+            if (!hasBag) {
+                setPopup({
+                    kind: "info",
+                    text: "Le vendeur te regarde. \"Pas de sac, pas de courses. Va voir PEPITO à Pépiteville d'abord.\"",
+                })
+                return
+            }
+            setShowShop(true)
+            return
+        }
+        // v3.24a-3 — Shop rachat usés : popup pour l'instant (mécanique rachat à venir)
+        if (state.mapId === "lasagnas_shop_rachat" && tile === "shopCounter") {
             setPopup({
                 kind: "info",
-                text: `${shopLabel}\n\n"Catalogue arrive dans le patch suivant (v3.24a-3)."\n\nReviens bientôt.`,
+                text: "TONY RECYCLO regarde tes objets cassés.\n\n\"Reviens dans le prochain patch — j'ai pas encore mes prix. (Mécanique rachat à venir.)\"",
             })
             return
         }
@@ -3345,7 +3378,13 @@ export default function MapClient({
                     availableEnergy={reps}
                     nickname={nickname}
                     difficultyRatio={difficultyRatio}
-                    shop={state.mapId === "shop_macaron" ? "trenette" : state.mapId === "bike_shop" ? "muscuville_bikes" : "nutripates"}
+                    shop={
+                        state.mapId === "shop_macaron" ? "trenette"
+                            : state.mapId === "bike_shop" ? "muscuville_bikes"
+                                : state.mapId === "lasagnas_shop_habits" ? "vegas_habits"
+                                    : state.mapId === "lasagnas_shop_bouffe" ? "vegas_bouffe"
+                                        : "nutripates"
+                    }
                     onBuy={async (itemKey) => {
                         try {
                             const res = await fetch("/api/gamebook/shop/buy", {

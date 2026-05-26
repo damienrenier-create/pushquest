@@ -72,6 +72,18 @@ export interface ItemCapabilities {
         /** Coût en reps par case sur le Mont Pasta-Ventoux (avant modulation cadence). */
         costPerCase: number
     }
+    /** v3.24a-3 — Casquette de flic : immune à l'écrasement sur la route Vegas.
+     *  S'use d'1 à chaque case "road" traversée (pas à chaque pas).
+     *  À 0 → cassée → plus de protection. */
+    canBypassRoad?: {
+        initialDurability: number
+    }
+    /** v3.24a-3 — Arrosoir magique : permet de faire repousser les fruits d'un arbre.
+     *  Usage : interagir avec un arbre vide. Reset le compteur du jour pour cet arbre.
+     *  S'use d'1 par utilisation. À 0 → cassé. */
+    canWater?: {
+        initialDurability: number
+    }
 }
 
 export interface ItemDefinition {
@@ -84,8 +96,9 @@ export interface ItemDefinition {
     maxQuantity: number
     /** v3.17 — Catalogue d'origine : "nutripates" (Pépiteville), "trenette" (Macaron'île),
      * "both" (les deux shops), "gift" (donné, pas vendu).
-     * v3.23 : ajout "muscuville_bikes" pour le magasin de vélos. */
-    availableAt?: "nutripates" | "trenette" | "both" | "gift" | "muscuville_bikes"
+     * v3.23 : ajout "muscuville_bikes" pour le magasin de vélos.
+     * v3.24a-3 : ajout "vegas_habits" (Lasagnas Vegas) et "vegas_bouffe" (Lasagnas Vegas premium). */
+    availableAt?: "nutripates" | "trenette" | "both" | "gift" | "muscuville_bikes" | "vegas_habits" | "vegas_bouffe"
     capabilities: ItemCapabilities
 }
 
@@ -268,6 +281,117 @@ export const ITEMS: ItemDefinition[] = [
             canRide: { initialDurability: 800, costPerCase: 2 },
         },
     },
+    // ============================================================
+    // v3.24a-3 — Items Lasagnas Vegas
+    // ============================================================
+    {
+        key: "casquette_flic",
+        name: "Casquette de Flic",
+        emoji: "👮",
+        description: "Casquette autoritaire. Les voitures de Vegas s'arrêtent net pour te laisser passer. S'use de 1 par traversée de route (50 traversées).",
+        priceReps: 200,
+        maxQuantity: 1,
+        availableAt: "vegas_habits",
+        capabilities: {
+            canBypassRoad: { initialDurability: 50 },
+        },
+    },
+    {
+        key: "arrosoir",
+        name: "Arrosoir Magique",
+        emoji: "🪣",
+        description: "Reçu par BASILICO le jardinier (ou acheté). Permet de faire repousser les fruits d'un arbre vide. S'use de 1 par utilisation (5 utilisations).",
+        priceReps: 900,
+        maxQuantity: 1,
+        availableAt: "vegas_bouffe",
+        capabilities: {
+            canWater: { initialDurability: 5 },
+        },
+    },
+    {
+        key: "corned_pates_truffees",
+        name: "Corned Pâtes Truffées",
+        emoji: "🥫",
+        description: "Version PREMIUM. Double instantanément ton énergie ET donne +5 happiness à ton tamagotchi. Disparaît à l'usage.",
+        priceReps: 200,
+        maxQuantity: 1,
+        availableAt: "vegas_bouffe",
+        capabilities: {
+            canConsume: { effect: "doubleEnergy" },
+        },
+    },
+    {
+        key: "lunettes_diamant",
+        name: "Lunettes Diamant",
+        emoji: "👓",
+        description: "Version PREMIUM des Lunettes (-20% prix sociaux + +20% rewards bonus). Durent 1500 pas. Pièce de luxe.",
+        priceReps: 700,
+        maxQuantity: 1,
+        availableAt: "vegas_habits",
+        capabilities: {
+            canCosmetic: { slot: "face", socialDiscount: 0.2, rewardBonus: 0.2, initialDurability: 1500 },
+        },
+    },
+    {
+        key: "grande_gourde_xl",
+        name: "Grande Gourde XL",
+        emoji: "⛲",
+        description: "Capacité 400 reps. Idéale pour les longues sorties. S'use de 5 à chaque gorgée.",
+        priceReps: 500,
+        maxQuantity: 1,
+        availableAt: "vegas_bouffe",
+        capabilities: {
+            canStore: { maxCapacity: 400, unit: "reps", wearOnDrink: 5 },
+        },
+    },
+    {
+        key: "chaussures_air_pasta",
+        name: "Chaussures Air Pasta",
+        emoji: "🥾",
+        description: "Réduit le coût de déplacement à 2 reps/case. Durent 4000 pas. Le top du top.",
+        priceReps: 800,
+        maxQuantity: 1,
+        availableAt: "vegas_habits",
+        capabilities: {
+            canWear: { initialDurability: 4000, moveCostReduction: 8 },
+        },
+    },
+    {
+        key: "brassards_or",
+        name: "Brassards d'Or",
+        emoji: "🥇",
+        description: "Réduit le coût en eau à 2 reps/case. Durent 1500 pas. La nage de luxe.",
+        priceReps: 250,
+        maxQuantity: 1,
+        availableAt: "vegas_habits",
+        capabilities: {
+            canWear: { initialDurability: 1500, moveCostReduction: 8, tileRestriction: "waterShallow" },
+        },
+    },
+    {
+        key: "smoking_vip",
+        name: "Smoking VIP",
+        emoji: "🤵",
+        description: "Tenue exigée pour entrer dans la salle VIP du casino. Cosmétique éternel.",
+        priceReps: 300,
+        maxQuantity: 1,
+        availableAt: "vegas_habits",
+        capabilities: {
+            canCosmetic: { slot: "body" },
+        },
+    },
+    {
+        key: "grain_de_pate",
+        name: "Grain de Pâte",
+        emoji: "🌾",
+        description: "Nourriture pour coqs de combat. Donne-le à un coq avant le combat de 21h pour +10% de chance qu'il gagne (cumulable).",
+        priceReps: 30,
+        maxQuantity: 10,
+        availableAt: "vegas_bouffe",
+        capabilities: {
+            canConsume: { effect: "doubleEnergy" },  // placeholder — vraie logique gérée dans /api/gamebook/coq/feed (à venir v3.24b)
+        },
+    },
 ]
 
 export function getItem(key: string): ItemDefinition | null {
@@ -279,12 +403,14 @@ export function getItem(key: string): ItemDefinition | null {
  * "both" est inclus dans les deux shops. "gift" est exclu.
  * v3.23 — Étendu pour supporter "muscuville_bikes" (magasin de vélos).
  */
-export function itemsAvailableAtShop(shop: "nutripates" | "trenette" | "muscuville_bikes"): ItemDefinition[] {
+export function itemsAvailableAtShop(shop: "nutripates" | "trenette" | "muscuville_bikes" | "vegas_habits" | "vegas_bouffe"): ItemDefinition[] {
     return ITEMS.filter((i) => {
         const at = i.availableAt ?? "both"
         if (at === "gift") return false
         if (shop === "muscuville_bikes") return at === "muscuville_bikes"
-        if (at === "muscuville_bikes") return false
+        if (shop === "vegas_habits") return at === "vegas_habits"
+        if (shop === "vegas_bouffe") return at === "vegas_bouffe"
+        if (at === "muscuville_bikes" || at === "vegas_habits" || at === "vegas_bouffe") return false
         if (at === "both") return true
         return at === shop
     })
@@ -366,6 +492,13 @@ export function getInitialItemData(def: ItemDefinition): Record<string, unknown>
     if (def.capabilities.canRide) {
         return { durability: def.capabilities.canRide.initialDurability }
     }
+    // v3.24a-3 — casquette de flic + arrosoir
+    if (def.capabilities.canBypassRoad) {
+        return { durability: def.capabilities.canBypassRoad.initialDurability }
+    }
+    if (def.capabilities.canWater) {
+        return { durability: def.capabilities.canWater.initialDurability }
+    }
     return undefined
 }
 
@@ -383,6 +516,14 @@ export function isBrokenItem(data: unknown, def: ItemDefinition): boolean {
     }
     // v3.23 — vélos (canRide) ont aussi durabilité
     if (def.capabilities.canRide) {
+        if (data && typeof data === "object" && "durability" in data) {
+            const v = (data as { durability: unknown }).durability
+            if (typeof v === "number" && Number.isFinite(v)) return v <= 0
+        }
+        return false
+    }
+    // v3.24a-3 — casquette de flic + arrosoir : data.durability ≤ 0
+    if (def.capabilities.canBypassRoad || def.capabilities.canWater) {
         if (data && typeof data === "object" && "durability" in data) {
             const v = (data as { durability: unknown }).durability
             if (typeof v === "number" && Number.isFinite(v)) return v <= 0

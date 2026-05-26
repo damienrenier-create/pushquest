@@ -28,8 +28,11 @@ interface Props {
     nickname: string
     /** v3.10 — ratio de difficulté pour ajuster l'affichage des prix (onboarding paye moins) */
     difficultyRatio: number
-    /** v3.17 — Quel shop est ouvert. v3.23 : ajout "muscuville_bikes". Par défaut nutripates. */
-    shop?: "nutripates" | "trenette" | "muscuville_bikes"
+    /** v3.17 — Quel shop est ouvert.
+     * v3.23 : ajout "muscuville_bikes".
+     * v3.24a-3 : ajout "vegas_habits" et "vegas_bouffe".
+     * Par défaut nutripates. */
+    shop?: "nutripates" | "trenette" | "muscuville_bikes" | "vegas_habits" | "vegas_bouffe"
     onBuy: (itemKey: string) => Promise<void>
     /** v3.8.9 — notifie le parent à la fermeture du modal, en indiquant si un achat a été fait. */
     onClose: (purchaseMade: boolean) => void
@@ -50,6 +53,16 @@ function greetingNutripates(lastPurchase: LastPurchase | null, currentNickname: 
 // v3.23 — Greeting du magasin de vélos (PELOTON à Muscuville)
 function greetingBikeShop(): string {
     return "PELOTON polit une selle. \"Le Mont Pasta-Ventoux ? Faut un vélo. Pas le choix. Choisis bien — ce que tu paies, tu le récupères au sommet.\""
+}
+
+// v3.24a-3 — Greeting du shop habits (RAVIOL'STYLE à Lasagnas Vegas)
+function greetingHabits(): string {
+    return "RAVIOL'STYLE défait son col en velours. \"Bienvenue, élégant. Casquettes, smokings, lunettes diamant... Tout pour s'imposer en Vegas.\""
+}
+
+// v3.24a-3 — Greeting du shop bouffe (LINGUINI L'ANCIEN à Lasagnas Vegas)
+function greetingBouffe(): string {
+    return "LINGUINI L'ANCIEN te tend une carte argentée. \"Tu es chez le PREMIUM. Plus cher, mais ma cousine Trenette serait jalouse de la qualité.\""
 }
 
 // v3.17 — Greeting TRENETTE (frère de NUTRIPATES, shop Macaron'île)
@@ -102,6 +115,8 @@ export default function ShopModal({ inventory, availableEnergy, nickname, diffic
     const greeting = useMemo(() => {
         if (shop === "trenette") return greetingTrenette(lastPurchase, nickname)
         if (shop === "muscuville_bikes") return greetingBikeShop()
+        if (shop === "vegas_habits") return greetingHabits()
+        if (shop === "vegas_bouffe") return greetingBouffe()
         return greetingNutripates(lastPurchase, nickname)
     }, [lastPurchase, nickname, shop])
 

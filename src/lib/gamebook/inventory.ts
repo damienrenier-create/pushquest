@@ -176,9 +176,12 @@ export function wearItem(inv: InventoryEntry[], itemKey: string, amount: number 
     const def = getItem(itemKey)
     if (!def) return inv
     // v3.17d — supporte aussi les items canCosmetic avec initialDurability (lunettes)
+    // v3.24a-3 — Étendu : canBypassRoad (casquette flic) et canWater (arrosoir) ont aussi une durabilité
     const hasWearCap = !!def.capabilities.canWear
     const hasCosmeticDur = def.capabilities.canCosmetic?.initialDurability !== undefined
-    if (!hasWearCap && !hasCosmeticDur) return inv
+    const hasBypassRoad = !!def.capabilities.canBypassRoad
+    const hasWater = !!def.capabilities.canWater
+    if (!hasWearCap && !hasCosmeticDur && !hasBypassRoad && !hasWater) return inv
 
     // v3.20 — Amulette du Monstre : chaque wear a une chance d'être préservé (skip).
     // Cherche un canPreserve actif dans l'inventaire (item non cassé).
@@ -205,8 +208,14 @@ export function wearItem(inv: InventoryEntry[], itemKey: string, amount: number 
             current = typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.floor(v)) : 0
         } else if (hasWearCap) {
             current = def.capabilities.canWear?.initialDurability ?? 0
-        } else {
+        } else if (hasCosmeticDur) {
             current = def.capabilities.canCosmetic?.initialDurability ?? 0
+        } else if (hasBypassRoad) {
+            current = def.capabilities.canBypassRoad?.initialDurability ?? 0
+        } else if (hasWater) {
+            current = def.capabilities.canWater?.initialDurability ?? 0
+        } else {
+            current = 0
         }
         const next = Math.max(0, current - amount)
         return { ...e, data: { ...(e.data ?? {}), durability: next } }
