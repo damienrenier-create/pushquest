@@ -97,6 +97,7 @@ import { parseInventory, hasIntactItem, type InventoryEntry } from "@/lib/gamebo
 import { findActiveWearableForTile, applySocialDiscount, hasIntactLunettes } from "@/lib/gamebook/items"
 import { PEPITO_DIALOGUE_FIRST, MONT_SUMMIT_LINES, FRANSS_JOKE_INTRO_LINES, FRANSS_JOKE_ATTOWER_LINES } from "@/lib/gamebook/dialogue"
 import TamagotchiModal from "./TamagotchiModal"
+import DaemonTeamModal from "./DaemonTeamModal"
 import type { TamagotchiView } from "@/lib/gamebook/tamagotchi"
 import BibliothequeModal from "./BibliothequeModal"
 import BestioleNamingModal from "./BestioleNamingModal"
@@ -250,6 +251,8 @@ export default function MapClient({
     // v3.14 — Modal du vétérinaire (V3T) : adoption / nourrissage du tamagotchi
     const [showTamagotchi, setShowTamagotchi] = useState(false)
     const [tamagotchi, setTamagotchi] = useState<TamagotchiView | null>(initialTamagotchi)
+    // v4.0 Phase 1.D — Modal équipe Daemon (jusqu'à 6 slots) accessible via START
+    const [showDaemonTeam, setShowDaemonTeam] = useState(false)
     // v3.27 — Mode "rangé dans le sac" : si true, le sprite compagnon est caché de la map
     const [tamagotchiInBag, setTamagotchiInBag] = useState<boolean>(false)
     // v3.27 — Modal de choix (3ᵉ interaction dans la minute : Parler / Ranger)
@@ -1651,7 +1654,7 @@ export default function MapClient({
         }, 300)
 
         // v3.8 — si une modal est ouverte, le A est géré par la modal elle-même
-        if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore || showCockfight || showSlotMachine || showCasinoPatternVegas || showArena) return
+        if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore || showCockfight || showSlotMachine || showCasinoPatternVegas || showArena || showDaemonTeam) return
 
         // v3.23e — Blague PIAFFINI unique pour Franss : intercepter le premier A press (idem tryMove)
         if (
@@ -3111,7 +3114,7 @@ export default function MapClient({
         const handler = (e: KeyboardEvent) => {
             // v3.8 — si une modal est ouverte, on ne gère pas les touches ici
             // (StartMenu/InventoryModal/ShopModal/PlayerMapModal écoutent leurs propres events)
-            if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore || showCockfight || showSlotMachine || showCasinoPatternVegas || showArena) return
+            if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore || showCockfight || showSlotMachine || showCasinoPatternVegas || showArena || showDaemonTeam) return
 
             if (state.phase === "introMonster") {
                 if (e.key === "Enter" || e.key === " " || e.key.toLowerCase() === "a") {
@@ -3817,10 +3820,18 @@ export default function MapClient({
                         } else if (entry === "travel") {
                             setShowStartMenu(false)
                             setShowFastTravel(true)
+                        } else if (entry === "daemon") {
+                            setShowStartMenu(false)
+                            setShowDaemonTeam(true)
                         }
                     }}
                     onClose={() => setShowStartMenu(false)}
                 />
+            )}
+
+            {/* v4.0 Phase 1.D — Modal équipe Daemon (jusqu'à 6 slots) */}
+            {showDaemonTeam && (
+                <DaemonTeamModal onClose={() => setShowDaemonTeam(false)} />
             )}
 
             {/* v3.25 — Modal Pokédex des arbres (Livre des Arbres) */}

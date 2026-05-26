@@ -9,7 +9,7 @@
 
 import { useEffect, useState } from "react"
 
-export type StartMenuEntry = "bag" | "travel" | "close"
+export type StartMenuEntry = "bag" | "travel" | "daemon" | "close"
 
 interface Props {
     onSelect: (entry: StartMenuEntry) => void
@@ -17,8 +17,10 @@ interface Props {
 }
 
 // v3.33 — VOYAGE désactivé (fast travel mis en pause).
+// v4.0 Phase 1.D — DAEMON ajouté (équipe Daemon up to 6 slots).
 const ENTRIES: Array<{ key: StartMenuEntry; label: string }> = [
     { key: "bag", label: "🎒 SAC" },
+    { key: "daemon", label: "👾 DAEMON" },
     { key: "close", label: "↩ RETOUR" },
 ]
 
