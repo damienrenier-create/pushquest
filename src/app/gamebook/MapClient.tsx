@@ -2456,6 +2456,30 @@ export default function MapClient({
                 setShowBibliotheque(true)
                 return
             }
+            // v3.36 — Véto Muscuville (DOC PROTÉINE) : remet bonheur max (1×/jour)
+            if (npcId === "veto_muscuville") {
+                ; (async () => {
+                    try {
+                        const res = await fetch("/api/gamebook/veto-muscu/heal", { method: "POST" })
+                        const data = await res.json()
+                        if (data.ok && data.message) {
+                            setPopup({ kind: "info", text: data.message })
+                            try {
+                                const sRes = await fetch("/api/gamebook/state")
+                                if (sRes.ok) {
+                                    const sData = await sRes.json()
+                                    if (sData.tamagotchi) setTamagotchi(sData.tamagotchi)
+                                }
+                            } catch { /* silent */ }
+                        } else if (data.reason) {
+                            setToast(data.reason)
+                        }
+                    } catch (e) {
+                        console.warn("[MapClient] veto-muscu/heal failed", e)
+                    }
+                })()
+                return
+            }
             // v3.35 — Bibliothécaire MIRABELLE de Muscuville : offre le Livre des Arbres
             // si conditions remplies (≥3 arbres découverts + quota du jour non rempli).
             if (npcId === "biblio_muscu_keeper") {

@@ -1319,6 +1319,29 @@ export const NPCS: NpcDefinition[] = [
     },
 
     // ============================================================
+    // v3.36 — Véto de Muscuville (DOC PROTÉINE) : remet happiness max 1×/jour
+    // ============================================================
+    {
+        id: "veto_muscuville",
+        name: "DOC PROTÉINE",
+        mapId: "muscuville",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🩺", color: "#80c090" },
+        // Position : sud du chemin central, près de l'arène
+        initialX: 6,
+        initialY: 14,
+        dialoguesAfter: [
+            "*DOC PROTÉINE essuie ses lunettes.*",
+            "Je suis le véto local. Pas de cages chez moi — juste des bols d'eau et des câlins.",
+            "Tu veux que je prenne soin de ton animal ? Je peux le remettre au bonheur max (1× par jour, gratuit).",
+        ],
+        dialoguesAfterRevisit: [
+            "*Il tend la main.* Tu veux remettre ton compagnon au bonheur max ?",
+        ],
+    },
+
+    // ============================================================
     // v3.35 — Bibliothécaire de Muscuville (sœur de la bibliothécaire de Macaron'île)
     // ============================================================
     {

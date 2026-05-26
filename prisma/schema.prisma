@@ -573,6 +573,9 @@ model GamebookProgress {
   muscuvilleChampionsRevanche   Json    @default("[]")
   muscuvilleRocksPassed         Boolean @default(false)
   muscuvilleInterpellatorTalked Boolean @default(false)
+  // v3.36 — Véto de Muscuville (DOC PROTÉINE) : remet happiness à 100 sur le tamagotchi.
+  // Limite 1×/jour pour éviter l'abus (le decay est à -1 par 6h).
+  vetoMuscuLastVisitDate        String  @default("")
 
   // v3.24a-4 — Mission jardinier BASILICO (Lasagnas Vegas).
   // jardinierMissionActive : true depuis qu'on a parlé à BASILICO la 1ère fois (= mission acceptée).
