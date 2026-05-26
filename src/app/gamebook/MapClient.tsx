@@ -862,6 +862,16 @@ export default function MapClient({
                 }
             }
 
+            // v3.24c-7 — Gating du bureau d'IL CAPO : accessible uniquement avec la clé de JAMIE
+            if (!("blocked" in result) && result.nextState.mapId === "lasagnas_tb_bureau") {
+                const keyHeld = (state as { tbBossKeyHeld?: boolean }).tbBossKeyHeld === true
+                if (!keyHeld) {
+                    setToast("🔒 Porte du bureau verrouillée. Il te faut la clé.")
+                    setState((s) => ({ ...s, direction: d }))
+                    return
+                }
+            }
+
             // v3.12 — Check waterShallow (canal) : conditions d'entrée selon swim_set + firstSwimDone
             if (!("blocked" in result)) {
                 const targetTile = map.tiles[result.nextState.posY]?.[result.nextState.posX]
@@ -1799,6 +1809,20 @@ export default function MapClient({
                             if (data.message) setPopup({ kind: "info", text: data.message })
                         } catch (e) {
                             console.warn("[MapClient] tb/jamie failed", e)
+                        }
+                    })()
+                    return
+                }
+
+                // v3.24c-7 — IL CAPO : 4 défis ordonnés (squat / pompes / hier / 2 jours)
+                if (npcId === "tb_boss") {
+                    ; (async () => {
+                        try {
+                            const res = await fetch("/api/gamebook/tb/boss", { method: "POST" })
+                            const data = await res.json()
+                            if (data.message) setPopup({ kind: "info", text: data.message })
+                        } catch (e) {
+                            console.warn("[MapClient] tb/boss failed", e)
                         }
                     })()
                     return

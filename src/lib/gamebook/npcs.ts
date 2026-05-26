@@ -1595,12 +1595,9 @@ export const NPCS: NpcDefinition[] = [
             "*IL CAPO te scrute lentement, sans bouger d'un cil.*",
             "Tu as bravé mes hommes pour venir jusqu'ici. Bien.",
             "Mais entrer dans ma confidence, c'est PROUVER. Prouver que tu es au sommet.",
-            "Défi 1 : être TOP 1 squat du jour. Reviens me voir quand c'est fait.",
-            "(Logique défis à venir en v3.24c-3.)",
         ],
         dialoguesAfterRevisit: [
             "*IL CAPO patiente. Ses doigts tambourinent sur le bureau.*",
-            "Alors ? Tu en es où ?",
         ],
     },
 
