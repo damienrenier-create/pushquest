@@ -108,6 +108,7 @@ import CockfightModal from "./CockfightModal"
 import SlotMachineModal from "./SlotMachineModal"
 import CasinoPatternVegasModal from "./CasinoPatternVegasModal"
 import ArenaModal from "./ArenaModal"
+import MontVentouxSideView from "./MontVentouxSideView"
 import { getLevelDetails } from "@/lib/xp"
 import { getActiveBicycle } from "@/lib/gamebook/items"
 
@@ -3151,6 +3152,27 @@ export default function MapClient({
                         border: "2px solid #000",
                     }}
                 >
+                    {/* v3.34 — Mont Pasta-Ventoux : overlay vue de profil pseudo-3D
+                        (au-dessus de la grille top-down). Z-index 8 pour passer au-dessus
+                        des tiles mais derrière les overlays HUD. La grille reste rendue
+                        en-dessous (et donc utilisée pour les calculs de mouvement). */}
+                    {state.mapId === "mont_pasta_ventoux" && (
+                        <div
+                            style={{
+                                position: "absolute",
+                                inset: 0,
+                                zIndex: 8,
+                                pointerEvents: "none",
+                            }}
+                        >
+                            <MontVentouxSideView
+                                posY={state.posY}
+                                mapHeight={map.height}
+                                animStep={animStep}
+                                onBike={getActiveBicycle(inventory) !== null}
+                            />
+                        </div>
+                    )}
                     {/* Grille */}
                     <div
                         style={{
