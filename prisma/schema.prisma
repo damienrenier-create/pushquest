@@ -44,6 +44,10 @@ model User {
   coinAdjustments        CoinAdjustment[]
   quotaModifiersGiven    QuotaModifier[]  @relation("QuotaModifierSource")
   quotaModifiersReceived QuotaModifier[]  @relation("QuotaModifierTarget")
+  // v4.0 — Équipe de Daemons (refactor du tamagotchi single Json vers table 1-N).
+  // L'ancien champ GamebookProgress.tamagotchi (Json) reste actif pendant la migration
+  // pour assurer la coexistence (Phase 1.A-D). Cleanup en Phase 1.E uniquement.
+  daemons                Daemon[]
   league    String      @default("POMPES")
   image     String?     // URL to profile picture
   alterEgoId String?     @unique
@@ -55,6 +59,87 @@ model User {
 }
 
 // Existing tables ...
+
+// ============================================================
+// v4.0 — Modèle Daemon (refactor du tamagotchi Json vers table 1-N)
+// ============================================================
+// Chaque user peut avoir jusqu'à 6 daemons (slot 1-6). Le leader est slot 1.
+// L'animal d'origine de PastaVegas (anciennement tamagotchi) devient le Daemon
+// du joueur en slot 1. Les daemons supplémentaires viennent du boss Pastagone
+// (3 animaux orphelins) et de Bolognion (énigme cuisine).
+//
+// Stats de combat (Pokémon Gen 1) :
+//   - F (Force) / V (Vitesse) / D (Défense) / I (Intelligence) / E (Endurance)
+//   - Bonheur (Happiness) : multiplicateur global ×0.5 à ×1.5
+//   - HP combat dérivé d'Endurance + combatLevel
+//
+// Tracking Saiyan (pour calcul des 5-9 points par level up) :
+//   - energySpentThisLevel : énergie dépensée en attaques depuis le dernier level up
+//   - koCountThisLevel : nb de K.O. subis depuis le dernier level up
+//   - easyBattlesCount / hardBattlesCount : combats faciles (< -3 level) vs durs (> +3 level)
+//
+// Attaques :
+//   - attacksKnown : array de codes d'attaques apprises (Json)
+//   - attacksEquipped : array de 4 max (slots de moveset) (Json)
+//   - equippedItems : items équipés (collier, muselière, etc.) (Json)
+// ============================================================
+model Daemon {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slotIndex       Int      // 1..6 (1 = leader)
+  name            String
+  // Identité (héritée XP_ANIMALS pour le sprite/emoji affiché)
+  speciesLevel    Int      // 1..100, mappé sur XP_ANIMALS
+  // Type Pokémon (combat) — Normal au départ, évolution via pierres dans arc post-Pastagone
+  type            String   @default("Normal")  // Normal | Feu | Eau | Plante | Electrique | Vol | Psy | Pate | Combat | Roche
+  // Morphologie (pour variantes d'attaques)
+  morphology      String   @default("pattes")  // crocs | bec | insecte | pattes | ecailles
+  // Progression combat (Saiyan)
+  combatLevel     Int      @default(1)
+  combatXp        Int      @default(0)
+  // Stats de base (héritées des datas réelles du joueur, clamp 25-100)
+  baseFor         Int      @default(25)
+  baseVit         Int      @default(25)
+  baseDef         Int      @default(25)
+  baseInt         Int      @default(25)
+  baseEnd         Int      @default(25)
+  // Bonus alloués par level-ups (répartition manuelle, clamp 0-80)
+  bonusFor        Int      @default(0)
+  bonusVit        Int      @default(0)
+  bonusDef        Int      @default(0)
+  bonusInt        Int      @default(0)
+  bonusEnd        Int      @default(0)
+  // État live
+  currentHp       Int      @default(100)
+  happiness       Int      @default(50)
+  // Tracking Saiyan (reset à 0 à chaque level up)
+  energySpentThisLevel  Int @default(0)
+  koCountThisLevel      Int @default(0)
+  // Tracking meta (cumulé sur la vie de l'animal)
+  easyBattlesCount      Int @default(0)
+  hardBattlesCount      Int @default(0)
+  battlesTotal          Int @default(0)
+  damageReceivedTotal   Int @default(0)
+  // Attaques (Json arrays)
+  attacksKnown    Json     @default("[\"charge\"]")
+  attacksEquipped Json     @default("[\"charge\"]")
+  // Items équipés (Json array de string keys)
+  equippedItems   Json     @default("[]")
+  // Méta narratif
+  recovered       Boolean  @default(false)  // a passé les 7 défis d'adoption (animal #1 uniquement, autres = true direct)
+  inBag           Boolean  @default(false)
+  // Lien d'origine narratif : "pastavegas" (animal #1), "pastagone_boss_volt/vol/psy", "pastagone_bolognion"
+  origin          String   @default("pastavegas")
+  // Timestamps
+  lastFedAt       DateTime?
+  lastKoAt        DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, slotIndex])
+  @@index([userId])
+}
 
 model GlobalConfig {
   key       String   @id
@@ -526,6 +611,13 @@ model GamebookProgress {
   // v3.25 — Pokédex des arbres : kinds découverts (apple/cherry/pear/peach/coconut/poison/olive/boost/divisor).
   treesDiscovered           Json    @default("[]")
   treeBookGiven             Boolean @default(false)
+  // v4.0 — Tracking datas pour le calcul des stats de base des Daemons.
+  // totalGamebookSteps  : nb cumulé de cases parcourues dans le Gamebook (toutes maps confondues).
+  //                       Source de la stat Vitesse du Daemon.
+  // totalShopSpend      : reps cumulés dépensés en achats shop (NUTRIPATES, TRENETTE, PELOTON, Vegas).
+  //                       Source de la stat Intelligence du Daemon.
+  totalGamebookSteps        Int     @default(0)
+  totalShopSpend            Int     @default(0)
   // v3.27 — Animal follower : si true, l'animal est rangé dans le sac (pas affiché à l'écran).
   // tamagotchiInteractionsAt stocke les timestamps ISO des dernières interactions (sliding window 60s).
   tamagotchiInBag           Boolean @default(false)

@@ -135,6 +135,9 @@ export async function POST(req: NextRequest) {
     // v3.8.1 — data initial dépend des capabilities (canStore = gourde, canWear = baskets...)
     const initialData = getInitialItemData(itemDef)
     const newInventory = addItem(currentInventory, itemKey, initialData)
+    // v4.0 — Tracking totalShopSpend (source de la stat Intelligence du Daemon).
+    const prevTotalShopSpend = (progress as { totalShopSpend?: number }).totalShopSpend ?? 0
+    const newTotalShopSpend = prevTotalShopSpend + finalPrice
 
     await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
@@ -142,6 +145,7 @@ export async function POST(req: NextRequest) {
             energySpentToday: newSpent,
             energySpentDate: today,
             inventory: newInventory,
+            totalShopSpend: newTotalShopSpend,
             lastSeen: new Date(),
         },
     })

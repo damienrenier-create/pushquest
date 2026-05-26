@@ -171,6 +171,16 @@ export async function GET() {
         })
     }
 
+    // v4.0 — Phase 1.A : auto-migration tamagotchi (Json) → Daemon row (slot 1).
+    // Idempotente : si déjà migré, no-op. Permet de migrer progressivement tous les joueurs
+    // sans intervention manuelle. L'ancien champ tamagotchi reste en place (coexistence).
+    try {
+        const { ensureDaemonForTamagotchi } = await import("@/lib/gamebook/daemon")
+        await ensureDaemonForTamagotchi(userId, progress)
+    } catch (e) {
+        console.warn("[state GET] ensureDaemonForTamagotchi failed", e)
+    }
+
     const todayReps = await getTodayReps(userId)
 
     // === v3.4a / v3.23f : calcul de l'énergie disponible ===
@@ -420,6 +430,15 @@ export async function POST(req: NextRequest) {
     let nextLastDailyDecayDate = (existing as { lastDailyDecayDate?: string })?.lastDailyDecayDate ?? ""
     let nextHappyFlowerLastDate = (existing as { happyFlowerLastDate?: string })?.happyFlowerLastDate ?? ""
     let nextInBagSince = (existing as { tamagotchiInBagSince?: Date | null })?.tamagotchiInBagSince ?? null
+    // v4.0 — Tracking totalGamebookSteps (source de la stat Vitesse du Daemon)
+    let nextTotalGamebookSteps = (existing as { totalGamebookSteps?: number })?.totalGamebookSteps ?? 0
+
+    // v4.0 — détection mouvement avant le bloc tamagotchi (pour incrémenter totalSteps même sans daemon)
+    const prevMapBeforeUpdate = (existing as { mapId?: string })?.mapId
+    const prevXBeforeUpdate = (existing as { posX?: number })?.posX
+    const prevYBeforeUpdate = (existing as { posY?: number })?.posY
+    const movedGlobal = prevMapBeforeUpdate !== mapId || prevXBeforeUpdate !== posX || prevYBeforeUpdate !== posY
+    if (movedGlobal) nextTotalGamebookSteps++
 
     if (nextTamagotchi) {
         const todayStr = (await import("@/lib/challenge")).getTodayISO()
@@ -499,6 +518,8 @@ export async function POST(req: NextRequest) {
             lastDailyDecayDate: nextLastDailyDecayDate,
             tamagotchiInBagSince: nextInBagSince,
             happyFlowerLastDate: nextHappyFlowerLastDate,
+            // v4.0 — Tracking total steps Gamebook
+            totalGamebookSteps: nextTotalGamebookSteps,
         },
         create: {
             userId,
