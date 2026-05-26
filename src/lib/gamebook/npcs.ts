@@ -1515,12 +1515,10 @@ export const NPCS: NpcDefinition[] = [
         initialY: 3,
         dialoguesAfter: [
             "*MEOWTH te toise depuis sa table.*",
-            "Tiens, un nouveau venu. Tu vas tenir combien de temps ?",
             "Défi : 10 pompes en 5 minutes. Top chrono dès maintenant.",
-            "(Mécanique défi à venir en v3.24c-3 — pour l'instant, parle-moi et reviens plus tard.)",
         ],
         dialoguesAfterRevisit: [
-            "T'es revenu ? Bien.",
+            "Alors, ces pompes ?",
         ],
     },
     {
@@ -1534,12 +1532,10 @@ export const NPCS: NpcDefinition[] = [
         initialY: 3,
         dialoguesAfter: [
             "*JESSIE te lance un regard de défi.*",
-            "Tu veux jouer dans la cour des grands ?",
-            "Défi : finis ton quota du jour avant la fin de la journée.",
-            "(Mécanique défi à venir en v3.24c-3.)",
+            "Défi : finis ton quota du jour avant que je te respecte.",
         ],
         dialoguesAfterRevisit: [
-            "T'as bossé ? Vraiment ? Pas mal.",
+            "T'as bouclé ton quota ? Voyons voir.",
         ],
     },
     {
@@ -1553,12 +1549,10 @@ export const NPCS: NpcDefinition[] = [
         initialY: 5,
         dialoguesAfter: [
             "*GIOVANNI essuie son verre.*",
-            "Avant de parler au boss, faut que tu prouves quelque chose.",
             "Défi : sois TOP 1 gainage du jour. Pas négociable.",
-            "(Mécanique défi à venir en v3.24c-3.)",
         ],
         dialoguesAfterRevisit: [
-            "Top 1 gainage ? On verra ça.",
+            "Alors, le gainage ?",
         ],
     },
     // 4e PNJ : petit frère de JAMES. Donne la clé du boss après les 3 défis ci-dessus.

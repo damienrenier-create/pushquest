@@ -1764,6 +1764,46 @@ export default function MapClient({
                     // On laisse aussi tourner le dialogue normal (n'override pas)
                 }
 
+                // v3.24c-6 — SBIRES BAR TB (MEOWTH / JESSIE / GIOVANNI) : interaction défi
+                {
+                    const sbireMap: Record<string, "meowth" | "jessie" | "giovanni"> = {
+                        tb_sbire_meowth: "meowth",
+                        tb_sbire_jessie: "jessie",
+                        tb_sbire_giovanni: "giovanni",
+                    }
+                    const sbireId = sbireMap[npcId]
+                    if (sbireId) {
+                        ; (async () => {
+                            try {
+                                const res = await fetch("/api/gamebook/tb/sbire", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ sbireId }),
+                                })
+                                const data = await res.json()
+                                if (data.message) setPopup({ kind: "info", text: data.message })
+                            } catch (e) {
+                                console.warn("[MapClient] tb/sbire failed", e)
+                            }
+                        })()
+                        return
+                    }
+                }
+
+                // v3.24c-6 — JAMIE : remet la clé du boss si les 3 sbires sont battus
+                if (npcId === "tb_petit_frere_james") {
+                    ; (async () => {
+                        try {
+                            const res = await fetch("/api/gamebook/tb/jamie", { method: "POST" })
+                            const data = await res.json()
+                            if (data.message) setPopup({ kind: "info", text: data.message })
+                        } catch (e) {
+                            console.warn("[MapClient] tb/jamie failed", e)
+                        }
+                    })()
+                    return
+                }
+
                 // v3.24c-4 — VIDEUR : on tente d'abord validate-challenge (si un défi est en cours),
                 // sinon on ouvre le modal interactif (3 choix oui_honest / yes_lying / no)
                 if (npcId === "tb_videur") {

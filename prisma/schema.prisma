@@ -509,6 +509,8 @@ model GamebookProgress {
   videurChallengeBaseline   Int     @default(0)
   videurChallengeStartedAt  DateTime?
   tbBarDefisDone            Json    @default("[]")
+  // v3.24c-6 — état actif des défis sbires (ex: { meowth: { baselinePushups, startedAt } }).
+  tbBarChallengeData        Json    @default("{}")
   tbBossKeyHeld             Boolean @default(false)
   tbBossDefisDone           Json    @default("[]")
   tbBossBeaten              Boolean @default(false)
