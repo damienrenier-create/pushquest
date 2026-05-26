@@ -268,6 +268,8 @@ export async function GET() {
                 ? ((progress as { treesDiscovered?: unknown }).treesDiscovered as string[])
                 : [],
             treeBookGiven: (progress as { treeBookGiven?: boolean }).treeBookGiven === true,
+            // v3.27 — Animal follower : rangé dans le sac (caché de la map)
+            tamagotchiInBag: (progress as { tamagotchiInBag?: boolean }).tamagotchiInBag === true,
         },
         todayReps,
         energySpentToday,

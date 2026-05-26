@@ -238,6 +238,10 @@ export default function MapClient({
     // v3.14 — Modal du vétérinaire (V3T) : adoption / nourrissage du tamagotchi
     const [showTamagotchi, setShowTamagotchi] = useState(false)
     const [tamagotchi, setTamagotchi] = useState<TamagotchiView | null>(initialTamagotchi)
+    // v3.27 — Mode "rangé dans le sac" : si true, le sprite compagnon est caché de la map
+    const [tamagotchiInBag, setTamagotchiInBag] = useState<boolean>(false)
+    // v3.27 — Modal de choix (3ᵉ interaction dans la minute : Parler / Ranger)
+    const [showTamaChoiceModal, setShowTamaChoiceModal] = useState(false)
     // v3.18 — Modal de la bibliothèque (BIBLIO ou comptoir) : navigation hybride
     const [showBibliotheque, setShowBibliotheque] = useState(false)
     // v3.19b — Modal nommage des bestioles à la première rencontre
@@ -326,6 +330,20 @@ export default function MapClient({
         } catch (e) {
             console.warn("[MapClient] loadOtherPlayers failed", e)
         }
+    }, [])
+
+    // v3.27 — Lecture initiale du flag tamagotchiInBag (côté serveur)
+    useEffect(() => {
+        ; (async () => {
+            try {
+                const r = await fetch("/api/gamebook/state")
+                if (r.ok) {
+                    const j = await r.json()
+                    const inBag = j?.state?.tamagotchiInBag
+                    if (typeof inBag === "boolean") setTamagotchiInBag(inBag)
+                }
+            } catch { /* silent */ }
+        })()
     }, [])
 
     // ============================================================
@@ -3086,8 +3104,9 @@ export default function MapClient({
                         onBike={state.mapId === "mont_pasta_ventoux" && getActiveBicycle(inventory) !== null}
                     />
 
-                    {/* v3.19b — Compagnon tamagotchi (visible si récupéré, outdoor maps uniquement) */}
-                    {tamagotchi?.recovered && OUTDOOR_MAP_IDS.has(state.mapId) && (() => {
+                    {/* v3.19b — Compagnon tamagotchi (visible si récupéré, outdoor maps uniquement)
+                        v3.27 — Caché si tamagotchiInBag = true */}
+                    {tamagotchi?.recovered && !tamagotchiInBag && OUTDOOR_MAP_IDS.has(state.mapId) && (() => {
                         const details = getLevelDetails(tamagotchi.displayLevel ?? tamagotchi.currentLevel)
                         // Position : 1 case derrière le joueur (selon direction)
                         let cx = state.posX
@@ -3314,6 +3333,75 @@ export default function MapClient({
                 >
                     A
                 </button>
+
+                {/* v3.27 — Bouton "ressortir l'animal" (visible si rangé) */}
+                {tamagotchi?.recovered && tamagotchiInBag && OUTDOOR_MAP_IDS.has(state.mapId) && (
+                    <button
+                        onClick={async (e) => {
+                            e.preventDefault()
+                            try {
+                                const res = await fetch("/api/gamebook/tamagotchi/in-bag", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ inBag: false }),
+                                })
+                                const data = await res.json()
+                                if (data.ok) {
+                                    setTamagotchiInBag(false)
+                                    setToast(data.message || "Ton compagnon ressort.")
+                                }
+                            } catch { /* silent */ }
+                        }}
+                        style={{
+                            background: "#806030", color: "#fff", border: "2px solid #fff",
+                            width: "44px", height: "44px", fontSize: "18px", fontWeight: "bold",
+                            cursor: "pointer", touchAction: "manipulation", userSelect: "none",
+                            borderRadius: "50%",
+                            boxShadow: "0 2px 0 #503010, 0 3px 6px rgba(0,0,0,0.4)",
+                        }}
+                        title="Sortir le compagnon du sac"
+                    >
+                        🎒
+                    </button>
+                )}
+
+                {/* v3.27 — Bouton "se retourner vers l'animal" (visible si animal récupéré et hors-sac) */}
+                {tamagotchi?.recovered && !tamagotchiInBag && OUTDOOR_MAP_IDS.has(state.mapId) && (
+                    <button
+                        onClick={async (e) => {
+                            e.preventDefault()
+                            try {
+                                const res = await fetch("/api/gamebook/tamagotchi/turn-talk", { method: "POST" })
+                                const data = await res.json()
+                                if (!data.ok) return
+                                if (data.choice) {
+                                    setShowTamaChoiceModal(true)
+                                } else if (data.line) {
+                                    setPopup({ kind: "info", text: data.line })
+                                }
+                            } catch (err) {
+                                console.warn("[MapClient] turn-talk failed", err)
+                            }
+                        }}
+                        style={{
+                            background: "#3a6030",
+                            color: "#fff",
+                            border: "2px solid #fff",
+                            width: "44px",
+                            height: "44px",
+                            fontSize: "18px",
+                            fontWeight: "bold",
+                            cursor: "pointer",
+                            touchAction: "manipulation",
+                            userSelect: "none",
+                            borderRadius: "50%",
+                            boxShadow: "0 2px 0 #1a3010, 0 3px 6px rgba(0,0,0,0.4)",
+                        }}
+                        title={`Se retourner vers ${tamagotchi.name}`}
+                    >
+                        🐾
+                    </button>
+                )}
             </div>
 
             {/* v3.8 — Modals : StartMenu, InventoryModal, ShopModal */}
@@ -3338,6 +3426,82 @@ export default function MapClient({
                     discovered={treesDiscovered}
                     onClose={() => setShowTreeBook(false)}
                 />
+            )}
+
+            {/* v3.27 — Mini-modal Parler / Ranger (3ᵉ interaction dans la minute) */}
+            {showTamaChoiceModal && tamagotchi && (
+                <div
+                    style={{
+                        position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        zIndex: 9000, padding: 16, fontFamily: "'Courier New', monospace",
+                    }}
+                    onClick={() => setShowTamaChoiceModal(false)}
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                            background: "#1a1a1a", color: "#fff",
+                            border: "3px solid #3a6030", borderRadius: 6,
+                            padding: 16, maxWidth: 320, width: "100%",
+                        }}
+                    >
+                        <div style={{ fontSize: 12, fontWeight: "bold", marginBottom: 10, letterSpacing: 2 }}>
+                            🐾 {tamagotchi.name}
+                        </div>
+                        <div style={{ fontSize: 11, lineHeight: 1.6, marginBottom: 14, fontStyle: "italic", opacity: 0.85 }}>
+                            *Il te fixe avec insistance. Tu sens qu'il attend quelque chose.*
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                            <button
+                                onClick={() => {
+                                    setShowTamaChoiceModal(false)
+                                    setShowTamagotchi(true)
+                                }}
+                                style={{
+                                    background: "#3a6030", color: "#fff", border: "1px solid #fff",
+                                    padding: "10px 12px", fontFamily: "monospace", fontSize: 12,
+                                    letterSpacing: 1, cursor: "pointer",
+                                }}
+                            >
+                                💬 PARLER (ouvrir sa fiche)
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    setShowTamaChoiceModal(false)
+                                    try {
+                                        const res = await fetch("/api/gamebook/tamagotchi/in-bag", {
+                                            method: "POST",
+                                            headers: { "Content-Type": "application/json" },
+                                            body: JSON.stringify({ inBag: true }),
+                                        })
+                                        const data = await res.json()
+                                        if (data.ok) {
+                                            setTamagotchiInBag(true)
+                                            setPopup({ kind: "info", text: data.message })
+                                        }
+                                    } catch { /* silent */ }
+                                }}
+                                style={{
+                                    background: "#806030", color: "#fff", border: "1px solid #fff",
+                                    padding: "10px 12px", fontFamily: "monospace", fontSize: 12,
+                                    letterSpacing: 1, cursor: "pointer",
+                                }}
+                            >
+                                🎒 RANGER DANS LE SAC
+                            </button>
+                            <button
+                                onClick={() => setShowTamaChoiceModal(false)}
+                                style={{
+                                    background: "#222", color: "#888", border: "1px solid #555",
+                                    padding: "6px", fontSize: 10, cursor: "pointer",
+                                }}
+                            >
+                                ANNULER
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* v3.24c-4 — Modal interactif du videur Team Boulette (3 choix) */}
