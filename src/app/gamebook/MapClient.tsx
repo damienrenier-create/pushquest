@@ -1814,6 +1814,34 @@ export default function MapClient({
                     return
                 }
 
+                // v3.24c-8 — BRUTES LÂCHÉES (5 wanderers dans Vegas) : -10 reps si lying_pursued
+                if (npcId.startsWith("tb_sbire_lacher_")) {
+                    ; (async () => {
+                        try {
+                            const res = await fetch("/api/gamebook/tb/brute", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ bruteId: npcId }),
+                            })
+                            const data = await res.json()
+                            if (data.message) setPopup({ kind: "info", text: data.message })
+                            // Si malus appliqué, on rafraîchit l'état (energySpentToday a changé)
+                            if (data.malus && data.malus > 0) {
+                                try {
+                                    const stateRes = await fetch("/api/gamebook/state")
+                                    if (stateRes.ok) {
+                                        const stateData = await stateRes.json()
+                                        if (stateData.state) setState((s) => ({ ...s, ...stateData.state, mapId: s.mapId, posX: s.posX, posY: s.posY, direction: s.direction }))
+                                    }
+                                } catch { /* silent */ }
+                            }
+                        } catch (e) {
+                            console.warn("[MapClient] tb/brute failed", e)
+                        }
+                    })()
+                    return
+                }
+
                 // v3.24c-7 — IL CAPO : 4 défis ordonnés (squat / pompes / hier / 2 jours)
                 if (npcId === "tb_boss") {
                     ; (async () => {

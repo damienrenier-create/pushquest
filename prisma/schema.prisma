@@ -514,6 +514,8 @@ model GamebookProgress {
   tbBossKeyHeld             Boolean @default(false)
   tbBossDefisDone           Json    @default("[]")
   tbBossBeaten              Boolean @default(false)
+  // v3.24c-8 — IDs des brutes lâchées à qui le joueur a déjà parlé (1 malus de -10 reps par brute).
+  tbBrutesTalked            Json    @default("[]")
 
   // v3.24a-4 — Mission jardinier BASILICO (Lasagnas Vegas).
   // jardinierMissionActive : true depuis qu'on a parlé à BASILICO la 1ère fois (= mission acceptée).
