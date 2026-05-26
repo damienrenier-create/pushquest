@@ -425,6 +425,12 @@ export const ALL_TREES: TreeInstance[] = [
     { id: "poison_tree_1", mapId: "pepiteville", x: 12, y: 15, kind: "poison" },
     // === 🫒 Olivier (Lasagnas Vegas) : 7 olives/jour à +20 reps chacune ===
     { id: "olive_tree_1", mapId: "lasagnas_vegas", x: 10, y: 21, kind: "olive" },
+    // === 🍒 Cerisier Vegas (haut-droite près Père Pesto) ===
+    { id: "vegas_cherry_1", mapId: "lasagnas_vegas", x: 15, y: 2, kind: "cherry" },
+    // === 🍐 Poirier Vegas (sud-ouest près du bar TB) ===
+    { id: "vegas_pear_1", mapId: "lasagnas_vegas", x: 3, y: 21, kind: "pear" },
+    // === 🍑 Pêcher Vegas (sud-est près du casino VIP) ===
+    { id: "vegas_peach_1", mapId: "lasagnas_vegas", x: 20, y: 21, kind: "peach" },
 ]
 
 /** Helper : tous les arbres d'une map donnée. */
@@ -693,8 +699,12 @@ function buildLasagnasVegas(): TileType[][] {
     m[20][6] = "water"; m[20][7] = "water"
     m[20][16] = "water"; m[20][17] = "water"
 
-    // === 🫒 Olivier sud (entre les 2 fontaines), accessible depuis le trottoir y=15 ===
-    m[21][10] = "oliveTree"
+    // === Arbres décor Lasagnas Vegas — séquence du jardinier BASILICO ===
+    // L'ordre de cueillette à respecter (pour la mission) sera défini server-side.
+    m[21][10] = "oliveTree"      // 🫒 olive_tree_1 (sud-centre)
+    m[2][15] = "cherryTree"      // 🍒 vegas_cherry_1 (haut-droite, près de Père Pesto)
+    m[21][3] = "pearTree"        // 🍐 vegas_pear_1 (sud-ouest, près du bar TB)
+    m[21][20] = "peachTree"      // 🍑 vegas_peach_1 (sud-est, près du casino VIP)
 
     // === Trottoirs d'accès aux portes des bâtiments ===
     // Lignes verticales courtes entre y=10 (trottoir) et y=9 (face nord bâtiments)

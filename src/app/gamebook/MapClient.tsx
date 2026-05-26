@@ -1720,6 +1720,42 @@ export default function MapClient({
                     }
                 }
 
+                // v3.24a-4 — BASILICO (jardinier Vegas) : mission cueillette dans l'ordre
+                if (npcId === "lasagnas_jardinier") {
+                    ; (async () => {
+                        try {
+                            // On essaye d'abord /check : si mission active, ça valide ou échoue.
+                            const checkRes = await fetch("/api/gamebook/jardinier/check", { method: "POST" })
+                            const checkData = await checkRes.json()
+                            if (checkData.ok && checkData.success) {
+                                // SUCCESS : arrosoir gagné
+                                setPopup({ kind: "info", text: checkData.message })
+                                if (Array.isArray(checkData.inventory)) setInventory(checkData.inventory)
+                                return
+                            }
+                            if (checkData.ok && checkData.alreadyGiven) {
+                                setToast(checkData.message)
+                                return
+                            }
+                            // Pas de mission active → on démarre via /talk
+                            if (!checkData.ok && typeof checkData.reason === "string" && checkData.reason.includes("non démarrée")) {
+                                const talkRes = await fetch("/api/gamebook/jardinier/talk", { method: "POST" })
+                                const talkData = await talkRes.json()
+                                setPopup({ kind: "info", text: talkData.message || "Mission démarrée." })
+                                return
+                            }
+                            // Mission active mais séquence pas encore prête ou ratée
+                            if (!checkData.ok && checkData.reason) {
+                                setPopup({ kind: "info", text: checkData.reason })
+                                return
+                            }
+                        } catch (e) {
+                            console.warn("[MapClient] jardinier interaction failed", e)
+                        }
+                    })()
+                    return  // skip default dialogue
+                }
+
                 // v3.17 — LINGUINI : +1 luck par jour (idempotent serveur)
                 if (npcId === "linguini") {
                     ; (async () => {
@@ -2353,8 +2389,44 @@ export default function MapClient({
         }
 
         // v3.8.1 — Arbre fruitier devant ?
-        // v3.23d — Détection unifiée pour tous les types d'arbres (apple/cherry/pear/peach/coconut/poison)
-        const TREE_TILES = ["appleTree", "cherryTree", "pearTree", "peachTree", "coconutTree", "poisonTree"]
+        // v3.23d — Détection unifiée pour tous les types d'arbres (apple/cherry/pear/peach/coconut/poison/olive)
+        // v3.24a-4 — Si arbre VIDE + arrosoir intact → propose d'arroser pour faire repousser
+        const TREE_TILES = ["appleTree", "cherryTree", "pearTree", "peachTree", "coconutTree", "poisonTree", "oliveTree"]
+        const TREE_EMPTY_TILES = ["appleTreeEmpty", "cherryTreeEmpty", "pearTreeEmpty", "peachTreeEmpty", "coconutTreeEmpty", "poisonTreeEmpty", "oliveTreeEmpty"]
+        if (TREE_EMPTY_TILES.includes(tile)) {
+            const tree = ALL_TREES.find(
+                (t) => t.mapId === state.mapId && t.x === front.x && t.y === front.y,
+            )
+            if (tree && hasIntactItem(inventory, "arrosoir")) {
+                ; (async () => {
+                    try {
+                        const res = await fetch("/api/gamebook/arrosoir/use", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ treeId: tree.id }),
+                        })
+                        const data = await res.json()
+                        if (data.ok) {
+                            setPopup({ kind: "info", text: data.message })
+                            if (Array.isArray(data.inventory)) setInventory(data.inventory)
+                            if (data.fruitsTaken && typeof data.fruitsTaken === "object") {
+                                const counts = (data.fruitsTaken as { counts?: Record<string, number> }).counts
+                                if (counts) setFruitCounts({ ...counts })
+                            }
+                        } else {
+                            setToast(data.reason || "Impossible d'arroser.")
+                        }
+                    } catch (e) {
+                        console.warn("[MapClient] arrosoir/use failed", e)
+                        setToast("Erreur réseau.")
+                    }
+                })()
+                return
+            }
+            // Pas d'arrosoir → toast par défaut
+            setToast("L'arbre est dépouillé pour aujourd'hui. Reviens demain — ou utilise un arrosoir magique.")
+            return
+        }
         if (TREE_TILES.includes(tile)) {
             const tree = ALL_TREES.find(
                 (t) => t.mapId === state.mapId && t.x === front.x && t.y === front.y,

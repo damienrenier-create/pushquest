@@ -133,6 +133,19 @@ export async function POST(req: NextRequest) {
         counts: { ...state.counts, [treeInstance.id]: taken + 1 },
     }
 
+    // v3.24a-4 — Si mission jardinier active (et arrosoir pas encore obtenu),
+    // on push le kind du fruit cueilli dans jardinierFruitOrder (pour vérif séquence ensuite).
+    const missionActive = (progress as { jardinierMissionActive?: boolean }).jardinierMissionActive === true
+    const arrosoirGiven = (progress as { jardinierArrosoirGiven?: boolean }).jardinierArrosoirGiven === true
+    let newJardinierFruitOrder: string[] | undefined = undefined
+    if (missionActive && !arrosoirGiven) {
+        const orderRaw = (progress as { jardinierFruitOrder?: unknown }).jardinierFruitOrder
+        const existing = Array.isArray(orderRaw)
+            ? (orderRaw as unknown[]).filter((x): x is string => typeof x === "string")
+            : []
+        newJardinierFruitOrder = [...existing, treeInstance.kind]
+    }
+
     await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
         data: {
@@ -140,6 +153,7 @@ export async function POST(req: NextRequest) {
             energySpentDate: nextSnap.energySpentDate,
             bonusSurplus: nextSnap.bonusSurplus,
             fruitsTaken: newState,
+            ...(newJardinierFruitOrder !== undefined ? { jardinierFruitOrder: newJardinierFruitOrder } : {}),
             lastSeen: new Date(),
         },
     })

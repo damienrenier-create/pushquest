@@ -496,6 +496,15 @@ model GamebookProgress {
   // One-shot ; déclenche cinématique + badge Conquérant 500 XP. Aussi unlock contest_hall.
   montSummitReached         Boolean @default(false)
 
+  // v3.24a-4 — Mission jardinier BASILICO (Lasagnas Vegas).
+  // jardinierMissionActive : true depuis qu'on a parlé à BASILICO la 1ère fois (= mission acceptée).
+  // jardinierFruitOrder    : array JSON des tree.kind cueillis depuis le démarrage de la mission
+  //                          (reset à chaque entrée chez le jardinier qui re-démarre la mission).
+  // jardinierArrosoirGiven : true une fois que le jardinier a offert l'arrosoir (one-shot).
+  jardinierMissionActive    Boolean @default(false)
+  jardinierFruitOrder       Json    @default("[]")
+  jardinierArrosoirGiven    Boolean @default(false)
+
   // v3.24a-2 — Hôtel Bellagiomato (Lasagnas Vegas) : dernière fois que le joueur a dormi.
   // Format YYYY-MM-DD. Permet 1 sommeil/jour. Reset à minuit.
   // Effet du sommeil :
