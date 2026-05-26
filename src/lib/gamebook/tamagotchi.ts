@@ -78,15 +78,16 @@ export function parseTamagotchi(raw: unknown): Tamagotchi | null {
 }
 
 /**
- * Recalcule la happiness courante en appliquant le decay depuis lastFedAt.
- * Ne modifie pas le tamagotchi en DB — c'est une valeur dérivée à afficher.
+ * v3.37 — Le decay temps "-1 toutes les 6h depuis lastFedAt" est RETIRÉ.
+ * Le bonheur évolue désormais sur des triggers explicites (cf. happinessChanges.ts) :
+ *   - decay activité : -1 par 50 pas
+ *   - decay déconnexion : -10 si lastSeen > 6h (1×/jour)
+ *   - +/- divers triggers (boire, défis PNJ, brutes, happyFlower, etc.)
+ * Cette fonction reste exportée pour compatibilité mais retourne le happiness brut.
  */
-export function effectiveHappiness(tam: Tamagotchi, nowMs: number = Date.now()): number {
-    const lastFedMs = new Date(tam.lastFedAt).getTime()
-    if (!Number.isFinite(lastFedMs)) return tam.happiness
-    const elapsedHours = Math.max(0, (nowMs - lastFedMs) / (1000 * 60 * 60))
-    const decay = Math.floor(elapsedHours / TAMAGOTCHI_DECAY_INTERVAL_HOURS)
-    return Math.max(0, tam.happiness - decay)
+export function effectiveHappiness(tam: Tamagotchi, _nowMs: number = Date.now()): number {
+    void _nowMs
+    return tam.happiness
 }
 
 /**

@@ -93,6 +93,10 @@ export async function POST() {
         newInventory = addItem(inventory, "arrosoir", getInitialItemData(arroseurDef))
     }
 
+    // v3.37 (règle d) — +10 happiness sur défi PNJ réussi (mission jardinier)
+    const { applyHappinessDelta, HAPPINESS_DELTAS } = await import("@/lib/gamebook/happinessChanges")
+    const newTam = applyHappinessDelta((progress as { tamagotchi?: unknown }).tamagotchi, HAPPINESS_DELTAS.PNJ_CHALLENGE_WIN)
+
     await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
         data: {
@@ -100,6 +104,7 @@ export async function POST() {
             jardinierMissionActive: false,
             jardinierFruitOrder: [],
             inventory: newInventory,
+            ...(newTam ? { tamagotchi: newTam } : {}),
         },
     })
 

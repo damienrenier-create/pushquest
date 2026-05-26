@@ -3,7 +3,7 @@
 // v3.37 — Helper centralisé pour modifier le bonheur du tamagotchi.
 //
 // Règles configurables (v3.37) :
-//   a. 24h sans connexion (lastSeen) → -10
+//   a. 24h sans connexion (lastSeen) → -10 (1×/jour, idempotent via lastDailyDecayDate)
 //   b. -1 happiness tous les 50 pas (steps counter)
 //   c. Donner à manger (corned_pates) → +30 (existant)
 //   d. Réussir un défi PNJ → +10
@@ -22,7 +22,7 @@
 import { parseTamagotchi, TAMAGOTCHI_HAPPINESS_MAX, type Tamagotchi } from "./tamagotchi"
 
 export const HAPPINESS_DELTAS = {
-    DAILY_DECAY: -10,                  // a — 24h sans connexion
+    DAILY_DECAY: -10,                  // a — 24h sans connexion (1×/jour max)
     STEP_DECAY: -1,                    // b — toutes les 50 cases
     STEP_THRESHOLD: 50,                // b
     PNJ_CHALLENGE_WIN: +10,            // d

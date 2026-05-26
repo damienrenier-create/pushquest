@@ -130,9 +130,12 @@ export async function POST(req: NextRequest) {
             const newDone = [...done, "meowth"]
             const newData = { ...challengeData }
             delete newData.meowth
+            // v3.37 (règle d) — +10 happiness sur défi PNJ réussi
+            const { applyHappinessDelta, HAPPINESS_DELTAS } = await import("@/lib/gamebook/happinessChanges")
+            const newTam = applyHappinessDelta((progress as { tamagotchi?: unknown }).tamagotchi, HAPPINESS_DELTAS.PNJ_CHALLENGE_WIN)
             await (prisma as any).gamebookProgress.update({
                 where: { id: progress.id },
-                data: { tbBarDefisDone: newDone, tbBarChallengeData: newData },
+                data: { tbBarDefisDone: newDone, tbBarChallengeData: newData, ...(newTam ? { tamagotchi: newTam } : {}) },
             })
             return NextResponse.json({
                 ok: true,
@@ -162,9 +165,12 @@ export async function POST(req: NextRequest) {
         const personalTarget = getDailyTargetForUserOnDate(user, today)
         if (reps.total >= personalTarget) {
             const newDone = [...done, "jessie"]
+            // v3.37 (règle d) — +10 happiness sur défi PNJ réussi
+            const { applyHappinessDelta, HAPPINESS_DELTAS } = await import("@/lib/gamebook/happinessChanges")
+            const newTam = applyHappinessDelta((progress as { tamagotchi?: unknown }).tamagotchi, HAPPINESS_DELTAS.PNJ_CHALLENGE_WIN)
             await (prisma as any).gamebookProgress.update({
                 where: { id: progress.id },
-                data: { tbBarDefisDone: newDone },
+                data: { tbBarDefisDone: newDone, ...(newTam ? { tamagotchi: newTam } : {}) },
             })
             return NextResponse.json({
                 ok: true,
@@ -200,9 +206,12 @@ export async function POST(req: NextRequest) {
 
         if (isTop1) {
             const newDone = [...done, "giovanni"]
+            // v3.37 (règle d) — +10 happiness sur défi PNJ réussi
+            const { applyHappinessDelta, HAPPINESS_DELTAS } = await import("@/lib/gamebook/happinessChanges")
+            const newTam = applyHappinessDelta((progress as { tamagotchi?: unknown }).tamagotchi, HAPPINESS_DELTAS.PNJ_CHALLENGE_WIN)
             await (prisma as any).gamebookProgress.update({
                 where: { id: progress.id },
-                data: { tbBarDefisDone: newDone },
+                data: { tbBarDefisDone: newDone, ...(newTam ? { tamagotchi: newTam } : {}) },
             })
             return NextResponse.json({
                 ok: true,
