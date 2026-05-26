@@ -19,6 +19,26 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { getTodayISO, getYesterdayISO } from "@/lib/challenge"
+import { addItem } from "@/lib/gamebook/inventory"
+import type { InventoryEntry } from "@/lib/gamebook/inventory"
+
+const SERUM_REPS_REWARD = 1000
+
+async function applyBossRewards(progressId: string, currentInventory: unknown): Promise<InventoryEntry[]> {
+    const inv: InventoryEntry[] = Array.isArray(currentInventory) ? (currentInventory as InventoryEntry[]) : []
+    const newInv = addItem(inv, "mega_gourde")
+    await (prisma as any).gamebookProgress.update({
+        where: { id: progressId },
+        data: {
+            tbBossBeaten: true,
+            tbRewardClaimed: true,
+            serumIntelligenceReps: { increment: SERUM_REPS_REWARD },
+            arenaUnlocked: true,
+            inventory: newInv,
+        },
+    })
+    return newInv
+}
 
 export const dynamic = "force-dynamic"
 
@@ -84,15 +104,22 @@ export async function POST() {
     const nextIndex = done.length // 0..3
 
     if (nextIndex >= 4) {
-        // Défense — devrait être marqué beaten
-        await (prisma as any).gamebookProgress.update({
-            where: { id: progress.id },
-            data: { tbBossBeaten: true },
-        })
+        // Défense — devrait être marqué beaten + appliquer la récompense si pas déjà fait
+        const rewardClaimed = (progress as { tbRewardClaimed?: boolean }).tbRewardClaimed === true
+        if (!rewardClaimed) {
+            await applyBossRewards(progress.id, (progress as { inventory?: unknown }).inventory)
+        } else {
+            await (prisma as any).gamebookProgress.update({
+                where: { id: progress.id },
+                data: { tbBossBeaten: true },
+            })
+        }
         return NextResponse.json({
             ok: true,
             justBeaten: true,
-            message: "IL CAPO s'incline. « Tu as tout prouvé. L'arène est à toi. »",
+            message: rewardClaimed
+                ? "IL CAPO incline la tête. « L'arène est à toi. »"
+                : `IL CAPO s'incline. « Tu as tout prouvé. Voici la Mega Gourde du Capo. L'arène est à toi. Mes sbires ne t'embêteront plus. » (+1 Mega Gourde, +${SERUM_REPS_REWARD} reps de sérum intelligence)`,
         })
     }
 
@@ -140,21 +167,26 @@ export async function POST() {
     // Succès
     const newDone = [...done, `d${nextIndex + 1}`]
     const allDone = newDone.length >= 4
-    await (prisma as any).gamebookProgress.update({
-        where: { id: progress.id },
-        data: {
-            tbBossDefisDone: newDone,
-            tbBossBeaten: allDone ? true : false,
-        },
-    })
 
     if (allDone) {
+        // Marquer done + appliquer la récompense (mega gourde + sérum + arène)
+        await (prisma as any).gamebookProgress.update({
+            where: { id: progress.id },
+            data: { tbBossDefisDone: newDone },
+        })
+        await applyBossRewards(progress.id, (progress as { inventory?: unknown }).inventory)
         return NextResponse.json({
             ok: true,
             justBeaten: true,
-            message: "IL CAPO s'incline lentement. « Tu as TOUT prouvé. L'arène est à toi. Et tes ennemis... mes sbires... ils n'oseront plus. »",
+            rewards: { item: "mega_gourde", serumReps: SERUM_REPS_REWARD, arenaUnlocked: true },
+            message: `IL CAPO s'incline lentement. « Tu as TOUT prouvé. Voici la Mega Gourde du Capo, marque de mon respect. L'arène est à toi. Et mes sbires... ils n'oseront plus. » (+1 Mega Gourde, +${SERUM_REPS_REWARD} reps de sérum intelligence)`,
         })
     }
+
+    await (prisma as any).gamebookProgress.update({
+        where: { id: progress.id },
+        data: { tbBossDefisDone: newDone },
+    })
 
     return NextResponse.json({
         ok: true,

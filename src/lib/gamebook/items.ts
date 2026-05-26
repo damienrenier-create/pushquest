@@ -345,6 +345,17 @@ export const ITEMS: ItemDefinition[] = [
         },
     },
     {
+        key: "mega_gourde",
+        name: "Mega Gourde du Capo",
+        emoji: "🧪",
+        description: "Capacité 1000 reps. Trophée d'IL CAPO. Ne s'achète pas — se gagne.",
+        priceReps: 0,
+        maxQuantity: 1,
+        capabilities: {
+            canStore: { maxCapacity: 1000, unit: "reps", wearOnDrink: 5 },
+        },
+    },
+    {
         key: "chaussures_air_pasta",
         name: "Chaussures Air Pasta",
         emoji: "🥾",
