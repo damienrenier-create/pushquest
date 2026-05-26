@@ -106,9 +106,15 @@ export async function POST(req: NextRequest) {
         if (crash) {
             const dead: StopSession = { ...currentSession, alive: false, currentPot: 0 }
             const newData = { ...challengeData, stopSession: dead }
+            // v3.37 (règle f6) — CRASH déçoit l'animal : -3 happiness
+            const { applyHappinessDelta, HAPPINESS_DELTAS } = await import("@/lib/gamebook/happinessChanges")
+            const newTam = applyHappinessDelta((progress as { tamagotchi?: unknown }).tamagotchi, HAPPINESS_DELTAS.STOP_CRASH)
             await (prisma as any).gamebookProgress.update({
                 where: { id: progress.id },
-                data: { tbBarChallengeData: newData },
+                data: {
+                    tbBarChallengeData: newData,
+                    ...(newTam ? { tamagotchi: newTam } : {}),
+                },
             })
             return NextResponse.json({
                 ok: true,

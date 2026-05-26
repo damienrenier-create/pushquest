@@ -146,12 +146,22 @@ export async function POST(req: NextRequest) {
             const wear = itemDef.capabilities.canStore?.wearOnDrink ?? 0
             const newMaxCapacity = Math.max(0, capacity - wear)
             const newInventory = setItemData(inventory, itemKey, { stored: 0, maxCapacity: newMaxCapacity })
+
+            // v3.37 (règle e) — Boire sans en donner à l'animal :
+            //   -1 happiness si l'animal est dans le sac (caché)
+            //   -3 happiness si l'animal est visible (hors-sac, sur la map)
+            const { applyHappinessDelta, HAPPINESS_DELTAS } = await import("@/lib/gamebook/happinessChanges")
+            const inBag = (progress as { tamagotchiInBag?: boolean }).tamagotchiInBag === true
+            const delta = inBag ? HAPPINESS_DELTAS.DRINK_IN_BAG : HAPPINESS_DELTAS.DRINK_VISIBLE
+            const newTam = applyHappinessDelta((progress as { tamagotchi?: unknown }).tamagotchi, delta)
+
             await (prisma as any).gamebookProgress.update({
                 where: { id: progress.id },
                 data: {
                     energySpentToday: newSpent,
                     energySpentDate: today,
                     inventory: newInventory,
+                    ...(newTam ? { tamagotchi: newTam } : {}),
                     lastSeen: new Date(),
                 },
             })
@@ -164,6 +174,7 @@ export async function POST(req: NextRequest) {
                 stored: 0,
                 maxCapacity: newMaxCapacity,
                 broken: newMaxCapacity <= 0,
+                happinessDelta: newTam ? delta : 0,
             })
         }
 

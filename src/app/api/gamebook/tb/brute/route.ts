@@ -73,12 +73,17 @@ export async function POST(req: NextRequest) {
     const newSpent = currentSpent + MALUS_REPS
     const newTalked = [...talked, bruteId]
 
+    // v3.37 (règle f4) — Croiser une brute lâchée stresse l'animal : -2 happiness
+    const { applyHappinessDelta, HAPPINESS_DELTAS } = await import("@/lib/gamebook/happinessChanges")
+    const newTam = applyHappinessDelta((progress as { tamagotchi?: unknown }).tamagotchi, HAPPINESS_DELTAS.BRUTE_ENCOUNTER)
+
     await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
         data: {
             energySpentToday: newSpent,
             energySpentDate: today,
             tbBrutesTalked: newTalked,
+            ...(newTam ? { tamagotchi: newTam } : {}),
         },
     })
 

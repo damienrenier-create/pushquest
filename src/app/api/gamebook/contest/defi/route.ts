@@ -108,6 +108,10 @@ export async function POST(req: NextRequest) {
     const snap = readEnergySnapshot(progress, today)
     const nextSnap = grantRewardOnSnapshot(snap, reward, today)
 
+    // v3.37 (règle d) — +10 happiness sur défi PNJ réussi
+    const { applyHappinessDelta, HAPPINESS_DELTAS } = await import("@/lib/gamebook/happinessChanges")
+    const newTam = applyHappinessDelta((progress as { tamagotchi?: unknown }).tamagotchi, HAPPINESS_DELTAS.PNJ_CHALLENGE_WIN)
+
     await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
         data: {
@@ -115,6 +119,7 @@ export async function POST(req: NextRequest) {
             energySpentToday: nextSnap.energySpentToday,
             energySpentDate: nextSnap.energySpentDate,
             bonusSurplus: nextSnap.bonusSurplus,
+            ...(newTam ? { tamagotchi: newTam } : {}),
             lastSeen: new Date(),
         },
     })

@@ -166,6 +166,14 @@ export async function POST(req: NextRequest) {
         ? undefined
         : [...discovered, treeInstance.kind]
 
+    // v3.37 (règle f5) — Manger un fruit de Maléfica (poison) blesse l'animal : -5 happiness
+    let newTamagotchiForPoison: unknown = undefined
+    if (treeInstance.kind === "poison") {
+        const { applyHappinessDelta, HAPPINESS_DELTAS } = await import("@/lib/gamebook/happinessChanges")
+        const t = applyHappinessDelta((progress as { tamagotchi?: unknown }).tamagotchi, HAPPINESS_DELTAS.POISON_FRUIT)
+        if (t) newTamagotchiForPoison = t
+    }
+
     await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
         data: {
@@ -175,6 +183,7 @@ export async function POST(req: NextRequest) {
             fruitsTaken: newState,
             ...(newJardinierFruitOrder !== undefined ? { jardinierFruitOrder: newJardinierFruitOrder } : {}),
             ...(newDiscovered !== undefined ? { treesDiscovered: newDiscovered } : {}),
+            ...(newTamagotchiForPoison !== undefined ? { tamagotchi: newTamagotchiForPoison } : {}),
             lastSeen: new Date(),
         },
     })

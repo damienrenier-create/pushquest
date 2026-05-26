@@ -122,9 +122,15 @@ export async function POST(req: NextRequest) {
         if (todayVolume === recordVolume && todayVolume > 0 && recordDate === today) {
             // Win revanche
             const newRevanche = [...revanche, championId]
+            // v3.37 (règle d) — Réussir un défi PNJ : +10 happiness à l'animal
+            const { applyHappinessDelta, HAPPINESS_DELTAS } = await import("@/lib/gamebook/happinessChanges")
+            const newTam = applyHappinessDelta((progress as { tamagotchi?: unknown }).tamagotchi, HAPPINESS_DELTAS.PNJ_CHALLENGE_WIN)
             await (prisma as any).gamebookProgress.update({
                 where: { id: progress.id },
-                data: { muscuvilleChampionsRevanche: newRevanche },
+                data: {
+                    muscuvilleChampionsRevanche: newRevanche,
+                    ...(newTam ? { tamagotchi: newTam } : {}),
+                },
             })
             // Octroyer le badge (BadgeEvent UNIQUE_AWARDED multi-détenteurs)
             try {
@@ -180,9 +186,15 @@ export async function POST(req: NextRequest) {
     if (currentMax > existing.max) {
         // Champion battu !
         const newBeaten = [...beaten, championId]
+        // v3.37 (règle d) — +10 happiness sur défi PNJ réussi (1ʳᵉ confrontation)
+        const { applyHappinessDelta, HAPPINESS_DELTAS } = await import("@/lib/gamebook/happinessChanges")
+        const newTam = applyHappinessDelta((progress as { tamagotchi?: unknown }).tamagotchi, HAPPINESS_DELTAS.PNJ_CHALLENGE_WIN)
         await (prisma as any).gamebookProgress.update({
             where: { id: progress.id },
-            data: { muscuvilleChampionsBeaten: newBeaten },
+            data: {
+                muscuvilleChampionsBeaten: newBeaten,
+                ...(newTam ? { tamagotchi: newTam } : {}),
+            },
         })
         return NextResponse.json({
             ok: true,

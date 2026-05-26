@@ -412,6 +412,63 @@ export async function POST(req: NextRequest) {
         finalVisitedTowns = [...existingVisited, mapId]
     }
 
+    // v3.37 — Application des règles de bonheur (a, b, f1, f3) au moment du save state.
+    // On collecte un delta cumulé pour limiter les passes successives sur le tamagotchi.
+    const { applyHappinessDelta, fullDaysSince, HAPPINESS_DELTAS } = await import("@/lib/gamebook/happinessChanges")
+    let nextTamagotchi: unknown = (existing as { tamagotchi?: unknown }).tamagotchi
+    let nextStepsCounter = (existing as { tamagotchiStepsCounter?: number })?.tamagotchiStepsCounter ?? 0
+    let nextLastDailyDecayDate = (existing as { lastDailyDecayDate?: string })?.lastDailyDecayDate ?? ""
+    let nextHappyFlowerLastDate = (existing as { happyFlowerLastDate?: string })?.happyFlowerLastDate ?? ""
+    let nextInBagSince = (existing as { tamagotchiInBagSince?: Date | null })?.tamagotchiInBagSince ?? null
+
+    if (nextTamagotchi) {
+        const todayStr = (await import("@/lib/challenge")).getTodayISO()
+
+        // (b) Decay sur les pas : détecter mouvement (mapId/posX/posY a changé)
+        const prevMap = (existing as { mapId?: string })?.mapId
+        const prevX = (existing as { posX?: number })?.posX
+        const prevY = (existing as { posY?: number })?.posY
+        const moved = prevMap !== mapId || prevX !== posX || prevY !== posY
+        if (moved) {
+            const c = nextStepsCounter + 1
+            if (c >= HAPPINESS_DELTAS.STEP_THRESHOLD) {
+                const decayed = applyHappinessDelta(nextTamagotchi, HAPPINESS_DELTAS.STEP_DECAY)
+                if (decayed) nextTamagotchi = decayed
+                nextStepsCounter = 0
+            } else {
+                nextStepsCounter = c
+            }
+        }
+
+        // (a) Decay 24h sans connexion : compare lastSeen vs now, applique -10 si > 24h (1x/jour max)
+        const prevLastSeen = (existing as { lastSeen?: Date | null })?.lastSeen ?? null
+        if (prevLastSeen && fullDaysSince(prevLastSeen.toString()) >= 1 && nextLastDailyDecayDate !== todayStr) {
+            const decayed = applyHappinessDelta(nextTamagotchi, HAPPINESS_DELTAS.DAILY_DECAY)
+            if (decayed) nextTamagotchi = decayed
+            nextLastDailyDecayDate = todayStr
+        }
+
+        // (f1) Animal en sac > 24h : appliquer un decay -1 par jour passé en sac
+        const inBag = (existing as { tamagotchiInBag?: boolean })?.tamagotchiInBag === true
+        if (inBag && nextInBagSince) {
+            const daysInBag = fullDaysSince(nextInBagSince.toString())
+            if (daysInBag >= 1) {
+                const decayed = applyHappinessDelta(nextTamagotchi, HAPPINESS_DELTAS.IN_BAG_DAILY * daysInBag)
+                if (decayed) nextTamagotchi = decayed
+                nextInBagSince = new Date()  // reset le compteur
+            }
+        }
+        if (inBag && !nextInBagSince) nextInBagSince = new Date()
+        if (!inBag) nextInBagSince = null
+
+        // (f3) happyFlower : si le joueur est sur la case (3, 6) de grass_sud, +30 (1×/jour)
+        if (mapId === "grass_sud" && posX === 3 && posY === 6 && nextHappyFlowerLastDate !== todayStr) {
+            const boosted = applyHappinessDelta(nextTamagotchi, HAPPINESS_DELTAS.HAPPY_FLOWER)
+            if (boosted) nextTamagotchi = boosted
+            nextHappyFlowerLastDate = todayStr
+        }
+    }
+
     // Cast en `any` pour le `data` afin de bypasser le check TS strict sur les nouveaux
     // champs Prisma tant que le client n'est pas régénéré côté CI. Le pattern est cohérent
     // avec le reste du code qui utilise `(prisma as any)` régulièrement.
@@ -436,6 +493,12 @@ export async function POST(req: NextRequest) {
             piaffiniRescued: finalPiaffiniRescued,
             firstSwimDone: finalFirstSwimDone,
             lastSeen: new Date(),
+            // v3.37 — Mise à jour du tamagotchi + flags decay
+            tamagotchi: nextTamagotchi,
+            tamagotchiStepsCounter: nextStepsCounter,
+            lastDailyDecayDate: nextLastDailyDecayDate,
+            tamagotchiInBagSince: nextInBagSince,
+            happyFlowerLastDate: nextHappyFlowerLastDate,
         },
         create: {
             userId,

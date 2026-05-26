@@ -576,6 +576,17 @@ model GamebookProgress {
   // v3.36 — Véto de Muscuville (DOC PROTÉINE) : remet happiness à 100 sur le tamagotchi.
   // Limite 1×/jour pour éviter l'abus (le decay est à -1 par 6h).
   vetoMuscuLastVisitDate        String  @default("")
+  // v3.37 — Decay du bonheur sur les pas + check 24h sans connexion + cooldown happyFlower.
+  // tamagotchiStepsCounter : 0..49, incrémenté à chaque case parcourue. Quand atteint
+  //                          TAMAGOTCHI_STEP_THRESHOLD (50) → -1 happiness + reset à 0.
+  // lastDailyDecayDate     : YYYY-MM-DD, idempotence du -10/24h (1 fois par jour max).
+  // tamagotchiInBagSince   : timestamp ISO où l'animal est passé en mode "rangé".
+  //                          Reset à null quand l'animal ressort. Permet le decay -1/24h en sac.
+  // happyFlowerLastDate    : YYYY-MM-DD, idempotence du +30 happyFlower (1×/jour).
+  tamagotchiStepsCounter        Int     @default(0)
+  lastDailyDecayDate            String  @default("")
+  tamagotchiInBagSince          DateTime?
+  happyFlowerLastDate           String  @default("")
 
   // v3.24a-4 — Mission jardinier BASILICO (Lasagnas Vegas).
   // jardinierMissionActive : true depuis qu'on a parlé à BASILICO la 1ère fois (= mission acceptée).
