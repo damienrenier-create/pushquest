@@ -1735,6 +1735,36 @@ export default function MapClient({
                     }
                 }
 
+                // v3.24c-3 — PÈRE PESTO : set le flag pereTalked (pour le mot de passe du videur)
+                if (npcId === "pere_pesto") {
+                    ; (async () => {
+                        try {
+                            const res = await fetch("/api/gamebook/tb/pesto", { method: "POST" })
+                            const data = await res.json()
+                            if (data.ok && !data.alreadyTalked) {
+                                setToast("🤫 Tu retiens le mot de passe. Va voir le videur du bar.")
+                            }
+                        } catch (e) {
+                            console.warn("[MapClient] tb/pesto failed", e)
+                        }
+                    })()
+                    // On laisse aussi tourner le dialogue normal (n'override pas)
+                }
+
+                // v3.24c-3 — VIDEUR : 3 choix oui_honest / yes_lying / no via popup interactif
+                if (npcId === "tb_videur") {
+                    // Le dialogue normal joue (dialoguesAfter), puis on attend que le user fasse un choix
+                    // via 3 boutons custom dans un popup spécial. Pour simplifier ici : on déclenche directement
+                    // une route avec un choix par défaut, mais idéalement il faut un modal interactif.
+                    // Pour le moment : on offre une popup avec 3 options en mode info (le user devra cliquer "OK"
+                    // pour fermer et puis le système se déclenchera via un sous-menu... à venir v3.24c-4).
+                    setPopup({
+                        kind: "info",
+                        text: "🕴️ Le PORTIER ARRABBIATA croise les bras.\n\n\"Tu connais le mot de passe ?\"\n\n(Choix à venir en patch suivant : « OUI honnête » / « OUI menteur » / « NON » → défi reps avant accès au bar.)",
+                    })
+                    return
+                }
+
                 // v3.24a-4 — BASILICO (jardinier Vegas) : mission cueillette dans l'ordre
                 if (npcId === "lasagnas_jardinier") {
                     ; (async () => {

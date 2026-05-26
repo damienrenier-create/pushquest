@@ -496,6 +496,23 @@ model GamebookProgress {
   // One-shot ; déclenche cinématique + badge Conquérant 500 XP. Aussi unlock contest_hall.
   montSummitReached         Boolean @default(false)
 
+  // v3.24c-3 — Arc Team Boulette (Lasagnas Vegas).
+  // pereTalked     : a parlé au Père Pesto et reçu le "mot de passe" (honest).
+  // videurState    : état du dialogue videur — "untouched" | "honest_challenge" | "passed" | "lying_pursued" | "boss_beaten"
+  // videurChallengeBaseline : reps au moment du défi 200/100/50 (snapshot pour calcul progression)
+  // tbBarDefisDone : array des sbires bar (meowth/jessie/giovanni) déjà battus
+  // tbBossKeyHeld  : true si JAMIE a donné la clé du boss
+  // tbBossDefisDone: array des 4 défis boss (squat / pompes / hier / 2 jours) déjà validés
+  // tbBossBeaten   : true si IL CAPO est vaincu (donne accès arène)
+  pereTalked                Boolean @default(false)
+  videurState               String  @default("untouched")
+  videurChallengeBaseline   Int     @default(0)
+  videurChallengeStartedAt  DateTime?
+  tbBarDefisDone            Json    @default("[]")
+  tbBossKeyHeld             Boolean @default(false)
+  tbBossDefisDone           Json    @default("[]")
+  tbBossBeaten              Boolean @default(false)
+
   // v3.24a-4 — Mission jardinier BASILICO (Lasagnas Vegas).
   // jardinierMissionActive : true depuis qu'on a parlé à BASILICO la 1ère fois (= mission acceptée).
   // jardinierFruitOrder    : array JSON des tree.kind cueillis depuis le démarrage de la mission
