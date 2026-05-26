@@ -265,3 +265,77 @@ export function v3tNarrativeForProgress(done: number, total: number, recovered: 
     if (pct < 0.75) return "Il te suit des yeux. Il attend autre chose de toi."
     return "Il s'agite quand tu arrives. Il est presque prêt. Encore un effort."
 }
+
+/**
+ * v3.26 — Renvoie le dialogue dynamique COMPLET du vétérinaire V3T selon la progression Tamagotchi.
+ * Le véto ne RÉVÈLE PLUS la marche à suivre (voir Livre/Biblio) : il COMMENTE.
+ * 8 paliers : aucun défi, premier, ~1/3, ~moitié, ~2/3, presque, prêt, récupéré.
+ *
+ * @param hasTamagotchi true si le joueur a déjà un tamagotchi associé chez V3T
+ * @param done nombre de défis d'adoption validés (0..total)
+ * @param total nombre total de défis (= CANONICAL_DEFIS.length)
+ * @param recovered true si l'animal a été récupéré (adopté)
+ */
+export function v3tDialogueLines(hasTamagotchi: boolean, done: number, total: number, recovered: boolean): string[] {
+    if (!hasTamagotchi) {
+        return [
+            "Bienvenue à la Clinique des Compagnons Totem.",
+            "Ici, je m'occupe des animaux qui choisissent leurs humains — pas l'inverse.",
+            "Approche du comptoir pour rencontrer le tien.",
+        ]
+    }
+    if (recovered) {
+        return [
+            "*V3T sourit.* Tu reviens en visite ? Bien.",
+            "Tu te débrouilles très bien avec lui. Continue.",
+        ]
+    }
+    if (done === 0) {
+        return [
+            "*V3T te toise par-dessus ses lunettes.*",
+            "Ton tamagotchi est là, mais il ne te connaît pas. Pas encore.",
+            "Je ne peux pas te dire QUOI faire — va lire les rayons de la biblio.",
+            "Mais je te le dis : commence par t'occuper de lui.",
+        ]
+    }
+    const pct = done / total
+    if (done === total) {
+        return [
+            "*V3T applaudit doucement.* Voilà, tu as tout fait.",
+            "Il est prêt. Reviens quand tu veux le récupérer — il te suivra partout.",
+        ]
+    }
+    if (pct < 0.2) {
+        return [
+            "*V3T hoche la tête, sceptique mais bienveillant.*",
+            "Il commence à te sentir. C'est un début. Mais ne traîne pas.",
+            "S'il a faim ou soif, il finira par t'oublier.",
+        ]
+    }
+    if (pct < 0.4) {
+        return [
+            "*V3T te regarde avec un sourire en coin.*",
+            "Super, je vois que ton animal t'aime un petit peu plus. Il a l'air vraiment content.",
+            "Continue. Tu as bien commencé.",
+        ]
+    }
+    if (pct < 0.6) {
+        return [
+            "*V3T tape doucement sur le comptoir.*",
+            "Vous progressez bien tous les deux. Il s'approche quand tu entres maintenant.",
+            "Si tu continues tes efforts, vous allez devenir de super amis.",
+        ]
+    }
+    if (pct < 0.8) {
+        return [
+            "*V3T sourit franchement.*",
+            "Il te suit des yeux. Il attend quelque chose de toi — encore.",
+            "Tu n'es plus très loin.",
+        ]
+    }
+    return [
+        "*V3T retient un sourire.*",
+        "Il s'agite quand tu arrives. Tu es son humain, ou presque.",
+        "Encore un effort. Un seul.",
+    ]
+}

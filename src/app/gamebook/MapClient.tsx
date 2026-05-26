@@ -2244,9 +2244,27 @@ export default function MapClient({
                 setShowShop(true)
                 return
             }
-            // v3.14 — V3T (vétérinaire) : ouvre la modal Tamagotchi (adoption ou suivi)
+            // v3.14 — V3T (vétérinaire) : commentaire dynamique (v3.26) puis ouvre la modal Tamagotchi
             if (npcId === "veterinaire_keeper") {
-                setShowTamagotchi(true)
+                ; (async () => {
+                    try {
+                        const res = await fetch("/api/gamebook/v3t/talk", { method: "POST" })
+                        const data = await res.json()
+                        if (data.ok && Array.isArray(data.lines) && data.lines.length > 0) {
+                            // Si tamagotchi en cours (non récupéré) : afficher commentaire dynamique
+                            // au lieu d'ouvrir le modal direct. Le joueur peut cliquer sur l'animal
+                            // sur la map pour ouvrir le modal.
+                            if (data.hasTamagotchi && !data.recovered) {
+                                setPopup({ kind: "info", text: data.lines.join("\n\n") })
+                                return
+                            }
+                        }
+                    } catch (e) {
+                        console.warn("[MapClient] v3t/talk failed", e)
+                    }
+                    // Fallback (pas de tamagotchi, ou récupéré, ou erreur) : ouvre le modal
+                    setShowTamagotchi(true)
+                })()
                 return
             }
             // v3.18 — BIBLIO (bibliothécaire) : ouvre la modal Bibliothèque
