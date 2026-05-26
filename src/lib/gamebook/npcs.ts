@@ -950,6 +950,52 @@ export const NPCS: NpcDefinition[] = [
         ],
     },
 
+    // ============================================================
+    // v3.24b-1 — JEUX VEGAS : guichets dédiés (Lotto Poule, Stop ou encore, Coqs)
+    // ============================================================
+    {
+        id: "lotto_keeper",
+        name: "GUICHET LOTTO POULE",
+        mapId: "lasagnas_casino_a",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🐔", color: "#c0a040" },
+        initialX: 1,
+        initialY: 4,
+        dialoguesAfter: [
+            "*Une vieille dame agitée derrière son guichet.*",
+            "LOTTO POULE ! 1 sur 16, mise 10 reps, gain ×16. UN SEUL GAIN PAR JOUR !",
+        ],
+    },
+    {
+        id: "stop_keeper",
+        name: "GUICHET STOP OU ENCORE",
+        mapId: "lasagnas_casino_a",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🚦", color: "#80a0d0" },
+        initialX: 10,
+        initialY: 4,
+        dialoguesAfter: [
+            "*Un homme aux yeux brillants te fait signe.*",
+            "STOP OU ENCORE ! 3 essais/jour. Mise 1-20. Tu enchaînes tant que tu veux, mais le crash peut tomber à tout moment.",
+        ],
+    },
+    {
+        id: "cock_keeper",
+        name: "GUICHET COMBATS DE COQS",
+        mapId: "lasagnas_casino_b",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🐓", color: "#a04040" },
+        initialX: 1,
+        initialY: 6,
+        dialoguesAfter: [
+            "*Un type louche te tend un programme.*",
+            "COMBATS DE COQS ! 4 coqs, mise 20-200 reps. Mais on commence à 21h, pas avant.",
+        ],
+    },
+
     // v3.29 — Gamin chasseur de chenilles (jaloux de l'animal du joueur)
     {
         id: "chenille_kid",

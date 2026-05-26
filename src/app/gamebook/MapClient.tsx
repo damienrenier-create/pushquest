@@ -102,6 +102,10 @@ import CasinoPatternModal from "./CasinoPatternModal"
 import FastTravelModal from "./FastTravelModal"
 import VideurModal from "./VideurModal"
 import TreeBookModal from "./TreeBookModal"
+import LottoPouleModal from "./LottoPouleModal"
+import StopOuEncoreModal from "./StopOuEncoreModal"
+import CockfightModal from "./CockfightModal"
+import SlotMachineModal from "./SlotMachineModal"
 import { getLevelDetails } from "@/lib/xp"
 import { getActiveBicycle } from "@/lib/gamebook/items"
 
@@ -257,6 +261,11 @@ export default function MapClient({
     // v3.25 — Modal Pokédex des arbres (Livre des Arbres)
     const [showTreeBook, setShowTreeBook] = useState(false)
     const [treesDiscovered, setTreesDiscovered] = useState<string[]>([])
+    // v3.24b — Modals jeux Vegas
+    const [showLottoPoule, setShowLottoPoule] = useState(false)
+    const [showStopOuEncore, setShowStopOuEncore] = useState(false)
+    const [showCockfight, setShowCockfight] = useState(false)
+    const [showSlotMachine, setShowSlotMachine] = useState(false)
     // v3.23b — Cadence sur le Mont Pasta-Ventoux : timestamps des derniers clics "pédale"
     const [cadenceClicks, setCadenceClicks] = useState<number[]>([])
     // Tick pour rafraîchir le BPM même si pas de nouveau click
@@ -1581,7 +1590,7 @@ export default function MapClient({
         }, 300)
 
         // v3.8 — si une modal est ouverte, le A est géré par la modal elle-même
-        if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook) return
+        if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore || showCockfight || showSlotMachine) return
 
         // v3.23e — Blague PIAFFINI unique pour Franss : intercepter le premier A press (idem tryMove)
         if (
@@ -1903,6 +1912,22 @@ export default function MapClient({
                             console.warn("[MapClient] tb/brute failed", e)
                         }
                     })()
+                    return
+                }
+
+                // v3.24b-1 — GUICHET LOTTO POULE → ouvre modal
+                if (npcId === "lotto_keeper") {
+                    setShowLottoPoule(true)
+                    return
+                }
+                // v3.24b-2 — GUICHET STOP OU ENCORE → ouvre modal
+                if (npcId === "stop_keeper") {
+                    setShowStopOuEncore(true)
+                    return
+                }
+                // v3.24b-3 — GUICHET COMBATS DE COQS → ouvre modal
+                if (npcId === "cock_keeper") {
+                    setShowCockfight(true)
                     return
                 }
 
@@ -2787,7 +2812,14 @@ export default function MapClient({
         if (tile === "machineCardio") return doExercise("Cardio")
         if (tile === "machineGainage") return doExercise("Gainage")
         if (tile === "table") return setPopup({ kind: "info", text: "Table de jeu.\n\nDes parieurs s'agitent. Pas pour toi pour l'instant." })
-        if (tile === "slotMachine") return setPopup({ kind: "info", text: "Machine à sous.\n\n*BIPS et CLINQ*\n\nÉlégamment hors de prix." })
+        if (tile === "slotMachine") {
+            // v3.24b-4 — Slot machines fonctionnelles à Lasagnas Vegas
+            if (state.mapId === "lasagnas_casino_a" || state.mapId === "lasagnas_casino_b" || state.mapId === "lasagnas_casino_c") {
+                setShowSlotMachine(true)
+                return
+            }
+            return setPopup({ kind: "info", text: "Machine à sous.\n\n*BIPS et CLINQ*\n\nÉlégamment hors de prix." })
+        }
         if (tile === "rouletteWheel") return setPopup({ kind: "info", text: "Roulette.\n\nLa boule tourne. Tu n'as rien à miser. Tant mieux pour toi." })
         if (tile === "bookshelf") return setPopup({ kind: "info", text: "Une bibliothèque.\n\nDes livres sur la pasta, la physique des nouilles, l'art du sarcasme." })
         if (tile === "potion") return setPopup({ kind: "info", text: "Une potion d'énergie.\n\n[Bientôt : tu pourras en acheter pour stocker tes reps.]" })
@@ -2865,7 +2897,7 @@ export default function MapClient({
         const handler = (e: KeyboardEvent) => {
             // v3.8 — si une modal est ouverte, on ne gère pas les touches ici
             // (StartMenu/InventoryModal/ShopModal/PlayerMapModal écoutent leurs propres events)
-            if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook) return
+            if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore || showCockfight || showSlotMachine) return
 
             if (state.phase === "introMonster") {
                 if (e.key === "Enter" || e.key === " " || e.key.toLowerCase() === "a") {
@@ -3561,6 +3593,82 @@ export default function MapClient({
                 <TreeBookModal
                     discovered={treesDiscovered}
                     onClose={() => setShowTreeBook(false)}
+                />
+            )}
+
+            {/* v3.24b-1 — Modal Lotto Poule (4×4) */}
+            {showLottoPoule && (
+                <LottoPouleModal
+                    onClose={() => {
+                        setShowLottoPoule(false)
+                        ; (async () => {
+                            try {
+                                const r = await fetch("/api/gamebook/state")
+                                if (r.ok) {
+                                    const j = await r.json()
+                                    if (typeof j.availableEnergy === "number") setReps(j.availableEnergy)
+                                    if (typeof j.energySpentToday === "number") setEnergySpent(j.energySpentToday)
+                                }
+                            } catch { /* silent */ }
+                        })()
+                    }}
+                />
+            )}
+
+            {/* v3.24b-2 — Modal Stop ou Encore */}
+            {showStopOuEncore && (
+                <StopOuEncoreModal
+                    onClose={() => {
+                        setShowStopOuEncore(false)
+                        ; (async () => {
+                            try {
+                                const r = await fetch("/api/gamebook/state")
+                                if (r.ok) {
+                                    const j = await r.json()
+                                    if (typeof j.availableEnergy === "number") setReps(j.availableEnergy)
+                                    if (typeof j.energySpentToday === "number") setEnergySpent(j.energySpentToday)
+                                }
+                            } catch { /* silent */ }
+                        })()
+                    }}
+                />
+            )}
+
+            {/* v3.24b-3 — Modal Combats de Coqs */}
+            {showCockfight && (
+                <CockfightModal
+                    onClose={() => {
+                        setShowCockfight(false)
+                        ; (async () => {
+                            try {
+                                const r = await fetch("/api/gamebook/state")
+                                if (r.ok) {
+                                    const j = await r.json()
+                                    if (typeof j.availableEnergy === "number") setReps(j.availableEnergy)
+                                    if (typeof j.energySpentToday === "number") setEnergySpent(j.energySpentToday)
+                                }
+                            } catch { /* silent */ }
+                        })()
+                    }}
+                />
+            )}
+
+            {/* v3.24b-4 — Modal Slot Machine */}
+            {showSlotMachine && (
+                <SlotMachineModal
+                    onClose={() => {
+                        setShowSlotMachine(false)
+                        ; (async () => {
+                            try {
+                                const r = await fetch("/api/gamebook/state")
+                                if (r.ok) {
+                                    const j = await r.json()
+                                    if (typeof j.availableEnergy === "number") setReps(j.availableEnergy)
+                                    if (typeof j.energySpentToday === "number") setEnergySpent(j.energySpentToday)
+                                }
+                            } catch { /* silent */ }
+                        })()
+                    }}
                 />
             )}
 

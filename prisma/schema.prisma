@@ -532,6 +532,26 @@ model GamebookProgress {
   grassSudCutsceneShown     Boolean @default(false)
   // v3.29 — Ornithologue (grass_sud) : bonus +50 énergies remis 1 fois si animal = oiseau.
   ornithologueBirdBonusGiven Boolean @default(false)
+  // v3.24b — Jeux casino Vegas (limites par jour + states)
+  // Lotto poule : 4x4 grid, 1/16, max 1 win/jour
+  lottoPouleDate             String  @default("")
+  lottoPouleWonToday         Boolean @default(false)
+  // Stop ou encore : 3 essais/jour, mise 1-20, random crash
+  stopOuEncoreDate           String  @default("")
+  stopOuEncorePlaysToday     Int     @default(0)
+  // Combats de coqs : 1×/jour à partir de 21h
+  cockfightDate              String  @default("")
+  // Slot machines : compteur quotidien (pas de cap dur, juste tracking)
+  slotMachinesPlayedToday    Int     @default(0)
+  slotMachinesDate           String  @default("")
+  // Croupier boost/malus du jour (set au talk avec un croupier, applique au prochain pari)
+  casinoBoostPctToday        Int     @default(0)
+  casinoBoostDate            String  @default("")
+  casinoCroupierTalkedToday  String  @default("")
+  // Casino pattern Vegas (22 cases) : compteur séparé du Muscuville (casinoPatternSpinIndex)
+  casinoPatternVegasIndex    Int     @default(0)
+  casinoPatternVegasStreak   Int     @default(0)
+  casinoPatternVegasBankruptUntil DateTime?
 
   // v3.24a-4 — Mission jardinier BASILICO (Lasagnas Vegas).
   // jardinierMissionActive : true depuis qu'on a parlé à BASILICO la 1ère fois (= mission acceptée).
