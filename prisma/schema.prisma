@@ -741,6 +741,33 @@ model GamebookProgress {
   // Bourg-Boulette chez JOJO + 30 reps cadeau. One-shot à vie, Franss only.
   franssJokeBirdDone        Boolean @default(false)
 
+  // === v4.0 Phase 4 — Arc Pastagone ===
+  // pastagoneArrested      : true après cinématique capture (barrage police Vegas-ouest).
+  //                          Quand true → spawn dans pastagone_cellule + escape interrogatoire.
+  // pastagoneEscaped       : true une fois les 3 défis interrogatoire passés → unlock outdoor.
+  // pastagoneBossBeaten    : true après victoire Doberman Alpha → débloque retour Vegas.
+  // pastagoneInterrogStart : timestamp (delta réel pompes/gainage/squats depuis cet instant).
+  // pastagoneInterrogDefis : JSON { pompes: bool, gainage: bool, squats: bool } pour valider 3/3.
+  // pastagoneOrphanChosen  : "anguillzap" | "faucotron" | "octopsy" | null — choix post-boss.
+  // pastagoneBolognionFound: true si BOLOGNION récupéré via énigme cuisine.
+  // pastagoneCuisinePuzzle : JSON { step1: bool, step2: bool, step3: bool } pour énigme.
+  // pastagoneInfirmerieUses: JSON { date: "YYYY-MM-DD", count: 0..3 } (max 3 soins/jour).
+  // pastagoneTourLastNpc   : id du dernier PNJ Tour de Garde affiché (rotation).
+  // pastagoneTourLastRotAt : timestamp dernier rotation Tour (cooldown 10 min).
+  // pastagoneTourCooldownUntil : timestamp fin cooldown combat (30s entre combats Tour).
+  pastagoneArrested          Boolean   @default(false)
+  pastagoneEscaped           Boolean   @default(false)
+  pastagoneBossBeaten        Boolean   @default(false)
+  pastagoneInterrogStart     DateTime?
+  pastagoneInterrogDefis     Json      @default("{}")
+  pastagoneOrphanChosen      String?
+  pastagoneBolognionFound    Boolean   @default(false)
+  pastagoneCuisinePuzzle     Json      @default("{}")
+  pastagoneInfirmerieUses    Json      @default("{}")
+  pastagoneTourLastNpc       String?
+  pastagoneTourLastRotAt     DateTime?
+  pastagoneTourCooldownUntil DateTime?
+
   @@unique([userId, chapterId])
   @@index([userId])
   @@index([mapId])

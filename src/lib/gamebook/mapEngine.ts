@@ -91,6 +91,19 @@ export type TileType =
     | "animalCage"    // cage en grillage avec un animal du bestiaire à l'intérieur (bloquant + interactif A)
     | "plant"         // plante en pot (bloquant, décoratif)
     | "foodBag"       // sac de croquettes (bloquant, décoratif)
+    // === v4.0 Phase 4 — Pastagone ===
+    | "roadBlocked"   // barricade policière (Vegas → Pastagone) : bloquant, interactif A → cinématique capture si tbBossBeaten
+    | "celluleBars"   // barreaux de la cellule Pastagone (bloquants, décoratifs)
+    | "celluleDoor"   // porte de la cellule (bloquant, interactif A → tentative d'évasion)
+    | "interrogationLamp"   // lampe d'interrogatoire (bloquant, décoratif)
+    | "interrogationTable"  // table d'interrogatoire (bloquant, décoratif)
+    | "pastagoneRoad"   // bitume Pastagone (non-bloquant, plus sombre)
+    | "buildingCellule"   // façade cellule (bloquant, doorMat à côté)
+    | "buildingInfirmerie" // façade infirmerie (bloquant)
+    | "buildingCuisine"   // façade cuisine (bloquant)
+    | "buildingArmurerie" // façade armurerie (bloquant)
+    | "buildingBriefing"  // façade briefing (bloquant)
+    | "buildingTour"      // façade tour de garde (bloquant)
 
 export interface Building {
     x: number
@@ -180,6 +193,15 @@ export interface PlayerMapState {
     contestDefiTiroirDone?: boolean
     // === v3.23e : Blague PIAFFINI unique pour Franss (one-shot) ===
     franssJokeBirdDone?: boolean
+    // === v4.0 Phase 4 : Arc Pastagone ===
+    pastagoneArrested?: boolean
+    pastagoneEscaped?: boolean
+    pastagoneBossBeaten?: boolean
+    pastagoneInterrogStart?: string | Date | null
+    pastagoneInterrogDefis?: { pompes?: boolean; gainage?: boolean; squats?: boolean }
+    pastagoneOrphanChosen?: string | null
+    pastagoneBolognionFound?: boolean
+    pastagoneCuisinePuzzle?: { step1?: boolean; step2?: boolean; step3?: boolean }
 }
 
 // Snapshot d'un autre joueur affiché sur la carte
@@ -249,6 +271,18 @@ export const BLOCKING_TILES: TileType[] = [
     "animalCage",
     "plant",
     "foodBag",
+    // v4.0 Phase 4 — Pastagone : barricade police, cellule, décor interrogatoire, bâtiments
+    "roadBlocked",
+    "celluleBars",
+    "celluleDoor",
+    "interrogationLamp",
+    "interrogationTable",
+    "buildingCellule",
+    "buildingInfirmerie",
+    "buildingCuisine",
+    "buildingArmurerie",
+    "buildingBriefing",
+    "buildingTour",
 ]
 
 export function isBlockingTile(tile: TileType): boolean {

@@ -1903,6 +1903,218 @@ export type BridgeChallenge =
     | { kind: "topYesterday" }
 
 // ============================================================
+// v4.0 Phase 4 — PASTAGONE (hub pentagonal + cellule + 5 bâtiments)
+// ============================================================
+// Layout outdoor : 15×15. Pentagone stylisé avec 5 bâtiments aux 5 points
+// cardinaux + 1 cellule au centre. Tile "pastagoneRoad" partout sauf décor.
+
+const PASTAGONE_W = 15
+const PASTAGONE_H = 15
+
+function buildPastagone(): TileType[][] {
+    const m: TileType[][] = Array.from({ length: PASTAGONE_H }, () =>
+        Array(PASTAGONE_W).fill("pastagoneRoad" as TileType))
+
+    // Bordures fence (effet "enclos")
+    for (let x = 0; x < PASTAGONE_W; x++) {
+        m[0][x] = "fence"
+        m[PASTAGONE_H - 1][x] = "fence"
+    }
+    for (let y = 0; y < PASTAGONE_H; y++) {
+        m[y][0] = "fence"
+        m[y][PASTAGONE_W - 1] = "fence"
+    }
+
+    // Cellule centrale (2×2) avec doorMat en bas
+    m[5][7] = "buildingCellule"
+    m[5][8] = "buildingCellule"
+    m[6][7] = "buildingCellule"
+    m[6][8] = "doorMat"  // entrée cellule
+
+    // 5 bâtiments aux 5 points (pentagonal-ish)
+    // Infirmerie (haut-gauche)
+    m[2][3] = "buildingInfirmerie"
+    m[2][4] = "buildingInfirmerie"
+    m[3][3] = "doorMat"
+    // Cuisine (haut-droite)
+    m[2][10] = "buildingCuisine"
+    m[2][11] = "buildingCuisine"
+    m[3][11] = "doorMat"
+    // Armurerie (bas-gauche)
+    m[11][3] = "buildingArmurerie"
+    m[11][4] = "buildingArmurerie"
+    m[10][3] = "doorMat"
+    // Briefing (bas-droite)
+    m[11][10] = "buildingBriefing"
+    m[11][11] = "buildingBriefing"
+    m[10][11] = "doorMat"
+    // Tour de Garde (bas centre)
+    m[12][7] = "buildingTour"
+    m[12][8] = "buildingTour"
+    m[11][7] = "doorMat"
+
+    // Sortie nord (vers Vegas) — verrouillée tant que !pastagoneBossBeaten (gérée côté client)
+    m[1][7] = "pastagoneRoad"
+    m[1][8] = "pastagoneRoad"
+
+    return m
+}
+
+// Cellule intérieure 9×7 : table, lampe, chaise, flic CARBONE, porte
+const CELLULE_W = 9
+const CELLULE_H = 7
+
+function buildPastagoneCellule(): TileType[][] {
+    const m: TileType[][] = Array.from({ length: CELLULE_H }, () =>
+        Array(CELLULE_W).fill("floorTile" as TileType))
+
+    // Murs
+    for (let x = 0; x < CELLULE_W; x++) {
+        m[0][x] = "wallH"
+        m[CELLULE_H - 1][x] = "wallH"
+    }
+    for (let y = 0; y < CELLULE_H; y++) {
+        m[y][0] = "wallV"
+        m[y][CELLULE_W - 1] = "wallV"
+    }
+    m[0][0] = "wallCorner"
+    m[0][CELLULE_W - 1] = "wallCorner"
+    m[CELLULE_H - 1][0] = "wallCorner"
+    m[CELLULE_H - 1][CELLULE_W - 1] = "wallCorner"
+
+    // Barreaux côté droit (mi-cellule, mi-couloir)
+    m[2][6] = "celluleBars"
+    m[3][6] = "celluleBars"
+    m[4][6] = "celluleBars"
+
+    // Porte de cellule (centre droit, interactive A)
+    m[3][7] = "celluleDoor"
+
+    // Table d'interrogatoire + lampe au centre côté cellule
+    m[2][3] = "interrogationLamp"
+    m[3][3] = "interrogationTable"
+    m[3][2] = "interrogationTable"  // table 2 cases
+
+    // Sortie (doorMat) — bloquée tant que !pastagoneEscaped, sinon mène à Pastagone outdoor
+    m[CELLULE_H - 1][4] = "doorMat"
+
+    return m
+}
+
+// Infirmerie 9×7 — RIGATONI ? Non, FUSILLI : heal 50 reps/soin, max 3/j
+function buildPastagoneInfirmerie(): TileType[][] {
+    const m: TileType[][] = Array.from({ length: 7 }, () => Array(9).fill("floorTile" as TileType))
+    for (let x = 0; x < 9; x++) { m[0][x] = "wallH"; m[6][x] = "wallH" }
+    for (let y = 0; y < 7; y++) { m[y][0] = "wallV"; m[y][8] = "wallV" }
+    m[0][0] = "wallCorner"; m[0][8] = "wallCorner"; m[6][0] = "wallCorner"; m[6][8] = "wallCorner"
+    m[2][4] = "shopCounter"  // comptoir FUSILLI
+    m[2][3] = "shopShelf"
+    m[2][5] = "shopShelf"
+    m[6][4] = "doorMat"
+    return m
+}
+
+// Cuisine 9×7 — RIGATONI : shop bouffe + énigme BOLOGNION cachée
+function buildPastagoneCuisine(): TileType[][] {
+    const m: TileType[][] = Array.from({ length: 7 }, () => Array(9).fill("floorTile" as TileType))
+    for (let x = 0; x < 9; x++) { m[0][x] = "wallH"; m[6][x] = "wallH" }
+    for (let y = 0; y < 7; y++) { m[y][0] = "wallV"; m[y][8] = "wallV" }
+    m[0][0] = "wallCorner"; m[0][8] = "wallCorner"; m[6][0] = "wallCorner"; m[6][8] = "wallCorner"
+    m[2][4] = "shopCounter"  // comptoir RIGATONI
+    m[2][3] = "shopShelf"
+    m[2][5] = "shopShelf"
+    m[4][2] = "foodBag"  // sacs de pâte (clue énigme BOLOGNION)
+    m[4][6] = "foodBag"
+    m[6][4] = "doorMat"
+    return m
+}
+
+// Armurerie 9×7 — PESTO Jr : 4 items wearables Daemon
+function buildPastagoneArmurerie(): TileType[][] {
+    const m: TileType[][] = Array.from({ length: 7 }, () => Array(9).fill("floorTile" as TileType))
+    for (let x = 0; x < 9; x++) { m[0][x] = "wallH"; m[6][x] = "wallH" }
+    for (let y = 0; y < 7; y++) { m[y][0] = "wallV"; m[y][8] = "wallV" }
+    m[0][0] = "wallCorner"; m[0][8] = "wallCorner"; m[6][0] = "wallCorner"; m[6][8] = "wallCorner"
+    m[2][4] = "shopCounter"  // comptoir PESTO Jr
+    m[2][2] = "shopShelf"
+    m[2][3] = "shopShelf"
+    m[2][5] = "shopShelf"
+    m[2][6] = "shopShelf"
+    m[6][4] = "doorMat"
+    return m
+}
+
+// Briefing 9×7 — TAGLIA : stats progression + map ennemis
+function buildPastagoneBriefing(): TileType[][] {
+    const m: TileType[][] = Array.from({ length: 7 }, () => Array(9).fill("floorTile" as TileType))
+    for (let x = 0; x < 9; x++) { m[0][x] = "wallH"; m[6][x] = "wallH" }
+    for (let y = 0; y < 7; y++) { m[y][0] = "wallV"; m[y][8] = "wallV" }
+    m[0][0] = "wallCorner"; m[0][8] = "wallCorner"; m[6][0] = "wallCorner"; m[6][8] = "wallCorner"
+    m[2][4] = "interrogationTable"  // table briefing
+    m[2][3] = "painting"  // tableau briefing (carte ennemis)
+    m[2][5] = "painting"
+    m[6][4] = "doorMat"
+    return m
+}
+
+// Tour de Garde 9×7 — 1 PNJ visible à la fois (rotation aléatoire 25 PNJ)
+// ============================================================
+// PASTAGONE Buildings + Signs + spawn entries
+// ============================================================
+export const PASTAGONE_BUILDINGS: Building[] = [
+    // Cellule centrale (le joueur sort par là après escape)
+    { x: 7, y: 5, w: 2, h: 2, kind: "monsterCave", doorX: 1, doorY: 1, visible: true,
+      targetMapId: "pastagone_cellule", displayName: "CELLULE" },
+    // Infirmerie (haut-gauche)
+    { x: 3, y: 2, w: 2, h: 2, kind: "veterinaire", doorX: 0, doorY: 1, visible: true,
+      targetMapId: "pastagone_infirmerie", displayName: "INFIRMERIE" },
+    // Cuisine (haut-droite)
+    { x: 10, y: 2, w: 2, h: 2, kind: "shop", doorX: 1, doorY: 1, visible: true,
+      targetMapId: "pastagone_cuisine", displayName: "CUISINE" },
+    // Armurerie (bas-gauche) — building y=11 row, door y=10
+    { x: 3, y: 10, w: 2, h: 2, kind: "shop", doorX: 0, doorY: 0, visible: true,
+      targetMapId: "pastagone_armurerie", displayName: "ARMURERIE" },
+    // Briefing (bas-droite)
+    { x: 10, y: 10, w: 2, h: 2, kind: "bibliotheque", doorX: 1, doorY: 0, visible: true,
+      targetMapId: "pastagone_briefing", displayName: "BRIEFING" },
+    // Tour de Garde (bas centre) — building y=12 row, door y=11
+    { x: 7, y: 11, w: 2, h: 2, kind: "tower", doorX: 0, doorY: 0, visible: true,
+      targetMapId: "pastagone_tour", displayName: "TOUR" },
+]
+
+export const PASTAGONE_SIGNS: Sign[] = [
+    { x: 7, y: 13, text: "PASTAGONE\nLe pentagone des chiens flics. Cinq services, une seule sortie : par la porte du Doberman Alpha." },
+    { x: 1, y: 7, text: "Tu cherches la sortie ? Trouve le boss." },
+]
+
+// Spawn quand le joueur s'évade de la cellule (pose-toi devant la cellule, face sud)
+export const PASTAGONE_SPAWN_AFTER_ESCAPE = {
+    mapId: "pastagone",
+    posX: 8,
+    posY: 7,
+    direction: "down" as const,
+}
+
+// Spawn quand le joueur est arrêté à Vegas et téléporté en cellule
+export const PASTAGONE_CELLULE_SPAWN = {
+    mapId: "pastagone_cellule",
+    posX: 2,
+    posY: 4,
+    direction: "right" as const,
+}
+
+function buildPastagoneTour(): TileType[][] {
+    const m: TileType[][] = Array.from({ length: 7 }, () => Array(9).fill("floorTile" as TileType))
+    for (let x = 0; x < 9; x++) { m[0][x] = "wallH"; m[6][x] = "wallH" }
+    for (let y = 0; y < 7; y++) { m[y][0] = "wallV"; m[y][8] = "wallV" }
+    m[0][0] = "wallCorner"; m[0][8] = "wallCorner"; m[6][0] = "wallCorner"; m[6][8] = "wallCorner"
+    // Sol arène au centre pour signifier "ring de combat"
+    for (let y = 2; y <= 4; y++) for (let x = 3; x <= 5; x++) m[y][x] = "arenaFloor"
+    m[6][4] = "doorMat"
+    return m
+}
+
+// ============================================================
 // MAPS EXPORTÉES
 // ============================================================
 export const MAPS: Record<string, MapData> = {
@@ -2245,6 +2457,63 @@ export const MAPS: Record<string, MapData> = {
         tiles: buildTowerFloor5(),
         width: 7,
         height: 7,
+    },
+    // v4.0 Phase 4 — Pastagone (hub pentagonal outdoor + cellule + 5 bâtiments)
+    pastagone: {
+        id: "pastagone",
+        name: "PASTAGONE",
+        tiles: buildPastagone(),
+        width: PASTAGONE_W,
+        height: PASTAGONE_H,
+    },
+    pastagone_cellule: {
+        id: "pastagone_cellule",
+        name: "CELLULE PASTAGONE",
+        tiles: buildPastagoneCellule(),
+        width: CELLULE_W,
+        height: CELLULE_H,
+        // exitTarget posé dynamiquement quand pastagoneEscaped=true → Pastagone (7, 6)
+        exitTarget: { mapId: "pastagone", x: 8, y: 6 },
+    },
+    pastagone_infirmerie: {
+        id: "pastagone_infirmerie",
+        name: "INFIRMERIE — FUSILLI",
+        tiles: buildPastagoneInfirmerie(),
+        width: 9,
+        height: 7,
+        exitTarget: { mapId: "pastagone", x: 3, y: 4 },
+    },
+    pastagone_cuisine: {
+        id: "pastagone_cuisine",
+        name: "CUISINE — RIGATONI",
+        tiles: buildPastagoneCuisine(),
+        width: 9,
+        height: 7,
+        exitTarget: { mapId: "pastagone", x: 11, y: 4 },
+    },
+    pastagone_armurerie: {
+        id: "pastagone_armurerie",
+        name: "ARMURERIE — PESTO Jr",
+        tiles: buildPastagoneArmurerie(),
+        width: 9,
+        height: 7,
+        exitTarget: { mapId: "pastagone", x: 3, y: 9 },
+    },
+    pastagone_briefing: {
+        id: "pastagone_briefing",
+        name: "BRIEFING — TAGLIA",
+        tiles: buildPastagoneBriefing(),
+        width: 9,
+        height: 7,
+        exitTarget: { mapId: "pastagone", x: 11, y: 9 },
+    },
+    pastagone_tour: {
+        id: "pastagone_tour",
+        name: "TOUR DE GARDE",
+        tiles: buildPastagoneTour(),
+        width: 9,
+        height: 7,
+        exitTarget: { mapId: "pastagone", x: 7, y: 11 },
     },
 }
 

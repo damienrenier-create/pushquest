@@ -42,6 +42,10 @@ import {
     MONT_SOMMET_SIGNS,
     LASAGNAS_BUILDINGS,
     LASAGNAS_SIGNS,
+    PASTAGONE_BUILDINGS,
+    PASTAGONE_SIGNS,
+    PASTAGONE_SPAWN_AFTER_ESCAPE,
+    PASTAGONE_CELLULE_SPAWN,
     GRASS_SUD_SPAWN_FROM_NORTH,
     MACARONILE_SPAWN_FROM_GRASS_SUD,
     MUSCUVILLE_SPAWN_FROM_NORTH,
@@ -357,7 +361,9 @@ export default function MapClient({
                             ? MUSCUVILLE_BUILDINGS
                             : state.mapId === "lasagnas_vegas"
                                 ? LASAGNAS_BUILDINGS
-                                : []
+                                : state.mapId === "pastagone"
+                                    ? PASTAGONE_BUILDINGS
+                                    : []
 
     // v3.8 — Signs selon la map courante
     const signs =
@@ -368,7 +374,8 @@ export default function MapClient({
                         : state.mapId === "muscuville" ? MUSCUVILLE_SIGNS
                             : state.mapId === "lasagnas_vegas" ? LASAGNAS_SIGNS
                                 : state.mapId === "mont_sommet" ? MONT_SOMMET_SIGNS
-                                    : []
+                                    : state.mapId === "pastagone" ? PASTAGONE_SIGNS
+                                        : []
 
     // ============================================================
     // LOAD AUTRES JOUEURS (polling fallback si Pusher off)

@@ -1041,5 +1041,121 @@ export default function TileCell({ tile, x, y }: { tile: TileType; x: number; y:
         )
     }
 
+    // ============================================================
+    // v4.0 Phase 4 — Pastagone : barricade police + cellule + bâtiments
+    // ============================================================
+    if (tile === "roadBlocked") {
+        // Barricade rouge/blanc avec barrière + gyrophare
+        return (
+            <div style={{ position: "relative", background: "#383838", overflow: "hidden" }}>
+                <div style={{ position: "absolute", inset: 0, backgroundImage: `radial-gradient(circle at 50% 50%, #2a2a2a 0.5px, transparent 1px)`, backgroundSize: "4px 4px", opacity: 0.5 }} />
+                {/* Barrière rayée rouge/blanc */}
+                <div style={{
+                    position: "absolute", left: "5%", right: "5%", top: "38%", bottom: "38%",
+                    background: "repeating-linear-gradient(45deg, #c83030 0, #c83030 6px, #f0f0f0 6px, #f0f0f0 12px)",
+                    border: "1px solid #1a1a1a", boxShadow: "0 1px 0 rgba(0,0,0,0.4)",
+                }} />
+                {/* Gyrophare bleu */}
+                <div style={{
+                    position: "absolute", left: "44%", top: "10%", width: "12%", height: "22%",
+                    background: "#3070d8", borderRadius: "50%",
+                    boxShadow: "0 0 4px rgba(48,112,216,0.8)",
+                }} />
+            </div>
+        )
+    }
+    if (tile === "pastagoneRoad") {
+        // Bitume Pastagone plus sombre + texture craquelée
+        return (
+            <div style={{ position: "relative", background: "#2a2a30", overflow: "hidden" }}>
+                <div style={{
+                    position: "absolute", inset: 0,
+                    backgroundImage: `radial-gradient(circle at 30% 30%, #1a1a20 0.5px, transparent 1px), radial-gradient(circle at 70% 70%, #383840 0.5px, transparent 1px)`,
+                    backgroundSize: "5px 5px",
+                }} />
+            </div>
+        )
+    }
+    if (tile === "celluleBars") {
+        // Barreaux verticaux gris sur fond sombre
+        return (
+            <div style={{ position: "relative", background: "#181818", overflow: "hidden" }}>
+                <div style={{
+                    position: "absolute", inset: 0,
+                    background: "repeating-linear-gradient(90deg, transparent 0, transparent 4px, #6a6a6a 4px, #6a6a6a 7px)",
+                }} />
+            </div>
+        )
+    }
+    if (tile === "celluleDoor") {
+        // Porte de cellule avec serrure
+        return (
+            <div style={{
+                position: "relative", background: "#3a2a1a",
+                border: "2px solid #1a0a00", boxShadow: "inset 0 0 8px rgba(0,0,0,0.6)",
+            }}>
+                <div style={{ position: "absolute", right: "20%", top: "44%", width: "12%", height: "12%", background: "#d8a040", borderRadius: "50%", border: "1px solid #683018" }} />
+            </div>
+        )
+    }
+    if (tile === "interrogationLamp") {
+        // Lampe baladeuse jaune (style interrogatoire noir)
+        return (
+            <div style={{
+                position: "relative", background: "#1a1a1a",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                overflow: "hidden",
+            }}>
+                <div style={{ fontSize: "150%", lineHeight: 1, filter: "drop-shadow(0 0 6px rgba(255,213,80,0.9))" }}>💡</div>
+            </div>
+        )
+    }
+    if (tile === "interrogationTable") {
+        // Table métallique d'interrogatoire
+        return (
+            <div style={{ position: "relative", background: "#3a3a3a", overflow: "hidden" }}>
+                <div style={{
+                    position: "absolute", left: "8%", right: "8%", top: "20%", bottom: "20%",
+                    background: "linear-gradient(180deg, #6a6a6a 0%, #4a4a4a 100%)",
+                    border: "1px solid #1a1a1a",
+                    boxShadow: "inset 1px 1px 0 #8a8a8a, inset -1px -2px 0 #2a2a2a",
+                }} />
+            </div>
+        )
+    }
+    // Bâtiments Pastagone (façades — emojis discrets sur fond pierre sombre)
+    if (tile === "buildingCellule"
+        || tile === "buildingInfirmerie"
+        || tile === "buildingCuisine"
+        || tile === "buildingArmurerie"
+        || tile === "buildingBriefing"
+        || tile === "buildingTour") {
+        const map: Record<string, { bg: string; emoji: string }> = {
+            buildingCellule: { bg: "#2a2a2a", emoji: "🚪" },
+            buildingInfirmerie: { bg: "#3a2a30", emoji: "🏥" },
+            buildingCuisine: { bg: "#3a3020", emoji: "🍝" },
+            buildingArmurerie: { bg: "#2a3020", emoji: "🗡️" },
+            buildingBriefing: { bg: "#202a3a", emoji: "📋" },
+            buildingTour: { bg: "#3a2020", emoji: "🎯" },
+        }
+        const info = map[tile]
+        return (
+            <div style={{
+                position: "relative", background: info.bg,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                overflow: "hidden", border: "1px solid #1a1a1a",
+            }}>
+                <div style={{
+                    position: "absolute", inset: 0,
+                    backgroundImage: `radial-gradient(circle at 30% 30%, rgba(0,0,0,0.4) 0.5px, transparent 1px)`,
+                    backgroundSize: "4px 4px",
+                }} />
+                <div style={{ fontSize: "120%", lineHeight: 1, position: "relative", filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.8))" }}>
+                    {info.emoji}
+                </div>
+            </div>
+        )
+    }
+
     return <div style={{ background: C.grass }} />
 }
