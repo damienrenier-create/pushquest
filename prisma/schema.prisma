@@ -623,6 +623,10 @@ model GamebookProgress {
   //                       Source de la stat Intelligence du Daemon.
   totalGamebookSteps        Int     @default(0)
   totalShopSpend            Int     @default(0)
+  // v4.0 Phase 2.B — Combat actif (Json sérialisé du BattleState).
+  // null = pas de combat en cours. Une seule battle par user à tout instant.
+  // Le contenu suit l'interface BattleState dans src/lib/gamebook/battleState.ts
+  activeBattle              Json?
   // v3.27 — Animal follower : si true, l'animal est rangé dans le sac (pas affiché à l'écran).
   // tamagotchiInteractionsAt stocke les timestamps ISO des dernières interactions (sliding window 60s).
   tamagotchiInBag           Boolean @default(false)
