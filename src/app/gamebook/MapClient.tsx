@@ -1478,12 +1478,31 @@ export default function MapClient({
                 }
             }
             // v3.24a — Muscuville ouest (3 cases milieu) → Lasagnas Vegas
+            // v3.30 — Gating TRIPLE : champion arène + 3 contests + sommet Mont
             if (
                 state.mapId === "muscuville" &&
                 result.nextState.posX === 0 &&
                 (result.nextState.posY === 7 || result.nextState.posY === 8 || result.nextState.posY === 9) &&
                 map.tiles[result.nextState.posY]?.[result.nextState.posX] === "grassTall"
             ) {
+                const summit = (state as { montSummitReached?: boolean }).montSummitReached === true
+                const contestPomp = (state as { contestDefiPompatorDone?: boolean }).contestDefiPompatorDone === true
+                const contestSquat = (state as { contestDefiSquatilusDone?: boolean }).contestDefiSquatilusDone === true
+                const contestTiroir = (state as { contestDefiTiroirDone?: boolean }).contestDefiTiroirDone === true
+                const allContests = contestPomp && contestSquat && contestTiroir
+                // Le "champion d'arène" n'existe pas encore — pour v3.30, on n'exige que summit + contests
+                // (l'arène sera implémentée en v3.24d, le check arenaUnlocked peut être ajouté ultérieurement).
+                if (!summit || !allContests) {
+                    const missing: string[] = []
+                    if (!summit) missing.push("le sommet du Mont Pasta-Ventoux")
+                    if (!allContests) missing.push("les 3 défis intersalle (POMPATOR + SQUATILUS + TIROIR)")
+                    setState((s) => ({ ...s, direction: d }))
+                    setPopup({
+                        kind: "info",
+                        text: `🛑 *Deux gardes musclés te barrent la route vers Lasagnas Vegas.*\n\n« Personne ne passe avant d'avoir prouvé sa valeur. Il te manque : ${missing.join(" et ")}. »`,
+                    })
+                    return
+                }
                 setTimeout(() => {
                     setState((s) => ({
                         ...s,

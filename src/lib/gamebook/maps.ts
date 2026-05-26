@@ -1180,6 +1180,10 @@ export const MUSCUVILLE_SIGNS: Sign[] = [
     { x: 4, y: 10, text: "CASINO DE MUSCUVILLE\nDernier casino de l'archipel." },
     { x: 14, y: 10, text: "SALLE DES CONCOURS\nIntersalle annuel. Accès interdit aux non-conquérants du Mont." },
     { x: 8, y: 14, text: "↓ MONT PASTA-VENTOUX\n100 cases jusqu'au sommet. Vélo obligatoire." },
+    // v3.30 — Forêt hantée (à l'est, accès bloqué — "tu as trop peur")
+    { x: 16, y: 8, text: "→ FORÊT HANTÉE\n*Le panneau grince. Tu sens un frisson.*\n« Trop peur. Reviens quand tu te sentiras prêt. »" },
+    // v3.30 — Passage vers Lasagnas Vegas (à l'ouest, gating triple)
+    { x: 0, y: 8, text: "← LASAGNAS VEGAS\nPassage gardé. Trois preuves requises : Mont Pasta-Ventoux conquis + 3 défis intersalle." },
 ]
 
 // v3.22 — Bâtiments 5×5 avec displayName (label custom rendu à droite du bâtiment).
