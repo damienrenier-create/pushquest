@@ -1370,6 +1370,114 @@ export const NPCS: NpcDefinition[] = [
         ],
     },
 
+    // ============================================================
+    // v3.24b — 6 CROUPIERS DU CASINO LASAGNAS VEGAS
+    // 3 bons (boost de chance) + 3 mauvais (malus). Effet sur le PROCHAIN pari.
+    // Dialogues savoureux qui doivent suggérer le boost/malus par le TON.
+    // ============================================================
+
+    // Casino Hall (Map A)
+    {
+        id: "croupier_vitellino",
+        name: "VITELLINO",
+        mapId: "lasagnas_casino_a",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🎩", color: "#48a830" },
+        initialX: 3,
+        initialY: 4,
+        dialoguesAfter: [
+            "*VITELLINO te tape doucement l'épaule, comme un vieux complice.*",
+            "Eh, l'ami. T'as une bonne tronche ce soir. Les pâtes te sourient, j'le sens.",
+            "Va miser maintenant. La machine en face attend. Tu vas voir.",
+            "(+10% pour ton prochain pari)",
+        ],
+    },
+    {
+        id: "croupier_fettucci",
+        name: "FETTUCCI",
+        mapId: "lasagnas_casino_a",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🥶", color: "#506880" },
+        initialX: 9,
+        initialY: 4,
+        dialoguesAfter: [
+            "*FETTUCCI te regarde de haut, le sourire en coin.*",
+            "Pas mal, l'amateur. T'as cru que ça serait facile, hein ?",
+            "Vas-y, tente. C'est ton soir, c'est sûr. *Il ne sourit plus.*",
+            "(-10% pour ton prochain pari)",
+        ],
+    },
+
+    // Casino Salle de jeux (Map B)
+    {
+        id: "croupier_gramigna",
+        name: "GRAMIGNA",
+        mapId: "lasagnas_casino_b",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "👔", color: "#88a8d8" },
+        initialX: 3,
+        initialY: 5,
+        dialoguesAfter: [
+            "*GRAMIGNA t'accueille avec un hochement de tête bienveillant.*",
+            "Tiens, mon ami. Joue pour moi aussi. Y'a une bonne énergie dans l'air.",
+            "La table de gauche est généreuse ce soir, c'est moi qui te le dis.",
+            "(+5% pour ton prochain pari)",
+        ],
+    },
+    {
+        id: "croupier_casarecci",
+        name: "CASARECCI",
+        mapId: "lasagnas_casino_b",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "💀", color: "#202020" },
+        initialX: 9,
+        initialY: 5,
+        dialoguesAfter: [
+            "*CASARECCI te jette un regard méprisant.*",
+            "Mh. La chance n'aime pas les indécis. Décide-toi, ou rentre chez ta mère.",
+            "Allez, mise. On va bien voir si t'as les couilles. *Il pince les lèvres.*",
+            "(-5% pour ton prochain pari)",
+        ],
+    },
+
+    // Casino VIP (Map C)
+    {
+        id: "croupier_bavettone",
+        name: "BAVETTONE",
+        mapId: "lasagnas_casino_c",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🌹", color: "#d83080" },
+        initialX: 3,
+        initialY: 3,
+        dialoguesAfter: [
+            "*BAVETTONE te sourit avec une chaleur sincère.*",
+            "Tu mérites un coup de chance ce soir. Vraiment, je le dis avec le cœur.",
+            "Va miser. Tu vas gagner. C'est pas une promesse, c'est une certitude.",
+            "(+15% pour ton prochain pari)",
+        ],
+    },
+    {
+        id: "croupier_trofie",
+        name: "TROFIE",
+        mapId: "lasagnas_casino_c",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🐍", color: "#586020" },
+        initialX: 7,
+        initialY: 3,
+        dialoguesAfter: [
+            "*TROFIE te pousse vers la roulette, agressif.*",
+            "Pourquoi tu hésites, hein ?! Allez, fonce. T'as l'air d'un vrai joueur.",
+            "Mise gros. C'est ça les hommes, ça mise GROS. *Il ricane.*",
+            "(-15% pour ton prochain pari)",
+        ],
+    },
+
     // VIDEUR du bar Team Boulette : à l'entrée, demande le mot de passe.
     // Logique de dialogue gérée dans MapClient (3 réponses possibles).
     {

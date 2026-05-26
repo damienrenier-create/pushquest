@@ -795,6 +795,90 @@ function buildLasagnasShopRachat(): TileType[][] {
     return m
 }
 
+// v3.24b — CASINO MAP A : HALL d'entrée. Slot machines + lotto poule (à venir).
+// 12×9. 2 croupiers (VITELLINO +10% boost / FETTUCCI -10% malus).
+function buildLasagnasCasinoA(): TileType[][] {
+    const W = 12, H = 9
+    const m: TileType[][] = []
+    for (let y = 0; y < H; y++) {
+        const row: TileType[] = []
+        for (let x = 0; x < W; x++) {
+            if (y === 0) row.push("wallH")
+            else if (x === 0 || x === W - 1 || y === H - 1) row.push("wallV")
+            else row.push("floorTile")
+        }
+        m.push(row)
+    }
+    // Slot machines en rangée nord (4 machines)
+    m[2][2] = "slotMachine"
+    m[2][4] = "slotMachine"
+    m[2][6] = "slotMachine"
+    m[2][8] = "slotMachine"
+    // Tapis rouge au centre
+    for (let x = 3; x <= 8; x++) {
+        m[5][x] = "rug"
+    }
+    // Future zone lotto poule (5, 5) — tile placeholder
+    m[5][5] = "rug"
+    m[5][6] = "rug"
+    // Sortie sud
+    m[H - 1][6] = "doorMat"
+    return m
+}
+
+// v3.24b — CASINO MAP B : SALLE DE JEUX. Roulettes + stop ou encore (à venir).
+// 12×9. 2 croupiers (GRAMIGNA +5% / CASARECCI -5%).
+function buildLasagnasCasinoB(): TileType[][] {
+    const W = 12, H = 9
+    const m: TileType[][] = []
+    for (let y = 0; y < H; y++) {
+        const row: TileType[] = []
+        for (let x = 0; x < W; x++) {
+            if (y === 0) row.push("wallH")
+            else if (x === 0 || x === W - 1 || y === H - 1) row.push("wallV")
+            else row.push("floorTile")
+        }
+        m.push(row)
+    }
+    // 2 roulettes à gauche/droite
+    m[3][3] = "rouletteWheel"
+    m[3][8] = "rouletteWheel"
+    // 2 tables au sud avec chaises
+    m[5][4] = "table"; m[5][5] = "chairRedDown"
+    m[5][7] = "table"; m[5][8] = "chairBlueDown"
+    // Tapis central
+    for (let x = 3; x <= 8; x++) m[6][x] = "rug"
+    // Sortie sud
+    m[H - 1][6] = "doorMat"
+    return m
+}
+
+// v3.24b — CASINO MAP C : VIP. Casino pattern + combats de coq (à venir).
+// 10×8. 2 croupiers (BAVETTONE +15% / TROFIE -15%).
+// Gating à l'entrée (smoking VIP + 100 pompes + sorteur).
+function buildLasagnasCasinoC(): TileType[][] {
+    const W = 10, H = 8
+    const m: TileType[][] = []
+    for (let y = 0; y < H; y++) {
+        const row: TileType[] = []
+        for (let x = 0; x < W; x++) {
+            if (y === 0) row.push("wallH")
+            else if (x === 0 || x === W - 1 || y === H - 1) row.push("wallV")
+            else row.push("floorTile")
+        }
+        m.push(row)
+    }
+    // Roulette pattern VIP (centre)
+    m[2][5] = "rouletteWheel"
+    // Tapis luxe partout au sud
+    for (let y = 4; y <= 5; y++) {
+        for (let x = 2; x <= 7; x++) m[y][x] = "rug"
+    }
+    // Sortie sud
+    m[H - 1][5] = "doorMat"
+    return m
+}
+
 // v3.24a — Placeholder pour les intérieurs Lasagnas Vegas non encore implémentés.
 // 7×6 box avec un panneau "construction" + doorMat de retour vers la ville.
 // Sera remplacé par les vrais intérieurs (hôtel, casino, etc.) dans les commits suivants.
@@ -829,12 +913,12 @@ export const LASAGNAS_BUILDINGS: Building[] = [
     { x: 1,  y: 4,  w: 4, h: 4, kind: "shop",   doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_hotel",        displayName: "HOTEL" },
     { x: 6,  y: 4,  w: 4, h: 4, kind: "shop",   doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_shop_habits",  displayName: "HABITS" },
     { x: 11, y: 4,  w: 4, h: 4, kind: "shop",   doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_shop_bouffe",  displayName: "BOUFFE" },
-    { x: 17, y: 4,  w: 4, h: 4, kind: "casino", doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_construction", displayName: "CASINO" },
+    { x: 17, y: 4,  w: 4, h: 4, kind: "casino", doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_casino_a",    displayName: "CASINO" },
     // Sud — Bar TB (placeholder), Shop rachat fonctionnel, 2 casinos (placeholder)
     { x: 1,  y: 16, w: 4, h: 4, kind: "casino", doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_construction", displayName: "BAR" },
     { x: 6,  y: 16, w: 4, h: 4, kind: "shop",   doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_shop_rachat",  displayName: "RACHAT" },
-    { x: 11, y: 16, w: 4, h: 4, kind: "casino", doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_construction", displayName: "JEUX" },
-    { x: 17, y: 16, w: 4, h: 4, kind: "casino", doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_construction", displayName: "VIP" },
+    { x: 11, y: 16, w: 4, h: 4, kind: "casino", doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_casino_b",    displayName: "JEUX" },
+    { x: 17, y: 16, w: 4, h: 4, kind: "casino", doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_casino_c",    displayName: "VIP" },
 ]
 
 export const LASAGNAS_SIGNS: Sign[] = [
@@ -1728,6 +1812,31 @@ export const MAPS: Record<string, MapData> = {
         height: 7,
         exitTarget: { mapId: "lasagnas_vegas", x: 7, y: 20 },
     },
+    // v3.24b — Casino 3 maps (Hall, Salle de jeux, VIP)
+    lasagnas_casino_a: {
+        id: "lasagnas_casino_a",
+        name: "CASINO — HALL",
+        tiles: buildLasagnasCasinoA(),
+        width: 12,
+        height: 9,
+        exitTarget: { mapId: "lasagnas_vegas", x: 18, y: 8 },
+    },
+    lasagnas_casino_b: {
+        id: "lasagnas_casino_b",
+        name: "CASINO — SALLE DE JEUX",
+        tiles: buildLasagnasCasinoB(),
+        width: 12,
+        height: 9,
+        exitTarget: { mapId: "lasagnas_vegas", x: 12, y: 20 },
+    },
+    lasagnas_casino_c: {
+        id: "lasagnas_casino_c",
+        name: "CASINO — VIP",
+        tiles: buildLasagnasCasinoC(),
+        width: 10,
+        height: 8,
+        exitTarget: { mapId: "lasagnas_vegas", x: 18, y: 20 },
+    },
     // v3.17c — La mer (canal navigable inséré entre Bourg-Boulette et Macaron'île)
     la_mer: {
         id: "la_mer",
@@ -1980,6 +2089,10 @@ export const INDOOR_MAP_IDS = new Set([
     "lasagnas_shop_habits",
     "lasagnas_shop_bouffe",
     "lasagnas_shop_rachat",
+    // v3.24b — 3 maps casino Vegas
+    "lasagnas_casino_a",
+    "lasagnas_casino_b",
+    "lasagnas_casino_c",
 ])
 
 export function isIndoorMap(mapId: string): boolean {
