@@ -33,6 +33,42 @@ export const CASINO_BANKRUPT_COOLDOWN_HOURS = 24
 export const CASINO_BANKRUPT_BADGE_KEY = "gamebook_casseur_banque"
 export const CASINO_BANKRUPT_BADGE_XP = 200
 
+// ============================================================
+// v3.24b-5 — Casino pattern VEGAS (Lasagnas Vegas — casino VIP)
+// ============================================================
+// Variante "haut de gamme" du pattern Muscuville :
+//   - 22 cases (0..21)
+//   - Mise 20-100
+//   - Gain ×15
+//   - 7 patterns différents (un par jour de la semaine, 0=dim..6=sam)
+//
+// Le pattern actif dépend du jour de la semaine en Europe/Paris.
+// Chaque pattern fait 22 chiffres → un joueur attentif peut craquer le
+// pattern du jour en notant les résultats.
+// ============================================================
+
+export const CASINO_VEGAS_NUM_CASES = 22
+export const CASINO_VEGAS_MIN_BET = 20
+export const CASINO_VEGAS_MAX_BET = 100
+export const CASINO_VEGAS_WIN_MULTIPLIER = 15
+export const CASINO_VEGAS_PATTERN_LENGTH = 22
+
+/** 7 patterns de 22 chiffres, indexés par jour de la semaine (0=dim..6=sam). */
+export const CASINO_VEGAS_PATTERNS: readonly (readonly number[])[] = [
+    [ 5, 12,  3, 18,  9,  0, 15,  7, 20,  2, 11,  6, 17,  1, 14,  8, 21, 10,  4, 19, 13, 16] as const, // dim
+    [11,  4, 17,  8, 21,  2, 15, 10, 19,  0, 13,  6, 18,  3, 20,  9, 12,  1, 16,  7, 14,  5] as const, // lun
+    [16,  9,  2, 21,  5, 14, 11,  0, 18,  7, 20,  3, 12,  8, 17,  6, 19, 10,  1, 15,  4, 13] as const, // mar
+    [ 0, 13,  6, 19,  3, 16,  9, 21, 12,  5, 18,  2, 15,  8, 20, 11,  1, 14,  7, 17,  4, 10] as const, // mer
+    [ 7, 18,  4, 21, 12, 10,  3, 15,  9, 20,  1, 14, 17,  6, 19, 11,  2, 16,  5,  8, 13,  0] as const, // jeu
+    [13, 21,  8,  5, 17,  0, 16, 12,  3, 19, 11,  9, 20,  2, 18,  7, 15,  4, 10,  1, 14,  6] as const, // ven
+    [19,  3, 14,  7, 21,  6, 18, 10,  0, 15,  4, 17, 13,  2, 20,  9, 11,  8, 16,  5, 12,  1] as const, // sam
+]
+
+export function getCasinoVegasPatternForToday(): readonly number[] {
+    const d = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Paris" }))
+    return CASINO_VEGAS_PATTERNS[d.getDay()]
+}
+
 /** Bet placé par le joueur sur une case. */
 export interface CasinoBet {
     case: number      // 0-10

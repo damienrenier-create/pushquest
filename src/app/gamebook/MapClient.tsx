@@ -106,6 +106,7 @@ import LottoPouleModal from "./LottoPouleModal"
 import StopOuEncoreModal from "./StopOuEncoreModal"
 import CockfightModal from "./CockfightModal"
 import SlotMachineModal from "./SlotMachineModal"
+import CasinoPatternVegasModal from "./CasinoPatternVegasModal"
 import { getLevelDetails } from "@/lib/xp"
 import { getActiveBicycle } from "@/lib/gamebook/items"
 
@@ -269,6 +270,8 @@ export default function MapClient({
     // v3.32 — Compte tester GUIGUI : popup recharge à 0 énergie
     const [isTester, setIsTester] = useState(false)
     const [showGuiguiRecharge, setShowGuiguiRecharge] = useState(false)
+    // v3.24b-5 — Modal casino pattern Vegas
+    const [showCasinoPatternVegas, setShowCasinoPatternVegas] = useState(false)
     // v3.23b — Cadence sur le Mont Pasta-Ventoux : timestamps des derniers clics "pédale"
     const [cadenceClicks, setCadenceClicks] = useState<number[]>([])
     // Tick pour rafraîchir le BPM même si pas de nouveau click
@@ -1602,7 +1605,7 @@ export default function MapClient({
         }, 300)
 
         // v3.8 — si une modal est ouverte, le A est géré par la modal elle-même
-        if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore || showCockfight || showSlotMachine) return
+        if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore || showCockfight || showSlotMachine || showCasinoPatternVegas) return
 
         // v3.23e — Blague PIAFFINI unique pour Franss : intercepter le premier A press (idem tryMove)
         if (
@@ -2613,6 +2616,12 @@ export default function MapClient({
             return
         }
 
+        // v3.24b-5 — Roulette pattern Vegas : casino VIP (lasagnas_casino_c)
+        if (state.mapId === "lasagnas_casino_c" && tile === "rouletteWheel") {
+            setShowCasinoPatternVegas(true)
+            return
+        }
+
         // v3.18 — Dans la bibliothèque : interactions sur bookshelf / statue / lectern via BIBLIOTHEQUE_TOPICS
         if (state.mapId === "bibliotheque" && (tile === "bookshelf" || tile === "statue" || tile === "lectern" || tile === "shopShelf")) {
             const topic = BIBLIOTHEQUE_TOPICS.find((t) => t.x === front.x && t.y === front.y)
@@ -2909,7 +2918,7 @@ export default function MapClient({
         const handler = (e: KeyboardEvent) => {
             // v3.8 — si une modal est ouverte, on ne gère pas les touches ici
             // (StartMenu/InventoryModal/ShopModal/PlayerMapModal écoutent leurs propres events)
-            if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore || showCockfight || showSlotMachine) return
+            if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore || showCockfight || showSlotMachine || showCasinoPatternVegas) return
 
             if (state.phase === "introMonster") {
                 if (e.key === "Enter" || e.key === " " || e.key.toLowerCase() === "a") {
@@ -3735,6 +3744,25 @@ export default function MapClient({
                 <SlotMachineModal
                     onClose={() => {
                         setShowSlotMachine(false)
+                        ; (async () => {
+                            try {
+                                const r = await fetch("/api/gamebook/state")
+                                if (r.ok) {
+                                    const j = await r.json()
+                                    if (typeof j.availableEnergy === "number") setReps(j.availableEnergy)
+                                    if (typeof j.energySpentToday === "number") setEnergySpent(j.energySpentToday)
+                                }
+                            } catch { /* silent */ }
+                        })()
+                    }}
+                />
+            )}
+
+            {/* v3.24b-5 — Modal Casino Pattern Vegas */}
+            {showCasinoPatternVegas && (
+                <CasinoPatternVegasModal
+                    onClose={() => {
+                        setShowCasinoPatternVegas(false)
                         ; (async () => {
                             try {
                                 const r = await fetch("/api/gamebook/state")
