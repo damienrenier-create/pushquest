@@ -1500,6 +1500,200 @@ export const NPCS: NpcDefinition[] = [
         ],
     },
 
+    // ============================================================
+    // v3.24c-2 — PNJ DU BAR TEAM BOULETTE (intérieur)
+    // 3 sbires avec défis simples + 4e PNJ (petit frère de James) qui donne la clé du boss.
+    // ============================================================
+    {
+        id: "tb_sbire_meowth",
+        name: "MEOWTH",
+        mapId: "lasagnas_tb_bar",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "😼", color: "#d8a830" },
+        initialX: 3,
+        initialY: 3,
+        dialoguesAfter: [
+            "*MEOWTH te toise depuis sa table.*",
+            "Tiens, un nouveau venu. Tu vas tenir combien de temps ?",
+            "Défi : 10 pompes en 5 minutes. Top chrono dès maintenant.",
+            "(Mécanique défi à venir en v3.24c-3 — pour l'instant, parle-moi et reviens plus tard.)",
+        ],
+        dialoguesAfterRevisit: [
+            "T'es revenu ? Bien.",
+        ],
+    },
+    {
+        id: "tb_sbire_jessie",
+        name: "JESSIE",
+        mapId: "lasagnas_tb_bar",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "💋", color: "#d83080" },
+        initialX: 7,
+        initialY: 3,
+        dialoguesAfter: [
+            "*JESSIE te lance un regard de défi.*",
+            "Tu veux jouer dans la cour des grands ?",
+            "Défi : finis ton quota du jour avant la fin de la journée.",
+            "(Mécanique défi à venir en v3.24c-3.)",
+        ],
+        dialoguesAfterRevisit: [
+            "T'as bossé ? Vraiment ? Pas mal.",
+        ],
+    },
+    {
+        id: "tb_sbire_giovanni",
+        name: "GIOVANNI",
+        mapId: "lasagnas_tb_bar",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🎩", color: "#205020" },
+        initialX: 5,
+        initialY: 5,
+        dialoguesAfter: [
+            "*GIOVANNI essuie son verre.*",
+            "Avant de parler au boss, faut que tu prouves quelque chose.",
+            "Défi : sois TOP 1 gainage du jour. Pas négociable.",
+            "(Mécanique défi à venir en v3.24c-3.)",
+        ],
+        dialoguesAfterRevisit: [
+            "Top 1 gainage ? On verra ça.",
+        ],
+    },
+    // 4e PNJ : petit frère de JAMES. Donne la clé du boss après les 3 défis ci-dessus.
+    {
+        id: "tb_petit_frere_james",
+        name: "JAMIE",
+        mapId: "lasagnas_tb_bar",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "👦", color: "#a04848" },
+        initialX: 9,
+        initialY: 5,
+        dialoguesAfter: [
+            "*JAMIE se cache à moitié derrière sa table.*",
+            "J'ai... j'ai peur. Mon grand frère JAMES dit que t'es peut-être le bon.",
+            "Mais je peux pas te parler tant que je me sens pas en sécurité.",
+            "Bats d'abord les 3 autres au bar. Après... je verrai.",
+        ],
+        dialoguesAfterRevisit: [
+            "*Il regarde par-dessus son épaule, anxieux.*",
+            "Pas encore... pas encore. Bats les 3 autres d'abord.",
+        ],
+    },
+
+    // ============================================================
+    // v3.24c-2 — IL CAPO (boss de la Team Boulette)
+    // Dans son bureau (lasagnas_tb_bureau), seulement accessible avec la clé de JAMIE.
+    // 4 défis ordonnés : top 1 squat / top 1 pompes / top 1 hier / top 1 deux jours d'affilée.
+    // ============================================================
+    {
+        id: "tb_boss",
+        name: "IL CAPO",
+        mapId: "lasagnas_tb_bureau",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "👑", color: "#7a0000" },
+        initialX: 4,
+        initialY: 2,
+        dialoguesAfter: [
+            "*IL CAPO te scrute lentement, sans bouger d'un cil.*",
+            "Tu as bravé mes hommes pour venir jusqu'ici. Bien.",
+            "Mais entrer dans ma confidence, c'est PROUVER. Prouver que tu es au sommet.",
+            "Défi 1 : être TOP 1 squat du jour. Reviens me voir quand c'est fait.",
+            "(Logique défis à venir en v3.24c-3.)",
+        ],
+        dialoguesAfterRevisit: [
+            "*IL CAPO patiente. Ses doigts tambourinent sur le bureau.*",
+            "Alors ? Tu en es où ?",
+        ],
+    },
+
+    // ============================================================
+    // v3.24c-2 — 5 SBIRES LÂCHÉS dans Vegas (mode "lying_pursued" du videur)
+    // Si le joueur a menti au videur, ces sbires lui prennent 10 reps quand il leur parle.
+    // Le malus s'arrête quand le boss est vaincu.
+    // ============================================================
+    {
+        id: "tb_sbire_lacher_1",
+        name: "BRUTE 1",
+        mapId: "lasagnas_vegas",
+        kind: "wanderer",
+        interaction: "interactive",
+        sprite: { emoji: "😠", color: "#883030" },
+        initialX: 8,
+        initialY: 16,
+        wanderRadius: 2,
+        dialoguesAfter: [
+            "*La brute te bouscule sans même te regarder.*",
+            "Ah, le menteur. Le boss a dit de te faire payer.",
+            "(Mécanique malus -10 reps à venir en v3.24c-3.)",
+        ],
+    },
+    {
+        id: "tb_sbire_lacher_2",
+        name: "BRUTE 2",
+        mapId: "lasagnas_vegas",
+        kind: "wanderer",
+        interaction: "interactive",
+        sprite: { emoji: "🥊", color: "#883030" },
+        initialX: 14,
+        initialY: 9,
+        wanderRadius: 2,
+        dialoguesAfter: [
+            "*Elle te bloque le passage, sourire mauvais.*",
+            "Tiens, le filou. Tu paies maintenant.",
+            "(Malus à venir en v3.24c-3.)",
+        ],
+    },
+    {
+        id: "tb_sbire_lacher_3",
+        name: "BRUTE 3",
+        mapId: "lasagnas_vegas",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🧌", color: "#883030" },
+        initialX: 19,
+        initialY: 16,
+        dialoguesAfter: [
+            "*La brute crache à tes pieds.*",
+            "Faux frère. T'aurais dû dire la vérité.",
+            "(Malus à venir en v3.24c-3.)",
+        ],
+    },
+    {
+        id: "tb_sbire_lacher_4",
+        name: "BRUTE 4",
+        mapId: "lasagnas_vegas",
+        kind: "wanderer",
+        interaction: "interactive",
+        sprite: { emoji: "👊", color: "#883030" },
+        initialX: 12,
+        initialY: 22,
+        wanderRadius: 2,
+        dialoguesAfter: [
+            "*Le sbire t'attrape par le col.*",
+            "Ah, le menteur. Tu vas voir comment on traite les renards ici.",
+            "(Malus à venir en v3.24c-3.)",
+        ],
+    },
+    {
+        id: "tb_sbire_lacher_5",
+        name: "BRUTE 5",
+        mapId: "lasagnas_vegas",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "😤", color: "#883030" },
+        initialX: 6,
+        initialY: 9,
+        dialoguesAfter: [
+            "*Elle te toise sans dire un mot, puis tend la main.*",
+            "Tu sais ce qu'on dit aux menteurs ? *Elle ne finit pas sa phrase.*",
+            "(Malus à venir en v3.24c-3.)",
+        ],
+    },
+
 ]
 
 // ============================================================
