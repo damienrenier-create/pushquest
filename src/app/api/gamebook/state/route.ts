@@ -310,6 +310,8 @@ export async function GET() {
                 : [],
             muscuvilleRocksPassed: (progress as { muscuvilleRocksPassed?: boolean }).muscuvilleRocksPassed === true,
             muscuvilleInterpellatorTalked: (progress as { muscuvilleInterpellatorTalked?: boolean }).muscuvilleInterpellatorTalked === true,
+            // v4.0 Phase 2.C — Battle en cours (resume après refresh / déco)
+            activeBattle: (progress as { activeBattle?: unknown }).activeBattle ?? null,
         },
         todayReps,
         energySpentToday,
@@ -328,6 +330,8 @@ export async function GET() {
         difficultyRatio,
         // v3.14 — Tamagotchi (null si pas adopté)
         tamagotchi,
+        // v4.0 Phase 2.C — flag créateur (pour bouton "Combat test" en debug)
+        isCreator,
     })
 }
 

@@ -98,6 +98,8 @@ import { findActiveWearableForTile, applySocialDiscount, hasIntactLunettes } fro
 import { PEPITO_DIALOGUE_FIRST, MONT_SUMMIT_LINES, FRANSS_JOKE_INTRO_LINES, FRANSS_JOKE_ATTOWER_LINES } from "@/lib/gamebook/dialogue"
 import TamagotchiModal from "./TamagotchiModal"
 import DaemonTeamModal from "./DaemonTeamModal"
+import BattleModal from "./BattleModal"
+import type { BattleState } from "@/lib/gamebook/battleState"
 import type { TamagotchiView } from "@/lib/gamebook/tamagotchi"
 import BibliothequeModal from "./BibliothequeModal"
 import BestioleNamingModal from "./BestioleNamingModal"
@@ -253,6 +255,10 @@ export default function MapClient({
     const [tamagotchi, setTamagotchi] = useState<TamagotchiView | null>(initialTamagotchi)
     // v4.0 Phase 1.D — Modal équipe Daemon (jusqu'à 6 slots) accessible via START
     const [showDaemonTeam, setShowDaemonTeam] = useState(false)
+    // v4.0 Phase 2.C — Modal combat (BattleState courant si battle active)
+    const [activeBattle, setActiveBattle] = useState<BattleState | null>(null)
+    // v4.0 Phase 2.C — flag créateur (debug "Combat test" button)
+    const [isCreator, setIsCreator] = useState<boolean>(false)
     // v3.27 — Mode "rangé dans le sac" : si true, le sprite compagnon est caché de la map
     const [tamagotchiInBag, setTamagotchiInBag] = useState<boolean>(false)
     // v3.27 — Modal de choix (3ᵉ interaction dans la minute : Parler / Ranger)
@@ -373,6 +379,7 @@ export default function MapClient({
     }, [])
 
     // v3.27 — Lecture initiale du flag tamagotchiInBag + v3.32 isTester (côté serveur)
+    // v4.0 Phase 2.C — Lit aussi isCreator + reprise de combat (activeBattle) sur la même requête
     useEffect(() => {
         ; (async () => {
             try {
@@ -383,6 +390,12 @@ export default function MapClient({
                     if (typeof inBag === "boolean") setTamagotchiInBag(inBag)
                     const tester = j?.state?.isTester
                     if (typeof tester === "boolean") setIsTester(tester)
+                    if (j?.isCreator === true) setIsCreator(true)
+                    // Reprise de combat si une battle était active (refresh / déco)
+                    const active = j?.state?.activeBattle
+                    if (active && typeof active === "object" && active.phase !== "ended") {
+                        setActiveBattle(active as BattleState)
+                    }
                 }
             } catch { /* silent */ }
         })()
@@ -1654,7 +1667,7 @@ export default function MapClient({
         }, 300)
 
         // v3.8 — si une modal est ouverte, le A est géré par la modal elle-même
-        if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore || showCockfight || showSlotMachine || showCasinoPatternVegas || showArena || showDaemonTeam) return
+        if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore || showCockfight || showSlotMachine || showCasinoPatternVegas || showArena || showDaemonTeam || !!activeBattle) return
 
         // v3.23e — Blague PIAFFINI unique pour Franss : intercepter le premier A press (idem tryMove)
         if (
@@ -3114,7 +3127,7 @@ export default function MapClient({
         const handler = (e: KeyboardEvent) => {
             // v3.8 — si une modal est ouverte, on ne gère pas les touches ici
             // (StartMenu/InventoryModal/ShopModal/PlayerMapModal écoutent leurs propres events)
-            if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore || showCockfight || showSlotMachine || showCasinoPatternVegas || showArena || showDaemonTeam) return
+            if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore || showCockfight || showSlotMachine || showCasinoPatternVegas || showArena || showDaemonTeam || !!activeBattle) return
 
             if (state.phase === "introMonster") {
                 if (e.key === "Enter" || e.key === " " || e.key.toLowerCase() === "a") {
@@ -3808,6 +3821,60 @@ export default function MapClient({
                         🐾
                     </button>
                 )}
+
+                {/* v4.0 Phase 2.C — Bouton "Combat test" (créateur uniquement) */}
+                {isCreator && !activeBattle && (
+                    <button
+                        onClick={async (e) => {
+                            e.preventDefault()
+                            try {
+                                const res = await fetch("/api/gamebook/daemon/battle/start", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({
+                                        enemy: {
+                                            kind: "wild",
+                                            name: "Chien-Test",
+                                            type: "Combat",
+                                            morphology: "crocs",
+                                            speciesLevel: 40,
+                                            combatLevel: 5,
+                                            happiness: 50,
+                                            attacksEquipped: ["morsure", "croc_fatal"],
+                                            emoji: "🐺",
+                                        },
+                                        fleeAllowed: true,
+                                    }),
+                                })
+                                const data = await res.json()
+                                if (data.ok) {
+                                    setActiveBattle(data.state as BattleState)
+                                } else {
+                                    setToast(data.reason ?? "Combat impossible.")
+                                }
+                            } catch {
+                                setToast("Erreur réseau combat.")
+                            }
+                        }}
+                        style={{
+                            background: "#80206a",
+                            color: "#fff",
+                            border: "2px solid #fff",
+                            width: "44px",
+                            height: "44px",
+                            fontSize: "18px",
+                            fontWeight: "bold",
+                            cursor: "pointer",
+                            touchAction: "manipulation",
+                            userSelect: "none",
+                            borderRadius: "50%",
+                            boxShadow: "0 2px 0 #50104a, 0 3px 6px rgba(0,0,0,0.4)",
+                        }}
+                        title="Combat test (créateur)"
+                    >
+                        🥊
+                    </button>
+                )}
             </div>
 
             {/* v3.8 — Modals : StartMenu, InventoryModal, ShopModal */}
@@ -3832,6 +3899,24 @@ export default function MapClient({
             {/* v4.0 Phase 1.D — Modal équipe Daemon (jusqu'à 6 slots) */}
             {showDaemonTeam && (
                 <DaemonTeamModal onClose={() => setShowDaemonTeam(false)} />
+            )}
+
+            {/* v4.0 Phase 2.C — Modal combat (BattleModal) */}
+            {activeBattle && (
+                <BattleModal
+                    initialState={activeBattle}
+                    onEnded={async () => {
+                        try {
+                            const r = await fetch("/api/gamebook/state")
+                            if (r.ok) {
+                                const j = await r.json()
+                                if (typeof j.availableEnergy === "number") setReps(j.availableEnergy)
+                                if (typeof j.energySpentToday === "number") setEnergySpent(j.energySpentToday)
+                            }
+                        } catch { /* silent */ }
+                    }}
+                    onClose={() => setActiveBattle(null)}
+                />
             )}
 
             {/* v3.25 — Modal Pokédex des arbres (Livre des Arbres) */}

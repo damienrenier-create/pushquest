@@ -1,0 +1,306 @@
+"use client"
+
+// src/app/gamebook/BattleModal.tsx
+//
+// v4.0 Phase 2.C — Modal de combat (Pokémon Gen 1-like).
+//
+// Reçoit un BattleState initial (depuis /api/gamebook/daemon/battle/start).
+// Pour chaque action utilisateur (attaque / fuite), POST sur
+// /api/gamebook/daemon/battle/action et applique le nouveau state.
+//
+// Quand le state passe en phase="ended", affiche un écran résultat + FERMER.
+
+import { useEffect, useState } from "react"
+import type { BattleState, PlayerAction } from "@/lib/gamebook/battleState"
+import { getAttack } from "@/lib/gamebook/attacks"
+import { effectiveEnergyCost } from "@/lib/gamebook/combat"
+
+interface Props {
+    initialState: BattleState
+    onClose: () => void
+    /** Notifie le parent quand la battle est terminée (pour recharger l'énergie etc). */
+    onEnded?: (state: BattleState, meta: ActionMeta | null) => void
+}
+
+interface ActionMeta {
+    xpEarned: number
+    energySpent: number
+    leveledUp: boolean
+    newCombatLevel: number
+    nextLevelXp: number
+}
+
+type MenuMode = "actions" | "attacks"
+
+export default function BattleModal({ initialState, onClose, onEnded }: Props) {
+    const [state, setState] = useState<BattleState>(initialState)
+    const [busy, setBusy] = useState(false)
+    const [menu, setMenu] = useState<MenuMode>("actions")
+    const [lastMeta, setLastMeta] = useState<ActionMeta | null>(null)
+    const [error, setError] = useState<string | null>(null)
+
+    useEffect(() => {
+        if (state.phase === "ended" && onEnded) {
+            onEnded(state, lastMeta)
+        }
+    }, [state.phase])
+
+    const doAction = async (action: PlayerAction) => {
+        if (busy || state.phase === "ended") return
+        setBusy(true)
+        setError(null)
+        try {
+            const res = await fetch("/api/gamebook/daemon/battle/action", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action }),
+            })
+            const data = await res.json()
+            if (!res.ok || !data.ok) {
+                setError(data.reason ?? "Action refusée.")
+                setBusy(false)
+                return
+            }
+            setState(data.state as BattleState)
+            setLastMeta((data.meta ?? null) as ActionMeta | null)
+            setMenu("actions")
+        } catch {
+            setError("Erreur réseau.")
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    const enemy = state.enemy
+    const player = state.player
+    const enemyHpPct = (enemy.currentHp / enemy.maxHp) * 100
+    const playerHpPct = (player.currentHp / player.maxHp) * 100
+
+    return (
+        <div
+            style={{
+                position: "fixed", inset: 0, background: "rgba(0,0,0,0.95)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                zIndex: 9500, padding: 16, fontFamily: "'Courier New', monospace",
+            }}
+        >
+            <div
+                style={{
+                    background: "#000", color: "#fff",
+                    border: "4px solid #80a0d0", borderRadius: 6,
+                    padding: 12, maxWidth: 460, width: "100%",
+                    maxHeight: "96vh", display: "flex", flexDirection: "column",
+                }}
+            >
+                {/* Zone ennemi (en haut) */}
+                <div style={{ background: "#1a2533", border: "1px solid #345", padding: 10, marginBottom: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                        <div style={{ fontSize: 12, fontWeight: "bold" }}>
+                            {enemy.emoji ?? "👹"} {enemy.name}
+                            <span style={{ fontSize: 9, marginLeft: 6, opacity: 0.7 }}>Lv {enemy.combatLevel}</span>
+                            <span style={{ fontSize: 9, marginLeft: 6, color: typeColor(enemy.type) }}>[{enemy.type}]</span>
+                        </div>
+                        <div style={{ fontSize: 9, opacity: 0.6 }}>{enemy.kind}</div>
+                    </div>
+                    <Bar pct={enemyHpPct} color="#c84848" />
+                    <div style={{ fontSize: 9, opacity: 0.7, marginTop: 2 }}>HP {enemy.currentHp} / {enemy.maxHp}</div>
+                </div>
+
+                {/* Zone joueur (en bas) */}
+                <div style={{ background: "#1a3a2a", border: "1px solid #4a6", padding: 10, marginBottom: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                        <div style={{ fontSize: 12, fontWeight: "bold" }}>
+                            🐾 {player.name}
+                            <span style={{ fontSize: 9, marginLeft: 6, opacity: 0.7 }}>Lv {player.combatLevel}</span>
+                            <span style={{ fontSize: 9, marginLeft: 6, color: typeColor(player.type) }}>[{player.type}]</span>
+                        </div>
+                        <div style={{ fontSize: 9, opacity: 0.7 }}>♥ {player.happiness}</div>
+                    </div>
+                    <Bar pct={playerHpPct} color="#48c848" />
+                    <div style={{ fontSize: 9, opacity: 0.7, marginTop: 2 }}>HP {player.currentHp} / {player.maxHp}</div>
+                </div>
+
+                {/* Log */}
+                <div style={{
+                    background: "#111", border: "1px solid #333", padding: 8,
+                    fontSize: 10, lineHeight: 1.5, marginBottom: 8,
+                    minHeight: 80, maxHeight: 140, overflowY: "auto",
+                }}>
+                    {state.log.slice(-10).map((entry, i) => (
+                        <div key={i} style={{ color: logColor(entry.kind), marginBottom: 2 }}>
+                            {entry.text}
+                        </div>
+                    ))}
+                </div>
+
+                {/* Menu actions ou attaques */}
+                {state.phase === "playerTurn" && menu === "actions" && (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                        <ActionBtn label="⚔️ ATTAQUE" onClick={() => setMenu("attacks")} busy={busy} />
+                        <ActionBtn label="🎒 SAC" onClick={() => setError("Sac pas encore disponible en combat.")} busy={busy} />
+                        <ActionBtn label="🔄 DAEMON" onClick={() => setError("Switch pas encore disponible.")} busy={busy} />
+                        <ActionBtn
+                            label="🏃 FUITE"
+                            onClick={() => doAction({ kind: "flee" })}
+                            busy={busy}
+                            disabled={!state.fleeAllowed}
+                        />
+                    </div>
+                )}
+
+                {state.phase === "playerTurn" && menu === "attacks" && (
+                    <div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 6 }}>
+                            {player.attacksEquipped.slice(0, 4).map((key) => {
+                                const att = getAttack(key)
+                                if (!att) return null
+                                const cost = effectiveEnergyCost(att, player.intelligence)
+                                return (
+                                    <button
+                                        key={key}
+                                        disabled={busy}
+                                        onClick={() => doAction({ kind: "attack", attackKey: key })}
+                                        style={{
+                                            background: busy ? "#444" : "#2a4a8a",
+                                            color: "#fff", border: "1px solid #80a0d0",
+                                            padding: 8, fontSize: 10, fontWeight: "bold",
+                                            cursor: busy ? "wait" : "pointer", fontFamily: "monospace",
+                                            textAlign: "left",
+                                        }}
+                                    >
+                                        <div>{att.name}</div>
+                                        <div style={{ fontSize: 8, opacity: 0.7, marginTop: 2 }}>
+                                            <span style={{ color: typeColor(att.type) }}>[{att.type}]</span> ·
+                                            {att.power > 0 ? ` ${att.power}p` : " status"} · {cost} reps
+                                        </div>
+                                    </button>
+                                )
+                            })}
+                            {player.attacksEquipped.length === 0 && (
+                                <div style={{ fontSize: 10, opacity: 0.7, gridColumn: "span 2", padding: 8 }}>
+                                    Aucune attaque équipée. Utilise « Lutte ».
+                                </div>
+                            )}
+                        </div>
+                        <button
+                            onClick={() => setMenu("actions")}
+                            style={{
+                                width: "100%", background: "transparent",
+                                color: "#80a0d0", border: "1px solid #80a0d0",
+                                padding: 6, fontSize: 10, fontFamily: "monospace",
+                                cursor: "pointer",
+                            }}
+                        >
+                            ← Retour menu
+                        </button>
+                    </div>
+                )}
+
+                {state.phase === "ended" && (
+                    <div style={{
+                        background: "#222", border: "1px solid #555", padding: 10,
+                        textAlign: "center",
+                    }}>
+                        <div style={{ fontSize: 14, fontWeight: "bold", marginBottom: 6 }}>
+                            {state.result === "victory" && "🏆 VICTOIRE"}
+                            {state.result === "defeat" && "💀 DÉFAITE"}
+                            {state.result === "fled" && "🏃 FUITE"}
+                        </div>
+                        {lastMeta && state.result === "victory" && (
+                            <div style={{ fontSize: 10, opacity: 0.8, marginBottom: 8 }}>
+                                +{lastMeta.xpEarned} XP · −{lastMeta.energySpent} reps
+                                {lastMeta.leveledUp && (
+                                    <div style={{ marginTop: 4, color: "#ffd54f", fontWeight: "bold" }}>
+                                        ⚡ Niveau {lastMeta.newCombatLevel} atteint !
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        <button
+                            onClick={onClose}
+                            style={{
+                                width: "100%", background: "#80a0d0", color: "#000",
+                                border: "none", padding: 10, fontSize: 12, fontWeight: "bold",
+                                letterSpacing: 2, cursor: "pointer", fontFamily: "monospace",
+                            }}
+                        >
+                            FERMER
+                        </button>
+                    </div>
+                )}
+
+                {error && (
+                    <div style={{
+                        marginTop: 8, padding: 6, background: "#502020",
+                        border: "1px solid #c84848", fontSize: 10,
+                    }}>
+                        {error}
+                    </div>
+                )}
+            </div>
+        </div>
+    )
+}
+
+// ============================================================
+// Sous-composants
+// ============================================================
+
+function Bar({ pct, color }: { pct: number; color: string }) {
+    return (
+        <div style={{ background: "#111", height: 8, border: "1px solid #333", overflow: "hidden" }}>
+            <div style={{
+                width: `${Math.max(0, Math.min(100, pct))}%`, height: "100%",
+                background: color, transition: "width 0.4s",
+            }} />
+        </div>
+    )
+}
+
+function ActionBtn({ label, onClick, busy, disabled }: { label: string; onClick: () => void; busy: boolean; disabled?: boolean }) {
+    const off = busy || disabled
+    return (
+        <button
+            onClick={onClick}
+            disabled={off}
+            style={{
+                background: off ? "#333" : "#2a4a8a",
+                color: off ? "#666" : "#fff", border: "1px solid " + (off ? "#555" : "#80a0d0"),
+                padding: 10, fontSize: 11, fontWeight: "bold",
+                cursor: off ? "not-allowed" : "pointer", fontFamily: "monospace",
+            }}
+        >
+            {label}
+        </button>
+    )
+}
+
+function logColor(kind: string): string {
+    switch (kind) {
+        case "crit": return "#ffd54f"
+        case "miss": return "#a0a0a0"
+        case "faint": return "#c84848"
+        case "victory": return "#80d080"
+        case "defeat": return "#c84848"
+        case "flee_success": case "flee_fail": return "#a0c0d0"
+        case "type_label": return "#d0a0d0"
+        case "damage": return "#e08060"
+        case "attack": return "#e0e0e0"
+        default: return "#c0c0c0"
+    }
+}
+
+function typeColor(type: string): string {
+    switch (type) {
+        case "Feu": return "#ff7e3e"
+        case "Eau": return "#4fa0ff"
+        case "Plante": return "#5fd060"
+        case "Electrique": return "#ffd54f"
+        case "Vol": return "#a0c8ff"
+        case "Psy": return "#e060a0"
+        case "Pate": return "#d4a060"
+        case "Combat": return "#c0603e"
+        case "Roche": return "#a08060"
+        default: return "#c0c0c0"
+    }
+}
