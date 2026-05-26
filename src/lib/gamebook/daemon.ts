@@ -247,11 +247,11 @@ export async function ensureDaemonForTamagotchi(
             attacksEquipped: ["charge"],
             origin: "pastavegas",
             lastFedAt: tam.lastFedAt ? new Date(tam.lastFedAt) : null,
-            // v4.0 Phase 1.D.bis — grandfather : les compagnons existants
-            // (avant que l'arc Pastagone/sérum existe) restent déverrouillés.
-            // Les NOUVEAUX animaux adoptés via le flux mafia (post-arc) auront
-            // unlockedAt = null jusqu'à use-serum.
-            unlockedAt: new Date(),
+            // v4.0 Phase 1.D.bis Option B — PAS de grandfather. Tant que le joueur
+            // n'a pas reçu le Sérum de Poussière (drop du chef mafia Team Boulette,
+            // futur arc Pastagone), son compagnon reste 🐾 ANIMAL. Le créateur peut
+            // force-unlock via POST /api/gamebook/daemon/use-serum pour tester.
+            unlockedAt: null,
         },
     })
 }

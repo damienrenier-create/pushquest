@@ -45,9 +45,12 @@ interface DaemonView {
 
 interface Props {
     onClose: () => void
+    /** v4.0 Phase 1.D.bis Option B — true si le user est créateur (isSystem).
+     *  Active le bouton 💉 DEBUG "force-unlock sérum" sur les Daemons verrouillés. */
+    isCreator?: boolean
 }
 
-export default function DaemonTeamModal({ onClose }: Props) {
+export default function DaemonTeamModal({ onClose, isCreator = false }: Props) {
     const [daemons, setDaemons] = useState<DaemonView[]>([])
     const [loading, setLoading] = useState(true)
     const [focused, setFocused] = useState<DaemonView | null>(null)
@@ -264,6 +267,17 @@ export default function DaemonTeamModal({ onClose }: Props) {
                             <ActionButton label="💧 Boire" onClick={() => callAction("/api/gamebook/daemon/drink", { daemonId: focused.id })} busy={busy} />
                             <ActionButton label={focused.inBag ? "🐾 Sortir" : "🎒 Ranger"} onClick={() => callAction("/api/gamebook/daemon/in-bag", { daemonId: focused.id, inBag: !focused.inBag })} busy={busy} />
                         </div>
+
+                        {/* v4.0 Phase 1.D.bis Option B — DEBUG créateur uniquement : force-unlock sérum
+                            pour pouvoir tester les combats avant l'arc Pastagone. */}
+                        {isCreator && !focused.unlocked && (
+                            <ActionButton
+                                label="💉 [CRÉATEUR] Inoculer Sérum"
+                                fullWidth
+                                onClick={() => callAction("/api/gamebook/daemon/use-serum", { daemonId: focused.id })}
+                                busy={busy}
+                            />
+                        )}
 
                         {/* Réordonner — permet de set leader */}
                         {focused.slotIndex !== 1 && daemons.length > 1 && (

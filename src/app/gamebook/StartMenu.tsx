@@ -14,17 +14,20 @@ export type StartMenuEntry = "bag" | "travel" | "daemon" | "close"
 interface Props {
     onSelect: (entry: StartMenuEntry) => void
     onClose: () => void
+    /** v4.0 Phase 1.D.bis Option B — true si au moins un Daemon a reçu le sérum.
+     *  Conditionne le label "👾 DAEMON" (après sérum) vs "🐾 ANIMAUX" (avant). */
+    hasUnlockedDaemon?: boolean
 }
 
 // v3.33 — VOYAGE désactivé (fast travel mis en pause).
 // v4.0 Phase 1.D — DAEMON ajouté (équipe Daemon up to 6 slots).
-const ENTRIES: Array<{ key: StartMenuEntry; label: string }> = [
-    { key: "bag", label: "🎒 SAC" },
-    { key: "daemon", label: "👾 DAEMON" },
-    { key: "close", label: "↩ RETOUR" },
-]
-
-export default function StartMenu({ onSelect, onClose }: Props) {
+// v4.0 Phase 1.D.bis Option B — label dynamique selon sérum reçu.
+export default function StartMenu({ onSelect, onClose, hasUnlockedDaemon = false }: Props) {
+    const ENTRIES: Array<{ key: StartMenuEntry; label: string }> = [
+        { key: "bag", label: "🎒 SAC" },
+        { key: "daemon", label: hasUnlockedDaemon ? "👾 DAEMON" : "🐾 ANIMAUX" },
+        { key: "close", label: "↩ RETOUR" },
+    ]
     const [cursor, setCursor] = useState(0)
 
     useEffect(() => {

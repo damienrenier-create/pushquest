@@ -259,6 +259,9 @@ export default function MapClient({
     const [activeBattle, setActiveBattle] = useState<BattleState | null>(null)
     // v4.0 Phase 2.C — flag créateur (debug "Combat test" button)
     const [isCreator, setIsCreator] = useState<boolean>(false)
+    // v4.0 Phase 1.D.bis Option B — true si au moins un Daemon a reçu le sérum
+    // (conditionne le label "🐾 ANIMAUX"/"👾 DAEMON" dans le StartMenu).
+    const [hasUnlockedDaemon, setHasUnlockedDaemon] = useState<boolean>(false)
     // v3.27 — Mode "rangé dans le sac" : si true, le sprite compagnon est caché de la map
     const [tamagotchiInBag, setTamagotchiInBag] = useState<boolean>(false)
     // v3.27 — Modal de choix (3ᵉ interaction dans la minute : Parler / Ranger)
@@ -391,6 +394,7 @@ export default function MapClient({
                     const tester = j?.state?.isTester
                     if (typeof tester === "boolean") setIsTester(tester)
                     if (j?.isCreator === true) setIsCreator(true)
+                    if (j?.state?.hasUnlockedDaemon === true) setHasUnlockedDaemon(true)
                     // Reprise de combat si une battle était active (refresh / déco)
                     const active = j?.state?.activeBattle
                     if (active && typeof active === "object" && active.phase !== "ended") {
@@ -3880,6 +3884,7 @@ export default function MapClient({
             {/* v3.8 — Modals : StartMenu, InventoryModal, ShopModal */}
             {showStartMenu && (
                 <StartMenu
+                    hasUnlockedDaemon={hasUnlockedDaemon}
                     onSelect={(entry) => {
                         if (entry === "bag") {
                             setShowStartMenu(false)
@@ -3898,7 +3903,21 @@ export default function MapClient({
 
             {/* v4.0 Phase 1.D — Modal équipe Daemon (jusqu'à 6 slots) */}
             {showDaemonTeam && (
-                <DaemonTeamModal onClose={() => setShowDaemonTeam(false)} />
+                <DaemonTeamModal
+                    isCreator={isCreator}
+                    onClose={async () => {
+                        setShowDaemonTeam(false)
+                        // Phase 1.D.bis Option B — recharge le flag hasUnlockedDaemon (en cas
+                        // de force-unlock côté créateur) pour rafraîchir le label StartMenu.
+                        try {
+                            const r = await fetch("/api/gamebook/state")
+                            if (r.ok) {
+                                const j = await r.json()
+                                if (j?.state?.hasUnlockedDaemon === true) setHasUnlockedDaemon(true)
+                            }
+                        } catch { /* silent */ }
+                    }}
+                />
             )}
 
             {/* v4.0 Phase 2.C — Modal combat (BattleModal) */}

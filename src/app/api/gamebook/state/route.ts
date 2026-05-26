@@ -312,6 +312,15 @@ export async function GET() {
             muscuvilleInterpellatorTalked: (progress as { muscuvilleInterpellatorTalked?: boolean }).muscuvilleInterpellatorTalked === true,
             // v4.0 Phase 2.C — Battle en cours (resume après refresh / déco)
             activeBattle: (progress as { activeBattle?: unknown }).activeBattle ?? null,
+            // v4.0 Phase 1.D.bis Option B — true si au moins un Daemon a reçu le sérum.
+            // Sert au StartMenu pour afficher "🐾 ANIMAUX" (avant) vs "👾 DAEMON" (après).
+            hasUnlockedDaemon: await (async () => {
+                const d = await (prisma as any).daemon.findFirst({
+                    where: { userId, unlockedAt: { not: null } },
+                    select: { id: true },
+                })
+                return d !== null
+            })(),
         },
         todayReps,
         energySpentToday,
