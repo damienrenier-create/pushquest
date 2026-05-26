@@ -772,7 +772,7 @@ export default function MapClient({
 
             // v3.23b — Mont Pasta-Ventoux : override movement logic
             // - up : avance 1 case (cost = bike.costPerCase × cadenceMult) + ajoute click au cadence tracker
-            // - down : recule 1 case gratuit (descente volontaire, pas de click)
+            // - down : v3.24f — SUPER SPEED : 1 pas = 10 cases pour 0 énergie (descente libre)
             // - left/right : bloqué (reste sur le chemin)
             if (state.mapId === "mont_pasta_ventoux") {
                 if (d === "left" || d === "right") {
@@ -786,9 +786,14 @@ export default function MapClient({
                     return
                 }
                 const goingUp = d === "up"
-                const newY = goingUp ? state.posY - 1 : state.posY + 1
+                // v3.24f — Down = super speed 10 cases d'un coup, gratuit. Up = 1 case avec coût.
+                const stepSize = goingUp ? 1 : 10
+                let newY = goingUp ? state.posY - stepSize : state.posY + stepSize
+                // Clamp : ne dépasse pas le sommet (y=1) ni l'entrée sud (y=H-2)
+                if (newY < 1) newY = 1
+                if (newY > map.height - 2) newY = map.height - 2
                 // Bounds : y=1 = sommet, y=H-2 = entrée sud
-                if (newY < 1) {
+                if (goingUp && newY === 1 && state.posY > 1) {
                     // v3.23c — Sommet atteint : trigger cinématique + badge Conquérant
                     setState((s) => ({ ...s, posY: 1, direction: "up" }))
                     const alreadyReached = (state as { montSummitReached?: boolean }).montSummitReached === true
@@ -800,8 +805,18 @@ export default function MapClient({
                     }
                     return
                 }
-                if (newY > map.height - 2) {
-                    setState((s) => ({ ...s, direction: d }))
+                if (!goingUp && newY === map.height - 2 && state.posY < map.height - 2) {
+                    // Atteinte de l'entrée sud (grassTall) → transition vers Muscuville
+                    setTimeout(() => {
+                        setState((s) => ({
+                            ...s,
+                            mapId: "muscuville",
+                            posX: 8,
+                            posY: 14,
+                            direction: "up",
+                        }))
+                        setToast("🚴 Tu redescends à toute vitesse jusqu'à MUSCUVILLE.")
+                    }, 200)
                     return
                 }
                 // Avancement
@@ -2858,6 +2873,7 @@ export default function MapClient({
                         mapW={map.width}
                         mapH={map.height}
                         hasLunettes={hasIntactLunettes(inventory)}
+                        onBike={state.mapId === "mont_pasta_ventoux" && getActiveBicycle(inventory) !== null}
                     />
 
                     {/* v3.19b — Compagnon tamagotchi (visible si récupéré, outdoor maps uniquement) */}
@@ -3527,8 +3543,8 @@ export default function MapClient({
 // ============================================================
 
 function PlayerOnMap({
-    x, y, direction, animStep, mapW, mapH, hasLunettes,
-}: { x: number; y: number; direction: Direction; animStep: number; mapW: number; mapH: number; hasLunettes?: boolean }) {
+    x, y, direction, animStep, mapW, mapH, hasLunettes, onBike,
+}: { x: number; y: number; direction: Direction; animStep: number; mapW: number; mapH: number; hasLunettes?: boolean; onBike?: boolean }) {
     return (
         <div
             style={{
@@ -3545,6 +3561,18 @@ function PlayerOnMap({
             }}
         >
             <PlayerSprite direction={direction} animStep={animStep} color="#c83838" hasLunettes={hasLunettes} />
+            {/* v3.24f — Sprite vélo : visible quand le joueur est sur le Mont avec vélo actif */}
+            {onBike && (
+                <div style={{
+                    position: "absolute",
+                    bottom: "-8%",
+                    fontSize: "150%",
+                    pointerEvents: "none",
+                    filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.6))",
+                }}>
+                    🚴
+                </div>
+            )}
         </div>
     )
 }
