@@ -176,6 +176,10 @@ export default function ShopModal({ inventory, availableEnergy, nickname, diffic
                     minWidth: 280,
                     maxWidth: 360,
                     width: "100%",
+                    // v3.33 — Scroll mobile + desktop sur les longues listes d'items
+                    maxHeight: "92vh",
+                    overflowY: "auto",
+                    WebkitOverflowScrolling: "touch",
                 }}
             >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
@@ -299,24 +303,28 @@ export default function ShopModal({ inventory, availableEnergy, nickname, diffic
                     )
                 })}
 
-                {/* v3.21.1 — Gros bouton QUITTER en bas */}
+                {/* v3.21.1 — Gros bouton SORTIR en bas */}
+                {/* v3.33 — Renforcé en taille + couleur + position sticky pour mobile */}
                 <button
                     onClick={handleClose}
                     style={{
                         marginTop: 12,
+                        position: "sticky",
+                        bottom: 0,
                         width: "100%",
-                        background: "#444",
+                        background: "#c83838",
                         color: "#fff",
-                        border: "2px solid #fff",
-                        padding: "10px 12px",
+                        border: "3px solid #fff",
+                        padding: "14px 12px",
                         fontFamily: "'Courier New', monospace",
-                        fontSize: 12,
+                        fontSize: 13,
                         fontWeight: "bold",
                         letterSpacing: 3,
                         cursor: "pointer",
+                        boxShadow: "0 -4px 12px rgba(0,0,0,0.6)",
                     }}
                 >
-                    QUITTER
+                    🚪 SORTIR DU MAGASIN
                 </button>
             </div>
         </div>

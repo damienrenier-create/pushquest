@@ -891,6 +891,17 @@ export default function MapClient({
 
             const result = tryComputeMove(state, d, map, buildings, blockingPositions)
 
+            // v3.33 — Gating du Casino de Bourg : accessible uniquement après défaite du Monstre
+            // (= pioneerBadgeAwarded). Pas de paris avant d'avoir prouvé qu'on sait gagner ses reps.
+            if (!("blocked" in result) && result.nextState.mapId === "casino") {
+                const isPionneer = state.pioneerBadgeAwarded === true
+                if (!isPionneer) {
+                    setToast("🔒 Le casino est fermé. Faut d'abord vaincre le Monstre des Spaghettis.")
+                    setState((s) => ({ ...s, direction: d }))
+                    return
+                }
+            }
+
             // v3.23c — Gating du contest_hall : accessible uniquement après badge Conquérant
             if (!("blocked" in result) && result.enteredBuilding === "shop" && result.nextState.mapId === "contest_hall") {
                 const conquered = (state as { montSummitReached?: boolean }).montSummitReached === true
