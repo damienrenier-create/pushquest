@@ -1369,13 +1369,25 @@ export default function MapClient({
             }
 
             // === v3.16 : Transitions sud Macaron'île ↔ grass_sud ↔ Muscuville ===
-            // Macaron'île sud (grassTall col 6/7 ligne 21) → grass_sud
+            // v3.28 — Macaron'île sud → grass_sud : blocage strict si pas d'animal récupéré.
+            //         Cinématique "[Nom] attaque les bestioles..." une seule fois avec animal.
             if (
                 state.mapId === "macaron_ile" &&
                 result.nextState.posY === map.height - 1 &&
                 (result.nextState.posX === 6 || result.nextState.posX === 7) &&
                 map.tiles[result.nextState.posY]?.[result.nextState.posX] === "grassTall"
             ) {
+                // Blocage strict si pas de tamagotchi récupéré
+                if (!tamagotchi?.recovered) {
+                    setState((s) => ({ ...s, direction: d }))
+                    setPopup({
+                        kind: "info",
+                        text: "🌿 *Les hautes herbes s'agitent. Des bestioles invisibles te bloquent le passage.*\n\n« Tu n'avanceras pas sans protection. Apprivoise un animal avant d'oser. »",
+                    })
+                    return
+                }
+                // Avec animal : transition + cinématique (1 fois)
+                const cutsceneShown = (state as { grassSudCutsceneShown?: boolean }).grassSudCutsceneShown === true
                 setTimeout(() => {
                     setState((s) => ({
                         ...s,
@@ -1384,10 +1396,21 @@ export default function MapClient({
                         posY: GRASS_SUD_SPAWN_FROM_NORTH.posY,
                         direction: GRASS_SUD_SPAWN_FROM_NORTH.direction,
                     }))
-                    if (bestiolesFlee) {
-                        setToast("Les bestioles s'écartent à la vue de ton compagnon.")
+                    if (!cutsceneShown) {
+                        // Cinématique unique : fin de l'arc Macaron'île
+                        const animalName = tamagotchi?.name ?? "Ton compagnon"
+                        setPopup({
+                            kind: "info",
+                            text: `🌿 *${animalName} bondit dans les hautes herbes.*\n\n*${animalName} attaque toutes les bestioles dans les hautes herbes et les fait fuir.*\n\n✨ **Vous avez ouvert le chemin vers Muscuville.**`,
+                        })
+                        ; (async () => {
+                            try {
+                                await fetch("/api/gamebook/grass-sud-cutscene", { method: "POST" })
+                                setState((s) => ({ ...s, grassSudCutsceneShown: true } as typeof s))
+                            } catch { /* silent */ }
+                        })()
                     } else {
-                        setToast("HAUTES HERBES DU SUD")
+                        setToast("Les bestioles s'écartent à la vue de ton compagnon.")
                     }
                 }, 200)
             }

@@ -270,6 +270,8 @@ export async function GET() {
             treeBookGiven: (progress as { treeBookGiven?: boolean }).treeBookGiven === true,
             // v3.27 — Animal follower : rangé dans le sac (caché de la map)
             tamagotchiInBag: (progress as { tamagotchiInBag?: boolean }).tamagotchiInBag === true,
+            // v3.28 — Cinématique fin Macaron'île (ouverture chemin Muscuville)
+            grassSudCutsceneShown: (progress as { grassSudCutsceneShown?: boolean }).grassSudCutsceneShown === true,
         },
         todayReps,
         energySpentToday,
