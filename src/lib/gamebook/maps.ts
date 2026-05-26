@@ -795,6 +795,62 @@ function buildLasagnasShopRachat(): TileType[][] {
     return m
 }
 
+// v3.24c — BAR DE LA TEAM BOULETTE (intérieur opaque, mafia camouflée)
+// 11×8. Comptoir bar nord + 4 PNJ TB + porte cachée vers bureau (à condition d'avoir la clé)
+function buildLasagnasTbBar(): TileType[][] {
+    const W = 11, H = 8
+    const m: TileType[][] = []
+    for (let y = 0; y < H; y++) {
+        const row: TileType[] = []
+        for (let x = 0; x < W; x++) {
+            if (y === 0) row.push("wallH")
+            else if (x === 0 || x === W - 1 || y === H - 1) row.push("wallV")
+            else row.push("floorTile")
+        }
+        m.push(row)
+    }
+    // Comptoir bar nord
+    for (let x = 2; x <= W - 3; x++) m[1][x] = "shopCounter"
+    // Petites tables
+    m[3][2] = "table"; m[3][8] = "table"
+    m[5][2] = "table"; m[5][8] = "table"
+    // Tapis rouge mafia
+    for (let x = 4; x <= 6; x++) m[4][x] = "rug"
+    // Porte cachée vers le bureau du boss (apparaîtra ouverte si clé obtenue)
+    // Pour l'instant : decor shopShelf au centre nord, devient stairsUp si clé
+    m[2][5] = "shopShelf"  // "porte cachée" stylisée
+    // Sortie sud
+    m[H - 1][5] = "doorMat"
+    return m
+}
+
+// v3.24c — BUREAU DU BOSS (Il Capo) — accessible après avoir la clé du 4e PNJ bar
+// 9×7. Tapis rouge + bureau impérial + Il Capo derrière + porte arène (cachée jusqu'au boss vaincu)
+function buildLasagnasTbBureau(): TileType[][] {
+    const W = 9, H = 7
+    const m: TileType[][] = []
+    for (let y = 0; y < H; y++) {
+        const row: TileType[] = []
+        for (let x = 0; x < W; x++) {
+            if (y === 0) row.push("wallH")
+            else if (x === 0 || x === W - 1 || y === H - 1) row.push("wallV")
+            else row.push("floorTile")
+        }
+        m.push(row)
+    }
+    // Bureau central (table)
+    m[2][4] = "table"
+    // Tapis rouge sang luxueux
+    for (let y = 1; y <= H - 2; y++) {
+        for (let x = 1; x <= W - 2; x++) {
+            if (m[y][x] === "floorTile") m[y][x] = "rug"
+        }
+    }
+    // Sortie sud (retour bar)
+    m[H - 1][4] = "doorMat"
+    return m
+}
+
 // v3.24b — CASINO MAP A : HALL d'entrée. Slot machines + lotto poule (à venir).
 // 12×9. 2 croupiers (VITELLINO +10% boost / FETTUCCI -10% malus).
 function buildLasagnasCasinoA(): TileType[][] {
@@ -915,7 +971,7 @@ export const LASAGNAS_BUILDINGS: Building[] = [
     { x: 11, y: 4,  w: 4, h: 4, kind: "shop",   doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_shop_bouffe",  displayName: "BOUFFE" },
     { x: 17, y: 4,  w: 4, h: 4, kind: "casino", doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_casino_a",    displayName: "CASINO" },
     // Sud — Bar TB (placeholder), Shop rachat fonctionnel, 2 casinos (placeholder)
-    { x: 1,  y: 16, w: 4, h: 4, kind: "casino", doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_construction", displayName: "BAR" },
+    { x: 1,  y: 16, w: 4, h: 4, kind: "casino", doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_tb_bar",       displayName: "BAR" },
     { x: 6,  y: 16, w: 4, h: 4, kind: "shop",   doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_shop_rachat",  displayName: "RACHAT" },
     { x: 11, y: 16, w: 4, h: 4, kind: "casino", doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_casino_b",    displayName: "JEUX" },
     { x: 17, y: 16, w: 4, h: 4, kind: "casino", doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_casino_c",    displayName: "VIP" },
@@ -1812,6 +1868,23 @@ export const MAPS: Record<string, MapData> = {
         height: 7,
         exitTarget: { mapId: "lasagnas_vegas", x: 7, y: 20 },
     },
+    // v3.24c — Bar Team Boulette + bureau Il Capo
+    lasagnas_tb_bar: {
+        id: "lasagnas_tb_bar",
+        name: "BAR DE LA TEAM BOULETTE",
+        tiles: buildLasagnasTbBar(),
+        width: 11,
+        height: 8,
+        exitTarget: { mapId: "lasagnas_vegas", x: 2, y: 20 },
+    },
+    lasagnas_tb_bureau: {
+        id: "lasagnas_tb_bureau",
+        name: "BUREAU DE IL CAPO",
+        tiles: buildLasagnasTbBureau(),
+        width: 9,
+        height: 7,
+        exitTarget: { mapId: "lasagnas_tb_bar", x: 5, y: 6 },
+    },
     // v3.24b — Casino 3 maps (Hall, Salle de jeux, VIP)
     lasagnas_casino_a: {
         id: "lasagnas_casino_a",
@@ -2093,6 +2166,9 @@ export const INDOOR_MAP_IDS = new Set([
     "lasagnas_casino_a",
     "lasagnas_casino_b",
     "lasagnas_casino_c",
+    // v3.24c — Bar Team Boulette + bureau Il Capo
+    "lasagnas_tb_bar",
+    "lasagnas_tb_bureau",
 ])
 
 export function isIndoorMap(mapId: string): boolean {
