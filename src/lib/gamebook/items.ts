@@ -110,7 +110,8 @@ export const ITEMS: ItemDefinition[] = [
         description: "Stocke jusqu'à 100 reps. Bois pour récupérer toute l'énergie d'un trait. Elle s'use de 10 à chaque gorgée.",
         priceReps: 50,
         maxQuantity: 1,
-        availableAt: "nutripates",
+        // v3.33 — Disponible chez NUTRIPATES (Pépiteville), TRENETTE (Macaron'île) et PELOTON (Muscuville).
+        availableAt: "both",
         capabilities: {
             canStore: { maxCapacity: 100, unit: "reps", wearOnDrink: 10 },
         },
@@ -122,7 +123,8 @@ export const ITEMS: ItemDefinition[] = [
         description: "Réduit le coût de déplacement de 10 à 8 reps par case. Durent 500 pas. Souvent offertes par MAMAN.",
         priceReps: 200,
         maxQuantity: 1,
-        availableAt: "nutripates",
+        // v3.33 — Disponible chez NUTRIPATES (Pépiteville), TRENETTE (Macaron'île) et PELOTON (Muscuville).
+        availableAt: "both",
         capabilities: {
             canWear: { initialDurability: 500, moveCostReduction: 2 },
         },
@@ -433,7 +435,8 @@ export function itemsAvailableAtShop(shop: "nutripates" | "trenette" | "muscuvil
         if (!i.availableAt) return false
         const at = i.availableAt
         if (at === "gift") return false
-        if (shop === "muscuville_bikes") return at === "muscuville_bikes"
+        // v3.33 — PELOTON (Muscuville) vend les vélos ET les essentiels "both" (Gourde, Baskets).
+        if (shop === "muscuville_bikes") return at === "muscuville_bikes" || at === "both"
         if (shop === "vegas_habits") return at === "vegas_habits"
         if (shop === "vegas_bouffe") return at === "vegas_bouffe"
         if (at === "muscuville_bikes" || at === "vegas_habits" || at === "vegas_bouffe") return false
