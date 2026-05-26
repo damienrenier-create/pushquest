@@ -61,19 +61,20 @@ export async function POST() {
         })
     }
 
-    // Bonus +50 énergies : on diminue energySpentToday de 50 (= +50 énergie dispo).
+    // v3.33 — Bonus +50 énergies via bonusSurplus (persistant, survit à minuit) au lieu de
+    // soustraire à energySpentToday (qui se reset à minuit → bonus perdu, cf. bug v3.10).
     const today = getTodayISO()
-    const storedDate = (progress as { energySpentDate?: string }).energySpentDate ?? ""
-    const storedSpent = (progress as { energySpentToday?: number }).energySpentToday ?? 0
-    const currentSpent = storedDate === today ? storedSpent : 0
-    const newSpent = Math.max(0, currentSpent - BIRD_BONUS_ENERGY)
+    const { readEnergySnapshot, grantRewardOnSnapshot } = await import("@/lib/gamebook/energy")
+    const snap = readEnergySnapshot(progress, today)
+    const nextSnap = grantRewardOnSnapshot(snap, BIRD_BONUS_ENERGY, today)
 
     await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
         data: {
             ornithologueBirdBonusGiven: true,
-            energySpentToday: newSpent,
+            energySpentToday: nextSnap.energySpentToday,
             energySpentDate: today,
+            bonusSurplus: nextSnap.bonusSurplus,
         },
     })
 
