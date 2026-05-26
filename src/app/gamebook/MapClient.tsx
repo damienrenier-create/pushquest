@@ -39,6 +39,7 @@ import {
     MACARONILE_SIGNS,
     MUSCUVILLE_BUILDINGS,
     MUSCUVILLE_SIGNS,
+    MONT_SOMMET_SIGNS,
     LASAGNAS_BUILDINGS,
     LASAGNAS_SIGNS,
     GRASS_SUD_SPAWN_FROM_NORTH,
@@ -350,7 +351,8 @@ export default function MapClient({
                     : state.mapId === "macaron_ile" ? MACARONILE_SIGNS
                         : state.mapId === "muscuville" ? MUSCUVILLE_SIGNS
                             : state.mapId === "lasagnas_vegas" ? LASAGNAS_SIGNS
-                                : []
+                                : state.mapId === "mont_sommet" ? MONT_SOMMET_SIGNS
+                                    : []
 
     // ============================================================
     // LOAD AUTRES JOUEURS (polling fallback si Pusher off)
@@ -2018,6 +2020,49 @@ export default function MapClient({
                 // v3.24d — MAESTRO MANOUCHE (arène Vegas) → ouvre modal combat
                 if (npcId === "arena_master") {
                     setShowArena(true)
+                    return
+                }
+
+                // v3.39 — RÉCEPTIONNISTE ARÈNE MUSCUVILLE : 4 paliers de dialogue selon état
+                if (npcId === "arene_muscu_receptioniste") {
+                    const summit = (state as { montSummitReached?: boolean }).montSummitReached === true
+                    const beaten: string[] = Array.isArray((state as { muscuvilleChampionsBeaten?: unknown }).muscuvilleChampionsBeaten)
+                        ? ((state as { muscuvilleChampionsBeaten?: unknown }).muscuvilleChampionsBeaten as string[])
+                        : []
+                    const revanche: string[] = Array.isArray((state as { muscuvilleChampionsRevanche?: unknown }).muscuvilleChampionsRevanche)
+                        ? ((state as { muscuvilleChampionsRevanche?: unknown }).muscuvilleChampionsRevanche as string[])
+                        : []
+                    let text = ""
+                    if (!summit) {
+                        text = "*La réceptionniste vérifie ses notes, l'air désolé.*\n\nLes 4 champions sont partis faire du vélo au Mont Pasta-Ventoux. Ils ne reviendront pas avant un moment.\n\n*Elle te regarde par-dessus ses lunettes.* « Si tu veux les croiser, monte là-haut. Peut-être tu pourras les conquérir avant qu'ils ne redescendent. »"
+                    } else if (beaten.length === 0) {
+                        text = "*La réceptionniste te sourit, hospitalière.*\n\n« Les champions sont à l'intérieur — leur échauffement est fini. 4 disciplines, 4 records personnels à battre. Ton choix. »\n\n« Bonne chance. Et n'hésite pas à revenir si tu trembles devant un d'eux. »"
+                    } else if (beaten.length < 4) {
+                        const remaining = 4 - beaten.length
+                        text = `*La réceptionniste consulte un tableau d'affichage avec ton nom dessus.*\n\n« ${beaten.length}/4 champion${beaten.length > 1 ? "s" : ""} battu${beaten.length > 1 ? "s" : ""}. Il en reste ${remaining}. »\n\n« Le prix des rochers a chuté de ${beaten.length * 25}%. Continue. »`
+                    } else if (revanche.length < 4) {
+                        text = `*La réceptionniste applaudit doucement.*\n\n« 4/4 champions humiliés. Les rochers s'effondrent. »\n\n« Ils veulent leur revanche maintenant. Volume du jour all-time cette fois, pas la plus grosse série. Plus dur. Badges 800 XP à la clé. »\n\n« ${revanche.length}/4 revanches faites pour l'instant. »`
+                    } else {
+                        text = `*La réceptionniste s'incline avec respect.*\n\n« Tu as battu les 4 champions en 1ʳᵉ ET en revanche. C'est jamais arrivé. »\n\n« Tu fais partie de l'histoire de Muscuville maintenant. Reviens quand tu veux, juste pour voir. »`
+                    }
+                    setPopup({ kind: "info", text })
+                    return
+                }
+
+                // v3.39 — SECRÉTAIRE DE L'ARÈNE AU SOMMET : dialogues dynamiques selon état champions
+                if (npcId === "mont_secretaire") {
+                    const beaten: string[] = Array.isArray((state as { muscuvilleChampionsBeaten?: unknown }).muscuvilleChampionsBeaten)
+                        ? ((state as { muscuvilleChampionsBeaten?: unknown }).muscuvilleChampionsBeaten as string[])
+                        : []
+                    let text = ""
+                    if (beaten.length === 0) {
+                        text = "*Une silhouette en survêt, planchette à la main, t'attend au sommet.*\n\n« Tu as fait fort, athlète. Les 4 champions de Muscuville viennent juste de redescendre — ils ont fini leur échauffement ici en haut. »\n\n*Il consulte sa planchette.* « Va à l'arène centrale de Muscuville. Ils t'y attendent maintenant. »"
+                    } else if (beaten.length < 4) {
+                        text = `*Le secrétaire t'observe.*\n\n« Tu as déjà battu ${beaten.length} de mes champions. Bravo. Mais il en reste ${4 - beaten.length} à humilier. »\n\n*Il regarde au loin.* « Le vent est bon aujourd'hui. Profite-en pour redescendre vite. »`
+                    } else {
+                        text = `*Le secrétaire ferme sa planchette dans un claquement sec.*\n\n« Tu as battu mes 4 champions. C'est rare. »\n\n« Ils sont en train de prendre des forces pour la revanche. Volume du jour, cette fois — ils savent que tu peux pas tout enchaîner sans pause. »\n\n*Il sourit.* « Va. L'arène t'attend. »`
+                    }
+                    setPopup({ kind: "info", text })
                     return
                 }
 

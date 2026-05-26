@@ -1200,6 +1200,14 @@ export const MUSCUVILLE_SIGNS: Sign[] = [
     { x: 1, y: 6, text: "🪨 ROCHERS — PASSAGE VEGAS\nPrix : 4000 reps (–25% par champion d'arène battu).\n4/4 champions battus → passage GRATUIT." },
 ]
 
+// v3.39 — Signs de la mini-map sommet du Mont
+export const MONT_SOMMET_SIGNS: Sign[] = [
+    { x: 1, y: 2, text: "🌬️ VUE PANORAMIQUE\nDe ce sommet, tu vois tout l'archipel. Bourg-Boulette est minuscule au nord, Macaron'île à l'est, Vegas au loin." },
+    { x: 5, y: 2, text: "📋 TABLEAU DE L'ARÈNE\n4 champions à battre : Gainage, Pompes, Tractions, Squats. Chacun = -25% sur le prix des rochers." },
+    { x: 1, y: 4, text: "⛺ TENTE DES CHAMPIONS\n*Vide. Ils sont redescendus.*\n(L'un d'eux a oublié sa serviette de sport.)" },
+    { x: 5, y: 4, text: "🎌 DRAPEAU DU SOMMET\nUn drapeau usé claque au vent. « Conquis le 2026-05-26. »\n(Tous ceux qui sont montés ont signé.)" },
+]
+
 // v3.22 — Bâtiments 5×5 avec displayName (label custom rendu à droite du bâtiment).
 export const MACARONILE_BUILDINGS: Building[] = [
     // Shop TRENETTE — rangée 1 gauche (cols 1..5, rows 4..8) ; door centrée (3, 8). Labellé "SHOP" en façade.

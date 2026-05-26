@@ -39,10 +39,24 @@ export async function POST() {
     // Déjà donné ?
     const given = (progress as { treeBookGiven?: boolean }).treeBookGiven === true
     if (given) {
+        // v3.39 — Dialogue enrichi après le don : commentaire sur la progression Pokédex
+        const discoveredRawAlt = (progress as { treesDiscovered?: unknown }).treesDiscovered
+        const treesCountAlt = Array.isArray(discoveredRawAlt) ? (discoveredRawAlt as unknown[]).length : 0
+        const TOTAL_TREES = 9
+        let msg: string
+        if (treesCountAlt >= TOTAL_TREES) {
+            msg = `📗 *MIRABELLE applaudit lentement.* « Tu as découvert les ${TOTAL_TREES} essences. Ton Livre est complet. Personne avant toi. »\n\n« Tu es désormais botaniste honoraire de Muscuville. »`
+        } else if (treesCountAlt >= 6) {
+            msg = `📗 *MIRABELLE sourit avec fierté.* « ${treesCountAlt}/${TOTAL_TREES} essences. Plus que ${TOTAL_TREES - treesCountAlt}. »\n\n« Le boost ✨ et le divisor ⚠️ de grass_sud sont parmi les plus rares. Cherche-les. »`
+        } else if (treesCountAlt >= 3) {
+            msg = `📗 *MIRABELLE feuillette son exemplaire.* « ${treesCountAlt}/${TOTAL_TREES}. Tu as bien commencé. »\n\n« Pense aux fruits exotiques de Lasagnas Vegas — l'olivier 🫒, certains arbres magiques de grass_sud. »`
+        } else {
+            msg = `📗 *MIRABELLE soupire.* « Tu as ton Livre mais tu n'as croisé que ${treesCountAlt} essence${treesCountAlt > 1 ? "s" : ""}. Sors et observe. »`
+        }
         return NextResponse.json({
             ok: true,
             alreadyGiven: true,
-            message: "📗 *MIRABELLE sourit.* « Tu as déjà ton Livre. Continue d'explorer — il s'enrichit à chaque essence rencontrée. »",
+            message: msg,
         })
     }
 

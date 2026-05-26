@@ -47,10 +47,11 @@ export async function POST() {
         return NextResponse.json({
             ok: false,
             alreadyVisited: true,
-            reason: "DOC PROTÉINE déjà visité aujourd'hui. Reviens demain.",
+            reason: `🩺 DOC PROTÉINE refuse poliment. « Trop de soins en une journée, ça fait mal aux animaux. Reviens demain. »`,
         })
     }
 
+    const prevHappiness = tam.happiness ?? 100
     const newTamagotchi = {
         ...tam,
         happiness: TAMAGOTCHI_HAPPINESS_MAX,
@@ -65,10 +66,23 @@ export async function POST() {
         },
     })
 
+    // v3.39 — Dialogue enrichi selon l'état du bonheur avant soin
+    let message: string
+    if (prevHappiness <= 20) {
+        message = `🩺 *DOC PROTÉINE fronce les sourcils.* « Bonheur à ${prevHappiness}/100 — c'est limite maltraitance, ami. »\n\n*Il s'occupe longuement de ${tam.name}.* « Voilà. ${TAMAGOTCHI_HAPPINESS_MAX}/100. Mais surveille mieux ton compagnon. »`
+    } else if (prevHappiness <= 50) {
+        message = `🩺 *DOC PROTÉINE soupire.* « ${tam.name} avait ${prevHappiness}/100 de bonheur. Pas la fin du monde, mais on aurait pu faire mieux. »\n\n*Il caresse l'animal avec douceur.* « Voilà, ${TAMAGOTCHI_HAPPINESS_MAX}/100. »`
+    } else if (prevHappiness <= 80) {
+        message = `🩺 *DOC PROTÉINE sourit.* « Ton compagnon était à ${prevHappiness}/100 — pas mal. Mais on fait encore mieux. »\n\n*Soin rapide.* « Voilà, ${TAMAGOTCHI_HAPPINESS_MAX}/100. »`
+    } else {
+        message = `🩺 *DOC PROTÉINE est ravi.* « ${tam.name} était déjà à ${prevHappiness}/100. Tu en prends bien soin. »\n\n*Petit coup de pouce vers le max.* « Maintenant ${TAMAGOTCHI_HAPPINESS_MAX}/100. »`
+    }
+
     return NextResponse.json({
         ok: true,
         healed: true,
+        previousHappiness: prevHappiness,
         happiness: TAMAGOTCHI_HAPPINESS_MAX,
-        message: `🩺 DOC PROTÉINE caresse ${tam.name} avec douceur. *« Voilà, il est tout heureux maintenant. Bonheur ${TAMAGOTCHI_HAPPINESS_MAX}/100. Reviens demain si besoin. »*`,
+        message,
     })
 }
