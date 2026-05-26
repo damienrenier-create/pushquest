@@ -852,6 +852,16 @@ export default function MapClient({
                 }
             }
 
+            // v3.24c-5 — Gating du bar Team Boulette : accessible uniquement si videurState = passed ou boss_beaten
+            if (!("blocked" in result) && result.nextState.mapId === "lasagnas_tb_bar") {
+                const vState = (state as { videurState?: string }).videurState ?? "untouched"
+                if (vState !== "passed" && vState !== "boss_beaten") {
+                    setToast("🚪 Le PORTIER ARRABBIATA te barre l'entrée. « Pas si vite. »")
+                    setState((s) => ({ ...s, direction: d }))
+                    return
+                }
+            }
+
             // v3.12 — Check waterShallow (canal) : conditions d'entrée selon swim_set + firstSwimDone
             if (!("blocked" in result)) {
                 const targetTile = map.tiles[result.nextState.posY]?.[result.nextState.posX]
