@@ -2246,6 +2246,111 @@ export const NPCS: NpcDefinition[] = [
         ],
     },
     // ============================================================
+    // v4.0 — MARY MALONE (apothicairerie RDC Tour Pullman PastaVegas)
+    // Lore : physicienne / nun-turned-scientist dans Pullman.
+    // ============================================================
+    {
+        id: "mary_malone",
+        name: "MARY MALONE",
+        mapId: "vegas_shoptower_1",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "⚗️", color: "#c08080" },
+        // Derrière le comptoir
+        initialX: 4,
+        initialY: 2,
+        dialoguesAfter: [
+            "*Une femme au visage doux range des fioles colorées sur des étagères en bois.*",
+            "« Bienvenue. Je suis Mary Malone — physicienne convertie en apothicaire. »",
+            "« Mes potions soignent les blessures qu'on voit, et celles qu'on ne voit pas. »",
+            "« Si ton Daemon est K.O. en combat, une potion suffit. Mais elles coûtent. »",
+            "(Approche-toi du comptoir pour acheter.)",
+            "— MARY MALONE",
+        ],
+        dialoguesAfterRevisit: [
+            "*Mary Malone te sourit en mélangeant une nouvelle fiole.*",
+            "« Tu reviens. Bon signe. »",
+        ],
+    },
+    // ============================================================
+    // v4.0 — IOREK (forge étage 2 Tour Pullman PastaVegas)
+    // Lore : Iorek Byrnison, l'ours en armure.
+    // ============================================================
+    {
+        id: "iorek_byrnison",
+        name: "IOREK",
+        mapId: "vegas_shoptower_2",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🐻", color: "#806040" },
+        initialX: 4,
+        initialY: 2,
+        dialoguesAfter: [
+            "*Un énorme ours-Daemon en armure martèle un plastron sur une enclume.*",
+            "« Je suis IOREK. Je fais des armures pour les Daemons. »",
+            "« Pas de blabla. Tu veux du fer ? Tu paies. Tu repars. »",
+            "*Il pose son marteau, te scrute.*",
+            "« Mais une armure ne sauve pas un Daemon mal aimé. Soigne d'abord son bonheur. »",
+            "— IOREK",
+        ],
+        dialoguesAfterRevisit: [
+            "*Iorek lève à peine la tête.*",
+            "« Tu veux quoi ? »",
+        ],
+    },
+    // ============================================================
+    // v4.0 — LEE SCORESBY (transport étage 3 Tour Pullman PastaVegas)
+    // Inventaire vide pour l'instant (Phase futur : pierres d'évolution).
+    // ============================================================
+    {
+        id: "lee_scoresby_tower",
+        name: "LEE SCORESBY",
+        mapId: "vegas_shoptower_3",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🤠", color: "#a06040" },
+        initialX: 4,
+        initialY: 2,
+        dialoguesAfter: [
+            "*Un homme au chapeau de cow-boy, accoudé à son comptoir, mâchouille un cure-dent.*",
+            "« Howdy, partner. Lee Scoresby, aérostier de profession, marchand de pierres rares en hobby. »",
+            "« Mon dirigeable est en bas. Sans lui, je peux pas aller chercher les pierres d'évolution. »",
+            "« Tu m'as débloqué jusqu'ici — bravo. Reviens quand mon stock sera reconstitué. »",
+            "(Shop vide pour l'instant — pierres d'évolution à venir dans l'arc 3.)",
+            "— LEE SCORESBY",
+        ],
+        dialoguesAfterRevisit: [
+            "*Lee crache son cure-dent, déçu.*",
+            "« Patience, partner. »",
+        ],
+    },
+    // ============================================================
+    // v4.0 — SERAFINA TOWER (étage 4 caché Tour Pullman PastaVegas)
+    // Inventaire vide pour l'instant (Phase futur : sérums boost permanent).
+    // ============================================================
+    {
+        id: "serafina_tower",
+        name: "SERAFINA",
+        mapId: "vegas_shoptower_4",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🧙‍♀️", color: "#6080c0" },
+        initialX: 4,
+        initialY: 2,
+        dialoguesAfter: [
+            "*Serafina Pekkala flotte légèrement au-dessus du sol, ses yeux brillent d'une lumière étrange.*",
+            "« Tu as trouvé l'étage. Peu y parviennent. »",
+            "« Ici, je distille la Poussière. Elle peut transformer ton Daemon de manière permanente. »",
+            "« Mais le rituel n'est pas encore prêt. Les fleurs de Macaron'île doivent fleurir. »",
+            "(Shop vide pour l'instant — sérums boost permanent à venir dans l'arc 3.)",
+            "— SERAFINA",
+        ],
+        dialoguesAfterRevisit: [
+            "*Serafina ferme les yeux, en méditation.*",
+            "« Reviens quand les étoiles le diront. »",
+        ],
+    },
+    // ============================================================
     // v4.0 — CAPOLINO (2ᵉ rencontre, casino_b Lasagnas Vegas)
     // ============================================================
     {

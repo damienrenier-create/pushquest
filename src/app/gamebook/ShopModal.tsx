@@ -32,7 +32,7 @@ interface Props {
      * v3.23 : ajout "muscuville_bikes".
      * v3.24a-3 : ajout "vegas_habits" et "vegas_bouffe".
      * Par défaut nutripates. */
-    shop?: "nutripates" | "trenette" | "muscuville_bikes" | "vegas_habits" | "vegas_bouffe"
+    shop?: "nutripates" | "trenette" | "muscuville_bikes" | "vegas_habits" | "vegas_bouffe" | "pastagone_cuisine" | "pastagone_armurerie" | "vegas_shoptower_1" | "vegas_shoptower_2" | "vegas_shoptower_3" | "vegas_shoptower_4"
     onBuy: (itemKey: string) => Promise<void>
     /** v3.8.9 — notifie le parent à la fermeture du modal, en indiquant si un achat a été fait. */
     onClose: (purchaseMade: boolean) => void
@@ -117,6 +117,11 @@ export default function ShopModal({ inventory, availableEnergy, nickname, diffic
         if (shop === "muscuville_bikes") return greetingBikeShop()
         if (shop === "vegas_habits") return greetingHabits()
         if (shop === "vegas_bouffe") return greetingBouffe()
+        // v4.0 — Tour Pullman PastaVegas
+        if (shop === "vegas_shoptower_1") return "MARY MALONE te tend une fiole bleue. « Bienvenue chez les apothicaires. Pour soigner ton Daemon ET son esprit. »"
+        if (shop === "vegas_shoptower_2") return "IOREK pose son marteau. « Du fer. De l'acier. Choisis. Et ne te plains pas du poids. »"
+        if (shop === "vegas_shoptower_3") return "LEE SCORESBY soupire. « Mon dirigeable est en panne, mon stock vide. Reviens plus tard, partner. »"
+        if (shop === "vegas_shoptower_4") return "SERAFINA murmure. « La Poussière n'est pas encore prête. Patience, voyageur. »"
         return greetingNutripates(lastPurchase, nickname)
     }, [lastPurchase, nickname, shop])
 

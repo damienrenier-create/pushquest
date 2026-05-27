@@ -115,7 +115,7 @@ export interface ItemDefinition {
      * "both" (les deux shops), "gift" (donné, pas vendu).
      * v3.23 : ajout "muscuville_bikes" pour le magasin de vélos.
      * v3.24a-3 : ajout "vegas_habits" (Lasagnas Vegas) et "vegas_bouffe" (Lasagnas Vegas premium). */
-    availableAt?: "nutripates" | "trenette" | "both" | "gift" | "muscuville_bikes" | "vegas_habits" | "vegas_bouffe" | "pastagone_cuisine" | "pastagone_armurerie"
+    availableAt?: "nutripates" | "trenette" | "both" | "gift" | "muscuville_bikes" | "vegas_habits" | "vegas_bouffe" | "pastagone_cuisine" | "pastagone_armurerie" | "vegas_shoptower_1" | "vegas_shoptower_2" | "vegas_shoptower_3" | "vegas_shoptower_4"
     capabilities: ItemCapabilities
 }
 
@@ -522,6 +522,60 @@ export const ITEMS: ItemDefinition[] = [
             canUseInBattle: { effect: "vitesse_buff_one_battle", amount: 2 },
         },
     },
+    // ============================================================
+    // v4.0 — Apothicairerie MARY MALONE (vegas_shoptower_1)
+    // ============================================================
+    {
+        key: "potion_hp_malone",
+        name: "Potion d'HP",
+        emoji: "🧪",
+        description: "Bleue, sucrée. Restaure 80 HP à un Daemon en combat.",
+        priceReps: 90,
+        maxQuantity: 5,
+        availableAt: "vegas_shoptower_1",
+        capabilities: {
+            canUseInBattle: { effect: "heal_hp", amount: 80 },
+        },
+    },
+    {
+        key: "potion_happy_malone",
+        name: "Potion de Bonheur",
+        emoji: "💖",
+        description: "Rose pétillante. +30 happiness à un Daemon.",
+        priceReps: 70,
+        maxQuantity: 5,
+        availableAt: "vegas_shoptower_1",
+        capabilities: {
+            canUseInBattle: { effect: "happiness_boost", amount: 30 },
+        },
+    },
+    // ============================================================
+    // v4.0 — Forge IOREK (vegas_shoptower_2) : armures Daemon
+    // ============================================================
+    {
+        key: "plastron_iorek",
+        name: "Plastron de Fer",
+        emoji: "🛡️",
+        description: "Plastron forgé par Iorek. +5 DÉFENSE, durabilité 10 combats.",
+        priceReps: 220,
+        maxQuantity: 3,
+        availableAt: "vegas_shoptower_2",
+        capabilities: {
+            canEquipDaemon: { stat: "defense", bonus: 5, durabilityBattles: 10 },
+        },
+    },
+    {
+        key: "gantelets_iorek",
+        name: "Gantelets d'Iorek",
+        emoji: "🥊",
+        description: "Gantelets de fer forgés. +5 FORCE, durabilité 10 combats.",
+        priceReps: 220,
+        maxQuantity: 3,
+        availableAt: "vegas_shoptower_2",
+        capabilities: {
+            canEquipDaemon: { stat: "force", bonus: 5, durabilityBattles: 10 },
+        },
+    },
 ]
 
 export function getItem(key: string): ItemDefinition | null {
@@ -533,7 +587,7 @@ export function getItem(key: string): ItemDefinition | null {
  * "both" est inclus dans les deux shops. "gift" est exclu.
  * v3.23 — Étendu pour supporter "muscuville_bikes" (magasin de vélos).
  */
-export function itemsAvailableAtShop(shop: "nutripates" | "trenette" | "muscuville_bikes" | "vegas_habits" | "vegas_bouffe" | "pastagone_cuisine" | "pastagone_armurerie"): ItemDefinition[] {
+export function itemsAvailableAtShop(shop: "nutripates" | "trenette" | "muscuville_bikes" | "vegas_habits" | "vegas_bouffe" | "pastagone_cuisine" | "pastagone_armurerie" | "vegas_shoptower_1" | "vegas_shoptower_2" | "vegas_shoptower_3" | "vegas_shoptower_4"): ItemDefinition[] {
     return ITEMS.filter((i) => {
         // v3.33 — Si pas d'availableAt, l'item n'est pas vendu (= gift only).
         if (!i.availableAt) return false
@@ -546,8 +600,15 @@ export function itemsAvailableAtShop(shop: "nutripates" | "trenette" | "muscuvil
         // v4.0 Phase 5 — Shops Pastagone (cuisine + armurerie)
         if (shop === "pastagone_cuisine") return at === "pastagone_cuisine"
         if (shop === "pastagone_armurerie") return at === "pastagone_armurerie"
+        // v4.0 — Tour Pullman PastaVegas (4 étages)
+        if (shop === "vegas_shoptower_1") return at === "vegas_shoptower_1"
+        if (shop === "vegas_shoptower_2") return at === "vegas_shoptower_2"
+        if (shop === "vegas_shoptower_3") return at === "vegas_shoptower_3"
+        if (shop === "vegas_shoptower_4") return at === "vegas_shoptower_4"
         if (at === "muscuville_bikes" || at === "vegas_habits" || at === "vegas_bouffe"
-            || at === "pastagone_cuisine" || at === "pastagone_armurerie") return false
+            || at === "pastagone_cuisine" || at === "pastagone_armurerie"
+            || at === "vegas_shoptower_1" || at === "vegas_shoptower_2"
+            || at === "vegas_shoptower_3" || at === "vegas_shoptower_4") return false
         if (at === "both") return true
         return at === shop
     })

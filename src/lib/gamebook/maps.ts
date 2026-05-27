@@ -988,6 +988,8 @@ export const LASAGNAS_BUILDINGS: Building[] = [
     { x: 6,  y: 16, w: 4, h: 4, kind: "shop",   doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_shop_rachat",  displayName: "RACHAT" },
     { x: 11, y: 16, w: 4, h: 4, kind: "casino", doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_casino_b",    displayName: "JEUX" },
     { x: 17, y: 16, w: 4, h: 4, kind: "casino", doorX: 1, doorY: 3, visible: true, targetMapId: "lasagnas_casino_c",    displayName: "VIP" },
+    // v4.0 — Tour Pullman (shop multi-étages : Mary Malone / Iorek / Lee Scoresby / Serafina)
+    { x: 22, y: 4,  w: 2, h: 4, kind: "tower",  doorX: 0, doorY: 3, visible: true, targetMapId: "vegas_shoptower_1",    displayName: "TOUR" },
 ]
 
 export const LASAGNAS_SIGNS: Sign[] = [
@@ -2059,6 +2061,43 @@ function buildPastagoneBriefing(): TileType[][] {
 
 // Tour de Garde 9×7 — 1 PNJ visible à la fois (rotation aléatoire 25 PNJ)
 // ============================================================
+// v4.0 — TOUR PULLMAN (4 étages PastaVegas : apothicairerie / forge / transport / magie)
+// 9×8 par étage, layout identique avec stairs latéraux.
+// ============================================================
+function buildVegasShopTowerFloor(opts: {
+    /** "first" : stairsUp seul. "middle" : stairsUp + stairsDown. "top" : stairsDown seul. */
+    floorKind: "first" | "middle" | "top"
+}): TileType[][] {
+    const W = 9, H = 8
+    const m: TileType[][] = []
+    for (let y = 0; y < H; y++) {
+        const row: TileType[] = []
+        for (let x = 0; x < W; x++) {
+            if (y === 0) row.push("wallH")
+            else if (x === 0 || x === W - 1 || y === H - 1) row.push("wallV")
+            else row.push("floorChecker")
+        }
+        m.push(row)
+    }
+    // shopShelf au nord (y=1)
+    for (let x = 1; x < W - 1; x++) m[1][x] = "shopShelf"
+    // shopCounter (y=3) sauf au milieu (passage)
+    for (let x = 1; x < W - 1; x++) m[3][x] = "shopCounter"
+    // Escaliers
+    if (opts.floorKind === "first" || opts.floorKind === "middle") {
+        m[5][7] = "stairsUp"  // monter
+    }
+    if (opts.floorKind === "middle" || opts.floorKind === "top") {
+        m[5][1] = "stairsDown"  // descendre
+    }
+    // doorMat sud (sortie vers Vegas outdoor — uniquement RDC, autres étages ont seulement les stairs)
+    if (opts.floorKind === "first") {
+        m[H - 1][4] = "doorMat"
+    }
+    return m
+}
+
+// ============================================================
 // PASTAGONE Buildings + Signs + spawn entries
 // ============================================================
 export const PASTAGONE_BUILDINGS: Building[] = [
@@ -2514,6 +2553,41 @@ export const MAPS: Record<string, MapData> = {
         width: 9,
         height: 7,
         exitTarget: { mapId: "pastagone", x: 7, y: 11 },
+    },
+    // v4.0 — Tour Pullman PastaVegas (4 étages)
+    vegas_shoptower_1: {
+        id: "vegas_shoptower_1",
+        name: "APOTHICAIRERIE — MARY MALONE",
+        tiles: buildVegasShopTowerFloor({ floorKind: "first" }),
+        width: 9,
+        height: 8,
+        // Sortie sud → Vegas devant la tour (porte à 22, 7 = building.x=22, w=2, doorY=3)
+        // On revient à (22, 8) qui est juste sous la porte. Vegas est 24×24, vérifier walkable.
+        exitTarget: { mapId: "lasagnas_vegas", x: 22, y: 8 },
+    },
+    vegas_shoptower_2: {
+        id: "vegas_shoptower_2",
+        name: "FORGE — IOREK",
+        tiles: buildVegasShopTowerFloor({ floorKind: "middle" }),
+        width: 9,
+        height: 8,
+        exitTarget: { mapId: "lasagnas_vegas", x: 22, y: 8 },
+    },
+    vegas_shoptower_3: {
+        id: "vegas_shoptower_3",
+        name: "TRANSPORT — LEE SCORESBY",
+        tiles: buildVegasShopTowerFloor({ floorKind: "middle" }),
+        width: 9,
+        height: 8,
+        exitTarget: { mapId: "lasagnas_vegas", x: 22, y: 8 },
+    },
+    vegas_shoptower_4: {
+        id: "vegas_shoptower_4",
+        name: "MAGIE — SERAFINA",
+        tiles: buildVegasShopTowerFloor({ floorKind: "top" }),
+        width: 9,
+        height: 8,
+        exitTarget: { mapId: "lasagnas_vegas", x: 22, y: 8 },
     },
 }
 

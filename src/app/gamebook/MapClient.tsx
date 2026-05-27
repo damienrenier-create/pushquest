@@ -2945,6 +2945,17 @@ export default function MapClient({
             setShowPastagoneTour(true)
             return
         }
+        // v4.0 — Comptoir Tour Pullman PastaVegas (Mary / Iorek / Lee / Serafina)
+        if ((state.mapId === "vegas_shoptower_1" || state.mapId === "vegas_shoptower_2"
+            || state.mapId === "vegas_shoptower_3" || state.mapId === "vegas_shoptower_4")
+            && tile === "shopCounter") {
+            if (!hasBag) {
+                setPopup({ kind: "info", text: "Sans sac, pas d'achat. Va voir PEPITO." })
+                return
+            }
+            setShowShop(true)
+            return
+        }
 
         // v3.24a-3 — Shop rachat usés : popup pour l'instant (mécanique rachat à venir)
         if (state.mapId === "lasagnas_shop_rachat" && tile === "shopCounter") {
@@ -3115,12 +3126,17 @@ export default function MapClient({
             return
         }
 
-        // v3.8.2 — Escalier devant ? (Tour des Pâtes Aiguës)
+        // v3.8.2 — Escalier devant ? (Tour des Pâtes Aiguës OU Tour Pullman PastaVegas)
         if (tile === "stairsUp" || tile === "stairsDown") {
             const direction: "up" | "down" = tile === "stairsUp" ? "up" : "down"
+            // v4.0 — Dispatch selon mapId : Tour Pullman a son propre endpoint sans gate physique
+            const isVegasShopTower = state.mapId.startsWith("vegas_shoptower_")
+            const climbUrl = isVegasShopTower
+                ? "/api/gamebook/pastavegas/shoptower-climb"
+                : "/api/gamebook/tower/climb"
             ; (async () => {
                 try {
-                    const res = await fetch("/api/gamebook/tower/climb", {
+                    const res = await fetch(climbUrl, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ direction }),
@@ -5015,7 +5031,11 @@ export default function MapClient({
                             : state.mapId === "bike_shop" ? "muscuville_bikes"
                                 : state.mapId === "lasagnas_shop_habits" ? "vegas_habits"
                                     : state.mapId === "lasagnas_shop_bouffe" ? "vegas_bouffe"
-                                        : "nutripates"
+                                        : state.mapId === "vegas_shoptower_1" ? "vegas_shoptower_1"
+                                            : state.mapId === "vegas_shoptower_2" ? "vegas_shoptower_2"
+                                                : state.mapId === "vegas_shoptower_3" ? "vegas_shoptower_3"
+                                                    : state.mapId === "vegas_shoptower_4" ? "vegas_shoptower_4"
+                                                        : "nutripates"
                     }
                     onBuy={async (itemKey) => {
                         try {
