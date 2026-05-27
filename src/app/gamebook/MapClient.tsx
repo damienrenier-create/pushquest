@@ -205,6 +205,8 @@ type Cinematic =
     | { kind: "montSummit"; step: number }
     // v3.23e — Cinématique blague PIAFFINI pour Franss (2 phases : intro + atTower)
     | { kind: "franssJoke"; phase: "intro" | "atTower"; step: number }
+    // v4.0 Phase 4.B — Cinématique capture policière (Vegas-ouest → cellule Pastagone)
+    | { kind: "pastagoneCapture"; step: number }
     | null
 
 // Ticker partagé entre tous les NPCs wanderers pour synchroniser leurs déplacements
@@ -865,6 +867,24 @@ export default function MapClient({
                 }
                 return
             }
+            // v4.0 Phase 4.B — Capture policière à la sortie ouest de Vegas
+            // Déclenchée quand le joueur tente d'aller vers l'ouest (left) depuis
+            // x=1, y∈[11..14], après avoir battu la Team Boulette (tbBossBeaten),
+            // et tant que pastagoneArrested === false.
+            if (
+                !cinematic
+                && state.mapId === "lasagnas_vegas"
+                && (state as { tbBossBeaten?: boolean }).tbBossBeaten === true
+                && (state as { pastagoneArrested?: boolean }).pastagoneArrested !== true
+                && d === "left"
+                && state.posX === 1
+                && state.posY >= 11 && state.posY <= 14
+            ) {
+                setState((s) => ({ ...s, direction: "left" }))
+                setCinematic({ kind: "pastagoneCapture", step: 0 })
+                return
+            }
+
             // Si une cinématique est en cours (NPC ou Pionnier), on l'avance plutôt que de bouger
             if (cinematic) {
                 pressA()
@@ -1783,6 +1803,40 @@ export default function MapClient({
                 return
             }
             setCinematic({ kind: "piaffini", stage: "dialog", step: next })
+            return
+        }
+
+        // v4.0 Phase 4.B — Cinématique capture Pastagone (fade noir + arrestation)
+        // Étapes : 0 (sirènes) → 1 (chiens flics) → 2 (fade noir + warp serveur)
+        if (cinematic?.kind === "pastagoneCapture") {
+            const next = cinematic.step + 1
+            if (next >= 3) {
+                // Fin de cinématique : appel serveur pour set pastagoneArrested + teleport cellule
+                ; (async () => {
+                    try {
+                        const res = await fetch("/api/gamebook/pastagone/capture", { method: "POST" })
+                        const data = await res.json()
+                        if (data.ok && data.spawn) {
+                            setState((s) => ({
+                                ...s,
+                                mapId: data.spawn.mapId,
+                                posX: data.spawn.posX,
+                                posY: data.spawn.posY,
+                                direction: data.spawn.direction,
+                                pastagoneArrested: true,
+                            } as PlayerMapState))
+                            setToast(data.message ?? "Tu te réveilles en cellule.")
+                        } else {
+                            setToast(data.reason ?? "Capture impossible.")
+                        }
+                    } catch (e) {
+                        console.warn("[MapClient] pastagone/capture failed", e)
+                    }
+                })()
+                setCinematic(null)
+                return
+            }
+            setCinematic({ kind: "pastagoneCapture", step: next })
             return
         }
 
@@ -3385,6 +3439,15 @@ export default function MapClient({
                                         }
                                     }
                                 }
+                                // v4.0 Phase 4.B — Barrage policier Vegas-ouest une fois tbBossBeaten
+                                // Override visuel UNIQUEMENT (la tile sous-jacente reste tree = bloquant).
+                                if (state.mapId === "lasagnas_vegas"
+                                    && (state as { tbBossBeaten?: boolean }).tbBossBeaten === true
+                                    && !(state as { pastagoneArrested?: boolean }).pastagoneArrested
+                                    && x === 0
+                                    && (y === 11 || y === 12 || y === 13 || y === 14)) {
+                                    effectiveTile = "roadBlocked"
+                                }
                                 return <TileCell key={`${x}-${y}`} tile={effectiveTile} x={x} y={y} />
                             })
                         )}
@@ -3684,6 +3747,34 @@ export default function MapClient({
                             }
                             onNext={pressA}
                         />
+                    )}
+
+                    {/* === v4.0 Phase 4.B : CINÉMATIQUE CAPTURE PASTAGONE === */}
+                    {cinematic?.kind === "pastagoneCapture" && (
+                        <>
+                            {/* Fade noir progressif sur les étapes 1 et 2 */}
+                            {cinematic.step >= 1 && (
+                                <div style={{
+                                    position: "absolute", inset: 0,
+                                    background: "rgba(0,0,0," + (cinematic.step === 1 ? 0.5 : 0.92) + ")",
+                                    transition: "background 0.6s",
+                                    zIndex: 100,
+                                }} />
+                            )}
+                            <div style={{ position: "relative", zIndex: 101 }}>
+                                <DialogueBox
+                                    speaker={cinematic.step === 0 ? "🚓 SIRÈNES" : cinematic.step === 1 ? "🐕 FLIC" : "🌑 ..."}
+                                    text={
+                                        cinematic.step === 0
+                                            ? "Wiouuu — wiouuu… Des sirènes hurlent.\nTrois voitures de police te coupent la route."
+                                            : cinematic.step === 1
+                                                ? "« Sale petit poucet. Tu pensais quitter Vegas pépère ?\nÀ Pastagone, on va t'apprendre la propreté. »\n\n*Tu sens un coup à la nuque.*"
+                                                : "*Tu te réveilles. Une lampe te brûle les yeux.\nL'air sent la pâte au curry et le métal mouillé.*"
+                                    }
+                                    onNext={pressA}
+                                />
+                            </div>
+                        </>
                     )}
 
                     {/* POPUP */}
