@@ -18,7 +18,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 
-type Tab = "ressources" | "temps" | "flags" | "teleport" | "combat" | "snapshots" | "logs"
+type Tab = "ressources" | "exos" | "temps" | "flags" | "teleport" | "combat" | "snapshots" | "logs"
 
 interface TesterPanelProps {
     isTester: boolean
@@ -162,6 +162,53 @@ export default function TesterPanel({ isTester, onAfterAction }: TesterPanelProp
     }, [isTester, open])
 
     // ─── Actions ───
+    const addExercise = async (exercise: string, reps: number) => {
+        if (busy) return
+        setBusy(true)
+        try {
+            const r = await fetch("/api/admin/tester/exercise", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ exercise, reps }),
+            })
+            const j = await r.json()
+            if (j?.ok) {
+                flash(`+${reps} ${exercise} encodé`)
+                await refreshStatus()
+                onAfterAction?.()
+            } else {
+                flash(`Erreur : ${j?.reason ?? "?"}`)
+            }
+        } catch (e) {
+            flash(`Erreur réseau : ${(e as Error).message}`)
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    const validateDefi = async (defiIndex: number) => {
+        if (busy) return
+        setBusy(true)
+        try {
+            const r = await fetch("/api/admin/tester/validate-defi", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ defiIndex }),
+            })
+            const j = await r.json()
+            if (j?.ok) {
+                flash(j.message ?? `Défi #${defiIndex} validé`)
+                onAfterAction?.()
+            } else {
+                flash(`Erreur : ${j?.reason ?? "?"}`)
+            }
+        } catch (e) {
+            flash(`Erreur réseau : ${(e as Error).message}`)
+        } finally {
+            setBusy(false)
+        }
+    }
+
     const energyDelta = async (delta: number) => {
         if (busy) return
         setBusy(true)
@@ -411,7 +458,7 @@ export default function TesterPanel({ isTester, onAfterAction }: TesterPanelProp
 
                 {/* Tabs */}
                 <div style={tabsStyle}>
-                    {(["ressources", "temps", "flags", "teleport", "combat", "snapshots", "logs"] as Tab[]).map((t) => (
+                    {(["ressources", "exos", "temps", "flags", "teleport", "combat", "snapshots", "logs"] as Tab[]).map((t) => (
                         <button
                             key={t}
                             onClick={() => setTab(t)}
@@ -436,6 +483,49 @@ export default function TesterPanel({ isTester, onAfterAction }: TesterPanelProp
                             <p style={{ fontSize: 11, opacity: 0.7, marginTop: 8 }}>
                                 Note : delta agit sur bonusSurplus. Le compte tester est traité comme un joueur normal — les contraintes énergie s'appliquent normalement.
                             </p>
+                        </div>
+                    )}
+
+                    {tab === "exos" && (
+                        <div>
+                            <h3>Exercices (vrai ExerciseSet, compte dans tes reps du jour)</h3>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                                {([
+                                    ["PUSHUP", 10], ["PUSHUP", 50], ["PUSHUP", 100], ["PUSHUP", 200],
+                                    ["SQUAT", 10], ["SQUAT", 50], ["SQUAT", 100], ["SQUAT", 300],
+                                    ["PLANK", 30], ["PLANK", 60], ["PLANK", 180],
+                                    ["PULLUP", 5], ["PULLUP", 10], ["PULLUP", 30],
+                                    ["CARDIO", 10], ["CARDIO", 30],
+                                ] as Array<[string, number]>).map(([ex, r], i) => (
+                                    <button key={`${ex}-${r}-${i}`} onClick={() => addExercise(ex, r)} disabled={busy} style={actionBtnStyle}>
+                                        +{r} {ex === "PLANK" ? `${ex} (s)` : ex}
+                                    </button>
+                                ))}
+                            </div>
+                            <p style={{ fontSize: 11, opacity: 0.7, marginTop: 8 }}>
+                                ⚠️ Plank = secondes. Crée un vrai ExerciseSet daté d'aujourd'hui — compte dans le scoring PushQuest ET dans l'énergie Nexus.
+                            </p>
+                            <div style={{ marginTop: 14, borderTop: "1px solid #555", paddingTop: 10 }}>
+                                <h4>Valider défi animal (1 clic, sans encoder)</h4>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                                    {[
+                                        { i: 0, label: "VISIT" },
+                                        { i: 1, label: "DRINK" },
+                                        { i: 2, label: "PATES" },
+                                        { i: 3, label: "MATIN+AM" },
+                                        { i: 4, label: "GAINAGE 180s" },
+                                        { i: 5, label: "200 PUSHUP" },
+                                        { i: 6, label: "300 SQUAT" },
+                                    ].map((d) => (
+                                        <button key={d.i} onClick={() => validateDefi(d.i)} disabled={busy} style={{ ...actionBtnStyle, fontSize: 10 }}>
+                                            #{d.i} {d.label}
+                                        </button>
+                                    ))}
+                                </div>
+                                <p style={{ fontSize: 11, opacity: 0.7, marginTop: 6 }}>
+                                    Bypass — set défi à true sans contrainte. Utile pour valider le défi MATIN+AM sans attendre l'après-midi.
+                                </p>
+                            </div>
                         </div>
                     )}
 

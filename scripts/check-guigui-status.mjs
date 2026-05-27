@@ -67,16 +67,20 @@ async function main() {
         console.log(`  ${YEL}Absent${RESET} — sera créé au prochain GET /api/gamebook/state avec bonusSurplus=0.`)
     }
 
-    const daemons = await prisma.daemon.findMany({
-        where: { userId: user.id },
-        select: { slotIndex: true, name: true, type: true, combatLevel: true, currentHp: true, happiness: true },
-    })
-
-    if (daemons.length > 0) {
-        console.log(`\n${GRN}━━━ Daemons (${daemons.length}) ━━━${RESET}`)
-        for (const d of daemons) {
-            console.log(`  slot ${d.slotIndex} — ${d.name} [${d.type}] L${d.combatLevel} HP ${d.currentHp} 😊 ${d.happiness}`)
+    // Daemon : accédé en raw SQL (modèle non exposé dans le client Prisma généré)
+    try {
+        const daemons = await prisma.$queryRawUnsafe(
+            `SELECT "slotIndex", "name", "type", "combatLevel", "currentHp", "happiness" FROM "Daemon" WHERE "userId" = $1`,
+            user.id
+        )
+        if (Array.isArray(daemons) && daemons.length > 0) {
+            console.log(`\n${GRN}━━━ Daemons (${daemons.length}) ━━━${RESET}`)
+            for (const d of daemons) {
+                console.log(`  slot ${d.slotIndex} — ${d.name} [${d.type}] L${d.combatLevel} HP ${d.currentHp} 😊 ${d.happiness}`)
+            }
         }
+    } catch {
+        // ignore (table Daemon peut ne pas exister sur certains environnements)
     }
 
     console.log(`\n${GRN}━━━ Checklist GUIGUI online ━━━${RESET}`)

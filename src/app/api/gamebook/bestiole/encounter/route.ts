@@ -93,8 +93,8 @@ export async function POST(req: NextRequest) {
             kind: "first",
             speciesName: newName,
             message: newName
-                ? `Aïe ! Tu te fais mordre par les ${newName} ! Tu recules. (Pas de perte cette fois.)`
-                : "Aïe ! Tu te fais mordre par les bestioles ! Tu recules. (Pas de perte cette fois.)",
+                ? `Aïe ! Tu te fais mordre par les ${newName} ! Tu recules. (Pas de perte cette fois — mais sans animal compagnon, la prochaine fois ce sera -10 reps. Va voir V3T à Macaron'île.)`
+                : "Aïe ! Tu te fais mordre par les bestioles ! Tu recules. (Pas de perte cette fois — mais sans animal compagnon, la prochaine fois ce sera -10 reps. Va voir V3T à Macaron'île.)",
         })
     }
 
