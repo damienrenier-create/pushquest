@@ -34,6 +34,8 @@ import {
     computeMaxHp,
     happinessMultiplier,
     computeCritRate,
+    computeRewardXp,
+    BASE_EXP_WILD_COMMON,
     type DaemonType,
     type Morphology,
 } from "@/lib/gamebook/daemon"
@@ -179,8 +181,14 @@ export async function POST(req: NextRequest) {
         emoji: e.emoji,
     }
 
-    // Récompense XP par défaut : ~(enemyLvl × 50)
-    const rewardXp = typeof body.rewardXp === "number" ? body.rewardXp : Math.max(10, e.combatLevel * 50)
+    // v4.0 Phase 9.A — Récompense XP formule Pokémon Gen 1 : floor(baseExp × L / 7)
+    // baseExp peut être passé dans le body (custom), sinon défaut = 64 (wild commun).
+    const baseExp = typeof (body as { baseExp?: number }).baseExp === "number"
+        ? (body as { baseExp: number }).baseExp
+        : BASE_EXP_WILD_COMMON
+    const rewardXp = typeof body.rewardXp === "number"
+        ? body.rewardXp
+        : computeRewardXp(baseExp, e.combatLevel)
     const rewardEnergy = typeof body.rewardEnergy === "number" ? body.rewardEnergy : 0
 
     const battleId = `b_${Date.now()}_${Math.floor(Math.random() * 1e6)}`

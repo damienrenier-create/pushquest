@@ -20,6 +20,8 @@ import {
     computeMaxHp,
     happinessMultiplier,
     computeCritRate,
+    computeRewardXp,
+    BASE_EXP_BOSS_FINAL,
     type DaemonType,
     type Morphology,
 } from "@/lib/gamebook/daemon"
@@ -82,9 +84,11 @@ export async function POST() {
         attacksEquipped: Array.isArray(leader.attacksEquipped) ? leader.attacksEquipped : ["charge"],
     }
 
-    // Boss stats (statsMultiplier 2.0, level 25)
-    const bossBaseStat = 100  // base stat moyenne × multiplicateur 2.0
-    const bossLevel = 25
+    // v4.0 Phase 9.C — Boss rebalance : L15 (réaliste après 25 combats Tour de Garde
+    // avec la nouvelle formule XP Gen 1) + statsMult 2.5 (compense la baisse de level
+    // pour garder le boss menaçant : stat brute 125 partout).
+    const bossBaseStat = 125  // 50 × 2.5
+    const bossLevel = 15
     const bossMaxHp = computeMaxHp(bossBaseStat, bossLevel, 0)
     const bossHapp = 60
     const enemy: BattleEnemy = {
@@ -105,7 +109,8 @@ export async function POST() {
         emoji: "🐺",
     }
 
-    const rewardXp = 5000  // GROSSE XP, level up garanti pour la plupart des joueurs
+    // v4.0 Phase 9.A — Formule Gen 1 : floor(300 × 15 / 7) = 642 XP
+    const rewardXp = computeRewardXp(BASE_EXP_BOSS_FINAL, bossLevel)
 
     const battleId = `boss_${Date.now()}`
     const state: BattleState = {

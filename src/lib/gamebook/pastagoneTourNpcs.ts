@@ -23,8 +23,11 @@ export interface TourNpc {
     happiness: number
     /** Multiplier de stats sur la base (par grade). */
     statsMultiplier?: number
-    /** XP bonus % vs un combat wild de même level. */
+    /** XP bonus % vs un combat wild de même level. (Legacy, conservé pour compat.) */
     xpBonusPct?: number
+    /** v4.0 Phase 9.A — baseExp Pokémon Gen 1 (rewardXp = baseExp×L/7).
+     *  Chihuahua faible (40), standard (70), Doberman-light fortiche (100). */
+    baseExp?: number
     /** Phrase d'intro avant le combat. */
     introLine: string
 }
@@ -42,6 +45,7 @@ const SAINTBERNARD_TEMPLATE = {
     happiness: 60,
     statsMultiplier: 1.0,
     xpBonusPct: 10,
+    baseExp: 70,
 }
 const SAINTBERNARDS: TourNpc[] = [
     { ...SAINTBERNARD_TEMPLATE, id: "tour_sb1", name: "Sergent JAMES",     introLine: "« Au boulot, intrus. Faut bien quelqu'un pour faire les heures sup'. »" },
@@ -64,6 +68,7 @@ const PITBULL_TEMPLATE = {
     happiness: 40,
     statsMultiplier: 1.1,
     xpBonusPct: 15,
+    baseExp: 75,
 }
 const PITBULLS: TourNpc[] = [
     { ...PITBULL_TEMPLATE, id: "tour_pb1", name: "Pitbull HUNTER",  introLine: "« Aboie pas. Encaisse. »" },
@@ -86,6 +91,7 @@ const MASTIFF_TEMPLATE = {
     happiness: 55,
     statsMultiplier: 1.15,
     xpBonusPct: 12,
+    baseExp: 75,
 }
 const MASTIFFS: TourNpc[] = [
     { ...MASTIFF_TEMPLATE, id: "tour_mt1", name: "Mastiff BRUNO",    introLine: "« Patience. Endurance. Ma marque. »" },
@@ -108,6 +114,7 @@ const CHIHUAHUA_TEMPLATE = {
     happiness: 75,
     statsMultiplier: 0.7,
     xpBonusPct: -10,
+    baseExp: 40,
 }
 const CHIHUAHUAS: TourNpc[] = [
     { ...CHIHUAHUA_TEMPLATE, id: "tour_ch1", name: "Chihuahua PRESCO",  introLine: "« GRRRRR ! (Couinement.) »" },
@@ -130,6 +137,7 @@ const DOBERMAN_TEMPLATE = {
     happiness: 50,
     statsMultiplier: 1.4,
     xpBonusPct: 30,
+    baseExp: 100,
 }
 const DOBERMANS: TourNpc[] = [
     { ...DOBERMAN_TEMPLATE, id: "tour_db1", name: "Doberman VEGA",   introLine: "« Tu commences à m'intéresser, dresseur. »" },

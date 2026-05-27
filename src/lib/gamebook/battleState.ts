@@ -48,6 +48,9 @@ export interface BattleActor {
     happiness: number
     critRate: number
     attacksEquipped: string[]
+    /** v4.0 Phase 9.D — Status effect : null/undefined = OK ; poison = -maxHp/16 fin de tour ;
+     *  paralysis = 25% skip turn. Limité aux deux pour cette phase. */
+    status?: "poison" | "paralysis" | null
 }
 
 export interface BattleEnemy extends BattleActor {
@@ -144,6 +147,27 @@ export function buildPlayerActor(d: {
 }
 
 // ============================================================
+// v4.0 Phase 9.D — Helpers statuts (poison + paralysie)
+// ============================================================
+
+/** Renvoie true si le status fait sauter le tour de l'acteur. */
+function rollStatusSkipTurn(actor: BattleActor, rng: () => number): boolean {
+    if (actor.status === "paralysis") {
+        return rng() < 0.25  // 25% chance de skip
+    }
+    return false
+}
+
+/** Applique les dégâts de poison en fin de tour (sur place via mutate). */
+function applyPoisonTick(state: BattleState, who: "player" | "enemy"): void {
+    const actor = state[who]
+    if (actor.status !== "poison") return
+    const dmg = Math.max(1, Math.floor(actor.maxHp / 16))
+    actor.currentHp = Math.max(0, actor.currentHp - dmg)
+    state.log.push({ kind: "damage", text: `${actor.name} souffre de l'empoisonnement (-${dmg} HP).` })
+}
+
+// ============================================================
 // Conversion BattleActor → CombatActor (pour les formules combat.ts)
 // ============================================================
 function toCombatActor(b: BattleActor): CombatActor {
@@ -178,35 +202,13 @@ export function applyPlayerAction(
     }
 
     let playerHpDelta = 0
+    const playerHpStart = state.player.currentHp
     let playerHappinessDelta = 0
     let energySpentDelta = 0
     let xpEarned = 0
 
     // ============================================================
-    // FUITE
-    // ============================================================
-    if (action.kind === "flee") {
-        if (!state.fleeAllowed) {
-            next.log.push({ kind: "info", text: "Impossible de fuir ce combat." })
-            return { state: next, playerHpDelta, playerHappinessDelta, energySpentDelta, xpEarned }
-        }
-        const chance = fleeChance(next.player.vitesse, next.enemy.vitesse)
-        if (rng() < chance) {
-            next.log.push({ kind: "flee_success", text: `${next.player.name} prend ses jambes à son cou !` })
-            next.phase = "ended"
-            next.result = "fled"
-            playerHappinessDelta = -FLEE_HAPPINESS_COST
-            return { state: next, playerHpDelta, playerHappinessDelta, energySpentDelta, xpEarned }
-        }
-        next.log.push({ kind: "flee_fail", text: `${next.player.name} n'arrive pas à fuir.` })
-        // L'ennemi attaque sur l'échec de fuite (cf. plus bas)
-    }
-
-    // ============================================================
-    // SWITCH (Phase 2.D)
-    // Géré côté route /battle/action (besoin d'accès DB pour charger le Daemon
-    // cible). La transition pure ne sait pas faire de I/O. La route appelle
-    // applySwitchEnemyTurn() après avoir échangé state.player.
+    // SWITCH (Phase 2.D) — géré côté route, retour immédiat
     // ============================================================
     if (action.kind === "switch") {
         next.log.push({ kind: "info", text: "Switch traité côté route." })
@@ -214,74 +216,209 @@ export function applyPlayerAction(
     }
 
     // ============================================================
-    // ATTAQUE
+    // v4.0 Phase 9.B — Détermine qui agit en premier selon VITESSE
+    // (égalité = 50/50 random ; sans Vitesse-stage system, c'est la stat brute)
     // ============================================================
-    if (action.kind === "attack") {
-        const attack = getAttack(action.attackKey)
-        if (!attack) {
-            next.log.push({ kind: "info", text: "Attaque inconnue." })
+    const playerFirst = (() => {
+        if (next.player.vitesse > next.enemy.vitesse) return true
+        if (next.player.vitesse < next.enemy.vitesse) return false
+        return rng() < 0.5
+    })()
+
+    // Fuite : on traite à part car la fuite résolue en premier
+    // (l'ennemi peut quand même attaquer avant si plus rapide).
+    if (action.kind === "flee") {
+        if (!state.fleeAllowed) {
+            next.log.push({ kind: "info", text: "Impossible de fuir ce combat." })
             return { state: next, playerHpDelta, playerHappinessDelta, energySpentDelta, xpEarned }
         }
-        // Vérifie que l'attaque est bien équipée
-        if (!next.player.attacksEquipped.includes(attack.key)) {
-            next.log.push({ kind: "info", text: `${attack.name} n'est pas équipée.` })
+        // Si ennemi plus rapide → il attaque AVANT que tu tentes la fuite
+        if (!playerFirst) {
+            enemyAttackTurn(next, rng)
+            if (next.player.currentHp <= 0) {
+                next.log.push({ kind: "faint", text: `${next.player.name} est K.O. !` })
+                next.log.push({ kind: "defeat", text: "Tu as perdu ce combat." })
+                next.phase = "ended"
+                next.result = "defeat"
+                playerHpDelta = next.player.currentHp - playerHpStart
+                return { state: next, playerHpDelta, playerHappinessDelta, energySpentDelta, xpEarned }
+            }
+        }
+        const chance = fleeChance(next.player.vitesse, next.enemy.vitesse)
+        if (rng() < chance) {
+            next.log.push({ kind: "flee_success", text: `${next.player.name} prend ses jambes à son cou !` })
+            next.phase = "ended"
+            next.result = "fled"
+            playerHappinessDelta = -FLEE_HAPPINESS_COST
+            playerHpDelta = next.player.currentHp - playerHpStart
             return { state: next, playerHpDelta, playerHappinessDelta, energySpentDelta, xpEarned }
+        }
+        next.log.push({ kind: "flee_fail", text: `${next.player.name} n'arrive pas à fuir.` })
+        // Si joueur était plus rapide, l'ennemi attaque maintenant (en représailles)
+        if (playerFirst) {
+            enemyAttackTurn(next, rng)
+            if (next.player.currentHp <= 0) {
+                next.log.push({ kind: "faint", text: `${next.player.name} est K.O. !` })
+                next.log.push({ kind: "defeat", text: "Tu as perdu ce combat." })
+                next.phase = "ended"
+                next.result = "defeat"
+            }
+        }
+        next.turn += 1
+        playerHpDelta = next.player.currentHp - playerHpStart
+        return { state: next, playerHpDelta, playerHappinessDelta, energySpentDelta, xpEarned }
+    }
+
+    // ============================================================
+    // ATTAQUE : ordre basé sur Vitesse + status checks
+    // ============================================================
+    if (action.kind !== "attack") {
+        return { state: next, playerHpDelta, playerHappinessDelta, energySpentDelta, xpEarned }
+    }
+
+    const attack = getAttack(action.attackKey)
+    if (!attack) {
+        next.log.push({ kind: "info", text: "Attaque inconnue." })
+        return { state: next, playerHpDelta, playerHappinessDelta, energySpentDelta, xpEarned }
+    }
+    if (!next.player.attacksEquipped.includes(attack.key)) {
+        next.log.push({ kind: "info", text: `${attack.name} n'est pas équipée.` })
+        return { state: next, playerHpDelta, playerHappinessDelta, energySpentDelta, xpEarned }
+    }
+
+    // Helper inline : exécute le tour ennemi (avec check paralysie). Retourne true si ennemi a attaqué.
+    const doEnemyTurn = (): void => {
+        if (next.enemy.status === "paralysis" && rng() < 0.25) {
+            next.log.push({ kind: "info", text: `${next.enemy.name} est paralysé et ne peut pas bouger !` })
+            return
+        }
+        enemyAttackTurn(next, rng)
+    }
+
+    // Helper inline : exécute le tour joueur. Retourne true si attaque a eu lieu.
+    const doPlayerAttack = (): boolean => {
+        if (next.player.status === "paralysis" && rng() < 0.25) {
+            next.log.push({ kind: "info", text: `${next.player.name} est paralysé et ne peut pas bouger !` })
+            return false
         }
         const cost = effectiveEnergyCost(attack, next.player.intelligence)
         energySpentDelta = cost
-
-        // Touche ?
         if (!rollHit(attack.accuracy, rng)) {
             next.log.push({ kind: "attack", text: `${next.player.name} utilise ${attack.name} (−${cost} reps).` })
             next.log.push({ kind: "miss", text: "Mais l'attaque manque sa cible !" })
-        } else {
-            const isCrit = rollCrit(next.player.critRate, rng)
-            const dmg = computeDamage(
-                toCombatActor(next.player),
-                toCombatActor(next.enemy),
-                attack,
-                { forceCrit: isCrit, rng },
-            )
-            next.log.push({ kind: "attack", text: `${next.player.name} utilise ${attack.name} (−${cost} reps).` })
-            if (isCrit) next.log.push({ kind: "crit", text: "Coup critique !" })
-            const label = typeEffectivenessLabel(dmg.typeMult)
-            if (label) next.log.push({ kind: "type_label", text: label })
-            next.enemy.currentHp = Math.max(0, next.enemy.currentHp - dmg.damage)
-            next.log.push({ kind: "damage", text: `${next.enemy.name} subit ${dmg.damage} dégâts.` })
+            return true
+        }
+        const isCrit = rollCrit(next.player.critRate, rng)
+        next.log.push({ kind: "attack", text: `${next.player.name} utilise ${attack.name} (−${cost} reps).` })
 
-            // Recoil "Lutte"
-            if (attack.special === "recoil25") {
-                const recoil = Math.max(1, Math.floor(dmg.damage * 0.25))
-                next.player.currentHp = Math.max(0, next.player.currentHp - recoil)
-                playerHpDelta -= recoil
-                next.log.push({ kind: "damage", text: `${next.player.name} encaisse ${recoil} dégâts en retour.` })
+        // Attaque "status move" : power 0 mais inflictStatus → on applique sans dégâts
+        if (attack.power === 0 && attack.inflictStatus) {
+            if (next.enemy.status) {
+                next.log.push({ kind: "info", text: `${next.enemy.name} est déjà affecté par un status.` })
+            } else {
+                next.enemy.status = attack.inflictStatus
+                const label = attack.inflictStatus === "poison" ? "empoisonné" : "paralysé"
+                next.log.push({ kind: "type_label", text: `${next.enemy.name} est ${label} !` })
+            }
+            return true
+        }
+
+        // Attaque normale : compute damage
+        const dmg = computeDamage(
+            toCombatActor(next.player),
+            toCombatActor(next.enemy),
+            attack,
+            { forceCrit: isCrit, rng },
+        )
+        if (isCrit) next.log.push({ kind: "crit", text: "Coup critique !" })
+        const label = typeEffectivenessLabel(dmg.typeMult)
+        if (label) next.log.push({ kind: "type_label", text: label })
+        next.enemy.currentHp = Math.max(0, next.enemy.currentHp - dmg.damage)
+        next.log.push({ kind: "damage", text: `${next.enemy.name} subit ${dmg.damage} dégâts.` })
+
+        // Status infligé en SECONDAIRE par une attaque qui a déjà fait des dégâts
+        if (attack.inflictStatus && !next.enemy.status && next.enemy.currentHp > 0) {
+            // 30% de chance par défaut pour les attaques à effet secondaire
+            if (rng() < 0.3) {
+                next.enemy.status = attack.inflictStatus
+                const lbl = attack.inflictStatus === "poison" ? "empoisonné" : "paralysé"
+                next.log.push({ kind: "type_label", text: `${next.enemy.name} est ${lbl} !` })
             }
         }
 
-        // Victoire si ennemi à 0 HP
-        if (next.enemy.currentHp <= 0) {
-            next.log.push({ kind: "faint", text: `${next.enemy.name} est K.O. !` })
-            next.log.push({ kind: "victory", text: `Tu remportes le combat. +${next.rewardXp} XP.` })
+        if (attack.special === "recoil25") {
+            const recoil = Math.max(1, Math.floor(dmg.damage * 0.25))
+            next.player.currentHp = Math.max(0, next.player.currentHp - recoil)
+            next.log.push({ kind: "damage", text: `${next.player.name} encaisse ${recoil} dégâts en retour.` })
+        }
+        return true
+    }
+
+    // ============================================================
+    // Exécution dans l'ordre Vitesse
+    // ============================================================
+    if (!playerFirst) {
+        doEnemyTurn()
+        if (next.player.currentHp <= 0) {
+            next.log.push({ kind: "faint", text: `${next.player.name} est K.O. !` })
+            next.log.push({ kind: "defeat", text: "Tu as perdu ce combat." })
             next.phase = "ended"
-            next.result = "victory"
-            xpEarned = next.rewardXp
+            next.result = "defeat"
+            energySpentDelta = 0  // joueur KO avant d'attaquer = pas de coût énergie
+            playerHpDelta = next.player.currentHp - playerHpStart
+            return { state: next, playerHpDelta, playerHappinessDelta, energySpentDelta, xpEarned }
+        }
+    }
+
+    doPlayerAttack()
+
+    if (next.enemy.currentHp <= 0) {
+        next.log.push({ kind: "faint", text: `${next.enemy.name} est K.O. !` })
+        next.log.push({ kind: "victory", text: `Tu remportes le combat. +${next.rewardXp} XP.` })
+        next.phase = "ended"
+        next.result = "victory"
+        xpEarned = next.rewardXp
+        playerHpDelta = next.player.currentHp - playerHpStart
+        return { state: next, playerHpDelta, playerHappinessDelta, energySpentDelta, xpEarned }
+    }
+
+    if (playerFirst) {
+        doEnemyTurn()
+        if (next.player.currentHp <= 0) {
+            next.log.push({ kind: "faint", text: `${next.player.name} est K.O. !` })
+            next.log.push({ kind: "defeat", text: "Tu as perdu ce combat." })
+            next.phase = "ended"
+            next.result = "defeat"
+            playerHpDelta = next.player.currentHp - playerHpStart
             return { state: next, playerHpDelta, playerHappinessDelta, energySpentDelta, xpEarned }
         }
     }
 
     // ============================================================
-    // RIPOSTE ENNEMIE (automatique en fin de tour joueur)
+    // Phase 9.D — Poison tick fin de tour (les deux acteurs)
     // ============================================================
-    enemyAttackTurn(next, rng)
-    playerHpDelta += (next.player.currentHp - state.player.currentHp - playerHpDelta) // delta total contre l'init
+    applyPoisonTick(next, "player")
     if (next.player.currentHp <= 0) {
-        next.log.push({ kind: "faint", text: `${next.player.name} est K.O. !` })
+        next.log.push({ kind: "faint", text: `${next.player.name} succombe au poison !` })
         next.log.push({ kind: "defeat", text: "Tu as perdu ce combat." })
         next.phase = "ended"
         next.result = "defeat"
+        playerHpDelta = next.player.currentHp - playerHpStart
+        return { state: next, playerHpDelta, playerHappinessDelta, energySpentDelta, xpEarned }
+    }
+    applyPoisonTick(next, "enemy")
+    if (next.enemy.currentHp <= 0) {
+        next.log.push({ kind: "faint", text: `${next.enemy.name} succombe au poison !` })
+        next.log.push({ kind: "victory", text: `Tu remportes le combat. +${next.rewardXp} XP.` })
+        next.phase = "ended"
+        next.result = "victory"
+        xpEarned = next.rewardXp
+        playerHpDelta = next.player.currentHp - playerHpStart
+        return { state: next, playerHpDelta, playerHappinessDelta, energySpentDelta, xpEarned }
     }
 
     next.turn += 1
+    playerHpDelta = next.player.currentHp - playerHpStart
     return { state: next, playerHpDelta, playerHappinessDelta, energySpentDelta, xpEarned }
 }
 

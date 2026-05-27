@@ -23,12 +23,15 @@ export interface Attack {
     key: string
     name: string
     type: DaemonType
-    power: number          // 0 = pas de dégâts (status, futur)
+    power: number          // 0 = pas de dégâts (status move)
     accuracy: number       // 0..100
     energyCost: number     // reps
     isPhysical: boolean
     morphology?: Morphology
     special?: "recoil25"
+    /** v4.0 Phase 9.D — Status à infliger si l'attaque touche.
+     *  Si la cible a déjà un status, l'attaque rate son effet (mais peut faire ses dégâts). */
+    inflictStatus?: "poison" | "paralysis"
     description?: string
 }
 
@@ -201,6 +204,19 @@ export const ATTACK_CATALOG: Record<string, Attack> = {
     lance_roc: {
         key: "lance_roc", name: "Lance-Roc", type: "Roche",
         power: 75, accuracy: 90, energyCost: 18, isPhysical: true,
+    },
+    // ---- Status moves (Phase 9.D) ----
+    poudre_toxique: {
+        key: "poudre_toxique", name: "Poudre Toxique", type: "Plante",
+        power: 0, accuracy: 90, energyCost: 8, isPhysical: false,
+        inflictStatus: "poison",
+        description: "Empoisonne la cible (dégâts résiduels chaque tour).",
+    },
+    onde_paralysante: {
+        key: "onde_paralysante", name: "Onde Paralysante", type: "Electrique",
+        power: 0, accuracy: 95, energyCost: 8, isPhysical: false,
+        inflictStatus: "paralysis",
+        description: "Paralyse la cible : 25% de chance de sauter son tour.",
     },
 }
 

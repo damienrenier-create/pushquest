@@ -191,6 +191,30 @@ export function levelFromXp(xp: number): number {
 }
 
 // ============================================================
+// v4.0 Phase 9.A — Récompense XP (formule Pokémon Gen 1 standard)
+//
+//   rewardXp = floor(baseExp × defeatedLevel / 7)
+//
+// avec baseExp ≈ 50-100 pour PNJ commun, ~150 mini-boss, ~300 boss final.
+// → 1 combat L1 vs L1 = ~9 XP, 1 combat L25 vs L25 = ~228 XP (avec baseExp=64).
+// Aligné avec la courbe L³ (Medium Fast) : ~110 combats pour atteindre L25
+// depuis L1 en affrontant que des ennemis de son niveau (= rythme Pokémon).
+//
+// Par contraste, l'ancienne formule (max(10, L×50)) donnait 1 niveau / combat
+// même à haut level → cassé.
+// ============================================================
+export const BASE_EXP_WILD_COMMON = 64
+export const BASE_EXP_TOUR_CHIHUAHUA = 40
+export const BASE_EXP_TOUR_STANDARD = 70
+export const BASE_EXP_TOUR_DOBERMAN_LIGHT = 100
+export const BASE_EXP_RIVAL = 120
+export const BASE_EXP_BOSS_FINAL = 300
+
+export function computeRewardXp(baseExp: number, defeatedLevel: number): number {
+    return Math.max(1, Math.floor((baseExp * defeatedLevel) / 7))
+}
+
+// ============================================================
 // v4.0 Phase 3 — Saiyan : nb de points à répartir après un level up
 //
 // Base 7, modulé par l'effort + la résilience + la difficulté.

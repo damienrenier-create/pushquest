@@ -17,6 +17,8 @@ import {
     computeMaxHp,
     happinessMultiplier,
     computeCritRate,
+    computeRewardXp,
+    BASE_EXP_TOUR_STANDARD,
     type DaemonType,
     type Morphology,
 } from "@/lib/gamebook/daemon"
@@ -123,8 +125,9 @@ export async function POST() {
         emoji: npc.emoji,
     }
 
-    const bonusPct = npc.xpBonusPct ?? 0
-    const rewardXp = Math.max(10, Math.round(npc.combatLevel * 50 * (1 + bonusPct / 100)))
+    // v4.0 Phase 9.A — Formule Pokémon Gen 1 : floor(baseExp × L / 7)
+    const baseExp = npc.baseExp ?? BASE_EXP_TOUR_STANDARD
+    const rewardXp = computeRewardXp(baseExp, npc.combatLevel)
 
     const battleId = `tour_${Date.now()}_${Math.floor(Math.random() * 1e6)}`
     const state: BattleState = {
