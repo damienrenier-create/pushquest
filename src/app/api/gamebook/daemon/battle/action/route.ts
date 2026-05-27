@@ -237,6 +237,14 @@ export async function POST(req: NextRequest) {
     } else {
         progressData.activeBattle = newState as unknown as object
     }
+
+    // v4.0 Phase 8 — Si DOBERMAN ALPHA vaincu → set pastagoneBossBeaten=true
+    if (newState.phase === "ended"
+        && newState.result === "victory"
+        && stateBefore.enemy.pnjKey === "doberman_alpha"
+        && progress.pastagoneBossBeaten !== true) {
+        progressData.pastagoneBossBeaten = true
+    }
     await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
         data: progressData,

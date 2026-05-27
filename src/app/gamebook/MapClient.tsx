@@ -4141,13 +4141,28 @@ export default function MapClient({
                     }}
                     onClose={async () => {
                         setActiveBattle(null)
-                        // v4.0 Phase 3 — Si un Daemon a des points en attente, ouvre le modal Saiyan
+                        // v4.0 Phase 3 — Si un Daemon a des points en attente, ouvre Saiyan
+                        // v4.0 Phase 8 — Si Boss vaincu + pas encore d'orphelin → auto-ouvre TAGLIA
                         try {
-                            const r = await fetch("/api/gamebook/daemon/list", { cache: "no-store" })
-                            if (r.ok) {
-                                const j = await r.json()
+                            const [listR, stateR] = await Promise.all([
+                                fetch("/api/gamebook/daemon/list", { cache: "no-store" }),
+                                fetch("/api/gamebook/state"),
+                            ])
+                            if (listR.ok) {
+                                const j = await listR.json()
                                 const hasPending = (j.daemons ?? []).some((d: { pendingStatPoints?: number }) => (d.pendingStatPoints ?? 0) > 0)
                                 if (hasPending) setShowSaiyanModal(true)
+                            }
+                            if (stateR.ok) {
+                                const s = await stateR.json()
+                                const flags = s?.state ?? {}
+                                if (flags.pastagoneBossBeaten === true && !flags.pastagoneOrphanChosen) {
+                                    setState((cur) => ({
+                                        ...cur,
+                                        pastagoneBossBeaten: true,
+                                    } as PlayerMapState))
+                                    setShowPastagoneBriefing(true)
+                                }
                             }
                         } catch { /* silent */ }
                     }}
@@ -4188,6 +4203,26 @@ export default function MapClient({
                         pastagoneOrphanChosen: (state as { pastagoneOrphanChosen?: string | null }).pastagoneOrphanChosen,
                     }}
                     onClose={() => setShowPastagoneBriefing(false)}
+                    onBossBattleStarted={(s) => {
+                        setShowPastagoneBriefing(false)
+                        setActiveBattle(s)
+                    }}
+                    onOrphanChosen={(orphan) => {
+                        // v4.0 Phase 8 — Choix orphelin fait. Le joueur peut maintenant
+                        // sortir du Pastagone (téléport retour Vegas barrage levé).
+                        setState((s) => ({ ...s, pastagoneOrphanChosen: orphan } as PlayerMapState))
+                        setShowPastagoneBriefing(false)
+                        setTimeout(() => {
+                            setState((s) => ({
+                                ...s,
+                                mapId: "lasagnas_vegas",
+                                posX: 1,
+                                posY: 12,
+                                direction: "right",
+                            } as PlayerMapState))
+                            setToast("🚪 Le Doberman te laisse passer. Le barrage tombe. Vegas s'ouvre à nouveau.")
+                        }, 1200)
+                    }}
                 />
             )}
             {showPastagoneCuisine && (
