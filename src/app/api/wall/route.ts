@@ -8,6 +8,10 @@ export const dynamic = "force-dynamic";
 export async function GET() {
     try {
         const messages = await (prisma as any).wallMessage.findMany({
+            // Exclut les comptes système / testeur du mur public.
+            where: {
+                user: { isSystem: false }
+            },
             orderBy: {
                 createdAt: 'desc',
             },

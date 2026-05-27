@@ -34,20 +34,14 @@ export const authOptions: NextAuthOptions = {
                     return null
                 }
 
-                // v3.32 — Compte GUIGUI : autorisé uniquement si GUIGUI_LOGIN_ENABLED=true
-                // (variable d'env à définir dans .env.local — absente en prod).
-                // À chaque login : reset complet du gamebookProgress (= test depuis le début).
+                // Compte testeur : gate par GUIGUI_LOGIN_ENABLED (variable d'env à activer
+                // localement OU en prod pour permettre la connexion). Pas de reset auto :
+                // le testeur conserve sa progression entre sessions. Le panneau testeur
+                // (/api/admin/tester/reset-full) permet un reset manuel quand voulu.
                 const isTester = (user as any).isTester === true
                 if (isTester) {
                     if (process.env.GUIGUI_LOGIN_ENABLED !== "true") {
                         return null
-                    }
-                    try {
-                        await (prisma as any).gamebookProgress.deleteMany({
-                            where: { userId: user.id },
-                        })
-                    } catch (e) {
-                        console.warn("[auth] tester reset failed", e)
                     }
                 }
 

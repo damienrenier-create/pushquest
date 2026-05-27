@@ -115,6 +115,7 @@ import type { TamagotchiView } from "@/lib/gamebook/tamagotchi"
 import BibliothequeModal from "./BibliothequeModal"
 import BestioleNamingModal from "./BestioleNamingModal"
 import CasinoModal from "./CasinoModal"
+import TesterPanel from "./TesterPanel"
 import CasinoPatternModal from "./CasinoPatternModal"
 import FastTravelModal from "./FastTravelModal"
 import VideurModal from "./VideurModal"
@@ -473,12 +474,8 @@ export default function MapClient({
         })()
     }, [])
 
-    // v3.32 — Watch reps : si tester et énergie tombe à 0, propose la recharge
-    useEffect(() => {
-        if (isTester && reps <= 0 && !showGuiguiRecharge) {
-            setShowGuiguiRecharge(true)
-        }
-    }, [isTester, reps, showGuiguiRecharge])
+    // Compte testeur : pas de modal de recharge automatique. Le tester ajuste son
+    // énergie via le panneau testeur (🧪 / touche T), pas via un modal forcé.
 
     // ============================================================
     // v3.4b : WebSocket Pusher
@@ -3582,6 +3579,9 @@ export default function MapClient({
                 @keyframes flowerSway { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
                 @keyframes ghostFloat { 0%, 100% { opacity: 0.85; } 50% { opacity: 1; } }
             `}</style>
+
+            {/* Panneau testeur — visible UNIQUEMENT si isTester=true (compte GUIGUI) */}
+            <TesterPanel isTester={isTester} onAfterAction={() => { window.location.reload() }} />
 
             {/* HUD TOP */}
             <div

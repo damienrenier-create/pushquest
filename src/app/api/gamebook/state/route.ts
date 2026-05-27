@@ -135,12 +135,9 @@ export async function GET() {
     }
 
     if (!progress) {
-        // v3.32 — Compte tester (GUIGUI) : init bonusSurplus à 1000 (banque énergie god mod).
-        const tester = await (prisma as any).user.findUnique({
-            where: { id: userId },
-            select: { isTester: true },
-        })
-        const initialBonusSurplus = tester?.isTester === true ? 1000 : 0
+        // Tous les comptes (y compris isTester) démarrent avec bonusSurplus = 0.
+        // Le panneau testeur permettra à GUIGUI d'ajouter de l'énergie à la demande
+        // via /api/admin/tester/energy.
         progress = await (prisma as any).gamebookProgress.create({
             data: {
                 userId,
@@ -161,7 +158,7 @@ export async function GET() {
                 bridgePnjLastBeatenDate: {},
                 gymGuyEnergyGiven: false,
                 npcsTalkedTo: [],
-                bonusSurplus: initialBonusSurplus,
+                bonusSurplus: 0,
             },
         })
     } else {
@@ -196,17 +193,17 @@ export async function GET() {
 
     // v3.8.5 — Mode créateur (isSystem) : énergie minimum 1000 pour tester la map.
     // Ne touche pas aux données réelles : on override juste la valeur renvoyée au client.
-    // v3.32 — Compte tester (GUIGUI) : énergie plafonnée à 2000, banque renouvelable
-    //   (recharge à 1000 via /api/gamebook/guigui/recharge quand availableEnergy ≤ 0).
+    //
+    // Compte testeur (isTester) : AUCUN override d'énergie. Le testeur subit les mêmes
+    // contraintes qu'un vrai joueur ; le panneau testeur (`/api/admin/tester/energy`)
+    // lui permet d'ajuster son bonusSurplus à la demande.
     const userRow = await (prisma as any).user.findUnique({
         where: { id: userId },
         select: { isSystem: true, isTester: true },
     })
     const isCreator = userRow?.isSystem === true
     const isTester = userRow?.isTester === true
-    if (isTester) {
-        availableEnergy = Math.max(0, Math.min(2000, availableEnergy))
-    } else if (isCreator && availableEnergy < CREATOR_MIN_ENERGY) {
+    if (isCreator && availableEnergy < CREATOR_MIN_ENERGY) {
         availableEnergy = CREATOR_MIN_ENERGY
     }
 

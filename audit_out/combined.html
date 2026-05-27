@@ -1,0 +1,3646 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Audit Nexus — 2026-05-27</title>
+<style>
+@page { size: A4; margin: 18mm 16mm; }
+* { box-sizing: border-box; }
+html, body {
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 10pt;
+    line-height: 1.5;
+    color: #1f2328;
+    margin: 0;
+    padding: 0;
+}
+.pagebreak { page-break-before: always; }
+h1 { font-size: 20pt; margin: 0.4em 0 0.4em; color: #0b3d91; border-bottom: 2px solid #0b3d91; padding-bottom: 0.2em; }
+h2 { font-size: 14pt; margin: 1.1em 0 0.4em; color: #0b3d91; }
+h3 { font-size: 12pt; margin: 0.9em 0 0.3em; color: #1f4e8c; }
+h4 { font-size: 10.5pt; margin: 0.7em 0 0.2em; }
+p { margin: 0.4em 0; }
+ul, ol { margin: 0.4em 0; padding-left: 1.4em; }
+li { margin: 0.15em 0; }
+code { font-family: "Cascadia Mono", "Consolas", monospace; font-size: 9pt; background: #f3f4f6; padding: 1px 4px; border-radius: 3px; }
+pre { background: #f3f4f6; border-radius: 5px; padding: 8px 10px; overflow-x: auto; font-size: 8.5pt; line-height: 1.35; }
+pre code { background: none; padding: 0; }
+table { border-collapse: collapse; width: 100%; margin: 0.6em 0; font-size: 9pt; }
+th, td { border: 1px solid #d0d7de; padding: 4px 7px; text-align: left; vertical-align: top; }
+th { background: #f3f4f6; }
+blockquote { border-left: 3px solid #d0d7de; margin: 0.4em 0; padding: 0.2em 0.8em; color: #57606a; }
+hr { border: none; border-top: 1px solid #d0d7de; margin: 1em 0; }
+strong { color: #1f2328; }
+em { color: #57606a; }
+</style>
+</head>
+<body>
+<h1>🔬 Audit Nexus / Gamebook</h1>
+<p><strong>Projet</strong> : PushQuest
+<strong>Module</strong> : Nexus (subsystem gamebook)
+<strong>Branche</strong> : feat/gamification-pass-2
+<strong>Date</strong> : 2026-05-27
+<strong>Auditeur</strong> : Claude Opus 4.7
+<strong>Méthodologie</strong> : Audit chirurgical sans complaisance, sans modification de code</p>
+<hr>
+<h2>Sommaire</h2>
+<ol>
+<li><a href="#01">Cartographie — MAP_APPLICATION.md</a></li>
+<li><a href="#02">Tech Lead — AUDIT_01_CODE.md</a></li>
+<li><a href="#03">DBA — AUDIT_02_DATABASE.md</a></li>
+<li><a href="#04">Game Designer — AUDIT_03_GAMEDESIGN.md</a></li>
+<li><a href="#05">Narrative Designer — AUDIT_04_NARRATIF.md</a></li>
+<li><a href="#06">UX Designer — AUDIT_05_UX.md</a></li>
+<li><a href="#07">QA Engineer — AUDIT_06_QA_BUGS.md</a></li>
+<li><a href="#08">Conformité / Sécurité — AUDIT_07_CONFORMITE.md</a></li>
+<li><a href="#09">Questions ouvertes — AUDIT_08_QUESTIONS.md</a></li>
+<li><a href="#10">Synthèse exécutive — AUDIT_00_SYNTHESE.md</a></li>
+</ol>
+<p>&lt;div class=“pagebreak”&gt;&lt;/div&gt;</p>
+<p>&lt;a id=“01”&gt;&lt;/a&gt;</p>
+<h1>📍 MAP_APPLICATION.md — Cartographie du module Nexus</h1>
+<p><em>Phase 0 — Audit chirurgical Nexus. Pas de modification de code.</em></p>
+<hr>
+<h2>1. Périmètre couvert</h2>
+<p>Le module <strong>Nexus</strong> (alias <em>gamebook</em>) regroupe :</p>
+<table>
+<thead>
+<tr>
+<th>Catégorie</th>
+<th>Chemin racine</th>
+<th>Volume</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Composants UI client</td>
+<td><code>src/app/gamebook/</code></td>
+<td>36 fichiers, ~14 000 lignes</td>
+</tr>
+<tr>
+<td>Routes API serveur</td>
+<td><code>src/app/api/gamebook/</code></td>
+<td>95 fichiers</td>
+</tr>
+<tr>
+<td>Bibliothèques métier</td>
+<td><code>src/lib/gamebook/</code></td>
+<td>23 fichiers, ~9 700 lignes</td>
+</tr>
+<tr>
+<td>Catalogue items</td>
+<td><code>src/lib/gamebook/items.ts</code> + <code>src/config/badges.ts</code></td>
+<td>2 fichiers</td>
+</tr>
+<tr>
+<td>Routes admin liées</td>
+<td><code>src/app/api/admin/rescue-player/</code></td>
+<td>1 route</td>
+</tr>
+<tr>
+<td>Migrations Prisma</td>
+<td><code>prisma/migrations/</code> (filtre Nexus)</td>
+<td>~22 migrations</td>
+</tr>
+<tr>
+<td>Models Prisma</td>
+<td><code>prisma/schema.prisma</code></td>
+<td>4 modèles directs + 3 satellites</td>
+</tr>
+<tr>
+<td>Scripts utilitaires</td>
+<td><code>scripts/audit-doors.mjs</code></td>
+<td>1 fichier</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Hors périmètre</strong> mais utilisés en lecture : <code>src/lib/xp.ts</code> (XP_ANIMALS, getLevelDetails), <code>src/lib/badges.ts</code> (BADGE_DEFINITIONS, recalc), <code>src/lib/challenge.ts</code> (getTodayISO, daily reps), <code>src/lib/rewards.ts</code>.</p>
+<hr>
+<h2>2. Arborescence détaillée</h2>
+<h3>2.1 Composants UI client — <code>src/app/gamebook/</code></h3>
+<h4>Point d’entrée Next.js</h4>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th style="text-align:right">Lignes</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>page.tsx</code></td>
+<td style="text-align:right">30</td>
+<td>Page Next.js <code>/gamebook</code> server-side. Récupère session + state initial + injecte <code>&lt;GamebookClient&gt;</code>.</td>
+</tr>
+<tr>
+<td><code>GamebookClient.tsx</code></td>
+<td style="text-align:right">230</td>
+<td>Wrapper SSR→client. Charge initial state, gère erreur d’hydration, monte MapClient.</td>
+</tr>
+</tbody>
+</table>
+<h4>Orchestrateur monolithique</h4>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th style="text-align:right">Lignes</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MapClient.tsx</code></td>
+<td style="text-align:right"><strong>5791</strong> ⚠️</td>
+<td>Cœur applicatif client. Gère état joueur, mouvement, popups, cinematics, NPCs, broadcasts Pusher, tous les handlers <code>pressA</code>/<code>tryMove</code>, ouverture de TOUS les modals. <strong>C’est le monolithe critique à refactoriser.</strong></td>
+</tr>
+</tbody>
+</table>
+<h4>Composants tile / sprite</h4>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th style="text-align:right">Lignes</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TileCell.tsx</code></td>
+<td style="text-align:right">1167</td>
+<td>Rendu visuel CSS d’une tile (~60 cas dans un switch déguisé). Accepte <code>overlayEmoji</code> pour les cages véto.</td>
+</tr>
+<tr>
+<td><code>PlayerSprite.tsx</code></td>
+<td style="text-align:right">122</td>
+<td>Sprite joueur (corps + direction + lunettes).</td>
+</tr>
+<tr>
+<td><code>MontVentouxSideView.tsx</code></td>
+<td style="text-align:right">309</td>
+<td>Vue de profil pseudo-3D du Mont (parallax 3 couches, route inclinée, cycliste animé).</td>
+</tr>
+<tr>
+<td><code>PiaffiniFlightScreen.tsx</code></td>
+<td style="text-align:right">156</td>
+<td>Cinématique plein écran du vol PIAFFINI.</td>
+</tr>
+<tr>
+<td><code>BlackScreen.tsx</code></td>
+<td style="text-align:right">66</td>
+<td>Écran noir transitoire.</td>
+</tr>
+<tr>
+<td><code>FrozenScreen.tsx</code></td>
+<td style="text-align:right">154</td>
+<td>Overlay anti-cheat (gel quand suppression de reps).</td>
+</tr>
+</tbody>
+</table>
+<h4>Modales principales</h4>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th style="text-align:right">Lignes</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>StartMenu.tsx</code></td>
+<td style="text-align:right">133</td>
+<td>Menu START (SAC / DAEMON / RETOUR). Gating conditionnel sur <code>hasRecoveredDaemon</code>.</td>
+</tr>
+<tr>
+<td><code>InventoryModal.tsx</code></td>
+<td style="text-align:right">397</td>
+<td>Sac + actions sur items.</td>
+</tr>
+<tr>
+<td><code>ShopModal.tsx</code></td>
+<td style="text-align:right">337</td>
+<td>Shop générique paramétré par prop <code>shop</code> (10 vendeurs supportés).</td>
+</tr>
+<tr>
+<td><code>BibliothequeModal.tsx</code></td>
+<td style="text-align:right">377</td>
+<td>Bibliothèque Macaron/Muscuville avec topics navigables.</td>
+</tr>
+<tr>
+<td><code>TamagotchiModal.tsx</code></td>
+<td style="text-align:right">538</td>
+<td>Adoption + soin tamagotchi + boutons défis.</td>
+</tr>
+<tr>
+<td><code>DaemonTeamModal.tsx</code></td>
+<td style="text-align:right">445</td>
+<td>Équipe Daemon 6 slots + stats + items applicables (sérums/pierres).</td>
+</tr>
+<tr>
+<td><code>BattleModal.tsx</code></td>
+<td style="text-align:right">517</td>
+<td>Combat Pokémon-style (attaques/switch/sac/fuite).</td>
+</tr>
+<tr>
+<td><code>SaiyanLevelUpModal.tsx</code></td>
+<td style="text-align:right">275</td>
+<td>Répartition points stats après level-up Daemon.</td>
+</tr>
+<tr>
+<td><code>PlayerMapModal.tsx</code></td>
+<td style="text-align:right">181</td>
+<td>Mini-map mondiale (item map).</td>
+</tr>
+<tr>
+<td><code>TreeBookModal.tsx</code></td>
+<td style="text-align:right">109</td>
+<td>Pokédex des arbres.</td>
+</tr>
+<tr>
+<td><code>FastTravelModal.tsx</code></td>
+<td style="text-align:right">128</td>
+<td>Voyage rapide entre villes (désactivé v3.33).</td>
+</tr>
+<tr>
+<td><code>BestioleNamingModal.tsx</code></td>
+<td style="text-align:right">120</td>
+<td>Nommer les bestioles à la 1ʳᵉ rencontre.</td>
+</tr>
+</tbody>
+</table>
+<h4>Modales jeux de hasard</h4>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th style="text-align:right">Lignes</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CasinoModal.tsx</code></td>
+<td style="text-align:right">195</td>
+<td>Roulette rouge/noir Bourg &amp; Pépiteville.</td>
+</tr>
+<tr>
+<td><code>CasinoPatternModal.tsx</code></td>
+<td style="text-align:right">278</td>
+<td>Roulette pattern Muscuville.</td>
+</tr>
+<tr>
+<td><code>CasinoPatternVegasModal.tsx</code></td>
+<td style="text-align:right">226</td>
+<td>Variante VIP Vegas.</td>
+</tr>
+<tr>
+<td><code>SlotMachineModal.tsx</code></td>
+<td style="text-align:right">117</td>
+<td>Machine à sous Vegas.</td>
+</tr>
+<tr>
+<td><code>LottoPouleModal.tsx</code></td>
+<td style="text-align:right">123</td>
+<td>Grille 4×4 Vegas.</td>
+</tr>
+<tr>
+<td><code>StopOuEncoreModal.tsx</code></td>
+<td style="text-align:right">183</td>
+<td>Stop ou Encore Vegas.</td>
+</tr>
+<tr>
+<td><code>CockfightModal.tsx</code></td>
+<td style="text-align:right">158</td>
+<td>Combat de coqs Vegas.</td>
+</tr>
+</tbody>
+</table>
+<h4>Modales contexte Muscuville / Vegas</h4>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th style="text-align:right">Lignes</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ArenaModal.tsx</code></td>
+<td style="text-align:right">163</td>
+<td>Arène Muscuville (4 champions + revanches).</td>
+</tr>
+<tr>
+<td><code>VideurModal.tsx</code></td>
+<td style="text-align:right">132</td>
+<td>Portier Arrabbiata du bar TB.</td>
+</tr>
+</tbody>
+</table>
+<h4>Modales Pastagone v4.0</h4>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th style="text-align:right">Lignes</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PastagoneCelluleModal.tsx</code></td>
+<td style="text-align:right">183</td>
+<td>Interrogatoire CARBONE (3 défis réels pompes/gainage/squats).</td>
+</tr>
+<tr>
+<td><code>PastagoneInfirmerieModal.tsx</code></td>
+<td style="text-align:right">94</td>
+<td>FUSILLI heal 50 reps / 3 fois/jour.</td>
+</tr>
+<tr>
+<td><code>PastagoneCuisineModal.tsx</code></td>
+<td style="text-align:right">167</td>
+<td>RIGATONI shop + énigme BOLOGNION.</td>
+</tr>
+<tr>
+<td><code>PastagoneArmurerieModal.tsx</code></td>
+<td style="text-align:right">130</td>
+<td>PESTO Jr wearables Daemon.</td>
+</tr>
+<tr>
+<td><code>PastagoneBriefingModal.tsx</code></td>
+<td style="text-align:right">194</td>
+<td>TAGLIA récap arc + défi boss + choix orphelin.</td>
+</tr>
+<tr>
+<td><code>PastagoneTourModal.tsx</code></td>
+<td style="text-align:right">188</td>
+<td>Tour de Garde (25 PNJ rotation + cooldown 30s).</td>
+</tr>
+</tbody>
+</table>
+<h3>2.2 Routes API serveur — <code>src/app/api/gamebook/</code></h3>
+<p><strong>95 routes</strong>, regroupées par domaine.</p>
+<h4>État global &amp; technique (6)</h4>
+<table>
+<thead>
+<tr>
+<th>Route</th>
+<th>Verbe</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>state/route.ts</code></td>
+<td>GET / POST / DELETE</td>
+<td>Source de vérité. GET retourne tout l’état joueur + autobootstrap créateur + auto-migration daemon. POST sauvegarde position/flags. DELETE reset.</td>
+</tr>
+<tr>
+<td><code>players/route.ts</code></td>
+<td>GET</td>
+<td>Polling des autres joueurs visibles sur la même map.</td>
+</tr>
+<tr>
+<td><code>broadcast/route.ts</code></td>
+<td>POST</td>
+<td>Diffuse events Pusher (cinematic:trigger).</td>
+</tr>
+<tr>
+<td><code>pusher-auth/route.ts</code></td>
+<td>POST</td>
+<td>Auth Pusher.</td>
+</tr>
+<tr>
+<td><code>spend/route.ts</code></td>
+<td>POST</td>
+<td>Dépense d’énergie ad-hoc (rarement appelée).</td>
+</tr>
+<tr>
+<td><code>travel/route.ts</code></td>
+<td>POST</td>
+<td>Fast-travel entre villes.</td>
+</tr>
+</tbody>
+</table>
+<h4>Tamagotchi (legacy v3.14 → v4.0) (8)</h4>
+<table>
+<thead>
+<tr>
+<th>Route</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tamagotchi/adopt</code></td>
+<td>Adoption initiale chez V3T (snapshot vetFirstVisitLevel).</td>
+</tr>
+<tr>
+<td><code>tamagotchi/feed</code></td>
+<td>Nourrissage (déprécié au profit de feed-pates).</td>
+</tr>
+<tr>
+<td><code>tamagotchi/feed-pates</code></td>
+<td>Consomme corned_pates + heal happiness.</td>
+</tr>
+<tr>
+<td><code>tamagotchi/drink</code></td>
+<td>Consomme gourde + heal happiness.</td>
+</tr>
+<tr>
+<td><code>tamagotchi/check-defis</code></td>
+<td>Valide les 7 défis d’adoption.</td>
+</tr>
+<tr>
+<td><code>tamagotchi/liberer</code></td>
+<td>Officialise adoption (recovered=true) + badge animal totem.</td>
+</tr>
+<tr>
+<td><code>tamagotchi/in-bag</code></td>
+<td>Toggle “rangé dans le sac”.</td>
+</tr>
+<tr>
+<td><code>tamagotchi/turn-talk</code></td>
+<td>Animal follower interactif (dialogues random).</td>
+</tr>
+<tr>
+<td><code>tamagotchi/use-serum</code></td>
+<td>Sérum intelligence (v3.24d — <em>attention au doublon avec daemon/use-serum</em>).</td>
+</tr>
+<tr>
+<td><code>v3t/talk</code></td>
+<td>Commentaire dynamique V3T (déprécié de fait par dernier commit).</td>
+</tr>
+</tbody>
+</table>
+<h4>Daemon v4.0 (14)</h4>
+<table>
+<thead>
+<tr>
+<th>Route</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>daemon/list</code></td>
+<td>Liste équipe (jusqu’à 6 slots) avec stats enrichies.</td>
+</tr>
+<tr>
+<td><code>daemon/public-list</code></td>
+<td>Liste publique recovered=true (utilisée par cages véto).</td>
+</tr>
+<tr>
+<td><code>daemon/reorder</code></td>
+<td>Réordonne slots (set leader).</td>
+</tr>
+<tr>
+<td><code>daemon/feed</code> <code>daemon/drink</code> <code>daemon/heal</code> <code>daemon/in-bag</code></td>
+<td>Actions de base.</td>
+</tr>
+<tr>
+<td><code>daemon/use-serum</code></td>
+<td>Active unlockedAt (créateur ou Phase 4 mafia).</td>
+</tr>
+<tr>
+<td><code>daemon/evolve</code></td>
+<td>Pierre d’évolution (change type).</td>
+</tr>
+<tr>
+<td><code>daemon/boost-stat</code></td>
+<td>Sérum permanent (+5 stat).</td>
+</tr>
+<tr>
+<td><code>daemon/equip-item</code> <code>daemon/unequip-item</code></td>
+<td>Wearables.</td>
+</tr>
+<tr>
+<td><code>daemon/allocate-points</code></td>
+<td>Saiyan points → bonus[X].</td>
+</tr>
+<tr>
+<td><code>daemon/battle/start</code> <code>daemon/battle/action</code> <code>daemon/battle/use-item</code></td>
+<td>Combat.</td>
+</tr>
+</tbody>
+</table>
+<h4>Pastagone v4.0 (12)</h4>
+<table>
+<thead>
+<tr>
+<th>Route</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pastagone/capture</code></td>
+<td>Cinématique arrestation → cellule.</td>
+</tr>
+<tr>
+<td><code>pastagone/interrog-defi</code></td>
+<td>Validation 1 des 3 défis (pompes/gainage/squats).</td>
+</tr>
+<tr>
+<td><code>pastagone/infirmerie-heal</code></td>
+<td>FUSILLI.</td>
+</tr>
+<tr>
+<td><code>pastagone/cuisine-puzzle</code></td>
+<td>Énigme BOLOGNION 3 steps.</td>
+</tr>
+<tr>
+<td><code>pastagone/tour-rotate</code> <code>pastagone/tour-battle</code></td>
+<td>Tour de Garde.</td>
+</tr>
+<tr>
+<td><code>pastagone/coulter-battle</code> <code>pastagone/capolino-mid-battle</code> <code>pastagone/boss-battle</code></td>
+<td>Mini-bosses + boss.</td>
+</tr>
+<tr>
+<td><code>pastagone/faa-gift</code></td>
+<td>One-shot +100 reps.</td>
+</tr>
+<tr>
+<td><code>pastagone/orphan-choose</code></td>
+<td>Choix Anguillzap/Faucotron/Octopsy + ciné CAPOLINO fuite.</td>
+</tr>
+<tr>
+<td><code>pastavegas/shoptower-climb</code></td>
+<td>Stairs Tour Pullman.</td>
+</tr>
+</tbody>
+</table>
+<h4>Cinématiques &amp; one-shots narratifs (10)</h4>
+<table>
+<thead>
+<tr>
+<th>Route</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>grant-bag</code></td>
+<td>PEPITO / MAMAN offrent le sac.</td>
+</tr>
+<tr>
+<td><code>grant-gym-energy</code> <code>grant-durum-energy</code></td>
+<td>Récompenses one-shot reps.</td>
+</tr>
+<tr>
+<td><code>piaffini/rescue</code></td>
+<td>Sommet Tour → badge Sauveur.</td>
+</tr>
+<tr>
+<td><code>mont/summit-reached</code></td>
+<td>Sommet Mont → badge Conquérant.</td>
+</tr>
+<tr>
+<td><code>bridge/route.ts</code></td>
+<td>Pont Azuria + 5 PNJ + badge Pionnier + badge Star.</td>
+</tr>
+<tr>
+<td><code>franss-joke</code></td>
+<td>Easter egg Franss.</td>
+</tr>
+<tr>
+<td><code>monstre/grant-amulette</code></td>
+<td>Cadeau Monstre.</td>
+</tr>
+<tr>
+<td><code>grass-sud-cutscene</code></td>
+<td>Cutscene grass_sud.</td>
+</tr>
+<tr>
+<td><code>nageur/defi</code></td>
+<td>Défi Nageur.</td>
+</tr>
+<tr>
+<td><code>painting/papa-boost</code></td>
+<td>Tableau papa tour.</td>
+</tr>
+</tbody>
+</table>
+<h4>Shops (3)</h4>
+<table>
+<thead>
+<tr>
+<th>Route</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>shop/buy</code></td>
+<td>Achat unifié pour 10 vendeurs (filtre par availableAt).</td>
+</tr>
+<tr>
+<td><code>shop/info</code></td>
+<td>Info contextuelle pour <code>lastShopPurchase</code>.</td>
+</tr>
+<tr>
+<td><code>take-fruit</code></td>
+<td>Cueillette arbres fruitiers (~10 types).</td>
+</tr>
+</tbody>
+</table>
+<h4>Inventaire (2)</h4>
+<table>
+<thead>
+<tr>
+<th>Route</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>inventory/use</code></td>
+<td>Use d’item (corned_pates, gourde, baskets, etc.).</td>
+</tr>
+<tr>
+<td><code>arrosoir/use</code></td>
+<td>Arrosoir → fait repousser fruit.</td>
+</tr>
+</tbody>
+</table>
+<h4>Casinos (8)</h4>
+<table>
+<thead>
+<tr>
+<th>Route</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>casino/bet</code> <code>casino/croupier-talk</code> <code>casino/coin-found</code></td>
+<td>Roulette Bourg/Pépite.</td>
+</tr>
+<tr>
+<td><code>casino/pattern-spin</code> <code>casino/pattern-vegas-spin</code></td>
+<td>Roulette pattern Muscuville/Vegas.</td>
+</tr>
+<tr>
+<td><code>casino/slot</code> <code>casino/cockfight</code> <code>casino/lotto-poule</code> <code>casino/stop</code></td>
+<td>Jeux Vegas additionnels.</td>
+</tr>
+</tbody>
+</table>
+<h4>Muscuville (4)</h4>
+<table>
+<thead>
+<tr>
+<th>Route</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>muscuville/champion</code></td>
+<td>4 champions (1ʳᵉ + revanche).</td>
+</tr>
+<tr>
+<td><code>muscuville/interpellator-talk</code></td>
+<td>Réceptionniste arène.</td>
+</tr>
+<tr>
+<td><code>muscuville/rocks-pay</code></td>
+<td>Rochers de sortie ouest (4000 reps modulés).</td>
+</tr>
+<tr>
+<td><code>veto-muscu/heal</code></td>
+<td>Vétérinaire Muscuville.</td>
+</tr>
+<tr>
+<td><code>biblio-muscu/talk</code></td>
+<td>Bibliothécaire (donne TreeBook).</td>
+</tr>
+<tr>
+<td><code>arena/fight</code></td>
+<td>Combat champion exo.</td>
+</tr>
+</tbody>
+</table>
+<h4>Macaron’île (3)</h4>
+<table>
+<thead>
+<tr>
+<th>Route</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>biblio/gift-tree-book</code></td>
+<td>Don du TreeBook (déplacé Muscuville).</td>
+</tr>
+<tr>
+<td><code>jardinier/talk</code> <code>jardinier/check</code></td>
+<td>BASILICO mission fruits.</td>
+</tr>
+<tr>
+<td><code>ornithologue/talk</code></td>
+<td>+50 reps si animal=oiseau.</td>
+</tr>
+</tbody>
+</table>
+<h4>Team Boulette (Vegas) (7)</h4>
+<table>
+<thead>
+<tr>
+<th>Route</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tb/videur</code> <code>tb/sbire</code> <code>tb/jamie</code> <code>tb/pesto</code> <code>tb/brute</code></td>
+<td>Sous-fifres.</td>
+</tr>
+<tr>
+<td><code>tb/validate-challenge</code></td>
+<td>Défis du bar.</td>
+</tr>
+<tr>
+<td><code>tb/boss</code></td>
+<td>Boss IL CAPO.</td>
+</tr>
+</tbody>
+</table>
+<h4>Divers (5)</h4>
+<table>
+<thead>
+<tr>
+<th>Route</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>water/attempt</code> <code>water/push</code> <code>water/jojo-push</code></td>
+<td>Canal coopératif.</td>
+</tr>
+<tr>
+<td><code>bestiole/encounter</code></td>
+<td>Hautes herbes du sud.</td>
+</tr>
+<tr>
+<td><code>tower/climb</code></td>
+<td>Tour des Pâtes Aiguës (gate exercices).</td>
+</tr>
+<tr>
+<td><code>tree/discover</code></td>
+<td>Découverte Pokédex arbres.</td>
+</tr>
+<tr>
+<td><code>team/captain-bonus</code></td>
+<td>Bonus capitaine d’équipe.</td>
+</tr>
+<tr>
+<td><code>contest/defi</code></td>
+<td>Défis intersalle Muscuville.</td>
+</tr>
+<tr>
+<td><code>luck/talk</code></td>
+<td>LINGUINI chance.</td>
+</tr>
+<tr>
+<td><code>hotel/sleep</code></td>
+<td>Hôtel Vegas.</td>
+</tr>
+<tr>
+<td><code>guigui/recharge</code></td>
+<td>Recharge GUIGUI (compte test).</td>
+</tr>
+</tbody>
+</table>
+<h3>2.3 Bibliothèques métier — <code>src/lib/gamebook/</code></h3>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th style="text-align:right">Lignes</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>engine.ts</code></td>
+<td style="text-align:right">218</td>
+<td>Logique de jeu pure (intro Monstre, transitions). À auditer pour clarifier vs mapEngine.</td>
+</tr>
+<tr>
+<td><code>mapEngine.ts</code></td>
+<td style="text-align:right">578</td>
+<td>Mouvement (<code>tryComputeMove</code>), tiles bloquantes, entrées bâtiments, <code>INTERIOR_ENTRY_POSITIONS</code>.</td>
+</tr>
+<tr>
+<td><code>maps.ts</code></td>
+<td style="text-align:right"><strong>2812</strong> ⚠️</td>
+<td>TOUTES les maps (32 maps construites in-code) + buildings + signs. Énorme monolithe.</td>
+</tr>
+<tr>
+<td><code>npcs.ts</code></td>
+<td style="text-align:right"><strong>2565</strong> ⚠️</td>
+<td>TOUS les NPCs (~80+). Données + dialogues + interactions. Difficile à maintenir.</td>
+</tr>
+<tr>
+<td><code>items.ts</code></td>
+<td style="text-align:right">1018</td>
+<td>Catalogue items + capabilities + filtres shops.</td>
+</tr>
+<tr>
+<td><code>inventory.ts</code></td>
+<td style="text-align:right">223</td>
+<td>Parse/add/remove/hasIntactItem. Pur.</td>
+</tr>
+<tr>
+<td><code>dialogue.ts</code></td>
+<td style="text-align:right">?</td>
+<td>Dialogues longs (cinématiques, monologues).</td>
+</tr>
+<tr>
+<td><code>daemon.ts</code></td>
+<td style="text-align:right">?</td>
+<td>Stats Daemon, formules XP, computeMaxHp, Saiyan.</td>
+</tr>
+<tr>
+<td><code>battleState.ts</code></td>
+<td style="text-align:right">?</td>
+<td>Transition combat (apply player action, status, vitesse).</td>
+</tr>
+<tr>
+<td><code>attacks.ts</code></td>
+<td style="text-align:right">?</td>
+<td>~30 attaques + STRUGGLE.</td>
+</tr>
+<tr>
+<td><code>combat.ts</code></td>
+<td style="text-align:right">?</td>
+<td>Formule dégâts Gen 1, types matchups 10×10.</td>
+</tr>
+<tr>
+<td><code>pastagoneTourNpcs.ts</code></td>
+<td style="text-align:right">175</td>
+<td>Pool 25 PNJ Tour de Garde.</td>
+</tr>
+<tr>
+<td><code>tamagotchi.ts</code></td>
+<td style="text-align:right">388</td>
+<td>Logique tamagotchi (display, défis, recovered).</td>
+</tr>
+<tr>
+<td><code>happinessChanges.ts</code></td>
+<td style="text-align:right">71</td>
+<td>Deltas happiness (decay, gains).</td>
+</tr>
+<tr>
+<td><code>energy.ts</code></td>
+<td style="text-align:right">137</td>
+<td>Calcul <code>availableEnergy</code> côté serveur.</td>
+</tr>
+<tr>
+<td><code>creator.ts</code></td>
+<td style="text-align:right">96</td>
+<td>Bootstrap auto compte créateur.</td>
+</tr>
+<tr>
+<td><code>antiCheat.ts</code></td>
+<td style="text-align:right">?</td>
+<td>Gel gamebook si suppression de reps.</td>
+</tr>
+<tr>
+<td><code>difficulty.ts</code></td>
+<td style="text-align:right">?</td>
+<td>Ratio onboarding (jeunes joueurs paient moins).</td>
+</tr>
+<tr>
+<td><code>ratio.ts</code></td>
+<td style="text-align:right">177</td>
+<td>Probablement applyRatio (rabais).</td>
+</tr>
+<tr>
+<td><code>userLevel.ts</code></td>
+<td style="text-align:right">97</td>
+<td>Map level XP global → niveau Pokémon.</td>
+</tr>
+<tr>
+<td><code>teams.ts</code></td>
+<td style="text-align:right">57</td>
+<td>Captain bonus, équipes.</td>
+</tr>
+<tr>
+<td><code>casino.ts</code> <code>casinoBoost.ts</code></td>
+<td style="text-align:right">?</td>
+<td>Calculs roulette + boost LINGUINI.</td>
+</tr>
+</tbody>
+</table>
+<h3>2.4 Configuration</h3>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>src/config/badges.ts</code></td>
+<td>11 badges Nexus (parmi tous les badges PushQuest).</td>
+</tr>
+<tr>
+<td><code>src/lib/xp.ts</code></td>
+<td>XP_ANIMALS (100 entrées level→emoji) + <code>getLevelDetails</code>.</td>
+</tr>
+<tr>
+<td><code>src/lib/challenge.ts</code></td>
+<td><code>getTodayISO</code>, daily target, ratios.</td>
+</tr>
+<tr>
+<td><code>src/lib/rewards.ts</code></td>
+<td>XP formulas globales (capture mensuelle).</td>
+</tr>
+</tbody>
+</table>
+<h3>2.5 Migrations Prisma — <code>prisma/migrations/</code></h3>
+<p>35 migrations au total, dont <strong>22 liées à Nexus</strong> (préfixe <code>*_v3_*</code> ou <code>*_v4_*</code>) :</p>
+<table>
+<thead>
+<tr>
+<th>Date</th>
+<th>Migration</th>
+<th>Sujet</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>20260520</td>
+<td>add_gamebook_progress</td>
+<td>Initial GamebookProgress</td>
+</tr>
+<tr>
+<td>20260521</td>
+<td>v3_map</td>
+<td>Champs map</td>
+</tr>
+<tr>
+<td>20260522</td>
+<td>v3_1_route1</td>
+<td>Route 1</td>
+</tr>
+<tr>
+<td>20260524</td>
+<td>v3_23c_conquerant / v3_23c2_contest_defis / v3_24a_teams / v3_24b_casino_pattern / v3_3_npcs</td>
+<td>Plusieurs ajouts simultanés</td>
+</tr>
+<tr>
+<td>20260525</td>
+<td>v3_23e_franss_joke / v3_23f_bonus_surplus / v3_23g_water_attempts / v3_23h_vet_first_visit / v3_4a_energy_spent</td>
+<td>Polish</td>
+</tr>
+<tr>
+<td>20260526</td>
+<td>v3_6_anti_cheat / v4_0_active_battle / v4_0_daemon_unlocked / v4_0_pending_stat_points / v4_pastagone_progress</td>
+<td>v4.0 day 1</td>
+</tr>
+<tr>
+<td>20260527</td>
+<td>v4_capolino_mid_fuite / v4_pullman_coulter</td>
+<td>v4.0 day 2</td>
+</tr>
+<tr>
+<td>20260528-20260608</td>
+<td>pepiteville / fruits_boots / tower / piaffini / water / tamagotchi / luck / polish / bestioles / casino / fast_travel</td>
+<td>Suite historique</td>
+</tr>
+</tbody>
+</table>
+<p>⚠️ <strong>Note</strong> : Les dates de migration <code>20260528+</code> ont des préfixes datés <strong>après</strong> les migrations <code>20260520-20260527</code>. C’est cohérent dans l’ordre alphabétique car le suffixe <code>vX_Y_*</code> ordonne par version logique, mais le format date suggère une réalité historique différente. À vérifier en phase 1.2.</p>
+<h3>2.6 Scripts utilitaires</h3>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>scripts/audit-doors.mjs</code></td>
+<td>Vérifie INTERIOR_ENTRY_POSITIONS + exitTargets vs tile walkability. Réutilisable.</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>3. Points d’entrée</h2>
+<h3>3.1 Route page Next.js</h3>
+<ul>
+<li><strong><code>/gamebook</code></strong> → <code>src/app/gamebook/page.tsx</code> → <code>&lt;GamebookClient&gt;</code> → <code>&lt;MapClient&gt;</code>.</li>
+</ul>
+<h3>3.2 Routes API consommées par MapClient (extraits)</h3>
+<ul>
+<li><code>GET /api/gamebook/state</code> — load au mount + refresh régulier.</li>
+<li><code>POST /api/gamebook/state</code> — chaque mouvement, chaque set de flag.</li>
+<li><code>GET /api/gamebook/players</code> — polling autres joueurs (~10s).</li>
+<li><code>POST /api/gamebook/broadcast</code> — events Pusher.</li>
+<li>~80 autres endpoints invoqués selon interaction (talk NPC, shopCounter, etc.).</li>
+</ul>
+<h3>3.3 Déclencheurs serveur-side</h3>
+<ul>
+<li><strong><code>ensureCreatorBootstrap</code></strong> (state route ligne 56) — auto-flag piaffini/swim/swim_set pour comptes isSystem.</li>
+<li><strong><code>ensureDaemonForTamagotchi</code></strong> (state route, via daemon.ts) — auto-création Daemon depuis tamagotchi Json.</li>
+<li><strong>Auto-set <code>vetFirstVisitLevel</code></strong> (state route ligne 117-135) — snapshot level à la 1ʳᵉ visite véto.</li>
+<li><strong>Tracking <code>totalGamebookSteps</code></strong> (state POST) — incrémenté à chaque mouvement.</li>
+<li><strong>Bootstrap badges PIAFFINI</strong> (state route ligne 95-110) — auto-création XpAdjustment + BadgeEvent post-rescue.</li>
+</ul>
+<h3>3.4 Real-time</h3>
+<ul>
+<li><strong>Pusher</strong> : event <code>cinematic:trigger</code>, broadcast position joueurs. Channel <code>gamebook-{userId}</code>.</li>
+</ul>
+<hr>
+<h2>4. Dépendances inter-modules</h2>
+<h3>4.1 Auth (next-auth)</h3>
+<ul>
+<li>Toutes les routes API : <code>getServerSession(authOptions)</code> + extraction <code>userId</code>.</li>
+<li>Pas de session = 401.</li>
+</ul>
+<h3>4.2 Énergie globale</h3>
+<ul>
+<li><strong>Source de vérité</strong> : <code>ExerciseSet</code> (table all-time) → <code>getTodayReps(userId)</code> somme PUSHUP+SQUAT+PLANK/5+autres.</li>
+<li><strong>Énergie dépensée</strong> : <code>GamebookProgress.energySpentToday</code> (reset minuit) + <code>bonusSurplus</code> (boost).</li>
+<li><strong>Énergie disponible</strong> : <code>max(0, todayReps - energySpentToday + bonusSurplus)</code>.</li>
+<li><strong>Padding créateur</strong> : <code>padAvailableEnergyForCreator()</code> impose floor 1000 reps.</li>
+<li><strong>Pas de transaction stricte</strong> entre <code>ExerciseSet.reps</code> et <code>GamebookProgress.energySpentToday</code>.</li>
+</ul>
+<h3>4.3 Badges / XP système global</h3>
+<ul>
+<li><code>BadgeEvent</code> (UNIQUE_AWARDED) → trigger recalc via lib/badges.ts.</li>
+<li><code>XpAdjustment</code> (table partagée avec tout PushQuest) — réaffichée dans timeline globale.</li>
+<li>11 badges Nexus déclarés (cf. audit XP précédent).</li>
+</ul>
+<h3>4.4 Catalogues partagés</h3>
+<ul>
+<li><code>XP_ANIMALS</code> (lib/xp.ts) — mapping level→animal utilisé partout (tamagotchi display, daemon emoji, cages véto).</li>
+<li><code>getUserLevelForGamebook</code> (lib/gamebook/userLevel.ts) — niveau Pokémon depuis XP global PushQuest.</li>
+</ul>
+<h3>4.5 Pusher (real-time)</h3>
+<ul>
+<li><code>lib/pusher-server.ts</code> + <code>lib/pusher-client.ts</code> (hors gamebook).</li>
+<li>Channel par utilisateur (broadcast cinematic).</li>
+</ul>
+<hr>
+<h2>5. Modèles Prisma utilisés par Nexus</h2>
+<h3>5.1 Modèles directs (4)</h3>
+<table>
+<thead>
+<tr>
+<th>Modèle</th>
+<th>Rôle</th>
+<th>Champs critiques</th>
+<th>Volume actuel (DB locale)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>GamebookProgress</strong></td>
+<td>Un row par user (composite userId+chapterId=“map_v3”). Position + 60+ flags narratifs + Json (tamagotchi, inventory, activeBattle).</td>
+<td>mapId/posX/posY, hasBag, tbBossBeaten, pastagone*, tamagotchi, inventory, activeBattle</td>
+<td>~7 rows</td>
+</tr>
+<tr>
+<td><strong>Daemon</strong></td>
+<td>1-N par user (slot 1-6 unique). Stats + bonheur + équipement + état combat.</td>
+<td>speciesLevel, type, combatLevel, baseFor…baseEnd, currentHp, happiness, unlockedAt, equippedItems, attacksKnown</td>
+<td>~3 rows</td>
+</tr>
+<tr>
+<td><strong>ExerciseSet</strong></td>
+<td>Toutes les reps encodées (PUSHUP/SQUAT/PLANK/PULLUP/etc.).</td>
+<td>exercise, reps, date, userId</td>
+<td>massif</td>
+</tr>
+<tr>
+<td><strong>XpAdjustment</strong></td>
+<td>Toutes les attributions d’XP.</td>
+<td>userId, amount, reason, date</td>
+<td>massif</td>
+</tr>
+</tbody>
+</table>
+<h3>5.2 Modèles satellites utilisés</h3>
+<table>
+<thead>
+<tr>
+<th>Modèle</th>
+<th>Lien Nexus</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>User</strong></td>
+<td>id, nickname, isSystem, isTester (gating créateur).</td>
+</tr>
+<tr>
+<td><strong>BadgeEvent</strong></td>
+<td>UNIQUE_AWARDED pour les 11 badges Nexus.</td>
+</tr>
+<tr>
+<td><strong>SpecialWorkoutEntry</strong></td>
+<td>Pas direct, mais WOD défis à la carte (mémoire séparée).</td>
+</tr>
+<tr>
+<td><strong>GlobalConfig</strong></td>
+<td><code>lastShopPurchase</code> (info contextuelle shop).</td>
+</tr>
+</tbody>
+</table>
+<h3>5.3 Modèles totalement hors-périmètre (mais coexistent)</h3>
+<p>FineRecord, MonthlyChallengeEntry, MedicalCertificate, PotEvent, Bet/BetEntry/BetEvent/BetEventLike/BetResult, CoinAdjustment, QuotaModifier, BadgeOwnership, BadgeDefinition, BadgeLike, BadgeEventLike, WallMessage, UserStatus, StatusLike.</p>
+<h3>5.4 Relations</h3>
+<ul>
+<li><code>User 1 → 1 GamebookProgress</code> (via composite (userId, chapterId)).</li>
+<li><code>User 1 → N Daemon</code> (slot unique par user).</li>
+<li><code>User 1 → N ExerciseSet</code>.</li>
+<li><code>User 1 → N XpAdjustment</code>.</li>
+<li><code>User 1 → N BadgeEvent</code> (toUserId).</li>
+</ul>
+<hr>
+<h2>6. Observations préliminaires (sans complaisance)</h2>
+<h3>6.1 🔴 Symptômes architecturaux préoccupants</h3>
+<ol>
+<li><strong><code>MapClient.tsx</code> à 5791 lignes</strong> = monolithe critique. Tout le client passe par là. Tout bug latent vivra ici. <strong>À fragmenter avant tout autre refactor</strong>.</li>
+<li><strong><code>maps.ts</code> à 2812 lignes</strong> = monolithe données. Toutes les maps construites in-code, pas de séparation.</li>
+<li><strong><code>npcs.ts</code> à 2565 lignes</strong> = même problème, ~80+ NPCs avec dialogues inline.</li>
+<li><strong>Combinaison MapClient + maps + npcs ≈ 11 000 lignes</strong> dans 3 fichiers. Le toucher = risque de régression sur l’ensemble du jeu.</li>
+</ol>
+<h3>6.2 🟠 Coexistence systèmes legacy/v4.0</h3>
+<ul>
+<li><code>tamagotchi</code> (Json sur GamebookProgress) ET <code>Daemon</code> (table relationnelle) cohabitent. L’auto-migration <code>ensureDaemonForTamagotchi</code> synchronise unilatéralement. <strong>Double source de vérité = bug possible.</strong></li>
+<li>2 routes <code>use-serum</code> : <code>tamagotchi/use-serum</code> (v3.24d sérum intelligence) et <code>daemon/use-serum</code> (v4.0 sérum Poussière). <strong>Confusion possible.</strong></li>
+</ul>
+<h3>6.3 🟠 Migrations à date incohérente</h3>
+<p>Les migrations <code>20260528_*</code> jusqu’à <code>20260608_*</code> ont des dates <strong>postérieures</strong> aux migrations <code>20260526_v4_*</code> et <code>20260527_v4_*</code> qui ajoutent des champs récents (Pastagone, Coulter). Or alphabétiquement, <code>20260528_pepiteville</code> s’applique APRÈS <code>20260527_v4_pullman_coulter</code>. Si on regarde la sémantique, Pépiteville est <em>plus ancien</em> dans le jeu. <strong>À auditer en phase 1.2 (database).</strong></p>
+<h3>6.4 🟡 Routes redondantes potentielles</h3>
+<ul>
+<li><code>grant-bag</code> vs cinematic pepitoBag : qui fait quoi ?</li>
+<li><code>tamagotchi/feed</code> vs <code>tamagotchi/feed-pates</code> : la première est-elle morte ?</li>
+<li><code>v3t/talk</code> désactivé de facto par le dernier commit (V3T NPC ouvre direct le modal) : à supprimer ou conserver ?</li>
+</ul>
+<h3>6.5 🟡 Trace narrative pas centralisée</h3>
+<p>Aucun fichier <code>flows.ts</code> ou <code>progression.ts</code> qui décrirait le parcours joueur. Le narratif est éparpillé : flags sur GamebookProgress, dialoguesAfterMacaronAwakened en NPC props, conditions inline dans MapClient. <strong>Difficile d’auditer la cohérence narrative sans tout lire.</strong></p>
+<h3>6.6 🟡 Pas de tests automatisés détectés</h3>
+<p>Aucun fichier <code>*.test.ts</code> ou <code>*.spec.ts</code> dans le périmètre Nexus. Tout repose sur le test manuel. Pour un module de cette complexité, c’est un risque élevé.</p>
+<h3>6.7 ⚪ Volumétrie données client</h3>
+<p>À chaque GET <code>/api/gamebook/state</code>, le serveur renvoie ~80 flags + inventory Json + tamagotchi Json + activeBattle Json. <strong>Aucune pagination, aucune normalisation, aucune compression.</strong> À considérer pour la performance mobile.</p>
+<hr>
+<h2>7. Statistiques globales</h2>
+<table>
+<thead>
+<tr>
+<th>Indicateur</th>
+<th>Valeur</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Composants UI</td>
+<td>36</td>
+</tr>
+<tr>
+<td>Routes API</td>
+<td>95</td>
+</tr>
+<tr>
+<td>Modules libs</td>
+<td>23</td>
+</tr>
+<tr>
+<td>Modales</td>
+<td>26 (sur 36 composants UI)</td>
+</tr>
+<tr>
+<td>Routes serveur tamagotchi (legacy)</td>
+<td>10</td>
+</tr>
+<tr>
+<td>Routes serveur Daemon (v4.0)</td>
+<td>14</td>
+</tr>
+<tr>
+<td>Routes Pastagone v4.0</td>
+<td>12</td>
+</tr>
+<tr>
+<td>Migrations Prisma Nexus</td>
+<td>22</td>
+</tr>
+<tr>
+<td>Maps construites</td>
+<td>32</td>
+</tr>
+<tr>
+<td>NPCs définis</td>
+<td>~80</td>
+</tr>
+<tr>
+<td>Items au catalogue</td>
+<td>~30</td>
+</tr>
+<tr>
+<td>Lignes totales périmètre Nexus</td>
+<td>~24 500</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>🛑 Fin de Phase 0</h2>
+<p>J’ai terminé MAP_APPLICATION.md. Pas de modification de code apportée.</p>
+<p><strong>Avant de passer à Phase 1.1 (AUDIT_01_CODE.md — Tech Lead / Audit Code &amp; Architecture)</strong>, dis-moi :</p>
+<ol>
+<li><strong>Valide-tu le périmètre</strong> (le module Nexus tel que cartographié, hors challenges quotidiens / classements / défis à la carte) ?</li>
+<li><strong>Faut-il que j’ouvre chaque lib individuellement</strong> pour préciser les rôles non clairs (engine.ts, dialogue.ts, daemon.ts, antiCheat.ts, etc.) avant d’attaquer l’audit code, ou tu fais confiance aux rôles inférés du nom ?</li>
+<li><strong>Question méthodo</strong> : pour l’audit code (phase 1.1), je vais devoir lire profondément les gros fichiers (MapClient 5791 lignes, maps 2812, npcs 2565). Tu préfères que je délègue cette lecture à un sous-agent <code>Explore</code> pour aller plus vite, ou je lis moi-même méthodiquement (plus lent mais plus précis) ?</li>
+</ol>
+<p>J’attends ton go pour démarrer Phase 1.1.</p>
+<p>&lt;div class=“pagebreak”&gt;&lt;/div&gt;</p>
+<p>&lt;a id=“02”&gt;&lt;/a&gt;</p>
+<p>Données collectées. Voici le rapport :</p>
+<hr>
+<h1>🧑‍💻 AUDIT_01_CODE.md — Tech Lead Silicon Valley QA</h1>
+<p><em>Phase 1.1 — Audit Code &amp; Architecture. Sans complaisance, sans modification de code.</em></p>
+<h2>0. Résumé exécutif</h2>
+<blockquote>
+<p>Le module Nexus tient debout par habitude et par chance, pas par design. La séparation client/serveur existe sur le papier mais le client est un god-component de 5791 lignes qui dépend de tout, et le serveur n’utilise <strong>aucune</strong> transaction Prisma sur 95 routes mutatives. La sécurité de typage est volontairement contournée 292 fois (<code>prisma as any</code>). Aucun test automatisé. Code mort identifié dans 9 endroits (1 lib + 8 routes), <code>engine.ts</code> à 218 lignes n’est référencé NULLE PART.</p>
+</blockquote>
+<p><strong>Verdict global</strong> : ⚠️ <strong>Dette technique majeure</strong>. Le code livre la valeur business demandée mais chaque ajout coûte exponentiellement plus cher. La prochaine refonte structurelle est non-optionnelle si la roadmap continue de s’étendre.</p>
+<hr>
+<h2>1. Indicateurs transverses (chiffres bruts)</h2>
+<table>
+<thead>
+<tr>
+<th>Métrique</th>
+<th style="text-align:right">Valeur</th>
+<th>Verdict</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>(prisma as any)</code> (bypass typage)</td>
+<td style="text-align:right"><strong>292</strong></td>
+<td>🔴 Massif</td>
+</tr>
+<tr>
+<td><code>as any</code> (autres casts)</td>
+<td style="text-align:right">10</td>
+<td>🟡 Marginal</td>
+</tr>
+<tr>
+<td>Casts structurels <code>as { ... }</code></td>
+<td style="text-align:right"><strong>592</strong></td>
+<td>🔴 Le typage explicite n’est pas utilisé</td>
+</tr>
+<tr>
+<td><code>console.warn/error/log</code></td>
+<td style="text-align:right">80</td>
+<td>🟡 OK pour debug, à logger structuré en prod</td>
+</tr>
+<tr>
+<td><code>catch { /* silent */ }</code></td>
+<td style="text-align:right"><strong>31</strong></td>
+<td>🟠 Bugs invisibles</td>
+</tr>
+<tr>
+<td><code>TODO/FIXME/HACK</code></td>
+<td style="text-align:right">0</td>
+<td>⚪ Bizarre (signe que personne ne note la dette)</td>
+</tr>
+<tr>
+<td>Transactions Prisma <code>$transaction</code></td>
+<td style="text-align:right"><strong>0</strong></td>
+<td>🔴 Aucune atomicité sur 95 routes mutatives</td>
+</tr>
+<tr>
+<td>AbortController côté client</td>
+<td style="text-align:right"><strong>0</strong></td>
+<td>🟠 Fetch fantômes possibles</td>
+</tr>
+<tr>
+<td>useEffect dans MapClient</td>
+<td style="text-align:right">11</td>
+<td>⚪</td>
+</tr>
+<tr>
+<td>useState dans MapClient</td>
+<td style="text-align:right"><strong>57</strong></td>
+<td>🔴 God component</td>
+</tr>
+<tr>
+<td><code>try { ... }</code> dans MapClient</td>
+<td style="text-align:right">88</td>
+<td>🔴 Idem</td>
+</tr>
+<tr>
+<td><code>fetch(&quot;/api/gamebook…&quot;)</code> dans MapClient</td>
+<td style="text-align:right">94</td>
+<td>🔴 Idem</td>
+</tr>
+<tr>
+<td><code>state.mapId === &quot;…&quot;</code> dans MapClient</td>
+<td style="text-align:right"><strong>85</strong></td>
+<td>🔴 Gating spaghetti</td>
+</tr>
+<tr>
+<td>Tests automatisés Nexus</td>
+<td style="text-align:right"><strong>0</strong></td>
+<td>🔴</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>2. Architecture globale — séparation des responsabilités</h2>
+<h3>2.1 🔴 Le god component : <code>MapClient.tsx</code></h3>
+<ul>
+<li><strong>5 791 lignes</strong> dans un seul composant React.</li>
+<li><strong>57 hooks <code>useState</code></strong> locaux → la moitié de l’état applicatif vit dans un seul composant.</li>
+<li><strong>94 appels <code>fetch</code></strong> vers 50+ routes différentes, mélangés inline dans des handlers JSX.</li>
+<li><strong>85 branches <code>state.mapId === &quot;…&quot;</code></strong> qui transforment ce composant en machine à états déguisée.</li>
+<li><strong>88 blocs <code>try</code></strong> dispersés, dont aucun avec stratégie de retry.</li>
+<li>Importe ~50 modules (modals, NPCs, items, map data).</li>
+</ul>
+<p><strong>Verdict</strong> : Ce composant viole <code>single-responsibility</code>, <code>open/closed</code>, et la moindre règle de cohésion. Toute modification non-triviale a un risque de régression imprévisible.</p>
+<p><strong>Recommandation</strong> : Découper en au minimum :</p>
+<ul>
+<li><code>useGamebookState()</code> — hook custom qui gère état joueur (position, énergie, flags) + sync serveur.</li>
+<li><code>useNpcInteraction()</code> — hook qui gère le <code>pressA</code> sur NPCs avec un router par <code>npcId</code>.</li>
+<li><code>useTileInteraction()</code> — hook qui gère le <code>pressA</code> sur tiles (shopCounter, doorMat, animalCage, etc.).</li>
+<li><code>useCinematicMachine()</code> — state machine dédiée aux cinématiques.</li>
+<li><code>useBattleFlow()</code> — gestion BattleModal + state activeBattle.</li>
+<li><code>&lt;MapRenderer&gt;</code> — composant pur de rendu de la grille et des sprites.</li>
+<li><code>&lt;ModalHost&gt;</code> — un seul host qui mount/unmount tous les modals selon état.</li>
+</ul>
+<h3>2.2 🟠 Confusion <code>engine.ts</code> vs <code>mapEngine.ts</code></h3>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th style="text-align:right">Lignes</th>
+<th>Rôle déclaré</th>
+<th>Rôle effectif</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>engine.ts</code></td>
+<td style="text-align:right">218</td>
+<td>“Moteur du Gamebook. Fonctions pures.”</td>
+<td><strong>Zéro importeur</strong>. Code mort intégral.</td>
+</tr>
+<tr>
+<td><code>mapEngine.ts</code></td>
+<td style="text-align:right">578</td>
+<td>Pas commenté</td>
+<td>Le VRAI moteur (tryComputeMove, isBlockingTile, INTERIOR_ENTRY_POSITIONS).</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>engine.ts</code> est référencé uniquement depuis <code>src/_archive/gamebook_progress_v2/progress/route.ts</code></strong> — du code explicitement archivé. C’est donc 218 lignes de code mort en <code>src/lib/gamebook/</code>.</p>
+<p><strong>Recommandation</strong> : supprimer <code>engine.ts</code> OU le renommer <code>_archive_engine.ts</code> si tu veux le garder par nostalgie.</p>
+<h3>2.3 🟠 Triple architecture des données de map</h3>
+<ul>
+<li><code>maps.ts</code> (2812 lignes) construit les tiles <strong>en code impératif</strong> via des <code>for</code> loops + assignements imperatifs.</li>
+<li><code>npcs.ts</code> (2565 lignes) déclare ~80 NPCs en <strong>objets littéraux inline</strong> avec dialogues hardcodés.</li>
+<li><code>dialogue.ts</code> contient encore d’autres dialogues longs séparés des NPCs.</li>
+</ul>
+<p>→ Pour ajouter un NPC, il faut toucher 1-3 fichiers, espérer ne pas casser le typage, et tester manuellement. Pas de schéma de données, pas de validation, pas de runtime check.</p>
+<p><strong>Recommandation</strong> : extraire les NPCs en JSON typé (<code>src/data/npcs/{map}.json</code>) + un loader qui valide via Zod au démarrage.</p>
+<h3>2.4 🔴 Aucun découpage logique côté serveur</h3>
+<ul>
+<li>95 routes API, chacune avec son fichier <code>route.ts</code> (Next.js App Router le force) — OK.</li>
+<li><strong>Mais</strong> : aucune couche service partagée. Chaque route reimplémente :
+<ul>
+<li>Auth check (<code>getServerSession + extraction userId</code>) — 95×.</li>
+<li>Lecture <code>GamebookProgress</code> — ~80×.</li>
+<li>Cast <code>prisma as any</code> — 292×.</li>
+<li>Logique métier mélangée avec persistence.</li>
+</ul>
+</li>
+</ul>
+<p><strong>Recommandation</strong> : créer <code>src/lib/gamebook/services/</code> avec :</p>
+<ul>
+<li><code>progressService.ts</code> — read/update GamebookProgress.</li>
+<li><code>energyService.ts</code> — calcul/débit/crédit énergie.</li>
+<li><code>daemonService.ts</code> — list/create/update daemons.</li>
+<li><code>inventoryService.ts</code> — déjà partiellement présent dans <code>inventory.ts</code> mais pas utilisé partout.</li>
+<li><code>xpService.ts</code> — création atomique de BadgeEvent + XpAdjustment.</li>
+</ul>
+<hr>
+<h2>3. Anti-patterns récurrents</h2>
+<h3>3.1 🔴 <code>(prisma as any)</code> × 292</h3>
+<p>Le typage Prisma est contourné systématiquement. Causes probables :</p>
+<ol>
+<li>Le client Prisma n’a pas été régénéré après chaque migration (cf. règle d’or memo : “EPERM Windows lock sur prisma generate”).</li>
+<li>Les nouveaux champs (Daemon, pastagone*, etc.) sont annotés mais le type généré ne reflète pas la DB.</li>
+<li>Mode “ça marche, on bouge”.</li>
+</ol>
+<p><strong>Conséquence concrète</strong> : aucune erreur de compilation si on tape un mauvais nom de champ (<code>pastagonneArrested</code> au lieu de <code>pastagoneArrested</code>). Le bug arrive en runtime.</p>
+<p><strong>Recommandation</strong> : forcer <code>prisma generate</code> après chaque migration via un hook <code>postinstall</code> ET supprimer <strong>tous</strong> les <code>as any</code> Prisma en 3 PR (par domaine).</p>
+<h3>3.2 🔴 Dynamic imports partout dans les routes API</h3>
+<pre><code class="language-ts">const { applyHappinessDelta, HAPPINESS_DELTAS } = await import(&quot;@/lib/gamebook/happinessChanges&quot;)
+</code></pre>
+<p>Pattern présent dans 20+ routes serveur. Justification présumée : éviter les cycles d’import OU lazy-load. En réalité :</p>
+<ul>
+<li>❌ Désactive le tree-shaking — tout est bundlé runtime.</li>
+<li>❌ Cache l’arbre de dépendances aux IDE → impossible de “find usages” en static.</li>
+<li>❌ Coût runtime à chaque appel de route (résolution module).</li>
+<li>✅ Le seul cas légitime serait éviter un cycle, mais aucun cycle réel n’est documenté.</li>
+</ul>
+<p><strong>Recommandation</strong> : convertir tous ces dynamic imports en imports statiques en haut du fichier. Si vrai cycle détecté → refactor.</p>
+<h3>3.3 🟠 31 <code>} catch { /* silent */ }</code></h3>
+<p>Catalogue des silent catches :</p>
+<pre><code>src/app/gamebook/MapClient.tsx              13 ✗
+src/app/gamebook/DaemonTeamModal.tsx         3 ✗
+src/app/gamebook/BattleModal.tsx             2 ✗
+src/app/gamebook/PastagoneCelluleModal.tsx   2 ✗
+... (10+ autres modals)
+</code></pre>
+<p>Pour chaque appel <code>fetch</code> qui échoue silencieusement, le joueur ne sait pas qu’il y a eu un problème (réseau, 500, 401 après expiration session). Le state local reste mais le serveur ne sait rien. Au prochain reload → divergence.</p>
+<p><strong>Recommandation</strong> : un wrapper <code>apiFetch(url, opts)</code> qui :</p>
+<ul>
+<li>Centralise headers/credentials.</li>
+<li>Catch 401 → redirect login.</li>
+<li>Catch 500 → toast “Erreur serveur, réessaie.”</li>
+<li>Catch network → toast “Erreur réseau.”</li>
+<li>Expose un log structuré.</li>
+</ul>
+<h3>3.4 🔴 Aucune transaction Prisma sur 95 routes mutatives</h3>
+<pre><code class="language-bash">$ grep -rln 'prisma\.\$transaction' src/app/api/gamebook
+# (vide)
+</code></pre>
+<p><strong>Exemples de routes qui devraient être atomiques mais ne le sont pas</strong> :</p>
+<ul>
+<li><code>/api/gamebook/shop/buy</code> : débit energySpent + write inventory + write totalShopSpend → 3 writes séparés.</li>
+<li><code>/api/gamebook/mont/summit-reached</code> : badgeEvent + xpAdjustment + GamebookProgress.update → 3 writes.</li>
+<li><code>/api/gamebook/pastagone/orphan-choose</code> : daemon.create + gamebookProgress.update → 2 writes.</li>
+<li><code>/api/gamebook/daemon/battle/action</code> : daemon.update + gamebookProgress.update → 2 writes.</li>
+</ul>
+<p><strong>Conséquence concrète</strong> : si la première écriture réussit et la seconde échoue (Neon timeout, lock, deadlock), le joueur a l’XP sans le badge OU le daemon sans le slot mis à jour. Récupération manuelle obligatoire.</p>
+<p><strong>Recommandation</strong> : wrapper toutes les routes multi-write dans <code>prisma.$transaction()</code>. Coût trivial vs bénéfice critique.</p>
+<h3>3.5 🟠 useEffect avec deps incomplètes</h3>
+<p>Repéré dans MapClient (11 useEffect, plusieurs avec <code>[]</code> ou deps minimales alors que le hook utilise des state externes). Exemple flagrant :</p>
+<pre><code class="language-ts">useEffect(() =&gt; { ; (async () =&gt; {
+    await refresh()
+    setLoading(false)
+})() }, [])
+</code></pre>
+<p>Dans <code>DaemonTeamModal.tsx</code> : <code>refresh()</code> capture <code>focused</code> dans sa closure mais l’effect a <code>[]</code> comme deps. Si <code>focused</code> change, la version de <code>refresh</code> utilisée reste l’initiale. Fonctionnellement OK ici (l’utilisateur clique pour set focused, qui re-render et re-attache). Mais c’est fragile.</p>
+<p><strong>Recommandation</strong> : activer <code>eslint-plugin-react-hooks</code> avec règle <code>exhaustive-deps</code> en error.</p>
+<h3>3.6 🟠 Conditions inline gating (85 occurrences)</h3>
+<pre><code class="language-ts">if (state.mapId === &quot;veterinaire&quot; &amp;&amp; tile === &quot;shopCounter&quot;) { setShowTamagotchi(true); return }
+if (state.mapId === &quot;pastagone_cuisine&quot; &amp;&amp; tile === &quot;foodBag&quot;) { ... }
+if (state.mapId === &quot;vegas_shoptower_1&quot; || state.mapId === &quot;vegas_shoptower_2&quot; ...
+</code></pre>
+<p>Le <code>pressA</code> de MapClient est devenu un router de 600+ lignes avec ~85 conditions de gating. Ajouter une interaction nouvelle = trouver le bon endroit dans la chaîne, espérer ne pas casser une priorité existante.</p>
+<p><strong>Recommandation</strong> : table de routing <code>(mapId, tile|npcId) → handler</code> extraite. Permet ajout déclaratif sans toucher le god component.</p>
+<hr>
+<h2>4. Code mort, dupliqué, ou inutilisé</h2>
+<h3>4.1 🔴 <code>engine.ts</code> — 218 lignes mortes</h3>
+<p>0 importeur (sauf <code>_archive/</code>). À supprimer.</p>
+<h3>4.2 🔴 8 routes API zéro consumer client</h3>
+<table>
+<thead>
+<tr>
+<th>Route</th>
+<th>Statut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>biblio/gift-tree-book</code></td>
+<td>0 client. Probablement remplacée par <code>tree-book</code> à Muscuville.</td>
+</tr>
+<tr>
+<td><code>daemon/equip-item</code> / <code>daemon/unequip-item</code></td>
+<td>0 client. Routes créées mais aucune UI ne les appelle.</td>
+</tr>
+<tr>
+<td><code>daemon/heal</code></td>
+<td>0 client. Route présente, jamais appelée.</td>
+</tr>
+<tr>
+<td><code>muscuville/interpellator-talk</code></td>
+<td>0 client. Code mort ?</td>
+</tr>
+<tr>
+<td><code>pusher-auth</code></td>
+<td>0 client direct (peut être appelée par lib <code>pusher-client</code> côté Pusher SDK). À valider.</td>
+</tr>
+<tr>
+<td><code>tamagotchi/use-serum</code></td>
+<td>0 client. Doublon avec <code>daemon/use-serum</code> ?</td>
+</tr>
+<tr>
+<td><code>v3t/talk</code></td>
+<td>0 client. Dernier commit a désactivé l’appel. À supprimer.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Recommandation</strong> : pour chaque route, soit la connecter à une UI, soit la supprimer. Le placebo “ça pourrait servir” coûte plus que ça ne rapporte.</p>
+<h3>4.3 🟠 Routes redondantes / doublons</h3>
+<table>
+<thead>
+<tr>
+<th>Route #1</th>
+<th>Route #2</th>
+<th>Verdict</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tamagotchi/feed</code></td>
+<td><code>tamagotchi/feed-pates</code></td>
+<td>feed est probablement obsolète.</td>
+</tr>
+<tr>
+<td><code>tamagotchi/use-serum</code> (v3.24d sérum intelligence)</td>
+<td><code>daemon/use-serum</code> (v4.0 sérum Poussière)</td>
+<td>Confusion sémantique forte. À renommer/supprimer.</td>
+</tr>
+<tr>
+<td><code>grant-bag</code></td>
+<td><code>setCinematic(&quot;pepitoBag&quot;)</code> côté client</td>
+<td>Qui de l’API ou du cinematic effectue le grant ? À tracer.</td>
+</tr>
+</tbody>
+</table>
+<h3>4.4 🟡 Dossier <code>_archive/</code> dans <code>src/</code></h3>
+<pre><code>src/_archive/gamebook_progress_v2/progress/route.ts
+src/_archive/sanctuaire_v1/fsm_dialogue.json
+src/_archive/sanctuaire_v1/GamebookClient.tsx
+src/_archive/sanctuaire_v1/page.tsx
+src/_archive/sanctuaire_v1/SanctuaireTab.tsx
+</code></pre>
+<p>Le code mort archivé pollue les recherches grep/IDE. <strong>Recommandation</strong> : déplacer hors de <code>src/</code> (par exemple <code>archive/</code>) ou supprimer (git history le conserve).</p>
+<h3>4.5 🟡 Pattern dupliqué : “battle setup”</h3>
+<p><code>/api/gamebook/daemon/battle/start</code>, <code>/api/gamebook/pastagone/tour-battle</code>, <code>/api/gamebook/pastagone/coulter-battle</code>, <code>/api/gamebook/pastagone/capolino-mid-battle</code>, <code>/api/gamebook/pastagone/boss-battle</code> : 5 routes qui font toutes la même chose (lire leader, calculer effective stats avec snapshot wearables, créer BattleState).</p>
+<p><strong>~80 lignes dupliquées par fichier × 5 = 400 lignes dupliquées</strong>.</p>
+<p><strong>Recommandation</strong> : extraire un helper <code>buildBattleStart(userId, enemyDescriptor) → BattleState</code>.</p>
+<hr>
+<h2>5. Gestion d’erreurs &amp; cas limites</h2>
+<h3>5.1 🟠 Pas de retry, pas d’abort, pas de timeout</h3>
+<ul>
+<li><strong>0 AbortController</strong> côté client → fetch en cours pendant qu’on navigue ou ferme un modal continue à muter le state local après unmount → warnings React + race conditions.</li>
+<li>Pas de retry sur les routes critiques (battle action, shop buy).</li>
+<li>Pas de timeout explicite (le runtime Vercel a son propre timeout).</li>
+</ul>
+<h3>5.2 🟠 Validation d’entrée serveur inégale</h3>
+<p>Échantillon de routes :</p>
+<table>
+<thead>
+<tr>
+<th>Route</th>
+<th>Validation body</th>
+<th>Verdict</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/state</code> POST</td>
+<td>Inputs validés (mapId in list, posX/posY 0-30, direction in list)</td>
+<td>✅</td>
+</tr>
+<tr>
+<td><code>/shop/buy</code></td>
+<td><code>itemKey</code> string check</td>
+<td>🟡 Pas de check explicite que l’item est buyable.</td>
+</tr>
+<tr>
+<td><code>/daemon/battle/action</code></td>
+<td><code>body.action.kind</code> check</td>
+<td>🟡 Pas de schéma global, juste switch.</td>
+</tr>
+<tr>
+<td><code>/pastagone/orphan-choose</code></td>
+<td><code>orphan</code> in dict</td>
+<td>✅</td>
+</tr>
+<tr>
+<td><code>/daemon/allocate-points</code></td>
+<td>Allocation parsée via clampInt</td>
+<td>✅</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Recommandation</strong> : un schema Zod par route, validation strict en début de handler. Sortie type-safe.</p>
+<h3>5.3 🟠 Null safety à la louche</h3>
+<pre><code class="language-ts">const userRow = await (prisma as any).user.findUnique({...})
+const isCreator = userRow?.isSystem === true   // ✅ optional chaining OK
+// ...
+const tam = p.tamagotchi as { name?: string; currentLevel?: number; ... }
+if (!tam.name || typeof tam.currentLevel !== &quot;number&quot;) return  // ✅
+</code></pre>
+<p>Mais ailleurs (MapClient) :</p>
+<pre><code class="language-ts">const npcInFront = npcsWithPos.find(...)
+if (npcInFront) { ... const npcId = npcInFront.npc.id  // 🟡 npc.id non-typé garanti
+</code></pre>
+<p>Et :</p>
+<pre><code class="language-ts">const tile = map.tiles[ny][nx]   // 🟠 si y/x hors map → exception runtime
+</code></pre>
+<p><code>tryComputeMove</code> valide les bounds en amont, donc OK ici. Mais ailleurs dans MapClient (les overrides), pas toujours.</p>
+<h3>5.4 🔴 État local non-synchronisé serveur</h3>
+<p>Pattern observé :</p>
+<pre><code class="language-ts">setState((s) =&gt; ({ ...s, pastagoneEscaped: true }))
+// PUIS plus tard : POST /state qui ne renvoie pas pastagoneEscaped
+</code></pre>
+<p>Le client met à jour son state localement <em>avant</em> que le serveur ait confirmé. Si le serveur 500, l’état local est divergent. Récupéré uniquement à la prochaine GET <code>/state</code> complète.</p>
+<p><strong>Risque</strong> : un utilisateur qui ferme l’app pendant que son <code>pastagoneEscaped=true</code> local est en attente de sync server perd la cohérence.</p>
+<hr>
+<h2>6. Performance</h2>
+<h3>6.1 🟠 GET <code>/api/gamebook/state</code> retourne tout</h3>
+<p>Réponse type :</p>
+<ul>
+<li><code>state</code> (80+ champs flat, incluant Json tamagotchi + Json activeBattle + Json inventory + Json visitedTowns)</li>
+<li><code>todayReps</code>, <code>energySpentToday</code>, <code>bonusSurplus</code>, <code>availableEnergy</code></li>
+<li><code>frozen</code>, <code>frozenUntil</code>, <code>inventory</code>, <code>hasBag</code>, <code>fruitsTaken</code>, <code>towerFloorReached</code>, <code>difficultyRatio</code></li>
+<li><code>tamagotchi</code> (Json reformaté)</li>
+<li><code>isCreator</code></li>
+</ul>
+<p>→ <strong>~5-15 KB par appel</strong>, appelé au mount, après chaque mouvement (POST + GET refresh), et à la fermeture des modals. Mobile en 3G : douloureux.</p>
+<p><strong>Recommandation</strong> :</p>
+<ul>
+<li>Séparer endpoints : <code>/state/position</code> (rapide, juste mapId+pos+direction), <code>/state/full</code> (au mount uniquement).</li>
+<li>Cache client (SWR/React Query) avec invalidation ciblée.</li>
+</ul>
+<h3>6.2 🟠 Pas de cache <code>/players</code></h3>
+<p><code>/api/gamebook/players</code> est polled (~10s) pour afficher autres joueurs visibles. Aucun cache HTTP, aucun cache mémoire, aucun stale-while-revalidate.</p>
+<h3>6.3 🟡 Maps construites à chaque import</h3>
+<p><code>maps.ts</code> construit les 32 maps à l’import via fonctions <code>buildXxx()</code>. C’est OK car module-level (1 fois par worker), mais ça gonfle le cold start serverless.</p>
+<p><strong>Recommandation</strong> : sérialiser une fois en JSON statique.</p>
+<hr>
+<h2>7. Dette technique récapitulée</h2>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Sévérité</th>
+<th>Impact effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Aucun test automatisé Nexus</td>
+<td>🔴</td>
+<td>Régression invisible à chaque commit</td>
+</tr>
+<tr>
+<td>God component MapClient</td>
+<td>🔴</td>
+<td>Toute évolution = risque cascade</td>
+</tr>
+<tr>
+<td><code>(prisma as any)</code> × 292</td>
+<td>🔴</td>
+<td>Bug typage en runtime</td>
+</tr>
+<tr>
+<td>0 transaction Prisma</td>
+<td>🔴</td>
+<td>Corruptions partielles possibles</td>
+</tr>
+<tr>
+<td>Silent catches × 31</td>
+<td>🟠</td>
+<td>Bugs invisibles</td>
+</tr>
+<tr>
+<td>Dynamic imports systématiques</td>
+<td>🟠</td>
+<td>Tree-shaking off, perf cold start</td>
+</tr>
+<tr>
+<td>Code mort (engine + 8 routes)</td>
+<td>🟠</td>
+<td>Pollution / confusion</td>
+</tr>
+<tr>
+<td><code>_archive/</code> dans <code>src/</code></td>
+<td>🟡</td>
+<td>Pollution recherches</td>
+</tr>
+<tr>
+<td>Pas de schema validation Zod</td>
+<td>🟠</td>
+<td>Validation manuelle inégale</td>
+</tr>
+<tr>
+<td>Pas d’AbortController client</td>
+<td>🟡</td>
+<td>Memory leaks possibles</td>
+</tr>
+<tr>
+<td>5 routes battle/setup dupliquées</td>
+<td>🟡</td>
+<td>400 lignes dupliquées</td>
+</tr>
+<tr>
+<td>Pas de retry strategy fetch</td>
+<td>🟡</td>
+<td>UX dégradée sur réseau instable</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>8. Top 10 bombes à désamorcer (prio Tech Lead)</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Bombe</th>
+<th>Effort</th>
+<th>Impact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Ajouter <code>prisma.$transaction()</code> sur les 10 routes les plus mutatives</td>
+<td>M</td>
+<td>🔴</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Wrapper <code>apiFetch</code> centralisé + retry + abort</td>
+<td>M</td>
+<td>🔴</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Découper MapClient en 6-8 hooks customs + ModalHost</td>
+<td>L</td>
+<td>🔴</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>prisma generate</code> enforced post-migration + suppression des <code>(prisma as any)</code></td>
+<td>M</td>
+<td>🔴</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Schema validation Zod sur les 20 routes critiques</td>
+<td>M</td>
+<td>🟠</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Test E2E sur le golden path (Bourg → Macaron → Pastagone)</td>
+<td>L</td>
+<td>🔴</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Supprimer <code>engine.ts</code> + 8 routes mortes + <code>_archive/src/</code></td>
+<td>S</td>
+<td>🟠</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Convertir dynamic imports en static imports</td>
+<td>S</td>
+<td>🟠</td>
+</tr>
+<tr>
+<td>9</td>
+<td><code>eslint-plugin-react-hooks</code> exhaustive-deps en error</td>
+<td>S</td>
+<td>🟠</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Snapshot <code>maps.ts</code> en JSON statique pré-build</td>
+<td>M</td>
+<td>🟡</td>
+</tr>
+</tbody>
+</table>
+<p>S = small (&lt; 1 jour), M = medium (1-3 jours), L = large (1-2 semaines).</p>
+<hr>
+<h2>9. Notes pour les phases suivantes</h2>
+<ul>
+<li><strong>Phase 1.2 (DB)</strong> doit creuser l’absence de transactions, le timing des migrations (<code>20260528_*</code> dates incohérentes), et les race conditions XP/énergie.</li>
+<li><strong>Phase 1.4 (Narratif)</strong> doit lister tous les flags de progression pour cartographier les flows.</li>
+<li><strong>Phase 1.6 (QA)</strong> doit ouvrir une issue pour chaque silent catch + chaque route morte.</li>
+<li><strong>Phase 1.7 (Conformité)</strong> doit tracer chaque <code>as any</code> à la consigne d’origine — combien sont des contournements documentés vs des paresses.</li>
+<li>Ce que je n’ai PAS audité ici (volontairement, c’est ailleurs) :
+<ul>
+<li>Les schémas Prisma eux-mêmes (Phase 1.2).</li>
+<li>Les flows narratifs end-to-end (Phase 1.4).</li>
+<li>Les bugs visuels (Phase 1.5).</li>
+<li>La conformité aux consignes (Phase 1.7).</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2>🛑 Fin de Phase 1.1 — AUDIT_01_CODE.md</h2>
+<p>Pas une ligne de code modifiée. Aucune correction appliquée.</p>
+<p><strong>Auto Mode actif</strong> → j’enchaîne sur Phase 1.2 (AUDIT_02_DATABASE.md — Database Admin) dans la réponse suivante.</p>
+<p>Si tu veux que je marque une pause et que tu valides avant Phase 1.2, dis “stop”. Sinon je continue.</p>
+<p>&lt;div class=“pagebreak”&gt;&lt;/div&gt;</p>
+<p>&lt;a id=“03”&gt;&lt;/a&gt;</p>
+<p>Données complètes. Je rédige le rapport.</p>
+<hr>
+<h1>AUDIT_02_DATABASE.md — Administrateur Base de Données</h1>
+<blockquote>
+<p><strong>Périmètre</strong> : Nexus / Gamebook subsystem<br>
+<strong>Branche</strong> : <code>feat/gamification-pass-2</code> (HEAD <code>6f0bb65</code>)<br>
+<strong>Date</strong> : 2026-05-27<br>
+<strong>Posture</strong> : Sans complaisance<br>
+<strong>Critères</strong> : 🔴 Bloquant prod • 🟠 Critique • 🟡 Moyen • ⚪ Mineur</p>
+</blockquote>
+<hr>
+<h2>1. Vue d’ensemble — Inventaire schéma</h2>
+<table>
+<thead>
+<tr>
+<th>Métrique</th>
+<th>Valeur</th>
+<th>Verdict</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Modèles Prisma déclarés</td>
+<td>26</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Tables effectivement créées par migrations</td>
+<td>12</td>
+<td>🔴 14 modèles fantômes</td>
+</tr>
+<tr>
+<td>Champs sur <code>GamebookProgress</code></td>
+<td><strong>130</strong></td>
+<td>🔴 God-table</td>
+</tr>
+<tr>
+<td>Champs sur <code>Daemon</code></td>
+<td>40</td>
+<td>🟠 Trop large</td>
+</tr>
+<tr>
+<td>Migrations totales</td>
+<td>34</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>prisma.$transaction</code> dans gamebook</td>
+<td><strong>0</strong></td>
+<td>🔴 Aucune atomicité</td>
+</tr>
+<tr>
+<td><code>FOR UPDATE</code> / <code>pg_advisory_lock</code></td>
+<td><strong>0</strong></td>
+<td>🔴 Aucun verrouillage</td>
+</tr>
+<tr>
+<td>Routes mutant <code>energySpentToday</code> sans tx</td>
+<td><strong>31</strong></td>
+<td>🔴 Race condition systémique</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>2. Cohérence schéma Prisma</h2>
+<h3>2.1 🔴 God-table <code>GamebookProgress</code> (130 champs)</h3>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Count</th>
+<th>Exemples</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Boolean</code></td>
+<td>42</td>
+<td><code>hasBag</code>, <code>treeObstacleCleared</code>, <code>piaffiniRescued</code>, <code>pastagoneBossBeaten</code></td>
+</tr>
+<tr>
+<td><code>Json</code> / <code>Json?</code></td>
+<td>24</td>
+<td><code>flags</code>, <code>history</code>, <code>inventory</code>, <code>tamagotchi</code>, <code>activeBattle</code>, <code>pastagoneCuisinePuzzle</code></td>
+</tr>
+<tr>
+<td><code>String</code> / <code>String?</code></td>
+<td>27</td>
+<td><code>mapId</code>, <code>phase</code>, <code>videurState</code>, <code>casinoBetsDate</code></td>
+</tr>
+<tr>
+<td><code>Int</code> / <code>Int?</code></td>
+<td>22</td>
+<td><code>posX</code>, <code>posY</code>, <code>energySpentToday</code>, <code>luck</code>, <code>bonusSurplus</code></td>
+</tr>
+<tr>
+<td><code>DateTime</code> / <code>DateTime?</code></td>
+<td>11</td>
+<td><code>createdAt</code>, <code>lastSeen</code>, <code>gamebookFrozenUntil</code>, <code>pastagoneInterrogStart</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Diagnostic</strong> : Anti-pattern « Single Massive Save Object ». Chaque interaction joueur (déplacement, achat, dialogue, combat) déclenche un <code>update</code> de <strong>tous les champs concernés</strong> sur une ligne unique par utilisateur. Le payload moyen d’un round-trip dépasse 8 KB. Impossible à partitionner, impossible à archiver, impossible à indexer finement.</p>
+<p><strong>Conséquences concrètes</strong> :</p>
+<ul>
+<li>Verrouillage pessimiste implicite : chaque écriture verrouille toute la ligne, donc toute concurrence sur le même <code>userId</code> se sérialise → latence montre quand le joueur poste plusieurs actions rapprochées.</li>
+<li>L’absence d’index secondaires sur les 42 booléens force des full-scans pour toute statistique ad-hoc (« combien de joueurs ont sauvé PIAFFINI ? »).</li>
+<li>Aucune séparation domaine : casino, combat, narration, inventaire, daemon, économie cohabitent dans la même ligne.</li>
+</ul>
+<h3>2.2 🟠 Anti-pattern « Date stockée en String »</h3>
+<p>Onze champs nommés <code>*Date</code> typés <code>String</code> au lieu de <code>DateTime</code> :</p>
+<pre><code>casinoBetsDate, lastLuckTalkDate, lottoPouleDate, stopOuEncoreDate,
+cockfightDate, slotMachinesDate, casinoBoostDate, lastArenaDate,
+vetoMuscuLastVisitDate, lastDailyDecayDate, happyFlowerLastDate,
+lastHotelSleepDate, energySpentDate
+</code></pre>
+<p>Format attendu : <code>YYYY-MM-DD</code> (TZ Europe/Paris).<br>
+<strong>Risques</strong> :</p>
+<ul>
+<li>Toute comparaison se fait lexicographiquement — fonctionne pour ISO mais casse au moindre format alternatif.</li>
+<li>Impossible d’utiliser les opérateurs Prisma <code>gte</code>/<code>lt</code> avec sémantique calendaire (fuseaux, été/hiver).</li>
+<li>Migrations multi-pays impossibles sans rewrite.</li>
+</ul>
+<h3>2.3 🔴 14 modèles déclarés mais jamais migrés (schema drift)</h3>
+<p>Les <code>CREATE TABLE</code> dans <code>prisma/migrations/*/migration.sql</code> couvrent <strong>12 tables</strong> seulement :</p>
+<pre><code>✅ User, BadgeDefinition, BadgeEvent, BadgeEventLike, BadgeOwnership,
+   ExerciseSet, FineRecord, GamebookProgress, MedicalCertificate,
+   MonthlyChallengeEntry, PotEvent, WallMessage
+</code></pre>
+<p><strong>Manquants</strong> (déclarés <code>model X { ... }</code> mais aucun <code>CREATE TABLE</code>) :</p>
+<pre><code>❌ Daemon
+❌ GlobalConfig
+❌ BadgeLike
+❌ UserStatus
+❌ StatusLike
+❌ XpAdjustment
+❌ SpecialWorkoutEntry
+❌ Bet, BetEntry, BetEvent, BetEventLike, BetResult
+❌ CoinAdjustment
+❌ QuotaModifier
+</code></pre>
+<p><strong>Diagnostic</strong> : Le schéma de production a été synchronisé via <code>prisma db push</code> (sync direct, sans génération de migration) plutôt que <code>prisma migrate dev</code>. Conséquences :</p>
+<ul>
+<li>Tout clonage du repo échouera à recréer la prod avec <code>prisma migrate deploy</code>.</li>
+<li>Aucune trace d’historique pour ces tables : impossible de rollback, impossible d’auditer l’évolution des contraintes.</li>
+<li>Le <code>migration_lock.toml</code> ment sur l’état réel.</li>
+</ul>
+<p><strong>Cas le plus critique : <code>Daemon</code></strong> — 40 colonnes, FK vers <code>User</code>, contient les statpoints, l’XP, l’équipement et l’objet <code>activeBattle</code>. C’est la <strong>seconde table la plus critique du Nexus</strong>, et elle n’a pas de migration. Si la prod est cassée demain, la recréation passe par un <code>db push</code> manuel.</p>
+<h3>2.4 ⚪ Index présents</h3>
+<table>
+<thead>
+<tr>
+<th>Table</th>
+<th>Index</th>
+<th>Coverage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GamebookProgress</code></td>
+<td><code>@@unique([userId, chapterId])</code>, <code>@@index([userId])</code>, <code>@@index([mapId])</code>, <code>@@index([lastSeen Desc])</code></td>
+<td>Correct pour les requêtes connues</td>
+</tr>
+<tr>
+<td><code>Daemon</code></td>
+<td><code>@@unique([userId, slotIndex])</code>, <code>@@index([userId])</code></td>
+<td>Correct</td>
+</tr>
+</tbody>
+</table>
+<p>Bonne nouvelle : aucun manque d’index sur les hot paths. <strong>Mais</strong> aucun index partiel sur les 42 booléens, ce qui rendra coûteuse toute future analytics (« qui a fini Pastagone ? »).</p>
+<h3>2.5 🟡 Intégrité référentielle</h3>
+<p>Toutes les FK vers <code>User</code> ont <code>onDelete: Cascade</code>. Cohérent avec la suppression RGPD. <strong>Mais</strong> :</p>
+<ul>
+<li>Aucune FK sortante de <code>Daemon</code> ou <code>GamebookProgress</code> vers des tables de définition (ex. <code>BadgeDefinition</code> pour les badges débloqués). Tous les <code>badgeKey</code> sont des <strong>strings libres</strong>. → Impossible de garantir qu’un badge cité dans le payload existe réellement.</li>
+<li>Le champ <code>chapterId</code> est un string libre. Aucune table <code>Chapter</code> pour le contraindre.</li>
+</ul>
+<hr>
+<h2>3. État des migrations</h2>
+<h3>3.1 🔴 Désordre chronologique entre nommage et sémantique</h3>
+<p>Migrations triées alphabétiquement (= ordre d’exécution Prisma) :</p>
+<pre><code>20260524_pushquest_v3_3_npcs
+20260525_pushquest_v3_4a_energy_spent
+20260526_pushquest_v3_6_anti_cheat
+20260526_pushquest_v4_0_active_battle          ← v4.0 ici
+20260526_pushquest_v4_0_daemon_unlocked
+20260526_pushquest_v4_0_pending_stat_points
+20260526_pushquest_v4_pastagone_progress
+20260527_pushquest_v4_capolino_mid_fuite
+20260527_pushquest_v4_pullman_coulter
+20260528_pushquest_v3_8_pepiteville            ← v3.8 APRÈS v4.0 ?!
+20260529_pushquest_v3_8_1_fruits_boots
+20260530_pushquest_v3_8_2_tower
+20260601_pushquest_v3_11_piaffini
+20260602_pushquest_v3_12_water
+20260603_pushquest_v3_14_tamagotchi
+20260604_pushquest_v3_17_luck
+20260605_pushquest_v3_17c_polish
+20260606_pushquest_v3_19b_bestioles
+20260607_pushquest_v3_21_casino
+20260608_pushquest_v3_22_fast_travel
+</code></pre>
+<p><strong>Diagnostic</strong> : Les versions sémantiques (v3.8, v3.11, …, v3.22) ont été créées <strong>après</strong> v4.0. Le timestamp de nommage reflète la date d’écriture, pas l’ordre d’arc narratif. C’est légitime sur le papier — mais ça produit deux problèmes :</p>
+<ol>
+<li><strong>Risque de conflit sur colonnes</strong> : si v3.8 ajoute <code>pepitevilleArrived</code> et v4.0 a déjà altéré la même table, l’ALTER s’enchaîne dans un ordre incohérent avec le code qui les a introduits.</li>
+<li><strong>Lecture humaine impossible</strong> : impossible de reconstituer chronologiquement « quand on a livré quoi » à partir du dossier <code>migrations/</code>.</li>
+</ol>
+<p><strong>À vérifier (centralisé dans Phase 1.8)</strong> : la prod a-t-elle appliqué les migrations dans cet ordre alphabétique, ou un ordre fourni à la main ? Si Vercel a déclenché <code>migrate deploy</code> à chaque push, c’est l’ordre alphabétique qui s’applique → les utilisateurs prod ont vécu une « v4.0 active_battle » avant la « v3.8 pepiteville ».</p>
+<h3>3.2 🟡 Migrations purement additives — Bon point</h3>
+<p>Toutes les migrations Nexus sont des <code>ALTER TABLE ... ADD COLUMN</code> avec <code>DEFAULT</code>. Aucun <code>DROP COLUMN</code>, aucun <code>RENAME</code>, aucun <code>ALTER TYPE</code>. ✅ Cohérent avec la règle d’or énoncée par Sartay (« migrations additives only »).</p>
+<h3>3.3 🔴 Migrations qui exécutent du code sur table inexistante (couplé à 2.3)</h3>
+<p>Plusieurs migrations effectuent des <code>ALTER TABLE &quot;Daemon&quot; ADD COLUMN ...</code> alors que la table <code>Daemon</code> <strong>n’a jamais été créée par migration</strong>. Sur une base recréée à zéro via <code>migrate deploy</code>, ces ALTER plantent. <strong>Inférence</strong> : la branche <code>feat/gamification-pass-2</code> n’est aujourd’hui reproductible qu’avec un Neon préexistant ayant subi un <code>db push</code> initial.</p>
+<hr>
+<h2>4. Race conditions &amp; transactions</h2>
+<h3>4.1 🔴 Zéro transaction sur 95 routes mutatives</h3>
+<pre><code class="language-bash">$ grep -rln &quot;$transaction\|interactiveTransaction&quot; src/app/api/gamebook/
+(aucun résultat)
+</code></pre>
+<p><strong>95 routes Nexus écrivent en base sans <code>prisma.$transaction</code></strong>. Conséquences pratiques sur les scénarios joueur :</p>
+<table>
+<thead>
+<tr>
+<th>Scénario</th>
+<th>Tables touchées</th>
+<th>Risque</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Achat shop</td>
+<td><code>GamebookProgress</code> (énergie) + <code>XpAdjustment</code> (badge) + <code>BadgeOwnership</code></td>
+<td>Énergie débitée mais badge non créé si crash entre 2 writes</td>
+</tr>
+<tr>
+<td>Spend énergie + déplacement</td>
+<td><code>GamebookProgress.energySpentToday</code> + <code>posX/posY</code></td>
+<td>Position mise à jour mais énergie non débitée (ou inverse)</td>
+</tr>
+<tr>
+<td>Combat Daemon</td>
+<td><code>Daemon</code> (HP, XP) + <code>GamebookProgress.activeBattle</code> (JSON) + <code>XpAdjustment</code></td>
+<td>Daemon level-up sans XP en banque, ou XP créditée 2×</td>
+</tr>
+<tr>
+<td>Casino lotto</td>
+<td><code>GamebookProgress.lottoPouleDate</code> + <code>lottoPouleWonToday</code> + <code>XpAdjustment</code></td>
+<td>Joueur peut rejouer en spammant si la 2e écriture rate</td>
+</tr>
+</tbody>
+</table>
+<h3>4.2 🔴 31 routes mutant <code>energySpentToday</code></h3>
+<p>C’est le champ le plus chaud du Nexus. Chaque écriture suit le pattern :</p>
+<pre><code class="language-ts">const gbp = await prisma.gamebookProgress.findUnique({...})
+const newSpent = gbp.energySpentToday + COST
+await prisma.gamebookProgress.update({
+  where: { userId_chapterId: {...} },
+  data: { energySpentToday: newSpent, ... },
+})
+</code></pre>
+<p><strong>Anti-pattern read-modify-write sans verrouillage.</strong> Si deux requêtes du même joueur arrivent à 100 ms d’intervalle :</p>
+<ol>
+<li>R1 lit <code>energySpentToday = 50</code></li>
+<li>R2 lit <code>energySpentToday = 50</code></li>
+<li>R1 écrit <code>60</code> (coût 10)</li>
+<li>R2 écrit <code>60</code> (coût 10)
+→ Le joueur a dépensé 20 d’énergie mais le compteur indique 60 au lieu de 70.</li>
+</ol>
+<p><strong>Mitigation existante</strong> : le client envoie une action à la fois (<code>isLoading</code> du <code>MapClient</code>), ce qui réduit la fenêtre. <strong>Mais</strong> : multi-onglets, double-clic rapide, retry côté réseau, et surtout les jobs serveur (Pusher events) bypassent cette garantie client.</p>
+<h3>4.3 🔴 Aucun verrouillage applicatif</h3>
+<p>Aucun <code>pg_advisory_lock</code>, aucun <code>SELECT ... FOR UPDATE</code>. La seule garantie est l’isolation <code>READ COMMITTED</code> par défaut de PostgreSQL — insuffisante pour des incréments concurrents.</p>
+<p><strong>Pattern correct attendu</strong> : soit incrément atomique (<code>{ increment: COST }</code>), soit transaction sérialisable avec retry, soit advisory lock par <code>userId</code>. Aucun des trois n’existe.</p>
+<h3>4.4 🟡 Le champ <code>activeBattle</code> (JSON) cumule les risques</h3>
+<p><code>Daemon.activeBattle</code> stocke l’état complet d’un combat (HP, tour, statut). Toute action de combat fait un read-modify-write sur ce JSON :</p>
+<pre><code class="language-ts">const daemon = await prisma.daemon.findFirst(...)
+const battle = daemon.activeBattle as Battle
+battle.enemyHp -= damage
+await prisma.daemon.update({ where: { id }, data: { activeBattle: battle } })
+</code></pre>
+<p>Deux clics rapides « ATTAQUE » → double dégât appliqué côté client mais un seul persisté → désynchro.</p>
+<hr>
+<h2>5. Inventaire des flags — orphelins &amp; fantômes</h2>
+<h3>5.1 Boolean flags (42)</h3>
+<p>Tous référencés dans le code, <strong>sauf 2 quasi-orphelins</strong> :</p>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Référence unique</th>
+<th>Statut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>durumEnergyGiven</code></td>
+<td><code>api/gamebook/grant-durum-energy/route.ts</code></td>
+<td>🟡 Set unique, jamais relu pour conditionner</td>
+</tr>
+<tr>
+<td><code>lottoPouleWonToday</code></td>
+<td><code>api/gamebook/casino/lotto-poule/route.ts</code></td>
+<td>🟡 Set unique, jamais relu</td>
+</tr>
+</tbody>
+</table>
+<p>Les deux flags sont écrits par leur route mais <strong>jamais consommés</strong> par une garde de gameplay. Soit la garde a été retirée, soit le flag a été conçu en prévision. <strong>À clarifier</strong> (Phase 1.8).</p>
+<h3>5.2 Catégorisation thématique des 42 booléens</h3>
+<table>
+<thead>
+<tr>
+<th>Thème</th>
+<th>Flags</th>
+<th>Volume</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Onboarding &amp; intro</td>
+<td><code>hasSeenWelcomeScreen</code>, <code>hasBag</code>, <code>hasEnteredTallGrass</code>, <code>monsterCaveRevealed</code>, <code>grassSudCutsceneShown</code></td>
+<td>5</td>
+</tr>
+<tr>
+<td>Arc Tour Blagueur (TB)</td>
+<td><code>tbBossBeaten</code>, <code>tbBossKeyHeld</code>, <code>tbRewardClaimed</code>, <code>treeBookGiven</code>, <code>treeObstacleCleared</code></td>
+<td>5</td>
+</tr>
+<tr>
+<td>Arc PIAFFINI / Mont</td>
+<td><code>piaffiniRescued</code>, <code>montSummitReached</code>, <code>franssJokeBirdDone</code>, <code>ornithologueBirdBonusGiven</code>, <code>firstSwimDone</code></td>
+<td>5</td>
+</tr>
+<tr>
+<td>Muscuville</td>
+<td><code>muscuvilleInterpellatorTalked</code>, <code>muscuvilleRocksPassed</code>, <code>arenaUnlocked</code>, <code>nageurDefiCompleted</code></td>
+<td>4</td>
+</tr>
+<tr>
+<td>Contest hall</td>
+<td><code>contestDefiPompatorDone</code>, <code>contestDefiSquatilusDone</code>, <code>contestDefiTiroirDone</code></td>
+<td>3</td>
+</tr>
+<tr>
+<td>Pastagone</td>
+<td><code>pastagoneArrested</code>, <code>pastagoneBolognionFound</code>, <code>pastagoneBossBeaten</code>, <code>pastagoneCapolinoFleeShown</code>, <code>pastagoneCapolinoMidBeaten</code>, <code>pastagoneCoulterBeaten</code>, <code>pastagoneEscaped</code>, <code>pastagoneFaaGiftClaimed</code></td>
+<td>8</td>
+</tr>
+<tr>
+<td>Casino</td>
+<td><code>bourgCasinoCoinsFound</code>, <code>lottoPouleWonToday</code></td>
+<td>2</td>
+</tr>
+<tr>
+<td>PNJ ponctuels</td>
+<td><code>papaBoostClaimed</code>, <code>pereTalked</code>, <code>durumEnergyGiven</code>, <code>gymGuyEnergyGiven</code>, <code>bestiolesFirstEncountered</code></td>
+<td>5</td>
+</tr>
+<tr>
+<td>Tamagotchi &amp; jardinier</td>
+<td><code>tamagotchiInBag</code>, <code>jardinierArrosoirGiven</code>, <code>jardinierMissionActive</code></td>
+<td>3</td>
+</tr>
+<tr>
+<td>Système</td>
+<td><code>isCompleted</code>, <code>pioneerBadgeAwarded</code></td>
+<td>2</td>
+</tr>
+</tbody>
+</table>
+<h3>5.3 🟠 « Ghost flags » — utilisés dans le code mais valeur par défaut implicite</h3>
+<p>Plusieurs flags sont lus en <code>gbp.xxx ?? false</code> dans le code mais n’ont pas de <code>DEFAULT false</code> explicite dans la migration (vérification rapide nécessaire ligne par ligne — à approfondir en Phase 1.7 / 1.8). Risque : sur un compte créé avant l’ajout du flag, la valeur est <code>NULL</code>, le code la traite comme <code>false</code>, mais les requêtes SQL ad-hoc retournent du <code>NULL</code> au lieu de <code>false</code>. Inconsistance silencieuse.</p>
+<h3>5.4 🟡 Flags JSON <code>flags</code> &amp; <code>history</code> — fourre-tout</h3>
+<p>Les deux Json <code>flags</code> et <code>history</code> sur <code>GamebookProgress</code> sont des sacs à clés. Le code y empile des choses sans schéma. Aucun moyen d’auditer ce qui s’y trouve sans grep exhaustif. <strong>Recommandation différée</strong> : à terme, migrer ces clés vers des colonnes typées ou une table EAV <code>GamebookFlag(userId, key, value)</code>.</p>
+<hr>
+<h2>6. Persistance client/serveur</h2>
+<h3>6.1 🟡 Source de vérité dispersée</h3>
+<table>
+<thead>
+<tr>
+<th>Donnée</th>
+<th>Source de vérité</th>
+<th>Stockée côté client ?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Position joueur</td>
+<td><code>GamebookProgress.posX/posY</code></td>
+<td>Oui (state React) — re-fetch sur reload</td>
+</tr>
+<tr>
+<td>Énergie restante</td>
+<td>Calculée serveur (<code>workouts</code> du jour - <code>energySpentToday</code>)</td>
+<td>Oui (état dérivé)</td>
+</tr>
+<tr>
+<td>Inventaire</td>
+<td><code>GamebookProgress.inventory</code> (Json)</td>
+<td>Oui</td>
+</tr>
+<tr>
+<td>HP Daemon</td>
+<td><code>Daemon.currentHp</code></td>
+<td>Oui (<code>activeBattle.actorHp</code> aussi) → 🔴 dualité</td>
+</tr>
+<tr>
+<td><code>activeBattle</code></td>
+<td><code>Daemon.activeBattle</code> (Json)</td>
+<td>Oui (mirror complet)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Risque principal</strong> : <code>Daemon.currentHp</code> ET <code>activeBattle.actorHp</code> représentent la même donnée. Le code lit/écrit l’un OU l’autre selon le contexte. Désynchro garantie si crash en milieu de combat.</p>
+<h3>6.2 🟠 Aucune trace d’audit côté serveur</h3>
+<p>Aucune table <code>GamebookEvent</code> / <code>PlayerActionLog</code> / <code>AuditTrail</code>. Si demain un joueur conteste « j’ai pas dépensé cette énergie », il n’existe <strong>aucun journal serveur</strong> pour reconstituer la séquence. Le seul artefact est le JSON <code>history</code> (taille non bornée, écrit côté client).</p>
+<h3>6.3 ⚪ Snapshots ?</h3>
+<p>Aucun mécanisme de snapshot/rollback de <code>GamebookProgress</code>. Restaurer un joueur après bug = <code>UPDATE</code> manuel via Prisma Studio ou route admin ad-hoc.</p>
+<hr>
+<h2>7. Top routes par fréquence d’écriture <code>GamebookProgress</code></h2>
+<table>
+<thead>
+<tr>
+<th>Rang</th>
+<th>Route</th>
+<th><code>gamebookProgress.update</code> count</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>api/gamebook/state</code></td>
+<td>12</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>api/gamebook/spend</code></td>
+<td>9</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>api/gamebook/daemon/battle/action</code></td>
+<td>9</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>api/gamebook/casino/stop</code></td>
+<td>8</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>api/gamebook/muscuville/rocks-pay</code></td>
+<td>6</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>api/gamebook/shop/buy</code></td>
+<td>5</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>api/gamebook/pastagone/infirmerie-heal</code></td>
+<td>5</td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>api/gamebook/inventory/use</code></td>
+<td>4</td>
+</tr>
+<tr>
+<td>9</td>
+<td><code>api/gamebook/hotel/sleep</code></td>
+<td>4</td>
+</tr>
+<tr>
+<td>10</td>
+<td><code>api/gamebook/franss-joke</code></td>
+<td>4</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Diagnostic</strong> : la route <code>/state</code> (hardenée récemment via commit <code>78c9d18</code>) écrit 12 fois — c’est elle qui doit absolument passer en transaction.</p>
+<hr>
+<h2>8. Synthèse criticité</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Constat</th>
+<th>Criticité</th>
+<th>Effort fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>God-table 130 champs</td>
+<td>🔴</td>
+<td>XXL (refacto domaine)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>14 modèles sans CREATE TABLE</td>
+<td>🔴</td>
+<td>M (régénérer baseline migration)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>0 transaction sur 95 routes</td>
+<td>🔴</td>
+<td>L (audit route par route)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>31 routes race-prone sur énergie</td>
+<td>🔴</td>
+<td>M (incrément atomique)</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Désordre alphabétique migrations</td>
+<td>🔴</td>
+<td>S (renommer ou figer)</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Dates en <code>String</code></td>
+<td>🟠</td>
+<td>M (migration + code)</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Dualité <code>Daemon.currentHp</code> / <code>activeBattle.actorHp</code></td>
+<td>🟠</td>
+<td>S</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Aucun audit log serveur</td>
+<td>🟠</td>
+<td>L</td>
+</tr>
+<tr>
+<td>9</td>
+<td>2 flags quasi-orphelins</td>
+<td>🟡</td>
+<td>XS</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Json fourre-tout <code>flags</code>/<code>history</code></td>
+<td>🟡</td>
+<td>XL</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>9. Recommandations DBA (sans implémentation)</h2>
+<ol>
+<li><strong>Baseline urgente</strong> : générer une migration <code>__baseline_v3_drift_repair</code> qui crée explicitement les 14 tables manquantes via <code>prisma migrate dev --create-only</code>, puis marquer la migration comme appliquée en prod via <code>prisma migrate resolve --applied</code>. Sans ça, le repo est ingérable sur tout nouvel environnement.</li>
+<li><strong>Atomicité énergie</strong> : remplacer tous les read-modify-write <code>energySpentToday</code> par <code>{ increment: COST }</code>. Bénéfice immédiat, effort minimal, zéro side effect métier.</li>
+<li><strong>Transaction sur routes shopping</strong> : <code>shop/buy</code>, <code>casino/*</code>, <code>daemon/battle/action</code>, <code>inventory/use</code> doivent passer en <code>prisma.$transaction([...])</code> ou <code>prisma.$transaction(async tx =&gt; ...)</code>.</li>
+<li><strong>Journal append-only</strong> : créer table <code>GamebookEvent(id, userId, eventType, payload Json, createdAt)</code> et <code>INSERT</code> à chaque action significative. Permet rollback, debug joueur, futur analytics.</li>
+<li><strong>Convention dates</strong> : geler la convention « <code>*Date</code> toujours <code>DateTime</code>, <code>*Day</code> toujours <code>String YYYY-MM-DD</code> » et migrer progressivement.</li>
+</ol>
+<hr>
+<p><strong>Fin AUDIT_02_DATABASE.md.</strong></p>
+<p>Phase 1.2 terminée. Les points 🔴 1, 2, 3, 4, 5 sont les plus alarmants — ils relèvent tous d’un patron systémique (« écriture rapide sans atomicité ») né de la vélocité solo + livraison continue.</p>
+<p>Auto Mode actif → j’enchaîne avec <strong>Phase 1.3 : AUDIT_03_GAMEDESIGN.md</strong> (Game Designer) dans la réponse suivante.</p>
+<p>&lt;div class=“pagebreak”&gt;&lt;/div&gt;</p>
+<p>&lt;a id=“04”&gt;&lt;/a&gt;</p>
+<h1>AUDIT_03_GAMEDESIGN.md — Game Designer</h1>
+<blockquote>
+<p><strong>Périmètre</strong> : Nexus / Gamebook subsystem<br>
+<strong>Date</strong> : 2026-05-27<br>
+<strong>Posture</strong> : Sans complaisance</p>
+</blockquote>
+<hr>
+<h2>1. Boucle de jeu principale</h2>
+<table>
+<thead>
+<tr>
+<th>Couche</th>
+<th>Élément</th>
+<th>Verdict</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Métrique d’effort</td>
+<td>Reps réelles (pompes, squats, plank/5, etc.)</td>
+<td>✅ Excellent : ancrage physique réel</td>
+</tr>
+<tr>
+<td>Conversion</td>
+<td>10 reps = 1 case (<code>COST_MOVE = 10</code>)</td>
+<td>✅ Lisible, mémorisable</td>
+</tr>
+<tr>
+<td>Plafond / jour</td>
+<td><code>MAX_SPEND_PER_CALL = 500</code> par appel</td>
+<td>🟡 Pas un cap journalier réel — limite par requête seulement</td>
+</tr>
+<tr>
+<td>Boucle minute</td>
+<td>Move → interaction PNJ/tile → narrative beat</td>
+<td>✅ Le bouclage est solide</td>
+</tr>
+<tr>
+<td>Boucle session</td>
+<td>Faire ses reps du jour → progresser sur la map → croiser un PNJ</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Boucle long terme</td>
+<td>Compléter arcs (TB, Pastagone, Macaron’île…)</td>
+<td>🟠 Voir 1.3</td>
+</tr>
+</tbody>
+</table>
+<h3>1.1 🟢 La conversion reps→cases est l’âme du jeu</h3>
+<p><code>COST_MOVE = 10</code> est non-négociable : c’est ce qui fait que faire des pompes a un coût d’opportunité visible. <strong>À conserver coûte que coûte.</strong></p>
+<h3>1.2 🟠 La progression long terme repose sur des arcs trop nombreux pour un solo</h3>
+<p>Liste des arcs identifiés via <code>mapId</code> + commentaires version :</p>
+<pre><code>v3.0  : Bourg-Boulette / cave / arbre obstacle
+v3.1  : Route 1 / pont Pépite / 4 PNJ
+v3.3  : NPCs Pépiteville
+v3.4  : Bonus surplus, baskets
+v3.6  : Anti-cheat freeze
+v3.8  : Pépiteville (fruits, boots)
+v3.11 : PIAFFINI / Tour Blagueur
+v3.12 : Water push (mer)
+v3.14 : Tamagotchi
+v3.17 : Luck / Casino Bourg
+v3.19 : Bestioles (hautes herbes sud)
+v3.21 : Casino étendu
+v3.22 : Fast travel
+v3.23 : Mont Pasta-Ventoux / Contest hall
+v4.0  : Daemon refactor + Pastagone + Pullman + CAPOLINO + Pierres
+</code></pre>
+<p><strong>~15 arcs livrés</strong>, chacun avec ses PNJ, ses items, ses flags, ses dialogues. Le périmètre est <strong>gigantesque pour un dev solo</strong> sans testeur dédié. Risque inévitable : surface de bug ingérable (vu en Phase 1.2).</p>
+<h3>1.3 🔴 Onboarding sur-codé pour l’effet escompté</h3>
+<p>Le tutoriel (<code>MONSTER_INTRO_DIALOGUE</code>, 13 étapes + téléport en grotte) prescrit la règle « 10 reps = 1 case » verbalement puis envoie le joueur faire 150 reps pour pousser l’arbre. <strong>C’est 150 pompes avant la première progression.</strong> Pour un joueur peu sportif, c’est un mur. Pour un athlète, c’est insignifiant. Aucune adaptation au profil.</p>
+<p><strong>Conséquence</strong> : la courbe de difficulté est binaire (« je peux faire 150 pompes » / « je ne peux pas »). Le « tile 1 » n’existe pas — il y a un saut entre le tuto et le premier vrai obstacle.</p>
+<hr>
+<h2>2. Économie &amp; équilibrage</h2>
+<h3>2.1 🟢 Stats Daemon — formule très bonne</h3>
+<pre><code>Force        = 25 + totalPushups / 100
+Vitesse      = 25 + log10(totalSteps + 1) × 15
+Défense      = 25 + 2 × défisValidés
+Intelligence = 25 + totalShopSpend / 50
+Endurance    = 25 + totalPlankSeconds / 60
+</code></pre>
+<p>Clamp <code>[25, 100]</code>. <strong>Lecture de game design</strong> : chaque stat capture une dimension réelle du joueur. Log10 sur les steps évite que les marathoniens dominent. Plancher 25 protège les nouveaux. <strong>C’est probablement la meilleure idée mécanique de tout le Nexus.</strong></p>
+<h3>2.2 🟢 Saiyan : +1 si effort, −1 si farming d’easy → excellent</h3>
+<pre><code>Base = 7, clamp [5, 9]
++1 si energySpentThisLevel ≥ 100
++1 si koCountThisLevel ≥ 1
++1 si hardBattles &gt; easyBattles × 2
+−1 si easyBattles &gt; hardBattles × 2  (et hardBattles &gt; 0)
+</code></pre>
+<p>Sanctionne le farming, récompense la résilience. <strong>À conserver.</strong></p>
+<h3>2.3 🔴 Courbe XP Pokémon Gen 1 (L³) + cap niveau 50</h3>
+<pre><code>xpForLevel(L) = L³
+xpForLevel(50) = 125 000
+</code></pre>
+<p>Avec <code>BASE_EXP_WILD_COMMON = 64</code> et <code>computeRewardXp = baseExp × level / 7</code> :</p>
+<ul>
+<li>L1 vs L1 → ~9 XP/combat → <strong>~111 combats pour L2</strong> (théorique). En pratique L2 = 8 XP donc 1 combat suffit.</li>
+<li>L25 vs L25 → ~228 XP/combat → <strong>~68 combats</strong> entre L24 et L25.</li>
+<li>L49 vs L49 → ~448 XP/combat → <strong>~327 combats</strong> entre L49 et L50.</li>
+</ul>
+<p>→ La queue est <strong>interminable</strong>. Si Sartay veut que ses 7 potes voient le L50, il faudrait ~3500 combats pour le dernier niveau seul. C’est probablement <strong>mort</strong> narrativement.</p>
+<p><strong>Recommandation</strong> : soit cap à L30 (10 fois moins de combats requis), soit baseExp dynamique (boss 4x, rivaux 3x).</p>
+<h3>2.4 🟠 Badges tous capés à 200 XP</h3>
+<p>Décision récente (commit <code>c8bb83d</code>) : tous les badges Nexus capés à 200 XP. 5 badges → 1000 XP max sur l’ensemble du jeu. Pour des joueurs qui font 40k XP/an de reps, <strong>les badges sont insignifiants côté XP</strong>. Leur valeur est purement symbolique/collectionnée. ✅ Décision cohérente avec « le jeu n’inflate pas l’XP de l’app PushQuest ».</p>
+<h3>2.5 🔴 Casino — économie potentiellement cassée</h3>
+<p>Sources d’énergie identifiées :</p>
+<ul>
+<li>Reps quotidiennes (variable)</li>
+<li>Bonus surplus (one-shots des PNJ)</li>
+<li>Gains casino (cockfight, lotto-poule, slot, pattern-spin, stop-ou-encore)</li>
+</ul>
+<p>5 jeux casino. Tous utilisent <code>Math.random()</code> côté serveur. Si l’EV (expected value) &gt; 0 sur même un seul → exploit infini d’énergie. <strong>À vérifier sur chaque jeu</strong> (centralisé en Phase 1.8).</p>
+<p>Cap journalier identifié : <code>casinoBetsToday ≤ 10</code> pour <code>bet</code>, <code>cockfightDate</code> pour cockfight, <code>stopOuEncorePlaysToday</code>, <code>slotMachinesPlayedToday</code>, <code>lottoPouleDate</code> (1/j). <strong>Mais</strong> : pas de cap cumulé sur le <strong>gain total</strong> d’un jour. Un joueur chanceux peut multiplier son énergie sans plafond.</p>
+<h3>2.6 🟡 Shop — pas de cap de dépense</h3>
+<p><code>totalShopSpend</code> est tracké (sert à la stat Intelligence) mais aucun cap journalier. Un joueur peut tout dépenser d’un coup ou rien. Pas un bug, mais aucun rythme imposé.</p>
+<hr>
+<h2>3. Progression &amp; gating</h2>
+<h3>3.1 🟢 Gating par badges/flags — propre</h3>
+<p>Chaque arc débloque le suivant via un flag (<code>piaffiniRescued</code>, <code>pastagoneEscaped</code>, etc.). Lecture simple, idempotent, lisible dans le code.</p>
+<h3>3.2 🟠 Gating par défis sportifs — bonne idée, mauvais équilibrage</h3>
+<p>Pousser l’arbre = 150 reps. Défis Champions de Muscuville = volumes inconnus (à mesurer dans <code>champion/route.ts</code>). Le gating crée des <strong>murs déterministes</strong>, mais sans courbe ajustée au profil ça revient au pb du tuto (1.3).</p>
+<h3>3.3 🔴 Aucun système de skip / aide / contournement</h3>
+<p>Pas de menu « j’abandonne cet arc », pas de réduction du coût après N tentatives, pas de hint après un dialogue répété 5 fois. Un joueur bloqué reste bloqué. Vu le bug récent « Gg-rem coincé dans shop_interior » : c’est arrivé <strong>en vrai sur la prod</strong>.</p>
+<hr>
+<h2>4. Combat Daemon</h2>
+<h3>4.1 🟢 Formule HP Pokémon Gen 1 fidèle</h3>
+<pre><code>maxHp = floor((End + 10) × 2 × Lvl / 100) + Lvl + 10 + bonusEnd
+</code></pre>
+<h3>4.2 🟢 Crit cap à 35 % — Cohérent</h3>
+<pre><code>crit = 0.0625 + Int/500 + happiness/1000, max 0.35
+</code></pre>
+<h3>4.3 🟢 Bonheur ×0.5 à ×1.5 — Effet visible</h3>
+<pre><code>happinessMultiplier(h) = 1 + (h - 50) / 100
+</code></pre>
+<h3>4.4 🔴 Combat = JSON <code>activeBattle</code> mutable — voir Phase 1.2 §4.4</h3>
+<p>Risque de désynchro client/serveur. Pas de game design en soi, mais le combat est <strong>fragile</strong>.</p>
+<h3>4.5 🟠 Types implémentés mais nombre limité</h3>
+<p><code>DaemonType</code> énuméré : Normal, Feu, Eau, Plante, Electrique, Vol, Psy, Pate, Combat, Roche.<br>
+Aucune table de faiblesses/résistances visible dans <code>daemon.ts</code>. À vérifier dans <code>combat.ts</code> ou <code>attacks.ts</code> (Phase 1.8).</p>
+<hr>
+<h2>5. Items &amp; inventaire</h2>
+<table>
+<thead>
+<tr>
+<th>Catégorie</th>
+<th>Count</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Items totaux</td>
+<td>48</td>
+</tr>
+<tr>
+<td>Wearables (baskets, brassards, lunettes…)</td>
+<td>~10 (parsage rapide)</td>
+</tr>
+<tr>
+<td>Consommables</td>
+<td>~15</td>
+</tr>
+<tr>
+<td>Stockables (gourde, bidon)</td>
+<td>2</td>
+</tr>
+<tr>
+<td>Cosmétiques</td>
+<td>~5</td>
+</tr>
+</tbody>
+</table>
+<h3>5.1 🟢 Wearables à durabilité — bon design</h3>
+<p>Baskets réduisent le coût de déplacement de 10→8 pendant 500 pas. Trade-off lisible.</p>
+<h3>5.2 🟡 48 items pour 7 joueurs — surface trop grande</h3>
+<p>Probablement trop d’items pour qu’un joueur les goûte tous. Phénomène classique de jeu solo. Pas critique, mais 30 % des items doivent être rarement vus.</p>
+<hr>
+<h2>6. Synthèse criticité</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Constat</th>
+<th>Criticité</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Onboarding = mur 150 reps non gradué</td>
+<td>🔴</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Courbe L³ + cap L50 = queue interminable</td>
+<td>🔴</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Casino sans cap de gain journalier cumulé</td>
+<td>🔴</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Aucun système de skip/contournement</td>
+<td>🔴</td>
+</tr>
+<tr>
+<td>5</td>
+<td>15 arcs pour un dev solo + 7 joueurs</td>
+<td>🟠</td>
+</tr>
+<tr>
+<td>6</td>
+<td>48 items, dilution attention</td>
+<td>🟡</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Pas de cap shop journalier</td>
+<td>🟡</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p>&lt;div class=“pagebreak”&gt;&lt;/div&gt;</p>
+<p>&lt;a id=“05”&gt;&lt;/a&gt;</p>
+<h1>AUDIT_04_NARRATIF.md — Narrative Designer</h1>
+<blockquote>
+<p><strong>Périmètre</strong> : Nexus / Gamebook subsystem<br>
+<strong>Date</strong> : 2026-05-27</p>
+</blockquote>
+<hr>
+<h2>1. Architecture narrative</h2>
+<h3>1.1 Personnages identifiés</h3>
+<p>105 PNJ totaux (count <code>id:</code> dans <code>npcs.ts</code>).</p>
+<p><strong>Personnages-piliers</strong> :</p>
+<ul>
+<li>Monstre Spaghetti Volant (mentor irrévérencieux, intro)</li>
+<li>MAMAN / PEPITO (donneurs de sac/baskets)</li>
+<li>JOJO / JOJETTE / PIAFFINI (arc Tour Blagueur → sauvetage oiseau)</li>
+<li>CAPOLINO (rival, 4 rencontres)</li>
+<li>BOLOGNION (secret, mafia Team Boulette)</li>
+<li>Asriel / Coulter / Faa / Coram (Pullman PastaVegas, 4 étages)</li>
+<li>Roger / Lyra / Will / Lee (lore Pullman)</li>
+<li>Mary Malone / Iorek / Lee Scoresby / Serafina Pekkala (Pullman, donneurs)</li>
+<li>Champions Muscuville (Pompator / Squatilus / Tiroir + revanche)</li>
+</ul>
+<p><strong>Diagnostic</strong> : 4 univers de référence se croisent (Pokémon Gen 1, Dragon Ball / Saiyan, Pullman <em>His Dark Materials</em>, Pasta humor). C’est riche, <strong>mais</strong> :</p>
+<h3>1.2 🟠 Fusion d’univers non assumée</h3>
+<p>Pullman (sérieux/mystique) + blagues de pâtes + Pokémon → ton oscillant. Le Monstre Spaghetti Volant brise le 4e mur (« arrête de me regarder comme ça ») cohabite avec Asriel / Iorek (références fidèles à un univers tragique). <strong>Aucun joueur n’a verbalisé la dissonance pour le moment, mais c’est un risque de cohésion.</strong></p>
+<hr>
+<h2>2. Dialogues</h2>
+<h3>2.1 🟢 Ton du Monstre Spaghetti Volant — excellent</h3>
+<p>Direct, fainéant, paternel, drôle. C’est <strong>la voix forte</strong> du jeu :</p>
+<blockquote>
+<p>« 10 reps = 1 case. Pas plus, pas moins. »<br>
+« Va te faire des pompes avant. »<br>
+« Et arrête de me regarder comme ça. »</p>
+</blockquote>
+<h3>2.2 🟢 PIAFFINI / Franss-joke — cassure 4e mur réussie</h3>
+<p>Le rappel pour blaguer « j’avais oublié un truc → AHAHAH c’était une blague » est exactement le registre d’une amitié geek bienveillante (clin d’œil au Dofus de Sartay, je suppose). À conserver.</p>
+<h3>2.3 🟡 Dialogues conditionnels — gestion fragile</h3>
+<p><code>PEPITO_DIALOGUE_FIRST</code> vs <code>PEPITO_DIALOGUE_AFTER</code> : pattern clair. <strong>Mais</strong> : v3.22 réutilise le même dialogue pour MAMAN OU PEPITO selon la branche du joueur. Le texte parle de « <em>Te tend un sac</em> » et « <em>Sort une paire de baskets</em> » — pour MAMAN c’est cohérent, pour PEPITO aussi. ✅ Bon réemploi.</p>
+<h3>2.4 🟠 TOWER_JOKES — humour à 100 % spécifique</h3>
+<pre><code>&quot;Pourquoi est-ce que les pâtes sont sportives ?&quot;
+&quot;Parce qu'elles ont la forme.&quot;
+</code></pre>
+<p>4 blagues sur les pâtes. Drôle 1 fois, lassant à la 10e visite. <strong>Aucun gate pour éviter le replay.</strong> À mettre dans Phase 1.5 (UX).</p>
+<h3>2.5 🔴 Aucune table centrale de dialogues</h3>
+<p><code>dialogue.ts</code> contient ~10 dialogues système (intro, pioneer, pepito, piaffini, jojo, franss-joke, mont, rumeurs, tower jokes). <strong>Tous les autres dialogues</strong> (PNJ ponctuels, champions, mafiosi, jardinier) sont éparpillés dans <code>npcs.ts</code> (2565 lignes) ou inline dans les routes.</p>
+<p>→ Impossible de relire la narration d’un arc en un endroit unique. Tout audit éditorial (cohérence du « tu » / « vous », orthographe, ton) nécessite de scanner 5+ fichiers.</p>
+<hr>
+<h2>3. Arcs narratifs</h2>
+<h3>3.1 Inventaire des arcs (par mapId + flags)</h3>
+<table>
+<thead>
+<tr>
+<th>Arc</th>
+<th>Trigger</th>
+<th>Sortie</th>
+<th>Récompense</th>
+<th>Statut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Intro</td>
+<td>Spawn <code>bourgpates</code></td>
+<td><code>treeObstacleCleared</code></td>
+<td>—</td>
+<td>✅ Live</td>
+</tr>
+<tr>
+<td>Pionnier</td>
+<td>Pousser arbre</td>
+<td><code>pioneerBadgeAwarded</code></td>
+<td>Badge 200 XP</td>
+<td>✅ Live</td>
+</tr>
+<tr>
+<td>Pont Pépite</td>
+<td>4 PNJ Route 1</td>
+<td>Accès <code>pepiteville</code></td>
+<td>—</td>
+<td>✅ Live</td>
+</tr>
+<tr>
+<td>Tour Blagueur</td>
+<td><code>tower_floor_1→4</code></td>
+<td><code>piaffiniRescued</code></td>
+<td>Set de Nage</td>
+<td>✅ Live</td>
+</tr>
+<tr>
+<td>PIAFFINI rescue</td>
+<td>Sommet tour</td>
+<td>Badge Sauveur 200 XP</td>
+<td>+ dialogue JOJO</td>
+<td>✅ Live</td>
+</tr>
+<tr>
+<td>Mer</td>
+<td>Set de Nage équipé</td>
+<td><code>firstSwimDone</code></td>
+<td>Accès sud</td>
+<td>✅ Live</td>
+</tr>
+<tr>
+<td>Mont Pasta-Ventoux</td>
+<td>Atteindre sommet</td>
+<td>Badge Conquérant 200 XP</td>
+<td>+ Muscuville/Contest</td>
+<td>✅ Live</td>
+</tr>
+<tr>
+<td>Muscuville</td>
+<td>3 défis Champions</td>
+<td>Badge Champio Star (revanche)</td>
+<td>200 XP</td>
+<td>✅ Live</td>
+</tr>
+<tr>
+<td>Contest Hall</td>
+<td>3 défis</td>
+<td><code>contestDefiXxxDone</code></td>
+<td>XP cumulé</td>
+<td>✅ Live</td>
+</tr>
+<tr>
+<td>Bestioles</td>
+<td>Hautes herbes sud</td>
+<td><code>bestiolesFirstEncountered</code></td>
+<td>Bestiaire</td>
+<td>✅ Live</td>
+</tr>
+<tr>
+<td>Tamagotchi</td>
+<td>v3.14</td>
+<td>Daemon migration</td>
+<td>Pierres / Sérums</td>
+<td>✅ Live</td>
+</tr>
+<tr>
+<td>Casino Bourg</td>
+<td>Coin trouvée</td>
+<td><code>bourgCasinoCoinsFound</code></td>
+<td>Casseur de banque</td>
+<td>✅ Live</td>
+</tr>
+<tr>
+<td>Pastagone</td>
+<td>Arc complet</td>
+<td><code>pastagoneEscaped</code> + <code>pastagoneBossBeaten</code></td>
+<td>Bolognion / Pierres</td>
+<td>✅ Live</td>
+</tr>
+<tr>
+<td>Pullman PastaVegas</td>
+<td>4 étages</td>
+<td>Coulter mini-boss</td>
+<td>Wearables / Sérums</td>
+<td>✅ Live</td>
+</tr>
+<tr>
+<td>CAPOLINO rival</td>
+<td>4 rencontres</td>
+<td>Combat boss puis fuite</td>
+<td>Lore</td>
+<td>✅ Live</td>
+</tr>
+<tr>
+<td>Macaron’île</td>
+<td>Serafina</td>
+<td>Sérums boost permanent</td>
+<td>XP</td>
+<td>✅ Live</td>
+</tr>
+<tr>
+<td>Fast travel</td>
+<td>v3.22</td>
+<td>Téléport entre villes</td>
+<td>—</td>
+<td>✅ Live</td>
+</tr>
+</tbody>
+</table>
+<h3>3.2 🔴 Aucune linéarisation explicite</h3>
+<p>Un joueur ne sait pas <strong>dans quel ordre</strong> faire les arcs. Le seul guide est « j’ai débloqué tel flag, donc je peux maintenant aller là ». Avec 17 mapIds et ~15 arcs, c’est désorientant.</p>
+<h3>3.3 🟠 Arcs sans clôture émotionnelle</h3>
+<p>Plusieurs arcs débloquent un badge puis… rien. PIAFFINI a une vraie clôture (dialogue JOJETTE + cadeau). Mont Pasta-Ventoux a une voix-off sommet. <strong>Pastagone</strong> se termine sur quoi ? À vérifier (Phase 1.8). Si un joueur traverse Pastagone et ne reçoit pas un beat narratif fort à la sortie, c’est anti-climactique.</p>
+<h3>3.4 🟢 Foreshadowing présent</h3>
+<p><code>RUMEUR_OISEAU_DIALOGUE</code>, <code>RUMEUR_HERBES_DIALOGUE</code>, <code>RUMEUR_CONCOURS_DIALOGUE</code> plantent PIAFFINI, bestioles, contest. ✅ Bonne pratique de game writing.</p>
+<hr>
+<h2>4. Items narratifs</h2>
+<h3>4.1 🟢 Items avec lore</h3>
+<ul>
+<li>Gourde, Bidon d’IL CAPO (trophée)</li>
+<li>Set de Nage (héritage grand-mère JOJO)</li>
+<li>Tenue VIP casino</li>
+<li>Pierres d’évolution (Lee Scoresby)</li>
+<li>Sérums (Serafina, boost permanent)</li>
+</ul>
+<p>Chaque item a sa raison narrative d’exister. ✅</p>
+<hr>
+<h2>5. Synthèse criticité</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Constat</th>
+<th>Criticité</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Aucune table centrale dialogues</td>
+<td>🔴</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Aucune linéarisation explicite des arcs</td>
+<td>🔴</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Fusion d’univers (Pullman + pasta) non assumée</td>
+<td>🟠</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Plusieurs arcs sans clôture émotionnelle</td>
+<td>🟠</td>
+</tr>
+<tr>
+<td>5</td>
+<td>TOWER_JOKES sans gate replay</td>
+<td>🟡</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Foreshadowing fait</td>
+<td>🟢</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p>&lt;div class=“pagebreak”&gt;&lt;/div&gt;</p>
+<p>&lt;a id=“06”&gt;&lt;/a&gt;</p>
+<h1>AUDIT_05_UX.md — UX Designer</h1>
+<blockquote>
+<p><strong>Périmètre</strong> : Nexus / Gamebook subsystem<br>
+<strong>Date</strong> : 2026-05-27</p>
+</blockquote>
+<hr>
+<h2>1. Architecture UX</h2>
+<h3>1.1 Le <code>MapClient</code> est l’unique écran</h3>
+<p>Tout passe par <code>MapClient.tsx</code> (5791 lignes) :</p>
+<ul>
+<li>Affichage map + sprites</li>
+<li>HUD énergie</li>
+<li>Modales (dialogue, shop, inventaire, combat, casino, défi)</li>
+<li>Cinématiques (téléport, sommet, sauvetage)</li>
+</ul>
+<p>→ <strong>Un seul écran, beaucoup de couches modales empilées.</strong> Aucune route URL distincte pour chaque sous-écran. Conséquence : F5 perd l’état modal local (un joueur en plein dialogue qui recharge la page revient au monde).</p>
+<h3>1.2 🔴 Aucun deeplink</h3>
+<p>Impossible d’envoyer à un pote « va voir ce dialogue ici » ou de bookmarker une situation. Toute la navigation est state-only.</p>
+<hr>
+<h2>2. HUD &amp; feedback</h2>
+<h3>2.1 🟢 HUD énergie permanent — bon</h3>
+<p>L’énergie disponible est toujours visible. Le coût d’un déplacement (10) est implicite mais constant.</p>
+<h3>2.2 🟠 Pas de prévisualisation du coût</h3>
+<p>Aucune surimpression « -10 » au survol d’une case. Le joueur apprend par l’expérience. OK pour le tuto, mais sur une décision de longue distance (« si je vais à Pépiteville, ça me coûte combien ? »), pas d’info anticipée.</p>
+<h3>2.3 🔴 Feedback du débit pas toujours synchrone</h3>
+<p>Plusieurs routes <code>update</code> puis le client re-fetch. Latence visible (250-600ms). Pas d’optimistic UI cohérent. Sur les actions rapides (combat, casino), le joueur voit son HP/énergie sauter en différé.</p>
+<h3>2.4 🟠 Aucune notification persistante</h3>
+<p>Pas de toast d’historique « +200 XP Pionnier reçu ». Le dialogue passe une fois, après c’est perdu. Pas de panneau « événements de la session ».</p>
+<hr>
+<h2>3. Onboarding</h2>
+<h3>3.1 🔴 Pas de tutoriel des contrôles</h3>
+<p>Le joueur arrive sur le <code>MapClient</code>. Aucun overlay ne lui dit « flèches pour bouger », « ESC pour menu », « E pour interact », « START pour ouvrir le sac ». Le dialogue d’intro mentionne « START pour ouvrir ton sac » au milieu d’un texte sans mise en évidence visuelle du bouton.</p>
+<h3>3.2 🟠 Le <code>hasSeenWelcomeScreen</code> est binaire</h3>
+<p>Soit le joueur a vu, soit pas. Aucune re-onboarding « ça fait 2 mois, voici ce que tu as oublié ». 7 potes ≠ tous régulier.</p>
+<hr>
+<h2>4. Modalité dialogue</h2>
+<h3>4.1 🟢 Avancement step-by-step lisible</h3>
+<p>L’utilisateur clique pour avancer. Cohérent avec les JRPG.</p>
+<h3>4.2 🔴 Aucun back/forward</h3>
+<p>Un joueur qui clique trop vite et rate une ligne ne peut pas revenir. Sur des intros de 13 lignes, c’est frustrant.</p>
+<h3>4.3 🟡 Pas de skip pour dialogues déjà vus</h3>
+<p>Re-visiter PEPITO joue toujours <code>PEPITO_DIALOGUE_AFTER</code> (2 lignes — OK), mais d’autres PNJ rejouent toute leur intro. À vérifier (Phase 1.8).</p>
+<hr>
+<h2>5. Combat Daemon</h2>
+<h3>5.1 🟠 Aucune indication de type</h3>
+<p>Les 10 types Daemon (Feu, Eau, Plante, Combat, Roche…) existent en code. Le joueur les voit-il ? Avec quel feedback ? Si non → frustration garantie au moment d’un combat où le type compte.</p>
+<h3>5.2 🔴 Aucune UI de “vue d’équipe”</h3>
+<p><code>Daemon.slotIndex</code> suggère plusieurs slots. La gestion d’équipe (swap, ordre, équipement par daemon) doit avoir une UI. <strong>À cartographier en Phase 1.8.</strong></p>
+<hr>
+<h2>6. Casino</h2>
+<h3>6.1 🟢 5 jeux distincts visuellement différents</h3>
+<p>Bonne variété (rouge/noir, cockfight, lotto, slot, pattern, stop-ou-encore).</p>
+<h3>6.2 🟠 Aucune mémoire des stats joueur</h3>
+<p>Le joueur ne voit pas « tu as gagné X / perdu Y depuis le début ». Pas de feedback méta. Une simple ligne dans l’inventaire suffirait.</p>
+<hr>
+<h2>7. Accessibilité</h2>
+<h3>7.1 🔴 Aucune option contraste/taille texte</h3>
+<p>Les dialogues sont sur fond foncé (à vérifier), texte petit sur mobile. Aucune option d’accessibilité visible dans le code.</p>
+<h3>7.2 🔴 Aucune nav clavier exhaustive</h3>
+<p>À vérifier — <code>MapClient</code> semble utiliser les flèches pour bouger, mais les modales (sac, shop) sont-elles entièrement navigables au clavier ?</p>
+<h3>7.3 🟡 Aucune annonce aria</h3>
+<p>Le mode lecteur d’écran est probablement inutilisable.</p>
+<hr>
+<h2>8. Mobile</h2>
+<h3>8.1 🟠 Pas de contrôles tactiles évidents</h3>
+<p>Le code de <code>MapClient</code> mérite un audit visuel. Sartay teste-t-il mobile ?</p>
+<hr>
+<h2>9. Synthèse criticité</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Constat</th>
+<th>Criticité</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Aucun deeplink / routing modal</td>
+<td>🔴</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Pas de tuto des contrôles</td>
+<td>🔴</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Pas de back/forward dialogue</td>
+<td>🔴</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Pas d’UI équipe Daemon</td>
+<td>🔴</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Pas d’options d’accessibilité</td>
+<td>🔴</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Pas de prévisualisation coût</td>
+<td>🟠</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Feedback débit non optimiste</td>
+<td>🟠</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Aucune mémoire stats casino</td>
+<td>🟠</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Mobile non audité</td>
+<td>🟠</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p>&lt;div class=“pagebreak”&gt;&lt;/div&gt;</p>
+<p>&lt;a id=“07”&gt;&lt;/a&gt;</p>
+<h1>AUDIT_06_QA_BUGS.md — QA Engineer</h1>
+<blockquote>
+<p><strong>Périmètre</strong> : Nexus / Gamebook subsystem<br>
+<strong>Date</strong> : 2026-05-27</p>
+</blockquote>
+<hr>
+<h2>1. Bugs connus / récents (extraits commit log)</h2>
+<table>
+<thead>
+<tr>
+<th>Commit</th>
+<th>Bug</th>
+<th>Statut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>b9a28cb</code></td>
+<td>shop_interior spawn sur sprite NUTRIPATES</td>
+<td>✅ Fixé</td>
+</tr>
+<tr>
+<td><code>b9a28cb</code></td>
+<td>MAMAN demande 2 talks pour le sac</td>
+<td>✅ Fixé</td>
+</tr>
+<tr>
+<td><code>b9a28cb</code></td>
+<td>Véto cages visual</td>
+<td>✅ Fixé</td>
+</tr>
+<tr>
+<td><code>b9a28cb</code></td>
+<td>“recovered gate”</td>
+<td>✅ Fixé</td>
+</tr>
+<tr>
+<td><code>706f20e</code></td>
+<td>Revanche Champion +800 XP annoncé mais 0 distribué</td>
+<td>✅ Fixé (capé à 200)</td>
+</tr>
+<tr>
+<td><code>78c9d18</code></td>
+<td>POST /state acceptait positions sur tiles bloquantes</td>
+<td>✅ Fixé (hardening)</td>
+</tr>
+<tr>
+<td><code>71b972d</code></td>
+<td>Portes (entry positions + exitTargets) incohérences</td>
+<td>✅ Fixé</td>
+</tr>
+<tr>
+<td>Mémoire</td>
+<td>Bonus minuit (pommiers, papa, capitaine…) perdus à minuit</td>
+<td>🔴 <strong>Non fixé</strong></td>
+</tr>
+<tr>
+<td>Phase 1.2</td>
+<td>Race condition energySpentToday (31 routes)</td>
+<td>🔴 <strong>Non fixé</strong></td>
+</tr>
+</tbody>
+</table>
+<h3>1.1 🔴 Le bug “bonus minuit” est documenté en mémoire mais pas planifié</h3>
+<p>Mémo Sartay : « les bonus gagnés (pommiers, papa, capitaine…) sont perdus à minuit. À fixer plus tard. » → <strong>risque de frustration récurrente</strong>. Si un joueur claim un bonus à 23h57, il perd tout à 00h00. Probable cause : un reset journalier touche <code>bonusSurplus</code> ou un flag de date confondu.</p>
+<h3>1.2 🔴 31 routes race-prone (cf. Phase 1.2 §4.2)</h3>
+<p>Symptôme observé concrètement : impossible à reproduire facilement, mais sur 7 joueurs en parallèle qui spam-cliquent, statistiquement il y a déjà eu des désynchros d’énergie. Aucune trace serveur pour le détecter.</p>
+<hr>
+<h2>2. Edge cases identifiés à risque</h2>
+<h3>2.1 🔴 Reset journalier (minuit Paris)</h3>
+<p>11 champs stockent une date <code>String</code> (voir Phase 1.2 §2.2). À chaque rollover minuit, le code doit savoir :</p>
+<ul>
+<li>Reset <code>energySpentToday</code> ?</li>
+<li>Reset <code>casinoBetsToday</code> ?</li>
+<li>Reset <code>bonusSurplus</code> ?</li>
+<li>Reset <code>casinoBoostPctToday</code> ?</li>
+<li>Reset <code>slotMachinesPlayedToday</code> ?</li>
+<li>Reset <code>stopOuEncorePlaysToday</code> ?</li>
+</ul>
+<p>Chaque route fait son propre check <code>if (storedDate !== today) reset</code>. <strong>Aucune source unique de vérité.</strong> Risque : oublier un reset, ou en faire deux à des moments différents (cf. bug bonus minuit).</p>
+<h3>2.2 🔴 Concurrence multi-onglets</h3>
+<p>Un joueur avec 2 onglets ouverts → 2 sessions partagent la même DB. Aucune protection. Si onglet A spend 50 et onglet B spend 50 simultanément, énergie peut sauter à -10 ou rester à 100 (selon ordering DB).</p>
+<h3>2.3 🟠 Crash en plein combat = état <code>activeBattle</code> orphelin</h3>
+<p><code>Daemon.activeBattle</code> est un Json. Si le client crash après le serveur a écrit l’init du combat mais avant la première action, le joueur revient et son daemon est “en combat” sans interface visible. <strong>Aucune route de reset visible.</strong></p>
+<h3>2.4 🟠 Position bloquante après hardening</h3>
+<p>Le commit <code>78c9d18</code> empêche d’ÉCRIRE une position bloquante. Mais que se passe-t-il pour un joueur dont la position EN BASE était déjà bloquante avant le patch ? → Le <code>state</code> GET retourne la position bloquante, le client tente de bouger, le POST refuse, infinite loop possible. <strong>À vérifier.</strong></p>
+<h3>2.5 🟠 <code>pioneerBadgeAwarded</code> et arc Pionnier</h3>
+<p>Si <code>treeObstacleCleared = true</code> mais <code>pioneerBadgeAwarded = false</code> (par exemple si le commit de badge a failed), le joueur a passé l’arbre mais n’a jamais reçu le badge. Aucune route de re-claim n’est apparente.</p>
+<hr>
+<h2>3. Robustesse des routes</h2>
+<h3>3.1 🟠 26 routes ont un <code>console.error</code> ou <code>throw</code></h3>
+<p>Sur 95 routes, ~26 loggent ou throw. Les 69 autres : soit succèdent silencieusement, soit catch silencieusement (voir Phase 1.1 : 31 silent catches). <strong>Couverture d’erreur faible.</strong></p>
+<h3>3.2 🔴 Aucun test unitaire visible</h3>
+<p>Aucun fichier <code>*.test.ts</code> ou <code>*.spec.ts</code> dans <code>src/lib/gamebook/</code>. Les formules critiques (<code>xpForLevel</code>, <code>computeMaxHp</code>, <code>computeSaiyanPoints</code>, <code>computeDaemonBaseStats</code>) n’ont aucune validation automatisée. Un changement de constante peut casser le balancing sans alerte.</p>
+<h3>3.3 🔴 Aucun test E2E</h3>
+<p>Aucun Playwright/Cypress trace. Un dev solo en prod sans tests = chaque déploiement est un coup de poker.</p>
+<hr>
+<h2>4. Données corrompues récurrentes</h2>
+<h3>4.1 🟡 <code>flags</code> Json fourre-tout</h3>
+<p>Aucun schéma. Toute clé peut être écrite. Si une route v3.8 écrit <code>flags.fooBar = true</code> puis le code de v4.0 ne le relit jamais, la clé persiste indéfiniment. <strong>Aucun nettoyage.</strong></p>
+<h3>4.2 🟡 <code>history</code> Json non borné</h3>
+<p>Probable cause : croissance illimitée. À vérifier qu’il n’y a pas de joueur avec 50 KB de history.</p>
+<hr>
+<h2>5. Synthèse criticité</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Bug/Risque</th>
+<th>Criticité</th>
+<th>Statut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Bonus minuit perdus</td>
+<td>🔴</td>
+<td>Non fixé</td>
+</tr>
+<tr>
+<td>2</td>
+<td>31 routes race-prone</td>
+<td>🔴</td>
+<td>Non fixé</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Reset journalier dispersé</td>
+<td>🔴</td>
+<td>Latent</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Concurrence multi-onglets</td>
+<td>🔴</td>
+<td>Latent</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Aucun test unitaire</td>
+<td>🔴</td>
+<td>Latent</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Aucun test E2E</td>
+<td>🔴</td>
+<td>Latent</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Crash combat = état orphelin</td>
+<td>🟠</td>
+<td>Latent</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Position bloquante héritée</td>
+<td>🟠</td>
+<td>À vérifier</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Pionnier badge potentiellement loupé</td>
+<td>🟠</td>
+<td>Latent</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Flags Json non purgés</td>
+<td>🟡</td>
+<td>Latent</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p>&lt;div class=“pagebreak”&gt;&lt;/div&gt;</p>
+<p>&lt;a id=“08”&gt;&lt;/a&gt;</p>
+<h1>AUDIT_07_CONFORMITE.md — Conformité / Sécurité / Anti-cheat</h1>
+<blockquote>
+<p><strong>Périmètre</strong> : Nexus / Gamebook subsystem<br>
+<strong>Date</strong> : 2026-05-27</p>
+</blockquote>
+<hr>
+<h2>1. Authentification</h2>
+<h3>1.1 🟢 NextAuth sur toutes les routes</h3>
+<p>Chaque route mutative commence par <code>getServerSession(authOptions)</code> puis vérifie <code>session?.user?.id</code>. <strong>Cohérent.</strong></p>
+<h3>1.2 🟡 Aucun rate limiting</h3>
+<p>Aucun middleware visible (next.config / <code>middleware.ts</code> à vérifier). Un attaquant authentifié peut spam-poster 1000 req/s sur <code>/spend</code>. Pas critique en dev, <strong>dangereux en prod si quelqu’un voulait nuker l’énergie d’un pote</strong> (impossible sans son auth) ou DDOS le Neon.</p>
+<h3>1.3 🔴 Pas de CSRF check explicite</h3>
+<p>NextAuth gère le CSRF pour ses propres routes mais les routes <code>/api/gamebook/*</code> ne semblent pas avoir de validation CSRF token explicite. À vérifier (Phase 1.8) — NextAuth peut le gérer transparently via cookie SameSite=Lax.</p>
+<hr>
+<h2>2. Autorisations</h2>
+<h3>2.1 🟢 Le <code>userId</code> vient toujours de la session</h3>
+<p>Aucune route ne lit un <code>userId</code> depuis le body de la requête. ✅ Pas d’IDOR (Insecure Direct Object Reference).</p>
+<h3>2.2 🔴 <code>isCreator</code> / <code>isSystem</code> backdoors</h3>
+<p><code>src/lib/gamebook/creator.ts</code> :</p>
+<ul>
+<li><code>padAvailableEnergyForCreator</code> → énergie min 1000 pour <code>isSystem=true</code></li>
+<li><code>bridge/route.ts</code> : bypass tous les checks de défi</li>
+<li><code>spend/route.ts</code> : <code>availableEnergy = Math.max(availableEnergy, 1000)</code></li>
+</ul>
+<p><strong>111 références à <code>isCreator/isSystem</code> dans les routes Nexus.</strong> Toute personne avec <code>isSystem=true</code> en DB a des super-pouvoirs. <strong>Si ce flag est jamais accidentellement activé sur un compte joueur, le balancing est cassé.</strong></p>
+<p>→ Aligné avec Partie B du brief (compte test God Mode externe). C’est exactement ce que la Partie B veut <strong>remplacer</strong>.</p>
+<h3>2.3 🟢 <code>isSystem</code> exclu de classements</h3>
+<p><code>bridge/route.ts:296</code> filtre <code>user: { isSystem: false }</code>. ✅ Bonne pratique pour ne pas polluer les leaderboards.</p>
+<hr>
+<h2>3. Anti-cheat</h2>
+<h3>3.1 🟢 Freeze gamebook si suppression de reps (v3.6)</h3>
+<p><code>isGamebookFrozen</code> + <code>gamebookFrozenUntil</code> : si un joueur supprime ses reps après avoir spend de l’énergie, le gamebook est gelé. ✅ Idée correcte.</p>
+<h3>3.2 🟠 La freeze n’est pas réversible côté joueur</h3>
+<p>Aucune route <code>/api/gamebook/unfreeze</code> côté joueur. Le créateur peut update en DB. Pour 7 potes, c’est gérable. <strong>Mais</strong> : si un joueur a 3-4 freeze par mois, son XP narrative s’éteint.</p>
+<h3>3.3 🔴 Aucune validation cryptographique des actions</h3>
+<p>Le client envoie « j’ai cliqué sur PNJ X, je veux le défi ». Le serveur fait confiance. Si un joueur ouvre la console et POST directement <code>/api/gamebook/piaffini/rescue</code>, est-ce qu’il rescue PIAFFINI sans avoir fait la tour ? <strong>À vérifier (Phase 1.8).</strong> Probablement oui pour certaines routes.</p>
+<h3>3.4 🔴 Aucun audit log des actions sensibles</h3>
+<p>Cf. Phase 1.2 §6.2. Si un joueur conteste ou si un autre est suspect de triche, <strong>aucune trace serveur</strong> pour départager.</p>
+<hr>
+<h2>4. RGPD</h2>
+<h3>4.1 🟢 Cascade delete</h3>
+<p><code>onDelete: Cascade</code> sur toutes les FK vers <code>User</code>. ✅ Conforme à l’effacement RGPD.</p>
+<h3>4.2 🟡 Aucune export/portabilité</h3>
+<p>Aucune route <code>/api/user/export</code> visible. Si un joueur demande son data, c’est manuel.</p>
+<h3>4.3 🟡 Aucune mention CGU/CGV in-game</h3>
+<p>Pas de gate « j’ai lu les conditions ». Pour 7 potes, OK. En cas d’élargissement → à prévoir.</p>
+<hr>
+<h2>5. Secrets</h2>
+<h3>5.1 🟡 <code>.env</code> présent dans le repo (vu dans <code>ls</code>)</h3>
+<p>Le <code>.env</code> est dans le repo (<code>.gitignore</code> à vérifier). Si le fichier réel est tracké, c’est un leak. À confirmer (Phase 1.8).</p>
+<h3>5.2 🟢 <code>.env.example</code> séparé</h3>
+<p>Bonne pratique vue.</p>
+<hr>
+<h2>6. Conformité business</h2>
+<h3>6.1 ⚪ Casino simulé sans argent réel</h3>
+<p>Pas de PSC, pas de question légale en France (pas de jeu d’argent au sens du code monétaire).</p>
+<hr>
+<h2>7. Synthèse criticité</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Constat</th>
+<th>Criticité</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Pas de rate limiting</td>
+<td>🟠</td>
+</tr>
+<tr>
+<td>2</td>
+<td>CSRF à vérifier</td>
+<td>🟠</td>
+</tr>
+<tr>
+<td>3</td>
+<td>111 backdoors <code>isCreator</code></td>
+<td>🔴 (= raison d’être de Partie B)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Validation actions sensibles côté serveur incomplète</td>
+<td>🔴</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Aucun audit log</td>
+<td>🔴</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Aucune export RGPD</td>
+<td>🟡</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>.env</code> tracké ?</td>
+<td>🟡</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p>&lt;div class=“pagebreak”&gt;&lt;/div&gt;</p>
+<p>&lt;a id=“09”&gt;&lt;/a&gt;</p>
+<h1>AUDIT_08_QUESTIONS.md — Questions ouvertes (centralisé)</h1>
+<blockquote>
+<p>Pour chaque question : contexte + impact si non répondue.</p>
+</blockquote>
+<hr>
+<h2>1. Migrations &amp; DB</h2>
+<h3>Q1.1 — Ordre d’application des migrations en prod</h3>
+<p><strong>Contexte</strong> : v3.8/v3.11/v3.12 datées 20260528+ viennent alphabétiquement APRÈS v4.0 datées 20260526.<br>
+<strong>Question</strong> : Sur la prod Neon, dans quel ordre ces migrations ont-elles été appliquées ? Ordre alphabétique (Prisma standard), ordre manuel via <code>db push</code>, ou hybride ?<br>
+<strong>Impact</strong> : Détermine si les utilisateurs prod ont vu une « v4.0 active_battle » avant les colonnes v3.8 Pépiteville, ou l’inverse.</p>
+<h3>Q1.2 — Régénération depuis zéro</h3>
+<p><strong>Contexte</strong> : 14 modèles sans <code>CREATE TABLE</code>.<br>
+<strong>Question</strong> : Faut-il accepter de générer une migration « baseline_drift_repair » via <code>prisma migrate dev --create-only</code> puis la marquer <code>--applied</code> en prod ? Ou laisser le repo non-reproductible ?</p>
+<h3>Q1.3 — Bonus minuit</h3>
+<p><strong>Contexte</strong> : Bug documenté en mémoire.<br>
+<strong>Question</strong> : Quels champs exactement sont perdus à minuit ? Lesquels doivent persister (bonus permanent) vs reset (énergie quotidienne) ?</p>
+<hr>
+<h2>2. Game design</h2>
+<h3>Q2.1 — Cap niveau Daemon</h3>
+<p><strong>Contexte</strong> : Cap L50 + L³ → queue impossible.<br>
+<strong>Question</strong> : Cap à 30 ? Ou baseExp dynamique multiplié pour boss ?</p>
+<h3>Q2.2 — Casino EV</h3>
+<p><strong>Contexte</strong> : 5 jeux casino, tous en <code>Math.random()</code> serveur. Aucun cap de gain cumulé journalier.<br>
+<strong>Question</strong> : EV exact de chaque jeu ? L’un d’eux a-t-il EV &gt; 0 ?</p>
+<h3>Q2.3 — Pénalité freeze</h3>
+<p><strong>Contexte</strong> : <code>gamebookFrozenUntil</code> actif si suppression de reps. Pas de route de réversion joueur.<br>
+<strong>Question</strong> : Garder le freeze comme dissuasion ou ajouter un « rachat » via un défi sportif ?</p>
+<h3>Q2.4 — Système de skip</h3>
+<p><strong>Contexte</strong> : Joueur bloqué → bloqué.<br>
+<strong>Question</strong> : Ajouter un système d’aide après N tentatives ? Sous quelle forme ?</p>
+<hr>
+<h2>3. Narratif</h2>
+<h3>Q3.1 — Clôture Pastagone</h3>
+<p><strong>Contexte</strong> : Arc majeur v4.0.<br>
+<strong>Question</strong> : Beat narratif post-Pastagone ? Qui dit quoi quand le joueur sort ?</p>
+<h3>Q3.2 — Fusion univers</h3>
+<p><strong>Contexte</strong> : Pullman + Pasta humor + Pokémon mécanique.<br>
+<strong>Question</strong> : Assumer pleinement le mélange (in-jokes croisés) ou re-cloisonner les tonalités par zone ?</p>
+<h3>Q3.3 — Linéarisation explicite</h3>
+<p><strong>Contexte</strong> : 15 arcs, ordre flou.<br>
+<strong>Question</strong> : Ajouter une carte/journal de quêtes ? Ou rester sur la découverte organique ?</p>
+<h3>Q3.4 — TOWER_JOKES replay</h3>
+<p><strong>Contexte</strong> : 4 blagues qui rejouent indéfiniment.<br>
+<strong>Question</strong> : Ajouter un flag <code>tbJokesSeenIds: int[]</code> pour ne pas reproposer les blagues vues ?</p>
+<hr>
+<h2>4. UX</h2>
+<h3>Q4.1 — Tutoriel contrôles</h3>
+<p><strong>Question</strong> : Un overlay au premier <code>MapClient</code> mount ?</p>
+<h3>Q4.2 — Back/forward dialogue</h3>
+<p><strong>Question</strong> : Comportement attendu : <code>←</code> pour reculer d’1 step ?</p>
+<h3>Q4.3 — Mobile</h3>
+<p><strong>Question</strong> : Le jeu est-il testé sur mobile ? Sartay utilise-t-il son téléphone pour jouer ?</p>
+<h3>Q4.4 — UI équipe Daemon</h3>
+<p><strong>Question</strong> : Existe-t-il une UI pour gérer plusieurs Daemons ? Si non, c’est prioritaire ?</p>
+<hr>
+<h2>5. QA / robustesse</h2>
+<h3>Q5.1 — Tests</h3>
+<p><strong>Question</strong> : Acceptes-tu d’introduire un fichier <code>daemon.test.ts</code> minimal (formules) en mode « pas casser le code mais ajouter sécurité » ?</p>
+<h3>Q5.2 — Position bloquante héritée</h3>
+<p><strong>Question</strong> : Faut-il une route admin de « rescue all blocked » à exécuter une fois ?</p>
+<h3>Q5.3 — Crash combat orphelin</h3>
+<p><strong>Question</strong> : <code>activeBattle = null</code> au timeout (&gt;30min sans action) ?</p>
+<hr>
+<h2>6. Sécurité</h2>
+<h3>Q6.1 — CSRF</h3>
+<p><strong>Question</strong> : Confirmer que NextAuth gère bien le CSRF via cookie sur les routes <code>/api/gamebook/*</code> ?</p>
+<h3>Q6.2 — Validation actions sensibles</h3>
+<p><strong>Question</strong> : Faut-il auditer route par route les pré-conditions serveur (« le joueur doit avoir tel flag pour POST telle action ») ?</p>
+<h3>Q6.3 — .env tracké</h3>
+<p><strong>Question</strong> : Vérifier <code>git ls-files .env</code>. Si tracké, à purger immédiatement de l’historique ?</p>
+<h3>Q6.4 — Rate limit</h3>
+<p><strong>Question</strong> : Acceptes-tu un middleware Next.js rate-limit (ex: Upstash) ou ce n’est pas prioritaire pour 7 potes ?</p>
+<hr>
+<h2>7. Partie B (God Mode)</h2>
+<h3>Q7.1 — Périmètre panel testeur</h3>
+<p><strong>Question</strong> : Quelles fonctions précises veux-tu (resources, time-travel, flag manip, téléport, snapshots) ? Doit-on inclure la simulation de race conditions ?</p>
+<h3>Q7.2 — Lien avec <code>isSystem</code></h3>
+<p><strong>Contexte</strong> : 111 backdoors actuels.<br>
+<strong>Question</strong> : Le compte test doit-il rester <code>isSystem=false</code> (= joueur normal) et le panel agir via routes admin séparées ? Confirme.</p>
+<hr>
+<p>&lt;div class=“pagebreak”&gt;&lt;/div&gt;</p>
+<p>&lt;a id=“10”&gt;&lt;/a&gt;</p>
+<h1>AUDIT_00_SYNTHESE.md — Synthèse exécutive</h1>
+<blockquote>
+<p><strong>Périmètre</strong> : Nexus / Gamebook subsystem<br>
+<strong>Date</strong> : 2026-05-27<br>
+<strong>Branche auditée</strong> : <code>feat/gamification-pass-2</code> HEAD <code>6f0bb65</code></p>
+</blockquote>
+<hr>
+<h2>1. Verdict global</h2>
+<p><strong>Le Nexus est un produit live, joué par 7 vrais utilisateurs, avec une vélocité de production solo remarquable.</strong> Il fonctionne. Mais il porte une <strong>dette technique systémique</strong> née de la livraison continue sans tests, sans transactions, et avec une god-table de 130 colonnes.</p>
+<table>
+<thead>
+<tr>
+<th>Dimension</th>
+<th>Note</th>
+<th>Commentaire</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Code</td>
+<td>C+</td>
+<td>Architecture étroite (MapClient 5791l, npcs 2565l, maps 2812l), 292 <code>(prisma as any)</code>, 0 tests. Cohérent en surface, fragile en profondeur.</td>
+</tr>
+<tr>
+<td>DB</td>
+<td>D</td>
+<td>God-table, 14 modèles sans migration, 0 transaction, 31 routes race-prone.</td>
+</tr>
+<tr>
+<td>Game design</td>
+<td>B</td>
+<td>Idées fortes (10 reps = 1 case, formules Daemon, Saiyan). Casino non équilibré, courbe L³ impraticable.</td>
+</tr>
+<tr>
+<td>Narratif</td>
+<td>B</td>
+<td>Voix forte du Monstre, foreshadowing, mais dispersion et pas de linéarisation.</td>
+</tr>
+<tr>
+<td>UX</td>
+<td>C</td>
+<td>Modale-only, pas de tuto contrôles, pas de deeplink, mobile non confirmé.</td>
+</tr>
+<tr>
+<td>QA</td>
+<td>D</td>
+<td>Aucun test, bugs latents (race, minuit, multi-onglets).</td>
+</tr>
+<tr>
+<td>Conformité</td>
+<td>C+</td>
+<td>NextAuth OK, mais 111 backdoors <code>isCreator</code>, pas d’audit log, pas de rate limit.</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>2. Top 10 priorités (toutes phases confondues)</h2>
+<table>
+<thead>
+<tr>
+<th>Rang</th>
+<th>Constat</th>
+<th>Phase</th>
+<th>Criticité</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>31 routes race-prone sur <code>energySpentToday</code></strong> (read-modify-write sans tx)</td>
+<td>1.2</td>
+<td>🔴</td>
+<td>M</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>0 transaction Prisma sur 95 routes</strong></td>
+<td>1.2</td>
+<td>🔴</td>
+<td>L</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>14 modèles sans <code>CREATE TABLE</code></strong> (schema drift, repo non-reproductible)</td>
+<td>1.2</td>
+<td>🔴</td>
+<td>M</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Bonus minuit perdus</strong> (bug documenté, non fixé)</td>
+<td>1.6</td>
+<td>🔴</td>
+<td>S</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Courbe XP L³ + cap L50 = injouable jusqu’au bout</strong></td>
+<td>1.3</td>
+<td>🔴</td>
+<td>S (constants)</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Casino sans cap de gain cumulé journalier</strong></td>
+<td>1.3</td>
+<td>🔴</td>
+<td>S</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Aucun test unitaire/E2E</strong></td>
+<td>1.6</td>
+<td>🔴</td>
+<td>L (mais L = sécurité long terme)</td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>Aucun audit log serveur</strong></td>
+<td>1.2 / 1.7</td>
+<td>🔴</td>
+<td>M</td>
+</tr>
+<tr>
+<td>9</td>
+<td><strong>MapClient 5791 lignes</strong> (god component)</td>
+<td>1.1</td>
+<td>🔴</td>
+<td>XL</td>
+</tr>
+<tr>
+<td>10</td>
+<td><strong>111 backdoors <code>isCreator</code></strong> → à remplacer par panneau testeur externe (Partie B)</td>
+<td>1.7</td>
+<td>🔴</td>
+<td>M (Partie B)</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>3. Schéma de causalité</h2>
+<pre><code>Vélocité solo + livraison continue
+        ↓
+Dette transactionnelle (0 tx, 31 race-prone)
+        ↓
+Couplage god-table (130 champs)
+        ↓
+Architecture client god-component (MapClient 5791l)
+        ↓
+Aucun test
+        ↓
+Régressions cycliques (cf. commits b9a28cb, 706f20e, 78c9d18)
+</code></pre>
+<p>Chaque couche cristallise les choix de vitesse. Aucune n’est « fautive » isolément — c’est le <strong>système</strong> qui est sous-tendu.</p>
+<hr>
+<h2>4. Recommandation stratégique</h2>
+<h3>4.1 Priorité absolue (avant tout nouveau contenu)</h3>
+<ol>
+<li><strong>Baseline migration de répare</strong> (Phase 1.2 §2.3) — sans ça, le repo est inutilisable hors prod actuelle.</li>
+<li><strong>Atomicité énergie</strong> (incrément Prisma) — fix systémique, faible effort, haut impact.</li>
+<li><strong>Audit log serveur</strong> (<code>GamebookEvent</code> append-only) — débloque debug, conformité et anti-cheat.</li>
+<li><strong>Fix bug bonus minuit</strong> — frustration utilisateur réelle.</li>
+</ol>
+<h3>4.2 Stabilisation moyen terme</h3>
+<ol start="5">
+<li><strong>Suite de tests minimale</strong> : formules Daemon + 5 routes critiques en intégration.</li>
+<li><strong>Rééquilibrage L³</strong> (cap L30 ou baseExp boss×4).</li>
+<li><strong>Cap casino journalier</strong> sur gain cumulé.</li>
+</ol>
+<h3>4.3 Refactor long terme (NON BLOQUANT pour l’audit)</h3>
+<ol start="8">
+<li><strong>Décomposer MapClient</strong> en hooks (cf. Phase 1.1).</li>
+<li><strong>Séparer god-table</strong> : <code>GamebookCore</code> (position, énergie) + <code>GamebookFlags</code> + <code>GamebookCasino</code>.</li>
+<li><strong>Centraliser dialogues</strong> dans une table de référence éditable.</li>
+</ol>
+<h3>4.4 Partie B — God Mode externe</h3>
+<p>Le brief Partie B (panneau testeur séparé, compte normal sans <code>isSystem</code>) est <strong>précisément l’antidote</strong> aux 111 backdoors actuels. Recommandation : remplacer progressivement les <code>isCreator</code> par des routes <code>/api/admin/*</code> cookie-gated par un secret, accessibles uniquement depuis le panel.</p>
+<hr>
+<h2>5. Ce qui est solide (à NE PAS toucher)</h2>
+<p>Sans complaisance mais sans non-plus jeter le bébé :</p>
+<ul>
+<li><strong><code>COST_MOVE = 10</code></strong> : intouchable.</li>
+<li><strong>Formules <code>computeDaemonBaseStats</code> &amp; <code>computeSaiyanPoints</code></strong> : à conserver telles quelles.</li>
+<li><strong>NextAuth + <code>userId</code> depuis session</strong> : pattern sain.</li>
+<li><strong><code>onDelete: Cascade</code> partout</strong> : conforme RGPD.</li>
+<li><strong><code>isSystem</code> exclu des classements</strong> : bonne discipline.</li>
+<li><strong>Foreshadowing narratif</strong> : à étendre.</li>
+<li><strong>Voix du Monstre Spaghetti Volant</strong> : marque identitaire.</li>
+</ul>
+<hr>
+<h2>6. Coût estimé (ordres de grandeur, sans engagement)</h2>
+<table>
+<thead>
+<tr>
+<th>Bloc</th>
+<th>Estimation Sartay seul</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Baseline migration</td>
+<td>2-4h</td>
+</tr>
+<tr>
+<td>Atomicité énergie sur 31 routes</td>
+<td>8-16h</td>
+</tr>
+<tr>
+<td>Audit log</td>
+<td>4-8h</td>
+</tr>
+<tr>
+<td>Fix bonus minuit</td>
+<td>1-3h</td>
+</tr>
+<tr>
+<td>Tests formules Daemon</td>
+<td>2-4h</td>
+</tr>
+<tr>
+<td>Cap L30 ou rebalance</td>
+<td>1-2h</td>
+</tr>
+<tr>
+<td>Cap casino journalier</td>
+<td>2-4h</td>
+</tr>
+<tr>
+<td>Décompo MapClient</td>
+<td>30-60h</td>
+</tr>
+<tr>
+<td>Refactor god-table</td>
+<td>40-80h</td>
+</tr>
+<tr>
+<td>Partie B (panel testeur)</td>
+<td>12-24h</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Travail prio (avant nouveau contenu)</strong> : ~40h.<br>
+<strong>Refactor long terme</strong> : ~120h (donc à étaler).</p>
+<hr>
+<h2>7. Ce qui dépend de réponses (Phase 1.8)</h2>
+<p>22 questions ouvertes centralisées en <code>AUDIT_08_QUESTIONS.md</code>. Les plus urgentes :</p>
+<ul>
+<li>Q1.1 (ordre migrations prod)</li>
+<li>Q2.1 (cap L30 ?)</li>
+<li>Q2.2 (EV casino par jeu)</li>
+<li>Q7.1 / Q7.2 (périmètre Partie B)</li>
+</ul>
+<hr>
+<p><strong>Fin AUDIT_00_SYNTHESE.md — Fin de la Partie A.</strong></p>
+<hr>
+
+</body>
+</html>
