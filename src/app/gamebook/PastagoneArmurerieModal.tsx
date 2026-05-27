@@ -2,8 +2,10 @@
 
 // src/app/gamebook/PastagoneArmurerieModal.tsx
 //
-// v4.0 Phase 4.D — PESTO Jr armurerie Pastagone : équipements pour Daemon.
-// Phase 4.D = squelette UI ; les achats réels arrivent en Phase 5.
+// v4.0 Phase 5 — PESTO Jr armurerie Pastagone : 4 wearables Daemon achetables.
+// Appelle /api/gamebook/shop/buy pour acheter (1 à la fois — convention catalog).
+
+import { useState } from "react"
 
 interface Props {
     onClose: () => void
@@ -19,12 +21,32 @@ interface WearableItem {
 
 const WEARABLES: WearableItem[] = [
     { key: "collier_renforce",   label: "🦴 Collier renforcé",   desc: "Protection cervicale rigide",    cost: 120, bonus: "+3 DÉFENSE, durabilité 5 combats" },
-    { key: "muselière_dressage", label: "🥊 Muselière dressage", desc: "Force le Daemon à mordre fort",  cost: 130, bonus: "+4 ATTAQUE, durabilité 5 combats" },
+    { key: "muselière_dressage", label: "🥊 Muselière dressage", desc: "Force le Daemon à mordre fort",  cost: 130, bonus: "+4 FORCE, durabilité 5 combats" },
     { key: "harnais_leger",      label: "🪶 Harnais léger",      desc: "Aérodynamique, super stretch",   cost: 110, bonus: "+3 VITESSE, durabilité 5 combats" },
     { key: "plaque_mentale",     label: "🧠 Plaque mentale",      desc: "Stimule l'intuition combat",     cost: 140, bonus: "+3 INTELLIGENCE, durabilité 5 combats" },
 ]
 
 export default function PastagoneArmurerieModal({ onClose }: Props) {
+    const [busy, setBusy] = useState<string | null>(null)
+    const [message, setMessage] = useState<string | null>(null)
+
+    const buy = async (itemKey: string) => {
+        if (busy) return
+        setBusy(itemKey); setMessage(null)
+        try {
+            const r = await fetch("/api/gamebook/shop/buy", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ itemKey }),
+            })
+            const j = await r.json()
+            setMessage(j.ok ? `✅ ${itemKey} acheté.` : (j.reason ?? "Achat refusé."))
+        } catch {
+            setMessage("Erreur réseau.")
+        } finally {
+            setBusy(null)
+        }
+    }
     return (
         <div
             style={{
@@ -66,18 +88,30 @@ export default function PastagoneArmurerieModal({ onClose }: Props) {
                         <div style={{ opacity: 0.7, marginTop: 2 }}>{item.desc}</div>
                         <div style={{ opacity: 0.85, marginTop: 2, color: "#80c060" }}>{item.bonus}</div>
                         <button
-                            disabled
+                            onClick={() => buy(item.key)}
+                            disabled={busy !== null}
                             style={{
-                                marginTop: 6, padding: "4px 8px",
-                                background: "#444", color: "#888",
-                                border: "1px solid #666", fontSize: 9,
-                                fontFamily: "monospace", cursor: "not-allowed",
+                                marginTop: 6, padding: "6px 10px",
+                                background: busy === item.key ? "#444" : "#3a5a3a",
+                                color: "#fff",
+                                border: "1px solid #80c060", fontSize: 10,
+                                fontFamily: "monospace",
+                                cursor: busy ? "wait" : "pointer", fontWeight: "bold",
                             }}
                         >
-                            ACHETER (Phase 5 à venir)
+                            {busy === item.key ? "..." : `🛒 ACHETER (${item.cost} reps)`}
                         </button>
                     </div>
                 ))}
+
+                {message && (
+                    <div style={{
+                        marginTop: 8, padding: 8,
+                        background: "#222", border: "1px solid #555", fontSize: 10,
+                    }}>
+                        {message}
+                    </div>
+                )}
 
                 <button
                     onClick={onClose}

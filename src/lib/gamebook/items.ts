@@ -84,6 +84,23 @@ export interface ItemCapabilities {
     canWater?: {
         initialDurability: number
     }
+    /** v4.0 Phase 5 — Item équipable sur UN Daemon (équipement combat).
+     *  Stocké dans Daemon.equippedItems (Json array de string keys), max 4.
+     *  Bonus stat appliqué côté combat (snapshot au démarrage de battle).
+     *  durabilityBattles : nombre de combats avant cassure (cf. Daemon.equippedItems[].durability). */
+    canEquipDaemon?: {
+        /** Stat boostée (clé de DaemonStats). */
+        stat: "force" | "vitesse" | "defense" | "intelligence" | "endurance"
+        /** Bonus de stat (additif). */
+        bonus: number
+        durabilityBattles: number
+    }
+    /** v4.0 Phase 5 — Item à consommer en plein combat (potion-like).
+     *  Effet appliqué au Daemon actif (heal HP, boost stat tour, +happiness, etc.). */
+    canUseInBattle?: {
+        effect: "heal_hp" | "happiness_boost" | "vitesse_buff_one_battle"
+        amount: number
+    }
 }
 
 export interface ItemDefinition {
@@ -98,7 +115,7 @@ export interface ItemDefinition {
      * "both" (les deux shops), "gift" (donné, pas vendu).
      * v3.23 : ajout "muscuville_bikes" pour le magasin de vélos.
      * v3.24a-3 : ajout "vegas_habits" (Lasagnas Vegas) et "vegas_bouffe" (Lasagnas Vegas premium). */
-    availableAt?: "nutripates" | "trenette" | "both" | "gift" | "muscuville_bikes" | "vegas_habits" | "vegas_bouffe"
+    availableAt?: "nutripates" | "trenette" | "both" | "gift" | "muscuville_bikes" | "vegas_habits" | "vegas_bouffe" | "pastagone_cuisine" | "pastagone_armurerie"
     capabilities: ItemCapabilities
 }
 
@@ -418,6 +435,93 @@ export const ITEMS: ItemDefinition[] = [
             canConsume: { effect: "doubleEnergy" },  // placeholder — vraie logique gérée dans /api/gamebook/coq/feed (à venir v3.24b)
         },
     },
+    // ============================================================
+    // v4.0 Phase 5 — Catalogue Pastagone (4 wearables Daemon + 3 consommables)
+    // ============================================================
+    {
+        key: "collier_renforce",
+        name: "Collier renforcé",
+        emoji: "🦴",
+        description: "Cuir épais + métal. Protège la nuque du Daemon. +3 DÉFENSE pour 5 combats.",
+        priceReps: 120,
+        maxQuantity: 5,
+        availableAt: "pastagone_armurerie",
+        capabilities: {
+            canEquipDaemon: { stat: "defense", bonus: 3, durabilityBattles: 5 },
+        },
+    },
+    {
+        key: "muselière_dressage",
+        name: "Muselière dressage",
+        emoji: "🥊",
+        description: "Force le Daemon à concentrer sa morsure. +4 FORCE pour 5 combats.",
+        priceReps: 130,
+        maxQuantity: 5,
+        availableAt: "pastagone_armurerie",
+        capabilities: {
+            canEquipDaemon: { stat: "force", bonus: 4, durabilityBattles: 5 },
+        },
+    },
+    {
+        key: "harnais_leger",
+        name: "Harnais léger",
+        emoji: "🪶",
+        description: "Aérodynamique. +3 VITESSE pour 5 combats.",
+        priceReps: 110,
+        maxQuantity: 5,
+        availableAt: "pastagone_armurerie",
+        capabilities: {
+            canEquipDaemon: { stat: "vitesse", bonus: 3, durabilityBattles: 5 },
+        },
+    },
+    {
+        key: "plaque_mentale",
+        name: "Plaque mentale",
+        emoji: "🧠",
+        description: "Renforce l'intuition combat. +3 INTELLIGENCE pour 5 combats.",
+        priceReps: 140,
+        maxQuantity: 5,
+        availableAt: "pastagone_armurerie",
+        capabilities: {
+            canEquipDaemon: { stat: "intelligence", bonus: 3, durabilityBattles: 5 },
+        },
+    },
+    {
+        key: "steak_nerveux",
+        name: "Steak nerveux",
+        emoji: "🥩",
+        description: "Bourre la viande crue dans la gueule de ton Daemon. Restaure 50 HP en plein combat.",
+        priceReps: 80,
+        maxQuantity: 10,
+        availableAt: "pastagone_cuisine",
+        capabilities: {
+            canUseInBattle: { effect: "heal_hp", amount: 50 },
+        },
+    },
+    {
+        key: "os_a_moelle",
+        name: "Os à moelle",
+        emoji: "🦴",
+        description: "Comfort food canin. +20 bonheur au Daemon (utilisable hors combat).",
+        priceReps: 60,
+        maxQuantity: 10,
+        availableAt: "pastagone_cuisine",
+        capabilities: {
+            canUseInBattle: { effect: "happiness_boost", amount: 20 },
+        },
+    },
+    {
+        key: "espresso_canin",
+        name: "Espresso canin",
+        emoji: "☕",
+        description: "Caféine concentrée. +2 VITESSE pour 1 combat (consommé à l'usage).",
+        priceReps: 100,
+        maxQuantity: 5,
+        availableAt: "pastagone_cuisine",
+        capabilities: {
+            canUseInBattle: { effect: "vitesse_buff_one_battle", amount: 2 },
+        },
+    },
 ]
 
 export function getItem(key: string): ItemDefinition | null {
@@ -429,7 +533,7 @@ export function getItem(key: string): ItemDefinition | null {
  * "both" est inclus dans les deux shops. "gift" est exclu.
  * v3.23 — Étendu pour supporter "muscuville_bikes" (magasin de vélos).
  */
-export function itemsAvailableAtShop(shop: "nutripates" | "trenette" | "muscuville_bikes" | "vegas_habits" | "vegas_bouffe"): ItemDefinition[] {
+export function itemsAvailableAtShop(shop: "nutripates" | "trenette" | "muscuville_bikes" | "vegas_habits" | "vegas_bouffe" | "pastagone_cuisine" | "pastagone_armurerie"): ItemDefinition[] {
     return ITEMS.filter((i) => {
         // v3.33 — Si pas d'availableAt, l'item n'est pas vendu (= gift only).
         if (!i.availableAt) return false
@@ -439,7 +543,11 @@ export function itemsAvailableAtShop(shop: "nutripates" | "trenette" | "muscuvil
         if (shop === "muscuville_bikes") return at === "muscuville_bikes" || at === "both"
         if (shop === "vegas_habits") return at === "vegas_habits"
         if (shop === "vegas_bouffe") return at === "vegas_bouffe"
-        if (at === "muscuville_bikes" || at === "vegas_habits" || at === "vegas_bouffe") return false
+        // v4.0 Phase 5 — Shops Pastagone (cuisine + armurerie)
+        if (shop === "pastagone_cuisine") return at === "pastagone_cuisine"
+        if (shop === "pastagone_armurerie") return at === "pastagone_armurerie"
+        if (at === "muscuville_bikes" || at === "vegas_habits" || at === "vegas_bouffe"
+            || at === "pastagone_cuisine" || at === "pastagone_armurerie") return false
         if (at === "both") return true
         return at === shop
     })

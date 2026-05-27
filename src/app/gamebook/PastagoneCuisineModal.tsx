@@ -29,6 +29,25 @@ const CUISINE_ITEMS: CuisineItem[] = [
 export default function PastagoneCuisineModal({ onClose }: Props) {
     const [puzzleStep, setPuzzleStep] = useState(0)
     const [message, setMessage] = useState<string | null>(null)
+    const [busy, setBusy] = useState<string | null>(null)
+
+    const buy = async (itemKey: string) => {
+        if (busy) return
+        setBusy(itemKey); setMessage(null)
+        try {
+            const r = await fetch("/api/gamebook/shop/buy", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ itemKey }),
+            })
+            const j = await r.json()
+            setMessage(j.ok ? `✅ ${itemKey} acheté.` : (j.reason ?? "Achat refusé."))
+        } catch {
+            setMessage("Erreur réseau.")
+        } finally {
+            setBusy(null)
+        }
+    }
 
     useEffect(() => {
         // Lit l'état de l'énigme côté serveur
@@ -88,16 +107,18 @@ export default function PastagoneCuisineModal({ onClose }: Props) {
                         </div>
                         <div style={{ opacity: 0.7, marginTop: 2 }}>{item.desc}</div>
                         <button
-                            disabled
-                            onClick={() => setMessage("Achat indisponible pour l'instant (Phase 5 à venir).")}
+                            onClick={() => buy(item.key)}
+                            disabled={busy !== null}
                             style={{
-                                marginTop: 6, padding: "4px 8px",
-                                background: "#444", color: "#888",
-                                border: "1px solid #666", fontSize: 9,
-                                fontFamily: "monospace", cursor: "not-allowed",
+                                marginTop: 6, padding: "6px 10px",
+                                background: busy === item.key ? "#444" : "#3a5a3a",
+                                color: "#fff",
+                                border: "1px solid #d4a060", fontSize: 10,
+                                fontFamily: "monospace",
+                                cursor: busy ? "wait" : "pointer", fontWeight: "bold",
                             }}
                         >
-                            ACHETER (à venir)
+                            {busy === item.key ? "..." : `🛒 ACHETER (${item.cost} reps)`}
                         </button>
                     </div>
                 ))}
