@@ -774,6 +774,12 @@ model GamebookProgress {
   //                           (+100 reps one-shot, indice anti-boss).
   pastagoneCoulterBeaten     Boolean   @default(false)
   pastagoneFaaGiftClaimed    Boolean   @default(false)
+  // v4.0 — CAPOLINO 3ᵉ + 4ᵉ rencontre :
+  // pastagoneCapolinoMidBeaten : true après défaite du rival CAPOLINO en mid-arc Pastagone.
+  // pastagoneCapolinoFleeShown : true après cinématique post-boss où CAPOLINO s'enfuit
+  //                              en jurant vengeance (étape narrative one-shot).
+  pastagoneCapolinoMidBeaten Boolean   @default(false)
+  pastagoneCapolinoFleeShown Boolean   @default(false)
 
   @@unique([userId, chapterId])
   @@index([userId])

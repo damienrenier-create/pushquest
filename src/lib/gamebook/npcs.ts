@@ -2127,6 +2127,35 @@ export const NPCS: NpcDefinition[] = [
         ],
     },
     // ============================================================
+    // v4.0 — CAPOLINO (3ᵉ rencontre, mini-boss Pastagone outdoor)
+    // Combat optionnel avant le Chef Asriel.
+    // ============================================================
+    {
+        id: "capolino_pastagone_mid",
+        name: "CAPOLINO",
+        mapId: "pastagone",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🥊", color: "#8b0000" },
+        // Centre du Pastagone, devant la cellule, le visage déterminé.
+        initialX: 9,
+        initialY: 8,
+        dialoguesAfter: [
+            "*CAPOLINO est planté là, regardant la cellule. Il sourit en te voyant.*",
+            "« Te revoilà. Ça commence à devenir une habitude. »",
+            "« J'étais à Vegas. J'ai claqué tout le fric de mon père. »",
+            "*Il sort un Daemon — un boxeur tatoué.*",
+            "« Cette fois, je te défie SUR MON terrain. »",
+            "« Bats-moi, ou disparais. »",
+            "(Appuie A à nouveau pour le défier.)",
+            "— CAPOLINO",
+        ],
+        dialoguesAfterRevisit: [
+            "*CAPOLINO essuie le sang de sa lèvre.*",
+            "« Une autre fois. Pas maintenant. »",
+        ],
+    },
+    // ============================================================
     // v4.0 — INSPECTEUR COULTER (mini-boss Pastagone — Daemon orang-outan DESSINGH)
     // ============================================================
     {

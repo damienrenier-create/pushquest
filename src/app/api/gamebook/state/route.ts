@@ -316,6 +316,8 @@ export async function GET() {
             pastagoneBossBeaten: (progress as { pastagoneBossBeaten?: boolean }).pastagoneBossBeaten === true,
             pastagoneCoulterBeaten: (progress as { pastagoneCoulterBeaten?: boolean }).pastagoneCoulterBeaten === true,
             pastagoneFaaGiftClaimed: (progress as { pastagoneFaaGiftClaimed?: boolean }).pastagoneFaaGiftClaimed === true,
+            pastagoneCapolinoMidBeaten: (progress as { pastagoneCapolinoMidBeaten?: boolean }).pastagoneCapolinoMidBeaten === true,
+            pastagoneCapolinoFleeShown: (progress as { pastagoneCapolinoFleeShown?: boolean }).pastagoneCapolinoFleeShown === true,
             pastagoneInterrogStart: (progress as { pastagoneInterrogStart?: Date | null }).pastagoneInterrogStart ?? null,
             pastagoneInterrogDefis: (progress as { pastagoneInterrogDefis?: unknown }).pastagoneInterrogDefis ?? {},
             pastagoneOrphanChosen: (progress as { pastagoneOrphanChosen?: string | null }).pastagoneOrphanChosen ?? null,

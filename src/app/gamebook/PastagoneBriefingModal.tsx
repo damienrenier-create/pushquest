@@ -20,7 +20,9 @@ interface Props {
      *  depuis le briefing. Le parent (MapClient) gère le démarrage du combat
      *  et le retour à Vegas. */
     onBossBattleStarted?: (state: BattleState) => void
-    onOrphanChosen?: (orphan: string) => void
+    /** v4.0 — Le payload capolinoFlee est passé au parent pour jouer la cinématique
+     *  CAPOLINO 4ᵉ rencontre (fuite + vol Daemon opposé). */
+    onOrphanChosen?: (orphan: string, capolinoFlee?: { stolenType: string; lines: string[] }) => void
 }
 
 const ORPHANS = [
@@ -58,7 +60,7 @@ export default function PastagoneBriefingModal({ onClose, progress, onBossBattle
             })
             const j = await r.json()
             setMessage(j.message ?? j.reason ?? "")
-            if (j.ok && onOrphanChosen) onOrphanChosen(orphanKey)
+            if (j.ok && onOrphanChosen) onOrphanChosen(orphanKey, j.capolinoFlee)
         } catch { setMessage("Erreur réseau.") }
         finally { setBusy(false) }
     }

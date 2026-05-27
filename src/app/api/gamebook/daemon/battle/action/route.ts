@@ -252,6 +252,13 @@ export async function POST(req: NextRequest) {
         && progress.pastagoneCoulterBeaten !== true) {
         progressData.pastagoneCoulterBeaten = true
     }
+    // v4.0 — Si CAPOLINO mid-arc vaincu → set pastagoneCapolinoMidBeaten=true
+    if (newState.phase === "ended"
+        && newState.result === "victory"
+        && stateBefore.enemy.pnjKey === "capolino_mid"
+        && progress.pastagoneCapolinoMidBeaten !== true) {
+        progressData.pastagoneCapolinoMidBeaten = true
+    }
 
     // v4.0 Phase 5.D — Décrément durabilité des wearables équipés en fin de combat
     if (newState.phase === "ended" && Array.isArray(leader.equippedItems) && leader.equippedItems.length > 0) {

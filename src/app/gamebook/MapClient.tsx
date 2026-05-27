@@ -213,6 +213,8 @@ type Cinematic =
     | { kind: "franssJoke"; phase: "intro" | "atTower"; step: number }
     // v4.0 Phase 4.B — Cinématique capture policière (Vegas-ouest → cellule Pastagone)
     | { kind: "pastagoneCapture"; step: number }
+    // v4.0 — Cinématique CAPOLINO 4ᵉ rencontre (fuite post-boss avec vol Daemon opposé)
+    | { kind: "capolinoFlee"; step: number; lines: string[]; stolenType: string }
     | null
 
 // Ticker partagé entre tous les NPCs wanderers pour synchroniser leurs déplacements
@@ -1831,6 +1833,26 @@ export default function MapClient({
             return
         }
 
+        // v4.0 — Cinématique CAPOLINO 4ᵉ rencontre (fuite post-boss)
+        if (cinematic?.kind === "capolinoFlee") {
+            const next = cinematic.step + 1
+            if (next >= cinematic.lines.length) {
+                // Fin → téléport Vegas
+                setCinematic(null)
+                setState((s) => ({
+                    ...s,
+                    mapId: "lasagnas_vegas",
+                    posX: 1,
+                    posY: 12,
+                    direction: "right",
+                } as PlayerMapState))
+                setToast("🚪 Le Doberman te laisse passer. Le barrage tombe. Vegas s'ouvre à nouveau.")
+                return
+            }
+            setCinematic({ ...cinematic, step: next })
+            return
+        }
+
         // v4.0 Phase 4.B — Cinématique capture Pastagone (fade noir + arrestation)
         // Étapes : 0 (sirènes) → 1 (chiens flics) → 2 (fade noir + warp serveur)
         if (cinematic?.kind === "pastagoneCapture") {
@@ -2743,6 +2765,32 @@ export default function MapClient({
             // v3.17c — NAGEUR (la_mer) : 3 niveaux de dialogue + défi 50 pompes
             if (npcId === "lamer_nageur") {
                 triggerNageurDialog()
+                return
+            }
+
+            // v4.0 — CAPOLINO 3ᵉ rencontre (Pastagone mid) : 1er talk = dialogue, 2e talk = combat
+            if (npcId === "capolino_pastagone_mid") {
+                const capolinoMidBeaten = (state as { pastagoneCapolinoMidBeaten?: boolean }).pastagoneCapolinoMidBeaten === true
+                if (capolinoMidBeaten) {
+                    setPopup({ kind: "info", text: "CAPOLINO : « Encore toi. Tu m'as eu. Pour CETTE fois. »\n\n*Il crache du sang et s'éloigne en boitant.*" })
+                    return
+                }
+                const talked = state.npcsTalkedTo?.includes("capolino_pastagone_mid") === true
+                if (!talked) {
+                    triggerNpcDialogue(npcInFront.npc)
+                    return
+                }
+                ; (async () => {
+                    try {
+                        const r = await fetch("/api/gamebook/pastagone/capolino-mid-battle", { method: "POST" })
+                        const j = await r.json()
+                        if (j.ok && j.state) {
+                            setActiveBattle(j.state as BattleState)
+                        } else {
+                            setPopup({ kind: "info", text: j.reason ?? "Combat refusé." })
+                        }
+                    } catch { setToast("Erreur réseau combat.") }
+                })()
                 return
             }
 
@@ -3932,6 +3980,15 @@ export default function MapClient({
                         />
                     )}
 
+                    {/* === v4.0 : CINÉMATIQUE CAPOLINO 4ᵉ rencontre (fuite post-boss) === */}
+                    {cinematic?.kind === "capolinoFlee" && (
+                        <DialogueBox
+                            speaker="🥊 CAPOLINO"
+                            text={cinematic.lines[cinematic.step]}
+                            onNext={pressA}
+                        />
+                    )}
+
                     {/* === v4.0 Phase 4.B : CINÉMATIQUE CAPTURE PASTAGONE === */}
                     {cinematic?.kind === "pastagoneCapture" && (
                         <>
@@ -4286,11 +4343,21 @@ export default function MapClient({
                         setShowPastagoneBriefing(false)
                         setActiveBattle(s)
                     }}
-                    onOrphanChosen={(orphan) => {
-                        // v4.0 Phase 8 — Choix orphelin fait. Le joueur peut maintenant
-                        // sortir du Pastagone (téléport retour Vegas barrage levé).
+                    onOrphanChosen={(orphan, capolinoFlee) => {
+                        // v4.0 Phase 8 + v4.0 CAPOLINO 4 — Choix orphelin fait, déclenche
+                        // d'abord la cinématique CAPOLINO (4ᵉ rencontre, fuite + vol).
                         setState((s) => ({ ...s, pastagoneOrphanChosen: orphan } as PlayerMapState))
                         setShowPastagoneBriefing(false)
+                        if (capolinoFlee && Array.isArray(capolinoFlee.lines) && capolinoFlee.lines.length > 0) {
+                            setCinematic({
+                                kind: "capolinoFlee",
+                                step: 0,
+                                lines: capolinoFlee.lines,
+                                stolenType: capolinoFlee.stolenType,
+                            })
+                            return
+                        }
+                        // Fallback : pas de cinématique → téléport direct
                         setTimeout(() => {
                             setState((s) => ({
                                 ...s,

@@ -133,9 +133,21 @@ export async function POST(req: NextRequest) {
         },
     })
 
+    // v4.0 — Triangulation CAPOLINO 4ᵉ rencontre :
+    //   Joueur prend ÉLEC → CAPOLINO vole un Combat
+    //   Joueur prend VOL  → CAPOLINO vole un Roche
+    //   Joueur prend PSY  → CAPOLINO vole un Vol
+    const capolinoTypeStolen =
+        orphan.key === "anguillzap" ? "Combat"
+            : orphan.key === "faucotron" ? "Roche"
+                : "Vol"
+
     await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
-        data: { pastagoneOrphanChosen: orphan.key },
+        data: {
+            pastagoneOrphanChosen: orphan.key,
+            pastagoneCapolinoFleeShown: true,
+        },
     })
 
     return NextResponse.json({
@@ -143,5 +155,18 @@ export async function POST(req: NextRequest) {
         orphan: orphan.key,
         slot,
         message: `${orphan.name} te suit. (${orphan.type}, slot ${slot}.) Le combat avec le boss l'a laissé orphelin — il a choisi de te faire confiance.`,
+        // v4.0 — Données cinématique post-boss CAPOLINO (4ᵉ rencontre)
+        capolinoFlee: {
+            stolenType: capolinoTypeStolen,
+            lines: [
+                "*Une voix résonne derrière toi.*",
+                "« Eh bien, dresseur ! Tu pensais avoir gagné ? »",
+                "*CAPOLINO surgit, son Daemon " + capolinoTypeStolen + " grognant à ses côtés.*",
+                "« Tu prends celui-là ? Je prends son contraire. »",
+                `*Il s'empare d'un Daemon de type ${capolinoTypeStolen} dans l'ombre.*`,
+                "« On se retrouvera, dresseur. Et cette fois, c'est toi qui dispatch des fleurs. »",
+                "*Il s'enfuit par le nord, son rire résonnant dans les couloirs.*",
+            ],
+        },
     })
 }
