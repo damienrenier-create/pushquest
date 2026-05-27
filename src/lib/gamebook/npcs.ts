@@ -1247,7 +1247,7 @@ export const NPCS: NpcDefinition[] = [
     // ============================================================
     // v3.35 — ARÈNE DE MUSCUVILLE : 4 champions aux 4 coins
     // Premier défi : battre sa meilleure série all-time (1 encodage)
-    // Revanche : battre son plus gros VOLUME du jour all-time (optionnelle, badge 800 XP)
+    // Revanche : battre son plus gros VOLUME du jour all-time (optionnelle, badge 200 XP)
     // ============================================================
     {
         id: "champion_plank",
@@ -1424,7 +1424,7 @@ export const NPCS: NpcDefinition[] = [
             "*Une silhouette en survêt s'approche, l'air sérieux.*",
             "Hé toi. Tu pars déjà ? Il paraît que les champions de Muscuville ont été humiliés.",
             "Ils veulent leur revanche. Volume du jour all-time, cette fois. Pas la plus grosse série — le VOLUME.",
-            "Retourne à l'arène. Chaque revanche gagnée = badge 800 XP.",
+            "Retourne à l'arène. Chaque revanche gagnée = badge 200 XP.",
         ],
     },
 

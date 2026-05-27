@@ -154,7 +154,7 @@ export const MONT_SUMMIT_LINES: string[] = [
     "Devant toi, l'horizon s'étend à perte de vue. Bourg-Boulette, Pépiteville, Macaron'île — tout te paraît minuscule.",
     "Le vent siffle dans tes oreilles. Tes jambes tremblent.",
     "Tu as conquis ce monstre de pierre. Personne ne pourra plus jamais te dire que tu n'en es pas capable.",
-    "(Badge Conquérant 🏔️ +500 XP — Le contest_hall + l'arène de Muscuville s'ouvrent. Et tu sens une présence : une silhouette planchette à la main t'attend.)",
+    "(Badge Conquérant 🏔️ +200 XP — Le contest_hall + l'arène de Muscuville s'ouvrent. Et tu sens une présence : une silhouette planchette à la main t'attend.)",
 ]
 
 // =====================================================

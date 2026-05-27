@@ -146,7 +146,7 @@ export async function POST(req: NextRequest) {
             } catch (e) {
                 console.warn("[champion revanche badge] failed", e)
             }
-            // v4.0 fix XP bug : badge annonçait +800 XP mais aucun XpAdjustment n'était créé.
+            // v4.0 fix XP bug + cap : badge donne désormais 200 XP (au lieu de 800 jamais distribués).
             // Idempotent (vérif reason unique pour éviter double octroi).
             try {
                 const reason = `BADGE_${badgeKey.toUpperCase()}`
@@ -157,7 +157,7 @@ export async function POST(req: NextRequest) {
                     await (prisma as any).xpAdjustment.create({
                         data: {
                             userId,
-                            amount: 800,
+                            amount: 200,
                             reason,
                             date: getTodayISO(),
                         },
@@ -169,7 +169,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({
                 ok: true,
                 revancheWon: true,
-                message: `🏆 *Le Champion du ${label} s'incline.* « Aujourd'hui : ${todayVolume} ${unit}. Mon record all-time, c'est toi. Tiens, un badge — tu l'as bien mérité (+800 XP). »`,
+                message: `🏆 *Le Champion du ${label} s'incline.* « Aujourd'hui : ${todayVolume} ${unit}. Mon record all-time, c'est toi. Tiens, un badge — tu l'as bien mérité (+200 XP). »`,
             })
         }
         return NextResponse.json({

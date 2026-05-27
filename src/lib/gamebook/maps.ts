@@ -1219,13 +1219,13 @@ export const BIBLIOTHEQUE_MUSCU_TOPICS: BiblioTopic[] = [
     {
         x: 10, y: 1, kind: "archives" as const,
         title: "Mont Pasta-Ventoux — Records",
-        text: "100 cases verticales. Vélo obligatoire.\n\nCoût/case selon vélo :\n🚲 Vieux Vélo : 8 reps\n🚴 Vélo Sport : 4 reps\n🚵 Vélo Pro : 2 reps\n\nMultiplicateur cadence (BPM) :\n💀 <30 ou ≥100 : ×3.0 (épuisement/explosion)\n🐌 30-59 ou 81-99 : ×1.5 (mauvais rythme)\n✨ 60-80 : ×0.5 (ZONE IDÉALE)\n\nDescente : 1 pas down = 10 cases gratuites.\nSommet conquis = badge Conquérant 500 XP + accès arène Muscu.",
+        text: "100 cases verticales. Vélo obligatoire.\n\nCoût/case selon vélo :\n🚲 Vieux Vélo : 8 reps\n🚴 Vélo Sport : 4 reps\n🚵 Vélo Pro : 2 reps\n\nMultiplicateur cadence (BPM) :\n💀 <30 ou ≥100 : ×3.0 (épuisement/explosion)\n🐌 30-59 ou 81-99 : ×1.5 (mauvais rythme)\n✨ 60-80 : ×0.5 (ZONE IDÉALE)\n\nDescente : 1 pas down = 10 cases gratuites.\nSommet conquis = badge Conquérant 200 XP + accès arène Muscu.",
     },
     // Rangée thématique (y=3)
     {
         x: 2, y: 3, kind: "archives" as const,
         title: "Champions de l'arène — Palmarès",
-        text: "4 champions historiques de Muscuville :\n\n🧱 Champion du Gainage (coin NO)\n💪 Champion des Pompes (coin NE)\n🪢 Championne des Tractions (coin SO)\n🦵 Champion des Squats (coin SE)\n\n1ʳᵉ confrontation : bats TON record all-time sur l'exo.\nRevanche (après 1ʳᵉ gagnée) : plus gros VOLUME du jour all-time → badge 800 XP.\n\nChaque champion battu = -25% sur le prix des rochers (4000 reps).",
+        text: "4 champions historiques de Muscuville :\n\n🧱 Champion du Gainage (coin NO)\n💪 Champion des Pompes (coin NE)\n🪢 Championne des Tractions (coin SO)\n🦵 Champion des Squats (coin SE)\n\n1ʳᵉ confrontation : bats TON record all-time sur l'exo.\nRevanche (après 1ʳᵉ gagnée) : plus gros VOLUME du jour all-time → badge 200 XP.\n\nChaque champion battu = -25% sur le prix des rochers (4000 reps).",
     },
     {
         x: 6, y: 3, kind: "archives" as const,

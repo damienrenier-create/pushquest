@@ -1,7 +1,7 @@
 // src/app/api/gamebook/mont/summit-reached/route.ts
 //
 // v3.23c — POST : le joueur a atteint le sommet du Mont Pasta-Ventoux (y=1).
-// Idempotent via montSummitReached. Récompense : badge Conquérant 500 XP.
+// Idempotent via montSummitReached. Récompense : badge Conquérant 200 XP (cap v4.0).
 //
 // Le client appelle cette route quand le sprite arrive sur y=1 du
 // mont_pasta_ventoux. Pas de coût en reps (le coût est dans la montée elle-même).
@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic"
 
 const CHAPTER_ID = "map_v3"
 const BADGE_KEY_CONQUERANT = "gamebook_conquerant"
-const XP_REWARD_CONQUERANT = 500
+const XP_REWARD_CONQUERANT = 200  // v4.0 — cap badges Nexus à 200 XP max (était 500)
 
 export async function POST() {
     const session = await getServerSession(authOptions)

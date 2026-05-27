@@ -2230,7 +2230,7 @@ export default function MapClient({
                         const remaining = 4 - beaten.length
                         text = `*La réceptionniste consulte un tableau d'affichage avec ton nom dessus.*\n\n« ${beaten.length}/4 champion${beaten.length > 1 ? "s" : ""} battu${beaten.length > 1 ? "s" : ""}. Il en reste ${remaining}. »\n\n« Le prix des rochers a chuté de ${beaten.length * 25}%. Continue. »`
                     } else if (revanche.length < 4) {
-                        text = `*La réceptionniste applaudit doucement.*\n\n« 4/4 champions humiliés. Les rochers s'effondrent. »\n\n« Ils veulent leur revanche maintenant. Volume du jour all-time cette fois, pas la plus grosse série. Plus dur. Badges 800 XP à la clé. »\n\n« ${revanche.length}/4 revanches faites pour l'instant. »`
+                        text = `*La réceptionniste applaudit doucement.*\n\n« 4/4 champions humiliés. Les rochers s'effondrent. »\n\n« Ils veulent leur revanche maintenant. Volume du jour all-time cette fois, pas la plus grosse série. Plus dur. Badges 200 XP à la clé. »\n\n« ${revanche.length}/4 revanches faites pour l'instant. »`
                     } else {
                         text = `*La réceptionniste s'incline avec respect.*\n\n« Tu as battu les 4 champions en 1ʳᵉ ET en revanche. C'est jamais arrivé. »\n\n« Tu fais partie de l'histoire de Muscuville maintenant. Reviens quand tu veux, juste pour voir. »`
                     }
