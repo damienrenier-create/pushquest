@@ -397,6 +397,30 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Invalid state" }, { status: 400 })
     }
 
+    // v4.0 — Hardening anti-stuck : vérifie que la tile cible n'est pas bloquante.
+    // Évite que le serveur stocke une position invalide (cas Gg-rem coincé sur shopCounter
+    // ou autres tiles bloquantes via bug client ou ancienne position héritée).
+    // Si la tile est bloquante : refuse + log pour debug.
+    try {
+        const { getMap } = await import("@/lib/gamebook/maps")
+        const { isBlockingTile } = await import("@/lib/gamebook/mapEngine")
+        const targetMap = getMap(mapId)
+        const row = targetMap?.tiles?.[posY]
+        const tile = row?.[posX]
+        if (tile && isBlockingTile(tile)) {
+            console.warn(`[POST /state] Blocked invalid position for userId=${userId}: mapId=${mapId} pos=(${posX},${posY}) tile=${tile}`)
+            return NextResponse.json({
+                error: "Invalid position — tile is blocking",
+                tile,
+                mapId,
+                posX,
+                posY,
+            }, { status: 400 })
+        }
+    } catch (err) {
+        console.warn("[POST /state] tile validation skipped (lazy import failed)", err)
+    }
+
     const introStep = typeof body.introStep === "number" ? body.introStep : 0
     const hasEnteredTallGrass = body.hasEnteredTallGrass === true
     const monsterCaveRevealed = body.monsterCaveRevealed === true
