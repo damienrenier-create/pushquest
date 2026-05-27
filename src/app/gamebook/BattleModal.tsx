@@ -30,7 +30,7 @@ interface ActionMeta {
     nextLevelXp: number
 }
 
-type MenuMode = "actions" | "attacks" | "switch"
+type MenuMode = "actions" | "attacks" | "switch" | "bag"
 
 interface TeamMember {
     id: string
@@ -43,6 +43,15 @@ interface TeamMember {
     combatLevel: number
 }
 
+interface UsableItem {
+    itemKey: string
+    name: string
+    emoji: string
+    effect: string
+    amount: number
+    quantity: number
+}
+
 export default function BattleModal({ initialState, onClose, onEnded }: Props) {
     const [state, setState] = useState<BattleState>(initialState)
     const [busy, setBusy] = useState(false)
@@ -50,6 +59,7 @@ export default function BattleModal({ initialState, onClose, onEnded }: Props) {
     const [lastMeta, setLastMeta] = useState<ActionMeta | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [team, setTeam] = useState<TeamMember[]>([])
+    const [usableItems, setUsableItems] = useState<UsableItem[]>([])
 
     useEffect(() => {
         if (state.phase === "ended" && onEnded) {
@@ -58,20 +68,49 @@ export default function BattleModal({ initialState, onClose, onEnded }: Props) {
     }, [state.phase])
 
     // v4.0 Phase 2.D — Charge l'équipe Daemon une fois pour le menu switch.
+    // v4.0 Phase 5.C — Charge les items utilisables (canUseInBattle) en parallèle.
     useEffect(() => {
         ; (async () => {
             try {
-                const r = await fetch("/api/gamebook/daemon/list", { cache: "no-store" })
-                if (!r.ok) return
-                const j = await r.json()
-                const members: TeamMember[] = (j.daemons ?? []).map((d: { id: string; name: string; slotIndex: number; unlocked: boolean; currentHp: number; maxHp: number; type: string; combatLevel: number }) => ({
-                    id: d.id, name: d.name, slotIndex: d.slotIndex, unlocked: d.unlocked,
-                    currentHp: d.currentHp, maxHp: d.maxHp, type: d.type, combatLevel: d.combatLevel,
-                }))
-                setTeam(members)
+                const [listR, stateR, itemsModule] = await Promise.all([
+                    fetch("/api/gamebook/daemon/list", { cache: "no-store" }),
+                    fetch("/api/gamebook/state"),
+                    import("@/lib/gamebook/items"),
+                ])
+                if (listR.ok) {
+                    const j = await listR.json()
+                    const members: TeamMember[] = (j.daemons ?? []).map((d: { id: string; name: string; slotIndex: number; unlocked: boolean; currentHp: number; maxHp: number; type: string; combatLevel: number }) => ({
+                        id: d.id, name: d.name, slotIndex: d.slotIndex, unlocked: d.unlocked,
+                        currentHp: d.currentHp, maxHp: d.maxHp, type: d.type, combatLevel: d.combatLevel,
+                    }))
+                    setTeam(members)
+                }
+                if (stateR.ok) {
+                    const sj = await stateR.json()
+                    const inv = Array.isArray(sj.inventory) ? sj.inventory : []
+                    const usable: UsableItem[] = []
+                    for (const entry of inv) {
+                        const itemKey = entry.itemKey
+                        if (!itemKey) continue
+                        const def = itemsModule.getItem(itemKey)
+                        const cap = def?.capabilities.canUseInBattle
+                        if (!cap || !def) continue
+                        const qty = entry.quantity ?? 1
+                        if (qty <= 0) continue
+                        usable.push({
+                            itemKey,
+                            name: def.name,
+                            emoji: def.emoji,
+                            effect: cap.effect,
+                            amount: cap.amount,
+                            quantity: qty,
+                        })
+                    }
+                    setUsableItems(usable)
+                }
             } catch { /* silent */ }
         })()
-    }, [state.playerDaemonId])
+    }, [state.playerDaemonId, state.turn])
 
     const doAction = async (action: PlayerAction) => {
         if (busy || state.phase === "ended") return
@@ -91,6 +130,31 @@ export default function BattleModal({ initialState, onClose, onEnded }: Props) {
             }
             setState(data.state as BattleState)
             setLastMeta((data.meta ?? null) as ActionMeta | null)
+            setMenu("actions")
+        } catch {
+            setError("Erreur réseau.")
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    // v4.0 Phase 5.C — Utilise un consommable en combat (coût : 1 tour, ennemi attaque)
+    const useItemInBattle = async (itemKey: string) => {
+        if (busy || state.phase === "ended") return
+        setBusy(true); setError(null)
+        try {
+            const res = await fetch("/api/gamebook/daemon/battle/use-item", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ itemKey }),
+            })
+            const data = await res.json()
+            if (!res.ok || !data.ok) {
+                setError(data.reason ?? "Item refusé.")
+                setBusy(false)
+                return
+            }
+            setState(data.state as BattleState)
             setMenu("actions")
         } catch {
             setError("Erreur réseau.")
@@ -165,7 +229,12 @@ export default function BattleModal({ initialState, onClose, onEnded }: Props) {
                 {state.phase === "playerTurn" && menu === "actions" && (
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                         <ActionBtn label="⚔️ ATTAQUE" onClick={() => setMenu("attacks")} busy={busy} />
-                        <ActionBtn label="🎒 SAC" onClick={() => setError("Sac pas encore disponible en combat.")} busy={busy} />
+                        <ActionBtn
+                            label="🎒 SAC"
+                            onClick={() => setMenu("bag")}
+                            busy={busy}
+                            disabled={usableItems.length === 0}
+                        />
                         <ActionBtn
                             label="🔄 DAEMON"
                             onClick={() => setMenu("switch")}
@@ -178,6 +247,51 @@ export default function BattleModal({ initialState, onClose, onEnded }: Props) {
                             busy={busy}
                             disabled={!state.fleeAllowed}
                         />
+                    </div>
+                )}
+
+                {state.phase === "playerTurn" && menu === "bag" && (
+                    <div>
+                        <div style={{ fontSize: 10, opacity: 0.7, marginBottom: 6 }}>
+                            Choisis un consommable. L'ennemi attaquera après.
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 6 }}>
+                            {usableItems.map((it) => (
+                                <button
+                                    key={it.itemKey}
+                                    onClick={() => useItemInBattle(it.itemKey)}
+                                    disabled={busy}
+                                    style={{
+                                        background: busy ? "#444" : "#3a5a4a",
+                                        color: "#fff", border: "1px solid #80c060",
+                                        padding: 8, fontSize: 10, fontWeight: "bold",
+                                        cursor: busy ? "wait" : "pointer", fontFamily: "monospace",
+                                        textAlign: "left",
+                                    }}
+                                >
+                                    <div>{it.emoji} {it.name}</div>
+                                    <div style={{ fontSize: 8, opacity: 0.7, marginTop: 2 }}>
+                                        {effectLabel(it.effect, it.amount)} · ×{it.quantity}
+                                    </div>
+                                </button>
+                            ))}
+                            {usableItems.length === 0 && (
+                                <div style={{ fontSize: 10, opacity: 0.7, gridColumn: "span 2", padding: 8 }}>
+                                    Aucun consommable utilisable. Achète-en chez RIGATONI à la cuisine Pastagone.
+                                </div>
+                            )}
+                        </div>
+                        <button
+                            onClick={() => setMenu("actions")}
+                            style={{
+                                width: "100%", background: "transparent",
+                                color: "#80a0d0", border: "1px solid #80a0d0",
+                                padding: 6, fontSize: 10, fontFamily: "monospace",
+                                cursor: "pointer",
+                            }}
+                        >
+                            ← Retour menu
+                        </button>
                     </div>
                 )}
 
@@ -375,6 +489,15 @@ function logColor(kind: string): string {
         case "damage": return "#e08060"
         case "attack": return "#e0e0e0"
         default: return "#c0c0c0"
+    }
+}
+
+function effectLabel(effect: string, amount: number): string {
+    switch (effect) {
+        case "heal_hp": return `+${amount} HP`
+        case "happiness_boost": return `+${amount} ♥`
+        case "vitesse_buff_one_battle": return `+${amount} VIT (1 combat)`
+        default: return effect
     }
 }
 
