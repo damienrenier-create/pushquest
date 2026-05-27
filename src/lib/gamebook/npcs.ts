@@ -2017,6 +2017,72 @@ export const NPCS: NpcDefinition[] = [
             "« Disparais. »",
         ],
     },
+    // ============================================================
+    // v4.0 — SERAFINA PEKKALA (sorcière du Nord, foreshadowing fleurs)
+    // Lore : Pullman / La Croisée des Mondes. Future téléportation vers
+    // le Donjon Magique (à implémenter quand l'arc 3 / extension Donjons sera prêt).
+    // Pour l'instant : foreshadow sur le pouvoir des fleurs (guérison + bonheur Daemon).
+    // ============================================================
+    {
+        id: "serafina_pekkala",
+        name: "SERAFINA PEKKALA",
+        mapId: "macaron_ile",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🧙‍♀️", color: "#6080c0" },
+        // Coin sud-est de Macaron'île, en bord de plage (case sable / grass).
+        // Position à ajuster si conflit avec autre PNJ ; on reste discret.
+        initialX: 12,
+        initialY: 11,
+        dialoguesAfter: [
+            "*Une femme à la cape bleue se tient face à la mer. Le vent ne semble pas l'effleurer.*",
+            "« Je suis Serafina Pekkala. Une sorcière des royaumes du Nord. »",
+            "« Tu es loin de chez toi… mais tu n'es pas perdu. »",
+            "*Elle te regarde, puis pose son doigt sur une fleur près du chemin.*",
+            "« Sais-tu que certaines fleurs gardent en elles le souffle des étoiles ? »",
+            "« On dit qu'elles peuvent recoudre les blessures que personne ne voit. »",
+            "« Et que ton Daemon, s'il en respire le parfum, retrouvera son sourire. »",
+            "*Elle te sourit, énigmatique.*",
+            "« Un jour, peut-être, ces fleurs te mèneront ailleurs. Vers un lieu qui n'existe pas encore sur tes cartes. »",
+            "« Reviens me voir, voyageur. »",
+            "— SERAFINA PEKKALA",
+        ],
+        dialoguesAfterRevisit: [
+            "*Serafina regarde l'horizon, immobile.*",
+            "« Les fleurs poussent encore. Sois patient. »",
+        ],
+    },
+    // ============================================================
+    // v4.0 — CAPOLINO (2ᵉ rencontre, casino_b Lasagnas Vegas)
+    // ============================================================
+    {
+        id: "capolino_vegas_casino",
+        name: "CAPOLINO",
+        mapId: "lasagnas_casino_b",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🥊", color: "#8b0000" },
+        // Devant la roulette de gauche (3, 3). On le pose en (3, 4) pour qu'il soit
+        // au sud de la roulette, regardant vers le haut comme s'il jouait.
+        initialX: 3,
+        initialY: 4,
+        dialoguesAfter: [
+            "*CAPOLINO frappe la roulette du poing.*",
+            "« PUTAIN DE MACHINE !!! »",
+            "« Trois soirs. Trois soirs que je laisse tout mon fric ici. »",
+            "*Il se retourne, te reconnaît, fait une grimace.*",
+            "« Toi… tu m'as vu à Muscuville, hein ? »",
+            "« Mon père m'avait donné cette enveloppe pour rentrer. J'ai TOUT misé. »",
+            "« Je remonterai. Tu m'entends ? JE REMONTERAI. »",
+            "*Il retourne miser. Un sbire de la mafia, dans le fond, l'observe.*",
+            "(Le rival continue sa lente descente. Tu sens qu'il y aura un point de bascule.)",
+        ],
+        dialoguesAfterRevisit: [
+            "*CAPOLINO replonge la main dans sa poche, en sort un dernier billet.*",
+            "« Encore un. Juste un. »",
+            "*Il ne te regarde même pas.*",
+        ],
+    },
 
 ]
 
