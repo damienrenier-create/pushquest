@@ -109,6 +109,7 @@ import PastagoneInfirmerieModal from "./PastagoneInfirmerieModal"
 import PastagoneBriefingModal from "./PastagoneBriefingModal"
 import PastagoneCuisineModal from "./PastagoneCuisineModal"
 import PastagoneArmurerieModal from "./PastagoneArmurerieModal"
+import PastagoneTourModal from "./PastagoneTourModal"
 import type { BattleState } from "@/lib/gamebook/battleState"
 import type { TamagotchiView } from "@/lib/gamebook/tamagotchi"
 import BibliothequeModal from "./BibliothequeModal"
@@ -283,6 +284,7 @@ export default function MapClient({
     const [showPastagoneBriefing, setShowPastagoneBriefing] = useState<boolean>(false)
     const [showPastagoneCuisine, setShowPastagoneCuisine] = useState<boolean>(false)
     const [showPastagoneArmurerie, setShowPastagoneArmurerie] = useState<boolean>(false)
+    const [showPastagoneTour, setShowPastagoneTour] = useState<boolean>(false)
     // v3.27 — Mode "rangé dans le sac" : si true, le sprite compagnon est caché de la map
     const [tamagotchiInBag, setTamagotchiInBag] = useState<boolean>(false)
     // v3.27 — Modal de choix (3ᵉ interaction dans la minute : Parler / Ranger)
@@ -1724,7 +1726,7 @@ export default function MapClient({
         }, 300)
 
         // v3.8 — si une modal est ouverte, le A est géré par la modal elle-même
-        if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore || showCockfight || showSlotMachine || showCasinoPatternVegas || showArena || showDaemonTeam || !!activeBattle || showSaiyanModal || showPastagoneCellule || showPastagoneInfirmerie || showPastagoneBriefing || showPastagoneCuisine || showPastagoneArmurerie) return
+        if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore || showCockfight || showSlotMachine || showCasinoPatternVegas || showArena || showDaemonTeam || !!activeBattle || showSaiyanModal || showPastagoneCellule || showPastagoneInfirmerie || showPastagoneBriefing || showPastagoneCuisine || showPastagoneArmurerie || showPastagoneTour) return
 
         // v3.23e — Blague PIAFFINI unique pour Franss : intercepter le premier A press (idem tryMove)
         if (
@@ -2829,6 +2831,11 @@ export default function MapClient({
             setShowPastagoneBriefing(true)
             return
         }
+        // v4.0 Phase 6 — Sol arène Tour de Garde Pastagone → modal rotation + combats
+        if (state.mapId === "pastagone_tour" && tile === "arenaFloor") {
+            setShowPastagoneTour(true)
+            return
+        }
 
         // v3.24a-3 — Shop rachat usés : popup pour l'instant (mécanique rachat à venir)
         if (state.mapId === "lasagnas_shop_rachat" && tile === "shopCounter") {
@@ -3246,7 +3253,7 @@ export default function MapClient({
         const handler = (e: KeyboardEvent) => {
             // v3.8 — si une modal est ouverte, on ne gère pas les touches ici
             // (StartMenu/InventoryModal/ShopModal/PlayerMapModal écoutent leurs propres events)
-            if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore || showCockfight || showSlotMachine || showCasinoPatternVegas || showArena || showDaemonTeam || !!activeBattle || showSaiyanModal || showPastagoneCellule || showPastagoneInfirmerie || showPastagoneBriefing || showPastagoneCuisine || showPastagoneArmurerie) return
+            if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore || showCockfight || showSlotMachine || showCasinoPatternVegas || showArena || showDaemonTeam || !!activeBattle || showSaiyanModal || showPastagoneCellule || showPastagoneInfirmerie || showPastagoneBriefing || showPastagoneCuisine || showPastagoneArmurerie || showPastagoneTour) return
 
             if (state.phase === "introMonster") {
                 if (e.key === "Enter" || e.key === " " || e.key.toLowerCase() === "a") {
@@ -4142,6 +4149,15 @@ export default function MapClient({
             )}
             {showPastagoneArmurerie && (
                 <PastagoneArmurerieModal onClose={() => setShowPastagoneArmurerie(false)} />
+            )}
+            {showPastagoneTour && (
+                <PastagoneTourModal
+                    onClose={() => setShowPastagoneTour(false)}
+                    onBattleStarted={(s) => {
+                        setShowPastagoneTour(false)
+                        setActiveBattle(s)
+                    }}
+                />
             )}
 
             {/* v4.0 Phase 4.C — Modal cellule Pastagone (interrogatoire CARBONE) */}
