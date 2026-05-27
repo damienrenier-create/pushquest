@@ -121,16 +121,13 @@ export default function CasinoPatternModal({
                 <div style={{ fontSize: 10, opacity: 0.7, marginBottom: 10, lineHeight: 1.4 }}>
                     11 cases (0-10). Mise <strong>{CASINO_MIN_BET}-{CASINO_MAX_BET} reps</strong> par case.
                     Gain : mise × <strong>{CASINO_WIN_MULTIPLIER}</strong> sur la case gagnante.
-                    Pattern de 20 chiffres déterministe — joueur attentif craque la séquence.
-                    <br />
-                    <strong>{CASINO_BANKRUPT_STREAK} wins d'affilée → banqueroute</strong> + badge Casseur de banque 200 XP.
                 </div>
 
                 {/* Status bar */}
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginBottom: 10, background: "#0f0f0f", padding: 6, borderRadius: 4 }}>
                     <span>⚡ <strong>{localEnergy}</strong></span>
                     <span>🎯 Spin #<strong>{localSpinIndex + 1}</strong></span>
-                    <span>🔥 Streak <strong style={{ color: localWinStreak >= 3 ? "#f1c40f" : "#fff" }}>{localWinStreak}/{CASINO_BANKRUPT_STREAK}</strong></span>
+                    <span>🔥 Streak <strong style={{ color: localWinStreak >= 3 ? "#f1c40f" : "#fff" }}>{localWinStreak}</strong></span>
                 </div>
 
                 {bankruptActive ? (
@@ -238,13 +235,13 @@ export default function CasinoPatternModal({
                                     <div style={{ marginTop: 6, padding: 6, background: "#1f1f00", borderRadius: 3, fontSize: 11 }}>
                                         <div style={{ color: "#f1c40f", fontWeight: "bold" }}>💰 BANQUEROUTE !</div>
                                         <div style={{ fontSize: 9, opacity: 0.8 }}>
-                                            5 wins d'affilée — le casino ferme 24h.
-                                            {result.badgeAwarded && " Badge Casseur de banque +200 XP débloqué."}
+                                            Le casino ferme 24h.
+                                            {result.badgeAwarded && " Badge Casseur de banque +200 XP débloqué !"}
                                         </div>
                                     </div>
                                 ) : (
                                     <div style={{ fontSize: 9, opacity: 0.7, marginTop: 4 }}>
-                                        Streak {result.newWinStreak}/{CASINO_BANKRUPT_STREAK}. {CASINO_BANKRUPT_STREAK - result.newWinStreak} pour faire sauter la banque.
+                                        Streak {result.newWinStreak}. Continue.
                                     </div>
                                 )}
                             </>
