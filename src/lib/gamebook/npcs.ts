@@ -1696,7 +1696,6 @@ export const NPCS: NpcDefinition[] = [
             "*VITELLINO te tape doucement l'épaule, comme un vieux complice.*",
             "Eh, l'ami. T'as une bonne tronche ce soir. Les pâtes te sourient, j'le sens.",
             "Va miser maintenant. La machine en face attend. Tu vas voir.",
-            "(+10% pour ton prochain pari)",
         ],
     },
     {
@@ -1712,7 +1711,6 @@ export const NPCS: NpcDefinition[] = [
             "*FETTUCCI te regarde de haut, le sourire en coin.*",
             "Pas mal, l'amateur. T'as cru que ça serait facile, hein ?",
             "Vas-y, tente. C'est ton soir, c'est sûr. *Il ne sourit plus.*",
-            "(-10% pour ton prochain pari)",
         ],
     },
 
@@ -1730,7 +1728,6 @@ export const NPCS: NpcDefinition[] = [
             "*GRAMIGNA t'accueille avec un hochement de tête bienveillant.*",
             "Tiens, mon ami. Joue pour moi aussi. Y'a une bonne énergie dans l'air.",
             "La table de gauche est généreuse ce soir, c'est moi qui te le dis.",
-            "(+5% pour ton prochain pari)",
         ],
     },
     {
@@ -1746,7 +1743,6 @@ export const NPCS: NpcDefinition[] = [
             "*CASARECCI te jette un regard méprisant.*",
             "Mh. La chance n'aime pas les indécis. Décide-toi, ou rentre chez ta mère.",
             "Allez, mise. On va bien voir si t'as les couilles. *Il pince les lèvres.*",
-            "(-5% pour ton prochain pari)",
         ],
     },
 
@@ -1764,7 +1760,6 @@ export const NPCS: NpcDefinition[] = [
             "*BAVETTONE te sourit avec une chaleur sincère.*",
             "Tu mérites un coup de chance ce soir. Vraiment, je le dis avec le cœur.",
             "Va miser. Tu vas gagner. C'est pas une promesse, c'est une certitude.",
-            "(+15% pour ton prochain pari)",
         ],
     },
     {
@@ -1780,7 +1775,6 @@ export const NPCS: NpcDefinition[] = [
             "*TROFIE te pousse vers la roulette, agressif.*",
             "Pourquoi tu hésites, hein ?! Allez, fonce. T'as l'air d'un vrai joueur.",
             "Mise gros. C'est ça les hommes, ça mise GROS. *Il ricane.*",
-            "(-15% pour ton prochain pari)",
         ],
     },
 
