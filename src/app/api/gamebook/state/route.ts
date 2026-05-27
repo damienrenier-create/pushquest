@@ -334,6 +334,16 @@ export async function GET() {
                 })
                 return d !== null
             })(),
+            // v4.0 — true si au moins un Daemon est officiellement adopté (recovered=true).
+            // Avant ça, le Daemon row existe mais c'est juste un animal en cours d'adoption
+            // chez V3T. L'entrée START DAEMON/ANIMAUX ne doit apparaître qu'après recovered=true.
+            hasRecoveredDaemon: await (async () => {
+                const d = await (prisma as any).daemon.findFirst({
+                    where: { userId, recovered: true },
+                    select: { id: true },
+                })
+                return d !== null
+            })(),
         },
         todayReps,
         energySpentToday,

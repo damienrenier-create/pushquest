@@ -17,15 +17,20 @@ interface Props {
     /** v4.0 Phase 1.D.bis Option B — true si au moins un Daemon a reçu le sérum.
      *  Conditionne le label "👾 DAEMON" (après sérum) vs "🐾 ANIMAUX" (avant). */
     hasUnlockedDaemon?: boolean
+    /** v4.0 — true si au moins un Daemon a recovered=true (adoption complète chez V3T).
+     *  Cache l'entrée DAEMON/ANIMAUX du menu START tant qu'aucun Daemon n'est officiellement reçu. */
+    hasRecoveredDaemon?: boolean
 }
 
 // v3.33 — VOYAGE désactivé (fast travel mis en pause).
 // v4.0 Phase 1.D — DAEMON ajouté (équipe Daemon up to 6 slots).
 // v4.0 Phase 1.D.bis Option B — label dynamique selon sérum reçu.
-export default function StartMenu({ onSelect, onClose, hasUnlockedDaemon = false }: Props) {
+// v4.0 — Entrée DAEMON cachée tant que recovered=false (avant remise officielle par V3T).
+export default function StartMenu({ onSelect, onClose, hasUnlockedDaemon = false, hasRecoveredDaemon = false }: Props) {
     const ENTRIES: Array<{ key: StartMenuEntry; label: string }> = [
         { key: "bag", label: "🎒 SAC" },
-        { key: "daemon", label: hasUnlockedDaemon ? "👾 DAEMON" : "🐾 ANIMAUX" },
+        // L'entrée DAEMON/ANIMAUX n'apparaît qu'après avoir officiellement reçu son animal.
+        ...(hasRecoveredDaemon ? [{ key: "daemon" as const, label: hasUnlockedDaemon ? "👾 DAEMON" : "🐾 ANIMAUX" }] : []),
         { key: "close", label: "↩ RETOUR" },
     ]
     const [cursor, setCursor] = useState(0)

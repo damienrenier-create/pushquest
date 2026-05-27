@@ -22,7 +22,7 @@ export const INTERIOR_ENTRY_POSITIONS: Record<string, { x: number; y: number; di
     pepiteville: { x: 8, y: 17, direction: "up" },       // 17×20, doorMat (8,18) — outdoor lien
     gym_pepite: { x: 4, y: 6, direction: "up" },         // 10×8, doorMat (4,7)
     casino_pepite: { x: 4, y: 6, direction: "up" },      // 10×8, doorMat (4,7)
-    shop_interior: { x: 4, y: 6, direction: "up" },      // 9×8, doorMat (4,7) — était (5,8) HORS MAP
+    shop_interior: { x: 4, y: 5, direction: "up" },      // 9×8, doorMat (4,7) — spawn à 2 cases du doorMat (évite exit accidentel)
     tower_floor_1: { x: 5, y: 9, direction: "up" },      // 11×11, doorMat (5,10) — était (4,6) hors d'usage
     // ── Macaron'île ──
     shop_macaron: { x: 4, y: 6, direction: "up" },       // 9×8, doorMat (4,7) — était (6,5) pas adjacent

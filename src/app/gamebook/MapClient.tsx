@@ -277,6 +277,9 @@ export default function MapClient({
     // v4.0 Phase 1.D.bis Option B — true si au moins un Daemon a reçu le sérum
     // (conditionne le label "🐾 ANIMAUX"/"👾 DAEMON" dans le StartMenu).
     const [hasUnlockedDaemon, setHasUnlockedDaemon] = useState<boolean>(false)
+    // v4.0 — true si au moins un Daemon a recovered=true (adoption officielle V3T finie).
+    // Cache l'entrée START → DAEMON/ANIMAUX avant ça.
+    const [hasRecoveredDaemon, setHasRecoveredDaemon] = useState<boolean>(false)
     // v4.0 Phase 3 — Modal Saiyan level up (s'ouvre après combat si pending > 0)
     const [showSaiyanModal, setShowSaiyanModal] = useState<boolean>(false)
     // v4.0 Phase 4.C — Modal interrogatoire cellule Pastagone (CARBONE + 3 défis)
@@ -423,6 +426,7 @@ export default function MapClient({
                     if (typeof tester === "boolean") setIsTester(tester)
                     if (j?.isCreator === true) setIsCreator(true)
                     if (j?.state?.hasUnlockedDaemon === true) setHasUnlockedDaemon(true)
+                    if (j?.state?.hasRecoveredDaemon === true) setHasRecoveredDaemon(true)
                     // Reprise de combat si une battle était active (refresh / déco)
                     const active = j?.state?.activeBattle
                     if (active && typeof active === "object" && active.phase !== "ended") {
@@ -1318,6 +1322,23 @@ export default function MapClient({
 
             if (result.leftToOutdoor) {
                 setToast(`Tu sors.`)
+                // v4.0 — Auto-trigger cinématique sac MAMAN/PEPITO si le joueur sort
+                // d'un bâtiment, n'a pas le sac, et arrive adjacent à MAMAN ou PEPITO.
+                // Évite le piège "1er talk = rien, 2e talk = sac" quand le joueur sort
+                // d'une grotte face down (direction "down") alors que MAMAN est à côté.
+                if (!hasBag) {
+                    const nx = result.nextState.posX
+                    const ny = result.nextState.posY
+                    const adjacentToMamanOrPepito = npcsWithPos.find((n) =>
+                        (n.npc.id === "maman" || n.npc.id === "pepito")
+                        && Math.abs(n.x - nx) + Math.abs(n.y - ny) <= 1
+                    )
+                    if (adjacentToMamanOrPepito) {
+                        setTimeout(() => {
+                            setCinematic({ kind: "pepitoBag", step: 0 })
+                        }, 300)
+                    }
+                }
             }
 
             // === v3.3 : entrée AUTOMATIQUE dans un bâtiment ===
@@ -2642,27 +2663,11 @@ export default function MapClient({
                 setShowShop(true)
                 return
             }
-            // v3.14 — V3T (vétérinaire) : commentaire dynamique (v3.26) puis ouvre la modal Tamagotchi
+            // v3.14 / v4.0 — V3T (vétérinaire) : ouvre TOUJOURS la modal animal (peu importe la direction).
+            // Le commentaire dynamique est désactivé : trop frustrant pour partager le PNJ entre joueurs.
+            // Le joueur peut désormais parler à V3T de n'importe quel côté pour accéder à son menu.
             if (npcId === "veterinaire_keeper") {
-                ; (async () => {
-                    try {
-                        const res = await fetch("/api/gamebook/v3t/talk", { method: "POST" })
-                        const data = await res.json()
-                        if (data.ok && Array.isArray(data.lines) && data.lines.length > 0) {
-                            // Si tamagotchi en cours (non récupéré) : afficher commentaire dynamique
-                            // au lieu d'ouvrir le modal direct. Le joueur peut cliquer sur l'animal
-                            // sur la map pour ouvrir le modal.
-                            if (data.hasTamagotchi && !data.recovered) {
-                                setPopup({ kind: "info", text: data.lines.join("\n\n") })
-                                return
-                            }
-                        }
-                    } catch (e) {
-                        console.warn("[MapClient] v3t/talk failed", e)
-                    }
-                    // Fallback (pas de tamagotchi, ou récupéré, ou erreur) : ouvre le modal
-                    setShowTamagotchi(true)
-                })()
+                setShowTamagotchi(true)
                 return
             }
             // v3.18 — BIBLIO (bibliothécaire Macaron) : ouvre la modal Bibliothèque
@@ -3060,12 +3065,53 @@ export default function MapClient({
             return
         }
 
-        // v3.21.1 — Cage d'animal : popup descriptif
+        // v4.0 — Cages du véto : montre les Daemons des autres joueurs.
+        // Position de la cage → indice dans la liste des Daemons publics.
+        // Si c'est NOTRE Daemon → ouvre TamagotchiModal directement.
         if (state.mapId === "veterinaire" && tile === "animalCage") {
-            setPopup({
-                kind: "info",
-                text: "Une cage métallique. À l'intérieur, un petit compagnon se repose.\n\nV3T t'observe : \"Chaque cage abrite un animal qui attend l'humain qui saura le mériter. Approche du comptoir si tu veux rencontrer le tien.\"",
-            })
+            ; (async () => {
+                try {
+                    const r = await fetch("/api/gamebook/daemon/public-list", { cache: "no-store" })
+                    if (!r.ok) {
+                        setPopup({ kind: "info", text: "Une cage vide. V3T : « Bientôt occupée par un autre dresseur. »" })
+                        return
+                    }
+                    const j = await r.json()
+                    const daemons = Array.isArray(j.daemons) ? j.daemons : []
+                    // Mapping déterministe : ordre des cages dans la map vétérinaire
+                    // (lecture ligne par ligne, gauche-droite). Voir buildVeterinaire dans maps.ts.
+                    const CAGE_ORDER = [
+                        // Rangée nord y=1, x=2..10 (9 cages)
+                        ...Array.from({ length: 9 }, (_, i) => ({ x: 2 + i, y: 1 })),
+                        // Rangée 3 (2 cages)
+                        { x: 2, y: 3 }, { x: 10, y: 3 },
+                        // Rangée 7 (2 cages)
+                        { x: 2, y: 7 }, { x: 10, y: 7 },
+                    ]
+                    const idx = CAGE_ORDER.findIndex((c) => c.x === front.x && c.y === front.y)
+                    if (idx < 0) {
+                        setPopup({ kind: "info", text: "Une cage métallique. Vide pour l'instant." })
+                        return
+                    }
+                    const d = daemons[idx]
+                    if (!d) {
+                        setPopup({ kind: "info", text: `Cage #${idx + 1} : libre.\n\nV3T : « Cette place attend un nouvel élu. »` })
+                        return
+                    }
+                    if (d.isOwn) {
+                        // Notre propre Daemon — ouvre directement le menu (raccourci)
+                        setShowTamagotchi(true)
+                        return
+                    }
+                    const typeLabel = d.unlocked ? `(éveillé — type ${d.type})` : "(en cours d'éveil)"
+                    setPopup({
+                        kind: "info",
+                        text: `🐾 ${d.name}\nLv ${d.speciesLevel} · ${d.morphology} ${typeLabel}\n\nC'est l'animal de ${d.nickname}. Ne le dérange pas, V3T s'occupe de lui.`,
+                    })
+                } catch {
+                    setPopup({ kind: "info", text: "Une cage métallique. (Erreur réseau.)" })
+                }
+            })()
             return
         }
 
@@ -4226,6 +4272,7 @@ export default function MapClient({
             {showStartMenu && (
                 <StartMenu
                     hasUnlockedDaemon={hasUnlockedDaemon}
+                    hasRecoveredDaemon={hasRecoveredDaemon}
                     onSelect={(entry) => {
                         if (entry === "bag") {
                             setShowStartMenu(false)

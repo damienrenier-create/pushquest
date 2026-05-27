@@ -409,19 +409,18 @@ function TamagotchiCard({
                 </div>
             )}
 
-            {/* Progression défis (compact, infos read-only) */}
+            {/* v4.0 — Progression défis : ne PAS spoiler le détail ici.
+                Le joueur peut consulter les conditions d'adoption à la bibliothèque
+                (rayon "Animaux & Défis" chez BIBLIO à Macaron'île).
+                On garde juste le compteur global pour qu'il sache où il en est. */}
             {!tamagotchi.recovered && (
-                <div style={{ marginBottom: 12, fontSize: 9, opacity: 0.75, lineHeight: 1.6 }}>
-                    <div style={{ fontWeight: "bold", marginBottom: 4 }}>
+                <div style={{ marginBottom: 12, fontSize: 10, opacity: 0.85, lineHeight: 1.6, textAlign: "center" }}>
+                    <div style={{ fontWeight: "bold" }}>
                         Défis : {tamagotchi.defisDone}/{tamagotchi.defisTotal}
                     </div>
-                    <DefiLine done={true} text="✓ Visite chez V3T (auto)" />
-                    <DefiLine done={drinkDone} text="Donner à boire (via la gourde)" />
-                    <DefiLine done={patesDone} text="Partager des Corned Pâtes" />
-                    <DefiLine done={dayHalvesDone} text="Visite matin ET après-midi (même jour)" />
-                    <DefiLine done={plankDone} text="180 sec de gainage (aujourd'hui)" />
-                    <DefiLine done={pushupDone} text="200 pompes APRÈS le gainage" />
-                    <DefiLine done={squatDone} text="300 squats APRÈS les pompes" />
+                    <div style={{ fontSize: 9, opacity: 0.65, marginTop: 2, fontStyle: "italic" }}>
+                        Consulte la bibliothèque pour découvrir les épreuves d'adoption.
+                    </div>
                 </div>
             )}
 
