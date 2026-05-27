@@ -2816,8 +2816,54 @@ export default function MapClient({
             setShowPastagoneInfirmerie(true)
             return
         }
-        // v4.0 Phase 4.D — Comptoir cuisine Pastagone (RIGATONI) — shop bouffe + énigme BOLOGNION
+        // v4.0 Phase 7 — Énigme BOLOGNION (cuisine Pastagone) — step 1+2 sur foodBag
+        if (state.mapId === "pastagone_cuisine" && tile === "foodBag") {
+            // foodBag(4,2) = step 1 ; foodBag(4,6) = step 2 (cohérent avec buildPastagoneCuisine)
+            const step = (front.x === 2 && front.y === 4) ? 1
+                : (front.x === 6 && front.y === 4) ? 2
+                : 0
+            if (step === 0) {
+                setToast("Un sac de pâtes ordinaire.")
+                return
+            }
+            ; (async () => {
+                try {
+                    const r = await fetch("/api/gamebook/pastagone/cuisine-puzzle", {
+                        method: "POST", headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ step }),
+                    })
+                    const j = await r.json()
+                    setPopup({ kind: "info", text: j.message ?? j.reason ?? "..." })
+                } catch {
+                    setToast("Erreur réseau cuisine.")
+                }
+            })()
+            return
+        }
+
+        // v4.0 Phase 4.D / 7 — Comptoir cuisine Pastagone (RIGATONI) :
+        // Si l'énigme BOLOGNION est aux 2/3 (step1+step2 done) et !bolognionFound :
+        // press A sur le comptoir = step 3 (invocation) AU LIEU d'ouvrir le shop.
         if (state.mapId === "pastagone_cuisine" && tile === "shopCounter") {
+            const puz = (state as { pastagoneCuisinePuzzle?: { step1?: boolean; step2?: boolean } }).pastagoneCuisinePuzzle ?? {}
+            const bolFound = (state as { pastagoneBolognionFound?: boolean }).pastagoneBolognionFound === true
+            if (!bolFound && puz.step1 === true && puz.step2 === true) {
+                ; (async () => {
+                    try {
+                        const r = await fetch("/api/gamebook/pastagone/cuisine-puzzle", {
+                            method: "POST", headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ step: 3 }),
+                        })
+                        const j = await r.json()
+                        setPopup({ kind: "info", text: j.message ?? j.reason ?? "..." })
+                        if (j.ok && j.bolognionAdopted) {
+                            // Met à jour le flag local
+                            setState((s) => ({ ...s, pastagoneBolognionFound: true } as PlayerMapState))
+                        }
+                    } catch { setToast("Erreur réseau.") }
+                })()
+                return
+            }
             setShowPastagoneCuisine(true)
             return
         }
