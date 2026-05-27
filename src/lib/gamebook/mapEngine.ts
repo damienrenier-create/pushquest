@@ -8,24 +8,54 @@ export type Direction = "up" | "down" | "left" | "right"
 // v3.33 — Position d'entrée dans chaque map intérieure (= juste au-dessus du doorMat).
 // Si une map n'est pas listée, fallback (4, 6, up) — peut casser le spawn ;
 // à compléter au fil des bug reports.
+// v4.0 — Table complète des positions d'entrée pour chaque interior et outdoor avec doorMat.
+// Format : { x, y } = case juste à côté du doorMat (typiquement y-1, donc au-dessus),
+// avec direction "up" pour faire entrer le joueur face au reste du bâtiment.
+// Audit automatique : scripts/audit-doors.mjs
 export const INTERIOR_ENTRY_POSITIONS: Record<string, { x: number; y: number; direction: Direction }> = {
-    veterinaire: { x: 6, y: 8, direction: "up" },
-    shop_macaron: { x: 6, y: 5, direction: "up" },
-    bibliotheque: { x: 6, y: 8, direction: "up" },
-    shop_interior: { x: 5, y: 8, direction: "up" },
-    gym: { x: 4, y: 6, direction: "up" },
-    casino: { x: 4, y: 6, direction: "up" },
-    gym_pepite: { x: 4, y: 6, direction: "up" },
-    casino_pepite: { x: 4, y: 6, direction: "up" },
-    cave: { x: 4, y: 6, direction: "up" },
-    tower_floor_1: { x: 4, y: 6, direction: "up" },
-    bike_shop: { x: 6, y: 8, direction: "up" },
-    gym_muscuville: { x: 6, y: 8, direction: "up" },
-    casino_muscuville: { x: 6, y: 8, direction: "up" },
-    contest_hall: { x: 6, y: 8, direction: "up" },
-    // v3.35 — Muscuville (arène + biblio)
-    arena_muscuville: { x: 5, y: 9, direction: "up" },
-    bibliotheque_muscuville: { x: 6, y: 8, direction: "up" },
+    // ── Bourg-Boulette interiors ──
+    gym: { x: 4, y: 6, direction: "up" },                // 10×8, doorMat (4,7)
+    casino: { x: 4, y: 6, direction: "up" },             // 10×8, doorMat (4,7)
+    cave: { x: 4, y: 6, direction: "up" },               // 9×8, doorMat (4,7)
+    route1: { x: 5, y: 16, direction: "up" },            // 11×18, doorMat (5,17) — outdoor lien
+    // ── Pépiteville + Hautes-Pâtes ──
+    pepiteville: { x: 8, y: 17, direction: "up" },       // 17×20, doorMat (8,18) — outdoor lien
+    gym_pepite: { x: 4, y: 6, direction: "up" },         // 10×8, doorMat (4,7)
+    casino_pepite: { x: 4, y: 6, direction: "up" },      // 10×8, doorMat (4,7)
+    shop_interior: { x: 4, y: 6, direction: "up" },      // 9×8, doorMat (4,7) — était (5,8) HORS MAP
+    tower_floor_1: { x: 5, y: 9, direction: "up" },      // 11×11, doorMat (5,10) — était (4,6) hors d'usage
+    // ── Macaron'île ──
+    shop_macaron: { x: 4, y: 6, direction: "up" },       // 9×8, doorMat (4,7) — était (6,5) pas adjacent
+    veterinaire: { x: 6, y: 8, direction: "up" },        // 13×10, doorMat (6,9)
+    bibliotheque: { x: 6, y: 8, direction: "up" },       // 13×10, doorMat (6,9)
+    // ── Muscuville ──
+    bike_shop: { x: 4, y: 6, direction: "up" },          // 9×8, doorMat (4,7) — était (6,8) HORS MAP
+    gym_muscuville: { x: 4, y: 6, direction: "up" },     // 10×8, doorMat (4,7) — était (6,8) HORS MAP
+    casino_muscuville: { x: 4, y: 6, direction: "up" },  // 10×8, doorMat (4,7) — était (6,8) HORS MAP
+    contest_hall: { x: 5, y: 7, direction: "up" },       // 11×9, doorMat (5,8) — était (6,8)=wallV BLOQUANT
+    arena_muscuville: { x: 5, y: 9, direction: "up" },   // 11×11, doorMat (5,10)
+    bibliotheque_muscuville: { x: 6, y: 8, direction: "up" }, // 13×10, doorMat (6,9)
+    // ── Lasagnas Vegas interiors ──
+    lasagnas_construction: { x: 3, y: 4, direction: "up" },    // 7×6, doorMat (3,5)
+    lasagnas_hotel: { x: 4, y: 5, direction: "up" },           // 9×7, doorMat (4,6)
+    lasagnas_shop_habits: { x: 4, y: 5, direction: "up" },     // 9×7
+    lasagnas_shop_bouffe: { x: 4, y: 5, direction: "up" },     // 9×7
+    lasagnas_shop_rachat: { x: 4, y: 5, direction: "up" },     // 9×7
+    lasagnas_tb_bar: { x: 5, y: 6, direction: "up" },          // 11×8, doorMat (5,7)
+    lasagnas_tb_bureau: { x: 4, y: 5, direction: "up" },       // 9×7
+    lasagnas_casino_a: { x: 6, y: 7, direction: "up" },        // 12×9, doorMat (6,8)
+    lasagnas_casino_b: { x: 6, y: 7, direction: "up" },        // 12×9
+    lasagnas_casino_c: { x: 5, y: 6, direction: "up" },        // 10×8, doorMat (5,7)
+    // ── Pastagone interiors (v4.0 Phase 4) ──
+    pastagone_cellule: { x: 4, y: 5, direction: "up" },        // 9×7, doorMat (4,6)
+    pastagone_infirmerie: { x: 4, y: 5, direction: "up" },     // 9×7
+    pastagone_cuisine: { x: 4, y: 5, direction: "up" },        // 9×7
+    pastagone_armurerie: { x: 4, y: 5, direction: "up" },      // 9×7
+    pastagone_briefing: { x: 4, y: 5, direction: "up" },       // 9×7
+    pastagone_tour: { x: 4, y: 5, direction: "up" },           // 9×7
+    // ── Tour Pullman PastaVegas (v4.0) ──
+    vegas_shoptower_1: { x: 4, y: 6, direction: "up" },        // 9×8, doorMat (4,7) — RDC seul a un doorMat
+    // vegas_shoptower_2/3/4 : pas de doorMat (transition via stairs uniquement).
 }
 
 export type TileType =

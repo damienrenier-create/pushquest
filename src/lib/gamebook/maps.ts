@@ -2352,7 +2352,8 @@ export const MAPS: Record<string, MapData> = {
         tiles: buildLasagnasShopRachat(),
         width: 9,
         height: 7,
-        exitTarget: { mapId: "lasagnas_vegas", x: 7, y: 20 },
+        // v4.0 audit-doors fix : était (7, 20) = "water" (bloquant). Décalé à (8, 20) = grass adjacent au door.
+        exitTarget: { mapId: "lasagnas_vegas", x: 8, y: 20 },
     },
     // v3.24c — Bar Team Boulette + bureau Il Capo
     lasagnas_tb_bar: {
@@ -2511,8 +2512,9 @@ export const MAPS: Record<string, MapData> = {
         tiles: buildPastagoneCellule(),
         width: CELLULE_W,
         height: CELLULE_H,
-        // exitTarget posé dynamiquement quand pastagoneEscaped=true → Pastagone (7, 6)
-        exitTarget: { mapId: "pastagone", x: 8, y: 6 },
+        // v4.0 audit-doors fix : était (8, 6) = doorMat (boucle d'entrée infinie).
+        // Décalé à (8, 7) = pastagoneRoad walkable, juste sud du door cellule.
+        exitTarget: { mapId: "pastagone", x: 8, y: 7 },
     },
     pastagone_infirmerie: {
         id: "pastagone_infirmerie",
@@ -2552,7 +2554,9 @@ export const MAPS: Record<string, MapData> = {
         tiles: buildPastagoneTour(),
         width: 9,
         height: 7,
-        exitTarget: { mapId: "pastagone", x: 7, y: 11 },
+        // v4.0 audit-doors fix : était (7, 11) = doorMat (boucle d'entrée infinie).
+        // Décalé à (7, 10) = pastagoneRoad walkable, juste nord du door tour.
+        exitTarget: { mapId: "pastagone", x: 7, y: 10 },
     },
     // v4.0 — Tour Pullman PastaVegas (4 étages)
     vegas_shoptower_1: {
@@ -2571,7 +2575,7 @@ export const MAPS: Record<string, MapData> = {
         tiles: buildVegasShopTowerFloor({ floorKind: "middle" }),
         width: 9,
         height: 8,
-        exitTarget: { mapId: "lasagnas_vegas", x: 22, y: 8 },
+        // v4.0 audit-doors : pas de doorMat (transition via stairs). exitTarget retiré.
     },
     vegas_shoptower_3: {
         id: "vegas_shoptower_3",
@@ -2579,7 +2583,6 @@ export const MAPS: Record<string, MapData> = {
         tiles: buildVegasShopTowerFloor({ floorKind: "middle" }),
         width: 9,
         height: 8,
-        exitTarget: { mapId: "lasagnas_vegas", x: 22, y: 8 },
     },
     vegas_shoptower_4: {
         id: "vegas_shoptower_4",
@@ -2587,7 +2590,6 @@ export const MAPS: Record<string, MapData> = {
         tiles: buildVegasShopTowerFloor({ floorKind: "top" }),
         width: 9,
         height: 8,
-        exitTarget: { mapId: "lasagnas_vegas", x: 22, y: 8 },
     },
 }
 
