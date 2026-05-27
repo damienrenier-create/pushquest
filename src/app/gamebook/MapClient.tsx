@@ -280,6 +280,8 @@ export default function MapClient({
     // v4.0 — true si au moins un Daemon a recovered=true (adoption officielle V3T finie).
     // Cache l'entrée START → DAEMON/ANIMAUX avant ça.
     const [hasRecoveredDaemon, setHasRecoveredDaemon] = useState<boolean>(false)
+    // v4.0 — Map cage position → emoji du Daemon du joueur (rendu visuel des cages véto).
+    const [vetoCageEmojis, setVetoCageEmojis] = useState<Record<string, string>>({})
     // v4.0 Phase 3 — Modal Saiyan level up (s'ouvre après combat si pending > 0)
     const [showSaiyanModal, setShowSaiyanModal] = useState<boolean>(false)
     // v4.0 Phase 4.C — Modal interrogatoire cellule Pastagone (CARBONE + 3 défis)
@@ -411,6 +413,40 @@ export default function MapClient({
             console.warn("[MapClient] loadOtherPlayers failed", e)
         }
     }, [])
+
+    // v4.0 — Charge les Daemons publics quand le joueur entre au véto, pour afficher
+    // les emojis des animaux des potes dans les cages (rendu visuel + popup au clic).
+    useEffect(() => {
+        if (state.mapId !== "veterinaire") {
+            setVetoCageEmojis({})
+            return
+        }
+        ; (async () => {
+            try {
+                const [r, xpModule] = await Promise.all([
+                    fetch("/api/gamebook/daemon/public-list", { cache: "no-store" }),
+                    import("@/lib/xp"),
+                ])
+                if (!r.ok) return
+                const j = await r.json()
+                const daemons = Array.isArray(j.daemons) ? j.daemons : []
+                const CAGE_ORDER = [
+                    ...Array.from({ length: 9 }, (_, i) => ({ x: 2 + i, y: 1 })),
+                    { x: 2, y: 3 }, { x: 10, y: 3 },
+                    { x: 2, y: 7 }, { x: 10, y: 7 },
+                ]
+                const map: Record<string, string> = {}
+                for (let i = 0; i < CAGE_ORDER.length; i++) {
+                    const d = daemons[i]
+                    if (!d) continue
+                    const animal = xpModule.getLevelDetails(d.speciesLevel)
+                    const emoji = animal?.emoji ?? "🐾"
+                    map[`${CAGE_ORDER[i].x}-${CAGE_ORDER[i].y}`] = emoji
+                }
+                setVetoCageEmojis(map)
+            } catch { /* silent */ }
+        })()
+    }, [state.mapId])
 
     // v3.27 — Lecture initiale du flag tamagotchiInBag + v3.32 isTester (côté serveur)
     // v4.0 Phase 2.C — Lit aussi isCreator + reprise de combat (activeBattle) sur la même requête
@@ -3725,7 +3761,11 @@ export default function MapClient({
                                     && (y === 11 || y === 12 || y === 13 || y === 14)) {
                                     effectiveTile = "roadBlocked"
                                 }
-                                return <TileCell key={`${x}-${y}`} tile={effectiveTile} x={x} y={y} />
+                                // v4.0 — Cages véto : overlay emoji du Daemon du joueur correspondant
+                                const overlayEmoji = (state.mapId === "veterinaire" && effectiveTile === "animalCage")
+                                    ? vetoCageEmojis[`${x}-${y}`]
+                                    : undefined
+                                return <TileCell key={`${x}-${y}`} tile={effectiveTile} x={x} y={y} overlayEmoji={overlayEmoji} />
                             })
                         )}
                     </div>

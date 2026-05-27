@@ -47,7 +47,13 @@ const C = {
     monsterSauce: "#d84030",
 }
 
-export default function TileCell({ tile, x, y }: { tile: TileType; x: number; y: number }) {
+export default function TileCell({
+    tile, x, y, overlayEmoji,
+}: {
+    tile: TileType; x: number; y: number;
+    /** v4.0 — Optionnel : emoji à overlay sur la tile (ex: animal d'un joueur dans une cage du véto). */
+    overlayEmoji?: string;
+}) {
     // === EXTÉRIEUR ===
     if (tile === "grass") {
         const pattern = (x + y) % 3
@@ -514,9 +520,9 @@ export default function TileCell({ tile, x, y }: { tile: TileType; x: number; y:
                         <div style={{ width: "8%", background: "#606870", borderRadius: 1 }} />
                         <div style={{ width: "8%", background: "#606870", borderRadius: 1 }} />
                     </div>
-                    {/* Petit emoji animal centré */}
-                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "60%", lineHeight: 1, pointerEvents: "none" }}>
-                        🐾
+                    {/* v4.0 — Si overlayEmoji défini (animal d'un joueur), on l'affiche ; sinon 🐾 générique. */}
+                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "70%", lineHeight: 1, pointerEvents: "none" }}>
+                        {overlayEmoji ?? "🐾"}
                     </div>
                 </div>
             </div>
