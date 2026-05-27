@@ -1219,7 +1219,7 @@ export const BIBLIOTHEQUE_MUSCU_TOPICS: BiblioTopic[] = [
     {
         x: 2, y: 1, kind: "archives" as const,
         title: "Arbres du Nexus — Vue d'ensemble",
-        text: "9 essences répertoriées dans le Nexus :\n\n🍎 Pommier (+80 reps × 3/jour)\n🍒 Cerisier (+40 × 5)\n🍐 Poirier (+60 × 4)\n🍑 Pêcher (+100 × 2)\n🥥 Cocotier (+150 × 1, ultra-rare)\n🟣 Maléfica (-30 × 3, piège)\n🫒 Olivier (+20 × 7, Vegas)\n✨ Arbre Boost (×2 énergie, 1×/jour, grass_sud)\n⚠️ Arbre Divisor (÷2, 1×/jour, look trompeur)\n\nDemande-moi le LIVRE DES ARBRES quand tu en auras croisé au moins 3.",
+        text: "9 essences répertoriées dans le Nexus :\n\n🍎 Pommier (+80 reps × 3/jour)\n🍒 Cerisier (+40 × 5)\n🍐 Poirier (+60 × 4)\n🍑 Pêcher (+100 × 2)\n🥥 Cocotier (+150 × 1, ultra-rare)\n🟣 Maléfica (-30 × 3, piège)\n🫒 Olivier (+20 × 7, Vegas)\n✨ Arbre Boost (×2 énergie, 1×/jour, grass_sud)\n⚠️ Arbre Divisor (÷2, 1×/jour, look trompeur)\n\nDemande-moi le LIVRE DES ARBRES quand tu en auras croisé au moins 3.\n\n──────────\n📜 *Note de marge (écrite à la main par MIRABELLE) :*\n« Mon ami BASILICO, jardinier à Vegas, dit qu'il offre son arrosoir à qui cueille les fruits dans l'ordre des couleurs de l'arc-en-ciel : du rouge à l'orange en passant par le vert et le jaune. »",
     },
     {
         x: 6, y: 1, kind: "archives" as const,
