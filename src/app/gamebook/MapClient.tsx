@@ -1713,13 +1713,13 @@ export default function MapClient({
                     }, 200)
                 }
             }
-            // v3.24a — Muscuville ouest (3 cases milieu) → Lasagnas Vegas
-            // v3.35 — Plus de gating triple : remplacé par les rochers physiques (interaction tile boulder).
-            //         Si le joueur arrive ici, c'est qu'il a déjà payé/cassé les rochers.
+            // v4.0 — Muscuville sortie ouest déplacée (col 0, y=15-17) — passe par
+            // la place sud agrandie. Les rochers physiques (col 1, y=15-17) bloquent
+            // toujours le passage tant que pas payés/cassés.
             if (
                 state.mapId === "muscuville" &&
                 result.nextState.posX === 0 &&
-                (result.nextState.posY === 7 || result.nextState.posY === 8 || result.nextState.posY === 9) &&
+                (result.nextState.posY === 15 || result.nextState.posY === 16 || result.nextState.posY === 17) &&
                 map.tiles[result.nextState.posY]?.[result.nextState.posX] === "grassTall"
             ) {
                 setTimeout(() => {
@@ -1733,7 +1733,7 @@ export default function MapClient({
                     setToast("🎰 LASAGNAS VEGAS 🎰")
                 }, 200)
             }
-            // v3.24a — Lasagnas Vegas est (grassTall x=W-1) → Muscuville
+            // v4.0 — Lasagnas Vegas est (grassTall x=W-1) → Muscuville (place sud agrandie)
             if (
                 state.mapId === "lasagnas_vegas" &&
                 result.nextState.posX === 23 &&  // LASAGNAS_W - 1
@@ -1745,7 +1745,7 @@ export default function MapClient({
                         ...s,
                         mapId: "muscuville",
                         posX: 1,
-                        posY: 8,
+                        posY: 16,
                         direction: "right",
                     }))
                     setToast("MUSCUVILLE")

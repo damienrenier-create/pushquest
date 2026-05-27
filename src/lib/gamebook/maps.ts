@@ -1146,10 +1146,12 @@ function buildMuscuville(): TileType[][] {
     m[0][8] = "grassTall"
     // Sortie sud grassTall (col 8) = trigger Mont Pasta-Ventoux (dernière ligne)
     m[MUSCUVILLE_H - 1][8] = "grassTall"
-    // v3.24a — Sortie OUEST (3 cases) vers Lasagnas Vegas. Côté gauche centre vertical.
-    m[7][0] = "grassTall"
-    m[8][0] = "grassTall"
-    m[9][0] = "grassTall"
+    // v4.0 — Sortie OUEST déplacée à la place sud (y=15-17, col 0).
+    // Avant : (col 0, y=7-9) — mais le casino (x=1..5, y=6..9) cachait les rochers !
+    // Maintenant : place sud agrandie, rochers VISIBLES juste devant la sortie.
+    m[15][0] = "grassTall"
+    m[16][0] = "grassTall"
+    m[17][0] = "grassTall"
 
     // Chemin vertical central (col 8) sur toute la hauteur (jusqu'à la sortie sud)
     for (let y = 1; y < MUSCUVILLE_H - 1; y++) m[y][8] = "path"
@@ -1157,11 +1159,16 @@ function buildMuscuville(): TileType[][] {
     // Chemins horizontaux d'accès aux portes (y=5 et y=10)
     for (let x = 1; x < MUSCUVILLE_W - 1; x++) m[5][x] = "path"
     for (let x = 1; x < MUSCUVILLE_W - 1; x++) m[10][x] = "path"
+    // Nouveau : chemin horizontal y=16 pour relier le chemin central aux rochers ouest.
+    for (let x = 1; x < MUSCUVILLE_W - 1; x++) {
+        if (m[16][x] === "grass") m[16][x] = "path"
+    }
 
-    // v3.35 — Rochers bloquant la sortie ouest vers Vegas
-    m[7][1] = "boulder"
-    m[8][1] = "boulder"
-    m[9][1] = "boulder"
+    // v4.0 — Rochers physiques bloquant la sortie ouest (col 1, y=15-17).
+    // Visibles + atteignables depuis la place sud aérée.
+    m[15][1] = "boulder"
+    m[16][1] = "boulder"
+    m[17][1] = "boulder"
 
     // v3.35 — Chemin d'accès aux portes ARÈNE/BIBLIO (y=13)
     for (let x = 1; x < MUSCUVILLE_W - 1; x++) {
@@ -1202,7 +1209,7 @@ export const MUSCUVILLE_SIGNS: Sign[] = [
     // v3.30 — Forêt hantée (à l'est, accès bloqué — "tu as trop peur")
     { x: 16, y: 8, text: "→ FORÊT HANTÉE\n*Le panneau grince. Tu sens un frisson.*\n« Trop peur. Reviens quand tu te sentiras prêt. »" },
     // v3.35 — Rochers à l'ouest : prix de passage progressif selon champions battus
-    { x: 1, y: 6, text: "🪨 ROCHERS — PASSAGE VEGAS\nPrix : 4000 reps (–25% par champion d'arène battu).\n4/4 champions battus → passage GRATUIT." },
+    { x: 1, y: 14, text: "🪨 ROCHERS — PASSAGE VEGAS\nPrix : 4000 reps (–25% par champion d'arène battu).\n4/4 champions battus → passage GRATUIT." },
 ]
 
 // v3.39 — Topics de la BIBLIOTHÈQUE DE MUSCUVILLE (MIRABELLE, sœur de la bibliothécaire Macaron).
