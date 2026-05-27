@@ -5074,7 +5074,7 @@ export default function MapClient({
                                 if (data.tamagotchi) setTamagotchi(data.tamagotchi)
                                 if (typeof data.availableEnergy === "number") setReps(data.availableEnergy)
                                 if (typeof data.energySpentToday === "number") setEnergySpent(data.energySpentToday)
-                                setToast(`Tu adoptes ${data.tamagotchi?.name ?? "ton tamagotchi"}.`)
+                                setToast(`Tu adoptes ${data.tamagotchi?.name ?? "ton animal"}.`)
                             } else {
                                 setToast(data.reason || "Adoption impossible.")
                             }

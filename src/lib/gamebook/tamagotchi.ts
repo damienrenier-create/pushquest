@@ -253,9 +253,9 @@ export function computeAnimalStats(
 }
 
 export const CANONICAL_DEFIS: CanonicalDefi[] = [
-    { index: 0, code: "VISIT", title: "Aller le voir", description: "Rends visite à ton tamagotchi chez le vétérinaire V3T (Macaron'île)." },
-    { index: 1, code: "DRINK", title: "Lui donner à boire", description: "Bois ta gourde pendant que tu es chez V3T avec ton tamagotchi." },
-    { index: 2, code: "PATES", title: "Lui offrir des pâtes", description: "Consomme une Corned Pâtes (TRENETTE) chez V3T pour la partager avec ton tamagotchi." },
+    { index: 0, code: "VISIT", title: "Aller le voir", description: "Rends visite à ton animal chez le vétérinaire V3T (Macaron'île)." },
+    { index: 1, code: "DRINK", title: "Lui donner à boire", description: "Bois ta gourde pendant que tu es chez V3T avec ton animal." },
+    { index: 2, code: "PATES", title: "Lui offrir des pâtes", description: "Consomme une Corned Pâtes (TRENETTE) chez V3T pour la partager avec ton animal." },
     { index: 3, code: "DAY_HALVES", title: "Le voir matin ET après-midi", description: "Visite V3T une fois avant midi ET une fois après midi le même jour." },
     { index: 4, code: "PLANK_180", title: "180 secondes de gainage", description: "Encode 180 secondes de gainage aujourd'hui (ajusté au ratio onboarding).", baseThreshold: 180 },
     { index: 5, code: "PUSHUP_200", title: "200 pompes APRÈS le gainage", description: "Encode 200 pompes aujourd'hui APRÈS ton premier set de gainage (séquence stricte par timestamp).", baseThreshold: 200 },
@@ -340,7 +340,7 @@ export function v3tDialogueLines(hasTamagotchi: boolean, done: number, total: nu
     if (done === 0) {
         return [
             "*V3T te toise par-dessus ses lunettes.*",
-            "Ton tamagotchi est là, mais il ne te connaît pas. Pas encore.",
+            "Ton compagnon est là, mais il ne te connaît pas. Pas encore.",
             "Je ne peux pas te dire QUOI faire — va lire les rayons de la biblio.",
             "Mais je te le dis : commence par t'occuper de lui.",
         ]
