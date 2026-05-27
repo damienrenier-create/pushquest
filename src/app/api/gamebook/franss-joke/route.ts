@@ -228,5 +228,8 @@ export async function POST(req: NextRequest) {
         inventory: newInventory,
         piaffiniRescued: true,
         rescuedViaJoke: !alreadyRescued,
+        // Annonce explicite du badge XP gagné (le client affiche un toast)
+        xpAwarded: !alreadyRescued ? XP_REWARD_SAUVEUR_PIAFFINI : 0,
+        badgeAwarded: !alreadyRescued ? "Sauveur de PIAFFINI" : null,
     })
 }

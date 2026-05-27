@@ -178,6 +178,34 @@ export async function GET() {
         console.warn("[state GET] ensureDaemonForTamagotchi failed", e)
     }
 
+    // v4.0 — Auto-clear des combats orphelins (> 30 min sans activité).
+    // Si un combat est resté actif sans MAJ depuis plus de 30 min, on l'efface
+    // silencieusement pour ne pas bloquer le joueur. Le HP du Daemon reste tel
+    // qu'il était au dernier tour (donc le joueur reprend là où il en était).
+    if (progress) {
+        const activeBattle = (progress as unknown as { activeBattle?: unknown }).activeBattle
+        if (activeBattle && typeof activeBattle === "object") {
+            const startedAt = (activeBattle as { startedAt?: string | number }).startedAt
+            const lastTurnAt = (activeBattle as { lastTurnAt?: string | number }).lastTurnAt
+            const lastActivity = lastTurnAt ?? startedAt
+            if (lastActivity) {
+                const tsMs = typeof lastActivity === "string" ? Date.parse(lastActivity) : Number(lastActivity)
+                if (Number.isFinite(tsMs) && Date.now() - tsMs > 30 * 60 * 1000) {
+                    try {
+                        await (prisma as any).gamebookProgress.update({
+                            where: { id: progress.id },
+                            data: { activeBattle: null as unknown as object },
+                        })
+                        ;(progress as unknown as { activeBattle: unknown }).activeBattle = null
+                        console.info("[state GET] auto-cleared orphan battle (>30min) for", userId)
+                    } catch (e) {
+                        console.warn("[state GET] auto-clear orphan battle failed", e)
+                    }
+                }
+            }
+        }
+    }
+
     const todayReps = await getTodayReps(userId)
 
     // === v3.4a / v3.23f : calcul de l'énergie disponible ===

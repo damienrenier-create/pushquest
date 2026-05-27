@@ -478,6 +478,41 @@ export default function MapClient({
     // énergie via le panneau testeur (🧪 / touche T), pas via un modal forcé.
 
     // ============================================================
+    // Auto-refresh à minuit Paris.
+    // Évite les compteurs daily stales (energySpentToday, casinoBetsToday, etc.)
+    // quand le joueur reste connecté à cheval sur minuit. Le serveur re-resette
+    // ses champs *Date côté lecture ; il suffit d'un GET /state pour rafraîchir.
+    // ============================================================
+    useEffect(() => {
+        function msUntilNextMidnightParis(): number {
+            const nowParis = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Paris" }))
+            const next = new Date(nowParis)
+            next.setHours(0, 0, 0, 0)
+            next.setDate(next.getDate() + 1)
+            const diff = next.getTime() - nowParis.getTime()
+            // +5s de marge pour s'assurer qu'on est bien après minuit côté serveur
+            return diff + 5000
+        }
+        let timeoutId: ReturnType<typeof setTimeout> | null = null
+        const schedule = () => {
+            const ms = msUntilNextMidnightParis()
+            timeoutId = setTimeout(async () => {
+                try {
+                    const r = await fetch("/api/gamebook/state", { cache: "no-store" })
+                    if (r.ok) {
+                        const j = await r.json()
+                        if (typeof j?.availableEnergy === "number") setReps(j.availableEnergy)
+                        if (typeof j?.energySpentToday === "number") setEnergySpent(j.energySpentToday)
+                    }
+                } catch { /* silent */ }
+                schedule()  // re-planifier pour le prochain minuit
+            }, ms)
+        }
+        schedule()
+        return () => { if (timeoutId !== null) clearTimeout(timeoutId) }
+    }, [])
+
+    // ============================================================
     // v3.4b : WebSocket Pusher
     // ============================================================
     useEffect(() => {

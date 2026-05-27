@@ -77,6 +77,20 @@ export async function POST(req: NextRequest) {
     if (!e || !e.name || !e.type || !e.morphology || typeof e.combatLevel !== "number" || typeof e.speciesLevel !== "number") {
         return NextResponse.json({ ok: false, reason: "enemy { name, type, morphology, speciesLevel, combatLevel } requis" }, { status: 400 })
     }
+    // Anti-exploit : un client malveillant pourrait forger un baseExp ou combatLevel astronomique
+    // pour farmer de l'XP. On clamp aux valeurs maximales attendues du catalogue.
+    if (e.combatLevel < 1 || e.combatLevel > 50) {
+        return NextResponse.json({ ok: false, reason: "combatLevel hors plage (1..50)" }, { status: 400 })
+    }
+    if (typeof (body as { baseExp?: number }).baseExp === "number") {
+        const bx = (body as { baseExp: number }).baseExp
+        if (bx < 1 || bx > 300) {
+            return NextResponse.json({ ok: false, reason: "baseExp hors plage (1..300)" }, { status: 400 })
+        }
+    }
+    if (typeof body.rewardXp === "number" && (body.rewardXp < 0 || body.rewardXp > 5000)) {
+        return NextResponse.json({ ok: false, reason: "rewardXp hors plage (0..5000)" }, { status: 400 })
+    }
     const kind = (e.kind ?? "wild") as "wild" | "pnj" | "rival" | "boss"
 
     // Cherche le progress + battle en cours

@@ -214,6 +214,9 @@ export async function POST(req: NextRequest) {
         bankrupt,
         bankruptUntil: newBankruptUntil,
         badgeAwarded,
+        // Annonce explicite du badge XP gagné (le client affiche un toast)
+        xpAwarded: badgeAwarded ? CASINO_BANKRUPT_BADGE_XP : 0,
+        badgeName: badgeAwarded ? "Casseur de banque" : null,
         availableEnergy: newAvailableEnergy,
         energySpentToday: newSpent,
     })

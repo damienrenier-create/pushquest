@@ -415,6 +415,9 @@ async function challengePnj(userId: string, pnjId: string) {
         thresholdUsed: thresholdUsed ?? undefined,
         championStarAwarded,
         xp: championStarAwarded ? XP_REWARD_CHAMPIO_STAR : undefined,
+        // Annonce explicite : badge + XP gagné (le client affiche un toast)
+        xpAwarded: championStarAwarded ? XP_REWARD_CHAMPIO_STAR : 0,
+        badgeName: championStarAwarded ? "Star du Pont d'Hier" : null,
     })
 }
 

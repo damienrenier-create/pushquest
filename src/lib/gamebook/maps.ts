@@ -2301,7 +2301,7 @@ export const MAPS: Record<string, MapData> = {
         tiles: buildMontSommet(),
         width: 7,
         height: 7,
-        exitTarget: { mapId: "mont_pasta_ventoux", x: 3, y: 2 },
+        // Pas d'exitTarget : la sortie se fait via grassTall sud (transit auto vers mont_pasta_ventoux).
     },
     // v3.24a — Lasagnas Vegas (ville opulente à l'ouest de Muscuville, casinos + mafia)
     lasagnas_vegas: {
@@ -2460,7 +2460,7 @@ export const MAPS: Record<string, MapData> = {
         tiles: buildHautesPates(),
         width: HAUTESPATES_W,
         height: HAUTESPATES_H,
-        exitTarget: { mapId: "pepiteville", x: 8, y: 1 },  // retour Pépiteville sortie nord
+        // Pas d'exitTarget : la sortie se fait via grassTall sud (transit auto vers pepiteville).
     },
     tower_floor_1: {
         id: "tower_floor_1",
