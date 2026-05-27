@@ -105,14 +105,35 @@ export async function POST(req: NextRequest) {
 
     // Construit BattleActor joueur (snapshot avec bonheur appliqué)
     const happMult = happinessMultiplier(leader.happiness)
-    const effF = Math.round((leader.baseFor + leader.bonusFor) * happMult)
-    const effV = Math.round((leader.baseVit + leader.bonusVit) * happMult)
-    const effD = Math.round((leader.baseDef + leader.bonusDef) * happMult)
-    const effI = Math.round((leader.baseInt + leader.bonusInt) * happMult)
-    const effE = Math.round((leader.baseEnd + leader.bonusEnd) * happMult)
+    let effF = Math.round((leader.baseFor + leader.bonusFor) * happMult)
+    let effV = Math.round((leader.baseVit + leader.bonusVit) * happMult)
+    let effD = Math.round((leader.baseDef + leader.bonusDef) * happMult)
+    let effI = Math.round((leader.baseInt + leader.bonusInt) * happMult)
+    let effE = Math.round((leader.baseEnd + leader.bonusEnd) * happMult)
     const maxHp = computeMaxHp(leader.baseEnd, leader.combatLevel, leader.bonusEnd)
-    const critRate = computeCritRate(effI, leader.happiness)
     const attacksEq = Array.isArray(leader.attacksEquipped) ? leader.attacksEquipped : ["charge"]
+
+    // v4.0 Phase 5.B — Snapshot des wearables équipés (canEquipDaemon).
+    // Daemon.equippedItems est un Json array de { itemKey: string, durability?: number }.
+    // Chaque item de type canEquipDaemon ajoute son bonus à la stat correspondante.
+    const equipped = Array.isArray(leader.equippedItems) ? leader.equippedItems : []
+    if (equipped.length > 0) {
+        const { getItem } = await import("@/lib/gamebook/items")
+        for (const eq of equipped) {
+            const itemKey = typeof eq === "string" ? eq : (eq as { itemKey?: string }).itemKey
+            if (!itemKey) continue
+            const def = getItem(itemKey)
+            const cap = def?.capabilities.canEquipDaemon
+            if (!cap) continue
+            if (cap.stat === "force") effF += cap.bonus
+            else if (cap.stat === "vitesse") effV += cap.bonus
+            else if (cap.stat === "defense") effD += cap.bonus
+            else if (cap.stat === "intelligence") effI += cap.bonus
+            else if (cap.stat === "endurance") effE += cap.bonus
+        }
+    }
+
+    const critRate = computeCritRate(effI, leader.happiness)
 
     const playerActor: BattleActor = {
         daemonId: leader.id,
