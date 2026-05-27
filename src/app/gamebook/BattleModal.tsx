@@ -227,27 +227,60 @@ export default function BattleModal({ initialState, onClose, onEnded }: Props) {
 
                 {/* Menu actions ou attaques */}
                 {state.phase === "playerTurn" && menu === "actions" && (
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-                        <ActionBtn label="⚔️ ATTAQUE" onClick={() => setMenu("attacks")} busy={busy} />
-                        <ActionBtn
-                            label="🎒 SAC"
-                            onClick={() => setMenu("bag")}
-                            busy={busy}
-                            disabled={usableItems.length === 0}
-                        />
-                        <ActionBtn
-                            label="🔄 DAEMON"
-                            onClick={() => setMenu("switch")}
-                            busy={busy}
-                            disabled={team.filter((t) => t.id !== state.playerDaemonId && t.unlocked && t.currentHp > 0).length === 0}
-                        />
-                        <ActionBtn
-                            label="🏃 FUITE"
-                            onClick={() => doAction({ kind: "flee" })}
-                            busy={busy}
-                            disabled={!state.fleeAllowed}
-                        />
-                    </div>
+                    <>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                            <ActionBtn label="⚔️ ATTAQUE" onClick={() => setMenu("attacks")} busy={busy} />
+                            <ActionBtn
+                                label="🎒 SAC"
+                                onClick={() => setMenu("bag")}
+                                busy={busy}
+                                disabled={usableItems.length === 0}
+                            />
+                            <ActionBtn
+                                label="🔄 DAEMON"
+                                onClick={() => setMenu("switch")}
+                                busy={busy}
+                                disabled={team.filter((t) => t.id !== state.playerDaemonId && t.unlocked && t.currentHp > 0).length === 0}
+                            />
+                            <ActionBtn
+                                label="🏃 FUITE"
+                                onClick={() => doAction({ kind: "flee" })}
+                                busy={busy}
+                                disabled={!state.fleeAllowed}
+                            />
+                        </div>
+                        {/* Abandon : porte de sortie d'urgence (combats orphelins, boss coincés).
+                            Toujours visible mais avec confirmation. Aucun XP donné, le Daemon garde son HP actuel. */}
+                        <button
+                            onClick={async () => {
+                                if (busy) return
+                                if (!confirm("Abandonner ce combat ? Aucun XP gagné, ton Daemon garde son HP actuel.")) return
+                                setBusy(true)
+                                try {
+                                    await fetch("/api/gamebook/daemon/battle/forfeit", { method: "POST" })
+                                    if (onEnded) onEnded({ ...state, phase: "ended" }, null)
+                                    onClose()
+                                } catch {
+                                    setBusy(false)
+                                }
+                            }}
+                            disabled={busy}
+                            style={{
+                                marginTop: 6,
+                                width: "100%",
+                                background: "transparent",
+                                color: "#b07070",
+                                border: "1px solid #804040",
+                                padding: 4,
+                                fontSize: 9,
+                                fontFamily: "monospace",
+                                cursor: busy ? "wait" : "pointer",
+                                letterSpacing: 1,
+                            }}
+                        >
+                            🚪 ABANDONNER (sans XP)
+                        </button>
+                    </>
                 )}
 
                 {state.phase === "playerTurn" && menu === "bag" && (

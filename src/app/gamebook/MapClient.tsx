@@ -3556,6 +3556,13 @@ export default function MapClient({
                 }
                 return
             }
+            // Porte de sortie d'urgence : ESC ferme tout dialogue NPC en cours.
+            // (Évite les blocages quand le joueur ne peut pas avancer ou veut sortir vite.)
+            if (e.key === "Escape" && cinematic?.kind === "npcDialogue") {
+                e.preventDefault()
+                setCinematic(null)
+                return
+            }
             if (e.key === "ArrowUp") { e.preventDefault(); tryMove("up") }
             if (e.key === "ArrowDown") { e.preventDefault(); tryMove("down") }
             if (e.key === "ArrowLeft") { e.preventDefault(); tryMove("left") }
