@@ -577,8 +577,10 @@ function FAQContent() {
                                         <div className="text-emerald-100">Marchands, défis, foreshadowing, animaux compagnons</div>
                                     </div>
                                     <div className="bg-white/10 p-3 rounded-2xl">
-                                        <div className="text-emerald-200 font-black uppercase mb-1">🏆 5 badges</div>
-                                        <div className="text-emerald-100">Pionnier (150 XP) · Star (200) · Sauveur PIAFFINI (200) · Pousseur (100) · Animal Totem (100)</div>
+                                        <div className="text-emerald-200 font-black uppercase mb-1">🏆 11 badges Nexus (jusqu'à 4500 XP)</div>
+                                        <div className="text-emerald-100 leading-relaxed">
+                                            🌳 Pionnier (200) · ⭐ Star du Pont (200) · 🐦 Sauveur PIAFFINI (200) · 💦 Pousseur (100) · 🐾 Animal Totem (100) · 💰 Casseur de banque (200) · 🏔️ Conquérant (500) · 🧱💪🪢🦵 4× Revanche d'arène (800 chacun)
+                                        </div>
                                     </div>
                                     <div className="bg-white/10 p-3 rounded-2xl">
                                         <div className="text-emerald-200 font-black uppercase mb-1">⚖️ Anti-cheat</div>

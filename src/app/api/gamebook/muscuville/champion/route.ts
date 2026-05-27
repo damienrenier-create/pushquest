@@ -133,17 +133,38 @@ export async function POST(req: NextRequest) {
                 },
             })
             // Octroyer le badge (BadgeEvent UNIQUE_AWARDED multi-détenteurs)
+            const badgeKey = BADGE_KEY[championId]
             try {
                 await (prisma as any).badgeEvent.create({
                     data: {
                         eventType: "UNIQUE_AWARDED",
-                        badgeKey: BADGE_KEY[championId],
+                        badgeKey,
                         fromUserId: userId,
                         toUserId: userId,
                     },
                 })
             } catch (e) {
                 console.warn("[champion revanche badge] failed", e)
+            }
+            // v4.0 fix XP bug : badge annonçait +800 XP mais aucun XpAdjustment n'était créé.
+            // Idempotent (vérif reason unique pour éviter double octroi).
+            try {
+                const reason = `BADGE_${badgeKey.toUpperCase()}`
+                const existingXp = await (prisma as any).xpAdjustment.findFirst({
+                    where: { userId, reason },
+                })
+                if (!existingXp) {
+                    await (prisma as any).xpAdjustment.create({
+                        data: {
+                            userId,
+                            amount: 800,
+                            reason,
+                            date: getTodayISO(),
+                        },
+                    })
+                }
+            } catch (e) {
+                console.warn("[champion revanche xp] failed", e)
             }
             return NextResponse.json({
                 ok: true,
