@@ -3724,7 +3724,8 @@ export default function MapClient({
                             />
                         </div>
                     )}
-                    {/* Grille */}
+                    {/* Grille — cachée sur le Mont (le MontVentouxSideView prend le relais visuel,
+                        la grille reste utilisée pour les calculs de mouvement). */}
                     <div
                         style={{
                             display: "grid",
@@ -3732,6 +3733,7 @@ export default function MapClient({
                             gridTemplateRows: `repeat(${map.height}, 1fr)`,
                             width: "min(94vw, 380px)",
                             aspectRatio: `${map.width} / ${map.height}`,
+                            visibility: state.mapId === "mont_pasta_ventoux" ? "hidden" : "visible",
                         }}
                     >
                         {map.tiles.map((row, y) =>
@@ -3905,17 +3907,19 @@ export default function MapClient({
                         </>
                     )}
 
-                    {/* Joueur principal */}
-                    <PlayerOnMap
-                        x={state.posX}
-                        y={state.posY}
-                        direction={state.direction}
-                        animStep={animStep}
-                        mapW={map.width}
-                        mapH={map.height}
-                        hasLunettes={hasIntactLunettes(inventory)}
-                        onBike={state.mapId === "mont_pasta_ventoux" && getActiveBicycle(inventory) !== null}
-                    />
+                    {/* Joueur principal — caché sur le Mont (le SideView gère son propre cycliste 🚴). */}
+                    {state.mapId !== "mont_pasta_ventoux" && (
+                        <PlayerOnMap
+                            x={state.posX}
+                            y={state.posY}
+                            direction={state.direction}
+                            animStep={animStep}
+                            mapW={map.width}
+                            mapH={map.height}
+                            hasLunettes={hasIntactLunettes(inventory)}
+                            onBike={false}
+                        />
+                    )}
 
                     {/* v3.19b — Compagnon tamagotchi (visible si récupéré, outdoor maps uniquement)
                         v3.27 — Caché si tamagotchiInBag = true */}
