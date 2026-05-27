@@ -5774,10 +5774,12 @@ function NpcSprite({
     mapH: number
     animStep: number
 }) {
-    // v3.8.9 — Si le NPC définit un sprite.emoji, on l'affiche tel quel
-    // (au lieu d'un sprite humain coloré). Utile pour PIAFFINI (🐦) et autres
-    // créatures qui ne sont pas des humains.
-    const hasEmoji = typeof npc.sprite.emoji === "string" && npc.sprite.emoji.length > 0
+    // v4.0 — Sartay préfère les sprites humains classiques (PlayerSprite color)
+    // partout, même pour les PNJ qui définissent un sprite.emoji. Les emojis
+    // restent dans les données (npcs.ts) au cas où on voudrait les ré-activer
+    // plus tard, mais le rendu UI les ignore.
+    // Pour ré-activer : remettre `typeof npc.sprite.emoji === "string" && npc.sprite.emoji.length > 0`
+    const hasEmoji = false
 
     return (
         <div
