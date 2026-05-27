@@ -89,7 +89,7 @@ export default function CockfightModal({ onClose }: Props) {
                                         {c.emoji} {c.name} <span style={{ opacity: 0.7, fontWeight: "normal" }}>— ×{c.payout}</span>
                                     </div>
                                     <div style={{ opacity: 0.7, fontSize: 10 }}>
-                                        {c.description} ({c.prob}% de gagner)
+                                        {c.description}
                                     </div>
                                 </button>
                             ))}

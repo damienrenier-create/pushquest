@@ -3550,15 +3550,15 @@ export default function MapClient({
                 return
             }
             if (popup) {
-                if (e.key === "Enter" || e.key === " " || e.key === "Escape" || e.key.toLowerCase() === "a") {
+                if (e.key === "Enter" || e.key === " " || e.key === "Escape" || e.key.toLowerCase() === "a" || e.key.toLowerCase() === "b") {
                     e.preventDefault()
                     setPopup(null)
                 }
                 return
             }
-            // Porte de sortie d'urgence : ESC ferme tout dialogue NPC en cours.
+            // Porte de sortie d'urgence : ESC ou B ferme tout dialogue NPC en cours.
             // (Évite les blocages quand le joueur ne peut pas avancer ou veut sortir vite.)
-            if (e.key === "Escape" && cinematic?.kind === "npcDialogue") {
+            if ((e.key === "Escape" || e.key.toLowerCase() === "b") && cinematic?.kind === "npcDialogue") {
                 e.preventDefault()
                 setCinematic(null)
                 return
@@ -4054,6 +4054,7 @@ export default function MapClient({
                             speaker={cinematic.npcName}
                             text={cinematic.lines[cinematic.step]}
                             onNext={pressA}
+                            onCancel={() => setCinematic(null)}
                         />
                     )}
 
@@ -5608,8 +5609,8 @@ function SignSpriteR({
 }
 
 function DialogueBox({
-    speaker, text, onNext,
-}: { speaker: string; text: string; onNext: () => void }) {
+    speaker, text, onNext, onCancel,
+}: { speaker: string; text: string; onNext: () => void; onCancel?: () => void }) {
     return (
         <div
             style={{
@@ -5633,6 +5634,19 @@ function DialogueBox({
             <div style={{ fontSize: "11px", color: "#000", lineHeight: "1.4", paddingRight: "20px" }}>
                 {text}
             </div>
+            {/* Bouton retour visible si onCancel défini (sortie d'urgence — touche B / ESC). */}
+            {onCancel && (
+                <button
+                    onClick={(e) => { e.stopPropagation(); onCancel() }}
+                    title="Quitter (B / ESC)"
+                    style={{
+                        position: "absolute", top: "4px", right: "4px",
+                        background: "#fff", border: "1px solid #000", borderRadius: "3px",
+                        fontSize: "9px", fontWeight: "bold", color: "#000",
+                        cursor: "pointer", padding: "1px 5px", lineHeight: 1.2,
+                    }}
+                >B ✕</button>
+            )}
             <div style={{ position: "absolute", bottom: "4px", right: "8px", fontSize: "10px", color: "#000", animation: "gbBlink 0.7s infinite" }}>
                 ▼ A
             </div>

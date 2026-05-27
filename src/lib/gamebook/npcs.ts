@@ -969,7 +969,7 @@ export const NPCS: NpcDefinition[] = [
         initialY: 4,
         dialoguesAfter: [
             "*Une vieille dame agitée derrière son guichet.*",
-            "LOTTO POULE ! 1 sur 16, mise 10 reps, gain ×16. UN SEUL GAIN PAR JOUR !",
+            "LOTTO POULE ! 16 cases. Mise 10 reps, gain ×16 si tu trouves la bonne. UN SEUL GAIN PAR JOUR !",
         ],
     },
     {

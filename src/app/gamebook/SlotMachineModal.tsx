@@ -58,7 +58,7 @@ export default function SlotMachineModal({ onClose }: Props) {
                     🎰 MACHINE À SOUS
                 </div>
                 <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 12 }}>
-                    Mise 5 reps. Boost 21h-23h et le 1er du mois.
+                    Mise 5 reps par essai.
                 </div>
 
                 <div style={{

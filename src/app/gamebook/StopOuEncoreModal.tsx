@@ -74,7 +74,7 @@ export default function StopOuEncoreModal({ onClose }: Props) {
                     🚦 STOP OU ENCORE
                 </div>
                 <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 12 }}>
-                    3 essais/jour. Chaque CONTINUE = pot ×1.5 mais 30% crash.
+                    3 essais/jour. Continue tant que tu veux… ou prends ce que tu as.
                 </div>
 
                 {!inSession && !crashed && !cashed && (

@@ -107,7 +107,7 @@ export default function CasinoPatternVegasModal({ onClose }: Props) {
                     22 cases, mise {CASINO_VEGAS_MIN_BET}-{CASINO_VEGAS_MAX_BET} reps, gain ×{CASINO_VEGAS_WIN_MULTIPLIER}.
                 </div>
                 <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 12 }}>
-                    Pattern unique par jour de la semaine. Spin index actuel : {spinIndex + 1} / 22.
+                    Spin #{spinIndex + 1}.
                 </div>
 
                 <div style={{
