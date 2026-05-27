@@ -104,6 +104,7 @@ import TamagotchiModal from "./TamagotchiModal"
 import DaemonTeamModal from "./DaemonTeamModal"
 import BattleModal from "./BattleModal"
 import SaiyanLevelUpModal from "./SaiyanLevelUpModal"
+import PastagoneCelluleModal from "./PastagoneCelluleModal"
 import type { BattleState } from "@/lib/gamebook/battleState"
 import type { TamagotchiView } from "@/lib/gamebook/tamagotchi"
 import BibliothequeModal from "./BibliothequeModal"
@@ -271,6 +272,8 @@ export default function MapClient({
     const [hasUnlockedDaemon, setHasUnlockedDaemon] = useState<boolean>(false)
     // v4.0 Phase 3 — Modal Saiyan level up (s'ouvre après combat si pending > 0)
     const [showSaiyanModal, setShowSaiyanModal] = useState<boolean>(false)
+    // v4.0 Phase 4.C — Modal interrogatoire cellule Pastagone (CARBONE + 3 défis)
+    const [showPastagoneCellule, setShowPastagoneCellule] = useState<boolean>(false)
     // v3.27 — Mode "rangé dans le sac" : si true, le sprite compagnon est caché de la map
     const [tamagotchiInBag, setTamagotchiInBag] = useState<boolean>(false)
     // v3.27 — Modal de choix (3ᵉ interaction dans la minute : Parler / Ranger)
@@ -994,6 +997,17 @@ export default function MapClient({
                 }
             }
 
+            // v4.0 Phase 4.C — Gating de la sortie cellule Pastagone : la porte est verrouillée
+            // tant que les 3 défis interrogatoire ne sont pas validés (pastagoneEscaped=false).
+            // Le joueur doit parler à CARBONE (interaction sur celluleDoor) pour les valider.
+            if (!("blocked" in result) && state.mapId === "pastagone_cellule"
+                && result.nextState.mapId === "pastagone"
+                && (state as { pastagoneEscaped?: boolean }).pastagoneEscaped !== true) {
+                setToast("🔒 La porte est verrouillée. Parle au flic CARBONE pour la débloquer.")
+                setState((s) => ({ ...s, direction: d }))
+                return
+            }
+
             // v3.24c-5 — Gating du bar Team Boulette : accessible uniquement si videurState = passed ou boss_beaten
             if (!("blocked" in result) && result.nextState.mapId === "lasagnas_tb_bar") {
                 const vState = (state as { videurState?: string }).videurState ?? "untouched"
@@ -1701,7 +1715,7 @@ export default function MapClient({
         }, 300)
 
         // v3.8 — si une modal est ouverte, le A est géré par la modal elle-même
-        if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore || showCockfight || showSlotMachine || showCasinoPatternVegas || showArena || showDaemonTeam || !!activeBattle || showSaiyanModal) return
+        if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore || showCockfight || showSlotMachine || showCasinoPatternVegas || showArena || showDaemonTeam || !!activeBattle || showSaiyanModal || showPastagoneCellule) return
 
         // v3.23e — Blague PIAFFINI unique pour Franss : intercepter le premier A press (idem tryMove)
         if (
@@ -2874,6 +2888,13 @@ export default function MapClient({
             return
         }
 
+        // v4.0 Phase 4.C — Interaction sur la porte de la cellule Pastagone
+        // → ouvre la modal interrogatoire (CARBONE + 3 défis réels).
+        if (state.mapId === "pastagone_cellule" && tile === "celluleDoor") {
+            setShowPastagoneCellule(true)
+            return
+        }
+
         // v3.18 / v3.39 — Bibliothèque Macaron OU Muscuville : interactions sur bookshelf / statue / lectern
         if ((state.mapId === "bibliotheque" || state.mapId === "bibliotheque_muscuville") && (tile === "bookshelf" || tile === "statue" || tile === "lectern" || tile === "shopShelf")) {
             const topicsSet = state.mapId === "bibliotheque_muscuville" ? BIBLIOTHEQUE_MUSCU_TOPICS : BIBLIOTHEQUE_TOPICS
@@ -3195,7 +3216,7 @@ export default function MapClient({
         const handler = (e: KeyboardEvent) => {
             // v3.8 — si une modal est ouverte, on ne gère pas les touches ici
             // (StartMenu/InventoryModal/ShopModal/PlayerMapModal écoutent leurs propres events)
-            if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore || showCockfight || showSlotMachine || showCasinoPatternVegas || showArena || showDaemonTeam || !!activeBattle || showSaiyanModal) return
+            if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore || showCockfight || showSlotMachine || showCasinoPatternVegas || showArena || showDaemonTeam || !!activeBattle || showSaiyanModal || showPastagoneCellule) return
 
             if (state.phase === "introMonster") {
                 if (e.key === "Enter" || e.key === " " || e.key.toLowerCase() === "a") {
@@ -4054,6 +4075,34 @@ export default function MapClient({
             {showSaiyanModal && (
                 <SaiyanLevelUpModal
                     onClose={() => setShowSaiyanModal(false)}
+                />
+            )}
+
+            {/* v4.0 Phase 4.C — Modal cellule Pastagone (interrogatoire CARBONE) */}
+            {showPastagoneCellule && (
+                <PastagoneCelluleModal
+                    initialDefis={(state as { pastagoneInterrogDefis?: { pompes?: boolean; gainage?: boolean; squats?: boolean } }).pastagoneInterrogDefis ?? {}}
+                    interrogStartAt={
+                        (() => {
+                            const v = (state as { pastagoneInterrogStart?: string | Date | null }).pastagoneInterrogStart
+                            if (!v) return null
+                            return typeof v === "string" ? v : v.toISOString()
+                        })()
+                    }
+                    onClose={() => setShowPastagoneCellule(false)}
+                    onEscaped={async () => {
+                        setShowPastagoneCellule(false)
+                        // Met à jour le flag client puis téléporte directement à Pastagone outdoor
+                        setState((s) => ({
+                            ...s,
+                            mapId: PASTAGONE_SPAWN_AFTER_ESCAPE.mapId,
+                            posX: PASTAGONE_SPAWN_AFTER_ESCAPE.posX,
+                            posY: PASTAGONE_SPAWN_AFTER_ESCAPE.posY,
+                            direction: PASTAGONE_SPAWN_AFTER_ESCAPE.direction,
+                            pastagoneEscaped: true,
+                        } as PlayerMapState))
+                        setToast("🚪 Tu sors de la cellule. Le pentagone du Pastagone s'ouvre devant toi.")
+                    }}
                 />
             )}
 
