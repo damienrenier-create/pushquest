@@ -185,5 +185,106 @@ export const SPECIAL_WORKOUTS: SpecialWorkout[] = [
         ],
         scoringType: 'TIME',
         xpBonus: 1000
-    }
+    },
+    // ═══════════════════════════════════════════════════
+    // SÉRIE WOD — Workouts of the Day CrossFit-style (v4.0, 2026-05-27)
+    // ═══════════════════════════════════════════════════
+    {
+        id: 'workout-09-wod-emom',
+        slug: 'wod-emom-last-stand',
+        name: 'WOD 1 — EMOM "Last Stand"',
+        description: 'Chaque minute, ON THE MINUTE : 10s de gainage + 10 squats + 10 pompes. Le reste de la minute = repos. Refais le cycle tant que tu tiens. Note bien chaque round dans le menu principal.',
+        date: '2026-05-27',
+        endDate: '2026-08-31',
+        exercises: [
+            { type: 'PLANK', label: 'Gainage 10s', goal: 10, unit: 'SECONDS' },
+            { type: 'SQUATS', label: 'Squats ×10', goal: 10, unit: 'REPS' },
+            { type: 'PUSHUPS', label: 'Pompes ×10', goal: 10, unit: 'REPS' },
+        ],
+        scoringType: 'REPS',
+        xpBonus: 700,
+    },
+    {
+        id: 'workout-10-wod-five-rounds',
+        slug: 'wod-five-rounds-finisher',
+        name: 'WOD 2 — Five Rounds + 100',
+        description: '(1 km course + 100 cordes à sauter + 50 squats) × 5 tours. Puis 100 pompes en finisher. Au chrono — le plus rapide gagne.',
+        date: '2026-05-27',
+        endDate: '2026-08-31',
+        exercises: [
+            ...Array.from({ length: 5 }).flatMap((_, i) => [
+                { type: 'RUN' as const, label: `Course 1km (tour ${i + 1}/5)`, goal: 1, unit: 'KILOMETERS' as const },
+                { type: 'JUMP_ROPE' as const, label: `Corde ×100 (tour ${i + 1}/5)`, goal: 100, unit: 'REPS' as const },
+                { type: 'SQUATS' as const, label: `Squats ×50 (tour ${i + 1}/5)`, goal: 50, unit: 'REPS' as const },
+            ]),
+            { type: 'PUSHUPS', label: 'Pompes ×100 (finisher)', goal: 100, unit: 'REPS' },
+        ],
+        scoringType: 'TIME',
+        xpBonus: 1200,
+    },
+    {
+        id: 'workout-11-wod-abc-cycles',
+        slug: 'wod-abc-cycles',
+        name: 'WOD 3 — Cycles A/B/C',
+        description: 'A : 6 burpees en 1 min · B : 12 squats en 1 min · C : 18 cordes à sauter en 1 min. Enchaîne A-B-C en cycles continus. Fais-en le plus possible.',
+        date: '2026-05-27',
+        endDate: '2026-08-31',
+        exercises: [
+            { type: 'BURPEES', label: 'Burpees ×6 (1 min)', goal: 6, unit: 'REPS' },
+            { type: 'SQUATS', label: 'Squats ×12 (1 min)', goal: 12, unit: 'REPS' },
+            { type: 'JUMP_ROPE', label: 'Corde ×18 (1 min)', goal: 18, unit: 'REPS' },
+        ],
+        scoringType: 'REPS',
+        xpBonus: 650,
+    },
+    {
+        id: 'workout-12-wod-ladder-pullups',
+        slug: 'wod-ladder-tractions',
+        name: 'WOD 4 — Ladder Tractions (20 min)',
+        description: '300 cordes à sauter + 200 squats + 100 pompes — PUIS max tractions sur le temps restant. Total imparti : 20 minutes. Score = nombre de tractions sur le finisher.',
+        date: '2026-05-27',
+        endDate: '2026-08-31',
+        exercises: [
+            { type: 'JUMP_ROPE', label: 'Corde ×300', goal: 300, unit: 'REPS' },
+            { type: 'SQUATS', label: 'Squats ×200', goal: 200, unit: 'REPS' },
+            { type: 'PUSHUPS', label: 'Pompes ×100', goal: 100, unit: 'REPS' },
+            { type: 'PULLUPS', label: 'Tractions (max sur temps restant)', unit: 'REPS' },
+        ],
+        scoringType: 'REPS',
+        xpBonus: 1100,
+    },
+    {
+        id: 'workout-13-wod-mountain-sprint',
+        slug: 'wod-mountain-sprint',
+        name: 'WOD 5 — Mountain Sprint',
+        description: '200 mètres de dénivelé positif (gros mollets) + 200 squats. Le plus rapidement possible. Saisis le D+ dans le champ "Course" en mètres.',
+        date: '2026-05-27',
+        endDate: '2026-08-31',
+        exercises: [
+            { type: 'RUN', label: 'Dénivelé positif (200 m)', goal: 200, unit: 'METERS' },
+            { type: 'SQUATS', label: 'Squats ×200', goal: 200, unit: 'REPS' },
+        ],
+        scoringType: 'TIME',
+        xpBonus: 950,
+    },
+    // ═══════════════════════════════════════════════════
+    // 🎖️ MURPH (Hero WOD) — semaine du 2026-06-06
+    // ═══════════════════════════════════════════════════
+    {
+        id: 'workout-14-murph',
+        slug: 'murph-d-day',
+        name: 'MURPH — D-Day',
+        description: 'Le Hero WOD. 1,6 km course + 100 tractions + 200 pompes + 300 squats + 1,6 km course. ORDRE STRICT — un exo doit être complété avant le suivant. Au chrono. Honore les fallen.',
+        date: '2026-06-06',
+        endDate: '2026-06-13',
+        exercises: [
+            { type: 'RUN', label: 'Course 1,6 km (mile 1)', goal: 1.6, unit: 'KILOMETERS' },
+            { type: 'PULLUPS', label: 'Tractions ×100', goal: 100, unit: 'REPS' },
+            { type: 'PUSHUPS', label: 'Pompes ×200', goal: 200, unit: 'REPS' },
+            { type: 'SQUATS', label: 'Squats ×300', goal: 300, unit: 'REPS' },
+            { type: 'RUN', label: 'Course 1,6 km (mile 2)', goal: 1.6, unit: 'KILOMETERS' },
+        ],
+        scoringType: 'TIME',
+        xpBonus: 2500,
+    },
 ];
