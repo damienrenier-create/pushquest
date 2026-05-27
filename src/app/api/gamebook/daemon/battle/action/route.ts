@@ -238,12 +238,19 @@ export async function POST(req: NextRequest) {
         progressData.activeBattle = newState as unknown as object
     }
 
-    // v4.0 Phase 8 — Si DOBERMAN ALPHA vaincu → set pastagoneBossBeaten=true
+    // v4.0 Phase 8 — Si DOBERMAN ALPHA / CHEF ASRIEL vaincu → set pastagoneBossBeaten=true
     if (newState.phase === "ended"
         && newState.result === "victory"
         && stateBefore.enemy.pnjKey === "doberman_alpha"
         && progress.pastagoneBossBeaten !== true) {
         progressData.pastagoneBossBeaten = true
+    }
+    // v4.0 — Si INSPECTEUR COULTER vaincue → set pastagoneCoulterBeaten=true
+    if (newState.phase === "ended"
+        && newState.result === "victory"
+        && stateBefore.enemy.pnjKey === "coulter"
+        && progress.pastagoneCoulterBeaten !== true) {
+        progressData.pastagoneCoulterBeaten = true
     }
 
     // v4.0 Phase 5.D — Décrément durabilité des wearables équipés en fin de combat

@@ -2745,6 +2745,69 @@ export default function MapClient({
                 triggerNageurDialog()
                 return
             }
+
+            // v4.0 — INSPECTEUR COULTER : 1er talk = dialogue, 2e talk = combat
+            if (npcId === "coulter_pastagone") {
+                const coulterBeaten = (state as { pastagoneCoulterBeaten?: boolean }).pastagoneCoulterBeaten === true
+                if (coulterBeaten) {
+                    setPopup({ kind: "info", text: "INSPECTEUR COULTER : « Tu m'as battue. Pour cette fois. »\n\n*Elle baisse les yeux, Dessingh ne bouge plus.*" })
+                    return
+                }
+                const talked = state.npcsTalkedTo?.includes("coulter_pastagone") === true
+                if (!talked) {
+                    triggerNpcDialogue(npcInFront.npc)
+                    return
+                }
+                // 2e talk → lance le combat
+                ; (async () => {
+                    try {
+                        const r = await fetch("/api/gamebook/pastagone/coulter-battle", { method: "POST" })
+                        const j = await r.json()
+                        if (j.ok && j.state) {
+                            setActiveBattle(j.state as BattleState)
+                        } else {
+                            setPopup({ kind: "info", text: j.reason ?? "Combat refusé." })
+                        }
+                    } catch { setToast("Erreur réseau combat.") }
+                })()
+                return
+            }
+
+            // v4.0 — BRIGADIER FAA : 1er talk = dialogue, 2e talk = claim gift
+            if (npcId === "brigadier_faa") {
+                const claimed = (state as { pastagoneFaaGiftClaimed?: boolean }).pastagoneFaaGiftClaimed === true
+                if (claimed) {
+                    setPopup({ kind: "info", text: "BRIGADIER FAA : « Tu as ton enveloppe. Va. Et n'oublie pas mon conseil. »" })
+                    return
+                }
+                const talked = state.npcsTalkedTo?.includes("brigadier_faa") === true
+                if (!talked) {
+                    triggerNpcDialogue(npcInFront.npc)
+                    return
+                }
+                // 2e talk → claim
+                ; (async () => {
+                    try {
+                        const r = await fetch("/api/gamebook/pastagone/faa-gift", { method: "POST" })
+                        const j = await r.json()
+                        setPopup({ kind: "info", text: j.message ?? j.reason ?? "..." })
+                        if (j.ok) {
+                            setState((s) => ({ ...s, pastagoneFaaGiftClaimed: true } as PlayerMapState))
+                            // refresh énergie
+                            try {
+                                const sr = await fetch("/api/gamebook/state")
+                                if (sr.ok) {
+                                    const sj = await sr.json()
+                                    if (typeof sj.availableEnergy === "number") setReps(sj.availableEnergy)
+                                    if (typeof sj.energySpentToday === "number") setEnergySpent(sj.energySpentToday)
+                                }
+                            } catch { /* silent */ }
+                        }
+                    } catch { setToast("Erreur réseau cadeau.") }
+                })()
+                return
+            }
+
             triggerNpcDialogue(npcInFront.npc)
             return
         }

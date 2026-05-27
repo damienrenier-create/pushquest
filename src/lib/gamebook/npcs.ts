@@ -2127,6 +2127,90 @@ export const NPCS: NpcDefinition[] = [
         ],
     },
     // ============================================================
+    // v4.0 — INSPECTEUR COULTER (mini-boss Pastagone — Daemon orang-outan DESSINGH)
+    // ============================================================
+    {
+        id: "coulter_pastagone",
+        name: "INSPECTEUR COULTER",
+        mapId: "pastagone",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "👠", color: "#d04080" },
+        // Coin sud-ouest, devant l'armurerie (entre Tour et armurerie)
+        initialX: 5,
+        initialY: 8,
+        dialoguesAfter: [
+            "*Une femme en tailleur impeccable te toise. Un orang-outan doré la flanque.*",
+            "« Charmant. Tu as cru pouvoir traverser sans me saluer ? »",
+            "« Je suis Mme Coulter. Inspecteur en chef. Voici Dessingh. »",
+            "*L'orang-outan grogne, montre les crocs.*",
+            "« Le Chef Asriel attend derrière moi. Mais d'abord, tu vas me prouver que tu mérites de le déranger. »",
+            "(Appuie A à nouveau ou ouvre TAGLIA pour la défier.)",
+            "— MME COULTER",
+        ],
+        dialoguesAfterRevisit: [
+            "*Coulter ajuste sa veste, Dessingh sur l'épaule.*",
+            "« Encore là ? Tu m'amuses, dresseur. »",
+        ],
+    },
+    // ============================================================
+    // v4.0 — BRIGADIER FAA (résistant Pastagone, cadeau one-shot)
+    // Lore : John Faa, roi des Gitans, leader de la résistance.
+    // ============================================================
+    {
+        id: "brigadier_faa",
+        name: "BRIGADIER FAA",
+        mapId: "pastagone",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🛡️", color: "#c08040" },
+        // Coin nord-est (entre cuisine et la sortie nord)
+        initialX: 11,
+        initialY: 6,
+        dialoguesAfter: [
+            "*Un vieux chien à la barbe grise te fait signe discrètement.*",
+            "« Pssst. Je m'appelle FAA. Brigadier officiellement, mais... »",
+            "« ...je travaille pour la résistance. Tous les flics ici ne sont pas du côté du Chef. »",
+            "*Il sort une enveloppe.*",
+            "« Tiens. 100 reps de réserve. Et un conseil : la STELMARIA d'Asriel frappe en premier. Encaisse, puis riposte. »",
+            "(Appuie A à nouveau pour accepter le cadeau.)",
+            "— BRIGADIER FAA",
+        ],
+        dialoguesAfterRevisit: [
+            "*FAA fait mine de regarder ailleurs.*",
+            "« Continue, dresseur. Et chut. »",
+        ],
+    },
+    // ============================================================
+    // v4.0 — SERGENT CORAM (résistant Pastagone, sage et lore profond)
+    // Lore : Farder Coram, conseiller des Gitans dans Pullman.
+    // ============================================================
+    {
+        id: "sergent_coram",
+        name: "SERGENT CORAM",
+        mapId: "pastagone",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "📖", color: "#404060" },
+        // Coin nord-ouest (entre infirmerie et la sortie nord)
+        initialX: 3,
+        initialY: 6,
+        dialoguesAfter: [
+            "*Un vieux chien-flic feuillette un grimoire poussiéreux.*",
+            "« Je suis CORAM. Sergent dans la forme, érudit dans le fond. »",
+            "« Tu fais partie d'une histoire plus grande que tu ne le crois. »",
+            "*Il lève les yeux vers le ciel.*",
+            "« La Poussière s'est posée sur toi. Tu vois ces lumières au loin ? Ce sont des mondes. »",
+            "« Quand ton Daemon aura mûri, tu pourras y entrer. »",
+            "« Pour l'instant : occupe-toi du Chef. Et de Coulter. Mais souviens-toi de moi. »",
+            "— SERGENT CORAM",
+        ],
+        dialoguesAfterRevisit: [
+            "*CORAM tourne une page.*",
+            "« Les sorcières des Nord parlent de toi. Continue. »",
+        ],
+    },
+    // ============================================================
     // v4.0 — SERAFINA PEKKALA (sorcière du Nord, foreshadowing fleurs)
     // Lore : Pullman / La Croisée des Mondes. Future téléportation vers
     // le Donjon Magique (à implémenter quand l'arc 3 / extension Donjons sera prêt).

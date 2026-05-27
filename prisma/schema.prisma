@@ -767,6 +767,13 @@ model GamebookProgress {
   pastagoneTourLastNpc       String?
   pastagoneTourLastRotAt     DateTime?
   pastagoneTourCooldownUntil DateTime?
+  // v4.0 — Extensions Pullman Pastagone (Inspecteur Coulter mini-boss + résistants)
+  // pastagoneCoulterBeaten  : true après défaite de l'INSPECTEUR COULTER (mini-boss
+  //                           Pastagone, sa Daemon orang-outan Dessingh).
+  // pastagoneFaaGiftClaimed : true après que BRIGADIER FAA a donné son cadeau
+  //                           (+100 reps one-shot, indice anti-boss).
+  pastagoneCoulterBeaten     Boolean   @default(false)
+  pastagoneFaaGiftClaimed    Boolean   @default(false)
 
   @@unique([userId, chapterId])
   @@index([userId])
