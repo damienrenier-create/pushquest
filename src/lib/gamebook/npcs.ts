@@ -1077,9 +1077,9 @@ export const NPCS: NpcDefinition[] = [
         kind: "static",
         interaction: "interactive",
         sprite: { color: "#a06030" },
-        // v3.35 — déplacé hors zone arène/biblio (rows 11-13)
-        initialX: 8,
-        initialY: 14,
+        // v4.0 — Place sud agrandie, déplacé pour libérer le chemin central y=14.
+        initialX: 6,
+        initialY: 16,
         dialoguesAfter: [
             "Bienvenue à MUSCUVILLE, athlète !",
             "Tu as franchi les hautes herbes — personne n'avait osé depuis des mois.",
@@ -1094,9 +1094,9 @@ export const NPCS: NpcDefinition[] = [
         kind: "wanderer",
         interaction: "interactive",
         sprite: { color: "#c08030" },
-        // v3.35 — déplacé hors zone arène (rows 11-13)
-        initialX: 9,
-        initialY: 14,
+        // v4.0 — Place sud agrandie, déplacé à droite du chemin central.
+        initialX: 10,
+        initialY: 16,
         wanderRadius: 1,
         dialoguesAfter: [
             "Yo nouveau ! Tu te dopes aux pâtes ?",
@@ -1377,9 +1377,9 @@ export const NPCS: NpcDefinition[] = [
         kind: "static",
         interaction: "interactive",
         sprite: { emoji: "🩺", color: "#80c090" },
-        // Position : sud du chemin central, près de l'arène
-        initialX: 6,
-        initialY: 14,
+        // v4.0 — Place sud agrandie (y=14..18). Doc placé hors du chemin central.
+        initialX: 12,
+        initialY: 16,
         dialoguesAfter: [
             "*DOC PROTÉINE essuie ses lunettes.*",
             "Je suis le véto local. Pas de cages chez moi — juste des bols d'eau et des câlins.",

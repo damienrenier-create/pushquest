@@ -419,7 +419,7 @@ export const ALL_TREES: TreeInstance[] = [
     { id: "cherry_tree_3", mapId: "pepiteville", x: 3,  y: 17, kind: "cherry" },
     // === Poiriers (commun, 60 reps × 4/j) ===
     { id: "pear_tree_1", mapId: "macaron_ile", x: 10, y: 14, kind: "pear" },
-    { id: "pear_tree_2", mapId: "muscuville",  x: 8, y: 14, kind: "pear" },
+    { id: "pear_tree_2", mapId: "muscuville",  x: 5, y: 16, kind: "pear" },
     // === Pêcher (rare, 100 reps × 2/j — caché dans grass_sud) ===
     { id: "peach_tree_1", mapId: "grass_sud", x: 7, y: 3, kind: "peach" },
     // === Cocotier (ultra-rare, 150 reps × 1/j — sommet du Mont) ===
@@ -1125,7 +1125,9 @@ function buildGrassSud(): TileType[][] {
 //   - y=15    : tree + grassTall (col 8) trigger Mont Pasta-Ventoux
 // ============================================================
 const MUSCUVILLE_W = 17
-const MUSCUVILLE_H = 16
+// v4.0 — Étendu de 16 à 20 : 4 lignes de respiration au sud pour décongestionner
+//        la zone arène + biblio + PNJ (ils étaient agglutinés sur y=14).
+const MUSCUVILLE_H = 20
 
 function buildMuscuville(): TileType[][] {
     const m: TileType[][] = []
@@ -1142,34 +1144,35 @@ function buildMuscuville(): TileType[][] {
     }
     // Entrée grassTall nord (col 8) = trigger retour grass_sud
     m[0][8] = "grassTall"
-    // Sortie sud grassTall (col 8) = trigger Mont Pasta-Ventoux
+    // Sortie sud grassTall (col 8) = trigger Mont Pasta-Ventoux (dernière ligne)
     m[MUSCUVILLE_H - 1][8] = "grassTall"
     // v3.24a — Sortie OUEST (3 cases) vers Lasagnas Vegas. Côté gauche centre vertical.
     m[7][0] = "grassTall"
     m[8][0] = "grassTall"
     m[9][0] = "grassTall"
 
-    // Chemin vertical central (col 8) sur toute la hauteur
+    // Chemin vertical central (col 8) sur toute la hauteur (jusqu'à la sortie sud)
     for (let y = 1; y < MUSCUVILLE_H - 1; y++) m[y][8] = "path"
 
     // Chemins horizontaux d'accès aux portes (y=5 et y=10)
     for (let x = 1; x < MUSCUVILLE_W - 1; x++) m[5][x] = "path"
     for (let x = 1; x < MUSCUVILLE_W - 1; x++) m[10][x] = "path"
 
-    // v3.35 — Rochers bloquant la sortie ouest vers Vegas (entre la porte et l'extérieur)
-    // Placés en col 1, y=7-9 (juste devant les 3 cases grassTall de sortie).
+    // v3.35 — Rochers bloquant la sortie ouest vers Vegas
     m[7][1] = "boulder"
     m[8][1] = "boulder"
     m[9][1] = "boulder"
 
-    // v3.35 — Chemin d'accès aux nouvelles portes ARÈNE/BIBLIO (y=13, comme y=5 et y=10)
+    // v3.35 — Chemin d'accès aux portes ARÈNE/BIBLIO (y=13)
     for (let x = 1; x < MUSCUVILLE_W - 1; x++) {
         if (m[13][x] === "grass") m[13][x] = "path"
     }
 
-    // Décor : fleurs + arbres (déplacés pour éviter les bâtiments arène/biblio)
+    // v4.0 — Place sud agrandie (y=14..18) : décor aéré pour PNJ et balade.
+    // Décor : fleurs aux 4 coins de la place + le long du chemin central.
     m[14][2] = "flowerR"; m[14][3] = "flowerY"
     m[14][13] = "flowerY"; m[14][14] = "flowerR"
+    m[17][2] = "flowerY"; m[17][14] = "flowerR"
     m[2][6] = "flowerY"; m[2][10] = "flowerR"
     return m
 }
@@ -1195,7 +1198,7 @@ export const MUSCUVILLE_SIGNS: Sign[] = [
     { x: 14, y: 5, text: "GYMNASE DE MUSCUVILLE\nLa salle officielle des athlètes." },
     { x: 4, y: 10, text: "CASINO DE MUSCUVILLE\nDernier casino de l'archipel." },
     { x: 14, y: 10, text: "SALLE DES CONCOURS\nIntersalle annuel. Accès interdit aux non-conquérants du Mont." },
-    { x: 8, y: 14, text: "↓ MONT PASTA-VENTOUX\n100 cases jusqu'au sommet. Vélo obligatoire." },
+    { x: 8, y: 18, text: "↓ MONT PASTA-VENTOUX\n100 cases jusqu'au sommet. Vélo obligatoire." },
     // v3.30 — Forêt hantée (à l'est, accès bloqué — "tu as trop peur")
     { x: 16, y: 8, text: "→ FORÊT HANTÉE\n*Le panneau grince. Tu sens un frisson.*\n« Trop peur. Reviens quand tu te sentiras prêt. »" },
     // v3.35 — Rochers à l'ouest : prix de passage progressif selon champions battus
