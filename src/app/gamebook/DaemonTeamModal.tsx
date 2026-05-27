@@ -50,23 +50,62 @@ interface Props {
     isCreator?: boolean
 }
 
+interface ApplicableItem {
+    itemKey: string
+    name: string
+    emoji: string
+    kind: "evolve" | "boost"
+    detail: string  // ex: "→ Type Feu" ou "+5 FORCE"
+}
+
 export default function DaemonTeamModal({ onClose, isCreator = false }: Props) {
     const [daemons, setDaemons] = useState<DaemonView[]>([])
     const [loading, setLoading] = useState(true)
     const [focused, setFocused] = useState<DaemonView | null>(null)
     const [busy, setBusy] = useState(false)
     const [message, setMessage] = useState<string | null>(null)
+    const [applicableItems, setApplicableItems] = useState<ApplicableItem[]>([])
 
     const refresh = async () => {
         try {
-            const res = await fetch("/api/gamebook/daemon/list", { cache: "no-store" })
-            if (res.ok) {
-                const data = await res.json()
+            const [listR, stateR, itemsModule] = await Promise.all([
+                fetch("/api/gamebook/daemon/list", { cache: "no-store" }),
+                fetch("/api/gamebook/state"),
+                import("@/lib/gamebook/items"),
+            ])
+            if (listR.ok) {
+                const data = await listR.json()
                 setDaemons(data.daemons ?? [])
                 if (focused) {
                     const updated = (data.daemons ?? []).find((d: DaemonView) => d.id === focused.id)
                     if (updated) setFocused(updated)
                 }
+            }
+            if (stateR.ok) {
+                const sj = await stateR.json()
+                const inv = Array.isArray(sj.inventory) ? sj.inventory : []
+                const items: ApplicableItem[] = []
+                for (const entry of inv) {
+                    const itemKey = entry.itemKey
+                    if (!itemKey) continue
+                    const def = itemsModule.getItem(itemKey)
+                    if (!def) continue
+                    if (def.capabilities.canEvolveType) {
+                        items.push({
+                            itemKey, name: def.name, emoji: def.emoji,
+                            kind: "evolve",
+                            detail: `→ Type ${def.capabilities.canEvolveType.newType}`,
+                        })
+                    } else if (def.capabilities.canPermanentStatBoost) {
+                        const c = def.capabilities.canPermanentStatBoost
+                        items.push({
+                            itemKey, name: def.name, emoji: def.emoji,
+                            kind: "boost",
+                            detail: `+${c.amount} ${c.stat.toUpperCase()} permanent`,
+                        })
+                    }
+                }
+                setApplicableItems(items)
             }
         } catch { /* silent */ }
     }
@@ -277,6 +316,43 @@ export default function DaemonTeamModal({ onClose, isCreator = false }: Props) {
                                 onClick={() => callAction("/api/gamebook/daemon/use-serum", { daemonId: focused.id })}
                                 busy={busy}
                             />
+                        )}
+
+                        {/* v4.0 — Pierres d'évolution + sérums boost permanent (Lee Scoresby + Serafina) */}
+                        {focused.unlocked && applicableItems.length > 0 && (
+                            <div style={{ background: "#2a2a2a", border: "1px solid #6080c0", padding: 10, marginBottom: 8 }}>
+                                <div style={{ fontSize: 11, fontWeight: "bold", marginBottom: 6, color: "#80a0d0" }}>
+                                    ✨ ITEMS APPLICABLES (depuis ton sac)
+                                </div>
+                                <div style={{ fontSize: 9, opacity: 0.7, marginBottom: 8 }}>
+                                    Pierres d'évolution (changement de type) et sérums boost (stat +5 permanent).
+                                </div>
+                                {applicableItems.map((it) => (
+                                    <button
+                                        key={it.itemKey}
+                                        onClick={() => callAction(
+                                            it.kind === "evolve"
+                                                ? "/api/gamebook/daemon/evolve"
+                                                : "/api/gamebook/daemon/boost-stat",
+                                            { daemonId: focused.id, itemKey: it.itemKey },
+                                        )}
+                                        disabled={busy}
+                                        style={{
+                                            display: "block", width: "100%",
+                                            background: busy ? "#444" : "#3a3a5a",
+                                            color: "#fff",
+                                            border: "1px solid #80a0d0",
+                                            padding: 6, marginBottom: 4, fontSize: 10,
+                                            fontFamily: "monospace",
+                                            cursor: busy ? "wait" : "pointer",
+                                            textAlign: "left",
+                                        }}
+                                    >
+                                        <strong>{it.emoji} {it.name}</strong>
+                                        <span style={{ marginLeft: 6, fontSize: 9, opacity: 0.8 }}>{it.detail}</span>
+                                    </button>
+                                ))}
+                            </div>
                         )}
 
                         {/* Réordonner — permet de set leader */}

@@ -101,6 +101,17 @@ export interface ItemCapabilities {
         effect: "heal_hp" | "happiness_boost" | "vitesse_buff_one_battle"
         amount: number
     }
+    /** v4.0 — Pierre d'évolution (Lee Scoresby étage 3). Change le type du Daemon
+     *  cible de manière permanente. L'item est consommé. */
+    canEvolveType?: {
+        newType: "Feu" | "Eau" | "Plante" | "Electrique" | "Vol" | "Psy" | "Roche"
+    }
+    /** v4.0 — Sérum boost permanent (Serafina étage 4). Ajoute amount à la baseStat
+     *  du Daemon ciblé (clamp DAEMON_STAT_MAX). Item consommé. */
+    canPermanentStatBoost?: {
+        stat: "force" | "vitesse" | "defense" | "intelligence" | "endurance"
+        amount: number
+    }
 }
 
 export interface ItemDefinition {
@@ -575,6 +586,133 @@ export const ITEMS: ItemDefinition[] = [
         capabilities: {
             canEquipDaemon: { stat: "force", bonus: 5, durabilityBattles: 10 },
         },
+    },
+    // ============================================================
+    // v4.0 — Pierres d'évolution LEE SCORESBY (vegas_shoptower_3)
+    // Changent le type d'un Daemon de manière permanente (one-shot).
+    // ============================================================
+    {
+        key: "pierre_feu",
+        name: "Pierre de Feu",
+        emoji: "🔥",
+        description: "Caillou brûlant rapporté du Sud par Lee Scoresby. Transforme ton Daemon en type Feu.",
+        priceReps: 350,
+        maxQuantity: 1,
+        availableAt: "vegas_shoptower_3",
+        capabilities: { canEvolveType: { newType: "Feu" } },
+    },
+    {
+        key: "pierre_eau",
+        name: "Pierre d'Eau",
+        emoji: "💧",
+        description: "Galet bleu marine ramené des fjords. Transforme ton Daemon en type Eau.",
+        priceReps: 350,
+        maxQuantity: 1,
+        availableAt: "vegas_shoptower_3",
+        capabilities: { canEvolveType: { newType: "Eau" } },
+    },
+    {
+        key: "pierre_plante",
+        name: "Pierre de Plante",
+        emoji: "🌿",
+        description: "Cristal vert tissé de racines vivantes. Transforme ton Daemon en type Plante.",
+        priceReps: 350,
+        maxQuantity: 1,
+        availableAt: "vegas_shoptower_3",
+        capabilities: { canEvolveType: { newType: "Plante" } },
+    },
+    {
+        key: "pierre_electrique",
+        name: "Pierre Foudre",
+        emoji: "⚡",
+        description: "Roche statique qui pique au toucher. Transforme ton Daemon en type Électrique.",
+        priceReps: 350,
+        maxQuantity: 1,
+        availableAt: "vegas_shoptower_3",
+        capabilities: { canEvolveType: { newType: "Electrique" } },
+    },
+    {
+        key: "pierre_vol",
+        name: "Plume du Vent",
+        emoji: "🪶",
+        description: "Plume légère qui flotte par elle-même. Transforme ton Daemon en type Vol.",
+        priceReps: 400,
+        maxQuantity: 1,
+        availableAt: "vegas_shoptower_3",
+        capabilities: { canEvolveType: { newType: "Vol" } },
+    },
+    {
+        key: "pierre_psy",
+        name: "Pierre Mentale",
+        emoji: "🔮",
+        description: "Cristal violet aux reflets hypnotiques. Transforme ton Daemon en type Psy.",
+        priceReps: 400,
+        maxQuantity: 1,
+        availableAt: "vegas_shoptower_3",
+        capabilities: { canEvolveType: { newType: "Psy" } },
+    },
+    {
+        key: "pierre_roche",
+        name: "Pierre Ancienne",
+        emoji: "🪨",
+        description: "Bloc de granit fossilisé. Transforme ton Daemon en type Roche.",
+        priceReps: 350,
+        maxQuantity: 1,
+        availableAt: "vegas_shoptower_3",
+        capabilities: { canEvolveType: { newType: "Roche" } },
+    },
+    // ============================================================
+    // v4.0 — Sérums SERAFINA (vegas_shoptower_4, étage caché) — boost permanent
+    // ============================================================
+    {
+        key: "serum_force",
+        name: "Sérum de Force",
+        emoji: "💪",
+        description: "Distillé par Serafina. +5 FORCE PERMANENT (clamp 100). Consommé à l'usage.",
+        priceReps: 500,
+        maxQuantity: 1,
+        availableAt: "vegas_shoptower_4",
+        capabilities: { canPermanentStatBoost: { stat: "force", amount: 5 } },
+    },
+    {
+        key: "serum_vitesse",
+        name: "Sérum de Vitesse",
+        emoji: "⚡",
+        description: "Vif et clair. +5 VITESSE PERMANENT (clamp 100).",
+        priceReps: 500,
+        maxQuantity: 1,
+        availableAt: "vegas_shoptower_4",
+        capabilities: { canPermanentStatBoost: { stat: "vitesse", amount: 5 } },
+    },
+    {
+        key: "serum_defense",
+        name: "Sérum de Défense",
+        emoji: "🛡️",
+        description: "Lourd et ambré. +5 DÉFENSE PERMANENT (clamp 100).",
+        priceReps: 500,
+        maxQuantity: 1,
+        availableAt: "vegas_shoptower_4",
+        capabilities: { canPermanentStatBoost: { stat: "defense", amount: 5 } },
+    },
+    {
+        key: "serum_intelligence",
+        name: "Sérum d'Intelligence",
+        emoji: "🧠",
+        description: "Violet, électrique au toucher. +5 INTELLIGENCE PERMANENT (clamp 100).",
+        priceReps: 550,
+        maxQuantity: 1,
+        availableAt: "vegas_shoptower_4",
+        capabilities: { canPermanentStatBoost: { stat: "intelligence", amount: 5 } },
+    },
+    {
+        key: "serum_endurance",
+        name: "Sérum d'Endurance",
+        emoji: "❤️",
+        description: "Vert profond, terreux. +5 ENDURANCE PERMANENT (clamp 100).",
+        priceReps: 500,
+        maxQuantity: 1,
+        availableAt: "vegas_shoptower_4",
+        capabilities: { canPermanentStatBoost: { stat: "endurance", amount: 5 } },
     },
 ]
 
