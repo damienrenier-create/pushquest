@@ -1988,6 +1988,35 @@ export const NPCS: NpcDefinition[] = [
             "(Malus à venir en v3.24c-3.)",
         ],
     },
+    // ============================================================
+    // v4.0 — CAPOLINO (rival récurrent, première rencontre Muscuville post-arène)
+    // ============================================================
+    {
+        id: "capolino_muscuville",
+        name: "CAPOLINO",
+        mapId: "muscuville",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🥊", color: "#8b0000" },
+        // Coin sud-est de la place (case grass discrète, hors du chemin)
+        initialX: 12,
+        initialY: 12,
+        dialoguesAfter: [
+            "*Un type au visage tuméfié, assis dans l'herbe. Il fixe le vide.*",
+            "« ...mes champions. Ils m'ont humilié. »",
+            "« Cinq fois j'ai essayé. Cinq fois j'ai perdu. »",
+            "« Mon père IL CAPO m'a envoyé prouver que je vaux quelque chose. »",
+            "*Il te regarde, les yeux rouges.*",
+            "« Toi, tu vas réussir ? Tchhh... On verra. »",
+            "« Si t'y arrives, on se reverra ailleurs. Et là, je serai prêt. »",
+            "— CAPOLINO",
+        ],
+        // v3.17 — dialogue de revisit pour souligner qu'il reviendra
+        dialoguesAfterRevisit: [
+            "*CAPOLINO ne te regarde même plus.*",
+            "« Disparais. »",
+        ],
+    },
 
 ]
 
