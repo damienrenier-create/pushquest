@@ -245,6 +245,27 @@ export async function POST(req: NextRequest) {
         && progress.pastagoneBossBeaten !== true) {
         progressData.pastagoneBossBeaten = true
     }
+
+    // v4.0 Phase 5.D — Décrément durabilité des wearables équipés en fin de combat
+    if (newState.phase === "ended" && Array.isArray(leader.equippedItems) && leader.equippedItems.length > 0) {
+        const { getItem } = await import("@/lib/gamebook/items")
+        interface EquippedEntry { itemKey: string; durability: number }
+        const normalized: EquippedEntry[] = leader.equippedItems.map((e: unknown) => {
+            if (typeof e === "string") {
+                const def = getItem(e)
+                return { itemKey: e, durability: def?.capabilities.canEquipDaemon?.durabilityBattles ?? 5 }
+            }
+            const obj = e as { itemKey?: string; durability?: number }
+            if (typeof obj?.itemKey === "string" && typeof obj?.durability === "number") {
+                return { itemKey: obj.itemKey, durability: obj.durability }
+            }
+            return null as unknown as EquippedEntry
+        }).filter(Boolean)
+        const survived = normalized
+            .map((e) => ({ itemKey: e.itemKey, durability: e.durability - 1 }))
+            .filter((e) => e.durability > 0)
+        playerData.equippedItems = survived
+    }
     await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
         data: progressData,
