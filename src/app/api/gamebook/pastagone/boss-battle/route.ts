@@ -93,7 +93,10 @@ export async function POST() {
     const bossHapp = 60
     const enemy: BattleEnemy = {
         kind: "boss",
-        name: "DOBERMAN ALPHA",
+        // v4.0 lore Pullman — Chef Asriel = boss du Pastagone (Daemon de race Doberman).
+        // Le pnjKey "doberman_alpha" est conservé pour la cohérence du tracking côté
+        // /battle/action (détection victoire boss → set pastagoneBossBeaten=true).
+        name: "CHEF ASRIEL",
         type: "Combat" as DaemonType,
         morphology: "crocs" as Morphology,
         speciesLevel: 70,  // 🐺 grandes bêtes
@@ -121,8 +124,8 @@ export async function POST() {
         player: playerActor,
         enemy,
         log: [
-            { kind: "info", text: "Le DOBERMAN ALPHA entre dans l'arène. Le silence tombe." },
-            { kind: "info", text: "« Tu as battu mes lieutenants. Voyons si tu survis à MOI. »" },
+            { kind: "info", text: "Le CHEF ASRIEL entre dans l'arène. Sa panthère des neiges Stelmaria gronde derrière lui." },
+            { kind: "info", text: "« Tu as battu mes lieutenants, dresseur. Voyons si tu survis à MOI. »" },
         ],
         phase: "playerTurn",
         rewardXp,

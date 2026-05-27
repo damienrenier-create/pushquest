@@ -119,7 +119,7 @@ export default function PastagoneBriefingModal({ onClose, progress, onBossBattle
                     {hint}
                 </div>
 
-                {/* v4.0 Phase 8 — Bouton DÉFIER DOBERMAN ALPHA si évadé + pas encore battu */}
+                {/* v4.0 Phase 8 — Bouton DÉFIER CHEF ASRIEL si évadé + pas encore battu */}
                 {escaped && !bossBeaten && (
                     <button
                         onClick={challengeBoss}
@@ -133,7 +133,7 @@ export default function PastagoneBriefingModal({ onClose, progress, onBossBattle
                             fontFamily: "monospace",
                         }}
                     >
-                        🐺 DÉFIER LE DOBERMAN ALPHA
+                        🐺 DÉFIER CHEF ASRIEL
                     </button>
                 )}
 

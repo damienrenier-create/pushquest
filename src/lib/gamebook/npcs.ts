@@ -2018,6 +2018,115 @@ export const NPCS: NpcDefinition[] = [
         ],
     },
     // ============================================================
+    // v4.0 — ROGER (enfant captif libéré, attend Lyra à PastaVegas)
+    // Lore Pullman : Roger Parslow, le meilleur ami de Lyra.
+    // ============================================================
+    {
+        id: "roger_vegas",
+        name: "ROGER",
+        mapId: "lasagnas_vegas",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🧒", color: "#a07050" },
+        // Sur le trottoir, près d'un banc symbolique. Coin SW de Vegas, hors route.
+        initialX: 3,
+        initialY: 8,
+        dialoguesAfter: [
+            "*Un gamin maigrichon, T-shirt déchiré, joue avec un caillou.*",
+            "« Pssst. Toi. Tu vas où ? »",
+            "« Ma copine Lyra est partie chercher quelque chose au nord. »",
+            "« Elle m'a dit d'attendre. Alors j'attends. »",
+            "*Il jette le caillou un peu plus loin.*",
+            "« Si tu la croises, dis-lui que Roger est toujours là. »",
+            "« Si t'as un Daemon, il a de la chance. Le mien… eh, t'inquiète. »",
+            "— ROGER",
+        ],
+        dialoguesAfterRevisit: [
+            "*Roger fait des ronds dans la poussière avec son pied.*",
+            "« Toujours pas de Lyra. Bon. J'attends encore. »",
+        ],
+    },
+    // ============================================================
+    // v4.0 — LYRA (apparition mystérieuse à PastaVegas, indice BOLOGNION)
+    // ============================================================
+    {
+        id: "lyra_vegas",
+        name: "LYRA",
+        mapId: "lasagnas_vegas",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "👧", color: "#c08040" },
+        // Pose-la en (6, 18) côté sud du shop rachat, comme si elle inspectait quelque chose
+        initialX: 6,
+        initialY: 19,
+        dialoguesAfter: [
+            "*Une fille de ton âge, cheveux ébouriffés, te fixe sans cligner.*",
+            "« Tu connais le Pastagone ? Le pentagone des chiens. »",
+            "« Il y a une cuisine là-bas. Avec trois sacs de pâtes. »",
+            "« Si tu inspectes les deux bons sacs dans le bon ordre, et que tu touches ensuite le comptoir… »",
+            "*Elle te coupe la parole avant que tu ne demandes.*",
+            "« …quelque chose se réveillera. Quelque chose que les flics gardent secret. »",
+            "« Je dois retrouver Roger. Bonne route, voyageur. »",
+            "— LYRA",
+        ],
+        dialoguesAfterRevisit: [
+            "*Lyra a disparu. Reste juste l'odeur de pâte cuite dans l'air.*",
+            "(Elle reviendra peut-être. Ou peut-être pas.)",
+        ],
+    },
+    // ============================================================
+    // v4.0 — WILL (garçon au couteau étrange, foreshadow Donjons Magiques)
+    // ============================================================
+    {
+        id: "will_vegas",
+        name: "WILL",
+        mapId: "lasagnas_vegas",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🗡️", color: "#404060" },
+        // Sur le trottoir nord, près d'une ruelle. Loin de la zone Team Boulette.
+        initialX: 21,
+        initialY: 8,
+        dialoguesAfter: [
+            "*Un garçon silencieux, le regard sombre, joue avec un couteau ancien.*",
+            "« Touche pas. Ce couteau n'est pas d'ici. »",
+            "« Il découpe des choses que tu ne peux pas voir. »",
+            "*Il regarde au loin, comme s'il voyait à travers les murs.*",
+            "« J'aiderai peut-être un jour. Pas maintenant. »",
+            "« Continue. Et fais attention à qui tu suis. »",
+            "— WILL",
+        ],
+        dialoguesAfterRevisit: [
+            "*Will affûte son couteau sur une pierre.*",
+            "« Pas encore. »",
+        ],
+    },
+    // ============================================================
+    // v4.0 — LEE SCORESBY (placeholder — dirigeable stationné, propriétaire absent)
+    // ============================================================
+    {
+        id: "lee_scoresby_airship",
+        name: "PANNEAU LEE SCORESBY",
+        mapId: "lasagnas_vegas",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "📋", color: "#604030" },
+        // Sur la route nord côté est
+        initialX: 19,
+        initialY: 5,
+        dialoguesAfter: [
+            "*Un dirigeable rouge et bleu est amarré au bord de la route.*",
+            "*Un panneau cloué dessus :*",
+            "« DIRIGEABLE PROPRIÉTÉ DE LEE SCORESBY.",
+            "  PARTI EN MISSION SECRÈTE — RETOUR INCONNU.",
+            "  PAS TOUCHER. NI MONTER. NI VOLER LE WHISKY. »",
+            "*Tu jettes un œil aux cordes. Solides. Pas pour toi.*",
+        ],
+        dialoguesAfterRevisit: [
+            "*Le dirigeable est toujours là. Lee Scoresby, lui, non.*",
+        ],
+    },
+    // ============================================================
     // v4.0 — SERAFINA PEKKALA (sorcière du Nord, foreshadowing fleurs)
     // Lore : Pullman / La Croisée des Mondes. Future téléportation vers
     // le Donjon Magique (à implémenter quand l'arc 3 / extension Donjons sera prêt).
