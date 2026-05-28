@@ -20,6 +20,7 @@ import prisma from "@/lib/prisma"
 import { getTodayISO } from "@/lib/challenge"
 import { isGamebookFrozen } from "@/lib/gamebook/antiCheat"
 import { isCreatorAccount, padAvailableEnergyForCreator } from "@/lib/gamebook/creator"
+import { readEnergySnapshot, spendEnergyOnSnapshot, computeAvailableEnergy } from "@/lib/gamebook/energy"
 import {
     createTamagotchi,
     isValidTamagotchiName,
@@ -93,14 +94,12 @@ export async function POST(req: NextRequest) {
         })
     }
 
-    // Énergie disponible
+    // v4.0 — Énergie disponible avec bonusSurplus
     const today = getTodayISO()
-    const storedDate = (progress as { energySpentDate?: string }).energySpentDate ?? ""
-    const storedSpent = (progress as { energySpentToday?: number }).energySpentToday ?? 0
-    const currentSpent = storedDate === today ? storedSpent : 0
+    const snap = readEnergySnapshot(progress, today)
     const todayReps = await getTodayReps(userId)
     const isCreator = await isCreatorAccount(userId)
-    const availableEnergy = padAvailableEnergyForCreator(todayReps - currentSpent, isCreator)
+    const availableEnergy = padAvailableEnergyForCreator(computeAvailableEnergy(todayReps, snap), isCreator)
 
     if (availableEnergy < TAMAGOTCHI_ADOPT_COST) {
         return NextResponse.json({
@@ -109,7 +108,7 @@ export async function POST(req: NextRequest) {
         })
     }
 
-    const newSpent = currentSpent + TAMAGOTCHI_ADOPT_COST
+    const nextSnap = spendEnergyOnSnapshot(snap, TAMAGOTCHI_ADOPT_COST, today)
     // v3.23h — L'animal est figé sur le level du 1er passage chez V3T (snapshot dans state GET).
     // Fallback : si le snapshot n'a pas été pris (race condition), on prend le level actuel.
     const snapshotLevel = (progress as { vetFirstVisitLevel?: number | null }).vetFirstVisitLevel
@@ -122,8 +121,9 @@ export async function POST(req: NextRequest) {
         where: { id: progress.id },
         data: {
             tamagotchi: tam,
-            energySpentToday: newSpent,
+            energySpentToday: nextSnap.energySpentToday,
             energySpentDate: today,
+            bonusSurplus: nextSnap.bonusSurplus,
             lastSeen: new Date(),
         },
     })
@@ -131,7 +131,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
         ok: true,
         tamagotchi: viewTamagotchi(tam, levelForAnimal),
-        availableEnergy: padAvailableEnergyForCreator(todayReps - newSpent, isCreator),
-        energySpentToday: newSpent,
+        availableEnergy: padAvailableEnergyForCreator(computeAvailableEnergy(todayReps, nextSnap), isCreator),
+        energySpentToday: nextSnap.energySpentToday,
+        bonusSurplus: nextSnap.bonusSurplus,
     })
 }

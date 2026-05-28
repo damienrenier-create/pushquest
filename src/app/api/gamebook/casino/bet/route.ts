@@ -20,6 +20,7 @@ import prisma from "@/lib/prisma"
 import { getTodayISO } from "@/lib/challenge"
 import { isGamebookFrozen } from "@/lib/gamebook/antiCheat"
 import { isCreatorAccount, padAvailableEnergyForCreator } from "@/lib/gamebook/creator"
+import { readEnergySnapshot, spendEnergyOnSnapshot, grantRewardOnSnapshot, computeAvailableEnergy } from "@/lib/gamebook/energy"
 
 export const dynamic = "force-dynamic"
 
@@ -86,13 +87,11 @@ export async function POST(req: NextRequest) {
         })
     }
 
-    // Énergie dispo : doit pouvoir payer le stake
-    const storedDate = (progress as { energySpentDate?: string }).energySpentDate ?? ""
-    const storedSpent = (progress as { energySpentToday?: number }).energySpentToday ?? 0
-    const currentSpent = storedDate === today ? storedSpent : 0
+    // v4.0 — Énergie dispo INCLUANT bonusSurplus
+    const snap = readEnergySnapshot(progress, today)
     const todayReps = await getTodayReps(userId)
     const isCreator = await isCreatorAccount(userId)
-    const availableEnergy = padAvailableEnergyForCreator(todayReps - currentSpent, isCreator)
+    const availableEnergy = padAvailableEnergyForCreator(computeAvailableEnergy(todayReps, snap), isCreator)
 
     if (availableEnergy < CASINO_BET_STAKE) {
         return NextResponse.json({
@@ -111,24 +110,25 @@ export async function POST(req: NextRequest) {
     // Couleur tirée : on dérive de roll pour cohérence (mais visible au joueur uniquement)
     const drawnColor = won ? color : (color === "red" ? "black" : "red")
 
-    // Calcul du delta : si win, net +10 (récupère stake + 10) → energySpentToday -= 10
-    //                  si lose, net -10 → energySpentToday += 10
-    const netDelta = won ? -(CASINO_BET_WIN - CASINO_BET_STAKE) : CASINO_BET_STAKE
-    const newSpent = currentSpent + netDelta
+    // v4.0 — Si win : on dépense STAKE puis on crédite WIN au bonusSurplus.
+    //        Si lose : on dépense STAKE seul (le reste reste dans le pot du casino).
+    const afterStake = spendEnergyOnSnapshot(snap, CASINO_BET_STAKE, today)
+    const nextSnap = won ? grantRewardOnSnapshot(afterStake, CASINO_BET_WIN, today) : afterStake
     const newBetsToday = betsToday + 1
 
     await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
         data: {
-            energySpentToday: newSpent,
+            energySpentToday: nextSnap.energySpentToday,
             energySpentDate: today,
+            bonusSurplus: nextSnap.bonusSurplus,
             casinoBetsDate: today,
             casinoBetsToday: newBetsToday,
             lastSeen: new Date(),
         },
     })
 
-    const newAvailable = padAvailableEnergyForCreator(todayReps - newSpent, isCreator)
+    const newAvailable = padAvailableEnergyForCreator(computeAvailableEnergy(todayReps, nextSnap), isCreator)
 
     return NextResponse.json({
         ok: true,
@@ -140,7 +140,8 @@ export async function POST(req: NextRequest) {
         stake: CASINO_BET_STAKE,
         netReps: won ? CASINO_BET_WIN - CASINO_BET_STAKE : -CASINO_BET_STAKE,
         availableEnergy: newAvailable,
-        energySpentToday: newSpent,
+        energySpentToday: nextSnap.energySpentToday,
+        bonusSurplus: nextSnap.bonusSurplus,
         betsToday: newBetsToday,
         maxBets: CASINO_MAX_BETS_PER_DAY,
     })

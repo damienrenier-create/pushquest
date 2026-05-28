@@ -19,6 +19,7 @@ import prisma from "@/lib/prisma"
 import { getTodayISO } from "@/lib/challenge"
 import { isGamebookFrozen } from "@/lib/gamebook/antiCheat"
 import { isCreatorAccount, padAvailableEnergyForCreator } from "@/lib/gamebook/creator"
+import { readEnergySnapshot, spendEnergyOnSnapshot, computeAvailableEnergy } from "@/lib/gamebook/energy"
 import {
     applyFeed,
     parseTamagotchi,
@@ -74,12 +75,10 @@ export async function POST() {
     }
 
     const today = getTodayISO()
-    const storedDate = (progress as { energySpentDate?: string }).energySpentDate ?? ""
-    const storedSpent = (progress as { energySpentToday?: number }).energySpentToday ?? 0
-    const currentSpent = storedDate === today ? storedSpent : 0
+    const snap = readEnergySnapshot(progress, today)
     const todayReps = await getTodayReps(userId)
     const isCreator = await isCreatorAccount(userId)
-    const availableEnergy = padAvailableEnergyForCreator(todayReps - currentSpent, isCreator)
+    const availableEnergy = padAvailableEnergyForCreator(computeAvailableEnergy(todayReps, snap), isCreator)
 
     // v3.23e — ratio appliqué au coût (doctrine E1 : coût feed ratio-aware)
     const ratio = await getUserDifficultyRatio(userId)
@@ -92,7 +91,7 @@ export async function POST() {
         })
     }
 
-    const newSpent = currentSpent + feedCost
+    const nextSnap = spendEnergyOnSnapshot(snap, feedCost, today)
     const userLevel = await getUserLevelForGamebook(userId)
     const fed = applyFeed(existing, userLevel)
 
@@ -100,8 +99,9 @@ export async function POST() {
         where: { id: progress.id },
         data: {
             tamagotchi: fed,
-            energySpentToday: newSpent,
+            energySpentToday: nextSnap.energySpentToday,
             energySpentDate: today,
+            bonusSurplus: nextSnap.bonusSurplus,
             lastSeen: new Date(),
         },
     })
@@ -109,7 +109,8 @@ export async function POST() {
     return NextResponse.json({
         ok: true,
         tamagotchi: viewTamagotchi(fed, userLevel),
-        availableEnergy: padAvailableEnergyForCreator(todayReps - newSpent, isCreator),
-        energySpentToday: newSpent,
+        availableEnergy: padAvailableEnergyForCreator(computeAvailableEnergy(todayReps, nextSnap), isCreator),
+        energySpentToday: nextSnap.energySpentToday,
+        bonusSurplus: nextSnap.bonusSurplus,
     })
 }

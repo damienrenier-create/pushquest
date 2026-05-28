@@ -30,6 +30,7 @@ import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { getTodayISO } from "@/lib/challenge"
 import { isCreatorAccount, padAvailableEnergyForCreator } from "@/lib/gamebook/creator"
+import { readEnergySnapshot, spendEnergyOnSnapshot, grantRewardOnSnapshot, computeAvailableEnergy } from "@/lib/gamebook/energy"
 import {
     CASINO_PATTERN,
     CASINO_PATTERN_LENGTH,
@@ -138,14 +139,12 @@ export async function POST(req: NextRequest) {
         })
     }
 
-    // Énergie suffisante ?
+    // v4.0 — Énergie dispo avec bonusSurplus
     const today = getTodayISO()
-    const storedDate = (progress as { energySpentDate?: string }).energySpentDate ?? ""
-    const storedSpent = (progress as { energySpentToday?: number }).energySpentToday ?? 0
-    const currentSpent = storedDate === today ? storedSpent : 0
+    const snap = readEnergySnapshot(progress, today)
     const todayReps = await getTodayReps(userId)
     const isCreator = await isCreatorAccount(userId)
-    const availableEnergy = padAvailableEnergyForCreator(todayReps - currentSpent, isCreator)
+    const availableEnergy = padAvailableEnergyForCreator(computeAvailableEnergy(todayReps, snap), isCreator)
 
     const totalBet = bets.reduce((sum, b) => sum + b.amount, 0)
     if (totalBet > availableEnergy) {
@@ -181,16 +180,18 @@ export async function POST(req: NextRequest) {
         newStreak = 0
     }
 
-    // Persist
-    const newSpent = currentSpent + totalBet - totalWin
+    // v4.0 — Dépense totalBet puis crédite totalWin au bonusSurplus.
+    const afterStake = spendEnergyOnSnapshot(snap, totalBet, today)
+    const nextSnap = totalWin > 0 ? grantRewardOnSnapshot(afterStake, totalWin, today) : afterStake
     await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
         data: {
             casinoPatternSpinIndex: newSpinIndex,
             casinoPatternWinStreak: newStreak,
             casinoPatternBankruptUntil: bankrupt ? newBankruptUntil : (bankruptUntil ?? null),
-            energySpentToday: newSpent,
+            energySpentToday: nextSnap.energySpentToday,
             energySpentDate: today,
+            bonusSurplus: nextSnap.bonusSurplus,
             lastSeen: new Date(),
         },
     })
@@ -201,7 +202,7 @@ export async function POST(req: NextRequest) {
         badgeAwarded = true
     }
 
-    const newAvailableEnergy = padAvailableEnergyForCreator(todayReps - newSpent, isCreator)
+    const newAvailableEnergy = padAvailableEnergyForCreator(computeAvailableEnergy(todayReps, nextSnap), isCreator)
 
     return NextResponse.json({
         ok: true,
@@ -218,6 +219,7 @@ export async function POST(req: NextRequest) {
         xpAwarded: badgeAwarded ? CASINO_BANKRUPT_BADGE_XP : 0,
         badgeName: badgeAwarded ? "Casseur de banque" : null,
         availableEnergy: newAvailableEnergy,
-        energySpentToday: newSpent,
+        energySpentToday: nextSnap.energySpentToday,
+        bonusSurplus: nextSnap.bonusSurplus,
     })
 }

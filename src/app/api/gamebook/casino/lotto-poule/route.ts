@@ -46,15 +46,12 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: false, reason: "Tu as déjà gagné aujourd'hui. Reviens demain." })
     }
 
-    // Vérifier qu'on a au moins 10 reps disponibles
-    const storedDate = (progress as { energySpentDate?: string }).energySpentDate ?? ""
-    const storedSpent = (progress as { energySpentToday?: number }).energySpentToday ?? 0
-    const currentSpent = storedDate === today ? storedSpent : 0
-
+    // v4.0 — Snapshot énergie (inclut bonusSurplus)
+    const { readEnergySnapshot, spendEnergyOnSnapshot, grantRewardOnSnapshot, computeAvailableEnergy } = await import("@/lib/gamebook/energy")
+    const snap = readEnergySnapshot(progress, today)
     const sets = await prisma.exerciseSet.findMany({ where: { userId, date: today } })
     const todayReps = sets.reduce((sum, s) => sum + (s.exercise === "PLANK" ? Math.floor(s.reps / 5) : s.reps), 0)
-    const bonusSurplus = (progress as { bonusSurplus?: number }).bonusSurplus ?? 0
-    const available = todayReps - currentSpent + bonusSurplus
+    const available = computeAvailableEnergy(todayReps, snap)
     if (available < STAKE) {
         return NextResponse.json({ ok: false, reason: `Pas assez de reps. Tu as ${available}, il en faut ${STAKE}.` })
     }
@@ -65,14 +62,17 @@ export async function POST(req: NextRequest) {
     const boost = getActiveBoost(progress as any)
     const rawPayout = won ? PAYOUT_MULT * STAKE : 0
     const boostedPayout = applyBoostToPayout(rawPayout, boost)
-    const netDelta = won ? -(boostedPayout - STAKE) : STAKE
-    const newSpent = currentSpent + netDelta
+
+    // v4.0 — Dépense STAKE puis crédite payout en bonusSurplus si win
+    const afterStake = spendEnergyOnSnapshot(snap, STAKE, today)
+    const nextSnap = won ? grantRewardOnSnapshot(afterStake, boostedPayout, today) : afterStake
 
     await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
         data: {
-            energySpentToday: newSpent,
+            energySpentToday: nextSnap.energySpentToday,
             energySpentDate: today,
+            bonusSurplus: nextSnap.bonusSurplus,
             lottoPouleDate: today,
             ...(won ? { lottoPouleWonToday: true } : {}),
             ...consumeBoostPatch(),

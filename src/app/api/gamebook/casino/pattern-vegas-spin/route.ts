@@ -80,16 +80,15 @@ export async function POST(req: NextRequest) {
     }
 
     const today = getTodayISO()
-    const energyDate = (progress as { energySpentDate?: string }).energySpentDate ?? ""
-    const energySpent = (progress as { energySpentToday?: number }).energySpentToday ?? 0
-    const currentSpent = energyDate === today ? energySpent : 0
+    // v4.0 — Snapshot énergie incluant bonusSurplus
+    const { readEnergySnapshot, spendEnergyOnSnapshot, grantRewardOnSnapshot, computeAvailableEnergy } = await import("@/lib/gamebook/energy")
+    const snap = readEnergySnapshot(progress, today)
 
     const totalBet = bets.reduce((s, b) => s + b.amount, 0)
 
     const sets = await prisma.exerciseSet.findMany({ where: { userId, date: today } })
     const todayReps = sets.reduce((sum, s) => sum + (s.exercise === "PLANK" ? Math.floor(s.reps / 5) : s.reps), 0)
-    const bonusSurplus = (progress as { bonusSurplus?: number }).bonusSurplus ?? 0
-    const available = todayReps - currentSpent + bonusSurplus
+    const available = computeAvailableEnergy(todayReps, snap)
     if (available < totalBet) {
         return NextResponse.json({ ok: false, reason: `Pas assez de reps : ${available}, ${totalBet} requis.` })
     }
@@ -109,13 +108,17 @@ export async function POST(req: NextRequest) {
     const bankrupt = newStreak >= CASINO_BANKRUPT_STREAK
     const newBankruptUntil = bankrupt ? new Date(Date.now() + CASINO_BANKRUPT_COOLDOWN_HOURS * 60 * 60 * 1000) : null
     const newSpinIndex = bankrupt ? 0 : (spinIndex + 1) % CASINO_VEGAS_PATTERN_LENGTH
-    const newSpent = currentSpent - netGain // si netGain positif, spent diminue
+
+    // v4.0 — Dépense totalBet puis crédite totalWin au bonusSurplus
+    const afterStake = spendEnergyOnSnapshot(snap, totalBet, today)
+    const nextSnap = totalWin > 0 ? grantRewardOnSnapshot(afterStake, totalWin, today) : afterStake
 
     await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
         data: {
-            energySpentToday: newSpent,
+            energySpentToday: nextSnap.energySpentToday,
             energySpentDate: today,
+            bonusSurplus: nextSnap.bonusSurplus,
             casinoPatternVegasIndex: newSpinIndex,
             casinoPatternVegasStreak: bankrupt ? 0 : newStreak,
             ...(bankrupt ? { casinoPatternVegasBankruptUntil: newBankruptUntil } : {}),

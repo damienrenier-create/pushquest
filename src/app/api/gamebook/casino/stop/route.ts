@@ -57,10 +57,9 @@ export async function POST(req: NextRequest) {
     const challengeData = ((progress as { tbBarChallengeData?: unknown }).tbBarChallengeData ?? {}) as Record<string, unknown>
     const currentSession: StopSession | null = (challengeData.stopSession as StopSession | undefined) ?? null
 
-    // Lecture énergie
-    const energyDate = (progress as { energySpentDate?: string }).energySpentDate ?? ""
-    const energySpent = (progress as { energySpentToday?: number }).energySpentToday ?? 0
-    const currentSpent = energyDate === today ? energySpent : 0
+    // v4.0 — Snapshot énergie incluant bonusSurplus
+    const { readEnergySnapshot, spendEnergyOnSnapshot, grantRewardOnSnapshot, computeAvailableEnergy } = await import("@/lib/gamebook/energy")
+    const snap = readEnergySnapshot(progress, today)
 
     if (action === "start") {
         if (playsToday >= MAX_PLAYS_PER_DAY) {
@@ -70,21 +69,21 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ ok: false, reason: "Une session est déjà en cours. Continue ou cash-out d'abord." })
         }
         const stake = Math.max(1, Math.min(20, Math.floor(body.stake ?? 1)))
-        // Vérifier énergie dispo
         const sets = await prisma.exerciseSet.findMany({ where: { userId, date: today } })
         const todayReps = sets.reduce((sum, s) => sum + (s.exercise === "PLANK" ? Math.floor(s.reps / 5) : s.reps), 0)
-        const bonusSurplus = (progress as { bonusSurplus?: number }).bonusSurplus ?? 0
-        const available = todayReps - currentSpent + bonusSurplus
+        const available = computeAvailableEnergy(todayReps, snap)
         if (available < stake) {
             return NextResponse.json({ ok: false, reason: `Pas assez de reps : ${available} dispo, ${stake} requis.` })
         }
         const newSession: StopSession = { stake, currentPot: stake, step: 0, alive: true }
         const newData = { ...challengeData, stopSession: newSession }
+        const nextSnap = spendEnergyOnSnapshot(snap, stake, today)
         await (prisma as any).gamebookProgress.update({
             where: { id: progress.id },
             data: {
-                energySpentToday: currentSpent + stake,
+                energySpentToday: nextSnap.energySpentToday,
                 energySpentDate: today,
+                bonusSurplus: nextSnap.bonusSurplus,
                 tbBarChallengeData: newData,
                 stopOuEncoreDate: today,
                 stopOuEncorePlaysToday: playsToday + 1,
@@ -143,15 +142,16 @@ export async function POST(req: NextRequest) {
     }
     const boost = getActiveBoost(progress as any)
     const boostedPot = applyBoostToPayout(currentSession.currentPot, boost)
-    // Crédit le pot boosté
-    const newSpent = Math.max(0, currentSpent - boostedPot)
+    // v4.0 — Crédit le pot boosté dans bonusSurplus (gain en énergie réutilisable)
+    const nextSnap = grantRewardOnSnapshot(snap, boostedPot, today)
     const dead: StopSession = { ...currentSession, alive: false }
     const newData = { ...challengeData, stopSession: dead }
     await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
         data: {
-            energySpentToday: newSpent,
+            energySpentToday: nextSnap.energySpentToday,
             energySpentDate: today,
+            bonusSurplus: nextSnap.bonusSurplus,
             tbBarChallengeData: newData,
             ...consumeBoostPatch(),
         },

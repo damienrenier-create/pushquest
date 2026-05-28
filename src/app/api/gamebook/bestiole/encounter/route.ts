@@ -23,6 +23,7 @@ import prisma from "@/lib/prisma"
 import { getTodayISO } from "@/lib/challenge"
 import { isGamebookFrozen } from "@/lib/gamebook/antiCheat"
 import { isCreatorAccount, padAvailableEnergyForCreator } from "@/lib/gamebook/creator"
+import { readEnergySnapshot, spendEnergyOnSnapshot, computeAvailableEnergy } from "@/lib/gamebook/energy"
 
 export const dynamic = "force-dynamic"
 
@@ -98,25 +99,24 @@ export async function POST(req: NextRequest) {
         })
     }
 
-    // Rencontres suivantes : -10 reps via energySpentToday
+    // v4.0 — Morsure : consomme bonusSurplus d'abord puis energySpentToday
     const today = getTodayISO()
-    const storedDate = (progress as { energySpentDate?: string }).energySpentDate ?? ""
-    const storedSpent = (progress as { energySpentToday?: number }).energySpentToday ?? 0
-    const currentSpent = storedDate === today ? storedSpent : 0
-    const newSpent = currentSpent + BESTIOLE_ATTACK_COST
+    const snap = readEnergySnapshot(progress, today)
+    const nextSnap = spendEnergyOnSnapshot(snap, BESTIOLE_ATTACK_COST, today)
 
     await (prisma as any).gamebookProgress.update({
         where: { id: progress.id },
         data: {
-            energySpentToday: newSpent,
+            energySpentToday: nextSnap.energySpentToday,
             energySpentDate: today,
+            bonusSurplus: nextSnap.bonusSurplus,
             lastSeen: new Date(),
         },
     })
 
     const todayReps = await getTodayReps(userId)
     const isCreator = await isCreatorAccount(userId)
-    const availableEnergy = padAvailableEnergyForCreator(todayReps - newSpent, isCreator)
+    const availableEnergy = padAvailableEnergyForCreator(computeAvailableEnergy(todayReps, nextSnap), isCreator)
 
     return NextResponse.json({
         ok: true,
@@ -124,7 +124,8 @@ export async function POST(req: NextRequest) {
         speciesName,
         cost: BESTIOLE_ATTACK_COST,
         availableEnergy,
-        energySpentToday: newSpent,
+        energySpentToday: nextSnap.energySpentToday,
+        bonusSurplus: nextSnap.bonusSurplus,
         message: speciesName
             ? `Les ${speciesName} te mordent encore ! -${BESTIOLE_ATTACK_COST} reps.`
             : `Les bestioles te mordent encore ! -${BESTIOLE_ATTACK_COST} reps.`,

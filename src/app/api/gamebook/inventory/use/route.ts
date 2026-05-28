@@ -19,6 +19,7 @@ import { isGamebookFrozen } from "@/lib/gamebook/antiCheat"
 import { getItem, readStored, readMaxCapacity } from "@/lib/gamebook/items"
 import { parseInventory, findItem, setItemData } from "@/lib/gamebook/inventory"
 import { isCreatorAccount, padAvailableEnergyForCreator } from "@/lib/gamebook/creator"
+import { readEnergySnapshot, spendEnergyOnSnapshot, grantRewardOnSnapshot, computeAvailableEnergy } from "@/lib/gamebook/energy"
 
 export const dynamic = "force-dynamic"
 
@@ -95,13 +96,11 @@ export async function POST(req: NextRequest) {
         }
 
         const today = getTodayISO()
-        const storedDate = (progress as { energySpentDate?: string }).energySpentDate ?? ""
-        const storedSpent = (progress as { energySpentToday?: number }).energySpentToday ?? 0
-        const currentSpent = storedDate === today ? storedSpent : 0
+        const snap = readEnergySnapshot(progress, today)
         const todayReps = await getTodayReps(userId)
         const isCreator = await isCreatorAccount(userId)
-        // v3.8.5 — pad pour créateur (action use toujours possible avec godmode)
-        const availableEnergy = padAvailableEnergyForCreator(todayReps - currentSpent, isCreator)
+        // v4.0 — Inclut bonusSurplus dans l'énergie disponible (pommiers/papa/etc.)
+        const availableEnergy = padAvailableEnergyForCreator(computeAvailableEnergy(todayReps, snap), isCreator)
 
         if (action === "fill") {
             if (requestedAmount <= 0) {
@@ -115,13 +114,15 @@ export async function POST(req: NextRequest) {
             if (amount <= 0) {
                 return NextResponse.json({ ok: false, reason: "Gourde déjà pleine ou rien à transvaser." })
             }
-            const newSpent = currentSpent + amount
+            // v4.0 — Débit via spendEnergyOnSnapshot (consomme bonusSurplus d'abord)
+            const nextSnap = spendEnergyOnSnapshot(snap, amount, today)
             const newInventory = setItemData(inventory, itemKey, { stored: stored + amount, maxCapacity: capacity })
             await (prisma as any).gamebookProgress.update({
                 where: { id: progress.id },
                 data: {
-                    energySpentToday: newSpent,
+                    energySpentToday: nextSnap.energySpentToday,
                     energySpentDate: today,
+                    bonusSurplus: nextSnap.bonusSurplus,
                     inventory: newInventory,
                     lastSeen: new Date(),
                 },
@@ -129,8 +130,9 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({
                 ok: true,
                 inventory: newInventory,
-                availableEnergy: padAvailableEnergyForCreator(todayReps - newSpent, isCreator),
-                energySpentToday: newSpent,
+                availableEnergy: padAvailableEnergyForCreator(computeAvailableEnergy(todayReps, nextSnap), isCreator),
+                energySpentToday: nextSnap.energySpentToday,
+                bonusSurplus: nextSnap.bonusSurplus,
                 filled: amount,
                 stored: stored + amount,
             })
@@ -140,9 +142,9 @@ export async function POST(req: NextRequest) {
             if (stored <= 0) {
                 return NextResponse.json({ ok: false, reason: "Gourde vide." })
             }
-            // On vide tout d'un trait. energySpentToday peut devenir négatif (= surplus).
+            // v4.0 — Boire la gourde = crédit dans bonusSurplus (au lieu de soustraire à energySpentToday)
+            const nextSnap = grantRewardOnSnapshot(snap, stored, today)
             // v3.8.1 — la gourde s'use de wearOnDrink (10 par défaut) à chaque boire
-            const newSpent = currentSpent - stored
             const wear = itemDef.capabilities.canStore?.wearOnDrink ?? 0
             const newMaxCapacity = Math.max(0, capacity - wear)
             const newInventory = setItemData(inventory, itemKey, { stored: 0, maxCapacity: newMaxCapacity })
@@ -158,8 +160,9 @@ export async function POST(req: NextRequest) {
             await (prisma as any).gamebookProgress.update({
                 where: { id: progress.id },
                 data: {
-                    energySpentToday: newSpent,
+                    energySpentToday: nextSnap.energySpentToday,
                     energySpentDate: today,
+                    bonusSurplus: nextSnap.bonusSurplus,
                     inventory: newInventory,
                     ...(newTam ? { tamagotchi: newTam } : {}),
                     lastSeen: new Date(),
@@ -168,8 +171,9 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({
                 ok: true,
                 inventory: newInventory,
-                availableEnergy: padAvailableEnergyForCreator(todayReps - newSpent, isCreator),
-                energySpentToday: newSpent,
+                availableEnergy: padAvailableEnergyForCreator(computeAvailableEnergy(todayReps, nextSnap), isCreator),
+                energySpentToday: nextSnap.energySpentToday,
+                bonusSurplus: nextSnap.bonusSurplus,
                 drank: stored,
                 stored: 0,
                 maxCapacity: newMaxCapacity,
@@ -184,28 +188,27 @@ export async function POST(req: NextRequest) {
     // === v3.13 : CORNED PÂTES (consommable, double l'énergie) ===
     if (itemKey === "corned_pates" && action === "consume") {
         const today = getTodayISO()
-        const storedDate = (progress as { energySpentDate?: string }).energySpentDate ?? ""
-        const storedSpent = (progress as { energySpentToday?: number }).energySpentToday ?? 0
-        const currentSpent = storedDate === today ? storedSpent : 0
+        const snap = readEnergySnapshot(progress, today)
         const todayReps = await getTodayReps(userId)
         const isCreator = await isCreatorAccount(userId)
-        const availableEnergy = padAvailableEnergyForCreator(todayReps - currentSpent, isCreator)
+        const availableEnergy = padAvailableEnergyForCreator(computeAvailableEnergy(todayReps, snap), isCreator)
 
         if (availableEnergy <= 0) {
             return NextResponse.json({ ok: false, reason: "Tu n'as pas d'énergie à doubler. Reviens plus tard." })
         }
 
-        // Doubler l'énergie disponible = ajouter un bonus égal à availableEnergy → soustraire de energySpentToday
+        // v4.0 — Doubler = crédit `availableEnergy` au bonusSurplus
         const bonus = availableEnergy
-        const newSpent = currentSpent - bonus
+        const nextSnap = grantRewardOnSnapshot(snap, bonus, today)
         // Retirer l'item de l'inventaire (Corned Pâtes consommé)
         const newInventory = inventory.filter((e) => e.itemKey !== "corned_pates")
 
         await (prisma as any).gamebookProgress.update({
             where: { id: progress.id },
             data: {
-                energySpentToday: newSpent,
+                energySpentToday: nextSnap.energySpentToday,
                 energySpentDate: today,
+                bonusSurplus: nextSnap.bonusSurplus,
                 inventory: newInventory,
                 lastSeen: new Date(),
             },
@@ -214,8 +217,9 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({
             ok: true,
             inventory: newInventory,
-            availableEnergy: padAvailableEnergyForCreator(todayReps - newSpent, isCreator),
-            energySpentToday: newSpent,
+            availableEnergy: padAvailableEnergyForCreator(computeAvailableEnergy(todayReps, nextSnap), isCreator),
+            energySpentToday: nextSnap.energySpentToday,
+            bonusSurplus: nextSnap.bonusSurplus,
             consumed: itemKey,
             bonus,
         })
