@@ -31,39 +31,76 @@ interface Decor {
     label?: string
 }
 
-// Décor distribué le long du Mont (mapY = 0 sommet ↓ 103 pied)
+// v4.0 — Décor densifié (~70 éléments) pour que le défilement soit visible à
+//        chaque pas. Avant : ~25 décors, trous fréquents → impression de
+//        stagnation. Maintenant : un élément tous les 1-2 mapY environ.
+//        Disposé en alternance left/right + variation de depth pour parallax.
 const DECOR: Decor[] = [
-    // Sommet : nuages, neige, montagnes
+    // === SOMMET (mapY 1-9) : nuages, neige, montagnes lointaines ===
     { mapY: 1,  side: "center", depth: 3, emoji: "🏔️", label: "SOMMET" },
-    { mapY: 3,  side: "left",  depth: 3, emoji: "☁️" },
-    { mapY: 5,  side: "right", depth: 3, emoji: "☁️" },
-    { mapY: 8,  side: "left",  depth: 2, emoji: "⛰️" },
-    { mapY: 10, side: "right", depth: 2, emoji: "🏔️" },
-    // Haut : sapins épars
-    { mapY: 15, side: "left",  depth: 2, emoji: "🌲" },
-    { mapY: 18, side: "right", depth: 1, emoji: "🌲" },
-    { mapY: 22, side: "left",  depth: 1, emoji: "🪨" },
-    { mapY: 26, side: "right", depth: 2, emoji: "🌲" },
-    { mapY: 30, side: "left",  depth: 1, emoji: "🌲" },
-    // Milieu : virages, panneaux
-    { mapY: 35, side: "right", depth: 1, emoji: "⚠️", label: "VIRAGE" },
-    { mapY: 40, side: "left",  depth: 1, emoji: "🌳" },
-    { mapY: 44, side: "right", depth: 1, emoji: "🪨" },
-    { mapY: 48, side: "left",  depth: 2, emoji: "🌳" },
+    { mapY: 2,  side: "left",   depth: 3, emoji: "☁️" },
+    { mapY: 3,  side: "right",  depth: 3, emoji: "☁️" },
+    { mapY: 4,  side: "left",   depth: 2, emoji: "⛰️" },
+    { mapY: 5,  side: "right",  depth: 3, emoji: "☁️" },
+    { mapY: 6,  side: "right",  depth: 2, emoji: "🏔️" },
+    { mapY: 7,  side: "left",   depth: 3, emoji: "☁️" },
+    { mapY: 8,  side: "right",  depth: 2, emoji: "⛰️" },
+    { mapY: 9,  side: "left",   depth: 2, emoji: "🏔️" },
+    // === HAUT (mapY 10-30) : zone alpine, sapins, rochers ===
+    { mapY: 11, side: "right",  depth: 2, emoji: "🌲" },
+    { mapY: 13, side: "left",   depth: 1, emoji: "🌲" },
+    { mapY: 14, side: "right",  depth: 1, emoji: "🪨" },
+    { mapY: 16, side: "left",   depth: 2, emoji: "🌲" },
+    { mapY: 17, side: "right",  depth: 1, emoji: "🌲" },
+    { mapY: 19, side: "left",   depth: 1, emoji: "🪨" },
+    { mapY: 20, side: "right",  depth: 2, emoji: "🌲" },
+    { mapY: 22, side: "left",   depth: 1, emoji: "🌲" },
+    { mapY: 24, side: "right",  depth: 1, emoji: "🪨" },
+    { mapY: 25, side: "center", depth: 3, emoji: "🦅" },
+    { mapY: 26, side: "left",   depth: 2, emoji: "🌲" },
+    { mapY: 28, side: "right",  depth: 1, emoji: "🌲" },
+    { mapY: 30, side: "left",   depth: 1, emoji: "🌲" },
+    // === MILIEU-HAUT (mapY 31-50) : virages, transitions ===
+    { mapY: 32, side: "right",  depth: 1, emoji: "🪨" },
+    { mapY: 34, side: "left",   depth: 1, emoji: "🌳" },
+    { mapY: 35, side: "right",  depth: 1, emoji: "⚠️", label: "VIRAGE" },
+    { mapY: 37, side: "left",   depth: 2, emoji: "🌳" },
+    { mapY: 39, side: "right",  depth: 1, emoji: "🌳" },
+    { mapY: 41, side: "left",   depth: 1, emoji: "🪨" },
+    { mapY: 43, side: "right",  depth: 1, emoji: "🌳" },
+    { mapY: 45, side: "left",   depth: 2, emoji: "🌳" },
+    { mapY: 47, side: "right",  depth: 1, emoji: "🪨" },
+    { mapY: 49, side: "left",   depth: 1, emoji: "🌳" },
+    // === MILIEU (mapY 51-70) : forêt mixte ===
     { mapY: 52, side: "center", depth: 1, emoji: "🚧", label: "MI-CHEMIN" },
-    { mapY: 56, side: "right", depth: 1, emoji: "🌳" },
-    { mapY: 60, side: "left",  depth: 1, emoji: "🪨" },
-    // Bas : forêt dense
-    { mapY: 65, side: "right", depth: 1, emoji: "🌳" },
-    { mapY: 70, side: "left",  depth: 2, emoji: "🌳" },
-    { mapY: 75, side: "right", depth: 1, emoji: "🌲" },
-    { mapY: 80, side: "left",  depth: 1, emoji: "🌳" },
-    { mapY: 85, side: "right", depth: 2, emoji: "🌲" },
-    { mapY: 90, side: "left",  depth: 1, emoji: "🪨" },
-    { mapY: 95, side: "right", depth: 1, emoji: "🌳" },
-    // Pied : départ
+    { mapY: 54, side: "right",  depth: 1, emoji: "🌳" },
+    { mapY: 56, side: "left",   depth: 1, emoji: "🌳" },
+    { mapY: 58, side: "right",  depth: 2, emoji: "🌳" },
+    { mapY: 60, side: "left",   depth: 1, emoji: "🪨" },
+    { mapY: 62, side: "right",  depth: 1, emoji: "🌳" },
+    { mapY: 64, side: "left",   depth: 2, emoji: "🌳" },
+    { mapY: 66, side: "right",  depth: 1, emoji: "🌳" },
+    { mapY: 68, side: "left",   depth: 1, emoji: "🌲" },
+    { mapY: 70, side: "right",  depth: 2, emoji: "🌳" },
+    // === BAS (mapY 71-90) : forêt dense ===
+    { mapY: 72, side: "left",   depth: 1, emoji: "🌳" },
+    { mapY: 74, side: "right",  depth: 1, emoji: "🌲" },
+    { mapY: 76, side: "left",   depth: 2, emoji: "🌳" },
+    { mapY: 78, side: "right",  depth: 1, emoji: "🌳" },
+    { mapY: 80, side: "left",   depth: 1, emoji: "🌳" },
+    { mapY: 82, side: "right",  depth: 2, emoji: "🌲" },
+    { mapY: 84, side: "left",   depth: 1, emoji: "🌳" },
+    { mapY: 86, side: "right",  depth: 1, emoji: "🌳" },
+    { mapY: 88, side: "left",   depth: 1, emoji: "🪨" },
+    { mapY: 90, side: "right",  depth: 2, emoji: "🌳" },
+    // === PIED (mapY 91-102) : abords du DÉPART ===
+    { mapY: 92, side: "left",   depth: 1, emoji: "🌳" },
+    { mapY: 94, side: "right",  depth: 1, emoji: "🌳" },
+    { mapY: 96, side: "left",   depth: 1, emoji: "🌳" },
+    { mapY: 98, side: "right",  depth: 1, emoji: "🪨" },
     { mapY: 100, side: "center", depth: 1, emoji: "🚲", label: "DÉPART" },
-    { mapY: 102, side: "right", depth: 1, emoji: "🌳" },
+    { mapY: 101, side: "left",   depth: 1, emoji: "🌳" },
+    { mapY: 102, side: "right",  depth: 1, emoji: "🌳" },
 ]
 
 /** Position visuelle Y (% du viewport) d'un décor selon Y joueur, avec parallax par profondeur.
