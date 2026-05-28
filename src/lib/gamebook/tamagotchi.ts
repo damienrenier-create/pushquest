@@ -258,8 +258,8 @@ export const CANONICAL_DEFIS: CanonicalDefi[] = [
     { index: 2, code: "PATES", title: "Lui offrir des pâtes", description: "Consomme une Corned Pâtes (TRENETTE) chez V3T pour la partager avec ton animal." },
     { index: 3, code: "DAY_HALVES", title: "Le voir matin ET après-midi", description: "Visite V3T une fois avant midi ET une fois après midi le même jour." },
     { index: 4, code: "PLANK_180", title: "180 secondes de gainage", description: "Encode 180 secondes de gainage aujourd'hui (ajusté au ratio onboarding).", baseThreshold: 180 },
-    { index: 5, code: "PUSHUP_200", title: "200 pompes APRÈS le gainage", description: "Encode 200 pompes aujourd'hui APRÈS ton premier set de gainage (séquence stricte par timestamp).", baseThreshold: 200 },
-    { index: 6, code: "SQUAT_300", title: "300 squats APRÈS les pompes", description: "Encode 300 squats aujourd'hui APRÈS ton premier set de pompes (lui-même post-gainage).", baseThreshold: 300 },
+    { index: 5, code: "PUSHUP_200", title: "200 pompes aujourd'hui", description: "Encode au moins 200 pompes aujourd'hui (l'ordre n'importe pas).", baseThreshold: 200 },
+    { index: 6, code: "SQUAT_300", title: "300 squats aujourd'hui", description: "Encode au moins 300 squats aujourd'hui (l'ordre n'importe pas).", baseThreshold: 300 },
 ]
 
 /**

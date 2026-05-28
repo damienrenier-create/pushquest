@@ -5893,11 +5893,21 @@ function NpcSprite({
     animStep: number
 }) {
     // v4.0 — Sartay préfère les sprites humains classiques (PlayerSprite color)
-    // partout, même pour les PNJ qui définissent un sprite.emoji. Les emojis
-    // restent dans les données (npcs.ts) au cas où on voudrait les ré-activer
-    // plus tard, mais le rendu UI les ignore.
-    // Pour ré-activer : remettre `typeof npc.sprite.emoji === "string" && npc.sprite.emoji.length > 0`
-    const hasEmoji = false
+    // pour les humains du jeu, MAIS garde les emojis pour les vrais animaux et
+    // créatures (PIAFFINI, MONSTRE, chiens véto, singe, loutre, etc.). Les
+    // emojis "objets" (cloche, stéthoscope, instrument…) sont basculés en humain.
+    const ANIMAL_EMOJIS = new Set([
+        "🐦", "🐕", "🐛", "🐔", "🐓", "🐒", "🦦", "🦊", "🐹",
+        "🐺", "🦅", "🐍", "🐢", "🐬", "🐳", "🦌", "🐘", "🦏",
+        "🐎", "🐈", "🐇", "🦔", "🦇", "🦉", "🦜", "🦢", "🦃",
+        "🐧", "🦚", "🐊", "🦎", "🦖", "🦕", "🐠", "🐡", "🦈",
+        "🐙", "🦑", "🦞", "🦀", "🐝", "🐞", "🦋", "🪲", "🕷️",
+        "🦂", "🐌", "🐜", "🦗", "🪱",
+        // Créatures spéciales du lore (pas humaines)
+        "👹", "🦖", "🐉", "🦄",
+    ])
+    const emoji = typeof npc.sprite.emoji === "string" ? npc.sprite.emoji : ""
+    const hasEmoji = emoji.length > 0 && ANIMAL_EMOJIS.has(emoji)
 
     return (
         <div

@@ -41,10 +41,15 @@ interface ExSet { id: string; exercise: string; reps: number; createdAt: Date }
 
 async function getTodaySets(userId: string): Promise<ExSet[]> {
     const today = getTodayISO()
+    // v4.0 — Tie-break par id (cuid séquentiel par insertion) pour gérer le
+    // cas où plusieurs sets sont encodés au même createdAt (batch typique).
+    // Sans ça, les défis #5/#6 ne pouvaient JAMAIS se valider pour un joueur
+    // qui encode son entraînement complet en un seul clic — le check
+    // strict > sur createdAt était toujours false.
     const sets = await prisma.exerciseSet.findMany({
         where: { userId, date: today },
         select: { id: true, exercise: true, reps: true, createdAt: true },
-        orderBy: { createdAt: "asc" },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     })
     return sets
 }
@@ -113,25 +118,23 @@ export async function POST() {
     const plankThreshold = applyRatio(180, ratio)
     if (plankSum >= plankThreshold) markDone(4)
 
-    // 5 PUSHUP_200 — pompes APRÈS le 1er gainage today
-    const firstPlankAt = plankSets[0]?.createdAt
-    if (firstPlankAt) {
-        const pushupsPost = sets
-            .filter((s) => s.exercise === "PUSHUP" && s.createdAt.getTime() > firstPlankAt.getTime())
-        const pushupsSum = pushupsPost.reduce((a, s) => a + s.reps, 0)
-        const pushupsThreshold = applyRatio(200, ratio)
-        if (pushupsSum >= pushupsThreshold) markDone(5)
+    // 5 PUSHUP_200 — somme des pompes du jour
+    // 6 SQUAT_300 — somme des squats du jour
+    //
+    // v4.0 — Mode PERMISSIF : on ne contraint plus l'ordre temporel (plank →
+    //        pompes → squats). L'app PushQuest n'insère pas toujours les sets
+    //        dans l'ordre physique réel du joueur (batch saisie), ce qui rendait
+    //        les défis #5 et #6 quasi impossibles à valider. Maintenant : tu as
+    //        fait 200 pompes ET 300 squats aujourd'hui ? Validé, peu importe l'ordre.
+    //        Le défi #4 (plank 180s) reste, ce qui garde la dimension "entraînement
+    //        complet" (besoin des 3 exos sur la journée).
+    const pushupSum = sets.filter((s) => s.exercise === "PUSHUP").reduce((a, s) => a + s.reps, 0)
+    const pushupThreshold = applyRatio(200, ratio)
+    if (pushupSum >= pushupThreshold) markDone(5)
 
-        // 6 SQUAT_300 — squats APRÈS le 1er pompe post-gainage today
-        const firstPushupPostPlank = pushupsPost[0]?.createdAt
-        if (firstPushupPostPlank) {
-            const squatsPost = sets
-                .filter((s) => s.exercise === "SQUAT" && s.createdAt.getTime() > firstPushupPostPlank.getTime())
-            const squatsSum = squatsPost.reduce((a, s) => a + s.reps, 0)
-            const squatsThreshold = applyRatio(300, ratio)
-            if (squatsSum >= squatsThreshold) markDone(6)
-        }
-    }
+    const squatSum = sets.filter((s) => s.exercise === "SQUAT").reduce((a, s) => a + s.reps, 0)
+    const squatThreshold = applyRatio(300, ratio)
+    if (squatSum >= squatThreshold) markDone(6)
 
     // 1 DRINK — MVP : vrai si la gourde a déjà été usée (heuristique : si stored < maxCapacity OU drinkable)
     // Pour MVP : on accepte si la gourde a stored=0 (donc bue au moins une fois ou jamais remplie).
