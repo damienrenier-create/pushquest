@@ -3704,7 +3704,11 @@ export default function MapClient({
     return (
         <div
             style={{
-                minHeight: "100vh",
+                // v4.0 — Layout viewport-locked : tout rentre dans 100dvh,
+                // contrôles fixes en bas + HUD sticky en haut.
+                // Évite le scroll qui faisait sortir les flèches du viewport
+                // notamment sur le Mont Pasta-Ventoux.
+                height: "100dvh",
                 width: "100%",
                 background: "#111",
                 display: "flex",
@@ -3715,6 +3719,7 @@ export default function MapClient({
                 gap: "6px",
                 boxSizing: "border-box",
                 userSelect: "none",
+                overflow: "hidden",
             }}
         >
             <style jsx global>{`
@@ -3729,7 +3734,7 @@ export default function MapClient({
             {/* Panneau testeur — visible UNIQUEMENT si isTester=true (compte GUIGUI) */}
             <TesterPanel isTester={isTester} onAfterAction={() => { window.location.reload() }} />
 
-            {/* HUD TOP */}
+            {/* HUD TOP — flexShrink: 0 pour rester visible en haut du viewport. */}
             <div
                 style={{
                     width: "min(94vw, 380px)",
@@ -3742,6 +3747,7 @@ export default function MapClient({
                     justifyContent: "space-between",
                     alignItems: "center",
                     letterSpacing: "1px",
+                    flexShrink: 0,
                 }}
             >
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -3786,6 +3792,7 @@ export default function MapClient({
                             color: "#fff",
                             fontSize: "10px",
                             letterSpacing: "0.5px",
+                            flexShrink: 0,
                         }}
                     >
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
@@ -3826,7 +3833,8 @@ export default function MapClient({
                 )
             })()}
 
-            {/* ÉCRAN */}
+            {/* ÉCRAN — flex: 1 pour prendre l'espace restant du viewport ;
+                overflow: hidden contient le débordement potentiel des grands maps. */}
             <div
                 style={{
                     background: "#222",
@@ -3834,6 +3842,12 @@ export default function MapClient({
                     borderRadius: "4px",
                     boxShadow: "0 4px 16px rgba(0,0,0,0.6)",
                     position: "relative",
+                    flex: "1 1 auto",
+                    minHeight: 0,
+                    overflow: "auto",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                 }}
             >
                 <div
@@ -4266,8 +4280,8 @@ export default function MapClient({
                 </div>
             </div>
 
-            {/* CONTROLS */}
-            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "2px" }}>
+            {/* CONTROLS — flexShrink: 0 pour rester visible en bas du viewport. */}
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "2px", flexShrink: 0 }}>
                 <div
                     style={{
                         display: "grid",
