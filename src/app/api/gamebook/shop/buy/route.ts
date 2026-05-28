@@ -21,6 +21,7 @@ import { getItem, getInitialItemData, applySocialDiscount, isBrokenItem } from "
 import { parseInventory, addItem, hasIntactItem } from "@/lib/gamebook/inventory"
 import { isCreatorAccount, padAvailableEnergyForCreator } from "@/lib/gamebook/creator"
 import { getUserDifficultyRatio, applyRatio } from "@/lib/gamebook/difficulty"
+import { readEnergySnapshot, spendEnergyOnSnapshot, computeAvailableEnergy } from "@/lib/gamebook/energy"
 
 export const dynamic = "force-dynamic"
 
@@ -105,16 +106,16 @@ export async function POST(req: NextRequest) {
         }
     }
 
-    // Calcul de l'énergie disponible
+    // v4.0 — Calcul de l'énergie disponible INCLUANT le bonusSurplus
+    //   (pommiers, papa, capitaine, ornithologue, etc.). Avant ce fix, le shop
+    //   calculait simplement todayReps - energySpent, ignorant bonusSurplus →
+    //   le HUD affichait "2128" mais le shop refusait à "532 dispo".
     const today = getTodayISO()
-    const storedDate = (progress as { energySpentDate?: string }).energySpentDate ?? ""
-    const storedSpent = (progress as { energySpentToday?: number }).energySpentToday ?? 0
-    const currentSpent = storedDate === today ? storedSpent : 0
-
+    const snap = readEnergySnapshot(progress, today)
     const todayReps = await getTodayReps(userId)
     const isCreator = await isCreatorAccount(userId)
-    // v3.8.5 — pad pour créateur (achat toujours possible avec godmode)
-    const availableEnergy = padAvailableEnergyForCreator(todayReps - currentSpent, isCreator)
+    const availableEnergyRaw = computeAvailableEnergy(todayReps, snap)
+    const availableEnergy = padAvailableEnergyForCreator(availableEnergyRaw, isCreator)
 
     // v3.10 — prix ajusté selon le ratio de difficulté (onboarding paye moins)
     const ratio = await getUserDifficultyRatio(userId)
@@ -130,8 +131,11 @@ export async function POST(req: NextRequest) {
         })
     }
 
-    // Transaction : débit + ajout à inventory (utilise le prix final post-discount)
-    const newSpent = currentSpent + finalPrice
+    // v4.0 — Débit via spendEnergyOnSnapshot : consomme bonusSurplus d'abord,
+    //        puis incrémente energySpentToday avec le reste. Cohérent avec spend/route.ts.
+    const nextSnap = spendEnergyOnSnapshot(snap, finalPrice, today)
+    const newSpent = nextSnap.energySpentToday
+    const newBonusSurplus = nextSnap.bonusSurplus
     // v3.8.1 — data initial dépend des capabilities (canStore = gourde, canWear = baskets...)
     const initialData = getInitialItemData(itemDef)
     const newInventory = addItem(currentInventory, itemKey, initialData)
@@ -144,6 +148,7 @@ export async function POST(req: NextRequest) {
         data: {
             energySpentToday: newSpent,
             energySpentDate: today,
+            bonusSurplus: newBonusSurplus,
             inventory: newInventory,
             totalShopSpend: newTotalShopSpend,
             lastSeen: new Date(),
@@ -180,8 +185,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
         ok: true,
         inventory: newInventory,
-        availableEnergy: padAvailableEnergyForCreator(todayReps - newSpent, isCreator),
+        availableEnergy: padAvailableEnergyForCreator(computeAvailableEnergy(todayReps, nextSnap), isCreator),
         energySpentToday: newSpent,
+        bonusSurplus: newBonusSurplus,
         purchased: itemKey,
     })
 }
