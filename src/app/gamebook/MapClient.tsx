@@ -3871,14 +3871,21 @@ export default function MapClient({
                         </div>
                     )}
                     {/* Grille — cachée sur le Mont (le MontVentouxSideView prend le relais visuel,
-                        la grille reste utilisée pour les calculs de mouvement). */}
+                        la grille reste utilisée pour les calculs de mouvement).
+                        v4.0 — Mont Pasta-Ventoux : aspect-ratio override 7/14 (au lieu de 7/104).
+                        La vraie map fait 104 lignes, mais le rendu pseudo-3D n'a pas besoin
+                        de cette hauteur réelle — il rend une scène à parallax sur un viewport
+                        raisonnable. Sans cet override, le conteneur faisait 5600+ pixels de
+                        haut sur mobile et le sprite vélo se retrouvait hors viewport. */}
                     <div
                         style={{
                             display: "grid",
                             gridTemplateColumns: `repeat(${map.width}, minmax(0, 1fr))`,
                             gridTemplateRows: `repeat(${map.height}, 1fr)`,
                             width: "min(94vw, 380px)",
-                            aspectRatio: `${map.width} / ${map.height}`,
+                            aspectRatio: state.mapId === "mont_pasta_ventoux"
+                                ? "7 / 8"
+                                : `${map.width} / ${map.height}`,
                             visibility: state.mapId === "mont_pasta_ventoux" ? "hidden" : "visible",
                         }}
                     >
