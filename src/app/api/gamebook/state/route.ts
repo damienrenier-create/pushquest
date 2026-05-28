@@ -636,7 +636,40 @@ export async function POST(req: NextRequest) {
 
     // (variable `existing` est référencée ci-dessus pour préserver piaffiniRescued)
     void existing
-    return NextResponse.json({ ok: true, state: updated })
+
+    // v4.0 OPTIM NEON — Enrichit la réponse du POST avec les champs dérivés
+    //   (availableEnergy, energySpentToday, bonusSurplus) pour permettre au
+    //   client d'éviter un GET /state redondant après chaque action.
+    let availableEnergy = 0
+    let energySpentToday = 0
+    let bonusSurplus = 0
+    try {
+        const today = getTodayISO()
+        const { readEnergySnapshot, computeAvailableEnergy } = await import("@/lib/gamebook/energy")
+        const energySnap = readEnergySnapshot(updated, today)
+        energySpentToday = energySnap.energySpentToday
+        bonusSurplus = energySnap.bonusSurplus
+        const todayReps = await getTodayReps(userId)
+        availableEnergy = computeAvailableEnergy(todayReps, energySnap)
+        // Préserve les overrides historiques (compte créateur isSystem)
+        const userRow = await (prisma as any).user.findUnique({
+            where: { id: userId },
+            select: { isSystem: true },
+        })
+        if (userRow?.isSystem === true && availableEnergy < CREATOR_MIN_ENERGY) {
+            availableEnergy = CREATOR_MIN_ENERGY
+        }
+    } catch (e) {
+        console.warn("[POST /state] energy snapshot failed", e)
+    }
+
+    return NextResponse.json({
+        ok: true,
+        state: updated,
+        availableEnergy,
+        energySpentToday,
+        bonusSurplus,
+    })
 }
 
 export async function DELETE() {

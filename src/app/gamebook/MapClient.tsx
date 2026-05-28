@@ -514,17 +514,46 @@ export default function MapClient({
 
     // ============================================================
     // v3.4b : WebSocket Pusher
+    // v4.0 — Polling optimisé Neon : 60s + suspendu si onglet caché ou modale ouverte.
+    //        Le but : laisser Neon scale-to-zero quand personne ne joue activement.
     // ============================================================
+    // Helper local : un poll ne s'exécute pas si l'onglet est caché ou si une modale est ouverte.
+    const shouldSkipPollRef = useRef<() => boolean>(() => false)
+    shouldSkipPollRef.current = () => {
+        if (typeof document !== "undefined" && document.hidden) return true
+        // Modales bloquantes : si l'une d'elles est ouverte, le joueur n'a pas besoin
+        // de voir les autres se déplacer en temps réel.
+        return (
+            showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi ||
+            showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern ||
+            showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore ||
+            showCockfight || showSlotMachine || showCasinoPatternVegas || showArena ||
+            showDaemonTeam || !!activeBattle || showSaiyanModal || showPastagoneCellule ||
+            showPastagoneInfirmerie || showPastagoneBriefing || showPastagoneCuisine ||
+            showPastagoneArmurerie || showPastagoneTour
+        )
+    }
+    const guardedLoadPlayers = useCallback(() => {
+        if (shouldSkipPollRef.current()) return
+        loadOtherPlayers()
+    }, [loadOtherPlayers])
+
     useEffect(() => {
         // Chargement initial des positions (toujours fait, peu importe Pusher)
         loadOtherPlayers()
 
         const pusherClient = getPusherClient()
 
-        // Si Pusher n'est pas configuré côté client, fallback sur polling 30s
+        // Si Pusher n'est pas configuré côté client, fallback sur polling 60s (était 30s).
         if (!pusherClient || !PUSHER_CLIENT_ENABLED) {
-            const t = setInterval(loadOtherPlayers, 30_000)
-            return () => clearInterval(t)
+            const t = setInterval(guardedLoadPlayers, 60_000)
+            // Reprise au retour de l'onglet (visibility change)
+            const onVis = () => { if (!document.hidden) guardedLoadPlayers() }
+            document.addEventListener("visibilitychange", onVis)
+            return () => {
+                clearInterval(t)
+                document.removeEventListener("visibilitychange", onVis)
+            }
         }
 
         // Pusher activé : on subscribe au canal de la map courante
@@ -624,8 +653,11 @@ export default function MapClient({
         channel.bind("player:push", onPush)
         channel.bind("cinematic:trigger", onCinematic)
 
-        // Polling de sécurité moins fréquent en cas de désync (toutes les 60s)
-        const safetyPoll = setInterval(loadOtherPlayers, 60_000)
+        // v4.0 — Safety poll passé à 5 min (était 60s) + gardé par visibility/modale.
+        //        Pusher gère le temps-réel ; ce poll n'est qu'un filet de sécurité contre desync.
+        const safetyPoll = setInterval(guardedLoadPlayers, 5 * 60_000)
+        const onVis = () => { if (!document.hidden) guardedLoadPlayers() }
+        document.addEventListener("visibilitychange", onVis)
 
         return () => {
             channel.unbind("player:move", onMove)
@@ -633,30 +665,102 @@ export default function MapClient({
             channel.unbind("cinematic:trigger", onCinematic)
             pusherClient.unsubscribe(channelName)
             clearInterval(safetyPoll)
+            document.removeEventListener("visibilitychange", onVis)
         }
-    }, [state.mapId, userId, loadOtherPlayers])
+    }, [state.mapId, userId, loadOtherPlayers, guardedLoadPlayers])
 
     // ============================================================
-    // SAUVEGARDE DEBOUNCED
+    // SAUVEGARDE DEBOUNCED — v4.0 OPTIM NEON
+    //
+    // 2 niveaux de sauvegarde pour économiser les requêtes :
+    //
+    //   - CRITIQUE (immédiat 500ms) : tout changement autre que la position pure
+    //     → mapId, flags, inventory, énergie, etc.
+    //
+    //   - POSITION PURE (débounce long 3s) : juste (posX, posY, direction) changent
+    //     sur la même mapId. Un joueur qui parcourt 10 cases ne fait plus 10 POST
+    //     mais 1 seul (à la fin du déplacement).
+    //
+    // Sécurité : beforeunload flush immédiat + flush sur changement de map / modale.
     // ============================================================
-    const saveState = useCallback((s: PlayerMapState) => {
-        if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current)
-        saveDebounceRef.current = setTimeout(async () => {
-            try {
-                await fetch("/api/gamebook/state", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(s),
-                })
-            } catch (e) {
-                console.warn("[MapClient] save failed", e)
-            }
-        }, 500)
+    const lastSavedStateRef = useRef<PlayerMapState | null>(null)
+    const pendingStateRef = useRef<PlayerMapState | null>(null)
+
+    const flushSave = useCallback(async () => {
+        if (saveDebounceRef.current) {
+            clearTimeout(saveDebounceRef.current)
+            saveDebounceRef.current = null
+        }
+        const toSave = pendingStateRef.current
+        if (!toSave) return
+        pendingStateRef.current = null
+        lastSavedStateRef.current = toSave
+        try {
+            await fetch("/api/gamebook/state", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(toSave),
+            })
+        } catch (e) {
+            console.warn("[MapClient] flush save failed", e)
+        }
     }, [])
+
+    const saveState = useCallback((s: PlayerMapState) => {
+        pendingStateRef.current = s
+        // Détermine si c'est une "position pure" (mapId inchangé + autres champs inchangés)
+        const prev = lastSavedStateRef.current
+        const positionOnly = !!prev
+            && prev.mapId === s.mapId
+            && prev.phase === s.phase
+            && prev.introStep === s.introStep
+            && prev.hasEnteredTallGrass === s.hasEnteredTallGrass
+            && prev.monsterCaveRevealed === s.monsterCaveRevealed
+            && prev.hasSeenWelcomeScreen === s.hasSeenWelcomeScreen
+            && prev.treeObstacleCleared === s.treeObstacleCleared
+            && prev.pioneerBadgeAwarded === s.pioneerBadgeAwarded
+            && prev.piaffiniRescued === s.piaffiniRescued
+            && prev.firstSwimDone === s.firstSwimDone
+            && prev.gymGuyEnergyGiven === s.gymGuyEnergyGiven
+            && JSON.stringify(prev.bridgePnjDefeated) === JSON.stringify(s.bridgePnjDefeated)
+            && JSON.stringify(prev.npcsTalkedTo) === JSON.stringify(s.npcsTalkedTo)
+        if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current)
+        // Position pure → 3000ms (le joueur peut traverser plein de cases sans déclencher de POST).
+        // Changement critique → 500ms (comportement historique préservé).
+        const delay = positionOnly ? 3000 : 500
+        saveDebounceRef.current = setTimeout(() => { flushSave() }, delay)
+    }, [flushSave])
 
     useEffect(() => {
         saveState(state)
     }, [state, saveState])
+
+    // v4.0 OPTIM NEON — Filets de sécurité : flush immédiat lors de la fermeture
+    //   d'onglet, de la mise en arrière-plan, ou quand une modale s'ouvre.
+    //   Empêche toute perte de position si le joueur ferme brutalement.
+    useEffect(() => {
+        const onBeforeUnload = () => {
+            if (!pendingStateRef.current) return
+            try {
+                // sendBeacon survit à la fermeture de l'onglet (pas await).
+                const body = JSON.stringify(pendingStateRef.current)
+                if (typeof navigator !== "undefined" && navigator.sendBeacon) {
+                    const blob = new Blob([body], { type: "application/json" })
+                    navigator.sendBeacon("/api/gamebook/state", blob)
+                } else {
+                    // Fallback synchrone (souvent ignoré par les navigateurs modernes)
+                    fetch("/api/gamebook/state", { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true })
+                }
+            } catch { /* silent */ }
+        }
+        const onHide = () => { if (document.hidden) flushSave() }
+        window.addEventListener("beforeunload", onBeforeUnload)
+        document.addEventListener("visibilitychange", onHide)
+        return () => {
+            window.removeEventListener("beforeunload", onBeforeUnload)
+            document.removeEventListener("visibilitychange", onHide)
+        }
+    }, [flushSave])
 
     // ============================================================
     // ANIMATION JAMBES
