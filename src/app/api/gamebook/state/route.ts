@@ -569,11 +569,16 @@ export async function POST(req: NextRequest) {
         if (inBag && !nextInBagSince) nextInBagSince = new Date()
         if (!inBag) nextInBagSince = null
 
-        // (f3) happyFlower : si le joueur est sur la case (3, 6) de grass_sud, +30 (1×/jour)
-        if (mapId === "grass_sud" && posX === 3 && posY === 6 && nextHappyFlowerLastDate !== todayStr) {
-            const boosted = applyHappinessDelta(nextTamagotchi, HAPPINESS_DELTAS.HAPPY_FLOWER)
-            if (boosted) nextTamagotchi = boosted
-            nextHappyFlowerLastDate = todayStr
+        // (f3) happyFlower : nouvelles positions après compactage grass_sud v4.0 → H=8.
+        //      Anciennes positions (3, 6) et (5, 9) hors map maintenant.
+        //      Nouvelles : (3, 3) et (5, 4) — toujours +30 happiness 1×/jour, peu importe laquelle.
+        if (mapId === "grass_sud" && nextHappyFlowerLastDate !== todayStr) {
+            const isOnHappyFlower = (posX === 3 && posY === 3) || (posX === 5 && posY === 4)
+            if (isOnHappyFlower) {
+                const boosted = applyHappinessDelta(nextTamagotchi, HAPPINESS_DELTAS.HAPPY_FLOWER)
+                if (boosted) nextTamagotchi = boosted
+                nextHappyFlowerLastDate = todayStr
+            }
         }
     }
 

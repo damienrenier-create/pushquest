@@ -421,6 +421,7 @@ export const ALL_TREES: TreeInstance[] = [
     { id: "pear_tree_1", mapId: "macaron_ile", x: 10, y: 14, kind: "pear" },
     { id: "pear_tree_2", mapId: "muscuville",  x: 5, y: 16, kind: "pear" },
     // === Pêcher (rare, 100 reps × 2/j — caché dans grass_sud) ===
+    // v4.0 — peach_tree_1 placé à (7, 3) — toujours valide après compactage H=14→8
     { id: "peach_tree_1", mapId: "grass_sud", x: 7, y: 3, kind: "peach" },
     // === Cocotier (ultra-rare, 150 reps × 1/j — sommet du Mont) ===
     { id: "coconut_tree_1", mapId: "mont_pasta_ventoux", x: 5, y: 1, kind: "coconut" },
@@ -436,14 +437,15 @@ export const ALL_TREES: TreeInstance[] = [
     // === 🍑 Pêcher Vegas (sud-est près du casino VIP) ===
     { id: "vegas_peach_1", mapId: "lasagnas_vegas", x: 20, y: 21, kind: "peach" },
     // === v3.24e — Arbres du parc grass_sud (entre Macaron'île et Muscuville) ===
-    { id: "park_cherry_1",  mapId: "grass_sud", x: 2, y: 2,  kind: "cherry" },
-    { id: "park_pear_1",    mapId: "grass_sud", x: 6, y: 2,  kind: "pear" },
-    { id: "park_peach_1",   mapId: "grass_sud", x: 2, y: 5,  kind: "peach" },
-    { id: "park_poison_1",  mapId: "grass_sud", x: 6, y: 5,  kind: "poison" },
-    { id: "park_poison_2",  mapId: "grass_sud", x: 2, y: 8,  kind: "poison" },
-    { id: "park_boost_1",   mapId: "grass_sud", x: 6, y: 8,  kind: "boost" },
-    { id: "park_divisor_1", mapId: "grass_sud", x: 2, y: 11, kind: "divisor" },
-    { id: "park_apple_1",   mapId: "grass_sud", x: 6, y: 11, kind: "apple" },
+    // v4.0 — grass_sud compactée à H=8 : arbres regroupés sur y=2..5
+    { id: "park_cherry_1",  mapId: "grass_sud", x: 2, y: 2, kind: "cherry" },
+    { id: "park_pear_1",    mapId: "grass_sud", x: 6, y: 2, kind: "pear" },
+    { id: "park_peach_1",   mapId: "grass_sud", x: 2, y: 3, kind: "peach" },
+    { id: "park_poison_1",  mapId: "grass_sud", x: 6, y: 3, kind: "poison" },
+    { id: "park_poison_2",  mapId: "grass_sud", x: 2, y: 4, kind: "poison" },
+    { id: "park_boost_1",   mapId: "grass_sud", x: 6, y: 4, kind: "boost" },
+    { id: "park_divisor_1", mapId: "grass_sud", x: 2, y: 5, kind: "divisor" },
+    { id: "park_apple_1",   mapId: "grass_sud", x: 6, y: 5, kind: "apple" },
 ]
 
 /** Helper : tous les arbres d'une map donnée. */
@@ -1059,7 +1061,10 @@ function buildLaMer(): TileType[][] {
 // Bloqué par des BESTIOLES sauf si le tamagotchi du joueur est level >= 23.
 // ============================================================
 const GRASS_SUD_W = 9
-const GRASS_SUD_H = 14
+// v4.0 — Compactée de 14 à 8 (presque moitié) : le corridor était trop long
+//        et fatigant pour les joueurs. Les 8 arbres + happyFlowers sont
+//        regroupés sur 4 lignes intérieures (y=2..5).
+const GRASS_SUD_H = 8
 
 function buildGrassSud(): TileType[][] {
     const m: TileType[][] = []
@@ -1080,35 +1085,32 @@ function buildGrassSud(): TileType[][] {
     // Chemin vertical central
     for (let y = 1; y < GRASS_SUD_H - 1; y++) m[y][4] = "path"
 
-    // v3.24e — Rework "parc des hautes herbes" :
-    // - Touffes denses de grassTall partout (sauf chemin et arbres) pour rendu plus vivant
+    // v3.24e — Touffes denses de grassTall hors chemin pour rendu vivant
     for (let y = 1; y < GRASS_SUD_H - 1; y++) {
         for (let x = 1; x < GRASS_SUD_W - 1; x++) {
             if (m[y][x] === "grass" && Math.abs(x - 4) > 1) {
-                // 60% de chance de touffe (deterministic-ish via x+y parity)
                 if ((x * 3 + y * 7) % 5 < 3) m[y][x] = "grassTall"
             }
         }
     }
 
-    // === Arbres du parc ===
-    m[2][2] = "cherryTree"      // 🍒 cerisier nord-ouest
-    m[2][6] = "pearTree"        // 🍐 poirier nord-est
-    m[5][2] = "peachTree"       // 🍑 pêcher milieu-ouest
-    m[5][6] = "poisonTree"      // 🟣 maléfica 1 milieu-est (piège)
-    m[8][2] = "poisonTree"      // 🟣 maléfica 2 sud-ouest (piège)
-    m[8][6] = "boostTree"       // ✨ arbre BOOST sud-est (double énergie)
-    m[11][2] = "divisorTree"    // ⚠️ arbre DIVISOR sud-extrême-ouest (divise par 2)
-    m[11][6] = "appleTree"      // 🍎 pommier (bonus normal pour récompenser exploration)
+    // === 8 arbres du parc compactés sur y=2..5 ===
+    m[2][2] = "cherryTree"      // 🍒
+    m[2][6] = "pearTree"        // 🍐
+    m[3][2] = "peachTree"       // 🍑
+    m[3][6] = "poisonTree"      // 🟣 piège 1
+    m[4][2] = "poisonTree"      // 🟣 piège 2
+    m[4][6] = "boostTree"       // ✨ boost
+    m[5][2] = "divisorTree"     // ⚠️ divisor (piège déguisé)
+    m[5][6] = "appleTree"       // 🍎
 
-    // === Fleurs du parc ===
-    m[3][3] = "flowerR"; m[3][5] = "flowerY"
-    m[7][3] = "flowerY"; m[7][5] = "flowerR"
-    m[10][5] = "flowerR"
+    // === Fleurs déco ===
+    m[2][3] = "flowerR"; m[2][5] = "flowerY"
+    m[5][3] = "flowerY"; m[5][5] = "flowerR"
 
-    // === Fleur du bonheur (rare, +30 happiness pour tamagotchi qui s'arrête dessus) ===
-    m[6][3] = "happyFlower"     // 🌸 fleur magique, 1×/jour
-    m[9][5] = "happyFlower"     // 🌸 deuxième pour augmenter les chances
+    // === HappyFlowers (placées sur le chemin central pour rester triggerables) ===
+    m[3][3] = "happyFlower"
+    m[4][5] = "happyFlower"
 
     return m
 }
