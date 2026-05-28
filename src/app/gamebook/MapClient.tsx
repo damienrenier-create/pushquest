@@ -3779,6 +3779,10 @@ export default function MapClient({
                     mult === 0.5 ? "IDÉAL ×0.5" :
                         mult === 1.5 ? (bpm < 60 ? "TROP LENT ×1.5" : "TROP RAPIDE ×1.5") :
                             (bpm < 30 ? "ÉPUISEMENT ×3" : "EXPLOSION ×3")
+                // v4.0 — Affiche le COÛT CONCRET du prochain pas (intuitif pour le joueur)
+                const activeBikeForCost = getActiveBicycle(inventory)
+                const baseCost = activeBikeForCost?.def.capabilities.canRide?.costPerCase ?? 8
+                const currentStepCost = Math.max(1, Math.round(baseCost * mult))
                 // Position du curseur sur l'échelle 0-130 BPM (clampée)
                 const cursorPct = Math.max(0, Math.min(100, (Math.min(bpm, 130) / 130) * 100))
                 return (
@@ -3796,9 +3800,9 @@ export default function MapClient({
                         }}
                     >
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                            <span style={{ fontWeight: "bold" }}>🚴 CADENCE</span>
-                            <span style={{ fontWeight: "bold", color: zoneColor }}>{bpm} BPM</span>
+                            <span style={{ fontWeight: "bold" }}>🚴 {bpm} BPM</span>
                             <span style={{ fontSize: "9px", color: zoneColor }}>{zoneLabel}</span>
+                            <span style={{ fontWeight: "bold", color: zoneColor }}>⚡ {currentStepCost}/case</span>
                         </div>
                         {/* Barre de zones : rouge 0-30 / orange 30-60 / vert 60-80 / orange 80-100 / rouge 100-130 */}
                         <div style={{ position: "relative", height: 10, borderRadius: 2, overflow: "hidden", display: "flex" }}>

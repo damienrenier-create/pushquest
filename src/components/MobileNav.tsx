@@ -7,6 +7,11 @@ import { Home, Trophy, Users, Star, User, MessageSquare, Zap } from "lucide-reac
 export default function MobileNav() {
     const pathname = usePathname()
 
+    // v4.0 — Sur /gamebook (Nexus), on masque la nav mobile : elle écrasait les
+    // contrôles flèches/A du jeu et créait du scroll inutile. Le joueur peut
+    // toujours revenir au dashboard via le bouton home en haut à gauche.
+    if (pathname?.startsWith("/gamebook")) return null
+
     return (
         <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-100 p-2 z-40 shadow-[0_-10px_20px_rgba(0,0,0,0.05)] safe-area-pb">
             <div className="flex justify-around items-center">
