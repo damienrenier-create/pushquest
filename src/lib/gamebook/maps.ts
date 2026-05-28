@@ -1207,7 +1207,7 @@ export const MUSCUVILLE_SIGNS: Sign[] = [
     { x: 14, y: 5, text: "GYMNASE DE MUSCUVILLE\nLa salle officielle des athlètes." },
     { x: 4, y: 10, text: "CASINO DE MUSCUVILLE\nDernier casino de l'archipel." },
     { x: 14, y: 10, text: "SALLE DES CONCOURS\nIntersalle annuel. Accès interdit aux non-conquérants du Mont." },
-    { x: 8, y: 18, text: "↓ MONT PASTA-VENTOUX\n100 cases jusqu'au sommet. Vélo obligatoire." },
+    { x: 8, y: 18, text: "↓ MONT PASTA-VENTOUX\n100 cases jusqu'au sommet. Vélo obligatoire.\n\n⚡ ASTUCE : Maintiens 60-80 BPM (zone VERTE de la jauge cadence) pour payer ×0.5.\nHors zone : coût ×1.5 à ×3. Le rythme = ton allié." },
     // v3.30 — Forêt hantée (à l'est, accès bloqué — "tu as trop peur")
     { x: 16, y: 8, text: "→ FORÊT HANTÉE\n*Le panneau grince. Tu sens un frisson.*\n« Trop peur. Reviens quand tu te sentiras prêt. »" },
     // v3.35 — Rochers à l'ouest : prix de passage progressif selon champions battus
