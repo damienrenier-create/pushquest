@@ -49,7 +49,17 @@ export async function POST(req: Request) {
 
         const userId = session.user.id;
 
+        // Lookup workout config once (used for scoring direction, XP bonus, platinum bonus)
+        const workout = SPECIAL_WORKOUTS.find(w => w.id === workoutId);
+
         // 1. Save or Update the workout entry
+        // EMOM (slug "wod-emom*") : score = nombre de minutes tenues (higher = better) → totalScore positif
+        // Autres défis : score = temps de réalisation (lower time = better) → totalScore = -completionTime
+        const isEmom = workout?.slug?.startsWith('wod-emom') ?? false;
+        const totalScoreValue = completionTime
+            ? (isEmom ? completionTime : -completionTime)
+            : 0;
+
         const entry = await prisma.specialWorkoutEntry.upsert({
             where: { userId_workoutId: { userId, workoutId } },
             create: {
@@ -59,14 +69,14 @@ export async function POST(req: Request) {
                 completionTime,
                 proofUrl,
                 date,
-                totalScore: completionTime ? -completionTime : 0
+                totalScore: totalScoreValue
             },
             update: {
                 data,
                 completionTime,
                 proofUrl,
                 date,
-                totalScore: completionTime ? -completionTime : 0
+                totalScore: totalScoreValue
             }
         });
 
@@ -104,6 +114,12 @@ export async function POST(req: Request) {
         });
 
         if (bestEntry && bestEntry.userId === userId) {
+            // Capture previous holder BEFORE updating ownership, to transfer platinum XP if needed
+            const previousBadge = await prisma.badgeOwnership.findUnique({
+                where: { badgeKey: platinumBadgeKey }
+            });
+            const previousHolderId = previousBadge?.currentUserId ?? null;
+
             // Update or Reassign the record badge to the current winner
             await prisma.badgeOwnership.upsert({
                 where: {
@@ -121,10 +137,33 @@ export async function POST(req: Request) {
                     achievedAt: new Date()
                 }
             });
+
+            // Transferable platinum XP bonus : ancien holder perd le bonus, nouveau le gagne
+            const xpPlatBonus = workout?.xpPlatinumBonus ?? 0;
+            if (xpPlatBonus > 0 && previousHolderId !== userId) {
+                const platReason = `Record Platine: ${workout?.name ?? workoutId}`;
+                if (previousHolderId) {
+                    await prisma.xpAdjustment.create({
+                        data: {
+                            userId: previousHolderId,
+                            amount: -xpPlatBonus,
+                            reason: `${platReason} (transféré au nouveau record)`,
+                            date
+                        }
+                    });
+                }
+                await prisma.xpAdjustment.create({
+                    data: {
+                        userId,
+                        amount: xpPlatBonus,
+                        reason: platReason,
+                        date
+                    }
+                });
+            }
         }
 
-        // 5. XP Reward Logic (1000 XP via XpAdjustment)
-        const workout = SPECIAL_WORKOUTS.find(w => w.id === workoutId);
+        // 5. XP Reward Logic (participation XP, une seule fois par user/workout)
         if (workout) {
             const reason = `Special Workout: ${workout.name}`;
             const existingAdj = await prisma.xpAdjustment.findFirst({

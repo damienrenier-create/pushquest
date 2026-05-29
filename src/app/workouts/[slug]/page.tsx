@@ -22,9 +22,12 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
     const [formData, setFormData] = useState<Record<string, number>>({})
     const [manualMinutes, setManualMinutes] = useState<string>("")
     const [manualSeconds, setManualSeconds] = useState<string>("")
+    const [emomMinutes, setEmomMinutes] = useState<string>("")
     const [proofUrl, setProofUrl] = useState<string>("")
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [success, setSuccess] = useState(false)
+
+    const isEmom = workout?.slug?.startsWith('wod-emom') ?? false
 
     // Chrono state
     const [startTime, setStartTime] = useState<number | null>(null)
@@ -94,14 +97,23 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
         if (!session) return alert("Vous devez être connecté")
         if (!isAvailable) return alert("Ce défi n'est pas actif actuellement")
 
+        // EMOM: validation single-input
+        if (isEmom) {
+            const n = parseInt(emomMinutes)
+            if (!n || n < 1 || n > 100) return alert("Saisis un nombre de minutes entre 1 et 100")
+        }
+
         setIsSubmitting(true)
 
         // Calculate final time from manual inputs (priority) or elapsed
-        const finalTime = (parseInt(manualMinutes) || 0) * 60 + (parseInt(manualSeconds) || 0)
+        // EMOM: completionTime = minutes * 60 (so it displays "X:00" in ranking, and totalScore is naturally higher = better via API override)
+        const finalTime = isEmom
+            ? (parseInt(emomMinutes) || 0) * 60
+            : (parseInt(manualMinutes) || 0) * 60 + (parseInt(manualSeconds) || 0)
 
-        // Automatically mock exercises completion if scoring is TIME
+        // Automatically mock exercises completion if scoring is TIME or EMOM (we don't ask per-exercise reps for EMOM)
         let finalDataExercises = formData;
-        if (workout.scoringType === 'TIME') {
+        if (workout.scoringType === 'TIME' || isEmom) {
             finalDataExercises = workout.exercises.reduce((acc, exo, idx) => ({ ...acc, [`${exo.type}_${idx}`]: exo.goal || 0 }), {});
         }
 
@@ -206,7 +218,55 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
                             </div>
                         )}
 
-                        {isAvailable && (
+                        {isAvailable && isEmom && (
+                            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
+                                <div className="space-y-3">
+                                    <div className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600">🎯 La règle (chaque minute)</div>
+                                    <div className="grid gap-2">
+                                        {workout.exercises.map((exo, idx) => {
+                                            const emoji = exo.type === 'PLANK' ? '🛡️' : exo.type === 'SQUATS' ? '🦵' : exo.type === 'PUSHUPS' ? '💪' : '⚡';
+                                            const label = exo.type === 'PLANK'
+                                                ? `${exo.goal} secondes de gainage`
+                                                : exo.type === 'SQUATS'
+                                                    ? `${exo.goal} squats`
+                                                    : exo.type === 'PUSHUPS'
+                                                        ? `${exo.goal} pompes`
+                                                        : exo.label;
+                                            return (
+                                                <div key={idx} className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 py-2.5">
+                                                    <span className="text-xl">{emoji}</span>
+                                                    <span className="font-black text-sm text-slate-800 uppercase tracking-tight">{label}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <p className="text-[11px] text-slate-500 font-medium italic px-1 leading-relaxed">
+                                        Le reste de la minute = repos. Refais le cycle à chaque nouvelle minute, jusqu'à ne plus tenir.
+                                    </p>
+                                </div>
+
+                                <div className="space-y-3 pt-4 border-t border-slate-100">
+                                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 text-center">
+                                        📊 Ton score — minutes complètes tenues
+                                    </label>
+                                    <input
+                                        type="number"
+                                        required
+                                        min={1}
+                                        max={100}
+                                        placeholder="0"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-6 text-center font-black text-5xl tabular-nums focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-900"
+                                        value={emomMinutes}
+                                        onChange={(e) => setEmomMinutes(e.target.value)}
+                                    />
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider text-center">
+                                        Entre 1 et 100 — plus c'est haut, mieux c'est
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
+                        {isAvailable && !isEmom && (
                             <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
@@ -282,6 +342,7 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
                         )}
 
                         {/* Exercises List - Light Theme */}
+                        {!isEmom && (
                         <div className="space-y-4">
                             <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-2">Programmation du défi</h2>
 
@@ -401,6 +462,7 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
                                 )}
                             </div>
                         </div>
+                        )}
 
                         {isAvailable && (
                             <>
@@ -487,7 +549,9 @@ export default function WorkoutPage({ params }: { params: Promise<{ slug: string
                                         </div>
                                         <div className="flex flex-col items-end gap-1">
                                             <div className="font-mono font-black text-indigo-600 text-lg">
-                                                {formatTime(row.completionTime || 0)}
+                                                {isEmom
+                                                    ? `${Math.floor((row.completionTime || 0) / 60)} min`
+                                                    : formatTime(row.completionTime || 0)}
                                             </div>
                                             {row.proofUrl && (
                                                 <a href={row.proofUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[9px] font-black text-indigo-400 hover:text-indigo-600 uppercase tracking-widest bg-indigo-50 px-2 py-0.5 rounded-full transition-colors">

@@ -26,6 +26,9 @@ export interface SpecialWorkout {
     exercises: WorkoutExercise[];
     scoringType: 'TIME' | 'REPS' | 'COMPOSITE';
     xpBonus: number;
+    /** Bonus XP transférable qui accompagne le badge platine du record holder.
+     *  Si quelqu'un bat le record, l'ancien holder perd ce XP et le nouveau le gagne. */
+    xpPlatinumBonus?: number;
     isActive?: boolean;
     endDate?: string; // YYYY-MM-DD
 }
@@ -192,8 +195,8 @@ export const SPECIAL_WORKOUTS: SpecialWorkout[] = [
     {
         id: 'workout-09-wod-emom',
         slug: 'wod-emom-last-stand',
-        name: 'WOD 1 — EMOM "Last Stand"',
-        description: 'Chaque minute, ON THE MINUTE : 10s de gainage + 10 squats + 10 pompes. Le reste de la minute = repos. Refais le cycle tant que tu tiens. Note bien chaque round dans le menu principal.',
+        name: 'WOD 1 — EMOM 10',
+        description: 'Chaque minute, ON THE MINUTE : 10s de gainage + 10 squats + 10 pompes. Le reste de la minute = repos. Refais le cycle tant que tu tiens. Saisis le nombre de minutes complètes tenues (1 à 100).',
         date: '2026-05-27',
         endDate: '2026-08-31',
         exercises: [
@@ -202,7 +205,40 @@ export const SPECIAL_WORKOUTS: SpecialWorkout[] = [
             { type: 'PUSHUPS', label: 'Pompes ×10', goal: 10, unit: 'REPS' },
         ],
         scoringType: 'REPS',
+        xpBonus: 350,
+        xpPlatinumBonus: 100,
+    },
+    {
+        id: 'workout-09b-wod-emom-12',
+        slug: 'wod-emom-12',
+        name: 'WOD 1b — EMOM 12',
+        description: 'Chaque minute, ON THE MINUTE : 12s de gainage + 12 squats + 12 pompes. Le reste de la minute = repos. Refais le cycle tant que tu tiens. Saisis le nombre de minutes complètes tenues (1 à 100).',
+        date: '2026-05-27',
+        endDate: '2026-08-31',
+        exercises: [
+            { type: 'PLANK', label: 'Gainage 12s', goal: 12, unit: 'SECONDS' },
+            { type: 'SQUATS', label: 'Squats ×12', goal: 12, unit: 'REPS' },
+            { type: 'PUSHUPS', label: 'Pompes ×12', goal: 12, unit: 'REPS' },
+        ],
+        scoringType: 'REPS',
+        xpBonus: 500,
+        xpPlatinumBonus: 150,
+    },
+    {
+        id: 'workout-09c-wod-emom-15',
+        slug: 'wod-emom-15',
+        name: 'WOD 1c — EMOM 15',
+        description: 'Chaque minute, ON THE MINUTE : 15s de gainage + 15 squats + 15 pompes. Le reste de la minute = repos. Refais le cycle tant que tu tiens. Saisis le nombre de minutes complètes tenues (1 à 100).',
+        date: '2026-05-27',
+        endDate: '2026-08-31',
+        exercises: [
+            { type: 'PLANK', label: 'Gainage 15s', goal: 15, unit: 'SECONDS' },
+            { type: 'SQUATS', label: 'Squats ×15', goal: 15, unit: 'REPS' },
+            { type: 'PUSHUPS', label: 'Pompes ×15', goal: 15, unit: 'REPS' },
+        ],
+        scoringType: 'REPS',
         xpBonus: 700,
+        xpPlatinumBonus: 300,
     },
     {
         id: 'workout-10-wod-five-rounds',
