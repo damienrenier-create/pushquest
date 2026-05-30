@@ -49,12 +49,13 @@ function ScreenPlaceholder({ lastPressed }: { lastPressed: string }) {
 // === STYLES ===
 
 const pageStyle: React.CSSProperties = {
-    minHeight: "100vh",
+    minHeight: "100dvh", // dynamic viewport height : suit la barre Safari iOS qui apparaît/disparaît
     background: "#1a1a1a",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    padding: "16px",
+    // Padding 16 par défaut + safe area insets pour iPhone notch / home bar
+    padding: "max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))",
 }
 
 const screenContentStyle: React.CSSProperties = {

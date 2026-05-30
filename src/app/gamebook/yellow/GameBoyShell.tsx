@@ -156,7 +156,9 @@ const shellStyle: React.CSSProperties = {
         "0 8px 24px rgba(0,0,0,0.3)",
     fontFamily: "'Courier New', monospace",
     userSelect: "none",
+    WebkitUserSelect: "none",
     WebkitTapHighlightColor: "transparent",
+    touchAction: "manipulation", // élimine le délai 300ms iOS + bloque le double-tap zoom
     position: "relative",
 }
 
@@ -215,20 +217,22 @@ const controlsRowStyle: React.CSSProperties = {
     marginBottom: 28,
 }
 
+// D-pad : taille 144×144 (3×48) au lieu de 120×120 (3×40)
+// Chaque bouton 48×48 = au-dessus du seuil mobile (Material 48dp, Apple 44pt)
 const dpadContainerStyle: React.CSSProperties = {
     position: "relative",
-    width: 120,
-    height: 120,
+    width: 144,
+    height: 144,
 }
 
 const dpadButtonStyle: React.CSSProperties = {
     position: "absolute",
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
     background: DPAD_BLACK,
     border: "none",
     color: "#fff",
-    fontSize: 18,
+    fontSize: 20,
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
@@ -236,38 +240,39 @@ const dpadButtonStyle: React.CSSProperties = {
     boxShadow:
         "inset 0 2px 2px rgba(255,255,255,0.2), " +
         "inset 0 -2px 2px rgba(0,0,0,0.4)",
+    touchAction: "manipulation",
 }
 
 const dpadUpStyle: React.CSSProperties = {
     top: 0,
-    left: 40,
+    left: 48,
     borderRadius: "6px 6px 0 0",
 }
 
 const dpadDownStyle: React.CSSProperties = {
     bottom: 0,
-    left: 40,
+    left: 48,
     borderRadius: "0 0 6px 6px",
 }
 
 const dpadLeftStyle: React.CSSProperties = {
     left: 0,
-    top: 40,
+    top: 48,
     borderRadius: "6px 0 0 6px",
 }
 
 const dpadRightStyle: React.CSSProperties = {
     right: 0,
-    top: 40,
+    top: 48,
     borderRadius: "0 6px 6px 0",
 }
 
 const dpadCenterStyle: React.CSSProperties = {
     position: "absolute",
-    top: 40,
-    left: 40,
-    width: 40,
-    height: 40,
+    top: 48,
+    left: 48,
+    width: 48,
+    height: 48,
     background: DPAD_BLACK,
     boxShadow: "inset 0 0 4px rgba(0,0,0,0.6)",
 }
@@ -281,20 +286,21 @@ const abContainerStyle: React.CSSProperties = {
 
 const abButtonStyle: React.CSSProperties = {
     position: "absolute",
-    width: 56,
-    height: 56,
+    width: 64,
+    height: 64,
     borderRadius: "50%",
     background: `radial-gradient(circle at 30% 30%, ${BUTTON_RED} 0%, ${BUTTON_RED_DARK} 100%)`,
     border: "none",
     color: "#fff",
     fontWeight: "bold",
-    fontSize: 20,
+    fontSize: 22,
     cursor: "pointer",
     letterSpacing: 1,
     boxShadow:
         "inset 0 2px 2px rgba(255,255,255,0.3), " +
         "inset 0 -3px 4px rgba(0,0,0,0.5), " +
         "0 2px 4px rgba(0,0,0,0.3)",
+    touchAction: "manipulation",
 }
 
 const bButtonPositionStyle: React.CSSProperties = {
@@ -319,17 +325,19 @@ const startSelectButtonStyle: React.CSSProperties = {
     background: BUTTON_BLACK,
     color: "#fff",
     border: "none",
-    borderRadius: 12,
-    padding: "6px 16px",
-    fontSize: 10,
+    borderRadius: 16,
+    padding: "12px 20px",
+    fontSize: 11,
     fontWeight: "bold",
     letterSpacing: 1.5,
     cursor: "pointer",
-    minWidth: 64,
+    minWidth: 84,
+    minHeight: 36, // au-dessus du seuil tactile (avant : ~24px, trop petit)
     boxShadow:
         "inset 0 1px 1px rgba(255,255,255,0.15), " +
         "inset 0 -2px 2px rgba(0,0,0,0.4), " +
         "0 2px 2px rgba(0,0,0,0.2)",
+    touchAction: "manipulation",
 }
 
 const speakerStyle: React.CSSProperties = {
