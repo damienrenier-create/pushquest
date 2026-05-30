@@ -31,6 +31,7 @@ interface GameStore {
     map: YellowMapData
     dialogue: ActiveDialogue | null
     hydrated: boolean // true une fois que l'état serveur a été chargé
+    stepFrame: 0 | 1 // alterne à chaque déplacement réel → anime les jambes du sprite
 
     // === ACTIONS ===
     move: (dir: Direction) => void
@@ -71,6 +72,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     map: YELLOW_MAPS[YELLOW_ENTRANCE_MAP_ID],
     dialogue: null,
     hydrated: false,
+    stepFrame: 0,
 
     move: (dir) => {
         const { player, map, dialogue } = get()
@@ -98,12 +100,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
 
         // Pas de transition : move standard
-        const unchanged =
-            next.posX === player.posX &&
-            next.posY === player.posY &&
-            next.direction === player.direction
-        set({ player: next })
-        if (!unchanged) scheduleSave(next)
+        const moved = next.posX !== player.posX || next.posY !== player.posY
+        const dirChanged = next.direction !== player.direction
+        if (moved) {
+            // Animation : alterne stepFrame uniquement quand on bouge réellement
+            set({ player: next, stepFrame: (get().stepFrame === 0 ? 1 : 0) })
+        } else if (dirChanged) {
+            set({ player: next }) // simple rotation face au mur, pas d'anim
+        }
+        if (moved || dirChanged) scheduleSave(next)
     },
 
     pressA: () => {

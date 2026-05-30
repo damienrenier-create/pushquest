@@ -368,23 +368,7 @@ export default function MapView() {
                 ))}
 
                 {npcsOnMap.map((npc) => (
-                    <div
-                        key={npc.id}
-                        style={{
-                            position: "absolute",
-                            ...screenPos(npc.initialX, npc.initialY),
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontSize: "clamp(12px, 3dvw, 20px)",
-                            color: COLOR_INK_DARK,
-                            zIndex: 2,
-                            filter: "drop-shadow(0 1px 0 rgba(0,0,0,0.4))",
-                        }}
-                        title={npc.name}
-                    >
-                        {npc.sprite.emoji ?? "❓"}
-                    </div>
+                    <NpcSprite key={npc.id} npc={npc} screenPos={screenPos} />
                 ))}
 
                 <PlayerSprite player={player} screenPos={screenPos} />
@@ -399,7 +383,79 @@ export default function MapView() {
     )
 }
 
-// === Joueur : casquette rouge + corps style trainer Pokémon ===========
+// === NPCs : vrais sprites Crystal (frame 0 statique pour l'instant) =====
+
+const NPC_SPRITES: Record<string, { url: string; frames: number } | null> = {
+    // Architecte : pas de sprite spécifique, on garde l'emoji
+    y_architecte: null,
+    y_vendeur: { url: "/yellow/sprites/npc_clerk_color.png", frames: 6 },
+    y_croupier: { url: "/yellow/sprites/kris_color.png", frames: 6 },
+    y_medecin: { url: "/yellow/sprites/npc_nurse_color.png", frames: 3 },
+    y_arbitre: { url: "/yellow/sprites/npc_black_belt_color.png", frames: 6 },
+}
+
+function NpcSprite({
+    npc,
+    screenPos,
+}: {
+    npc: { id: string; initialX: number; initialY: number; name: string; sprite: { emoji?: string } }
+    screenPos: (x: number, y: number, w?: number, h?: number) => React.CSSProperties
+}) {
+    const sprite = NPC_SPRITES[npc.id]
+    if (!sprite) {
+        // Fallback : emoji
+        return (
+            <div
+                style={{
+                    position: "absolute",
+                    ...screenPos(npc.initialX, npc.initialY),
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "clamp(12px, 3dvw, 20px)",
+                    color: COLOR_INK_DARK,
+                    zIndex: 2,
+                    filter: "drop-shadow(0 1px 0 rgba(0,0,0,0.4))",
+                }}
+                title={npc.name}
+            >
+                {npc.sprite.emoji ?? "❓"}
+            </div>
+        )
+    }
+    return (
+        <div
+            style={{
+                position: "absolute",
+                ...screenPos(npc.initialX, npc.initialY),
+                backgroundImage: `url(${sprite.url})`,
+                backgroundRepeat: "no-repeat",
+                backgroundSize: "100% auto",
+                backgroundPosition: "0 0", // frame 0 (face down)
+                imageRendering: "pixelated",
+                zIndex: 2,
+                pointerEvents: "none",
+            }}
+            title={npc.name}
+        />
+    )
+}
+
+// === Joueur : vrai sprite chris_color.png de Pokémon Crystal avec anim ===
+//
+// chris_color.png est 16x96 = 6 frames de 16x16 empilées verticalement :
+//   frame 0 (y=0)   : face DOWN, debout
+//   frame 1 (y=16)  : face DOWN, pas
+//   frame 2 (y=32)  : face UP,   debout
+//   frame 3 (y=48)  : face UP,   pas
+//   frame 4 (y=64)  : face RIGHT, debout (flip horizontal pour LEFT)
+//   frame 5 (y=80)  : face RIGHT, pas    (flip horizontal pour LEFT)
+//
+// stepFrame du store alterne 0/1 à chaque mouvement → anime les jambes.
+
+const DIRECTION_BASE_FRAME: Record<string, number> = {
+    down: 0, up: 2, right: 4, left: 4,
+}
 
 function PlayerSprite({
     player,
@@ -408,62 +464,26 @@ function PlayerSprite({
     player: { posX: number; posY: number; direction: string }
     screenPos: (x: number, y: number, w?: number, h?: number) => React.CSSProperties
 }) {
+    const stepFrame = useGameStore((s) => s.stepFrame)
+    const base = DIRECTION_BASE_FRAME[player.direction] ?? 0
+    const frameIndex = base + stepFrame // 0..5
+    // 6 frames total → position-y va de 0% à 100% par pas de 20%
+    const bgPosY = (frameIndex / 5) * 100
+    const flip = player.direction === "left" ? "scaleX(-1)" : "none"
+
     return (
         <div style={{
             position: "absolute",
             ...screenPos(player.posX, player.posY),
+            backgroundImage: "url(/yellow/sprites/chris_color.png)",
+            backgroundRepeat: "no-repeat",
+            backgroundSize: "100% auto",
+            backgroundPosition: `0 ${bgPosY}%`,
+            imageRendering: "pixelated",
+            transform: flip,
             zIndex: 3,
             pointerEvents: "none",
-        }}>
-            {/* Ombre au sol */}
-            <span style={{
-                position: "absolute",
-                left: "20%", bottom: "5%", width: "60%", height: "10%",
-                background: "rgba(0,0,0,0.3)",
-                borderRadius: "50%",
-            }} />
-            {/* Corps (rouge) */}
-            <span style={{
-                position: "absolute",
-                left: "25%", top: "40%", right: "25%", bottom: "15%",
-                background: "#c83828",
-                boxShadow: `inset 0 0 0 1px ${COLOR_INK_DARK}, inset -2px -2px 0 #8c1c1c`,
-            }} />
-            {/* Casquette (rouge plus foncé + visière) */}
-            <span style={{
-                position: "absolute",
-                left: "22%", top: "10%", right: "22%", height: "32%",
-                background: "#c83828",
-                boxShadow: `inset 0 0 0 1px ${COLOR_INK_DARK}`,
-                borderRadius: "50% 50% 0 0",
-            }} />
-            <span style={{
-                position: "absolute",
-                left: "18%", top: "30%", right: "18%", height: "8%",
-                background: "#8c1c1c",
-            }} />
-            {/* Visage */}
-            <span style={{
-                position: "absolute",
-                left: "30%", top: "35%", right: "30%", height: "16%",
-                background: "#f0c898",
-            }} />
-            {/* Indicateur de direction (petite flèche en bas) */}
-            <span style={{
-                position: "absolute",
-                left: "42%", bottom: "2%",
-                width: "16%", height: "10%",
-                color: COLOR_INK_DARK,
-                fontSize: "9px",
-                lineHeight: 1,
-                textAlign: "center",
-                fontWeight: "bold",
-            }}>
-                {player.direction === "up" ? "▲"
-                    : player.direction === "down" ? "▼"
-                    : player.direction === "left" ? "◀" : "▶"}
-            </span>
-        </div>
+        }} />
     )
 }
 
