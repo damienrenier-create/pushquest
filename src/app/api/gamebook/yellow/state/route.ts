@@ -26,15 +26,34 @@ import {
     YELLOW_ENTRANCE_MAP_ID,
 } from "@/lib/gamebook/yellow/featureFlag"
 import { YELLOW_MAPS } from "@/lib/gamebook/yellow/maps"
+import { isBlockingTile } from "@/lib/gamebook/mapEngine"
+import type { YellowMapData } from "@/lib/gamebook/yellow/maps"
 
 export const dynamic = "force-dynamic"
 
 // Spawn par défaut côté serveur (doit rester en phase avec store/gameStore.ts).
+// VILLE JAUNE 20×16 : centre-sud, face nord, le joueur monte vers l'Architecte.
 const DEFAULT_PLAYER = {
     mapId: YELLOW_ENTRANCE_MAP_ID,
-    posX: 7,
-    posY: 10,
+    posX: 10,
+    posY: 13,
     direction: "up" as const,
+}
+
+function isPositionWalkable(map: YellowMapData, x: number, y: number): boolean {
+    if (x < 0 || y < 0 || x >= map.width || y >= map.height) return false
+    const tile = map.tiles[y][x]
+    if (isBlockingTile(tile)) return false
+    // Mur de bâtiment (sauf porte)
+    if (map.buildings) {
+        for (const b of map.buildings) {
+            const inside = x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h
+            if (!inside) continue
+            const isDoor = x === b.x + b.doorX && y === b.y + b.doorY
+            if (!isDoor) return false
+        }
+    }
+    return true
 }
 
 async function authorize(): Promise<{ userId: string } | NextResponse> {
@@ -65,9 +84,11 @@ export async function GET() {
           }
         : DEFAULT_PLAYER
 
-    // Si le mapId stocké n'existe pas (ou n'est pas une map yellow), on
-    // retombe sur l'entrée. Évite de boot un joueur sur une map disparue.
-    if (!YELLOW_MAPS[player.mapId]) {
+    // Safety : si la map a évolué depuis le dernier save (refonte, building
+    // ajouté à l'emplacement où le joueur était…), on retombe sur le spawn
+    // par défaut pour éviter de spawn le joueur dans un mur infranchissable.
+    const map = YELLOW_MAPS[player.mapId]
+    if (!map || !isPositionWalkable(map, player.posX, player.posY)) {
         return NextResponse.json({ player: DEFAULT_PLAYER, recovered: true })
     }
 

@@ -8,10 +8,10 @@
 
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 
-// Palette GBC monochrome verte (cohérente avec MapView)
-const GBC_LIGHTEST = "#c4cfa1"
-const GBC_DARK = "#306230"
-const GBC_DARKEST = "#0f380f"
+// Palette Johto (cohérente avec MapView)
+const BOX_BG = "#f4ecd4"        // cream lisible
+const BOX_BG_DARK = "#d8c898"   // ombre du box
+const INK = "#2a1c10"           // texte / contour
 
 export default function DialogueBox() {
     const dialogue = useGameStore((s) => s.dialogue)
@@ -37,13 +37,13 @@ const boxStyle: React.CSSProperties = {
     left: "4%",
     right: "4%",
     bottom: "4%",
-    background: GBC_LIGHTEST,
-    border: `2px solid ${GBC_DARKEST}`,
+    background: BOX_BG,
+    border: `2px solid ${INK}`,
     borderRadius: 4,
     padding: "6px 10px 14px",
-    color: GBC_DARKEST,
+    color: INK,
     fontFamily: "'Courier New', monospace",
-    boxShadow: `inset 0 0 0 1px ${GBC_LIGHTEST}, 0 2px 0 ${GBC_DARK}`,
+    boxShadow: `inset 0 0 0 1px ${BOX_BG}, 0 2px 0 ${BOX_BG_DARK}`,
     zIndex: 10,
     minHeight: "30%",
 }
@@ -54,7 +54,7 @@ const nameStyle: React.CSSProperties = {
     letterSpacing: 1,
     marginBottom: 4,
     paddingBottom: 2,
-    borderBottom: `1px solid ${GBC_DARK}`,
+    borderBottom: `1px solid ${INK}`,
 }
 
 const lineStyle: React.CSSProperties = {

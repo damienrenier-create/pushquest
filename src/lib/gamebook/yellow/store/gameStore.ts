@@ -8,12 +8,13 @@
 // remplacent le state immuable. Tout est testable unitairement hors React.
 
 import { create } from "zustand"
-import type { MapData } from "@/lib/gamebook/mapEngine"
 import type { Direction, PlayerState } from "../engine/types"
 import { createInitialPlayer } from "../engine/types"
 import { tryMove } from "../engine/movement"
+import { findExitAt } from "../engine/warp"
 import { getNpcInFrontOfPlayer } from "../engine/interaction"
 import { YELLOW_MAPS } from "../maps"
+import type { YellowMapData } from "../maps"
 import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 
@@ -27,7 +28,7 @@ export interface ActiveDialogue {
 interface GameStore {
     // === STATE ===
     player: PlayerState
-    map: MapData
+    map: YellowMapData
     dialogue: ActiveDialogue | null
     hydrated: boolean // true une fois que l'état serveur a été chargé
 
@@ -61,9 +62,9 @@ function scheduleSave(player: PlayerState) {
     }, 3000)
 }
 
-// Spawn par défaut : bas-centre de yellow_entrance (14×12), face nord.
-// Le joueur doit marcher vers le haut pour atteindre l'Architecte en (7, 2).
-const DEFAULT_SPAWN = { x: 7, y: 10 }
+// Spawn par défaut : centre-sud de la VILLE JAUNE (20×16), face nord.
+// L'Architecte est au croisement des paths (10, 7). Le joueur monte pour le rencontrer.
+const DEFAULT_SPAWN = { x: 10, y: 13 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
     player: createInitialPlayer(YELLOW_ENTRANCE_MAP_ID, DEFAULT_SPAWN.x, DEFAULT_SPAWN.y, "up"),
@@ -73,10 +74,30 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     move: (dir) => {
         const { player, map, dialogue } = get()
-        // Mouvement bloqué pendant un dialogue : le joueur doit fermer avant de bouger.
+        // Mouvement bloqué pendant un dialogue.
         if (dialogue) return
+
         const next = tryMove(player, dir, map)
-        // Pas de changement (mur sans changement de direction) → on évite un save inutile
+
+        // Le joueur vient-il d'atterrir sur une case warp ? (porte de bâtiment
+        // ou doorMat de sortie). Si oui : transition de map immédiate.
+        const exit = findExitAt(map, next.posX, next.posY)
+        if (exit) {
+            const newMap = YELLOW_MAPS[exit.targetMapId]
+            if (newMap) {
+                const newPlayer = createInitialPlayer(
+                    exit.targetMapId,
+                    exit.targetSpawnX,
+                    exit.targetSpawnY,
+                    next.direction,
+                )
+                set({ map: newMap, player: newPlayer, dialogue: null })
+                scheduleSave(newPlayer)
+                return
+            }
+        }
+
+        // Pas de transition : move standard
         const unchanged =
             next.posX === player.posX &&
             next.posY === player.posY &&
@@ -113,7 +134,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
     },
 
     pressB: () => {
-        // B = quitter / annuler. Pour l'instant : ferme un dialogue ouvert.
         const { dialogue } = get()
         if (dialogue) set({ dialogue: null })
     },

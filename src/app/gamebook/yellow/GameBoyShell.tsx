@@ -180,11 +180,11 @@ const screenFrameStyle: React.CSSProperties = {
 
 const screenStyle: React.CSSProperties = {
     aspectRatio: "10 / 9",
-    background: "#9bbc0f", // vert GBC original "DMG" (peut être remplacé par #c4cfa1)
+    background: "#1a1612", // void noir-brun (style Johto, écran transparent LCD)
     imageRendering: "pixelated",
     overflow: "hidden",
     position: "relative",
-    color: "#0f380f",
+    color: "#2a1c10",
     fontFamily: "'Courier New', monospace",
 }
 

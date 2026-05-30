@@ -3,9 +3,8 @@
 // Convention : tous les ids commencent par `y_` pour éviter toute collision
 // avec les PNJ v3 (gym_guy, tb_videur, pere_pesto, etc.).
 //
-// Phase scaffolding : un seul PNJ "ARCHITECTE" qui annonce que la suite est en
-// construction. Il prouve uniquement que le rendu de PNJ fonctionne dans la map
-// yellow_entrance.
+// L'Architecte vit dans la ville extérieure (yellow_entrance). Les autres
+// vivent chacun dans leur bâtiment intérieur.
 
 import type { NpcDefinition } from "@/lib/gamebook/npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "./featureFlag"
@@ -18,16 +17,83 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         kind: "static",
         interaction: "interactive",
         sprite: { emoji: "👷", color: "#f0c020" },
-        // Map 14×12 : Architecte en haut-centre, le joueur spawn en bas-centre
-        // pour qu'on le voie en marchant vers lui (scroll caméra vertical visible).
-        initialX: 7,
-        initialY: 2,
+        // Centre de la ville, au croisement des paths (10, 8)
+        initialX: 10,
+        initialY: 7,
         dialoguesAfter: [
             "*L'Architecte te regarde, sourire en coin.*",
-            "Tu as battu Il Capo. Bravo.",
-            "Mais ce que tu croyais être la fin n'était qu'une porte.",
-            "🚧 NEXUS II — JAUNE ÉCLAIR : en construction.",
-            "Reviens bientôt. Le foudre gronde déjà au loin.",
+            "Bienvenue dans la VILLE JAUNE.",
+            "4 bâtiments. 4 portes. 4 secrets.",
+            "Le shop, le casino, l'infirmerie, l'arène.",
+            "Va frapper où tu veux. La foudre te guidera.",
+        ],
+    },
+
+    // === Intérieur SHOP ===
+    {
+        id: "y_vendeur",
+        name: "VENDEUR",
+        mapId: "yellow_shop",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🧑‍💼", color: "#a06030" },
+        initialX: 4,
+        initialY: 3,
+        dialoguesAfter: [
+            "*Le vendeur te toise par-dessus le comptoir.*",
+            "Bienvenue chez moi. J'ai tout ce qu'il te faut…",
+            "🚧 Catalogue à venir. Reviens plus tard.",
+        ],
+    },
+
+    // === Intérieur CASINO ===
+    {
+        id: "y_croupier",
+        name: "CROUPIER",
+        mapId: "yellow_casino",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🎲", color: "#c02040" },
+        initialX: 4,
+        initialY: 3,
+        dialoguesAfter: [
+            "*Le croupier brasse des cartes invisibles.*",
+            "Tu sens la chance, blanc-bec ?",
+            "🚧 Jeux à venir. La maison gagne toujours.",
+        ],
+    },
+
+    // === Intérieur INFIRMERIE ===
+    {
+        id: "y_medecin",
+        name: "MÉDECIN",
+        mapId: "yellow_infirmary",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "👩‍⚕️", color: "#e0f0ff" },
+        initialX: 4,
+        initialY: 2,
+        dialoguesAfter: [
+            "*La médecin range son stéthoscope.*",
+            "T'as l'air en forme. Tant mieux.",
+            "🚧 Soins à venir. Évite les bagarres en attendant.",
+        ],
+    },
+
+    // === Intérieur ARÈNE ===
+    {
+        id: "y_arbitre",
+        name: "ARBITRE",
+        mapId: "yellow_arena",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🥋", color: "#604030" },
+        initialX: 4,
+        initialY: 2,
+        dialoguesAfter: [
+            "*L'arbitre te jauge des pieds à la tête.*",
+            "Tu viens combattre ou regarder ?",
+            "🚧 Combats à venir. Affûte-toi en attendant.",
         ],
     },
 ]
