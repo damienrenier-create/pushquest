@@ -2,16 +2,11 @@
 
 // Nexus II — rendu de la map courante en mode "caméra qui suit le joueur".
 //
-// Style visuel : Pokémon Or/Argent (GBC, Johto). Palette douce désaturée
-// avec verts/bleus/beiges/bruns. Top-down strict, formes lisibles, contours
-// nets, immédiatement déchiffrable. Pas de dégradés réalistes, pas de 3D,
-// pas de blur. Le rendu doit ressembler à un background de route Johto.
+// Style visuel : Pokémon Or/Argent/Crystal (GBC, région Johto).
+// Palette saturée + contours nets + pixel art. Trees ronds, buildings avec
+// fenêtres jaunes lumineuses, chemins texturés, herbe avec micro-relief.
 //
-// Comportement caméra Pokémon GBC :
-//   - Viewport fixe de 10×9 tiles dans l'écran.
-//   - Le joueur reste au centre du viewport, c'est la map qui scroll.
-//   - Si on approche d'un bord (map plus grande que viewport), la caméra
-//     se bloque pour ne pas révéler le néant.
+// Comportement caméra : viewport 10×9, joueur centré, scroll, lock aux bords.
 
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { YELLOW_NPCS } from "@/lib/gamebook/yellow/npcs"
@@ -19,83 +14,92 @@ import type { YellowBuilding, YellowMapData } from "@/lib/gamebook/yellow/maps"
 import type { TileType } from "@/lib/gamebook/mapEngine"
 import DialogueBox from "./DialogueBox"
 
-// === Palette Johto désaturée ===========================================
+// === Palette Johto (saturée) ===========================================
 
-const COLOR_GRASS = "#9cbc6c"           // herbe : vert légèrement jauni
-const COLOR_GRASS_DARK = "#6a8a44"      // ombre d'herbe (pour bordures)
-const COLOR_PATH = "#d8c08c"            // chemin terre/sable beige
-const COLOR_PATH_DARK = "#b89868"       // bord de chemin
-const COLOR_TREE = "#3c6428"            // arbre vert foncé désaturé
-const COLOR_TREE_HIGHLIGHT = "#5c8c44"  // touche claire de feuillage
-const COLOR_WATER = "#6c90b8"           // eau bleu désat
-const COLOR_FLOWER = "#e8c850"          // fleur jaune doux
-const COLOR_FENCE = "#886848"           // barrière brun
+const COLOR_GRASS = "#88b070"          // herbe Johto vert moyen
+const COLOR_GRASS_DARK = "#608848"     // ombre / accent
+const COLOR_GRASS_HL = "#a4c884"       // brins clairs
+const COLOR_PATH = "#dcc088"           // sable / chemin
+const COLOR_PATH_DARK = "#b89860"      // accent terre
+const COLOR_TREE_DARK = "#2c4818"      // contour arbre
+const COLOR_TREE = "#3c6420"           // canopée
+const COLOR_TREE_HL = "#5c8c34"        // reflet feuillage
+const COLOR_TREE_TRUNK = "#5c3818"     // tronc brun
+const COLOR_WATER = "#5070c8"
+const COLOR_FLOWER = "#f8d04c"
+const COLOR_FLOWER_CORE = "#c84818"
 
 // Intérieurs
 const COLOR_FLOOR_WOOD = "#c89c64"
 const COLOR_FLOOR_TILE = "#dcc8a4"
 const COLOR_FLOOR_CHECKER = "#e0c898"
-const COLOR_WALL = "#6c4828"             // mur intérieur brun foncé
-const COLOR_DOORMAT = "#8c6440"          // tapis de sortie
+const COLOR_WALL_INT = "#5c3818"
+const COLOR_DOORMAT = "#a86434"
 const COLOR_ARENA_FLOOR = "#d8b878"
 
-// Mobilier
+// Mobilier intérieur
 const COLOR_COUNTER = "#a87c4c"
-const COLOR_SHELF = "#6c4828"
+const COLOR_COUNTER_TOP = "#cc9c64"
+const COLOR_SHELF = "#5c3818"
+const COLOR_SHELF_HL = "#8c6840"
 const COLOR_TABLE = "#a87c4c"
-const COLOR_SLOT = "#c84848"
-const COLOR_ROULETTE = "#4858a8"
-const COLOR_RUG = "#c87878"
+const COLOR_SLOT = "#c83830"
+const COLOR_ROULETTE = "#3848a8"
+const COLOR_RUG = "#c84860"
+const COLOR_RUG_HL = "#e87478"
 
 // UI / texte
-const COLOR_INK_DARK = "#2a1c10"         // contour foncé pour texte/sprite
-const COLOR_INK_LIGHT = "#f4ecd4"        // halo clair derrière texte
-const COLOR_VOID = "#1a1612"             // hors-map (void)
+const COLOR_INK_DARK = "#1c1408"
+const COLOR_INK_LIGHT = "#f4ecd4"
+const COLOR_VOID = "#0a0a14"
 
-// Bâtiments — par type (Pokémon Gold style : toits colorés, murs cream)
+// Bâtiments par type — palette Pokémon Or/Argent
 const BUILDING_ROOF: Record<YellowBuilding["kind"], string> = {
-    shop: "#c44848",       // rouge brique (= boutique style Pokémon)
-    casino: "#bc8c2c",     // jaune orangé (jeux d'argent)
-    infirmary: "#88a8c8",  // bleu pâle (centre Pokémon)
-    arena: "#7c3c4c",      // bordeaux (dojo)
+    shop: "#c83828",        // rouge vif marché
+    casino: "#d89028",      // jaune-orange casino
+    infirmary: "#5070c0",   // bleu centre Pokémon
+    arena: "#8c2848",       // bordeaux dojo
 }
 const BUILDING_ROOF_DARK: Record<YellowBuilding["kind"], string> = {
-    shop: "#8c2c2c",
-    casino: "#84601c",
-    infirmary: "#5c7c98",
-    arena: "#542030",
+    shop: "#8c1c1c",
+    casino: "#a86818",
+    infirmary: "#304878",
+    arena: "#581830",
 }
-const BUILDING_WALL = "#e4d4ac"
-const BUILDING_WALL_DARK = "#b8a078"
-const BUILDING_DOOR = "#3c2818"
-const BUILDING_WINDOW = "#88a8c8"
+const BUILDING_ROOF_HL: Record<YellowBuilding["kind"], string> = {
+    shop: "#e85c44",
+    casino: "#f0b048",
+    infirmary: "#7898d8",
+    arena: "#b04860",
+}
+const BUILDING_WALL = "#e8d4a8"
+const BUILDING_WALL_DARK = "#a88858"
+const BUILDING_DOOR = "#3c2410"
+const BUILDING_DOOR_HL = "#a87c4c"
+const BUILDING_WINDOW = "#f0d440"        // fenêtre lumineuse jaune
+const BUILDING_WINDOW_OUTLINE = "#5c3818"
 
-// === Constantes viewport ==============================================
+// === Viewport ==========================================================
 
 const VIEWPORT_W = 10
 const VIEWPORT_H = 9
 const TILE_W_PCT = 100 / VIEWPORT_W
 const TILE_H_PCT = 100 / VIEWPORT_H
 
+// === Tile background ===================================================
+
 function tileColor(tile: TileType): string {
-    // Extérieur
     if (tile === "grass" || tile === "grassTall") return COLOR_GRASS
-    if (tile === "path") return COLOR_PATH
-    if (tile === "tree") return COLOR_TREE
+    if (tile === "path" || tile === "sand") return COLOR_PATH
+    if (tile === "tree") return COLOR_GRASS
     if (tile === "water" || tile === "waterShallow") return COLOR_WATER
-    if (tile === "flowerY" || tile === "flowerR") return COLOR_FLOWER
-    if (tile === "fence") return COLOR_FENCE
-    if (tile === "sand") return COLOR_PATH
-    // Intérieurs - murs
-    if (tile === "wallH" || tile === "wallV" || tile === "wallCorner") return COLOR_WALL
-    // Sols
+    if (tile === "flowerY" || tile === "flowerR") return COLOR_GRASS
+    if (tile === "wallH" || tile === "wallV" || tile === "wallCorner") return COLOR_WALL_INT
     if (tile === "floorWood") return COLOR_FLOOR_WOOD
     if (tile === "floorTile") return COLOR_FLOOR_TILE
     if (tile === "floorChecker") return COLOR_FLOOR_CHECKER
     if (tile === "arenaFloor") return COLOR_ARENA_FLOOR
-    // Porte de sortie
     if (tile === "doorMat") return COLOR_DOORMAT
-    // Mobilier
     if (tile === "shopCounter") return COLOR_COUNTER
     if (tile === "shopShelf") return COLOR_SHELF
     if (tile === "table") return COLOR_TABLE
@@ -105,29 +109,190 @@ function tileColor(tile: TileType): string {
     return COLOR_GRASS
 }
 
-// Petits accents visuels pour densifier le pixel art sans surcharge
-function tileAccent(tile: TileType): React.ReactNode {
-    if (tile === "tree") {
-        // 4 petits points clairs pour évoquer le feuillage
-        return (
-            <>
-                <span style={accentDot(20, 20, COLOR_TREE_HIGHLIGHT)} />
-                <span style={accentDot(70, 30, COLOR_TREE_HIGHLIGHT)} />
-                <span style={accentDot(30, 70, COLOR_TREE_HIGHLIGHT)} />
-                <span style={accentDot(65, 65, COLOR_TREE_HIGHLIGHT)} />
-            </>
-        )
-    }
-    if (tile === "flowerY") {
-        return <span style={accentDot(50, 50, COLOR_INK_DARK, 26)} />
-    }
-    if (tile === "path") {
-        return <span style={accentDot(50, 50, COLOR_PATH_DARK, 14)} />
-    }
+// === Tile decoration (overlay pixel art) ===============================
+
+function TileDeco({ tile }: { tile: TileType }) {
+    if (tile === "tree") return <TreeSprite />
+    if (tile === "flowerY") return <FlowerSprite />
+    if (tile === "grass") return <GrassDots />
+    if (tile === "path") return <PathSpeckles />
+    if (tile === "shopCounter") return <CounterTop />
+    if (tile === "shopShelf") return <ShelfBooks />
+    if (tile === "slotMachine") return <SlotDisplay />
+    if (tile === "rouletteWheel") return <RouletteDots />
+    if (tile === "rug") return <RugStripes />
+    if (tile === "table") return <TableEdge />
+    if (tile === "doorMat") return <DoorMatEdge />
     return null
 }
 
-function accentDot(xPct: number, yPct: number, color: string, sizePct = 18): React.CSSProperties {
+function TreeSprite() {
+    // Tronc + canopée ronde + reflet de feuillage
+    return (
+        <>
+            <span style={{
+                position: "absolute",
+                left: "42%", top: "70%", width: "16%", height: "28%",
+                background: COLOR_TREE_TRUNK,
+                pointerEvents: "none",
+            }} />
+            <span style={{
+                position: "absolute",
+                inset: "8% 8% 22% 8%",
+                background: COLOR_TREE,
+                borderRadius: "50%",
+                boxShadow: `inset 0 -4px 0 ${COLOR_TREE_DARK}, inset 2px 2px 0 ${COLOR_TREE_HL}`,
+                pointerEvents: "none",
+            }} />
+            <span style={{
+                position: "absolute",
+                left: "26%", top: "22%", width: "12%", height: "12%",
+                background: COLOR_TREE_HL,
+                borderRadius: "50%",
+                pointerEvents: "none",
+            }} />
+        </>
+    )
+}
+
+function FlowerSprite() {
+    return (
+        <>
+            <span style={{
+                position: "absolute",
+                inset: "25%",
+                background: COLOR_FLOWER,
+                borderRadius: "50%",
+                boxShadow: `inset 0 -2px 0 ${COLOR_PATH_DARK}`,
+                pointerEvents: "none",
+            }} />
+            <span style={{
+                position: "absolute",
+                left: "42%", top: "42%", width: "16%", height: "16%",
+                background: COLOR_FLOWER_CORE,
+                borderRadius: "50%",
+                pointerEvents: "none",
+            }} />
+        </>
+    )
+}
+
+function GrassDots() {
+    return (
+        <>
+            <span style={dotStyle(25, 35, COLOR_GRASS_HL, 10)} />
+            <span style={dotStyle(75, 65, COLOR_GRASS_DARK, 10)} />
+            <span style={dotStyle(60, 25, COLOR_GRASS_HL, 8)} />
+            <span style={dotStyle(35, 75, COLOR_GRASS_DARK, 8)} />
+        </>
+    )
+}
+
+function PathSpeckles() {
+    return (
+        <>
+            <span style={dotStyle(30, 30, COLOR_PATH_DARK, 14)} />
+            <span style={dotStyle(70, 65, COLOR_PATH_DARK, 12)} />
+            <span style={dotStyle(50, 50, COLOR_PATH_DARK, 8)} />
+        </>
+    )
+}
+
+function CounterTop() {
+    return <span style={{
+        position: "absolute",
+        left: 0, right: 0, top: 0, height: "30%",
+        background: COLOR_COUNTER_TOP,
+        pointerEvents: "none",
+    }} />
+}
+
+function ShelfBooks() {
+    return (
+        <>
+            {[10, 28, 46, 64, 82].map((left, i) => (
+                <span key={i} style={{
+                    position: "absolute",
+                    left: `${left}%`, top: "15%", width: "12%", height: "65%",
+                    background: i % 2 === 0 ? "#c84048" : "#3868c8",
+                    boxShadow: `inset 0 0 0 1px ${COLOR_SHELF_HL}`,
+                    pointerEvents: "none",
+                }} />
+            ))}
+        </>
+    )
+}
+
+function SlotDisplay() {
+    return (
+        <>
+            <span style={{
+                position: "absolute",
+                left: "15%", right: "15%", top: "20%", height: "30%",
+                background: COLOR_INK_LIGHT,
+                boxShadow: `inset 0 0 0 2px ${COLOR_INK_DARK}`,
+                pointerEvents: "none",
+            }} />
+            <span style={{
+                position: "absolute",
+                left: "30%", right: "30%", bottom: "15%", height: "20%",
+                background: "#f0d440",
+                pointerEvents: "none",
+            }} />
+        </>
+    )
+}
+
+function RouletteDots() {
+    return (
+        <>
+            <span style={dotStyle(50, 50, COLOR_INK_LIGHT, 50)} />
+            <span style={dotStyle(50, 50, COLOR_ROULETTE, 30)} />
+            {[0, 60, 120, 180, 240, 300].map((angle, i) => {
+                const rad = (angle * Math.PI) / 180
+                const x = 50 + 22 * Math.cos(rad)
+                const y = 50 + 22 * Math.sin(rad)
+                return (
+                    <span key={i} style={dotStyle(x, y, i % 2 ? "#c83830" : "#1c1408", 10)} />
+                )
+            })}
+        </>
+    )
+}
+
+function RugStripes() {
+    return (
+        <>
+            <span style={{
+                position: "absolute",
+                inset: "10%",
+                background: `repeating-linear-gradient(45deg, ${COLOR_RUG} 0 8px, ${COLOR_RUG_HL} 8px 14px)`,
+                pointerEvents: "none",
+            }} />
+        </>
+    )
+}
+
+function TableEdge() {
+    return <span style={{
+        position: "absolute",
+        inset: "20%",
+        background: COLOR_COUNTER_TOP,
+        boxShadow: `inset 0 0 0 2px ${COLOR_INK_DARK}`,
+        pointerEvents: "none",
+    }} />
+}
+
+function DoorMatEdge() {
+    return <span style={{
+        position: "absolute",
+        inset: "15% 8%",
+        background: `repeating-linear-gradient(90deg, ${COLOR_DOORMAT} 0 4px, ${COLOR_PATH_DARK} 4px 8px)`,
+        pointerEvents: "none",
+    }} />
+}
+
+function dotStyle(xPct: number, yPct: number, color: string, sizePct = 12): React.CSSProperties {
     return {
         position: "absolute",
         left: `${xPct - sizePct / 2}%`,
@@ -182,7 +347,6 @@ export default function MapView() {
     return (
         <div style={containerStyle}>
             <div style={viewportStyle}>
-                {/* Tiles + accents pixel art */}
                 {map.tiles.flatMap((row, y) =>
                     row.map((tile, x) => (
                         <div
@@ -194,17 +358,15 @@ export default function MapView() {
                                 overflow: "hidden",
                             }}
                         >
-                            {tileAccent(tile)}
+                            <TileDeco tile={tile} />
                         </div>
                     )),
                 )}
 
-                {/* Bâtiments (overlay) */}
                 {buildings.map((b) => (
                     <BuildingSprite key={b.id} building={b} screenPos={screenPos} />
                 ))}
 
-                {/* NPCs */}
                 {npcsOnMap.map((npc) => (
                     <div
                         key={npc.id}
@@ -214,9 +376,10 @@ export default function MapView() {
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            fontSize: "clamp(10px, 2.5dvw, 18px)",
+                            fontSize: "clamp(12px, 3dvw, 20px)",
                             color: COLOR_INK_DARK,
                             zIndex: 2,
+                            filter: "drop-shadow(0 1px 0 rgba(0,0,0,0.4))",
                         }}
                         title={npc.name}
                     >
@@ -224,36 +387,87 @@ export default function MapView() {
                     </div>
                 ))}
 
-                {/* Player sprite */}
-                <div
-                    style={{
-                        position: "absolute",
-                        ...screenPos(player.posX, player.posY),
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "clamp(12px, 3dvw, 20px)",
-                        color: COLOR_INK_DARK,
-                        fontWeight: "bold",
-                        zIndex: 3,
-                    }}
-                >
-                    {directionArrow(player.direction)}
-                </div>
+                <PlayerSprite player={player} screenPos={screenPos} />
             </div>
 
-            {/* HUD debug */}
             <div style={hudStyle}>
                 {map.name} ({player.posX},{player.posY}) {player.direction.toUpperCase()}
             </div>
 
-            {/* Overlay dialogue */}
             <DialogueBox />
         </div>
     )
 }
 
-// === Bâtiment : façade colorée Pokémon Gold style =====================
+// === Joueur : casquette rouge + corps style trainer Pokémon ===========
+
+function PlayerSprite({
+    player,
+    screenPos,
+}: {
+    player: { posX: number; posY: number; direction: string }
+    screenPos: (x: number, y: number, w?: number, h?: number) => React.CSSProperties
+}) {
+    return (
+        <div style={{
+            position: "absolute",
+            ...screenPos(player.posX, player.posY),
+            zIndex: 3,
+            pointerEvents: "none",
+        }}>
+            {/* Ombre au sol */}
+            <span style={{
+                position: "absolute",
+                left: "20%", bottom: "5%", width: "60%", height: "10%",
+                background: "rgba(0,0,0,0.3)",
+                borderRadius: "50%",
+            }} />
+            {/* Corps (rouge) */}
+            <span style={{
+                position: "absolute",
+                left: "25%", top: "40%", right: "25%", bottom: "15%",
+                background: "#c83828",
+                boxShadow: `inset 0 0 0 1px ${COLOR_INK_DARK}, inset -2px -2px 0 #8c1c1c`,
+            }} />
+            {/* Casquette (rouge plus foncé + visière) */}
+            <span style={{
+                position: "absolute",
+                left: "22%", top: "10%", right: "22%", height: "32%",
+                background: "#c83828",
+                boxShadow: `inset 0 0 0 1px ${COLOR_INK_DARK}`,
+                borderRadius: "50% 50% 0 0",
+            }} />
+            <span style={{
+                position: "absolute",
+                left: "18%", top: "30%", right: "18%", height: "8%",
+                background: "#8c1c1c",
+            }} />
+            {/* Visage */}
+            <span style={{
+                position: "absolute",
+                left: "30%", top: "35%", right: "30%", height: "16%",
+                background: "#f0c898",
+            }} />
+            {/* Indicateur de direction (petite flèche en bas) */}
+            <span style={{
+                position: "absolute",
+                left: "42%", bottom: "2%",
+                width: "16%", height: "10%",
+                color: COLOR_INK_DARK,
+                fontSize: "9px",
+                lineHeight: 1,
+                textAlign: "center",
+                fontWeight: "bold",
+            }}>
+                {player.direction === "up" ? "▲"
+                    : player.direction === "down" ? "▼"
+                    : player.direction === "left" ? "◀" : "▶"}
+            </span>
+        </div>
+    )
+}
+
+// === Bâtiment : façade Pokémon Or/Argent avec fenêtres ================
 
 function BuildingSprite({
     building,
@@ -264,23 +478,17 @@ function BuildingSprite({
 }) {
     const roof = BUILDING_ROOF[building.kind]
     const roofDark = BUILDING_ROOF_DARK[building.kind]
+    const roofHl = BUILDING_ROOF_HL[building.kind]
 
     const cells: React.ReactNode[] = []
     for (let dy = 0; dy < building.h; dy++) {
         for (let dx = 0; dx < building.w; dx++) {
             const isRoofRow = dy === 0
-            const isUnderRoof = dy === 1
+            const isUnderRoof = dy === 1 // bande d'ombre sous le toit
             const isDoor = dx === building.doorX && dy === building.doorY
             const isWindow =
                 !isDoor && !isRoofRow && !isUnderRoof &&
-                (dx === 0 || dx === building.w - 1) && dy === 2
-
-            let color: string
-            if (isDoor) color = BUILDING_DOOR
-            else if (isRoofRow) color = roof
-            else if (isUnderRoof) color = roofDark      // ombre sous le toit
-            else if (isWindow) color = BUILDING_WINDOW
-            else color = BUILDING_WALL
+                (dx === 0 || dx === building.w - 1) && dy === building.h - 2
 
             cells.push(
                 <div
@@ -288,17 +496,29 @@ function BuildingSprite({
                     style={{
                         position: "absolute",
                         ...screenPos(building.x + dx, building.y + dy),
-                        background: color,
-                        boxShadow: !isRoofRow && !isUnderRoof
-                            ? `inset 0 0 0 1px ${BUILDING_WALL_DARK}`
-                            : undefined,
+                        background: isRoofRow
+                            ? roof
+                            : isUnderRoof
+                                ? roofDark
+                                : BUILDING_WALL,
+                        overflow: "hidden",
                     }}
-                />,
+                >
+                    {isRoofRow && <RoofTile color={roofHl} />}
+                    {!isRoofRow && !isUnderRoof && !isDoor && !isWindow && (
+                        <span style={{
+                            position: "absolute",
+                            inset: 0,
+                            boxShadow: `inset 0 0 0 1px ${BUILDING_WALL_DARK}`,
+                        }} />
+                    )}
+                    {isDoor && <DoorTile />}
+                    {isWindow && <WindowTile />}
+                </div>,
             )
         }
     }
 
-    // Label au-dessus du bâtiment
     const labelStyle: React.CSSProperties = {
         position: "absolute",
         ...screenPos(building.x, building.y - 1, building.w, 1),
@@ -323,14 +543,72 @@ function BuildingSprite({
     )
 }
 
-function directionArrow(dir: string): string {
-    switch (dir) {
-        case "up": return "▲"
-        case "down": return "▼"
-        case "left": return "◀"
-        case "right": return "▶"
-        default: return "●"
-    }
+function RoofTile({ color }: { color: string }) {
+    // Petites tuiles : 3 lignes claires sur le toit
+    return (
+        <>
+            <span style={{
+                position: "absolute",
+                left: 0, right: 0, top: "20%", height: "2px",
+                background: color,
+            }} />
+            <span style={{
+                position: "absolute",
+                left: 0, right: 0, top: "50%", height: "2px",
+                background: color,
+            }} />
+            <span style={{
+                position: "absolute",
+                left: 0, right: 0, top: "80%", height: "2px",
+                background: color,
+            }} />
+        </>
+    )
+}
+
+function DoorTile() {
+    return (
+        <>
+            <span style={{
+                position: "absolute",
+                inset: "5% 15% 0 15%",
+                background: BUILDING_DOOR,
+                boxShadow: `inset 0 0 0 1px ${COLOR_INK_DARK}`,
+            }} />
+            {/* Poignée */}
+            <span style={{
+                position: "absolute",
+                right: "25%", top: "55%",
+                width: "8%", height: "8%",
+                background: BUILDING_DOOR_HL,
+                borderRadius: "50%",
+            }} />
+        </>
+    )
+}
+
+function WindowTile() {
+    return (
+        <>
+            <span style={{
+                position: "absolute",
+                inset: "20%",
+                background: BUILDING_WINDOW,
+                boxShadow: `inset 0 0 0 2px ${BUILDING_WINDOW_OUTLINE}`,
+            }} />
+            {/* Croisillon */}
+            <span style={{
+                position: "absolute",
+                left: "20%", right: "20%", top: "50%", height: "2px",
+                background: BUILDING_WINDOW_OUTLINE,
+            }} />
+            <span style={{
+                position: "absolute",
+                top: "20%", bottom: "20%", left: "50%", width: "2px",
+                background: BUILDING_WINDOW_OUTLINE,
+            }} />
+        </>
+    )
 }
 
 const containerStyle: React.CSSProperties = {
@@ -361,6 +639,3 @@ const hudStyle: React.CSSProperties = {
     padding: "2px 4px",
     flexShrink: 0,
 }
-
-// COLOR_GRASS_DARK référencé pour usage futur (bordures de chemin etc)
-void COLOR_GRASS_DARK
