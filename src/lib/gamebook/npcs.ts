@@ -1795,9 +1795,13 @@ export const NPCS: NpcDefinition[] = [
         kind: "static",
         interaction: "interactive",
         sprite: { emoji: "🕴️", color: "#202020" },
-        // Position : devant le bar TB (sud-ouest, opposé Père Pesto)
+        // v3.42 — Position : sur le trottoir d'approche sud, directement devant la porte
+        // du bar (qui est à 2,19). Avant, le videur était à (2, 18) — à l'intérieur du
+        // footprint du bâtiment = mur infranchissable. Il est maintenant un obstacle
+        // physique que le joueur ne peut pas contourner. Filtré côté client une fois
+        // videurState = "passed" → il s'efface et libère la voie vers la porte.
         initialX: 2,
-        initialY: 18,
+        initialY: 20,
         // Dialogue initial — la suite est gérée par MapClient (choix oui/non + flag pere_pesto)
         dialoguesAfter: [
             "*Le portier croise les bras et te toise.*",

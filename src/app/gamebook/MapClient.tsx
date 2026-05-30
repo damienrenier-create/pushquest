@@ -792,8 +792,15 @@ export default function MapClient({
     // ============================================================
     const wanderTick = useWanderTicker()
     const bestiolesFlee = tamagotchi?.recovered === true
+    // v3.42 — Le PORTIER ARRABBIATA s'efface une fois son défi validé ("passed")
+    // ou le boss vaincu. Il était physiquement devant la porte du bar TB (2, 20) ;
+    // sans ce filtre, il bloquerait à vie le passage même après que le joueur a payé son dû.
+    const videurPassed =
+        (state as { videurState?: string }).videurState === "passed" ||
+        (state as { videurState?: string }).videurState === "boss_beaten"
     const npcsOnMap = getNpcsForMap(state.mapId).filter((npc) => {
         if (npc.id.startsWith("bestiole_") && bestiolesFlee) return false
+        if (npc.id === "tb_videur" && videurPassed) return false
         return true
     })
     const npcsWithPos = npcsOnMap.map((npc) => {
