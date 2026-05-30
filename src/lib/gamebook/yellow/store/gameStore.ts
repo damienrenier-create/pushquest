@@ -37,11 +37,12 @@ interface GameStore {
     setMap: (mapId: string, spawnX: number, spawnY: number) => void
 }
 
-// Spawn par défaut : bas-centre de yellow_entrance, face nord (donc l'architecte est devant).
-const DEFAULT_SPAWN = { x: 4, y: 5 }
+// Spawn par défaut : bas-centre de yellow_entrance (14×12), face nord.
+// Le joueur doit marcher vers le haut pour atteindre l'Architecte en (7, 2).
+const DEFAULT_SPAWN = { x: 7, y: 10 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
-    player: createInitialPlayer(YELLOW_ENTRANCE_MAP_ID, DEFAULT_SPAWN.x, DEFAULT_SPAWN.y),
+    player: createInitialPlayer(YELLOW_ENTRANCE_MAP_ID, DEFAULT_SPAWN.x, DEFAULT_SPAWN.y, "up"),
     map: YELLOW_MAPS[YELLOW_ENTRANCE_MAP_ID],
     dialogue: null,
 

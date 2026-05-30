@@ -3,16 +3,18 @@
 // Convention : tous les ids commencent par `yellow_` pour éviter toute collision
 // avec les maps v3 (lasagnas_*, muscuville, macaronile, etc.).
 //
-// Phase scaffolding : une seule map d'entrée vide avec PNJ "ARCHITECTE" qui sert
-// uniquement à valider que la transition v3 → v2 fonctionne. Le concept narratif
-// et les vraies maps arriveront ensuite.
+// Phase scaffolding : une seule map d'entrée 14×12 (plus grande que le viewport
+// 10×9 pour démontrer le scroll caméra style Pokémon). L'Architecte se trouve
+// en haut, le joueur spawn en bas — il doit marcher vers lui en voyant la map
+// défiler sous lui.
 
 import type { MapData, TileType } from "@/lib/gamebook/mapEngine"
 import { YELLOW_ENTRANCE_MAP_ID } from "./featureFlag"
 
-// === yellow_entrance : salle d'attente vide 9x7 ===
+// === yellow_entrance : salle d'attente 14×12 avec colonnes décoratives ===
+// Plus grande que le viewport (10×9) pour démontrer la caméra qui suit le joueur.
 function buildYellowEntrance(): TileType[][] {
-    const W = 9, H = 7
+    const W = 14, H = 12
     const m: TileType[][] = []
     for (let y = 0; y < H; y++) {
         const row: TileType[] = []
@@ -23,16 +25,22 @@ function buildYellowEntrance(): TileType[][] {
         }
         m.push(row)
     }
+    // Quelques colonnes décoratives au milieu pour briser la monotonie + tester
+    // la collision avec des murs intérieurs.
+    m[5][4] = "wallV"
+    m[5][9] = "wallV"
+    m[8][4] = "wallV"
+    m[8][9] = "wallV"
     return m
 }
 
 export const YELLOW_MAPS: Record<string, MapData> = {
     [YELLOW_ENTRANCE_MAP_ID]: {
         id: YELLOW_ENTRANCE_MAP_ID,
-        name: "NEXUS II — ENTRÉE (placeholder)",
+        name: "NEXUS II — ENTRÉE",
         tiles: buildYellowEntrance(),
-        width: 9,
-        height: 7,
+        width: 14,
+        height: 12,
     },
 }
 

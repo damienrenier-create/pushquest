@@ -13,6 +13,11 @@ export interface PlayerState {
     direction: Direction
 }
 
-export function createInitialPlayer(mapId: string, x: number, y: number): PlayerState {
-    return { mapId, posX: x, posY: y, direction: "down" }
+export function createInitialPlayer(
+    mapId: string,
+    x: number,
+    y: number,
+    direction: Direction = "down",
+): PlayerState {
+    return { mapId, posX: x, posY: y, direction }
 }

@@ -18,8 +18,10 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         kind: "static",
         interaction: "interactive",
         sprite: { emoji: "👷", color: "#f0c020" },
-        initialX: 4,
-        initialY: 3,
+        // Map 14×12 : Architecte en haut-centre, le joueur spawn en bas-centre
+        // pour qu'on le voie en marchant vers lui (scroll caméra vertical visible).
+        initialX: 7,
+        initialY: 2,
         dialoguesAfter: [
             "*L'Architecte te regarde, sourire en coin.*",
             "Tu as battu Il Capo. Bravo.",
