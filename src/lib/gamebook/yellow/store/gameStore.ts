@@ -29,12 +29,36 @@ interface GameStore {
     player: PlayerState
     map: MapData
     dialogue: ActiveDialogue | null
+    hydrated: boolean // true une fois que l'état serveur a été chargé
 
     // === ACTIONS ===
     move: (dir: Direction) => void
     pressA: () => void
     pressB: () => void
     setMap: (mapId: string, spawnX: number, spawnY: number) => void
+    hydrate: (loaded: PlayerState) => void
+}
+
+// === PERSISTANCE SERVEUR ===
+// Debounce 3s sur l'envoi : si le joueur bouge en rafale, on n'envoie QUE la
+// dernière position après 3s d'inactivité. Limite drastiquement le trafic Neon.
+let saveTimer: ReturnType<typeof setTimeout> | null = null
+
+function scheduleSave(player: PlayerState) {
+    if (typeof window === "undefined") return
+    if (saveTimer) clearTimeout(saveTimer)
+    saveTimer = setTimeout(() => {
+        fetch("/api/gamebook/yellow/state", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                mapId: player.mapId,
+                posX: player.posX,
+                posY: player.posY,
+                direction: player.direction,
+            }),
+        }).catch((e) => console.warn("[yellow] save failed", e))
+    }, 3000)
 }
 
 // Spawn par défaut : bas-centre de yellow_entrance (14×12), face nord.
@@ -45,13 +69,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
     player: createInitialPlayer(YELLOW_ENTRANCE_MAP_ID, DEFAULT_SPAWN.x, DEFAULT_SPAWN.y, "up"),
     map: YELLOW_MAPS[YELLOW_ENTRANCE_MAP_ID],
     dialogue: null,
+    hydrated: false,
 
     move: (dir) => {
         const { player, map, dialogue } = get()
         // Mouvement bloqué pendant un dialogue : le joueur doit fermer avant de bouger.
         if (dialogue) return
         const next = tryMove(player, dir, map)
+        // Pas de changement (mur sans changement de direction) → on évite un save inutile
+        const unchanged =
+            next.posX === player.posX &&
+            next.posY === player.posY &&
+            next.direction === player.direction
         set({ player: next })
+        if (!unchanged) scheduleSave(next)
     },
 
     pressA: () => {
@@ -93,10 +124,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
             console.warn(`[gameStore] Map inconnue : ${mapId}`)
             return
         }
-        set({
-            map,
-            player: createInitialPlayer(mapId, spawnX, spawnY),
-            dialogue: null,
-        })
+        const player = createInitialPlayer(mapId, spawnX, spawnY)
+        set({ map, player, dialogue: null })
+        scheduleSave(player)
+    },
+
+    hydrate: (loaded) => {
+        const map = YELLOW_MAPS[loaded.mapId] ?? YELLOW_MAPS[YELLOW_ENTRANCE_MAP_ID]
+        set({ player: loaded, map, hydrated: true })
     },
 }))

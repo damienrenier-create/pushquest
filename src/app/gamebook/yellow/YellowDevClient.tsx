@@ -17,6 +17,20 @@ export default function YellowDevClient() {
     const move = useGameStore((s) => s.move)
     const pressA = useGameStore((s) => s.pressA)
     const pressB = useGameStore((s) => s.pressB)
+    const hydrate = useGameStore((s) => s.hydrate)
+    const hydrated = useGameStore((s) => s.hydrated)
+
+    // Au mount : charge l'état du joueur depuis le serveur (DB Neon).
+    // Si le joueur n'a jamais joué, on garde le state par défaut (déjà set
+    // côté store) — l'API renvoie les mêmes defaults dans ce cas.
+    useEffect(() => {
+        fetch("/api/gamebook/yellow/state")
+            .then((r) => (r.ok ? r.json() : null))
+            .then((data) => {
+                if (data?.player) hydrate(data.player)
+            })
+            .catch((e) => console.warn("[yellow] load failed", e))
+    }, [hydrate])
 
     // Support clavier desktop : flèches + Espace/Entrée/A (= A), Escape/B (= B)
     useEffect(() => {
@@ -35,6 +49,10 @@ export default function YellowDevClient() {
         window.addEventListener("keydown", handler)
         return () => window.removeEventListener("keydown", handler)
     }, [move, pressA, pressB])
+
+    // Évite un flash à l'écran avant que l'état serveur soit chargé.
+    // Si la requête échoue (offline / 403), on affiche quand même le state local.
+    void hydrated
 
     return (
         <div style={pageStyle}>
