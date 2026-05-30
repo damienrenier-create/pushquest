@@ -1,47 +1,55 @@
 "use client"
 
-// Nexus II — page de dev client qui rend GameBoyShell avec un contenu
-// placeholder dans l'écran. Sert juste à valider visuellement la coque.
+// Nexus II — page de dev client.
+//
+// Branche le D-pad du GameBoyShell au store Zustand : chaque pression appelle
+// useGameStore.move(direction), qui calcule le nouveau player state via le
+// moteur pur tryMove(). Le MapView ré-render automatiquement.
+//
+// Pas encore : interaction A/B (NPCs, dialogues), START (menu), SELECT.
 
-import { useState } from "react"
+import { useEffect } from "react"
 import GameBoyShell from "./GameBoyShell"
+import MapView from "./MapView"
+import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 
 export default function YellowDevClient() {
-    const [lastPressed, setLastPressed] = useState<string>("—")
+    const move = useGameStore((s) => s.move)
+    const pressA = useGameStore((s) => s.pressA)
+    const pressB = useGameStore((s) => s.pressB)
+
+    // Support clavier desktop : flèches + Espace/Entrée/A (= A), Escape/B (= B)
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => {
+            if (e.key === "ArrowUp") { e.preventDefault(); move("up") }
+            else if (e.key === "ArrowDown") { e.preventDefault(); move("down") }
+            else if (e.key === "ArrowLeft") { e.preventDefault(); move("left") }
+            else if (e.key === "ArrowRight") { e.preventDefault(); move("right") }
+            else if (e.key === " " || e.key === "Enter" || e.key.toLowerCase() === "a") {
+                e.preventDefault(); pressA()
+            }
+            else if (e.key === "Escape" || e.key.toLowerCase() === "b") {
+                e.preventDefault(); pressB()
+            }
+        }
+        window.addEventListener("keydown", handler)
+        return () => window.removeEventListener("keydown", handler)
+    }, [move, pressA, pressB])
 
     return (
         <div style={pageStyle}>
             <GameBoyShell
-                onUp={() => setLastPressed("▲ UP")}
-                onDown={() => setLastPressed("▼ DOWN")}
-                onLeft={() => setLastPressed("◀ LEFT")}
-                onRight={() => setLastPressed("▶ RIGHT")}
-                onA={() => setLastPressed("A")}
-                onB={() => setLastPressed("B")}
-                onStart={() => setLastPressed("START")}
-                onSelect={() => setLastPressed("SELECT")}
+                onUp={() => move("up")}
+                onDown={() => move("down")}
+                onLeft={() => move("left")}
+                onRight={() => move("right")}
+                onA={pressA}
+                onB={pressB}
+                onStart={() => console.log("[yellow] START pressed (à implémenter)")}
+                onSelect={() => console.log("[yellow] SELECT pressed (à implémenter)")}
             >
-                <ScreenPlaceholder lastPressed={lastPressed} />
+                <MapView />
             </GameBoyShell>
-        </div>
-    )
-}
-
-function ScreenPlaceholder({ lastPressed }: { lastPressed: string }) {
-    return (
-        <div style={screenContentStyle}>
-            <div style={titleStyle}>NEXUS II</div>
-            <div style={subtitleStyle}>JAUNE ÉCLAIR</div>
-            <div style={dividerStyle} />
-            <div style={statusLineStyle}>
-                <span style={{ opacity: 0.7 }}>SCAFFOLDING</span>
-            </div>
-            <div style={statusLineStyle}>
-                <span style={{ opacity: 0.7 }}>v0.1 — DEV</span>
-            </div>
-            <div style={dividerStyle} />
-            <div style={pressLabelStyle}>DERNIÈRE TOUCHE</div>
-            <div style={pressValueStyle}>{lastPressed}</div>
         </div>
     )
 }
@@ -49,64 +57,10 @@ function ScreenPlaceholder({ lastPressed }: { lastPressed: string }) {
 // === STYLES ===
 
 const pageStyle: React.CSSProperties = {
-    minHeight: "100dvh", // dynamic viewport height : suit la barre Safari iOS qui apparaît/disparaît
+    minHeight: "100dvh",
     background: "#1a1a1a",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    // Padding 16 par défaut + safe area insets pour iPhone notch / home bar
     padding: "max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))",
-}
-
-const screenContentStyle: React.CSSProperties = {
-    width: "100%",
-    height: "100%",
-    padding: "12px 8px",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 4,
-    color: "#0f380f",
-    fontFamily: "'Courier New', monospace",
-    textAlign: "center",
-}
-
-const titleStyle: React.CSSProperties = {
-    fontSize: 18,
-    fontWeight: "bold",
-    letterSpacing: 2,
-}
-
-const subtitleStyle: React.CSSProperties = {
-    fontSize: 11,
-    letterSpacing: 3,
-    opacity: 0.8,
-}
-
-const dividerStyle: React.CSSProperties = {
-    width: "70%",
-    height: 1,
-    background: "#0f380f",
-    opacity: 0.4,
-    margin: "6px 0",
-}
-
-const statusLineStyle: React.CSSProperties = {
-    fontSize: 9,
-    letterSpacing: 1,
-}
-
-const pressLabelStyle: React.CSSProperties = {
-    fontSize: 8,
-    letterSpacing: 2,
-    opacity: 0.6,
-    marginTop: 4,
-}
-
-const pressValueStyle: React.CSSProperties = {
-    fontSize: 14,
-    fontWeight: "bold",
-    letterSpacing: 1,
-    marginTop: 2,
 }
