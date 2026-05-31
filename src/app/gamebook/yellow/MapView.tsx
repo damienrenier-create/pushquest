@@ -354,6 +354,10 @@ export default function MapView() {
                             style={{
                                 position: "absolute",
                                 ...screenPos(x, y),
+                                // +1px sur width/height pour overlapper le tile voisin
+                                // et masquer les gaps de subpixel rendering CSS
+                                width: `calc(${TILE_W_PCT}% + 1px)`,
+                                height: `calc(${TILE_H_PCT}% + 1px)`,
                                 background: tileColor(tile),
                                 overflow: "hidden",
                             }}
@@ -546,6 +550,9 @@ function BuildingSprite({
                     style={{
                         position: "absolute",
                         ...screenPos(building.x + dx, building.y + dy),
+                        // +1px overlap pour masquer les gaps subpixel CSS
+                        width: `calc(${TILE_W_PCT}% + 1px)`,
+                        height: `calc(${TILE_H_PCT}% + 1px)`,
                         background: isRoofRow
                             ? roof
                             : isUnderRoof
