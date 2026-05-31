@@ -94,7 +94,7 @@ function fillRoom(W: number, H: number, floor: TileType): TileType[][] {
     return m
 }
 
-// === Collisions Viridian City (positions mappées par l'user 2026-05-31) ==
+// === Collisions Viridian City (mapping user + extrapolations pixel) ==
 // Le visuel vient de viridian_full.png. Ces tiles servent uniquement à
 // bloquer/autoriser le mouvement (pas de rendu CSS).
 
@@ -107,16 +107,24 @@ function buildViridianCollisions(): TileType[][] {
         m.push(row)
     }
 
-    // === MONTAGNES (cliffs ouest) — cols 0..7, rows 0..16 ===
+    // === MONTAGNES OUEST (cliffs) ===
+    // Bloc nord : cols 0..7, rows 0..16 (user-confirmed)
     for (let y = 0; y <= 16; y++) {
         for (let x = 0; x <= 7; x++) m[y][x] = "tree"
     }
+    // Sand path horizontal rows 17..19 cols 0..8 (extrapolé via sampling — user mentionnait col 0)
+    // Ces tiles restent en default grass (walkable).
+
+    // Bloc sud : cols 0..6, rows 20..37 (extrapolé — les cliffs continuent vers le sud)
+    for (let y = 20; y <= 37; y++) {
+        for (let x = 0; x <= 6; x++) m[y][x] = "tree"
+    }
 
     // === BORDURE NORD (row 0) ===
-    for (let x = 8; x <= 17; x++) m[0][x] = "tree"          // sapins
-    m[0][18] = "fence"                                       // barrière
-    // (19,0) à (23,0) = herbe (déjà default)
-    for (let x = 24; x <= 43; x++) m[0][x] = "tree"          // sapins
+    for (let x = 8; x <= 17; x++) m[0][x] = "tree"
+    m[0][18] = "fence"
+    // (19..23, 0) = herbe (default)
+    for (let x = 24; x <= 43; x++) m[0][x] = "tree"
 
     // === BARRIÈRES horizontales row 4 ===
     for (let x = 8; x <= 18; x++) m[4][x] = "fence"
@@ -131,6 +139,17 @@ function buildViridianCollisions(): TileType[][] {
     for (let y = 26; y <= 30; y++) {
         for (let x = 11; x <= 16; x++) m[y][x] = "water"
     }
+
+    // === BORDURE EST (cols 42..43, toutes les rows) ===
+    for (let y = 0; y < H; y++) {
+        for (let x = 42; x <= 43; x++) m[y][x] = "tree"
+    }
+
+    // === BORDURE SUD (row 39) avec gap sortie Route 1 ===
+    // Cols 0..21 et 26..41 = trees. Cols 22..25 = sand walkable (sortie Route 1).
+    for (let x = 0; x <= 21; x++) m[39][x] = "tree"
+    for (let x = 26; x <= 41; x++) m[39][x] = "tree"
+    // (22..25, 36..39) = sand walkable (default grass OK)
 
     return m
 }
