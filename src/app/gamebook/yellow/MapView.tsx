@@ -443,33 +443,42 @@ function NpcSprite({
 
 // === Joueur : sprite Red (Pokémon FireRed/LeafGreen GBA) ================
 //
-// firered_player_t.png : 673x638 px, fond orange rgb(255,127,39) déjà rendu
-// transparent. Layout des sprites de marche (cellules 16w × 32h) :
-//   - DOWN  : y=55,  x=[8, 25, 42]  (3 frames : idle + 2 step)
-//   - UP    : y=88,  x=[8, 25, 42]
-//   - LEFT  : y=121, x=[8, 25, 42]
-//   - RIGHT : y=154, x=[8, 25, 42]
-//   Espacement vertical entre rangées : 33 px (32 sprite + 1 séparateur).
+// firered_player_t.png : 673×638 px, fond orange transparent.
+// Cellules sprite RÉELLES : 16w × 19h (pas 32 ! j'avais surestimé).
+// Layout par direction :
+//   - DOWN  : y=55,  cellules à x=[8, 25, 42]
+//   - UP    : y=88
+//   - LEFT  : y=121
+//   - RIGHT : y=154
+//   Stride vertical : 33 px (19 sprite + 14 gap incluant séparateur blanc à y=74).
 //
-// Convention Pokémon : le sprite déborde vers le HAUT du tile. Les pieds
-// sont sur le tile du joueur (player.posY), la tête sur le tile du dessus
-// (player.posY - 1). On rend donc l'élément 1 tile wide × 2 tile tall,
-// avec son top à (posY - 1).
+// Cellules par direction : 3 frames horizontales.
+//   - Cellule 1 (x=8)  : jambe gauche en avant (step A)
+//   - Cellule 2 (x=25) : pose idle (les 2 pieds au sol)
+//   - Cellule 3 (x=42) : jambe droite en avant (step B)
+//
+// Animation marche : on alterne cellules 1 et 3 (les 2 vrais step frames) via
+// stepFrame du store. Cellule 2 (idle) à câbler quand on aura un timer
+// "currently moving vs stopped".
+//
+// Convention Pokémon : sprite déborde vers le HAUT du tile. Container = 1
+// tile wide × (19/16 = 1.1875) tile tall, bottom collé sur le tile du joueur.
 
 const SHEET_W = 673
 const SHEET_H = 638
 const SPRITE_W = 16
-const SPRITE_H = 32
+const SPRITE_H = 19
 const SHEET_COLS = SHEET_W / SPRITE_W       // 42.0625
-const SHEET_ROWS = SHEET_H / SPRITE_H       // 19.9375
+const SHEET_ROWS = SHEET_H / SPRITE_H       // 33.58
+const SPRITE_ASPECT_RATIO = SPRITE_H / SPRITE_W   // 1.1875 (hauteur en tiles)
 
 interface SpriteCell { x: number; y: number }
 
 const FIRERED_PLAYER: Record<string, [SpriteCell, SpriteCell]> = {
-    down:  [{ x: 8,  y: 55  }, { x: 25, y: 55  }],
-    up:    [{ x: 8,  y: 88  }, { x: 25, y: 88  }],
-    left:  [{ x: 8,  y: 121 }, { x: 25, y: 121 }],
-    right: [{ x: 8,  y: 154 }, { x: 25, y: 154 }],
+    down:  [{ x: 8,  y: 55  }, { x: 42, y: 55  }],
+    up:    [{ x: 8,  y: 88  }, { x: 42, y: 88  }],
+    left:  [{ x: 8,  y: 121 }, { x: 42, y: 121 }],
+    right: [{ x: 8,  y: 154 }, { x: 42, y: 154 }],
 }
 
 function sheetBgPosition(cell: SpriteCell): string {
@@ -489,13 +498,15 @@ function PlayerSprite({
     const cells = FIRERED_PLAYER[player.direction] ?? FIRERED_PLAYER.down
     const cell = cells[stepFrame]
 
+    // Container 1 tile wide × 1.1875 tile tall, top à (posY - 0.1875)
+    // pour que le bas s'aligne avec le bas du tile du joueur (les pieds).
+    const topOffset = SPRITE_ASPECT_RATIO - 1   // 0.1875
+
     return (
         <div style={{
             position: "absolute",
-            // Élément 1 tile wide × 2 tile tall, top à (posY - 1) pour que
-            // le bas s'aligne avec le tile du joueur (= les pieds).
-            ...screenPos(player.posX, player.posY - 1, 1, 2),
-            backgroundImage: "url(/yellow/sprites/firered_player_t.png?v=2)",
+            ...screenPos(player.posX, player.posY - topOffset, 1, SPRITE_ASPECT_RATIO),
+            backgroundImage: "url(/yellow/sprites/firered_player_t.png?v=3)",
             backgroundRepeat: "no-repeat",
             backgroundSize: `${SHEET_COLS * 100}% ${SHEET_ROWS * 100}%`,
             backgroundPosition: sheetBgPosition(cell),
