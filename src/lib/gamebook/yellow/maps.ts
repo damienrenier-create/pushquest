@@ -161,26 +161,33 @@ function buildViridianCollisions(): TileType[][] {
     m[16][20] = "tree"  // petit panneau
     m[31][20] = "tree"  // panneau près passage
 
-    // === EAU (juste row 30 cols 11..16) ===
-    for (let x = 11; x <= 16; x++) m[30][x] = "water"
+    // === EAU (rows 26 ET 30 cols 11..16 — rows 27-29 walkable péninsule) ===
+    for (let x = 11; x <= 16; x++) { m[26][x] = "water"; m[30][x] = "water" }
 
     // === OVERRIDES walkable (À LA FIN pour effacer les blocages au besoin) ===
     // Petite zone herbe (6,15), (7,15)
     m[15][6] = "grass"; m[15][7] = "grass"
+    // Path vertical col 8 rows 5..16 (perce le forêt gauche)
+    for (let y = 5; y <= 16; y++) m[y][8] = "grass"
     // Ligne herbe (0..8, 16)
     for (let x = 0; x <= 8; x++) m[16][x] = "grass"
-    // Sand path (0..8, 17..19)
-    for (let y = 17; y <= 19; y++) for (let x = 0; x <= 8; x++) m[y][x] = "grass"
+    // Row 17 walkable cols 0..23 (perce le forêt gauche)
+    for (let x = 0; x <= 23; x++) m[17][x] = "grass"
+    // Sand path west (0..8, 17..19) — déjà couvert par row 17 mais on garde 18-19
+    for (let y = 18; y <= 19; y++) for (let x = 0; x <= 8; x++) m[y][x] = "grass"
     // Sortie Route 1 sand (22..25, 35..39)
     for (let y = 35; y <= 39; y++) for (let x = 22; x <= 25; x++) m[y][x] = "grass"
     // Passage row 30 cols 20..22
     for (let x = 20; x <= 22; x++) m[30][x] = "grass"
-    // Colonne accessible (11, 22..25)
+    // Colonne accessible (11, 22..25) + (12, 22) + (13, 22)
     for (let y = 22; y <= 25; y++) m[y][11] = "grass"
+    m[22][12] = "grass"; m[22][13] = "grass"
     // Terre-plein (7..10, 25..29)
     for (let y = 25; y <= 29; y++) for (let x = 7; x <= 10; x++) m[y][x] = "grass"
     // Walkable nord (7..19, 20..21)
     for (let y = 20; y <= 21; y++) for (let x = 7; x <= 19; x++) m[y][x] = "grass"
+    // Walkable rows 5 et 8 cols 20..30 (user spec)
+    for (let x = 20; x <= 30; x++) { m[5][x] = "grass"; m[8][x] = "grass" }
     // Walkable row 31 cols 7..19
     for (let x = 7; x <= 19; x++) m[31][x] = "grass"
     // Walkable row 32 cols 7..41
