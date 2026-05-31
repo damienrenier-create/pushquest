@@ -383,26 +383,7 @@ export default function MapView() {
                     )
                 })()}
 
-                {/* DEBUG : grille coords sur chaque case (à retirer quand collisions OK) */}
-                {hasBgImage && Array.from({ length: map.height }).flatMap((_, y) =>
-                    Array.from({ length: map.width }).map((__, x) => (
-                        <div key={`g-${x}-${y}`} style={{
-                            position: "absolute",
-                            ...screenPos(x, y),
-                            border: "1px solid rgba(255,0,0,0.4)",
-                            color: "rgba(255,255,255,0.95)",
-                            background: "rgba(0,0,0,0.3)",
-                            fontSize: 7,
-                            fontFamily: "monospace",
-                            fontWeight: "bold",
-                            lineHeight: 1,
-                            padding: 1,
-                            zIndex: 1,
-                            pointerEvents: "none",
-                            boxSizing: "border-box",
-                        }}>{x},{y}</div>
-                    )),
-                )}
+                {/* Grille debug retirée — collisions actives, gameplay normal */}
 
                 {!hasBgImage && map.tiles.flatMap((row, y) =>
                     row.map((tile, x) => (

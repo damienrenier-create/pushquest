@@ -94,80 +94,91 @@ function fillRoom(W: number, H: number, floor: TileType): TileType[][] {
     return m
 }
 
-// === yellow_entrance : la VILLE (extérieur) ==============================
-// 20×16 tiles. 4 bâtiments en 2×2. Paths qui les connectent. Quelques arbres
-// décoratifs. Joueur spawn au centre-sud. Camera scrollera quand il bouge.
+// === Collisions Viridian City (positions mappées par l'user 2026-05-31) ==
+// Le visuel vient de viridian_full.png. Ces tiles servent uniquement à
+// bloquer/autoriser le mouvement (pas de rendu CSS).
 
-const TOWN_W = 20
-const TOWN_H = 16
+function buildViridianCollisions(): TileType[][] {
+    const W = VIRIDIAN_W, H = VIRIDIAN_H
+    const m: TileType[][] = []
+    for (let y = 0; y < H; y++) {
+        const row: TileType[] = []
+        for (let x = 0; x < W; x++) row.push("grass")
+        m.push(row)
+    }
 
-function buildYellowTown(): TileType[][] {
-    const m = fillRect(TOWN_W, TOWN_H, "grass")
-    // Bordures = arbres (mur naturel infranchissable)
-    for (let x = 0; x < TOWN_W; x++) {
-        m[0][x] = "tree"
-        m[TOWN_H - 1][x] = "tree"
+    // === MONTAGNES (cliffs ouest) — cols 0..7, rows 0..16 ===
+    for (let y = 0; y <= 16; y++) {
+        for (let x = 0; x <= 7; x++) m[y][x] = "tree"
     }
-    for (let y = 0; y < TOWN_H; y++) {
-        m[y][0] = "tree"
-        m[y][TOWN_W - 1] = "tree"
+
+    // === BORDURE NORD (row 0) ===
+    for (let x = 8; x <= 17; x++) m[0][x] = "tree"          // sapins
+    m[0][18] = "fence"                                       // barrière
+    // (19,0) à (23,0) = herbe (déjà default)
+    for (let x = 24; x <= 43; x++) m[0][x] = "tree"          // sapins
+
+    // === BARRIÈRES horizontales row 4 ===
+    for (let x = 8; x <= 18; x++) m[4][x] = "fence"
+
+    // === BARRIÈRE (18, 6) ===
+    m[6][18] = "fence"
+
+    // === BUISSONS col 19, rows impaires 7..15 ===
+    for (let y = 7; y <= 15; y += 2) m[y][19] = "tree"
+
+    // === EAU (fontaine) cols 11..16, rows 26..30 ===
+    for (let y = 26; y <= 30; y++) {
+        for (let x = 11; x <= 16; x++) m[y][x] = "water"
     }
-    // Croix de paths : un axe horizontal au milieu + un vertical au milieu
-    for (let x = 1; x < TOWN_W - 1; x++) m[8][x] = "path"
-    for (let y = 1; y < TOWN_H - 1; y++) m[y][10] = "path"
-    // Petits paths verticaux qui descendent des portes (door y=7 → path y=8)
-    for (let y = 7; y <= 8; y++) {
-        m[y][4] = "path"   // descente devant shop
-        m[y][15] = "path"  // descente devant casino
-    }
-    for (let y = 8; y <= 14; y++) {
-        m[y][4] = "path"   // descente vers infirmerie
-        m[y][15] = "path"  // descente vers arène
-    }
-    // Quelques fleurs déco
-    m[2][2] = "flowerY"
-    m[2][17] = "flowerY"
-    m[13][2] = "flowerY"
-    m[13][17] = "flowerY"
+
     return m
 }
 
+// === Bâtiments de Viridian City (positions mappées par l'user 2026-05-31) ==
+// Le visuel est dans viridian_full.png — ces définitions servent à :
+//   1. Bloquer le mouvement sur les murs du bâtiment
+//   2. Auto-générer les exits (warp porte → map intérieure)
 const TOWN_BUILDINGS: YellowBuilding[] = [
     {
-        id: "b_shop",
-        x: 3, y: 3, w: 4, h: 4,
-        doorX: 1, doorY: 3,
-        targetMapId: "yellow_shop",
+        // GYM : toit (33-38, 6) à (33-38, 8), porte (36, 10)
+        id: "b_arena",
+        x: 33, y: 6, w: 6, h: 4,        // footprint cols 33..38, rows 6..9
+        doorX: 3, doorY: 4,             // porte abs (36, 10) — devant le bâtiment
+        targetMapId: "yellow_arena",
         targetSpawnX: 4, targetSpawnY: 5,
-        displayName: "SHOP",
-        kind: "shop",
+        displayName: "GYM",
+        kind: "arena",
     },
     {
+        // MAISON NPC (placeholder casino) : toit (24-28, 16), porte (25, 18)
         id: "b_casino",
-        x: 14, y: 3, w: 4, h: 4,
-        doorX: 1, doorY: 3,
+        x: 24, y: 16, w: 5, h: 2,       // footprint cols 24..28, rows 16..17
+        doorX: 1, doorY: 2,             // porte abs (25, 18) — devant le bâtiment
         targetMapId: "yellow_casino",
         targetSpawnX: 4, targetSpawnY: 5,
-        displayName: "CASINO",
+        displayName: "MAISON",
         kind: "casino",
     },
     {
-        id: "b_infirmary",
-        x: 3, y: 10, w: 4, h: 4,
-        doorX: 1, doorY: 3,
-        targetMapId: "yellow_infirmary",
+        // MART : toit (34-37, 16), descend à (34-37, 19), porte (36, 19)
+        id: "b_shop",
+        x: 34, y: 16, w: 4, h: 4,       // footprint cols 34..37, rows 16..19
+        doorX: 2, doorY: 3,             // porte abs (36, 19) — dans le footprint (walkable)
+        targetMapId: "yellow_shop",
         targetSpawnX: 4, targetSpawnY: 5,
-        displayName: "INFIRMERIE",
-        kind: "infirmary",
+        displayName: "MART",
+        kind: "shop",
     },
     {
-        id: "b_arena",
-        x: 14, y: 10, w: 4, h: 4,
-        doorX: 1, doorY: 3,
-        targetMapId: "yellow_arena",
+        // PC Pokemon Center : (24-28, 20-26), porte (26, 26)
+        id: "b_infirmary",
+        x: 24, y: 20, w: 5, h: 7,       // footprint cols 24..28, rows 20..26
+        doorX: 2, doorY: 6,             // porte abs (26, 26) — dans le footprint (walkable)
+        targetMapId: "yellow_infirmary",
         targetSpawnX: 4, targetSpawnY: 5,
-        displayName: "ARÈNE",
-        kind: "arena",
+        displayName: "PC",
+        kind: "infirmary",
     },
 ]
 
@@ -274,14 +285,14 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
     [YELLOW_ENTRANCE_MAP_ID]: {
         id: YELLOW_ENTRANCE_MAP_ID,
         name: "VILLE JAUNE",
-        tiles: fillRect(VIRIDIAN_W, VIRIDIAN_H, "grass"), // tout walkable pour l'instant — collisions à câbler après
+        tiles: buildViridianCollisions(),
         width: VIRIDIAN_W,
         height: VIRIDIAN_H,
-        // Bâtiments désactivés : leurs façades sont déjà dans l'image, et leurs
-        // portes/intérieurs seront re-câblés une fois qu'on aura identifié leurs
-        // coords précises dans l'image.
-        // buildings: TOWN_BUILDINGS,
-        // exits: exitsFromBuildings(TOWN_BUILDINGS),
+        // Bâtiments visuellement déjà dans l'image. Le buildings array sert
+        // uniquement à : 1) bloquer le mouvement dans les façades, 2) générer
+        // les exits/warps via les positions de porte.
+        buildings: TOWN_BUILDINGS,
+        exits: exitsFromBuildings(TOWN_BUILDINGS),
         backgroundImage: "/yellow/sprites/viridian_full.png",
         backgroundImageWidth: 1360,
         backgroundImageHeight: 672,
