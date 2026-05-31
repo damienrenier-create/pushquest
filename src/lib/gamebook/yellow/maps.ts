@@ -161,8 +161,9 @@ function buildViridianCollisions(): TileType[][] {
     m[16][20] = "tree"  // petit panneau
     m[31][20] = "tree"  // panneau près passage
 
-    // === EAU (rows 26 ET 30 cols 11..16 — rows 27-29 walkable péninsule) ===
-    for (let x = 11; x <= 16; x++) { m[26][x] = "water"; m[30][x] = "water" }
+    // === EAU (rectangle plein cols 11..16, rows 26..30) ===
+    // User a précisé : "ce sont les mêmes tuiles" → toute la zone est de l'eau.
+    for (let y = 26; y <= 30; y++) for (let x = 11; x <= 16; x++) m[y][x] = "water"
 
     // === OVERRIDES walkable (À LA FIN pour effacer les blocages au besoin) ===
     // Petite zone herbe (6,15), (7,15)
