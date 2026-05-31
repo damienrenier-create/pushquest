@@ -174,10 +174,9 @@ function buildViridianCollisions(): TileType[][] {
     for (let y = 5; y <= 16; y++) m[y][8] = "grass"
     // Ligne herbe (0..8, 16)
     for (let x = 0; x <= 8; x++) m[16][x] = "grass"
-    // Row 17 walkable cols 0..23 (perce le forêt gauche)
-    for (let x = 0; x <= 23; x++) m[17][x] = "grass"
-    // Sand path west (0..8, 17..19) — déjà couvert par row 17 mais on garde 18-19
-    for (let y = 18; y <= 19; y++) for (let x = 0; x <= 8; x++) m[y][x] = "grass"
+    // Rows 17, 18, 19 walkable cols 0..22 (bande horizontale path/sand qui
+    // traverse la forêt gauche — user : "la ligne 17, 18 et 19 c'est pareil")
+    for (let y = 17; y <= 19; y++) for (let x = 0; x <= 22; x++) m[y][x] = "grass"
     // Sortie Route 1 sand (22..25, 35..39)
     for (let y = 35; y <= 39; y++) for (let x = 22; x <= 25; x++) m[y][x] = "grass"
     // Passage row 30 cols 20..22
