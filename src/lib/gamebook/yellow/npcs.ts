@@ -80,6 +80,24 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         ],
     },
 
+    // === ROUTE NORD : panneau placeholder ===
+    {
+        id: "y_route_nord_panneau",
+        name: "PANNEAU",
+        mapId: "yellow_route_nord",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🪧", color: "#8c6840" },
+        initialX: 7,
+        initialY: 8,
+        dialoguesAfter: [
+            "*Tu lis le panneau.*",
+            "ROUTE NORD",
+            "Bientôt : zone de Pokémon sauvages à capturer.",
+            "🚧 En construction — reviens plus tard !",
+        ],
+    },
+
     // === Intérieur ARÈNE ===
     {
         id: "y_arbitre",

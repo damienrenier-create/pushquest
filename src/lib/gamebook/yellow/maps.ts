@@ -304,6 +304,30 @@ function buildArenaInterior(): TileType[][] {
     return m
 }
 
+// === ROUTE NORD = future zone Pokémon (placeholder grass/trees) ==========
+// 15×12. Bordures d'arbres SAUF cols 5..9 row 11 (sortie sud vers Viridian).
+// Intérieur : herbe avec patches de grassTall pour faune sauvage future.
+// Le PNJ y_route_nord_panneau annonce que la vraie zone arrive bientôt.
+function buildNorthRoute(): TileType[][] {
+    const W = 15, H = 12
+    const m: TileType[][] = []
+    for (let y = 0; y < H; y++) {
+        const row: TileType[] = []
+        for (let x = 0; x < W; x++) row.push("grass")
+        m.push(row)
+    }
+    // Bordures trees
+    for (let x = 0; x < W; x++) { m[0][x] = "tree"; m[H - 1][x] = "tree" }
+    for (let y = 0; y < H; y++) { m[y][0] = "tree"; m[y][W - 1] = "tree" }
+    // Sortie sud cols 5..9 (gap dans la bordure) — restent en grass walkable
+    for (let x = 5; x <= 9; x++) m[H - 1][x] = "grass"
+    // Patches grassTall pour ambiance "wild grass"
+    for (let y = 3; y <= 5; y++) for (let x = 2; x <= 4; x++) m[y][x] = "grassTall"
+    for (let y = 5; y <= 7; y++) for (let x = 9; x <= 12; x++) m[y][x] = "grassTall"
+    for (let y = 8; y <= 9; y++) for (let x = 3; x <= 5; x++) m[y][x] = "grassTall"
+    return m
+}
+
 // === Helpers warp =======================================================
 
 /** Position absolue de la porte d'un bâtiment. */
@@ -368,7 +392,17 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         // uniquement à : 1) bloquer le mouvement dans les façades, 2) générer
         // les exits/warps via les positions de porte.
         buildings: TOWN_BUILDINGS,
-        exits: exitsFromBuildings(TOWN_BUILDINGS),
+        exits: [
+            ...exitsFromBuildings(TOWN_BUILDINGS),
+            // Sortie nord (19-23, 0) → Route Nord (futur monde Pokémon)
+            ...[19, 20, 21, 22, 23].map((col) => ({
+                x: col,
+                y: 0,
+                targetMapId: "yellow_route_nord",
+                targetSpawnX: 7,   // centre-sud Route Nord (col 7 sur 15)
+                targetSpawnY: 10,  // juste au-dessus de la bordure sud (row 11)
+            })),
+        ],
         backgroundImage: "/yellow/sprites/viridian_full.png",
         backgroundImageWidth: 1360,
         backgroundImageHeight: 672,
@@ -407,6 +441,21 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         width: 9,
         height: 7,
         exits: [returnExit("yellow_arena", 4, 6)],
+    },
+    yellow_route_nord: {
+        id: "yellow_route_nord",
+        name: "ROUTE NORD",
+        tiles: buildNorthRoute(),
+        width: 15,
+        height: 12,
+        // Sortie sud (cols 5..9, row 11) → retour Viridian sur col 21 row 1
+        exits: [5, 6, 7, 8, 9].map((col) => ({
+            x: col,
+            y: 11,
+            targetMapId: YELLOW_ENTRANCE_MAP_ID,
+            targetSpawnX: 21,  // centre de la sortie nord Viridian (cols 19..23)
+            targetSpawnY: 1,   // 1 row sous la bordure pour éviter re-warp
+        })),
     },
 }
 
