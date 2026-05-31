@@ -378,41 +378,6 @@ export default function MapView() {
                 {map.name} ({player.posX},{player.posY}) {player.direction.toUpperCase()}
             </div>
 
-            {/* DEBUG : 6 frames de chris_color.png en OVERLAY flottant au-dessus
-                de l'écran pour ne pas réduire le viewport. À retirer après mapping. */}
-            <div style={{
-                position: "absolute",
-                left: "50%",
-                bottom: 18,
-                transform: "translateX(-50%)",
-                display: "flex",
-                gap: 4,
-                padding: "4px 6px",
-                background: "rgba(0,0,0,0.88)",
-                color: "#fff",
-                fontSize: 9,
-                fontWeight: "bold",
-                borderRadius: 4,
-                zIndex: 20,
-                pointerEvents: "none",
-            }}>
-                {[0, 1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} style={{ textAlign: "center" }}>
-                        <div style={{
-                            width: 28, height: 28,
-                            backgroundColor: "#444",
-                            backgroundImage: "url(/yellow/sprites/chris_color.png?v=3)",
-                            backgroundRepeat: "no-repeat",
-                            backgroundSize: "100% auto",
-                            backgroundPosition: `0 ${(i / 5) * 100}%`,
-                            imageRendering: "pixelated",
-                            border: "1px solid #888",
-                        }} />
-                        <div style={{ marginTop: 1, fontSize: 8 }}>{i}</div>
-                    </div>
-                ))}
-            </div>
-
             <DialogueBox />
         </div>
     )
@@ -476,20 +441,40 @@ function NpcSprite({
     )
 }
 
-// === Joueur : vrai sprite chris_color.png de Pokémon Crystal avec anim ===
+// === Joueur : sprite Red (Pokémon FireRed/LeafGreen GBA) ================
 //
-// chris_color.png est 16x96 = 6 frames de 16x16 empilées verticalement :
-//   frame 0 (y=0)   : face DOWN, debout
-//   frame 1 (y=16)  : face DOWN, pas
-//   frame 2 (y=32)  : face UP,   debout
-//   frame 3 (y=48)  : face UP,   pas
-//   frame 4 (y=64)  : face RIGHT, debout (flip horizontal pour LEFT)
-//   frame 5 (y=80)  : face RIGHT, pas    (flip horizontal pour LEFT)
+// firered_player.png : sprite sheet officiel rippé, 673x638 px, fond orange
+// rgb(255,127,39) transparent. Layout des sprites de marche :
+//   - DOWN  : y=55,  x=[8, 25, 42]  (3 frames : idle + 2 step)
+//   - UP    : y=88,  x=[8, 25, 42]
+//   - LEFT  : y=121, x=[8, 25, 42]
+//   - RIGHT : y=154, x=[8, 25, 42]
+//   Chaque sprite : 16x16 px, séparation 1 px entre cellules.
 //
-// stepFrame du store alterne 0/1 à chaque mouvement → anime les jambes.
+// On utilise les frames 0 et 1 pour l'animation (idle + step) — la frame 2
+// (autre pas) reste à câbler quand on ajoutera un timer "isMoving".
 
-const DIRECTION_BASE_FRAME: Record<string, number> = {
-    down: 0, up: 2, right: 4, left: 4,
+const SHEET_W = 673
+const SHEET_H = 638
+const SPRITE_SIZE = 16
+const SHEET_COLS = SHEET_W / SPRITE_SIZE       // 42.0625
+const SHEET_ROWS = SHEET_H / SPRITE_SIZE       // 39.875
+
+interface SpriteCell { x: number; y: number }
+
+const FIRERED_PLAYER: Record<string, [SpriteCell, SpriteCell]> = {
+    down:  [{ x: 8,  y: 55  }, { x: 25, y: 55  }],
+    up:    [{ x: 8,  y: 88  }, { x: 25, y: 88  }],
+    left:  [{ x: 8,  y: 121 }, { x: 25, y: 121 }],
+    right: [{ x: 8,  y: 154 }, { x: 25, y: 154 }],
+}
+
+function sheetBgPosition(cell: SpriteCell): string {
+    // Formule : pour montrer le pixel (cell.x, cell.y) au top-left de l'élément
+    // avec backgroundSize en % du conteneur, on calcule la position en % de l'overflow.
+    const posX = (cell.x / SPRITE_SIZE) / (SHEET_COLS - 1) * 100
+    const posY = (cell.y / SPRITE_SIZE) / (SHEET_ROWS - 1) * 100
+    return `${posX}% ${posY}%`
 }
 
 function PlayerSprite({
@@ -500,22 +485,18 @@ function PlayerSprite({
     screenPos: (x: number, y: number, w?: number, h?: number) => React.CSSProperties
 }) {
     const stepFrame = useGameStore((s) => s.stepFrame)
-    const base = DIRECTION_BASE_FRAME[player.direction] ?? 0
-    const frameIndex = base + stepFrame // 0..5
-    // 6 frames total → position-y va de 0% à 100% par pas de 20%
-    const bgPosY = (frameIndex / 5) * 100
-    const flip = player.direction === "left" ? "scaleX(-1)" : "none"
+    const cells = FIRERED_PLAYER[player.direction] ?? FIRERED_PLAYER.down
+    const cell = cells[stepFrame]
 
     return (
         <div style={{
             position: "absolute",
             ...screenPos(player.posX, player.posY),
-            backgroundImage: "url(/yellow/sprites/chris_color.png?v=3)",
+            backgroundImage: "url(/yellow/sprites/firered_player_t.png?v=1)",
             backgroundRepeat: "no-repeat",
-            backgroundSize: "100% auto",
-            backgroundPosition: `0 ${bgPosY}%`,
+            backgroundSize: `${SHEET_COLS * 100}% ${SHEET_ROWS * 100}%`,
+            backgroundPosition: sheetBgPosition(cell),
             imageRendering: "pixelated",
-            transform: flip,
             zIndex: 3,
             pointerEvents: "none",
         }} />
