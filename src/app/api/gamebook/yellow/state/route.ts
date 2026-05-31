@@ -32,11 +32,11 @@ import type { YellowMapData } from "@/lib/gamebook/yellow/maps"
 export const dynamic = "force-dynamic"
 
 // Spawn par défaut côté serveur (doit rester en phase avec store/gameStore.ts).
-// VILLE JAUNE = Viridian City 22×21 : entrée sud (Route 1), face nord.
+// VILLE JAUNE = Viridian City 45×40 (scale natif), entrée sud centre-bas.
 const DEFAULT_PLAYER = {
     mapId: YELLOW_ENTRANCE_MAP_ID,
-    posX: 11,
-    posY: 18,
+    posX: 22,
+    posY: 38,
     direction: "up" as const,
 }
 

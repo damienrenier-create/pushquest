@@ -63,9 +63,9 @@ function scheduleSave(player: PlayerState) {
     }, 3000)
 }
 
-// Spawn par défaut : VILLE JAUNE = Viridian City 22×21, entrée sud (Route 1).
-// Le joueur arrive du bas et peut explorer la ville.
-const DEFAULT_SPAWN = { x: 11, y: 18 }
+// Spawn par défaut : VILLE JAUNE = Viridian City 45×40 (scale natif FireRed),
+// entrée sud (Route 1) centre-bas pour explorer la ville.
+const DEFAULT_SPAWN = { x: 22, y: 38 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
     player: createInitialPlayer(YELLOW_ENTRANCE_MAP_ID, DEFAULT_SPAWN.x, DEFAULT_SPAWN.y, "up"),

@@ -59,8 +59,12 @@ export interface YellowMapData extends MapData {
     backgroundImageWidth?: number
     /** Hauteur native de l'image en pixels */
     backgroundImageHeight?: number
-    /** Combien de pixels de l'image natifs = 1 tile du jeu (ex: 32 pour image 2x upscalée) */
+    /** Combien de pixels de l'image natifs = 1 tile du jeu (ex: 16 pour natif, 32 pour 2x) */
     backgroundImageTileSize?: number
+    /** Pixel x de l'image qui correspond à la case (0, 0) de la map (skip headers/bordures) */
+    backgroundImageOriginX?: number
+    /** Pixel y de l'image qui correspond à la case (0, 0) de la map (skip headers/bordures) */
+    backgroundImageOriginY?: number
 }
 
 // === Helpers ============================================================
@@ -255,13 +259,14 @@ function returnExit(targetInteriorMapId: string, doorMatX: number, doorMatY: num
 }
 
 // === VILLE JAUNE = Viridian City (FireRed) ==============================
-// viridian_full.png : 1360x672 px. Viridian City occupe les ~720 premiers
-// pixels en largeur, le reste = intérieurs (rendus séparément plus tard).
-// Image upscalée 2x → 1 metatile FireRed = 32 px image. Viridian City =
-// 22 tiles wide × 21 tiles tall (= 704 × 672 px image affichés).
-const VIRIDIAN_W = 22
-const VIRIDIAN_H = 21
-const VIRIDIAN_IMAGE_TILE_SIZE = 32  // px par tile dans l'image
+// viridian_full.png : 1360x672 px à l'échelle NATIVE FireRed (16 px = 1 tile).
+// Total image = 85 × 42 tiles. Viridian City occupe ~ x=0..720 = 45 tiles wide.
+// Hauteur : 672 px = 42 tiles, dont ~2 tiles de bande blanche en haut
+// (titre "Viridian City" Spriters Resource) → on crop pour avoir 40 tiles.
+const VIRIDIAN_W = 45
+const VIRIDIAN_H = 40
+const VIRIDIAN_IMAGE_TILE_SIZE = 16  // px natif FireRed par tile dans l'image
+const VIRIDIAN_HEADER_TILES = 2      // tiles de header à skip en haut
 
 export const YELLOW_MAPS: Record<string, YellowMapData> = {
     [YELLOW_ENTRANCE_MAP_ID]: {
@@ -279,6 +284,8 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImageWidth: 1360,
         backgroundImageHeight: 672,
         backgroundImageTileSize: VIRIDIAN_IMAGE_TILE_SIZE,
+        backgroundImageOriginX: 0,
+        backgroundImageOriginY: VIRIDIAN_HEADER_TILES * VIRIDIAN_IMAGE_TILE_SIZE, // skip 32 px de header
     },
     yellow_shop: {
         id: "yellow_shop",

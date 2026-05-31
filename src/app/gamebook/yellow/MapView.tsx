@@ -81,8 +81,11 @@ const BUILDING_WINDOW_OUTLINE = "#5c3818"
 
 // === Viewport ==========================================================
 
-const VIEWPORT_W = 10
-const VIEWPORT_H = 9
+// v2 — Viewport 15×10 (FireRed natif) au lieu de 10×9 GBC. Avec ce ratio
+// chaque tile est plus petite à l'écran → le perso paraît moins gros et on
+// voit plus de monde d'un coup, comme dans le vrai FireRed.
+const VIEWPORT_W = 15
+const VIEWPORT_H = 10
 const TILE_W_PCT = 100 / VIEWPORT_W
 const TILE_H_PCT = 100 / VIEWPORT_H
 
@@ -357,20 +360,49 @@ export default function MapView() {
                     const imageTilesH = (map.backgroundImageHeight ?? 0) / tileSize
                     const bgSizeX = (imageTilesW / map.width) * 100
                     const bgSizeY = (imageTilesH / map.height) * 100
+                    // Origin = pixel image qui correspond à la case (0,0) de la map → permet
+                    // de cropper headers/bordures Spriters Resource.
+                    const originXTiles = (map.backgroundImageOriginX ?? 0) / tileSize
+                    const originYTiles = (map.backgroundImageOriginY ?? 0) / tileSize
+                    const overflowXTiles = imageTilesW - map.width
+                    const overflowYTiles = imageTilesH - map.height
+                    const bgPosX = overflowXTiles > 0 ? (originXTiles / overflowXTiles) * 100 : 0
+                    const bgPosY = overflowYTiles > 0 ? (originYTiles / overflowYTiles) * 100 : 0
                     return (
                         <div style={{
                             position: "absolute",
                             ...screenPos(0, 0, map.width, map.height),
-                            backgroundImage: `url(${map.backgroundImage}?v=1)`,
+                            backgroundImage: `url(${map.backgroundImage}?v=2)`,
                             backgroundRepeat: "no-repeat",
                             backgroundSize: `${bgSizeX}% ${bgSizeY}%`,
-                            backgroundPosition: "0 0",
+                            backgroundPosition: `${bgPosX}% ${bgPosY}%`,
                             imageRendering: "pixelated",
                             zIndex: 0,
                             pointerEvents: "none",
                         }} />
                     )
                 })()}
+
+                {/* DEBUG : grille coords sur chaque case (à retirer quand collisions OK) */}
+                {hasBgImage && Array.from({ length: map.height }).flatMap((_, y) =>
+                    Array.from({ length: map.width }).map((__, x) => (
+                        <div key={`g-${x}-${y}`} style={{
+                            position: "absolute",
+                            ...screenPos(x, y),
+                            border: "1px solid rgba(255,0,0,0.4)",
+                            color: "rgba(255,255,255,0.95)",
+                            background: "rgba(0,0,0,0.3)",
+                            fontSize: 7,
+                            fontFamily: "monospace",
+                            fontWeight: "bold",
+                            lineHeight: 1,
+                            padding: 1,
+                            zIndex: 1,
+                            pointerEvents: "none",
+                            boxSizing: "border-box",
+                        }}>{x},{y}</div>
+                    )),
+                )}
 
                 {!hasBgImage && map.tiles.flatMap((row, y) =>
                     row.map((tile, x) => (

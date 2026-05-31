@@ -179,8 +179,10 @@ const screenFrameStyle: React.CSSProperties = {
 }
 
 const screenStyle: React.CSSProperties = {
-    aspectRatio: "10 / 9",
-    background: "#1a1612", // void noir-brun (style Johto, écran transparent LCD)
+    // v2 — Aspect 3:2 (= 15:10 = GBA FireRed natif) au lieu de 10:9 GBC,
+    // pour que les tiles soient carrées avec le viewport 15×10 du MapView.
+    aspectRatio: "3 / 2",
+    background: "#1a1612", // void noir-brun
     imageRendering: "pixelated",
     overflow: "hidden",
     position: "relative",
