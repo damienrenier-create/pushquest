@@ -121,12 +121,14 @@ function buildViridianCollisions(): TileType[][] {
     for (let y = 20; y <= 33; y++) for (let x = 0; x <= 6; x++) m[y][x] = "tree"
     for (let y = 34; y <= 39; y++) for (let x = 0; x <= 5; x++) m[y][x] = "tree"
 
-    // === FORÊTS (5 zones) ===
+    // === FORÊTS (5 zones + bordure est) ===
     for (let y = 13; y <= 39; y++) for (let x = 6; x <= 13; x++) m[y][x] = "tree"   // gauche
     for (let y = 35; y <= 39; y++) for (let x = 14; x <= 21; x++) m[y][x] = "tree"  // centre-bas
     for (let y = 35; y <= 39; y++) for (let x = 26; x <= 43; x++) m[y][x] = "tree"  // bas-droite
     for (let y = 0; y <= 3; y++) for (let x = 24; x <= 43; x++) m[y][x] = "tree"    // haut-droite
     for (let x = 24; x <= 27; x++) m[4][x] = "tree"                                 // petits sapins
+    // Bordure est cols 42-43 toutes rows (sapins infranchissables)
+    for (let y = 0; y < VIRIDIAN_H; y++) { m[y][42] = "tree"; m[y][43] = "tree" }
 
     // === BLOC HAUT (rectangle plein 8-18, 0-4) ===
     for (let y = 0; y <= 4; y++) for (let x = 8; x <= 18; x++) m[y][x] = "tree"
