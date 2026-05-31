@@ -378,6 +378,36 @@ export default function MapView() {
                 {map.name} ({player.posX},{player.posY}) {player.direction.toUpperCase()}
             </div>
 
+            {/* DEBUG : affiche les 6 frames de chris_color.png pour identifier l'ordre.
+                À retirer une fois le mapping correct. */}
+            <div style={{
+                display: "flex",
+                gap: 8,
+                justifyContent: "center",
+                padding: "8px 4px",
+                background: "#222",
+                color: "#fff",
+                fontSize: 11,
+                fontWeight: "bold",
+                flexShrink: 0,
+            }}>
+                {[0, 1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} style={{ textAlign: "center" }}>
+                        <div style={{
+                            width: 48, height: 48,
+                            backgroundColor: "#444",
+                            backgroundImage: "url(/yellow/sprites/chris_color.png)",
+                            backgroundRepeat: "no-repeat",
+                            backgroundSize: "100% auto",
+                            backgroundPosition: `0 ${(i / 5) * 100}%`,
+                            imageRendering: "pixelated",
+                            border: "1px solid #888",
+                        }} />
+                        <div style={{ marginTop: 2 }}>{i}</div>
+                    </div>
+                ))}
+            </div>
+
             <DialogueBox />
         </div>
     )
