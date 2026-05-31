@@ -443,22 +443,25 @@ function NpcSprite({
 
 // === Joueur : sprite Red (Pokémon FireRed/LeafGreen GBA) ================
 //
-// firered_player.png : sprite sheet officiel rippé, 673x638 px, fond orange
-// rgb(255,127,39) transparent. Layout des sprites de marche :
+// firered_player_t.png : 673x638 px, fond orange rgb(255,127,39) déjà rendu
+// transparent. Layout des sprites de marche (cellules 16w × 32h) :
 //   - DOWN  : y=55,  x=[8, 25, 42]  (3 frames : idle + 2 step)
 //   - UP    : y=88,  x=[8, 25, 42]
 //   - LEFT  : y=121, x=[8, 25, 42]
 //   - RIGHT : y=154, x=[8, 25, 42]
-//   Chaque sprite : 16x16 px, séparation 1 px entre cellules.
+//   Espacement vertical entre rangées : 33 px (32 sprite + 1 séparateur).
 //
-// On utilise les frames 0 et 1 pour l'animation (idle + step) — la frame 2
-// (autre pas) reste à câbler quand on ajoutera un timer "isMoving".
+// Convention Pokémon : le sprite déborde vers le HAUT du tile. Les pieds
+// sont sur le tile du joueur (player.posY), la tête sur le tile du dessus
+// (player.posY - 1). On rend donc l'élément 1 tile wide × 2 tile tall,
+// avec son top à (posY - 1).
 
 const SHEET_W = 673
 const SHEET_H = 638
-const SPRITE_SIZE = 16
-const SHEET_COLS = SHEET_W / SPRITE_SIZE       // 42.0625
-const SHEET_ROWS = SHEET_H / SPRITE_SIZE       // 39.875
+const SPRITE_W = 16
+const SPRITE_H = 32
+const SHEET_COLS = SHEET_W / SPRITE_W       // 42.0625
+const SHEET_ROWS = SHEET_H / SPRITE_H       // 19.9375
 
 interface SpriteCell { x: number; y: number }
 
@@ -470,10 +473,8 @@ const FIRERED_PLAYER: Record<string, [SpriteCell, SpriteCell]> = {
 }
 
 function sheetBgPosition(cell: SpriteCell): string {
-    // Formule : pour montrer le pixel (cell.x, cell.y) au top-left de l'élément
-    // avec backgroundSize en % du conteneur, on calcule la position en % de l'overflow.
-    const posX = (cell.x / SPRITE_SIZE) / (SHEET_COLS - 1) * 100
-    const posY = (cell.y / SPRITE_SIZE) / (SHEET_ROWS - 1) * 100
+    const posX = (cell.x / SPRITE_W) / (SHEET_COLS - 1) * 100
+    const posY = (cell.y / SPRITE_H) / (SHEET_ROWS - 1) * 100
     return `${posX}% ${posY}%`
 }
 
@@ -491,8 +492,10 @@ function PlayerSprite({
     return (
         <div style={{
             position: "absolute",
-            ...screenPos(player.posX, player.posY),
-            backgroundImage: "url(/yellow/sprites/firered_player_t.png?v=1)",
+            // Élément 1 tile wide × 2 tile tall, top à (posY - 1) pour que
+            // le bas s'aligne avec le tile du joueur (= les pieds).
+            ...screenPos(player.posX, player.posY - 1, 1, 2),
+            backgroundImage: "url(/yellow/sprites/firered_player_t.png?v=2)",
             backgroundRepeat: "no-repeat",
             backgroundSize: `${SHEET_COLS * 100}% ${SHEET_ROWS * 100}%`,
             backgroundPosition: sheetBgPosition(cell),
