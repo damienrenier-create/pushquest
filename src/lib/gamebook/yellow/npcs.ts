@@ -88,8 +88,8 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         kind: "static",
         interaction: "interactive",
         sprite: { emoji: "🪧", color: "#8c6840" },
-        initialX: 7,
-        initialY: 8,
+        initialX: 21,
+        initialY: 36,
         dialoguesAfter: [
             "*Tu lis le panneau.*",
             "ROUTE NORD",
