@@ -344,18 +344,41 @@ export default function MapView() {
         height: `${h * TILE_H_PCT}%`,
     })
 
+    // Si la map a un backgroundImage défini, on rend l'image entière à la place
+    // des tiles CSS individuelles (cas Viridian City pré-assemblée).
+    const hasBgImage = !!map.backgroundImage && !!map.backgroundImageWidth && !!map.backgroundImageHeight
+
     return (
         <div style={containerStyle}>
             <div style={viewportStyle}>
-                {map.tiles.flatMap((row, y) =>
+                {hasBgImage && (() => {
+                    const tileSize = map.backgroundImageTileSize ?? 16
+                    const imageTilesW = (map.backgroundImageWidth ?? 0) / tileSize
+                    const imageTilesH = (map.backgroundImageHeight ?? 0) / tileSize
+                    const bgSizeX = (imageTilesW / map.width) * 100
+                    const bgSizeY = (imageTilesH / map.height) * 100
+                    return (
+                        <div style={{
+                            position: "absolute",
+                            ...screenPos(0, 0, map.width, map.height),
+                            backgroundImage: `url(${map.backgroundImage}?v=1)`,
+                            backgroundRepeat: "no-repeat",
+                            backgroundSize: `${bgSizeX}% ${bgSizeY}%`,
+                            backgroundPosition: "0 0",
+                            imageRendering: "pixelated",
+                            zIndex: 0,
+                            pointerEvents: "none",
+                        }} />
+                    )
+                })()}
+
+                {!hasBgImage && map.tiles.flatMap((row, y) =>
                     row.map((tile, x) => (
                         <div
                             key={`t-${x}-${y}`}
                             style={{
                                 position: "absolute",
                                 ...screenPos(x, y),
-                                // +1px sur width/height pour overlapper le tile voisin
-                                // et masquer les gaps de subpixel rendering CSS
                                 width: `calc(${TILE_W_PCT}% + 1px)`,
                                 height: `calc(${TILE_H_PCT}% + 1px)`,
                                 background: tileColor(tile),
@@ -367,7 +390,7 @@ export default function MapView() {
                     )),
                 )}
 
-                {buildings.map((b) => (
+                {!hasBgImage && buildings.map((b) => (
                     <BuildingSprite key={b.id} building={b} screenPos={screenPos} />
                 ))}
 

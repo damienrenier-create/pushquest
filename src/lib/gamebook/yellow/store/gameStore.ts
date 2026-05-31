@@ -63,9 +63,9 @@ function scheduleSave(player: PlayerState) {
     }, 3000)
 }
 
-// Spawn par défaut : centre-sud de la VILLE JAUNE (20×16), face nord.
-// L'Architecte est au croisement des paths (10, 7). Le joueur monte pour le rencontrer.
-const DEFAULT_SPAWN = { x: 10, y: 13 }
+// Spawn par défaut : VILLE JAUNE = Viridian City 22×21, entrée sud (Route 1).
+// Le joueur arrive du bas et peut explorer la ville.
+const DEFAULT_SPAWN = { x: 11, y: 18 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
     player: createInitialPlayer(YELLOW_ENTRANCE_MAP_ID, DEFAULT_SPAWN.x, DEFAULT_SPAWN.y, "up"),

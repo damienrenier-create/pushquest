@@ -52,6 +52,15 @@ export interface YellowMapData extends MapData {
     exits?: YellowExit[]
     /** Couleur dominante de la map ("ground" — sol par défaut) */
     groundTile?: TileType
+    /** v2 — Image PNG utilisée comme fond complet de la map (au lieu du rendu
+     *  par tiles CSS). Pratique pour des scènes pré-assemblées Spriters Resource. */
+    backgroundImage?: string
+    /** Largeur native de l'image en pixels (ex: 1360 pour viridian_full) */
+    backgroundImageWidth?: number
+    /** Hauteur native de l'image en pixels */
+    backgroundImageHeight?: number
+    /** Combien de pixels de l'image natifs = 1 tile du jeu (ex: 32 pour image 2x upscalée) */
+    backgroundImageTileSize?: number
 }
 
 // === Helpers ============================================================
@@ -245,15 +254,31 @@ function returnExit(targetInteriorMapId: string, doorMatX: number, doorMatY: num
     }
 }
 
+// === VILLE JAUNE = Viridian City (FireRed) ==============================
+// viridian_full.png : 1360x672 px. Viridian City occupe les ~720 premiers
+// pixels en largeur, le reste = intérieurs (rendus séparément plus tard).
+// Image upscalée 2x → 1 metatile FireRed = 32 px image. Viridian City =
+// 22 tiles wide × 21 tiles tall (= 704 × 672 px image affichés).
+const VIRIDIAN_W = 22
+const VIRIDIAN_H = 21
+const VIRIDIAN_IMAGE_TILE_SIZE = 32  // px par tile dans l'image
+
 export const YELLOW_MAPS: Record<string, YellowMapData> = {
     [YELLOW_ENTRANCE_MAP_ID]: {
         id: YELLOW_ENTRANCE_MAP_ID,
         name: "VILLE JAUNE",
-        tiles: buildYellowTown(),
-        width: TOWN_W,
-        height: TOWN_H,
-        buildings: TOWN_BUILDINGS,
-        exits: exitsFromBuildings(TOWN_BUILDINGS),
+        tiles: fillRect(VIRIDIAN_W, VIRIDIAN_H, "grass"), // tout walkable pour l'instant — collisions à câbler après
+        width: VIRIDIAN_W,
+        height: VIRIDIAN_H,
+        // Bâtiments désactivés : leurs façades sont déjà dans l'image, et leurs
+        // portes/intérieurs seront re-câblés une fois qu'on aura identifié leurs
+        // coords précises dans l'image.
+        // buildings: TOWN_BUILDINGS,
+        // exits: exitsFromBuildings(TOWN_BUILDINGS),
+        backgroundImage: "/yellow/sprites/viridian_full.png",
+        backgroundImageWidth: 1360,
+        backgroundImageHeight: 672,
+        backgroundImageTileSize: VIRIDIAN_IMAGE_TILE_SIZE,
     },
     yellow_shop: {
         id: "yellow_shop",
