@@ -378,32 +378,37 @@ export default function MapView() {
                 {map.name} ({player.posX},{player.posY}) {player.direction.toUpperCase()}
             </div>
 
-            {/* DEBUG : affiche les 6 frames de chris_color.png pour identifier l'ordre.
-                À retirer une fois le mapping correct. */}
+            {/* DEBUG : 6 frames de chris_color.png en OVERLAY flottant au-dessus
+                de l'écran pour ne pas réduire le viewport. À retirer après mapping. */}
             <div style={{
+                position: "absolute",
+                left: "50%",
+                bottom: 18,
+                transform: "translateX(-50%)",
                 display: "flex",
-                gap: 8,
-                justifyContent: "center",
-                padding: "8px 4px",
-                background: "#222",
+                gap: 4,
+                padding: "4px 6px",
+                background: "rgba(0,0,0,0.88)",
                 color: "#fff",
-                fontSize: 11,
+                fontSize: 9,
                 fontWeight: "bold",
-                flexShrink: 0,
+                borderRadius: 4,
+                zIndex: 20,
+                pointerEvents: "none",
             }}>
                 {[0, 1, 2, 3, 4, 5].map((i) => (
                     <div key={i} style={{ textAlign: "center" }}>
                         <div style={{
-                            width: 48, height: 48,
+                            width: 28, height: 28,
                             backgroundColor: "#444",
-                            backgroundImage: "url(/yellow/sprites/chris_color.png)",
+                            backgroundImage: "url(/yellow/sprites/chris_color.png?v=3)",
                             backgroundRepeat: "no-repeat",
                             backgroundSize: "100% auto",
                             backgroundPosition: `0 ${(i / 5) * 100}%`,
                             imageRendering: "pixelated",
                             border: "1px solid #888",
                         }} />
-                        <div style={{ marginTop: 2 }}>{i}</div>
+                        <div style={{ marginTop: 1, fontSize: 8 }}>{i}</div>
                     </div>
                 ))}
             </div>
@@ -418,10 +423,10 @@ export default function MapView() {
 const NPC_SPRITES: Record<string, { url: string; frames: number } | null> = {
     // Architecte : pas de sprite spécifique, on garde l'emoji
     y_architecte: null,
-    y_vendeur: { url: "/yellow/sprites/npc_clerk_color.png", frames: 6 },
-    y_croupier: { url: "/yellow/sprites/kris_color.png", frames: 6 },
-    y_medecin: { url: "/yellow/sprites/npc_nurse_color.png", frames: 3 },
-    y_arbitre: { url: "/yellow/sprites/npc_black_belt_color.png", frames: 6 },
+    y_vendeur: { url: "/yellow/sprites/npc_clerk_color.png?v=3", frames: 6 },
+    y_croupier: { url: "/yellow/sprites/kris_color.png?v=3", frames: 6 },
+    y_medecin: { url: "/yellow/sprites/npc_nurse_color.png?v=3", frames: 3 },
+    y_arbitre: { url: "/yellow/sprites/npc_black_belt_color.png?v=3", frames: 6 },
 }
 
 function NpcSprite({
@@ -505,7 +510,7 @@ function PlayerSprite({
         <div style={{
             position: "absolute",
             ...screenPos(player.posX, player.posY),
-            backgroundImage: "url(/yellow/sprites/chris_color.png)",
+            backgroundImage: "url(/yellow/sprites/chris_color.png?v=3)",
             backgroundRepeat: "no-repeat",
             backgroundSize: "100% auto",
             backgroundPosition: `0 ${bgPosY}%`,
