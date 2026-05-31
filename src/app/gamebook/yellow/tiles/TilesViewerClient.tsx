@@ -89,17 +89,35 @@ function SheetView({ sheet }: { sheet: SheetMeta }) {
                         textAlign: "right",
                     }}>{r}</span>
                 ))}
-                {/* image + grille */}
+                {/* image + grille + coords dans CHAQUE cellule */}
                 <div style={{
                     position: "relative",
                     width: sheet.w * SCALE,
                     height: sheet.h * SCALE,
-                    backgroundImage: `url(${sheet.url}?v=1)`,
+                    backgroundImage: `url(${sheet.url}?v=2)`,
                     backgroundSize: `${sheet.w * SCALE}px ${sheet.h * SCALE}px`,
                     backgroundRepeat: "no-repeat",
                     imageRendering: "pixelated",
                     backgroundColor: "#222",
                 }}>
+                    {/* coord badge dans chaque cellule (col,row) */}
+                    {Array.from({ length: rows }).flatMap((_, r) =>
+                        Array.from({ length: cols }).map((__, c) => (
+                            <span key={`coord-${c}-${r}`} style={{
+                                position: "absolute",
+                                left: c * TILE_DISPLAY + 2,
+                                top: r * TILE_DISPLAY + 1,
+                                color: "#fff",
+                                background: "rgba(0,0,0,0.75)",
+                                padding: "0 3px",
+                                fontSize: 10,
+                                fontFamily: "monospace",
+                                lineHeight: 1.3,
+                                pointerEvents: "none",
+                                fontWeight: "bold",
+                            }}>{c},{r}</span>
+                        )),
+                    )}
                     {/* grille verticale */}
                     {Array.from({ length: cols + 1 }).map((_, c) => (
                         <span key={`vg-${c}`} style={{
@@ -108,7 +126,7 @@ function SheetView({ sheet }: { sheet: SheetMeta }) {
                             top: 0,
                             width: 1,
                             height: sheet.h * SCALE,
-                            background: "rgba(255,40,40,0.7)",
+                            background: "rgba(255,40,40,0.5)",
                             pointerEvents: "none",
                         }} />
                     ))}
@@ -120,7 +138,7 @@ function SheetView({ sheet }: { sheet: SheetMeta }) {
                             top: r * TILE_DISPLAY,
                             width: sheet.w * SCALE,
                             height: 1,
-                            background: "rgba(255,40,40,0.7)",
+                            background: "rgba(255,40,40,0.5)",
                             pointerEvents: "none",
                         }} />
                     ))}
