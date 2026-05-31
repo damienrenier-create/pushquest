@@ -693,18 +693,20 @@ function buildLasagnasVegas(): TileType[][] {
     // Connexion verticale : 2 cases au centre vertical (x=11,12) entre trottoirs
     // (déjà couvert par le path horizontal aux y=10 et y=15)
 
-    // === Route 4 voies y=11..14, avec passage piéton x=11,12 (cases path safe) ===
-    // Les tiles "road" sont décoratives ; les voitures seront animées côté client.
-    // Le passage piéton (x=11,12, y=11..14) reste path → pas d'écrasement.
+    // === Hautes herbes décoratives y=11..14 (ex-route 4 voies, virée v4.x) ===
+    // Avant : route avec risque d'écrasement 15% par case (sauf casquette flic).
+    // Comme les voitures n'ont jamais été animées côté client et que la mécanique
+    // était plus punitive qu'amusante, on remplace par une bande de hautes herbes
+    // style route Pokémon (grassTall purement décoratif — aucun trigger ici).
+    // Quelques fleurs jaunes/rouges scattered pour casser la monotonie.
     for (let y = 11; y <= 14; y++) {
         for (let x = 1; x < LASAGNAS_W - 1; x++) {
-            if (x === 11 || x === 12) {
-                m[y][x] = "path"  // passage piéton safe
-            } else {
-                m[y][x] = "road"
-            }
+            m[y][x] = "grassTall"
         }
     }
+    // Fleurs décoratives dans la bande d'herbes
+    m[11][3] = "flowerY"; m[11][9] = "flowerR"; m[11][16] = "flowerY"
+    m[14][6] = "flowerR"; m[14][13] = "flowerY"; m[14][20] = "flowerR"
 
     // === Décor opulent rangée nord (y=1..3) : néons et marbre ===
     // Quelques fleurs jaunes pour les néons décoratifs
@@ -998,7 +1000,8 @@ export const LASAGNAS_SIGNS: Sign[] = [
     { x: 11, y: 9, text: "LASAGNAS VEGAS\nLa ville qui ne dort jamais. Casinos, hôtel, et la mafia Team Boulette dans les ruelles…" },
     { x: 1, y: 12, text: "🚧 ROUTE EN CONSTRUCTION 🚧\nVers une autre ville. Reviens plus tard." },
     { x: 22, y: 1, text: "Vers le sommet : Père Pesto, le fidèle du Dieu Spaghetti." },
-    { x: 11, y: 11, text: "⚠️ ATTENTION : voitures sur la route. Utilise le passage piéton (cases jaunes)." },
+    // v4.x — panneau "ATTENTION voitures" supprimé : la route a été remplacée
+    // par des hautes herbes décoratives (cf. buildLasagnasVegas).
 ]
 
 // Spawns ===
