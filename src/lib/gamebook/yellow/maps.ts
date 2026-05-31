@@ -94,9 +94,16 @@ function fillRoom(W: number, H: number, floor: TileType): TileType[][] {
     return m
 }
 
-// === Collisions Viridian City (mapping user + extrapolations pixel) ==
-// Le visuel vient de viridian_full.png. Ces tiles servent uniquement à
-// bloquer/autoriser le mouvement (pas de rendu CSS).
+// === Collisions Viridian City (mapping ultra-détaillé user 2026-05-31, v3) ==
+// Ordre d'application :
+//   1. Default grass
+//   2. Mountains (4 blocs)
+//   3. Forêts (5 zones)
+//   4. Bloc haut + gros encart + fences + obstacles row 30
+//   5. Buissons + sapins isolés + petit bloc sapins
+//   6. Signs (blocking)
+//   7. Eau
+//   8. Overrides WALKABLE en dernier (terre-plein, passages, rows 20-21, 31, 32, etc.)
 
 function buildViridianCollisions(): TileType[][] {
     const W = VIRIDIAN_W, H = VIRIDIAN_H
@@ -106,59 +113,99 @@ function buildViridianCollisions(): TileType[][] {
         for (let x = 0; x < W; x++) row.push("grass")
         m.push(row)
     }
+    void W; void H
 
-    // === MONTAGNES OUEST (cliffs) ===
-    // Bloc nord : cols 0..7, rows 0..16 (user-confirmed)
-    for (let y = 0; y <= 16; y++) {
-        for (let x = 0; x <= 7; x++) m[y][x] = "tree"
-    }
-    // Sand path horizontal rows 17..19 cols 0..8 (extrapolé via sampling — user mentionnait col 0)
-    // Ces tiles restent en default grass (walkable).
+    // === MONTAGNES (4 blocs) ===
+    for (let y = 0; y <= 14; y++) for (let x = 0; x <= 7; x++) m[y][x] = "tree"
+    for (let x = 0; x <= 5; x++) m[15][x] = "tree"
+    for (let y = 20; y <= 33; y++) for (let x = 0; x <= 6; x++) m[y][x] = "tree"
+    for (let y = 34; y <= 39; y++) for (let x = 0; x <= 5; x++) m[y][x] = "tree"
 
-    // Bloc sud : cols 0..6, rows 20..37 (extrapolé — les cliffs continuent vers le sud)
-    for (let y = 20; y <= 37; y++) {
-        for (let x = 0; x <= 6; x++) m[y][x] = "tree"
-    }
+    // === FORÊTS (5 zones) ===
+    for (let y = 13; y <= 39; y++) for (let x = 6; x <= 13; x++) m[y][x] = "tree"   // gauche
+    for (let y = 35; y <= 39; y++) for (let x = 14; x <= 21; x++) m[y][x] = "tree"  // centre-bas
+    for (let y = 35; y <= 39; y++) for (let x = 26; x <= 43; x++) m[y][x] = "tree"  // bas-droite
+    for (let y = 0; y <= 3; y++) for (let x = 24; x <= 43; x++) m[y][x] = "tree"    // haut-droite
+    for (let x = 24; x <= 27; x++) m[4][x] = "tree"                                 // petits sapins
 
-    // === BORDURE NORD (row 0) ===
-    for (let x = 8; x <= 17; x++) m[0][x] = "tree"
-    m[0][18] = "fence"
-    // (19..23, 0) = herbe (default)
-    for (let x = 24; x <= 43; x++) m[0][x] = "tree"
+    // === BLOC HAUT (rectangle plein 8-18, 0-4) ===
+    for (let y = 0; y <= 4; y++) for (let x = 8; x <= 18; x++) m[y][x] = "tree"
 
-    // === BARRIÈRES horizontales row 4 ===
-    for (let x = 8; x <= 18; x++) m[4][x] = "fence"
+    // === GROS ENCART (9-18, 6-16) — TOUT bloqué (user a corrigé X=9) ===
+    for (let y = 6; y <= 16; y++) for (let x = 9; x <= 18; x++) m[y][x] = "fence"
 
-    // === BARRIÈRE (18, 6) ===
-    m[6][18] = "fence"
+    // === LIGNES BARRIÈRES horizontales ===
+    for (let x = 29; x <= 41; x++) { m[12][x] = "fence"; m[15][x] = "fence" }
+    // Barrière "suite et fin" (23..41, 30)
+    for (let x = 23; x <= 41; x++) m[30][x] = "fence"
 
-    // === BUISSONS col 19, rows impaires 7..15 ===
-    for (let y = 7; y <= 15; y += 2) m[y][19] = "tree"
+    // === LIGNE Y=30 obstacles supplémentaires ===
+    for (let x = 7; x <= 10; x++) m[30][x] = "tree"
+    for (let x = 17; x <= 19; x++) m[30][x] = "tree"
 
-    // === EAU (fontaine) cols 11..16, rows 26..30 ===
-    for (let y = 26; y <= 30; y++) {
-        for (let x = 11; x <= 16; x++) m[y][x] = "water"
-    }
+    // === BUISSONS (séries 1, 2, 3 dédoublonnées) ===
+    for (const y of [7, 9, 11, 13, 15]) m[y][19] = "tree"   // série 1 col 19
+    m[9][23] = "tree"; m[11][23] = "tree"                    // série 2 + 3
+    m[12][27] = "tree"; m[12][28] = "tree"                   // série 2
+    m[16][23] = "tree"; m[18][23] = "tree"                   // série 3
 
-    // === BORDURE EST (cols 42..43, toutes les rows) ===
-    for (let y = 0; y < H; y++) {
-        for (let x = 42; x <= 43; x++) m[y][x] = "tree"
-    }
+    // === SAPINS LIGNES ISOLÉES (rows 22 et 24, cols 7..10) ===
+    for (let x = 7; x <= 10; x++) { m[22][x] = "tree"; m[24][x] = "tree" }
 
-    // === BORDURE SUD (row 39) avec gap sortie Route 1 ===
-    // Cols 0..21 et 26..41 = trees. Cols 22..25 = sand walkable (sortie Route 1).
-    for (let x = 0; x <= 21; x++) m[39][x] = "tree"
-    for (let x = 26; x <= 41; x++) m[39][x] = "tree"
-    // (22..25, 36..39) = sand walkable (default grass OK)
+    // === PETIT BLOC SAPINS (12-13, 23-25) ===
+    for (let y = 23; y <= 25; y++) for (let x = 12; x <= 13; x++) m[y][x] = "tree"
+
+    // === SIGNS (blocking) ===
+    m[1][23] = "tree"   // panneau standard
+    m[10][32] = "tree"  // panneau gym
+    m[16][20] = "tree"  // petit panneau
+    m[31][20] = "tree"  // panneau près passage
+
+    // === EAU (juste row 30 cols 11..16) ===
+    for (let x = 11; x <= 16; x++) m[30][x] = "water"
+
+    // === OVERRIDES walkable (À LA FIN pour effacer les blocages au besoin) ===
+    // Petite zone herbe (6,15), (7,15)
+    m[15][6] = "grass"; m[15][7] = "grass"
+    // Ligne herbe (0..8, 16)
+    for (let x = 0; x <= 8; x++) m[16][x] = "grass"
+    // Sand path (0..8, 17..19)
+    for (let y = 17; y <= 19; y++) for (let x = 0; x <= 8; x++) m[y][x] = "grass"
+    // Sortie Route 1 sand (22..25, 35..39)
+    for (let y = 35; y <= 39; y++) for (let x = 22; x <= 25; x++) m[y][x] = "grass"
+    // Passage row 30 cols 20..22
+    for (let x = 20; x <= 22; x++) m[30][x] = "grass"
+    // Colonne accessible (11, 22..25)
+    for (let y = 22; y <= 25; y++) m[y][11] = "grass"
+    // Terre-plein (7..10, 25..29)
+    for (let y = 25; y <= 29; y++) for (let x = 7; x <= 10; x++) m[y][x] = "grass"
+    // Walkable nord (7..19, 20..21)
+    for (let y = 20; y <= 21; y++) for (let x = 7; x <= 19; x++) m[y][x] = "grass"
+    // Walkable row 31 cols 7..19
+    for (let x = 7; x <= 19; x++) m[31][x] = "grass"
+    // Walkable row 32 cols 7..41
+    for (let x = 7; x <= 41; x++) m[32][x] = "grass"
 
     return m
 }
+
 
 // === Bâtiments de Viridian City (positions mappées par l'user 2026-05-31) ==
 // Le visuel est dans viridian_full.png — ces définitions servent à :
 //   1. Bloquer le mouvement sur les murs du bâtiment
 //   2. Auto-générer les exits (warp porte → map intérieure)
 const TOWN_BUILDINGS: YellowBuilding[] = [
+    {
+        // Bâtiment 1 (NPC house haut, mappé par user) : zone (24,8)-(28,11)
+        // Row 8 = roof overhang (walkable), rows 9-11 = wall + door (25, 11)
+        id: "b_npc1",
+        x: 24, y: 9, w: 5, h: 3,        // footprint rows 9..11
+        doorX: 1, doorY: 2,             // porte abs (25, 11) — dans le footprint (walkable)
+        targetMapId: "yellow_casino",   // placeholder (pas de map Academy encore)
+        targetSpawnX: 4, targetSpawnY: 5,
+        displayName: "MAISON",
+        kind: "casino",
+    },
     {
         // GYM : toit (33-38, 6) à (33-38, 8), porte (36, 10)
         id: "b_arena",
@@ -190,10 +237,11 @@ const TOWN_BUILDINGS: YellowBuilding[] = [
         kind: "shop",
     },
     {
-        // PC Pokemon Center : (24-28, 20-26), porte (26, 26)
+        // PC Pokemon Center : (24-28, 23-26), porte (26, 26)
+        // (rows 19-22 = espace walkable entre Maison NPC et PC, per user 2026-05-31)
         id: "b_infirmary",
-        x: 24, y: 20, w: 5, h: 7,       // footprint cols 24..28, rows 20..26
-        doorX: 2, doorY: 6,             // porte abs (26, 26) — dans le footprint (walkable)
+        x: 24, y: 23, w: 5, h: 4,       // footprint cols 24..28, rows 23..26
+        doorX: 2, doorY: 3,             // porte abs (26, 26) — dans le footprint (walkable)
         targetMapId: "yellow_infirmary",
         targetSpawnX: 4, targetSpawnY: 5,
         displayName: "PC",
