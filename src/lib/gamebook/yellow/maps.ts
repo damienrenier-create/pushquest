@@ -260,13 +260,15 @@ function returnExit(targetInteriorMapId: string, doorMatX: number, doorMatY: num
 
 // === VILLE JAUNE = Viridian City (FireRed) ==============================
 // viridian_full.png : 1360x672 px à l'échelle NATIVE FireRed (16 px = 1 tile).
-// Total image = 85 × 42 tiles. Viridian City occupe ~ x=0..720 = 45 tiles wide.
-// Hauteur : 672 px = 42 tiles, dont ~2 tiles de bande blanche en haut
-// (titre "Viridian City" Spriters Resource) → on crop pour avoir 40 tiles.
-const VIRIDIAN_W = 45
-const VIRIDIAN_H = 40
-const VIRIDIAN_IMAGE_TILE_SIZE = 16  // px natif FireRed par tile dans l'image
-const VIRIDIAN_HEADER_TILES = 2      // tiles de header à skip en haut
+// La sheet Spriters Resource a une bordure décorative :
+//   - Gauche : x=0..7 (frame + marge blanche), contenu réel commence x=8
+//   - Haut  : y=0..23 (titre + marge blanche), contenu réel commence y=24
+// Viridian City occupe ensuite ~712 px wide × 648 px tall depuis (8, 24).
+const VIRIDIAN_W = 44                // (720 - 8) / 16 = 44.5, on prend 44
+const VIRIDIAN_H = 40                // (672 - 24) / 16 = 40.5, on prend 40
+const VIRIDIAN_IMAGE_TILE_SIZE = 16
+const VIRIDIAN_ORIGIN_X = 8          // px image qui correspond à map (0, _)
+const VIRIDIAN_ORIGIN_Y = 24         // px image qui correspond à map (_, 0)
 
 export const YELLOW_MAPS: Record<string, YellowMapData> = {
     [YELLOW_ENTRANCE_MAP_ID]: {
@@ -284,8 +286,8 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImageWidth: 1360,
         backgroundImageHeight: 672,
         backgroundImageTileSize: VIRIDIAN_IMAGE_TILE_SIZE,
-        backgroundImageOriginX: 0,
-        backgroundImageOriginY: VIRIDIAN_HEADER_TILES * VIRIDIAN_IMAGE_TILE_SIZE, // skip 32 px de header
+        backgroundImageOriginX: VIRIDIAN_ORIGIN_X,
+        backgroundImageOriginY: VIRIDIAN_ORIGIN_Y,
     },
     yellow_shop: {
         id: "yellow_shop",
