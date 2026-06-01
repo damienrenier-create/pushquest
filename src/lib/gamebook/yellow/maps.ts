@@ -331,6 +331,8 @@ function buildNorthRoute(): TileType[][] {
     // Bordures trees (4 côtés)
     for (let x = 0; x < W; x++) { m[0][x] = "tree"; m[H - 1][x] = "tree" }
     for (let y = 0; y < H; y++) { m[y][0] = "tree"; m[y][W - 1] = "tree" }
+    // Bordure est épaissie : cols 42 ET 43 = trees (clone du double sapin Viridian)
+    for (let y = 0; y < H; y++) m[y][W - 2] = "tree"
     // Sortie sud cols 19..23 (gap dans la bordure) — restent en grass walkable
     for (let x = 19; x <= 23; x++) m[H - 1][x] = "grass"
     // Patches grassTall scatterés (placeholder wild grass)
