@@ -338,13 +338,11 @@ function buildNorthRoute(): TileType[][] {
         for (let x = 0; x < W; x++) row.push("grass")
         m.push(row)
     }
-    // Bordures trees (4 côtés)
-    for (let x = 0; x < W; x++) { m[0][x] = "tree"; m[H - 1][x] = "tree" }
-    for (let y = 0; y < H; y++) { m[y][0] = "tree"; m[y][W - 1] = "tree" }
+    // Bordures trees (haut + ouest)
+    for (let x = 0; x < W; x++) m[0][x] = "tree"
+    for (let y = 0; y < H; y++) m[y][0] = "tree"
     // Bordure est épaissie : cols 42 ET 43 = trees (clone du double sapin Viridian)
-    for (let y = 0; y < H; y++) m[y][W - 2] = "tree"
-    // Sortie sud cols 19..23 (gap dans la bordure) — restent en grass walkable
-    for (let x = 19; x <= 23; x++) m[H - 1][x] = "grass"
+    for (let y = 0; y < H; y++) { m[y][W - 1] = "tree"; m[y][W - 2] = "tree" }
     // Patches grassTall scatterés (placeholder wild grass)
     for (let y = 4; y <= 8; y++) for (let x = 5; x <= 12; x++) m[y][x] = "grassTall"
     for (let y = 10; y <= 14; y++) for (let x = 25; x <= 35; x++) m[y][x] = "grassTall"
@@ -355,6 +353,17 @@ function buildNorthRoute(): TileType[][] {
     for (let y = 3; y <= 7; y++) for (let x = 35; x <= 40; x++) m[y][x] = "water"
     // Plan d'eau 2 : bas-gauche (5-10, 25-29)
     for (let y = 25; y <= 29; y++) for (let x = 5; x <= 10; x++) m[y][x] = "water"
+    // === COLLISIONS du bas (rows 35-39) = clone des walkables Viridian ===
+    // Viridian source pour la zone clonée :
+    //   - cols 14-21 = forêt centre-bas = tree
+    //   - cols 22-25 = sortie Route 1 sand = grass walkable
+    //   - cols 26-43 = forêt bas-droite = tree
+    // Cols 0-13 = répétition de cols 14-15 (forêt centre-bas) = tree
+    for (let y = 35; y <= 39; y++) {
+        for (let x = 0; x <= 21; x++) m[y][x] = "tree"
+        for (let x = 22; x <= 25; x++) m[y][x] = "grass"
+        for (let x = 26; x < W; x++) m[y][x] = "tree"
+    }
     return m
 }
 
@@ -425,11 +434,13 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         exits: [
             ...exitsFromBuildings(TOWN_BUILDINGS),
             // Sortie nord (19-23, 0) → Route Nord (futur monde Pokémon)
+            // Le bas de Route Nord est cloné de Viridian : sortie sable Route 1
+            // visible aux cols 22-25 rows 35-39 → on spawn dans cette bande.
             ...[19, 20, 21, 22, 23].map((col) => ({
                 x: col,
                 y: 0,
                 targetMapId: "yellow_route_nord",
-                targetSpawnX: 21,  // centre de la sortie sud Route Nord
+                targetSpawnX: 23,  // centre de la nouvelle bande sable (cols 22-25)
                 targetSpawnY: 38,  // 1 row au-dessus de la bordure sud (row 39)
             })),
         ],
@@ -478,8 +489,9 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         tiles: buildNorthRoute(),
         width: NORTH_W,
         height: NORTH_H,
-        // Sortie sud (cols 19..23, row 39) → retour Viridian sur col 21 row 1
-        exits: [19, 20, 21, 22, 23].map((col) => ({
+        // Sortie sud (cols 22..25, row 39) → retour Viridian sur col 21 row 1.
+        // Alignée sur la bande sable cloné de Viridian (cols 22-25).
+        exits: [22, 23, 24, 25].map((col) => ({
             x: col,
             y: NORTH_H - 1,
             targetMapId: YELLOW_ENTRANCE_MAP_ID,
