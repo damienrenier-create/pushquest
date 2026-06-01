@@ -396,6 +396,26 @@ export default function MapView() {
 
                 {!hasBgImage && map.tiles.flatMap((row, y) =>
                     row.map((tile, x) => {
+                        // Tile grassTall + tallGrassUrl → tuile unique haute herbe
+                        if (tile === "grassTall" && map.tallGrassUrl) {
+                            return (
+                                <div
+                                    key={`t-${x}-${y}`}
+                                    style={{
+                                        position: "absolute",
+                                        ...screenPos(x, y),
+                                        width: `calc(${TILE_W_PCT}% + 1px)`,
+                                        height: `calc(${TILE_H_PCT}% + 1px)`,
+                                        backgroundColor: tileColor(tile),
+                                        backgroundImage: `url(${map.tallGrassUrl}?v=1)`,
+                                        backgroundRepeat: "no-repeat",
+                                        backgroundSize: "100% 100%",
+                                        imageRendering: "pixelated",
+                                        overflow: "hidden",
+                                    }}
+                                />
+                            )
+                        }
                         // Tile grass + groundSheet → sprite random
                         const tileSheet = (tile === "grass" && map.groundSheet)
                             ? map.groundSheet

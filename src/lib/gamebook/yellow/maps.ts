@@ -73,6 +73,9 @@ export interface YellowMapData extends MapData {
         gap: number
         count: number
     }
+    /** v2 — URL d'une tile 16×16 utilisée pour rendre toutes les cases "grassTall"
+     *  de la map (visuel uniforme + collision walkable + future wild encounters). */
+    tallGrassUrl?: string
     /** v2 — Régions de sprite : rectangles fixes avec une image source qui couvre
      *  exactement w×h tiles. Utilisé pour cloner des zones de Viridian (eau, bordures
      *  d'arbres, etc.) au pixel près. Affiché par-dessus le rendu CSS des tiles. */
@@ -446,6 +449,29 @@ function buildNorthRoute(): NorthBuild {
     for (const p of bushes) m[p.y][p.x] = "tree"
     // 3) Fleurs (clone Viridian 37.26, 1×1, WALKABLE comme dans la source)
     const flowers = placeDecors(W, H, 40, 1, 1, 0x5a5a5a5a, isUsable)
+    // 4) Haute herbe (tile herbes 1 bottom-left) sur 3/4 des cases grass restantes
+    //    Filtre : zone jouable, type "grass" (donc pas tree/water/grassTall), et
+    //    pas sous une fleur (pour garder les fleurs visibles).
+    const flowerKeys = new Set(flowers.map((f) => `${f.x},${f.y}`))
+    const candidates: DecorPos[] = []
+    for (let y = 4; y <= 34; y++) {
+        for (let x = 2; x <= 41; x++) {
+            if (m[y][x] === "grass" && !flowerKeys.has(`${x},${y}`)) {
+                candidates.push({ x, y })
+            }
+        }
+    }
+    // Shuffle déterministe puis prendre 3/4
+    const rngTall = mulberry32(0xc0ffee42)
+    for (let i = candidates.length - 1; i > 0; i--) {
+        const j = Math.floor(rngTall() * (i + 1))
+        const tmp = candidates[i]; candidates[i] = candidates[j]; candidates[j] = tmp
+    }
+    const tallCount = Math.floor(candidates.length * 0.75)
+    for (let i = 0; i < tallCount; i++) {
+        const p = candidates[i]
+        m[p.y][p.x] = "grassTall"
+    }
     return { tiles: m, trees, flowers, bushes }
 }
 
@@ -594,6 +620,8 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
             gap: 1,
             count: 4,
         },
+        // Haute herbe (herbes 1 bottom-left) appliquée à toutes les tiles grassTall
+        tallGrassUrl: "/yellow/sprites/herbe_haute_h1.png",
         // Régions sprite clonées depuis Viridian au pixel près :
         // - 2 plans d'eau (6×5 chacun) = sprite eau Viridian 96×80
         // - Bordure est trees (cols 42-43, all rows) = sprite Viridian est 32×640
