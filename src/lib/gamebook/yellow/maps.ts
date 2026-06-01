@@ -330,7 +330,64 @@ function buildArenaInterior(): TileType[][] {
 const NORTH_W = 44
 const NORTH_H = 40
 
-function buildNorthRoute(): TileType[][] {
+// === Helpers décor déterministe ========================================
+
+/** Mulberry32 PRNG. Permet un layout stable entre les renders. */
+function mulberry32(seed: number): () => number {
+    let s = seed >>> 0
+    return () => {
+        s = (s + 0x6d2b79f5) >>> 0
+        let t = s
+        t = Math.imul(t ^ (t >>> 15), t | 1)
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+    }
+}
+
+interface DecorPos { x: number; y: number }
+
+/** Place `count` décors de taille (w, h) sans chevauchement, sur cases isUsable. */
+function placeDecors(
+    W: number,
+    H: number,
+    count: number,
+    w: number,
+    h: number,
+    seed: number,
+    isUsable: (x: number, y: number) => boolean,
+): DecorPos[] {
+    const rng = mulberry32(seed)
+    const used = new Set<string>()
+    const out: DecorPos[] = []
+    let attempts = 0
+    while (out.length < count && attempts < count * 200) {
+        attempts++
+        const x = Math.floor(rng() * (W - w + 1))
+        const y = Math.floor(rng() * (H - h + 1))
+        let valid = true
+        for (let dy = 0; dy < h && valid; dy++) {
+            for (let dx = 0; dx < w && valid; dx++) {
+                const cx = x + dx, cy = y + dy
+                if (!isUsable(cx, cy)) valid = false
+                else if (used.has(`${cx},${cy}`)) valid = false
+            }
+        }
+        if (valid) {
+            for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) used.add(`${x + dx},${y + dy}`)
+            out.push({ x, y })
+        }
+    }
+    return out
+}
+
+interface NorthBuild {
+    tiles: TileType[][]
+    trees: DecorPos[]
+    flowers: DecorPos[]
+    bushes: DecorPos[]
+}
+
+function buildNorthRoute(): NorthBuild {
     const W = NORTH_W, H = NORTH_H
     const m: TileType[][] = []
     for (let y = 0; y < H; y++) {
@@ -372,8 +429,32 @@ function buildNorthRoute(): TileType[][] {
         for (let x = 22; x <= 25; x++) m[y][x] = "grass"
         for (let x = 26; x < W; x++) m[y][x] = "tree"
     }
-    return m
+    // === DÉCORS aléatoires déterministes (sapins / fleurs / buissons) ====
+    // Zone d'éligibilité : intérieur jouable rows 4-34 cols 2-41, herbe simple uniquement.
+    const isUsable = (x: number, y: number): boolean => {
+        if (x < 2 || x > 41) return false
+        if (y < 4 || y > 34) return false
+        return m[y][x] === "grass"
+    }
+    // 1) Sapins (clone Viridian 12-13 × 23-25, footprint 2×3, BLOQUANTS)
+    const trees = placeDecors(W, H, 10, 2, 3, 0x1234abcd, isUsable)
+    for (const p of trees) {
+        for (let dy = 0; dy < 3; dy++) for (let dx = 0; dx < 2; dx++) m[p.y + dy][p.x + dx] = "tree"
+    }
+    // 2) Buissons (clone Viridian 23.16, 1×1, BLOQUANT comme dans la source)
+    const bushes = placeDecors(W, H, 40, 1, 1, 0xfeedbeef, isUsable)
+    for (const p of bushes) m[p.y][p.x] = "tree"
+    // 3) Fleurs (clone Viridian 37.26, 1×1, WALKABLE comme dans la source)
+    const flowers = placeDecors(W, H, 40, 1, 1, 0x5a5a5a5a, isUsable)
+    return { tiles: m, trees, flowers, bushes }
 }
+
+const NORTH_BUILD = buildNorthRoute()
+const NORTH_DECOR_REGIONS: Array<{ x: number; y: number; w: number; h: number; url: string }> = [
+    ...NORTH_BUILD.trees.map((p) => ({ x: p.x, y: p.y, w: 2, h: 3, url: "/yellow/sprites/viridian_tree_12_13_23_25.png" })),
+    ...NORTH_BUILD.bushes.map((p) => ({ x: p.x, y: p.y, w: 1, h: 1, url: "/yellow/sprites/viridian_bush_23_16.png" })),
+    ...NORTH_BUILD.flowers.map((p) => ({ x: p.x, y: p.y, w: 1, h: 1, url: "/yellow/sprites/viridian_flower_37_26.png" })),
+]
 
 // === Helpers warp =======================================================
 
@@ -494,7 +575,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
     yellow_route_nord: {
         id: "yellow_route_nord",
         name: "ROUTE NORD",
-        tiles: buildNorthRoute(),
+        tiles: NORTH_BUILD.tiles,
         width: NORTH_W,
         height: NORTH_H,
         // Sortie sud (cols 22..25, row 39) → retour Viridian sur col 21 row 1.
@@ -543,6 +624,8 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
             // Sud-ouest : clone du sud-est (cols 42-43 rows 35-39) pour avoir
             // le même bandeau sapin que la bordure est, plutôt que la forêt centre-bas.
             { x: 0, y: 35, w: 2, h: 5, url: "/yellow/sprites/viridian_se_corner_42_43_35_39.png" },
+            // Décors générés déterministiquement : 10 sapins 2×3 + 40 buissons + 40 fleurs
+            ...NORTH_DECOR_REGIONS,
         ],
     },
 }
