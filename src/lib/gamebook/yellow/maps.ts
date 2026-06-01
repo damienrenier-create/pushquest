@@ -425,6 +425,10 @@ function buildNorthRoute(): NorthBuild {
     for (let y = 12; y <= 16; y++) for (let x = 28; x <= 33; x++) m[y][x] = "water"
     // Plan d'eau 4 : mid-bas centre-gauche (13-18, 20-24)
     for (let y = 20; y <= 24; y++) for (let x = 13; x <= 18; x++) m[y][x] = "water"
+    // === Bloc montagne (clone Viridian cols 0-4 rows 2-11) ===
+    // Position : cols 4-8 rows 4-13 = extension naturelle de la mini-montagne
+    // col 4 (rows 0-3). Évite les 4 mares.
+    for (let y = 4; y <= 13; y++) for (let x = 4; x <= 8; x++) m[y][x] = "tree"
     // === COLLISIONS du bas (rows 35-39) = clone des walkables Viridian ===
     // Viridian source pour la zone clonée :
     //   - cols 14-21 = forêt centre-bas = tree
@@ -647,6 +651,8 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
             { x: 4, y: 0, w: 1, h: 4, url: "/yellow/sprites/viridian_mountain_col4.png" },
             { x: 5, y: 0, w: 36, h: 4, url: "/yellow/sprites/viridian_top_strip_36.png" },
             { x: 41, y: 0, w: 1, h: 4, url: "/yellow/sprites/viridian_mountain_col41.png" },
+            // Bloc montagne 5×10 (clone Viridian cols 0-4 rows 2-11)
+            { x: 4, y: 4, w: 5, h: 10, url: "/yellow/sprites/viridian_mountain_block_0_4_2_11.png" },
             { x: 14, y: 35, w: 30, h: 5, url: "/yellow/sprites/viridian_bottom_14_43.png" },
             { x: 0, y: 35, w: 2, h: 5, url: "/yellow/sprites/viridian_bottom_14_15.png" },
             { x: 2, y: 35, w: 2, h: 5, url: "/yellow/sprites/viridian_bottom_14_15.png" },
