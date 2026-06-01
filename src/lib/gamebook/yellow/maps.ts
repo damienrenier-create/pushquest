@@ -540,6 +540,9 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
             { x: 8, y: 35, w: 2, h: 5, url: "/yellow/sprites/viridian_bottom_14_15.png" },
             { x: 10, y: 35, w: 2, h: 5, url: "/yellow/sprites/viridian_bottom_14_15.png" },
             { x: 12, y: 35, w: 2, h: 5, url: "/yellow/sprites/viridian_bottom_14_15.png" },
+            // Sud-ouest : clone du sud-est (cols 42-43 rows 35-39) pour avoir
+            // le même bandeau sapin que la bordure est, plutôt que la forêt centre-bas.
+            { x: 0, y: 35, w: 2, h: 5, url: "/yellow/sprites/viridian_se_corner_42_43_35_39.png" },
         ],
     },
 }
