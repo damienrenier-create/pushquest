@@ -496,10 +496,21 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         // Régions sprite clonées depuis Viridian au pixel près :
         // - 2 plans d'eau (6×5 chacun) = sprite eau Viridian 96×80
         // - Bordure est trees (cols 42-43, all rows) = sprite Viridian east 32×640
+        // - Bordure sud (rows 35-39) :
+        //     * cols 14-43 = clone exact du bas Viridian (forêt + sortie sable)
+        //     * cols 0-13 = répétition 7x de la slice 2-col cols 14-15 de Viridian
         spriteRegions: [
             { x: 35, y: 3, w: 6, h: 5, url: "/yellow/sprites/water_viridian.png" },
             { x: 5, y: 25, w: 6, h: 5, url: "/yellow/sprites/water_viridian.png" },
             { x: 42, y: 0, w: 2, h: NORTH_H, url: "/yellow/sprites/trees_east_border.png" },
+            { x: 14, y: 35, w: 30, h: 5, url: "/yellow/sprites/viridian_bottom_14_43.png" },
+            { x: 0, y: 35, w: 2, h: 5, url: "/yellow/sprites/viridian_bottom_14_15.png" },
+            { x: 2, y: 35, w: 2, h: 5, url: "/yellow/sprites/viridian_bottom_14_15.png" },
+            { x: 4, y: 35, w: 2, h: 5, url: "/yellow/sprites/viridian_bottom_14_15.png" },
+            { x: 6, y: 35, w: 2, h: 5, url: "/yellow/sprites/viridian_bottom_14_15.png" },
+            { x: 8, y: 35, w: 2, h: 5, url: "/yellow/sprites/viridian_bottom_14_15.png" },
+            { x: 10, y: 35, w: 2, h: 5, url: "/yellow/sprites/viridian_bottom_14_15.png" },
+            { x: 12, y: 35, w: 2, h: 5, url: "/yellow/sprites/viridian_bottom_14_15.png" },
         ],
     },
 }
