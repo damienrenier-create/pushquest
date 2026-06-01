@@ -416,11 +416,15 @@ function buildNorthRoute(): NorthBuild {
     for (let y = 10; y <= 14; y++) for (let x = 25; x <= 35; x++) m[y][x] = "grassTall"
     for (let y = 18; y <= 22; y++) for (let x = 12; x <= 20; x++) m[y][x] = "grassTall"
     for (let y = 25; y <= 30; y++) for (let x = 28; x <= 38; x++) m[y][x] = "grassTall"
-    // 2 plans d'eau cloned de Viridian (6 cols × 5 rows = même taille)
+    // 4 plans d'eau cloned de Viridian (chacun 6 cols × 5 rows = sprite water_viridian)
     // Plan d'eau 1 : haut-droite (35-40, 3-7)
     for (let y = 3; y <= 7; y++) for (let x = 35; x <= 40; x++) m[y][x] = "water"
     // Plan d'eau 2 : bas-gauche (5-10, 25-29)
     for (let y = 25; y <= 29; y++) for (let x = 5; x <= 10; x++) m[y][x] = "water"
+    // Plan d'eau 3 : mid-haut centre-droite (28-33, 12-16)
+    for (let y = 12; y <= 16; y++) for (let x = 28; x <= 33; x++) m[y][x] = "water"
+    // Plan d'eau 4 : mid-bas centre-gauche (13-18, 20-24)
+    for (let y = 20; y <= 24; y++) for (let x = 13; x <= 18; x++) m[y][x] = "water"
     // === COLLISIONS du bas (rows 35-39) = clone des walkables Viridian ===
     // Viridian source pour la zone clonée :
     //   - cols 14-21 = forêt centre-bas = tree
@@ -632,6 +636,8 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         spriteRegions: [
             { x: 35, y: 3, w: 6, h: 5, url: "/yellow/sprites/water_viridian.png" },
             { x: 5, y: 25, w: 6, h: 5, url: "/yellow/sprites/water_viridian.png" },
+            { x: 28, y: 12, w: 6, h: 5, url: "/yellow/sprites/water_viridian.png" },
+            { x: 13, y: 20, w: 6, h: 5, url: "/yellow/sprites/water_viridian.png" },
             { x: 42, y: 0, w: 2, h: NORTH_H, url: "/yellow/sprites/trees_east_border.png" },
             { x: 0, y: 0, w: 2, h: NORTH_H, url: "/yellow/sprites/trees_east_border.png" },
             // Bordure nord (rows 0-3) découpée :
