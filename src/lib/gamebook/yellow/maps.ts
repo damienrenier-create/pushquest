@@ -73,13 +73,16 @@ export interface YellowMapData extends MapData {
         gap: number
         count: number
     }
-    /** v2 — Sheet de tiles "water" appliquée à toutes les tiles "water" de la map. */
-    waterSheet?: {
-        url: string
-        tileSize: number
-        gap: number
-        count: number
-    }
+    /** v2 — Régions de sprite : rectangles fixes avec une image source qui couvre
+     *  exactement w×h tiles. Utilisé pour cloner des zones de Viridian (eau, bordures
+     *  d'arbres, etc.) au pixel près. Affiché par-dessus le rendu CSS des tiles. */
+    spriteRegions?: Array<{
+        x: number     // col de départ
+        y: number     // row de départ
+        w: number     // largeur en tiles
+        h: number     // hauteur en tiles
+        url: string   // URL du sprite (taille native = w*16 × h*16 px)
+    }>
 }
 
 // === Helpers ============================================================
@@ -490,13 +493,14 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
             gap: 1,
             count: 4,
         },
-        // Eau pixel-art FireRed (extraite de Viridian) : 1 tile 16×16
-        waterSheet: {
-            url: "/yellow/sprites/water_viridian.png",
-            tileSize: 16,
-            gap: 0,
-            count: 1,
-        },
+        // Régions sprite clonées depuis Viridian au pixel près :
+        // - 2 plans d'eau (6×5 chacun) = sprite eau Viridian 96×80
+        // - Bordure est trees (cols 42-43, all rows) = sprite Viridian east 32×640
+        spriteRegions: [
+            { x: 35, y: 3, w: 6, h: 5, url: "/yellow/sprites/water_viridian.png" },
+            { x: 5, y: 25, w: 6, h: 5, url: "/yellow/sprites/water_viridian.png" },
+            { x: 42, y: 0, w: 2, h: NORTH_H, url: "/yellow/sprites/trees_east_border.png" },
+        ],
     },
 }
 

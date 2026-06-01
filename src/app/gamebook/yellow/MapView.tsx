@@ -397,12 +397,9 @@ export default function MapView() {
                 {!hasBgImage && map.tiles.flatMap((row, y) =>
                     row.map((tile, x) => {
                         // Tile grass + groundSheet → sprite random
-                        // Tile water + waterSheet → sprite unique
                         const tileSheet = (tile === "grass" && map.groundSheet)
                             ? map.groundSheet
-                            : (tile === "water" && map.waterSheet)
-                                ? map.waterSheet
-                                : null
+                            : null
                         if (tileSheet) {
                             const idx = pickGroundVariant(x, y, tileSheet.count)
                             const sheetW = tileSheet.count * tileSheet.tileSize + (tileSheet.count - 1) * tileSheet.gap
@@ -444,6 +441,23 @@ export default function MapView() {
                         )
                     }),
                 )}
+
+                {/* Régions sprite (zones clonées au pixel près depuis Viridian, etc.) */}
+                {map.spriteRegions?.map((r, i) => (
+                    <div
+                        key={`sr-${i}`}
+                        style={{
+                            position: "absolute",
+                            ...screenPos(r.x, r.y, r.w, r.h),
+                            backgroundImage: `url(${r.url}?v=1)`,
+                            backgroundRepeat: "no-repeat",
+                            backgroundSize: "100% 100%",
+                            imageRendering: "pixelated",
+                            zIndex: 1,
+                            pointerEvents: "none",
+                        }}
+                    />
+                ))}
 
                 {!hasBgImage && buildings.map((b) => (
                     <BuildingSprite key={b.id} building={b} screenPos={screenPos} />
