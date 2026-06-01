@@ -478,7 +478,7 @@ function buildNorthRoute(): NorthBuild {
 const NORTH_BUILD = buildNorthRoute()
 const NORTH_DECOR_REGIONS: Array<{ x: number; y: number; w: number; h: number; url: string }> = [
     ...NORTH_BUILD.trees.map((p) => ({ x: p.x, y: p.y, w: 2, h: 3, url: "/yellow/sprites/viridian_tree_12_13_23_25.png" })),
-    ...NORTH_BUILD.bushes.map((p) => ({ x: p.x, y: p.y, w: 1, h: 1, url: "/yellow/sprites/viridian_bush_23_16.png" })),
+    ...NORTH_BUILD.bushes.map((p) => ({ x: p.x, y: p.y, w: 1, h: 1, url: "/yellow/sprites/viridian_bush_19_13.png" })),
     ...NORTH_BUILD.flowers.map((p) => ({ x: p.x, y: p.y, w: 1, h: 1, url: "/yellow/sprites/viridian_flower_37_26.png" })),
 ]
 
