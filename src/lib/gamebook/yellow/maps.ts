@@ -431,12 +431,13 @@ function buildNorthRoute(): NorthBuild {
     // col 4 (rows 0-3). Évite les 4 mares.
     for (let y = 4; y <= 13; y++) for (let x = 4; x <= 8; x++) m[y][x] = "tree"
     // === Rectangle clone Viridian (14-18, 21-24) avec 2 buissons interieurs ===
-    // Surpose water 4 (qui couvre 13-18, 20-24) sur 20 cellules => grass walkable.
-    // Visuel : ile d herbe encadree de eau au N (row 20) et O (col 13).
-    for (let y = 21; y <= 24; y++) for (let x = 14; x <= 18; x++) m[y][x] = "grass"
-    // 2 buissons specifiques (clone Viridian 23.18, BLOQUANTS) places diagonalement
-    m[22][15] = "tree"
-    m[23][17] = "tree"
+    // Place à cols 25-29 rows 4-7 (top-mid, hors des 4 mares et du bloc montagne).
+    // 5×4 = 20 cellules grass walkable (clone d une zone grass de Viridian).
+    for (let y = 4; y <= 7; y++) for (let x = 25; x <= 29; x++) m[y][x] = "grass"
+    // 2 buissons specifiques (clone Viridian 23.18, BLOQUANTS) places en diagonale
+    // au sein du rectangle (positions relatives : +1/+1 et +3/+2 du coin haut-gauche)
+    m[5][26] = "tree"
+    m[6][28] = "tree"
     // === COLLISIONS du bas (rows 35-39) = clone des walkables Viridian ===
     // Viridian source pour la zone clonée :
     //   - cols 14-21 = forêt centre-bas = tree
@@ -453,8 +454,8 @@ function buildNorthRoute(): NorthBuild {
     const reservedCells = new Set<string>()
     // Bande row 34 cols 22-25 : clone de Viridian row 32 (transition path/sand vers sortie sud)
     for (let x = 22; x <= 25; x++) reservedCells.add(`${x},34`)
-    // Rectangle clone Viridian (14-18, 21-24) + 2 buissons interieurs : tout réservé
-    for (let y = 21; y <= 24; y++) for (let x = 14; x <= 18; x++) reservedCells.add(`${x},${y}`)
+    // Rectangle clone Viridian (14-18, 21-24) -> dest (25-29, 4-7) + 2 buissons : tout réservé
+    for (let y = 4; y <= 7; y++) for (let x = 25; x <= 29; x++) reservedCells.add(`${x},${y}`)
     // Zone d'éligibilité : intérieur jouable rows 4-34 cols 2-41, herbe simple uniquement.
     const isUsable = (x: number, y: number): boolean => {
         if (x < 2 || x > 41) return false
@@ -687,11 +688,11 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
             ...NORTH_DECOR_REGIONS,
             // Bande 4 tuiles row 34 cols 22-25 = clones Viridian (14,32)/(37,32)/(38,32)/(39,32)
             { x: 22, y: 34, w: 4, h: 1, url: "/yellow/sprites/viridian_strip_row32_22_25.png" },
-            // Rectangle 5×4 clone Viridian (14-18, 21-24) — recouvre water 4 au centre
-            { x: 14, y: 21, w: 5, h: 4, url: "/yellow/sprites/viridian_zone_14_18_21_24.png" },
+            // Rectangle 5×4 clone Viridian (14-18, 21-24) -> place à (25-29, 4-7)
+            { x: 25, y: 4, w: 5, h: 4, url: "/yellow/sprites/viridian_zone_14_18_21_24.png" },
             // 2 buissons (clone Viridian 23.18) à l'intérieur du rectangle (diagonale)
-            { x: 15, y: 22, w: 1, h: 1, url: "/yellow/sprites/viridian_bush_23_18.png" },
-            { x: 17, y: 23, w: 1, h: 1, url: "/yellow/sprites/viridian_bush_23_18.png" },
+            { x: 26, y: 5, w: 1, h: 1, url: "/yellow/sprites/viridian_bush_23_18.png" },
+            { x: 28, y: 6, w: 1, h: 1, url: "/yellow/sprites/viridian_bush_23_18.png" },
         ],
     },
 }
