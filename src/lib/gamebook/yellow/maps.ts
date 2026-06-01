@@ -388,6 +388,7 @@ interface NorthBuild {
     trees: DecorPos[]
     flowers: DecorPos[]
     bushes: DecorPos[]
+    signs: DecorPos[]
 }
 
 function buildNorthRoute(): NorthBuild {
@@ -452,10 +453,13 @@ function buildNorthRoute(): NorthBuild {
     for (const p of trees) {
         for (let dy = 0; dy < 3; dy++) for (let dx = 0; dx < 2; dx++) m[p.y + dy][p.x + dx] = "tree"
     }
-    // 2) Buissons (clone Viridian 23.16, 1×1, BLOQUANT comme dans la source)
+    // 2) Buissons (clone Viridian 19.13, 1×1, BLOQUANT comme dans la source)
     const bushes = placeDecors(W, H, 40, 1, 1, 0xfeedbeef, isUsable)
     for (const p of bushes) m[p.y][p.x] = "tree"
-    // 3) Fleurs (clone Viridian 37.26, 1×1, WALKABLE comme dans la source)
+    // 3) Panneaux (clone Viridian 20.31, 1×1, BLOQUANT comme dans la source)
+    const signs = placeDecors(W, H, 8, 1, 1, 0xa1c0de42, isUsable)
+    for (const p of signs) m[p.y][p.x] = "tree"
+    // 4) Fleurs (clone Viridian 37.26, 1×1, WALKABLE comme dans la source)
     const flowers = placeDecors(W, H, 40, 1, 1, 0x5a5a5a5a, isUsable)
     // 4) Haute herbe (tile herbes 1 bottom-left) sur 3/4 des cases grass restantes
     //    Filtre : zone jouable, type "grass" (donc pas tree/water/grassTall), et
@@ -480,13 +484,14 @@ function buildNorthRoute(): NorthBuild {
         const p = candidates[i]
         m[p.y][p.x] = "grassTall"
     }
-    return { tiles: m, trees, flowers, bushes }
+    return { tiles: m, trees, flowers, bushes, signs }
 }
 
 const NORTH_BUILD = buildNorthRoute()
 const NORTH_DECOR_REGIONS: Array<{ x: number; y: number; w: number; h: number; url: string }> = [
     ...NORTH_BUILD.trees.map((p) => ({ x: p.x, y: p.y, w: 2, h: 3, url: "/yellow/sprites/viridian_tree_12_13_23_25.png" })),
     ...NORTH_BUILD.bushes.map((p) => ({ x: p.x, y: p.y, w: 1, h: 1, url: "/yellow/sprites/viridian_bush_19_13.png" })),
+    ...NORTH_BUILD.signs.map((p) => ({ x: p.x, y: p.y, w: 1, h: 1, url: "/yellow/sprites/viridian_sign_20_31.png" })),
     ...NORTH_BUILD.flowers.map((p) => ({ x: p.x, y: p.y, w: 1, h: 1, url: "/yellow/sprites/viridian_flower_37_26.png" })),
 ]
 
