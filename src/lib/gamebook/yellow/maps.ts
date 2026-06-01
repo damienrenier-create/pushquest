@@ -338,8 +338,8 @@ function buildNorthRoute(): TileType[][] {
         for (let x = 0; x < W; x++) row.push("grass")
         m.push(row)
     }
-    // Bordure haut
-    for (let x = 0; x < W; x++) m[0][x] = "tree"
+    // Bordure nord épaissie : rows 0-3 cols 0-43 = trees (clone montagne Viridian col 0 rows 12-15)
+    for (let y = 0; y <= 3; y++) for (let x = 0; x < W; x++) m[y][x] = "tree"
     // Bordure ouest épaissie : cols 0 ET 1 = trees (clone du double sapin Viridian côté est)
     for (let y = 0; y < H; y++) { m[y][0] = "tree"; m[y][1] = "tree" }
     // Bordure est épaissie : cols 42 ET 43 = trees (clone du double sapin Viridian)
@@ -518,6 +518,8 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
             { x: 5, y: 25, w: 6, h: 5, url: "/yellow/sprites/water_viridian.png" },
             { x: 42, y: 0, w: 2, h: NORTH_H, url: "/yellow/sprites/trees_east_border.png" },
             { x: 0, y: 0, w: 2, h: NORTH_H, url: "/yellow/sprites/trees_east_border.png" },
+            // Bordure nord : strip vertical Viridian (col 0 rows 12-15) répété 44x
+            { x: 0, y: 0, w: 44, h: 4, url: "/yellow/sprites/viridian_top_strip.png" },
             { x: 14, y: 35, w: 30, h: 5, url: "/yellow/sprites/viridian_bottom_14_43.png" },
             { x: 0, y: 35, w: 2, h: 5, url: "/yellow/sprites/viridian_bottom_14_15.png" },
             { x: 2, y: 35, w: 2, h: 5, url: "/yellow/sprites/viridian_bottom_14_15.png" },
