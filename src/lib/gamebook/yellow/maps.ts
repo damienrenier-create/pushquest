@@ -65,6 +65,14 @@ export interface YellowMapData extends MapData {
     backgroundImageOriginX?: number
     /** Pixel y de l'image qui correspond à la case (0, 0) de la map (skip headers/bordures) */
     backgroundImageOriginY?: number
+    /** v2 — Sheet de tiles "ground" (ex: herbe FireRed) avec N variantes
+     *  réparties aléatoirement sur toutes les tiles "grass" de la map. */
+    groundSheet?: {
+        url: string           // ex: "/yellow/sprites/herbes_2_t.png"
+        tileSize: number      // taille d'une tile dans la sheet (px natif)
+        gap: number           // gap entre tiles dans la sheet (0 si pas de gap)
+        count: number         // nombre de variantes
+    }
 }
 
 // === Helpers ============================================================
@@ -458,9 +466,17 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
             x: col,
             y: NORTH_H - 1,
             targetMapId: YELLOW_ENTRANCE_MAP_ID,
-            targetSpawnX: 21,  // centre de la sortie nord Viridian (cols 19..23)
-            targetSpawnY: 1,   // 1 row sous la bordure pour éviter re-warp
+            targetSpawnX: 21,
+            targetSpawnY: 1,
         })),
+        // Tapis d'herbe FireRed : 4 variantes 16×16 séparées par 1px gap
+        // (sheet totale 67×16 px), distribuées aléatoirement sur les tiles grass
+        groundSheet: {
+            url: "/yellow/sprites/herbes_2_t.png",
+            tileSize: 16,
+            gap: 1,
+            count: 4,
+        },
     },
 }
 

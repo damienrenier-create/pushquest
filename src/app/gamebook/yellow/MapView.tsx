@@ -295,6 +295,15 @@ function DoorMatEdge() {
     }} />
 }
 
+// Pick déterministe d'une variante (0..count-1) pour les tiles "grass" d'une map
+// avec groundSheet. Hash simple multiplicatif → la même (col, row) donne toujours
+// la même variante donc le pattern est stable entre rafraîchissements.
+function pickGroundVariant(col: number, row: number, count: number): number {
+    if (count <= 1) return 0
+    const h = ((col * 73856093) ^ (row * 19349663)) >>> 0
+    return h % count
+}
+
 function dotStyle(xPct: number, yPct: number, color: string, sizePct = 12): React.CSSProperties {
     return {
         position: "absolute",
@@ -386,21 +395,49 @@ export default function MapView() {
                 {/* Grille debug retirée — collisions actives, gameplay normal */}
 
                 {!hasBgImage && map.tiles.flatMap((row, y) =>
-                    row.map((tile, x) => (
-                        <div
-                            key={`t-${x}-${y}`}
-                            style={{
-                                position: "absolute",
-                                ...screenPos(x, y),
-                                width: `calc(${TILE_W_PCT}% + 1px)`,
-                                height: `calc(${TILE_H_PCT}% + 1px)`,
-                                background: tileColor(tile),
-                                overflow: "hidden",
-                            }}
-                        >
-                            <TileDeco tile={tile} />
-                        </div>
-                    )),
+                    row.map((tile, x) => {
+                        // Si map.groundSheet défini ET tile = grass → render avec sheet random
+                        if (tile === "grass" && map.groundSheet) {
+                            const sheet = map.groundSheet
+                            const idx = pickGroundVariant(x, y, sheet.count)
+                            const sheetW = sheet.count * sheet.tileSize + (sheet.count - 1) * sheet.gap
+                            const bgSizeXPct = (sheetW / sheet.tileSize) * 100
+                            const bgPosXPct = sheet.count > 1 ? (idx / (sheet.count - 1)) * 100 : 0
+                            return (
+                                <div
+                                    key={`t-${x}-${y}`}
+                                    style={{
+                                        position: "absolute",
+                                        ...screenPos(x, y),
+                                        width: `calc(${TILE_W_PCT}% + 1px)`,
+                                        height: `calc(${TILE_H_PCT}% + 1px)`,
+                                        backgroundColor: tileColor(tile),
+                                        backgroundImage: `url(${sheet.url}?v=1)`,
+                                        backgroundRepeat: "no-repeat",
+                                        backgroundSize: `${bgSizeXPct}% 100%`,
+                                        backgroundPosition: `${bgPosXPct}% 0%`,
+                                        imageRendering: "pixelated",
+                                        overflow: "hidden",
+                                    }}
+                                />
+                            )
+                        }
+                        return (
+                            <div
+                                key={`t-${x}-${y}`}
+                                style={{
+                                    position: "absolute",
+                                    ...screenPos(x, y),
+                                    width: `calc(${TILE_W_PCT}% + 1px)`,
+                                    height: `calc(${TILE_H_PCT}% + 1px)`,
+                                    background: tileColor(tile),
+                                    overflow: "hidden",
+                                }}
+                            >
+                                <TileDeco tile={tile} />
+                            </div>
+                        )
+                    }),
                 )}
 
                 {!hasBgImage && buildings.map((b) => (
