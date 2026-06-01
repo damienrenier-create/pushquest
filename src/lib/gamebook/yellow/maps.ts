@@ -442,10 +442,15 @@ function buildNorthRoute(): NorthBuild {
         for (let x = 26; x < W; x++) m[y][x] = "tree"
     }
     // === DÉCORS aléatoires déterministes (sapins / fleurs / buissons) ====
+    // Cellules réservées (clones spécifiques qui doivent rester telles quelles).
+    const reservedCells = new Set<string>()
+    // Bande row 34 cols 22-25 : clone de Viridian row 32 (transition path/sand vers sortie sud)
+    for (let x = 22; x <= 25; x++) reservedCells.add(`${x},34`)
     // Zone d'éligibilité : intérieur jouable rows 4-34 cols 2-41, herbe simple uniquement.
     const isUsable = (x: number, y: number): boolean => {
         if (x < 2 || x > 41) return false
         if (y < 4 || y > 34) return false
+        if (reservedCells.has(`${x},${y}`)) return false
         return m[y][x] === "grass"
     }
     // 1) Sapins (clone Viridian 12-13 × 23-25, footprint 2×3, BLOQUANTS)
@@ -468,7 +473,7 @@ function buildNorthRoute(): NorthBuild {
     const candidates: DecorPos[] = []
     for (let y = 4; y <= 34; y++) {
         for (let x = 2; x <= 41; x++) {
-            if (m[y][x] === "grass" && !flowerKeys.has(`${x},${y}`)) {
+            if (m[y][x] === "grass" && !flowerKeys.has(`${x},${y}`) && !reservedCells.has(`${x},${y}`)) {
                 candidates.push({ x, y })
             }
         }
@@ -671,6 +676,8 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
             { x: 0, y: 35, w: 2, h: 5, url: "/yellow/sprites/viridian_se_corner_42_43_35_39.png" },
             // Décors générés déterministiquement : 10 sapins 2×3 + 40 buissons + 40 fleurs
             ...NORTH_DECOR_REGIONS,
+            // Bande 4 tuiles row 34 cols 22-25 = clones Viridian (14,32)/(37,32)/(38,32)/(39,32)
+            { x: 22, y: 34, w: 4, h: 1, url: "/yellow/sprites/viridian_strip_row32_22_25.png" },
         ],
     },
 }
