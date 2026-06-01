@@ -68,10 +68,17 @@ export interface YellowMapData extends MapData {
     /** v2 — Sheet de tiles "ground" (ex: herbe FireRed) avec N variantes
      *  réparties aléatoirement sur toutes les tiles "grass" de la map. */
     groundSheet?: {
-        url: string           // ex: "/yellow/sprites/herbes_2_t.png"
-        tileSize: number      // taille d'une tile dans la sheet (px natif)
-        gap: number           // gap entre tiles dans la sheet (0 si pas de gap)
-        count: number         // nombre de variantes
+        url: string
+        tileSize: number
+        gap: number
+        count: number
+    }
+    /** v2 — Sheet de tiles "water" appliquée à toutes les tiles "water" de la map. */
+    waterSheet?: {
+        url: string
+        tileSize: number
+        gap: number
+        count: number
     }
 }
 
@@ -477,12 +484,18 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
             targetSpawnY: 1,
         })),
         // Tapis d'herbe FireRed : 4 variantes 16×16 séparées par 1px gap
-        // (sheet totale 67×16 px), distribuées aléatoirement sur les tiles grass
         groundSheet: {
             url: "/yellow/sprites/herbes_2_t.png",
             tileSize: 16,
             gap: 1,
             count: 4,
+        },
+        // Eau pixel-art FireRed (extraite de Viridian) : 1 tile 16×16
+        waterSheet: {
+            url: "/yellow/sprites/water_viridian.png",
+            tileSize: 16,
+            gap: 0,
+            count: 1,
         },
     },
 }

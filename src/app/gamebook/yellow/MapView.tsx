@@ -396,13 +396,18 @@ export default function MapView() {
 
                 {!hasBgImage && map.tiles.flatMap((row, y) =>
                     row.map((tile, x) => {
-                        // Si map.groundSheet défini ET tile = grass → render avec sheet random
-                        if (tile === "grass" && map.groundSheet) {
-                            const sheet = map.groundSheet
-                            const idx = pickGroundVariant(x, y, sheet.count)
-                            const sheetW = sheet.count * sheet.tileSize + (sheet.count - 1) * sheet.gap
-                            const bgSizeXPct = (sheetW / sheet.tileSize) * 100
-                            const bgPosXPct = sheet.count > 1 ? (idx / (sheet.count - 1)) * 100 : 0
+                        // Tile grass + groundSheet → sprite random
+                        // Tile water + waterSheet → sprite unique
+                        const tileSheet = (tile === "grass" && map.groundSheet)
+                            ? map.groundSheet
+                            : (tile === "water" && map.waterSheet)
+                                ? map.waterSheet
+                                : null
+                        if (tileSheet) {
+                            const idx = pickGroundVariant(x, y, tileSheet.count)
+                            const sheetW = tileSheet.count * tileSheet.tileSize + (tileSheet.count - 1) * tileSheet.gap
+                            const bgSizeXPct = (sheetW / tileSheet.tileSize) * 100
+                            const bgPosXPct = tileSheet.count > 1 ? (idx / (tileSheet.count - 1)) * 100 : 0
                             return (
                                 <div
                                     key={`t-${x}-${y}`}
@@ -412,7 +417,7 @@ export default function MapView() {
                                         width: `calc(${TILE_W_PCT}% + 1px)`,
                                         height: `calc(${TILE_H_PCT}% + 1px)`,
                                         backgroundColor: tileColor(tile),
-                                        backgroundImage: `url(${sheet.url}?v=1)`,
+                                        backgroundImage: `url(${tileSheet.url}?v=1)`,
                                         backgroundRepeat: "no-repeat",
                                         backgroundSize: `${bgSizeXPct}% 100%`,
                                         backgroundPosition: `${bgPosXPct}% 0%`,
