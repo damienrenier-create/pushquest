@@ -338,9 +338,10 @@ function buildNorthRoute(): TileType[][] {
         for (let x = 0; x < W; x++) row.push("grass")
         m.push(row)
     }
-    // Bordures trees (haut + ouest)
+    // Bordure haut
     for (let x = 0; x < W; x++) m[0][x] = "tree"
-    for (let y = 0; y < H; y++) m[y][0] = "tree"
+    // Bordure ouest épaissie : cols 0 ET 1 = trees (clone du double sapin Viridian côté est)
+    for (let y = 0; y < H; y++) { m[y][0] = "tree"; m[y][1] = "tree" }
     // Bordure est épaissie : cols 42 ET 43 = trees (clone du double sapin Viridian)
     for (let y = 0; y < H; y++) { m[y][W - 1] = "tree"; m[y][W - 2] = "tree" }
     // Patches grassTall scatterés (placeholder wild grass)
@@ -507,7 +508,8 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         },
         // Régions sprite clonées depuis Viridian au pixel près :
         // - 2 plans d'eau (6×5 chacun) = sprite eau Viridian 96×80
-        // - Bordure est trees (cols 42-43, all rows) = sprite Viridian east 32×640
+        // - Bordure est trees (cols 42-43, all rows) = sprite Viridian est 32×640
+        // - Bordure ouest trees (cols 0-1, all rows)  = même sprite (double sapin)
         // - Bordure sud (rows 35-39) :
         //     * cols 14-43 = clone exact du bas Viridian (forêt + sortie sable)
         //     * cols 0-13 = répétition 7x de la slice 2-col cols 14-15 de Viridian
@@ -515,6 +517,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
             { x: 35, y: 3, w: 6, h: 5, url: "/yellow/sprites/water_viridian.png" },
             { x: 5, y: 25, w: 6, h: 5, url: "/yellow/sprites/water_viridian.png" },
             { x: 42, y: 0, w: 2, h: NORTH_H, url: "/yellow/sprites/trees_east_border.png" },
+            { x: 0, y: 0, w: 2, h: NORTH_H, url: "/yellow/sprites/trees_east_border.png" },
             { x: 14, y: 35, w: 30, h: 5, url: "/yellow/sprites/viridian_bottom_14_43.png" },
             { x: 0, y: 35, w: 2, h: 5, url: "/yellow/sprites/viridian_bottom_14_15.png" },
             { x: 2, y: 35, w: 2, h: 5, url: "/yellow/sprites/viridian_bottom_14_15.png" },
