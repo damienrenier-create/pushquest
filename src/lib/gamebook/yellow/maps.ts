@@ -171,10 +171,9 @@ function buildViridianCollisions(): TileType[][] {
     m[16][20] = "tree"  // petit panneau
     m[31][20] = "tree"  // panneau près passage
 
-    // === EAU (rectangle plein cols 11..16, rows 26..31) ===
-    // User : "le carré de 11.26 à 16.26 qui descend jusqu'à 11.31 à 16.31"
-    // → 6 cols × 6 rows = 36 tiles d'eau.
-    for (let y = 26; y <= 31; y++) for (let x = 11; x <= 16; x++) m[y][x] = "water"
+    // === EAU (rectangle plein cols 11..16, rows 26..30) ===
+    // 6 cols × 5 rows = 30 tiles d'eau (user a corrigé : va jusqu'à row 30 pas 31).
+    for (let y = 26; y <= 30; y++) for (let x = 11; x <= 16; x++) m[y][x] = "water"
 
     // === OVERRIDES walkable (À LA FIN pour effacer les blocages au besoin) ===
     // Petite zone herbe (6,15), (7,15)
@@ -199,8 +198,8 @@ function buildViridianCollisions(): TileType[][] {
     for (let y = 20; y <= 21; y++) for (let x = 7; x <= 19; x++) m[y][x] = "grass"
     // Walkable rows 5 et 8 cols 20..30 (user spec)
     for (let x = 20; x <= 30; x++) { m[5][x] = "grass"; m[8][x] = "grass" }
-    // Walkable row 31 cols 7..19 SAUF cols 11..16 (= eau étendue à row 31)
-    for (let x = 7; x <= 19; x++) if (x < 11 || x > 16) m[31][x] = "grass"
+    // Walkable row 31 cols 7..19
+    for (let x = 7; x <= 19; x++) m[31][x] = "grass"
     // Walkable row 32 cols 7..41
     for (let x = 7; x <= 41; x++) m[32][x] = "grass"
 
@@ -341,11 +340,11 @@ function buildNorthRoute(): TileType[][] {
     for (let y = 10; y <= 14; y++) for (let x = 25; x <= 35; x++) m[y][x] = "grassTall"
     for (let y = 18; y <= 22; y++) for (let x = 12; x <= 20; x++) m[y][x] = "grassTall"
     for (let y = 25; y <= 30; y++) for (let x = 28; x <= 38; x++) m[y][x] = "grassTall"
-    // 2 plans d'eau cloned de Viridian (6×6 chacun)
-    // Plan d'eau 1 : haut-droite (35-40, 3-8)
-    for (let y = 3; y <= 8; y++) for (let x = 35; x <= 40; x++) m[y][x] = "water"
-    // Plan d'eau 2 : bas-gauche (5-10, 25-30)
-    for (let y = 25; y <= 30; y++) for (let x = 5; x <= 10; x++) m[y][x] = "water"
+    // 2 plans d'eau cloned de Viridian (6 cols × 5 rows = même taille)
+    // Plan d'eau 1 : haut-droite (35-40, 3-7)
+    for (let y = 3; y <= 7; y++) for (let x = 35; x <= 40; x++) m[y][x] = "water"
+    // Plan d'eau 2 : bas-gauche (5-10, 25-29)
+    for (let y = 25; y <= 29; y++) for (let x = 5; x <= 10; x++) m[y][x] = "water"
     return m
 }
 
