@@ -1795,12 +1795,12 @@ export const NPCS: NpcDefinition[] = [
         kind: "static",
         interaction: "interactive",
         sprite: { emoji: "🕴️", color: "#202020" },
-        // v3.42 — Position : sur le trottoir d'approche sud, directement devant la porte
-        // du bar (qui est à 2,19). Avant, le videur était à (2, 18) — à l'intérieur du
-        // footprint du bâtiment = mur infranchissable. Il est maintenant un obstacle
-        // physique que le joueur ne peut pas contourner. Filtré côté client une fois
-        // videurState = "passed" → il s'efface et libère la voie vers la porte.
-        initialX: 2,
+        // v4.x — Position : À CÔTÉ de la porte du bar (porte à 2,19), trottoir sud, x=1.
+        // Avant il était pile DEVANT (2,20) → il bloquait physiquement le passage MÊME après
+        // que le joueur avait le mot de passe / fait le défi. L'accès est de toute façon géré
+        // par le gating de la porte (videurState, cf. MapClient), donc le videur n'a plus besoin
+        // de barrer la route : il reste visible comme portier juste à gauche de la porte.
+        initialX: 1,
         initialY: 20,
         // Dialogue initial — la suite est gérée par MapClient (choix oui/non + flag pere_pesto)
         dialoguesAfter: [

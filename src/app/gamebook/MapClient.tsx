@@ -813,15 +813,12 @@ export default function MapClient({
     // ============================================================
     const wanderTick = useWanderTicker()
     const bestiolesFlee = tamagotchi?.recovered === true
-    // v3.42 — Le PORTIER ARRABBIATA s'efface une fois son défi validé ("passed")
-    // ou le boss vaincu. Il était physiquement devant la porte du bar TB (2, 20) ;
-    // sans ce filtre, il bloquerait à vie le passage même après que le joueur a payé son dû.
-    const videurPassed =
-        (state as { videurState?: string }).videurState === "passed" ||
-        (state as { videurState?: string }).videurState === "boss_beaten"
+    // v4.x — Le PORTIER ARRABBIATA est désormais placé À CÔTÉ de la porte (1,20), plus DEVANT.
+    // Il ne bloque donc plus physiquement le passage : l'accès au bar est géré uniquement par
+    // le gating de la porte (videurState, cf. plus bas). On le laisse visible en permanence
+    // comme portier (plus de filtre qui le faisait disparaître après le défi).
     const npcsOnMap = getNpcsForMap(state.mapId).filter((npc) => {
         if (npc.id.startsWith("bestiole_") && bestiolesFlee) return false
-        if (npc.id === "tb_videur" && videurPassed) return false
         return true
     })
     const npcsWithPos = npcsOnMap.map((npc) => {
@@ -1229,7 +1226,7 @@ export default function MapClient({
             if (!("blocked" in result) && result.nextState.mapId === "lasagnas_tb_bar") {
                 const vState = (state as { videurState?: string }).videurState ?? "untouched"
                 if (vState !== "passed" && vState !== "boss_beaten") {
-                    setToast("🚪 Le PORTIER ARRABBIATA te barre l'entrée. « Pas si vite. »")
+                    setToast("🚪 « Pas si vite. » Parle d'abord au PORTIER ARRABBIATA, juste à côté de la porte.")
                     setState((s) => ({ ...s, direction: d }))
                     return
                 }
@@ -2487,7 +2484,10 @@ export default function MapClient({
                             const res = await fetch("/api/gamebook/tb/validate-challenge", { method: "POST" })
                             const data = await res.json()
                             if (data.ok && data.canEnter) {
-                                // Le videur laisse entrer (déjà passé ou défi vient d'être validé)
+                                // Le videur laisse entrer (déjà passé ou défi vient d'être validé).
+                                // FIX : on met à jour videurState côté client, sinon le gating de la
+                                // porte (qui lit state.videurState) restait bloqué → "ne laisse passer personne".
+                                if (data.state) setState((s) => ({ ...s, videurState: data.state }))
                                 setPopup({ kind: "info", text: data.message })
                                 return
                             }
@@ -4984,6 +4984,9 @@ export default function MapClient({
                                 body: JSON.stringify({ choice }),
                             })
                             const data = await res.json()
+                            // Synchronise le videurState côté client (sinon le gating de la porte reste en retard).
+                            if (data.state) setState((s) => ({ ...s, videurState: data.state }))
+                            setShowVideur(false)
                             if (data.ok && data.message) {
                                 setPopup({
                                     kind: "info",
