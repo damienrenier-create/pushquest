@@ -1406,7 +1406,7 @@ export const BIBLIOTHEQUE_TOPICS: BiblioTopic[] = [
         y: 3,
         kind: "defis_adoption",
         title: "Défis d'adoption (chez le vétérinaire V3T)",
-        text: "Pour libérer ton animal, tous ont les MÊMES 7 défis (ordre différent par animal) :\n\n1. Aller le voir\n2. Lui donner à boire (gourde)\n3. Lui offrir des pâtes (corned_pates)\n4. Le visiter matin ET après-midi\n5. 180s de gainage\n6. 200 pompes APRÈS le gainage\n7. 300 squats APRÈS les pompes\n\nLes seuils sont ajustés au ratio onboarding.",
+        text: "Pour libérer ton animal, tous ont les MÊMES 7 défis (ordre différent par animal) :\n\n1. Aller le voir\n2. Lui donner à boire (gourde)\n3. Lui offrir des pâtes (corned_pates)\n4. Le visiter matin ET après-midi\n5. [[r:180]]s de gainage\n6. [[r:200]] pompes APRÈS le gainage\n7. [[r:300]] squats APRÈS les pompes\n\nLes seuils sont ajustés au ratio onboarding.",
     },
     // Archives (y=7)
     {

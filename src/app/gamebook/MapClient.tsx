@@ -954,8 +954,8 @@ export default function MapClient({
             // 2e — défi 50 pompes
             lines = [
                 "Tu reviens ! T'as l'air en forme.",
-                "J'te propose un défi : si tu fais 50 pompes dans la journée, je te file mon économie : +100 reps.",
-                "Reviens me parler quand t'as fait les 50. Je vérifie en direct.",
+                "J'te propose un défi : si tu fais [[r:50]] pompes dans la journée, je te file mon économie : +[[r:100]] reps.",
+                "Reviens me parler quand t'as fait les [[r:50]]. Je vérifie en direct.",
             ]
         } else {
             // 3e+ — ONE PIECE
@@ -4183,7 +4183,7 @@ export default function MapClient({
                                 maxWidth: "90%",
                             }}
                         >
-                            {toast}
+                            {ratioizeText(toast ?? "", difficultyRatio)}
                         </div>
                     )}
 
@@ -4193,6 +4193,7 @@ export default function MapClient({
                             speaker="MONSTRE SPAGHETTI"
                             text={MONSTER_INTRO_DIALOGUE[state.introStep]}
                             onNext={pressA}
+                            ratio={difficultyRatio}
                         />
                     )}
 
@@ -4212,6 +4213,7 @@ export default function MapClient({
                             text={cinematic.lines[cinematic.step]}
                             onNext={pressA}
                             onCancel={() => setCinematic(null)}
+                            ratio={difficultyRatio}
                         />
                     )}
 
@@ -4267,6 +4269,7 @@ export default function MapClient({
                                     : FRANSS_JOKE_ATTOWER_LINES[cinematic.step]
                             }
                             onNext={pressA}
+                            ratio={difficultyRatio}
                         />
                     )}
 
@@ -4308,7 +4311,7 @@ export default function MapClient({
                     )}
 
                     {/* POPUP */}
-                    {popup && <PopupBox text={popup.text} onClose={() => setPopup(null)} />}
+                    {popup && <PopupBox text={popup.text} onClose={() => setPopup(null)} ratio={difficultyRatio} />}
                 </div>
             </div>
 
@@ -5767,9 +5770,20 @@ function SignSpriteR({
     )
 }
 
+// Remplace les placeholders [[r:N]] par N ajusté au ratio d'onboarding (pour que le joueur
+// voie la VRAIE valeur qu'il devra payer/atteindre). Les nombres normaux ne sont pas touchés.
+function ratioizeText(text: string, ratio: number): string {
+    if (!text) return text
+    return text.replace(/\[\[r:(\d+)\]\]/g, (_m, n) => {
+        const base = parseInt(n, 10)
+        if (!Number.isFinite(ratio) || ratio >= 1) return String(base)
+        return String(Math.max(1, Math.round(base * ratio)))
+    })
+}
+
 function DialogueBox({
-    speaker, text, onNext, onCancel,
-}: { speaker: string; text: string; onNext: () => void; onCancel?: () => void }) {
+    speaker, text, onNext, onCancel, ratio = 1,
+}: { speaker: string; text: string; onNext: () => void; onCancel?: () => void; ratio?: number }) {
     return (
         <div
             style={{
@@ -5791,7 +5805,7 @@ function DialogueBox({
                 {speaker}
             </div>
             <div style={{ fontSize: "11px", color: "#000", lineHeight: "1.4", paddingRight: "20px" }}>
-                {text}
+                {ratioizeText(text, ratio)}
             </div>
             {/* Bouton retour visible si onCancel défini (sortie d'urgence — touche B / ESC). */}
             {onCancel && (
@@ -5813,7 +5827,7 @@ function DialogueBox({
     )
 }
 
-function PopupBox({ text, onClose }: { text: string; onClose: () => void }) {
+function PopupBox({ text, onClose, ratio = 1 }: { text: string; onClose: () => void; ratio?: number }) {
     return (
         <div
             style={{
@@ -5831,7 +5845,7 @@ function PopupBox({ text, onClose }: { text: string; onClose: () => void }) {
             onClick={onClose}
         >
             <div style={{ fontSize: "10px", color: "#000", whiteSpace: "pre-wrap", lineHeight: "1.4" }}>
-                {text}
+                {ratioizeText(text, ratio)}
             </div>
             <div style={{ position: "absolute", bottom: "4px", right: "8px", fontSize: "10px", color: "#000", animation: "gbBlink 0.7s infinite" }}>
                 ▼ A
