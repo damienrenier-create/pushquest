@@ -18,6 +18,8 @@ import { BADGE_DEFINITIONS } from "@/config/badges";
 import { calculateAllUsersXP } from "@/lib/xp";
 import { getXPForReward } from "@/lib/rewards";
 import { getCompetitiveDangerList } from "@/lib/competitive-danger";
+import { GIFT_RECIPIENT_ID } from "@/lib/gift";
+import { quotaTotalWithGifts, setEffort } from "@/lib/quota";
 
 export const dynamic = "force-dynamic";
 
@@ -86,6 +88,9 @@ export async function GET(req: Request) {
         });
         const sharedSummaries = getUserSummaries(allUsers, allTorchAndStealEvents);
 
+        // Reps offertes à Milka (cadeau) — agrégées depuis tous les donneurs (sets avec offeredToUserId)
+        const giftsToMilka = allUsers.flatMap((u: any) => (u.sets || []).filter((s: any) => s.offeredToUserId === GIFT_RECIPIENT_ID));
+
         // --- 3. Lazy Fine Calculation ---
         const fineDates = getDatesInRangeToToday(FINE_START_DATE).filter(d => d < today).slice(-7);
 
@@ -125,11 +130,11 @@ export async function GET(req: Request) {
                     continue;
                 }
 
-                const daySets = u.sets?.filter((s: any) => s.date === d) || [];
-                const dayTotal = daySets
-                    .reduce((sum: number, s: any) => sum + (s.exercise === "PLANK" ? Math.floor(s.reps / 5) : s.reps), 0);
-
                 const req = getDailyTargetForUserOnDate(u, d);
+                // Reps offertes à Milka : excluent les reps données par le donneur de SON quota,
+                // et ajoutent (capé) les reps reçues au quota du bénéficiaire.
+                const giftSetsForU = u.id === GIFT_RECIPIENT_ID ? giftsToMilka : [];
+                const dayTotal = quotaTotalWithGifts(u.sets || [], giftSetsForU, d, req);
 
                 if (existingFine) {
                     // If fine exists but requirement met, delete it
@@ -195,9 +200,9 @@ export async function GET(req: Request) {
                 let broken = false;
                 for (let i = dates.length - 1; i >= 0; i--) {
                     const d = dates[i];
-                    const daySets = uSets.filter((s: any) => s.date === d);
-                    const dayTotal = daySets.reduce((sum: number, s: any) => sum + (s.exercise === "PLANK" ? Math.floor(s.reps / 5) : s.reps), 0);
                     const req = getDailyTargetForUserOnDate(u, d);
+                    const giftSetsForU = u.id === GIFT_RECIPIENT_ID ? giftsToMilka : [];
+                    const dayTotal = quotaTotalWithGifts(uSets, giftSetsForU, d, req);
                     const isExcused = isVeteran || (u.medicalCertificates?.some((c: any) => d >= c.startDateISO && d <= c.endDateISO));
                     const isComp = (dayTotal >= req) || isExcused;
                     
@@ -238,9 +243,9 @@ export async function GET(req: Request) {
                 maxSingleSet: Math.max(0, ...uSets.map((s: any) => s.reps)),
                 totalPerfectDays: uSets.filter((s: any) => {
                     const d = s.date;
-                    const daySets = uSets.filter((ss: any) => ss.date === d);
-                    const dayTotal = daySets.reduce((sum: number, ss: any) => sum + (ss.exercise === "PLANK" ? Math.floor(ss.reps / 5) : ss.reps), 0);
-                    return dayTotal >= getDailyTargetForUserOnDate(u, d);
+                    const req = getDailyTargetForUserOnDate(u, d);
+                    const giftSetsForU = u.id === GIFT_RECIPIENT_ID ? giftsToMilka : [];
+                    return quotaTotalWithGifts(uSets, giftSetsForU, d, req) >= req;
                 }).length, // Note: Simplified but accurate enough for badges
                 totalPushupsAllTime,
                 totalPullupsAllTime,
@@ -304,6 +309,26 @@ export async function GET(req: Request) {
                     recordsData[p.id][ex.toLowerCase() + "s"] = { winner: "Pas de record", maxReps: 0, top3Sets: [], top3Volume: [] };
                 }
             }
+        }
+
+        // --- Classement Générosité (cadeau de reps à Milka) ---
+        const nickById: Record<string, string> = Object.fromEntries(allUsers.map((u: any) => [u.id, u.nickname]));
+        const genPeriods = [
+            { id: "day", filter: (s: any) => s.date === today },
+            { id: "week", filter: (s: any) => s.date >= formatDateISO(new Date(Date.now() - 6 * 86400000)) },
+            { id: "month", filter: (s: any) => s.date.startsWith(today.substring(0, 7)) },
+            { id: "year", filter: (s: any) => s.date.startsWith(today.substring(0, 4)) },
+        ];
+        const generosity: any = {};
+        for (const p of genPeriods) {
+            const totals = new Map<string, number>();
+            for (const s of giftsToMilka) {
+                if (!p.filter(s)) continue;
+                totals.set(s.userId, (totals.get(s.userId) || 0) + setEffort(s));
+            }
+            generosity[p.id] = Array.from(totals.entries())
+                .map(([uid, total]) => ({ nickname: nickById[uid] || "?", total }))
+                .sort((a, b) => b.total - a.total);
         }
 
         // Trophies Configuration (V3.1 Expansion)
@@ -542,6 +567,7 @@ export async function GET(req: Request) {
 
             leaderboard: leaderboard.map(({ sets, ...rest }) => rest),
             records: recordsData,
+            generosity,
             xp: {
                 leaderboard: xpScores,
                 currentUser: currentUserXP

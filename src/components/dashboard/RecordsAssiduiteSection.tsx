@@ -157,6 +157,35 @@ export default function RecordsAssiduiteSection({
                 </div>
             </div>
 
+            {/* GÉNÉROSITÉ — Cadeau de reps à Milka */}
+            {data?.generosity && (['day', 'week', 'month', 'year'] as const).some(p => (data.generosity[p] || []).length > 0) && (
+                <div className="space-y-3">
+                    <div className="flex flex-col ml-2">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xl">🎁</span>
+                            <h3 className="font-black text-xs text-gray-800 uppercase tracking-widest leading-none">Générosité — Reps offertes à Milka 🍼</h3>
+                        </div>
+                        <p className="text-[9px] font-bold text-gray-400 uppercase mt-1 ml-7 tracking-tighter">Les plus généreux du jour, semaine, mois et année</p>
+                    </div>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                        {([['day', 'Jour'], ['week', 'Semaine'], ['month', 'Mois'], ['year', 'Année']] as const).map(([pid, label]) => (
+                            <div key={pid} className="bg-gradient-to-br from-pink-50 to-rose-50 p-4 rounded-3xl border border-pink-100 shadow-sm">
+                                <span className="text-[9px] font-black text-pink-600 bg-pink-100 px-2 py-0.5 rounded-full uppercase">{label}</span>
+                                <div className="mt-3 space-y-2">
+                                    {((data.generosity[pid] || []).slice(0, 3)).map((g: any, i: number) => (
+                                        <div key={g.nickname + i} className="flex justify-between items-center text-[11px]">
+                                            <span className="font-bold text-gray-600 truncate mr-1">{i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'} {g.nickname}</span>
+                                            <span className="font-black text-pink-600">{g.total}</span>
+                                        </div>
+                                    ))}
+                                    {!(data.generosity[pid] || []).length && <p className="text-[9px] text-gray-400 italic">Personne encore</p>}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* ASSIDUITE */}
             <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="p-4 bg-gray-50 border-b border-gray-100 flex justify-center items-center gap-2">

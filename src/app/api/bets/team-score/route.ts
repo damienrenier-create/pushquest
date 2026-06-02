@@ -50,7 +50,7 @@ export async function GET(req: Request) {
           userId: { in: allUserIds },
           date: { gte: competitionStart, lte: endClamp },
         },
-        select: { userId: true, date: true, exercise: true, reps: true },
+        select: { userId: true, date: true, exercise: true, reps: true, offeredToUserId: true },
       });
       const setsByUser: Record<string, any[]> = {};
       for (const s of sets) (setsByUser[s.userId] ??= []).push(s);

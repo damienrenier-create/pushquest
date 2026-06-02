@@ -165,11 +165,16 @@ model ExerciseSet {
   date      String   // YYYY-MM-DD
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Cadeau de reps : si non-null, ces reps sont OFFERTES à ce joueur.
+  // Elles comptent dans le volume/XP du donneur (userId) mais PAS son quota,
+  // et remplissent le quota du bénéficiaire (offeredToUserId). Voir src/lib/quota.ts.
+  offeredToUserId String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId, date])
   @@index([date, exercise])
+  @@index([offeredToUserId, date])
 }
 
 model FineRecord {

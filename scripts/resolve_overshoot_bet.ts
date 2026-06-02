@@ -50,7 +50,7 @@ async function main() {
   const userMap = Object.fromEntries(users.map((u: any) => [u.id, u]));
   const sets = await (prisma as any).exerciseSet.findMany({
     where: { userId: { in: allIds }, date: { gte: competitionStart, lte: competitionEnd } },
-    select: { userId: true, date: true, exercise: true, reps: true },
+    select: { userId: true, date: true, exercise: true, reps: true, offeredToUserId: true },
   });
   const setsByUser: Record<string, any[]> = {};
   for (const s of sets) (setsByUser[s.userId] ??= []).push(s);

@@ -12,6 +12,7 @@ export interface OvershootSet {
     date: string;
     exercise: string;
     reps: number;
+    offeredToUserId?: string | null;
 }
 
 /** Total de reps d'une journée selon la convention de l'app (PLANK compté /5). */
@@ -48,7 +49,8 @@ export function overshootPointsForUser(
     for (const d of dates) {
         const quota = getDailyTargetForUserOnDate(user, d);
         if (quota <= 0) continue;
-        const total = dayTotalReps(sets.filter(s => s.date === d));
+        // On exclut les reps OFFERTES (cadeau) : elles ne comptent pas pour le dépassement du donneur.
+        const total = dayTotalReps(sets.filter(s => s.date === d && !s.offeredToUserId));
         if (total > quota) {
             points += Math.floor(((total - quota) / quota) * 100);
         }

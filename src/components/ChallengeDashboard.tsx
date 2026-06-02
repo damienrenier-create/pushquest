@@ -7,6 +7,7 @@ import { useSession, signIn } from "next-auth/react"
 import { HelpCircle } from "lucide-react"
 import RewardDetailSheet from "./RewardDetailSheet"
 import WorkoutEntry from "./dashboard/WorkoutEntry"
+import GiftRepsCard from "./dashboard/GiftRepsCard"
 import StatCards from "./dashboard/StatCards"
 import SocialFeed from "./dashboard/SocialFeed"
 import TrophySection from "./dashboard/TrophySection"
@@ -659,6 +660,12 @@ export default function ChallengeDashboard() {
                         setLocalSets={setLocalSets}
                         saving={saving}
                         saveLogs={saveLogs}
+                    />
+
+                    <GiftRepsCard
+                        currentUserId={(session?.user as any)?.id}
+                        today={data.todayISO}
+                        onSaved={() => fetchData(selectedDate)}
                     />
 
                     <SocialFeed
