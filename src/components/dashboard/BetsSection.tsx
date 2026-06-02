@@ -44,9 +44,13 @@ export default function BetsSection({ session }: { session: any }) {
     const activeBets = bets.filter(b => b.status === "OPEN" || b.status === "LOCKED" || b.status === "DRAFT")
     const resolvedBets = bets.filter(b => b.status === "RESOLVED" || b.status === "CANCELLED")
 
-    // Détecte les paris d'équipe pour activer le thème jungle + scoreboard
+    // Détecte les paris d'équipe ENCORE ACTIFS pour activer le thème jungle + scoreboard
+    // (une fois la Semaine des Équipes résolue, le bloc disparaît tout seul)
     const teamBets = useMemo(() => bets.filter(b => {
-        try { return JSON.parse(b.metadata || '{}')?.teamBet === true } catch { return false }
+        try {
+            const meta = JSON.parse(b.metadata || '{}')
+            return meta?.teamBet === true && (b.status === "OPEN" || b.status === "LOCKED")
+        } catch { return false }
     }), [bets])
     const isJungleTheme = teamBets.length > 0
     const teamBetIds = useMemo(() => teamBets.map((b: any) => b.id), [teamBets])
