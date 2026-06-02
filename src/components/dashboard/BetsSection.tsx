@@ -3,8 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import CoinsBalance from "./CoinsBalance"
 import BetCard from "./BetCard"
-import TeamLore from "@/components/TeamLore"
-import TeamScoreBoard from "@/components/TeamScoreBoard"
+import OvershootScoreBoard from "@/components/OvershootScoreBoard"
 
 export default function BetsSection({ session }: { session: any }) {
     const [bets, setBets] = useState<any[]>([])
@@ -94,13 +93,8 @@ export default function BetsSection({ session }: { session: any }) {
                     {isJungleTheme ? '🌿' : '🎲'} PARIS EN COURS
                 </h2>
 
-                {/* Bloc lore FSM — visible uniquement en mode jungle */}
-                {isJungleTheme && <TeamLore />}
-
-                {/* Tableau de scores — visible dès qu'un teamBet existe */}
-                {isJungleTheme && (
-                    <TeamScoreBoard bets={bets} />
-                )}
+                {/* Tableau de scores Verts/Bleus — Défi du Dépassement de Quota */}
+                {isJungleTheme && <OvershootScoreBoard bets={bets} />}
 
                 {loading ? (
                     <div className="space-y-4">

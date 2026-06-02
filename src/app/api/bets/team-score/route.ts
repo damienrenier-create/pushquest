@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { getTodayISO } from "@/lib/challenge";
+import { overshootPointsForUser, datesInRange } from "@/lib/overshoot";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +29,63 @@ export async function GET(req: Request) {
 
     const { competitionStart, competitionEnd, exercise, teams } = teamConfig;
 
-    // Récupérer les nicknames
+    // ─── MODE DÉPASSEMENT DE QUOTA (Verts vs Bleus) ──────────────────────────
+    if (teamConfig.metric === "QUOTA_OVERSHOOT") {
+      const teamKeys = Object.keys(teams); // ex: ["vert", "bleu"]
+      const allUserIds = teamKeys.flatMap((k) => teams[k]);
+
+      // Borne haute = min(fin de compète, aujourd'hui) pour un score live
+      const today = getTodayISO();
+      const endClamp = today < competitionEnd ? today : competitionEnd;
+      const dates = competitionStart <= endClamp ? datesInRange(competitionStart, endClamp) : [];
+
+      const users = await prisma.user.findMany({
+        where: { id: { in: allUserIds } },
+        select: { id: true, nickname: true, onboardingStartedAt: true },
+      });
+      const userMap = Object.fromEntries(users.map((u: any) => [u.id, u]));
+
+      const sets = await (prisma as any).exerciseSet.findMany({
+        where: {
+          userId: { in: allUserIds },
+          date: { gte: competitionStart, lte: endClamp },
+        },
+        select: { userId: true, date: true, exercise: true, reps: true },
+      });
+      const setsByUser: Record<string, any[]> = {};
+      for (const s of sets) (setsByUser[s.userId] ??= []).push(s);
+
+      const buildTeam = (ids: string[]) => {
+        const members: Record<string, number> = {};
+        let total = 0;
+        for (const id of ids) {
+          const u = userMap[id];
+          const pts = u ? overshootPointsForUser(u, setsByUser[id] ?? [], dates) : 0;
+          members[u?.nickname ?? id] = pts;
+          total += pts;
+        }
+        return { total, members };
+      };
+
+      const teamResults: Record<string, { total: number; members: Record<string, number> }> = {};
+      for (const k of teamKeys) teamResults[k] = buildTeam(teams[k]);
+
+      const [kA, kB] = teamKeys;
+      const leader = teamResults[kA].total > teamResults[kB].total ? kA
+        : teamResults[kB].total > teamResults[kA].total ? kB
+        : null;
+
+      return NextResponse.json({
+        mode: "overshoot",
+        competitionStart,
+        competitionEnd,
+        teams: teamResults,
+        display: teamConfig.display ?? {},
+        leader,
+      });
+    }
+
+    // ─── MODE VOLUME (Semaine des Équipes Jaune/Rouge — inchangé) ─────────────
     const allUserIds = [...teams.jaune, ...teams.rouge];
     const users = await prisma.user.findMany({
       where: { id: { in: allUserIds } },
@@ -35,7 +93,6 @@ export async function GET(req: Request) {
     });
     const nicknameMap = Object.fromEntries(users.map((u: any) => [u.id, u.nickname]));
 
-    // Sommer les reps par userId
     const sets = await (prisma as any).exerciseSet.findMany({
       where: {
         userId: { in: allUserIds },
