@@ -16,8 +16,8 @@ export default function TeamBadge({ userId, showText = false }: { userId: string
   if (!badge) return null;
 
   if (showText) {
-    const text = badge === "🟡" ? "TEAM JAUNE" : "TEAM ROUGE";
-    const color = badge === "🟡" ? "text-amber-400" : "text-red-400";
+    const text = badge === "🟢" ? "TEAM VERTS" : "TEAM BLEUS";
+    const color = badge === "🟢" ? "text-green-400" : "text-blue-400";
     return (
       <span className={`ml-2 px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[9px] font-black tracking-wider ${color} uppercase`}>
         {badge} {text}

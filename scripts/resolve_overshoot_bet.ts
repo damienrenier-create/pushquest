@@ -61,7 +61,7 @@ async function main() {
     console.log(`\n   ${display?.[k]?.emoji ?? ""} ${display?.[k]?.label ?? k} :`);
     for (const id of teams[k]) {
       const pts = userMap[id] ? overshootPointsForUser(userMap[id], setsByUser[id] ?? [], dates) : 0;
-      console.log(`      ${userMap[id]?.nickname ?? id} : +${pts}%`);
+      console.log(`      ${userMap[id]?.nickname ?? id} : +${pts} reps`);
       t += pts;
     }
     totals[k] = t;

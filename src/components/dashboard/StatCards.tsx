@@ -46,15 +46,15 @@ export default function StatCards({
                 textClass: "text-indigo-400"
             }
         }
-        if (userTeam === "🟡") {
+        if (userTeam === "🟢") {
             return {
-                cardClass: "bg-gradient-to-br from-amber-950/45 via-stone-900 to-yellow-950/50 border-yellow-500/30 shadow-yellow-950/20 shadow-2xl",
-                textClass: "text-amber-400 font-bold"
+                cardClass: "bg-gradient-to-br from-green-950/45 via-stone-900 to-emerald-950/50 border-green-500/30 shadow-green-950/20 shadow-2xl",
+                textClass: "text-green-400 font-bold"
             }
         }
         return {
-            cardClass: "bg-gradient-to-br from-red-950/45 via-stone-900 to-rose-950/50 border-red-500/30 shadow-red-950/20 shadow-2xl",
-            textClass: "text-red-400 font-bold"
+            cardClass: "bg-gradient-to-br from-blue-950/45 via-stone-900 to-sky-950/50 border-blue-500/30 shadow-blue-950/20 shadow-2xl",
+            textClass: "text-blue-400 font-bold"
         }
     }
 

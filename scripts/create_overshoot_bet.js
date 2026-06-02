@@ -19,6 +19,7 @@ const TEAMS = {
     "cmopr0pw6000a5ubrn11oedxk", // Gg
     "cmml1r6um0000pto29d129npd", // Mools
     "cmml1yb61000fpto2bxd8i6fc", // Milkardashian
+    "cmpgu4uq5000069du4s19q5l9", // Franss
   ],
   bleu: [
     "cmml1wvc00006k6aaxjjfsfv0", // Neuneu
@@ -34,14 +35,14 @@ const OPTIONS = [
 
 const metadata = {
   teamBet: true,
-  tagline: "Dépasse-toi. Chaque % au-dessus de ton quota fait gagner ton équipe.",
+  tagline: "Dépasse-toi. Chaque rep au-dessus de ton quota fait gagner ton équipe.",
   manualOdds: [
-    { key: "vert", label: "Verts 🟢", odd: 1.90, statLabel: "Gg + Mools + Milka — projection ~5533 pts / 2 mois" },
-    { key: "bleu", label: "Bleus 🔵", odd: 1.75, statLabel: "Neuneu + Xa + Embi — projection ~6033 pts / 2 mois" },
+    { key: "vert", label: "Verts 🟢", odd: 2.20, statLabel: "Gg + Mools + Milka + Franss — projection ~5118 reps / 2 mois" },
+    { key: "bleu", label: "Bleus 🔵", odd: 1.55, statLabel: "Neuneu + Xa + Embi — projection ~7278 reps / 2 mois" },
   ],
   note: "Défi du Dépassement de Quota — Verts vs Bleus",
   resolveInstructions:
-    "Comparer les points de dépassement de quota de chaque équipe sur 2026-06-08 → 2026-06-14 via scripts/resolve_overshoot_bet.ts. Points = somme par membre de max(0, floor((reps_jour - quota_jour)/quota_jour*100)).",
+    "Comparer les points de dépassement de quota de chaque équipe sur 2026-06-08 → 2026-06-14 via scripts/resolve_overshoot_bet.ts. Points = somme par membre de max(0, reps_jour - quota_jour) (1 rep au-dessus du quota = 1 point).",
   teamConfig: {
     metric: "QUOTA_OVERSHOOT",
     competitionStart: "2026-06-08",
@@ -59,7 +60,7 @@ const DATA = {
   subType: "BINARY",
   title: "Le Défi du Dépassement — 🟢 Verts vs 🔵 Bleus",
   description:
-    "Du 8 au 14 juin, chaque joueur essaie de dépasser le plus possible SON quota quotidien. Chaque % au-dessus du quota = 1 point pour son équipe (pile le quota ou en dessous = 0, pas de malus, pas de plafond). Sur qui paries-tu ?",
+    "Du 8 au 14 juin, chaque joueur essaie de dépasser le plus possible SON quota quotidien. Chaque rep au-dessus du quota = 1 point pour son équipe (pile le quota ou en dessous = 0, pas de malus, pas de plafond). Sur qui paries-tu ?",
   options: JSON.stringify(OPTIONS),
   status: "OPEN",
   openAt: new Date(),

@@ -1,7 +1,7 @@
 /**
  * overshoot.ts — Logique pure du "Défi du Dépassement de Quota".
- * Points = somme, sur la période, du % de dépassement du quota perso de chaque jour.
- *   points_jour = max(0, floor((total_reps_jour - quota_jour) / quota_jour * 100))
+ * Points = somme, sur la période, des reps RÉALISÉES AU-DESSUS du quota perso de chaque jour.
+ *   points_jour = max(0, total_reps_jour - quota_jour)   (1 rep au-dessus du quota = 1 point)
  *   total_reps_jour = pompes + tractions + squats + floor(gainage / 5)
  * Plancher 0 (pile le quota ou en dessous = 0). Pas de plafond.
  * Aucun import Prisma — logique pure.
@@ -52,7 +52,7 @@ export function overshootPointsForUser(
         // On exclut les reps OFFERTES (cadeau) : elles ne comptent pas pour le dépassement du donneur.
         const total = dayTotalReps(sets.filter(s => s.date === d && !s.offeredToUserId));
         if (total > quota) {
-            points += Math.floor(((total - quota) / quota) * 100);
+            points += total - quota; // 1 rep au-dessus du quota = 1 point
         }
     }
     return points;

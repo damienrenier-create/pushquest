@@ -3,6 +3,8 @@
 
 import Link from "next/link"
 import { useState } from "react"
+import TeamBadge from "@/components/TeamBadge"
+import { getTeamRowClass } from "@/lib/teamBadge"
 
 interface RecordsAssiduiteSectionProps {
     data: any
@@ -196,7 +198,7 @@ export default function RecordsAssiduiteSection({
                     {(data?.leaderboard || []).map((u: any, i: number) => {
                         const ind = getStreakEmoji(u.completionRate, u.streakCurrent);
                         return (
-                            <div key={u.nickname || i} className="flex justify-between items-center p-4 hover:bg-gray-50/50 transition-colors">
+                            <div key={u.nickname || i} className={`flex justify-between items-center p-4 hover:bg-gray-50/50 transition-colors ${getTeamRowClass(u.id)}`}>
                                 <div className="flex items-center gap-3">
                                     <span className={`w-6 text-center font-black ${i < 3 ? 'text-blue-500' : 'text-gray-300'}`}>{i + 1}</span>
                                     <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-sm border border-gray-100 overflow-hidden shrink-0">
@@ -223,6 +225,7 @@ export default function RecordsAssiduiteSection({
                                                 {u.isVeteran && <span className="text-[10px] cursor-help" title="Vétéran : Libéré du service (Buyout payé)">🕊️</span>}
                                                 {!u.isInjured && !u.isVeteran && <span className="text-[10px] opacity-20 grayscale" title="Apte au service">✅</span>}
                                             </div>
+                                            <TeamBadge userId={u.id} showText={true} />
                                         </div>
                                         <RegularitySubline u={u} ind={ind} />
                                     </div>

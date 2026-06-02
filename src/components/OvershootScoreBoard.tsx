@@ -45,7 +45,7 @@ function TeamColumn({
                     .map(([name, pts]) => (
                         <div key={name} className="flex justify-between items-center text-[11px] text-slate-400">
                             <span className="truncate mr-1">{name}</span>
-                            <span className="font-bold text-slate-200">+{pts}%</span>
+                            <span className="font-bold text-slate-200">+{pts}</span>
                         </div>
                     ))}
             </div>
@@ -108,7 +108,7 @@ export default function OvershootScoreBoard({ bets }: { bets: any[] }) {
                 </div>
 
                 <p className="text-[11px] text-slate-500 italic leading-snug">
-                    Chaque % au-dessus de TON quota du jour = 1 point pour ton équipe. Période {data.competitionStart} → {data.competitionEnd}.
+                    Chaque rep au-dessus de TON quota du jour = 1 point pour ton équipe. Période {data.competitionStart} → {data.competitionEnd}.
                 </p>
 
                 <div className="grid grid-cols-2 gap-3">
