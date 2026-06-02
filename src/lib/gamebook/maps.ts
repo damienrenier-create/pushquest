@@ -1214,7 +1214,7 @@ export const MUSCUVILLE_SIGNS: Sign[] = [
     // v3.30 — Forêt hantée (à l'est, accès bloqué — "tu as trop peur")
     { x: 16, y: 8, text: "→ FORÊT HANTÉE\n*Le panneau grince. Tu sens un frisson.*\n« Trop peur. Reviens quand tu te sentiras prêt. »" },
     // v3.35 — Rochers à l'ouest : prix de passage progressif selon champions battus
-    { x: 1, y: 14, text: "🪨 ROCHERS — PASSAGE VEGAS\nPrix : 4000 reps (–25% par champion d'arène battu).\n4/4 champions battus → passage GRATUIT." },
+    { x: 1, y: 14, text: "🪨 ROCHERS — PASSAGE VEGAS\nPrix : [[r:4000]] reps (–25% par champion d'arène battu).\n4/4 champions battus → passage GRATUIT." },
 ]
 
 // v3.39 — Topics de la BIBLIOTHÈQUE DE MUSCUVILLE (MIRABELLE, sœur de la bibliothécaire Macaron).
@@ -1240,7 +1240,7 @@ export const BIBLIOTHEQUE_MUSCU_TOPICS: BiblioTopic[] = [
     {
         x: 2, y: 3, kind: "archives" as const,
         title: "Champions de l'arène — Palmarès",
-        text: "4 champions historiques de Muscuville :\n\n🧱 Champion du Gainage (coin NO)\n💪 Champion des Pompes (coin NE)\n🪢 Championne des Tractions (coin SO)\n🦵 Champion des Squats (coin SE)\n\n1ʳᵉ confrontation : bats TON record all-time sur l'exo.\nRevanche (après 1ʳᵉ gagnée) : plus gros VOLUME du jour all-time → badge 200 XP.\n\nChaque champion battu = -25% sur le prix des rochers (4000 reps).",
+        text: "4 champions historiques de Muscuville :\n\n🧱 Champion du Gainage (coin NO)\n💪 Champion des Pompes (coin NE)\n🪢 Championne des Tractions (coin SO)\n🦵 Champion des Squats (coin SE)\n\n1ʳᵉ confrontation : bats TON record all-time sur l'exo.\nRevanche (après 1ʳᵉ gagnée) : plus gros VOLUME du jour all-time → badge 200 XP.\n\nChaque champion battu = -25% sur le prix des rochers ([[r:4000]] reps).",
     },
     {
         x: 6, y: 3, kind: "archives" as const,
