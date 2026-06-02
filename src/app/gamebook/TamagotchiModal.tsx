@@ -18,12 +18,25 @@ import {
     TAMAGOTCHI_FEED_COST,
     TAMAGOTCHI_HAPPINESS_MAX,
     isValidTamagotchiName,
+    CANONICAL_DEFIS,
 } from "@/lib/gamebook/tamagotchi"
+
+export interface DefiDetail {
+    index: number
+    code: string
+    title: string
+    done: boolean
+    current?: number
+    threshold?: number
+    unit?: string
+    todo?: string
+}
 import { getLevelDetails } from "@/lib/xp"
 import type { InventoryEntry } from "@/lib/gamebook/inventory"
 
 interface Props {
     tamagotchi: TamagotchiView | null
+    defiDetails?: DefiDetail[]
     availableEnergy: number
     inventory: InventoryEntry[]
     onAdopt: (name: string) => Promise<void>
@@ -36,7 +49,7 @@ interface Props {
 }
 
 export default function TamagotchiModal({
-    tamagotchi, availableEnergy, inventory,
+    tamagotchi, defiDetails, availableEnergy, inventory,
     onAdopt, onFeed, onDrink, onFeedPates, onCheckDefis, onLiberer, onClose,
 }: Props) {
     const [name, setName] = useState("")
@@ -124,6 +137,7 @@ export default function TamagotchiModal({
                 ) : (
                     <TamagotchiCard
                         tamagotchi={tamagotchi}
+                        defiDetails={defiDetails}
                         availableEnergy={availableEnergy}
                         inventory={inventory}
                         busy={busy}
@@ -241,10 +255,11 @@ function AdoptForm({
 }
 
 function TamagotchiCard({
-    tamagotchi, availableEnergy, inventory, busy, error, v3tBubble,
+    tamagotchi, defiDetails, availableEnergy, inventory, busy, error, v3tBubble,
     onFeed, onDrink, onFeedPates, onCheckDefis, onLiberer,
 }: {
     tamagotchi: TamagotchiView
+    defiDetails?: DefiDetail[]
     availableEnergy: number
     inventory: InventoryEntry[]
     busy: boolean
@@ -409,19 +424,9 @@ function TamagotchiCard({
                 </div>
             )}
 
-            {/* v4.0 — Progression défis : ne PAS spoiler le détail ici.
-                Le joueur peut consulter les conditions d'adoption à la bibliothèque
-                (rayon "Animaux & Défis" chez BIBLIO à Macaron'île).
-                On garde juste le compteur global pour qu'il sache où il en est. */}
+            {/* v4.x — Le véto dit EXACTEMENT où on en est + ce qui reste (checklist explicite). */}
             {!tamagotchi.recovered && (
-                <div style={{ marginBottom: 12, fontSize: 10, opacity: 0.85, lineHeight: 1.6, textAlign: "center" }}>
-                    <div style={{ fontWeight: "bold" }}>
-                        Défis : {tamagotchi.defisDone}/{tamagotchi.defisTotal}
-                    </div>
-                    <div style={{ fontSize: 9, opacity: 0.65, marginTop: 2, fontStyle: "italic" }}>
-                        Consulte la bibliothèque pour découvrir les épreuves d'adoption.
-                    </div>
-                </div>
+                <DefiChecklist tamagotchi={tamagotchi} defiDetails={defiDetails} />
             )}
 
             {error && (
@@ -533,6 +538,59 @@ function DefiLine({ done, text }: { done: boolean; text: string }) {
     return (
         <div style={{ opacity: done ? 1 : 0.5, color: done ? "#48a868" : "#fff" }}>
             {done ? "✓" : "•"} {text}
+        </div>
+    )
+}
+
+/**
+ * v4.x — Checklist explicite des 7 défis d'adoption, dans l'ordre propre à l'animal.
+ * Le véto V3T dit EXACTEMENT ce qui est fait (✓) et ce qui reste (numéro + action + compteur live).
+ */
+function DefiChecklist({ tamagotchi, defiDetails }: { tamagotchi: TamagotchiView; defiDetails?: DefiDetail[] }) {
+    const order = tamagotchi.defiOrder && tamagotchi.defiOrder.length === CANONICAL_DEFIS.length
+        ? tamagotchi.defiOrder
+        : CANONICAL_DEFIS.map((d) => d.index)
+    const byIndex = new Map((defiDetails ?? []).map((d) => [d.index, d]))
+
+    return (
+        <div style={{ marginBottom: 12, background: "#0f0f0f", border: "1px solid #2a4a30", borderRadius: 4, padding: 10 }}>
+            <div style={{ fontSize: 10, fontWeight: "bold", letterSpacing: 1, marginBottom: 8, color: "#9fd8a8" }}>
+                🩺 V3T : « Voilà exactement où tu en es. » ({tamagotchi.defisDone}/{tamagotchi.defisTotal})
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                {order.map((idx, n) => {
+                    const d = byIndex.get(idx)
+                    const canon = CANONICAL_DEFIS[idx]
+                    const done = d?.done ?? (tamagotchi.defiProgress?.[String(idx)] === true)
+                    const title = d?.title ?? canon?.title ?? `Défi ${idx + 1}`
+                    const hasCount = typeof d?.current === "number" && typeof d?.threshold === "number"
+                    return (
+                        <div key={idx} style={{ fontSize: 10, lineHeight: 1.4 }}>
+                            <div style={{
+                                display: "flex", justifyContent: "space-between", gap: 6,
+                                color: done ? "#48a868" : "#fff",
+                                fontWeight: done ? "normal" : "bold",
+                                opacity: done ? 0.7 : 1,
+                            }}>
+                                <span>{done ? "✓" : `${n + 1}.`} {title}</span>
+                                {hasCount && (
+                                    <span style={{ color: done ? "#48a868" : "#f0a050", whiteSpace: "nowrap" }}>
+                                        {Math.min(d!.current!, d!.threshold!)}/{d!.threshold}{d!.unit === "s" ? "s" : ""}
+                                    </span>
+                                )}
+                            </div>
+                            {!done && d?.todo && (
+                                <div style={{ fontSize: 9, opacity: 0.6, fontStyle: "italic", marginLeft: 14, marginTop: 1 }}>
+                                    → {d.todo}
+                                </div>
+                            )}
+                        </div>
+                    )
+                })}
+            </div>
+            <div style={{ fontSize: 8, opacity: 0.5, marginTop: 8, fontStyle: "italic", textAlign: "center" }}>
+                Clique « Vérifier mes progrès » après ton entraînement du jour.
+            </div>
         </div>
     )
 }

@@ -186,9 +186,28 @@ export async function POST() {
     const userLevel = await getUserLevelForGamebook(userId)
     const view = viewTamagotchi(updatedTam, userLevel)
 
+    // v4.x — Détail explicite de chaque défi (le véto dit EXACTEMENT où on en est + quoi faire).
+    const isDone = (i: number) => newProgress[String(i)] === true
+    const base = (i: number) => ({ index: i, code: CANONICAL_DEFIS[i].code, title: CANONICAL_DEFIS[i].title, done: isDone(i) })
+    const dayHalvesTodo =
+        lastMorning === today && lastAfternoon === today ? ""
+            : lastMorning === today ? "Reviens me voir cet après-midi (après 12h)."
+                : lastAfternoon === today ? "Reviens me voir ce matin (avant 12h)."
+                    : "Passe me voir une fois le matin ET une fois l'après-midi (le même jour)."
+    const defiDetails = [
+        { ...base(0), todo: "Viens me voir ici, à la clinique (c'est validé rien qu'en étant là)." },
+        { ...base(1), todo: "Bois ta gourde pendant que tu es ici (remplis-la à un point d'eau si elle est vide)." },
+        { ...base(2), todo: "Partage une Corned Pâtes avec lui (achète-la chez TRENETTE à Macaron'île)." },
+        { ...base(3), todo: dayHalvesTodo },
+        { ...base(4), current: plankSum, threshold: plankThreshold, unit: "s", todo: "Encode du gainage aujourd'hui." },
+        { ...base(5), current: pushupSum, threshold: pushupThreshold, unit: "pompes", todo: "Encode des pompes aujourd'hui." },
+        { ...base(6), current: squatSum, threshold: squatThreshold, unit: "squats", todo: "Encode des squats aujourd'hui." },
+    ]
+
     return NextResponse.json({
         ok: true,
         tamagotchi: view,
         newlyCompleted,
+        defiDetails,
     })
 }

@@ -269,6 +269,27 @@ export default function MapClient({
     // v3.14 — Modal du vétérinaire (V3T) : adoption / nourrissage du tamagotchi
     const [showTamagotchi, setShowTamagotchi] = useState(false)
     const [tamagotchi, setTamagotchi] = useState<TamagotchiView | null>(initialTamagotchi)
+    // v4.x — Détail explicite des défis d'adoption (le véto dit exactement où on en est + quoi faire)
+    const [defiDetails, setDefiDetails] = useState<any[]>([])
+    // v4.x — À l'ouverture du modal véto (avec animal déjà adopté), on rafraîchit silencieusement
+    // l'état des défis pour que la checklist affichée soit exacte (compteurs du jour, visites…).
+    useEffect(() => {
+        if (!showTamagotchi || !tamagotchi) return
+        let cancelled = false
+        ;(async () => {
+            try {
+                const res = await fetch("/api/gamebook/tamagotchi/check-defis", { method: "POST" })
+                const data = await res.json()
+                if (cancelled) return
+                if (data?.ok) {
+                    if (data.tamagotchi) setTamagotchi(data.tamagotchi)
+                    if (Array.isArray(data.defiDetails)) setDefiDetails(data.defiDetails)
+                }
+            } catch { /* silencieux */ }
+        })()
+        return () => { cancelled = true }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [showTamagotchi])
     // v4.0 Phase 1.D — Modal équipe Daemon (jusqu'à 6 slots) accessible via START
     const [showDaemonTeam, setShowDaemonTeam] = useState(false)
     // v4.0 Phase 2.C — Modal combat (BattleState courant si battle active)
@@ -5211,6 +5232,7 @@ export default function MapClient({
             {showTamagotchi && (
                 <TamagotchiModal
                     tamagotchi={tamagotchi}
+                    defiDetails={defiDetails}
                     availableEnergy={reps}
                     inventory={inventory}
                     onDrink={async () => {
@@ -5284,6 +5306,7 @@ export default function MapClient({
                             const data = await res.json()
                             if (data.ok) {
                                 if (data.tamagotchi) setTamagotchi(data.tamagotchi)
+                                if (Array.isArray(data.defiDetails)) setDefiDetails(data.defiDetails)
                                 const newlyDone: number[] = Array.isArray(data.newlyCompleted) ? data.newlyCompleted : []
                                 if (newlyDone.length > 0) {
                                     setToast(`✨ ${newlyDone.length} défi(s) validé(s) !`)
