@@ -469,6 +469,10 @@ export default function MapView() {
                         style={{
                             position: "absolute",
                             ...screenPos(r.x, r.y, r.w, r.h),
+                            // v4.y — +1px (comme les tuiles de base) pour recouvrir le débord de 1px
+                            // des tuiles sous-jacentes → supprime la fine ligne bleue (eau) au scroll.
+                            width: `calc(${r.w * TILE_W_PCT}% + 1px)`,
+                            height: `calc(${r.h * TILE_H_PCT}% + 1px)`,
                             backgroundImage: `url(${r.url}?v=1)`,
                             backgroundRepeat: "no-repeat",
                             backgroundSize: "100% 100%",
@@ -502,8 +506,6 @@ export default function MapView() {
 // === NPCs : vrais sprites Crystal (frame 0 statique pour l'instant) =====
 
 const NPC_SPRITES: Record<string, { url: string; frames: number } | null> = {
-    // Architecte : pas de sprite spécifique, on garde l'emoji
-    y_architecte: null,
     y_vendeur: { url: "/yellow/sprites/npc_clerk_color.png?v=3", frames: 6 },
     y_croupier: { url: "/yellow/sprites/kris_color.png?v=3", frames: 6 },
     y_medecin: { url: "/yellow/sprites/npc_nurse_color.png?v=3", frames: 3 },

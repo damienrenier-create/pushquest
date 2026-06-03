@@ -7,27 +7,10 @@
 // vivent chacun dans leur bâtiment intérieur.
 
 import type { NpcDefinition } from "@/lib/gamebook/npcs"
-import { YELLOW_ENTRANCE_MAP_ID } from "./featureFlag"
 
 export const YELLOW_NPCS: NpcDefinition[] = [
-    {
-        id: "y_architecte",
-        name: "ARCHITECTE",
-        mapId: YELLOW_ENTRANCE_MAP_ID,
-        kind: "static",
-        interaction: "interactive",
-        sprite: { emoji: "👷", color: "#f0c020" },
-        // Centre de la ville, au croisement des paths (10, 8)
-        initialX: 10,
-        initialY: 7,
-        dialoguesAfter: [
-            "*L'Architecte te regarde, sourire en coin.*",
-            "Bienvenue dans la VILLE JAUNE.",
-            "4 bâtiments. 4 portes. 4 secrets.",
-            "Le shop, le casino, l'infirmerie, l'arène.",
-            "Va frapper où tu veux. La foudre te guidera.",
-        ],
-    },
+    // v4.y — PNJ "ARCHITECTE" (👷, ex-"professeur" relique du tout début) RETIRÉ :
+    // emoji parasite au centre de la ville. À recréer proprement plus tard si besoin.
 
     // === Intérieur SHOP ===
     {

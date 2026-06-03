@@ -135,7 +135,7 @@ export async function POST(req: Request) {
 
     await (prisma as any).gamebookProgress.upsert({
         where: { userId_chapterId: { userId, chapterId: YELLOW_CHAPTER_ID } },
-        create: { userId, chapterId: YELLOW_CHAPTER_ID, mapId, posX, posY, direction },
+        create: { userId, chapterId: YELLOW_CHAPTER_ID, currentNodeId: "map", mapId, posX, posY, direction },
         update: { mapId, posX, posY, direction },
     })
 

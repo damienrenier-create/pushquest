@@ -410,6 +410,9 @@ function buildNorthRoute(): NorthBuild {
     for (let y = 0; y <= 3; y++) {
         for (let x = 4; x <= 41; x++) m[y][x] = "tree"
     }
+    // Sapin FIXE en (2,0) : footprint 2×3 → cols 2-3, rows 0-1-2 (bloquant).
+    // Posé dans le "trou" grass entre la bordure ouest (cols 0-1) et la montagne nord (col 4).
+    for (let dy = 0; dy < 3; dy++) for (let dx = 0; dx < 2; dx++) m[dy][2 + dx] = "tree"
     // Bordure est épaissie : cols 42 ET 43 = trees (clone du double sapin Viridian)
     for (let y = 0; y < H; y++) { m[y][W - 1] = "tree"; m[y][W - 2] = "tree" }
     // Patches grassTall scatterés (placeholder wild grass)
@@ -472,7 +475,9 @@ function buildNorthRoute(): NorthBuild {
     const bushes = placeDecors(W, H, 40, 1, 1, 0xfeedbeef, isUsable)
     for (const p of bushes) m[p.y][p.x] = "tree"
     // 3) Panneaux (clone Viridian 20.31, 1×1, BLOQUANT comme dans la source)
-    const signs = placeDecors(W, H, 8, 1, 1, 0xa1c0de42, isUsable)
+    // v4.y — Panneaux décor RETIRÉS (count 0) : placeholders parasites (un sprite paraissait
+    // blanc sur fond de sapins, et deux tombaient collés). Plus aucun sign décor sur Route Nord.
+    const signs = placeDecors(W, H, 0, 1, 1, 0xa1c0de42, isUsable)
     for (const p of signs) m[p.y][p.x] = "tree"
     // 4) Fleurs (clone Viridian 37.26, 1×1, WALKABLE comme dans la source)
     const flowers = placeDecors(W, H, 40, 1, 1, 0x5a5a5a5a, isUsable)
@@ -504,6 +509,8 @@ function buildNorthRoute(): NorthBuild {
 
 const NORTH_BUILD = buildNorthRoute()
 const NORTH_DECOR_REGIONS: Array<{ x: number; y: number; w: number; h: number; url: string }> = [
+    // Sapin fixe en (2,0) — footprint 2×3, même sprite que les sapins aléatoires.
+    { x: 2, y: 0, w: 2, h: 3, url: "/yellow/sprites/viridian_tree_12_13_23_25.png" },
     ...NORTH_BUILD.trees.map((p) => ({ x: p.x, y: p.y, w: 2, h: 3, url: "/yellow/sprites/viridian_tree_12_13_23_25.png" })),
     ...NORTH_BUILD.bushes.map((p) => ({ x: p.x, y: p.y, w: 1, h: 1, url: "/yellow/sprites/viridian_bush_19_13.png" })),
     ...NORTH_BUILD.signs.map((p) => ({ x: p.x, y: p.y, w: 1, h: 1, url: "/yellow/sprites/viridian_sign_20_31.png" })),
