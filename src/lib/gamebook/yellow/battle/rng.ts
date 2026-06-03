@@ -11,6 +11,11 @@ export class Rng {
         this.s = seed >>> 0
     }
 
+    /** État interne courant — pour persister/reprendre le RNG entre deux tours. */
+    getState(): number {
+        return this.s >>> 0
+    }
+
     /** Flottant [0, 1). */
     next(): number {
         this.s = (this.s + 0x6d2b79f5) >>> 0
