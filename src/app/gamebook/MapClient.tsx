@@ -1223,7 +1223,11 @@ export default function MapClient({
             }
 
             // v3.24c-5 — Gating du bar Team Boulette : accessible uniquement si videurState = passed ou boss_beaten
-            if (!("blocked" in result) && result.nextState.mapId === "lasagnas_tb_bar") {
+            // v4.y FIX softlock — La garde state.mapId !== cible est OBLIGATOIRE : un déplacement interne
+            // au bar renvoie nextState.mapId === "lasagnas_tb_bar" (cf. mapEngine), donc sans cette garde
+            // le gate se redéclenchait à CHAQUE pas une fois à l'intérieur → joueur figé, incapable
+            // d'atteindre la porte de sortie. On ne bloque que la TRANSITION depuis une autre map.
+            if (!("blocked" in result) && state.mapId !== "lasagnas_tb_bar" && result.nextState.mapId === "lasagnas_tb_bar") {
                 const vState = (state as { videurState?: string }).videurState ?? "untouched"
                 if (vState !== "passed" && vState !== "boss_beaten") {
                     setToast("🚪 « Pas si vite. » Parle d'abord au PORTIER ARRABBIATA, juste à côté de la porte.")
@@ -1233,7 +1237,8 @@ export default function MapClient({
             }
 
             // v3.24c-7 — Gating du bureau d'IL CAPO : accessible uniquement avec la clé de JAMIE
-            if (!("blocked" in result) && result.nextState.mapId === "lasagnas_tb_bureau") {
+            // v4.y — Même garde anti-softlock que le bar : ne gate que la transition entrante.
+            if (!("blocked" in result) && state.mapId !== "lasagnas_tb_bureau" && result.nextState.mapId === "lasagnas_tb_bureau") {
                 const keyHeld = (state as { tbBossKeyHeld?: boolean }).tbBossKeyHeld === true
                 if (!keyHeld) {
                     setToast("🔒 Porte du bureau verrouillée. Il te faut la clé.")
