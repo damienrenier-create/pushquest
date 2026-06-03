@@ -2302,6 +2302,11 @@ export default function MapClient({
                         try {
                             const res = await fetch("/api/gamebook/tb/jamie", { method: "POST" })
                             const data = await res.json()
+                            // v4.y FIX : synchroniser tbBossKeyHeld côté client, sinon la porte cachée
+                            // du bureau (qui lit state.tbBossKeyHeld) reste verrouillée jusqu'à un reload.
+                            if (data.ok && (data.keyGiven || data.alreadyHeld)) {
+                                setState((s) => ({ ...s, tbBossKeyHeld: true }))
+                            }
                             if (data.message) setPopup({ kind: "info", text: data.message })
                         } catch (e) {
                             console.warn("[MapClient] tb/jamie failed", e)
@@ -2473,6 +2478,12 @@ export default function MapClient({
                         try {
                             const res = await fetch("/api/gamebook/tb/boss", { method: "POST" })
                             const data = await res.json()
+                            // v4.y FIX : synchroniser tbBossBeaten côté client une fois le boss vaincu,
+                            // sinon la capture policière Vegas-ouest (qui lit state.tbBossBeaten) ne se
+                            // déclenche pas → la suite de l'arc (Pastagone) reste bloquée jusqu'à un reload.
+                            if (data.ok && (data.justBeaten || data.alreadyBeaten)) {
+                                setState((s) => ({ ...s, tbBossBeaten: true }))
+                            }
                             if (data.message) setPopup({ kind: "info", text: data.message })
                         } catch (e) {
                             console.warn("[MapClient] tb/boss failed", e)
