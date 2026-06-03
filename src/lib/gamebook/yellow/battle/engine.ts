@@ -10,10 +10,15 @@ import { neutralStages } from "./types"
 import { Rng } from "./rng"
 import { getSpecies } from "../data/species"
 import { getMove } from "../data/moves"
-import { fullStats, effectiveStat, clampStage, accEvaMultiplier } from "./stats"
-import { computeDamage, hasStab, critProbability } from "./damage"
-import { typeEffectiveness, effectivenessMessage } from "./typeChart"
+import { fullStats, effectiveStat, clampStage } from "./stats"
+import { computeDamage, hasStab, critProbabilityGen1 } from "./damage"
+import { typeEffectiveness, effectivenessMessage, moveCategory } from "./typeChart"
 import * as Status from "./status"
+import { accuracyCheck } from "./accuracy"
+import { chooseAiAction, type AiLevel } from "./ai"
+import { xpForDefeat, applyExp } from "./xp"
+import { tryCapture } from "./capture"
+import { ballBonusOf, getItem } from "../data/items"
 
 // ============================================================
 // Types d'état & événements
@@ -40,6 +45,7 @@ export interface BattleState {
     player: BattleSide
     enemy: BattleSide
     isWild: boolean
+    aiLevel: AiLevel
     turn: number
     phase: "select" | "ended"
     outcome: Outcome | null
@@ -54,6 +60,7 @@ export interface BattleState {
 export type PlayerAction =
     | { kind: "move"; moveIndex: number }
     | { kind: "switch"; teamIndex: number }
+    | { kind: "ball"; itemId: string }
     | { kind: "run" }
 
 // Action interne résolue pour un camp (le joueur ET l'IA produisent ça).
@@ -106,12 +113,13 @@ export function toBattleMon(inst: MonInstance): BattleMon {
 export function createBattle(
     playerTeam: MonInstance[],
     enemyTeam: MonInstance[],
-    opts: { isWild: boolean; seed: number },
+    opts: { isWild: boolean; seed: number; aiLevel?: AiLevel },
 ): BattleState {
     return {
         player: { team: playerTeam.map(toBattleMon), activeIndex: 0 },
         enemy: { team: enemyTeam.map(toBattleMon), activeIndex: 0 },
         isWild: opts.isWild,
+        aiLevel: opts.aiLevel ?? (opts.isWild ? "wild" : "trainer"),
         turn: 1,
         phase: "select",
         outcome: null,
@@ -152,6 +160,24 @@ export function resolveTurn(prev: BattleState, playerAction: PlayerAction): Batt
         state.outcome = "run"
         events.push({ kind: "end", outcome: "run" })
         return commit(state, events, rng, prev.turn, false)
+    }
+
+    // --- Lancer une Ball (capture, uniquement en combat sauvage) ---
+    if (playerAction.kind === "ball") {
+        if (!state.isWild) {
+            events.push({ kind: "message", text: "On ne capture pas le Daemon d'un Dresseur !" })
+            return commit(state, events, rng, prev.turn, false)
+        }
+        performCapture(state, playerAction.itemId, events, rng)
+        if (state.outcome === "caught") return commit(state, events, rng, prev.turn, false)
+        // Capture ratée → l'adversaire prend quand même son tour.
+        const ea = chooseEnemyAction(state, rng)
+        if (active(state.enemy).currentHp > 0 && ea.kind === "move") {
+            performMove(state, "enemy", ea.moveIndex!, events, rng)
+            checkFaints(state, events)
+        }
+        if (state.phase !== "ended") { endOfTurn(state, events, rng); checkFaints(state, events) }
+        return commit(state, events, rng, prev.turn, true)
     }
 
     // --- Construit les actions des deux camps ---
@@ -265,7 +291,8 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
         return
     }
 
-    if (move.category === "STATUS") {
+    // Gen 1 : un move sans puissance est un move de STATUT (effet pur).
+    if (move.power <= 0) {
         applyStatusMove(state, side, move, events, rng)
         return
     }
@@ -319,11 +346,17 @@ function dealMoveDamage(state: BattleState, side: SideId, move: MoveData, rng: R
 
     const rawStats = fullStats(attacker, atkSpecies)
     const rawDefStats = fullStats(defender, defSpecies)
-    const isPhysical = move.category === "PHYSICAL"
-    const atk = effectiveStat(isPhysical ? rawStats.atk : rawStats.spa, isPhysical ? "atk" : "spa", isPhysical ? attacker.stages.atk : attacker.stages.spa, attacker.status)
-    const def = effectiveStat(isPhysical ? rawDefStats.def : rawDefStats.spd, isPhysical ? "def" : "spd", isPhysical ? defender.stages.def : defender.stages.spd, "NONE")
+    // Gen 1 : catégorie déterminée par le TYPE. Physique → Atq/Déf ; Spécial → Spc/Spc.
+    const isPhysical = moveCategory(move.type) === "PHYSICAL"
+    const atk = isPhysical
+        ? effectiveStat(rawStats.atk, "atk", attacker.stages.atk, attacker.status)
+        : effectiveStat(rawStats.spc, "spc", attacker.stages.spc, attacker.status)
+    const def = isPhysical
+        ? effectiveStat(rawDefStats.def, "def", defender.stages.def, "NONE")
+        : effectiveStat(rawDefStats.spc, "spc", defender.stages.spc, "NONE")
 
-    const isCrit = rng.next() < critProbability(move.effect?.critStage ?? 0)
+    // Crit Gen 1 : probabilité liée à la Vitesse de base de l'attaquant.
+    const isCrit = rng.next() < critProbabilityGen1(atkSpecies.baseStats.spe, move.effect?.highCrit)
     const result = computeDamage({
         level: attacker.level,
         power: move.power,
@@ -524,18 +557,6 @@ function confusionDamage(mon: BattleMon): number {
 }
 
 // ============================================================
-// Précision
-// ============================================================
-
-function accuracyCheck(move: MoveData, attacker: BattleMon, defender: BattleMon, rng: Rng): boolean {
-    if (move.accuracy <= 0) return true // ne rate jamais
-    const accMult = accEvaMultiplier(attacker.stages.acc)
-    const evaMult = accEvaMultiplier(-defender.stages.eva)
-    const finalAcc = move.accuracy * accMult * evaMult
-    return rng.chance(finalAcc)
-}
-
-// ============================================================
 // Switch / KO / IA
 // ============================================================
 
@@ -563,6 +584,7 @@ function checkFaints(state: BattleState, events: BattleEvent[]) {
             (mon as any).__fainted = true
             events.push({ kind: "faint", side, name: displayName(mon) })
             events.push({ kind: "message", text: `${displayName(mon)} est K.O. !` })
+            if (side === "enemy") awardExp(state, events)
         }
     }
     // Issue / changement forcé
@@ -586,23 +608,57 @@ function checkFaints(state: BattleState, events: BattleEvent[]) {
     }
 }
 
-/** IA basique (Phase 4 enrichira) : choisit l'attaque la plus rentable. */
+/** Délègue le choix de l'adversaire à l'IA (ai.ts) selon le niveau de difficulté. */
 export function chooseEnemyAction(state: BattleState, rng: Rng): ResolvedAction {
-    const mon = active(state.enemy)
+    const self = active(state.enemy)
     const foe = active(state.player)
-    const usable = mon.moves.map((m, i) => ({ i, move: getMove(m.moveId), pp: m.pp })).filter((x) => x.move && x.pp > 0)
-    if (usable.length === 0) return { side: "enemy", kind: "move", moveIndex: 0 } // Lutte (placeholder)
-
-    // Score = puissance × efficacité de type (status moves → score bas mais possible).
-    let best = usable[0]
-    let bestScore = -1
-    for (const u of usable) {
-        const mv = u.move!
-        const eff = mv.category === "STATUS" ? 0.5 : typeEffectiveness(mv.type, speciesOf(foe).types)
-        const score = (mv.power || 30) * eff * (0.85 + rng.next() * 0.3)
-        if (score > bestScore) { bestScore = score; best = u }
+    const choice = chooseAiAction(self, foe, state.enemy.team, state.enemy.activeIndex, state.aiLevel, rng)
+    if (choice.kind === "switch" && choice.teamIndex !== undefined) {
+        return { side: "enemy", kind: "switch", teamIndex: choice.teamIndex }
     }
-    return { side: "enemy", kind: "move", moveIndex: best.i }
+    return { side: "enemy", kind: "move", moveIndex: choice.moveIndex ?? 0 }
+}
+
+/** XP attribuée au Daemon actif du joueur quand l'adversaire actif tombe K.O. */
+function awardExp(state: BattleState, events: BattleEvent[]) {
+    const fainted = active(state.enemy)
+    const winner = active(state.player)
+    if (winner.currentHp <= 0) return
+    const gain = xpForDefeat(speciesOf(fainted).baseExp, fainted.level, state.isWild)
+    const beforeMax = maxHpOf(winner)
+    const res = applyExp(winner, gain)
+    events.push({ kind: "message", text: `${displayName(winner)} gagne ${gain} points d'Exp !` })
+    if (res.toLevel > res.fromLevel) {
+        const delta = maxHpOf(winner) - beforeMax
+        if (delta > 0) {
+            winner.currentHp += delta
+            events.push({ kind: "hp", side: "player", hp: winner.currentHp, max: maxHpOf(winner) })
+        }
+        events.push({ kind: "message", text: `${displayName(winner)} monte au niveau ${res.toLevel} !` })
+        for (const mid of res.learnedMoveIds) {
+            events.push({ kind: "message", text: `${displayName(winner)} apprend ${getMove(mid)?.name ?? mid} !` })
+        }
+    }
+}
+
+/** Tentative de capture (combat sauvage). Met outcome = "caught" si réussi. */
+function performCapture(state: BattleState, itemId: string, events: BattleEvent[], rng: Rng) {
+    const wild = active(state.enemy)
+    const sp = speciesOf(wild)
+    const res = tryCapture(
+        { catchRate: sp.catchRate, currentHp: wild.currentHp, maxHp: maxHpOf(wild), status: wild.status, ballBonus: ballBonusOf(itemId) },
+        rng,
+    )
+    events.push({ kind: "message", text: `Tu lances une ${getItem(itemId)?.name ?? "Ball"} !` })
+    events.push({ kind: "message", text: res.shakes > 0 ? `${"• ".repeat(res.shakes)}` : "La Ball s'ouvre aussitôt…" })
+    if (res.caught) {
+        state.phase = "ended"
+        state.outcome = "caught"
+        events.push({ kind: "message", text: `Gagné ! ${displayName(wild)} est capturé !` })
+        events.push({ kind: "end", outcome: "caught" })
+    } else {
+        events.push({ kind: "message", text: `Oh non ! ${displayName(wild)} s'est échappé !` })
+    }
 }
 
 // ============================================================
@@ -615,7 +671,7 @@ function other(side: SideId): SideId {
 
 function labelStat(stat: StageKey): string {
     const map: Record<StageKey, string> = {
-        atk: "l'Attaque", def: "la Défense", spa: "l'Atq. Spé.", spd: "la Déf. Spé.",
+        atk: "l'Attaque", def: "la Défense", spc: "le Spécial",
         spe: "la Vitesse", acc: "la Précision", eva: "l'Esquive",
     }
     return map[stat]

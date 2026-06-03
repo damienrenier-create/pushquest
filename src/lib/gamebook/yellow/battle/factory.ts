@@ -24,7 +24,7 @@ export function createMonInstance(speciesId: string, level: number, opts: MakeMo
     if (!sp) throw new Error(`Espèce inconnue: ${speciesId}`)
 
     const ivVal = clampIv(opts.ivs ?? 15)
-    const ivs: Record<StatKey, number> = { hp: ivVal, atk: ivVal, def: ivVal, spa: ivVal, spd: ivVal, spe: ivVal }
+    const ivs: Record<StatKey, number> = { hp: ivVal, atk: ivVal, def: ivVal, spe: ivVal, spc: ivVal }
 
     // 4 dernières attaques apprises (level <= niveau), sinon la 1ère du learnset.
     const learned = opts.moveIds ?? sp.learnset.filter((l) => l.level <= level).map((l) => l.moveId)
@@ -55,5 +55,5 @@ export function createMonInstance(speciesId: string, level: number, opts: MakeMo
 }
 
 function clampIv(v: number): number {
-    return Math.max(0, Math.min(31, Math.floor(v)))
+    return Math.max(0, Math.min(15, Math.floor(v))) // Gen 1 : "DV" sur 4 bits (0..15)
 }

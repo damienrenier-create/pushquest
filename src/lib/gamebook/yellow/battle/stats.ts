@@ -1,25 +1,26 @@
 // src/lib/gamebook/yellow/battle/stats.ts
 //
-// Nexus Jaune Éclair — calcul des stats (niveau / base / IV) + stages de combat.
-// Formules style Gen 3+ simplifiées (sans EV/nature pour l'instant — extensible).
+// Nexus Jaune Éclair — calcul des stats (STRICT Gen 1 : 5 stats, IV/"DV" 0..15).
+// Pas d'EV/Nature (volontaire, documenté). Le Spécial (spc) sert d'attaque ET de
+// défense spéciale.
 
 import type { SpeciesData, StatKey, StageKey, MonInstance, MajorStatus } from "./types"
 
 // ============================================================
-// Stats absolues d'un monstre (hors combat)
+// Stats absolues (hors combat)
 // ============================================================
 
-/** PV max : ((2*Base + IV) * niveau / 100) + niveau + 10. */
+/** PV max : floor(((2*Base + IV) * niveau) / 100) + niveau + 10. */
 export function maxHp(species: SpeciesData, level: number, ivHp: number): number {
     return Math.floor(((2 * species.baseStats.hp + ivHp) * level) / 100) + level + 10
 }
 
-/** Autres stats : (((2*Base + IV) * niveau / 100) + 5). */
+/** Autres stats : floor(((2*Base + IV) * niveau) / 100) + 5. */
 export function computeStat(base: number, iv: number, level: number): number {
     return Math.floor(((2 * base + iv) * level) / 100) + 5
 }
 
-/** Toutes les stats absolues d'une instance (atk/def/spa/spd/spe + hpMax). */
+/** Les 5 stats absolues d'une instance. */
 export function fullStats(
     inst: Pick<MonInstance, "level" | "ivs">,
     species: SpeciesData,
@@ -29,9 +30,8 @@ export function fullStats(
         hp: maxHp(species, lv, inst.ivs.hp),
         atk: computeStat(species.baseStats.atk, inst.ivs.atk, lv),
         def: computeStat(species.baseStats.def, inst.ivs.def, lv),
-        spa: computeStat(species.baseStats.spa, inst.ivs.spa, lv),
-        spd: computeStat(species.baseStats.spd, inst.ivs.spd, lv),
         spe: computeStat(species.baseStats.spe, inst.ivs.spe, lv),
+        spc: computeStat(species.baseStats.spc, inst.ivs.spc, lv),
     }
 }
 
@@ -39,13 +39,12 @@ export function fullStats(
 // Multiplicateurs de stages (-6..+6)
 // ============================================================
 
-/** Multiplicateur d'une stat offensive/défensive (atk/def/spa/spd/spe). */
 export function stageMultiplier(stage: number): number {
     const s = clampStage(stage)
     return s >= 0 ? (2 + s) / 2 : 2 / (2 - s)
 }
 
-/** Multiplicateur précision/esquive (table différente : 3/3..9/3). */
+/** Précision/esquive : table de fractions distincte (base 3/3). */
 export function accEvaMultiplier(stage: number): number {
     const s = clampStage(stage)
     return s >= 0 ? (3 + s) / 3 : 3 / (3 - s)
@@ -59,7 +58,7 @@ export function clampStage(stage: number): number {
 // Stats EFFECTIVES en combat (stage + statut)
 // ============================================================
 
-/** Attaque effective : base * stage, halvée si brûlure (phys) / paralysie (spe). */
+/** Attaque effective : base × stage, halvée par brûlure (Atq) / paralysie (Vit). */
 export function effectiveStat(
     raw: number,
     key: Exclude<StageKey, "acc" | "eva">,

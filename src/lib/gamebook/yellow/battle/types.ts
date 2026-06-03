@@ -1,27 +1,29 @@
 // src/lib/gamebook/yellow/battle/types.ts
 //
-// Nexus Jaune Éclair — TYPES FONDAMENTAUX du moteur de combat.
-// 100% React-free : aucune dépendance UI ici. Tout le reste du moteur
-// (rng, typeChart, stats, damage, status, engine, ai) s'appuie dessus.
+// Nexus Jaune Éclair — TYPES FONDAMENTAUX (moteur de combat STRICT Gen 1).
+// 100% React-free. Spécificités Gen 1 :
+//   - 5 stats : HP, Attaque, Défense, Vitesse, SPÉCIAL (unifié, pas de split).
+//   - la catégorie physique/spéciale d'un move dépend de son TYPE (cf. typeChart),
+//     PAS du move → MoveData n'a donc PAS de champ "category".
+//   - 15 types, 4 moves max.
 
 // ============================================================
-// Types élémentaires
+// Types élémentaires (15 — Gen 1)
 // ============================================================
 
 export const POKE_TYPES = [
-    "NORMAL", "FEU", "EAU", "PLANTE", "ELEC", "COMBAT",
-    "VOL", "PSY", "ROCHE", "SPECTRE", "GLACE", "TENEBRES",
+    "NORMAL", "FEU", "EAU", "PLANTE", "ELEC", "GLACE",
+    "COMBAT", "POISON", "SOL", "VOL", "PSY", "INSECTE",
+    "ROCHE", "SPECTRE", "DRAGON",
 ] as const
 export type PokeType = (typeof POKE_TYPES)[number]
 
-// Stats canoniques (séparation physique / spécial comme Gen 3+).
-export type StatKey = "hp" | "atk" | "def" | "spa" | "spd" | "spe"
+// 5 stats Gen 1 (spc = "Spécial" unifié : sert à l'attaque ET à la défense spéciale).
+export type StatKey = "hp" | "atk" | "def" | "spe" | "spc"
 
 /** Stats modifiables par stages en combat (+ précision/esquive), -6..+6. */
-export type StageKey = "atk" | "def" | "spa" | "spd" | "spe" | "acc" | "eva"
+export type StageKey = "atk" | "def" | "spe" | "spc" | "acc" | "eva"
 export type StatStages = Record<StageKey, number>
-
-export type MoveCategory = "PHYSICAL" | "SPECIAL" | "STATUS"
 
 // Statuts majeurs (non-volatils, EXCLUSIFS entre eux).
 export type MajorStatus =
@@ -29,7 +31,7 @@ export type MajorStatus =
 
 // Statuts volatils (peuvent coexister, disparaissent au switch/fin de combat).
 export type VolatileStatus =
-    | "CONFUSION" | "FLINCH" | "SEEDED" | "TRAPPED" | "PROTECT" | "RECHARGE"
+    | "CONFUSION" | "FLINCH" | "SEEDED" | "TRAPPED" | "RECHARGE"
 
 // ============================================================
 // Données statiques (data/)
@@ -42,40 +44,37 @@ export interface MoveEffect {
     inflictVolatile?: VolatileStatus
     statChanges?: Array<{ target: "self" | "target"; stat: StageKey; stages: number }>
     flinch?: boolean
-    /** % des dégâts infligés rendus en PV à l'attaquant. */
     drainPct?: number
-    /** % des dégâts infligés subis en recul par l'attaquant. */
     recoilPct?: number
-    /** Coups multiples [min, max]. */
     multiHit?: [number, number]
-    /** Soin en % des PV max (attaques de statut type Soin). */
     healPct?: number
-    /** Multiplicateur de chance de critique (1 = normal, 8 = quasi garanti). */
-    critStage?: number
+    /** Move à haute chance de critique (Gen 1 : ratio basé sur la vitesse de base ×8). */
+    highCrit?: boolean
 }
 
 export interface MoveData {
     id: string
     name: string
     type: PokeType
-    category: MoveCategory
-    /** Puissance de base (0 pour les attaques de statut). */
+    /** Puissance de base (0 = move de STATUT, ne fait pas de dégâts directs). */
     power: number
-    /** Précision 0..100. 0 = ne rate jamais (touche toujours). */
+    /** Précision 0..100. 0 = ne rate jamais. */
     accuracy: number
-    /** Points de Pouvoir (nombre d'utilisations). */
     pp: number
-    /** Priorité (-7..+5). Défaut 0. */
     priority?: number
     effect?: MoveEffect
-    /** Texte court affiché ("Une attaque puissante !"). */
     description?: string
+}
+
+/** Un move fait-il des dégâts directs ? (Gen 1 : sinon c'est un move de statut.) */
+export function isDamaging(move: MoveData): boolean {
+    return move.power > 0
 }
 
 export type EvolutionMethod =
     | { kind: "LEVEL"; level: number }
     | { kind: "ITEM"; itemId: string }
-    | { kind: "HAPPINESS" }
+    | { kind: "TRADE" }
 
 export type Rarity = "COMMON" | "UNCOMMON" | "RARE" | "LEGENDARY"
 
@@ -84,21 +83,18 @@ export interface SpeciesData {
     dexNo: number
     name: string
     types: PokeType[]                 // 1 ou 2 types
-    baseStats: Record<StatKey, number>
+    baseStats: Record<StatKey, number>  // hp, atk, def, spe, spc
     learnset: Array<{ level: number; moveId: string }>
     evolution?: { toId: string; method: EvolutionMethod }
-    /** 0..255 (plus bas = plus dur à capturer). */
-    catchRate: number
-    /** Base d'XP cédée à la défaite. */
+    catchRate: number                 // 0..255
     baseExp: number
     rarity: Rarity
     description: string
-    /** Chemin public, ex "/yellow/sprites/dex/loupiote.png". */
     sprite: string
 }
 
 // ============================================================
-// Instances concrètes (un monstre réel : équipe, sauvage, dresseur)
+// Instances concrètes
 // ============================================================
 
 export interface MoveSlot {
@@ -108,33 +104,24 @@ export interface MoveSlot {
 }
 
 export interface MonInstance {
-    /** Identifiant unique d'instance (≠ speciesId). */
     uid: string
     speciesId: string
     nickname?: string
     level: number
     exp: number
-    ivs: Record<StatKey, number>      // 0..31
+    ivs: Record<StatKey, number>      // 0..15 (Gen 1 : "DV" sur 4 bits)
     currentHp: number
     status: MajorStatus
-    /** Compteur lié au statut (tours de sommeil restants, paliers toxic…). */
     statusCounter: number
     moves: MoveSlot[]
-    happiness?: number
-    /** True une fois capturé par le joueur (sinon sauvage/dresseur). */
     owned?: boolean
 }
 
-/** Monstre tel qu'il existe DANS un combat (instance + état runtime). */
 export interface BattleMon extends MonInstance {
     stages: StatStages
     volatiles: Partial<Record<VolatileStatus, number>>
 }
 
-// ============================================================
-// Helpers de construction d'état neutre
-// ============================================================
-
 export function neutralStages(): StatStages {
-    return { atk: 0, def: 0, spa: 0, spd: 0, spe: 0, acc: 0, eva: 0 }
+    return { atk: 0, def: 0, spe: 0, spc: 0, acc: 0, eva: 0 }
 }
