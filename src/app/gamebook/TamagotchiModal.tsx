@@ -45,12 +45,18 @@ interface Props {
     onFeedPates?: () => Promise<{ ok: boolean; v3tComment?: string; reason?: string }>
     onCheckDefis?: () => Promise<void>
     onLiberer?: () => Promise<void>
+    // v4.y — Évolution Animal → Daemon via la Mega Gourde du Capo (pleine).
+    hasMegaGourde?: boolean
+    megaGourdeStored?: number
+    evolveThreshold?: number
+    onEvolve?: () => Promise<void>
     onClose: () => void
 }
 
 export default function TamagotchiModal({
     tamagotchi, defiDetails, availableEnergy, inventory,
-    onAdopt, onFeed, onDrink, onFeedPates, onCheckDefis, onLiberer, onClose,
+    onAdopt, onFeed, onDrink, onFeedPates, onCheckDefis, onLiberer,
+    hasMegaGourde, megaGourdeStored, evolveThreshold, onEvolve, onClose,
 }: Props) {
     const [name, setName] = useState("")
     const [busy, setBusy] = useState(false)
@@ -181,6 +187,15 @@ export default function TamagotchiModal({
                             setError(null)
                             try { await onLiberer() } finally { setBusy(false) }
                         } : undefined}
+                        hasMegaGourde={hasMegaGourde}
+                        megaGourdeStored={megaGourdeStored}
+                        evolveThreshold={evolveThreshold}
+                        onEvolve={onEvolve ? async () => {
+                            if (busy) return
+                            setBusy(true)
+                            setError(null)
+                            try { await onEvolve() } finally { setBusy(false) }
+                        } : undefined}
                     />
                 )}
             </div>
@@ -257,6 +272,7 @@ function AdoptForm({
 function TamagotchiCard({
     tamagotchi, defiDetails, availableEnergy, inventory, busy, error, v3tBubble,
     onFeed, onDrink, onFeedPates, onCheckDefis, onLiberer,
+    hasMegaGourde, megaGourdeStored, evolveThreshold, onEvolve,
 }: {
     tamagotchi: TamagotchiView
     defiDetails?: DefiDetail[]
@@ -270,6 +286,10 @@ function TamagotchiCard({
     onFeedPates: () => Promise<void>
     onCheckDefis?: () => Promise<void>
     onLiberer?: () => Promise<void>
+    hasMegaGourde?: boolean
+    megaGourdeStored?: number
+    evolveThreshold?: number
+    onEvolve?: () => Promise<void>
 }) {
     const details = getLevelDetails(tamagotchi.displayLevel)
     const happinessPct = (tamagotchi.displayHappiness / TAMAGOTCHI_HAPPINESS_MAX) * 100
@@ -278,6 +298,11 @@ function TamagotchiCard({
             : happinessPct > 25 ? "#f0a050"
                 : "#c83838"
     const canFeed = availableEnergy >= TAMAGOTCHI_FEED_COST
+
+    // v4.y — Évolution en Daemon : possible quand la Mega Gourde du Capo est pleine (seuil onboardé).
+    const evoStored = megaGourdeStored ?? 0
+    const evoThreshold = evolveThreshold ?? 1000
+    const canEvolve = (hasMegaGourde ?? false) && evoStored >= evoThreshold
 
     // Conditions pour boire/manger les pâtes
     const flask = inventory.find((e) => e.itemKey === "flask" || e.itemKey === "grande_gourde")
@@ -473,6 +498,42 @@ function TamagotchiCard({
                     >
                         ✨ LIBÉRER MON ANIMAL ✨
                     </button>
+                )}
+
+                {/* v4.y — Évolution Animal → Daemon (Mega Gourde du Capo pleine).
+                    Toujours visible une fois l'animal récupéré ; activable seulement quand la gourde est pleine. */}
+                {tamagotchi.recovered && onEvolve && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 2 }}>
+                        <button
+                            onClick={canEvolve ? onEvolve : undefined}
+                            disabled={busy || !canEvolve}
+                            style={{
+                                background: canEvolve && !busy ? "#7a3cc0" : "#333",
+                                color: "#fff",
+                                border: "2px solid #fff",
+                                padding: "10px 12px",
+                                fontFamily: "'Courier New', monospace",
+                                fontSize: 12,
+                                fontWeight: "bold",
+                                letterSpacing: 1,
+                                cursor: canEvolve && !busy ? "pointer" : "not-allowed",
+                                width: "100%",
+                                opacity: canEvolve ? 1 : 0.75,
+                            }}
+                        >
+                            👾 FAIRE ÉVOLUER EN DAEMON
+                        </button>
+                        {canEvolve ? (
+                            <div style={{ fontSize: 9, fontStyle: "italic", textAlign: "center", color: "#c9a0ff" }}>
+                                La Mega Gourde du Capo est pleine — {tamagotchi.name} est prêt à évoluer !
+                            </div>
+                        ) : (
+                            <div style={{ fontSize: 9, opacity: 0.7, fontStyle: "italic", lineHeight: 1.4, textAlign: "center" }}>
+                                Patience : remplis ta Mega Gourde du Capo à fond ({evoStored}/{evoThreshold})
+                                {" "}et tu pourras la faire boire à {tamagotchi.name} pour le faire évoluer en Daemon !
+                            </div>
+                        )}
+                    </div>
                 )}
             </div>
 

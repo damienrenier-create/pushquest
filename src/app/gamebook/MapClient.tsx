@@ -126,6 +126,7 @@ import CockfightModal from "./CockfightModal"
 import SlotMachineModal from "./SlotMachineModal"
 import CasinoPatternVegasModal from "./CasinoPatternVegasModal"
 import ArenaModal from "./ArenaModal"
+import DaemonEvolutionScreen, { type DaemonEvolutionData } from "./DaemonEvolutionScreen"
 import MontVentouxSideView from "./MontVentouxSideView"
 import { getLevelDetails } from "@/lib/xp"
 import { getActiveBicycle } from "@/lib/gamebook/items"
@@ -216,6 +217,8 @@ type Cinematic =
     | { kind: "pastagoneCapture"; step: number }
     // v4.0 — Cinématique CAPOLINO 4ᵉ rencontre (fuite post-boss avec vol Daemon opposé)
     | { kind: "capolinoFlee"; step: number; lines: string[]; stolenType: string }
+    // v4.y — Cinématique évolution Animal → Daemon (Mega Gourde du Capo bue)
+    | { kind: "daemonEvolution"; data: DaemonEvolutionData }
     | null
 
 // Ticker partagé entre tous les NPCs wanderers pour synchroniser leurs déplacements
@@ -1089,7 +1092,11 @@ export default function MapClient({
             // x=1, y∈[11..14], après avoir battu la Team Boulette (tbBossBeaten),
             // et tant que pastagoneArrested === false.
             if (
-                !cinematic
+                // v4.y — Arc Pastagone ABANDONNÉ : la suite post-boss est désormais
+                // Mega Gourde → évolution Daemon → teaser Chapitre 2 (Nexus Jaune Éclair).
+                // On désactive donc la capture policière qui menait à Pastagone.
+                false
+                && !cinematic
                 && state.mapId === "lasagnas_vegas"
                 && (state as { tbBossBeaten?: boolean }).tbBossBeaten === true
                 && (state as { pastagoneArrested?: boolean }).pastagoneArrested !== true
@@ -1960,6 +1967,9 @@ export default function MapClient({
 
         // v3.8 — si une modal est ouverte, le A est géré par la modal elle-même
         if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore || showCockfight || showSlotMachine || showCasinoPatternVegas || showArena || showDaemonTeam || !!activeBattle || showSaiyanModal || showPastagoneCellule || showPastagoneInfirmerie || showPastagoneBriefing || showPastagoneCuisine || showPastagoneArmurerie || showPastagoneTour) return
+
+        // v4.y — la cinématique d'évolution Daemon gère ses propres clics (écran dédié)
+        if (cinematic?.kind === "daemonEvolution") return
 
         // v3.23e — Blague PIAFFINI unique pour Franss : intercepter le premier A press (idem tryMove)
         if (
@@ -5388,7 +5398,50 @@ export default function MapClient({
                             setToast("Erreur réseau, réessaie.")
                         }
                     }}
+                    hasMegaGourde={inventory.some((e) => e.itemKey === "mega_gourde")}
+                    megaGourdeStored={(() => {
+                        const g = inventory.find((e) => e.itemKey === "mega_gourde")
+                        const d = g?.data as { stored?: number } | undefined
+                        return typeof d?.stored === "number" ? d.stored : 0
+                    })()}
+                    evolveThreshold={applyDifficultyRatio(1000)}
+                    onEvolve={async () => {
+                        try {
+                            const res = await fetch("/api/gamebook/tamagotchi/evolve-daemon", { method: "POST" })
+                            const data = await res.json()
+                            if (data.ok && data.evolved) {
+                                if (data.tamagotchi) setTamagotchi(data.tamagotchi)
+                                if (Array.isArray(data.inventory)) setInventory(data.inventory)
+                                setHasUnlockedDaemon(true)
+                                setShowTamagotchi(false)
+                                setCinematic({
+                                    kind: "daemonEvolution",
+                                    data: {
+                                        animalName: data.animalName,
+                                        totalReps: typeof data.totalReps === "number" ? data.totalReps : 0,
+                                        fromLevel: data.fromLevel ?? 1,
+                                        toLevel: data.toLevel ?? 1,
+                                        fromAnimal: data.fromAnimal ?? { name: "", emoji: "🐾" },
+                                        toAnimal: data.toAnimal ?? { name: "", emoji: "👾" },
+                                    },
+                                })
+                            } else {
+                                setToast(data.reason || "Évolution impossible.")
+                            }
+                        } catch (e) {
+                            console.warn("[MapClient] tamagotchi/evolve-daemon failed", e)
+                            setToast("Erreur réseau, réessaie.")
+                        }
+                    }}
                     onClose={() => setShowTamagotchi(false)}
+                />
+            )}
+
+            {/* v4.y — Cinématique évolution Animal → Daemon (Mega Gourde du Capo) */}
+            {cinematic?.kind === "daemonEvolution" && (
+                <DaemonEvolutionScreen
+                    data={cinematic.data}
+                    onDone={() => setCinematic(null)}
                 />
             )}
 
