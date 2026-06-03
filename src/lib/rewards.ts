@@ -131,6 +131,13 @@ export function getXPForReward(key: string, achievedAt?: Date | string | any): n
             const streak = (achievedAt as any)?.newValue || (achievedAt as any)?.currentValue || (achievedAt as any)?.currentStreak || 0;
             xp = getTorchPalier(streak).xp;
         }
+    } else if (def.type === "GAMEBOOK") {
+        // v4.y BUGFIX — Les badges Gamebook tombaient dans le `else` générique → ils affichaient
+        // `timeBonus` (le multiplicateur du mois, ex. 1000 en juin) au lieu de leur XP réel.
+        // Le vrai XP crédité est fixe (cf. routes /api/gamebook/*) et vaut le `threshold` du badge,
+        // SAUF pionnier dont le threshold (150) est le COÛT en reps, pas l'XP (200).
+        if (def.key === "gamebook_pionnier") xp = 200;
+        else xp = def.threshold ?? 100;
     } else {
         // Event / Others
         if (def.key === "trinity_gold") {
