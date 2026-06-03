@@ -3351,6 +3351,28 @@ export default function MapClient({
             return
         }
 
+        // v4.y — Porte cachée du bar Team Boulette → bureau d'IL CAPO.
+        // L'étagère (shopShelf) en (5,2) masque la porte du bureau. Elle ne s'ouvre
+        // qu'avec la clé rouillée donnée par JAMIE après les 3 sbires (tbBossKeyHeld).
+        // (Avant : aucune entrée n'était câblée → IL CAPO était inaccessible.)
+        if (state.mapId === "lasagnas_tb_bar" && tile === "shopShelf" && front.x === 5 && front.y === 2) {
+            const keyHeld = (state as { tbBossKeyHeld?: boolean }).tbBossKeyHeld === true
+            if (!keyHeld) {
+                setPopup({
+                    kind: "info",
+                    text: "Une étagère branlante… mais le sol est usé devant, comme une porte. Une serrure est dissimulée derrière les bouteilles.\n\nIl te faut une clé.",
+                })
+                return
+            }
+            // Entrée vers le bureau (spawn aligné sur INTERIOR_ENTRY_POSITIONS.lasagnas_tb_bureau).
+            setState((s) => ({ ...s, mapId: "lasagnas_tb_bureau", posX: 4, posY: 5, direction: "up" }))
+            setPopup({
+                kind: "info",
+                text: "🔑 Tu glisses la clé rouillée dans la serrure cachée. *clic* L'étagère coulisse.\n\nTu pénètres dans le bureau d'IL CAPO.",
+            })
+            return
+        }
+
         // v3.18 / v3.39 — Bibliothèque Macaron OU Muscuville : interactions sur bookshelf / statue / lectern
         if ((state.mapId === "bibliotheque" || state.mapId === "bibliotheque_muscuville") && (tile === "bookshelf" || tile === "statue" || tile === "lectern" || tile === "shopShelf")) {
             const topicsSet = state.mapId === "bibliotheque_muscuville" ? BIBLIOTHEQUE_MUSCU_TOPICS : BIBLIOTHEQUE_TOPICS
