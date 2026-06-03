@@ -328,7 +328,11 @@ export default function PantheonClient({
                                     const displayBadge = {
                                         ...event.badge,
                                         name: rewardData?.name || event.badge?.name,
-                                        emoji: rewardData?.emoji || event.badge?.emoji,
+                                        // v4.y — Badge "Éveil du Daemon" : on affiche l'emoji de l'animal du
+                                        // niveau (stocké dans metadata) plutôt que l'emoji fixe 👾.
+                                        emoji: (badgeKey === "gamebook_daemon_evolution" && metaDataObj?.animalEmoji)
+                                            ? metaDataObj.animalEmoji
+                                            : (rewardData?.emoji || event.badge?.emoji),
                                         description: rewardData?.description || event.badge?.description
                                     };
 

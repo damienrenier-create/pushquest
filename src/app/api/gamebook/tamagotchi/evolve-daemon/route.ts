@@ -26,11 +26,14 @@ import { getUserDifficultyRatio, applyRatio } from "@/lib/gamebook/difficulty"
 import { getUserLevelForGamebook } from "@/lib/gamebook/userLevel"
 import { ensureDaemonForTamagotchi, getMorphology, computeDaemonBaseStats, computeMaxHp } from "@/lib/gamebook/daemon"
 import { getLevelDetails } from "@/lib/xp"
+import { getTodayISO } from "@/lib/challenge"
 
 export const dynamic = "force-dynamic"
 
 const CHAPTER_ID = "map_v3"
 const GOURDE_FULL_BASE = 1000
+const BADGE_KEY_DAEMON = "gamebook_daemon_evolution"
+const XP_REWARD_DAEMON = 100
 
 export async function POST() {
     const session = await getServerSession(authOptions)
@@ -137,6 +140,50 @@ export async function POST() {
 
     const fromAnimal = getLevelDetails(fromLevel)
     const toAnimal = getLevelDetails(newLevel)
+
+    // v4.y — Badge "Éveil du Daemon" (pattern Animal Totem) : BadgeEvent UNIQUE_AWARDED + XpAdjustment.
+    // L'emoji de l'animal du niveau est stocké dans metadata pour l'affichage (gazette/panthéon/graph).
+    try {
+        const def = await (prisma as any).badgeDefinition.findUnique({ where: { key: BADGE_KEY_DAEMON } })
+        if (def) {
+            const existing = await (prisma as any).badgeEvent.findFirst({
+                where: { badgeKey: BADGE_KEY_DAEMON, toUserId: userId, eventType: "UNIQUE_AWARDED" },
+            })
+            if (!existing) {
+                await (prisma as any).badgeEvent.create({
+                    data: {
+                        badgeKey: BADGE_KEY_DAEMON,
+                        fromUserId: null,
+                        toUserId: userId,
+                        eventType: "UNIQUE_AWARDED",
+                        previousValue: 0,
+                        newValue: 1,
+                        metadata: JSON.stringify({
+                            source: "gamebook_daemon_evolution",
+                            animalLevel: newLevel,
+                            animalName: tam.name,
+                            animalEmoji: toAnimal.emoji,
+                            xpReward: XP_REWARD_DAEMON,
+                        }),
+                    },
+                })
+            }
+        }
+    } catch (e) {
+        console.warn("[evolve-daemon] could not create BadgeEvent", e)
+    }
+    try {
+        const existingXp = await (prisma as any).xpAdjustment.findFirst({
+            where: { userId, reason: "BADGE_DAEMON_EVOLUTION_GAMEBOOK" },
+        })
+        if (!existingXp) {
+            await (prisma as any).xpAdjustment.create({
+                data: { userId, amount: XP_REWARD_DAEMON, reason: "BADGE_DAEMON_EVOLUTION_GAMEBOOK", date: getTodayISO() },
+            })
+        }
+    } catch (e) {
+        console.warn("[evolve-daemon] could not create XpAdjustment", e)
+    }
 
     return NextResponse.json({
         ok: true,
