@@ -359,6 +359,11 @@ export default function MapClient({
     }, [state.mapId])
     // === v3.8.1 : fruits cueillis aujourd'hui (par CE user). Drive le rendu vide/plein des arbres. ===
     const [fruitCounts, setFruitCounts] = useState<Record<string, number>>(initialFruitCounts)
+    // v4.y — Les fruits reset à minuit (Europe/Paris) côté serveur. On suit le jour Paris pour
+    // re-remplir VISUELLEMENT les arbres (fruitCounts → {}) au changement de jour, sans attendre
+    // un clic. Couvre le passage de minuit ET le retour de l'app au premier plan un nouveau jour.
+    const parisDay = () => new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Paris" })
+    const fruitDayRef = useRef<string>(parisDay())
     // === v3.8.2 : plus haut étage atteint dans la Tour. Drive le bypass-check des escaliers. ===
     const [towerFloorReached, setTowerFloorReached] = useState<number>(initialTowerFloorReached)
     // === v3.10 : ratio de difficulté (multiplie tous les coûts du Gamebook, sauf rewards). ===
@@ -529,11 +534,30 @@ export default function MapClient({
                         if (typeof j?.energySpentToday === "number") setEnergySpent(j.energySpentToday)
                     }
                 } catch { /* silent */ }
+                // v4.y — Nouveau jour : re-remplir VISUELLEMENT les arbres (les fruits ont reset côté serveur).
+                fruitDayRef.current = parisDay()
+                setFruitCounts({})
                 schedule()  // re-planifier pour le prochain minuit
             }, ms)
         }
         schedule()
         return () => { if (timeoutId !== null) clearTimeout(timeoutId) }
+    }, [])
+
+    // v4.y — Re-remplir visuellement les arbres quand l'app revient au premier plan un NOUVEAU jour
+    // (cas mobile/PWA où le timer de minuit a pu être throttlé en arrière-plan).
+    useEffect(() => {
+        const onVisible = () => {
+            if (typeof document !== "undefined" && document.hidden) return
+            const today = parisDay()
+            if (today !== fruitDayRef.current) {
+                fruitDayRef.current = today
+                setFruitCounts({})
+            }
+        }
+        document.addEventListener("visibilitychange", onVisible)
+        return () => document.removeEventListener("visibilitychange", onVisible)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     // ============================================================
