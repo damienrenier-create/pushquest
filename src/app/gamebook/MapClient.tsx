@@ -5100,6 +5100,36 @@ export default function MapClient({
                     availableEnergy={reps}
                     mapId={state.mapId}
                     hasTamagotchi={tamagotchi?.recovered === true}
+                    animalName={tamagotchi?.name}
+                    evolveThreshold={applyDifficultyRatio(1000)}
+                    onEvolveAnimal={async () => {
+                        try {
+                            const res = await fetch("/api/gamebook/tamagotchi/evolve-daemon", { method: "POST" })
+                            const data = await res.json()
+                            if (data.ok && data.evolved) {
+                                if (data.tamagotchi) setTamagotchi(data.tamagotchi)
+                                if (Array.isArray(data.inventory)) setInventory(data.inventory)
+                                setHasUnlockedDaemon(true)
+                                setShowInventory(false)
+                                setCinematic({
+                                    kind: "daemonEvolution",
+                                    data: {
+                                        animalName: data.animalName,
+                                        totalReps: typeof data.totalReps === "number" ? data.totalReps : 0,
+                                        fromLevel: data.fromLevel ?? 1,
+                                        toLevel: data.toLevel ?? 1,
+                                        fromAnimal: data.fromAnimal ?? { name: "", emoji: "🐾" },
+                                        toAnimal: data.toAnimal ?? { name: "", emoji: "👾" },
+                                    },
+                                })
+                            } else {
+                                setToast(data.reason || "Évolution impossible.")
+                            }
+                        } catch (e) {
+                            console.warn("[MapClient] evolve-daemon (bag) failed", e)
+                            setToast("Erreur réseau, réessaie.")
+                        }
+                    }}
                     onView={(_itemKey, kind) => {
                         if (kind === "playerMap") {
                             setShowInventory(false)
