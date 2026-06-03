@@ -1223,13 +1223,21 @@ export default function MapClient({
             }
 
             // v3.24c-5 — Gating du bar Team Boulette : accessible uniquement si videurState = passed ou boss_beaten
-            // v4.y FIX softlock — La garde state.mapId !== cible est OBLIGATOIRE : un déplacement interne
-            // au bar renvoie nextState.mapId === "lasagnas_tb_bar" (cf. mapEngine), donc sans cette garde
-            // le gate se redéclenchait à CHAQUE pas une fois à l'intérieur → joueur figé, incapable
-            // d'atteindre la porte de sortie. On ne bloque que la TRANSITION depuis une autre map.
-            if (!("blocked" in result) && state.mapId !== "lasagnas_tb_bar" && result.nextState.mapId === "lasagnas_tb_bar") {
+            // v4.y FIX softlock — on ne gate QUE l'entrée depuis l'extérieur (la rue de Vegas). On exclut :
+            //   - les déplacements internes au bar (state.mapId === bar) — un move interne renvoie
+            //     nextState.mapId === "lasagnas_tb_bar" (cf. mapEngine), sinon le gate refirait à chaque pas ;
+            //   - le RETOUR depuis le bureau d'IL CAPO (state.mapId === bureau) — sinon le joueur reste
+            //     piégé dans le bureau après avoir battu le boss (le videur est injoignable de là).
+            // Et un joueur ayant déjà vaincu IL CAPO (tbBossBeaten) n'est jamais re-bloqué.
+            if (
+                !("blocked" in result)
+                && state.mapId !== "lasagnas_tb_bar"
+                && state.mapId !== "lasagnas_tb_bureau"
+                && result.nextState.mapId === "lasagnas_tb_bar"
+            ) {
                 const vState = (state as { videurState?: string }).videurState ?? "untouched"
-                if (vState !== "passed" && vState !== "boss_beaten") {
+                const bossBeaten = (state as { tbBossBeaten?: boolean }).tbBossBeaten === true
+                if (vState !== "passed" && vState !== "boss_beaten" && !bossBeaten) {
                     setToast("🚪 « Pas si vite. » Parle d'abord au PORTIER ARRABBIATA, juste à côté de la porte.")
                     setState((s) => ({ ...s, direction: d }))
                     return
