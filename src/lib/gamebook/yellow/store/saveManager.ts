@@ -18,7 +18,7 @@ export async function loadYellowSave(): Promise<void> {
         if (!r.ok) { loaded = true; return }
         const j = await r.json()
         const save = parseSave(j?.save)
-        hydratePlayer({ team: save.team, pc: save.pc, items: save.items, reps: save.reps, repsCap: save.repsCap, creditedThrough: save.creditedThrough, defeatedTrainers: save.defeatedTrainers, introSeen: save.introSeen })
+        hydratePlayer({ team: save.team, pc: save.pc, items: save.items, reps: save.reps, repsCap: save.repsCap, creditedThrough: save.creditedThrough, pastaBoughtToday: save.pastaBoughtToday, pastaDayBonus: save.pastaDayBonus, defeatedTrainers: save.defeatedTrainers, introSeen: save.introSeen })
         hydratePokedex({ seen: save.pokedex.seen, caught: save.pokedex.caught })
     } catch {
         /* hors-ligne : on garde l'état mémoire */
@@ -39,7 +39,7 @@ export async function loadYellowSave(): Promise<void> {
 function snapshot(): YellowSave {
     const p = getPlayer()
     const d = getPokedex()
-    return { version: SAVE_VERSION, team: p.team, pc: p.pc, items: p.items, reps: p.reps, repsCap: p.repsCap, creditedThrough: p.creditedThrough, pokedex: { seen: d.seen, caught: d.caught }, defeatedTrainers: p.defeatedTrainers, introSeen: p.introSeen }
+    return { version: SAVE_VERSION, team: p.team, pc: p.pc, items: p.items, reps: p.reps, repsCap: p.repsCap, creditedThrough: p.creditedThrough, pastaBoughtToday: p.pastaBoughtToday, pastaDayBonus: p.pastaDayBonus, pokedex: { seen: d.seen, caught: d.caught }, defeatedTrainers: p.defeatedTrainers, introSeen: p.introSeen }
 }
 
 /** Sauvegarde débouncée (ne fait rien tant que la save initiale n'est pas chargée). */

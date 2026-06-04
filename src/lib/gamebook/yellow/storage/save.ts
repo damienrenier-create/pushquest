@@ -18,6 +18,10 @@ export interface YellowSave {
     repsCap: number
     /** Dernier jour crédité (YYYY-MM-DD) — anti double-crédit du gain quotidien. */
     creditedThrough: string
+    /** Nb de Super Pastas achetés aujourd'hui (reset quotidien). */
+    pastaBoughtToday: number
+    /** Bonus cumulé du prix plancher du Super Pasta (+3/jour). */
+    pastaDayBonus: number
     pokedex: { seen: string[]; caught: string[] }
     /** Ids des dresseurs déjà battus (ne se recombattent pas). */
     defeatedTrainers: string[]
@@ -28,7 +32,7 @@ export interface YellowSave {
 export const SAVE_VERSION = 1
 
 export function emptySave(): YellowSave {
-    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", pokedex: { seen: [], caught: [] }, defeatedTrainers: [], introSeen: false }
+    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], introSeen: false }
 }
 
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -94,6 +98,8 @@ export function parseSave(raw: unknown): YellowSave {
         reps: typeof o.reps === "number" ? Math.max(0, Math.floor(o.reps)) : 0,
         repsCap: typeof o.repsCap === "number" ? Math.max(1, Math.floor(o.repsCap)) : 1000,
         creditedThrough: typeof o.creditedThrough === "string" ? o.creditedThrough : "",
+        pastaBoughtToday: typeof o.pastaBoughtToday === "number" ? Math.max(0, Math.floor(o.pastaBoughtToday)) : 0,
+        pastaDayBonus: typeof o.pastaDayBonus === "number" ? Math.max(0, Math.floor(o.pastaDayBonus)) : 0,
         pokedex: { seen: strArr(dex.seen), caught: strArr(dex.caught) },
         defeatedTrainers: strArr(o.defeatedTrainers),
         introSeen: o.introSeen === true,

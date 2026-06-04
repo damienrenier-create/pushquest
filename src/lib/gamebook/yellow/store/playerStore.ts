@@ -9,9 +9,16 @@ import type { MonInstance, MoveSlot } from "../battle/types"
 import { fullStats } from "../battle/stats"
 import { getSpecies } from "../data/species"
 import { getMove } from "../data/moves"
+import { expForLevel, levelFromExp, applyExp, MAX_LEVEL, type ExpResult } from "../battle/xp"
 import type { WildPlayerCtx } from "../data/encounters"
 
 export const TEAM_MAX = 6
+
+/** Super Pasta : +1 niveau. Prix = (60 + bonus journalier) × 1.5^achats du jour. */
+export const SUPER_PASTA_BASE = 60
+/** Le prix plancher augmente de ce montant à chaque nouveau jour de jeu. */
+export const SUPER_PASTA_DAILY_INCREASE = 3
+export const SUPER_PASTA_GROWTH = 1.5
 
 interface PlayerState {
     team: MonInstance[]
@@ -23,6 +30,10 @@ interface PlayerState {
     repsCap: number
     /** Dernier jour où les reps de la veille ont été crédités (anti double-crédit). */
     creditedThrough: string
+    /** Nb de Super Pastas achetés aujourd'hui (remis à 0 chaque jour ; gonfle le prix ×1.5). */
+    pastaBoughtToday: number
+    /** Bonus cumulé sur le prix plancher du Super Pasta (+3 par jour de jeu écoulé). */
+    pastaDayBonus: number
     /** Ids des dresseurs déjà battus. */
     defeatedTrainers: string[]
     /** Stats d'effort du jour (PushQuest) qui modulent les rencontres. Null = neutre. */
@@ -31,7 +42,7 @@ interface PlayerState {
     introSeen: boolean
 }
 
-let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", defeatedTrainers: [], wildCtx: null, introSeen: false }
+let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], wildCtx: null, introSeen: false }
 const listeners = new Set<() => void>()
 
 function emit() { for (const l of listeners) l() }
@@ -47,6 +58,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
     st = {
         team: p.team ?? [], pc: p.pc ?? [], items: p.items ?? {},
         reps: p.reps ?? st.reps ?? 0, repsCap: p.repsCap ?? st.repsCap ?? 1000, creditedThrough: p.creditedThrough ?? st.creditedThrough ?? "",
+        pastaBoughtToday: p.pastaBoughtToday ?? st.pastaBoughtToday ?? 0, pastaDayBonus: p.pastaDayBonus ?? st.pastaDayBonus ?? 0,
         defeatedTrainers: p.defeatedTrainers ?? [], wildCtx: p.wildCtx ?? st.wildCtx ?? null,
         introSeen: p.introSeen ?? st.introSeen ?? false,
     }
@@ -62,7 +74,7 @@ export function markIntroSeen() {
 
 /** DEV : remet la progression jaune à zéro pour rejouer l'intro (équipe vidée, introSeen=false). */
 export function resetForIntro() {
-    st = { team: [], pc: [], items: {}, reps: 0, repsCap: st.repsCap, creditedThrough: "", defeatedTrainers: [], wildCtx: st.wildCtx, introSeen: false }
+    st = { team: [], pc: [], items: {}, reps: 0, repsCap: st.repsCap, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], wildCtx: st.wildCtx, introSeen: false }
     emit()
 }
 
@@ -128,12 +140,59 @@ export function spendReps(n: number): boolean {
     return true
 }
 
-/** Crédite les reps de la veille (1×/jour), plafonné au cap de stockage. */
+/**
+ * Tick quotidien (1×/jour) : crédite les reps de la veille (plafonné au cap),
+ * remet à zéro le compteur d'achats de Super Pasta, et augmente de +3 le prix
+ * plancher du Super Pasta à chaque nouveau jour (sauf le tout premier jour).
+ */
 export function creditDailyReps(yesterdayReps: number, today: string) {
-    if (st.creditedThrough === today) return // déjà crédité aujourd'hui
+    if (st.creditedThrough === today) return // déjà tické aujourd'hui
+    const firstEver = st.creditedThrough === ""
     const credited = Math.min(st.repsCap, st.reps + Math.max(0, Math.floor(yesterdayReps)))
-    st = { ...st, reps: credited, creditedThrough: today }
+    st = {
+        ...st,
+        reps: credited,
+        creditedThrough: today,
+        pastaBoughtToday: 0,
+        pastaDayBonus: firstEver ? st.pastaDayBonus : st.pastaDayBonus + SUPER_PASTA_DAILY_INCREASE,
+    }
     emit()
+}
+
+/** Prix actuel d'un Super Pasta : (60 + bonus journalier) × 1.5^(achats du jour). */
+export function superPastaPrice(): number {
+    return Math.round((SUPER_PASTA_BASE + st.pastaDayBonus) * SUPER_PASTA_GROWTH ** st.pastaBoughtToday)
+}
+
+/**
+ * Achète et applique un Super Pasta à un Daemon de l'équipe : +1 niveau effectif,
+ * apprentissage des attaques du palier (ou mise en attente), PV ajustés au level-up.
+ * Renvoie { ok:false } si solde insuffisant, Daemon introuvable, ou déjà au max.
+ */
+export function buySuperPasta(uid: string): { ok: boolean; reason?: "reps" | "introuvable" | "max"; result?: ExpResult; price?: number } {
+    const price = superPastaPrice()
+    if (st.reps < price) return { ok: false, reason: "reps" }
+    const idx = st.team.findIndex((m) => m.uid === uid)
+    if (idx < 0) return { ok: false, reason: "introuvable" }
+    const orig = st.team[idx]
+    const sp = getSpecies(orig.speciesId)
+    const baseExp = Math.max(orig.exp, expForLevel(orig.level))
+    const effLevel = Math.max(orig.level, levelFromExp(orig.exp))
+    if (effLevel >= MAX_LEVEL) return { ok: false, reason: "max" }
+    const target = Math.min(MAX_LEVEL, effLevel + 1)
+    const mon: MonInstance = {
+        ...orig, ivs: { ...orig.ivs }, moves: orig.moves.map((s) => ({ ...s })),
+        pendingMoves: orig.pendingMoves ? [...orig.pendingMoves] : undefined,
+    }
+    const hpBefore = sp ? fullStats(orig, sp).hp : orig.currentHp
+    const result = applyExp(mon, Math.max(1, expForLevel(target) - baseExp))
+    const hpAfter = sp ? fullStats(mon, sp).hp : mon.currentHp
+    mon.currentHp = Math.min(hpAfter, mon.currentHp + Math.max(0, hpAfter - hpBefore))
+    const team = st.team.slice()
+    team[idx] = mon
+    st = { ...st, reps: st.reps - price, pastaBoughtToday: st.pastaBoughtToday + 1, team }
+    emit()
+    return { ok: true, result, price }
 }
 
 /** Augmente le plafond de stockage (badge d'arène). */

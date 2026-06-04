@@ -19,7 +19,7 @@ import LearnScreen from "./LearnScreen"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout } from "@/lib/gamebook/yellow/store/battleStore"
 import { loadYellowSave, initAutosave, persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
-import { getPlayer, setTeam, usePlayer, addItem, spendReps, markIntroSeen, resetForIntro } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, addItem, spendReps, markIntroSeen, resetForIntro, superPastaPrice, buySuperPasta } from "@/lib/gamebook/yellow/store/playerStore"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
@@ -46,6 +46,8 @@ export default function YellowDevClient() {
     const [menu, setMenu] = useState<"none" | "pause" | "team">("none")
     const [selected, setSelected] = useState<MonInstance | null>(null)
     const [showIntro, setShowIntro] = useState(false)
+    const [pastaPick, setPastaPick] = useState(false)
+    const [toast, setToast] = useState<string | null>(null)
 
     // Au mount : charge l'état du joueur depuis le serveur (DB Neon).
     // Si le joueur n'a jamais joué, on garde le state par défaut (déjà set
@@ -90,6 +92,13 @@ export default function YellowDevClient() {
         window.addEventListener("keydown", handler)
         return () => window.removeEventListener("keydown", handler)
     }, [move, pressA, pressB])
+
+    // Toast éphémère : disparaît tout seul après 2,5 s.
+    useEffect(() => {
+        if (!toast) return
+        const t = setTimeout(() => setToast(null), 2500)
+        return () => clearTimeout(t)
+    }, [toast])
 
     // Évite un flash à l'écran avant que l'état serveur soit chargé.
     // Si la requête échoue (offline / 403), on affiche quand même le state local.
@@ -204,9 +213,66 @@ export default function YellowDevClient() {
                                 </button>
                             )
                         })}
+                        {/* Super Pasta : +1 niveau, prix dynamique (monte à chaque achat du jour). */}
+                        {(() => {
+                            const price = superPastaPrice()
+                            const afford = player.reps >= price && player.team.length > 0
+                            return (
+                                <button
+                                    style={afford ? { ...menuBtnStyle, borderColor: "#f5d020" } : menuBtnDimStyle}
+                                    disabled={!afford}
+                                    onClick={() => setPastaPick(true)}
+                                    title="Fait gagner 1 niveau à un Daemon de l'équipe"
+                                >
+                                    <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                        <span>🍝 Super Pasta (+1 niv.)</span>
+                                        <span>{price} reps</span>
+                                    </span>
+                                </button>
+                            )
+                        })()}
                         <button style={menuBtnDimStyle} onClick={closeShop}>← QUITTER</button>
                     </div>
                 </div>
+            )}
+
+            {/* Super Pasta : choix du Daemon à faire monter d'un niveau. */}
+            {!battle && pastaPick && (
+                <div style={menuOverlayStyle} onClick={() => setPastaPick(false)}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={{ ...menuTitleStyle, display: "flex", justifyContent: "space-between" }}>
+                            <span>🍝 QUEL DAEMON ?</span><span>{superPastaPrice()} reps</span>
+                        </div>
+                        {player.team.map((m) => (
+                            <button
+                                key={m.uid}
+                                style={m.level >= 100 ? menuBtnDimStyle : menuBtnStyle}
+                                disabled={m.level >= 100}
+                                onClick={() => {
+                                    const r = buySuperPasta(m.uid)
+                                    if (r.ok && r.result) {
+                                        setToast(`${displayName(m)} monte au niveau ${r.result.toLevel} !`)
+                                        setPastaPick(false)
+                                    } else if (r.reason === "reps") {
+                                        setToast("Pas assez de reps.")
+                                    } else if (r.reason === "max") {
+                                        setToast(`${displayName(m)} est déjà au niveau max.`)
+                                    }
+                                }}
+                            >
+                                <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                    <span>{displayName(m)}</span><span>N.{m.level}</span>
+                                </span>
+                            </button>
+                        ))}
+                        <button style={menuBtnDimStyle} onClick={() => setPastaPick(false)}>← ANNULER</button>
+                    </div>
+                </div>
+            )}
+
+            {/* Toast éphémère (achat, info). */}
+            {toast && (
+                <div style={toastStyle} onClick={() => setToast(null)}>{toast}</div>
             )}
 
             {/* Fiche / résumé d'un Daemon (depuis l'Équipe) */}
@@ -298,5 +364,11 @@ const menuBtnStyle: React.CSSProperties = {
 const menuBtnDimStyle: React.CSSProperties = { ...menuBtnStyle, background: "#e0e0d0", border: "2px solid #888", color: "#555" }
 const teamRowStyle: React.CSSProperties = {
     display: "flex", alignItems: "center", gap: 8, fontSize: 12, padding: "5px 0", borderBottom: "1px solid #00000018",
+}
+const toastStyle: React.CSSProperties = {
+    position: "fixed", left: "50%", bottom: 90, transform: "translateX(-50%)", zIndex: 9300,
+    background: "#1c1408", color: "#f5d020", border: "2px solid #f5d020", borderRadius: 8,
+    padding: "10px 16px", fontFamily: "'Courier New', monospace", fontSize: 13, fontWeight: 700,
+    maxWidth: 320, textAlign: "center", cursor: "pointer",
 }
 
