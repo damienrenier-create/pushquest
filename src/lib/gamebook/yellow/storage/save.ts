@@ -12,8 +12,12 @@ export interface YellowSave {
     /** Réserve (PC) au-delà des 6 de l'équipe. */
     pc: MonInstance[]
     items: Record<string, number>
-    /** Monnaie du chapitre (gagnée en combat, dépensée à la boutique). */
-    money: number
+    /** Portefeuille reps (pool stocké, plafonné). */
+    reps: number
+    /** Plafond de stockage des reps (augmenté par les badges d'arène). */
+    repsCap: number
+    /** Dernier jour crédité (YYYY-MM-DD) — anti double-crédit du gain quotidien. */
+    creditedThrough: string
     pokedex: { seen: string[]; caught: string[] }
     /** Ids des dresseurs déjà battus (ne se recombattent pas). */
     defeatedTrainers: string[]
@@ -24,7 +28,7 @@ export interface YellowSave {
 export const SAVE_VERSION = 1
 
 export function emptySave(): YellowSave {
-    return { version: SAVE_VERSION, team: [], pc: [], items: {}, money: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], introSeen: false }
+    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", pokedex: { seen: [], caught: [] }, defeatedTrainers: [], introSeen: false }
 }
 
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -87,7 +91,9 @@ export function parseSave(raw: unknown): YellowSave {
         team,
         pc,
         items,
-        money: typeof o.money === "number" ? Math.max(0, Math.floor(o.money)) : 0,
+        reps: typeof o.reps === "number" ? Math.max(0, Math.floor(o.reps)) : 0,
+        repsCap: typeof o.repsCap === "number" ? Math.max(1, Math.floor(o.repsCap)) : 1000,
+        creditedThrough: typeof o.creditedThrough === "string" ? o.creditedThrough : "",
         pokedex: { seen: strArr(dex.seen), caught: strArr(dex.caught) },
         defeatedTrainers: strArr(o.defeatedTrainers),
         introSeen: o.introSeen === true,

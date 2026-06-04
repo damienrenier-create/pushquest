@@ -5,8 +5,15 @@
 // SERVEUR uniquement (accès Prisma). Le client le récupère via /player-stats.
 
 import prisma from "@/lib/prisma"
-import { getTodayISO, getDailyTargetWithModifiers } from "@/lib/challenge"
+import { getTodayISO, getYesterdayISO, getDailyTargetWithModifiers } from "@/lib/challenge"
 import type { WildPlayerCtx } from "../data/encounters"
+
+/** Reps réalisées HIER (créditées au portefeuille du chapitre, plafonnées côté client). */
+export async function getYesterdayReps(userId: string): Promise<number> {
+    const date = getYesterdayISO()
+    const sets = await (prisma as any).exerciseSet.findMany({ where: { userId, date } })
+    return (sets as { reps: number }[]).reduce((a, s) => a + s.reps, 0)
+}
 
 /** Contexte neutre (aucun bonus) — repli si on n'a pas de données. */
 export function neutralWildCtx(): WildPlayerCtx {

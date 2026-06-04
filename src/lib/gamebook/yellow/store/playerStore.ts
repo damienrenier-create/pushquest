@@ -16,7 +16,12 @@ interface PlayerState {
     team: MonInstance[]
     pc: MonInstance[]
     items: Record<string, number>
-    money: number
+    /** Portefeuille : reps stockés (dépensés en boutique ET pour attaquer). Persisté. */
+    reps: number
+    /** Plafond de stockage des reps (1000 au départ, augmenté par les badges d'arène). */
+    repsCap: number
+    /** Dernier jour où les reps de la veille ont été crédités (anti double-crédit). */
+    creditedThrough: string
     /** Ids des dresseurs déjà battus. */
     defeatedTrainers: string[]
     /** Stats d'effort du jour (PushQuest) qui modulent les rencontres. Null = neutre. */
@@ -25,7 +30,7 @@ interface PlayerState {
     introSeen: boolean
 }
 
-let st: PlayerState = { team: [], pc: [], items: {}, money: 0, defeatedTrainers: [], wildCtx: null, introSeen: false }
+let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", defeatedTrainers: [], wildCtx: null, introSeen: false }
 const listeners = new Set<() => void>()
 
 function emit() { for (const l of listeners) l() }
@@ -39,7 +44,8 @@ export function getPlayer(): PlayerState { return st }
 
 export function hydratePlayer(p: Partial<PlayerState>) {
     st = {
-        team: p.team ?? [], pc: p.pc ?? [], items: p.items ?? {}, money: p.money ?? 0,
+        team: p.team ?? [], pc: p.pc ?? [], items: p.items ?? {},
+        reps: p.reps ?? st.reps ?? 0, repsCap: p.repsCap ?? st.repsCap ?? 1000, creditedThrough: p.creditedThrough ?? st.creditedThrough ?? "",
         defeatedTrainers: p.defeatedTrainers ?? [], wildCtx: p.wildCtx ?? st.wildCtx ?? null,
         introSeen: p.introSeen ?? st.introSeen ?? false,
     }
@@ -55,7 +61,7 @@ export function markIntroSeen() {
 
 /** DEV : remet la progression jaune à zéro pour rejouer l'intro (équipe vidée, introSeen=false). */
 export function resetForIntro() {
-    st = { team: [], pc: [], items: {}, money: 0, defeatedTrainers: [], wildCtx: st.wildCtx, introSeen: false }
+    st = { team: [], pc: [], items: {}, reps: 0, repsCap: st.repsCap, creditedThrough: "", defeatedTrainers: [], wildCtx: st.wildCtx, introSeen: false }
     emit()
 }
 
@@ -108,17 +114,31 @@ export function consumeItem(itemId: string): boolean {
     return true
 }
 
-export function addMoney(n: number) {
-    st = { ...st, money: Math.max(0, st.money + Math.floor(n)) }
+/** Solde de reps disponible (pool stocké, déjà plafonné). */
+export function walletBalance(): number {
+    return st.reps
+}
+
+/** Dépense des reps (boutique OU attaque). Renvoie false si solde insuffisant. */
+export function spendReps(n: number): boolean {
+    if (st.reps < n) return false
+    st = { ...st, reps: st.reps - Math.floor(n) }
+    emit()
+    return true
+}
+
+/** Crédite les reps de la veille (1×/jour), plafonné au cap de stockage. */
+export function creditDailyReps(yesterdayReps: number, today: string) {
+    if (st.creditedThrough === today) return // déjà crédité aujourd'hui
+    const credited = Math.min(st.repsCap, st.reps + Math.max(0, Math.floor(yesterdayReps)))
+    st = { ...st, reps: credited, creditedThrough: today }
     emit()
 }
 
-/** Dépense de l'argent. Renvoie false si fonds insuffisants. */
-export function spendMoney(n: number): boolean {
-    if (st.money < n) return false
-    st = { ...st, money: st.money - Math.floor(n) }
+/** Augmente le plafond de stockage (badge d'arène). */
+export function raiseRepsCap(delta: number) {
+    st = { ...st, repsCap: st.repsCap + Math.max(0, Math.floor(delta)) }
     emit()
-    return true
 }
 
 /** Soin complet de l'équipe (Centre Daemon) : PV max, statut effacé, PP refaits. */

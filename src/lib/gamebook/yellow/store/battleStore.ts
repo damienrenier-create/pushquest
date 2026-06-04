@@ -15,7 +15,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance } from "../battle/types"
 import { markSeen, markCaught } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, addMoney, markTrainerDefeated, healAllTeam } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, healAllTeam } from "./playerStore"
 import { toMonInstance } from "../storage/save"
 import { evolveTeam } from "../progression/evolveTeam"
 import { persistYellowSave } from "./saveManager"
@@ -121,16 +121,9 @@ function finishBattle(b: BattleState) {
         if (wild) addCaught(toMonInstance(wild))
     }
 
-    // 2bis) Victoire : argent + (si dresseur) marquage "battu".
-    if (b.outcome === "win") {
-        const trainer = storeState.trainer
-        if (trainer) {
-            addMoney(trainer.reward)
-            markTrainerDefeated(trainer.trainerId)
-        } else {
-            const foe = b.enemy.team[b.enemy.activeIndex]
-            if (foe) addMoney(foe.level * 6)
-        }
+    // 2bis) Victoire dresseur : marquage "battu" (la monnaie = reps, gagnée hors combat).
+    if (b.outcome === "win" && storeState.trainer) {
+        markTrainerDefeated(storeState.trainer.trainerId)
     }
 
     // 2ter) Défaite (équipe entièrement K.O.) : on soigne tout de suite et on

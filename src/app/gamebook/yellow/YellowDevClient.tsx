@@ -18,7 +18,7 @@ import IntroCinematic from "./IntroCinematic"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout } from "@/lib/gamebook/yellow/store/battleStore"
 import { loadYellowSave, initAutosave, persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
-import { getPlayer, setTeam, usePlayer, addItem, addMoney, spendMoney, markIntroSeen, resetForIntro } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, addItem, spendReps, markIntroSeen, resetForIntro } from "@/lib/gamebook/yellow/store/playerStore"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
@@ -109,7 +109,7 @@ export default function YellowDevClient() {
     const onIntroComplete = (starterId: string) => {
         setTeam([createMonInstance(starterId, 5, { owned: true })])
         addItem("poke_ball", 5)
-        addMoney(500)
+        // Pas d'argent offert : le portefeuille = reps de la veille (crédité au chargement).
         markIntroSeen()
         setShowIntro(false)
         persistYellowSave()
@@ -184,21 +184,21 @@ export default function YellowDevClient() {
                 <div style={menuOverlayStyle} onClick={closeShop}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                         <div style={{ ...menuTitleStyle, display: "flex", justifyContent: "space-between" }}>
-                            <span>BOUTIQUE</span><span>💰 {player.money}</span>
+                            <span>BOUTIQUE</span><span>💪 {player.reps}/{player.repsCap} reps</span>
                         </div>
                         {Object.values(ITEMS).filter((it) => it.price > 0).map((it) => {
                             const owned = player.items[it.id] ?? 0
-                            const afford = player.money >= it.price
+                            const afford = player.reps >= it.price
                             return (
                                 <button
                                     key={it.id}
                                     style={afford ? menuBtnStyle : menuBtnDimStyle}
                                     disabled={!afford}
-                                    onClick={() => { if (spendMoney(it.price)) addItem(it.id, 1) }}
+                                    onClick={() => { if (spendReps(it.price)) addItem(it.id, 1) }}
                                 >
                                     <span style={{ display: "flex", justifyContent: "space-between" }}>
                                         <span>{it.name}{owned > 0 ? ` (×${owned})` : ""}</span>
-                                        <span>{it.price}💰</span>
+                                        <span>{it.price} reps</span>
                                     </span>
                                 </button>
                             )
