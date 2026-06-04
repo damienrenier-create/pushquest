@@ -53,6 +53,12 @@ export function markIntroSeen() {
     emit()
 }
 
+/** DEV : remet la progression jaune à zéro pour rejouer l'intro (équipe vidée, introSeen=false). */
+export function resetForIntro() {
+    st = { team: [], pc: [], items: {}, money: 0, defeatedTrainers: [], wildCtx: st.wildCtx, introSeen: false }
+    emit()
+}
+
 /** Renseigne les stats d'effort du jour (fetchées au chargement). */
 export function setWildCtx(ctx: WildPlayerCtx | null) {
     st = { ...st, wildCtx: ctx }
