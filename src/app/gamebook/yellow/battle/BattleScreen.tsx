@@ -1,10 +1,13 @@
 "use client"
 
-// Nexus Jaune Éclair — écran de combat (UI minimale).
-// Lit l'état via le store (useBattle), rejoue la file de messages tour par tour,
-// et déclenche les actions. AUCUNE règle de jeu recalculée ici : tout vient du moteur.
+// Nexus Jaune Éclair — écran de combat (UI minimale, style Game Boy).
+// Le moteur résout un tour COMPLET et produit une file d'événements ordonnée
+// (messages, variations de PV, K.O., changements…). Cet écran REJOUE cette file
+// pas à pas : un message attend un tap ; un changement de PV s'anime (la barre
+// descend + le Daemon touché tremble) puis on enchaîne. Ainsi les attaques
+// paraissent bien séquentielles (jamais simultanées). Aucune règle recalculée ici.
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useBattle, submitPlayerAction, endBattle } from "@/lib/gamebook/yellow/store/battleStore"
 import { speciesOf, maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
 import type { BattleMon } from "@/lib/gamebook/yellow/battle/types"
@@ -14,57 +17,119 @@ import { usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
 
 type Menu = "root" | "moves" | "switch" | "ball"
 
+interface DispHp { p: number; pMax: number; e: number; eMax: number }
+
+/** Dernier message affiché à (ou avant) l'index courant, pour garder le texte
+ *  visible pendant qu'un changement de PV s'anime. */
+function lastMessageAt(events: readonly { kind: string; text?: string }[], step: number): string {
+    for (let i = Math.min(step, events.length - 1); i >= 0; i--) {
+        const e = events[i]
+        if (e.kind === "message") return e.text ?? ""
+    }
+    return ""
+}
+
 export default function BattleScreen() {
     const battle = useBattle()
-    const [cursor, setCursor] = useState(0)
+    const [step, setStep] = useState(0)
     const [menu, setMenu] = useState<Menu>("root")
+    const [disp, setDisp] = useState<DispHp | null>(null)
+    const [shakeP, setShakeP] = useState(0)
+    const [shakeE, setShakeE] = useState(0)
+    const lastBattle = useRef(battle)
 
-    // Nouveau tour résolu → on rejoue la file depuis le début + reset menu.
+    // Initialise les PV affichés au tout début du combat (ils sont ensuite
+    // CONSERVÉS d'un tour à l'autre → pas de saut visuel entre les tours).
     useEffect(() => {
-        setCursor(0)
-        setMenu("root")
-    }, [battle])
+        if (battle && disp === null) {
+            const p = battle.player.team[battle.player.activeIndex]
+            const e = battle.enemy.team[battle.enemy.activeIndex]
+            setDisp({ p: p.currentHp, pMax: maxHpOf(p), e: e.currentHp, eMax: maxHpOf(e) })
+        }
+    }, [battle, disp])
+
+    // Lecture de la file : reset au nouveau tour, sinon traite l'événement courant.
+    useEffect(() => {
+        if (!battle) return
+        // Nouveau tour résolu → on repart au début de la file (et on attend le re-render).
+        if (lastBattle.current !== battle) {
+            lastBattle.current = battle
+            setStep(0)
+            setMenu("root")
+            return
+        }
+        const ev = battle.events[step]
+        if (!ev) return                      // file terminée → menu/fin
+        if (ev.kind === "message") return    // on attend un tap du joueur
+
+        // Événement non-textuel : on l'applique puis on enchaîne automatiquement.
+        let delay = 140
+        if (ev.kind === "hp") {
+            setDisp((d) => {
+                if (!d) return d
+                const next = { ...d }
+                if (ev.side === "player") {
+                    if (ev.hp < d.p) setShakeP((k) => k + 1)
+                    next.p = ev.hp; next.pMax = ev.max
+                } else {
+                    if (ev.hp < d.e) setShakeE((k) => k + 1)
+                    next.e = ev.hp; next.eMax = ev.max
+                }
+                return next
+            })
+            delay = 340
+        } else if (ev.kind === "faint") {
+            delay = 320
+        }
+        const t = setTimeout(() => setStep((s) => s + 1), delay)
+        return () => clearTimeout(t)
+    }, [battle, step])
 
     if (!battle) return null
 
-    const messages = battle.events.filter((e) => e.kind === "message") as { kind: "message"; text: string }[]
-    const playingDone = cursor >= messages.length
-    const currentMsg = messages[cursor]?.text ?? ""
+    const events = battle.events
+    const playbackDone = step >= events.length
+    const waitingForTap = !playbackDone && events[step]?.kind === "message"
+    const shownMsg = lastMessageAt(events, step)
 
     const player = battle.player.team[battle.player.activeIndex]
     const enemy = battle.enemy.team[battle.enemy.activeIndex]
 
     const isEnded = battle.phase === "ended"
     const needSwitch = battle.forcedSwitch === "player"
-    const canShowMenu = playingDone && !isEnded && !needSwitch
 
     // --- handlers ---
-    const advance = () => { if (!playingDone) setCursor((c) => c + 1) }
+    const advance = () => { if (waitingForTap) setStep((s) => s + 1) }
     const useMove = (i: number) => { submitPlayerAction({ kind: "move", moveIndex: i }); setMenu("root") }
     const doSwitch = (i: number) => { submitPlayerAction({ kind: "switch", teamIndex: i }); setMenu("root") }
     const throwBall = (itemId: string) => { submitPlayerAction({ kind: "ball", itemId }); setMenu("root") }
     const run = () => submitPlayerAction({ kind: "run" })
 
+    const pHp = disp?.p ?? player.currentHp
+    const pMax = disp?.pMax ?? maxHpOf(player)
+    const eHp = disp?.e ?? enemy.currentHp
+    const eMax = disp?.eMax ?? maxHpOf(enemy)
+
     return (
-        <div style={S.root} onClick={!playingDone ? advance : undefined}>
+        <div style={S.root} onClick={waitingForTap ? advance : undefined}>
             {/* ===== Scène ===== */}
             <div style={S.scene}>
                 <div style={S.enemyRow}>
-                    <MonInfo mon={enemy} />
-                    <MonSprite mon={enemy} facing="front" />
+                    <MonInfo mon={enemy} hp={eHp} max={eMax} />
+                    <MonSprite mon={enemy} facing="front" alive={eHp > 0} hitKey={shakeE} />
                 </div>
                 <div style={S.playerRow}>
-                    <MonSprite mon={player} facing="back" />
-                    <MonInfo mon={player} self />
+                    <MonSprite mon={player} facing="back" alive={pHp > 0} hitKey={shakeP} />
+                    <MonInfo mon={player} self hp={pHp} max={pMax} />
                 </div>
             </div>
 
             {/* ===== Boîte du bas ===== */}
             <div style={S.bottom}>
-                {!playingDone ? (
+                {!playbackDone ? (
                     <div style={S.msgBox}>
-                        <p style={S.msgText}>{currentMsg}</p>
-                        <span style={S.next}>▶</span>
+                        <p style={S.msgText}>{shownMsg}</p>
+                        {waitingForTap && <span style={S.next}>▶</span>}
                     </div>
                 ) : isEnded ? (
                     <EndBox outcome={battle.outcome} />
@@ -85,6 +150,18 @@ export default function BattleScreen() {
                     <SwitchMenu team={battle.player.team} activeIndex={battle.player.activeIndex} onPick={doSwitch} onBack={() => setMenu("root")} />
                 )}
             </div>
+
+            <style jsx>{`
+                @keyframes hitShake {
+                    0% { transform: translateX(0); }
+                    15% { transform: translateX(-6px); }
+                    30% { transform: translateX(5px); }
+                    45% { transform: translateX(-4px); }
+                    60% { transform: translateX(3px); }
+                    75% { transform: translateX(-2px); }
+                    100% { transform: translateX(0); }
+                }
+            `}</style>
         </div>
     )
 }
@@ -93,9 +170,8 @@ export default function BattleScreen() {
 // Sous-composants
 // ============================================================
 
-function MonInfo({ mon, self }: { mon: BattleMon; self?: boolean }) {
-    const max = maxHpOf(mon)
-    const pct = Math.max(0, Math.min(100, (mon.currentHp / max) * 100))
+function MonInfo({ mon, self, hp, max }: { mon: BattleMon; self?: boolean; hp: number; max: number }) {
+    const pct = Math.max(0, Math.min(100, (hp / max) * 100))
     const col = pct > 50 ? "#48c048" : pct > 20 ? "#f0c040" : "#e04040"
     return (
         <div style={{ ...S.info, alignSelf: self ? "flex-end" : "flex-start" }}>
@@ -107,17 +183,26 @@ function MonInfo({ mon, self }: { mon: BattleMon; self?: boolean }) {
                 <span style={S.hpLabel}>PV</span>
                 <div style={S.hpTrack}><div style={{ ...S.hpFill, width: `${pct}%`, background: col }} /></div>
             </div>
-            {self && <div style={S.hpNum}>{mon.currentHp}/{max}</div>}
-            {mon.status !== "NONE" && <span style={S.statusTag}>{mon.status}</span>}
+            {self && <div style={S.hpNum}>{Math.max(0, Math.round(hp))}/{max}</div>}
+            {hp > 0 && mon.status !== "NONE" && <span style={S.statusTag}>{mon.status}</span>}
         </div>
     )
 }
 
-function MonSprite({ mon, facing }: { mon: BattleMon; facing: "front" | "back" }) {
+function MonSprite({ mon, facing, alive, hitKey }: { mon: BattleMon; facing: "front" | "back"; alive: boolean; hitKey: number }) {
     // Placeholder : pastille colorée + initiale (les vrais sprites arriveront dans public/).
+    // `key={hitKey}` force un remount à chaque coup encaissé → l'animation de tremblement rejoue.
     const sp = speciesOf(mon)
     return (
-        <div style={{ ...S.sprite, opacity: mon.currentHp > 0 ? 1 : 0.25, transform: facing === "back" ? "scaleX(-1)" : "none" }}>
+        <div
+            key={hitKey}
+            style={{
+                ...S.sprite,
+                opacity: alive ? 1 : 0.25,
+                transform: facing === "back" ? "scaleX(-1)" : "none",
+                animation: hitKey > 0 ? "hitShake 0.3s ease-in-out" : "none",
+            }}
+        >
             <span style={S.spriteGlyph}>{sp.name[0]}</span>
         </div>
     )
