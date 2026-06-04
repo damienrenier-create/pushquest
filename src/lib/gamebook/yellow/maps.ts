@@ -262,7 +262,7 @@ const TOWN_BUILDINGS: YellowBuilding[] = [
         x: 34, y: 16, w: 4, h: 4,       // footprint cols 34..37, rows 16..19
         doorX: 2, doorY: 3,             // porte abs (36, 19) — dans le footprint (walkable)
         targetMapId: "yellow_shop",
-        targetSpawnX: 4, targetSpawnY: 5,
+        targetSpawnX: 5, targetSpawnY: 6,
         displayName: "MART",
         kind: "shop",
     },
@@ -273,7 +273,7 @@ const TOWN_BUILDINGS: YellowBuilding[] = [
         x: 24, y: 23, w: 5, h: 4,       // footprint cols 24..28, rows 23..26
         doorX: 2, doorY: 3,             // porte abs (26, 26) — dans le footprint (walkable)
         targetMapId: "yellow_infirmary",
-        targetSpawnX: 4, targetSpawnY: 5,
+        targetSpawnX: 7, targetSpawnY: 7,
         displayName: "PC",
         kind: "infirmary",
     },
@@ -281,19 +281,13 @@ const TOWN_BUILDINGS: YellowBuilding[] = [
 
 // === Intérieurs : 4 maps 9×7 ============================================
 
+// Boutique : grille 11×8 calée sur l'image de fond shop.png (189×137).
 function buildShopInterior(): TileType[][] {
-    const m = fillRoom(9, 7, "floorChecker")
-    // Rayonnages le long du mur du fond
-    for (let x = 1; x < 8; x++) m[1][x] = "shopShelf"
-    // Comptoir du vendeur (le joueur lui parle par-dessus)
-    for (let x = 1; x < 8; x++) m[2][x] = "shopCounter"
-    // Rayonnages latéraux au rayon central (gauche / droite)
-    m[3][1] = "shopShelf"; m[4][1] = "shopShelf"
-    m[3][7] = "shopShelf"; m[4][7] = "shopShelf"
-    // Tapis d'accueil devant la porte
-    m[5][4] = "rug"
-    // Porte de sortie au sud
-    m[6][4] = "doorMat"
+    const m = fillRoom(11, 8, "floorChecker")
+    for (let x = 1; x < 10; x++) m[1][x] = "shopShelf"    // rayonnages du fond
+    for (let x = 1; x < 10; x++) m[2][x] = "shopCounter"  // comptoir (vendeur derrière)
+    // Porte de sortie au sud-centre (sous le spawn d'entrée 5,6)
+    m[7][5] = "doorMat"
     return m
 }
 
@@ -309,15 +303,13 @@ function buildCasinoInterior(): TileType[][] {
     return m
 }
 
+// Centre Daemon : grille 14×9 calée sur l'image centre_interior.png (242×155).
 function buildInfirmaryInterior(): TileType[][] {
-    const m = fillRoom(9, 7, "floorTile")
-    // 2 lits
-    m[2][2] = "rug"
-    m[2][6] = "rug"
-    // Comptoir d'accueil au nord
-    for (let x = 3; x <= 5; x++) m[1][x] = "shopCounter"
-    // Porte sortie
-    m[6][4] = "doorMat"
+    const m = fillRoom(14, 9, "floorTile")
+    // Comptoir de soins le long du mur du fond (médecin derrière)
+    for (let x = 1; x < 13; x++) m[1][x] = "shopCounter"
+    // Porte de sortie au sud-centre (sous le spawn d'entrée 7,7)
+    m[8][7] = "doorMat"
     return m
 }
 
@@ -610,9 +602,13 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         id: "yellow_shop",
         name: "SHOP",
         tiles: buildShopInterior(),
-        width: 9,
-        height: 7,
-        exits: [returnExit("yellow_shop", 4, 6)],
+        width: 11,
+        height: 8,
+        exits: [returnExit("yellow_shop", 5, 7)],
+        backgroundImage: "/yellow/sprites/shop.png",
+        backgroundImageWidth: 189,
+        backgroundImageHeight: 137,
+        backgroundImageTileSize: 189 / 11,
     },
     yellow_casino: {
         id: "yellow_casino",
@@ -624,11 +620,15 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
     },
     yellow_infirmary: {
         id: "yellow_infirmary",
-        name: "INFIRMERIE",
+        name: "CENTRE DAEMON",
         tiles: buildInfirmaryInterior(),
-        width: 9,
-        height: 7,
-        exits: [returnExit("yellow_infirmary", 4, 6)],
+        width: 14,
+        height: 9,
+        exits: [returnExit("yellow_infirmary", 7, 8)],
+        backgroundImage: "/yellow/sprites/centre_interior.png",
+        backgroundImageWidth: 242,
+        backgroundImageHeight: 155,
+        backgroundImageTileSize: 242 / 14,
     },
     yellow_arena: {
         id: "yellow_arena",

@@ -36,8 +36,8 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         kind: "static",
         interaction: "interactive",
         sprite: { emoji: "🧑‍💼", color: "#a06030" },
-        initialX: 4,
-        initialY: 3,
+        initialX: 5,
+        initialY: 2,
         dialoguesAfter: [
             "*Le vendeur te toise par-dessus le comptoir.*",
             "Bienvenue chez moi. J'ai tout ce qu'il te faut…",
@@ -70,7 +70,7 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         kind: "static",
         interaction: "interactive",
         sprite: { emoji: "👩‍⚕️", color: "#e0f0ff" },
-        initialX: 4,
+        initialX: 7,
         initialY: 2,
         dialoguesAfter: [
             "*La médecin range son stéthoscope.*",
