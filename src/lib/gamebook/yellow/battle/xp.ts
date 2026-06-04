@@ -1,7 +1,8 @@
 // src/lib/gamebook/yellow/battle/exp.ts
 //
 // Nexus Jaune Éclair — expérience, courbe de niveau, montée de niveau + apprentissage.
-// React-free, pur. Courbe "medium-fast" (XP totale au niveau L = L³).
+// React-free, pur. Courbe DOUCE (XP totale au niveau L = 12·L²) pour accélérer
+// nettement la progression — le jeu était trop long avec l'ancienne courbe L³.
 
 import type { MonInstance } from "./types"
 import { getSpecies } from "../data/species"
@@ -9,9 +10,9 @@ import { getMove } from "../data/moves"
 
 export const MAX_LEVEL = 100
 
-/** XP cumulée nécessaire pour ATTEINDRE un niveau (medium-fast : L³). */
+/** XP cumulée nécessaire pour ATTEINDRE un niveau (courbe douce : 12·L²). */
 export function expForLevel(level: number): number {
-    return Math.max(0, Math.floor(level) ** 3)
+    return Math.max(0, 12 * Math.floor(level) ** 2)
 }
 
 /** Niveau correspondant à une XP cumulée. */
@@ -21,9 +22,9 @@ export function levelFromExp(exp: number): number {
     return l
 }
 
-/** XP gagnée en battant un adversaire (formule simplifiée : baseExp × niveau / 7). */
+/** XP gagnée en battant un adversaire (formule simplifiée : baseExp × niveau / 5). */
 export function xpForDefeat(defeatedBaseExp: number, defeatedLevel: number, isWild: boolean): number {
-    const base = Math.floor((defeatedBaseExp * defeatedLevel) / 7)
+    const base = Math.floor((defeatedBaseExp * defeatedLevel) / 5)
     return Math.max(1, isWild ? base : Math.floor(base * 1.5))
 }
 

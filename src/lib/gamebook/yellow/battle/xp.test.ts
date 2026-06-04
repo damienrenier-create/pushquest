@@ -2,15 +2,15 @@ import { describe, it, expect } from "vitest"
 import { expForLevel, levelFromExp, xpForDefeat, applyExp, MAX_LEVEL } from "./xp"
 import type { MonInstance } from "./types"
 
-describe("courbe d'XP (medium-fast = L³)", () => {
-    it("expForLevel = niveau au cube", () => {
-        expect(expForLevel(1)).toBe(1)
-        expect(expForLevel(10)).toBe(1000)
-        expect(expForLevel(100)).toBe(1_000_000)
+describe("courbe d'XP (douce = 12·L²)", () => {
+    it("expForLevel = 12 × niveau²", () => {
+        expect(expForLevel(1)).toBe(12)
+        expect(expForLevel(10)).toBe(1200)
+        expect(expForLevel(100)).toBe(120_000)
     })
     it("levelFromExp est l'inverse (palier inférieur)", () => {
-        expect(levelFromExp(1000)).toBe(10)
-        expect(levelFromExp(999)).toBe(9)
+        expect(levelFromExp(1200)).toBe(10)
+        expect(levelFromExp(1199)).toBe(9)
         expect(levelFromExp(0)).toBe(1)
     })
     it("ne dépasse jamais MAX_LEVEL", () => {
@@ -19,12 +19,12 @@ describe("courbe d'XP (medium-fast = L³)", () => {
 })
 
 describe("xpForDefeat", () => {
-    it("sauvage = floor(baseExp*level/7)", () => {
-        // 30 * 10 / 7 = 42.85 → 42.
-        expect(xpForDefeat(30, 10, true)).toBe(42)
+    it("sauvage = floor(baseExp*level/5)", () => {
+        // 30 * 10 / 5 = 60.
+        expect(xpForDefeat(30, 10, true)).toBe(60)
     })
     it("dresseur = ×1.5", () => {
-        expect(xpForDefeat(30, 10, false)).toBe(63) // floor(42*1.5)
+        expect(xpForDefeat(30, 10, false)).toBe(90) // floor(60*1.5)
     })
     it("toujours >= 1", () => {
         expect(xpForDefeat(1, 1, true)).toBe(1)
