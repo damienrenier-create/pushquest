@@ -8,7 +8,7 @@
 // paraissent bien séquentielles (jamais simultanées). Aucune règle recalculée ici.
 
 import { useEffect, useRef, useState } from "react"
-import { useBattle, submitPlayerAction, endBattle } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, submitPlayerAction, endBattle, getBattleEnergy } from "@/lib/gamebook/yellow/store/battleStore"
 import { speciesOf, maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
 import type { BattleMon } from "@/lib/gamebook/yellow/battle/types"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
@@ -217,25 +217,32 @@ function MonSprite({ mon, facing, alive, hitKey }: { mon: BattleMon; facing: "fr
 
 function MoveMenu({ mon, onPick, onStruggle, onBack }: { mon: BattleMon; onPick: (i: number) => void; onStruggle: () => void; onBack: () => void }) {
     const reps = usePlayer().reps
+    const energy = getBattleEnergy()
+    const remainingEnergy = Math.max(0, energy.cap - energy.spent)
     // Les PP sont illimités : chaque attaque coûte des reps (PP bas = plus cher).
+    // Une attaque est jouable si on a les reps ET assez d'énergie restante ce combat.
     const costs = mon.moves.map((slot) => moveCostReps(slot.ppMax, mon.level))
-    const canAffordAny = costs.some((c) => c <= reps)
+    const usable = (c: number) => c <= reps && c <= remainingEnergy
+    const canUseAny = costs.some(usable)
     return (
         <div style={S.menuGrid}>
-            <div style={{ gridColumn: "1 / -1", fontSize: 11, fontWeight: 700, textAlign: "right", opacity: 0.8 }}>💪 {reps} reps</div>
+            <div style={{ gridColumn: "1 / -1", fontSize: 11, fontWeight: 700, display: "flex", justifyContent: "space-between", opacity: 0.85 }}>
+                <span>⚡ {remainingEnergy}/{energy.cap} ce combat</span>
+                <span>💪 {reps} reps</span>
+            </div>
             {mon.moves.map((slot, i) => {
                 const m = getMove(slot.moveId)
                 const cost = costs[i]
-                const broke = cost > reps
+                const off = !usable(cost)
                 return (
-                    <button key={i} style={broke ? S.btnDim : S.btn} disabled={broke} onClick={() => onPick(i)}>
-                        {m?.name ?? slot.moveId} <span style={S.pp}>💪{cost}</span>
+                    <button key={i} style={off ? S.btnDim : S.btn} disabled={off} onClick={() => onPick(i)}>
+                        {m?.name ?? slot.moveId} <span style={S.pp}>⚡{cost}</span>
                     </button>
                 )
             })}
             {Array.from({ length: Math.max(0, 4 - mon.moves.length) }).map((_, i) => <span key={`e${i}`} />)}
-            {/* Secours gratuit anti soft-lock : visible quand aucune attaque n'est payable. */}
-            {!canAffordAny && (
+            {/* Secours gratuit anti soft-lock : visible quand aucune attaque n'est jouable. */}
+            {!canUseAny && (
                 <button style={{ ...S.btn, gridColumn: "1 / -1", background: "#f0d8a0" }} onClick={onStruggle}>
                     Charge Désespérée <span style={S.pp}>gratuit · recul</span>
                 </button>

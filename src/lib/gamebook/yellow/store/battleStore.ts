@@ -21,6 +21,7 @@ import { evolveTeam } from "../progression/evolveTeam"
 import { persistYellowSave } from "./saveManager"
 import { QUOTA_CAPTURE_BONUS } from "../data/captureConfig"
 import { moveCostReps, STRUGGLE_INDEX } from "../data/combatCostConfig"
+import { battleEnergyCap } from "../data/badges"
 import type { EvolutionResult } from "../battle/evolution"
 
 /** Espèce de l'adversaire actif (pour synchroniser le Pokédex). */
@@ -51,17 +52,20 @@ interface BattleStoreState {
     trainer: TrainerContext | null
     /** Équipe entièrement K.O. → la carte doit renvoyer le joueur au Centre (soigné). */
     whiteout: boolean
+    /** Reps dépensés en attaques DANS le combat courant (cap d'énergie par combat). */
+    energySpent: number
 }
 
-let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false }
+let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0 }
 const listeners = new Set<() => void>()
 
 function emit() {
     for (const l of listeners) l()
 }
 
-function setStore(next: BattleStoreState) {
-    storeState = next
+/** Fusionne un patch dans l'état (les champs non fournis sont conservés). */
+function setStore(next: Partial<BattleStoreState>) {
+    storeState = { ...storeState, ...next }
     emit()
 }
 
@@ -84,7 +88,7 @@ export function startWildBattle(playerTeam: MonInstance[], enemyTeam: MonInstanc
     const captureModifier = getPlayer().wildCtx?.quotaReached ? QUOTA_CAPTURE_BONUS : 1
     const battle = createBattle(playerTeam, enemyTeam, { isWild: true, seed, captureModifier })
     syncPokedex(battle) // adversaire "vu" dès la rencontre
-    setStore({ battle, evolutions: [], trainer: null, whiteout: false })
+    setStore({ battle, evolutions: [], trainer: null, whiteout: false, energySpent: 0 })
 }
 
 export function startTrainerBattle(
@@ -96,7 +100,12 @@ export function startTrainerBattle(
     const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: opts?.aiLevel })
     syncPokedex(battle)
     const trainer = opts?.trainerId ? { trainerId: opts.trainerId, reward: opts.reward ?? 0 } : null
-    setStore({ battle, evolutions: [], trainer, whiteout: false })
+    setStore({ battle, evolutions: [], trainer, whiteout: false, energySpent: 0 })
+}
+
+/** Énergie de combat : reps déjà dépensés ce combat + plafond (selon badges). */
+export function getBattleEnergy(): { spent: number; cap: number } {
+    return { spent: storeState.energySpent, cap: battleEnergyCap(getPlayer().badges.length) }
 }
 
 /** Coût en reps de l'attaque du Daemon actif (0 si introuvable). */
@@ -108,17 +117,24 @@ function moveCostRepsForAction(b: BattleState, moveIndex: number): number {
 }
 
 export function submitPlayerAction(action: PlayerAction) {
-    if (!storeState.battle) return
+    const battle = storeState.battle
+    if (!battle) return
     // Lancer une Ball consomme l'objet de l'inventaire (réussite ou non).
     if (action.kind === "ball" && !consumeItem(action.itemId)) return
     // Utiliser un objet de soin le consomme aussi.
     if (action.kind === "item" && !consumeItem(action.itemId)) return
     // Attaque normale : coûte des reps (la Charge Désespérée, index sentinelle, est gratuite).
     if (action.kind === "move" && action.moveIndex !== STRUGGLE_INDEX) {
-        const cost = moveCostRepsForAction(storeState.battle, action.moveIndex)
-        if (cost > 0 && !spendReps(cost)) return // solde insuffisant → action refusée (l'UI grise déjà)
+        const cost = moveCostRepsForAction(battle, action.moveIndex)
+        if (cost > 0) {
+            // Cap d'énergie PAR COMBAT (relevé par les badges d'arène).
+            const cap = battleEnergyCap(getPlayer().badges.length)
+            if (storeState.energySpent + cost > cap) return // plus d'énergie ce combat (UI grise déjà)
+            if (!spendReps(cost)) return                    // solde global insuffisant
+            storeState = { ...storeState, energySpent: storeState.energySpent + cost }
+        }
     }
-    const next = resolveTurn(storeState.battle, action)
+    const next = resolveTurn(battle, action)
     syncPokedex(next) // vu (changement d'adversaire) + capturé le cas échéant
     setStore({ battle: next, evolutions: [], trainer: storeState.trainer, whiteout: false })
     if (next.phase === "ended") finishBattle(next)

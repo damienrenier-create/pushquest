@@ -25,6 +25,8 @@ export interface YellowSave {
     pokedex: { seen: string[]; caught: string[] }
     /** Ids des dresseurs déjà battus (ne se recombattent pas). */
     defeatedTrainers: string[]
+    /** Badges d'arène gagnés. */
+    badges: string[]
     /** La cinématique d'intro (choix du starter) a-t-elle déjà été jouée ? */
     introSeen: boolean
 }
@@ -32,7 +34,7 @@ export interface YellowSave {
 export const SAVE_VERSION = 1
 
 export function emptySave(): YellowSave {
-    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], introSeen: false }
+    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], badges: [], introSeen: false }
 }
 
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -115,6 +117,7 @@ export function parseSave(raw: unknown): YellowSave {
         pastaDayBonus: typeof o.pastaDayBonus === "number" ? Math.max(0, Math.floor(o.pastaDayBonus)) : 0,
         pokedex: { seen: strArr(dex.seen), caught: strArr(dex.caught) },
         defeatedTrainers: strArr(o.defeatedTrainers),
+        badges: strArr(o.badges),
         introSeen: o.introSeen === true,
     }
 }

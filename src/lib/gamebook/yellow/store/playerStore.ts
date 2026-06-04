@@ -11,6 +11,8 @@ import { getSpecies } from "../data/species"
 import { getMove } from "../data/moves"
 import { getItem } from "../data/items"
 import { SAIYAN_POINT_VALUE } from "../data/saiyanConfig"
+import { BADGE_REPS_CAP_BONUS } from "../data/badges"
+import type { BadgeId } from "../data/cts"
 import type { StatKey } from "../battle/types"
 import { expForLevel, levelFromExp, applyExp, MAX_LEVEL, type ExpResult } from "../battle/xp"
 import type { WildPlayerCtx } from "../data/encounters"
@@ -39,13 +41,15 @@ interface PlayerState {
     pastaDayBonus: number
     /** Ids des dresseurs déjà battus. */
     defeatedTrainers: string[]
+    /** Badges d'arène gagnés (Feu/Plante/Eau). */
+    badges: BadgeId[]
     /** Stats d'effort du jour (PushQuest) qui modulent les rencontres. Null = neutre. */
     wildCtx: WildPlayerCtx | null
     /** Cinématique d'intro (choix du starter) déjà jouée ? */
     introSeen: boolean
 }
 
-let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], wildCtx: null, introSeen: false }
+let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: null, introSeen: false }
 const listeners = new Set<() => void>()
 
 function emit() { for (const l of listeners) l() }
@@ -62,7 +66,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         team: p.team ?? [], pc: p.pc ?? [], items: p.items ?? {},
         reps: p.reps ?? st.reps ?? 0, repsCap: p.repsCap ?? st.repsCap ?? 1000, creditedThrough: p.creditedThrough ?? st.creditedThrough ?? "",
         pastaBoughtToday: p.pastaBoughtToday ?? st.pastaBoughtToday ?? 0, pastaDayBonus: p.pastaDayBonus ?? st.pastaDayBonus ?? 0,
-        defeatedTrainers: p.defeatedTrainers ?? [], wildCtx: p.wildCtx ?? st.wildCtx ?? null,
+        defeatedTrainers: p.defeatedTrainers ?? [], badges: p.badges ?? st.badges ?? [], wildCtx: p.wildCtx ?? st.wildCtx ?? null,
         introSeen: p.introSeen ?? st.introSeen ?? false,
     }
     emit()
@@ -77,7 +81,7 @@ export function markIntroSeen() {
 
 /** DEV : remet la progression jaune à zéro pour rejouer l'intro (équipe vidée, introSeen=false). */
 export function resetForIntro() {
-    st = { team: [], pc: [], items: {}, reps: 0, repsCap: st.repsCap, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], wildCtx: st.wildCtx, introSeen: false }
+    st = { team: [], pc: [], items: {}, reps: 0, repsCap: st.repsCap, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false }
     emit()
 }
 
@@ -96,6 +100,19 @@ export function markTrainerDefeated(trainerId: string) {
 
 export function isTrainerDefeated(trainerId: string): boolean {
     return st.defeatedTrainers.includes(trainerId)
+}
+
+/** Possède ce badge d'arène ? */
+export function hasBadge(id: BadgeId): boolean {
+    return st.badges.includes(id)
+}
+
+/** Accorde un badge (idempotent) : augmente aussi le plafond de stockage des reps. */
+export function awardBadge(id: BadgeId): boolean {
+    if (st.badges.includes(id)) return false
+    st = { ...st, badges: [...st.badges, id], repsCap: st.repsCap + BADGE_REPS_CAP_BONUS }
+    emit()
+    return true
 }
 
 /** Remplace l'équipe (utilisé pour resynchroniser après un combat : XP/PV/niveaux). */
