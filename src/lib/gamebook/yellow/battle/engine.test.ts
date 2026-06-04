@@ -29,7 +29,7 @@ function trainerEnemyTeam(trainerId: string) {
 
 describe("combat de dresseur — enchaînement multi-Daemon", () => {
     it("un joueur surpuissant bat les 2 Daemons du dresseur (les deux finissent K.O.)", () => {
-        const player = [createMonInstance("flordaemon", 50), createMonInstance("galet", 50)]
+        const player = [createMonInstance("cerfeuillu", 50), createMonInstance("cailloutchi", 50)]
         const enemy = trainerEnemyTeam("y_trainer_leo") // rongeur L5 + bulle L6
         const start = createBattle(player, enemy, { isWild: false, seed: 12345 })
 
@@ -44,7 +44,7 @@ describe("combat de dresseur — enchaînement multi-Daemon", () => {
 
     it("est parfaitement déterministe pour une même seed", () => {
         const mk = () => createBattle(
-            [createMonInstance("flordaemon", 50), createMonInstance("galet", 50)],
+            [createMonInstance("cerfeuillu", 50), createMonInstance("cailloutchi", 50)],
             trainerEnemyTeam("y_trainer_leo"),
             { isWild: false, seed: 999 },
         )
@@ -56,7 +56,7 @@ describe("combat de dresseur — enchaînement multi-Daemon", () => {
 
     it("on ne peut ni fuir ni capturer un combat de dresseur", () => {
         const start = createBattle(
-            [createMonInstance("flordaemon", 50)],
+            [createMonInstance("cerfeuillu", 50)],
             trainerEnemyTeam("y_trainer_mia"),
             { isWild: false, seed: 7 },
         )
@@ -78,7 +78,7 @@ describe("combat de dresseur — enchaînement multi-Daemon", () => {
 
     it("un Daemon faible et seul perd contre le dresseur", () => {
         const start = createBattle(
-            [createMonInstance("rongeur", 2)],
+            [createMonInstance("cornaissant", 2)],
             trainerEnemyTeam("y_trainer_mia"), // piafeu L7 + galet L7
             { isWild: false, seed: 4242 },
         )

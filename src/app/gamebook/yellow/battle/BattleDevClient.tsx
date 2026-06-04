@@ -14,7 +14,7 @@ import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
 import type { MonInstance } from "@/lib/gamebook/yellow/battle/types"
 import BattleScreen from "./BattleScreen"
 
-const WILD_POOL = ["plumiot", "cailloutchi", "couperin", "faukon", "rongeur"]
+const WILD_POOL = ["plumiot", "cailloutchi", "couperin", "faukon", "cornaissant"]
 
 export default function BattleDevClient() {
     const battle = useBattle()

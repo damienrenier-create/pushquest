@@ -33,7 +33,7 @@ describe("xpForDefeat", () => {
 
 function makeMon(level: number, exp: number): MonInstance {
     return {
-        uid: "test", speciesId: "rongeur", level, exp,
+        uid: "test", speciesId: "cornaissant", level, exp,
         ivs: { hp: 0, atk: 0, def: 0, spe: 0, spc: 0 },
         currentHp: 20, status: "NONE", statusCounter: 0,
         moves: [{ moveId: "charge", pp: 35, ppMax: 35 }],
@@ -42,15 +42,15 @@ function makeMon(level: number, exp: number): MonInstance {
 
 describe("applyExp (montée de niveau + apprentissage)", () => {
     it("monte de niveau et apprend les attaques du learnset", () => {
-        // Rongeur niv 1 → on lui donne assez d'XP pour atteindre le niveau 6.
+        // Cornaissant niv 1 → assez d'XP pour atteindre le niveau 6.
         const mon = makeMon(1, expForLevel(1))
         const r = applyExp(mon, expForLevel(6) - expForLevel(1))
         expect(mon.level).toBe(6)
         expect(r.fromLevel).toBe(1)
         expect(r.toLevel).toBe(6)
-        // vive_attaque s'apprend au niveau 5.
-        expect(mon.moves.some((m) => m.moveId === "vive_attaque")).toBe(true)
-        expect(r.learnedMoveIds).toContain("vive_attaque")
+        // picpic s'apprend au niveau 5.
+        expect(mon.moves.some((m) => m.moveId === "picpic")).toBe(true)
+        expect(r.learnedMoveIds).toContain("picpic")
     })
     it("plafonne l'apprentissage à 4 attaques", () => {
         const mon = makeMon(1, expForLevel(1))

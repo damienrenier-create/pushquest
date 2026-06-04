@@ -61,8 +61,8 @@ export default function YellowDevClient() {
             await loadYellowSave()
             if (!cancelled && getPlayer().team.length === 0) {
                 setTeam([
-                    createMonInstance("flordaemon", 16, { owned: true, nickname: "Flora" }),
-                    createMonInstance("galet", 12, { owned: true }),
+                    createMonInstance("feuillichot", 16, { owned: true }),
+                    createMonInstance("cailloutchi", 12, { owned: true }),
                 ])
                 addItem("poke_ball", 5)
                 addMoney(800)

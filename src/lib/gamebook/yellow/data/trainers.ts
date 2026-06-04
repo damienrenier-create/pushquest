@@ -43,8 +43,8 @@ export const TRAINERS: TrainerData[] = [
         x: 24,
         y: 37,
         team: [
-            { speciesId: "rongeur", level: 5 },
-            { speciesId: "bulle", level: 6 },
+            { speciesId: "plumiot", level: 5 },
+            { speciesId: "cailloutchi", level: 6 },
         ],
         reward: 90,
         aiLevel: "trainer",
@@ -67,8 +67,8 @@ export const TRAINERS: TrainerData[] = [
         x: 23,
         y: 34,
         team: [
-            { speciesId: "piafeu", level: 7 },
-            { speciesId: "galet", level: 7 },
+            { speciesId: "cornaissant", level: 7 },
+            { speciesId: "trolystrik", level: 7 },
         ],
         reward: 140,
         aiLevel: "trainer",

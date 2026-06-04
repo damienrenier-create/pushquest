@@ -496,7 +496,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     // --- 🐦 Héron (Vol/Eau) ---
     piouflot: {
         id: "piouflot", dexNo: 34, name: "Piouflot", types: ["VOL", "EAU"],
-        baseStats: { hp: 40, atk: 42, def: 40, spe: 58, spc: 46 },
+        baseStats: { hp: 40, atk: 40, def: 40, spe: 56, spc: 48 },
         learnset: [
             { level: 1, moveId: "charge" },
             { level: 5, moveId: "pistolet_a_o" },
@@ -510,12 +510,12 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     herondee: {
         id: "herondee", dexNo: 35, name: "Hérondée", types: ["VOL", "EAU"],
-        baseStats: { hp: 58, atk: 56, def: 52, spe: 78, spc: 66 },
+        baseStats: { hp: 58, atk: 54, def: 52, spe: 76, spc: 68 },
         learnset: [
             { level: 1, moveId: "pistolet_a_o" },
             { level: 1, moveId: "picpic" },
-            { level: 26, moveId: "tornade" },
-            { level: 34, moveId: "coup_d_givre" },
+            { level: 20, moveId: "lame_eau" },
+            { level: 28, moveId: "tornade" },
         ],
         evolution: { toId: "oragron", method: { kind: "LEVEL", level: 35 } },
         catchRate: 60, baseExp: 142, rarity: "UNCOMMON", growthRate: "medium_fast", role: "Vol/Eau — gracile",
@@ -523,16 +523,16 @@ export const SPECIES: Record<string, SpeciesData> = {
         sprite: "/yellow/sprites/dex/herondee.png",
     },
     oragron: {
-        id: "oragron", dexNo: 36, name: "Oragron", types: ["VOL", "EAU"],
-        baseStats: { hp: 78, atk: 78, def: 70, spe: 104, spc: 88 },
+        id: "oragron", dexNo: 36, name: "Oragron", types: ["VOL", "ELEC"],
+        baseStats: { hp: 80, atk: 74, def: 70, spe: 106, spc: 92 },
         learnset: [
             { level: 1, moveId: "tornade" },
-            { level: 1, moveId: "hydrocanon" },
-            { level: 1, moveId: "picpic" },
-            { level: 42, moveId: "belier" },
+            { level: 1, moveId: "etincelle" },
+            { level: 1, moveId: "fulgurance" },
+            { level: 42, moveId: "pique_fatal" },
         ],
-        catchRate: 45, baseExp: 210, rarity: "RARE", growthRate: "medium_fast", role: "Vol/Eau — sweeper",
-        description: "Héron de tempête aux ailes de nuages, zébré d'éclairs.",
+        catchRate: 45, baseExp: 210, rarity: "RARE", growthRate: "medium_fast", role: "Vol/Élec — sweeper",
+        description: "Héron de tempête aux ailes de nuages d'orage, zébré d'éclairs.",
         sprite: "/yellow/sprites/dex/oragron.png",
     },
 
@@ -579,85 +579,232 @@ export const SPECIES: Record<string, SpeciesData> = {
         sprite: "/yellow/sprites/dex/druidours.png",
     },
 
-    // --- Famille PLANTE (starter, 2 stades) ---
-    pousstout: {
-        id: "pousstout", dexNo: 51, name: "Pousstout", types: ["PLANTE", "POISON"],
-        baseStats: { hp: 45, atk: 49, def: 49, spe: 45, spc: 65 },
-        learnset: [
-            { level: 1, moveId: "charge" },
-            { level: 4, moveId: "fouet_lianes" },
-            { level: 10, moveId: "vampigraine" },
-            { level: 13, moveId: "dard_venin" },
-            { level: 18, moveId: "mega_sangsue" },
-        ],
-        evolution: { toId: "flordaemon", method: { kind: "LEVEL", level: 16 } },
-        catchRate: 45, baseExp: 64, rarity: "RARE",
-        description: "Une graine vivante qui puise sa force dans les reps de son dresseur.",
-        sprite: "/yellow/sprites/dex/pousstout.png",
+    // ============================================================
+    // 8 FAMILLES SUPPLÉMENTAIRES (Daemons ORIGINAUX, stats maison).
+    // ============================================================
+
+    // --- 🌿 Félin végétal (Plante, signature Vitesse) ---
+    pampousse: {
+        id: "pampousse", dexNo: 40, name: "Pampousse", types: ["PLANTE"],
+        baseStats: { hp: 45, atk: 45, def: 42, spe: 55, spc: 52 },
+        learnset: [{ level: 1, moveId: "charge" }, { level: 4, moveId: "fouet_lianes" }, { level: 10, moveId: "vive_attaque" }, { level: 18, moveId: "tranche_feuille" }],
+        evolution: { toId: "feliane", method: { kind: "LEVEL", level: 16 } },
+        catchRate: 45, baseExp: 64, rarity: "RARE", growthRate: "medium_fast", role: "Plante — vif",
+        description: "Chaton-pousse joueur qui bondit de branche en branche.",
+        sprite: "/yellow/sprites/dex/pampousse.png",
     },
-    flordaemon: {
-        id: "flordaemon", dexNo: 52, name: "Flordaemon", types: ["PLANTE", "PSY"],
-        baseStats: { hp: 60, atk: 62, def: 63, spe: 60, spc: 90 },
-        learnset: [
-            { level: 1, moveId: "fouet_lianes" },
-            { level: 1, moveId: "vampigraine" },
-            { level: 20, moveId: "mega_sangsue" },
-            { level: 24, moveId: "onde_folie" },
-            { level: 30, moveId: "tempete_verte" },
-        ],
-        catchRate: 30, baseExp: 142, rarity: "RARE",
-        description: "Forme éveillée de Pousstout. Sa fleur émet une lumière apaisante.",
-        sprite: "/yellow/sprites/dex/flordaemon.png",
+    feliane: {
+        id: "feliane", dexNo: 41, name: "Féliane", types: ["PLANTE"],
+        baseStats: { hp: 62, atk: 68, def: 56, spe: 82, spc: 68 },
+        learnset: [{ level: 1, moveId: "fouet_lianes" }, { level: 1, moveId: "tranche_feuille" }, { level: 24, moveId: "mega_sangsue" }, { level: 30, moveId: "vive_attaque" }, { level: 34, moveId: "focalisation" }],
+        evolution: { toId: "cerfeuillu", method: { kind: "LEVEL", level: 34 } },
+        catchRate: 45, baseExp: 141, rarity: "RARE", growthRate: "medium_fast", role: "Plante — rapide",
+        description: "Félin sylvestre à la crinière de feuilles ; file comme le vent.",
+        sprite: "/yellow/sprites/dex/feliane.png",
+    },
+    cerfeuillu: {
+        id: "cerfeuillu", dexNo: 42, name: "Cerfeuillu", types: ["PLANTE"],
+        baseStats: { hp: 82, atk: 88, def: 74, spe: 96, spc: 92 },
+        learnset: [{ level: 1, moveId: "tempete_verte" }, { level: 1, moveId: "tranche_feuille" }, { level: 1, moveId: "focalisation" }, { level: 44, moveId: "belier" }],
+        catchRate: 45, baseExp: 210, rarity: "RARE", growthRate: "medium_fast", role: "Plante — sweeper",
+        description: "Félin-cerf majestueux paré de fruits et de fleurs.",
+        sprite: "/yellow/sprites/dex/cerfeuillu.png",
     },
 
-    // --- Sauvages de Route Nord ---
-    rongeur: {
-        id: "rongeur", dexNo: 53, name: "Rongeur", types: ["NORMAL"],
-        baseStats: { hp: 40, atk: 45, def: 40, spe: 60, spc: 30 },
-        learnset: [
-            { level: 1, moveId: "charge" },
-            { level: 5, moveId: "vive_attaque" },
-            { level: 12, moveId: "coup_d_boule" },
-        ],
-        catchRate: 200, baseExp: 30, rarity: "COMMON",
-        description: "Petit rongeur véloce des hautes herbes. Premier adversaire classique.",
-        sprite: "/yellow/sprites/dex/rongeur.png",
+    // --- 💧 Loutre → dragon d'eau (Eau, signature Spécial) ---
+    loutrille: {
+        id: "loutrille", dexNo: 43, name: "Loutrille", types: ["EAU"],
+        baseStats: { hp: 48, atk: 46, def: 46, spe: 50, spc: 60 },
+        learnset: [{ level: 1, moveId: "charge" }, { level: 6, moveId: "pistolet_a_o" }, { level: 12, moveId: "vive_attaque" }, { level: 20, moveId: "lame_eau" }],
+        evolution: { toId: "ondaloutre", method: { kind: "LEVEL", level: 16 } },
+        catchRate: 45, baseExp: 64, rarity: "RARE", growthRate: "medium_fast", role: "Eau — special",
+        description: "Petite loutre espiègle qui ne tient pas en place.",
+        sprite: "/yellow/sprites/dex/loutrille.png",
     },
-    piafeu: {
-        id: "piafeu", dexNo: 54, name: "Piafeu", types: ["FEU", "VOL"],
-        baseStats: { hp: 40, atk: 56, def: 40, spe: 70, spc: 60 },
-        learnset: [
-            { level: 1, moveId: "picpic" },
-            { level: 7, moveId: "flammeche" },
-            { level: 14, moveId: "tornade" },
-        ],
-        catchRate: 120, baseExp: 50, rarity: "UNCOMMON",
-        description: "Oiseau au plumage incandescent. Rare au lever du jour sur Route Nord.",
-        sprite: "/yellow/sprites/dex/piafeu.png",
+    ondaloutre: {
+        id: "ondaloutre", dexNo: 44, name: "Ondaloutre", types: ["EAU"],
+        baseStats: { hp: 64, atk: 60, def: 60, spe: 64, spc: 82 },
+        learnset: [{ level: 1, moveId: "pistolet_a_o" }, { level: 1, moveId: "lame_eau" }, { level: 26, moveId: "coup_d_givre" }, { level: 34, moveId: "hydrocanon" }],
+        evolution: { toId: "naiadrak", method: { kind: "LEVEL", level: 36 } },
+        catchRate: 45, baseExp: 141, rarity: "RARE", growthRate: "medium_fast", role: "Eau — special",
+        description: "Loutre élégante chevauchant ses propres vagues.",
+        sprite: "/yellow/sprites/dex/ondaloutre.png",
     },
-    galet: {
-        id: "galet", dexNo: 55, name: "Galet", types: ["ROCHE", "SOL"],
-        baseStats: { hp: 50, atk: 60, def: 95, spe: 25, spc: 30 },
-        learnset: [
-            { level: 1, moveId: "charge" },
-            { level: 8, moveId: "jet_pierres" },
-            { level: 14, moveId: "mur_de_fer" },
-        ],
-        catchRate: 150, baseExp: 45, rarity: "COMMON",
-        description: "Un caillou animé, dur comme la pierre. Lent mais résistant.",
-        sprite: "/yellow/sprites/dex/galet.png",
+    naiadrak: {
+        id: "naiadrak", dexNo: 45, name: "Naïadrak", types: ["EAU"],
+        baseStats: { hp: 84, atk: 76, def: 66, spe: 82, spc: 114 },
+        learnset: [{ level: 1, moveId: "hydrocanon" }, { level: 1, moveId: "lame_eau" }, { level: 1, moveId: "coup_d_givre" }, { level: 38, moveId: "draco_souffle" }, { level: 44, moveId: "focalisation" }],
+        catchRate: 45, baseExp: 210, rarity: "RARE", growthRate: "medium_fast", role: "Eau — canon spécial (Déf frêle)",
+        description: "Dragon d'eau couronné de corail ; gardien des courants.",
+        sprite: "/yellow/sprites/dex/naiadrak.png",
     },
-    bulle: {
-        id: "bulle", dexNo: 56, name: "Bulle", types: ["EAU"],
-        baseStats: { hp: 48, atk: 48, def: 50, spe: 55, spc: 60 },
-        learnset: [
-            { level: 1, moveId: "pistolet_a_o" },
-            { level: 6, moveId: "vive_attaque" },
-            { level: 16, moveId: "coup_d_givre" },
-        ],
-        catchRate: 160, baseExp: 42, rarity: "COMMON",
-        description: "Petite créature aquatique espiègle qui adore les flaques de Route Nord.",
-        sprite: "/yellow/sprites/dex/bulle.png",
+
+    // --- 🔥 Fennec → loup (Feu, signature Attaque/Vitesse) ---
+    fennaise: {
+        id: "fennaise", dexNo: 46, name: "Fennaise", types: ["FEU"],
+        baseStats: { hp: 42, atk: 52, def: 40, spe: 64, spc: 48 },
+        learnset: [{ level: 1, moveId: "charge" }, { level: 7, moveId: "flammeche" }, { level: 14, moveId: "vive_attaque" }, { level: 22, moveId: "flamme_ardente" }],
+        evolution: { toId: "pyrenard", method: { kind: "LEVEL", level: 16 } },
+        catchRate: 45, baseExp: 64, rarity: "RARE", growthRate: "medium_fast", role: "Feu — vif",
+        description: "Renardeau de feu aux grandes oreilles, vif et farceur.",
+        sprite: "/yellow/sprites/dex/fennaise.png",
+    },
+    pyrenard: {
+        id: "pyrenard", dexNo: 47, name: "Pyrenard", types: ["FEU"],
+        baseStats: { hp: 60, atk: 74, def: 52, spe: 86, spc: 60 },
+        learnset: [{ level: 1, moveId: "flammeche" }, { level: 1, moveId: "flamme_ardente" }, { level: 28, moveId: "belier" }, { level: 36, moveId: "lance_flammes" }],
+        evolution: { toId: "loupyre", method: { kind: "LEVEL", level: 36 } },
+        catchRate: 45, baseExp: 141, rarity: "RARE", growthRate: "medium_fast", role: "Feu — rapide offensif",
+        description: "Renard de braise dont la queue laisse une traînée d'étincelles.",
+        sprite: "/yellow/sprites/dex/pyrenard.png",
+    },
+    loupyre: {
+        id: "loupyre", dexNo: 48, name: "Loupyre", types: ["FEU"],
+        baseStats: { hp: 82, atk: 110, def: 72, spe: 98, spc: 72 },
+        learnset: [{ level: 1, moveId: "lance_flammes" }, { level: 1, moveId: "flamme_ardente" }, { level: 1, moveId: "belier" }, { level: 42, moveId: "crochet_maitre" }, { level: 46, moveId: "danse_lames" }],
+        catchRate: 45, baseExp: 210, rarity: "RARE", growthRate: "medium_fast", role: "Feu — sweeper physique",
+        description: "Loup de flammes à la crinière incandescente.",
+        sprite: "/yellow/sprites/dex/loupyre.png",
+    },
+
+    // --- 🦍 Orang-outan forgeron (Combat → Combat/Psy) ---
+    forgeotin: {
+        id: "forgeotin", dexNo: 49, name: "Forgeotin", types: ["COMBAT"],
+        baseStats: { hp: 52, atk: 58, def: 50, spe: 40, spc: 44 },
+        learnset: [{ level: 1, moveId: "charge" }, { level: 7, moveId: "double_pied" }, { level: 16, moveId: "mur_de_fer" }, { level: 24, moveId: "balayage" }],
+        evolution: { toId: "marteloutan", method: { kind: "LEVEL", level: 18 } },
+        catchRate: 120, baseExp: 60, rarity: "COMMON", growthRate: "medium_fast", role: "Combat — apprenti",
+        description: "Jeune orang-outan déjà armé de son petit marteau.",
+        sprite: "/yellow/sprites/dex/forgeotin.png",
+    },
+    marteloutan: {
+        id: "marteloutan", dexNo: 50, name: "Marteloutan", types: ["COMBAT"],
+        baseStats: { hp: 74, atk: 82, def: 70, spe: 52, spc: 60 },
+        learnset: [{ level: 1, moveId: "balayage" }, { level: 1, moveId: "double_pied" }, { level: 1, moveId: "mur_de_fer" }, { level: 30, moveId: "crochet_maitre" }, { level: 36, moveId: "focalisation" }],
+        evolution: { toId: "enclumind", method: { kind: "LEVEL", level: 36 } },
+        catchRate: 60, baseExp: 142, rarity: "UNCOMMON", growthRate: "medium_fast", role: "Combat — forgeron",
+        description: "Forgeron singe au tablier de cuir ; frappe comme une enclume.",
+        sprite: "/yellow/sprites/dex/marteloutan.png",
+    },
+    enclumind: {
+        id: "enclumind", dexNo: 51, name: "Enclumind", types: ["COMBAT", "PSY"],
+        baseStats: { hp: 92, atk: 122, def: 90, spe: 52, spc: 82 },
+        learnset: [{ level: 1, moveId: "crochet_maitre" }, { level: 1, moveId: "balayage" }, { level: 1, moveId: "choc_mental" }, { level: 40, moveId: "seisme" }, { level: 46, moveId: "vague_mentale" }],
+        catchRate: 45, baseExp: 215, rarity: "RARE", growthRate: "medium_fast", role: "Combat/Psy — bruiser lent",
+        description: "Maître-forgeron en armure runique ; son marteau plie l'acier et l'esprit.",
+        sprite: "/yellow/sprites/dex/enclumind.png",
+    },
+
+    // --- ⚡ Trolls (Combat/Élec, signature Attaque) ---
+    trolystrik: {
+        id: "trolystrik", dexNo: 52, name: "Trolystrik", types: ["COMBAT", "ELEC"],
+        baseStats: { hp: 46, atk: 60, def: 40, spe: 58, spc: 40 },
+        learnset: [{ level: 1, moveId: "charge" }, { level: 7, moveId: "double_pied" }, { level: 16, moveId: "etincelle" }, { level: 24, moveId: "vive_attaque" }],
+        evolution: { toId: "brutetrik", method: { kind: "LEVEL", level: 17 } },
+        catchRate: 120, baseExp: 60, rarity: "COMMON", growthRate: "medium_fast", role: "Combat/Élec — vif",
+        description: "Troll-lutin nerveux dont la crête grésille d'électricité.",
+        sprite: "/yellow/sprites/dex/trolystrik.png",
+    },
+    brutetrik: {
+        id: "brutetrik", dexNo: 53, name: "Brutetrik", types: ["COMBAT", "ELEC"],
+        baseStats: { hp: 70, atk: 92, def: 62, spe: 76, spc: 56 },
+        learnset: [{ level: 1, moveId: "poing_karate" }, { level: 1, moveId: "etincelle" }, { level: 30, moveId: "balayage" }, { level: 36, moveId: "fulgurance" }],
+        evolution: { toId: "hebulmin", method: { kind: "LEVEL", level: 38 } },
+        catchRate: 60, baseExp: 142, rarity: "UNCOMMON", growthRate: "medium_fast", role: "Combat/Élec — brute",
+        description: "Troll musculeux dont les poings crépitent d'arcs électriques.",
+        sprite: "/yellow/sprites/dex/brutetrik.png",
+    },
+    hebulmin: {
+        id: "hebulmin", dexNo: 54, name: "Hébulmin", types: ["COMBAT", "ELEC"],
+        baseStats: { hp: 100, atk: 126, def: 82, spe: 78, spc: 64 },
+        learnset: [{ level: 1, moveId: "crochet_maitre" }, { level: 1, moveId: "fulgurance" }, { level: 1, moveId: "belier" }, { level: 44, moveId: "seisme" }],
+        catchRate: 45, baseExp: 215, rarity: "RARE", growthRate: "medium_fast", role: "Combat/Élec — colosse",
+        description: "Colosse-troll à la crinière de foudre ; un seul coup fait trembler l'arène.",
+        sprite: "/yellow/sprites/dex/hebulmin.png",
+    },
+
+    // --- 🐉 Dragon blanc (Vol/Dragon, pseudo-légendaire) ---
+    draclet: {
+        id: "draclet", dexNo: 55, name: "Draclet", types: ["VOL", "DRAGON"],
+        baseStats: { hp: 45, atk: 50, def: 44, spe: 50, spc: 50 },
+        learnset: [{ level: 1, moveId: "charge" }, { level: 5, moveId: "picpic" }, { level: 16, moveId: "draco_souffle" }, { level: 24, moveId: "vive_attaque" }],
+        evolution: { toId: "wyverion", method: { kind: "LEVEL", level: 20 } },
+        catchRate: 45, baseExp: 66, rarity: "RARE", growthRate: "medium_fast", role: "Dragon — équilibré",
+        description: "Dragonnet blanc enjoué aux ailes encore trop petites.",
+        sprite: "/yellow/sprites/dex/draclet.png",
+    },
+    wyverion: {
+        id: "wyverion", dexNo: 56, name: "Wyverion", types: ["VOL", "DRAGON"],
+        baseStats: { hp: 68, atk: 78, def: 66, spe: 74, spc: 68 },
+        learnset: [{ level: 1, moveId: "picpic" }, { level: 1, moveId: "draco_souffle" }, { level: 26, moveId: "tornade" }, { level: 34, moveId: "fonce_bec" }],
+        evolution: { toId: "draconarque", method: { kind: "LEVEL", level: 40 } },
+        catchRate: 45, baseExp: 144, rarity: "RARE", growthRate: "medium_fast", role: "Dragon — agile",
+        description: "Wyverne véloce aux ailes coriaces ; chasse en piqué.",
+        sprite: "/yellow/sprites/dex/wyverion.png",
+    },
+    draconarque: {
+        id: "draconarque", dexNo: 57, name: "Draconarque", types: ["VOL", "DRAGON"],
+        baseStats: { hp: 90, atk: 110, def: 88, spe: 100, spc: 90 },
+        learnset: [{ level: 1, moveId: "draco_charge" }, { level: 1, moveId: "draco_souffle" }, { level: 1, moveId: "fonce_bec" }, { level: 44, moveId: "pique_fatal" }, { level: 48, moveId: "souffle_polaire" }],
+        catchRate: 30, baseExp: 255, rarity: "LEGENDARY", growthRate: "medium_fast", role: "Dragon — pseudo-légendaire",
+        description: "Grand dragon blanc régnant sur les cimes. Son ombre couvre une vallée.",
+        sprite: "/yellow/sprites/dex/draconarque.png",
+    },
+
+    // --- ☠️ Corbeaux (Vol/Poison, signature Spécial/Vitesse) ---
+    cornaissant: {
+        id: "cornaissant", dexNo: 58, name: "Cornaissant", types: ["VOL", "POISON"],
+        baseStats: { hp: 40, atk: 44, def: 40, spe: 52, spc: 52 },
+        learnset: [{ level: 1, moveId: "charge" }, { level: 5, moveId: "picpic" }, { level: 14, moveId: "dard_venin" }, { level: 22, moveId: "vive_attaque" }],
+        evolution: { toId: "corvenin", method: { kind: "LEVEL", level: 16 } },
+        catchRate: 120, baseExp: 60, rarity: "COMMON", growthRate: "medium_fast", role: "Vol/Poison — early",
+        description: "Corbillat tout juste éclos, déjà curieux des potions.",
+        sprite: "/yellow/sprites/dex/cornaissant.png",
+    },
+    corvenin: {
+        id: "corvenin", dexNo: 59, name: "Corvenin", types: ["VOL", "POISON"],
+        baseStats: { hp: 58, atk: 60, def: 52, spe: 72, spc: 72 },
+        learnset: [{ level: 1, moveId: "picpic" }, { level: 1, moveId: "crachat_acide" }, { level: 26, moveId: "tornade" }, { level: 32, moveId: "toxik" }],
+        evolution: { toId: "necrocorbe", method: { kind: "LEVEL", level: 35 } },
+        catchRate: 60, baseExp: 142, rarity: "UNCOMMON", growthRate: "medium_fast", role: "Vol/Poison — rapide",
+        description: "Corbeau alchimiste transportant une fiole de venin.",
+        sprite: "/yellow/sprites/dex/corvenin.png",
+    },
+    necrocorbe: {
+        id: "necrocorbe", dexNo: 60, name: "Nécrocorbe", types: ["VOL", "POISON"],
+        baseStats: { hp: 78, atk: 80, def: 72, spe: 96, spc: 100 },
+        learnset: [{ level: 1, moveId: "tornade" }, { level: 1, moveId: "vague_mentale" }, { level: 1, moveId: "crachat_acide" }, { level: 40, moveId: "ombre_furtive" }],
+        catchRate: 45, baseExp: 210, rarity: "RARE", growthRate: "medium_fast", role: "Vol/Poison — hex caster",
+        description: "Corbeau-chamane drapé d'ossements ; ses incantations rongent l'âme.",
+        sprite: "/yellow/sprites/dex/necrocorbe.png",
+    },
+
+    // --- 👻 Champignons (Spectre/Poison, signature Spécial + bulk) ---
+    sporbeo: {
+        id: "sporbeo", dexNo: 61, name: "Sporbéo", types: ["SPECTRE", "POISON"],
+        baseStats: { hp: 48, atk: 40, def: 48, spe: 38, spc: 60 },
+        learnset: [{ level: 1, moveId: "charge" }, { level: 7, moveId: "leche" }, { level: 14, moveId: "dard_venin" }, { level: 22, moveId: "mega_sangsue" }],
+        evolution: { toId: "lampignon", method: { kind: "LEVEL", level: 15 } },
+        catchRate: 90, baseExp: 64, rarity: "UNCOMMON", growthRate: "medium_fast", role: "Spectre/Poison — special frêle",
+        description: "Petit champignon souriant coiffé d'une flammèche spectrale.",
+        sprite: "/yellow/sprites/dex/sporbeo.png",
+    },
+    lampignon: {
+        id: "lampignon", dexNo: 62, name: "Lampignon", types: ["SPECTRE", "POISON"],
+        baseStats: { hp: 66, atk: 54, def: 64, spe: 52, spc: 86 },
+        learnset: [{ level: 1, moveId: "leche" }, { level: 1, moveId: "crachat_acide" }, { level: 1, moveId: "mega_sangsue" }, { level: 30, moveId: "toxik" }, { level: 36, moveId: "onde_folie" }],
+        evolution: { toId: "mycedruide", method: { kind: "LEVEL", level: 33 } },
+        catchRate: 45, baseExp: 142, rarity: "RARE", growthRate: "medium_fast", role: "Spectre/Poison — special",
+        description: "Esprit-champignon ailé portant une lanterne d'âmes.",
+        sprite: "/yellow/sprites/dex/lampignon.png",
+    },
+    mycedruide: {
+        id: "mycedruide", dexNo: 63, name: "Mycédruide", types: ["SPECTRE", "POISON"],
+        baseStats: { hp: 90, atk: 72, def: 88, spe: 60, spc: 116 },
+        learnset: [{ level: 1, moveId: "leche" }, { level: 1, moveId: "onde_folie" }, { level: 1, moveId: "vague_mentale" }, { level: 1, moveId: "toxik" }, { level: 44, moveId: "repos" }],
+        catchRate: 45, baseExp: 215, rarity: "RARE", growthRate: "medium_fast", role: "Spectre/Poison — mur spécial",
+        description: "Sage-champignon millénaire couronné de mycélium luminescent.",
+        sprite: "/yellow/sprites/dex/mycedruide.png",
     },
 }
 

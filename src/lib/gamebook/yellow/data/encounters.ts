@@ -13,10 +13,10 @@ export const ENCOUNTERS: Record<string, ZoneEncounters> = {
     yellow_route_nord: {
         rate: 0.14,
         entries: [
-            { speciesId: "rongeur", min: 3, max: 6, weight: 50 },
-            { speciesId: "bulle", min: 3, max: 6, weight: 25 },
-            { speciesId: "galet", min: 4, max: 7, weight: 20 },
-            { speciesId: "piafeu", min: 5, max: 8, weight: 5 },
+            { speciesId: "plumiot", min: 3, max: 6, weight: 45 },
+            { speciesId: "cornaissant", min: 3, max: 6, weight: 25 },
+            { speciesId: "cailloutchi", min: 4, max: 7, weight: 20 },
+            { speciesId: "trolystrik", min: 5, max: 8, weight: 10 },
         ],
     },
 }

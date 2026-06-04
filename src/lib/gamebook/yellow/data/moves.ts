@@ -56,6 +56,28 @@ export const MOVES: Record<string, MoveData> = {
     danse_lames: { id: "danse_lames", name: "Danse-Lames", type: "NORMAL", power: 0, accuracy: 0, pp: 20, effect: { statChanges: [{ target: "self", stat: "atk", stages: 2 }] }, description: "Augmente fortement l'Attaque." },
     hurlement: { id: "hurlement", name: "Hurlement", type: "NORMAL", power: 0, accuracy: 100, pp: 40, effect: { statChanges: [{ target: "target", stat: "atk", stages: -1 }] }, description: "Baisse l'Attaque adverse." },
     mur_de_fer: { id: "mur_de_fer", name: "Mur de Fer", type: "NORMAL", power: 0, accuracy: 0, pp: 30, effect: { statChanges: [{ target: "self", stat: "def", stages: 1 }] }, description: "Augmente la Défense." },
+
+    // === Ajouts pool maison (20) : moves de rôle + paliers mid/gros par type ===
+    elan: { id: "elan", name: "Élan", type: "NORMAL", power: 0, accuracy: 0, pp: 30, effect: { statChanges: [{ target: "self", stat: "spe", stages: 1 }] }, description: "Augmente la Vitesse." },
+    focalisation: { id: "focalisation", name: "Focalisation", type: "PSY", power: 0, accuracy: 0, pp: 20, effect: { statChanges: [{ target: "self", stat: "spc", stages: 1 }] }, description: "Augmente le Spécial." },
+    flamme_ardente: { id: "flamme_ardente", name: "Flamme Ardente", type: "FEU", power: 65, accuracy: 100, pp: 20, effect: { chance: 10, inflictStatus: "BURN" }, description: "Move Feu intermédiaire ; peut brûler." },
+    lame_eau: { id: "lame_eau", name: "Lame d'Eau", type: "EAU", power: 65, accuracy: 100, pp: 20, effect: { chance: 10, statChanges: [{ target: "target", stat: "spe", stages: -1 }] }, description: "Peut baisser la Vitesse." },
+    tranche_feuille: { id: "tranche_feuille", name: "Tranche-Feuille", type: "PLANTE", power: 55, accuracy: 95, pp: 25, effect: { highCrit: true }, description: "Taux de critique élevé." },
+    spores_dodo: { id: "spores_dodo", name: "Spores Dodo", type: "PLANTE", power: 0, accuracy: 75, pp: 15, effect: { inflictStatus: "SLEEP" }, description: "Endort la cible." },
+    fulgurance: { id: "fulgurance", name: "Fulgurance", type: "ELEC", power: 90, accuracy: 100, pp: 15, effect: { chance: 10, inflictStatus: "PARALYSIS" }, description: "Gros move Élec ; peut paralyser." },
+    souffle_polaire: { id: "souffle_polaire", name: "Souffle Polaire", type: "GLACE", power: 90, accuracy: 100, pp: 10, effect: { chance: 10, inflictStatus: "FREEZE" }, description: "Gros move Glace ; peut geler." },
+    balayage: { id: "balayage", name: "Balayage", type: "COMBAT", power: 60, accuracy: 100, pp: 20, effect: { chance: 10, flinch: true }, description: "Peut apeurer." },
+    crochet_maitre: { id: "crochet_maitre", name: "Crochet du Maître", type: "COMBAT", power: 80, accuracy: 90, pp: 10, effect: { highCrit: true }, description: "Crochet à fort taux de critique." },
+    crachat_acide: { id: "crachat_acide", name: "Crachat Acide", type: "POISON", power: 40, accuracy: 100, pp: 30, effect: { chance: 10, statChanges: [{ target: "target", stat: "def", stages: -1 }] }, description: "Peut baisser la Défense." },
+    tir_boue: { id: "tir_boue", name: "Tir de Boue", type: "SOL", power: 55, accuracy: 95, pp: 15, effect: { chance: 10, statChanges: [{ target: "target", stat: "acc", stages: -1 }] }, description: "Peut baisser la Précision." },
+    fonce_bec: { id: "fonce_bec", name: "Fonce-Bec", type: "VOL", power: 75, accuracy: 100, pp: 20, description: "Charge aérienne fiable." },
+    pique_fatal: { id: "pique_fatal", name: "Piqué Fatal", type: "VOL", power: 90, accuracy: 100, pp: 15, effect: { recoilPct: 25 }, description: "Piqué puissant, cause du recul." },
+    vague_mentale: { id: "vague_mentale", name: "Vague Mentale", type: "PSY", power: 90, accuracy: 100, pp: 10, effect: { chance: 10, statChanges: [{ target: "target", stat: "spc", stages: -1 }] }, description: "Gros move Psy ; peut baisser le Spécial." },
+    morsure: { id: "morsure", name: "Morsure", type: "INSECTE", power: 60, accuracy: 100, pp: 20, description: "Morsure intermédiaire." },
+    dard_mortel: { id: "dard_mortel", name: "Dard Mortel", type: "INSECTE", power: 70, accuracy: 100, pp: 15, description: "Gros move Insecte." },
+    eboulis: { id: "eboulis", name: "Éboulis", type: "ROCHE", power: 75, accuracy: 90, pp: 10, effect: { chance: 30, flinch: true }, description: "Peut apeurer." },
+    ombre_furtive: { id: "ombre_furtive", name: "Ombre Furtive", type: "SPECTRE", power: 40, accuracy: 100, pp: 30, priority: 1, description: "Frappe en priorité." },
+    draco_charge: { id: "draco_charge", name: "Draco-Charge", type: "DRAGON", power: 90, accuracy: 100, pp: 10, description: "Gros move Dragon." },
 }
 
 export function getMove(id: string): MoveData | null {
