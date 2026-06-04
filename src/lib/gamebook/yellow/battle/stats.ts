@@ -15,7 +15,12 @@ export function maxHp(species: SpeciesData, level: number, ivHp: number): number
     return Math.floor(((2 * species.baseStats.hp + ivHp) * level) / 100) + level + 10
 }
 
-/** Autres stats : floor(((2*Base + IV) * niveau) / 100) + 5. */
+/**
+ * Autres stats : floor(((2*Base + IV) * niveau) / 100) + 5.
+ * CHOIX DE GAME-DESIGN (assumé, pas un oubli) : le vrai Gen 1 fait 2*(Base + DV),
+ * donc le DV y compte double. On garde 2*Base + IV (un IV pèse moitié moins) :
+ * écart d'au plus ~niveau/13 sur une stat, négligeable pour 7 joueurs en prod.
+ */
 export function computeStat(base: number, iv: number, level: number): number {
     return Math.floor(((2 * base + iv) * level) / 100) + 5
 }
@@ -67,6 +72,8 @@ export function effectiveStat(
 ): number {
     let v = Math.floor(raw * stageMultiplier(stage))
     if (key === "atk" && status === "BURN") v = Math.floor(v / 2)
+    // CHOIX DE GAME-DESIGN (assumé) : paralysie = Vitesse ÷2. Le strict Gen 1 fait
+    // ÷4 (25%) ; on garde ÷2 (valeur moderne) pour une paralysie moins punitive.
     if (key === "spe" && status === "PARALYSIS") v = Math.floor(v / 2)
     return Math.max(1, v)
 }

@@ -71,7 +71,12 @@ export function paralysisSkips(rng: Rng): boolean {
     return rng.chance(25)
 }
 
-/** Gel : 20% de chance de dégeler (et d'agir) à chaque tour. */
+/**
+ * Gel : 20% de chance de dégeler (et d'agir) à chaque tour.
+ * CHOIX DE GAME-DESIGN (assumé) : le strict Gen 1 rend le gel DÉFINITIF (on ne
+ * dégèle que si touché par une attaque Feu). On garde un dégel auto 20%/tour
+ * (comportement Gen 2+) pour éviter un gel quasi-permanent frustrant en prod.
+ */
 export function freezeThaws(rng: Rng): boolean {
     return rng.chance(20)
 }
