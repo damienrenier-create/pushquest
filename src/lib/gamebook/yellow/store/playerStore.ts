@@ -21,9 +21,11 @@ interface PlayerState {
     defeatedTrainers: string[]
     /** Stats d'effort du jour (PushQuest) qui modulent les rencontres. Null = neutre. */
     wildCtx: WildPlayerCtx | null
+    /** Cinématique d'intro (choix du starter) déjà jouée ? */
+    introSeen: boolean
 }
 
-let st: PlayerState = { team: [], pc: [], items: {}, money: 0, defeatedTrainers: [], wildCtx: null }
+let st: PlayerState = { team: [], pc: [], items: {}, money: 0, defeatedTrainers: [], wildCtx: null, introSeen: false }
 const listeners = new Set<() => void>()
 
 function emit() { for (const l of listeners) l() }
@@ -39,7 +41,15 @@ export function hydratePlayer(p: Partial<PlayerState>) {
     st = {
         team: p.team ?? [], pc: p.pc ?? [], items: p.items ?? {}, money: p.money ?? 0,
         defeatedTrainers: p.defeatedTrainers ?? [], wildCtx: p.wildCtx ?? st.wildCtx ?? null,
+        introSeen: p.introSeen ?? st.introSeen ?? false,
     }
+    emit()
+}
+
+/** Marque la cinématique d'intro comme jouée. */
+export function markIntroSeen() {
+    if (st.introSeen) return
+    st = { ...st, introSeen: true }
     emit()
 }
 

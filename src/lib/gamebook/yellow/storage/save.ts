@@ -17,12 +17,14 @@ export interface YellowSave {
     pokedex: { seen: string[]; caught: string[] }
     /** Ids des dresseurs déjà battus (ne se recombattent pas). */
     defeatedTrainers: string[]
+    /** La cinématique d'intro (choix du starter) a-t-elle déjà été jouée ? */
+    introSeen: boolean
 }
 
 export const SAVE_VERSION = 1
 
 export function emptySave(): YellowSave {
-    return { version: SAVE_VERSION, team: [], pc: [], items: {}, money: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [] }
+    return { version: SAVE_VERSION, team: [], pc: [], items: {}, money: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], introSeen: false }
 }
 
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -88,6 +90,7 @@ export function parseSave(raw: unknown): YellowSave {
         money: typeof o.money === "number" ? Math.max(0, Math.floor(o.money)) : 0,
         pokedex: { seen: strArr(dex.seen), caught: strArr(dex.caught) },
         defeatedTrainers: strArr(o.defeatedTrainers),
+        introSeen: o.introSeen === true,
     }
 }
 

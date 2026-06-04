@@ -14,10 +14,11 @@ import GameBoyShell from "./GameBoyShell"
 import MapView from "./MapView"
 import BattleScreen from "./battle/BattleScreen"
 import EvolutionScreen from "./battle/EvolutionScreen"
+import IntroCinematic from "./IntroCinematic"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { useBattle, useEvolutions, clearEvolutions } from "@/lib/gamebook/yellow/store/battleStore"
-import { loadYellowSave, initAutosave } from "@/lib/gamebook/yellow/store/saveManager"
-import { getPlayer, setTeam, usePlayer, addItem, addMoney, spendMoney } from "@/lib/gamebook/yellow/store/playerStore"
+import { loadYellowSave, initAutosave, persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
+import { getPlayer, setTeam, usePlayer, addItem, addMoney, spendMoney, markIntroSeen } from "@/lib/gamebook/yellow/store/playerStore"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
@@ -41,6 +42,7 @@ export default function YellowDevClient() {
     const player = usePlayer()
     const [menu, setMenu] = useState<"none" | "pause" | "team">("none")
     const [selected, setSelected] = useState<MonInstance | null>(null)
+    const [showIntro, setShowIntro] = useState(false)
 
     // Au mount : charge l'état du joueur depuis le serveur (DB Neon).
     // Si le joueur n'a jamais joué, on garde le state par défaut (déjà set
@@ -59,15 +61,11 @@ export default function YellowDevClient() {
         let cancelled = false
         ; (async () => {
             await loadYellowSave()
-            if (!cancelled && getPlayer().team.length === 0) {
-                setTeam([
-                    createMonInstance("feuillichot", 16, { owned: true }),
-                    createMonInstance("cailloutchi", 12, { owned: true }),
-                ])
-                addItem("poke_ball", 5)
-                addMoney(800)
-            }
             initAutosave()
+            // 1re entrée (intro jamais vue + aucune équipe) → cinématique + choix du starter.
+            if (!cancelled && !getPlayer().introSeen && getPlayer().team.length === 0) {
+                setShowIntro(true)
+            }
         })()
         return () => { cancelled = true }
     }, [])
@@ -94,8 +92,21 @@ export default function YellowDevClient() {
     // Si la requête échoue (offline / 403), on affiche quand même le state local.
     void hydrated
 
+    // Fin d'intro : on accorde le starter choisi (niv 5) + un petit kit de départ,
+    // on marque l'intro vue et on persiste.
+    const onIntroComplete = (starterId: string) => {
+        setTeam([createMonInstance(starterId, 5, { owned: true })])
+        addItem("poke_ball", 5)
+        addMoney(500)
+        markIntroSeen()
+        setShowIntro(false)
+        persistYellowSave()
+    }
+
     return (
         <div style={pageStyle}>
+            {showIntro && <IntroCinematic onComplete={onIntroComplete} />}
+
             <GameBoyShell
                 onUp={() => move("up")}
                 onDown={() => move("down")}
