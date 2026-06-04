@@ -3,10 +3,12 @@
 // Nexus Jaune Éclair — écran Pokédex. Lit le store Pokédex (seen/caught) + les
 // espèces. N'exécute aucune règle : pur affichage synchronisé.
 
+import { useRouter } from "next/navigation"
 import { usePokedex, pokedexCompletion } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { SPECIES } from "@/lib/gamebook/yellow/data/species"
 
 export default function PokedexClient() {
+    const router = useRouter()
     const dex = usePokedex()
     const comp = pokedexCompletion()
     const entries = Object.values(SPECIES).sort((a, b) => a.dexNo - b.dexNo)
@@ -14,6 +16,7 @@ export default function PokedexClient() {
     return (
         <div style={S.root}>
             <div style={S.header}>
+                <button onClick={() => router.back()} style={S.back}>← Retour</button>
                 <h1 style={S.title}>📷 POKÉDEX NEXUS</h1>
                 <div style={S.compRow}>
                     <span style={S.compTxt}>{comp.caught}/{comp.total} capturés — {comp.pct}%</span>
@@ -54,6 +57,7 @@ export default function PokedexClient() {
 const S: Record<string, React.CSSProperties> = {
     root: { minHeight: "100dvh", background: "#1a1a1a", color: "#f8f8e8", fontFamily: "'Courier New', monospace", padding: 16 },
     header: { maxWidth: 560, margin: "0 auto 16px" },
+    back: { background: "transparent", border: "1px solid #555", borderRadius: 6, padding: "5px 12px", color: "#c8c8c8", fontFamily: "'Courier New', monospace", fontSize: 12, cursor: "pointer", marginBottom: 10 },
     title: { fontSize: 18, fontWeight: 900, letterSpacing: 2, marginBottom: 8 },
     compRow: { display: "flex", flexDirection: "column", gap: 4 },
     compTxt: { fontSize: 12, opacity: 0.85 },

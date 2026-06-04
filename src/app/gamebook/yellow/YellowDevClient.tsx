@@ -11,7 +11,12 @@
 import { useEffect } from "react"
 import GameBoyShell from "./GameBoyShell"
 import MapView from "./MapView"
+import BattleScreen from "./battle/BattleScreen"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
+import { useBattle } from "@/lib/gamebook/yellow/store/battleStore"
+import { loadYellowSave, initAutosave } from "@/lib/gamebook/yellow/store/saveManager"
+import { getPlayer, setTeam } from "@/lib/gamebook/yellow/store/playerStore"
+import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 
 export default function YellowDevClient() {
     const move = useGameStore((s) => s.move)
@@ -19,6 +24,7 @@ export default function YellowDevClient() {
     const pressB = useGameStore((s) => s.pressB)
     const hydrate = useGameStore((s) => s.hydrate)
     const hydrated = useGameStore((s) => s.hydrated)
+    const battle = useBattle()
 
     // Au mount : charge l'état du joueur depuis le serveur (DB Neon).
     // Si le joueur n'a jamais joué, on garde le state par défaut (déjà set
@@ -31,6 +37,22 @@ export default function YellowDevClient() {
             })
             .catch((e) => console.warn("[yellow] load failed", e))
     }, [hydrate])
+
+    // Charge la sauvegarde de jeu (équipe / Pokédex / objets) + auto-save.
+    useEffect(() => {
+        let cancelled = false
+        ; (async () => {
+            await loadYellowSave()
+            if (!cancelled && getPlayer().team.length === 0) {
+                setTeam([
+                    createMonInstance("flordaemon", 16, { owned: true, nickname: "Flora" }),
+                    createMonInstance("galet", 12, { owned: true }),
+                ])
+            }
+            initAutosave()
+        })()
+        return () => { cancelled = true }
+    }, [])
 
     // Support clavier desktop : flèches + Espace/Entrée/A (= A), Escape/B (= B)
     useEffect(() => {
@@ -68,6 +90,13 @@ export default function YellowDevClient() {
             >
                 <MapView />
             </GameBoyShell>
+
+            {/* Overlay de combat : apparaît quand une rencontre se déclenche dans l'herbe. */}
+            {battle && (
+                <div style={battleOverlayStyle}>
+                    <BattleScreen />
+                </div>
+            )}
         </div>
     )
 }
@@ -82,3 +111,15 @@ const pageStyle: React.CSSProperties = {
     justifyContent: "center",
     padding: "max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))",
 }
+
+const battleOverlayStyle: React.CSSProperties = {
+    position: "fixed",
+    inset: 0,
+    background: "#1a1a1a",
+    zIndex: 9000,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 12,
+}
+

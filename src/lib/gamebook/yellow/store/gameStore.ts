@@ -17,6 +17,9 @@ import { YELLOW_MAPS } from "../maps"
 import type { YellowMapData } from "../maps"
 import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
+import { getSnapshot as getBattleSnapshot, startWildBattle } from "./battleStore"
+import { getPlayer as getPlayerSave } from "./playerStore"
+import { rollWildEncounter } from "../data/encounters"
 
 export interface ActiveDialogue {
     npcId: string
@@ -76,8 +79,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     move: (dir) => {
         const { player, map, dialogue } = get()
-        // Mouvement bloqué pendant un dialogue.
+        // Mouvement bloqué pendant un dialogue ou un combat.
         if (dialogue) return
+        if (getBattleSnapshot().battle) return
 
         const next = tryMove(player, dir, map)
 
@@ -109,6 +113,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ player: next }) // simple rotation face au mur, pas d'anim
         }
         if (moved || dirChanged) scheduleSave(next)
+
+        // Rencontre sauvage : marcher sur des hautes herbes (zone à rencontres).
+        if (moved && map.tiles[next.posY]?.[next.posX] === "grassTall") {
+            const team = getPlayerSave().team
+            if (team.some((m) => m.currentHp > 0)) {
+                const wild = rollWildEncounter(next.mapId)
+                if (wild) {
+                    const seed = Math.floor(Math.random() * 1e9) >>> 0
+                    startWildBattle(team, [wild], seed)
+                }
+            }
+        }
     },
 
     pressA: () => {
