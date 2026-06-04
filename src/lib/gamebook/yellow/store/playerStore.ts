@@ -6,6 +6,8 @@
 
 import { useSyncExternalStore } from "react"
 import type { MonInstance } from "../battle/types"
+import { fullStats } from "../battle/stats"
+import { getSpecies } from "../data/species"
 
 export const TEAM_MAX = 6
 
@@ -53,6 +55,25 @@ export function addCaught(mon: MonInstance): "team" | "pc" {
 
 export function addItem(itemId: string, qty = 1) {
     st = { ...st, items: { ...st.items, [itemId]: (st.items[itemId] ?? 0) + qty } }
+    emit()
+}
+
+/** Soin complet de l'équipe (Centre Daemon) : PV max, statut effacé, PP refaits. */
+export function healAllTeam() {
+    st = {
+        ...st,
+        team: st.team.map((m): MonInstance => {
+            const sp = getSpecies(m.speciesId)
+            const max = sp ? fullStats(m, sp).hp : m.currentHp
+            return {
+                ...m,
+                currentHp: max,
+                status: "NONE",
+                statusCounter: 0,
+                moves: m.moves.map((mv) => ({ ...mv, pp: mv.ppMax })),
+            }
+        }),
+    }
     emit()
 }
 

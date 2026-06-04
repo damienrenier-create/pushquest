@@ -18,7 +18,8 @@ import type { YellowMapData } from "../maps"
 import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { getSnapshot as getBattleSnapshot, startWildBattle } from "./battleStore"
-import { getPlayer as getPlayerSave } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam } from "./playerStore"
+import { persistYellowSave } from "./saveManager"
 import { rollWildEncounter } from "../data/encounters"
 
 export interface ActiveDialogue {
@@ -144,6 +145,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // Sinon : chercher un NPC devant le joueur et déclencher son dialogue.
         const npc = getNpcInFrontOfPlayer(player, YELLOW_NPCS)
         if (!npc) return
+
+        // Médecin du Centre Daemon : soigne toute l'équipe.
+        if (npc.id === "y_medecin") {
+            healAllTeam()
+            persistYellowSave()
+            set({
+                dialogue: {
+                    npcId: npc.id,
+                    npcName: npc.name,
+                    lines: ["Bienvenue au Centre Daemon !", "Tes Daemons sont soignés à bloc. Reviens quand tu veux !"],
+                    lineIndex: 0,
+                },
+            })
+            return
+        }
+
         set({
             dialogue: {
                 npcId: npc.id,

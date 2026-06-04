@@ -8,15 +8,18 @@
 //
 // Pas encore : interaction A/B (NPCs, dialogues), START (menu), SELECT.
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import GameBoyShell from "./GameBoyShell"
 import MapView from "./MapView"
 import BattleScreen from "./battle/BattleScreen"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { useBattle } from "@/lib/gamebook/yellow/store/battleStore"
 import { loadYellowSave, initAutosave } from "@/lib/gamebook/yellow/store/saveManager"
-import { getPlayer, setTeam } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
+import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
+import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 
 export default function YellowDevClient() {
     const move = useGameStore((s) => s.move)
@@ -25,6 +28,9 @@ export default function YellowDevClient() {
     const hydrate = useGameStore((s) => s.hydrate)
     const hydrated = useGameStore((s) => s.hydrated)
     const battle = useBattle()
+    const router = useRouter()
+    const player = usePlayer()
+    const [menu, setMenu] = useState<"none" | "pause" | "team">("none")
 
     // Au mount : charge l'état du joueur depuis le serveur (DB Neon).
     // Si le joueur n'a jamais joué, on garde le state par défaut (déjà set
@@ -85,8 +91,8 @@ export default function YellowDevClient() {
                 onRight={() => move("right")}
                 onA={pressA}
                 onB={pressB}
-                onStart={() => console.log("[yellow] START pressed (à implémenter)")}
-                onSelect={() => console.log("[yellow] SELECT pressed (à implémenter)")}
+                onStart={() => setMenu((m) => (m === "none" ? "pause" : "none"))}
+                onSelect={() => setMenu((m) => (m === "none" ? "pause" : "none"))}
             >
                 <MapView />
             </GameBoyShell>
@@ -95,6 +101,45 @@ export default function YellowDevClient() {
             {battle && (
                 <div style={battleOverlayStyle}>
                     <BattleScreen />
+                </div>
+            )}
+
+            {/* Menu START (pause) */}
+            {!battle && menu === "pause" && (
+                <div style={menuOverlayStyle} onClick={() => setMenu("none")}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>MENU</div>
+                        <button style={menuBtnStyle} onClick={() => setMenu("team")}>🐾 ÉQUIPE</button>
+                        <button style={menuBtnStyle} onClick={() => router.push("/gamebook/yellow/pokedex")}>📷 POKÉDEX</button>
+                        <button style={menuBtnDimStyle} onClick={() => setMenu("none")}>← FERMER</button>
+                    </div>
+                </div>
+            )}
+
+            {/* Overlay Équipe */}
+            {!battle && menu === "team" && (
+                <div style={menuOverlayStyle} onClick={() => setMenu("pause")}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>ÉQUIPE</div>
+                        {player.team.length === 0 && <div style={{ fontSize: 12, opacity: 0.6 }}>Aucun Daemon.</div>}
+                        {player.team.map((m) => {
+                            const sp = getSpecies(m.speciesId)
+                            const max = maxHpOf(m)
+                            const pct = Math.max(0, Math.min(100, (m.currentHp / max) * 100))
+                            return (
+                                <div key={m.uid} style={teamRowStyle}>
+                                    <span style={{ fontWeight: 700, flex: 1 }}>{displayName(m)}</span>
+                                    <span style={{ opacity: 0.6, fontSize: 10 }}>{sp?.types.join("/")}</span>
+                                    <span style={{ width: 38, textAlign: "right" }}>N.{m.level}</span>
+                                    <span style={{ width: 78, textAlign: "right", color: pct > 50 ? "#2a8a2a" : pct > 20 ? "#b88010" : "#c83030" }}>
+                                        {m.currentHp}/{max}{m.status !== "NONE" ? ` ${m.status}` : ""}
+                                    </span>
+                                </div>
+                            )
+                        })}
+                        {player.pc.length > 0 && <div style={{ fontSize: 10, opacity: 0.5, marginTop: 6 }}>PC : {player.pc.length} Daemon(s) en réserve</div>}
+                        <button style={menuBtnDimStyle} onClick={() => setMenu("pause")}>← RETOUR</button>
+                    </div>
                 </div>
             )}
         </div>
@@ -121,5 +166,24 @@ const battleOverlayStyle: React.CSSProperties = {
     alignItems: "center",
     justifyContent: "center",
     padding: 12,
+}
+
+const menuOverlayStyle: React.CSSProperties = {
+    position: "fixed", inset: 0, zIndex: 9100,
+    background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
+}
+const menuBoxStyle: React.CSSProperties = {
+    background: "#f8f8e8", color: "#1c1408", border: "3px solid #1c1408", borderRadius: 10,
+    padding: 16, width: "100%", maxWidth: 360, fontFamily: "'Courier New', monospace",
+    display: "flex", flexDirection: "column", gap: 8,
+}
+const menuTitleStyle: React.CSSProperties = { fontSize: 14, fontWeight: 900, letterSpacing: 2, marginBottom: 4 }
+const menuBtnStyle: React.CSSProperties = {
+    background: "#fff", border: "2px solid #1c1408", borderRadius: 6, padding: "12px 14px",
+    fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer", textAlign: "left", color: "#1c1408",
+}
+const menuBtnDimStyle: React.CSSProperties = { ...menuBtnStyle, background: "#e0e0d0", border: "2px solid #888", color: "#555" }
+const teamRowStyle: React.CSSProperties = {
+    display: "flex", alignItems: "center", gap: 8, fontSize: 12, padding: "5px 0", borderBottom: "1px solid #00000018",
 }
 
