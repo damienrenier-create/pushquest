@@ -274,6 +274,311 @@ export const SPECIES: Record<string, SpeciesData> = {
         sprite: "/yellow/sprites/dex/maitrezenc.png",
     },
 
+    // ============================================================
+    // 7 FAMILLES BONUS (couverture de types). Daemons ORIGINAUX, stats maison.
+    // ============================================================
+
+    // --- ⚡ Coatis (Élec) ---
+    electroatiss: {
+        id: "electroatiss", dexNo: 19, name: "Électroatiss", types: ["ELEC"],
+        baseStats: { hp: 45, atk: 52, def: 40, spe: 65, spc: 55 },
+        learnset: [
+            { level: 1, moveId: "charge" },
+            { level: 6, moveId: "etincelle" },
+            { level: 18, moveId: "vive_attaque" },
+            { level: 28, moveId: "cage_eclair" },
+        ],
+        evolution: { toId: "couranti", method: { kind: "LEVEL", level: 16 } },
+        catchRate: 120, baseExp: 60, rarity: "COMMON", growthRate: "medium_fast", role: "Élec — vif",
+        description: "Coati farceur à bandeau ; sa queue crépite d'étincelles.",
+        sprite: "/yellow/sprites/dex/electroatiss.png",
+    },
+    couranti: {
+        id: "couranti", dexNo: 20, name: "Couranti", types: ["ELEC"],
+        baseStats: { hp: 60, atk: 66, def: 52, spe: 86, spc: 68 },
+        learnset: [
+            { level: 1, moveId: "etincelle" },
+            { level: 1, moveId: "vive_attaque" },
+            { level: 30, moveId: "cage_eclair" },
+            { level: 36, moveId: "danse_lames" },
+        ],
+        evolution: { toId: "zappeureal", method: { kind: "LEVEL", level: 36 } },
+        catchRate: 60, baseExp: 142, rarity: "UNCOMMON", growthRate: "medium_fast", role: "Élec — rapide",
+        description: "Maraudeur électrique drapé d'une cape conductrice.",
+        sprite: "/yellow/sprites/dex/couranti.png",
+    },
+    zappeureal: {
+        id: "zappeureal", dexNo: 21, name: "Zappeuréal", types: ["ELEC"],
+        baseStats: { hp: 82, atk: 86, def: 72, spe: 110, spc: 96 },
+        learnset: [
+            { level: 1, moveId: "etincelle" },
+            { level: 1, moveId: "cage_eclair" },
+            { level: 1, moveId: "vive_attaque" },
+            { level: 42, moveId: "coup_d_boule" },
+        ],
+        catchRate: 45, baseExp: 210, rarity: "RARE", growthRate: "medium_fast", role: "Élec — sweeper",
+        description: "Souverain de la foudre, couronné d'arcs électriques.",
+        sprite: "/yellow/sprites/dex/zappeureal.png",
+    },
+
+    // --- ❄️ Chiens (Glace) ---
+    auroruff: {
+        id: "auroruff", dexNo: 22, name: "Auroruff", types: ["GLACE"],
+        baseStats: { hp: 50, atk: 50, def: 50, spe: 50, spc: 55 },
+        learnset: [
+            { level: 1, moveId: "charge" },
+            { level: 8, moveId: "coup_d_givre" },
+            { level: 20, moveId: "vive_attaque" },
+            { level: 30, moveId: "mur_de_fer" },
+        ],
+        evolution: { toId: "glaceer", method: { kind: "LEVEL", level: 16 } },
+        catchRate: 120, baseExp: 60, rarity: "COMMON", growthRate: "medium_fast", role: "Glace — équilibré",
+        description: "Chiot des neiges à l'os givré ; fidèle et frileux.",
+        sprite: "/yellow/sprites/dex/auroruff.png",
+    },
+    glaceer: {
+        id: "glaceer", dexNo: 23, name: "Glaceer", types: ["GLACE"],
+        baseStats: { hp: 66, atk: 66, def: 64, spe: 68, spc: 72 },
+        learnset: [
+            { level: 1, moveId: "coup_d_givre" },
+            { level: 1, moveId: "charge" },
+            { level: 28, moveId: "belier" },
+            { level: 36, moveId: "mur_de_fer" },
+        ],
+        evolution: { toId: "auroraur", method: { kind: "LEVEL", level: 35 } },
+        catchRate: 60, baseExp: 142, rarity: "UNCOMMON", growthRate: "medium_fast", role: "Glace — élégant",
+        description: "Lévrier de gel ; laisse une traînée de givre à chaque foulée.",
+        sprite: "/yellow/sprites/dex/glaceer.png",
+    },
+    auroraur: {
+        id: "auroraur", dexNo: 24, name: "Auroraur", types: ["GLACE"],
+        baseStats: { hp: 90, atk: 82, def: 86, spe: 72, spc: 96 },
+        learnset: [
+            { level: 1, moveId: "coup_d_givre" },
+            { level: 1, moveId: "belier" },
+            { level: 1, moveId: "mur_de_fer" },
+            { level: 44, moveId: "repos" },
+        ],
+        catchRate: 45, baseExp: 210, rarity: "RARE", growthRate: "medium_fast", role: "Glace — mur",
+        description: "Molosse polaire à la cape d'aurore boréale. Majestueux.",
+        sprite: "/yellow/sprites/dex/auroraur.png",
+    },
+
+    // --- 🐜 Fourmis (Insecte → Insecte/Psy) ---
+    ruffiant: {
+        id: "ruffiant", dexNo: 25, name: "Ruffiant", types: ["INSECTE"],
+        baseStats: { hp: 42, atk: 55, def: 52, spe: 50, spc: 36 },
+        learnset: [
+            { level: 1, moveId: "charge" },
+            { level: 6, moveId: "dard_nuee" },
+            { level: 16, moveId: "dard_venin" },
+            { level: 26, moveId: "mur_de_fer" },
+        ],
+        evolution: { toId: "formiguer", method: { kind: "LEVEL", level: 15 } },
+        catchRate: 120, baseExp: 60, rarity: "COMMON", growthRate: "medium_fast", role: "Insecte — ouvrière",
+        description: "Fourmi-soldat dégourdie, mandibules toujours prêtes.",
+        sprite: "/yellow/sprites/dex/ruffiant.png",
+    },
+    formiguer: {
+        id: "formiguer", dexNo: 26, name: "Formiguer", types: ["INSECTE"],
+        baseStats: { hp: 60, atk: 78, def: 72, spe: 64, spc: 48 },
+        learnset: [
+            { level: 1, moveId: "dard_nuee" },
+            { level: 1, moveId: "dard_venin" },
+            { level: 30, moveId: "belier" },
+            { level: 36, moveId: "mur_de_fer" },
+        ],
+        evolution: { toId: "regnantaur", method: { kind: "LEVEL", level: 34 } },
+        catchRate: 60, baseExp: 142, rarity: "UNCOMMON", growthRate: "medium_fast", role: "Insecte — soldat",
+        description: "Fourmi-guerrière à la carapace chitineuse renforcée.",
+        sprite: "/yellow/sprites/dex/formiguer.png",
+    },
+    regnantaur: {
+        id: "regnantaur", dexNo: 27, name: "Regnantaur", types: ["INSECTE", "PSY"],
+        baseStats: { hp: 78, atk: 95, def: 92, spe: 80, spc: 80 },
+        learnset: [
+            { level: 1, moveId: "dard_nuee" },
+            { level: 1, moveId: "choc_mental" },
+            { level: 1, moveId: "belier" },
+            { level: 40, moveId: "onde_folie" },
+        ],
+        catchRate: 45, baseExp: 210, rarity: "RARE", growthRate: "medium_fast", role: "Insecte/Psy — reine",
+        description: "Reine-fourmi couronnée, dont l'esprit dirige toute la colonie.",
+        sprite: "/yellow/sprites/dex/regnantaur.png",
+    },
+
+    // --- 🌋 Magma (Roche/Feu) ---
+    lavapetit: {
+        id: "lavapetit", dexNo: 28, name: "Lavapetit", types: ["ROCHE", "FEU"],
+        baseStats: { hp: 46, atk: 52, def: 64, spe: 30, spc: 46 },
+        learnset: [
+            { level: 1, moveId: "charge" },
+            { level: 8, moveId: "jet_pierres" },
+            { level: 18, moveId: "flammeche" },
+            { level: 28, moveId: "mur_de_fer" },
+        ],
+        evolution: { toId: "fissuralave", method: { kind: "LEVEL", level: 17 } },
+        catchRate: 120, baseExp: 60, rarity: "COMMON", growthRate: "medium_fast", role: "Roche/Feu — braise lente",
+        description: "Caillou couvant une braise interne ; tiède au toucher.",
+        sprite: "/yellow/sprites/dex/lavapetit.png",
+    },
+    fissuralave: {
+        id: "fissuralave", dexNo: 29, name: "Fissuralave", types: ["ROCHE", "FEU"],
+        baseStats: { hp: 66, atk: 78, def: 92, spe: 40, spc: 64 },
+        learnset: [
+            { level: 1, moveId: "jet_pierres" },
+            { level: 1, moveId: "flammeche" },
+            { level: 30, moveId: "seisme" },
+            { level: 36, moveId: "lance_flammes" },
+        ],
+        evolution: { toId: "magmator", method: { kind: "LEVEL", level: 37 } },
+        catchRate: 60, baseExp: 142, rarity: "UNCOMMON", growthRate: "medium_fast", role: "Roche/Feu — colosse",
+        description: "Golem fissuré laissant suinter la lave par ses craquelures.",
+        sprite: "/yellow/sprites/dex/fissuralave.png",
+    },
+    magmator: {
+        id: "magmator", dexNo: 30, name: "Magmator", types: ["ROCHE", "FEU"],
+        baseStats: { hp: 90, atk: 104, def: 118, spe: 48, spc: 82 },
+        learnset: [
+            { level: 1, moveId: "seisme" },
+            { level: 1, moveId: "lance_flammes" },
+            { level: 1, moveId: "jet_pierres" },
+            { level: 44, moveId: "belier" },
+        ],
+        catchRate: 45, baseExp: 210, rarity: "RARE", growthRate: "medium_fast", role: "Roche/Feu — tank",
+        description: "Titan de roche en fusion ; son cœur de magma ne s'éteint jamais.",
+        sprite: "/yellow/sprites/dex/magmator.png",
+    },
+
+    // --- 🍝 Dieu spaghetti (Psy) ---
+    nouillon: {
+        id: "nouillon", dexNo: 31, name: "Nouillon", types: ["PSY"],
+        baseStats: { hp: 44, atk: 40, def: 44, spe: 40, spc: 62 },
+        learnset: [
+            { level: 1, moveId: "charge" },
+            { level: 7, moveId: "choc_mental" },
+            { level: 18, moveId: "onde_folie" },
+            { level: 28, moveId: "repos" },
+        ],
+        evolution: { toId: "vermisaint", method: { kind: "LEVEL", level: 16 } },
+        catchRate: 90, baseExp: 64, rarity: "UNCOMMON", growthRate: "medium_fast", role: "Psy — special frêle",
+        description: "Petit amas de nouilles vivant aux yeux sur tentacules.",
+        sprite: "/yellow/sprites/dex/nouillon.png",
+    },
+    vermisaint: {
+        id: "vermisaint", dexNo: 32, name: "Vermisaint", types: ["PSY"],
+        baseStats: { hp: 60, atk: 55, def: 58, spe: 55, spc: 86 },
+        learnset: [
+            { level: 1, moveId: "choc_mental" },
+            { level: 1, moveId: "onde_folie" },
+            { level: 30, moveId: "repos" },
+            { level: 34, moveId: "leche" },
+        ],
+        evolution: { toId: "divinpate", method: { kind: "LEVEL", level: 34 } },
+        catchRate: 45, baseExp: 142, rarity: "RARE", growthRate: "medium_fast", role: "Psy — special",
+        description: "Enchevêtrement de pâtes nimbé d'une aura mystique.",
+        sprite: "/yellow/sprites/dex/vermisaint.png",
+    },
+    divinpate: {
+        id: "divinpate", dexNo: 33, name: "Divinpâte", types: ["PSY"],
+        baseStats: { hp: 84, atk: 72, def: 76, spe: 78, spc: 116 },
+        learnset: [
+            { level: 1, moveId: "choc_mental" },
+            { level: 1, moveId: "onde_folie" },
+            { level: 1, moveId: "repos" },
+            { level: 44, moveId: "leche" },
+        ],
+        catchRate: 30, baseExp: 220, rarity: "RARE", growthRate: "medium_fast", role: "Psy — special divin",
+        description: "Divinité-spaghetti ailée, auréolée et couronnée. On la touche de sa nouille.",
+        sprite: "/yellow/sprites/dex/divinpate.png",
+    },
+
+    // --- 🐦 Héron (Vol/Eau) ---
+    piouflot: {
+        id: "piouflot", dexNo: 34, name: "Piouflot", types: ["VOL", "EAU"],
+        baseStats: { hp: 40, atk: 44, def: 40, spe: 55, spc: 45 },
+        learnset: [
+            { level: 1, moveId: "charge" },
+            { level: 5, moveId: "pistolet_a_o" },
+            { level: 14, moveId: "picpic" },
+            { level: 22, moveId: "tornade" },
+        ],
+        evolution: { toId: "herondee", method: { kind: "LEVEL", level: 17 } },
+        catchRate: 120, baseExp: 55, rarity: "COMMON", growthRate: "medium_fast", role: "Vol/Eau — poussin",
+        description: "Poussin duveteux qui patauge plus qu'il ne vole.",
+        sprite: "/yellow/sprites/dex/piouflot.png",
+    },
+    herondee: {
+        id: "herondee", dexNo: 35, name: "Hérondée", types: ["VOL", "EAU"],
+        baseStats: { hp: 60, atk: 58, def: 54, spe: 74, spc: 66 },
+        learnset: [
+            { level: 1, moveId: "pistolet_a_o" },
+            { level: 1, moveId: "picpic" },
+            { level: 26, moveId: "tornade" },
+            { level: 34, moveId: "coup_d_givre" },
+        ],
+        evolution: { toId: "oragron", method: { kind: "LEVEL", level: 35 } },
+        catchRate: 60, baseExp: 142, rarity: "UNCOMMON", growthRate: "medium_fast", role: "Vol/Eau — gracile",
+        description: "Héron élégant ruisselant d'eau de pluie.",
+        sprite: "/yellow/sprites/dex/herondee.png",
+    },
+    oragron: {
+        id: "oragron", dexNo: 36, name: "Oragron", types: ["VOL", "EAU"],
+        baseStats: { hp: 82, atk: 80, def: 72, spe: 100, spc: 86 },
+        learnset: [
+            { level: 1, moveId: "tornade" },
+            { level: 1, moveId: "hydrocanon" },
+            { level: 1, moveId: "picpic" },
+            { level: 42, moveId: "belier" },
+        ],
+        catchRate: 45, baseExp: 210, rarity: "RARE", growthRate: "medium_fast", role: "Vol/Eau — sweeper",
+        description: "Héron de tempête aux ailes de nuages, zébré d'éclairs.",
+        sprite: "/yellow/sprites/dex/oragron.png",
+    },
+
+    // --- 🐻 Ours sylvestre (Combat/Plante) ---
+    broussours: {
+        id: "broussours", dexNo: 37, name: "Broussours", types: ["COMBAT", "PLANTE"],
+        baseStats: { hp: 52, atk: 62, def: 50, spe: 40, spc: 40 },
+        learnset: [
+            { level: 1, moveId: "charge" },
+            { level: 7, moveId: "double_pied" },
+            { level: 18, moveId: "fouet_lianes" },
+            { level: 28, moveId: "belier" },
+        ],
+        evolution: { toId: "sylvours", method: { kind: "LEVEL", level: 18 } },
+        catchRate: 120, baseExp: 60, rarity: "COMMON", growthRate: "medium_fast", role: "Combat/Plante — ourson",
+        description: "Ourson des broussailles à la fourrure mêlée de lierre.",
+        sprite: "/yellow/sprites/dex/broussours.png",
+    },
+    sylvours: {
+        id: "sylvours", dexNo: 38, name: "Sylvours", types: ["COMBAT", "PLANTE"],
+        baseStats: { hp: 72, atk: 86, def: 70, spe: 52, spc: 56 },
+        learnset: [
+            { level: 1, moveId: "double_pied" },
+            { level: 1, moveId: "fouet_lianes" },
+            { level: 30, moveId: "poing_karate" },
+            { level: 36, moveId: "mega_sangsue" },
+        ],
+        evolution: { toId: "druidours", method: { kind: "LEVEL", level: 36 } },
+        catchRate: 60, baseExp: 142, rarity: "UNCOMMON", growthRate: "medium_fast", role: "Combat/Plante — colosse",
+        description: "Ours sylvestre dressé, paré d'une armure de feuilles.",
+        sprite: "/yellow/sprites/dex/sylvours.png",
+    },
+    druidours: {
+        id: "druidours", dexNo: 39, name: "Druidours", types: ["COMBAT", "PLANTE"],
+        baseStats: { hp: 100, atk: 116, def: 96, spe: 60, spc: 78 },
+        learnset: [
+            { level: 1, moveId: "poing_karate" },
+            { level: 1, moveId: "fouet_lianes" },
+            { level: 1, moveId: "belier" },
+            { level: 44, moveId: "seisme" },
+        ],
+        catchRate: 45, baseExp: 220, rarity: "RARE", growthRate: "medium_fast", role: "Combat/Plante — tank offensif",
+        description: "Ours-druide titanesque au cœur de sève luminescent.",
+        sprite: "/yellow/sprites/dex/druidours.png",
+    },
+
     // --- Famille PLANTE (starter, 2 stades) ---
     pousstout: {
         id: "pousstout", dexNo: 51, name: "Pousstout", types: ["PLANTE", "POISON"],
