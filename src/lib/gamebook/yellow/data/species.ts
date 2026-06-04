@@ -148,7 +148,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     // --- Ligne VOL (Normal/Vol) ---
     plumiot: {
         id: "plumiot", dexNo: 10, name: "Plumiot", types: ["NORMAL", "VOL"],
-        baseStats: { hp: 40, atk: 45, def: 40, spe: 60, spc: 34 },
+        baseStats: { hp: 42, atk: 48, def: 42, spe: 66, spc: 36 },
         learnset: [
             { level: 1, moveId: "charge" },
             { level: 5, moveId: "picpic" },
@@ -176,7 +176,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     aquilothan: {
         id: "aquilothan", dexNo: 12, name: "Aquilothan", types: ["NORMAL", "VOL"],
-        baseStats: { hp: 80, atk: 82, def: 72, spe: 108, spc: 68 },
+        baseStats: { hp: 80, atk: 82, def: 72, spe: 100, spc: 68 },
         learnset: [
             { level: 1, moveId: "tornade" },
             { level: 1, moveId: "picpic" },
@@ -234,7 +234,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     // --- Ligne COMBAT ---
     couperin: {
         id: "couperin", dexNo: 16, name: "Couperin", types: ["COMBAT"],
-        baseStats: { hp: 40, atk: 82, def: 35, spe: 75, spc: 32 },
+        baseStats: { hp: 45, atk: 82, def: 42, spe: 75, spc: 32 },
         learnset: [
             { level: 1, moveId: "charge" },
             { level: 7, moveId: "double_pied" },
@@ -453,7 +453,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     // --- 🍝 Dieu spaghetti (Psy) ---
     nouillon: {
         id: "nouillon", dexNo: 31, name: "Nouillon", types: ["PSY"],
-        baseStats: { hp: 52, atk: 30, def: 52, spe: 38, spc: 64 },
+        baseStats: { hp: 55, atk: 28, def: 58, spe: 36, spc: 68 },
         learnset: [
             { level: 1, moveId: "charge" },
             { level: 7, moveId: "choc_mental" },
