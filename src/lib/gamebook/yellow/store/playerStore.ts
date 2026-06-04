@@ -12,7 +12,7 @@ import { getMove } from "../data/moves"
 import { getItem } from "../data/items"
 import { SAIYAN_POINT_VALUE } from "../data/saiyanConfig"
 import { BADGE_REPS_CAP_BONUS } from "../data/badges"
-import type { BadgeId } from "../data/cts"
+import { getCt, canLearnCt, purchasableCts, type BadgeId } from "../data/cts"
 import type { StatKey } from "../battle/types"
 import { expForLevel, levelFromExp, applyExp, MAX_LEVEL, type ExpResult } from "../battle/xp"
 import type { WildPlayerCtx } from "../data/encounters"
@@ -321,6 +321,39 @@ export function allocateStatPoint(uid: string, stat: StatKey): boolean {
         return true
     }
     return false
+}
+
+/**
+ * Achète et enseigne une CT à un Daemon (équipe ou PC). Paie en reps.
+ * - slot libre → apprise directement ;
+ * - 4 slots pleins → mise EN ATTENTE (pendingMoves) → l'écran d'apprentissage gère le remplacement.
+ */
+export function teachCt(uid: string, ctId: string): { ok: boolean; reason?: "introuvable" | "locked" | "incompatible" | "known" | "reps"; queued?: boolean } {
+    const ct = getCt(ctId)
+    if (!ct) return { ok: false, reason: "introuvable" }
+    if (!purchasableCts(st.badges).some((c) => c.id === ctId)) return { ok: false, reason: "locked" }
+    const pools: ("team" | "pc")[] = ["team", "pc"]
+    for (const pool of pools) {
+        const arr = st[pool]
+        const idx = arr.findIndex((m) => m.uid === uid)
+        if (idx < 0) continue
+        const m = arr[idx]
+        const sp = getSpecies(m.speciesId)
+        if (!sp || !canLearnCt(sp, ct)) return { ok: false, reason: "incompatible" }
+        if (m.moves.some((s) => s.moveId === ct.moveId) || m.pendingMoves?.includes(ct.moveId)) return { ok: false, reason: "known" }
+        if (st.reps < ct.price) return { ok: false, reason: "reps" }
+        const free = m.moves.length < 4
+        const pp = getMove(ct.moveId)?.pp ?? 5
+        const updated: MonInstance = free
+            ? { ...m, moves: [...m.moves, { moveId: ct.moveId, pp, ppMax: pp }] }
+            : { ...m, pendingMoves: [...(m.pendingMoves ?? []), ct.moveId] }
+        const next = arr.slice()
+        next[idx] = updated
+        st = { ...st, reps: st.reps - ct.price, [pool]: next }
+        emit()
+        return { ok: true, queued: !free }
+    }
+    return { ok: false, reason: "introuvable" }
 }
 
 /** Apprentissage en attente : un Daemon veut apprendre une attaque mais a 4 slots. */
