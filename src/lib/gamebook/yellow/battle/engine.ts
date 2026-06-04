@@ -61,6 +61,7 @@ export type PlayerAction =
     | { kind: "move"; moveIndex: number }
     | { kind: "switch"; teamIndex: number }
     | { kind: "ball"; itemId: string }
+    | { kind: "item"; itemId: string }
     | { kind: "run" }
 
 // Action interne résolue pour un camp (le joueur ET l'IA produisent ça).
@@ -175,6 +176,18 @@ export function resolveTurn(prev: BattleState, playerAction: PlayerAction): Batt
         if (active(state.enemy).currentHp > 0 && ea.kind === "move") {
             performMove(state, "enemy", ea.moveIndex!, events, rng)
             checkFaints(state, events)
+        }
+        if (state.phase !== "ended") { endOfTurn(state, events, rng); checkFaints(state, events) }
+        return commit(state, events, rng, prev.turn, true)
+    }
+
+    // --- Utiliser un objet de soin (consomme le tour ; l'adversaire agit ensuite) ---
+    if (playerAction.kind === "item") {
+        applyHealItem(state, playerAction.itemId, events)
+        const ea = chooseEnemyAction(state, rng)
+        if (active(state.enemy).currentHp > 0) {
+            if (ea.kind === "switch") doSwitch(state, "enemy", ea.teamIndex!, events)
+            else if (ea.kind === "move") { performMove(state, "enemy", ea.moveIndex!, events, rng); checkFaints(state, events) }
         }
         if (state.phase !== "ended") { endOfTurn(state, events, rng); checkFaints(state, events) }
         return commit(state, events, rng, prev.turn, true)
@@ -659,6 +672,20 @@ function performCapture(state: BattleState, itemId: string, events: BattleEvent[
     } else {
         events.push({ kind: "message", text: `Oh non ! ${displayName(wild)} s'est échappé !` })
     }
+}
+
+/** Utilise un objet de soin sur le Daemon actif du joueur (consomme le tour). */
+function applyHealItem(state: BattleState, itemId: string, events: BattleEvent[]) {
+    const it = getItem(itemId)
+    const mon = active(state.player)
+    events.push({ kind: "message", text: `Tu utilises ${it?.name ?? "un objet"} !` })
+    if (!it || it.category !== "HEAL") {
+        events.push({ kind: "message", text: "Mais ça n'a aucun effet ici…" })
+        return
+    }
+    const amount = it.healHp && it.healHp > 0 ? it.healHp : maxHpOf(mon)
+    applyHeal(state, "player", amount, events)
+    events.push({ kind: "message", text: `${displayName(mon)} récupère des PV !` })
 }
 
 // ============================================================

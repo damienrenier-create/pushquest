@@ -66,6 +66,16 @@ describe("combat de dresseur — enchaînement multi-Daemon", () => {
         expect(afterBall.outcome).not.toBe("caught") // la capture est refusée
     })
 
+    it("un objet de soin restaure des PV et consomme le tour", () => {
+        const p = createMonInstance("rochison", 30) // énorme Défense → l'ennemi tape pour ~rien
+        p.currentHp = 10
+        const start = createBattle([p], [createMonInstance("plumiot", 2)], { isWild: true, seed: 5 })
+        const after = resolveTurn(start, { kind: "item", itemId: "potion" })
+        const mon = after.player.team[after.player.activeIndex]
+        expect(mon.currentHp).toBeGreaterThan(10) // +20 PV (moins le coup ennemi minime)
+        expect(after.turn).toBe(start.turn + 1)    // le tour est bien passé
+    })
+
     it("un Daemon faible et seul perd contre le dresseur", () => {
         const start = createBattle(
             [createMonInstance("rongeur", 2)],

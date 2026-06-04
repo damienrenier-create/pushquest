@@ -97,6 +97,8 @@ export function submitPlayerAction(action: PlayerAction) {
     if (!storeState.battle) return
     // Lancer une Ball consomme l'objet de l'inventaire (réussite ou non).
     if (action.kind === "ball" && !consumeItem(action.itemId)) return
+    // Utiliser un objet de soin le consomme aussi.
+    if (action.kind === "item" && !consumeItem(action.itemId)) return
     const next = resolveTurn(storeState.battle, action)
     syncPokedex(next) // vu (changement d'adversaire) + capturé le cas échéant
     setStore({ battle: next, evolutions: [], trainer: storeState.trainer })
