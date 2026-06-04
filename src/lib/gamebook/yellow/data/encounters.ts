@@ -1,47 +1,135 @@
 // src/lib/gamebook/yellow/data/encounters.ts
 //
-// Nexus Jaune Éclair — tables de rencontres sauvages par zone (Daemons ORIGINAUX).
-// `rate` = probabilité d'une rencontre à chaque pas sur une case de hautes herbes.
+// Nexus Jaune Éclair — rencontres sauvages (Daemons ORIGINAUX).
+// Probabilité par famille = base_rareté × influence_biome (4 paliers) × bonus_joueur.
+// Niveau corrélé au 1er Daemon de l'équipe. Tout est pur/déterministe (RNG injecté).
 
 import { createMonInstance } from "../battle/factory"
 import type { MonInstance } from "../battle/types"
+import { biomeDistance, affinityMult, repulsionMult, type Biome } from "./biomes"
 
-interface EncounterEntry { speciesId: string; min: number; max: number; weight: number }
-interface ZoneEncounters { rate: number; entries: EncounterEntry[] }
+// Rareté de base (poids avant modulation).
+const COMMON = 100, UNCOMMON = 45, RARE = 14, VERY_RARE = 5
 
-export const ENCOUNTERS: Record<string, ZoneEncounters> = {
+type PlayerTag = "combat" | "rocheSol" | "elec" | "rare"
+
+interface WildEntry {
+    speciesId: string
+    base: number
+    affinity?: Biome[]    // biomes qui l'attirent (densité ↑ en approchant)
+    repulsion?: Biome[]   // biomes qu'il fuit (densité ↓ en approchant)
+    player?: PlayerTag    // type influencé par les stats PushQuest
+    rare?: boolean        // popе 1-2 niveaux au-dessus du lead
+}
+
+interface Zone { rate: number; pool: WildEntry[] }
+
+/** Stats PushQuest normalisées 0..1 (sauf quotaReached). Couche méta. */
+export interface WildPlayerCtx {
+    pompes: number       // 0..1 (effort pompes du jour)
+    squats: number       // 0..1
+    quotaReached: boolean
+    overshoot: number    // 0..1 (dépassement du quota)
+}
+
+export interface EncounterCtx {
+    mapId: string
+    x: number
+    y: number
+    leadLevel: number          // niveau du 1er Daemon de l'équipe
+    rng?: () => number         // [0,1) — défaut Math.random
+    player?: WildPlayerCtx
+}
+
+const ZONES: Record<string, Zone> = {
     yellow_route_nord: {
         rate: 0.14,
-        entries: [
-            { speciesId: "plumiot", min: 3, max: 6, weight: 45 },
-            { speciesId: "cornaissant", min: 3, max: 6, weight: 25 },
-            { speciesId: "cailloutchi", min: 4, max: 7, weight: 20 },
-            { speciesId: "trolystrik", min: 5, max: 8, weight: 10 },
+        pool: [
+            // Communs (passe-partout / habitats larges)
+            { speciesId: "plumiot", base: COMMON, affinity: ["mountain", "sapin"], repulsion: ["water"] },
+            { speciesId: "couperin", base: COMMON, player: "combat" },
+            { speciesId: "cailloutchi", base: COMMON, affinity: ["mountain"], player: "rocheSol" },
+            { speciesId: "ruffiant", base: COMMON, affinity: ["sapin"] },
+            { speciesId: "cornaissant", base: COMMON, affinity: ["mountain", "sapin"], repulsion: ["water"] },
+            // Peu communs (élémentaires, denses dans leur biome)
+            { speciesId: "electroatiss", base: UNCOMMON, player: "elec" },
+            { speciesId: "loutrille", base: UNCOMMON, affinity: ["water"] },
+            { speciesId: "piouflot", base: UNCOMMON, affinity: ["water"] },
+            { speciesId: "pampousse", base: UNCOMMON, affinity: ["sapin"] },
+            { speciesId: "fennaise", base: UNCOMMON, affinity: ["mountain"], repulsion: ["water"] },
+            { speciesId: "lavapetit", base: UNCOMMON, affinity: ["mountain"], repulsion: ["water"] },
+            { speciesId: "auroruff", base: UNCOMMON, affinity: ["mountain"] },
+            { speciesId: "broussours", base: UNCOMMON, affinity: ["sapin"], player: "combat" },
+            { speciesId: "trolystrik", base: UNCOMMON, affinity: ["mountain"], player: "combat" },
+            { speciesId: "forgeotin", base: UNCOMMON, affinity: ["mountain", "sapin"], player: "combat" },
+            // Rares
+            { speciesId: "sporbeo", base: RARE, affinity: ["sapin"], player: "rare", rare: true },
+            { speciesId: "nouillon", base: RARE, player: "rare", rare: true },
+            // Très rare
+            { speciesId: "draclet", base: VERY_RARE, affinity: ["mountain"], repulsion: ["water"], player: "rare", rare: true },
         ],
     },
 }
 
-/** Une zone a-t-elle des rencontres ? */
 export function hasEncounters(mapId: string): boolean {
-    return mapId in ENCOUNTERS
+    return mapId in ZONES
 }
 
-/**
- * Tire (ou non) une rencontre sauvage pour une zone. Renvoie un Daemon prêt au
- * combat, ou null si pas de rencontre ce pas-ci.
- */
-export function rollWildEncounter(mapId: string): MonInstance | null {
-    const zone = ENCOUNTERS[mapId]
-    if (!zone) return null
-    if (Math.random() >= zone.rate) return null
+/** Bonus joueur (plafonné ×1.8) selon les stats PushQuest. */
+function playerMult(entry: WildEntry, p?: WildPlayerCtx): number {
+    if (!p || !entry.player) return 1
+    let m = 1
+    if (entry.player === "combat") m *= 1 + Math.min(0.8, Math.max(0, p.pompes))
+    else if (entry.player === "rocheSol") m *= 1 + Math.min(0.8, Math.max(0, p.squats))
+    else if (entry.player === "elec") m *= p.quotaReached ? 1.5 : 1
+    else if (entry.player === "rare") m *= 1 + Math.min(0.8, Math.max(0, p.overshoot))
+    return Math.min(1.8, m)
+}
 
-    const total = zone.entries.reduce((a, e) => a + e.weight, 0)
-    let r = Math.random() * total
-    let chosen = zone.entries[0]
-    for (const e of zone.entries) {
-        if (r < e.weight) { chosen = e; break }
-        r -= e.weight
+/** Poids final d'une entrée à une position donnée. */
+function entryWeight(entry: WildEntry, mapId: string, x: number, y: number, p?: WildPlayerCtx): number {
+    let w = entry.base
+    for (const b of entry.affinity ?? []) w *= affinityMult(biomeDistance(mapId, x, y, b))
+    for (const b of entry.repulsion ?? []) w *= repulsionMult(biomeDistance(mapId, x, y, b))
+    return w * playerMult(entry, p)
+}
+
+const intIn = (rng: () => number, min: number, max: number) => min + Math.floor(rng() * (max - min + 1))
+
+/**
+ * Tire (ou non) une rencontre sauvage. Renvoie un Daemon prêt au combat, ou null.
+ * Le niveau suit le 1er Daemon de l'équipe (rares : +1 à +2).
+ */
+export function rollWildEncounter(ctx: EncounterCtx): MonInstance | null {
+    const zone = ZONES[ctx.mapId]
+    if (!zone) return null
+    const rng = ctx.rng ?? Math.random
+    if (rng() >= zone.rate) return null
+
+    const weights = zone.pool.map((e) => entryWeight(e, ctx.mapId, ctx.x, ctx.y, ctx.player))
+    const total = weights.reduce((a, w) => a + w, 0)
+    if (total <= 0) return null
+
+    let r = rng() * total
+    let idx = 0
+    for (let i = 0; i < zone.pool.length; i++) {
+        if (r < weights[i]) { idx = i; break }
+        r -= weights[i]
     }
-    const level = chosen.min + Math.floor(Math.random() * (chosen.max - chosen.min + 1))
-    return createMonInstance(chosen.speciesId, level)
+    const entry = zone.pool[idx]
+
+    let level = ctx.leadLevel + intIn(rng, -2, 1)
+    if (entry.rare) level += intIn(rng, 1, 2)
+    level = Math.max(2, Math.min(100, level))
+
+    return createMonInstance(entry.speciesId, level)
+}
+
+/** Exposé pour les tests/outils : poids de chaque espèce à une position. */
+export function debugWeights(mapId: string, x: number, y: number, player?: WildPlayerCtx): Record<string, number> {
+    const zone = ZONES[mapId]
+    if (!zone) return {}
+    const out: Record<string, number> = {}
+    for (const e of zone.pool) out[e.speciesId] = entryWeight(e, mapId, x, y, player)
+    return out
 }
