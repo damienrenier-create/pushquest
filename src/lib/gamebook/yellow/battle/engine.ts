@@ -20,6 +20,7 @@ import { xpForDefeat, applyExp } from "./xp"
 import { tryCapture } from "./capture"
 import { ballBonusOf, getItem, isGuaranteedBall } from "../data/items"
 import { rarityBonusOf } from "../data/captureConfig"
+import { STRUGGLE_MOVE_ID, STRUGGLE_INDEX } from "../data/combatCostConfig"
 
 // ============================================================
 // Types d'état & événements
@@ -238,6 +239,7 @@ export function resolveTurn(prev: BattleState, playerAction: PlayerAction): Batt
 function actionPriority(state: BattleState, a: ResolvedAction): number {
     if (a.kind === "switch") return 6 // les switchs passent avant tout
     if (a.kind === "move") {
+        if (a.moveIndex === STRUGGLE_INDEX) return getMove(STRUGGLE_MOVE_ID)?.priority ?? 0
         const mon = active(state[a.side])
         const slot = mon.moves[a.moveIndex!]
         const move = slot ? getMove(slot.moveId) : null
@@ -276,16 +278,16 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
     const defSide = state[other(side)]
     const attacker = active(atkSide)
     const defender = active(defSide)
-    const slot = attacker.moves[moveIndex]
-    if (!slot) return
-    const move = getMove(slot.moveId)
+    // moveIndex sentinelle (< 0) = Charge Désespérée (secours gratuit hors slots).
+    const isStruggle = moveIndex === STRUGGLE_INDEX
+    const slot = isStruggle ? null : attacker.moves[moveIndex]
+    const move = isStruggle ? getMove(STRUGGLE_MOVE_ID) : slot ? getMove(slot.moveId) : null
     if (!move) return
 
     // --- Pré-checks de statut (peut empêcher l'action) ---
     if (!canAct(attacker, events, rng)) return
 
-    // Consomme 1 PP.
-    slot.pp = Math.max(0, slot.pp - 1)
+    // PP illimités : la seule limite est le coût en reps (déduit côté store).
     events.push({ kind: "message", text: `${displayName(attacker)} utilise ${move.name} !` })
 
     // --- Confusion : risque de se blesser soi-même ---

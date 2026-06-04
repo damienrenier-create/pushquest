@@ -78,6 +78,10 @@ export const MOVES: Record<string, MoveData> = {
     eboulis: { id: "eboulis", name: "Éboulis", type: "ROCHE", power: 75, accuracy: 90, pp: 10, effect: { chance: 30, flinch: true }, description: "Peut apeurer." },
     ombre_furtive: { id: "ombre_furtive", name: "Ombre Furtive", type: "SPECTRE", power: 40, accuracy: 100, pp: 30, priority: 1, description: "Frappe en priorité." },
     draco_charge: { id: "draco_charge", name: "Draco-Charge", type: "DRAGON", power: 90, accuracy: 100, pp: 10, description: "Gros move Dragon." },
+
+    // Attaque de SECOURS gratuite (anti soft-lock) : utilisable quand le joueur n'a
+    // plus de reps pour aucune autre attaque. Faible et inflige du recul à soi-même.
+    charge_desesperee: { id: "charge_desesperee", name: "Charge Désespérée", type: "NORMAL", power: 25, accuracy: 100, pp: 1, effect: { recoilPct: 50 }, description: "Dernier recours gratuit : faible et blesse son utilisateur." },
 }
 
 export function getMove(id: string): MoveData | null {

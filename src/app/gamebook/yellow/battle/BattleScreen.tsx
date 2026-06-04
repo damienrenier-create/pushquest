@@ -14,6 +14,7 @@ import type { BattleMon } from "@/lib/gamebook/yellow/battle/types"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { ITEMS } from "@/lib/gamebook/yellow/data/items"
 import { usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
+import { moveCostReps, STRUGGLE_INDEX } from "@/lib/gamebook/yellow/data/combatCostConfig"
 
 type Menu = "root" | "moves" | "switch" | "bag"
 
@@ -101,6 +102,7 @@ export default function BattleScreen() {
     // --- handlers ---
     const advance = () => { if (waitingForTap) setStep((s) => s + 1) }
     const useMove = (i: number) => { submitPlayerAction({ kind: "move", moveIndex: i }); setMenu("root") }
+    const useStruggle = () => { submitPlayerAction({ kind: "move", moveIndex: STRUGGLE_INDEX }); setMenu("root") }
     const doSwitch = (i: number) => { submitPlayerAction({ kind: "switch", teamIndex: i }); setMenu("root") }
     const throwBall = (itemId: string) => { submitPlayerAction({ kind: "ball", itemId }); setMenu("root") }
     const useItem = (itemId: string) => { submitPlayerAction({ kind: "item", itemId }); setMenu("root") }
@@ -144,7 +146,7 @@ export default function BattleScreen() {
                         <button style={battle.isWild ? S.btn : S.btnDim} disabled={!battle.isWild} onClick={battle.isWild ? run : undefined}>FUITE</button>
                     </div>
                 ) : menu === "moves" ? (
-                    <MoveMenu mon={player} onPick={useMove} onBack={() => setMenu("root")} />
+                    <MoveMenu mon={player} onPick={useMove} onStruggle={useStruggle} onBack={() => setMenu("root")} />
                 ) : menu === "bag" ? (
                     <BagMenu isWild={battle.isWild} mon={player} onUse={useItem} onThrow={throwBall} onBack={() => setMenu("root")} />
                 ) : (
@@ -213,19 +215,31 @@ function MonSprite({ mon, facing, alive, hitKey }: { mon: BattleMon; facing: "fr
     )
 }
 
-function MoveMenu({ mon, onPick, onBack }: { mon: BattleMon; onPick: (i: number) => void; onBack: () => void }) {
+function MoveMenu({ mon, onPick, onStruggle, onBack }: { mon: BattleMon; onPick: (i: number) => void; onStruggle: () => void; onBack: () => void }) {
+    const reps = usePlayer().reps
+    // Les PP sont illimités : chaque attaque coûte des reps (PP bas = plus cher).
+    const costs = mon.moves.map((slot) => moveCostReps(slot.ppMax, mon.level))
+    const canAffordAny = costs.some((c) => c <= reps)
     return (
         <div style={S.menuGrid}>
+            <div style={{ gridColumn: "1 / -1", fontSize: 11, fontWeight: 700, textAlign: "right", opacity: 0.8 }}>💪 {reps} reps</div>
             {mon.moves.map((slot, i) => {
                 const m = getMove(slot.moveId)
-                const dead = slot.pp <= 0
+                const cost = costs[i]
+                const broke = cost > reps
                 return (
-                    <button key={i} style={dead ? S.btnDim : S.btn} disabled={dead} onClick={() => onPick(i)}>
-                        {m?.name ?? slot.moveId} <span style={S.pp}>{slot.pp}/{slot.ppMax}</span>
+                    <button key={i} style={broke ? S.btnDim : S.btn} disabled={broke} onClick={() => onPick(i)}>
+                        {m?.name ?? slot.moveId} <span style={S.pp}>💪{cost}</span>
                     </button>
                 )
             })}
             {Array.from({ length: Math.max(0, 4 - mon.moves.length) }).map((_, i) => <span key={`e${i}`} />)}
+            {/* Secours gratuit anti soft-lock : visible quand aucune attaque n'est payable. */}
+            {!canAffordAny && (
+                <button style={{ ...S.btn, gridColumn: "1 / -1", background: "#f0d8a0" }} onClick={onStruggle}>
+                    Charge Désespérée <span style={S.pp}>gratuit · recul</span>
+                </button>
+            )}
             <button style={{ ...S.btnDim, gridColumn: "1 / -1" }} onClick={onBack}>← RETOUR</button>
         </div>
     )

@@ -15,11 +15,12 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance } from "../battle/types"
 import { markSeen, markCaught } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, healAllTeam } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, healAllTeam, spendReps } from "./playerStore"
 import { toMonInstance } from "../storage/save"
 import { evolveTeam } from "../progression/evolveTeam"
 import { persistYellowSave } from "./saveManager"
 import { QUOTA_CAPTURE_BONUS } from "../data/captureConfig"
+import { moveCostReps, STRUGGLE_INDEX } from "../data/combatCostConfig"
 import type { EvolutionResult } from "../battle/evolution"
 
 /** Espèce de l'adversaire actif (pour synchroniser le Pokédex). */
@@ -98,12 +99,25 @@ export function startTrainerBattle(
     setStore({ battle, evolutions: [], trainer, whiteout: false })
 }
 
+/** Coût en reps de l'attaque du Daemon actif (0 si introuvable). */
+function moveCostRepsForAction(b: BattleState, moveIndex: number): number {
+    const me = b.player.team[b.player.activeIndex]
+    const slot = me?.moves[moveIndex]
+    if (!me || !slot) return 0
+    return moveCostReps(slot.ppMax, me.level)
+}
+
 export function submitPlayerAction(action: PlayerAction) {
     if (!storeState.battle) return
     // Lancer une Ball consomme l'objet de l'inventaire (réussite ou non).
     if (action.kind === "ball" && !consumeItem(action.itemId)) return
     // Utiliser un objet de soin le consomme aussi.
     if (action.kind === "item" && !consumeItem(action.itemId)) return
+    // Attaque normale : coûte des reps (la Charge Désespérée, index sentinelle, est gratuite).
+    if (action.kind === "move" && action.moveIndex !== STRUGGLE_INDEX) {
+        const cost = moveCostRepsForAction(storeState.battle, action.moveIndex)
+        if (cost > 0 && !spendReps(cost)) return // solde insuffisant → action refusée (l'UI grise déjà)
+    }
     const next = resolveTurn(storeState.battle, action)
     syncPokedex(next) // vu (changement d'adversaire) + capturé le cas échéant
     setStore({ battle: next, evolutions: [], trainer: storeState.trainer, whiteout: false })
