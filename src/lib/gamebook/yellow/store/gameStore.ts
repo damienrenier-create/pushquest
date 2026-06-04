@@ -17,10 +17,12 @@ import { YELLOW_MAPS } from "../maps"
 import type { YellowMapData } from "../maps"
 import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
-import { getSnapshot as getBattleSnapshot, startWildBattle } from "./battleStore"
-import { getPlayer as getPlayerSave, healAllTeam } from "./playerStore"
+import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle } from "./battleStore"
+import { getPlayer as getPlayerSave, healAllTeam, isTrainerDefeated } from "./playerStore"
 import { persistYellowSave } from "./saveManager"
 import { rollWildEncounter } from "../data/encounters"
+import { getTrainer } from "../data/trainers"
+import { createMonInstance } from "../battle/factory"
 
 export interface ActiveDialogue {
     npcId: string
@@ -37,6 +39,7 @@ interface GameStore {
     shopOpen: boolean // boutique ouverte (vendeur)
     hydrated: boolean // true une fois que l'état serveur a été chargé
     stepFrame: 0 | 1 // alterne à chaque déplacement réel → anime les jambes du sprite
+    pendingTrainerId: string | null // dresseur dont l'intro est en cours → combat à la fermeture
 
     // === ACTIONS ===
     move: (dir: Direction) => void
@@ -69,6 +72,24 @@ function scheduleSave(player: PlayerState) {
     }, 3000)
 }
 
+// Lance un combat de dresseur. Renvoie un dialogue à afficher (équipe K.O.) ou null
+// si le combat a bien démarré. L'équipe ennemie est fabriquée à partir du registre.
+function tryLaunchTrainer(trainerId: string): ActiveDialogue | null {
+    const trainer = getTrainer(trainerId)
+    if (!trainer) return null
+    const team = getPlayerSave().team
+    if (!team.some((m) => m.currentHp > 0)) {
+        return {
+            npcId: trainerId, npcName: trainer.name, lineIndex: 0,
+            lines: ["Tes Daemons sont tous K.O. !", "Soigne-les au Centre avant de te battre."],
+        }
+    }
+    const enemyTeam = trainer.team.map((s) => createMonInstance(s.speciesId, s.level, { owned: false }))
+    const seed = Math.floor(Math.random() * 1e9) >>> 0
+    startTrainerBattle(team, enemyTeam, seed, { trainerId, reward: trainer.reward, aiLevel: trainer.aiLevel })
+    return null
+}
+
 // Spawn par défaut : VILLE JAUNE = Viridian City 45×40 (scale natif FireRed),
 // entrée sud (Route 1) centre-bas pour explorer la ville.
 const DEFAULT_SPAWN = { x: 22, y: 38 }
@@ -80,6 +101,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     shopOpen: false,
     hydrated: false,
     stepFrame: 0,
+    pendingTrainerId: null,
 
     move: (dir) => {
         const { player, map, dialogue } = get()
@@ -134,11 +156,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
     pressA: () => {
         const { player, dialogue } = get()
 
+        // Pendant un combat : l'UI de combat gère les entrées, on ignore ici.
+        if (getBattleSnapshot().battle) return
+
         // Si un dialogue est ouvert : avancer à la ligne suivante (ou fermer si dernière).
         if (dialogue) {
             const nextIndex = dialogue.lineIndex + 1
             if (nextIndex >= dialogue.lines.length) {
-                set({ dialogue: null })
+                // Fin d'un dialogue : si c'était l'intro d'un dresseur, on lance le combat.
+                const pid = get().pendingTrainerId
+                if (pid) {
+                    set({ dialogue: tryLaunchTrainer(pid), pendingTrainerId: null })
+                } else {
+                    set({ dialogue: null })
+                }
             } else {
                 set({ dialogue: { ...dialogue, lineIndex: nextIndex } })
             }
@@ -170,6 +201,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
+        // Dresseur : intro + combat (ou réplique de défaite s'il est déjà battu).
+        const trainer = getTrainer(npc.id)
+        if (trainer) {
+            if (isTrainerDefeated(trainer.id)) {
+                set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: trainer.defeat, lineIndex: 0 } })
+            } else {
+                set({
+                    dialogue: { npcId: npc.id, npcName: npc.name, lines: trainer.intro, lineIndex: 0 },
+                    pendingTrainerId: trainer.id,
+                })
+            }
+            return
+        }
+
         set({
             dialogue: {
                 npcId: npc.id,
@@ -181,8 +226,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
     },
 
     pressB: () => {
-        const { dialogue } = get()
-        if (dialogue) set({ dialogue: null })
+        const { dialogue, pendingTrainerId } = get()
+        if (!dialogue) return
+        // Un défi de dresseur ne se refuse pas : fermer l'intro lance quand même le combat.
+        if (pendingTrainerId) {
+            set({ dialogue: tryLaunchTrainer(pendingTrainerId), pendingTrainerId: null })
+        } else {
+            set({ dialogue: null })
+        }
     },
 
     setMap: (mapId, spawnX, spawnY) => {

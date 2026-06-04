@@ -15,12 +15,14 @@ export interface YellowSave {
     /** Monnaie du chapitre (gagnée en combat, dépensée à la boutique). */
     money: number
     pokedex: { seen: string[]; caught: string[] }
+    /** Ids des dresseurs déjà battus (ne se recombattent pas). */
+    defeatedTrainers: string[]
 }
 
 export const SAVE_VERSION = 1
 
 export function emptySave(): YellowSave {
-    return { version: SAVE_VERSION, team: [], pc: [], items: {}, money: 0, pokedex: { seen: [], caught: [] } }
+    return { version: SAVE_VERSION, team: [], pc: [], items: {}, money: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [] }
 }
 
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -85,6 +87,7 @@ export function parseSave(raw: unknown): YellowSave {
         items,
         money: typeof o.money === "number" ? Math.max(0, Math.floor(o.money)) : 0,
         pokedex: { seen: strArr(dex.seen), caught: strArr(dex.caught) },
+        defeatedTrainers: strArr(o.defeatedTrainers),
     }
 }
 

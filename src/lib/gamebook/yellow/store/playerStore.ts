@@ -16,9 +16,11 @@ interface PlayerState {
     pc: MonInstance[]
     items: Record<string, number>
     money: number
+    /** Ids des dresseurs déjà battus. */
+    defeatedTrainers: string[]
 }
 
-let st: PlayerState = { team: [], pc: [], items: {}, money: 0 }
+let st: PlayerState = { team: [], pc: [], items: {}, money: 0, defeatedTrainers: [] }
 const listeners = new Set<() => void>()
 
 function emit() { for (const l of listeners) l() }
@@ -31,8 +33,19 @@ export function subscribePlayer(l: () => void): () => void {
 export function getPlayer(): PlayerState { return st }
 
 export function hydratePlayer(p: Partial<PlayerState>) {
-    st = { team: p.team ?? [], pc: p.pc ?? [], items: p.items ?? {}, money: p.money ?? 0 }
+    st = { team: p.team ?? [], pc: p.pc ?? [], items: p.items ?? {}, money: p.money ?? 0, defeatedTrainers: p.defeatedTrainers ?? [] }
     emit()
+}
+
+/** Marque un dresseur comme battu (idempotent). */
+export function markTrainerDefeated(trainerId: string) {
+    if (st.defeatedTrainers.includes(trainerId)) return
+    st = { ...st, defeatedTrainers: [...st.defeatedTrainers, trainerId] }
+    emit()
+}
+
+export function isTrainerDefeated(trainerId: string): boolean {
+    return st.defeatedTrainers.includes(trainerId)
 }
 
 /** Remplace l'équipe (utilisé pour resynchroniser après un combat : XP/PV/niveaux). */

@@ -18,7 +18,7 @@ export async function loadYellowSave(): Promise<void> {
         if (!r.ok) { loaded = true; return }
         const j = await r.json()
         const save = parseSave(j?.save)
-        hydratePlayer({ team: save.team, pc: save.pc, items: save.items })
+        hydratePlayer({ team: save.team, pc: save.pc, items: save.items, money: save.money, defeatedTrainers: save.defeatedTrainers })
         hydratePokedex({ seen: save.pokedex.seen, caught: save.pokedex.caught })
     } catch {
         /* hors-ligne : on garde l'état mémoire */
@@ -30,7 +30,7 @@ export async function loadYellowSave(): Promise<void> {
 function snapshot(): YellowSave {
     const p = getPlayer()
     const d = getPokedex()
-    return { version: SAVE_VERSION, team: p.team, pc: p.pc, items: p.items, money: p.money, pokedex: { seen: d.seen, caught: d.caught } }
+    return { version: SAVE_VERSION, team: p.team, pc: p.pc, items: p.items, money: p.money, pokedex: { seen: d.seen, caught: d.caught }, defeatedTrainers: p.defeatedTrainers }
 }
 
 /** Sauvegarde débouncée (ne fait rien tant que la save initiale n'est pas chargée). */

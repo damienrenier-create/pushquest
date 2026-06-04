@@ -7,6 +7,22 @@
 // vivent chacun dans leur bâtiment intérieur.
 
 import type { NpcDefinition } from "@/lib/gamebook/npcs"
+import { TRAINERS } from "./data/trainers"
+
+// PNJ-dresseurs dérivés du registre des dresseurs (source unique pour la position).
+// gameStore.pressA les intercepte par id (via getTrainer) pour lancer le combat ;
+// dialoguesAfter ne sert que de repli si jamais l'interception ne s'applique pas.
+const TRAINER_NPCS: NpcDefinition[] = TRAINERS.map((t) => ({
+    id: t.id,
+    name: t.name,
+    mapId: t.mapId,
+    kind: "static",
+    interaction: "interactive",
+    sprite: t.sprite,
+    initialX: t.x,
+    initialY: t.y,
+    dialoguesAfter: t.intro,
+}))
 
 export const YELLOW_NPCS: NpcDefinition[] = [
     // v4.y — PNJ "ARCHITECTE" (👷, ex-"professeur" relique du tout début) RETIRÉ :
@@ -97,4 +113,7 @@ export const YELLOW_NPCS: NpcDefinition[] = [
             "🚧 Combats à venir. Affûte-toi en attendant.",
         ],
     },
+
+    // === DRESSEURS (combats) — dérivés de data/trainers.ts ===
+    ...TRAINER_NPCS,
 ]
