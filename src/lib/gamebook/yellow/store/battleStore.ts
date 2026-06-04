@@ -18,6 +18,7 @@ import { getPlayer, setTeam, addCaught, consumeItem, addMoney } from "./playerSt
 import { toMonInstance } from "../storage/save"
 import { evolveTeam } from "../progression/evolveTeam"
 import { persistYellowSave } from "./saveManager"
+import type { EvolutionResult } from "../battle/evolution"
 
 /** Espèce de l'adversaire actif (pour synchroniser le Pokédex). */
 function enemyActiveSpeciesId(b: BattleState): string | null {
@@ -35,9 +36,11 @@ function syncPokedex(b: BattleState) {
 
 interface BattleStoreState {
     battle: BattleState | null
+    /** Évolutions à jouer (cinématique post-combat). */
+    evolutions: EvolutionResult[]
 }
 
-let storeState: BattleStoreState = { battle: null }
+let storeState: BattleStoreState = { battle: null, evolutions: [] }
 const listeners = new Set<() => void>()
 
 function emit() {
@@ -66,13 +69,13 @@ export function getSnapshot(): BattleStoreState {
 export function startWildBattle(playerTeam: MonInstance[], enemyTeam: MonInstance[], seed: number) {
     const battle = createBattle(playerTeam, enemyTeam, { isWild: true, seed })
     syncPokedex(battle) // adversaire "vu" dès la rencontre
-    setStore({ battle })
+    setStore({ battle, evolutions: [] })
 }
 
 export function startTrainerBattle(playerTeam: MonInstance[], enemyTeam: MonInstance[], seed: number) {
     const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed })
     syncPokedex(battle)
-    setStore({ battle })
+    setStore({ battle, evolutions: [] })
 }
 
 export function submitPlayerAction(action: PlayerAction) {
@@ -81,7 +84,7 @@ export function submitPlayerAction(action: PlayerAction) {
     if (action.kind === "ball" && !consumeItem(action.itemId)) return
     const next = resolveTurn(storeState.battle, action)
     syncPokedex(next) // vu (changement d'adversaire) + capturé le cas échéant
-    setStore({ battle: next })
+    setStore({ battle: next, evolutions: [] })
     if (next.phase === "ended") finishBattle(next)
 }
 
@@ -109,13 +112,20 @@ function finishBattle(b: BattleState) {
         for (const e of evos) markCaught(e.toId) // la nouvelle forme entre au Pokédex
         setTeam([...team])
     }
+    // Expose les évolutions pour la cinématique post-combat (jouée après "QUITTER").
+    setStore({ battle: b, evolutions: evos })
 
     // 4) Sauvegarde persistante (DB).
     persistYellowSave()
 }
 
 export function endBattle() {
-    setStore({ battle: null })
+    // On garde les évolutions : la cinématique se joue une fois le combat quitté.
+    setStore({ battle: null, evolutions: storeState.evolutions })
+}
+
+export function clearEvolutions() {
+    setStore({ battle: storeState.battle, evolutions: [] })
 }
 
 // ============================================================
@@ -127,5 +137,13 @@ export function useBattle(): BattleState | null {
         subscribe,
         () => getSnapshot().battle,
         () => getSnapshot().battle,
+    )
+}
+
+export function useEvolutions(): EvolutionResult[] {
+    return useSyncExternalStore(
+        subscribe,
+        () => getSnapshot().evolutions,
+        () => getSnapshot().evolutions,
     )
 }

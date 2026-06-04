@@ -13,14 +13,19 @@ import { useRouter } from "next/navigation"
 import GameBoyShell from "./GameBoyShell"
 import MapView from "./MapView"
 import BattleScreen from "./battle/BattleScreen"
+import EvolutionScreen from "./battle/EvolutionScreen"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
-import { useBattle } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, useEvolutions, clearEvolutions } from "@/lib/gamebook/yellow/store/battleStore"
 import { loadYellowSave, initAutosave } from "@/lib/gamebook/yellow/store/saveManager"
 import { getPlayer, setTeam, usePlayer, addItem, addMoney, spendMoney } from "@/lib/gamebook/yellow/store/playerStore"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { ITEMS } from "@/lib/gamebook/yellow/data/items"
+import { getMove } from "@/lib/gamebook/yellow/data/moves"
+import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
+import { expForLevel } from "@/lib/gamebook/yellow/battle/xp"
+import type { MonInstance } from "@/lib/gamebook/yellow/battle/types"
 
 export default function YellowDevClient() {
     const move = useGameStore((s) => s.move)
@@ -31,9 +36,11 @@ export default function YellowDevClient() {
     const shopOpen = useGameStore((s) => s.shopOpen)
     const closeShop = useGameStore((s) => s.closeShop)
     const battle = useBattle()
+    const evolutions = useEvolutions()
     const router = useRouter()
     const player = usePlayer()
     const [menu, setMenu] = useState<"none" | "pause" | "team">("none")
+    const [selected, setSelected] = useState<MonInstance | null>(null)
 
     // Au mount : charge l'état du joueur depuis le serveur (DB Neon).
     // Si le joueur n'a jamais joué, on garde le state par défaut (déjà set
@@ -132,7 +139,7 @@ export default function YellowDevClient() {
                             const max = maxHpOf(m)
                             const pct = Math.max(0, Math.min(100, (m.currentHp / max) * 100))
                             return (
-                                <div key={m.uid} style={teamRowStyle}>
+                                <div key={m.uid} style={{ ...teamRowStyle, cursor: "pointer" }} onClick={() => setSelected(m)} title="Voir la fiche">
                                     <span style={{ fontWeight: 700, flex: 1 }}>{displayName(m)}</span>
                                     <span style={{ opacity: 0.6, fontSize: 10 }}>{sp?.types.join("/")}</span>
                                     <span style={{ width: 38, textAlign: "right" }}>N.{m.level}</span>
@@ -175,6 +182,50 @@ export default function YellowDevClient() {
                         <button style={menuBtnDimStyle} onClick={closeShop}>← QUITTER</button>
                     </div>
                 </div>
+            )}
+
+            {/* Fiche / résumé d'un Daemon (depuis l'Équipe) */}
+            {selected && (() => {
+                const sp = getSpecies(selected.speciesId)
+                const stats = sp ? fullStats(selected, sp) : null
+                const toNext = expForLevel(selected.level + 1) - Math.max(selected.exp, expForLevel(selected.level))
+                return (
+                    <div style={menuOverlayStyle} onClick={() => setSelected(null)}>
+                        <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                            <div style={{ ...menuTitleStyle, display: "flex", justifyContent: "space-between" }}>
+                                <span>{displayName(selected).toUpperCase()}</span><span>N.{selected.level}</span>
+                            </div>
+                            <div style={{ fontSize: 11, opacity: 0.7 }}>{sp?.types.join(" / ")} · {sp?.name}</div>
+                            {stats && (
+                                <div style={{ fontSize: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3px 12px", margin: "8px 0" }}>
+                                    <span>PV : {selected.currentHp}/{stats.hp}</span>
+                                    <span>Vitesse : {stats.spe}</span>
+                                    <span>Attaque : {stats.atk}</span>
+                                    <span>Défense : {stats.def}</span>
+                                    <span>Spécial : {stats.spc}</span>
+                                    <span>Statut : {selected.status === "NONE" ? "—" : selected.status}</span>
+                                </div>
+                            )}
+                            <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 6 }}>Niveau suivant dans ~{Math.max(0, toNext).toLocaleString("fr-FR")} XP</div>
+                            <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 2 }}>ATTAQUES</div>
+                            {selected.moves.map((mv) => {
+                                const m = getMove(mv.moveId)
+                                return (
+                                    <div key={mv.moveId} style={{ fontSize: 11, display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
+                                        <span>{m?.name ?? mv.moveId} <span style={{ opacity: 0.55 }}>({m?.type ?? "?"})</span></span>
+                                        <span style={{ opacity: 0.7 }}>{mv.pp}/{mv.ppMax} PP</span>
+                                    </div>
+                                )
+                            })}
+                            <button style={{ ...menuBtnDimStyle, marginTop: 8 }} onClick={() => setSelected(null)}>← RETOUR</button>
+                        </div>
+                    </div>
+                )
+            })()}
+
+            {/* Cinématique d'évolution (post-combat, après QUITTER) */}
+            {!battle && evolutions.length > 0 && (
+                <EvolutionScreen evolutions={evolutions} onDone={clearEvolutions} />
             )}
         </div>
     )
