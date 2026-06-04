@@ -141,13 +141,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
         if (moved || dirChanged) scheduleSave(next)
 
         // Rencontre sauvage : marcher sur des hautes herbes (zone à rencontres).
-        // Le biome (proximité eau/montagne/sapins) et le niveau du lead modulent le tirage.
-        // TODO: brancher `player` sur les vraies stats PushQuest (pompes/squats/quota) — méta.
+        // Le biome (proximité eau/montagne/sapins), le niveau du lead et les stats
+        // d'effort du jour (pompes/squats/quota, fetchées au chargement) modulent le tirage.
         if (moved && map.tiles[next.posY]?.[next.posX] === "grassTall") {
             const team = getPlayerSave().team
             const lead = team.find((m) => m.currentHp > 0)
             if (lead) {
-                const wild = rollWildEncounter({ mapId: next.mapId, x: next.posX, y: next.posY, leadLevel: lead.level })
+                const wild = rollWildEncounter({
+                    mapId: next.mapId, x: next.posX, y: next.posY, leadLevel: lead.level,
+                    player: getPlayerSave().wildCtx ?? undefined,
+                })
                 if (wild) {
                     const seed = Math.floor(Math.random() * 1e9) >>> 0
                     startWildBattle(team, [wild], seed)

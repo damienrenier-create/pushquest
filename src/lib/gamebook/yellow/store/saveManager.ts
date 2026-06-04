@@ -3,7 +3,7 @@
 // Nexus Jaune Éclair — pont entre les stores (joueur + Pokédex) et l'API de save.
 // Charge au démarrage, puis auto-sauvegarde (débouncé) à chaque changement.
 
-import { getPlayer, hydratePlayer, subscribePlayer } from "./playerStore"
+import { getPlayer, hydratePlayer, subscribePlayer, setWildCtx } from "./playerStore"
 import { getPokedex, hydratePokedex, subscribePokedex } from "./pokedexStore"
 import { parseSave, type YellowSave, SAVE_VERSION } from "../storage/save"
 
@@ -25,6 +25,11 @@ export async function loadYellowSave(): Promise<void> {
     } finally {
         loaded = true
     }
+    // Stats d'effort du jour (module les rencontres) — best-effort, non bloquant.
+    try {
+        const r = await fetch("/api/gamebook/yellow/player-stats")
+        if (r.ok) { const j = await r.json(); if (j?.ctx) setWildCtx(j.ctx) }
+    } catch { /* neutre si indisponible */ }
 }
 
 function snapshot(): YellowSave {

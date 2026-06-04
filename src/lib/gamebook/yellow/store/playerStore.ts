@@ -8,6 +8,7 @@ import { useSyncExternalStore } from "react"
 import type { MonInstance } from "../battle/types"
 import { fullStats } from "../battle/stats"
 import { getSpecies } from "../data/species"
+import type { WildPlayerCtx } from "../data/encounters"
 
 export const TEAM_MAX = 6
 
@@ -18,9 +19,11 @@ interface PlayerState {
     money: number
     /** Ids des dresseurs déjà battus. */
     defeatedTrainers: string[]
+    /** Stats d'effort du jour (PushQuest) qui modulent les rencontres. Null = neutre. */
+    wildCtx: WildPlayerCtx | null
 }
 
-let st: PlayerState = { team: [], pc: [], items: {}, money: 0, defeatedTrainers: [] }
+let st: PlayerState = { team: [], pc: [], items: {}, money: 0, defeatedTrainers: [], wildCtx: null }
 const listeners = new Set<() => void>()
 
 function emit() { for (const l of listeners) l() }
@@ -33,7 +36,16 @@ export function subscribePlayer(l: () => void): () => void {
 export function getPlayer(): PlayerState { return st }
 
 export function hydratePlayer(p: Partial<PlayerState>) {
-    st = { team: p.team ?? [], pc: p.pc ?? [], items: p.items ?? {}, money: p.money ?? 0, defeatedTrainers: p.defeatedTrainers ?? [] }
+    st = {
+        team: p.team ?? [], pc: p.pc ?? [], items: p.items ?? {}, money: p.money ?? 0,
+        defeatedTrainers: p.defeatedTrainers ?? [], wildCtx: p.wildCtx ?? st.wildCtx ?? null,
+    }
+    emit()
+}
+
+/** Renseigne les stats d'effort du jour (fetchées au chargement). */
+export function setWildCtx(ctx: WildPlayerCtx | null) {
+    st = { ...st, wildCtx: ctx }
     emit()
 }
 
