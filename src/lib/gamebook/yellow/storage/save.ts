@@ -12,13 +12,15 @@ export interface YellowSave {
     /** Réserve (PC) au-delà des 6 de l'équipe. */
     pc: MonInstance[]
     items: Record<string, number>
+    /** Monnaie du chapitre (gagnée en combat, dépensée à la boutique). */
+    money: number
     pokedex: { seen: string[]; caught: string[] }
 }
 
 export const SAVE_VERSION = 1
 
 export function emptySave(): YellowSave {
-    return { version: SAVE_VERSION, team: [], pc: [], items: {}, pokedex: { seen: [], caught: [] } }
+    return { version: SAVE_VERSION, team: [], pc: [], items: {}, money: 0, pokedex: { seen: [], caught: [] } }
 }
 
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -81,6 +83,7 @@ export function parseSave(raw: unknown): YellowSave {
         team,
         pc,
         items,
+        money: typeof o.money === "number" ? Math.max(0, Math.floor(o.money)) : 0,
         pokedex: { seen: strArr(dex.seen), caught: strArr(dex.caught) },
     }
 }

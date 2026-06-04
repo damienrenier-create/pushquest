@@ -34,6 +34,7 @@ interface GameStore {
     player: PlayerState
     map: YellowMapData
     dialogue: ActiveDialogue | null
+    shopOpen: boolean // boutique ouverte (vendeur)
     hydrated: boolean // true une fois que l'état serveur a été chargé
     stepFrame: 0 | 1 // alterne à chaque déplacement réel → anime les jambes du sprite
 
@@ -43,6 +44,7 @@ interface GameStore {
     pressB: () => void
     setMap: (mapId: string, spawnX: number, spawnY: number) => void
     hydrate: (loaded: PlayerState) => void
+    closeShop: () => void
 }
 
 // === PERSISTANCE SERVEUR ===
@@ -75,13 +77,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
     player: createInitialPlayer(YELLOW_ENTRANCE_MAP_ID, DEFAULT_SPAWN.x, DEFAULT_SPAWN.y, "up"),
     map: YELLOW_MAPS[YELLOW_ENTRANCE_MAP_ID],
     dialogue: null,
+    shopOpen: false,
     hydrated: false,
     stepFrame: 0,
 
     move: (dir) => {
         const { player, map, dialogue } = get()
-        // Mouvement bloqué pendant un dialogue ou un combat.
-        if (dialogue) return
+        // Mouvement bloqué pendant un dialogue, une boutique ou un combat.
+        if (dialogue || get().shopOpen) return
         if (getBattleSnapshot().battle) return
 
         const next = tryMove(player, dir, map)
@@ -161,6 +164,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
+        // Vendeur : ouvre la boutique.
+        if (npc.id === "y_vendeur") {
+            set({ shopOpen: true })
+            return
+        }
+
         set({
             dialogue: {
                 npcId: npc.id,
@@ -191,4 +200,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
         const map = YELLOW_MAPS[loaded.mapId] ?? YELLOW_MAPS[YELLOW_ENTRANCE_MAP_ID]
         set({ player: loaded, map, hydrated: true })
     },
+
+    closeShop: () => set({ shopOpen: false }),
 }))

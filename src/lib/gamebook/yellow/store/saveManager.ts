@@ -30,7 +30,7 @@ export async function loadYellowSave(): Promise<void> {
 function snapshot(): YellowSave {
     const p = getPlayer()
     const d = getPokedex()
-    return { version: SAVE_VERSION, team: p.team, pc: p.pc, items: p.items, pokedex: { seen: d.seen, caught: d.caught } }
+    return { version: SAVE_VERSION, team: p.team, pc: p.pc, items: p.items, money: p.money, pokedex: { seen: d.seen, caught: d.caught } }
 }
 
 /** Sauvegarde débouncée (ne fait rien tant que la save initiale n'est pas chargée). */

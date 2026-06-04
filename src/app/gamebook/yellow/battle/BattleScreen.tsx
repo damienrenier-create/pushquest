@@ -10,6 +10,7 @@ import { speciesOf, maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/en
 import type { BattleMon } from "@/lib/gamebook/yellow/battle/types"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { ITEMS } from "@/lib/gamebook/yellow/data/items"
+import { usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
 
 type Menu = "root" | "moves" | "switch" | "ball"
 
@@ -162,11 +163,19 @@ function SwitchMenu({ team, activeIndex, onPick, onBack, forced }: {
 }
 
 function BallMenu({ onPick, onBack }: { onPick: (id: string) => void; onBack: () => void }) {
-    const balls = Object.values(ITEMS).filter((it) => it.category === "BALL")
+    const items = usePlayer().items
+    const balls = Object.values(ITEMS).filter((it) => it.category === "BALL" && (items[it.id] ?? 0) > 0)
     return (
         <div style={S.menuGrid}>
+            {balls.length === 0 && (
+                <div style={{ gridColumn: "1 / -1", fontSize: 11, fontStyle: "italic", opacity: 0.7, padding: 4 }}>
+                    Aucune Ball ! Va en acheter à la boutique.
+                </div>
+            )}
             {balls.map((b) => (
-                <button key={b.id} style={S.btn} onClick={() => onPick(b.id)}>{b.name}</button>
+                <button key={b.id} style={S.btn} onClick={() => onPick(b.id)}>
+                    {b.name} <span style={S.pp}>×{items[b.id]}</span>
+                </button>
             ))}
             <button style={{ ...S.btnDim, gridColumn: "1 / -1" }} onClick={onBack}>← RETOUR</button>
         </div>

@@ -14,7 +14,7 @@ import {
 } from "../battle/engine"
 import type { MonInstance } from "../battle/types"
 import { markSeen, markCaught } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, addMoney } from "./playerStore"
 import { toMonInstance } from "../storage/save"
 import { evolveTeam } from "../progression/evolveTeam"
 import { persistYellowSave } from "./saveManager"
@@ -77,6 +77,8 @@ export function startTrainerBattle(playerTeam: MonInstance[], enemyTeam: MonInst
 
 export function submitPlayerAction(action: PlayerAction) {
     if (!storeState.battle) return
+    // Lancer une Ball consomme l'objet de l'inventaire (réussite ou non).
+    if (action.kind === "ball" && !consumeItem(action.itemId)) return
     const next = resolveTurn(storeState.battle, action)
     syncPokedex(next) // vu (changement d'adversaire) + capturé le cas échéant
     setStore({ battle: next })
@@ -92,6 +94,12 @@ function finishBattle(b: BattleState) {
     if (b.outcome === "caught") {
         const wild = b.enemy.team[b.enemy.activeIndex]
         if (wild) addCaught(toMonInstance(wild))
+    }
+
+    // 2bis) Argent de victoire (prix de combat).
+    if (b.outcome === "win") {
+        const foe = b.enemy.team[b.enemy.activeIndex]
+        if (foe) addMoney(foe.level * 6)
     }
 
     // 3) Évolutions post-combat (mute l'équipe → re-set pour notifier + Pokédex).

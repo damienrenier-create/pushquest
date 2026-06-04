@@ -16,10 +16,11 @@ import BattleScreen from "./battle/BattleScreen"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { useBattle } from "@/lib/gamebook/yellow/store/battleStore"
 import { loadYellowSave, initAutosave } from "@/lib/gamebook/yellow/store/saveManager"
-import { getPlayer, setTeam, usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, addItem, addMoney, spendMoney } from "@/lib/gamebook/yellow/store/playerStore"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
+import { ITEMS } from "@/lib/gamebook/yellow/data/items"
 
 export default function YellowDevClient() {
     const move = useGameStore((s) => s.move)
@@ -27,6 +28,8 @@ export default function YellowDevClient() {
     const pressB = useGameStore((s) => s.pressB)
     const hydrate = useGameStore((s) => s.hydrate)
     const hydrated = useGameStore((s) => s.hydrated)
+    const shopOpen = useGameStore((s) => s.shopOpen)
+    const closeShop = useGameStore((s) => s.closeShop)
     const battle = useBattle()
     const router = useRouter()
     const player = usePlayer()
@@ -54,6 +57,8 @@ export default function YellowDevClient() {
                     createMonInstance("flordaemon", 16, { owned: true, nickname: "Flora" }),
                     createMonInstance("galet", 12, { owned: true }),
                 ])
+                addItem("poke_ball", 5)
+                addMoney(800)
             }
             initAutosave()
         })()
@@ -139,6 +144,35 @@ export default function YellowDevClient() {
                         })}
                         {player.pc.length > 0 && <div style={{ fontSize: 10, opacity: 0.5, marginTop: 6 }}>PC : {player.pc.length} Daemon(s) en réserve</div>}
                         <button style={menuBtnDimStyle} onClick={() => setMenu("pause")}>← RETOUR</button>
+                    </div>
+                </div>
+            )}
+
+            {/* Boutique (vendeur) */}
+            {!battle && shopOpen && (
+                <div style={menuOverlayStyle} onClick={closeShop}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={{ ...menuTitleStyle, display: "flex", justifyContent: "space-between" }}>
+                            <span>BOUTIQUE</span><span>💰 {player.money}</span>
+                        </div>
+                        {Object.values(ITEMS).filter((it) => it.price > 0).map((it) => {
+                            const owned = player.items[it.id] ?? 0
+                            const afford = player.money >= it.price
+                            return (
+                                <button
+                                    key={it.id}
+                                    style={afford ? menuBtnStyle : menuBtnDimStyle}
+                                    disabled={!afford}
+                                    onClick={() => { if (spendMoney(it.price)) addItem(it.id, 1) }}
+                                >
+                                    <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                        <span>{it.name}{owned > 0 ? ` (×${owned})` : ""}</span>
+                                        <span>{it.price}💰</span>
+                                    </span>
+                                </button>
+                            )
+                        })}
+                        <button style={menuBtnDimStyle} onClick={closeShop}>← QUITTER</button>
                     </div>
                 </div>
             )}
