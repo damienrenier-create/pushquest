@@ -14,6 +14,10 @@ import {
 } from "../battle/engine"
 import type { MonInstance } from "../battle/types"
 import { markSeen, markCaught } from "./pokedexStore"
+import { getPlayer, setTeam, addCaught } from "./playerStore"
+import { toMonInstance } from "../storage/save"
+import { evolveTeam } from "../progression/evolveTeam"
+import { persistYellowSave } from "./saveManager"
 
 /** Espèce de l'adversaire actif (pour synchroniser le Pokédex). */
 function enemyActiveSpeciesId(b: BattleState): string | null {
@@ -76,6 +80,30 @@ export function submitPlayerAction(action: PlayerAction) {
     const next = resolveTurn(storeState.battle, action)
     syncPokedex(next) // vu (changement d'adversaire) + capturé le cas échéant
     setStore({ battle: next })
+    if (next.phase === "ended") finishBattle(next)
+}
+
+/** Fin de combat : resync équipe (XP/PV/niveaux), capture, évolutions, sauvegarde. */
+function finishBattle(b: BattleState) {
+    // 1) Resynchronise l'équipe persistante depuis l'état de combat.
+    setTeam(b.player.team.map(toMonInstance))
+
+    // 2) Capture → ajoute le sauvage à l'équipe/PC.
+    if (b.outcome === "caught") {
+        const wild = b.enemy.team[b.enemy.activeIndex]
+        if (wild) addCaught(toMonInstance(wild))
+    }
+
+    // 3) Évolutions post-combat (mute l'équipe → re-set pour notifier + Pokédex).
+    const team = getPlayer().team
+    const evos = evolveTeam(team)
+    if (evos.length > 0) {
+        for (const e of evos) markCaught(e.toId) // la nouvelle forme entre au Pokédex
+        setTeam([...team])
+    }
+
+    // 4) Sauvegarde persistante (DB).
+    persistYellowSave()
 }
 
 export function endBattle() {

@@ -1,0 +1,61 @@
+// src/lib/gamebook/yellow/store/playerStore.ts
+//
+// Nexus Jaune Éclair — état PERSISTANT du joueur : équipe (max 6), PC (réserve),
+// objets. Store externe (useSyncExternalStore). Source de vérité hors combat ;
+// le combat travaille sur une COPIE de l'équipe et resynchronise à la fin.
+
+import { useSyncExternalStore } from "react"
+import type { MonInstance } from "../battle/types"
+
+export const TEAM_MAX = 6
+
+interface PlayerState {
+    team: MonInstance[]
+    pc: MonInstance[]
+    items: Record<string, number>
+}
+
+let st: PlayerState = { team: [], pc: [], items: {} }
+const listeners = new Set<() => void>()
+
+function emit() { for (const l of listeners) l() }
+
+export function subscribePlayer(l: () => void): () => void {
+    listeners.add(l)
+    return () => { listeners.delete(l) }
+}
+
+export function getPlayer(): PlayerState { return st }
+
+export function hydratePlayer(p: Partial<PlayerState>) {
+    st = { team: p.team ?? [], pc: p.pc ?? [], items: p.items ?? {} }
+    emit()
+}
+
+/** Remplace l'équipe (utilisé pour resynchroniser après un combat : XP/PV/niveaux). */
+export function setTeam(team: MonInstance[]) {
+    st = { ...st, team }
+    emit()
+}
+
+/** Ajoute un Daemon capturé (équipe si place, sinon PC). */
+export function addCaught(mon: MonInstance): "team" | "pc" {
+    const owned = { ...mon, owned: true }
+    if (st.team.length < TEAM_MAX) {
+        st = { ...st, team: [...st.team, owned] }
+        emit()
+        return "team"
+    }
+    st = { ...st, pc: [...st.pc, owned] }
+    emit()
+    return "pc"
+}
+
+export function addItem(itemId: string, qty = 1) {
+    st = { ...st, items: { ...st.items, [itemId]: (st.items[itemId] ?? 0) + qty } }
+    emit()
+}
+
+export function usePlayer(): PlayerState {
+    return useSyncExternalStore(subscribePlayer, getPlayer, getPlayer)
+}
