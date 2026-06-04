@@ -65,11 +65,11 @@ describe("lignées d'évolution", () => {
         }
     })
 
-    it("méthodes d'évolution conformes (niveaux + échange Roctaur→Rochison)", () => {
+    it("méthodes d'évolution conformes (toutes par niveau pour l'instant)", () => {
         expect(getSpecies("feuillichot")!.evolution!.method).toEqual({ kind: "LEVEL", level: 16 })
         expect(getSpecies("broutame")!.evolution!.method).toEqual({ kind: "LEVEL", level: 32 })
         expect(getSpecies("plumiot")!.evolution!.method).toEqual({ kind: "LEVEL", level: 18 })
         expect(getSpecies("couperin")!.evolution!.method).toEqual({ kind: "LEVEL", level: 28 })
-        expect(getSpecies("roctaur")!.evolution!.method).toEqual({ kind: "TRADE" })
+        expect(getSpecies("roctaur")!.evolution!.method).toEqual({ kind: "LEVEL", level: 36 })
     })
 })
