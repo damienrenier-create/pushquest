@@ -19,26 +19,33 @@ const HOME = process.env.USERPROFILE || process.env.HOME
 const DL = path.join(HOME, "Downloads")
 const OUT_DIR = path.join("public", "yellow", "sprites", "dex")
 
+// `framed: false` pour les planches SANS cadre ni titre (créatures sur damier nu) :
+// on ne rogne quasi pas le haut, sinon on couperait têtes/auréoles/ailes.
 const SHEETS = [
-    { file: "Gemini_Generated_Image_pqpzt7pqpzt7pqpz (1).png", names: ["electroatiss", "couranti", "zappeureal"] },
-    { file: "Gemini_Generated_Image_fn6u05fn6u05fn6u.png", names: ["auroruff", "glaceer", "auroraur"] },
-    { file: "Gemini_Generated_Image_u2gak2u2gak2u2ga.png", names: ["ruffiant", "formiguer", "regnantaur"] },
-    { file: "Gemini_Generated_Image_9v4ygz9v4ygz9v4y (1).png", names: ["lavapetit", "fissuralave", "magmator"] },
+    { file: "Gemini_Generated_Image_yednmxyednmxyedn.png", names: ["nouillon", "vermisaint", "divinpate"], framed: false },
+    { file: "Gemini_Generated_Image_7q72mj7q72mj7q72 (1).png", names: ["piouflot", "herondee", "oragron"], framed: false },
+    { file: "Gemini_Generated_Image_pk5aippk5aippk5a.png", names: ["broussours", "sylvours", "druidours"], framed: false },
 ]
 
 const KEY_TOL2 = 44 * 44
 const sat = (r, g, b) => Math.max(r, g, b) - Math.min(r, g, b)
 
-// Palette du damier : couleurs peu saturées les plus fréquentes de la région.
+// Palette du FOND : couleurs peu saturées les plus fréquentes dans la BANDE
+// EXTÉRIEURE (là où c'est le fond, pas la créature). Échantillonner toute la zone
+// ferait entrer le brun/gris d'une grosse créature dans la palette → on la mangerait.
 function detectPalette(out, W, H) {
     const freq = new Map()
-    for (let y = 0; y < H; y += 2) for (let x = 0; x < W; x += 2) {
+    const band = Math.max(10, Math.round(Math.min(W, H) * 0.12))
+    const sample = (x, y) => {
         const d = (y * W + x) * 4
-        if (out[d + 3] < 10) continue
+        if (out[d + 3] < 10) return
         const r = out[d], g = out[d + 1], b = out[d + 2]
-        if (sat(r, g, b) >= 48) continue // ignore les couleurs vives (créature)
+        if (sat(r, g, b) >= 48) return // ignore les couleurs vives (créature)
         const key = ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3)
         freq.set(key, (freq.get(key) || 0) + 1)
+    }
+    for (let y = 0; y < H; y += 2) for (let x = 0; x < W; x += 2) {
+        if (x < band || x >= W - band || y < band || y >= H - band) sample(x, y)
     }
     return [...freq.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4)
         .map(([k]) => [((k >> 10) & 31) << 3, ((k >> 5) & 31) << 3, (k & 31) << 3])
@@ -51,9 +58,10 @@ async function processSheet(sheet) {
     const { width: w, height: h } = info
     const I = (x, y) => (y * w + x) * 4
     const third = w / 3
-    const insetX = Math.round(third * 0.03)
-    const ryT = Math.round(h * 0.13)         // sous le titre + bord haut du cadre
-    const insetB = Math.round(h * 0.03)
+    const framed = sheet.framed !== false
+    const insetX = Math.round(third * (framed ? 0.03 : 0.01))
+    const ryT = Math.round(h * (framed ? 0.13 : 0.02))  // si cadre+titre : on saute la bande du haut
+    const insetB = Math.round(h * (framed ? 0.03 : 0.02))
     console.log(`\n${sheet.file}  (${w}x${h})`)
 
     for (let i = 0; i < 3; i++) {
