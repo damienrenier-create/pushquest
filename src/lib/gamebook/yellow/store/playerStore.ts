@@ -274,8 +274,9 @@ export function renameDaemon(uid: string, nickname: string) {
     emit()
 }
 
-/** Utilise un objet de soin sur un Daemon de l'équipe (hors combat). Renvoie false si inutile. */
-export function useHealItemOnTeam(uid: string, itemId: string): boolean {
+/** Utilise un objet de soin sur un Daemon de l'équipe (hors combat). Renvoie false si inutile.
+ *  NB : nom volontairement SANS préfixe « use » (ce n'est pas un hook React). */
+export function healTeamMember(uid: string, itemId: string): boolean {
     const item = getItem(itemId)
     if (!item || item.category !== "HEAL") return false
     if ((st.items[itemId] ?? 0) <= 0) return false

@@ -19,7 +19,7 @@ import LearnScreen from "./LearnScreen"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout } from "@/lib/gamebook/yellow/store/battleStore"
 import { loadYellowSave, initAutosave, persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
-import { getPlayer, setTeam, usePlayer, addItem, spendReps, markIntroSeen, resetForIntro, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, useHealItemOnTeam, allocateStatPoint, teachCt } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, addItem, spendReps, markIntroSeen, resetForIntro, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt } from "@/lib/gamebook/yellow/store/playerStore"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
@@ -283,7 +283,7 @@ export default function YellowDevClient() {
                                             style={dis ? menuBtnDimStyle : menuBtnStyle}
                                             disabled={dis}
                                             onClick={() => {
-                                                if (useHealItemOnTeam(m.uid, bagItem)) {
+                                                if (healTeamMember(m.uid, bagItem)) {
                                                     setToast(`${displayName(m)} récupère des PV !`)
                                                     persistYellowSave()
                                                 }
