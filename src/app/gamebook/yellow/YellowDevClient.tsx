@@ -582,6 +582,8 @@ const battleOverlayStyle: React.CSSProperties = {
     alignItems: "center",
     justifyContent: "center",
     padding: 12,
+    // Mobile : si l'écran est court (paysage), le combat reste scrollable.
+    overflowY: "auto",
 }
 
 const menuOverlayStyle: React.CSSProperties = {
@@ -592,6 +594,8 @@ const menuBoxStyle: React.CSSProperties = {
     background: "#f8f8e8", color: "#1c1408", border: "3px solid #1c1408", borderRadius: 10,
     padding: 16, width: "100%", maxWidth: 360, fontFamily: "'Courier New', monospace",
     display: "flex", flexDirection: "column", gap: 8,
+    // Mobile : ne jamais dépasser l'écran → scroll interne (boutons toujours atteignables).
+    maxHeight: "88dvh", overflowY: "auto",
 }
 const menuTitleStyle: React.CSSProperties = { fontSize: 14, fontWeight: 900, letterSpacing: 2, marginBottom: 4 }
 const menuBtnStyle: React.CSSProperties = {

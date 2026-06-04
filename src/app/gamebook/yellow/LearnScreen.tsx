@@ -42,7 +42,7 @@ export default function LearnScreen() {
 
 const S: Record<string, React.CSSProperties> = {
     overlay: { position: "fixed", inset: 0, zIndex: 9250, background: "#0a0a14ee", color: "#f8f8e8", fontFamily: "'Courier New', monospace", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 },
-    box: { width: "100%", maxWidth: 380, background: "#1c1408", border: "3px solid #f5d020", borderRadius: 10, padding: 18 },
+    box: { width: "100%", maxWidth: 380, background: "#1c1408", border: "3px solid #f5d020", borderRadius: 10, padding: 18, maxHeight: "88dvh", overflowY: "auto" },
     title: { fontSize: 14, fontWeight: 700, lineHeight: 1.5, margin: "0 0 4px" },
     sub: { fontSize: 11, opacity: 0.7, margin: "0 0 14px" },
     q: { fontSize: 12, fontWeight: 700, margin: "0 0 10px" },
