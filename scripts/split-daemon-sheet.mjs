@@ -21,10 +21,20 @@ const OUT_DIR = path.join("public", "yellow", "sprites", "dex")
 
 // `framed: false` pour les planches SANS cadre ni titre (créatures sur damier nu) :
 // on ne rogne quasi pas le haut, sinon on couperait têtes/auréoles/ailes.
+// `framed:false` = pas de cadre/titre. `region` = sous-rectangle px à découper.
+// `cols` = nombre de cellules (défaut 3). `outDir` = sous-dossier de sprites.
 const SHEETS = [
-    { file: "Gemini_Generated_Image_yednmxyednmxyedn.png", names: ["nouillon", "vermisaint", "divinpate"], framed: false },
-    { file: "Gemini_Generated_Image_7q72mj7q72mj7q72 (1).png", names: ["piouflot", "herondee", "oragron"], framed: false },
-    { file: "Gemini_Generated_Image_pk5aippk5aippk5a.png", names: ["broussours", "sylvours", "druidours"], framed: false },
+    // Planche Pastafaith (overworld, fond blanc) — rangée du bas, 2 bandes ciblées.
+    {
+        file: "Gemini_Generated_Image_a22kiwa22kiwa22k.png", framed: false, outDir: "npc",
+        region: { x0: 40, y0: 1080, x1: 700, y1: 1610 }, cols: 3,
+        names: ["acolyte", "deacon", "high_priest"],
+    },
+    {
+        file: "Gemini_Generated_Image_a22kiwa22kiwa22k.png", framed: false, outDir: "npc",
+        region: { x0: 1820, y0: 1080, x1: 2420, y1: 1610 }, cols: 3,
+        names: ["fsm_divine_form", "meatball_spirit", "noodle_nymph"],
+    },
 ]
 
 const KEY_TOL2 = 44 * 44
@@ -36,11 +46,12 @@ const sat = (r, g, b) => Math.max(r, g, b) - Math.min(r, g, b)
 function detectPalette(out, W, H) {
     const freq = new Map()
     const band = Math.max(10, Math.round(Math.min(W, H) * 0.12))
+    // Fond = couleurs les plus fréquentes de la bande extérieure, QUELLE QUE SOIT
+    // leur saturation (gère le damier gris ET le fond plein magenta #FF00FF).
     const sample = (x, y) => {
         const d = (y * W + x) * 4
         if (out[d + 3] < 10) return
         const r = out[d], g = out[d + 1], b = out[d + 2]
-        if (sat(r, g, b) >= 48) return // ignore les couleurs vives (créature)
         const key = ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3)
         freq.set(key, (freq.get(key) || 0) + 1)
     }
@@ -57,16 +68,23 @@ async function processSheet(sheet) {
     const { data, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
     const { width: w, height: h } = info
     const I = (x, y) => (y * w + x) * 4
-    const third = w / 3
     const framed = sheet.framed !== false
+    const cols = sheet.cols ?? 3
+    const baseX = sheet.region?.x0 ?? 0
+    const baseY = sheet.region?.y0 ?? 0
+    const areaW = (sheet.region?.x1 ?? w) - baseX
+    const areaH = (sheet.region?.y1 ?? h) - baseY
+    const third = areaW / cols
     const insetX = Math.round(third * (framed ? 0.03 : 0.01))
-    const ryT = Math.round(h * (framed ? 0.13 : 0.02))  // si cadre+titre : on saute la bande du haut
-    const insetB = Math.round(h * (framed ? 0.03 : 0.02))
-    console.log(`\n${sheet.file}  (${w}x${h})`)
+    const ryT = baseY + Math.round(areaH * (framed ? 0.13 : 0.02))  // si cadre+titre : saute la bande du haut
+    const ryB = baseY + areaH - Math.round(areaH * (framed ? 0.03 : 0.02))
+    const outDir = sheet.outDir ? path.join("public", "yellow", "sprites", sheet.outDir) : OUT_DIR
+    fs.mkdirSync(outDir, { recursive: true })
+    console.log(`\n${sheet.file}  region ${baseX},${baseY} ${areaW}x${areaH} cols=${cols}`)
 
-    for (let i = 0; i < 3; i++) {
-        const x0 = Math.round(i * third), x1 = Math.round((i + 1) * third)
-        const rx0 = x0 + insetX, rx1 = x1 - insetX, ryB = h - insetB
+    for (let i = 0; i < cols; i++) {
+        const x0 = baseX + Math.round(i * third), x1 = baseX + Math.round((i + 1) * third)
+        const rx0 = x0 + insetX, rx1 = x1 - insetX
         const W = rx1 - rx0, H = ryB - ryT
 
         // Copie la région.
@@ -76,36 +94,43 @@ async function processSheet(sheet) {
             out[d] = data[s]; out[d + 1] = data[s + 1]; out[d + 2] = data[s + 2]; out[d + 3] = data[s + 3]
         }
 
-        // 1) Palette du damier (globale, fiable même si la créature touche les bords).
+        // 1) Palette du fond (bande extérieure).
         const pal = detectPalette(out, W, H)
+        const bgSat = pal.length ? sat(pal[0][0], pal[0][1], pal[0][2]) : 0
+        const tol2 = bgSat > 100 ? 70 * 70 : KEY_TOL2 // magenta : tolérance large ; damier : stricte
         const isBg = (d) => {
             if (out[d + 3] === 0) return true
             const r = out[d], g = out[d + 1], b = out[d + 2]
             for (const c of pal) {
                 const dr = r - c[0], dg = g - c[1], db = b - c[2]
-                if (dr * dr + dg * dg + db * db < KEY_TOL2) return true
+                if (dr * dr + dg * dg + db * db < tol2) return true
             }
             return false
         }
-        // 2) Détourage par FLOOD depuis les bords (préserve l'intérieur via le contour
-        //    sombre ; le damier enclavé entre ailes sera retiré à l'étape 3).
-        const seen = new Uint8Array(W * H)
-        const stack = []
-        const push = (x, y) => { if (x >= 0 && x < W && y >= 0 && y < H && !seen[y * W + x]) { seen[y * W + x] = 1; stack.push(y * W + x) } }
-        // Amorce depuis TOUT pixel de damier de la bande extérieure (pas seulement le
-        // bord) : si un cadre longe le bord, le damier juste à l'intérieur sert de départ.
-        const band = Math.max(8, Math.round(Math.min(W, H) * 0.1))
-        for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-            if (x < band || x >= W - band || y < band || y >= H - band) {
-                if (isBg((y * W + x) * 4)) push(x, y)
+
+        if (bgSat > 100) {
+            // 2a) Fond plein très saturé (magenta) : keying GLOBAL — sûr (aucune créature
+            //     n'est magenta) et retire aussi les poches enclavées entre les ailes.
+            for (let p = 0; p < W * H; p++) if (out[p * 4 + 3] && isBg(p * 4)) out[p * 4 + 3] = 0
+        } else {
+            // 2b) Damier peu saturé : flood depuis la bande extérieure (préserve
+            //     l'intérieur via le contour sombre ; poches enclavées retirées en 3).
+            const seen = new Uint8Array(W * H)
+            const stack = []
+            const push = (x, y) => { if (x >= 0 && x < W && y >= 0 && y < H && !seen[y * W + x]) { seen[y * W + x] = 1; stack.push(y * W + x) } }
+            const band = Math.max(8, Math.round(Math.min(W, H) * 0.1))
+            for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+                if (x < band || x >= W - band || y < band || y >= H - band) {
+                    if (isBg((y * W + x) * 4)) push(x, y)
+                }
             }
-        }
-        while (stack.length) {
-            const p = stack.pop()
-            if (!isBg(p * 4)) continue
-            out[p * 4 + 3] = 0
-            const x = p % W, y = (p - x) / W
-            push(x + 1, y); push(x - 1, y); push(x, y + 1); push(x, y - 1)
+            while (stack.length) {
+                const p = stack.pop()
+                if (!isBg(p * 4)) continue
+                out[p * 4 + 3] = 0
+                const x = p % W, y = (p - x) / W
+                push(x + 1, y); push(x - 1, y); push(x, y + 1); push(x, y - 1)
+            }
         }
 
         // 3) Plus grande composante opaque connexe = le Daemon.
@@ -145,7 +170,7 @@ async function processSheet(sheet) {
                 crop[d] = out[sp * 4]; crop[d + 1] = out[sp * 4 + 1]; crop[d + 2] = out[sp * 4 + 2]; crop[d + 3] = out[sp * 4 + 3]
             } // sinon laissé transparent (0,0,0,0)
         }
-        const dest = path.join(OUT_DIR, `${sheet.names[i]}.png`)
+        const dest = path.join(outDir, `${sheet.names[i]}.png`)
         await sharp(crop, { raw: { width: cw, height: ch, channels: 4 } }).png().toFile(dest)
         console.log(`  ✓ ${sheet.names[i]}.png  (${cw}x${ch}, ${bestN}px, palette ${pal.length})`)
     }

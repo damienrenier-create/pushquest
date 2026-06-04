@@ -1,29 +1,33 @@
 "use client"
 
 // Nexus Jaune Éclair — cinématique d'INTRO (1re entrée).
-// Divinpâte (le dieu spaghetti) accueille le joueur, pose le monde, puis lui fait
-// choisir son starter parmi les 3. À la fin : onComplete(starterId).
-// Texte PLACEHOLDER — édite librement INTRO_LINES / OUTRO_LINES / les répliques.
+// Casting Pastafaith : les Servants accueillent, le Grand Prêtre explique, le
+// Monstre en Spaghetti Volant (FSM) offre le choix du starter, Nymphe & Esprit
+// bénissent. À la fin : onComplete(starterId).
+// Texte PLACEHOLDER — édite librement SCRIPT / outro() / les répliques.
 
 import { useState } from "react"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 
-const NARRATOR_SPRITE = "/yellow/sprites/dex/divinpate.png"
+const npc = (id: string) => `/yellow/sprites/npc/${id}.png`
+
+interface Line { speaker: string; sprite: string; fallback: string; text: string }
 
 // Starters proposés (Plante / Eau / Feu).
 const STARTERS = ["feuillichot", "gouttiny", "braisille"]
 
-const INTRO_LINES = [
-    "✦ Une masse de nouilles dorées flotte vers toi, nimbée d'une lumière sainte… ✦",
-    "Bienvenue, mortel. Te voici dans le NEXUS JAUNE ÉCLAIR.",
-    "Je suis DIVINPÂTE, divinité spaghetti de ce monde. Mes appendices nouilleux sont, rassure-toi, bienveillants.",
-    "Ici vivent des créatures qu'on nomme DAEMONS — elles jaillissent des hautes herbes.",
-    "Et, Je le vois d'ici, ta sueur du monde réel les attire : plus tu forces, plus elles affluent.",
-    "Mais nul ne part à l'aventure les mains vides. Choisis ton premier compagnon.",
+const SCRIPT: Line[] = [
+    { speaker: "ACOLYTE", sprite: npc("acolyte"), fallback: "🙏", text: "Oh ! Un nouveau venu ! Bienvenue au NEXUS JAUNE ÉCLAIR, ami." },
+    { speaker: "DIACRE", sprite: npc("deacon"), fallback: "📜", text: "Nous sommes les servants de la Pastafaith. Tu as été… touché par Son Appendice Nouilleux." },
+    { speaker: "GRAND PRÊTRE", sprite: npc("high_priest"), fallback: "⛪", text: "Écoute bien. Ici vivent les DAEMONS — ils surgissent des hautes herbes." },
+    { speaker: "GRAND PRÊTRE", sprite: npc("high_priest"), fallback: "⛪", text: "Et — nous le voyons d'ici — ta sueur du monde réel les attire. Plus tu forces, plus ils affluent." },
+    { speaker: "GRAND PRÊTRE", sprite: npc("high_priest"), fallback: "⛪", text: "Mais nul n'avance seul. Le Dieu en personne va te confier un premier compagnon…" },
+    { speaker: "MONSTRE SPAGHETTI", sprite: npc("fsm_divine_form"), fallback: "🍝", text: "✦ R'amen, mortel. Je suis le Monstre en Spaghetti Volant. Choisis ton Daemon — avec sagesse, ou à l'instinct. ✦" },
 ]
-const outroLines = (name: string) => [
-    `${name} ! Sage décision… ou délicieux hasard. Je ne juge pas.`,
-    "Que tes reps soient nombreuses et tes critiques cléments. Va, Dresseur — le Nexus Jaune Éclair t'attend. ✦",
+const outro = (name: string): Line[] => [
+    { speaker: "MONSTRE SPAGHETTI", sprite: npc("fsm_divine_form"), fallback: "🍝", text: `${name} ! Excellent. Qu'il te suive fidèlement.` },
+    { speaker: "NYMPHE NOUILLE", sprite: npc("noodle_nymph"), fallback: "🧚", text: "Que tes nouilles ne collent jamais, Dresseur." },
+    { speaker: "ESPRIT BOULETTE", sprite: npc("meatball_spirit"), fallback: "🟤", text: "Et que tes reps soient nombreuses. Va — l'aventure t'attend ! ✦" },
 ]
 
 function Portrait({ src, fallback }: { src: string; fallback: string }) {
@@ -34,19 +38,19 @@ function Portrait({ src, fallback }: { src: string; fallback: string }) {
 
 export default function IntroCinematic({ onComplete }: { onComplete: (starterId: string) => void }) {
     const [phase, setPhase] = useState<"intro" | "choose" | "outro">("intro")
-    const [line, setLine] = useState(0)
+    const [i, setI] = useState(0)
     const [chosen, setChosen] = useState<string | null>(null)
 
-    const advanceIntro = () => {
-        if (line + 1 < INTRO_LINES.length) setLine(line + 1)
-        else setPhase("choose")
-    }
-    const pick = (id: string) => { setChosen(id); setLine(0); setPhase("outro") }
+    const advanceIntro = () => { if (i + 1 < SCRIPT.length) setI(i + 1); else setPhase("choose") }
+    const pick = (id: string) => { setChosen(id); setI(0); setPhase("outro") }
     const advanceOutro = () => {
-        const lines = outroLines(getSpecies(chosen!)?.name ?? "Ton Daemon")
-        if (line + 1 < lines.length) setLine(line + 1)
-        else onComplete(chosen!)
+        const lines = outro(getSpecies(chosen!)?.name ?? "Ton Daemon")
+        if (i + 1 < lines.length) setI(i + 1); else onComplete(chosen!)
     }
+
+    const line: Line | null = phase === "intro" ? SCRIPT[i]
+        : phase === "outro" ? outro(getSpecies(chosen!)?.name ?? "Ton Daemon")[i]
+            : null
 
     return (
         <div style={S.overlay}>
@@ -67,20 +71,16 @@ export default function IntroCinematic({ onComplete }: { onComplete: (starterId:
                     </div>
                     <p style={S.hint}>Touche une carte pour choisir ▶</p>
                 </div>
-            ) : (
+            ) : line ? (
                 <div style={S.scene} onClick={phase === "intro" ? advanceIntro : advanceOutro}>
-                    <Portrait src={NARRATOR_SPRITE} fallback="🍝" />
+                    <Portrait src={line.sprite} fallback={line.fallback} />
                     <div style={S.box}>
-                        <div style={S.speaker}>DIVINPÂTE</div>
-                        <p style={S.text}>
-                            {phase === "intro"
-                                ? INTRO_LINES[line]
-                                : outroLines(getSpecies(chosen!)?.name ?? "Ton Daemon")[line]}
-                        </p>
+                        <div style={S.speaker}>{line.speaker}</div>
+                        <p style={S.text}>{line.text}</p>
                         <span style={S.next}>Toucher ▶</span>
                     </div>
                 </div>
-            )}
+            ) : null}
         </div>
     )
 }
@@ -88,7 +88,7 @@ export default function IntroCinematic({ onComplete }: { onComplete: (starterId:
 const S: Record<string, React.CSSProperties> = {
     overlay: { position: "fixed", inset: 0, zIndex: 9300, background: "radial-gradient(circle at 50% 35%, #2a1a40 0%, #0a0a14 70%)", color: "#f8f8e8", fontFamily: "'Courier New', monospace", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 },
     scene: { width: "100%", maxWidth: 440, display: "flex", flexDirection: "column", alignItems: "center", gap: 16, cursor: "pointer" },
-    portraitImg: { width: 150, height: 150, objectFit: "contain", imageRendering: "pixelated", filter: "drop-shadow(0 0 18px #f5d02088)" },
+    portraitImg: { width: 150, height: 150, objectFit: "contain", imageRendering: "pixelated", filter: "drop-shadow(0 0 16px #f5d02077)" },
     portraitGlyph: { width: 110, height: 110, borderRadius: "50%", background: "#1c1408", border: "3px solid #f5d020", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 54 },
     box: { background: "#f8f8e8", color: "#1c1408", border: "3px solid #1c1408", borderRadius: 8, padding: 16, width: "100%", minHeight: 110, position: "relative", display: "flex", flexDirection: "column", justifyContent: "center" },
     speaker: { fontSize: 11, fontWeight: 900, letterSpacing: 1, color: "#a06030", marginBottom: 6 },
