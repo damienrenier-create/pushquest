@@ -32,6 +32,8 @@ export interface ExpResult {
     fromLevel: number
     toLevel: number
     learnedMoveIds: string[]
+    /** Attaques que le Daemon veut apprendre mais ne peut pas (4 slots pleins). */
+    pendingMoveIds: string[]
 }
 
 /**
@@ -50,18 +52,27 @@ export function applyExp(mon: MonInstance, gained: number): ExpResult {
     mon.level = toLevel
 
     const learnedMoveIds: string[] = []
+    const pendingMoveIds: string[] = []
     if (sp && toLevel > fromLevel) {
         for (let lv = fromLevel + 1; lv <= toLevel; lv++) {
             for (const entry of sp.learnset) {
                 if (entry.level !== lv) continue
                 if (mon.moves.some((m) => m.moveId === entry.moveId)) continue
-                if (mon.moves.length >= 4) continue // (oubli d'attaque → Phase UI)
-                const mv = getMove(entry.moveId)
-                const pp = mv?.pp ?? 5
-                mon.moves.push({ moveId: entry.moveId, pp, ppMax: pp })
-                learnedMoveIds.push(entry.moveId)
+                if (mon.moves.length < 4) {
+                    const mv = getMove(entry.moveId)
+                    const pp = mv?.pp ?? 5
+                    mon.moves.push({ moveId: entry.moveId, pp, ppMax: pp })
+                    learnedMoveIds.push(entry.moveId)
+                } else {
+                    // 4 slots pleins → en attente d'un choix « oublier une capacité ».
+                    mon.pendingMoves ??= []
+                    if (!mon.pendingMoves.includes(entry.moveId)) {
+                        mon.pendingMoves.push(entry.moveId)
+                        pendingMoveIds.push(entry.moveId)
+                    }
+                }
             }
         }
     }
-    return { gained, fromLevel, toLevel, learnedMoveIds }
+    return { gained, fromLevel, toLevel, learnedMoveIds, pendingMoveIds }
 }

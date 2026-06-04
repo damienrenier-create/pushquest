@@ -15,6 +15,7 @@ import MapView from "./MapView"
 import BattleScreen from "./battle/BattleScreen"
 import EvolutionScreen from "./battle/EvolutionScreen"
 import IntroCinematic from "./IntroCinematic"
+import LearnScreen from "./LearnScreen"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout } from "@/lib/gamebook/yellow/store/battleStore"
 import { loadYellowSave, initAutosave, persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
@@ -251,6 +252,9 @@ export default function YellowDevClient() {
             {!battle && evolutions.length > 0 && (
                 <EvolutionScreen evolutions={evolutions} onDone={clearEvolutions} />
             )}
+
+            {/* Apprentissage d'attaque (4 slots pleins) — après les évolutions */}
+            {!battle && !showIntro && evolutions.length === 0 && <LearnScreen />}
         </div>
     )
 }

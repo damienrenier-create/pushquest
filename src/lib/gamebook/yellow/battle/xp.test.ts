@@ -52,14 +52,16 @@ describe("applyExp (montée de niveau + apprentissage)", () => {
         expect(mon.moves.some((m) => m.moveId === "picpic")).toBe(true)
         expect(r.learnedMoveIds).toContain("picpic")
     })
-    it("plafonne l'apprentissage à 4 attaques", () => {
+    it("4 slots pleins → les attaques sont MISES EN ATTENTE (pas perdues)", () => {
         const mon = makeMon(1, expForLevel(1))
         mon.moves = [
             { moveId: "a", pp: 5, ppMax: 5 }, { moveId: "b", pp: 5, ppMax: 5 },
             { moveId: "c", pp: 5, ppMax: 5 }, { moveId: "d", pp: 5, ppMax: 5 },
         ]
-        applyExp(mon, expForLevel(20))
-        expect(mon.moves.length).toBe(4)
+        const r = applyExp(mon, expForLevel(20)) // Cornaissant : picpic(L5) + dard_venin(L14)
+        expect(mon.moves.length).toBe(4)               // toujours 4 slots
+        expect(r.pendingMoveIds).toContain("picpic")   // proposées, pas ignorées
+        expect(mon.pendingMoves).toContain("dard_venin")
     })
     it("ne fait jamais baisser le niveau", () => {
         const mon = makeMon(10, expForLevel(10))

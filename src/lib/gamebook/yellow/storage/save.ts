@@ -106,5 +106,6 @@ export function toMonInstance(m: MonInstance & { stages?: unknown; volatiles?: u
         uid: m.uid, speciesId: m.speciesId, nickname: m.nickname, level: m.level, exp: m.exp,
         ivs: { ...m.ivs }, currentHp: m.currentHp, status: m.status, statusCounter: m.statusCounter,
         moves: m.moves.map((mv) => ({ ...mv })), owned: m.owned,
+        pendingMoves: m.pendingMoves && m.pendingMoves.length ? [...m.pendingMoves] : undefined,
     }
 }

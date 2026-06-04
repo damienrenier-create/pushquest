@@ -5,9 +5,10 @@
 // le combat travaille sur une COPIE de l'équipe et resynchronise à la fin.
 
 import { useSyncExternalStore } from "react"
-import type { MonInstance } from "../battle/types"
+import type { MonInstance, MoveSlot } from "../battle/types"
 import { fullStats } from "../battle/stats"
 import { getSpecies } from "../data/species"
+import { getMove } from "../data/moves"
 import type { WildPlayerCtx } from "../data/encounters"
 
 export const TEAM_MAX = 6
@@ -155,6 +156,38 @@ export function healAllTeam() {
                 statusCounter: 0,
                 moves: m.moves.map((mv) => ({ ...mv, pp: mv.ppMax })),
             }
+        }),
+    }
+    emit()
+}
+
+/** Apprentissage en attente : un Daemon veut apprendre une attaque mais a 4 slots. */
+export interface PendingLearn { uid: string; speciesId: string; name: string; moveId: string; moves: MoveSlot[] }
+
+/** Liste des apprentissages en attente sur l'équipe (un par couple Daemon/attaque). */
+export function pendingLearns(): PendingLearn[] {
+    const out: PendingLearn[] = []
+    for (const m of st.team) {
+        if (!m.pendingMoves?.length) continue
+        const name = m.nickname ?? getSpecies(m.speciesId)?.name ?? m.speciesId
+        for (const moveId of m.pendingMoves) out.push({ uid: m.uid, speciesId: m.speciesId, name, moveId, moves: m.moves })
+    }
+    return out
+}
+
+/** Résout un apprentissage : slotIndex = capacité à remplacer, ou null = renoncer. */
+export function resolveLearn(uid: string, moveId: string, slotIndex: number | null) {
+    st = {
+        ...st,
+        team: st.team.map((m) => {
+            if (m.uid !== uid) return m
+            const pending = (m.pendingMoves ?? []).filter((id) => id !== moveId)
+            let moves = m.moves
+            if (slotIndex !== null && slotIndex >= 0 && slotIndex < m.moves.length) {
+                const pp = getMove(moveId)?.pp ?? 5
+                moves = m.moves.map((s, i) => (i === slotIndex ? { moveId, pp, ppMax: pp } : s))
+            }
+            return { ...m, moves, pendingMoves: pending.length ? pending : undefined }
         }),
     }
     emit()

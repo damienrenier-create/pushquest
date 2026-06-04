@@ -119,6 +119,9 @@ export interface MonInstance {
     statusCounter: number
     moves: MoveSlot[]
     owned?: boolean
+    /** Attaques apprises à un niveau alors que les 4 slots étaient pleins :
+     *  en attente d'un choix « oublier une capacité » côté UI. Transitoire. */
+    pendingMoves?: string[]
 }
 
 export interface BattleMon extends MonInstance {
