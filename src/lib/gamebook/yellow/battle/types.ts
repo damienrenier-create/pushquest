@@ -91,6 +91,10 @@ export interface SpeciesData {
     rarity: Rarity
     description: string
     sprite: string
+    /** Courbe d'XP (cf. game design). Défaut implicite : "medium_fast" (= L³). */
+    growthRate?: "medium_fast" | "fast" | "slow" | "medium_slow"
+    /** Rôle de game-design (lisibilité éditoriale, non utilisé par le moteur). */
+    role?: string
 }
 
 // ============================================================

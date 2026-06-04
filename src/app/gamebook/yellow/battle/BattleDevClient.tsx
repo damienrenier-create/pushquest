@@ -14,7 +14,7 @@ import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
 import type { MonInstance } from "@/lib/gamebook/yellow/battle/types"
 import BattleScreen from "./BattleScreen"
 
-const WILD_POOL = ["rongeur", "piafeu", "galet", "bulle"]
+const WILD_POOL = ["plumiot", "cailloutchi", "couperin", "faukon", "rongeur"]
 
 export default function BattleDevClient() {
     const battle = useBattle()
@@ -26,10 +26,11 @@ export default function BattleDevClient() {
         ; (async () => {
             await loadYellowSave()
             if (!cancelled && getPlayer().team.length === 0) {
-                // Starter de dev (en vrai : le Daemon évolué du Chapitre 1).
+                // Équipe de test : les 3 starters du roster pour voir leurs sprites.
                 setTeam([
-                    createMonInstance("flordaemon", 16, { owned: true, nickname: "Flora" }),
-                    createMonInstance("galet", 12, { owned: true }),
+                    createMonInstance("feuillichot", 8, { owned: true }),
+                    createMonInstance("gouttiny", 8, { owned: true }),
+                    createMonInstance("braisille", 8, { owned: true }),
                 ])
             }
             initAutosave()

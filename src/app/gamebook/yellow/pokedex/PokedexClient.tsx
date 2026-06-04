@@ -3,9 +3,24 @@
 // Nexus Jaune Éclair — écran Pokédex. Lit le store Pokédex (seen/caught) + les
 // espèces. N'exécute aucune règle : pur affichage synchronisé.
 
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { usePokedex, pokedexCompletion } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { SPECIES } from "@/lib/gamebook/yellow/data/species"
+import type { SpeciesData } from "@/lib/gamebook/yellow/battle/types"
+
+// Vignette : sprite PNG si l'espèce est vue, repli sur l'initiale si le fichier manque.
+function DexIcon({ sp, seen, caught }: { sp: SpeciesData; seen: boolean; caught: boolean }) {
+    const [err, setErr] = useState(false)
+    return (
+        <div style={{ ...S.icon, filter: caught ? "none" : "grayscale(1) brightness(0.6)" }}>
+            {!seen ? "?" : err
+                ? sp.name[0]
+                : <img src={sp.sprite} alt={sp.name} onError={() => setErr(true)}
+                    style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated" }} />}
+        </div>
+    )
+}
 
 export default function PokedexClient() {
     const router = useRouter()
@@ -31,9 +46,7 @@ export default function PokedexClient() {
                     return (
                         <div key={sp.id} style={{ ...S.card, opacity: seen ? 1 : 0.5 }}>
                             <div style={S.no}>N°{String(sp.dexNo).padStart(3, "0")}</div>
-                            <div style={{ ...S.icon, filter: caught ? "none" : "grayscale(1) brightness(0.6)" }}>
-                                {seen ? sp.name[0] : "?"}
-                            </div>
+                            <DexIcon sp={sp} seen={seen} caught={caught} />
                             <div style={S.body}>
                                 <div style={S.name}>{seen ? sp.name.toUpperCase() : "???"}</div>
                                 {seen && (

@@ -190,20 +190,24 @@ function MonInfo({ mon, self, hp, max }: { mon: BattleMon; self?: boolean; hp: n
 }
 
 function MonSprite({ mon, facing, alive, hitKey }: { mon: BattleMon; facing: "front" | "back"; alive: boolean; hitKey: number }) {
-    // Placeholder : pastille colorée + initiale (les vrais sprites arriveront dans public/).
+    // Sprite PNG (public/) avec repli sur l'initiale si le fichier manque.
     // `key={hitKey}` force un remount à chaque coup encaissé → l'animation de tremblement rejoue.
     const sp = speciesOf(mon)
+    const [err, setErr] = useState(false)
     return (
         <div
             key={hitKey}
             style={{
-                ...S.sprite,
+                ...(err ? S.sprite : S.spriteBox),
                 opacity: alive ? 1 : 0.25,
                 transform: facing === "back" ? "scaleX(-1)" : "none",
                 animation: hitKey > 0 ? "hitShake 0.3s ease-in-out" : "none",
             }}
         >
-            <span style={S.spriteGlyph}>{sp.name[0]}</span>
+            {err
+                ? <span style={S.spriteGlyph}>{sp.name[0]}</span>
+                : <img src={sp.sprite} alt={sp.name} onError={() => setErr(true)}
+                    style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated" }} />}
         </div>
     )
 }
@@ -301,6 +305,7 @@ const S: Record<string, React.CSSProperties> = {
     hpNum: { textAlign: "right", fontSize: 10, fontWeight: 700, marginTop: 2 },
     statusTag: { display: "inline-block", marginTop: 3, fontSize: 8, fontWeight: 700, background: "#8868c0", color: "#fff", padding: "1px 5px", borderRadius: 3, letterSpacing: 1 },
     sprite: { width: 72, height: 72, borderRadius: "50%", background: "#ffffff80", border: "3px solid #1c1408", display: "flex", alignItems: "center", justifyContent: "center" },
+    spriteBox: { width: 84, height: 84, display: "flex", alignItems: "center", justifyContent: "center" },
     spriteGlyph: { fontSize: 34, fontWeight: 900 },
     bottom: { marginTop: 8, minHeight: 96 },
     msgBox: { background: "#f8f8e8", border: "3px solid #1c1408", borderRadius: 6, padding: 14, minHeight: 72, display: "flex", flexDirection: "column", justifyContent: "center", cursor: "pointer", position: "relative" },
