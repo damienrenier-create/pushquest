@@ -17,7 +17,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     // --- Ligne PLANTE (starter) ---
     feuillichot: {
         id: "feuillichot", dexNo: 1, name: "Feuillichot", types: ["PLANTE"],
-        baseStats: { hp: 48, atk: 48, def: 52, spe: 44, spc: 62 },
+        baseStats: { hp: 45, atk: 48, def: 50, spe: 42, spc: 60 },
         learnset: [
             { level: 1, moveId: "charge" },
             { level: 4, moveId: "fouet_lianes" },
@@ -32,7 +32,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     broutame: {
         id: "broutame", dexNo: 2, name: "Broutame", types: ["PLANTE"],
-        baseStats: { hp: 64, atk: 60, def: 70, spe: 57, spc: 80 },
+        baseStats: { hp: 62, atk: 58, def: 68, spe: 52, spc: 82 },
         learnset: [
             { level: 1, moveId: "fouet_lianes" },
             { level: 1, moveId: "vampigraine" },
@@ -47,7 +47,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     sylvapuce: {
         id: "sylvapuce", dexNo: 3, name: "Sylvapuce", types: ["PLANTE"],
-        baseStats: { hp: 84, atk: 80, def: 88, spe: 76, spc: 102 },
+        baseStats: { hp: 85, atk: 78, def: 90, spe: 70, spc: 112 },
         learnset: [
             { level: 1, moveId: "tempete_verte" },
             { level: 1, moveId: "vampigraine" },
@@ -62,7 +62,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     // --- Ligne EAU (starter) ---
     gouttiny: {
         id: "gouttiny", dexNo: 4, name: "Gouttiny", types: ["EAU"],
-        baseStats: { hp: 46, atk: 48, def: 66, spe: 42, spc: 52 },
+        baseStats: { hp: 44, atk: 46, def: 68, spe: 38, spc: 50 },
         learnset: [
             { level: 1, moveId: "charge" },
             { level: 6, moveId: "pistolet_a_o" },
@@ -76,7 +76,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     ondulo: {
         id: "ondulo", dexNo: 5, name: "Ondulo", types: ["EAU"],
-        baseStats: { hp: 62, atk: 62, def: 82, spe: 56, spc: 66 },
+        baseStats: { hp: 60, atk: 58, def: 86, spe: 50, spc: 64 },
         learnset: [
             { level: 1, moveId: "pistolet_a_o" },
             { level: 1, moveId: "charge" },
@@ -90,7 +90,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     razmaree: {
         id: "razmaree", dexNo: 6, name: "Razmarée", types: ["EAU"],
-        baseStats: { hp: 82, atk: 82, def: 104, spe: 74, spc: 86 },
+        baseStats: { hp: 80, atk: 80, def: 112, spe: 66, spc: 86 },
         learnset: [
             { level: 1, moveId: "hydrocanon" },
             { level: 1, moveId: "pistolet_a_o" },
@@ -105,7 +105,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     // --- Ligne FEU (starter) ---
     braisille: {
         id: "braisille", dexNo: 7, name: "Braisille", types: ["FEU"],
-        baseStats: { hp: 42, atk: 54, def: 44, spe: 66, spc: 52 },
+        baseStats: { hp: 40, atk: 52, def: 42, spe: 68, spc: 52 },
         learnset: [
             { level: 1, moveId: "charge" },
             { level: 7, moveId: "flammeche" },
@@ -119,7 +119,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     flamkure: {
         id: "flamkure", dexNo: 8, name: "Flamkure", types: ["FEU"],
-        baseStats: { hp: 60, atk: 68, def: 56, spe: 84, spc: 66 },
+        baseStats: { hp: 58, atk: 66, def: 52, spe: 88, spc: 68 },
         learnset: [
             { level: 1, moveId: "flammeche" },
             { level: 1, moveId: "charge" },
@@ -133,7 +133,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     pyrokoss: {
         id: "pyrokoss", dexNo: 9, name: "Pyrokoss", types: ["FEU"],
-        baseStats: { hp: 80, atk: 88, def: 76, spe: 104, spc: 88 },
+        baseStats: { hp: 78, atk: 90, def: 74, spe: 112, spc: 92 },
         learnset: [
             { level: 1, moveId: "lance_flammes" },
             { level: 1, moveId: "flammeche" },
@@ -148,7 +148,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     // --- Ligne VOL (Normal/Vol) ---
     plumiot: {
         id: "plumiot", dexNo: 10, name: "Plumiot", types: ["NORMAL", "VOL"],
-        baseStats: { hp: 42, atk: 46, def: 42, spe: 58, spc: 36 },
+        baseStats: { hp: 40, atk: 45, def: 40, spe: 60, spc: 34 },
         learnset: [
             { level: 1, moveId: "charge" },
             { level: 5, moveId: "picpic" },
@@ -162,7 +162,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     faukon: {
         id: "faukon", dexNo: 11, name: "Faukon", types: ["NORMAL", "VOL"],
-        baseStats: { hp: 64, atk: 62, def: 56, spe: 73, spc: 52 },
+        baseStats: { hp: 62, atk: 62, def: 54, spe: 76, spc: 50 },
         learnset: [
             { level: 1, moveId: "picpic" },
             { level: 1, moveId: "vive_attaque" },
@@ -176,7 +176,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     aquilothan: {
         id: "aquilothan", dexNo: 12, name: "Aquilothan", types: ["NORMAL", "VOL"],
-        baseStats: { hp: 84, atk: 82, def: 76, spe: 104, spc: 72 },
+        baseStats: { hp: 80, atk: 82, def: 72, spe: 108, spc: 68 },
         learnset: [
             { level: 1, moveId: "tornade" },
             { level: 1, moveId: "picpic" },
@@ -191,7 +191,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     // --- Ligne ROCHE/SOL ---
     cailloutchi: {
         id: "cailloutchi", dexNo: 13, name: "Cailloutchi", types: ["ROCHE", "SOL"],
-        baseStats: { hp: 42, atk: 78, def: 100, spe: 22, spc: 32 },
+        baseStats: { hp: 40, atk: 75, def: 102, spe: 20, spc: 30 },
         learnset: [
             { level: 1, moveId: "charge" },
             { level: 8, moveId: "jet_pierres" },
@@ -205,7 +205,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     roctaur: {
         id: "roctaur", dexNo: 14, name: "Roctaur", types: ["ROCHE", "SOL"],
-        baseStats: { hp: 58, atk: 94, def: 118, spe: 34, spc: 46 },
+        baseStats: { hp: 55, atk: 92, def: 120, spe: 30, spc: 42 },
         learnset: [
             { level: 1, moveId: "jet_pierres" },
             { level: 1, moveId: "charge" },
@@ -219,7 +219,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     rochison: {
         id: "rochison", dexNo: 15, name: "Rochison", types: ["ROCHE", "SOL"],
-        baseStats: { hp: 82, atk: 112, def: 134, spe: 46, spc: 56 },
+        baseStats: { hp: 80, atk: 115, def: 138, spe: 40, spc: 52 },
         learnset: [
             { level: 1, moveId: "seisme" },
             { level: 1, moveId: "jet_pierres" },
@@ -234,7 +234,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     // --- Ligne COMBAT ---
     couperin: {
         id: "couperin", dexNo: 16, name: "Couperin", types: ["COMBAT"],
-        baseStats: { hp: 42, atk: 80, def: 38, spe: 72, spc: 34 },
+        baseStats: { hp: 40, atk: 82, def: 35, spe: 75, spc: 32 },
         learnset: [
             { level: 1, moveId: "charge" },
             { level: 7, moveId: "double_pied" },
@@ -248,7 +248,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     frappard: {
         id: "frappard", dexNo: 17, name: "Frappard", types: ["COMBAT"],
-        baseStats: { hp: 66, atk: 104, def: 62, spe: 94, spc: 58 },
+        baseStats: { hp: 64, atk: 106, def: 56, spe: 96, spc: 52 },
         learnset: [
             { level: 1, moveId: "poing_karate" },
             { level: 1, moveId: "double_pied" },
@@ -262,7 +262,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     maitrezenc: {
         id: "maitrezenc", dexNo: 18, name: "Maîtrezenc", types: ["COMBAT"],
-        baseStats: { hp: 86, atk: 124, def: 82, spe: 110, spc: 78 },
+        baseStats: { hp: 80, atk: 118, def: 68, spe: 108, spc: 68 },
         learnset: [
             { level: 1, moveId: "poing_karate" },
             { level: 1, moveId: "belier" },
@@ -281,7 +281,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     // --- ⚡ Coatis (Élec) ---
     electroatiss: {
         id: "electroatiss", dexNo: 19, name: "Électroatiss", types: ["ELEC"],
-        baseStats: { hp: 45, atk: 52, def: 40, spe: 65, spc: 55 },
+        baseStats: { hp: 42, atk: 50, def: 38, spe: 68, spc: 56 },
         learnset: [
             { level: 1, moveId: "charge" },
             { level: 6, moveId: "etincelle" },
@@ -295,7 +295,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     couranti: {
         id: "couranti", dexNo: 20, name: "Couranti", types: ["ELEC"],
-        baseStats: { hp: 60, atk: 66, def: 52, spe: 86, spc: 68 },
+        baseStats: { hp: 58, atk: 64, def: 50, spe: 90, spc: 70 },
         learnset: [
             { level: 1, moveId: "etincelle" },
             { level: 1, moveId: "vive_attaque" },
@@ -309,7 +309,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     zappeureal: {
         id: "zappeureal", dexNo: 21, name: "Zappeuréal", types: ["ELEC"],
-        baseStats: { hp: 82, atk: 86, def: 72, spe: 110, spc: 96 },
+        baseStats: { hp: 80, atk: 84, def: 68, spe: 115, spc: 98 },
         learnset: [
             { level: 1, moveId: "etincelle" },
             { level: 1, moveId: "cage_eclair" },
@@ -324,7 +324,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     // --- ❄️ Chiens (Glace) ---
     auroruff: {
         id: "auroruff", dexNo: 22, name: "Auroruff", types: ["GLACE"],
-        baseStats: { hp: 50, atk: 50, def: 50, spe: 50, spc: 55 },
+        baseStats: { hp: 52, atk: 48, def: 62, spe: 44, spc: 56 },
         learnset: [
             { level: 1, moveId: "charge" },
             { level: 8, moveId: "coup_d_givre" },
@@ -338,7 +338,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     glaceer: {
         id: "glaceer", dexNo: 23, name: "Glaceer", types: ["GLACE"],
-        baseStats: { hp: 66, atk: 66, def: 64, spe: 68, spc: 72 },
+        baseStats: { hp: 66, atk: 64, def: 72, spe: 66, spc: 76 },
         learnset: [
             { level: 1, moveId: "coup_d_givre" },
             { level: 1, moveId: "charge" },
@@ -352,7 +352,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     auroraur: {
         id: "auroraur", dexNo: 24, name: "Auroraur", types: ["GLACE"],
-        baseStats: { hp: 90, atk: 82, def: 86, spe: 72, spc: 96 },
+        baseStats: { hp: 92, atk: 80, def: 92, spe: 66, spc: 100 },
         learnset: [
             { level: 1, moveId: "coup_d_givre" },
             { level: 1, moveId: "belier" },
@@ -367,7 +367,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     // --- 🐜 Fourmis (Insecte → Insecte/Psy) ---
     ruffiant: {
         id: "ruffiant", dexNo: 25, name: "Ruffiant", types: ["INSECTE"],
-        baseStats: { hp: 42, atk: 55, def: 52, spe: 50, spc: 36 },
+        baseStats: { hp: 40, atk: 54, def: 54, spe: 52, spc: 34 },
         learnset: [
             { level: 1, moveId: "charge" },
             { level: 6, moveId: "dard_nuee" },
@@ -381,7 +381,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     formiguer: {
         id: "formiguer", dexNo: 26, name: "Formiguer", types: ["INSECTE"],
-        baseStats: { hp: 60, atk: 78, def: 72, spe: 64, spc: 48 },
+        baseStats: { hp: 58, atk: 78, def: 76, spe: 64, spc: 46 },
         learnset: [
             { level: 1, moveId: "dard_nuee" },
             { level: 1, moveId: "dard_venin" },
@@ -395,7 +395,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     regnantaur: {
         id: "regnantaur", dexNo: 27, name: "Regnantaur", types: ["INSECTE", "PSY"],
-        baseStats: { hp: 78, atk: 95, def: 92, spe: 80, spc: 80 },
+        baseStats: { hp: 76, atk: 98, def: 88, spe: 82, spc: 86 },
         learnset: [
             { level: 1, moveId: "dard_nuee" },
             { level: 1, moveId: "choc_mental" },
@@ -410,7 +410,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     // --- 🌋 Magma (Roche/Feu) ---
     lavapetit: {
         id: "lavapetit", dexNo: 28, name: "Lavapetit", types: ["ROCHE", "FEU"],
-        baseStats: { hp: 46, atk: 52, def: 64, spe: 30, spc: 46 },
+        baseStats: { hp: 44, atk: 54, def: 66, spe: 28, spc: 46 },
         learnset: [
             { level: 1, moveId: "charge" },
             { level: 8, moveId: "jet_pierres" },
@@ -424,7 +424,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     fissuralave: {
         id: "fissuralave", dexNo: 29, name: "Fissuralave", types: ["ROCHE", "FEU"],
-        baseStats: { hp: 66, atk: 78, def: 92, spe: 40, spc: 64 },
+        baseStats: { hp: 64, atk: 80, def: 94, spe: 38, spc: 64 },
         learnset: [
             { level: 1, moveId: "jet_pierres" },
             { level: 1, moveId: "flammeche" },
@@ -438,7 +438,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     magmator: {
         id: "magmator", dexNo: 30, name: "Magmator", types: ["ROCHE", "FEU"],
-        baseStats: { hp: 90, atk: 104, def: 118, spe: 48, spc: 82 },
+        baseStats: { hp: 80, atk: 112, def: 100, spe: 50, spc: 82 },
         learnset: [
             { level: 1, moveId: "seisme" },
             { level: 1, moveId: "lance_flammes" },
@@ -453,7 +453,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     // --- 🍝 Dieu spaghetti (Psy) ---
     nouillon: {
         id: "nouillon", dexNo: 31, name: "Nouillon", types: ["PSY"],
-        baseStats: { hp: 44, atk: 40, def: 44, spe: 40, spc: 62 },
+        baseStats: { hp: 52, atk: 30, def: 52, spe: 38, spc: 64 },
         learnset: [
             { level: 1, moveId: "charge" },
             { level: 7, moveId: "choc_mental" },
@@ -467,7 +467,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     vermisaint: {
         id: "vermisaint", dexNo: 32, name: "Vermisaint", types: ["PSY"],
-        baseStats: { hp: 60, atk: 55, def: 58, spe: 55, spc: 86 },
+        baseStats: { hp: 66, atk: 45, def: 60, spe: 52, spc: 88 },
         learnset: [
             { level: 1, moveId: "choc_mental" },
             { level: 1, moveId: "onde_folie" },
@@ -481,7 +481,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     divinpate: {
         id: "divinpate", dexNo: 33, name: "Divinpâte", types: ["PSY"],
-        baseStats: { hp: 84, atk: 72, def: 76, spe: 78, spc: 116 },
+        baseStats: { hp: 72, atk: 68, def: 64, spe: 82, spc: 120 },
         learnset: [
             { level: 1, moveId: "choc_mental" },
             { level: 1, moveId: "onde_folie" },
@@ -496,7 +496,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     // --- 🐦 Héron (Vol/Eau) ---
     piouflot: {
         id: "piouflot", dexNo: 34, name: "Piouflot", types: ["VOL", "EAU"],
-        baseStats: { hp: 40, atk: 44, def: 40, spe: 55, spc: 45 },
+        baseStats: { hp: 40, atk: 42, def: 40, spe: 58, spc: 46 },
         learnset: [
             { level: 1, moveId: "charge" },
             { level: 5, moveId: "pistolet_a_o" },
@@ -510,7 +510,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     herondee: {
         id: "herondee", dexNo: 35, name: "Hérondée", types: ["VOL", "EAU"],
-        baseStats: { hp: 60, atk: 58, def: 54, spe: 74, spc: 66 },
+        baseStats: { hp: 58, atk: 56, def: 52, spe: 78, spc: 66 },
         learnset: [
             { level: 1, moveId: "pistolet_a_o" },
             { level: 1, moveId: "picpic" },
@@ -524,7 +524,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     oragron: {
         id: "oragron", dexNo: 36, name: "Oragron", types: ["VOL", "EAU"],
-        baseStats: { hp: 82, atk: 80, def: 72, spe: 100, spc: 86 },
+        baseStats: { hp: 78, atk: 78, def: 70, spe: 104, spc: 88 },
         learnset: [
             { level: 1, moveId: "tornade" },
             { level: 1, moveId: "hydrocanon" },
@@ -539,7 +539,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     // --- 🐻 Ours sylvestre (Combat/Plante) ---
     broussours: {
         id: "broussours", dexNo: 37, name: "Broussours", types: ["COMBAT", "PLANTE"],
-        baseStats: { hp: 52, atk: 62, def: 50, spe: 40, spc: 40 },
+        baseStats: { hp: 56, atk: 64, def: 52, spe: 38, spc: 38 },
         learnset: [
             { level: 1, moveId: "charge" },
             { level: 7, moveId: "double_pied" },
@@ -553,7 +553,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     sylvours: {
         id: "sylvours", dexNo: 38, name: "Sylvours", types: ["COMBAT", "PLANTE"],
-        baseStats: { hp: 72, atk: 86, def: 70, spe: 52, spc: 56 },
+        baseStats: { hp: 76, atk: 88, def: 72, spe: 48, spc: 54 },
         learnset: [
             { level: 1, moveId: "double_pied" },
             { level: 1, moveId: "fouet_lianes" },
@@ -567,7 +567,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     druidours: {
         id: "druidours", dexNo: 39, name: "Druidours", types: ["COMBAT", "PLANTE"],
-        baseStats: { hp: 100, atk: 116, def: 96, spe: 60, spc: 78 },
+        baseStats: { hp: 105, atk: 118, def: 98, spe: 48, spc: 66 },
         learnset: [
             { level: 1, moveId: "poing_karate" },
             { level: 1, moveId: "fouet_lianes" },
