@@ -70,7 +70,20 @@ function parseMon(raw: unknown): MonInstance | null {
         statusCounter: typeof o.statusCounter === "number" ? o.statusCounter : 0,
         moves,
         owned: o.owned === true,
+        statPoints: typeof o.statPoints === "number" ? Math.max(0, Math.floor(o.statPoints)) : undefined,
+        allocated: parseAllocated(o.allocated),
     }
+}
+
+/** Parse défensif des points alloués (Saiyan) : sous-ensemble de stats → entiers >= 0. */
+function parseAllocated(raw: unknown): Partial<Record<StatKey, number>> | undefined {
+    if (!raw || typeof raw !== "object") return undefined
+    const out: Partial<Record<StatKey, number>> = {}
+    for (const k of STAT_KEYS) {
+        const v = (raw as Record<string, unknown>)[k]
+        if (typeof v === "number" && v > 0) out[k] = Math.floor(v)
+    }
+    return Object.keys(out).length ? out : undefined
 }
 
 function strArr(raw: unknown): string[] {
@@ -113,5 +126,7 @@ export function toMonInstance(m: MonInstance & { stages?: unknown; volatiles?: u
         ivs: { ...m.ivs }, currentHp: m.currentHp, status: m.status, statusCounter: m.statusCounter,
         moves: m.moves.map((mv) => ({ ...mv })), owned: m.owned,
         pendingMoves: m.pendingMoves && m.pendingMoves.length ? [...m.pendingMoves] : undefined,
+        statPoints: m.statPoints && m.statPoints > 0 ? m.statPoints : undefined,
+        allocated: m.allocated && Object.keys(m.allocated).length ? { ...m.allocated } : undefined,
     }
 }

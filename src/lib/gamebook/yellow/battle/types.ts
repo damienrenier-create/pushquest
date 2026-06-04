@@ -122,6 +122,10 @@ export interface MonInstance {
     /** Attaques apprises à un niveau alors que les 4 slots étaient pleins :
      *  en attente d'un choix « oublier une capacité » côté UI. Transitoire. */
     pendingMoves?: string[]
+    /** ENTRAÎNEMENT SAIYAN — points de stats non encore dépensés (gagnés au level-up). */
+    statPoints?: number
+    /** ENTRAÎNEMENT SAIYAN — bonus à plat alloués par le joueur, par stat (additif). */
+    allocated?: Partial<Record<StatKey, number>>
 }
 
 export interface BattleMon extends MonInstance {

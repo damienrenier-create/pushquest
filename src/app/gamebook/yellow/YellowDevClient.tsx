@@ -19,13 +19,14 @@ import LearnScreen from "./LearnScreen"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout } from "@/lib/gamebook/yellow/store/battleStore"
 import { loadYellowSave, initAutosave, persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
-import { getPlayer, setTeam, usePlayer, addItem, spendReps, markIntroSeen, resetForIntro, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, useHealItemOnTeam } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, addItem, spendReps, markIntroSeen, resetForIntro, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, useHealItemOnTeam, allocateStatPoint } from "@/lib/gamebook/yellow/store/playerStore"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { ITEMS, getItem } from "@/lib/gamebook/yellow/data/items"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { moveCostReps } from "@/lib/gamebook/yellow/data/combatCostConfig"
+import { SAIYAN_POINT_VALUE } from "@/lib/gamebook/yellow/data/saiyanConfig"
 import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
 import { expForLevel } from "@/lib/gamebook/yellow/battle/xp"
 import type { MonInstance } from "@/lib/gamebook/yellow/battle/types"
@@ -424,6 +425,26 @@ export default function YellowDevClient() {
                                     </div>
                                 )
                             })}
+
+                            {/* ENTRAÎNEMENT SAIYAN : répartition des points de stats */}
+                            {(live.statPoints ?? 0) > 0 && (
+                                <div style={{ marginTop: 10, padding: 8, border: "2px solid #f5a020", borderRadius: 6, background: "#fff6e6" }}>
+                                    <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 6 }}>
+                                        🔥 ENTRAÎNEMENT SAIYAN — <span style={{ color: "#e06000" }}>{live.statPoints} pt{(live.statPoints ?? 0) > 1 ? "s" : ""}</span>
+                                    </div>
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr", gap: 4 }}>
+                                        {([["hp", "PV"], ["atk", "ATQ"], ["def", "DÉF"], ["spe", "VIT"], ["spc", "SPÉ"]] as const).map(([k, lbl]) => (
+                                            <button
+                                                key={k}
+                                                style={{ ...menuBtnStyle, padding: "8px 2px", textAlign: "center", fontSize: 11 }}
+                                                onClick={() => { if (allocateStatPoint(live.uid, k)) { setToast(`+${SAIYAN_POINT_VALUE[k]} ${lbl}`); persistYellowSave() } }}
+                                            >
+                                                +{lbl}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Renommage */}
                             {renaming ? (

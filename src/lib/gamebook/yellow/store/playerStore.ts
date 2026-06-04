@@ -10,6 +10,8 @@ import { fullStats } from "../battle/stats"
 import { getSpecies } from "../data/species"
 import { getMove } from "../data/moves"
 import { getItem } from "../data/items"
+import { SAIYAN_POINT_VALUE } from "../data/saiyanConfig"
+import type { StatKey } from "../battle/types"
 import { expForLevel, levelFromExp, applyExp, MAX_LEVEL, type ExpResult } from "../battle/xp"
 import type { WildPlayerCtx } from "../data/encounters"
 
@@ -273,6 +275,35 @@ export function useHealItemOnTeam(uid: string, itemId: string): boolean {
     st = { ...st, team, items: { ...st.items, [itemId]: st.items[itemId] - 1 } }
     emit()
     return true
+}
+
+/**
+ * ENTRAÎNEMENT SAIYAN : dépense 1 point de stat sur le Daemon (équipe ou PC).
+ * Si la stat est PV, augmente aussi les PV courants du gain (pas de PV "manquants").
+ */
+export function allocateStatPoint(uid: string, stat: StatKey): boolean {
+    const pools: ("team" | "pc")[] = ["team", "pc"]
+    for (const pool of pools) {
+        const arr = st[pool]
+        const idx = arr.findIndex((m) => m.uid === uid)
+        if (idx < 0) continue
+        const m = arr[idx]
+        if ((m.statPoints ?? 0) <= 0) return false
+        const allocated = { ...(m.allocated ?? {}) }
+        allocated[stat] = (allocated[stat] ?? 0) + 1
+        const updated: MonInstance = {
+            ...m,
+            statPoints: (m.statPoints ?? 0) - 1,
+            allocated,
+            currentHp: stat === "hp" ? m.currentHp + SAIYAN_POINT_VALUE.hp : m.currentHp,
+        }
+        const next = arr.slice()
+        next[idx] = updated
+        st = { ...st, [pool]: next }
+        emit()
+        return true
+    }
+    return false
 }
 
 /** Apprentissage en attente : un Daemon veut apprendre une attaque mais a 4 slots. */

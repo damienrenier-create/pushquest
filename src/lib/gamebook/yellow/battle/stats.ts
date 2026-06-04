@@ -5,6 +5,7 @@
 // défense spéciale.
 
 import type { SpeciesData, StatKey, StageKey, MonInstance, MajorStatus } from "./types"
+import { allocatedBonus } from "../data/saiyanConfig"
 
 // ============================================================
 // Stats absolues (hors combat)
@@ -25,18 +26,19 @@ export function computeStat(base: number, iv: number, level: number): number {
     return Math.floor(((2 * base + iv) * level) / 100) + 5
 }
 
-/** Les 5 stats absolues d'une instance. */
+/** Les 5 stats absolues d'une instance (formule Gen-1 + bonus Saiyan alloués). */
 export function fullStats(
-    inst: Pick<MonInstance, "level" | "ivs">,
+    inst: Pick<MonInstance, "level" | "ivs" | "allocated">,
     species: SpeciesData,
 ): Record<StatKey, number> {
     const lv = inst.level
+    const a = inst.allocated ?? {}
     return {
-        hp: maxHp(species, lv, inst.ivs.hp),
-        atk: computeStat(species.baseStats.atk, inst.ivs.atk, lv),
-        def: computeStat(species.baseStats.def, inst.ivs.def, lv),
-        spe: computeStat(species.baseStats.spe, inst.ivs.spe, lv),
-        spc: computeStat(species.baseStats.spc, inst.ivs.spc, lv),
+        hp: maxHp(species, lv, inst.ivs.hp) + allocatedBonus("hp", a.hp ?? 0),
+        atk: computeStat(species.baseStats.atk, inst.ivs.atk, lv) + allocatedBonus("atk", a.atk ?? 0),
+        def: computeStat(species.baseStats.def, inst.ivs.def, lv) + allocatedBonus("def", a.def ?? 0),
+        spe: computeStat(species.baseStats.spe, inst.ivs.spe, lv) + allocatedBonus("spe", a.spe ?? 0),
+        spc: computeStat(species.baseStats.spc, inst.ivs.spc, lv) + allocatedBonus("spc", a.spc ?? 0),
     }
 }
 
