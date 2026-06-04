@@ -1,0 +1,70 @@
+import { describe, it, expect } from "vitest"
+import { expForLevel, levelFromExp, xpForDefeat, applyExp, MAX_LEVEL } from "./xp"
+import type { MonInstance } from "./types"
+
+describe("courbe d'XP (medium-fast = L³)", () => {
+    it("expForLevel = niveau au cube", () => {
+        expect(expForLevel(1)).toBe(1)
+        expect(expForLevel(10)).toBe(1000)
+        expect(expForLevel(100)).toBe(1_000_000)
+    })
+    it("levelFromExp est l'inverse (palier inférieur)", () => {
+        expect(levelFromExp(1000)).toBe(10)
+        expect(levelFromExp(999)).toBe(9)
+        expect(levelFromExp(0)).toBe(1)
+    })
+    it("ne dépasse jamais MAX_LEVEL", () => {
+        expect(levelFromExp(999_999_999)).toBe(MAX_LEVEL)
+    })
+})
+
+describe("xpForDefeat", () => {
+    it("sauvage = floor(baseExp*level/7)", () => {
+        // 30 * 10 / 7 = 42.85 → 42.
+        expect(xpForDefeat(30, 10, true)).toBe(42)
+    })
+    it("dresseur = ×1.5", () => {
+        expect(xpForDefeat(30, 10, false)).toBe(63) // floor(42*1.5)
+    })
+    it("toujours >= 1", () => {
+        expect(xpForDefeat(1, 1, true)).toBe(1)
+    })
+})
+
+function makeMon(level: number, exp: number): MonInstance {
+    return {
+        uid: "test", speciesId: "rongeur", level, exp,
+        ivs: { hp: 0, atk: 0, def: 0, spe: 0, spc: 0 },
+        currentHp: 20, status: "NONE", statusCounter: 0,
+        moves: [{ moveId: "charge", pp: 35, ppMax: 35 }],
+    }
+}
+
+describe("applyExp (montée de niveau + apprentissage)", () => {
+    it("monte de niveau et apprend les attaques du learnset", () => {
+        // Rongeur niv 1 → on lui donne assez d'XP pour atteindre le niveau 6.
+        const mon = makeMon(1, expForLevel(1))
+        const r = applyExp(mon, expForLevel(6) - expForLevel(1))
+        expect(mon.level).toBe(6)
+        expect(r.fromLevel).toBe(1)
+        expect(r.toLevel).toBe(6)
+        // vive_attaque s'apprend au niveau 5.
+        expect(mon.moves.some((m) => m.moveId === "vive_attaque")).toBe(true)
+        expect(r.learnedMoveIds).toContain("vive_attaque")
+    })
+    it("plafonne l'apprentissage à 4 attaques", () => {
+        const mon = makeMon(1, expForLevel(1))
+        mon.moves = [
+            { moveId: "a", pp: 5, ppMax: 5 }, { moveId: "b", pp: 5, ppMax: 5 },
+            { moveId: "c", pp: 5, ppMax: 5 }, { moveId: "d", pp: 5, ppMax: 5 },
+        ]
+        applyExp(mon, expForLevel(20))
+        expect(mon.moves.length).toBe(4)
+    })
+    it("ne fait jamais baisser le niveau", () => {
+        const mon = makeMon(10, expForLevel(10))
+        const r = applyExp(mon, 0)
+        expect(mon.level).toBe(10)
+        expect(r.toLevel).toBe(10)
+    })
+})

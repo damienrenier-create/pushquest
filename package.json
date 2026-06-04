@@ -8,6 +8,8 @@
     "db:push": "npx prisma db push --schema=./prisma/schema.prisma",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "reset:db": "npx prisma db push --accept-data-loss --schema=./prisma/schema.prisma && npx prisma generate --schema=./prisma/schema.prisma",
     "postinstall": "prisma generate --schema=./prisma/schema.prisma",
     "verify": "node scripts/safety-net.js"
@@ -39,6 +41,7 @@
     "eslint-config-next": "16.1.6",
     "prisma": "^5.22.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.6"
   }
 }
