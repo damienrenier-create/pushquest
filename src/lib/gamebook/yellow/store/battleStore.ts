@@ -13,6 +13,21 @@ import {
     type PlayerAction,
 } from "../battle/engine"
 import type { MonInstance } from "../battle/types"
+import { markSeen, markCaught } from "./pokedexStore"
+
+/** Espèce de l'adversaire actif (pour synchroniser le Pokédex). */
+function enemyActiveSpeciesId(b: BattleState): string | null {
+    const m = b.enemy.team[b.enemy.activeIndex]
+    return m ? m.speciesId : null
+}
+
+/** Met à jour le Pokédex depuis l'état de combat (vu, et capturé si applicable). */
+function syncPokedex(b: BattleState) {
+    const sp = enemyActiveSpeciesId(b)
+    if (!sp) return
+    markSeen(sp)
+    if (b.outcome === "caught") markCaught(sp)
+}
 
 interface BattleStoreState {
     battle: BattleState | null
@@ -45,16 +60,21 @@ export function getSnapshot(): BattleStoreState {
 // ============================================================
 
 export function startWildBattle(playerTeam: MonInstance[], enemyTeam: MonInstance[], seed: number) {
-    setStore({ battle: createBattle(playerTeam, enemyTeam, { isWild: true, seed }) })
+    const battle = createBattle(playerTeam, enemyTeam, { isWild: true, seed })
+    syncPokedex(battle) // adversaire "vu" dès la rencontre
+    setStore({ battle })
 }
 
 export function startTrainerBattle(playerTeam: MonInstance[], enemyTeam: MonInstance[], seed: number) {
-    setStore({ battle: createBattle(playerTeam, enemyTeam, { isWild: false, seed }) })
+    const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed })
+    syncPokedex(battle)
+    setStore({ battle })
 }
 
 export function submitPlayerAction(action: PlayerAction) {
     if (!storeState.battle) return
     const next = resolveTurn(storeState.battle, action)
+    syncPokedex(next) // vu (changement d'adversaire) + capturé le cas échéant
     setStore({ battle: next })
 }
 

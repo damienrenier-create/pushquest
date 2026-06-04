@@ -9,8 +9,9 @@ import { useBattle, submitPlayerAction, endBattle } from "@/lib/gamebook/yellow/
 import { speciesOf, maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
 import type { BattleMon } from "@/lib/gamebook/yellow/battle/types"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
+import { ITEMS } from "@/lib/gamebook/yellow/data/items"
 
-type Menu = "root" | "moves" | "switch"
+type Menu = "root" | "moves" | "switch" | "ball"
 
 export default function BattleScreen() {
     const battle = useBattle()
@@ -40,6 +41,7 @@ export default function BattleScreen() {
     const advance = () => { if (!playingDone) setCursor((c) => c + 1) }
     const useMove = (i: number) => { submitPlayerAction({ kind: "move", moveIndex: i }); setMenu("root") }
     const doSwitch = (i: number) => { submitPlayerAction({ kind: "switch", teamIndex: i }); setMenu("root") }
+    const throwBall = (itemId: string) => { submitPlayerAction({ kind: "ball", itemId }); setMenu("root") }
     const run = () => submitPlayerAction({ kind: "run" })
 
     return (
@@ -70,12 +72,14 @@ export default function BattleScreen() {
                 ) : menu === "root" ? (
                     <div style={S.menuGrid}>
                         <button style={S.btn} onClick={() => setMenu("moves")}>ATTAQUE</button>
-                        <button style={S.btnDim} disabled>SAC</button>
+                        <button style={battle.isWild ? S.btn : S.btnDim} disabled={!battle.isWild} onClick={battle.isWild ? () => setMenu("ball") : undefined}>SAC</button>
                         <button style={S.btn} onClick={() => setMenu("switch")}>DAEMON</button>
                         <button style={battle.isWild ? S.btn : S.btnDim} disabled={!battle.isWild} onClick={battle.isWild ? run : undefined}>FUITE</button>
                     </div>
                 ) : menu === "moves" ? (
                     <MoveMenu mon={player} onPick={useMove} onBack={() => setMenu("root")} />
+                ) : menu === "ball" ? (
+                    <BallMenu onPick={throwBall} onBack={() => setMenu("root")} />
                 ) : (
                     <SwitchMenu team={battle.player.team} activeIndex={battle.player.activeIndex} onPick={doSwitch} onBack={() => setMenu("root")} />
                 )}
@@ -153,6 +157,18 @@ function SwitchMenu({ team, activeIndex, onPick, onBack, forced }: {
                 )
             })}
             {!forced && onBack && <button style={{ ...S.btnDim, gridColumn: "1 / -1" }} onClick={onBack}>← RETOUR</button>}
+        </div>
+    )
+}
+
+function BallMenu({ onPick, onBack }: { onPick: (id: string) => void; onBack: () => void }) {
+    const balls = Object.values(ITEMS).filter((it) => it.category === "BALL")
+    return (
+        <div style={S.menuGrid}>
+            {balls.map((b) => (
+                <button key={b.id} style={S.btn} onClick={() => onPick(b.id)}>{b.name}</button>
+            ))}
+            <button style={{ ...S.btnDim, gridColumn: "1 / -1" }} onClick={onBack}>← RETOUR</button>
         </div>
     )
 }
