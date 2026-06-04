@@ -45,10 +45,10 @@ export function tryCapture(i: CaptureInput, rng: Rng): CaptureResult {
     const value = captureValue(i)
     if (value >= 255) return { caught: true, shakes: 3, value }
     const p = Math.max(0, Math.min(1, value / 255))
-    let shakes = 0
-    for (let s = 0; s < 3; s++) {
-        if (rng.next() < p) shakes++
-        else break
-    }
-    return { caught: shakes >= 3, shakes, value }
+    // Capture décidée par UN jet à la proba p (≈ valeur/255) — bien moins punitif
+    // que l'ancien modèle (p³). Les secousses ne sont qu'un habillage visuel.
+    const caught = rng.next() < p
+    let shakes = caught ? 3 : 0
+    if (!caught) { for (let s = 0; s < 3; s++) { if (rng.next() < p) shakes++; else break } }
+    return { caught, shakes, value }
 }

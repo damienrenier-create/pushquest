@@ -16,7 +16,7 @@ import BattleScreen from "./battle/BattleScreen"
 import EvolutionScreen from "./battle/EvolutionScreen"
 import IntroCinematic from "./IntroCinematic"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
-import { useBattle, useEvolutions, clearEvolutions } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout } from "@/lib/gamebook/yellow/store/battleStore"
 import { loadYellowSave, initAutosave, persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { getPlayer, setTeam, usePlayer, addItem, addMoney, spendMoney, markIntroSeen, resetForIntro } from "@/lib/gamebook/yellow/store/playerStore"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
@@ -36,8 +36,10 @@ export default function YellowDevClient() {
     const hydrated = useGameStore((s) => s.hydrated)
     const shopOpen = useGameStore((s) => s.shopOpen)
     const closeShop = useGameStore((s) => s.closeShop)
+    const setMap = useGameStore((s) => s.setMap)
     const battle = useBattle()
     const evolutions = useEvolutions()
+    const whiteout = useWhiteout()
     const router = useRouter()
     const player = usePlayer()
     const [menu, setMenu] = useState<"none" | "pause" | "team">("none")
@@ -91,6 +93,16 @@ export default function YellowDevClient() {
     // Évite un flash à l'écran avant que l'état serveur soit chargé.
     // Si la requête échoue (offline / 403), on affiche quand même le state local.
     void hydrated
+
+    // Équipe entièrement K.O. → renvoi immédiat au Centre Daemon (déjà soignée par
+    // le store de combat). On warp dès que le combat est quitté.
+    useEffect(() => {
+        if (whiteout && !battle) {
+            setMap("yellow_infirmary", 4, 3)
+            persistYellowSave()
+            clearWhiteout()
+        }
+    }, [whiteout, battle, setMap])
 
     // Fin d'intro : on accorde le starter choisi (niv 5) + un petit kit de départ,
     // on marque l'intro vue et on persiste.

@@ -15,7 +15,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance } from "../battle/types"
 import { markSeen, markCaught } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, addMoney, markTrainerDefeated } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, addMoney, markTrainerDefeated, healAllTeam } from "./playerStore"
 import { toMonInstance } from "../storage/save"
 import { evolveTeam } from "../progression/evolveTeam"
 import { persistYellowSave } from "./saveManager"
@@ -47,9 +47,11 @@ interface BattleStoreState {
     evolutions: EvolutionResult[]
     /** Présent uniquement pendant/juste après un combat de dresseur. */
     trainer: TrainerContext | null
+    /** Équipe entièrement K.O. → la carte doit renvoyer le joueur au Centre (soigné). */
+    whiteout: boolean
 }
 
-let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null }
+let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false }
 const listeners = new Set<() => void>()
 
 function emit() {
@@ -78,7 +80,7 @@ export function getSnapshot(): BattleStoreState {
 export function startWildBattle(playerTeam: MonInstance[], enemyTeam: MonInstance[], seed: number) {
     const battle = createBattle(playerTeam, enemyTeam, { isWild: true, seed })
     syncPokedex(battle) // adversaire "vu" dès la rencontre
-    setStore({ battle, evolutions: [], trainer: null })
+    setStore({ battle, evolutions: [], trainer: null, whiteout: false })
 }
 
 export function startTrainerBattle(
@@ -90,7 +92,7 @@ export function startTrainerBattle(
     const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: opts?.aiLevel })
     syncPokedex(battle)
     const trainer = opts?.trainerId ? { trainerId: opts.trainerId, reward: opts.reward ?? 0 } : null
-    setStore({ battle, evolutions: [], trainer })
+    setStore({ battle, evolutions: [], trainer, whiteout: false })
 }
 
 export function submitPlayerAction(action: PlayerAction) {
@@ -101,7 +103,7 @@ export function submitPlayerAction(action: PlayerAction) {
     if (action.kind === "item" && !consumeItem(action.itemId)) return
     const next = resolveTurn(storeState.battle, action)
     syncPokedex(next) // vu (changement d'adversaire) + capturé le cas échéant
-    setStore({ battle: next, evolutions: [], trainer: storeState.trainer })
+    setStore({ battle: next, evolutions: [], trainer: storeState.trainer, whiteout: false })
     if (next.phase === "ended") finishBattle(next)
 }
 
@@ -128,6 +130,11 @@ function finishBattle(b: BattleState) {
         }
     }
 
+    // 2ter) Défaite (équipe entièrement K.O.) : on soigne tout de suite et on
+    //       signale un "whiteout" → la carte renverra le joueur au Centre.
+    const isLose = b.outcome === "lose"
+    if (isLose) healAllTeam()
+
     // 3) Évolutions post-combat (mute l'équipe → re-set pour notifier + Pokédex).
     const team = getPlayer().team
     const evos = evolveTeam(team)
@@ -136,19 +143,24 @@ function finishBattle(b: BattleState) {
         setTeam([...team])
     }
     // Expose les évolutions pour la cinématique post-combat (jouée après "QUITTER").
-    setStore({ battle: b, evolutions: evos, trainer: null })
+    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose })
 
     // 4) Sauvegarde persistante (DB).
     persistYellowSave()
 }
 
 export function endBattle() {
-    // On garde les évolutions : la cinématique se joue une fois le combat quitté.
-    setStore({ battle: null, evolutions: storeState.evolutions, trainer: null })
+    // On garde évolutions + whiteout : ils se jouent une fois le combat quitté.
+    setStore({ battle: null, evolutions: storeState.evolutions, trainer: null, whiteout: storeState.whiteout })
 }
 
 export function clearEvolutions() {
-    setStore({ battle: storeState.battle, evolutions: [], trainer: storeState.trainer })
+    setStore({ battle: storeState.battle, evolutions: [], trainer: storeState.trainer, whiteout: storeState.whiteout })
+}
+
+/** Consommé par la carte une fois le joueur renvoyé au Centre. */
+export function clearWhiteout() {
+    setStore({ ...storeState, whiteout: false })
 }
 
 // ============================================================
@@ -168,5 +180,13 @@ export function useEvolutions(): EvolutionResult[] {
         subscribe,
         () => getSnapshot().evolutions,
         () => getSnapshot().evolutions,
+    )
+}
+
+export function useWhiteout(): boolean {
+    return useSyncExternalStore(
+        subscribe,
+        () => getSnapshot().whiteout,
+        () => getSnapshot().whiteout,
     )
 }
