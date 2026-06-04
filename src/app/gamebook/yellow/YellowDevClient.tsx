@@ -19,12 +19,13 @@ import LearnScreen from "./LearnScreen"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout } from "@/lib/gamebook/yellow/store/battleStore"
 import { loadYellowSave, initAutosave, persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
-import { getPlayer, setTeam, usePlayer, addItem, spendReps, markIntroSeen, resetForIntro, superPastaPrice, buySuperPasta } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, addItem, spendReps, markIntroSeen, resetForIntro, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, useHealItemOnTeam } from "@/lib/gamebook/yellow/store/playerStore"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
-import { ITEMS } from "@/lib/gamebook/yellow/data/items"
+import { ITEMS, getItem } from "@/lib/gamebook/yellow/data/items"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
+import { moveCostReps } from "@/lib/gamebook/yellow/data/combatCostConfig"
 import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
 import { expForLevel } from "@/lib/gamebook/yellow/battle/xp"
 import type { MonInstance } from "@/lib/gamebook/yellow/battle/types"
@@ -43,11 +44,15 @@ export default function YellowDevClient() {
     const whiteout = useWhiteout()
     const router = useRouter()
     const player = usePlayer()
-    const [menu, setMenu] = useState<"none" | "pause" | "team">("none")
+    const [menu, setMenu] = useState<"none" | "pause" | "team" | "pc" | "bag">("none")
     const [selected, setSelected] = useState<MonInstance | null>(null)
     const [showIntro, setShowIntro] = useState(false)
     const [pastaPick, setPastaPick] = useState(false)
     const [toast, setToast] = useState<string | null>(null)
+    const [renaming, setRenaming] = useState(false)
+    const [renameText, setRenameText] = useState("")
+    const [bagItem, setBagItem] = useState<string | null>(null)
+    const [pcBox, setPcBox] = useState(0)
 
     // Au mount : charge l'état du joueur depuis le serveur (DB Neon).
     // Si le joueur n'a jamais joué, on garde le state par défaut (déjà set
@@ -130,6 +135,8 @@ export default function YellowDevClient() {
             {showIntro && <IntroCinematic onComplete={onIntroComplete} />}
 
             <GameBoyShell
+                reps={player.reps}
+                repsCap={player.repsCap}
                 onUp={() => move("up")}
                 onDown={() => move("down")}
                 onLeft={() => move("left")}
@@ -155,6 +162,8 @@ export default function YellowDevClient() {
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                         <div style={menuTitleStyle}>MENU</div>
                         <button style={menuBtnStyle} onClick={() => setMenu("team")}>🐾 ÉQUIPE</button>
+                        <button style={menuBtnStyle} onClick={() => setMenu("pc")}>📦 PC (BOÎTES)</button>
+                        <button style={menuBtnStyle} onClick={() => setMenu("bag")}>🎒 SAC</button>
                         <button style={menuBtnStyle} onClick={() => router.push("/gamebook/yellow/pokedex")}>📷 POKÉDEX</button>
                         <button style={menuBtnDimStyle} onClick={() => { resetForIntro(); persistYellowSave(); setMenu("none"); setShowIntro(true) }}>↺ REJOUER INTRO (dev)</button>
                         <button style={menuBtnDimStyle} onClick={() => setMenu("none")}>← FERMER</button>
@@ -185,6 +194,108 @@ export default function YellowDevClient() {
                         })}
                         {player.pc.length > 0 && <div style={{ fontSize: 10, opacity: 0.5, marginTop: 6 }}>PC : {player.pc.length} Daemon(s) en réserve</div>}
                         <button style={menuBtnDimStyle} onClick={() => setMenu("pause")}>← RETOUR</button>
+                    </div>
+                </div>
+            )}
+
+            {/* PC — boîtes : dépôt/retrait entre l'équipe et la réserve */}
+            {!battle && menu === "pc" && (() => {
+                const BOX_SIZE = 20
+                const boxes = Math.max(1, Math.ceil(player.pc.length / BOX_SIZE))
+                const box = Math.min(pcBox, boxes - 1)
+                const slice = player.pc.slice(box * BOX_SIZE, box * BOX_SIZE + BOX_SIZE)
+                return (
+                    <div style={menuOverlayStyle} onClick={() => setMenu("pause")}>
+                        <div style={{ ...menuBoxStyle, maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
+                            <div style={menuTitleStyle}>PC — RANGEMENT</div>
+                            <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.7, margin: "2px 0" }}>ÉQUIPE ({player.team.length}/6)</div>
+                            {player.team.map((m) => (
+                                <button key={m.uid} style={{ ...teamRowStyle, cursor: "pointer", border: "none", background: "transparent", width: "100%" }} onClick={() => setSelected(m)}>
+                                    <span style={{ fontWeight: 700, flex: 1, textAlign: "left" }}>{displayName(m)}</span>
+                                    <span style={{ opacity: 0.6, fontSize: 10 }}>N.{m.level}</span>
+                                </button>
+                            ))}
+                            <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.7, margin: "8px 0 2px", display: "flex", justifyContent: "space-between" }}>
+                                <span>BOÎTE {box + 1}/{boxes}</span>
+                                <span>
+                                    <button style={miniBtn} disabled={box <= 0} onClick={() => setPcBox(box - 1)}>◀</button>
+                                    <button style={miniBtn} disabled={box >= boxes - 1} onClick={() => setPcBox(box + 1)}>▶</button>
+                                </span>
+                            </div>
+                            {player.pc.length === 0 && <div style={{ fontSize: 11, opacity: 0.6 }}>Aucun Daemon en réserve.</div>}
+                            {slice.map((m) => (
+                                <button key={m.uid} style={{ ...teamRowStyle, cursor: "pointer", border: "none", background: "transparent", width: "100%" }} onClick={() => setSelected(m)}>
+                                    <span style={{ fontWeight: 700, flex: 1, textAlign: "left" }}>{displayName(m)}</span>
+                                    <span style={{ opacity: 0.6, fontSize: 10 }}>{getSpecies(m.speciesId)?.types.join("/")}</span>
+                                    <span style={{ width: 38, textAlign: "right" }}>N.{m.level}</span>
+                                </button>
+                            ))}
+                            <button style={{ ...menuBtnDimStyle, marginTop: 6 }} onClick={() => setMenu("pause")}>← RETOUR</button>
+                        </div>
+                    </div>
+                )
+            })()}
+
+            {/* SAC — objets utilisables hors combat (soins) */}
+            {!battle && menu === "bag" && (
+                <div style={menuOverlayStyle} onClick={() => { setMenu("pause"); setBagItem(null) }}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        {bagItem === null ? (
+                            <>
+                                <div style={menuTitleStyle}>SAC</div>
+                                {Object.values(ITEMS).filter((it) => (player.items[it.id] ?? 0) > 0).map((it) => {
+                                    const usable = it.category === "HEAL"
+                                    return (
+                                        <button
+                                            key={it.id}
+                                            style={usable ? menuBtnStyle : menuBtnDimStyle}
+                                            disabled={!usable}
+                                            onClick={() => usable && setBagItem(it.id)}
+                                        >
+                                            <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                                <span>{it.name}{usable ? "" : it.category === "BALL" ? " (en combat)" : ""}</span>
+                                                <span>×{player.items[it.id]}</span>
+                                            </span>
+                                        </button>
+                                    )
+                                })}
+                                {Object.values(ITEMS).filter((it) => (player.items[it.id] ?? 0) > 0).length === 0 && (
+                                    <div style={{ fontSize: 11, opacity: 0.6 }}>Sac vide. Va à la boutique !</div>
+                                )}
+                                <button style={menuBtnDimStyle} onClick={() => setMenu("pause")}>← RETOUR</button>
+                            </>
+                        ) : (
+                            <>
+                                <div style={menuTitleStyle}>{getItem(bagItem)?.name} — SUR QUI ?</div>
+                                {player.team.map((m) => {
+                                    const sp = getSpecies(m.speciesId)
+                                    const max = sp ? fullStats(m, sp).hp : m.currentHp
+                                    const ko = m.currentHp <= 0
+                                    const full = m.currentHp >= max
+                                    const dis = ko || full
+                                    return (
+                                        <button
+                                            key={m.uid}
+                                            style={dis ? menuBtnDimStyle : menuBtnStyle}
+                                            disabled={dis}
+                                            onClick={() => {
+                                                if (useHealItemOnTeam(m.uid, bagItem)) {
+                                                    setToast(`${displayName(m)} récupère des PV !`)
+                                                    persistYellowSave()
+                                                }
+                                                setBagItem(null)
+                                            }}
+                                        >
+                                            <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                                <span>{displayName(m)}{ko ? " (K.O.)" : ""}</span>
+                                                <span>{m.currentHp}/{max}</span>
+                                            </span>
+                                        </button>
+                                    )
+                                })}
+                                <button style={menuBtnDimStyle} onClick={() => setBagItem(null)}>← RETOUR</button>
+                            </>
+                        )}
                     </div>
                 </div>
             )}
@@ -275,40 +386,78 @@ export default function YellowDevClient() {
                 <div style={toastStyle} onClick={() => setToast(null)}>{toast}</div>
             )}
 
-            {/* Fiche / résumé d'un Daemon (depuis l'Équipe) */}
+            {/* Fiche / résumé d'un Daemon (équipe ou PC) + actions */}
             {selected && (() => {
-                const sp = getSpecies(selected.speciesId)
-                const stats = sp ? fullStats(selected, sp) : null
-                const toNext = expForLevel(selected.level + 1) - Math.max(selected.exp, expForLevel(selected.level))
+                // Lit la version LIVE depuis le store (à jour après renommage/soin).
+                const live = player.team.find((m) => m.uid === selected.uid) ?? player.pc.find((m) => m.uid === selected.uid)
+                if (!live) { return null }
+                const inTeam = player.team.some((m) => m.uid === live.uid)
+                const sp = getSpecies(live.speciesId)
+                const stats = sp ? fullStats(live, sp) : null
+                const toNext = expForLevel(live.level + 1) - Math.max(live.exp, expForLevel(live.level))
+                const closeFiche = () => { setSelected(null); setRenaming(false) }
                 return (
-                    <div style={menuOverlayStyle} onClick={() => setSelected(null)}>
+                    <div style={menuOverlayStyle} onClick={closeFiche}>
                         <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                             <div style={{ ...menuTitleStyle, display: "flex", justifyContent: "space-between" }}>
-                                <span>{displayName(selected).toUpperCase()}</span><span>N.{selected.level}</span>
+                                <span>{displayName(live).toUpperCase()}</span><span>N.{live.level}</span>
                             </div>
-                            <div style={{ fontSize: 11, opacity: 0.7 }}>{sp?.types.join(" / ")} · {sp?.name}</div>
+                            <div style={{ fontSize: 11, opacity: 0.7 }}>{sp?.types.join(" / ")} · {sp?.name} · {inTeam ? "Équipe" : "PC"}</div>
                             {stats && (
                                 <div style={{ fontSize: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3px 12px", margin: "8px 0" }}>
-                                    <span>PV : {selected.currentHp}/{stats.hp}</span>
+                                    <span>PV : {live.currentHp}/{stats.hp}</span>
                                     <span>Vitesse : {stats.spe}</span>
                                     <span>Attaque : {stats.atk}</span>
                                     <span>Défense : {stats.def}</span>
                                     <span>Spécial : {stats.spc}</span>
-                                    <span>Statut : {selected.status === "NONE" ? "—" : selected.status}</span>
+                                    <span>Statut : {live.status === "NONE" ? "—" : live.status}</span>
                                 </div>
                             )}
                             <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 6 }}>Niveau suivant dans ~{Math.max(0, toNext).toLocaleString("fr-FR")} XP</div>
-                            <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 2 }}>ATTAQUES</div>
-                            {selected.moves.map((mv) => {
+                            <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 2 }}>ATTAQUES (coût en reps)</div>
+                            {live.moves.map((mv) => {
                                 const m = getMove(mv.moveId)
                                 return (
                                     <div key={mv.moveId} style={{ fontSize: 11, display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
                                         <span>{m?.name ?? mv.moveId} <span style={{ opacity: 0.55 }}>({m?.type ?? "?"})</span></span>
-                                        <span style={{ opacity: 0.7 }}>{mv.pp}/{mv.ppMax} PP</span>
+                                        <span style={{ opacity: 0.7 }}>💪 {moveCostReps(mv.ppMax, live.level)}</span>
                                     </div>
                                 )
                             })}
-                            <button style={{ ...menuBtnDimStyle, marginTop: 8 }} onClick={() => setSelected(null)}>← RETOUR</button>
+
+                            {/* Renommage */}
+                            {renaming ? (
+                                <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+                                    <input
+                                        autoFocus
+                                        value={renameText}
+                                        maxLength={12}
+                                        placeholder={sp?.name ?? ""}
+                                        onChange={(e) => setRenameText(e.target.value)}
+                                        style={{ flex: 1, fontFamily: "inherit", fontSize: 13, padding: "8px 10px", border: "2px solid #1c1408", borderRadius: 6 }}
+                                    />
+                                    <button style={menuBtnStyle} onClick={() => { renameDaemon(live.uid, renameText); persistYellowSave(); setRenaming(false) }}>OK</button>
+                                </div>
+                            ) : (
+                                <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
+                                    <button style={{ ...menuBtnStyle, flex: 1 }} onClick={() => { setRenameText(live.nickname ?? ""); setRenaming(true) }}>✏️ Renommer</button>
+                                    {inTeam ? (
+                                        <button style={{ ...menuBtnStyle, flex: 1 }} onClick={() => {
+                                            const r = depositToPc(live.uid)
+                                            if (r.ok) { setToast(`${displayName(live)} déposé au PC.`); persistYellowSave(); closeFiche() }
+                                            else if (r.reason === "last") setToast("Tu dois garder au moins 1 Daemon !")
+                                        }}>📦 Déposer</button>
+                                    ) : (
+                                        <button style={{ ...menuBtnStyle, flex: 1 }} onClick={() => {
+                                            const r = withdrawFromPc(live.uid)
+                                            if (r.ok) { setToast(`${displayName(live)} rejoint l'équipe.`); persistYellowSave(); closeFiche() }
+                                            else if (r.reason === "full") setToast("Équipe pleine (6 max).")
+                                        }}>➡️ Équipe</button>
+                                    )}
+                                </div>
+                            )}
+
+                            <button style={{ ...menuBtnDimStyle, marginTop: 8 }} onClick={closeFiche}>← RETOUR</button>
                         </div>
                     </div>
                 )
@@ -364,6 +513,10 @@ const menuBtnStyle: React.CSSProperties = {
 const menuBtnDimStyle: React.CSSProperties = { ...menuBtnStyle, background: "#e0e0d0", border: "2px solid #888", color: "#555" }
 const teamRowStyle: React.CSSProperties = {
     display: "flex", alignItems: "center", gap: 8, fontSize: 12, padding: "5px 0", borderBottom: "1px solid #00000018",
+}
+const miniBtn: React.CSSProperties = {
+    background: "#fff", border: "2px solid #1c1408", borderRadius: 5, padding: "2px 8px",
+    fontFamily: "inherit", fontWeight: 700, cursor: "pointer", color: "#1c1408", marginLeft: 4,
 }
 const toastStyle: React.CSSProperties = {
     position: "fixed", left: "50%", bottom: 90, transform: "translateX(-50%)", zIndex: 9300,

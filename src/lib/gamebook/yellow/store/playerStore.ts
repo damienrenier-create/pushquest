@@ -9,6 +9,7 @@ import type { MonInstance, MoveSlot } from "../battle/types"
 import { fullStats } from "../battle/stats"
 import { getSpecies } from "../data/species"
 import { getMove } from "../data/moves"
+import { getItem } from "../data/items"
 import { expForLevel, levelFromExp, applyExp, MAX_LEVEL, type ExpResult } from "../battle/xp"
 import type { WildPlayerCtx } from "../data/encounters"
 
@@ -218,6 +219,60 @@ export function healAllTeam() {
         }),
     }
     emit()
+}
+
+// ============================================================
+// PC / boîtes — dépôt, retrait, renommage, soin hors combat
+// ============================================================
+
+/** Dépose un Daemon de l'équipe vers le PC. Refuse de vider entièrement l'équipe. */
+export function depositToPc(uid: string): { ok: boolean; reason?: "introuvable" | "last" } {
+    const idx = st.team.findIndex((m) => m.uid === uid)
+    if (idx < 0) return { ok: false, reason: "introuvable" }
+    if (st.team.length <= 1) return { ok: false, reason: "last" }
+    const mon = st.team[idx]
+    st = { ...st, team: st.team.filter((_, i) => i !== idx), pc: [...st.pc, mon] }
+    emit()
+    return { ok: true }
+}
+
+/** Retire un Daemon du PC vers l'équipe. Refuse si l'équipe est pleine. */
+export function withdrawFromPc(uid: string): { ok: boolean; reason?: "introuvable" | "full" } {
+    if (st.team.length >= TEAM_MAX) return { ok: false, reason: "full" }
+    const idx = st.pc.findIndex((m) => m.uid === uid)
+    if (idx < 0) return { ok: false, reason: "introuvable" }
+    const mon = st.pc[idx]
+    st = { ...st, pc: st.pc.filter((_, i) => i !== idx), team: [...st.team, mon] }
+    emit()
+    return { ok: true }
+}
+
+/** Renomme un Daemon (équipe ou PC). Vide → réinitialise au nom d'espèce. Max 12 car. */
+export function renameDaemon(uid: string, nickname: string) {
+    const nn = nickname.trim().slice(0, 12)
+    const apply = (m: MonInstance): MonInstance => (m.uid === uid ? { ...m, nickname: nn.length ? nn : undefined } : m)
+    st = { ...st, team: st.team.map(apply), pc: st.pc.map(apply) }
+    emit()
+}
+
+/** Utilise un objet de soin sur un Daemon de l'équipe (hors combat). Renvoie false si inutile. */
+export function useHealItemOnTeam(uid: string, itemId: string): boolean {
+    const item = getItem(itemId)
+    if (!item || item.category !== "HEAL") return false
+    if ((st.items[itemId] ?? 0) <= 0) return false
+    const idx = st.team.findIndex((m) => m.uid === uid)
+    if (idx < 0) return false
+    const m = st.team[idx]
+    if (m.currentHp <= 0) return false // une Potion ne ranime pas un Daemon K.O.
+    const sp = getSpecies(m.speciesId)
+    const max = sp ? fullStats(m, sp).hp : m.currentHp
+    if (m.currentHp >= max) return false // déjà au max
+    const heal = item.healHp && item.healHp > 0 ? item.healHp : max
+    const team = st.team.slice()
+    team[idx] = { ...m, currentHp: Math.min(max, m.currentHp + heal) }
+    st = { ...st, team, items: { ...st.items, [itemId]: st.items[itemId] - 1 } }
+    emit()
+    return true
 }
 
 /** Apprentissage en attente : un Daemon veut apprendre une attaque mais a 4 slots. */

@@ -16,6 +16,9 @@ import { useCallback } from "react"
 
 export interface GameBoyShellProps {
     children: React.ReactNode
+    /** Reps disponibles (affichés en jauge à côté de POWER). */
+    reps?: number
+    repsCap?: number
     onUp?: () => void
     onDown?: () => void
     onLeft?: () => void
@@ -39,6 +42,8 @@ const TEXT_DARK = "#3D3328"
 
 export default function GameBoyShell({
     children,
+    reps,
+    repsCap,
     onUp,
     onDown,
     onLeft,
@@ -65,6 +70,16 @@ export default function GameBoyShell({
                 {/* Mini-LED power indicator */}
                 <div style={powerLedStyle} />
                 <div style={powerLabelStyle}>POWER</div>
+                {/* Jauge de reps disponibles (énergie de combat) */}
+                {reps !== undefined && (
+                    <div style={repsGaugeWrapStyle}>
+                        <span style={repsGaugeIconStyle}>💪</span>
+                        <div style={repsGaugeTrackStyle}>
+                            <div style={{ ...repsGaugeFillStyle, width: `${Math.max(0, Math.min(100, (reps / Math.max(1, repsCap ?? 1000)) * 100))}%` }} />
+                        </div>
+                        <span style={repsGaugeNumStyle}>{reps}</span>
+                    </div>
+                )}
             </div>
 
             {/* Zone contrôles */}
@@ -209,6 +224,35 @@ const powerLabelStyle: React.CSSProperties = {
     color: "#ff3030",
     letterSpacing: 1.5,
     fontWeight: "bold",
+}
+
+const repsGaugeWrapStyle: React.CSSProperties = {
+    position: "absolute",
+    right: 20,
+    bottom: 7,
+    display: "flex",
+    alignItems: "center",
+    gap: 5,
+}
+const repsGaugeIconStyle: React.CSSProperties = { fontSize: 11, lineHeight: 1 }
+const repsGaugeTrackStyle: React.CSSProperties = {
+    width: 54,
+    height: 7,
+    background: "#2a1c10",
+    border: "1px solid #2a1c10",
+    borderRadius: 4,
+    overflow: "hidden",
+}
+const repsGaugeFillStyle: React.CSSProperties = {
+    height: "100%",
+    background: "linear-gradient(90deg,#ffcc33,#ff9500)",
+    transition: "width 0.3s ease",
+}
+const repsGaugeNumStyle: React.CSSProperties = {
+    fontSize: 9,
+    fontWeight: "bold",
+    color: "#2a1c10",
+    minWidth: 22,
 }
 
 const controlsRowStyle: React.CSSProperties = {
