@@ -19,6 +19,7 @@ import { getPlayer, setTeam, addCaught, consumeItem, addMoney, markTrainerDefeat
 import { toMonInstance } from "../storage/save"
 import { evolveTeam } from "../progression/evolveTeam"
 import { persistYellowSave } from "./saveManager"
+import { QUOTA_CAPTURE_BONUS } from "../data/captureConfig"
 import type { EvolutionResult } from "../battle/evolution"
 
 /** Espèce de l'adversaire actif (pour synchroniser le Pokédex). */
@@ -78,7 +79,9 @@ export function getSnapshot(): BattleStoreState {
 // ============================================================
 
 export function startWildBattle(playerTeam: MonInstance[], enemyTeam: MonInstance[], seed: number) {
-    const battle = createBattle(playerTeam, enemyTeam, { isWild: true, seed })
+    // Quota PushQuest du jour atteint → capture facilitée pendant le combat.
+    const captureModifier = getPlayer().wildCtx?.quotaReached ? QUOTA_CAPTURE_BONUS : 1
+    const battle = createBattle(playerTeam, enemyTeam, { isWild: true, seed, captureModifier })
     syncPokedex(battle) // adversaire "vu" dès la rencontre
     setStore({ battle, evolutions: [], trainer: null, whiteout: false })
 }

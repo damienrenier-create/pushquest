@@ -14,6 +14,8 @@ export interface ItemData {
     price: number
     /** Pour les Balls : multiplicateur de capture. */
     ballBonus?: number
+    /** Ball à capture GARANTIE (Master-Ball) : bypasse toute la formule. */
+    guaranteed?: boolean
     /** Pour les soins : PV restaurés (0 = full). */
     healHp?: number
 }
@@ -33,7 +35,7 @@ export const ITEMS: Record<string, ItemData> = {
     },
     master_ball: {
         id: "master_ball", name: "Master-Éclair", category: "BALL",
-        description: "Capture infaillible. Rarissime.", price: 0, ballBonus: 255,
+        description: "Capture infaillible. Rarissime.", price: 0, ballBonus: 255, guaranteed: true,
     },
     potion: {
         id: "potion", name: "Potion", category: "HEAL",
@@ -53,4 +55,9 @@ export function getItem(id: string): ItemData | null {
 export function ballBonusOf(itemId: string): number {
     const it = ITEMS[itemId]
     return it?.category === "BALL" ? (it.ballBonus ?? 1) : 1
+}
+
+/** Ball à capture garantie (Master-Éclair) ? */
+export function isGuaranteedBall(itemId: string): boolean {
+    return getItem(itemId)?.guaranteed === true
 }

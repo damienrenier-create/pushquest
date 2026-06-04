@@ -18,7 +18,8 @@ import { accuracyCheck } from "./accuracy"
 import { chooseAiAction, type AiLevel } from "./ai"
 import { xpForDefeat, applyExp } from "./xp"
 import { tryCapture } from "./capture"
-import { ballBonusOf, getItem } from "../data/items"
+import { ballBonusOf, getItem, isGuaranteedBall } from "../data/items"
+import { rarityBonusOf } from "../data/captureConfig"
 
 // ============================================================
 // Types d'état & événements
@@ -55,6 +56,8 @@ export interface BattleState {
     events: BattleEvent[]
     /** État RNG persistant (déterministe / rejouable). */
     seed: number
+    /** Bonus situationnel de capture (ex. quota PushQuest atteint). Défaut 1. */
+    captureModifier: number
 }
 
 export type PlayerAction =
@@ -114,7 +117,7 @@ export function toBattleMon(inst: MonInstance): BattleMon {
 export function createBattle(
     playerTeam: MonInstance[],
     enemyTeam: MonInstance[],
-    opts: { isWild: boolean; seed: number; aiLevel?: AiLevel },
+    opts: { isWild: boolean; seed: number; aiLevel?: AiLevel; captureModifier?: number },
 ): BattleState {
     return {
         player: { team: playerTeam.map(toBattleMon), activeIndex: 0 },
@@ -127,6 +130,7 @@ export function createBattle(
         forcedSwitch: null,
         events: [],
         seed: opts.seed >>> 0,
+        captureModifier: opts.captureModifier ?? 1,
     }
 }
 
@@ -658,10 +662,15 @@ function awardExp(state: BattleState, events: BattleEvent[]) {
 function performCapture(state: BattleState, itemId: string, events: BattleEvent[], rng: Rng) {
     const wild = active(state.enemy)
     const sp = speciesOf(wild)
-    const res = tryCapture(
-        { catchRate: sp.catchRate, currentHp: wild.currentHp, maxHp: maxHpOf(wild), status: wild.status, ballBonus: ballBonusOf(itemId) },
-        rng,
-    )
+    const res = isGuaranteedBall(itemId)
+        ? { caught: true, shakes: 3, value: Infinity }
+        : tryCapture(
+            {
+                catchRate: sp.catchRate, currentHp: wild.currentHp, maxHp: maxHpOf(wild), status: wild.status,
+                ballBonus: ballBonusOf(itemId), rarityBonus: rarityBonusOf(sp.rarity), extraBonus: state.captureModifier,
+            },
+            rng,
+        )
     events.push({ kind: "message", text: `Tu lances une ${getItem(itemId)?.name ?? "Ball"} !` })
     events.push({ kind: "message", text: res.shakes > 0 ? `${"• ".repeat(res.shakes)}` : "La Ball s'ouvre aussitôt…" })
     if (res.caught) {
