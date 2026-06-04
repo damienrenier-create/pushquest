@@ -15,7 +15,8 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance } from "../battle/types"
 import { markSeen, markCaught } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, healAllTeam, spendReps } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, healAllTeam, spendReps, awardBadge } from "./playerStore"
+import { getTrainer } from "../data/trainers"
 import { toMonInstance } from "../storage/save"
 import { evolveTeam } from "../progression/evolveTeam"
 import { persistYellowSave } from "./saveManager"
@@ -152,8 +153,11 @@ function finishBattle(b: BattleState) {
     }
 
     // 2bis) Victoire dresseur : marquage "battu" (la monnaie = reps, gagnée hors combat).
+    //       Chef d'arène → badge accordé (augmente cap reps + cap d'énergie + CT débloquées).
     if (b.outcome === "win" && storeState.trainer) {
         markTrainerDefeated(storeState.trainer.trainerId)
+        const badge = getTrainer(storeState.trainer.trainerId)?.badge
+        if (badge) awardBadge(badge)
     }
 
     // 2ter) Défaite (équipe entièrement K.O.) : on soigne tout de suite et on

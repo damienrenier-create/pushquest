@@ -210,6 +210,21 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // Dresseur : intro + combat (ou réplique de défaite s'il est déjà battu).
         const trainer = getTrainer(npc.id)
         if (trainer) {
+            // Champion : verrouillé tant que les 3 badges ne sont pas réunis.
+            if (trainer.requiresAllBadges && !isTrainerDefeated(trainer.id) && getPlayerSave().badges.length < 3) {
+                set({
+                    dialogue: {
+                        npcId: npc.id, npcName: npc.name,
+                        lines: [
+                            "*Le Champion ne lève même pas les yeux.*",
+                            "Reviens quand tu auras conquis les trois salles.",
+                            `Il te manque ${3 - getPlayerSave().badges.length} badge(s).`,
+                        ],
+                        lineIndex: 0,
+                    },
+                })
+                return
+            }
             if (isTrainerDefeated(trainer.id)) {
                 set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: trainer.defeat, lineIndex: 0 } })
             } else {

@@ -20,12 +20,22 @@ describe("intégrité des données dresseurs", () => {
         }
     })
 
-    it("récompense positive et dialogues intro/défaite non vides", () => {
+    it("récompense non négative et dialogues intro/défaite non vides", () => {
         for (const t of TRAINERS) {
-            expect(t.reward).toBeGreaterThan(0)
+            // reward = argent legacy (non utilisé : le combat ne donne pas de reps).
+            // Les chefs d'arène récompensent un BADGE, pas de l'argent → reward peut être 0.
+            expect(t.reward).toBeGreaterThanOrEqual(0)
             expect(t.intro.length).toBeGreaterThan(0)
             expect(t.defeat.length).toBeGreaterThan(0)
         }
+    })
+
+    it("arène : 3 chefs avec badges distincts (feu/plante/eau) + 1 champion gaté", () => {
+        const badges = TRAINERS.filter((t) => t.badge).map((t) => t.badge)
+        expect(new Set(badges)).toEqual(new Set(["feu", "plante", "eau"]))
+        const champions = TRAINERS.filter((t) => t.requiresAllBadges)
+        expect(champions.length).toBe(1)
+        expect(champions[0].badge).toBeUndefined() // le champion ne donne pas de badge
     })
 
     it("chaque Daemon d'un dresseur se fabrique avec des PV pleins et des attaques", () => {

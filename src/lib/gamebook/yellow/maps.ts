@@ -242,7 +242,7 @@ const TOWN_BUILDINGS: YellowBuilding[] = [
         x: 33, y: 6, w: 6, h: 4,        // footprint cols 33..38, rows 6..9
         doorX: 3, doorY: 4,             // porte abs (36, 10) — devant le bâtiment
         targetMapId: "yellow_arena",
-        targetSpawnX: 4, targetSpawnY: 5,
+        targetSpawnX: 20, targetSpawnY: 21,
         displayName: "GYM",
         kind: "arena",
     },
@@ -313,12 +313,30 @@ function buildInfirmaryInterior(): TileType[][] {
     return m
 }
 
+// Arène : grille 44×24 calée sur arena_full.png (2816×1536, tile 64px).
+// Structure : 5 salles (Feu gauche, Plante haut-centre, Trône haut-droite,
+// Eau droite-bas, Réception bas-centre) reliées par des couloirs en croix.
+// Tout est mur par défaut ; on creuse les salles + couloirs (walkable).
 function buildArenaInterior(): TileType[][] {
-    const m = fillRoom(9, 7, "arenaFloor")
-    // Petite estrade au nord
-    m[1][4] = "shopCounter"
-    // Porte sortie
-    m[6][4] = "doorMat"
+    const W = 44, H = 24
+    const m: TileType[][] = Array.from({ length: H }, () => Array.from({ length: W }, () => "wallV" as TileType))
+    const carve = (x0: number, y0: number, x1: number, y1: number) => {
+        for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+            if (y >= 0 && y < H && x >= 0 && x < W) m[y][x] = "arenaFloor"
+        }
+    }
+    // Salles
+    carve(2, 3, 12, 21)     // 🔥 Salle Feu (gauche)
+    carve(12, 2, 20, 7)     // 🌿 Salle Plante (haut-centre)
+    carve(28, 2, 42, 7)     // 👑 Salle du Trône (haut-droite)
+    carve(28, 11, 42, 21)   // 💧 Salle Eau (droite-bas)
+    carve(16, 15, 24, 22)   // 🏛️ Réception (bas-centre, entrée)
+    // Couloirs (relient toutes les salles au hub central)
+    carve(19, 7, 22, 17)    // vertical central : gate/Plante ↔ hub ↔ Réception
+    carve(11, 10, 31, 14)   // horizontal hub : Feu ↔ centre ↔ Eau/Trône
+    carve(28, 7, 31, 11)    // lien Trône ↔ hub
+    // Porte de sortie (sud de la réception). Spawn d'entrée juste au-dessus (20,21).
+    m[22][20] = "doorMat"
     return m
 }
 
@@ -634,9 +652,13 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         id: "yellow_arena",
         name: "ARÈNE",
         tiles: buildArenaInterior(),
-        width: 9,
-        height: 7,
-        exits: [returnExit("yellow_arena", 4, 6)],
+        width: 44,
+        height: 24,
+        exits: [returnExit("yellow_arena", 20, 22)],
+        backgroundImage: "/yellow/sprites/arena_full.png",
+        backgroundImageWidth: 2816,
+        backgroundImageHeight: 1536,
+        backgroundImageTileSize: 64,
     },
     yellow_route_nord: {
         id: "yellow_route_nord",
