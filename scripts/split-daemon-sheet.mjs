@@ -20,12 +20,10 @@ const DL = path.join(HOME, "Downloads")
 const OUT_DIR = path.join("public", "yellow", "sprites", "dex")
 
 const SHEETS = [
-    { file: "Gemini_Generated_Image_qgm3mdqgm3mdqgm3.png", names: ["feuillichot", "broutame", "sylvapuce"] },
-    { file: "Gemini_Generated_Image_mswk2mmswk2mmswk.png", names: ["gouttiny", "ondulo", "razmaree"] },
-    { file: "Gemini_Generated_Image_r61mc8r61mc8r61m.png", names: ["braisille", "flamkure", "pyrokoss"] },
-    { file: "Gemini_Generated_Image_6cjibl6cjibl6cji.png", names: ["couperin", "frappard", "maitrezenc"] },
-    { file: "Gemini_Generated_Image_i9lilwi9lilwi9li.png", names: ["cailloutchi", "roctaur", "rochison"] },
-    { file: "Gemini_Generated_Image_99bnju99bnju99bn.png", names: ["plumiot", "faukon", "aquilothan"] },
+    { file: "Gemini_Generated_Image_pqpzt7pqpzt7pqpz (1).png", names: ["electroatiss", "couranti", "zappeureal"] },
+    { file: "Gemini_Generated_Image_fn6u05fn6u05fn6u.png", names: ["auroruff", "glaceer", "auroraur"] },
+    { file: "Gemini_Generated_Image_u2gak2u2gak2u2ga.png", names: ["ruffiant", "formiguer", "regnantaur"] },
+    { file: "Gemini_Generated_Image_9v4ygz9v4ygz9v4y (1).png", names: ["lavapetit", "fissuralave", "magmator"] },
 ]
 
 const KEY_TOL2 = 44 * 44
@@ -86,8 +84,14 @@ async function processSheet(sheet) {
         const seen = new Uint8Array(W * H)
         const stack = []
         const push = (x, y) => { if (x >= 0 && x < W && y >= 0 && y < H && !seen[y * W + x]) { seen[y * W + x] = 1; stack.push(y * W + x) } }
-        for (let x = 0; x < W; x++) { push(x, 0); push(x, H - 1) }
-        for (let y = 0; y < H; y++) { push(0, y); push(W - 1, y) }
+        // Amorce depuis TOUT pixel de damier de la bande extérieure (pas seulement le
+        // bord) : si un cadre longe le bord, le damier juste à l'intérieur sert de départ.
+        const band = Math.max(8, Math.round(Math.min(W, H) * 0.1))
+        for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+            if (x < band || x >= W - band || y < band || y >= H - band) {
+                if (isBg((y * W + x) * 4)) push(x, y)
+            }
+        }
         while (stack.length) {
             const p = stack.pop()
             if (!isBg(p * 4)) continue
