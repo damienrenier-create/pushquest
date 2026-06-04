@@ -283,10 +283,15 @@ const TOWN_BUILDINGS: YellowBuilding[] = [
 
 function buildShopInterior(): TileType[][] {
     const m = fillRoom(9, 7, "floorChecker")
-    // Comptoir horizontal
-    for (let x = 1; x < 8; x++) m[2][x] = "shopCounter"
-    // Étagères au-dessus
+    // Rayonnages le long du mur du fond
     for (let x = 1; x < 8; x++) m[1][x] = "shopShelf"
+    // Comptoir du vendeur (le joueur lui parle par-dessus)
+    for (let x = 1; x < 8; x++) m[2][x] = "shopCounter"
+    // Rayonnages latéraux au rayon central (gauche / droite)
+    m[3][1] = "shopShelf"; m[4][1] = "shopShelf"
+    m[3][7] = "shopShelf"; m[4][7] = "shopShelf"
+    // Tapis d'accueil devant la porte
+    m[5][4] = "rug"
     // Porte de sortie au sud
     m[6][4] = "doorMat"
     return m
