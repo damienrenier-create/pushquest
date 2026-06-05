@@ -3,7 +3,7 @@
 // Nexus Jaune Éclair — pont entre les stores (joueur + Pokédex) et l'API de save.
 // Charge au démarrage, puis auto-sauvegarde (débouncé) à chaque changement.
 
-import { getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, applySaiyanResults } from "./playerStore"
+import { getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, applySaiyanResults, resetForIntro } from "./playerStore"
 import { getPokedex, hydratePokedex, subscribePokedex } from "./pokedexStore"
 import { parseSave, type YellowSave, SAVE_VERSION } from "../storage/save"
 import type { BadgeId } from "../data/cts"
@@ -88,6 +88,17 @@ export async function processSaiyanPoints(): Promise<void> {
         return { uid: m.uid, points: saiyanPointsForLevels(m.pendingSaiyanLevels ?? 0, w) }
     })
     applySaiyanResults(results, today)
+    persistYellowSave()
+}
+
+/**
+ * REMISE À ZÉRO COMPLÈTE du Chapitre 2 pour CE joueur uniquement :
+ * vide l'équipe/PC/objets/reps/badges (resetForIntro) ET le Pokédex, puis écrase
+ * la sauvegarde serveur. N'affecte que la ligne GamebookProgress "yellow" du joueur.
+ */
+export function resetYellowChapter(): void {
+    resetForIntro()
+    hydratePokedex({ seen: [], caught: [] })
     persistYellowSave()
 }
 

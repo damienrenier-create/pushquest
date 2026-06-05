@@ -18,8 +18,8 @@ import IntroCinematic from "./IntroCinematic"
 import LearnScreen from "./LearnScreen"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout } from "@/lib/gamebook/yellow/store/battleStore"
-import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints } from "@/lib/gamebook/yellow/store/saveManager"
-import { getPlayer, setTeam, usePlayer, addItem, spendReps, markIntroSeen, resetForIntro, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt } from "@/lib/gamebook/yellow/store/playerStore"
+import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
+import { getPlayer, setTeam, usePlayer, addItem, spendReps, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt } from "@/lib/gamebook/yellow/store/playerStore"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
@@ -59,6 +59,7 @@ export default function YellowDevClient() {
     const [pcBox, setPcBox] = useState(0)
     const [ctShop, setCtShop] = useState(false)
     const [ctPick, setCtPick] = useState<string | null>(null)
+    const [confirmReset, setConfirmReset] = useState(false)
 
     // Au mount : charge l'état du joueur depuis le serveur (DB Neon).
     // Si le joueur n'a jamais joué, on garde le state par défaut (déjà set
@@ -171,7 +172,17 @@ export default function YellowDevClient() {
                         <button style={menuBtnStyle} onClick={() => setMenu("pc")}>📦 PC (BOÎTES)</button>
                         <button style={menuBtnStyle} onClick={() => setMenu("bag")}>🎒 SAC</button>
                         <button style={menuBtnStyle} onClick={() => router.push("/gamebook/yellow/pokedex")}>📷 POKÉDEX</button>
-                        <button style={menuBtnDimStyle} onClick={() => { resetForIntro(); persistYellowSave(); setMenu("none"); setShowIntro(true) }}>↺ REJOUER INTRO (dev)</button>
+                        {confirmReset ? (
+                            <>
+                                <div style={{ fontSize: 11, color: "#c83030", fontWeight: 700, textAlign: "center" }}>
+                                    Effacer TOUTE ta progression du Chapitre 2 ?<br />(équipe, Pokédex, badges, reps — irréversible)
+                                </div>
+                                <button style={{ ...menuBtnStyle, borderColor: "#c83030", color: "#c83030" }} onClick={() => { resetYellowChapter(); setConfirmReset(false); setMenu("none"); setShowIntro(true) }}>✓ OUI, tout recommencer</button>
+                                <button style={menuBtnDimStyle} onClick={() => setConfirmReset(false)}>← Annuler</button>
+                            </>
+                        ) : (
+                            <button style={menuBtnDimStyle} onClick={() => setConfirmReset(true)}>♻️ RECOMMENCER LE CHAPITRE 2</button>
+                        )}
                         <button style={menuBtnDimStyle} onClick={() => setMenu("none")}>← FERMER</button>
                     </div>
                 </div>
