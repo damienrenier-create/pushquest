@@ -606,7 +606,7 @@ const pageStyle: React.CSSProperties = {
     minHeight: "100dvh",
     background: "#1a1a1a",
     display: "flex",
-    alignItems: "flex-start",    // coque ancrée en haut (écran près du header), hauteur naturelle → pas de scroll
+    alignItems: "center",        // bloc compact centré verticalement → boutons dans la zone du pouce, pas de scroll
     justifyContent: "center",    // centrée horizontalement sur grand écran
     padding: 0,
 }
