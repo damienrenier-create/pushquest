@@ -11,7 +11,8 @@
 
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 
 export interface DaemonEvolutionData {
     animalName: string
@@ -31,6 +32,17 @@ export default function DaemonEvolutionScreen({
 }) {
     // 0 intro · 1 récap reps · 2 évolution (animation) · 3 daemon · 4 teaser chapitre 2
     const [phase, setPhase] = useState(0)
+    const router = useRouter()
+    // Le passage vers le Chapitre 2 est-il ouvert ? (feature flag + isSystem)
+    const [yellowOpen, setYellowOpen] = useState(false)
+    useEffect(() => {
+        let cancel = false
+        fetch("/api/gamebook/yellow/enabled")
+            .then((r) => (r.ok ? r.json() : null))
+            .then((j) => { if (!cancel && j?.enabled) setYellowOpen(true) })
+            .catch(() => { /* passage fermé par défaut */ })
+        return () => { cancel = true }
+    }, [])
 
     const next = () => {
         if (phase >= 4) { onDone(); return }
@@ -113,10 +125,28 @@ export default function DaemonEvolutionScreen({
                     <p style={{ fontSize: 14, lineHeight: 1.7 }}>
                         Le Nexus frémit. Une voix résonne :
                     </p>
-                    <p style={{ fontSize: 13, lineHeight: 1.7, fontStyle: "italic", color: "#f5d020", marginTop: 10 }}>
-                        « Tu es prêt pour le <b>Chapitre 2 — Nexus Jaune Éclair</b>.
-                        Mais le passage n'est pas encore ouvert… Patiente. Reviens bientôt. »
-                    </p>
+                    {yellowOpen ? (
+                        <>
+                            <p style={{ fontSize: 13, lineHeight: 1.7, fontStyle: "italic", color: "#f5d020", marginTop: 10 }}>
+                                « Tu es prêt pour le <b>Chapitre 2 — Nexus Jaune Éclair</b>.
+                                Le passage s'ouvre enfin. Franchis-le. »
+                            </p>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); router.push("/gamebook/yellow") }}
+                                style={{
+                                    marginTop: 18, padding: "12px 22px", fontFamily: "inherit", fontSize: 14, fontWeight: 700,
+                                    background: "#f5d020", color: "#1c1408", border: "3px solid #1c1408", borderRadius: 8, cursor: "pointer",
+                                }}
+                            >
+                                ⚡ ENTRER DANS LE CHAPITRE 2
+                            </button>
+                        </>
+                    ) : (
+                        <p style={{ fontSize: 13, lineHeight: 1.7, fontStyle: "italic", color: "#f5d020", marginTop: 10 }}>
+                            « Tu es prêt pour le <b>Chapitre 2 — Nexus Jaune Éclair</b>.
+                            Mais le passage n'est pas encore ouvert… Patiente. Reviens bientôt. »
+                        </p>
+                    )}
                 </div>
             )}
 
