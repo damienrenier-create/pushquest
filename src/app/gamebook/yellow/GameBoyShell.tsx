@@ -12,7 +12,7 @@
 // Le contenu du jeu (children) est rendu à l'intérieur de l'écran avec
 // image-rendering: pixelated pour le look LCD pixel.
 
-import { useCallback, useRef } from "react"
+import { useCallback } from "react"
 
 export interface GameBoyShellProps {
     children: React.ReactNode
@@ -53,16 +53,10 @@ export default function GameBoyShell({
     onStart,
     onSelect,
 }: GameBoyShellProps) {
-    // Anti double-déclenchement tactile : un tap déclenche touchstart PUIS un
-    // "clic fantôme" mousedown synthétique → 2 pas. On enregistre le dernier touch
-    // et on ignore le mousedown qui suit dans la foulée (≤ 700 ms).
-    const lastTouchRef = useRef(0)
-    const handlePress = useCallback((cb?: () => void) => (e: React.MouseEvent | React.TouchEvent) => {
-        if (e.type === "touchstart") {
-            lastTouchRef.current = Date.now()
-        } else if (Date.now() - lastTouchRef.current < 700) {
-            return // clic fantôme post-touch → ignoré (sinon déplacement double)
-        }
+    // Pointer Events : UN seul événement par appui (tactile ou souris), non-passif,
+    // donc preventDefault() supprime les events souris de compat + le clic fantôme.
+    // → fini le double-pas ET le tap-through qui refermait les menus (START).
+    const handlePress = useCallback((cb?: () => void) => (e: React.PointerEvent) => {
         e.preventDefault()
         cb?.()
     }, [])
@@ -86,7 +80,7 @@ export default function GameBoyShell({
                         <div style={repsGaugeTrackStyle}>
                             <div style={{ ...repsGaugeFillStyle, width: `${Math.max(0, Math.min(100, (reps / Math.max(1, repsCap ?? 1000)) * 100))}%` }} />
                         </div>
-                        <span style={repsGaugeNumStyle}>{reps}</span>
+                        <span style={repsGaugeNumStyle}>{reps}/{repsCap ?? 1000}</span>
                     </div>
                 )}
             </div>
@@ -98,27 +92,23 @@ export default function GameBoyShell({
                     <button
                         aria-label="Haut"
                         style={{ ...dpadButtonStyle, ...dpadUpStyle }}
-                        onMouseDown={handlePress(onUp)}
-                        onTouchStart={handlePress(onUp)}
+                        onPointerDown={handlePress(onUp)}
                     >▲</button>
                     <button
                         aria-label="Gauche"
                         style={{ ...dpadButtonStyle, ...dpadLeftStyle }}
-                        onMouseDown={handlePress(onLeft)}
-                        onTouchStart={handlePress(onLeft)}
+                        onPointerDown={handlePress(onLeft)}
                     >◀</button>
                     <div style={dpadCenterStyle} />
                     <button
                         aria-label="Droite"
                         style={{ ...dpadButtonStyle, ...dpadRightStyle }}
-                        onMouseDown={handlePress(onRight)}
-                        onTouchStart={handlePress(onRight)}
+                        onPointerDown={handlePress(onRight)}
                     >▶</button>
                     <button
                         aria-label="Bas"
                         style={{ ...dpadButtonStyle, ...dpadDownStyle }}
-                        onMouseDown={handlePress(onDown)}
-                        onTouchStart={handlePress(onDown)}
+                        onPointerDown={handlePress(onDown)}
                     >▼</button>
                 </div>
 
@@ -127,14 +117,12 @@ export default function GameBoyShell({
                     <button
                         aria-label="Bouton B"
                         style={{ ...abButtonStyle, ...bButtonPositionStyle }}
-                        onMouseDown={handlePress(onB)}
-                        onTouchStart={handlePress(onB)}
+                        onPointerDown={handlePress(onB)}
                     >B</button>
                     <button
                         aria-label="Bouton A"
                         style={{ ...abButtonStyle, ...aButtonPositionStyle }}
-                        onMouseDown={handlePress(onA)}
-                        onTouchStart={handlePress(onA)}
+                        onPointerDown={handlePress(onA)}
                     >A</button>
                 </div>
             </div>
@@ -144,14 +132,12 @@ export default function GameBoyShell({
                 <button
                     aria-label="Select"
                     style={startSelectButtonStyle}
-                    onMouseDown={handlePress(onSelect)}
-                    onTouchStart={handlePress(onSelect)}
+                    onPointerDown={handlePress(onSelect)}
                 >SELECT</button>
                 <button
                     aria-label="Start"
                     style={startSelectButtonStyle}
-                    onMouseDown={handlePress(onStart)}
-                    onTouchStart={handlePress(onStart)}
+                    onPointerDown={handlePress(onStart)}
                 >START</button>
             </div>
 
@@ -248,13 +234,13 @@ const repsGaugeWrapStyle: React.CSSProperties = {
     alignItems: "center",
     gap: 6,
 }
-const repsGaugeIconStyle: React.CSSProperties = { fontSize: 16, lineHeight: 1 }
+const repsGaugeIconStyle: React.CSSProperties = { fontSize: 19, lineHeight: 1 }
 const repsGaugeTrackStyle: React.CSSProperties = {
-    width: 92,
-    height: 11,
+    width: 120,
+    height: 16,
     background: "#2a1c10",
-    border: "1px solid #2a1c10",
-    borderRadius: 5,
+    border: "2px solid #1c1408",
+    borderRadius: 8,
     overflow: "hidden",
 }
 const repsGaugeFillStyle: React.CSSProperties = {
@@ -263,10 +249,12 @@ const repsGaugeFillStyle: React.CSSProperties = {
     transition: "width 0.3s ease",
 }
 const repsGaugeNumStyle: React.CSSProperties = {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: "bold",
-    color: "#2a1c10",
-    minWidth: 28,
+    color: "#ffe24a",
+    textShadow: "0 1px 1px #000",
+    minWidth: 54,
+    textAlign: "right",
 }
 
 const controlsRowStyle: React.CSSProperties = {

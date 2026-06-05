@@ -35,6 +35,7 @@ export type BattleEvent =
     | { kind: "faint"; side: SideId; name: string }
     | { kind: "status"; side: SideId; status: MajorStatus }
     | { kind: "switchIn"; side: SideId; name: string }
+    | { kind: "ball"; action: "throw" | "shake" | "result"; shakes?: number; caught?: boolean }
     | { kind: "end"; outcome: Outcome }
 
 export type Outcome = "win" | "lose" | "run" | "caught"
@@ -121,9 +122,12 @@ export function createBattle(
     enemyTeam: MonInstance[],
     opts: { isWild: boolean; seed: number; aiLevel?: AiLevel; captureModifier?: number },
 ): BattleState {
+    // Le joueur envoie son premier Daemon ENCORE DEBOUT (pas un K.O. en tête de liste).
+    const playerStart = playerTeam.findIndex((m) => m.currentHp > 0)
+    const enemyStart = enemyTeam.findIndex((m) => m.currentHp > 0)
     return {
-        player: { team: playerTeam.map(toBattleMon), activeIndex: 0 },
-        enemy: { team: enemyTeam.map(toBattleMon), activeIndex: 0 },
+        player: { team: playerTeam.map(toBattleMon), activeIndex: playerStart >= 0 ? playerStart : 0 },
+        enemy: { team: enemyTeam.map(toBattleMon), activeIndex: enemyStart >= 0 ? enemyStart : 0 },
         isWild: opts.isWild,
         aiLevel: opts.aiLevel ?? (opts.isWild ? "wild" : "trainer"),
         turn: 1,
@@ -678,7 +682,9 @@ function performCapture(state: BattleState, itemId: string, events: BattleEvent[
             rng,
         )
     events.push({ kind: "message", text: `Tu lances une ${getItem(itemId)?.name ?? "Ball"} !` })
-    events.push({ kind: "message", text: res.shakes > 0 ? `${"• ".repeat(res.shakes)}` : "La Ball s'ouvre aussitôt…" })
+    events.push({ kind: "ball", action: "throw" })           // la ball file vers le Daemon
+    events.push({ kind: "ball", action: "shake", shakes: res.shakes }) // secousses (0..3)
+    events.push({ kind: "ball", action: "result", caught: res.caught }) // clic / éclatement
     if (res.caught) {
         state.phase = "ended"
         state.outcome = "caught"

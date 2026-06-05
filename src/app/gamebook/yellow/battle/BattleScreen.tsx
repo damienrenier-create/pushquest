@@ -37,6 +37,8 @@ export default function BattleScreen() {
     const [disp, setDisp] = useState<DispHp | null>(null)
     const [shakeP, setShakeP] = useState(0)
     const [shakeE, setShakeE] = useState(0)
+    const [ball, setBall] = useState<{ phase: "throw" | "shake" | "result"; shakes: number; caught: boolean } | null>(null)
+    const playerReps = usePlayer().reps
     const lastBattle = useRef(battle)
 
     // Initialise les PV affichés au tout début du combat (ils sont ensuite
@@ -57,6 +59,7 @@ export default function BattleScreen() {
             lastBattle.current = battle
             setStep(0)
             setMenu("root")
+            setBall(null)
             return
         }
         const ev = battle.events[step]
@@ -65,7 +68,11 @@ export default function BattleScreen() {
 
         // Événement non-textuel : on l'applique puis on enchaîne automatiquement.
         let delay = 140
-        if (ev.kind === "hp") {
+        if (ev.kind === "ball") {
+            if (ev.action === "throw") { setBall({ phase: "throw", shakes: 0, caught: false }); delay = 620 }
+            else if (ev.action === "shake") { setBall({ phase: "shake", shakes: ev.shakes ?? 0, caught: false }); delay = Math.max(500, (ev.shakes ?? 0) * 460 + 360) }
+            else { setBall({ phase: "result", shakes: 0, caught: !!ev.caught }); delay = 850 }
+        } else if (ev.kind === "hp") {
             setDisp((d) => {
                 if (!d) return d
                 const next = { ...d }
@@ -113,13 +120,32 @@ export default function BattleScreen() {
     const eHp = disp?.e ?? enemy.currentHp
     const eMax = disp?.eMax ?? maxHpOf(enemy)
 
+    // L'ennemi est "aspiré" par la ball (lancer/secousses, et capture réussie).
+    const enemyHiddenByBall = !!ball && (ball.phase === "throw" || ball.phase === "shake" || (ball.phase === "result" && ball.caught))
+
+    // Énergie de combat (toujours visible : on ne se bat pas à l'aveugle).
+    const reps = playerReps
+    const energy = getBattleEnergy()
+    const remainingEnergy = Math.max(0, energy.cap - energy.spent)
+    const energyPct = Math.max(0, Math.min(100, (remainingEnergy / Math.max(1, energy.cap)) * 100))
+
     return (
         <div style={S.root} onClick={waitingForTap ? advance : undefined}>
+            {/* ===== Bandeau énergie (permanent) ===== */}
+            <div style={S.energyBar}>
+                <span style={{ fontSize: 13 }}>⚡</span>
+                <div style={S.energyTrack}><div style={{ ...S.energyFill, width: `${energyPct}%` }} /></div>
+                <span style={S.energyTxt}>{remainingEnergy}/{energy.cap} <span style={{ opacity: 0.6 }}>· 💪{reps}</span></span>
+            </div>
+
             {/* ===== Scène ===== */}
             <div style={S.scene}>
                 <div style={S.enemyRow}>
                     <MonInfo mon={enemy} hp={eHp} max={eMax} />
-                    <MonSprite mon={enemy} facing="front" alive={eHp > 0} hitKey={shakeE} />
+                    <div style={S.enemySpot}>
+                        {!enemyHiddenByBall && <MonSprite mon={enemy} facing="front" alive={eHp > 0} hitKey={shakeE} />}
+                        {ball && <BallAnim phase={ball.phase} shakes={ball.shakes} caught={ball.caught} />}
+                    </div>
                 </div>
                 <div style={S.playerRow}>
                     <MonSprite mon={player} facing="back" alive={pHp > 0} hitKey={shakeP} />
@@ -163,6 +189,28 @@ export default function BattleScreen() {
                     60% { transform: translateX(3px); }
                     75% { transform: translateX(-2px); }
                     100% { transform: translateX(0); }
+                }
+                @keyframes ballThrow {
+                    0% { transform: translate(-150px, -70px) scale(0.5) rotate(-200deg); opacity: 0; }
+                    30% { opacity: 1; }
+                    100% { transform: translate(0,0) scale(1) rotate(0deg); opacity: 1; }
+                }
+                @keyframes ballShake {
+                    0%, 100% { transform: rotate(0deg); }
+                    25% { transform: rotate(-18deg) translateX(-3px); }
+                    75% { transform: rotate(18deg) translateX(3px); }
+                }
+                @keyframes ballCaught {
+                    0% { transform: scale(1); filter: none; }
+                    30% { transform: translateY(-6px) scale(1.05); }
+                    55% { transform: translateY(0) scale(1); }
+                    60% { filter: brightness(2.2) drop-shadow(0 0 10px #f5d020); }
+                    100% { transform: scale(1); filter: brightness(1); }
+                }
+                @keyframes ballEscape {
+                    0% { transform: scale(1); opacity: 1; filter: brightness(1); }
+                    40% { transform: scale(1.5); opacity: 1; filter: brightness(2.5); }
+                    100% { transform: scale(1.9); opacity: 0; }
                 }
             `}</style>
         </div>
@@ -320,11 +368,35 @@ function EndBox({ outcome }: { outcome: string | null }) {
 // Styles (GBC-ish, inline pour rester autonome)
 // ============================================================
 
+// Nexus-Ball animée : lancer (arc) → secousses (×N) → clic (capturé) ou éclatement (raté).
+function BallAnim({ phase, shakes, caught }: { phase: "throw" | "shake" | "result"; shakes: number; caught: boolean }) {
+    const anim = phase === "throw" ? "ballThrow 0.6s ease-out forwards"
+        : phase === "shake" ? `ballShake 0.42s ease-in-out ${Math.max(0, shakes)}`
+            : caught ? "ballCaught 0.8s ease-out forwards"
+                : "ballEscape 0.6s ease-out forwards"
+    return (
+        <div style={{ ...S.ball, animation: anim }}>
+            <div style={S.ballTop} />
+            <div style={S.ballBand} />
+            <div style={S.ballBtn} />
+        </div>
+    )
+}
+
 const S: Record<string, React.CSSProperties> = {
     root: { width: "100%", maxWidth: 460, margin: "0 auto", fontFamily: "'Courier New', monospace", color: "#1c1408", userSelect: "none" },
     scene: { background: "linear-gradient(#9bd0e0 0%, #c8e89c 60%, #a8d878 100%)", border: "3px solid #1c1408", borderRadius: 6, padding: 14, display: "flex", flexDirection: "column", gap: 18, minHeight: 240 },
     enemyRow: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" },
     playerRow: { display: "flex", justifyContent: "space-between", alignItems: "flex-end" },
+    energyBar: { display: "flex", alignItems: "center", gap: 8, marginBottom: 8, background: "#1c1408", border: "2px solid #1c1408", borderRadius: 8, padding: "5px 10px" },
+    energyTrack: { flex: 1, height: 12, background: "#3a2c18", borderRadius: 6, overflow: "hidden", border: "1px solid #000" },
+    energyFill: { height: "100%", background: "linear-gradient(90deg,#ffe24a,#ff9500)", transition: "width 0.3s ease" },
+    energyTxt: { fontSize: 11, fontWeight: 700, color: "#f5d020", minWidth: 92, textAlign: "right" },
+    enemySpot: { position: "relative", width: 84, height: 84, display: "flex", alignItems: "center", justifyContent: "center" },
+    ball: { position: "absolute", width: 38, height: 38, borderRadius: "50%", background: "#f5f5f5", border: "2px solid #1c1408", overflow: "hidden", boxShadow: "0 2px 4px rgba(0,0,0,0.35)" },
+    ballTop: { position: "absolute", top: 0, left: 0, right: 0, height: "50%", background: "linear-gradient(#e8503a,#c8301a)" },
+    ballBand: { position: "absolute", top: "calc(50% - 2px)", left: 0, right: 0, height: 4, background: "#1c1408" },
+    ballBtn: { position: "absolute", top: "calc(50% - 5px)", left: "calc(50% - 5px)", width: 10, height: 10, borderRadius: "50%", background: "#f8f8e8", border: "2px solid #1c1408" },
     info: { background: "#f8f8e8", border: "2px solid #1c1408", borderRadius: 6, padding: "6px 10px", minWidth: 160 },
     infoTop: { display: "flex", justifyContent: "space-between", gap: 10, fontSize: 12, fontWeight: 700 },
     monName: { letterSpacing: 1 },
