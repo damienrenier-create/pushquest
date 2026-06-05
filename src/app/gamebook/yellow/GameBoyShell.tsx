@@ -162,12 +162,9 @@ const shellStyle: React.CSSProperties = {
     width: "100%",
     maxWidth: 480,
     margin: "0 auto",
-    // Remplit toute la hauteur de l'écran (plus de noir perdu) : écran en haut,
-    // boutons poussés en bas (marginTop:auto sur controlsRow).
-    minHeight: "100dvh",
+    // Coque COMPACTE : écran large en haut, boutons juste en dessous (pas de
+    // scroll, pas de grand vide). Hauteur = contenu naturel.
     boxSizing: "border-box",
-    display: "flex",
-    flexDirection: "column",
     background: `linear-gradient(180deg, ${SHELL_YELLOW} 0%, ${SHELL_YELLOW_DARK} 100%)`,
     borderRadius: "0 0 36px 0",
     padding: "6px 8px 12px",
@@ -268,8 +265,7 @@ const controlsRowStyle: React.CSSProperties = {
     justifyContent: "space-between",
     alignItems: "center",
     padding: "0 8px",
-    marginTop: "auto",   // pousse les boutons tout en bas (l'écran prend l'espace en haut)
-    marginBottom: 14,
+    marginBottom: 12,    // boutons juste sous l'écran, compact
 }
 
 // D-pad : taille 144×144 (3×48) au lieu de 120×120 (3×40)

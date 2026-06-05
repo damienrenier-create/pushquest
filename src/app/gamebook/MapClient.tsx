@@ -388,10 +388,16 @@ export default function MapClient({
         let cancel = false
         fetch("/api/gamebook/yellow/enabled")
             .then((r) => (r.ok ? r.json() : null))
-            .then((j) => { if (!cancel && j?.enabled && !j?.entered) chapter2PendingRef.current = true })
-            .catch(() => { /* pas d'enlèvement si indisponible */ })
+            .then((j) => {
+                if (cancel || !j) return
+                // Déjà dans le Chapitre 2 → on saute le Nexus 1 et on reprend là où on était.
+                if (j.enabled && j.entered) { router.replace("/gamebook/yellow"); return }
+                // Daemon éveillé mais Chapitre 2 pas encore entamé → enlèvement au 1er pas.
+                if (j.enabled && !j.entered) chapter2PendingRef.current = true
+            })
+            .catch(() => { /* offline : on reste sur le Nexus 1 */ })
         return () => { cancel = true }
-    }, [])
+    }, [router])
 
     // v3.35 — Si muscuvilleRocksPassed, les rochers de Muscuville sont remplacés par du chemin
     // (walkable + visuel) dans la grille de rendu et de calcul de mouvement.
