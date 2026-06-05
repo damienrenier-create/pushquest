@@ -42,6 +42,8 @@ export default function YellowDevClient() {
     const hydrated = useGameStore((s) => s.hydrated)
     const shopOpen = useGameStore((s) => s.shopOpen)
     const closeShop = useGameStore((s) => s.closeShop)
+    const pcOpen = useGameStore((s) => s.pcOpen)
+    const closePc = useGameStore((s) => s.closePc)
     const setMap = useGameStore((s) => s.setMap)
     const battle = useBattle()
     const evolutions = useEvolutions()
@@ -215,14 +217,16 @@ export default function YellowDevClient() {
                 </div>
             )}
 
-            {/* PC — boîtes : dépôt/retrait entre l'équipe et la réserve */}
-            {!battle && menu === "pc" && (() => {
+            {/* PC — boîtes : dépôt/retrait entre l'équipe et la réserve.
+                Ouvert via le menu START (menu="pc") OU l'ordinateur du Centre (pcOpen). */}
+            {!battle && (menu === "pc" || pcOpen) && (() => {
                 const BOX_SIZE = 20
                 const boxes = Math.max(1, Math.ceil(player.pc.length / BOX_SIZE))
                 const box = Math.min(pcBox, boxes - 1)
                 const slice = player.pc.slice(box * BOX_SIZE, box * BOX_SIZE + BOX_SIZE)
+                const closePcUi = () => { closePc(); setMenu(menu === "pc" ? "pause" : "none") }
                 return (
-                    <div style={menuOverlayStyle} onClick={() => setMenu("pause")}>
+                    <div style={menuOverlayStyle} onClick={closePcUi}>
                         <div style={{ ...menuBoxStyle, maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
                             <div style={menuTitleStyle}>PC — RANGEMENT</div>
                             <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.7, margin: "2px 0" }}>ÉQUIPE ({player.team.length}/6)</div>
@@ -247,7 +251,7 @@ export default function YellowDevClient() {
                                     <span style={{ width: 38, textAlign: "right" }}>N.{m.level}</span>
                                 </button>
                             ))}
-                            <button style={{ ...menuBtnDimStyle, marginTop: 6 }} onClick={() => setMenu("pause")}>← RETOUR</button>
+                            <button style={{ ...menuBtnDimStyle, marginTop: 6 }} onClick={closePcUi}>← RETOUR</button>
                         </div>
                     </div>
                 )

@@ -12,7 +12,7 @@ import type { Direction, PlayerState } from "../engine/types"
 import { createInitialPlayer } from "../engine/types"
 import { tryMove } from "../engine/movement"
 import { findExitAt } from "../engine/warp"
-import { getNpcInFrontOfPlayer } from "../engine/interaction"
+import { getNpcInFrontOfPlayer, getFacingTile, getTileInFront, findNpcAt } from "../engine/interaction"
 import { YELLOW_MAPS } from "../maps"
 import type { YellowMapData } from "../maps"
 import { YELLOW_NPCS } from "../npcs"
@@ -37,6 +37,7 @@ interface GameStore {
     map: YellowMapData
     dialogue: ActiveDialogue | null
     shopOpen: boolean // boutique ouverte (vendeur)
+    pcOpen: boolean // boîte PC ouverte (ordinateur du Centre Daemon)
     hydrated: boolean // true une fois que l'état serveur a été chargé
     stepFrame: 0 | 1 // alterne à chaque déplacement réel → anime les jambes du sprite
     pendingTrainerId: string | null // dresseur dont l'intro est en cours → combat à la fermeture
@@ -48,6 +49,7 @@ interface GameStore {
     setMap: (mapId: string, spawnX: number, spawnY: number) => void
     hydrate: (loaded: PlayerState) => void
     closeShop: () => void
+    closePc: () => void
 }
 
 // === PERSISTANCE SERVEUR ===
@@ -99,14 +101,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
     map: YELLOW_MAPS[YELLOW_ENTRANCE_MAP_ID],
     dialogue: null,
     shopOpen: false,
+    pcOpen: false,
     hydrated: false,
     stepFrame: 0,
     pendingTrainerId: null,
 
     move: (dir) => {
         const { player, map, dialogue } = get()
-        // Mouvement bloqué pendant un dialogue, une boutique ou un combat.
-        if (dialogue || get().shopOpen) return
+        // Mouvement bloqué pendant un dialogue, une boutique, le PC ou un combat.
+        if (dialogue || get().shopOpen || get().pcOpen) return
         if (getBattleSnapshot().battle) return
 
         const next = tryMove(player, dir, map)
@@ -160,7 +163,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     },
 
     pressA: () => {
-        const { player, dialogue } = get()
+        const { player, dialogue, map } = get()
 
         // Pendant un combat : l'UI de combat gère les entrées, on ignore ici.
         if (getBattleSnapshot().battle) return
@@ -183,8 +186,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
 
         // Sinon : chercher un NPC devant le joueur et déclencher son dialogue.
-        const npc = getNpcInFrontOfPlayer(player, YELLOW_NPCS)
+        let npc = getNpcInFrontOfPlayer(player, YELLOW_NPCS)
+        // Parler PAR-DESSUS un comptoir : si la case devant est un comptoir et
+        // qu'un PNJ se tient juste derrière (2 cases devant), on l'interpelle.
+        if (!npc) {
+            const front = getFacingTile(player)
+            if (map.tiles[front.y]?.[front.x] === "shopCounter") {
+                const beyond = getTileInFront(player, 2)
+                npc = findNpcAt(YELLOW_NPCS, beyond.x, beyond.y, player.mapId)
+            }
+        }
         if (!npc) return
+
+        // Ordinateur du Centre : ouvre la boîte PC (rangement des Daemons).
+        if (npc.id === "y_pc_box") {
+            set({ pcOpen: true })
+            return
+        }
 
         // Médecin du Centre Daemon : soigne toute l'équipe.
         if (npc.id === "y_medecin") {
@@ -274,4 +292,5 @@ export const useGameStore = create<GameStore>((set, get) => ({
     },
 
     closeShop: () => set({ shopOpen: false }),
+    closePc: () => set({ pcOpen: false }),
 }))

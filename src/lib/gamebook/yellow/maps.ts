@@ -281,11 +281,17 @@ const TOWN_BUILDINGS: YellowBuilding[] = [
 
 // === Intérieurs : 4 maps 9×7 ============================================
 
-// Boutique : grille 11×8 calée sur l'image de fond shop.png (189×137).
+// Boutique : grille 11×8 calée sur shop.png. Collisions relevées avec Sartay.
 function buildShopInterior(): TileType[][] {
     const m = fillRoom(11, 8, "floorChecker")
-    for (let x = 1; x < 10; x++) m[1][x] = "shopShelf"    // rayonnages du fond
-    for (let x = 1; x < 10; x++) m[2][x] = "shopCounter"  // comptoir (vendeur derrière)
+    const blocked: [number, number][] = [
+        // Comptoir en L (le vendeur est le PNJ en 1,3 ; on lui parle par-dessus depuis 1,5)
+        [1, 2], [2, 2], // coin derrière le vendeur
+        [1, 3],         // case du vendeur (PNJ ne bloque pas le mouvement → bloqué ici)
+        [2, 3],
+        [1, 4], [2, 4],
+    ]
+    for (const [x, y] of blocked) m[y][x] = "shopCounter"
     // Porte de sortie au sud-centre (sous le spawn d'entrée 5,6)
     m[7][5] = "doorMat"
     return m
@@ -304,10 +310,23 @@ function buildCasinoInterior(): TileType[][] {
 }
 
 // Centre Daemon : grille 14×9 calée sur l'image centre_interior.png (242×155).
+// Collisions relevées sur grille avec Sartay (cases non-walkables ci-dessous).
 function buildInfirmaryInterior(): TileType[][] {
     const m = fillRoom(14, 9, "floorTile")
-    // Comptoir de soins le long du mur du fond (médecin derrière)
-    for (let x = 1; x < 13; x++) m[1][x] = "shopCounter"
+    const blocked: [number, number][] = [
+        // Mur/meubles du fond (rangée 1)
+        [1, 1], [2, 1], [3, 1], [4, 1], [5, 1], [6, 1], [7, 1], [8, 1], [9, 1],
+        // Comptoir de soins (la médecin est le PNJ en 7,2 ; on parle par-dessus depuis 7,4)
+        [5, 2], [6, 2], [7, 2], [8, 2], [9, 2],
+        [5, 3], [6, 3], [7, 3], [8, 3], [9, 3],
+        // Mobilier gauche
+        [2, 3], [1, 5], [2, 5], [1, 6], [2, 6],
+        // Mobilier droite
+        [11, 6], [12, 6], [11, 7], [12, 7],
+        // Ordinateur PC (boîte) — PNJ "y_pc_box" placé dessus, activé depuis 10,2
+        [10, 1],
+    ]
+    for (const [x, y] of blocked) m[y][x] = "shopCounter"
     // Porte de sortie au sud-centre (sous le spawn d'entrée 7,7)
     m[8][7] = "doorMat"
     return m

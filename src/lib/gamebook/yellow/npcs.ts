@@ -36,8 +36,8 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         kind: "static",
         interaction: "interactive",
         sprite: { emoji: "🧑‍💼", color: "#a06030" },
-        initialX: 5,
-        initialY: 2,
+        initialX: 1,
+        initialY: 3,
         dialoguesAfter: [
             "*Le vendeur te toise par-dessus le comptoir.*",
             "Bienvenue chez moi. J'ai tout ce qu'il te faut…",
@@ -77,6 +77,19 @@ export const YELLOW_NPCS: NpcDefinition[] = [
             "T'as l'air en forme. Tant mieux.",
             "🚧 Soins à venir. Évite les bagarres en attendant.",
         ],
+    },
+    {
+        // Ordinateur PC du Centre Daemon : ouvre la boîte de rangement (équipe ↔ PC).
+        // On l'active depuis (10,2) en regardant vers le haut (10,1).
+        id: "y_pc_box",
+        name: "PC",
+        mapId: "yellow_infirmary",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "💻", color: "#3a8ee0" },
+        initialX: 10,
+        initialY: 1,
+        dialoguesAfter: ["*L'ordinateur du Centre ronronne.*"],
     },
 
     // === ROUTE NORD : panneau placeholder ===

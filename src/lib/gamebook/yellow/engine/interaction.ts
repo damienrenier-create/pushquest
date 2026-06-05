@@ -24,6 +24,12 @@ export function getFacingTile(player: PlayerState): TileCoord {
     return { x: player.posX + d.x, y: player.posY + d.y }
 }
 
+/** Case située à `distance` cases devant le joueur (1 = juste devant, 2 = par-dessus un comptoir). */
+export function getTileInFront(player: PlayerState, distance: number): TileCoord {
+    const d = FACING_DELTAS[player.direction]
+    return { x: player.posX + d.x * distance, y: player.posY + d.y * distance }
+}
+
 export function findNpcAt(npcs: NpcDefinition[], x: number, y: number, mapId: string): NpcDefinition | null {
     return npcs.find((n) => n.mapId === mapId && n.initialX === x && n.initialY === y) ?? null
 }
