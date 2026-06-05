@@ -85,8 +85,10 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: false, reason: "Tu ne possèdes pas cet objet." })
     }
 
-    // === GOURDE ===
-    if (itemKey === "flask") {
+    // === GOURDES (flask, grande_gourde, grande_gourde_xl, mega_gourde) ===
+    // v4.x — BUGFIX : avant, seul "flask" était géré → impossible de remplir/boire les
+    // grandes gourdes et la Mega Gourde du Capo. On gère désormais TOUT item stockable.
+    if (itemDef.capabilities.canStore) {
         const stored = readStored(entry.data)
         // v3.8.1 — capacité actuelle (peut avoir décrû via l'usure)
         const capacity = readMaxCapacity(entry.data, itemDef)

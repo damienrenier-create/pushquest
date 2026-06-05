@@ -3,8 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import CoinsBalance from "./CoinsBalance"
 import BetCard from "./BetCard"
-import TeamLore from "@/components/TeamLore"
-import TeamScoreBoard from "@/components/TeamScoreBoard"
+import OvershootScoreBoard from "@/components/OvershootScoreBoard"
 
 export default function BetsSection({ session }: { session: any }) {
     const [bets, setBets] = useState<any[]>([])
@@ -44,9 +43,13 @@ export default function BetsSection({ session }: { session: any }) {
     const activeBets = bets.filter(b => b.status === "OPEN" || b.status === "LOCKED" || b.status === "DRAFT")
     const resolvedBets = bets.filter(b => b.status === "RESOLVED" || b.status === "CANCELLED")
 
-    // Détecte les paris d'équipe pour activer le thème jungle + scoreboard
+    // Détecte les paris d'équipe ENCORE ACTIFS pour activer le thème jungle + scoreboard
+    // (une fois la Semaine des Équipes résolue, le bloc disparaît tout seul)
     const teamBets = useMemo(() => bets.filter(b => {
-        try { return JSON.parse(b.metadata || '{}')?.teamBet === true } catch { return false }
+        try {
+            const meta = JSON.parse(b.metadata || '{}')
+            return meta?.teamBet === true && (b.status === "OPEN" || b.status === "LOCKED")
+        } catch { return false }
     }), [bets])
     const isJungleTheme = teamBets.length > 0
     const teamBetIds = useMemo(() => teamBets.map((b: any) => b.id), [teamBets])
@@ -90,13 +93,8 @@ export default function BetsSection({ session }: { session: any }) {
                     {isJungleTheme ? '🌿' : '🎲'} PARIS EN COURS
                 </h2>
 
-                {/* Bloc lore FSM — visible uniquement en mode jungle */}
-                {isJungleTheme && <TeamLore />}
-
-                {/* Tableau de scores — visible dès qu'un teamBet existe */}
-                {isJungleTheme && (
-                    <TeamScoreBoard bets={bets} />
-                )}
+                {/* Tableau de scores Verts/Bleus — Défi du Dépassement de Quota */}
+                {isJungleTheme && <OvershootScoreBoard bets={bets} />}
 
                 {loading ? (
                     <div className="space-y-4">

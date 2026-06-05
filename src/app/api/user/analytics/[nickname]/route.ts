@@ -163,6 +163,22 @@ export async function GET(
 
         const top3Recaps = allTimeRecaps.slice(0, 3);
 
+        // v4.y — Évolution Animal → Daemon (affichée comme jalon sous le graphique d'évolution).
+        const daemonEvoEvent = await (prisma as any).badgeEvent.findFirst({
+            where: { eventType: "UNIQUE_AWARDED", badgeKey: "gamebook_daemon_evolution", toUserId: user.id },
+            orderBy: { createdAt: "desc" },
+        });
+        let daemonEvolution: { date: string; animalEmoji: string; animalName: string } | null = null;
+        if (daemonEvoEvent) {
+            let dmd: any = null;
+            try { if (daemonEvoEvent.metadata) dmd = JSON.parse(daemonEvoEvent.metadata); } catch { }
+            daemonEvolution = {
+                date: new Date(daemonEvoEvent.createdAt).toISOString(),
+                animalEmoji: dmd?.animalEmoji || "👾",
+                animalName: dmd?.animalName || "ton animal",
+            };
+        }
+
         return NextResponse.json({
             xpBreakdown: userXPInfo?.details || {},
             maxSeriesData,
@@ -171,7 +187,8 @@ export async function GET(
             totalXP: userXPInfo?.totalXP || 0,
             yesterdayRecap: last7DaysRecaps[0] || null,
             weeklyRecaps: last7DaysRecaps,
-            topRecaps: top3Recaps
+            topRecaps: top3Recaps,
+            daemonEvolution
         })
     } catch (error) {
         console.error("Analytics API Error:", error)

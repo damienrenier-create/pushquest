@@ -18,7 +18,7 @@ export const MONSTER_INTRO_DIALOGUE: string[] = [
     "Et l'énergie, c'est tes REPS. Les vraies. Celles que tu fais.",
     "10 reps = 1 case. Pas plus, pas moins.",
     "Au nord, dans les hautes herbes, y'a un arbre tombé.",
-    "Il coûte 150 reps à pousser. Va te faire des pompes avant.",
+    "Il coûte [[r:150]] reps à pousser. Va te faire des pompes avant.",
     "Et arrête de me regarder comme ça.",
 ]
 
@@ -172,6 +172,6 @@ export const FRANSS_JOKE_ATTOWER_LINES: string[] = [
     "*PIAFFINI éclate de rire.* « AHAHAH ! »",
     "« T'as cru quoi ? Que j'avais oublié quelque chose ? Non, c'était une blague ! »",
     "« Bon, désolé pour la marche à pied de tout à l'heure. Je me rattrape. »",
-    "« Tiens, prends ces 30 reps en cadeau d'excuses. Direction JOJO, et cette fois pour de vrai. »",
+    "« Tiens, prends ces [[r:30]] reps en cadeau d'excuses. Direction JOJO, et cette fois pour de vrai. »",
 ]
 

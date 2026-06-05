@@ -693,18 +693,20 @@ function buildLasagnasVegas(): TileType[][] {
     // Connexion verticale : 2 cases au centre vertical (x=11,12) entre trottoirs
     // (déjà couvert par le path horizontal aux y=10 et y=15)
 
-    // === Route 4 voies y=11..14, avec passage piéton x=11,12 (cases path safe) ===
-    // Les tiles "road" sont décoratives ; les voitures seront animées côté client.
-    // Le passage piéton (x=11,12, y=11..14) reste path → pas d'écrasement.
+    // === Hautes herbes décoratives y=11..14 (ex-route 4 voies, virée v4.x) ===
+    // Avant : route avec risque d'écrasement 15% par case (sauf casquette flic).
+    // Comme les voitures n'ont jamais été animées côté client et que la mécanique
+    // était plus punitive qu'amusante, on remplace par une bande de hautes herbes
+    // style route Pokémon (grassTall purement décoratif — aucun trigger ici).
+    // Quelques fleurs jaunes/rouges scattered pour casser la monotonie.
     for (let y = 11; y <= 14; y++) {
         for (let x = 1; x < LASAGNAS_W - 1; x++) {
-            if (x === 11 || x === 12) {
-                m[y][x] = "path"  // passage piéton safe
-            } else {
-                m[y][x] = "road"
-            }
+            m[y][x] = "grassTall"
         }
     }
+    // Fleurs décoratives dans la bande d'herbes
+    m[11][3] = "flowerY"; m[11][9] = "flowerR"; m[11][16] = "flowerY"
+    m[14][6] = "flowerR"; m[14][13] = "flowerY"; m[14][20] = "flowerR"
 
     // === Décor opulent rangée nord (y=1..3) : néons et marbre ===
     // Quelques fleurs jaunes pour les néons décoratifs
@@ -998,7 +1000,8 @@ export const LASAGNAS_SIGNS: Sign[] = [
     { x: 11, y: 9, text: "LASAGNAS VEGAS\nLa ville qui ne dort jamais. Casinos, hôtel, et la mafia Team Boulette dans les ruelles…" },
     { x: 1, y: 12, text: "🚧 ROUTE EN CONSTRUCTION 🚧\nVers une autre ville. Reviens plus tard." },
     { x: 22, y: 1, text: "Vers le sommet : Père Pesto, le fidèle du Dieu Spaghetti." },
-    { x: 11, y: 11, text: "⚠️ ATTENTION : voitures sur la route. Utilise le passage piéton (cases jaunes)." },
+    // v4.x — panneau "ATTENTION voitures" supprimé : la route a été remplacée
+    // par des hautes herbes décoratives (cf. buildLasagnasVegas).
 ]
 
 // Spawns ===
@@ -1211,7 +1214,7 @@ export const MUSCUVILLE_SIGNS: Sign[] = [
     // v3.30 — Forêt hantée (à l'est, accès bloqué — "tu as trop peur")
     { x: 16, y: 8, text: "→ FORÊT HANTÉE\n*Le panneau grince. Tu sens un frisson.*\n« Trop peur. Reviens quand tu te sentiras prêt. »" },
     // v3.35 — Rochers à l'ouest : prix de passage progressif selon champions battus
-    { x: 1, y: 14, text: "🪨 ROCHERS — PASSAGE VEGAS\nPrix : 4000 reps (–25% par champion d'arène battu).\n4/4 champions battus → passage GRATUIT." },
+    { x: 1, y: 14, text: "🪨 ROCHERS — PASSAGE VEGAS\nPrix : [[r:4000]] reps (–25% par champion d'arène battu).\n4/4 champions battus → passage GRATUIT." },
 ]
 
 // v3.39 — Topics de la BIBLIOTHÈQUE DE MUSCUVILLE (MIRABELLE, sœur de la bibliothécaire Macaron).
@@ -1237,7 +1240,7 @@ export const BIBLIOTHEQUE_MUSCU_TOPICS: BiblioTopic[] = [
     {
         x: 2, y: 3, kind: "archives" as const,
         title: "Champions de l'arène — Palmarès",
-        text: "4 champions historiques de Muscuville :\n\n🧱 Champion du Gainage (coin NO)\n💪 Champion des Pompes (coin NE)\n🪢 Championne des Tractions (coin SO)\n🦵 Champion des Squats (coin SE)\n\n1ʳᵉ confrontation : bats TON record all-time sur l'exo.\nRevanche (après 1ʳᵉ gagnée) : plus gros VOLUME du jour all-time → badge 200 XP.\n\nChaque champion battu = -25% sur le prix des rochers (4000 reps).",
+        text: "4 champions historiques de Muscuville :\n\n🧱 Champion du Gainage (coin NO)\n💪 Champion des Pompes (coin NE)\n🪢 Championne des Tractions (coin SO)\n🦵 Champion des Squats (coin SE)\n\n1ʳᵉ confrontation : bats TON record all-time sur l'exo.\nRevanche (après 1ʳᵉ gagnée) : plus gros VOLUME du jour all-time → badge 200 XP.\n\nChaque champion battu = -25% sur le prix des rochers ([[r:4000]] reps).",
     },
     {
         x: 6, y: 3, kind: "archives" as const,
@@ -1403,7 +1406,7 @@ export const BIBLIOTHEQUE_TOPICS: BiblioTopic[] = [
         y: 3,
         kind: "defis_adoption",
         title: "Défis d'adoption (chez le vétérinaire V3T)",
-        text: "Pour libérer ton animal, tous ont les MÊMES 7 défis (ordre différent par animal) :\n\n1. Aller le voir\n2. Lui donner à boire (gourde)\n3. Lui offrir des pâtes (corned_pates)\n4. Le visiter matin ET après-midi\n5. 180s de gainage\n6. 200 pompes APRÈS le gainage\n7. 300 squats APRÈS les pompes\n\nLes seuils sont ajustés au ratio onboarding.",
+        text: "Pour libérer ton animal, tous ont les MÊMES 7 défis (ordre différent par animal) :\n\n1. Aller le voir\n2. Lui donner à boire (gourde)\n3. Lui offrir des pâtes (corned_pates)\n4. Le visiter matin ET après-midi\n5. [[r:180]]s de gainage\n6. [[r:200]] pompes APRÈS le gainage\n7. [[r:300]] squats APRÈS les pompes\n\nLes seuils sont ajustés au ratio onboarding.",
     },
     // Archives (y=7)
     {

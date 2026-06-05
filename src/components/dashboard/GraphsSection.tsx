@@ -227,6 +227,19 @@ export default function GraphsSection({ data, graphPeriod, setGraphPeriod }: Gra
                                         </div>
                                     </div>
 
+                                    {/* v4.y — Jalon "Évolution Daemon" sous le graphique (avec la date) */}
+                                    {data?.daemonEvolution && (
+                                        <div className="flex items-center gap-3 px-5 py-3 bg-purple-50 border border-purple-200 rounded-2xl">
+                                            <span className="text-2xl shrink-0">{data.daemonEvolution.animalEmoji || "👾"}</span>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-[11px] font-black text-purple-700 uppercase tracking-wide">Évolution Daemon 👾</p>
+                                                <p className="text-xs text-slate-500 font-medium">
+                                                    {data.daemonEvolution.animalName} a évolué en Daemon — le {new Date(data.daemonEvolution.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
                                         <div className="lg:col-span-7 space-y-5">
                                             <div className="flex items-center justify-between">

@@ -94,7 +94,7 @@ export async function POST() {
         return NextResponse.json({
             ok: true,
             alreadyBeaten: true,
-            message: "IL CAPO incline la tête. « Tu as gagné. L'arène est à toi. Va. »",
+            message: "IL CAPO incline la tête. « Tu as gagné. Remplis la Mega Gourde du Capo de 1000 reps, puis fais-la boire à ton animal pour qu'il évolue en DAEMON. »",
         })
     }
 
@@ -118,8 +118,8 @@ export async function POST() {
             ok: true,
             justBeaten: true,
             message: rewardClaimed
-                ? "IL CAPO incline la tête. « L'arène est à toi. »"
-                : `IL CAPO s'incline. « Tu as tout prouvé. Voici la Mega Gourde du Capo. L'arène est à toi. Mes sbires ne t'embêteront plus. » (+1 Mega Gourde, +${SERUM_REPS_REWARD} reps de sérum intelligence)`,
+                ? "IL CAPO incline la tête. « Remplis la Mega Gourde et fais-la boire à ton animal pour qu'il évolue en DAEMON. »"
+                : `IL CAPO s'incline. « Tu as tout prouvé. Voici la Mega Gourde du Capo. Remplis-la de 1000 reps puis fais-la boire à ton animal : il évoluera en DAEMON. Mes sbires ne t'embêteront plus. » (+1 Mega Gourde)`,
         })
     }
 
@@ -179,7 +179,7 @@ export async function POST() {
             ok: true,
             justBeaten: true,
             rewards: { item: "mega_gourde", serumReps: SERUM_REPS_REWARD, arenaUnlocked: true },
-            message: `IL CAPO s'incline lentement. « Tu as TOUT prouvé. Voici la Mega Gourde du Capo, marque de mon respect. L'arène est à toi. Et mes sbires... ils n'oseront plus. » (+1 Mega Gourde, +${SERUM_REPS_REWARD} reps de sérum intelligence)`,
+            message: `IL CAPO s'incline lentement. « Tu as TOUT prouvé. Voici la Mega Gourde du Capo, marque de mon respect. Remplis-la de 1000 reps à une fontaine, puis fais-la boire à ton animal : il évoluera en DAEMON. Et mes sbires... ils n'oseront plus. » (+1 Mega Gourde)`,
         })
     }
 

@@ -129,8 +129,19 @@ export default async function GazetteXP() {
         }
     });
 
+    // v4.y — Évolutions Animal → Daemon : event spécial affiché dans la Gazette.
+    const daemonEvents = await (prisma as any).badgeEvent.findMany({
+        where: {
+            eventType: "UNIQUE_AWARDED",
+            badgeKey: "gamebook_daemon_evolution",
+            toUser: { league: league }
+        },
+        orderBy: { createdAt: "desc" },
+        include: { likes: true, toUser: { select: { nickname: true } } }
+    });
+
     // Strategy: One article per user, prioritizing real events
-    const displayEvents = allUsers.map((user: any) => {
+    const userArticles = allUsers.map((user: any) => {
         const userXP = (xpScores as any[]).find((x: any) => x.id === user.id);
         const realEvents = rawEvents.filter((e: any) => e.toUserId === user.id);
         const latestReal = realEvents[0];
@@ -170,7 +181,21 @@ export default async function GazetteXP() {
                 reason: reason
             })
         };
-    }).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    });
+
+    // v4.y — Articles "Évolution Daemon" fusionnés avec les ascensions, triés par date.
+    const daemonArticles = daemonEvents.map((e: any) => ({
+        id: e.id,
+        toUserId: e.toUserId,
+        toUser: { nickname: e.toUser?.nickname || "Inconnu" },
+        eventType: "DAEMON_EVOLUTION",
+        createdAt: e.createdAt,
+        likes: e.likes || [],
+        metadata: e.metadata,
+    }));
+    const displayEvents = [...userArticles, ...daemonArticles].sort(
+        (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
 
     return (
         <div className="bg-gradient-to-br from-indigo-900 via-slate-900 to-slate-900 rounded-[2rem] p-6 sm:p-8 shadow-xl border border-indigo-500/20 relative overflow-hidden mt-8">
@@ -205,6 +230,39 @@ export default async function GazetteXP() {
                         try {
                             if (event.metadata) metaDataObj = JSON.parse(event.metadata);
                         } catch (e) { }
+
+                        // v4.y — Article spécial "Évolution Daemon"
+                        if (event.eventType === "DAEMON_EVOLUTION") {
+                            const dNick = event.toUser?.nickname || "Inconnu";
+                            const dEmoji = metaDataObj?.animalEmoji || "👾";
+                            const dName = metaDataObj?.animalName || "son animal";
+                            const dTime = getTimeAgo(event.createdAt);
+                            return (
+                                <div key={event.id} className="bg-purple-900/15 border border-purple-500/30 rounded-2xl p-4 transition-colors">
+                                    <div className="flex items-start gap-4">
+                                        <div className="text-4xl mt-1 drop-shadow-md">{dEmoji}</div>
+                                        <div className="flex-1 space-y-1">
+                                            <div className="flex justify-between items-start gap-2">
+                                                <h3 className="font-bold text-white text-base leading-tight">
+                                                    <Link href={`/u/${encodeURIComponent(dNick)}`} className="text-purple-300 font-black hover:underline">{dNick}</Link> a fait évoluer son animal en <span className="text-purple-300 font-black text-lg">DAEMON</span> ! 👾
+                                                </h3>
+                                                <span className="text-[10px] font-bold text-slate-400 whitespace-nowrap bg-slate-800 px-2 py-1 rounded-full">{dTime}</span>
+                                            </div>
+                                            <p className="text-sm text-slate-300">
+                                                {dEmoji} {dName} s'est éveillé — la voie des combats s'ouvre.
+                                            </p>
+                                            <div className="pt-2 flex justify-end">
+                                                <GazetteLikeButton
+                                                    eventId={event.id}
+                                                    initialLikeCount={event.likes?.length || 0}
+                                                    initialHasLiked={event.likes?.some((l: any) => l.userId === currentUserId) || false}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        }
 
                         const nickname = event.toUser?.nickname || "Inconnu";
                         const level = event.newValue;

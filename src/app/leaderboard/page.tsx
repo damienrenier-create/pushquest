@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { calculateAllUsersXP } from "@/lib/xp";
 import TeamBadge from "@/components/TeamBadge";
+import { getTeamRowClassDark } from "@/lib/teamBadge";
 
 export default async function LeaderboardPage({
     searchParams,
@@ -180,7 +181,7 @@ export default async function LeaderboardPage({
                     </thead>
                     <tbody className="divide-y divide-slate-800">
                         {leaderboard.map((entry, index) => (
-                            <tr key={entry.userId} className="hover:bg-slate-800/30 transition-colors group">
+                            <tr key={entry.userId} className={`hover:bg-slate-800/30 transition-colors group ${getTeamRowClassDark(entry.userId)}`}>
                                 <td className="px-3 sm:px-6 py-4 sm:py-6">
                                     <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded sm:rounded-lg flex items-center justify-center font-black text-xs sm:text-base ${index === 0 ? "bg-yellow-500 text-yellow-950 scale-110 shadow-lg shadow-yellow-500/20" :
                                         index === 1 ? "bg-slate-300 text-slate-900" :

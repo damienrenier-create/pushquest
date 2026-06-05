@@ -86,7 +86,7 @@ export const NPCS: NpcDefinition[] = [
         ],
         dialoguesAfter: [
             "Ah ! Tu reviens du Monstre !",
-            "Tiens, prends ça. 100 reps de surplus.",
+            "Tiens, prends ça. [[r:100]] reps de surplus.",
             "Tu vas en avoir besoin pour explorer.",
             "Allez file. Et reviens jamais. Enfin, reviens si tu veux.",
         ],
@@ -253,7 +253,7 @@ export const NPCS: NpcDefinition[] = [
         dialoguesAfter: [
             "Hé ! Tu veux savoir un truc cool ?",
             "Y a plein d'arbres à pâtes-fruits planqués partout dans le monde.",
-            "Chacun donne 3 fruits par jour, et chaque fruit c'est +80 reps. C'est gratos quoi.",
+            "Chacun donne 3 fruits par jour, et chaque fruit c'est +[[r:80]] reps. C'est gratos quoi.",
             "Cherche bien à Pépiteville, à Hautes-Pâtes, partout. Y en a même qui sont à moitié cachés.",
         ],
         dialoguesAfterRevisit: [
@@ -345,7 +345,7 @@ export const NPCS: NpcDefinition[] = [
         dialoguesAfter: [
             "Yo. Bienvenue dans MON gymnase.",
             "BUFFY de Bourg-Boulette, c'est mon cousin. On a tous les deux trop d'énergie.",
-            "Tiens, 50 reps en cadeau. Pas plus, faut bien que je garde mon style.",
+            "Tiens, [[r:50]] reps en cadeau. Pas plus, faut bien que je garde mon style.",
             "Maintenant fous le camp, j'ai des biceps à entretenir.",
         ],
         energyReward: 50,
@@ -581,7 +581,7 @@ export const NPCS: NpcDefinition[] = [
             "*Veste rouge sang, cigare au coin de la bouche.*",
             "Je suis MARCO, capitaine de l'Équipe Rouge.",
             "Mes troupes : Mools, Milkardashian, Neuneu.",
-            "Si t'es des miens, j'te file 30 reps par jour. Loyalty fee.",
+            "Si t'es des miens, j'te file [[r:30]] reps par jour. Loyalty fee.",
         ],
         dialoguesAfterRevisit: [
             "Reviens demain pour ton bonus, soldat.",
@@ -601,7 +601,7 @@ export const NPCS: NpcDefinition[] = [
             "*Costard jaune banane, lunettes de soleil intérieures.*",
             "POLO, capitaine de l'Équipe Jaune. Enchanté.",
             "Mon roster : Xa, Embi, Gg. Trio doré.",
-            "Si t'es à moi, c'est 30 reps par jour. Discrétion garantie.",
+            "Si t'es à moi, c'est [[r:30]] reps par jour. Discrétion garantie.",
         ],
         dialoguesAfterRevisit: [
             "Le bonus, c'est 1× par 24h. Reviens demain.",
@@ -1191,8 +1191,8 @@ export const NPCS: NpcDefinition[] = [
         initialY: 2,
         dialoguesAfter: [
             "POMPATOR, champion de pompes. *Il claque sa poitrine.*",
-            "Tu veux me défier ? Très bien. Mon défi est simple : 200 pompes aujourd'hui.",
-            "Si tu y arrives, je te lègue 100 reps de surplus en hommage à ton effort.",
+            "Tu veux me défier ? Très bien. Mon défi est simple : [[r:200]] pompes aujourd'hui.",
+            "Si tu y arrives, je te lègue [[r:100]] reps de surplus en hommage à ton effort.",
         ],
         dialoguesAfterRevisit: [
             "POMPATOR hoche la tête. \"Le défi est passé. Ta poitrine est forgée.\"",
@@ -1209,8 +1209,8 @@ export const NPCS: NpcDefinition[] = [
         initialY: 2,
         dialoguesAfter: [
             "SQUATILUS, maître des squats. *Il fait flexion lente.*",
-            "Mon défi à toi : 250 squats aujourd'hui. Cuisses brûlantes ou pas du tout.",
-            "Récompense : 100 reps de surplus si tu tiens.",
+            "Mon défi à toi : [[r:250]] squats aujourd'hui. Cuisses brûlantes ou pas du tout.",
+            "Récompense : [[r:100]] reps de surplus si tu tiens.",
         ],
         dialoguesAfterRevisit: [
             "SQUATILUS grogne d'approbation. \"Tes cuisses ont parlé. Respect.\"",
@@ -1227,8 +1227,8 @@ export const NPCS: NpcDefinition[] = [
         initialY: 2,
         dialoguesAfter: [
             "TIROIR, expert des tractions. *Il regarde la barre.*",
-            "Mon défi : 30 tractions aujourd'hui. C'est dur, je sais. C'est fait pour.",
-            "Tiens bon et tu auras 100 reps en cadeau d'amitié.",
+            "Mon défi : [[r:30]] tractions aujourd'hui. C'est dur, je sais. C'est fait pour.",
+            "Tiens bon et tu auras [[r:100]] reps en cadeau d'amitié.",
         ],
         dialoguesAfterRevisit: [
             "TIROIR sourit, silencieux. *Il te tape l'épaule.*",
@@ -1795,12 +1795,12 @@ export const NPCS: NpcDefinition[] = [
         kind: "static",
         interaction: "interactive",
         sprite: { emoji: "🕴️", color: "#202020" },
-        // v3.42 — Position : sur le trottoir d'approche sud, directement devant la porte
-        // du bar (qui est à 2,19). Avant, le videur était à (2, 18) — à l'intérieur du
-        // footprint du bâtiment = mur infranchissable. Il est maintenant un obstacle
-        // physique que le joueur ne peut pas contourner. Filtré côté client une fois
-        // videurState = "passed" → il s'efface et libère la voie vers la porte.
-        initialX: 2,
+        // v4.x — Position : À CÔTÉ de la porte du bar (porte à 2,19), trottoir sud, x=1.
+        // Avant il était pile DEVANT (2,20) → il bloquait physiquement le passage MÊME après
+        // que le joueur avait le mot de passe / fait le défi. L'accès est de toute façon géré
+        // par le gating de la porte (videurState, cf. MapClient), donc le videur n'a plus besoin
+        // de barrer la route : il reste visible comme portier juste à gauche de la porte.
+        initialX: 1,
         initialY: 20,
         // Dialogue initial — la suite est gérée par MapClient (choix oui/non + flag pere_pesto)
         dialoguesAfter: [

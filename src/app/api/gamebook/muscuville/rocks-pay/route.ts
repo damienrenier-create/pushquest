@@ -17,6 +17,7 @@ import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { getTodayISO } from "@/lib/challenge"
 import { readEnergySnapshot, spendEnergyOnSnapshot, computeAvailableEnergy, getTodayRepsForEnergy } from "@/lib/gamebook/energy"
+import { getUserDifficultyRatio, applyRatioToCost } from "@/lib/gamebook/ratio"
 
 export const dynamic = "force-dynamic"
 
@@ -47,7 +48,10 @@ export async function POST() {
     const beaten: string[] = Array.isArray((progress as { muscuvilleChampionsBeaten?: unknown }).muscuvilleChampionsBeaten)
         ? ((progress as { muscuvilleChampionsBeaten: unknown[] }).muscuvilleChampionsBeaten as string[])
         : []
-    const price = computeRocksPrice(beaten.length)
+    // Prix ajusté au ratio d'onboarding (comme les autres coûts du Nexus). 0 reste 0 (4/4 champions).
+    const ratio = await getUserDifficultyRatio(userId)
+    const rawPrice = computeRocksPrice(beaten.length)
+    const price = rawPrice > 0 ? applyRatioToCost(rawPrice, ratio) : 0
 
     const today = getTodayISO()
     const snap = readEnergySnapshot(progress, today)

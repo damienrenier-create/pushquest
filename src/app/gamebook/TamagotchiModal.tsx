@@ -18,12 +18,25 @@ import {
     TAMAGOTCHI_FEED_COST,
     TAMAGOTCHI_HAPPINESS_MAX,
     isValidTamagotchiName,
+    CANONICAL_DEFIS,
 } from "@/lib/gamebook/tamagotchi"
+
+export interface DefiDetail {
+    index: number
+    code: string
+    title: string
+    done: boolean
+    current?: number
+    threshold?: number
+    unit?: string
+    todo?: string
+}
 import { getLevelDetails } from "@/lib/xp"
 import type { InventoryEntry } from "@/lib/gamebook/inventory"
 
 interface Props {
     tamagotchi: TamagotchiView | null
+    defiDetails?: DefiDetail[]
     availableEnergy: number
     inventory: InventoryEntry[]
     onAdopt: (name: string) => Promise<void>
@@ -32,12 +45,18 @@ interface Props {
     onFeedPates?: () => Promise<{ ok: boolean; v3tComment?: string; reason?: string }>
     onCheckDefis?: () => Promise<void>
     onLiberer?: () => Promise<void>
+    // v4.y — Évolution Animal → Daemon via la Mega Gourde du Capo (pleine).
+    hasMegaGourde?: boolean
+    megaGourdeStored?: number
+    evolveThreshold?: number
+    onEvolve?: () => Promise<void>
     onClose: () => void
 }
 
 export default function TamagotchiModal({
-    tamagotchi, availableEnergy, inventory,
-    onAdopt, onFeed, onDrink, onFeedPates, onCheckDefis, onLiberer, onClose,
+    tamagotchi, defiDetails, availableEnergy, inventory,
+    onAdopt, onFeed, onDrink, onFeedPates, onCheckDefis, onLiberer,
+    hasMegaGourde, megaGourdeStored, evolveThreshold, onEvolve, onClose,
 }: Props) {
     const [name, setName] = useState("")
     const [busy, setBusy] = useState(false)
@@ -124,6 +143,7 @@ export default function TamagotchiModal({
                 ) : (
                     <TamagotchiCard
                         tamagotchi={tamagotchi}
+                        defiDetails={defiDetails}
                         availableEnergy={availableEnergy}
                         inventory={inventory}
                         busy={busy}
@@ -166,6 +186,15 @@ export default function TamagotchiModal({
                             setBusy(true)
                             setError(null)
                             try { await onLiberer() } finally { setBusy(false) }
+                        } : undefined}
+                        hasMegaGourde={hasMegaGourde}
+                        megaGourdeStored={megaGourdeStored}
+                        evolveThreshold={evolveThreshold}
+                        onEvolve={onEvolve ? async () => {
+                            if (busy) return
+                            setBusy(true)
+                            setError(null)
+                            try { await onEvolve() } finally { setBusy(false) }
                         } : undefined}
                     />
                 )}
@@ -241,10 +270,12 @@ function AdoptForm({
 }
 
 function TamagotchiCard({
-    tamagotchi, availableEnergy, inventory, busy, error, v3tBubble,
+    tamagotchi, defiDetails, availableEnergy, inventory, busy, error, v3tBubble,
     onFeed, onDrink, onFeedPates, onCheckDefis, onLiberer,
+    hasMegaGourde, megaGourdeStored, evolveThreshold, onEvolve,
 }: {
     tamagotchi: TamagotchiView
+    defiDetails?: DefiDetail[]
     availableEnergy: number
     inventory: InventoryEntry[]
     busy: boolean
@@ -255,6 +286,10 @@ function TamagotchiCard({
     onFeedPates: () => Promise<void>
     onCheckDefis?: () => Promise<void>
     onLiberer?: () => Promise<void>
+    hasMegaGourde?: boolean
+    megaGourdeStored?: number
+    evolveThreshold?: number
+    onEvolve?: () => Promise<void>
 }) {
     const details = getLevelDetails(tamagotchi.displayLevel)
     const happinessPct = (tamagotchi.displayHappiness / TAMAGOTCHI_HAPPINESS_MAX) * 100
@@ -263,6 +298,11 @@ function TamagotchiCard({
             : happinessPct > 25 ? "#f0a050"
                 : "#c83838"
     const canFeed = availableEnergy >= TAMAGOTCHI_FEED_COST
+
+    // v4.y — Évolution en Daemon : possible quand la Mega Gourde du Capo est pleine (seuil onboardé).
+    const evoStored = megaGourdeStored ?? 0
+    const evoThreshold = evolveThreshold ?? 1000
+    const canEvolve = (hasMegaGourde ?? false) && evoStored >= evoThreshold
 
     // Conditions pour boire/manger les pâtes
     const flask = inventory.find((e) => e.itemKey === "flask" || e.itemKey === "grande_gourde")
@@ -409,19 +449,9 @@ function TamagotchiCard({
                 </div>
             )}
 
-            {/* v4.0 — Progression défis : ne PAS spoiler le détail ici.
-                Le joueur peut consulter les conditions d'adoption à la bibliothèque
-                (rayon "Animaux & Défis" chez BIBLIO à Macaron'île).
-                On garde juste le compteur global pour qu'il sache où il en est. */}
+            {/* v4.x — Le véto dit EXACTEMENT où on en est + ce qui reste (checklist explicite). */}
             {!tamagotchi.recovered && (
-                <div style={{ marginBottom: 12, fontSize: 10, opacity: 0.85, lineHeight: 1.6, textAlign: "center" }}>
-                    <div style={{ fontWeight: "bold" }}>
-                        Défis : {tamagotchi.defisDone}/{tamagotchi.defisTotal}
-                    </div>
-                    <div style={{ fontSize: 9, opacity: 0.65, marginTop: 2, fontStyle: "italic" }}>
-                        Consulte la bibliothèque pour découvrir les épreuves d'adoption.
-                    </div>
-                </div>
+                <DefiChecklist tamagotchi={tamagotchi} defiDetails={defiDetails} />
             )}
 
             {error && (
@@ -468,6 +498,42 @@ function TamagotchiCard({
                     >
                         ✨ LIBÉRER MON ANIMAL ✨
                     </button>
+                )}
+
+                {/* v4.y — Évolution Animal → Daemon (Mega Gourde du Capo pleine).
+                    Toujours visible une fois l'animal récupéré ; activable seulement quand la gourde est pleine. */}
+                {tamagotchi.recovered && onEvolve && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 2 }}>
+                        <button
+                            onClick={canEvolve ? onEvolve : undefined}
+                            disabled={busy || !canEvolve}
+                            style={{
+                                background: canEvolve && !busy ? "#7a3cc0" : "#333",
+                                color: "#fff",
+                                border: "2px solid #fff",
+                                padding: "10px 12px",
+                                fontFamily: "'Courier New', monospace",
+                                fontSize: 12,
+                                fontWeight: "bold",
+                                letterSpacing: 1,
+                                cursor: canEvolve && !busy ? "pointer" : "not-allowed",
+                                width: "100%",
+                                opacity: canEvolve ? 1 : 0.75,
+                            }}
+                        >
+                            👾 FAIRE ÉVOLUER EN DAEMON
+                        </button>
+                        {canEvolve ? (
+                            <div style={{ fontSize: 9, fontStyle: "italic", textAlign: "center", color: "#c9a0ff" }}>
+                                La Mega Gourde du Capo est pleine — {tamagotchi.name} est prêt à évoluer !
+                            </div>
+                        ) : (
+                            <div style={{ fontSize: 9, opacity: 0.7, fontStyle: "italic", lineHeight: 1.4, textAlign: "center" }}>
+                                Patience : remplis ta Mega Gourde du Capo à fond ({evoStored}/{evoThreshold})
+                                {" "}et tu pourras la faire boire à {tamagotchi.name} pour le faire évoluer en Daemon !
+                            </div>
+                        )}
+                    </div>
                 )}
             </div>
 
@@ -533,6 +599,103 @@ function DefiLine({ done, text }: { done: boolean; text: string }) {
     return (
         <div style={{ opacity: done ? 1 : 0.5, color: done ? "#48a868" : "#fff" }}>
             {done ? "✓" : "•"} {text}
+        </div>
+    )
+}
+
+/**
+ * v4.x — Checklist explicite des 7 défis d'adoption, dans l'ordre propre à l'animal.
+ * Le véto V3T dit EXACTEMENT ce qui est fait (✓) et ce qui reste (numéro + action + compteur live).
+ *
+ * v4.y — Scindée en DEUX blocs distincts pour lever toute ambiguïté :
+ *   ⏳ IL TE RESTE (to-do)  → ce qu'il faut encore faire, avec compteur live + hint.
+ *   ✅ DÉJÀ FAIT (done)     → ce qui est validé.
+ * Fallback canonique (titre + description) si check-defis n'a pas encore répondu,
+ * pour que la liste soit lisible dès l'ouverture du modal.
+ */
+function DefiChecklist({ tamagotchi, defiDetails }: { tamagotchi: TamagotchiView; defiDetails?: DefiDetail[] }) {
+    const order = tamagotchi.defiOrder && tamagotchi.defiOrder.length === CANONICAL_DEFIS.length
+        ? tamagotchi.defiOrder
+        : CANONICAL_DEFIS.map((d) => d.index)
+    const byIndex = new Map((defiDetails ?? []).map((d) => [d.index, d]))
+
+    // Ligne enrichie par index, avec fallback canonique (titre + description)
+    // quand check-defis n'a pas encore répondu → toujours lisible à l'ouverture.
+    const rows = order.map((idx) => {
+        const d = byIndex.get(idx)
+        const canon = CANONICAL_DEFIS[idx]
+        const done = d?.done ?? (tamagotchi.defiProgress?.[String(idx)] === true)
+        return {
+            idx,
+            done,
+            title: d?.title ?? canon?.title ?? `Défi ${idx + 1}`,
+            todo: d?.todo ?? canon?.description ?? "",
+            hasCount: typeof d?.current === "number" && typeof d?.threshold === "number",
+            current: d?.current,
+            threshold: d?.threshold,
+            unit: d?.unit,
+        }
+    })
+    const todoRows = rows.filter((r) => !r.done)
+    const doneRows = rows.filter((r) => r.done)
+
+    return (
+        <div style={{ marginBottom: 12, background: "#0f0f0f", border: "1px solid #2a4a30", borderRadius: 4, padding: 10 }}>
+            <div style={{ fontSize: 10, fontWeight: "bold", letterSpacing: 1, marginBottom: 8, color: "#9fd8a8" }}>
+                🩺 V3T : « Voilà exactement où tu en es. » ({tamagotchi.defisDone}/{tamagotchi.defisTotal})
+            </div>
+
+            {/* ⏳ IL TE RESTE — les défis non validés */}
+            <div style={{ fontSize: 9, fontWeight: "bold", letterSpacing: 1, color: "#f0a050", marginBottom: 5 }}>
+                ⏳ IL TE RESTE ({todoRows.length})
+            </div>
+            {todoRows.length === 0 ? (
+                <div style={{ fontSize: 9, opacity: 0.6, fontStyle: "italic", marginBottom: 10 }}>
+                    Plus rien — il est prêt. Reviens le récupérer.
+                </div>
+            ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 10 }}>
+                    {todoRows.map((r, n) => (
+                        <div key={r.idx} style={{ fontSize: 10, lineHeight: 1.4 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", gap: 6, color: "#fff", fontWeight: "bold" }}>
+                                <span>{n + 1}. {r.title}</span>
+                                {r.hasCount && (
+                                    <span style={{ color: "#f0a050", whiteSpace: "nowrap" }}>
+                                        {Math.min(r.current!, r.threshold!)}/{r.threshold}{r.unit === "s" ? "s" : ""}
+                                    </span>
+                                )}
+                            </div>
+                            {r.todo && (
+                                <div style={{ fontSize: 9, opacity: 0.6, fontStyle: "italic", marginLeft: 14, marginTop: 1 }}>
+                                    → {r.todo}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* ✅ DÉJÀ FAIT — les défis validés */}
+            <div style={{ fontSize: 9, fontWeight: "bold", letterSpacing: 1, color: "#48a868", marginBottom: 5 }}>
+                ✅ DÉJÀ FAIT ({doneRows.length})
+            </div>
+            {doneRows.length === 0 ? (
+                <div style={{ fontSize: 9, opacity: 0.6, fontStyle: "italic" }}>
+                    Rien encore. Commence par t'occuper de lui.
+                </div>
+            ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    {doneRows.map((r) => (
+                        <div key={r.idx} style={{ fontSize: 10, color: "#48a868", opacity: 0.75 }}>
+                            ✓ {r.title}
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            <div style={{ fontSize: 8, opacity: 0.5, marginTop: 8, fontStyle: "italic", textAlign: "center" }}>
+                Clique « Vérifier mes progrès » après ton entraînement du jour.
+            </div>
         </div>
     )
 }

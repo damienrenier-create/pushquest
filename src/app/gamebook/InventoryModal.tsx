@@ -28,9 +28,13 @@ interface Props {
     // v3.33 — Contexte pour activer les actions "donner à l'animal" chez le véto
     mapId?: string
     hasTamagotchi?: boolean
+    // v4.y — Évolution Animal → Daemon depuis le sac (Mega Gourde pleine), accessible de partout.
+    animalName?: string
+    evolveThreshold?: number
+    onEvolveAnimal?: () => Promise<void>
 }
 
-export default function InventoryModal({ inventory, availableEnergy, onUse, onView, onClose, mapId, hasTamagotchi }: Props) {
+export default function InventoryModal({ inventory, availableEnergy, onUse, onView, onClose, mapId, hasTamagotchi, animalName, evolveThreshold, onEvolveAnimal }: Props) {
     const [activePocket, setActivePocket] = useState<Pocket>("working")
 
     const ownedAll = inventory
@@ -141,6 +145,9 @@ export default function InventoryModal({ inventory, availableEnergy, onUse, onVi
                             onView={onView}
                             mapId={mapId}
                             hasTamagotchi={hasTamagotchi}
+                            animalName={animalName}
+                            evolveThreshold={evolveThreshold}
+                            onEvolveAnimal={onEvolveAnimal}
                         />
                     ))}
                 </div>
@@ -211,6 +218,9 @@ function ItemRow({
     onView,
     mapId,
     hasTamagotchi,
+    animalName,
+    evolveThreshold,
+    onEvolveAnimal,
 }: {
     entry: InventoryEntry
     def: ItemDefinition
@@ -219,6 +229,9 @@ function ItemRow({
     onView?: (itemKey: string, kind: "playerMap" | "treasureMap" | "tree_book") => void
     mapId?: string
     hasTamagotchi?: boolean
+    animalName?: string
+    evolveThreshold?: number
+    onEvolveAnimal?: () => Promise<void>
 }) {
     const [fillInput, setFillInput] = useState<string>("10")
     const [busy, setBusy] = useState(false)
@@ -336,6 +349,27 @@ function ItemRow({
                             🐾 DONNER À BOIRE
                         </button>
                     )}
+                    {/* v4.y — Faire boire la Mega Gourde pleine → évolution en Daemon (accessible de partout) */}
+                    {def.key === "mega_gourde" && hasTamagotchi && onEvolveAnimal && (
+                        <button
+                            onClick={async () => {
+                                if (busy) return
+                                setBusy(true)
+                                try { await onEvolveAnimal() } finally { setBusy(false) }
+                            }}
+                            disabled={busy || stored < (evolveThreshold ?? 1000)}
+                            style={btnStyle(busy || stored < (evolveThreshold ?? 1000), "#7a3cc0")}
+                        >
+                            👾 FAIRE ÉVOLUER {(animalName ?? "L'ANIMAL").toUpperCase()}
+                        </button>
+                    )}
+                </div>
+            )}
+
+            {def.key === "mega_gourde" && hasTamagotchi && onEvolveAnimal && stored < (evolveThreshold ?? 1000) && (
+                <div style={{ fontSize: 9, opacity: 0.7, marginTop: 6, fontStyle: "italic", lineHeight: 1.4 }}>
+                    Patience : remplis la Mega Gourde à fond ({stored}/{evolveThreshold ?? 1000})
+                    {" "}et tu pourras la faire boire à {animalName ?? "ton animal"} pour le faire évoluer en Daemon !
                 </div>
             )}
 

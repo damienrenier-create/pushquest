@@ -126,6 +126,7 @@ import CockfightModal from "./CockfightModal"
 import SlotMachineModal from "./SlotMachineModal"
 import CasinoPatternVegasModal from "./CasinoPatternVegasModal"
 import ArenaModal from "./ArenaModal"
+import DaemonEvolutionScreen, { type DaemonEvolutionData } from "./DaemonEvolutionScreen"
 import MontVentouxSideView from "./MontVentouxSideView"
 import { getLevelDetails } from "@/lib/xp"
 import { getActiveBicycle } from "@/lib/gamebook/items"
@@ -216,6 +217,8 @@ type Cinematic =
     | { kind: "pastagoneCapture"; step: number }
     // v4.0 — Cinématique CAPOLINO 4ᵉ rencontre (fuite post-boss avec vol Daemon opposé)
     | { kind: "capolinoFlee"; step: number; lines: string[]; stolenType: string }
+    // v4.y — Cinématique évolution Animal → Daemon (Mega Gourde du Capo bue)
+    | { kind: "daemonEvolution"; data: DaemonEvolutionData }
     | null
 
 // Ticker partagé entre tous les NPCs wanderers pour synchroniser leurs déplacements
@@ -269,6 +272,27 @@ export default function MapClient({
     // v3.14 — Modal du vétérinaire (V3T) : adoption / nourrissage du tamagotchi
     const [showTamagotchi, setShowTamagotchi] = useState(false)
     const [tamagotchi, setTamagotchi] = useState<TamagotchiView | null>(initialTamagotchi)
+    // v4.x — Détail explicite des défis d'adoption (le véto dit exactement où on en est + quoi faire)
+    const [defiDetails, setDefiDetails] = useState<any[]>([])
+    // v4.x — À l'ouverture du modal véto (avec animal déjà adopté), on rafraîchit silencieusement
+    // l'état des défis pour que la checklist affichée soit exacte (compteurs du jour, visites…).
+    useEffect(() => {
+        if (!showTamagotchi || !tamagotchi) return
+        let cancelled = false
+        ;(async () => {
+            try {
+                const res = await fetch("/api/gamebook/tamagotchi/check-defis", { method: "POST" })
+                const data = await res.json()
+                if (cancelled) return
+                if (data?.ok) {
+                    if (data.tamagotchi) setTamagotchi(data.tamagotchi)
+                    if (Array.isArray(data.defiDetails)) setDefiDetails(data.defiDetails)
+                }
+            } catch { /* silencieux */ }
+        })()
+        return () => { cancelled = true }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [showTamagotchi])
     // v4.0 Phase 1.D — Modal équipe Daemon (jusqu'à 6 slots) accessible via START
     const [showDaemonTeam, setShowDaemonTeam] = useState(false)
     // v4.0 Phase 2.C — Modal combat (BattleState courant si battle active)
@@ -335,6 +359,11 @@ export default function MapClient({
     }, [state.mapId])
     // === v3.8.1 : fruits cueillis aujourd'hui (par CE user). Drive le rendu vide/plein des arbres. ===
     const [fruitCounts, setFruitCounts] = useState<Record<string, number>>(initialFruitCounts)
+    // v4.y — Les fruits reset à minuit (Europe/Paris) côté serveur. On suit le jour Paris pour
+    // re-remplir VISUELLEMENT les arbres (fruitCounts → {}) au changement de jour, sans attendre
+    // un clic. Couvre le passage de minuit ET le retour de l'app au premier plan un nouveau jour.
+    const parisDay = () => new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Paris" })
+    const fruitDayRef = useRef<string>(parisDay())
     // === v3.8.2 : plus haut étage atteint dans la Tour. Drive le bypass-check des escaliers. ===
     const [towerFloorReached, setTowerFloorReached] = useState<number>(initialTowerFloorReached)
     // === v3.10 : ratio de difficulté (multiplie tous les coûts du Gamebook, sauf rewards). ===
@@ -505,11 +534,30 @@ export default function MapClient({
                         if (typeof j?.energySpentToday === "number") setEnergySpent(j.energySpentToday)
                     }
                 } catch { /* silent */ }
+                // v4.y — Nouveau jour : re-remplir VISUELLEMENT les arbres (les fruits ont reset côté serveur).
+                fruitDayRef.current = parisDay()
+                setFruitCounts({})
                 schedule()  // re-planifier pour le prochain minuit
             }, ms)
         }
         schedule()
         return () => { if (timeoutId !== null) clearTimeout(timeoutId) }
+    }, [])
+
+    // v4.y — Re-remplir visuellement les arbres quand l'app revient au premier plan un NOUVEAU jour
+    // (cas mobile/PWA où le timer de minuit a pu être throttlé en arrière-plan).
+    useEffect(() => {
+        const onVisible = () => {
+            if (typeof document !== "undefined" && document.hidden) return
+            const today = parisDay()
+            if (today !== fruitDayRef.current) {
+                fruitDayRef.current = today
+                setFruitCounts({})
+            }
+        }
+        document.addEventListener("visibilitychange", onVisible)
+        return () => document.removeEventListener("visibilitychange", onVisible)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     // ============================================================
@@ -792,15 +840,12 @@ export default function MapClient({
     // ============================================================
     const wanderTick = useWanderTicker()
     const bestiolesFlee = tamagotchi?.recovered === true
-    // v3.42 — Le PORTIER ARRABBIATA s'efface une fois son défi validé ("passed")
-    // ou le boss vaincu. Il était physiquement devant la porte du bar TB (2, 20) ;
-    // sans ce filtre, il bloquerait à vie le passage même après que le joueur a payé son dû.
-    const videurPassed =
-        (state as { videurState?: string }).videurState === "passed" ||
-        (state as { videurState?: string }).videurState === "boss_beaten"
+    // v4.x — Le PORTIER ARRABBIATA est désormais placé À CÔTÉ de la porte (1,20), plus DEVANT.
+    // Il ne bloque donc plus physiquement le passage : l'accès au bar est géré uniquement par
+    // le gating de la porte (videurState, cf. plus bas). On le laisse visible en permanence
+    // comme portier (plus de filtre qui le faisait disparaître après le défi).
     const npcsOnMap = getNpcsForMap(state.mapId).filter((npc) => {
         if (npc.id.startsWith("bestiole_") && bestiolesFlee) return false
-        if (npc.id === "tb_videur" && videurPassed) return false
         return true
     })
     const npcsWithPos = npcsOnMap.map((npc) => {
@@ -933,8 +978,8 @@ export default function MapClient({
             // 2e — défi 50 pompes
             lines = [
                 "Tu reviens ! T'as l'air en forme.",
-                "J'te propose un défi : si tu fais 50 pompes dans la journée, je te file mon économie : +100 reps.",
-                "Reviens me parler quand t'as fait les 50. Je vérifie en direct.",
+                "J'te propose un défi : si tu fais [[r:50]] pompes dans la journée, je te file mon économie : +[[r:100]] reps.",
+                "Reviens me parler quand t'as fait les [[r:50]]. Je vérifie en direct.",
             ]
         } else {
             // 3e+ — ONE PIECE
@@ -1071,7 +1116,11 @@ export default function MapClient({
             // x=1, y∈[11..14], après avoir battu la Team Boulette (tbBossBeaten),
             // et tant que pastagoneArrested === false.
             if (
-                !cinematic
+                // v4.y — Arc Pastagone ABANDONNÉ : la suite post-boss est désormais
+                // Mega Gourde → évolution Daemon → teaser Chapitre 2 (Nexus Jaune Éclair).
+                // On désactive donc la capture policière qui menait à Pastagone.
+                false
+                && !cinematic
                 && state.mapId === "lasagnas_vegas"
                 && (state as { tbBossBeaten?: boolean }).tbBossBeaten === true
                 && (state as { pastagoneArrested?: boolean }).pastagoneArrested !== true
@@ -1205,17 +1254,30 @@ export default function MapClient({
             }
 
             // v3.24c-5 — Gating du bar Team Boulette : accessible uniquement si videurState = passed ou boss_beaten
-            if (!("blocked" in result) && result.nextState.mapId === "lasagnas_tb_bar") {
+            // v4.y FIX softlock — on ne gate QUE l'entrée depuis l'extérieur (la rue de Vegas). On exclut :
+            //   - les déplacements internes au bar (state.mapId === bar) — un move interne renvoie
+            //     nextState.mapId === "lasagnas_tb_bar" (cf. mapEngine), sinon le gate refirait à chaque pas ;
+            //   - le RETOUR depuis le bureau d'IL CAPO (state.mapId === bureau) — sinon le joueur reste
+            //     piégé dans le bureau après avoir battu le boss (le videur est injoignable de là).
+            // Et un joueur ayant déjà vaincu IL CAPO (tbBossBeaten) n'est jamais re-bloqué.
+            if (
+                !("blocked" in result)
+                && state.mapId !== "lasagnas_tb_bar"
+                && state.mapId !== "lasagnas_tb_bureau"
+                && result.nextState.mapId === "lasagnas_tb_bar"
+            ) {
                 const vState = (state as { videurState?: string }).videurState ?? "untouched"
-                if (vState !== "passed" && vState !== "boss_beaten") {
-                    setToast("🚪 Le PORTIER ARRABBIATA te barre l'entrée. « Pas si vite. »")
+                const bossBeaten = (state as { tbBossBeaten?: boolean }).tbBossBeaten === true
+                if (vState !== "passed" && vState !== "boss_beaten" && !bossBeaten) {
+                    setToast("🚪 « Pas si vite. » Parle d'abord au PORTIER ARRABBIATA, juste à côté de la porte.")
                     setState((s) => ({ ...s, direction: d }))
                     return
                 }
             }
 
             // v3.24c-7 — Gating du bureau d'IL CAPO : accessible uniquement avec la clé de JAMIE
-            if (!("blocked" in result) && result.nextState.mapId === "lasagnas_tb_bureau") {
+            // v4.y — Même garde anti-softlock que le bar : ne gate que la transition entrante.
+            if (!("blocked" in result) && state.mapId !== "lasagnas_tb_bureau" && result.nextState.mapId === "lasagnas_tb_bureau") {
                 const keyHeld = (state as { tbBossKeyHeld?: boolean }).tbBossKeyHeld === true
                 if (!keyHeld) {
                     setToast("🔒 Porte du bureau verrouillée. Il te faut la clé.")
@@ -1930,6 +1992,9 @@ export default function MapClient({
         // v3.8 — si une modal est ouverte, le A est géré par la modal elle-même
         if (showStartMenu || showInventory || showShop || showPlayerMap || showTamagotchi || showBibliotheque || showBestioleNaming || showCasino || showCasinoPattern || showFastTravel || showVideur || showTreeBook || showLottoPoule || showStopOuEncore || showCockfight || showSlotMachine || showCasinoPatternVegas || showArena || showDaemonTeam || !!activeBattle || showSaiyanModal || showPastagoneCellule || showPastagoneInfirmerie || showPastagoneBriefing || showPastagoneCuisine || showPastagoneArmurerie || showPastagoneTour) return
 
+        // v4.y — la cinématique d'évolution Daemon gère ses propres clics (écran dédié)
+        if (cinematic?.kind === "daemonEvolution") return
+
         // v3.23e — Blague PIAFFINI unique pour Franss : intercepter le premier A press (idem tryMove)
         if (
             !cinematic
@@ -2279,6 +2344,11 @@ export default function MapClient({
                         try {
                             const res = await fetch("/api/gamebook/tb/jamie", { method: "POST" })
                             const data = await res.json()
+                            // v4.y FIX : synchroniser tbBossKeyHeld côté client, sinon la porte cachée
+                            // du bureau (qui lit state.tbBossKeyHeld) reste verrouillée jusqu'à un reload.
+                            if (data.ok && (data.keyGiven || data.alreadyHeld)) {
+                                setState((s) => ({ ...s, tbBossKeyHeld: true }))
+                            }
                             if (data.message) setPopup({ kind: "info", text: data.message })
                         } catch (e) {
                             console.warn("[MapClient] tb/jamie failed", e)
@@ -2450,6 +2520,12 @@ export default function MapClient({
                         try {
                             const res = await fetch("/api/gamebook/tb/boss", { method: "POST" })
                             const data = await res.json()
+                            // v4.y FIX : synchroniser tbBossBeaten côté client une fois le boss vaincu,
+                            // sinon la capture policière Vegas-ouest (qui lit state.tbBossBeaten) ne se
+                            // déclenche pas → la suite de l'arc (Pastagone) reste bloquée jusqu'à un reload.
+                            if (data.ok && (data.justBeaten || data.alreadyBeaten)) {
+                                setState((s) => ({ ...s, tbBossBeaten: true }))
+                            }
                             if (data.message) setPopup({ kind: "info", text: data.message })
                         } catch (e) {
                             console.warn("[MapClient] tb/boss failed", e)
@@ -2466,7 +2542,10 @@ export default function MapClient({
                             const res = await fetch("/api/gamebook/tb/validate-challenge", { method: "POST" })
                             const data = await res.json()
                             if (data.ok && data.canEnter) {
-                                // Le videur laisse entrer (déjà passé ou défi vient d'être validé)
+                                // Le videur laisse entrer (déjà passé ou défi vient d'être validé).
+                                // FIX : on met à jour videurState côté client, sinon le gating de la
+                                // porte (qui lit state.videurState) restait bloqué → "ne laisse passer personne".
+                                if (data.state) setState((s) => ({ ...s, videurState: data.state }))
                                 setPopup({ kind: "info", text: data.message })
                                 return
                             }
@@ -3325,6 +3404,28 @@ export default function MapClient({
             return
         }
 
+        // v4.y — Porte cachée du bar Team Boulette → bureau d'IL CAPO.
+        // L'étagère (shopShelf) en (5,2) masque la porte du bureau. Elle ne s'ouvre
+        // qu'avec la clé rouillée donnée par JAMIE après les 3 sbires (tbBossKeyHeld).
+        // (Avant : aucune entrée n'était câblée → IL CAPO était inaccessible.)
+        if (state.mapId === "lasagnas_tb_bar" && tile === "shopShelf" && front.x === 5 && front.y === 2) {
+            const keyHeld = (state as { tbBossKeyHeld?: boolean }).tbBossKeyHeld === true
+            if (!keyHeld) {
+                setPopup({
+                    kind: "info",
+                    text: "Une étagère branlante… mais le sol est usé devant, comme une porte. Une serrure est dissimulée derrière les bouteilles.\n\nIl te faut une clé.",
+                })
+                return
+            }
+            // Entrée vers le bureau (spawn aligné sur INTERIOR_ENTRY_POSITIONS.lasagnas_tb_bureau).
+            setState((s) => ({ ...s, mapId: "lasagnas_tb_bureau", posX: 4, posY: 5, direction: "up" }))
+            setPopup({
+                kind: "info",
+                text: "🔑 Tu glisses la clé rouillée dans la serrure cachée. *clic* L'étagère coulisse.\n\nTu pénètres dans le bureau d'IL CAPO.",
+            })
+            return
+        }
+
         // v3.18 / v3.39 — Bibliothèque Macaron OU Muscuville : interactions sur bookshelf / statue / lectern
         if ((state.mapId === "bibliotheque" || state.mapId === "bibliotheque_muscuville") && (tile === "bookshelf" || tile === "statue" || tile === "lectern" || tile === "shopShelf")) {
             const topicsSet = state.mapId === "bibliotheque_muscuville" ? BIBLIOTHEQUE_MUSCU_TOPICS : BIBLIOTHEQUE_TOPICS
@@ -4162,7 +4263,7 @@ export default function MapClient({
                                 maxWidth: "90%",
                             }}
                         >
-                            {toast}
+                            {ratioizeText(toast ?? "", difficultyRatio)}
                         </div>
                     )}
 
@@ -4172,6 +4273,7 @@ export default function MapClient({
                             speaker="MONSTRE SPAGHETTI"
                             text={MONSTER_INTRO_DIALOGUE[state.introStep]}
                             onNext={pressA}
+                            ratio={difficultyRatio}
                         />
                     )}
 
@@ -4191,6 +4293,7 @@ export default function MapClient({
                             text={cinematic.lines[cinematic.step]}
                             onNext={pressA}
                             onCancel={() => setCinematic(null)}
+                            ratio={difficultyRatio}
                         />
                     )}
 
@@ -4246,6 +4349,7 @@ export default function MapClient({
                                     : FRANSS_JOKE_ATTOWER_LINES[cinematic.step]
                             }
                             onNext={pressA}
+                            ratio={difficultyRatio}
                         />
                     )}
 
@@ -4287,7 +4391,7 @@ export default function MapClient({
                     )}
 
                     {/* POPUP */}
-                    {popup && <PopupBox text={popup.text} onClose={() => setPopup(null)} />}
+                    {popup && <PopupBox text={popup.text} onClose={() => setPopup(null)} ratio={difficultyRatio} />}
                 </div>
             </div>
 
@@ -4960,6 +5064,9 @@ export default function MapClient({
                                 body: JSON.stringify({ choice }),
                             })
                             const data = await res.json()
+                            // Synchronise le videurState côté client (sinon le gating de la porte reste en retard).
+                            if (data.state) setState((s) => ({ ...s, videurState: data.state }))
+                            setShowVideur(false)
                             if (data.ok && data.message) {
                                 setPopup({
                                     kind: "info",
@@ -5017,6 +5124,36 @@ export default function MapClient({
                     availableEnergy={reps}
                     mapId={state.mapId}
                     hasTamagotchi={tamagotchi?.recovered === true}
+                    animalName={tamagotchi?.name}
+                    evolveThreshold={applyDifficultyRatio(1000)}
+                    onEvolveAnimal={async () => {
+                        try {
+                            const res = await fetch("/api/gamebook/tamagotchi/evolve-daemon", { method: "POST" })
+                            const data = await res.json()
+                            if (data.ok && data.evolved) {
+                                if (data.tamagotchi) setTamagotchi(data.tamagotchi)
+                                if (Array.isArray(data.inventory)) setInventory(data.inventory)
+                                setHasUnlockedDaemon(true)
+                                setShowInventory(false)
+                                setCinematic({
+                                    kind: "daemonEvolution",
+                                    data: {
+                                        animalName: data.animalName,
+                                        totalReps: typeof data.totalReps === "number" ? data.totalReps : 0,
+                                        fromLevel: data.fromLevel ?? 1,
+                                        toLevel: data.toLevel ?? 1,
+                                        fromAnimal: data.fromAnimal ?? { name: "", emoji: "🐾" },
+                                        toAnimal: data.toAnimal ?? { name: "", emoji: "👾" },
+                                    },
+                                })
+                            } else {
+                                setToast(data.reason || "Évolution impossible.")
+                            }
+                        } catch (e) {
+                            console.warn("[MapClient] evolve-daemon (bag) failed", e)
+                            setToast("Erreur réseau, réessaie.")
+                        }
+                    }}
                     onView={(_itemKey, kind) => {
                         if (kind === "playerMap") {
                             setShowInventory(false)
@@ -5211,6 +5348,7 @@ export default function MapClient({
             {showTamagotchi && (
                 <TamagotchiModal
                     tamagotchi={tamagotchi}
+                    defiDetails={defiDetails}
                     availableEnergy={reps}
                     inventory={inventory}
                     onDrink={async () => {
@@ -5284,6 +5422,7 @@ export default function MapClient({
                             const data = await res.json()
                             if (data.ok) {
                                 if (data.tamagotchi) setTamagotchi(data.tamagotchi)
+                                if (Array.isArray(data.defiDetails)) setDefiDetails(data.defiDetails)
                                 const newlyDone: number[] = Array.isArray(data.newlyCompleted) ? data.newlyCompleted : []
                                 if (newlyDone.length > 0) {
                                     setToast(`✨ ${newlyDone.length} défi(s) validé(s) !`)
@@ -5313,7 +5452,50 @@ export default function MapClient({
                             setToast("Erreur réseau, réessaie.")
                         }
                     }}
+                    hasMegaGourde={inventory.some((e) => e.itemKey === "mega_gourde")}
+                    megaGourdeStored={(() => {
+                        const g = inventory.find((e) => e.itemKey === "mega_gourde")
+                        const d = g?.data as { stored?: number } | undefined
+                        return typeof d?.stored === "number" ? d.stored : 0
+                    })()}
+                    evolveThreshold={applyDifficultyRatio(1000)}
+                    onEvolve={async () => {
+                        try {
+                            const res = await fetch("/api/gamebook/tamagotchi/evolve-daemon", { method: "POST" })
+                            const data = await res.json()
+                            if (data.ok && data.evolved) {
+                                if (data.tamagotchi) setTamagotchi(data.tamagotchi)
+                                if (Array.isArray(data.inventory)) setInventory(data.inventory)
+                                setHasUnlockedDaemon(true)
+                                setShowTamagotchi(false)
+                                setCinematic({
+                                    kind: "daemonEvolution",
+                                    data: {
+                                        animalName: data.animalName,
+                                        totalReps: typeof data.totalReps === "number" ? data.totalReps : 0,
+                                        fromLevel: data.fromLevel ?? 1,
+                                        toLevel: data.toLevel ?? 1,
+                                        fromAnimal: data.fromAnimal ?? { name: "", emoji: "🐾" },
+                                        toAnimal: data.toAnimal ?? { name: "", emoji: "👾" },
+                                    },
+                                })
+                            } else {
+                                setToast(data.reason || "Évolution impossible.")
+                            }
+                        } catch (e) {
+                            console.warn("[MapClient] tamagotchi/evolve-daemon failed", e)
+                            setToast("Erreur réseau, réessaie.")
+                        }
+                    }}
                     onClose={() => setShowTamagotchi(false)}
+                />
+            )}
+
+            {/* v4.y — Cinématique évolution Animal → Daemon (Mega Gourde du Capo) */}
+            {cinematic?.kind === "daemonEvolution" && (
+                <DaemonEvolutionScreen
+                    data={cinematic.data}
+                    onDone={() => setCinematic(null)}
                 />
             )}
 
@@ -5744,9 +5926,20 @@ function SignSpriteR({
     )
 }
 
+// Remplace les placeholders [[r:N]] par N ajusté au ratio d'onboarding (pour que le joueur
+// voie la VRAIE valeur qu'il devra payer/atteindre). Les nombres normaux ne sont pas touchés.
+function ratioizeText(text: string, ratio: number): string {
+    if (!text) return text
+    return text.replace(/\[\[r:(\d+)\]\]/g, (_m, n) => {
+        const base = parseInt(n, 10)
+        if (!Number.isFinite(ratio) || ratio >= 1) return String(base)
+        return String(Math.max(1, Math.round(base * ratio)))
+    })
+}
+
 function DialogueBox({
-    speaker, text, onNext, onCancel,
-}: { speaker: string; text: string; onNext: () => void; onCancel?: () => void }) {
+    speaker, text, onNext, onCancel, ratio = 1,
+}: { speaker: string; text: string; onNext: () => void; onCancel?: () => void; ratio?: number }) {
     return (
         <div
             style={{
@@ -5768,7 +5961,7 @@ function DialogueBox({
                 {speaker}
             </div>
             <div style={{ fontSize: "11px", color: "#000", lineHeight: "1.4", paddingRight: "20px" }}>
-                {text}
+                {ratioizeText(text, ratio)}
             </div>
             {/* Bouton retour visible si onCancel défini (sortie d'urgence — touche B / ESC). */}
             {onCancel && (
@@ -5790,7 +5983,7 @@ function DialogueBox({
     )
 }
 
-function PopupBox({ text, onClose }: { text: string; onClose: () => void }) {
+function PopupBox({ text, onClose, ratio = 1 }: { text: string; onClose: () => void; ratio?: number }) {
     return (
         <div
             style={{
@@ -5808,7 +6001,7 @@ function PopupBox({ text, onClose }: { text: string; onClose: () => void }) {
             onClick={onClose}
         >
             <div style={{ fontSize: "10px", color: "#000", whiteSpace: "pre-wrap", lineHeight: "1.4" }}>
-                {text}
+                {ratioizeText(text, ratio)}
             </div>
             <div style={{ position: "absolute", bottom: "4px", right: "8px", fontSize: "10px", color: "#000", animation: "gbBlink 0.7s infinite" }}>
                 ▼ A
