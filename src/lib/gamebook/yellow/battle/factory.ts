@@ -12,8 +12,10 @@ import { fullStats } from "./stats"
 let seq = 0
 
 export interface MakeMonOpts {
-    /** Valeur d'IV uniforme (0..31). Défaut 15. */
+    /** Valeur d'IV uniforme (0..15). Défaut 15. */
     ivs?: number
+    /** IV par stat (prioritaire sur `ivs`) — utilisé pour les captures sauvages (effort → génétique). */
+    ivsByStat?: Partial<Record<StatKey, number>>
     owned?: boolean
     nickname?: string
     moveIds?: string[]
@@ -24,7 +26,9 @@ export function createMonInstance(speciesId: string, level: number, opts: MakeMo
     if (!sp) throw new Error(`Espèce inconnue: ${speciesId}`)
 
     const ivVal = clampIv(opts.ivs ?? 15)
-    const ivs: Record<StatKey, number> = { hp: ivVal, atk: ivVal, def: ivVal, spe: ivVal, spc: ivVal }
+    const byStat = opts.ivsByStat
+    const iv = (k: StatKey) => (byStat && typeof byStat[k] === "number" ? clampIv(byStat[k] as number) : ivVal)
+    const ivs: Record<StatKey, number> = { hp: iv("hp"), atk: iv("atk"), def: iv("def"), spe: iv("spe"), spc: iv("spc") }
 
     // 4 dernières attaques apprises (level <= niveau), sinon la 1ère du learnset.
     const learned = opts.moveIds ?? sp.learnset.filter((l) => l.level <= level).map((l) => l.moveId)

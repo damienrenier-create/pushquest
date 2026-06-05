@@ -28,6 +28,7 @@ import { ITEMS, getItem } from "@/lib/gamebook/yellow/data/items"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { moveCostReps } from "@/lib/gamebook/yellow/data/combatCostConfig"
 import { SAIYAN_POINT_VALUE } from "@/lib/gamebook/yellow/data/saiyanConfig"
+import { ivTier, ivTotal, ivTierColor } from "@/lib/gamebook/yellow/data/ivConfig"
 import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
 import { expForLevel } from "@/lib/gamebook/yellow/battle/xp"
 import type { MonInstance } from "@/lib/gamebook/yellow/battle/types"
@@ -483,6 +484,15 @@ export default function YellowDevClient() {
                                 </div>
                             )}
                             <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 6 }}>Niveau suivant dans ~{Math.max(0, toNext).toLocaleString("fr-FR")} XP</div>
+                            {(() => {
+                                const tier = ivTier(live.ivs)
+                                return (
+                                    <div style={{ fontSize: 11, marginBottom: 6 }}>
+                                        Potentiel génétique : <b style={{ color: ivTierColor(tier) }}>{tier === "PARFAIT" ? "★ PARFAIT" : tier}</b>
+                                        <span style={{ opacity: 0.5 }}> ({ivTotal(live.ivs)}/75 IV)</span>
+                                    </div>
+                                )
+                            })()}
                             <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 2 }}>ATTAQUES (coût en reps)</div>
                             {live.moves.map((mv) => {
                                 const m = getMove(mv.moveId)

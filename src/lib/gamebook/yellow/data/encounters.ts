@@ -7,6 +7,7 @@
 import { createMonInstance } from "../battle/factory"
 import type { MonInstance } from "../battle/types"
 import { biomeDistance, affinityMult, repulsionMult, type Biome } from "./biomes"
+import { rollIvs } from "./ivConfig"
 
 // Rareté de base (poids avant modulation).
 const COMMON = 100, UNCOMMON = 45, RARE = 14, VERY_RARE = 5
@@ -30,6 +31,7 @@ export interface WildPlayerCtx {
     squats: number       // 0..1
     quotaReached: boolean
     overshoot: number    // 0..1 (dépassement du quota)
+    quotaRatio: number   // 0..1 (total du jour / quota, capé) → pilote le plancher d'IV
 }
 
 export interface EncounterCtx {
@@ -122,7 +124,13 @@ export function rollWildEncounter(ctx: EncounterCtx): MonInstance | null {
     if (entry.rare) level += intIn(rng, 1, 2)
     level = Math.max(2, Math.min(100, level))
 
-    return createMonInstance(entry.speciesId, level)
+    // IV "génétiques" pilotés par l'effort du jour (proximité du quota → meilleur plancher).
+    // Sans données d'effort (hors-ligne), plancher médian (0.5) : ni puni ni maximal.
+    const quotaRatio = ctx.player ? ctx.player.quotaRatio : 0.5
+    const overshoot = ctx.player ? ctx.player.overshoot : 0
+    const ivsByStat = rollIvs(rng, quotaRatio, overshoot)
+
+    return createMonInstance(entry.speciesId, level, { ivsByStat })
 }
 
 /** Exposé pour les tests/outils : poids de chaque espèce à une position. */

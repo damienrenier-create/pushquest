@@ -46,12 +46,12 @@ describe("pondération selon le biome", () => {
 describe("bonus joueur (PushQuest), plafonné ×1.8", () => {
     it("les pompes boostent le Combat, plafonné", () => {
         const base = debugWeights(MAP, NEUTRAL.x, NEUTRAL.y)
-        const boosted = debugWeights(MAP, NEUTRAL.x, NEUTRAL.y, { pompes: 1, squats: 0, quotaReached: false, overshoot: 0 })
+        const boosted = debugWeights(MAP, NEUTRAL.x, NEUTRAL.y, { pompes: 1, squats: 0, quotaReached: false, overshoot: 0, quotaRatio: 0.5 })
         expect(boosted.couperin).toBeGreaterThan(base.couperin)
         expect(boosted.couperin).toBe(180) // 100 × min(1.8, 1+0.8)
     })
     it("le dépassement de quota booste les rares", () => {
-        const w = debugWeights(MAP, NEUTRAL.x, NEUTRAL.y, { pompes: 0, squats: 0, quotaReached: false, overshoot: 1 })
+        const w = debugWeights(MAP, NEUTRAL.x, NEUTRAL.y, { pompes: 0, squats: 0, quotaReached: false, overshoot: 1, quotaRatio: 1 })
         expect(w.nouillon).toBeCloseTo(14 * 1.8, 5)
     })
 })
