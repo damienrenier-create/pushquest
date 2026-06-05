@@ -12,7 +12,7 @@
 // Le contenu du jeu (children) est rendu à l'intérieur de l'écran avec
 // image-rendering: pixelated pour le look LCD pixel.
 
-import { useCallback } from "react"
+import { useCallback, useRef } from "react"
 
 export interface GameBoyShellProps {
     children: React.ReactNode
@@ -53,7 +53,16 @@ export default function GameBoyShell({
     onStart,
     onSelect,
 }: GameBoyShellProps) {
+    // Anti double-déclenchement tactile : un tap déclenche touchstart PUIS un
+    // "clic fantôme" mousedown synthétique → 2 pas. On enregistre le dernier touch
+    // et on ignore le mousedown qui suit dans la foulée (≤ 700 ms).
+    const lastTouchRef = useRef(0)
     const handlePress = useCallback((cb?: () => void) => (e: React.MouseEvent | React.TouchEvent) => {
+        if (e.type === "touchstart") {
+            lastTouchRef.current = Date.now()
+        } else if (Date.now() - lastTouchRef.current < 700) {
+            return // clic fantôme post-touch → ignoré (sinon déplacement double)
+        }
         e.preventDefault()
         cb?.()
     }, [])
