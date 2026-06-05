@@ -11,7 +11,7 @@
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { YELLOW_NPCS } from "@/lib/gamebook/yellow/npcs"
 import type { YellowBuilding, YellowMapData } from "@/lib/gamebook/yellow/maps"
-import type { TileType } from "@/lib/gamebook/mapEngine"
+import { type TileType, isBlockingTile } from "@/lib/gamebook/mapEngine"
 import DialogueBox from "./DialogueBox"
 
 // === Palette Johto (saturée) ===========================================
@@ -348,6 +348,8 @@ export default function MapView() {
     const cam = computeCamera(player.posX, player.posY, map)
     const npcsOnMap = YELLOW_NPCS.filter((n) => n.mapId === player.mapId)
     const buildings = map.buildings ?? []
+    // DEBUG : grille de coordonnées (vert = walkable, rouge = bloqué). Activer via ?grid=1.
+    const showGrid = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("grid")
 
     const screenPos = (worldX: number, worldY: number, w = 1, h = 1) => ({
         left: `${(worldX - cam.x) * TILE_W_PCT}%`,
@@ -392,7 +394,31 @@ export default function MapView() {
                     )
                 })()}
 
-                {/* Grille debug retirée — collisions actives, gameplay normal */}
+                {/* DEBUG : grille de coordonnées + walkable/bloqué (URL ?grid=1). */}
+                {showGrid && map.tiles.flatMap((row, y) =>
+                    row.map((tile, x) => (
+                        <div
+                            key={`grid-${x}-${y}`}
+                            style={{
+                                position: "absolute",
+                                ...screenPos(x, y),
+                                boxSizing: "border-box",
+                                border: "1px solid rgba(255,255,255,0.35)",
+                                background: isBlockingTile(tile) ? "rgba(220,40,40,0.40)" : "rgba(40,200,80,0.22)",
+                                color: "#fff",
+                                fontSize: 7,
+                                lineHeight: 1,
+                                padding: 1,
+                                zIndex: 50,
+                                pointerEvents: "none",
+                                textShadow: "0 0 2px #000, 0 0 2px #000",
+                                fontFamily: "monospace",
+                            }}
+                        >
+                            {x},{y}
+                        </div>
+                    )),
+                )}
 
                 {!hasBgImage && map.tiles.flatMap((row, y) =>
                     row.map((tile, x) => {
