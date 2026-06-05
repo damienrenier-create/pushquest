@@ -12,7 +12,8 @@
 // Après chaque action, V3T fait un commentaire encourageant (bulle de dialogue).
 // Quand une étape est validée (drink, pates), un petit ✓ s'affiche.
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import {
     type TamagotchiView,
     TAMAGOTCHI_FEED_COST,
@@ -292,6 +293,17 @@ function TamagotchiCard({
     onEvolve?: () => Promise<void>
 }) {
     const details = getLevelDetails(tamagotchi.displayLevel)
+    // Chapitre 2 (Nexus Jaune Éclair) accessible ? (= Daemon éveillé / créateur)
+    const router = useRouter()
+    const [chapter2Open, setChapter2Open] = useState(false)
+    useEffect(() => {
+        let cancel = false
+        fetch("/api/gamebook/yellow/enabled")
+            .then((r) => (r.ok ? r.json() : null))
+            .then((j) => { if (!cancel && j?.enabled) setChapter2Open(true) })
+            .catch(() => { /* fermé par défaut */ })
+        return () => { cancel = true }
+    }, [])
     const happinessPct = (tamagotchi.displayHappiness / TAMAGOTCHI_HAPPINESS_MAX) * 100
     const happinessColor =
         happinessPct > 60 ? "#48a830"
@@ -534,6 +546,28 @@ function TamagotchiCard({
                             </div>
                         )}
                     </div>
+                )}
+
+                {/* Porte permanente vers le Chapitre 2 (Nexus Jaune Éclair), une fois le Daemon éveillé. */}
+                {chapter2Open && (
+                    <button
+                        onClick={() => router.push("/gamebook/yellow")}
+                        style={{
+                            background: "#f5d020",
+                            color: "#1c1408",
+                            border: "2px solid #1c1408",
+                            padding: "10px 12px",
+                            fontFamily: "'Courier New', monospace",
+                            fontSize: 12,
+                            fontWeight: "bold",
+                            letterSpacing: 1,
+                            cursor: "pointer",
+                            width: "100%",
+                            marginTop: 2,
+                        }}
+                    >
+                        ⚡ ENTRER DANS LE CHAPITRE 2
+                    </button>
                 )}
             </div>
 
