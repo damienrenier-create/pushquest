@@ -38,7 +38,7 @@ export default function BattleScreen() {
     const [shakeP, setShakeP] = useState(0)
     const [shakeE, setShakeE] = useState(0)
     const [ball, setBall] = useState<{ phase: "throw" | "shake" | "result"; shakes: number; caught: boolean } | null>(null)
-    const playerReps = usePlayer().reps
+    const repsWallet = usePlayer()
     const lastBattle = useRef(battle)
 
     // Initialise les PV affichés au tout début du combat (ils sont ensuite
@@ -123,19 +123,19 @@ export default function BattleScreen() {
     // L'ennemi est "aspiré" par la ball (lancer/secousses, et capture réussie).
     const enemyHiddenByBall = !!ball && (ball.phase === "throw" || ball.phase === "shake" || (ball.phase === "result" && ball.caught))
 
-    // Énergie de combat (toujours visible : on ne se bat pas à l'aveugle).
-    const reps = playerReps
-    const energy = getBattleEnergy()
-    const remainingEnergy = Math.max(0, energy.cap - energy.spent)
-    const energyPct = Math.max(0, Math.min(100, (remainingEnergy / Math.max(1, energy.cap)) * 100))
+    // Énergie = LE MÊME portefeuille de reps que la jauge GameBoy (X/repsCap).
+    // (Le cap d'énergie PAR COMBAT reste géré côté store et affiché dans le menu Attaque.)
+    const reps = repsWallet.reps
+    const repsCap = repsWallet.repsCap
+    const walletPct = Math.max(0, Math.min(100, (reps / Math.max(1, repsCap)) * 100))
 
     return (
         <div style={S.root} onClick={waitingForTap ? advance : undefined}>
-            {/* ===== Bandeau énergie (permanent) ===== */}
+            {/* ===== Bandeau énergie (= portefeuille de reps, identique à la coque) ===== */}
             <div style={S.energyBar}>
                 <span style={{ fontSize: 13 }}>⚡</span>
-                <div style={S.energyTrack}><div style={{ ...S.energyFill, width: `${energyPct}%` }} /></div>
-                <span style={S.energyTxt}>{remainingEnergy}/{energy.cap} <span style={{ opacity: 0.6 }}>· 💪{reps}</span></span>
+                <div style={S.energyTrack}><div style={{ ...S.energyFill, width: `${walletPct}%` }} /></div>
+                <span style={S.energyTxt}>{reps}/{repsCap}</span>
             </div>
 
             {/* ===== Scène ===== */}

@@ -12,7 +12,7 @@
 // Le contenu du jeu (children) est rendu à l'intérieur de l'écran avec
 // image-rendering: pixelated pour le look LCD pixel.
 
-import { useCallback } from "react"
+import { useCallback, useRef, useEffect } from "react"
 
 export interface GameBoyShellProps {
     children: React.ReactNode
@@ -61,6 +61,24 @@ export default function GameBoyShell({
         cb?.()
     }, [])
 
+    // Maintien d'une flèche = avance en continu (1 appui = 1 case, appui long = répétition).
+    const holdRef = useRef<ReturnType<typeof setInterval> | null>(null)
+    const stopHold = useCallback(() => {
+        if (holdRef.current) { clearInterval(holdRef.current); holdRef.current = null }
+    }, [])
+    const holdHandlers = useCallback((cb?: () => void) => ({
+        onPointerDown: (e: React.PointerEvent) => {
+            e.preventDefault()
+            cb?.()                                    // 1er pas immédiat
+            stopHold()
+            holdRef.current = setInterval(() => cb?.(), 170) // répétition tant que maintenu
+        },
+        onPointerUp: stopHold,
+        onPointerLeave: stopHold,
+        onPointerCancel: stopHold,
+    }), [stopHold])
+    useEffect(() => stopHold, [stopHold]) // nettoyage au démontage
+
     return (
         <div style={shellStyle}>
             {/* Écran indenté avec biseau */}
@@ -92,23 +110,23 @@ export default function GameBoyShell({
                     <button
                         aria-label="Haut"
                         style={{ ...dpadButtonStyle, ...dpadUpStyle }}
-                        onPointerDown={handlePress(onUp)}
+                        {...holdHandlers(onUp)}
                     >▲</button>
                     <button
                         aria-label="Gauche"
                         style={{ ...dpadButtonStyle, ...dpadLeftStyle }}
-                        onPointerDown={handlePress(onLeft)}
+                        {...holdHandlers(onLeft)}
                     >◀</button>
                     <div style={dpadCenterStyle} />
                     <button
                         aria-label="Droite"
                         style={{ ...dpadButtonStyle, ...dpadRightStyle }}
-                        onPointerDown={handlePress(onRight)}
+                        {...holdHandlers(onRight)}
                     >▶</button>
                     <button
                         aria-label="Bas"
                         style={{ ...dpadButtonStyle, ...dpadDownStyle }}
-                        onPointerDown={handlePress(onDown)}
+                        {...holdHandlers(onDown)}
                     >▼</button>
                 </div>
 
