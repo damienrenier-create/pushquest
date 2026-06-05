@@ -45,7 +45,11 @@ export default function DaemonEvolutionScreen({
     }, [])
 
     const next = () => {
-        if (phase >= 4) { onDone(); return }
+        if (phase >= 4) {
+            // Passage ouvert → on enchaîne direct sur le Chapitre 2 (enlèvement + intro).
+            if (yellowOpen) { router.push("/gamebook/yellow"); return }
+            onDone(); return
+        }
         setPhase((p) => p + 1)
     }
 
@@ -128,8 +132,8 @@ export default function DaemonEvolutionScreen({
                     {yellowOpen ? (
                         <>
                             <p style={{ fontSize: 13, lineHeight: 1.7, fontStyle: "italic", color: "#f5d020", marginTop: 10 }}>
-                                « Tu es prêt pour le <b>Chapitre 2 — Nexus Jaune Éclair</b>.
-                                Le passage s'ouvre enfin. Franchis-le. »
+                                « Tu es prêt pour le <b>Chapitre 2 — Nexus Jaune Éclair</b>…
+                                mais quelque chose t'observe déjà depuis l'autre côté. »
                             </p>
                             <button
                                 onClick={(e) => { e.stopPropagation(); router.push("/gamebook/yellow") }}
