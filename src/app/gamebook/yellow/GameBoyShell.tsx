@@ -160,11 +160,17 @@ export default function GameBoyShell({
 
 const shellStyle: React.CSSProperties = {
     width: "100%",
-    maxWidth: 420,
+    maxWidth: 480,
     margin: "0 auto",
+    // Remplit toute la hauteur de l'écran (plus de noir perdu) : écran en haut,
+    // boutons poussés en bas (marginTop:auto sur controlsRow).
+    minHeight: "100dvh",
+    boxSizing: "border-box",
+    display: "flex",
+    flexDirection: "column",
     background: `linear-gradient(180deg, ${SHELL_YELLOW} 0%, ${SHELL_YELLOW_DARK} 100%)`,
-    borderRadius: "28px 28px 80px 28px",
-    padding: "24px 20px 32px",
+    borderRadius: "0 0 36px 0",
+    padding: "6px 8px 12px",
     boxShadow:
         "inset 0 2px 4px rgba(255,255,255,0.4), " +
         "inset 0 -4px 12px rgba(0,0,0,0.15), " +
@@ -179,17 +185,19 @@ const shellStyle: React.CSSProperties = {
 
 const screenBezelStyle: React.CSSProperties = {
     background: SCREEN_BEZEL,
-    borderRadius: "8px 8px 24px 8px",
-    padding: "20px 16px 32px",
+    borderRadius: "8px 8px 20px 8px",
+    // Padding réduit (surtout les côtés) → l'écran prend quasi toute la largeur.
+    // Le bas garde ~26px pour loger la rangée POWER + jauge de reps.
+    padding: "8px 8px 26px",
     boxShadow: "inset 0 4px 8px rgba(0,0,0,0.4)",
-    marginBottom: 24,
+    marginBottom: 10,
     position: "relative",
 }
 
 const screenFrameStyle: React.CSSProperties = {
     background: SCREEN_FRAME,
     borderRadius: 4,
-    padding: 8,
+    padding: 4,
     boxShadow: "inset 0 2px 4px rgba(0,0,0,0.6)",
 }
 
@@ -260,7 +268,8 @@ const controlsRowStyle: React.CSSProperties = {
     justifyContent: "space-between",
     alignItems: "center",
     padding: "0 8px",
-    marginBottom: 28,
+    marginTop: "auto",   // pousse les boutons tout en bas (l'écran prend l'espace en haut)
+    marginBottom: 14,
 }
 
 // D-pad : taille 144×144 (3×48) au lieu de 120×120 (3×40)

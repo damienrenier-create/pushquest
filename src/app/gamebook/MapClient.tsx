@@ -14,6 +14,7 @@
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ArrowLeft, RotateCcw } from "lucide-react"
 import {
     MAPS,
@@ -379,6 +380,18 @@ export default function MapClient({
     const moveLockRef = useRef(false)
     const aLockRef = useRef(false)
     const saveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    // Chapitre 2 : enlèvement au 1er pas (le Daemon est éveillé mais le Jaune pas encore entamé).
+    const router = useRouter()
+    const chapter2PendingRef = useRef(false)
+    const kidnapDoneRef = useRef(false)
+    useEffect(() => {
+        let cancel = false
+        fetch("/api/gamebook/yellow/enabled")
+            .then((r) => (r.ok ? r.json() : null))
+            .then((j) => { if (!cancel && j?.enabled && !j?.entered) chapter2PendingRef.current = true })
+            .catch(() => { /* pas d'enlèvement si indisponible */ })
+        return () => { cancel = true }
+    }, [])
 
     // v3.35 — Si muscuvilleRocksPassed, les rochers de Muscuville sont remplacés par du chemin
     // (walkable + visuel) dans la grille de rendu et de calcul de mouvement.
@@ -1093,6 +1106,14 @@ export default function MapClient({
             if (state.phase === "introMonster") return
             if (popup) {
                 setPopup(null)
+                return
+            }
+            // Chapitre 2 : le Daemon est éveillé → au 1er pas, le Monstre Spaghetti happe
+            // le joueur vers le Nexus Jaune Éclair (enlèvement joué par l'intro du Jaune).
+            if (chapter2PendingRef.current && !kidnapDoneRef.current) {
+                kidnapDoneRef.current = true
+                setState((s) => ({ ...s, direction: d }))
+                router.push("/gamebook/yellow")
                 return
             }
             // v3.23e — Blague PIAFFINI unique pour Franss : intercepter le premier mouvement.

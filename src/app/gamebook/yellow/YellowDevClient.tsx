@@ -602,9 +602,9 @@ const pageStyle: React.CSSProperties = {
     minHeight: "100dvh",
     background: "#1a1a1a",
     display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))",
+    alignItems: "stretch",       // la coque remplit toute la hauteur
+    justifyContent: "center",    // centrée horizontalement sur grand écran
+    padding: 0,                  // plus de marge noire perdue
 }
 
 const battleOverlayStyle: React.CSSProperties = {
