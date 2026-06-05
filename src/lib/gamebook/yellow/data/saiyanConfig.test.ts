@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { allocatedBonus, SAIYAN_POINT_VALUE, SAIYAN_POINTS_PER_LEVEL } from "./saiyanConfig"
+import { allocatedBonus, SAIYAN_POINT_VALUE, saiyanPointsPerLevel, saiyanPointsForLevels } from "./saiyanConfig"
 import { fullStats } from "../battle/stats"
 import { applyExp, expForLevel } from "../battle/xp"
 import { getSpecies } from "./species"
@@ -35,10 +35,27 @@ describe("Saiyan — couche additive de stats", () => {
         expect(SAIYAN_POINT_VALUE.hp).toBeGreaterThan(SAIYAN_POINT_VALUE.atk)
     })
 
-    it("monter de niveau accorde des points Saiyan", () => {
+    it("monter de niveau met les niveaux EN ATTENTE (pas de points directs)", () => {
         const m = mon(1, expForLevel(1))
         const r = applyExp(m, expForLevel(6) - expForLevel(1)) // niv 1 → 6
-        expect(m.statPoints).toBe((r.toLevel - r.fromLevel) * SAIYAN_POINTS_PER_LEVEL)
-        expect(m.statPoints).toBeGreaterThan(0)
+        expect(m.pendingSaiyanLevels).toBe(r.toLevel - r.fromLevel)
+        expect(m.pendingSaiyanLevels).toBeGreaterThan(0)
+        expect(m.statPoints ?? 0).toBe(0) // conversion en points = plus tard (règle amende/quota)
+    })
+})
+
+describe("règle Saiyan 0/1/2 (amende / quota)", () => {
+    it("amende dans la fenêtre → 0 point", () => {
+        expect(saiyanPointsPerLevel({ hadFine: true, quotaEveryDay: true })).toBe(0)
+    })
+    it("quota dépassé chaque jour (sans amende) → 2 points", () => {
+        expect(saiyanPointsPerLevel({ hadFine: false, quotaEveryDay: true })).toBe(2)
+    })
+    it("sinon → 1 point", () => {
+        expect(saiyanPointsPerLevel({ hadFine: false, quotaEveryDay: false })).toBe(1)
+    })
+    it("multi-niveaux = × nombre de niveaux", () => {
+        expect(saiyanPointsForLevels(3, { hadFine: false, quotaEveryDay: true })).toBe(6)
+        expect(saiyanPointsForLevels(3, { hadFine: true, quotaEveryDay: true })).toBe(0)
     })
 })

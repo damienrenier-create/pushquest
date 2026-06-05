@@ -126,6 +126,10 @@ export interface MonInstance {
     statPoints?: number
     /** ENTRAÎNEMENT SAIYAN — bonus à plat alloués par le joueur, par stat (additif). */
     allocated?: Partial<Record<StatKey, number>>
+    /** SAIYAN — niveaux gagnés pas encore convertis en points (règle amende/quota appliquée après coup, async). */
+    pendingSaiyanLevels?: number
+    /** SAIYAN — date (YYYY-MM-DD) du dernier passage de niveau converti (début de fenêtre). */
+    lastLevelUpAt?: string
 }
 
 export interface BattleMon extends MonInstance {

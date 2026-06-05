@@ -18,7 +18,7 @@ import IntroCinematic from "./IntroCinematic"
 import LearnScreen from "./LearnScreen"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout } from "@/lib/gamebook/yellow/store/battleStore"
-import { loadYellowSave, initAutosave, persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
+import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints } from "@/lib/gamebook/yellow/store/saveManager"
 import { getPlayer, setTeam, usePlayer, addItem, spendReps, markIntroSeen, resetForIntro, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt } from "@/lib/gamebook/yellow/store/playerStore"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
@@ -432,6 +432,7 @@ export default function YellowDevClient() {
                                     if (r.ok && r.result) {
                                         setToast(`${displayName(m)} monte au niveau ${r.result.toLevel} !`)
                                         setPastaPick(false)
+                                        void processSaiyanPoints() // convertit le niveau gagné en points Saiyan
                                     } else if (r.reason === "reps") {
                                         setToast("Pas assez de reps.")
                                     } else if (r.reason === "max") {

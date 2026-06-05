@@ -10,8 +10,33 @@
 
 import type { StatKey } from "../battle/types"
 
-/** Points d'entraînement gagnés à chaque niveau gagné. */
-export const SAIYAN_POINTS_PER_LEVEL = 1
+/**
+ * Contexte PushQuest d'une fenêtre [dernier level-up → hier] pour un Daemon.
+ * - hadFine : au moins une amende reçue dans la fenêtre.
+ * - quotaEveryDay : quota DÉPASSÉ chaque jour terminé de la fenêtre (≥ 1 jour).
+ */
+export interface SaiyanWindow {
+    hadFine: boolean
+    quotaEveryDay: boolean
+}
+
+/**
+ * Règle "inspirée des Saiyans" : combien de points par niveau gagné ?
+ *   0 si une amende est tombée (discipline brisée),
+ *   2 si le quota a été dépassé chaque jour (entraînement exemplaire),
+ *   1 sinon (croissance normale).
+ * Indéterminé / hors-ligne → traiter comme { hadFine:false, quotaEveryDay:false } = 1/niveau.
+ */
+export function saiyanPointsPerLevel(w: SaiyanWindow): 0 | 1 | 2 {
+    if (w.hadFine) return 0
+    if (w.quotaEveryDay) return 2
+    return 1
+}
+
+/** Total de points pour N niveaux gagnés sur une même fenêtre. */
+export function saiyanPointsForLevels(levelsGained: number, w: SaiyanWindow): number {
+    return Math.max(0, Math.floor(levelsGained)) * saiyanPointsPerLevel(w)
+}
 
 /** Valeur ajoutée par point dépensé, selon la stat (les PV scalent plus gros). */
 export const SAIYAN_POINT_VALUE: Record<StatKey, number> = {

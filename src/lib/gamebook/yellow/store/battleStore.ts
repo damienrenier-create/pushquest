@@ -19,7 +19,7 @@ import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, healAl
 import { getTrainer } from "../data/trainers"
 import { toMonInstance } from "../storage/save"
 import { evolveTeam } from "../progression/evolveTeam"
-import { persistYellowSave } from "./saveManager"
+import { persistYellowSave, processSaiyanPoints } from "./saveManager"
 import { QUOTA_CAPTURE_BONUS } from "../data/captureConfig"
 import { moveCostReps, STRUGGLE_INDEX } from "../data/combatCostConfig"
 import { battleEnergyCap } from "../data/badges"
@@ -177,6 +177,9 @@ function finishBattle(b: BattleState) {
 
     // 4) Sauvegarde persistante (DB).
     persistYellowSave()
+
+    // 5) SAIYAN : convertit les niveaux gagnés ce combat en points (règle amende/quota).
+    void processSaiyanPoints()
 }
 
 export function endBattle() {

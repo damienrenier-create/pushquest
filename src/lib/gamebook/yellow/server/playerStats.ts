@@ -5,14 +5,46 @@
 // SERVEUR uniquement (accès Prisma). Le client le récupère via /player-stats.
 
 import prisma from "@/lib/prisma"
-import { getTodayISO, getYesterdayISO, getDailyTargetWithModifiers } from "@/lib/challenge"
+import { getTodayISO, getYesterdayISO, getDailyTargetWithModifiers, getDailyTargetForUserOnDate, getDatesInRangeToYesterday } from "@/lib/challenge"
 import type { WildPlayerCtx } from "../data/encounters"
+import type { SaiyanWindow } from "../data/saiyanConfig"
 
 /** Reps réalisées HIER (créditées au portefeuille du chapitre, plafonnées côté client). */
 export async function getYesterdayReps(userId: string): Promise<number> {
     const date = getYesterdayISO()
     const sets = await (prisma as any).exerciseSet.findMany({ where: { userId, date } })
     return (sets as { reps: number }[]).reduce((a, s) => a + s.reps, 0)
+}
+
+/**
+ * ENTRAÎNEMENT SAIYAN — évalue la fenêtre [since → hier] pour un joueur :
+ * - hadFine : au moins une amende (FineRecord) tombée dans la fenêtre.
+ * - quotaEveryDay : quota DÉPASSÉ (reps > cible) chaque jour terminé (≥ 1 jour).
+ * Fenêtre sans jour terminé (since aujourd'hui/futur) → { false, false } = 1 point/niveau.
+ */
+export async function getSaiyanWindow(userId: string, since: string): Promise<SaiyanWindow> {
+    const yesterday = getYesterdayISO()
+    if (since > yesterday) return { hadFine: false, quotaEveryDay: false }
+    const dates = getDatesInRangeToYesterday(since)
+    if (dates.length === 0) return { hadFine: false, quotaEveryDay: false }
+
+    const [fine, user, sets] = await Promise.all([
+        (prisma as any).fineRecord.findFirst({ where: { userId, date: { gte: since, lte: yesterday } } }),
+        (prisma as any).user.findUnique({ where: { id: userId } }),
+        (prisma as any).exerciseSet.findMany({ where: { userId, date: { gte: since, lte: yesterday } } }),
+    ])
+    const hadFine = !!fine
+    if (!user) return { hadFine, quotaEveryDay: false }
+
+    const repsByDate: Record<string, number> = {}
+    for (const s of sets as { date: string; reps: number }[]) repsByDate[s.date] = (repsByDate[s.date] ?? 0) + s.reps
+
+    let quotaEveryDay = true
+    for (const d of dates) {
+        const target = getDailyTargetForUserOnDate(user, d)
+        if ((repsByDate[d] ?? 0) <= target) { quotaEveryDay = false; break } // "dépassé" = strictement >
+    }
+    return { hadFine, quotaEveryDay }
 }
 
 /** Contexte neutre (aucun bonus) — repli si on n'a pas de données. */

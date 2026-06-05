@@ -7,7 +7,6 @@
 import type { MonInstance } from "./types"
 import { getSpecies } from "../data/species"
 import { getMove } from "../data/moves"
-import { SAIYAN_POINTS_PER_LEVEL } from "../data/saiyanConfig"
 
 export const MAX_LEVEL = 100
 
@@ -53,9 +52,11 @@ export function applyExp(mon: MonInstance, gained: number): ExpResult {
     mon.exp = newExp
     mon.level = toLevel
 
-    // ENTRAÎNEMENT SAIYAN : points d'allocation gagnés pour chaque niveau pris.
+    // ENTRAÎNEMENT SAIYAN : on note seulement les niveaux gagnés (compteur pur).
+    // La conversion en points (règle amende/quota PushQuest) se fait après coup,
+    // côté app (processSaiyanPoints), car elle nécessite date + accès serveur.
     if (toLevel > fromLevel) {
-        mon.statPoints = (mon.statPoints ?? 0) + (toLevel - fromLevel) * SAIYAN_POINTS_PER_LEVEL
+        mon.pendingSaiyanLevels = (mon.pendingSaiyanLevels ?? 0) + (toLevel - fromLevel)
     }
 
     const learnedMoveIds: string[] = []

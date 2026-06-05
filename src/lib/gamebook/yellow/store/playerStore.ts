@@ -357,6 +357,27 @@ export function teachCt(uid: string, ctId: string): { ok: boolean; reason?: "int
     return { ok: false, reason: "introuvable" }
 }
 
+/**
+ * SAIYAN — applique les points calculés (règle amende/quota) aux Daemons :
+ * ajoute statPoints, remet à zéro pendingSaiyanLevels, fixe lastLevelUpAt=today.
+ * (Appelé par processSaiyanPoints côté bridge, après l'appel serveur.)
+ */
+export function applySaiyanResults(results: { uid: string; points: number }[], today: string) {
+    if (!today || results.length === 0) return
+    const byUid = new Map(results.map((r) => [r.uid, r.points]))
+    const patch = (m: MonInstance): MonInstance => {
+        if (!byUid.has(m.uid) || !(m.pendingSaiyanLevels ?? 0)) return m
+        return {
+            ...m,
+            statPoints: (m.statPoints ?? 0) + (byUid.get(m.uid) ?? 0),
+            pendingSaiyanLevels: undefined,
+            lastLevelUpAt: today,
+        }
+    }
+    st = { ...st, team: st.team.map(patch), pc: st.pc.map(patch) }
+    emit()
+}
+
 /** Apprentissage en attente : un Daemon veut apprendre une attaque mais a 4 slots. */
 export interface PendingLearn { uid: string; speciesId: string; name: string; moveId: string; moves: MoveSlot[] }
 

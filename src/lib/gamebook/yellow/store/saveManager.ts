@@ -3,10 +3,11 @@
 // Nexus Jaune Éclair — pont entre les stores (joueur + Pokédex) et l'API de save.
 // Charge au démarrage, puis auto-sauvegarde (débouncé) à chaque changement.
 
-import { getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps } from "./playerStore"
+import { getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, applySaiyanResults } from "./playerStore"
 import { getPokedex, hydratePokedex, subscribePokedex } from "./pokedexStore"
 import { parseSave, type YellowSave, SAVE_VERSION } from "../storage/save"
 import type { BadgeId } from "../data/cts"
+import { saiyanPointsForLevels, type SaiyanWindow } from "../data/saiyanConfig"
 
 let loaded = false
 let autosaveInit = false
@@ -35,6 +36,8 @@ export async function loadYellowSave(): Promise<void> {
             if (typeof j?.yesterdayReps === "number" && typeof j?.today === "string") creditDailyReps(j.yesterdayReps, j.today)
         }
     } catch { /* neutre si indisponible */ }
+    // Convertit d'éventuels niveaux Saiyan en attente (gagnés hors-ligne au combat précédent).
+    await processSaiyanPoints()
 }
 
 function snapshot(): YellowSave {
@@ -54,6 +57,38 @@ export function persistYellowSave(): void {
             body: JSON.stringify({ save: snapshot() }),
         }).catch(() => { /* silencieux */ })
     }, 800)
+}
+
+/**
+ * SAIYAN — convertit les niveaux gagnés (pendingSaiyanLevels) en points de stats
+ * selon la règle PushQuest (amende → 0 / quota dépassé chaque jour → 2 / sinon 1),
+ * évaluée sur la fenêtre [dernier level-up → hier] de chaque Daemon.
+ * Best-effort : si le serveur est injoignable, on laisse le compteur (réessai plus tard).
+ */
+export async function processSaiyanPoints(): Promise<void> {
+    const p = getPlayer()
+    const pending = [...p.team, ...p.pc].filter((m) => (m.pendingSaiyanLevels ?? 0) > 0)
+    if (pending.length === 0) return
+    const since = [...new Set(pending.map((m) => m.lastLevelUpAt).filter((d): d is string => !!d))]
+
+    let windows: Record<string, SaiyanWindow> = {}
+    let today = ""
+    try {
+        const r = await fetch("/api/gamebook/yellow/saiyan", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ since }),
+        })
+        if (r.ok) { const j = await r.json(); windows = j.windows ?? {}; today = j.today ?? "" }
+    } catch { /* hors-ligne : on réessaiera */ }
+    if (!today) return // pas de date fiable → on garde les compteurs pour plus tard
+
+    const results = pending.map((m) => {
+        const w: SaiyanWindow = (m.lastLevelUpAt && windows[m.lastLevelUpAt]) || { hadFine: false, quotaEveryDay: false }
+        return { uid: m.uid, points: saiyanPointsForLevels(m.pendingSaiyanLevels ?? 0, w) }
+    })
+    applySaiyanResults(results, today)
+    persistYellowSave()
 }
 
 /** Branche l'auto-sauvegarde sur les deux stores (idempotent). */
