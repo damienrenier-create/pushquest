@@ -74,6 +74,7 @@ function parseMon(raw: unknown): MonInstance | null {
         owned: o.owned === true,
         statPoints: typeof o.statPoints === "number" ? Math.max(0, Math.floor(o.statPoints)) : undefined,
         allocated: parseAllocated(o.allocated),
+        ev: parseAllocated(o.ev),
         pendingSaiyanLevels: typeof o.pendingSaiyanLevels === "number" ? Math.max(0, Math.floor(o.pendingSaiyanLevels)) : undefined,
         lastLevelUpAt: typeof o.lastLevelUpAt === "string" ? o.lastLevelUpAt : undefined,
     }
@@ -133,6 +134,7 @@ export function toMonInstance(m: MonInstance & { stages?: unknown; volatiles?: u
         pendingMoves: m.pendingMoves && m.pendingMoves.length ? [...m.pendingMoves] : undefined,
         statPoints: m.statPoints && m.statPoints > 0 ? m.statPoints : undefined,
         allocated: m.allocated && Object.keys(m.allocated).length ? { ...m.allocated } : undefined,
+        ev: m.ev && Object.keys(m.ev).length ? { ...m.ev } : undefined,
         pendingSaiyanLevels: m.pendingSaiyanLevels && m.pendingSaiyanLevels > 0 ? m.pendingSaiyanLevels : undefined,
         lastLevelUpAt: m.lastLevelUpAt,
     }

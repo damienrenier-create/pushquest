@@ -21,6 +21,7 @@ import { tryCapture } from "./capture"
 import { ballBonusOf, getItem, isGuaranteedBall } from "../data/items"
 import { rarityBonusOf } from "../data/captureConfig"
 import { STRUGGLE_MOVE_ID, STRUGGLE_INDEX } from "../data/combatCostConfig"
+import { gainEv, signatureStat, EV_YIELD_PER_WIN } from "../data/evConfig"
 
 // ============================================================
 // Types d'état & événements
@@ -643,8 +644,11 @@ function awardExp(state: BattleState, events: BattleEvent[]) {
     const fainted = active(state.enemy)
     const winner = active(state.player)
     if (winner.currentHp <= 0) return
-    const gain = xpForDefeat(speciesOf(fainted).baseExp, fainted.level, state.isWild)
+    const faintedSp = speciesOf(fainted)
+    const gain = xpForDefeat(faintedSp.baseExp, fainted.level, state.isWild)
     const beforeMax = maxHpOf(winner)
+    // EXPÉRIENCE DE COMBAT : EV versé dans la stat-signature du vaincu (plafonné).
+    gainEv(winner, signatureStat(faintedSp), EV_YIELD_PER_WIN)
     const res = applyExp(winner, gain)
     events.push({ kind: "message", text: `${displayName(winner)} gagne ${gain} points d'Exp !` })
     if (res.toLevel > res.fromLevel) {

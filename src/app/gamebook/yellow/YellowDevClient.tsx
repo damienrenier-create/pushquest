@@ -29,6 +29,7 @@ import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { moveCostReps } from "@/lib/gamebook/yellow/data/combatCostConfig"
 import { SAIYAN_POINT_VALUE } from "@/lib/gamebook/yellow/data/saiyanConfig"
 import { ivTier, ivTotal, ivTierColor } from "@/lib/gamebook/yellow/data/ivConfig"
+import { evTotal, topEvStats, EV_TOTAL_CAP } from "@/lib/gamebook/yellow/data/evConfig"
 import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
 import { expForLevel } from "@/lib/gamebook/yellow/battle/xp"
 import type { MonInstance } from "@/lib/gamebook/yellow/battle/types"
@@ -490,6 +491,17 @@ export default function YellowDevClient() {
                                     <div style={{ fontSize: 11, marginBottom: 6 }}>
                                         Potentiel génétique : <b style={{ color: ivTierColor(tier) }}>{tier === "PARFAIT" ? "★ PARFAIT" : tier}</b>
                                         <span style={{ opacity: 0.5 }}> ({ivTotal(live.ivs)}/75 IV)</span>
+                                    </div>
+                                )
+                            })()}
+                            {(() => {
+                                const total = evTotal(live.ev)
+                                const STAT_FR: Record<string, string> = { hp: "PV", atk: "ATQ", def: "DÉF", spe: "VIT", spc: "SPÉ" }
+                                const tops = topEvStats(live.ev).slice(0, 2).map((k) => STAT_FR[k]).join(" / ")
+                                return (
+                                    <div style={{ fontSize: 11, marginBottom: 6 }}>
+                                        Expérience de combat : <b>{total}/{EV_TOTAL_CAP}</b>
+                                        {tops ? <span style={{ opacity: 0.5 }}> (surtout {tops})</span> : <span style={{ opacity: 0.5 }}> — pas encore aguerri</span>}
                                     </div>
                                 )
                             })()}

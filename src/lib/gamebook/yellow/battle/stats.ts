@@ -6,14 +6,15 @@
 
 import type { SpeciesData, StatKey, StageKey, MonInstance, MajorStatus } from "./types"
 import { allocatedBonus } from "../data/saiyanConfig"
+import { evStatBonus } from "../data/evConfig"
 
 // ============================================================
 // Stats absolues (hors combat)
 // ============================================================
 
-/** PV max : floor(((2*Base + IV) * niveau) / 100) + niveau + 10. */
-export function maxHp(species: SpeciesData, level: number, ivHp: number): number {
-    return Math.floor(((2 * species.baseStats.hp + ivHp) * level) / 100) + level + 10
+/** PV max : floor(((2*Base + IV + ⌊EV/4⌋) * niveau) / 100) + niveau + 10. */
+export function maxHp(species: SpeciesData, level: number, ivHp: number, evHp = 0): number {
+    return Math.floor(((2 * species.baseStats.hp + ivHp + evStatBonus(evHp)) * level) / 100) + level + 10
 }
 
 /**
@@ -22,23 +23,24 @@ export function maxHp(species: SpeciesData, level: number, ivHp: number): number
  * donc le DV y compte double. On garde 2*Base + IV (un IV pèse moitié moins) :
  * écart d'au plus ~niveau/13 sur une stat, négligeable pour 7 joueurs en prod.
  */
-export function computeStat(base: number, iv: number, level: number): number {
-    return Math.floor(((2 * base + iv) * level) / 100) + 5
+export function computeStat(base: number, iv: number, level: number, ev = 0): number {
+    return Math.floor(((2 * base + iv + evStatBonus(ev)) * level) / 100) + 5
 }
 
-/** Les 5 stats absolues d'une instance (formule Gen-1 + bonus Saiyan alloués). */
+/** Les 5 stats absolues : Gen-1 (base+IV) + EV (⌊EV/4⌋, plafonné) + bonus Saiyan (à plat). */
 export function fullStats(
-    inst: Pick<MonInstance, "level" | "ivs" | "allocated">,
+    inst: Pick<MonInstance, "level" | "ivs" | "allocated" | "ev">,
     species: SpeciesData,
 ): Record<StatKey, number> {
     const lv = inst.level
     const a = inst.allocated ?? {}
+    const e = inst.ev ?? {}
     return {
-        hp: maxHp(species, lv, inst.ivs.hp) + allocatedBonus("hp", a.hp ?? 0),
-        atk: computeStat(species.baseStats.atk, inst.ivs.atk, lv) + allocatedBonus("atk", a.atk ?? 0),
-        def: computeStat(species.baseStats.def, inst.ivs.def, lv) + allocatedBonus("def", a.def ?? 0),
-        spe: computeStat(species.baseStats.spe, inst.ivs.spe, lv) + allocatedBonus("spe", a.spe ?? 0),
-        spc: computeStat(species.baseStats.spc, inst.ivs.spc, lv) + allocatedBonus("spc", a.spc ?? 0),
+        hp: maxHp(species, lv, inst.ivs.hp, e.hp ?? 0) + allocatedBonus("hp", a.hp ?? 0),
+        atk: computeStat(species.baseStats.atk, inst.ivs.atk, lv, e.atk ?? 0) + allocatedBonus("atk", a.atk ?? 0),
+        def: computeStat(species.baseStats.def, inst.ivs.def, lv, e.def ?? 0) + allocatedBonus("def", a.def ?? 0),
+        spe: computeStat(species.baseStats.spe, inst.ivs.spe, lv, e.spe ?? 0) + allocatedBonus("spe", a.spe ?? 0),
+        spc: computeStat(species.baseStats.spc, inst.ivs.spc, lv, e.spc ?? 0) + allocatedBonus("spc", a.spc ?? 0),
     }
 }
 
