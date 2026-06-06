@@ -890,6 +890,63 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "Panthère sylvestre aux lianes vives ; bondit comme le lierre s'élance.",
         sprite: "/yellow/sprites/dex/florapanthe.png",
     },
+
+    // --- 🐆 Les 5 autres panthères élémentaires (boss-only ; évolutions de Panthéon) ---
+    panthegel: {
+        id: "panthegel", dexNo: 69, name: "Panthégel", types: ["GLACE"],
+        baseStats: { hp: 90, atk: 72, def: 90, spe: 82, spc: 105 },
+        learnset: [
+            { level: 1, moveId: "coup_d_givre" }, { level: 1, moveId: "souffle_polaire" },
+            { level: 1, moveId: "vive_attaque" }, { level: 1, moveId: "coup_d_boule" },
+        ],
+        catchRate: 45, baseExp: 195, rarity: "RARE", growthRate: "medium_fast", role: "Glace — panthère (boss)",
+        description: "Panthère de givre au pelage cristallin ; son souffle gèle l'air.",
+        sprite: "/yellow/sprites/dex/panthegel.png",
+    },
+    pyropanthe: {
+        id: "pyropanthe", dexNo: 70, name: "Pyropanthe", types: ["FEU"],
+        baseStats: { hp: 72, atk: 78, def: 62, spe: 118, spc: 121 },
+        learnset: [
+            { level: 1, moveId: "flamme_ardente" }, { level: 1, moveId: "lance_flammes" },
+            { level: 1, moveId: "vive_attaque" }, { level: 1, moveId: "coup_d_boule" },
+        ],
+        catchRate: 45, baseExp: 200, rarity: "RARE", growthRate: "medium_fast", role: "Feu — panthère (boss)",
+        description: "Panthère de braise ; file plus vite que la flamme qui la couronne.",
+        sprite: "/yellow/sprites/dex/pyropanthe.png",
+    },
+    ombrapanthe: {
+        id: "ombrapanthe", dexNo: 71, name: "Ombrapanthe", types: ["SPECTRE"],
+        baseStats: { hp: 78, atk: 96, def: 70, spe: 113, spc: 98 },
+        learnset: [
+            { level: 1, moveId: "ombre_furtive" }, { level: 1, moveId: "leche" },
+            { level: 1, moveId: "morsure" }, { level: 1, moveId: "coup_d_boule" },
+        ],
+        catchRate: 45, baseExp: 200, rarity: "RARE", growthRate: "medium_fast", role: "Spectre (ténèbre) — panthère (boss)",
+        description: "Panthère des ténèbres ; surgit de l'ombre avant qu'on la voie.",
+        sprite: "/yellow/sprites/dex/ombrapanthe.png",
+    },
+    aquapanthe: {
+        id: "aquapanthe", dexNo: 72, name: "Aquapanthe", types: ["EAU"],
+        baseStats: { hp: 102, atk: 76, def: 92, spe: 80, spc: 95 },
+        learnset: [
+            { level: 1, moveId: "lame_eau" }, { level: 1, moveId: "hydrocanon" },
+            { level: 1, moveId: "vive_attaque" }, { level: 1, moveId: "coup_d_boule" },
+        ],
+        catchRate: 45, baseExp: 195, rarity: "RARE", growthRate: "medium_fast", role: "Eau — panthère (boss)",
+        description: "Panthère des torrents ; sa crinière ruisselle d'une eau vive.",
+        sprite: "/yellow/sprites/dex/aquapanthe.png",
+    },
+    voltapanthe: {
+        id: "voltapanthe", dexNo: 73, name: "Voltapanthe", types: ["ELEC"],
+        baseStats: { hp: 76, atk: 88, def: 64, spe: 122, spc: 102 },
+        learnset: [
+            { level: 1, moveId: "etincelle" }, { level: 1, moveId: "fulgurance" },
+            { level: 1, moveId: "cage_eclair" }, { level: 1, moveId: "vive_attaque" },
+        ],
+        catchRate: 45, baseExp: 200, rarity: "RARE", growthRate: "medium_fast", role: "Élec — panthère (boss)",
+        description: "Panthère de foudre ; un éclair sur pattes, la plus rapide du donjon.",
+        sprite: "/yellow/sprites/dex/voltapanthe.png",
+    },
 }
 
 export function getSpecies(id: string): SpeciesData | null {

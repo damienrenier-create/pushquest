@@ -357,13 +357,24 @@ function buildInfirmaryInterior(): TileType[][] {
 function buildArenaPlante(): TileType[][] {
     const W = 15, H = 10
     const m: TileType[][] = Array.from({ length: H }, () => Array.from({ length: W }, () => "grass" as TileType))
-    // Bords bloquants
-    for (let x = 0; x < W; x++) { m[0][x] = "tree"; m[H - 1][x] = "tree" }
-    for (let y = 0; y < H; y++) { m[y][0] = "tree"; m[y][W - 1] = "tree" }
-    // Massif d'arbre central (rows 4-7 × cols 5-9) → on passe par les couloirs latéraux
-    for (let y = 4; y <= 7; y++) for (let x = 5; x <= 9; x++) m[y][x] = "tree"
+    const wall = (x: number, y: number) => { if (x >= 0 && x < W && y >= 0 && y < H) m[y][x] = "tree" }
+    // Bordures
+    for (let x = 0; x < W; x++) { wall(x, 0); wall(x, H - 1) }
+    for (let y = 0; y < H; y++) { wall(0, y); wall(W - 1, y) }
     // Entrée / sortie bas-centre (ouverture dans la bordure)
     m[H - 1][7] = "grass"
+    // Décor / estrade (collisions exactes — relevé Sartay sur la grille) :
+    //   rangée 1 : piliers/décor en 1,4,6,8,10,13 ; colonnes de l'estrade 6 et 8 (rows 2-3) ;
+    //   coins bas en (1,7)(1,8)(13,7)(13,8). Le centre 5-9 × 4-7 reste WALKABLE.
+    const blocks: [number, number][] = [
+        [1, 1], [4, 1], [6, 1], [8, 1], [10, 1], [13, 1],
+        [6, 2], [6, 3], [8, 2], [8, 3],
+        [1, 7], [1, 8], [13, 7], [13, 8],
+    ]
+    for (const [x, y] of blocks) wall(x, y)
+    // Cases des PNJ (tryMove ne bloque pas sur les PNJ → on les rend non-walkable ici).
+    // Druide 7,1 ; gardes 2,1 / 3,1 / 11,1 / 12,1.
+    for (const [x, y] of [[7, 1], [2, 1], [3, 1], [11, 1], [12, 1]] as [number, number][]) wall(x, y)
     return m
 }
 

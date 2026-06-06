@@ -407,12 +407,13 @@ export default function MapView({ remotePlayers = [] }: { remotePlayers?: Remote
                                 border: "1px solid rgba(255,255,255,0.35)",
                                 background: isBlockingTile(tile) ? "rgba(220,40,40,0.40)" : "rgba(40,200,80,0.22)",
                                 color: "#fff",
-                                fontSize: 7,
+                                fontSize: 9,
+                                fontWeight: 700,
                                 lineHeight: 1,
                                 padding: 1,
                                 zIndex: 50,
                                 pointerEvents: "none",
-                                textShadow: "0 0 2px #000, 0 0 2px #000",
+                                textShadow: "0 0 2px #000, 0 0 3px #000",
                                 fontFamily: "monospace",
                             }}
                         >
@@ -537,15 +538,20 @@ export default function MapView({ remotePlayers = [] }: { remotePlayers?: Remote
 
 // === NPCs : vrais sprites Crystal (frame 0 statique pour l'instant) =====
 
-const NPC_SPRITES: Record<string, { url: string; frames: number } | null> = {
+// frames > 1 : spritesheet vertical (frame 0). frames === 1 : portrait UNIQUE rendu
+// entier, ancré au sol, débordant vers le haut (h = hauteur en nb de tuiles).
+const NPC_SPRITES: Record<string, { url: string; frames: number; h?: number } | null> = {
     y_vendeur: { url: "/yellow/sprites/npc_clerk_color.png?v=3", frames: 6 },
     y_croupier: { url: "/yellow/sprites/kris_color.png?v=3", frames: 6 },
     y_medecin: { url: "/yellow/sprites/npc_nurse_color.png?v=3", frames: 3 },
-    // Sbire = portrait de la Nymphe Nouille (cinématique d'intro) au lieu de l'emoji 🍝.
-    // Image unique (pas un spritesheet) → frames: 1, rendu en frame 0.
-    y_sbire: { url: "/yellow/sprites/npc/noodle_nymph.png", frames: 1 },
-    // (Arène Plante : les PNJ sont déjà DESSINÉS sur l'image de fond → pas de sprite
-    //  map ici, juste des hotspots invisibles. Leurs portraits servent en combat.)
+    // Sbire = portrait de la Nymphe Nouille (image unique).
+    y_sbire: { url: "/yellow/sprites/npc/noodle_nymph.png", frames: 1, h: 1.9 },
+    // Arène Plante (carte SANS PNJ dessinés) : sprites ENTIERS sur les cases.
+    y_arena_druide: { url: "/yellow/sprites/npc_druide.png", frames: 1, h: 2.4 },
+    y_arena_g1: { url: "/yellow/sprites/npc_garde_plante.png", frames: 1, h: 2.0 },
+    y_arena_g2: { url: "/yellow/sprites/npc_garde_plante.png", frames: 1, h: 2.0 },
+    y_arena_g3: { url: "/yellow/sprites/npc_garde_plante.png", frames: 1, h: 2.0 },
+    y_arena_g4: { url: "/yellow/sprites/npc_garde_plante.png", frames: 1, h: 2.0 },
 }
 
 function NpcSprite({
@@ -580,6 +586,34 @@ function NpcSprite({
             </div>
         )
     }
+    // Portrait UNIQUE (frames:1) : sprite ENTIER, taille ≥ joueur, pieds sur la
+    // case, débordant vers le haut (jamais rogné par la tuile).
+    if (sprite.frames === 1) {
+        const h = sprite.h ?? 1.8
+        return (
+            <div
+                style={{ position: "absolute", ...screenPos(npc.initialX, npc.initialY), zIndex: 4, overflow: "visible", pointerEvents: "none" }}
+                title={npc.name}
+            >
+                <img
+                    src={sprite.url}
+                    alt={npc.name}
+                    style={{
+                        position: "absolute",
+                        bottom: 0,            // pieds posés sur la case
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        height: `${h * 100}%`, // hauteur en multiples de tuile (> joueur)
+                        width: "auto",
+                        maxWidth: "none",
+                        imageRendering: "pixelated",
+                        filter: "drop-shadow(0 2px 2px rgba(0,0,0,0.45))",
+                    }}
+                />
+            </div>
+        )
+    }
+    // Spritesheet vertical (PNJ marcheurs) : frame 0.
     return (
         <div
             style={{

@@ -96,7 +96,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_arena_g1", name: "GARDE RONCE", title: "Garde du Bosquet",
         sprite: { emoji: "", color: "#3aa54a" }, // invisible : le garde est déjà dessiné sur l'image d'arène
-        mapId: "yellow_arena", x: 4, y: 3,
+        mapId: "yellow_arena", x: 2, y: 1,
         team: [{ speciesId: "feuillichot", level: 7 }, { speciesId: "feuillichot", level: 9 }],
         reward: 60, aiLevel: "trainer",
         intro: ["*Un garde abaisse sa lance-feuille.*", "Le Bosquet ne laisse passer que les dignes !"],
@@ -105,7 +105,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_arena_g2", name: "GARDE LIERRE", title: "Garde du Bosquet",
         sprite: { emoji: "", color: "#3aa54a" }, // invisible : le garde est déjà dessiné sur l'image d'arène
-        mapId: "yellow_arena", x: 4, y: 6,
+        mapId: "yellow_arena", x: 3, y: 1,
         team: [{ speciesId: "broussours", level: 8 }, { speciesId: "pampousse", level: 12 }],
         reward: 80, aiLevel: "trainer",
         intro: ["Mes bêtes ont soif de ton sel !"],
@@ -114,7 +114,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_arena_g3", name: "GARDE SÈVE", title: "Garde du Bosquet",
         sprite: { emoji: "", color: "#3aa54a" }, // invisible : le garde est déjà dessiné sur l'image d'arène
-        mapId: "yellow_arena", x: 10, y: 3,
+        mapId: "yellow_arena", x: 11, y: 1,
         team: [{ speciesId: "tamanpousse", level: 10 }, { speciesId: "pantheon", level: 8 }],
         reward: 90, aiLevel: "trainer",
         intro: ["*Le garde caresse un étrange tamanoir feuillu.*", "Des créatures inédites veillent ici…"],
@@ -123,7 +123,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_arena_g4", name: "GARDE ÉCORCE", title: "Garde du Bosquet",
         sprite: { emoji: "", color: "#3aa54a" }, // invisible : le garde est déjà dessiné sur l'image d'arène
-        mapId: "yellow_arena", x: 10, y: 6,
+        mapId: "yellow_arena", x: 12, y: 1,
         team: [{ speciesId: "feliane", level: 16 }],
         reward: 110, aiLevel: "trainer",
         intro: ["Dernier rempart avant le Doyen. En garde !"],
