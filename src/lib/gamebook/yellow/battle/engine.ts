@@ -63,6 +63,8 @@ export interface BattleState {
     captureModifier: number
     /** uids des Daemons du joueur qui ont COMBATTU (envoyés au moins une fois) → partage d'XP. */
     participated: string[]
+    /** Combat JOUEUR vs JOUEUR : XP attribuée AUX DEUX camps (au vainqueur de chaque KO). */
+    pvp: boolean
 }
 
 export type PlayerAction =
@@ -122,7 +124,7 @@ export function toBattleMon(inst: MonInstance): BattleMon {
 export function createBattle(
     playerTeam: MonInstance[],
     enemyTeam: MonInstance[],
-    opts: { isWild: boolean; seed: number; aiLevel?: AiLevel; captureModifier?: number },
+    opts: { isWild: boolean; seed: number; aiLevel?: AiLevel; captureModifier?: number; pvp?: boolean },
 ): BattleState {
     // Le joueur envoie son premier Daemon ENCORE DEBOUT (pas un K.O. en tête de liste).
     const playerStart = playerTeam.findIndex((m) => m.currentHp > 0)
@@ -142,6 +144,7 @@ export function createBattle(
         seed: opts.seed >>> 0,
         captureModifier: opts.captureModifier ?? 1,
         participated: leadUid ? [leadUid] : [],
+        pvp: opts.pvp ?? false,
     }
 }
 
@@ -239,6 +242,50 @@ export function resolveTurn(prev: BattleState, playerAction: PlayerAction): Batt
         checkFaints(state, events)
     }
 
+    return commit(state, events, rng, prev.turn, true)
+}
+
+/**
+ * Résolution d'un tour JOUEUR vs JOUEUR : les DEUX actions sont fournies (aucune IA).
+ * Convention canonique : côté A = "player" (le challenger), côté B = "enemy" (le défié).
+ *
+ * ⚠️ RISQUE — DÉTERMINISME : les deux clients doivent appeler cette fonction avec le
+ *   MÊME `prev` (même seed) et les MÊMES actions, dans le MÊME ordre. Toute source
+ *   d'aléa hors `rng` (seedé) provoquerait une désync. Ne rien ajouter d'impur ici.
+ * v1 : uniquement move / switch (ni objet, ni fuite, ni capture en PvP).
+ */
+export function resolveTurnPvp(prev: BattleState, actionA: PlayerAction, actionB: PlayerAction): BattleState {
+    if (prev.phase === "ended") return prev
+    const state = structuredCloneState(prev)
+    const rng = new Rng(state.seed)
+    const events: BattleEvent[] = []
+
+    // Changement forcé après KO : seul le camp concerné rejoue (un switch).
+    if (state.forcedSwitch) {
+        const side = state.forcedSwitch
+        const act = side === "player" ? actionA : actionB
+        if (act.kind === "switch") doSwitch(state, side, act.teamIndex!, events)
+        state.forcedSwitch = null
+        return commit(state, events, rng, prev.turn, false)
+    }
+
+    // v1 PvP : seuls move/switch sont relayés ; tout le reste retombe sur "move" idx 0
+    // par sécurité (ne devrait jamais arriver — le client ne propose que move/switch).
+    const toResolved = (side: SideId, a: PlayerAction): ResolvedAction => ({
+        side,
+        kind: a.kind === "switch" ? "switch" : "move",
+        moveIndex: a.kind === "move" ? a.moveIndex : undefined,
+        teamIndex: a.kind === "switch" ? a.teamIndex : undefined,
+    })
+    const order = orderActions(state, toResolved("player", actionA), toResolved("enemy", actionB), rng)
+    for (const act of order) {
+        if (state.phase === "ended") break
+        if (active(state[act.side]).currentHp <= 0) continue // KO entre-temps → n'agit pas
+        if (act.kind === "switch") doSwitch(state, act.side, act.teamIndex!, events)
+        else if (act.kind === "move") performMove(state, act.side, act.moveIndex!, events, rng)
+        checkFaints(state, events)
+    }
+    if (state.phase !== "ended") { endOfTurn(state, events, rng); checkFaints(state, events) }
     return commit(state, events, rng, prev.turn, true)
 }
 
@@ -617,7 +664,10 @@ function checkFaints(state: BattleState, events: BattleEvent[]) {
             (mon as any).__fainted = true
             events.push({ kind: "faint", side, name: displayName(mon) })
             events.push({ kind: "message", text: `${displayName(mon)} est K.O. !` })
-            if (side === "enemy") awardExp(state, events)
+            // PvP : le camp ADVERSE (celui dont l'actif vient de KO l'autre) gagne l'XP.
+            // Solo : seul le joueur gagne l'XP, et seulement quand l'ennemi tombe.
+            if (state.pvp) awardExpPvp(state, other(side), events)
+            else if (side === "enemy") awardExp(state, events)
         }
     }
     // Issue / changement forcé
@@ -690,6 +740,37 @@ function awardExp(state: BattleState, events: BattleEvent[]) {
             for (const mid of res.pendingMoveIds) {
                 events.push({ kind: "message", text: `${displayName(mon)} veut apprendre ${getMove(mid)?.name ?? mid}… mais connaît déjà 4 capacités ! (choix à la fin du combat)` })
             }
+        }
+    }
+}
+
+/**
+ * XP en PvP : attribuée à l'ACTIF du camp vainqueur quand l'actif adverse tombe.
+ * Pas de partage d'équipe (state.participated est joueur-only) → uniquement l'actif
+ * qui a porté le coup. Symétrique : marche pour les deux camps.
+ */
+function awardExpPvp(state: BattleState, winnerSide: SideId, events: BattleEvent[]) {
+    const winner = active(state[winnerSide])
+    if (winner.currentHp <= 0) return // double KO → pas d'XP
+    const fainted = active(state[other(winnerSide)])
+    const faintedSp = speciesOf(fainted)
+    const gain = xpForDefeat(faintedSp.baseExp, fainted.level, false)
+    gainEv(winner, signatureStat(faintedSp), EV_YIELD_PER_WIN)
+    const beforeMax = maxHpOf(winner)
+    const res = applyExp(winner, gain)
+    events.push({ kind: "message", text: `${displayName(winner)} gagne ${gain} points d'Exp !` })
+    if (res.toLevel > res.fromLevel) {
+        const delta = maxHpOf(winner) - beforeMax
+        if (delta > 0) {
+            winner.currentHp += delta
+            events.push({ kind: "hp", side: winnerSide, hp: winner.currentHp, max: maxHpOf(winner) })
+        }
+        events.push({ kind: "message", text: `${displayName(winner)} monte au niveau ${res.toLevel} !` })
+        for (const mid of res.learnedMoveIds) {
+            events.push({ kind: "message", text: `${displayName(winner)} apprend ${getMove(mid)?.name ?? mid} !` })
+        }
+        for (const mid of res.pendingMoveIds) {
+            events.push({ kind: "message", text: `${displayName(winner)} veut apprendre ${getMove(mid)?.name ?? mid}… mais connaît déjà 4 capacités ! (choix à la fin du combat)` })
         }
     }
 }
