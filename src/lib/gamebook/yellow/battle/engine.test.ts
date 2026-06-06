@@ -76,6 +76,39 @@ describe("combat de dresseur — enchaînement multi-Daemon", () => {
         expect(after.turn).toBe(start.turn + 1)    // le tour est bien passé
     })
 
+    it("partage l'XP : un Daemon ayant combattu puis mis au banc gagne aussi l'XP", () => {
+        const a = createMonInstance("rochison", 50) // tank : survit à tout
+        const b = createMonInstance("plumiot", 5)
+        const startExpB = b.exp
+        let s = createBattle([a, b], [createMonInstance("plumiot", 2)], { isWild: true, seed: 77 })
+        // b entre en combat (→ "participated"), puis on le renvoie au banc.
+        s = resolveTurn(s, { kind: "switch", teamIndex: 1 })
+        s = resolveTurn(s, { kind: "switch", teamIndex: 0 })
+        // a achève le sauvage.
+        let guard = 0
+        while (s.phase !== "ended" && guard < 50) {
+            s = resolveTurn(s, { kind: "move", moveIndex: 0 })
+            guard++
+        }
+        expect(s.outcome).toBe("win")
+        // b était au banc à la fin, mais ayant participé il a touché de l'XP.
+        expect(s.player.team[1].exp).toBeGreaterThan(startExpB)
+    })
+
+    it("ne partage PAS l'XP avec un Daemon n'ayant jamais combattu", () => {
+        const a = createMonInstance("rochison", 50)
+        const b = createMonInstance("plumiot", 5) // reste au banc tout le combat
+        const startExpB = b.exp
+        let s = createBattle([a, b], [createMonInstance("plumiot", 2)], { isWild: true, seed: 78 })
+        let guard = 0
+        while (s.phase !== "ended" && guard < 50) {
+            s = resolveTurn(s, { kind: "move", moveIndex: 0 })
+            guard++
+        }
+        expect(s.outcome).toBe("win")
+        expect(s.player.team[1].exp).toBe(startExpB) // jamais envoyé → aucune XP
+    })
+
     it("un Daemon faible et seul perd contre le dresseur", () => {
         const start = createBattle(
             [createMonInstance("cornaissant", 2)],

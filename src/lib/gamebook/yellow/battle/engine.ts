@@ -61,6 +61,8 @@ export interface BattleState {
     seed: number
     /** Bonus situationnel de capture (ex. quota PushQuest atteint). Défaut 1. */
     captureModifier: number
+    /** uids des Daemons du joueur qui ont COMBATTU (envoyés au moins une fois) → partage d'XP. */
+    participated: string[]
 }
 
 export type PlayerAction =
@@ -125,8 +127,10 @@ export function createBattle(
     // Le joueur envoie son premier Daemon ENCORE DEBOUT (pas un K.O. en tête de liste).
     const playerStart = playerTeam.findIndex((m) => m.currentHp > 0)
     const enemyStart = enemyTeam.findIndex((m) => m.currentHp > 0)
+    const playerStartIdx = playerStart >= 0 ? playerStart : 0
+    const leadUid = playerTeam[playerStartIdx]?.uid
     return {
-        player: { team: playerTeam.map(toBattleMon), activeIndex: playerStart >= 0 ? playerStart : 0 },
+        player: { team: playerTeam.map(toBattleMon), activeIndex: playerStartIdx },
         enemy: { team: enemyTeam.map(toBattleMon), activeIndex: enemyStart >= 0 ? enemyStart : 0 },
         isWild: opts.isWild,
         aiLevel: opts.aiLevel ?? (opts.isWild ? "wild" : "trainer"),
@@ -137,6 +141,7 @@ export function createBattle(
         events: [],
         seed: opts.seed >>> 0,
         captureModifier: opts.captureModifier ?? 1,
+        participated: leadUid ? [leadUid] : [],
     }
 }
 
@@ -595,6 +600,10 @@ function doSwitch(state: BattleState, side: SideId, teamIndex: number, events: B
     out.volatiles = {}
     s.activeIndex = teamIndex
     const incoming = s.team[teamIndex]
+    // Le Daemon entrant a "participé" → il partagera l'XP des futurs K.O. (joueur uniquement).
+    if (side === "player" && !state.participated.includes(incoming.uid)) {
+        state.participated.push(incoming.uid)
+    }
     events.push({ kind: "switchIn", side, name: displayName(incoming) })
     events.push({ kind: "message", text: side === "player" ? `En avant, ${displayName(incoming)} !` : `L'adversaire envoie ${displayName(incoming)} !` })
     events.push({ kind: "hp", side, hp: incoming.currentHp, max: maxHpOf(incoming) })
@@ -643,27 +652,39 @@ export function chooseEnemyAction(state: BattleState, rng: Rng): ResolvedAction 
     return { side: "enemy", kind: "move", moveIndex: choice.moveIndex ?? 0 }
 }
 
-/** XP attribuée au Daemon actif du joueur quand l'adversaire actif tombe K.O. */
+/**
+ * XP attribuée quand l'adversaire actif tombe K.O.
+ * PARTAGE : tous les Daemons du joueur ayant COMBATTU ce combat (state.participated)
+ * et encore debout reçoivent l'XP. L'EXPÉRIENCE DE COMBAT (EV) reste réservée au
+ * Daemon actif (celui qui a porté le coup fatal).
+ */
 function awardExp(state: BattleState, events: BattleEvent[]) {
     const fainted = active(state.enemy)
     const winner = active(state.player)
-    if (winner.currentHp <= 0) return
     const faintedSp = speciesOf(fainted)
     const gain = xpForDefeat(faintedSp.baseExp, fainted.level, state.isWild)
-    const beforeMax = maxHpOf(winner)
-    // EXPÉRIENCE DE COMBAT : EV versé dans la stat-signature du vaincu (plafonné).
-    gainEv(winner, signatureStat(faintedSp), EV_YIELD_PER_WIN)
-    const res = applyExp(winner, gain)
-    events.push({ kind: "message", text: `${displayName(winner)} gagne ${gain} points d'Exp !` })
-    if (res.toLevel > res.fromLevel) {
-        const delta = maxHpOf(winner) - beforeMax
-        if (delta > 0) {
-            winner.currentHp += delta
-            events.push({ kind: "hp", side: "player", hp: winner.currentHp, max: maxHpOf(winner) })
-        }
-        events.push({ kind: "message", text: `${displayName(winner)} monte au niveau ${res.toLevel} !` })
-        for (const mid of res.learnedMoveIds) {
-            events.push({ kind: "message", text: `${displayName(winner)} apprend ${getMove(mid)?.name ?? mid} !` })
+
+    // EV uniquement au Daemon actif s'il est encore debout.
+    if (winner.currentHp > 0) gainEv(winner, signatureStat(faintedSp), EV_YIELD_PER_WIN)
+
+    for (const mon of state.player.team) {
+        if (mon.currentHp <= 0) continue                       // un K.O. ne gagne pas d'XP
+        if (!state.participated.includes(mon.uid)) continue    // n'a pas combattu → rien
+        const isActive = mon === winner
+        const beforeMax = maxHpOf(mon)
+        const res = applyExp(mon, gain)
+        events.push({ kind: "message", text: `${displayName(mon)} gagne ${gain} points d'Exp !` })
+        if (res.toLevel > res.fromLevel) {
+            const delta = maxHpOf(mon) - beforeMax
+            if (delta > 0) {
+                mon.currentHp += delta
+                // Seul l'actif a sa barre affichée → on n'émet l'event "hp" que pour lui.
+                if (isActive) events.push({ kind: "hp", side: "player", hp: mon.currentHp, max: maxHpOf(mon) })
+            }
+            events.push({ kind: "message", text: `${displayName(mon)} monte au niveau ${res.toLevel} !` })
+            for (const mid of res.learnedMoveIds) {
+                events.push({ kind: "message", text: `${displayName(mon)} apprend ${getMove(mid)?.name ?? mid} !` })
+            }
         }
     }
 }
@@ -742,6 +763,7 @@ function structuredCloneState(s: BattleState): BattleState {
         player: { activeIndex: s.player.activeIndex, team: s.player.team.map(cloneMon) },
         enemy: { activeIndex: s.enemy.activeIndex, team: s.enemy.team.map(cloneMon) },
         events: [],
+        participated: [...s.participated],
     }
 }
 
