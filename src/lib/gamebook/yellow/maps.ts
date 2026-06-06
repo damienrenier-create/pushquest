@@ -282,16 +282,16 @@ const TOWN_BUILDINGS: YellowBuilding[] = [
 // === Intérieurs : 4 maps 9×7 ============================================
 
 // Boutique : grille 11×8 calée sur shop.png. Collisions relevées sur grille avec
-// Sartay : sol walkable PARTOUT sauf le comptoir ; entrée/sortie en (3,7)/(4,7).
+// Sartay (coordonnées exactes : murs par défaut, on n'ouvre QUE les cases listées).
 function buildShopInterior(): TileType[][] {
-    const m = fillRect(11, 8, "floorChecker") // tout walkable par défaut
-    const blocked: [number, number][] = [
-        // Comptoir en L (le vendeur est le PNJ en 1,3 ; on lui parle par-dessus depuis 1,5)
-        [1, 2], [2, 2], // coin derrière le vendeur
-        [1, 3],         // case du vendeur (PNJ ne bloque pas le mouvement → bloqué ici)
-        [2, 3],
-        [1, 4], [2, 4],
+    const m = fillRoom(11, 8, "floorChecker")
+    // Cases rendues walkable en plus (bordure basse + coin bas-gauche) — relevé Sartay.
+    const walkable: [number, number][] = [
+        [0, 5], [0, 6], [0, 7], [1, 7], [2, 7], [5, 7], [6, 7], [8, 7], [9, 7], [10, 7],
     ]
+    for (const [x, y] of walkable) m[y][x] = "floorChecker"
+    // Comptoir en L bloqué (le vendeur est le PNJ en 1,3 ; on lui parle par-dessus depuis 1,5)
+    const blocked: [number, number][] = [[1, 2], [2, 2], [1, 3], [2, 3], [1, 4], [2, 4]]
     for (const [x, y] of blocked) m[y][x] = "shopCounter"
     // Entrée / sortie (2 cases) en bas
     m[7][3] = "doorMat"
