@@ -17,6 +17,7 @@ const INK = "#2a1c10"           // texte / contour
 // entrée affiche le dialogue sans portrait (comportement historique).
 const DIALOGUE_PORTRAITS: Record<string, string> = {
     y_sbire: "/yellow/sprites/npc/noodle_nymph.png", // la Nymphe Nouille
+    y_ace: "/yellow/sprites/npc_ace.png", // ACE (rival), intro/outro de combat
     // Arène Plante : portraits d'intro/outro de combat.
     y_arena_druide: "/yellow/sprites/npc_druide.png",
     y_arena_g1: "/yellow/sprites/npc_garde_plante.png",

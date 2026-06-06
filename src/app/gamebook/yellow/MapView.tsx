@@ -546,6 +546,8 @@ const NPC_SPRITES: Record<string, { url: string; frames: number; h?: number } | 
     y_medecin: { url: "/yellow/sprites/npc_nurse_color.png?v=3", frames: 3 },
     // Sbire = portrait de la Nymphe Nouille (image unique).
     y_sbire: { url: "/yellow/sprites/npc/noodle_nymph.png", frames: 1, h: 1.9 },
+    // ACE (rival) sur la ville — perso entier, plus grand que le joueur.
+    y_ace: { url: "/yellow/sprites/npc_ace.png", frames: 1, h: 2.0 },
     // Arène Plante (carte SANS PNJ dessinés) : sprites ENTIERS sur les cases.
     y_arena_druide: { url: "/yellow/sprites/npc_druide.png", frames: 1, h: 2.4 },
     y_arena_g1: { url: "/yellow/sprites/npc_garde_plante.png", frames: 1, h: 2.0 },
