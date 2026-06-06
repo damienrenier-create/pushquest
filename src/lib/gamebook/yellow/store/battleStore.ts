@@ -28,6 +28,7 @@ import { persistYellowSave, processSaiyanPoints } from "./saveManager"
 import { QUOTA_CAPTURE_BONUS } from "../data/captureConfig"
 import { moveCostReps, STRUGGLE_INDEX } from "../data/combatCostConfig"
 import { battleEnergyCap } from "../data/badges"
+import { mpLog } from "../multiplayer/mp"
 import type { EvolutionResult } from "../battle/evolution"
 
 /** Espèce de l'adversaire actif (pour synchroniser le Pokédex). */
@@ -83,6 +84,8 @@ interface PvpContext {
     oppAction: PlayerAction | null
     /** Issue côté MOI (true=gagné, false=perdu, null=en cours). */
     won: boolean | null
+    /** Désynchronisation détectée (checksum divergent) → combat à recharger. */
+    desync: boolean
 }
 
 let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, pvpCtx: null }
@@ -323,19 +326,39 @@ function getDisplayBattle(): BattleState | null {
 
 function mySide(ctx: PvpContext): SideId { return ctx.role === "A" ? "player" : "enemy" }
 
-// Pont d'ENVOI : le hook réseau enregistre comment relayer une action.
-let pvpSendHandler: ((seq: number, action: PlayerAction) => void) | null = null
-export function setPvpSendHandler(fn: ((seq: number, action: PlayerAction) => void) | null) {
+/**
+ * Empreinte déterministe de l'état canonique (FNV-1a 32 bits) : PV/niveau/statut
+ * de chaque Daemon + actif + seed + tour + phase. Identique des 2 côtés tant que
+ * la synchro tient. Sert à DÉTECTER une désync (le checksum voyage avec l'action).
+ */
+function battleChecksum(b: BattleState): number {
+    let h = 2166136261 >>> 0
+    const add = (n: number) => { h = (h ^ (n >>> 0)) >>> 0; h = Math.imul(h, 16777619) >>> 0 }
+    add(b.turn); add(b.phase === "ended" ? 1 : 0); add(b.seed >>> 0)
+    for (const side of [b.player, b.enemy]) {
+        add(side.activeIndex)
+        for (const m of side.team) {
+            add(m.currentHp); add(m.level)
+            add(m.status === "NONE" ? 0 : m.status.charCodeAt(0))
+        }
+    }
+    return h >>> 0
+}
+
+// Pont d'ENVOI : le hook réseau enregistre comment relayer une action (+ checksum).
+let pvpSendHandler: ((seq: number, action: PlayerAction, checksum: number) => void) | null = null
+export function setPvpSendHandler(fn: ((seq: number, action: PlayerAction, checksum: number) => void) | null) {
     pvpSendHandler = fn
 }
 
 /** Démarre un combat PvP (les 2 clients construisent le MÊME état canonique). */
-export function startPvpBattle(battle: BattleState, ctx: Omit<PvpContext, "seq" | "myAction" | "oppAction" | "won">) {
+export function startPvpBattle(battle: BattleState, ctx: Omit<PvpContext, "seq" | "myAction" | "oppAction" | "won" | "desync">) {
     swapCache = { src: null, out: null }
+    mpLog("battle", "start", { battleId: ctx.battleId, role: ctx.role, checksum: battleChecksum(battle) })
     setStore({
         battle, evolutions: [], trainer: null, whiteout: false, energySpent: 0,
         sbireWin: null, sbireRewardMsg: null,
-        pvpCtx: { ...ctx, seq: 0, myAction: null, oppAction: null, won: null },
+        pvpCtx: { ...ctx, seq: 0, myAction: null, oppAction: null, won: null, desync: false },
     })
 }
 
@@ -366,15 +389,33 @@ function submitPvpAction(action: PlayerAction) {
     }
 
     storeState = { ...storeState, pvpCtx: { ...ctx, myAction: action } }
-    pvpSendHandler?.(ctx.seq, action)
+    // Le checksum de l'état COURANT voyage avec l'action → l'adversaire détecte une désync.
+    const checksum = battleChecksum(battle)
+    mpLog("action↗", { seq: ctx.seq, action, checksum })
+    pvpSendHandler?.(ctx.seq, action, checksum)
     emit()
     tryResolvePvp()
 }
 
 /** Reçoit l'action de l'adversaire (relayée par le hook réseau). */
-export function receivePvpAction(seq: number, action: PlayerAction) {
+export function receivePvpAction(seq: number, action: PlayerAction, checksum?: number) {
     const ctx = storeState.pvpCtx
-    if (!ctx || seq !== ctx.seq) return // échange périmé / futur → ignoré
+    const battle = storeState.battle
+    if (!ctx || !battle || seq !== ctx.seq) {
+        mpLog("action↙", "ignoré (seq périmé)", { seq, attendu: ctx?.seq })
+        return
+    }
+    // ⚠️ Détection de désync : l'adversaire a joué sur un état différent du mien.
+    if (typeof checksum === "number") {
+        const mine = battleChecksum(battle)
+        if (checksum !== mine) {
+            mpLog("DÉSYNC", { recu: checksum, mien: mine, seq })
+            storeState = { ...storeState, pvpCtx: { ...ctx, desync: true } }
+            emit()
+            return // on n'applique rien : combat à recharger
+        }
+    }
+    mpLog("action↙", { seq, action })
     storeState = { ...storeState, pvpCtx: { ...ctx, oppAction: action } }
     emit()
     tryResolvePvp()
@@ -401,6 +442,7 @@ function tryResolvePvp() {
     }
 
     const next = resolveTurnPvp(battle, actionA, actionB)
+    mpLog("resolve", { seq: ctx.seq, turn: next.turn, checksum: battleChecksum(next), phase: next.phase })
     setStore({ battle: next, pvpCtx: { ...ctx, seq: ctx.seq + 1, myAction: null, oppAction: null } })
     if (next.phase === "ended") finishPvpBattle(next)
 }

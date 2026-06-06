@@ -15,6 +15,7 @@
 import { useEffect, useRef, useState, useCallback } from "react"
 import { getPusherClient, PUSHER_CLIENT_ENABLED } from "@/lib/pusher-client"
 import type { PvpRole } from "@/lib/gamebook/yellow/store/battleStore"
+import { mpLog } from "./mp"
 
 const CHANNEL = "yellow_casino"
 const CHALLENGE_TIMEOUT_MS = 20000
@@ -99,11 +100,25 @@ export function useCasinoChallenge(opts: {
 
         const onSend = (d: ChallengeMsg) => {
             if (!d.userId || d.userId === myUserId || d.targetUserId !== myUserId || !d.battleId) return
+            const o = outgoingRef.current
+            // #4 — défi MUTUEL (on se défie en même temps) → tie-break DÉTERMINISTE :
+            // le plus PETIT userId est l'hôte (A). Évite la création de 2 combats.
+            if (o && o.toUserId === d.userId) {
+                if (myUserId < d.userId) {
+                    mpLog("challenge", "mutuel : je garde mon défi (userId plus petit)")
+                    return // mon défi sortant l'emporte ; l'autre acceptera le mien
+                }
+                mpLog("challenge", "mutuel : j'annule le mien, je traite le sien")
+                post({ type: "challenge:cancel", targetUserId: o.toUserId, battleId: o.battleId })
+                setOutgoing(null)
+                setIncoming({ fromUserId: d.userId, fromNickname: d.nickname ?? "?", battleId: d.battleId })
+                return
+            }
             if (busyRef.current || outgoingRef.current) {
-                // Occupé → refus auto.
                 post({ type: "challenge:respond", targetUserId: d.userId, battleId: d.battleId, accepted: false })
                 return
             }
+            mpLog("challenge↙", "défi reçu de", d.nickname)
             setIncoming({ fromUserId: d.userId, fromNickname: d.nickname ?? "?", battleId: d.battleId })
         }
         const onRespond = (d: ChallengeMsg) => {

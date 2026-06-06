@@ -1,20 +1,18 @@
 "use client"
 
-// Nexus Jaune Éclair — RÉSEAU du combat PvP (Phase 3).
+// Nexus Jaune Éclair — RÉSEAU du combat PvP (Phase 3 + garde-fous Lot 1).
 //
 // Une fois un défi accepté, ce hook orchestre le combat sur le canal privé du
 // match `gamebook-yellow_battle_<battleId>` :
-//   1. échange des équipes + du seed (battle:hello, le challenger A fournit le seed)
+//   1. échange équipes + seed + VERSION (battle:hello ; A fournit le seed)
 //   2. construction du MÊME état CANONIQUE des 2 côtés (A="player", B="enemy")
-//   3. relai des actions (battle:action) → le store résout en dual-déterministe
-//   4. abandon (battle:forfeit) à la déconnexion / sortie
+//   3. relai des actions + CHECKSUM (battle:action) → résolution dual-déterministe
+//   4. abandon (battle:forfeit) à la déconnexion / sortie / bouton abandon
 //
-// ⚠️ RISQUE — voir note mémoire casino-pvp :
-//   - déterminisme : les 2 équipes doivent être IDENTIQUES des 2 côtés (round-trip
-//     JSON). Toute divergence d'équipe/seed = désync.
-//   - taille des messages Pusher (~10 Ko) : on envoie l'équipe complète au hello.
+// Garde-fous : refus si versions différentes (#10), checksum de désync via le
+// store (#1), abandon propre (#7). ⚠️ voir note mémoire casino-pvp.
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useCallback } from "react"
 import { getPusherClient, PUSHER_CLIENT_ENABLED } from "@/lib/pusher-client"
 import { getPlayer } from "@/lib/gamebook/yellow/store/playerStore"
 import { createBattle, type PlayerAction } from "@/lib/gamebook/yellow/battle/engine"
@@ -23,6 +21,7 @@ import {
 } from "@/lib/gamebook/yellow/store/battleStore"
 import type { MonInstance } from "@/lib/gamebook/yellow/battle/types"
 import type { BattleStart } from "./useCasinoChallenge"
+import { MP_VERSION, mpLog } from "./mp"
 
 interface BattleMsg {
     type: string
@@ -30,8 +29,10 @@ interface BattleMsg {
     data?: {
         team?: MonInstance[]
         seed?: number
+        version?: string
         seq?: number
         action?: PlayerAction
+        checksum?: number
     }
 }
 
@@ -45,21 +46,33 @@ function postBattle(battleId: string, type: string, data?: BattleMsg["data"]) {
     } catch { /* best-effort */ }
 }
 
-/** Pseudo-aléatoire 31 bits pour le seed (généré par le challenger A uniquement). */
 function makeSeed(): number {
     return Math.floor(Math.random() * 0x7fffffff) >>> 0
 }
 
-export function useCasinoBattle(session: BattleStart | null, myUserId: string) {
-    // Réfs de session (collecte équipes + seed avant de démarrer).
+export function useCasinoBattle(
+    session: BattleStart | null,
+    myUserId: string,
+    onAbort?: (reason: string) => void,
+) {
     const startedRef = useRef(false)
     const oppTeamRef = useRef<MonInstance[] | null>(null)
     const seedRef = useRef<number | null>(null)
+    const battleIdRef = useRef<string | null>(null)
+
+    // Abandon explicite (bouton) : notifie l'adversaire puis quitte proprement.
+    const forfeit = useCallback(() => {
+        const id = battleIdRef.current
+        if (id) postBattle(id, "battle:forfeit")
+        mpLog("forfeit", "abandon volontaire")
+        pvpForfeit(true)
+    }, [])
 
     useEffect(() => {
         startedRef.current = false
         oppTeamRef.current = null
         seedRef.current = null
+        battleIdRef.current = session?.battleId ?? null
         if (!session || !PUSHER_CLIENT_ENABLED || !myUserId) return
         const client = getPusherClient()
         if (!client) return
@@ -67,9 +80,16 @@ export function useCasinoBattle(session: BattleStart | null, myUserId: string) {
         const { battleId, role, oppUserId, oppNickname } = session
         const myTeam = getPlayer().team
         if (role === "A") seedRef.current = makeSeed()
+        mpLog("battle", "session", { battleId, role, opp: oppNickname })
 
         const channelName = `gamebook-yellow_battle_${battleId}`
         const channel = client.subscribe(channelName)
+
+        const sendHello = () => postBattle(battleId, "battle:hello", {
+            team: myTeam,
+            seed: role === "A" ? seedRef.current ?? undefined : undefined,
+            version: MP_VERSION,
+        })
 
         const tryStart = () => {
             if (startedRef.current) return
@@ -77,45 +97,48 @@ export function useCasinoBattle(session: BattleStart | null, myUserId: string) {
             const seed = seedRef.current
             if (!opp || seed == null) return
             startedRef.current = true
-            // État CANONIQUE identique des 2 côtés : A="player", B="enemy".
             const teamA = role === "A" ? myTeam : opp
             const teamB = role === "A" ? opp : myTeam
             const battle = createBattle(teamA, teamB, { isWild: false, seed, pvp: true })
             startPvpBattle(battle, { battleId, role, myUserId, oppUserId, oppNickname })
-            // Pont d'envoi : chaque action locale est relayée à l'adversaire.
-            setPvpSendHandler((seq, action) => postBattle(battleId, "battle:action", { seq, action }))
+            setPvpSendHandler((seq, action, checksum) => postBattle(battleId, "battle:action", { seq, action, checksum }))
         }
 
         const onHello = (d: BattleMsg) => {
             if (!d.userId || d.userId === myUserId) return
+            // ⚠️ #10 : versions différentes → on REFUSE le combat (désync garantie sinon).
+            if (d.data?.version && d.data.version !== MP_VERSION) {
+                mpLog("abort", "version mismatch", { mien: MP_VERSION, opp: d.data.version })
+                onAbort?.("Versions du jeu différentes. Rechargez la page des deux côtés, puis réessayez.")
+                return
+            }
             if (d.data?.team) oppTeamRef.current = d.data.team
             if (role === "B" && typeof d.data?.seed === "number") seedRef.current = d.data.seed
-            // Renvoie mon hello (au cas où l'adversaire s'est abonné après mon 1er envoi).
-            if (!startedRef.current) {
-                postBattle(battleId, "battle:hello", { team: myTeam, seed: role === "A" ? seedRef.current ?? undefined : undefined })
-            }
+            mpLog("hello↙", { from: d.userId, hasTeam: !!d.data?.team, seed: seedRef.current })
+            if (!startedRef.current) sendHello() // echo (abonnement tardif éventuel)
             tryStart()
         }
         const onAction = (d: BattleMsg) => {
             if (!d.userId || d.userId === myUserId) return
-            if (typeof d.data?.seq === "number" && d.data.action) receivePvpAction(d.data.seq, d.data.action)
+            if (typeof d.data?.seq === "number" && d.data.action) {
+                receivePvpAction(d.data.seq, d.data.action, d.data.checksum)
+            }
         }
         const onForfeit = (d: BattleMsg) => {
             if (!d.userId || d.userId === myUserId) return
+            mpLog("forfeit↙", "adversaire a quitté")
             pvpForfeit(false) // l'adversaire a quitté → je gagne
         }
 
         channel.bind("battle:hello", onHello)
         channel.bind("battle:action", onAction)
         channel.bind("battle:forfeit", onForfeit)
-
-        // J'annonce mon équipe (+ seed si je suis A).
-        postBattle(battleId, "battle:hello", { team: myTeam, seed: role === "A" ? seedRef.current ?? undefined : undefined })
+        sendHello()
 
         return () => {
-            // Si je quitte alors que le combat est toujours en cours → abandon.
+            // Si je quitte alors que le combat est en cours → abandon implicite.
             const snap = getSnapshot()
-            if (snap.pvpCtx && snap.battle && snap.battle.phase !== "ended") {
+            if (snap.pvpCtx && snap.battle && snap.battle.phase !== "ended" && !snap.pvpCtx.desync) {
                 postBattle(battleId, "battle:forfeit")
                 pvpForfeit(true)
             }
@@ -125,5 +148,7 @@ export function useCasinoBattle(session: BattleStart | null, myUserId: string) {
             channel.unbind("battle:forfeit", onForfeit)
             client.unsubscribe(channelName)
         }
-    }, [session, myUserId])
+    }, [session, myUserId, onAbort])
+
+    return { forfeit }
 }

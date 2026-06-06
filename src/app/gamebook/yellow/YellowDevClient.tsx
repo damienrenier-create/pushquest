@@ -18,7 +18,7 @@ import BattleBoundary from "./battle/BattleBoundary"
 import { useCasinoPresence } from "@/lib/gamebook/yellow/multiplayer/useCasinoPresence"
 import { useCasinoChallenge, type BattleStart } from "@/lib/gamebook/yellow/multiplayer/useCasinoChallenge"
 import { useCasinoBattle } from "@/lib/gamebook/yellow/multiplayer/useCasinoBattle"
-import { usePvpCtx } from "@/lib/gamebook/yellow/store/battleStore"
+import { usePvpCtx, pvpForfeit } from "@/lib/gamebook/yellow/store/battleStore"
 import EvolutionScreen from "./battle/EvolutionScreen"
 import IntroCinematic from "./IntroCinematic"
 import LearnScreen from "./LearnScreen"
@@ -94,14 +94,33 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
         busy: !!battle || !!pvpSession,
         onStart: (s) => setPvpSession(s),
     })
-    useCasinoBattle(pvpSession, userId)
+    const { forfeit: pvpForfeitNow } = useCasinoBattle(pvpSession, userId, (reason) => {
+        setPvpSession(null)
+        setToast(reason)
+    })
+    const [confirmForfeit, setConfirmForfeit] = useState(false)
 
     // Teardown de la session PvP une fois le combat terminé (pvpCtx repassé à null).
     const wasPvpRef = useRef(false)
     useEffect(() => {
         if (pvpCtx) wasPvpRef.current = true
-        else if (wasPvpRef.current) { wasPvpRef.current = false; setPvpSession(null) }
+        else if (wasPvpRef.current) { wasPvpRef.current = false; setPvpSession(null); setConfirmForfeit(false) }
     }, [pvpCtx])
+
+    // #2 — Timeout de tour : si j'attends l'adversaire trop longtemps → il déclare forfait.
+    // "J'attends" = soit l'adversaire doit changer de Daemon, soit j'ai joué et pas lui.
+    const waitingOnOpp = !!pvpCtx && !!battle && battle.phase !== "ended" && !pvpCtx.desync && (
+        battle.forcedSwitch === "enemy"
+        || (pvpCtx.myAction != null && pvpCtx.oppAction == null && !battle.forcedSwitch)
+    )
+    useEffect(() => {
+        if (!waitingOnOpp) return
+        const t = setTimeout(() => {
+            setToast("L'adversaire n'a pas répondu — victoire par forfait.")
+            pvpForfeit(false) // l'adversaire n'a pas joué → IL forfait, je gagne
+        }, 35000)
+        return () => clearTimeout(t)
+    }, [waitingOnOpp])
 
     // Joueur distant sur la tuile EN FACE (pour le défier d'un appui A).
     const facingRemote = () => {
@@ -584,6 +603,38 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                 </div>
             )}
 
+            {/* PvP #6 — en attente de l'adversaire */}
+            {waitingOnOpp && (
+                <div style={pvpWaitStyle}>⏳ En attente de l'adversaire…</div>
+            )}
+
+            {/* PvP #1 — désynchronisation détectée */}
+            {pvpCtx?.desync && (
+                <div style={menuOverlayStyle}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>⚠️ DÉSYNCHRONISATION</div>
+                        <div style={{ fontSize: 12, lineHeight: 1.5, margin: "4px 0 10px" }}>
+                            Le combat n'est plus synchronisé entre les deux joueurs. Recharge la page pour repartir proprement.
+                        </div>
+                        <button style={menuBtnStyle} onClick={() => pvpForfeitNow()}>Quitter le combat</button>
+                    </div>
+                </div>
+            )}
+
+            {/* PvP #7/#11 — abandon explicite + avertissement reps */}
+            {pvpCtx && battle && battle.phase !== "ended" && !pvpCtx.desync && (
+                confirmForfeit ? (
+                    <div style={pvpForfeitBoxStyle}>
+                        <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Abandonner ?</div>
+                        <div style={{ fontSize: 10, opacity: 0.8, marginBottom: 6 }}>Les reps déjà dépensés ce combat sont perdus.</div>
+                        <button style={miniBtn} onClick={() => pvpForfeitNow()}>Oui, abandonner</button>
+                        <button style={miniBtn} onClick={() => setConfirmForfeit(false)}>Non</button>
+                    </div>
+                ) : (
+                    <button style={pvpForfeitBtnStyle} onClick={() => setConfirmForfeit(true)}>🏳️ Abandonner</button>
+                )
+            )}
+
             {/* Fiche / résumé d'un Daemon (équipe ou PC) + actions */}
             {selected && (() => {
                 // Lit la version LIVE depuis le store (à jour après renommage/soin).
@@ -731,6 +782,24 @@ const battleWrapStyle: React.CSSProperties = {
     padding: "14px 12px", boxSizing: "border-box",
     maxHeight: "100dvh", overflowY: "auto",
     paddingBottom: `calc(${BATTLE_CONTROLS_HEIGHT}px + env(safe-area-inset-bottom, 0px) + 16px)`,
+}
+
+// PvP — bandeau d'attente + bouton/boîte d'abandon (fixés, au-dessus du combat).
+const pvpWaitStyle: React.CSSProperties = {
+    position: "fixed", top: 70, left: "50%", transform: "translateX(-50%)", zIndex: 70,
+    background: "#1c1408", color: "#f5d020", border: "2px solid #f5d020", borderRadius: 8,
+    padding: "8px 14px", fontFamily: "'Courier New', monospace", fontSize: 13, fontWeight: 700,
+}
+const pvpForfeitBtnStyle: React.CSSProperties = {
+    position: "fixed", top: 70, left: 10, zIndex: 70,
+    background: "#5a0f1c", color: "#fff", border: "2px solid #1c1408", borderRadius: 8,
+    padding: "6px 10px", fontFamily: "'Courier New', monospace", fontSize: 11, fontWeight: 700, cursor: "pointer",
+}
+const pvpForfeitBoxStyle: React.CSSProperties = {
+    position: "fixed", top: 70, left: 10, zIndex: 70,
+    background: "#f8f8e8", color: "#1c1408", border: "3px solid #1c1408", borderRadius: 8,
+    padding: 10, fontFamily: "'Courier New', monospace", maxWidth: 220,
+    display: "flex", flexDirection: "column", gap: 6,
 }
 
 const menuOverlayStyle: React.CSSProperties = {
