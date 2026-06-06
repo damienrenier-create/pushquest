@@ -242,7 +242,7 @@ const TOWN_BUILDINGS: YellowBuilding[] = [
         x: 33, y: 6, w: 6, h: 4,        // footprint cols 33..38, rows 6..9
         doorX: 3, doorY: 4,             // porte abs (36, 10) — devant le bâtiment
         targetMapId: "yellow_arena",
-        targetSpawnX: 20, targetSpawnY: 21,
+        targetSpawnX: 7, targetSpawnY: 8,
         displayName: "GYM",
         kind: "arena",
     },
@@ -350,30 +350,20 @@ function buildInfirmaryInterior(): TileType[][] {
     return m
 }
 
-// Arène : grille 44×24 calée sur arena_full.png (2816×1536, tile 64px).
-// Structure : 5 salles (Feu gauche, Plante haut-centre, Trône haut-droite,
-// Eau droite-bas, Réception bas-centre) reliées par des couloirs en croix.
-// Tout est mur par défaut ; on creuse les salles + couloirs (walkable).
-function buildArenaInterior(): TileType[][] {
-    const W = 44, H = 24
-    const m: TileType[][] = Array.from({ length: H }, () => Array.from({ length: W }, () => "wallV" as TileType))
-    const carve = (x0: number, y0: number, x1: number, y1: number) => {
-        for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
-            if (y >= 0 && y < H && x >= 0 && x < W) m[y][x] = "arenaFloor"
-        }
-    }
-    // Salles
-    carve(2, 3, 12, 21)     // 🔥 Salle Feu (gauche)
-    carve(12, 2, 20, 7)     // 🌿 Salle Plante (haut-centre)
-    carve(28, 2, 42, 7)     // 👑 Salle du Trône (haut-droite)
-    carve(28, 11, 42, 21)   // 💧 Salle Eau (droite-bas)
-    carve(16, 15, 24, 22)   // 🏛️ Réception (bas-centre, entrée)
-    // Couloirs (relient toutes les salles au hub central)
-    carve(19, 7, 22, 17)    // vertical central : gate/Plante ↔ hub ↔ Réception
-    carve(11, 10, 31, 14)   // horizontal hub : Feu ↔ centre ↔ Eau/Trône
-    carve(28, 7, 31, 11)    // lien Trône ↔ hub
-    // Porte de sortie (sud de la réception). Spawn d'entrée juste au-dessus (20,21).
-    m[22][20] = "doorMat"
+// Arène Plante "Bosquet Sacré" : 15×10 calée sur arena_plante.png (480×320, tile 32px).
+// Plein écran (= viewport, pas de scroll). Bords bloquants, gros arbre central
+// que l'on contourne par les côtés, entrée en bas-centre, estrade du Druide en
+// haut-centre. PNJ : 2 gardes à gauche, 2 à droite, le Druide au centre-haut.
+function buildArenaPlante(): TileType[][] {
+    const W = 15, H = 10
+    const m: TileType[][] = Array.from({ length: H }, () => Array.from({ length: W }, () => "grass" as TileType))
+    // Bords bloquants
+    for (let x = 0; x < W; x++) { m[0][x] = "tree"; m[H - 1][x] = "tree" }
+    for (let y = 0; y < H; y++) { m[y][0] = "tree"; m[y][W - 1] = "tree" }
+    // Massif d'arbre central (rows 4-7 × cols 5-9) → on passe par les couloirs latéraux
+    for (let y = 4; y <= 7; y++) for (let x = 5; x <= 9; x++) m[y][x] = "tree"
+    // Entrée / sortie bas-centre (ouverture dans la bordure)
+    m[H - 1][7] = "grass"
     return m
 }
 
@@ -697,15 +687,15 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
     },
     yellow_arena: {
         id: "yellow_arena",
-        name: "ARÈNE",
-        tiles: buildArenaInterior(),
-        width: 44,
-        height: 24,
-        exits: [returnExit("yellow_arena", 20, 22)],
-        backgroundImage: "/yellow/sprites/arena_full.png",
-        backgroundImageWidth: 2816,
-        backgroundImageHeight: 1536,
-        backgroundImageTileSize: 64,
+        name: "BOSQUET SACRÉ",
+        tiles: buildArenaPlante(),
+        width: 15,
+        height: 10,
+        exits: [returnExit("yellow_arena", 7, 9)],
+        backgroundImage: "/yellow/sprites/arena_plante.png",
+        backgroundImageWidth: 480,
+        backgroundImageHeight: 320,
+        backgroundImageTileSize: 32,
     },
     yellow_route_nord: {
         id: "yellow_route_nord",

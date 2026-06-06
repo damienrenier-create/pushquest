@@ -30,12 +30,13 @@ describe("intégrité des données dresseurs", () => {
         }
     })
 
-    it("arène : 3 chefs avec badges distincts (feu/plante/eau) + 1 champion gaté", () => {
-        const badges = TRAINERS.filter((t) => t.badge).map((t) => t.badge)
-        expect(new Set(badges)).toEqual(new Set(["feu", "plante", "eau"]))
-        const champions = TRAINERS.filter((t) => t.requiresAllBadges)
-        expect(champions.length).toBe(1)
-        expect(champions[0].badge).toBeUndefined() // le champion ne donne pas de badge
+    it("arène plante (Bosquet Sacré) : 5 dresseurs, seul le Druide donne le badge plante", () => {
+        const arena = trainersOnMap("yellow_arena")
+        expect(arena.length).toBe(5) // 4 gardes + 1 boss
+        const badged = arena.filter((t) => t.badge)
+        expect(badged.length).toBe(1)
+        expect(badged[0].badge).toBe("plante")
+        expect(badged[0].id).toBe("y_arena_druide")
     })
 
     it("chaque Daemon d'un dresseur se fabrique avec des PV pleins et des attaques", () => {

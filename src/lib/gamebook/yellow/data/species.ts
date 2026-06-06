@@ -807,6 +807,88 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "Sage-champignon millénaire couronné de mycélium luminescent.",
         sprite: "/yellow/sprites/dex/mycedruide.png",
     },
+
+    // ============================================================
+    // DONJON — espèces INÉDITES (boss-only pour l'instant ; Panthéon sera
+    // offert au joueur par un boss plus tard). Famille tamanoir + panthères.
+    // ============================================================
+
+    // --- 🐜 Tamanoir végétal (Plante, archétype drain-tank spécial) ---
+    tamanpousse: {
+        id: "tamanpousse", dexNo: 64, name: "Tamanpousse", types: ["PLANTE"],
+        baseStats: { hp: 55, atk: 40, def: 52, spe: 40, spc: 58 },
+        learnset: [
+            { level: 1, moveId: "charge" },
+            { level: 5, moveId: "fouet_lianes" },
+            { level: 9, moveId: "vampigraine" },
+            { level: 14, moveId: "mega_sangsue" },
+            { level: 20, moveId: "spores_dodo" },
+        ],
+        evolution: { toId: "fourmilierre", method: { kind: "LEVEL", level: 16 } },
+        catchRate: 45, baseExp: 64, rarity: "RARE", growthRate: "medium_fast", role: "Plante — bébé draineur",
+        description: "Bébé tamanoir feuillu qui aspire la sève des fourmilières.",
+        sprite: "/yellow/sprites/dex/tamanpousse.png",
+    },
+    fourmilierre: {
+        id: "fourmilierre", dexNo: 65, name: "Fourmilierre", types: ["PLANTE"],
+        baseStats: { hp: 78, atk: 52, def: 70, spe: 46, spc: 80 },
+        learnset: [
+            { level: 1, moveId: "fouet_lianes" },
+            { level: 1, moveId: "vampigraine" },
+            { level: 1, moveId: "mega_sangsue" },
+            { level: 22, moveId: "morsure" },
+            { level: 24, moveId: "spores_dodo" },
+            { level: 30, moveId: "tranche_feuille" },
+        ],
+        evolution: { toId: "gloutanoir", method: { kind: "LEVEL", level: 34 } },
+        catchRate: 45, baseExp: 142, rarity: "RARE", growthRate: "medium_fast", role: "Plante — draineur",
+        description: "Tamanoir paré de lianes ; sa langue happe les nuisibles.",
+        sprite: "/yellow/sprites/dex/fourmilierre.png",
+    },
+    gloutanoir: {
+        id: "gloutanoir", dexNo: 66, name: "Gloutanoir", types: ["PLANTE"],
+        baseStats: { hp: 108, atk: 72, def: 95, spe: 50, spc: 110 },
+        learnset: [
+            { level: 1, moveId: "mega_sangsue" },
+            { level: 1, moveId: "vampigraine" },
+            { level: 1, moveId: "tranche_feuille" },
+            { level: 1, moveId: "morsure" },
+            { level: 38, moveId: "tempete_verte" },
+        ],
+        catchRate: 45, baseExp: 220, rarity: "RARE", growthRate: "medium_fast", role: "Plante — mur draineur",
+        description: "Tamanoir-titan à la crinière de fougères ; vide ses proies de leur vigueur.",
+        sprite: "/yellow/sprites/dex/gloutanoir.png",
+    },
+
+    // --- 🐆 Panthères élémentaires (base Normal + 6 formes ; v1 = boss-only) ---
+    pantheon: {
+        id: "pantheon", dexNo: 67, name: "Panthéon", types: ["NORMAL"],
+        baseStats: { hp: 58, atk: 62, def: 52, spe: 70, spc: 55 },
+        learnset: [
+            { level: 1, moveId: "charge" },
+            { level: 1, moveId: "vive_attaque" },
+            { level: 12, moveId: "coup_d_boule" },
+            { level: 18, moveId: "hurlement" },
+            { level: 24, moveId: "elan" },
+        ],
+        catchRate: 45, baseExp: 70, rarity: "RARE", growthRate: "medium_fast", role: "Normal — souche panthère (don futur)",
+        description: "Panthéreau sombre et vif, réceptif aux énergies élémentaires.",
+        sprite: "/yellow/sprites/dex/pantheon.png",
+    },
+    florapanthe: {
+        id: "florapanthe", dexNo: 68, name: "Florapanthe", types: ["PLANTE"],
+        baseStats: { hp: 90, atk: 80, def: 82, spe: 90, spc: 98 },
+        learnset: [
+            { level: 1, moveId: "vive_attaque" },
+            { level: 1, moveId: "fouet_lianes" },
+            { level: 1, moveId: "tranche_feuille" },
+            { level: 20, moveId: "mega_sangsue" },
+            { level: 30, moveId: "tempete_verte" },
+        ],
+        catchRate: 45, baseExp: 190, rarity: "RARE", growthRate: "medium_fast", role: "Plante — panthère (boss)",
+        description: "Panthère sylvestre aux lianes vives ; bondit comme le lierre s'élance.",
+        sprite: "/yellow/sprites/dex/florapanthe.png",
+    },
 }
 
 export function getSpecies(id: string): SpeciesData | null {

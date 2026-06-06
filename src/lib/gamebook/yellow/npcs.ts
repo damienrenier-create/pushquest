@@ -143,23 +143,7 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         ],
     },
 
-    // === Intérieur ARÈNE ===
-    {
-        id: "y_arbitre",
-        name: "ARBITRE",
-        mapId: "yellow_arena",
-        kind: "static",
-        interaction: "interactive",
-        sprite: { emoji: "🥋", color: "#604030" },
-        initialX: 21,
-        initialY: 18,
-        dialoguesAfter: [
-            "*L'arbitre t'accueille à l'entrée de l'arène.*",
-            "Trois salles, trois chefs : Feu, Plante, Eau.",
-            "Bats-les pour gagner leurs badges…",
-            "…puis défie le Champion sur son trône tout en haut !",
-        ],
-    },
+    // (Arène : plus d'arbitre — c'est le Bosquet Sacré, le Druide est le boss.)
 
     // === PANNEAUX DE CONSEILS (map Nord) ===
     ...PARK_SIGN_NPCS,
