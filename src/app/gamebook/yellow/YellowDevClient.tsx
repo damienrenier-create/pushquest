@@ -19,7 +19,7 @@ import LearnScreen from "./LearnScreen"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout, dispatchBattleInput } from "@/lib/gamebook/yellow/store/battleStore"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
-import { getPlayer, setTeam, usePlayer, addItem, spendReps, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, addItem, spendReps, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam } from "@/lib/gamebook/yellow/store/playerStore"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
@@ -62,6 +62,7 @@ export default function YellowDevClient() {
     const [ctShop, setCtShop] = useState(false)
     const [ctPick, setCtPick] = useState<string | null>(null)
     const [confirmReset, setConfirmReset] = useState(false)
+    const [swapPick, setSwapPick] = useState<string | null>(null) // uid du Daemon "à déplacer"
 
     // Au mount : charge l'état du joueur depuis le serveur (DB Neon).
     // Si le joueur n'a jamais joué, on garde le state par défaut (déjà set
@@ -187,7 +188,7 @@ export default function YellowDevClient() {
 
             {/* Overlay Équipe */}
             {!battle && menu === "team" && (
-                <div style={menuOverlayStyle} onClick={() => setMenu("pause")}>
+                <div style={menuOverlayStyle} onClick={() => { setMenu("pause"); setSwapPick(null) }}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                         <div style={menuTitleStyle}>ÉQUIPE</div>
                         {player.team.length === 0 && <div style={{ fontSize: 12, opacity: 0.6 }}>Aucun Daemon.</div>}
@@ -195,9 +196,21 @@ export default function YellowDevClient() {
                             const sp = getSpecies(m.speciesId)
                             const max = maxHpOf(m)
                             const pct = Math.max(0, Math.min(100, (m.currentHp / max) * 100))
+                            const picked = swapPick === m.uid
                             return (
-                                <div key={m.uid} style={{ ...teamRowStyle, cursor: "pointer" }} onClick={() => setSelected(m)} title="Voir la fiche">
-                                    <span style={{ fontWeight: 700, flex: 1 }}>{displayName(m)}</span>
+                                <div key={m.uid} style={{ ...teamRowStyle, alignItems: "center", outline: picked ? "2px solid #e0b020" : "none", borderRadius: picked ? 4 : 0 }}>
+                                    {/* Poignée de réordonnancement : 1er tap = "à déplacer", 2e tap (autre) = échange. */}
+                                    <button
+                                        title={picked ? "Annuler le déplacement" : "Déplacer ce Daemon"}
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            if (!swapPick) { setSwapPick(m.uid); return }
+                                            if (swapPick === m.uid) { setSwapPick(null); return }
+                                            if (swapTeam(swapPick, m.uid)) { persistYellowSave(); setSwapPick(null) }
+                                        }}
+                                        style={{ background: picked ? "#e0b020" : "transparent", border: "1px solid #b8941c", color: picked ? "#3a2a00" : "#b8941c", borderRadius: 4, cursor: "pointer", fontSize: 13, padding: "2px 6px", marginRight: 6, lineHeight: 1 }}
+                                    >⇅</button>
+                                    <span onClick={() => setSelected(m)} title="Voir la fiche" style={{ fontWeight: 700, flex: 1, cursor: "pointer" }}>{displayName(m)}</span>
                                     <span style={{ opacity: 0.6, fontSize: 10 }}>{sp?.types.join("/")}</span>
                                     <span style={{ width: 38, textAlign: "right" }}>N.{m.level}</span>
                                     <span style={{ width: 78, textAlign: "right", color: pct > 50 ? "#2a8a2a" : pct > 20 ? "#b88010" : "#c83030" }}>
@@ -206,8 +219,11 @@ export default function YellowDevClient() {
                                 </div>
                             )
                         })}
+                        <div style={{ fontSize: 10, opacity: 0.6, marginTop: 4 }}>
+                            {swapPick ? "Touche un autre ⇅ pour échanger les places." : "⇅ pour déplacer · nom pour la fiche."}
+                        </div>
                         {player.pc.length > 0 && <div style={{ fontSize: 10, opacity: 0.5, marginTop: 6 }}>PC : {player.pc.length} Daemon(s) en réserve</div>}
-                        <button style={menuBtnDimStyle} onClick={() => setMenu("pause")}>← RETOUR</button>
+                        <button style={menuBtnDimStyle} onClick={() => { setMenu("pause"); setSwapPick(null) }}>← RETOUR</button>
                     </div>
                 </div>
             )}

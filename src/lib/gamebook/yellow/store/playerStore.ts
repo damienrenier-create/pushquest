@@ -266,6 +266,19 @@ export function withdrawFromPc(uid: string): { ok: boolean; reason?: "introuvabl
     return { ok: true }
 }
 
+/** Échange la position de deux Daemons de l'équipe (réordonnancement manuel). */
+export function swapTeam(uidA: string, uidB: string): boolean {
+    if (uidA === uidB) return false
+    const i = st.team.findIndex((m) => m.uid === uidA)
+    const j = st.team.findIndex((m) => m.uid === uidB)
+    if (i < 0 || j < 0) return false
+    const team = [...st.team]
+    ;[team[i], team[j]] = [team[j], team[i]]
+    st = { ...st, team }
+    emit()
+    return true
+}
+
 /** Renomme un Daemon (équipe ou PC). Vide → réinitialise au nom d'espèce. Max 12 car. */
 export function renameDaemon(uid: string, nickname: string) {
     const nn = nickname.trim().slice(0, 12)
