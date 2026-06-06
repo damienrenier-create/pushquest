@@ -33,12 +33,14 @@ export interface YellowSave {
     sbireDefeatsToday: number
     /** Nb total de victoires sur le sbire (cumulatif → cycle des explications). */
     sbireWinsTotal: number
+    /** Réputation PvP : matchs + usages (Daemon fétiche / attaque favorite). */
+    pvpStats: { wins: number; losses: number; forfeits: number; daemonUse: Record<string, number>; moveUse: Record<string, number> }
 }
 
 export const SAVE_VERSION = 1
 
 export function emptySave(): YellowSave {
-    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0 }
+    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} } }
 }
 
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -99,6 +101,23 @@ function strArr(raw: unknown): string[] {
     return Array.isArray(raw) ? (raw as unknown[]).filter((x): x is string => typeof x === "string") : []
 }
 
+/** Record<string,number> défensif (compteurs d'usage). */
+function numRec(raw: unknown): Record<string, number> {
+    const out: Record<string, number> = {}
+    if (raw && typeof raw === "object") {
+        for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+            if (typeof v === "number" && v > 0) out[k] = Math.floor(v)
+        }
+    }
+    return out
+}
+
+function parsePvpStats(raw: unknown): YellowSave["pvpStats"] {
+    const o = (raw ?? {}) as Record<string, unknown>
+    const n = (v: unknown) => (typeof v === "number" ? Math.max(0, Math.floor(v)) : 0)
+    return { wins: n(o.wins), losses: n(o.losses), forfeits: n(o.forfeits), daemonUse: numRec(o.daemonUse), moveUse: numRec(o.moveUse) }
+}
+
 /** Parse défensif d'une sauvegarde complète. */
 export function parseSave(raw: unknown): YellowSave {
     if (!raw || typeof raw !== "object") return emptySave()
@@ -128,6 +147,7 @@ export function parseSave(raw: unknown): YellowSave {
         introSeen: o.introSeen === true,
         sbireDefeatsToday: typeof o.sbireDefeatsToday === "number" ? Math.max(0, Math.floor(o.sbireDefeatsToday)) : 0,
         sbireWinsTotal: typeof o.sbireWinsTotal === "number" ? Math.max(0, Math.floor(o.sbireWinsTotal)) : 0,
+        pvpStats: parsePvpStats(o.pvpStats),
     }
 }
 

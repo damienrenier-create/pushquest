@@ -51,9 +51,27 @@ interface PlayerState {
     sbireDefeatsToday: number
     /** Victoires totales sur le sbire (cumulatif → cycle des explications app). */
     sbireWinsTotal: number
+    /** Réputation PvP (matchs + usages pour fétiche/favorite). */
+    pvpStats: PvpStats
 }
 
-let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0 }
+/** Statistiques PvP du joueur (réputation). */
+export interface PvpStats {
+    wins: number
+    losses: number
+    /** Matchs que J'AI abandonnés (comptés aussi dans `losses`). */
+    forfeits: number
+    /** speciesId → nb de fois envoyé/utilisé en PvP (→ "Daemon fétiche"). */
+    daemonUse: Record<string, number>
+    /** moveId → nb d'utilisations en PvP (→ "attaque favorite"). */
+    moveUse: Record<string, number>
+}
+
+export function emptyPvpStats(): PvpStats {
+    return { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }
+}
+
+let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats() }
 const listeners = new Set<() => void>()
 
 function emit() { for (const l of listeners) l() }
@@ -74,6 +92,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         introSeen: p.introSeen ?? st.introSeen ?? false,
         sbireDefeatsToday: p.sbireDefeatsToday ?? st.sbireDefeatsToday ?? 0,
         sbireWinsTotal: p.sbireWinsTotal ?? st.sbireWinsTotal ?? 0,
+        pvpStats: p.pvpStats ?? st.pvpStats ?? emptyPvpStats(),
     }
     emit()
 }
@@ -87,7 +106,7 @@ export function markIntroSeen() {
 
 /** DEV : remet la progression jaune à zéro pour rejouer l'intro (équipe vidée, introSeen=false). */
 export function resetForIntro() {
-    st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0 }
+    st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats() }
     emit()
 }
 
@@ -204,6 +223,38 @@ export function recordSbireWin(): number {
     emit()
     return winsTotal
 }
+
+// === RÉPUTATION PvP ===
+
+/** Enregistre l'issue d'un match PvP. "forfeit" = j'ai abandonné (compté en défaite aussi). */
+export function recordPvpResult(result: "win" | "loss" | "forfeit") {
+    const s = st.pvpStats
+    const next: PvpStats = { ...s, daemonUse: { ...s.daemonUse }, moveUse: { ...s.moveUse } }
+    if (result === "win") next.wins += 1
+    else if (result === "loss") next.losses += 1
+    else { next.forfeits += 1; next.losses += 1 }
+    st = { ...st, pvpStats: next }
+    emit()
+}
+
+/** Comptabilise l'usage d'un Daemon (+ d'une attaque) en PvP → fétiche / favorite. */
+export function recordPvpUse(speciesId: string, moveId?: string) {
+    const s = st.pvpStats
+    const daemonUse = { ...s.daemonUse, [speciesId]: (s.daemonUse[speciesId] ?? 0) + 1 }
+    const moveUse = moveId ? { ...s.moveUse, [moveId]: (s.moveUse[moveId] ?? 0) + 1 } : s.moveUse
+    st = { ...st, pvpStats: { ...s, daemonUse, moveUse } }
+    emit()
+}
+
+function topKey(rec: Record<string, number>): string | null {
+    let best: string | null = null, max = -1
+    for (const [k, v] of Object.entries(rec)) if (v > max) { max = v; best = k }
+    return best
+}
+/** Daemon fétiche (le plus envoyé en PvP), ou null. */
+export function favoriteDaemon(): string | null { return topKey(st.pvpStats.daemonUse) }
+/** Attaque favorite (la plus utilisée en PvP), ou null. */
+export function favoriteMove(): string | null { return topKey(st.pvpStats.moveUse) }
 
 /** Prix actuel d'un Super Pasta : (60 + bonus journalier) × 1.5^(achats du jour). */
 export function superPastaPrice(): number {

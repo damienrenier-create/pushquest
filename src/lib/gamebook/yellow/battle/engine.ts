@@ -749,12 +749,12 @@ function awardExp(state: BattleState, events: BattleEvent[]) {
  * Pas de partage d'équipe (state.participated est joueur-only) → uniquement l'actif
  * qui a porté le coup. Symétrique : marche pour les deux camps.
  */
-function awardExpPvp(state: BattleState, winnerSide: SideId, events: BattleEvent[]) {
+function awardExpPvp(state: BattleState, winnerSide: SideId, events: BattleEvent[], multiplier = 1) {
     const winner = active(state[winnerSide])
     if (winner.currentHp <= 0) return // double KO → pas d'XP
     const fainted = active(state[other(winnerSide)])
     const faintedSp = speciesOf(fainted)
-    const gain = xpForDefeat(faintedSp.baseExp, fainted.level, false)
+    const gain = Math.max(1, Math.floor(xpForDefeat(faintedSp.baseExp, fainted.level, false) * multiplier))
     gainEv(winner, signatureStat(faintedSp), EV_YIELD_PER_WIN)
     const beforeMax = maxHpOf(winner)
     const res = applyExp(winner, gain)
@@ -773,6 +773,26 @@ function awardExpPvp(state: BattleState, winnerSide: SideId, events: BattleEvent
             events.push({ kind: "message", text: `${displayName(winner)} veut apprendre ${getMove(mid)?.name ?? mid}… mais connaît déjà 4 capacités ! (choix à la fin du combat)` })
         }
     }
+}
+
+/**
+ * Issue d'un combat PvP par ABANDON adverse : le camp restant gagne, et reçoit
+ * de l'XP (multiplicateur, ex. ×2 en récompense). Renvoie un état "ended" prêt
+ * à afficher (avec les messages d'XP/niveau). Pur.
+ */
+export function applyForfeitWin(
+    prev: BattleState,
+    winnerSide: SideId,
+    opts: { multiplier?: number; headline?: string } = {},
+): BattleState {
+    const state = structuredCloneState(prev)
+    const events: BattleEvent[] = []
+    if (opts.headline) events.push({ kind: "message", text: opts.headline })
+    awardExpPvp(state, winnerSide, events, opts.multiplier ?? 1)
+    state.phase = "ended"
+    state.outcome = winnerSide === "player" ? "win" : "lose"
+    state.events = events
+    return state
 }
 
 /** Tentative de capture (combat sauvage). Met outcome = "caught" si réussi. */

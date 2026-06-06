@@ -26,7 +26,7 @@ import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, dispatchBattleInput, endBattle, getSbireRewardMsg } from "@/lib/gamebook/yellow/store/battleStore"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
-import { getPlayer, setTeam, usePlayer, addItem, spendReps, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, addItem, spendReps, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove } from "@/lib/gamebook/yellow/store/playerStore"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
@@ -60,7 +60,7 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
     const sbireWin = useSbireWin()
     const router = useRouter()
     const player = usePlayer()
-    const [menu, setMenu] = useState<"none" | "pause" | "team" | "pc" | "bag">("none")
+    const [menu, setMenu] = useState<"none" | "pause" | "team" | "pc" | "bag" | "reput">("none")
     const [selected, setSelected] = useState<MonInstance | null>(null)
     const [showIntro, setShowIntro] = useState(false)
     const [pastaPick, setPastaPick] = useState(false)
@@ -269,6 +269,7 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                         <button style={menuBtnStyle} onClick={() => setMenu("pc")}>📦 PC (BOÎTES)</button>
                         <button style={menuBtnStyle} onClick={() => setMenu("bag")}>🎒 SAC</button>
                         <button style={menuBtnStyle} onClick={() => router.push("/gamebook/yellow/pokedex")}>📷 POKÉDEX</button>
+                        <button style={menuBtnStyle} onClick={() => setMenu("reput")}>🏆 RÉPUTATION</button>
                         {confirmReset ? (
                             <>
                                 <div style={{ fontSize: 11, color: "#c83030", fontWeight: 700, textAlign: "center" }}>
@@ -427,6 +428,38 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                                 <button style={menuBtnDimStyle} onClick={() => setBagItem(null)}>← RETOUR</button>
                             </>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* Réputation PvP (matchs + Daemon fétiche + attaque favorite) */}
+            {!battle && menu === "reput" && (
+                <div style={menuOverlayStyle} onClick={() => setMenu("pause")}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>🏆 RÉPUTATION PvP</div>
+                        {(() => {
+                            const s = player.pvpStats
+                            const fav = favoriteDaemon()
+                            const favMv = favoriteMove()
+                            const total = s.wins + s.losses
+                            const winrate = total > 0 ? Math.round((s.wins / total) * 100) : 0
+                            const row = (label: string, val: React.ReactNode) => (
+                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}><span>{label}</span><b>{val}</b></div>
+                            )
+                            return (
+                                <div style={{ display: "flex", flexDirection: "column", gap: 6, margin: "4px 0 8px" }}>
+                                    {row("Victoires", s.wins)}
+                                    {row("Défaites", s.losses)}
+                                    {row("Abandons", s.forfeits)}
+                                    {row("Ratio de victoire", `${winrate}%`)}
+                                    <div style={{ height: 1, background: "#00000022", margin: "2px 0" }} />
+                                    {row("Daemon fétiche", fav ? (getSpecies(fav)?.name ?? fav) : "—")}
+                                    {row("Attaque favorite", favMv ? (getMove(favMv)?.name ?? favMv) : "—")}
+                                    {total === 0 && <div style={{ fontSize: 11, opacity: 0.6, marginTop: 4 }}>Aucun combat PvP pour l'instant. Défie un joueur au casino !</div>}
+                                </div>
+                            )
+                        })()}
+                        <button style={menuBtnDimStyle} onClick={() => setMenu("pause")}>← RETOUR</button>
                     </div>
                 </div>
             )}

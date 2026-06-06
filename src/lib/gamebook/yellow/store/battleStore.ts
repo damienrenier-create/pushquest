@@ -10,6 +10,7 @@ import {
     createBattle,
     resolveTurn,
     resolveTurnPvp,
+    applyForfeitWin,
     type BattleState,
     type BattleEvent,
     type PlayerAction,
@@ -18,7 +19,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance } from "../battle/types"
 import { markSeen, markCaught } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse } from "./playerStore"
 import { SBIRE_REWARD_REPS, SBIRE_REWARD_BALL_ID } from "../data/sbire"
 import { getTrainer } from "../data/trainers"
 import { SBIRE_TRAINER_ID } from "../data/sbire"
@@ -388,6 +389,13 @@ function submitPvpAction(action: PlayerAction) {
         }
     }
 
+    // Stats PvP : Daemon fétiche + attaque favorite (sur les attaques).
+    if (action.kind === "move") {
+        const t = battle[mySide(ctx)]
+        const meMon = t.team[t.activeIndex]
+        if (meMon) recordPvpUse(meMon.speciesId, action.moveIndex >= 0 ? meMon.moves[action.moveIndex]?.moveId : undefined)
+    }
+
     storeState = { ...storeState, pvpCtx: { ...ctx, myAction: action } }
     // Le checksum de l'état COURANT voyage avec l'action → l'adversaire détecte une désync.
     const checksum = battleChecksum(battle)
@@ -453,6 +461,7 @@ function finishPvpBattle(b: BattleState) {
     if (!ctx) return
     const side = mySide(ctx)
     const won = ctx.role === "A" ? b.outcome === "win" : b.outcome === "lose"
+    recordPvpResult(won ? "win" : "loss") // réputation
 
     setTeam(b[side].team.map(toMonInstance))
     const isLose = !won
@@ -476,16 +485,16 @@ export function pvpForfeit(byMe: boolean) {
     if (byMe) {
         // Je quitte : équipe mutée NON enregistrée (état d'avant-combat gardé).
         // Les reps déjà dépensés restent dépensés (pas de remboursement v1).
+        recordPvpResult("forfeit") // réputation : compté comme abandon (+ défaite)
         setStore({ battle: null, pvpCtx: null })
+        persistYellowSave()
         return
     }
-    // L'adversaire a abandonné → je gagne, je garde mon équipe (dégâts réels).
+    // L'adversaire a abandonné → je gagne, je GARDE mon équipe (dégâts réels) et je
+    // touche de l'XP DOUBLÉE en récompense (cf. applyForfeitWin multiplier 2).
     const side = mySide(ctx)
-    const ended: BattleState = {
-        ...battle, phase: "ended",
-        outcome: side === "player" ? "win" : "lose",
-        events: [{ kind: "message", text: `${ctx.oppNickname} a abandonné le combat !` }],
-    }
+    const ended = applyForfeitWin(battle, side, { multiplier: 2, headline: `${ctx.oppNickname} a abandonné le combat !` })
+    recordPvpResult("win") // réputation
     setTeam(ended[side].team.map(toMonInstance))
     setStore({ battle: ended, pvpCtx: { ...ctx, won: true } })
     persistYellowSave()
