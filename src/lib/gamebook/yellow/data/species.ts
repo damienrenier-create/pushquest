@@ -882,6 +882,7 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 1, moveId: "vive_attaque" },
             { level: 1, moveId: "fouet_lianes" },
             { level: 1, moveId: "tranche_feuille" },
+            { level: 1, moveId: "etreinte_sylvestre" }, // signature du Druide
             { level: 20, moveId: "mega_sangsue" },
             { level: 30, moveId: "tempete_verte" },
         ],

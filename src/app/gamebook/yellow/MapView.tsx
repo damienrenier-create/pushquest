@@ -544,12 +544,8 @@ const NPC_SPRITES: Record<string, { url: string; frames: number } | null> = {
     // Sbire = portrait de la Nymphe Nouille (cinématique d'intro) au lieu de l'emoji 🍝.
     // Image unique (pas un spritesheet) → frames: 1, rendu en frame 0.
     y_sbire: { url: "/yellow/sprites/npc/noodle_nymph.png", frames: 1 },
-    // Arène Plante : le Druide (boss) + les 4 gardes (même sprite lance/bouclier-feuille).
-    y_arena_druide: { url: "/yellow/sprites/npc_druide.png", frames: 1 },
-    y_arena_g1: { url: "/yellow/sprites/npc_garde_plante.png", frames: 1 },
-    y_arena_g2: { url: "/yellow/sprites/npc_garde_plante.png", frames: 1 },
-    y_arena_g3: { url: "/yellow/sprites/npc_garde_plante.png", frames: 1 },
-    y_arena_g4: { url: "/yellow/sprites/npc_garde_plante.png", frames: 1 },
+    // (Arène Plante : les PNJ sont déjà DESSINÉS sur l'image de fond → pas de sprite
+    //  map ici, juste des hotspots invisibles. Leurs portraits servent en combat.)
 }
 
 function NpcSprite({

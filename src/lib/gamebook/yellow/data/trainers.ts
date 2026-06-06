@@ -36,6 +36,8 @@ export interface TrainerData {
     badge?: BadgeId
     /** Champion : ne peut être défié qu'avec les 3 badges. */
     requiresAllBadges?: boolean
+    /** Boss d'arène : ne peut être défié qu'après avoir battu ces dresseurs (les gardes). */
+    requiresTrainers?: string[]
 }
 
 export const TRAINERS: TrainerData[] = [
@@ -93,7 +95,7 @@ export const TRAINERS: TrainerData[] = [
     // les arènes suivantes (modèle "1 arène, PNJ qui changent par badge").
     {
         id: "y_arena_g1", name: "GARDE RONCE", title: "Garde du Bosquet",
-        sprite: { emoji: "🌿", color: "#3aa54a" },
+        sprite: { emoji: "", color: "#3aa54a" }, // invisible : le garde est déjà dessiné sur l'image d'arène
         mapId: "yellow_arena", x: 4, y: 3,
         team: [{ speciesId: "feuillichot", level: 7 }, { speciesId: "feuillichot", level: 9 }],
         reward: 60, aiLevel: "trainer",
@@ -102,7 +104,7 @@ export const TRAINERS: TrainerData[] = [
     },
     {
         id: "y_arena_g2", name: "GARDE LIERRE", title: "Garde du Bosquet",
-        sprite: { emoji: "🌿", color: "#3aa54a" },
+        sprite: { emoji: "", color: "#3aa54a" }, // invisible : le garde est déjà dessiné sur l'image d'arène
         mapId: "yellow_arena", x: 4, y: 6,
         team: [{ speciesId: "broussours", level: 8 }, { speciesId: "pampousse", level: 12 }],
         reward: 80, aiLevel: "trainer",
@@ -111,7 +113,7 @@ export const TRAINERS: TrainerData[] = [
     },
     {
         id: "y_arena_g3", name: "GARDE SÈVE", title: "Garde du Bosquet",
-        sprite: { emoji: "🌿", color: "#3aa54a" },
+        sprite: { emoji: "", color: "#3aa54a" }, // invisible : le garde est déjà dessiné sur l'image d'arène
         mapId: "yellow_arena", x: 10, y: 3,
         team: [{ speciesId: "tamanpousse", level: 10 }, { speciesId: "pantheon", level: 8 }],
         reward: 90, aiLevel: "trainer",
@@ -120,7 +122,7 @@ export const TRAINERS: TrainerData[] = [
     },
     {
         id: "y_arena_g4", name: "GARDE ÉCORCE", title: "Garde du Bosquet",
-        sprite: { emoji: "🌿", color: "#3aa54a" },
+        sprite: { emoji: "", color: "#3aa54a" }, // invisible : le garde est déjà dessiné sur l'image d'arène
         mapId: "yellow_arena", x: 10, y: 6,
         team: [{ speciesId: "feliane", level: 16 }],
         reward: 110, aiLevel: "trainer",
@@ -129,11 +131,13 @@ export const TRAINERS: TrainerData[] = [
     },
     {
         id: "y_arena_druide", name: "DRUIDE SYLVAIN", title: "Doyen du Bosquet Sacré",
-        sprite: { emoji: "🌳", color: "#2c6e2c" },
+        sprite: { emoji: "", color: "#2c6e2c" }, // invisible : déjà dessiné sur l'image
         mapId: "yellow_arena", x: 7, y: 1,
+        // GATE : il faut avoir battu les 4 gardes (dans n'importe quel ordre).
+        requiresTrainers: ["y_arena_g1", "y_arena_g2", "y_arena_g3", "y_arena_g4"],
         team: [
             { speciesId: "broutame", level: 16 },
-            { speciesId: "florapanthe", level: 16 }, // ace inédit
+            { speciesId: "florapanthe", level: 16 }, // ace inédit (attaque signature)
         ],
         reward: 0, aiLevel: "trainer", badge: "plante",
         intro: [

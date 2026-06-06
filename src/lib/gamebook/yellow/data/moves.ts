@@ -64,6 +64,7 @@ export const MOVES: Record<string, MoveData> = {
     lame_eau: { id: "lame_eau", name: "Lame d'Eau", type: "EAU", power: 65, accuracy: 100, pp: 20, effect: { chance: 10, statChanges: [{ target: "target", stat: "spe", stages: -1 }] }, description: "Peut baisser la Vitesse." },
     tranche_feuille: { id: "tranche_feuille", name: "Tranche-Feuille", type: "PLANTE", power: 55, accuracy: 95, pp: 25, effect: { highCrit: true }, description: "Taux de critique élevé." },
     spores_dodo: { id: "spores_dodo", name: "Spores Dodo", type: "PLANTE", power: 0, accuracy: 75, pp: 15, effect: { inflictStatus: "SLEEP" }, description: "Endort la cible." },
+    etreinte_sylvestre: { id: "etreinte_sylvestre", name: "Étreinte Sylvestre", type: "PLANTE", power: 75, accuracy: 100, pp: 10, effect: { drainPct: 50 }, description: "Signature du Druide : des racines enserrent la cible et drainent sa vigueur (rend 50% des dégâts)." },
     fulgurance: { id: "fulgurance", name: "Fulgurance", type: "ELEC", power: 90, accuracy: 100, pp: 15, effect: { chance: 10, inflictStatus: "PARALYSIS" }, description: "Gros move Élec ; peut paralyser." },
     souffle_polaire: { id: "souffle_polaire", name: "Souffle Polaire", type: "GLACE", power: 90, accuracy: 100, pp: 10, effect: { chance: 10, inflictStatus: "FREEZE" }, description: "Gros move Glace ; peut geler." },
     balayage: { id: "balayage", name: "Balayage", type: "COMBAT", power: 60, accuracy: 100, pp: 20, effect: { chance: 10, flinch: true }, description: "Peut apeurer." },

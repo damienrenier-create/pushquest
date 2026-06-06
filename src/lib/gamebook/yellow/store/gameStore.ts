@@ -286,6 +286,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 })
                 return
             }
+            // Boss d'arène : verrouillé tant que les gardes (requiresTrainers) ne sont
+            // pas TOUS battus (ordre libre).
+            if (trainer.requiresTrainers && !isTrainerDefeated(trainer.id)) {
+                const restants = trainer.requiresTrainers.filter((id) => !isTrainerDefeated(id)).length
+                if (restants > 0) {
+                    set({
+                        dialogue: {
+                            npcId: npc.id, npcName: npc.name, lineIndex: 0,
+                            lines: [
+                                "*Le Doyen reste impassible, enraciné.*",
+                                `Bats d'abord mes ${restants} garde(s) restant(s). Alors seulement je t'affronterai.`,
+                            ],
+                        },
+                    })
+                    return
+                }
+            }
             if (isTrainerDefeated(trainer.id)) {
                 set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: trainer.defeat, lineIndex: 0 } })
             } else {

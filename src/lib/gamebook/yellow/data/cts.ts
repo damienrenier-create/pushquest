@@ -56,6 +56,9 @@ export const CTS: CtData[] = [
     { id: "ct14", label: "CT14", moveId: "seisme", price: 900, champion: true },
     { id: "ct15", label: "CT15", moveId: "draco_charge", price: 900, champion: true },
     { id: "ct16", label: "CT16", moveId: "vague_mentale", price: 800, champion: true },
+
+    // --- CT signature offerte par le Druide (débloquée par le Badge Feuille) ---
+    { id: "ct17", label: "CT17", moveId: "etreinte_sylvestre", price: 650, badge: "plante" },
 ]
 
 export function getCt(id: string): CtData | null {
