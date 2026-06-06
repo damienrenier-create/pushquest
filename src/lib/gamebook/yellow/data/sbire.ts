@@ -42,19 +42,169 @@ export function buildSbireTeam(lead: MonInstance, fightIndex: number): MonInstan
     return [createMonInstance(counter, level)]
 }
 
-/** Pool d'explications sur l'app, distillées une par victoire (cycle sur la durée). */
-export const SBIRE_EXPLANATIONS: string[] = [
-    "Tes reps RÉELS sont ton énergie : chaque jour, ce que tu fais s'ajoute à minuit à ton portefeuille.",
-    "Tes attaques coûtent des reps (pas de PP). Frappe fort… ou économise. À toi de juger.",
-    "Plus tu t'entraînes pour de vrai, meilleurs sont les IV des Daemons que tu captures.",
-    "Chaque niveau gagné donne des points Saiyan à répartir. Mais une amende les réduit à zéro : reste discipliné.",
-    "Combats souvent : l'expérience de combat (EV) muscle peu à peu tes Daemons, façon vétéran.",
-    "Les 3 chefs d'arène donnent des badges : plus d'énergie par combat et des CT débloquées.",
-    "Surmonter ta faiblesse, c'est savoir changer de Daemon au bon moment. N'aie pas peur de switcher.",
+// ============================================================
+// RÉPLIQUES DU SBIRE — édite librement ce bloc (tout est ici).
+// ============================================================
+
+/**
+ * Répliques AVANT le combat, selon le n° du combat du jour :
+ *   index 0 → 1er combat (MIROIR), index 1 → 2e combat (FAIBLESSE).
+ */
+export const SBIRE_INTRO_LINES: string[][] = [
+    [
+        "Je suis un sbire du dieu Spaghetti.",
+        "Si tu me bas tu seras récompensé !",
+        "En garde !",
+    ],
+    [
+        "Tu reviens ? Cette fois, je frapperai plus fort.",
+        "Prouve-moi que tu sais t'adapter !",
+    ],
 ]
 
-/** Explication à afficher pour la n-ième victoire (1-indexée), cycle sur le pool. */
-export function sbireExplanation(winNumber: number): string {
-    const i = (Math.max(1, winNumber) - 1) % SBIRE_EXPLANATIONS.length
-    return SBIRE_EXPLANATIONS[i]
+/** Répliques quand le sbire a déjà été battu le maximum de fois aujourd'hui. */
+export const SBIRE_DONE_LINES: string[] = [
+    "Pasta ! Tu m'as déjà vaincu deux fois aujourd'hui.",
+    "Reviens demain, je te testerai encore.",
+]
+
+/** Répliques quand toute l'équipe du joueur est K.O. */
+export const SBIRE_NO_TEAM_LINES: string[] = [
+    "Tes Daemons sont tous K.O. !",
+    "Soigne-les au Centre avant de m'affronter.",
+]
+
+/** Répliques d'intro pour le combat n° fightIndex du jour (clamp sur la dernière). */
+export function sbireIntroLines(fightIndex: number): string[] {
+    const i = Math.max(0, Math.min(fightIndex, SBIRE_INTRO_LINES.length - 1))
+    return SBIRE_INTRO_LINES[i]
+}
+
+/**
+ * Conseils distillés une par victoire (cycle sur le pool). Chaque conseil est un
+ * TABLEAU de bulles (une par tap), pour pouvoir détailler un concept.
+ * Tout est calé sur les vrais systèmes du jeu — édite/ajoute librement.
+ */
+export const SBIRE_TIPS: string[][] = [
+    // 1 — Reps = énergie
+    [
+        "Tes reps de la vraie vie sont ton énergie de combat ici.",
+        "Chaque jour, ce que tu fais dehors vient gonfler ton portefeuille de reps.",
+        "Mais il a un plafond (1000 au départ). Au-delà, le surplus est perdu — alors dépense avant d'être au max !",
+    ],
+    // 2 — Coût des attaques
+    [
+        "Oublie les PP : ici, chaque attaque se paie en reps.",
+        "Plus une attaque est puissante, plus elle coûte cher — et la note grimpe avec le niveau du Daemon.",
+        "Frappe fort quand ça compte, économise sur les petits combats.",
+    ],
+    // 3 — Charge Désespérée (anti soft-lock)
+    [
+        "À sec de reps ou d'énergie en plein combat ? La Charge Désespérée reste gratuite.",
+        "Mais elle est faible et te blesse toi-même. C'est un filet de secours, pas un plan de jeu.",
+    ],
+    // 4 — Deux limites différentes (portefeuille vs énergie/combat)
+    [
+        "Méfie-toi : il y a DEUX jauges à ne pas confondre.",
+        "Ton portefeuille total de reps… et un plafond d'énergie dépensable DANS un seul combat (200 au début).",
+        "Même riche en reps, tu ne peux pas tout cramer d'un coup. Gère ton tempo.",
+    ],
+    // 5 — IV piloté par l'effort
+    [
+        "Chaque Daemon sauvage naît avec un potentiel génétique : ses IV, notés de D à PARFAIT.",
+        "Et c'est TON effort qui le décide : plus tu approches ton quota du jour, plus le potentiel garanti monte.",
+        "Boucle ton quota AVANT de partir chasser, et tu attraperas bien mieux.",
+    ],
+    // 6 — Daemon PARFAIT
+    [
+        "Tu rêves d'un Daemon PARFAIT, tous les IV au sommet ?",
+        "Dépasse largement ton quota du jour : plus tu en fais, plus la chance d'en croiser un grimpe.",
+    ],
+    // 7 — EV (expérience de combat)
+    [
+        "En combattant, tes Daemons engrangent de l'expérience de combat — comme des vétérans.",
+        "Chaque victoire muscle un peu la stat dominante de l'adversaire vaincu.",
+        "C'est plafonné : tu peux spécialiser environ deux stats par Daemon. Choisis bien tes proies.",
+    ],
+    // 8 — EV ciblé
+    [
+        "Tu veux un Daemon véloce ? Affronte souvent des ennemis dont la Vitesse est la stat reine.",
+        "C'est précisément là que l'expérience de combat se dépose.",
+    ],
+    // 9 — Points Saiyan
+    [
+        "À chaque niveau gagné, ton Daemon reçoit des points d'entraînement à répartir où tu veux.",
+        "En PV, un point vaut gros (×3). En Attaque ou Vitesse, tu sculptes un foudroyeur fragile.",
+        "Tank ou glass cannon : c'est ta main qui façonne le monstre.",
+    ],
+    // 10 — Saiyan = discipline réelle
+    [
+        "Cet entraînement récompense ta discipline DANS la vraie vie.",
+        "Quota dépassé chaque jour ? Deux points par niveau. Une seule amende ? Zéro point.",
+        "La régularité bat l'intensité. Ne lâche rien.",
+    ],
+    // 11 — Rencontres pilotées par pompes/squats
+    [
+        "Les Daemons que tu croises dépendent de ton entraînement du jour.",
+        "Beaucoup de pompes attirent les types Combat. Beaucoup de squats, les types Roche et Sol.",
+    ],
+    // 12 — Élec / rares
+    [
+        "Quota du jour atteint ? Les Daemons Électriques se montrent davantage.",
+        "Et un gros dépassement fait surgir les espèces rares… parfois un cran au-dessus de ton équipe.",
+    ],
+    // 13 — Biomes
+    [
+        "Le décor n'est pas qu'un décor : montagne, forêt de sapins et points d'eau abritent des familles différentes.",
+        "Repère le terrain pour cibler les captures que tu cherches.",
+    ],
+    // 14 — Switch / types
+    [
+        "Un combat se gagne souvent avant le premier coup : envoie le bon type.",
+        "N'aie jamais peur de changer de Daemon en pleine bataille pour renverser le rapport de force.",
+    ],
+    // 15 — Badges d'arène
+    [
+        "Trois salles, trois chefs : Feu, Plante, Eau.",
+        "Chaque badge agrandit ton portefeuille de reps, gonfle ton énergie par combat et débloque de nouvelles CT.",
+        "Réunis les trois et le Champion t'ouvrira son trône.",
+    ],
+    // 16 — CT (Capsules Techniques)
+    [
+        "Les CT enseignent de nouvelles attaques à tes Daemons, contre des reps.",
+        "Certaines sont libres dès le départ ; d'autres ne s'achètent qu'une fois le bon badge en poche.",
+        "Garde toujours quelques reps d'avance pour la CT qui changera ton équipe.",
+    ],
+    // 17 — Super Pasta
+    [
+        "Pressé de faire grandir un Daemon ? La Super Pasta lui offre un niveau d'un coup.",
+        "Mais son prix flambe à chaque achat dans la même journée. À savourer avec modération.",
+    ],
+    // 18 — Capture
+    [
+        "Pour capturer, affaiblis d'abord le sauvage… sans le mettre K.O.",
+        "Une bonne ball lancée au bon moment, et il rejoint tes rangs.",
+    ],
+    // 19 — Centre Daemon & PC
+    [
+        "Au Centre Daemon, soigne ton équipe et range tes prises dans le PC.",
+        "Six places seulement en équipe : compose-la selon le défi qui t'attend.",
+    ],
+    // 20 — Reviens chaque jour
+    [
+        "Je t'attends ici deux fois par jour, chaque jour.",
+        "À chaque passage : de l'XP, de l'expérience de combat… et un nouveau conseil de ma part.",
+        "Un sensei, ça s'use à la régularité.",
+    ],
+    // (Les conseils sur l'équipe, l'évolution, les attaques, la fuite et les types
+    //  sont désormais lisibles sur les PANNEAUX de la map Nord — cf. data/parkSigns.ts.)
+]
+
+/**
+ * Conseil (liste de bulles) à afficher pour la n-ième victoire (1-indexée),
+ * en cyclant sur le pool une fois tous les conseils vus.
+ */
+export function sbireExplanation(winNumber: number): string[] {
+    const i = (Math.max(1, winNumber) - 1) % SBIRE_TIPS.length
+    return SBIRE_TIPS[i]
 }

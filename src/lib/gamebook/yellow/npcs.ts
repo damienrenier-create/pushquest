@@ -8,6 +8,24 @@
 
 import type { NpcDefinition } from "@/lib/gamebook/npcs"
 import { TRAINERS } from "./data/trainers"
+import { NORTH_BUSH_POSITIONS } from "./maps"
+import { PARK_SIGN_TIPS } from "./data/parkSigns"
+
+// PANNEAUX = les buissons (# isolés) de la map Nord ("le parc"). Chaque buisson
+// reçoit un hotspot interactif INVISIBLE (emoji vide → MapView ne dessine rien,
+// le sprite buisson étant déjà rendu par le décor). Le lire affiche un conseil ;
+// les conseils tournent en boucle sur l'ensemble des buissons.
+const PARK_SIGN_NPCS: NpcDefinition[] = NORTH_BUSH_POSITIONS.map((pos, i) => ({
+    id: `y_park_sign_${i + 1}`,
+    name: "PANNEAU",
+    mapId: "yellow_route_nord",
+    kind: "static",
+    interaction: "interactive",
+    sprite: { emoji: "", color: "#8c6840" },
+    initialX: pos.x,
+    initialY: pos.y,
+    dialoguesAfter: ["*Tu lis le panneau.*", ...PARK_SIGN_TIPS[i % PARK_SIGN_TIPS.length]],
+}))
 
 // PNJ-dresseurs dérivés du registre des dresseurs (source unique pour la position).
 // gameStore.pressA les intercepte par id (via getTrainer) pour lancer le combat ;
@@ -142,6 +160,9 @@ export const YELLOW_NPCS: NpcDefinition[] = [
             "…puis défie le Champion sur son trône tout en haut !",
         ],
     },
+
+    // === PANNEAUX DE CONSEILS (map Nord) ===
+    ...PARK_SIGN_NPCS,
 
     // === DRESSEURS (combats) — dérivés de data/trainers.ts ===
     ...TRAINER_NPCS,

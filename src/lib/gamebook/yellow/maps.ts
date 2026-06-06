@@ -560,6 +560,8 @@ function buildNorthRoute(): NorthBuild {
 }
 
 const NORTH_BUILD = buildNorthRoute()
+/** Positions des buissons (# isolés dans l'herbe) de la Route Nord — servent de panneaux lisibles. */
+export const NORTH_BUSH_POSITIONS: ReadonlyArray<{ x: number; y: number }> = NORTH_BUILD.bushes
 const NORTH_DECOR_REGIONS: Array<{ x: number; y: number; w: number; h: number; url: string }> = [
     // Sapin fixe en (2,0) — footprint 2×3, même sprite que les sapins aléatoires.
     { x: 2, y: 0, w: 2, h: 3, url: "/yellow/sprites/viridian_tree_12_13_23_25.png" },

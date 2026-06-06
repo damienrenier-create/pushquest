@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { buildSbireTeam, sbireExplanation, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_EXPLANATIONS } from "./sbire"
+import { buildSbireTeam, sbireExplanation, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TIPS } from "./sbire"
 import { createMonInstance } from "../battle/factory"
 import { getSpecies } from "./species"
 import { typeEffectiveness } from "../battle/typeChart"
@@ -24,10 +24,10 @@ describe("sbire du dieu Spaghetti", () => {
         expect(superEff).toBe(true)
     })
 
-    it("les explications sont 1-indexées et cyclent sur le pool", () => {
-        expect(sbireExplanation(1)).toBe(SBIRE_EXPLANATIONS[0])
-        expect(sbireExplanation(SBIRE_EXPLANATIONS.length)).toBe(SBIRE_EXPLANATIONS[SBIRE_EXPLANATIONS.length - 1])
-        expect(sbireExplanation(SBIRE_EXPLANATIONS.length + 1)).toBe(SBIRE_EXPLANATIONS[0])
+    it("les conseils sont 1-indexés (tableaux de bulles) et cyclent sur le pool", () => {
+        expect(sbireExplanation(1)).toEqual(SBIRE_TIPS[0])
+        expect(sbireExplanation(SBIRE_TIPS.length)).toEqual(SBIRE_TIPS[SBIRE_TIPS.length - 1])
+        expect(sbireExplanation(SBIRE_TIPS.length + 1)).toEqual(SBIRE_TIPS[0])
     })
 
     it("plafonne à 2 combats par jour", () => {

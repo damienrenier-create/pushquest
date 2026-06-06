@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation"
 import GameBoyShell from "./GameBoyShell"
 import MapView from "./MapView"
 import BattleScreen from "./battle/BattleScreen"
+import BattleControls from "./battle/BattleControls"
 import EvolutionScreen from "./battle/EvolutionScreen"
 import IntroCinematic from "./IntroCinematic"
 import LearnScreen from "./LearnScreen"
@@ -137,7 +138,7 @@ export default function YellowDevClient() {
     // combat quitté ET l'éventuelle cinématique d'évolution terminée.
     useEffect(() => {
         if (sbireWin !== null && !battle && evolutions.length === 0) {
-            showDialogue("y_sbire", "SBIRE", [sbireExplanation(sbireWin)])
+            showDialogue("y_sbire", "SBIRE", sbireExplanation(sbireWin))
             clearSbireWin()
         }
     }, [sbireWin, battle, evolutions.length, showDialogue])
@@ -157,21 +158,33 @@ export default function YellowDevClient() {
         <div style={pageStyle}>
             {showIntro && <IntroCinematic onComplete={onIntroComplete} />}
 
-            <GameBoyShell
-                reps={player.reps}
-                repsCap={player.repsCap}
-                onUp={() => (battle ? dispatchBattleInput("up") : move("up"))}
-                onDown={() => (battle ? dispatchBattleInput("down") : move("down"))}
-                onLeft={() => (battle ? dispatchBattleInput("left") : move("left"))}
-                onRight={() => (battle ? dispatchBattleInput("right") : move("right"))}
-                onA={() => (battle ? dispatchBattleInput("a") : pressA())}
-                onB={() => (battle ? dispatchBattleInput("b") : pressB())}
-                onStart={() => { if (!battle) setMenu((m) => (m === "none" ? "pause" : "none")) }}
-                onSelect={() => { if (!battle) setMenu((m) => (m === "none" ? "pause" : "none")) }}
-            >
-                {/* Le combat se joue DANS l'écran GBA (coque + boutons visibles). */}
-                {battle ? <BattleScreen /> : <MapView />}
-            </GameBoyShell>
+            {/* En COMBAT : plein écran, SANS la coque Game Boy. La coque enfermait
+                le combat dans l'écran 3:2 et coupait les menus (cf. retour Sartay).
+                Le BattleScreen est entièrement jouable au doigt (boutons d'options
+                tactiles) + clavier (dispatchBattleInput), donc pas besoin du D-pad. */}
+            {battle ? (
+                <div style={battleWrapStyle}>
+                    <BattleScreen />
+                    {/* Boutons compacts (D-pad + A/B) sous le combat, dans le flux :
+                        pas de coque, pas de superposition avec les menus. */}
+                    <BattleControls />
+                </div>
+            ) : (
+                <GameBoyShell
+                    reps={player.reps}
+                    repsCap={player.repsCap}
+                    onUp={() => move("up")}
+                    onDown={() => move("down")}
+                    onLeft={() => move("left")}
+                    onRight={() => move("right")}
+                    onA={() => pressA()}
+                    onB={() => pressB()}
+                    onStart={() => setMenu((m) => (m === "none" ? "pause" : "none"))}
+                    onSelect={() => setMenu((m) => (m === "none" ? "pause" : "none"))}
+                >
+                    <MapView />
+                </GameBoyShell>
+            )}
 
             {/* Menu START (pause) */}
             {!battle && menu === "pause" && (
@@ -632,6 +645,13 @@ const pageStyle: React.CSSProperties = {
     alignItems: "center",        // bloc compact centré verticalement → boutons dans la zone du pouce, pas de scroll
     justifyContent: "center",    // centrée horizontalement sur grand écran
     padding: 0,
+}
+
+// Combat plein écran (hors coque) : centré, scrollable si le contenu dépasse.
+const battleWrapStyle: React.CSSProperties = {
+    width: "100%", maxWidth: 480, margin: "0 auto",
+    padding: "14px 12px", boxSizing: "border-box",
+    maxHeight: "100dvh", overflowY: "auto",
 }
 
 const menuOverlayStyle: React.CSSProperties = {

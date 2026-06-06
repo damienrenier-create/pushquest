@@ -23,7 +23,7 @@ import { persistYellowSave } from "./saveManager"
 import { rollWildEncounter } from "../data/encounters"
 import { getTrainer } from "../data/trainers"
 import { createMonInstance } from "../battle/factory"
-import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID } from "../data/sbire"
+import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroLines, SBIRE_DONE_LINES, SBIRE_NO_TEAM_LINES } from "../data/sbire"
 
 export interface ActiveDialogue {
     npcId: string
@@ -105,7 +105,7 @@ function tryLaunchSbire(): ActiveDialogue | null {
     if (!lead) {
         return {
             npcId: SBIRE_TRAINER_ID, npcName: "SBIRE", lineIndex: 0,
-            lines: ["Tes Daemons sont tous K.O. !", "Soigne-les au Centre avant de m'affronter."],
+            lines: SBIRE_NO_TEAM_LINES,
         }
     }
     const fightIndex = getPlayerSave().sbireDefeatsToday // 0 → miroir, 1 → faiblesse
@@ -258,14 +258,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 set({
                     dialogue: {
                         npcId: npc.id, npcName: npc.name, lineIndex: 0,
-                        lines: ["Pasta ! Tu m'as déjà vaincu deux fois aujourd'hui.", "Reviens demain, je te testerai encore."],
+                        lines: SBIRE_DONE_LINES,
                     },
                 })
                 return
             }
-            const intro = wins === 0
-                ? ["Je suis un sbire du dieu Spaghetti.", "Pour t'éprouver, je copie ton Daemon à l'identique !", "En garde !"]
-                : ["Tu reviens ? Cette fois, je frappe ta FAIBLESSE.", "Prouve-moi que tu sais t'adapter !"]
+            const intro = sbireIntroLines(wins) // 0 → miroir, 1 → faiblesse
             set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: intro, lineIndex: 0 }, pendingSbire: true })
             return
         }

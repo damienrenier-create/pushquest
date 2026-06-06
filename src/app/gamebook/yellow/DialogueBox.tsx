@@ -13,16 +13,26 @@ const BOX_BG = "#f4ecd4"        // cream lisible
 const BOX_BG_DARK = "#d8c898"   // ombre du box
 const INK = "#2a1c10"           // texte / contour
 
+// Portraits de dialogue par PNJ (cinématique d'intro). Optionnel : un PNJ sans
+// entrée affiche le dialogue sans portrait (comportement historique).
+const DIALOGUE_PORTRAITS: Record<string, string> = {
+    y_sbire: "/yellow/sprites/npc/noodle_nymph.png", // la Nymphe Nouille
+}
+
 export default function DialogueBox() {
     const dialogue = useGameStore((s) => s.dialogue)
     if (!dialogue) return null
 
     const line = dialogue.lines[dialogue.lineIndex]
     const isLast = dialogue.lineIndex >= dialogue.lines.length - 1
+    const portrait = DIALOGUE_PORTRAITS[dialogue.npcId]
 
     return (
         <>
             <style>{`@keyframes yellowBlink { 0%,49% { opacity: 1 } 50%,100% { opacity: 0 } }`}</style>
+            {portrait && (
+                <img src={portrait} alt={dialogue.npcName} style={portraitStyle} />
+            )}
             <div style={boxStyle}>
                 <div style={nameStyle}>{dialogue.npcName}</div>
                 <div style={lineStyle}>{line}</div>
@@ -30,6 +40,19 @@ export default function DialogueBox() {
             </div>
         </>
     )
+}
+
+// Portrait posé juste au-dessus de la boîte de dialogue (coin droit), look "VN".
+const portraitStyle: React.CSSProperties = {
+    position: "absolute",
+    right: "5%",
+    bottom: "calc(4% + 30% - 6px)", // au-dessus du box (bottom 4% + minHeight 30%)
+    width: "clamp(56px, 18dvw, 96px)",
+    height: "auto",
+    imageRendering: "pixelated",
+    filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))",
+    zIndex: 11,
+    pointerEvents: "none",
 }
 
 const boxStyle: React.CSSProperties = {

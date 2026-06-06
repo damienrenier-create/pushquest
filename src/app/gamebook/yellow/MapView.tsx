@@ -536,6 +536,9 @@ const NPC_SPRITES: Record<string, { url: string; frames: number } | null> = {
     y_croupier: { url: "/yellow/sprites/kris_color.png?v=3", frames: 6 },
     y_medecin: { url: "/yellow/sprites/npc_nurse_color.png?v=3", frames: 3 },
     y_arbitre: { url: "/yellow/sprites/npc_black_belt_color.png?v=3", frames: 6 },
+    // Sbire = portrait de la Nymphe Nouille (cinématique d'intro) au lieu de l'emoji 🍝.
+    // Image unique (pas un spritesheet) → frames: 1, rendu en frame 0.
+    y_sbire: { url: "/yellow/sprites/npc/noodle_nymph.png", frames: 1 },
 }
 
 function NpcSprite({
@@ -547,6 +550,9 @@ function NpcSprite({
 }) {
     const sprite = NPC_SPRITES[npc.id]
     if (!sprite) {
+        // PNJ "hotspot" invisible (emoji vide) : interaction sans sprite. Utilisé
+        // pour les panneaux dont le visuel est déjà dans le décor de la map.
+        if (!npc.sprite.emoji) return null
         // Fallback : emoji
         return (
             <div
