@@ -9,8 +9,11 @@ import { useSyncExternalStore } from "react"
 import {
     createBattle,
     resolveTurn,
+    resolveTurnPvp,
     type BattleState,
+    type BattleEvent,
     type PlayerAction,
+    type SideId,
 } from "../battle/engine"
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance } from "../battle/types"
@@ -61,9 +64,28 @@ interface BattleStoreState {
     sbireWin: number | null
     /** Message de récompense du sbire (énergie / ball) à afficher avec l'explication ; null sinon. */
     sbireRewardMsg: string | null
+    /** Contexte d'un combat JOUEUR vs JOUEUR (null = combat solo classique). */
+    pvpCtx: PvpContext | null
 }
 
-let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null }
+/** Rôle canonique : A = challenger ("player" canonique), B = défié ("enemy" canonique). */
+export type PvpRole = "A" | "B"
+
+interface PvpContext {
+    battleId: string
+    role: PvpRole
+    myUserId: string
+    oppUserId: string
+    oppNickname: string
+    /** N° d'échange (incrémenté à chaque tour résolu) → match des actions relayées. */
+    seq: number
+    myAction: PlayerAction | null
+    oppAction: PlayerAction | null
+    /** Issue côté MOI (true=gagné, false=perdu, null=en cours). */
+    won: boolean | null
+}
+
+let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, pvpCtx: null }
 const listeners = new Set<() => void>()
 
 function emit() {
@@ -138,6 +160,8 @@ function moveCostRepsForAction(b: BattleState, moveIndex: number): number {
 export function submitPlayerAction(action: PlayerAction) {
     const battle = storeState.battle
     if (!battle) return
+    // Combat PvP : chemin réseau dédié (pas d'IA, résolution dual-déterministe).
+    if (storeState.pvpCtx) { submitPvpAction(action); return }
     // Lancer une Ball consomme l'objet de l'inventaire (réussite ou non).
     if (action.kind === "ball" && !consumeItem(action.itemId)) return
     // Utiliser un objet de soin le consomme aussi.
@@ -219,7 +243,8 @@ function finishBattle(b: BattleState) {
 
 export function endBattle() {
     // On garde évolutions + whiteout : ils se jouent une fois le combat quitté.
-    setStore({ battle: null, evolutions: storeState.evolutions, trainer: null, whiteout: storeState.whiteout })
+    swapCache = { src: null, out: null }
+    setStore({ battle: null, evolutions: storeState.evolutions, trainer: null, whiteout: storeState.whiteout, pvpCtx: null })
 }
 
 export function clearEvolutions() {
@@ -242,15 +267,201 @@ export function getSbireRewardMsg(): string | null {
 }
 
 // ============================================================
+// PvP — combat joueur vs joueur (dual-déterministe, sans serveur d'arbitrage)
+// ============================================================
+//
+// Les 2 clients gardent TOUJOURS le même état CANONIQUE (A="player", B="enemy")
+// → clé du déterminisme. Pour l'INVITÉ (role B), useBattle() renvoie une vue
+// INVERSÉE (mémoïsée) afin que BattleScreen affiche son équipe en bas sans
+// modification. Toute la bascule de perspective est isolée ici.
+//
+// ⚠️ RISQUE : tout repose sur le fait que les 2 clients appellent resolveTurnPvp
+//   avec le MÊME état + les MÊMES actions. Voir note mémoire casino-pvp.
+
+function flipSide(s: SideId): SideId { return s === "player" ? "enemy" : "player" }
+function flipOutcome(o: BattleState["outcome"]): BattleState["outcome"] {
+    return o === "win" ? "lose" : o === "lose" ? "win" : o
+}
+
+function swapEvent(e: BattleEvent): BattleEvent {
+    switch (e.kind) {
+        case "hp":
+        case "faint":
+        case "status":
+        case "switchIn":
+            return { ...e, side: flipSide(e.side) }
+        case "end": {
+            const o = e.outcome
+            return { ...e, outcome: o === "win" ? "lose" : o === "lose" ? "win" : o }
+        }
+        default:
+            return e // message, ball : pas de notion de camp
+    }
+}
+
+/** Vue inversée d'un état (affichage côté invité B). Pur. */
+function swapBattle(b: BattleState): BattleState {
+    return {
+        ...b,
+        player: b.enemy,
+        enemy: b.player,
+        forcedSwitch: b.forcedSwitch ? flipSide(b.forcedSwitch) : null,
+        outcome: flipOutcome(b.outcome),
+        events: b.events.map(swapEvent),
+    }
+}
+
+// Cache de la vue inversée (réf. stable tant que l'état canonique ne change pas →
+// requis par useSyncExternalStore).
+let swapCache: { src: BattleState | null; out: BattleState | null } = { src: null, out: null }
+function getDisplayBattle(): BattleState | null {
+    const b = storeState.battle
+    if (!b || storeState.pvpCtx?.role !== "B") return b
+    if (swapCache.src !== b) swapCache = { src: b, out: swapBattle(b) }
+    return swapCache.out
+}
+
+function mySide(ctx: PvpContext): SideId { return ctx.role === "A" ? "player" : "enemy" }
+
+// Pont d'ENVOI : le hook réseau enregistre comment relayer une action.
+let pvpSendHandler: ((seq: number, action: PlayerAction) => void) | null = null
+export function setPvpSendHandler(fn: ((seq: number, action: PlayerAction) => void) | null) {
+    pvpSendHandler = fn
+}
+
+/** Démarre un combat PvP (les 2 clients construisent le MÊME état canonique). */
+export function startPvpBattle(battle: BattleState, ctx: Omit<PvpContext, "seq" | "myAction" | "oppAction" | "won">) {
+    swapCache = { src: null, out: null }
+    setStore({
+        battle, evolutions: [], trainer: null, whiteout: false, energySpent: 0,
+        sbireWin: null, sbireRewardMsg: null,
+        pvpCtx: { ...ctx, seq: 0, myAction: null, oppAction: null, won: null },
+    })
+}
+
+const PLACEHOLDER_ACTION: PlayerAction = { kind: "move", moveIndex: 0 }
+
+/** Action locale du joueur en PvP (remplace le chemin solo). */
+function submitPvpAction(action: PlayerAction) {
+    const ctx = storeState.pvpCtx
+    const battle = storeState.battle
+    if (!ctx || !battle || battle.phase === "ended") return
+    if (action.kind !== "move" && action.kind !== "switch") return // v1 : move/switch only
+    if (ctx.myAction) return // déjà joué ce tour
+    // Changement forcé de l'ADVERSAIRE : je dois attendre (je ne joue pas ce tour).
+    if (battle.forcedSwitch && battle.forcedSwitch !== mySide(ctx)) return
+
+    // Coût en reps de MON attaque (sur MON actif canonique). Charge Désespérée gratuite.
+    if (action.kind === "move" && action.moveIndex !== STRUGGLE_INDEX) {
+        const meTeam = battle[mySide(ctx)]
+        const me = meTeam.team[meTeam.activeIndex]
+        const slot = me?.moves[action.moveIndex]
+        if (slot) {
+            const cost = moveCostReps(slot.ppMax, me.level)
+            const cap = battleEnergyCap(getPlayer().badges.length)
+            if (storeState.energySpent + cost > cap) return
+            if (!spendReps(cost)) return
+            storeState = { ...storeState, energySpent: storeState.energySpent + cost }
+        }
+    }
+
+    storeState = { ...storeState, pvpCtx: { ...ctx, myAction: action } }
+    pvpSendHandler?.(ctx.seq, action)
+    emit()
+    tryResolvePvp()
+}
+
+/** Reçoit l'action de l'adversaire (relayée par le hook réseau). */
+export function receivePvpAction(seq: number, action: PlayerAction) {
+    const ctx = storeState.pvpCtx
+    if (!ctx || seq !== ctx.seq) return // échange périmé / futur → ignoré
+    storeState = { ...storeState, pvpCtx: { ...ctx, oppAction: action } }
+    emit()
+    tryResolvePvp()
+}
+
+/** Résout le tour dès que les actions nécessaires sont réunies. */
+function tryResolvePvp() {
+    const ctx = storeState.pvpCtx
+    const battle = storeState.battle
+    if (!ctx || !battle || battle.phase === "ended") return
+
+    let actionA: PlayerAction, actionB: PlayerAction
+    if (battle.forcedSwitch) {
+        // Seul le camp forcé rejoue (un switch) ; l'autre n'agit pas ce tour.
+        const forcedMine = battle.forcedSwitch === mySide(ctx)
+        const forcedAct = forcedMine ? ctx.myAction : ctx.oppAction
+        if (!forcedAct) return
+        actionA = battle.forcedSwitch === "player" ? forcedAct : PLACEHOLDER_ACTION
+        actionB = battle.forcedSwitch === "enemy" ? forcedAct : PLACEHOLDER_ACTION
+    } else {
+        if (!ctx.myAction || !ctx.oppAction) return
+        actionA = ctx.role === "A" ? ctx.myAction : ctx.oppAction
+        actionB = ctx.role === "A" ? ctx.oppAction : ctx.myAction
+    }
+
+    const next = resolveTurnPvp(battle, actionA, actionB)
+    setStore({ battle: next, pvpCtx: { ...ctx, seq: ctx.seq + 1, myAction: null, oppAction: null } })
+    if (next.phase === "ended") finishPvpBattle(next)
+}
+
+/** Fin de combat PvP : CHAQUE client persiste SON propre camp (XP/KO réels). */
+function finishPvpBattle(b: BattleState) {
+    const ctx = storeState.pvpCtx
+    if (!ctx) return
+    const side = mySide(ctx)
+    const won = ctx.role === "A" ? b.outcome === "win" : b.outcome === "lose"
+
+    setTeam(b[side].team.map(toMonInstance))
+    const isLose = !won
+    const team = getPlayer().team
+    const evos = evolveTeam(team)
+    if (evos.length > 0) {
+        for (const e of evos) markCaught(e.toId)
+        setTeam([...team])
+    }
+    setStore({ battle: b, evolutions: evos, whiteout: isLose, pvpCtx: { ...ctx, won } })
+    persistYellowSave()
+    void processSaiyanPoints()
+}
+
+/** Abandon : l'adversaire est parti (je gagne) OU je quitte (j'abandonne). */
+export function pvpForfeit(byMe: boolean) {
+    const ctx = storeState.pvpCtx
+    const battle = storeState.battle
+    if (!ctx) return
+    if (!battle || battle.phase === "ended") { setStore({ pvpCtx: null }); return }
+    if (byMe) {
+        // Je quitte : équipe mutée NON enregistrée (état d'avant-combat gardé).
+        // Les reps déjà dépensés restent dépensés (pas de remboursement v1).
+        setStore({ battle: null, pvpCtx: null })
+        return
+    }
+    // L'adversaire a abandonné → je gagne, je garde mon équipe (dégâts réels).
+    const side = mySide(ctx)
+    const ended: BattleState = {
+        ...battle, phase: "ended",
+        outcome: side === "player" ? "win" : "lose",
+        events: [{ kind: "message", text: `${ctx.oppNickname} a abandonné le combat !` }],
+    }
+    setTeam(ended[side].team.map(toMonInstance))
+    setStore({ battle: ended, pvpCtx: { ...ctx, won: true } })
+    persistYellowSave()
+    void processSaiyanPoints()
+}
+
+// ============================================================
 // Hooks de lecture (React) — la référence reste stable entre tours.
 // ============================================================
 
 export function useBattle(): BattleState | null {
-    return useSyncExternalStore(
-        subscribe,
-        () => getSnapshot().battle,
-        () => getSnapshot().battle,
-    )
+    // En PvP côté invité (B), renvoie la vue INVERSÉE mémoïsée (cf. getDisplayBattle).
+    return useSyncExternalStore(subscribe, getDisplayBattle, getDisplayBattle)
+}
+
+/** Contexte PvP courant (null hors PvP). */
+export function usePvpCtx(): PvpContext | null {
+    return useSyncExternalStore(subscribe, () => getSnapshot().pvpCtx, () => getSnapshot().pvpCtx)
 }
 
 export function useEvolutions(): EvolutionResult[] {

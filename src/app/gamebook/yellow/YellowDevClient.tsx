@@ -8,7 +8,7 @@
 //
 // Pas encore : interaction A/B (NPCs, dialogues), START (menu), SELECT.
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import GameBoyShell from "./GameBoyShell"
 import MapView from "./MapView"
@@ -16,6 +16,9 @@ import BattleScreen from "./battle/BattleScreen"
 import BattleControls, { BATTLE_CONTROLS_HEIGHT } from "./battle/BattleControls"
 import BattleBoundary from "./battle/BattleBoundary"
 import { useCasinoPresence } from "@/lib/gamebook/yellow/multiplayer/useCasinoPresence"
+import { useCasinoChallenge, type BattleStart } from "@/lib/gamebook/yellow/multiplayer/useCasinoChallenge"
+import { useCasinoBattle } from "@/lib/gamebook/yellow/multiplayer/useCasinoBattle"
+import { usePvpCtx } from "@/lib/gamebook/yellow/store/battleStore"
 import EvolutionScreen from "./battle/EvolutionScreen"
 import IntroCinematic from "./IntroCinematic"
 import LearnScreen from "./LearnScreen"
@@ -81,6 +84,32 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
         posY: mapPlayer.posY,
         direction: mapPlayer.direction,
     })
+
+    // === PvP : défi + combat réseau ===
+    const [pvpSession, setPvpSession] = useState<BattleStart | null>(null)
+    const pvpCtx = usePvpCtx()
+    const challenge = useCasinoChallenge({
+        active: inCasino && !battle && !showIntro && !!userId,
+        myUserId: userId,
+        busy: !!battle || !!pvpSession,
+        onStart: (s) => setPvpSession(s),
+    })
+    useCasinoBattle(pvpSession, userId)
+
+    // Teardown de la session PvP une fois le combat terminé (pvpCtx repassé à null).
+    const wasPvpRef = useRef(false)
+    useEffect(() => {
+        if (pvpCtx) wasPvpRef.current = true
+        else if (wasPvpRef.current) { wasPvpRef.current = false; setPvpSession(null) }
+    }, [pvpCtx])
+
+    // Joueur distant sur la tuile EN FACE (pour le défier d'un appui A).
+    const facingRemote = () => {
+        const d = mapPlayer.direction
+        const fx = mapPlayer.posX + (d === "left" ? -1 : d === "right" ? 1 : 0)
+        const fy = mapPlayer.posY + (d === "up" ? -1 : d === "down" ? 1 : 0)
+        return remotePlayers.find((p) => p.posX === fx && p.posY === fy) ?? null
+    }
 
     // Au mount : charge l'état du joueur depuis le serveur (DB Neon).
     // Si le joueur n'a jamais joué, on garde le state par défaut (déjà set
@@ -196,7 +225,14 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                     onDown={() => move("down")}
                     onLeft={() => move("left")}
                     onRight={() => move("right")}
-                    onA={() => pressA()}
+                    onA={() => {
+                        // Dans le casino, A face à un autre joueur = le défier.
+                        if (inCasino) {
+                            const target = facingRemote()
+                            if (target) { challenge.sendChallenge(target.userId, target.nickname); return }
+                        }
+                        pressA()
+                    }}
                     onB={() => pressB()}
                     onStart={() => setMenu((m) => (m === "none" ? "pause" : "none"))}
                     onSelect={() => setMenu((m) => (m === "none" ? "pause" : "none"))}
@@ -525,6 +561,27 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
             {/* Toast éphémère (achat, info). */}
             {toast && (
                 <div style={toastStyle} onClick={() => setToast(null)}>{toast}</div>
+            )}
+
+            {/* PvP — défi reçu : accepter / refuser */}
+            {challenge.incoming && !battle && (
+                <div style={menuOverlayStyle}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>⚔️ DÉFI</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, textAlign: "center", margin: "4px 0 10px" }}>
+                            {challenge.incoming.fromNickname} te défie en combat !
+                        </div>
+                        <button style={menuBtnStyle} onClick={() => challenge.respond(true)}>✓ Combattre</button>
+                        <button style={menuBtnDimStyle} onClick={() => challenge.respond(false)}>✕ Refuser</button>
+                    </div>
+                </div>
+            )}
+
+            {/* PvP — défi envoyé : en attente (touche pour annuler) */}
+            {challenge.outgoing && !battle && (
+                <div style={toastStyle} onClick={() => challenge.cancelChallenge()}>
+                    Défi envoyé à {challenge.outgoing.toNickname}… (touche pour annuler)
+                </div>
             )}
 
             {/* Fiche / résumé d'un Daemon (équipe ou PC) + actions */}

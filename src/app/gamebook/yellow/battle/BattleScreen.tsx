@@ -176,10 +176,13 @@ export default function BattleScreen() {
     } else if (playbackDone) {
         if (menu === "root") {
             options.push({ label: "⚔️ ATTAQUE", onSelect: () => setMenu("moves") })
-            options.push({ label: "🎒 SAC", onSelect: () => setMenu("bag") })
+            // En PvP (v1) : ni SAC ni FUITE (move/switch only ; quitter = abandon).
+            if (!battle.pvp) options.push({ label: "🎒 SAC", onSelect: () => setMenu("bag") })
             options.push({ label: "🐾 DAEMON", onSelect: () => setMenu("switch") })
-            // FUITE → écran de confirmation (évite la fuite accidentelle).
-            options.push({ label: "🏃 FUITE", onSelect: () => setMenu("confirmRun"), disabled: !battle.isWild })
+            if (!battle.pvp) {
+                // FUITE → écran de confirmation (évite la fuite accidentelle).
+                options.push({ label: "🏃 FUITE", onSelect: () => setMenu("confirmRun"), disabled: !battle.isWild })
+            }
         } else if (menu === "moves") {
             const costs = player.moves.map((s) => moveCostReps(s.ppMax, player.level))
             const canUse = (c: number) => c <= reps && c <= remainingEnergy
