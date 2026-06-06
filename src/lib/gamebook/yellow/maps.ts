@@ -285,14 +285,20 @@ const TOWN_BUILDINGS: YellowBuilding[] = [
 // Sartay (coordonnées exactes : murs par défaut, on n'ouvre QUE les cases listées).
 function buildShopInterior(): TileType[][] {
     const m = fillRoom(11, 8, "floorChecker")
-    // Cases rendues walkable en plus (bordure basse + coin bas-gauche) — relevé Sartay.
+    // Cases rendues walkable en plus (bordure basse + coin bas-gauche + 7,7) — relevé Sartay.
     const walkable: [number, number][] = [
-        [0, 5], [0, 6], [0, 7], [1, 7], [2, 7], [5, 7], [6, 7], [8, 7], [9, 7], [10, 7],
+        [0, 5], [0, 6], [0, 7], [1, 7], [2, 7], [5, 7], [6, 7], [7, 7], [8, 7], [9, 7], [10, 7],
     ]
     for (const [x, y] of walkable) m[y][x] = "floorChecker"
-    // Comptoir en L bloqué (le vendeur est le PNJ en 1,3 ; on lui parle par-dessus depuis 1,5)
-    const blocked: [number, number][] = [[1, 2], [2, 2], [1, 3], [2, 3], [1, 4], [2, 4]]
-    for (const [x, y] of blocked) m[y][x] = "shopCounter"
+    // Comptoir en L (shopCounter : nécessaire pour parler par-dessus depuis 1,5 → vendeur en 1,3).
+    const counter: [number, number][] = [[1, 2], [2, 2], [1, 3], [2, 3], [1, 4], [2, 4]]
+    for (const [x, y] of counter) m[y][x] = "shopCounter"
+    // Mur du fond (toute la rangée 1) + frigo (6-7, 4-6) → bloqués.
+    const walls: [number, number][] = [
+        [0, 1], [1, 1], [2, 1], [3, 1], [4, 1], [5, 1], [6, 1], [7, 1], [8, 1], [9, 1], [10, 1],
+        [6, 4], [6, 5], [6, 6], [7, 4], [7, 5], [7, 6],
+    ]
+    for (const [x, y] of walls) m[y][x] = "shopShelf"
     // Entrée / sortie (2 cases) en bas
     m[7][3] = "doorMat"
     m[7][4] = "doorMat"
