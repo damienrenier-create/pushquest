@@ -40,24 +40,32 @@ export default function BattleControls() {
     }), [stopHold])
 
     return (
-        <div style={rowStyle}>
-            {/* D-pad gauche */}
-            <div style={dpadStyle}>
-                <button aria-label="Haut" style={{ ...dBtn, ...dUp }} {...hold("up")}>▲</button>
-                <button aria-label="Gauche" style={{ ...dBtn, ...dLeft }} {...hold("left")}>◀</button>
-                <div style={dCenter} />
-                <button aria-label="Droite" style={{ ...dBtn, ...dRight }} {...hold("right")}>▶</button>
-                <button aria-label="Bas" style={{ ...dBtn, ...dDown }} {...hold("down")}>▼</button>
-            </div>
+        // Footer FIXE en bas du viewport : les boutons ne bougent JAMAIS, quel que
+        // soit l'écran de combat (menu racine, attaques, message…). Évite d'appuyer
+        // au mauvais endroit pendant une transition de menu.
+        <div style={footerStyle}>
+            <div style={rowStyle}>
+                {/* D-pad gauche */}
+                <div style={dpadStyle}>
+                    <button aria-label="Haut" style={{ ...dBtn, ...dUp }} {...hold("up")}>▲</button>
+                    <button aria-label="Gauche" style={{ ...dBtn, ...dLeft }} {...hold("left")}>◀</button>
+                    <div style={dCenter} />
+                    <button aria-label="Droite" style={{ ...dBtn, ...dRight }} {...hold("right")}>▶</button>
+                    <button aria-label="Bas" style={{ ...dBtn, ...dDown }} {...hold("down")}>▼</button>
+                </div>
 
-            {/* A / B droite (diagonale comme la coque) */}
-            <div style={abStyle}>
-                <button aria-label="Bouton B" style={{ ...abBtn, ...bPos }} onPointerDown={tap("b")}>B</button>
-                <button aria-label="Bouton A" style={{ ...abBtn, ...aPos }} onPointerDown={tap("a")}>A</button>
+                {/* A / B droite (diagonale comme la coque) */}
+                <div style={abStyle}>
+                    <button aria-label="Bouton B" style={{ ...abBtn, ...bPos }} onPointerDown={tap("b")}>B</button>
+                    <button aria-label="Bouton A" style={{ ...abBtn, ...aPos }} onPointerDown={tap("a")}>A</button>
+                </div>
             </div>
         </div>
     )
 }
+
+/** Hauteur réservée du footer de contrôles (px) — utilisée pour le padding du combat. */
+export const BATTLE_CONTROLS_HEIGHT = 150
 
 // === STYLES (compacts) ===
 
@@ -65,19 +73,31 @@ const BUTTON_RED = "#8B1E2E"
 const BUTTON_RED_DARK = "#5A0F1C"
 const DPAD_BLACK = "#2A2A2A"
 
+// Footer ancré au bas du viewport (au-dessus de la nav OS via safe-area).
+const footerStyle: React.CSSProperties = {
+    position: "fixed",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 60,
+    background: "#1a1a1a",
+    borderTop: "1px solid #000",
+    paddingBottom: "env(safe-area-inset-bottom, 0px)",
+    userSelect: "none",
+    WebkitUserSelect: "none",
+    WebkitTapHighlightColor: "transparent",
+    touchAction: "manipulation",
+}
+
 const rowStyle: React.CSSProperties = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
     width: "100%",
     maxWidth: 460,
-    margin: "10px auto 0",
-    padding: "0 6px",
+    margin: "0 auto",
+    padding: "8px 6px",
     boxSizing: "border-box",
-    userSelect: "none",
-    WebkitUserSelect: "none",
-    WebkitTapHighlightColor: "transparent",
-    touchAction: "manipulation",
 }
 
 // D-pad 120×120 (3×40)

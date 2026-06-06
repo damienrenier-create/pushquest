@@ -16,7 +16,7 @@ import { ITEMS } from "@/lib/gamebook/yellow/data/items"
 import { usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
 import { moveCostReps, STRUGGLE_INDEX } from "@/lib/gamebook/yellow/data/combatCostConfig"
 
-type Menu = "root" | "moves" | "switch" | "bag"
+type Menu = "root" | "moves" | "switch" | "bag" | "confirmRun"
 
 interface DispHp { p: number; pMax: number; e: number; eMax: number }
 
@@ -42,6 +42,10 @@ export default function BattleScreen() {
     const repsWallet = usePlayer()
     const lastBattle = useRef(battle)
     const inputRef = useRef<(a: BattleInput) => void>(() => { })
+    // Anti double-action : on ne résout qu'UNE action par état de combat. Clé sur
+    // l'identité de `battle` → auto-réparant (un nouveau tour rend `battle` différent
+    // et débloque l'action suivante). Empêche le freeze par double-tap rapide.
+    const actedRef = useRef<typeof battle>(null)
 
     // Initialise les PV affichés au tout début du combat (ils sont ensuite
     // CONSERVÉS d'un tour à l'autre → pas de saut visuel entre les tours).
@@ -56,13 +60,16 @@ export default function BattleScreen() {
     // Lecture de la file : reset au nouveau tour, sinon traite l'événement courant.
     useEffect(() => {
         if (!battle) return
-        // Nouveau tour résolu → on repart au début de la file (et on attend le re-render).
+        // Nouveau tour résolu → on repart au début de la file.
         if (lastBattle.current !== battle) {
             lastBattle.current = battle
-            setStep(0)
             setMenu("root")
             setBall(null)
-            return
+            // Si step != 0 : on remet à 0 et le re-render traitera events[0].
+            // Si step EST déjà 0 : surtout PAS de return (setStep(0) serait un no-op
+            // → aucun re-render → file jamais traitée = blocage). On tombe dans le
+            // traitement de events[0] ci-dessous.
+            if (step !== 0) { setStep(0); return }
         }
         const ev = battle.events[step]
         if (!ev) return                      // file terminée → menu/fin
@@ -75,16 +82,14 @@ export default function BattleScreen() {
             else if (ev.action === "shake") { setBall({ phase: "shake", shakes: ev.shakes ?? 0, caught: false }); delay = Math.max(500, (ev.shakes ?? 0) * 460 + 360) }
             else { setBall({ phase: "result", shakes: 0, caught: !!ev.caught }); delay = 850 }
         } else if (ev.kind === "hp") {
+            // Déclenche le tremblement AVANT setDisp (jamais de setState imbriqué).
+            if (ev.side === "player") { if (ev.hp < (disp?.p ?? Infinity)) setShakeP((k) => k + 1) }
+            else { if (ev.hp < (disp?.e ?? Infinity)) setShakeE((k) => k + 1) }
             setDisp((d) => {
                 if (!d) return d
                 const next = { ...d }
-                if (ev.side === "player") {
-                    if (ev.hp < d.p) setShakeP((k) => k + 1)
-                    next.p = ev.hp; next.pMax = ev.max
-                } else {
-                    if (ev.hp < d.e) setShakeE((k) => k + 1)
-                    next.e = ev.hp; next.eMax = ev.max
-                }
+                if (ev.side === "player") { next.p = ev.hp; next.pMax = ev.max }
+                else { next.e = ev.hp; next.eMax = ev.max }
                 return next
             })
             delay = 340
@@ -93,6 +98,7 @@ export default function BattleScreen() {
         }
         const t = setTimeout(() => setStep((s) => s + 1), delay)
         return () => clearTimeout(t)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [battle, step])
 
     // Enregistre le pont d'entrée (boutons coque → menu de combat) le temps du combat.
@@ -117,18 +123,29 @@ export default function BattleScreen() {
     const needSwitch = battle.forcedSwitch === "player"
 
     // --- handlers ---
+    // tryAct : n'exécute l'action que si on n'a pas déjà agi pour CET état de combat
+    // (garde anti double-soumission → anti-freeze). Les transitions de menu pures
+    // (ATTAQUE→moves, etc.) ne passent PAS par là.
+    const tryAct = (fn: () => void) => {
+        if (actedRef.current === battle) return
+        actedRef.current = battle
+        fn()
+    }
     const advance = () => { if (waitingForTap) setStep((s) => s + 1) }
-    const doMove = (i: number) => { submitPlayerAction({ kind: "move", moveIndex: i }); setMenu("root") }
-    const doStruggle = () => { submitPlayerAction({ kind: "move", moveIndex: STRUGGLE_INDEX }); setMenu("root") }
-    const doSwitch = (i: number) => { submitPlayerAction({ kind: "switch", teamIndex: i }); setMenu("root") }
-    const throwBall = (itemId: string) => { submitPlayerAction({ kind: "ball", itemId }); setMenu("root") }
-    const doItem = (itemId: string) => { submitPlayerAction({ kind: "item", itemId }); setMenu("root") }
-    const run = () => submitPlayerAction({ kind: "run" })
+    const doMove = (i: number) => tryAct(() => { submitPlayerAction({ kind: "move", moveIndex: i }); setMenu("root") })
+    const doStruggle = () => tryAct(() => { submitPlayerAction({ kind: "move", moveIndex: STRUGGLE_INDEX }); setMenu("root") })
+    const doSwitch = (i: number) => tryAct(() => { submitPlayerAction({ kind: "switch", teamIndex: i }); setMenu("root") })
+    const throwBall = (itemId: string) => tryAct(() => { submitPlayerAction({ kind: "ball", itemId }); setMenu("root") })
+    const doItem = (itemId: string) => tryAct(() => { submitPlayerAction({ kind: "item", itemId }); setMenu("root") })
+    const run = () => tryAct(() => submitPlayerAction({ kind: "run" }))
 
-    const pHp = disp?.p ?? player.currentHp
-    const pMax = disp?.pMax ?? maxHpOf(player)
-    const eHp = disp?.e ?? enemy.currentHp
-    const eMax = disp?.eMax ?? maxHpOf(enemy)
+    // Pendant le playback (animations de coups), on suit `disp` pour animer les barres.
+    // Dès que le tour est résolu (playbackDone), on affiche TOUJOURS l'état réel et
+    // frais des Daemon → plus jamais de PV/jauge "figés" sur une ancienne valeur.
+    const pHp = playbackDone ? player.currentHp : (disp?.p ?? player.currentHp)
+    const pMax = playbackDone ? maxHpOf(player) : (disp?.pMax ?? maxHpOf(player))
+    const eHp = playbackDone ? enemy.currentHp : (disp?.e ?? enemy.currentHp)
+    const eMax = playbackDone ? maxHpOf(enemy) : (disp?.eMax ?? maxHpOf(enemy))
 
     // L'ennemi est "aspiré" par la ball (lancer/secousses, et capture réussie).
     const enemyHiddenByBall = !!ball && (ball.phase === "throw" || ball.phase === "shake" || (ball.phase === "result" && ball.caught))
@@ -158,7 +175,8 @@ export default function BattleScreen() {
             options.push({ label: "⚔️ ATTAQUE", onSelect: () => setMenu("moves") })
             options.push({ label: "🎒 SAC", onSelect: () => setMenu("bag") })
             options.push({ label: "🐾 DAEMON", onSelect: () => setMenu("switch") })
-            options.push({ label: "🏃 FUITE", onSelect: run, disabled: !battle.isWild })
+            // FUITE → écran de confirmation (évite la fuite accidentelle).
+            options.push({ label: "🏃 FUITE", onSelect: () => setMenu("confirmRun"), disabled: !battle.isWild })
         } else if (menu === "moves") {
             const costs = player.moves.map((s) => moveCostReps(s.ppMax, player.level))
             const canUse = (c: number) => c <= reps && c <= remainingEnergy
@@ -175,6 +193,12 @@ export default function BattleScreen() {
             if (battle.isWild) Object.values(ITEMS).filter((it) => it.category === "BALL" && (items[it.id] ?? 0) > 0)
                 .forEach((b) => options.push({ label: `${b.name} ×${items[b.id]}`, onSelect: () => throwBall(b.id) }))
             options.push({ label: "← RETOUR", onSelect: () => setMenu("root") })
+            canBack = true
+        } else if (menu === "confirmRun") {
+            // "Annuler" en premier → le curseur démarre dessus (défaut sûr : un
+            // appui A réflexe annule la fuite au lieu de la confirmer).
+            options.push({ label: "← Annuler", onSelect: () => setMenu("root") })
+            options.push({ label: "🏃 Confirmer la fuite", onSelect: run })
             canBack = true
         } else {
             battle.player.team.forEach((m, i) => options.push({
@@ -239,13 +263,19 @@ export default function BattleScreen() {
                     </div>
                 ) : (
                     <>
-                        {isEnded && (
-                            <div style={S.menuHint}>{battle.outcome === "win" ? "Tu remportes le combat !" : battle.outcome === "lose" ? "Tous tes Daemons sont K.O…" : battle.outcome === "run" ? "Tu as pris la fuite." : battle.outcome === "caught" ? "Daemon capturé !" : "Fin du combat."}</div>
-                        )}
-                        {menu === "moves" && !isEnded && !needSwitch && (
-                            <div style={S.menuHint}><span>⚡ {remainingEnergy}/{energy.cap} ce combat</span><span>💪 {reps}</span></div>
-                        )}
-                        {needSwitch && <div style={S.menuHint}>Choisis un Daemon !</div>}
+                        {/* Ligne d'info : TOUJOURS rendue (hauteur réservée) → les
+                            options gardent exactement le même Y d'un menu à l'autre. */}
+                        <div style={S.menuHint}>
+                            {isEnded ? (
+                                <span>{battle.outcome === "win" ? "Tu remportes le combat !" : battle.outcome === "lose" ? "Tous tes Daemons sont K.O…" : battle.outcome === "run" ? "Tu as pris la fuite." : battle.outcome === "caught" ? "Daemon capturé !" : "Fin du combat."}</span>
+                            ) : needSwitch ? (
+                                <span>Choisis un Daemon !</span>
+                            ) : menu === "confirmRun" ? (
+                                <span>Fuir le combat ? (B = annuler)</span>
+                            ) : menu === "moves" ? (
+                                <><span>⚡ {remainingEnergy}/{energy.cap} ce combat</span><span>💪 {reps}</span></>
+                            ) : <span>&nbsp;</span>}
+                        </div>
                         <div style={S.optList}>
                             {options.map((o, i) => (
                                 <button
@@ -392,13 +422,15 @@ const S: Record<string, React.CSSProperties> = {
     sprite: { width: 72, height: 72, borderRadius: "50%", background: "#ffffff80", border: "3px solid #1c1408", display: "flex", alignItems: "center", justifyContent: "center" },
     spriteBox: { width: 84, height: 84, display: "flex", alignItems: "center", justifyContent: "center" },
     spriteGlyph: { fontSize: 34, fontWeight: 900 },
-    bottom: { marginTop: 8, minHeight: 96 },
+    // Hauteur réservée pour 4 options + la ligne d'info → la zone du bas ne change
+    // pas de taille selon le menu (pas de "saut" des options entre écrans).
+    bottom: { marginTop: 8, minHeight: 248 },
     msgBox: { background: "#f8f8e8", border: "3px solid #1c1408", borderRadius: 6, padding: 14, minHeight: 72, display: "flex", flexDirection: "column", justifyContent: "center", cursor: "pointer", position: "relative" },
     msgText: { fontSize: 14, lineHeight: 1.5, fontWeight: 700, margin: 0 },
     next: { position: "absolute", bottom: 6, right: 12, fontSize: 12, animation: "none" },
     menuGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 },
     optList: { display: "flex", flexDirection: "column", gap: 6 },
-    menuHint: { display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: 700, opacity: 0.85, marginBottom: 4, color: "#1c1408" },
+    menuHint: { display: "flex", justifyContent: "space-between", alignItems: "center", minHeight: 18, fontSize: 11, fontWeight: 700, opacity: 0.85, marginBottom: 4, color: "#1c1408" },
     btn: { background: "#f8f8e8", border: "3px solid #1c1408", borderRadius: 6, padding: "11px 12px", fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer", color: "#1c1408", textAlign: "left" },
     btnDim: { background: "#d8d8c8", border: "3px solid #888", borderRadius: 6, padding: "11px 12px", fontFamily: "inherit", fontSize: 13, fontWeight: 700, color: "#888", textAlign: "left" },
     btnFocus: { background: "#f5d020", borderColor: "#1c1408", boxShadow: "0 0 0 2px #f5d020" },

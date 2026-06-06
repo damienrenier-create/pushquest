@@ -13,12 +13,13 @@ import { useRouter } from "next/navigation"
 import GameBoyShell from "./GameBoyShell"
 import MapView from "./MapView"
 import BattleScreen from "./battle/BattleScreen"
-import BattleControls from "./battle/BattleControls"
+import BattleControls, { BATTLE_CONTROLS_HEIGHT } from "./battle/BattleControls"
+import BattleBoundary from "./battle/BattleBoundary"
 import EvolutionScreen from "./battle/EvolutionScreen"
 import IntroCinematic from "./IntroCinematic"
 import LearnScreen from "./LearnScreen"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
-import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, dispatchBattleInput } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, dispatchBattleInput, endBattle } from "@/lib/gamebook/yellow/store/battleStore"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
 import { getPlayer, setTeam, usePlayer, addItem, spendReps, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam } from "@/lib/gamebook/yellow/store/playerStore"
@@ -164,9 +165,12 @@ export default function YellowDevClient() {
                 tactiles) + clavier (dispatchBattleInput), donc pas besoin du D-pad. */}
             {battle ? (
                 <div style={battleWrapStyle}>
-                    <BattleScreen />
-                    {/* Boutons compacts (D-pad + A/B) sous le combat, dans le flux :
-                        pas de coque, pas de superposition avec les menus. */}
+                    {/* Error boundary : si le combat plante, on propose "Reprendre"
+                        (endBattle) au lieu d'obliger un hard refresh. */}
+                    <BattleBoundary onReset={() => endBattle()}>
+                        <BattleScreen />
+                    </BattleBoundary>
+                    {/* Boutons (D-pad + A/B) en footer FIXE : ne bougent jamais. */}
                     <BattleControls />
                 </div>
             ) : (
@@ -648,10 +652,13 @@ const pageStyle: React.CSSProperties = {
 }
 
 // Combat plein écran (hors coque) : centré, scrollable si le contenu dépasse.
+// paddingBottom réserve la place du footer de contrôles FIXE (sinon il masque
+// les dernières options).
 const battleWrapStyle: React.CSSProperties = {
     width: "100%", maxWidth: 480, margin: "0 auto",
     padding: "14px 12px", boxSizing: "border-box",
     maxHeight: "100dvh", overflowY: "auto",
+    paddingBottom: `calc(${BATTLE_CONTROLS_HEIGHT}px + env(safe-area-inset-bottom, 0px) + 16px)`,
 }
 
 const menuOverlayStyle: React.CSSProperties = {
