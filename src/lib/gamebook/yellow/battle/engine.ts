@@ -20,7 +20,7 @@ import { xpForDefeat, applyExp } from "./xp"
 import { tryCapture } from "./capture"
 import { ballBonusOf, getItem, isGuaranteedBall } from "../data/items"
 import { rarityBonusOf } from "../data/captureConfig"
-import { STRUGGLE_MOVE_ID, STRUGGLE_INDEX } from "../data/combatCostConfig"
+import { STRUGGLE_MOVE_ID, STRUGGLE_INDEX, moveCostReps } from "../data/combatCostConfig"
 import { gainEv, signatureStat, EV_YIELD_PER_WIN } from "../data/evConfig"
 
 // ============================================================
@@ -65,6 +65,8 @@ export interface BattleState {
     participated: string[]
     /** Combat JOUEUR vs JOUEUR : XP attribuée AUX DEUX camps (au vainqueur de chaque KO). */
     pvp: boolean
+    /** Budget d'énergie de l'ENNEMI (ACE) : il paie ses attaques, struggle à sec. null = illimité. */
+    enemyEnergy: { spent: number; cap: number } | null
 }
 
 export type PlayerAction =
@@ -124,7 +126,7 @@ export function toBattleMon(inst: MonInstance): BattleMon {
 export function createBattle(
     playerTeam: MonInstance[],
     enemyTeam: MonInstance[],
-    opts: { isWild: boolean; seed: number; aiLevel?: AiLevel; captureModifier?: number; pvp?: boolean },
+    opts: { isWild: boolean; seed: number; aiLevel?: AiLevel; captureModifier?: number; pvp?: boolean; enemyEnergyCap?: number },
 ): BattleState {
     // Le joueur envoie son premier Daemon ENCORE DEBOUT (pas un K.O. en tête de liste).
     const playerStart = playerTeam.findIndex((m) => m.currentHp > 0)
@@ -145,6 +147,7 @@ export function createBattle(
         captureModifier: opts.captureModifier ?? 1,
         participated: leadUid ? [leadUid] : [],
         pvp: opts.pvp ?? false,
+        enemyEnergy: opts.enemyEnergyCap != null ? { spent: 0, cap: opts.enemyEnergyCap } : null,
     }
 }
 
@@ -340,6 +343,11 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
     const slot = isStruggle ? null : attacker.moves[moveIndex]
     const move = isStruggle ? getMove(STRUGGLE_MOVE_ID) : slot ? getMove(slot.moveId) : null
     if (!move) return
+
+    // Budget d'énergie de l'ENNEMI (ACE) : il paie son attaque (sauf Charge Désespérée).
+    if (side === "enemy" && state.enemyEnergy && !isStruggle) {
+        state.enemyEnergy.spent += moveCostReps(attacker.moves[moveIndex]?.ppMax ?? 5, attacker.level)
+    }
 
     // --- Pré-checks de statut (peut empêcher l'action) ---
     if (!canAct(attacker, events, rng)) return
@@ -699,7 +707,24 @@ export function chooseEnemyAction(state: BattleState, rng: Rng): ResolvedAction 
     if (choice.kind === "switch" && choice.teamIndex !== undefined) {
         return { side: "enemy", kind: "switch", teamIndex: choice.teamIndex }
     }
-    return { side: "enemy", kind: "move", moveIndex: choice.moveIndex ?? 0 }
+    let moveIndex = choice.moveIndex ?? 0
+    // Budget d'énergie (ACE) : si l'attaque choisie est inabordable, prendre la
+    // meilleure attaque abordable ; à sec → Charge Désespérée (gratuite).
+    if (state.enemyEnergy) {
+        const remaining = state.enemyEnergy.cap - state.enemyEnergy.spent
+        const costOf = (i: number) => moveCostReps(self.moves[i]?.ppMax ?? 5, self.level)
+        if (moveIndex < 0 || costOf(moveIndex) > remaining) {
+            let best = -1, bestPow = -1
+            self.moves.forEach((slot, i) => {
+                if (costOf(i) <= remaining) {
+                    const p = getMove(slot.moveId)?.power ?? 0
+                    if (p > bestPow) { bestPow = p; best = i }
+                }
+            })
+            moveIndex = best >= 0 ? best : STRUGGLE_INDEX
+        }
+    }
+    return { side: "enemy", kind: "move", moveIndex }
 }
 
 /**
@@ -870,6 +895,7 @@ function structuredCloneState(s: BattleState): BattleState {
         enemy: { activeIndex: s.enemy.activeIndex, team: s.enemy.team.map(cloneMon) },
         events: [],
         participated: [...s.participated],
+        enemyEnergy: s.enemyEnergy ? { ...s.enemyEnergy } : null,
     }
 }
 

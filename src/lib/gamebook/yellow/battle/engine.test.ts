@@ -120,3 +120,26 @@ describe("combat de dresseur — enchaînement multi-Daemon", () => {
         expect(final.outcome).toBe("lose")
     })
 })
+
+describe("budget d'énergie de l'ennemi (ACE)", () => {
+    it("sans cap : enemyEnergy = null (solo inchangé)", () => {
+        const s = createBattle([createMonInstance("cerfeuillu", 30)], [createMonInstance("razmaree", 30)], { isWild: false, seed: 1 })
+        expect(s.enemyEnergy).toBeNull()
+    })
+
+    it("avec cap : l'ennemi dépense de l'énergie, jamais au-delà du cap", () => {
+        // Ennemi costaud (attaque au moins une fois) vs joueur faible.
+        const s0 = createBattle([createMonInstance("cornaissant", 5)], [createMonInstance("razmaree", 40)], { isWild: false, seed: 3, enemyEnergyCap: 1000, aiLevel: "ace" })
+        expect(s0.enemyEnergy).toEqual({ spent: 0, cap: 1000 })
+        const { final } = autoPlay(s0)
+        expect(final.enemyEnergy!.spent).toBeGreaterThan(0)      // il a bien payé son attaque
+        expect(final.enemyEnergy!.spent).toBeLessThanOrEqual(1000) // jamais au-delà du budget
+    })
+
+    it("cap 0 : l'ennemi ne peut rien payer → Charge Désespérée, dépense reste 0", () => {
+        const s0 = createBattle([createMonInstance("cerfeuillu", 50)], [createMonInstance("braisille", 8)], { isWild: false, seed: 9, enemyEnergyCap: 0, aiLevel: "ace" })
+        const { final } = autoPlay(s0)
+        expect(final.phase).toBe("ended")
+        expect(final.enemyEnergy!.spent).toBe(0) // toujours à sec → aucune attaque payante
+    })
+})

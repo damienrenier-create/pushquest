@@ -23,7 +23,7 @@ import EvolutionScreen from "./battle/EvolutionScreen"
 import IntroCinematic from "./IntroCinematic"
 import LearnScreen from "./LearnScreen"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
-import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, dispatchBattleInput, endBattle, getSbireRewardMsg } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg } from "@/lib/gamebook/yellow/store/battleStore"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
 import { getPlayer, setTeam, usePlayer, addItem, spendReps, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove } from "@/lib/gamebook/yellow/store/playerStore"
@@ -58,6 +58,7 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
     const evolutions = useEvolutions()
     const whiteout = useWhiteout()
     const sbireWin = useSbireWin()
+    const aceWin = useAceWin()
     const router = useRouter()
     const player = usePlayer()
     const [menu, setMenu] = useState<"none" | "pause" | "team" | "pc" | "bag" | "reput">("none")
@@ -206,6 +207,16 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
             clearSbireWin()
         }
     }, [sbireWin, battle, evolutions.length, showDialogue])
+
+    // ACE vaincu : message de récompense post-combat (revanche le lendemain, plus fort).
+    useEffect(() => {
+        if (aceWin !== null && !battle && evolutions.length === 0) {
+            const reward = getAceRewardMsg()
+            const lines = ["*ACE s'incline, un sourire en coin.*", "Pas mal. Mais demain je reviens plus fort…", ...(reward ? [reward] : [])]
+            showDialogue("y_ace", "ACE", lines)
+            clearAceWin()
+        }
+    }, [aceWin, battle, evolutions.length, showDialogue])
 
     // Fin d'intro : on accorde le starter choisi (niv 5) + un petit kit de départ,
     // on marque l'intro vue et on persiste.

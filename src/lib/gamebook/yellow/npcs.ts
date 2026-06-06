@@ -10,6 +10,7 @@ import type { NpcDefinition } from "@/lib/gamebook/npcs"
 import { TRAINERS } from "./data/trainers"
 import { NORTH_BUSH_POSITIONS } from "./maps"
 import { PARK_SIGN_TIPS } from "./data/parkSigns"
+import { ACE_TRAINER_ID, ACE_POS, ACE_INTRO_LINES } from "./data/ace"
 
 // PANNEAUX = les buissons (# isolés) de la map Nord ("le parc"). Chaque buisson
 // reçoit un hotspot interactif INVISIBLE (emoji vide → MapView ne dessine rien,
@@ -45,6 +46,20 @@ const TRAINER_NPCS: NpcDefinition[] = TRAINERS.map((t) => ({
 export const YELLOW_NPCS: NpcDefinition[] = [
     // v4.y — PNJ "ARCHITECTE" (👷, ex-"professeur" relique du tout début) RETIRÉ :
     // emoji parasite au centre de la ville. À recréer proprement plus tard si besoin.
+
+    // === VILLE — ACE (rival quotidien, IA "ace", équipe évolutive par joueur) ===
+    // Se tient en (0,16) ; interpelle aussi le joueur sur la bande (0,17-19).
+    {
+        id: ACE_TRAINER_ID,
+        name: "ACE",
+        mapId: "yellow_entrance",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "😎", color: "#2b6cb0" }, // placeholder : sprite à venir
+        initialX: ACE_POS.x,
+        initialY: ACE_POS.y,
+        dialoguesAfter: ACE_INTRO_LINES,
+    },
 
     // === Intérieur SHOP ===
     {

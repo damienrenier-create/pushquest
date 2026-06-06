@@ -16,6 +16,7 @@ import { getCt, canLearnCt, purchasableCts, type BadgeId } from "../data/cts"
 import type { StatKey } from "../battle/types"
 import { expForLevel, levelFromExp, applyExp, MAX_LEVEL, type ExpResult } from "../battle/xp"
 import type { WildPlayerCtx } from "../data/encounters"
+import { initialAceTeam, progressAceTeam, type AceMon } from "../data/ace"
 
 export const TEAM_MAX = 6
 
@@ -53,6 +54,12 @@ interface PlayerState {
     sbireWinsTotal: number
     /** Réputation PvP (matchs + usages pour fétiche/favorite). */
     pvpStats: PvpStats
+    /** ACE (rival) — état PAR JOUEUR : son équipe mute à chaque défaite. */
+    aceTeam: AceMon[]
+    /** Nombre de fois où le joueur a battu ACE (pilote la progression + récompenses). */
+    aceWins: number
+    /** Jour (= creditedThrough) où ACE a été battu → 1 défaite/jour. */
+    aceDefeatedDate: string
 }
 
 /** Statistiques PvP du joueur (réputation). */
@@ -71,7 +78,7 @@ export function emptyPvpStats(): PvpStats {
     return { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }
 }
 
-let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats() }
+let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), aceTeam: [], aceWins: 0, aceDefeatedDate: "" }
 const listeners = new Set<() => void>()
 
 function emit() { for (const l of listeners) l() }
@@ -93,6 +100,9 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         sbireDefeatsToday: p.sbireDefeatsToday ?? st.sbireDefeatsToday ?? 0,
         sbireWinsTotal: p.sbireWinsTotal ?? st.sbireWinsTotal ?? 0,
         pvpStats: p.pvpStats ?? st.pvpStats ?? emptyPvpStats(),
+        aceTeam: p.aceTeam ?? st.aceTeam ?? [],
+        aceWins: p.aceWins ?? st.aceWins ?? 0,
+        aceDefeatedDate: p.aceDefeatedDate ?? st.aceDefeatedDate ?? "",
     }
     emit()
 }
@@ -106,7 +116,7 @@ export function markIntroSeen() {
 
 /** DEV : remet la progression jaune à zéro pour rejouer l'intro (équipe vidée, introSeen=false). */
 export function resetForIntro() {
-    st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats() }
+    st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), aceTeam: [], aceWins: 0, aceDefeatedDate: "" }
     emit()
 }
 
@@ -255,6 +265,26 @@ function topKey(rec: Record<string, number>): string | null {
 export function favoriteDaemon(): string | null { return topKey(st.pvpStats.daemonUse) }
 /** Attaque favorite (la plus utilisée en PvP), ou null. */
 export function favoriteMove(): string | null { return topKey(st.pvpStats.moveUse) }
+
+// === ACE (rival) ===
+/** Équipe actuelle d'ACE (init paresseuse à la 1re rencontre). */
+export function getAceTeam(): AceMon[] {
+    return st.aceTeam.length ? st.aceTeam : initialAceTeam()
+}
+/** Nombre de défaites d'ACE infligées par ce joueur. */
+export function aceWinsCount(): number { return st.aceWins }
+/** ACE affrontable aujourd'hui ? (1 défaite/jour ; retry libre si on perd). */
+export function aceAvailableToday(): boolean {
+    return st.creditedThrough === "" || st.aceDefeatedDate !== st.creditedThrough
+}
+/** Défaite d'ACE : fait MUTER son équipe + verrouille pour la journée. Renvoie le n° de victoire. */
+export function recordAceDefeat(playerBestLevel: number): number {
+    const wins = st.aceWins + 1
+    const team = progressAceTeam(getAceTeam(), wins, playerBestLevel, Math.random)
+    st = { ...st, aceTeam: team, aceWins: wins, aceDefeatedDate: st.creditedThrough }
+    emit()
+    return wins
+}
 
 /** Prix actuel d'un Super Pasta : (60 + bonus journalier) × 1.5^(achats du jour). */
 export function superPastaPrice(): number {

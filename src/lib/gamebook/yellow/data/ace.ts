@@ -15,6 +15,28 @@ export const ACE_TRAINER_ID = "y_ace"
 export const ACE_ENERGY_MULT = 1.5
 export const MAX_LEVEL = 100
 
+// Emplacement sur la VILLE (yellow_entrance) : ACE se tient en (0,16) et interpelle
+// le joueur dès qu'il marche sur la bande (0,17)/(0,18)/(0,19).
+export const ACE_POS = { x: 0, y: 16 }
+export const ACE_TRIGGER_TILES: { x: number; y: number }[] = [
+    { x: 0, y: 17 }, { x: 0, y: 18 }, { x: 0, y: 19 },
+]
+
+export const ACE_INTRO_LINES = [
+    "*Un type nonchalant te barre la route, mains dans les poches.*",
+    "Tiens, encore toi. Paraît que tu montes… Moi c'est ACE.",
+    "Je reviens chaque jour plus fort. Voyons si tu tiens le rythme !",
+]
+export const ACE_DONE_LINES = [
+    "*ACE époussette sa veste.*",
+    "Tu m'as déjà battu aujourd'hui. Je file m'entraîner…",
+    "Reviens demain : je serai plus fort. Promis.",
+]
+export const ACE_NO_TEAM_LINES = [
+    "*ACE hausse un sourcil.*",
+    "Aucun Daemon en état de combattre ? Reviens quand tu seras prêt.",
+]
+
 export interface AceMon { speciesId: string; level: number }
 
 /** Équipe de départ (tous niv 4) : 3 Panthéon + Nouillon + 2 Feu (Braisille, Fennaise). */

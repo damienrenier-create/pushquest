@@ -19,8 +19,10 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance } from "../battle/types"
 import { markSeen, markCaught } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat } from "./playerStore"
 import { SBIRE_REWARD_REPS, SBIRE_REWARD_BALL_ID } from "../data/sbire"
+import { ACE_TRAINER_ID, aceReward } from "../data/ace"
+import { createMonInstance } from "../battle/factory"
 import { getTrainer } from "../data/trainers"
 import { SBIRE_TRAINER_ID } from "../data/sbire"
 import { toMonInstance } from "../storage/save"
@@ -66,6 +68,9 @@ interface BattleStoreState {
     sbireWin: number | null
     /** Message de récompense du sbire (énergie / ball) à afficher avec l'explication ; null sinon. */
     sbireRewardMsg: string | null
+    /** Numéro de victoire sur ACE (1-indexé) → message de récompense post-combat ; null sinon. */
+    aceWin: number | null
+    aceRewardMsg: string | null
     /** Contexte d'un combat JOUEUR vs JOUEUR (null = combat solo classique). */
     pvpCtx: PvpContext | null
 }
@@ -89,7 +94,7 @@ interface PvpContext {
     desync: boolean
 }
 
-let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, pvpCtx: null }
+let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, pvpCtx: null }
 const listeners = new Set<() => void>()
 
 function emit() {
@@ -133,19 +138,19 @@ export function startWildBattle(playerTeam: MonInstance[], enemyTeam: MonInstanc
     const captureModifier = getPlayer().wildCtx?.quotaReached ? QUOTA_CAPTURE_BONUS : 1
     const battle = createBattle(playerTeam, enemyTeam, { isWild: true, seed, captureModifier })
     syncPokedex(battle) // adversaire "vu" dès la rencontre
-    setStore({ battle, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null })
+    setStore({ battle, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null })
 }
 
 export function startTrainerBattle(
     playerTeam: MonInstance[],
     enemyTeam: MonInstance[],
     seed: number,
-    opts?: { trainerId?: string; reward?: number; aiLevel?: AiLevel },
+    opts?: { trainerId?: string; reward?: number; aiLevel?: AiLevel; enemyEnergyCap?: number },
 ) {
-    const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: opts?.aiLevel })
+    const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: opts?.aiLevel, enemyEnergyCap: opts?.enemyEnergyCap })
     syncPokedex(battle)
     const trainer = opts?.trainerId ? { trainerId: opts.trainerId, reward: opts.reward ?? 0 } : null
-    setStore({ battle, evolutions: [], trainer, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null })
+    setStore({ battle, evolutions: [], trainer, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null })
 }
 
 /** Énergie de combat : reps déjà dépensés ce combat + plafond (selon badges). */
@@ -204,8 +209,21 @@ function finishBattle(b: BattleState) {
     //       (sinon il deviendrait inaffrontable), juste le compteur + l'explication.
     let sbireWin: number | null = null
     let sbireRewardMsg: string | null = null
+    let aceWin: number | null = null
+    let aceRewardMsg: string | null = null
     if (b.outcome === "win" && storeState.trainer) {
-        if (storeState.trainer.trainerId === SBIRE_TRAINER_ID) {
+        if (storeState.trainer.trainerId === ACE_TRAINER_ID) {
+            // ACE : sa défaite fait muter son équipe (par joueur) + récompense graduée.
+            const best = Math.max(1, ...getPlayer().team.map((m) => m.level))
+            const winNum = recordAceDefeat(best)
+            const r = aceReward(winNum)
+            if (r.itemId) addItem(r.itemId, 1)
+            if (r.reps) grantReps(r.reps)
+            if (r.gift === "pantheon") addCaught(createMonInstance("pantheon", 5, { owned: true }))
+            if (r.refund) grantReps(storeState.energySpent) // remboursement de l'énergie dépensée
+            aceWin = winNum
+            aceRewardMsg = r.message
+        } else if (storeState.trainer.trainerId === SBIRE_TRAINER_ID) {
             sbireWin = recordSbireWin()
             // Récompense selon la victoire DU JOUR : 1re → énergie, 2e → ball.
             const todayWins = getPlayer().sbireDefeatsToday
@@ -236,7 +254,7 @@ function finishBattle(b: BattleState) {
         setTeam([...team])
     }
     // Expose les évolutions pour la cinématique post-combat (jouée après "QUITTER").
-    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose, sbireWin, sbireRewardMsg })
+    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg })
 
     // 4) Sauvegarde persistante (DB).
     persistYellowSave()
@@ -268,6 +286,16 @@ export function clearSbireWin() {
 /** Message de récompense du sbire (lu au moment d'afficher l'explication). */
 export function getSbireRewardMsg(): string | null {
     return storeState.sbireRewardMsg
+}
+
+/** Consommé par la carte une fois la récompense d'ACE affichée. */
+export function clearAceWin() {
+    setStore({ ...storeState, aceWin: null, aceRewardMsg: null })
+}
+
+/** Message de récompense d'ACE (lu au moment d'afficher le dialogue post-combat). */
+export function getAceRewardMsg(): string | null {
+    return storeState.aceRewardMsg
 }
 
 // ============================================================
@@ -358,7 +386,7 @@ export function startPvpBattle(battle: BattleState, ctx: Omit<PvpContext, "seq" 
     mpLog("battle", "start", { battleId: ctx.battleId, role: ctx.role, checksum: battleChecksum(battle) })
     setStore({
         battle, evolutions: [], trainer: null, whiteout: false, energySpent: 0,
-        sbireWin: null, sbireRewardMsg: null,
+        sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null,
         pvpCtx: { ...ctx, seq: 0, myAction: null, oppAction: null, won: null, desync: false },
     })
 }
@@ -536,5 +564,13 @@ export function useSbireWin(): number | null {
         subscribe,
         () => getSnapshot().sbireWin,
         () => getSnapshot().sbireWin,
+    )
+}
+
+export function useAceWin(): number | null {
+    return useSyncExternalStore(
+        subscribe,
+        () => getSnapshot().aceWin,
+        () => getSnapshot().aceWin,
     )
 }

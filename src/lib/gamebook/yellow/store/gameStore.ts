@@ -18,12 +18,13 @@ import type { YellowMapData } from "../maps"
 import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle } from "./battleStore"
-import { getPlayer as getPlayerSave, healAllTeam, isTrainerDefeated } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, isTrainerDefeated, getAceTeam, aceAvailableToday } from "./playerStore"
 import { persistYellowSave } from "./saveManager"
 import { rollWildEncounter } from "../data/encounters"
 import { getTrainer } from "../data/trainers"
 import { createMonInstance } from "../battle/factory"
 import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroLines, SBIRE_DONE_LINES, SBIRE_NO_TEAM_LINES } from "../data/sbire"
+import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_INTRO_LINES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, aceEnergyBudget } from "../data/ace"
 
 export interface ActiveDialogue {
     npcId: string
@@ -43,6 +44,7 @@ interface GameStore {
     stepFrame: 0 | 1 // alterne à chaque déplacement réel → anime les jambes du sprite
     pendingTrainerId: string | null // dresseur dont l'intro est en cours → combat à la fermeture
     pendingSbire: boolean // intro du sbire en cours → combat dynamique à la fermeture
+    pendingAce: boolean // intro d'ACE en cours → combat à la fermeture
 
     // === ACTIONS ===
     move: (dir: Direction) => void
@@ -115,6 +117,22 @@ function tryLaunchSbire(): ActiveDialogue | null {
     return null
 }
 
+// Lance le combat ACE : équipe = celle STOCKÉE pour ce joueur (IA "ace"), budget
+// d'énergie ennemi = 1,5× les reps du joueur. Renvoie un dialogue (K.O.) ou null.
+function tryLaunchAce(): ActiveDialogue | null {
+    const team = getPlayerSave().team
+    if (!team.some((m) => m.currentHp > 0)) {
+        return { npcId: ACE_TRAINER_ID, npcName: "ACE", lineIndex: 0, lines: ACE_NO_TEAM_LINES }
+    }
+    const enemyTeam = getAceTeam().map((m) => createMonInstance(m.speciesId, m.level))
+    const seed = Math.floor(Math.random() * 1e9) >>> 0
+    startTrainerBattle(team, enemyTeam, seed, {
+        trainerId: ACE_TRAINER_ID, reward: 0, aiLevel: "ace",
+        enemyEnergyCap: aceEnergyBudget(getPlayerSave().reps),
+    })
+    return null
+}
+
 // Spawn par défaut : VILLE JAUNE = Viridian City 45×40 (scale natif FireRed),
 // entrée sud (Route 1) centre-bas pour explorer la ville.
 const DEFAULT_SPAWN = { x: 22, y: 38 }
@@ -129,6 +147,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     stepFrame: 0,
     pendingTrainerId: null,
     pendingSbire: false,
+    pendingAce: false,
 
     move: (dir) => {
         const { player, map, dialogue } = get()
@@ -184,6 +203,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 }
             }
         }
+
+        // ACE (rival) : interpelle le joueur s'il marche sur sa bande de déclenchement.
+        if (moved && next.mapId === YELLOW_ENTRANCE_MAP_ID && aceAvailableToday()
+            && ACE_TRIGGER_TILES.some((t) => t.x === next.posX && t.y === next.posY)) {
+            set({
+                dialogue: { npcId: ACE_TRAINER_ID, npcName: "ACE", lines: ACE_INTRO_LINES, lineIndex: 0 },
+                pendingAce: true,
+            })
+        }
     },
 
     pressA: () => {
@@ -202,6 +230,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     set({ dialogue: tryLaunchTrainer(pid), pendingTrainerId: null })
                 } else if (get().pendingSbire) {
                     set({ dialogue: tryLaunchSbire(), pendingSbire: false })
+                } else if (get().pendingAce) {
+                    set({ dialogue: tryLaunchAce(), pendingAce: false })
                 } else {
                     set({ dialogue: null })
                 }
@@ -265,6 +295,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
             }
             const intro = sbireIntroLines(wins) // 0 → miroir, 1 → faiblesse
             set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: intro, lineIndex: 0 }, pendingSbire: true })
+            return
+        }
+
+        // ACE (rival) : combat quotidien, équipe évolutive par joueur, IA "ace".
+        if (npc.id === ACE_TRAINER_ID) {
+            if (!aceAvailableToday()) {
+                set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: ACE_DONE_LINES, lineIndex: 0 } })
+                return
+            }
+            set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: ACE_INTRO_LINES, lineIndex: 0 }, pendingAce: true })
             return
         }
 
@@ -332,6 +372,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ dialogue: tryLaunchTrainer(pendingTrainerId), pendingTrainerId: null })
         } else if (get().pendingSbire) {
             set({ dialogue: tryLaunchSbire(), pendingSbire: false })
+        } else if (get().pendingAce) {
+            set({ dialogue: tryLaunchAce(), pendingAce: false })
         } else {
             set({ dialogue: null })
         }
