@@ -15,6 +15,14 @@ export const SBIRE_MAX_FIGHTS_PER_DAY = 2
 /** Id partagé du combat de sbire (gameStore le lance, battleStore le reconnaît à la fin). */
 export const SBIRE_TRAINER_ID = "y_sbire"
 
+// RÉCOMPENSES (en plus du conseil distillé à chaque victoire) :
+//   1re victoire du jour → de l'énergie (reps)
+//   2e victoire du jour  → une ball
+/** Énergie (reps) offerte à la 1re victoire du jour. */
+export const SBIRE_REWARD_REPS = 50
+/** Objet offert à la 2e victoire du jour. */
+export const SBIRE_REWARD_BALL_ID = "poke_ball"
+
 /** Un type super-efficace contre les types du lead (repli NORMAL si rien). */
 function counterTypeFor(types: PokeType[]): PokeType {
     for (const t of POKE_TYPES) {

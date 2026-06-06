@@ -92,9 +92,12 @@ export default function BattleScreen() {
                 else { next.e = ev.hp; next.eMax = ev.max }
                 return next
             })
-            delay = 340
+            // La barre met 0,4s à se vider (transition CSS). On attend qu'elle soit
+            // terminée avant d'enchaîner (faint/K.O. ou coup suivant) → l'ordre perçu
+            // est bien : coup → perte de PV → annonce du K.O.
+            delay = 460
         } else if (ev.kind === "faint") {
-            delay = 320
+            delay = 340
         }
         const t = setTimeout(() => setStep((s) => s + 1), delay)
         return () => clearTimeout(t)

@@ -685,6 +685,11 @@ function awardExp(state: BattleState, events: BattleEvent[]) {
             for (const mid of res.learnedMoveIds) {
                 events.push({ kind: "message", text: `${displayName(mon)} apprend ${getMove(mid)?.name ?? mid} !` })
             }
+            // 4 slots pleins : la capacité est mise en attente. On NOTIFIE le joueur
+            // DANS le combat (le remplacement se fera à la fin, sans quitter brusquement).
+            for (const mid of res.pendingMoveIds) {
+                events.push({ kind: "message", text: `${displayName(mon)} veut apprendre ${getMove(mid)?.name ?? mid}… mais connaît déjà 4 capacités ! (choix à la fin du combat)` })
+            }
         }
     }
 }

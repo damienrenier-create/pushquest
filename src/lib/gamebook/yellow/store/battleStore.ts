@@ -15,7 +15,8 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance } from "../battle/types"
 import { markSeen, markCaught } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, healAllTeam, spendReps, awardBadge, recordSbireWin } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem } from "./playerStore"
+import { SBIRE_REWARD_REPS, SBIRE_REWARD_BALL_ID } from "../data/sbire"
 import { getTrainer } from "../data/trainers"
 import { SBIRE_TRAINER_ID } from "../data/sbire"
 import { toMonInstance } from "../storage/save"
@@ -58,9 +59,11 @@ interface BattleStoreState {
     energySpent: number
     /** Numéro de victoire sur le sbire (1-indexé) à expliquer post-combat ; null sinon. */
     sbireWin: number | null
+    /** Message de récompense du sbire (énergie / ball) à afficher avec l'explication ; null sinon. */
+    sbireRewardMsg: string | null
 }
 
-let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null }
+let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null }
 const listeners = new Set<() => void>()
 
 function emit() {
@@ -104,7 +107,7 @@ export function startWildBattle(playerTeam: MonInstance[], enemyTeam: MonInstanc
     const captureModifier = getPlayer().wildCtx?.quotaReached ? QUOTA_CAPTURE_BONUS : 1
     const battle = createBattle(playerTeam, enemyTeam, { isWild: true, seed, captureModifier })
     syncPokedex(battle) // adversaire "vu" dès la rencontre
-    setStore({ battle, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null })
+    setStore({ battle, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null })
 }
 
 export function startTrainerBattle(
@@ -116,7 +119,7 @@ export function startTrainerBattle(
     const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: opts?.aiLevel })
     syncPokedex(battle)
     const trainer = opts?.trainerId ? { trainerId: opts.trainerId, reward: opts.reward ?? 0 } : null
-    setStore({ battle, evolutions: [], trainer, whiteout: false, energySpent: 0, sbireWin: null })
+    setStore({ battle, evolutions: [], trainer, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null })
 }
 
 /** Énergie de combat : reps déjà dépensés ce combat + plafond (selon badges). */
@@ -172,9 +175,19 @@ function finishBattle(b: BattleState) {
     //       CAS SPÉCIAL sbire : récurrent (2×/jour) → on N'enregistre PAS "battu"
     //       (sinon il deviendrait inaffrontable), juste le compteur + l'explication.
     let sbireWin: number | null = null
+    let sbireRewardMsg: string | null = null
     if (b.outcome === "win" && storeState.trainer) {
         if (storeState.trainer.trainerId === SBIRE_TRAINER_ID) {
             sbireWin = recordSbireWin()
+            // Récompense selon la victoire DU JOUR : 1re → énergie, 2e → ball.
+            const todayWins = getPlayer().sbireDefeatsToday
+            if (todayWins === 1) {
+                const added = grantReps(SBIRE_REWARD_REPS)
+                sbireRewardMsg = `⚡ Et tiens, ${added} d'énergie pour ta peine !`
+            } else if (todayWins === 2) {
+                addItem(SBIRE_REWARD_BALL_ID, 1)
+                sbireRewardMsg = `🎁 Et prends donc cette Nexus Ball, tu l'as méritée !`
+            }
         } else {
             markTrainerDefeated(storeState.trainer.trainerId)
             const badge = getTrainer(storeState.trainer.trainerId)?.badge
@@ -195,7 +208,7 @@ function finishBattle(b: BattleState) {
         setTeam([...team])
     }
     // Expose les évolutions pour la cinématique post-combat (jouée après "QUITTER").
-    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose, sbireWin })
+    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose, sbireWin, sbireRewardMsg })
 
     // 4) Sauvegarde persistante (DB).
     persistYellowSave()
@@ -220,7 +233,12 @@ export function clearWhiteout() {
 
 /** Consommé par la carte une fois l'explication du sbire affichée. */
 export function clearSbireWin() {
-    setStore({ ...storeState, sbireWin: null })
+    setStore({ ...storeState, sbireWin: null, sbireRewardMsg: null })
+}
+
+/** Message de récompense du sbire (lu au moment d'afficher l'explication). */
+export function getSbireRewardMsg(): string | null {
+    return storeState.sbireRewardMsg
 }
 
 // ============================================================

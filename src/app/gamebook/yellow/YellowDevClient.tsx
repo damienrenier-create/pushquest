@@ -19,7 +19,7 @@ import EvolutionScreen from "./battle/EvolutionScreen"
 import IntroCinematic from "./IntroCinematic"
 import LearnScreen from "./LearnScreen"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
-import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, dispatchBattleInput, endBattle } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, dispatchBattleInput, endBattle, getSbireRewardMsg } from "@/lib/gamebook/yellow/store/battleStore"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
 import { getPlayer, setTeam, usePlayer, addItem, spendReps, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam } from "@/lib/gamebook/yellow/store/playerStore"
@@ -139,7 +139,9 @@ export default function YellowDevClient() {
     // combat quitté ET l'éventuelle cinématique d'évolution terminée.
     useEffect(() => {
         if (sbireWin !== null && !battle && evolutions.length === 0) {
-            showDialogue("y_sbire", "SBIRE", sbireExplanation(sbireWin))
+            const reward = getSbireRewardMsg()
+            const lines = [...sbireExplanation(sbireWin), ...(reward ? [reward] : [])]
+            showDialogue("y_sbire", "SBIRE", lines)
             clearSbireWin()
         }
     }, [sbireWin, battle, evolutions.length, showDialogue])

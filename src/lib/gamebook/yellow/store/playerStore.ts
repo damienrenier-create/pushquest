@@ -166,6 +166,14 @@ export function spendReps(n: number): boolean {
     return true
 }
 
+/** Crédite des reps (récompense), plafonné au cap. Renvoie le montant réellement ajouté. */
+export function grantReps(n: number): number {
+    const before = st.reps
+    st = { ...st, reps: Math.min(st.repsCap, st.reps + Math.max(0, Math.floor(n))) }
+    emit()
+    return st.reps - before
+}
+
 /**
  * Tick quotidien (1×/jour) : crédite les reps de la veille (plafonné au cap),
  * remet à zéro le compteur d'achats de Super Pasta, et augmente de +3 le prix
