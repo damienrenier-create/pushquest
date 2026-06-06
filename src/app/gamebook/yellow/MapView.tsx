@@ -12,6 +12,7 @@ import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { YELLOW_NPCS } from "@/lib/gamebook/yellow/npcs"
 import type { YellowBuilding, YellowMapData } from "@/lib/gamebook/yellow/maps"
 import { type TileType, isBlockingTile } from "@/lib/gamebook/mapEngine"
+import type { RemotePlayer } from "@/lib/gamebook/yellow/multiplayer/useCasinoPresence"
 import DialogueBox from "./DialogueBox"
 
 // === Palette Johto (saturée) ===========================================
@@ -341,7 +342,7 @@ function computeCamera(playerX: number, playerY: number, map: YellowMapData): Ca
 
 // === Composant principal ==============================================
 
-export default function MapView() {
+export default function MapView({ remotePlayers = [] }: { remotePlayers?: RemotePlayer[] }) {
     const player = useGameStore((s) => s.player)
     const map = useGameStore((s) => s.map)
 
@@ -517,6 +518,11 @@ export default function MapView() {
                     <NpcSprite key={npc.id} npc={npc} screenPos={screenPos} />
                 ))}
 
+                {/* Avatars des autres joueurs (casino multijoueur) */}
+                {remotePlayers.map((rp) => (
+                    <RemotePlayerSprite key={rp.userId} rp={rp} screenPos={screenPos} />
+                ))}
+
                 <PlayerSprite player={player} screenPos={screenPos} />
             </div>
 
@@ -588,6 +594,74 @@ function NpcSprite({
             }}
             title={npc.name}
         />
+    )
+}
+
+// === Autres joueurs (casino multijoueur) ================================
+// Avatar simple + pseudo au-dessus, glissement fluide entre tuiles. Couleur
+// dérivée de l'userId pour distinguer les joueurs d'un coup d'œil.
+
+function hashHue(s: string): number {
+    let h = 0
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
+    return h % 360
+}
+
+function RemotePlayerSprite({
+    rp,
+    screenPos,
+}: {
+    rp: RemotePlayer
+    screenPos: (x: number, y: number, w?: number, h?: number) => React.CSSProperties
+}) {
+    return (
+        <div
+            style={{
+                position: "absolute",
+                ...screenPos(rp.posX, rp.posY),
+                zIndex: 3,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "left 0.12s linear, top 0.12s linear",
+                pointerEvents: "none",
+            }}
+        >
+            <div
+                style={{
+                    position: "absolute",
+                    bottom: "100%",
+                    whiteSpace: "nowrap",
+                    fontSize: "clamp(7px, 1.6dvw, 10px)",
+                    fontWeight: 700,
+                    color: "#fff",
+                    background: "rgba(28,20,8,0.8)",
+                    border: "1px solid #000",
+                    borderRadius: 3,
+                    padding: "0 3px",
+                    transform: "translateY(-2px)",
+                    fontFamily: "'Courier New', monospace",
+                }}
+            >
+                {rp.nickname}
+            </div>
+            <div
+                style={{
+                    width: "82%",
+                    height: "82%",
+                    borderRadius: "50%",
+                    background: `hsl(${hashHue(rp.userId)} 60% 55%)`,
+                    border: "2px solid #1c1408",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "clamp(10px, 2.6dvw, 16px)",
+                    boxShadow: "0 1px 2px rgba(0,0,0,0.45)",
+                }}
+            >
+                🧑
+            </div>
+        </div>
     )
 }
 

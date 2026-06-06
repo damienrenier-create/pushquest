@@ -15,6 +15,7 @@ import MapView from "./MapView"
 import BattleScreen from "./battle/BattleScreen"
 import BattleControls, { BATTLE_CONTROLS_HEIGHT } from "./battle/BattleControls"
 import BattleBoundary from "./battle/BattleBoundary"
+import { useCasinoPresence } from "@/lib/gamebook/yellow/multiplayer/useCasinoPresence"
 import EvolutionScreen from "./battle/EvolutionScreen"
 import IntroCinematic from "./IntroCinematic"
 import LearnScreen from "./LearnScreen"
@@ -37,8 +38,9 @@ import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
 import { expForLevel } from "@/lib/gamebook/yellow/battle/xp"
 import type { MonInstance } from "@/lib/gamebook/yellow/battle/types"
 
-export default function YellowDevClient() {
+export default function YellowDevClient({ userId = "" }: { userId?: string }) {
     const move = useGameStore((s) => s.move)
+    const mapPlayer = useGameStore((s) => s.player)
     const pressA = useGameStore((s) => s.pressA)
     const pressB = useGameStore((s) => s.pressB)
     const hydrate = useGameStore((s) => s.hydrate)
@@ -68,6 +70,17 @@ export default function YellowDevClient() {
     const [ctPick, setCtPick] = useState<string | null>(null)
     const [confirmReset, setConfirmReset] = useState(false)
     const [swapPick, setSwapPick] = useState<string | null>(null) // uid du Daemon "à déplacer"
+
+    // Multijoueur casino : présence + déplacements temps réel des autres joueurs.
+    // Actif uniquement quand on EST dans le casino, hors combat et hors intro.
+    const inCasino = mapPlayer.mapId === "yellow_casino"
+    const remotePlayers = useCasinoPresence({
+        active: inCasino && !battle && !showIntro && !!userId,
+        myUserId: userId,
+        posX: mapPlayer.posX,
+        posY: mapPlayer.posY,
+        direction: mapPlayer.direction,
+    })
 
     // Au mount : charge l'état du joueur depuis le serveur (DB Neon).
     // Si le joueur n'a jamais joué, on garde le state par défaut (déjà set
@@ -188,7 +201,7 @@ export default function YellowDevClient() {
                     onStart={() => setMenu((m) => (m === "none" ? "pause" : "none"))}
                     onSelect={() => setMenu((m) => (m === "none" ? "pause" : "none"))}
                 >
-                    <MapView />
+                    <MapView remotePlayers={remotePlayers} />
                 </GameBoyShell>
             )}
 

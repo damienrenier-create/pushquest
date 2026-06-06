@@ -17,5 +17,5 @@ export default async function YellowDevPage() {
     const enabled = await isNexusYellowEnabled(userId)
     if (!enabled) return notFound()
 
-    return <YellowDevClient />
+    return <YellowDevClient userId={userId ?? ""} />
 }
