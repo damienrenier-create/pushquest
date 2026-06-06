@@ -23,6 +23,9 @@ export async function GET() {
         const [ctx, yesterdayReps] = await Promise.all([getWildPlayerCtx(userId), getYesterdayReps(userId)])
         return NextResponse.json({ ok: true, ctx, yesterdayReps, today })
     } catch {
-        return NextResponse.json({ ok: true, ctx: neutralWildCtx(), yesterdayReps: 0, today })
+        // ⚠️ NE PAS renvoyer `today` ici : sinon le client crédite 0 reps ET marque le
+        // jour comme tické → blocage à 0 pour la journée. On omet today/yesterdayReps
+        // (le client saute le crédit et réessaiera au prochain chargement).
+        return NextResponse.json({ ok: false, ctx: neutralWildCtx() })
     }
 }
