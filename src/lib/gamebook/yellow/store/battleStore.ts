@@ -219,7 +219,11 @@ function finishBattle(b: BattleState) {
             const r = aceReward(winNum)
             if (r.itemId) addItem(r.itemId, 1)
             if (r.reps) grantReps(r.reps)
-            if (r.gift === "pantheon") addCaught(createMonInstance("pantheon", 5, { owned: true }))
+            if (r.gift === "pantheon") {
+                const lvls = getPlayer().team.map((m) => m.level)
+                const lvl = lvls.length ? Math.min(...lvls) : 5 // niveau du plus faible de l'équipe présente
+                addCaught(createMonInstance("pantheon", lvl, { owned: true }))
+            }
             if (r.refund) grantReps(storeState.energySpent) // remboursement de l'énergie dépensée
             aceWin = winNum
             aceRewardMsg = r.message

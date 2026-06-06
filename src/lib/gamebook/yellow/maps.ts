@@ -372,9 +372,8 @@ function buildArenaPlante(): TileType[][] {
         [1, 7], [1, 8], [13, 7], [13, 8],
     ]
     for (const [x, y] of blocks) wall(x, y)
-    // Cases des PNJ (tryMove ne bloque pas sur les PNJ → on les rend non-walkable ici).
-    // Druide 7,1 ; gardes 2,1 / 3,1 / 11,1 / 12,1.
-    for (const [x, y] of [[7, 1], [2, 1], [3, 1], [11, 1], [12, 1]] as [number, number][]) wall(x, y)
+    // (Les cases des PNJ — druide 7,1 ; gardes 2,1/3,1/11,1/12,1 — sont rendues
+    //  non-walkables globalement par gameStore.move ; plus besoin de les bloquer ici.)
     return m
 }
 

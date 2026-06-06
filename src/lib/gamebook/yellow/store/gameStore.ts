@@ -157,6 +157,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
         const next = tryMove(player, dir, map)
 
+        // Les PNJ ne sont JAMAIS traversables : si la case cible est occupée par un
+        // PNJ, on tourne sur place (comme un mur). tryMove ne connaît pas les PNJ.
+        if ((next.posX !== player.posX || next.posY !== player.posY)
+            && findNpcAt(YELLOW_NPCS, next.posX, next.posY, player.mapId)) {
+            set({ player: { ...player, direction: next.direction } })
+            scheduleSave({ ...player, direction: next.direction })
+            return
+        }
+
         // Le joueur vient-il d'atterrir sur une case warp ? (porte de bâtiment
         // ou doorMat de sortie). Si oui : transition de map immédiate.
         const exit = findExitAt(map, next.posX, next.posY)
