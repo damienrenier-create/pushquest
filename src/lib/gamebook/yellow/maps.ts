@@ -262,7 +262,7 @@ const TOWN_BUILDINGS: YellowBuilding[] = [
         x: 34, y: 16, w: 4, h: 4,       // footprint cols 34..37, rows 16..19
         doorX: 2, doorY: 3,             // porte abs (36, 19) — dans le footprint (walkable)
         targetMapId: "yellow_shop",
-        targetSpawnX: 5, targetSpawnY: 6,
+        targetSpawnX: 4, targetSpawnY: 6,
         displayName: "MART",
         kind: "shop",
     },
@@ -281,9 +281,10 @@ const TOWN_BUILDINGS: YellowBuilding[] = [
 
 // === Intérieurs : 4 maps 9×7 ============================================
 
-// Boutique : grille 11×8 calée sur shop.png. Collisions relevées avec Sartay.
+// Boutique : grille 11×8 calée sur shop.png. Collisions relevées sur grille avec
+// Sartay : sol walkable PARTOUT sauf le comptoir ; entrée/sortie en (3,7)/(4,7).
 function buildShopInterior(): TileType[][] {
-    const m = fillRoom(11, 8, "floorChecker")
+    const m = fillRect(11, 8, "floorChecker") // tout walkable par défaut
     const blocked: [number, number][] = [
         // Comptoir en L (le vendeur est le PNJ en 1,3 ; on lui parle par-dessus depuis 1,5)
         [1, 2], [2, 2], // coin derrière le vendeur
@@ -292,8 +293,9 @@ function buildShopInterior(): TileType[][] {
         [1, 4], [2, 4],
     ]
     for (const [x, y] of blocked) m[y][x] = "shopCounter"
-    // Porte de sortie au sud-centre (sous le spawn d'entrée 5,6)
-    m[7][5] = "doorMat"
+    // Entrée / sortie (2 cases) en bas
+    m[7][3] = "doorMat"
+    m[7][4] = "doorMat"
     return m
 }
 
@@ -641,7 +643,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         tiles: buildShopInterior(),
         width: 11,
         height: 8,
-        exits: [returnExit("yellow_shop", 5, 7)],
+        exits: [returnExit("yellow_shop", 3, 7), returnExit("yellow_shop", 4, 7)],
         backgroundImage: "/yellow/sprites/shop.png",
         backgroundImageWidth: 189,
         backgroundImageHeight: 137,

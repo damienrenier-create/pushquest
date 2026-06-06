@@ -80,6 +80,18 @@ export function getSnapshot(): BattleStoreState {
     return storeState
 }
 
+// --- Pont d'ENTRÉES : la coque GameBoy route ses boutons vers le menu de combat ---
+export type BattleInput = "up" | "down" | "left" | "right" | "a" | "b"
+let battleInputHandler: ((a: BattleInput) => void) | null = null
+/** BattleScreen enregistre ici son gestionnaire (curseur) ; null à la sortie. */
+export function setBattleInputHandler(fn: ((a: BattleInput) => void) | null) {
+    battleInputHandler = fn
+}
+/** Appelé par YellowDevClient quand un bouton physique est pressé pendant un combat. */
+export function dispatchBattleInput(a: BattleInput) {
+    battleInputHandler?.(a)
+}
+
 // ============================================================
 // Actions (mutent l'état via le moteur pur)
 // ============================================================

@@ -8,7 +8,7 @@
 // paraissent bien séquentielles (jamais simultanées). Aucune règle recalculée ici.
 
 import { useEffect, useRef, useState } from "react"
-import { useBattle, submitPlayerAction, endBattle, getBattleEnergy } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, submitPlayerAction, endBattle, getBattleEnergy, setBattleInputHandler, type BattleInput } from "@/lib/gamebook/yellow/store/battleStore"
 import { speciesOf, maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
 import type { BattleMon } from "@/lib/gamebook/yellow/battle/types"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
@@ -38,8 +38,10 @@ export default function BattleScreen() {
     const [shakeP, setShakeP] = useState(0)
     const [shakeE, setShakeE] = useState(0)
     const [ball, setBall] = useState<{ phase: "throw" | "shake" | "result"; shakes: number; caught: boolean } | null>(null)
+    const [cursor, setCursor] = useState(0)
     const repsWallet = usePlayer()
     const lastBattle = useRef(battle)
+    const inputRef = useRef<(a: BattleInput) => void>(() => { })
 
     // Initialise les PV affichés au tout début du combat (ils sont ensuite
     // CONSERVÉS d'un tour à l'autre → pas de saut visuel entre les tours).
@@ -93,6 +95,14 @@ export default function BattleScreen() {
         return () => clearTimeout(t)
     }, [battle, step])
 
+    // Enregistre le pont d'entrée (boutons coque → menu de combat) le temps du combat.
+    useEffect(() => {
+        setBattleInputHandler((a) => inputRef.current(a))
+        return () => setBattleInputHandler(null)
+    }, [])
+    // Remet le curseur en haut quand on change de menu ou de tour.
+    useEffect(() => { setCursor(0) }, [menu, step])
+
     if (!battle) return null
 
     const events = battle.events
@@ -108,11 +118,11 @@ export default function BattleScreen() {
 
     // --- handlers ---
     const advance = () => { if (waitingForTap) setStep((s) => s + 1) }
-    const useMove = (i: number) => { submitPlayerAction({ kind: "move", moveIndex: i }); setMenu("root") }
-    const useStruggle = () => { submitPlayerAction({ kind: "move", moveIndex: STRUGGLE_INDEX }); setMenu("root") }
+    const doMove = (i: number) => { submitPlayerAction({ kind: "move", moveIndex: i }); setMenu("root") }
+    const doStruggle = () => { submitPlayerAction({ kind: "move", moveIndex: STRUGGLE_INDEX }); setMenu("root") }
     const doSwitch = (i: number) => { submitPlayerAction({ kind: "switch", teamIndex: i }); setMenu("root") }
     const throwBall = (itemId: string) => { submitPlayerAction({ kind: "ball", itemId }); setMenu("root") }
-    const useItem = (itemId: string) => { submitPlayerAction({ kind: "item", itemId }); setMenu("root") }
+    const doItem = (itemId: string) => { submitPlayerAction({ kind: "item", itemId }); setMenu("root") }
     const run = () => submitPlayerAction({ kind: "run" })
 
     const pHp = disp?.p ?? player.currentHp
@@ -128,6 +138,73 @@ export default function BattleScreen() {
     const reps = repsWallet.reps
     const repsCap = repsWallet.repsCap
     const walletPct = Math.max(0, Math.min(100, (reps / Math.max(1, repsCap)) * 100))
+
+    // ===== Options du menu courant (liste unifiée pilotable au curseur) =====
+    const energy = getBattleEnergy()
+    const remainingEnergy = Math.max(0, energy.cap - energy.spent)
+    const items = repsWallet.items
+    type Opt = { label: React.ReactNode; onSelect: () => void; disabled?: boolean }
+    const options: Opt[] = []
+    let canBack = false
+    if (playbackDone && isEnded) {
+        options.push({ label: "QUITTER ▶", onSelect: () => endBattle() })
+    } else if (playbackDone && needSwitch) {
+        battle.player.team.forEach((m, i) => options.push({
+            label: `${displayName(m)} — ${m.currentHp <= 0 ? "K.O." : m.currentHp + " PV"}`,
+            onSelect: () => doSwitch(i), disabled: m.currentHp <= 0 || i === battle.player.activeIndex,
+        }))
+    } else if (playbackDone) {
+        if (menu === "root") {
+            options.push({ label: "⚔️ ATTAQUE", onSelect: () => setMenu("moves") })
+            options.push({ label: "🎒 SAC", onSelect: () => setMenu("bag") })
+            options.push({ label: "🐾 DAEMON", onSelect: () => setMenu("switch") })
+            options.push({ label: "🏃 FUITE", onSelect: run, disabled: !battle.isWild })
+        } else if (menu === "moves") {
+            const costs = player.moves.map((s) => moveCostReps(s.ppMax, player.level))
+            const canUse = (c: number) => c <= reps && c <= remainingEnergy
+            player.moves.forEach((slot, i) => options.push({
+                label: `${getMove(slot.moveId)?.name ?? slot.moveId}  ⚡${costs[i]}`,
+                onSelect: () => doMove(i), disabled: !canUse(costs[i]),
+            }))
+            if (!costs.some(canUse)) options.push({ label: "Charge Désespérée (gratuit)", onSelect: doStruggle })
+            options.push({ label: "← RETOUR", onSelect: () => setMenu("root") })
+            canBack = true
+        } else if (menu === "bag") {
+            Object.values(ITEMS).filter((it) => it.category === "HEAL" && (items[it.id] ?? 0) > 0)
+                .forEach((it) => options.push({ label: `${it.name} ×${items[it.id]}`, onSelect: () => doItem(it.id), disabled: player.currentHp >= maxHpOf(player) }))
+            if (battle.isWild) Object.values(ITEMS).filter((it) => it.category === "BALL" && (items[it.id] ?? 0) > 0)
+                .forEach((b) => options.push({ label: `${b.name} ×${items[b.id]}`, onSelect: () => throwBall(b.id) }))
+            options.push({ label: "← RETOUR", onSelect: () => setMenu("root") })
+            canBack = true
+        } else {
+            battle.player.team.forEach((m, i) => options.push({
+                label: `${displayName(m)} — ${m.currentHp <= 0 ? "K.O." : m.currentHp + " PV"}`,
+                onSelect: () => doSwitch(i), disabled: m.currentHp <= 0 || i === battle.player.activeIndex,
+            }))
+            options.push({ label: "← RETOUR", onSelect: () => setMenu("root") })
+            canBack = true
+        }
+    }
+
+    const stepCursor = (d: number) => {
+        if (!options.length) return
+        let i = cursor
+        for (let k = 0; k < options.length; k++) {
+            i = (i + d + options.length) % options.length
+            if (!options[i].disabled) break
+        }
+        setCursor(i)
+    }
+    // Pont d'entrée : la coque GameBoy pousse ses appuis ici pendant le combat.
+    // (Pattern "latest ref" : on garde le handler à jour ; appelé via le wrapper enregistré.)
+    // eslint-disable-next-line
+    inputRef.current = (a: BattleInput) => {
+        if (!playbackDone) { if (a === "a" || a === "b") advance(); return }
+        if (a === "up" || a === "left") stepCursor(-1)
+        else if (a === "down" || a === "right") stepCursor(1)
+        else if (a === "a") { const o = options[cursor]; if (o && !o.disabled) o.onSelect() }
+        else if (a === "b" && canBack) setMenu("root")
+    }
 
     return (
         <div style={S.root} onClick={waitingForTap ? advance : undefined}>
@@ -153,30 +230,35 @@ export default function BattleScreen() {
                 </div>
             </div>
 
-            {/* ===== Boîte du bas ===== */}
+            {/* ===== Boîte du bas : message OU liste d'options (curseur D-pad/A/B + tactile) ===== */}
             <div style={S.bottom}>
                 {!playbackDone ? (
-                    <div style={S.msgBox}>
+                    <div style={S.msgBox} onClick={advance}>
                         <p style={S.msgText}>{shownMsg}</p>
                         {waitingForTap && <span style={S.next}>▶</span>}
                     </div>
-                ) : isEnded ? (
-                    <EndBox outcome={battle.outcome} />
-                ) : needSwitch ? (
-                    <SwitchMenu team={battle.player.team} activeIndex={battle.player.activeIndex} onPick={doSwitch} forced />
-                ) : menu === "root" ? (
-                    <div style={S.menuGrid}>
-                        <button style={S.btn} onClick={() => setMenu("moves")}>ATTAQUE</button>
-                        <button style={S.btn} onClick={() => setMenu("bag")}>SAC</button>
-                        <button style={S.btn} onClick={() => setMenu("switch")}>DAEMON</button>
-                        <button style={battle.isWild ? S.btn : S.btnDim} disabled={!battle.isWild} onClick={battle.isWild ? run : undefined}>FUITE</button>
-                    </div>
-                ) : menu === "moves" ? (
-                    <MoveMenu mon={player} onPick={useMove} onStruggle={useStruggle} onBack={() => setMenu("root")} />
-                ) : menu === "bag" ? (
-                    <BagMenu isWild={battle.isWild} mon={player} onUse={useItem} onThrow={throwBall} onBack={() => setMenu("root")} />
                 ) : (
-                    <SwitchMenu team={battle.player.team} activeIndex={battle.player.activeIndex} onPick={doSwitch} onBack={() => setMenu("root")} />
+                    <>
+                        {isEnded && (
+                            <div style={S.menuHint}>{battle.outcome === "win" ? "Tu remportes le combat !" : battle.outcome === "lose" ? "Tous tes Daemons sont K.O…" : battle.outcome === "run" ? "Tu as pris la fuite." : battle.outcome === "caught" ? "Daemon capturé !" : "Fin du combat."}</div>
+                        )}
+                        {menu === "moves" && !isEnded && !needSwitch && (
+                            <div style={S.menuHint}><span>⚡ {remainingEnergy}/{energy.cap} ce combat</span><span>💪 {reps}</span></div>
+                        )}
+                        {needSwitch && <div style={S.menuHint}>Choisis un Daemon !</div>}
+                        <div style={S.optList}>
+                            {options.map((o, i) => (
+                                <button
+                                    key={i}
+                                    style={{ ...(o.disabled ? S.btnDim : S.btn), ...(i === cursor ? S.btnFocus : null) }}
+                                    disabled={o.disabled}
+                                    onClick={() => { setCursor(i); if (!o.disabled) o.onSelect() }}
+                                >
+                                    <span style={{ opacity: i === cursor ? 1 : 0 }}>▶ </span>{o.label}
+                                </button>
+                            ))}
+                        </div>
+                    </>
                 )}
             </div>
 
@@ -263,106 +345,6 @@ function MonSprite({ mon, facing, alive, hitKey }: { mon: BattleMon; facing: "fr
     )
 }
 
-function MoveMenu({ mon, onPick, onStruggle, onBack }: { mon: BattleMon; onPick: (i: number) => void; onStruggle: () => void; onBack: () => void }) {
-    const reps = usePlayer().reps
-    const energy = getBattleEnergy()
-    const remainingEnergy = Math.max(0, energy.cap - energy.spent)
-    // Les PP sont illimités : chaque attaque coûte des reps (PP bas = plus cher).
-    // Une attaque est jouable si on a les reps ET assez d'énergie restante ce combat.
-    const costs = mon.moves.map((slot) => moveCostReps(slot.ppMax, mon.level))
-    const usable = (c: number) => c <= reps && c <= remainingEnergy
-    const canUseAny = costs.some(usable)
-    return (
-        <div style={S.menuGrid}>
-            <div style={{ gridColumn: "1 / -1", fontSize: 11, fontWeight: 700, display: "flex", justifyContent: "space-between", opacity: 0.85 }}>
-                <span>⚡ {remainingEnergy}/{energy.cap} ce combat</span>
-                <span>💪 {reps} reps</span>
-            </div>
-            {mon.moves.map((slot, i) => {
-                const m = getMove(slot.moveId)
-                const cost = costs[i]
-                const off = !usable(cost)
-                return (
-                    <button key={i} style={off ? S.btnDim : S.btn} disabled={off} onClick={() => onPick(i)}>
-                        {m?.name ?? slot.moveId} <span style={S.pp}>⚡{cost}</span>
-                    </button>
-                )
-            })}
-            {Array.from({ length: Math.max(0, 4 - mon.moves.length) }).map((_, i) => <span key={`e${i}`} />)}
-            {/* Secours gratuit anti soft-lock : visible quand aucune attaque n'est jouable. */}
-            {!canUseAny && (
-                <button style={{ ...S.btn, gridColumn: "1 / -1", background: "#f0d8a0" }} onClick={onStruggle}>
-                    Charge Désespérée <span style={S.pp}>gratuit · recul</span>
-                </button>
-            )}
-            <button style={{ ...S.btnDim, gridColumn: "1 / -1" }} onClick={onBack}>← RETOUR</button>
-        </div>
-    )
-}
-
-function SwitchMenu({ team, activeIndex, onPick, onBack, forced }: {
-    team: BattleMon[]; activeIndex: number; onPick: (i: number) => void; onBack?: () => void; forced?: boolean
-}) {
-    return (
-        <div style={S.menuGrid}>
-            {forced && <p style={{ ...S.msgText, gridColumn: "1 / -1" }}>Choisis un Daemon !</p>}
-            {team.map((m, i) => {
-                const ko = m.currentHp <= 0
-                const cur = i === activeIndex
-                const disabled = ko || cur
-                return (
-                    <button key={m.uid} style={disabled ? S.btnDim : S.btn} disabled={disabled} onClick={() => onPick(i)}>
-                        {displayName(m)} {ko ? "(K.O.)" : `${m.currentHp}PV`}
-                    </button>
-                )
-            })}
-            {!forced && onBack && <button style={{ ...S.btnDim, gridColumn: "1 / -1" }} onClick={onBack}>← RETOUR</button>}
-        </div>
-    )
-}
-
-function BagMenu({ isWild, mon, onUse, onThrow, onBack }: {
-    isWild: boolean; mon: BattleMon; onUse: (id: string) => void; onThrow: (id: string) => void; onBack: () => void
-}) {
-    const items = usePlayer().items
-    const heals = Object.values(ITEMS).filter((it) => it.category === "HEAL" && (items[it.id] ?? 0) > 0)
-    const balls = isWild ? Object.values(ITEMS).filter((it) => it.category === "BALL" && (items[it.id] ?? 0) > 0) : []
-    const full = mon.currentHp >= maxHpOf(mon)
-    return (
-        <div style={S.menuGrid}>
-            {heals.length === 0 && balls.length === 0 && (
-                <div style={{ gridColumn: "1 / -1", fontSize: 11, fontStyle: "italic", opacity: 0.7, padding: 4 }}>
-                    Sac vide ! Va à la boutique.
-                </div>
-            )}
-            {heals.map((it) => (
-                <button key={it.id} style={full ? S.btnDim : S.btn} disabled={full} onClick={() => onUse(it.id)}>
-                    {it.name} <span style={S.pp}>×{items[it.id]}</span>
-                </button>
-            ))}
-            {balls.map((b) => (
-                <button key={b.id} style={S.btn} onClick={() => onThrow(b.id)}>
-                    {b.name} <span style={S.pp}>×{items[b.id]}</span>
-                </button>
-            ))}
-            <button style={{ ...S.btnDim, gridColumn: "1 / -1" }} onClick={onBack}>← RETOUR</button>
-        </div>
-    )
-}
-
-function EndBox({ outcome }: { outcome: string | null }) {
-    const txt = outcome === "win" ? "Tu remportes le combat !"
-        : outcome === "lose" ? "Tous tes Daemons sont K.O…"
-            : outcome === "run" ? "Tu as pris la fuite."
-                : outcome === "caught" ? "Daemon capturé !"
-                    : "Fin du combat."
-    return (
-        <div style={S.msgBox}>
-            <p style={S.msgText}>{txt}</p>
-            <button style={{ ...S.btn, marginTop: 8 }} onClick={() => endBattle()}>QUITTER</button>
-        </div>
-    )
-}
 
 // ============================================================
 // Styles (GBC-ish, inline pour rester autonome)
@@ -415,7 +397,10 @@ const S: Record<string, React.CSSProperties> = {
     msgText: { fontSize: 14, lineHeight: 1.5, fontWeight: 700, margin: 0 },
     next: { position: "absolute", bottom: 6, right: 12, fontSize: 12, animation: "none" },
     menuGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 },
-    btn: { background: "#f8f8e8", border: "3px solid #1c1408", borderRadius: 6, padding: "12px 10px", fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer", color: "#1c1408", textAlign: "left" },
-    btnDim: { background: "#d8d8c8", border: "3px solid #888", borderRadius: 6, padding: "12px 10px", fontFamily: "inherit", fontSize: 13, fontWeight: 700, color: "#888", textAlign: "left" },
+    optList: { display: "flex", flexDirection: "column", gap: 6 },
+    menuHint: { display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: 700, opacity: 0.85, marginBottom: 4, color: "#1c1408" },
+    btn: { background: "#f8f8e8", border: "3px solid #1c1408", borderRadius: 6, padding: "11px 12px", fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer", color: "#1c1408", textAlign: "left" },
+    btnDim: { background: "#d8d8c8", border: "3px solid #888", borderRadius: 6, padding: "11px 12px", fontFamily: "inherit", fontSize: 13, fontWeight: 700, color: "#888", textAlign: "left" },
+    btnFocus: { background: "#f5d020", borderColor: "#1c1408", boxShadow: "0 0 0 2px #f5d020" },
     pp: { float: "right", fontSize: 10, opacity: 0.7 },
 }

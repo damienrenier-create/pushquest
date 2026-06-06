@@ -17,7 +17,7 @@ import EvolutionScreen from "./battle/EvolutionScreen"
 import IntroCinematic from "./IntroCinematic"
 import LearnScreen from "./LearnScreen"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
-import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout, dispatchBattleInput } from "@/lib/gamebook/yellow/store/battleStore"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
 import { getPlayer, setTeam, usePlayer, addItem, spendReps, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt } from "@/lib/gamebook/yellow/store/playerStore"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
@@ -92,20 +92,21 @@ export default function YellowDevClient() {
     // Support clavier desktop : flèches + Espace/Entrée/A (= A), Escape/B (= B)
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
-            if (e.key === "ArrowUp") { e.preventDefault(); move("up") }
-            else if (e.key === "ArrowDown") { e.preventDefault(); move("down") }
-            else if (e.key === "ArrowLeft") { e.preventDefault(); move("left") }
-            else if (e.key === "ArrowRight") { e.preventDefault(); move("right") }
+            const inB = !!battle
+            if (e.key === "ArrowUp") { e.preventDefault(); inB ? dispatchBattleInput("up") : move("up") }
+            else if (e.key === "ArrowDown") { e.preventDefault(); inB ? dispatchBattleInput("down") : move("down") }
+            else if (e.key === "ArrowLeft") { e.preventDefault(); inB ? dispatchBattleInput("left") : move("left") }
+            else if (e.key === "ArrowRight") { e.preventDefault(); inB ? dispatchBattleInput("right") : move("right") }
             else if (e.key === " " || e.key === "Enter" || e.key.toLowerCase() === "a") {
-                e.preventDefault(); pressA()
+                e.preventDefault(); inB ? dispatchBattleInput("a") : pressA()
             }
             else if (e.key === "Escape" || e.key.toLowerCase() === "b") {
-                e.preventDefault(); pressB()
+                e.preventDefault(); inB ? dispatchBattleInput("b") : pressB()
             }
         }
         window.addEventListener("keydown", handler)
         return () => window.removeEventListener("keydown", handler)
-    }, [move, pressA, pressB])
+    }, [move, pressA, pressB, battle])
 
     // Toast éphémère : disparaît tout seul après 2,5 s.
     useEffect(() => {
@@ -146,24 +147,18 @@ export default function YellowDevClient() {
             <GameBoyShell
                 reps={player.reps}
                 repsCap={player.repsCap}
-                onUp={() => move("up")}
-                onDown={() => move("down")}
-                onLeft={() => move("left")}
-                onRight={() => move("right")}
-                onA={pressA}
-                onB={pressB}
-                onStart={() => setMenu((m) => (m === "none" ? "pause" : "none"))}
-                onSelect={() => setMenu((m) => (m === "none" ? "pause" : "none"))}
+                onUp={() => (battle ? dispatchBattleInput("up") : move("up"))}
+                onDown={() => (battle ? dispatchBattleInput("down") : move("down"))}
+                onLeft={() => (battle ? dispatchBattleInput("left") : move("left"))}
+                onRight={() => (battle ? dispatchBattleInput("right") : move("right"))}
+                onA={() => (battle ? dispatchBattleInput("a") : pressA())}
+                onB={() => (battle ? dispatchBattleInput("b") : pressB())}
+                onStart={() => { if (!battle) setMenu((m) => (m === "none" ? "pause" : "none")) }}
+                onSelect={() => { if (!battle) setMenu((m) => (m === "none" ? "pause" : "none")) }}
             >
-                <MapView />
+                {/* Le combat se joue DANS l'écran GBA (coque + boutons visibles). */}
+                {battle ? <BattleScreen /> : <MapView />}
             </GameBoyShell>
-
-            {/* Overlay de combat : apparaît quand une rencontre se déclenche dans l'herbe. */}
-            {battle && (
-                <div style={battleOverlayStyle}>
-                    <BattleScreen />
-                </div>
-            )}
 
             {/* Menu START (pause) */}
             {!battle && menu === "pause" && (
@@ -609,19 +604,6 @@ const pageStyle: React.CSSProperties = {
     alignItems: "center",        // bloc compact centré verticalement → boutons dans la zone du pouce, pas de scroll
     justifyContent: "center",    // centrée horizontalement sur grand écran
     padding: 0,
-}
-
-const battleOverlayStyle: React.CSSProperties = {
-    position: "fixed",
-    inset: 0,
-    background: "#1a1a1a",
-    zIndex: 9000,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 12,
-    // Mobile : si l'écran est court (paysage), le combat reste scrollable.
-    overflowY: "auto",
 }
 
 const menuOverlayStyle: React.CSSProperties = {
