@@ -92,6 +92,21 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         dialoguesAfter: ["*L'ordinateur du Centre ronronne.*"],
     },
 
+    // === Intérieur ANTRE DU SBIRE (combat dynamique 2×/jour) ===
+    // Interception spéciale dans gameStore.pressA (équipe miroir/faiblesse selon
+    // le nb de victoires du jour). dialoguesAfter = repli si jamais non intercepté.
+    {
+        id: "y_sbire",
+        name: "SBIRE",
+        mapId: "yellow_sbire",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🍝", color: "#c83a2a" },
+        initialX: 4,
+        initialY: 2,
+        dialoguesAfter: ["*Le sbire du dieu Spaghetti médite devant son autel.*"],
+    },
+
     // === ROUTE NORD : panneau placeholder ===
     {
         id: "y_route_nord_panneau",

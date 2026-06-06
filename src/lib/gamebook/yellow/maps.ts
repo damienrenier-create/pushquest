@@ -231,9 +231,9 @@ const TOWN_BUILDINGS: YellowBuilding[] = [
         id: "b_npc1",
         x: 24, y: 9, w: 5, h: 3,        // footprint rows 9..11
         doorX: 1, doorY: 2,             // porte abs (25, 11) — dans le footprint (walkable)
-        targetMapId: "yellow_casino",   // placeholder (pas de map Academy encore)
+        targetMapId: "yellow_sbire",    // antre du sbire du dieu Spaghetti
         targetSpawnX: 4, targetSpawnY: 5,
-        displayName: "MAISON",
+        displayName: "ANTRE",
         kind: "casino",
     },
     {
@@ -314,6 +314,16 @@ function buildCasinoInterior(): TileType[][] {
     m[4][6] = "rouletteWheel"
     // Porte sortie
     m[6][4] = "doorMat"
+    return m
+}
+
+// Antre du sbire du dieu Spaghetti : petite salle 9×7. Le sbire (PNJ y_sbire)
+// se tient derrière un autel en (4,2) — case bloquée pour qu'on ne lui marche pas
+// dessus (le moteur de mouvement ne teste pas les PNJ). On l'affronte depuis (4,3).
+function buildSbireInterior(): TileType[][] {
+    const m = fillRoom(9, 7, "floorTile")
+    m[2][4] = "table"   // autel du sbire (case du PNJ, bloquante)
+    m[6][4] = "doorMat" // sortie
     return m
 }
 
@@ -662,6 +672,14 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         width: 9,
         height: 7,
         exits: [returnExit("yellow_casino", 4, 6)],
+    },
+    yellow_sbire: {
+        id: "yellow_sbire",
+        name: "ANTRE DU SBIRE",
+        tiles: buildSbireInterior(),
+        width: 9,
+        height: 7,
+        exits: [returnExit("yellow_sbire", 4, 6)],
     },
     yellow_infirmary: {
         id: "yellow_infirmary",

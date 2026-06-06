@@ -17,7 +17,8 @@ import EvolutionScreen from "./battle/EvolutionScreen"
 import IntroCinematic from "./IntroCinematic"
 import LearnScreen from "./LearnScreen"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
-import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout, dispatchBattleInput } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, dispatchBattleInput } from "@/lib/gamebook/yellow/store/battleStore"
+import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
 import { getPlayer, setTeam, usePlayer, addItem, spendReps, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam } from "@/lib/gamebook/yellow/store/playerStore"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
@@ -45,9 +46,11 @@ export default function YellowDevClient() {
     const pcOpen = useGameStore((s) => s.pcOpen)
     const closePc = useGameStore((s) => s.closePc)
     const setMap = useGameStore((s) => s.setMap)
+    const showDialogue = useGameStore((s) => s.showDialogue)
     const battle = useBattle()
     const evolutions = useEvolutions()
     const whiteout = useWhiteout()
+    const sbireWin = useSbireWin()
     const router = useRouter()
     const player = usePlayer()
     const [menu, setMenu] = useState<"none" | "pause" | "team" | "pc" | "bag">("none")
@@ -129,6 +132,15 @@ export default function YellowDevClient() {
             clearWhiteout()
         }
     }, [whiteout, battle, setMap])
+
+    // Victoire sur le sbire : on délivre une explication sur l'app, une fois le
+    // combat quitté ET l'éventuelle cinématique d'évolution terminée.
+    useEffect(() => {
+        if (sbireWin !== null && !battle && evolutions.length === 0) {
+            showDialogue("y_sbire", "SBIRE", [sbireExplanation(sbireWin)])
+            clearSbireWin()
+        }
+    }, [sbireWin, battle, evolutions.length, showDialogue])
 
     // Fin d'intro : on accorde le starter choisi (niv 5) + un petit kit de départ,
     // on marque l'intro vue et on persiste.

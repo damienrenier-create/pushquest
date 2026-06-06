@@ -47,9 +47,13 @@ interface PlayerState {
     wildCtx: WildPlayerCtx | null
     /** Cinématique d'intro (choix du starter) déjà jouée ? */
     introSeen: boolean
+    /** Victoires sur le sbire AUJOURD'HUI (reset au tick quotidien ; plafond 2). */
+    sbireDefeatsToday: number
+    /** Victoires totales sur le sbire (cumulatif → cycle des explications app). */
+    sbireWinsTotal: number
 }
 
-let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: null, introSeen: false }
+let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0 }
 const listeners = new Set<() => void>()
 
 function emit() { for (const l of listeners) l() }
@@ -68,6 +72,8 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         pastaBoughtToday: p.pastaBoughtToday ?? st.pastaBoughtToday ?? 0, pastaDayBonus: p.pastaDayBonus ?? st.pastaDayBonus ?? 0,
         defeatedTrainers: p.defeatedTrainers ?? [], badges: p.badges ?? st.badges ?? [], wildCtx: p.wildCtx ?? st.wildCtx ?? null,
         introSeen: p.introSeen ?? st.introSeen ?? false,
+        sbireDefeatsToday: p.sbireDefeatsToday ?? st.sbireDefeatsToday ?? 0,
+        sbireWinsTotal: p.sbireWinsTotal ?? st.sbireWinsTotal ?? 0,
     }
     emit()
 }
@@ -81,7 +87,7 @@ export function markIntroSeen() {
 
 /** DEV : remet la progression jaune à zéro pour rejouer l'intro (équipe vidée, introSeen=false). */
 export function resetForIntro() {
-    st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false }
+    st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0 }
     emit()
 }
 
@@ -175,8 +181,20 @@ export function creditDailyReps(yesterdayReps: number, today: string) {
         creditedThrough: today,
         pastaBoughtToday: 0,
         pastaDayBonus: firstEver ? st.pastaDayBonus : st.pastaDayBonus + SUPER_PASTA_DAILY_INCREASE,
+        sbireDefeatsToday: 0, // nouveau jour → le sbire est de nouveau affrontable (2×)
     }
     emit()
+}
+
+/**
+ * Enregistre une victoire sur le sbire : +1 au compteur du jour ET au cumul.
+ * Renvoie le numéro de victoire TOTAL (1-indexé) → choix de l'explication app.
+ */
+export function recordSbireWin(): number {
+    const winsTotal = st.sbireWinsTotal + 1
+    st = { ...st, sbireDefeatsToday: st.sbireDefeatsToday + 1, sbireWinsTotal: winsTotal }
+    emit()
+    return winsTotal
 }
 
 /** Prix actuel d'un Super Pasta : (60 + bonus journalier) × 1.5^(achats du jour). */

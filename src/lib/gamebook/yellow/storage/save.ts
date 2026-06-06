@@ -29,12 +29,16 @@ export interface YellowSave {
     badges: string[]
     /** La cinématique d'intro (choix du starter) a-t-elle déjà été jouée ? */
     introSeen: boolean
+    /** Nb de victoires sur le sbire AUJOURD'HUI (reset quotidien ; plafond 2/jour). */
+    sbireDefeatsToday: number
+    /** Nb total de victoires sur le sbire (cumulatif → cycle des explications). */
+    sbireWinsTotal: number
 }
 
 export const SAVE_VERSION = 1
 
 export function emptySave(): YellowSave {
-    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], badges: [], introSeen: false }
+    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0 }
 }
 
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -122,6 +126,8 @@ export function parseSave(raw: unknown): YellowSave {
         defeatedTrainers: strArr(o.defeatedTrainers),
         badges: strArr(o.badges),
         introSeen: o.introSeen === true,
+        sbireDefeatsToday: typeof o.sbireDefeatsToday === "number" ? Math.max(0, Math.floor(o.sbireDefeatsToday)) : 0,
+        sbireWinsTotal: typeof o.sbireWinsTotal === "number" ? Math.max(0, Math.floor(o.sbireWinsTotal)) : 0,
     }
 }
 

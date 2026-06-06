@@ -15,8 +15,9 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance } from "../battle/types"
 import { markSeen, markCaught } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, healAllTeam, spendReps, awardBadge } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, healAllTeam, spendReps, awardBadge, recordSbireWin } from "./playerStore"
 import { getTrainer } from "../data/trainers"
+import { SBIRE_TRAINER_ID } from "../data/sbire"
 import { toMonInstance } from "../storage/save"
 import { evolveTeam } from "../progression/evolveTeam"
 import { persistYellowSave, processSaiyanPoints } from "./saveManager"
@@ -55,9 +56,11 @@ interface BattleStoreState {
     whiteout: boolean
     /** Reps dépensés en attaques DANS le combat courant (cap d'énergie par combat). */
     energySpent: number
+    /** Numéro de victoire sur le sbire (1-indexé) à expliquer post-combat ; null sinon. */
+    sbireWin: number | null
 }
 
-let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0 }
+let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null }
 const listeners = new Set<() => void>()
 
 function emit() {
@@ -101,7 +104,7 @@ export function startWildBattle(playerTeam: MonInstance[], enemyTeam: MonInstanc
     const captureModifier = getPlayer().wildCtx?.quotaReached ? QUOTA_CAPTURE_BONUS : 1
     const battle = createBattle(playerTeam, enemyTeam, { isWild: true, seed, captureModifier })
     syncPokedex(battle) // adversaire "vu" dès la rencontre
-    setStore({ battle, evolutions: [], trainer: null, whiteout: false, energySpent: 0 })
+    setStore({ battle, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null })
 }
 
 export function startTrainerBattle(
@@ -113,7 +116,7 @@ export function startTrainerBattle(
     const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: opts?.aiLevel })
     syncPokedex(battle)
     const trainer = opts?.trainerId ? { trainerId: opts.trainerId, reward: opts.reward ?? 0 } : null
-    setStore({ battle, evolutions: [], trainer, whiteout: false, energySpent: 0 })
+    setStore({ battle, evolutions: [], trainer, whiteout: false, energySpent: 0, sbireWin: null })
 }
 
 /** Énergie de combat : reps déjà dépensés ce combat + plafond (selon badges). */
@@ -166,10 +169,17 @@ function finishBattle(b: BattleState) {
 
     // 2bis) Victoire dresseur : marquage "battu" (la monnaie = reps, gagnée hors combat).
     //       Chef d'arène → badge accordé (augmente cap reps + cap d'énergie + CT débloquées).
+    //       CAS SPÉCIAL sbire : récurrent (2×/jour) → on N'enregistre PAS "battu"
+    //       (sinon il deviendrait inaffrontable), juste le compteur + l'explication.
+    let sbireWin: number | null = null
     if (b.outcome === "win" && storeState.trainer) {
-        markTrainerDefeated(storeState.trainer.trainerId)
-        const badge = getTrainer(storeState.trainer.trainerId)?.badge
-        if (badge) awardBadge(badge)
+        if (storeState.trainer.trainerId === SBIRE_TRAINER_ID) {
+            sbireWin = recordSbireWin()
+        } else {
+            markTrainerDefeated(storeState.trainer.trainerId)
+            const badge = getTrainer(storeState.trainer.trainerId)?.badge
+            if (badge) awardBadge(badge)
+        }
     }
 
     // 2ter) Défaite (équipe entièrement K.O.) : on soigne tout de suite et on
@@ -185,7 +195,7 @@ function finishBattle(b: BattleState) {
         setTeam([...team])
     }
     // Expose les évolutions pour la cinématique post-combat (jouée après "QUITTER").
-    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose })
+    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose, sbireWin })
 
     // 4) Sauvegarde persistante (DB).
     persistYellowSave()
@@ -206,6 +216,11 @@ export function clearEvolutions() {
 /** Consommé par la carte une fois le joueur renvoyé au Centre. */
 export function clearWhiteout() {
     setStore({ ...storeState, whiteout: false })
+}
+
+/** Consommé par la carte une fois l'explication du sbire affichée. */
+export function clearSbireWin() {
+    setStore({ ...storeState, sbireWin: null })
 }
 
 // ============================================================
@@ -233,5 +248,13 @@ export function useWhiteout(): boolean {
         subscribe,
         () => getSnapshot().whiteout,
         () => getSnapshot().whiteout,
+    )
+}
+
+export function useSbireWin(): number | null {
+    return useSyncExternalStore(
+        subscribe,
+        () => getSnapshot().sbireWin,
+        () => getSnapshot().sbireWin,
     )
 }

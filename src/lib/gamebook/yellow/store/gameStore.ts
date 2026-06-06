@@ -23,6 +23,7 @@ import { persistYellowSave } from "./saveManager"
 import { rollWildEncounter } from "../data/encounters"
 import { getTrainer } from "../data/trainers"
 import { createMonInstance } from "../battle/factory"
+import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID } from "../data/sbire"
 
 export interface ActiveDialogue {
     npcId: string
@@ -41,6 +42,7 @@ interface GameStore {
     hydrated: boolean // true une fois que l'état serveur a été chargé
     stepFrame: 0 | 1 // alterne à chaque déplacement réel → anime les jambes du sprite
     pendingTrainerId: string | null // dresseur dont l'intro est en cours → combat à la fermeture
+    pendingSbire: boolean // intro du sbire en cours → combat dynamique à la fermeture
 
     // === ACTIONS ===
     move: (dir: Direction) => void
@@ -50,6 +52,8 @@ interface GameStore {
     hydrate: (loaded: PlayerState) => void
     closeShop: () => void
     closePc: () => void
+    /** Affiche un dialogue simple (ex. explication post-combat du sbire). */
+    showDialogue: (npcId: string, npcName: string, lines: string[]) => void
 }
 
 // === PERSISTANCE SERVEUR ===
@@ -92,6 +96,25 @@ function tryLaunchTrainer(trainerId: string): ActiveDialogue | null {
     return null
 }
 
+// Lance le combat DYNAMIQUE du sbire : équipe = miroir du lead (1re victoire du
+// jour) puis faiblesse du lead (2e), toujours à niveau équivalent. Renvoie un
+// dialogue (équipe K.O.) ou null si le combat démarre.
+function tryLaunchSbire(): ActiveDialogue | null {
+    const team = getPlayerSave().team
+    const lead = team.find((m) => m.currentHp > 0)
+    if (!lead) {
+        return {
+            npcId: SBIRE_TRAINER_ID, npcName: "SBIRE", lineIndex: 0,
+            lines: ["Tes Daemons sont tous K.O. !", "Soigne-les au Centre avant de m'affronter."],
+        }
+    }
+    const fightIndex = getPlayerSave().sbireDefeatsToday // 0 → miroir, 1 → faiblesse
+    const enemyTeam = buildSbireTeam(lead, fightIndex)
+    const seed = Math.floor(Math.random() * 1e9) >>> 0
+    startTrainerBattle(team, enemyTeam, seed, { trainerId: SBIRE_TRAINER_ID, reward: 0, aiLevel: "trainer" })
+    return null
+}
+
 // Spawn par défaut : VILLE JAUNE = Viridian City 45×40 (scale natif FireRed),
 // entrée sud (Route 1) centre-bas pour explorer la ville.
 const DEFAULT_SPAWN = { x: 22, y: 38 }
@@ -105,6 +128,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     hydrated: false,
     stepFrame: 0,
     pendingTrainerId: null,
+    pendingSbire: false,
 
     move: (dir) => {
         const { player, map, dialogue } = get()
@@ -176,6 +200,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 const pid = get().pendingTrainerId
                 if (pid) {
                     set({ dialogue: tryLaunchTrainer(pid), pendingTrainerId: null })
+                } else if (get().pendingSbire) {
+                    set({ dialogue: tryLaunchSbire(), pendingSbire: false })
                 } else {
                     set({ dialogue: null })
                 }
@@ -225,6 +251,25 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
+        // Sbire du dieu Spaghetti : combat dynamique, 2×/jour max.
+        if (npc.id === SBIRE_TRAINER_ID) {
+            const wins = getPlayerSave().sbireDefeatsToday
+            if (wins >= SBIRE_MAX_FIGHTS_PER_DAY) {
+                set({
+                    dialogue: {
+                        npcId: npc.id, npcName: npc.name, lineIndex: 0,
+                        lines: ["Pasta ! Tu m'as déjà vaincu deux fois aujourd'hui.", "Reviens demain, je te testerai encore."],
+                    },
+                })
+                return
+            }
+            const intro = wins === 0
+                ? ["Je suis un sbire du dieu Spaghetti.", "Pour t'éprouver, je copie ton Daemon à l'identique !", "En garde !"]
+                : ["Tu reviens ? Cette fois, je frappe ta FAIBLESSE.", "Prouve-moi que tu sais t'adapter !"]
+            set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: intro, lineIndex: 0 }, pendingSbire: true })
+            return
+        }
+
         // Dresseur : intro + combat (ou réplique de défaite s'il est déjà battu).
         const trainer = getTrainer(npc.id)
         if (trainer) {
@@ -267,13 +312,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
     pressB: () => {
         const { dialogue, pendingTrainerId } = get()
         if (!dialogue) return
-        // Un défi de dresseur ne se refuse pas : fermer l'intro lance quand même le combat.
+        // Un défi ne se refuse pas : fermer l'intro lance quand même le combat.
         if (pendingTrainerId) {
             set({ dialogue: tryLaunchTrainer(pendingTrainerId), pendingTrainerId: null })
+        } else if (get().pendingSbire) {
+            set({ dialogue: tryLaunchSbire(), pendingSbire: false })
         } else {
             set({ dialogue: null })
         }
     },
+
+    showDialogue: (npcId, npcName, lines) => set({ dialogue: { npcId, npcName, lines, lineIndex: 0 } }),
 
     setMap: (mapId, spawnX, spawnY) => {
         const map = YELLOW_MAPS[mapId]
