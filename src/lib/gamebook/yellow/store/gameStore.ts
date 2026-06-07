@@ -40,6 +40,7 @@ interface GameStore {
     dialogue: ActiveDialogue | null
     shopOpen: boolean // boutique ouverte (vendeur)
     pcOpen: boolean // boîte PC ouverte (ordinateur du Centre Daemon)
+    guideOpen: boolean // guide du Bosquet ouvert (panneau devant le gym)
     hydrated: boolean // true une fois que l'état serveur a été chargé
     stepFrame: 0 | 1 // alterne à chaque déplacement réel → anime les jambes du sprite
     pendingTrainerId: string | null // dresseur dont l'intro est en cours → combat à la fermeture
@@ -54,6 +55,7 @@ interface GameStore {
     hydrate: (loaded: PlayerState) => void
     closeShop: () => void
     closePc: () => void
+    closeGuide: () => void
     /** Affiche un dialogue simple (ex. explication post-combat du sbire). */
     showDialogue: (npcId: string, npcName: string, lines: string[]) => void
 }
@@ -143,6 +145,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     dialogue: null,
     shopOpen: false,
     pcOpen: false,
+    guideOpen: false,
     hydrated: false,
     stepFrame: 0,
     pendingTrainerId: null,
@@ -152,7 +155,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     move: (dir) => {
         const { player, map, dialogue } = get()
         // Mouvement bloqué pendant un dialogue, une boutique, le PC ou un combat.
-        if (dialogue || get().shopOpen || get().pcOpen) return
+        if (dialogue || get().shopOpen || get().pcOpen || get().guideOpen) return
         if (getBattleSnapshot().battle) return
 
         const next = tryMove(player, dir, map)
@@ -290,6 +293,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
+        // Panneau du Bosquet : ouvre le GUIDE (pop-up riche) au lieu d'un dialogue.
+        if (npc.id === "y_gym_sign") {
+            set({ guideOpen: true })
+            return
+        }
+
         // Sbire du dieu Spaghetti : combat dynamique, 2×/jour max.
         if (npc.id === SBIRE_TRAINER_ID) {
             const wins = getPlayerSave().sbireDefeatsToday
@@ -407,5 +416,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
     },
 
     closeShop: () => set({ shopOpen: false }),
+    closeGuide: () => set({ guideOpen: false }),
     closePc: () => set({ pcOpen: false }),
 }))

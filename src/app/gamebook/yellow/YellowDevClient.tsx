@@ -22,6 +22,7 @@ import { usePvpCtx, pvpForfeit } from "@/lib/gamebook/yellow/store/battleStore"
 import EvolutionScreen from "./battle/EvolutionScreen"
 import IntroCinematic from "./IntroCinematic"
 import LearnScreen from "./LearnScreen"
+import GuidePanel from "./GuidePanel"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg } from "@/lib/gamebook/yellow/store/battleStore"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
@@ -476,6 +477,8 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
             )}
 
             {/* Boutique (vendeur) */}
+            <GuidePanel />
+
             {!battle && shopOpen && (
                 <div style={menuOverlayStyle} onClick={closeShop}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
