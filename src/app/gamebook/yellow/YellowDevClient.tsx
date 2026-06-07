@@ -24,7 +24,7 @@ import IntroCinematic from "./IntroCinematic"
 import LearnScreen from "./LearnScreen"
 import GuidePanel from "./GuidePanel"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
-import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getGiftCtMove } from "@/lib/gamebook/yellow/store/battleStore"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
 import { getPlayer, setTeam, usePlayer, addItem, spendReps, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove } from "@/lib/gamebook/yellow/store/playerStore"
@@ -225,10 +225,13 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
         if (badgeAwarded && !battle && evolutions.length === 0) {
             const labels: Record<string, string> = { plante: "FEUILLE", feu: "FLAMME", eau: "GOUTTE" }
             const lbl = labels[badgeAwarded] ?? badgeAwarded.toUpperCase()
-            showDialogue("y_gym_sign", "ARÈNE", [
+            const giftMove = getGiftCtMove()
+            const lines = [
                 `🎖️ Tu obtiens le BADGE ${lbl} !`,
                 "Ton plafond de reps grimpe (+250) et de nouvelles CT s'ouvrent à la boutique.",
-            ])
+            ]
+            if (giftMove) lines.push(`🎁 Le Doyen te remet la CT « ${giftMove} » ! (gratuite — enseigne-la à un Daemon compatible via la boutique → Capsules CT)`)
+            showDialogue("y_gym_sign", "ARÈNE", lines)
             clearBadgeAwarded()
         }
     }, [badgeAwarded, battle, evolutions.length, showDialogue])
@@ -555,14 +558,17 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                                     <span>🎓 CAPSULES CT</span><span>⚡ {player.reps}</span>
                                 </div>
                                 <div style={{ maxHeight: "55vh", overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
-                                    {purchasableCts(player.badges).map((ct) => {
+                                    {[
+                                        ...player.ownedCts.map((id) => getCt(id)).filter((c): c is NonNullable<typeof c> => !!c).map((ct) => ({ ct, free: true })),
+                                        ...purchasableCts(player.badges).map((ct) => ({ ct, free: false })),
+                                    ].map(({ ct, free }) => {
                                         const mv = getMove(ct.moveId)
-                                        const afford = player.reps >= ct.price
+                                        const afford = free || player.reps >= ct.price
                                         return (
                                             <button key={ct.id} style={afford ? menuBtnStyle : menuBtnDimStyle} disabled={!afford} onClick={() => setCtPick(ct.id)}>
                                                 <span style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                                                     <span>{ct.label} · {mv?.name}<br /><span style={{ fontSize: 10, opacity: 0.6 }}>{mv?.type}{mv && mv.power > 0 ? ` · ${mv.power}` : " · statut"}</span></span>
-                                                    <span>{ct.price} reps</span>
+                                                    <span>{free ? "GRATUIT 🎁" : `${ct.price} reps`}</span>
                                                 </span>
                                             </button>
                                         )

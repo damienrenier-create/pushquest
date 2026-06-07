@@ -60,6 +60,8 @@ interface PlayerState {
     aceWins: number
     /** Jour (= creditedThrough) où ACE a été battu → 1 défaite/jour. */
     aceDefeatedDate: string
+    /** CT CADEAUX possédées (remises par les boss) : enseignables GRATUITEMENT. */
+    ownedCts: string[]
 }
 
 /** Statistiques PvP du joueur (réputation). */
@@ -78,7 +80,7 @@ export function emptyPvpStats(): PvpStats {
     return { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }
 }
 
-let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), aceTeam: [], aceWins: 0, aceDefeatedDate: "" }
+let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), aceTeam: [], aceWins: 0, aceDefeatedDate: "", ownedCts: [] }
 const listeners = new Set<() => void>()
 
 function emit() { for (const l of listeners) l() }
@@ -103,6 +105,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         aceTeam: p.aceTeam ?? st.aceTeam ?? [],
         aceWins: p.aceWins ?? st.aceWins ?? 0,
         aceDefeatedDate: p.aceDefeatedDate ?? st.aceDefeatedDate ?? "",
+        ownedCts: p.ownedCts ?? st.ownedCts ?? [],
     }
     emit()
 }
@@ -116,7 +119,7 @@ export function markIntroSeen() {
 
 /** DEV : remet la progression jaune à zéro pour rejouer l'intro (équipe vidée, introSeen=false). */
 export function resetForIntro() {
-    st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), aceTeam: [], aceWins: 0, aceDefeatedDate: "" }
+    st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), aceTeam: [], aceWins: 0, aceDefeatedDate: "", ownedCts: [] }
     emit()
 }
 
@@ -146,6 +149,14 @@ export function hasBadge(id: BadgeId): boolean {
 export function awardBadge(id: BadgeId): boolean {
     if (st.badges.includes(id)) return false
     st = { ...st, badges: [...st.badges, id], repsCap: st.repsCap + BADGE_REPS_CAP_BONUS }
+    emit()
+    return true
+}
+
+/** Remet une CT CADEAU (trophée de boss) → enseignable GRATUITEMENT. true si nouvelle. */
+export function grantCt(ctId: string): boolean {
+    if (st.ownedCts.includes(ctId)) return false
+    st = { ...st, ownedCts: [...st.ownedCts, ctId] }
     emit()
     return true
 }
@@ -452,7 +463,9 @@ export function allocateStatPoint(uid: string, stat: StatKey): boolean {
 export function teachCt(uid: string, ctId: string): { ok: boolean; reason?: "introuvable" | "locked" | "incompatible" | "known" | "reps"; queued?: boolean } {
     const ct = getCt(ctId)
     if (!ct) return { ok: false, reason: "introuvable" }
-    if (!purchasableCts(st.badges).some((c) => c.id === ctId)) return { ok: false, reason: "locked" }
+    // CT possédée (cadeau) → gratuite. Sinon il faut qu'elle soit en vente (badges).
+    const owned = st.ownedCts.includes(ctId)
+    if (!owned && !purchasableCts(st.badges).some((c) => c.id === ctId)) return { ok: false, reason: "locked" }
     const pools: ("team" | "pc")[] = ["team", "pc"]
     for (const pool of pools) {
         const arr = st[pool]
@@ -462,7 +475,8 @@ export function teachCt(uid: string, ctId: string): { ok: boolean; reason?: "int
         const sp = getSpecies(m.speciesId)
         if (!sp || !canLearnCt(sp, ct)) return { ok: false, reason: "incompatible" }
         if (m.moves.some((s) => s.moveId === ct.moveId) || m.pendingMoves?.includes(ct.moveId)) return { ok: false, reason: "known" }
-        if (st.reps < ct.price) return { ok: false, reason: "reps" }
+        const cost = owned ? 0 : ct.price // CT cadeau = gratuite
+        if (st.reps < cost) return { ok: false, reason: "reps" }
         const free = m.moves.length < 4
         const pp = getMove(ct.moveId)?.pp ?? 5
         const updated: MonInstance = free
@@ -470,7 +484,7 @@ export function teachCt(uid: string, ctId: string): { ok: boolean; reason?: "int
             : { ...m, pendingMoves: [...(m.pendingMoves ?? []), ct.moveId] }
         const next = arr.slice()
         next[idx] = updated
-        st = { ...st, reps: st.reps - ct.price, [pool]: next }
+        st = { ...st, reps: st.reps - cost, [pool]: next }
         emit()
         return { ok: true, queued: !free }
     }

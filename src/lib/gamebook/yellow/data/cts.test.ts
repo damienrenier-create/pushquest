@@ -43,4 +43,13 @@ describe("catalogue des CT", () => {
         const all3: BadgeId[] = ["feu", "plante", "eau"]
         expect(purchasableCts(all3).some((c) => c.champion)).toBe(true)
     })
+
+    it("une CT cadeau (gift) n'est JAMAIS en vente + ct17 est un cadeau gratuit", () => {
+        const gifts = CTS.filter((c) => c.gift)
+        expect(gifts.length).toBeGreaterThan(0)
+        const all3: BadgeId[] = ["feu", "plante", "eau"]
+        for (const g of gifts) expect(purchasableCts(all3).some((c) => c.id === g.id)).toBe(false)
+        expect(getCt("ct17")?.gift).toBe(true)
+        expect(getCt("ct17")?.price).toBe(0)
+    })
 })

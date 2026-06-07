@@ -38,6 +38,8 @@ export interface TrainerData {
     requiresAllBadges?: boolean
     /** Boss d'arène : ne peut être défié qu'après avoir battu ces dresseurs (les gardes). */
     requiresTrainers?: string[]
+    /** CT CADEAU remise gratuitement à la victoire (trophée du boss, cf. cts.ts). */
+    giftCt?: string
 }
 
 export const TRAINERS: TrainerData[] = [
@@ -139,7 +141,7 @@ export const TRAINERS: TrainerData[] = [
             { speciesId: "broutame", level: 16 },
             { speciesId: "florapanthe", level: 16 }, // ace inédit (attaque signature)
         ],
-        reward: 0, aiLevel: "trainer", badge: "plante",
+        reward: 0, aiLevel: "trainer", badge: "plante", giftCt: "ct17",
         intro: [
             "*Le Doyen lève son bâton feuillu ; tout le Bosquet bruisse.*",
             "Je suis SYLVAIN, gardien du Bosquet Sacré.",

@@ -26,6 +26,8 @@ export interface CtData {
     badge?: BadgeId
     /** Requiert les 3 badges (CT de fin, vendues au champion / hub). */
     champion?: boolean
+    /** CADEAU : remise gratuitement par un boss, JAMAIS en vente (trophée). */
+    gift?: boolean
     /** Enseignable à N'IMPORTE QUEL Daemon (moves de stat/utilité), sinon compat de type. */
     universal?: boolean
 }
@@ -57,8 +59,8 @@ export const CTS: CtData[] = [
     { id: "ct15", label: "CT15", moveId: "draco_charge", price: 900, champion: true },
     { id: "ct16", label: "CT16", moveId: "vague_mentale", price: 800, champion: true },
 
-    // --- CT signature offerte par le Druide (débloquée par le Badge Feuille) ---
-    { id: "ct17", label: "CT17", moveId: "etreinte_sylvestre", price: 650, badge: "plante" },
+    // --- CT signature : CADEAU du Druide (jamais en vente, gratuite à enseigner) ---
+    { id: "ct17", label: "CT17", moveId: "etreinte_sylvestre", price: 0, gift: true },
 
     // --- Utilitaire set-up : boost de Spé, apprenable par TOUS (dispo dès le départ) ---
     { id: "ct18", label: "CT18", moveId: "focalisation", price: 450, universal: true },
@@ -85,6 +87,7 @@ export function canLearnCt(species: SpeciesData, ct: CtData): boolean {
 export function purchasableCts(badges: BadgeId[]): CtData[] {
     const has3 = (["feu", "plante", "eau"] as BadgeId[]).every((b) => badges.includes(b))
     return CTS.filter((c) => {
+        if (c.gift) return false // jamais en vente : obtenue uniquement en cadeau
         if (c.champion) return has3
         if (c.badge) return badges.includes(c.badge)
         return true
