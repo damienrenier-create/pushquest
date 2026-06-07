@@ -1082,7 +1082,7 @@ export const SPECIES: Record<string, SpeciesData> = {
         sprite: "/yellow/sprites/dex/limaroche.png",
     },
     escaroche: {
-        id: "escaroche", dexNo: 87, name: "Escaroche", types: ["ROCHE", "PSY"],
+        id: "escaroche", dexNo: 87, name: "Escargyle", types: ["ROCHE", "PSY"],
         baseStats: { hp: 72, atk: 45, def: 80, spe: 24, spc: 75 },
         learnset: [{ level: 1, moveId: "choc_mental" }, { level: 1, moveId: "jet_pierres" }, { level: 1, moveId: "eboulis" }, { level: 24, moveId: "mur_de_fer" }],
         evolution: { toId: "torturoche", method: { kind: "LEVEL", level: 36 } },
@@ -1091,7 +1091,7 @@ export const SPECIES: Record<string, SpeciesData> = {
         sprite: "/yellow/sprites/dex/escaroche.png",
     },
     torturoche: {
-        id: "torturoche", dexNo: 88, name: "Torturoche", types: ["ROCHE", "PSY"],
+        id: "torturoche", dexNo: 88, name: "Tortoracle", types: ["ROCHE", "PSY"],
         baseStats: { hp: 100, atk: 58, def: 108, spe: 27, spc: 112 },
         learnset: [{ level: 1, moveId: "vague_mentale" }, { level: 1, moveId: "lame_roche" }, { level: 1, moveId: "eboulis" }, { level: 1, moveId: "choc_mental" }, { level: 40, moveId: "focalisation" }, { level: 44, moveId: "mur_de_fer" }, { level: 48, moveId: "repos" }],
         catchRate: 45, baseExp: 200, rarity: "RARE", growthRate: "medium_fast", role: "Roche/Psy — tortue (mur spécial)",
