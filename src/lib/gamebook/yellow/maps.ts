@@ -377,6 +377,21 @@ function buildArenaPlante(): TileType[][] {
     return m
 }
 
+// Grotte Roche : 18×10 visible (scroll), calée sur grotte.png (576×608, tile 32px).
+// Collisions PLACEHOLDER (bords + mare bloquants, intérieur walkable) — À AFFINER
+// avec le relevé de Sartay sur la grille (?grid). Ouverture/sortie en bas (9,18).
+function buildGrotte(): TileType[][] {
+    const W = 18, H = 19
+    const m: TileType[][] = Array.from({ length: H }, () => Array.from({ length: W }, () => "grass" as TileType))
+    const wall = (x: number, y: number) => { if (x >= 0 && x < W && y >= 0 && y < H) m[y][x] = "tree" }
+    for (let x = 0; x < W; x++) { wall(x, 0); wall(x, H - 1) }
+    for (let y = 0; y < H; y++) { wall(0, y); wall(W - 1, y) }
+    m[H - 1][9] = "grass" // ouverture bas-centre (sortie vers la Route Nord)
+    // Mare d'eau (approx haut-gauche) — bloquante (à recaler avec la grille).
+    for (let y = 2; y <= 5; y++) for (let x = 1; x <= 6; x++) m[y][x] = "water"
+    return m
+}
+
 // === ROUTE NORD = future zone Pokémon (placeholder grass/trees) ==========
 // 44×40 (même taille que Viridian per user 2026-05-31).
 // Bordures d'arbres SAUF cols 19..23 row 39 (sortie sud vers Viridian, aligné
@@ -707,6 +722,19 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImageHeight: 320,
         backgroundImageTileSize: 32,
     },
+    yellow_grotte: {
+        id: "yellow_grotte",
+        name: "GROTTE ROCHEUSE",
+        tiles: buildGrotte(),
+        width: 18,
+        height: 19,
+        // Sortie bas-centre (9,18) → retour Route Nord, 1 case sous l'entrée (12,5).
+        exits: [{ x: 9, y: 18, targetMapId: "yellow_route_nord", targetSpawnX: 12, targetSpawnY: 5 }],
+        backgroundImage: "/yellow/sprites/grotte.png",
+        backgroundImageWidth: 576,
+        backgroundImageHeight: 608,
+        backgroundImageTileSize: 32,
+    },
     yellow_route_nord: {
         id: "yellow_route_nord",
         name: "ROUTE NORD",
@@ -715,13 +743,17 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         height: NORTH_H,
         // Sortie sud (cols 22..25, row 39) → retour Viridian sur col 21 row 1.
         // Alignée sur la bande sable cloné de Viridian (cols 22-25).
-        exits: [22, 23, 24, 25].map((col) => ({
-            x: col,
-            y: NORTH_H - 1,
-            targetMapId: YELLOW_ENTRANCE_MAP_ID,
-            targetSpawnX: 21,
-            targetSpawnY: 1,
-        })),
+        exits: [
+            ...[22, 23, 24, 25].map((col) => ({
+                x: col,
+                y: NORTH_H - 1,
+                targetMapId: YELLOW_ENTRANCE_MAP_ID,
+                targetSpawnX: 21,
+                targetSpawnY: 1,
+            })),
+            // Entrée de la GROTTE (coin entre les 2 reliefs montagneux), en (12,4).
+            { x: 12, y: 4, targetMapId: "yellow_grotte", targetSpawnX: 9, targetSpawnY: 16 },
+        ],
         // Tapis d'herbe FireRed : 4 variantes 16×16 séparées par 1px gap
         groundSheet: {
             url: "/yellow/sprites/herbes_2_t.png",

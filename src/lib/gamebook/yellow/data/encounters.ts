@@ -71,6 +71,21 @@ const ZONES: Record<string, Zone> = {
             { speciesId: "draclet", base: VERY_RARE, affinity: ["mountain"], repulsion: ["water"], player: "rare", rare: true },
         ],
     },
+    // GROTTE ROCHEUSE : habitat des Daemons Roche (+ une rareté spectrale).
+    yellow_grotte: {
+        rate: 0.16,
+        pool: [
+            { speciesId: "mottoche", base: COMMON },          // le « Magicarpe » rocheux
+            { speciesId: "cailloutchi", base: COMMON, player: "rocheSol" },
+            { speciesId: "rembodo", base: UNCOMMON },         // fossile
+            { speciesId: "limaroche", base: UNCOMMON },       // roche/psy
+            { speciesId: "marmoterre", base: UNCOMMON },      // roche/glace
+            { speciesId: "lavapetit", base: UNCOMMON },       // roche/feu
+            { speciesId: "tetardoc", base: UNCOMMON, affinity: ["water"] }, // roche/eau près de la mare
+            { speciesId: "revemante", base: RARE, player: "rare", rare: true },
+            { speciesId: "draclet", base: VERY_RARE, player: "rare", rare: true },
+        ],
+    },
 }
 
 export function hasEncounters(mapId: string): boolean {
