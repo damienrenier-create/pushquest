@@ -59,6 +59,9 @@ export const CTS: CtData[] = [
 
     // --- CT signature offerte par le Druide (débloquée par le Badge Feuille) ---
     { id: "ct17", label: "CT17", moveId: "etreinte_sylvestre", price: 650, badge: "plante" },
+
+    // --- Utilitaire set-up : boost de Spé, apprenable par TOUS (dispo dès le départ) ---
+    { id: "ct18", label: "CT18", moveId: "focalisation", price: 450, universal: true },
 ]
 
 export function getCt(id: string): CtData | null {

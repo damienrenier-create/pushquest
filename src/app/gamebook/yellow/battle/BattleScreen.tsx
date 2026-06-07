@@ -194,9 +194,17 @@ export default function BattleScreen() {
             options.push({ label: "← RETOUR", onSelect: () => setMenu("root") })
             canBack = true
         } else if (menu === "bag") {
-            Object.values(ITEMS).filter((it) => it.category === "HEAL" && (items[it.id] ?? 0) > 0)
+            const owned = (id: string) => (items[id] ?? 0) > 0
+            // Soins de PV (désactivés à PV pleins)
+            Object.values(ITEMS).filter((it) => it.category === "HEAL" && owned(it.id))
                 .forEach((it) => options.push({ label: `${it.name} ×${items[it.id]}`, onSelect: () => doItem(it.id), disabled: player.currentHp >= maxHpOf(player) }))
-            if (battle.isWild) Object.values(ITEMS).filter((it) => it.category === "BALL" && (items[it.id] ?? 0) > 0)
+            // Anti-statut (désactivés si aucun statut)
+            Object.values(ITEMS).filter((it) => it.category === "STATUS_HEAL" && owned(it.id))
+                .forEach((it) => options.push({ label: `${it.name} ×${items[it.id]}`, onSelect: () => doItem(it.id), disabled: player.status === "NONE" }))
+            // Objets X (boost de stat)
+            Object.values(ITEMS).filter((it) => it.category === "BOOST" && owned(it.id))
+                .forEach((it) => options.push({ label: `${it.name} ×${items[it.id]}`, onSelect: () => doItem(it.id) }))
+            if (battle.isWild) Object.values(ITEMS).filter((it) => it.category === "BALL" && owned(it.id))
                 .forEach((b) => options.push({ label: `${b.name} ×${items[b.id]}`, onSelect: () => throwBall(b.id) }))
             options.push({ label: "← RETOUR", onSelect: () => setMenu("root") })
             canBack = true

@@ -143,3 +143,28 @@ describe("budget d'énergie de l'ennemi (ACE)", () => {
         expect(final.enemyEnergy!.spent).toBe(0) // toujours à sec → aucune attaque payante
     })
 })
+
+describe("objets de combat (X / anti-statut)", () => {
+    it("un objet X augmente le palier de stat du Daemon actif (+1)", () => {
+        const s0 = createBattle([createMonInstance("rochison", 50)], [createMonInstance("plumiot", 2)], { isWild: true, seed: 1 })
+        expect(s0.player.team[s0.player.activeIndex].stages.atk).toBe(0)
+        const s1 = resolveTurn(s0, { kind: "item", itemId: "x_attaque" })
+        expect(s1.player.team[s1.player.activeIndex].stages.atk).toBe(1)
+        const s2 = resolveTurn(s1, { kind: "item", itemId: "x_special" })
+        expect(s2.player.team[s2.player.activeIndex].stages.spc).toBe(1)
+    })
+
+    it("un anti-statut soigne le bon statut", () => {
+        const s0 = createBattle([createMonInstance("rochison", 50)], [createMonInstance("plumiot", 2)], { isWild: true, seed: 1 })
+        s0.player.team[s0.player.activeIndex].status = "PARALYSIS"
+        const s1 = resolveTurn(s0, { kind: "item", itemId: "anti_para" })
+        expect(s1.player.team[s1.player.activeIndex].status).toBe("NONE")
+    })
+
+    it("Total Soin soigne n'importe quel statut", () => {
+        const s0 = createBattle([createMonInstance("rochison", 50)], [createMonInstance("plumiot", 2)], { isWild: true, seed: 1 })
+        s0.player.team[s0.player.activeIndex].status = "BURN"
+        const s1 = resolveTurn(s0, { kind: "item", itemId: "total_soin" })
+        expect(s1.player.team[s1.player.activeIndex].status).toBe("NONE")
+    })
+})

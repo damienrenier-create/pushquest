@@ -3,7 +3,10 @@
 // Nexus Jaune Éclair — objets : Balls (capture) + soins. Data-driven.
 // L'achat/coût se paie en ÉNERGIE PushQuest (reps) → couche meta (hors moteur).
 
-export type ItemCategory = "BALL" | "HEAL" | "STATUS_HEAL" | "MISC"
+export type ItemCategory = "BALL" | "HEAL" | "STATUS_HEAL" | "BOOST" | "MISC"
+
+/** Statuts majeurs gérés (aligné sur MajorStatus). "ALL" = tous. */
+export type CurableStatus = "ALL" | "BURN" | "POISON" | "TOXIC" | "PARALYSIS" | "SLEEP" | "FREEZE"
 
 export interface ItemData {
     id: string
@@ -18,6 +21,11 @@ export interface ItemData {
     guaranteed?: boolean
     /** Pour les soins : PV restaurés (0 = full). */
     healHp?: number
+    /** STATUS_HEAL : statuts guéris. */
+    cures?: CurableStatus[]
+    /** BOOST (objet X) : stat boostée + nombre de crans (appliqué en combat). */
+    boostStat?: "atk" | "def" | "spe" | "spc"
+    boostStages?: number
 }
 
 export const ITEMS: Record<string, ItemData> = {
@@ -44,6 +52,50 @@ export const ITEMS: Record<string, ItemData> = {
     super_potion: {
         id: "super_potion", name: "Super Potion", category: "HEAL",
         description: "Restaure 50 PV.", price: 350, healHp: 50,
+    },
+
+    // --- Anti-statut (en combat) ---
+    antidote: {
+        id: "antidote", name: "Antidote", category: "STATUS_HEAL",
+        description: "Soigne le Poison.", price: 120, cures: ["POISON", "TOXIC"],
+    },
+    anti_para: {
+        id: "anti_para", name: "Anti-Para", category: "STATUS_HEAL",
+        description: "Soigne la Paralysie.", price: 120, cures: ["PARALYSIS"],
+    },
+    reveil: {
+        id: "reveil", name: "Réveil", category: "STATUS_HEAL",
+        description: "Réveille un Daemon endormi.", price: 120, cures: ["SLEEP"],
+    },
+    antigel: {
+        id: "antigel", name: "Antigel", category: "STATUS_HEAL",
+        description: "Dégèle un Daemon gelé.", price: 120, cures: ["FREEZE"],
+    },
+    anti_brulure: {
+        id: "anti_brulure", name: "Anti-Brûlure", category: "STATUS_HEAL",
+        description: "Soigne la Brûlure.", price: 120, cures: ["BURN"],
+    },
+    total_soin: {
+        id: "total_soin", name: "Total Soin", category: "STATUS_HEAL",
+        description: "Soigne TOUS les statuts.", price: 250, cures: ["ALL"],
+    },
+
+    // --- Objets X : boostent une stat de +1 cran pour le combat (consomment le tour) ---
+    x_attaque: {
+        id: "x_attaque", name: "X-Attaque", category: "BOOST",
+        description: "Augmente l'Attaque (+1) le temps du combat.", price: 120, boostStat: "atk", boostStages: 1,
+    },
+    x_defense: {
+        id: "x_defense", name: "X-Défense", category: "BOOST",
+        description: "Augmente la Défense (+1) le temps du combat.", price: 120, boostStat: "def", boostStages: 1,
+    },
+    x_vitesse: {
+        id: "x_vitesse", name: "X-Vitesse", category: "BOOST",
+        description: "Augmente la Vitesse (+1) le temps du combat.", price: 120, boostStat: "spe", boostStages: 1,
+    },
+    x_special: {
+        id: "x_special", name: "X-Spé", category: "BOOST",
+        description: "Augmente le Spécial (+1) le temps du combat.", price: 120, boostStat: "spc", boostStages: 1,
     },
 }
 

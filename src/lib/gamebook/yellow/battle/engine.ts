@@ -204,7 +204,7 @@ export function resolveTurn(prev: BattleState, playerAction: PlayerAction): Batt
 
     // --- Utiliser un objet de soin (consomme le tour ; l'adversaire agit ensuite) ---
     if (playerAction.kind === "item") {
-        applyHealItem(state, playerAction.itemId, events)
+        applyItem(state, playerAction.itemId, events)
         const ea = chooseEnemyAction(state, rng)
         if (active(state.enemy).currentHp > 0) {
             if (ea.kind === "switch") doSwitch(state, "enemy", ea.teamIndex!, events)
@@ -848,17 +848,38 @@ function performCapture(state: BattleState, itemId: string, events: BattleEvent[
 }
 
 /** Utilise un objet de soin sur le Daemon actif du joueur (consomme le tour). */
-function applyHealItem(state: BattleState, itemId: string, events: BattleEvent[]) {
+function applyItem(state: BattleState, itemId: string, events: BattleEvent[]) {
     const it = getItem(itemId)
     const mon = active(state.player)
     events.push({ kind: "message", text: `Tu utilises ${it?.name ?? "un objet"} !` })
-    if (!it || it.category !== "HEAL") {
-        events.push({ kind: "message", text: "Mais ça n'a aucun effet ici…" })
+    if (!it) { events.push({ kind: "message", text: "Mais ça n'a aucun effet…" }); return }
+
+    // Soin de PV
+    if (it.category === "HEAL") {
+        const amount = it.healHp && it.healHp > 0 ? it.healHp : maxHpOf(mon)
+        applyHeal(state, "player", amount, events)
+        events.push({ kind: "message", text: `${displayName(mon)} récupère des PV !` })
         return
     }
-    const amount = it.healHp && it.healHp > 0 ? it.healHp : maxHpOf(mon)
-    applyHeal(state, "player", amount, events)
-    events.push({ kind: "message", text: `${displayName(mon)} récupère des PV !` })
+    // Anti-statut
+    if (it.category === "STATUS_HEAL") {
+        const cures = it.cures ?? []
+        const heals = cures.includes("ALL") || cures.includes(mon.status as never)
+        if (mon.status !== "NONE" && heals) {
+            mon.status = "NONE"
+            mon.statusCounter = 0
+            events.push({ kind: "message", text: `${displayName(mon)} n'a plus de problème de statut !` })
+        } else {
+            events.push({ kind: "message", text: "Mais ça n'a aucun effet…" })
+        }
+        return
+    }
+    // Objet X : boost de stat (+ crans) pour le combat
+    if (it.category === "BOOST" && it.boostStat) {
+        applyStatChange(state, "player", it.boostStat, it.boostStages ?? 1, events)
+        return
+    }
+    events.push({ kind: "message", text: "Mais ça n'a aucun effet ici…" })
 }
 
 // ============================================================
