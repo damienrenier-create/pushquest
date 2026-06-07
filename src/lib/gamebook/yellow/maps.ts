@@ -377,18 +377,17 @@ function buildArenaPlante(): TileType[][] {
     return m
 }
 
-// Grotte Roche : 18×10 visible (scroll), calée sur grotte.png (576×608, tile 32px).
-// Collisions PLACEHOLDER (bords + mare bloquants, intérieur walkable) — À AFFINER
-// avec le relevé de Sartay sur la grille (?grid). Ouverture/sortie en bas (9,18).
+// Grotte Roche : 30×31, calée sur grotte.png (720×744, tile 24px). Plus de tuiles
+// = perso plus petit vs décor (re-zoom). Collisions PLACEHOLDER (bords + mare) —
+// À AFFINER avec le relevé de Sartay (?grid). Entrée/sortie = trou noir haut-droite.
 function buildGrotte(): TileType[][] {
-    const W = 18, H = 19
+    const W = 30, H = 31
     const m: TileType[][] = Array.from({ length: H }, () => Array.from({ length: W }, () => "grass" as TileType))
     const wall = (x: number, y: number) => { if (x >= 0 && x < W && y >= 0 && y < H) m[y][x] = "tree" }
     for (let x = 0; x < W; x++) { wall(x, 0); wall(x, H - 1) }
     for (let y = 0; y < H; y++) { wall(0, y); wall(W - 1, y) }
-    m[H - 1][9] = "grass" // ouverture bas-centre (sortie vers la Route Nord)
     // Mare d'eau (approx haut-gauche) — bloquante (à recaler avec la grille).
-    for (let y = 2; y <= 5; y++) for (let x = 1; x <= 6; x++) m[y][x] = "water"
+    for (let y = 3; y <= 8; y++) for (let x = 1; x <= 9; x++) m[y][x] = "water"
     return m
 }
 
@@ -726,14 +725,14 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         id: "yellow_grotte",
         name: "GROTTE ROCHEUSE",
         tiles: buildGrotte(),
-        width: 18,
-        height: 19,
-        // Sortie bas-centre (9,18) → retour Route Nord, 1 case sous l'entrée (12,5).
-        exits: [{ x: 9, y: 18, targetMapId: "yellow_route_nord", targetSpawnX: 12, targetSpawnY: 5 }],
+        width: 30,
+        height: 31,
+        // Sortie = le « trou noir » haut-droite (~25,5, à recaler) → retour Route Nord (12,5).
+        exits: [{ x: 25, y: 5, targetMapId: "yellow_route_nord", targetSpawnX: 12, targetSpawnY: 5 }],
         backgroundImage: "/yellow/sprites/grotte.png",
-        backgroundImageWidth: 576,
-        backgroundImageHeight: 608,
-        backgroundImageTileSize: 32,
+        backgroundImageWidth: 720,
+        backgroundImageHeight: 744,
+        backgroundImageTileSize: 24,
     },
     yellow_route_nord: {
         id: "yellow_route_nord",
@@ -752,7 +751,8 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
                 targetSpawnY: 1,
             })),
             // Entrée de la GROTTE (coin entre les 2 reliefs montagneux), en (12,4).
-            { x: 12, y: 4, targetMapId: "yellow_grotte", targetSpawnX: 9, targetSpawnY: 16 },
+            // Arrivée près du trou noir haut-droite (à recaler avec la grille).
+            { x: 12, y: 4, targetMapId: "yellow_grotte", targetSpawnX: 25, targetSpawnY: 6 },
         ],
         // Tapis d'herbe FireRed : 4 variantes 16×16 séparées par 1px gap
         groundSheet: {
@@ -786,6 +786,8 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
             { x: 41, y: 0, w: 1, h: 4, url: "/yellow/sprites/viridian_mountain_col41.png" },
             // Bloc montagne 5×10 (clone Viridian cols 0-4 rows 2-11)
             { x: 4, y: 4, w: 5, h: 10, url: "/yellow/sprites/viridian_mountain_block_0_4_2_11.png" },
+            // Bouche de la GROTTE (entrée en 12,4)
+            { x: 12, y: 4, w: 1, h: 1, url: "/yellow/sprites/cave_entrance.png" },
             { x: 14, y: 35, w: 30, h: 5, url: "/yellow/sprites/viridian_bottom_14_43.png" },
             { x: 0, y: 35, w: 2, h: 5, url: "/yellow/sprites/viridian_bottom_14_15.png" },
             { x: 2, y: 35, w: 2, h: 5, url: "/yellow/sprites/viridian_bottom_14_15.png" },
