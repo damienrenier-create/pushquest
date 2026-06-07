@@ -46,7 +46,7 @@ export default function GuidePanel() {
                         <Row k="❄️ Glace" v="Coup d'Givre (10% de GELER !) — Auroruff niv 8, Gouttiny niv 18." />
                         <Row k="🐛 Insecte" v="Dard-Nuée (frappe 2 à 5 fois) — Ruffiant niv 6. Morsure — Formiguer (Ruffiant évolue niv 15)." />
                         <Row k="🦅 Vol" v="Picpic — Plumiot/Cornaissant/Draclet niv 5. Tornade — Plumiot niv 20." />
-                        <Row k="☠️ Poison" v="Dard-Venin (30% empoisonne — grignote le boss) — Ruffiant niv 16, Cornaissant/Sporbéo niv 14." />
+                        <Row k="☠️ Poison" v="Dard-Venin (30% empoisonne — grignote le boss) — Ruffiant niv 13, Cornaissant/Sporbéo niv 14." />
                     </Section>
 
                     <Section t="🗺️ Où capturer (Route Nord)">

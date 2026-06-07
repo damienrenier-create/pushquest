@@ -375,7 +375,7 @@ export const SPECIES: Record<string, SpeciesData> = {
         learnset: [
             { level: 1, moveId: "charge" },
             { level: 6, moveId: "dard_nuee" },
-            { level: 16, moveId: "dard_venin" },
+            { level: 13, moveId: "dard_venin" }, // avant l'évo (niv 15) → réellement accessible
             { level: 26, moveId: "morsure" },
         ],
         evolution: { toId: "formiguer", method: { kind: "LEVEL", level: 15 } },

@@ -6,6 +6,7 @@
 
 import type { MonInstance } from "./types"
 import { getSpecies } from "../data/species"
+import { getMove } from "../data/moves"
 
 /** Espèce cible si le monstre peut évoluer MAINTENANT (méthode niveau), sinon null. */
 export function levelEvolutionTarget(mon: MonInstance): string | null {
@@ -43,5 +44,22 @@ export function applyEvolution(mon: MonInstance, toId: string): EvolutionResult 
     const toSp = getSpecies(toId)
     if (!fromSp || !toSp) return null
     mon.speciesId = toId
+    // La forme évoluée APPREND ses attaques déjà débloquées par le niveau (dont les
+    // moves "niv 1") — sinon elles seraient à jamais inaccessibles après évolution.
+    // Slots libres remplis direct ; surplus mis en attente (écran d'apprentissage).
+    const known = new Set(mon.moves.map((m) => m.moveId))
+    const pend = new Set(mon.pendingMoves ?? [])
+    for (const e of toSp.learnset) {
+        if (e.level > mon.level || known.has(e.moveId) || pend.has(e.moveId)) continue
+        const mv = getMove(e.moveId)
+        if (!mv) continue
+        if (mon.moves.length < 4) {
+            mon.moves.push({ moveId: e.moveId, pp: mv.pp, ppMax: mv.pp })
+            known.add(e.moveId)
+        } else {
+            ;(mon.pendingMoves ??= []).push(e.moveId)
+            pend.add(e.moveId)
+        }
+    }
     return { fromId: fromSp.id, fromName: fromSp.name, toId: toSp.id, toName: toSp.name }
 }

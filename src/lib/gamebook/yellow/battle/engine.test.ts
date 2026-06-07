@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest"
 import { createBattle, resolveTurn, type BattleState } from "./engine"
 import { createMonInstance } from "./factory"
+import { applyEvolution } from "./evolution"
 import { getTrainer } from "../data/trainers"
 
 // Auto-joue un combat jusqu'à l'issue, de façon DÉTERMINISTE :
@@ -141,6 +142,17 @@ describe("budget d'énergie de l'ennemi (ACE)", () => {
         const { final } = autoPlay(s0)
         expect(final.phase).toBe("ended")
         expect(final.enemyEnergy!.spent).toBe(0) // toujours à sec → aucune attaque payante
+    })
+})
+
+describe("évolution — apprentissage des attaques du nouveau stade", () => {
+    it("un Daemon qui évolue récupère les attaques 'niv 1' de sa forme évoluée", () => {
+        const mon = createMonInstance("ruffiant", 15)
+        expect(mon.moves.some((m) => m.moveId === "morsure")).toBe(false) // Ruffiant ne l'a pas
+        applyEvolution(mon, "formiguer")
+        expect(mon.speciesId).toBe("formiguer")
+        const aMorsure = mon.moves.some((m) => m.moveId === "morsure") || (mon.pendingMoves ?? []).includes("morsure")
+        expect(aMorsure).toBe(true) // Morsure (niv 1 de Formiguer) est bien acquise
     })
 })
 
