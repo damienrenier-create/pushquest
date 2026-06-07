@@ -31,7 +31,7 @@ export const SPECIES: Record<string, SpeciesData> = {
         sprite: "/yellow/sprites/dex/feuillichot.png",
     },
     broutame: {
-        id: "broutame", dexNo: 2, name: "Broutame", types: ["PLANTE"],
+        id: "broutame", dexNo: 2, name: "Broubouc", types: ["PLANTE"],
         baseStats: { hp: 62, atk: 58, def: 68, spe: 52, spc: 82 },
         learnset: [
             { level: 1, moveId: "fouet_lianes" },
@@ -46,7 +46,7 @@ export const SPECIES: Record<string, SpeciesData> = {
         sprite: "/yellow/sprites/dex/broutame.png",
     },
     sylvapuce: {
-        id: "sylvapuce", dexNo: 3, name: "Sylvapuce", types: ["PLANTE"],
+        id: "sylvapuce", dexNo: 3, name: "Cerfeuillu", types: ["PLANTE"],
         baseStats: { hp: 85, atk: 78, def: 90, spe: 70, spc: 112 },
         learnset: [
             { level: 1, moveId: "tempete_verte" },
@@ -263,7 +263,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     maitrezenc: {
         id: "maitrezenc", dexNo: 18, name: "Maîtrezenc", types: ["COMBAT"],
-        baseStats: { hp: 80, atk: 118, def: 68, spe: 108, spc: 68 },
+        baseStats: { hp: 80, atk: 118, def: 68, spe: 88, spc: 68 },
         learnset: [
             { level: 1, moveId: "poing_karate" },
             { level: 1, moveId: "belier" },
@@ -610,7 +610,7 @@ export const SPECIES: Record<string, SpeciesData> = {
         sprite: "/yellow/sprites/dex/feliane.png",
     },
     cerfeuillu: {
-        id: "cerfeuillu", dexNo: 42, name: "Cerfeuillu", types: ["PLANTE"],
+        id: "cerfeuillu", dexNo: 42, name: "Silviliane", types: ["PLANTE"],
         baseStats: { hp: 82, atk: 88, def: 74, spe: 96, spc: 92 },
         learnset: [{ level: 1, moveId: "tempete_verte" }, { level: 1, moveId: "tranche_feuille" }, { level: 1, moveId: "spores_dodo" }, { level: 1, moveId: "focalisation" }],
         catchRate: 45, baseExp: 210, rarity: "RARE", growthRate: "medium_fast", role: "Plante — sweeper",
@@ -723,7 +723,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     hebulmin: {
         id: "hebulmin", dexNo: 54, name: "Hébulmin", types: ["COMBAT", "ELEC"],
-        baseStats: { hp: 100, atk: 126, def: 82, spe: 78, spc: 64 },
+        baseStats: { hp: 100, atk: 126, def: 82, spe: 66, spc: 64 },
         learnset: [{ level: 1, moveId: "crochet_maitre" }, { level: 1, moveId: "fulgurance" }, { level: 1, moveId: "belier" }, { level: 44, moveId: "seisme" }],
         catchRate: 45, baseExp: 215, rarity: "RARE", growthRate: "medium_fast", role: "Combat/Élec — colosse",
         description: "Colosse-troll à la crinière de foudre ; un seul coup fait trembler l'arène.",
