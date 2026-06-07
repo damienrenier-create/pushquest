@@ -76,6 +76,8 @@ export const MOVES: Record<string, MoveData> = {
     vague_mentale: { id: "vague_mentale", name: "Vague Mentale", type: "PSY", power: 90, accuracy: 100, pp: 10, effect: { chance: 10, statChanges: [{ target: "target", stat: "spc", stages: -1 }] }, description: "Gros move Psy ; peut baisser le Spécial." },
     morsure: { id: "morsure", name: "Morsure", type: "INSECTE", power: 60, accuracy: 100, pp: 20, description: "Morsure intermédiaire." },
     dard_mortel: { id: "dard_mortel", name: "Dard Mortel", type: "INSECTE", power: 70, accuracy: 100, pp: 15, description: "Gros move Insecte." },
+    ball_ombre: { id: "ball_ombre", name: "Ball'Ombre", type: "SPECTRE", power: 85, accuracy: 100, pp: 15, description: "Grosse attaque spectrale." },
+    bombe_beurk: { id: "bombe_beurk", name: "Bombe Beurk", type: "POISON", power: 90, accuracy: 100, pp: 10, effect: { chance: 30, inflictStatus: "POISON" }, description: "Gros move Poison ; peut empoisonner." },
     eboulis: { id: "eboulis", name: "Éboulis", type: "ROCHE", power: 75, accuracy: 90, pp: 10, effect: { chance: 30, flinch: true }, description: "Peut apeurer." },
     ombre_furtive: { id: "ombre_furtive", name: "Ombre Furtive", type: "SPECTRE", power: 40, accuracy: 100, pp: 30, priority: 1, description: "Frappe en priorité." },
     draco_charge: { id: "draco_charge", name: "Draco-Charge", type: "DRAGON", power: 90, accuracy: 100, pp: 10, description: "Gros move Dragon." },

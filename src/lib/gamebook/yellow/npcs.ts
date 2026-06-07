@@ -61,6 +61,30 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         dialoguesAfter: ACE_INTRO_LINES,
     },
 
+    // === VILLE — PANNEAU "antisèche du Bosquet" devant le gym (32,10) ===
+    // Hotspot invisible (le panneau est déjà dessiné dans le décor). 8 conseils aérés.
+    {
+        id: "y_gym_sign",
+        name: "PANNEAU",
+        mapId: "yellow_entrance",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "", color: "#8c6840" },
+        initialX: 32,
+        initialY: 10,
+        dialoguesAfter: [
+            "*Tu lis l'antisèche gravée devant l'arène.*",
+            "🌿 Le Bosquet est 100% PLANTE.",
+            "🔥 Tes meilleures armes : FEU, GLACE, INSECTE (super efficace).",
+            "⚡ Flammèche dès niv 7 (Braisille/Fennaise) · Dard-Nuée dès niv 6 (Ruffiant, 2 à 5 coups).",
+            "🧊 La GLACE est reine : Coup d'Givre (Auroruff dès niv 8) tape ×2 ET peut GELER le boss !",
+            "⚔️ Feu & Glace = attaques SPÉCIALES → monte ta SPÉ. Insecte & Vol = PHYSIQUES → monte ton ATTAQUE.",
+            "🛡️ La Plante cogne en SPÉCIAL : c'est ta SPÉ qui encaisse, pas ta Déf. Et le Feu résiste à la Plante.",
+            "🚫 N'amène pas d'Eau, Sol ni Roche (la Plante leur fait ×2) ; l'Élec est résisté.",
+            "🗝️ Bats les 4 gardes (ordre libre), puis le Doyen — gare à ses drains et à sa Florapanthe.",
+        ],
+    },
+
     // === Intérieur SHOP ===
     {
         id: "y_vendeur",
