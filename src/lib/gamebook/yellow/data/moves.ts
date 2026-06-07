@@ -77,6 +77,7 @@ export const MOVES: Record<string, MoveData> = {
     morsure: { id: "morsure", name: "Morsure", type: "INSECTE", power: 60, accuracy: 100, pp: 20, description: "Morsure intermédiaire." },
     dard_mortel: { id: "dard_mortel", name: "Dard Mortel", type: "INSECTE", power: 70, accuracy: 100, pp: 15, description: "Gros move Insecte." },
     ball_ombre: { id: "ball_ombre", name: "Ball'Ombre", type: "SPECTRE", power: 85, accuracy: 100, pp: 15, description: "Grosse attaque spectrale." },
+    lame_roche: { id: "lame_roche", name: "Lame de Roche", type: "ROCHE", power: 90, accuracy: 90, pp: 10, effect: { highCrit: true }, description: "Gros move Roche ; fort taux de critique." },
     bombe_beurk: { id: "bombe_beurk", name: "Bombe Beurk", type: "POISON", power: 90, accuracy: 100, pp: 10, effect: { chance: 30, inflictStatus: "POISON" }, description: "Gros move Poison ; peut empoisonner." },
     eboulis: { id: "eboulis", name: "Éboulis", type: "ROCHE", power: 75, accuracy: 90, pp: 10, effect: { chance: 30, flinch: true }, description: "Peut apeurer." },
     ombre_furtive: { id: "ombre_furtive", name: "Ombre Furtive", type: "SPECTRE", power: 40, accuracy: 100, pp: 30, priority: 1, description: "Frappe en priorité." },
