@@ -53,6 +53,7 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
     const closeShop = useGameStore((s) => s.closeShop)
     const pcOpen = useGameStore((s) => s.pcOpen)
     const closePc = useGameStore((s) => s.closePc)
+    const dialogue = useGameStore((s) => s.dialogue)
     const setMap = useGameStore((s) => s.setMap)
     const showDialogue = useGameStore((s) => s.showDialogue)
     const battle = useBattle()
@@ -74,6 +75,7 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
     const [pcBox, setPcBox] = useState(0)
     const [ctShop, setCtShop] = useState(false)
     const [ctPick, setCtPick] = useState<string | null>(null)
+    const [giftHidden, setGiftHidden] = useState(false) // "plus tard" sur l'écran de CT cadeau
     const [confirmReset, setConfirmReset] = useState(false)
     const [swapPick, setSwapPick] = useState<string | null>(null) // uid du Daemon "à déplacer"
 
@@ -230,7 +232,7 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                 `🎖️ Tu obtiens le BADGE ${lbl} !`,
                 "Ton plafond de reps grimpe (+250) et de nouvelles CT s'ouvrent à la boutique.",
             ]
-            if (giftMove) lines.push(`🎁 Le Doyen te remet la CT « ${giftMove} » ! (gratuite — enseigne-la à un Daemon compatible via la boutique → Capsules CT)`)
+            if (giftMove) lines.push(`🎁 Le Doyen te remet la CT « ${giftMove} » ! Apprends-la à un Daemon Plante — c'est un cadeau unique.`)
             showDialogue("y_gym_sign", "ARÈNE", lines)
             clearBadgeAwarded()
         }
@@ -558,17 +560,14 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                                     <span>🎓 CAPSULES CT</span><span>⚡ {player.reps}</span>
                                 </div>
                                 <div style={{ maxHeight: "55vh", overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
-                                    {[
-                                        ...player.ownedCts.map((id) => getCt(id)).filter((c): c is NonNullable<typeof c> => !!c).map((ct) => ({ ct, free: true })),
-                                        ...purchasableCts(player.badges).map((ct) => ({ ct, free: false })),
-                                    ].map(({ ct, free }) => {
+                                    {purchasableCts(player.badges).map((ct) => {
                                         const mv = getMove(ct.moveId)
-                                        const afford = free || player.reps >= ct.price
+                                        const afford = player.reps >= ct.price
                                         return (
                                             <button key={ct.id} style={afford ? menuBtnStyle : menuBtnDimStyle} disabled={!afford} onClick={() => setCtPick(ct.id)}>
                                                 <span style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                                                     <span>{ct.label} · {mv?.name}<br /><span style={{ fontSize: 10, opacity: 0.6 }}>{mv?.type}{mv && mv.power > 0 ? ` · ${mv.power}` : " · statut"}</span></span>
-                                                    <span>{free ? "GRATUIT 🎁" : `${ct.price} reps`}</span>
+                                                    <span>{ct.price} reps</span>
                                                 </span>
                                             </button>
                                         )
@@ -608,6 +607,39 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                     </div>
                 </div>
             )}
+
+            {/* CT CADEAU (trophée de boss) : apprentissage UNIQUE, jamais en boutique. */}
+            {!battle && !dialogue && !shopOpen && !ctShop && !pcOpen && !pastaPick && !giftHidden && player.ownedCts.length > 0 && (() => {
+                const ct = getCt(player.ownedCts[0])
+                if (!ct) return null
+                const mv = getMove(ct.moveId)
+                return (
+                    <div style={menuOverlayStyle}>
+                        <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                            <div style={menuTitleStyle}>🎁 CT REÇUE : {mv?.name}</div>
+                            <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 6 }}>Cadeau unique du Doyen — apprends-la à un Daemon compatible :</div>
+                            {player.team.map((m) => {
+                                const sp = getSpecies(m.speciesId)
+                                const compatible = sp ? canLearnCt(sp, ct) : false
+                                const known = m.moves.some((s) => s.moveId === ct.moveId)
+                                const dis = !compatible || known
+                                return (
+                                    <button key={m.uid} style={dis ? menuBtnDimStyle : menuBtnStyle} disabled={dis}
+                                        onClick={() => {
+                                            const r = teachCt(m.uid, ct.id)
+                                            if (r.ok) { setToast(r.queued ? `${displayName(m)} : choisis une attaque à oublier.` : `${displayName(m)} apprend ${mv?.name} !`); persistYellowSave() }
+                                        }}>
+                                        <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                            <span>{displayName(m)}{known ? " (déjà apprise)" : compatible ? "" : " (incompatible)"}</span><span>N.{m.level}</span>
+                                        </span>
+                                    </button>
+                                )
+                            })}
+                            <button style={menuBtnDimStyle} onClick={() => setGiftHidden(true)}>Plus tard</button>
+                        </div>
+                    </div>
+                )
+            })()}
 
             {/* Super Pasta : choix du Daemon à faire monter d'un niveau. */}
             {!battle && pastaPick && (

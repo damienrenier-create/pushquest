@@ -484,7 +484,9 @@ export function teachCt(uid: string, ctId: string): { ok: boolean; reason?: "int
             : { ...m, pendingMoves: [...(m.pendingMoves ?? []), ct.moveId] }
         const next = arr.slice()
         next[idx] = updated
-        st = { ...st, reps: st.reps - cost, [pool]: next }
+        // CT cadeau : consommée à l'apprentissage (une seule fois, puis c'est fini).
+        const ownedAfter = owned ? st.ownedCts.filter((id) => id !== ctId) : st.ownedCts
+        st = { ...st, reps: st.reps - cost, [pool]: next, ownedCts: ownedAfter }
         emit()
         return { ok: true, queued: !free }
     }
