@@ -219,12 +219,13 @@ export const TRAINERS: TrainerData[] = [
         // GATE : avoir battu les 4 gardes (n'importe quel ordre).
         requiresTrainers: ["y_rocharena_g1", "y_rocharena_g2", "y_rocharena_g3", "y_rocharena_g4"],
         team: [
-            // Lead Roche/Feu : Fissuralave connaît Flammèche NATURELLEMENT (×2 sur Plante).
-            { speciesId: "fissuralave", level: 18 },
-            { speciesId: "iorours", level: 20 },
-            { speciesId: "octoroc", level: 20 },
-            // Ace : Roctaur 25 → apprend Faille Sismique à 25 (naturel), pas d'override.
-            { speciesId: "roctaur", level: 25 },
+            // Le boss OUVRE avec sa signature : son Roctaur a appris FAILLE SISMIQUE via
+            // la CT (un move de CT est enseignable légitimement → ce n'est PAS un move
+            // hors-learnset interdit). Les 3 autres moves sont naturels (≤25).
+            { speciesId: "roctaur", level: 25, moves: ["faille_sismique", "eboulis", "jet_pierres", "charge"] },
+            { speciesId: "fissuralave", level: 18 }, // Roche/Feu, Flammèche natif (×2 sur Plante)
+            { speciesId: "iorours", level: 20 },     // Roche/Glace (×2 sur Plante)
+            { speciesId: "octoroc", level: 20 },     // mur Roche/Sol
         ],
         reward: 0, aiLevel: "trainer", badge: "roche", giftCt: "ct19",
         intro: [
@@ -233,8 +234,10 @@ export const TRAINERS: TrainerData[] = [
             "La roche endure tout. Brise-la… si tu peux !",
         ],
         defeat: [
-            "Fissuré… par plus dur que moi.",
-            "Le Badge Roche est tien. Prends aussi ma FAILLE SISMIQUE.",
+            "Fissuré… par plus dur que la pierre elle-même.",
+            "Le Badge Roche est tien, tu l'as arraché à la montagne.",
+            "*GRANIT dépose une CT au creux de ta main.*",
+            "Et prends ça : ma FAILLE SISMIQUE. Continue de creuser ta voie, gamin — le Nexus a besoin de roc comme toi. Va plus loin !",
         ],
     },
 ]
