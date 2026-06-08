@@ -64,40 +64,60 @@ function PlanteGuide() {
 function RockGuide() {
     return (
         <>
-            <Section t="⚔️ Frappe en EAU ou PLANTE (×2 — souvent ×4 !)">
-                <Row k="💥 Pourquoi ×4" v="La plupart sont Roche/Sol : Eau ET Plante font DOUBLEMENT mouche." />
-                <Row k="💧 Eau" v="Pistolet à O — Piouflot niv 5, Gouttiny/Loutrille niv 6, Têtardoc dès le départ. Lame d'Eau (65) — Loutrille/Hérondée niv 20." />
-                <Row k="🌿 Plante" v="Fouet Lianes — Feuillichot/Pampousse niv 4, Tamanpousse niv 5. Méga-Sangsue (vole des PV) — Feuillichot niv 16." />
-                <Row k="💪 Combat (×2)" v="Double-Pied — Couperin/Forgeotin/Trolystrik niv 7. Poing-Karaté — Couperin niv 18." />
-                <Row k="🌍 Sol (×2, ×4 sur la lave)" v="Tir de Boue — un Quadroc/Octoroc capturé en grotte." />
+            <Section t="💥 Le principe">
+                <Row k="Faiblesses" v="La Roche tombe sous EAU · PLANTE · COMBAT · SOL (×2)." />
+                <Row k="Le ×4" v="La plupart des Roche d'ici sont Roche/SOL → Eau ET Plante font ×4 (doublement super-efficace) !" />
+                <Row k="La clé" v="La Roche a une ÉNORME Défense mais une SPÉ (déf spéciale) FAIBLE. Eau & Plante sont des attaques SPÉCIALES → elles ignorent le mur et frappent le point faible. (Combat/Sol sont physiques → ils butent sur la Déf.)" />
             </Section>
-            <Section t="🧠 LE secret : tape en SPÉCIAL">
-                <Row k="Le mur" v="La Roche a une ÉNORME Défense mais une SPÉ (déf spéciale) FAIBLE." />
-                <Row k="La clé" v="Eau & Plante sont des attaques SPÉCIALES → elles ignorent le mur de Déf et frappent le point faible. (Combat/Sol sont physiques → ils se cognent au mur.)" />
+
+            <Section t="💧 EAU — qui, capturé où, quelles attaques">
+                <Row k="Gouttiny" v="STARTER Eau. Pistolet à O niv 6 → évolue Ondulo niv 16 (Hydrocanon niv 34 plus tard)." />
+                <Row k="Loutrille" v="Route Nord, PRÈS DE L'EAU (peu commun). Pistolet à O niv 6, LAME D'EAU (65) niv 20 → Ondaloutre niv 16." />
+                <Row k="Piouflot" v="Route Nord, près de l'eau (Vol/Eau). Pistolet à O niv 5 → Hérondée niv 17 (Lame d'Eau niv 20)." />
+                <Row k="Têtardoc" v="GROTTE, près de la mare (Roche/Eau). Pistolet à O d'emblée → Grenarc niv 18 (Lame d'Eau niv 22)." />
             </Section>
-            <Section t="🔥 La formule Saiyan (où mettre tes points)">
-                <Row k="Combien" v="À chaque niveau : +2 pts si tu as DÉPASSÉ ton quota chaque jour · +1 normalement · +0 si quota raté." />
-                <Row k="Où" v="Dans la FICHE du Daemon (section ENTRAÎNEMENT SAIYAN) — boutons +PV/+ATQ/+DÉF/+VIT/+SPÉ." />
-                <Row k="Pour la Roche" v="mets-les en SPÉ (booste ton attaque spéciale Eau/Plante ET ta défense spéciale)." />
+
+            <Section t="🌿 PLANTE — qui, capturé où, quelles attaques">
+                <Row k="Feuillichot" v="STARTER Plante. Fouet Lianes niv 4, MÉGA-SANGSUE (vole 50% des dégâts) niv 16 → Broubouc niv 16 (Tempête Verte niv 28)." />
+                <Row k="Pampousse" v="Route Nord, SAPINS (peu commun). Fouet Lianes niv 4, Tranche-Feuille (55) niv 18 → Féliane niv 16." />
+                <Row k="⚠️ Attention" v="le boss PUNIT le Plante (Glace + Feu) → garde un plan B Eau/Combat." />
             </Section>
-            <Section t="🛒 La CT qui change tout">
-                <Row k="💿 Tempête Verte" v="Plante, puiss 90 — EN VENTE (tu as le badge plante) → ×4 sur la plupart des Roche. Ton plus gros coup." />
-                <Row k="Aussi" v="Focalisation (+Spé, set-up), X-Spé en combat, Super Pasta (+1 niveau)." />
+
+            <Section t="💪 COMBAT (×2) — qui, capturé où, quelles attaques">
+                <Row k="Couperin" v="Route Nord (commun). Double-Pied niv 7, POING-KARATÉ (50) niv 18 → Frappard niv 28." />
+                <Row k="Forgeotin" v="Route Nord (peu commun). Double-Pied niv 7, BALAYAGE (60) niv 24 → Marteloutan niv 18." />
+                <Row k="Broussours" v="Route Nord, sapins (Combat/Plante !). Double-Pied niv 7 + Fouet Lianes niv 18 → DOUBLE contre." />
+                <Row k="Trolystrik" v="Route Nord, montagnes (Combat/Élec). Double-Pied niv 7 → Brutetrik niv 17." />
             </Section>
-            <Section t="🗺️ Où capturer tes contres">
-                <Row k="💧 Eau" v="Gouttiny (starter), Piouflot/Loutrille/Têtardoc (Route Nord & Grotte, près de l'eau)." />
-                <Row k="🌿 Plante" v="Feuillichot (starter), Pampousse/Tamanpousse (Route Nord)." />
-                <Row k="💡 Astuce" v="Dépasse ton quota → plus de rares ET de meilleurs IV." />
+
+            <Section t="🌍 SOL (×2, ×4 sur la lave) — qui, où">
+                <Row k="Quadroc / Octoroc" v="capturés en GROTTE (lignée diamant, Roche/Sol). TIR DE BOUE (Sol 55) d'emblée — un Roche qui tape la Roche." />
+                <Row k="Plus tard" v="Séisme (100) via Roctaur niv 30, ou la CT Champion." />
             </Section>
-            <Section t="⚠️ Le piège du Maître Granit">
-                <Row k="Anti-Plante" v="Il a Iorours (GLACE) ET Fissuralave (FEU) qui punissent le Plante → ne mise pas QUE dessus, garde un EAU ou COMBAT en secours." />
-                <Row k="Son ace" v="Roctaur, un mur de Défense qui ouvre sur Faille Sismique — mais sa SPÉ est nulle : un coup spécial Eau/Plante ×4 le brise." />
+
+            <Section t="💿 LES CT (tu as le badge plante)">
+                <Row k="⭐ Étreinte Sylvestre" v="TU L'AS DÉJÀ (cadeau du Druide) ! Plante 75 + VOLE 50% des dégâts → tape ×4 ET te soigne. Enseigne-la à un Daemon Plante." />
+                <Row k="Tempête Verte" v="EN VENTE 700 reps (débloquée par ton badge plante) : Plante 90, ton plus gros nuke." />
+                <Row k="Vampigraine" v="EN VENTE 450 reps : pose des graines qui drainent l'ennemi chaque tour." />
+                <Row k="Set-up" v="Focalisation (450, +Spé) pour les Eau/Plante ; Danse-Lames (400, +Atk) pour les Combat." />
+                <Row k="Hydrocanon/Séisme" v="Hydrocanon (Eau 110) et Souffle Polaire = badge EAU (pas encore). Séisme (Sol 100) = CT Champion." />
             </Section>
-            <Section t="🚫 À éviter">
-                <Row k="Types" v="Pas de Feu, Vol, Insecte ni Poison (résistés ou faibles face à la Roche). Évite le tout-physique contre le mur de Déf." />
+
+            <Section t="🔥 La formule Saiyan + où mettre les points">
+                <Row k="Combien" v="À chaque niveau : +2 pts si tu as DÉPASSÉ ton quota CHAQUE jour · +1 normalement · +0 si quota raté." />
+                <Row k="Où" v="Dans la FICHE du Daemon, section ENTRAÎNEMENT SAIYAN (+PV/+ATQ/+DÉF/+VIT/+SPÉ)." />
+                <Row k="Pour la Roche" v="mets en SPÉ → booste ton attaque spéciale Eau/Plante ET ta défense spéciale." />
             </Section>
-            <Section t="🗝️ L'arène">
-                <Row k="Ordre" v="Bats les 4 gardes (ordre libre), puis le Maître Granit." />
+
+            <Section t="⚠️ Le piège du Maître Granit (boss)">
+                <Row k="Anti-Plante" v="Il a Iorours (GLACE) ET Fissuralave (FEU) qui frappent le Plante ×2 → ne mise pas QUE sur le Plante." />
+                <Row k="Son ace" v="Roctaur ouvre sur Faille Sismique — c'est un mur de Défense MAIS sa SPÉ est nulle : un coup spécial Eau/Plante ×4 le brise." />
+                <Row k="Rappel" v="Il a 3 panthères minimum + le contre de TON dernier Daemon → soigne-toi avant (Centre Daemon)." />
+            </Section>
+
+            <Section t="🚫 À éviter / 🗝️ L'arène">
+                <Row k="À éviter" v="Feu, Vol, Insecte, Poison (résistés ou faibles face Roche). Et le tout-physique contre le mur de Déf." />
+                <Row k="Ordre" v="Bats les 4 gardes (ordre libre) → le Maître Granit." />
                 <Row k="Butin" v="Badge Roche + la CT signature FAILLE SISMIQUE (offerte, introuvable ailleurs)." />
             </Section>
         </>
