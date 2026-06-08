@@ -65,6 +65,7 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
     const router = useRouter()
     const player = usePlayer()
     const [menu, setMenu] = useState<"none" | "pause" | "team" | "pc" | "bag" | "reput">("none")
+    const ficheTouchX = useRef<number | null>(null) // swipe gauche/droite dans la fiche Daemon
     const [selected, setSelected] = useState<MonInstance | null>(null)
     const [showIntro, setShowIntro] = useState(false)
     const [pastaPick, setPastaPick] = useState(false)
@@ -744,13 +745,37 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                 const stats = sp ? fullStats(live, sp) : null
                 const toNext = expForLevel(live.level + 1) - Math.max(live.exp, expForLevel(live.level))
                 const closeFiche = () => { setSelected(null); setRenaming(false) }
+                // Slide ◀ ▶ / swipe entre les Daemons de la MÊME liste (équipe ou PC).
+                const ficheList = inTeam ? player.team : player.pc
+                const ficheIdx = ficheList.findIndex((m) => m.uid === live.uid)
+                const slide = (d: number) => {
+                    if (ficheList.length < 2) return
+                    const nx = ficheList[(ficheIdx + d + ficheList.length) % ficheList.length]
+                    setSelected(nx); setRenaming(false)
+                }
+                const evoLvl = sp?.evolution && sp.evolution.method.kind === "LEVEL" ? sp.evolution.method.level : null
                 return (
                     <div style={menuOverlayStyle} onClick={closeFiche}>
-                        <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
-                            <div style={{ ...menuTitleStyle, display: "flex", justifyContent: "space-between" }}>
-                                <span>{displayName(live).toUpperCase()}</span><span>N.{live.level}</span>
+                        <div
+                            style={menuBoxStyle}
+                            onClick={(e) => e.stopPropagation()}
+                            onTouchStart={(e) => { ficheTouchX.current = e.touches[0]?.clientX ?? null }}
+                            onTouchEnd={(e) => {
+                                const sx = ficheTouchX.current; ficheTouchX.current = null
+                                if (sx == null) return
+                                const dx = (e.changedTouches[0]?.clientX ?? sx) - sx
+                                if (Math.abs(dx) > 45) slide(dx < 0 ? 1 : -1) // swipe gauche = suivant
+                            }}
+                        >
+                            <div style={{ ...menuTitleStyle, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                                <button style={slideBtnStyle} disabled={ficheList.length < 2} onClick={() => slide(-1)}>◀</button>
+                                <span style={{ flex: 1, textAlign: "center" }}>{displayName(live).toUpperCase()} · N.{live.level}</span>
+                                <button style={slideBtnStyle} disabled={ficheList.length < 2} onClick={() => slide(1)}>▶</button>
                             </div>
-                            <div style={{ fontSize: 11, opacity: 0.7 }}>{sp?.types.join(" / ")} · {sp?.name} · {inTeam ? "Équipe" : "PC"}</div>
+                            {sp?.sprite && <img src={sp.sprite} alt={sp.name} style={ficheSpriteStyle} />}
+                            <div style={{ fontSize: 11, opacity: 0.7, textAlign: "center" }}>
+                                N°{sp?.dexNo} · {sp?.types.join(" / ")} · {sp?.name} · {inTeam ? `Équipe ${ficheIdx + 1}/${ficheList.length}` : `PC ${ficheIdx + 1}/${ficheList.length}`}
+                            </div>
                             {stats && (
                                 <div style={{ fontSize: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3px 12px", margin: "8px 0" }}>
                                     <span>PV : {live.currentHp}/{stats.hp}</span>
@@ -762,6 +787,9 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                                 </div>
                             )}
                             <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 6 }}>Niveau suivant dans ~{Math.max(0, toNext).toLocaleString("fr-FR")} XP</div>
+                            {evoLvl != null && sp?.evolution && (
+                                <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 6 }}>⤴️ Évolue en {getSpecies(sp.evolution.toId)?.name ?? "?"} au niveau {evoLvl}</div>
+                            )}
                             {(() => {
                                 const tier = ivTier(live.ivs)
                                 return (
@@ -787,8 +815,8 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                                 const m = getMove(mv.moveId)
                                 return (
                                     <div key={mv.moveId} style={{ fontSize: 11, display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
-                                        <span>{m?.name ?? mv.moveId} <span style={{ opacity: 0.55 }}>({m?.type ?? "?"})</span></span>
-                                        <span style={{ opacity: 0.7 }}>💪 {moveCostReps(mv.ppMax, live.level)}</span>
+                                        <span>{m?.name ?? mv.moveId} <span style={{ opacity: 0.55 }}>({m?.type ?? "?"}{m && m.power > 0 ? ` · ${m.power}` : ""})</span></span>
+                                        <span style={{ opacity: 0.7 }}>PP {mv.pp}/{mv.ppMax} · 💪 {moveCostReps(mv.ppMax, live.level)}</span>
                                     </div>
                                 )
                             })}
@@ -918,6 +946,15 @@ const menuBtnStyle: React.CSSProperties = {
     fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer", textAlign: "left", color: "#1c1408",
 }
 const menuBtnDimStyle: React.CSSProperties = { ...menuBtnStyle, background: "#e0e0d0", border: "2px solid #888", color: "#555" }
+// Fiche Daemon : flèches de slide + sprite.
+const slideBtnStyle: React.CSSProperties = {
+    background: "#1c1408", color: "#f5d020", border: "none", borderRadius: 6, padding: "4px 10px",
+    fontFamily: "inherit", fontSize: 16, fontWeight: 900, cursor: "pointer", lineHeight: 1,
+}
+const ficheSpriteStyle: React.CSSProperties = {
+    width: 104, height: 104, objectFit: "contain", imageRendering: "pixelated",
+    display: "block", margin: "2px auto", filter: "drop-shadow(0 2px 3px rgba(0,0,0,0.25))",
+}
 const teamRowStyle: React.CSSProperties = {
     display: "flex", alignItems: "center", gap: 8, fontSize: 12, padding: "5px 0", borderBottom: "1px solid #00000018",
 }
