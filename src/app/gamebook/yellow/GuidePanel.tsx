@@ -64,59 +64,65 @@ function PlanteGuide() {
 function RockGuide() {
     return (
         <>
-            <Section t="💥 Le principe">
+            <Section t="💥 Le principe (2e arène — plus dure !)">
                 <Row k="Faiblesses" v="La Roche tombe sous EAU · PLANTE · COMBAT · SOL (×2)." />
-                <Row k="Le ×4" v="La plupart des Roche d'ici sont Roche/SOL → Eau ET Plante font ×4 (doublement super-efficace) !" />
-                <Row k="La clé" v="La Roche a une ÉNORME Défense mais une SPÉ (déf spéciale) FAIBLE. Eau & Plante sont des attaques SPÉCIALES → elles ignorent le mur et frappent le point faible. (Combat/Sol sont physiques → ils butent sur la Déf.)" />
+                <Row k="Le ×4" v="La plupart des Roche d'ici sont Roche/SOL → Eau ET Plante font ×4 !" />
+                <Row k="La clé" v="Énorme Défense mais SPÉ (déf spéciale) FAIBLE → tape en SPÉCIAL : Eau & Plante ignorent le mur et frappent le point faible. (Combat/Sol = physiques, ils butent sur la Déf.)" />
+                <Row k="Niveau conseillé" v="Boss niv 25 + dresseurs ENTRAÎNÉS (stats boostées). Viens avec une équipe ÉVOLUÉE ~niv 22-26, soignée." />
             </Section>
 
-            <Section t="💧 EAU — qui, capturé où, quelles attaques">
-                <Row k="Gouttiny" v="STARTER Eau. Pistolet à O niv 6 → évolue Ondulo niv 16 (Hydrocanon niv 34 plus tard)." />
-                <Row k="Loutrille" v="Route Nord, PRÈS DE L'EAU (peu commun). Pistolet à O niv 6, LAME D'EAU (65) niv 20 → Ondaloutre niv 16." />
-                <Row k="Piouflot" v="Route Nord, près de l'eau (Vol/Eau). Pistolet à O niv 5 → Hérondée niv 17 (Lame d'Eau niv 20)." />
-                <Row k="Têtardoc" v="GROTTE, près de la mare (Roche/Eau). Pistolet à O d'emblée → Grenarc niv 18 (Lame d'Eau niv 22)." />
+            <Section t="💧 EAU — capture · attaques (jusqu'à niv 30)">
+                <Row k="Gouttiny → Ondulo (16)" v="STARTER Eau. Pistolet à O niv 6 · Coup d'Givre niv 18→24 · HYDROCANON (110) niv 34." />
+                <Row k="Loutrille → Ondaloutre (16)" v="Route Nord PRÈS DE L'EAU. Pistolet à O 6 · LAME D'EAU (65) niv 20 · Coup d'Givre 26." />
+                <Row k="Piouflot → Hérondée (17)" v="Route Nord, eau (Vol/Eau). Pistolet à O 5 · Lame d'Eau niv 20." />
+                <Row k="Têtardoc → Grenarc (18)" v="GROTTE près de la mare (Roche/Eau). Pistolet à O · Lame d'Eau niv 22." />
             </Section>
 
-            <Section t="🌿 PLANTE — qui, capturé où, quelles attaques">
-                <Row k="Feuillichot" v="STARTER Plante. Fouet Lianes niv 4, MÉGA-SANGSUE (vole 50% des dégâts) niv 16 → Broubouc niv 16 (Tempête Verte niv 28)." />
-                <Row k="Pampousse" v="Route Nord, SAPINS (peu commun). Fouet Lianes niv 4, Tranche-Feuille (55) niv 18 → Féliane niv 16." />
-                <Row k="⚠️ Attention" v="le boss PUNIT le Plante (Glace + Feu) → garde un plan B Eau/Combat." />
+            <Section t="🌿 PLANTE — capture · attaques">
+                <Row k="Feuillichot → Broubouc (16)" v="STARTER. Fouet Lianes 4 · MÉGA-SANGSUE (vole 50%) 16→20 · TEMPÊTE VERTE (90) niv 28 (gratuit par niveau !)." />
+                <Row k="Pampousse → Féliane (16)" v="Route Nord, SAPINS. Fouet Lianes 4 · Tranche-Feuille (55) 18 · Méga-Sangsue 24." />
+                <Row k="⚠️ Attention" v="le boss PUNIT le Plante (Feu + Glace) → garde un plan B Eau/Combat." />
             </Section>
 
-            <Section t="💪 COMBAT (×2) — qui, capturé où, quelles attaques">
-                <Row k="Couperin" v="Route Nord (commun). Double-Pied niv 7, POING-KARATÉ (50) niv 18 → Frappard niv 28." />
-                <Row k="Forgeotin" v="Route Nord (peu commun). Double-Pied niv 7, BALAYAGE (60) niv 24 → Marteloutan niv 18." />
-                <Row k="Broussours" v="Route Nord, sapins (Combat/Plante !). Double-Pied niv 7 + Fouet Lianes niv 18 → DOUBLE contre." />
-                <Row k="Trolystrik" v="Route Nord, montagnes (Combat/Élec). Double-Pied niv 7 → Brutetrik niv 17." />
+            <Section t="💪 COMBAT (×2) — capture · attaques">
+                <Row k="Couperin → Frappard (28)" v="Route Nord (commun). Double-Pied 7 · POING-KARATÉ (50) niv 18." />
+                <Row k="Forgeotin → Marteloutan (18)" v="Route Nord. Double-Pied 7 · Balayage (60) 24 · CROCHET DU MAÎTRE (80) niv 30." />
+                <Row k="Broussours → Sylvours (18)" v="Route Nord sapins (Combat/PLANTE !). Double-Pied 7 + Fouet Lianes 18 → DOUBLE contre · Poing-Karaté 30." />
+                <Row k="Trolystrik → Brutetrik (17)" v="Route Nord montagnes (Combat/Élec). Double-Pied 7 · Poing-Karaté · Balayage 30." />
             </Section>
 
-            <Section t="🌍 SOL (×2, ×4 sur la lave) — qui, où">
-                <Row k="Quadroc / Octoroc" v="capturés en GROTTE (lignée diamant, Roche/Sol). TIR DE BOUE (Sol 55) d'emblée — un Roche qui tape la Roche." />
-                <Row k="Plus tard" v="Séisme (100) via Roctaur niv 30, ou la CT Champion." />
+            <Section t="🌍 SOL (×2, ×4 sur la lave) — capture">
+                <Row k="Quadroc / Octoroc" v="capturés en GROTTE (lignée diamant). TIR DE BOUE (Sol 55) d'emblée — un Roche qui tape la Roche." />
+                <Row k="Cailloutchi → Roctaur (25)" v="Route Nord/Grotte. À niv 30, Roctaur apprend SÉISME (Sol 100) — gros coup." />
             </Section>
 
             <Section t="💿 LES CT (tu as le badge plante)">
-                <Row k="⭐ Étreinte Sylvestre" v="TU L'AS DÉJÀ (cadeau du Druide) ! Plante 75 + VOLE 50% des dégâts → tape ×4 ET te soigne. Enseigne-la à un Daemon Plante." />
-                <Row k="Tempête Verte" v="EN VENTE 700 reps (débloquée par ton badge plante) : Plante 90, ton plus gros nuke." />
-                <Row k="Vampigraine" v="EN VENTE 450 reps : pose des graines qui drainent l'ennemi chaque tour." />
-                <Row k="Set-up" v="Focalisation (450, +Spé) pour les Eau/Plante ; Danse-Lames (400, +Atk) pour les Combat." />
-                <Row k="Hydrocanon/Séisme" v="Hydrocanon (Eau 110) et Souffle Polaire = badge EAU (pas encore). Séisme (Sol 100) = CT Champion." />
+                <Row k="⭐ Étreinte Sylvestre" v="TU L'AS DÉJÀ (cadeau du Druide) ! Plante 75 + VOLE 50% des dégâts → ×4 ET te soigne. Enseigne-la à un Daemon Plante." />
+                <Row k="Tempête Verte" v="EN VENTE 700 reps (badge plante) : Plante 90. (Ou gratuit : Broubouc l'apprend niv 28.)" />
+                <Row k="Vampigraine" v="EN VENTE 450 reps : graines qui drainent l'ennemi chaque tour." />
+                <Row k="Set-up" v="Focalisation (450, +Spé) pour Eau/Plante · Danse-Lames (400, +Atk) pour Combat." />
+                <Row k="Pas encore" v="Hydrocanon/Souffle Polaire = badge EAU · Séisme (CT) = Champion." />
             </Section>
 
-            <Section t="🔥 La formule Saiyan + où mettre les points">
-                <Row k="Combien" v="À chaque niveau : +2 pts si tu as DÉPASSÉ ton quota CHAQUE jour · +1 normalement · +0 si quota raté." />
-                <Row k="Où" v="Dans la FICHE du Daemon, section ENTRAÎNEMENT SAIYAN (+PV/+ATQ/+DÉF/+VIT/+SPÉ)." />
-                <Row k="Pour la Roche" v="mets en SPÉ → booste ton attaque spéciale Eau/Plante ET ta défense spéciale." />
+            <Section t="🔥 Formule Saiyan + où mettre les points">
+                <Row k="Combien" v="Par niveau : +2 si quota DÉPASSÉ chaque jour · +1 normal · +0 si quota raté." />
+                <Row k="Où / quoi" v="Fiche du Daemon → ENTRAÎNEMENT SAIYAN. Pour la Roche, mets en SPÉ (attaque spé Eau/Plante + déf spé)." />
             </Section>
 
-            <Section t="⚠️ Le piège du Maître Granit (boss)">
-                <Row k="Anti-Plante" v="Il a Iorours (GLACE) ET Fissuralave (FEU) qui frappent le Plante ×2 → ne mise pas QUE sur le Plante." />
-                <Row k="Son ace" v="Roctaur ouvre sur Faille Sismique — c'est un mur de Défense MAIS sa SPÉ est nulle : un coup spécial Eau/Plante ×4 le brise." />
-                <Row k="Rappel" v="Il a 3 panthères minimum + le contre de TON dernier Daemon → soigne-toi avant (Centre Daemon)." />
+            <Section t="⚔️ Le boss : MAÎTRE GRANIT (5 Daemons FIXES)">
+                <Row k="Ouvre sur" v="ROCTAUR niv 25 (Roche/Sol) + Faille Sismique — mur de Déf, mais SPÉ NULLE : un coup spécial Eau/Plante ×4 le brise." />
+                <Row k="Anti-Plante" v="FISSURALAVE (Roche/Feu) + IOROURS (Roche/Glace) tapent le Plante ×2 → aie un Eau ou Combat." />
+                <Row k="Le rapide" v="RÉTRORAPTOR (Roche/Vol, très rapide) te double → un Eau bulky l'encaisse et le calme." />
+                <Row k="+ OCTOROC" v="(Roche/Sol, mur de Déf). Au total 5 Daemons → soigne-toi au Centre Daemon AVANT." />
             </Section>
 
-            <Section t="🚫 À éviter / 🗝️ L'arène">
-                <Row k="À éviter" v="Feu, Vol, Insecte, Poison (résistés ou faibles face Roche). Et le tout-physique contre le mur de Déf." />
+            <Section t="🚫 Ce qui NE marche PAS sur la Roche">
+                <Row k="Résistés ×0.5" v="Feu, Vol, Normal, Poison → la Roche les encaisse." />
+                <Row k="Neutres ×1 (inutiles)" v="GLACE, DRAGON, Élec, Insecte, Psy, Spectre → AUCUN avantage. (La Glace et le Dragon ne servent à rien ici !)" />
+                <Row k="Aussi" v="évite le tout-physique contre le mur de Déf — privilégie le SPÉCIAL." />
+            </Section>
+
+            <Section t="🗝️ L'arène">
                 <Row k="Ordre" v="Bats les 4 gardes (ordre libre) → le Maître Granit." />
                 <Row k="Butin" v="Badge Roche + la CT signature FAILLE SISMIQUE (offerte, introuvable ailleurs)." />
             </Section>
@@ -141,7 +147,7 @@ export default function GuidePanel() {
             >
                 <div style={{ padding: "10px 12px", borderBottom: `2px solid ${DARK}`, color: INK, fontWeight: 800, fontSize: 14 }}>
                     {isRock ? "📜 GUIDE DE LA CAVERNE" : "📜 GUIDE DU BOSQUET"}{" "}
-                    <span style={{ fontSize: 10, opacity: 0.6, fontWeight: 600 }}>{isRock ? "arène Roche" : "arène Plante"} · infos ≤ niv 20</span>
+                    <span style={{ fontSize: 10, opacity: 0.6, fontWeight: 600 }}>{isRock ? "arène Roche · infos ≤ niv 30" : "arène Plante · infos ≤ niv 20"}</span>
                 </div>
 
                 <div style={{ overflowY: "auto", padding: "10px 12px" }}>
