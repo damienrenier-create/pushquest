@@ -784,9 +784,9 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                                 if (Math.abs(dx) > 45) slide(dx < 0 ? 1 : -1) // swipe gauche = suivant
                             }}
                         >
-                            <div style={{ ...menuTitleStyle, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                            <div style={{ ...menuTitleStyle, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6 }}>
+                                <span style={{ flex: 1, textAlign: "left" }}>{displayName(live).toUpperCase()} · N.{live.level}</span>
                                 <button style={slideBtnStyle} disabled={ficheList.length < 2} onClick={() => slide(-1)}>◀</button>
-                                <span style={{ flex: 1, textAlign: "center" }}>{displayName(live).toUpperCase()} · N.{live.level}</span>
                                 <button style={slideBtnStyle} disabled={ficheList.length < 2} onClick={() => slide(1)}>▶</button>
                             </div>
                             {sp?.sprite && <img src={sp.sprite} alt={sp.name} style={ficheSpriteStyle} />}
@@ -803,7 +803,9 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                                     <span>Statut : {live.status === "NONE" ? "—" : live.status}</span>
                                 </div>
                             )}
-                            <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 6 }}>Niveau suivant dans ~{Math.max(0, toNext).toLocaleString("fr-FR")} XP</div>
+                            <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 6 }}>
+                                XP cumulée : {live.exp.toLocaleString("fr-FR")} · niveau suivant dans ~{Math.max(0, toNext).toLocaleString("fr-FR")} XP
+                            </div>
                             {evoLvl != null && sp?.evolution && (
                                 <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 6 }}>⤴️ Évolue en {getSpecies(sp.evolution.toId)?.name ?? "?"} au niveau {evoLvl}</div>
                             )}
@@ -812,18 +814,16 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                                 return (
                                     <div style={{ fontSize: 11, marginBottom: 6 }}>
                                         Potentiel génétique : <b style={{ color: ivTierColor(tier) }}>{tier === "PARFAIT" ? "★ PARFAIT" : tier}</b>
-                                        <span style={{ opacity: 0.5 }}> ({ivTotal(live.ivs)}/75 IV)</span>
+                                        <span style={{ opacity: 0.45 }}> (qualité de naissance)</span>
                                     </div>
                                 )
                             })()}
                             {(() => {
                                 const total = evTotal(live.ev)
-                                const STAT_FR: Record<string, string> = { hp: "PV", atk: "ATQ", def: "DÉF", spe: "VIT", spc: "SPÉ" }
-                                const tops = topEvStats(live.ev).slice(0, 2).map((k) => STAT_FR[k]).join(" / ")
                                 return (
                                     <div style={{ fontSize: 11, marginBottom: 6 }}>
                                         Expérience de combat : <b>{total}/{EV_TOTAL_CAP}</b>
-                                        {tops ? <span style={{ opacity: 0.5 }}> (surtout {tops})</span> : <span style={{ opacity: 0.5 }}> — pas encore aguerri</span>}
+                                        <span style={{ opacity: 0.45 }}> (petit bonus passif gagné en combattant)</span>
                                     </div>
                                 )
                             })()}
@@ -991,6 +991,7 @@ const menuTitleStyle: React.CSSProperties = { fontSize: 14, fontWeight: 900, let
 const menuBtnStyle: React.CSSProperties = {
     background: "#fff", border: "2px solid #1c1408", borderRadius: 6, padding: "12px 14px",
     fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer", textAlign: "left", color: "#1c1408",
+    touchAction: "manipulation", // tap instantané sur mobile (sinon pris pour un scroll → "appui long")
 }
 const menuBtnDimStyle: React.CSSProperties = { ...menuBtnStyle, background: "#e0e0d0", border: "2px solid #888", color: "#555" }
 // Fiche Daemon : flèches de slide + sprite.

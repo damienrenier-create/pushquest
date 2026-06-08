@@ -69,13 +69,16 @@ export default function GameBoyShell({
     const holdHandlers = useCallback((cb?: () => void) => ({
         onPointerDown: (e: React.PointerEvent) => {
             e.preventDefault()
+            // Capture le pointeur : le bouton garde le doigt même s'il glisse hors
+            // de la case (48px) → la marche en continu ne s'interrompt plus sur mobile.
+            try { (e.currentTarget as Element).setPointerCapture?.(e.pointerId) } catch { /* noop */ }
             cb?.()                                    // 1er pas immédiat
             stopHold()
-            holdRef.current = setInterval(() => cb?.(), 170) // répétition tant que maintenu
+            holdRef.current = setInterval(() => cb?.(), 150) // répétition tant que maintenu
         },
         onPointerUp: stopHold,
-        onPointerLeave: stopHold,
         onPointerCancel: stopHold,
+        // PAS de onPointerLeave : grâce à la capture, on ne s'arrête qu'au relâché.
     }), [stopHold])
     useEffect(() => stopHold, [stopHold]) // nettoyage au démontage
 
