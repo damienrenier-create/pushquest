@@ -21,7 +21,6 @@ import { useCasinoBattle } from "@/lib/gamebook/yellow/multiplayer/useCasinoBatt
 import { usePvpCtx, pvpForfeit } from "@/lib/gamebook/yellow/store/battleStore"
 import EvolutionScreen from "./battle/EvolutionScreen"
 import IntroCinematic from "./IntroCinematic"
-import LearnScreen from "./LearnScreen"
 import GuidePanel from "./GuidePanel"
 import LibraryPanel from "./LibraryPanel"
 import LabPanel from "./LabPanel"
@@ -29,7 +28,7 @@ import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getGiftCtMove } from "@/lib/gamebook/yellow/store/battleStore"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
-import { getPlayer, setTeam, usePlayer, addItem, spendReps, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, addItem, spendReps, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn } from "@/lib/gamebook/yellow/store/playerStore"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
@@ -839,6 +838,35 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                                 )
                             })}
 
+                            {/* ATTAQUES EN ATTENTE : apprentissage À LA DEMANDE (plus de pop-up forcé). */}
+                            {live.pendingMoves && live.pendingMoves.length > 0 && (
+                                <div style={{ marginTop: 8, padding: 8, border: "2px solid #f5d020", borderRadius: 6, background: "#fffbe6" }}>
+                                    <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 4 }}>🆕 NOUVELLE(S) ATTAQUE(S) À APPRENDRE</div>
+                                    {live.pendingMoves.map((mid) => {
+                                        const nm = getMove(mid)
+                                        return (
+                                            <div key={mid} style={{ marginBottom: 6 }}>
+                                                <div style={{ fontSize: 10, marginBottom: 3 }}>
+                                                    <b>{nm?.name ?? mid}</b> {nm ? `(${nm.type}${nm.power > 0 ? ` · ${nm.power}` : ""})` : ""} — remplace :
+                                                </div>
+                                                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                                                    {live.moves.map((s, i) => (
+                                                        <button key={i} style={{ ...menuBtnStyle, padding: "6px 8px", fontSize: 10 }}
+                                                            onClick={() => { resolveLearn(live.uid, mid, i); persistYellowSave(); setToast(`${nm?.name ?? mid} apprise !`) }}>
+                                                            {getMove(s.moveId)?.name ?? s.moveId}
+                                                        </button>
+                                                    ))}
+                                                    <button style={{ ...menuBtnDimStyle, padding: "6px 8px", fontSize: 10 }}
+                                                        onClick={() => { resolveLearn(live.uid, mid, null); persistYellowSave(); setToast(`${nm?.name ?? mid} oubliée.`) }}>
+                                                        Oublier
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            )}
+
                             {/* ENTRAÎNEMENT SAIYAN : répartition des points de stats */}
                             {(live.statPoints ?? 0) > 0 && (
                                 <div style={{ marginTop: 10, padding: 8, border: "2px solid #f5a020", borderRadius: 6, background: "#fff6e6" }}>
@@ -875,7 +903,8 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                             ) : (
                                 <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
                                     <button style={{ ...menuBtnStyle, flex: 1 }} onClick={() => { setRenameText(live.nickname ?? ""); setRenaming(true) }}>✏️ Renommer</button>
-                                    {inTeam ? (
+                                    {/* Dépôt/retrait UNIQUEMENT depuis l'ordi du Centre Daemon (pcOpen), pas le menu START. */}
+                                    {pcOpen && (inTeam ? (
                                         <button style={{ ...menuBtnStyle, flex: 1 }} onClick={() => {
                                             const r = depositToPc(live.uid)
                                             if (r.ok) { setToast(`${displayName(live)} déposé au PC.`); persistYellowSave(); closeFiche() }
@@ -887,7 +916,7 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                                             if (r.ok) { setToast(`${displayName(live)} rejoint l'équipe.`); persistYellowSave(); closeFiche() }
                                             else if (r.reason === "full") setToast("Équipe pleine (6 max).")
                                         }}>➡️ Équipe</button>
-                                    )}
+                                    ))}
                                 </div>
                             )}
 
@@ -902,8 +931,8 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                 <EvolutionScreen evolutions={evolutions} onDone={clearEvolutions} />
             )}
 
-            {/* Apprentissage d'attaque (4 slots pleins) — après les évolutions */}
-            {!battle && !showIntro && evolutions.length === 0 && <LearnScreen />}
+            {/* Apprentissage d'attaque : plus de pop-up forcé — ça se fait À LA DEMANDE
+                dans la fiche du Daemon (section « 🆕 attaque(s) à apprendre »). */}
         </div>
     )
 }
