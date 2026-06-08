@@ -219,13 +219,12 @@ export const TRAINERS: TrainerData[] = [
         // GATE : avoir battu les 4 gardes (n'importe quel ordre).
         requiresTrainers: ["y_rocharena_g1", "y_rocharena_g2", "y_rocharena_g3", "y_rocharena_g4"],
         team: [
-            // Lavapetit (Roche/Feu) en lead : Flammèche imposée (×2 sur Plante → anti-sweep).
-            // Niv 16 = max valide (évolue en Fissuralave à 17).
-            { speciesId: "lavapetit", level: 16, moves: ["flammeche", "jet_pierres"] },
+            // Lead Roche/Feu : Fissuralave connaît Flammèche NATURELLEMENT (×2 sur Plante).
+            { speciesId: "fissuralave", level: 18 },
             { speciesId: "iorours", level: 20 },
             { speciesId: "octoroc", level: 20 },
-            // Ace : Roctaur 25 avec la SIGNATURE Faille Sismique (exclusive, donnée en CT).
-            { speciesId: "roctaur", level: 25, moves: ["faille_sismique", "eboulis", "seisme", "carapace_diamant"] },
+            // Ace : Roctaur 25 → apprend Faille Sismique à 25 (naturel), pas d'override.
+            { speciesId: "roctaur", level: 25 },
         ],
         reward: 0, aiLevel: "trainer", badge: "roche", giftCt: "ct19",
         intro: [
