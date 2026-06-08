@@ -7,7 +7,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { isNexusYellowEnabled } from "@/lib/gamebook/yellow/featureFlag"
-import { getWildPlayerCtx, neutralWildCtx, getYesterdayReps } from "@/lib/gamebook/yellow/server/playerStats"
+import { getWildPlayerCtx, neutralWildCtx, getRepsTotals } from "@/lib/gamebook/yellow/server/playerStats"
 import { getTodayISO } from "@/lib/challenge"
 
 export const dynamic = "force-dynamic"
@@ -20,8 +20,8 @@ export async function GET() {
 
     const today = getTodayISO()
     try {
-        const [ctx, yesterdayReps] = await Promise.all([getWildPlayerCtx(userId), getYesterdayReps(userId)])
-        return NextResponse.json({ ok: true, ctx, yesterdayReps, today })
+        const [ctx, repsTotals] = await Promise.all([getWildPlayerCtx(userId), getRepsTotals(userId)])
+        return NextResponse.json({ ok: true, ctx, today, repsTotalToDate: repsTotals.totalToDate, repsThroughYesterday: repsTotals.throughYesterday })
     } catch {
         // ⚠️ NE PAS renvoyer `today` ici : sinon le client crédite 0 reps ET marque le
         // jour comme tické → blocage à 0 pour la journée. On omet today/yesterdayReps

@@ -35,8 +35,12 @@ interface PlayerState {
     reps: number
     /** Plafond de stockage des reps (1000 au départ, augmenté par les badges d'arène). */
     repsCap: number
-    /** Dernier jour où les reps de la veille ont été crédités (anti double-crédit). */
+    /** Dernier jour tické (reset quotidien pasta/sbire). */
     creditedThrough: string
+    /** High-water des reps banquées en énergie (total déjà crédité). -1 = non initialisé. */
+    repsBankedTotal: number
+    /** Cadeau de bienvenue (100 énergie) déjà réclamé ? */
+    welcomeGift: boolean
     /** Nb de Super Pastas achetés aujourd'hui (remis à 0 chaque jour ; gonfle le prix ×1.5). */
     pastaBoughtToday: number
     /** Bonus cumulé sur le prix plancher du Super Pasta (+3 par jour de jeu écoulé). */
@@ -83,7 +87,7 @@ export function emptyPvpStats(): PvpStats {
     return { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }
 }
 
-let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceWins: 0, aceDefeatedDate: "", ownedCts: [] }
+let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceWins: 0, aceDefeatedDate: "", ownedCts: [] }
 const listeners = new Set<() => void>()
 
 function emit() { for (const l of listeners) l() }
@@ -99,6 +103,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
     st = {
         team: p.team ?? [], pc: p.pc ?? [], items: p.items ?? {},
         reps: p.reps ?? st.reps ?? 0, repsCap: p.repsCap ?? st.repsCap ?? 1000, creditedThrough: p.creditedThrough ?? st.creditedThrough ?? "",
+        repsBankedTotal: p.repsBankedTotal ?? st.repsBankedTotal ?? -1, welcomeGift: p.welcomeGift ?? st.welcomeGift ?? false,
         pastaBoughtToday: p.pastaBoughtToday ?? st.pastaBoughtToday ?? 0, pastaDayBonus: p.pastaDayBonus ?? st.pastaDayBonus ?? 0,
         defeatedTrainers: p.defeatedTrainers ?? [], badges: p.badges ?? st.badges ?? [], wildCtx: p.wildCtx ?? st.wildCtx ?? null,
         introSeen: p.introSeen ?? st.introSeen ?? false,
@@ -123,7 +128,7 @@ export function markIntroSeen() {
 
 /** DEV : remet la progression jaune à zéro pour rejouer l'intro (équipe vidée, introSeen=false). */
 export function resetForIntro() {
-    st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceWins: 0, aceDefeatedDate: "", ownedCts: [] }
+    st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceWins: 0, aceDefeatedDate: "", ownedCts: [] }
     emit()
 }
 
@@ -219,22 +224,42 @@ export function grantReps(n: number): number {
 }
 
 /**
- * Tick quotidien (1×/jour) : crédite les reps de la veille (plafonné au cap),
- * remet à zéro le compteur d'achats de Super Pasta, et augmente de +3 le prix
- * plancher du Super Pasta à chaque nouveau jour (sauf le tout premier jour).
+ * Tick quotidien (1×/jour) : reset des achats Super Pasta (+3 au prix plancher) et
+ * du compteur de combats du sbire. Le CRÉDIT des reps est désormais géré par bankReps.
  */
-export function creditDailyReps(yesterdayReps: number, today: string) {
+export function creditDailyReps(today: string) {
     if (st.creditedThrough === today) return // déjà tické aujourd'hui
     const firstEver = st.creditedThrough === ""
-    const credited = Math.min(st.repsCap, st.reps + Math.max(0, Math.floor(yesterdayReps)))
     st = {
         ...st,
-        reps: credited,
         creditedThrough: today,
         pastaBoughtToday: 0,
         pastaDayBonus: firstEver ? st.pastaDayBonus : st.pastaDayBonus + SUPER_PASTA_DAILY_INCREASE,
         sbireDefeatsToday: 0, // nouveau jour → le sbire est de nouveau affrontable (2×)
     }
+    emit()
+}
+
+/**
+ * Banque les reps réelles en ÉNERGIE, INSTANTANÉMENT (high-water mark) : crédite le
+ * DELTA entre le total cumulé des reps (incluant aujourd'hui, en direct) et ce qui a
+ * déjà été banqué → aujourd'hui compte tout de suite, les jours non joués ne sont
+ * jamais perdus, zéro double-crédit (idempotent). 1re fois : pic initialisé au "total
+ * d'hier" (le passé est déjà banqué par l'ancien système → pas de crédit rétroactif).
+ */
+export function bankReps(totalToDate: number, throughYesterday: number) {
+    const tot = Math.max(0, Math.floor(totalToDate))
+    let banked = st.repsBankedTotal
+    if (banked < 0) banked = Math.max(0, Math.floor(throughYesterday)) // init migration / 1re fois
+    const delta = Math.max(0, tot - banked)
+    st = { ...st, reps: Math.min(st.repsCap, st.reps + delta), repsBankedTotal: Math.max(banked, tot) }
+    emit()
+}
+
+/** Cadeau de bienvenue : +100 énergie, UNE seule fois par joueur (à l'arrivée dans le Ch.2). */
+export function claimWelcomeGift() {
+    if (st.welcomeGift) return
+    st = { ...st, welcomeGift: true, reps: Math.min(st.repsCap, st.reps + 100) }
     emit()
 }
 

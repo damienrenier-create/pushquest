@@ -17,6 +17,24 @@ export async function getYesterdayReps(userId: string): Promise<number> {
 }
 
 /**
+ * Totaux de reps pour le crédit "high-water" de l'énergie :
+ * - totalToDate    : somme de TOUTES les reps jusqu'à AUJOURD'HUI inclus (en direct).
+ * - throughYesterday : somme jusqu'à HIER inclus (sert à initialiser le pic sans flood).
+ */
+export async function getRepsTotals(userId: string): Promise<{ totalToDate: number; throughYesterday: number }> {
+    const today = getTodayISO()
+    const yesterday = getYesterdayISO()
+    const [allAgg, yAgg] = await Promise.all([
+        (prisma as any).exerciseSet.aggregate({ _sum: { reps: true }, where: { userId, date: { lte: today } } }),
+        (prisma as any).exerciseSet.aggregate({ _sum: { reps: true }, where: { userId, date: { lte: yesterday } } }),
+    ])
+    return {
+        totalToDate: Math.max(0, allAgg?._sum?.reps ?? 0),
+        throughYesterday: Math.max(0, yAgg?._sum?.reps ?? 0),
+    }
+}
+
+/**
  * ENTRAÎNEMENT SAIYAN — évalue la fenêtre [since → hier] pour un joueur :
  * - hadFine : au moins une amende (FineRecord) tombée dans la fenêtre.
  * - quotaEveryDay : quota DÉPASSÉ (reps > cible) chaque jour terminé (≥ 1 jour).
