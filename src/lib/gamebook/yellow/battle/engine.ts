@@ -61,8 +61,11 @@ export interface BattleState {
     seed: number
     /** Bonus situationnel de capture (ex. quota PushQuest atteint). Défaut 1. */
     captureModifier: number
-    /** uids des Daemons du joueur qui ont COMBATTU (envoyés au moins une fois) → partage d'XP. */
+    /** uids des Daemons du joueur qui ont COMBATTU (envoyés au moins une fois). */
     participated: string[]
+    /** Par ENNEMI (uid) → uids des Daemons joueur qui l'ont AFFRONTÉ. Seuls eux gagnent
+     *  SON XP (on ne gagne pas l'XP d'un ennemi qu'on n'a pas affronté → évite l'évo trop rapide). */
+    participants: Record<string, string[]>
     /** Combat JOUEUR vs JOUEUR : XP attribuée AUX DEUX camps (au vainqueur de chaque KO). */
     pvp: boolean
     /** Budget d'énergie de l'ENNEMI (ACE) : il paie ses attaques, struggle à sec. null = illimité. */
@@ -133,6 +136,7 @@ export function createBattle(
     const enemyStart = enemyTeam.findIndex((m) => m.currentHp > 0)
     const playerStartIdx = playerStart >= 0 ? playerStart : 0
     const leadUid = playerTeam[playerStartIdx]?.uid
+    const enemyLeadUid = enemyTeam[enemyStart >= 0 ? enemyStart : 0]?.uid
     return {
         player: { team: playerTeam.map(toBattleMon), activeIndex: playerStartIdx },
         enemy: { team: enemyTeam.map(toBattleMon), activeIndex: enemyStart >= 0 ? enemyStart : 0 },
@@ -146,6 +150,7 @@ export function createBattle(
         seed: opts.seed >>> 0,
         captureModifier: opts.captureModifier ?? 1,
         participated: leadUid ? [leadUid] : [],
+        participants: enemyLeadUid && leadUid ? { [enemyLeadUid]: [leadUid] } : {},
         pvp: opts.pvp ?? false,
         enemyEnergy: opts.enemyEnergyCap != null ? { spent: 0, cap: opts.enemyEnergyCap } : null,
     }
@@ -664,6 +669,15 @@ function doSwitch(state: BattleState, side: SideId, teamIndex: number, events: B
     events.push({ kind: "switchIn", side, name: displayName(incoming), teamIndex })
     events.push({ kind: "message", text: side === "player" ? `En avant, ${displayName(incoming)} !` : `L'adversaire envoie ${displayName(incoming)} !` })
     events.push({ kind: "hp", side, hp: incoming.currentHp, max: maxHpOf(incoming) })
+    recordMatchup(state)
+}
+
+/** Mémorise que le Daemon joueur actif a AFFRONTÉ l'ennemi actif (partage d'XP par ennemi). */
+function recordMatchup(state: BattleState) {
+    const e = active(state.enemy), p = active(state.player)
+    if (!e || !p) return
+    const set = (state.participants[e.uid] ??= [])
+    if (!set.includes(p.uid)) set.push(p.uid)
 }
 
 function checkFaints(state: BattleState, events: BattleEvent[]) {
@@ -744,9 +758,12 @@ function awardExp(state: BattleState, events: BattleEvent[]) {
     // EV uniquement au Daemon actif s'il est encore debout.
     if (winner.currentHp > 0) gainEv(winner, signatureStat(faintedSp), EV_YIELD_PER_WIN)
 
+    // Seuls les Daemons qui ont AFFRONTÉ CET ennemi précis gagnent SON XP (pas l'XP
+    // d'ennemis qu'ils n'ont jamais vus → évite les évolutions trop rapides).
+    const credited = state.participants[fainted.uid] ?? []
     for (const mon of state.player.team) {
-        if (mon.currentHp <= 0) continue                       // un K.O. ne gagne pas d'XP
-        if (!state.participated.includes(mon.uid)) continue    // n'a pas combattu → rien
+        if (mon.currentHp <= 0) continue            // un K.O. ne gagne pas d'XP
+        if (!credited.includes(mon.uid)) continue   // n'a pas affronté cet ennemi → rien
         const isActive = mon === winner
         const beforeMax = maxHpOf(mon)
         const res = applyExp(mon, gain)
@@ -918,6 +935,7 @@ function structuredCloneState(s: BattleState): BattleState {
         enemy: { activeIndex: s.enemy.activeIndex, team: s.enemy.team.map(cloneMon) },
         events: [],
         participated: [...s.participated],
+        participants: Object.fromEntries(Object.entries(s.participants).map(([k, v]) => [k, [...v]])),
         enemyEnergy: s.enemyEnergy ? { ...s.enemyEnergy } : null,
     }
 }
