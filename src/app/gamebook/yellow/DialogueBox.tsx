@@ -24,6 +24,12 @@ const DIALOGUE_PORTRAITS: Record<string, string> = {
     y_arena_g2: "/yellow/sprites/npc_garde_plante.png",
     y_arena_g3: "/yellow/sprites/npc_garde_plante.png",
     y_arena_g4: "/yellow/sprites/npc_garde_plante.png",
+    // Arène Roche : mineurs + Maître Granit.
+    y_rocharena_g1: "/yellow/sprites/npc_roche1.png",
+    y_rocharena_g2: "/yellow/sprites/npc_roche2.png",
+    y_rocharena_g3: "/yellow/sprites/npc_roche3.png",
+    y_rocharena_g4: "/yellow/sprites/npc_roche4.png",
+    y_rocharena_boss: "/yellow/sprites/npc_granit.png",
 }
 
 export default function DialogueBox() {

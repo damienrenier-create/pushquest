@@ -554,6 +554,12 @@ const NPC_SPRITES: Record<string, { url: string; frames: number; h?: number } | 
     y_arena_g2: { url: "/yellow/sprites/npc_garde_plante.png", frames: 1, h: 2.0 },
     y_arena_g3: { url: "/yellow/sprites/npc_garde_plante.png", frames: 1, h: 2.0 },
     y_arena_g4: { url: "/yellow/sprites/npc_garde_plante.png", frames: 1, h: 2.0 },
+    // Arène Roche "Caverne Minière" : mineurs + Maître Granit (sprites entiers).
+    y_rocharena_g1: { url: "/yellow/sprites/npc_roche1.png", frames: 1, h: 2.0 },
+    y_rocharena_g2: { url: "/yellow/sprites/npc_roche2.png", frames: 1, h: 2.0 },
+    y_rocharena_g3: { url: "/yellow/sprites/npc_roche3.png", frames: 1, h: 2.0 },
+    y_rocharena_g4: { url: "/yellow/sprites/npc_roche4.png", frames: 1, h: 2.0 },
+    y_rocharena_boss: { url: "/yellow/sprites/npc_granit.png", frames: 1, h: 2.4 },
 }
 
 function NpcSprite({
