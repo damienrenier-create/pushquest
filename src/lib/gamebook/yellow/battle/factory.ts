@@ -19,6 +19,10 @@ export interface MakeMonOpts {
     owned?: boolean
     nickname?: string
     moveIds?: string[]
+    /** EV par stat (entraînement) — ex. Daemons de dresseur boostés. */
+    ev?: Partial<Record<StatKey, number>>
+    /** Points Saiyan alloués par stat (entraînement) — ex. Daemons de dresseur boostés. */
+    allocated?: Partial<Record<StatKey, number>>
 }
 
 export function createMonInstance(speciesId: string, level: number, opts: MakeMonOpts = {}): MonInstance {
@@ -53,6 +57,8 @@ export function createMonInstance(speciesId: string, level: number, opts: MakeMo
         moves,
         owned: opts.owned,
         nickname: opts.nickname,
+        ev: opts.ev && Object.keys(opts.ev).length ? opts.ev : undefined,
+        allocated: opts.allocated && Object.keys(opts.allocated).length ? opts.allocated : undefined,
     }
     inst.currentHp = fullStats(inst, sp).hp
     return inst

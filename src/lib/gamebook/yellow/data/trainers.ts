@@ -8,6 +8,11 @@
 
 import type { AiLevel } from "../battle/ai"
 import type { BadgeId } from "./cts"
+import type { StatKey } from "../battle/types"
+import { getSpecies } from "./species"
+
+/** Niveau d'entraînement d'un dresseur → boost Saiyan/EV de ses Daemons. */
+export type TrainTier = "guard" | "elite"
 
 export interface TrainerMonSpec {
     speciesId: string
@@ -42,6 +47,35 @@ export interface TrainerData {
     requiresTrainers?: string[]
     /** CT CADEAU remise gratuitement à la victoire (trophée du boss, cf. cts.ts). */
     giftCt?: string
+    /** Entraînement : boost Saiyan/EV des Daemons (gardien = moyen, élite = boss/ACE). */
+    training?: TrainTier
+}
+
+const TIER_EV: Record<TrainTier, number> = { guard: 128, elite: 252 }
+const TIER_RATE: Record<TrainTier, number> = { guard: 0.5, elite: 1 }
+
+/**
+ * Boost "entraînement" d'un Daemon de dresseur (EV + points Saiyan), simulant un
+ * joueur entraîné → les dresseurs ne sont plus surclassés par les Daemons boostés.
+ * EV sur la stat signature ; points Saiyan répartis 60% signature / 25% PV / 15% déf.
+ */
+export function trainerBoost(speciesId: string, level: number, tier?: TrainTier): { ev?: Partial<Record<StatKey, number>>; allocated?: Partial<Record<StatKey, number>> } {
+    if (!tier) return {}
+    const sp = getSpecies(speciesId)
+    if (!sp) return {}
+    const b = sp.baseStats
+    const stats: [StatKey, number][] = [["hp", b.hp], ["atk", b.atk], ["def", b.def], ["spe", b.spe], ["spc", b.spc]]
+    const sig = stats.reduce((a, c) => (c[1] > a[1] ? c : a))[0]      // stat signature (plus haute base)
+    const defStat: StatKey = b.def >= b.spc ? "def" : "spc"          // meilleure défense
+    const ev: Partial<Record<StatKey, number>> = { [sig]: TIER_EV[tier] }
+    const P = Math.floor(level * TIER_RATE[tier])
+    const allocated: Partial<Record<StatKey, number>> = {}
+    const add = (k: StatKey, n: number) => { if (n > 0) allocated[k] = (allocated[k] ?? 0) + n }
+    const pSig = Math.floor(P * 0.6), pHp = Math.floor(P * 0.25)
+    add(sig, pSig)
+    add("hp", pHp)
+    add(defStat, P - pSig - pHp)
+    return { ev, allocated }
 }
 
 export const TRAINERS: TrainerData[] = [

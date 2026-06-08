@@ -22,7 +22,7 @@ import { getPlayer as getPlayerSave, healAllTeam, isTrainerDefeated, getAceState
 import { getSpecies } from "../data/species"
 import { persistYellowSave } from "./saveManager"
 import { rollWildEncounter, wildLevelCap } from "../data/encounters"
-import { getTrainer } from "../data/trainers"
+import { getTrainer, trainerBoost, type TrainTier } from "../data/trainers"
 import { createMonInstance } from "../battle/factory"
 import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroLines, SBIRE_DONE_LINES, SBIRE_NO_TEAM_LINES } from "../data/sbire"
 import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_INTRO_LINES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, aceEnergyBudget, buildAceTeam } from "../data/ace"
@@ -95,7 +95,11 @@ function tryLaunchTrainer(trainerId: string): ActiveDialogue | null {
             lines: ["Tes Daemons sont tous K.O. !", "Soigne-les au Centre avant de te battre."],
         }
     }
-    const enemyTeam = trainer.team.map((s) => createMonInstance(s.speciesId, s.level, { owned: false, moveIds: s.moves }))
+    // Boost "entraînement" : élite si chef d'arène (badge), gardien si autre dresseur
+    // d'arène, rien sinon (route/sbire) → les dresseurs tiennent face à un joueur boosté.
+    const tier: TrainTier | undefined = trainer.training
+        ?? (trainer.badge ? "elite" : trainer.mapId.startsWith("yellow_arena") ? "guard" : undefined)
+    const enemyTeam = trainer.team.map((s) => createMonInstance(s.speciesId, s.level, { owned: false, moveIds: s.moves, ...trainerBoost(s.speciesId, s.level, tier) }))
     const seed = Math.floor(Math.random() * 1e9) >>> 0
     startTrainerBattle(team, enemyTeam, seed, { trainerId, reward: trainer.reward, aiLevel: trainer.aiLevel })
     return null
@@ -132,7 +136,8 @@ function tryLaunchAce(): ActiveDialogue | null {
     const lastTypes = getSpecies(last.speciesId)?.types ?? []
     const { peak, box } = getAceState()
     const built = buildAceTeam({ acePeak: peak, playerBestLevel: best, playerLastTypes: lastTypes, playerLastLevel: last.level, box })
-    const enemyTeam = built.team.map((m) => createMonInstance(m.speciesId, m.level))
+    // ACE = élite (boss ultime) : ses Daemons sont entraînés comme un joueur assidu.
+    const enemyTeam = built.team.map((m) => createMonInstance(m.speciesId, m.level, { ...trainerBoost(m.speciesId, m.level, "elite") }))
     const seed = Math.floor(Math.random() * 1e9) >>> 0
     startTrainerBattle(team, enemyTeam, seed, {
         trainerId: ACE_TRAINER_ID, reward: 0, aiLevel: "ace",
