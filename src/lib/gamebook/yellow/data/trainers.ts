@@ -223,6 +223,7 @@ export const TRAINERS: TrainerData[] = [
             // la CT (un move de CT est enseignable légitimement → ce n'est PAS un move
             // hors-learnset interdit). Les 3 autres moves sont naturels (≤25).
             { speciesId: "roctaur", level: 25, moves: ["faille_sismique", "eboulis", "jet_pierres", "charge"] },
+            { speciesId: "retroraptor", level: 21 }, // Roche/Vol RAPIDE (Vit 91) : outspeed + Picpic ×2 sur Plante, neutre à Étreinte
             { speciesId: "fissuralave", level: 18 }, // Roche/Feu, Flammèche natif (×2 sur Plante)
             { speciesId: "iorours", level: 20 },     // Roche/Glace (×2 sur Plante)
             { speciesId: "octoroc", level: 20 },     // mur Roche/Sol
