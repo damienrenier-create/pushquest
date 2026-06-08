@@ -210,7 +210,6 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 1, moveId: "jet_pierres" },
             { level: 1, moveId: "charge" },
             { level: 24, moveId: "eboulis" },
-            { level: 25, moveId: "faille_sismique" }, // signature (aussi dispo en CT pour les autres)
             { level: 30, moveId: "seisme" },
             { level: 36, moveId: "tir_boue" },
         ],
