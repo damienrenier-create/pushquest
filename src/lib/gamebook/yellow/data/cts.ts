@@ -15,7 +15,7 @@ import { getMove } from "./moves"
 import type { SpeciesData } from "../battle/types"
 
 /** Badge requis pour acheter une CT (aligné sur les salles de l'arène). */
-export type BadgeId = "feu" | "plante" | "eau"
+export type BadgeId = "feu" | "plante" | "eau" | "roche"
 
 export interface CtData {
     id: string          // "ct01"
@@ -64,6 +64,11 @@ export const CTS: CtData[] = [
 
     // --- Utilitaire set-up : boost de Spé, apprenable par TOUS (dispo dès le départ) ---
     { id: "ct18", label: "CT18", moveId: "focalisation", price: 450, universal: true },
+
+    // --- CT signature ROCHE : CADEAU du boss d'arène Roche (jamais en vente) ---
+    { id: "ct19", label: "CT19", moveId: "faille_sismique", price: 0, gift: true },
+    // --- CT Roche en vente (débloquée par le badge roche) ---
+    { id: "ct20", label: "CT20", moveId: "lame_roche", price: 700, badge: "roche" },
 ]
 
 export function getCt(id: string): CtData | null {

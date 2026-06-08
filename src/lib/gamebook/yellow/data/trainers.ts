@@ -12,6 +12,8 @@ import type { BadgeId } from "./cts"
 export interface TrainerMonSpec {
     speciesId: string
     level: number
+    /** Attaques imposées (sinon auto depuis le learnset) — pour les moves signature exclusifs. */
+    moves?: string[]
 }
 
 export interface TrainerData {
@@ -150,6 +152,88 @@ export const TRAINERS: TrainerData[] = [
         defeat: [
             "Tu as grandi plus vite que mes ronces…",
             "Le Badge Feuille est tien. Que la sève te guide.",
+        ],
+    },
+
+    // === ARÈNE ROCHE — "Caverne Minière" : 4 gardes + le Maître (boss, badge Roche) ===
+    // Même bâtiment de gym que l'arène Plante : il se RÉORGANISE selon les badges
+    // (cf. currentArenaMapId). PNJ visibles via emoji (sprites à venir).
+    {
+        id: "y_rocharena_g1", name: "MINEUR BURIN", title: "Garde de la Caverne",
+        sprite: { emoji: "⛏️", color: "#a08050" },
+        mapId: "yellow_arena_roche", x: 4, y: 5,
+        team: [
+            { speciesId: "cailloutchi", level: 14 },
+            { speciesId: "rembodo", level: 16 },
+            { speciesId: "limaroche", level: 17 },
+        ],
+        reward: 120, aiLevel: "trainer",
+        intro: ["*Un mineur fait rouler un caillou dans sa paume.*", "On ne passe pas la Caverne sans s'écorcher !"],
+        defeat: ["Solide… file au suivant."],
+    },
+    {
+        id: "y_rocharena_g2", name: "GAMIN GALET", title: "Garde de la Caverne",
+        sprite: { emoji: "⛏️", color: "#a08050" },
+        mapId: "yellow_arena_roche", x: 4, y: 7,
+        // Le "collectionneur de cailloux" : sa lignée Mottoche à différents stades.
+        team: [
+            { speciesId: "mottoche", level: 5 },
+            { speciesId: "mottoche", level: 7 },
+            { speciesId: "dumotte", level: 9 },
+            { speciesId: "dumotte", level: 11 },
+            { speciesId: "quadroc", level: 13 },
+        ],
+        reward: 100, aiLevel: "trainer",
+        intro: ["Regarde mes cailloux GRANDIR ! Ils valent de l'or… enfin, du diamant !"],
+        defeat: ["Mes bébés cailloux… vous serez forts un jour !"],
+    },
+    {
+        id: "y_rocharena_g3", name: "FORGEUR BRAISE", title: "Garde de la Caverne",
+        sprite: { emoji: "⛏️", color: "#a08050" },
+        mapId: "yellow_arena_roche", x: 10, y: 5,
+        team: [
+            { speciesId: "lavapetit", level: 15 },
+            { speciesId: "lavapetit", level: 15 },
+            { speciesId: "fissuralave", level: 17 },
+        ],
+        reward: 120, aiLevel: "trainer",
+        intro: ["*La chaleur monte près des filons de lave.*", "Roche ET feu : double peine pour toi !"],
+        defeat: ["Mes braises s'éteignent…"],
+    },
+    {
+        id: "y_rocharena_g4", name: "GUIDE STALAGM", title: "Garde de la Caverne",
+        sprite: { emoji: "⛏️", color: "#a08050" },
+        mapId: "yellow_arena_roche", x: 10, y: 7,
+        team: [
+            { speciesId: "marmoterre", level: 18 },
+            { speciesId: "tetardoc", level: 17 },
+        ],
+        reward: 140, aiLevel: "trainer",
+        intro: ["Dernier rempart avant le Maître. La Caverne te jauge !"],
+        defeat: ["Le Maître t'attend au fond."],
+    },
+    {
+        id: "y_rocharena_boss", name: "MAÎTRE GRANIT", title: "Doyen de la Caverne Minière",
+        sprite: { emoji: "🗿", color: "#7a6a55" },
+        mapId: "yellow_arena_roche", x: 7, y: 3,
+        // GATE : avoir battu les 4 gardes (n'importe quel ordre).
+        requiresTrainers: ["y_rocharena_g1", "y_rocharena_g2", "y_rocharena_g3", "y_rocharena_g4"],
+        team: [
+            { speciesId: "grenarc", level: 18 },
+            { speciesId: "iorours", level: 20 },
+            { speciesId: "octoroc", level: 20 },
+            // Ace : Roctaur 25 avec la SIGNATURE Faille Sismique (exclusive, donnée en CT).
+            { speciesId: "roctaur", level: 25, moves: ["faille_sismique", "eboulis", "seisme", "carapace_diamant"] },
+        ],
+        reward: 0, aiLevel: "trainer", badge: "roche", giftCt: "ct19",
+        intro: [
+            "*Une silhouette de pierre se dresse, immobile depuis des siècles.*",
+            "Je suis GRANIT, Doyen de la Caverne Minière.",
+            "La roche endure tout. Brise-la… si tu peux !",
+        ],
+        defeat: [
+            "Fissuré… par plus dur que moi.",
+            "Le Badge Roche est tien. Prends aussi ma FAILLE SISMIQUE.",
         ],
     },
 ]

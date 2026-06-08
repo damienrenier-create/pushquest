@@ -417,6 +417,28 @@ function buildGrotte(): TileType[][] {
     return GROTTE_MASK.map((row) => [...row].map((ch) => (ch === "X" ? "tree" : "grass") as TileType))
 }
 
+// Arène Roche "Caverne Minière" : 15×10, calée sur arena_roche.png. Zone walkable
+// (relevé Sartay) : y4-7 → x5-9 ; y8-9 → x6-8 (y9 = entrée/sortie). Le reste bloqué.
+// PNJ en bordure : Boss (7,3), gardes (4,5)(4,7)(10,5)(10,7) — on leur parle de côté.
+function buildArenaRoche(): TileType[][] {
+    const W = 15, H = 10
+    const m: TileType[][] = Array.from({ length: H }, () => Array.from({ length: W }, () => "tree" as TileType))
+    const walk = (y: number, xs: number[]) => { for (const x of xs) m[y][x] = "grass" }
+    walk(4, [5, 6, 7, 8, 9]); walk(5, [5, 6, 7, 8, 9]); walk(6, [5, 6, 7, 8, 9]); walk(7, [5, 6, 7, 8, 9])
+    walk(8, [6, 7, 8]); walk(9, [6, 7, 8])
+    return m
+}
+
+/**
+ * Quelle arène se trouve derrière la porte du GYM, selon la progression (badges) ?
+ * Le bâtiment se "réorganise" : Plante tant que non obtenu, puis Roche, etc.
+ */
+export function currentArenaMapId(badges: readonly string[]): string {
+    if (!badges.includes("plante")) return "yellow_arena"
+    if (!badges.includes("roche")) return "yellow_arena_roche"
+    return "yellow_arena_roche" // placeholder jusqu'à la prochaine arène
+}
+
 // === ROUTE NORD = future zone Pokémon (placeholder grass/trees) ==========
 // 44×40 (même taille que Viridian per user 2026-05-31).
 // Bordures d'arbres SAUF cols 19..23 row 39 (sortie sud vers Viridian, aligné
@@ -746,6 +768,19 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         height: 10,
         exits: [returnExit("yellow_arena", 7, 9)],
         backgroundImage: "/yellow/sprites/arena_plante.png",
+        backgroundImageWidth: 480,
+        backgroundImageHeight: 320,
+        backgroundImageTileSize: 32,
+    },
+    yellow_arena_roche: {
+        id: "yellow_arena_roche",
+        name: "CAVERNE MINIÈRE",
+        tiles: buildArenaRoche(),
+        width: 15,
+        height: 10,
+        // Sortie en (7,9) → retour ville devant la porte du gym (door b_arena +1).
+        exits: [{ x: 7, y: 9, targetMapId: YELLOW_ENTRANCE_MAP_ID, targetSpawnX: 36, targetSpawnY: 11 }],
+        backgroundImage: "/yellow/sprites/arena_roche.png",
         backgroundImageWidth: 480,
         backgroundImageHeight: 320,
         backgroundImageTileSize: 32,

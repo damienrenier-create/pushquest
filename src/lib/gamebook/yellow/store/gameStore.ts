@@ -13,7 +13,7 @@ import { createInitialPlayer } from "../engine/types"
 import { tryMove } from "../engine/movement"
 import { findExitAt } from "../engine/warp"
 import { getNpcInFrontOfPlayer, getFacingTile, getTileInFront, findNpcAt } from "../engine/interaction"
-import { YELLOW_MAPS } from "../maps"
+import { YELLOW_MAPS, currentArenaMapId } from "../maps"
 import type { YellowMapData } from "../maps"
 import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
@@ -95,7 +95,7 @@ function tryLaunchTrainer(trainerId: string): ActiveDialogue | null {
             lines: ["Tes Daemons sont tous K.O. !", "Soigne-les au Centre avant de te battre."],
         }
     }
-    const enemyTeam = trainer.team.map((s) => createMonInstance(s.speciesId, s.level, { owned: false }))
+    const enemyTeam = trainer.team.map((s) => createMonInstance(s.speciesId, s.level, { owned: false, moveIds: s.moves }))
     const seed = Math.floor(Math.random() * 1e9) >>> 0
     startTrainerBattle(team, enemyTeam, seed, { trainerId, reward: trainer.reward, aiLevel: trainer.aiLevel })
     return null
@@ -179,10 +179,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // ou doorMat de sortie). Si oui : transition de map immédiate.
         const exit = findExitAt(map, next.posX, next.posY)
         if (exit) {
-            const newMap = YELLOW_MAPS[exit.targetMapId]
+            // Le GYM se réorganise selon les badges : la porte mène à l'arène courante.
+            const targetMapId = exit.targetMapId === "yellow_arena"
+                ? currentArenaMapId(getPlayerSave().badges)
+                : exit.targetMapId
+            const newMap = YELLOW_MAPS[targetMapId]
             if (newMap) {
                 const newPlayer = createInitialPlayer(
-                    exit.targetMapId,
+                    targetMapId,
                     exit.targetSpawnX,
                     exit.targetSpawnY,
                     next.direction,
