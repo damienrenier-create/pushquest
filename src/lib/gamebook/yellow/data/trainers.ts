@@ -219,7 +219,9 @@ export const TRAINERS: TrainerData[] = [
         // GATE : avoir battu les 4 gardes (n'importe quel ordre).
         requiresTrainers: ["y_rocharena_g1", "y_rocharena_g2", "y_rocharena_g3", "y_rocharena_g4"],
         team: [
-            { speciesId: "grenarc", level: 18 },
+            // Lavapetit (Roche/Feu) en lead : Flammèche imposée (×2 sur Plante → anti-sweep).
+            // Niv 16 = max valide (évolue en Fissuralave à 17).
+            { speciesId: "lavapetit", level: 16, moves: ["flammeche", "jet_pierres"] },
             { speciesId: "iorours", level: 20 },
             { speciesId: "octoroc", level: 20 },
             // Ace : Roctaur 25 avec la SIGNATURE Faille Sismique (exclusive, donnée en CT).
