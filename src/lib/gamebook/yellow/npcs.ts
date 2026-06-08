@@ -148,6 +148,19 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         initialY: 1,
         dialoguesAfter: ["*L'ordinateur du Centre ronronne.*"],
     },
+    {
+        // Bibliothèque du Centre Daemon : ouvre le REGISTRE DES DRESSEURS (stats des
+        // autres joueurs). Meuble dessiné dans le décor (3,1) ; activé depuis (3,2) ↑.
+        id: "y_biblio",
+        name: "BIBLIOTHÈQUE",
+        mapId: "yellow_infirmary",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "", color: "#8c6840" }, // invisible (le meuble est dans le décor)
+        initialX: 3,
+        initialY: 1,
+        dialoguesAfter: ["*Le Registre des Dresseurs du Nexus.*"], // repli si non intercepté
+    },
 
     // === Intérieur ANTRE DU SBIRE (combat dynamique 2×/jour) ===
     // Interception spéciale dans gameStore.pressA (équipe miroir/faiblesse selon

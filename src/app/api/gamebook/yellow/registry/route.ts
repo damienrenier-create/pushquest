@@ -1,0 +1,58 @@
+// src/app/api/gamebook/yellow/registry/route.ts
+//
+// Nexus Jaune Éclair — REGISTRE DES DRESSEURS (bibliothèque du Centre Daemon).
+// Renvoie, pour chaque joueur Yellow (invités inclus), un résumé public de sa
+// progression : équipe (espèces + niveaux), Pokédex, badges, PvP, victoires ACE,
+// Daemon fétiche. Lecture seule, gated comme le reste du chapitre.
+
+import { NextResponse } from "next/server"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
+import prisma from "@/lib/prisma"
+import { isNexusYellowEnabled, YELLOW_CHAPTER_ID } from "@/lib/gamebook/yellow/featureFlag"
+import { parseSave } from "@/lib/gamebook/yellow/storage/save"
+import { SPECIES } from "@/lib/gamebook/yellow/data/species"
+
+export const dynamic = "force-dynamic"
+
+const DEX_TOTAL = Object.keys(SPECIES).length
+
+/** Clé au plus grand compteur (Daemon fétiche / attaque favorite). */
+function topKey(rec: Record<string, number>): string | null {
+    let best: string | null = null
+    let max = 0
+    for (const [k, v] of Object.entries(rec)) if (v > max) { max = v; best = k }
+    return best
+}
+
+export async function GET() {
+    const session = await getServerSession(authOptions)
+    const userId = (session?.user as { id?: string })?.id
+    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    if (!(await isNexusYellowEnabled(userId))) return NextResponse.json({ error: "Forbidden" }, { status: 404 })
+
+    const rows = await (prisma as any).gamebookProgress.findMany({
+        where: { chapterId: YELLOW_CHAPTER_ID },
+        select: { userId: true, flags: true, user: { select: { nickname: true, isGuest: true } } },
+    })
+
+    const players = (rows as { userId: string; flags: unknown; user: { nickname: string | null; isGuest: boolean } | null }[])
+        .map((r) => {
+            const s = parseSave(r.flags)
+            return {
+                userId: r.userId,
+                nickname: r.user?.nickname ?? "?",
+                isGuest: r.user?.isGuest === true,
+                team: s.team.map((m) => ({ speciesId: m.speciesId, level: m.level, nickname: m.nickname ?? null })),
+                dexCaught: s.pokedex.caught.length,
+                badges: s.badges,
+                pvp: { wins: s.pvpStats.wins, losses: s.pvpStats.losses },
+                aceWins: s.aceWins,
+                favoriteDaemon: topKey(s.pvpStats.daemonUse),
+                favoriteMove: topKey(s.pvpStats.moveUse),
+            }
+        })
+        .filter((p) => p.team.length > 0) // uniquement ceux qui ont vraiment commencé
+
+    return NextResponse.json({ ok: true, players, dexTotal: DEX_TOTAL, me: userId })
+}
