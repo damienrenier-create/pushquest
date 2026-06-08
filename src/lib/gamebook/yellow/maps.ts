@@ -570,6 +570,9 @@ function buildNorthRoute(): NorthBuild {
         const p = candidates[i]
         m[p.y][p.x] = "grassTall"
     }
+    // Ouverture de la GROTTE creusée dans le flanc de la montagne nord (12,3) :
+    // case walkable pour pouvoir y entrer (le sprite "bouche" est posé par-dessus).
+    m[3][12] = "grass"
     return { tiles: m, trees, flowers, bushes, signs }
 }
 
@@ -728,7 +731,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         width: 30,
         height: 31,
         // Sortie = le « trou noir » haut-droite (~25,5, à recaler) → retour Route Nord (12,5).
-        exits: [{ x: 25, y: 5, targetMapId: "yellow_route_nord", targetSpawnX: 12, targetSpawnY: 5 }],
+        exits: [{ x: 25, y: 5, targetMapId: "yellow_route_nord", targetSpawnX: 12, targetSpawnY: 4 }],
         backgroundImage: "/yellow/sprites/grotte.png",
         backgroundImageWidth: 720,
         backgroundImageHeight: 744,
@@ -752,7 +755,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
             })),
             // Entrée de la GROTTE (coin entre les 2 reliefs montagneux), en (12,4).
             // Arrivée près du trou noir haut-droite (à recaler avec la grille).
-            { x: 12, y: 4, targetMapId: "yellow_grotte", targetSpawnX: 25, targetSpawnY: 6 },
+            { x: 12, y: 3, targetMapId: "yellow_grotte", targetSpawnX: 25, targetSpawnY: 6 },
         ],
         // Tapis d'herbe FireRed : 4 variantes 16×16 séparées par 1px gap
         groundSheet: {
@@ -786,8 +789,8 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
             { x: 41, y: 0, w: 1, h: 4, url: "/yellow/sprites/viridian_mountain_col41.png" },
             // Bloc montagne 5×10 (clone Viridian cols 0-4 rows 2-11)
             { x: 4, y: 4, w: 5, h: 10, url: "/yellow/sprites/viridian_mountain_block_0_4_2_11.png" },
-            // Bouche de la GROTTE (entrée en 12,4)
-            { x: 12, y: 4, w: 1, h: 1, url: "/yellow/sprites/cave_entrance.png" },
+            // Bouche de la GROTTE (entrée en 12,3, creusée dans la montagne)
+            { x: 12, y: 3, w: 1, h: 1, url: "/yellow/sprites/cave_entrance.png" },
             { x: 14, y: 35, w: 30, h: 5, url: "/yellow/sprites/viridian_bottom_14_43.png" },
             { x: 0, y: 35, w: 2, h: 5, url: "/yellow/sprites/viridian_bottom_14_15.png" },
             { x: 2, y: 35, w: 2, h: 5, url: "/yellow/sprites/viridian_bottom_14_15.png" },
