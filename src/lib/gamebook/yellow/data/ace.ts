@@ -1,15 +1,17 @@
 // src/lib/gamebook/yellow/data/ace.ts
 //
-// Nexus Jaune Éclair — ACE, le RIVAL ultime. Un ACE DIFFÉRENT PAR JOUEUR :
-// son équipe est stockée et MUTE à chaque fois que le joueur le bat (1 défaite
-// d'ACE par jour). React-free, pur, testable. L'IA "ace" + le budget d'énergie
-// (1,5× les reps du joueur) sont gérés au niveau du moteur/store.
+// Nexus Jaune Éclair — ACE, le RIVAL parfait (1 défaite/jour). React-free, pur, testable.
 //
-// Progression (à CHAQUE défaite) : +1 niv à 3 Daemons + +2 niv à 1 Daemon (aléatoire).
-// Paliers (tous les 5) : 5 Eau · 10 Plante · 15 (les 3 Panthéon ÉVOLUENT) · 20 Vol
-// · 25 Combat · 30 Roche · 35 équipe FINALE.
+// MODÈLE (par joueur) :
+//   • Équipe FIXE de 5 : 3 panthères (slot 3 = FEU) + lignée Nouillon (Psy) + lignée Feu.
+//   • Slot 6 ADAPTATIF : tiré d'une BOX de contres = la faiblesse parfaite de TON dernier Daemon.
+//   • Niveau des fixes = max(pic mémorisé, ton meilleur + 2) → ne RÉGRESSE jamais ;
+//     il ratchete à CHAQUE défaite. Le contre s'aligne sur ton dernier Daemon (mémoire box).
+// L'IA "ace" + le budget d'énergie (1,5× tes reps) sont gérés au moteur/store.
 
 import { getSpecies } from "./species"
+import { typeEffectiveness } from "../battle/typeChart"
+import type { PokeType } from "../battle/types"
 
 export const ACE_TRAINER_ID = "y_ace"
 export const ACE_ENERGY_MULT = 1.5
@@ -39,16 +41,35 @@ export const ACE_NO_TEAM_LINES = [
 
 export interface AceMon { speciesId: string; level: number }
 
-/** Équipe de départ (tous niv 4) : 3 Panthéon + Nouillon + 2 Feu (Braisille, Fennaise). */
-export function initialAceTeam(): AceMon[] {
-    return [
-        { speciesId: "pantheon", level: 4 },
-        { speciesId: "pantheon", level: 4 },
-        { speciesId: "pantheon", level: 4 },
-        { speciesId: "nouillon", level: 4 },   // slot "psy" (retiré à l'équipe finale)
-        { speciesId: "braisille", level: 4 },  // slot rotation A
-        { speciesId: "fennaise", level: 4 },   // slot rotation B
-    ]
+// === ÉQUIPE FIXE (5 slots) ===
+// Slot 3 = la panthère de FEU (Pyropanthe). Nouillon & la lignée Feu évoluent avec le niveau.
+export const ACE_PANTHERS = ["ombrapanthe", "voltapanthe", "pyropanthe"] // 1,2,3 (3 = feu)
+export const ACE_NOUILLON_BASE = "nouillon"   // → vermisaint → divinpate
+export const ACE_FIRE_BASE = "braisille"      // → flamkure → pyrokoss
+export const ACE_LEVEL_OFFSET = 2
+
+// === BOX de 10 contres (un bon attaquant par type clé) ===
+// Le slot 6 = celui qui frappe le plus fort le DERNIER Daemon du joueur (faiblesse parfaite).
+export const ACE_BOX = [
+    "razmaree", "gloutanoir", "maitrezenc", "rochison", "auroraur",
+    "zappeureal", "draconarque", "regnantaur", "magmator", "mycedruide",
+]
+
+/** Niveau-cible des slots fixes : max(pic, meilleur du joueur + 2). Ne régresse jamais. */
+export function aceTargetLevel(acePeak: number, playerBestLevel: number): number {
+    return Math.min(MAX_LEVEL, Math.max(1, acePeak, playerBestLevel + ACE_LEVEL_OFFSET))
+}
+
+/** Meilleur contre de la box face aux types du dernier Daemon joueur. */
+export function bestCounter(playerLastTypes: PokeType[]): string {
+    let best = ACE_BOX[0], bestEff = -1
+    for (const id of ACE_BOX) {
+        const sp = getSpecies(id)
+        if (!sp) continue
+        const eff = Math.max(...sp.types.map((t) => typeEffectiveness(t, playerLastTypes)))
+        if (eff > bestEff) { bestEff = eff; best = id }
+    }
+    return best
 }
 
 /** Espèce au bon STADE d'évolution pour un niveau donné (suit la chaîne par niveau). */
@@ -63,72 +84,33 @@ export function speciesAtLevel(baseId: string, level: number): string {
     return id
 }
 
-// Lignées de base pour chaque type de rotation (le stade s'adapte au niveau).
-const ROTATION_BASE: Record<string, string> = {
-    eau: "gouttiny", plante: "pampousse", vol: "plumiot", combat: "couperin", roche: "cailloutchi",
-}
-
-/** Remplace les 2 slots de rotation (4 et 5) par 2 Daemons d'un type, même niveau. */
-function swapRotation(team: AceMon[], type: keyof typeof ROTATION_BASE): void {
-    const base = ROTATION_BASE[type]
-    for (const i of [4, 5]) {
-        team[i] = { speciesId: speciesAtLevel(base, team[i].level), level: team[i].level }
-    }
-}
-
-/** À 15 défaites : les 3 Panthéon (slots 0,1,2) évoluent (ténèbre/élec/glace), niveaux gardés. */
-function evolvePanthers(team: AceMon[]): void {
-    const forms = ["ombrapanthe", "voltapanthe", "panthegel"]
-    for (let i = 0; i < 3; i++) team[i] = { speciesId: forms[i], level: team[i].level }
+export interface AceBuildInput {
+    acePeak: number              // pic de niveau mémorisé (ratchet)
+    playerBestLevel: number      // meilleur Daemon du joueur
+    playerLastTypes: PokeType[]  // types du DERNIER Daemon de l'équipe joueur
+    playerLastLevel: number      // niveau de ce dernier Daemon
+    box: Record<string, number>  // mémoire de niveau par espèce-contre
 }
 
 /**
- * Équipe FINALE (35) : on garde les 3 panthères, on RETIRE Nouillon, et on équipe
- * Draclet (au niveau du MEILLEUR Daemon du joueur) + Lavapetit + Braisille (au niveau
- * du slot qu'ils remplacent). Stades adaptés au niveau. (Fennaise est coupée pour
- * tenir à 6 — réglable.)
+ * Construit l'équipe ACE (6) pour un combat : 5 fixes au niveau-cible + 1 contre adaptatif.
+ * Renvoie aussi l'espèce-contre choisie (pour mémoriser le niveau à la défaite).
  */
-function finalTeam(team: AceMon[], playerBestLevel: number): AceMon[] {
-    const lvlA = team[4].level, lvlB = team[5].level
-    return [
-        team[0], team[1], team[2], // les 3 panthères (déjà évoluées au palier 15)
-        { speciesId: speciesAtLevel("draclet", playerBestLevel), level: Math.max(1, Math.min(MAX_LEVEL, playerBestLevel)) },
-        { speciesId: speciesAtLevel("lavapetit", lvlA), level: lvlA },
-        { speciesId: speciesAtLevel("braisille", lvlB), level: lvlB },
+export function buildAceTeam(i: AceBuildInput): { team: AceMon[]; counterSpecies: string } {
+    // Niveau FIGÉ entre deux défaites : on utilise le pic mémorisé tel quel ; il ne
+    // ratchete qu'à la défaite (cf. recordAceDefeat). 1re rencontre (pic 0) → se cale sur toi.
+    const L = i.acePeak > 0 ? Math.min(MAX_LEVEL, i.acePeak) : aceTargetLevel(0, i.playerBestLevel)
+    const counter = bestCounter(i.playerLastTypes)
+    const counterLevel = Math.min(MAX_LEVEL, Math.max(1, i.box[counter] ?? 0, i.playerLastLevel))
+    const team: AceMon[] = [
+        { speciesId: ACE_PANTHERS[0], level: L },
+        { speciesId: ACE_PANTHERS[1], level: L },
+        { speciesId: ACE_PANTHERS[2], level: L }, // panthère de feu
+        { speciesId: speciesAtLevel(ACE_NOUILLON_BASE, L), level: L },
+        { speciesId: speciesAtLevel(ACE_FIRE_BASE, L), level: L },
+        { speciesId: counter, level: counterLevel },
     ]
-}
-
-/** Monte l'équipe : +2 niv à 1 Daemon aléatoire, +1 niv à 3 autres (distincts). */
-function levelUp(team: AceMon[], rng: () => number): void {
-    const n = team.length
-    const i2 = Math.floor(rng() * n)
-    const others = Array.from({ length: n }, (_, i) => i).filter((i) => i !== i2)
-    for (let i = others.length - 1; i > 0; i--) {
-        const j = Math.floor(rng() * (i + 1))
-        ;[others[i], others[j]] = [others[j], others[i]]
-    }
-    const plus1 = others.slice(0, 3)
-    team[i2].level = Math.min(MAX_LEVEL, team[i2].level + 2)
-    for (const i of plus1) team[i].level = Math.min(MAX_LEVEL, team[i].level + 1)
-}
-
-/**
- * Applique UNE défaite d'ACE (le joueur a gagné) : renvoie la NOUVELLE équipe.
- * @param newWins  nombre TOTAL de défaites d'ACE APRÈS celle-ci (1, 2, 3…).
- */
-export function progressAceTeam(team: AceMon[], newWins: number, playerBestLevel: number, rng: () => number): AceMon[] {
-    const t = team.map((m) => ({ ...m }))
-    levelUp(t, rng) // la montée de niveau s'applique à chaque défaite
-    switch (newWins) {
-        case 5: swapRotation(t, "eau"); break
-        case 10: swapRotation(t, "plante"); break
-        case 15: evolvePanthers(t); break
-        case 20: swapRotation(t, "vol"); break
-        case 25: swapRotation(t, "combat"); break
-        case 30: swapRotation(t, "roche"); break
-        case 35: return finalTeam(t, playerBestLevel)
-    }
-    return t
+    return { team, counterSpecies: counter }
 }
 
 /** Budget d'énergie d'ACE = 1,5× les reps du joueur au début du match. */

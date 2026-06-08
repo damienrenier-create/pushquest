@@ -35,8 +35,9 @@ export interface YellowSave {
     sbireWinsTotal: number
     /** Réputation PvP : matchs + usages (Daemon fétiche / attaque favorite). */
     pvpStats: { wins: number; losses: number; forfeits: number; daemonUse: Record<string, number>; moveUse: Record<string, number> }
-    /** ACE (rival) : équipe persistée + nb de défaites + jour de la dernière défaite. */
-    aceTeam: { speciesId: string; level: number }[]
+    /** ACE (rival) : pic de niveau (ratchet) + box des contres + défaites + jour. */
+    acePeakLevel: number
+    aceBox: Record<string, number>
     aceWins: number
     aceDefeatedDate: string
     /** CT cadeaux possédées (trophées de boss). */
@@ -46,7 +47,7 @@ export interface YellowSave {
 export const SAVE_VERSION = 1
 
 export function emptySave(): YellowSave {
-    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, aceTeam: [], aceWins: 0, aceDefeatedDate: "", ownedCts: [] }
+    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, acePeakLevel: 0, aceBox: {}, aceWins: 0, aceDefeatedDate: "", ownedCts: [] }
 }
 
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -154,12 +155,8 @@ export function parseSave(raw: unknown): YellowSave {
         sbireDefeatsToday: typeof o.sbireDefeatsToday === "number" ? Math.max(0, Math.floor(o.sbireDefeatsToday)) : 0,
         sbireWinsTotal: typeof o.sbireWinsTotal === "number" ? Math.max(0, Math.floor(o.sbireWinsTotal)) : 0,
         pvpStats: parsePvpStats(o.pvpStats),
-        aceTeam: Array.isArray(o.aceTeam)
-            ? (o.aceTeam as unknown[]).map((m) => {
-                const x = (m ?? {}) as Record<string, unknown>
-                return { speciesId: typeof x.speciesId === "string" ? x.speciesId : "", level: typeof x.level === "number" ? Math.max(1, Math.floor(x.level)) : 1 }
-            }).filter((m) => m.speciesId)
-            : [],
+        acePeakLevel: typeof o.acePeakLevel === "number" ? Math.max(0, Math.floor(o.acePeakLevel)) : 0,
+        aceBox: numRec(o.aceBox),
         aceWins: typeof o.aceWins === "number" ? Math.max(0, Math.floor(o.aceWins)) : 0,
         aceDefeatedDate: typeof o.aceDefeatedDate === "string" ? o.aceDefeatedDate : "",
         ownedCts: strArr(o.ownedCts),

@@ -22,6 +22,7 @@ import { markSeen, markCaught } from "./pokedexStore"
 import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt } from "./playerStore"
 import { getCt } from "../data/cts"
 import { getMove } from "../data/moves"
+import { getSpecies } from "../data/species"
 import { SBIRE_REWARD_REPS, SBIRE_REWARD_BALL_ID } from "../data/sbire"
 import { ACE_TRAINER_ID, aceReward } from "../data/ace"
 import type { BadgeId } from "../data/cts"
@@ -222,9 +223,12 @@ function finishBattle(b: BattleState) {
     let giftCtMove: string | null = null
     if (b.outcome === "win" && storeState.trainer) {
         if (storeState.trainer.trainerId === ACE_TRAINER_ID) {
-            // ACE : sa défaite fait muter son équipe (par joueur) + récompense graduée.
-            const best = Math.max(1, ...getPlayer().team.map((m) => m.level))
-            const winNum = recordAceDefeat(best)
+            // ACE : sa défaite ratchete son niveau (+2 sur ton meilleur) + mémorise le contre.
+            const aceTeam = getPlayer().team
+            const best = Math.max(1, ...aceTeam.map((m) => m.level))
+            const aceLast = aceTeam[aceTeam.length - 1]
+            const aceLastTypes = aceLast ? (getSpecies(aceLast.speciesId)?.types ?? []) : []
+            const winNum = recordAceDefeat(best, aceLastTypes, aceLast?.level ?? best)
             const r = aceReward(winNum)
             if (r.itemId) addItem(r.itemId, 1)
             if (r.reps) grantReps(r.reps)

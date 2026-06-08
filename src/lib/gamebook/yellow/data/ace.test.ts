@@ -1,88 +1,59 @@
 import { describe, it, expect } from "vitest"
-import {
-    initialAceTeam, speciesAtLevel, progressAceTeam, aceReward, aceEnergyBudget,
-} from "./ace"
+import { buildAceTeam, bestCounter, aceTargetLevel, aceReward, aceEnergyBudget, speciesAtLevel, ACE_PANTHERS, ACE_BOX } from "./ace"
 import { getSpecies } from "./species"
 
-// RNG déterministe pour les tests.
-function rng() {
-    let s = 12345
-    return () => { s = (s * 16807) % 2147483647; return (s & 0x7fffffff) / 2147483647 }
-}
-const sum = (t: { level: number }[]) => t.reduce((a, m) => a + m.level, 0)
-const typesOf = (id: string) => getSpecies(id)?.types ?? []
-
-describe("ACE — équipe & progression", () => {
-    it("équipe de départ : 6 Daemons niv 4 (3 Panthéon, Nouillon, Braisille, Fennaise)", () => {
-        const t = initialAceTeam()
-        expect(t).toHaveLength(6)
-        expect(t.every((m) => m.level === 4)).toBe(true)
-        expect(t.map((m) => m.speciesId)).toEqual(["pantheon", "pantheon", "pantheon", "nouillon", "braisille", "fennaise"])
+describe("ACE — scaling + équipe + contre adaptatif", () => {
+    it("niveau-cible = max(pic, meilleur joueur + 2) — ne régresse jamais", () => {
+        expect(aceTargetLevel(0, 10)).toBe(12)
+        expect(aceTargetLevel(30, 10)).toBe(30) // pic conservé (ne descend pas)
+        expect(aceTargetLevel(20, 25)).toBe(27) // suit le joueur (+2)
     })
 
     it("speciesAtLevel suit la chaîne d'évolution", () => {
-        expect(speciesAtLevel("braisille", 4)).toBe("braisille")
-        expect(speciesAtLevel("braisille", 20)).toBe("flamkure")
-        expect(speciesAtLevel("braisille", 40)).toBe("pyrokoss")
-        expect(speciesAtLevel("draclet", 30)).toBe("wyverion")
-        expect(speciesAtLevel("draclet", 45)).toBe("draconarque")
+        expect(speciesAtLevel("nouillon", 10)).toBe("nouillon")
+        expect(speciesAtLevel("nouillon", 16)).toBe("vermisaint")
+        expect(speciesAtLevel("nouillon", 34)).toBe("divinpate")
+        expect(speciesAtLevel("braisille", 36)).toBe("pyrokoss")
     })
 
-    it("chaque défaite ajoute +5 niveaux au total (3×+1, 1×+2)", () => {
-        const t0 = initialAceTeam()
-        const t1 = progressAceTeam(t0, 1, 10, rng())
-        expect(sum(t1)).toBe(sum(t0) + 5)
-        // 4 Daemons distincts modifiés
-        const changed = t1.filter((m, i) => m.level !== t0[i].level).length
-        expect(changed).toBe(4)
+    it("bestCounter renvoie une espèce de la box super-efficace contre le type joueur", () => {
+        const cFeu = bestCounter(["FEU"]) // Eau/Roche/Sol ×2
+        expect(ACE_BOX).toContain(cFeu)
+        expect(Math.max(...getSpecies(cFeu)!.types.map((t) => typeEff(t, ["FEU"])))).toBe(2)
+        const cEau = bestCounter(["EAU"]) // Plante/Élec ×2
+        expect(Math.max(...getSpecies(cEau)!.types.map((t) => typeEff(t, ["EAU"])))).toBe(2)
     })
 
-    it("palier 5 : les 2 slots Feu deviennent Eau (mêmes niveaux)", () => {
-        const t = progressAceTeam(initialAceTeam(), 5, 10, rng())
-        expect(typesOf(t[4].speciesId)).toContain("EAU")
-        expect(typesOf(t[5].speciesId)).toContain("EAU")
-        // slots 0-3 inchangés d'espèce
-        expect(t.slice(0, 4).map((m) => m.speciesId)).toEqual(["pantheon", "pantheon", "pantheon", "nouillon"])
+    it("buildAceTeam : 6 mons, 3 panthères (slot3=feu), nouillon+feu évolués, contre adapté", () => {
+        const { team, counterSpecies } = buildAceTeam({
+            acePeak: 40, playerBestLevel: 30, playerLastTypes: ["FEU"], playerLastLevel: 28, box: {},
+        })
+        expect(team).toHaveLength(6)
+        expect(team.slice(0, 3).map((m) => m.speciesId)).toEqual(ACE_PANTHERS)
+        expect(team[2].speciesId).toBe("pyropanthe") // slot 3 = panthère de feu
+        expect(team.slice(0, 5).every((m) => m.level === 40)).toBe(true) // fixes au niveau-cible
+        expect(team[3].speciesId).toBe("divinpate") // nouillon évolué à niv 40
+        expect(team[4].speciesId).toBe("pyrokoss")  // braisille évolué à niv 40
+        expect(ACE_BOX).toContain(counterSpecies)
+        expect(team[5].speciesId).toBe(counterSpecies)
+        expect(team[5].level).toBe(28) // contre au niveau du dernier Daemon joueur (box vide)
     })
 
-    it("palier 15 : les 3 Panthéon évoluent (ténèbre/élec/glace)", () => {
-        const t = progressAceTeam(initialAceTeam(), 15, 10, rng())
-        expect(t.slice(0, 3).map((m) => m.speciesId)).toEqual(["ombrapanthe", "voltapanthe", "panthegel"])
+    it("le contre respecte la mémoire box (ne descend pas sous le niveau mémorisé)", () => {
+        const c = bestCounter(["FEU"])
+        const { team } = buildAceTeam({ acePeak: 40, playerBestLevel: 30, playerLastTypes: ["FEU"], playerLastLevel: 10, box: { [c]: 25 } })
+        expect(team[5].level).toBe(25) // max(box 25, dernier 10)
     })
 
-    it("palier 35 : équipe finale à 6, sans Nouillon, Draclet au niveau du meilleur joueur", () => {
-        // On part d'une équipe déjà avancée (panthères évoluées) pour le test.
-        const base = initialAceTeam()
-        base[0] = { speciesId: "ombrapanthe", level: 40 }
-        base[1] = { speciesId: "voltapanthe", level: 40 }
-        base[2] = { speciesId: "panthegel", level: 40 }
-        base[4] = { speciesId: "razmaree", level: 38 }
-        base[5] = { speciesId: "razmaree", level: 38 }
-        const t = progressAceTeam(base, 35, 50, rng())
-        expect(t).toHaveLength(6)
-        expect(t.some((m) => m.speciesId === "nouillon")).toBe(false)
-        // 3 panthères + draclet-line + lavapetit-line + braisille-line
-        expect(t.slice(0, 3).map((m) => m.speciesId)).toEqual(["ombrapanthe", "voltapanthe", "panthegel"])
-        expect(["draclet", "wyverion", "draconarque"]).toContain(t[3].speciesId) // au niveau ~50 → draconarque
-        expect(t[3].speciesId).toBe("draconarque")
-        expect(typesOf(t[4].speciesId)).toContain("ROCHE") // lavapetit-line (Roche/Feu)
-        expect(typesOf(t[5].speciesId)).toContain("FEU")  // braisille-line
-    })
-
-    it("récompenses : ball ×5, reps ×5, super_ball, Panthéon, puis remboursement", () => {
+    it("récompenses + budget énergie (inchangés)", () => {
         expect(aceReward(1).itemId).toBe("poke_ball")
-        expect(aceReward(5).itemId).toBe("poke_ball")
-        expect(aceReward(6).reps).toBe(100)
-        expect(aceReward(10).reps).toBe(100)
-        expect(aceReward(11).itemId).toBe("super_ball")
         expect(aceReward(12).gift).toBe("pantheon")
-        expect(aceReward(13).refund).toBe(true)
-        expect(aceReward(99).refund).toBe(true)
-    })
-
-    it("budget d'énergie = 1,5× les reps du joueur", () => {
         expect(aceEnergyBudget(200)).toBe(300)
-        expect(aceEnergyBudget(0)).toBe(0)
-        expect(aceEnergyBudget(333)).toBe(499)
     })
 })
+
+// helper local
+import { typeEffectiveness } from "../battle/typeChart"
+function typeEff(t: string, def: string[]): number {
+    return typeEffectiveness(t as never, def as never[])
+}

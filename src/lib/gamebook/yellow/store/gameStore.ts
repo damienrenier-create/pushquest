@@ -18,13 +18,14 @@ import type { YellowMapData } from "../maps"
 import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle } from "./battleStore"
-import { getPlayer as getPlayerSave, healAllTeam, isTrainerDefeated, getAceTeam, aceAvailableToday } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, isTrainerDefeated, getAceState, aceAvailableToday } from "./playerStore"
+import { getSpecies } from "../data/species"
 import { persistYellowSave } from "./saveManager"
 import { rollWildEncounter, wildLevelCap } from "../data/encounters"
 import { getTrainer } from "../data/trainers"
 import { createMonInstance } from "../battle/factory"
 import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroLines, SBIRE_DONE_LINES, SBIRE_NO_TEAM_LINES } from "../data/sbire"
-import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_INTRO_LINES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, aceEnergyBudget } from "../data/ace"
+import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_INTRO_LINES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, aceEnergyBudget, buildAceTeam } from "../data/ace"
 
 export interface ActiveDialogue {
     npcId: string
@@ -126,7 +127,12 @@ function tryLaunchAce(): ActiveDialogue | null {
     if (!team.some((m) => m.currentHp > 0)) {
         return { npcId: ACE_TRAINER_ID, npcName: "ACE", lineIndex: 0, lines: ACE_NO_TEAM_LINES }
     }
-    const enemyTeam = getAceTeam().map((m) => createMonInstance(m.speciesId, m.level))
+    const best = Math.max(...team.map((m) => m.level))
+    const last = team[team.length - 1]
+    const lastTypes = getSpecies(last.speciesId)?.types ?? []
+    const { peak, box } = getAceState()
+    const built = buildAceTeam({ acePeak: peak, playerBestLevel: best, playerLastTypes: lastTypes, playerLastLevel: last.level, box })
+    const enemyTeam = built.team.map((m) => createMonInstance(m.speciesId, m.level))
     const seed = Math.floor(Math.random() * 1e9) >>> 0
     startTrainerBattle(team, enemyTeam, seed, {
         trainerId: ACE_TRAINER_ID, reward: 0, aiLevel: "ace",
