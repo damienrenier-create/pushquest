@@ -1180,6 +1180,155 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "Scolopendre spectral interminable ; insaisissable, mais fragile s'il est touché.",
         sprite: "/yellow/sprites/dex/necrolopendre.png",
     },
+
+    // ============================================================
+    // FAMILLE FEU (arène 3) — 5 lignées, dexNo 98-108. Capture en zone
+    // volcanique (à créer) ; pour l'instant data only (équipes d'arène à venir).
+    // BST calibrés sur les Feu existants (Pyrokoss 446 / Loupyre 434 / Pyropanthe 451).
+    // ============================================================
+
+    // --- Ligne OISEAU (Vol/Feu) — sweeper rapide & fragile (×4 Roche, immunisé Sol) ---
+    colibraise: {
+        id: "colibraise", dexNo: 98, name: "Colibraise", types: ["VOL", "FEU"],
+        baseStats: { hp: 38, atk: 45, def: 38, spe: 75, spc: 56 },
+        learnset: [
+            { level: 1, moveId: "charge" }, { level: 1, moveId: "picpic" },
+            { level: 7, moveId: "flammeche" }, { level: 13, moveId: "vive_attaque" },
+            { level: 17, moveId: "tornade" },
+        ],
+        evolution: { toId: "arardent", method: { kind: "LEVEL", level: 17 } },
+        catchRate: 120, baseExp: 64, rarity: "COMMON", growthRate: "medium_fast", role: "Vol/Feu — colibri vif",
+        description: "Colibri de braise qui bat des ailes si vite qu'elles s'enflamment.",
+        sprite: "/yellow/sprites/dex/colibraise.png",
+    },
+    arardent: {
+        id: "arardent", dexNo: 99, name: "Arardent", types: ["VOL", "FEU"],
+        baseStats: { hp: 55, atk: 60, def: 52, spe: 95, spc: 76 },
+        learnset: [
+            { level: 1, moveId: "picpic" }, { level: 1, moveId: "flammeche" }, { level: 1, moveId: "tornade" },
+            { level: 20, moveId: "flamme_ardente" }, { level: 28, moveId: "fonce_bec" },
+        ],
+        evolution: { toId: "toucanyon", method: { kind: "LEVEL", level: 36 } },
+        catchRate: 60, baseExp: 141, rarity: "UNCOMMON", growthRate: "medium_fast", role: "Vol/Feu — ara flamboyant",
+        description: "Ara au plumage incandescent ; ses cris font crépiter l'air chaud.",
+        sprite: "/yellow/sprites/dex/arardent.png",
+    },
+    toucanyon: {
+        id: "toucanyon", dexNo: 100, name: "Toucanyon", types: ["VOL", "FEU"],
+        baseStats: { hp: 78, atk: 80, def: 68, spe: 122, spc: 108 },
+        learnset: [
+            { level: 1, moveId: "flamme_ardente" }, { level: 1, moveId: "fonce_bec" }, { level: 1, moveId: "tornade" },
+            { level: 38, moveId: "lance_flammes" }, { level: 44, moveId: "pique_fatal" },
+        ],
+        catchRate: 45, baseExp: 209, rarity: "RARE", growthRate: "medium_fast", role: "Vol/Feu — sweeper rapide",
+        description: "Toucan-volcan dont le bec rougeoyant projette des flammes à distance.",
+        sprite: "/yellow/sprites/dex/toucanyon.png",
+    },
+
+    // --- Ligne SERPENT (Psy/Feu) — l'ACE du boss, encaisse + spécial ---
+    blaziper: {
+        id: "blaziper", dexNo: 101, name: "Blaziper", types: ["PSY", "FEU"],
+        baseStats: { hp: 46, atk: 46, def: 50, spe: 52, spc: 64 },
+        learnset: [
+            { level: 1, moveId: "charge" }, { level: 1, moveId: "flammeche" },
+            { level: 8, moveId: "choc_mental" }, { level: 14, moveId: "flamme_ardente" },
+            { level: 20, moveId: "onde_folie" },
+        ],
+        evolution: { toId: "flamaspic", method: { kind: "LEVEL", level: 18 } },
+        catchRate: 90, baseExp: 66, rarity: "UNCOMMON", growthRate: "medium_fast", role: "Psy/Feu — serpenteau",
+        description: "Serpenteau aux écailles tièdes ; hypnotise ses proies d'un regard ardent.",
+        sprite: "/yellow/sprites/dex/blaziper.png",
+    },
+    flamaspic: {
+        id: "flamaspic", dexNo: 102, name: "Flamaspic", types: ["PSY", "FEU"],
+        baseStats: { hp: 64, atk: 58, def: 66, spe: 68, spc: 92 },
+        learnset: [
+            { level: 1, moveId: "choc_mental" }, { level: 1, moveId: "flammeche" }, { level: 1, moveId: "flamme_ardente" },
+            { level: 24, moveId: "onde_folie" }, { level: 30, moveId: "lance_flammes" },
+        ],
+        evolution: { toId: "vipember", method: { kind: "LEVEL", level: 38 } },
+        catchRate: 60, baseExp: 145, rarity: "UNCOMMON", growthRate: "medium_fast", role: "Psy/Feu — aspic de feu",
+        description: "Aspic incandescent dont les anneaux fument quand il se concentre.",
+        sprite: "/yellow/sprites/dex/flamaspic.png",
+    },
+    vipember: {
+        id: "vipember", dexNo: 103, name: "Vipember", types: ["PSY", "FEU"],
+        baseStats: { hp: 90, atk: 72, def: 88, spe: 92, spc: 120 },
+        learnset: [
+            { level: 1, moveId: "vague_mentale" }, { level: 1, moveId: "lance_flammes" },
+            { level: 1, moveId: "flamme_ardente" }, { level: 1, moveId: "onde_folie" },
+            { level: 42, moveId: "repos" },
+        ],
+        catchRate: 45, baseExp: 214, rarity: "RARE", growthRate: "medium_fast", role: "Psy/Feu — vipère psychique (ace)",
+        description: "Vipère-braise millénaire ; son esprit brûlant plie la volonté des autres.",
+        sprite: "/yellow/sprites/dex/vipember.png",
+    },
+
+    // --- Ligne TORTUE (Feu/Eau) — le mur (le twist : l'Eau ne la blesse pas) ---
+    braisecaille: {
+        id: "braisecaille", dexNo: 104, name: "Braisécaille", types: ["FEU", "EAU"],
+        baseStats: { hp: 58, atk: 52, def: 76, spe: 38, spc: 58 },
+        learnset: [
+            { level: 1, moveId: "charge" }, { level: 1, moveId: "flammeche" },
+            { level: 6, moveId: "pistolet_a_o" }, { level: 14, moveId: "flamme_ardente" },
+            { level: 22, moveId: "mur_de_fer" },
+        ],
+        evolution: { toId: "calderont", method: { kind: "LEVEL", level: 32 } },
+        catchRate: 110, baseExp: 66, rarity: "COMMON", growthRate: "medium_fast", role: "Feu/Eau — tortuelet",
+        description: "Petite tortue dont la carapace abrite des braises sous une mare interne.",
+        sprite: "/yellow/sprites/dex/braisecaille.png",
+    },
+    calderont: {
+        id: "calderont", dexNo: 105, name: "Caldéront", types: ["FEU", "EAU"],
+        baseStats: { hp: 100, atk: 80, def: 118, spe: 48, spc: 92 },
+        learnset: [
+            { level: 1, moveId: "pistolet_a_o" }, { level: 1, moveId: "flammeche" }, { level: 1, moveId: "mur_de_fer" },
+            { level: 30, moveId: "lame_eau" }, { level: 36, moveId: "lance_flammes" },
+        ],
+        catchRate: 45, baseExp: 205, rarity: "RARE", growthRate: "medium_fast", role: "Feu/Eau — tortue-volcan (mur)",
+        description: "Tortue dont la carapace est un volcan miniature crachant lave et vapeur.",
+        sprite: "/yellow/sprites/dex/calderont.png",
+    },
+
+    // --- Ligne VACHE (Feu/Combat) — casseur physique ---
+    brasicow: {
+        id: "brasicow", dexNo: 106, name: "Brasicow", types: ["FEU", "COMBAT"],
+        baseStats: { hp: 66, atk: 66, def: 54, spe: 46, spc: 44 },
+        learnset: [
+            { level: 1, moveId: "charge" }, { level: 1, moveId: "double_pied" },
+            { level: 7, moveId: "flammeche" }, { level: 15, moveId: "coup_d_boule" },
+            { level: 22, moveId: "poing_karate" },
+        ],
+        evolution: { toId: "tauricendre", method: { kind: "LEVEL", level: 30 } },
+        catchRate: 110, baseExp: 66, rarity: "COMMON", growthRate: "medium_fast", role: "Feu/Combat — veau de braise",
+        description: "Veau râblé qui rumine du charbon ardent ; charge tête baissée.",
+        sprite: "/yellow/sprites/dex/brasicow.png",
+    },
+    tauricendre: {
+        id: "tauricendre", dexNo: 107, name: "Tauricendre", types: ["FEU", "COMBAT"],
+        baseStats: { hp: 100, atk: 120, def: 84, spe: 66, spc: 62 },
+        learnset: [
+            { level: 1, moveId: "double_pied" }, { level: 1, moveId: "poing_karate" }, { level: 1, moveId: "flammeche" },
+            { level: 30, moveId: "flamme_ardente" }, { level: 36, moveId: "crochet_maitre" }, { level: 42, moveId: "belier" },
+        ],
+        catchRate: 45, baseExp: 205, rarity: "RARE", growthRate: "medium_fast", role: "Feu/Combat — taureau de cendre (casseur)",
+        description: "Taureau colossal aux cornes en fusion ; sa charge fait trembler le sol.",
+        sprite: "/yellow/sprites/dex/tauricendre.png",
+    },
+
+    // --- OURS (Feu) — polyvalent fiable, 1 stade ---
+    pyrozly: {
+        id: "pyrozly", dexNo: 108, name: "Pyrozly", types: ["FEU"],
+        baseStats: { hp: 96, atk: 100, def: 86, spe: 72, spc: 90 },
+        learnset: [
+            { level: 1, moveId: "charge" }, { level: 1, moveId: "flammeche" },
+            { level: 12, moveId: "flamme_ardente" }, { level: 24, moveId: "coup_d_boule" },
+            { level: 36, moveId: "lance_flammes" }, { level: 44, moveId: "belier" },
+        ],
+        catchRate: 60, baseExp: 196, rarity: "RARE", growthRate: "medium_fast", role: "Feu — ours grizzly ardent",
+        description: "Grizzly au pelage fumant ; hiberne dans les cratères encore tièdes.",
+        sprite: "/yellow/sprites/dex/pyrozly.png",
+    },
 }
 
 export function getSpecies(id: string): SpeciesData | null {
