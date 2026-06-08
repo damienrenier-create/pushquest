@@ -377,18 +377,44 @@ function buildArenaPlante(): TileType[][] {
     return m
 }
 
-// Grotte Roche : 30×31, calée sur grotte.png (720×744, tile 24px). Plus de tuiles
-// = perso plus petit vs décor (re-zoom). Collisions PLACEHOLDER (bords + mare) —
-// À AFFINER avec le relevé de Sartay (?grid). Entrée/sortie = trou noir haut-droite.
+// Grotte Roche : 30×31, calée sur grotte.png (720×744, tile 24px). Collisions
+// EXTRAITES du masque peint par Sartay (zones blanches = non-walkable). X = mur,
+// . = sol praticable. Porte/sortie = (25,5) (trou noir haut-droite).
+const GROTTE_MASK = [
+    "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "XXXXXXXXXXXXX..XX..X...XXXXXXX",
+    "XXXXXXXXXXXXX..XXX....XXXXXXXX",
+    "XXXXXXXXXXXXX..XX.........XXXX",
+    "XXXXXXXXXX.....XX..........XXX",
+    "XXXXXXXXXX.....XX..........XXX",
+    "XXXXXXXXXX.................XXX",
+    "XXXXXXX....................XXX",
+    "XXXXXXX........XXX..XX....XXXX",
+    "XXXXXXX........XXX..XX....XXXX",
+    "XXXXXXX........XXX..XX....XXXX",
+    "XXXXXXX.............XX....XXXX",
+    "XXXXXXX..............XXXXXXXXX",
+    "XXXXXXX...............XXXXXXXX",
+    "XXXXXX.................XXXXXXX",
+    "XXXX...................XXXXXXX",
+    "XXXXXXXXXXXXXXX........XXXXXXX",
+    "XXXXXXXXXXXXXXXX..........XXXX",
+    "XXXXXXXXXXXXXXXX...........XXX",
+    "XXXXXXXXXXXXXXXX...........XXX",
+    "XXXXXXXXXXXXX..............XXX",
+    "XXXXXXXX...................XXX",
+    "XXXXXXXX...................XXX",
+    "XXXXX......................XXX",
+    "XXXX.......................XXX",
+    "XXXX.....XXXXXXXXX.........XXX",
+    "XXXX.....XXXXXXXXX........XXXX",
+    "XXXX....XXXXXXXXXXXXXXXXXXXXXX",
+    "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+]
 function buildGrotte(): TileType[][] {
-    const W = 30, H = 31
-    const m: TileType[][] = Array.from({ length: H }, () => Array.from({ length: W }, () => "grass" as TileType))
-    const wall = (x: number, y: number) => { if (x >= 0 && x < W && y >= 0 && y < H) m[y][x] = "tree" }
-    for (let x = 0; x < W; x++) { wall(x, 0); wall(x, H - 1) }
-    for (let y = 0; y < H; y++) { wall(0, y); wall(W - 1, y) }
-    // Mare d'eau (approx haut-gauche) — bloquante (à recaler avec la grille).
-    for (let y = 3; y <= 8; y++) for (let x = 1; x <= 9; x++) m[y][x] = "water"
-    return m
+    return GROTTE_MASK.map((row) => [...row].map((ch) => (ch === "X" ? "tree" : "grass") as TileType))
 }
 
 // === ROUTE NORD = future zone Pokémon (placeholder grass/trees) ==========
