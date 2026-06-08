@@ -626,6 +626,8 @@ function applyDamage(state: BattleState, side: SideId, amount: number, events: B
 function applyHeal(state: BattleState, side: SideId, amount: number, events: BattleEvent[]) {
     if (amount <= 0) return
     const mon = active(state[side])
+    // Un Daemon K.O. ne peut JAMAIS être soigné/ressuscité (drain Vampigraine, etc.).
+    if (mon.currentHp <= 0) return
     const max = maxHpOf(mon)
     mon.currentHp = Math.min(max, mon.currentHp + amount)
     events.push({ kind: "hp", side, hp: mon.currentHp, max })

@@ -9,6 +9,7 @@ import { SPECIES, getSpecies } from "./species"
 import { typeEffectiveness } from "../battle/typeChart"
 import { POKE_TYPES, type PokeType, type MonInstance } from "../battle/types"
 import { createMonInstance } from "../battle/factory"
+import { speciesAtLevel } from "./ace"
 
 export const SBIRE_MAX_FIGHTS_PER_DAY = 2
 
@@ -47,7 +48,8 @@ export function buildSbireTeam(lead: MonInstance, fightIndex: number): MonInstan
     if (fightIndex <= 0) return [createMonInstance(lead.speciesId, level)]
     const sp = getSpecies(lead.speciesId)
     const counter = speciesOfType(counterTypeFor(sp?.types ?? ["NORMAL"]))
-    return [createMonInstance(counter, level)]
+    // Stade d'évolution cohérent avec le niveau (jamais de Braisille niv 20, etc.).
+    return [createMonInstance(speciesAtLevel(counter, level), level)]
 }
 
 // ============================================================
