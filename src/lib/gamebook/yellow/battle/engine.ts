@@ -34,7 +34,7 @@ export type BattleEvent =
     | { kind: "hp"; side: SideId; hp: number; max: number }
     | { kind: "faint"; side: SideId; name: string }
     | { kind: "status"; side: SideId; status: MajorStatus }
-    | { kind: "switchIn"; side: SideId; name: string }
+    | { kind: "switchIn"; side: SideId; name: string; teamIndex: number }
     | { kind: "ball"; action: "throw" | "shake" | "result"; shakes?: number; caught?: boolean }
     | { kind: "end"; outcome: Outcome }
 
@@ -661,7 +661,7 @@ function doSwitch(state: BattleState, side: SideId, teamIndex: number, events: B
     if (side === "player" && !state.participated.includes(incoming.uid)) {
         state.participated.push(incoming.uid)
     }
-    events.push({ kind: "switchIn", side, name: displayName(incoming) })
+    events.push({ kind: "switchIn", side, name: displayName(incoming), teamIndex })
     events.push({ kind: "message", text: side === "player" ? `En avant, ${displayName(incoming)} !` : `L'adversaire envoie ${displayName(incoming)} !` })
     events.push({ kind: "hp", side, hp: incoming.currentHp, max: maxHpOf(incoming) })
 }

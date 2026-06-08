@@ -35,6 +35,9 @@ export default function BattleScreen() {
     const [step, setStep] = useState(0)
     const [menu, setMenu] = useState<Menu>("root")
     const [disp, setDisp] = useState<DispHp | null>(null)
+    // Index du Daemon AFFICHÉ par côté pendant le playback (suit les switchIn) → on ne
+    // montre pas le Daemon suivant avant son annonce / on garde le bon sprite & barre.
+    const [dispIdx, setDispIdx] = useState<{ p: number; e: number } | null>(null)
     const [shakeP, setShakeP] = useState(0)
     const [shakeE, setShakeE] = useState(0)
     const [ball, setBall] = useState<{ phase: "throw" | "shake" | "result"; shakes: number; caught: boolean } | null>(null)
@@ -54,6 +57,7 @@ export default function BattleScreen() {
             const p = battle.player.team[battle.player.activeIndex]
             const e = battle.enemy.team[battle.enemy.activeIndex]
             setDisp({ p: p.currentHp, pMax: maxHpOf(p), e: e.currentHp, eMax: maxHpOf(e) })
+            setDispIdx({ p: battle.player.activeIndex, e: battle.enemy.activeIndex })
         }
     }, [battle, disp])
 
@@ -98,6 +102,15 @@ export default function BattleScreen() {
             delay = 460
         } else if (ev.kind === "faint") {
             delay = 340
+        } else if (ev.kind === "switchIn") {
+            // Le Daemon entrant devient l'affiché (sprite + barre) — pas avant.
+            const m = battle[ev.side].team[ev.teamIndex]
+            setDispIdx((d) => (d ? (ev.side === "player" ? { ...d, p: ev.teamIndex } : { ...d, e: ev.teamIndex }) : d))
+            setDisp((d) => {
+                if (!d) return d
+                if (ev.side === "player") return { ...d, p: m.currentHp, pMax: maxHpOf(m) }
+                return { ...d, e: m.currentHp, eMax: maxHpOf(m) }
+            })
         }
         const t = setTimeout(() => setStep((s) => s + 1), delay)
         return () => clearTimeout(t)
@@ -119,8 +132,12 @@ export default function BattleScreen() {
     const waitingForTap = !playbackDone && events[step]?.kind === "message"
     const shownMsg = lastMessageAt(events, step)
 
-    const player = battle.player.team[battle.player.activeIndex]
-    const enemy = battle.enemy.team[battle.enemy.activeIndex]
+    // Pendant le playback : on affiche le Daemon suivi par dispIdx (suit les switchIn),
+    // pas l'index final → le Daemon suivant n'apparaît qu'à son annonce.
+    const pIdx = playbackDone ? battle.player.activeIndex : (dispIdx?.p ?? battle.player.activeIndex)
+    const eIdx = playbackDone ? battle.enemy.activeIndex : (dispIdx?.e ?? battle.enemy.activeIndex)
+    const player = battle.player.team[pIdx]
+    const enemy = battle.enemy.team[eIdx]
 
     const isEnded = battle.phase === "ended"
     const needSwitch = battle.forcedSwitch === "player"
