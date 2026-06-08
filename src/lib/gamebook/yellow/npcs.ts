@@ -162,6 +162,32 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         dialoguesAfter: ["*Le Registre des Dresseurs du Nexus.*"], // repli si non intercepté
     },
 
+    // === Intérieur LABO SCIENTIFIQUE (étage de l'infirmerie) ===
+    {
+        // Terminal d'expériences : ouvre le menu de défis (intercepté gameStore). (3,3) → (3,4) ↑.
+        id: "y_lab_computer",
+        name: "TERMINAL",
+        mapId: "yellow_infirmary_2e",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "", color: "#3a8ee0" }, // invisible (l'ordi est dessiné dans le décor)
+        initialX: 3,
+        initialY: 3,
+        dialoguesAfter: ["*Le terminal d'expériences scientifiques.*"], // repli si non intercepté
+    },
+    {
+        // Scientifique : remet la récompense d'un défi réussi (intercepté gameStore). (5,3) → (5,4) ↑.
+        id: "y_lab_scientist",
+        name: "SCIENTIFIQUE",
+        mapId: "yellow_infirmary_2e",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "", color: "#e0f0ff" }, // invisible (le scientifique est dessiné dans le décor)
+        initialX: 5,
+        initialY: 3,
+        dialoguesAfter: ["*Le scientifique t'observe par-dessus ses lunettes.*", "Reviens quand tu auras accompli ton défi."],
+    },
+
     // === Intérieur ANTRE DU SBIRE (combat dynamique 2×/jour) ===
     // Interception spéciale dans gameStore.pressA (équipe miroir/faiblesse selon
     // le nb de victoires du jour). dialoguesAfter = repli si jamais non intercepté.

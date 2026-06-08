@@ -347,6 +347,25 @@ function buildInfirmaryInterior(): TileType[][] {
     for (const [x, y] of blocked) m[y][x] = "shopCounter"
     // Porte de sortie au sud-centre (sous le spawn d'entrée 7,7)
     m[8][7] = "doorMat"
+    // Escalier vers le LABO (étage) : case (2,6), à droite du meuble escalator.
+    m[6][2] = "doorMat"
+    return m
+}
+
+// LABO SCIENTIFIQUE (étage de l'infirmerie) : grille 14×10 calée sur lab_interior.png.
+// Walkability relevée avec Sartay. (2,6)=arrivée depuis l'infi ; (1,6)=escalator
+// descendant ; ordi en (3,3) [parlé depuis (3,4)] ; scientifique en (5,3) [depuis (5,4)].
+function buildLabInterior(): TileType[][] {
+    const W = 14, H = 10
+    const m: TileType[][] = Array.from({ length: H }, () => Array.from({ length: W }, () => "shopCounter" as TileType))
+    const open = (y: number, x0: number, x1: number) => { for (let x = x0; x <= x1; x++) m[y][x] = "floorTile" }
+    open(4, 0, 10)
+    open(5, 2, 10)
+    open(6, 2, 6)
+    open(7, 1, 4)
+    open(8, 0, 4)
+    open(9, 1, 4)
+    m[6][1] = "doorMat" // escalator → descend à l'infirmerie
     return m
 }
 
@@ -754,11 +773,28 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         tiles: buildInfirmaryInterior(),
         width: 14,
         height: 9,
-        exits: [returnExit("yellow_infirmary", 7, 8)],
+        exits: [
+            returnExit("yellow_infirmary", 7, 8),
+            // Escalier (2,6) → monte au LABO (étage), arrivée labo (2,6).
+            { x: 2, y: 6, targetMapId: "yellow_infirmary_2e", targetSpawnX: 2, targetSpawnY: 6 },
+        ],
         backgroundImage: "/yellow/sprites/centre_interior.png",
         backgroundImageWidth: 242,
         backgroundImageHeight: 155,
         backgroundImageTileSize: 242 / 14,
+    },
+    yellow_infirmary_2e: {
+        id: "yellow_infirmary_2e",
+        name: "LABO SCIENTIFIQUE",
+        tiles: buildLabInterior(),
+        width: 14,
+        height: 10,
+        // Escalator (1,6) → redescend à l'infirmerie (arrivée 3,6, à côté de l'escalier).
+        exits: [{ x: 1, y: 6, targetMapId: "yellow_infirmary", targetSpawnX: 3, targetSpawnY: 6 }],
+        backgroundImage: "/yellow/sprites/lab_interior.png",
+        backgroundImageWidth: 672,
+        backgroundImageHeight: 480,
+        backgroundImageTileSize: 48,
     },
     yellow_arena: {
         id: "yellow_arena",
