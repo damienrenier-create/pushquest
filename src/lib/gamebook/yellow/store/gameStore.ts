@@ -20,7 +20,7 @@ import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle } from "./battleStore"
 import { getPlayer as getPlayerSave, healAllTeam, isTrainerDefeated, getAceTeam, aceAvailableToday } from "./playerStore"
 import { persistYellowSave } from "./saveManager"
-import { rollWildEncounter } from "../data/encounters"
+import { rollWildEncounter, wildLevelCap } from "../data/encounters"
 import { getTrainer } from "../data/trainers"
 import { createMonInstance } from "../battle/factory"
 import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroLines, SBIRE_DONE_LINES, SBIRE_NO_TEAM_LINES } from "../data/sbire"
@@ -208,6 +208,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 const wild = rollWildEncounter({
                     mapId: next.mapId, x: next.posX, y: next.posY, leadLevel: lead.level,
                     player: getPlayerSave().wildCtx ?? undefined,
+                    levelCap: wildLevelCap(getPlayerSave().badges), // bridage par badges (Route Nord + Grotte)
                 })
                 if (wild) {
                     const seed = Math.floor(Math.random() * 1e9) >>> 0

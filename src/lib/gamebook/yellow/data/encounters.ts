@@ -41,6 +41,20 @@ export interface EncounterCtx {
     leadLevel: number          // niveau du 1er Daemon de l'équipe
     rng?: () => number         // [0,1) — défaut Math.random
     player?: WildPlayerCtx
+    levelCap?: number          // plafond de niveau (bridé par les badges, cf. wildLevelCap)
+}
+
+/**
+ * Plafond de niveau des Daemons sauvages selon la progression (badges) :
+ * - avant l'arène Plante : N≤12
+ * - Plante battue, avant l'arène Roche : N≤17
+ * - Roche battue : N≤30 (placeholder, à étendre avec les arènes suivantes)
+ * S'applique à la Route Nord ET à la Grotte.
+ */
+export function wildLevelCap(badges: readonly string[]): number {
+    if (!badges.includes("plante")) return 12
+    if (!badges.includes("roche")) return 17
+    return 30
 }
 
 const ZONES: Record<string, Zone> = {
@@ -137,6 +151,7 @@ export function rollWildEncounter(ctx: EncounterCtx): MonInstance | null {
 
     let level = ctx.leadLevel + intIn(rng, -2, 1)
     if (entry.rare) level += intIn(rng, 1, 2)
+    if (ctx.levelCap != null) level = Math.min(level, ctx.levelCap) // bridage par badges
     level = Math.max(2, Math.min(100, level))
 
     // IV "génétiques" pilotés par l'effort du jour (proximité du quota → meilleur plancher).
