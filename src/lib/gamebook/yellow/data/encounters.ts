@@ -8,6 +8,7 @@ import { createMonInstance } from "../battle/factory"
 import type { MonInstance } from "../battle/types"
 import { biomeDistance, affinityMult, repulsionMult, type Biome } from "./biomes"
 import { rollIvs } from "./ivConfig"
+import { speciesAtLevel } from "./ace"
 
 // Rareté de base (poids avant modulation).
 const COMMON = 100, UNCOMMON = 45, RARE = 14, VERY_RARE = 5
@@ -160,7 +161,9 @@ export function rollWildEncounter(ctx: EncounterCtx): MonInstance | null {
     const overshoot = ctx.player ? ctx.player.overshoot : 0
     const ivsByStat = rollIvs(rng, quotaRatio, overshoot)
 
-    return createMonInstance(entry.speciesId, level, { ivsByStat })
+    // Stade d'évolution cohérent avec le niveau tiré : jamais de stade impossible
+    // à l'état sauvage (ex. Mottoche N13 → Quadroc). On évolue l'espèce de base.
+    return createMonInstance(speciesAtLevel(entry.speciesId, level), level, { ivsByStat })
 }
 
 /** Exposé pour les tests/outils : poids de chaque espèce à une position. */
