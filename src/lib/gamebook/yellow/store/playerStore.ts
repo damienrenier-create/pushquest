@@ -63,6 +63,8 @@ interface PlayerState {
     acePeakLevel: number
     /** Mémoire de niveau des espèces-contre (slot 6 adaptatif). */
     aceBox: Record<string, number>
+    /** Taille d'équipe d'ACE (cliquet de la taille du joueur, min 3 = les 3 panthères, ne redescend jamais). */
+    aceTeamSizePeak: number
     /** Nombre de fois où le joueur a battu ACE (récompenses). */
     aceWins: number
     /** Jour (= creditedThrough) où ACE a été battu → 1 défaite/jour. */
@@ -87,7 +89,7 @@ export function emptyPvpStats(): PvpStats {
     return { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }
 }
 
-let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceWins: 0, aceDefeatedDate: "", ownedCts: [] }
+let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [] }
 const listeners = new Set<() => void>()
 
 function emit() { for (const l of listeners) l() }
@@ -112,6 +114,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         pvpStats: p.pvpStats ?? st.pvpStats ?? emptyPvpStats(),
         acePeakLevel: p.acePeakLevel ?? st.acePeakLevel ?? 0,
         aceBox: p.aceBox ?? st.aceBox ?? {},
+        aceTeamSizePeak: p.aceTeamSizePeak ?? st.aceTeamSizePeak ?? 3,
         aceWins: p.aceWins ?? st.aceWins ?? 0,
         aceDefeatedDate: p.aceDefeatedDate ?? st.aceDefeatedDate ?? "",
         ownedCts: p.ownedCts ?? st.ownedCts ?? [],
@@ -128,7 +131,7 @@ export function markIntroSeen() {
 
 /** DEV : remet la progression jaune à zéro pour rejouer l'intro (équipe vidée, introSeen=false). */
 export function resetForIntro() {
-    st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceWins: 0, aceDefeatedDate: "", ownedCts: [] }
+    st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [] }
     emit()
 }
 
@@ -310,6 +313,13 @@ export function favoriteMove(): string | null { return topKey(st.pvpStats.moveUs
 /** Pic de niveau mémorisé + box des contres (pour construire son équipe au combat). */
 export function getAceState(): { peak: number; box: Record<string, number> } {
     return { peak: st.acePeakLevel, box: st.aceBox }
+}
+/** Taille d'équipe d'ACE : max(pic, taille du joueur), plancher 3 (les 3 panthères), cliquet → ne redescend jamais. */
+export function aceTeamSizeFor(playerTeamSize: number): number {
+    const want = Math.max(1, Math.min(6, Math.floor(playerTeamSize)))
+    const size = Math.max(st.aceTeamSizePeak, 3, want)
+    if (size !== st.aceTeamSizePeak) { st = { ...st, aceTeamSizePeak: size }; emit() }
+    return size
 }
 /** Nombre de défaites d'ACE infligées par ce joueur. */
 export function aceWinsCount(): number { return st.aceWins }

@@ -42,6 +42,8 @@ export interface YellowSave {
     /** ACE (rival) : pic de niveau (ratchet) + box des contres + défaites + jour. */
     acePeakLevel: number
     aceBox: Record<string, number>
+    /** Taille d'équipe d'ACE = pic (cliquet) de la taille d'équipe du joueur, ne redescend jamais. */
+    aceTeamSizePeak: number
     aceWins: number
     aceDefeatedDate: string
     /** CT cadeaux possédées (trophées de boss). */
@@ -51,7 +53,7 @@ export interface YellowSave {
 export const SAVE_VERSION = 1
 
 export function emptySave(): YellowSave {
-    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, acePeakLevel: 0, aceBox: {}, aceWins: 0, aceDefeatedDate: "", ownedCts: [] }
+    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [] }
 }
 
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -163,6 +165,7 @@ export function parseSave(raw: unknown): YellowSave {
         pvpStats: parsePvpStats(o.pvpStats),
         acePeakLevel: typeof o.acePeakLevel === "number" ? Math.max(0, Math.floor(o.acePeakLevel)) : 0,
         aceBox: numRec(o.aceBox),
+        aceTeamSizePeak: typeof o.aceTeamSizePeak === "number" ? Math.max(3, Math.min(6, Math.floor(o.aceTeamSizePeak))) : 3,
         aceWins: typeof o.aceWins === "number" ? Math.max(0, Math.floor(o.aceWins)) : 0,
         aceDefeatedDate: typeof o.aceDefeatedDate === "string" ? o.aceDefeatedDate : "",
         ownedCts: strArr(o.ownedCts),

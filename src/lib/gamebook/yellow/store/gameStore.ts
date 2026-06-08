@@ -18,7 +18,7 @@ import type { YellowMapData } from "../maps"
 import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle } from "./battleStore"
-import { getPlayer as getPlayerSave, healAllTeam, isTrainerDefeated, getAceState, aceAvailableToday } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, isTrainerDefeated, getAceState, aceTeamSizeFor, aceAvailableToday } from "./playerStore"
 import { getSpecies } from "../data/species"
 import { persistYellowSave } from "./saveManager"
 import { rollWildEncounter, wildLevelCap } from "../data/encounters"
@@ -136,8 +136,10 @@ function tryLaunchAce(): ActiveDialogue | null {
     const lastTypes = getSpecies(last.speciesId)?.types ?? []
     const { peak, box } = getAceState()
     const built = buildAceTeam({ acePeak: peak, playerBestLevel: best, playerLastTypes: lastTypes, playerLastLevel: last.level, box })
+    // Taille d'équipe d'ACE = celle du joueur (min 3 = les 3 panthères), avec cliquet.
+    const aceSize = aceTeamSizeFor(team.length)
     // ACE = élite (boss ultime) : ses Daemons sont entraînés comme un joueur assidu.
-    const enemyTeam = built.team.map((m) => createMonInstance(m.speciesId, m.level, { ...trainerBoost(m.speciesId, m.level, "elite") }))
+    const enemyTeam = built.team.slice(0, aceSize).map((m) => createMonInstance(m.speciesId, m.level, { ...trainerBoost(m.speciesId, m.level, "elite") }))
     const seed = Math.floor(Math.random() * 1e9) >>> 0
     startTrainerBattle(team, enemyTeam, seed, {
         trainerId: ACE_TRAINER_ID, reward: 0, aiLevel: "ace",
