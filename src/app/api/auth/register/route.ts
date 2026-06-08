@@ -8,7 +8,12 @@ export async function POST(req: Request) {
     console.log("[DB_URL_SCHEME]", (process.env.DATABASE_URL || "").split(":")[0]);
     console.log("[DIRECT_URL_SCHEME]", (process.env.DIRECT_URL || "").split(":")[0]);
     try {
-        const { email, code, nickname, promoCode } = await req.json()
+        const { email, code, nickname, promoCode, invite } = await req.json()
+
+        // Compte INVITÉ/AMI : créé via le lien /register?invite=<code>. Joue au
+        // Chapitre 2 mais reste hors-concours (cf. isGuest). Code partagé par Sartay.
+        const GUEST_INVITE_CODE = process.env.GUEST_INVITE_CODE || "nexus-ami-2026"
+        const isGuest = typeof invite === "string" && invite === GUEST_INVITE_CODE
 
         if (!email || !code || !nickname) {
             return NextResponse.json(
@@ -55,7 +60,8 @@ export async function POST(req: Request) {
                 email,
                 password: code, // On stocke en clair car c'est un "code" volontairement faible par design
                 nickname,
-                onboardingStartedAt
+                onboardingStartedAt,
+                isGuest,
             },
             select: {
                 id: true,

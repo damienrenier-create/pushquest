@@ -623,7 +623,7 @@ async function settlePreviousMonth(summaries: any[], todayISO: string) {
 
 export async function updateBadgesPostSave(userId: string, precomputedSummaries?: any[]) {
     const [allUsers, events, allOwnerships] = await Promise.all([
-        (prisma as any).user.findMany({ where: { nickname: { not: 'modo' }, isSystem: false }, include: { sets: true, fines: true, badges: true, sallyUps: true } }),
+        (prisma as any).user.findMany({ where: { nickname: { not: 'modo' }, isSystem: false, isGuest: false }, include: { sets: true, fines: true, badges: true, sallyUps: true } }),
         (prisma as any).badgeEvent.findMany({ 
             where: { 
                 eventType: { in: ["STEAL", "TORCH_CLAIM"] } 

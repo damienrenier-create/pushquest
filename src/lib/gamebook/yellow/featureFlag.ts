@@ -19,11 +19,11 @@ export async function isNexusYellowEnabled(userId: string | null | undefined): P
         }),
         (prisma as any).user.findUnique({
             where: { id: userId },
-            select: { isSystem: true },
+            select: { isSystem: true, isGuest: true },
         }),
     ])
-    // Daemon éveillé (Chapitre 1 terminé) OU créateur.
-    return !!daemon?.unlockedAt || user?.isSystem === true
+    // Daemon éveillé (Chapitre 1 terminé) OU créateur OU compte INVITÉ (accès direct au Ch.2).
+    return !!daemon?.unlockedAt || user?.isSystem === true || user?.isGuest === true
 }
 
 export const YELLOW_CHAPTER_ID = "yellow"

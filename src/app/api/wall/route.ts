@@ -10,7 +10,7 @@ export async function GET() {
         const messages = await (prisma as any).wallMessage.findMany({
             // Exclut les comptes système / testeur du mur public.
             where: {
-                user: { isSystem: false }
+                user: { isSystem: false, isGuest: false }
             },
             orderBy: {
                 createdAt: 'desc',

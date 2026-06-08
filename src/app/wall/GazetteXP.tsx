@@ -110,7 +110,7 @@ export default async function GazetteXP() {
         where: {
             nickname: { not: 'modo' },
             league: league,
-            isSystem: false
+            isSystem: false, isGuest: false
         },
         select: { id: true, nickname: true, sets: true, createdAt: true, xpAdjustments: true }
     });

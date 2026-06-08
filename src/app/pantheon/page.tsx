@@ -27,7 +27,7 @@ export default async function PantheonPage() {
         (prisma as any).user.findMany({
             where: {
                 nickname: { not: 'modo' },
-                isSystem: false
+                isSystem: false, isGuest: false
             },
             include: {
                 sets: true,

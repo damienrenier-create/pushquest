@@ -30,7 +30,7 @@ export default async function LeaderboardPage({
             where: {
                 nickname: { not: 'modo' },
                 league: league,
-                isSystem: false
+                isSystem: false, isGuest: false
             },
             include: { sets: true, xpAdjustments: true } // FORCE TO GET NICKNAME
         });
@@ -64,7 +64,7 @@ export default async function LeaderboardPage({
             where: {
                 nickname: { not: 'modo' },
                 league: league,
-                isSystem: false
+                isSystem: false, isGuest: false
             },
             select: {
                 id: true,

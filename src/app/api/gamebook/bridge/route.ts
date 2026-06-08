@@ -293,7 +293,7 @@ async function challengePnj(userId: string, pnjId: string) {
 
         // -- Hier (exclut isSystem)
         const allYesterday = await prisma.exerciseSet.findMany({
-            where: { date: yesterday, user: { isSystem: false } },
+            where: { date: yesterday, user: { isSystem: false, isGuest: false } },
         })
         const sumsYesterday: Record<string, number> = {}
         for (const s of allYesterday) {
@@ -306,7 +306,7 @@ async function challengePnj(userId: string, pnjId: string) {
 
         // -- Aujourd'hui (exclut isSystem)
         const allToday = await prisma.exerciseSet.findMany({
-            where: { date: today, user: { isSystem: false } },
+            where: { date: today, user: { isSystem: false, isGuest: false } },
         })
         const sumsToday: Record<string, number> = {}
         for (const s of allToday) {

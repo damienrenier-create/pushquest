@@ -28,7 +28,7 @@ export async function GET(
 
         // 1. Get all users for context (competitive badges, although progress is for milestones)
         const allUsers = await prisma.user.findMany({
-            where: { isSystem: false },
+            where: { isSystem: false, isGuest: false },
             include: { sets: true, fines: true, sallyUps: true }
         })
 

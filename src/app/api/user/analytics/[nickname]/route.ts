@@ -32,7 +32,7 @@ export async function GET(
 
         // 1. Get XP Breakdown using the existing logic (snapshot today)
         const allUsers = await prisma.user.findMany({
-            where: { isSystem: false },
+            where: { isSystem: false, isGuest: false },
             include: {
                 sets: true,
                 xpAdjustments: true

@@ -32,7 +32,7 @@ export async function getUserLevelForGamebook(userId: string): Promise<number> {
             where: {
                 nickname: { not: "modo" },
                 league,
-                isSystem: false,
+                isSystem: false, isGuest: false,
             },
             select: {
                 id: true,

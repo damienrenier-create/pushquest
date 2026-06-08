@@ -22,7 +22,7 @@ export async function GET(req: Request) {
             where: {
                 nickname: { not: 'modo' },
                 league: league,
-                isSystem: false
+                isSystem: false, isGuest: false
             },
             select: {
                 id: true,

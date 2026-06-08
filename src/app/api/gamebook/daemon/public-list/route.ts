@@ -25,7 +25,7 @@ export async function GET() {
         where: {
             slotIndex: 1,
             recovered: true,
-            user: { isSystem: false, isTester: false },
+            user: { isSystem: false, isGuest: false, isTester: false },
         },
         select: {
             id: true,

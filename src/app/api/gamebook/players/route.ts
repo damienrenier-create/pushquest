@@ -43,7 +43,7 @@ export async function GET() {
             chapterId: CHAPTER_ID,
             userId: { not: currentUserId },
             user: {
-                isSystem: false,
+                isSystem: false, isGuest: false,
                 nickname: { not: "modo" },
             },
         },
@@ -68,7 +68,7 @@ export async function GET() {
     if (!cacheHit) {
         const allActiveUsers = await (prisma.user as any).findMany({
             where: {
-                isSystem: false,
+                isSystem: false, isGuest: false,
                 nickname: { not: "modo" },
             },
             include: {

@@ -6,6 +6,7 @@
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { redirect } from "next/navigation"
+import prisma from "@/lib/prisma"
 import GamebookClient from "./GamebookClient"
 
 export const dynamic = "force-dynamic"
@@ -18,6 +19,12 @@ export default async function GamebookPage() {
     }
 
     const user = session.user as { id: string; name?: string }
+
+    // Compte INVITÉ : ne joue jamais le Chapitre 1 → entrée directe dans le Chapitre 2.
+    const acc = await (prisma as any).user.findUnique({ where: { id: user.id }, select: { isGuest: true } })
+    if (acc?.isGuest) {
+        redirect("/gamebook/yellow")
+    }
 
     return (
         <main className="min-h-screen">

@@ -33,17 +33,23 @@ export async function getSaiyanWindow(userId: string, since: string): Promise<Sa
         (prisma as any).user.findUnique({ where: { id: userId } }),
         (prisma as any).exerciseSet.findMany({ where: { userId, date: { gte: since, lte: yesterday } } }),
     ])
-    const hadFine = !!fine
-    if (!user) return { hadFine, quotaEveryDay: false }
+    if (!user) return { hadFine: !!fine, quotaEveryDay: false }
 
     const repsByDate: Record<string, number> = {}
     for (const s of sets as { date: string; reps: number }[]) repsByDate[s.date] = (repsByDate[s.date] ?? 0) + s.reps
 
     let quotaEveryDay = true
+    let missedQuota = false
     for (const d of dates) {
         const target = getDailyTargetForUserOnDate(user, d)
-        if ((repsByDate[d] ?? 0) <= target) { quotaEveryDay = false; break } // "dépassé" = strictement >
+        const reps = repsByDate[d] ?? 0
+        if (reps <= target) quotaEveryDay = false // "dépassé" = strictement >
+        if (reps < target) missedQuota = true      // quota RATÉ ce jour-là
     }
+    // INVITÉ (hors-concours, jamais amendé financièrement) : la pénalité Saiyan (0 point)
+    // vient du quota RATÉ, pas du FineRecord → même exigence que tout le monde (faut faire
+    // ses reps). Joueurs normaux : inchangés (FineRecord + ses exemptions).
+    const hadFine = user.isGuest ? missedQuota : !!fine
     return { hadFine, quotaEveryDay }
 }
 

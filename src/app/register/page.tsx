@@ -9,6 +9,8 @@ function RegisterForm() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const promoCode = searchParams.get("promoCode") || ""
+    // Lien d'invitation /register?invite=<code> → crée un compte INVITÉ (hors-concours).
+    const invite = searchParams.get("invite") || ""
 
     const [formData, setFormData] = useState({
         nickname: "",
@@ -30,7 +32,8 @@ function RegisterForm() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     ...formData,
-                    promoCode
+                    promoCode,
+                    invite,
                 }),
             })
 
@@ -69,6 +72,11 @@ function RegisterForm() {
                             Rejoindre l'équipe
                         </h1>
                         <p className="text-gray-500">Créez votre compte pour commencer</p>
+                        {invite && (
+                            <p className="mt-3 inline-block bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-3 py-1 text-xs font-semibold">
+                                🎟️ Compte invité — accès à Nexus Jaune Éclair (hors-concours)
+                            </p>
+                        )}
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-5">

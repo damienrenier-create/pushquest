@@ -16,6 +16,7 @@ export function getEffortValue(set: { exercise: string; reps: number }): number 
 export async function checkAndClaimTorch(userId: string, date: string): Promise<boolean> {
     const user = await (prisma as any).user.findUnique({ where: { id: userId } });
     if (!user) return false;
+    if (user.isGuest) return false; // Compte invité : hors-concours, ne prend pas le flambeau.
 
     const req = getDailyTargetForUserOnDate(user, date);
     if (req <= 0) return false;

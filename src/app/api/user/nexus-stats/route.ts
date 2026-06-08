@@ -17,7 +17,7 @@ export async function GET() {
     const allUsers = await prisma.user.findMany({
       where: {
         nickname: { not: 'modo' },
-        isSystem: false
+        isSystem: false, isGuest: false
       },
       select: {
         id: true,
