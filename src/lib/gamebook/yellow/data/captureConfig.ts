@@ -6,8 +6,9 @@
 
 import type { MajorStatus } from "../battle/types"
 
-/** A = hpFactor × catchRate × ball × statut × rareté × extra ; proba = min(1, A / CALIBRATION). */
-export const CAPTURE_CALIBRATION = 255
+/** A = hpFactor × catchRate × ball × statut × rareté × extra ; proba = min(1, A / CALIBRATION).
+ *  Baissé 255 → 170 : capture sensiblement plus facile (surtout sur cible affaiblie). */
+export const CAPTURE_CALIBRATION = 170
 
 /** Bonus si le joueur a atteint son quota PushQuest du jour (capture facilitée). */
 export const QUOTA_CAPTURE_BONUS = 1.3

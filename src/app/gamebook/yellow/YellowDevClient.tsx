@@ -509,23 +509,37 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                         <div style={{ ...menuTitleStyle, display: "flex", justifyContent: "space-between" }}>
                             <span>BOUTIQUE</span><span>💪 {player.reps}/{player.repsCap} reps</span>
                         </div>
-                        {Object.values(ITEMS).filter((it) => it.price > 0).map((it) => {
-                            const owned = player.items[it.id] ?? 0
-                            const afford = player.reps >= it.price
-                            return (
-                                <button
-                                    key={it.id}
-                                    style={afford ? menuBtnStyle : menuBtnDimStyle}
-                                    disabled={!afford}
-                                    onClick={() => { if (spendReps(it.price)) addItem(it.id, 1) }}
-                                >
-                                    <span style={{ display: "flex", justifyContent: "space-between" }}>
-                                        <span>{it.name}{owned > 0 ? ` (×${owned})` : ""}</span>
-                                        <span>{it.price} reps</span>
-                                    </span>
-                                </button>
-                            )
-                        })}
+                        {(() => {
+                            const groups: [string, string][] = [["BALL", "🔴 Balls"], ["HEAL", "❤️ Soins"], ["STATUS_HEAL", "💊 Statuts"], ["BOOST", "⬆️ Boosts (combat)"]]
+                            const sellable = Object.values(ITEMS).filter((it) => it.price > 0)
+                            return groups.map(([cat, label]) => {
+                                const list = sellable.filter((it) => it.category === cat)
+                                if (!list.length) return null
+                                return (
+                                    <div key={cat}>
+                                        <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.7, margin: "6px 0 2px" }}>{label}</div>
+                                        {list.map((it) => {
+                                            const owned = player.items[it.id] ?? 0
+                                            const afford = player.reps >= it.price
+                                            return (
+                                                <button
+                                                    key={it.id}
+                                                    style={afford ? menuBtnStyle : menuBtnDimStyle}
+                                                    disabled={!afford}
+                                                    onClick={() => { if (spendReps(it.price)) addItem(it.id, 1) }}
+                                                >
+                                                    <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                                        <span>{it.name}{owned > 0 ? ` (×${owned})` : ""}</span>
+                                                        <span>{it.price} reps</span>
+                                                    </span>
+                                                    <span style={{ display: "block", fontSize: 10, opacity: 0.6, fontWeight: 400 }}>{it.description}</span>
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                )
+                            })
+                        })()}
                         {/* Super Pasta : +1 niveau, prix dynamique (monte à chaque achat du jour). */}
                         {(() => {
                             const price = superPastaPrice()
