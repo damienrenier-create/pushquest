@@ -806,6 +806,16 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                             <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 6 }}>
                                 XP cumulée : {live.exp.toLocaleString("fr-FR")} · niveau suivant dans ~{Math.max(0, toNext).toLocaleString("fr-FR")} XP
                             </div>
+                            {(live.capturedLevel != null || live.capturedAt) && (
+                                <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 6 }}>
+                                    🎣 Capturé{live.capturedLevel != null ? ` au N.${live.capturedLevel}` : ""}{live.capturedAt ? ` le ${live.capturedAt}` : ""}
+                                </div>
+                            )}
+                            {live.bestDmgMove && (
+                                <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 6 }}>
+                                    💥 Plus gros coup : {live.bestDmgMove} ({live.bestDmg} dégâts)
+                                </div>
+                            )}
                             {evoLvl != null && sp?.evolution && (
                                 <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 6 }}>⤴️ Évolue en {getSpecies(sp.evolution.toId)?.name ?? "?"} au niveau {evoLvl}</div>
                             )}

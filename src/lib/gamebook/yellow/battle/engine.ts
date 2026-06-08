@@ -458,6 +458,8 @@ function dealMoveDamage(state: BattleState, side: SideId, move: MoveData, rng: R
     })
 
     applyDamage(state, other(side), result.damage, events)
+    // Mémorise la plus grosse frappe de l'attaquant (flavor affiché dans la fiche).
+    if (result.damage > (attacker.bestDmg ?? 0)) { attacker.bestDmg = result.damage; attacker.bestDmgMove = move.name }
     if (isCrit) events.push({ kind: "message", text: "Coup critique !" })
     const effMsg = effectivenessMessage(eff)
     if (effMsg) events.push({ kind: "message", text: effMsg })

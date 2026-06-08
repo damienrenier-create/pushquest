@@ -181,7 +181,8 @@ export function setTeam(team: MonInstance[]) {
 
 /** Ajoute un Daemon capturé (équipe si place, sinon PC). */
 export function addCaught(mon: MonInstance): "team" | "pc" {
-    const owned = { ...mon, owned: true }
+    const today = new Date().toISOString().slice(0, 10)
+    const owned = { ...mon, owned: true, capturedLevel: mon.level, capturedAt: today }
     if (st.team.length < TEAM_MAX) {
         st = { ...st, team: [...st.team, owned] }
         emit()

@@ -132,6 +132,13 @@ export interface MonInstance {
     pendingSaiyanLevels?: number
     /** SAIYAN — date (YYYY-MM-DD) du dernier passage de niveau converti (début de fenêtre). */
     lastLevelUpAt?: string
+    /** Niveau auquel ce Daemon a été capturé (flavor, affiché dans la fiche). */
+    capturedLevel?: number
+    /** Date de capture (YYYY-MM-DD). */
+    capturedAt?: string
+    /** Plus gros dégât infligé par ce Daemon jusqu'ici + l'attaque correspondante. */
+    bestDmg?: number
+    bestDmgMove?: string
 }
 
 export interface BattleMon extends MonInstance {

@@ -96,6 +96,10 @@ function parseMon(raw: unknown): MonInstance | null {
         ev: parseAllocated(o.ev),
         pendingSaiyanLevels: typeof o.pendingSaiyanLevels === "number" ? Math.max(0, Math.floor(o.pendingSaiyanLevels)) : undefined,
         lastLevelUpAt: typeof o.lastLevelUpAt === "string" ? o.lastLevelUpAt : undefined,
+        capturedLevel: typeof o.capturedLevel === "number" ? Math.floor(o.capturedLevel) : undefined,
+        capturedAt: typeof o.capturedAt === "string" ? o.capturedAt : undefined,
+        bestDmg: typeof o.bestDmg === "number" ? Math.max(0, Math.floor(o.bestDmg)) : undefined,
+        bestDmgMove: typeof o.bestDmgMove === "string" ? o.bestDmgMove : undefined,
     }
 }
 
@@ -184,5 +188,9 @@ export function toMonInstance(m: MonInstance & { stages?: unknown; volatiles?: u
         ev: m.ev && Object.keys(m.ev).length ? { ...m.ev } : undefined,
         pendingSaiyanLevels: m.pendingSaiyanLevels && m.pendingSaiyanLevels > 0 ? m.pendingSaiyanLevels : undefined,
         lastLevelUpAt: m.lastLevelUpAt,
+        capturedLevel: m.capturedLevel,
+        capturedAt: m.capturedAt,
+        bestDmg: m.bestDmg && m.bestDmg > 0 ? m.bestDmg : undefined,
+        bestDmgMove: m.bestDmgMove,
     }
 }
