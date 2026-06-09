@@ -29,6 +29,8 @@ const VALID_TYPES = new Set([
     "player:move", "player:hello", "player:disconnect",
     "challenge:send", "challenge:cancel", "challenge:respond",
     "battle:action", "battle:state", "battle:forfeit", "battle:hello",
+    "chat:say",
+    "trade:offer", "trade:cancel", "trade:respond", "trade:confirm",
 ])
 
 /** Un canal yellow valide : présence du casino OU un combat privé. */
@@ -54,7 +56,7 @@ export async function POST(req: NextRequest) {
     if (!VALID_TYPES.has(type)) return NextResponse.json({ error: "Invalid type" }, { status: 400 })
     if (!isValidChannel(channel)) return NextResponse.json({ error: "Invalid channel" }, { status: 400 })
 
-    const throttled = type === "player:move"
+    const throttled = type === "player:move" || type === "chat:say" // anti-flood
     if (throttled) {
         const now = Date.now()
         const last = lastByUser.get(userId) ?? 0

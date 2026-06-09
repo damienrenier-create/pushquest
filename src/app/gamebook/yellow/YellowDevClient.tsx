@@ -18,6 +18,7 @@ import BattleControls, { BATTLE_CONTROLS_HEIGHT } from "./battle/BattleControls"
 import BattleBoundary from "./battle/BattleBoundary"
 import { useCasinoPresence } from "@/lib/gamebook/yellow/multiplayer/useCasinoPresence"
 import { useCasinoChallenge, type BattleStart } from "@/lib/gamebook/yellow/multiplayer/useCasinoChallenge"
+import { useCasinoChat } from "@/lib/gamebook/yellow/multiplayer/useCasinoChat"
 import { useCasinoBattle } from "@/lib/gamebook/yellow/multiplayer/useCasinoBattle"
 import { usePvpCtx, pvpForfeit } from "@/lib/gamebook/yellow/store/battleStore"
 import EvolutionScreen from "./battle/EvolutionScreen"
@@ -97,6 +98,11 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
         direction: mapPlayer.direction,
     })
 
+    // === Chat du casino (RECO 8) ===
+    const chat = useCasinoChat({ active: inCasino && !battle && !showIntro && !!userId, myUserId: userId })
+    const [chatOpen, setChatOpen] = useState(false)
+    const [chatText, setChatText] = useState("")
+
     // === PvP : défi + combat réseau ===
     const [pvpSession, setPvpSession] = useState<BattleStart | null>(null)
     const pvpCtx = usePvpCtx()
@@ -171,6 +177,9 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
     // Support clavier desktop : flèches + Espace/Entrée/A (= A), Escape/B (= B)
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
+            // Ne pas piloter le jeu quand on tape dans un champ (chat, renommage…).
+            const t = e.target as HTMLElement | null
+            if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return
             const inB = !!battle
             if (e.key === "ArrowUp") { e.preventDefault(); inB ? dispatchBattleInput("up") : move("up") }
             else if (e.key === "ArrowDown") { e.preventDefault(); inB ? dispatchBattleInput("down") : move("down") }
@@ -512,6 +521,37 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
             <LabPanel />
             <ParkSignPanel />
             <EncounterTransition />
+
+            {/* Chat du casino (RECO 8) : bouton flottant + overlay messages/saisie */}
+            {inCasino && !battle && !showIntro && !chatOpen && (
+                <button onClick={() => setChatOpen(true)} style={chatFabStyle} title="Chat du casino">💬</button>
+            )}
+            {chatOpen && (
+                <div style={menuOverlayStyle} onClick={() => setChatOpen(false)}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>💬 CHAT CASINO</div>
+                        <div style={{ minHeight: 110, maxHeight: 200, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4, padding: "6px 2px", fontSize: 12.5, lineHeight: 1.35 }}>
+                            {chat.lines.length === 0
+                                ? <div style={{ opacity: 0.5, textAlign: "center", padding: 14 }}>Aucun message. Dis bonjour ! 👋</div>
+                                : chat.lines.map((l) => (
+                                    <div key={l.id}><b style={{ color: l.mine ? "#1f7a3a" : "#9a3010" }}>{l.mine ? "moi" : l.nickname}</b> : {l.text}</div>
+                                ))}
+                        </div>
+                        <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                            <input
+                                value={chatText}
+                                onChange={(e) => setChatText(e.target.value)}
+                                maxLength={80}
+                                placeholder="Écris un message…"
+                                onKeyDown={(e) => { if (e.key === "Enter") { chat.send(chatText); setChatText("") } }}
+                                style={{ flex: 1, padding: "9px 10px", border: "2px solid #1c1408", borderRadius: 8, fontSize: 13, minWidth: 0 }}
+                            />
+                            <button style={{ ...menuBtnStyle, width: "auto", padding: "0 14px", flexShrink: 0 }} onClick={() => { chat.send(chatText); setChatText("") }}>Envoyer</button>
+                        </div>
+                        <button style={menuBtnDimStyle} onClick={() => setChatOpen(false)}>← Fermer</button>
+                    </div>
+                </div>
+            )}
 
             {!battle && shopOpen && (
                 <div style={menuOverlayStyle} onClick={closeShop}>
@@ -1051,6 +1091,7 @@ const menuBoxStyle: React.CSSProperties = {
     maxHeight: "88dvh", overflowY: "auto",
 }
 const menuTitleStyle: React.CSSProperties = { fontSize: 14, fontWeight: 900, letterSpacing: 2, marginBottom: 4 }
+const chatFabStyle: React.CSSProperties = { position: "fixed", top: 12, right: "max(12px, calc(50% - 228px))", zIndex: 9300, width: 44, height: 44, borderRadius: "50%", border: "3px solid #1c1408", background: "#f4ecd4", fontSize: 20, cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center" }
 const menuBtnStyle: React.CSSProperties = {
     background: "#fff", border: "2px solid #1c1408", borderRadius: 6, padding: "12px 14px",
     fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer", textAlign: "left", color: "#1c1408",
