@@ -60,20 +60,23 @@ describe("rollWildEncounter", () => {
     it("respecte le taux (pas de rencontre si tirage ≥ rate)", () => {
         expect(rollWildEncounter({ mapId: MAP, x: 25, y: 32, leadLevel: 10, rng: () => 0.99 })).toBeNull()
     })
-    it("renvoie un Daemon dont le niveau suit le lead (corrélation)", () => {
+    it("renvoie un Daemon dans la plage des 3 bandes (33-100% du lead)", () => {
         const r = new Rng(2024)
         const rng = () => r.next()
         const lead = 20
-        let count = 0
+        let count = 0, low = 0, near = 0
         for (let i = 0; i < 800; i++) {
             const mon = rollWildEncounter({ mapId: MAP, x: 25, y: 32, leadLevel: lead, rng })
             if (!mon) continue
             count++
-            expect(mon.level).toBeGreaterThanOrEqual(lead - 2)   // jamais trop bas
-            expect(mon.level).toBeLessThanOrEqual(lead + 3)      // rares : +1..+2
-            expect(mon.level).toBeGreaterThanOrEqual(2)
+            expect(mon.level).toBeGreaterThanOrEqual(2)          // plancher
+            expect(mon.level).toBeLessThanOrEqual(lead + 2)      // max : 100% du lead + bonus rare
+            if (mon.level <= lead * 0.66) low++                  // bande basse (33-66%)
+            if (mon.level >= lead * 0.85) near++                 // bande « proche »
         }
         expect(count).toBeGreaterThan(0)
+        expect(low).toBeGreaterThan(0)   // la bande basse existe
+        expect(near).toBeGreaterThan(0)  // la bande « proche » existe
     })
     it("zone inconnue → pas de rencontre", () => {
         expect(hasEncounters("nulle_part")).toBe(false)
