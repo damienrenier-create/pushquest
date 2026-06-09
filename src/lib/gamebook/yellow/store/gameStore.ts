@@ -25,7 +25,7 @@ import { rollWildEncounter, wildLevelCap } from "../data/encounters"
 import { getTrainer, trainerBoost, type TrainTier } from "../data/trainers"
 import { createMonInstance } from "../battle/factory"
 import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroLines, SBIRE_DONE_LINES, SBIRE_NO_TEAM_LINES } from "../data/sbire"
-import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_INTRO_LINES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, aceEnergyBudget, buildAceTeam } from "../data/ace"
+import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_INTRO_LINES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, buildAceTeam } from "../data/ace"
 
 export interface ActiveDialogue {
     npcId: string
@@ -153,7 +153,8 @@ function tryLaunchAce(): ActiveDialogue | null {
     const seed = Math.floor(Math.random() * 1e9) >>> 0
     startTrainerBattle(team, enemyTeam, seed, {
         trainerId: ACE_TRAINER_ID, reward: 0, aiLevel: "ace",
-        enemyEnergyCap: aceEnergyBudget(getPlayerSave().reps),
+        // Règle revue : un PNJ n'est JAMAIS à court d'énergie → aucun cap d'énergie ennemi.
+        // (L'ACE utilise toujours ses meilleures attaques ; sa difficulté vient de ses stats.)
     })
     return null
 }
