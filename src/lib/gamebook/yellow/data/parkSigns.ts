@@ -9,11 +9,11 @@
 
 /** Conseils affichés sur les panneaux de la Route Nord (cyclés). */
 export const PARK_SIGN_TIPS: ReadonlyArray<ReadonlyArray<string>> = [
-    // 1 — Capture : affaiblir + statut
+    // 1 — Capture : affaiblir + statut (chiffres concrets)
     [
-        "POUR CAPTURER : descends d'abord les PV de la cible le plus bas possible.",
-        "À 1 PV, tes chances triplent. Et un statut (SOMMEIL ou GEL) les multiplie encore par 2,5 !",
-        "Garde tes meilleures Balls pour les rares : à pleins PV, même une Hyper Ball galère.",
+        "POUR CAPTURER : plus la cible est affaiblie, plus c'est facile. Avec une Nexus-Ball sur un Daemon commun :",
+        "PV pleins ≈ 24% · à 50% ≈ 47% · à 33% ≈ 55% · à 1 PV ≈ 71%.",
+        "Un statut (SOMMEIL ou GEL) multiplie encore par 2,5 ! Garde tes bonnes Balls pour les rares.",
     ],
     // 2 — Reps → énergie
     [
@@ -33,25 +33,26 @@ export const PARK_SIGN_TIPS: ReadonlyArray<ReadonlyArray<string>> = [
         "Mais retiens aussi : la ROCHE écrase Feu et Vol · le COMBAT brise Roche et Normal · le SOL foudroie Feu, Roche et Élec.",
         "Une équipe de types VARIÉS ne se fait jamais surprendre.",
     ],
-    // 5 — Daemon de tête
+    // 5 — Niveau de l'équipe → sauvages (volontairement vague)
     [
-        "Le Daemon EN TÊTE fixe le niveau des sauvages que tu croises.",
-        "C'est aussi lui que le sbire copie face à toi. Réordonne ton équipe pour choisir qui ouvre.",
+        "Le NIVEAU de ton équipe influence les Daemons sauvages que tu croises.",
+        "Plus tu montes en puissance, plus les herbes recèlent d'adversaires coriaces.",
     ],
     // 6 — Partage d'XP (corrigé)
     [
         "L'XP d'un ennemi vaincu va à TOUS tes Daemons qui l'ont affronté — pas aux autres.",
         "Envoie tes jeunes recrues au front un instant : même un bref passage les fait grandir.",
     ],
-    // 7 — Attaques de statut
+    // 7 — Attaques de statut (avec exemple)
     [
-        "Toutes les attaques ne font pas de dégâts directs.",
-        "Poison, paralysie, sommeil… elles rongent l'adversaire ou l'immobilisent tour après tour.",
-        "Bien placées, elles renversent un combat sans que tu prennes un coup.",
+        "Certaines attaques infligent un STATUT : brûlure, poison, paralysie, sommeil…",
+        "Ex : Flammèche brûle (10%) — Braisille et Fennaise l'apprennent dès le NIVEAU 7.",
+        "Poison et brûlure rongent l'ennemi chaque tour, le sommeil le fige : de quoi gagner sans prendre un coup.",
     ],
-    // 8 — Renforcement / objets X
+    // 8 — Renforcement / objets X (avec exemple)
     [
-        "Sacrifie un tour pour aiguiser ton Attaque ou ta Défense, et les coups suivants font mal.",
+        "D'autres techniques te renforcent TOI au lieu de frapper.",
+        "Ex : Danse-Lames augmente fortement ton Attaque (+2 crans) — un tour de mise, puis tu balaies.",
         "Les objets X font pareil en combat : +1 cran (~+50%) sur une stat, le temps du duel.",
     ],
     // 9 — Apprentissage des attaques
@@ -64,10 +65,11 @@ export const PARK_SIGN_TIPS: ReadonlyArray<ReadonlyArray<string>> = [
         "Face à un sauvage trop coriace, fuir n'a rien de honteux.",
         "Mais contre un DRESSEUR, pas d'échappatoire : il faut vaincre ou tomber.",
     ],
-    // 11 — La Grotte
+    // 11 — ACE (rival quotidien)
     [
-        "Une GROTTE s'ouvre dans le flanc de la montagne, au nord.",
-        "C'est l'antre des Daemons ROCHE — idéal pour étoffer ton équipe avant l'arène de pierre.",
+        "ACE, le rival, t'attend en ville : tu peux le défier UNE fois par jour.",
+        "Il s'adapte à ta puissance et ne faiblit jamais… mais le vaincre rapporte un petit cadeau.",
+        "Reviens chaque jour mesurer tes progrès contre lui.",
     ],
     // 12 — Le Centre Daemon
     [
