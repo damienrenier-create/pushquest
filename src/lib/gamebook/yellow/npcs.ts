@@ -8,15 +8,14 @@
 
 import type { NpcDefinition } from "@/lib/gamebook/npcs"
 import { TRAINERS } from "./data/trainers"
-import { NORTH_BUSH_POSITIONS } from "./maps"
+import { NORTH_SIGN_POSITIONS } from "./maps"
 import { PARK_SIGN_TIPS } from "./data/parkSigns"
 import { ACE_TRAINER_ID, ACE_POS, ACE_INTRO_LINES } from "./data/ace"
 
-// PANNEAUX = les buissons (# isolés) de la map Nord ("le parc"). Chaque buisson
-// reçoit un hotspot interactif INVISIBLE (emoji vide → MapView ne dessine rien,
-// le sprite buisson étant déjà rendu par le décor). Le lire affiche un conseil ;
-// les conseils tournent en boucle sur l'ensemble des buissons.
-const PARK_SIGN_NPCS: NpcDefinition[] = NORTH_BUSH_POSITIONS.map((pos, i) => ({
+// PANNEAUX-conseils = les ~12 panneaux BIEN ESPACÉS de la Route Nord (le sprite
+// panneau est rendu par le décor). Chaque panneau = un hotspot INVISIBLE qui
+// affiche un conseil. Les conseils tournent en boucle (index % nb de conseils).
+const PARK_SIGN_NPCS: NpcDefinition[] = NORTH_SIGN_POSITIONS.map((pos, i) => ({
     id: `y_park_sign_${i + 1}`,
     name: "PANNEAU",
     mapId: "yellow_route_nord",

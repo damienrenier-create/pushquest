@@ -491,12 +491,13 @@ function placeDecors(
     h: number,
     seed: number,
     isUsable: (x: number, y: number) => boolean,
+    minDist = 0, // distance (Chebyshev) minimale entre 2 décors → dispersion
 ): DecorPos[] {
     const rng = mulberry32(seed)
     const used = new Set<string>()
     const out: DecorPos[] = []
     let attempts = 0
-    while (out.length < count && attempts < count * 200) {
+    while (out.length < count && attempts < count * 400) {
         attempts++
         const x = Math.floor(rng() * (W - w + 1))
         const y = Math.floor(rng() * (H - h + 1))
@@ -507,6 +508,9 @@ function placeDecors(
                 if (!isUsable(cx, cy)) valid = false
                 else if (used.has(`${cx},${cy}`)) valid = false
             }
+        }
+        if (valid && minDist > 0) {
+            for (const p of out) { if (Math.max(Math.abs(p.x - x), Math.abs(p.y - y)) < minDist) { valid = false; break } }
         }
         if (valid) {
             for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) used.add(`${x + dx},${y + dy}`)
@@ -607,10 +611,10 @@ function buildNorthRoute(): NorthBuild {
     // 2) Buissons (clone Viridian 19.13, 1×1, BLOQUANT comme dans la source)
     const bushes = placeDecors(W, H, 40, 1, 1, 0xfeedbeef, isUsable)
     for (const p of bushes) m[p.y][p.x] = "tree"
-    // 3) Panneaux (clone Viridian 20.31, 1×1, BLOQUANT comme dans la source)
-    // v4.y — Panneaux décor RETIRÉS (count 0) : placeholders parasites (un sprite paraissait
-    // blanc sur fond de sapins, et deux tombaient collés). Plus aucun sign décor sur Route Nord.
-    const signs = placeDecors(W, H, 0, 1, 1, 0xa1c0de42, isUsable)
+    // 3) PANNEAUX-conseils (1×1, BLOQUANTS) : ~12, BIEN ESPACÉS (distance min 7) sur
+    //    tout le parc → ce sont les hotspots-texte (PARK_SIGN_NPCS). Les buissons
+    //    ci-dessus redeviennent du simple décor (verdure).
+    const signs = placeDecors(W, H, 12, 1, 1, 0xa1c0de42, isUsable, 7)
     for (const p of signs) m[p.y][p.x] = "tree"
     // 4) Fleurs (clone Viridian 37.26, 1×1, WALKABLE comme dans la source)
     const flowers = placeDecors(W, H, 40, 1, 1, 0x5a5a5a5a, isUsable)
@@ -644,15 +648,16 @@ function buildNorthRoute(): NorthBuild {
 }
 
 const NORTH_BUILD = buildNorthRoute()
-/** Positions des buissons (# isolés dans l'herbe) de la Route Nord — servent de panneaux lisibles. */
+/** Buissons (décor verdure) de la Route Nord. */
 export const NORTH_BUSH_POSITIONS: ReadonlyArray<{ x: number; y: number }> = NORTH_BUILD.bushes
+/** PANNEAUX-conseils espacés de la Route Nord (hotspots-texte). */
+export const NORTH_SIGN_POSITIONS: ReadonlyArray<{ x: number; y: number }> = NORTH_BUILD.signs
 const NORTH_DECOR_REGIONS: Array<{ x: number; y: number; w: number; h: number; url: string }> = [
     // Sapin fixe en (2,0) — footprint 2×3, même sprite que les sapins aléatoires.
     { x: 2, y: 0, w: 2, h: 3, url: "/yellow/sprites/viridian_tree_12_13_23_25.png" },
     ...NORTH_BUILD.trees.map((p) => ({ x: p.x, y: p.y, w: 2, h: 3, url: "/yellow/sprites/viridian_tree_12_13_23_25.png" })),
-    // Les "buissons" de la Route Nord sont en fait des PANNEAUX-texte (park signs) → on
-    // les rend avec le sprite panneau (et plus le buisson), comme demandé.
-    ...NORTH_BUILD.bushes.map((p) => ({ x: p.x, y: p.y, w: 1, h: 1, url: "/yellow/sprites/viridian_sign_20_31.png" })),
+    // Buissons = décor verdure (sprite buisson) ; les PANNEAUX-conseils = sprite panneau.
+    ...NORTH_BUILD.bushes.map((p) => ({ x: p.x, y: p.y, w: 1, h: 1, url: "/yellow/sprites/viridian_bush_19_13.png" })),
     ...NORTH_BUILD.signs.map((p) => ({ x: p.x, y: p.y, w: 1, h: 1, url: "/yellow/sprites/viridian_sign_20_31.png" })),
     ...NORTH_BUILD.flowers.map((p) => ({ x: p.x, y: p.y, w: 1, h: 1, url: "/yellow/sprites/viridian_flower_37_26.png" })),
 ]
