@@ -77,7 +77,6 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
     const [pcBox, setPcBox] = useState(0)
     const [ctShop, setCtShop] = useState(false)
     const [ctPick, setCtPick] = useState<string | null>(null)
-    const [giftHidden, setGiftHidden] = useState(false) // "plus tard" sur l'écran de CT cadeau
     const [confirmReset, setConfirmReset] = useState(false)
     const [swapPick, setSwapPick] = useState<string | null>(null) // uid du Daemon "à déplacer"
 
@@ -578,18 +577,25 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                                     <span>🎓 CAPSULES CT</span><span>⚡ {player.reps}</span>
                                 </div>
                                 <div style={{ maxHeight: "55vh", overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
-                                    {purchasableCts(player.badges).map((ct) => {
-                                        const mv = getMove(ct.moveId)
-                                        const afford = player.reps >= ct.price
-                                        return (
-                                            <button key={ct.id} style={afford ? menuBtnStyle : menuBtnDimStyle} disabled={!afford} onClick={() => setCtPick(ct.id)}>
-                                                <span style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                                                    <span>{ct.label} · {mv?.name}<br /><span style={{ fontSize: 10, opacity: 0.6 }}>{mv?.type}{mv && mv.power > 0 ? ` · ${mv.power}` : " · statut"}</span></span>
-                                                    <span>{ct.price} reps</span>
-                                                </span>
-                                            </button>
-                                        )
-                                    })}
+                                    {(() => {
+                                        const purch = purchasableCts(player.badges)
+                                        const purchIds = new Set(purch.map((c) => c.id))
+                                        // CT CADEAUX possédées (trophées de boss, gratuites) en tête de liste.
+                                        const gifts = player.ownedCts.map(getCt).filter((c): c is NonNullable<typeof c> => !!c && !purchIds.has(c.id))
+                                        return [...gifts, ...purch].map((ct) => {
+                                            const mv = getMove(ct.moveId)
+                                            const isGift = !purchIds.has(ct.id)
+                                            const afford = isGift || player.reps >= ct.price
+                                            return (
+                                                <button key={ct.id} style={afford ? menuBtnStyle : menuBtnDimStyle} disabled={!afford} onClick={() => setCtPick(ct.id)}>
+                                                    <span style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                                                        <span>{ct.label} · {mv?.name}<br /><span style={{ fontSize: 10, opacity: 0.6 }}>{mv?.type}{mv && mv.power > 0 ? ` · ${mv.power}` : " · statut"}</span></span>
+                                                        <span>{isGift ? "✨ Cadeau" : `${ct.price} reps`}</span>
+                                                    </span>
+                                                </button>
+                                            )
+                                        })
+                                    })()}
                                 </div>
                                 <div style={{ fontSize: 10, opacity: 0.55, marginTop: 4 }}>D'autres CT se débloquent avec les badges d'arène.</div>
                                 <button style={menuBtnDimStyle} onClick={() => setCtShop(false)}>← QUITTER</button>
@@ -626,38 +632,8 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                 </div>
             )}
 
-            {/* CT CADEAU (trophée de boss) : apprentissage UNIQUE, jamais en boutique. */}
-            {!battle && !dialogue && !shopOpen && !ctShop && !pcOpen && !pastaPick && !giftHidden && player.ownedCts.length > 0 && (() => {
-                const ct = getCt(player.ownedCts[0])
-                if (!ct) return null
-                const mv = getMove(ct.moveId)
-                return (
-                    <div style={menuOverlayStyle}>
-                        <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
-                            <div style={menuTitleStyle}>🎁 CT REÇUE : {mv?.name}</div>
-                            <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 6 }}>Cadeau unique du Doyen — apprends-la à un Daemon compatible :</div>
-                            {player.team.map((m) => {
-                                const sp = getSpecies(m.speciesId)
-                                const compatible = sp ? canLearnCt(sp, ct) : false
-                                const known = m.moves.some((s) => s.moveId === ct.moveId)
-                                const dis = !compatible || known
-                                return (
-                                    <button key={m.uid} style={dis ? menuBtnDimStyle : menuBtnStyle} disabled={dis}
-                                        onClick={() => {
-                                            const r = teachCt(m.uid, ct.id)
-                                            if (r.ok) { setToast(r.queued ? `${displayName(m)} : choisis une attaque à oublier.` : `${displayName(m)} apprend ${mv?.name} !`); persistYellowSave() }
-                                        }}>
-                                        <span style={{ display: "flex", justifyContent: "space-between" }}>
-                                            <span>{displayName(m)}{known ? " (déjà apprise)" : compatible ? "" : " (incompatible)"}</span><span>N.{m.level}</span>
-                                        </span>
-                                    </button>
-                                )
-                            })}
-                            <button style={menuBtnDimStyle} onClick={() => setGiftHidden(true)}>Plus tard</button>
-                        </div>
-                    </div>
-                )
-            })()}
+            {/* CT CADEAU : plus de pop-up forcé. L'annonce se fait UNE fois au badge, puis
+                la CT s'apprend à la demande via la boutique → 🎓 Capsules CT (gratuite). */}
 
             {/* Super Pasta : choix du Daemon à faire monter d'un niveau. */}
             {!battle && pastaPick && (

@@ -273,7 +273,9 @@ export default function BattleScreen() {
             {/* ===== Scène ===== */}
             <div style={S.scene}>
                 <div style={S.enemyRow}>
-                    <MonInfo mon={enemy} hp={eHp} max={eMax} />
+                    {/* key sur l'uid : au changement de Daemon (switchIn), la barre se REMONTE
+                        nette au lieu d'animer 0%→100% (le "flash plein" perçu à chaque K.O.). */}
+                    <MonInfo key={enemy.uid} mon={enemy} hp={eHp} max={eMax} />
                     <div style={S.enemySpot}>
                         {!enemyHiddenByBall && <MonSprite mon={enemy} facing="front" alive={eHp > 0} hitKey={shakeE} />}
                         {ball && <BallAnim phase={ball.phase} shakes={ball.shakes} caught={ball.caught} />}
@@ -281,7 +283,7 @@ export default function BattleScreen() {
                 </div>
                 <div style={S.playerRow}>
                     <MonSprite mon={player} facing="back" alive={pHp > 0} hitKey={shakeP} />
-                    <MonInfo mon={player} self hp={pHp} max={pMax} />
+                    <MonInfo key={player.uid} mon={player} self hp={pHp} max={pMax} />
                 </div>
             </div>
 
