@@ -208,7 +208,7 @@ function finishBattle(b: BattleState) {
     // 2) Capture → ajoute le sauvage à l'équipe/PC.
     if (b.outcome === "caught") {
         const wild = b.enemy.team[b.enemy.activeIndex]
-        if (wild) addCaught(toMonInstance(wild))
+        if (wild) addCaught(toMonInstance(wild), { quotaReached: getPlayer().wildCtx?.quotaReached })
     }
 
     // 2bis) Victoire dresseur : marquage "battu" (la monnaie = reps, gagnée hors combat).

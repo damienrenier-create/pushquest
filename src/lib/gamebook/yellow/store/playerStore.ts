@@ -135,6 +135,14 @@ export function resetForIntro() {
     emit()
 }
 
+// Identité du joueur courant (= User.id) + carte courante : sert à estampiller
+// l'ownership et le lieu de capture (RECO identité/Pokédex). Posés par l'UI au montage.
+let currentPlayerId = ""
+let currentMapId = ""
+export function setCurrentPlayerId(id: string) { currentPlayerId = id || "" }
+export function getCurrentPlayerId(): string { return currentPlayerId }
+export function setCurrentMapId(id: string) { currentMapId = id || "" }
+
 /** Renseigne les stats d'effort du jour (fetchées au chargement). */
 export function setWildCtx(ctx: WildPlayerCtx | null) {
     st = { ...st, wildCtx: ctx }
@@ -180,9 +188,20 @@ export function setTeam(team: MonInstance[]) {
 }
 
 /** Ajoute un Daemon capturé (équipe si place, sinon PC). */
-export function addCaught(mon: MonInstance): "team" | "pc" {
+export function addCaught(mon: MonInstance, ctx?: { quotaReached?: boolean }): "team" | "pc" {
     const today = new Date().toISOString().slice(0, 10)
-    const owned = { ...mon, owned: true, capturedLevel: mon.level, capturedAt: today }
+    const owned: MonInstance = {
+        ...mon, owned: true,
+        capturedLevel: mon.capturedLevel ?? mon.level,
+        capturedAt: mon.capturedAt ?? today,
+        // Identité : posée UNE fois (le captureur). currentOwner = origin à la capture.
+        originalTrainerId: mon.originalTrainerId ?? (currentPlayerId || undefined),
+        currentOwnerId: mon.currentOwnerId ?? (currentPlayerId || undefined),
+        traded: mon.traded ?? false,
+        // Métadonnées de capture (Pokédex enrichi).
+        capturedMapId: mon.capturedMapId ?? (currentMapId || undefined),
+        capturedQuotaReached: mon.capturedQuotaReached ?? ctx?.quotaReached,
+    }
     if (st.team.length < TEAM_MAX) {
         st = { ...st, team: [...st.team, owned] }
         emit()

@@ -139,6 +139,20 @@ export interface MonInstance {
     /** Plus gros dégât infligé par ce Daemon jusqu'ici + l'attaque correspondante. */
     bestDmg?: number
     bestDmgMove?: string
+    // ── IDENTITÉ SOCIALE (échanges/Pokédex) — flavor, JAMAIS lu par le moteur de combat ──
+    /** Dresseur d'ORIGINE (User.id du captureur). Posé une fois à la capture, jamais réécrit. */
+    originalTrainerId?: string
+    /** Possesseur ACTUEL (User.id). Réassigné à chaque échange. */
+    currentOwnerId?: string
+    /** Échangé au moins une fois → surnom verrouillé + bonus d'XP d'échange. */
+    traded?: boolean
+    /** Surnom d'origine figé (affichage verrouillé si le Daemon a été reçu d'un autre). */
+    originalNickname?: string
+    // ── MÉTADONNÉES DE CAPTURE (Pokédex enrichi) ──
+    /** Carte où le Daemon a été capturé. */
+    capturedMapId?: string
+    /** Quota du jour atteint au moment de la capture (génétique bonifiée). */
+    capturedQuotaReached?: boolean
 }
 
 export interface BattleMon extends MonInstance {

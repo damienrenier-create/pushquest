@@ -100,6 +100,12 @@ function parseMon(raw: unknown): MonInstance | null {
         capturedAt: typeof o.capturedAt === "string" ? o.capturedAt : undefined,
         bestDmg: typeof o.bestDmg === "number" ? Math.max(0, Math.floor(o.bestDmg)) : undefined,
         bestDmgMove: typeof o.bestDmgMove === "string" ? o.bestDmgMove : undefined,
+        originalTrainerId: typeof o.originalTrainerId === "string" ? o.originalTrainerId : undefined,
+        currentOwnerId: typeof o.currentOwnerId === "string" ? o.currentOwnerId : undefined,
+        traded: o.traded === true ? true : undefined,
+        originalNickname: typeof o.originalNickname === "string" ? o.originalNickname : undefined,
+        capturedMapId: typeof o.capturedMapId === "string" ? o.capturedMapId : undefined,
+        capturedQuotaReached: o.capturedQuotaReached === true ? true : undefined,
     }
 }
 
@@ -192,5 +198,11 @@ export function toMonInstance(m: MonInstance & { stages?: unknown; volatiles?: u
         capturedAt: m.capturedAt,
         bestDmg: m.bestDmg && m.bestDmg > 0 ? m.bestDmg : undefined,
         bestDmgMove: m.bestDmgMove,
+        originalTrainerId: m.originalTrainerId,
+        currentOwnerId: m.currentOwnerId,
+        traded: m.traded ? true : undefined,
+        originalNickname: m.originalNickname,
+        capturedMapId: m.capturedMapId,
+        capturedQuotaReached: m.capturedQuotaReached ? true : undefined,
     }
 }

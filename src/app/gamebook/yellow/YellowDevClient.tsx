@@ -30,7 +30,7 @@ import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getGiftCtMove } from "@/lib/gamebook/yellow/store/battleStore"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
-import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, consumeItem, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, consumeItem, setCurrentPlayerId, setCurrentMapId, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn } from "@/lib/gamebook/yellow/store/playerStore"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
@@ -185,6 +185,10 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
         window.addEventListener("keydown", handler)
         return () => window.removeEventListener("keydown", handler)
     }, [move, pressA, pressB, battle])
+
+    // Identité (User.id) + carte courante → estampillage ownership/lieu à la capture.
+    useEffect(() => { setCurrentPlayerId(userId) }, [userId])
+    useEffect(() => { setCurrentMapId(mapPlayer.mapId) }, [mapPlayer.mapId])
 
     // Toast éphémère : disparaît tout seul après 2,5 s.
     useEffect(() => {
