@@ -13,6 +13,8 @@ import { speciesOf, maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/en
 import type { BattleMon } from "@/lib/gamebook/yellow/battle/types"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { ITEMS } from "@/lib/gamebook/yellow/data/items"
+import AttackFx from "./AttackFx"
+import { pickAttackFx, type AttackFxSpec } from "@/lib/gamebook/yellow/data/attackAnims"
 import { usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
 import { moveCostReps, STRUGGLE_INDEX } from "@/lib/gamebook/yellow/data/combatCostConfig"
 
@@ -42,6 +44,8 @@ export default function BattleScreen() {
     const [shakeE, setShakeE] = useState(0)
     const [ball, setBall] = useState<{ phase: "throw" | "shake" | "result"; shakes: number; caught: boolean } | null>(null)
     const [cursor, setCursor] = useState(0)
+    const [atkFx, setAtkFx] = useState<{ spec: AttackFxSpec; side: "player" | "enemy"; key: number } | null>(null)
+    const atkKeyRef = useRef(0)
     const repsWallet = usePlayer()
     const lastBattle = useRef(battle)
     const inputRef = useRef<(a: BattleInput) => void>(() => { })
@@ -111,6 +115,11 @@ export default function BattleScreen() {
                 if (ev.side === "player") return { ...d, p: m.currentHp, pMax: maxHpOf(m) }
                 return { ...d, e: m.currentHp, eMax: maxHpOf(m) }
             })
+        } else if (ev.kind === "move") {
+            // Anim d'attaque (catégorie déduite du moveId), puis on enchaîne vite.
+            atkKeyRef.current += 1
+            setAtkFx({ spec: pickAttackFx(ev.moveId), side: ev.side, key: atkKeyRef.current })
+            delay = 120
         }
         const t = setTimeout(() => setStep((s) => s + 1), delay)
         return () => clearTimeout(t)
@@ -285,6 +294,7 @@ export default function BattleScreen() {
                     <MonSprite mon={player} facing="back" alive={pHp > 0} hitKey={shakeP} />
                     <MonInfo key={player.uid} mon={player} self hp={pHp} max={pMax} />
                 </div>
+                {atkFx && <AttackFx key={atkFx.key} spec={atkFx.spec} attackerSide={atkFx.side} onDone={() => setAtkFx(null)} />}
             </div>
 
             {/* ===== Boîte du bas : message OU liste d'options (curseur D-pad/A/B + tactile) ===== */}
@@ -430,7 +440,7 @@ function BallAnim({ phase, shakes, caught }: { phase: "throw" | "shake" | "resul
 
 const S: Record<string, React.CSSProperties> = {
     root: { width: "100%", maxWidth: 460, margin: "0 auto", fontFamily: "'Courier New', monospace", color: "#1c1408", userSelect: "none" },
-    scene: { background: "linear-gradient(#9bd0e0 0%, #c8e89c 60%, #a8d878 100%)", border: "3px solid #1c1408", borderRadius: 6, padding: 14, display: "flex", flexDirection: "column", gap: 18, minHeight: 240 },
+    scene: { background: "linear-gradient(#9bd0e0 0%, #c8e89c 60%, #a8d878 100%)", border: "3px solid #1c1408", borderRadius: 6, padding: 14, display: "flex", flexDirection: "column", gap: 18, minHeight: 240, position: "relative", overflow: "hidden" },
     enemyRow: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" },
     playerRow: { display: "flex", justifyContent: "space-between", alignItems: "flex-end" },
     energyBar: { display: "flex", alignItems: "center", gap: 8, marginBottom: 8, background: "#1c1408", border: "2px solid #1c1408", borderRadius: 8, padding: "5px 10px" },

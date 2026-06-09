@@ -31,6 +31,7 @@ export type SideId = "player" | "enemy"
 
 export type BattleEvent =
     | { kind: "message"; text: string }
+    | { kind: "move"; side: SideId; moveId: string }   // attaque lancée → déclenche l'anim FX
     | { kind: "hp"; side: SideId; hp: number; max: number }
     | { kind: "faint"; side: SideId; name: string }
     | { kind: "status"; side: SideId; status: MajorStatus }
@@ -358,6 +359,8 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
     if (!canAct(attacker, events, rng)) return
 
     // PP illimités : la seule limite est le coût en reps (déduit côté store).
+    const fxMoveId = isStruggle ? STRUGGLE_MOVE_ID : (slot?.moveId ?? "")
+    events.push({ kind: "move", side, moveId: fxMoveId }) // déclenche l'anim d'attaque
     events.push({ kind: "message", text: `${displayName(attacker)} utilise ${move.name} !` })
 
     // --- Confusion : risque de se blesser soi-même ---
