@@ -213,11 +213,12 @@ export default function BattleScreen() {
         } else if (menu === "moves") {
             const costs = player.moves.map((s) => moveCostReps(s.ppMax, player.level))
             const canUse = (c: number) => c <= reps && c <= remainingEnergy
+            // À court d'énergie → Charge Désespérée EN PREMIER (ergonomie : plus en 5e position).
+            if (!costs.some(canUse)) options.push({ label: "💥 Charge Désespérée (gratuit)", onSelect: doStruggle })
             player.moves.forEach((slot, i) => options.push({
                 label: `${getMove(slot.moveId)?.name ?? slot.moveId}  ⚡${costs[i]}`,
                 onSelect: () => doMove(i), disabled: !canUse(costs[i]),
             }))
-            if (!costs.some(canUse)) options.push({ label: "Charge Désespérée (gratuit)", onSelect: doStruggle })
             options.push({ label: "← RETOUR", onSelect: () => setMenu("root") })
             canBack = true
         } else if (menu === "bag") {

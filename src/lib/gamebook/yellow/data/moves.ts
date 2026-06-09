@@ -87,7 +87,7 @@ export const MOVES: Record<string, MoveData> = {
 
     // Attaque de SECOURS gratuite (anti soft-lock) : utilisable quand le joueur n'a
     // plus de reps pour aucune autre attaque. Faible et inflige du recul à soi-même.
-    charge_desesperee: { id: "charge_desesperee", name: "Charge Désespérée", type: "NORMAL", power: 25, accuracy: 100, pp: 1, effect: { recoilPct: 50 }, description: "Dernier recours gratuit : faible et blesse son utilisateur." },
+    charge_desesperee: { id: "charge_desesperee", name: "Charge Désespérée", type: "NORMAL", power: 45, accuracy: 100, pp: 1, effect: { recoilPct: 70 }, description: "Dernier recours gratuit : frappe correctement mais se blesse gravement (le combat ne traîne pas)." },
 }
 
 export function getMove(id: string): MoveData | null {
