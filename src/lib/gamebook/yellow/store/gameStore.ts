@@ -44,6 +44,7 @@ interface GameStore {
     guideOpen: boolean // guide du Bosquet ouvert (panneau devant le gym)
     libraryOpen: boolean // Registre des Dresseurs (bibliothèque de l'infirmerie)
     labOpen: boolean // Terminal d'expériences (labo, étage de l'infirmerie)
+    signOpen: number | null // index du panneau du parc ouvert (pop-up dédié), null = fermé
     hydrated: boolean // true une fois que l'état serveur a été chargé
     stepFrame: 0 | 1 // alterne à chaque déplacement réel → anime les jambes du sprite
     pendingTrainerId: string | null // dresseur dont l'intro est en cours → combat à la fermeture
@@ -61,6 +62,7 @@ interface GameStore {
     closeGuide: () => void
     closeLibrary: () => void
     closeLab: () => void
+    closeSign: () => void
     /** Affiche un dialogue simple (ex. explication post-combat du sbire). */
     showDialogue: (npcId: string, npcName: string, lines: string[]) => void
 }
@@ -165,6 +167,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     guideOpen: false,
     libraryOpen: false,
     labOpen: false,
+    signOpen: null,
     hydrated: false,
     stepFrame: 0,
     pendingTrainerId: null,
@@ -174,7 +177,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     move: (dir) => {
         const { player, map, dialogue } = get()
         // Mouvement bloqué pendant un dialogue, une boutique, le PC ou un combat.
-        if (dialogue || get().shopOpen || get().pcOpen || get().guideOpen || get().libraryOpen || get().labOpen) return
+        if (dialogue || get().shopOpen || get().pcOpen || get().guideOpen || get().libraryOpen || get().labOpen || get().signOpen !== null) return
         if (getBattleSnapshot().battle) return
 
         const next = tryMove(player, dir, map)
@@ -335,6 +338,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
+        // Panneau du parc (Route Nord) : chaque panneau ouvre SON pop-up dédié.
+        // id = "y_park_sign_<n>" (1-based) → index de sujet 0-based.
+        const signMatch = npc.id.match(/^y_park_sign_(\d+)$/)
+        if (signMatch) {
+            set({ signOpen: parseInt(signMatch[1], 10) - 1 })
+            return
+        }
+
         // Sbire du dieu Spaghetti : combat dynamique, 2×/jour max.
         if (npc.id === SBIRE_TRAINER_ID) {
             const wins = getPlayerSave().sbireDefeatsToday
@@ -455,5 +466,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
     closeGuide: () => set({ guideOpen: false }),
     closeLibrary: () => set({ libraryOpen: false }),
     closeLab: () => set({ labOpen: false }),
+    closeSign: () => set({ signOpen: null }),
     closePc: () => set({ pcOpen: false }),
 }))
