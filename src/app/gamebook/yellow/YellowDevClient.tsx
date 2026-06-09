@@ -1061,7 +1061,7 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                                 return (
                                     <div key={mv.moveId} style={{ fontSize: 11, display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
                                         <span>{m?.name ?? mv.moveId} <span style={{ opacity: 0.55 }}>({m?.type ?? "?"}{m && m.power > 0 ? ` · ${m.power}` : ""})</span></span>
-                                        <span style={{ opacity: 0.7 }}>PP {mv.pp}/{mv.ppMax} · 💪 {moveCostReps(mv.ppMax, live.level)}</span>
+                                        <span style={{ opacity: 0.7 }}>PP {mv.pp}/{mv.ppMax} · 💪 {moveCostReps(m?.power ?? 0)}</span>
                                     </div>
                                 )
                             })}

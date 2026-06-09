@@ -211,7 +211,7 @@ export default function BattleScreen() {
                 options.push({ label: "🏃 FUITE", onSelect: () => setMenu("confirmRun"), disabled: !battle.isWild })
             }
         } else if (menu === "moves") {
-            const costs = player.moves.map((s) => moveCostReps(s.ppMax, player.level))
+            const costs = player.moves.map((s) => moveCostReps(getMove(s.moveId)?.power ?? 0))
             const canUse = (c: number) => c <= reps && c <= remainingEnergy
             // À court d'énergie → Charge Désespérée EN PREMIER (ergonomie : plus en 5e position).
             if (!costs.some(canUse)) options.push({ label: "💥 Charge Désespérée (gratuit)", onSelect: doStruggle })

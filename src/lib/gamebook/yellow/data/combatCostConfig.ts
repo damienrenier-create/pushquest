@@ -2,19 +2,18 @@
 //
 // Nexus Jaune Éclair — COÛT EN REPS des attaques (config, éditable).
 // Les PP sont illimités : la vraie limite est le portefeuille de reps du joueur.
-// Coût = arrondi_sup( (C / pp_max) × (1 + niveau / N) ), minimum 1.
-//   - PP faible (attaque forte) → coût ↑
-//   - niveau élevé → coût ↑
+// Coût basé sur la PUISSANCE de l'attaque (faible = bon marché, forte = chère),
+// SANS rampe de niveau (le coût ne dépend QUE de l'attaque) :
+//   coût = max(1, arrondi( (puissance − FLOOR) / DIV ))
+// Calibré : Charge (puiss 40) → 1 rep · Hydrocanon (puiss 110) → 10 reps.
+// Les attaques de statut (puiss 0) coûtent 1.
 
-export const MOVE_COST_PP_WEIGHT = 50  // C : poids du PP (PP bas = cher)
-export const MOVE_COST_LEVEL_DIV = 25  // N : poids du niveau
+export const MOVE_COST_POWER_FLOOR = 30 // puissance "offerte" avant de payer
+export const MOVE_COST_POWER_DIV = 8    // points de puissance par rep
 
-/** Coût en reps d'une attaque, selon son PP d'origine et le niveau du Daemon. */
-export function moveCostReps(ppMax: number, level: number): number {
-    const pp = Math.max(1, ppMax)
-    const lvl = Math.max(1, level)
-    const raw = (MOVE_COST_PP_WEIGHT / pp) * (1 + lvl / MOVE_COST_LEVEL_DIV)
-    return Math.max(1, Math.ceil(raw))
+/** Coût en reps d'une attaque, selon sa PUISSANCE (indépendant du niveau). */
+export function moveCostReps(power: number): number {
+    return Math.max(1, Math.round((Math.max(0, power) - MOVE_COST_POWER_FLOOR) / MOVE_COST_POWER_DIV))
 }
 
 /** Id de l'attaque de secours gratuite (anti soft-lock : faible + dégâts à soi). */
