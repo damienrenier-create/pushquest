@@ -101,10 +101,11 @@ function tryLaunchTrainer(trainerId: string): ActiveDialogue | null {
             lines: ["Tes Daemons sont tous K.O. !", "Soigne-les au Centre avant de te battre."],
         }
     }
-    // Boost "entraînement" : élite si chef d'arène (badge), gardien si autre dresseur
-    // d'arène, rien sinon (route/sbire) → les dresseurs tiennent face à un joueur boosté.
-    const tier: TrainTier | undefined = trainer.training
-        ?? (trainer.badge ? "elite" : trainer.mapId.startsWith("yellow_arena") ? "guard" : undefined)
+    // Boost "entraînement" : TOUS les dresseurs sont boostés pour ne pas être surclassés
+    // par un joueur qui alloue du Saiyan à chaque niveau. Boss d'arène (badge) → "elite" ;
+    // tout autre dresseur (route, gardes…) → "guard". Le boost SCALE avec le niveau
+    // (trainerBoost), donc un dresseur niv 6 reste modeste et un niv 25 devient solide.
+    const tier: TrainTier | undefined = trainer.training ?? (trainer.badge ? "elite" : "guard")
     const enemyTeam = trainer.team.map((s) => createMonInstance(s.speciesId, s.level, { owned: false, moveIds: s.moves, ...trainerBoost(s.speciesId, s.level, tier) }))
     const seed = Math.floor(Math.random() * 1e9) >>> 0
     startTrainerBattle(team, enemyTeam, seed, { trainerId, reward: trainer.reward, aiLevel: trainer.aiLevel })
@@ -124,7 +125,10 @@ function tryLaunchSbire(): ActiveDialogue | null {
         }
     }
     const fightIndex = getPlayerSave().sbireDefeatsToday // 0 → miroir, 1 → faiblesse
-    const enemyTeam = buildSbireTeam(lead, fightIndex)
+    // Le sbire MIROIR ton lead (boosté Saiyan) → on le booste en "elite" pour qu'il
+    // soit un vrai rival, pas une version nerfée de toi-même.
+    const enemyTeam = buildSbireTeam(lead, fightIndex).map((m) =>
+        createMonInstance(m.speciesId, m.level, { owned: false, ...trainerBoost(m.speciesId, m.level, "elite") }))
     const seed = Math.floor(Math.random() * 1e9) >>> 0
     startTrainerBattle(team, enemyTeam, seed, { trainerId: SBIRE_TRAINER_ID, reward: 0, aiLevel: "trainer" })
     return null
