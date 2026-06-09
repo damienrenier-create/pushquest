@@ -31,6 +31,17 @@ export function hpFactor(currentHp: number, maxHp: number): number {
     return (3 * max - 2 * cur) / (3 * max)
 }
 
+/**
+ * PLAFOND de proba selon les PV : on ne peut atteindre 100% QUE sous 1/3 de vie.
+ * Au-dessus, un plafond DESCEND (≈85% à mi-vie, 40% à PV pleins) — même avec
+ * Hyper Ball + Sommeil, une cible peu affaiblie ne se capture jamais à coup sûr.
+ */
+export function hpCeiling(currentHp: number, maxHp: number): number {
+    const r = Math.max(0, Math.min(1, currentHp / Math.max(1, maxHp)))
+    if (r <= 1 / 3) return 1
+    return Math.max(0.4, 1 - (r - 1 / 3) * 0.9) // 1/3→100% · 1/2→85% · 2/3→70% · plein→40%
+}
+
 /** Valeur de capture "A" (0..255+). Plus c'est haut, plus c'est facile. */
 export function captureValue(i: CaptureInput): number {
     return i.catchRate
@@ -54,8 +65,10 @@ export interface CaptureResult {
  */
 export function tryCapture(i: CaptureInput, rng: Rng): CaptureResult {
     const value = captureValue(i)
-    if (value >= CAPTURE_CALIBRATION) return { caught: true, shakes: 3, value }
-    const p = Math.max(0, Math.min(1, value / CAPTURE_CALIBRATION))
+    // Proba = A/CALIBRATION, MAIS plafonnée selon les PV : 100% seulement sous 1/3 de vie.
+    const ceiling = hpCeiling(i.currentHp, i.maxHp)
+    const p = Math.max(0, Math.min(ceiling, value / CAPTURE_CALIBRATION))
+    if (p >= 1) return { caught: true, shakes: 3, value }
     const caught = rng.next() < p
     let shakes = caught ? 3 : 0
     if (!caught) { for (let s = 0; s < 3; s++) { if (rng.next() < p) shakes++; else break } }
