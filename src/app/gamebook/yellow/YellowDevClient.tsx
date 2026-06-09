@@ -442,26 +442,57 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                         {bagItem === null ? (
                             <>
-                                <div style={menuTitleStyle}>SAC</div>
-                                {Object.values(ITEMS).filter((it) => (player.items[it.id] ?? 0) > 0).map((it) => {
-                                    const usable = it.category === "HEAL"
-                                    return (
-                                        <button
-                                            key={it.id}
-                                            style={usable ? menuBtnStyle : menuBtnDimStyle}
-                                            disabled={!usable}
-                                            onClick={() => usable && setBagItem(it.id)}
-                                        >
-                                            <span style={{ display: "flex", justifyContent: "space-between" }}>
-                                                <span>{it.name}{usable ? "" : it.category === "BALL" ? " (en combat)" : ""}</span>
-                                                <span>×{player.items[it.id]}</span>
-                                            </span>
-                                        </button>
-                                    )
-                                })}
-                                {Object.values(ITEMS).filter((it) => (player.items[it.id] ?? 0) > 0).length === 0 && (
-                                    <div style={{ fontSize: 11, opacity: 0.6 }}>Sac vide. Va à la boutique !</div>
-                                )}
+                                <div style={menuTitleStyle}>🎒 SAC</div>
+                                <div style={{ maxHeight: "62vh", overflowY: "auto" }}>
+                                    {/* 📀 Poche CT (toute CT reçue/achetée/cadeau y est visible + enseignable) */}
+                                    {player.ownedCts.length > 0 && (
+                                        <>
+                                            <div style={pocketHdrStyle}>📀 Capsules Techniques</div>
+                                            {player.ownedCts.map((id) => getCt(id)).filter((c): c is NonNullable<typeof c> => !!c).map((ct) => (
+                                                <button key={ct.id} style={menuBtnStyle} onClick={() => { setMenu("none"); setCtShop(true); setCtPick(ct.id) }}>
+                                                    <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                                        <span>{ct.label} · {getMove(ct.moveId)?.name ?? ct.moveId}</span><span>Enseigner ▸</span>
+                                                    </span>
+                                                </button>
+                                            ))}
+                                        </>
+                                    )}
+                                    {/* ❤️ Poche Soins */}
+                                    {(() => {
+                                        const heals = Object.values(ITEMS).filter((it) => (it.category === "HEAL" || it.category === "STATUS_HEAL") && (player.items[it.id] ?? 0) > 0)
+                                        return heals.length > 0 && (
+                                            <>
+                                                <div style={pocketHdrStyle}>❤️ Soins</div>
+                                                {heals.map((it) => (
+                                                    <button key={it.id} style={it.category === "HEAL" ? menuBtnStyle : menuBtnDimStyle} disabled={it.category !== "HEAL"} onClick={() => it.category === "HEAL" && setBagItem(it.id)}>
+                                                        <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                                            <span>{it.name}{it.category === "STATUS_HEAL" ? " (en combat)" : ""}</span><span>×{player.items[it.id]}</span>
+                                                        </span>
+                                                    </button>
+                                                ))}
+                                            </>
+                                        )
+                                    })()}
+                                    {/* 🔴 Poche Balls · ⬆️ Poche Combat (utilisables en combat) */}
+                                    {([["BALL", "🔴 Balls"], ["BOOST", "⬆️ Objets de combat"]] as [string, string][]).map(([cat, label]) => {
+                                        const list = Object.values(ITEMS).filter((it) => it.category === cat && (player.items[it.id] ?? 0) > 0)
+                                        return list.length > 0 && (
+                                            <div key={cat}>
+                                                <div style={pocketHdrStyle}>{label}</div>
+                                                {list.map((it) => (
+                                                    <button key={it.id} style={menuBtnDimStyle} disabled>
+                                                        <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                                            <span>{it.name} (en combat)</span><span>×{player.items[it.id]}</span>
+                                                        </span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )
+                                    })}
+                                    {player.ownedCts.length === 0 && Object.values(ITEMS).filter((it) => (player.items[it.id] ?? 0) > 0).length === 0 && (
+                                        <div style={{ fontSize: 11, opacity: 0.6, padding: 10 }}>Sac vide. Va à la boutique !</div>
+                                    )}
+                                </div>
                                 <button style={menuBtnDimStyle} onClick={() => setMenu("pause")}>← RETOUR</button>
                             </>
                         ) : (
@@ -1186,6 +1217,7 @@ const menuBoxStyle: React.CSSProperties = {
 }
 const menuTitleStyle: React.CSSProperties = { fontSize: 14, fontWeight: 900, letterSpacing: 2, marginBottom: 4 }
 const chatFabStyle: React.CSSProperties = { position: "fixed", top: 12, right: "max(12px, calc(50% - 228px))", zIndex: 9300, width: 44, height: 44, borderRadius: "50%", border: "3px solid #1c1408", background: "#f4ecd4", fontSize: 20, cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center" }
+const pocketHdrStyle: React.CSSProperties = { fontSize: 11, fontWeight: 800, letterSpacing: 1, opacity: 0.75, margin: "8px 0 3px", borderBottom: "1px solid rgba(0,0,0,0.15)", paddingBottom: 2 }
 const menuBtnStyle: React.CSSProperties = {
     background: "#fff", border: "2px solid #1c1408", borderRadius: 6, padding: "12px 14px",
     fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer", textAlign: "left", color: "#1c1408",
