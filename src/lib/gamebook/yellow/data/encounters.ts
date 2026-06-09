@@ -58,6 +58,11 @@ export function wildLevelCap(badges: readonly string[]): number {
     return 30
 }
 
+/** Zones (mapId) où une espèce apparaît à l'état sauvage — pour la fiche Pokédex. */
+export function speciesZones(speciesId: string): string[] {
+    return Object.keys(ZONES).filter((mapId) => ZONES[mapId].pool.some((e) => e.speciesId === speciesId))
+}
+
 const ZONES: Record<string, Zone> = {
     yellow_route_nord: {
         rate: 0.14,
