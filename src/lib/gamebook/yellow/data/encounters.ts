@@ -24,7 +24,7 @@ interface WildEntry {
     rare?: boolean        // popе 1-2 niveaux au-dessus du lead
 }
 
-interface Zone { rate: number; pool: WildEntry[] }
+interface Zone { rate: number; pool: WildEntry[]; minLevel?: number }
 
 /** Stats PushQuest normalisées 0..1 (sauf quotaReached). Couche méta. */
 export interface WildPlayerCtx {
@@ -94,6 +94,7 @@ const ZONES: Record<string, Zone> = {
     // GROTTE ROCHEUSE : habitat des Daemons Roche (+ une rareté spectrale).
     yellow_grotte: {
         rate: 0.16,
+        minLevel: 5, // donjon gated (badge Plante) → pas de bébés niv 2
         pool: [
             { speciesId: "mottoche", base: COMMON },          // le « Magicarpe » rocheux
             { speciesId: "cailloutchi", base: COMMON, player: "rocheSol" },
@@ -164,7 +165,7 @@ export function rollWildEncounter(ctx: EncounterCtx): MonInstance | null {
     let level = Math.round(L * frac)
     if (entry.rare) level += intIn(rng, 1, 2)                        // un rare sauvage = un cran au-dessus
     if (ctx.levelCap != null) level = Math.min(level, ctx.levelCap)  // bridage par badges (arène) — conservé
-    level = Math.max(2, Math.min(100, level))                        // plancher 2, plafond 100
+    level = Math.max(zone.minLevel ?? 2, Math.min(100, level))      // plancher (zone) → plafond 100
 
     // IV "génétiques" pilotés par l'effort du jour (proximité du quota → meilleur plancher).
     // Sans données d'effort (hors-ligne), plancher médian (0.5) : ni puni ni maximal.

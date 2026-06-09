@@ -236,10 +236,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
             const team = getPlayerSave().team
             const lead = team.find((m) => m.currentHp > 0)
             if (lead) {
+                const badges = getPlayerSave().badges
+                // Niveau du pop (3 bandes) : dès le badge ROCHE, basé sur la MOYENNE de
+                // l'équipe ; avant, basé sur le 1er Daemon (lead).
+                const levelBasis = badges.includes("roche")
+                    ? Math.round(team.reduce((s, m) => s + m.level, 0) / Math.max(1, team.length))
+                    : lead.level
                 const wild = rollWildEncounter({
-                    mapId: next.mapId, x: next.posX, y: next.posY, leadLevel: lead.level,
+                    mapId: next.mapId, x: next.posX, y: next.posY, leadLevel: levelBasis,
                     player: getPlayerSave().wildCtx ?? undefined,
-                    levelCap: wildLevelCap(getPlayerSave().badges), // bridage par badges (Route Nord + Grotte)
+                    levelCap: wildLevelCap(badges), // bridage par badges (Route Nord + Grotte)
                 })
                 if (wild) {
                     const seed = Math.floor(Math.random() * 1e9) >>> 0
