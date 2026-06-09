@@ -345,6 +345,12 @@ export default function BattleScreen() {
                     75% { transform: translateX(-2px); }
                     100% { transform: translateX(0); }
                 }
+                @keyframes monEnter {
+                    0% { transform: translateY(-44px) scale(0.7); opacity: 0; }
+                    55% { opacity: 1; }
+                    78% { transform: translateY(5px) scale(1.06); }
+                    100% { transform: translateY(0) scale(1); opacity: 1; }
+                }
                 @keyframes ballThrow {
                     0% { transform: translate(-150px, -70px) scale(0.5) rotate(-200deg); opacity: 0; }
                     30% { opacity: 1; }
@@ -401,19 +407,23 @@ function MonSprite({ mon, facing, alive, hitKey }: { mon: BattleMon; facing: "fr
     const sp = speciesOf(mon)
     const [err, setErr] = useState(false)
     return (
-        <div
-            key={hitKey}
-            style={{
-                ...(err ? S.sprite : S.spriteBox),
-                opacity: alive ? 1 : 0.25,
-                transform: facing === "back" ? "scaleX(-1)" : "none",
-                animation: hitKey > 0 ? "hitShake 0.3s ease-in-out" : "none",
-            }}
-        >
-            {err
-                ? <span style={S.spriteGlyph}>{sp.name[0]}</span>
-                : <img src={sp.sprite} alt={sp.name} onError={() => setErr(true)}
-                    style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated" }} />}
+        // Wrapper keyé sur l'uid : remonte à chaque ENTRÉE de Daemon (combat/switch)
+        // → joue l'anim "monEnter" (chute + rebond). Le shake reste sur le div interne.
+        <div key={mon.uid} style={{ animation: "monEnter 0.42s cubic-bezier(.17,.67,.33,.99)" }}>
+            <div
+                key={hitKey}
+                style={{
+                    ...(err ? S.sprite : S.spriteBox),
+                    opacity: alive ? 1 : 0.25,
+                    transform: facing === "back" ? "scaleX(-1)" : "none",
+                    animation: hitKey > 0 ? "hitShake 0.3s ease-in-out" : "none",
+                }}
+            >
+                {err
+                    ? <span style={S.spriteGlyph}>{sp.name[0]}</span>
+                    : <img src={sp.sprite} alt={sp.name} onError={() => setErr(true)}
+                        style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated" }} />}
+            </div>
         </div>
     )
 }
