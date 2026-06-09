@@ -252,7 +252,7 @@ const TOWN_BUILDINGS: YellowBuilding[] = [
         x: 24, y: 16, w: 5, h: 2,       // footprint cols 24..28, rows 16..17
         doorX: 1, doorY: 2,             // porte abs (25, 18) — devant le bâtiment
         targetMapId: "yellow_casino",
-        targetSpawnX: 4, targetSpawnY: 5,
+        targetSpawnX: 10, targetSpawnY: 10,
         displayName: "MAISON",
         kind: "casino",
     },
@@ -306,14 +306,16 @@ function buildShopInterior(): TileType[][] {
 }
 
 function buildCasinoInterior(): TileType[][] {
-    const m = fillRoom(9, 7, "floorTile")
-    // Tables de casino
-    m[2][2] = "table"
-    m[2][6] = "table"
-    m[4][2] = "slotMachine"
-    m[4][6] = "rouletteWheel"
-    // Porte sortie
-    m[6][4] = "doorMat"
+    // 22×12 calé sur casino_interior.png (1056×576, tile 48px). On part TOUT bloqué
+    // puis on ouvre l'intérieur walkable ; le décor (machines à sous à gauche,
+    // comptoir au centre, arène à droite) est déjà dessiné sur l'image. Les 3 zones
+    // sont reliées (hub social). Sortie : porte en bas-centre.
+    const W = 22, H = 12
+    const m: TileType[][] = Array.from({ length: H }, () => Array.from({ length: W }, () => "shopCounter" as TileType))
+    for (let y = 1; y <= 10; y++) for (let x = 1; x <= 20; x++) m[y][x] = "floorTile"
+    for (let x = 1; x <= 6; x++) m[1][x] = "shopCounter"   // rangée des machines à sous (haut-gauche)
+    for (let x = 9; x <= 12; x++) m[1][x] = "shopCounter"  // comptoir (haut-centre)
+    m[11][10] = "doorMat"                                   // sortie (porte bas-centre)
     return m
 }
 
@@ -762,9 +764,13 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         id: "yellow_casino",
         name: "CASINO",
         tiles: buildCasinoInterior(),
-        width: 9,
-        height: 7,
-        exits: [returnExit("yellow_casino", 4, 6)],
+        width: 22,
+        height: 12,
+        exits: [returnExit("yellow_casino", 10, 11)],
+        backgroundImage: "/yellow/sprites/casino_interior.png",
+        backgroundImageWidth: 1056,
+        backgroundImageHeight: 576,
+        backgroundImageTileSize: 48,
     },
     yellow_sbire: {
         id: "yellow_sbire",
