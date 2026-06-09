@@ -30,7 +30,7 @@ import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getGiftCtMove } from "@/lib/gamebook/yellow/store/battleStore"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
-import { getPlayer, setTeam, usePlayer, addItem, spendReps, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, consumeItem, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn } from "@/lib/gamebook/yellow/store/playerStore"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
@@ -80,6 +80,9 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
     const [ctShop, setCtShop] = useState(false)
     const [ctPick, setCtPick] = useState<string | null>(null)
     const [confirmReset, setConfirmReset] = useState(false)
+    const [buyConfirm, setBuyConfirm] = useState<{ id: string; name: string; price: number } | null>(null)
+    const [buyQty, setBuyQty] = useState(1)
+    const [sellMode, setSellMode] = useState(false)
     const [swapPick, setSwapPick] = useState<string | null>(null) // uid du Daemon "à déplacer"
 
     // Multijoueur casino : présence + déplacements temps réel des autres joueurs.
@@ -528,7 +531,7 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                                                     key={it.id}
                                                     style={afford ? menuBtnStyle : menuBtnDimStyle}
                                                     disabled={!afford}
-                                                    onClick={() => { if (spendReps(it.price)) addItem(it.id, 1) }}
+                                                    onClick={() => { setBuyConfirm({ id: it.id, name: it.name, price: it.price }); setBuyQty(1) }}
                                                 >
                                                     <span style={{ display: "flex", justifyContent: "space-between" }}>
                                                         <span>{it.name}{owned > 0 ? ` (×${owned})` : ""}</span>
@@ -566,7 +569,67 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                                 <span>🎓 Capsules CT</span><span>attaques</span>
                             </span>
                         </button>
+                        <button style={menuBtnStyle} onClick={() => setSellMode(true)}>
+                            <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                <span>💰 Revendre un objet</span><span>50%</span>
+                            </span>
+                        </button>
                         <button style={menuBtnDimStyle} onClick={closeShop}>← QUITTER</button>
+                    </div>
+                </div>
+            )}
+
+            {/* Confirmation d'achat (anti-clic accidentel) + sélecteur de quantité */}
+            {shopOpen && buyConfirm && (() => {
+                const total = buyConfirm.price * buyQty
+                const canAfford = player.reps >= total
+                return (
+                    <div style={{ ...menuOverlayStyle, zIndex: 9500 }} onClick={() => setBuyConfirm(null)}>
+                        <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                            <div style={menuTitleStyle}>Confirmer l'achat</div>
+                            <div style={{ textAlign: "center", margin: "8px 0 4px", fontSize: 14, fontWeight: 700 }}>{buyConfirm.name}</div>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, margin: "10px 0" }}>
+                                <button style={{ ...menuBtnDimStyle, width: 48, fontSize: 20 }} onClick={() => setBuyQty((q) => Math.max(1, q - 1))}>−</button>
+                                <span style={{ fontSize: 22, fontWeight: 800, minWidth: 36, textAlign: "center" }}>{buyQty}</span>
+                                <button style={{ ...menuBtnDimStyle, width: 48, fontSize: 20 }} onClick={() => setBuyQty((q) => q + 1)}>+</button>
+                            </div>
+                            <div style={{ textAlign: "center", marginBottom: 10, fontSize: 13, color: canAfford ? "inherit" : "#c0392b" }}>
+                                Total : <b>{total} reps</b>{canAfford ? "" : " — insuffisant"}
+                            </div>
+                            <button
+                                style={canAfford ? menuBtnStyle : menuBtnDimStyle}
+                                disabled={!canAfford}
+                                onClick={() => { if (spendReps(total)) addItem(buyConfirm.id, buyQty); setBuyConfirm(null) }}
+                            >✅ Acheter</button>
+                            <button style={menuBtnDimStyle} onClick={() => setBuyConfirm(null)}>← Annuler</button>
+                        </div>
+                    </div>
+                )
+            })()}
+
+            {/* Revente : récupère 50% du prix (anti-achat-définitif) */}
+            {shopOpen && sellMode && (
+                <div style={{ ...menuOverlayStyle, zIndex: 9500 }} onClick={() => setSellMode(false)}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={{ ...menuTitleStyle, display: "flex", justifyContent: "space-between" }}>
+                            <span>REVENDRE</span><span>💪 {player.reps}/{player.repsCap}</span>
+                        </div>
+                        {(() => {
+                            const owned = Object.values(ITEMS).filter((it) => it.price > 0 && (player.items[it.id] ?? 0) > 0)
+                            if (!owned.length) return <div style={{ textAlign: "center", padding: 18, fontSize: 12, opacity: 0.6 }}>Aucun objet à revendre.</div>
+                            return owned.map((it) => {
+                                const refund = Math.floor(it.price / 2)
+                                const n = player.items[it.id] ?? 0
+                                return (
+                                    <button key={it.id} style={menuBtnStyle} onClick={() => { if (consumeItem(it.id)) grantReps(refund) }}>
+                                        <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                            <span>{it.name} (×{n})</span><span>+{refund} reps</span>
+                                        </span>
+                                    </button>
+                                )
+                            })
+                        })()}
+                        <button style={menuBtnDimStyle} onClick={() => setSellMode(false)}>← Retour</button>
                     </div>
                 </div>
             )}
