@@ -19,6 +19,7 @@ import BattleBoundary from "./battle/BattleBoundary"
 import { useCasinoPresence } from "@/lib/gamebook/yellow/multiplayer/useCasinoPresence"
 import { useCasinoChallenge, type BattleStart } from "@/lib/gamebook/yellow/multiplayer/useCasinoChallenge"
 import { useCasinoChat } from "@/lib/gamebook/yellow/multiplayer/useCasinoChat"
+import { useCasinoTrade } from "@/lib/gamebook/yellow/multiplayer/useCasinoTrade"
 import { useCasinoBattle } from "@/lib/gamebook/yellow/multiplayer/useCasinoBattle"
 import { usePvpCtx, pvpForfeit } from "@/lib/gamebook/yellow/store/battleStore"
 import EvolutionScreen from "./battle/EvolutionScreen"
@@ -32,7 +33,7 @@ import { YELLOW_MAPS } from "@/lib/gamebook/yellow/maps"
 import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getGiftCtMove } from "@/lib/gamebook/yellow/store/battleStore"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
-import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, consumeItem, setCurrentPlayerId, setCurrentMapId, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn } from "@/lib/gamebook/yellow/store/playerStore"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
@@ -116,6 +117,22 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
         setPvpSession(null)
         setToast(reason)
     })
+
+    // === Échange de Daemons (RECO 4) ===
+    const [interactTarget, setInteractTarget] = useState<{ userId: string; nickname: string } | null>(null)
+    const [tradePickFor, setTradePickFor] = useState<{ userId: string; nickname: string } | null>(null)
+    const trade = useCasinoTrade({
+        active: inCasino && !battle && !showIntro && !!userId,
+        myUserId: userId,
+        busy: !!battle || !!pvpSession,
+        onComplete: (give, receive) => {
+            executeTrade(give.uid, receive)
+            persistYellowSave()
+            setTradePickFor(null)
+            setToast(`Échange réussi ! Tu reçois ${getSpecies(receive.speciesId)?.name ?? "un Daemon"}.`)
+        },
+    })
+
     const [confirmForfeit, setConfirmForfeit] = useState(false)
 
     // Teardown de la session PvP une fois le combat terminé (pvpCtx repassé à null).
@@ -299,7 +316,7 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                         // Dans le casino, A face à un autre joueur = le défier.
                         if (inCasino) {
                             const target = facingRemote()
-                            if (target) { challenge.sendChallenge(target.userId, target.nickname); return }
+                            if (target) { setInteractTarget({ userId: target.userId, nickname: target.nickname }); return }
                         }
                         pressA()
                     }}
@@ -326,7 +343,7 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                                 <div style={{ fontSize: 11, color: "#c83030", fontWeight: 700, textAlign: "center" }}>
                                     Effacer TOUTE ta progression du Chapitre 2 ?<br />(équipe, Pokédex, badges, reps — irréversible)
                                 </div>
-                                <button style={{ ...menuBtnStyle, borderColor: "#c83030", color: "#c83030" }} onClick={() => { resetYellowChapter(); setConfirmReset(false); setMenu("none"); setShowIntro(true) }}>✓ OUI, tout recommencer</button>
+                                <button style={{ ...menuBtnStyle, borderColor: "#c83030", color: "#c83030" }} onClick={() => { if (trade.session) { setToast("Termine ton échange en cours avant de réinitialiser."); setConfirmReset(false); return } resetYellowChapter(); setConfirmReset(false); setMenu("none"); setShowIntro(true) }}>✓ OUI, tout recommencer</button>
                                 <button style={menuBtnDimStyle} onClick={() => setConfirmReset(false)}>← Annuler</button>
                             </>
                         ) : (
@@ -549,6 +566,83 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                             <button style={{ ...menuBtnStyle, width: "auto", padding: "0 14px", flexShrink: 0 }} onClick={() => { chat.send(chatText); setChatText("") }}>Envoyer</button>
                         </div>
                         <button style={menuBtnDimStyle} onClick={() => setChatOpen(false)}>← Fermer</button>
+                    </div>
+                </div>
+            )}
+
+            {/* === ÉCHANGE (RECO 4) === */}
+            {/* 1) Menu d'interaction face à un joueur */}
+            {interactTarget && !trade.session && !tradePickFor && (
+                <div style={menuOverlayStyle} onClick={() => setInteractTarget(null)}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>{interactTarget.nickname}</div>
+                        <button style={menuBtnStyle} onClick={() => { challenge.sendChallenge(interactTarget.userId, interactTarget.nickname); setInteractTarget(null) }}>⚔️ Défier en combat</button>
+                        <button style={menuBtnStyle} onClick={() => { setTradePickFor(interactTarget); setInteractTarget(null) }}>🔄 Proposer un échange</button>
+                        <button style={menuBtnDimStyle} onClick={() => setInteractTarget(null)}>← Annuler</button>
+                    </div>
+                </div>
+            )}
+
+            {/* 2) Choix du Daemon à offrir (initiateur OU répondeur) */}
+            {(tradePickFor || (trade.session?.role === "B" && !trade.session.myMon)) && (
+                <div style={menuOverlayStyle} onClick={() => { if (tradePickFor) setTradePickFor(null); else trade.cancel() }}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>{tradePickFor ? `Offrir à ${tradePickFor.nickname}` : `${trade.session?.partnerNickname} propose un échange`}</div>
+                        {trade.session?.theirMon && (
+                            <div style={{ fontSize: 12, marginBottom: 8, textAlign: "center" }}>
+                                Il offre : <b>{getSpecies(trade.session.theirMon.speciesId)?.name}</b> N.{trade.session.theirMon.level}
+                            </div>
+                        )}
+                        <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 4 }}>Choisis ton Daemon à donner :</div>
+                        <div style={{ maxHeight: 220, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
+                            {player.team.map((m) => (
+                                <button key={m.uid} style={menuBtnStyle} onClick={() => {
+                                    if (tradePickFor) { trade.startOffer(tradePickFor.userId, tradePickFor.nickname, m); setTradePickFor(null) }
+                                    else trade.acceptWith(m)
+                                }}>
+                                    <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                        <span>{m.nickname || getSpecies(m.speciesId)?.name}</span><span>N.{m.level}</span>
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+                        <button style={menuBtnDimStyle} onClick={() => { if (tradePickFor) setTradePickFor(null); else trade.acceptWith(null) }}>← {tradePickFor ? "Annuler" : "Refuser"}</button>
+                    </div>
+                </div>
+            )}
+
+            {/* 3) Panneau d'échange : les 2 offres + DOUBLE confirmation (pas de fermeture accidentelle) */}
+            {trade.session && trade.session.myMon && (
+                <div style={menuOverlayStyle}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>🔄 ÉCHANGE — {trade.session.partnerNickname}</div>
+                        <div style={{ display: "flex", justifyContent: "space-around", gap: 8, margin: "10px 0", fontSize: 12, textAlign: "center" }}>
+                            <div>
+                                <div style={{ opacity: 0.6, fontSize: 10 }}>Tu donnes</div>
+                                <div><b>{trade.session.myMon.nickname || getSpecies(trade.session.myMon.speciesId)?.name}</b></div>
+                                <div>N.{trade.session.myMon.level}</div>
+                                <div style={{ fontSize: 16 }}>{trade.session.myConfirmed ? "✅" : "⏳"}</div>
+                            </div>
+                            <div style={{ alignSelf: "center", fontSize: 18 }}>⇄</div>
+                            <div>
+                                <div style={{ opacity: 0.6, fontSize: 10 }}>Tu reçois</div>
+                                {trade.session.theirMon ? (
+                                    <>
+                                        <div><b>{getSpecies(trade.session.theirMon.speciesId)?.name}</b></div>
+                                        <div>N.{trade.session.theirMon.level}</div>
+                                        <div style={{ fontSize: 16 }}>{trade.session.theirConfirmed ? "✅" : "⏳"}</div>
+                                    </>
+                                ) : <div style={{ opacity: 0.5, marginTop: 8 }}>en attente…</div>}
+                            </div>
+                        </div>
+                        {trade.session.theirMon ? (
+                            <button style={trade.session.myConfirmed ? menuBtnDimStyle : menuBtnStyle} disabled={trade.session.myConfirmed} onClick={() => trade.confirm()}>
+                                {trade.session.myConfirmed ? "En attente de l'autre dresseur…" : "✅ Confirmer l'échange"}
+                            </button>
+                        ) : (
+                            <div style={{ textAlign: "center", fontSize: 11, opacity: 0.6, padding: 8 }}>En attente de son Daemon…</div>
+                        )}
+                        <button style={menuBtnDimStyle} onClick={() => trade.cancel()}>← Annuler l'échange</button>
                     </div>
                 </div>
             )}

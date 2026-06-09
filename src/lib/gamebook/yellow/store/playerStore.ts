@@ -212,6 +212,31 @@ export function addCaught(mon: MonInstance, ctx?: { quotaReached?: boolean }): "
     return "pc"
 }
 
+/**
+ * ÉCHANGE (RECO 4) : retire le Daemon donné (par uid, équipe OU PC), ajoute le reçu
+ * avec nouvel ownership. originalTrainerId préservé (survit aux allers-retours) ;
+ * surnom d'origine figé. Renvoie false si le Daemon donné est introuvable (déjà parti).
+ */
+export function executeTrade(giveUid: string, receive: MonInstance): boolean {
+    const has = st.team.some((m) => m.uid === giveUid) || st.pc.some((m) => m.uid === giveUid)
+    if (!has || !receive?.speciesId) return false
+    const team = st.team.filter((m) => m.uid !== giveUid)
+    const pc = st.pc.filter((m) => m.uid !== giveUid)
+    const got: MonInstance = {
+        ...receive,
+        owned: true,
+        currentOwnerId: currentPlayerId || receive.currentOwnerId,
+        originalTrainerId: receive.originalTrainerId ?? receive.currentOwnerId,
+        traded: true,
+        originalNickname: receive.originalNickname ?? receive.nickname,
+    }
+    if (team.length < TEAM_MAX) team.push(got)
+    else pc.push(got)
+    st = { ...st, team, pc }
+    emit()
+    return true
+}
+
 export function addItem(itemId: string, qty = 1) {
     st = { ...st, items: { ...st.items, [itemId]: (st.items[itemId] ?? 0) + qty } }
     emit()
