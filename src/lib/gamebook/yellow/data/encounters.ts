@@ -155,10 +155,16 @@ export function rollWildEncounter(ctx: EncounterCtx): MonInstance | null {
     }
     const entry = zone.pool[idx]
 
-    let level = ctx.leadLevel + intIn(rng, -2, 1)
-    if (entry.rare) level += intIn(rng, 1, 2)
-    if (ctx.levelCap != null) level = Math.min(level, ctx.levelCap) // bridage par badges
-    level = Math.max(2, Math.min(100, level))
+    // Niveau sauvage : 3 BANDES de probabilité calées sur le niveau du LEAD (L).
+    //   33% « proche » (90-100% de L) · 33% (66-99% de L) · 34% (33-66% de L).
+    const L = ctx.leadLevel
+    const lerp = (a: number, b: number) => a + (b - a) * rng()
+    const roll = rng()
+    const frac = roll < 0.33 ? lerp(0.90, 1.00) : roll < 0.66 ? lerp(0.66, 0.99) : lerp(0.33, 0.66)
+    let level = Math.round(L * frac)
+    if (entry.rare) level += intIn(rng, 1, 2)                        // un rare sauvage = un cran au-dessus
+    if (ctx.levelCap != null) level = Math.min(level, ctx.levelCap)  // bridage par badges (arène) — conservé
+    level = Math.max(2, Math.min(100, level))                        // plancher 2, plafond 100
 
     // IV "génétiques" pilotés par l'effort du jour (proximité du quota → meilleur plancher).
     // Sans données d'effort (hors-ligne), plancher médian (0.5) : ni puni ni maximal.
