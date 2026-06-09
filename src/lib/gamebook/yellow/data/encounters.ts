@@ -96,15 +96,20 @@ const ZONES: Record<string, Zone> = {
         rate: 0.16,
         minLevel: 5, // donjon gated (badge Plante) → pas de bébés niv 2
         pool: [
-            { speciesId: "mottoche", base: COMMON },          // le « Magicarpe » rocheux
-            { speciesId: "cailloutchi", base: COMMON, player: "rocheSol" },
-            { speciesId: "rembodo", base: UNCOMMON },         // fossile
-            { speciesId: "limaroche", base: UNCOMMON },       // roche/psy
-            { speciesId: "marmoterre", base: UNCOMMON },      // roche/glace
-            { speciesId: "lavapetit", base: UNCOMMON },       // roche/feu
-            { speciesId: "tetardoc", base: UNCOMMON, affinity: ["water"] }, // roche/eau près de la mare
-            { speciesId: "revemante", base: RARE, player: "rare", rare: true },
-            { speciesId: "draclet", base: VERY_RARE, player: "rare", rare: true },
+            // 🪨 ROCHE (la grotte) — repulsion water pour laisser le LAC à l'eau (2 biomes).
+            { speciesId: "mottoche", base: 180, repulsion: ["water"] },                       // « Magicarpe » rocheux : COMMUN ++
+            { speciesId: "cailloutchi", base: 60, repulsion: ["water"], player: "rocheSol" }, // déjà commun dehors → moins ici
+            { speciesId: "rembodo", base: UNCOMMON, repulsion: ["water"] },                   // Roche/Vol
+            { speciesId: "lavapetit", base: UNCOMMON, repulsion: ["water"] },                 // Roche/Feu
+            { speciesId: "limaroche", base: UNCOMMON, repulsion: ["water"] },                 // Roche/Psy
+            { speciesId: "marmoterre", base: UNCOMMON, repulsion: ["water"] },                // Roche/Glace
+            { speciesId: "quadroc", base: UNCOMMON, repulsion: ["water"] },                   // lignée diamant
+            // 💧 EAU (le lac, haut-gauche) — affinity water = dense au bord, fond en s'éloignant.
+            { speciesId: "loutrille", base: 40, affinity: ["water"] },                        // commun au bord, rare loin
+            { speciesId: "tetardoc", base: RARE, affinity: ["water"] },                       // le PONT eau/roche, concentré au bord du lac
+            // 👻🐉 LE FOND
+            { speciesId: "revemante", base: UNCOMMON },                                       // fantôme des cavernes
+            { speciesId: "draclet", base: VERY_RARE, player: "rare", rare: true },            // la pépite (Vol/Dragon)
         ],
     },
 }

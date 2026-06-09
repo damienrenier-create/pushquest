@@ -30,6 +30,10 @@ const BIOME_REGIONS: Record<string, Partial<Record<Biome, Rect[]>>> = {
             { x0: 42, y0: 0, x1: 43, y1: 39 },
         ],
     },
+    yellow_grotte: {
+        // Le LAC (haut-gauche, cf. grotte.png) — source d'influence "eau" pour Loutrille/Têtardoc.
+        water: [{ x0: 1, y0: 2, x1: 9, y1: 7 }],
+    },
 }
 
 /** Distance de Chebyshev d'un point à un rectangle (0 si dedans). */

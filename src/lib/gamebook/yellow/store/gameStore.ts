@@ -204,6 +204,24 @@ export const useGameStore = create<GameStore>((set, get) => ({
             const targetMapId = exit.targetMapId === "yellow_arena"
                 ? currentArenaMapId(getPlayerSave().badges)
                 : exit.targetMapId
+            // GATE GROTTE : interdite tant que le Badge Plante n'est pas gagné → le dieu
+            // Spaghetti barre la route et te renvoie au Centre Daemon (comme un K.O.).
+            if (targetMapId === "yellow_grotte" && !getPlayerSave().badges.includes("plante")) {
+                const newPlayer = createInitialPlayer("yellow_infirmary", 4, 3, "down")
+                set({
+                    map: YELLOW_MAPS["yellow_infirmary"], player: newPlayer,
+                    dialogue: {
+                        npcId: "spaghetti_gate", npcName: "DIEU SPAGHETTI", lineIndex: 0,
+                        lines: [
+                            "Olà, aventurier ! Des créatures terribles rôdent dans ces cavernes…",
+                            "Reviens quand tu auras prouvé ta valeur en décrochant le Badge Feuille !",
+                            "*D'un claquement de doigts, te voilà ramené au Centre Daemon, sain et sauf.*",
+                        ],
+                    },
+                })
+                scheduleSave(newPlayer)
+                return
+            }
             const newMap = YELLOW_MAPS[targetMapId]
             if (newMap) {
                 const newPlayer = createInitialPlayer(
