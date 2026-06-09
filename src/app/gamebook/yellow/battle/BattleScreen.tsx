@@ -282,6 +282,7 @@ export default function BattleScreen() {
 
             {/* ===== Scène ===== */}
             <div style={S.scene}>
+                <TeamPips team={battle.enemy.team} activeIdx={eIdx} activeHp={eHp} align="left" />
                 <div style={S.enemyRow}>
                     {/* key sur l'uid : au changement de Daemon (switchIn), la barre se REMONTE
                         nette au lieu d'animer 0%→100% (le "flash plein" perçu à chaque K.O.). */}
@@ -295,6 +296,7 @@ export default function BattleScreen() {
                     <MonSprite mon={player} facing="back" alive={pHp > 0} hitKey={shakeP} />
                     <MonInfo key={player.uid} mon={player} self hp={pHp} max={pMax} />
                 </div>
+                <TeamPips team={battle.player.team} activeIdx={pIdx} activeHp={pHp} align="right" />
                 {atkFx && <AttackFx key={atkFx.key} spec={atkFx.spec} attackerSide={atkFx.side} onDone={() => setAtkFx(null)} />}
             </div>
 
@@ -398,6 +400,34 @@ function MonInfo({ mon, self, hp, max }: { mon: BattleMon; self?: boolean; hp: n
             </div>
             {self && <div style={S.hpNum}>{Math.max(0, Math.round(hp))}/{max}</div>}
             {hp > 0 && mon.status !== "NONE" && <span style={S.statusTag}>{mon.status}</span>}
+        </div>
+    )
+}
+
+// Barre des 6 Daemons d'une équipe (style "pokéballs") : vivant = bille rouge/crème,
+// K.O. = grisé + ✕, statut = ambre. Lecture seule de l'état de combat (zéro moteur).
+// Le Daemon ACTIF utilise activeHp (synchro avec sa barre animée).
+function TeamPips({ team, activeIdx, activeHp, align }: { team: BattleMon[]; activeIdx: number; activeHp: number; align: "left" | "right" }) {
+    return (
+        <div style={{ display: "flex", gap: 5, justifyContent: align === "left" ? "flex-start" : "flex-end", padding: "0 6px", minHeight: 16 }}>
+            {team.map((m, i) => {
+                const hp = i === activeIdx ? activeHp : m.currentHp
+                const ko = hp <= 0
+                const sick = !!m.status && m.status !== "NONE"
+                return (
+                    <span
+                        key={m.uid}
+                        title={`${displayName(m)} — ${ko ? "K.O." : `${Math.max(0, Math.ceil(hp))} PV`}`}
+                        style={{
+                            width: 14, height: 14, borderRadius: "50%", border: "2px solid #1c1408",
+                            background: ko ? "#9a9a9a" : sick ? "#e0b020" : "linear-gradient(#e23c2a 0 50%, #f4ecd4 50% 100%)",
+                            display: "inline-flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 9, fontWeight: 900, color: "#1c1408", lineHeight: 1,
+                            boxShadow: ko ? "none" : "0 1px 2px rgba(0,0,0,0.35)",
+                        }}
+                    >{ko ? "✕" : ""}</span>
+                )
+            })}
         </div>
     )
 }
