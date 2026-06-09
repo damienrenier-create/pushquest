@@ -27,6 +27,7 @@ import LibraryPanel from "./LibraryPanel"
 import LabPanel from "./LabPanel"
 import ParkSignPanel from "./ParkSignPanel"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
+import { YELLOW_MAPS } from "@/lib/gamebook/yellow/maps"
 import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getGiftCtMove } from "@/lib/gamebook/yellow/store/battleStore"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
@@ -853,9 +854,14 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                             <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 6 }}>
                                 XP cumulée : {live.exp.toLocaleString("fr-FR")} · niveau suivant dans ~{Math.max(0, toNext).toLocaleString("fr-FR")} XP
                             </div>
-                            {(live.capturedLevel != null || live.capturedAt) && (
+                            {(live.capturedLevel != null || live.capturedAt || live.capturedMapId) && (
                                 <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 6 }}>
-                                    🎣 Capturé{live.capturedLevel != null ? ` au N.${live.capturedLevel}` : ""}{live.capturedAt ? ` le ${live.capturedAt}` : ""}
+                                    🎣 Capturé{live.capturedLevel != null ? ` au N.${live.capturedLevel}` : ""}{live.capturedAt ? ` le ${live.capturedAt}` : ""}{live.capturedMapId && YELLOW_MAPS[live.capturedMapId] ? ` — ${YELLOW_MAPS[live.capturedMapId].name}` : ""}{live.capturedQuotaReached ? " · 🏆 quota atteint" : ""}
+                                </div>
+                            )}
+                            {live.traded && (
+                                <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 6 }}>
+                                    🔄 Reçu par échange{live.originalNickname ? ` · surnom d'origine « ${live.originalNickname} »` : ""}
                                 </div>
                             )}
                             {live.bestDmgMove && (
