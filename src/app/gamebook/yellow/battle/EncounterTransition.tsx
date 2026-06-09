@@ -55,6 +55,17 @@ export default function EncounterTransition() {
         return () => clearTimeout(t)
     }, [fx])
 
+    // SKIP uniquement sur B / Échap (jamais sur un tap/flèche accidentel).
+    useEffect(() => {
+        if (!fx) return
+        const onKey = (e: KeyboardEvent) => {
+            const k = e.key.toLowerCase()
+            if (k === "b" || k === "escape") setFx(null)
+        }
+        window.addEventListener("keydown", onKey)
+        return () => window.removeEventListener("keydown", onKey)
+    }, [fx])
+
     if (!fx) return null
     const reduced = prefersReducedMotion()
     const { profile, danger, count, bloom, shake } = fx
@@ -64,7 +75,7 @@ export default function EncounterTransition() {
 
     // Mode accessible : simple fondu, aucun mouvement/particule/flash.
     if (reduced) {
-        return <div onPointerDown={skip} style={{ ...S.overlay, background: grad, animation: "etx-fade 220ms ease forwards" }}><style>{KEYFRAMES}</style></div>
+        return <div style={{ ...S.overlay, background: grad, animation: "etx-fade 220ms ease forwards" }}><style>{KEYFRAMES}</style></div>
     }
 
     const kind = profile.kind
@@ -72,7 +83,7 @@ export default function EncounterTransition() {
     const coverAnim = (anim: string) => `${anim} ${fx.dur}ms ${ease} forwards`
 
     return (
-        <div onPointerDown={skip} style={{ ...S.overlay, animation: shake ? `etx-shake ${Math.min(400, fx.dur)}ms ease-in-out` : undefined }}>
+        <div style={{ ...S.overlay, animation: shake ? `etx-shake ${Math.min(400, fx.dur)}ms ease-in-out` : undefined }}>
             <style>{KEYFRAMES}</style>
 
             {/* Couche RIDEAU (se retire selon la technique → révèle le combat) */}
@@ -122,7 +133,7 @@ export default function EncounterTransition() {
             {/* Teinte de DANGER (sauvage bien plus haut niveau) */}
             {danger && <div style={{ ...S.cover, background: "rgba(224,64,64,0.28)", animation: `etx-fade ${fx.dur}ms ease forwards`, pointerEvents: "none" }} />}
 
-            <div style={S.skipHint}>tap pour passer</div>
+            <button onClick={skip} style={S.skipBtn}>⏩ Passer (B)</button>
         </div>
     )
 }
@@ -134,7 +145,7 @@ const S: Record<string, React.CSSProperties> = {
     flash: { position: "absolute", inset: 0, background: "#fff", opacity: 0, pointerEvents: "none" },
     rays: { position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", opacity: 0.55 },
     ray: { position: "absolute", width: 6, height: "150%", transformOrigin: "center", opacity: 0.7 },
-    skipHint: { position: "absolute", bottom: 8, right: 10, fontSize: 9, color: "rgba(255,255,255,0.7)", fontFamily: "monospace", pointerEvents: "none" },
+    skipBtn: { position: "absolute", bottom: 12, right: 12, padding: "6px 14px", fontSize: 12, fontWeight: 700, color: "#fff", background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.55)", borderRadius: 20, cursor: "pointer", pointerEvents: "auto", fontFamily: "system-ui, sans-serif" },
 }
 
 const KEYFRAMES = `
