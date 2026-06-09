@@ -22,15 +22,15 @@ export interface AtkCatProfile {
 }
 
 export const ATK_CATEGORIES: Record<AtkCategory, AtkCatProfile> = {
-    impact:       { durationMs: 220, motion: "burst", shake: "light", flash: false, bloom: false, onCaster: false, easing: "cubic-bezier(.7,0,.84,0)" },
-    impact_heavy: { durationMs: 260, motion: "burst", shake: "heavy", flash: true,  bloom: true,  onCaster: false, easing: "cubic-bezier(.7,0,.84,0)" },
-    projectile:   { durationMs: 260, motion: "sweep", shake: "light", flash: false, bloom: true,  onCaster: false, easing: "cubic-bezier(.22,.61,.36,1)" },
-    recoil:       { durationMs: 280, motion: "burst", shake: "heavy", flash: true,  bloom: false, onCaster: false, tint: "rgba(224,64,64,0.25)", easing: "cubic-bezier(.83,0,.17,1)" },
-    priority:     { durationMs: 180, motion: "dash",  shake: "light", flash: true,  bloom: false, onCaster: false, easing: "steps(5)" },
-    drain:        { durationMs: 300, motion: "float", shake: "none",  flash: false, bloom: true,  onCaster: false, easing: "cubic-bezier(.37,0,.63,1)" },
-    heal:         { durationMs: 320, motion: "rise",  shake: "none",  flash: false, bloom: true,  onCaster: true,  easing: "ease-out" },
-    boost:        { durationMs: 240, motion: "rays",  shake: "none",  flash: true,  bloom: true,  onCaster: true,  easing: "cubic-bezier(.34,1.56,.64,1)" },
-    debuff:       { durationMs: 260, motion: "pulse", shake: "none",  flash: false, bloom: false, onCaster: false, tint: "rgba(150,60,180,0.22)", easing: "cubic-bezier(.65,0,.35,1)" },
+    impact:       { durationMs: 300, motion: "burst", shake: "light", flash: false, bloom: false, onCaster: false, easing: "cubic-bezier(.7,0,.84,0)" },
+    impact_heavy: { durationMs: 360, motion: "burst", shake: "heavy", flash: true,  bloom: true,  onCaster: false, easing: "cubic-bezier(.7,0,.84,0)" },
+    projectile:   { durationMs: 360, motion: "sweep", shake: "light", flash: false, bloom: true,  onCaster: false, easing: "cubic-bezier(.22,.61,.36,1)" },
+    recoil:       { durationMs: 380, motion: "burst", shake: "heavy", flash: true,  bloom: false, onCaster: false, tint: "rgba(224,64,64,0.25)", easing: "cubic-bezier(.83,0,.17,1)" },
+    priority:     { durationMs: 250, motion: "dash",  shake: "light", flash: true,  bloom: false, onCaster: false, easing: "steps(5)" },
+    drain:        { durationMs: 400, motion: "float", shake: "none",  flash: false, bloom: true,  onCaster: false, easing: "cubic-bezier(.37,0,.63,1)" },
+    heal:         { durationMs: 420, motion: "rise",  shake: "none",  flash: false, bloom: true,  onCaster: true,  easing: "ease-out" },
+    boost:        { durationMs: 340, motion: "rays",  shake: "none",  flash: true,  bloom: true,  onCaster: true,  easing: "cubic-bezier(.34,1.56,.64,1)" },
+    debuff:       { durationMs: 360, motion: "pulse", shake: "none",  flash: false, bloom: false, onCaster: false, tint: "rgba(150,60,180,0.22)", easing: "cubic-bezier(.65,0,.35,1)" },
 }
 
 /** TYPE → palette + particule emoji. */

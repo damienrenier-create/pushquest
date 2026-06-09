@@ -360,8 +360,8 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
 
     // PP illimités : la seule limite est le coût en reps (déduit côté store).
     const fxMoveId = isStruggle ? STRUGGLE_MOVE_ID : (slot?.moveId ?? "")
-    events.push({ kind: "move", side, moveId: fxMoveId }) // déclenche l'anim d'attaque
     events.push({ kind: "message", text: `${displayName(attacker)} utilise ${move.name} !` })
+    events.push({ kind: "move", side, moveId: fxMoveId }) // APRÈS le message : l'anim joue, puis les dégâts
 
     // --- Confusion : risque de se blesser soi-même ---
     if (attacker.volatiles.CONFUSION && attacker.volatiles.CONFUSION > 0) {

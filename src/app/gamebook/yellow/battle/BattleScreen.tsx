@@ -102,8 +102,8 @@ export default function BattleScreen() {
             })
             // La barre met 0,4s à se vider (transition CSS). On attend qu'elle soit
             // terminée avant d'enchaîner (faint/K.O. ou coup suivant) → l'ordre perçu
-            // est bien : coup → perte de PV → annonce du K.O.
-            delay = 460
+            // est bien : coup → perte de PV → annonce du K.O. (marge pour bien voir).
+            delay = 600
         } else if (ev.kind === "faint") {
             delay = 340
         } else if (ev.kind === "switchIn") {
@@ -116,10 +116,11 @@ export default function BattleScreen() {
                 return { ...d, e: m.currentHp, eMax: maxHpOf(m) }
             })
         } else if (ev.kind === "move") {
-            // Anim d'attaque (catégorie déduite du moveId), puis on enchaîne vite.
+            // Anim d'attaque (catégorie déduite du moveId) : on LAISSE le temps de la voir
+            // avant d'enchaîner sur les dégâts.
             atkKeyRef.current += 1
             setAtkFx({ spec: pickAttackFx(ev.moveId), side: ev.side, key: atkKeyRef.current })
-            delay = 120
+            delay = 360
         }
         const t = setTimeout(() => setStep((s) => s + 1), delay)
         return () => clearTimeout(t)
