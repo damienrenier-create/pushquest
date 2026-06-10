@@ -25,10 +25,11 @@ function post(text: string) {
     } catch { /* best-effort */ }
 }
 
-export function useCasinoChat(opts: { active: boolean; myUserId: string; myNickname?: string }) {
-    const { active, myUserId, myNickname } = opts
+export function useCasinoChat(opts: { active: boolean; myUserId: string; myNickname?: string; onIncoming?: (line: ChatLine) => void }) {
+    const { active, myUserId, myNickname, onIncoming } = opts
     const [lines, setLines] = useState<ChatLine[]>([])
     const idRef = useRef(0)
+    const onIncomingRef = useRef(onIncoming); onIncomingRef.current = onIncoming
 
     const push = useCallback((userId: string, nickname: string, text: string, mine: boolean) => {
         const clean = text.trim().slice(0, MAX_LEN)
@@ -36,6 +37,8 @@ export function useCasinoChat(opts: { active: boolean; myUserId: string; myNickn
         idRef.current += 1
         const line: ChatLine = { id: idRef.current, userId, nickname, text: clean, mine }
         setLines((prev) => [...prev, line].slice(-MAX_LINES))
+        // #2 — notifie l'UI d'un message REÇU (toast + badge non-lus quand le chat est fermé).
+        if (!mine) onIncomingRef.current?.(line)
     }, [])
 
     const send = useCallback((raw: string) => {

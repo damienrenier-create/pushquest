@@ -57,12 +57,14 @@ export function useCasinoTrade(opts: {
     myUserId: string
     busy: boolean
     onComplete: (give: MonInstance, receive: MonInstance) => void
+    onClosed?: (reason: string) => void // #13 : feedback (refus / expiration / départ)
 }) {
-    const { active, myUserId, busy, onComplete } = opts
+    const { active, myUserId, busy, onComplete, onClosed } = opts
     const [session, setSession] = useState<TradeSession | null>(null)
     const sessionRef = useRef<TradeSession | null>(null); sessionRef.current = session
     const busyRef = useRef(busy); busyRef.current = busy
     const onCompleteRef = useRef(onComplete); onCompleteRef.current = onComplete
+    const onClosedRef = useRef(onClosed); onClosedRef.current = onClosed
 
     // Si les deux ont confirmé ET les deux Daemons sont posés → swap + clôture.
     const settle = useCallback((s: TradeSession): TradeSession | null => {
@@ -129,7 +131,7 @@ export function useCasinoTrade(opts: {
             if (d.targetUserId !== myUserId) return
             setSession((s) => {
                 if (!s || s.tradeId !== d.battleId) return s
-                if (!d.accepted || !d.data?.mon) return null // refusé → clôture
+                if (!d.accepted || !d.data?.mon) { onClosedRef.current?.("L'échange a été refusé."); return null }
                 return { ...s, theirMon: d.data.mon }
             })
         }
@@ -139,26 +141,44 @@ export function useCasinoTrade(opts: {
         }
         const onCancel = (d: TradeMsg) => {
             if (d.targetUserId !== myUserId) return
-            setSession((s) => (s && s.tradeId === d.battleId ? null : s))
+            setSession((s) => { if (s && s.tradeId === d.battleId) { onClosedRef.current?.("L'échange a été annulé."); return null } return s })
+        }
+        // #6 — si le partenaire quitte le casino/onglet pendant l'échange, on ferme le
+        // modal au lieu de rester bloqué 90 s (le serveur diffuse player:disconnect).
+        const onPartnerLeft = (d: TradeMsg) => {
+            const s = sessionRef.current
+            if (s && d.userId && d.userId === s.partnerUserId) {
+                setSession(null)
+                onClosedRef.current?.("Le dresseur a quitté l'échange.")
+            }
         }
 
         channel.bind("trade:offer", onOffer)
         channel.bind("trade:respond", onRespond)
         channel.bind("trade:confirm", onConfirm)
         channel.bind("trade:cancel", onCancel)
+        channel.bind("player:disconnect", onPartnerLeft)
         return () => {
             channel.unbind("trade:offer", onOffer)
             channel.unbind("trade:respond", onRespond)
             channel.unbind("trade:confirm", onConfirm)
             channel.unbind("trade:cancel", onCancel)
+            channel.unbind("player:disconnect", onPartnerLeft)
+            // #6 — je pars avec un échange en cours → préviens le partenaire (sinon il
+            // reste coincé sur un modal non fermable jusqu'au timeout).
+            const s = sessionRef.current
+            if (s) post({ type: "trade:cancel", targetUserId: s.partnerUserId, battleId: s.tradeId })
             setSession(null)
         }
     }, [active, myUserId, settle])
 
-    // Timeout de sécurité (offre sans suite).
+    // Timeout de sécurité (offre sans suite) — #13 : avec feedback explicite.
     useEffect(() => {
         if (!session) return
-        const t = setTimeout(() => setSession(null), TRADE_TIMEOUT_MS)
+        const t = setTimeout(() => {
+            setSession(null)
+            onClosedRef.current?.("Échange expiré (aucune réponse).")
+        }, TRADE_TIMEOUT_MS)
         return () => clearTimeout(t)
     }, [session])
 

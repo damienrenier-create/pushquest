@@ -120,7 +120,9 @@ export function useCasinoPresence(opts: {
             channel.unbind("player:move", onMove)
             channel.unbind("player:hello", onHello)
             channel.unbind("player:disconnect", onDisconnect)
-            client.unsubscribe(`gamebook-${CHANNEL}`)
+            // ⚠️ #4 — on NE désabonne PAS le canal `yellow_casino` : il est PARTAGÉ avec
+            // chat / défi / échange. Un unsubscribe global ici coupait leur réception
+            // selon l'ordre de cleanup React. On retire seulement nos handlers.
             setPlayers({})
         }
     }, [active, myUserId, upsert])

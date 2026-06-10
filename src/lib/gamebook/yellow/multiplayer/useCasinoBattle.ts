@@ -135,7 +135,26 @@ export function useCasinoBattle(
         channel.bind("battle:forfeit", onForfeit)
         sendHello()
 
+        // #3 — RELANCE du hello (le seed est ré-émis par A à chaque fois) jusqu'au
+        // démarrage : Pusher ne rejoue pas les events, donc si l'adversaire s'abonne
+        // tard il manque le 1er hello → seed jamais reçu, combat fantôme. On répète
+        // tant que le combat n'a pas démarré des deux côtés.
+        const helloRetry = setInterval(() => {
+            if (startedRef.current) { clearInterval(helloRetry); return }
+            sendHello()
+        }, 1500)
+        // #11 — FILET : si le handshake n'aboutit pas (~15 s), on abandonne proprement
+        // au lieu de laisser le joueur figé "en attente" sans aucun feedback.
+        const helloTimeout = setTimeout(() => {
+            if (!startedRef.current) {
+                mpLog("abort", "handshake timeout (seed/équipe jamais reçus)")
+                onAbort?.("La connexion au combat a échoué. Réessayez depuis le casino.")
+            }
+        }, 15000)
+
         return () => {
+            clearInterval(helloRetry)
+            clearTimeout(helloTimeout)
             // Si je quitte alors que le combat est en cours → abandon implicite.
             const snap = getSnapshot()
             if (snap.pvpCtx && snap.battle && snap.battle.phase !== "ended" && !snap.pvpCtx.desync) {

@@ -100,9 +100,28 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
     })
 
     // === Chat du casino (RECO 8) ===
-    const chat = useCasinoChat({ active: inCasino && !battle && !showIntro && !!userId, myUserId: userId })
     const [chatOpen, setChatOpen] = useState(false)
     const [chatText, setChatText] = useState("")
+    const [chatUnread, setChatUnread] = useState(0) // #2 : badge non-lus quand le panneau est fermé
+    const chatOpenRef = useRef(chatOpen); chatOpenRef.current = chatOpen
+    const chat = useCasinoChat({
+        active: inCasino && !battle && !showIntro && !!userId,
+        myUserId: userId,
+        // #2 — message REÇU alors que le panneau est fermé → toast + incrément du badge
+        // (sinon le message n'apparaissait nulle part : « le chat semble cassé »).
+        onIncoming: (line) => {
+            if (!chatOpenRef.current) {
+                setChatUnread((n) => Math.min(99, n + 1))
+                setToast(`💬 ${line.nickname}: ${line.text}`)
+            }
+        },
+    })
+
+    // #5 — verrous croisés échange↔défi (jamais les deux en même temps, sinon on peut
+    // partir en combat avec un Daemon déjà échangé). Réfs lues à chaque render par les
+    // hooks (busy stocké en ref côté hook) → 1 render de latence max, sans casse.
+    const tradeBusyRef = useRef(false)
+    const challengeBusyRef = useRef(false)
 
     // === PvP : défi + combat réseau ===
     const [pvpSession, setPvpSession] = useState<BattleStart | null>(null)
@@ -110,7 +129,7 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
     const challenge = useCasinoChallenge({
         active: inCasino && !battle && !showIntro && !!userId,
         myUserId: userId,
-        busy: !!battle || !!pvpSession,
+        busy: !!battle || !!pvpSession || tradeBusyRef.current,
         onStart: (s) => setPvpSession(s),
     })
     const { forfeit: pvpForfeitNow } = useCasinoBattle(pvpSession, userId, (reason) => {
@@ -124,7 +143,7 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
     const trade = useCasinoTrade({
         active: inCasino && !battle && !showIntro && !!userId,
         myUserId: userId,
-        busy: !!battle || !!pvpSession,
+        busy: !!battle || !!pvpSession || challengeBusyRef.current,
         onComplete: (give, receive) => {
             executeTrade(give.uid, receive)
             const evo = applyTradeEvolution(receive.uid) // évolution par échange (ex. Roctaur → Rochison)
@@ -133,7 +152,12 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
             if (evo) setToast(`✨ Suite à l'échange, ${evo.fromName} évolue en ${evo.toName} !`)
             else setToast(`Échange réussi ! Tu reçois ${getSpecies(receive.speciesId)?.name ?? "un Daemon"}.`)
         },
+        // #13 — feedback explicite quand l'échange se ferme sans aboutir.
+        onClosed: (reason) => { setToast(reason); setTradePickFor(null) },
     })
+    // #5 — MAJ des réfs APRÈS les deux hooks (lues au render suivant par les busy).
+    challengeBusyRef.current = !!(challenge.incoming || challenge.outgoing)
+    tradeBusyRef.current = !!trade.session
 
     const [confirmForfeit, setConfirmForfeit] = useState(false)
 
@@ -574,7 +598,10 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
 
             {/* Chat du casino (RECO 8) : bouton flottant + overlay messages/saisie */}
             {inCasino && !battle && !showIntro && !chatOpen && (
-                <button onClick={() => setChatOpen(true)} style={chatFabStyle} title="Chat du casino">💬</button>
+                <button onClick={() => { setChatOpen(true); setChatUnread(0) }} style={chatFabStyle} title="Chat du casino">
+                    💬
+                    {chatUnread > 0 && <span style={chatBadgeStyle}>{chatUnread > 9 ? "9+" : chatUnread}</span>}
+                </button>
             )}
             {chatOpen && (
                 <div style={menuOverlayStyle} onClick={() => setChatOpen(false)}>
@@ -1219,6 +1246,7 @@ const menuBoxStyle: React.CSSProperties = {
 }
 const menuTitleStyle: React.CSSProperties = { fontSize: 14, fontWeight: 900, letterSpacing: 2, marginBottom: 4 }
 const chatFabStyle: React.CSSProperties = { position: "fixed", top: 12, right: "max(12px, calc(50% - 228px))", zIndex: 9300, width: 44, height: 44, borderRadius: "50%", border: "3px solid #1c1408", background: "#f4ecd4", fontSize: 20, cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center" }
+const chatBadgeStyle: React.CSSProperties = { position: "absolute", top: -4, right: -4, minWidth: 18, height: 18, padding: "0 4px", borderRadius: 9, background: "#e0302a", color: "#fff", fontSize: 11, fontWeight: 800, lineHeight: "18px", textAlign: "center", border: "2px solid #f4ecd4", boxShadow: "0 1px 3px rgba(0,0,0,0.4)" }
 const pocketHdrStyle: React.CSSProperties = { fontSize: 11, fontWeight: 800, letterSpacing: 1, opacity: 0.75, margin: "8px 0 3px", borderBottom: "1px solid rgba(0,0,0,0.15)", paddingBottom: 2 }
 const menuBtnStyle: React.CSSProperties = {
     background: "#fff", border: "2px solid #1c1408", borderRadius: 6, padding: "12px 14px",

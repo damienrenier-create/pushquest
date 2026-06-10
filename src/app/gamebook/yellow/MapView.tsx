@@ -641,8 +641,10 @@ function NpcSprite({
 }
 
 // === Autres joueurs (casino multijoueur) ================================
-// Avatar simple + pseudo au-dessus, glissement fluide entre tuiles. Couleur
-// dérivée de l'userId pour distinguer les joueurs d'un coup d'œil.
+// Même sprite Red que le joueur local (orienté selon leur direction), distingué
+// par un HALO coloré dérivé de l'userId, + pseudo au-dessus de la tête. Glissement
+// fluide entre tuiles. (NB : FIRERED_PLAYER & co sont définis plus bas — résolus au
+// rendu, donc OK.)
 
 function hashHue(s: string): number {
     let h = 0
@@ -657,52 +659,59 @@ function RemotePlayerSprite({
     rp: RemotePlayer
     screenPos: (x: number, y: number, w?: number, h?: number) => React.CSSProperties
 }) {
+    const hue = hashHue(rp.userId)
+    const cells = FIRERED_PLAYER[rp.direction] ?? FIRERED_PLAYER.down
+    // Le stepFrame distant n'est pas diffusé : on alterne les 2 frames de marche
+    // selon la parité de la tuile → l'animation de pas se fait "gratuitement" à
+    // chaque déplacement (couplée au glissement CSS).
+    const cell = cells[(rp.posX + rp.posY) % 2]
+    const topOffset = SPRITE_ASPECT_RATIO - 1
+
     return (
         <div
             style={{
                 position: "absolute",
-                ...screenPos(rp.posX, rp.posY),
+                ...screenPos(rp.posX, rp.posY - topOffset, 1, SPRITE_ASPECT_RATIO),
                 zIndex: 3,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
                 transition: "left 0.12s linear, top 0.12s linear",
                 pointerEvents: "none",
             }}
         >
+            {/* Sprite Red teinté par un halo coloré (distinction d'un coup d'œil). */}
+            <div
+                style={{
+                    position: "absolute",
+                    inset: 0,
+                    backgroundImage: "url(/yellow/sprites/firered_player_t.png?v=3)",
+                    backgroundRepeat: "no-repeat",
+                    backgroundSize: `${SHEET_COLS * 100}% ${SHEET_ROWS * 100}%`,
+                    backgroundPosition: sheetBgPosition(cell),
+                    imageRendering: "pixelated",
+                    filter: `drop-shadow(0 0 1.5px hsl(${hue} 95% 45%)) drop-shadow(0 0 1.5px hsl(${hue} 95% 45%))`,
+                }}
+            />
+            {/* Pseudo au-dessus de la tête, bordure à la couleur du joueur (noms longs tronqués). */}
             <div
                 style={{
                     position: "absolute",
                     bottom: "100%",
+                    left: "50%",
+                    transform: "translateX(-50%) translateY(-1px)",
                     whiteSpace: "nowrap",
+                    maxWidth: "22dvw",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
                     fontSize: "clamp(7px, 1.6dvw, 10px)",
                     fontWeight: 700,
                     color: "#fff",
-                    background: "rgba(28,20,8,0.8)",
-                    border: "1px solid #000",
+                    background: "rgba(28,20,8,0.82)",
+                    border: `1px solid hsl(${hue} 80% 45%)`,
                     borderRadius: 3,
                     padding: "0 3px",
-                    transform: "translateY(-2px)",
                     fontFamily: "'Courier New', monospace",
                 }}
             >
                 {rp.nickname}
-            </div>
-            <div
-                style={{
-                    width: "82%",
-                    height: "82%",
-                    borderRadius: "50%",
-                    background: `hsl(${hashHue(rp.userId)} 60% 55%)`,
-                    border: "2px solid #1c1408",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "clamp(10px, 2.6dvw, 16px)",
-                    boxShadow: "0 1px 2px rgba(0,0,0,0.45)",
-                }}
-            >
-                🧑
             </div>
         </div>
     )
