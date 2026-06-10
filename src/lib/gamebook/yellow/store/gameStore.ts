@@ -22,7 +22,7 @@ import { getPlayer as getPlayerSave, healAllTeam, isTrainerDefeated, getAceState
 import { getSpecies } from "../data/species"
 import { persistYellowSave } from "./saveManager"
 import { rollWildEncounter, wildLevelCap, hasEncounters } from "../data/encounters"
-import { getTrainer, trainerBoost, type TrainTier } from "../data/trainers"
+import { getTrainer, trainerBoost, arenaScaledLevel, type TrainTier } from "../data/trainers"
 import { createMonInstance } from "../battle/factory"
 import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroLines, SBIRE_DONE_LINES, SBIRE_NO_TEAM_LINES } from "../data/sbire"
 import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_INTRO_LINES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, buildAceTeam } from "../data/ace"
@@ -106,7 +106,12 @@ function tryLaunchTrainer(trainerId: string): ActiveDialogue | null {
     // tout autre dresseur (route, gardes…) → "guard". Le boost SCALE avec le niveau
     // (trainerBoost), donc un dresseur niv 6 reste modeste et un niv 25 devient solide.
     const tier: TrainTier | undefined = trainer.training ?? (trainer.badge ? "elite" : "guard")
-    const enemyTeam = trainer.team.map((s) => createMonInstance(s.speciesId, s.level, { owned: false, moveIds: s.moves, ...trainerBoost(s.speciesId, s.level, tier) }))
+    // Rival de route (Léo/Mia) : niveau d'un garde de l'arène la plus récemment battue, MÊMES espèces.
+    const scaledLvl = trainer.scaleWithBadges ? arenaScaledLevel(getPlayerSave().badges) : null
+    const enemyTeam = trainer.team.map((s) => {
+        const lvl = scaledLvl ?? s.level
+        return createMonInstance(s.speciesId, lvl, { owned: false, moveIds: s.moves, ...trainerBoost(s.speciesId, lvl, tier) })
+    })
     const seed = Math.floor(Math.random() * 1e9) >>> 0
     startTrainerBattle(team, enemyTeam, seed, { trainerId, reward: trainer.reward, aiLevel: trainer.aiLevel })
     return null

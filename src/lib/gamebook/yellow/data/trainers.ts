@@ -49,6 +49,18 @@ export interface TrainerData {
     giftCt?: string
     /** Entraînement : boost Saiyan/EV des Daemons (gardien = moyen, élite = boss/ACE). */
     training?: TrainTier
+    /** Rival de route (Léo/Mia) : monte au niveau du garde le plus fort de l'arène la plus
+     *  récemment battue (plante→roche→feu), en gardant ses espèces. Sinon niveaux fixes. */
+    scaleWithBadges?: boolean
+}
+
+/** Niveau-cible des rivaux de route (Léo/Mia) = niveau du GARDE LE PLUS FORT de l'arène la
+ *  plus récemment battue. null si aucune arène battue → on garde les niveaux fixes du dresseur. */
+export function arenaScaledLevel(badges: readonly string[]): number | null {
+    if (badges.includes("feu")) return 33    // garde le plus fort de l'Arène Feu
+    if (badges.includes("roche")) return 18  // garde le plus fort de l'Arène Roche
+    if (badges.includes("plante")) return 16 // garde le plus fort de l'Arène Plante
+    return null
 }
 
 const TIER_EV: Record<TrainTier, number> = { guard: 128, elite: 252 }
@@ -84,6 +96,7 @@ export const TRAINERS: TrainerData[] = [
         name: "GAMIN LÉO",
         title: "Gamin",
         sprite: { emoji: "🧒", color: "#4a90d9" },
+        scaleWithBadges: true,
         mapId: "yellow_route_nord",
         x: 24,
         y: 37,
@@ -108,6 +121,7 @@ export const TRAINERS: TrainerData[] = [
         name: "EXPLORATRICE MIA",
         title: "Exploratrice",
         sprite: { emoji: "🧭", color: "#d96a4a" },
+        scaleWithBadges: true,
         mapId: "yellow_route_nord",
         x: 23,
         y: 34,
