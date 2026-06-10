@@ -33,10 +33,10 @@ function lastMessageAt(events: readonly { kind: string; text?: string }[], step:
     return ""
 }
 
-// Emoji par type, pour afficher d'un coup d'œil le type d'une attaque dans le menu.
-const TYPE_EMOJI: Record<string, string> = {
-    NORMAL: "⚪", FEU: "🔥", EAU: "💧", PLANTE: "🌿", ELEC: "🟡", GLACE: "❄️", COMBAT: "🥊",
-    POISON: "☠️", SOL: "🌍", VOL: "🦅", PSY: "🔮", INSECTE: "🐛", ROCHE: "🪨", SPECTRE: "👻", DRAGON: "🐉",
+// Nom FR du type, affiché en clair à DROITE de chaque attaque dans le menu (plus lisible que l'emoji).
+const TYPE_FR: Record<string, string> = {
+    NORMAL: "Normal", FEU: "Feu", EAU: "Eau", PLANTE: "Plante", ELEC: "Élec", GLACE: "Glace", COMBAT: "Combat",
+    POISON: "Poison", SOL: "Sol", VOL: "Vol", PSY: "Psy", INSECTE: "Insecte", ROCHE: "Roche", SPECTRE: "Spectre", DRAGON: "Dragon",
 }
 
 export default function BattleScreen() {
@@ -212,7 +212,7 @@ export default function BattleScreen() {
     const energy = getBattleEnergy()
     const remainingEnergy = Math.max(0, energy.cap - energy.spent)
     const items = repsWallet.items
-    type Opt = { label: React.ReactNode; onSelect: () => void; disabled?: boolean }
+    type Opt = { label: React.ReactNode; onSelect: () => void; disabled?: boolean; right?: string }
     const options: Opt[] = []
     let canBack = false
     if (playbackDone && isEnded) {
@@ -240,7 +240,8 @@ export default function BattleScreen() {
             player.moves.forEach((slot, i) => {
                 const mv = getMove(slot.moveId)
                 options.push({
-                    label: `${TYPE_EMOJI[mv?.type ?? ""] ?? ""} ${mv?.name ?? slot.moveId}  ⚡${costs[i]}`,
+                    label: `${mv?.name ?? slot.moveId}  ⚡${costs[i]}`,
+                    right: TYPE_FR[mv?.type ?? ""] ?? "",
                     onSelect: () => doMove(i), disabled: !canUse(costs[i]),
                 })
             })
@@ -359,7 +360,9 @@ export default function BattleScreen() {
                                     disabled={o.disabled}
                                     onClick={() => { setCursor(i); if (!o.disabled) o.onSelect() }}
                                 >
-                                    <span style={{ opacity: i === cursor ? 1 : 0 }}>▶ </span>{o.label}
+                                    <span style={{ opacity: i === cursor ? 1 : 0, flexShrink: 0 }}>▶ </span>
+                                    <span style={{ flex: 1, textAlign: "left" }}>{o.label}</span>
+                                    {o.right ? <span style={{ opacity: 0.5, fontWeight: 600, fontSize: 11, marginLeft: 8, flexShrink: 0 }}>{o.right}</span> : null}
                                 </button>
                             ))}
                         </div>
@@ -544,8 +547,8 @@ const S: Record<string, React.CSSProperties> = {
     menuGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 },
     optList: { display: "flex", flexDirection: "column", gap: 6 },
     menuHint: { display: "flex", justifyContent: "space-between", alignItems: "center", minHeight: 18, fontSize: 11, fontWeight: 700, opacity: 0.85, marginBottom: 4, color: "#1c1408" },
-    btn: { background: "#f8f8e8", border: "3px solid #1c1408", borderRadius: 6, padding: "11px 12px", fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer", color: "#1c1408", textAlign: "left" },
-    btnDim: { background: "#d8d8c8", border: "3px solid #888", borderRadius: 6, padding: "11px 12px", fontFamily: "inherit", fontSize: 13, fontWeight: 700, color: "#888", textAlign: "left" },
+    btn: { background: "#f8f8e8", border: "3px solid #1c1408", borderRadius: 6, padding: "11px 12px", fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer", color: "#1c1408", textAlign: "left", display: "flex", alignItems: "center" },
+    btnDim: { background: "#d8d8c8", border: "3px solid #888", borderRadius: 6, padding: "11px 12px", fontFamily: "inherit", fontSize: 13, fontWeight: 700, color: "#888", textAlign: "left", display: "flex", alignItems: "center" },
     btnFocus: { background: "#f5d020", borderColor: "#1c1408", boxShadow: "0 0 0 2px #f5d020" },
     pp: { float: "right", fontSize: 10, opacity: 0.7 },
 }
