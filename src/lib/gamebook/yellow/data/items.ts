@@ -43,15 +43,15 @@ export const ITEMS: Record<string, ItemData> = {
     },
     super_ball_plus: {
         id: "super_ball_plus", name: "Super Nexus-Ball +", category: "BALL",
-        description: "Très bon taux de capture.", price: 75, ballBonus: 2.5,
+        description: "Très bon taux de capture.", price: 75, ballBonus: 3,
     },
     hyper_ball: {
         id: "hyper_ball", name: "Hyper Nexus-Ball", category: "BALL",
-        description: "Excellent taux de capture.", price: 100, ballBonus: 3,
+        description: "Excellent taux de capture.", price: 100, ballBonus: 4,
     },
     hyper_ball_plus: {
         id: "hyper_ball_plus", name: "Hyper Nexus-Ball +", category: "BALL",
-        description: "Le summum hors Master — pour les proies les plus coriaces.", price: 150, ballBonus: 3.5,
+        description: "Le summum hors Master — pour les proies les plus coriaces.", price: 150, ballBonus: 5,
     },
     master_ball: {
         id: "master_ball", name: "Master-Éclair", category: "BALL",

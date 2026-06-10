@@ -28,12 +28,12 @@ describe("coefficient de rareté (config)", () => {
     })
 })
 
-describe("facteur niveau (capture)", () => {
-    it("bas niveau = plus facile, ~1 à niv 25, capé à 0.5 en haut", () => {
-        expect(levelCatchFactor(0)).toBeCloseTo(1.5)
-        expect(levelCatchFactor(25)).toBeCloseTo(1.0)
-        expect(levelCatchFactor(50)).toBeCloseTo(0.5)
-        expect(levelCatchFactor(90)).toBeCloseTo(0.5) // clampé
+describe("facteur niveau (capture, courbe inverse 13/niv)", () => {
+    it("bas niveau capé à 2.6, ~1 à niv 13, décroît en 1/niv, plancher 0.15", () => {
+        expect(levelCatchFactor(5)).toBeCloseTo(2.6)    // 13/5 = 2.6
+        expect(levelCatchFactor(13)).toBeCloseTo(1.0)   // niveau de référence
+        expect(levelCatchFactor(26)).toBeCloseTo(0.5)   // 13/26
+        expect(levelCatchFactor(130)).toBeCloseTo(0.15) // 13/130=0.1 → plancher 0.15
     })
 })
 
@@ -42,8 +42,8 @@ describe("captureValue", () => {
         expect(captureValue(base)).toBeCloseTo(50, 6) // 150 × 1 × 1/3 × 1 (niv neutre)
     })
     it("le niveau module : bas niveau augmente la valeur, haut la réduit", () => {
-        expect(captureValue({ ...base, level: 0 })).toBeCloseTo(75, 6)  // 50 × 1.5
-        expect(captureValue({ ...base, level: 50 })).toBeCloseTo(25, 6) // 50 × 0.5
+        expect(captureValue({ ...base, level: 13 })).toBeCloseTo(50, 6) // 50 × 1.0 (réf)
+        expect(captureValue({ ...base, level: 26 })).toBeCloseTo(25, 6) // 50 × 0.5
     })
     it("1 PV → facteur PV proche de 1", () => {
         expect(captureValue({ ...base, currentHp: 1 })).toBeCloseTo(149, 0)

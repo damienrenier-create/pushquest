@@ -13,12 +13,15 @@ import type { MajorStatus } from "../battle/types"
 export const CAPTURE_CALIBRATION = 130
 
 /**
- * Facteur NIVEAU : bas niveau = capture plus facile, haut niveau = plus dure.
- * clamp(1.5 − niv/50 ; 0.5 ; 1.5) → ×1.5 à niv 0 · ×1 à niv 25 · ×0.5 à niv 50+.
+ * Facteur NIVEAU : courbe INVERSE (REF / niveau) → crée des PALIERS nets par ball.
+ * Calé pour qu'une ball de bonus b capture un COMMUN à ~100% (à 1/3 de vie) jusqu'au
+ * niveau ≈ 10×b. Combiné aux bonus 1/1.5/2/3/4/5 → seuils communs 10/15/20/30/40/50.
+ * clamp(13/niv ; 0.15 ; 2.6) → ×2.6 à bas niveau · ×1 à niv 13 · ×0.26 à niv 50 · ×0.15 plafond bas.
  */
-export const CAP_LEVEL_NEUTRAL = 25 // niveau où le facteur vaut 1 (défaut si non fourni)
+export const CAP_LEVEL_REF = 13     // numérateur de la courbe (≈ 10×bonus = niveau-seuil commun)
+export const CAP_LEVEL_NEUTRAL = 13 // niveau où le facteur vaut 1 (défaut si non fourni)
 export function levelCatchFactor(level: number): number {
-    return Math.max(0.5, Math.min(1.5, 1.5 - level / 50))
+    return Math.max(0.15, Math.min(2.6, CAP_LEVEL_REF / Math.max(1, level)))
 }
 
 /** Bonus si le joueur a atteint son quota PushQuest du jour (capture facilitée). */
