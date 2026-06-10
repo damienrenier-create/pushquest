@@ -107,6 +107,7 @@ const ZONES: Record<string, Zone> = {
             // 💧 EAU (le lac, haut-gauche) — affinity water = dense au bord, fond en s'éloignant.
             { speciesId: "loutrille", base: 40, affinity: ["water"] },                        // commun au bord, rare loin
             { speciesId: "tetardoc", base: RARE, affinity: ["water"] },                       // le PONT eau/roche, concentré au bord du lac
+            { speciesId: "braisecaille", base: VERY_RARE, affinity: ["water"] },              // tortue FEU/EAU : TRÈS RARE au lac (même zone que les têtards)
             // 🍄👻🐉 LE FOND (champignons-fantômes + dragon caché)
             { speciesId: "sporbeo", base: UNCOMMON },                                         // champignon-spectre (→ Lampignon → Mycédruide)
             { speciesId: "revemante", base: UNCOMMON },                                       // insecte-fantôme des cavernes
