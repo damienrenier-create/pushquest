@@ -1,13 +1,12 @@
 // src/app/gamebook/page.tsx
 //
-// Page serveur du Gamebook. Garde-fou auth + injection des props.
-// Monte le client GamebookClient v3 (carte Pokémon-style).
+// Page serveur du Gamebook. CHAPITRE 1 RETIRÉ (juin 2026) : tout joueur connecté est
+// redirigé directement vers le Nexus II (Chapitre 2 "jaune éclair"). Le Chapitre 1 n'est
+// plus chargé ; l'ancien GamebookClient reste en repo pour archive mais n'est plus monté.
 
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { redirect } from "next/navigation"
-import prisma from "@/lib/prisma"
-import GamebookClient from "./GamebookClient"
 
 export const dynamic = "force-dynamic"
 
@@ -18,20 +17,6 @@ export default async function GamebookPage() {
         redirect("/login")
     }
 
-    const user = session.user as { id: string; name?: string }
-
-    // Compte INVITÉ : ne joue jamais le Chapitre 1 → entrée directe dans le Chapitre 2.
-    const acc = await (prisma as any).user.findUnique({ where: { id: user.id }, select: { isGuest: true } })
-    if (acc?.isGuest) {
-        redirect("/gamebook/yellow")
-    }
-
-    return (
-        <main className="min-h-screen">
-            <GamebookClient
-                nickname={user.name ?? "Aventurier"}
-                userId={user.id}
-            />
-        </main>
-    )
+    // Aspiration directe dans le Chapitre 2 — quel que soit le joueur (créateur, invité, pote).
+    redirect("/gamebook/yellow")
 }

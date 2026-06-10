@@ -17,10 +17,10 @@ interface Line { speaker: string; sprite: string; fallback: string; text: string
 const STARTERS = ["feuillichot", "gouttiny", "braisille"]
 
 const SCRIPT: Line[] = [
-    // — Enlèvement : le Monstre Spaghetti happe le joueur à la fin du Chapitre 1 —
-    { speaker: "???", sprite: npc("fsm_divine_form"), fallback: "🍝", text: "✦ HALTE-LÀ. Pose cette Mega Gourde, petit mortel. ✦" },
-    { speaker: "MONSTRE SPAGHETTI", sprite: npc("fsm_divine_form"), fallback: "🍝", text: "Tu as réveillé ton Daemon de tes propres reps… Donc tu es enfin PRÊT." },
-    { speaker: "MONSTRE SPAGHETTI", sprite: npc("fsm_divine_form"), fallback: "🍝", text: "Fini de gambader dans le bac à sable ! Mon Appendice Nouilleux se referme sur toi…" },
+    // — Invocation : le Monstre Spaghetti aspire le joueur depuis le monde réel (Chapitre 1 retiré) —
+    { speaker: "???", sprite: npc("fsm_divine_form"), fallback: "🍝", text: "✦ TOI, là-bas. Oui, toi qui transpires dans le monde réel. Tu M'as appelé sans le savoir. ✦" },
+    { speaker: "MONSTRE SPAGHETTI", sprite: npc("fsm_divine_form"), fallback: "🍝", text: "Chaque répétition que tu accomplis résonne jusqu'à Mon royaume… Tu es enfin PRÊT." },
+    { speaker: "MONSTRE SPAGHETTI", sprite: npc("fsm_divine_form"), fallback: "🍝", text: "Mon Appendice Nouilleux se referme sur toi et t'arrache à ton monde…" },
     { speaker: "MONSTRE SPAGHETTI", sprite: npc("fsm_divine_form"), fallback: "🍝", text: "On commence les choses SÉRIEUSES. *SLOURP* ✦" },
     { speaker: "ACOLYTE", sprite: npc("acolyte"), fallback: "🙏", text: "Oh ! Il a survécu au transfert ! Bienvenue au NEXUS JAUNE ÉCLAIR, ami." },
     { speaker: "DIACRE", sprite: npc("deacon"), fallback: "📜", text: "Nous sommes les servants de la Pastafaith. Tu as été… touché par Son Appendice Nouilleux." },

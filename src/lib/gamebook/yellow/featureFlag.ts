@@ -1,29 +1,13 @@
 // Nexus II "jaune éclair" — accès au Chapitre 2.
 //
-// L'accès SE MÉRITE : il faut avoir fait évoluer son animal en DAEMON dans le
-// Nexus 1 (Daemon slot 1 éveillé → unlockedAt renseigné par la route evolve-daemon).
-// C'est la suite naturelle du teaser de fin de Chapitre 1.
-//
-// Le CRÉATEUR (isSystem) garde un accès permanent pour tester/administrer, même
-// sans avoir évolué. Aucun flag d'env requis.
-
-import prisma from "@/lib/prisma"
+// CHAPITRE 1 RETIRÉ (juin 2026) : le Nexus II est désormais OUVERT À TOUS les joueurs
+// connectés. Plus de condition d'évolution / de Daemon éveillé : tout le monde est aspiré
+// directement dans le Chapitre 2 (cf. /gamebook/page.tsx qui redirige vers /gamebook/yellow).
+// On garde la fonction (utilisée par la page yellow + d'éventuelles routes) mais elle
+// renvoie simplement "vrai dès qu'on est connecté".
 
 export async function isNexusYellowEnabled(userId: string | null | undefined): Promise<boolean> {
-    if (!userId) return false
-
-    const [daemon, user] = await Promise.all([
-        (prisma as any).daemon.findUnique({
-            where: { userId_slotIndex: { userId, slotIndex: 1 } },
-            select: { unlockedAt: true },
-        }),
-        (prisma as any).user.findUnique({
-            where: { id: userId },
-            select: { isSystem: true, isGuest: true },
-        }),
-    ])
-    // Daemon éveillé (Chapitre 1 terminé) OU créateur OU compte INVITÉ (accès direct au Ch.2).
-    return !!daemon?.unlockedAt || user?.isSystem === true || user?.isGuest === true
+    return !!userId
 }
 
 export const YELLOW_CHAPTER_ID = "yellow"
