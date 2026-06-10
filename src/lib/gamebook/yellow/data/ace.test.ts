@@ -26,12 +26,12 @@ describe("ACE — scaling + équipe + contre adaptatif", () => {
 
     it("buildAceTeam : 6 mons, 3 Panthéons (modèle de base), nouillon+feu évolués, contre adapté", () => {
         const { team, counterSpecies } = buildAceTeam({
-            acePeak: 40, playerBestLevel: 30, playerLastTypes: ["FEU"], playerLastLevel: 28, box: {},
+            aceWins: 5, playerBestLevel: 38, playerLastTypes: ["FEU"], playerLastLevel: 28, box: {},
         })
         expect(team).toHaveLength(6)
         expect(team.slice(0, 3).map((m) => m.speciesId)).toEqual(ACE_PANTHERS)
         expect(team[2].speciesId).toBe("pantheon") // slot 3 = Panthéon (plus de panthère élite)
-        expect(team.slice(0, 5).every((m) => m.level === 40)).toBe(true) // fixes au niveau-cible
+        expect(team.slice(0, 5).every((m) => m.level === 40)).toBe(true) // 38 + 2 (offset final, après 3 victoires)
         expect(team[3].speciesId).toBe("divinpate") // nouillon évolué à niv 40
         expect(team[4].speciesId).toBe("pyrokoss")  // braisille évolué à niv 40
         expect(ACE_BOX).toContain(counterSpecies)
@@ -41,8 +41,17 @@ describe("ACE — scaling + équipe + contre adaptatif", () => {
 
     it("le contre respecte la mémoire box (ne descend pas sous le niveau mémorisé)", () => {
         const c = bestCounter(["FEU"])
-        const { team } = buildAceTeam({ acePeak: 40, playerBestLevel: 30, playerLastTypes: ["FEU"], playerLastLevel: 10, box: { [c]: 25 } })
+        const { team } = buildAceTeam({ aceWins: 5, playerBestLevel: 38, playerLastTypes: ["FEU"], playerLastLevel: 10, box: { [c]: 25 } })
         expect(team[5].level).toBe(25) // max(box 25, dernier 10)
+    })
+
+    it("rampe de difficulté : facile les 3 premières fois (-4, -2, 0) puis +2, recalibré sur le joueur", () => {
+        const lvlAt = (wins: number) => buildAceTeam({ aceWins: wins, playerBestLevel: 30, playerLastTypes: ["FEU"], playerLastLevel: 20, box: {} }).team[0].level
+        expect(lvlAt(0)).toBe(26) // 30 - 4
+        expect(lvlAt(1)).toBe(28) // 30 - 2
+        expect(lvlAt(2)).toBe(30) // 30 + 0
+        expect(lvlAt(3)).toBe(32) // 30 + 2
+        expect(lvlAt(10)).toBe(32) // capé à +2
     })
 
     it("récompenses + budget énergie (inchangés)", () => {

@@ -18,7 +18,7 @@ import type { YellowMapData } from "../maps"
 import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle } from "./battleStore"
-import { getPlayer as getPlayerSave, healAllTeam, isTrainerDefeated, getAceState, aceTeamSizeFor, aceAvailableToday } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, isTrainerDefeated, getAceState, aceTeamSizeFor, aceAvailableToday, aceWinsCount } from "./playerStore"
 import { getSpecies } from "../data/species"
 import { persistYellowSave } from "./saveManager"
 import { rollWildEncounter, wildLevelCap, hasEncounters } from "../data/encounters"
@@ -144,8 +144,9 @@ function tryLaunchAce(): ActiveDialogue | null {
     const best = Math.max(...team.map((m) => m.level))
     const last = team[team.length - 1]
     const lastTypes = getSpecies(last.speciesId)?.types ?? []
-    const { peak, box } = getAceState()
-    const built = buildAceTeam({ acePeak: peak, playerBestLevel: best, playerLastTypes: lastTypes, playerLastLevel: last.level, box })
+    const { box } = getAceState()
+    // Niveau recalibré à CHAQUE combat (rampe via aceWins) — plus de pic figé.
+    const built = buildAceTeam({ aceWins: aceWinsCount(), playerBestLevel: best, playerLastTypes: lastTypes, playerLastLevel: last.level, box })
     // Taille d'équipe d'ACE = celle du joueur (min 3 = les 3 panthères), avec cliquet.
     const aceSize = aceTeamSizeFor(team.length)
     // ACE = élite (boss ultime) : ses Daemons sont entraînés comme un joueur assidu.

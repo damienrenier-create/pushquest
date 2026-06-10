@@ -5,8 +5,9 @@
 // MODÈLE (par joueur) :
 //   • Équipe FIXE de 5 : 3 Panthéons (modèle de base) + lignée Nouillon (Psy) + lignée Feu.
 //   • Slot 6 ADAPTATIF : tiré d'une BOX de contres = la faiblesse parfaite de TON dernier Daemon.
-//   • Niveau des fixes = max(pic mémorisé, ton meilleur + 2) → ne RÉGRESSE jamais ;
-//     il ratchete à CHAQUE défaite. Le contre s'aligne sur ton dernier Daemon (mémoire box).
+//   • Niveau = ton meilleur Daemon + offset(victoires), RECALIBRÉ à CHAQUE combat. Rampe :
+//     -4 / -2 / 0 pour tes 3 premières fois (volontairement faciles), puis +2 ensuite.
+//     Le contre s'aligne sur ton dernier Daemon (mémoire box). Énergie : illimitée (PNJ).
 // L'IA "ace" + le budget d'énergie (1,5× tes reps) sont gérés au moteur/store.
 
 import { getSpecies } from "./species"
@@ -48,7 +49,16 @@ export interface AceMon { speciesId: string; level: number }
 export const ACE_PANTHERS = ["pantheon", "pantheon", "pantheon"]
 export const ACE_NOUILLON_BASE = "nouillon"   // → vermisaint → divinpate
 export const ACE_FIRE_BASE = "braisille"      // → flamkure → pyrokoss
-export const ACE_LEVEL_OFFSET = 2
+export const ACE_LEVEL_OFFSET = 2     // offset FINAL (dès la 4e rencontre) : ton meilleur +2
+export const ACE_EASY_START = -4      // 1re rencontre : ton meilleur -4 (volontairement facile)
+
+/**
+ * Offset de niveau d'ACE selon le nb de VICTOIRES (rampe douce) : -4, -2, 0 pour tes 3
+ * premières fois, puis +2 ensuite. Recalibré sur ton meilleur Daemon à CHAQUE combat.
+ */
+export function aceLevelOffset(aceWins: number): number {
+    return Math.min(ACE_LEVEL_OFFSET, ACE_EASY_START + 2 * Math.max(0, aceWins))
+}
 
 // === BOX de 10 contres (un bon attaquant par type clé) ===
 // Le slot 6 = celui qui frappe le plus fort le DERNIER Daemon du joueur (faiblesse parfaite).
@@ -87,8 +97,8 @@ export function speciesAtLevel(baseId: string, level: number): string {
 }
 
 export interface AceBuildInput {
-    acePeak: number              // pic de niveau mémorisé (ratchet)
-    playerBestLevel: number      // meilleur Daemon du joueur
+    aceWins: number              // nb de victoires (pilote la rampe de difficulté)
+    playerBestLevel: number      // meilleur Daemon du joueur (recalibré à CHAQUE combat)
     playerLastTypes: PokeType[]  // types du DERNIER Daemon de l'équipe joueur
     playerLastLevel: number      // niveau de ce dernier Daemon
     box: Record<string, number>  // mémoire de niveau par espèce-contre
@@ -99,9 +109,9 @@ export interface AceBuildInput {
  * Renvoie aussi l'espèce-contre choisie (pour mémoriser le niveau à la défaite).
  */
 export function buildAceTeam(i: AceBuildInput): { team: AceMon[]; counterSpecies: string } {
-    // Niveau FIGÉ entre deux défaites : on utilise le pic mémorisé tel quel ; il ne
-    // ratchete qu'à la défaite (cf. recordAceDefeat). 1re rencontre (pic 0) → se cale sur toi.
-    const L = i.acePeak > 0 ? Math.min(MAX_LEVEL, i.acePeak) : aceTargetLevel(0, i.playerBestLevel)
+    // Niveau RECALIBRÉ à chaque combat sur ton meilleur Daemon, avec la rampe de difficulté
+    // (faciles les 3 premières fois : -4/-2/0, puis +2). Plus de pic figé.
+    const L = Math.max(1, Math.min(MAX_LEVEL, i.playerBestLevel + aceLevelOffset(i.aceWins)))
     const counter = bestCounter(i.playerLastTypes)
     const counterLevel = Math.min(MAX_LEVEL, Math.max(1, i.box[counter] ?? 0, i.playerLastLevel))
     const team: AceMon[] = [
