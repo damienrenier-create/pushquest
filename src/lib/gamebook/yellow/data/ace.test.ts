@@ -45,11 +45,11 @@ describe("ACE — scaling + équipe + contre adaptatif", () => {
         expect(team[5].level).toBe(25) // max(box 25, dernier 10)
     })
 
-    it("rampe de difficulté : facile les 3 premières fois (-4, -2, 0) puis +2, recalibré sur le joueur", () => {
+    it("rampe de difficulté : un poil facile les 3 premières fois (-1, 0, +1) puis +2, recalibré sur le joueur", () => {
         const lvlAt = (wins: number) => buildAceTeam({ aceWins: wins, playerBestLevel: 30, playerLastTypes: ["FEU"], playerLastLevel: 20, box: {} }).team[0].level
-        expect(lvlAt(0)).toBe(26) // 30 - 4
-        expect(lvlAt(1)).toBe(28) // 30 - 2
-        expect(lvlAt(2)).toBe(30) // 30 + 0
+        expect(lvlAt(0)).toBe(29) // 30 - 1
+        expect(lvlAt(1)).toBe(30) // 30 + 0
+        expect(lvlAt(2)).toBe(31) // 30 + 1
         expect(lvlAt(3)).toBe(32) // 30 + 2
         expect(lvlAt(10)).toBe(32) // capé à +2
     })
