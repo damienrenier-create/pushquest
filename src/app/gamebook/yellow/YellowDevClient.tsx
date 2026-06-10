@@ -437,7 +437,8 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                             {player.team.map((m) => (
                                 <button key={m.uid} style={{ ...teamRowStyle, cursor: "pointer", border: "none", background: "transparent", width: "100%" }} onClick={() => setSelected(m)}>
                                     <span style={{ fontWeight: 700, flex: 1, textAlign: "left" }}>{displayName(m)}</span>
-                                    <span style={{ opacity: 0.6, fontSize: 10 }}>N.{m.level}</span>
+                                    <span style={{ opacity: 0.6, fontSize: 10 }}>{getSpecies(m.speciesId)?.types.join("/")}</span>
+                                    <span style={{ width: 38, textAlign: "right" }}>N.{m.level}</span>
                                 </button>
                             ))}
                             <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.7, margin: "8px 0 2px", display: "flex", justifyContent: "space-between" }}>
