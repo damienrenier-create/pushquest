@@ -21,7 +21,7 @@ import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle }
 import { getPlayer as getPlayerSave, healAllTeam, isTrainerDefeated, getAceState, aceTeamSizeFor, aceAvailableToday } from "./playerStore"
 import { getSpecies } from "../data/species"
 import { persistYellowSave } from "./saveManager"
-import { rollWildEncounter, wildLevelCap } from "../data/encounters"
+import { rollWildEncounter, wildLevelCap, hasEncounters } from "../data/encounters"
 import { getTrainer, trainerBoost, type TrainTier } from "../data/trainers"
 import { createMonInstance } from "../battle/factory"
 import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroLines, SBIRE_DONE_LINES, SBIRE_NO_TEAM_LINES } from "../data/sbire"
@@ -250,7 +250,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // Rencontre sauvage : marcher sur des hautes herbes (zone à rencontres).
         // Le biome (proximité eau/montagne/sapins), le niveau du lead et les stats
         // d'effort du jour (pompes/squats/quota, fetchées au chargement) modulent le tirage.
-        if (moved && map.tiles[next.posY]?.[next.posX] === "grassTall") {
+        // Rencontre : hautes herbes (overworld) OU sol d'une GROTTE (map à fond image
+        // AVEC une zone de rencontres → tout le sol praticable déclenche, façon donjon).
+        const onWildTile = map.tiles[next.posY]?.[next.posX]
+        const isWildTile = onWildTile === "grassTall"
+            || (onWildTile === "grass" && !!map.backgroundImage && hasEncounters(map.id))
+        if (moved && isWildTile) {
             const team = getPlayerSave().team
             const lead = team.find((m) => m.currentHp > 0)
             if (lead) {
