@@ -171,7 +171,7 @@ function moveCostRepsForAction(b: BattleState, moveIndex: number): number {
     const me = b.player.team[b.player.activeIndex]
     const slot = me?.moves[moveIndex]
     if (!me || !slot) return 0
-    return moveCostReps(getMove(slot.moveId)?.power ?? 0)
+    return moveCostReps(getMove(slot.moveId)?.power ?? 0, me.level)
 }
 
 export function submitPlayerAction(action: PlayerAction) {
@@ -441,7 +441,7 @@ function submitPvpAction(action: PlayerAction) {
         const me = meTeam.team[meTeam.activeIndex]
         const slot = me?.moves[action.moveIndex]
         if (slot) {
-            const cost = moveCostReps(getMove(slot.moveId)?.power ?? 0)
+            const cost = moveCostReps(getMove(slot.moveId)?.power ?? 0, me.level)
             const cap = battleEnergyCap(getPlayer().badges.length)
             if (storeState.energySpent + cost > cap) return
             if (!spendReps(cost)) return

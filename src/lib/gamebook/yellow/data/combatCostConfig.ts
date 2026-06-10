@@ -2,18 +2,31 @@
 //
 // Nexus Jaune Éclair — COÛT EN REPS des attaques (config, éditable).
 // Les PP sont illimités : la vraie limite est le portefeuille de reps du joueur.
-// Coût basé sur la PUISSANCE de l'attaque (faible = bon marché, forte = chère),
-// SANS rampe de niveau (le coût ne dépend QUE de l'attaque) :
-//   coût = max(1, arrondi( (puissance − FLOOR) / DIV ))
-// Calibré : Charge (puiss 40) → 1 rep · Hydrocanon (puiss 110) → 10 reps.
-// Les attaques de statut (puiss 0) coûtent 1.
+// Coût basé sur la PUISSANCE de l'attaque, PLAFONNÉ par la bande de niveau du Daemon
+// (le niveau compte via un PLAFOND, pas un multiplicateur → ne monte plus trop vite) :
+//   bande : niv ≤15 (0) · 16-30 (1) · 31+ (2)
+//   attaque DÉGÂT  : coût = clamp( round((puiss−FLOOR)/DIV), 1, PLAFOND[bande] )
+//   attaque STATUT : coût = STATUT[bande]
+// Calibré : Charge (40) → 1 · Hydrocanon (110) → 5 (niv≤15) / 8 (16-30) / 10 (31+).
+// Statut : 1 (niv≤15) / 2 (16-30) / 3 (31+).
 
 export const MOVE_COST_POWER_FLOOR = 30 // puissance "offerte" avant de payer
 export const MOVE_COST_POWER_DIV = 8    // points de puissance par rep
+export const COST_LEVEL_BANDS = [15, 30] as const   // bornes hautes des bandes 0 et 1
+export const COST_CAP_BY_BAND = [5, 8, 10] as const  // plafond du coût d'une attaque, par bande
+export const STATUS_COST_BY_BAND = [1, 2, 3] as const // coût d'une attaque de statut, par bande
 
-/** Coût en reps d'une attaque, selon sa PUISSANCE (indépendant du niveau). */
-export function moveCostReps(power: number): number {
-    return Math.max(1, Math.round((Math.max(0, power) - MOVE_COST_POWER_FLOOR) / MOVE_COST_POWER_DIV))
+/** Bande de niveau (0 = ≤15, 1 = 16-30, 2 = 31+). */
+function levelBand(level: number): 0 | 1 | 2 {
+    return level <= COST_LEVEL_BANDS[0] ? 0 : level <= COST_LEVEL_BANDS[1] ? 1 : 2
+}
+
+/** Coût en reps d'une attaque, selon sa PUISSANCE + le niveau (via plafond/bande). */
+export function moveCostReps(power: number, level: number): number {
+    const band = levelBand(level)
+    if (power <= 0) return STATUS_COST_BY_BAND[band] // attaque de statut
+    const raw = Math.round((power - MOVE_COST_POWER_FLOOR) / MOVE_COST_POWER_DIV)
+    return Math.max(1, Math.min(COST_CAP_BY_BAND[band], raw))
 }
 
 /** Id de l'attaque de secours gratuite (anti soft-lock : faible + dégâts à soi). */

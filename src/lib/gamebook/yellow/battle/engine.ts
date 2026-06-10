@@ -352,7 +352,7 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
 
     // Budget d'énergie de l'ENNEMI (ACE) : il paie son attaque (sauf Charge Désespérée).
     if (side === "enemy" && state.enemyEnergy && !isStruggle) {
-        state.enemyEnergy.spent += moveCostReps(getMove(attacker.moves[moveIndex]?.moveId ?? "")?.power ?? 0)
+        state.enemyEnergy.spent += moveCostReps(getMove(attacker.moves[moveIndex]?.moveId ?? "")?.power ?? 0, attacker.level)
     }
 
     // --- Pré-checks de statut (peut empêcher l'action) ---
@@ -733,7 +733,7 @@ export function chooseEnemyAction(state: BattleState, rng: Rng): ResolvedAction 
     // meilleure attaque abordable ; à sec → Charge Désespérée (gratuite).
     if (state.enemyEnergy) {
         const remaining = state.enemyEnergy.cap - state.enemyEnergy.spent
-        const costOf = (i: number) => moveCostReps(getMove(self.moves[i]?.moveId ?? "")?.power ?? 0)
+        const costOf = (i: number) => moveCostReps(getMove(self.moves[i]?.moveId ?? "")?.power ?? 0, self.level)
         if (moveIndex < 0 || costOf(moveIndex) > remaining) {
             let best = -1, bestPow = -1
             self.moves.forEach((slot, i) => {
