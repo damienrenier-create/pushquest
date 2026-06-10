@@ -219,7 +219,7 @@ export default function BattleScreen() {
         options.push({ label: "QUITTER ▶", onSelect: () => endBattle() })
     } else if (playbackDone && needSwitch) {
         battle.player.team.forEach((m, i) => options.push({
-            label: `${displayName(m)} — ${m.currentHp <= 0 ? "K.O." : m.currentHp + " PV"}`,
+            label: `${displayName(m)} N.${m.level} — ${m.currentHp <= 0 ? "K.O." : m.currentHp + "/" + maxHpOf(m) + " PV"}`,
             onSelect: () => doSwitch(i), disabled: m.currentHp <= 0 || i === battle.player.activeIndex,
         }))
     } else if (playbackDone) {
@@ -269,7 +269,7 @@ export default function BattleScreen() {
             canBack = true
         } else {
             battle.player.team.forEach((m, i) => options.push({
-                label: `${displayName(m)} — ${m.currentHp <= 0 ? "K.O." : m.currentHp + " PV"}`,
+                label: `${displayName(m)} N.${m.level} — ${m.currentHp <= 0 ? "K.O." : m.currentHp + "/" + maxHpOf(m) + " PV"}`,
                 onSelect: () => doSwitch(i), disabled: m.currentHp <= 0 || i === battle.player.activeIndex,
             }))
             options.push({ label: "← RETOUR", onSelect: () => setMenu("root") })
