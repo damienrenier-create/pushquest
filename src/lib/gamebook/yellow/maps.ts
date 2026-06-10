@@ -450,14 +450,41 @@ function buildArenaRoche(): TileType[][] {
     return m
 }
 
+// Arène de Feu "La Caldeira" : 16×16 calée sur fire_arena_interior.png (1024², tile 64,
+// art décalé +32px pour centrer le couloir sur la colonne 8). X = mur/lave, . = sol.
+// Les cellules des dresseuses (boss 8,2 + 4 gardes) sont des MURS (PNJ posés dessus,
+// le moteur de mouvement ne teste pas les PNJ → on bloque la case). Collision per Sartay.
+const ARENA_FEU_MASK = [
+    "XXXXXXXXXXXXXXXX",
+    "XXXXXXXXXXXXXXXX",
+    "XX..X...X..XX.XX",
+    "XX.XX......XXXXX",
+    "XX..X......XX.XX",
+    "XX..XXXX.XXXX.XX",
+    "XX..XXX...XXX.XX",
+    "XX...X.....X..XX",
+    "XX............XX",
+    "XX............XX",
+    "XX............XX",
+    "XX............XX",
+    "XX............XX",
+    "XX............XX",
+    "XXXXXXXX.XXXXXXX",
+    "XXXXXXXX.XXXXXXX",
+]
+function buildArenaFeu(): TileType[][] {
+    return ARENA_FEU_MASK.map((row) => [...row].map((ch) => (ch === "X" ? "tree" : "grass") as TileType))
+}
+
 /**
  * Quelle arène se trouve derrière la porte du GYM, selon la progression (badges) ?
- * Le bâtiment se "réorganise" : Plante tant que non obtenu, puis Roche, etc.
+ * Le bâtiment se "réorganise" : Plante tant que non obtenu, puis Roche, puis Feu, etc.
  */
 export function currentArenaMapId(badges: readonly string[]): string {
     if (!badges.includes("plante")) return "yellow_arena"
     if (!badges.includes("roche")) return "yellow_arena_roche"
-    return "yellow_arena_roche" // placeholder jusqu'à la prochaine arène
+    if (!badges.includes("feu")) return "yellow_arena_feu"
+    return "yellow_arena_feu" // placeholder jusqu'à la prochaine arène
 }
 
 // === ROUTE NORD = future zone Pokémon (placeholder grass/trees) ==========
@@ -833,6 +860,19 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImageWidth: 480,
         backgroundImageHeight: 320,
         backgroundImageTileSize: 32,
+    },
+    yellow_arena_feu: {
+        id: "yellow_arena_feu",
+        name: "LA CALDEIRA",
+        tiles: buildArenaFeu(),
+        width: 16,
+        height: 16,
+        // Entrée/sortie en bas du couloir central (8,15) → retour ville devant le gym.
+        exits: [{ x: 8, y: 15, targetMapId: YELLOW_ENTRANCE_MAP_ID, targetSpawnX: 36, targetSpawnY: 11 }],
+        backgroundImage: "/yellow/sprites/fire_arena_interior.png",
+        backgroundImageWidth: 1024,
+        backgroundImageHeight: 1024,
+        backgroundImageTileSize: 64,
     },
     yellow_grotte: {
         id: "yellow_grotte",

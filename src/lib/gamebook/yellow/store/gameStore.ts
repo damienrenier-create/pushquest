@@ -224,10 +224,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
             }
             const newMap = YELLOW_MAPS[targetMapId]
             if (newMap) {
+                // Override de spawn : l'arène Feu (16×16) a son entrée en bas (8,14),
+                // pas au spawn générique du gym (7,8) calé sur les arènes 15×10.
+                const spawnX = targetMapId === "yellow_arena_feu" ? 8 : exit.targetSpawnX
+                const spawnY = targetMapId === "yellow_arena_feu" ? 14 : exit.targetSpawnY
                 const newPlayer = createInitialPlayer(
                     targetMapId,
-                    exit.targetSpawnX,
-                    exit.targetSpawnY,
+                    spawnX,
+                    spawnY,
                     next.direction,
                 )
                 set({ map: newMap, player: newPlayer, dialogue: null })
