@@ -135,6 +135,16 @@ export default function BattleScreen() {
     // Remet le curseur en haut quand on change de menu ou de tour.
     useEffect(() => { setCursor(0) }, [menu, step])
 
+    // Anti-bug "sprite d'un Daemon K.O. qui revient" (combats multi-Daemon, ex. ACE) :
+    // dès que le playback d'un tour est terminé, on resynchronise les index AFFICHÉS sur
+    // les actifs RÉELS. Sinon un dispIdx périmé (ex. resté sur la panthère tombée) refait
+    // surface au début du tour suivant, le temps du playback.
+    useEffect(() => {
+        if (!battle || step < battle.events.length) return
+        setDispIdx((d) => (d && (d.p !== battle.player.activeIndex || d.e !== battle.enemy.activeIndex)
+            ? { ...d, p: battle.player.activeIndex, e: battle.enemy.activeIndex } : d))
+    }, [battle, step])
+
     if (!battle) return null
 
     const events = battle.events
