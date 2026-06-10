@@ -79,6 +79,8 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
     const [renameText, setRenameText] = useState("")
     const [bagItem, setBagItem] = useState<string | null>(null)
     const [pcBox, setPcBox] = useState(0)
+    const [pcSort, setPcSort] = useState<"recent" | "lvl" | "hp" | "spc" | "atk" | "def" | "spe" | "alpha">("recent")
+    const [pcSortDir, setPcSortDir] = useState(-1) // -1 = décroissant · 1 = croissant
     const [ctShop, setCtShop] = useState(false)
     const [ctPick, setCtPick] = useState<string | null>(null)
     const [confirmReset, setConfirmReset] = useState(false)
@@ -425,9 +427,22 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                 Ouvert via le menu START (menu="pc") OU l'ordinateur du Centre (pcOpen). */}
             {!battle && (menu === "pc" || pcOpen) && (() => {
                 const BOX_SIZE = 20
-                const boxes = Math.max(1, Math.ceil(player.pc.length / BOX_SIZE))
+                // Tri de la réserve — sur une COPIE (on ne réordonne jamais player.pc lui-même,
+                // pour garder l'ordre de dépôt réel pour l'option "récemment déposé").
+                const sortedPc = [...player.pc]
+                if (pcSort === "recent") { if (pcSortDir < 0) sortedPc.reverse() } // récent = dernier déposé en tête
+                else if (pcSort === "alpha") sortedPc.sort((a, b) => displayName(a).localeCompare(displayName(b)) * pcSortDir)
+                else if (pcSort === "lvl") sortedPc.sort((a, b) => (a.level - b.level) * pcSortDir)
+                else {
+                    const k = pcSort // "hp"|"spc"|"atk"|"def"|"spe" → stat calculée au niveau du Daemon
+                    sortedPc.sort((a, b) => {
+                        const sa = getSpecies(a.speciesId), sb = getSpecies(b.speciesId)
+                        return ((sa ? fullStats(a, sa)[k] : 0) - (sb ? fullStats(b, sb)[k] : 0)) * pcSortDir
+                    })
+                }
+                const boxes = Math.max(1, Math.ceil(sortedPc.length / BOX_SIZE))
                 const box = Math.min(pcBox, boxes - 1)
-                const slice = player.pc.slice(box * BOX_SIZE, box * BOX_SIZE + BOX_SIZE)
+                const slice = sortedPc.slice(box * BOX_SIZE, box * BOX_SIZE + BOX_SIZE)
                 const closePcUi = () => { closePc(); setMenu(menu === "pc" ? "pause" : "none") }
                 return (
                     <div style={menuOverlayStyle} onClick={closePcUi}>
@@ -447,6 +462,21 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                                     <button style={miniBtn} disabled={box <= 0} onClick={() => setPcBox(box - 1)}>◀</button>
                                     <button style={miniBtn} disabled={box >= boxes - 1} onClick={() => setPcBox(box + 1)}>▶</button>
                                 </span>
+                            </div>
+                            <div style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 11, margin: "0 0 6px" }}>
+                                <span style={{ opacity: 0.6 }}>Tri</span>
+                                <select value={pcSort} onChange={(e) => { setPcSort(e.target.value as typeof pcSort); setPcBox(0) }}
+                                    style={{ flex: 1, fontSize: 11, padding: "3px 4px", borderRadius: 4, border: "1px solid #cdbb86", background: "#fffef8", color: "#1c1408", fontFamily: "inherit" }}>
+                                    <option value="recent">Déposé récemment</option>
+                                    <option value="lvl">Niveau</option>
+                                    <option value="hp">PV max</option>
+                                    <option value="spc">Spé max</option>
+                                    <option value="atk">Att max</option>
+                                    <option value="def">Déf max</option>
+                                    <option value="spe">Vit max</option>
+                                    <option value="alpha">Alphabet</option>
+                                </select>
+                                <button style={miniBtn} onClick={() => { setPcSortDir((d) => -d); setPcBox(0) }} title={pcSortDir < 0 ? "Décroissant" : "Croissant"}>{pcSortDir < 0 ? "▼" : "▲"}</button>
                             </div>
                             {player.pc.length === 0 && <div style={{ fontSize: 11, opacity: 0.6 }}>Aucun Daemon en réserve.</div>}
                             {slice.map((m) => (
