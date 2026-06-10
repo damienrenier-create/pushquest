@@ -148,10 +148,17 @@ export function useCasinoPresence(opts: {
                 return changed ? next : prev
             })
         }, SWEEP_MS)
+        // #12 — HEARTBEAT : re-poste ma position périodiquement pour ne pas être purgé
+        // (STALE 20 s) quand je reste immobile → fini le clignotement disparition/retour.
+        const heartbeat = setInterval(() => {
+            const { posX, posY, direction } = posRef.current
+            postCasino({ type: "player:move", posX, posY, direction })
+        }, 10000)
         const onUnload = () => postCasino({ type: "player:disconnect" }, true)
         window.addEventListener("beforeunload", onUnload)
         return () => {
             clearInterval(sweep)
+            clearInterval(heartbeat)
             window.removeEventListener("beforeunload", onUnload)
         }
     }, [active])

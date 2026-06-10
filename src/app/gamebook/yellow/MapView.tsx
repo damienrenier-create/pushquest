@@ -13,6 +13,7 @@ import { YELLOW_NPCS } from "@/lib/gamebook/yellow/npcs"
 import type { YellowBuilding, YellowMapData } from "@/lib/gamebook/yellow/maps"
 import { type TileType, isBlockingTile } from "@/lib/gamebook/mapEngine"
 import type { RemotePlayer } from "@/lib/gamebook/yellow/multiplayer/useCasinoPresence"
+import type { ChatBubble } from "@/lib/gamebook/yellow/multiplayer/useCasinoChat"
 import DialogueBox from "./DialogueBox"
 
 // === Palette Johto (saturée) ===========================================
@@ -342,7 +343,7 @@ function computeCamera(playerX: number, playerY: number, map: YellowMapData): Ca
 
 // === Composant principal ==============================================
 
-export default function MapView({ remotePlayers = [] }: { remotePlayers?: RemotePlayer[] }) {
+export default function MapView({ remotePlayers = [], chatBubbles, myUserId }: { remotePlayers?: RemotePlayer[]; chatBubbles?: Record<string, ChatBubble>; myUserId?: string }) {
     const player = useGameStore((s) => s.player)
     const map = useGameStore((s) => s.map)
 
@@ -521,10 +522,20 @@ export default function MapView({ remotePlayers = [] }: { remotePlayers?: Remote
 
                 {/* Avatars des autres joueurs (casino multijoueur) */}
                 {remotePlayers.map((rp) => (
-                    <RemotePlayerSprite key={rp.userId} rp={rp} screenPos={screenPos} />
+                    <RemotePlayerSprite key={rp.userId} rp={rp} screenPos={screenPos} bubble={chatBubbles?.[rp.userId]?.text} />
                 ))}
 
                 <PlayerSprite player={player} screenPos={screenPos} />
+                {/* #9 — ma propre bulle de chat, au-dessus de mon perso */}
+                {myUserId && chatBubbles?.[myUserId] && (
+                    <ChatBubbleSprite
+                        key={chatBubbles[myUserId].ts}
+                        text={chatBubbles[myUserId].text}
+                        posX={player.posX}
+                        posY={player.posY}
+                        screenPos={screenPos}
+                    />
+                )}
             </div>
 
             <div style={hudStyle}>
@@ -655,9 +666,11 @@ function hashHue(s: string): number {
 function RemotePlayerSprite({
     rp,
     screenPos,
+    bubble,
 }: {
     rp: RemotePlayer
     screenPos: (x: number, y: number, w?: number, h?: number) => React.CSSProperties
+    bubble?: string
 }) {
     const hue = hashHue(rp.userId)
     const cells = FIRERED_PLAYER[rp.direction] ?? FIRERED_PLAYER.down
@@ -690,28 +703,82 @@ function RemotePlayerSprite({
                     filter: `drop-shadow(0 0 1.5px hsl(${hue} 95% 45%)) drop-shadow(0 0 1.5px hsl(${hue} 95% 45%))`,
                 }}
             />
-            {/* Pseudo au-dessus de la tête, bordure à la couleur du joueur (noms longs tronqués). */}
+            {/* Au-dessus de la tête : bulle de chat (si message récent) PUIS le pseudo. */}
             <div
                 style={{
                     position: "absolute",
                     bottom: "100%",
                     left: "50%",
                     transform: "translateX(-50%) translateY(-1px)",
-                    whiteSpace: "nowrap",
-                    maxWidth: "22dvw",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    fontSize: "clamp(7px, 1.6dvw, 10px)",
-                    fontWeight: 700,
-                    color: "#fff",
-                    background: "rgba(28,20,8,0.82)",
-                    border: `1px solid hsl(${hue} 80% 45%)`,
-                    borderRadius: 3,
-                    padding: "0 3px",
-                    fontFamily: "'Courier New', monospace",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: 2,
+                    pointerEvents: "none",
                 }}
             >
-                {rp.nickname}
+                {bubble && <BubbleBox text={bubble} />}
+                <span
+                    style={{
+                        whiteSpace: "nowrap",
+                        maxWidth: "22dvw",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        fontSize: "clamp(7px, 1.6dvw, 10px)",
+                        fontWeight: 700,
+                        color: "#fff",
+                        background: "rgba(28,20,8,0.82)",
+                        border: `1px solid hsl(${hue} 80% 45%)`,
+                        borderRadius: 3,
+                        padding: "0 3px",
+                        fontFamily: "'Courier New', monospace",
+                    }}
+                >
+                    {rp.nickname}
+                </span>
+            </div>
+        </div>
+    )
+}
+
+// #9 — bulle de message style BD (blanche, bord noir) au-dessus d'un joueur.
+function BubbleBox({ text }: { text: string }) {
+    return (
+        <div
+            style={{
+                maxWidth: "30dvw",
+                background: "#fff",
+                color: "#1c1408",
+                border: "2px solid #1c1408",
+                borderRadius: 8,
+                padding: "2px 7px",
+                fontSize: "clamp(8px, 1.9dvw, 12px)",
+                fontWeight: 600,
+                fontFamily: "system-ui, sans-serif",
+                lineHeight: 1.25,
+                wordBreak: "break-word",
+                boxShadow: "0 2px 4px rgba(0,0,0,0.35)",
+                textAlign: "center",
+            }}
+        >
+            {text}
+        </div>
+    )
+}
+
+// Bulle au-dessus du JOUEUR LOCAL (les distants l'ont dans RemotePlayerSprite).
+function ChatBubbleSprite({
+    text, posX, posY, screenPos,
+}: {
+    text: string
+    posX: number
+    posY: number
+    screenPos: (x: number, y: number, w?: number, h?: number) => React.CSSProperties
+}) {
+    return (
+        <div style={{ position: "absolute", ...screenPos(posX, posY, 1, 1), zIndex: 6, pointerEvents: "none" }}>
+            <div style={{ position: "absolute", bottom: "115%", left: "50%", transform: "translateX(-50%)" }}>
+                <BubbleBox text={text} />
             </div>
         </div>
     )

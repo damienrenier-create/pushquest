@@ -59,9 +59,12 @@ export async function POST(req: NextRequest) {
     const throttled = type === "player:move" || type === "chat:say" // anti-flood
     if (throttled) {
         const now = Date.now()
-        const last = lastByUser.get(userId) ?? 0
+        // #10 — throttle SÉPARÉ par (user, type) : un chat juste après un pas n'est plus
+        // avalé en 429 par le throttle de déplacement (et inversement).
+        const key = `${userId}:${type}`
+        const last = lastByUser.get(key) ?? 0
         if (now - last < THROTTLE_MS) return NextResponse.json({ ok: false, reason: "Rate limited" }, { status: 429 })
-        lastByUser.set(userId, now)
+        lastByUser.set(key, now)
     }
 
     // Identité (nickname) depuis la session/DB — jamais fournie par le client.

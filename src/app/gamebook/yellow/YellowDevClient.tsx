@@ -350,7 +350,7 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                     onStart={() => setMenu((m) => (m === "none" ? "pause" : "none"))}
                     onSelect={() => setMenu((m) => (m === "none" ? "pause" : "none"))}
                 >
-                    <MapView remotePlayers={remotePlayers} />
+                    <MapView remotePlayers={remotePlayers} chatBubbles={chat.bubbles} myUserId={userId} />
                 </GameBoyShell>
             )}
 
