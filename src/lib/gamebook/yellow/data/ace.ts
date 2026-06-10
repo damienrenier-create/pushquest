@@ -3,7 +3,7 @@
 // Nexus Jaune Éclair — ACE, le RIVAL parfait (1 défaite/jour). React-free, pur, testable.
 //
 // MODÈLE (par joueur) :
-//   • Équipe FIXE de 5 : 3 panthères (slot 3 = FEU) + lignée Nouillon (Psy) + lignée Feu.
+//   • Équipe FIXE de 5 : 3 Panthéons (modèle de base) + lignée Nouillon (Psy) + lignée Feu.
 //   • Slot 6 ADAPTATIF : tiré d'une BOX de contres = la faiblesse parfaite de TON dernier Daemon.
 //   • Niveau des fixes = max(pic mémorisé, ton meilleur + 2) → ne RÉGRESSE jamais ;
 //     il ratchete à CHAQUE défaite. Le contre s'aligne sur ton dernier Daemon (mémoire box).
@@ -42,8 +42,10 @@ export const ACE_NO_TEAM_LINES = [
 export interface AceMon { speciesId: string; level: number }
 
 // === ÉQUIPE FIXE (5 slots) ===
-// Slot 3 = la panthère de FEU (Pyropanthe). Nouillon & la lignée Feu évoluent avec le niveau.
-export const ACE_PANTHERS = ["ombrapanthe", "voltapanthe", "pyropanthe"] // 1,2,3 (3 = feu)
+// Slots 1-3 = le PANTHÉON (modèle de base, Normal, BST 297) — celui qu'ACE t'offre.
+// On NE met PLUS les panthères élites (Ombra/Volta/Pyropanthe, BST ~455) : elles étaient
+// 1000x trop fortes dès le 1er combat. Nouillon & la lignée Feu évoluent avec le niveau.
+export const ACE_PANTHERS = ["pantheon", "pantheon", "pantheon"]
 export const ACE_NOUILLON_BASE = "nouillon"   // → vermisaint → divinpate
 export const ACE_FIRE_BASE = "braisille"      // → flamkure → pyrokoss
 export const ACE_LEVEL_OFFSET = 2
@@ -105,7 +107,7 @@ export function buildAceTeam(i: AceBuildInput): { team: AceMon[]; counterSpecies
     const team: AceMon[] = [
         { speciesId: ACE_PANTHERS[0], level: L },
         { speciesId: ACE_PANTHERS[1], level: L },
-        { speciesId: ACE_PANTHERS[2], level: L }, // panthère de feu
+        { speciesId: ACE_PANTHERS[2], level: L }, // Panthéon
         { speciesId: speciesAtLevel(ACE_NOUILLON_BASE, L), level: L },
         { speciesId: speciesAtLevel(ACE_FIRE_BASE, L), level: L },
         { speciesId: counter, level: counterLevel },

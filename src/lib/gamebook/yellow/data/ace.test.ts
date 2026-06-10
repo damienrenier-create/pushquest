@@ -24,13 +24,13 @@ describe("ACE — scaling + équipe + contre adaptatif", () => {
         expect(Math.max(...getSpecies(cEau)!.types.map((t) => typeEff(t, ["EAU"])))).toBe(2)
     })
 
-    it("buildAceTeam : 6 mons, 3 panthères (slot3=feu), nouillon+feu évolués, contre adapté", () => {
+    it("buildAceTeam : 6 mons, 3 Panthéons (modèle de base), nouillon+feu évolués, contre adapté", () => {
         const { team, counterSpecies } = buildAceTeam({
             acePeak: 40, playerBestLevel: 30, playerLastTypes: ["FEU"], playerLastLevel: 28, box: {},
         })
         expect(team).toHaveLength(6)
         expect(team.slice(0, 3).map((m) => m.speciesId)).toEqual(ACE_PANTHERS)
-        expect(team[2].speciesId).toBe("pyropanthe") // slot 3 = panthère de feu
+        expect(team[2].speciesId).toBe("pantheon") // slot 3 = Panthéon (plus de panthère élite)
         expect(team.slice(0, 5).every((m) => m.level === 40)).toBe(true) // fixes au niveau-cible
         expect(team[3].speciesId).toBe("divinpate") // nouillon évolué à niv 40
         expect(team[4].speciesId).toBe("pyrokoss")  // braisille évolué à niv 40
