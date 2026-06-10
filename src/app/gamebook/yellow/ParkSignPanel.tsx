@@ -4,7 +4,7 @@
 // du parc (Route Nord). Chaque panneau ouvre SON sujet (signOpen = index), et on
 // peut feuilleter les autres avec ◀ ▶ / swipe. Privilégie la QUALITÉ de l'info.
 
-import { useState, useEffect, useRef, type ReactNode } from "react"
+import { type ReactNode } from "react"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 
 const CREAM = "#f4ecd4", INK = "#2a1c10", DARK = "#cdbb86"
@@ -19,20 +19,23 @@ const td: React.CSSProperties = { border: `1px solid ${DARK}`, padding: "4px 6px
 
 function CapturePage() {
     const rows = [
-        ["100% (pleins)", "24%", "35%", "47%"],
-        ["50%", "47%", "71%", "94%"],
-        ["33%", "55%", "82%", "~100%"],
-        ["1 PV", "71%", "~100%", "~100%"],
+        ["🔴 Nexus (×1)", "niv < 10"],
+        ["🔴 Nexus +", "niv < 15"],
+        ["🔵 Super (×2)", "niv < 20"],
+        ["🔵 Super +", "niv < 30"],
+        ["🟡 Hyper (×4)", "niv < 40"],
+        ["🟡 Hyper +", "niv < 50"],
     ]
     return (
         <>
-            <P>Plus la cible est <b>affaiblie</b>, plus la capture est facile. Taux pour un Daemon <b>commun</b>, sans statut :</P>
+            <P>D'abord <b>affaiblis</b> : à PV pleins, <b>40% max</b> (impossible de capturer sans toucher). Sous <b>1/3 de vie</b>, le <b>100%</b> devient possible.</P>
+            <P>Chaque ball est taillée pour les <b>communs</b> jusqu'à un niveau (à 1/3 de vie) :</P>
             <table style={tbl}>
-                <thead><tr><th style={th}>PV restants</th><th style={th}>🔴 Nexus</th><th style={th}>🟣 Super</th><th style={th}>🟡 Hyper</th></tr></thead>
+                <thead><tr><th style={th}>Ball</th><th style={th}>Communs jusqu'au…</th></tr></thead>
                 <tbody>{rows.map((r, i) => <tr key={i}>{r.map((c, j) => <td key={j} style={{ ...td, fontWeight: j === 0 ? 700 : 400 }}>{c}</td>)}</tr>)}</tbody>
             </table>
-            <P>➕ <b>Statut</b> en plus : Sommeil/Gel <b>×2,5</b>, Poison/Paralysie/Brûlure <b>×1,5</b> → souvent capture garantie.</P>
-            <P>🔸 <b>Rares</b> : environ <b>×0,65</b> (plus durs) — privilégie Hyper Ball + statut. <b>Master-Éclair</b> : infaillible.</P>
+            <P>Les <b>peu communs / rares</b> et les <b>hauts niveaux</b> sont plus durs → monte d'une ball, ou affaiblis encore plus.</P>
+            <P>➕ <b>Statut</b> : Sommeil/Gel <b>×2,5</b>, Poison/Para/Brûlure <b>×1,5</b>. <b>Quota</b> du jour atteint : <b>×1,3</b>. <b>Master-Éclair</b> : infaillible.</P>
         </>
     )
 }
@@ -119,9 +122,9 @@ const TOPICS: { t: string; body: ReactNode }[] = [
     },
     {
         t: "🐆 ACE, le rival", body: <>
-            <P>ACE t'attend en ville : tu peux le défier <b>une fois par jour</b>.</P>
-            <P>Il <b>s'adapte à ta puissance</b> et ne faiblit jamais (son niveau ne redescend pas). Mais le <b>vaincre</b> rapporte un <b>petit cadeau</b>.</P>
-            <P>Reviens chaque jour mesurer tes progrès contre lui — c'est ton mètre-étalon.</P>
+            <P>ACE t'attend en ville : défie-le <b>une fois par jour</b>.</P>
+            <P>Il se cale sur <b>ton meilleur Daemon</b>, recalibré à chaque combat : <b>facile</b> tes 3 premières fois, puis <b>+2 niveaux</b> au-dessus de toi.</P>
+            <P>Le <b>vaincre</b> rapporte un cadeau chaque jour… et un <b>Panthéon</b> à la 12e victoire ! Reste devant en t'entraînant.</P>
         </>,
     },
     {
@@ -133,43 +136,26 @@ const TOPICS: { t: string; body: ReactNode }[] = [
     },
 ]
 
-const navBtn: React.CSSProperties = { background: INK, color: CREAM, border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 16, fontWeight: 900, cursor: "pointer", lineHeight: 1, flexShrink: 0 }
-
 export default function ParkSignPanel() {
     const idx = useGameStore((s) => s.signOpen)
     const close = useGameStore((s) => s.closeSign)
-    const [page, setPage] = useState(0)
-    const touchX = useRef<number | null>(null)
-    useEffect(() => { if (idx !== null) setPage(((idx % TOPICS.length) + TOPICS.length) % TOPICS.length) }, [idx])
     if (idx === null) return null
-    const cur = TOPICS[page]
-    const go = (d: number) => setPage((p) => (p + d + TOPICS.length) % TOPICS.length)
+    // UNE fiche par panneau : on affiche UNIQUEMENT le sujet du panneau cliqué.
+    // Plus de carrousel/navigation entre les fiches (demande Sartay).
+    const cur = TOPICS[((idx % TOPICS.length) + TOPICS.length) % TOPICS.length]
     return (
         <div onClick={close} style={overlay}>
-            <div
-                onClick={(e) => e.stopPropagation()}
-                onTouchStart={(e) => { touchX.current = e.touches[0]?.clientX ?? null }}
-                onTouchEnd={(e) => { const sx = touchX.current; touchX.current = null; if (sx == null) return; const dx = (e.changedTouches[0]?.clientX ?? sx) - sx; if (Math.abs(dx) > 45) go(dx < 0 ? 1 : -1) }}
-                style={box}
-            >
-                <div style={header}>📜 MANUEL DU DRESSEUR <span style={{ fontSize: 10, opacity: 0.6, fontWeight: 600 }}>fiche {page + 1}/{TOPICS.length}</span></div>
+            <div onClick={(e) => e.stopPropagation()} style={box}>
+                <div style={header}>📜 {cur.t}</div>
                 <div style={{ flex: 1, overflowY: "auto", padding: "12px 14px" }}>
-                    <div style={{ fontWeight: 800, fontSize: 15, color: INK, marginBottom: 8 }}>{cur.t}</div>
                     {cur.body}
                 </div>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "8px 12px", borderTop: `2px solid ${DARK}` }}>
-                    <button onClick={() => go(-1)} style={navBtn}>◀</button>
-                    <div style={{ display: "flex", gap: 5, flexWrap: "wrap", justifyContent: "center", alignItems: "center" }}>
-                        {TOPICS.map((_, i) => <span key={i} onClick={() => setPage(i)} style={{ width: 8, height: 8, borderRadius: "50%", background: i === page ? INK : DARK, cursor: "pointer" }} />)}
-                    </div>
-                    <button onClick={() => go(1)} style={navBtn}>▶</button>
-                </div>
-                <button onClick={close} style={{ margin: 10, marginTop: 0, padding: "8px 0", background: INK, color: CREAM, border: "none", borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>FERMER</button>
+                <button onClick={close} style={{ margin: 10, padding: "8px 0", background: INK, color: CREAM, border: "none", borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>FERMER</button>
             </div>
         </div>
     )
 }
 
 const overlay: React.CSSProperties = { position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 60, padding: 12 }
-const box: React.CSSProperties = { background: CREAM, border: `3px solid ${INK}`, borderRadius: 10, width: "100%", maxWidth: 440, height: "82%", display: "flex", flexDirection: "column", boxShadow: "0 6px 24px rgba(0,0,0,0.5)", fontFamily: "system-ui, sans-serif" }
+const box: React.CSSProperties = { background: CREAM, border: `3px solid ${INK}`, borderRadius: 10, width: "100%", maxWidth: 440, maxHeight: "82%", display: "flex", flexDirection: "column", boxShadow: "0 6px 24px rgba(0,0,0,0.5)", fontFamily: "system-ui, sans-serif" }
 const header: React.CSSProperties = { padding: "10px 12px", borderBottom: `2px solid ${DARK}`, color: INK, fontWeight: 800, fontSize: 14 }
