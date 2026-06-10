@@ -33,6 +33,12 @@ function lastMessageAt(events: readonly { kind: string; text?: string }[], step:
     return ""
 }
 
+// Emoji par type, pour afficher d'un coup d'œil le type d'une attaque dans le menu.
+const TYPE_EMOJI: Record<string, string> = {
+    NORMAL: "⚪", FEU: "🔥", EAU: "💧", PLANTE: "🌿", ELEC: "🟡", GLACE: "❄️", COMBAT: "🥊",
+    POISON: "☠️", SOL: "🌍", VOL: "🦅", PSY: "🔮", INSECTE: "🐛", ROCHE: "🪨", SPECTRE: "👻", DRAGON: "🐉",
+}
+
 export default function BattleScreen() {
     const battle = useBattle()
     const [step, setStep] = useState(0)
@@ -231,10 +237,13 @@ export default function BattleScreen() {
             const canUse = (c: number) => c <= reps && c <= remainingEnergy
             // À court d'énergie → Charge Désespérée EN PREMIER (ergonomie : plus en 5e position).
             if (!costs.some(canUse)) options.push({ label: "💥 Charge Désespérée (gratuit)", onSelect: doStruggle })
-            player.moves.forEach((slot, i) => options.push({
-                label: `${getMove(slot.moveId)?.name ?? slot.moveId}  ⚡${costs[i]}`,
-                onSelect: () => doMove(i), disabled: !canUse(costs[i]),
-            }))
+            player.moves.forEach((slot, i) => {
+                const mv = getMove(slot.moveId)
+                options.push({
+                    label: `${TYPE_EMOJI[mv?.type ?? ""] ?? ""} ${mv?.name ?? slot.moveId}  ⚡${costs[i]}`,
+                    onSelect: () => doMove(i), disabled: !canUse(costs[i]),
+                })
+            })
             options.push({ label: "← RETOUR", onSelect: () => setMenu("root") })
             canBack = true
         } else if (menu === "bag") {
