@@ -50,7 +50,8 @@ export interface TrainerData {
     /** Entraînement : boost Saiyan/EV des Daemons (gardien = moyen, élite = boss/ACE). */
     training?: TrainTier
     /** Rival de route (Léo/Mia) : monte au niveau du garde le plus fort de l'arène la plus
-     *  récemment battue (plante→roche→feu), en gardant ses espèces. Sinon niveaux fixes. */
+     *  récemment battue (plante→roche→feu), avec ÉVOLUTION de ses Daemons au stade du niveau.
+     *  Sinon niveaux fixes. */
     scaleWithBadges?: boolean
 }
 
