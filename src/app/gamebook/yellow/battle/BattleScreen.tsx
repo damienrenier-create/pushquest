@@ -149,7 +149,12 @@ export default function BattleScreen() {
     if (!battle) return null
 
     const events = battle.events
-    const playbackDone = step >= events.length
+    // ⚠️ Tant que le nouveau tour n'a pas été pris en charge par la file (lastBattle pas
+    // encore à jour), `step` est PÉRIMÉ (celui du tour précédent) → on ne doit PAS se fier
+    // à playbackDone (sinon la barre lit l'HP FINAL et "saute" le temps d'1 frame). On reste
+    // sur `disp` (l'HP animé) jusqu'à ce que la file reparte du bon pied.
+    const stepIsStale = lastBattle.current !== battle
+    const playbackDone = !stepIsStale && step >= events.length
     const waitingForTap = !playbackDone && events[step]?.kind === "message"
     const shownMsg = lastMessageAt(events, step)
 
