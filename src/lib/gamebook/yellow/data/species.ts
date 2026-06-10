@@ -210,7 +210,7 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 30, moveId: "seisme" },
             { level: 36, moveId: "tir_boue" },
         ],
-        evolution: { toId: "rochison", method: { kind: "LEVEL", level: 36 } },
+        evolution: { toId: "rochison", method: { kind: "TRADE" } }, // évolue par ÉCHANGE (hommage Grolem)
         catchRate: 60, baseExp: 142, rarity: "UNCOMMON", growthRate: "medium_fast", role: "Roche — tank",
         description: "Bélier rocheux ; charge en faisant trembler le sol.",
         sprite: "/yellow/sprites/dex/roctaur.png",

@@ -70,6 +70,6 @@ describe("lignées d'évolution", () => {
         expect(getSpecies("broutame")!.evolution!.method).toEqual({ kind: "LEVEL", level: 32 })
         expect(getSpecies("plumiot")!.evolution!.method).toEqual({ kind: "LEVEL", level: 18 })
         expect(getSpecies("couperin")!.evolution!.method).toEqual({ kind: "LEVEL", level: 28 })
-        expect(getSpecies("roctaur")!.evolution!.method).toEqual({ kind: "LEVEL", level: 36 })
+        expect(getSpecies("roctaur")!.evolution!.method).toEqual({ kind: "TRADE" })
     })
 })

@@ -8,6 +8,7 @@ import { useSyncExternalStore } from "react"
 import type { MonInstance, MoveSlot } from "../battle/types"
 import { fullStats } from "../battle/stats"
 import { getSpecies } from "../data/species"
+import { tradeEvolutionTarget, applyEvolution, type EvolutionResult } from "../battle/evolution"
 import { getMove } from "../data/moves"
 import { getItem } from "../data/items"
 import { SAIYAN_POINT_VALUE } from "../data/saiyanConfig"
@@ -235,6 +236,28 @@ export function executeTrade(giveUid: string, receive: MonInstance): boolean {
     st = { ...st, team, pc }
     emit()
     return true
+}
+
+/**
+ * ÉVOLUTION PAR ÉCHANGE : si le Daemon reçu (uid) appartient à une espèce qui évolue
+ * par TRADE, l'évolue sur-le-champ (immuable). Renvoie le résultat (pour le toast/anim).
+ */
+export function applyTradeEvolution(uid: string): EvolutionResult | null {
+    const inTeam = st.team.findIndex((m) => m.uid === uid)
+    const where: "team" | "pc" = inTeam >= 0 ? "team" : "pc"
+    const idx = inTeam >= 0 ? inTeam : st.pc.findIndex((m) => m.uid === uid)
+    if (idx < 0) return null
+    const src = (where === "team" ? st.team : st.pc)[idx]
+    const toId = tradeEvolutionTarget(src)
+    if (!toId) return null
+    const clone: MonInstance = { ...src, moves: src.moves.map((m) => ({ ...m })), pendingMoves: src.pendingMoves ? [...src.pendingMoves] : undefined }
+    const res = applyEvolution(clone, toId)
+    if (!res) return null
+    const list = [...(where === "team" ? st.team : st.pc)]
+    list[idx] = clone
+    st = where === "team" ? { ...st, team: list } : { ...st, pc: list }
+    emit()
+    return res
 }
 
 export function addItem(itemId: string, qty = 1) {

@@ -33,7 +33,7 @@ import { YELLOW_MAPS } from "@/lib/gamebook/yellow/maps"
 import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getGiftCtMove } from "@/lib/gamebook/yellow/store/battleStore"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
-import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn } from "@/lib/gamebook/yellow/store/playerStore"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
@@ -127,9 +127,11 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
         busy: !!battle || !!pvpSession,
         onComplete: (give, receive) => {
             executeTrade(give.uid, receive)
+            const evo = applyTradeEvolution(receive.uid) // évolution par échange (ex. Roctaur → Rochison)
             persistYellowSave()
             setTradePickFor(null)
-            setToast(`Échange réussi ! Tu reçois ${getSpecies(receive.speciesId)?.name ?? "un Daemon"}.`)
+            if (evo) setToast(`✨ Suite à l'échange, ${evo.fromName} évolue en ${evo.toName} !`)
+            else setToast(`Échange réussi ! Tu reçois ${getSpecies(receive.speciesId)?.name ?? "un Daemon"}.`)
         },
     })
 

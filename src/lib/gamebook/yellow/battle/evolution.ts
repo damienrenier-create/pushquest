@@ -26,6 +26,13 @@ export function itemEvolutionTarget(mon: MonInstance, itemId: string): string | 
     return null
 }
 
+/** Espèce cible si le monstre évolue par ÉCHANGE, sinon null. */
+export function tradeEvolutionTarget(mon: MonInstance): string | null {
+    const sp = getSpecies(mon.speciesId)
+    if (!sp?.evolution) return null
+    return sp.evolution.method.kind === "TRADE" ? sp.evolution.toId : null
+}
+
 export interface EvolutionResult {
     fromId: string
     fromName: string

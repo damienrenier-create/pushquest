@@ -32,7 +32,8 @@ const BIOME_REGIONS: Record<string, Partial<Record<Biome, Rect[]>>> = {
     },
     yellow_grotte: {
         // Le LAC (haut-gauche, cf. grotte.png) — source d'influence "eau" pour Loutrille/Têtardoc.
-        water: [{ x0: 1, y0: 2, x1: 9, y1: 7 }],
+        // Descend jusqu'à la ligne 8 (col ≤9) — recalé d'après Sartay.
+        water: [{ x0: 1, y0: 2, x1: 9, y1: 8 }],
     },
 }
 
