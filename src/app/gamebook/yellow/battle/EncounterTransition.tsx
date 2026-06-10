@@ -139,7 +139,7 @@ export default function EncounterTransition() {
 }
 
 const S: Record<string, React.CSSProperties> = {
-    overlay: { position: "fixed", top: 0, bottom: 0, left: 0, right: 0, margin: "0 auto", width: "100%", maxWidth: 480, zIndex: 9400, overflow: "hidden", pointerEvents: "auto" },
+    overlay: { position: "absolute", inset: 0, zIndex: 50, overflow: "hidden", pointerEvents: "auto" },
     cover: { position: "absolute", inset: 0 },
     half: { position: "absolute", top: 0, bottom: 0, width: "100%" },
     flash: { position: "absolute", inset: 0, background: "#fff", opacity: 0, pointerEvents: "none" },

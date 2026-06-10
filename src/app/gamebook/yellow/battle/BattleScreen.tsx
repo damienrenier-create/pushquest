@@ -14,6 +14,7 @@ import type { BattleMon } from "@/lib/gamebook/yellow/battle/types"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { ITEMS } from "@/lib/gamebook/yellow/data/items"
 import AttackFx from "./AttackFx"
+import EncounterTransition from "./EncounterTransition"
 import { pickAttackFx, type AttackFxSpec } from "@/lib/gamebook/yellow/data/attackAnims"
 import { usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
 import { moveCostReps, STRUGGLE_INDEX } from "@/lib/gamebook/yellow/data/combatCostConfig"
@@ -309,6 +310,9 @@ export default function BattleScreen() {
                 </div>
                 <TeamPips team={battle.player.team} activeIdx={pIdx} activeHp={pHp} align="right" />
                 {atkFx && <AttackFx key={atkFx.key} spec={atkFx.spec} attackerSide={atkFx.side} onDone={() => setAtkFx(null)} />}
+                {/* Transition pré-combat : RENDUE DANS la scène (overflow:hidden) → elle fait
+                    pile la taille du cadre de combat, plus le plein écran. */}
+                <EncounterTransition />
             </div>
 
             {/* ===== Boîte du bas : message OU liste d'options (curseur D-pad/A/B + tactile) ===== */}

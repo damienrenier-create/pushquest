@@ -13,7 +13,6 @@ import { useRouter } from "next/navigation"
 import GameBoyShell from "./GameBoyShell"
 import MapView from "./MapView"
 import BattleScreen from "./battle/BattleScreen"
-import EncounterTransition from "./battle/EncounterTransition"
 import BattleControls, { BATTLE_CONTROLS_HEIGHT } from "./battle/BattleControls"
 import BattleBoundary from "./battle/BattleBoundary"
 import { useCasinoPresence } from "@/lib/gamebook/yellow/multiplayer/useCasinoPresence"
@@ -594,7 +593,7 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
             <LibraryPanel />
             <LabPanel />
             <ParkSignPanel />
-            <EncounterTransition />
+            {/* EncounterTransition est désormais rendu DANS BattleScreen (calé sur la scène). */}
 
             {/* Chat du casino (RECO 8) : bouton flottant + overlay messages/saisie */}
             {inCasino && !battle && !showIntro && !chatOpen && (
