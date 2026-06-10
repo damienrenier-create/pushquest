@@ -105,16 +105,73 @@ const ROCHE_PAGES: Page[] = [
     ] },
 ]
 
+// ====== ARÈNE FEU "La Caldeira" (≤ niv 45) ======
+const FEU_PAGES: Page[] = [
+    { t: "🌋 Le principe (3e arène — la Caldeira)", rows: [
+        ["Faiblesses", "Le Feu tombe sous EAU · SOL · ROCHE (×2)."],
+        ["⚠️ Piège n°1", "TOUCANYON (Vol/Feu) est IMMUNE au Sol → seule la ROCHE la foudroie (×4 !)."],
+        ["⚠️ Piège n°2", "VIPEMBER (l'as) est un tank SPÉCIAL et sa PYROTECHNIE baisse ta Spé (-2) → tes coups Eau/Élec FONDENT. Frappe en PHYSIQUE (Sol/Roche)."],
+        ["Niveau conseillé", "Boss niv 37, gardes ENTRAÎNÉES (boostées). Viens ~niv 30-34, équipe variée et soignée."],
+    ] },
+    { t: "🪨 ROCHE — la MVP (Toucanyon ×4)", rows: [
+        ["Jet de Pierres (50)", "Cailloutchi niv 8 · Lavapetit niv 8 · Rembodo niv 12 (Route Nord / Grotte)."],
+        ["Éboulis (75)", "Roctaur niv 24 · Cailloutchi niv 26 · Octoroc & lignée diamant d'emblée (GROTTE)."],
+        ["Lame de Roche (90)", "CT20 en vente (badge roche) · Diamantine et la lignée diamant l'ont d'emblée."],
+        ["💡 Le + tôt <30", "Un OCTOROC (Grotte, Roche/Sol) a Tir de Boue (Sol) + Éboulis (Roche) DÈS le départ → couverture totale, et PHYSIQUE."],
+    ] },
+    { t: "🌍 SOL — touche 5/6 (sauf Toucanyon)", rows: [
+        ["Tir de Boue (55)", "Quadroc · Octoroc d'emblée (GROTTE) · Roctaur niv 36."],
+        ["Séisme (100)", "Roctaur niv 30 · Fissuralave niv 30 — gros coup, touche 5 des 6."],
+        ["⭐ Faille Sismique (90)", "Tu l'AS DÉJÀ (cadeau de Granit) ! Sol 90 + monte ta Déf. Parfaite sur un Roche/Sol."],
+        ["🚫 Rappel", "le Sol NE TOUCHE PAS Toucanyon (Vol) → garde une attaque Roche pour elle."],
+    ] },
+    { t: "💧 EAU — 4/6, mais gare au SPÉ", rows: [
+        ["Lame d'Eau (65)", "Loutrille niv 20 · Grenarc niv 22 (Route Nord eau / Grotte)."],
+        ["Hydrocanon (110)", "Ondulo / Ondaloutre niv 34 · Aquapanthe d'emblée (la CT = badge eau)."],
+        ["⚠️ Spécial", "l'Eau est SPÉCIALE → la Pyrotechnie de Vipember la divise par 2. Réserve-la aux autres, ou KO Vipember en premier."],
+    ] },
+    { t: "⚡ ÉLEC — pile sur les tortues + Toucanyon", rows: [
+        ["Étincelle (65)", "Électroatiss niv 6 (Route Nord, montagnes) · Voltapanthe d'emblée."],
+        ["Fulgurance (90)", "Zappeuréal niv 38 · Brutetrik niv 36 (Combat/Élec)."],
+        ["Cible", "×2 sur Braisécaille, Caldéront ET Toucanyon. Mais SPÉCIAL → même piège Pyrotechnie."],
+    ] },
+    { t: "📈 Quelle stat améliorer ?", rows: [
+        ["Sol / Roche", "attaques PHYSIQUES → monte l'ATTAQUE (et elles IGNORENT la Pyrotechnie !)."],
+        ["Eau / Élec", "attaques SPÉCIALES → monte la SPÉ… mais Vipember les punit."],
+        ["Le bon plan", "Vipember est un tank SPÉCIAL : un physique Sol/Roche perce sa Déf molle. Priorise le PHYSIQUE pour toute l'arène."],
+    ] },
+    { t: "💿 LES CT utiles", rows: [
+        ["⭐ Faille Sismique", "tu l'as (cadeau Granit) : Sol 90 + auto +Déf. À coller sur un Roche/Sol."],
+        ["Lame de Roche", "EN VENTE 700 (badge roche) : Roche 90 → ×4 sur Toucanyon."],
+        ["Set-up", "Danse-Lames (400, +Atk) sur ton physique → un tour, puis tu balaies."],
+        ["Pas encore", "Hydrocanon (CT) = badge EAU · Séisme (CT) = Champion."],
+    ] },
+    { t: "⚔️ La boss : PYRA (6 Daemons)", rows: [
+        ["Ouvre faible", "Brasicow + Braisécaille (bases niv 24) → fais-toi la main dessus."],
+        ["Les fortes", "Tauricendre (Feu/Combat) + Caldéront (Feu/Eau) niv 32-33 : Caldéront tape ton Roche/Sol ×4 à l'eau → méfiance."],
+        ["🦅 Toucanyon niv 35", "Vol/Feu : SEULE la Roche la touche (×4). Surtout PAS de Sol."],
+        ["🧠 Vipember niv 37 (l'AS)", "Psy/Feu + PYROTECHNIE (-2 Spé). Frappe-la en PHYSIQUE. Butin : Badge Feu + CT Pyrotechnie."],
+    ] },
+    { t: "🚫 Ce qui NE marche PAS · 🗝️ L'arène", rows: [
+        ["Résisté ×0.5", "FEU (évidemment), + Glace/Insecte/Acier/Plante sur une partie de l'équipe."],
+        ["Trop partiel", "Vol et Psy ne touchent QUE les 2 taureaux Combat. Spectre, que Vipember."],
+        ["Ordre", "Bats les 4 gardes (ordre libre) → la Doyenne PYRA au sommet."],
+        ["Le + tôt <30", "Un Roche/Sol (Roctaur/Octoroc) ~niv 26-30 avec Éboulis + un Eau de soutien = jouable sous le niveau du boss."],
+    ] },
+]
+
 export default function GuidePanel() {
     const open = useGameStore((s) => s.guideOpen)
     const close = useGameStore((s) => s.closeGuide)
     const badges = usePlayer().badges
     const [page, setPage] = useState(0)
     const touchX = useRef<number | null>(null)
-    const isRock = currentArenaMapId(badges) === "yellow_arena_roche"
-    const pages = isRock ? ROCHE_PAGES : PLANTE_PAGES
+    const arena = currentArenaMapId(badges)
+    const isRock = arena === "yellow_arena_roche"
+    const isFeu = arena === "yellow_arena_feu"
+    const pages = isFeu ? FEU_PAGES : isRock ? ROCHE_PAGES : PLANTE_PAGES
     // Remet à la 1re page à l'ouverture (et si on change d'arène).
-    useEffect(() => { setPage(0) }, [open, isRock])
+    useEffect(() => { setPage(0) }, [open, arena])
 
     if (!open) return null
     const idx = Math.min(page, pages.length - 1)
@@ -130,8 +187,8 @@ export default function GuidePanel() {
                 style={{ background: CREAM, border: `3px solid ${INK}`, borderRadius: 10, width: "100%", maxWidth: 440, height: "78%", display: "flex", flexDirection: "column", boxShadow: "0 6px 24px rgba(0,0,0,0.5)", fontFamily: "system-ui, sans-serif" }}
             >
                 <div style={{ padding: "10px 12px", borderBottom: `2px solid ${DARK}`, color: INK, fontWeight: 800, fontSize: 14 }}>
-                    {isRock ? "📜 GUIDE DE LA CAVERNE" : "📜 GUIDE DU BOSQUET"}{" "}
-                    <span style={{ fontSize: 10, opacity: 0.6, fontWeight: 600 }}>{isRock ? "arène Roche · ≤ niv 30" : "arène Plante · ≤ niv 20"}</span>
+                    {isFeu ? "📜 GUIDE DE LA CALDEIRA" : isRock ? "📜 GUIDE DE LA CAVERNE" : "📜 GUIDE DU BOSQUET"}{" "}
+                    <span style={{ fontSize: 10, opacity: 0.6, fontWeight: 600 }}>{isFeu ? "arène Feu · ≤ niv 45" : isRock ? "arène Roche · ≤ niv 30" : "arène Plante · ≤ niv 20"}</span>
                 </div>
 
                 {/* Page courante */}
