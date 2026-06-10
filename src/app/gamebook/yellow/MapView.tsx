@@ -571,6 +571,12 @@ const NPC_SPRITES: Record<string, { url: string; frames: number; h?: number } | 
     y_rocharena_g3: { url: "/yellow/sprites/npc_roche3.png", frames: 1, h: 2.0 },
     y_rocharena_g4: { url: "/yellow/sprites/npc_roche4.png", frames: 1, h: 2.0 },
     y_rocharena_boss: { url: "/yellow/sprites/npc_granit.png", frames: 1, h: 2.4 },
+    // Arène Feu "La Caldeira" : 4 dresseuses + la Doyenne PYRA (sprites entiers).
+    y_feuarena_g1: { url: "/yellow/sprites/npc_feu1.png", frames: 1, h: 2.0 },
+    y_feuarena_g2: { url: "/yellow/sprites/npc_feu2.png", frames: 1, h: 2.0 },
+    y_feuarena_g3: { url: "/yellow/sprites/npc_feu3.png", frames: 1, h: 2.0 },
+    y_feuarena_g4: { url: "/yellow/sprites/npc_feu4.png", frames: 1, h: 2.0 },
+    y_feuarena_boss: { url: "/yellow/sprites/npc_pyra.png", frames: 1, h: 2.4 },
 }
 
 function NpcSprite({
