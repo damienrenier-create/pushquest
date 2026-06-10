@@ -10,6 +10,9 @@ describe("moveCostReps (coût = puissance, plafonné par bande de niveau)", () =
         expect(moveCostReps(110, 25)).toBe(8)  // niv 16-30
         expect(moveCostReps(110, 45)).toBe(10) // niv 31+
     })
+    it("puissance 90 (16-30) = 7 (floor, pas 8)", () => {
+        expect(moveCostReps(90, 25)).toBe(7)
+    })
     it("une attaque faible reste bon marché à tout niveau", () => {
         expect(moveCostReps(40, 10)).toBe(1)
         expect(moveCostReps(40, 45)).toBe(1)

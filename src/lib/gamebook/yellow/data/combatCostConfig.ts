@@ -25,7 +25,7 @@ function levelBand(level: number): 0 | 1 | 2 {
 export function moveCostReps(power: number, level: number): number {
     const band = levelBand(level)
     if (power <= 0) return STATUS_COST_BY_BAND[band] // attaque de statut
-    const raw = Math.round((power - MOVE_COST_POWER_FLOOR) / MOVE_COST_POWER_DIV)
+    const raw = Math.floor((power - MOVE_COST_POWER_FLOOR) / MOVE_COST_POWER_DIV) // floor : puiss 90 → 7 (pas 8)
     return Math.max(1, Math.min(COST_CAP_BY_BAND[band], raw))
 }
 
