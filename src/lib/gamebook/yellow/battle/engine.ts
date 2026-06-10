@@ -19,7 +19,6 @@ import { chooseAiAction, type AiLevel } from "./ai"
 import { xpForDefeat, applyExp } from "./xp"
 import { tryCapture } from "./capture"
 import { ballBonusOf, getItem, isGuaranteedBall } from "../data/items"
-import { rarityBonusOf } from "../data/captureConfig"
 import { STRUGGLE_MOVE_ID, STRUGGLE_INDEX, moveCostReps } from "../data/combatCostConfig"
 import { gainEv, signatureStat, EV_YIELD_PER_WIN } from "../data/evConfig"
 
@@ -853,7 +852,7 @@ function performCapture(state: BattleState, itemId: string, events: BattleEvent[
         : tryCapture(
             {
                 catchRate: sp.catchRate, currentHp: wild.currentHp, maxHp: maxHpOf(wild), status: wild.status,
-                ballBonus: ballBonusOf(itemId), rarityBonus: rarityBonusOf(sp.rarity), extraBonus: state.captureModifier,
+                ballBonus: ballBonusOf(itemId), level: wild.level, extraBonus: state.captureModifier,
             },
             rng,
         )

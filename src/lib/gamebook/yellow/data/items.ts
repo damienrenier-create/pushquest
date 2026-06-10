@@ -33,13 +33,25 @@ export const ITEMS: Record<string, ItemData> = {
         id: "poke_ball", name: "Nexus-Ball", category: "BALL",
         description: "Ball standard pour capturer un Daemon affaibli.", price: 30, ballBonus: 1,
     },
+    poke_ball_plus: {
+        id: "poke_ball_plus", name: "Nexus-Ball +", category: "BALL",
+        description: "Un cran au-dessus de la Nexus-Ball de base.", price: 45, ballBonus: 1.5,
+    },
     super_ball: {
         id: "super_ball", name: "Super Nexus-Ball", category: "BALL",
-        description: "Meilleur taux de capture que la Nexus-Ball.", price: 100, ballBonus: 1.5,
+        description: "Bon taux de capture.", price: 60, ballBonus: 2,
+    },
+    super_ball_plus: {
+        id: "super_ball_plus", name: "Super Nexus-Ball +", category: "BALL",
+        description: "Très bon taux de capture.", price: 75, ballBonus: 2.5,
     },
     hyper_ball: {
         id: "hyper_ball", name: "Hyper Nexus-Ball", category: "BALL",
-        description: "Excellent taux de capture.", price: 300, ballBonus: 2,
+        description: "Excellent taux de capture.", price: 100, ballBonus: 3,
+    },
+    hyper_ball_plus: {
+        id: "hyper_ball_plus", name: "Hyper Nexus-Ball +", category: "BALL",
+        description: "Le summum hors Master — pour les proies les plus coriaces.", price: 150, ballBonus: 3.5,
     },
     master_ball: {
         id: "master_ball", name: "Master-Éclair", category: "BALL",

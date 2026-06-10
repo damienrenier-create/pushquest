@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { statusCatchBonus, captureValue, tryCapture, type CaptureInput } from "./capture"
-import { rarityBonusOf, statusBonusOf } from "../data/captureConfig"
+import { rarityBonusOf, statusBonusOf, levelCatchFactor } from "../data/captureConfig"
 import { Rng } from "./rng"
 
 const base: CaptureInput = { catchRate: 150, currentHp: 100, maxHp: 100, status: "NONE", ballBonus: 1 }
@@ -28,9 +28,22 @@ describe("coefficient de rareté (config)", () => {
     })
 })
 
+describe("facteur niveau (capture)", () => {
+    it("bas niveau = plus facile, ~1 à niv 25, capé à 0.5 en haut", () => {
+        expect(levelCatchFactor(0)).toBeCloseTo(1.5)
+        expect(levelCatchFactor(25)).toBeCloseTo(1.0)
+        expect(levelCatchFactor(50)).toBeCloseTo(0.5)
+        expect(levelCatchFactor(90)).toBeCloseTo(0.5) // clampé
+    })
+})
+
 describe("captureValue", () => {
-    it("PV pleins → facteur PV = 1/3", () => {
-        expect(captureValue(base)).toBeCloseTo(50, 6) // 150 × 1 × 1/3
+    it("PV pleins → facteur PV = 1/3 (niveau par défaut = neutre)", () => {
+        expect(captureValue(base)).toBeCloseTo(50, 6) // 150 × 1 × 1/3 × 1 (niv neutre)
+    })
+    it("le niveau module : bas niveau augmente la valeur, haut la réduit", () => {
+        expect(captureValue({ ...base, level: 0 })).toBeCloseTo(75, 6)  // 50 × 1.5
+        expect(captureValue({ ...base, level: 50 })).toBeCloseTo(25, 6) // 50 × 0.5
     })
     it("1 PV → facteur PV proche de 1", () => {
         expect(captureValue({ ...base, currentHp: 1 })).toBeCloseTo(149, 0)

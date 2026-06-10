@@ -1,21 +1,22 @@
 // src/lib/gamebook/yellow/battle/capture.ts
 //
 // Nexus Jaune Éclair — système de capture. React-free, pur, seedable.
-// A = hpFactor × catchRate × ballBonus × statut × rareté × extra
-// proba = min(1, A / CALIBRATION). Les bonus/coefficients vivent dans
+// A = hpFactor × catchRate × ballBonus × statut × NIVEAU × rareté(option) × extra
+// proba = min(plafondPV, A / CALIBRATION). Les bonus/coefficients vivent dans
 // data/captureConfig.ts (édition sans toucher à la logique).
 
 import type { MajorStatus } from "./types"
 import type { Rng } from "./rng"
-import { statusBonusOf, rarityBonusOf, CAPTURE_CALIBRATION } from "../data/captureConfig"
+import { statusBonusOf, levelCatchFactor, CAP_LEVEL_NEUTRAL, CAPTURE_CALIBRATION } from "../data/captureConfig"
 
 export interface CaptureInput {
-    catchRate: number       // 0..255 (espèce)
+    catchRate: number       // 0..255 (espèce — porte déjà la rareté)
     currentHp: number
     maxHp: number
     status: MajorStatus
     ballBonus: number       // multiplicateur de la Ball
-    rarityBonus?: number    // coefficient de rareté (défaut 1)
+    level?: number          // niveau de la cible (défaut = neutre) : bas = + facile, haut = + dur
+    rarityBonus?: number    // coefficient de rareté SUPPLÉMENTAIRE (défaut 1 — non utilisé par défaut)
     extraBonus?: number     // bonus situationnel : quota PushQuest, etc. (défaut 1)
 }
 
@@ -48,6 +49,7 @@ export function captureValue(i: CaptureInput): number {
         * i.ballBonus
         * hpFactor(i.currentHp, i.maxHp)
         * statusBonusOf(i.status)
+        * levelCatchFactor(i.level ?? CAP_LEVEL_NEUTRAL)
         * (i.rarityBonus ?? 1)
         * (i.extraBonus ?? 1)
 }

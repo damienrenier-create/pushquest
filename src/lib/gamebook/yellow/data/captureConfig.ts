@@ -6,9 +6,20 @@
 
 import type { MajorStatus } from "../battle/types"
 
-/** A = hpFactor × catchRate × ball × statut × rareté × extra ; proba = min(1, A / CALIBRATION).
- *  Baissé 255 → 170 : capture sensiblement plus facile (surtout sur cible affaiblie). */
-export const CAPTURE_CALIBRATION = 170
+/** A = hpFactor × catchRate × ball × statut × NIVEAU × extra ; proba = min(plafondPV, A / CALIBRATION).
+ *  255 → 170 → 130 : capture plus généreuse (et compense la rareté retirée du DÉFAUT, cf. plus bas).
+ *  ⚠️ la RARETÉ est déjà portée par le catchRate de l'espèce (commun ~128, rare ~45) : on ne la
+ *  recompte plus par défaut (le rarityBonus ci-dessous reste dispo pour des captures scriptées). */
+export const CAPTURE_CALIBRATION = 130
+
+/**
+ * Facteur NIVEAU : bas niveau = capture plus facile, haut niveau = plus dure.
+ * clamp(1.5 − niv/50 ; 0.5 ; 1.5) → ×1.5 à niv 0 · ×1 à niv 25 · ×0.5 à niv 50+.
+ */
+export const CAP_LEVEL_NEUTRAL = 25 // niveau où le facteur vaut 1 (défaut si non fourni)
+export function levelCatchFactor(level: number): number {
+    return Math.max(0.5, Math.min(1.5, 1.5 - level / 50))
+}
 
 /** Bonus si le joueur a atteint son quota PushQuest du jour (capture facilitée). */
 export const QUOTA_CAPTURE_BONUS = 1.3
