@@ -49,13 +49,15 @@ export interface EncounterCtx {
  * Plafond de niveau des Daemons sauvages selon la progression (badges) :
  * - avant l'arène Plante : N≤12
  * - Plante battue, avant l'arène Roche : N≤17
- * - Roche battue : N≤30 (placeholder, à étendre avec les arènes suivantes)
+ * - Roche battue, avant l'arène Feu : N≤30
+ * - Feu battue : N≤45 (placeholder, à étendre avec les arènes suivantes)
  * S'applique à la Route Nord ET à la Grotte.
  */
 export function wildLevelCap(badges: readonly string[]): number {
     if (!badges.includes("plante")) return 12
     if (!badges.includes("roche")) return 17
-    return 30
+    if (!badges.includes("feu")) return 30
+    return 45
 }
 
 /** Zones (mapId) où une espèce apparaît à l'état sauvage — pour la fiche Pokédex. */

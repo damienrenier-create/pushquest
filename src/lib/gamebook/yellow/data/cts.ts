@@ -69,6 +69,9 @@ export const CTS: CtData[] = [
     { id: "ct19", label: "CT19", moveId: "faille_sismique", price: 0, gift: true },
     // --- CT Roche en vente (débloquée par le badge roche) ---
     { id: "ct20", label: "CT20", moveId: "lame_roche", price: 700, badge: "roche" },
+
+    // --- CT signature FEU : CADEAU de la boss PYRA (Arène Feu, jamais en vente) ---
+    { id: "ct21", label: "CT21", moveId: "pyrotechnie", price: 0, gift: true },
 ]
 
 export function getCt(id: string): CtData | null {

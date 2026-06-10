@@ -275,6 +275,95 @@ export const TRAINERS: TrainerData[] = [
             "Et prends ça : ma FAILLE SISMIQUE. Continue de creuser ta voie, gamin — le Nexus a besoin de roc comme toi. Va plus loin !",
         ],
     },
+
+    // ===== ARÈNE FEU "LA CALDEIRA" (3e arène, tenue par des femmes) =====
+    {
+        id: "y_feuarena_g1", name: "NOVICE ÉTINCELLE", title: "Gardienne du Brasier",
+        sprite: { emoji: "🔥", color: "#ff6a3a" },
+        mapId: "yellow_arena_feu", x: 3, y: 3,
+        // "Beaucoup, varié, au moins un feu" : une jeune recrue qui ramène un peu de tout.
+        team: [
+            { speciesId: "brasicow", level: 20 },
+            { speciesId: "braisecaille", level: 20 },
+            { speciesId: "pyrozly", level: 21 },
+            { speciesId: "plumiot", level: 19 },
+            { speciesId: "pantheon", level: 18 },
+        ],
+        reward: 150, aiLevel: "trainer",
+        intro: ["*Une jeune dresseuse jongle avec une flammèche.*", "L'arène est tenue par des femmes de feu — et je tiens la première garde !"],
+        defeat: ["Pas mal… mes grandes sœurs vont te chauffer pour de bon."],
+    },
+    {
+        id: "y_feuarena_g2", name: "ÉLEVEUSE EMBRA", title: "Gardienne du Brasier",
+        sprite: { emoji: "🔥", color: "#ff6a3a" },
+        mapId: "yellow_arena_feu", x: 5, y: 7,
+        // 5 Daemons de la MÊME lignée (oiseau de feu), du poussin au grand rapace.
+        team: [
+            { speciesId: "colibraise", level: 22 },
+            { speciesId: "colibraise", level: 24 },
+            { speciesId: "arardent", level: 26 },
+            { speciesId: "arardent", level: 28 },
+            { speciesId: "toucanyon", level: 30 },
+        ],
+        reward: 170, aiLevel: "trainer",
+        intro: ["J'élève mes oiseaux de braise du premier duvet jusqu'au grand rapace. Regarde-les grandir !"],
+        defeat: ["Mes oisillons ont encore des plumes à faire pousser…"],
+    },
+    {
+        id: "y_feuarena_g3", name: "PRÊTRESSE LAVE", title: "Gardienne du Brasier",
+        sprite: { emoji: "🔥", color: "#ff6a3a" },
+        mapId: "yellow_arena_feu", x: 11, y: 7,
+        // 3 costaudes (formes finales).
+        team: [
+            { speciesId: "tauricendre", level: 31 },
+            { speciesId: "calderont", level: 31 },
+            { speciesId: "arardent", level: 30 },
+        ],
+        reward: 200, aiLevel: "trainer",
+        intro: ["*La chaleur devient suffocante.*", "Trois titans de feu te barrent la route de la Doyenne."],
+        defeat: ["Tu brûles d'un feu plus vif que le mien…"],
+    },
+    {
+        id: "y_feuarena_g4", name: "GARDIENNE MAGMA", title: "Sentinelle de la Caldeira",
+        sprite: { emoji: "🔥", color: "#ff6a3a" },
+        mapId: "yellow_arena_feu", x: 13, y: 3,
+        // Une seule Daemon, mais de niveau boss.
+        team: [
+            { speciesId: "toucanyon", level: 33 },
+        ],
+        reward: 220, aiLevel: "trainer",
+        intro: ["Je n'ai qu'une Daemon. Mais une seule suffit pour calciner les imprudents."],
+        defeat: ["Passe… PYRA t'attend au sommet."],
+    },
+    {
+        id: "y_feuarena_boss", name: "PYRA", title: "Doyenne de la Caldeira",
+        sprite: { emoji: "🌋", color: "#ff4a2a" },
+        mapId: "yellow_arena_feu", x: 8, y: 2,
+        // GATE : avoir battu les 4 gardes (n'importe quel ordre).
+        requiresTrainers: ["y_feuarena_g1", "y_feuarena_g2", "y_feuarena_g3", "y_feuarena_g4"],
+        team: [
+            // 2 faibles (bases), 2 fortes (finales), 2 niveau-boss — dont son AS Vipember qui
+            // OUVRE sur sa signature PYROTECHNIE (move de CT, enseignable légitimement).
+            { speciesId: "brasicow", level: 24 },
+            { speciesId: "braisecaille", level: 24 },
+            { speciesId: "tauricendre", level: 32 },
+            { speciesId: "calderont", level: 33 },
+            { speciesId: "toucanyon", level: 35 },
+            { speciesId: "vipember", level: 37, moves: ["pyrotechnie", "lance_flammes", "vague_mentale", "flamme_ardente"] },
+        ],
+        reward: 0, aiLevel: "trainer", badge: "feu", giftCt: "ct21",
+        intro: [
+            "*Au sommet de la caldeira, une femme se tient dans les flammes, impassible.*",
+            "Je suis PYRA, Doyenne de cette arène. Ici, ce sont les femmes qui règnent sur le feu.",
+            "Mon Vipember ne se contente pas de brûler : il consume l'esprit. Montre-moi ta flamme !",
+        ],
+        defeat: [
+            "Éteinte… par une flamme plus pure que la mienne.",
+            "Le Badge Feu est à toi — tu as dansé dans la caldeira sans flancher.",
+            "*PYRA dépose une CT brûlante dans ta paume.*",
+            "Et garde ma PYROTECHNIE : que le feu de l'esprit éclaire ta route. Le Nexus t'attend plus loin !",
+        ],
+    },
 ]
 
 const BY_ID = new Map(TRAINERS.map((t) => [t.id, t]))
