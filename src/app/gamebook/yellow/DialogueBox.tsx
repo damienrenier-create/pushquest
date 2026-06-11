@@ -7,6 +7,7 @@
 // + un petit triangle clignotant pour indiquer "presse A pour suivre".
 
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
+import { getTrainer } from "@/lib/gamebook/yellow/data/trainers"
 
 // Palette Johto (cohérente avec MapView)
 const BOX_BG = "#f4ecd4"        // cream lisible
@@ -39,6 +40,9 @@ export default function DialogueBox() {
     const line = dialogue.lines[dialogue.lineIndex]
     const isLast = dialogue.lineIndex >= dialogue.lines.length - 1
     const portrait = DIALOGUE_PORTRAITS[dialogue.npcId]
+    // Garde / dresseur SANS portrait image → on affiche son emoji de sprite en filigrane
+    // DERRIÈRE le texte (look "on voit qui parle"). Non-dresseurs : pas de filigrane.
+    const trainerEmoji = !portrait ? (getTrainer(dialogue.npcId)?.sprite.emoji ?? "").trim() : ""
 
     return (
         <>
@@ -47,6 +51,7 @@ export default function DialogueBox() {
                 <img src={portrait} alt={dialogue.npcName} style={portraitStyle} />
             )}
             <div style={boxStyle}>
+                {trainerEmoji && <span style={spriteWatermarkStyle} aria-hidden>{trainerEmoji}</span>}
                 <div style={nameStyle}>{dialogue.npcName}</div>
                 <div style={lineStyle}>{line}</div>
                 <div style={blinkArrowStyle}>{isLast ? "▣" : "▼"}</div>
@@ -82,9 +87,25 @@ const boxStyle: React.CSSProperties = {
     boxShadow: `inset 0 0 0 1px ${BOX_BG}, 0 2px 0 ${BOX_BG_DARK}`,
     zIndex: 10,
     minHeight: "30%",
+    overflow: "hidden", // clippe le filigrane du sprite à la boîte
+}
+
+// Emoji du dresseur en FILIGRANE derrière le texte (grand, très transparent, à droite).
+const spriteWatermarkStyle: React.CSSProperties = {
+    position: "absolute",
+    right: 8,
+    top: "50%",
+    transform: "translateY(-50%)",
+    fontSize: "clamp(46px, 15dvw, 84px)",
+    opacity: 0.16,
+    lineHeight: 1,
+    zIndex: 0,
+    pointerEvents: "none",
 }
 
 const nameStyle: React.CSSProperties = {
+    position: "relative", // au-dessus du filigrane
+    zIndex: 1,
     fontSize: "clamp(8px, 1.8dvw, 11px)",
     fontWeight: "bold",
     letterSpacing: 1,
@@ -94,6 +115,8 @@ const nameStyle: React.CSSProperties = {
 }
 
 const lineStyle: React.CSSProperties = {
+    position: "relative", // au-dessus du filigrane
+    zIndex: 1,
     fontSize: "clamp(9px, 2.2dvw, 13px)",
     lineHeight: 1.4,
     letterSpacing: 0.5,
