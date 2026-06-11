@@ -58,7 +58,7 @@ export interface TrainerData {
 /** Niveau-cible des rivaux de route (Léo/Mia) = niveau du GARDE LE PLUS FORT de l'arène la
  *  plus récemment battue. null si aucune arène battue → on garde les niveaux fixes du dresseur. */
 export function arenaScaledLevel(badges: readonly string[]): number | null {
-    if (badges.includes("feu")) return 33    // garde le plus fort de l'Arène Feu
+    if (badges.includes("feu")) return 29    // garde le plus fort de l'Arène Feu (g4, nerfé)
     if (badges.includes("roche")) return 18  // garde le plus fort de l'Arène Roche
     if (badges.includes("plante")) return 16 // garde le plus fort de l'Arène Plante
     return null
@@ -271,7 +271,7 @@ export const TRAINERS: TrainerData[] = [
             // Le boss OUVRE avec sa signature : son Roctaur a appris FAILLE SISMIQUE via
             // la CT (un move de CT est enseignable légitimement → ce n'est PAS un move
             // hors-learnset interdit). Les 3 autres moves sont naturels (≤25).
-            { speciesId: "roctaur", level: 25, moves: ["faille_sismique", "eboulis", "jet_pierres", "charge"] },
+            { speciesId: "roctaur", level: 21, moves: ["faille_sismique", "eboulis", "jet_pierres", "charge"] },
             { speciesId: "retroraptor", level: 21 }, // Roche/Vol RAPIDE (Vit 91) : outspeed + Picpic ×2 sur Plante, neutre à Étreinte
             { speciesId: "fissuralave", level: 18 }, // Roche/Feu, Flammèche natif (×2 sur Plante)
             { speciesId: "iorours", level: 20 },     // Roche/Glace (×2 sur Plante)
@@ -317,8 +317,8 @@ export const TRAINERS: TrainerData[] = [
             { speciesId: "colibraise", level: 22 },
             { speciesId: "colibraise", level: 24 },
             { speciesId: "arardent", level: 26 },
-            { speciesId: "arardent", level: 28 },
-            { speciesId: "toucanyon", level: 30 },
+            { speciesId: "arardent", level: 27 },
+            { speciesId: "toucanyon", level: 27 },
         ],
         reward: 170, aiLevel: "trainer",
         intro: ["J'élève mes oiseaux de braise du premier duvet jusqu'au grand rapace. Regarde-les grandir !"],
@@ -330,9 +330,9 @@ export const TRAINERS: TrainerData[] = [
         mapId: "yellow_arena_feu", x: 11, y: 7,
         // 3 costaudes (formes finales).
         team: [
-            { speciesId: "tauricendre", level: 31 },
-            { speciesId: "calderont", level: 31 },
-            { speciesId: "arardent", level: 30 },
+            { speciesId: "tauricendre", level: 28 },
+            { speciesId: "calderont", level: 28 },
+            { speciesId: "arardent", level: 28 },
         ],
         reward: 200, aiLevel: "trainer",
         intro: ["*La chaleur devient suffocante.*", "Trois titans de feu te barrent la route de la Doyenne."],
@@ -344,7 +344,7 @@ export const TRAINERS: TrainerData[] = [
         mapId: "yellow_arena_feu", x: 13, y: 3,
         // Une seule Daemon, mais de niveau boss.
         team: [
-            { speciesId: "toucanyon", level: 33 },
+            { speciesId: "toucanyon", level: 29 },
         ],
         reward: 220, aiLevel: "trainer",
         intro: ["Je n'ai qu'une Daemon. Mais une seule suffit pour calciner les imprudents."],
@@ -361,10 +361,10 @@ export const TRAINERS: TrainerData[] = [
             // OUVRE sur sa signature PYROTECHNIE (move de CT, enseignable légitimement).
             { speciesId: "brasicow", level: 24 },
             { speciesId: "braisecaille", level: 24 },
-            { speciesId: "tauricendre", level: 32 },
-            { speciesId: "calderont", level: 33 },
-            { speciesId: "toucanyon", level: 35 },
-            { speciesId: "vipember", level: 37, moves: ["pyrotechnie", "lance_flammes", "vague_mentale", "flamme_ardente"] },
+            { speciesId: "tauricendre", level: 29 },
+            { speciesId: "calderont", level: 30 },
+            { speciesId: "toucanyon", level: 31 },
+            { speciesId: "vipember", level: 32, moves: ["pyrotechnie", "lance_flammes", "vague_mentale", "flamme_ardente"] },
         ],
         reward: 0, aiLevel: "trainer", badge: "feu", giftCt: "ct21",
         intro: [
