@@ -511,6 +511,8 @@ export function swapTeam(uidA: string, uidB: string): boolean {
 
 /** Renomme un Daemon (équipe ou PC). Vide → réinitialise au nom d'espèce. Max 12 car. */
 export function renameDaemon(uid: string, nickname: string) {
+    const target = st.team.find((m) => m.uid === uid) ?? st.pc.find((m) => m.uid === uid)
+    if (target?.traded) return // surnom VERROUILLÉ sur un Daemon reçu en échange (cohérent avec l'UI + le flag traded)
     const nn = nickname.trim().slice(0, 12)
     const apply = (m: MonInstance): MonInstance => (m.uid === uid ? { ...m, nickname: nn.length ? nn : undefined } : m)
     st = { ...st, team: st.team.map(apply), pc: st.pc.map(apply) }

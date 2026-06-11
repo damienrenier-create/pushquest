@@ -70,7 +70,9 @@ export function useCasinoTrade(opts: {
     const settle = useCallback((s: TradeSession): TradeSession | null => {
         if (s.myConfirmed && s.theirConfirmed && s.myMon && s.theirMon) {
             mpLog("trade", "double confirm → swap")
-            onCompleteRef.current(s.myMon, s.theirMon)
+            // Le Daemon reçu retient son dresseur d'ORIGINE : préservé en multi-hop, sinon = le donneur.
+            const received: MonInstance = { ...s.theirMon, originalTrainerName: s.theirMon.originalTrainerName ?? s.partnerNickname }
+            onCompleteRef.current(s.myMon, received)
             return null
         }
         return s

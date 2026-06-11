@@ -1101,7 +1101,7 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                             )}
                             {live.traded && (
                                 <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 6 }}>
-                                    🔄 Reçu par échange{live.originalNickname ? ` · surnom d'origine « ${live.originalNickname} »` : ""}
+                                    🔄 Reçu par échange{live.originalTrainerName ? ` · dresseur d'origine : ${live.originalTrainerName}` : ""}{live.originalNickname ? ` · surnom d'origine « ${live.originalNickname} »` : ""}
                                 </div>
                             )}
                             {live.bestDmgMove && (
@@ -1205,7 +1205,9 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                                 </div>
                             ) : (
                                 <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
-                                    <button style={{ ...menuBtnStyle, flex: 1 }} onClick={() => { setRenameText(live.nickname ?? ""); setRenaming(true) }}>✏️ Renommer</button>
+                                    {live.traded
+                                        ? <div style={{ flex: 1, fontSize: 10, opacity: 0.6, alignSelf: "center", textAlign: "center", padding: "8px 4px" }}>🔒 Nom verrouillé (Daemon reçu en échange)</div>
+                                        : <button style={{ ...menuBtnStyle, flex: 1 }} onClick={() => { setRenameText(live.nickname ?? ""); setRenaming(true) }}>✏️ Renommer</button>}
                                     {/* Dépôt/retrait UNIQUEMENT depuis l'ordi du Centre Daemon (pcOpen), pas le menu START. */}
                                     {pcOpen && (inTeam ? (
                                         <button style={{ ...menuBtnStyle, flex: 1 }} onClick={() => {

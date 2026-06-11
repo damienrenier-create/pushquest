@@ -148,6 +148,8 @@ export interface MonInstance {
     traded?: boolean
     /** Surnom d'origine figé (affichage verrouillé si le Daemon a été reçu d'un autre). */
     originalNickname?: string
+    /** NOM (pseudo) du dresseur d'origine, pour l'afficher sur la fiche d'un Daemon reçu. */
+    originalTrainerName?: string
     // ── MÉTADONNÉES DE CAPTURE (Pokédex enrichi) ──
     /** Carte où le Daemon a été capturé. */
     capturedMapId?: string
