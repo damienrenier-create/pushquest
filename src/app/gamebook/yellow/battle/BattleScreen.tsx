@@ -12,6 +12,7 @@ import { useBattle, submitPlayerAction, endBattle, getBattleEnergy, setBattleInp
 import { speciesOf, maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
 import type { BattleMon } from "@/lib/gamebook/yellow/battle/types"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
+import { expForLevel } from "@/lib/gamebook/yellow/battle/xp"
 import { ITEMS } from "@/lib/gamebook/yellow/data/items"
 import AttackFx from "./AttackFx"
 import EncounterTransition from "./EncounterTransition"
@@ -430,6 +431,17 @@ function MonInfo({ mon, self, hp, max }: { mon: BattleMon; self?: boolean; hp: n
                 <span style={S.hpLabel}>PV</span>
                 <div style={S.hpTrack}><div style={{ ...S.hpFill, width: `${pct}%`, background: col }} /></div>
             </div>
+            {/* Mini barre d'XP (joueur uniquement) → on voit si le Daemon est proche du niveau suivant. */}
+            {self && (() => {
+                const cur = expForLevel(mon.level), nxt = expForLevel(mon.level + 1)
+                const xpPct = nxt > cur ? Math.max(0, Math.min(100, (((mon.exp ?? cur) - cur) / (nxt - cur)) * 100)) : 0
+                return (
+                    <div style={S.xpRow}>
+                        <span style={S.xpLabel}>XP</span>
+                        <div style={S.xpTrack}><div style={{ ...S.xpFill, width: `${xpPct}%` }} /></div>
+                    </div>
+                )
+            })()}
             {self && <div style={S.hpNum}>{Math.max(0, Math.round(hp))}/{max}</div>}
             {hp > 0 && mon.status !== "NONE" && <span style={S.statusTag}>{mon.status}</span>}
         </div>
@@ -534,6 +546,10 @@ const S: Record<string, React.CSSProperties> = {
     hpTrack: { flex: 1, height: 7, background: "#404040", borderRadius: 4, overflow: "hidden", border: "1px solid #1c1408" },
     hpFill: { height: "100%", transition: "width 0.4s ease" },
     hpNum: { textAlign: "right", fontSize: 10, fontWeight: 700, marginTop: 2 },
+    xpRow: { display: "flex", alignItems: "center", gap: 6, marginTop: 2 },
+    xpLabel: { fontSize: 8, fontWeight: 700, color: "#5a9fe0" },
+    xpTrack: { flex: 1, height: 4, background: "#404040", borderRadius: 3, overflow: "hidden", border: "1px solid #1c1408" },
+    xpFill: { height: "100%", background: "#4a9fe0", transition: "width 0.4s ease" },
     statusTag: { display: "inline-block", marginTop: 3, fontSize: 8, fontWeight: 700, background: "#8868c0", color: "#fff", padding: "1px 5px", borderRadius: 3, letterSpacing: 1 },
     sprite: { width: 72, height: 72, borderRadius: "50%", background: "#ffffff80", border: "3px solid #1c1408", display: "flex", alignItems: "center", justifyContent: "center" },
     spriteBox: { width: 84, height: 84, display: "flex", alignItems: "center", justifyContent: "center" },
