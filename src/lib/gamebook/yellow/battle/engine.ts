@@ -769,15 +769,16 @@ function awardExp(state: BattleState, events: BattleEvent[]) {
     const credited = state.participants[fainted.uid] ?? []
     for (const mon of state.player.team) {
         if (!credited.includes(mon.uid)) continue   // n'a pas affronté cet ennemi → rien
-        // NB : un Daemon K.O. qui a PARTICIPÉ gagne quand même l'XP (demande Sartay). Il
-        // reste K.O. (le gain de PV au level-up ne s'applique qu'aux vivants, cf. plus bas).
+        // RÈGLE (Sartay) : un Daemon mis K.O. pendant le combat NE gagne PAS d'XP — seuls
+        // ceux encore DEBOUT en profitent (cohérent avec le docstring + l'EV réservé à l'actif vivant).
+        if (mon.currentHp <= 0) continue
         const isActive = mon === winner
         const beforeMax = maxHpOf(mon)
         const res = applyExp(mon, gain)
         events.push({ kind: "message", text: `${displayName(mon)} gagne ${gain} points d'Exp !` })
         if (res.toLevel > res.fromLevel) {
             const delta = maxHpOf(mon) - beforeMax
-            if (delta > 0 && mon.currentHp > 0) { // un K.O. ne récupère PAS de PV (il reste K.O.)
+            if (delta > 0) { // le Daemon est forcément vivant ici (les K.O. sont écartés plus haut)
                 mon.currentHp += delta
                 // Seul l'actif a sa barre affichée → on n'émet l'event "hp" que pour lui.
                 if (isActive) events.push({ kind: "hp", side: "player", hp: mon.currentHp, max: maxHpOf(mon) })

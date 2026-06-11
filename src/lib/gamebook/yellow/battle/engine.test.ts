@@ -96,6 +96,22 @@ describe("combat de dresseur — enchaînement multi-Daemon", () => {
         expect(s.player.team[1].exp).toBeGreaterThan(startExpB)
     })
 
+    it("un Daemon mis K.O. pendant le combat ne gagne AUCUN XP (même en ayant participé)", () => {
+        const a = createMonInstance("rochison", 50) // tank : achève le sauvage
+        const b = createMonInstance("plumiot", 5)
+        b.currentHp = 1 // sera K.O. au premier coup encaissé
+        const startExpB = b.exp
+        let s = createBattle([a, b], [createMonInstance("plumiot", 6)], { isWild: true, seed: 123 })
+        // b entre en combat (→ participe) puis se fait K.O. par le sauvage.
+        s = resolveTurn(s, { kind: "switch", teamIndex: 1 })
+        if (s.forcedSwitch === "player") s = resolveTurn(s, { kind: "switch", teamIndex: 0 })
+        let guard = 0
+        while (s.phase !== "ended" && guard < 50) { s = resolveTurn(s, { kind: "move", moveIndex: 0 }); guard++ }
+        expect(s.outcome).toBe("win")
+        expect(s.player.team[1].currentHp).toBe(0)   // b est bien K.O.
+        expect(s.player.team[1].exp).toBe(startExpB) // … et n'a gagné AUCUN XP
+    })
+
     it("ne partage PAS l'XP avec un Daemon n'ayant jamais combattu", () => {
         const a = createMonInstance("rochison", 50)
         const b = createMonInstance("plumiot", 5) // reste au banc tout le combat
