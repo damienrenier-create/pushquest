@@ -20,6 +20,7 @@ import VictoryCelebration from "./VictoryCelebration"
 import PvpRecap from "./PvpRecap"
 import { pickAttackFx, type AttackFxSpec } from "@/lib/gamebook/yellow/data/attackAnims"
 import { usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { moveCostReps, STRUGGLE_INDEX } from "@/lib/gamebook/yellow/data/combatCostConfig"
 
 type Menu = "root" | "moves" | "switch" | "bag" | "confirmRun"
@@ -57,6 +58,7 @@ export default function BattleScreen() {
     const [atkFx, setAtkFx] = useState<{ spec: AttackFxSpec; side: "player" | "enemy"; key: number } | null>(null)
     const atkKeyRef = useRef(0)
     const repsWallet = usePlayer()
+    const dex = usePokedex() // statut Pokédex (caught) → indicateur en combat sauvage
     const lastBattle = useRef(battle)
     const inputRef = useRef<(a: BattleInput) => void>(() => { })
     // Anti double-action : on ne résout qu'UNE action par état de combat. Clé sur
@@ -317,7 +319,11 @@ export default function BattleScreen() {
 
             {/* ===== Scène ===== */}
             <div style={S.scene}>
-                <TeamPips team={battle.enemy.team} activeIdx={eIdx} activeHp={eHp} align="left" />
+                {/* Sauvage : 1 seul ennemi → le pip d'équipe est inutile. On affiche plutôt le statut
+                    Pokédex : pokéball ROUGE = espèce déjà capturée, pokéball grisée = encore à attraper. */}
+                {battle.isWild
+                    ? <WildDexPip caught={dex.caught.includes(enemy.speciesId)} />
+                    : <TeamPips team={battle.enemy.team} activeIdx={eIdx} activeHp={eHp} align="left" />}
                 <div style={S.enemyRow}>
                     {/* key sur l'uid : au changement de Daemon (switchIn), la barre se REMONTE
                         nette au lieu d'animer 0%→100% (le "flash plein" perçu à chaque K.O.). */}
@@ -492,6 +498,29 @@ function TeamPips({ team, activeIdx, activeHp, align }: { team: BattleMon[]; act
                     >{ko ? "✕" : ""}</span>
                 )
             })}
+        </div>
+    )
+}
+
+// Indicateur Pokédex en combat SAUVAGE : pokéball ROUGE = espèce déjà capturée,
+// pokéball grisée/transparente = pas encore attrapée (remplace le pip d'équipe à 1, inutile).
+function WildDexPip({ caught }: { caught: boolean }) {
+    return (
+        <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "0 6px", minHeight: 16 }}
+            title={caught ? "Espèce déjà capturée" : "Espèce pas encore capturée"}>
+            <div style={{
+                position: "relative", width: 15, height: 15, borderRadius: "50%",
+                border: "2px solid #1c1408", overflow: "hidden", background: "#f5f5f5",
+                opacity: caught ? 1 : 0.45, filter: caught ? "none" : "grayscale(1)",
+                boxShadow: caught ? "0 1px 2px rgba(0,0,0,0.35)" : "none",
+            }}>
+                <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "50%", background: caught ? "linear-gradient(#e8503a,#c8301a)" : "#9a9a9a" }} />
+                <div style={{ position: "absolute", top: "calc(50% - 1px)", left: 0, right: 0, height: 2, background: "#1c1408" }} />
+                <div style={{ position: "absolute", top: "calc(50% - 3px)", left: "calc(50% - 3px)", width: 6, height: 6, borderRadius: "50%", background: "#f8f8e8", border: "1px solid #1c1408" }} />
+            </div>
+            <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 0.5, color: caught ? "#1c1408" : "#3a8ee0", opacity: 0.85 }}>
+                {caught ? "CAPTURÉ" : "NOUVEAU !"}
+            </span>
         </div>
     )
 }
