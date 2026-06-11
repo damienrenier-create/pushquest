@@ -1,8 +1,9 @@
 // src/lib/gamebook/yellow/battle/exp.ts
 //
 // Nexus Jaune Éclair — expérience, courbe de niveau, montée de niveau + apprentissage.
-// React-free, pur. Courbe (XP totale au niveau L = 16·L²) : douce vs L³ Gen 1 mais
-// un peu durcie (était 12·L²) pour ralentir un poil la montée en niveau.
+// React-free, pur. Courbe : base 16·L² + terme cubique en PALIERS (coef +0.1 tous les ~7
+// niveaux). À bas niveau ≈ identique à avant ; en fin de jeu la montée se durcit de plus en
+// plus (un sauvage médian = ~1.3 combat/niveau au début → ~4.8 vers le niveau 50).
 
 import type { MonInstance } from "./types"
 import { getSpecies } from "../data/species"
@@ -10,9 +11,33 @@ import { getMove } from "../data/moves"
 
 export const MAX_LEVEL = 100
 
-/** XP cumulée nécessaire pour ATTEINDRE un niveau (courbe : 16·L²). */
+/** Coefficient cubique en PALIERS : +0.1 tous les ~7 niveaux. La montée se DURCIT de plus
+ *  en plus en fin de jeu (à bas niveau quasi identique à l'ancienne 16·L²). */
+function xpBandCoef(level: number): number {
+    const L = Math.floor(level)
+    return L <= 12 ? 0.1 : L <= 19 ? 0.2 : L <= 27 ? 0.3 : L <= 34 ? 0.4 : L <= 41 ? 0.5 : L <= 48 ? 0.6 : 0.7
+}
+
+/** XP pour passer du niveau L au niveau L+1 = incrément de 16·L² (32L+16) + coef de palier
+ *  × incrément de L³ (3L²+3L+1). Coef appliqué à l'INCRÉMENT (pas de saut brutal aux paliers). */
+export function xpToNextLevel(level: number): number {
+    const L = Math.floor(level)
+    return Math.round(32 * L + 16 + xpBandCoef(L) * (3 * L * L + 3 * L + 1))
+}
+
+/** Table cumulative (XP totale pour ATTEINDRE le niveau L), précalculée une fois. */
+const EXP_CUM: number[] = (() => {
+    const t: number[] = new Array(MAX_LEVEL + 1)
+    t[0] = 0
+    t[1] = 0 // niveau 1 = 0 XP
+    for (let L = 2; L <= MAX_LEVEL; L++) t[L] = t[L - 1] + xpToNextLevel(L - 1)
+    return t
+})()
+
+/** XP cumulée nécessaire pour ATTEINDRE un niveau. */
 export function expForLevel(level: number): number {
-    return Math.max(0, 16 * Math.floor(level) ** 2)
+    const L = Math.max(1, Math.min(MAX_LEVEL, Math.floor(level)))
+    return EXP_CUM[L]
 }
 
 /** Niveau correspondant à une XP cumulée. */

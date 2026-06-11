@@ -1,16 +1,21 @@
 import { describe, it, expect } from "vitest"
-import { expForLevel, levelFromExp, xpForDefeat, applyExp, MAX_LEVEL } from "./xp"
+import { expForLevel, levelFromExp, xpToNextLevel, xpForDefeat, applyExp, MAX_LEVEL } from "./xp"
 import type { MonInstance } from "./types"
 
-describe("courbe d'XP (16·L²)", () => {
-    it("expForLevel = 16 × niveau²", () => {
-        expect(expForLevel(1)).toBe(16)
-        expect(expForLevel(10)).toBe(1600)
-        expect(expForLevel(100)).toBe(160_000)
+describe("courbe d'XP (16·L² + paliers cubiques)", () => {
+    it("expForLevel : niveau 1 = 0, croît avec des paliers", () => {
+        expect(expForLevel(1)).toBe(0)
+        expect(expForLevel(10)).toBe(1685)
+        expect(expForLevel(50)).toBe(100_810)
+        expect(expForLevel(100)).toBe(833_315)
+    })
+    it("la difficulté par niveau CROÎT (paliers de plus en plus durs)", () => {
+        expect(xpToNextLevel(40)).toBeGreaterThan(xpToNextLevel(10))
+        expect(xpToNextLevel(10)).toBeGreaterThan(xpToNextLevel(5))
     })
     it("levelFromExp est l'inverse (palier inférieur)", () => {
-        expect(levelFromExp(1600)).toBe(10)
-        expect(levelFromExp(1599)).toBe(9)
+        expect(levelFromExp(expForLevel(10))).toBe(10)
+        expect(levelFromExp(expForLevel(10) - 1)).toBe(9)
         expect(levelFromExp(0)).toBe(1)
     })
     it("ne dépasse jamais MAX_LEVEL", () => {
