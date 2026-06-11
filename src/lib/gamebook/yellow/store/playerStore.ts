@@ -44,6 +44,8 @@ interface PlayerState {
     welcomeGift: boolean
     /** Cadeau du DIEU SPAG (+150 énergie, one-shot événementiel) déjà réclamé ? */
     spagGift: boolean
+    /** Cadeau du DIEU DES PÂTES (poster mural du Centre, +100 énergie, one-shot) déjà réclamé ? */
+    pastaGodGift: boolean
     /** Nb de Super Pastas achetés aujourd'hui (remis à 0 chaque jour ; gonfle le prix ×1.5). */
     pastaBoughtToday: number
     /** Bonus cumulé sur le prix plancher du Super Pasta (+3 par jour de jeu écoulé). */
@@ -92,7 +94,7 @@ export function emptyPvpStats(): PvpStats {
     return { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }
 }
 
-let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [] }
+let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [] }
 const listeners = new Set<() => void>()
 
 function emit() { for (const l of listeners) l() }
@@ -110,6 +112,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         reps: p.reps ?? st.reps ?? 0, repsCap: p.repsCap ?? st.repsCap ?? 1000, creditedThrough: p.creditedThrough ?? st.creditedThrough ?? "",
         repsBankedTotal: p.repsBankedTotal ?? st.repsBankedTotal ?? -1, welcomeGift: p.welcomeGift ?? st.welcomeGift ?? false,
         spagGift: p.spagGift ?? st.spagGift ?? false,
+        pastaGodGift: p.pastaGodGift ?? st.pastaGodGift ?? false,
         pastaBoughtToday: p.pastaBoughtToday ?? st.pastaBoughtToday ?? 0, pastaDayBonus: p.pastaDayBonus ?? st.pastaDayBonus ?? 0,
         defeatedTrainers: p.defeatedTrainers ?? [], badges: p.badges ?? st.badges ?? [], wildCtx: p.wildCtx ?? st.wildCtx ?? null,
         introSeen: p.introSeen ?? st.introSeen ?? false,
@@ -135,7 +138,7 @@ export function markIntroSeen() {
 
 /** DEV : remet la progression jaune à zéro pour rejouer l'intro (équipe vidée, introSeen=false). */
 export function resetForIntro() {
-    st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [] }
+    st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [] }
     emit()
 }
 
@@ -376,6 +379,18 @@ export function consumeGiftMessage(): string | null {
     const m = pendingGiftMessage
     pendingGiftMessage = null
     return m
+}
+
+/**
+ * Cadeau du DIEU DES PÂTES (poster mural du Centre) : +100 énergie, UNE seule fois par joueur
+ * (flag `pastaGodGift` persisté → anti-exploit du clic en boucle). Renvoie true si le don a eu
+ * lieu (le dialogue varie selon). Plafonné par repsCap.
+ */
+export function claimPastaGodGift(): boolean {
+    if (st.pastaGodGift) return false
+    st = { ...st, pastaGodGift: true, reps: Math.min(st.repsCap, st.reps + 100) }
+    emit()
+    return true
 }
 
 /**

@@ -160,6 +160,31 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         initialY: 1,
         dialoguesAfter: ["*Le Registre des Dresseurs du Nexus.*"], // repli si non intercepté
     },
+    {
+        // Easter egg — poster mural GAUCHE du Centre (case 11,0 du mur du fond). Activé depuis
+        // (11,1) en regardant vers le haut → affiche une image (gameStore.pressA intercepte).
+        id: "y_pasta_poster_1",
+        name: "POSTER",
+        mapId: "yellow_infirmary",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "", color: "#e0a020" }, // invisible (l'image s'affiche au clic)
+        initialX: 11,
+        initialY: 0,
+        dialoguesAfter: ["*Un poster un peu… particulier.*"], // repli si non intercepté
+    },
+    {
+        // Easter egg — poster mural DROIT (case 12,0). 1er A → image 2 · 2e → image 3 · 3e → DIEU DES PÂTES.
+        id: "y_pasta_poster_2",
+        name: "POSTER",
+        mapId: "yellow_infirmary",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "", color: "#e0a020" },
+        initialX: 12,
+        initialY: 0,
+        dialoguesAfter: ["*Un poster un peu… particulier.*"],
+    },
 
     // === Intérieur LABO SCIENTIFIQUE (étage de l'infirmerie) ===
     {

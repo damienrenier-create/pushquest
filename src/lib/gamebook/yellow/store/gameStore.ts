@@ -18,7 +18,7 @@ import type { YellowMapData } from "../maps"
 import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle } from "./battleStore"
-import { getPlayer as getPlayerSave, healAllTeam, isTrainerDefeated, getAceState, aceTeamSizeFor, aceAvailableToday, aceWinsCount } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, getAceState, aceTeamSizeFor, aceAvailableToday, aceWinsCount } from "./playerStore"
 import { getSpecies } from "../data/species"
 import { persistYellowSave } from "./saveManager"
 import { rollWildEncounter, wildLevelCap, hasEncounters } from "../data/encounters"
@@ -45,6 +45,8 @@ interface GameStore {
     libraryOpen: boolean // Registre des Dresseurs (bibliothèque de l'infirmerie)
     labOpen: boolean // Terminal d'expériences (labo, étage de l'infirmerie)
     signOpen: number | null // index du panneau du parc ouvert (pop-up dédié), null = fermé
+    posterImage: string | null // poster mural du Centre affiché en overlay (src PNG), null = fermé
+    poster2Step: number // compteur de SESSION du poster (12,0) : 0→PNG2 · 1→PNG3 · 2+→Dieu des Pâtes
     hydrated: boolean // true une fois que l'état serveur a été chargé
     stepFrame: 0 | 1 // alterne à chaque déplacement réel → anime les jambes du sprite
     pendingTrainerId: string | null // dresseur dont l'intro est en cours → combat à la fermeture
@@ -63,6 +65,7 @@ interface GameStore {
     closeLibrary: () => void
     closeLab: () => void
     closeSign: () => void
+    closePoster: () => void
     /** Affiche un dialogue simple (ex. explication post-combat du sbire). */
     showDialogue: (npcId: string, npcName: string, lines: string[]) => void
 }
@@ -181,6 +184,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     libraryOpen: false,
     labOpen: false,
     signOpen: null,
+    posterImage: null,
+    poster2Step: 0,
     hydrated: false,
     stepFrame: 0,
     pendingTrainerId: null,
@@ -402,6 +407,38 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
+        // Posters muraux du Centre Daemon (easter egg du DIEU DES PÂTES).
+        if (npc.id === "y_pasta_poster_1") {
+            set({ posterImage: "/yellow/sprites/poster1.jpg" })
+            return
+        }
+        if (npc.id === "y_pasta_poster_2") {
+            const step = get().poster2Step
+            if (step === 0) { set({ posterImage: "/yellow/sprites/poster2.jpg", poster2Step: 1 }); return }
+            if (step === 1) { set({ posterImage: "/yellow/sprites/poster3.jpg", poster2Step: 2 }); return }
+            // 3e activation (et au-delà) : le DIEU DES PÂTES surgit → +100 énergie UNE seule fois.
+            const granted = claimPastaGodGift()
+            if (granted) persistYellowSave()
+            set({
+                posterImage: null,
+                poster2Step: step + 1,
+                dialogue: {
+                    npcId: "y_dieu_pates", npcName: "DIEU DES PÂTES", lineIndex: 0,
+                    lines: granted
+                        ? [
+                            "🍝 *Le mur se fend — le DIEU DES PÂTES en jaillit, fumant.*",
+                            "TOI. T'es BOUILLANT, gamin. Y'a bien trop d'énergie qui déborde de ta carcasse !",
+                            "Tiens, +100 d'énergie offerte. Et arrête de mater des posters : VA TE DÉFOULER ! 💪🔥",
+                        ]
+                        : [
+                            "🍝 Encore là, à reluquer le mur ?",
+                            "Je t'ai déjà filé ton boost, gamin. Maintenant tu bouges et tu vas te DÉFOULER ! 💪",
+                        ],
+                },
+            })
+            return
+        }
+
         // Sbire du dieu Spaghetti : combat dynamique, 2×/jour max.
         if (npc.id === SBIRE_TRAINER_ID) {
             const wins = getPlayerSave().sbireDefeatsToday
@@ -523,5 +560,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
     closeLibrary: () => set({ libraryOpen: false }),
     closeLab: () => set({ labOpen: false }),
     closeSign: () => set({ signOpen: null }),
+    closePoster: () => set({ posterImage: null }),
     closePc: () => set({ pcOpen: false }),
 }))

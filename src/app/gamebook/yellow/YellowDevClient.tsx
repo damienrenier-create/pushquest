@@ -29,6 +29,7 @@ import GuidePanel from "./GuidePanel"
 import LibraryPanel from "./LibraryPanel"
 import LabPanel from "./LabPanel"
 import ParkSignPanel from "./ParkSignPanel"
+import PosterPanel from "./PosterPanel"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { YELLOW_MAPS } from "@/lib/gamebook/yellow/maps"
 import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getGiftCtMove } from "@/lib/gamebook/yellow/store/battleStore"
@@ -70,6 +71,8 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
     const closeLab = useGameStore((s) => s.closeLab)
     const signOpen = useGameStore((s) => s.signOpen)
     const closeSign = useGameStore((s) => s.closeSign)
+    const posterImage = useGameStore((s) => s.posterImage)
+    const closePoster = useGameStore((s) => s.closePoster)
     const dialogue = useGameStore((s) => s.dialogue)
     const setMap = useGameStore((s) => s.setMap)
     const showDialogue = useGameStore((s) => s.showDialogue)
@@ -379,6 +382,7 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
     // plus rien à fermer (le clavier/onB enchaîne alors sur pressB pour les dialogues).
     // Ordre = du plus superposé au moins superposé (un sous-modal se ferme avant son parent).
     const goBack = (): boolean => {
+        if (posterImage) { closePoster(); return true } // poster mural (Centre) → overlay plein écran
         if (confirmReset) { setConfirmReset(false); return true }
         if (renaming) { setRenaming(false); return true } // annule le renommage, reste sur la fiche
         if (selected) { setSelected(null); setRenaming(false); return true } // fermer la fiche reset aussi le renommage
@@ -733,6 +737,7 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
             <LibraryPanel />
             <LabPanel />
             <ParkSignPanel />
+            <PosterPanel />
             {/* EncounterTransition est désormais rendu DANS BattleScreen (calé sur la scène). */}
 
             {/* Chat du casino (RECO 8) : bouton flottant + overlay messages/saisie */}
