@@ -270,7 +270,7 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
     // TOUJOURS le goBack() à jour sans avoir à se ré-abonner (closures fraîches à chaque render).
     const goBackRef = useRef<() => boolean>(() => false)
 
-    // Support clavier desktop : flèches + Espace/Entrée/A (= A), Escape/B (= B)
+    // Support clavier desktop : flèches + Espace/Entrée/A/S (= A), Escape/B/Q (= B)
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
             // Ne pas piloter le jeu quand on tape dans un champ (chat, renommage…).
@@ -281,12 +281,12 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
             else if (e.key === "ArrowDown") { e.preventDefault(); inB ? dispatchBattleInput("down") : move("down") }
             else if (e.key === "ArrowLeft") { e.preventDefault(); inB ? dispatchBattleInput("left") : move("left") }
             else if (e.key === "ArrowRight") { e.preventDefault(); inB ? dispatchBattleInput("right") : move("right") }
-            else if (e.key === " " || e.key === "Enter" || e.key.toLowerCase() === "a") {
-                e.preventDefault(); inB ? dispatchBattleInput("a") : pressA()
+            else if (e.key === " " || e.key === "Enter" || e.key.toLowerCase() === "a" || e.key.toLowerCase() === "s") {
+                e.preventDefault(); inB ? dispatchBattleInput("a") : pressA()  // S = A (en plus de Espace/Entrée/A)
             }
-            else if (e.key === "Escape" || e.key.toLowerCase() === "b") {
+            else if (e.key === "Escape" || e.key.toLowerCase() === "b" || e.key.toLowerCase() === "q") {
                 // Hors combat : ferme d'abord l'overlay le plus haut (goBack), sinon dialogue (pressB).
-                e.preventDefault(); inB ? dispatchBattleInput("b") : (goBackRef.current() || pressB())
+                e.preventDefault(); inB ? dispatchBattleInput("b") : (goBackRef.current() || pressB())  // Q = B (en plus de Échap/B)
             }
         }
         window.addEventListener("keydown", handler)
