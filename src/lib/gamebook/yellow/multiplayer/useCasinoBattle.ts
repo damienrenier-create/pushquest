@@ -33,6 +33,7 @@ interface BattleMsg {
         seq?: number
         action?: PlayerAction
         checksum?: number
+        deliberate?: boolean // forfeit : true = abandon volontaire (XP), false/absent = déconnexion (annulé)
     }
 }
 
@@ -70,7 +71,7 @@ export function useCasinoBattle(
     // Abandon explicite (bouton) : notifie l'adversaire puis quitte proprement.
     const forfeit = useCallback(() => {
         const id = battleIdRef.current
-        if (id) postBattle(id, "battle:forfeit")
+        if (id) postBattle(id, "battle:forfeit", { deliberate: true }) // abandon VOLONTAIRE → combat validé (XP)
         mpLog("forfeit", "abandon volontaire")
         pvpForfeit(true)
     }, [])
@@ -133,8 +134,9 @@ export function useCasinoBattle(
         }
         const onForfeit = (d: BattleMsg) => {
             if (!d.userId || d.userId === myUserId) return
-            mpLog("forfeit↙", "adversaire a quitté")
-            pvpForfeit(false) // l'adversaire a quitté → je gagne
+            mpLog("forfeit↙", "adversaire a quitté", { deliberate: d.data?.deliberate === true })
+            // abandon volontaire (deliberate) → je gagne + XP ; déconnexion → combat annulé (pas d'XP)
+            pvpForfeit(false, d.data?.deliberate === true)
         }
 
         channel.bind("battle:hello", onHello)
@@ -165,7 +167,7 @@ export function useCasinoBattle(
             // Si je quitte alors que le combat est en cours → abandon implicite.
             const snap = getSnapshot()
             if (snap.pvpCtx && snap.battle && snap.battle.phase !== "ended" && !snap.pvpCtx.desync) {
-                postBattle(battleId, "battle:forfeit")
+                postBattle(battleId, "battle:forfeit", { deliberate: false }) // départ involontaire (démontage/déco) → combat annulé chez l'adversaire
                 pvpForfeit(true)
             }
             setPvpSendHandler(null)

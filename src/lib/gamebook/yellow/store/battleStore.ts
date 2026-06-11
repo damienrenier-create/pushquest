@@ -435,19 +435,8 @@ function submitPvpAction(action: PlayerAction) {
     // Changement forcé de l'ADVERSAIRE : je dois attendre (je ne joue pas ce tour).
     if (battle.forcedSwitch && battle.forcedSwitch !== mySide(ctx)) return
 
-    // Coût en reps de MON attaque (sur MON actif canonique). Charge Désespérée gratuite.
-    if (action.kind === "move" && action.moveIndex !== STRUGGLE_INDEX) {
-        const meTeam = battle[mySide(ctx)]
-        const me = meTeam.team[meTeam.activeIndex]
-        const slot = me?.moves[action.moveIndex]
-        if (slot) {
-            const cost = moveCostReps(getMove(slot.moveId)?.power ?? 0, me.level)
-            const cap = battleEnergyCap(getPlayer().badges.length)
-            if (storeState.energySpent + cost > cap) return
-            if (!spendReps(cost)) return
-            storeState = { ...storeState, energySpent: storeState.energySpent + cost }
-        }
-    }
+    // ÉNERGIE ILLIMITÉE en PvP (combat amical entre joueurs) : aucune déduction de reps ni
+    // plafond — toutes les attaques sont jouables sans coût (cohérent avec l'UI canUse=true).
 
     // Stats PvP : Daemon fétiche + attaque favorite (sur les attaques).
     if (action.kind === "move") {
@@ -531,29 +520,37 @@ function finishPvpBattle(b: BattleState) {
         for (const e of evos) markCaught(e.toId)
         setTeam([...team])
     }
-    setStore({ battle: b, evolutions: evos, whiteout: isLose, pvpCtx: { ...ctx, won } })
+    // PvP : le perdant ne va PAS à l'infirmerie (whiteout=false) → il reste où il était pour
+    // faciliter la revanche (ses Daemons restent K.O. jusqu'à un vrai passage au Centre).
+    setStore({ battle: b, evolutions: evos, whiteout: false, pvpCtx: { ...ctx, won } })
     persistYellowSave()
     void processSaiyanPoints()
 }
 
-/** Abandon : l'adversaire est parti (je gagne) OU je quitte (j'abandonne). */
-export function pvpForfeit(byMe: boolean) {
+/** Fin par départ de l'adversaire. `deliberate` distingue un ABANDON volontaire (bouton →
+ *  combat VALIDÉ, XP) d'une DÉCONNEXION (bug/réseau → combat ANNULÉ, aucune XP). */
+export function pvpForfeit(byMe: boolean, deliberate = true) {
     const ctx = storeState.pvpCtx
     const battle = storeState.battle
     if (!ctx) return
     if (!battle || battle.phase === "ended") { setStore({ pvpCtx: null }); return }
     if (byMe) {
         // Je quitte : équipe mutée NON enregistrée (état d'avant-combat gardé).
-        // Les reps déjà dépensés restent dépensés (pas de remboursement v1).
         recordPvpResult("forfeit") // réputation : compté comme abandon (+ défaite)
         setStore({ battle: null, pvpCtx: null })
         persistYellowSave()
         return
     }
-    // L'adversaire a abandonné → je gagne, je GARDE mon équipe (dégâts réels) et je
-    // touche de l'XP DOUBLÉE en récompense (cf. applyForfeitWin multiplier 2).
+    // DÉCONNEXION de l'adversaire (non délibérée) → match ANNULÉ : aucune XP, aucun résultat
+    // enregistré, je reviens sur la carte. (Évite le jackpot d'XP sur une coupure réseau.)
+    if (!deliberate) {
+        setStore({ battle: null, pvpCtx: null })
+        return
+    }
+    // ABANDON délibéré → je gagne, je GARDE mon équipe (dégâts réels) et je touche l'XP
+    // NORMALE (multiplier 1 : fini le ×2 qui faisait gagner ~7 niveaux d'un coup).
     const side = mySide(ctx)
-    const ended = applyForfeitWin(battle, side, { multiplier: 2, headline: `${ctx.oppNickname} a abandonné le combat !` })
+    const ended = applyForfeitWin(battle, side, { multiplier: 1, headline: `${ctx.oppNickname} a abandonné le combat !` })
     recordPvpResult("win") // réputation
     setTeam(ended[side].team.map(toMonInstance))
     setStore({ battle: ended, pvpCtx: { ...ctx, won: true } })
