@@ -353,7 +353,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 dialogue: {
                     npcId: npc.id,
                     npcName: npc.name,
-                    lines: ["Bienvenue au Centre Daemon !", "Tes Daemons sont soignés à bloc. Reviens quand tu veux !"],
+                    lines: [
+                        "Bienvenue au Centre Daemon ! Confie-moi ton équipe, je m'en occupe…",
+                        "🩹 *L'infirmière place tes Daemons dans le soigneur. Quelques secondes plus tard, ils en ressortent pétillants de santé.*",
+                        "✨ Et voilà ! Toute ton équipe est soignée à bloc, PV et statuts au max. Reviens quand tu veux !",
+                    ],
                     lineIndex: 0,
                 },
             })
