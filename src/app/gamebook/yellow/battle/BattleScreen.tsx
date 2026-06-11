@@ -337,12 +337,12 @@ export default function BattleScreen() {
                 {/* Transition pré-combat : RENDUE DANS la scène (overflow:hidden) → elle fait
                     pile la taille du cadre de combat, plus le plein écran. */}
                 <EncounterTransition />
-                {/* Victoire : recap "commentateur" RICHE en PvP (sprites + halos + analyse tactique),
-                    sinon la célébration GOAT/FLOP UNIQUEMENT contre les Dresseurs. En combat SAUVAGE
-                    (KO sauvage, capture, fuite) → fin sobre : juste le message + QUITTER, pas de confettis. */}
-                {playbackDone && playerWon && (battle.pvp
-                    ? <PvpRecap playerTeam={battle.player.team} enemyTeam={battle.enemy.team} onClose={() => endBattle()} />
-                    : !battle.isWild && <VictoryCelebration team={battle.player.team} />)}
+                {/* PvP : recap "commentateur" RICHE pour les DEUX joueurs (gagnant ET perdant, version
+                    adaptée). Hors PvP : célébration GOAT/FLOP UNIQUEMENT contre les Dresseurs ; en combat
+                    SAUVAGE (KO sauvage, capture, fuite) → fin sobre, juste le message + QUITTER. */}
+                {playbackDone && (battle.pvp
+                    ? (isEnded && <PvpRecap won={playerWon} playerTeam={battle.player.team} enemyTeam={battle.enemy.team} onClose={() => endBattle()} />)
+                    : (playerWon && !battle.isWild && <VictoryCelebration team={battle.player.team} />))}
             </div>
 
             {/* ===== Boîte du bas : message OU liste d'options (curseur D-pad/A/B + tactile) ===== */}
