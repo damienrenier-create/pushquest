@@ -16,6 +16,7 @@ import { expForLevel } from "@/lib/gamebook/yellow/battle/xp"
 import { ITEMS } from "@/lib/gamebook/yellow/data/items"
 import AttackFx from "./AttackFx"
 import EncounterTransition from "./EncounterTransition"
+import VictoryCelebration from "./VictoryCelebration"
 import { pickAttackFx, type AttackFxSpec } from "@/lib/gamebook/yellow/data/attackAnims"
 import { usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
 import { moveCostReps, STRUGGLE_INDEX } from "@/lib/gamebook/yellow/data/combatCostConfig"
@@ -173,6 +174,9 @@ export default function BattleScreen() {
     const enemy = battle.enemy.team[eIdx]
 
     const isEnded = battle.phase === "ended"
+    // Victoire = combat fini ET il me reste au moins un Daemon debout (mon camp canonique
+    // après swap éventuel) → déclenche la célébration (confettis + débrief GOAT/FLOP).
+    const playerWon = isEnded && battle.player.team.some((m) => m.currentHp > 0)
     const needSwitch = battle.forcedSwitch === "player"
 
     // --- handlers ---
@@ -331,6 +335,8 @@ export default function BattleScreen() {
                 {/* Transition pré-combat : RENDUE DANS la scène (overflow:hidden) → elle fait
                     pile la taille du cadre de combat, plus le plein écran. */}
                 <EncounterTransition />
+                {/* Célébration de victoire : confettis + débrief GOAT/FLOP (overlay non bloquant). */}
+                {playbackDone && playerWon && <VictoryCelebration team={battle.player.team} />}
             </div>
 
             {/* ===== Boîte du bas : message OU liste d'options (curseur D-pad/A/B + tactile) ===== */}
