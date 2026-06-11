@@ -513,15 +513,16 @@ function finishPvpBattle(b: BattleState) {
     recordPvpResult(won ? "win" : "loss") // réputation
 
     setTeam(b[side].team.map(toMonInstance))
-    const isLose = !won
     const team = getPlayer().team
     const evos = evolveTeam(team)
     if (evos.length > 0) {
         for (const e of evos) markCaught(e.toId)
         setTeam([...team])
     }
-    // PvP : le perdant ne va PAS à l'infirmerie (whiteout=false) → il reste où il était pour
-    // faciliter la revanche (ses Daemons restent K.O. jusqu'à un vrai passage au Centre).
+    // COMBAT AMICAL : après CHAQUE match PvP (gagnant comme perdant) on soigne l'équipe à fond
+    // (PV/statut/PP) → un match casino ne déprime jamais ton équipe PvE. Pas de white-out : tu
+    // restes sur place pour enchaîner / faire la revanche.
+    healAllTeam()
     setStore({ battle: b, evolutions: evos, whiteout: false, pvpCtx: { ...ctx, won } })
     persistYellowSave()
     void processSaiyanPoints()
@@ -547,12 +548,13 @@ export function pvpForfeit(byMe: boolean, deliberate = true) {
         setStore({ battle: null, pvpCtx: null })
         return
     }
-    // ABANDON délibéré → je gagne, je GARDE mon équipe (dégâts réels) et je touche l'XP
-    // NORMALE (multiplier 1 : fini le ×2 qui faisait gagner ~7 niveaux d'un coup).
+    // ABANDON délibéré → je gagne et je touche l'XP NORMALE (multiplier 1 : fini le ×2 qui
+    // faisait gagner ~7 niveaux d'un coup). Comme tout match PvP, mon équipe est soignée ensuite.
     const side = mySide(ctx)
     const ended = applyForfeitWin(battle, side, { multiplier: 1, headline: `${ctx.oppNickname} a abandonné le combat !` })
     recordPvpResult("win") // réputation
     setTeam(ended[side].team.map(toMonInstance))
+    healAllTeam() // combat amical terminé → équipe soignée (cohérent avec finishPvpBattle)
     setStore({ battle: ended, pvpCtx: { ...ctx, won: true } })
     persistYellowSave()
     void processSaiyanPoints()
