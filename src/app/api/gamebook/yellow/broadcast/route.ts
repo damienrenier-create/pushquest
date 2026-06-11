@@ -31,6 +31,7 @@ const VALID_TYPES = new Set([
     "battle:action", "battle:state", "battle:forfeit", "battle:hello",
     "chat:say",
     "trade:offer", "trade:cancel", "trade:respond", "trade:confirm",
+    "cttrade:offer", "cttrade:cancel", "cttrade:respond", "cttrade:confirm",
 ])
 
 /** Un canal yellow valide : présence du casino OU un combat privé. */

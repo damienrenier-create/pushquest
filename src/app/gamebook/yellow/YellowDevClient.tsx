@@ -19,6 +19,7 @@ import { useCasinoPresence } from "@/lib/gamebook/yellow/multiplayer/useCasinoPr
 import { useCasinoChallenge, type BattleStart } from "@/lib/gamebook/yellow/multiplayer/useCasinoChallenge"
 import { useCasinoChat } from "@/lib/gamebook/yellow/multiplayer/useCasinoChat"
 import { useCasinoTrade } from "@/lib/gamebook/yellow/multiplayer/useCasinoTrade"
+import { useCasinoCtTrade } from "@/lib/gamebook/yellow/multiplayer/useCasinoCtTrade"
 import { useCasinoBattle } from "@/lib/gamebook/yellow/multiplayer/useCasinoBattle"
 import TradeAnimation from "./TradeAnimation"
 import { usePvpCtx, pvpForfeit } from "@/lib/gamebook/yellow/store/battleStore"
@@ -33,7 +34,7 @@ import { YELLOW_MAPS } from "@/lib/gamebook/yellow/maps"
 import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getGiftCtMove } from "@/lib/gamebook/yellow/store/battleStore"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
-import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn } from "@/lib/gamebook/yellow/store/playerStore"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
@@ -124,6 +125,7 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
     // hooks (busy stocké en ref côté hook) → 1 render de latence max, sans casse.
     const tradeBusyRef = useRef(false)
     const challengeBusyRef = useRef(false)
+    const ctTradeBusyRef = useRef(false)
 
     // === PvP : défi + combat réseau ===
     const [pvpSession, setPvpSession] = useState<BattleStart | null>(null)
@@ -131,7 +133,7 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
     const challenge = useCasinoChallenge({
         active: inCasino && !battle && !showIntro && !!userId,
         myUserId: userId,
-        busy: !!battle || !!pvpSession || tradeBusyRef.current,
+        busy: !!battle || !!pvpSession || tradeBusyRef.current || ctTradeBusyRef.current,
         onStart: (s) => setPvpSession(s),
     })
     const { forfeit: pvpForfeitNow } = useCasinoBattle(pvpSession, userId, (reason) => {
@@ -151,7 +153,7 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
     const trade = useCasinoTrade({
         active: inCasino && !battle && !showIntro && !!userId,
         myUserId: userId,
-        busy: !!battle || !!pvpSession || challengeBusyRef.current,
+        busy: !!battle || !!pvpSession || challengeBusyRef.current || ctTradeBusyRef.current,
         // Échange validé des 2 côtés → on lance la CINÉMATIQUE ; le swap réel est appliqué
         // à la FIN de l'animation (onDone du composant TradeAnimation, plus bas).
         onComplete: (give, receive) => { setTradePickFor(null); setTradeAnim({ give, receive }) },
@@ -161,6 +163,22 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
     // #5 — MAJ des réfs APRÈS les deux hooks (lues au render suivant par les busy).
     challengeBusyRef.current = !!(challenge.incoming || challenge.outgoing)
     tradeBusyRef.current = !!trade.session
+
+    // ── Échange de CT (flux SÉPARÉ du Daemon ; un seul échange à la fois via ctTradeBusyRef). ──
+    const [ctTradePickFor, setCtTradePickFor] = useState<{ userId: string; nickname: string } | null>(null)
+    const ctTrade = useCasinoCtTrade({
+        active: inCasino && !battle && !showIntro && !!userId,
+        myUserId: userId,
+        busy: !!battle || !!pvpSession || challengeBusyRef.current || tradeBusyRef.current,
+        onComplete: (giveCtId, receiveCtId) => {
+            tradeCt(giveCtId, receiveCtId)
+            persistYellowSave()
+            setCtTradePickFor(null)
+            setToast(`🎴 Échange de CT réussi ! Tu reçois ${getMove(getCt(receiveCtId)?.moveId ?? "")?.name ?? "une CT"}.`)
+        },
+        onClosed: (reason) => { setToast(reason); setCtTradePickFor(null) },
+    })
+    ctTradeBusyRef.current = !!ctTrade.session
 
     const [confirmForfeit, setConfirmForfeit] = useState(false)
 
@@ -339,6 +357,7 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
         if (selected) { setSelected(null); return true }
         if (ctShop) { setCtShop(false); setCtPick(null); return true }
         if (tradePickFor) { setTradePickFor(null); return true }
+        if (ctTradePickFor) { setCtTradePickFor(null); return true }
         if (interactTarget) { setInteractTarget(null); return true }
         if (chatOpen) { setChatOpen(false); return true }
         if (menu === "pc" || pcOpen) { closePc(); setMenu(menu === "pc" ? "pause" : "none"); return true }
@@ -710,12 +729,13 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
 
             {/* === ÉCHANGE (RECO 4) === */}
             {/* 1) Menu d'interaction face à un joueur */}
-            {interactTarget && !trade.session && !tradePickFor && (
+            {interactTarget && !trade.session && !tradePickFor && !ctTrade.session && !ctTradePickFor && (
                 <div style={menuOverlayStyle} onClick={() => { if (Date.now() - menuTapGuard.current < 350) return; setInteractTarget(null) }}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                         <div style={menuTitleStyle}>{interactTarget.nickname}</div>
                         <button style={menuBtnStyle} onClick={() => { challenge.sendChallenge(interactTarget.userId, interactTarget.nickname); setInteractTarget(null) }}>⚔️ Défier en combat</button>
                         <button style={menuBtnStyle} onClick={() => { setTradePickFor(interactTarget); setInteractTarget(null) }}>🔄 Proposer un échange</button>
+                        <button style={menuBtnStyle} onClick={() => { setCtTradePickFor(interactTarget); setInteractTarget(null) }}>🎴 Échanger une CT</button>
                         <button style={menuBtnDimStyle} onClick={() => setInteractTarget(null)}>← Annuler</button>
                     </div>
                 </div>
@@ -781,6 +801,71 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                             <div style={{ textAlign: "center", fontSize: 11, opacity: 0.6, padding: 8 }}>En attente de son Daemon…</div>
                         )}
                         <button style={menuBtnDimStyle} onClick={() => trade.cancel()}>← Annuler l'échange</button>
+                    </div>
+                </div>
+            )}
+
+            {/* ÉCHANGE DE CT — choix de la CT à offrir (initiateur OU répondeur) */}
+            {(ctTradePickFor || (ctTrade.session?.role === "B" && !ctTrade.session.myCt)) && (
+                <div style={menuOverlayStyle} onClick={() => { if (ctTradePickFor) setCtTradePickFor(null); else ctTrade.cancel() }}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>{ctTradePickFor ? `🎴 Offrir une CT à ${ctTradePickFor.nickname}` : `${ctTrade.session?.partnerNickname} propose une CT`}</div>
+                        {ctTrade.session?.theirCt && (
+                            <div style={{ fontSize: 12, marginBottom: 8, textAlign: "center" }}>
+                                Il offre : <b>{getCt(ctTrade.session.theirCt)?.label}</b> · {getMove(getCt(ctTrade.session.theirCt)?.moveId ?? "")?.name}
+                            </div>
+                        )}
+                        <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 4 }}>Choisis ta CT à donner :</div>
+                        {player.ownedCts.length === 0 && <div style={{ fontSize: 11, opacity: 0.6, marginBottom: 4 }}>Tu n'as aucune CT à échanger.</div>}
+                        <div style={{ maxHeight: 220, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
+                            {player.ownedCts.map((id) => getCt(id)).filter((c): c is NonNullable<typeof c> => !!c).map((ct) => (
+                                <button key={ct.id} style={menuBtnStyle} onClick={() => {
+                                    if (ctTradePickFor) { ctTrade.startOffer(ctTradePickFor.userId, ctTradePickFor.nickname, ct.id); setCtTradePickFor(null) }
+                                    else ctTrade.acceptWith(ct.id)
+                                }}>
+                                    <span style={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
+                                        <span>{ct.label}</span><span>{getMove(ct.moveId)?.name}</span>
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+                        <button style={menuBtnDimStyle} onClick={() => { if (ctTradePickFor) setCtTradePickFor(null); else ctTrade.acceptWith(null) }}>← {ctTradePickFor ? "Annuler" : "Refuser"}</button>
+                    </div>
+                </div>
+            )}
+
+            {/* ÉCHANGE DE CT — les 2 offres + DOUBLE confirmation */}
+            {ctTrade.session && ctTrade.session.myCt && (
+                <div style={menuOverlayStyle}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>🎴 ÉCHANGE DE CT — {ctTrade.session.partnerNickname}</div>
+                        <div style={{ display: "flex", justifyContent: "space-around", gap: 8, margin: "10px 0", fontSize: 12, textAlign: "center" }}>
+                            <div>
+                                <div style={{ opacity: 0.6, fontSize: 10 }}>Tu donnes</div>
+                                <div><b>{getCt(ctTrade.session.myCt)?.label}</b></div>
+                                <div>{getMove(getCt(ctTrade.session.myCt)?.moveId ?? "")?.name}</div>
+                                <div style={{ fontSize: 16 }}>{ctTrade.session.myConfirmed ? "✅" : "⏳"}</div>
+                            </div>
+                            <div style={{ alignSelf: "center", fontSize: 18 }}>⇄</div>
+                            <div>
+                                <div style={{ opacity: 0.6, fontSize: 10 }}>Tu reçois</div>
+                                {ctTrade.session.theirCt ? (
+                                    <>
+                                        <div><b>{getCt(ctTrade.session.theirCt)?.label}</b></div>
+                                        <div>{getMove(getCt(ctTrade.session.theirCt)?.moveId ?? "")?.name}</div>
+                                        <div style={{ fontSize: 16 }}>{ctTrade.session.theirConfirmed ? "✅" : "⏳"}</div>
+                                    </>
+                                ) : <div style={{ opacity: 0.5, marginTop: 8 }}>en attente…</div>}
+                            </div>
+                        </div>
+                        {ctTrade.session.theirCt ? (
+                            <button style={ctTrade.session.myConfirmed ? menuBtnDimStyle : menuBtnStyle} disabled={ctTrade.session.myConfirmed} onClick={() => ctTrade.confirm()}>
+                                {ctTrade.session.myConfirmed ? "En attente de l'autre dresseur…" : "✅ Confirmer l'échange"}
+                            </button>
+                        ) : (
+                            <div style={{ textAlign: "center", fontSize: 11, opacity: 0.6, padding: 8 }}>En attente de sa CT…</div>
+                        )}
+                        <button style={menuBtnDimStyle} onClick={() => ctTrade.cancel()}>← Annuler l'échange</button>
                     </div>
                 </div>
             )}

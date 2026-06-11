@@ -238,6 +238,19 @@ export function executeTrade(giveUid: string, receive: MonInstance): boolean {
     return true
 }
 
+/** Échange de CT : retire la CT donnée de ownedCts et ajoute la reçue (si pas déjà possédée).
+ *  Renvoie false si je ne possède pas la CT offerte (garde-fou anti-triche). */
+export function tradeCt(giveCtId: string, receiveCtId: string): boolean {
+    const i = st.ownedCts.indexOf(giveCtId)
+    if (i < 0) return false
+    const owned = [...st.ownedCts]
+    owned.splice(i, 1)
+    if (receiveCtId && !owned.includes(receiveCtId)) owned.push(receiveCtId)
+    st = { ...st, ownedCts: owned }
+    emit()
+    return true
+}
+
 /**
  * ÉVOLUTION PAR ÉCHANGE : si le Daemon reçu (uid) appartient à une espèce qui évolue
  * par TRADE, l'évolue sur-le-champ (immuable). Renvoie le résultat (pour le toast/anim).
