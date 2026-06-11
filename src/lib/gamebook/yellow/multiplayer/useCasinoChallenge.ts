@@ -66,8 +66,10 @@ export function useCasinoChallenge(opts: {
     // Envoi d'un défi à un joueur (par son userId).
     const sendChallenge = useCallback((toUserId: string, toNickname: string) => {
         if (outgoingRef.current || busyRef.current) return
-        // battleId : challenger + cible + horodatage (unique, connu des deux camps).
-        const battleId = `${myUserId}_${toUserId}_${Date.now()}`
+        // battleId COURT (unique, connu des deux camps) : horodatage + aléa, en base36.
+        // ⚠️ NE PAS mettre les userId (2 cuid de 25 chars) → le canal `yellow_battle_<id>`
+        // dépassait 64 chars et était REJETÉ (400) par le broadcast → combat jamais démarré.
+        const battleId = `b${Date.now().toString(36)}${Math.floor(Math.random() * 1e9).toString(36)}`
         setOutgoing({ toUserId, toNickname, battleId })
         post({ type: "challenge:send", targetUserId: toUserId, battleId })
     }, [myUserId])

@@ -35,7 +35,7 @@ const VALID_TYPES = new Set([
 
 /** Un canal yellow valide : présence du casino OU un combat privé. */
 function isValidChannel(ch: string): boolean {
-    return ch === "yellow_casino" || /^yellow_battle_[A-Za-z0-9_-]{4,64}$/.test(ch)
+    return ch === "yellow_casino" || /^yellow_battle_[A-Za-z0-9_-]{4,120}$/.test(ch)
 }
 
 export async function POST(req: NextRequest) {
