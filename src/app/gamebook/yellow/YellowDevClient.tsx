@@ -140,6 +140,11 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
 
     // === Échange de Daemons (RECO 4) ===
     const [interactTarget, setInteractTarget] = useState<{ userId: string; nickname: string } | null>(null)
+    // Anti ghost-click : ouvrir un menu via un bouton GameBoy (START/A, onPointerDown) fait
+    // apparaître l'overlay SOUS le doigt → le clic de relâchement du même appui retombe sur
+    // le backdrop et le referme aussitôt (d'où "il faut appuyer longtemps"). On note l'instant
+    // d'ouverture ; le backdrop ignore toute fermeture dans les 350 ms qui suivent.
+    const menuTapGuard = useRef(0)
     const [tradePickFor, setTradePickFor] = useState<{ userId: string; nickname: string } | null>(null)
     const trade = useCasinoTrade({
         active: inCasino && !battle && !showIntro && !!userId,
@@ -343,13 +348,13 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                         // Dans le casino, A face à un autre joueur = le défier.
                         if (inCasino) {
                             const target = facingRemote()
-                            if (target) { setInteractTarget({ userId: target.userId, nickname: target.nickname }); return }
+                            if (target) { menuTapGuard.current = Date.now(); setInteractTarget({ userId: target.userId, nickname: target.nickname }); return }
                         }
                         pressA()
                     }}
                     onB={() => pressB()}
-                    onStart={() => setMenu((m) => (m === "none" ? "pause" : "none"))}
-                    onSelect={() => setMenu((m) => (m === "none" ? "pause" : "none"))}
+                    onStart={() => { menuTapGuard.current = Date.now(); setMenu((m) => (m === "none" ? "pause" : "none")) }}
+                    onSelect={() => { menuTapGuard.current = Date.now(); setMenu((m) => (m === "none" ? "pause" : "none")) }}
                 >
                     <MapView remotePlayers={remotePlayers} chatBubbles={chat.bubbles} myUserId={userId} />
                 </GameBoyShell>
@@ -357,7 +362,7 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
 
             {/* Menu START (pause) */}
             {!battle && menu === "pause" && (
-                <div style={menuOverlayStyle} onClick={() => setMenu("none")}>
+                <div style={menuOverlayStyle} onClick={() => { if (Date.now() - menuTapGuard.current < 350) return; setMenu("none") }}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                         <div style={menuTitleStyle}>MENU</div>
                         <button style={menuBtnStyle} onClick={() => setMenu("team")}>🐾 ÉQUIPE</button>
@@ -663,7 +668,7 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
             {/* === ÉCHANGE (RECO 4) === */}
             {/* 1) Menu d'interaction face à un joueur */}
             {interactTarget && !trade.session && !tradePickFor && (
-                <div style={menuOverlayStyle} onClick={() => setInteractTarget(null)}>
+                <div style={menuOverlayStyle} onClick={() => { if (Date.now() - menuTapGuard.current < 350) return; setInteractTarget(null) }}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                         <div style={menuTitleStyle}>{interactTarget.nickname}</div>
                         <button style={menuBtnStyle} onClick={() => { challenge.sendChallenge(interactTarget.userId, interactTarget.nickname); setInteractTarget(null) }}>⚔️ Défier en combat</button>
