@@ -59,6 +59,13 @@ export function useCasinoBattle(
     const oppTeamRef = useRef<MonInstance[] | null>(null)
     const seedRef = useRef<number | null>(null)
     const battleIdRef = useRef<string | null>(null)
+    // ⚠️ onAbort gardé dans un REF. Sinon (callback inline recréé à chaque render côté
+    // appelant) l'effet réseau ci-dessous, qui l'a en dépendance, se relancerait à CHAQUE
+    // rendu → (1) handshake remis à zéro en boucle (jamais le temps d'aboutir) et (2) quand
+    // le combat démarre, le cleanup du cycle précédent voit un combat actif → l'ABANDONNE
+    // aussitôt. D'où "le combat ne démarre jamais". Le ref stabilise les deps de l'effet.
+    const onAbortRef = useRef(onAbort)
+    onAbortRef.current = onAbort
 
     // Abandon explicite (bouton) : notifie l'adversaire puis quitte proprement.
     const forfeit = useCallback(() => {
@@ -109,7 +116,7 @@ export function useCasinoBattle(
             // ⚠️ #10 : versions différentes → on REFUSE le combat (désync garantie sinon).
             if (d.data?.version && d.data.version !== MP_VERSION) {
                 mpLog("abort", "version mismatch", { mien: MP_VERSION, opp: d.data.version })
-                onAbort?.("Versions du jeu différentes. Rechargez la page des deux côtés, puis réessayez.")
+                onAbortRef.current?.("Versions du jeu différentes. Rechargez la page des deux côtés, puis réessayez.")
                 return
             }
             if (d.data?.team) oppTeamRef.current = d.data.team
@@ -148,7 +155,7 @@ export function useCasinoBattle(
         const helloTimeout = setTimeout(() => {
             if (!startedRef.current) {
                 mpLog("abort", "handshake timeout (seed/équipe jamais reçus)")
-                onAbort?.("La connexion au combat a échoué. Réessayez depuis le casino.")
+                onAbortRef.current?.("La connexion au combat a échoué. Réessayez depuis le casino.")
             }
         }, 15000)
 
@@ -167,7 +174,7 @@ export function useCasinoBattle(
             channel.unbind("battle:forfeit", onForfeit)
             client.unsubscribe(channelName)
         }
-    }, [session, myUserId, onAbort])
+    }, [session, myUserId])
 
     return { forfeit }
 }
