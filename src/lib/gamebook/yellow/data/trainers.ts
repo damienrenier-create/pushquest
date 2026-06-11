@@ -296,13 +296,14 @@ export const TRAINERS: TrainerData[] = [
         id: "y_feuarena_g1", name: "NOVICE ÉTINCELLE", title: "Gardienne du Brasier",
         sprite: { emoji: "🔥", color: "#ff6a3a" },
         mapId: "yellow_arena_feu", x: 3, y: 3,
-        // "Beaucoup, varié, au moins un feu" : une jeune recrue qui ramène un peu de tout.
+        // Jeune recrue : équipe VARIÉE mais 100% sur le thème du feu (du Feu/Combat au Roche/Feu).
+        // (Avant : un Plumiot Normal/Vol hors-thème + un Panthéon LÉGENDAIRE — absurde sur un garde novice.)
         team: [
             { speciesId: "brasicow", level: 20 },
             { speciesId: "braisecaille", level: 20 },
             { speciesId: "pyrozly", level: 21 },
-            { speciesId: "plumiot", level: 19 },
-            { speciesId: "pantheon", level: 18 },
+            { speciesId: "colibraise", level: 19 },
+            { speciesId: "lavapetit", level: 18 },
         ],
         reward: 150, aiLevel: "trainer",
         intro: ["*Une jeune dresseuse jongle avec une flammèche.*", "L'arène est tenue par des femmes de feu — et je tiens la première garde !"],
