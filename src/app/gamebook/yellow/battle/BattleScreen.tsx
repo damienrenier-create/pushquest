@@ -17,6 +17,7 @@ import { ITEMS } from "@/lib/gamebook/yellow/data/items"
 import AttackFx from "./AttackFx"
 import EncounterTransition from "./EncounterTransition"
 import VictoryCelebration from "./VictoryCelebration"
+import PvpRecap from "./PvpRecap"
 import { pickAttackFx, type AttackFxSpec } from "@/lib/gamebook/yellow/data/attackAnims"
 import { usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
 import { moveCostReps, STRUGGLE_INDEX } from "@/lib/gamebook/yellow/data/combatCostConfig"
@@ -335,8 +336,11 @@ export default function BattleScreen() {
                 {/* Transition pré-combat : RENDUE DANS la scène (overflow:hidden) → elle fait
                     pile la taille du cadre de combat, plus le plein écran. */}
                 <EncounterTransition />
-                {/* Célébration de victoire : confettis + débrief GOAT/FLOP (overlay non bloquant). */}
-                {playbackDone && playerWon && <VictoryCelebration team={battle.player.team} />}
+                {/* Victoire : recap "commentateur" RICHE en PvP (sprites + halos + analyse tactique),
+                    sinon la célébration simple (confettis + GOAT/FLOP) pour les combats solo. */}
+                {playbackDone && playerWon && (battle.pvp
+                    ? <PvpRecap playerTeam={battle.player.team} enemyTeam={battle.enemy.team} onClose={() => endBattle()} />
+                    : <VictoryCelebration team={battle.player.team} />)}
             </div>
 
             {/* ===== Boîte du bas : message OU liste d'options (curseur D-pad/A/B + tactile) ===== */}
