@@ -27,9 +27,10 @@ export default function VictoryCelebration({ team }: { team: BattleMon[] }) {
         [],
     )
 
-    // GOAT = plus gros coup du combat. FLOP = un Daemon tombé au combat (ou rien si team intacte).
-    const goat = useMemo(() => [...team].sort((a, b) => (b.bestDmg ?? 0) - (a.bestDmg ?? 0))[0], [team])
-    const fainted = useMemo(() => team.filter((m) => m.currentHp <= 0).sort((a, b) => (a.bestDmg ?? 0) - (b.bestDmg ?? 0)), [team])
+    // GOAT = plus gros coup DE CE COMBAT (battleBestDmg, remis à 0 à chaque combat — on ne
+    // mélange JAMAIS les records des combats précédents). FLOP = un Daemon tombé ce combat.
+    const goat = useMemo(() => [...team].sort((a, b) => (b.battleBestDmg ?? 0) - (a.battleBestDmg ?? 0))[0], [team])
+    const fainted = useMemo(() => team.filter((m) => m.currentHp <= 0).sort((a, b) => (a.battleBestDmg ?? 0) - (b.battleBestDmg ?? 0)), [team])
     const flop = fainted[0] ?? null
 
     return (
@@ -51,13 +52,13 @@ export default function VictoryCelebration({ team }: { team: BattleMon[] }) {
             <div style={S.banner}>VICTOIRE&nbsp;!</div>
 
             <div style={S.card}>
-                {goat && (goat.bestDmg ?? 0) > 0 && (
+                {goat && (goat.battleBestDmg ?? 0) > 0 && (
                     <div style={{ ...S.row, ...S.goatRow }}>
                         <span style={S.emoji}>🐐</span>
                         <div style={S.rowText}>
                             <div style={S.rowTitle}>GOAT du combat</div>
                             <div style={S.rowMain}>{displayName(goat)}</div>
-                            <div style={S.rowSub}>{goat.bestDmgMove ?? "gros coup"} · {goat.bestDmg} dégâts</div>
+                            <div style={S.rowSub}>{goat.battleBestDmgMove ?? "gros coup"} · {goat.battleBestDmg} dégâts</div>
                         </div>
                     </div>
                 )}
@@ -87,7 +88,7 @@ export default function VictoryCelebration({ team }: { team: BattleMon[] }) {
 const KEYFRAMES = `
 @keyframes cfFall {
   0%   { transform: translate(0,0) rotate(var(--rot)); opacity: 1; }
-  100% { transform: translate(var(--drift), 112vh) rotate(calc(var(--rot) + 900deg)); opacity: 0.85; }
+  100% { transform: translate(var(--drift), 110cqh) rotate(calc(var(--rot) + 900deg)); opacity: 0.85; }
 }
 @keyframes vcPop {
   0%   { transform: translateX(-50%) scale(0.2); opacity: 0; }
@@ -101,10 +102,13 @@ const KEYFRAMES = `
 `
 
 const S: Record<string, React.CSSProperties> = {
-    overlay: { position: "absolute", inset: 0, zIndex: 90, pointerEvents: "none", overflow: "hidden", fontFamily: "'Courier New', monospace" },
+    // containerType:size → confettis (cqh) et bannière (cqw) se calent sur la TAILLE DU CADRE
+    // de combat (l'overlay fait inset:0 dans la scène), plus sur le viewport. Sinon, sur écran
+    // large, la bannière "9vw" débordait et les confettis tombaient trop loin.
+    overlay: { position: "absolute", inset: 0, zIndex: 90, pointerEvents: "none", overflow: "hidden", fontFamily: "'Courier New', monospace", containerType: "size" },
     banner: {
         position: "absolute", top: "14%", left: "50%", transform: "translateX(-50%)",
-        fontSize: "clamp(28px, 9vw, 52px)", fontWeight: 900, letterSpacing: 2, color: "#f5d020",
+        fontSize: "clamp(24px, 10cqw, 46px)", fontWeight: 900, letterSpacing: 2, color: "#f5d020",
         textShadow: "0 2px 0 #1c1408, 0 0 18px #f5d02088, 0 0 36px #f5d02044",
         animation: "vcPop 0.6s cubic-bezier(.2,1.4,.4,1) forwards", whiteSpace: "nowrap",
     },

@@ -160,6 +160,12 @@ export interface MonInstance {
 export interface BattleMon extends MonInstance {
     stages: StatStages
     volatiles: Partial<Record<VolatileStatus, number>>
+    /** Plus gros coup porté DANS CE COMBAT — runtime, JAMAIS persisté. Repart de 0 à
+     *  chaque combat (toBattleMon le laisse undefined) → le débrief GOAT ne reflète QUE
+     *  le combat courant, sans traîner les records des combats précédents. À ne pas
+     *  confondre avec `bestDmg` (record À VIE, persisté, affiché sur la fiche). */
+    battleBestDmg?: number
+    battleBestDmgMove?: string
 }
 
 export function neutralStages(): StatStages {

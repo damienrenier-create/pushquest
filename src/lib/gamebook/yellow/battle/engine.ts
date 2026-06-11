@@ -460,8 +460,10 @@ function dealMoveDamage(state: BattleState, side: SideId, move: MoveData, rng: R
     })
 
     applyDamage(state, other(side), result.damage, events)
-    // Mémorise la plus grosse frappe de l'attaquant (flavor affiché dans la fiche).
+    // Record À VIE de l'attaquant (flavor affiché dans la fiche, persisté).
     if (result.damage > (attacker.bestDmg ?? 0)) { attacker.bestDmg = result.damage; attacker.bestDmgMove = move.name }
+    // Record de CE COMBAT uniquement (runtime, repart de 0 à chaque combat) → débrief GOAT.
+    if (result.damage > (attacker.battleBestDmg ?? 0)) { attacker.battleBestDmg = result.damage; attacker.battleBestDmgMove = move.name }
     if (isCrit) events.push({ kind: "message", text: "Coup critique !" })
     const effMsg = effectivenessMessage(eff)
     if (effMsg) events.push({ kind: "message", text: effMsg })
