@@ -43,6 +43,7 @@ export interface EncounterCtx {
     rng?: () => number         // [0,1) — défaut Math.random
     player?: WildPlayerCtx
     levelCap?: number          // plafond de niveau (bridé par les badges, cf. wildLevelCap)
+    encounterCount?: number    // nb total de sauvages déjà croisés → rampe d'accueil (5+5 premiers)
 }
 
 /**
@@ -168,10 +169,20 @@ export function rollWildEncounter(ctx: EncounterCtx): MonInstance | null {
     // Niveau sauvage : 3 BANDES de probabilité calées sur le niveau du LEAD (L).
     //   33% « proche » (90-100% de L) · 33% (66-99% de L) · 34% (33-66% de L).
     const L = ctx.leadLevel
-    const lerp = (a: number, b: number) => a + (b - a) * rng()
-    const roll = rng()
-    const frac = roll < 0.33 ? lerp(0.90, 1.00) : roll < 0.66 ? lerp(0.66, 0.99) : lerp(0.33, 0.66)
-    let level = Math.round(L * frac)
+    // RAMPE D'ACCUEIL : les 5 PREMIERS sauvages croisés = 2 niveaux SOUS le lead, les 5
+    // SUIVANTS = 1 niveau sous, pour laisser le temps de progresser. Au-delà : bandes normales.
+    const ec = ctx.encounterCount ?? 999
+    let level: number
+    if (ec < 5) {
+        level = L - 2
+    } else if (ec < 10) {
+        level = L - 1
+    } else {
+        const lerp = (a: number, b: number) => a + (b - a) * rng()
+        const roll = rng()
+        const frac = roll < 0.33 ? lerp(0.90, 1.00) : roll < 0.66 ? lerp(0.66, 0.99) : lerp(0.33, 0.66)
+        level = Math.round(L * frac)
+    }
     if (entry.rare) level += intIn(rng, 1, 2)                        // un rare sauvage = un cran au-dessus
     if (ctx.levelCap != null) level = Math.min(level, ctx.levelCap)  // bridage par badges (arène) — conservé
     level = Math.max(zone.minLevel ?? 2, Math.min(100, level))      // plancher (zone) → plafond 100

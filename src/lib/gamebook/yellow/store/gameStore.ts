@@ -277,12 +277,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 const levelBasis = badges.includes("roche")
                     ? Math.round(team.reduce((s, m) => s + m.level, 0) / Math.max(1, team.length))
                     : lead.level
+                // RAMPE D'ACCUEIL : les 5 premiers sauvages croisés = -2 niveaux, les 5 suivants
+                // = -1, pour laisser le temps de progresser. Compteur persistant (par appareil).
+                const ENC_KEY = "yellow_wild_enc"
+                const encCount = typeof window !== "undefined" ? (parseInt(window.localStorage.getItem(ENC_KEY) || "0", 10) || 0) : 999
                 const wild = rollWildEncounter({
                     mapId: next.mapId, x: next.posX, y: next.posY, leadLevel: levelBasis,
                     player: getPlayerSave().wildCtx ?? undefined,
                     levelCap: wildLevelCap(badges), // bridage par badges (Route Nord + Grotte)
+                    encounterCount: encCount,
                 })
                 if (wild) {
+                    if (typeof window !== "undefined" && encCount < 10) window.localStorage.setItem(ENC_KEY, String(encCount + 1))
                     const seed = Math.floor(Math.random() * 1e9) >>> 0
                     startWildBattle(team, [wild], seed)
                 }
