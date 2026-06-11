@@ -15,6 +15,7 @@ let timer: ReturnType<typeof setTimeout> | null = null
 
 /** Charge la sauvegarde serveur → hydrate les stores. À appeler au mount. */
 export async function loadYellowSave(): Promise<void> {
+    if (loaded) return // idempotent : déjà chargé (ex. on arrive sur la page Pokédex en nav interne) → on garde l'état mémoire À JOUR au lieu de réécraser avec la DB (qui peut être en retard du débounce).
     try {
         const r = await fetch("/api/gamebook/yellow/save")
         if (!r.ok) { loaded = true; return }

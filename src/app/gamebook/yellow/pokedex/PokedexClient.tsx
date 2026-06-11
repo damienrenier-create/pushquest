@@ -4,9 +4,10 @@
 // + les espèces. Fiche détaillée : VU = infos partielles (type, rareté, lieu, lore) ;
 // CAPTURÉ = tout (stats de base, rôle, évolution, learnset par niveau). Pur affichage.
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { usePokedex, pokedexCompletion } from "@/lib/gamebook/yellow/store/pokedexStore"
+import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { SPECIES } from "@/lib/gamebook/yellow/data/species"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { speciesZones } from "@/lib/gamebook/yellow/data/encounters"
@@ -120,6 +121,9 @@ export default function PokedexClient() {
     const dex = usePokedex()
     const comp = pokedexCompletion()
     const [sel, setSel] = useState<SpeciesData | null>(null)
+    // Hydrate la save si on arrive DIRECTEMENT ici (refresh / lien) sans avoir chargé le jeu :
+    // sinon le store Pokédex en mémoire est vide → tout en "?". Idempotent (no-op si déjà chargé).
+    useEffect(() => { void loadYellowSave() }, [])
     const entries = Object.values(SPECIES).sort((a, b) => a.dexNo - b.dexNo)
 
     return (
