@@ -42,6 +42,8 @@ interface PlayerState {
     repsBankedTotal: number
     /** Cadeau de bienvenue (100 énergie) déjà réclamé ? */
     welcomeGift: boolean
+    /** Cadeau du DIEU SPAG (+150 énergie, one-shot événementiel) déjà réclamé ? */
+    spagGift: boolean
     /** Nb de Super Pastas achetés aujourd'hui (remis à 0 chaque jour ; gonfle le prix ×1.5). */
     pastaBoughtToday: number
     /** Bonus cumulé sur le prix plancher du Super Pasta (+3 par jour de jeu écoulé). */
@@ -90,7 +92,7 @@ export function emptyPvpStats(): PvpStats {
     return { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }
 }
 
-let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [] }
+let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [] }
 const listeners = new Set<() => void>()
 
 function emit() { for (const l of listeners) l() }
@@ -107,6 +109,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         team: p.team ?? [], pc: p.pc ?? [], items: p.items ?? {},
         reps: p.reps ?? st.reps ?? 0, repsCap: p.repsCap ?? st.repsCap ?? 1000, creditedThrough: p.creditedThrough ?? st.creditedThrough ?? "",
         repsBankedTotal: p.repsBankedTotal ?? st.repsBankedTotal ?? -1, welcomeGift: p.welcomeGift ?? st.welcomeGift ?? false,
+        spagGift: p.spagGift ?? st.spagGift ?? false,
         pastaBoughtToday: p.pastaBoughtToday ?? st.pastaBoughtToday ?? 0, pastaDayBonus: p.pastaDayBonus ?? st.pastaDayBonus ?? 0,
         defeatedTrainers: p.defeatedTrainers ?? [], badges: p.badges ?? st.badges ?? [], wildCtx: p.wildCtx ?? st.wildCtx ?? null,
         introSeen: p.introSeen ?? st.introSeen ?? false,
@@ -132,7 +135,7 @@ export function markIntroSeen() {
 
 /** DEV : remet la progression jaune à zéro pour rejouer l'intro (équipe vidée, introSeen=false). */
 export function resetForIntro() {
-    st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [] }
+    st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [] }
     emit()
 }
 
@@ -345,6 +348,34 @@ export function claimWelcomeGift() {
     if (st.welcomeGift) return
     st = { ...st, welcomeGift: true, reps: Math.min(st.repsCap, st.reps + 100) }
     emit()
+}
+
+// === CADEAU DU DIEU SPAG (événementiel, one-shot) ===
+
+/** Message de cadeau en attente d'affichage (toast). Transient, non persisté. */
+let pendingGiftMessage: string | null = null
+
+/**
+ * Cadeau du DIEU SPAG : +150 énergie, UNE seule fois par joueur (flag `spagGift` persisté).
+ * Crédité après hydratation (cf. saveManager) pour ne pas être écrasé. Plafonné par repsCap :
+ * si la jauge déborde, on le signale quand même (message "batterie pleine").
+ */
+export function claimSpagGift() {
+    if (st.spagGift) return
+    const before = st.reps
+    st = { ...st, spagGift: true, reps: Math.min(st.repsCap, st.reps + 150) }
+    const gained = st.reps - before
+    pendingGiftMessage = gained > 0
+        ? `🍝 Le DIEU SPAG te bénit : +${gained} d'énergie offerte ! Régale-toi, mortel.`
+        : `🍝 Le DIEU SPAG voulait t'offrir 150 d'énergie… mais ta jauge déborde déjà ! 🤌`
+    emit()
+}
+
+/** Récupère (et efface) le message de cadeau en attente, pour l'afficher en toast côté UI. */
+export function consumeGiftMessage(): string | null {
+    const m = pendingGiftMessage
+    pendingGiftMessage = null
+    return m
 }
 
 /**

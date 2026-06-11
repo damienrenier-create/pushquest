@@ -22,6 +22,8 @@ export interface YellowSave {
     repsBankedTotal: number
     /** Cadeau de bienvenue (100 énergie) déjà réclamé ? */
     welcomeGift: boolean
+    /** Cadeau du DIEU SPAG (+150 énergie, one-shot événementiel) déjà réclamé ? */
+    spagGift: boolean
     /** Nb de Super Pastas achetés aujourd'hui (reset quotidien). */
     pastaBoughtToday: number
     /** Bonus cumulé du prix plancher du Super Pasta (+3/jour). */
@@ -53,7 +55,7 @@ export interface YellowSave {
 export const SAVE_VERSION = 1
 
 export function emptySave(): YellowSave {
-    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [] }
+    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [] }
 }
 
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -164,6 +166,7 @@ export function parseSave(raw: unknown): YellowSave {
         creditedThrough: typeof o.creditedThrough === "string" ? o.creditedThrough : "",
         repsBankedTotal: typeof o.repsBankedTotal === "number" ? Math.floor(o.repsBankedTotal) : -1,
         welcomeGift: o.welcomeGift === true,
+        spagGift: o.spagGift === true,
         pastaBoughtToday: typeof o.pastaBoughtToday === "number" ? Math.max(0, Math.floor(o.pastaBoughtToday)) : 0,
         pastaDayBonus: typeof o.pastaDayBonus === "number" ? Math.max(0, Math.floor(o.pastaDayBonus)) : 0,
         pokedex: { seen: strArr(dex.seen), caught: strArr(dex.caught) },
