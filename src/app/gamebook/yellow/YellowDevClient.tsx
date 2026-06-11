@@ -164,6 +164,23 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
 
     const [confirmForfeit, setConfirmForfeit] = useState(false)
 
+    // Anti-sortie ACCIDENTELLE du Nexus : le bouton RETOUR du navigateur/téléphone déclenche
+    // une confirmation au lieu de quitter direct (le joueur voulait souvent juste un "retour"
+    // in-game). On pose une entrée tampon dans l'historique ; le retour la consomme → confirm.
+    useEffect(() => {
+        if (typeof window === "undefined") return
+        window.history.pushState(null, "", window.location.href)
+        const onPop = () => {
+            if (window.confirm("Quitter le Nexus Jaune Éclair ? Ta progression est sauvegardée — tu pourras reprendre où tu en étais.")) {
+                window.history.back() // l'utilisateur confirme → on le laisse sortir
+            } else {
+                window.history.pushState(null, "", window.location.href) // il reste : on re-pose le tampon
+            }
+        }
+        window.addEventListener("popstate", onPop)
+        return () => window.removeEventListener("popstate", onPop)
+    }, [])
+
     // Teardown de la session PvP une fois le combat terminé (pvpCtx repassé à null).
     const wasPvpRef = useRef(false)
     useEffect(() => {
