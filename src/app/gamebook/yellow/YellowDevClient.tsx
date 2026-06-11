@@ -315,6 +315,21 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
         persistYellowSave()
     }
 
+    // RETOUR : ferme l'overlay le plus "haut" de la pile (fiche → sous-menu → pause).
+    // Renvoie true si quelque chose a été fermé → utilisé par le bouton B (B = retour).
+    const goBack = (): boolean => {
+        if (confirmReset) { setConfirmReset(false); return true }
+        if (selected) { setSelected(null); return true }
+        if (ctShop) { setCtShop(false); setCtPick(null); return true }
+        if (tradePickFor) { setTradePickFor(null); return true }
+        if (interactTarget) { setInteractTarget(null); return true }
+        if (chatOpen) { setChatOpen(false); return true }
+        if (menu === "pc" || pcOpen) { closePc(); setMenu(menu === "pc" ? "pause" : "none"); return true }
+        if (menu === "team" || menu === "bag" || menu === "reput") { setMenu("pause"); return true }
+        if (menu === "pause") { setMenu("none"); return true }
+        return false
+    }
+
     return (
         <div style={pageStyle}>
             {showIntro && <IntroCinematic onComplete={onIntroComplete} />}
@@ -363,7 +378,7 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                         }
                         pressA()
                     }}
-                    onB={() => pressB()}
+                    onB={() => { if (!goBack()) pressB() }}
                     onStart={() => { menuTapGuard.current = Date.now(); setMenu((m) => (m === "none" ? "pause" : "none")) }}
                     onSelect={() => { menuTapGuard.current = Date.now(); setMenu((m) => (m === "none" ? "pause" : "none")) }}
                 >
