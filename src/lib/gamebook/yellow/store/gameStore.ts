@@ -413,15 +413,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
         if (npc.id === "y_pasta_poster_2") {
-            const step = get().poster2Step
-            if (step === 0) { set({ posterImage: "/yellow/sprites/poster2.jpg", poster2Step: 1 }); return }
-            if (step === 1) { set({ posterImage: "/yellow/sprites/poster3.jpg", poster2Step: 2 }); return }
-            // 3e activation (et au-delà) : le DIEU DES PÂTES surgit → +100 énergie UNE seule fois.
+            // Cycle EN BOUCLE (toujours accessible) : poster2 → poster3 → DIEU DES PÂTES → poster2 → …
+            const phase = get().poster2Step % 3
+            const next = get().poster2Step + 1
+            if (phase === 0) { set({ posterImage: "/yellow/sprites/poster2.jpg", poster2Step: next }); return }
+            if (phase === 1) { set({ posterImage: "/yellow/sprites/poster3.jpg", poster2Step: next }); return }
+            // phase 2 : le DIEU DES PÂTES surgit. +100 énergie UNE seule fois (ensuite : il le dit, rien de plus).
             const granted = claimPastaGodGift()
             if (granted) persistYellowSave()
             set({
                 posterImage: null,
-                poster2Step: step + 1,
+                poster2Step: next,
                 dialogue: {
                     npcId: "y_dieu_pates", npcName: "DIEU DES PÂTES", lineIndex: 0,
                     lines: granted
@@ -431,8 +433,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
                             "Tiens, +100 d'énergie offerte. Et arrête de mater des posters : VA TE DÉFOULER ! 💪🔥",
                         ]
                         : [
-                            "🍝 Encore là, à reluquer le mur ?",
-                            "Je t'ai déjà filé ton boost, gamin. Maintenant tu bouges et tu vas te DÉFOULER ! 💪",
+                            "🍝 Encore là, à reluquer les murs ?",
+                            "Le boost d'énergie, c'était UNE fois, gamin — t'en auras plus. 🤌",
+                            "Mais admire les posters tant que tu veux… puis VA TE DÉFOULER ! 💪",
                         ],
                 },
             })

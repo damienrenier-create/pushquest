@@ -161,8 +161,8 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         dialoguesAfter: ["*Le Registre des Dresseurs du Nexus.*"], // repli si non intercepté
     },
     {
-        // Easter egg — poster mural GAUCHE du Centre (case 11,0 du mur du fond). Activé depuis
-        // (11,1) en regardant vers le haut → affiche une image (gameStore.pressA intercepte).
+        // Easter egg — poster mural GAUCHE du Centre (case 11,1). Activé depuis (11,2) en
+        // regardant vers le haut → affiche une image (gameStore.pressA intercepte).
         id: "y_pasta_poster_1",
         name: "POSTER",
         mapId: "yellow_infirmary",
@@ -170,11 +170,11 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         interaction: "interactive",
         sprite: { emoji: "", color: "#e0a020" }, // invisible (l'image s'affiche au clic)
         initialX: 11,
-        initialY: 0,
+        initialY: 1,
         dialoguesAfter: ["*Un poster un peu… particulier.*"], // repli si non intercepté
     },
     {
-        // Easter egg — poster mural DROIT (case 12,0). 1er A → image 2 · 2e → image 3 · 3e → DIEU DES PÂTES.
+        // Easter egg — poster mural DROIT (case 12,1). 1er A → image 2 · 2e → image 3 · 3e → DIEU DES PÂTES (boucle).
         id: "y_pasta_poster_2",
         name: "POSTER",
         mapId: "yellow_infirmary",
@@ -182,7 +182,7 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         interaction: "interactive",
         sprite: { emoji: "", color: "#e0a020" },
         initialX: 12,
-        initialY: 0,
+        initialY: 1,
         dialoguesAfter: ["*Un poster un peu… particulier.*"],
     },
 
