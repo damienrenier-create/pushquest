@@ -2,7 +2,7 @@
 
 // Nexus Jaune Éclair — DÉBRIEF de fin de match PvP, commenté par le Monstre Spaghetti.
 // 4 sections (intro hype · top 3 · awards · décorticage tactique), sprites + halos, confettis.
-// Données : état FINAL des 2 équipes (gros coup par Daemon `bestDmg`, K.O., types). PvP only.
+// Données : état FINAL des 2 équipes (gros coup DE CE MATCH par Daemon `battleBestDmg`, K.O., types). PvP only.
 
 import { useMemo } from "react"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
@@ -96,9 +96,11 @@ interface Recap {
 }
 
 function analyze(playerTeam: BattleMon[], enemyTeam: BattleMon[]): Recap {
-    const byDmgDesc = (t: BattleMon[]) => [...t].sort((x, y) => (y.bestDmg ?? 0) - (x.bestDmg ?? 0))
+    // battleBestDmg = plus gros coup DE CE MATCH (runtime, remis à 0 à chaque combat) → le débrief
+    // ne mélange JAMAIS les records à vie des matchs précédents (cf. bestDmg, réservé à la fiche).
+    const byDmgDesc = (t: BattleMon[]) => [...t].sort((x, y) => (y.battleBestDmg ?? 0) - (x.battleBestDmg ?? 0))
     const mvp = byDmgDesc(playerTeam)[0] ?? playerTeam[0]
-    const flop = [...enemyTeam].sort((x, y) => (x.bestDmg ?? 0) - (y.bestDmg ?? 0))[0] ?? enemyTeam[0]
+    const flop = [...enemyTeam].sort((x, y) => (x.battleBestDmg ?? 0) - (y.battleBestDmg ?? 0))[0] ?? enemyTeam[0]
     const decisive = byDmgDesc([...playerTeam, ...enemyTeam])[0] ?? mvp
     const decMine = playerTeam.includes(decisive)
     const myDown = playerTeam.filter((m) => m.currentHp <= 0).length
@@ -112,16 +114,16 @@ function analyze(playerTeam: BattleMon[], enemyTeam: BattleMon[]): Recap {
                 : "✦ Quel THRILLER ! Ça s'est joué sur le fil, les nouilles tremblaient… mais tu as CLUTCH le money-time ! ✦"
 
     const top3 = [
-        `${decMine ? "Ton" : "Le"} ${nameOf(decisive)}${decMine ? "" : " adverse"} claque ${decisive.bestDmgMove ?? "un gros coup"} pour ${decisive.bestDmg ?? "?"} dégâts 💥`,
+        `${decMine ? "Ton" : "Le"} ${nameOf(decisive)}${decMine ? "" : " adverse"} claque ${decisive.battleBestDmgMove ?? "un gros coup"} pour ${decisive.battleBestDmg ?? "?"} dégâts 💥`,
         enemyDown > 0 ? `${enemyDown} Daemon${enemyDown > 1 ? "s" : ""} adverse${enemyDown > 1 ? "s" : ""} envoyé${enemyDown > 1 ? "s" : ""} au tapis 💀` : `Une guerre d'usure : personne ne lâche rien 😤`,
-        `${nameOf(flop)} (adverse) complètement aux fraises — son meilleur coup : ${flop.bestDmg ?? 0} dégâts 🤡`,
+        `${nameOf(flop)} (adverse) complètement aux fraises — son meilleur coup : ${flop.battleBestDmg ?? 0} dégâts 🤡`,
     ]
 
     const decType = (getSpecies(decisive.speciesId)?.types[0] ?? "NORMAL") as PokeType
     const enemyLead = enemyTeam[0]
     const enemyTypes = (getSpecies(enemyLead?.speciesId ?? "")?.types ?? []) as PokeType[]
     const mult = enemyTypes.length ? typeEffectiveness(decType, enemyTypes) : 1
-    const what = `${decMine ? "Ton" : "Le"} ${nameOf(decisive)} envoie ${decisive.bestDmgMove ?? "son attaque la plus lourde"} (${decisive.bestDmg ?? "?"} dégâts).`
+    const what = `${decMine ? "Ton" : "Le"} ${nameOf(decisive)} envoie ${decisive.battleBestDmgMove ?? "son attaque la plus lourde"} (${decisive.battleBestDmg ?? "?"} dégâts).`
     const why =
         mult >= 2
             ? `Type ${decType} ×${mult} contre ${nameOf(enemyLead)} (${enemyTypes.join("/")}) → COUNTER élémentaire parfait. 🎓 La leçon : repère la faiblesse de type adverse et frappe pile là — un ×2 vaut deux tours d'avance.`
@@ -131,7 +133,7 @@ function analyze(playerTeam: BattleMon[], enemyTeam: BattleMon[]): Recap {
 
     return {
         intro, top3, mvp,
-        mvpLine: `A porté l'équipe : ${mvp.bestDmgMove ?? "coup signature"} à ${mvp.bestDmg ?? 0} dégâts.`,
+        mvpLine: `A porté l'équipe : ${mvp.battleBestDmgMove ?? "coup signature"} à ${mvp.battleBestDmg ?? 0} dégâts.`,
         flop, flopLine: "Un sweeper qui rate son moment, c'est comme des pâtes sans sel.",
         what, why,
     }
