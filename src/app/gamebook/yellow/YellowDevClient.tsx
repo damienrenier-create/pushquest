@@ -431,6 +431,7 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                         <button style={menuBtnStyle} onClick={() => setMenu("pc")}>📦 PC (BOÎTES)</button>
                         <button style={menuBtnStyle} onClick={() => setMenu("bag")}>🎒 SAC</button>
                         <button style={menuBtnStyle} onClick={() => router.push("/gamebook/yellow/pokedex")}>📷 POKÉDEX</button>
+                        <button style={menuBtnStyle} onClick={() => router.push("/gamebook/yellow/dex")}>📖 DEX (CATALOGUE)</button>
                         <button style={menuBtnStyle} onClick={() => setMenu("reput")}>🏆 RÉPUTATION</button>
                         {confirmReset ? (
                             <>
