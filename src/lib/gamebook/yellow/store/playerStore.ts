@@ -514,6 +514,29 @@ export function healAllTeam() {
     emit()
 }
 
+/**
+ * Réordonne les attaques d'un Daemon (équipe OU PC) : déplace le slot `from` vers `to`.
+ * L'ordre des slots = l'ordre affiché en combat (le curseur démarre en haut). Persistance par l'appelant.
+ */
+export function reorderMove(uid: string, from: number, to: number) {
+    const applyTo = (list: MonInstance[]): MonInstance[] | null => {
+        const idx = list.findIndex((m) => m.uid === uid)
+        if (idx < 0) return null
+        const mon = list[idx]
+        if (from < 0 || to < 0 || from >= mon.moves.length || to >= mon.moves.length || from === to) return null
+        const moves = [...mon.moves]
+        const [moved] = moves.splice(from, 1)
+        moves.splice(to, 0, moved)
+        const next = [...list]
+        next[idx] = { ...mon, moves }
+        return next
+    }
+    const t = applyTo(st.team)
+    if (t) { st = { ...st, team: t }; emit(); return }
+    const p = applyTo(st.pc)
+    if (p) { st = { ...st, pc: p }; emit() }
+}
+
 // ============================================================
 // PC / boîtes — dépôt, retrait, renommage, soin hors combat
 // ============================================================

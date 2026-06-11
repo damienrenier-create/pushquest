@@ -34,13 +34,14 @@ import { YELLOW_MAPS } from "@/lib/gamebook/yellow/maps"
 import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getGiftCtMove } from "@/lib/gamebook/yellow/store/battleStore"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
-import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove } from "@/lib/gamebook/yellow/store/playerStore"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { ITEMS, getItem } from "@/lib/gamebook/yellow/data/items"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
+import { moveCategory } from "@/lib/gamebook/yellow/battle/typeChart"
 import { moveCostReps } from "@/lib/gamebook/yellow/data/combatCostConfig"
 import { SAIYAN_POINT_VALUE } from "@/lib/gamebook/yellow/data/saiyanConfig"
 import { ivTier, ivTotal, ivTierColor } from "@/lib/gamebook/yellow/data/ivConfig"
@@ -270,23 +271,29 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
     // TOUJOURS le goBack() à jour sans avoir à se ré-abonner (closures fraîches à chaque render).
     const goBackRef = useRef<() => boolean>(() => false)
 
-    // Support clavier desktop : flèches + Espace/Entrée/A/S (= A), Escape/B/Q (= B)
+    // Support clavier desktop — tout sous la MAIN GAUCHE (la souris reste libre pour les choix) :
+    //   déplacement = flèches OU ZQSD · A = Espace/Entrée/A · B = Échap/B/F · Start-Select = Tab.
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
             // Ne pas piloter le jeu quand on tape dans un champ (chat, renommage…).
             const t = e.target as HTMLElement | null
             if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return
             const inB = !!battle
-            if (e.key === "ArrowUp") { e.preventDefault(); inB ? dispatchBattleInput("up") : move("up") }
-            else if (e.key === "ArrowDown") { e.preventDefault(); inB ? dispatchBattleInput("down") : move("down") }
-            else if (e.key === "ArrowLeft") { e.preventDefault(); inB ? dispatchBattleInput("left") : move("left") }
-            else if (e.key === "ArrowRight") { e.preventDefault(); inB ? dispatchBattleInput("right") : move("right") }
-            else if (e.key === " " || e.key === "Enter" || e.key.toLowerCase() === "a" || e.key.toLowerCase() === "s") {
-                e.preventDefault(); inB ? dispatchBattleInput("a") : pressA()  // S = A (en plus de Espace/Entrée/A)
+            const k = e.key.toLowerCase()
+            if (e.key === "ArrowUp" || k === "z") { e.preventDefault(); inB ? dispatchBattleInput("up") : move("up") }
+            else if (e.key === "ArrowDown" || k === "s") { e.preventDefault(); inB ? dispatchBattleInput("down") : move("down") }
+            else if (e.key === "ArrowLeft" || k === "q") { e.preventDefault(); inB ? dispatchBattleInput("left") : move("left") }
+            else if (e.key === "ArrowRight" || k === "d") { e.preventDefault(); inB ? dispatchBattleInput("right") : move("right") }
+            else if (e.key === " " || e.key === "Enter" || k === "a") {
+                e.preventDefault(); inB ? dispatchBattleInput("a") : pressA()
             }
-            else if (e.key === "Escape" || e.key.toLowerCase() === "b" || e.key.toLowerCase() === "q") {
+            else if (e.key === "Escape" || k === "b" || k === "f") {
                 // Hors combat : ferme d'abord l'overlay le plus haut (goBack), sinon dialogue (pressB).
-                e.preventDefault(); inB ? dispatchBattleInput("b") : (goBackRef.current() || pressB())  // Q = B (en plus de Échap/B)
+                e.preventDefault(); inB ? dispatchBattleInput("b") : (goBackRef.current() || pressB())
+            }
+            else if (e.key === "Tab") {
+                // Start/Select = ouvre/ferme le menu pause (hors combat uniquement).
+                e.preventDefault(); if (!inB) setMenu((m) => (m === "none" ? "pause" : "none"))
             }
         }
         window.addEventListener("keydown", handler)
@@ -1282,13 +1289,24 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                                     </div>
                                 )
                             })()}
-                            <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 2 }}>ATTAQUES (coût en reps)</div>
-                            {live.moves.map((mv) => {
+                            <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 2 }}>ATTAQUES (▲▼ = ordre en combat)</div>
+                            {live.moves.map((mv, i) => {
                                 const m = getMove(mv.moveId)
+                                // Gen 1 : la catégorie dépend du TYPE (cf. moveCategory) ; puissance 0 = move de statut.
+                                const cat = !m || m.power <= 0 ? { label: "STATUT", color: "#8868c0" }
+                                    : moveCategory(m.type) === "PHYSICAL" ? { label: "PHYS", color: "#c0532a" }
+                                        : { label: "SPÉ", color: "#3a7ae0" }
+                                const up = i > 0, down = i < live.moves.length - 1
+                                const btn: React.CSSProperties = { width: 18, height: 18, fontSize: 9, lineHeight: 1, padding: 0, border: "1px solid #1c1408", borderRadius: 3, background: "#f8f8e8", flexShrink: 0 }
                                 return (
-                                    <div key={mv.moveId} style={{ fontSize: 11, display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
-                                        <span>{m?.name ?? mv.moveId} <span style={{ opacity: 0.55 }}>({m?.type ?? "?"}{m && m.power > 0 ? ` · ${m.power}` : ""})</span></span>
-                                        <span style={{ opacity: 0.7 }}>PP {mv.pp}/{mv.ppMax} · 💪 {moveCostReps(m?.power ?? 0, live.level)}</span>
+                                    <div key={mv.moveId} style={{ fontSize: 11, display: "flex", alignItems: "center", gap: 6, justifyContent: "space-between", padding: "2px 0" }}>
+                                        <span style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0 }}>
+                                            <button disabled={!up} style={{ ...btn, cursor: up ? "pointer" : "default", opacity: up ? 1 : 0.25 }} onClick={() => { reorderMove(live.uid, i, i - 1); persistYellowSave() }} aria-label="Monter l'attaque">▲</button>
+                                            <button disabled={!down} style={{ ...btn, cursor: down ? "pointer" : "default", opacity: down ? 1 : 0.25 }} onClick={() => { reorderMove(live.uid, i, i + 1); persistYellowSave() }} aria-label="Descendre l'attaque">▼</button>
+                                            <span style={{ fontSize: 8, fontWeight: 900, color: "#fff", background: cat.color, padding: "1px 4px", borderRadius: 3, flexShrink: 0, letterSpacing: 0.5 }}>{cat.label}</span>
+                                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m?.name ?? mv.moveId} <span style={{ opacity: 0.55 }}>({m?.type ?? "?"}{m && m.power > 0 ? ` · ${m.power}` : ""})</span></span>
+                                        </span>
+                                        <span style={{ opacity: 0.7, flexShrink: 0 }}>PP {mv.pp}/{mv.ppMax} · 💪 {moveCostReps(m?.power ?? 0, live.level)}</span>
                                     </div>
                                 )
                             })}
