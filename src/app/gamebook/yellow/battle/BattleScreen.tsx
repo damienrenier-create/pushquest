@@ -235,13 +235,15 @@ export default function BattleScreen() {
             }
         } else if (menu === "moves") {
             const costs = player.moves.map((s) => moveCostReps(getMove(s.moveId)?.power ?? 0, player.level))
-            const canUse = (c: number) => c <= reps && c <= remainingEnergy
+            // PvP (user vs user) = énergie ILLIMITÉE pendant le combat : aucune attaque grisée
+            // (la déduction de reps est déjà sautée côté store pour le PvP).
+            const canUse = (c: number) => battle.pvp || (c <= reps && c <= remainingEnergy)
             // À court d'énergie → Charge Désespérée EN PREMIER (ergonomie : plus en 5e position).
             if (!costs.some(canUse)) options.push({ label: "💥 Charge Désespérée (gratuit)", onSelect: doStruggle })
             player.moves.forEach((slot, i) => {
                 const mv = getMove(slot.moveId)
                 options.push({
-                    label: `${mv?.name ?? slot.moveId}  ⚡${costs[i]}`,
+                    label: `${mv?.name ?? slot.moveId}${battle.pvp ? "" : `  ⚡${costs[i]}`}`,
                     right: TYPE_FR[mv?.type ?? ""] ?? "",
                     onSelect: () => doMove(i), disabled: !canUse(costs[i]),
                 })
@@ -350,7 +352,9 @@ export default function BattleScreen() {
                             ) : menu === "confirmRun" ? (
                                 <span>Fuir le combat ? (B = annuler)</span>
                             ) : menu === "moves" ? (
-                                <><span>⚡ {remainingEnergy}/{energy.cap} ce combat</span><span>💪 {reps}</span></>
+                                battle.pvp
+                                    ? <><span>⚡ ∞ — combat amical</span><span></span></>
+                                    : <><span>⚡ {remainingEnergy}/{energy.cap} ce combat</span><span>💪 {reps}</span></>
                             ) : <span>&nbsp;</span>}
                         </div>
                         <div style={S.optList}>
