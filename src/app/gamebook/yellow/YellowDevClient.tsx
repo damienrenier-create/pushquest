@@ -20,6 +20,7 @@ import { useCasinoChallenge, type BattleStart } from "@/lib/gamebook/yellow/mult
 import { useCasinoChat } from "@/lib/gamebook/yellow/multiplayer/useCasinoChat"
 import { useCasinoTrade } from "@/lib/gamebook/yellow/multiplayer/useCasinoTrade"
 import { useCasinoBattle } from "@/lib/gamebook/yellow/multiplayer/useCasinoBattle"
+import TradeAnimation from "./TradeAnimation"
 import { usePvpCtx, pvpForfeit } from "@/lib/gamebook/yellow/store/battleStore"
 import EvolutionScreen from "./battle/EvolutionScreen"
 import IntroCinematic from "./IntroCinematic"
@@ -146,18 +147,14 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
     // d'ouverture ; le backdrop ignore toute fermeture dans les 350 ms qui suivent.
     const menuTapGuard = useRef(0)
     const [tradePickFor, setTradePickFor] = useState<{ userId: string; nickname: string } | null>(null)
+    const [tradeAnim, setTradeAnim] = useState<{ give: MonInstance; receive: MonInstance } | null>(null)
     const trade = useCasinoTrade({
         active: inCasino && !battle && !showIntro && !!userId,
         myUserId: userId,
         busy: !!battle || !!pvpSession || challengeBusyRef.current,
-        onComplete: (give, receive) => {
-            executeTrade(give.uid, receive)
-            const evo = applyTradeEvolution(receive.uid) // évolution par échange (ex. Roctaur → Rochison)
-            persistYellowSave()
-            setTradePickFor(null)
-            if (evo) setToast(`✨ Suite à l'échange, ${evo.fromName} évolue en ${evo.toName} !`)
-            else setToast(`Échange réussi ! Tu reçois ${getSpecies(receive.speciesId)?.name ?? "un Daemon"}.`)
-        },
+        // Échange validé des 2 côtés → on lance la CINÉMATIQUE ; le swap réel est appliqué
+        // à la FIN de l'animation (onDone du composant TradeAnimation, plus bas).
+        onComplete: (give, receive) => { setTradePickFor(null); setTradeAnim({ give, receive }) },
         // #13 — feedback explicite quand l'échange se ferme sans aboutir.
         onClosed: (reason) => { setToast(reason); setTradePickFor(null) },
     })
@@ -321,6 +318,20 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
     return (
         <div style={pageStyle}>
             {showIntro && <IntroCinematic onComplete={onIntroComplete} />}
+            {tradeAnim && (
+                <TradeAnimation
+                    give={tradeAnim.give}
+                    receive={tradeAnim.receive}
+                    onDone={() => {
+                        executeTrade(tradeAnim.give.uid, tradeAnim.receive)
+                        const evo = applyTradeEvolution(tradeAnim.receive.uid) // évolution par échange (ex. Roctaur → Rochison)
+                        persistYellowSave()
+                        if (evo) setToast(`✨ Suite à l'échange, ${evo.fromName} évolue en ${evo.toName} !`)
+                        else setToast(`Échange réussi ! Tu reçois ${getSpecies(tradeAnim.receive.speciesId)?.name ?? "un Daemon"}.`)
+                        setTradeAnim(null)
+                    }}
+                />
+            )}
 
             {/* En COMBAT : plein écran, SANS la coque Game Boy. La coque enfermait
                 le combat dans l'écran 3:2 et coupait les menus (cf. retour Sartay).
