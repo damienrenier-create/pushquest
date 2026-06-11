@@ -60,6 +60,15 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
     const closeShop = useGameStore((s) => s.closeShop)
     const pcOpen = useGameStore((s) => s.pcOpen)
     const closePc = useGameStore((s) => s.closePc)
+    // Overlays plein écran gérés côté store (fermés par le bouton B via goBack).
+    const guideOpen = useGameStore((s) => s.guideOpen)
+    const closeGuide = useGameStore((s) => s.closeGuide)
+    const libraryOpen = useGameStore((s) => s.libraryOpen)
+    const closeLibrary = useGameStore((s) => s.closeLibrary)
+    const labOpen = useGameStore((s) => s.labOpen)
+    const closeLab = useGameStore((s) => s.closeLab)
+    const signOpen = useGameStore((s) => s.signOpen)
+    const closeSign = useGameStore((s) => s.closeSign)
     const dialogue = useGameStore((s) => s.dialogue)
     const setMap = useGameStore((s) => s.setMap)
     const showDialogue = useGameStore((s) => s.showDialogue)
@@ -255,6 +264,10 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
         return () => { cancelled = true }
     }, [])
 
+    // Pile de fermeture (B/Escape) : ref "latest" pour que le handler clavier appelle
+    // TOUJOURS le goBack() à jour sans avoir à se ré-abonner (closures fraîches à chaque render).
+    const goBackRef = useRef<() => boolean>(() => false)
+
     // Support clavier desktop : flèches + Espace/Entrée/A (= A), Escape/B (= B)
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
@@ -270,7 +283,8 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                 e.preventDefault(); inB ? dispatchBattleInput("a") : pressA()
             }
             else if (e.key === "Escape" || e.key.toLowerCase() === "b") {
-                e.preventDefault(); inB ? dispatchBattleInput("b") : pressB()
+                // Hors combat : ferme d'abord l'overlay le plus haut (goBack), sinon dialogue (pressB).
+                e.preventDefault(); inB ? dispatchBattleInput("b") : (goBackRef.current() || pressB())
             }
         }
         window.addEventListener("keydown", handler)
@@ -352,19 +366,37 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
 
     // RETOUR : ferme l'overlay le plus "haut" de la pile (fiche → sous-menu → pause).
     // Renvoie true si quelque chose a été fermé → utilisé par le bouton B (B = retour).
+    // Pile de fermeture du bouton B : ferme l'overlay le PLUS HAUT et renvoie true ; false si
+    // plus rien à fermer (le clavier/onB enchaîne alors sur pressB pour les dialogues).
+    // Ordre = du plus superposé au moins superposé (un sous-modal se ferme avant son parent).
     const goBack = (): boolean => {
         if (confirmReset) { setConfirmReset(false); return true }
-        if (selected) { setSelected(null); return true }
+        if (renaming) { setRenaming(false); return true } // annule le renommage, reste sur la fiche
+        if (selected) { setSelected(null); setRenaming(false); return true } // fermer la fiche reset aussi le renommage
+        // Sous-modals de la BOUTIQUE (rendus au-dessus d'elle) → se ferment avant la boutique.
+        if (pastaPick) { setPastaPick(false); return true }
+        if (buyConfirm) { setBuyConfirm(null); return true }
+        if (sellMode) { setSellMode(false); return true }
         if (ctShop) { setCtShop(false); setCtPick(null); return true }
         if (tradePickFor) { setTradePickFor(null); return true }
         if (ctTradePickFor) { setCtTradePickFor(null); return true }
         if (interactTarget) { setInteractTarget(null); return true }
         if (chatOpen) { setChatOpen(false); return true }
+        // Sélection « déplacer un Daemon » dans le menu ÉQUIPE → annule la sélection d'abord.
+        if (swapPick) { setSwapPick(null); return true }
+        // Overlays plein écran gérés côté store (boutique + panneaux Guide/Library/Lab/Panneau).
+        if (shopOpen) { closeShop(); return true }
+        if (signOpen !== null) { closeSign(); return true } // signOpen est un index (0 = 1er panneau)
+        if (guideOpen) { closeGuide(); return true }
+        if (libraryOpen) { closeLibrary(); return true }
+        if (labOpen) { closeLab(); return true }
         if (menu === "pc" || pcOpen) { closePc(); setMenu(menu === "pc" ? "pause" : "none"); return true }
         if (menu === "team" || menu === "bag" || menu === "reput") { setMenu("pause"); return true }
         if (menu === "pause") { setMenu("none"); return true }
         return false
     }
+    // Le handler clavier (effet plus haut) appelle toujours la dernière version via ce ref.
+    goBackRef.current = goBack
 
     return (
         <div style={pageStyle}>

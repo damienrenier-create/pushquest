@@ -4,7 +4,7 @@
 // 4 sections (intro hype · top 3 · awards · décorticage tactique), sprites + halos, confettis.
 // Données : état FINAL des 2 équipes (gros coup DE CE MATCH par Daemon `battleBestDmg`, K.O., types). PvP only.
 
-import { useMemo } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { displayName } from "@/lib/gamebook/yellow/battle/engine"
 import { typeEffectiveness } from "@/lib/gamebook/yellow/battle/typeChart"
@@ -24,6 +24,13 @@ export default function PvpRecap({
     onClose: () => void
 }) {
     const a = useMemo(() => analyze(playerTeam, enemyTeam), [playerTeam, enemyTeam])
+    // Anti-fermeture accidentelle : l'overlay n'accepte le « tap pour fermer » qu'APRÈS le fondu
+    // d'entrée (≈0.55s). Sinon un tap réflexe « pour avancer » fermerait le recap dès son apparition.
+    const [ready, setReady] = useState(false)
+    useEffect(() => {
+        const t = setTimeout(() => setReady(true), 600)
+        return () => clearTimeout(t)
+    }, [])
     const confetti = useMemo(
         () => Array.from({ length: 64 }, () => ({
             left: Math.random() * 100, color: CONF[Math.floor(Math.random() * CONF.length)],
@@ -34,7 +41,7 @@ export default function PvpRecap({
     )
 
     return (
-        <div style={S.overlay} onClick={onClose}>
+        <div style={S.overlay} onClick={ready ? onClose : undefined}>
             <style>{KEYFRAMES}</style>
             {confetti.map((p, i) => (
                 <div key={i} style={{
@@ -142,10 +149,13 @@ function analyze(playerTeam: BattleMon[], enemyTeam: BattleMon[]): Recap {
 const KEYFRAMES = `
 @keyframes prFall { 0%{transform:translate(0,0) rotate(var(--rot));opacity:1} 100%{transform:translate(var(--drift),112vh) rotate(calc(var(--rot) + 900deg));opacity:.85} }
 @keyframes prRise { 0%{transform:translateY(16px);opacity:0} 100%{transform:translateY(0);opacity:1} }
+@keyframes prOverlayIn { from { opacity: 0 } to { opacity: 1 } }
 `
 
 const S: Record<string, React.CSSProperties> = {
-    overlay: { position: "absolute", inset: 0, zIndex: 92, background: "radial-gradient(circle at 50% 30%, #2a1a40 0%, #07060c 80%)", display: "flex", alignItems: "center", justifyContent: "center", padding: 10, overflow: "hidden", fontFamily: "'Courier New', monospace" },
+    // animation prOverlayIn : le voile + le recap montent en FONDU (≈0.55s) au lieu de surgir
+    // d'un coup → on aperçoit une fraction de seconde la scène (sprite du gagnant qui brille).
+    overlay: { position: "absolute", inset: 0, zIndex: 92, background: "radial-gradient(circle at 50% 30%, #2a1a40 0%, #07060c 80%)", display: "flex", alignItems: "center", justifyContent: "center", padding: 10, overflow: "hidden", fontFamily: "'Courier New', monospace", animation: "prOverlayIn 0.55s ease both" },
     card: { width: "100%", maxWidth: 420, maxHeight: "94%", overflowY: "auto", background: "#f8f8e8", border: "3px solid #1c1408", borderRadius: 12, padding: 14, color: "#1c1408", boxShadow: "0 10px 30px rgba(0,0,0,0.6)", zIndex: 1 },
     header: { textAlign: "center", fontSize: 12, fontWeight: 900, letterSpacing: 1, color: "#a06030", marginBottom: 10 },
     hype: { fontSize: 13, lineHeight: 1.5, fontWeight: 800, textAlign: "center", margin: "0 0 12px", color: "#2a1c10" },

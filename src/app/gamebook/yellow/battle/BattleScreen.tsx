@@ -328,7 +328,8 @@ export default function BattleScreen() {
                     </div>
                 </div>
                 <div style={S.playerRow}>
-                    <MonSprite mon={player} facing="back" alive={pHp > 0} hitKey={shakeP} />
+                    {/* victory : halo doré pulsé sur le gagnant en PvP, visible le temps du fondu du recap. */}
+                    <MonSprite mon={player} facing="back" alive={pHp > 0} hitKey={shakeP} victory={playbackDone && playerWon && battle.pvp} />
                     <MonInfo key={player.uid} mon={player} self hp={pHp} max={pMax} />
                 </div>
                 <TeamPips team={battle.player.team} activeIdx={pIdx} activeHp={pHp} align="right" />
@@ -401,6 +402,10 @@ export default function BattleScreen() {
                     55% { opacity: 1; }
                     78% { transform: translateY(5px) scale(1.06); }
                     100% { transform: translateY(0) scale(1); opacity: 1; }
+                }
+                @keyframes victoryPulse {
+                    0%, 100% { filter: drop-shadow(0 0 5px #f5d020) drop-shadow(0 0 11px #ffd54a88); }
+                    50% { filter: drop-shadow(0 0 11px #fff3a0) drop-shadow(0 0 22px #ffd54a); }
                 }
                 @keyframes ballThrow {
                     0% { transform: translate(-150px, -70px) scale(0.5) rotate(-200deg); opacity: 0; }
@@ -491,7 +496,7 @@ function TeamPips({ team, activeIdx, activeHp, align }: { team: BattleMon[]; act
     )
 }
 
-function MonSprite({ mon, facing, alive, hitKey }: { mon: BattleMon; facing: "front" | "back"; alive: boolean; hitKey: number }) {
+function MonSprite({ mon, facing, alive, hitKey, victory }: { mon: BattleMon; facing: "front" | "back"; alive: boolean; hitKey: number; victory?: boolean }) {
     // Sprite PNG (public/) avec repli sur l'initiale si le fichier manque.
     // `key={hitKey}` force un remount à chaque coup encaissé → l'animation de tremblement rejoue.
     const sp = speciesOf(mon)
@@ -506,7 +511,8 @@ function MonSprite({ mon, facing, alive, hitKey }: { mon: BattleMon; facing: "fr
                     ...(err ? S.sprite : S.spriteBox),
                     opacity: alive ? 1 : 0.25,
                     transform: facing === "back" ? "scaleX(-1)" : "none",
-                    animation: hitKey > 0 ? "hitShake 0.3s ease-in-out" : "none",
+                    // Victoire : halo doré pulsé (PRIME sur le shake) ; ne pulse QUE le filtre → préserve le scaleX du dos.
+                    animation: victory ? "victoryPulse 1.2s ease-in-out infinite" : hitKey > 0 ? "hitShake 0.3s ease-in-out" : "none",
                 }}
             >
                 {err
