@@ -820,16 +820,29 @@ function awardExp(state: BattleState, events: BattleEvent[]) {
  * NON mis K.O. pendant ce combat en profitent (règle Sartay : un KO = 0 XP, même l'XP gagnée
  * avant de tomber). Émet ici les messages d'XP / montée de niveau / capacités apprises.
  */
+// PARTAGE DÉGRESSIF de l'XP (Sartay) selon l'ordre de participation : les 2 premiers Daemon
+// entrés au combat touchent 100%, le 3e 60%, le 4e 30%, les 5e/6e 10% (au-delà : 10%).
+const XP_SHARE_LADDER = [1, 1, 0.6, 0.3, 0.1, 0.1]
+
 function finalizeExp(state: BattleState, events: BattleEvent[]) {
     const activeMon = active(state.player)
+    // Daemon ÉLIGIBLES (vivants, non-KO, avec XP en attente) dans l'ORDRE de participation
+    // → leur rang pilote le partage dégressif.
+    const eligible = state.participated.filter((uid) => {
+        const m = state.player.team.find((t) => t.uid === uid)
+        return !!m && m.currentHp > 0 && !m.koThisBattle && (state.pendingExp[uid] ?? 0) > 0
+    })
     for (const mon of state.player.team) {
         const gain = state.pendingExp[mon.uid] ?? 0
         if (gain <= 0) continue
         if (mon.currentHp <= 0 || mon.koThisBattle) continue // KO en cours de combat → aucune XP
+        const rank = eligible.indexOf(mon.uid)
+        const share = rank >= 0 ? (XP_SHARE_LADDER[rank] ?? 0.1) : 1
+        const finalGain = Math.max(1, Math.round(gain * share))
         const isActive = mon === activeMon
         const beforeMax = maxHpOf(mon)
-        const res = applyExp(mon, gain)
-        events.push({ kind: "message", text: `${displayName(mon)} gagne ${gain} points d'Exp !` })
+        const res = applyExp(mon, finalGain)
+        events.push({ kind: "message", text: `${displayName(mon)} gagne ${finalGain} points d'Exp !` })
         if (res.toLevel > res.fromLevel) {
             const delta = maxHpOf(mon) - beforeMax
             if (delta > 0) {

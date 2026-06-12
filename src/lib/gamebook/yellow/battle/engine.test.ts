@@ -147,6 +147,24 @@ describe("combat de dresseur — enchaînement multi-Daemon", () => {
         expect(s.player.team[0].currentHp).toBe(hpBefore)        // … mais a ne prend AUCUN dégât ce tour
     })
 
+    it("#3 — partage dégressif : 1er/2e 100%, 3e 60% (mêmes ennemis affrontés)", () => {
+        // A, B, C affrontent tous le MÊME ennemi (via switchs) puis A l'achève. Tous survivent.
+        const A = createMonInstance("rochison", 50), B = createMonInstance("rochison", 50), C = createMonInstance("rochison", 50)
+        const fA = A.exp, fC = C.exp // même espèce/niveau → même plancher d'XP
+        let s = createBattle([A, B, C], [createMonInstance("plumiot", 2)], { isWild: true, seed: 50 })
+        s = resolveTurn(s, { kind: "switch", teamIndex: 1 }) // B participe (rang 1)
+        s = resolveTurn(s, { kind: "switch", teamIndex: 2 }) // C participe (rang 2)
+        let guard = 0
+        while (s.phase !== "ended" && guard < 30) { s = resolveTurn(s, { kind: "move", moveIndex: 0 }); guard++ }
+        expect(s.outcome).toBe("win")
+        const gainA = s.player.team[0].exp - fA
+        const gainC = s.player.team[2].exp - fC
+        expect(gainA).toBeGreaterThan(0)
+        expect(gainC).toBeGreaterThan(0)
+        expect(gainC).toBeLessThan(gainA)                                   // le 3e touche MOINS
+        expect(Math.abs(gainC - Math.round(gainA * 0.6))).toBeLessThanOrEqual(1) // ≈ 60 %
+    })
+
     it("ne partage PAS l'XP avec un Daemon n'ayant jamais combattu", () => {
         const a = createMonInstance("rochison", 50)
         const b = createMonInstance("plumiot", 5) // reste au banc tout le combat
