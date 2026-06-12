@@ -114,11 +114,15 @@ const SLIDES: Slide[] = [
 
 const LS_KEY = "pushquest_feature_carousel_seen_v1";
 
-export default function FeatureDiscoveryCarousel() {
+// `isGuest` : un compte INVITÉ ne subit PAS ce carousel de 1re connexion (il voit la
+// bannière GuestNexusHint à la place). null/undefined = statut encore inconnu → on attend.
+export default function FeatureDiscoveryCarousel({ isGuest }: { isGuest?: boolean | null }) {
     const [isVisible, setIsVisible] = useState(false);
     const [currentIndex, setCurrentIndex] = useState(0);
 
     useEffect(() => {
+        if (isGuest === null) return;   // statut en cours de chargement → on attend
+        if (isGuest === true) return;   // INVITÉ → jamais de carousel
         try {
             const seen = localStorage.getItem(LS_KEY);
             if (seen !== "true") {
@@ -127,7 +131,7 @@ export default function FeatureDiscoveryCarousel() {
         } catch (e) {
             console.error("LocalStorage error:", e);
         }
-    }, []);
+    }, [isGuest]);
 
     const markAsSeen = () => {
         try {

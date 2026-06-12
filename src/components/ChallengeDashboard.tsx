@@ -16,6 +16,7 @@ import GraphsSection from "./dashboard/GraphsSection"
 import CagnotteSection from "./dashboard/CagnotteSection"
 import RecordsAssiduiteSection from "./dashboard/RecordsAssiduiteSection"
 import FeatureDiscoveryCarousel from "./FeatureDiscoveryCarousel"
+import GuestNexusHint from "./GuestNexusHint"
 import NotificationToast from "./NotificationToast"
 import { REACTION_PHRASES } from "@/config/notifications"
 
@@ -120,6 +121,9 @@ export default function ChallengeDashboard() {
     const { data: session } = useSession()
     const [data, setData] = useState<DashboardData>(DEFAULT_DASHBOARD_DATA)
     const [loading, setLoading] = useState(true)
+    // isGuest n'est pas dans la session NextAuth → on le lit via /api/user/me (null = inconnu).
+    // Pilote l'onboarding : un invité ne voit pas le carousel mais la bannière GuestNexusHint.
+    const [isGuest, setIsGuest] = useState<boolean | null>(null)
     const [saving, setSaving] = useState(false)
     const [activeTab, setActiveTab] = useState<'saisie' | 'graphs' | 'cagnotte' | 'trophees' | 'paris'>('saisie')
     const [selectedDate, setSelectedDate] = useState<string>(DEFAULT_DASHBOARD_DATA.selectedDateISO)
@@ -144,6 +148,16 @@ export default function ChallengeDashboard() {
     const showToast = useCallback((message: string, type: 'success' | 'error') => {
         setNotification({ id: Date.now().toString(), message, type })
     }, [setNotification])
+
+    // Statut INVITÉ (hors session) → gate l'onboarding (carousel vs bannière Nexus).
+    useEffect(() => {
+        let alive = true
+        fetch("/api/user/me")
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => { if (alive && d) setIsGuest(d.isGuest === true) })
+            .catch(() => { if (alive) setIsGuest(false) })
+        return () => { alive = false }
+    }, [])
 
     const fetchQuickData = useCallback(async () => {
         try {
@@ -579,7 +593,8 @@ export default function ChallengeDashboard() {
 
     return (
         <div className="max-w-4xl mx-auto p-4 space-y-6 pb-20">
-            <FeatureDiscoveryCarousel />
+            <FeatureDiscoveryCarousel isGuest={isGuest} />
+            <GuestNexusHint isGuest={isGuest} />
             {notification && (
                 <NotificationToast
                     notification={notification}
