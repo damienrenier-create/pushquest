@@ -17,7 +17,7 @@ import { YELLOW_MAPS, currentArenaMapId } from "../maps"
 import type { YellowMapData } from "../maps"
 import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
-import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle } from "./battleStore"
+import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, resetFleeStreak } from "./battleStore"
 import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, getAceState, aceTeamSizeFor, aceAvailableToday, aceWinsCount } from "./playerStore"
 import { getSpecies } from "../data/species"
 import { persistYellowSave } from "./saveManager"
@@ -382,6 +382,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // Médecin du Centre Daemon : soigne toute l'équipe.
         if (npc.id === "y_medecin") {
             healAllTeam()
+            resetFleeStreak() // #2 : se soigner remet la fuite à 100% (nouvelle boucle d'explo)
             persistYellowSave()
             set({
                 dialogue: {

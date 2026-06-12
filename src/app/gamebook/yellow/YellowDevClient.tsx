@@ -617,13 +617,16 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                                     {player.ownedCts.length > 0 && (
                                         <>
                                             <div style={pocketHdrStyle}>📀 Capsules Techniques</div>
-                                            {player.ownedCts.map((id) => getCt(id)).filter((c): c is NonNullable<typeof c> => !!c).map((ct) => (
-                                                <button key={ct.id} style={menuBtnStyle} onClick={() => { setMenu("none"); setCtShop(true); setCtPick(ct.id) }}>
-                                                    <span style={{ display: "flex", justifyContent: "space-between" }}>
-                                                        <span>{ct.label} · {getMove(ct.moveId)?.name ?? ct.moveId}</span><span>Enseigner ▸</span>
-                                                    </span>
-                                                </button>
-                                            ))}
+                                            {player.ownedCts.map((id) => getCt(id)).filter((c): c is NonNullable<typeof c> => !!c).map((ct) => {
+                                                const mv = getMove(ct.moveId)
+                                                return (
+                                                    <button key={ct.id} style={menuBtnStyle} onClick={() => { setMenu("none"); setCtShop(true); setCtPick(ct.id) }}>
+                                                        <span style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                                                            <span>{ct.label} · {mv?.name ?? ct.moveId}<br /><span style={{ fontSize: 10, opacity: 0.6 }}>{mv?.type}{mv && mv.power > 0 ? ` · Puis ${mv.power}` : " · statut"}{mv?.description ? ` — ${mv.description}` : ""}</span></span><span>Enseigner ▸</span>
+                                                        </span>
+                                                    </button>
+                                                )
+                                            })}
                                         </>
                                     )}
                                     {/* ❤️ Poche Soins */}
@@ -1065,7 +1068,7 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                                             return (
                                                 <button key={ct.id} style={afford ? menuBtnStyle : menuBtnDimStyle} disabled={!afford} onClick={() => setCtPick(ct.id)}>
                                                     <span style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                                                        <span>{ct.label} · {mv?.name}<br /><span style={{ fontSize: 10, opacity: 0.6 }}>{mv?.type}{mv && mv.power > 0 ? ` · ${mv.power}` : " · statut"}</span></span>
+                                                        <span>{ct.label} · {mv?.name}<br /><span style={{ fontSize: 10, opacity: 0.6 }}>{mv?.type}{mv && mv.power > 0 ? ` · Puis ${mv.power}` : " · statut"}{mv && mv.accuracy > 0 ? ` · Préc ${mv.accuracy}` : ""}{mv?.description ? ` — ${mv.description}` : ""}</span></span>
                                                         <span>{isGift ? "✨ Cadeau" : `${ct.price} reps`}</span>
                                                     </span>
                                                 </button>
@@ -1082,6 +1085,13 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                             return (
                                 <>
                                     <div style={menuTitleStyle}>{mv?.name} — QUEL DAEMON ?</div>
+                                    {mv && (
+                                        <div style={{ fontSize: 11, opacity: 0.78, marginBottom: 8, lineHeight: 1.45, padding: "6px 8px", background: "#f3efd6", borderRadius: 6 }}>
+                                            {mv.type} · {mv.power > 0 ? (moveCategory(mv.type) === "PHYSICAL" ? "Physique" : "Spécial") : "Statut"}
+                                            {mv.power > 0 ? ` · Puissance ${mv.power}` : ""}{mv.accuracy > 0 ? ` · Précision ${mv.accuracy}%` : ""}
+                                            {mv.description ? <><br />{mv.description}</> : null}
+                                        </div>
+                                    )}
                                     {player.team.map((m) => {
                                         const sp = getSpecies(m.speciesId)
                                         const compatible = sp ? canLearnCt(sp, ct) : false

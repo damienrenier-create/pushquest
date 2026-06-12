@@ -110,6 +110,8 @@ const listeners = new Set<() => void>()
 // combat (victoire / défaite / capture) → seul le SPAM de fuites est pénalisé.
 let fleeStreak = 0
 function wildFleeChance(): number { return Math.max(30, 100 - 10 * fleeStreak) }
+/** Remet la fuite à 100% (appelé au soin de l'infirmerie : nouvelle boucle d'explo propre). */
+export function resetFleeStreak() { fleeStreak = 0 }
 
 function emit() {
     for (const l of listeners) l()
