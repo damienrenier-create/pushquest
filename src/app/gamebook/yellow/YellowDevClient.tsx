@@ -1266,7 +1266,8 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                                 </div>
                             )}
                             <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 6 }}>
-                                XP cumulée : {live.exp.toLocaleString("fr-FR")} · niveau suivant dans ~{Math.max(0, toNext).toLocaleString("fr-FR")} XP
+                                {/* plancher du niveau pour les anciens Daemons sauvegardés à exp=0 → cohérent avec le niveau */}
+                                XP cumulée : {Math.max(live.exp, expForLevel(live.level)).toLocaleString("fr-FR")} · niveau suivant dans ~{Math.max(0, toNext).toLocaleString("fr-FR")} XP
                             </div>
                             {(live.capturedLevel != null || live.capturedAt || live.capturedMapId) && (
                                 <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 6 }}>

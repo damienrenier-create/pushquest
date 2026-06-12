@@ -472,7 +472,9 @@ function MonInfo({ mon, self, hp, max }: { mon: BattleMon; self?: boolean; hp: n
             {/* Mini barre d'XP (joueur uniquement) → on voit si le Daemon est proche du niveau suivant. */}
             {self && (() => {
                 const cur = expForLevel(mon.level), nxt = expForLevel(mon.level + 1)
-                const xpPct = nxt > cur ? Math.max(0, Math.min(100, (((mon.exp ?? cur) - cur) / (nxt - cur)) * 100)) : 0
+                // plancher du niveau : un Daemon créé/capturé à exp=0 montre 0% (et non une barre faussée).
+                const eff = Math.max(mon.exp ?? cur, cur)
+                const xpPct = nxt > cur ? Math.max(0, Math.min(100, ((eff - cur) / (nxt - cur)) * 100)) : 0
                 return (
                     <div style={S.xpRow}>
                         <span style={S.xpLabel}>XP</span>

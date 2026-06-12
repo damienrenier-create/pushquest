@@ -8,6 +8,7 @@ import type { MonInstance, StatKey } from "./types"
 import { getSpecies } from "../data/species"
 import { getMove } from "../data/moves"
 import { fullStats } from "./stats"
+import { expForLevel } from "./xp"
 
 let seq = 0
 
@@ -49,7 +50,9 @@ export function createMonInstance(speciesId: string, level: number, opts: MakeMo
         uid: `${speciesId}-${level}-${++seq}`,
         speciesId,
         level,
-        exp: 0,
+        // XP cumulée = plancher du niveau (et NON 0) → la fiche/barre d'XP correspondent
+        // au niveau réel dès la création/capture (un niv.20 n'affiche plus « XP : 0 »).
+        exp: expForLevel(level),
         ivs,
         currentHp: 0,
         status: "NONE",
