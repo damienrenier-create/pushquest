@@ -65,6 +65,10 @@ export interface YellowMapData extends MapData {
     backgroundImageOriginX?: number
     /** Pixel y de l'image qui correspond à la case (0, 0) de la map (skip headers/bordures) */
     backgroundImageOriginY?: number
+    /** WIP : force la grille debug sur cette map (sans ?grid). À retirer à la livraison. */
+    debugGrid?: boolean
+    /** WIP : met en pause les rencontres sauvages sur cette map (le temps de caler la grille). */
+    encountersPaused?: boolean
     /** v2 — Sheet de tiles "ground" (ex: herbe FireRed) avec N variantes
      *  réparties aléatoirement sur toutes les tiles "grass" de la map. */
     groundSheet?: {
@@ -834,6 +838,8 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImageTileSize: CENDREVILLE_TILE,
         backgroundImageOriginX: 0,
         backgroundImageOriginY: 0,
+        debugGrid: true,        // WIP : grille visible en permanence pour caler les collisions
+        encountersPaused: true, // WIP : pas de rencontres le temps de finaliser la map
     },
     yellow_shop: {
         id: "yellow_shop",

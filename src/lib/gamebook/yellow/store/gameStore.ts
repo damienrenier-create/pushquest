@@ -288,7 +288,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // #7 : juste après un combat, on garantit au moins UNE case sans rencontre (anti-rafale).
         if (moved && get().encounterCooldown > 0) {
             set({ encounterCooldown: get().encounterCooldown - 1 })
-        } else if (moved && isWildTile) {
+        } else if (moved && isWildTile && !map.encountersPaused) {
             const team = getPlayerSave().team
             const lead = team.find((m) => m.currentHp > 0)
             if (lead) {

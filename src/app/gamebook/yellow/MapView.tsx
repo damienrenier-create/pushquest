@@ -351,7 +351,8 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId }: {
     const npcsOnMap = YELLOW_NPCS.filter((n) => n.mapId === player.mapId)
     const buildings = map.buildings ?? []
     // DEBUG : grille de coordonnées (vert = walkable, rouge = bloqué). Activer via ?grid=1.
-    const showGrid = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("grid")
+    const showGrid = !!map.debugGrid
+        || (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("grid"))
 
     const screenPos = (worldX: number, worldY: number, w = 1, h = 1) => ({
         left: `${(worldX - cam.x) * TILE_W_PCT}%`,
