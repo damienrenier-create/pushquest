@@ -184,6 +184,7 @@ export function submitPlayerAction(action: PlayerAction) {
     // Utiliser un objet de soin le consomme aussi.
     if (action.kind === "item" && !consumeItem(action.itemId)) return
     // Attaque normale : coûte des reps (la Charge Désespérée, index sentinelle, est gratuite).
+    let paidMoveCost = 0
     if (action.kind === "move" && action.moveIndex !== STRUGGLE_INDEX) {
         const cost = moveCostRepsForAction(battle, action.moveIndex)
         if (cost > 0) {
@@ -192,9 +193,16 @@ export function submitPlayerAction(action: PlayerAction) {
             if (storeState.energySpent + cost > cap) return // plus d'énergie ce combat (UI grise déjà)
             if (!spendReps(cost)) return                    // solde global insuffisant
             storeState = { ...storeState, energySpent: storeState.energySpent + cost }
+            paidMoveCost = cost
         }
     }
     const next = resolveTurn(battle, action)
+    // #4 : l'attaque n'est jamais partie (Daemon mis K.O. avant d'agir, adversaire plus rapide)
+    // → on REMBOURSE les reps. Pas de double peine : on ne paie que les attaques réellement lancées.
+    if (paidMoveCost > 0 && next.lastPlayerActed === false) {
+        grantReps(paidMoveCost)
+        storeState = { ...storeState, energySpent: Math.max(0, storeState.energySpent - paidMoveCost) }
+    }
     syncPokedex(next) // vu (changement d'adversaire) + capturé le cas échéant
     setStore({ battle: next, evolutions: [], trainer: storeState.trainer, whiteout: false })
     if (next.phase === "ended") finishBattle(next)

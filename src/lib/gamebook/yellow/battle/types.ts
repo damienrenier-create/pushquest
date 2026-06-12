@@ -166,6 +166,9 @@ export interface BattleMon extends MonInstance {
      *  confondre avec `bestDmg` (record À VIE, persisté, affiché sur la fiche). */
     battleBestDmg?: number
     battleBestDmgMove?: string
+    /** Mis K.O. à un moment de CE combat (runtime, non persisté). RÈGLE (Sartay) : un Daemon
+     *  KO pendant le combat ne touche AUCUNE XP, même celle gagnée avant de tomber. */
+    koThisBattle?: boolean
 }
 
 export function neutralStages(): StatStages {

@@ -70,6 +70,13 @@ export interface BattleState {
     pvp: boolean
     /** Budget d'énergie de l'ENNEMI (ACE) : il paie ses attaques, struggle à sec. null = illimité. */
     enemyEnergy: { spent: number; cap: number } | null
+    /** XP DIFFÉRÉE (solo) : accumulée par uid au fil des KO ennemis, appliquée à la VICTOIRE
+     *  uniquement aux Daemons encore debout. Un Daemon KO en cours de combat ne touche rien
+     *  (même l'XP gagnée avant de tomber est perdue). */
+    pendingExp: Record<string, number>
+    /** Transitoire : le Daemon JOUEUR a-t-il pu exécuter son action ce tour ? false s'il a été
+     *  mis K.O. avant d'agir (adversaire plus rapide) → le store rembourse alors les reps. */
+    lastPlayerActed?: boolean
 }
 
 export type PlayerAction =
@@ -85,6 +92,9 @@ interface ResolvedAction {
     kind: "move" | "switch" | "run"
     moveIndex?: number
     teamIndex?: number
+    /** uid du Daemon pour qui l'action a été choisie (début de tour). Si l'actif a changé
+     *  entre-temps (KO + auto-switch), l'action est annulée → pas d'attaque « gratuite ». */
+    actorUid?: string
 }
 
 // ============================================================
@@ -153,6 +163,7 @@ export function createBattle(
         participants: enemyLeadUid && leadUid ? { [enemyLeadUid]: [leadUid] } : {},
         pvp: opts.pvp ?? false,
         enemyEnergy: opts.enemyEnergyCap != null ? { spent: 0, cap: opts.enemyEnergyCap } : null,
+        pendingExp: {},
     }
 }
 
@@ -221,28 +232,37 @@ export function resolveTurn(prev: BattleState, playerAction: PlayerAction): Batt
 
     // --- Construit les actions des deux camps ---
     const enemyAction = chooseEnemyAction(state, rng)
+    enemyAction.actorUid = active(state.enemy).uid
     const playerResolved: ResolvedAction = {
         side: "player",
         kind: playerAction.kind,
         moveIndex: playerAction.kind === "move" ? playerAction.moveIndex : undefined,
         teamIndex: playerAction.kind === "switch" ? playerAction.teamIndex : undefined,
+        actorUid: active(state.player).uid,
     }
 
     // Les switchs passent AVANT les attaques.
     const order = orderActions(state, playerResolved, enemyAction, rng)
 
+    let playerActed = false
     for (const act of order) {
         if (state.phase === "ended") break
-        // Si l'actif du camp est KO (suite à l'action adverse), il n'agit pas.
-        if (active(state[act.side]).currentHp <= 0) continue
+        const cur = active(state[act.side])
+        // L'actif est KO (action adverse) → il n'agit pas. OU l'actif a été REMPLACÉ depuis le
+        // choix d'action (KO + auto-switch en cours de tour) → l'action pré-choisie est annulée,
+        // sinon le remplaçant porterait une attaque « gratuite » (bug #10).
+        if (cur.currentHp <= 0 || (act.actorUid && cur.uid !== act.actorUid)) continue
 
         if (act.kind === "switch") {
             doSwitch(state, act.side, act.teamIndex!, events)
         } else if (act.kind === "move") {
+            if (act.side === "player") playerActed = true
             performMove(state, act.side, act.moveIndex!, events, rng)
         }
         checkFaints(state, events)
     }
+    // #4 : le store rembourse les reps si l'attaque du joueur n'est jamais partie (KO avant d'agir).
+    state.lastPlayerActed = playerResolved.kind === "move" ? playerActed : true
 
     // --- Fin de tour : résiduels de statut (ordre vitesse) ---
     if (state.phase !== "ended") {
@@ -692,10 +712,13 @@ function checkFaints(state: BattleState, events: BattleEvent[]) {
         const mon = active(s)
         if (mon.currentHp <= 0 && !(mon as any).__fainted) {
             (mon as any).__fainted = true
+            // RÈGLE (Sartay) : un Daemon JOUEUR KO à un instant du combat ne touchera AUCUNE
+            // XP à la victoire (même celle accumulée avant de tomber). Marqueur runtime.
+            if (side === "player") mon.koThisBattle = true
             events.push({ kind: "faint", side, name: displayName(mon) })
             events.push({ kind: "message", text: `${displayName(mon)} est K.O. !` })
             // PvP : le camp ADVERSE (celui dont l'actif vient de KO l'autre) gagne l'XP.
-            // Solo : seul le joueur gagne l'XP, et seulement quand l'ennemi tombe.
+            // Solo : l'XP de cet ennemi est ACCUMULÉE (versée à la victoire via finalizeExp).
             if (state.pvp) awardExpPvp(state, other(side), events)
             else if (side === "enemy") awardExp(state, events)
         }
@@ -703,6 +726,8 @@ function checkFaints(state: BattleState, events: BattleEvent[]) {
     // Issue / changement forcé
     if (!hasAlive(state.enemy)) {
         state.phase = "ended"; state.outcome = "win"
+        // Solo : on verse enfin l'XP différée, aux seuls Daemons encore debout.
+        if (!state.pvp) finalizeExp(state, events)
         events.push({ kind: "end", outcome: "win" })
         return
     }
@@ -756,29 +781,43 @@ export function chooseEnemyAction(state: BattleState, rng: Rng): ResolvedAction 
  * Daemon actif (celui qui a porté le coup fatal).
  */
 function awardExp(state: BattleState, events: BattleEvent[]) {
+    void events
     const fainted = active(state.enemy)
     const winner = active(state.player)
     const faintedSp = speciesOf(fainted)
     const gain = xpForDefeat(faintedSp.baseExp, fainted.level, state.isWild)
 
-    // EV uniquement au Daemon actif s'il est encore debout.
-    if (winner.currentHp > 0) gainEv(winner, signatureStat(faintedSp), EV_YIELD_PER_WIN)
+    // EV uniquement au Daemon actif s'il est encore debout ET pas KO ce combat.
+    if (winner.currentHp > 0 && !winner.koThisBattle) gainEv(winner, signatureStat(faintedSp), EV_YIELD_PER_WIN)
 
-    // Seuls les Daemons qui ont AFFRONTÉ CET ennemi précis gagnent SON XP (pas l'XP
-    // d'ennemis qu'ils n'ont jamais vus → évite les évolutions trop rapides).
+    // XP DIFFÉRÉE : seuls les Daemons ayant AFFRONTÉ CET ennemi (pas l'XP d'ennemis jamais
+    // vus → évite les évos trop rapides) ACCUMULENT le gain. Le versement réel a lieu à la
+    // VICTOIRE (finalizeExp), réservé aux Daemons encore debout → un KO en cours = 0 XP.
     const credited = state.participants[fainted.uid] ?? []
     for (const mon of state.player.team) {
-        if (!credited.includes(mon.uid)) continue   // n'a pas affronté cet ennemi → rien
-        // RÈGLE (Sartay) : un Daemon mis K.O. pendant le combat NE gagne PAS d'XP — seuls
-        // ceux encore DEBOUT en profitent (cohérent avec le docstring + l'EV réservé à l'actif vivant).
-        if (mon.currentHp <= 0) continue
-        const isActive = mon === winner
+        if (!credited.includes(mon.uid)) continue
+        state.pendingExp[mon.uid] = (state.pendingExp[mon.uid] ?? 0) + gain
+    }
+}
+
+/**
+ * Verse l'XP DIFFÉRÉE (state.pendingExp) à la VICTOIRE. Seuls les Daemons encore DEBOUT et
+ * NON mis K.O. pendant ce combat en profitent (règle Sartay : un KO = 0 XP, même l'XP gagnée
+ * avant de tomber). Émet ici les messages d'XP / montée de niveau / capacités apprises.
+ */
+function finalizeExp(state: BattleState, events: BattleEvent[]) {
+    const activeMon = active(state.player)
+    for (const mon of state.player.team) {
+        const gain = state.pendingExp[mon.uid] ?? 0
+        if (gain <= 0) continue
+        if (mon.currentHp <= 0 || mon.koThisBattle) continue // KO en cours de combat → aucune XP
+        const isActive = mon === activeMon
         const beforeMax = maxHpOf(mon)
         const res = applyExp(mon, gain)
         events.push({ kind: "message", text: `${displayName(mon)} gagne ${gain} points d'Exp !` })
         if (res.toLevel > res.fromLevel) {
             const delta = maxHpOf(mon) - beforeMax
-            if (delta > 0) { // le Daemon est forcément vivant ici (les K.O. sont écartés plus haut)
+            if (delta > 0) {
                 mon.currentHp += delta
                 // Seul l'actif a sa barre affichée → on n'émet l'event "hp" que pour lui.
                 if (isActive) events.push({ kind: "hp", side: "player", hp: mon.currentHp, max: maxHpOf(mon) })
@@ -787,13 +826,12 @@ function awardExp(state: BattleState, events: BattleEvent[]) {
             for (const mid of res.learnedMoveIds) {
                 events.push({ kind: "message", text: `${displayName(mon)} apprend ${getMove(mid)?.name ?? mid} !` })
             }
-            // 4 slots pleins : la capacité est mise en attente. On NOTIFIE le joueur
-            // DANS le combat (le remplacement se fera à la fin, sans quitter brusquement).
             for (const mid of res.pendingMoveIds) {
                 events.push({ kind: "message", text: `${displayName(mon)} veut apprendre ${getMove(mid)?.name ?? mid}… mais connaît déjà 4 capacités ! (choix à la fin du combat)` })
             }
         }
     }
+    state.pendingExp = {}
 }
 
 /**
@@ -945,6 +983,7 @@ function structuredCloneState(s: BattleState): BattleState {
         participated: [...s.participated],
         participants: Object.fromEntries(Object.entries(s.participants).map(([k, v]) => [k, [...v]])),
         enemyEnergy: s.enemyEnergy ? { ...s.enemyEnergy } : null,
+        pendingExp: { ...s.pendingExp },
     }
 }
 

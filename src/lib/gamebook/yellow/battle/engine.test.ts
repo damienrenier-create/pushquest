@@ -112,6 +112,32 @@ describe("combat de dresseur — enchaînement multi-Daemon", () => {
         expect(s.player.team[1].exp).toBe(startExpB) // … et n'a gagné AUCUN XP
     })
 
+    it("#6 — un Daemon qui GAGNE de l'XP (KO ennemi #1) puis tombe K.O. ne garde RIEN", () => {
+        // b achève l'ennemi #1 (→ XP différée accumulée), puis se fait K.O. par l'ennemi #2.
+        // a (tank) finit le combat. b doit terminer K.O. avec son XP de DÉPART (0 gain).
+        const b = createMonInstance("plumiot", 5)   // lead fragile mais rapide : tue e1
+        const a = createMonInstance("cerfeuillu", 50) // Plante : résiste à l'Eau, achève e2
+        const e1 = createMonInstance("plumiot", 2); e1.currentHp = 1 // b le one-shot
+        const e2 = createMonInstance("razmaree", 15)               // K.O. b, mais perd contre a
+        const startExpB = b.exp, startExpA = a.exp
+        const { final } = autoPlay(createBattle([b, a], [e1, e2], { isWild: false, seed: 246 }))
+        expect(final.outcome).toBe("win")
+        expect(final.player.team[0].currentHp).toBe(0)        // b est bien K.O.
+        expect(final.player.team[0].exp).toBe(startExpB)      // … et n'a RIEN gardé (même l'XP d'e1)
+        expect(final.player.team[1].exp).toBeGreaterThan(startExpA) // a (debout) touche bien son XP
+    })
+
+    it("#10 — le Daemon ennemi envoyé après un K.O. n'agit PAS le tour même", () => {
+        const a = createMonInstance("rochison", 50)               // rapide vs plumiot L5, achève e1
+        const e1 = createMonInstance("plumiot", 5); e1.currentHp = 1
+        const e2 = createMonInstance("razmaree", 50)              // frapperait FORT (eau ×4) s'il agissait
+        let s = createBattle([a], [e1, e2], { isWild: false, seed: 321 })
+        const hpBefore = s.player.team[0].currentHp
+        s = resolveTurn(s, { kind: "move", moveIndex: 0 })        // a KO e1 → e2 entre…
+        expect(s.enemy.team[s.enemy.activeIndex].speciesId).toBe("razmaree") // e2 bien envoyé
+        expect(s.player.team[0].currentHp).toBe(hpBefore)        // … mais a ne prend AUCUN dégât ce tour
+    })
+
     it("ne partage PAS l'XP avec un Daemon n'ayant jamais combattu", () => {
         const a = createMonInstance("rochison", 50)
         const b = createMonInstance("plumiot", 5) // reste au banc tout le combat
