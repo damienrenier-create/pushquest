@@ -13,7 +13,7 @@ import { createInitialPlayer } from "../engine/types"
 import { tryMove } from "../engine/movement"
 import { findExitAt } from "../engine/warp"
 import { getNpcInFrontOfPlayer, getFacingTile, getTileInFront, findNpcAt } from "../engine/interaction"
-import { YELLOW_MAPS, currentArenaMapId } from "../maps"
+import { YELLOW_MAPS, currentArenaMapId, CENDREVILLE_SPAWN } from "../maps"
 import type { YellowMapData } from "../maps"
 import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
@@ -313,7 +313,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             && ACE_TRIGGER_TILES.some((t) => t.x === next.posX && t.y === next.posY)) {
             if (getPlayerSave().badges.includes("feu")) {
                 // Badge Flamme → ACE laisse passer vers CENDREVILLE (ville-miroir cendrée).
-                const cp = createInitialPlayer("yellow_cendreville", 42, 17, "left")
+                const cp = createInitialPlayer("yellow_cendreville", CENDREVILLE_SPAWN.x, CENDREVILLE_SPAWN.y, "up")
                 set({
                     map: YELLOW_MAPS["yellow_cendreville"], player: cp,
                     dialogue: { npcId: ACE_TRAINER_ID, npcName: "ACE", lines: ACE_PASS_LINES, lineIndex: 0 },

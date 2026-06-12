@@ -744,16 +744,43 @@ const VIRIDIAN_IMAGE_TILE_SIZE = 16
 const VIRIDIAN_ORIGIN_X = 8          // px image qui correspond à map (0, _)
 const VIRIDIAN_ORIGIN_Y = 24         // px image qui correspond à map (_, 0)
 
-// === CENDREVILLE = miroir HORIZONTAL de Viridian ===
-// Même tileset, layout en symétrie gauche/droite. Collisions = Viridian inversé
-// colonne par colonne ; fond = viridian_full.png flippé (cendreville.png).
-// L'origine X bascule de l'autre côté de l'image : 1360 - 8 - 44*16 = 648.
+// === CENDREVILLE — ville SCORCHED (art dédié `cendreville.png`, PAS un miroir de Viridian) ===
+// Grille 44×37, tuiles image 16px → fond 704×592, origine (0,0) (l'art est croppé pile).
+// Collisions PROCÉDURALES calées sur l'art (bordure de forêt calcinée + falaise est,
+// bâtiments bloqués, étang, parterres/pelouse = rencontres). Affinable visuellement (?grid=1).
+const CENDREVILLE_W = 44, CENDREVILLE_H = 37, CENDREVILLE_TILE = 16
+// Arrivée (depuis ACE) et sortie sud (retour monde) — sur la route sable du bas.
+export const CENDREVILLE_SPAWN = { x: 15, y: 31 }
 function buildCendrevilleCollisions(): TileType[][] {
-    return buildViridianCollisions().map((row) => [...row].reverse())
+    const W = CENDREVILLE_W, H = CENDREVILLE_H
+    const m: TileType[][] = Array.from({ length: H }, () => Array.from({ length: W }, () => "path" as TileType))
+    const fill = (x0: number, y0: number, x1: number, y1: number, t: TileType) => {
+        for (let y = Math.max(0, y0); y <= Math.min(H - 1, y1); y++)
+            for (let x = Math.max(0, x0); x <= Math.min(W - 1, x1); x++) m[y][x] = t
+    }
+    // HERBE = rencontres sauvages (parterres de fleurs + grande pelouse de l'étang).
+    fill(5, 9, 14, 13, "grass")        // champ/fleurs sous la maison (gauche)
+    fill(6, 19, 13, 27, "grass")       // champ/fleurs bas-gauche
+    fill(23, 9, 36, 30, "grass")       // pelouse centre-droite (autour de l'étang)
+    // BORDURE forêt calcinée (infranchissable) + FALAISE rocheuse à l'est.
+    fill(0, 0, W - 1, 2, "tree")       // haut
+    fill(0, 0, 3, H - 1, "tree")       // gauche
+    fill(0, 34, W - 1, H - 1, "tree")  // bas
+    fill(37, 0, 43, 33, "tree")        // falaise (droite)
+    fill(24, 2, 36, 9, "tree")         // enclos de palmiers calcinés + barrière (haut-droite)
+    // BÂTIMENTS (bloqués ; pas d'intérieur en v1).
+    fill(6, 3, 13, 7, "tree")          // maison toit ocre
+    fill(17, 5, 22, 9, "tree")         // hutte de paille
+    fill(8, 14, 13, 18, "tree")        // Centre bleu
+    fill(18, 13, 23, 17, "tree")       // labo/mart gris
+    fill(16, 21, 22, 25, "tree")       // Centre rouge
+    // PALMIERS décoratifs (bord de l'étang + sud).
+    fill(31, 17, 37, 21, "tree")
+    fill(25, 31, 35, 33, "tree")
+    // ÉTANG (eau).
+    fill(27, 22, 34, 28, "water")
+    return m
 }
-const CENDREVILLE_IMAGE_WIDTH = 1360
-const CENDREVILLE_ORIGIN_X =
-    CENDREVILLE_IMAGE_WIDTH - VIRIDIAN_ORIGIN_X - VIRIDIAN_W * VIRIDIAN_IMAGE_TILE_SIZE // = 648
 
 export const YELLOW_MAPS: Record<string, YellowMapData> = {
     [YELLOW_ENTRANCE_MAP_ID]: {
@@ -790,23 +817,23 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         id: "yellow_cendreville",
         name: "CENDREVILLE",
         tiles: buildCendrevilleCollisions(),
-        width: VIRIDIAN_W,
-        height: VIRIDIAN_H,
-        // Retour vers la VILLE : bande EST (x=43, miroir de la bande ouest d'ACE).
-        // On revient en (1,17), juste à droite d'ACE.
-        exits: [17, 18, 19].map((y) => ({
-            x: VIRIDIAN_W - 1,
-            y,
+        width: CENDREVILLE_W,
+        height: CENDREVILLE_H,
+        // Retour vers la VILLE : route sable SUD (bas de la map) → on ressort en (1,17),
+        // juste à droite d'ACE. Spawn d'arrivée juste au-dessus (CENDREVILLE_SPAWN).
+        exits: [13, 14, 15, 16].map((x) => ({
+            x,
+            y: 33,
             targetMapId: YELLOW_ENTRANCE_MAP_ID,
             targetSpawnX: 1,
             targetSpawnY: 17,
         })),
         backgroundImage: "/yellow/sprites/cendreville.png",
-        backgroundImageWidth: CENDREVILLE_IMAGE_WIDTH,
-        backgroundImageHeight: 672,
-        backgroundImageTileSize: VIRIDIAN_IMAGE_TILE_SIZE,
-        backgroundImageOriginX: CENDREVILLE_ORIGIN_X,
-        backgroundImageOriginY: VIRIDIAN_ORIGIN_Y,
+        backgroundImageWidth: CENDREVILLE_W * CENDREVILLE_TILE,   // 704
+        backgroundImageHeight: CENDREVILLE_H * CENDREVILLE_TILE,  // 592
+        backgroundImageTileSize: CENDREVILLE_TILE,
+        backgroundImageOriginX: 0,
+        backgroundImageOriginY: 0,
     },
     yellow_shop: {
         id: "yellow_shop",
