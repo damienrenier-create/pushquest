@@ -73,10 +73,6 @@ export interface BattleState {
     /** Proba de FUITE (0..100). Dégressive (anti-spam de rencontres) : 100 puis -10 par fuite
      *  consécutive, plancher 30. Calculée par le store et figée pour ce combat. Défaut 100. */
     fleeChance: number
-    /** XP DIFFÉRÉE (solo) : accumulée par uid au fil des KO ennemis, appliquée à la VICTOIRE
-     *  uniquement aux Daemons encore debout. Un Daemon KO en cours de combat ne touche rien
-     *  (même l'XP gagnée avant de tomber est perdue). */
-    pendingExp: Record<string, number>
     /** Transitoire : le Daemon JOUEUR a-t-il pu exécuter son action ce tour ? false s'il a été
      *  mis K.O. avant d'agir (adversaire plus rapide) → le store rembourse alors les reps. */
     lastPlayerActed?: boolean
@@ -167,7 +163,6 @@ export function createBattle(
         pvp: opts.pvp ?? false,
         enemyEnergy: opts.enemyEnergyCap != null ? { spent: 0, cap: opts.enemyEnergyCap } : null,
         fleeChance: opts.fleeChance ?? 100,
-        pendingExp: {},
     }
 }
 
@@ -727,13 +722,11 @@ function checkFaints(state: BattleState, events: BattleEvent[]) {
         const mon = active(s)
         if (mon.currentHp <= 0 && !(mon as any).__fainted) {
             (mon as any).__fainted = true
-            // RÈGLE (Sartay) : un Daemon JOUEUR KO à un instant du combat ne touchera AUCUNE
-            // XP à la victoire (même celle accumulée avant de tomber). Marqueur runtime.
-            if (side === "player") mon.koThisBattle = true
             events.push({ kind: "faint", side, name: displayName(mon) })
             events.push({ kind: "message", text: `${displayName(mon)} est K.O. !` })
             // PvP : le camp ADVERSE (celui dont l'actif vient de KO l'autre) gagne l'XP.
-            // Solo : l'XP de cet ennemi est ACCUMULÉE (versée à la victoire via finalizeExp).
+            // Solo : l'XP de CET ennemi est versée IMMÉDIATEMENT aux Daemons ayant combattu et
+            // encore debout (par Pokémon, pas en fin de combat — cf. awardExp).
             if (state.pvp) awardExpPvp(state, other(side), events)
             else if (side === "enemy") awardExp(state, events)
         }
@@ -741,8 +734,6 @@ function checkFaints(state: BattleState, events: BattleEvent[]) {
     // Issue / changement forcé
     if (!hasAlive(state.enemy)) {
         state.phase = "ended"; state.outcome = "win"
-        // Solo : on verse enfin l'XP différée, aux seuls Daemons encore debout.
-        if (!state.pvp) finalizeExp(state, events)
         events.push({ kind: "end", outcome: "win" })
         return
     }
@@ -789,57 +780,38 @@ export function chooseEnemyAction(state: BattleState, rng: Rng): ResolvedAction 
     return { side: "enemy", kind: "move", moveIndex }
 }
 
+// PARTAGE DÉGRESSIF de l'XP (Sartay) selon l'ordre de participation : les 2 premiers Daemon
+// ayant affronté l'ennemi touchent 100%, le 3e 60%, le 4e 30%, les 5e/6e 10% (au-delà : 10%).
+const XP_SHARE_LADDER = [1, 1, 0.6, 0.3, 0.1, 0.1]
+
 /**
- * XP attribuée quand l'adversaire actif tombe K.O.
- * PARTAGE : tous les Daemons du joueur ayant COMBATTU ce combat (state.participated)
- * et encore debout reçoivent l'XP. L'EXPÉRIENCE DE COMBAT (EV) reste réservée au
- * Daemon actif (celui qui a porté le coup fatal).
+ * XP attribuée IMMÉDIATEMENT à la chute de CHAQUE adversaire (par Pokémon, pas en fin de combat).
+ * RÈGLE (Sartay) : seuls les Daemons ayant AFFRONTÉ cet ennemi ET ENCORE DEBOUT à l'instant de
+ * sa chute en profitent → un Daemon KO ne touche plus rien à partir de sa chute, mais GARDE ce
+ * qu'il a gagné avant. Partage dégressif selon l'ordre de participation (XP_SHARE_LADDER).
+ * L'EXPÉRIENCE DE COMBAT (EV) reste réservée au Daemon actif (coup fatal).
  */
 function awardExp(state: BattleState, events: BattleEvent[]) {
-    void events
     const fainted = active(state.enemy)
     const winner = active(state.player)
     const faintedSp = speciesOf(fainted)
     const gain = xpForDefeat(faintedSp.baseExp, fainted.level, state.isWild)
 
-    // EV uniquement au Daemon actif s'il est encore debout ET pas KO ce combat.
-    if (winner.currentHp > 0 && !winner.koThisBattle) gainEv(winner, signatureStat(faintedSp), EV_YIELD_PER_WIN)
+    // EV uniquement au Daemon actif s'il est encore debout.
+    if (winner.currentHp > 0) gainEv(winner, signatureStat(faintedSp), EV_YIELD_PER_WIN)
 
-    // XP DIFFÉRÉE : seuls les Daemons ayant AFFRONTÉ CET ennemi (pas l'XP d'ennemis jamais
-    // vus → évite les évos trop rapides) ACCUMULENT le gain. Le versement réel a lieu à la
-    // VICTOIRE (finalizeExp), réservé aux Daemons encore debout → un KO en cours = 0 XP.
+    // Daemons ayant affronté CET ennemi (pas l'XP d'ennemis jamais vus → évite les évos trop
+    // rapides) ET ENCORE DEBOUT, dans l'ordre de participation → pilote le rang du partage.
     const credited = state.participants[fainted.uid] ?? []
+    const aliveOrdered = state.participated.filter((uid) =>
+        credited.includes(uid) && ((state.player.team.find((m) => m.uid === uid)?.currentHp ?? 0) > 0),
+    )
     for (const mon of state.player.team) {
-        if (!credited.includes(mon.uid)) continue
-        state.pendingExp[mon.uid] = (state.pendingExp[mon.uid] ?? 0) + gain
-    }
-}
-
-/**
- * Verse l'XP DIFFÉRÉE (state.pendingExp) à la VICTOIRE. Seuls les Daemons encore DEBOUT et
- * NON mis K.O. pendant ce combat en profitent (règle Sartay : un KO = 0 XP, même l'XP gagnée
- * avant de tomber). Émet ici les messages d'XP / montée de niveau / capacités apprises.
- */
-// PARTAGE DÉGRESSIF de l'XP (Sartay) selon l'ordre de participation : les 2 premiers Daemon
-// entrés au combat touchent 100%, le 3e 60%, le 4e 30%, les 5e/6e 10% (au-delà : 10%).
-const XP_SHARE_LADDER = [1, 1, 0.6, 0.3, 0.1, 0.1]
-
-function finalizeExp(state: BattleState, events: BattleEvent[]) {
-    const activeMon = active(state.player)
-    // Daemon ÉLIGIBLES (vivants, non-KO, avec XP en attente) dans l'ORDRE de participation
-    // → leur rang pilote le partage dégressif.
-    const eligible = state.participated.filter((uid) => {
-        const m = state.player.team.find((t) => t.uid === uid)
-        return !!m && m.currentHp > 0 && !m.koThisBattle && (state.pendingExp[uid] ?? 0) > 0
-    })
-    for (const mon of state.player.team) {
-        const gain = state.pendingExp[mon.uid] ?? 0
-        if (gain <= 0) continue
-        if (mon.currentHp <= 0 || mon.koThisBattle) continue // KO en cours de combat → aucune XP
-        const rank = eligible.indexOf(mon.uid)
-        const share = rank >= 0 ? (XP_SHARE_LADDER[rank] ?? 0.1) : 1
+        const rank = aliveOrdered.indexOf(mon.uid)
+        if (rank < 0) continue // n'a pas affronté cet ennemi, ou KO à l'instant de sa chute → rien
+        const share = XP_SHARE_LADDER[rank] ?? 0.1
         const finalGain = Math.max(1, Math.round(gain * share))
-        const isActive = mon === activeMon
+        const isActive = mon === winner
         const beforeMax = maxHpOf(mon)
         const res = applyExp(mon, finalGain)
         events.push({ kind: "message", text: `${displayName(mon)} gagne ${finalGain} points d'Exp !` })
@@ -859,7 +831,6 @@ function finalizeExp(state: BattleState, events: BattleEvent[]) {
             }
         }
     }
-    state.pendingExp = {}
 }
 
 /**
@@ -1011,7 +982,6 @@ function structuredCloneState(s: BattleState): BattleState {
         participated: [...s.participated],
         participants: Object.fromEntries(Object.entries(s.participants).map(([k, v]) => [k, [...v]])),
         enemyEnergy: s.enemyEnergy ? { ...s.enemyEnergy } : null,
-        pendingExp: { ...s.pendingExp },
     }
 }
 
