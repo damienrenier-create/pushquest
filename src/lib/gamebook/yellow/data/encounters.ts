@@ -117,6 +117,28 @@ const ZONES: Record<string, Zone> = {
             { speciesId: "draclet", base: VERY_RARE, player: "rare", rare: true },            // la pépite (Vol/Dragon)
         ],
     },
+    // CENDREVILLE : ville-miroir cendrée, gated par le Badge Flamme (ACE).
+    // Faune SPECTRE / FEU / ÉLECTRIK — rend enfin capturables les orphelins Feu.
+    yellow_cendreville: {
+        rate: 0.15,
+        minLevel: 16, // ville de milieu de partie (Badge Flamme requis) → pas de bébés
+        pool: [
+            // 🔥 FEU — les orphelins enfin capturables (cœur des cendres)
+            { speciesId: "pyrozly", base: COMMON },                                // Feu pur, passe-partout des cendres
+            { speciesId: "brasicow", base: UNCOMMON, player: "combat" },           // Feu/Combat
+            { speciesId: "colibraise", base: UNCOMMON, affinity: ["mountain"] },   // Vol/Feu
+            { speciesId: "blaziper", base: RARE, player: "rare", rare: true },     // Psy/Feu (pépite)
+            // 👻 SPECTRE — la brume de cendre
+            { speciesId: "sporbeo", base: UNCOMMON },                              // Spectre/Poison
+            { speciesId: "revemante", base: UNCOMMON },                            // Insecte/Spectre
+            { speciesId: "necarabee", base: RARE },                               // Insecte/Spectre
+            // ⚡ ÉLECTRIK — courts-circuits dans les ruines
+            { speciesId: "electroatiss", base: COMMON, player: "elec" },
+            { speciesId: "couranti", base: UNCOMMON, player: "elec" },
+            { speciesId: "zappeureal", base: RARE, player: "elec" },
+            { speciesId: "oragron", base: VERY_RARE, player: "elec", rare: true }, // Vol/Élec (pépite)
+        ],
+    },
 }
 
 export function hasEncounters(mapId: string): boolean {

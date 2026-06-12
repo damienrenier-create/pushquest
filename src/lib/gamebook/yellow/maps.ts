@@ -744,6 +744,17 @@ const VIRIDIAN_IMAGE_TILE_SIZE = 16
 const VIRIDIAN_ORIGIN_X = 8          // px image qui correspond à map (0, _)
 const VIRIDIAN_ORIGIN_Y = 24         // px image qui correspond à map (_, 0)
 
+// === CENDREVILLE = miroir HORIZONTAL de Viridian ===
+// Même tileset, layout en symétrie gauche/droite. Collisions = Viridian inversé
+// colonne par colonne ; fond = viridian_full.png flippé (cendreville.png).
+// L'origine X bascule de l'autre côté de l'image : 1360 - 8 - 44*16 = 648.
+function buildCendrevilleCollisions(): TileType[][] {
+    return buildViridianCollisions().map((row) => [...row].reverse())
+}
+const CENDREVILLE_IMAGE_WIDTH = 1360
+const CENDREVILLE_ORIGIN_X =
+    CENDREVILLE_IMAGE_WIDTH - VIRIDIAN_ORIGIN_X - VIRIDIAN_W * VIRIDIAN_IMAGE_TILE_SIZE // = 648
+
 export const YELLOW_MAPS: Record<string, YellowMapData> = {
     [YELLOW_ENTRANCE_MAP_ID]: {
         id: YELLOW_ENTRANCE_MAP_ID,
@@ -773,6 +784,28 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImageHeight: 672,
         backgroundImageTileSize: VIRIDIAN_IMAGE_TILE_SIZE,
         backgroundImageOriginX: VIRIDIAN_ORIGIN_X,
+        backgroundImageOriginY: VIRIDIAN_ORIGIN_Y,
+    },
+    yellow_cendreville: {
+        id: "yellow_cendreville",
+        name: "CENDREVILLE",
+        tiles: buildCendrevilleCollisions(),
+        width: VIRIDIAN_W,
+        height: VIRIDIAN_H,
+        // Retour vers la VILLE : bande EST (x=43, miroir de la bande ouest d'ACE).
+        // On revient en (1,17), juste à droite d'ACE.
+        exits: [17, 18, 19].map((y) => ({
+            x: VIRIDIAN_W - 1,
+            y,
+            targetMapId: YELLOW_ENTRANCE_MAP_ID,
+            targetSpawnX: 1,
+            targetSpawnY: 17,
+        })),
+        backgroundImage: "/yellow/sprites/cendreville.png",
+        backgroundImageWidth: CENDREVILLE_IMAGE_WIDTH,
+        backgroundImageHeight: 672,
+        backgroundImageTileSize: VIRIDIAN_IMAGE_TILE_SIZE,
+        backgroundImageOriginX: CENDREVILLE_ORIGIN_X,
         backgroundImageOriginY: VIRIDIAN_ORIGIN_Y,
     },
     yellow_shop: {

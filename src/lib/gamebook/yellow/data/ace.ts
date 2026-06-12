@@ -26,9 +26,22 @@ export const ACE_TRIGGER_TILES: { x: number; y: number }[] = [
 ]
 
 export const ACE_INTRO_LINES = [
-    "*Un type nonchalant te barre la route, mains dans les poches.*",
-    "Tiens, encore toi. Paraît que tu montes… Moi c'est ACE.",
-    "Je reviens chaque jour plus fort. Voyons si tu tiens le rythme !",
+    "*Un type nonchalant te barre la route, le regard tourné vers l'ouest.*",
+    "Tiens, encore toi. Moi c'est ACE — et je garde le passage vers CENDREVILLE.",
+    "Cette ville me fascine… mais personne n'y entre sans le Badge Flamme.",
+    "Même moi, je dois d'abord plier l'arène Feu. En attendant : montre-moi si tu montes !",
+]
+// ACE s'écarte quand tu portes le Badge Flamme → accès à CENDREVILLE.
+export const ACE_PASS_LINES = [
+    "*ACE s'écarte, un sourire en coin, et te laisse filer vers l'ouest.*",
+    "Le Badge Flamme, hein ? Bien joué. CENDREVILLE est à toi…",
+    "Mais je te lâche pas d'une semelle. À demain, rival.",
+]
+// Tu n'as pas (encore) le Badge Flamme : ACE bloque l'accès à CENDREVILLE.
+export const ACE_GATE_LINES = [
+    "*ACE te bloque le passage, mains dans les poches.*",
+    "Pas si vite. CENDREVILLE, c'est Badge Flamme obligatoire — la règle, c'est la règle.",
+    "Va calciner la patronne de l'arène Feu, ramène ce badge, et là je m'écarte.",
 ]
 export const ACE_DONE_LINES = [
     "*ACE époussette sa veste.*",

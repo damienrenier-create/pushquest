@@ -25,7 +25,7 @@ import { rollWildEncounter, wildLevelCap, hasEncounters } from "../data/encounte
 import { getTrainer, trainerBoost, arenaScaledLevel, type TrainTier } from "../data/trainers"
 import { createMonInstance } from "../battle/factory"
 import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroLines, SBIRE_DONE_LINES, SBIRE_NO_TEAM_LINES } from "../data/sbire"
-import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_INTRO_LINES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, buildAceTeam, speciesAtLevel } from "../data/ace"
+import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_INTRO_LINES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, ACE_PASS_LINES, ACE_GATE_LINES, buildAceTeam, speciesAtLevel } from "../data/ace"
 
 export interface ActiveDialogue {
     npcId: string
@@ -300,12 +300,29 @@ export const useGameStore = create<GameStore>((set, get) => ({
             }
         }
 
-        // ACE (rival) : interpelle le joueur s'il marche sur sa bande de déclenchement.
-        if (moved && next.mapId === YELLOW_ENTRANCE_MAP_ID && aceAvailableToday()
+        // ACE (rival + gardien) : sa bande de déclenchement borde le passage OUEST vers
+        // CENDREVILLE. Avec le Badge Flamme il s'écarte (→ Cendreville) ; sinon il barre
+        // la route (et te défie une fois par jour).
+        if (moved && next.mapId === YELLOW_ENTRANCE_MAP_ID
             && ACE_TRIGGER_TILES.some((t) => t.x === next.posX && t.y === next.posY)) {
+            if (getPlayerSave().badges.includes("feu")) {
+                // Badge Flamme → ACE laisse passer vers CENDREVILLE (ville-miroir cendrée).
+                const cp = createInitialPlayer("yellow_cendreville", 42, 17, "left")
+                set({
+                    map: YELLOW_MAPS["yellow_cendreville"], player: cp,
+                    dialogue: { npcId: ACE_TRAINER_ID, npcName: "ACE", lines: ACE_PASS_LINES, lineIndex: 0 },
+                })
+                scheduleSave(cp)
+                return
+            }
+            // Pas de Badge Flamme : ACE barre la route. Combat quotidien s'il est dispo,
+            // sinon simple rappel du gate (« reviens avec le badge »).
             set({
-                dialogue: { npcId: ACE_TRAINER_ID, npcName: "ACE", lines: ACE_INTRO_LINES, lineIndex: 0 },
-                pendingAce: true,
+                dialogue: {
+                    npcId: ACE_TRAINER_ID, npcName: "ACE", lineIndex: 0,
+                    lines: aceAvailableToday() ? ACE_INTRO_LINES : ACE_GATE_LINES,
+                },
+                pendingAce: aceAvailableToday(),
             })
         }
     },
