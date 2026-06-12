@@ -19,6 +19,8 @@ export default async function YellowDevPage() {
     if (!enabled) return notFound()
     // Réservé au créateur : active le téléport de dev ?map=<id> (ex. Cendreville).
     const isCreator = userId ? await isCreatorAccount(userId) : false
+    // Pseudo du compte (whitelist du gate ACE → Cendreville pour certains joueurs).
+    const nickname = (session?.user as { name?: string })?.name ?? ""
 
-    return <YellowDevClient userId={userId ?? ""} isCreator={isCreator} />
+    return <YellowDevClient userId={userId ?? ""} isCreator={isCreator} nickname={nickname} />
 }

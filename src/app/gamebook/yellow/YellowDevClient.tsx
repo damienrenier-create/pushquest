@@ -30,7 +30,7 @@ import LibraryPanel from "./LibraryPanel"
 import LabPanel from "./LabPanel"
 import ParkSignPanel from "./ParkSignPanel"
 import PosterPanel from "./PosterPanel"
-import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
+import { useGameStore, setCurrentNickname } from "@/lib/gamebook/yellow/store/gameStore"
 import { YELLOW_MAPS, CENDREVILLE_SPAWN } from "@/lib/gamebook/yellow/maps"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
 import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getGiftCtMove } from "@/lib/gamebook/yellow/store/battleStore"
@@ -52,7 +52,7 @@ import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
 import { expForLevel } from "@/lib/gamebook/yellow/battle/xp"
 import type { MonInstance } from "@/lib/gamebook/yellow/battle/types"
 
-export default function YellowDevClient({ userId = "", isCreator = false }: { userId?: string; isCreator?: boolean }) {
+export default function YellowDevClient({ userId = "", isCreator = false, nickname = "" }: { userId?: string; isCreator?: boolean; nickname?: string }) {
     const move = useGameStore((s) => s.move)
     const mapPlayer = useGameStore((s) => s.player)
     const pressA = useGameStore((s) => s.pressA)
@@ -320,6 +320,7 @@ export default function YellowDevClient({ userId = "", isCreator = false }: { us
 
     // Identité (User.id) + carte courante → estampillage ownership/lieu à la capture.
     useEffect(() => { setCurrentPlayerId(userId) }, [userId])
+    useEffect(() => { setCurrentNickname(nickname) }, [nickname]) // whitelist gate ACE → Cendreville
     useEffect(() => { setCurrentMapId(mapPlayer.mapId) }, [mapPlayer.mapId])
 
     // Toast éphémère : disparaît tout seul après 2,5 s.

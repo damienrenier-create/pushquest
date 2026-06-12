@@ -34,6 +34,16 @@ export interface ActiveDialogue {
     lineIndex: number
 }
 
+// Pseudo du compte courant (injecté par le client au montage). Sert au WHITELIST du gate
+// Cendreville : certains joueurs (ex. « Ledé ») passent ACE même sans le Badge Flamme.
+let currentNickname = ""
+export function setCurrentNickname(n: string) { currentNickname = (n ?? "").trim() }
+// Joueurs autorisés à franchir ACE sans le badge (accès anticipé à Cendreville).
+const CENDREVILLE_BYPASS = new Set(["ledé", "lede"])
+function aceBypassByNickname(): boolean {
+    return CENDREVILLE_BYPASS.has(currentNickname.toLowerCase())
+}
+
 interface GameStore {
     // === STATE ===
     player: PlayerState
@@ -311,8 +321,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // la route (et te défie une fois par jour).
         if (moved && next.mapId === YELLOW_ENTRANCE_MAP_ID
             && ACE_TRIGGER_TILES.some((t) => t.x === next.posX && t.y === next.posY)) {
-            if (getPlayerSave().badges.includes("feu")) {
-                // Badge Flamme → ACE laisse passer vers CENDREVILLE (ville-miroir cendrée).
+            if (getPlayerSave().badges.includes("feu") || aceBypassByNickname()) {
+                // Badge Flamme (ou pseudo whitelisté) → ACE laisse passer vers CENDREVILLE.
                 const cp = createInitialPlayer("yellow_cendreville", CENDREVILLE_SPAWN.x, CENDREVILLE_SPAWN.y, "up")
                 set({
                     map: YELLOW_MAPS["yellow_cendreville"], player: cp,
