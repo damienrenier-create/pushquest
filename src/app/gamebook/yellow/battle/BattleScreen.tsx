@@ -57,6 +57,7 @@ export default function BattleScreen() {
     const [cursor, setCursor] = useState(0)
     const [atkFx, setAtkFx] = useState<{ spec: AttackFxSpec; side: "player" | "enemy"; key: number } | null>(null)
     const atkKeyRef = useRef(0)
+    const lastMoveSlotRef = useRef(0) // #3 : mémorise la dernière attaque choisie (rouvre dessus)
     const repsWallet = usePlayer()
     const dex = usePokedex() // statut Pokédex (caught) → indicateur en combat sauvage
     const lastBattle = useRef(battle)
@@ -144,8 +145,19 @@ export default function BattleScreen() {
         setBattleInputHandler((a) => inputRef.current(a))
         return () => setBattleInputHandler(null)
     }, [])
-    // Remet le curseur en haut quand on change de menu ou de tour.
-    useEffect(() => { setCursor(0) }, [menu, step])
+    // Remet le curseur en haut quand on change de menu ou de tour — SAUF le menu d'attaque,
+    // qui se rouvre sur la DERNIÈRE attaque utilisée (#3 : moins de re-navigation au combat).
+    useEffect(() => {
+        if (menu === "moves") {
+            const onSlot = options.findIndex((o) => o.moveSlot === lastMoveSlotRef.current && !o.disabled)
+            const firstOk = options.findIndex((o) => !o.disabled)
+            setCursor(onSlot >= 0 ? onSlot : firstOk >= 0 ? firstOk : 0)
+        } else {
+            setCursor(0)
+        }
+        // options dépend de menu/step → on garde ces deps (ajouter `options` relancerait à chaque rendu).
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [menu, step])
 
     // Anti-bug "sprite d'un Daemon K.O. qui revient" (combats multi-Daemon, ex. ACE) :
     // dès que le playback d'un tour est terminé, on resynchronise les index AFFICHÉS sur
@@ -192,7 +204,7 @@ export default function BattleScreen() {
         fn()
     }
     const advance = () => { if (waitingForTap) setStep((s) => s + 1) }
-    const doMove = (i: number) => tryAct(() => { submitPlayerAction({ kind: "move", moveIndex: i }); setMenu("root") })
+    const doMove = (i: number) => tryAct(() => { lastMoveSlotRef.current = i; submitPlayerAction({ kind: "move", moveIndex: i }); setMenu("root") })
     const doStruggle = () => tryAct(() => { submitPlayerAction({ kind: "move", moveIndex: STRUGGLE_INDEX }); setMenu("root") })
     const doSwitch = (i: number) => tryAct(() => { submitPlayerAction({ kind: "switch", teamIndex: i }); setMenu("root") })
     const throwBall = (itemId: string) => tryAct(() => { submitPlayerAction({ kind: "ball", itemId }); setMenu("root") })
@@ -220,7 +232,7 @@ export default function BattleScreen() {
     const energy = getBattleEnergy()
     const remainingEnergy = Math.max(0, energy.cap - energy.spent)
     const items = repsWallet.items
-    type Opt = { label: React.ReactNode; onSelect: () => void; disabled?: boolean; right?: string }
+    type Opt = { label: React.ReactNode; onSelect: () => void; disabled?: boolean; right?: string; moveSlot?: number }
     const options: Opt[] = []
     let canBack = false
     if (playbackDone && isEnded) {
@@ -252,7 +264,7 @@ export default function BattleScreen() {
                 options.push({
                     label: `${mv?.name ?? slot.moveId}${battle.pvp ? "" : `  ⚡${costs[i]}`}`,
                     right: TYPE_FR[mv?.type ?? ""] ?? "",
-                    onSelect: () => doMove(i), disabled: !canUse(costs[i]),
+                    onSelect: () => doMove(i), disabled: !canUse(costs[i]), moveSlot: i,
                 })
             })
             options.push({ label: "← RETOUR", onSelect: () => setMenu("root") })

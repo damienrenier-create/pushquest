@@ -70,6 +70,9 @@ export interface BattleState {
     pvp: boolean
     /** Budget d'énergie de l'ENNEMI (ACE) : il paie ses attaques, struggle à sec. null = illimité. */
     enemyEnergy: { spent: number; cap: number } | null
+    /** Proba de FUITE (0..100). Dégressive (anti-spam de rencontres) : 100 puis -10 par fuite
+     *  consécutive, plancher 30. Calculée par le store et figée pour ce combat. Défaut 100. */
+    fleeChance: number
     /** XP DIFFÉRÉE (solo) : accumulée par uid au fil des KO ennemis, appliquée à la VICTOIRE
      *  uniquement aux Daemons encore debout. Un Daemon KO en cours de combat ne touche rien
      *  (même l'XP gagnée avant de tomber est perdue). */
@@ -139,7 +142,7 @@ export function toBattleMon(inst: MonInstance): BattleMon {
 export function createBattle(
     playerTeam: MonInstance[],
     enemyTeam: MonInstance[],
-    opts: { isWild: boolean; seed: number; aiLevel?: AiLevel; captureModifier?: number; pvp?: boolean; enemyEnergyCap?: number },
+    opts: { isWild: boolean; seed: number; aiLevel?: AiLevel; captureModifier?: number; pvp?: boolean; enemyEnergyCap?: number; fleeChance?: number },
 ): BattleState {
     // Le joueur envoie son premier Daemon ENCORE DEBOUT (pas un K.O. en tête de liste).
     const playerStart = playerTeam.findIndex((m) => m.currentHp > 0)
@@ -163,6 +166,7 @@ export function createBattle(
         participants: enemyLeadUid && leadUid ? { [enemyLeadUid]: [leadUid] } : {},
         pvp: opts.pvp ?? false,
         enemyEnergy: opts.enemyEnergyCap != null ? { spent: 0, cap: opts.enemyEnergyCap } : null,
+        fleeChance: opts.fleeChance ?? 100,
         pendingExp: {},
     }
 }
@@ -192,12 +196,23 @@ export function resolveTurn(prev: BattleState, playerAction: PlayerAction): Batt
             events.push({ kind: "message", text: "On ne fuit pas un combat de Dresseur !" })
             return commit(state, events, rng, prev.turn, /*advance*/ false)
         }
-        // Fuite garantie pour l'instant (formule de vitesse → Phase polish).
-        events.push({ kind: "message", text: "Tu prends la fuite !" })
-        state.phase = "ended"
-        state.outcome = "run"
-        events.push({ kind: "end", outcome: "run" })
-        return commit(state, events, rng, prev.turn, false)
+        // Proba de fuite DÉGRESSIVE (anti-spam de rencontres, cf. battleStore). Succès → on file.
+        if (rng.chance(state.fleeChance)) {
+            events.push({ kind: "message", text: "Tu prends la fuite !" })
+            state.phase = "ended"
+            state.outcome = "run"
+            events.push({ kind: "end", outcome: "run" })
+            return commit(state, events, rng, prev.turn, false)
+        }
+        // Échec : l'ennemi profite du tour (comme une capture ratée).
+        events.push({ kind: "message", text: "Impossible de fuir !" })
+        const ea = chooseEnemyAction(state, rng)
+        if (active(state.enemy).currentHp > 0 && ea.kind === "move") {
+            performMove(state, "enemy", ea.moveIndex!, events, rng)
+            checkFaints(state, events)
+        }
+        if (state.phase !== "ended") { endOfTurn(state, events, rng); checkFaints(state, events) }
+        return commit(state, events, rng, prev.turn, true)
     }
 
     // --- Lancer une Ball (capture, uniquement en combat sauvage) ---

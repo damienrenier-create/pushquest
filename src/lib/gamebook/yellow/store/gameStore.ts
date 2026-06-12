@@ -52,6 +52,7 @@ interface GameStore {
     pendingTrainerId: string | null // dresseur dont l'intro est en cours → combat à la fermeture
     pendingSbire: boolean // intro du sbire en cours → combat dynamique à la fermeture
     pendingAce: boolean // intro d'ACE en cours → combat à la fermeture
+    encounterCooldown: number // #7 : pas de rencontre sauvage pendant N déplacements (≥1 case libre après un combat)
 
     // === ACTIONS ===
     move: (dir: Direction) => void
@@ -191,6 +192,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     pendingTrainerId: null,
     pendingSbire: false,
     pendingAce: false,
+    encounterCooldown: 0,
 
     move: (dir) => {
         const { player, map, dialogue } = get()
@@ -272,7 +274,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
         const onWildTile = map.tiles[next.posY]?.[next.posX]
         const isWildTile = onWildTile === "grassTall"
             || (onWildTile === "grass" && !!map.backgroundImage && hasEncounters(map.id))
-        if (moved && isWildTile) {
+        // #7 : juste après un combat, on garantit au moins UNE case sans rencontre (anti-rafale).
+        if (moved && get().encounterCooldown > 0) {
+            set({ encounterCooldown: get().encounterCooldown - 1 })
+        } else if (moved && isWildTile) {
             const team = getPlayerSave().team
             const lead = team.find((m) => m.currentHp > 0)
             if (lead) {
@@ -295,6 +300,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 if (wild) {
                     if (typeof window !== "undefined" && encCount < 10) window.localStorage.setItem(ENC_KEY, String(encCount + 1))
                     const seed = Math.floor(Math.random() * 1e9) >>> 0
+                    set({ encounterCooldown: 1 }) // #7 : la 1re case après ce combat sera sans rencontre
                     startWildBattle(team, [wild], seed)
                 }
             }

@@ -59,11 +59,15 @@ export const ITEMS: Record<string, ItemData> = {
     },
     potion: {
         id: "potion", name: "Potion", category: "HEAL",
-        description: "Restaure 20 PV à un Daemon.", price: 150, healHp: 20,
+        description: "Restaure 20 PV à un Daemon.", price: 20, healHp: 20,
     },
     super_potion: {
         id: "super_potion", name: "Super Potion", category: "HEAL",
-        description: "Restaure 50 PV.", price: 350, healHp: 50,
+        description: "Restaure 50 PV.", price: 50, healHp: 50,
+    },
+    hyper_potion: {
+        id: "hyper_potion", name: "Hyper Potion", category: "HEAL",
+        description: "Restaure 100 PV.", price: 100, healHp: 100,
     },
 
     // --- Anti-statut (en combat) ---

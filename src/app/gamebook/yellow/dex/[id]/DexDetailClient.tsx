@@ -158,7 +158,6 @@ export default function DexDetailClient({ id }: { id: string }) {
                         <span style={S.colType}>Type</span>
                         <span style={S.colNum}>Pui</span>
                         <span style={S.colNum}>Préc</span>
-                        <span style={S.colNum}>PP</span>
                     </div>
                     {learnset.map((entry, i) => {
                         const mv = MOVES[entry.moveId]
@@ -174,7 +173,6 @@ export default function DexDetailClient({ id }: { id: string }) {
                                 <span style={S.colType}><TypeChip type={mv.type} /></span>
                                 <span style={S.colNum}>{mv.power > 0 ? mv.power : "—"}</span>
                                 <span style={S.colNum}>{mv.accuracy > 0 ? mv.accuracy : "—"}</span>
-                                <span style={S.colNum}>{mv.pp}</span>
                             </div>
                         )
                     })}

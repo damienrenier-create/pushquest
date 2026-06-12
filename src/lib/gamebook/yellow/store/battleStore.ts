@@ -105,6 +105,12 @@ interface PvpContext {
 let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, badgeAwarded: null, giftCtMove: null, pvpCtx: null }
 const listeners = new Set<() => void>()
 
+// #2 — FUITE anti-spam : compteur de fuites consécutives (session). Chaque fuite RÉUSSIE durcit
+// la suivante (100% → -10% par fuite, plancher 30%). Remis à 0 dès qu'on ENGAGE vraiment un
+// combat (victoire / défaite / capture) → seul le SPAM de fuites est pénalisé.
+let fleeStreak = 0
+function wildFleeChance(): number { return Math.max(30, 100 - 10 * fleeStreak) }
+
 function emit() {
     for (const l of listeners) l()
 }
@@ -144,7 +150,7 @@ export function dispatchBattleInput(a: BattleInput) {
 export function startWildBattle(playerTeam: MonInstance[], enemyTeam: MonInstance[], seed: number) {
     // Quota PushQuest du jour atteint → capture facilitée pendant le combat.
     const captureModifier = getPlayer().wildCtx?.quotaReached ? QUOTA_CAPTURE_BONUS : 1
-    const battle = createBattle(playerTeam, enemyTeam, { isWild: true, seed, captureModifier })
+    const battle = createBattle(playerTeam, enemyTeam, { isWild: true, seed, captureModifier, fleeChance: wildFleeChance() })
     syncPokedex(battle) // adversaire "vu" dès la rencontre
     setStore({ battle, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, badgeAwarded: null, giftCtMove: null })
 }
@@ -210,6 +216,10 @@ export function submitPlayerAction(action: PlayerAction) {
 
 /** Fin de combat : resync équipe (XP/PV/niveaux), capture, évolutions, sauvegarde. */
 function finishBattle(b: BattleState) {
+    // #2 : fuite RÉUSSIE → on durcit la prochaine ; tout autre dénouement = engagement → reset.
+    if (b.outcome === "run") fleeStreak++
+    else fleeStreak = 0
+
     // 1) Resynchronise l'équipe persistante depuis l'état de combat.
     setTeam(b.player.team.map(toMonInstance))
 

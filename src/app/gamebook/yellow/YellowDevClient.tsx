@@ -1311,7 +1311,8 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
                                             <span style={{ fontSize: 8, fontWeight: 900, color: "#fff", background: cat.color, padding: "1px 4px", borderRadius: 3, flexShrink: 0, letterSpacing: 0.5 }}>{cat.label}</span>
                                             <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m?.name ?? mv.moveId} <span style={{ opacity: 0.55 }}>({m?.type ?? "?"}{m && m.power > 0 ? ` · ${m.power}` : ""})</span></span>
                                         </span>
-                                        <span style={{ opacity: 0.7, flexShrink: 0 }}>PP {mv.pp}/{mv.ppMax} · 💪 {moveCostReps(m?.power ?? 0, live.level)}</span>
+                                        {/* PP masqués côté joueur (illimités tant qu'on a l'énergie) → on n'affiche que le coût en reps. */}
+                                        <span style={{ opacity: 0.7, flexShrink: 0 }}>💪 {moveCostReps(m?.power ?? 0, live.level)}</span>
                                     </div>
                                 )
                             })}

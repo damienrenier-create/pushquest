@@ -67,6 +67,15 @@ describe("combat de dresseur — enchaînement multi-Daemon", () => {
         expect(afterBall.outcome).not.toBe("caught") // la capture est refusée
     })
 
+    it("#2 — la fuite suit fleeChance : 100% file, 0% échoue et l'ennemi prend le tour", () => {
+        const sure = createBattle([createMonInstance("rochison", 50)], [createMonInstance("plumiot", 2)], { isWild: true, seed: 1, fleeChance: 100 })
+        expect(resolveTurn(sure, { kind: "run" }).outcome).toBe("run") // 100% → on file
+        const stuck = createBattle([createMonInstance("rochison", 50)], [createMonInstance("plumiot", 2)], { isWild: true, seed: 1, fleeChance: 0 })
+        const after = resolveTurn(stuck, { kind: "run" })
+        expect(after.outcome).not.toBe("run")  // 0% → fuite refusée
+        expect(after.phase).not.toBe("ended")  // … toujours en combat (l'ennemi a joué)
+    })
+
     it("un objet de soin restaure des PV et consomme le tour", () => {
         const p = createMonInstance("rochison", 30) // énorme Défense → l'ennemi tape pour ~rien
         p.currentHp = 10
