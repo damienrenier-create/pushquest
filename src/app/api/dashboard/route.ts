@@ -165,7 +165,22 @@ export async function GET(req: Request) {
 
 
         // Re-fetch current user after fines (or just use local state if lazy)
-        const currentUser = allUsers.find(u => u.id === userId) as any;
+        let currentUser = allUsers.find(u => u.id === userId) as any;
+        // INVITÉ : allUsers exclut isGuest=true (hors-concours), donc currentUser serait undefined
+        // → la route crashait et son dashboard restait vide. On charge SON enregistrement À PART
+        // (mêmes champs) pour afficher SES reps/quota, SANS l'injecter dans les boucles compétition
+        // (amendes, XP, classement, pot) qui, elles, continuent d'ignorer les invités.
+        if (!currentUser) {
+            currentUser = await (prisma.user as any).findUnique({
+                where: { id: userId },
+                select: {
+                    id: true, nickname: true, email: true, image: true, buyoutPaid: true,
+                    buyoutPaidAt: true, sets: true, fines: true, sallyUps: true,
+                    medicalCertificates: true, potEvents: true, xpAdjustments: true,
+                    league: true, onboardingStartedAt: true, createdAt: true,
+                },
+            });
+        }
 
         const allSprinterEvents = (prisma as any).badgeEvent ? await (prisma as any).badgeEvent.findMany({
             where: { badgeKey: { startsWith: 'sprinter_' }, eventType: 'UNIQUE_AWARDED' }
@@ -351,7 +366,9 @@ export async function GET(req: Request) {
             { id: "sprinter_100", type: "sprinter", threshold: 100, label: "Sprinteur 100j", emoji: "🌌" }
         ];
 
-        const currentUserLB = leaderboard.find(u => u.id === userId);
+        // INVITÉ : absent du leaderboard (construit sur allUsers) → on retombe sur ses propres sets
+        // pour que SES reps encodées s'affichent quand même (setsSelected / totalsSelected).
+        const currentUserLB = leaderboard.find(u => u.id === userId) ?? ({ sets: currentUser?.sets ?? [] } as any);
         const earnedTrophies: any[] = [];
         const availableTrophies: any[] = [];
 
