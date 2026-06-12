@@ -31,7 +31,8 @@ import LabPanel from "./LabPanel"
 import ParkSignPanel from "./ParkSignPanel"
 import PosterPanel from "./PosterPanel"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
-import { YELLOW_MAPS } from "@/lib/gamebook/yellow/maps"
+import { YELLOW_MAPS, CENDREVILLE_SPAWN } from "@/lib/gamebook/yellow/maps"
+import { isBlockingTile } from "@/lib/gamebook/mapEngine"
 import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getGiftCtMove } from "@/lib/gamebook/yellow/store/battleStore"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
@@ -51,7 +52,7 @@ import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
 import { expForLevel } from "@/lib/gamebook/yellow/battle/xp"
 import type { MonInstance } from "@/lib/gamebook/yellow/battle/types"
 
-export default function YellowDevClient({ userId = "" }: { userId?: string }) {
+export default function YellowDevClient({ userId = "", isCreator = false }: { userId?: string; isCreator?: boolean }) {
     const move = useGameStore((s) => s.move)
     const mapPlayer = useGameStore((s) => s.player)
     const pressA = useGameStore((s) => s.pressA)
@@ -260,6 +261,20 @@ export default function YellowDevClient({ userId = "" }: { userId?: string }) {
         ; (async () => {
             await loadYellowSave()
             initAutosave()
+            // TÉLÉPORT CRÉATEUR (dev) : ?map=<id> saute direct à une map (ex. yellow_cendreville)
+            // en ignorant les gates (badge, ACE…). Gaté au créateur → inoffensif pour les joueurs.
+            if (!cancelled && isCreator && typeof window !== "undefined") {
+                const target = new URLSearchParams(window.location.search).get("map")
+                const tm = target ? YELLOW_MAPS[target] : null
+                if (target && tm) {
+                    let sp: { x: number; y: number } = { x: 1, y: 1 }
+                    if (target === "yellow_cendreville") sp = CENDREVILLE_SPAWN
+                    else outer: for (let y = 0; y < tm.height; y++) for (let x = 0; x < tm.width; x++) {
+                        if (!isBlockingTile(tm.tiles[y][x])) { sp = { x, y }; break outer }
+                    }
+                    setMap(target, sp.x, sp.y)
+                }
+            }
             // Cadeau du DIEU SPAG crédité au chargement (saveManager) → on affiche son message une fois.
             if (!cancelled) { const gift = consumeGiftMessage(); if (gift) setToast(gift) }
             // 1re entrée (intro jamais vue + aucune équipe) → cinématique + choix du starter.

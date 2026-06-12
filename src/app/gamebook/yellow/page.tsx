@@ -6,6 +6,7 @@
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { isNexusYellowEnabled } from "@/lib/gamebook/yellow/featureFlag"
+import { isCreatorAccount } from "@/lib/gamebook/creator"
 import { notFound } from "next/navigation"
 import YellowDevClient from "./YellowDevClient"
 
@@ -16,6 +17,8 @@ export default async function YellowDevPage() {
     const userId = (session?.user as { id?: string })?.id
     const enabled = await isNexusYellowEnabled(userId)
     if (!enabled) return notFound()
+    // Réservé au créateur : active le téléport de dev ?map=<id> (ex. Cendreville).
+    const isCreator = userId ? await isCreatorAccount(userId) : false
 
-    return <YellowDevClient userId={userId ?? ""} />
+    return <YellowDevClient userId={userId ?? ""} isCreator={isCreator} />
 }
