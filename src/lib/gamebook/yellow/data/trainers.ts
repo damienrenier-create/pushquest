@@ -19,6 +19,9 @@ export interface TrainerMonSpec {
     level: number
     /** Attaques imposées (sinon auto depuis le learnset) — pour les moves signature exclusifs. */
     moves?: string[]
+    /** OPENING SCRIPTÉ : moveIds imposés à ses 1ers tours (ordre), quoi qu'il arrive — priorité
+     *  sur l'IA et le budget d'énergie. Ex. un boss qui lance sa signature d'entrée. */
+    opening?: string[]
 }
 
 export interface TrainerData {
@@ -365,7 +368,7 @@ export const TRAINERS: TrainerData[] = [
             { speciesId: "tauricendre", level: 29 },
             { speciesId: "calderont", level: 30 },
             { speciesId: "toucanyon", level: 31 },
-            { speciesId: "vipember", level: 32, moves: ["pyrotechnie", "lance_flammes", "vague_mentale", "flamme_ardente"] },
+            { speciesId: "vipember", level: 32, moves: ["pyrotechnie", "lance_flammes", "vague_mentale", "flamme_ardente"], opening: ["pyrotechnie", "pyrotechnie"] },
         ],
         reward: 0, aiLevel: "trainer", badge: "feu", giftCt: "ct21",
         intro: [

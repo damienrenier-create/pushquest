@@ -756,6 +756,14 @@ function checkFaints(state: BattleState, events: BattleEvent[]) {
 export function chooseEnemyAction(state: BattleState, rng: Rng): ResolvedAction {
     const self = active(state.enemy)
     const foe = active(state.player)
+    // OPENING SCRIPTÉ (boss) : l'attaque imposée passe AVANT l'IA et le budget d'énergie
+    // ("quoi qu'il arrive"). Consommée une par une, uniquement quand ce Daemon est actif.
+    if (self.openingMoves && self.openingMoves.length > 0) {
+        const forced = self.openingMoves.shift()!
+        const idx = self.moves.findIndex((m) => m.moveId === forced)
+        if (idx >= 0) return { side: "enemy", kind: "move", moveIndex: idx }
+        // Sécurité : move non connu → entrée retirée, on enchaîne sur l'IA normale ce tour.
+    }
     const choice = chooseAiAction(self, foe, state.enemy.team, state.enemy.activeIndex, state.aiLevel, rng)
     if (choice.kind === "switch" && choice.teamIndex !== undefined) {
         return { side: "enemy", kind: "switch", teamIndex: choice.teamIndex }
@@ -992,5 +1000,7 @@ function cloneMon(m: BattleMon): BattleMon {
         moves: m.moves.map((mv) => ({ ...mv })),
         stages: { ...m.stages },
         volatiles: { ...m.volatiles },
+        // copie profonde : l'opening scripté est consommé (shift) par tour sans muter l'état précédent.
+        ...(m.openingMoves ? { openingMoves: [...m.openingMoves] } : {}),
     }
 }

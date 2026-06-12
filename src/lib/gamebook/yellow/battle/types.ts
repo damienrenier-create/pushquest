@@ -166,6 +166,9 @@ export interface BattleMon extends MonInstance {
      *  confondre avec `bestDmg` (record À VIE, persisté, affiché sur la fiche). */
     battleBestDmg?: number
     battleBestDmgMove?: string
+    /** OPENING SCRIPTÉ (ennemi/boss) : moveIds imposés à ses 1ers tours, dans l'ordre, quoi qu'il
+     *  arrive (priorité sur l'IA et le budget d'énergie). Consommé un par un. Runtime, non persisté. */
+    openingMoves?: string[]
 }
 
 export function neutralStages(): StatStages {

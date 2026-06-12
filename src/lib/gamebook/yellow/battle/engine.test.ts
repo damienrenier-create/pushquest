@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest"
-import { createBattle, resolveTurn, type BattleState } from "./engine"
+import { createBattle, resolveTurn, chooseEnemyAction, type BattleState } from "./engine"
+import { Rng } from "./rng"
 import { createMonInstance } from "./factory"
 import { applyEvolution } from "./evolution"
 import { getTrainer } from "../data/trainers"
@@ -134,6 +135,16 @@ describe("combat de dresseur — enchaînement multi-Daemon", () => {
         expect(final.player.team[0].currentHp).toBe(0)              // b est bien K.O.
         expect(final.player.team[0].exp).toBeGreaterThan(startExpB) // … mais a GARDÉ l'XP d'e1 (tué vivant)
         expect(final.player.team[1].exp).toBeGreaterThan(startExpA) // a (debout) touche l'XP d'e2
+    })
+
+    it("opening scripté : le boss force son move signature sur ses 2 premiers tours", () => {
+        const enemy = createMonInstance("vipember", 32, { moveIds: ["lance_flammes", "pyrotechnie", "vague_mentale", "flamme_ardente"] })
+        Object.assign(enemy, { openingMoves: ["pyrotechnie", "pyrotechnie"] }) // signature imposée d'entrée
+        const s = createBattle([createMonInstance("cerfeuillu", 30)], [enemy], { isWild: false, seed: 7, aiLevel: "trainer" })
+        const pyro = s.enemy.team[0].moves.findIndex((m) => m.moveId === "pyrotechnie") // ≠ index 0 (lance_flammes, + puissant)
+        expect(chooseEnemyAction(s, new Rng(s.seed))).toMatchObject({ kind: "move", moveIndex: pyro }) // tour 1 : forcé
+        expect(chooseEnemyAction(s, new Rng(s.seed))).toMatchObject({ kind: "move", moveIndex: pyro }) // tour 2 : forcé
+        expect(s.enemy.team[0].openingMoves).toHaveLength(0)                                           // opening épuisé
     })
 
     it("#10 — le Daemon ennemi envoyé après un K.O. n'agit PAS le tour même", () => {
