@@ -283,11 +283,19 @@ function finishBattle(b: BattleState) {
             markTrainerRematched(id)
             const rm = t?.rematch
             let rewardLine: string
-            if (rm?.giftCt && grantCt(rm.giftCt)) {
-                const mvId = getCt(rm.giftCt)?.moveId
-                const mv = mvId ? (getMove(mvId)?.name ?? null) : null
-                rewardLine = mv
-                    ? `🎁 ${t?.name ?? "Le boss"} te remet la CT « ${mv} » ! Un cadeau unique — apprends-la à un Daemon compatible.`
+            const ctIds = rm?.giftCts ?? []
+            if (ctIds.length > 0) {
+                // CT(s) cadeau : on ne nomme que celles RÉELLEMENT ajoutées (grantCt idempotent).
+                const names: string[] = []
+                for (const ctId of ctIds) {
+                    if (!grantCt(ctId)) continue
+                    const mvId = getCt(ctId)?.moveId
+                    const mv = mvId ? getMove(mvId)?.name : null
+                    if (mv) names.push(mv)
+                }
+                const plural = names.length > 1
+                rewardLine = names.length
+                    ? `🎁 ${t?.name ?? "Le boss"} te remet ${plural ? "les CT" : "la CT"} « ${names.join(" » et « ")} » ! Cadeau unique — apprends-${plural ? "les" : "la"} à un Daemon compatible.`
                     : `🎁 ${t?.name ?? "Le boss"} te remet une CT cadeau !`
             } else if (rm?.reward && rm.reward > 0) {
                 const added = grantReps(rm.reward)

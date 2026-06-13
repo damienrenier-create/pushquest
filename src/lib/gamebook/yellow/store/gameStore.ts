@@ -546,26 +546,30 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     return
                 }
             }
+            // Boss d'arène — 2e verrou : les gardes (battus) réclament leur REVANCHE.
+            // Tant qu'ils ne sont pas tous RE-battus, le boss renvoie le joueur les affronter
+            // (sans rien dévoiler de SON propre rematch ni des récompenses).
+            if (trainer.requiresRematch && !isTrainerDefeated(trainer.id)) {
+                const restants = trainer.requiresRematch.filter((id) => !isTrainerRematched(id)).length
+                if (restants > 0) {
+                    set({
+                        dialogue: {
+                            npcId: npc.id, npcName: npc.name, lineIndex: 0,
+                            lines: [
+                                "*VOLTA t'arrête d'un geste, un éclair dans les yeux.*",
+                                `Pas si vite. Mes ${restants} gardien(s) réclament leur revanche : bats-les une seconde fois.`,
+                                "Reviens quand ils t'auront tous redéfié — alors je te jugerai digne de m'affronter.",
+                            ],
+                        },
+                    })
+                    return
+                }
+            }
             if (isTrainerDefeated(trainer.id)) {
                 const rm = trainer.rematch
                 // REMATCH (match retour) : 2e équipe, dispo une fois le dresseur déjà battu.
+                // (Pour le boss, ses gardes étaient déjà requis en revanche AVANT son 1er combat.)
                 if (rm && !isTrainerRematched(trainer.id)) {
-                    // Gate du rematch (le boss exige les rematchs de ses gardes).
-                    if (rm.requiresRematch) {
-                        const restants = rm.requiresRematch.filter((id) => !isTrainerRematched(id)).length
-                        if (restants > 0) {
-                            set({
-                                dialogue: {
-                                    npcId: npc.id, npcName: npc.name, lineIndex: 0,
-                                    lines: [
-                                        "*VOLTA contemple l'orage, immobile.*",
-                                        `Tu veux ma revanche ? Bats d'abord mes ${restants} gardien(s) en match retour. Alors je libérerai ma vraie tempête.`,
-                                    ],
-                                },
-                            })
-                            return
-                        }
-                    }
                     set({
                         dialogue: { npcId: npc.id, npcName: npc.name, lines: rm.intro ?? trainer.intro, lineIndex: 0 },
                         pendingTrainerId: trainer.id, pendingRematch: true,

@@ -370,7 +370,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // Badge d'arène gagné : notification claire (sinon le joueur a l'impression de rien recevoir).
     useEffect(() => {
         if (badgeAwarded && !battle && evolutions.length === 0) {
-            const labels: Record<string, string> = { plante: "FEUILLE", feu: "FLAMME", eau: "GOUTTE" }
+            const labels: Record<string, string> = { plante: "FEUILLE", feu: "FLAMME", eau: "GOUTTE", roche: "ROCHE", elec: "ÉCLAIR" }
             const lbl = labels[badgeAwarded] ?? badgeAwarded.toUpperCase()
             const giftMove = getGiftCtMove()
             const lines = [

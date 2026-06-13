@@ -262,7 +262,7 @@ export const YELLOW_NPCS: NpcDefinition[] = [
             "⚡ TOUR HERTZ — 100% ÉLECTRIK. La foudre y terrasse l'Eau et le Vol.",
             "🌍 Mais l'éclair ne traverse pas la TERRE : un Daemon SOL ne craint pas l'Élec et la renvoie au sol. Amènes-en un — les guépards Feu/Élec y sont même ×4 faibles !",
             "🪶 Deux pièges : certains gardiens prennent leur ENVOL pour fuir le Sol… et l'AS de VOLTA se CHARGE un tour avant de foudroyer — frappe-le PENDANT qu'il prépare sa Surtension.",
-            "🔁 Déjà tout battu ? Les gardiens offrent une REVANCHE plus coriace (+50 énergie). Bats-les tous en match retour pour que VOLTA libère sa vraie tempête… et t'offre la CT Mirage.",
+            "🔁 Cette Tour aime la REVANCHE : ses gardiens veulent être battus DEUX fois (+50 énergie au match retour) avant que VOLTA daigne t'affronter. Et la vaincre, ELLE, n'est jamais vraiment fini…",
         ],
     },
 
