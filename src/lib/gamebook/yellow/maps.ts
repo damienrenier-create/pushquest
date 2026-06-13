@@ -969,6 +969,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         // Sortie (7,9) → retour ville devant la porte du gym (comme Plante/Roche, 15×10).
         exits: [{ x: 7, y: 9, targetMapId: YELLOW_ENTRANCE_MAP_ID, targetSpawnX: 36, targetSpawnY: 11 }],
         // PAS de backgroundImage : rendu CSS tuilé (grass/tree) — aucun asset à fournir.
+        debugGrid: true, // WIP : grille (coords x,y) visible pour placer les PNJ — à retirer ensuite
     },
     yellow_grotte: {
         id: "yellow_grotte",

@@ -261,9 +261,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         ; (async () => {
             await loadYellowSave()
             initAutosave()
-            // TÉLÉPORT CRÉATEUR (dev) : ?map=<id> saute direct à une map (ex. yellow_cendreville)
-            // en ignorant les gates (badge, ACE…). Gaté au créateur → inoffensif pour les joueurs.
-            if (!cancelled && isCreator && typeof window !== "undefined") {
+            // TÉLÉPORT DEV : ?map=<id> saute direct à une map (ex. yellow_arena_elec) en ignorant
+            // les gates (badge, ACE…). Réservé au créateur OU au pseudo whitelisté (Ledé) pour le test.
+            const teleportAllowed = isCreator || ["ledé", "lede"].includes(nickname.normalize("NFC").toLowerCase())
+            if (!cancelled && teleportAllowed && typeof window !== "undefined") {
                 const target = new URLSearchParams(window.location.search).get("map")
                 const tm = target ? YELLOW_MAPS[target] : null
                 if (target && tm) {
