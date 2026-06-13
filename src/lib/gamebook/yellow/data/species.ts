@@ -1329,6 +1329,126 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "Grizzly au pelage fumant ; hiberne dans les cratères encore tièdes.",
         sprite: "/yellow/sprites/dex/pyrozly.png",
     },
+
+    // ============================================================
+    // NOUVELLES LIGNÉES ÉLECTRIQUES (arène "Tour Hertz") — dexNo 109-117
+    // ============================================================
+    // 🐋 Baleines Eau/Élec — le MUR/pivot (riposte ×2 sur Roche/Sol, casse le hard-counter rochison).
+    belunode: {
+        id: "belunode", dexNo: 109, name: "Bélunode", types: ["EAU", "ELEC"],
+        baseStats: { hp: 65, atk: 45, def: 55, spe: 35, spc: 55 },
+        learnset: [
+            { level: 1, moveId: "pistolet_a_o" }, { level: 1, moveId: "charge" },
+            { level: 8, moveId: "etincelle" }, { level: 14, moveId: "lame_eau" },
+        ],
+        catchRate: 140, baseExp: 64, rarity: "COMMON", growthRate: "medium_fast", role: "Eau/Élec — bébé béluga",
+        description: "Bébé béluga bardé de petits nodes électriques ; crépite quand on le caresse.",
+        sprite: "/yellow/sprites/dex/belunode.png",
+    },
+    sonarque: {
+        id: "sonarque", dexNo: 110, name: "Sonarque", types: ["EAU", "ELEC"],
+        baseStats: { hp: 90, atk: 60, def: 75, spe: 45, spc: 75 },
+        learnset: [
+            { level: 1, moveId: "pistolet_a_o" }, { level: 1, moveId: "etincelle" },
+            { level: 1, moveId: "lame_eau" }, { level: 22, moveId: "repos" },
+            { level: 30, moveId: "fulgurance" },
+        ],
+        catchRate: 60, baseExp: 128, rarity: "UNCOMMON", growthRate: "medium_fast", role: "Eau/Élec — cétacé sonar",
+        evolution: { toId: "leviathonn", method: { kind: "LEVEL", level: 34 } },
+        description: "Émet des clics sonar électrifiés pour étourdir ses proies dans les abysses.",
+        sprite: "/yellow/sprites/dex/sonarque.png",
+    },
+    leviathonn: {
+        id: "leviathonn", dexNo: 111, name: "Léviathonn", types: ["EAU", "ELEC"],
+        baseStats: { hp: 120, atk: 75, def: 95, spe: 50, spc: 95 },
+        learnset: [
+            { level: 1, moveId: "lame_eau" }, { level: 1, moveId: "etincelle" },
+            { level: 1, moveId: "repos" }, { level: 30, moveId: "fulgurance" },
+            { level: 44, moveId: "hydrocanon" },
+        ],
+        catchRate: 30, baseExp: 196, rarity: "RARE", growthRate: "medium_fast", role: "Eau/Élec — colosse abyssal (mur)",
+        description: "Colosse des fosses ; sa décharge fait trembler l'océan sur des kilomètres.",
+        sprite: "/yellow/sprites/dex/leviathonn.png",
+    },
+
+    // 🧠 Jerbiwat — UNIQUE, croissance LENTE (faible tôt, monstre à N60 via Focalisation cumulable).
+    jerbiwat: {
+        id: "jerbiwat", dexNo: 112, name: "Jerbiwat", types: ["PSY", "ELEC"],
+        baseStats: { hp: 70, atk: 55, def: 60, spe: 120, spc: 130 },
+        learnset: [
+            { level: 1, moveId: "charge" }, { level: 1, moveId: "choc_mental" },
+            { level: 12, moveId: "etincelle" }, { level: 24, moveId: "focalisation" },
+            { level: 36, moveId: "vague_mentale" }, { level: 48, moveId: "fulgurance" },
+        ],
+        catchRate: 30, baseExp: 200, rarity: "RARE", growthRate: "slow", role: "Psy/Élec — gerbille late-bloomer",
+        description: "Petite gerbille électrostatique ; lente à mûrir, mais un canon psychique une fois adulte.",
+        sprite: "/yellow/sprites/dex/jerbiwat.png",
+    },
+
+    // 👻 Chats Spectre/Élec — rapides, Mirage (esquive) + Ombre Furtive (priorité). Immunisés Normal+Combat.
+    namicha: {
+        id: "namicha", dexNo: 113, name: "Namicha", types: ["SPECTRE", "ELEC"],
+        baseStats: { hp: 45, atk: 55, def: 42, spe: 70, spc: 55 },
+        learnset: [
+            { level: 1, moveId: "leche" }, { level: 1, moveId: "vive_attaque" },
+            { level: 12, moveId: "mirage" }, { level: 20, moveId: "ombre_furtive" },
+        ],
+        catchRate: 120, baseExp: 66, rarity: "UNCOMMON", growthRate: "medium_fast", role: "Spectre/Élec — chaton de l'ombre",
+        evolution: { toId: "namizeus", method: { kind: "LEVEL", level: 30 } },
+        description: "Chaton fait d'ombre et de statique ; se faufile entre deux éclairs.",
+        sprite: "/yellow/sprites/dex/namicha.png",
+    },
+    namizeus: {
+        id: "namizeus", dexNo: 114, name: "Namizeus", types: ["SPECTRE", "ELEC"],
+        baseStats: { hp: 70, atk: 80, def: 60, spe: 110, spc: 95 },
+        learnset: [
+            { level: 1, moveId: "leche" }, { level: 1, moveId: "mirage" },
+            { level: 1, moveId: "ombre_furtive" }, { level: 1, moveId: "vive_attaque" },
+            { level: 34, moveId: "fulgurance" }, { level: 40, moveId: "ball_ombre" },
+        ],
+        catchRate: 45, baseExp: 188, rarity: "RARE", growthRate: "medium_fast", role: "Spectre/Élec — félin spectral",
+        description: "Félin spectral foudroyant ; frappe depuis les ombres avant que le tonnerre ne gronde.",
+        sprite: "/yellow/sprites/dex/namizeus.png",
+    },
+
+    // 🐆 Guépards Feu/Élec — glass cannon ULTRA-rapide, esquive (Mirage) + débuff (Hurlement). ×4 faible Sol.
+    boltah: {
+        id: "boltah", dexNo: 115, name: "Boltah", types: ["FEU", "ELEC"],
+        baseStats: { hp: 45, atk: 55, def: 40, spe: 75, spc: 55 },
+        learnset: [
+            { level: 1, moveId: "flammeche" }, { level: 1, moveId: "etincelle" },
+            { level: 10, moveId: "mirage" }, { level: 16, moveId: "hurlement" },
+        ],
+        catchRate: 140, baseExp: 66, rarity: "COMMON", growthRate: "medium_fast", role: "Feu/Élec — guépardeau",
+        evolution: { toId: "heatah", method: { kind: "LEVEL", level: 16 } },
+        description: "Guépardeau aux pattes crépitantes ; déjà plus rapide que son ombre.",
+        sprite: "/yellow/sprites/dex/boltah.png",
+    },
+    heatah: {
+        id: "heatah", dexNo: 116, name: "Heatah", types: ["FEU", "ELEC"],
+        baseStats: { hp: 60, atk: 70, def: 50, spe: 100, spc: 70 },
+        learnset: [
+            { level: 1, moveId: "flammeche" }, { level: 1, moveId: "etincelle" },
+            { level: 1, moveId: "mirage" }, { level: 1, moveId: "hurlement" },
+            { level: 24, moveId: "flamme_ardente" },
+        ],
+        catchRate: 60, baseExp: 130, rarity: "UNCOMMON", growthRate: "medium_fast", role: "Feu/Élec — guépard de course",
+        evolution: { toId: "thundah", method: { kind: "LEVEL", level: 36 } },
+        description: "Laisse une traînée de braises et d'étincelles dans son sillage.",
+        sprite: "/yellow/sprites/dex/heatah.png",
+    },
+    thundah: {
+        id: "thundah", dexNo: 117, name: "Thundah", types: ["FEU", "ELEC"],
+        baseStats: { hp: 75, atk: 85, def: 60, spe: 130, spc: 95 },
+        learnset: [
+            { level: 1, moveId: "etincelle" }, { level: 1, moveId: "mirage" },
+            { level: 1, moveId: "hurlement" }, { level: 1, moveId: "flamme_ardente" },
+            { level: 40, moveId: "fulgurance" }, { level: 46, moveId: "lance_flammes" },
+        ],
+        catchRate: 45, baseExp: 196, rarity: "RARE", growthRate: "medium_fast", role: "Feu/Élec — guépard foudre (le + rapide)",
+        description: "Le Daemon le plus rapide du Nexus ; un éclair de feu sur quatre pattes.",
+        sprite: "/yellow/sprites/dex/thundah.png",
+    },
 }
 
 export function getSpecies(id: string): SpeciesData | null {
