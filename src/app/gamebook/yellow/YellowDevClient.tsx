@@ -33,7 +33,7 @@ import PosterPanel from "./PosterPanel"
 import { useGameStore, setCurrentNickname } from "@/lib/gamebook/yellow/store/gameStore"
 import { YELLOW_MAPS, CENDREVILLE_SPAWN } from "@/lib/gamebook/yellow/maps"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
-import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getGiftCtMove } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getGiftCtMove } from "@/lib/gamebook/yellow/store/battleStore"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
 import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove } from "@/lib/gamebook/yellow/store/playerStore"
@@ -83,6 +83,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const sbireWin = useSbireWin()
     const aceWin = useAceWin()
     const badgeAwarded = useBadgeAwarded()
+    const rematchReward = useRematchReward()
     const router = useRouter()
     const player = usePlayer()
     const [menu, setMenu] = useState<"none" | "pause" | "team" | "pc" | "bag" | "reput">("none")
@@ -381,6 +382,15 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             clearBadgeAwarded()
         }
     }, [badgeAwarded, battle, evolutions.length, showDialogue])
+
+    // Revanche d'arène gagnée : dialogue de récompense post-combat (énergie / CT Mirage),
+    // une fois le combat quitté ET la cinématique d'évolution terminée (même règle que badge/ACE).
+    useEffect(() => {
+        if (rematchReward && !battle && evolutions.length === 0) {
+            showDialogue(rematchReward.npcId, rematchReward.npcName, rematchReward.lines)
+            clearRematchReward()
+        }
+    }, [rematchReward, battle, evolutions.length, showDialogue])
 
     // Fin d'intro : on accorde le starter choisi (niv 5) + un petit kit de départ,
     // on marque l'intro vue et on persiste.

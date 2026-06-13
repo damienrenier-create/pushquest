@@ -19,7 +19,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance } from "../battle/types"
 import { markSeen, markCaught } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt } from "./playerStore"
 import { getCt } from "../data/cts"
 import { getMove } from "../data/moves"
 import { getSpecies } from "../data/species"
@@ -56,6 +56,8 @@ function syncPokedex(b: BattleState) {
 interface TrainerContext {
     trainerId: string
     reward: number
+    /** Ce combat est un REMATCH (2e équipe) → récompense rematch au lieu de badge/CT initiale. */
+    isRematch: boolean
 }
 
 interface BattleStoreState {
@@ -79,6 +81,8 @@ interface BattleStoreState {
     badgeAwarded: BadgeId | null
     /** Nom de l'attaque de la CT cadeau remise par le boss (notif) ; null sinon. */
     giftCtMove: string | null
+    /** Récompense d'un REMATCH de dresseur (dialogue post-combat : énergie / CT Mirage) ; null sinon. */
+    rematchReward: { npcId: string; npcName: string; lines: string[] } | null
     /** Contexte d'un combat JOUEUR vs JOUEUR (null = combat solo classique). */
     pvpCtx: PvpContext | null
 }
@@ -102,7 +106,7 @@ interface PvpContext {
     desync: boolean
 }
 
-let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, badgeAwarded: null, giftCtMove: null, pvpCtx: null }
+let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null }
 const listeners = new Set<() => void>()
 
 // #2 — FUITE anti-spam : compteur de fuites consécutives (session). Chaque fuite RÉUSSIE durcit
@@ -154,19 +158,19 @@ export function startWildBattle(playerTeam: MonInstance[], enemyTeam: MonInstanc
     const captureModifier = getPlayer().wildCtx?.quotaReached ? QUOTA_CAPTURE_BONUS : 1
     const battle = createBattle(playerTeam, enemyTeam, { isWild: true, seed, captureModifier, fleeChance: wildFleeChance() })
     syncPokedex(battle) // adversaire "vu" dès la rencontre
-    setStore({ battle, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, badgeAwarded: null, giftCtMove: null })
+    setStore({ battle, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, badgeAwarded: null, giftCtMove: null, rematchReward: null })
 }
 
 export function startTrainerBattle(
     playerTeam: MonInstance[],
     enemyTeam: MonInstance[],
     seed: number,
-    opts?: { trainerId?: string; reward?: number; aiLevel?: AiLevel; enemyEnergyCap?: number },
+    opts?: { trainerId?: string; reward?: number; aiLevel?: AiLevel; enemyEnergyCap?: number; isRematch?: boolean },
 ) {
     const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: opts?.aiLevel, enemyEnergyCap: opts?.enemyEnergyCap })
     syncPokedex(battle)
-    const trainer = opts?.trainerId ? { trainerId: opts.trainerId, reward: opts.reward ?? 0 } : null
-    setStore({ battle, evolutions: [], trainer, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, badgeAwarded: null, giftCtMove: null })
+    const trainer = opts?.trainerId ? { trainerId: opts.trainerId, reward: opts.reward ?? 0, isRematch: opts.isRematch ?? false } : null
+    setStore({ battle, evolutions: [], trainer, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, badgeAwarded: null, giftCtMove: null, rematchReward: null })
 }
 
 /** Énergie de combat : reps déjà dépensés ce combat + plafond (selon badges). */
@@ -241,6 +245,7 @@ function finishBattle(b: BattleState) {
     let aceRewardMsg: string | null = null
     let badgeAwarded: BadgeId | null = null
     let giftCtMove: string | null = null
+    let rematchReward: BattleStoreState["rematchReward"] = null
     if (b.outcome === "win" && storeState.trainer) {
         if (storeState.trainer.trainerId === ACE_TRAINER_ID) {
             // ACE : sa défaite ratchete son niveau (+2 sur ton meilleur) + mémorise le contre.
@@ -271,6 +276,28 @@ function finishBattle(b: BattleState) {
                 addItem(SBIRE_REWARD_BALL_ID, 1)
                 sbireRewardMsg = `🎁 Et prends donc cette Nexus Ball, tu l'as méritée !`
             }
+        } else if (storeState.trainer.isRematch) {
+            // REMATCH gagné : marque le rematch fait + récompense (énergie / CT cadeau).
+            const id = storeState.trainer.trainerId
+            const t = getTrainer(id)
+            markTrainerRematched(id)
+            const rm = t?.rematch
+            let rewardLine: string
+            if (rm?.giftCt && grantCt(rm.giftCt)) {
+                const mvId = getCt(rm.giftCt)?.moveId
+                const mv = mvId ? (getMove(mvId)?.name ?? null) : null
+                rewardLine = mv
+                    ? `🎁 ${t?.name ?? "Le boss"} te remet la CT « ${mv} » ! Un cadeau unique — apprends-la à un Daemon compatible.`
+                    : `🎁 ${t?.name ?? "Le boss"} te remet une CT cadeau !`
+            } else if (rm?.reward && rm.reward > 0) {
+                const added = grantReps(rm.reward)
+                rewardLine = added > 0
+                    ? `⚡ +${added} d'énergie pour la revanche !`
+                    : `⚡ Revanche gagnée ! (ta jauge d'énergie déborde déjà)`
+            } else {
+                rewardLine = "⚡ Revanche gagnée !"
+            }
+            rematchReward = { npcId: id, npcName: t?.name ?? "DRESSEUR", lines: [...(rm?.defeat ?? []), rewardLine] }
         } else {
             markTrainerDefeated(storeState.trainer.trainerId)
             const t = getTrainer(storeState.trainer.trainerId)
@@ -296,7 +323,7 @@ function finishBattle(b: BattleState) {
         setTeam([...team])
     }
     // Expose les évolutions pour la cinématique post-combat (jouée après "QUITTER").
-    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, badgeAwarded, giftCtMove })
+    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, badgeAwarded, giftCtMove, rematchReward })
 
     // 4) Sauvegarde persistante (DB).
     persistYellowSave()
@@ -348,6 +375,16 @@ export function clearBadgeAwarded() {
 /** Nom de l'attaque de la CT cadeau remise par le boss (lu à l'affichage). */
 export function getGiftCtMove(): string | null {
     return storeState.giftCtMove
+}
+
+/** Récompense d'un rematch d'arène à afficher post-combat (énergie / CT) ; null sinon. */
+export function getRematchReward(): BattleStoreState["rematchReward"] {
+    return storeState.rematchReward
+}
+
+/** Consommé par la carte une fois la récompense de rematch affichée. */
+export function clearRematchReward() {
+    setStore({ ...storeState, rematchReward: null })
 }
 
 // ============================================================
@@ -438,7 +475,7 @@ export function startPvpBattle(battle: BattleState, ctx: Omit<PvpContext, "seq" 
     mpLog("battle", "start", { battleId: ctx.battleId, role: ctx.role, checksum: battleChecksum(battle) })
     setStore({
         battle, evolutions: [], trainer: null, whiteout: false, energySpent: 0,
-        sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, badgeAwarded: null, giftCtMove: null,
+        sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, badgeAwarded: null, giftCtMove: null, rematchReward: null,
         pvpCtx: { ...ctx, seq: 0, myAction: null, oppAction: null, won: null, desync: false },
     })
 }
@@ -631,5 +668,13 @@ export function useBadgeAwarded(): BadgeId | null {
         subscribe,
         () => getSnapshot().badgeAwarded,
         () => getSnapshot().badgeAwarded,
+    )
+}
+
+export function useRematchReward(): BattleStoreState["rematchReward"] {
+    return useSyncExternalStore(
+        subscribe,
+        () => getSnapshot().rematchReward,
+        () => getSnapshot().rematchReward,
     )
 }

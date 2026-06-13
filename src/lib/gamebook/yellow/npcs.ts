@@ -247,6 +247,25 @@ export const YELLOW_NPCS: NpcDefinition[] = [
 
     // (Arène : plus d'arbitre — c'est le Bosquet Sacré, le Druide est le boss.)
 
+    // === ARÈNE ÉLECTRIQUE — panneau-antisèche (Tour Hertz, près de l'entrée) ===
+    {
+        id: "y_elecarena_sign",
+        name: "PANNEAU",
+        mapId: "yellow_arena_elec",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🪧", color: "#f6c640" },
+        initialX: 4,
+        initialY: 8,
+        dialoguesAfter: [
+            "*Tu lis l'antisèche grésillante de la Tour Hertz.*",
+            "⚡ TOUR HERTZ — 100% ÉLECTRIK. La foudre y terrasse l'Eau et le Vol.",
+            "🌍 Mais l'éclair ne traverse pas la TERRE : un Daemon SOL ne craint pas l'Élec et la renvoie au sol. Amènes-en un — les guépards Feu/Élec y sont même ×4 faibles !",
+            "🪶 Deux pièges : certains gardiens prennent leur ENVOL pour fuir le Sol… et l'AS de VOLTA se CHARGE un tour avant de foudroyer — frappe-le PENDANT qu'il prépare sa Surtension.",
+            "🔁 Déjà tout battu ? Les gardiens offrent une REVANCHE plus coriace (+50 énergie). Bats-les tous en match retour pour que VOLTA libère sa vraie tempête… et t'offre la CT Mirage.",
+        ],
+    },
+
     // === PANNEAUX DE CONSEILS (map Nord) ===
     ...PARK_SIGN_NPCS,
 

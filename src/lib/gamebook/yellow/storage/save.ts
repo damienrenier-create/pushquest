@@ -33,6 +33,8 @@ export interface YellowSave {
     pokedex: { seen: string[]; caught: string[] }
     /** Ids des dresseurs déjà battus (ne se recombattent pas). */
     defeatedTrainers: string[]
+    /** Ids des dresseurs déjà RE-battus (match retour / rematch fait). */
+    rematchedTrainers: string[]
     /** Badges d'arène gagnés. */
     badges: string[]
     /** La cinématique d'intro (choix du starter) a-t-elle déjà été jouée ? */
@@ -57,7 +59,7 @@ export interface YellowSave {
 export const SAVE_VERSION = 1
 
 export function emptySave(): YellowSave {
-    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [] }
+    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [] }
 }
 
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -174,6 +176,7 @@ export function parseSave(raw: unknown): YellowSave {
         pastaDayBonus: typeof o.pastaDayBonus === "number" ? Math.max(0, Math.floor(o.pastaDayBonus)) : 0,
         pokedex: { seen: strArr(dex.seen), caught: strArr(dex.caught) },
         defeatedTrainers: strArr(o.defeatedTrainers),
+        rematchedTrainers: strArr(o.rematchedTrainers),
         badges: strArr(o.badges),
         introSeen: o.introSeen === true,
         sbireDefeatsToday: typeof o.sbireDefeatsToday === "number" ? Math.max(0, Math.floor(o.sbireDefeatsToday)) : 0,

@@ -18,7 +18,7 @@ import type { YellowMapData } from "../maps"
 import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, resetFleeStreak } from "./battleStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, getAceState, aceTeamSizeFor, aceAvailableToday, aceWinsCount } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, getAceState, aceTeamSizeFor, aceAvailableToday, aceWinsCount } from "./playerStore"
 import { getSpecies } from "../data/species"
 import { persistYellowSave } from "./saveManager"
 import { rollWildEncounter, wildLevelCap, hasEncounters } from "../data/encounters"
@@ -61,6 +61,7 @@ interface GameStore {
     hydrated: boolean // true une fois que l'état serveur a été chargé
     stepFrame: 0 | 1 // alterne à chaque déplacement réel → anime les jambes du sprite
     pendingTrainerId: string | null // dresseur dont l'intro est en cours → combat à la fermeture
+    pendingRematch: boolean // l'intro en cours est un REMATCH (2e équipe + récompense)
     pendingSbire: boolean // intro du sbire en cours → combat dynamique à la fermeture
     pendingAce: boolean // intro d'ACE en cours → combat à la fermeture
     encounterCooldown: number // #7 : pas de rencontre sauvage pendant N déplacements (≥1 case libre après un combat)
@@ -106,7 +107,7 @@ function scheduleSave(player: PlayerState) {
 
 // Lance un combat de dresseur. Renvoie un dialogue à afficher (équipe K.O.) ou null
 // si le combat a bien démarré. L'équipe ennemie est fabriquée à partir du registre.
-function tryLaunchTrainer(trainerId: string): ActiveDialogue | null {
+function tryLaunchTrainer(trainerId: string, isRematch = false): ActiveDialogue | null {
     const trainer = getTrainer(trainerId)
     if (!trainer) return null
     const team = getPlayerSave().team
@@ -124,7 +125,9 @@ function tryLaunchTrainer(trainerId: string): ActiveDialogue | null {
     // Rival de route (Léo/Mia) : niveau d'un garde de l'arène la plus récemment battue. Leurs
     // Daemons ÉVOLUENT au stade correspondant à ce niveau (speciesAtLevel enchaîne les évolutions).
     const scaledLvl = trainer.scaleWithBadges ? arenaScaledLevel(getPlayerSave().badges) : null
-    const enemyTeam = trainer.team.map((s) => {
+    // Rematch (match retour) → 2e équipe ; sinon l'équipe de base.
+    const specs = isRematch && trainer.rematch ? trainer.rematch.team : trainer.team
+    const enemyTeam = specs.map((s) => {
         const lvl = scaledLvl ?? s.level
         const speciesId = trainer.scaleWithBadges ? speciesAtLevel(s.speciesId, lvl) : s.speciesId
         const inst = createMonInstance(speciesId, lvl, { owned: false, moveIds: s.moves, ...trainerBoost(speciesId, lvl, tier) })
@@ -133,7 +136,7 @@ function tryLaunchTrainer(trainerId: string): ActiveDialogue | null {
         return inst
     })
     const seed = Math.floor(Math.random() * 1e9) >>> 0
-    startTrainerBattle(team, enemyTeam, seed, { trainerId, reward: trainer.reward, aiLevel: trainer.aiLevel })
+    startTrainerBattle(team, enemyTeam, seed, { trainerId, reward: isRematch ? 0 : trainer.reward, aiLevel: trainer.aiLevel, isRematch })
     return null
 }
 
@@ -204,6 +207,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     hydrated: false,
     stepFrame: 0,
     pendingTrainerId: null,
+    pendingRematch: false,
     pendingSbire: false,
     pendingAce: false,
     encounterCooldown: 0,
@@ -360,7 +364,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 // Fin d'un dialogue : si c'était l'intro d'un dresseur, on lance le combat.
                 const pid = get().pendingTrainerId
                 if (pid) {
-                    set({ dialogue: tryLaunchTrainer(pid), pendingTrainerId: null })
+                    set({ dialogue: tryLaunchTrainer(pid, get().pendingRematch), pendingTrainerId: null, pendingRematch: false })
                 } else if (get().pendingSbire) {
                     set({ dialogue: tryLaunchSbire(), pendingSbire: false })
                 } else if (get().pendingAce) {
@@ -543,11 +547,37 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 }
             }
             if (isTrainerDefeated(trainer.id)) {
+                const rm = trainer.rematch
+                // REMATCH (match retour) : 2e équipe, dispo une fois le dresseur déjà battu.
+                if (rm && !isTrainerRematched(trainer.id)) {
+                    // Gate du rematch (le boss exige les rematchs de ses gardes).
+                    if (rm.requiresRematch) {
+                        const restants = rm.requiresRematch.filter((id) => !isTrainerRematched(id)).length
+                        if (restants > 0) {
+                            set({
+                                dialogue: {
+                                    npcId: npc.id, npcName: npc.name, lineIndex: 0,
+                                    lines: [
+                                        "*VOLTA contemple l'orage, immobile.*",
+                                        `Tu veux ma revanche ? Bats d'abord mes ${restants} gardien(s) en match retour. Alors je libérerai ma vraie tempête.`,
+                                    ],
+                                },
+                            })
+                            return
+                        }
+                    }
+                    set({
+                        dialogue: { npcId: npc.id, npcName: npc.name, lines: rm.intro ?? trainer.intro, lineIndex: 0 },
+                        pendingTrainerId: trainer.id, pendingRematch: true,
+                    })
+                    return
+                }
+                // Plus de rematch (ou déjà fait) → simple réplique de défaite.
                 set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: trainer.defeat, lineIndex: 0 } })
             } else {
                 set({
                     dialogue: { npcId: npc.id, npcName: npc.name, lines: trainer.intro, lineIndex: 0 },
-                    pendingTrainerId: trainer.id,
+                    pendingTrainerId: trainer.id, pendingRematch: false,
                 })
             }
             return
@@ -568,7 +598,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         if (!dialogue) return
         // Un défi ne se refuse pas : fermer l'intro lance quand même le combat.
         if (pendingTrainerId) {
-            set({ dialogue: tryLaunchTrainer(pendingTrainerId), pendingTrainerId: null })
+            set({ dialogue: tryLaunchTrainer(pendingTrainerId, get().pendingRematch), pendingTrainerId: null, pendingRematch: false })
         } else if (get().pendingSbire) {
             set({ dialogue: tryLaunchSbire(), pendingSbire: false })
         } else if (get().pendingAce) {

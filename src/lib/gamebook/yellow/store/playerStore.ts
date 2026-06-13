@@ -52,6 +52,8 @@ interface PlayerState {
     pastaDayBonus: number
     /** Ids des dresseurs déjà battus. */
     defeatedTrainers: string[]
+    /** Ids des dresseurs déjà RE-battus (match retour / rematch fait). */
+    rematchedTrainers: string[]
     /** Badges d'arène gagnés (Feu/Plante/Eau). */
     badges: BadgeId[]
     /** Stats d'effort du jour (PushQuest) qui modulent les rencontres. Null = neutre. */
@@ -94,7 +96,7 @@ export function emptyPvpStats(): PvpStats {
     return { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }
 }
 
-let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [] }
+let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [] }
 const listeners = new Set<() => void>()
 
 function emit() { for (const l of listeners) l() }
@@ -114,7 +116,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         spagGift: p.spagGift ?? st.spagGift ?? false,
         pastaGodGift: p.pastaGodGift ?? st.pastaGodGift ?? false,
         pastaBoughtToday: p.pastaBoughtToday ?? st.pastaBoughtToday ?? 0, pastaDayBonus: p.pastaDayBonus ?? st.pastaDayBonus ?? 0,
-        defeatedTrainers: p.defeatedTrainers ?? [], badges: p.badges ?? st.badges ?? [], wildCtx: p.wildCtx ?? st.wildCtx ?? null,
+        defeatedTrainers: p.defeatedTrainers ?? [], rematchedTrainers: p.rematchedTrainers ?? [], badges: p.badges ?? st.badges ?? [], wildCtx: p.wildCtx ?? st.wildCtx ?? null,
         introSeen: p.introSeen ?? st.introSeen ?? false,
         sbireDefeatsToday: p.sbireDefeatsToday ?? st.sbireDefeatsToday ?? 0,
         sbireWinsTotal: p.sbireWinsTotal ?? st.sbireWinsTotal ?? 0,
@@ -138,7 +140,7 @@ export function markIntroSeen() {
 
 /** DEV : remet la progression jaune à zéro pour rejouer l'intro (équipe vidée, introSeen=false). */
 export function resetForIntro() {
-    st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [] }
+    st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [] }
     emit()
 }
 
@@ -165,6 +167,17 @@ export function markTrainerDefeated(trainerId: string) {
 
 export function isTrainerDefeated(trainerId: string): boolean {
     return st.defeatedTrainers.includes(trainerId)
+}
+
+/** Marque un dresseur comme RE-battu (rematch / match retour fait, idempotent). */
+export function markTrainerRematched(trainerId: string) {
+    if (st.rematchedTrainers.includes(trainerId)) return
+    st = { ...st, rematchedTrainers: [...st.rematchedTrainers, trainerId] }
+    emit()
+}
+
+export function isTrainerRematched(trainerId: string): boolean {
+    return st.rematchedTrainers.includes(trainerId)
 }
 
 /** Possède ce badge d'arène ? */

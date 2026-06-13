@@ -50,6 +50,21 @@ export interface TrainerData {
     requiresTrainers?: string[]
     /** CT CADEAU remise gratuitement à la victoire (trophée du boss, cf. cts.ts). */
     giftCt?: string
+    /** REMATCH (match retour) : 2e équipe, proposée UNE fois ce dresseur déjà battu.
+     *  - reward  : énergie (reps) offerte à la victoire du rematch.
+     *  - giftCt  : CT cadeau remise à la victoire du rematch (ex. boss → Mirage).
+     *  - requiresRematch : rematch VERROUILLÉ tant que ces dresseurs ne sont pas RE-battus
+     *                      (le boss exige les rematchs de ses gardes).
+     *  - intro/defeat : répliques propres au rematch (defeat = jouée APRÈS la victoire,
+     *                   suivie du message de récompense auto). */
+    rematch?: {
+        team: TrainerMonSpec[]
+        reward?: number
+        giftCt?: string
+        requiresRematch?: string[]
+        intro?: string[]
+        defeat?: string[]
+    }
     /** Entraînement : boost Saiyan/EV des Daemons (gardien = moyen, élite = boss/ACE). */
     training?: TrainTier
     /** Rival de route (Léo/Mia) : monte au niveau du garde le plus fort de l'arène la plus
@@ -391,14 +406,23 @@ export const TRAINERS: TrainerData[] = [
         mapId: "yellow_arena_elec", x: 4, y: 3,
         team: [
             { speciesId: "trolystrik", level: 16 },
-            { speciesId: "trolystrik", level: 16 },
-            { speciesId: "trolystrik", level: 16 },
+            { speciesId: "boltah", level: 16 },
+            { speciesId: "heatah", level: 30 },
             { speciesId: "brutetrik", level: 30 },
-            { speciesId: "brutetrik", level: 36 },
         ],
         reward: 220, aiLevel: "trainer",
         intro: ["*Un gamin recharge une bobine en faisant crépiter ses doigts.*", "La Tour Hertz ne laisse passer que ceux qui encaissent le courant. À toi !"],
         defeat: ["Court-circuit… passe à l'étage suivant."],
+        rematch: {
+            team: [
+                { speciesId: "boltah", level: 33 },
+                { speciesId: "heatah", level: 36 },
+                { speciesId: "brutetrik", level: 36 },
+            ],
+            reward: 50,
+            intro: ["*BOBINE claque une bobine flambant neuve, l'œil brillant.*", "Revanche ! Mes nouveaux Daemons sont taillés pour la VITESSE. Suis le rythme si tu peux !"],
+            defeat: ["Re-grillé… t'es increvable, toi."],
+        },
     },
     {
         id: "y_elecarena_g2", name: "TECHNICIENNE OHM", title: "Gardienne de la Tour",
@@ -406,13 +430,23 @@ export const TRAINERS: TrainerData[] = [
         mapId: "yellow_arena_elec", x: 10, y: 2,
         team: [
             { speciesId: "electroatiss", level: 15 },
-            { speciesId: "electroatiss", level: 15 },
+            { speciesId: "belunode", level: 15 },
             { speciesId: "couranti", level: 25 },
             { speciesId: "zappeureal", level: 36 },
         ],
         reward: 240, aiLevel: "trainer",
         intro: ["Je règle la résistance de chaque câble de cette tour. La tienne va lâcher !"],
         defeat: ["Surtension imprévue… tu conduis mieux que je pensais."],
+        rematch: {
+            team: [
+                { speciesId: "sonarque", level: 30 },
+                { speciesId: "leviathonn", level: 36 },
+                { speciesId: "zappeureal", level: 36 },
+            ],
+            reward: 50,
+            intro: ["*OHM replonge ses câbles dans un bassin d'eau salée.*", "Eau ET foudre : cette fois je conduis le courant à pleine puissance. Revanche !"],
+            defeat: ["Court-circuit dans l'eau… bien joué."],
+        },
     },
     {
         id: "y_elecarena_g3", name: "PILOTE FOUDRE", title: "Gardien de la Tour",
@@ -421,11 +455,23 @@ export const TRAINERS: TrainerData[] = [
         team: [
             { speciesId: "oragron", level: 35 },
             { speciesId: "pantheon", level: 20 },
+            { speciesId: "namicha", level: 28 },
             { speciesId: "voltapanthe", level: 30 },
         ],
         reward: 270, aiLevel: "trainer",
         intro: ["*Le vent s'engouffre dans la tour, chargé d'électricité statique.*", "Mon Oragron frappe avant l'orage. Tu ne le verras pas venir."],
         defeat: ["Foudroyé en plein vol…"],
+        rematch: {
+            team: [
+                { speciesId: "oragron", level: 35 },
+                { speciesId: "namizeus", level: 35 },
+                { speciesId: "jerbiwat", level: 35 },
+                { speciesId: "voltapanthe", level: 35 },
+            ],
+            reward: 50,
+            intro: ["*FOUDRE siffle ; des ombres électriques rampent à ses pieds.*", "Revanche ! Mes spectres frappent vite et se font insaisissables. Bonne chance pour les toucher."],
+            defeat: ["Insaisissables… et pourtant tu m'as eu."],
+        },
     },
     {
         id: "y_elecarena_g4", name: "SENTINELLE ARC", title: "Sentinelle de la Tour",
@@ -439,6 +485,16 @@ export const TRAINERS: TrainerData[] = [
         reward: 300, aiLevel: "trainer",
         intro: ["Cent mille volts gardent ce palier. Touche le garde-fou si tu l'oses."],
         defeat: ["Disjoncté… VOLTA t'attend au sommet de la Tour."],
+        rematch: {
+            team: [
+                { speciesId: "thundah", level: 40 },
+                { speciesId: "leviathonn", level: 36 },
+                { speciesId: "namizeus", level: 38 },
+            ],
+            reward: 50,
+            intro: ["*ARC pousse le voltage de la Tour à son maximum.*", "Dernier garde-fou avant VOLTA. Ma revanche te disjonctera à coup sûr !"],
+            defeat: ["Disjoncté… file en haut, elle t'attend."],
+        },
     },
     {
         id: "y_elecarena_boss", name: "VOLTA", title: "Architecte de la Tour Hertz",
@@ -464,6 +520,29 @@ export const TRAINERS: TrainerData[] = [
             "*VOLTA glisse une CT grésillante dans ta paume.*",
             "Et garde ma SURTENSION : que l'éclair guide ta route. Le Nexus t'attend plus haut !",
         ],
+        rematch: {
+            // Défi FINAL de la Tour : accessible UNIQUEMENT après les 4 rematchs de gardes.
+            // Deux fauves OUVRENT sur Mirage (esquive) → l'AS Voltapanthe reste sur Surtension.
+            team: [
+                { speciesId: "hebulmin", level: 41 },
+                { speciesId: "jerbiwat", level: 42 },
+                { speciesId: "leviathonn", level: 43 },
+                { speciesId: "thundah", level: 44, moves: ["mirage", "fulgurance", "flamme_ardente", "etincelle"], opening: ["mirage"] },
+                { speciesId: "namizeus", level: 45, moves: ["mirage", "fulgurance", "ball_ombre", "vive_attaque"], opening: ["mirage"] },
+                { speciesId: "voltapanthe", level: 46, moves: ["surtension", "fulgurance", "cage_eclair", "vive_attaque"], opening: ["surtension"] },
+            ],
+            giftCt: "ct25", // Mirage
+            requiresRematch: ["y_elecarena_g1", "y_elecarena_g2", "y_elecarena_g3", "y_elecarena_g4"],
+            intro: [
+                "*La Tour Hertz tout entière vibre d'une charge nouvelle, aveuglante.*",
+                "Tu es revenu. Cette fois je libère ma VRAIE tempête — et deux de mes fauves s'effaceront dans le Mirage.",
+                "Que le meilleur conducteur gagne !",
+            ],
+            defeat: [
+                "Disjonctée… une seconde fois. Tu ES la foudre du Nexus.",
+                "*VOLTA fait crépiter entre ses doigts une CT d'un blanc aveuglant.*",
+            ],
+        },
     },
 ]
 
