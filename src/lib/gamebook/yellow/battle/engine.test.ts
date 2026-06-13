@@ -147,6 +147,31 @@ describe("combat de dresseur — enchaînement multi-Daemon", () => {
         expect(s.enemy.team[0].openingMoves).toHaveLength(0)                                           // opening épuisé
     })
 
+    it("Surtension (2 tours) : tour 1 charge + ralentit (-2 Vit), tour 2 libère automatiquement", () => {
+        const enemy = createMonInstance("voltapanthe", 36, { moveIds: ["surtension", "fulgurance", "vive_attaque", "cage_eclair"] })
+        Object.assign(enemy, { openingMoves: ["surtension"] }) // l'AS ouvre sur sa signature
+        const player = createMonInstance("cerfeuillu", 60) // neutre à l'Élec, encaisse les 2 phases
+        let s = createBattle([player], [enemy], { isWild: false, seed: 5, aiLevel: "trainer" })
+        // Tour 1 : le joueur temporise (objet → ne touche pas l'ennemi), l'ennemi CHARGE la Surtension.
+        s = resolveTurn(s, { kind: "item", itemId: "potion" })
+        expect(s.enemy.team[0].chargingMove).toBe("surtension") // l'ennemi est verrouillé en charge
+        expect(s.player.team[0].stages.spe).toBe(-2)            // -2 Vitesse appliqué dès la phase 1
+        // Tour 2 : l'ennemi est forcé de LIBÉRER sa décharge, quoi que fasse le joueur.
+        s = resolveTurn(s, { kind: "item", itemId: "potion" })
+        expect(s.enemy.team[0].chargingMove).toBeUndefined()    // déchargé → plus en charge
+    })
+
+    it("Surtension : rappeler le LANCEUR annule la charge (switch tactique)", () => {
+        const a = createMonInstance("voltapanthe", 40, { moveIds: ["surtension", "fulgurance", "vive_attaque", "cage_eclair"] })
+        const b = createMonInstance("rochison", 40)
+        let s = createBattle([a, b], [createMonInstance("rochison", 5)], { isWild: false, seed: 9 })
+        s = resolveTurn(s, { kind: "move", moveIndex: 0 })   // a CHARGE la surtension
+        expect(s.player.team[0].chargingMove).toBe("surtension")
+        s = resolveTurn(s, { kind: "switch", teamIndex: 1 }) // on RAPPELLE a → la charge s'annule
+        expect(s.player.team[0].chargingMove).toBeUndefined()
+        expect(s.player.activeIndex).toBe(1)                  // b est bien entré
+    })
+
     it("#10 — le Daemon ennemi envoyé après un K.O. n'agit PAS le tour même", () => {
         const a = createMonInstance("rochison", 50)               // rapide vs plumiot L5, achève e1
         const e1 = createMonInstance("plumiot", 5); e1.currentHp = 1

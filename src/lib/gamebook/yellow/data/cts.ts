@@ -15,7 +15,7 @@ import { getMove } from "./moves"
 import type { SpeciesData } from "../battle/types"
 
 /** Badge requis pour acheter une CT (aligné sur les salles de l'arène). */
-export type BadgeId = "feu" | "plante" | "eau" | "roche"
+export type BadgeId = "feu" | "plante" | "eau" | "roche" | "elec"
 
 export interface CtData {
     id: string          // "ct01"
@@ -72,6 +72,12 @@ export const CTS: CtData[] = [
 
     // --- CT signature FEU : CADEAU de la boss PYRA (Arène Feu, jamais en vente) ---
     { id: "ct21", label: "CT21", moveId: "pyrotechnie", price: 0, gift: true },
+
+    // --- CT signature ÉLEC : CADEAU du boss VOLTA (Tour Hertz, jamais en vente) ---
+    { id: "ct22", label: "CT22", moveId: "surtension", price: 0, gift: true },
+    // --- CT Élec en vente (débloquées par le badge elec) ---
+    { id: "ct23", label: "CT23", moveId: "etincelle", price: 500, badge: "elec" },
+    { id: "ct24", label: "CT24", moveId: "fulgurance", price: 750, badge: "elec" },
 ]
 
 export function getCt(id: string): CtData | null {

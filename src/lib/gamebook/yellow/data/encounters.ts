@@ -51,14 +51,16 @@ export interface EncounterCtx {
  * - avant l'arène Plante : N≤12
  * - Plante battue, avant l'arène Roche : N≤17
  * - Roche battue, avant l'arène Feu : N≤30
- * - Feu battue : N≤45 (placeholder, à étendre avec les arènes suivantes)
+ * - Feu battue, avant l'arène Électrique : N≤45
+ * - Électrique battue : N≤60 (placeholder, à étendre avec les arènes suivantes)
  * S'applique à la Route Nord ET à la Grotte.
  */
 export function wildLevelCap(badges: readonly string[]): number {
     if (!badges.includes("plante")) return 12
     if (!badges.includes("roche")) return 17
     if (!badges.includes("feu")) return 30
-    return 45
+    if (!badges.includes("elec")) return 45
+    return 60
 }
 
 /** Zones (mapId) où une espèce apparaît à l'état sauvage — pour la fiche Pokédex. */

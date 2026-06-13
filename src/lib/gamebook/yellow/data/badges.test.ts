@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest"
 import { BADGES, battleEnergyCap, BASE_BATTLE_ENERGY, BATTLE_ENERGY_PER_BADGE, getBadge } from "./badges"
 
 describe("badges", () => {
-    it("3 badges (feu/plante/eau)", () => {
-        expect(BADGES.map((b) => b.id).sort()).toEqual(["eau", "feu", "plante"])
+    it("4 badges (feu/plante/eau/elec)", () => {
+        expect(BADGES.map((b) => b.id).sort()).toEqual(["eau", "elec", "feu", "plante"])
     })
     it("getBadge", () => {
         expect(getBadge("feu")?.emoji).toBe("🔥")

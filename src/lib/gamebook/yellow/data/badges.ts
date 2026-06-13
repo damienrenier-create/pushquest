@@ -28,6 +28,7 @@ export const BADGES: BadgeMeta[] = [
     { id: "feu", label: "Badge Flamme", room: "Salle Feu", emoji: "🔥", color: "#e0502a" },
     { id: "plante", label: "Badge Feuille", room: "Salle Plante", emoji: "🌿", color: "#3aa54a" },
     { id: "eau", label: "Badge Goutte", room: "Salle Eau", emoji: "💧", color: "#3a8ee0" },
+    { id: "elec", label: "Badge Éclair", room: "Tour Hertz", emoji: "⚡", color: "#f6c640" },
 ]
 
 export function getBadge(id: BadgeId): BadgeMeta | undefined {

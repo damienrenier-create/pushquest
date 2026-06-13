@@ -480,15 +480,35 @@ function buildArenaFeu(): TileType[][] {
     return ARENA_FEU_MASK.map((row) => [...row].map((ch) => (ch === "X" ? "tree" : "grass") as TileType))
 }
 
+// Arène ÉLECTRIQUE "LA TOUR HERTZ" (4e arène) — 15×10, TUILÉE (pas d'asset : rendu CSS grass/tree).
+// Couloir central (col 7) ouvert pour rejoindre le boss (7,1) ; 2 pylônes décoratifs (6,4)/(8,4)/(6,5)/(8,5).
+// Entrée/sortie en bas-centre (7,9). PNJ : boss (7,1) · gardes (3,2)/(11,2)/(3,7)/(11,7).
+const ARENA_ELEC_MASK = [
+    "XXXXXXXXXXXXXXX",
+    "X.............X",
+    "X.............X",
+    "X.............X",
+    "X.....X.X.....X",
+    "X.....X.X.....X",
+    "X.............X",
+    "X.............X",
+    "X.............X",
+    "XXXXXXX.XXXXXXX",
+]
+function buildArenaElec(): TileType[][] {
+    return ARENA_ELEC_MASK.map((row) => [...row].map((ch) => (ch === "X" ? "tree" : "grass") as TileType))
+}
+
 /**
  * Quelle arène se trouve derrière la porte du GYM, selon la progression (badges) ?
- * Le bâtiment se "réorganise" : Plante tant que non obtenu, puis Roche, puis Feu, etc.
+ * Le bâtiment se "réorganise" : Plante tant que non obtenu, puis Roche, Feu, puis Électrique.
  */
 export function currentArenaMapId(badges: readonly string[]): string {
     if (!badges.includes("plante")) return "yellow_arena"
     if (!badges.includes("roche")) return "yellow_arena_roche"
     if (!badges.includes("feu")) return "yellow_arena_feu"
-    return "yellow_arena_feu" // placeholder jusqu'à la prochaine arène
+    if (!badges.includes("elec")) return "yellow_arena_elec"
+    return "yellow_arena_elec" // placeholder jusqu'à la prochaine arène
 }
 
 // === ROUTE NORD = future zone Pokémon (placeholder grass/trees) ==========
@@ -939,6 +959,16 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImageWidth: 1024,
         backgroundImageHeight: 1024,
         backgroundImageTileSize: 64,
+    },
+    yellow_arena_elec: {
+        id: "yellow_arena_elec",
+        name: "LA TOUR HERTZ",
+        tiles: buildArenaElec(),
+        width: 15,
+        height: 10,
+        // Sortie (7,9) → retour ville devant la porte du gym (comme Plante/Roche, 15×10).
+        exits: [{ x: 7, y: 9, targetMapId: YELLOW_ENTRANCE_MAP_ID, targetSpawnX: 36, targetSpawnY: 11 }],
+        // PAS de backgroundImage : rendu CSS tuilé (grass/tree) — aucun asset à fournir.
     },
     yellow_grotte: {
         id: "yellow_grotte",

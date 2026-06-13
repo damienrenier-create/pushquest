@@ -50,6 +50,9 @@ export interface MoveEffect {
     healPct?: number
     /** Move à haute chance de critique (Gen 1 : ratio basé sur la vitesse de base ×8). */
     highCrit?: boolean
+    /** Move à DEUX TOURS : tour 1 = décharge faible (power du move) + statChanges, puis le Daemon
+     *  est verrouillé et LIBÈRE automatiquement au tour suivant une frappe forte (power 60, highCrit). */
+    twoTurn?: boolean
 }
 
 export interface MoveData {
@@ -169,6 +172,9 @@ export interface BattleMon extends MonInstance {
     /** OPENING SCRIPTÉ (ennemi/boss) : moveIds imposés à ses 1ers tours, dans l'ordre, quoi qu'il
      *  arrive (priorité sur l'IA et le budget d'énergie). Consommé un par un. Runtime, non persisté. */
     openingMoves?: string[]
+    /** MOVE À 2 TOURS en cours : moveId que ce Daemon est en train de CHARGER → il est verrouillé
+     *  et libère sa décharge au tour suivant (quoi qu'il arrive). Runtime, non persisté. */
+    chargingMove?: string
 }
 
 export function neutralStages(): StatStages {

@@ -383,6 +383,88 @@ export const TRAINERS: TrainerData[] = [
             "Et garde ma PYROTECHNIE : que le feu de l'esprit éclaire ta route. Le Nexus t'attend plus loin !",
         ],
     },
+
+    // ===== ARÈNE ÉLECTRIQUE "LA TOUR HERTZ" (4e arène, badge "elec") =====
+    {
+        id: "y_elecarena_g1", name: "APPRENTI BOBINE", title: "Gardien de la Tour",
+        sprite: { emoji: "⚡", color: "#ffcc33" },
+        mapId: "yellow_arena_elec", x: 3, y: 2,
+        team: [
+            { speciesId: "trolystrik", level: 16 },
+            { speciesId: "trolystrik", level: 16 },
+            { speciesId: "trolystrik", level: 16 },
+            { speciesId: "brutetrik", level: 30 },
+            { speciesId: "brutetrik", level: 36 },
+        ],
+        reward: 220, aiLevel: "trainer",
+        intro: ["*Un gamin recharge une bobine en faisant crépiter ses doigts.*", "La Tour Hertz ne laisse passer que ceux qui encaissent le courant. À toi !"],
+        defeat: ["Court-circuit… passe à l'étage suivant."],
+    },
+    {
+        id: "y_elecarena_g2", name: "TECHNICIENNE OHM", title: "Gardienne de la Tour",
+        sprite: { emoji: "⚡", color: "#ffcc33" },
+        mapId: "yellow_arena_elec", x: 11, y: 2,
+        team: [
+            { speciesId: "electroatiss", level: 15 },
+            { speciesId: "electroatiss", level: 15 },
+            { speciesId: "couranti", level: 25 },
+            { speciesId: "zappeureal", level: 36 },
+        ],
+        reward: 240, aiLevel: "trainer",
+        intro: ["Je règle la résistance de chaque câble de cette tour. La tienne va lâcher !"],
+        defeat: ["Surtension imprévue… tu conduis mieux que je pensais."],
+    },
+    {
+        id: "y_elecarena_g3", name: "PILOTE FOUDRE", title: "Gardien de la Tour",
+        sprite: { emoji: "⚡", color: "#ffcc33" },
+        mapId: "yellow_arena_elec", x: 3, y: 7,
+        team: [
+            { speciesId: "oragron", level: 35 },
+            { speciesId: "pantheon", level: 20 },
+            { speciesId: "voltapanthe", level: 30 },
+        ],
+        reward: 270, aiLevel: "trainer",
+        intro: ["*Le vent s'engouffre dans la tour, chargé d'électricité statique.*", "Mon Oragron frappe avant l'orage. Tu ne le verras pas venir."],
+        defeat: ["Foudroyé en plein vol…"],
+    },
+    {
+        id: "y_elecarena_g4", name: "SENTINELLE ARC", title: "Sentinelle de la Tour",
+        sprite: { emoji: "⚡", color: "#ffcc33" },
+        mapId: "yellow_arena_elec", x: 11, y: 7,
+        team: [
+            { speciesId: "brutetrik", level: 30 },
+            { speciesId: "couranti", level: 32 },
+            { speciesId: "voltapanthe", level: 34 },
+        ],
+        reward: 300, aiLevel: "trainer",
+        intro: ["Cent mille volts gardent ce palier. Touche le garde-fou si tu l'oses."],
+        defeat: ["Disjoncté… VOLTA t'attend au sommet de la Tour."],
+    },
+    {
+        id: "y_elecarena_boss", name: "VOLTA", title: "Architecte de la Tour Hertz",
+        sprite: { emoji: "🗲", color: "#ffaa00" },
+        mapId: "yellow_arena_elec", x: 7, y: 1,
+        requiresTrainers: ["y_elecarena_g1", "y_elecarena_g2", "y_elecarena_g3", "y_elecarena_g4"],
+        team: [
+            { speciesId: "hebulmin", level: 38 },
+            { speciesId: "oragron", level: 35 },
+            { speciesId: "zappeureal", level: 36 },
+            // L'AS : ouvre sur sa SIGNATURE Surtension (charge → décharge foudroyante à haut critique).
+            { speciesId: "voltapanthe", level: 40, moves: ["surtension", "fulgurance", "cage_eclair", "vive_attaque"], opening: ["surtension"] },
+        ],
+        reward: 0, aiLevel: "trainer", badge: "elec", giftCt: "ct22",
+        intro: [
+            "*Au sommet de la Tour Hertz, une silhouette se découpe sur un ciel d'orage.*",
+            "Je suis VOLTA, l'Architecte. J'ai bâti cette tour pour capter la foudre du Nexus.",
+            "Mon Voltapanthe charge avant de foudroyer. Montre-moi ton voltage !",
+        ],
+        defeat: [
+            "Disjoncté… par un courant plus pur que le mien.",
+            "Le Badge Éclair est à toi — tu as encaissé la foudre sans broncher.",
+            "*VOLTA glisse une CT grésillante dans ta paume.*",
+            "Et garde ma SURTENSION : que l'éclair guide ta route. Le Nexus t'attend plus haut !",
+        ],
+    },
 ]
 
 const BY_ID = new Map(TRAINERS.map((t) => [t.id, t]))

@@ -178,6 +178,15 @@ export function resolveTurn(prev: BattleState, playerAction: PlayerAction): Batt
     const rng = new Rng(state.seed)
     const events: BattleEvent[] = []
 
+    // VERROU DE CHARGE (move à 2 tours) : un Daemon joueur en pleine charge LIBÈRE sa décharge ce
+    // tour. EXCEPTION : le joueur peut le RAPPELER (switch) pour ANNULER la charge (choix tactique) ;
+    // toute autre action (objet/fuite/autre attaque) est remplacée par la décharge.
+    const pCharge = active(state.player).chargingMove
+    if (pCharge && state.forcedSwitch !== "player" && playerAction.kind !== "switch") {
+        const ci = active(state.player).moves.findIndex((m) => m.moveId === pCharge)
+        if (ci >= 0) playerAction = { kind: "move", moveIndex: ci }
+    }
+
     // --- Cas spécial : changement forcé après KO (pas un vrai tour) ---
     if (state.forcedSwitch === "player" && playerAction.kind === "switch") {
         doSwitch(state, "player", playerAction.teamIndex!, events)
@@ -409,6 +418,27 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
     // --- Précision ---
     if (!accuracyCheck(move, attacker, defender, rng)) {
         events.push({ kind: "message", text: `${displayName(attacker)} rate son attaque !` })
+        return
+    }
+
+    // --- Move à 2 TOURS (charge → décharge), ex. Surtension de VOLTA ---
+    if (move.effect?.twoTurn) {
+        if (attacker.chargingMove === (slot?.moveId ?? move.id)) {
+            // PHASE 2 : libération automatique — frappe forte (power 60) à très haut critique.
+            attacker.chargingMove = undefined
+            events.push({ kind: "message", text: `${displayName(attacker)} libère sa décharge !` })
+            dealMoveDamage(state, side, { ...move, power: 60, effect: { highCrit: true } }, rng, events)
+            return
+        }
+        // PHASE 1 : décharge faible (power du move) + statChanges (ex. -2 Vitesse), puis on CHARGE.
+        const r1 = dealMoveDamage(state, side, move, rng, events)
+        if (r1.typeEff > 0 && active(defSide).currentHp > 0 && move.effect.statChanges) {
+            for (const sc of move.effect.statChanges) {
+                applyStatChange(state, sc.target === "self" ? side : other(side), sc.stat, sc.stages, events)
+            }
+        }
+        attacker.chargingMove = slot?.moveId ?? move.id
+        events.push({ kind: "message", text: `${displayName(attacker)} accumule une surtension… elle se libèrera au prochain tour !` })
         return
     }
 
@@ -692,10 +722,12 @@ function doSwitch(state: BattleState, side: SideId, teamIndex: number, events: B
     if (teamIndex < 0 || teamIndex >= s.team.length) return
     if (s.team[teamIndex].currentHp <= 0) return
     if (teamIndex === s.activeIndex) return
-    // Réinitialise stages/volatils du sortant.
+    // Réinitialise stages/volatils du sortant. Une charge en cours (move 2 tours) est ANNULÉE
+    // UNIQUEMENT pour le Daemon qui quitte le terrain (le lanceur) — pas pour l'adversaire.
     const out = s.team[s.activeIndex]
     out.stages = neutralStages()
     out.volatiles = {}
+    out.chargingMove = undefined
     s.activeIndex = teamIndex
     const incoming = s.team[teamIndex]
     // Le Daemon entrant a "participé" → il partagera l'XP des futurs K.O. (joueur uniquement).
@@ -756,6 +788,12 @@ function checkFaints(state: BattleState, events: BattleEvent[]) {
 export function chooseEnemyAction(state: BattleState, rng: Rng): ResolvedAction {
     const self = active(state.enemy)
     const foe = active(state.player)
+    // VERROU DE CHARGE (move à 2 tours) : prioritaire sur tout → l'ennemi libère sa décharge.
+    if (self.chargingMove) {
+        const ci = self.moves.findIndex((m) => m.moveId === self.chargingMove)
+        if (ci >= 0) return { side: "enemy", kind: "move", moveIndex: ci }
+        self.chargingMove = undefined // sécurité : move perdu → on déverrouille
+    }
     // OPENING SCRIPTÉ (boss) : l'attaque imposée passe AVANT l'IA et le budget d'énergie
     // ("quoi qu'il arrive"). Consommée une par une, uniquement quand ce Daemon est actif.
     if (self.openingMoves && self.openingMoves.length > 0) {
