@@ -31,6 +31,12 @@ const DIALOGUE_PORTRAITS: Record<string, string> = {
     y_rocharena_g3: "/yellow/sprites/npc_roche3.png",
     y_rocharena_g4: "/yellow/sprites/npc_roche4.png",
     y_rocharena_boss: "/yellow/sprites/npc_granit.png",
+    // Arène Électrique "Tour Hertz" : la Reine (boss) + 4 gardes.
+    y_elecarena_boss: "/yellow/sprites/npc_elec_reine.png",
+    y_elecarena_g1: "/yellow/sprites/npc_elec_gauche.png",
+    y_elecarena_g2: "/yellow/sprites/npc_elec_droit1.png",
+    y_elecarena_g3: "/yellow/sprites/npc_elec_droit2.png",
+    y_elecarena_g4: "/yellow/sprites/npc_elec_droit3.png",
 }
 
 export default function DialogueBox() {

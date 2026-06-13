@@ -578,6 +578,12 @@ const NPC_SPRITES: Record<string, { url: string; frames: number; h?: number } | 
     y_feuarena_g3: { url: "/yellow/sprites/npc_feu3.png", frames: 1, h: 2.0 },
     y_feuarena_g4: { url: "/yellow/sprites/npc_feu4.png", frames: 1, h: 2.0 },
     y_feuarena_boss: { url: "/yellow/sprites/npc_pyra.png", frames: 1, h: 2.4 },
+    // Arène Électrique "Tour Hertz" : la Reine (boss) + 4 gardes (sprites entiers).
+    y_elecarena_g1: { url: "/yellow/sprites/npc_elec_gauche.png", frames: 1, h: 2.0 },
+    y_elecarena_g2: { url: "/yellow/sprites/npc_elec_droit1.png", frames: 1, h: 2.0 },
+    y_elecarena_g3: { url: "/yellow/sprites/npc_elec_droit2.png", frames: 1, h: 2.0 },
+    y_elecarena_g4: { url: "/yellow/sprites/npc_elec_droit3.png", frames: 1, h: 2.0 },
+    y_elecarena_boss: { url: "/yellow/sprites/npc_elec_reine.png", frames: 1, h: 2.4 },
     // Route Nord : Gamin Léo + Exploratrice Mia (sprites entiers).
     y_trainer_leo: { url: "/yellow/sprites/npc_leo.png", frames: 1, h: 1.9 },
     y_trainer_mia: { url: "/yellow/sprites/npc_mia.png", frames: 1, h: 1.9 },

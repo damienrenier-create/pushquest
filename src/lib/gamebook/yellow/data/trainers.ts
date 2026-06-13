@@ -388,7 +388,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_elecarena_g1", name: "APPRENTI BOBINE", title: "Gardien de la Tour",
         sprite: { emoji: "⚡", color: "#ffcc33" },
-        mapId: "yellow_arena_elec", x: 3, y: 2,
+        mapId: "yellow_arena_elec", x: 4, y: 3,
         team: [
             { speciesId: "trolystrik", level: 16 },
             { speciesId: "trolystrik", level: 16 },
@@ -403,7 +403,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_elecarena_g2", name: "TECHNICIENNE OHM", title: "Gardienne de la Tour",
         sprite: { emoji: "⚡", color: "#ffcc33" },
-        mapId: "yellow_arena_elec", x: 11, y: 2,
+        mapId: "yellow_arena_elec", x: 10, y: 2,
         team: [
             { speciesId: "electroatiss", level: 15 },
             { speciesId: "electroatiss", level: 15 },
@@ -417,7 +417,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_elecarena_g3", name: "PILOTE FOUDRE", title: "Gardien de la Tour",
         sprite: { emoji: "⚡", color: "#ffcc33" },
-        mapId: "yellow_arena_elec", x: 3, y: 7,
+        mapId: "yellow_arena_elec", x: 11, y: 3,
         team: [
             { speciesId: "oragron", level: 35 },
             { speciesId: "pantheon", level: 20 },
@@ -430,7 +430,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_elecarena_g4", name: "SENTINELLE ARC", title: "Sentinelle de la Tour",
         sprite: { emoji: "⚡", color: "#ffcc33" },
-        mapId: "yellow_arena_elec", x: 11, y: 7,
+        mapId: "yellow_arena_elec", x: 12, y: 4,
         team: [
             { speciesId: "brutetrik", level: 30 },
             { speciesId: "couranti", level: 32 },

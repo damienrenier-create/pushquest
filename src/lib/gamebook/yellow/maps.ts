@@ -480,23 +480,15 @@ function buildArenaFeu(): TileType[][] {
     return ARENA_FEU_MASK.map((row) => [...row].map((ch) => (ch === "X" ? "tree" : "grass") as TileType))
 }
 
-// Arène ÉLECTRIQUE "LA TOUR HERTZ" (4e arène) — 15×10, TUILÉE (pas d'asset : rendu CSS grass/tree).
-// Couloir central (col 7) ouvert pour rejoindre le boss (7,1) ; 2 pylônes décoratifs (6,4)/(8,4)/(6,5)/(8,5).
-// Entrée/sortie en bas-centre (7,9). PNJ : boss (7,1) · gardes (3,2)/(11,2)/(3,7)/(11,7).
-const ARENA_ELEC_MASK = [
-    "XXXXXXXXXXXXXXX",
-    "X.............X",
-    "X.............X",
-    "X.............X",
-    "X.....X.X.....X",
-    "X.....X.X.....X",
-    "X.............X",
-    "X.............X",
-    "X.............X",
-    "XXXXXXX.XXXXXXX",
-]
+// Arène ÉLECTRIQUE "LA TOUR HERTZ" (4e arène) — 15×10, fond = elec_arena_interior.png.
+// Collisions calées sur le décor (Sartay) : bordure haut (l.0) / bas (l.9 sauf porte 7,9) /
+// gauche (col 0) / droite (col 14) + plateau du boss (cols 6 & 8, lignes 0-2). Le reste = sol.
 function buildArenaElec(): TileType[][] {
-    return ARENA_ELEC_MASK.map((row) => [...row].map((ch) => (ch === "X" ? "tree" : "grass") as TileType))
+    const W = 15, H = 10
+    const wall = (x: number, y: number) =>
+        y === 0 || x === 0 || x === 14 || (y === 9 && x !== 7) || ((x === 6 || x === 8) && y <= 2)
+    return Array.from({ length: H }, (_, y) =>
+        Array.from({ length: W }, (_, x) => (wall(x, y) ? "tree" : "grass") as TileType))
 }
 
 /**
@@ -966,10 +958,12 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         tiles: buildArenaElec(),
         width: 15,
         height: 10,
-        // Sortie (7,9) → retour ville devant la porte du gym (comme Plante/Roche, 15×10).
+        // Sortie/entrée par la PORTE en bas (7,9) → retour ville devant la porte du gym.
         exits: [{ x: 7, y: 9, targetMapId: YELLOW_ENTRANCE_MAP_ID, targetSpawnX: 36, targetSpawnY: 11 }],
-        // PAS de backgroundImage : rendu CSS tuilé (grass/tree) — aucun asset à fournir.
-        debugGrid: true, // WIP : grille (coords x,y) visible pour placer les PNJ — à retirer ensuite
+        backgroundImage: "/yellow/sprites/elec_arena_interior.png",
+        backgroundImageWidth: 1200,
+        backgroundImageHeight: 800,
+        backgroundImageTileSize: 80, // 1200/15 = 800/10 = 80 → grille 15×10 alignée pile
     },
     yellow_grotte: {
         id: "yellow_grotte",
