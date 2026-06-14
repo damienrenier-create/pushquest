@@ -932,7 +932,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImageTileSize: CENDREVILLE_TILE,
         backgroundImageOriginX: 0,
         backgroundImageOriginY: 0,
-        debugGrid: true,        // WIP : grille visible en permanence pour caler les collisions
+        debugGrid: false,       // grille de calage coupée (on garde ?grid=1 en dev si besoin)
         encountersPaused: true, // WIP : pas de rencontres le temps de finaliser la map
     },
     yellow_centrale: {
@@ -955,7 +955,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImageTileSize: CENTRALE_TILE,
         backgroundImageOriginX: 0,
         backgroundImageOriginY: 0,
-        debugGrid: true,        // WIP : grille de calage
+        debugGrid: false,       // grille de calage coupée (on garde ?grid=1 en dev si besoin)
         encountersPaused: true, // WIP
     },
     yellow_shop: {
