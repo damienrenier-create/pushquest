@@ -141,6 +141,20 @@ const ZONES: Record<string, Zone> = {
             { speciesId: "oragron", base: VERY_RARE, player: "elec", rare: true }, // Vol/Élec (pépite)
         ],
     },
+    // CENTRALE ÉLECTRIQUE (intérieur de Cendreville) : DONJON 100% ÉLECTRIK. Rend enfin
+    // capturables Jerbiwat (Psy/Élec), la lignée Boltah (Feu/Élec, la + rapide) et Namicha
+    // (Spectre/Élec). Sol = "grass" → tout le sol praticable déclenche (façon grotte).
+    yellow_centrale: {
+        rate: 0.16,
+        minLevel: 20, // donjon de milieu de partie (Badge Flamme requis pour Cendreville)
+        pool: [
+            { speciesId: "electroatiss", base: COMMON, player: "elec" },        // ⚡ staple, courts-circuits
+            { speciesId: "jerbiwat", base: COMMON },                            // Psy/Élec (gerbille électrostatique)
+            { speciesId: "boltah", base: UNCOMMON, player: "elec" },            // Feu/Élec (lignée vitesse)
+            { speciesId: "namicha", base: UNCOMMON },                           // Spectre/Élec (static des ruines)
+            { speciesId: "zappeureal", base: RARE, player: "elec", rare: true },// ⚡ le roi de la foudre (pépite)
+        ],
+    },
 }
 
 export function hasEncounters(mapId: string): boolean {

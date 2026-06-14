@@ -871,11 +871,13 @@ const CENTRALE_COLLISION_MAP: string[] = [
     "####..##################################", // 35
 ]
 function buildCentraleCollisions(): TileType[][] {
+    // Sol walkable = "grass" (et NON "path") : c'est un DONJON à rencontres → chaque case de sol
+    // déclenche un roll sauvage (cf. gameStore : grass + backgroundImage + zone). Mur = "tree".
     const m = CENTRALE_COLLISION_MAP.map((row) =>
-        Array.from(row, (c) => (c === "#" ? "tree" : "path") as TileType),
+        Array.from(row, (c) => (c === "#" ? "tree" : "grass") as TileType),
     )
     // Corrections walkable de Sartay (col,row).
-    for (const [x, y] of [[31, 20], [26, 16], [31, 16]] as const) m[y][x] = "path"
+    for (const [x, y] of [[31, 20], [26, 16], [31, 16]] as const) m[y][x] = "grass"
     return m
 }
 
@@ -959,7 +961,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImageOriginX: 0,
         backgroundImageOriginY: 0,
         debugGrid: false,       // grille de calage coupée (on garde ?grid=1 en dev si besoin)
-        encountersPaused: true, // WIP
+        encountersPaused: false, // rencontres Élec ACTIVES (cf. ZONES.yellow_centrale)
     },
     yellow_shop: {
         id: "yellow_shop",
