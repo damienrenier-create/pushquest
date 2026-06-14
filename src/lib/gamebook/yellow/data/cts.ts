@@ -81,6 +81,9 @@ export const CTS: CtData[] = [
     // Mirage : esquive cumulable, puissante → CADEAU EXCLUSIF de la revanche de VOLTA
     // (jamais en vente, comme Surtension). Remise avec ct22 à la victoire du rematch boss.
     { id: "ct25", label: "CT25", moveId: "mirage", price: 0, gift: true },
+    // CADEAU SPECTRE : récompense du PNJ "collectionneur de spectres" de Cendreville (montre 3 spectres
+    // différents + bats-le 3×). Premier gros move SPECTRE enseignable par CT.
+    { id: "ct26", label: "CT26", moveId: "frappe_audela", price: 0, gift: true },
 ]
 
 export function getCt(id: string): CtData | null {

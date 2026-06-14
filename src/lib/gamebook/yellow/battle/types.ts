@@ -53,6 +53,9 @@ export interface MoveEffect {
     /** Move à DEUX TOURS : tour 1 = décharge faible (power du move) + statChanges, puis le Daemon
      *  est verrouillé et LIBÈRE automatiquement au tour suivant une frappe forte (power 60, highCrit). */
     twoTurn?: boolean
+    /** KAMIKAZE : après avoir infligé ses dégâts, l'attaquant tombe à 1 PV (au lieu de s'auto-K.O.
+     *  comme une vraie Destruction). Ex. « Détonation » de Bouh → reste systématiquement à 1 PV. */
+    selfHpToOne?: boolean
 }
 
 export interface MoveData {
@@ -122,6 +125,9 @@ export interface MonInstance {
     statusCounter: number
     moves: MoveSlot[]
     owned?: boolean
+    /** CHROMATIQUE (shiny) : tiré ~1/512 au spawn sauvage. IV parfaits + **+10% sur chaque stat**
+     *  (cf. fullStats — "un peu plus que parfait"). Cosmétique : rendu avec un filtre + ✨. */
+    shiny?: boolean
     /** Attaques apprises à un niveau alors que les 4 slots étaient pleins :
      *  en attente d'un choix « oublier une capacité » côté UI. Transitoire. */
     pendingMoves?: string[]
@@ -175,6 +181,20 @@ export interface BattleMon extends MonInstance {
     /** MOVE À 2 TOURS en cours : moveId que ce Daemon est en train de CHARGER → il est verrouillé
      *  et libère sa décharge au tour suivant (quoi qu'il arrive). Runtime, non persisté. */
     chargingMove?: string
+    /** SAUVAGE (Centrale) : le Daemon FUIT (fin de combat, aucune récompense) une fois ce nombre
+     *  de tours atteint (ex. Boltah ≤5, Heatah ≤3). Runtime, non persisté. */
+    fleeAfterTurns?: number
+    /** SAUVAGE : capture IMPOSSIBLE si le ballBonus de la Ball lancée est < cette valeur
+     *  (ex. Zappeuréal = Hyper Ball+ → 4). Runtime, non persisté. */
+    captureMinBallBonus?: number
+    /** SAUVAGE : multiplie la valeur de capture (×<1 = plus dur, ex. Thundah/Bélunode). Runtime. */
+    captureMult?: number
+    /** SAUVAGE : capture IMPOSSIBLE tant que le Daemon n'a pas de STATUT majeur (para/sommeil/poison/
+     *  brûlure/gel) — hommage légendaire Gen1 (ex. Goshendofy). La Master Ball shunte. Runtime. */
+    captureRequiresStatus?: boolean
+    /** SAUVAGE : si présent avec captureMinBallBonus, un STATUT majeur SHUNTE l'exigence de Ball
+     *  (capturable avec Super Ball+ OU sous statut, ex. Bouh). Runtime, non persisté. */
+    captureStatusBypassesBall?: boolean
 }
 
 export function neutralStages(): StatStages {

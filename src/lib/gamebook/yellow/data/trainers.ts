@@ -549,6 +549,116 @@ export const TRAINERS: TrainerData[] = [
             ],
         },
     },
+
+    // ===== LA LIGUE DE CENDREVILLE — Conseil des 4 (hommage Gen1) + Maître =====
+    // Gauntlet : se débloque après le Badge Eau ; ordre imposé (requiresTrainers) ; point de
+    // non-retour (mécanique map/store à venir). Équipes 100% sur le roster existant.
+    // mapId "yellow_ligue" = placeholder tant que la map du Sud de Cendreville n'est pas créée.
+    {
+        id: "y_ligue_1_olga", name: "OLGA", title: "Conseil des 4",
+        sprite: { emoji: "❄️", color: "#6cc6e8" },
+        mapId: "yellow_ligue", x: 5, y: 4,
+        // Glace/Eau — tanks marins, mur d'endurance d'entrée (Lamantine/Crustabri/Lokhlass).
+        team: [
+            { speciesId: "yetiroche", level: 52 },
+            { speciesId: "ondaloutre", level: 53 },
+            { speciesId: "crapotaure", level: 54 },
+            { speciesId: "auroraur", level: 55 },
+            { speciesId: "naiadrak", level: 56 },
+        ],
+        reward: 300, aiLevel: "trainer",
+        intro: [
+            "*Le sol se couvre de givre.* Bienvenue, challenger. Je suis OLGA, première du Conseil des 4.",
+            "On ne survit pas sans esprit de compétition… et mes Daemons de glace te figeront sur place !",
+        ],
+        defeat: ["Gelée à mon propre jeu… Passe. Les autres t'attendent, et il n'y a plus de retour en arrière."],
+    },
+    {
+        id: "y_ligue_2_aldo", name: "ALDO", title: "Conseil des 4",
+        sprite: { emoji: "🥊", color: "#b8702e" },
+        mapId: "yellow_ligue", x: 5, y: 4,
+        requiresTrainers: ["y_ligue_1_olga"],
+        // Combat/Roche — brutes physiques, attaque brute + défense de pierre.
+        team: [
+            { speciesId: "octoroc", level: 53 },
+            { speciesId: "frappard", level: 54 },
+            { speciesId: "marteloutan", level: 55 },
+            { speciesId: "hexaroc", level: 55 },
+            { speciesId: "maitrezenc", level: 57 },
+        ],
+        reward: 350, aiLevel: "trainer",
+        intro: [
+            "Hi-yah ! Je suis ALDO, deuxième du Conseil des 4.",
+            "À force d'entraînement, on devient invincible. Mes colosses vont te broyer — montre tes muscles !",
+        ],
+        defeat: ["Brisé… par plus dur que le roc. Avance, mais sache que la sortie est scellée derrière toi."],
+    },
+    {
+        id: "y_ligue_3_agatha", name: "AGATHA", title: "Conseil des 4",
+        sprite: { emoji: "👻", color: "#8a5cc0" },
+        mapId: "yellow_ligue", x: 5, y: 4,
+        requiresTrainers: ["y_ligue_2_aldo"],
+        // Spectre/Poison — rapides, esquive, poison, altérations (vitrine des nouveaux spectres).
+        team: [
+            { speciesId: "lampignon", level: 54 },
+            { speciesId: "necrocorbe", level: 55 },
+            { speciesId: "corvenin", level: 55 },
+            { speciesId: "brookhante", level: 56 },
+            { speciesId: "mycedruide", level: 58 },
+        ],
+        reward: 400, aiLevel: "trainer",
+        intro: [
+            "Hi hi hi… Je suis AGATHA, troisième du Conseil des 4.",
+            "Le Prof te trouve doué ? Pour moi tu n'es qu'un marmot. Mes spectres vont te glacer le sang !",
+        ],
+        defeat: ["Pfff… du cran, pour un marmot. File. Le dernier siège est le plus terrible."],
+    },
+    {
+        id: "y_ligue_4_peter", name: "PETER", title: "Conseil des 4",
+        sprite: { emoji: "🐲", color: "#5a6cd8" },
+        mapId: "yellow_ligue", x: 5, y: 4,
+        requiresTrainers: ["y_ligue_3_agatha"],
+        // Dragon/Vol — créatures mythiques, stats massives, attaques dévastatrices.
+        team: [
+            { speciesId: "draclet", level: 55 },
+            { speciesId: "wyverion", level: 56 },
+            { speciesId: "chronorex", level: 57 },
+            { speciesId: "leviathonn", level: 58 },
+            { speciesId: "draconarque", level: 60 },
+        ],
+        reward: 450, aiLevel: "trainer",
+        intro: [
+            "Bienvenue, challenger. Je suis PETER, dernier rempart du Conseil des 4.",
+            "Mes dragons sont des créatures mythiques et invincibles. Contemple leur vraie puissance !",
+        ],
+        defeat: ["Mes dragons… terrassés. Il ne reste plus que le Maître. Va. Affronte ton destin."],
+    },
+    {
+        id: "y_ligue_maitre", name: "LE MAÎTRE", title: "Maître de la Ligue",
+        sprite: { emoji: "👑", color: "#e8c34a" },
+        mapId: "yellow_ligue", x: 5, y: 4,
+        requiresTrainers: ["y_ligue_4_peter"],
+        // ACE national / RIVAL en habit de Champion : équipe ÉQUILIBRÉE menée par ses 3 panthères.
+        // (Le 6e slot "on verra" — à affiner : starter du rival ou pièce signature.)
+        team: [
+            { speciesId: "pyropanthe", level: 58 },
+            { speciesId: "aquapanthe", level: 59 },
+            { speciesId: "voltapanthe", level: 59 },
+            { speciesId: "aquilothan", level: 60 },
+            { speciesId: "divinpate", level: 60 },
+            { speciesId: "megalithe", level: 62 },
+        ],
+        reward: 0, aiLevel: "ace",
+        intro: [
+            "*Au bout de la salle du trône, une silhouette familière se retourne en souriant.*",
+            "Surpris ? J'ai pris le chemin le plus court : pendant que tu suais, je suis devenu Maître de la Ligue.",
+            "Mes panthères et moi t'attendions. Montre-moi tout ce que le Nexus t'a appris !",
+        ],
+        defeat: [
+            "…Battu. Pour de bon, cette fois. Tu as toujours eu une longueur d'avance.",
+            "*Il s'incline.* Le Nexus a son nouveau Maître. La couronne est à toi.",
+        ],
+    },
 ]
 
 const BY_ID = new Map(TRAINERS.map((t) => [t.id, t]))

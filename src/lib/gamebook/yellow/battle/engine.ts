@@ -39,7 +39,7 @@ export type BattleEvent =
     | { kind: "ball"; action: "throw" | "shake" | "result" | "miss"; shakes?: number; caught?: boolean }
     | { kind: "end"; outcome: Outcome }
 
-export type Outcome = "win" | "lose" | "run" | "caught"
+export type Outcome = "win" | "lose" | "run" | "caught" | "enemyfled"
 
 export interface BattleSide {
     team: BattleMon[]
@@ -510,6 +510,16 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
             const recoil = Math.max(1, Math.floor((res.dealt * move.effect.recoilPct) / 100))
             applyDamage(state, side, recoil, events)
             events.push({ kind: "message", text: `${displayName(attacker)} est blessé par le contrecoup !` })
+        }
+    }
+    // KAMIKAZE (ex. « Détonation » de Bouh) : après les dégâts, l'attaquant ne garde QU'1 PV (au lieu
+    // de s'auto-K.O. comme une vraie Destruction) → il reste "systématiquement à 1 PV", prêt à capturer.
+    if (move.effect?.selfHpToOne && landed > 0) {
+        const self = active(state[side])
+        if (self.currentHp > 1) {
+            self.currentHp = 1
+            events.push({ kind: "hp", side, hp: 1, max: maxHpOf(self) })
+            events.push({ kind: "message", text: `${displayName(self)} se disloque dans la déflagration… il ne lui reste qu'1 PV !` })
         }
     }
 
@@ -989,16 +999,34 @@ export function applyForfeitWin(
 function performCapture(state: BattleState, itemId: string, events: BattleEvent[], rng: Rng) {
     const wild = active(state.enemy)
     const sp = speciesOf(wild)
+    events.push({ kind: "message", text: `Tu lances une ${getItem(itemId)?.name ?? "Ball"} !` })
+    // VERROU DE BALL (ex. Zappeuréal = Hyper Ball+) : une Ball trop faible n'accroche JAMAIS — la
+    // Master Ball (capture garantie) shunte ce verrou. Lancer raté théâtral + message dédié, le tour
+    // est consommé mais aucune capture. Placé AVANT tryCapture → le tirage RNG reste intact pour la suite.
+    // Un STATUT majeur peut SHUNTER l'exigence de Ball (ex. Bouh : Super Ball+ OU sous statut).
+    const statusBypassesBall = wild.captureStatusBypassesBall && wild.status !== "NONE"
+    if (wild.captureMinBallBonus != null && !isGuaranteedBall(itemId) && ballBonusOf(itemId) < wild.captureMinBallBonus && !statusBypassesBall) {
+        events.push({ kind: "ball", action: "miss" })
+        events.push({ kind: "message", text: `La Ball ricoche sans même s'ouvrir… ${displayName(wild)} est bien trop instable pour une Ball aussi faible !` })
+        return
+    }
+    // VERROU DE STATUT (hommage légendaire Gen1, ex. Goshendofy) : incapturable tant qu'il n'a pas de
+    // statut majeur (para/sommeil/poison/brûlure/gel). La Master Ball shunte. Placé AVANT tryCapture.
+    if (wild.captureRequiresStatus && wild.status === "NONE" && !isGuaranteedBall(itemId)) {
+        events.push({ kind: "ball", action: "miss" })
+        events.push({ kind: "message", text: `${displayName(wild)} dévie la Ball d'un revers ! Il faudra l'affaiblir par un STATUT avant d'espérer le capturer…` })
+        return
+    }
     const res = isGuaranteedBall(itemId)
         ? { caught: true, shakes: 3, value: Infinity }
         : tryCapture(
             {
                 catchRate: sp.catchRate, currentHp: wild.currentHp, maxHp: maxHpOf(wild), status: wild.status,
-                ballBonus: ballBonusOf(itemId), level: wild.level, extraBonus: state.captureModifier,
+                // captureMult (<1) rend la capture PLUS DURE (ex. Thundah/Bélunode) sans toucher la formule.
+                ballBonus: ballBonusOf(itemId), level: wild.level, extraBonus: state.captureModifier * (wild.captureMult ?? 1),
             },
             rng,
         )
-    events.push({ kind: "message", text: `Tu lances une ${getItem(itemId)?.name ?? "Ball"} !` })
     if (res.caught) {
         // RÉUSSITE : animation classique (la ball file → secousses → clic) puis capture.
         events.push({ kind: "ball", action: "throw" })           // la ball file vers le Daemon
@@ -1080,7 +1108,20 @@ function commit(state: BattleState, events: BattleEvent[], rng: Rng, prevTurn: n
     }
     state.events = events
     state.seed = rng.getState()
-    if (advance && state.phase !== "ended") state.turn = prevTurn + 1
+    if (advance && state.phase !== "ended") {
+        state.turn = prevTurn + 1
+        // FUITE SAUVAGE PROGRAMMÉE (Centrale) : certains Daemons électriques décrochent du combat une
+        // fois leur quota de tours écoulé (Boltah ≤5, Heatah ≤3 ; Thundah ne fuit jamais → pas de champ).
+        // prevTurn = le tour qui vient d'être joué → le Daemon a agi prevTurn fois. Fin de combat SANS
+        // récompense ni pénalité de fleeStreak (l'ennemi part, ce n'est pas le joueur qui fuit).
+        const wild = active(state.enemy)
+        if (state.isWild && wild.fleeAfterTurns != null && wild.currentHp > 0 && prevTurn >= wild.fleeAfterTurns) {
+            state.phase = "ended"
+            state.outcome = "enemyfled"
+            events.push({ kind: "message", text: `${displayName(wild)} décroche et file à toute vitesse ! Plus moyen de le rattraper…` })
+            events.push({ kind: "end", outcome: "enemyfled" })
+        }
+    }
     return state
 }
 

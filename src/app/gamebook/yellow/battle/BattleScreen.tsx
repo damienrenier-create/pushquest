@@ -406,7 +406,7 @@ export default function BattleScreen() {
                             options gardent exactement le même Y d'un menu à l'autre. */}
                         <div style={S.menuHint}>
                             {isEnded ? (
-                                <span>{battle.outcome === "win" ? "Tu remportes le combat !" : battle.outcome === "lose" ? "Tous tes Daemons sont K.O…" : battle.outcome === "run" ? "Tu as pris la fuite." : battle.outcome === "caught" ? "Daemon capturé !" : "Fin du combat."}</span>
+                                <span>{battle.outcome === "win" ? "Tu remportes le combat !" : battle.outcome === "lose" ? "Tous tes Daemons sont K.O…" : battle.outcome === "run" ? "Tu as pris la fuite." : battle.outcome === "enemyfled" ? "Le Daemon a pris la fuite !" : battle.outcome === "caught" ? "Daemon capturé !" : "Fin du combat."}</span>
                             ) : needSwitch ? (
                                 <span>Choisis un Daemon !</span>
                             ) : awaitSendOut ? (
@@ -594,6 +594,7 @@ function MonSprite({ mon, facing, alive, hitKey, victory }: { mon: BattleMon; fa
                 key={hitKey}
                 style={{
                     ...(err ? S.sprite : S.spriteBox),
+                    position: "relative",
                     opacity: alive ? 1 : 0.25,
                     transform: facing === "back" ? "scaleX(-1)" : "none",
                     // Victoire : halo doré pulsé (PRIME sur le shake) ; ne pulse QUE le filtre → préserve le scaleX du dos.
@@ -603,7 +604,9 @@ function MonSprite({ mon, facing, alive, hitKey, victory }: { mon: BattleMon; fa
                 {err
                     ? <span style={S.spriteGlyph}>{sp.name[0]}</span>
                     : <img src={sp.sprite} alt={sp.name} onError={() => setErr(true)}
-                        style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated" }} />}
+                        style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated", ...(mon.shiny ? { filter: "saturate(1.7) hue-rotate(35deg) drop-shadow(0 0 5px gold)" } : {}) }} />}
+                {/* CHROMATIQUE (shiny) : ✨ scintillantes par-dessus le sprite (le filtre recolore l'image). */}
+                {mon.shiny && !err && <span style={{ position: "absolute", top: -2, right: 0, fontSize: 18, animation: "victoryPulse 1.3s ease-in-out infinite", pointerEvents: "none" }}>✨</span>}
             </div>
         </div>
     )

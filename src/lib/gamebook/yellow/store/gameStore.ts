@@ -329,6 +329,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 const encCount = typeof window !== "undefined" ? (parseInt(window.localStorage.getItem(ENC_KEY) || "0", 10) || 0) : 999
                 const wild = rollWildEncounter({
                     mapId: next.mapId, x: next.posX, y: next.posY, leadLevel: levelBasis,
+                    weakestTeamLevel: Math.min(...team.map((m) => m.level)), // pour Namicha (Centrale / maison hantée)
+                    strongestTeamLevel: Math.max(...team.map((m) => m.level)), // pour Vipember (+5, maison hantée)
                     player: getPlayerSave().wildCtx ?? undefined,
                     levelCap: wildLevelCap(badges), // bridage par badges (Route Nord + Grotte)
                     encounterCount: encCount,

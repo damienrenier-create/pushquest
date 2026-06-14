@@ -52,5 +52,19 @@ export function tryMove(player: PlayerState, dir: Direction, map: YellowMapData)
         return { ...player, direction: dir }
     }
 
+    // LABYRINTHE INVISIBLE (maison hantée) : la case cible est praticable, mais une ARÊTE barrée
+    // entre la case courante et la cible empêche la transition → on tourne sur place comme un mur.
+    // v[y][x] = mur entre (x,y) et (x+1,y) ; h[y][x] = mur entre (x,y) et (x,y+1).
+    const ew = map.edgeWalls
+    if (ew) {
+        const { posX: x, posY: y } = player
+        const blocked =
+            dir === "right" ? ew.v[y]?.[x] :
+            dir === "left" ? ew.v[y]?.[x - 1] :
+            dir === "down" ? ew.h[y]?.[x] :
+            /* up */ ew.h[y - 1]?.[x]
+        if (blocked) return { ...player, direction: dir }
+    }
+
     return { mapId: player.mapId, posX: nx, posY: ny, direction: dir }
 }

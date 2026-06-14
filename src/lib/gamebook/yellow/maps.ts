@@ -72,6 +72,11 @@ export interface YellowMapData extends MapData {
     /** BROUILLARD (manoir hanté) : on ne voit qu'un rayon de 1 case autour du joueur, le reste
      *  est noir et la zone éclairée SUIT le joueur (les cases se révèlent quand on arrive à côté). */
     darkness?: boolean
+    /** LABYRINTHE INVISIBLE (manoir hanté) : murs sur les ARÊTES entre cases. Les cases restent
+     *  praticables/visibles, mais une arête barrée empêche la transition case→voisine (on tourne
+     *  sur place comme un mur). v[y][x] = mur entre (x,y) et (x+1,y) ; h[y][x] = mur entre (x,y) et
+     *  (x,y+1). Lu par tryMove. Combiné à darkness = labyrinthe qu'on découvre au toucher. */
+    edgeWalls?: { v: boolean[][]; h: boolean[][] }
     /** v2 — Sheet de tiles "ground" (ex: herbe FireRed) avec N variantes
      *  réparties aléatoirement sur toutes les tiles "grass" de la map. */
     groundSheet?: {
@@ -881,6 +886,110 @@ function buildCentraleCollisions(): TileType[][] {
     return m
 }
 
+// === MAISON HANTÉE (intérieur — bâtiment de Cendreville) ===
+// Petite salle en CROIX, 22×16. Art = maison_hantee.png (968×704 = 22×16 @ 44px). Collisions
+// relevées de l'overlay PEINT par Sartay (blanc/noir = non walkable, vert = porte) via
+// scripts/analyze-maison-hantee.ts + flood-fill depuis la porte (élimine les fragments d'art isolés).
+// On ENTRE par le SUD (porte 18-19,10 de Cendreville) et on SORT par la même porte bas-centre.
+// BROUILLARD activé (darkness) : on ne voit qu'à 1 case. '#' = mur, '.' = sol, 'D' = porte (sortie).
+const MAISON_HANTEE_W = 22, MAISON_HANTEE_H = 16, MAISON_HANTEE_TILE = 44
+const MAISON_HANTEE_COLLISION_MAP: string[] = [
+    "######################", // 0
+    "######################", // 1
+    "######################", // 2
+    "######################", // 3
+    "######################", // 4
+    "########.....#########", // 5
+    "########......########", // 6
+    "#######........#######", // 7
+    "#####............#####", // 8
+    "#####...........######", // 9
+    "######..........######", // 10
+    "#####............#####", // 11
+    "#####...........######", // 12
+    "#########...##########", // 13
+    "##########DD##########", // 14
+    "##########DD##########", // 15
+]
+function buildMaisonHanteeCollisions(): TileType[][] {
+    // Sol = "grass" → chaque case de sol déclenche une rencontre SPECTRE (cf. ZONES.yellow_maison_hantee :
+    // règle gameStore "grass + backgroundImage + hasEncounters", façon Grotte/Centrale). Mur = "tree".
+    // 'D' (porte de sortie) = "path" walkable MAIS sans rencontre (pas de combat-piège en sortant).
+    return MAISON_HANTEE_COLLISION_MAP.map((row) =>
+        Array.from(row, (c) => (c === "#" ? "tree" : c === "D" ? "path" : "grass") as TileType),
+    )
+}
+
+// LABYRINTHE INVISIBLE : murs sur les ARÊTES, relevés du tracé NOIR de Sartay sur l'overlay
+// (debug-maps/maison_hantee_check maze.png) via scripts/analyze-maison-hantee-maze.ts.
+// '|' dans VWALLS = mur à DROITE de (x,y) ; '_' dans HWALLS = mur SOUS (x,y).
+const MAISON_HANTEE_VWALLS: string[] = [
+    "......................", // 0
+    "......................", // 1
+    "............|.|.......", // 2
+    "..............|.......", // 3
+    ".|...|................", // 4
+    ".|....................", // 5
+    ".|.|........|.........", // 6
+    "...|........|.........", // 7
+    "..||........|.........", // 8
+    "..........|.|.|.......", // 9
+    ".||..|......|.|.......", // 10
+    ".|............|.......", // 11
+    ".|............|.......", // 12
+    "..........|...........", // 13
+    "..........|...........", // 14
+    "......................", // 15
+]
+const MAISON_HANTEE_HWALLS: string[] = [
+    "......................", // 0
+    "...._______......___..", // 1
+    "......................", // 2
+    "..__..___....__.......", // 3
+    "......_...............", // 4
+    "......................", // 5
+    "......................", // 6
+    "......................", // 7
+    "......................", // 8
+    "......................", // 9
+    "...__._....__.........", // 10
+    "......................", // 11
+    "...._______...........", // 12
+    "......................", // 13
+    "......................", // 14
+    "......................", // 15
+]
+function buildMaisonHanteeEdges(): { v: boolean[][]; h: boolean[][] } {
+    // On NE GARDE une arête que si elle sépare 2 cases PRATICABLES (sinon inerte : le joueur ne peut
+    // pas s'y trouver/y entrer). Ça nettoie les artefacts du fond rouge hors de la salle en croix.
+    const walk = (x: number, y: number) => {
+        const row = MAISON_HANTEE_COLLISION_MAP[y]
+        return !!row && x >= 0 && x < row.length && row[x] !== "#"
+    }
+    const v = MAISON_HANTEE_VWALLS.map((row, y) => Array.from(row, (c, x) => c === "|" && walk(x, y) && walk(x + 1, y)))
+    const h = MAISON_HANTEE_HWALLS.map((row, y) => Array.from(row, (c, x) => c === "_" && walk(x, y) && walk(x, y + 1)))
+    return { v, h }
+}
+
+// === HAUTES HERBES DU NORD (plaine d'entraînement de Cendreville) ===
+// 4 carrés d'herbes HAUTES 4×5 (= 4 types) où le NIVEAU est choisi par la LIGNE (N3-6 en bas → N15-18
+// en haut). Allées en herbe BASSE (grass → groundSheet, walkable sans rencontre), bordure de sapins
+// (tree → TreeSprite). Encounters = grassTall (cf. ZONES.yellow_hautes_herbes, grille d'entraînement).
+const HH_W = 24, HH_H = 10
+const HH_SQUARES: ReadonlyArray<readonly [number, number]> = [[2, 5], [7, 10], [12, 15], [17, 20]]
+function buildHautesHerbes(): TileType[][] {
+    const m: TileType[][] = Array.from({ length: HH_H }, () => Array.from({ length: HH_W }, () => "tree" as TileType))
+    // Rows 2-6 = les carrés (grassTall) séparés par des allées (grass). Row bottom (6) = band 0 (N3-6).
+    for (let y = 2; y <= 6; y++) {
+        for (let x = 2; x <= 21; x++) {
+            m[y][x] = HH_SQUARES.some(([a, b]) => x >= a && x <= b) ? "grassTall" : "grass"
+        }
+    }
+    for (let x = 2; x <= 21; x++) { m[7][x] = "grass"; m[8][x] = "grass" } // couloir bas (herbe basse, walkable)
+    m[9][11] = "grass"; m[9][12] = "grass" // trouée sud (sortie vers Cendreville)
+    return m
+}
+
 export const YELLOW_MAPS: Record<string, YellowMapData> = {
     [YELLOW_ENTRANCE_MAP_ID]: {
         id: YELLOW_ENTRANCE_MAP_ID,
@@ -930,6 +1039,11 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
             { x: 10, y: 17, targetMapId: "yellow_shop", targetSpawnX: 4, targetSpawnY: 6 },
             { x: 19, y: 24, targetMapId: "yellow_infirmary", targetSpawnX: 7, targetSpawnY: 7 },
             { x: 20, y: 24, targetMapId: "yellow_infirmary", targetSpawnX: 7, targetSpawnY: 7 },
+            // MAISON HANTÉE (porte 18-19,10) → intérieur, spawn juste au-dessus de la porte (10,13).
+            { x: 18, y: 10, targetMapId: "yellow_maison_hantee", targetSpawnX: 10, targetSpawnY: 13 },
+            { x: 19, y: 10, targetMapId: "yellow_maison_hantee", targetSpawnX: 10, targetSpawnY: 13 },
+            // OUVERTURE NORD (row 0, cols 22-26) → PLAINE D'ENTRAÎNEMENT (hautes herbes), spawn couloir bas.
+            ...[22, 23, 24, 25, 26].map((x) => ({ x, y: 0, targetMapId: "yellow_hautes_herbes", targetSpawnX: 11, targetSpawnY: 8 })),
         ],
         backgroundImage: "/yellow/sprites/cendreville.png",
         backgroundImageWidth: CENDREVILLE_W * CENDREVILLE_TILE,   // 704
@@ -962,6 +1076,47 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImageOriginY: 0,
         debugGrid: false,       // grille de calage coupée (on garde ?grid=1 en dev si besoin)
         encountersPaused: false, // rencontres Élec ACTIVES (cf. ZONES.yellow_centrale)
+    },
+    yellow_maison_hantee: {
+        id: "yellow_maison_hantee",
+        name: "MAISON HANTÉE",
+        tiles: buildMaisonHanteeCollisions(),
+        width: MAISON_HANTEE_W,
+        height: MAISON_HANTEE_H,
+        // ENTRÉE/SORTIE = la porte bas-centre (cols 10-11, rows 14-15). On entre depuis Cendreville
+        // (porte 18-19,10) et on spawn juste au-dessus de la porte (10,13). Toute case de porte
+        // ramène à Cendreville devant la maison (18,11).
+        exits: [
+            { x: 10, y: 14, targetMapId: "yellow_cendreville", targetSpawnX: 18, targetSpawnY: 11 },
+            { x: 11, y: 14, targetMapId: "yellow_cendreville", targetSpawnX: 18, targetSpawnY: 11 },
+            { x: 10, y: 15, targetMapId: "yellow_cendreville", targetSpawnX: 18, targetSpawnY: 11 },
+            { x: 11, y: 15, targetMapId: "yellow_cendreville", targetSpawnX: 18, targetSpawnY: 11 },
+        ],
+        backgroundImage: "/yellow/sprites/maison_hantee.png",
+        backgroundImageWidth: MAISON_HANTEE_W * MAISON_HANTEE_TILE,   // 968
+        backgroundImageHeight: MAISON_HANTEE_H * MAISON_HANTEE_TILE,  // 704
+        backgroundImageTileSize: MAISON_HANTEE_TILE,
+        backgroundImageOriginX: 0,
+        backgroundImageOriginY: 0,
+        darkness: true,         // brouillard : on ne voit qu'à 1 case (atmosphère manoir hanté)
+        edgeWalls: buildMaisonHanteeEdges(), // labyrinthe INVISIBLE : murs sur les arêtes (tracé de Sartay)
+        encountersPaused: false, // rencontres SPECTRES ACTIVES (cf. ZONES.yellow_maison_hantee)
+    },
+    yellow_hautes_herbes: {
+        id: "yellow_hautes_herbes",
+        name: "HAUTES HERBES",
+        tiles: buildHautesHerbes(),
+        width: HH_W,
+        height: HH_H,
+        // ENTRÉE depuis Cendreville (ouverture nord) → spawn couloir bas (11,8). SORTIE = trouée sud (11-12,9).
+        exits: [
+            { x: 11, y: 9, targetMapId: "yellow_cendreville", targetSpawnX: 24, targetSpawnY: 1 },
+            { x: 12, y: 9, targetMapId: "yellow_cendreville", targetSpawnX: 24, targetSpawnY: 1 },
+        ],
+        // Herbe basse (allées) = sheet 4 variantes 16px gap1 ; herbe HAUTE (carrés) = tuile unique.
+        groundSheet: { url: "/yellow/sprites/herbes_2.png", tileSize: 16, gap: 1, count: 4 },
+        tallGrassUrl: "/yellow/sprites/herbe_haute_h1.png",
+        encountersPaused: false, // rencontres d'entraînement ACTIVES (cf. ZONES.yellow_hautes_herbes)
     },
     yellow_shop: {
         id: "yellow_shop",

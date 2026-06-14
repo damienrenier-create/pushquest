@@ -5,6 +5,7 @@
 // Niveau corrélé au 1er Daemon de l'équipe. Tout est pur/déterministe (RNG injecté).
 
 import { createMonInstance } from "../battle/factory"
+import { getMove } from "./moves"
 import type { MonInstance } from "../battle/types"
 import { biomeDistance, affinityMult, repulsionMult, type Biome } from "./biomes"
 import { rollIvs } from "./ivConfig"
@@ -22,9 +23,36 @@ interface WildEntry {
     repulsion?: Biome[]   // biomes qu'il fuit (densité ↓ en approchant)
     player?: PlayerTag    // type influencé par les stats PushQuest
     rare?: boolean        // popе 1-2 niveaux au-dessus du lead
+    // --- Règles de NIVEAU/ÉVO par espèce (ex. Centrale) ---
+    levelFixed?: number           // niveau IMPOSÉ (ex. Zappeuréal 40, Thundah 50) — ignore scaling + caps
+    levelRange?: [number, number] // niveau tiré dans [min,max] (ex. Bélunode 5-15) — ignore scaling + caps
+    levelMode?: "weakestTeam" | "strongestTeam" // niveau = Daemon le + faible (Namicha) / le + fort (Vipember) de l'équipe
+    levelBonus?: number           // décalage appliqué au levelMode (ex. Vipember = strongestTeam +5)
+    levelMax?: number             // plafond spécifique à l'espèce (ex. Jerbiwat 20)
+    noEvolve?: boolean            // garde l'espèce telle quelle (pas de speciesAtLevel → ex. Namicha jamais Namizeus)
+    quotaRateMult?: number        // ×poids d'apparition si quota du jour atteint (ex. Bélunode ×3)
+    // --- Règles de COMBAT/CAPTURE par espèce (attachées au sauvage spawné, lues par le moteur) ---
+    openMirage?: number           // ouvre le combat par N Mirage forcés (ex. Namicha 1, Thundah 2)
+    openMoves?: string[]          // ouvre le combat par CES moves forcés (injectés au moveset, ex. Bouh = ["detonation"])
+    fleeMaxTurns?: number         // fuit AU PLUS TARD après ce nb de tours (ex. Boltah 5, Heatah 3) — tiré dans [⌈max/2⌉, max]
+    captureMinBallBonus?: number  // capture IMPOSSIBLE si ballBonus de la Ball < cette valeur (ex. Zappeuréal = Hyper Ball+ → 4)
+    captureMult?: number          // ×<1 → capture PLUS DURE (ex. Thundah, Bélunode)
+    captureRequiresStatus?: boolean // capture IMPOSSIBLE sans statut majeur sur la cible (légendaire, ex. Goshendofy)
+    captureStatusBypassesBall?: boolean // un statut majeur shunte captureMinBallBonus (Super Ball+ OU statut, ex. Bouh)
 }
 
-interface Zone { rate: number; pool: WildEntry[]; minLevel?: number }
+/** Carré d'herbes hautes d'un type donné (colonnes x), avec son pool d'espèces. */
+interface TrainingSquare { cols: [number, number]; pool: WildEntry[] }
+/** GRILLE D'ENTRAÎNEMENT : niveau DÉTERMINISTE par ligne (band 0 en bas = niv 3-6 → band 4 en haut
+ *  = niv 15-18), type par carré (colonnes). Le légendaire y rôde, + fréquent en herbe basse. */
+interface TrainingGrid {
+    bottomRow: number              // y de la ligne band-0 (la + basse / niveau 3-6) ; band = bottomRow - y
+    squares: TrainingSquare[]      // 1 carré = 1 type (plage de colonnes)
+    legendary?: WildEntry          // ex. Goshendofy (capture gatée Ball+statut via ses propres champs)
+    legendaryDenomByBand?: number[] // dénominateur de proba par band [bas..haut] (ex. [100,200,300,500,1000])
+}
+
+interface Zone { rate: number; pool: WildEntry[]; minLevel?: number; maxLevel?: number; trainingGrid?: TrainingGrid }
 
 /** Stats PushQuest normalisées 0..1 (sauf quotaReached). Couche méta. */
 export interface WildPlayerCtx {
@@ -40,6 +68,8 @@ export interface EncounterCtx {
     x: number
     y: number
     leadLevel: number          // niveau du 1er Daemon de l'équipe
+    weakestTeamLevel?: number  // niveau du Daemon le + FAIBLE de l'équipe (pour levelMode "weakestTeam")
+    strongestTeamLevel?: number // niveau du Daemon le + FORT de l'équipe (pour levelMode "strongestTeam", ex. Vipember +5)
     rng?: () => number         // [0,1) — défaut Math.random
     player?: WildPlayerCtx
     levelCap?: number          // plafond de niveau (bridé par les badges, cf. wildLevelCap)
@@ -65,7 +95,16 @@ export function wildLevelCap(badges: readonly string[]): number {
 
 /** Zones (mapId) où une espèce apparaît à l'état sauvage — pour la fiche Pokédex. */
 export function speciesZones(speciesId: string): string[] {
-    return Object.keys(ZONES).filter((mapId) => ZONES[mapId].pool.some((e) => e.speciesId === speciesId))
+    return Object.keys(ZONES).filter((mapId) => {
+        const z = ZONES[mapId]
+        if (z.pool.some((e) => e.speciesId === speciesId)) return true
+        const tg = z.trainingGrid
+        if (tg) {
+            if (tg.legendary?.speciesId === speciesId) return true
+            if (tg.squares.some((s) => s.pool.some((e) => e.speciesId === speciesId))) return true
+        }
+        return false
+    })
 }
 
 const ZONES: Record<string, Zone> = {
@@ -146,14 +185,61 @@ const ZONES: Record<string, Zone> = {
     // (Spectre/Élec). Sol = "grass" → tout le sol praticable déclenche (façon grotte).
     yellow_centrale: {
         rate: 0.16,
-        minLevel: 20, // donjon de milieu de partie (Badge Flamme requis pour Cendreville)
+        minLevel: 12,  // plancher des espèces génériques (les autres ont leurs propres règles)
+        maxLevel: 25,  // CAP GÉNÉRAL de la Centrale (sauf niveaux imposés ci-dessous)
         pool: [
-            { speciesId: "electroatiss", base: COMMON, player: "elec" },        // ⚡ staple, courts-circuits
-            { speciesId: "jerbiwat", base: COMMON },                            // Psy/Élec (gerbille électrostatique)
-            { speciesId: "boltah", base: UNCOMMON, player: "elec" },            // Feu/Élec (lignée vitesse)
-            { speciesId: "namicha", base: UNCOMMON },                           // Spectre/Élec (static des ruines)
-            { speciesId: "zappeureal", base: RARE, player: "elec", rare: true },// ⚡ le roi de la foudre (pépite)
+            // % visés (par rencontre) : Jerbiwat ~51 · Électroatiss ~20 · Namicha ~12 · Boltah ~10
+            // · Heatah ~3 · Thundah ~1,1 · Zappeuréal ~0,7 · Bélunode ~1 (×3 si quota).
+            { speciesId: "jerbiwat", base: 230, levelMax: 20 },                              // le + commun, ≤20
+            { speciesId: "electroatiss", base: 90 },                                         // commun, ≤25
+            { speciesId: "namicha", base: 55, levelMode: "weakestTeam", noEvolve: true, openMirage: 1 }, // = + faible équipe, jamais Namizeus, ouvre par 1 Mirage
+            { speciesId: "boltah", base: 45, noEvolve: true, fleeMaxTurns: 5 },              // peu commun, ≤25, fuit ≤5 tours
+            { speciesId: "heatah", base: 14, noEvolve: true, fleeMaxTurns: 3 },              // rare, ≤25, fuit ≤3 tours
+            { speciesId: "thundah", base: 5, levelFixed: 50, noEvolve: true, openMirage: 2, captureMult: 0.35 }, // très rare, N50, 2 Mirage, ne fuit jamais, dur à capturer
+            { speciesId: "zappeureal", base: 3, levelFixed: 40, noEvolve: true, captureMinBallBonus: 4 }, // très très rare, N40, Hyper Ball+ obligatoire
+            { speciesId: "belunode", base: 4, levelRange: [5, 15], noEvolve: true, quotaRateMult: 3, captureMult: 0.4 }, // bébé rare, N5-15, ×3 quota, dur à capturer
         ],
+    },
+    // MAISON HANTÉE (intérieur de Cendreville) : DONJON 100% SPECTRE/PSY, brouillard + labyrinthe
+    // invisible. Rend enfin capturables les stades finals spectres. Règles validées par Sartay.
+    yellow_maison_hantee: {
+        rate: 0.12,    // salle en croix ~80 cases → taux modéré (sous Centrale 0.16)
+        minLevel: 14,
+        maxLevel: 30,  // cap des espèces SCALANTES (Sporbéo/Revemante/Nouillon/Blaziper) ; les autres ont leurs overrides
+        pool: [
+            // % visés ≈ Brook 36 · Hibouh 28 · Sporbéo 11,6 · Revemante 11,6 · Nouillon 3,6 · Blaziper 3,1
+            // · Namicha 2,1 · Flamaspic 1,3 · Regnantaur 0,8 · Enclumind 0,8 · Vipember 0,5 · Bouh 2,6.
+            { speciesId: "brook", base: 140, levelFixed: 20, noEvolve: true },                       // LE + commun, niv 20
+            { speciesId: "hibouh", base: 110, levelRange: [15, 18], noEvolve: true },                // très commun, un peu + bas
+            { speciesId: "sporbeo", base: 45 },                                                      // UNCOMMON (= taux d'origine), scaling/évolue
+            { speciesId: "revemante", base: 45 },                                                    // UNCOMMON (= origine), scaling/évolue
+            { speciesId: "bouh", base: 10, levelFixed: 30, noEvolve: true, openMoves: ["detonation"], captureMinBallBonus: 2, captureStatusBypassesBall: true }, // rare, niv 30, KAMIKAZE (1 PV), capture = Super Ball+ OU statut
+            { speciesId: "nouillon", base: 14 },                                                     // RARE (= origine), scaling
+            { speciesId: "blaziper", base: 12, noEvolve: true, fleeMaxTurns: 6 },                    // rare, fuit en 3-6 tours
+            { speciesId: "namicha", base: 8, levelMode: "weakestTeam", noEvolve: true, openMirage: 1 }, // très rare, = règles Centrale (= + faible équipe, 1 Mirage, jamais Namizeus)
+            { speciesId: "flamaspic", base: 5, levelFixed: 33, noEvolve: true, fleeMaxTurns: 4 },     // + rare, fuit en 2-4 tours
+            { speciesId: "regnantaur", base: 3, levelFixed: 45, noEvolve: true, captureMult: 0.3 },   // très rare, niv 45, très dur à capturer
+            { speciesId: "enclumind", base: 3, levelFixed: 45, noEvolve: true, captureMult: 0.3 },    // très rare, niv 45, très dur à capturer
+            { speciesId: "vipember", base: 2, levelMode: "strongestTeam", levelBonus: 5, noEvolve: true, captureMult: 0.25 }, // LE + rare, +5 du meilleur de l'équipe, très dur
+        ],
+    },
+    // HAUTES HERBES DU NORD (plaine d'entraînement de Cendreville) : 4 carrés = 4 types, NIVEAU choisi
+    // par la LIGNE (band 0 en bas = N3-6 → band 4 en haut = N15-18). Sol = grassTall (déclencheur). Le
+    // légendaire Goshendofy y rôde, + fréquent en herbe BASSE (1/100 → 1/1000). pool[] inutilisé ici.
+    yellow_hautes_herbes: {
+        rate: 0.25, pool: [],
+        trainingGrid: {
+            bottomRow: 6,
+            squares: [
+                { cols: [2, 5], pool: [{ speciesId: "plumiot", base: 100 }] },                                              // NORMAL/Vol (lignée Plumiot)
+                { cols: [7, 10], pool: [{ speciesId: "broutame", base: 100 }, { speciesId: "pampousse", base: 60 }, { speciesId: "tamanpousse", base: 40 }] }, // PLANTE
+                { cols: [12, 15], pool: [{ speciesId: "loutrille", base: 100 }, { speciesId: "piouflot", base: 50 }] },       // EAU
+                { cols: [17, 20], pool: [{ speciesId: "fennaise", base: 100 }, { speciesId: "pyrozly", base: 50 }] },         // FEU
+            ],
+            // Goshendofy : niveau fixe 50 (vrai légendaire), Hyper Nexus Ball (ballBonus≥5) + STATUT requis, capture ×0.5.
+            legendary: { speciesId: "goshendofy", base: 1, levelFixed: 50, noEvolve: true, captureMinBallBonus: 5, captureRequiresStatus: true, captureMult: 0.5 },
+            legendaryDenomByBand: [100, 200, 300, 500, 1000], // band 0 (herbe basse) → band 4 (fond)
+        },
     },
 }
 
@@ -177,6 +263,8 @@ function entryWeight(entry: WildEntry, mapId: string, x: number, y: number, p?: 
     let w = entry.base
     for (const b of entry.affinity ?? []) w *= affinityMult(biomeDistance(mapId, x, y, b))
     for (const b of entry.repulsion ?? []) w *= repulsionMult(biomeDistance(mapId, x, y, b))
+    // Boost d'apparition lié au quota (ex. Bélunode ×3 quand le quota du jour est atteint).
+    if (entry.quotaRateMult && p?.quotaReached) w *= entry.quotaRateMult
     return w * playerMult(entry, p)
 }
 
@@ -191,6 +279,9 @@ export function rollWildEncounter(ctx: EncounterCtx): MonInstance | null {
     if (!zone) return null
     const rng = ctx.rng ?? Math.random
     if (rng() >= zone.rate) return null
+
+    // GRILLE D'ENTRAÎNEMENT (hautes herbes du nord) : niveau choisi par la LIGNE, type par le CARRÉ.
+    if (zone.trainingGrid) return rollTrainingGrid(zone.trainingGrid, ctx, rng)
 
     const weights = zone.pool.map((e) => entryWeight(e, ctx.mapId, ctx.x, ctx.y, ctx.player))
     const total = weights.reduce((a, w) => a + w, 0)
@@ -221,19 +312,89 @@ export function rollWildEncounter(ctx: EncounterCtx): MonInstance | null {
         const frac = roll < 0.33 ? lerp(0.90, 1.00) : roll < 0.66 ? lerp(0.66, 0.99) : lerp(0.33, 0.66)
         level = Math.round(L * frac)
     }
-    if (entry.rare) level += intIn(rng, 1, 2)                        // un rare sauvage = un cran au-dessus
-    if (ctx.levelCap != null) level = Math.min(level, ctx.levelCap)  // bridage par badges (arène) — conservé
-    level = Math.max(zone.minLevel ?? 2, Math.min(100, level))      // plancher (zone) → plafond 100
+    if (entry.rare) level += intIn(rng, 1, 2)                          // un rare sauvage = un cran au-dessus
+    if (ctx.levelCap != null) level = Math.min(level, ctx.levelCap)    // bridage par badges (arène) — conservé
+    if (zone.maxLevel != null) level = Math.min(level, zone.maxLevel)  // cap de ZONE (ex. Centrale 25)
+    if (entry.levelMax != null) level = Math.min(level, entry.levelMax)// cap d'ESPÈCE (ex. Jerbiwat 20)
+    level = Math.max(zone.minLevel ?? 2, Math.min(100, level))        // plancher (zone) → plafond 100
+    // OVERRIDES de niveau par espèce (bypassent scaling + caps ci-dessus) :
+    if (entry.levelFixed != null) level = entry.levelFixed                                   // ex. Thundah 50, Zappeuréal 40
+    else if (entry.levelRange) level = intIn(rng, entry.levelRange[0], entry.levelRange[1])  // ex. Bélunode 5-15
+    else if (entry.levelMode === "weakestTeam" && ctx.weakestTeamLevel != null) level = ctx.weakestTeamLevel // ex. Namicha
+    else if (entry.levelMode === "strongestTeam" && ctx.strongestTeamLevel != null) level = ctx.strongestTeamLevel + (entry.levelBonus ?? 0) // ex. Vipember = + fort équipe +5
+    level = Math.max(1, Math.min(100, level))
 
-    // IV "génétiques" pilotés par l'effort du jour (proximité du quota → meilleur plancher).
-    // Sans données d'effort (hors-ligne), plancher médian (0.5) : ni puni ni maximal.
+    return finalizeSpawn(entry, level, rng, ctx)
+}
+
+/** GRILLE D'ENTRAÎNEMENT (hautes herbes du nord) : niveau = la LIGNE, type = le CARRÉ (colonnes).
+ *  Le légendaire y rôde, + fréquent en herbe BASSE (band 0 = 1/100 → band 4 = 1/1000). */
+function rollTrainingGrid(tg: TrainingGrid, ctx: EncounterCtx, rng: () => number): MonInstance | null {
+    const band = Math.max(0, Math.min(4, tg.bottomRow - ctx.y)) // 0 = bas (niv 3-6) → 4 = haut (niv 15-18)
+    const sq = tg.squares.find((s) => ctx.x >= s.cols[0] && ctx.x <= s.cols[1])
+    if (!sq) return null // sur une allée (herbe basse) → pas de rencontre (gameStore ne roll que sur grassTall)
+    // LÉGENDAIRE : plus fréquent en herbe BASSE (contre-intuitif → paranoïa de chasse).
+    if (tg.legendary && tg.legendaryDenomByBand) {
+        const denom = tg.legendaryDenomByBand[band] ?? 1000
+        if (rng() < 1 / denom) return finalizeSpawn(tg.legendary, tg.legendary.levelFixed ?? 3 + 3 * band, rng, ctx)
+    }
+    // Sinon : pioche pondérée dans le carré, niveau DÉTERMINISTE par la bande.
+    const weights = sq.pool.map((e) => entryWeight(e, ctx.mapId, ctx.x, ctx.y, ctx.player))
+    const total = weights.reduce((a, w) => a + w, 0)
+    if (total <= 0) return null
+    let r = rng() * total, idx = 0
+    for (let i = 0; i < sq.pool.length; i++) { if (r < weights[i]) { idx = i; break } r -= weights[i] }
+    const entry = sq.pool[idx]
+    const level = entry.levelFixed ?? intIn(rng, 3 + 3 * band, 6 + 3 * band)
+    return finalizeSpawn(entry, level, rng, ctx)
+}
+
+/** Finalise un spawn (partagé par le roll standard ET la grille d'entraînement) : IV pilotés par
+ *  l'effort, shiny ~1/512, stade d'évolution cohérent (sauf noEvolve), puis comportements de combat
+ *  attachés à l'instance (openMirage/openMoves/fleeMaxTurns/capture*), lus par le moteur via BattleMon. */
+function finalizeSpawn(entry: WildEntry, level: number, rng: () => number, ctx: EncounterCtx): MonInstance {
+    level = Math.max(1, Math.min(100, level))
     const quotaRatio = ctx.player ? ctx.player.quotaRatio : 0.5
     const overshoot = ctx.player ? ctx.player.overshoot : 0
     const ivsByStat = rollIvs(rng, quotaRatio, overshoot)
+    const finalSpecies = entry.noEvolve ? entry.speciesId : speciesAtLevel(entry.speciesId, level)
+    const shiny = rng() < 1 / 512 // CHROMATIQUE (~1/512) : IV parfaits + +10% stats (cf. createMonInstance/fullStats)
+    const mon = createMonInstance(finalSpecies, level, { ivsByStat, shiny })
 
-    // Stade d'évolution cohérent avec le niveau tiré : jamais de stade impossible
-    // à l'état sauvage (ex. Mottoche N13 → Quadroc). On évolue l'espèce de base.
-    return createMonInstance(speciesAtLevel(entry.speciesId, level), level, { ivsByStat })
+    // COMPORTEMENTS SAUVAGES attachés à l'instance (runtime) → transportés par toBattleMon, inertes
+    // sur un Daemon capturé (le moteur ne les lit que sur l'ENNEMI sauvage).
+    const battleCfg: Record<string, unknown> = {}
+    if (entry.openMirage) {
+        if (!mon.moves.some((m) => m.moveId === "mirage")) {
+            const pp = getMove("mirage")?.pp ?? 20
+            const slot = { moveId: "mirage", pp, ppMax: pp }
+            if (mon.moves.length < 4) mon.moves.push(slot)
+            else mon.moves[mon.moves.length - 1] = slot
+        }
+        battleCfg.openingMoves = Array.from({ length: entry.openMirage }, () => "mirage")
+    }
+    if (entry.openMoves && entry.openMoves.length > 0) {
+        // Ouverture scriptée GÉNÉRIQUE (ex. Bouh = ["detonation"]) : injecte les moves + impose l'ordre.
+        for (const id of entry.openMoves) {
+            if (!mon.moves.some((m) => m.moveId === id)) {
+                const pp = getMove(id)?.pp ?? 5
+                const slot = { moveId: id, pp, ppMax: pp }
+                if (mon.moves.length < 4) mon.moves.push(slot)
+                else mon.moves[mon.moves.length - 1] = slot
+            }
+        }
+        battleCfg.openingMoves = [...((battleCfg.openingMoves as string[]) ?? []), ...entry.openMoves]
+    }
+    if (entry.fleeMaxTurns) {
+        const max = entry.fleeMaxTurns
+        battleCfg.fleeAfterTurns = intIn(rng, Math.ceil(max / 2), max)
+    }
+    if (entry.captureMinBallBonus != null) battleCfg.captureMinBallBonus = entry.captureMinBallBonus
+    if (entry.captureMult != null) battleCfg.captureMult = entry.captureMult
+    if (entry.captureRequiresStatus) battleCfg.captureRequiresStatus = true
+    if (entry.captureStatusBypassesBall) battleCfg.captureStatusBypassesBall = true
+    Object.assign(mon, battleCfg)
+    return mon
 }
 
 /** Exposé pour les tests/outils : poids de chaque espèce à une position. */
