@@ -1014,7 +1014,11 @@ function performCapture(state: BattleState, itemId: string, events: BattleEvent[
         // punchline moqueuse aléatoire. Le Daemon reste visible (on l'a raté, pas effleuré).
         // Tirage via le RNG seedé → déterministe/rejouable (la capture est wild-only, hors PvP).
         events.push({ kind: "ball", action: "miss" })
-        events.push({ kind: "message", text: MISS_CAPTURE_LINES[rng.int(0, MISS_CAPTURE_LINES.length - 1)] })
+        // Garde-fou : si la liste n'est pas chargée (module non résolu en dev), on ne plante PAS
+        // le tour (sinon la capture ratée ne ferait « rien ») → fallback de secours.
+        const lines = MISS_CAPTURE_LINES ?? []
+        const line = lines.length > 0 ? lines[rng.int(0, lines.length - 1)] : "Raté ! La Ball revient bredouille."
+        events.push({ kind: "message", text: line })
     }
 }
 

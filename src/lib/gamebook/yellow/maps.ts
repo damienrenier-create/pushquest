@@ -765,69 +765,114 @@ const VIRIDIAN_ORIGIN_Y = 24         // px image qui correspond à map (_, 0)
 // Collisions PROCÉDURALES calées sur l'art (bordure de forêt calcinée + falaise est,
 // bâtiments bloqués, étang, parterres/pelouse = rencontres). Affinable visuellement (?grid=1).
 const CENDREVILLE_W = 44, CENDREVILLE_H = 37, CENDREVILLE_TILE = 16
-// Arrivée (depuis ACE) et sortie sud (retour monde) — sur la route sable du bas.
-export const CENDREVILLE_SPAWN = { x: 15, y: 31 }
-// CENDREVILLE — collisions calées sur la SPEC DE COORDONNÉES fournie par Sartay (2026-06-14).
-// Convention : colonne,ligne (X,Y). "mur" = bloquant, "walkable" = franchissable.
-// Méthode : base TOUT walkable (path) → on pose les MURS (bordures, barrières, bâtiments,
-// obstacles, eau) → on ROUVRE les OUVERTURES/PORTES EN DERNIER (elles priment sur tout mur).
-// Le visuel réel est dans cendreville.png ; ici on ne gère QUE la collision (mur = "tree").
+// Arrivée depuis la VILLE (via ACE, passage ouest) → on entre par l'EST de Cendreville,
+// juste devant la porte de sortie (43 × 15-17) : la porte est↔ouest est une seule et même
+// liaison entre les deux cartes (« prolongement »). On regarde vers l'ouest (gauche).
+export const CENDREVILLE_SPAWN = { x: 42, y: 16 }
+// CENDREVILLE — collisions EXACTES relevées sur l'overlay REPEINT EN ROUGE par Sartay
+// (2026-06-14, via scripts/analyze-cendreville-red.ts). '#' = mur (non walkable), '.' = walkable.
+// 44 colonnes × 37 lignes. SOURCE DE VÉRITÉ = ce que Sartay a peint en rouge. Pour mettre à jour :
+// repeindre debug-maps/cendreville_overlay.png, relancer le script d'analyse, coller la grille ici.
+// L'art réel reste cendreville.png ; ici on ne gère QUE la collision (mur = "tree", walkable = "path").
+const CENDREVILLE_COLLISION_MAP: string[] = [
+    "######################.....#################", // 0
+    "#######################....#################", // 1
+    "######################.....#################", // 2
+    "#####.............####.....#################", // 3
+    "#####.............####...............#######", // 4
+    ".####........................##......#######", // 5
+    "#####...######............##########.#######", // 6
+    "#####...######...#####....##########.#######", // 7
+    "#####...######...#####....##########.#######", // 8
+    "#####...##.####..######...##########.#######", // 9
+    "#####............#..###...##########.#######", // 10
+    "#################.........##########.#######", // 11
+    "#####.....................##########.#######", // 12
+    "######.....................#########.#######", // 13
+    "######################....##########...#####", // 14
+    "#####....#..#....#####...#.#########.......#", // 15
+    "#####....####....######....................#", // 16
+    "#####....#.##....##.###....................#", // 17
+    "#####.................................######", // 18
+    "#####.................................######", // 19
+    "#####.............................##########", // 20
+    "#####.............####............##########", // 21
+    "#####............#####.........##.##########", // 22
+    "#####.............####.........##.....######", // 23
+    "#####.............#..#......######....######", // 24
+    "#####.......................#....#....######", // 25
+    "#####.......................#....#....######", // 26
+    "#####.......................#....#....######", // 27
+    "#######################...##################", // 28
+    "#####.................................######", // 29
+    "#####.................................######", // 30
+    "#####..........................#############", // 31
+    "#####..........................#############", // 32
+    "####################....####################", // 33
+    "####################....####################", // 34
+    "####################....####################", // 35
+    "####################....####################", // 36
+]
 function buildCendrevilleCollisions(): TileType[][] {
-    const W = CENDREVILLE_W, H = CENDREVILLE_H
-    const WALL = "tree" as TileType
-    const m: TileType[][] = Array.from({ length: H }, () => Array.from({ length: W }, () => "path" as TileType))
-    const fill = (x0: number, y0: number, x1: number, y1: number, t: TileType) => {
-        for (let y = Math.max(0, y0); y <= Math.min(H - 1, y1); y++)
-            for (let x = Math.max(0, x0); x <= Math.min(W - 1, x1); x++) m[y][x] = t
-    }
-    const set = (x: number, y: number, t: TileType) => { if (x >= 0 && x < W && y >= 0 && y < H) m[y][x] = t }
+    const m = CENDREVILLE_COLLISION_MAP.map((row) =>
+        Array.from(row, (c) => (c === "#" ? "tree" : "path") as TileType),
+    )
+    // PORTE DE SORTIE EST (43 × 15-17) : le bord est est peint en mur dans la carte rouge, mais
+    // ces 3 cases SONT la sortie (→ ville). On les force walkable pour pouvoir y entrer.
+    for (const y of [15, 16, 17]) m[y][CENDREVILLE_W - 1] = "path"
+    return m
+}
 
-    // ── 2. BORD HAUT (lignes 0-3) ──
-    fill(0, 0, 21, 2, WALL)          // cols 0-21, rows 0-2 : mur
-    fill(27, 0, 43, 3, WALL)         // cols 27-43, rows 0-3 : mur
-    // cols 22-26 rows 0-2 = walkable (laissé path) ; exception panneau 22,1 = mur
-    set(22, 1, WALL)
-
-    // ── 5. OBSTACLES ISOLÉS ──
-    fill(0, 11, 16, 11, WALL)        // barrière ligne 11 : cols 0-16
-    set(25, 15, WALL)                // panneau isolé
-
-    // ── 3. BÂTIMENTS (emprise = mur plein ; portes rouvertes plus bas) ──
-    fill(8, 6, 13, 9, WALL)          // Gym (8-13 × 6-9)
-    set(14, 9, WALL)                 // panneau Gym
-    fill(17, 7, 21, 10, WALL)        // Maison hantée (17-21 × 7-10)
-    fill(17, 14, 21, 17, WALL)       // Centrale électrique (17-21 × 14-17)
-    set(22, 16, WALL); set(22, 17, WALL) // Centrale — murs annexes (hors emprise, à droite)
-    fill(9, 15, 12, 17, WALL)        // Shop (9-12 × 15-17)
-    fill(18, 21, 21, 24, WALL)       // Centre Pokémon (18-21 × 21-24)
-
-    // ── 4. EAU (étang : 28-33 × 24-28) ──
-    fill(28, 24, 33, 28, "water")
-
-    // ── 1. LIGNE 33 (mur sud avec ouverture 20-23) ──
-    fill(0, 33, 19, 33, WALL)
-    fill(24, 33, 43, 33, WALL)
-
-    // ── 6. LIGNE 28 (barrière) — lecture actuelle ; 26 = MUR (À TRANCHER, cf. note) ──
-    fill(0, 28, 22, 28, WALL)
-    set(26, 28, WALL)                // ??? choisi MUR pour l'instant
-    fill(27, 28, 29, 28, WALL)
-    fill(34, 28, 43, 28, WALL)
-    // (28-33 = étang/eau, déjà posé ; 23-25 = ouverture, rouverte plus bas)
-
-    // ── OUVERTURES / PORTES (WALKABLE) — APPLIQUÉES EN DERNIER (priment sur les murs) ──
-    // 1. Sortie de ville (bord est) + ligne 33 ouverture
-    set(43, 15, "path"); set(43, 16, "path"); set(43, 17, "path")
-    fill(20, 33, 23, 33, "path")
-    // 6. Ligne 28 ouverture
-    fill(23, 28, 25, 28, "path")
-    // Portes des bâtiments
-    set(10, 9, "path")                          // Gym
-    set(18, 10, "path"); set(19, 10, "path")    // Maison hantée
-    set(19, 17, "path")                         // Centrale
-    set(10, 17, "path")                         // Shop
-    set(19, 24, "path"); set(20, 24, "path")    // Centre Pokémon
-
+// === CENTRALE ÉLECTRIQUE (intérieur — bâtiment de Cendreville) ===
+// Labyrinthe 40×36. Art = centrale.png (colorisée, 1080×972 = 40×36 @ 27px). Collisions relevées
+// de l'art (sol beige/jaune = walkable) via scripts/gen-centrale-map.ts + 3 corrections de Sartay.
+// On ENTRE par le SUD (porte centrale de Cendreville) et on SORT au NORD-OUEST (→ Cendreville,
+// devant la porte). '#' = mur, '.' = sol walkable.
+const CENTRALE_W = 40, CENTRALE_H = 36, CENTRALE_TILE = 27
+const CENTRALE_COLLISION_MAP: string[] = [
+    "########################################", // 0
+    "#.######################################", // 1
+    "#.####..#.##.#########...###############", // 2
+    "#...##.......#####.......###.#####..####", // 3
+    "#.......###.######.####..##..######...##", // 4
+    "#.......##....##....###..##..#######..##", // 5
+    "####..#####..#####..###..###.........###", // 6
+    "#.......###..###....###..###.........###", // 7
+    "#.......####.###.....##..##.......######", // 8
+    "#...#...####.###.....##..##...##..######", // 9
+    "#.......###....#......#..#....#....#####", // 10
+    "........###...........#..#....#....#####", // 11
+    "##################.####..#.............#", // 12
+    "######..#...####....###..#####..########", // 13
+    "####....#....###......#................#", // 14
+    "##...........########################..#", // 15
+    "##............####........#....#....#..#", // 16
+    "##......#.....##########..########..#..#", // 17
+    "#####...#####.###########.######....#..#", // 18
+    "####....#####.##..##.#############..#..#", // 19
+    "##......#.##...#...............#....#..#", // 20
+    "##......#.........################..#..#", // 21
+    "#..######..#####....................#..#", // 22
+    "#..#####....#########################..#", // 23
+    "#.....#####...#######.########.#####..##", // 24
+    "#.......###...##..###.######...###....##", // 25
+    "####..#######..#.......###......##...###", // 26
+    "##......####...#.......#.............###", // 27
+    "###...####........##.......###.#########", // 28
+    "###...####........##.......###.#########", // 29
+    "##...######.##################.#########", // 30
+    "##...#####....#############.##..########", // 31
+    "#......###....####....######.......##..#", // 32
+    "#......###......##....###.##..####.###.#", // 33
+    "#.......#...............#..............#", // 34
+    "####..##################################", // 35
+]
+function buildCentraleCollisions(): TileType[][] {
+    const m = CENTRALE_COLLISION_MAP.map((row) =>
+        Array.from(row, (c) => (c === "#" ? "tree" : "path") as TileType),
+    )
+    // Corrections walkable de Sartay (col,row).
+    for (const [x, y] of [[31, 20], [26, 16], [31, 16]] as const) m[y][x] = "path"
     return m
 }
 
@@ -868,16 +913,14 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         tiles: buildCendrevilleCollisions(),
         width: CENDREVILLE_W,
         height: CENDREVILLE_H,
-        // Retour vers la VILLE via la "Sortie de ville" de la spec (bord EST, 43 × 15-17) →
-        // on ressort en (1,17), juste à droite d'ACE. (L'ancienne sortie sud row33/13-16 est
-        // désormais un mur dans la spec ; la destination du passage sud 20-23 reste à définir.)
-        exits: [15, 16, 17].map((y) => ({
-            x: 43,
-            y,
-            targetMapId: YELLOW_ENTRANCE_MAP_ID,
-            targetSpawnX: 1,
-            targetSpawnY: 17,
-        })),
+        // SORTIE EST (43 × 15-17) = prolongement de la sortie OUEST de la ville. On ressort
+        // dans le passage ouest de la ville (1,17), juste à côté d'ACE.
+        // (Les ouvertures NORD haut et SUD cols 20-23 sont des CULS-DE-SAC : routes pas encore codées.)
+        exits: [
+            ...[15, 16, 17].map((y) => ({ x: 43, y, targetMapId: YELLOW_ENTRANCE_MAP_ID, targetSpawnX: 1, targetSpawnY: 17 })),
+            // Porte de la CENTRALE ÉLECTRIQUE (19,17) → intérieur, on entre par le SUD.
+            { x: 19, y: 17, targetMapId: "yellow_centrale", targetSpawnX: 5, targetSpawnY: 34 },
+        ],
         backgroundImage: "/yellow/sprites/cendreville.png",
         backgroundImageWidth: CENDREVILLE_W * CENDREVILLE_TILE,   // 704
         backgroundImageHeight: CENDREVILLE_H * CENDREVILLE_TILE,  // 592
@@ -886,6 +929,29 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImageOriginY: 0,
         debugGrid: true,        // WIP : grille visible en permanence pour caler les collisions
         encountersPaused: true, // WIP : pas de rencontres le temps de finaliser la map
+    },
+    yellow_centrale: {
+        id: "yellow_centrale",
+        name: "CENTRALE",
+        tiles: buildCentraleCollisions(),
+        width: CENTRALE_W,
+        height: CENTRALE_H,
+        // ENTRÉE = sud (depuis la porte de Cendreville, spawn 5,34). SORTIE = nord-ouest (0,11)
+        // → Cendreville devant la porte (19,18). Les deux ouvertures ramènent à Cendreville
+        // (pas de soft-lock : on peut aussi ressortir par le sud).
+        exits: [
+            { x: 0, y: 11, targetMapId: "yellow_cendreville", targetSpawnX: 19, targetSpawnY: 18 }, // sortie NW
+            { x: 4, y: 35, targetMapId: "yellow_cendreville", targetSpawnX: 19, targetSpawnY: 18 }, // entrée sud (retour)
+            { x: 5, y: 35, targetMapId: "yellow_cendreville", targetSpawnX: 19, targetSpawnY: 18 },
+        ],
+        backgroundImage: "/yellow/sprites/centrale.png",
+        backgroundImageWidth: CENTRALE_W * CENTRALE_TILE,   // 1080
+        backgroundImageHeight: CENTRALE_H * CENTRALE_TILE,  // 972
+        backgroundImageTileSize: CENTRALE_TILE,
+        backgroundImageOriginX: 0,
+        backgroundImageOriginY: 0,
+        debugGrid: true,        // WIP : grille de calage
+        encountersPaused: true, // WIP
     },
     yellow_shop: {
         id: "yellow_shop",
