@@ -262,7 +262,7 @@ export const YELLOW_NPCS: NpcDefinition[] = [
             "⚡ LA TOUR HERTZ est 100% ÉLECTRIK. Une clé domine tout : le SOL.",
             "🌍 Le SOL frappe l'Élec ×2 (et double-punit les Feu/Élec), et la foudre ne peut même PAS toucher un Daemon Sol (×0).",
             "🐗 Capture un ROCHE/SOL : CAILLOUTCHI (Route Nord) ou la lignée MOTTOCHE → QUADROC (Grotte). Immunisés à la foudre, ils traversent la tour.",
-            "⛏️ Arme-les : SÉISME (CT Champion, PUISSANCE 100, débloquée dès 3 badges) ou FAILLE SISMIQUE (cadeau de l'arène Roche, 90). Quadroc cogne déjà Tir de Boue (55) tout seul.",
+            "⛏️ Fais-le monter : CAILLOUTCHI évolue en ROCTAUR (N25) qui apprend SÉISME tout seul (N30, PUISSANCE 100) ! Sinon FAILLE SISMIQUE (cadeau de l'arène Roche, 90) ou la CT Séisme (Champion, 3 badges) s'enseignent à n'importe quel Roche/Sol.",
             "🪨 Le Sol ne touche pas le VOL : garde un coup ROCHE en secours (Lame de Roche, 90 — la CT du badge Roche). Une équipe variée ne se fait jamais surprendre.",
             "💪 SOL et ROCHE sont PHYSIQUES → mise sur ton ATTAQUE. La foudre, elle, frappe en SPÉCIAL → c'est ta SPÉ qui encaisse.",
             "🚫 N'amène ni EAU ni VOL : l'Élec leur fait ×2.",
