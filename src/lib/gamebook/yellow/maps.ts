@@ -920,6 +920,11 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
             ...[15, 16, 17].map((y) => ({ x: 43, y, targetMapId: YELLOW_ENTRANCE_MAP_ID, targetSpawnX: 1, targetSpawnY: 17 })),
             // Porte de la CENTRALE ÉLECTRIQUE (19,17) → intérieur, on entre par le SUD.
             { x: 19, y: 17, targetMapId: "yellow_centrale", targetSpawnX: 5, targetSpawnY: 34 },
+            // SHOP (10,17) et CENTRE POKÉMON (19,24 / 20,24) : intérieurs PARTAGÉS avec la ville.
+            // Le retour est redirigé vers Cendreville par le store (interiorReturn).
+            { x: 10, y: 17, targetMapId: "yellow_shop", targetSpawnX: 4, targetSpawnY: 6 },
+            { x: 19, y: 24, targetMapId: "yellow_infirmary", targetSpawnX: 7, targetSpawnY: 7 },
+            { x: 20, y: 24, targetMapId: "yellow_infirmary", targetSpawnX: 7, targetSpawnY: 7 },
         ],
         backgroundImage: "/yellow/sprites/cendreville.png",
         backgroundImageWidth: CENDREVILLE_W * CENDREVILLE_TILE,   // 704

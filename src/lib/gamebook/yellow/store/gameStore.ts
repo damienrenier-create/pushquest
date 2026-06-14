@@ -18,7 +18,7 @@ import type { YellowMapData } from "../maps"
 import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, resetFleeStreak } from "./battleStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, aceBattleLevel, aceTeamSizeFor, aceAvailableToday } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps } from "./playerStore"
 import { getSpecies } from "../data/species"
 import { persistYellowSave } from "./saveManager"
 import { rollWildEncounter, wildLevelCap, hasEncounters } from "../data/encounters"
@@ -59,6 +59,10 @@ interface GameStore {
     signOpen: number | null // index du panneau du parc ouvert (pop-up dédié), null = fermé
     posterImage: string | null // poster mural du Centre affiché en overlay (src PNG), null = fermé
     poster2Step: number // compteur de SESSION du poster (12,0) : 0→PNG2 · 1→PNG3 · 2+→Dieu des Pâtes
+    // Intérieurs PARTAGÉS (shop / Centre) : ville d'origine où ressortir (Ville Jaune ou Cendreville).
+    // Posé à l'entrée, consommé à la sortie. null = pas dans un intérieur partagé (ou rechargé).
+    interiorReturn: { mapId: string; x: number; y: number } | null
+    cendrePosterGiven: boolean // don d'énergie du poster cendre 2 déjà donné cette session (anti-spam)
     hydrated: boolean // true une fois que l'état serveur a été chargé
     stepFrame: 0 | 1 // alterne à chaque déplacement réel → anime les jambes du sprite
     pendingTrainerId: string | null // dresseur dont l'intro est en cours → combat à la fermeture
@@ -207,6 +211,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     signOpen: null,
     posterImage: null,
     poster2Step: 0,
+    interiorReturn: null,
+    cendrePosterGiven: false,
     hydrated: false,
     stepFrame: 0,
     pendingTrainerId: null,
@@ -237,9 +243,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
         const exit = findExitAt(map, next.posX, next.posY)
         if (exit) {
             // Le GYM se réorganise selon les badges : la porte mène à l'arène courante.
-            const targetMapId = exit.targetMapId === "yellow_arena"
+            let targetMapId = exit.targetMapId === "yellow_arena"
                 ? currentArenaMapId(getPlayerSave().badges)
                 : exit.targetMapId
+            let spawnX = exit.targetSpawnX
+            let spawnY = exit.targetSpawnY
+            // RETOUR DYNAMIQUE des intérieurs PARTAGÉS (shop / Centre) : on ressort dans la VILLE
+            // d'où l'on vient (Ville Jaune OU Cendreville), pas systématiquement yellow_entrance.
+            // interiorReturn a été posé à l'ENTRÉE (cf. plus bas). Scopé aux 2 intérieurs partagés.
+            const leavingShared = map.id === "yellow_shop" || map.id === "yellow_infirmary"
+            const ret = get().interiorReturn
+            if (leavingShared && ret) { targetMapId = ret.mapId; spawnX = ret.x; spawnY = ret.y }
             // GATE GROTTE : interdite tant que le Badge Plante n'est pas gagné → le dieu
             // Spaghetti barre la route et te renvoie au Centre Daemon (comme un K.O.).
             if (targetMapId === "yellow_grotte" && !getPlayerSave().badges.includes("plante")) {
@@ -262,15 +276,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
             if (newMap) {
                 // Override de spawn : l'arène Feu (16×16) a son entrée en bas (8,14),
                 // pas au spawn générique du gym (7,8) calé sur les arènes 15×10.
-                const spawnX = targetMapId === "yellow_arena_feu" ? 8 : exit.targetSpawnX
-                const spawnY = targetMapId === "yellow_arena_feu" ? 14 : exit.targetSpawnY
-                const newPlayer = createInitialPlayer(
-                    targetMapId,
-                    spawnX,
-                    spawnY,
-                    next.direction,
-                )
-                set({ map: newMap, player: newPlayer, dialogue: null })
+                if (targetMapId === "yellow_arena_feu") { spawnX = 8; spawnY = 14 }
+                const newPlayer = createInitialPlayer(targetMapId, spawnX, spawnY, next.direction)
+                // Mémorise l'origine en ENTRANT dans un intérieur partagé (→ retour dynamique +
+                // posters de Cendreville) ; on l'efface en SORTANT d'un partagé.
+                const enteringShared = targetMapId === "yellow_shop" || targetMapId === "yellow_infirmary"
+                const fromOverworld = map.id === YELLOW_ENTRANCE_MAP_ID || map.id === "yellow_cendreville"
+                const interiorReturn = enteringShared && fromOverworld
+                    ? { mapId: map.id, x: player.posX, y: player.posY }
+                    : (leavingShared ? null : ret)
+                set({ map: newMap, player: newPlayer, dialogue: null, interiorReturn })
                 scheduleSave(newPlayer)
                 return
             }
@@ -458,9 +473,38 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
-        // Posters muraux du Centre Daemon (easter egg du DIEU DES PÂTES).
+        // Posters muraux du Centre Daemon. Contenu DIFFÉRENT selon la ville d'origine :
+        // à CENDREVILLE → posters « cendre » + gag voyeur/énergie ; sinon → DIEU DES PÂTES.
+        const fromCendre = get().interiorReturn?.mapId === "yellow_cendreville"
         if (npc.id === "y_pasta_poster_1") {
-            set({ posterImage: "/yellow/sprites/poster1.jpg" })
+            set({ posterImage: fromCendre ? "/yellow/sprites/poster_cendre1.jpg" : "/yellow/sprites/poster1.jpg" })
+            return
+        }
+        if (npc.id === "y_pasta_poster_2" && fromCendre) {
+            // CENDREVILLE — cycle 2 phases : on regarde le poster, puis on se fait traiter de
+            // voyeur/gros cochon + don d'énergie (1×/session via cendrePosterGiven, anti-spam).
+            const phase = get().poster2Step % 2
+            const step = get().poster2Step + 1
+            if (phase === 0) { set({ posterImage: "/yellow/sprites/poster_cendre2.jpg", poster2Step: step }); return }
+            const give = !get().cendrePosterGiven
+            const added = give ? grantReps(80) : 0
+            if (give) persistYellowSave()
+            set({
+                posterImage: null, poster2Step: step, cendrePosterGiven: true,
+                dialogue: {
+                    npcId: "y_cendre_voyeur", npcName: "???", lineIndex: 0,
+                    lines: give
+                        ? [
+                            "*Une voix sèche claque derrière toi.*",
+                            "Eh, le VOYEUR ! On se rince l'œil sur les posters, gros cochon ? 👀",
+                            `Tiens, +${added} d'énergie pour la honte… et maintenant DÉGAGE te défouler ! 💪`,
+                        ]
+                        : [
+                            "Encore là à reluquer les murs, gros cochon ? 👀",
+                            "L'énergie, c'était UNE fois. Ouste !",
+                        ],
+                },
+            })
             return
         }
         if (npc.id === "y_pasta_poster_2") {
