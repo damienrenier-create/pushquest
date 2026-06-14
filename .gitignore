@@ -38,6 +38,9 @@ prisma/dev.db
 # vercel
 .vercel
 
+# cartes debug régénérables (npx tsx scripts/gen-cendreville-map.ts)
+/debug-maps/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

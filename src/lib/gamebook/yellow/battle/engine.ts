@@ -21,6 +21,7 @@ import { tryCapture } from "./capture"
 import { ballBonusOf, getItem, isGuaranteedBall } from "../data/items"
 import { STRUGGLE_MOVE_ID, STRUGGLE_INDEX, moveCostReps } from "../data/combatCostConfig"
 import { gainEv, signatureStat, EV_YIELD_PER_WIN } from "../data/evConfig"
+import { MISS_CAPTURE_LINES } from "../data/missCaptureLines"
 
 // ============================================================
 // Types d'état & événements
@@ -35,7 +36,7 @@ export type BattleEvent =
     | { kind: "faint"; side: SideId; name: string }
     | { kind: "status"; side: SideId; status: MajorStatus }
     | { kind: "switchIn"; side: SideId; name: string; teamIndex: number }
-    | { kind: "ball"; action: "throw" | "shake" | "result"; shakes?: number; caught?: boolean }
+    | { kind: "ball"; action: "throw" | "shake" | "result" | "miss"; shakes?: number; caught?: boolean }
     | { kind: "end"; outcome: Outcome }
 
 export type Outcome = "win" | "lose" | "run" | "caught"
@@ -55,6 +56,12 @@ export interface BattleState {
     outcome: Outcome | null
     /** Side devant choisir un remplaçant suite à un KO (sinon null). */
     forcedSwitch: SideId | null
+    /** COMBAT DE DRESSEUR (flow Game Boy) — l'ENNEMI vient de perdre son Daemon actif et doit en
+     *  envoyer un autre. On NE l'envoie PAS tout de suite : le KO est annoncé, le prochain Daemon
+     *  adverse est annoncé (teamIndex), et on laisse au joueur une FENÊTRE de changement.
+     *  Tant que ce champ est non-null, le combat est en PAUSE sur cette décision (cf. action "stay"
+     *  ou "switch"). null hors de ce contexte (sauvage/PvP : pas de fenêtre, cf. checkFaints). */
+    enemySendOut: { teamIndex: number } | null
     /** File d'événements du dernier tour résolu (vidée par l'UI). */
     events: BattleEvent[]
     /** État RNG persistant (déterministe / rejouable). */
@@ -84,6 +91,8 @@ export type PlayerAction =
     | { kind: "ball"; itemId: string }
     | { kind: "item"; itemId: string }
     | { kind: "run" }
+    /** Fenêtre d'envoi adverse (combat de Dresseur) : GARDER son Daemon face à l'envoi ennemi. */
+    | { kind: "stay" }
 
 // Action interne résolue pour un camp (le joueur ET l'IA produisent ça).
 interface ResolvedAction {
@@ -155,6 +164,7 @@ export function createBattle(
         phase: "select",
         outcome: null,
         forcedSwitch: null,
+        enemySendOut: null,
         events: [],
         seed: opts.seed >>> 0,
         captureModifier: opts.captureModifier ?? 1,
@@ -177,6 +187,33 @@ export function resolveTurn(prev: BattleState, playerAction: PlayerAction): Batt
     const state: BattleState = structuredCloneState(prev)
     const rng = new Rng(state.seed)
     const events: BattleEvent[] = []
+
+    // ============================================================
+    // FENÊTRE D'ENVOI ADVERSE (combat de Dresseur — flow Game Boy)
+    // ------------------------------------------------------------
+    // Le KO adverse a déjà été annoncé + le prochain Daemon ennemi annoncé (checkFaints).
+    // On a laissé au joueur le choix : CHANGER (switch) ou RESTER (stay). Quelle que soit
+    // sa décision, on fait ENTRER ensuite le Daemon adverse annoncé. Ce n'est PAS un vrai
+    // tour (aucune attaque de part ni d'autre) → on n'avance pas le compteur de tour.
+    // ============================================================
+    if (state.enemySendOut) {
+        // 1) Le joueur change AVANT l'entrée adverse — gratuit (face-à-face d'envois, pas de
+        //    coup offert : l'ennemi entre lui aussi). Toute autre action ("stay", etc.) = rester.
+        if (playerAction.kind === "switch") {
+            doSwitch(state, "player", playerAction.teamIndex!, events)
+        }
+        // Double KO : la décision du joueur consomme aussi son éventuel changement forcé.
+        state.forcedSwitch = null
+        // 2) L'ennemi envoie le Daemon annoncé (re-vérification de vie par sécurité).
+        const planned = state.enemySendOut.teamIndex
+        const idx = (state.enemy.team[planned]?.currentHp ?? 0) > 0 ? planned : firstAliveIndex(state.enemy)
+        if (idx >= 0) doSwitch(state, "enemy", idx, events)
+        state.enemySendOut = null
+        // 3) Garde-fou : si le joueur était lui-même K.O. et n'a pas changé (ne devrait pas
+        //    arriver — l'UI impose le choix dans ce cas) → on re-déclenche son changement forcé.
+        if (active(state.player).currentHp <= 0 && hasAlive(state.player)) state.forcedSwitch = "player"
+        return commit(state, events, rng, prev.turn, /*advance*/ false)
+    }
 
     // VERROU DE CHARGE (move à 2 tours) : un Daemon joueur en pleine charge LIBÈRE sa décharge ce
     // tour. EXCEPTION : le joueur peut le RAPPELER (switch) pour ANNULER la charge (choix tactique) ;
@@ -247,6 +284,12 @@ export function resolveTurn(prev: BattleState, playerAction: PlayerAction): Batt
         }
         if (state.phase !== "ended") { endOfTurn(state, events, rng); checkFaints(state, events) }
         return commit(state, events, rng, prev.turn, true)
+    }
+
+    // "stay" n'a de sens que DANS la fenêtre d'envoi adverse (gérée tout en haut). Hors de ce
+    // contexte c'est un no-op sûr (ne devrait jamais arriver — l'UI ne le propose que là).
+    if (playerAction.kind === "stay") {
+        return commit(state, events, rng, prev.turn, /*advance*/ false)
     }
 
     // --- Construit les actions des deux camps ---
@@ -774,9 +817,21 @@ function checkFaints(state: BattleState, events: BattleEvent[]) {
         events.push({ kind: "end", outcome: "lose" })
         return
     }
-    // Auto-switch ennemi si son actif est KO
-    if (active(state.enemy).currentHp <= 0) {
-        doSwitch(state, "enemy", firstAliveIndex(state.enemy), events)
+    // L'actif ennemi est K.O. et il lui reste des Daemons → il doit en envoyer un.
+    if (active(state.enemy).currentHp <= 0 && !state.enemySendOut) {
+        const enemyIdx = firstAliveIndex(state.enemy)
+        // COMBAT DE DRESSEUR (solo) — flow Game Boy : on N'envoie PAS le suivant tout de suite.
+        // On ANNONCE le prochain Daemon adverse et on laissera le joueur décider de changer
+        // (fenêtre gérée en tête de resolveTurn). EXCEPTION : si le joueur est LUI AUSSI K.O.
+        // (double KO), il devra de toute façon changer → la fenêtre "rester/changer" n'a pas de
+        // sens, on enchaîne directement l'envoi adverse (comportement historique).
+        // SAUVAGE / PvP : pas de fenêtre — on conserve l'auto-switch immédiat.
+        if (!state.isWild && !state.pvp && active(state.player).currentHp > 0 && enemyIdx >= 0) {
+            state.enemySendOut = { teamIndex: enemyIdx }
+            events.push({ kind: "message", text: `L'adversaire va envoyer ${displayName(state.enemy.team[enemyIdx])} !` })
+        } else {
+            doSwitch(state, "enemy", enemyIdx, events)
+        }
     }
     // Le joueur doit choisir un remplaçant si son actif est KO
     if (active(state.player).currentHp <= 0) {
@@ -944,16 +999,22 @@ function performCapture(state: BattleState, itemId: string, events: BattleEvent[
             rng,
         )
     events.push({ kind: "message", text: `Tu lances une ${getItem(itemId)?.name ?? "Ball"} !` })
-    events.push({ kind: "ball", action: "throw" })           // la ball file vers le Daemon
-    events.push({ kind: "ball", action: "shake", shakes: res.shakes }) // secousses (0..3)
-    events.push({ kind: "ball", action: "result", caught: res.caught }) // clic / éclatement
     if (res.caught) {
+        // RÉUSSITE : animation classique (la ball file → secousses → clic) puis capture.
+        events.push({ kind: "ball", action: "throw" })           // la ball file vers le Daemon
+        events.push({ kind: "ball", action: "shake", shakes: res.shakes }) // secousses (0..3)
+        events.push({ kind: "ball", action: "result", caught: true }) // clic
         state.phase = "ended"
         state.outcome = "caught"
         events.push({ kind: "message", text: `Gagné ! ${displayName(wild)} est capturé !` })
         events.push({ kind: "end", outcome: "caught" })
     } else {
-        events.push({ kind: "message", text: `Oh non ! ${displayName(wild)} s'est échappé !` })
+        // ÉCHEC = lancer RATÉ THÉÂTRAL (et NON l'animation « presque attrapé ») : la ball part
+        // de travers, manque la cible et sort de l'écran (event "miss", joué côté UI), puis une
+        // punchline moqueuse aléatoire. Le Daemon reste visible (on l'a raté, pas effleuré).
+        // Tirage via le RNG seedé → déterministe/rejouable (la capture est wild-only, hors PvP).
+        events.push({ kind: "ball", action: "miss" })
+        events.push({ kind: "message", text: MISS_CAPTURE_LINES[rng.int(0, MISS_CAPTURE_LINES.length - 1)] })
     }
 }
 
@@ -1028,6 +1089,9 @@ function structuredCloneState(s: BattleState): BattleState {
         participated: [...s.participated],
         participants: Object.fromEntries(Object.entries(s.participants).map(([k, v]) => [k, [...v]])),
         enemyEnergy: s.enemyEnergy ? { ...s.enemyEnergy } : null,
+        // Deep-clone défensif (cohérent avec enemyEnergy) : évite tout partage de référence
+        // de l'objet { teamIndex } avec l'état précédent détenu par le store.
+        enemySendOut: s.enemySendOut ? { ...s.enemySendOut } : null,
     }
 }
 

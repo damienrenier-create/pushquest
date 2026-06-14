@@ -53,7 +53,7 @@ export default function BattleScreen() {
     const [dispIdx, setDispIdx] = useState<{ p: number; e: number } | null>(null)
     const [shakeP, setShakeP] = useState(0)
     const [shakeE, setShakeE] = useState(0)
-    const [ball, setBall] = useState<{ phase: "throw" | "shake" | "result"; shakes: number; caught: boolean } | null>(null)
+    const [ball, setBall] = useState<{ phase: "throw" | "shake" | "result" | "miss"; shakes: number; caught: boolean } | null>(null)
     const [cursor, setCursor] = useState(0)
     const [atkFx, setAtkFx] = useState<{ spec: AttackFxSpec; side: "player" | "enemy"; key: number } | null>(null)
     const atkKeyRef = useRef(0)
@@ -101,6 +101,7 @@ export default function BattleScreen() {
         if (ev.kind === "ball") {
             if (ev.action === "throw") { setBall({ phase: "throw", shakes: 0, caught: false }); delay = 620 }
             else if (ev.action === "shake") { setBall({ phase: "shake", shakes: ev.shakes ?? 0, caught: false }); delay = Math.max(500, (ev.shakes ?? 0) * 460 + 360) }
+            else if (ev.action === "miss") { setBall({ phase: "miss", shakes: 0, caught: false }); delay = 950 } // lancer raté : la ball part de travers et sort de l'écran
             else { setBall({ phase: "result", shakes: 0, caught: !!ev.caught }); delay = 850 }
         } else if (ev.kind === "hp") {
             // Déclenche le tremblement AVANT setDisp (jamais de setState imbriqué).
@@ -152,6 +153,12 @@ export default function BattleScreen() {
             const onSlot = options.findIndex((o) => o.moveSlot === lastMoveSlotRef.current && !o.disabled)
             const firstOk = options.findIndex((o) => !o.disabled)
             setCursor(onSlot >= 0 ? onSlot : firstOk >= 0 ? firstOk : 0)
+        } else if (menu === "switch" || (playbackDone && needSwitch)) {
+            // Listes d'équipe (switch volontaire, switch forcé, ou fenêtre d'envoi adverse) :
+            // l'index 0 est souvent grisé (Daemon actif / K.O.) → on démarre sur la 1re option
+            // valide pour qu'un appui A réflexe sélectionne un Daemon jouable (cf. menu "moves").
+            const firstOk = options.findIndex((o) => !o.disabled)
+            setCursor(firstOk >= 0 ? firstOk : 0)
         } else {
             setCursor(0)
         }
@@ -193,6 +200,11 @@ export default function BattleScreen() {
     // après swap éventuel) → déclenche la célébration (confettis + débrief GOAT/FLOP).
     const playerWon = isEnded && battle.player.team.some((m) => m.currentHp > 0)
     const needSwitch = battle.forcedSwitch === "player"
+    // FENÊTRE D'ENVOI ADVERSE (combat de Dresseur — flow Game Boy) : le KO + l'annonce du prochain
+    // Daemon adverse ont été joués ; on attend la DÉCISION du joueur (RESTER / CHANGER) avant que
+    // l'ennemi n'entre. (Double KO : le changement forcé du joueur prime → pas de fenêtre optionnelle.)
+    const awaitSendOut = !!battle.enemySendOut && !needSwitch && !isEnded
+    const sendOutName = battle.enemySendOut ? displayName(battle.enemy.team[battle.enemySendOut.teamIndex]) : ""
 
     // --- handlers ---
     // tryAct : n'exécute l'action que si on n'a pas déjà agi pour CET état de combat
@@ -207,6 +219,8 @@ export default function BattleScreen() {
     const doMove = (i: number) => tryAct(() => { lastMoveSlotRef.current = i; submitPlayerAction({ kind: "move", moveIndex: i }); setMenu("root") })
     const doStruggle = () => tryAct(() => { submitPlayerAction({ kind: "move", moveIndex: STRUGGLE_INDEX }); setMenu("root") })
     const doSwitch = (i: number) => tryAct(() => { submitPlayerAction({ kind: "switch", teamIndex: i }); setMenu("root") })
+    // Fenêtre d'envoi adverse : GARDER son Daemon (l'ennemi annoncé entre ensuite, sans coup offert).
+    const doStay = () => tryAct(() => { submitPlayerAction({ kind: "stay" }); setMenu("root") })
     const throwBall = (itemId: string) => tryAct(() => { submitPlayerAction({ kind: "ball", itemId }); setMenu("root") })
     const doItem = (itemId: string) => tryAct(() => { submitPlayerAction({ kind: "item", itemId }); setMenu("root") })
     const run = () => tryAct(() => submitPlayerAction({ kind: "run" }))
@@ -242,6 +256,22 @@ export default function BattleScreen() {
             label: `${displayName(m)} N.${m.level} — ${m.currentHp <= 0 ? "K.O." : m.currentHp + "/" + maxHpOf(m) + " PV"}`,
             onSelect: () => doSwitch(i), disabled: m.currentHp <= 0 || i === battle.player.activeIndex,
         }))
+    } else if (playbackDone && awaitSendOut) {
+        // FENÊTRE D'ENVOI ADVERSE (flow Game Boy). Deux temps : la décision (rester/changer),
+        // puis — si « changer » — la liste d'équipe. Le Daemon adverse n'entre qu'APRÈS le choix.
+        if (menu === "switch") {
+            battle.player.team.forEach((m, i) => options.push({
+                label: `${displayName(m)} N.${m.level} — ${m.currentHp <= 0 ? "K.O." : m.currentHp + "/" + maxHpOf(m) + " PV"}`,
+                onSelect: () => doSwitch(i), disabled: m.currentHp <= 0 || i === battle.player.activeIndex,
+            }))
+            options.push({ label: "← RETOUR", onSelect: () => setMenu("root") })
+            canBack = true
+        } else {
+            // « Rester » en premier → curseur dessus par défaut (tap réflexe = rester, sans jamais
+            // escamoter la fenêtre de choix).
+            options.push({ label: "✋ Rester en jeu", onSelect: () => doStay() })
+            options.push({ label: "🔄 Changer de Daemon", onSelect: () => setMenu("switch") })
+        }
     } else if (playbackDone) {
         if (menu === "root") {
             options.push({ label: "⚔️ ATTAQUE", onSelect: () => setMenu("moves") })
@@ -379,6 +409,8 @@ export default function BattleScreen() {
                                 <span>{battle.outcome === "win" ? "Tu remportes le combat !" : battle.outcome === "lose" ? "Tous tes Daemons sont K.O…" : battle.outcome === "run" ? "Tu as pris la fuite." : battle.outcome === "caught" ? "Daemon capturé !" : "Fin du combat."}</span>
                             ) : needSwitch ? (
                                 <span>Choisis un Daemon !</span>
+                            ) : awaitSendOut ? (
+                                <span>{menu === "switch" ? "Choisis un Daemon !" : `L'adversaire envoie ${sendOutName} !`}</span>
                             ) : menu === "confirmRun" ? (
                                 <span>Fuir le combat ? (B = annuler)</span>
                             ) : menu === "moves" ? (
@@ -446,6 +478,16 @@ export default function BattleScreen() {
                     0% { transform: scale(1); opacity: 1; filter: brightness(1); }
                     40% { transform: scale(1.5); opacity: 1; filter: brightness(2.5); }
                     100% { transform: scale(1.9); opacity: 0; }
+                }
+                /* Lancer COMPLÈTEMENT raté : la ball arrive d'en bas, FRÔLE la cible, rebondit
+                   de travers et fuse hors de l'écran par le coin haut-droit (overflow:hidden la
+                   coupe au bord → effet "sortie de l'écran"). Théâtral, en ~0,9 s. */
+                @keyframes ballMiss {
+                    0%   { transform: translate(-150px, 12px) scale(0.5) rotate(0deg); opacity: 0; }
+                    18%  { transform: translate(-58px, -8px) scale(1) rotate(200deg); opacity: 1; }
+                    42%  { transform: translate(-12px, -40px) scale(1) rotate(420deg); opacity: 1; }
+                    56%  { transform: translate(22px, -18px) scale(0.95) rotate(560deg); opacity: 1; }
+                    100% { transform: translate(250px, -180px) scale(0.5) rotate(1140deg); opacity: 0; }
                 }
             `}</style>
         </div>
@@ -573,11 +615,13 @@ function MonSprite({ mon, facing, alive, hitKey, victory }: { mon: BattleMon; fa
 // ============================================================
 
 // Nexus-Ball animée : lancer (arc) → secousses (×N) → clic (capturé) ou éclatement (raté).
-function BallAnim({ phase, shakes, caught }: { phase: "throw" | "shake" | "result"; shakes: number; caught: boolean }) {
+// "miss" = lancer COMPLÈTEMENT raté : la ball part de travers, frôle la cible et sort de l'écran.
+function BallAnim({ phase, shakes, caught }: { phase: "throw" | "shake" | "result" | "miss"; shakes: number; caught: boolean }) {
     const anim = phase === "throw" ? "ballThrow 0.6s ease-out forwards"
         : phase === "shake" ? `ballShake 0.42s ease-in-out ${Math.max(0, shakes)}`
-            : caught ? "ballCaught 0.8s ease-out forwards"
-                : "ballEscape 0.6s ease-out forwards"
+            : phase === "miss" ? "ballMiss 0.9s ease-in forwards"
+                : caught ? "ballCaught 0.8s ease-out forwards"
+                    : "ballEscape 0.6s ease-out forwards"
     return (
         <div style={{ ...S.ball, animation: anim }}>
             <div style={S.ballTop} />

@@ -767,34 +767,67 @@ const VIRIDIAN_ORIGIN_Y = 24         // px image qui correspond à map (_, 0)
 const CENDREVILLE_W = 44, CENDREVILLE_H = 37, CENDREVILLE_TILE = 16
 // Arrivée (depuis ACE) et sortie sud (retour monde) — sur la route sable du bas.
 export const CENDREVILLE_SPAWN = { x: 15, y: 31 }
+// CENDREVILLE — collisions calées sur la SPEC DE COORDONNÉES fournie par Sartay (2026-06-14).
+// Convention : colonne,ligne (X,Y). "mur" = bloquant, "walkable" = franchissable.
+// Méthode : base TOUT walkable (path) → on pose les MURS (bordures, barrières, bâtiments,
+// obstacles, eau) → on ROUVRE les OUVERTURES/PORTES EN DERNIER (elles priment sur tout mur).
+// Le visuel réel est dans cendreville.png ; ici on ne gère QUE la collision (mur = "tree").
 function buildCendrevilleCollisions(): TileType[][] {
     const W = CENDREVILLE_W, H = CENDREVILLE_H
+    const WALL = "tree" as TileType
     const m: TileType[][] = Array.from({ length: H }, () => Array.from({ length: W }, () => "path" as TileType))
     const fill = (x0: number, y0: number, x1: number, y1: number, t: TileType) => {
         for (let y = Math.max(0, y0); y <= Math.min(H - 1, y1); y++)
             for (let x = Math.max(0, x0); x <= Math.min(W - 1, x1); x++) m[y][x] = t
     }
-    // HERBE = rencontres sauvages (parterres de fleurs + grande pelouse de l'étang).
-    fill(5, 9, 14, 13, "grass")        // champ/fleurs sous la maison (gauche)
-    fill(6, 19, 13, 27, "grass")       // champ/fleurs bas-gauche
-    fill(23, 9, 36, 30, "grass")       // pelouse centre-droite (autour de l'étang)
-    // BORDURE forêt calcinée (infranchissable) + FALAISE rocheuse à l'est.
-    fill(0, 0, W - 1, 2, "tree")       // haut
-    fill(0, 0, 3, H - 1, "tree")       // gauche
-    fill(0, 34, W - 1, H - 1, "tree")  // bas
-    fill(37, 0, 43, 33, "tree")        // falaise (droite)
-    fill(24, 2, 36, 9, "tree")         // enclos de palmiers calcinés + barrière (haut-droite)
-    // BÂTIMENTS (bloqués ; pas d'intérieur en v1).
-    fill(6, 3, 13, 7, "tree")          // maison toit ocre
-    fill(17, 5, 22, 9, "tree")         // hutte de paille
-    fill(8, 14, 13, 18, "tree")        // Centre bleu
-    fill(18, 13, 23, 17, "tree")       // labo/mart gris
-    fill(16, 21, 22, 25, "tree")       // Centre rouge
-    // PALMIERS décoratifs (bord de l'étang + sud).
-    fill(31, 17, 37, 21, "tree")
-    fill(25, 31, 35, 33, "tree")
-    // ÉTANG (eau).
-    fill(27, 22, 34, 28, "water")
+    const set = (x: number, y: number, t: TileType) => { if (x >= 0 && x < W && y >= 0 && y < H) m[y][x] = t }
+
+    // ── 2. BORD HAUT (lignes 0-3) ──
+    fill(0, 0, 21, 2, WALL)          // cols 0-21, rows 0-2 : mur
+    fill(27, 0, 43, 3, WALL)         // cols 27-43, rows 0-3 : mur
+    // cols 22-26 rows 0-2 = walkable (laissé path) ; exception panneau 22,1 = mur
+    set(22, 1, WALL)
+
+    // ── 5. OBSTACLES ISOLÉS ──
+    fill(0, 11, 16, 11, WALL)        // barrière ligne 11 : cols 0-16
+    set(25, 15, WALL)                // panneau isolé
+
+    // ── 3. BÂTIMENTS (emprise = mur plein ; portes rouvertes plus bas) ──
+    fill(8, 6, 13, 9, WALL)          // Gym (8-13 × 6-9)
+    set(14, 9, WALL)                 // panneau Gym
+    fill(17, 7, 21, 10, WALL)        // Maison hantée (17-21 × 7-10)
+    fill(17, 14, 21, 17, WALL)       // Centrale électrique (17-21 × 14-17)
+    set(22, 16, WALL); set(22, 17, WALL) // Centrale — murs annexes (hors emprise, à droite)
+    fill(9, 15, 12, 17, WALL)        // Shop (9-12 × 15-17)
+    fill(18, 21, 21, 24, WALL)       // Centre Pokémon (18-21 × 21-24)
+
+    // ── 4. EAU (étang : 28-33 × 24-28) ──
+    fill(28, 24, 33, 28, "water")
+
+    // ── 1. LIGNE 33 (mur sud avec ouverture 20-23) ──
+    fill(0, 33, 19, 33, WALL)
+    fill(24, 33, 43, 33, WALL)
+
+    // ── 6. LIGNE 28 (barrière) — lecture actuelle ; 26 = MUR (À TRANCHER, cf. note) ──
+    fill(0, 28, 22, 28, WALL)
+    set(26, 28, WALL)                // ??? choisi MUR pour l'instant
+    fill(27, 28, 29, 28, WALL)
+    fill(34, 28, 43, 28, WALL)
+    // (28-33 = étang/eau, déjà posé ; 23-25 = ouverture, rouverte plus bas)
+
+    // ── OUVERTURES / PORTES (WALKABLE) — APPLIQUÉES EN DERNIER (priment sur les murs) ──
+    // 1. Sortie de ville (bord est) + ligne 33 ouverture
+    set(43, 15, "path"); set(43, 16, "path"); set(43, 17, "path")
+    fill(20, 33, 23, 33, "path")
+    // 6. Ligne 28 ouverture
+    fill(23, 28, 25, 28, "path")
+    // Portes des bâtiments
+    set(10, 9, "path")                          // Gym
+    set(18, 10, "path"); set(19, 10, "path")    // Maison hantée
+    set(19, 17, "path")                         // Centrale
+    set(10, 17, "path")                         // Shop
+    set(19, 24, "path"); set(20, 24, "path")    // Centre Pokémon
+
     return m
 }
 
@@ -835,11 +868,12 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         tiles: buildCendrevilleCollisions(),
         width: CENDREVILLE_W,
         height: CENDREVILLE_H,
-        // Retour vers la VILLE : route sable SUD (bas de la map) → on ressort en (1,17),
-        // juste à droite d'ACE. Spawn d'arrivée juste au-dessus (CENDREVILLE_SPAWN).
-        exits: [13, 14, 15, 16].map((x) => ({
-            x,
-            y: 33,
+        // Retour vers la VILLE via la "Sortie de ville" de la spec (bord EST, 43 × 15-17) →
+        // on ressort en (1,17), juste à droite d'ACE. (L'ancienne sortie sud row33/13-16 est
+        // désormais un mur dans la spec ; la destination du passage sud 20-23 reste à définir.)
+        exits: [15, 16, 17].map((y) => ({
+            x: 43,
+            y,
             targetMapId: YELLOW_ENTRANCE_MAP_ID,
             targetSpawnX: 1,
             targetSpawnY: 17,

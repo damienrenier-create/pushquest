@@ -24,34 +24,24 @@ describe("ACE — scaling + équipe + contre adaptatif", () => {
         expect(Math.max(...getSpecies(cEau)!.types.map((t) => typeEff(t, ["EAU"])))).toBe(2)
     })
 
-    it("buildAceTeam : 6 mons, 3 Panthéons (modèle de base), nouillon+feu évolués, contre adapté", () => {
-        const { team, counterSpecies } = buildAceTeam({
-            aceWins: 5, playerBestLevel: 38, playerLastTypes: ["FEU"], playerLastLevel: 28, box: {},
-        })
+    it("buildAceTeam : 6 mons, 3 Panthéons, nouillon+feu évolués, contre adapté — TOUS au niveau cliquet", () => {
+        const { team, counterSpecies } = buildAceTeam({ aceLevel: 40, playerLastTypes: ["FEU"] })
         expect(team).toHaveLength(6)
         expect(team.slice(0, 3).map((m) => m.speciesId)).toEqual(ACE_PANTHERS)
         expect(team[2].speciesId).toBe("pantheon") // slot 3 = Panthéon (plus de panthère élite)
-        expect(team.slice(0, 5).every((m) => m.level === 40)).toBe(true) // 38 + 2 (offset final, après 3 victoires)
+        expect(team.every((m) => m.level === 40)).toBe(true) // TOUTE l'équipe au niveau CLIQUET d'ACE
         expect(team[3].speciesId).toBe("divinpate") // nouillon évolué à niv 40
         expect(team[4].speciesId).toBe("pyrokoss")  // braisille évolué à niv 40
         expect(ACE_BOX).toContain(counterSpecies)
-        expect(team[5].speciesId).toBe(counterSpecies)
-        expect(team[5].level).toBe(28) // contre au niveau du dernier Daemon joueur (box vide)
+        expect(team[5].speciesId).toBe(counterSpecies) // slot 6 = contre adaptatif (au niveau d'ACE)
     })
 
-    it("le contre respecte la mémoire box (ne descend pas sous le niveau mémorisé)", () => {
-        const c = bestCounter(["FEU"])
-        const { team } = buildAceTeam({ aceWins: 5, playerBestLevel: 38, playerLastTypes: ["FEU"], playerLastLevel: 10, box: { [c]: 25 } })
-        expect(team[5].level).toBe(25) // max(box 25, dernier 10)
-    })
-
-    it("rampe de difficulté : un poil facile les 3 premières fois (-1, 0, +1) puis +2, recalibré sur le joueur", () => {
-        const lvlAt = (wins: number) => buildAceTeam({ aceWins: wins, playerBestLevel: 30, playerLastTypes: ["FEU"], playerLastLevel: 20, box: {} }).team[0].level
-        expect(lvlAt(0)).toBe(29) // 30 - 1
-        expect(lvlAt(1)).toBe(30) // 30 + 0
-        expect(lvlAt(2)).toBe(31) // 30 + 1
-        expect(lvlAt(3)).toBe(32) // 30 + 2
-        expect(lvlAt(10)).toBe(32) // capé à +2
+    it("CLIQUET : buildAceTeam prend le niveau fourni TEL QUEL (aucune recalibration sur le joueur)", () => {
+        // Le bug corrigé : ACE recalibrait son niveau à CHAQUE rencontre sur le meilleur Daemon
+        // du joueur. Désormais buildAceTeam ne fait que refléter le niveau cliquet (figé entre
+        // deux défaites, monté uniquement par recordAceDefeat → aceTargetLevel).
+        expect(buildAceTeam({ aceLevel: 12, playerLastTypes: ["EAU"] }).team[0].level).toBe(12)
+        expect(buildAceTeam({ aceLevel: 50, playerLastTypes: ["EAU"] }).team[0].level).toBe(50)
     })
 
     it("récompenses + budget énergie (inchangés)", () => {

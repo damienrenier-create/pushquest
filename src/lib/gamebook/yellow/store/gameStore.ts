@@ -18,7 +18,7 @@ import type { YellowMapData } from "../maps"
 import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, resetFleeStreak } from "./battleStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, getAceState, aceTeamSizeFor, aceAvailableToday, aceWinsCount } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, aceBattleLevel, aceTeamSizeFor, aceAvailableToday } from "./playerStore"
 import { getSpecies } from "../data/species"
 import { persistYellowSave } from "./saveManager"
 import { rollWildEncounter, wildLevelCap, hasEncounters } from "../data/encounters"
@@ -54,6 +54,7 @@ interface GameStore {
     pcOpen: boolean // boîte PC ouverte (ordinateur du Centre Daemon)
     guideOpen: boolean // guide du Bosquet ouvert (panneau devant le gym)
     libraryOpen: boolean // Registre des Dresseurs (bibliothèque de l'infirmerie)
+    advisorOpen: boolean // Conseiller (PNJ à côté du Centre) : questions → base de données
     labOpen: boolean // Terminal d'expériences (labo, étage de l'infirmerie)
     signOpen: number | null // index du panneau du parc ouvert (pop-up dédié), null = fermé
     posterImage: string | null // poster mural du Centre affiché en overlay (src PNG), null = fermé
@@ -76,6 +77,7 @@ interface GameStore {
     closePc: () => void
     closeGuide: () => void
     closeLibrary: () => void
+    closeAdvisor: () => void
     closeLab: () => void
     closeSign: () => void
     closePoster: () => void
@@ -172,9 +174,9 @@ function tryLaunchAce(): ActiveDialogue | null {
     const best = Math.max(...team.map((m) => m.level))
     const last = team[team.length - 1]
     const lastTypes = getSpecies(last.speciesId)?.types ?? []
-    const { box } = getAceState()
-    // Niveau recalibré à CHAQUE combat (rampe via aceWins) — plus de pic figé.
-    const built = buildAceTeam({ aceWins: aceWinsCount(), playerBestLevel: best, playerLastTypes: lastTypes, playerLastLevel: last.level, box })
+    // CLIQUET : le niveau d'ACE est FIGÉ entre deux défaites (aceBattleLevel). Il ne monte
+    // qu'APRÈS sa défaite (recordAceDefeat) — fini la recalibration à chaque rencontre.
+    const built = buildAceTeam({ aceLevel: aceBattleLevel(best), playerLastTypes: lastTypes })
     // Taille d'équipe d'ACE = celle du joueur (min 3 = les 3 panthères), avec cliquet.
     const aceSize = aceTeamSizeFor(team.length)
     // ACE = élite (boss ultime) : ses Daemons sont entraînés comme un joueur assidu.
@@ -200,6 +202,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     pcOpen: false,
     guideOpen: false,
     libraryOpen: false,
+    advisorOpen: false,
     labOpen: false,
     signOpen: null,
     posterImage: null,
@@ -215,7 +218,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     move: (dir) => {
         const { player, map, dialogue } = get()
         // Mouvement bloqué pendant un dialogue, une boutique, le PC ou un combat.
-        if (dialogue || get().shopOpen || get().pcOpen || get().guideOpen || get().libraryOpen || get().labOpen || get().signOpen !== null) return
+        if (dialogue || get().shopOpen || get().pcOpen || get().guideOpen || get().libraryOpen || get().advisorOpen || get().labOpen || get().signOpen !== null) return
         if (getBattleSnapshot().battle) return
 
         const next = tryMove(player, dir, map)
@@ -435,6 +438,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
+        // Conseiller (à côté du Centre) : ouvre le panneau pour poser une question (→ base).
+        if (npc.id === "y_conseiller") {
+            set({ advisorOpen: true })
+            return
+        }
+
         // Terminal du labo : ouvre le menu d'EXPÉRIENCES (défis).
         if (npc.id === "y_lab_computer") {
             set({ labOpen: true })
@@ -633,6 +642,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     closeShop: () => set({ shopOpen: false }),
     closeGuide: () => set({ guideOpen: false }),
     closeLibrary: () => set({ libraryOpen: false }),
+    closeAdvisor: () => set({ advisorOpen: false }),
     closeLab: () => set({ labOpen: false }),
     closeSign: () => set({ signOpen: null }),
     closePoster: () => set({ posterImage: null }),

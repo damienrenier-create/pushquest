@@ -18,7 +18,7 @@ import {
 } from "../battle/engine"
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance } from "../battle/types"
-import { markSeen, markCaught } from "./pokedexStore"
+import { markSeen, markCaught, getPokedex } from "./pokedexStore"
 import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt } from "./playerStore"
 import { getCt } from "../data/cts"
 import { getMove } from "../data/moves"
@@ -85,6 +85,9 @@ interface BattleStoreState {
     rematchReward: { npcId: string; npcName: string; lines: string[] } | null
     /** Contexte d'un combat JOUEUR vs JOUEUR (null = combat solo classique). */
     pvpCtx: PvpContext | null
+    /** PREMIÈRE capture d'une espèce → popup post-combat (sprite + description + punchline +
+     *  proposition de surnom). null sinon. Renseigné en fin de combat, consommé par l'UI. */
+    newDexEntry: { speciesId: string; uid: string; level: number } | null
 }
 
 /** Rôle canonique : A = challenger ("player" canonique), B = défié ("enemy" canonique). */
@@ -106,7 +109,7 @@ interface PvpContext {
     desync: boolean
 }
 
-let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null }
+let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null }
 const listeners = new Set<() => void>()
 
 // #2 — FUITE anti-spam : compteur de fuites consécutives (session). Chaque fuite RÉUSSIE durcit
@@ -158,7 +161,7 @@ export function startWildBattle(playerTeam: MonInstance[], enemyTeam: MonInstanc
     const captureModifier = getPlayer().wildCtx?.quotaReached ? QUOTA_CAPTURE_BONUS : 1
     const battle = createBattle(playerTeam, enemyTeam, { isWild: true, seed, captureModifier, fleeChance: wildFleeChance() })
     syncPokedex(battle) // adversaire "vu" dès la rencontre
-    setStore({ battle, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, badgeAwarded: null, giftCtMove: null, rematchReward: null })
+    setStore({ battle, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
 }
 
 export function startTrainerBattle(
@@ -170,7 +173,7 @@ export function startTrainerBattle(
     const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: opts?.aiLevel, enemyEnergyCap: opts?.enemyEnergyCap })
     syncPokedex(battle)
     const trainer = opts?.trainerId ? { trainerId: opts.trainerId, reward: opts.reward ?? 0, isRematch: opts.isRematch ?? false } : null
-    setStore({ battle, evolutions: [], trainer, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, badgeAwarded: null, giftCtMove: null, rematchReward: null })
+    setStore({ battle, evolutions: [], trainer, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
 }
 
 /** Énergie de combat : reps déjà dépensés ce combat + plafond (selon badges). */
@@ -215,13 +218,22 @@ export function submitPlayerAction(action: PlayerAction) {
         grantReps(paidMoveCost)
         storeState = { ...storeState, energySpent: Math.max(0, storeState.energySpent - paidMoveCost) }
     }
+    // PREMIÈRE capture de cette espèce ? On le détecte AVANT que syncPokedex ne la marque
+    // « capturée » → sinon on ne saurait plus distinguer une nouvelle entrée d'un doublon.
+    let newEntry: BattleStoreState["newDexEntry"] = null
+    if (next.outcome === "caught") {
+        const wild = next.enemy.team[next.enemy.activeIndex]
+        if (wild && !getPokedex().caught.includes(wild.speciesId)) {
+            newEntry = { speciesId: wild.speciesId, uid: wild.uid, level: wild.level }
+        }
+    }
     syncPokedex(next) // vu (changement d'adversaire) + capturé le cas échéant
     setStore({ battle: next, evolutions: [], trainer: storeState.trainer, whiteout: false })
-    if (next.phase === "ended") finishBattle(next)
+    if (next.phase === "ended") finishBattle(next, newEntry)
 }
 
 /** Fin de combat : resync équipe (XP/PV/niveaux), capture, évolutions, sauvegarde. */
-function finishBattle(b: BattleState) {
+function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry"] = null) {
     // #2 : fuite RÉUSSIE → on durcit la prochaine ; tout autre dénouement = engagement → reset.
     if (b.outcome === "run") fleeStreak++
     else fleeStreak = 0
@@ -331,7 +343,7 @@ function finishBattle(b: BattleState) {
         setTeam([...team])
     }
     // Expose les évolutions pour la cinématique post-combat (jouée après "QUITTER").
-    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, badgeAwarded, giftCtMove, rematchReward })
+    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, badgeAwarded, giftCtMove, rematchReward, newDexEntry })
 
     // 4) Sauvegarde persistante (DB).
     persistYellowSave()
@@ -393,6 +405,16 @@ export function getRematchReward(): BattleStoreState["rematchReward"] {
 /** Consommé par la carte une fois la récompense de rematch affichée. */
 export function clearRematchReward() {
     setStore({ ...storeState, rematchReward: null })
+}
+
+/** Première capture d'une espèce à célébrer (popup Pokédex post-combat) ; null sinon. */
+export function useNewDexEntry(): BattleStoreState["newDexEntry"] {
+    return useSyncExternalStore(subscribe, () => getSnapshot().newDexEntry, () => getSnapshot().newDexEntry)
+}
+
+/** Consommé par la carte une fois la popup de nouvelle entrée Pokédex fermée. */
+export function clearNewDexEntry() {
+    setStore({ ...storeState, newDexEntry: null })
 }
 
 // ============================================================
@@ -483,7 +505,7 @@ export function startPvpBattle(battle: BattleState, ctx: Omit<PvpContext, "seq" 
     mpLog("battle", "start", { battleId: ctx.battleId, role: ctx.role, checksum: battleChecksum(battle) })
     setStore({
         battle, evolutions: [], trainer: null, whiteout: false, energySpent: 0,
-        sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, badgeAwarded: null, giftCtMove: null, rematchReward: null,
+        sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null,
         pvpCtx: { ...ctx, seq: 0, myAction: null, oppAction: null, won: null, desync: false },
     })
 }

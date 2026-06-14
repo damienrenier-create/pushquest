@@ -4,6 +4,7 @@ import { Rng } from "./rng"
 import { createMonInstance } from "./factory"
 import { applyEvolution } from "./evolution"
 import { getTrainer } from "../data/trainers"
+import { MISS_CAPTURE_LINES } from "../data/missCaptureLines"
 
 // Auto-joue un combat jusqu'à l'issue, de façon DÉTERMINISTE :
 // - en cas de changement forcé (KO du joueur), on envoie le 1er Daemon valide ;
@@ -13,7 +14,10 @@ function autoPlay(start: BattleState): { final: BattleState; turns: number } {
     let s = start
     let turns = 0
     while (s.phase !== "ended" && turns < 300) {
-        if (s.forcedSwitch === "player") {
+        if (s.enemySendOut) {
+            // Fenêtre d'envoi adverse (combat de Dresseur) : on garde notre Daemon (l'ennemi entre).
+            s = resolveTurn(s, { kind: "stay" })
+        } else if (s.forcedSwitch === "player") {
             const idx = s.player.team.findIndex((m) => m.currentHp > 0)
             s = resolveTurn(s, { kind: "switch", teamIndex: idx })
         } else {
@@ -172,15 +176,24 @@ describe("combat de dresseur — enchaînement multi-Daemon", () => {
         expect(s.player.activeIndex).toBe(1)                  // b est bien entré
     })
 
-    it("#10 — le Daemon ennemi envoyé après un K.O. n'agit PAS le tour même", () => {
+    it("#10 — combat de Dresseur : KO adverse → fenêtre d'envoi, le Daemon entrant n'agit PAS", () => {
         const a = createMonInstance("rochison", 50)               // rapide vs plumiot L5, achève e1
         const e1 = createMonInstance("plumiot", 5); e1.currentHp = 1
         const e2 = createMonInstance("razmaree", 50)              // frapperait FORT (eau ×4) s'il agissait
         let s = createBattle([a], [e1, e2], { isWild: false, seed: 321 })
         const hpBefore = s.player.team[0].currentHp
-        s = resolveTurn(s, { kind: "move", moveIndex: 0 })        // a KO e1 → e2 entre…
+
+        // 1) a KO e1 → l'ennemi ANNONCE son envoi mais N'entre PAS encore (flow Game Boy).
+        s = resolveTurn(s, { kind: "move", moveIndex: 0 })
+        expect(s.enemySendOut).not.toBeNull()                                // fenêtre d'envoi ouverte
+        expect(s.enemy.team[s.enemy.activeIndex].speciesId).toBe("plumiot")  // e2 PAS encore envoyé
+        expect(s.player.team[0].currentHp).toBe(hpBefore)                    // aucun dégât pendant l'annonce
+
+        // 2) le joueur décide de RESTER → e2 entre enfin, mais ne porte AUCUN coup ce tour.
+        s = resolveTurn(s, { kind: "stay" })
+        expect(s.enemySendOut).toBeNull()                                    // fenêtre refermée
         expect(s.enemy.team[s.enemy.activeIndex].speciesId).toBe("razmaree") // e2 bien envoyé
-        expect(s.player.team[0].currentHp).toBe(hpBefore)        // … mais a ne prend AUCUN dégât ce tour
+        expect(s.player.team[0].currentHp).toBe(hpBefore)                    // toujours aucun dégât (pas un tour)
     })
 
     it("#3 — partage dégressif : 1er/2e 100%, 3e 60% (mêmes ennemis affrontés)", () => {
@@ -224,6 +237,46 @@ describe("combat de dresseur — enchaînement multi-Daemon", () => {
         const { final } = autoPlay(start)
         expect(final.phase).toBe("ended")
         expect(final.outcome).toBe("lose")
+    })
+})
+
+describe("fenêtre d'envoi adverse — combat de Dresseur (flow Game Boy)", () => {
+    it("le joueur peut CHANGER de Daemon avant l'entrée adverse (sans coup offert)", () => {
+        const a = createMonInstance("rochison", 50)             // achève e1
+        const b = createMonInstance("cerfeuillu", 50)           // remplaçant anticipé
+        const e1 = createMonInstance("plumiot", 5); e1.currentHp = 1
+        const e2 = createMonInstance("razmaree", 50)
+        let s = createBattle([a, b], [e1, e2], { isWild: false, seed: 321 })
+        const bHpBefore = b.currentHp
+
+        s = resolveTurn(s, { kind: "move", moveIndex: 0 })      // a KO e1 → fenêtre d'envoi ouverte
+        expect(s.enemySendOut).not.toBeNull()
+
+        // Le joueur anticipe : il change pour b AVANT que l'ennemi entre.
+        s = resolveTurn(s, { kind: "switch", teamIndex: 1 })
+        expect(s.enemySendOut).toBeNull()                                    // fenêtre refermée
+        expect(s.player.activeIndex).toBe(1)                                 // b est entré
+        expect(s.enemy.team[s.enemy.activeIndex].speciesId).toBe("razmaree") // e2 aussi
+        expect(s.player.team[1].currentHp).toBe(bHpBefore)                   // face-à-face d'envois : b ne prend aucun coup
+    })
+
+    it("combat SAUVAGE : aucune fenêtre d'envoi (KO = fin du combat)", () => {
+        let s = createBattle([createMonInstance("rochison", 50)], [createMonInstance("plumiot", 2)], { isWild: true, seed: 1 })
+        let guard = 0
+        while (s.phase !== "ended" && guard < 30) { s = resolveTurn(s, { kind: "move", moveIndex: 0 }); guard++ }
+        expect(s.enemySendOut).toBeNull() // jamais de fenêtre en sauvage
+        expect(s.outcome).toBe("win")
+    })
+
+    it("Dresseur à 1 seul Daemon : KO = victoire directe, sans fenêtre", () => {
+        let s = createBattle([createMonInstance("rochison", 50)], [createMonInstance("plumiot", 2)], { isWild: false, seed: 2 })
+        let guard = 0
+        while (s.phase !== "ended" && guard < 30) {
+            s = s.enemySendOut ? resolveTurn(s, { kind: "stay" }) : resolveTurn(s, { kind: "move", moveIndex: 0 })
+            guard++
+        }
+        expect(s.outcome).toBe("win")
+        expect(s.enemySendOut).toBeNull()
     })
 })
 
@@ -283,5 +336,38 @@ describe("objets de combat (X / anti-statut)", () => {
         s0.player.team[s0.player.activeIndex].status = "BURN"
         const s1 = resolveTurn(s0, { kind: "item", itemId: "total_soin" })
         expect(s1.player.team[s1.player.activeIndex].status).toBe("NONE")
+    })
+})
+
+describe("capture ratée — séquence d'échec théâtral (miss + punchline)", () => {
+    it("un lancer raté joue l'anim 'miss' + une punchline, PAS l'anim de réussite", () => {
+        // Sauvage coriace (haut niveau, PV pleins, Ball de base) → capture quasi impossible.
+        const s = createBattle([createMonInstance("rochison", 50)], [createMonInstance("razmaree", 80)], { isWild: true, seed: 1 })
+        const after = resolveTurn(s, { kind: "ball", itemId: "poke_ball" })
+        expect(after.outcome).not.toBe("caught")
+        // Anim d'ÉCHEC présente ; anim de RÉUSSITE (secousses + clic) ABSENTE.
+        expect(after.events.some((e) => e.kind === "ball" && e.action === "miss")).toBe(true)
+        expect(after.events.some((e) => e.kind === "ball" && e.action === "result" && e.caught === true)).toBe(false)
+        expect(after.events.some((e) => e.kind === "ball" && e.action === "shake")).toBe(false)
+        // Une punchline moqueuse tirée de la liste officielle.
+        expect(after.events.some((e) => e.kind === "message" && MISS_CAPTURE_LINES.includes(e.text))).toBe(true)
+    })
+
+    it("une capture RÉUSSIE garde l'anim classique (result caught), sans 'miss' ni punchline", () => {
+        const s = createBattle([createMonInstance("rochison", 50)], [createMonInstance("plumiot", 2)], { isWild: true, seed: 1 })
+        const after = resolveTurn(s, { kind: "ball", itemId: "master_ball" }) // Master = capture garantie
+        expect(after.outcome).toBe("caught")
+        expect(after.events.some((e) => e.kind === "ball" && e.action === "result" && e.caught === true)).toBe(true)
+        expect(after.events.some((e) => e.kind === "ball" && e.action === "miss")).toBe(false)
+        expect(after.events.some((e) => e.kind === "message" && MISS_CAPTURE_LINES.includes(e.text))).toBe(false)
+    })
+
+    it("la punchline d'échec est déterministe (même seed → même réplique)", () => {
+        const mk = () => createBattle([createMonInstance("rochison", 50)], [createMonInstance("razmaree", 80)], { isWild: true, seed: 4242 })
+        const a = resolveTurn(mk(), { kind: "ball", itemId: "poke_ball" })
+        const b = resolveTurn(mk(), { kind: "ball", itemId: "poke_ball" })
+        const pick = (st: BattleState) => st.events.find((e) => e.kind === "message" && MISS_CAPTURE_LINES.includes(e.text))
+        const la = pick(a), lb = pick(b)
+        expect(la?.kind === "message" && lb?.kind === "message" && la.text === lb.text).toBe(true)
     })
 })

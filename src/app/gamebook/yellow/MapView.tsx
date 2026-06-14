@@ -560,6 +560,8 @@ const NPC_SPRITES: Record<string, { url: string; frames: number; h?: number } | 
     y_sbire: { url: "/yellow/sprites/npc/noodle_nymph.png", frames: 1, h: 1.9 },
     // ACE (rival) sur la ville — perso entier, plus grand que le joueur.
     y_ace: { url: "/yellow/sprites/npc_ace.png", frames: 1, h: 2.0 },
+    // Conseiller (à côté du Centre Daemon) — portrait entier (image unique fournie).
+    y_conseiller: { url: "/yellow/sprites/guide.png", frames: 1, h: 1.9 },
     // Arène Plante (carte SANS PNJ dessinés) : sprites ENTIERS sur les cases.
     y_arena_druide: { url: "/yellow/sprites/npc_druide.png", frames: 1, h: 2.4 },
     y_arena_g1: { url: "/yellow/sprites/npc_garde_plante.png", frames: 1, h: 2.0 },

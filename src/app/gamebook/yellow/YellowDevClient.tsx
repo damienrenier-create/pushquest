@@ -24,16 +24,19 @@ import { useCasinoBattle } from "@/lib/gamebook/yellow/multiplayer/useCasinoBatt
 import TradeAnimation from "./TradeAnimation"
 import { usePvpCtx, pvpForfeit } from "@/lib/gamebook/yellow/store/battleStore"
 import EvolutionScreen from "./battle/EvolutionScreen"
+import DexEntryScreen from "./battle/DexEntryScreen"
 import IntroCinematic from "./IntroCinematic"
 import GuidePanel from "./GuidePanel"
 import LibraryPanel from "./LibraryPanel"
+import MovesPanel from "./MovesPanel"
+import AdvisorPanel from "./AdvisorPanel"
 import LabPanel from "./LabPanel"
 import ParkSignPanel from "./ParkSignPanel"
 import PosterPanel from "./PosterPanel"
 import { useGameStore, setCurrentNickname } from "@/lib/gamebook/yellow/store/gameStore"
 import { YELLOW_MAPS, CENDREVILLE_SPAWN } from "@/lib/gamebook/yellow/maps"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
-import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getGiftCtMove } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getGiftCtMove } from "@/lib/gamebook/yellow/store/battleStore"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
 import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove } from "@/lib/gamebook/yellow/store/playerStore"
@@ -68,6 +71,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const closeGuide = useGameStore((s) => s.closeGuide)
     const libraryOpen = useGameStore((s) => s.libraryOpen)
     const closeLibrary = useGameStore((s) => s.closeLibrary)
+    const advisorOpen = useGameStore((s) => s.advisorOpen)
+    const closeAdvisor = useGameStore((s) => s.closeAdvisor)
     const labOpen = useGameStore((s) => s.labOpen)
     const closeLab = useGameStore((s) => s.closeLab)
     const signOpen = useGameStore((s) => s.signOpen)
@@ -79,6 +84,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const showDialogue = useGameStore((s) => s.showDialogue)
     const battle = useBattle()
     const evolutions = useEvolutions()
+    const newDexEntry = useNewDexEntry()
     const whiteout = useWhiteout()
     const sbireWin = useSbireWin()
     const aceWin = useAceWin()
@@ -86,7 +92,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const rematchReward = useRematchReward()
     const router = useRouter()
     const player = usePlayer()
-    const [menu, setMenu] = useState<"none" | "pause" | "team" | "pc" | "bag" | "reput">("none")
+    const [menu, setMenu] = useState<"none" | "pause" | "team" | "pc" | "bag" | "reput" | "moves">("none")
     const ficheTouchX = useRef<number | null>(null) // swipe gauche/droite dans la fiche Daemon
     const [selected, setSelected] = useState<MonInstance | null>(null)
     const [showIntro, setShowIntro] = useState(false)
@@ -298,6 +304,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             // Ne pas piloter le jeu quand on tape dans un champ (chat, renommage…).
             const t = e.target as HTMLElement | null
             if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return
+            // Overlays POST-COMBAT (popup 1re capture / cinématique d'évolution) : ils vivent dans
+            // battleStore (hors garde de move()) et s'affichent quand battle===null. Sans ça, une
+            // flèche déplacerait le joueur SOUS l'overlay → rencontre sauvage → startWildBattle
+            // reset newDexEntry/evolutions → popup + renommage PERDUS. On neutralise tout input carte.
+            if (newDexEntry || evolutions.length > 0) { e.preventDefault(); return }
             const inB = !!battle
             const k = e.key.toLowerCase()
             if (e.key === "ArrowUp" || k === "z") { e.preventDefault(); inB ? dispatchBattleInput("up") : move("up") }
@@ -318,7 +329,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         }
         window.addEventListener("keydown", handler)
         return () => window.removeEventListener("keydown", handler)
-    }, [move, pressA, pressB, battle])
+    }, [move, pressA, pressB, battle, newDexEntry, evolutions])
 
     // Identité (User.id) + carte courante → estampillage ownership/lieu à la capture.
     useEffect(() => { setCurrentPlayerId(userId) }, [userId])
@@ -429,9 +440,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (signOpen !== null) { closeSign(); return true } // signOpen est un index (0 = 1er panneau)
         if (guideOpen) { closeGuide(); return true }
         if (libraryOpen) { closeLibrary(); return true }
+        if (advisorOpen) { closeAdvisor(); return true }
         if (labOpen) { closeLab(); return true }
         if (menu === "pc" || pcOpen) { closePc(); setMenu(menu === "pc" ? "pause" : "none"); return true }
-        if (menu === "team" || menu === "bag" || menu === "reput") { setMenu("pause"); return true }
+        if (menu === "team" || menu === "bag" || menu === "reput" || menu === "moves") { setMenu("pause"); return true }
         if (menu === "pause") { setMenu("none"); return true }
         return false
     }
@@ -504,6 +516,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         <button style={menuBtnStyle} onClick={() => setMenu("bag")}>🎒 SAC</button>
                         <button style={menuBtnStyle} onClick={() => router.push("/gamebook/yellow/pokedex")}>📷 POKÉDEX</button>
                         <button style={menuBtnStyle} onClick={() => router.push("/gamebook/yellow/dex")}>📖 DEX (CATALOGUE)</button>
+                        <button style={menuBtnStyle} onClick={() => setMenu("moves")}>⚔️ ATTAQUES</button>
                         <button style={menuBtnStyle} onClick={() => setMenu("reput")}>🏆 RÉPUTATION</button>
                         {confirmReset ? (
                             <>
@@ -763,8 +776,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             )}
 
             {/* Boutique (vendeur) */}
+            {!battle && menu === "moves" && <MovesPanel close={() => setMenu("pause")} />}
             <GuidePanel />
             <LibraryPanel />
+            <AdvisorPanel />
             <LabPanel />
             <ParkSignPanel />
             <PosterPanel />
@@ -1448,6 +1463,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {/* Cinématique d'évolution (post-combat, après QUITTER) */}
             {!battle && evolutions.length > 0 && (
                 <EvolutionScreen evolutions={evolutions} onDone={clearEvolutions} />
+            )}
+
+            {/* Popup PREMIÈRE capture d'une espèce (après l'éventuelle évolution, jamais en
+                même temps : on attend que la file d'évolutions soit vidée). */}
+            {!battle && evolutions.length === 0 && newDexEntry && (
+                <DexEntryScreen entry={newDexEntry} onDone={clearNewDexEntry} />
             )}
 
             {/* Apprentissage d'attaque : plus de pop-up forcé — ça se fait À LA DEMANDE

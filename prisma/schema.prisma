@@ -32,6 +32,7 @@ model User {
   eventLikes BadgeEventLike[]
   potEvents PotEvent[]
   wallMessages WallMessage[]
+  advisorQuestions AdvisorQuestion[]
   gamebookProgress GamebookProgress[]
   statuses   UserStatus[]
   statusLikes StatusLike[]
@@ -300,6 +301,23 @@ model WallMessage {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
+  @@index([createdAt])
+}
+
+// Nexus Jaune Éclair — questions posées au CONSEILLER (PNJ à côté du Centre Daemon).
+// Le joueur pose une question en jeu → stockée ici. Le créateur (Sartay) la lit et y
+// répond en renseignant `answer` directement en base ; la réponse réapparaît au joueur
+// dans le panneau du conseiller. Modèle ADDITIF (aucune table existante modifiée).
+model AdvisorQuestion {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question   String
+  answer     String?
+  createdAt  DateTime  @default(now())
+  answeredAt DateTime?
+
+  @@index([userId, createdAt])
   @@index([createdAt])
 }
 

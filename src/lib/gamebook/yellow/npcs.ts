@@ -84,6 +84,21 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         ],
     },
 
+    // === VILLE — CONSEILLER (à côté du Centre Daemon, case 29,25) ===
+    // Le joueur lui pose une question → enregistrée en base (AdvisorQuestion), le
+    // créateur y répond ; la réponse réapparaît dans le panneau (intercepté gameStore).
+    {
+        id: "y_conseiller",
+        name: "CONSEILLER",
+        mapId: "yellow_entrance",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🧙", color: "#caa15a" }, // repli si le PNG NPC_SPRITES manquait
+        initialX: 29,
+        initialY: 25,
+        dialoguesAfter: ["*Le conseiller t'accueille d'un signe de tête.*"], // repli si non intercepté
+    },
+
     // === Intérieur SHOP ===
     {
         id: "y_vendeur",

@@ -110,30 +110,28 @@ export function speciesAtLevel(baseId: string, level: number): string {
 }
 
 export interface AceBuildInput {
-    aceWins: number              // nb de victoires (pilote la rampe de difficulté)
-    playerBestLevel: number      // meilleur Daemon du joueur (recalibré à CHAQUE combat)
-    playerLastTypes: PokeType[]  // types du DERNIER Daemon de l'équipe joueur
-    playerLastLevel: number      // niveau de ce dernier Daemon
-    box: Record<string, number>  // mémoire de niveau par espèce-contre
+    /** Niveau CLIQUET d'ACE pour ce combat : il ne monte QU'À sa défaite (cf. recordAceDefeat /
+     *  aceBattleLevel). On l'utilise tel quel ici — AUCUNE recalibration sur le joueur à la
+     *  rencontre (sinon ACE monterait à chaque fois que TON équipe grandit, bug signalé). */
+    aceLevel: number
+    playerLastTypes: PokeType[]  // types du DERNIER Daemon joueur → choisit le contre adaptatif (slot 6)
 }
 
 /**
- * Construit l'équipe ACE (6) pour un combat : 5 fixes au niveau-cible + 1 contre adaptatif.
- * Renvoie aussi l'espèce-contre choisie (pour mémoriser le niveau à la défaite).
+ * Construit l'équipe ACE (6) pour un combat : 5 fixes + 1 contre adaptatif, TOUS au niveau
+ * CLIQUET d'ACE. Le contre adapte son ESPÈCE à ton dernier Daemon, mais reste au niveau d'ACE
+ * (pas de scaling live). Renvoie aussi l'espèce-contre (pour mémoriser à la défaite).
  */
 export function buildAceTeam(i: AceBuildInput): { team: AceMon[]; counterSpecies: string } {
-    // Niveau RECALIBRÉ à chaque combat sur ton meilleur Daemon, avec la rampe de difficulté
-    // (un poil faciles les 3 premières fois : -1/0/+1, puis +2). Plus de pic figé.
-    const L = Math.max(1, Math.min(MAX_LEVEL, i.playerBestLevel + aceLevelOffset(i.aceWins)))
+    const L = Math.max(1, Math.min(MAX_LEVEL, i.aceLevel))
     const counter = bestCounter(i.playerLastTypes)
-    const counterLevel = Math.min(MAX_LEVEL, Math.max(1, i.box[counter] ?? 0, i.playerLastLevel))
     const team: AceMon[] = [
         { speciesId: ACE_PANTHERS[0], level: L },
         { speciesId: ACE_PANTHERS[1], level: L },
         { speciesId: ACE_PANTHERS[2], level: L }, // Panthéon
         { speciesId: speciesAtLevel(ACE_NOUILLON_BASE, L), level: L },
         { speciesId: speciesAtLevel(ACE_FIRE_BASE, L), level: L },
-        { speciesId: counter, level: counterLevel },
+        { speciesId: counter, level: L }, // contre adaptatif au niveau d'ACE (cliquet)
     ]
     return { team, counterSpecies: counter }
 }

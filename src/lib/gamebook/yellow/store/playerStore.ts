@@ -17,7 +17,7 @@ import { getCt, canLearnCt, purchasableCts, type BadgeId } from "../data/cts"
 import type { StatKey } from "../battle/types"
 import { expForLevel, levelFromExp, applyExp, MAX_LEVEL, type ExpResult } from "../battle/xp"
 import type { WildPlayerCtx } from "../data/encounters"
-import { aceTargetLevel, bestCounter } from "../data/ace"
+import { aceTargetLevel, bestCounter, ACE_EASY_START } from "../data/ace"
 import type { PokeType } from "../battle/types"
 
 export const TEAM_MAX = 6
@@ -463,6 +463,21 @@ export function aceTeamSizeFor(playerTeamSize: number): number {
 }
 /** Nombre de défaites d'ACE infligées par ce joueur. */
 export function aceWinsCount(): number { return st.aceWins }
+/**
+ * Niveau de combat d'ACE — CLIQUET. ACE ne monte ses Daemons de niveau QU'À sa défaite
+ * (recordAceDefeat ratchete acePeakLevel) ; entre deux défaites son niveau est FIGÉ, quelle
+ * que soit la progression du joueur. À la TOUTE PREMIÈRE rencontre (pic jamais posé), on fige
+ * le pic à « ton meilleur + ACE_EASY_START » (un poil facile) puis il ne bouge plus jusqu'à ce
+ * que tu le battes. (Corrige le bug : avant, son niveau se recalibrait à CHAQUE rencontre.)
+ */
+export function aceBattleLevel(playerBestLevel: number): number {
+    if (st.acePeakLevel <= 0) {
+        const init = Math.max(1, Math.min(MAX_LEVEL, Math.floor(playerBestLevel) + ACE_EASY_START))
+        st = { ...st, acePeakLevel: init }
+        emit()
+    }
+    return st.acePeakLevel
+}
 /** ACE affrontable aujourd'hui ? (1 défaite/jour ; retry libre si on perd). */
 export function aceAvailableToday(): boolean {
     return st.creditedThrough === "" || st.aceDefeatedDate !== st.creditedThrough
