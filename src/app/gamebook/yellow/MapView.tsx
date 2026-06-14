@@ -397,6 +397,22 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId }: {
                     )
                 })()}
 
+                {/* BROUILLARD (manoir hanté, map.darkness) : NOIR sur toute case hors d'un rayon de
+                    1 autour du joueur (Chebyshev ≤ 1 = visible). La case du joueur n'a jamais
+                    d'overlay → il reste visible ; le reste est noir et SUIT le joueur. */}
+                {map.darkness && map.tiles.flatMap((row, y) =>
+                    row.map((_t, x) => {
+                        const d = Math.max(Math.abs(x - player.posX), Math.abs(y - player.posY))
+                        if (d <= 1) return null
+                        return (
+                            <div
+                                key={`dark-${x}-${y}`}
+                                style={{ position: "absolute", ...screenPos(x, y), background: "#000", zIndex: 7, pointerEvents: "none" }}
+                            />
+                        )
+                    }),
+                )}
+
                 {/* DEBUG : grille de coordonnées + walkable/bloqué (URL ?grid=1). */}
                 {showGrid && map.tiles.flatMap((row, y) =>
                     row.map((tile, x) => (

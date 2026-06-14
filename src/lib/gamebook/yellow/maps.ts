@@ -69,6 +69,9 @@ export interface YellowMapData extends MapData {
     debugGrid?: boolean
     /** WIP : met en pause les rencontres sauvages sur cette map (le temps de caler la grille). */
     encountersPaused?: boolean
+    /** BROUILLARD (manoir hanté) : on ne voit qu'un rayon de 1 case autour du joueur, le reste
+     *  est noir et la zone éclairée SUIT le joueur (les cases se révèlent quand on arrive à côté). */
+    darkness?: boolean
     /** v2 — Sheet de tiles "ground" (ex: herbe FireRed) avec N variantes
      *  réparties aléatoirement sur toutes les tiles "grass" de la map. */
     groundSheet?: {
