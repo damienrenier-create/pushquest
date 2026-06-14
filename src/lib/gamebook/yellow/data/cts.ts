@@ -78,8 +78,9 @@ export const CTS: CtData[] = [
     // --- CT Élec en vente (débloquées par le badge elec) ---
     { id: "ct23", label: "CT23", moveId: "etincelle", price: 500, badge: "elec" },
     { id: "ct24", label: "CT24", moveId: "fulgurance", price: 750, badge: "elec" },
-    // Mirage : esquive cumulable, puissant → CT CHÈRE, réservée aux Daemon Élec (badge Éclair).
-    { id: "ct25", label: "CT25", moveId: "mirage", price: 1200, badge: "elec" },
+    // Mirage : esquive cumulable, puissante → CADEAU EXCLUSIF de la revanche de VOLTA
+    // (jamais en vente, comme Surtension). Remise avec ct22 à la victoire du rematch boss.
+    { id: "ct25", label: "CT25", moveId: "mirage", price: 0, gift: true },
 ]
 
 export function getCt(id: string): CtData | null {
