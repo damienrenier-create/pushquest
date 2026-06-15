@@ -12,7 +12,7 @@ import { NORTH_SIGN_POSITIONS } from "./maps"
 import { PARK_SIGN_TIPS } from "./data/parkSigns"
 import { ACE_TRAINER_ID, ACE_POS, ACE_INTRO_LINES } from "./data/ace"
 import { GEKROC_NPC_ID, GEKROC_MAP_ID, GEKROC_POS, GEKROC_INTRO_LINES } from "./data/gekroc"
-import { HH_TRADER_ID, HH_TRADER_MAP, HH_TRADER_POS, HH_TRADER_OFFER_LINES } from "./data/hauntedNpcs"
+import { HH_TRADER_ID, HH_TRADER_MAP, HH_TRADER_POS, HH_TRADER_OFFER_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_MAP, HH_COLLECTOR_POS, HH_COLLECTOR_INTRO_LINES } from "./data/hauntedNpcs"
 
 // PANNEAUX-conseils = les ~12 panneaux BIEN ESPACÉS de la Route Nord (le sprite
 // panneau est rendu par le décor). Chaque panneau = un hotspot INVISIBLE qui
@@ -88,6 +88,19 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         initialX: HH_TRADER_POS.x,
         initialY: HH_TRADER_POS.y,
         dialoguesAfter: HH_TRADER_OFFER_LINES,
+    },
+
+    // === CENDREVILLE — COLLECTIONNEUR DE SPECTRES devant la maison hantée (21,11) : 3 victoires + 3 spectres → CT26 ===
+    {
+        id: HH_COLLECTOR_ID,
+        name: "COLLECTIONNEUR",
+        mapId: HH_COLLECTOR_MAP,
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "👻", color: "#5e35b1" },
+        initialX: HH_COLLECTOR_POS.x,
+        initialY: HH_COLLECTOR_POS.y,
+        dialoguesAfter: HH_COLLECTOR_INTRO_LINES,
     },
 
     // === VILLE — PANNEAU "antisèche du Bosquet" devant le gym (32,10) ===

@@ -19,13 +19,14 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance } from "../battle/types"
 import { markSeen, markCaught, getPokedex } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin } from "./playerStore"
 import { getCt } from "../data/cts"
 import { getMove } from "../data/moves"
 import { getSpecies } from "../data/species"
 import { SBIRE_REWARD_REPS, SBIRE_REWARD_BALL_ID } from "../data/sbire"
 import { ACE_TRAINER_ID, aceReward } from "../data/ace"
 import { GEKROC_STONE_ITEM } from "../data/gekroc"
+import { HH_COLLECTOR_ID, HH_COLLECTOR_CT } from "../data/hauntedNpcs"
 import type { BadgeId } from "../data/cts"
 import { createMonInstance } from "../battle/factory"
 import { getTrainer } from "../data/trainers"
@@ -330,6 +331,14 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                 rewardLine = "⚡ Revanche gagnée !"
             }
             rematchReward = { npcId: id, npcName: t?.name ?? "DRESSEUR", lines: [...(rm?.defeat ?? []), rewardLine] }
+        } else if (storeState.trainer.trainerId === HH_COLLECTOR_ID) {
+            // COLLECTIONNEUR DE SPECTRES : réaffrontable (PAS de markTrainerDefeated). Enregistre la victoire
+            // + les spectres montrés (équipe). À 3 victoires ET 3 spectres distincts → CT26 (Frappe d'Au-delà).
+            const spectres = b.player.team.map((m) => m.speciesId).filter((id) => getSpecies(id)?.types.includes("SPECTRE"))
+            if (recordHhCollectorWin(spectres).rewarded) {
+                const mvId = getCt(HH_COLLECTOR_CT)?.moveId
+                giftCtMove = mvId ? (getMove(mvId)?.name ?? null) : null
+            }
         } else {
             markTrainerDefeated(storeState.trainer.trainerId)
             const t = getTrainer(storeState.trainer.trainerId)

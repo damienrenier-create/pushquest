@@ -27,7 +27,7 @@ import { createMonInstance } from "../battle/factory"
 import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroLines, SBIRE_DONE_LINES, SBIRE_NO_TEAM_LINES } from "../data/sbire"
 import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_INTRO_LINES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, ACE_PASS_LINES, ACE_GATE_LINES, buildAceTeam, speciesAtLevel } from "../data/ace"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
-import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES } from "../data/hauntedNpcs"
+import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
 
 export interface ActiveDialogue {
     npcId: string
@@ -73,6 +73,7 @@ interface GameStore {
     pendingAce: boolean // intro d'ACE en cours → combat à la fermeture
     pendingGekroc: boolean // intro de GÉKROC (mini-boss Centrale) en cours → combat à la fermeture
     pendingHhTrade: string | null // uid du Brookhanté à échanger (BROCANTEUR maison hantée) → échange à la fermeture
+    pendingHhCollector: boolean // intro du COLLECTIONNEUR (maison hantée) en cours → combat à la fermeture
     encounterCooldown: number // #7 : pas de rencontre sauvage pendant N déplacements (≥1 case libre après un combat)
 
     // === ACTIONS ===
@@ -202,6 +203,19 @@ function doHhTrade(brookUid: string): ActiveDialogue | null {
     }
 }
 
+// COLLECTIONNEUR DE SPECTRES (maison hantée) : combat de dresseur réaffrontable, équipe = 3 spectres au
+// niveau du meilleur Daemon du joueur. La récompense (CT26) est gérée dans battleStore.finishBattle.
+function tryLaunchHhCollector(): ActiveDialogue | null {
+    const team = getPlayerSave().team
+    if (!team.some((m) => m.currentHp > 0)) {
+        return { npcId: HH_COLLECTOR_ID, npcName: "COLLECTIONNEUR", lineIndex: 0, lines: HH_COLLECTOR_NO_TEAM_LINES }
+    }
+    const level = Math.max(...team.map((m) => m.level))
+    const seed = Math.floor(Math.random() * 1e9) >>> 0
+    startTrainerBattle(team, buildHhCollectorTeam(level), seed, { trainerId: HH_COLLECTOR_ID, reward: 0, aiLevel: "trainer" })
+    return null
+}
+
 // Lance le combat ACE : équipe = celle STOCKÉE pour ce joueur (IA "ace"), budget
 // d'énergie ennemi = 1,5× les reps du joueur. Renvoie un dialogue (K.O.) ou null.
 function tryLaunchAce(): ActiveDialogue | null {
@@ -255,6 +269,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     pendingAce: false,
     pendingGekroc: false,
     pendingHhTrade: null,
+    pendingHhCollector: false,
     encounterCooldown: 0,
 
     move: (dir) => {
@@ -470,6 +485,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     set({ dialogue: tryLaunchGekroc(), pendingGekroc: false })
                 } else if (get().pendingHhTrade) {
                     set({ dialogue: doHhTrade(get().pendingHhTrade!), pendingHhTrade: null })
+                } else if (get().pendingHhCollector) {
+                    set({ dialogue: tryLaunchHhCollector(), pendingHhCollector: false })
                 } else {
                     set({ dialogue: null })
                 }
@@ -669,6 +686,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
+        // COLLECTIONNEUR DE SPECTRES : 3 victoires + 3 spectres distincts → CT26. Réaffrontable jusque-là.
+        if (npc.id === HH_COLLECTOR_ID) {
+            if (getPlayerSave().ownedCts.includes(HH_COLLECTOR_CT)) {
+                set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: HH_COLLECTOR_DONE_LINES } })
+                return
+            }
+            const wins = Math.min(getPlayerSave().hhCollectorWins, HH_COLLECTOR_WINS_NEEDED)
+            const shown = Math.min(getPlayerSave().hhSpectresShown.length, HH_COLLECTOR_SPECTRES_NEEDED)
+            const progress = `(Progression : ${wins}/${HH_COLLECTOR_WINS_NEEDED} victoires · ${shown}/${HH_COLLECTOR_SPECTRES_NEEDED} spectres distincts montrés.)`
+            set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: [...HH_COLLECTOR_INTRO_LINES, progress], lineIndex: 0 }, pendingHhCollector: true })
+            return
+        }
+
         // Dresseur : intro + combat (ou réplique de défaite s'il est déjà battu).
         const trainer = getTrainer(npc.id)
         if (trainer) {
@@ -769,6 +799,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ dialogue: tryLaunchGekroc(), pendingGekroc: false })
         } else if (get().pendingHhTrade) {
             set({ dialogue: doHhTrade(get().pendingHhTrade!), pendingHhTrade: null })
+        } else if (get().pendingHhCollector) {
+            set({ dialogue: tryLaunchHhCollector(), pendingHhCollector: false })
         } else {
             set({ dialogue: null })
         }

@@ -82,6 +82,10 @@ interface PlayerState {
     ownedCts: string[]
     /** GÉKROC (mini-boss de la Centrale) vaincu OU capturé (one-time) → ne réapparaît plus. */
     gekrocResolved: boolean
+    /** COLLECTIONNEUR DE SPECTRES (maison hantée) : espèces SPECTRE distinctes montrées en combat gagné. */
+    hhSpectresShown: string[]
+    /** COLLECTIONNEUR DE SPECTRES : nombre de victoires contre lui (réward = 3 victoires + 3 spectres). */
+    hhCollectorWins: number
 }
 
 /** Statistiques PvP du joueur (réputation). */
@@ -100,7 +104,7 @@ export function emptyPvpStats(): PvpStats {
     return { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }
 }
 
-let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [], gekrocResolved: false }
+let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0 }
 const listeners = new Set<() => void>()
 
 function emit() { for (const l of listeners) l() }
@@ -132,6 +136,8 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         aceDefeatedDate: p.aceDefeatedDate ?? st.aceDefeatedDate ?? "",
         ownedCts: p.ownedCts ?? st.ownedCts ?? [],
         gekrocResolved: p.gekrocResolved ?? st.gekrocResolved ?? false,
+        hhSpectresShown: p.hhSpectresShown ?? st.hhSpectresShown ?? [],
+        hhCollectorWins: p.hhCollectorWins ?? st.hhCollectorWins ?? 0,
     }
     emit()
 }
@@ -150,9 +156,21 @@ export function markGekrocResolved() {
     emit()
 }
 
+/** COLLECTIONNEUR DE SPECTRES (maison hantée) : enregistre une victoire + les spectres montrés.
+ *  Récompense la CT26 (Frappe d'Au-delà) dès 3 VICTOIRES ET 3 spectres DISTINCTS montrés. */
+export function recordHhCollectorWin(teamSpectreSpecies: string[]): { wins: number; shown: number; rewarded: boolean } {
+    const shown = Array.from(new Set([...st.hhSpectresShown, ...teamSpectreSpecies]))
+    const wins = st.hhCollectorWins + 1
+    st = { ...st, hhSpectresShown: shown, hhCollectorWins: wins }
+    emit()
+    let rewarded = false
+    if (wins >= 3 && shown.length >= 3 && !st.ownedCts.includes("ct26")) rewarded = grantCt("ct26")
+    return { wins, shown: shown.length, rewarded }
+}
+
 /** DEV : remet la progression jaune à zéro pour rejouer l'intro (équipe vidée, introSeen=false). */
 export function resetForIntro() {
-    st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [], gekrocResolved: false }
+    st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0 }
     emit()
 }
 
