@@ -1044,6 +1044,9 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
             { x: 19, y: 10, targetMapId: "yellow_maison_hantee", targetSpawnX: 10, targetSpawnY: 13 },
             // OUVERTURE NORD (row 0, cols 22-26) → PLAINE D'ENTRAÎNEMENT (hautes herbes), spawn couloir bas.
             ...[22, 23, 24, 25, 26].map((x) => ({ x, y: 0, targetMapId: "yellow_hautes_herbes", targetSpawnX: 11, targetSpawnY: 8 })),
+            // OUVERTURE SUD (cols 20-23, row 36) → LIGUE : gate Dieu Spaghetti tant que TOUS les badges
+            // ne sont pas réunis (cf. gameStore). La map de la Ligue arrivera plus tard.
+            ...[20, 21, 22, 23].map((x) => ({ x, y: 36, targetMapId: "yellow_ligue", targetSpawnX: 5, targetSpawnY: 5 })),
         ],
         backgroundImage: "/yellow/sprites/cendreville.png",
         backgroundImageWidth: CENDREVILLE_W * CENDREVILLE_TILE,   // 704

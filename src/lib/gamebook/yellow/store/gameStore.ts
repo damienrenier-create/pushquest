@@ -272,6 +272,29 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 scheduleSave(newPlayer)
                 return
             }
+            // GATE LIGUE (teaser) : la Ligue (sud de Cendreville) n'ouvre qu'avec TOUS les badges.
+            // Sinon le dieu Spaghetti barre la route avec un message → l'utilisateur sait qu'il y aura
+            // du contenu ici (au lieu d'un simple mur). Pas de téléportation : on reste sur place.
+            if (targetMapId === "yellow_ligue") {
+                const badges = getPlayerSave().badges
+                const allBadges = (["plante", "roche", "feu", "eau", "elec"] as const).every((b) => badges.includes(b))
+                if (!allBadges) {
+                    set({
+                        player: next,
+                        dialogue: {
+                            npcId: "spaghetti_gate", npcName: "DIEU SPAGHETTI", lineIndex: 0,
+                            lines: [
+                                "HOLÀ ! Pas si vite, jeune Dresseur — ce n'est pas le moment d'aller là-bas.",
+                                "La Ligue n'ouvre ses portes qu'aux champions accomplis. Reviens quand tu auras décroché TOUS les badges !",
+                                "*Le dieu Spaghetti s'efface dans un tourbillon de semoule.*",
+                            ],
+                        },
+                    })
+                    scheduleSave(next)
+                    return
+                }
+                // (futur) tous les badges réunis → entrée réelle dans la Ligue quand sa map existera.
+            }
             const newMap = YELLOW_MAPS[targetMapId]
             if (newMap) {
                 // Override de spawn : l'arène Feu (16×16) a son entrée en bas (8,14),
