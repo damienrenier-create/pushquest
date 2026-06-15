@@ -19,7 +19,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance } from "../battle/types"
 import { markSeen, markCaught, getPokedex } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion } from "./playerStore"
 import { getCt } from "../data/cts"
 import { getMove } from "../data/moves"
 import { getSpecies } from "../data/species"
@@ -31,7 +31,7 @@ import type { BadgeId } from "../data/cts"
 import { createMonInstance } from "../battle/factory"
 import { getTrainer } from "../data/trainers"
 import { SBIRE_TRAINER_ID } from "../data/sbire"
-import { toMonInstance } from "../storage/save"
+import { toMonInstance, type LeagueHighlight } from "../storage/save"
 import { evolveTeam } from "../progression/evolveTeam"
 import { persistYellowSave, processSaiyanPoints } from "./saveManager"
 import { QUOTA_CAPTURE_BONUS } from "../data/captureConfig"
@@ -92,6 +92,8 @@ interface BattleStoreState {
     /** PREMIÈRE capture d'une espèce → popup post-combat (sprite + description + punchline +
      *  proposition de surnom). null sinon. Renseigné en fin de combat, consommé par l'UI. */
     newDexEntry: { speciesId: string; uid: string; level: number } | null
+    /** LIGUE : sacre du CHAMPION (après LE MAÎTRE) → Hall of Fame post-combat (équipe + best-of). null sinon. */
+    championRun: { team: { speciesId: string; nickname?: string; level: number }[]; highlights: LeagueHighlight[] } | null
 }
 
 /** Rôle canonique : A = challenger ("player" canonique), B = défié ("enemy" canonique). */
@@ -113,7 +115,10 @@ interface PvpContext {
     desync: boolean
 }
 
-let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null }
+let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null }
+// LIGUE — meilleurs moments du run en cours (best hit par membre du Conseil 4 + Maître), runtime.
+// Upsert par trainerId à chaque victoire de la Ligue ; lus au sacre du Maître pour le Hall of Fame.
+const leagueHighlights: Record<string, LeagueHighlight> = {}
 const listeners = new Set<() => void>()
 
 // #2 — FUITE anti-spam : compteur de fuites consécutives (session). Chaque fuite RÉUSSIE durcit
@@ -351,6 +356,27 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
         }
     }
 
+    // 2quater) LIGUE : à chaque victoire d'un membre, on retient le MEILLEUR coup du combat (best-of).
+    //          Au sacre du MAÎTRE → Champion + Hall of Fame (équipe + best-of des 5 combats).
+    let championRun: BattleStoreState["championRun"] = null
+    const lid = storeState.trainer?.trainerId
+    if (b.outcome === "win" && lid && lid.startsWith("y_ligue_")) {
+        let best = { dmg: 0, mon: "", move: "" }
+        for (const m of b.player.team) {
+            const d = (m as { battleBestDmg?: number }).battleBestDmg ?? 0
+            if (d > best.dmg) best = { dmg: d, mon: m.nickname ?? getSpecies(m.speciesId)?.name ?? m.speciesId, move: (m as { battleBestDmgMove?: string }).battleBestDmgMove ?? "" }
+        }
+        if (best.dmg > 0) leagueHighlights[lid] = { trainer: getTrainer(lid)?.name ?? "Conseil 4", mon: best.mon, dmg: best.dmg, move: best.move }
+        if (lid === "y_ligue_maitre") {
+            setChampion()
+            const order = ["y_ligue_1_olga", "y_ligue_2_aldo", "y_ligue_3_agatha", "y_ligue_4_peter", "y_ligue_maitre"]
+            championRun = {
+                team: getPlayer().team.map((m) => ({ speciesId: m.speciesId, nickname: m.nickname, level: m.level })),
+                highlights: order.map((id) => leagueHighlights[id]).filter((h): h is LeagueHighlight => !!h),
+            }
+        }
+    }
+
     // 2ter) Défaite (équipe entièrement K.O.) : on soigne tout de suite et on
     //       signale un "whiteout" → la carte renverra le joueur au Centre.
     const isLose = b.outcome === "lose"
@@ -364,7 +390,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
         setTeam([...team])
     }
     // Expose les évolutions pour la cinématique post-combat (jouée après "QUITTER").
-    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, badgeAwarded, giftCtMove, rematchReward, newDexEntry })
+    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun })
 
     // 4) Sauvegarde persistante (DB).
     persistYellowSave()
@@ -381,6 +407,11 @@ export function endBattle() {
 
 export function clearEvolutions() {
     setStore({ battle: storeState.battle, evolutions: [], trainer: storeState.trainer, whiteout: storeState.whiteout })
+}
+
+/** Consommé par l'UI une fois le Hall of Fame (sacre du Champion) joué. */
+export function clearChampion() {
+    setStore({ championRun: null })
 }
 
 /** Consommé par la carte une fois le joueur renvoyé au Centre. */
@@ -687,6 +718,15 @@ export function useEvolutions(): EvolutionResult[] {
         subscribe,
         () => getSnapshot().evolutions,
         () => getSnapshot().evolutions,
+    )
+}
+
+/** LIGUE : le sacre du Champion (Hall of Fame) à jouer, ou null. */
+export function useChampionRun(): BattleStoreState["championRun"] {
+    return useSyncExternalStore(
+        subscribe,
+        () => getSnapshot().championRun,
+        () => getSnapshot().championRun,
     )
 }
 
