@@ -550,6 +550,94 @@ export const TRAINERS: TrainerData[] = [
         },
     },
 
+    // ===== ARÈNE EAU "LE SANCTUAIRE DES MARÉES" (badge "eau", à Cendreville — DERNIER gate avant la Ligue) =====
+    // Coords PLACEHOLDER (mapId "yellow_arena_eau" à créer par Sartay) ; niveaux 42-53 (entre la Centrale et la Ligue).
+    {
+        id: "y_eauarena_g1", name: "PLONGEUR REMOUS", title: "Gardien des Marées",
+        sprite: { emoji: "💧", color: "#3aa0e8" },
+        mapId: "yellow_arena_eau", x: 3, y: 3,
+        team: [
+            { speciesId: "ondaloutre", level: 43 },
+            { speciesId: "tetardoc", level: 42 },
+            { speciesId: "herondee", level: 43 },
+            { speciesId: "piouflot", level: 42 },
+        ],
+        reward: 240, aiLevel: "trainer",
+        intro: ["*L'eau ruisselle entre les cendres.* Bienvenue au Sanctuaire des Marées ! Je tiens la première vague."],
+        defeat: ["Submergé… file vers le courant suivant."],
+    },
+    {
+        id: "y_eauarena_g2", name: "DOMPTEUSE ÉCUME", title: "Gardienne des Marées",
+        sprite: { emoji: "💧", color: "#3aa0e8" },
+        mapId: "yellow_arena_eau", x: 5, y: 7,
+        requiresTrainers: ["y_eauarena_g1"],
+        // Lignée loutre, du marcassin des flots au seigneur des rivières.
+        team: [
+            { speciesId: "ondaloutre", level: 44 },
+            { speciesId: "ondaloutre", level: 45 },
+            { speciesId: "naiadrak", level: 47 },
+        ],
+        reward: 260, aiLevel: "trainer",
+        intro: ["J'élève mes loutres des flots jusqu'au dragon des rivières. Regarde la marée monter !"],
+        defeat: ["Mes loutres ont encore à apprendre…"],
+    },
+    {
+        id: "y_eauarena_g3", name: "PÊCHEUR ABYSSE", title: "Gardien des Marées",
+        sprite: { emoji: "💧", color: "#3aa0e8" },
+        mapId: "yellow_arena_eau", x: 11, y: 7,
+        requiresTrainers: ["y_eauarena_g2"],
+        // Trois colosses des profondeurs (formes finales).
+        team: [
+            { speciesId: "crapotaure", level: 47 },
+            { speciesId: "grenarc", level: 47 },
+            { speciesId: "naiadrak", level: 48 },
+        ],
+        reward: 280, aiLevel: "trainer",
+        intro: ["*Des bulles géantes crèvent la surface.* Trois titans des abysses te barrent la route d'ONDINE."],
+        defeat: ["Tu nages plus fort que le courant…"],
+    },
+    {
+        id: "y_eauarena_g4", name: "SENTINELLE RESSAC", title: "Sentinelle du Sanctuaire",
+        sprite: { emoji: "💧", color: "#3aa0e8" },
+        mapId: "yellow_arena_eau", x: 13, y: 3,
+        requiresTrainers: ["y_eauarena_g3"],
+        // Une seule Daemon, mais de niveau boss.
+        team: [
+            { speciesId: "razmaree", level: 50 },
+        ],
+        reward: 300, aiLevel: "trainer",
+        intro: ["Une seule Daemon. Mais un seul raz-de-marée suffit à noyer les téméraires."],
+        defeat: ["Passe… ONDINE règne au cœur du sanctuaire."],
+    },
+    {
+        id: "y_eauarena_boss", name: "ONDINE", title: "Reine des Marées",
+        sprite: { emoji: "🌊", color: "#1e78c8" },
+        mapId: "yellow_arena_eau", x: 8, y: 2,
+        // GATE : avoir battu les 4 gardes (n'importe quel ordre).
+        requiresTrainers: ["y_eauarena_g1", "y_eauarena_g2", "y_eauarena_g3", "y_eauarena_g4"],
+        team: [
+            { speciesId: "ondaloutre", level: 47 },
+            { speciesId: "tetardoc", level: 47 },
+            { speciesId: "crapotaure", level: 50 },
+            { speciesId: "herondee", level: 50 },
+            { speciesId: "naiadrak", level: 51 },
+            // L'AS : le colosse abyssal Léviathonn, qui OUVRE sur sa signature DÉFERLANTE (move de CT).
+            { speciesId: "leviathonn", level: 53, moves: ["deferlante", "hydrocanon", "lame_eau", "etincelle"], opening: ["deferlante"] },
+        ],
+        reward: 0, aiLevel: "trainer", badge: "eau", giftCt: "ct27",
+        intro: [
+            "*Au cœur du sanctuaire, une marée jaillit des cendres ; une femme s'y dresse, sereine.*",
+            "Je suis ONDINE, Reine des Marées. Dans cette ville de cendre, c'est moi qui fais jaillir la vie.",
+            "Mon Léviathonn engloutit tout sous sa Déferlante. Montre-moi si tu sais nager contre le destin !",
+        ],
+        defeat: [
+            "Balayée… par une vague plus haute que la mienne.",
+            "Le Badge Eau est à toi — et avec lui, la Ligue t'ouvre enfin ses portes.",
+            "*ONDINE dépose une capsule ruisselante au creux de ta main.*",
+            "Garde ma DÉFERLANTE : que la marée porte tes pas jusqu'au trône du Nexus !",
+        ],
+    },
+
     // ===== LA LIGUE DE CENDREVILLE — Conseil des 4 (hommage Gen1) + Maître =====
     // Gauntlet : se débloque après le Badge Eau ; ordre imposé (requiresTrainers) ; point de
     // non-retour (mécanique map/store à venir). Équipes 100% sur le roster existant.
