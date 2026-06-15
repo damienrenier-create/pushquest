@@ -1060,13 +1060,12 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         tiles: buildCentraleCollisions(),
         width: CENTRALE_W,
         height: CENTRALE_H,
-        // ENTRÉE = sud (depuis la porte de Cendreville, spawn 5,34). SORTIE = nord-ouest (0,11)
-        // → Cendreville devant la porte (19,18). Les deux ouvertures ramènent à Cendreville
-        // (pas de soft-lock : on peut aussi ressortir par le sud).
+        // ENTRÉE = sud (porte de Cendreville, spawn 5,34) — SANS RETOUR : on ne peut PAS ressortir par
+        // le sud. SORTIE UNIQUE = nord-ouest (0,11) → Cendreville devant la porte (19,18). Le joueur
+        // DOIT traverser le donjon. Pas de soft-lock : la sortie NW est toujours atteignable depuis le
+        // spawn (labyrinthe entièrement connecté, vérifié).
         exits: [
-            { x: 0, y: 11, targetMapId: "yellow_cendreville", targetSpawnX: 19, targetSpawnY: 18 }, // sortie NW
-            { x: 4, y: 35, targetMapId: "yellow_cendreville", targetSpawnX: 19, targetSpawnY: 18 }, // entrée sud (retour)
-            { x: 5, y: 35, targetMapId: "yellow_cendreville", targetSpawnX: 19, targetSpawnY: 18 },
+            { x: 0, y: 11, targetMapId: "yellow_cendreville", targetSpawnX: 19, targetSpawnY: 18 }, // SORTIE UNIQUE (nord-ouest)
         ],
         backgroundImage: "/yellow/sprites/centrale.png",
         backgroundImageWidth: CENTRALE_W * CENTRALE_TILE,   // 1080
