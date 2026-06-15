@@ -620,15 +620,16 @@ export const TRAINERS: TrainerData[] = [
             { speciesId: "tetardoc", level: 47 },
             { speciesId: "crapotaure", level: 50 },
             { speciesId: "herondee", level: 50 },
-            { speciesId: "naiadrak", level: 51 },
-            // L'AS : le colosse abyssal Léviathonn, qui OUVRE sur sa signature DÉFERLANTE (move de CT).
-            { speciesId: "leviathonn", level: 53, moves: ["deferlante", "hydrocanon", "lame_eau", "etincelle"], opening: ["deferlante"] },
+            // Les 2 AS d'ONDINE : Naïadrak (dragon des rivières) + Razmarée (raz-de-marée), qui OUVRE
+            // sur la signature DÉFERLANTE (move de CT). Léviathonn lui a cédé sa place.
+            { speciesId: "naiadrak", level: 52, moves: ["hydrocanon", "lame_eau", "draco_souffle", "belier"] },
+            { speciesId: "razmaree", level: 53, moves: ["deferlante", "hydrocanon", "lame_eau", "belier"], opening: ["deferlante"] },
         ],
         reward: 0, aiLevel: "trainer", badge: "eau", giftCt: "ct27",
         intro: [
             "*Au cœur du sanctuaire, une marée jaillit des cendres ; une femme s'y dresse, sereine.*",
             "Je suis ONDINE, Reine des Marées. Dans cette ville de cendre, c'est moi qui fais jaillir la vie.",
-            "Mon Léviathonn engloutit tout sous sa Déferlante. Montre-moi si tu sais nager contre le destin !",
+            "Mes deux marées jumelles — Naïadrak et Razmarée — déferlent sans répit. Montre-moi si tu sais nager contre le destin !",
         ],
         defeat: [
             "Balayée… par une vague plus haute que la mienne.",

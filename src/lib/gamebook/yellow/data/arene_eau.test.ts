@@ -32,9 +32,12 @@ describe("Arène Eau — Sanctuaire des Marées (badge eau)", () => {
         expect(ct.gift).toBe(true)
     })
 
-    it("l'AS du boss (Léviathonn) ouvre sur Déferlante", () => {
-        const ace = getTrainer("y_eauarena_boss")!.team.find((m) => m.opening?.includes("deferlante"))
+    it("l'AS du boss (Razmarée) ouvre sur Déferlante + Naïadrak présent (les 2 AS)", () => {
+        const team = getTrainer("y_eauarena_boss")!.team
+        const ace = team.find((m) => m.opening?.includes("deferlante"))
         expect(ace).toBeTruthy()
-        expect(ace!.speciesId).toBe("leviathonn")
+        expect(ace!.speciesId).toBe("razmaree")
+        expect(team.some((m) => m.speciesId === "naiadrak")).toBe(true)
+        expect(team.some((m) => m.speciesId === "leviathonn")).toBe(false) // Léviathonn retiré du boss
     })
 })
