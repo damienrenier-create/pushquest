@@ -1341,6 +1341,7 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 1, moveId: "pistolet_a_o" }, { level: 1, moveId: "charge" },
             { level: 8, moveId: "etincelle" }, { level: 14, moveId: "lame_eau" },
         ],
+        evolution: { toId: "sonarque", method: { kind: "LEVEL", level: 16 } },
         catchRate: 140, baseExp: 64, rarity: "COMMON", growthRate: "medium_fast", role: "Eau/Élec — bébé béluga",
         description: "Bébé béluga bardé de petits nodes électriques ; crépite quand on le caresse.",
         sprite: "/yellow/sprites/dex/belunode.png",
