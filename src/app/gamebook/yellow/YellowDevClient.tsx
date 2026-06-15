@@ -39,7 +39,8 @@ import { isBlockingTile } from "@/lib/gamebook/mapEngine"
 import { useBattle, useEvolutions, clearEvolutions, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getGiftCtMove } from "@/lib/gamebook/yellow/store/battleStore"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
-import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone } from "@/lib/gamebook/yellow/store/playerStore"
+import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
@@ -95,6 +96,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [menu, setMenu] = useState<"none" | "pause" | "team" | "pc" | "bag" | "reput" | "moves">("none")
     const ficheTouchX = useRef<number | null>(null) // swipe gauche/droite dans la fiche Daemon
     const [selected, setSelected] = useState<MonInstance | null>(null)
+    const [pantheonEvo, setPantheonEvo] = useState<MonInstance | null>(null) // Pierre Gékroc : choix du type pour Panthéon
     const [showIntro, setShowIntro] = useState(false)
     const [pastaPick, setPastaPick] = useState(false)
     const [toast, setToast] = useState<string | null>(null)
@@ -430,6 +432,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (renaming) { setRenaming(false); return true } // annule le renommage, reste sur la fiche
         if (selected) { setSelected(null); setRenaming(false); return true } // fermer la fiche reset aussi le renommage
         // Sous-modals de la BOUTIQUE (rendus au-dessus d'elle) → se ferment avant la boutique.
+        if (pantheonEvo) { setPantheonEvo(null); return true }
         if (pastaPick) { setPastaPick(false); return true }
         if (buyConfirm) { setBuyConfirm(null); return true }
         if (sellMode) { setSellMode(false); return true }
@@ -1223,6 +1226,37 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 </div>
             )}
 
+            {/* Pierre Gékroc → Panthéon évolue vers la panthère du TYPE choisi (Part B). */}
+            {!battle && pantheonEvo && (
+                <div style={menuOverlayStyle} onClick={() => setPantheonEvo(null)}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>🪨 PIERRE GÉKROC — QUEL TYPE ?</div>
+                        {PANTHEON_STONE_EVOS.map(({ type, speciesId }) => (
+                            <button
+                                key={speciesId}
+                                style={menuBtnStyle}
+                                onClick={() => {
+                                    const res = evolvePantheonWithStone(pantheonEvo.uid, speciesId)
+                                    if (res) {
+                                        setToast(`${res.fromName} évolue en ${res.toName} !`)
+                                        persistYellowSave()
+                                        setPantheonEvo(null)
+                                        setSelected(null) // ferme la fiche (le Daemon a changé d'espèce)
+                                    } else {
+                                        setToast("Évolution impossible.")
+                                    }
+                                }}
+                            >
+                                <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                    <span>{type}</span><span>{getSpecies(speciesId)?.name}</span>
+                                </span>
+                            </button>
+                        ))}
+                        <button style={menuBtnDimStyle} onClick={() => setPantheonEvo(null)}>← ANNULER</button>
+                    </div>
+                </div>
+            )}
+
             {/* Toast éphémère (achat, info). */}
             {toast && (
                 <div style={toastStyle} onClick={() => setToast(null)}>{toast}</div>
@@ -1479,6 +1513,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 </div>
                             )}
 
+                            {live.speciesId === "pantheon" && (player.items["pierre_gekroc"] ?? 0) > 0 && (
+                                <button style={{ ...menuBtnStyle, marginTop: 8, width: "100%" }} onClick={() => setPantheonEvo(live)}>
+                                    🪨 Utiliser la Pierre Gékroc
+                                </button>
+                            )}
                             <button style={{ ...menuBtnDimStyle, marginTop: 8 }} onClick={closeFiche}>← RETOUR</button>
                         </div>
                     </div>

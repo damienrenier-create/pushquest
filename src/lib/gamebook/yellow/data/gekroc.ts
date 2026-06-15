@@ -6,7 +6,7 @@
 // (flag playerStore.gekrocResolved + don de la Pierre). Sprite overworld qui devient la Pierre une fois résolu.
 
 import { createMonInstance } from "../battle/factory"
-import type { MonInstance } from "../battle/types"
+import type { MonInstance, PokeType } from "../battle/types"
 
 export const GEKROC_NPC_ID = "y_gekroc"
 export const GEKROC_MAP_ID = "yellow_centrale"
@@ -33,3 +33,15 @@ export function buildGekroc(): MonInstance {
     Object.assign(mon, { captureMult: 0.6 }) // dur à capturer (cf. engine performCapture), mais pas légendaire
     return mon
 }
+
+// ── PART B : la Pierre Gékroc fait évoluer PANTHÉON vers la panthère du TYPE choisi ──
+export const PANTHEON_BASE_ID = "pantheon"
+/** Choix offerts par la Pierre Gékroc sur un Panthéon : 1 type → 1 panthère colorée. */
+export const PANTHEON_STONE_EVOS: ReadonlyArray<{ type: PokeType; speciesId: string }> = [
+    { type: "FEU", speciesId: "pyropanthe" },
+    { type: "EAU", speciesId: "aquapanthe" },
+    { type: "ELEC", speciesId: "voltapanthe" },
+    { type: "PLANTE", speciesId: "florapanthe" },
+    { type: "GLACE", speciesId: "panthegel" },
+    { type: "SPECTRE", speciesId: "ombrapanthe" },
+]

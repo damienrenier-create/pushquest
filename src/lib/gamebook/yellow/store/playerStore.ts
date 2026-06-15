@@ -18,6 +18,8 @@ import type { StatKey } from "../battle/types"
 import { expForLevel, levelFromExp, applyExp, MAX_LEVEL, type ExpResult } from "../battle/xp"
 import type { WildPlayerCtx } from "../data/encounters"
 import { aceTargetLevel, bestCounter, ACE_EASY_START } from "../data/ace"
+import { GEKROC_STONE_ITEM, PANTHEON_BASE_ID, PANTHEON_STONE_EVOS } from "../data/gekroc"
+import { markCaught } from "./pokedexStore"
 import type { PokeType } from "../battle/types"
 
 export const TEAM_MAX = 6
@@ -298,6 +300,32 @@ export function applyTradeEvolution(uid: string): EvolutionResult | null {
     const list = [...(where === "team" ? st.team : st.pc)]
     list[idx] = clone
     st = where === "team" ? { ...st, team: list } : { ...st, pc: list }
+    emit()
+    return res
+}
+
+/**
+ * PIERRE GÉKROC (Part B) : fait évoluer un PANTHÉON (uid) vers la panthère du TYPE choisi.
+ * Consomme la Pierre. Renvoie le résultat (toast/anim) ou null si invalide (pas de pierre, pas
+ * un Panthéon, cible inconnue). La nouvelle panthère entre au Pokédex.
+ */
+export function evolvePantheonWithStone(uid: string, targetSpeciesId: string): EvolutionResult | null {
+    if ((st.items[GEKROC_STONE_ITEM] ?? 0) <= 0) return null
+    if (!PANTHEON_STONE_EVOS.some((e) => e.speciesId === targetSpeciesId)) return null
+    const inTeam = st.team.findIndex((m) => m.uid === uid)
+    const where: "team" | "pc" = inTeam >= 0 ? "team" : "pc"
+    const idx = inTeam >= 0 ? inTeam : st.pc.findIndex((m) => m.uid === uid)
+    if (idx < 0) return null
+    const src = (where === "team" ? st.team : st.pc)[idx]
+    if (src.speciesId !== PANTHEON_BASE_ID) return null
+    const clone: MonInstance = { ...src, moves: src.moves.map((m) => ({ ...m })), pendingMoves: src.pendingMoves ? [...src.pendingMoves] : undefined }
+    const res = applyEvolution(clone, targetSpeciesId)
+    if (!res) return null
+    const list = [...(where === "team" ? st.team : st.pc)]
+    list[idx] = clone
+    const items = { ...st.items, [GEKROC_STONE_ITEM]: (st.items[GEKROC_STONE_ITEM] ?? 0) - 1 }
+    st = where === "team" ? { ...st, team: list, items } : { ...st, pc: list, items }
+    markCaught(targetSpeciesId) // la panthère entre au Pokédex
     emit()
     return res
 }

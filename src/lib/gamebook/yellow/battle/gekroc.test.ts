@@ -5,6 +5,8 @@ import { getSpecies } from "../data/species"
 import { getMove } from "../data/moves"
 import { CTS, canLearnCt } from "../data/cts"
 import { buildGekroc } from "../data/gekroc"
+import { hydratePlayer, getPlayer, evolvePantheonWithStone } from "../store/playerStore"
+import { getPokedex, hydratePokedex } from "../store/pokedexStore"
 
 describe("GÉKROC — espèce, Tunnel (dig), capture, masquage", () => {
     it("espèce : SOL/ÉLEC, dex 126, learnsAllCts + hiddenUntilCaught, connaît Tunnel", () => {
@@ -64,5 +66,34 @@ describe("GÉKROC — espèce, Tunnel (dig), capture, masquage", () => {
         s = resolveTurn(s, { kind: "move", moveIndex: 0 })
         expect(s.player.team[0].semiInvuln).toBeFalsy()            // ressorti
         expect(s.enemy.team[0].currentHp).toBeLessThan(enemyHp0)   // a touché en jaillissant
+    })
+})
+
+describe("GÉKROC — Part B : la Pierre fait évoluer Panthéon (choix du type)", () => {
+    it("évolue Panthéon vers la panthère choisie, consomme la Pierre, entre au Pokédex", () => {
+        hydratePokedex({ seen: [], caught: [] })
+        const p = createMonInstance("pantheon", 30, { owned: true })
+        hydratePlayer({ team: [p], items: { pierre_gekroc: 1 } })
+        const res = evolvePantheonWithStone(p.uid, "pyropanthe")
+        expect(res).toBeTruthy()
+        expect(res!.toId).toBe("pyropanthe")
+        expect(getPlayer().team[0].speciesId).toBe("pyropanthe")
+        expect(getPlayer().items["pierre_gekroc"]).toBe(0)         // Pierre consommée
+        expect(getPokedex().caught).toContain("pyropanthe")
+    })
+
+    it("refuse : sans Pierre / pas un Panthéon / cible invalide", () => {
+        const p1 = createMonInstance("pantheon", 30, { owned: true })
+        hydratePlayer({ team: [p1], items: {} })
+        expect(evolvePantheonWithStone(p1.uid, "pyropanthe")).toBeNull() // pas de pierre
+
+        const p2 = createMonInstance("plumiot", 30, { owned: true })
+        hydratePlayer({ team: [p2], items: { pierre_gekroc: 1 } })
+        expect(evolvePantheonWithStone(p2.uid, "pyropanthe")).toBeNull() // pas un Panthéon
+
+        const p3 = createMonInstance("pantheon", 30, { owned: true })
+        hydratePlayer({ team: [p3], items: { pierre_gekroc: 1 } })
+        expect(evolvePantheonWithStone(p3.uid, "plumiot")).toBeNull()    // cible non panthère
+        expect(getPlayer().items["pierre_gekroc"]).toBe(1)              // pierre NON consommée si refus
     })
 })
