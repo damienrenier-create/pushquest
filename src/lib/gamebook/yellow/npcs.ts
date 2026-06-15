@@ -12,6 +12,7 @@ import { NORTH_SIGN_POSITIONS } from "./maps"
 import { PARK_SIGN_TIPS } from "./data/parkSigns"
 import { ACE_TRAINER_ID, ACE_POS, ACE_INTRO_LINES } from "./data/ace"
 import { GEKROC_NPC_ID, GEKROC_MAP_ID, GEKROC_POS, GEKROC_INTRO_LINES } from "./data/gekroc"
+import { HH_TRADER_ID, HH_TRADER_MAP, HH_TRADER_POS, HH_TRADER_OFFER_LINES } from "./data/hauntedNpcs"
 
 // PANNEAUX-conseils = les ~12 panneaux BIEN ESPACÉS de la Route Nord (le sprite
 // panneau est rendu par le décor). Chaque panneau = un hotspot INVISIBLE qui
@@ -74,6 +75,19 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         initialX: GEKROC_POS.x,
         initialY: GEKROC_POS.y,
         dialoguesAfter: GEKROC_INTRO_LINES,
+    },
+
+    // === CENDREVILLE — BROCANTEUR devant la maison hantée (20,11) : échange Brookhanté → Roctaur (→ Rochison) ===
+    {
+        id: HH_TRADER_ID,
+        name: "BROCANTEUR",
+        mapId: HH_TRADER_MAP,
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🔮", color: "#7e57c2" },
+        initialX: HH_TRADER_POS.x,
+        initialY: HH_TRADER_POS.y,
+        dialoguesAfter: HH_TRADER_OFFER_LINES,
     },
 
     // === VILLE — PANNEAU "antisèche du Bosquet" devant le gym (32,10) ===

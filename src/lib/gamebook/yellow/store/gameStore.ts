@@ -18,7 +18,7 @@ import type { YellowMapData } from "../maps"
 import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, resetFleeStreak } from "./battleStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution } from "./playerStore"
 import { getSpecies } from "../data/species"
 import { persistYellowSave } from "./saveManager"
 import { rollWildEncounter, wildLevelCap, hasEncounters } from "../data/encounters"
@@ -27,6 +27,7 @@ import { createMonInstance } from "../battle/factory"
 import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroLines, SBIRE_DONE_LINES, SBIRE_NO_TEAM_LINES } from "../data/sbire"
 import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_INTRO_LINES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, ACE_PASS_LINES, ACE_GATE_LINES, buildAceTeam, speciesAtLevel } from "../data/ace"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
+import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES } from "../data/hauntedNpcs"
 
 export interface ActiveDialogue {
     npcId: string
@@ -71,6 +72,7 @@ interface GameStore {
     pendingSbire: boolean // intro du sbire en cours → combat dynamique à la fermeture
     pendingAce: boolean // intro d'ACE en cours → combat à la fermeture
     pendingGekroc: boolean // intro de GÉKROC (mini-boss Centrale) en cours → combat à la fermeture
+    pendingHhTrade: string | null // uid du Brookhanté à échanger (BROCANTEUR maison hantée) → échange à la fermeture
     encounterCooldown: number // #7 : pas de rencontre sauvage pendant N déplacements (≥1 case libre après un combat)
 
     // === ACTIONS ===
@@ -182,6 +184,24 @@ function tryLaunchGekroc(): ActiveDialogue | null {
     return null
 }
 
+// BROCANTEUR (maison hantée) : échange le Brookhanté (uid) du joueur contre un Roctaur qui, reçu par
+// échange, évolue aussitôt en Rochison (applyTradeEvolution). Renvoie le dialogue de résultat.
+function doHhTrade(brookUid: string): ActiveDialogue | null {
+    const owner = [...getPlayerSave().team, ...getPlayerSave().pc].find((m) => m.uid === brookUid)
+    if (!owner) return null
+    const roctaur = createMonInstance(HH_TRADE_RECEIVE, owner.level, { owned: true })
+    executeTrade(brookUid, roctaur)              // retire le Brookhanté, ajoute le Roctaur
+    const evo = applyTradeEvolution(roctaur.uid) // Roctaur → Rochison (évolution par échange)
+    persistYellowSave()
+    const got = evo ? evo.toName : "Roctaur"
+    return {
+        npcId: HH_TRADER_ID, npcName: "BROCANTEUR", lineIndex: 0,
+        lines: evo
+            ? ["Marché conclu ! Je récupère ton Brookhanté…", `…et sous tes yeux, mon Roctaur se transforme en ${got} ! L'échange a réveillé sa vraie forme. Prends-en soin !`]
+            : ["Marché conclu ! Je récupère ton Brookhanté…", `…et tu reçois mon ${got} ! Prends-en soin.`],
+    }
+}
+
 // Lance le combat ACE : équipe = celle STOCKÉE pour ce joueur (IA "ace"), budget
 // d'énergie ennemi = 1,5× les reps du joueur. Renvoie un dialogue (K.O.) ou null.
 function tryLaunchAce(): ActiveDialogue | null {
@@ -234,6 +254,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     pendingSbire: false,
     pendingAce: false,
     pendingGekroc: false,
+    pendingHhTrade: null,
     encounterCooldown: 0,
 
     move: (dir) => {
@@ -447,6 +468,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     set({ dialogue: tryLaunchAce(), pendingAce: false })
                 } else if (get().pendingGekroc) {
                     set({ dialogue: tryLaunchGekroc(), pendingGekroc: false })
+                } else if (get().pendingHhTrade) {
+                    set({ dialogue: doHhTrade(get().pendingHhTrade!), pendingHhTrade: null })
                 } else {
                     set({ dialogue: null })
                 }
@@ -635,6 +658,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
+        // BROCANTEUR (maison hantée) : échange Brookhanté → Roctaur (→ Rochison). Répétable.
+        if (npc.id === HH_TRADER_ID) {
+            const brook = [...getPlayerSave().team, ...getPlayerSave().pc].find((m) => m.speciesId === HH_TRADE_GIVE)
+            if (!brook) {
+                set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: HH_TRADER_NEED_LINES } })
+                return
+            }
+            set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: HH_TRADER_OFFER_LINES, lineIndex: 0 }, pendingHhTrade: brook.uid })
+            return
+        }
+
         // Dresseur : intro + combat (ou réplique de défaite s'il est déjà battu).
         const trainer = getTrainer(npc.id)
         if (trainer) {
@@ -733,6 +767,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ dialogue: tryLaunchAce(), pendingAce: false })
         } else if (get().pendingGekroc) {
             set({ dialogue: tryLaunchGekroc(), pendingGekroc: false })
+        } else if (get().pendingHhTrade) {
+            set({ dialogue: doHhTrade(get().pendingHhTrade!), pendingHhTrade: null })
         } else {
             set({ dialogue: null })
         }
