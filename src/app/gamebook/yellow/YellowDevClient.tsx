@@ -107,6 +107,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [ctShop, setCtShop] = useState(false)
     const [ctPick, setCtPick] = useState<string | null>(null)
     const [confirmReset, setConfirmReset] = useState(false)
+    // SÉCURITÉ RESET : le « OUI » se fait par MAINTIEN prolongé (1,5s, barre de remplissage), pas par
+    // un tap. Empêche l'effacement accidentel par double-A / tap rapide (cf. perte de save de Mools).
+    const [resetHolding, setResetHolding] = useState(false)
+    const resetHoldTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+    useEffect(() => () => { if (resetHoldTimer.current) clearTimeout(resetHoldTimer.current) }, [])
     const [buyConfirm, setBuyConfirm] = useState<{ id: string; name: string; price: number } | null>(null)
     const [buyQty, setBuyQty] = useState(1)
     const [sellMode, setSellMode] = useState(false)
@@ -521,9 +526,28 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         {confirmReset ? (
                             <>
                                 <div style={{ fontSize: 11, color: "#c83030", fontWeight: 700, textAlign: "center" }}>
-                                    Effacer TOUTE ta progression du Chapitre 2 ?<br />(équipe, Pokédex, badges, reps — irréversible)
+                                    Effacer TOUTE ta progression du Chapitre 2 ?<br />(équipe, Pokédex, badges, reps — IRRÉVERSIBLE)<br />
+                                    <span style={{ fontSize: 10, opacity: 0.85, fontWeight: 400 }}>MAINTIENS le bouton enfoncé 1,5 s pour confirmer — un simple appui ne fait rien.</span>
                                 </div>
-                                <button style={{ ...menuBtnStyle, borderColor: "#c83030", color: "#c83030" }} onClick={() => { if (trade.session) { setToast("Termine ton échange en cours avant de réinitialiser."); setConfirmReset(false); return } resetYellowChapter(); setConfirmReset(false); setMenu("none"); setShowIntro(true) }}>✓ OUI, tout recommencer</button>
+                                <button
+                                    style={{ ...menuBtnStyle, borderColor: "#c83030", color: "#c83030", position: "relative", overflow: "hidden", touchAction: "none", userSelect: "none" }}
+                                    onPointerDown={() => {
+                                        if (resetHoldTimer.current) return
+                                        if (trade.session) { setToast("Termine ton échange en cours avant de réinitialiser."); setConfirmReset(false); return }
+                                        setResetHolding(true)
+                                        resetHoldTimer.current = setTimeout(() => {
+                                            resetHoldTimer.current = null; setResetHolding(false)
+                                            resetYellowChapter(); setConfirmReset(false); setMenu("none"); setShowIntro(true)
+                                        }, 1500)
+                                    }}
+                                    onPointerUp={() => { if (resetHoldTimer.current) { clearTimeout(resetHoldTimer.current); resetHoldTimer.current = null } setResetHolding(false) }}
+                                    onPointerLeave={() => { if (resetHoldTimer.current) { clearTimeout(resetHoldTimer.current); resetHoldTimer.current = null } setResetHolding(false) }}
+                                    onPointerCancel={() => { if (resetHoldTimer.current) { clearTimeout(resetHoldTimer.current); resetHoldTimer.current = null } setResetHolding(false) }}
+                                    onContextMenu={(e) => e.preventDefault()}
+                                >
+                                    <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: resetHolding ? "100%" : "0%", background: "#c8303055", transition: resetHolding ? "width 1.5s linear" : "none", pointerEvents: "none" }} />
+                                    <span style={{ position: "relative", pointerEvents: "none" }}>{resetHolding ? "⏳ Maintiens… (relâche = annuler)" : "🔥 MAINTIENS 1,5 s pour TOUT effacer"}</span>
+                                </button>
                                 <button style={menuBtnDimStyle} onClick={() => setConfirmReset(false)}>← Annuler</button>
                             </>
                         ) : (
