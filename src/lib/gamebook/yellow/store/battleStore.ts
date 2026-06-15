@@ -19,12 +19,13 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance } from "../battle/types"
 import { markSeen, markCaught, getPokedex } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved } from "./playerStore"
 import { getCt } from "../data/cts"
 import { getMove } from "../data/moves"
 import { getSpecies } from "../data/species"
 import { SBIRE_REWARD_REPS, SBIRE_REWARD_BALL_ID } from "../data/sbire"
 import { ACE_TRAINER_ID, aceReward } from "../data/ace"
+import { GEKROC_STONE_ITEM } from "../data/gekroc"
 import type { BadgeId } from "../data/cts"
 import { createMonInstance } from "../battle/factory"
 import { getTrainer } from "../data/trainers"
@@ -48,8 +49,10 @@ function enemyActiveSpeciesId(b: BattleState): string | null {
 function syncPokedex(b: BattleState) {
     const sp = enemyActiveSpeciesId(b)
     if (!sp) return
-    markSeen(sp)
-    if (b.outcome === "caught") markCaught(sp)
+    const caught = b.outcome === "caught"
+    // SURPRISE : Gékroc / Goshendofy restent MASQUÉS du Pokédex (même pas « vu ») tant que NON capturés.
+    if (caught || !getSpecies(sp)?.hiddenUntilCaught) markSeen(sp)
+    if (caught) markCaught(sp)
 }
 
 /** Contexte d'un combat de dresseur (récompense + marquage "battu"). */
@@ -245,6 +248,15 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     if (b.outcome === "caught") {
         const wild = b.enemy.team[b.enemy.activeIndex]
         if (wild) addCaught(toMonInstance(wild), { quotaReached: getPlayer().wildCtx?.quotaReached })
+    }
+
+    // 2-bis) GÉKROC (mini-boss STATIQUE) : vaincu OU capturé → résolu (one-time, ne réapparaît plus)
+    //        et la Pierre Gékroc est libérée (objet → fait évoluer Panthéon, cf. Part B).
+    if (b.isWild && (b.outcome === "win" || b.outcome === "caught") && b.enemy.team.some((e) => e.speciesId === "gekroc")) {
+        if (!getPlayer().gekrocResolved) {
+            markGekrocResolved()
+            addItem(GEKROC_STONE_ITEM, 1)
+        }
     }
 
     // 2bis) Victoire dresseur : marquage "battu" (la monnaie = reps, gagnée hors combat).

@@ -96,6 +96,7 @@ export function getCt(id: string): CtData | null {
  * - sinon : type de l'attaque parmi les types du Daemon, ou attaque NORMAL.
  */
 export function canLearnCt(species: SpeciesData, ct: CtData): boolean {
+    if (species.learnsAllCts) return true // GÉKROC : couteau-suisse, apprend TOUTES les CT (tous types)
     if (ct.universal) return true
     const move = getMove(ct.moveId)
     if (!move) return false

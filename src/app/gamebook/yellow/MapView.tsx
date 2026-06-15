@@ -9,6 +9,7 @@
 // Comportement caméra : viewport 10×9, joueur centré, scroll, lock aux bords.
 
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
+import { getPlayer } from "@/lib/gamebook/yellow/store/playerStore"
 import { YELLOW_NPCS } from "@/lib/gamebook/yellow/npcs"
 import type { YellowBuilding, YellowMapData } from "@/lib/gamebook/yellow/maps"
 import { type TileType, isBlockingTile } from "@/lib/gamebook/mapEngine"
@@ -534,7 +535,8 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId }: {
                 ))}
 
                 {npcsOnMap.map((npc) => (
-                    <NpcSprite key={npc.id} npc={npc} screenPos={screenPos} />
+                    <NpcSprite key={npc.id} npc={npc} screenPos={screenPos}
+                        overrideSprite={npc.id === "y_gekroc" && getPlayer().gekrocResolved ? { url: "/yellow/sprites/pierre_gekroc.png", frames: 1, h: 1.2 } : undefined} />
                 ))}
 
                 {/* Avatars des autres joueurs (casino multijoueur) */}
@@ -605,16 +607,20 @@ const NPC_SPRITES: Record<string, { url: string; frames: number; h?: number } | 
     // Route Nord : Gamin Léo + Exploratrice Mia (sprites entiers).
     y_trainer_leo: { url: "/yellow/sprites/npc_leo.png", frames: 1, h: 1.9 },
     y_trainer_mia: { url: "/yellow/sprites/npc_mia.png", frames: 1, h: 1.9 },
+    // GÉKROC (mini-boss Centrale) sur sa pierre — devient la Pierre seule une fois résolu (override ci-dessous).
+    y_gekroc: { url: "/yellow/sprites/gekroc_overworld.png", frames: 1, h: 1.8 },
 }
 
 function NpcSprite({
     npc,
     screenPos,
+    overrideSprite,
 }: {
     npc: { id: string; initialX: number; initialY: number; name: string; sprite: { emoji?: string } }
     screenPos: (x: number, y: number, w?: number, h?: number) => React.CSSProperties
+    overrideSprite?: { url: string; frames: number; h?: number }
 }) {
-    const sprite = NPC_SPRITES[npc.id]
+    const sprite = overrideSprite ?? NPC_SPRITES[npc.id]
     if (!sprite) {
         // PNJ "hotspot" invisible (emoji vide) : interaction sans sprite. Utilisé
         // pour les panneaux dont le visuel est déjà dans le décor de la map.

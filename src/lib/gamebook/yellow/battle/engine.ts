@@ -464,6 +464,29 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
         return
     }
 
+    // --- TUNNEL : une cible SOUS TERRE (semiInvuln) est intouchable → l'attaque (à dégâts) la manque ---
+    if (defender.semiInvuln && move.power > 0) {
+        events.push({ kind: "message", text: `${displayName(defender)} est sous terre : l'attaque le manque !` })
+        return
+    }
+
+    // --- TUNNEL (dig) : 2 tours AVEC invulnérabilité (creuse → jaillit), ex. Tunnel de GÉKROC ---
+    if (move.effect?.dig) {
+        if (attacker.chargingMove === (slot?.moveId ?? move.id)) {
+            // PHASE 2 : ressort + frappe (power du move). L'invulnérabilité tombe.
+            attacker.chargingMove = undefined
+            attacker.semiInvuln = undefined
+            events.push({ kind: "message", text: `${displayName(attacker)} jaillit du sol !` })
+            dealMoveDamage(state, side, move, rng, events)
+            return
+        }
+        // PHASE 1 : creuse et disparaît (INVULNÉRABLE), aucun dégât ce tour.
+        attacker.chargingMove = slot?.moveId ?? move.id
+        attacker.semiInvuln = true
+        events.push({ kind: "message", text: `${displayName(attacker)} creuse un tunnel et disparaît sous terre !` })
+        return
+    }
+
     // --- Move à 2 TOURS (charge → décharge), ex. Surtension de VOLTA ---
     if (move.effect?.twoTurn) {
         if (attacker.chargingMove === (slot?.moveId ?? move.id)) {
@@ -781,6 +804,7 @@ function doSwitch(state: BattleState, side: SideId, teamIndex: number, events: B
     out.stages = neutralStages()
     out.volatiles = {}
     out.chargingMove = undefined
+    out.semiInvuln = undefined // le sortant ressort du tunnel (annule une charge Tunnel en cours)
     s.activeIndex = teamIndex
     const incoming = s.team[teamIndex]
     // Le Daemon entrant a "participé" → il partagera l'XP des futurs K.O. (joueur uniquement).
@@ -857,7 +881,7 @@ export function chooseEnemyAction(state: BattleState, rng: Rng): ResolvedAction 
     if (self.chargingMove) {
         const ci = self.moves.findIndex((m) => m.moveId === self.chargingMove)
         if (ci >= 0) return { side: "enemy", kind: "move", moveIndex: ci }
-        self.chargingMove = undefined // sécurité : move perdu → on déverrouille
+        self.chargingMove = undefined; self.semiInvuln = undefined // sécurité : move perdu → on déverrouille
     }
     // OPENING SCRIPTÉ (boss) : l'attaque imposée passe AVANT l'IA et le budget d'énergie
     // ("quoi qu'il arrive"). Consommée une par une, uniquement quand ce Daemon est actif.

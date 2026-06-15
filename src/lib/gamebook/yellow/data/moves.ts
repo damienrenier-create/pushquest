@@ -38,6 +38,7 @@ export const MOVES: Record<string, MoveData> = {
 
     jet_de_sable: { id: "jet_de_sable", name: "Jet de Sable", type: "SOL", power: 0, accuracy: 100, pp: 15, effect: { statChanges: [{ target: "target", stat: "acc", stages: -1 }] }, description: "Baisse la Précision adverse." },
     seisme: { id: "seisme", name: "Séisme", type: "SOL", power: 100, accuracy: 100, pp: 10, description: "Secousse dévastatrice." },
+    tunnel: { id: "tunnel", name: "Tunnel", type: "SOL", power: 50, accuracy: 100, pp: 10, effect: { dig: true }, description: "Signature de GÉKROC : tour 1, creuse et disparaît sous terre (INVULNÉRABLE) ; tour 2, jaillit et frappe (50)." },
 
     tornade: { id: "tornade", name: "Tornade", type: "VOL", power: 60, accuracy: 100, pp: 20, description: "Bourrasque tranchante." },
     picpic: { id: "picpic", name: "Picpic", type: "VOL", power: 35, accuracy: 100, pp: 35, description: "Coups de bec rapides." },

@@ -113,6 +113,12 @@ export const ITEMS: Record<string, ItemData> = {
         id: "x_special", name: "X-Spé", category: "BOOST",
         description: "Spécial +1 cran (~+50%) jusqu'à la fin du combat.", price: 120, boostStat: "spc", boostStages: 1,
     },
+
+    // --- Objet d'ÉVOLUTION (Part B : Pierre Gékroc → fait évoluer Panthéon vers la panthère du type choisi) ---
+    pierre_gekroc: {
+        id: "pierre_gekroc", name: "Pierre Gékroc", category: "MISC",
+        description: "Pierre d'évolution crépitante, libérée par Gékroc. Permet à Panthéon d'évoluer vers la panthère du type de ton choix.", price: 0,
+    },
 }
 
 export function getItem(id: string): ItemData | null {

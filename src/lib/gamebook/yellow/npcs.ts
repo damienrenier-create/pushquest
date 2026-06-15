@@ -11,6 +11,7 @@ import { TRAINERS } from "./data/trainers"
 import { NORTH_SIGN_POSITIONS } from "./maps"
 import { PARK_SIGN_TIPS } from "./data/parkSigns"
 import { ACE_TRAINER_ID, ACE_POS, ACE_INTRO_LINES } from "./data/ace"
+import { GEKROC_NPC_ID, GEKROC_MAP_ID, GEKROC_POS, GEKROC_INTRO_LINES } from "./data/gekroc"
 
 // PANNEAUX-conseils = les ~12 panneaux BIEN ESPACÉS de la Route Nord (le sprite
 // panneau est rendu par le décor). Chaque panneau = un hotspot INVISIBLE qui
@@ -58,6 +59,21 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         initialX: ACE_POS.x,
         initialY: ACE_POS.y,
         dialoguesAfter: ACE_INTRO_LINES,
+    },
+
+    // === CENTRALE — GÉKROC (mini-boss STATIQUE, gardien de la Pierre) en (4,9) ===
+    // (4,9) est un mur de la collision → l'NPC s'y pose et bloque naturellement ; on l'interpelle
+    // depuis une case adjacente. Visuel réel via NPC_SPRITES (gekroc_overworld, ou la Pierre si résolu).
+    {
+        id: GEKROC_NPC_ID,
+        name: "GÉKROC",
+        mapId: GEKROC_MAP_ID,
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🪨", color: "#c9a227" },
+        initialX: GEKROC_POS.x,
+        initialY: GEKROC_POS.y,
+        dialoguesAfter: GEKROC_INTRO_LINES,
     },
 
     // === VILLE — PANNEAU "antisèche du Bosquet" devant le gym (32,10) ===

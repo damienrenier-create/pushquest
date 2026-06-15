@@ -56,6 +56,10 @@ export interface MoveEffect {
     /** KAMIKAZE : après avoir infligé ses dégâts, l'attaquant tombe à 1 PV (au lieu de s'auto-K.O.
      *  comme une vraie Destruction). Ex. « Détonation » de Bouh → reste systématiquement à 1 PV. */
     selfHpToOne?: boolean
+    /** TUNNEL (dig) à 2 tours AVEC invulnérabilité : tour 1 = creuse et disparaît sous terre
+     *  (INVULNÉRABLE, les attaques le MANQUENT), tour 2 = jaillit et frappe (power du move).
+     *  Distinct de twoTurn (qui frappe aux 2 tours sans invuln). Ex. « Tunnel » de Gékroc. */
+    dig?: boolean
 }
 
 export interface MoveData {
@@ -101,6 +105,10 @@ export interface SpeciesData {
     growthRate?: "medium_fast" | "fast" | "slow" | "medium_slow"
     /** Rôle de game-design (lisibilité éditoriale, non utilisé par le moteur). */
     role?: string
+    /** GÉKROC : apprend TOUTES les CT, quel que soit le type (couteau-suisse). Défaut : compat normale. */
+    learnsAllCts?: boolean
+    /** SURPRISE : MASQUÉ du Pokédex (même pas « vu ») tant que NON capturé (ex. Gékroc, Goshendofy). */
+    hiddenUntilCaught?: boolean
 }
 
 // ============================================================
@@ -181,6 +189,9 @@ export interface BattleMon extends MonInstance {
     /** MOVE À 2 TOURS en cours : moveId que ce Daemon est en train de CHARGER → il est verrouillé
      *  et libère sa décharge au tour suivant (quoi qu'il arrive). Runtime, non persisté. */
     chargingMove?: string
+    /** TUNNEL (dig) : le Daemon est SOUS TERRE (tour 1 de Tunnel) → les attaques adverses le MANQUENT,
+     *  jusqu'à ce qu'il ressorte au tour 2. Posé/levé en même temps que chargingMove. Runtime, non persisté. */
+    semiInvuln?: boolean
     /** SAUVAGE (Centrale) : le Daemon FUIT (fin de combat, aucune récompense) une fois ce nombre
      *  de tours atteint (ex. Boltah ≤5, Heatah ≤3). Runtime, non persisté. */
     fleeAfterTurns?: number

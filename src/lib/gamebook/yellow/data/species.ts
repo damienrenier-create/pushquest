@@ -1584,6 +1584,25 @@ export const SPECIES: Record<string, SpeciesData> = {
         catchRate: 3, baseExp: 220, rarity: "LEGENDARY", growthRate: "slow", role: "Légendaire DRAGON — apex des hautes herbes (capture gatée Ball+statut)",
         description: "Dragon primordial qui sommeille, camouflé, dans l'herbe la plus humble — là où nul ne songe à le chercher.",
         sprite: "/yellow/sprites/dex/goshendofy.png",
+        hiddenUntilCaught: true, // SURPRISE : absent du Pokédex tant qu'on ne l'a pas capturé
+    },
+    // 🪨⚡ GÉKROC — mini-boss STATIQUE de la Centrale (gardien de la Pierre d'Évolution). Stats moyennes
+    // mais COUTEAU-SUISSE : apprend TOUTES les CT (learnsAllCts). Capture dure (catchRate 10) mais ≠ légendaire.
+    gekroc: {
+        id: "gekroc", dexNo: 126, name: "Gékroc", types: ["SOL", "ELEC"],
+        baseStats: { hp: 90, atk: 92, def: 100, spe: 48, spc: 80 }, // BST 410 — tank physique lent (immunisé ÉLEC via SOL)
+        learnset: [
+            { level: 1, moveId: "vive_attaque" },
+            { level: 1, moveId: "etincelle" },
+            { level: 1, moveId: "tunnel" },
+            { level: 1, moveId: "repos" },
+        ],
+        catchRate: 10, baseExp: 180, rarity: "RARE", growthRate: "medium_fast",
+        role: "Mini-boss SOL/ÉLEC — gardien de la Pierre, apprend TOUTES les CT",
+        description: "Golem-taupe fossile incrusté d'une pierre d'évolution crépitante. Creuse des tunnels fulgurants et s'adapte à tout.",
+        sprite: "/yellow/sprites/dex/gekroc.png",
+        learnsAllCts: true,
+        hiddenUntilCaught: true, // SURPRISE : absent du Pokédex tant qu'on ne l'a pas capturé
     },
 }
 

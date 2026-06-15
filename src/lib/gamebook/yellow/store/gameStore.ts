@@ -26,6 +26,7 @@ import { getTrainer, trainerBoost, arenaScaledLevel, type TrainTier } from "../d
 import { createMonInstance } from "../battle/factory"
 import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroLines, SBIRE_DONE_LINES, SBIRE_NO_TEAM_LINES } from "../data/sbire"
 import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_INTRO_LINES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, ACE_PASS_LINES, ACE_GATE_LINES, buildAceTeam, speciesAtLevel } from "../data/ace"
+import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
 
 export interface ActiveDialogue {
     npcId: string
@@ -69,6 +70,7 @@ interface GameStore {
     pendingRematch: boolean // l'intro en cours est un REMATCH (2e équipe + récompense)
     pendingSbire: boolean // intro du sbire en cours → combat dynamique à la fermeture
     pendingAce: boolean // intro d'ACE en cours → combat à la fermeture
+    pendingGekroc: boolean // intro de GÉKROC (mini-boss Centrale) en cours → combat à la fermeture
     encounterCooldown: number // #7 : pas de rencontre sauvage pendant N déplacements (≥1 case libre après un combat)
 
     // === ACTIONS ===
@@ -168,6 +170,18 @@ function tryLaunchSbire(): ActiveDialogue | null {
     return null
 }
 
+// Lance le combat de GÉKROC : mini-boss STATIQUE wild-style (capturable), instance fixe N35.
+// Renvoie un dialogue (équipe K.O.) ou null si le combat démarre. Résolu (one-time) dans finishBattle.
+function tryLaunchGekroc(): ActiveDialogue | null {
+    const team = getPlayerSave().team
+    if (!team.some((m) => m.currentHp > 0)) {
+        return { npcId: GEKROC_NPC_ID, npcName: "GÉKROC", lineIndex: 0, lines: GEKROC_NO_TEAM_LINES }
+    }
+    const seed = Math.floor(Math.random() * 1e9) >>> 0
+    startWildBattle(team, [buildGekroc()], seed)
+    return null
+}
+
 // Lance le combat ACE : équipe = celle STOCKÉE pour ce joueur (IA "ace"), budget
 // d'énergie ennemi = 1,5× les reps du joueur. Renvoie un dialogue (K.O.) ou null.
 function tryLaunchAce(): ActiveDialogue | null {
@@ -219,6 +233,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     pendingRematch: false,
     pendingSbire: false,
     pendingAce: false,
+    pendingGekroc: false,
     encounterCooldown: 0,
 
     move: (dir) => {
@@ -294,6 +309,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     return
                 }
                 // (futur) tous les badges réunis → entrée réelle dans la Ligue quand sa map existera.
+            }
+            // GATE HAUTES HERBES : la plaine d'entraînement n'ouvre qu'une fois l'arène ÉLECTRIQUE battue
+            // (Daemons costauds, paliers jusqu'à 50). Sinon, message + on reste sur place.
+            if (targetMapId === "yellow_hautes_herbes" && !getPlayerSave().badges.includes("elec")) {
+                set({
+                    player: next,
+                    dialogue: {
+                        npcId: "spaghetti_gate", npcName: "DIEU SPAGHETTI", lineIndex: 0,
+                        lines: [
+                            "HOLÀ ! Ces hautes herbes grouillent de Daemons surpuissants…",
+                            "Reviens quand tu auras dompté la foudre — décroche d'abord le Badge Éclair !",
+                            "*Le dieu Spaghetti te repousse gentiment dans une volute de semoule.*",
+                        ],
+                    },
+                })
+                scheduleSave(next)
+                return
             }
             const newMap = YELLOW_MAPS[targetMapId]
             if (newMap) {
@@ -413,6 +445,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     set({ dialogue: tryLaunchSbire(), pendingSbire: false })
                 } else if (get().pendingAce) {
                     set({ dialogue: tryLaunchAce(), pendingAce: false })
+                } else if (get().pendingGekroc) {
+                    set({ dialogue: tryLaunchGekroc(), pendingGekroc: false })
                 } else {
                     set({ dialogue: null })
                 }
@@ -590,6 +624,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
+        // GÉKROC (mini-boss STATIQUE de la Centrale) : combat UNIQUE. Une fois vaincu/capturé
+        // (gekrocResolved), il ne réapparaît plus → réplique "déjà descellé".
+        if (npc.id === GEKROC_NPC_ID) {
+            if (getPlayerSave().gekrocResolved) {
+                set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: GEKROC_DONE_LINES } })
+                return
+            }
+            set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: GEKROC_INTRO_LINES, lineIndex: 0 }, pendingGekroc: true })
+            return
+        }
+
         // Dresseur : intro + combat (ou réplique de défaite s'il est déjà battu).
         const trainer = getTrainer(npc.id)
         if (trainer) {
@@ -686,6 +731,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ dialogue: tryLaunchSbire(), pendingSbire: false })
         } else if (get().pendingAce) {
             set({ dialogue: tryLaunchAce(), pendingAce: false })
+        } else if (get().pendingGekroc) {
+            set({ dialogue: tryLaunchGekroc(), pendingGekroc: false })
         } else {
             set({ dialogue: null })
         }
