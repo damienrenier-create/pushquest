@@ -222,6 +222,7 @@ export function resolveTurn(prev: BattleState, playerAction: PlayerAction): Batt
     if (pCharge && state.forcedSwitch !== "player" && playerAction.kind !== "switch") {
         const ci = active(state.player).moves.findIndex((m) => m.moveId === pCharge)
         if (ci >= 0) playerAction = { kind: "move", moveIndex: ci }
+        else { const me = active(state.player); me.chargingMove = undefined; me.semiInvuln = undefined } // soupape : move disparu → on déverrouille (symétrie avec chooseEnemyAction)
     }
 
     // --- Cas spécial : changement forcé après KO (pas un vrai tour) ---
@@ -458,19 +459,14 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
         }
     }
 
-    // --- Précision ---
-    if (!accuracyCheck(move, attacker, defender, rng)) {
-        events.push({ kind: "message", text: `${displayName(attacker)} rate son attaque !` })
-        return
-    }
-
-    // --- TUNNEL : une cible SOUS TERRE (semiInvuln) est intouchable → l'attaque (à dégâts) la manque ---
-    if (defender.semiInvuln && move.power > 0) {
+    // --- TUNNEL : une cible SOUS TERRE (semiInvuln) est INTOUCHABLE → TOUT move la manque (statut compris) ---
+    if (defender.semiInvuln) {
         events.push({ kind: "message", text: `${displayName(defender)} est sous terre : l'attaque le manque !` })
         return
     }
 
-    // --- TUNNEL (dig) : 2 tours AVEC invulnérabilité (creuse → jaillit), ex. Tunnel de GÉKROC ---
+    // --- TUNNEL (dig) : 2 tours avec invulnérabilité. PHASE 1 (creuser) traitée AVANT l'accuracyCheck →
+    //     l'enfouissement ne RATE jamais ; PHASE 2 (jaillir) = décharge auto (comme twoTurn), sans jet. ---
     if (move.effect?.dig) {
         if (attacker.chargingMove === (slot?.moveId ?? move.id)) {
             // PHASE 2 : ressort + frappe (power du move). L'invulnérabilité tombe.
@@ -484,6 +480,12 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
         attacker.chargingMove = slot?.moveId ?? move.id
         attacker.semiInvuln = true
         events.push({ kind: "message", text: `${displayName(attacker)} creuse un tunnel et disparaît sous terre !` })
+        return
+    }
+
+    // --- Précision ---
+    if (!accuracyCheck(move, attacker, defender, rng)) {
+        events.push({ kind: "message", text: `${displayName(attacker)} rate son attaque !` })
         return
     }
 

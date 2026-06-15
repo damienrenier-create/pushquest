@@ -6,7 +6,8 @@ import { getMove } from "../data/moves"
 import { CTS, canLearnCt } from "../data/cts"
 import { buildGekroc } from "../data/gekroc"
 import { hydratePlayer, getPlayer, evolvePantheonWithStone } from "../store/playerStore"
-import { getPokedex, hydratePokedex } from "../store/pokedexStore"
+import { getPokedex, hydratePokedex, markCaught } from "../store/pokedexStore"
+import { startWildBattle } from "../store/battleStore"
 
 describe("GÉKROC — espèce, Tunnel (dig), capture, masquage", () => {
     it("espèce : SOL/ÉLEC, dex 126, learnsAllCts + hiddenUntilCaught, connaît Tunnel", () => {
@@ -95,5 +96,25 @@ describe("GÉKROC — Part B : la Pierre fait évoluer Panthéon (choix du type)
         hydratePlayer({ team: [p3], items: { pierre_gekroc: 1 } })
         expect(evolvePantheonWithStone(p3.uid, "plumiot")).toBeNull()    // cible non panthère
         expect(getPlayer().items["pierre_gekroc"]).toBe(1)              // pierre NON consommée si refus
+    })
+})
+
+describe("GÉKROC / Goshendofy — masquage Pokédex (surprise)", () => {
+    it("rencontre sauvage : une espèce hiddenUntilCaught n'est PAS marquée « vue »", () => {
+        hydratePokedex({ seen: [], caught: [] })
+        hydratePlayer({ team: [createMonInstance("plumiot", 20, { owned: true })] })
+        startWildBattle(getPlayer().team, [createMonInstance("gekroc", 35)], 123)
+        expect(getPokedex().seen).not.toContain("gekroc") // masqué : surprise
+        // sanity : une espèce NON masquée, elle, est bien vue à la rencontre
+        startWildBattle(getPlayer().team, [createMonInstance("cailloutchi", 20)], 124)
+        expect(getPokedex().seen).toContain("cailloutchi")
+        expect(getPokedex().seen).not.toContain("gekroc") // toujours masqué
+    })
+
+    it("capture : markCaught révèle l'espèce (vue ET capturée)", () => {
+        hydratePokedex({ seen: [], caught: [] })
+        markCaught("goshendofy")
+        expect(getPokedex().caught).toContain("goshendofy")
+        expect(getPokedex().seen).toContain("goshendofy") // la capture force aussi le « vu »
     })
 })

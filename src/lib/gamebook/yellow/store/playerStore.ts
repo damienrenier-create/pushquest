@@ -319,8 +319,13 @@ export function evolvePantheonWithStone(uid: string, targetSpeciesId: string): E
     const src = (where === "team" ? st.team : st.pc)[idx]
     if (src.speciesId !== PANTHEON_BASE_ID) return null
     const clone: MonInstance = { ...src, moves: src.moves.map((m) => ({ ...m })), pendingMoves: src.pendingMoves ? [...src.pendingMoves] : undefined }
+    const fromSp = getSpecies(src.speciesId)
+    const hpBefore = fromSp ? fullStats(src, fromSp).hp : src.currentHp
     const res = applyEvolution(clone, targetSpeciesId)
     if (!res) return null
+    // Crédite le delta de PV MAX (la panthère a + de PV que Panthéon) → pas de déficit injustifié.
+    const toSp = getSpecies(targetSpeciesId)
+    if (toSp) { const hpAfter = fullStats(clone, toSp).hp; clone.currentHp = Math.min(hpAfter, clone.currentHp + Math.max(0, hpAfter - hpBefore)) }
     const list = [...(where === "team" ? st.team : st.pc)]
     list[idx] = clone
     const items = { ...st.items, [GEKROC_STONE_ITEM]: (st.items[GEKROC_STONE_ITEM] ?? 0) - 1 }

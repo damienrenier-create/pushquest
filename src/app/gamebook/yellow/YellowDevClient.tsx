@@ -1514,7 +1514,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             )}
 
                             {live.speciesId === "pantheon" && (player.items["pierre_gekroc"] ?? 0) > 0 && (
-                                <button style={{ ...menuBtnStyle, marginTop: 8, width: "100%" }} onClick={() => setPantheonEvo(live)}>
+                                <button style={{ ...menuBtnStyle, marginTop: 8, width: "100%" }} onClick={() => { setPantheonEvo(live); setSelected(null) }}>
                                     🪨 Utiliser la Pierre Gékroc
                                 </button>
                             )}
