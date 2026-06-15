@@ -535,9 +535,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                         if (resetHoldTimer.current) return
                                         if (trade.session) { setToast("Termine ton échange en cours avant de réinitialiser."); setConfirmReset(false); return }
                                         setResetHolding(true)
-                                        resetHoldTimer.current = setTimeout(() => {
+                                        resetHoldTimer.current = setTimeout(async () => {
                                             resetHoldTimer.current = null; setResetHolding(false)
-                                            resetYellowChapter(); setConfirmReset(false); setMenu("none"); setShowIntro(true)
+                                            await resetYellowChapter() // copie la save dans history AVANT d'effacer
+                                            setConfirmReset(false); setMenu("none"); setShowIntro(true)
                                         }, 1500)
                                     }}
                                     onPointerUp={() => { if (resetHoldTimer.current) { clearTimeout(resetHoldTimer.current); resetHoldTimer.current = null } setResetHolding(false) }}

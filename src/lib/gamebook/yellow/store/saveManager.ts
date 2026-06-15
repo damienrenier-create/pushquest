@@ -106,7 +106,10 @@ export async function processSaiyanPoints(): Promise<void> {
  * vide l'équipe/PC/objets/reps/badges (resetForIntro) ET le Pokédex, puis écrase
  * la sauvegarde serveur. N'affecte que la ligne GamebookProgress "yellow" du joueur.
  */
-export function resetYellowChapter(): void {
+export async function resetYellowChapter(): Promise<void> {
+    // SÉCURITÉ : on copie d'abord la save courante dans `history` (best-effort) → un reset reste
+    // annulable. Si le backup échoue (hors-ligne), on n'empêche PAS le reset volontaire.
+    try { await fetch("/api/gamebook/yellow/save/backup", { method: "POST" }) } catch { /* best-effort */ }
     resetForIntro()
     hydratePokedex({ seen: [], caught: [] })
     persistYellowSave()
