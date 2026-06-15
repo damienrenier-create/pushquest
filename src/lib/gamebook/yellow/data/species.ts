@@ -1571,7 +1571,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     // capture = Hyper Nexus Ball (ballBonus≥5) ET statut majeur requis (cf. WildEntry captureRequiresStatus).
     goshendofy: {
         id: "goshendofy", dexNo: 125, name: "Goshendofy", types: ["DRAGON"],
-        baseStats: { hp: 110, atk: 130, def: 105, spe: 110, spc: 135 },
+        baseStats: { hp: 130, atk: 130, def: 105, spe: 90, spc: 135 }, // BST 590 — colosse tanky, vitesse moyenne (pas le + rapide)
         learnset: [
             { level: 1, moveId: "charge" },
             { level: 1, moveId: "draco_souffle" },
