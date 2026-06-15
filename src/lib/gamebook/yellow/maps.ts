@@ -975,18 +975,19 @@ function buildMaisonHanteeEdges(): { v: boolean[][]; h: boolean[][] } {
 // 4 carrés d'herbes HAUTES 4×5 (= 4 types) où le NIVEAU est choisi par la LIGNE (N3-6 en bas → N15-18
 // en haut). Allées en herbe BASSE (grass → groundSheet, walkable sans rencontre), bordure de sapins
 // (tree → TreeSprite). Encounters = grassTall (cf. ZONES.yellow_hautes_herbes, grille d'entraînement).
-const HH_W = 24, HH_H = 10
-const HH_SQUARES: ReadonlyArray<readonly [number, number]> = [[2, 5], [7, 10], [12, 15], [17, 20]]
+const HH_W = 27, HH_H = 10
+// 3 carrés 5×5 = 3 PALIERS (gauche→droite), séparés par des allées de 4 cases d'herbe basse.
+const HH_SQUARES: ReadonlyArray<readonly [number, number]> = [[2, 6], [11, 15], [20, 24]]
 function buildHautesHerbes(): TileType[][] {
     const m: TileType[][] = Array.from({ length: HH_H }, () => Array.from({ length: HH_W }, () => "tree" as TileType))
-    // Rows 2-6 = les carrés (grassTall) séparés par des allées (grass). Row bottom (6) = band 0 (N3-6).
+    // Rows 2-6 = les 3 carrés (grassTall) séparés par des allées (grass). Row bottom (6) = band 0.
     for (let y = 2; y <= 6; y++) {
-        for (let x = 2; x <= 21; x++) {
+        for (let x = 2; x <= 24; x++) {
             m[y][x] = HH_SQUARES.some(([a, b]) => x >= a && x <= b) ? "grassTall" : "grass"
         }
     }
-    for (let x = 2; x <= 21; x++) { m[7][x] = "grass"; m[8][x] = "grass" } // couloir bas (herbe basse, walkable)
-    m[9][11] = "grass"; m[9][12] = "grass" // trouée sud (sortie vers Cendreville)
+    for (let x = 2; x <= 24; x++) { m[7][x] = "grass"; m[8][x] = "grass" } // couloir bas (herbe basse, walkable)
+    m[9][13] = "grass"; m[9][14] = "grass" // trouée sud (sortie vers Cendreville)
     return m
 }
 
@@ -1043,7 +1044,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
             { x: 18, y: 10, targetMapId: "yellow_maison_hantee", targetSpawnX: 10, targetSpawnY: 13 },
             { x: 19, y: 10, targetMapId: "yellow_maison_hantee", targetSpawnX: 10, targetSpawnY: 13 },
             // OUVERTURE NORD (row 0, cols 22-26) → PLAINE D'ENTRAÎNEMENT (hautes herbes), spawn couloir bas.
-            ...[22, 23, 24, 25, 26].map((x) => ({ x, y: 0, targetMapId: "yellow_hautes_herbes", targetSpawnX: 11, targetSpawnY: 8 })),
+            ...[22, 23, 24, 25, 26].map((x) => ({ x, y: 0, targetMapId: "yellow_hautes_herbes", targetSpawnX: 13, targetSpawnY: 8 })),
             // OUVERTURE SUD (cols 20-23, row 36) → LIGUE : gate Dieu Spaghetti tant que TOUS les badges
             // ne sont pas réunis (cf. gameStore). La map de la Ligue arrivera plus tard.
             ...[20, 21, 22, 23].map((x) => ({ x, y: 36, targetMapId: "yellow_ligue", targetSpawnX: 5, targetSpawnY: 5 })),
@@ -1110,10 +1111,10 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         tiles: buildHautesHerbes(),
         width: HH_W,
         height: HH_H,
-        // ENTRÉE depuis Cendreville (ouverture nord) → spawn couloir bas (11,8). SORTIE = trouée sud (11-12,9).
+        // ENTRÉE depuis Cendreville (ouverture nord) → spawn couloir bas (13,8). SORTIE = trouée sud (13-14,9).
         exits: [
-            { x: 11, y: 9, targetMapId: "yellow_cendreville", targetSpawnX: 24, targetSpawnY: 1 },
-            { x: 12, y: 9, targetMapId: "yellow_cendreville", targetSpawnX: 24, targetSpawnY: 1 },
+            { x: 13, y: 9, targetMapId: "yellow_cendreville", targetSpawnX: 24, targetSpawnY: 1 },
+            { x: 14, y: 9, targetMapId: "yellow_cendreville", targetSpawnX: 24, targetSpawnY: 1 },
         ],
         // Herbe basse (allées) = sheet 4 variantes 16px gap1 ; herbe HAUTE (carrés) = tuile unique.
         groundSheet: { url: "/yellow/sprites/herbes_2.png", tileSize: 16, gap: 1, count: 4 },

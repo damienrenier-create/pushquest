@@ -41,15 +41,20 @@ interface WildEntry {
     captureStatusBypassesBall?: boolean // un statut majeur shunte captureMinBallBonus (Super Ball+ OU statut, ex. Bouh)
 }
 
-/** Carré d'herbes hautes d'un type donné (colonnes x), avec son pool d'espèces. */
-interface TrainingSquare { cols: [number, number]; pool: WildEntry[] }
-/** GRILLE D'ENTRAÎNEMENT : niveau DÉTERMINISTE par ligne (band 0 en bas = niv 3-6 → band 4 en haut
- *  = niv 15-18), type par carré (colonnes). Le légendaire y rôde, + fréquent en herbe basse. */
+/** Carré d'herbes hautes = 1 PALIER de niveau : plage de colonnes + 5 bandes de niveau (band 0 en bas). */
+interface TrainingSquare { cols: [number, number]; bands: ReadonlyArray<readonly [number, number]> }
+/** GRILLE D'ENTRAÎNEMENT : 3 carrés = 3 PALIERS (gauche→droite, niveaux croissants). Chaque carré
+ *  affiche UN type/jour (rotation déterministe par date), niveau DÉTERMINISTE par la LIGNE (band).
+ *  Le légendaire (Goshendofy) y rôde, + fréquent en herbe BASSE (palier 1, bandes basses). */
 interface TrainingGrid {
-    bottomRow: number              // y de la ligne band-0 (la + basse / niveau 3-6) ; band = bottomRow - y
-    squares: TrainingSquare[]      // 1 carré = 1 type (plage de colonnes)
-    legendary?: WildEntry          // ex. Goshendofy (capture gatée Ball+statut via ses propres champs)
-    legendaryDenomByBand?: number[] // dénominateur de proba par band [bas..haut] (ex. [100,200,300,500,1000])
+    bottomRow: number                          // y de la ligne band-0 (la + basse) ; band = bottomRow - y
+    squares: TrainingSquare[]                  // 3 paliers (chacun : colonnes + 5 bandes de niveau)
+    types: readonly string[]                   // types en ROTATION QUOTIDIENNE (1 type/carré/jour)
+    typePools: Record<string, WildEntry[]>     // type → pool de base (pondéré rareté → les rares restent rares)
+    highOnlyTypes?: readonly string[]          // types jamais au palier 1 (ex. ROCHE → ≥ palier 2)
+    legendary?: WildEntry                      // Goshendofy (capture gatée Ball+statut via ses champs)
+    legendaryDenomByBand?: number[]            // dénom de proba par band [bas..haut]
+    legendaryTierMult?: number[]               // ×dénom par palier (tier) → raréfié en montant de palier
 }
 
 interface Zone { rate: number; pool: WildEntry[]; minLevel?: number; maxLevel?: number; trainingGrid?: TrainingGrid }
@@ -74,6 +79,7 @@ export interface EncounterCtx {
     player?: WildPlayerCtx
     levelCap?: number          // plafond de niveau (bridé par les badges, cf. wildLevelCap)
     encounterCount?: number    // nb total de sauvages déjà croisés → rampe d'accueil (5+5 premiers)
+    dayKey?: string            // "YYYY-MM-DD" → rotation quotidienne des types (hautes herbes). Vide = jour fixe.
 }
 
 /**
@@ -101,10 +107,28 @@ export function speciesZones(speciesId: string): string[] {
         const tg = z.trainingGrid
         if (tg) {
             if (tg.legendary?.speciesId === speciesId) return true
-            if (tg.squares.some((s) => s.pool.some((e) => e.speciesId === speciesId))) return true
+            if (Object.values(tg.typePools).some((p) => p.some((e) => e.speciesId === speciesId))) return true
         }
         return false
     })
+}
+
+// HAUTES HERBES — 10 types en ROTATION quotidienne. Exclus : Psy/Spectre/Élec (réservés aux bâtiments) ;
+// Normal (trop peu d'espèces → plumiot rejoint Vol) ; Dragon (pas de carré, draclet pop rare Route Nord).
+const HAUTES_HERBES_TYPES = ["VOL", "EAU", "PLANTE", "FEU", "COMBAT", "SOL", "ROCHE", "POISON", "GLACE", "INSECTE"] as const
+// Pools de BASE par type (formes de base → speciesAtLevel les fait évoluer selon le niveau de la bande).
+// Poids = rareté (commun ~100 · secondaire ~45-70 · rare ~14 · très rare ~5) → les rares restent rares.
+const HH_TYPE_POOLS: Record<string, WildEntry[]> = {
+    VOL: [{ speciesId: "plumiot", base: 100 }, { speciesId: "cornaissant", base: 60 }, { speciesId: "piouflot", base: 45 }, { speciesId: "rembodo", base: 45 }, { speciesId: "colibraise", base: 45 }],
+    EAU: [{ speciesId: "loutrille", base: 100 }, { speciesId: "piouflot", base: 50 }, { speciesId: "tetardoc", base: 45 }, { speciesId: "braisecaille", base: 5 }],
+    PLANTE: [{ speciesId: "pampousse", base: 100 }, { speciesId: "broussours", base: 45 }, { speciesId: "tamanpousse", base: 14 }],
+    FEU: [{ speciesId: "fennaise", base: 100 }, { speciesId: "pyrozly", base: 100 }, { speciesId: "brasicow", base: 45 }, { speciesId: "colibraise", base: 45 }, { speciesId: "lavapetit", base: 45 }, { speciesId: "braisecaille", base: 5 }],
+    COMBAT: [{ speciesId: "couperin", base: 100 }, { speciesId: "broussours", base: 60 }, { speciesId: "forgeotin", base: 45 }, { speciesId: "brasicow", base: 45 }],
+    SOL: [{ speciesId: "cailloutchi", base: 100 }, { speciesId: "mottoche", base: 70 }],
+    ROCHE: [{ speciesId: "cailloutchi", base: 100 }, { speciesId: "mottoche", base: 70 }, { speciesId: "lavapetit", base: 45 }, { speciesId: "rembodo", base: 45 }, { speciesId: "limaroche", base: 45 }, { speciesId: "marmoterre", base: 45 }, { speciesId: "tetardoc", base: 30 }],
+    POISON: [{ speciesId: "cornaissant", base: 100 }, { speciesId: "sporbeo", base: 45 }],
+    GLACE: [{ speciesId: "auroruff", base: 100 }, { speciesId: "marmoterre", base: 45 }],
+    INSECTE: [{ speciesId: "ruffiant", base: 100 }, { speciesId: "revemante", base: 45 }],
 }
 
 const ZONES: Record<string, Zone> = {
@@ -223,22 +247,26 @@ const ZONES: Record<string, Zone> = {
             { speciesId: "vipember", base: 2, levelMode: "strongestTeam", levelBonus: 5, noEvolve: true, captureMult: 0.25 }, // LE + rare, +5 du meilleur de l'équipe, très dur
         ],
     },
-    // HAUTES HERBES DU NORD (plaine d'entraînement de Cendreville) : 4 carrés = 4 types, NIVEAU choisi
-    // par la LIGNE (band 0 en bas = N3-6 → band 4 en haut = N15-18). Sol = grassTall (déclencheur). Le
-    // légendaire Goshendofy y rôde, + fréquent en herbe BASSE (1/100 → 1/1000). pool[] inutilisé ici.
+    // HAUTES HERBES DU NORD (plaine d'entraînement de Cendreville) : 3 carrés = 3 PALIERS de niveau
+    // (palier 1 N3-18 · palier 2 N18-38 · palier 3 N38-50). NIVEAU choisi par la LIGNE (band 0 bas →
+    // band 4 haut). Chaque carré affiche UN type qui TOURNE chaque jour (rotation déterministe par date,
+    // cf. dailyTypes). Goshendofy y rôde, + fréquent en herbe BASSE (palier 1, bandes basses).
     yellow_hautes_herbes: {
         rate: 0.25, pool: [],
         trainingGrid: {
             bottomRow: 6,
+            types: HAUTES_HERBES_TYPES,
+            typePools: HH_TYPE_POOLS,
+            highOnlyTypes: ["ROCHE"], // Roche jamais au palier 1 (pas de bébé rock niv 3) → ≥ palier 2, cohérent « > 30 »
             squares: [
-                { cols: [2, 5], pool: [{ speciesId: "plumiot", base: 100 }] },                                              // NORMAL/Vol (lignée Plumiot)
-                { cols: [7, 10], pool: [{ speciesId: "broutame", base: 100 }, { speciesId: "pampousse", base: 60 }, { speciesId: "tamanpousse", base: 40 }] }, // PLANTE
-                { cols: [12, 15], pool: [{ speciesId: "loutrille", base: 100 }, { speciesId: "piouflot", base: 50 }] },       // EAU
-                { cols: [17, 20], pool: [{ speciesId: "fennaise", base: 100 }, { speciesId: "pyrozly", base: 50 }] },         // FEU
+                { cols: [2, 6], bands: [[3, 6], [6, 9], [9, 12], [12, 15], [15, 18]] },        // PALIER 1 (3-18)
+                { cols: [11, 15], bands: [[18, 22], [22, 26], [26, 30], [30, 34], [34, 38]] }, // PALIER 2 (18-38, les ~20 suivants)
+                { cols: [20, 24], bands: [[38, 41], [41, 44], [44, 47], [47, 50], [50, 50]] }, // PALIER 3 (38 → 50)
             ],
             // Goshendofy : niveau fixe 50 (vrai légendaire), Hyper Nexus Ball (ballBonus≥5) + STATUT requis, capture ×0.5.
             legendary: { speciesId: "goshendofy", base: 1, levelFixed: 50, noEvolve: true, captureMinBallBonus: 5, captureRequiresStatus: true, captureMult: 0.5 },
-            legendaryDenomByBand: [100, 200, 300, 500, 1000], // band 0 (herbe basse) → band 4 (fond)
+            legendaryDenomByBand: [100, 200, 300, 500, 1000], // band 0 (herbe basse) → band 4
+            legendaryTierMult: [1, 4, 8],                     // palier 1 (commun) → palier 3 (quasi introuvable)
         },
     },
 }
@@ -327,25 +355,54 @@ export function rollWildEncounter(ctx: EncounterCtx): MonInstance | null {
     return finalizeSpawn(entry, level, rng, ctx)
 }
 
-/** GRILLE D'ENTRAÎNEMENT (hautes herbes du nord) : niveau = la LIGNE, type = le CARRÉ (colonnes).
- *  Le légendaire y rôde, + fréquent en herbe BASSE (band 0 = 1/100 → band 4 = 1/1000). */
+// RNG déterministe (mulberry32) + hash de chaîne (FNV-1a) → graine de la rotation quotidienne des types.
+function hhMulberry32(seed: number): () => number {
+    let a = seed >>> 0
+    return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296 }
+}
+function hashStr(s: string): number { let h = 2166136261 >>> 0; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) } return h >>> 0 }
+
+/** Types du jour pour les paliers [1,2,3] : tirage DÉTERMINISTE par date (mélange Fisher-Yates),
+ *  3 types DISTINCTS ; les highOnlyTypes (ex. ROCHE) ne tombent jamais sur le palier 1. */
+function dailyTypes(dayKey: string, types: readonly string[], highOnly: readonly string[]): string[] {
+    const rng = hhMulberry32(hashStr(dayKey || "1970-01-01"))
+    const pool = [...types]
+    for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1));[pool[i], pool[j]] = [pool[j], pool[i]] }
+    const lowIdx = pool.findIndex((t) => !highOnly.includes(t)) // palier 1 : 1er type "bas-OK"
+    const tier1 = pool.splice(lowIdx < 0 ? 0 : lowIdx, 1)[0]
+    return [tier1, pool[0], pool[1]]
+}
+
+/** Exposé pour l'UI/tests : les 3 types affichés ce jour (palier 1 → 3). */
+export function hautesHerbesTypesForDay(dayKey: string): string[] {
+    const tg = ZONES.yellow_hautes_herbes.trainingGrid
+    return tg ? dailyTypes(dayKey, tg.types, tg.highOnlyTypes ?? []) : []
+}
+
+/** GRILLE D'ENTRAÎNEMENT : niveau = la LIGNE (band, via les bandes du palier), type = le carré du JOUR.
+ *  Le légendaire y rôde, + fréquent en herbe BASSE (band bas × palier bas). */
 function rollTrainingGrid(tg: TrainingGrid, ctx: EncounterCtx, rng: () => number): MonInstance | null {
-    const band = Math.max(0, Math.min(4, tg.bottomRow - ctx.y)) // 0 = bas (niv 3-6) → 4 = haut (niv 15-18)
-    const sq = tg.squares.find((s) => ctx.x >= s.cols[0] && ctx.x <= s.cols[1])
-    if (!sq) return null // sur une allée (herbe basse) → pas de rencontre (gameStore ne roll que sur grassTall)
-    // LÉGENDAIRE : plus fréquent en herbe BASSE (contre-intuitif → paranoïa de chasse).
+    const band = Math.max(0, Math.min(4, tg.bottomRow - ctx.y))
+    const sqIdx = tg.squares.findIndex((s) => ctx.x >= s.cols[0] && ctx.x <= s.cols[1])
+    if (sqIdx < 0) return null // sur une allée (herbe basse) → pas de rencontre (gameStore ne roll que sur grassTall)
+    const sq = tg.squares[sqIdx]
+    // LÉGENDAIRE : gradient herbe basse (band) × palier (tier) → + fréquent au bas du palier 1.
     if (tg.legendary && tg.legendaryDenomByBand) {
-        const denom = tg.legendaryDenomByBand[band] ?? 1000
-        if (rng() < 1 / denom) return finalizeSpawn(tg.legendary, tg.legendary.levelFixed ?? 3 + 3 * band, rng, ctx)
+        const denom = (tg.legendaryDenomByBand[band] ?? 1000) * (tg.legendaryTierMult?.[sqIdx] ?? 1)
+        if (rng() < 1 / denom) return finalizeSpawn(tg.legendary, tg.legendary.levelFixed ?? 50, rng, ctx)
     }
-    // Sinon : pioche pondérée dans le carré, niveau DÉTERMINISTE par la bande.
-    const weights = sq.pool.map((e) => entryWeight(e, ctx.mapId, ctx.x, ctx.y, ctx.player))
+    // TYPE DU JOUR pour ce palier → pioche pondérée dans son pool ; NIVEAU déterministe par la bande.
+    const type = dailyTypes(ctx.dayKey ?? "", tg.types, tg.highOnlyTypes ?? [])[sqIdx] ?? tg.types[0]
+    const pool = tg.typePools[type] ?? []
+    if (pool.length === 0) return null
+    const weights = pool.map((e) => entryWeight(e, ctx.mapId, ctx.x, ctx.y, ctx.player))
     const total = weights.reduce((a, w) => a + w, 0)
     if (total <= 0) return null
     let r = rng() * total, idx = 0
-    for (let i = 0; i < sq.pool.length; i++) { if (r < weights[i]) { idx = i; break } r -= weights[i] }
-    const entry = sq.pool[idx]
-    const level = entry.levelFixed ?? intIn(rng, 3 + 3 * band, 6 + 3 * band)
+    for (let i = 0; i < pool.length; i++) { if (r < weights[i]) { idx = i; break } r -= weights[i] }
+    const entry = pool[idx]
+    const [lo, hi] = sq.bands[band] ?? [3, 6]
+    const level = entry.levelFixed ?? intIn(rng, lo, hi)
     return finalizeSpawn(entry, level, rng, ctx)
 }
 

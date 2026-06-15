@@ -357,6 +357,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     player: getPlayerSave().wildCtx ?? undefined,
                     levelCap: wildLevelCap(badges), // bridage par badges (Route Nord + Grotte)
                     encounterCount: encCount,
+                    dayKey: new Date().toISOString().slice(0, 10), // rotation quotidienne des types (hautes herbes)
                 })
                 if (wild) {
                     if (typeof window !== "undefined" && encCount < 10) window.localStorage.setItem(ENC_KEY, String(encCount + 1))
