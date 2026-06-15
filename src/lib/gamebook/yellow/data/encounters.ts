@@ -188,8 +188,8 @@ const ZONES: Record<string, Zone> = {
         minLevel: 12,  // plancher des espèces génériques (les autres ont leurs propres règles)
         maxLevel: 25,  // CAP GÉNÉRAL de la Centrale (sauf niveaux imposés ci-dessous)
         pool: [
-            // % visés (par rencontre) : Jerbiwat ~51 · Électroatiss ~20 · Namicha ~12 · Boltah ~10
-            // · Heatah ~3 · Thundah ~1,1 · Zappeuréal ~0,7 · Bélunode ~1 (×3 si quota).
+            // % visés (par rencontre) : Jerbiwat ~50 · Électroatiss ~20 · Namicha ~12 · Boltah ~10
+            // · Heatah ~3 · Sonarque ~2 · Thundah ~1 · Zappeuréal ~0,7 · Bélunode ~1 (×3 si quota).
             { speciesId: "jerbiwat", base: 230, levelMax: 20 },                              // le + commun, ≤20
             { speciesId: "electroatiss", base: 90 },                                         // commun, ≤25
             { speciesId: "namicha", base: 55, levelMode: "weakestTeam", noEvolve: true, openMirage: 1 }, // = + faible équipe, jamais Namizeus, ouvre par 1 Mirage
@@ -198,6 +198,7 @@ const ZONES: Record<string, Zone> = {
             { speciesId: "thundah", base: 5, levelFixed: 50, noEvolve: true, openMirage: 2, captureMult: 0.35 }, // très rare, N50, 2 Mirage, ne fuit jamais, dur à capturer
             { speciesId: "zappeureal", base: 3, levelFixed: 40, noEvolve: true, captureMinBallBonus: 4 }, // très très rare, N40, Hyper Ball+ obligatoire
             { speciesId: "belunode", base: 4, levelRange: [5, 15], noEvolve: true, quotaRateMult: 3, captureMult: 0.4 }, // bébé rare, N5-15, ×3 quota, dur à capturer
+            { speciesId: "sonarque", base: 10 },                                             // EAU/ÉLEC, rare ~2% (≤25) → Léviathonn par évo niv 34 (étaient orphelins)
         ],
     },
     // MAISON HANTÉE (intérieur de Cendreville) : DONJON 100% SPECTRE/PSY, brouillard + labyrinthe
