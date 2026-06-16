@@ -1032,7 +1032,7 @@ export const SPECIES: Record<string, SpeciesData> = {
         sprite: "/yellow/sprites/dex/hexaroc.png",
     },
     diamantine: {
-        id: "diamantine", dexNo: 82, name: "Diamantine", types: ["ROCHE"],
+        id: "diamantine", dexNo: 82, name: "Diamantine", types: ["ROCHE", "SOL"],
         baseStats: { hp: 108, atk: 64, def: 124, spe: 30, spc: 68 },
         learnset: [{ level: 1, moveId: "eboulis" }, { level: 1, moveId: "carapace_diamant" }, { level: 1, moveId: "lame_roche" }, { level: 1, moveId: "seisme" }],
         evolution: { toId: "amadiam", method: { kind: "LEVEL", level: 50 } },
@@ -1041,7 +1041,7 @@ export const SPECIES: Record<string, SpeciesData> = {
         sprite: "/yellow/sprites/dex/diamantine.png",
     },
     amadiam: {
-        id: "amadiam", dexNo: 83, name: "Amadiam", types: ["ROCHE"],
+        id: "amadiam", dexNo: 83, name: "Amadiam", types: ["ROCHE", "SOL"],
         baseStats: { hp: 118, atk: 78, def: 138, spe: 34, spc: 78 },
         learnset: [{ level: 1, moveId: "lame_roche" }, { level: 1, moveId: "carapace_diamant" }, { level: 1, moveId: "seisme" }, { level: 1, moveId: "eboulis" }],
         evolution: { toId: "golemini", method: { kind: "LEVEL", level: 63 } },
@@ -1050,7 +1050,7 @@ export const SPECIES: Record<string, SpeciesData> = {
         sprite: "/yellow/sprites/dex/amadiam.png",
     },
     golemini: {
-        id: "golemini", dexNo: 84, name: "Golémini", types: ["ROCHE"],
+        id: "golemini", dexNo: 84, name: "Golémini", types: ["ROCHE", "SOL"],
         baseStats: { hp: 128, atk: 90, def: 150, spe: 38, spc: 86 },
         learnset: [{ level: 1, moveId: "lame_roche" }, { level: 1, moveId: "seisme" }, { level: 1, moveId: "carapace_diamant" }, { level: 1, moveId: "repos" }],
         evolution: { toId: "megalithe", method: { kind: "LEVEL", level: 80 } },

@@ -319,8 +319,12 @@ export function resolveTurn(prev: BattleState, playerAction: PlayerAction): Batt
         if (act.kind === "switch") {
             doSwitch(state, act.side, act.teamIndex!, events)
         } else if (act.kind === "move") {
-            if (act.side === "player") playerActed = true
-            performMove(state, act.side, act.moveIndex!, events, rng)
+            // Pré-check de statut (peur/sommeil/gel/paralysie) AVANT d'agir : si le Daemon ne peut PAS
+            // agir, l'attaque N'A PAS LIEU → playerActed reste false → le store rembourse les reps.
+            if (canAct(cur, events, rng)) {
+                if (act.side === "player") playerActed = true
+                performMove(state, act.side, act.moveIndex!, events, rng)
+            }
         }
         checkFaints(state, events)
     }
@@ -437,8 +441,8 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
         state.enemyEnergy.spent += moveCostReps(getMove(attacker.moves[moveIndex]?.moveId ?? "")?.power ?? 0, attacker.level)
     }
 
-    // --- Pré-checks de statut (peut empêcher l'action) ---
-    if (!canAct(attacker, events, rng)) return
+    // (Pré-checks de statut peur/sommeil/gel/paralysie : faits par l'appelant AVANT performMove,
+    //  pour rembourser les reps si l'attaque n'a pas lieu — cf. resolveTurn.)
 
     // PP illimités : la seule limite est le coût en reps (déduit côté store).
     const fxMoveId = isStruggle ? STRUGGLE_MOVE_ID : (slot?.moveId ?? "")
