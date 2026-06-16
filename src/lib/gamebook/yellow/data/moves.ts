@@ -72,11 +72,10 @@ export const MOVES: Record<string, MoveData> = {
     fulgurance: { id: "fulgurance", name: "Fulgurance", type: "ELEC", power: 90, accuracy: 100, pp: 15, effect: { chance: 10, inflictStatus: "PARALYSIS" }, description: "Gros move Élec ; peut paralyser." },
     souffle_polaire: { id: "souffle_polaire", name: "Souffle Polaire", type: "GLACE", power: 90, accuracy: 100, pp: 10, effect: { chance: 10, inflictStatus: "FREEZE" }, description: "Gros move Glace ; peut geler." },
     balayage: { id: "balayage", name: "Balayage", type: "COMBAT", power: 60, accuracy: 100, pp: 20, effect: { chance: 10, flinch: true }, description: "Peut apeurer." },
-    crochet_maitre: { id: "crochet_maitre", name: "Uppercut", type: "COMBAT", power: 80, accuracy: 90, pp: 10, effect: { highCrit: true }, description: "Uppercut à fort taux de critique." },
-    // CT28 (Champion) : déluge de crochets — frappe 2 à 5 fois (20/coup), distribution uniforme du moteur
-    // (≈3,5 coups en moyenne → 40 à 100 dégâts). Reprend le nom « Crochet du Maître » (l'ancien move simple
-    // est devenu « Uppercut »). Seul move COMBAT enseignable par CT.
-    deluge_crochets: { id: "deluge_crochets", name: "Crochet du Maître", type: "COMBAT", power: 20, accuracy: 95, pp: 10, effect: { multiHit: [2, 5] }, description: "Déluge de crochets : frappe 2 à 5 fois (20 par coup)." },
+    crochet_maitre: { id: "crochet_maitre", name: "Crochet du Maître", type: "COMBAT", power: 80, accuracy: 90, pp: 10, effect: { highCrit: true }, description: "Crochet à fort taux de critique." },
+    // CT28 (Champion) : nouveau move COMBAT multi-coups — frappe 2 à 5 fois (20/coup), distribution uniforme
+    // du moteur (≈3,5 coups en moyenne → 40 à 100 dégâts). Distinct du « Crochet du Maître » simple (intact).
+    deluge_crochets: { id: "deluge_crochets", name: "Rafale de Crochets", type: "COMBAT", power: 20, accuracy: 95, pp: 10, effect: { multiHit: [2, 5] }, description: "Déluge de crochets : frappe 2 à 5 fois (20 par coup)." },
     crachat_acide: { id: "crachat_acide", name: "Crachat Acide", type: "POISON", power: 40, accuracy: 100, pp: 30, effect: { chance: 10, statChanges: [{ target: "target", stat: "def", stages: -1 }] }, description: "Peut baisser la Défense." },
     tir_boue: { id: "tir_boue", name: "Tir de Boue", type: "SOL", power: 55, accuracy: 95, pp: 15, effect: { chance: 10, statChanges: [{ target: "target", stat: "acc", stages: -1 }] }, description: "Peut baisser la Précision." },
     fonce_bec: { id: "fonce_bec", name: "Fonce-Bec", type: "VOL", power: 75, accuracy: 100, pp: 20, description: "Charge aérienne fiable." },

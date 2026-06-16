@@ -53,12 +53,12 @@ describe("catalogue des CT", () => {
         expect(getCt("ct17")?.price).toBe(0)
     })
 
-    it("CT28 = « Crochet du Maître » COMBAT multi-coups (2-5×, 20/coup), Champion", () => {
+    it("CT28 = « Rafale de Crochets » COMBAT multi-coups (2-5×, 20/coup), achetable au shop (Champion)", () => {
         const ct = getCt("ct28")!
         expect(ct.champion).toBe(true)
-        expect(ct.gift).toBeFalsy()
+        expect(ct.gift).toBeFalsy() // c'est une CT du SHOP, pas un cadeau
         const mv = getMove("deluge_crochets")!
-        expect(mv.name).toBe("Crochet du Maître")
+        expect(mv.name).toBe("Rafale de Crochets")
         expect(mv.type).toBe("COMBAT")
         expect(mv.power).toBe(20)
         expect(mv.effect?.multiHit).toEqual([2, 5])
@@ -73,10 +73,10 @@ describe("catalogue des CT", () => {
         expect(purchasableCts(["feu"]).some((c) => c.id === "ct28")).toBe(false)
     })
 
-    it("l'ancien move simple est renommé « Uppercut » (id crochet_maitre, 80, intact)", () => {
-        const up = getMove("crochet_maitre")!
-        expect(up.name).toBe("Uppercut")
-        expect(up.power).toBe(80)
-        expect(up.type).toBe("COMBAT")
+    it("le move « Crochet du Maître » d'origine est INTACT (id crochet_maitre, 80, crit)", () => {
+        const mv = getMove("crochet_maitre")!
+        expect(mv.name).toBe("Crochet du Maître")
+        expect(mv.power).toBe(80)
+        expect(mv.effect?.highCrit).toBe(true)
     })
 })
