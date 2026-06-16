@@ -33,11 +33,11 @@ describe("Arène Eau — Sanctuaire des Marées (badge eau)", () => {
         expect(ct.gift).toBe(true)
     })
 
-    it("l'AS du boss (Razmarée) ouvre sur Déferlante + Naïadrak présent (les 2 AS)", () => {
+    it("Déferlante (signature) ouverte par le LEAD Aquapanthe ET l'AS Razmarée ; Naïadrak présent", () => {
         const team = getTrainer("y_eauarena_boss")!.team
-        const ace = team.find((m) => m.opening?.includes("deferlante"))
-        expect(ace).toBeTruthy()
-        expect(ace!.speciesId).toBe("razmaree")
+        // Aquapanthe (lead) ouvre Déferlante → vue dès le 1er tour ; Razmarée (AS) la garde en finale.
+        expect(team.find((m) => m.speciesId === "aquapanthe")?.opening).toContain("deferlante")
+        expect(team.find((m) => m.speciesId === "razmaree")?.opening).toContain("deferlante")
         expect(team.some((m) => m.speciesId === "naiadrak")).toBe(true)
         expect(team.some((m) => m.speciesId === "leviathonn")).toBe(false) // Léviathonn retiré du boss
     })
