@@ -616,7 +616,8 @@ export const TRAINERS: TrainerData[] = [
         // GATE : avoir battu les 4 gardes (n'importe quel ordre).
         requiresTrainers: ["y_eauarena_g1", "y_eauarena_g2", "y_eauarena_g3", "y_eauarena_g4"],
         team: [
-            { speciesId: "aquapanthe", level: 51 },  // EAU — la panthère des marées (pièce signature d'ONDINE)
+            // Aquapanthe OUVRE sur DÉFERLANTE (signature d'ONDINE) → vue dès le 1er tour (Razmarée la garde aussi en finale).
+            { speciesId: "aquapanthe", level: 51, moves: ["deferlante", "hydrocanon", "lame_eau", "vive_attaque"], opening: ["deferlante"] },
             { speciesId: "crapotaure", level: 50 },  // ROCHE/EAU
             { speciesId: "calderont", level: 50 },   // FEU/EAU
             { speciesId: "ondaloutre", level: 49 },  // EAU (lignée loutre)

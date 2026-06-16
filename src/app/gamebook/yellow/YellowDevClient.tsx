@@ -415,7 +415,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 `🎖️ Tu obtiens le BADGE ${lbl} !`,
                 "Ton plafond de reps grimpe (+250) et de nouvelles CT s'ouvrent à la boutique.",
             ]
-            if (giftMove) lines.push(`🎁 Le Doyen te remet la CT « ${giftMove} » ! Apprends-la à un Daemon Plante — c'est un cadeau unique.`)
+            if (giftMove) lines.push(`🎁 Tu reçois la CT « ${giftMove} » ! Apprends-la à un Daemon compatible — cadeau unique.`)
             showDialogue("y_gym_sign", "ARÈNE", lines)
             clearBadgeAwarded()
         }
