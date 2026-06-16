@@ -557,10 +557,10 @@ export const TRAINERS: TrainerData[] = [
         sprite: { emoji: "💧", color: "#3aa0e8" },
         mapId: "yellow_arena_eau", x: 5, y: 8,
         team: [
-            { speciesId: "ondaloutre", level: 43 },
-            { speciesId: "tetardoc", level: 42 },
-            { speciesId: "herondee", level: 43 },
-            { speciesId: "piouflot", level: 42 },
+            { speciesId: "herondee", level: 43 },   // VOL/EAU
+            { speciesId: "grenarc", level: 43 },     // ROCHE/EAU
+            { speciesId: "sonarque", level: 43 },    // EAU/ÉLEC
+            { speciesId: "ondulo", level: 42 },      // EAU (lignée starter)
         ],
         reward: 240, aiLevel: "trainer",
         intro: ["*L'eau ruisselle entre les cendres.* Bienvenue au Sanctuaire des Marées ! Je tiens la première vague."],
@@ -584,11 +584,11 @@ export const TRAINERS: TrainerData[] = [
         id: "y_eauarena_g3", name: "PÊCHEUR ABYSSE", title: "Gardien des Marées",
         sprite: { emoji: "💧", color: "#3aa0e8" },
         mapId: "yellow_arena_eau", x: 11, y: 8,
-        // Trois colosses des profondeurs (formes finales).
+        // Trois colosses des profondeurs (3 lignées différentes : crapaud-titan, tortue feu/eau, colosse abyssal).
         team: [
-            { speciesId: "crapotaure", level: 47 },
-            { speciesId: "grenarc", level: 47 },
-            { speciesId: "naiadrak", level: 48 },
+            { speciesId: "crapotaure", level: 47 },  // ROCHE/EAU
+            { speciesId: "calderont", level: 48 },   // FEU/EAU
+            { speciesId: "leviathonn", level: 49 },  // EAU/ÉLEC (colosse abyssal)
         ],
         reward: 280, aiLevel: "trainer",
         intro: ["*Des bulles géantes crèvent la surface.* Trois titans des abysses te barrent la route d'ONDINE."],
@@ -613,10 +613,10 @@ export const TRAINERS: TrainerData[] = [
         // GATE : avoir battu les 4 gardes (n'importe quel ordre).
         requiresTrainers: ["y_eauarena_g1", "y_eauarena_g2", "y_eauarena_g3", "y_eauarena_g4"],
         team: [
-            { speciesId: "ondaloutre", level: 47 },
-            { speciesId: "tetardoc", level: 47 },
-            { speciesId: "crapotaure", level: 50 },
-            { speciesId: "herondee", level: 50 },
+            { speciesId: "herondee", level: 48 },    // VOL/EAU
+            { speciesId: "crapotaure", level: 50 },  // ROCHE/EAU
+            { speciesId: "calderont", level: 50 },   // FEU/EAU
+            { speciesId: "ondaloutre", level: 49 },  // EAU (lignée loutre)
             // Les 2 AS d'ONDINE : Naïadrak (dragon des rivières) + Razmarée (raz-de-marée), qui OUVRE
             // sur la signature DÉFERLANTE (move de CT). Léviathonn lui a cédé sa place.
             { speciesId: "naiadrak", level: 52, moves: ["hydrocanon", "lame_eau", "draco_souffle", "belier"] },
