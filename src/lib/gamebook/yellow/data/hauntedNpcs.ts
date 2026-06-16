@@ -8,7 +8,6 @@
 //    DIFFÉRENTS au fil de tes combats + bats-le 3× → il offre la CT26 (Frappe d'Au-delà).
 
 import { createMonInstance } from "../battle/factory"
-import { speciesAtLevel } from "./ace"
 import type { MonInstance } from "../battle/types"
 
 export const HH_TRADER_ID = "y_hh_trader"
@@ -44,10 +43,15 @@ export const HH_COLLECTOR_NO_TEAM_LINES = [
     "Tes Daemons sont tous K.O. ! Reviens-moi en pleine forme.",
 ]
 
-/** Équipe du collectionneur : 3 spectres mis au niveau/stade d'évolution du joueur + son AS Ombrapanthe
- *  (la panthère SPECTRE, niveau +2). */
+/** Équipe du collectionneur : il CHERCHE les spectres → il en possède peu (un seul, son AS Ombrapanthe).
+ *  Il combat surtout avec des Daemons forts mais que personne n'utilise (formes finales oubliées).
+ *  Niveau plafonné à 40 (scale vers le bas pour les petits joueurs, jamais au-dessus). */
 export function buildHhCollectorTeam(level: number): MonInstance[] {
-    const team = ["hibouh", "brook", "sporbeo"].map((id) => createMonInstance(speciesAtLevel(id, level), level, { owned: false }))
-    team.push(createMonInstance("ombrapanthe", level + 2, { owned: false })) // AS : la panthère SPECTRE
-    return team
+    const cap = Math.min(level, 40) // jamais au-dessus du niveau 40
+    return [
+        createMonInstance("loupyre", Math.max(cap - 2, 5), { owned: false }), // FEU — loup de feu rapide
+        createMonInstance("druidours", Math.max(cap - 2, 5), { owned: false }), // COMBAT/PLANTE — gros cogneur bulky
+        createMonInstance("torturoche", Math.max(cap - 1, 5), { owned: false }), // ROCHE/PSY — mur spécial
+        createMonInstance("ombrapanthe", cap, { owned: false }), // AS : sa seule fierté spectrale (panthère SPECTRE)
+    ]
 }

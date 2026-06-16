@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest"
 import { createMonInstance } from "../battle/factory"
 import { hydratePlayer, getPlayer, recordHhCollectorWin, applyTradeEvolution } from "../store/playerStore"
 import { buildHhCollectorTeam } from "./hauntedNpcs"
+import { getSpecies } from "./species"
 
 describe("Maison hantée — PNJ1 BROCANTEUR (échange → rochison)", () => {
     it("un Roctaur reçu par échange évolue aussitôt en Rochison", () => {
@@ -45,11 +46,20 @@ describe("Maison hantée — PNJ2 COLLECTIONNEUR de spectres (CT26)", () => {
         expect(r.rewarded).toBe(false)
     })
 
-    it("son équipe a l'AS Ombrapanthe (panthère SPECTRE) au-dessus des 3 spectres", () => {
-        const team = buildHhCollectorTeam(40)
+    it("équipe plafonnée niveau 40, un SEUL spectre (l'AS Ombrapanthe) + 3 Daemons forts sous-utilisés", () => {
+        const team = buildHhCollectorTeam(60) // joueur très haut niveau
         expect(team.length).toBe(4)
+        for (const m of team) expect(m.level).toBeLessThanOrEqual(40) // plafond 40
         const ace = team.find((m) => m.speciesId === "ombrapanthe")
         expect(ace).toBeTruthy()
-        expect(ace!.level).toBe(42) // niveau +2
+        expect(ace!.level).toBe(40) // l'AS au plafond
+        // il CHERCHE les spectres → il en possède peu : un seul (son AS panthère)
+        const spectres = team.filter((m) => getSpecies(m.speciesId)!.types.includes("SPECTRE"))
+        expect(spectres.length).toBe(1)
+    })
+
+    it("le collectionneur scale vers le bas pour un petit joueur (cap = niveau joueur)", () => {
+        const team = buildHhCollectorTeam(25)
+        for (const m of team) expect(m.level).toBeLessThanOrEqual(25)
     })
 })
