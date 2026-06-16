@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest"
 import { createMonInstance } from "../battle/factory"
 import { hydratePlayer, getPlayer, recordHhCollectorWin, applyTradeEvolution } from "../store/playerStore"
+import { buildHhCollectorTeam } from "./hauntedNpcs"
 
 describe("Maison hantée — PNJ1 BROCANTEUR (échange → rochison)", () => {
     it("un Roctaur reçu par échange évolue aussitôt en Rochison", () => {
@@ -42,5 +43,13 @@ describe("Maison hantée — PNJ2 COLLECTIONNEUR de spectres (CT26)", () => {
         expect(r.shown).toBe(3)
         expect(r.wins).toBe(1)
         expect(r.rewarded).toBe(false)
+    })
+
+    it("son équipe a l'AS Ombrapanthe (panthère SPECTRE) au-dessus des 3 spectres", () => {
+        const team = buildHhCollectorTeam(40)
+        expect(team.length).toBe(4)
+        const ace = team.find((m) => m.speciesId === "ombrapanthe")
+        expect(ace).toBeTruthy()
+        expect(ace!.level).toBe(42) // niveau +2
     })
 })

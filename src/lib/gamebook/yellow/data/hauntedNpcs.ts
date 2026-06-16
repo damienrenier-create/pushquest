@@ -44,7 +44,10 @@ export const HH_COLLECTOR_NO_TEAM_LINES = [
     "Tes Daemons sont tous K.O. ! Reviens-moi en pleine forme.",
 ]
 
-/** Équipe du collectionneur : 3 spectres, mis au niveau (et au stade d'évolution) du joueur. */
+/** Équipe du collectionneur : 3 spectres mis au niveau/stade d'évolution du joueur + son AS Ombrapanthe
+ *  (la panthère SPECTRE, niveau +2). */
 export function buildHhCollectorTeam(level: number): MonInstance[] {
-    return ["hibouh", "brook", "sporbeo"].map((id) => createMonInstance(speciesAtLevel(id, level), level, { owned: false }))
+    const team = ["hibouh", "brook", "sporbeo"].map((id) => createMonInstance(speciesAtLevel(id, level), level, { owned: false }))
+    team.push(createMonInstance("ombrapanthe", level + 2, { owned: false })) // AS : la panthère SPECTRE
+    return team
 }
