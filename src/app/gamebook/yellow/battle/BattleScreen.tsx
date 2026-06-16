@@ -511,6 +511,8 @@ function MonInfo({ mon, self, hp, max }: { mon: BattleMon; self?: boolean; hp: n
                 <span style={S.hpLabel}>PV</span>
                 <div style={S.hpTrack}><div style={{ ...S.hpFill, width: `${pct}%`, background: col }} /></div>
             </div>
+            {/* Chiffre des PV ENTRE la barre de PV et la barre d'XP (lisibilité). */}
+            {self && <div style={S.hpNum}>{Math.max(0, Math.round(hp))}/{max}</div>}
             {/* Mini barre d'XP (joueur uniquement) → on voit si le Daemon est proche du niveau suivant. */}
             {self && (() => {
                 const cur = expForLevel(mon.level), nxt = expForLevel(mon.level + 1)
@@ -524,7 +526,6 @@ function MonInfo({ mon, self, hp, max }: { mon: BattleMon; self?: boolean; hp: n
                     </div>
                 )
             })()}
-            {self && <div style={S.hpNum}>{Math.max(0, Math.round(hp))}/{max}</div>}
             {hp > 0 && mon.status !== "NONE" && <span style={S.statusTag}>{mon.status}</span>}
         </div>
     )
