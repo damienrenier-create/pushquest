@@ -37,7 +37,7 @@ import PosterPanel from "./PosterPanel"
 import { useGameStore, setCurrentNickname } from "@/lib/gamebook/yellow/store/gameStore"
 import { YELLOW_MAPS, CENDREVILLE_SPAWN } from "@/lib/gamebook/yellow/maps"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
-import { useBattle, useEvolutions, clearEvolutions, useChampionRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getGiftCtMove, startTrainerBattle } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, useEvolutions, clearEvolutions, useChampionRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getGiftCtMove, startTrainerBattle, useChainRematch, clearChainRematch } from "@/lib/gamebook/yellow/store/battleStore"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
 import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone } from "@/lib/gamebook/yellow/store/playerStore"
@@ -86,10 +86,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const closePoster = useGameStore((s) => s.closePoster)
     const dialogue = useGameStore((s) => s.dialogue)
     const setMap = useGameStore((s) => s.setMap)
+    const launchRematch = useGameStore((s) => s.launchRematch)
     const showDialogue = useGameStore((s) => s.showDialogue)
     const battle = useBattle()
     const evolutions = useEvolutions()
     const championRun = useChampionRun()
+    const chainRematchId = useChainRematch()
     const newDexEntry = useNewDexEntry()
     const whiteout = useWhiteout()
     const sbireWin = useSbireWin()
@@ -416,6 +418,14 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             clearBadgeAwarded()
         }
     }, [badgeAwarded, battle, evolutions.length, showDialogue])
+
+    // BOSS À 2 PHASES (VOLTA) : une fois la notif de badge fermée, on enchaîne DIRECTEMENT son rematch (phase 2).
+    useEffect(() => {
+        if (chainRematchId && !battle && evolutions.length === 0 && !dialogue && !badgeAwarded) {
+            launchRematch(chainRematchId)
+            clearChainRematch()
+        }
+    }, [chainRematchId, battle, evolutions.length, dialogue, badgeAwarded, launchRematch])
 
     // Revanche d'arène gagnée : dialogue de récompense post-combat (énergie / CT Mirage),
     // une fois le combat quitté ET la cinématique d'évolution terminée (même règle que badge/ACE).

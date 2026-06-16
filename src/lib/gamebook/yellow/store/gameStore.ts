@@ -90,6 +90,8 @@ interface GameStore {
     pressA: () => void
     pressB: () => void
     setMap: (mapId: string, spawnX: number, spawnY: number) => void
+    /** Lance directement le REMATCH d'un dresseur (boss à 2 phases : enchaîne phase 2 après phase 1). */
+    launchRematch: (trainerId: string) => void
     hydrate: (loaded: PlayerState) => void
     closeShop: () => void
     closePc: () => void
@@ -841,6 +843,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
         const player = createInitialPlayer(mapId, spawnX, spawnY)
         set({ map, player, dialogue: null })
         scheduleSave(player)
+    },
+
+    launchRematch: (trainerId) => {
+        const trainer = getTrainer(trainerId)
+        if (!trainer?.rematch || isTrainerRematched(trainerId)) return
+        // Affiche l'intro du rematch puis enchaîne le combat (phase 2) à la fermeture du dialogue.
+        set({
+            dialogue: { npcId: trainerId, npcName: trainer.name, lines: trainer.rematch.intro ?? trainer.intro, lineIndex: 0 },
+            pendingTrainerId: trainerId, pendingRematch: true,
+        })
     },
 
     hydrate: (loaded) => {

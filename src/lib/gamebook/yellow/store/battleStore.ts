@@ -94,6 +94,8 @@ interface BattleStoreState {
     newDexEntry: { speciesId: string; uid: string; level: number } | null
     /** LIGUE : sacre du CHAMPION (après LE MAÎTRE) → Hall of Fame post-combat (équipe + best-of). null sinon. */
     championRun: { team: { speciesId: string; nickname?: string; level: number }[]; highlights: LeagueHighlight[] } | null
+    /** Dresseur dont le REMATCH doit s'enchaîner DIRECTEMENT après cette victoire (ex. VOLTA 2 phases). null sinon. */
+    chainRematchId: string | null
 }
 
 /** Rôle canonique : A = challenger ("player" canonique), B = défié ("enemy" canonique). */
@@ -115,7 +117,7 @@ interface PvpContext {
     desync: boolean
 }
 
-let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null }
+let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, chainRematchId: null }
 // LIGUE — meilleurs moments du run en cours (best hit par membre du Conseil 4 + Maître), runtime.
 // Upsert par trainerId à chaque victoire de la Ligue ; lus au sacre du Maître pour le Hall of Fame.
 const leagueHighlights: Record<string, LeagueHighlight> = {}
@@ -276,6 +278,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     let badgeAwarded: BadgeId | null = null
     let giftCtMove: string | null = null
     let rematchReward: BattleStoreState["rematchReward"] = null
+    let chainRematchId: string | null = null
     if (b.outcome === "win" && storeState.trainer) {
         if (storeState.trainer.trainerId === ACE_TRAINER_ID) {
             // ACE : sa défaite ratchete son niveau (+2 sur ton meilleur) + mémorise le contre.
@@ -373,6 +376,8 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                 const mvId = getCt(t.giftCt)?.moveId
                 giftCtMove = mvId ? (getMove(mvId)?.name ?? null) : null
             }
+            // BOSS À 2 PHASES (ex. VOLTA) : sa 1re défaite enchaîne DIRECTEMENT sur son rematch (phase 2).
+            if (t?.chainRematch && t.rematch && !storeState.trainer.isRematch) chainRematchId = storeState.trainer.trainerId
         }
     }
 
@@ -410,7 +415,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
         setTeam([...team])
     }
     // Expose les évolutions pour la cinématique post-combat (jouée après "QUITTER").
-    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun })
+    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, chainRematchId })
 
     // 4) Sauvegarde persistante (DB).
     persistYellowSave()
@@ -432,6 +437,18 @@ export function clearEvolutions() {
 /** Consommé par l'UI une fois le Hall of Fame (sacre du Champion) joué. */
 export function clearChampion() {
     setStore({ championRun: null })
+}
+
+/** Boss à 2 phases : id du dresseur dont le rematch doit s'enchaîner direct après la victoire ; null sinon. */
+export function useChainRematch(): string | null {
+    return useSyncExternalStore(
+        subscribe,
+        () => getSnapshot().chainRematchId,
+        () => getSnapshot().chainRematchId,
+    )
+}
+export function clearChainRematch() {
+    setStore({ chainRematchId: null })
 }
 
 /** Consommé par la carte une fois le joueur renvoyé au Centre. */

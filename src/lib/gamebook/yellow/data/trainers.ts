@@ -68,6 +68,9 @@ export interface TrainerData {
         intro?: string[]
         defeat?: string[]
     }
+    /** BOSS À 2 PHASES : la 1re défaite enchaîne DIRECTEMENT sur le rematch (phase 2), sans ressortir.
+     *  Si K.O. en phase 2, le checkpoint rematch fait reprendre la phase 2 (pas la phase 1). Ex. VOLTA. */
+    chainRematch?: boolean
     /** Entraînement : boost Saiyan/EV des Daemons (gardien = moyen, élite = boss/ACE). */
     training?: TrainTier
     /** Rival de route (Léo/Mia) : monte au niveau du garde le plus fort de l'arène la plus
@@ -507,41 +510,41 @@ export const TRAINERS: TrainerData[] = [
         // 2e verrou : il faut AUSSI avoir donné aux 4 gardes leur revanche (les re-battre).
         requiresRematch: ["y_elecarena_g1", "y_elecarena_g2", "y_elecarena_g3", "y_elecarena_g4"],
         team: [
-            { speciesId: "hebulmin", level: 38 },
-            { speciesId: "oragron", level: 35 },
-            { speciesId: "zappeureal", level: 36 },
+            // Movesets explicites : chaque Daemon de la Tour a au moins UNE attaque ÉLEC (arène élec oblige).
+            { speciesId: "hebulmin", level: 38, moves: ["fulgurance", "crochet_maitre", "etincelle", "vive_attaque"] },
+            { speciesId: "oragron", level: 35, moves: ["fulgurance", "fonce_bec", "etincelle", "vive_attaque"] },
+            { speciesId: "zappeureal", level: 36, moves: ["fulgurance", "etincelle", "cage_eclair", "vive_attaque"] },
             // L'AS : ouvre sur sa SIGNATURE Surtension (charge → décharge foudroyante à haut critique).
             { speciesId: "voltapanthe", level: 40, moves: ["surtension", "fulgurance", "cage_eclair", "vive_attaque"], opening: ["surtension"] },
         ],
-        // 1er combat = Badge SEUL (les CT signature se méritent au rematch).
-        reward: 0, aiLevel: "trainer", badge: "elec",
+        // Phase 1 = Badge. Puis ENCHAÎNEMENT DIRECT sur la phase 2 (rematch) sans ressortir (chainRematch).
+        reward: 0, aiLevel: "trainer", badge: "elec", chainRematch: true,
         intro: [
             "*Au sommet de la Tour Hertz, une silhouette se découpe sur un ciel d'orage.*",
             "Je suis VOLTA, l'Architecte. J'ai bâti cette tour pour capter la foudre du Nexus.",
             "Mon Voltapanthe charge avant de foudroyer. Montre-moi ton voltage !",
         ],
         defeat: [
-            "Disjoncté… par un courant plus pur que le mien.",
-            "Le Badge Éclair est à toi — tu as encaissé la foudre sans broncher.",
-            "Mais ne crois pas tout connaître de la Tour Hertz, gamin… Reviens quand tu voudras goûter à ma VRAIE tempête.",
+            "Disjoncté… deux fois, par un courant plus pur que le mien.",
+            "La Tour Hertz t'a tout livré : son badge ET ses deux secrets. Tu ES la foudre du Nexus.",
         ],
         rematch: {
             // Défi FINAL de la Tour (offert dès la 1re victoire sur VOLTA — les revanches de
             // gardes étaient déjà requises pour l'atteindre). Deux fauves OUVRENT sur Mirage
             // (esquive) → l'AS Voltapanthe reste sur Surtension. Récompense : les 2 CT signature.
             team: [
-                { speciesId: "hebulmin", level: 41 },
-                { speciesId: "jerbiwat", level: 42 },
-                { speciesId: "leviathonn", level: 43 },
+                { speciesId: "hebulmin", level: 41, moves: ["fulgurance", "crochet_maitre", "etincelle", "seisme"] },
+                { speciesId: "jerbiwat", level: 42, moves: ["fulgurance", "vague_mentale", "etincelle", "vive_attaque"] },
+                { speciesId: "leviathonn", level: 43, moves: ["fulgurance", "hydrocanon", "etincelle", "lame_eau"] },
                 { speciesId: "thundah", level: 44, moves: ["mirage", "fulgurance", "flamme_ardente", "etincelle"], opening: ["mirage"] },
                 { speciesId: "namizeus", level: 45, moves: ["mirage", "fulgurance", "ball_ombre", "vive_attaque"], opening: ["mirage"] },
                 { speciesId: "voltapanthe", level: 46, moves: ["surtension", "fulgurance", "cage_eclair", "vive_attaque"], opening: ["surtension"] },
             ],
             giftCts: ["ct22", "ct25"], // Surtension + Mirage, remises ensemble
             intro: [
-                "*La Tour Hertz tout entière vibre d'une charge nouvelle, aveuglante.*",
-                "Tu es revenu. Cette fois je libère ma VRAIE tempête — et deux de mes fauves s'effaceront dans le Mirage.",
-                "Bats-moi, et mes deux secrets seront tiens. Que le meilleur conducteur gagne !",
+                "*Le Badge à peine en poche, la Tour Hertz vrombit d'une charge aveuglante — VOLTA tend déjà la main vers le ciel.*",
+                "Le Badge Éclair ? Ce n'était que l'orage de surface. MAINTENANT, ma VRAIE tempête — deux de mes fauves s'effaceront dans le Mirage. SANS répit !",
+                "Bats-moi encore, et mes deux secrets seront tiens. Que le meilleur conducteur gagne !",
             ],
             defeat: [
                 "Disjonctée… une seconde fois. Tu ES la foudre du Nexus.",
