@@ -712,11 +712,12 @@ export const TRAINERS: TrainerData[] = [
         requiresTrainers: ["y_ligue_3_agatha"],
         // Dragon/Vol — créatures mythiques, stats massives, attaques dévastatrices.
         team: [
-            { speciesId: "draclet", level: 55 },
-            { speciesId: "wyverion", level: 56 },
-            { speciesId: "chronorex", level: 57 },
-            { speciesId: "leviathonn", level: 58 },
-            { speciesId: "draconarque", level: 60 },
+            // Conseil 4 = FORMES FINALES uniquement (fini Draclet/Wyverion, des pré-évos absurdes ici).
+            { speciesId: "aquilothan", level: 55 },  // NORMAL/VOL — aigle royal
+            { speciesId: "toucanyon", level: 56 },   // VOL/FEU — rapace de feu
+            { speciesId: "chronorex", level: 57 },   // ROCHE/VOL — façon Ptéra
+            { speciesId: "leviathonn", level: 58 },  // EAU/ELEC — serpent de mer
+            { speciesId: "draconarque", level: 60, moves: ["draco_charge", "pique_fatal", "belier", "danse_lames"], opening: ["danse_lames"] }, // VOL/DRAGON — l'AS dragon
         ],
         reward: 450, aiLevel: "trainer",
         intro: [
