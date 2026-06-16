@@ -24,6 +24,7 @@ import { useCasinoBattle } from "@/lib/gamebook/yellow/multiplayer/useCasinoBatt
 import TradeAnimation from "./TradeAnimation"
 import { usePvpCtx, pvpForfeit } from "@/lib/gamebook/yellow/store/battleStore"
 import EvolutionScreen from "./battle/EvolutionScreen"
+import MoveLearnScreen from "./battle/MoveLearnScreen"
 import HallOfFame from "./HallOfFame"
 import DexEntryScreen from "./battle/DexEntryScreen"
 import IntroCinematic from "./IntroCinematic"
@@ -37,7 +38,7 @@ import PosterPanel from "./PosterPanel"
 import { useGameStore, setCurrentNickname } from "@/lib/gamebook/yellow/store/gameStore"
 import { YELLOW_MAPS, CENDREVILLE_SPAWN } from "@/lib/gamebook/yellow/maps"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
-import { useBattle, useEvolutions, clearEvolutions, useChampionRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getGiftCtMove, startTrainerBattle, useChainRematch, clearChainRematch, cancelEvolution } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, useEvolutions, clearEvolutions, useChampionRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getGiftCtMove, startTrainerBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn } from "@/lib/gamebook/yellow/store/battleStore"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
 import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone } from "@/lib/gamebook/yellow/store/playerStore"
@@ -92,6 +93,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const evolutions = useEvolutions()
     const championRun = useChampionRun()
     const chainRematchId = useChainRematch()
+    const pendingLearn = usePendingLearn()
     const newDexEntry = useNewDexEntry()
     const whiteout = useWhiteout()
     const sbireWin = useSbireWin()
@@ -333,7 +335,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             // battleStore (hors garde de move()) et s'affichent quand battle===null. Sans ça, une
             // flèche déplacerait le joueur SOUS l'overlay → rencontre sauvage → startWildBattle
             // reset newDexEntry/evolutions → popup + renommage PERDUS. On neutralise tout input carte.
-            if (championRun || arenaFight || newDexEntry || evolutions.length > 0) { e.preventDefault(); return }
+            if (championRun || arenaFight || pendingLearn || newDexEntry || evolutions.length > 0) { e.preventDefault(); return }
             const inB = !!battle
             const k = e.key.toLowerCase()
             if (e.key === "ArrowUp" || k === "z") { e.preventDefault(); inB ? dispatchBattleInput("up") : move("up") }
@@ -354,7 +356,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         }
         window.addEventListener("keydown", handler)
         return () => window.removeEventListener("keydown", handler)
-    }, [move, pressA, pressB, battle, newDexEntry, evolutions, championRun, arenaFight])
+    }, [move, pressA, pressB, battle, newDexEntry, evolutions, championRun, arenaFight, pendingLearn])
 
     // Identité (User.id) + carte courante → estampillage ownership/lieu à la capture.
     useEffect(() => { setCurrentPlayerId(userId) }, [userId])
@@ -1553,6 +1555,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {/* Cinématique d'évolution (post-combat, après QUITTER) */}
             {!battle && evolutions.length > 0 && (
                 <EvolutionScreen evolutions={evolutions} onCancel={cancelEvolution} onDone={clearEvolutions} />
+            )}
+
+            {/* APPRENTISSAGE post-combat (après les évolutions) : « X veut apprendre Y — oublier laquelle ? » */}
+            {pendingLearn && !battle && evolutions.length === 0 && !championRun && !newDexEntry && !arenaFight && (
+                <MoveLearnScreen onDone={clearPendingLearn} />
             )}
 
             {/* Hall of Fame — sacre du Champion après LE MAÎTRE de la Ligue (après les évolutions) */}

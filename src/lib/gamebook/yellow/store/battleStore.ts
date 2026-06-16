@@ -95,6 +95,8 @@ interface BattleStoreState {
     championRun: { team: { speciesId: string; nickname?: string; level: number }[]; highlights: LeagueHighlight[] } | null
     /** Dresseur dont le REMATCH doit s'enchaîner DIRECTEMENT après cette victoire (ex. VOLTA 2 phases). null sinon. */
     chainRematchId: string | null
+    /** Au moins un Daemon a une attaque EN ATTENTE d'apprentissage → prompt post-combat (façon Gen 1). */
+    pendingLearn: boolean
 }
 
 /** Rôle canonique : A = challenger ("player" canonique), B = défié ("enemy" canonique). */
@@ -116,7 +118,7 @@ interface PvpContext {
     desync: boolean
 }
 
-let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, chainRematchId: null }
+let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, chainRematchId: null, pendingLearn: false }
 // LIGUE — meilleurs moments du run en cours (best hit par membre du Conseil 4 + Maître), runtime.
 // Upsert par trainerId à chaque victoire de la Ligue ; lus au sacre du Maître pour le Hall of Fame.
 const leagueHighlights: Record<string, LeagueHighlight> = {}
@@ -413,8 +415,10 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
         for (const e of evos) markCaught(e.toId) // la nouvelle forme entre au Pokédex
         setTeam([...team])
     }
+    // Un Daemon a-t-il une attaque EN ATTENTE (slots pleins à la montée de niveau / l'évolution) ? → prompt post-combat.
+    const pendingLearn = getPlayer().team.some((m) => (m.pendingMoves?.length ?? 0) > 0)
     // Expose les évolutions pour la cinématique post-combat (jouée après "QUITTER").
-    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, chainRematchId })
+    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, chainRematchId, pendingLearn })
 
     // 4) Sauvegarde persistante (DB).
     persistYellowSave()
@@ -462,6 +466,18 @@ export function useChainRematch(): string | null {
 }
 export function clearChainRematch() {
     setStore({ chainRematchId: null })
+}
+
+/** Au moins un Daemon a une attaque en attente → on déclenche le prompt d'apprentissage post-combat. */
+export function usePendingLearn(): boolean {
+    return useSyncExternalStore(
+        subscribe,
+        () => getSnapshot().pendingLearn,
+        () => getSnapshot().pendingLearn,
+    )
+}
+export function clearPendingLearn() {
+    setStore({ pendingLearn: false })
 }
 
 /** Consommé par la carte une fois le joueur renvoyé au Centre. */
