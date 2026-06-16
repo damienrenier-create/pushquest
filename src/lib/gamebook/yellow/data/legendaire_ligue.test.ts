@@ -103,12 +103,12 @@ describe("Ligue — 5 salles en enfilade (maps + dresseurs câblés)", () => {
 
     it("enfilade par la porte droite (20,6) ; la salle du rival sort vers Cendreville", () => {
         const chain = ["yellow_ligue_glace", "yellow_ligue_combat", "yellow_ligue_spectre", "yellow_ligue_dragon"]
-        for (let i = 0; i < chain.length; i++) {
-            const exit = YELLOW_MAPS[chain[i]].exits.find((e) => e.x === 20 && e.y === 6)
-            expect(exit, chain[i]).toBeTruthy()
-            expect(exit!.targetMapId).toBe(i < chain.length - 1 ? chain[i + 1] : "yellow_ligue_rival")
-        }
-        const rivalExit = YELLOW_MAPS["yellow_ligue_rival"].exits.find((e) => e.x === 20 && e.y === 6)
-        expect(rivalExit!.targetMapId).toBe("yellow_cendreville")
+        chain.forEach((id, i) => {
+            const exit = YELLOW_MAPS[id]?.exits?.find((e) => e.x === 19 && e.y === 6)
+            expect(exit, id).toBeTruthy()
+            expect(exit?.targetMapId).toBe(i < chain.length - 1 ? chain[i + 1] : "yellow_ligue_rival")
+        })
+        const rivalExit = YELLOW_MAPS["yellow_ligue_rival"]?.exits?.find((e) => e.x === 19 && e.y === 6)
+        expect(rivalExit?.targetMapId).toBe("yellow_cendreville")
     })
 })

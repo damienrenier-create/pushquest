@@ -609,6 +609,12 @@ const NPC_SPRITES: Record<string, { url: string; frames: number; h?: number } | 
     y_trainer_mia: { url: "/yellow/sprites/npc_mia.png", frames: 1, h: 1.9 },
     // GÉKROC (mini-boss Centrale) sur sa pierre — devient la Pierre seule une fois résolu (override ci-dessous).
     y_gekroc: { url: "/yellow/sprites/gekroc_overworld.png", frames: 1, h: 1.8 },
+    // LIGUE — Conseil des 4 (sprites maison) + LE MAÎTRE (réutilise le sprite ACE existant).
+    y_ligue_1_olga: { url: "/yellow/sprites/ligue_olga.png", frames: 1, h: 1.6 },
+    y_ligue_2_aldo: { url: "/yellow/sprites/ligue_aldo.png", frames: 1, h: 1.6 },
+    y_ligue_3_agatha: { url: "/yellow/sprites/ligue_agatha.png", frames: 1, h: 1.6 },
+    y_ligue_4_peter: { url: "/yellow/sprites/ligue_peter.png", frames: 1, h: 1.6 },
+    y_ligue_maitre: { url: "/yellow/sprites/npc_ace.png", frames: 1, h: 2.0 },
 }
 
 function NpcSprite({
