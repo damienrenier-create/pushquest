@@ -515,7 +515,7 @@ export const TRAINERS: TrainerData[] = [
             { speciesId: "oragron", level: 35, moves: ["fulgurance", "fonce_bec", "etincelle", "vive_attaque"] },
             { speciesId: "zappeureal", level: 36, moves: ["fulgurance", "etincelle", "cage_eclair", "vive_attaque"] },
             // L'AS : ouvre sur sa SIGNATURE Surtension (charge → décharge foudroyante à haut critique).
-            { speciesId: "voltapanthe", level: 40, moves: ["surtension", "fulgurance", "cage_eclair", "vive_attaque"], opening: ["surtension"] },
+            { speciesId: "voltapanthe", level: 40, moves: ["mirage", "surtension", "fulgurance", "vive_attaque"], opening: ["mirage", "surtension"] },
         ],
         // Phase 1 = Badge. Puis ENCHAÎNEMENT DIRECT sur la phase 2 (rematch) sans ressortir (chainRematch).
         reward: 0, aiLevel: "trainer", badge: "elec", chainRematch: true,
@@ -538,7 +538,7 @@ export const TRAINERS: TrainerData[] = [
                 { speciesId: "leviathonn", level: 43, moves: ["fulgurance", "hydrocanon", "etincelle", "lame_eau"] },
                 { speciesId: "thundah", level: 44, moves: ["mirage", "fulgurance", "flamme_ardente", "etincelle"], opening: ["mirage"] },
                 { speciesId: "namizeus", level: 45, moves: ["mirage", "fulgurance", "ball_ombre", "vive_attaque"], opening: ["mirage"] },
-                { speciesId: "voltapanthe", level: 46, moves: ["surtension", "fulgurance", "cage_eclair", "vive_attaque"], opening: ["surtension"] },
+                { speciesId: "voltapanthe", level: 46, moves: ["mirage", "surtension", "fulgurance", "vive_attaque"], opening: ["mirage", "surtension"] },
             ],
             giftCts: ["ct22", "ct25"], // Surtension + Mirage, remises ensemble
             intro: [
