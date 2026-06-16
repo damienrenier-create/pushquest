@@ -47,6 +47,15 @@ function aceBypassByNickname(): boolean {
     return CENDREVILLE_BYPASS.has(currentNickname.normalize("NFC").toLowerCase())
 }
 
+// LIGUE — quel dresseur garde la porte droite de chaque salle (gauntlet : porte scellée tant qu'il n'est pas vaincu).
+const LIGUE_ROOM_TRAINER: Record<string, string> = {
+    yellow_ligue_glace: "y_ligue_1_olga",
+    yellow_ligue_combat: "y_ligue_2_aldo",
+    yellow_ligue_spectre: "y_ligue_3_agatha",
+    yellow_ligue_dragon: "y_ligue_4_peter",
+    yellow_ligue_rival: "y_ligue_maitre",
+}
+
 interface GameStore {
     // === STATE ===
     player: PlayerState
@@ -326,7 +335,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             // GATE LIGUE (teaser) : la Ligue (sud de Cendreville) n'ouvre qu'avec TOUS les badges.
             // Sinon le dieu Spaghetti barre la route avec un message → l'utilisateur sait qu'il y aura
             // du contenu ici (au lieu d'un simple mur). Pas de téléportation : on reste sur place.
-            if (targetMapId === "yellow_ligue") {
+            if (targetMapId === "yellow_ligue_glace" && player.mapId === "yellow_cendreville") {
                 const badges = getPlayerSave().badges
                 const allBadges = (["plante", "roche", "feu", "eau", "elec"] as const).every((b) => badges.includes(b))
                 if (!allBadges) {
@@ -344,7 +353,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     scheduleSave(next)
                     return
                 }
-                // (futur) tous les badges réunis → entrée réelle dans la Ligue quand sa map existera.
+                // Tous les badges réunis → on entre réellement dans la 1re salle (glace).
+            }
+            // GATE GAUNTLET LIGUE : la porte DROITE d'une salle ne s'ouvre qu'une fois SON adversaire vaincu
+            // (point de non-retour : pas de retour par la gauche, aucune infirmerie — potions seulement).
+            const roomTrainer = LIGUE_ROOM_TRAINER[player.mapId]
+            if (roomTrainer && !isTrainerDefeated(roomTrainer)) {
+                const tName = getTrainer(roomTrainer)?.name ?? "l'adversaire"
+                set({
+                    player: next,
+                    dialogue: { npcId: roomTrainer, npcName: "LIGUE", lineIndex: 0, lines: [`La porte est scellée. Tu dois d'abord vaincre ${tName} pour avancer !`] },
+                })
+                scheduleSave(next)
+                return
             }
             // GATE HAUTES HERBES : la plaine d'entraînement n'ouvre qu'une fois l'arène ÉLECTRIQUE battue
             // (Daemons costauds, paliers jusqu'à 50). Sinon, message + on reste sur place.

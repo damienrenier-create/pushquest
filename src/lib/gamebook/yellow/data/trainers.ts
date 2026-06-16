@@ -646,7 +646,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_ligue_1_olga", name: "OLGA", title: "Conseil des 4",
         sprite: { emoji: "❄️", color: "#6cc6e8" },
-        mapId: "yellow_ligue", x: 5, y: 4,
+        mapId: "yellow_ligue_glace", x: 10, y: 3,
         // Glace/Eau — tanks marins, mur d'endurance d'entrée (Lamantine/Crustabri/Lokhlass).
         team: [
             { speciesId: "yetiroche", level: 52 },
@@ -665,7 +665,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_ligue_2_aldo", name: "ALDO", title: "Conseil des 4",
         sprite: { emoji: "🥊", color: "#b8702e" },
-        mapId: "yellow_ligue", x: 5, y: 4,
+        mapId: "yellow_ligue_combat", x: 10, y: 3,
         requiresTrainers: ["y_ligue_1_olga"],
         // Combat/Roche — brutes physiques, attaque brute + défense de pierre.
         team: [
@@ -685,7 +685,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_ligue_3_agatha", name: "AGATHA", title: "Conseil des 4",
         sprite: { emoji: "👻", color: "#8a5cc0" },
-        mapId: "yellow_ligue", x: 5, y: 4,
+        mapId: "yellow_ligue_spectre", x: 10, y: 3,
         requiresTrainers: ["y_ligue_2_aldo"],
         // Spectre/Poison — rapides, esquive, poison, altérations (vitrine des nouveaux spectres).
         team: [
@@ -705,7 +705,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_ligue_4_peter", name: "PETER", title: "Conseil des 4",
         sprite: { emoji: "🐲", color: "#5a6cd8" },
-        mapId: "yellow_ligue", x: 5, y: 4,
+        mapId: "yellow_ligue_dragon", x: 10, y: 3,
         requiresTrainers: ["y_ligue_3_agatha"],
         // Dragon/Vol — créatures mythiques, stats massives, attaques dévastatrices.
         team: [
@@ -725,7 +725,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_ligue_maitre", name: "LE MAÎTRE", title: "Maître de la Ligue",
         sprite: { emoji: "👑", color: "#e8c34a" },
-        mapId: "yellow_ligue", x: 5, y: 4,
+        mapId: "yellow_ligue_rival", x: 10, y: 3,
         requiresTrainers: ["y_ligue_4_peter"],
         // ACE national / RIVAL en habit de Champion : équipe ÉQUILIBRÉE menée par ses 3 panthères.
         // (Le 6e slot "on verra" — à affiner : starter du rival ou pièce signature.)

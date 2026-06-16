@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest"
 import { getSpecies } from "./species"
 import { getMove } from "./moves"
 import { getTrainer } from "./trainers"
+import { YELLOW_MAPS } from "../maps"
 import { createBattle, resolveTurn } from "../battle/engine"
 import { createMonInstance } from "../battle/factory"
 import type { MonInstance, MajorStatus } from "../battle/types"
@@ -81,5 +82,33 @@ describe("Ligue de Cendreville — Conseil des 4 + Maître", () => {
         expect(m.aiLevel).toBe("ace")
         const panthers = m.team.filter((t) => t.speciesId.endsWith("panthe"))
         expect(panthers.length).toBeGreaterThanOrEqual(3)
+    })
+})
+
+describe("Ligue — 5 salles en enfilade (maps + dresseurs câblés)", () => {
+    const ROOMS = [
+        ["yellow_ligue_glace", "y_ligue_1_olga"],
+        ["yellow_ligue_combat", "y_ligue_2_aldo"],
+        ["yellow_ligue_spectre", "y_ligue_3_agatha"],
+        ["yellow_ligue_dragon", "y_ligue_4_peter"],
+        ["yellow_ligue_rival", "y_ligue_maitre"],
+    ] as const
+
+    it("chaque salle existe + son dresseur y est placé", () => {
+        for (const [mapId, trainerId] of ROOMS) {
+            expect(YELLOW_MAPS[mapId], mapId).toBeTruthy()
+            expect(getTrainer(trainerId)!.mapId).toBe(mapId)
+        }
+    })
+
+    it("enfilade par la porte droite (20,6) ; la salle du rival sort vers Cendreville", () => {
+        const chain = ["yellow_ligue_glace", "yellow_ligue_combat", "yellow_ligue_spectre", "yellow_ligue_dragon"]
+        for (let i = 0; i < chain.length; i++) {
+            const exit = YELLOW_MAPS[chain[i]].exits.find((e) => e.x === 20 && e.y === 6)
+            expect(exit, chain[i]).toBeTruthy()
+            expect(exit!.targetMapId).toBe(i < chain.length - 1 ? chain[i + 1] : "yellow_ligue_rival")
+        }
+        const rivalExit = YELLOW_MAPS["yellow_ligue_rival"].exits.find((e) => e.x === 20 && e.y === 6)
+        expect(rivalExit!.targetMapId).toBe("yellow_cendreville")
     })
 })

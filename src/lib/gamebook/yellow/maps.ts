@@ -331,6 +331,19 @@ function buildCasinoInterior(): TileType[][] {
     return m
 }
 
+// LIGUE — gabarit COMMUN aux 5 salles (22×12 @ 64px, calé sur ligue_*.png). Tout en mur ("tree",
+// invisible sous le backgroundImage) ; sol central walkable (floorTile) ; PORTE GAUCHE (1,6) = entrée,
+// PORTE DROITE (20,6) = sortie vers la salle suivante ; l'adversaire se tient en HAUT-CENTRE (10,3).
+// Pas de rencontres sauvages (floorTile). Portes/positions À AFFINER en jeu (les 5 salles diffèrent un peu).
+function buildLigueRoom(): TileType[][] {
+    const W = 22, H = 12
+    const m: TileType[][] = Array.from({ length: H }, () => Array.from({ length: W }, () => "tree" as TileType))
+    for (let y = 3; y <= 9; y++) for (let x = 2; x <= 19; x++) m[y][x] = "floorTile" // sol central
+    m[6][1] = "floorTile"  // PORTE GAUCHE (entrée ; pas de sortie par la gauche → no-retour)
+    m[6][20] = "floorTile" // PORTE DROITE (sortie → salle suivante, gated par la victoire)
+    return m
+}
+
 // Antre du sbire du dieu Spaghetti : petite salle 9×7. Le sbire (PNJ y_sbire)
 // se tient derrière un autel en (4,2) — case bloquée pour qu'on ne lui marche pas
 // dessus (le moteur de mouvement ne teste pas les PNJ). On l'affronte depuis (4,3).
@@ -1045,9 +1058,9 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
             { x: 19, y: 10, targetMapId: "yellow_maison_hantee", targetSpawnX: 10, targetSpawnY: 13 },
             // OUVERTURE NORD (row 0, cols 22-26) → PLAINE D'ENTRAÎNEMENT (hautes herbes), spawn couloir bas.
             ...[22, 23, 24, 25, 26].map((x) => ({ x, y: 0, targetMapId: "yellow_hautes_herbes", targetSpawnX: 13, targetSpawnY: 8 })),
-            // OUVERTURE SUD (cols 20-23, row 36) → LIGUE : gate Dieu Spaghetti tant que TOUS les badges
-            // ne sont pas réunis (cf. gameStore). La map de la Ligue arrivera plus tard.
-            ...[20, 21, 22, 23].map((x) => ({ x, y: 36, targetMapId: "yellow_ligue", targetSpawnX: 5, targetSpawnY: 5 })),
+            // OUVERTURE SUD (cols 20-23, row 36) → LIGUE (1re salle, glace) : gate Dieu Spaghetti tant que
+            // TOUS les badges ne sont pas réunis (cf. gameStore). Arrivée porte gauche de la salle de glace.
+            ...[20, 21, 22, 23].map((x) => ({ x, y: 36, targetMapId: "yellow_ligue_glace", targetSpawnX: 2, targetSpawnY: 6 })),
         ],
         backgroundImage: "/yellow/sprites/cendreville.png",
         backgroundImageWidth: CENDREVILLE_W * CENDREVILLE_TILE,   // 704
@@ -1232,6 +1245,35 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImageWidth: 1200,
         backgroundImageHeight: 800,
         backgroundImageTileSize: 80, // 1200/15 = 800/10 = 80 → grille 15×10 alignée pile
+    },
+    // ===== LA LIGUE — 5 salles en enfilade (entrée GAUCHE → adversaire HAUT-CENTRE → sortie DROITE) =====
+    // Gauntlet : la porte droite ne s'ouvre qu'une fois l'adversaire de la salle vaincu (gating gameStore) ;
+    // pas de retour (porte gauche scellée) ; aucune infirmerie (potions seulement). Art = ligue_*.png.
+    yellow_ligue_glace: {
+        id: "yellow_ligue_glace", name: "LIGUE — SALLE DE GLACE", tiles: buildLigueRoom(), width: 22, height: 12,
+        exits: [{ x: 20, y: 6, targetMapId: "yellow_ligue_combat", targetSpawnX: 2, targetSpawnY: 6 }],
+        backgroundImage: "/yellow/sprites/ligue_glace.png", backgroundImageWidth: 1408, backgroundImageHeight: 768, backgroundImageTileSize: 64,
+    },
+    yellow_ligue_combat: {
+        id: "yellow_ligue_combat", name: "LIGUE — SALLE DE COMBAT", tiles: buildLigueRoom(), width: 22, height: 12,
+        exits: [{ x: 20, y: 6, targetMapId: "yellow_ligue_spectre", targetSpawnX: 2, targetSpawnY: 6 }],
+        backgroundImage: "/yellow/sprites/ligue_combat.png", backgroundImageWidth: 1408, backgroundImageHeight: 768, backgroundImageTileSize: 64,
+    },
+    yellow_ligue_spectre: {
+        id: "yellow_ligue_spectre", name: "LIGUE — SALLE SPECTRE", tiles: buildLigueRoom(), width: 22, height: 12,
+        exits: [{ x: 20, y: 6, targetMapId: "yellow_ligue_dragon", targetSpawnX: 2, targetSpawnY: 6 }],
+        backgroundImage: "/yellow/sprites/ligue_spectre.png", backgroundImageWidth: 1408, backgroundImageHeight: 768, backgroundImageTileSize: 64,
+    },
+    yellow_ligue_dragon: {
+        id: "yellow_ligue_dragon", name: "LIGUE — SALLE DRAGON", tiles: buildLigueRoom(), width: 22, height: 12,
+        exits: [{ x: 20, y: 6, targetMapId: "yellow_ligue_rival", targetSpawnX: 2, targetSpawnY: 6 }],
+        backgroundImage: "/yellow/sprites/ligue_dragon.png", backgroundImageWidth: 1408, backgroundImageHeight: 768, backgroundImageTileSize: 64,
+    },
+    yellow_ligue_rival: {
+        id: "yellow_ligue_rival", name: "LIGUE — TRÔNE DU MAÎTRE", tiles: buildLigueRoom(), width: 22, height: 12,
+        // Porte droite = SORTIE de la Ligue → Cendreville (au-dessus du gate sud), une fois le Maître vaincu.
+        exits: [{ x: 20, y: 6, targetMapId: "yellow_cendreville", targetSpawnX: 21, targetSpawnY: 32 }],
+        backgroundImage: "/yellow/sprites/ligue_rival.png", backgroundImageWidth: 1408, backgroundImageHeight: 768, backgroundImageTileSize: 64,
     },
     yellow_grotte: {
         id: "yellow_grotte",
