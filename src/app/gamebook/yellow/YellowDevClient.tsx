@@ -317,7 +317,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             // battleStore (hors garde de move()) et s'affichent quand battle===null. Sans ça, une
             // flèche déplacerait le joueur SOUS l'overlay → rencontre sauvage → startWildBattle
             // reset newDexEntry/evolutions → popup + renommage PERDUS. On neutralise tout input carte.
-            if (newDexEntry || evolutions.length > 0) { e.preventDefault(); return }
+            if (championRun || newDexEntry || evolutions.length > 0) { e.preventDefault(); return }
             const inB = !!battle
             const k = e.key.toLowerCase()
             if (e.key === "ArrowUp" || k === "z") { e.preventDefault(); inB ? dispatchBattleInput("up") : move("up") }
@@ -338,7 +338,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         }
         window.addEventListener("keydown", handler)
         return () => window.removeEventListener("keydown", handler)
-    }, [move, pressA, pressB, battle, newDexEntry, evolutions])
+    }, [move, pressA, pressB, battle, newDexEntry, evolutions, championRun])
 
     // Identité (User.id) + carte courante → estampillage ownership/lieu à la capture.
     useEffect(() => { setCurrentPlayerId(userId) }, [userId])
@@ -1533,7 +1533,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
 
             {/* Hall of Fame — sacre du Champion après LE MAÎTRE de la Ligue (après les évolutions) */}
             {!battle && evolutions.length === 0 && championRun && (
-                <HallOfFame champion={championRun} onDone={clearChampion} />
+                <HallOfFame champion={championRun} onDone={() => {
+                    clearChampion()
+                    // Le générique DEVIENT la transition : on ressort directement à Cendreville (au-dessus du
+                    // gate sud, comme la porte droite de la salle du trône) au lieu de rester dans le trône vide.
+                    setMap("yellow_cendreville", 21, 32)
+                }} />
             )}
 
             {/* Popup PREMIÈRE capture d'une espèce (après l'éventuelle évolution, jamais en
