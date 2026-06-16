@@ -85,6 +85,8 @@ export const CTS: CtData[] = [
     // différents + bats-le 3×). Premier gros move SPECTRE enseignable par CT.
     { id: "ct26", label: "CT26", moveId: "frappe_audela", price: 0, gift: true },
     { id: "ct27", label: "CT27", moveId: "deferlante", price: 0, gift: true },
+    // --- CT COMBAT (Champion, 3 badges) : « Crochet du Maître » multi-coups (2-5×). Seule CT de type Combat. ---
+    { id: "ct28", label: "CT28", moveId: "deluge_crochets", price: 900, champion: true },
 ]
 
 export function getCt(id: string): CtData | null {

@@ -52,4 +52,31 @@ describe("catalogue des CT", () => {
         expect(getCt("ct17")?.gift).toBe(true)
         expect(getCt("ct17")?.price).toBe(0)
     })
+
+    it("CT28 = « Crochet du Maître » COMBAT multi-coups (2-5×, 20/coup), Champion", () => {
+        const ct = getCt("ct28")!
+        expect(ct.champion).toBe(true)
+        expect(ct.gift).toBeFalsy()
+        const mv = getMove("deluge_crochets")!
+        expect(mv.name).toBe("Crochet du Maître")
+        expect(mv.type).toBe("COMBAT")
+        expect(mv.power).toBe(20)
+        expect(mv.effect?.multiHit).toEqual([2, 5])
+        // Combat-only : un Daemon COMBAT peut l'apprendre, pas un non-Combat
+        const combat = getSpecies("druidours")! // COMBAT/PLANTE
+        expect(canLearnCt(combat, ct)).toBe(true)
+        const eau = getSpecies("razmaree")
+        if (eau) expect(canLearnCt(eau, ct)).toBe(false)
+        // achetable uniquement avec les 3 badges
+        const all3: BadgeId[] = ["feu", "plante", "eau"]
+        expect(purchasableCts(all3).some((c) => c.id === "ct28")).toBe(true)
+        expect(purchasableCts(["feu"]).some((c) => c.id === "ct28")).toBe(false)
+    })
+
+    it("l'ancien move simple est renommé « Uppercut » (id crochet_maitre, 80, intact)", () => {
+        const up = getMove("crochet_maitre")!
+        expect(up.name).toBe("Uppercut")
+        expect(up.power).toBe(80)
+        expect(up.type).toBe("COMBAT")
+    })
 })

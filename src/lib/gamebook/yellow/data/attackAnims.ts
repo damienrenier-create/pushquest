@@ -69,7 +69,7 @@ export const ATTACK_CATEGORY: Record<string, AtkCategory> = {
     // GLACE
     souffle_polaire: "projectile", coup_d_givre: "projectile",
     // COMBAT
-    crochet_maitre: "impact_heavy", balayage: "impact", poing_karate: "impact", double_pied: "impact",
+    crochet_maitre: "impact_heavy", deluge_crochets: "impact", balayage: "impact", poing_karate: "impact", double_pied: "impact",
     // POISON
     dard_venin: "impact", toxik: "debuff", bombe_beurk: "projectile", crachat_acide: "projectile",
     // SOL
