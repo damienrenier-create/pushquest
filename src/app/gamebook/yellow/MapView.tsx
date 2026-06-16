@@ -344,7 +344,13 @@ function computeCamera(playerX: number, playerY: number, map: YellowMapData): Ca
 
 // === Composant principal ==============================================
 
-export default function MapView({ remotePlayers = [], chatBubbles, myUserId }: { remotePlayers?: RemotePlayer[]; chatBubbles?: Record<string, ChatBubble>; myUserId?: string }) {
+export default function MapView({ remotePlayers = [], chatBubbles, myUserId, arenaOpponents = [], onArenaClick }: {
+    remotePlayers?: RemotePlayer[]
+    chatBubbles?: Record<string, ChatBubble>
+    myUserId?: string
+    arenaOpponents?: { userId: string; nickname: string; x: number; y: number }[]
+    onArenaClick?: (userId: string) => void
+}) {
     const player = useGameStore((s) => s.player)
     const map = useGameStore((s) => s.map)
 
@@ -542,6 +548,11 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId }: {
                 {/* Avatars des autres joueurs (casino multijoueur) */}
                 {remotePlayers.map((rp) => (
                     <RemotePlayerSprite key={rp.userId} rp={rp} screenPos={screenPos} bubble={chatBubbles?.[rp.userId]?.text} />
+                ))}
+
+                {/* ARÈNES JOUEURS : adversaires IA cliquables (hub Eau / miroir Élec) */}
+                {arenaOpponents.map((o) => (
+                    <ArenaOpponentSprite key={o.userId} o={o} screenPos={screenPos} onClick={() => onArenaClick?.(o.userId)} />
                 ))}
 
                 <PlayerSprite player={player} screenPos={screenPos} />
@@ -787,6 +798,75 @@ function RemotePlayerSprite({
                     }}
                 >
                     {rp.nickname}
+                </span>
+            </div>
+        </div>
+    )
+}
+
+// === Adversaire d'ARÈNE JOUEUR (hub / miroir) =========================
+// Même sprite Red teinté que les distants, mais STATIQUE et CLIQUABLE (→ défi). Picto ⚔️ + pseudo.
+function ArenaOpponentSprite({
+    o,
+    screenPos,
+    onClick,
+}: {
+    o: { userId: string; nickname: string; x: number; y: number }
+    screenPos: (x: number, y: number, w?: number, h?: number) => React.CSSProperties
+    onClick: () => void
+}) {
+    const hue = hashHue(o.userId)
+    const cell = FIRERED_PLAYER.down[0]
+    const topOffset = SPRITE_ASPECT_RATIO - 1
+    return (
+        <div
+            style={{ position: "absolute", ...screenPos(o.x, o.y - topOffset, 1, SPRITE_ASPECT_RATIO), zIndex: 4, cursor: "pointer" }}
+            onClick={onClick}
+            title={`Défier ${o.nickname}`}
+        >
+            <div
+                style={{
+                    position: "absolute",
+                    inset: 0,
+                    backgroundImage: "url(/yellow/sprites/firered_player_t.png?v=3)",
+                    backgroundRepeat: "no-repeat",
+                    backgroundSize: `${SHEET_COLS * 100}% ${SHEET_ROWS * 100}%`,
+                    backgroundPosition: sheetBgPosition(cell),
+                    imageRendering: "pixelated",
+                    filter: `drop-shadow(0 0 2px hsl(${hue} 95% 50%)) drop-shadow(0 0 2px hsl(${hue} 95% 50%))`,
+                }}
+            />
+            <div
+                style={{
+                    position: "absolute",
+                    bottom: "100%",
+                    left: "50%",
+                    transform: "translateX(-50%) translateY(-1px)",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: 1,
+                    pointerEvents: "none",
+                }}
+            >
+                <span style={{ fontSize: "clamp(9px, 2.2dvw, 13px)" }}>⚔️</span>
+                <span
+                    style={{
+                        whiteSpace: "nowrap",
+                        maxWidth: "22dvw",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        fontSize: "clamp(7px, 1.6dvw, 10px)",
+                        fontWeight: 700,
+                        color: "#fff",
+                        background: "rgba(28,20,8,0.82)",
+                        border: `1px solid hsl(${hue} 80% 45%)`,
+                        borderRadius: 3,
+                        padding: "0 3px",
+                        fontFamily: "'Courier New', monospace",
+                    }}
+                >
+                    {o.nickname}
                 </span>
             </div>
         </div>

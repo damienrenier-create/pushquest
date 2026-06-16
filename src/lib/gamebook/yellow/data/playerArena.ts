@@ -27,6 +27,24 @@ export interface RegistryPlayer {
 /** Nombre d'adversaires affichés dans une arène (les plus proches de notre niveau). */
 export const ARENA_OPPONENTS = 6
 
+/** Les 5 badges du Nexus. Les posséder TOUS débloque les arènes joueurs (= après ONDINE, eau étant le dernier). */
+export const ALL_BADGES = ["feu", "plante", "eau", "roche", "elec"] as const
+export function hasAllBadges(badges: readonly string[]): boolean {
+    return ALL_BADGES.every((b) => badges.includes(b))
+}
+
+/** Mode d'arène joueur selon la map. */
+export type ArenaMode = "hub" | "mirror"
+export const ARENA_MAPS: Record<string, ArenaMode> = {
+    yellow_arena_eau: "hub",     // vraies équipes des autres joueurs, jouées par l'IA
+    yellow_arena_elec: "mirror", // reflets : équipes inversées + faiblesses de type
+}
+/** Cases LIBRES (walkable, hors gardes/boss) où planter les adversaires sur chaque arène. */
+export const ARENA_POSITIONS: Record<string, [number, number][]> = {
+    yellow_arena_eau: [[2, 8], [2, 12], [13, 8], [13, 12], [3, 10], [12, 10]],
+    yellow_arena_elec: [[2, 6], [4, 6], [6, 6], [8, 6], [10, 6], [12, 6]],
+}
+
 /** Niveau "représentatif" d'une équipe = niveau du Daemon le plus haut. */
 export function teamMaxLevel(team: RegistryMon[]): number {
     return team.reduce((m, x) => Math.max(m, x.level), 0)

@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest"
 import {
     teamMaxLevel, rankClosest, buildHubTeam, bestCounterType, strongestSpeciesOfType,
-    mirrorName, buildMirrorTeam, ARENA_OPPONENTS, type RegistryPlayer,
+    mirrorName, buildMirrorTeam, ARENA_OPPONENTS, hasAllBadges, ALL_BADGES, ARENA_MAPS, ARENA_POSITIONS,
+    type RegistryPlayer,
 } from "./playerArena"
 import { getSpecies } from "./species"
 import { typeEffectiveness } from "../battle/typeChart"
@@ -28,6 +29,23 @@ describe("Arène joueurs — classement par niveau", () => {
         expect(r.some((p) => p.userId === "vide")).toBe(false) // pas d'équipe vide
         expect(r[0].userId).toBe("g")  // d=0
         expect(r.some((p) => p.userId === "d")).toBe(false)    // d=30 → trop loin, hors du top 6
+    })
+})
+
+describe("Arène joueurs — déblocage & placement", () => {
+    it("hasAllBadges exige les 5 badges", () => {
+        expect(hasAllBadges(["feu", "plante", "eau", "roche", "elec"])).toBe(true)
+        expect(hasAllBadges(["feu", "plante", "eau", "roche"])).toBe(false) // manque élec
+        expect(hasAllBadges([])).toBe(false)
+        expect(ALL_BADGES.length).toBe(5)
+    })
+
+    it("chaque arène a assez de cases libres pour les 6 adversaires", () => {
+        for (const mapId of Object.keys(ARENA_MAPS)) {
+            expect(ARENA_POSITIONS[mapId]?.length, mapId).toBeGreaterThanOrEqual(ARENA_OPPONENTS)
+        }
+        expect(ARENA_MAPS["yellow_arena_eau"]).toBe("hub")
+        expect(ARENA_MAPS["yellow_arena_elec"]).toBe("mirror")
     })
 })
 

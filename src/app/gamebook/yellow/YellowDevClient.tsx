@@ -37,7 +37,7 @@ import PosterPanel from "./PosterPanel"
 import { useGameStore, setCurrentNickname } from "@/lib/gamebook/yellow/store/gameStore"
 import { YELLOW_MAPS, CENDREVILLE_SPAWN } from "@/lib/gamebook/yellow/maps"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
-import { useBattle, useEvolutions, clearEvolutions, useChampionRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getGiftCtMove } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, useEvolutions, clearEvolutions, useChampionRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getGiftCtMove, startTrainerBattle } from "@/lib/gamebook/yellow/store/battleStore"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
 import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone } from "@/lib/gamebook/yellow/store/playerStore"
@@ -56,6 +56,9 @@ import { evTotal, topEvStats, EV_TOTAL_CAP } from "@/lib/gamebook/yellow/data/ev
 import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
 import { expForLevel } from "@/lib/gamebook/yellow/battle/xp"
 import type { MonInstance } from "@/lib/gamebook/yellow/battle/types"
+import { usePlayerArena, type ArenaOpponent } from "@/lib/gamebook/yellow/multiplayer/usePlayerArena"
+import { buildHubTeam, buildMirrorTeam, mirrorName, type ArenaMode } from "@/lib/gamebook/yellow/data/playerArena"
+import ArenaChallengeModal from "./ArenaChallengeModal"
 
 export default function YellowDevClient({ userId = "", isCreator = false, nickname = "" }: { userId?: string; isCreator?: boolean; nickname?: string }) {
     const move = useGameStore((s) => s.move)
@@ -95,6 +98,17 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const rematchReward = useRematchReward()
     const router = useRouter()
     const player = usePlayer()
+    // ARÈNES JOUEURS (hub Eau / miroir Élec) — adversaires IA, débloqués quand on a TOUS les badges.
+    const myArenaLevel = player.team.reduce((m, x) => Math.max(m, x.level), 0)
+    const { mode: arenaMode, opponents: arenaOpponents } = usePlayerArena(mapPlayer.mapId, player.badges, userId, myArenaLevel)
+    const [arenaFight, setArenaFight] = useState<{ opp: ArenaOpponent; mode: ArenaMode; enemy: MonInstance[] } | null>(null)
+    const handleArenaClick = (uid: string) => {
+        if (!arenaMode) return
+        const opp = arenaOpponents.find((o) => o.userId === uid)
+        if (!opp) return
+        const enemy = arenaMode === "hub" ? buildHubTeam(opp.player) : buildMirrorTeam(opp.player)
+        setArenaFight({ opp, mode: arenaMode, enemy })
+    }
     const [menu, setMenu] = useState<"none" | "pause" | "team" | "pc" | "bag" | "reput" | "moves">("none")
     const ficheTouchX = useRef<number | null>(null) // swipe gauche/droite dans la fiche Daemon
     const [selected, setSelected] = useState<MonInstance | null>(null)
@@ -317,7 +331,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             // battleStore (hors garde de move()) et s'affichent quand battle===null. Sans ça, une
             // flèche déplacerait le joueur SOUS l'overlay → rencontre sauvage → startWildBattle
             // reset newDexEntry/evolutions → popup + renommage PERDUS. On neutralise tout input carte.
-            if (championRun || newDexEntry || evolutions.length > 0) { e.preventDefault(); return }
+            if (championRun || arenaFight || newDexEntry || evolutions.length > 0) { e.preventDefault(); return }
             const inB = !!battle
             const k = e.key.toLowerCase()
             if (e.key === "ArrowUp" || k === "z") { e.preventDefault(); inB ? dispatchBattleInput("up") : move("up") }
@@ -338,7 +352,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         }
         window.addEventListener("keydown", handler)
         return () => window.removeEventListener("keydown", handler)
-    }, [move, pressA, pressB, battle, newDexEntry, evolutions, championRun])
+    }, [move, pressA, pressB, battle, newDexEntry, evolutions, championRun, arenaFight])
 
     // Identité (User.id) + carte courante → estampillage ownership/lieu à la capture.
     useEffect(() => { setCurrentPlayerId(userId) }, [userId])
@@ -512,7 +526,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     onStart={() => { menuTapGuard.current = Date.now(); setMenu((m) => (m === "none" ? "pause" : "none")) }}
                     onSelect={() => { menuTapGuard.current = Date.now(); setMenu((m) => (m === "none" ? "pause" : "none")) }}
                 >
-                    <MapView remotePlayers={remotePlayers} chatBubbles={chat.bubbles} myUserId={userId} />
+                    <MapView remotePlayers={remotePlayers} chatBubbles={chat.bubbles} myUserId={userId} arenaOpponents={arenaOpponents} onArenaClick={handleArenaClick} />
                 </GameBoyShell>
             )}
 
@@ -1532,6 +1546,22 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             )}
 
             {/* Hall of Fame — sacre du Champion après LE MAÎTRE de la Ligue (après les évolutions) */}
+            {arenaFight && !battle && (
+                <ArenaChallengeModal
+                    title={arenaFight.mode === "hub" ? `⚔️ Défi : ${arenaFight.opp.nickname}` : `🪞 Reflet de ${mirrorName(arenaFight.opp.nickname)}`}
+                    subtitle={arenaFight.mode === "hub"
+                        ? "Son équipe réelle, jouée par l'IA. Entraîne-toi autant que tu veux !"
+                        : "Une version inversée, taillée pour TE contrer (faiblesses de type)."}
+                    accent={arenaFight.mode === "hub" ? "#4ec3ff" : "#c77dff"}
+                    enemyTeam={arenaFight.enemy}
+                    onFight={() => {
+                        startTrainerBattle(getPlayer().team, arenaFight.enemy, Math.floor(Math.random() * 1e9), { aiLevel: "trainer" })
+                        setArenaFight(null)
+                    }}
+                    onCancel={() => setArenaFight(null)}
+                />
+            )}
+
             {!battle && evolutions.length === 0 && championRun && (
                 <HallOfFame champion={championRun} onDone={() => {
                     clearChampion()

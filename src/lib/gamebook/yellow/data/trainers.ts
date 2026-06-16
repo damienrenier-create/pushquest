@@ -630,9 +630,12 @@ export const TRAINERS: TrainerData[] = [
         ],
         defeat: [
             "Balayée… par une vague plus haute que la mienne.",
-            "Le Badge Eau est à toi — et avec lui, la Ligue t'ouvre enfin ses portes.",
+            "Le Badge Eau est à toi — et avec lui, TES CINQ BADGES sont enfin réunis !",
             "*ONDINE dépose une capsule ruisselante au creux de ta main.*",
             "Garde ma DÉFERLANTE : que la marée porte tes pas jusqu'au trône du Nexus !",
+            "*Les eaux du sanctuaire se mettent à refléter d'autres dresseurs…*",
+            "Avec tous les badges, mon Sanctuaire devient une ARÈNE D'ENTRAÎNEMENT : touche un dresseur pour affronter sa VRAIE équipe, autant de fois que tu veux.",
+            "Et là-haut, dans la Tour Hertz, les courants ont changé : des REFLETS MIROIRS t'y attendent — des versions inversées, taillées pour exploiter tes faiblesses. À toi de voir si tu oses les défier !",
         ],
     },
 
