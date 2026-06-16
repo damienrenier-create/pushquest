@@ -1648,6 +1648,37 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "Carlin-dragon altier au regard d'acier. Fond du ciel en piqué embrasé avant qu'on ait pu cligner des yeux.",
         sprite: "/yellow/sprites/dex/dracarlin.png",
     },
+
+    // ===== LIGNÉE T-REX DE GLACE (Dragon/Glace) — le stade 2 calé sur Léviator Gen 1 =====
+    // Typage malin : Dragon/Glace ANNULE la faiblesse Glace du dragon. Faible Combat/Roche/Dragon.
+    glacirex: {
+        id: "glacirex", dexNo: 130, name: "Glacirex", types: ["DRAGON", "GLACE"],
+        baseStats: { hp: 60, atk: 78, def: 55, spe: 52, spc: 60 }, // BST 305
+        learnset: [
+            { level: 1, moveId: "charge" },
+            { level: 7, moveId: "coup_d_givre" },
+            { level: 16, moveId: "draco_souffle" },
+            { level: 26, moveId: "morsure" },
+        ],
+        evolution: { toId: "cryotyran", method: { kind: "LEVEL", level: 35 } },
+        catchRate: 45, baseExp: 70, rarity: "RARE", growthRate: "medium_fast", role: "Dragon/Glace — saurien juvénile",
+        description: "Jeune tyrannosaure des glaces. Sa gueule givrante mord plus fort qu'elle n'en a l'air.",
+        sprite: "/yellow/sprites/dex/glacirex.png",
+    },
+    cryotyran: {
+        id: "cryotyran", dexNo: 131, name: "Cryotyran", types: ["DRAGON", "GLACE"],
+        baseStats: { hp: 95, atk: 125, def: 79, spe: 81, spc: 100 }, // BST 480 — calqué sur Léviator Gen 1
+        learnset: [
+            { level: 1, moveId: "draco_souffle" },
+            { level: 1, moveId: "coup_d_givre" },
+            { level: 1, moveId: "morsure" },
+            { level: 38, moveId: "souffle_polaire" },
+            { level: 44, moveId: "draco_charge" },
+        ],
+        catchRate: 30, baseExp: 250, rarity: "RARE", growthRate: "medium_fast", role: "Dragon/Glace — colosse glaciaire",
+        description: "Tyran des banquises hérissé de cristaux. Un rugissement de Cryotyran gèle l'air et fait trembler la roche.",
+        sprite: "/yellow/sprites/dex/cryotyran.png",
+    },
 }
 
 export function getSpecies(id: string): SpeciesData | null {
