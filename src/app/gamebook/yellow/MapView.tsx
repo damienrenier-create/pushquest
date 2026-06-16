@@ -374,6 +374,10 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId, are
 
     return (
         <div style={containerStyle}>
+            {/* ARÈNE JOUEUR : indice pour défier les autres joueurs (sinon on ne sait pas comment les provoquer). */}
+            {arenaOpponents.length > 0 && (
+                <div style={arenaHintStyle}>⚔️ Approche un dresseur + A (ou touche-le) pour le défier !</div>
+            )}
             <div style={viewportStyle}>
                 {hasBgImage && (() => {
                     const tileSize = map.backgroundImageTileSize ?? 16
@@ -1150,6 +1154,12 @@ const containerStyle: React.CSSProperties = {
     alignItems: "stretch",
     justifyContent: "stretch",
     position: "relative",
+}
+const arenaHintStyle: React.CSSProperties = {
+    position: "absolute", top: 4, left: "50%", transform: "translateX(-50%)", zIndex: 20,
+    background: "rgba(20,16,40,0.92)", color: "#ffd54a", border: "1px solid #ffd54a", borderRadius: 8,
+    padding: "4px 10px", fontSize: "clamp(8px, 2dvw, 11px)", fontWeight: 700, fontFamily: "'Courier New', monospace",
+    whiteSpace: "nowrap", pointerEvents: "none", maxWidth: "96%", overflow: "hidden", textOverflow: "ellipsis",
 }
 
 const viewportStyle: React.CSSProperties = {

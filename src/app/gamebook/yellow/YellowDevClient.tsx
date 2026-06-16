@@ -343,7 +343,14 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             else if (e.key === "ArrowLeft" || k === "q") { e.preventDefault(); inB ? dispatchBattleInput("left") : move("left") }
             else if (e.key === "ArrowRight" || k === "d") { e.preventDefault(); inB ? dispatchBattleInput("right") : move("right") }
             else if (e.key === " " || e.key === "Enter" || k === "a") {
-                e.preventDefault(); inB ? dispatchBattleInput("a") : pressA()
+                e.preventDefault()
+                if (inB) { dispatchBattleInput("a") }
+                else {
+                    // ARÈNE JOUEUR : A à côté d'un adversaire (≤1 case) → défi (en plus du clic/tap sur le sprite).
+                    const opp = arenaMode && arenaOpponents.find((o) => Math.abs(o.x - mapPlayer.posX) + Math.abs(o.y - mapPlayer.posY) <= 1)
+                    if (opp) { const enemy = arenaMode === "hub" ? buildHubTeam(opp.player) : buildMirrorTeam(opp.player); setArenaFight({ opp, mode: arenaMode, enemy }) }
+                    else pressA()
+                }
             }
             else if (e.key === "Escape" || k === "b" || k === "f") {
                 // Hors combat : ferme d'abord l'overlay le plus haut (goBack), sinon dialogue (pressB).
@@ -356,7 +363,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         }
         window.addEventListener("keydown", handler)
         return () => window.removeEventListener("keydown", handler)
-    }, [move, pressA, pressB, battle, newDexEntry, evolutions, championRun, arenaFight, pendingLearn])
+    }, [move, pressA, pressB, battle, newDexEntry, evolutions, championRun, arenaFight, pendingLearn, arenaMode, arenaOpponents, mapPlayer])
 
     // Identité (User.id) + carte courante → estampillage ownership/lieu à la capture.
     useEffect(() => { setCurrentPlayerId(userId) }, [userId])
