@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest"
 import { createMonInstance } from "../battle/factory"
 import { hydratePlayer, getPlayer, recordHhCollectorWin, applyTradeEvolution } from "../store/playerStore"
-import { buildHhCollectorTeam } from "./hauntedNpcs"
+import { buildHhCollectorTeam, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES } from "./hauntedNpcs"
 import { getSpecies } from "./species"
 
 describe("Maison hantée — PNJ1 BROCANTEUR (échange → rochison)", () => {
@@ -63,5 +63,14 @@ describe("Maison hantée — PNJ2 COLLECTIONNEUR de spectres (CT26)", () => {
         const team = buildHhCollectorTeam(25)
         for (const m of team) if (m.speciesId !== "ombrapanthe") expect(m.level).toBeLessThanOrEqual(25)
         expect(team.find((m) => m.speciesId === "ombrapanthe")!.level).toBe(27) // cap 25 + 2
+    })
+
+    it("l'intro explique CLAIREMENT la mécanique : garder les spectres dans l'équipe", () => {
+        const blob = HH_COLLECTOR_INTRO_LINES.join(" ").toLowerCase()
+        expect(blob).toContain("équipe") // il faut les GARDER dans l'équipe
+        expect(blob).toMatch(/3 (victoires|fois)/) // l'objectif chiffré est dit
+        // le rappel court existe et est plus bref que le topo complet
+        expect(HH_COLLECTOR_REMINDER_LINES.length).toBeGreaterThan(0)
+        expect(HH_COLLECTOR_REMINDER_LINES.length).toBeLessThan(HH_COLLECTOR_INTRO_LINES.length)
     })
 })

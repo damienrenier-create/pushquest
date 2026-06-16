@@ -26,7 +26,7 @@ import { getSpecies } from "../data/species"
 import { SBIRE_REWARD_REPS, SBIRE_REWARD_BALL_ID } from "../data/sbire"
 import { ACE_TRAINER_ID, aceReward } from "../data/ace"
 import { GEKROC_STONE_ITEM } from "../data/gekroc"
-import { HH_COLLECTOR_ID, HH_COLLECTOR_CT } from "../data/hauntedNpcs"
+import { HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED } from "../data/hauntedNpcs"
 import type { BadgeId } from "../data/cts"
 import { createMonInstance } from "../battle/factory"
 import { getTrainer } from "../data/trainers"
@@ -338,11 +338,31 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             rematchReward = { npcId: id, npcName: t?.name ?? "DRESSEUR", lines: [...(rm?.defeat ?? []), rewardLine] }
         } else if (storeState.trainer.trainerId === HH_COLLECTOR_ID) {
             // COLLECTIONNEUR DE SPECTRES : réaffrontable (PAS de markTrainerDefeated). Enregistre la victoire
-            // + les spectres montrés (équipe). À 3 victoires ET 3 spectres distincts → CT26 (Frappe d'Au-delà).
+            // + les spectres montrés (présents dans l'équipe). À 3 victoires ET 3 spectres distincts → CT26.
+            // NB : le collectionneur n'a PAS de badge → on ne peut PAS passer par giftCtMove (affiché seulement
+            // avec un badge). On annonce donc tout (récompense ET progression) via rematchReward, fiable post-combat.
             const spectres = b.player.team.map((m) => m.speciesId).filter((id) => getSpecies(id)?.types.includes("SPECTRE"))
-            if (recordHhCollectorWin(spectres).rewarded) {
+            const res = recordHhCollectorWin(spectres)
+            if (res.rewarded) {
                 const mvId = getCt(HH_COLLECTOR_CT)?.moveId
-                giftCtMove = mvId ? (getMove(mvId)?.name ?? null) : null
+                const mv = mvId ? getMove(mvId)?.name : null
+                rematchReward = {
+                    npcId: HH_COLLECTOR_ID, npcName: "COLLECTIONNEUR",
+                    lines: [...HH_COLLECTOR_DONE_LINES, mv ? `🎁 Reçois la CT « ${mv} » ! Apprends-la à un Daemon compatible.` : "🎁 Reçois ma CT spectrale !"],
+                }
+            } else {
+                // Feedback de progression IMMÉDIAT (sinon le joueur ignore que sa victoire a compté).
+                const w = Math.min(res.wins, HH_COLLECTOR_WINS_NEEDED)
+                const s = Math.min(res.shown, HH_COLLECTOR_SPECTRES_NEEDED)
+                rematchReward = {
+                    npcId: HH_COLLECTOR_ID, npcName: "COLLECTIONNEUR",
+                    lines: [
+                        `Belle bataille ! Progression : ${w}/${HH_COLLECTOR_WINS_NEEDED} victoires · ${s}/${HH_COLLECTOR_SPECTRES_NEEDED} spectres distincts montrés.`,
+                        res.shown === 0
+                            ? "…mais je n'ai vu AUCUN spectre dans ton équipe ! Reviens avec un Daemon de type SPECTRE à tes côtés."
+                            : "Reviens m'affronter avec d'AUTRES spectres pour compléter ma collection !",
+                    ],
+                }
             }
         } else {
             markTrainerDefeated(storeState.trainer.trainerId)
