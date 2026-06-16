@@ -35,7 +35,7 @@ export const HH_COLLECTOR_SPECTRES_NEEDED = 3
 export const HH_COLLECTOR_INTRO_LINES = [
     "Ahhh, un dresseur ! Fais-moi admirer ta collection de SPECTRES…",
     "Voici mon défi : bats-moi 3 fois. Mais surtout, viens combattre en GARDANT dans ton équipe des Daemons de type SPECTRE — il me suffit de les apercevoir à tes côtés, pas besoin de les envoyer au front. Je les compte au fil de nos duels.",
-    "Montre-m'en 3 DIFFÉRENTS et remporte 3 victoires, et la CT « Frappe d'Au-delà » sera à toi !",
+    "Montre-m'en 3 DIFFÉRENTS et remporte 3 victoires, et la CT « Frappe de l'Au-delà » sera à toi !",
 ]
 // Rappel court affiché quand le joueur revient (a déjà combattu une fois) — évite de relire tout le topo.
 export const HH_COLLECTOR_REMINDER_LINES = [
