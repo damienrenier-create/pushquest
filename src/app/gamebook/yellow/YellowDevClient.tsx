@@ -37,7 +37,7 @@ import PosterPanel from "./PosterPanel"
 import { useGameStore, setCurrentNickname } from "@/lib/gamebook/yellow/store/gameStore"
 import { YELLOW_MAPS, CENDREVILLE_SPAWN } from "@/lib/gamebook/yellow/maps"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
-import { useBattle, useEvolutions, clearEvolutions, useChampionRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getGiftCtMove, startTrainerBattle, useChainRematch, clearChainRematch } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, useEvolutions, clearEvolutions, useChampionRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getGiftCtMove, startTrainerBattle, useChainRematch, clearChainRematch, cancelEvolution } from "@/lib/gamebook/yellow/store/battleStore"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
 import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone } from "@/lib/gamebook/yellow/store/playerStore"
@@ -1552,7 +1552,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
 
             {/* Cinématique d'évolution (post-combat, après QUITTER) */}
             {!battle && evolutions.length > 0 && (
-                <EvolutionScreen evolutions={evolutions} onDone={clearEvolutions} />
+                <EvolutionScreen evolutions={evolutions} onCancel={cancelEvolution} onDone={clearEvolutions} />
             )}
 
             {/* Hall of Fame — sacre du Champion après LE MAÎTRE de la Ligue (après les évolutions) */}

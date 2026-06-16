@@ -32,13 +32,12 @@ import { createMonInstance } from "../battle/factory"
 import { getTrainer } from "../data/trainers"
 import { SBIRE_TRAINER_ID } from "../data/sbire"
 import { toMonInstance, type LeagueHighlight } from "../storage/save"
-import { evolveTeam } from "../progression/evolveTeam"
+import { evolveTeam, type TeamEvolution } from "../progression/evolveTeam"
 import { persistYellowSave, processSaiyanPoints } from "./saveManager"
 import { QUOTA_CAPTURE_BONUS } from "../data/captureConfig"
 import { moveCostReps, STRUGGLE_INDEX } from "../data/combatCostConfig"
 import { battleEnergyCap } from "../data/badges"
 import { mpLog } from "../multiplayer/mp"
-import type { EvolutionResult } from "../battle/evolution"
 
 /** Espèce de l'adversaire actif (pour synchroniser le Pokédex). */
 function enemyActiveSpeciesId(b: BattleState): string | null {
@@ -67,7 +66,7 @@ interface TrainerContext {
 interface BattleStoreState {
     battle: BattleState | null
     /** Évolutions à jouer (cinématique post-combat). */
-    evolutions: EvolutionResult[]
+    evolutions: TeamEvolution[]
     /** Présent uniquement pendant/juste après un combat de dresseur. */
     trainer: TrainerContext | null
     /** Équipe entièrement K.O. → la carte doit renvoyer le joueur au Centre (soigné). */
@@ -434,6 +433,20 @@ export function clearEvolutions() {
     setStore({ battle: storeState.battle, evolutions: [], trainer: storeState.trainer, whiteout: storeState.whiteout })
 }
 
+/** ANNULE une évolution (touche B pendant la cinématique) : restaure la forme + les moves d'avant. */
+export function cancelEvolution(uid: string) {
+    const evo = storeState.evolutions.find((e) => e.uid === uid)
+    if (!evo) return
+    const team = getPlayer().team
+    const mon = team.find((m) => m.uid === uid)
+    if (!mon) return
+    mon.speciesId = evo.beforeSpeciesId
+    mon.moves = evo.beforeMoves.map((m) => ({ ...m }))
+    mon.pendingMoves = [...evo.beforePendingMoves]
+    setTeam([...team])
+    persistYellowSave()
+}
+
 /** Consommé par l'UI une fois le Hall of Fame (sacre du Champion) joué. */
 export function clearChampion() {
     setStore({ championRun: null })
@@ -750,7 +763,7 @@ export function usePvpCtx(): PvpContext | null {
     return useSyncExternalStore(subscribe, () => getSnapshot().pvpCtx, () => getSnapshot().pvpCtx)
 }
 
-export function useEvolutions(): EvolutionResult[] {
+export function useEvolutions(): TeamEvolution[] {
     return useSyncExternalStore(
         subscribe,
         () => getSnapshot().evolutions,
