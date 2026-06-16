@@ -343,6 +343,20 @@ function buildLigueRoom(): TileType[][] {
     return m
 }
 
+// ARÈNE EAU "SANCTUAIRE DES MARÉES" (16×16 @ 64px, calé sur arene_eau.png). Tout mur ("tree") puis on
+// ouvre : plateforme/autel haut-centre (ONDINE en 7,3), chemin de pierre central, et la moitié BASSE
+// (zones coralliennes) où se tiennent les 4 gardes (5,8)(5,11)(11,8)(11,11). Entrée bas-centre (7-8,15).
+// Bassins d'eau du haut (gauche/droite) = murs. Pas de rencontres (floorTile). Positions à affiner en jeu.
+function buildAreneEau(): TileType[][] {
+    const N = 16
+    const m: TileType[][] = Array.from({ length: N }, () => Array.from({ length: N }, () => "tree" as TileType))
+    for (let y = 1; y <= 3; y++) for (let x = 4; x <= 11; x++) m[y][x] = "floorTile"   // plateforme (ONDINE)
+    for (let y = 4; y <= 14; y++) for (let x = 6; x <= 9; x++) m[y][x] = "floorTile"   // chemin central
+    for (let y = 7; y <= 14; y++) for (let x = 1; x <= 14; x++) m[y][x] = "floorTile"  // moitié basse (gardes)
+    m[15][7] = "floorTile"; m[15][8] = "floorTile"                                      // entrée/sortie bas-centre
+    return m
+}
+
 // Antre du sbire du dieu Spaghetti : petite salle 9×7. Le sbire (PNJ y_sbire)
 // se tient derrière un autel en (4,2) — case bloquée pour qu'on ne lui marche pas
 // dessus (le moteur de mouvement ne teste pas les PNJ). On l'affronte depuis (4,3).
@@ -1273,6 +1287,14 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         // Porte droite (19,5/6/7) = SORTIE de la Ligue → Cendreville (au-dessus du gate sud), une fois le Maître vaincu.
         exits: [5, 6, 7].map((y) => ({ x: 19, y, targetMapId: "yellow_cendreville", targetSpawnX: 21, targetSpawnY: 32 })),
         backgroundImage: "/yellow/sprites/ligue_rival.png", backgroundImageWidth: 1408, backgroundImageHeight: 768, backgroundImageTileSize: 64,
+    },
+    // ===== ARÈNE EAU "SANCTUAIRE DES MARÉES" (Cendreville, badge eau) =====
+    yellow_arena_eau: {
+        id: "yellow_arena_eau", name: "SANCTUAIRE DES MARÉES", tiles: buildAreneEau(), width: 16, height: 16,
+        // Entrée/sortie bas-centre (7-8,15) → Cendreville. ⚠️ targetSpawn = PLACEHOLDER : à recaler sur la
+        // porte de l'arène une fois sa position dans Cendreville connue (cf. l'entrée côté Cendreville).
+        exits: [7, 8].map((x) => ({ x, y: 15, targetMapId: "yellow_cendreville", targetSpawnX: 10, targetSpawnY: 29 })),
+        backgroundImage: "/yellow/sprites/arene_eau.png", backgroundImageWidth: 1024, backgroundImageHeight: 1024, backgroundImageTileSize: 64,
     },
     yellow_grotte: {
         id: "yellow_grotte",

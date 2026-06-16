@@ -615,6 +615,12 @@ const NPC_SPRITES: Record<string, { url: string; frames: number; h?: number } | 
     y_ligue_3_agatha: { url: "/yellow/sprites/ligue_agatha.png", frames: 1, h: 1.6 },
     y_ligue_4_peter: { url: "/yellow/sprites/ligue_peter.png", frames: 1, h: 1.6 },
     y_ligue_maitre: { url: "/yellow/sprites/npc_ace.png", frames: 1, h: 2.0 },
+    // ARÈNE EAU — Conseil des marées (gauche 1/2, droite 1/2) + ONDINE.
+    y_eauarena_g1: { url: "/yellow/sprites/eau_g1.png", frames: 1, h: 1.9 },
+    y_eauarena_g2: { url: "/yellow/sprites/eau_g2.png", frames: 1, h: 1.9 },
+    y_eauarena_g3: { url: "/yellow/sprites/eau_g3.png", frames: 1, h: 1.9 },
+    y_eauarena_g4: { url: "/yellow/sprites/eau_g4.png", frames: 1, h: 1.9 },
+    y_eauarena_boss: { url: "/yellow/sprites/eau_ondine.png", frames: 1, h: 1.9 },
 }
 
 function NpcSprite({

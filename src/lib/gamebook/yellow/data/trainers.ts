@@ -555,7 +555,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_eauarena_g1", name: "PLONGEUR REMOUS", title: "Gardien des Marées",
         sprite: { emoji: "💧", color: "#3aa0e8" },
-        mapId: "yellow_arena_eau", x: 3, y: 3,
+        mapId: "yellow_arena_eau", x: 5, y: 8,
         team: [
             { speciesId: "ondaloutre", level: 43 },
             { speciesId: "tetardoc", level: 42 },
@@ -569,8 +569,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_eauarena_g2", name: "DOMPTEUSE ÉCUME", title: "Gardienne des Marées",
         sprite: { emoji: "💧", color: "#3aa0e8" },
-        mapId: "yellow_arena_eau", x: 5, y: 7,
-        requiresTrainers: ["y_eauarena_g1"],
+        mapId: "yellow_arena_eau", x: 5, y: 11,
         // Lignée loutre, du marcassin des flots au seigneur des rivières.
         team: [
             { speciesId: "ondaloutre", level: 44 },
@@ -584,8 +583,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_eauarena_g3", name: "PÊCHEUR ABYSSE", title: "Gardien des Marées",
         sprite: { emoji: "💧", color: "#3aa0e8" },
-        mapId: "yellow_arena_eau", x: 11, y: 7,
-        requiresTrainers: ["y_eauarena_g2"],
+        mapId: "yellow_arena_eau", x: 11, y: 8,
         // Trois colosses des profondeurs (formes finales).
         team: [
             { speciesId: "crapotaure", level: 47 },
@@ -599,8 +597,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_eauarena_g4", name: "SENTINELLE RESSAC", title: "Sentinelle du Sanctuaire",
         sprite: { emoji: "💧", color: "#3aa0e8" },
-        mapId: "yellow_arena_eau", x: 13, y: 3,
-        requiresTrainers: ["y_eauarena_g3"],
+        mapId: "yellow_arena_eau", x: 11, y: 11,
         // Une seule Daemon, mais de niveau boss.
         team: [
             { speciesId: "razmaree", level: 50 },
@@ -612,7 +609,7 @@ export const TRAINERS: TrainerData[] = [
     {
         id: "y_eauarena_boss", name: "ONDINE", title: "Reine des Marées",
         sprite: { emoji: "🌊", color: "#1e78c8" },
-        mapId: "yellow_arena_eau", x: 8, y: 2,
+        mapId: "yellow_arena_eau", x: 7, y: 3,
         // GATE : avoir battu les 4 gardes (n'importe quel ordre).
         requiresTrainers: ["y_eauarena_g1", "y_eauarena_g2", "y_eauarena_g3", "y_eauarena_g4"],
         team: [
