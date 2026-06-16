@@ -60,6 +60,9 @@ export interface AceMon { speciesId: string; level: number }
 // On NE met PLUS les panthères élites (Ombra/Volta/Pyropanthe, BST ~455) : elles étaient
 // 1000x trop fortes dès le 1er combat. Nouillon & la lignée Feu évoluent avec le niveau.
 export const ACE_PANTHERS = ["pantheon", "pantheon", "pantheon"]
+// Au BADGE ÉCLAIR, les 3 Panthéon d'ACE ÉVOLUENT en panthères élémentaires (Feu/Élec/Spectre, BST ~455).
+// Gaté tard → plus le souci "1000x trop fort" du 1er combat : le joueur est déjà costaud à ce stade.
+export const ACE_PANTHERS_EVOLVED = ["pyropanthe", "voltapanthe", "ombrapanthe"]
 export const ACE_NOUILLON_BASE = "nouillon"   // → vermisaint → divinpate
 export const ACE_FIRE_BASE = "braisille"      // → flamkure → pyrokoss
 export const ACE_LEVEL_OFFSET = 2     // offset FINAL (dès la 4e rencontre) : ton meilleur +2
@@ -115,6 +118,7 @@ export interface AceBuildInput {
      *  rencontre (sinon ACE monterait à chaque fois que TON équipe grandit, bug signalé). */
     aceLevel: number
     playerLastTypes: PokeType[]  // types du DERNIER Daemon joueur → choisit le contre adaptatif (slot 6)
+    hasElecBadge?: boolean       // au badge Éclair, les Panthéon d'ACE évoluent en panthères élémentaires
 }
 
 /**
@@ -125,10 +129,11 @@ export interface AceBuildInput {
 export function buildAceTeam(i: AceBuildInput): { team: AceMon[]; counterSpecies: string } {
     const L = Math.max(1, Math.min(MAX_LEVEL, i.aceLevel))
     const counter = bestCounter(i.playerLastTypes)
+    const panthers = i.hasElecBadge ? ACE_PANTHERS_EVOLVED : ACE_PANTHERS // évoluées une fois le badge Éclair obtenu
     const team: AceMon[] = [
-        { speciesId: ACE_PANTHERS[0], level: L },
-        { speciesId: ACE_PANTHERS[1], level: L },
-        { speciesId: ACE_PANTHERS[2], level: L }, // Panthéon
+        { speciesId: panthers[0], level: L },
+        { speciesId: panthers[1], level: L },
+        { speciesId: panthers[2], level: L }, // Panthéon → panthère élémentaire si badge Éclair
         { speciesId: speciesAtLevel(ACE_NOUILLON_BASE, L), level: L },
         { speciesId: speciesAtLevel(ACE_FIRE_BASE, L), level: L },
         { speciesId: counter, level: L }, // contre adaptatif au niveau d'ACE (cliquet)

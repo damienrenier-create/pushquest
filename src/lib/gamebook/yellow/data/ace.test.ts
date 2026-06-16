@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { buildAceTeam, bestCounter, aceTargetLevel, aceReward, aceEnergyBudget, speciesAtLevel, ACE_PANTHERS, ACE_BOX } from "./ace"
+import { buildAceTeam, bestCounter, aceTargetLevel, aceReward, aceEnergyBudget, speciesAtLevel, ACE_PANTHERS, ACE_PANTHERS_EVOLVED, ACE_BOX } from "./ace"
 import { getSpecies } from "./species"
 
 describe("ACE — scaling + équipe + contre adaptatif", () => {
@@ -34,6 +34,13 @@ describe("ACE — scaling + équipe + contre adaptatif", () => {
         expect(team[4].speciesId).toBe("pyrokoss")  // braisille évolué à niv 40
         expect(ACE_BOX).toContain(counterSpecies)
         expect(team[5].speciesId).toBe(counterSpecies) // slot 6 = contre adaptatif (au niveau d'ACE)
+    })
+
+    it("au BADGE ÉCLAIR, les 3 Panthéon d'ACE évoluent en panthères élémentaires", () => {
+        const evolved = buildAceTeam({ aceLevel: 50, playerLastTypes: ["EAU"], hasElecBadge: true })
+        expect(evolved.team.slice(0, 3).map((m) => m.speciesId)).toEqual(ACE_PANTHERS_EVOLVED)
+        const base = buildAceTeam({ aceLevel: 50, playerLastTypes: ["EAU"] }) // sans badge → Panthéon de base
+        expect(base.team.slice(0, 3).map((m) => m.speciesId)).toEqual(ACE_PANTHERS)
     })
 
     it("CLIQUET : buildAceTeam prend le niveau fourni TEL QUEL (aucune recalibration sur le joueur)", () => {
