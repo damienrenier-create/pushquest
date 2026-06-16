@@ -1604,6 +1604,50 @@ export const SPECIES: Record<string, SpeciesData> = {
         learnsAllCts: true,
         hiddenUntilCaught: true, // SURPRISE : absent du Pokédex tant qu'on ne l'a pas capturé
     },
+
+    // ===== LIGNÉE CARLIN-DRAGON (Feu/Dragon) — profil "Ptéra" : sprinter fragile (Vit++/Atk++, Déf molle) =====
+    carlinou: {
+        id: "carlinou", dexNo: 127, name: "Carlinou", types: ["FEU", "DRAGON"],
+        baseStats: { hp: 45, atk: 55, def: 45, spe: 60, spc: 50 }, // BST 255
+        learnset: [
+            { level: 1, moveId: "charge" },
+            { level: 6, moveId: "flamme_ardente" },
+            { level: 14, moveId: "draco_souffle" },
+            { level: 22, moveId: "vive_attaque" },
+        ],
+        evolution: { toId: "carlembre", method: { kind: "LEVEL", level: 18 } },
+        catchRate: 45, baseExp: 62, rarity: "RARE", growthRate: "medium_fast", role: "Feu/Dragon — chiot endormi",
+        description: "Bébé carlin-dragon qui ronfle des volutes de fumée. Une flammèche couve déjà au bout de sa queue.",
+        sprite: "/yellow/sprites/dex/carlinou.png",
+    },
+    carlembre: {
+        id: "carlembre", dexNo: 128, name: "Carlembre", types: ["FEU", "DRAGON"],
+        baseStats: { hp: 65, atk: 80, def: 62, spe: 90, spc: 72 }, // BST 369
+        learnset: [
+            { level: 1, moveId: "flamme_ardente" },
+            { level: 1, moveId: "draco_souffle" },
+            { level: 1, moveId: "vive_attaque" },
+            { level: 30, moveId: "lance_flammes" },
+        ],
+        evolution: { toId: "dracarlin", method: { kind: "LEVEL", level: 36 } },
+        catchRate: 45, baseExp: 145, rarity: "RARE", growthRate: "medium_fast", role: "Feu/Dragon — fougueux ailé",
+        description: "Joufflu mais vif : ses petites ailes le portent déjà, et sa queue de feu ne s'éteint plus.",
+        sprite: "/yellow/sprites/dex/carlembre.png",
+    },
+    dracarlin: {
+        id: "dracarlin", dexNo: 129, name: "Dracarlin", types: ["FEU", "DRAGON"],
+        baseStats: { hp: 80, atk: 115, def: 72, spe: 128, spc: 85 }, // BST 480 — sprinter offensif fragile (façon Ptéra)
+        learnset: [
+            { level: 1, moveId: "draco_charge" },
+            { level: 1, moveId: "lance_flammes" },
+            { level: 1, moveId: "vive_attaque" },
+            { level: 40, moveId: "pique_fatal" },
+            { level: 46, moveId: "danse_lames" },
+        ],
+        catchRate: 30, baseExp: 250, rarity: "RARE", growthRate: "medium_fast", role: "Feu/Dragon — foudre de guerre ailée",
+        description: "Carlin-dragon altier au regard d'acier. Fond du ciel en piqué embrasé avant qu'on ait pu cligner des yeux.",
+        sprite: "/yellow/sprites/dex/dracarlin.png",
+    },
 }
 
 export function getSpecies(id: string): SpeciesData | null {
