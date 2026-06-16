@@ -1137,7 +1137,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     grenarc: {
         id: "grenarc", dexNo: 93, name: "Grenarc", types: ["ROCHE", "EAU"],
         baseStats: { hp: 66, atk: 72, def: 60, spe: 88, spc: 54 },
-        learnset: [{ level: 1, moveId: "pistolet_a_o" }, { level: 1, moveId: "jet_pierres" }, { level: 1, moveId: "eboulis" }, { level: 22, moveId: "lame_eau" }, { level: 28, moveId: "fonce_bec" }],
+        learnset: [{ level: 1, moveId: "pistolet_a_o" }, { level: 1, moveId: "jet_pierres" }, { level: 1, moveId: "eboulis" }, { level: 22, moveId: "lame_eau" }, { level: 28, moveId: "belier" }],
         evolution: { toId: "crapotaure", method: { kind: "LEVEL", level: 36 } },
         catchRate: 60, baseExp: 134, rarity: "RARE", growthRate: "medium_fast", role: "Roche/Eau — grenouille archère",
         description: "Grenouille armée d'un arc de pierre ; tireuse d'élite.",
@@ -1146,7 +1146,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     crapotaure: {
         id: "crapotaure", dexNo: 94, name: "Crapôtaure", types: ["ROCHE", "EAU"],
         baseStats: { hp: 86, atk: 108, def: 78, spe: 108, spc: 64 },
-        learnset: [{ level: 1, moveId: "lame_roche" }, { level: 1, moveId: "hydrocanon" }, { level: 1, moveId: "lame_eau" }, { level: 1, moveId: "fonce_bec" }, { level: 40, moveId: "eboulis" }, { level: 44, moveId: "danse_lames" }],
+        learnset: [{ level: 1, moveId: "lame_roche" }, { level: 1, moveId: "hydrocanon" }, { level: 1, moveId: "lame_eau" }, { level: 1, moveId: "belier" }, { level: 40, moveId: "eboulis" }, { level: 44, moveId: "danse_lames" }],
         catchRate: 45, baseExp: 200, rarity: "RARE", growthRate: "medium_fast", role: "Roche/Eau — crapaud archer (le + rapide des Roche)",
         description: "Crapaud colossal au grand arc ; ses flèches de roche critent sans relâche.",
         sprite: "/yellow/sprites/dex/crapotaure.png",
