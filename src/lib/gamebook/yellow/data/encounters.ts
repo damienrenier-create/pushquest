@@ -10,6 +10,7 @@ import type { MonInstance } from "../battle/types"
 import { biomeDistance, affinityMult, repulsionMult, type Biome } from "./biomes"
 import { rollIvs } from "./ivConfig"
 import { speciesAtLevel } from "./ace"
+import { getSpecies, SPECIES } from "./species"
 
 // Rareté de base (poids avant modulation).
 const COMMON = 100, UNCOMMON = 45, RARE = 14, VERY_RARE = 5
@@ -55,6 +56,10 @@ interface TrainingGrid {
     legendary?: WildEntry                      // Goshendofy (capture gatée Ball+statut via ses champs)
     legendaryDenomByBand?: number[]            // dénom de proba par band [bas..haut]
     legendaryTierMult?: number[]               // ×dénom par palier (tier) → raréfié en montant de palier
+    /** DRAGONS RARES : chance de tomber sur un dragon (au lieu du type du jour), à la forme adaptée au
+     *  niveau du palier (speciesAtLevel). Proba = 1 / (denomByBand[band] × tierMult[palier]) → PLUS le
+     *  dragon pop fort (band haut / palier haut), PLUS il est rare. bases = têtes de lignées dragon. */
+    dragonRare?: { bases: readonly string[]; denomByBand: number[]; tierMult: number[] }
 }
 
 interface Zone { rate: number; pool: WildEntry[]; minLevel?: number; maxLevel?: number; trainingGrid?: TrainingGrid }
@@ -267,6 +272,10 @@ const ZONES: Record<string, Zone> = {
             legendary: { speciesId: "goshendofy", base: 1, levelFixed: 50, noEvolve: true, captureMinBallBonus: 5, captureRequiresStatus: true, captureMult: 0.5 },
             legendaryDenomByBand: [100, 200, 300, 500, 1000], // band 0 (herbe basse) → band 4
             legendaryTierMult: [1, 4, 8],                     // palier 1 (commun) → palier 3 (quasi introuvable)
+            // DRAGONS RARES : croise un dragon (Vol/Dragon, Feu/Dragon, Dragon/Glace) au lieu du type du jour ;
+            // forme adaptée au niveau (bébé en palier 1 → évolué en palier 3). PLUS il pop fort, PLUS il est rare :
+            //   palier 1 ~1/50 (bas) → 1/220 (haut) · palier 2 ×4 · palier 3 ×10 (≈1/500 → 1/2200 pour les gros).
+            dragonRare: { bases: ["draclet", "carlinou", "glacirex"], denomByBand: [50, 70, 100, 150, 220], tierMult: [1, 4, 10] },
         },
     },
 }
@@ -379,6 +388,18 @@ export function hautesHerbesTypesForDay(dayKey: string): string[] {
     return tg ? dailyTypes(dayKey, tg.types, tg.highOnlyTypes ?? []) : []
 }
 
+/** Forme adaptée au niveau MAIS JAMAIS la forme définitive : si speciesAtLevel donne une finale (sans
+ *  évolution), on recule sur sa pré-évolution → les dragons sauvages se capturent en pré-évo, à évoluer soi-même. */
+function nonFinalFormAtLevel(baseId: string, level: number): string {
+    const id = speciesAtLevel(baseId, level)
+    const sp = getSpecies(id)
+    if (sp && !sp.evolution) {
+        const pre = Object.values(SPECIES).find((s) => s.evolution?.toId === id)
+        if (pre) return pre.id
+    }
+    return id
+}
+
 /** GRILLE D'ENTRAÎNEMENT : niveau = la LIGNE (band, via les bandes du palier), type = le carré du JOUR.
  *  Le légendaire y rôde, + fréquent en herbe BASSE (band bas × palier bas). */
 function rollTrainingGrid(tg: TrainingGrid, ctx: EncounterCtx, rng: () => number): MonInstance | null {
@@ -390,6 +411,17 @@ function rollTrainingGrid(tg: TrainingGrid, ctx: EncounterCtx, rng: () => number
     if (tg.legendary && tg.legendaryDenomByBand) {
         const denom = (tg.legendaryDenomByBand[band] ?? 1000) * (tg.legendaryTierMult?.[sqIdx] ?? 1)
         if (rng() < 1 / denom) return finalizeSpawn(tg.legendary, tg.legendary.levelFixed ?? 50, rng, ctx)
+    }
+    // DRAGONS RARES : + le dragon pop fort (band/palier hauts), + il est rare. JAMAIS en forme définitive
+    // (on capture une pré-évolution, à faire évoluer soi-même) → nonFinalFormAtLevel recule d'un cran si besoin.
+    if (tg.dragonRare && tg.dragonRare.bases.length > 0) {
+        const denom = (tg.dragonRare.denomByBand[band] ?? 220) * (tg.dragonRare.tierMult[sqIdx] ?? 1)
+        if (rng() < 1 / denom) {
+            const baseId = tg.dragonRare.bases[Math.floor(rng() * tg.dragonRare.bases.length)]
+            const [lo, hi] = sq.bands[band] ?? [3, 6]
+            const level = intIn(rng, lo, hi)
+            return finalizeSpawn({ speciesId: nonFinalFormAtLevel(baseId, level), base: 1, rare: true, noEvolve: true }, level, rng, ctx)
+        }
     }
     // TYPE DU JOUR pour ce palier → pioche pondérée dans son pool ; NIVEAU déterministe par la bande.
     const type = dailyTypes(ctx.dayKey ?? "", tg.types, tg.highOnlyTypes ?? [])[sqIdx] ?? tg.types[0]

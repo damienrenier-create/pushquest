@@ -49,9 +49,11 @@ describe("Hautes herbes — 3 paliers + rotation quotidienne par type", () => {
 
     it("TYPE par carré = le type du JOUR pour ce palier (formes évoluées comprises)", () => {
         const [t1, t2, t3] = hautesHerbesTypesForDay(DAY)
-        for (const m of rollMany(4, 6, 400, 3).filter(wild)) expect(getSpecies(m.speciesId)?.types).toContain(t1)
-        for (const m of rollMany(13, 6, 400, 3).filter(wild)) expect(getSpecies(m.speciesId)?.types).toContain(t2)
-        for (const m of rollMany(22, 6, 400, 3).filter(wild)) expect(getSpecies(m.speciesId)?.types).toContain(t3)
+        // On exclut les DRAGONS : ils popent rarement HORS du type du jour (cf. encounters_dragons.test.ts).
+        const notDragon = (m: { speciesId: string }) => !getSpecies(m.speciesId)?.types.includes("DRAGON")
+        for (const m of rollMany(4, 6, 400, 3).filter(wild).filter(notDragon)) expect(getSpecies(m.speciesId)?.types).toContain(t1)
+        for (const m of rollMany(13, 6, 400, 3).filter(wild).filter(notDragon)) expect(getSpecies(m.speciesId)?.types).toContain(t2)
+        for (const m of rollMany(22, 6, 400, 3).filter(wild).filter(notDragon)) expect(getSpecies(m.speciesId)?.types).toContain(t3)
     })
 
     it("le TYPE change d'un jour à l'autre (au moins un palier diffère)", () => {
