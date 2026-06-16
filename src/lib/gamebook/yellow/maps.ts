@@ -1074,6 +1074,8 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
             // OUVERTURE SUD (cols 20-23, row 36) → LIGUE (1re salle, glace) : gate Dieu Spaghetti tant que
             // TOUS les badges ne sont pas réunis (cf. gameStore). Arrivée porte gauche de la salle de glace.
             ...[20, 21, 22, 23].map((x) => ({ x, y: 36, targetMapId: "yellow_ligue_glace", targetSpawnX: 3, targetSpawnY: 6 })),
+            // PORTE DE L'ARÈNE EAU « Sanctuaire des Marées » en (10,9) → arène (spawn 7,14, juste au-dessus de l'entrée).
+            { x: 10, y: 9, targetMapId: "yellow_arena_eau", targetSpawnX: 7, targetSpawnY: 14 },
         ],
         backgroundImage: "/yellow/sprites/cendreville.png",
         backgroundImageWidth: CENDREVILLE_W * CENDREVILLE_TILE,   // 704
@@ -1291,9 +1293,9 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
     // ===== ARÈNE EAU "SANCTUAIRE DES MARÉES" (Cendreville, badge eau) =====
     yellow_arena_eau: {
         id: "yellow_arena_eau", name: "SANCTUAIRE DES MARÉES", tiles: buildAreneEau(), width: 16, height: 16,
-        // Entrée/sortie bas-centre (7-8,15) → Cendreville. ⚠️ targetSpawn = PLACEHOLDER : à recaler sur la
-        // porte de l'arène une fois sa position dans Cendreville connue (cf. l'entrée côté Cendreville).
-        exits: [7, 8].map((x) => ({ x, y: 15, targetMapId: "yellow_cendreville", targetSpawnX: 10, targetSpawnY: 29 })),
+        // Entrée/sortie bas-centre (7-8,15) → Cendreville, juste SOUS la porte de l'arène (10,10) pour ne
+        // pas re-déclencher le warp (la porte est en 10,9).
+        exits: [7, 8].map((x) => ({ x, y: 15, targetMapId: "yellow_cendreville", targetSpawnX: 10, targetSpawnY: 10 })),
         backgroundImage: "/yellow/sprites/arene_eau.png", backgroundImageWidth: 1024, backgroundImageHeight: 1024, backgroundImageTileSize: 64,
     },
     yellow_grotte: {

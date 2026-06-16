@@ -58,4 +58,12 @@ describe("Arène Eau — Sanctuaire des Marées (badge eau)", () => {
         for (const g of GARDES) expect(getTrainer(g)!.requiresTrainers ?? []).toEqual([])
         expect(getTrainer("y_eauarena_boss")!.requiresTrainers).toEqual(GARDES)
     })
+
+    it("round-trip Cendreville (10,9) ↔ arène Eau câblé", () => {
+        const toArena = YELLOW_MAPS["yellow_cendreville"]?.exits?.find((e) => e.targetMapId === "yellow_arena_eau")
+        expect(toArena).toBeTruthy()
+        expect([toArena?.x, toArena?.y]).toEqual([10, 9])
+        const back = YELLOW_MAPS["yellow_arena_eau"]?.exits?.find((e) => e.targetMapId === "yellow_cendreville")
+        expect(back).toBeTruthy()
+    })
 })

@@ -103,6 +103,25 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         dialoguesAfter: HH_COLLECTOR_INTRO_LINES,
     },
 
+    // === CENDREVILLE — PANNEAU d'info de l'arène Eau « Sanctuaire des Marées » en (14,9) ===
+    // Hotspot invisible (le panneau est déjà dessiné dans l'art de Cendreville) ; lu depuis (14,10).
+    {
+        id: "y_eau_arena_sign",
+        name: "PANNEAU",
+        mapId: "yellow_cendreville",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "", color: "#3aa0e8" },
+        initialX: 14,
+        initialY: 9,
+        dialoguesAfter: [
+            "*Panneau du Sanctuaire des Marées.*",
+            "ARÈNE EAU — Cheffe : ONDINE, Reine des Marées (type EAU).",
+            "Bats ses 4 gardes (dans n'importe quel ordre), puis affronte ONDINE.",
+            "Récompense : le BADGE EAU — la dernière clé pour entrer à la Ligue !",
+        ],
+    },
+
     // === VILLE — PANNEAU "antisèche du Bosquet" devant le gym (32,10) ===
     // Hotspot invisible (le panneau est déjà dessiné dans le décor). 8 conseils aérés.
     {
