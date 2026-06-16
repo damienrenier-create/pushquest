@@ -45,13 +45,15 @@ export const HH_COLLECTOR_NO_TEAM_LINES = [
 
 /** Équipe du collectionneur : il CHERCHE les spectres → il en possède peu (un seul, son AS Ombrapanthe).
  *  Il combat surtout avec des Daemons forts mais que personne n'utilise (formes finales oubliées).
- *  Niveau plafonné à 40 (scale vers le bas pour les petits joueurs, jamais au-dessus). */
+ *  Réguliers plafonnés à 40, l'AS Ombrapanthe à 42 (scale vers le bas pour les petits joueurs). */
 export function buildHhCollectorTeam(level: number): MonInstance[] {
-    const cap = Math.min(level, 40) // jamais au-dessus du niveau 40
+    const cap = Math.min(level, 40) // les réguliers ne dépassent pas le niveau 40
     return [
         createMonInstance("loupyre", Math.max(cap - 2, 5), { owned: false }), // FEU — loup de feu rapide
         createMonInstance("druidours", Math.max(cap - 2, 5), { owned: false }), // COMBAT/PLANTE — gros cogneur bulky
         createMonInstance("torturoche", Math.max(cap - 1, 5), { owned: false }), // ROCHE/PSY — mur spécial
-        createMonInstance("ombrapanthe", cap, { owned: false }), // AS : sa seule fierté spectrale (panthère SPECTRE)
+        createMonInstance("gloutanoir", Math.max(cap - 1, 5), { owned: false }), // PLANTE — mur spécial draineur
+        createMonInstance("magmator", cap, { owned: false }), // ROCHE/FEU — attaquant tanky
+        createMonInstance("ombrapanthe", cap + 2, { owned: false }), // AS : sa seule fierté spectrale (panthère SPECTRE), niv 42
     ]
 }

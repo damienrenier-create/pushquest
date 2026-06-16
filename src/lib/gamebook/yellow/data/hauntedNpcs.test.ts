@@ -46,20 +46,22 @@ describe("Maison hantée — PNJ2 COLLECTIONNEUR de spectres (CT26)", () => {
         expect(r.rewarded).toBe(false)
     })
 
-    it("équipe plafonnée niveau 40, un SEUL spectre (l'AS Ombrapanthe) + 3 Daemons forts sous-utilisés", () => {
+    it("équipe de 6, réguliers ≤ 40 + AS Ombrapanthe à 42, un SEUL spectre", () => {
         const team = buildHhCollectorTeam(60) // joueur très haut niveau
-        expect(team.length).toBe(4)
-        for (const m of team) expect(m.level).toBeLessThanOrEqual(40) // plafond 40
-        const ace = team.find((m) => m.speciesId === "ombrapanthe")
-        expect(ace).toBeTruthy()
-        expect(ace!.level).toBe(40) // l'AS au plafond
+        expect(team.length).toBe(6)
+        const lvl = (id: string) => team.find((m) => m.speciesId === id)!.level
+        expect(lvl("gloutanoir")).toBe(39)
+        expect(lvl("magmator")).toBe(40)
+        expect(lvl("ombrapanthe")).toBe(42) // l'AS
+        for (const m of team) if (m.speciesId !== "ombrapanthe") expect(m.level).toBeLessThanOrEqual(40)
         // il CHERCHE les spectres → il en possède peu : un seul (son AS panthère)
         const spectres = team.filter((m) => getSpecies(m.speciesId)!.types.includes("SPECTRE"))
         expect(spectres.length).toBe(1)
     })
 
-    it("le collectionneur scale vers le bas pour un petit joueur (cap = niveau joueur)", () => {
+    it("le collectionneur scale vers le bas pour un petit joueur (réguliers ≤ niveau joueur, AS = +2)", () => {
         const team = buildHhCollectorTeam(25)
-        for (const m of team) expect(m.level).toBeLessThanOrEqual(25)
+        for (const m of team) if (m.speciesId !== "ombrapanthe") expect(m.level).toBeLessThanOrEqual(25)
+        expect(team.find((m) => m.speciesId === "ombrapanthe")!.level).toBe(27) // cap 25 + 2
     })
 })
