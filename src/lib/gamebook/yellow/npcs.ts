@@ -13,6 +13,7 @@ import { PARK_SIGN_TIPS } from "./data/parkSigns"
 import { ACE_TRAINER_ID, ACE_POS, ACE_INTRO_LINES } from "./data/ace"
 import { GEKROC_NPC_ID, GEKROC_MAP_ID, GEKROC_POS, GEKROC_INTRO_LINES } from "./data/gekroc"
 import { HH_TRADER_ID, HH_TRADER_MAP, HH_TRADER_POS, HH_TRADER_OFFER_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_MAP, HH_COLLECTOR_POS, HH_COLLECTOR_INTRO_LINES } from "./data/hauntedNpcs"
+import { CAVE_TRADER_ID, CAVE_TRADER_MAP, CAVE_TRADER_POS, CAVE_TRADER_OFFER_LINES } from "./data/caveTrader"
 
 // PANNEAUX-conseils = les ~12 panneaux BIEN ESPACÉS de la Route Nord (le sprite
 // panneau est rendu par le décor). Chaque panneau = un hotspot INVISIBLE qui
@@ -105,6 +106,19 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         initialX: HH_TRADER_POS.x,
         initialY: HH_TRADER_POS.y,
         dialoguesAfter: HH_TRADER_OFFER_LINES,
+    },
+
+    // === ROUTE NORD — DÉNICHEUR à côté de l'entrée de la grotte (13,4) : échange Faukon → Blaziper (base Vipember) ===
+    {
+        id: CAVE_TRADER_ID,
+        name: "DÉNICHEUR",
+        mapId: CAVE_TRADER_MAP,
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🧗", color: "#a1887f" }, // remplacé par NPC_SPRITES (npc_echange)
+        initialX: CAVE_TRADER_POS.x,
+        initialY: CAVE_TRADER_POS.y,
+        dialoguesAfter: CAVE_TRADER_OFFER_LINES,
     },
 
     // === CENDREVILLE — COLLECTIONNEUR DE SPECTRES devant la maison hantée (21,11) : 3 victoires + 3 spectres → CT26 ===

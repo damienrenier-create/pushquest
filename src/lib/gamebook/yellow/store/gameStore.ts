@@ -26,6 +26,7 @@ import { getTrainer, trainerBoost, arenaScaledLevel, type TrainTier } from "../d
 import { createMonInstance } from "../battle/factory"
 import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroLines, SBIRE_DONE_LINES, SBIRE_NO_TEAM_LINES } from "../data/sbire"
 import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_INTRO_LINES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, ACE_PASS_LINES, ACE_GATE_LINES, buildAceTeam, speciesAtLevel } from "../data/ace"
+import { CAVE_TRADER_ID, CAVE_TRADE_GIVE, CAVE_TRADE_RECEIVE, CAVE_TRADER_OFFER_LINES, CAVE_TRADER_NEED_LINES, CAVE_TRADE_DONE_LINES } from "../data/caveTrader"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
 import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
 
@@ -82,6 +83,7 @@ interface GameStore {
     pendingAce: boolean // intro d'ACE en cours → combat à la fermeture
     pendingGekroc: boolean // intro de GÉKROC (mini-boss Centrale) en cours → combat à la fermeture
     pendingHhTrade: string | null // uid du Brookhanté à échanger (BROCANTEUR maison hantée) → échange à la fermeture
+    pendingCaveTrade: string | null // uid du Faukon à échanger (DÉNICHEUR grotte) → échange à la fermeture
     pendingHhCollector: boolean // intro du COLLECTIONNEUR (maison hantée) en cours → combat à la fermeture
     encounterCooldown: number // #7 : pas de rencontre sauvage pendant N déplacements (≥1 case libre après un combat)
 
@@ -214,6 +216,18 @@ function doHhTrade(brookUid: string): ActiveDialogue | null {
     }
 }
 
+// DÉNICHEUR (grotte) : donne un FAUKON → reçoit un BLAZIPER (base lignée Vipember) au MÊME niveau
+// + MÊMES points Saiyan (récompense de l'investissement). Blaziper évolue ensuite en Vipember.
+function doCaveTrade(giveUid: string): ActiveDialogue | null {
+    const owner = [...getPlayerSave().team, ...getPlayerSave().pc].find((m) => m.uid === giveUid)
+    if (!owner) return null
+    const blaziper = createMonInstance(CAVE_TRADE_RECEIVE, owner.level, { owned: true })
+    blaziper.statPoints = owner.statPoints ?? 0 // préserve les points Saiyan
+    executeTrade(giveUid, blaziper)             // retire le Faukon, ajoute le Blaziper
+    persistYellowSave()
+    return { npcId: CAVE_TRADER_ID, npcName: "DÉNICHEUR", lineIndex: 0, lines: CAVE_TRADE_DONE_LINES }
+}
+
 // COLLECTIONNEUR DE SPECTRES (maison hantée) : combat de dresseur réaffrontable, équipe = 3 spectres au
 // niveau du meilleur Daemon du joueur. La récompense (CT26) est gérée dans battleStore.finishBattle.
 function tryLaunchHhCollector(): ActiveDialogue | null {
@@ -280,6 +294,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     pendingAce: false,
     pendingGekroc: false,
     pendingHhTrade: null,
+    pendingCaveTrade: null,
     pendingHhCollector: false,
     encounterCooldown: 0,
 
@@ -513,6 +528,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     set({ dialogue: tryLaunchGekroc(), pendingGekroc: false })
                 } else if (get().pendingHhTrade) {
                     set({ dialogue: doHhTrade(get().pendingHhTrade!), pendingHhTrade: null })
+                } else if (get().pendingCaveTrade) {
+                    set({ dialogue: doCaveTrade(get().pendingCaveTrade!), pendingCaveTrade: null })
                 } else if (get().pendingHhCollector) {
                     set({ dialogue: tryLaunchHhCollector(), pendingHhCollector: false })
                 } else {
@@ -714,6 +731,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
+        // DÉNICHEUR (grotte) : échange Faukon → Blaziper (base lignée Vipember). Répétable.
+        if (npc.id === CAVE_TRADER_ID) {
+            const faukon = [...getPlayerSave().team, ...getPlayerSave().pc].find((m) => m.speciesId === CAVE_TRADE_GIVE)
+            if (!faukon) {
+                set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: CAVE_TRADER_NEED_LINES } })
+                return
+            }
+            set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: CAVE_TRADER_OFFER_LINES, lineIndex: 0 }, pendingCaveTrade: faukon.uid })
+            return
+        }
+
         // COLLECTIONNEUR DE SPECTRES : 3 victoires + 3 spectres distincts → CT26. Réaffrontable jusque-là.
         if (npc.id === HH_COLLECTOR_ID) {
             if (getPlayerSave().ownedCts.includes(HH_COLLECTOR_CT)) {
@@ -830,6 +858,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ dialogue: tryLaunchGekroc(), pendingGekroc: false })
         } else if (get().pendingHhTrade) {
             set({ dialogue: doHhTrade(get().pendingHhTrade!), pendingHhTrade: null })
+        } else if (get().pendingCaveTrade) {
+            set({ dialogue: doCaveTrade(get().pendingCaveTrade!), pendingCaveTrade: null })
         } else if (get().pendingHhCollector) {
             set({ dialogue: tryLaunchHhCollector(), pendingHhCollector: false })
         } else {
