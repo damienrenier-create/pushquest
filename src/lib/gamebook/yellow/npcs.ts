@@ -77,6 +77,23 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         dialoguesAfter: GEKROC_INTRO_LINES,
     },
 
+    // === CENDREVILLE — TECHNICIEN devant la Centrale (21,18) : indice sur Gékroc + la Pierre d'évolution ===
+    {
+        id: "y_centrale_hint",
+        name: "TECHNICIEN",
+        mapId: "yellow_cendreville",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "👷", color: "#f0b429" }, // remplacé par NPC_SPRITES (npc_centrale)
+        initialX: 21,
+        initialY: 18,
+        dialoguesAfter: [
+            "Hé, l'ami ! Tu comptes entrer dans la Centrale ? Fais attention là-dedans…",
+            "Une drôle de créature y rôde. On raconte qu'elle veille sur une PIERRE très spéciale — capable de faire évoluer un Daemon dans le TYPE de ton choix.",
+            "Mais méfie-toi : si tu la combats, elle pourrait disparaître à JAMAIS. À toi de voir si la pierre vaut ce risque…",
+        ],
+    },
+
     // === CENDREVILLE — BROCANTEUR devant la maison hantée (20,11) : échange Brookhanté → Roctaur (→ Rochison) ===
     {
         id: HH_TRADER_ID,

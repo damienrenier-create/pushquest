@@ -598,6 +598,8 @@ const NPC_SPRITES: Record<string, { url: string; frames: number; h?: number } | 
     // PNJ devant la MAISON HANTÉE : le collectionneur (chasseur de spectres) + le brocanteur (mystique).
     y_hh_collector: { url: "/yellow/sprites/hh_collector.png", frames: 1, h: 2.0 },
     y_hh_trader: { url: "/yellow/sprites/hh_trader.png", frames: 1, h: 2.0 },
+    // Technicien devant la Centrale (indice Gékroc / Pierre).
+    y_centrale_hint: { url: "/yellow/sprites/npc_centrale.png", frames: 1, h: 2.0 },
     // Arène Plante (carte SANS PNJ dessinés) : sprites ENTIERS sur les cases.
     y_arena_druide: { url: "/yellow/sprites/npc_druide.png", frames: 1, h: 2.4 },
     y_arena_g1: { url: "/yellow/sprites/npc_garde_plante.png", frames: 1, h: 2.0 },

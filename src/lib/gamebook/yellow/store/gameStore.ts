@@ -476,10 +476,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
             }
             // Pas de Badge Flamme : ACE barre la route. Combat quotidien s'il est dispo,
             // sinon simple rappel du gate (« reviens avec le badge »).
+            // CADEAU : le PANTHÉON est offert à la 12e victoire sur ACE (cf. aceReward) → on annonce le compte à rebours.
+            const aceLeft = 12 - getPlayerSave().aceWins
+            const aceGiftLine = aceLeft > 0
+                ? `Au fait… j'ai un CADEAU pour qui me battra ${aceLeft} fois de plus : un PANTHÉON, rien que ça ! 😏`
+                : "Tu m'as déjà arraché mon PANTHÉON… mais reviens te frotter à moi quand tu veux !"
             set({
                 dialogue: {
                     npcId: ACE_TRAINER_ID, npcName: "ACE", lineIndex: 0,
-                    lines: aceAvailableToday() ? ACE_INTRO_LINES : ACE_GATE_LINES,
+                    lines: aceAvailableToday() ? [...ACE_INTRO_LINES, aceGiftLine] : ACE_GATE_LINES,
                 },
                 pendingAce: aceAvailableToday(),
             })
