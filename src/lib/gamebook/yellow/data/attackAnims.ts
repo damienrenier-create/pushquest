@@ -55,7 +55,7 @@ export const TYPE_FX: Record<string, { palette: [string, string]; emoji: string 
 /** moveId → catégorie mécanique (les 60 attaques). */
 export const ATTACK_CATEGORY: Record<string, AtkCategory> = {
     // NORMAL
-    charge: "impact", coup_d_boule: "impact", belier: "recoil", vive_attaque: "priority",
+    charge: "impact", coup_d_boule: "impact", belier: "recoil", vive_attaque: "priority", plaquage: "impact_heavy",
     charge_desesperee: "recoil", danse_lames: "boost", mur_de_fer: "boost", elan: "boost", hurlement: "debuff",
     // FEU
     lance_flammes: "projectile", flamme_ardente: "projectile", flammeche: "projectile",
@@ -79,7 +79,7 @@ export const ATTACK_CATEGORY: Record<string, AtkCategory> = {
     // PSY
     vague_mentale: "projectile", choc_mental: "projectile", onde_folie: "debuff", repos: "heal", focalisation: "boost",
     // INSECTE
-    dard_mortel: "impact_heavy", morsure: "impact", dard_nuee: "projectile",
+    dard_mortel: "impact_heavy", morsure: "impact", dard_nuee: "projectile", boul_pollen: "projectile",
     // ROCHE
     lame_de_roche: "impact_heavy", eboulis: "projectile", jet_pierres: "projectile", carapace_diamant: "boost",
     // SPECTRE

@@ -11,6 +11,7 @@ export const MOVES: Record<string, MoveData> = {
     vive_attaque: { id: "vive_attaque", name: "Vive-Attaque", type: "NORMAL", power: 40, accuracy: 100, pp: 30, priority: 1, description: "Frappe en priorité." },
     coup_d_boule: { id: "coup_d_boule", name: "Coup d'Boule", type: "NORMAL", power: 70, accuracy: 100, pp: 15, effect: { chance: 30, flinch: true }, description: "Peut apeurer." },
     belier: { id: "belier", name: "Bélier", type: "NORMAL", power: 90, accuracy: 85, pp: 20, effect: { recoilPct: 25 }, description: "Puissant, cause du recul." },
+    plaquage: { id: "plaquage", name: "Plaquage", type: "NORMAL", power: 85, accuracy: 100, pp: 15, effect: { chance: 30, inflictStatus: "PARALYSIS" }, description: "Le lanceur écrase l'ennemi de tout son poids ; peut paralyser (30%). Apprenable par presque tout le monde." },
 
     flammeche: { id: "flammeche", name: "Flammèche", type: "FEU", power: 40, accuracy: 100, pp: 25, effect: { chance: 10, inflictStatus: "BURN" }, description: "Peut brûler." },
     lance_flammes: { id: "lance_flammes", name: "Lance-Flammes", type: "FEU", power: 95, accuracy: 100, pp: 15, effect: { chance: 10, inflictStatus: "BURN" }, description: "Forte, peut brûler." },
@@ -48,6 +49,9 @@ export const MOVES: Record<string, MoveData> = {
     repos: { id: "repos", name: "Repos", type: "PSY", power: 0, accuracy: 0, pp: 10, effect: { healPct: 50 }, description: "Restaure la moitié des PV." },
 
     dard_nuee: { id: "dard_nuee", name: "Dard-Nuée", type: "INSECTE", power: 14, accuracy: 85, pp: 20, effect: { multiHit: [2, 5] }, description: "Frappe 2 à 5 fois." },
+    // Boul'Pollen : boule de pollen explosive. Le pollen NUTRITIF rend au lanceur 50% des dégâts (drain) —
+    // version codable du soin (en combat 1v1 il n'y a pas d'allié sur le terrain à cibler, cf. note).
+    boul_pollen: { id: "boul_pollen", name: "Boul'Pollen", type: "INSECTE", power: 85, accuracy: 100, pp: 10, effect: { drainPct: 50 }, description: "Envoie une boule de pollen explosive ; le pollen nutritif rend au lanceur 50% des dégâts infligés en PV." },
 
     jet_pierres: { id: "jet_pierres", name: "Jet-Pierres", type: "ROCHE", power: 50, accuracy: 90, pp: 15, description: "Lance des rochers." },
 

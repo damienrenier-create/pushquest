@@ -80,6 +80,21 @@ describe("catalogue des CT", () => {
         expect(mv.effect?.highCrit).toBe(true)
     })
 
+    it("CT29 Plaquage (Normal 85 + para) universelle · CT30 Boul'Pollen (Insecte 85 drain, +Plante)", () => {
+        const plaquage = getCt("ct29")!
+        expect(plaquage.universal).toBe(true)
+        const pm = getMove("plaquage")!
+        expect([pm.type, pm.power, pm.effect?.inflictStatus]).toEqual(["NORMAL", 85, "PARALYSIS"])
+        expect(canLearnCt(getSpecies("ruffiant")!, plaquage)).toBe(true) // tout le monde
+
+        const boul = getCt("ct30")!
+        const bm = getMove("boul_pollen")!
+        expect([bm.type, bm.power, bm.effect?.drainPct]).toEqual(["INSECTE", 85, 50])
+        expect(canLearnCt(getSpecies("ruffiant")!, boul)).toBe(true)    // Insecte
+        expect(canLearnCt(getSpecies("feuillichot")!, boul)).toBe(true) // Plante (alsoTypes)
+        expect(canLearnCt(getSpecies("pyropanthe")!, boul)).toBe(false) // Feu pur → non
+    })
+
     it("alsoTypes (élargissement Gen 1) : CT apprises au-delà du type exact", () => {
         const dragon = getSpecies("draclet")!   // VOL/DRAGON
         const normal = getSpecies("pantheon")!  // NORMAL

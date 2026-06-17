@@ -90,6 +90,10 @@ export const CTS: CtData[] = [
     { id: "ct27", label: "CT27", moveId: "deferlante", price: 0, gift: true },
     // --- CT COMBAT (Champion, 3 badges) : « Crochet du Maître » multi-coups (2-5×). Seule CT de type Combat. ---
     { id: "ct28", label: "CT28", moveId: "deluge_crochets", price: 900, champion: true },
+    // --- CT NORMAL forte « Plaquage » (Body Slam : 85 + paralysie) : apprenable par TOUT LE MONDE (universal). ---
+    { id: "ct29", label: "CT29", moveId: "plaquage", price: 650, universal: true },
+    // --- CT INSECTE « Boul'Pollen » (85 + drain 50%) : 1re CT Insecte ; aussi pour les Plante (pollen). ---
+    { id: "ct30", label: "CT30", moveId: "boul_pollen", price: 550, alsoTypes: ["PLANTE"] },
 ]
 
 export function getCt(id: string): CtData | null {
