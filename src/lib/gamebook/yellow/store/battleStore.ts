@@ -19,12 +19,13 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance } from "../battle/types"
 import { markSeen, markCaught, getPokedex } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, recordOrcalineDefeat, orcalineLevelForWins } from "./playerStore"
 import { getCt } from "../data/cts"
 import { getMove } from "../data/moves"
 import { getSpecies } from "../data/species"
 import { SBIRE_REWARD_REPS, SBIRE_REWARD_BALL_ID } from "../data/sbire"
 import { ACE_TRAINER_ID, aceReward } from "../data/ace"
+import { ORCALINE_TRAINER_ID, ORCALINE_GIFT_SPECIES, ORCALINE_GIFT_LEVEL, ORCALINE_BALL_REWARD_ID, ORCALINE_BALL_AT_LEVEL, ORCALINE_GIFT_LINES, ORCALINE_REMATCH_WIN_LINES, ORCALINE_BALL_LINES } from "../data/orcalineTrainer"
 import { GEKROC_STONE_ITEM } from "../data/gekroc"
 import { HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED } from "../data/hauntedNpcs"
 import type { BadgeId } from "../data/cts"
@@ -368,6 +369,23 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                     ],
                 }
             }
+        } else if (storeState.trainer.trainerId === ORCALINE_TRAINER_ID) {
+            // DRESSEUR D'ORCALINE : ré-affrontable (PAS de markTrainerDefeated). Verrouille la journée +
+            // escalade le niveau (+10/victoire). 1re victoire → cadeau Orcaline ; battre le niv 95 → ball.
+            const winsBefore = recordOrcalineDefeat()
+            const levelBeaten = orcalineLevelForWins(winsBefore)
+            const lines: string[] = []
+            if (winsBefore === 0) {
+                addCaught(createMonInstance(ORCALINE_GIFT_SPECIES, ORCALINE_GIFT_LEVEL, { owned: true }))
+                lines.push(...ORCALINE_GIFT_LINES)
+            } else {
+                lines.push(...ORCALINE_REMATCH_WIN_LINES)
+            }
+            if (levelBeaten === ORCALINE_BALL_AT_LEVEL) { // palier 95 battu (une seule fois) → récompense secrète
+                addItem(ORCALINE_BALL_REWARD_ID, 1)
+                lines.push(...ORCALINE_BALL_LINES)
+            }
+            rematchReward = { npcId: ORCALINE_TRAINER_ID, npcName: "DRESSEUR D'ORCALINE", lines }
         } else {
             markTrainerDefeated(storeState.trainer.trainerId)
             const t = getTrainer(storeState.trainer.trainerId)

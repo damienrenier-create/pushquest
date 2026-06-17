@@ -604,6 +604,8 @@ const NPC_SPRITES: Record<string, { url: string; frames: number; h?: number } | 
     y_cave_trader: { url: "/yellow/sprites/npc_echange.png", frames: 1, h: 2.0 },
     // Gamin au centre de la plaine d'entraînement (indice Goshendofy de nuit).
     y_hh_kid: { url: "/yellow/sprites/hh_kid.png", frames: 1, h: 2.0 },
+    // Dresseur d'Orcaline (plaine d'entraînement) : escalade quotidienne + cadeau.
+    y_orcaline_trainer: { url: "/yellow/sprites/dresseur_orcaline.png", frames: 1, h: 2.0 },
     // Arène Plante (carte SANS PNJ dessinés) : sprites ENTIERS sur les cases.
     y_arena_druide: { url: "/yellow/sprites/npc_druide.png", frames: 1, h: 2.4 },
     y_arena_g1: { url: "/yellow/sprites/npc_garde_plante.png", frames: 1, h: 2.0 },

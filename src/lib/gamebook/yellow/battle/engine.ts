@@ -1029,6 +1029,9 @@ export function applyForfeitWin(
 function performCapture(state: BattleState, itemId: string, events: BattleEvent[], rng: Rng) {
     const wild = active(state.enemy)
     const sp = speciesOf(wild)
+    // SUPER MÉGA NEXUS-BALL : capture GARANTIE de GOSHENDOFY s'il est sous 50% de ses PV (shunte le verrou
+    // de statut et la formule). Hors de ce cas précis, elle se comporte comme une Ball très forte (bonus 6).
+    const goshGuaranteed = itemId === "super_mega_nexus_ball" && wild.speciesId === "goshendofy" && wild.currentHp < maxHpOf(wild) * 0.5
     events.push({ kind: "message", text: `Tu lances une ${getItem(itemId)?.name ?? "Ball"} !` })
     // VERROU DE BALL (ex. Zappeuréal = Hyper Ball+) : une Ball trop faible n'accroche JAMAIS — la
     // Master Ball (capture garantie) shunte ce verrou. Lancer raté théâtral + message dédié, le tour
@@ -1042,12 +1045,12 @@ function performCapture(state: BattleState, itemId: string, events: BattleEvent[
     }
     // VERROU DE STATUT (hommage légendaire Gen1, ex. Goshendofy) : incapturable tant qu'il n'a pas de
     // statut majeur (para/sommeil/poison/brûlure/gel). La Master Ball shunte. Placé AVANT tryCapture.
-    if (wild.captureRequiresStatus && wild.status === "NONE" && !isGuaranteedBall(itemId)) {
+    if (wild.captureRequiresStatus && wild.status === "NONE" && !isGuaranteedBall(itemId) && !goshGuaranteed) {
         events.push({ kind: "ball", action: "miss" })
         events.push({ kind: "message", text: `${displayName(wild)} dévie la Ball d'un revers ! Il faudra l'affaiblir par un STATUT avant d'espérer le capturer…` })
         return
     }
-    const res = isGuaranteedBall(itemId)
+    const res = isGuaranteedBall(itemId) || goshGuaranteed
         ? { caught: true, shakes: 3, value: Infinity }
         : tryCapture(
             {

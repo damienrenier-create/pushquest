@@ -1681,6 +1681,26 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "Tyran des banquises hérissé de cristaux. Un rugissement de Cryotyran gèle l'air et fait trembler la roche.",
         sprite: "/yellow/sprites/dex/cryotyran.png",
     },
+    orcaline: {
+        id: "orcaline", dexNo: 132, name: "Orcaline", types: ["GLACE", "EAU"],
+        // BST 465 — contre "par type" de Goshendofy : VIT 100 (outspeed son 90), SPÉ 130 (2HKO),
+        // PV 95/DÉF 90 (encaisse 1 Séisme neutre), ATK dumpée (tout passe en spécial Gen 1).
+        baseStats: { hp: 95, atk: 50, def: 90, spe: 100, spc: 130 },
+        learnset: [
+            { level: 1, moveId: "vive_attaque" },
+            { level: 1, moveId: "coup_d_givre" },
+            { level: 12, moveId: "lame_eau" },
+            { level: 24, moveId: "deferlante" },
+            { level: 40, moveId: "souffle_polaire" }, // arme principale anti-Goshendofy (Glace, peut geler)
+            { level: 51, moveId: "plaquage" },
+            { level: 58, moveId: "hydrocanon" },
+            { level: 75, moveId: "repos" },
+            { level: 81, moveId: "ultralaser" },
+        ],
+        catchRate: 30, baseExp: 210, rarity: "RARE", growthRate: "medium_fast", role: "Glace/Eau — orque polaire (contre des dragons)",
+        description: "Petite orque des banquises au souffle glacé. Vive et maligne, elle plonge sous la glace puis jaillit pour figer les dragons d'un Souffle Polaire.",
+        sprite: "/yellow/sprites/dex/orcaline.png",
+    },
 }
 
 export function getSpecies(id: string): SpeciesData | null {

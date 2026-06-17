@@ -19,7 +19,7 @@ import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, resetFleeStreak } from "./battleStore"
 import { getPokedex } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount } from "./playerStore"
 import { getSpecies } from "../data/species"
 import { persistYellowSave } from "./saveManager"
 import { rollWildEncounter, wildLevelCap, hasEncounters } from "../data/encounters"
@@ -29,6 +29,7 @@ import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroL
 import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_INTRO_LINES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, ACE_PASS_LINES, ACE_GATE_LINES, buildAceTeam, speciesAtLevel } from "../data/ace"
 import { CAVE_TRADER_ID, CAVE_TRADE_GIVE, CAVE_TRADE_RECEIVE, CAVE_TRADER_OFFER_LINES, CAVE_TRADER_NEED_LINES, CAVE_TRADE_DONE_LINES, CAVE_TRADE_ALREADY_LINES } from "../data/caveTrader"
 import { HH_KID_ID, HH_KID_DAY_LINES, HH_KID_NIGHT_LINES, isHhKidNight } from "../data/hhKid"
+import { ORCALINE_TRAINER_ID, ORCALINE_INTRO_LINES, ORCALINE_REMATCH_LINES, ORCALINE_DONE_TODAY_LINES } from "../data/orcalineTrainer"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
 import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
 
@@ -83,6 +84,7 @@ interface GameStore {
     pendingRematch: boolean // l'intro en cours est un REMATCH (2e équipe + récompense)
     pendingSbire: boolean // intro du sbire en cours → combat dynamique à la fermeture
     pendingAce: boolean // intro d'ACE en cours → combat à la fermeture
+    pendingOrcaline: boolean // intro du DRESSEUR D'ORCALINE en cours → combat à la fermeture
     pendingGekroc: boolean // intro de GÉKROC (mini-boss Centrale) en cours → combat à la fermeture
     pendingHhTrade: string | null // uid du Brookhanté à échanger (BROCANTEUR maison hantée) → échange à la fermeture
     pendingCaveTrade: string | null // uid du Faukon à échanger (DÉNICHEUR grotte) → échange à la fermeture
@@ -270,6 +272,19 @@ function tryLaunchAce(): ActiveDialogue | null {
     return null
 }
 
+// DRESSEUR D'ORCALINE (plaine) : aligne 2 Orcalines de même niveau (35 + 10×victoires, cap 100).
+function tryLaunchOrcaline(): ActiveDialogue | null {
+    const team = getPlayerSave().team
+    if (!team.some((m) => m.currentHp > 0)) {
+        return { npcId: ORCALINE_TRAINER_ID, npcName: "DRESSEUR D'ORCALINE", lineIndex: 0, lines: ["Tes Daemons sont tous K.O. !", "Soigne-les au Centre avant de m'affronter."] }
+    }
+    const lvl = orcalineNextLevel()
+    const enemyTeam = [0, 1].map(() => createMonInstance("orcaline", lvl, { owned: false, ...trainerBoost("orcaline", lvl, "guard") }))
+    const seed = Math.floor(Math.random() * 1e9) >>> 0
+    startTrainerBattle(team, enemyTeam, seed, { trainerId: ORCALINE_TRAINER_ID, reward: 0, aiLevel: "trainer" })
+    return null
+}
+
 // Spawn par défaut : VILLE JAUNE = Viridian City 45×40 (scale natif FireRed),
 // entrée sud (Route 1) centre-bas pour explorer la ville.
 const DEFAULT_SPAWN = { x: 22, y: 38 }
@@ -295,6 +310,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     pendingRematch: false,
     pendingSbire: false,
     pendingAce: false,
+    pendingOrcaline: false,
     pendingGekroc: false,
     pendingHhTrade: null,
     pendingCaveTrade: null,
@@ -529,6 +545,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     set({ dialogue: tryLaunchSbire(), pendingSbire: false })
                 } else if (get().pendingAce) {
                     set({ dialogue: tryLaunchAce(), pendingAce: false })
+                } else if (get().pendingOrcaline) {
+                    set({ dialogue: tryLaunchOrcaline(), pendingOrcaline: false })
                 } else if (get().pendingGekroc) {
                     set({ dialogue: tryLaunchGekroc(), pendingGekroc: false })
                 } else if (get().pendingHhTrade) {
@@ -763,6 +781,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
+        // DRESSEUR D'ORCALINE (plaine) : 1 combat gagnant/jour ; le niveau de ses 2 Orcalines monte de +10
+        // à chaque victoire. 1re victoire → cadeau Orcaline (géré dans finishBattle). Combat à la fermeture.
+        if (npc.id === ORCALINE_TRAINER_ID) {
+            if (!orcalineAvailableToday()) {
+                set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: ORCALINE_DONE_TODAY_LINES } })
+                return
+            }
+            const lines = orcalineWinsCount() === 0 ? ORCALINE_INTRO_LINES : ORCALINE_REMATCH_LINES
+            set({ dialogue: { npcId: npc.id, npcName: npc.name, lines, lineIndex: 0 }, pendingOrcaline: true })
+            return
+        }
+
         // COLLECTIONNEUR DE SPECTRES : 3 victoires + 3 spectres distincts → CT26. Réaffrontable jusque-là.
         if (npc.id === HH_COLLECTOR_ID) {
             if (getPlayerSave().ownedCts.includes(HH_COLLECTOR_CT)) {
@@ -875,6 +905,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ dialogue: tryLaunchSbire(), pendingSbire: false })
         } else if (get().pendingAce) {
             set({ dialogue: tryLaunchAce(), pendingAce: false })
+        } else if (get().pendingOrcaline) {
+            set({ dialogue: tryLaunchOrcaline(), pendingOrcaline: false })
         } else if (get().pendingGekroc) {
             set({ dialogue: tryLaunchGekroc(), pendingGekroc: false })
         } else if (get().pendingHhTrade) {

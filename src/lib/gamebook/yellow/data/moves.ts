@@ -108,6 +108,9 @@ export const MOVES: Record<string, MoveData> = {
     // Attaque de SECOURS gratuite (anti soft-lock) : utilisable quand le joueur n'a
     // plus de reps pour aucune autre attaque. Faible et inflige du recul à soi-même.
     charge_desesperee: { id: "charge_desesperee", name: "Charge Désespérée", type: "NORMAL", power: 45, accuracy: 100, pp: 1, effect: { recoilPct: 70 }, description: "Dernier recours gratuit : frappe correctement mais se blesse gravement (le combat ne traîne pas)." },
+    // ULTIME (Normal physique) : puissance colossale, mais le contrecoup épuise le lanceur (pas de mécanique
+    // de « recharge » dans le moteur → le recul tient lieu de drawback). Apprise très tard (move de prestige).
+    ultralaser: { id: "ultralaser", name: "Ultralaser", type: "NORMAL", power: 150, accuracy: 90, pp: 5, effect: { recoilPct: 25 }, description: "Le rayon ultime : des dégâts dévastateurs, mais le contrecoup blesse violemment le lanceur." },
 }
 
 export function getMove(id: string): MoveData | null {

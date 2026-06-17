@@ -57,6 +57,12 @@ export const ITEMS: Record<string, ItemData> = {
         id: "master_ball", name: "Master-Éclair", category: "BALL",
         description: "Capture infaillible. Rarissime.", price: 0, ballBonus: 255, guaranteed: true,
     },
+    // Récompense du DRESSEUR D'ORCALINE (plaine d'entraînement). Très forte (ballBonus 6 → satisfait toute
+    // exigence de Ball), ET capture GARANTIE sur GOSHENDOFY s'il est sous 50% PV (cas spécial dans engine.ts).
+    super_mega_nexus_ball: {
+        id: "super_mega_nexus_ball", name: "Super Méga Nexus-Ball", category: "BALL",
+        description: "Ball légendaire. Capture à coup sûr le plus insaisissable des Daemons s'il est suffisamment affaibli.", price: 0, ballBonus: 6,
+    },
     potion: {
         id: "potion", name: "Potion", category: "HEAL",
         description: "Restaure 20 PV à un Daemon.", price: 20, healHp: 20,

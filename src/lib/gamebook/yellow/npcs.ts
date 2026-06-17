@@ -15,6 +15,7 @@ import { GEKROC_NPC_ID, GEKROC_MAP_ID, GEKROC_POS, GEKROC_INTRO_LINES } from "./
 import { HH_TRADER_ID, HH_TRADER_MAP, HH_TRADER_POS, HH_TRADER_OFFER_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_MAP, HH_COLLECTOR_POS, HH_COLLECTOR_INTRO_LINES } from "./data/hauntedNpcs"
 import { CAVE_TRADER_ID, CAVE_TRADER_MAP, CAVE_TRADER_POS, CAVE_TRADER_OFFER_LINES } from "./data/caveTrader"
 import { HH_KID_ID, HH_KID_MAP, HH_KID_POS, HH_KID_DAY_LINES } from "./data/hhKid"
+import { ORCALINE_TRAINER_ID, ORCALINE_TRAINER_MAP, ORCALINE_TRAINER_POS, ORCALINE_INTRO_LINES } from "./data/orcalineTrainer"
 
 // PANNEAUX-conseils = les ~12 panneaux BIEN ESPACÉS de la Route Nord (le sprite
 // panneau est rendu par le décor). Chaque panneau = un hotspot INVISIBLE qui
@@ -133,6 +134,19 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         initialX: HH_KID_POS.x,
         initialY: HH_KID_POS.y,
         dialoguesAfter: HH_KID_DAY_LINES,
+    },
+
+    // === PLAINE D'ENTRAÎNEMENT — DRESSEUR D'ORCALINE (8,15) : 2 Orcalines, escalade quotidienne + cadeau ===
+    {
+        id: ORCALINE_TRAINER_ID,
+        name: "DRESSEUR D'ORCALINE",
+        mapId: ORCALINE_TRAINER_MAP,
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🧑‍🦱", color: "#4fc3f7" }, // remplacé par NPC_SPRITES (dresseur_orcaline)
+        initialX: ORCALINE_TRAINER_POS.x,
+        initialY: ORCALINE_TRAINER_POS.y,
+        dialoguesAfter: ORCALINE_INTRO_LINES,
     },
 
     // === CENDREVILLE — COLLECTIONNEUR DE SPECTRES devant la maison hantée (21,11) : 3 victoires + 3 spectres → CT26 ===

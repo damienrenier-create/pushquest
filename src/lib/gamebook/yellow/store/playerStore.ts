@@ -92,6 +92,10 @@ interface PlayerState {
     caveTradeDone: boolean
     /** GAMIN (plaine d'entraînement) : confidence entendue de nuit → boost Goshendofy ×2 les nuits suivantes. */
     goshHintHeard: boolean
+    /** DRESSEUR D'ORCALINE (plaine) : nb de victoires (pilote le niveau : 35 + 10×victoires). */
+    orcalineWins: number
+    /** DRESSEUR D'ORCALINE : jour (=creditedThrough) de la dernière victoire → 1 combat gagnant/jour. */
+    orcalineDate: string
 }
 
 /** Statistiques PvP du joueur (réputation). */
@@ -110,7 +114,7 @@ export function emptyPvpStats(): PvpStats {
     return { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }
 }
 
-let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, caveTradeDone: false, goshHintHeard: false }
+let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "" }
 const listeners = new Set<() => void>()
 
 function emit() { for (const l of listeners) l() }
@@ -147,6 +151,8 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         isChampion: p.isChampion ?? st.isChampion ?? false,
         caveTradeDone: p.caveTradeDone ?? st.caveTradeDone ?? false,
         goshHintHeard: p.goshHintHeard ?? st.goshHintHeard ?? false,
+        orcalineWins: p.orcalineWins ?? st.orcalineWins ?? 0,
+        orcalineDate: p.orcalineDate ?? st.orcalineDate ?? "",
     }
     emit()
 }
@@ -200,7 +206,7 @@ export function setChampion() {
 
 /** DEV : remet la progression jaune à zéro pour rejouer l'intro (équipe vidée, introSeen=false). */
 export function resetForIntro() {
-    st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, caveTradeDone: false, goshHintHeard: false }
+    st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "" }
     emit()
 }
 
@@ -585,6 +591,27 @@ export function recordAceDefeat(playerBestLevel: number, playerLastTypes: PokeTy
     st = { ...st, acePeakLevel: peak, aceBox: box, aceWins: wins, aceDefeatedDate: st.creditedThrough }
     emit()
     return wins
+}
+
+// === DRESSEUR D'ORCALINE (plaine d'entraînement) ===
+/** Niveau des Orcalines du dresseur pour un nombre de victoires donné : 35, +10 par victoire (cap 100). */
+export function orcalineLevelForWins(wins: number): number {
+    return Math.min(MAX_LEVEL, 35 + 10 * Math.max(0, wins))
+}
+/** Niveau des Orcalines pour le PROCHAIN combat (selon les victoires déjà acquises). */
+export function orcalineNextLevel(): number { return orcalineLevelForWins(st.orcalineWins) }
+export function orcalineWinsCount(): number { return st.orcalineWins }
+/** Dresseur affrontable aujourd'hui ? (1 victoire/jour ; retry libre si on perd). */
+export function orcalineAvailableToday(): boolean {
+    return st.creditedThrough === "" || st.orcalineDate !== st.creditedThrough
+}
+/** Victoire sur le dresseur : verrouille la journée, incrémente le compteur. Renvoie le nb de victoires AVANT
+ *  (→ niveau battu = orcalineLevelForWins(winsBefore) ; winsBefore===0 = 1re victoire). */
+export function recordOrcalineDefeat(): number {
+    const winsBefore = st.orcalineWins
+    st = { ...st, orcalineWins: winsBefore + 1, orcalineDate: st.creditedThrough }
+    emit()
+    return winsBefore
 }
 
 /** Prix actuel d'un Super Pasta : (60 + bonus journalier) × 1.5^(achats du jour). */
