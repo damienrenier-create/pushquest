@@ -13,6 +13,11 @@ export const MOVES: Record<string, MoveData> = {
     belier: { id: "belier", name: "Bélier", type: "NORMAL", power: 90, accuracy: 85, pp: 20, effect: { recoilPct: 25 }, description: "Puissant, cause du recul." },
     plaquage: { id: "plaquage", name: "Plaquage", type: "NORMAL", power: 85, accuracy: 100, pp: 15, effect: { chance: 30, inflictStatus: "PARALYSIS" }, description: "Le lanceur écrase l'ennemi de tout son poids ; peut paralyser (30%). Apprenable par presque tout le monde." },
     berceuse: { id: "berceuse", name: "Berceuse", type: "NORMAL", power: 0, accuracy: 55, pp: 15, effect: { inflictStatus: "SLEEP" }, description: "Une mélodie apaisante qui endort la cible (précision faible). Version Normal du sommeil (≠ Spores Dodo, Plante)." },
+    // NE RATE JAMAIS : accuracy 0 → ignore précision/esquive/mirage ; sureHit → touche même une cible sous terre
+    // (Tunnel) ou en vol. Le seul coup vraiment infaillible du jeu.
+    meteores: { id: "meteores", name: "Météores", type: "NORMAL", power: 60, accuracy: 0, pp: 20, effect: { sureHit: true }, description: "Projette une nuée d'étoiles téléguidées : NE RATE JAMAIS — ni esquive, ni mirage, ni cible sous terre ou en vol n'y échappent." },
+    // SNOWBALL : grosse frappe Psy qui élève le Spécial du lanceur à CHAQUE coup (offense + mur spécial enflent).
+    eveil_divin: { id: "eveil_divin", name: "Éveil Divin", type: "PSY", power: 90, accuracy: 100, pp: 10, effect: { statChanges: [{ target: "self", stat: "spc", stages: 1 }] }, description: "Frappe psychique transcendante : inflige de lourds dégâts ET élève le Spécial du lanceur (+1, cumulable). Plus le combat dure, plus il devient irrésistible." },
 
     flammeche: { id: "flammeche", name: "Flammèche", type: "FEU", power: 40, accuracy: 100, pp: 25, effect: { chance: 10, inflictStatus: "BURN" }, description: "Peut brûler." },
     lance_flammes: { id: "lance_flammes", name: "Lance-Flammes", type: "FEU", power: 95, accuracy: 100, pp: 15, effect: { chance: 10, inflictStatus: "BURN" }, description: "Forte, peut brûler." },

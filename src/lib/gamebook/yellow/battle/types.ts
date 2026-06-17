@@ -60,6 +60,9 @@ export interface MoveEffect {
      *  (INVULNÉRABLE, les attaques le MANQUENT), tour 2 = jaillit et frappe (power du move).
      *  Distinct de twoTurn (qui frappe aux 2 tours sans invuln). Ex. « Tunnel » de Gékroc. */
     dig?: boolean
+    /** COUP SÛR (ex. « Météores ») : ignore l'invulnérabilité (cible sous terre via Tunnel / en vol).
+     *  Combiné à accuracy ≤ 0, le move NE RATE JAMAIS — esquive, mirage ET semi-invulnérabilité inclus. */
+    sureHit?: boolean
 }
 
 export interface MoveData {

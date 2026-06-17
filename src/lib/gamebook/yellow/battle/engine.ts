@@ -463,8 +463,9 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
         }
     }
 
-    // --- TUNNEL : une cible SOUS TERRE (semiInvuln) est INTOUCHABLE → TOUT move la manque (statut compris) ---
-    if (defender.semiInvuln) {
+    // --- TUNNEL : une cible SOUS TERRE (semiInvuln) est INTOUCHABLE → TOUT move la manque (statut compris).
+    //     EXCEPTION : un move « coup sûr » (Météores, sureHit) la touche quand même (ignore l'invulnérabilité). ---
+    if (defender.semiInvuln && !move.effect?.sureHit) {
         events.push({ kind: "message", text: `${displayName(defender)} est sous terre : l'attaque le manque !` })
         return
     }

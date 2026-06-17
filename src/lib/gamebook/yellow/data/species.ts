@@ -179,6 +179,7 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 1, moveId: "picpic" },
             { level: 1, moveId: "belier" },
             { level: 40, moveId: "coup_d_boule" },
+            { level: 46, moveId: "meteores" }, // STAB qui ne rate JAMAIS (boost du final commun)
         ],
         catchRate: 45, baseExp: 210, rarity: "RARE", growthRate: "medium_fast", role: "Vol — sweeper",
         description: "Empereur des cieux. Son envergure projette l'ombre d'un nuage.",
@@ -489,8 +490,10 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 1, moveId: "repos" },
             { level: 36, moveId: "vague_mentale" },
             { level: 44, moveId: "leche" },
+            { level: 48, moveId: "meteores" }, // pluie d'étoiles cosmiques qui ne rate JAMAIS (boost du final)
+            { level: 52, moveId: "eveil_divin" }, // finisher snowball : +Spécial à chaque coup
         ],
-        catchRate: 30, baseExp: 220, rarity: "RARE", growthRate: "medium_fast", role: "Psy — special divin",
+        catchRate: 30, baseExp: 220, rarity: "RARE", growthRate: "medium_fast", role: "Psy — special divin (snowball)",
         description: "Divinité-spaghetti ailée, auréolée et couronnée. On la touche de sa nouille.",
         sprite: "/yellow/sprites/dex/divinpate.png",
     },
