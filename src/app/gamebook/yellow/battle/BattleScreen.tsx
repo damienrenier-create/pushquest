@@ -21,6 +21,7 @@ import PvpRecap from "./PvpRecap"
 import { pickAttackFx, type AttackFxSpec } from "@/lib/gamebook/yellow/data/attackAnims"
 import { usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
 import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
+import { TYPE_COLORS } from "../dex/dexShared"
 import { moveCostReps, STRUGGLE_INDEX } from "@/lib/gamebook/yellow/data/combatCostConfig"
 
 type Menu = "root" | "moves" | "switch" | "bag" | "confirmRun"
@@ -507,6 +508,12 @@ function MonInfo({ mon, self, hp, max }: { mon: BattleMon; self?: boolean; hp: n
                 <span style={S.monName}>{displayName(mon).toUpperCase()}</span>
                 <span style={S.monLvl}>N.{mon.level}</span>
             </div>
+            {/* Type(s) du Daemon, juste sous le nom (aide stratégique en combat). */}
+            <div style={S.typeRow}>
+                {speciesOf(mon).types.map((t) => (
+                    <span key={t} style={{ ...S.typeChip, background: TYPE_COLORS[t] }}>{TYPE_FR[t] ?? t}</span>
+                ))}
+            </div>
             <div style={S.hpRow}>
                 <span style={S.hpLabel}>PV</span>
                 <div style={S.hpTrack}><div style={{ ...S.hpFill, width: `${pct}%`, background: col }} /></div>
@@ -653,6 +660,8 @@ const S: Record<string, React.CSSProperties> = {
     infoTop: { display: "flex", justifyContent: "space-between", gap: 10, fontSize: 12, fontWeight: 700 },
     monName: { letterSpacing: 1 },
     monLvl: { opacity: 0.8 },
+    typeRow: { display: "flex", gap: 4, marginTop: 3 },
+    typeChip: { fontSize: 8, fontWeight: 700, color: "#fff", padding: "1px 5px", borderRadius: 3, letterSpacing: 0.5, textShadow: "0 1px 1px rgba(0,0,0,0.45)" },
     hpRow: { display: "flex", alignItems: "center", gap: 6, marginTop: 4 },
     hpLabel: { fontSize: 9, fontWeight: 700, color: "#c89000" },
     hpTrack: { flex: 1, height: 7, background: "#404040", borderRadius: 4, overflow: "hidden", border: "1px solid #1c1408" },
