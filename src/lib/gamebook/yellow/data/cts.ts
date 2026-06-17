@@ -12,7 +12,7 @@
 // est la SOURCE DE VÉRITÉ de la liste à mettre en place. Réutilisera resolveLearn().
 
 import { getMove } from "./moves"
-import type { SpeciesData } from "../battle/types"
+import type { SpeciesData, PokeType } from "../battle/types"
 
 /** Badge requis pour acheter une CT (aligné sur les salles de l'arène). */
 export type BadgeId = "feu" | "plante" | "eau" | "roche" | "elec"
@@ -30,6 +30,9 @@ export interface CtData {
     gift?: boolean
     /** Enseignable à N'IMPORTE QUEL Daemon (moves de stat/utilité), sinon compat de type. */
     universal?: boolean
+    /** TYPES SUPPLÉMENTAIRES autorisés à apprendre la CT (en plus du type de l'attaque) — façon Gen 1,
+     *  où les grosses TM (Laser Glace, Séisme…) s'apprenaient bien au-delà de leur type. */
+    alsoTypes?: PokeType[]
 }
 
 export const CTS: CtData[] = [
@@ -43,7 +46,7 @@ export const CTS: CtData[] = [
     { id: "ct07", label: "CT07", moveId: "vive_attaque", price: 300, universal: true },
 
     // --- Débloquées par le BADGE FEU ---
-    { id: "ct08", label: "CT08", moveId: "lance_flammes", price: 700, badge: "feu" },
+    { id: "ct08", label: "CT08", moveId: "lance_flammes", price: 700, badge: "feu", alsoTypes: ["DRAGON", "NORMAL"] },
     { id: "ct09", label: "CT09", moveId: "flamme_ardente", price: 500, badge: "feu" },
 
     // --- Débloquées par le BADGE PLANTE ---
@@ -51,13 +54,13 @@ export const CTS: CtData[] = [
     { id: "ct11", label: "CT11", moveId: "vampigraine", price: 450, badge: "plante" },
 
     // --- Débloquées par le BADGE EAU ---
-    { id: "ct12", label: "CT12", moveId: "hydrocanon", price: 750, badge: "eau" },
-    { id: "ct13", label: "CT13", moveId: "souffle_polaire", price: 600, badge: "eau" },
+    { id: "ct12", label: "CT12", moveId: "hydrocanon", price: 750, badge: "eau", alsoTypes: ["GLACE", "SOL", "DRAGON", "NORMAL"] },
+    { id: "ct13", label: "CT13", moveId: "souffle_polaire", price: 600, badge: "eau", alsoTypes: ["EAU", "VOL", "DRAGON", "NORMAL", "SOL"] },
 
     // --- CT "champion" : nécessitent les 3 badges ---
-    { id: "ct14", label: "CT14", moveId: "seisme", price: 900, champion: true },
-    { id: "ct15", label: "CT15", moveId: "draco_charge", price: 900, champion: true },
-    { id: "ct16", label: "CT16", moveId: "vague_mentale", price: 800, champion: true },
+    { id: "ct14", label: "CT14", moveId: "seisme", price: 900, champion: true, alsoTypes: ["ROCHE", "DRAGON", "NORMAL"] },
+    { id: "ct15", label: "CT15", moveId: "draco_charge", price: 900, champion: true, alsoTypes: ["VOL", "EAU", "NORMAL"] },
+    { id: "ct16", label: "CT16", moveId: "vague_mentale", price: 800, champion: true, alsoTypes: ["NORMAL", "SPECTRE", "POISON"] },
 
     // --- CT signature : CADEAU du Druide (jamais en vente, gratuite à enseigner) ---
     { id: "ct17", label: "CT17", moveId: "etreinte_sylvestre", price: 0, gift: true },
@@ -68,7 +71,7 @@ export const CTS: CtData[] = [
     // --- CT signature ROCHE : CADEAU du boss d'arène Roche (jamais en vente) ---
     { id: "ct19", label: "CT19", moveId: "faille_sismique", price: 0, gift: true },
     // --- CT Roche en vente (débloquée par le badge roche) ---
-    { id: "ct20", label: "CT20", moveId: "lame_roche", price: 700, badge: "roche" },
+    { id: "ct20", label: "CT20", moveId: "lame_roche", price: 700, badge: "roche", alsoTypes: ["SOL", "COMBAT", "NORMAL"] },
 
     // --- CT signature FEU : CADEAU de la boss PYRA (Arène Feu, jamais en vente) ---
     { id: "ct21", label: "CT21", moveId: "pyrotechnie", price: 0, gift: true },
@@ -76,8 +79,8 @@ export const CTS: CtData[] = [
     // --- CT signature ÉLEC : CADEAU du boss VOLTA (Tour Hertz, jamais en vente) ---
     { id: "ct22", label: "CT22", moveId: "surtension", price: 0, gift: true },
     // --- CT Élec en vente (débloquées par le badge elec) ---
-    { id: "ct23", label: "CT23", moveId: "etincelle", price: 500, badge: "elec" },
-    { id: "ct24", label: "CT24", moveId: "fulgurance", price: 750, badge: "elec" },
+    { id: "ct23", label: "CT23", moveId: "etincelle", price: 500, badge: "elec", alsoTypes: ["NORMAL", "DRAGON"] },
+    { id: "ct24", label: "CT24", moveId: "fulgurance", price: 750, badge: "elec", alsoTypes: ["NORMAL", "DRAGON"] },
     // Mirage : esquive cumulable, puissante → CADEAU EXCLUSIF de la revanche de VOLTA
     // (jamais en vente, comme Surtension). Remise avec ct22 à la victoire du rematch boss.
     { id: "ct25", label: "CT25", moveId: "mirage", price: 0, gift: true, universal: true }, // Mirage = utilitaire d'esquive → apprenable par TOUS
@@ -96,7 +99,8 @@ export function getCt(id: string): CtData | null {
 /**
  * Un Daemon peut-il apprendre cette CT ?
  * - CT universelle (stat/utilité) → tout le monde.
- * - sinon : type de l'attaque parmi les types du Daemon, ou attaque NORMAL.
+ * - sinon : type de l'attaque parmi les types du Daemon, OU un des alsoTypes (élargissement Gen 1),
+ *   OU attaque NORMAL.
  */
 export function canLearnCt(species: SpeciesData, ct: CtData): boolean {
     if (species.learnsAllCts) return true // GÉKROC : couteau-suisse, apprend TOUTES les CT (tous types)
@@ -104,7 +108,8 @@ export function canLearnCt(species: SpeciesData, ct: CtData): boolean {
     const move = getMove(ct.moveId)
     if (!move) return false
     if (move.type === "NORMAL") return true
-    return species.types.includes(move.type)
+    if (species.types.includes(move.type)) return true
+    return !!ct.alsoTypes?.some((t) => species.types.includes(t)) // types supplémentaires (façon Gen 1)
 }
 
 /** CT effectivement achetables selon les badges possédés. */

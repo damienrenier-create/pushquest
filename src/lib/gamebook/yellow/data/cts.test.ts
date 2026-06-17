@@ -79,4 +79,17 @@ describe("catalogue des CT", () => {
         expect(mv.power).toBe(80)
         expect(mv.effect?.highCrit).toBe(true)
     })
+
+    it("alsoTypes (élargissement Gen 1) : CT apprises au-delà du type exact", () => {
+        const dragon = getSpecies("draclet")!   // VOL/DRAGON
+        const normal = getSpecies("pantheon")!  // NORMAL
+        // Souffle Polaire (Glace) : alsoTypes inclut DRAGON + NORMAL
+        expect(canLearnCt(dragon, getCt("ct13")!)).toBe(true)
+        expect(canLearnCt(normal, getCt("ct13")!)).toBe(true)
+        // Séisme (Sol) : alsoTypes ROCHE/DRAGON/NORMAL → un dragon l'apprend
+        expect(canLearnCt(dragon, getCt("ct14")!)).toBe(true)
+        // Une SIGNATURE sans alsoTypes (Déferlante, Eau) reste réservée au type exact
+        expect(getCt("ct27")!.alsoTypes).toBeUndefined()
+        expect(canLearnCt(dragon, getCt("ct27")!)).toBe(false) // Vol/Dragon ≠ Eau
+    })
 })
