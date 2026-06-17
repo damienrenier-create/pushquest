@@ -602,6 +602,8 @@ const NPC_SPRITES: Record<string, { url: string; frames: number; h?: number } | 
     y_centrale_hint: { url: "/yellow/sprites/npc_centrale.png", frames: 1, h: 2.0 },
     // Dénicheur à côté de l'entrée de la grotte (échange Faukon → Blaziper).
     y_cave_trader: { url: "/yellow/sprites/npc_echange.png", frames: 1, h: 2.0 },
+    // Gamin au centre de la plaine d'entraînement (indice Goshendofy de nuit).
+    y_hh_kid: { url: "/yellow/sprites/hh_kid.png", frames: 1, h: 2.0 },
     // Arène Plante (carte SANS PNJ dessinés) : sprites ENTIERS sur les cases.
     y_arena_druide: { url: "/yellow/sprites/npc_druide.png", frames: 1, h: 2.4 },
     y_arena_g1: { url: "/yellow/sprites/npc_garde_plante.png", frames: 1, h: 2.0 },

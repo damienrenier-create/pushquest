@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { rollWildEncounter, hasEncounters, speciesZones, hautesHerbesTypesForDay } from "./encounters"
+import { isHhKidNight } from "./hhKid"
 import { getSpecies } from "./species"
 import { Rng } from "../battle/rng"
 import type { MonInstance } from "../battle/types"
@@ -91,5 +92,22 @@ describe("Hautes herbes — grille 3×3 + rotation quotidienne par type", () => 
         expect(rollMany(5, 10, 500, 5).length).toBe(0)  // x=5 = allée verticale
         expect(rollMany(8, 6, 500, 5).length).toBe(0)   // y=6 = allée horizontale
         expect(rollMany(7, 18, 500, 5).length).toBe(0)  // couloir d'entrée (bas)
+    })
+
+    it("GAMIN : la fenêtre nuit = 21h → 23h59 (minuit exclu)", () => {
+        expect(isHhKidNight(20)).toBe(false)
+        expect(isHhKidNight(21)).toBe(true)
+        expect(isHhKidNight(23)).toBe(true)
+        expect(isHhKidNight(0)).toBe(false)
+        expect(isHhKidNight(12)).toBe(false)
+    })
+
+    it("GAMIN : le boost (nuit) DOUBLE les chances de Goshendofy", () => {
+        // tier0 band0 : dénom légendaire = 100 (1/100=0.01) ; avec boost ×2 → 50 (1/50=0.02).
+        const t = 0.015 // entre les deux seuils → Goshendofy SEULEMENT avec le boost
+        const withBoost = rollWildEncounter({ mapId: MAP, x: 2, y: 17, leadLevel: 10, rng: () => t, goshBoost: true, dayKey: DAY })
+        const noBoost = rollWildEncounter({ mapId: MAP, x: 2, y: 17, leadLevel: 10, rng: () => t, goshBoost: false, dayKey: DAY })
+        expect(withBoost?.speciesId).toBe("goshendofy")
+        expect(noBoost?.speciesId).not.toBe("goshendofy")
     })
 })

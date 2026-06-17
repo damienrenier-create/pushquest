@@ -18,7 +18,7 @@ import type { YellowMapData } from "../maps"
 import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, resetFleeStreak } from "./battleStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard } from "./playerStore"
 import { getSpecies } from "../data/species"
 import { persistYellowSave } from "./saveManager"
 import { rollWildEncounter, wildLevelCap, hasEncounters } from "../data/encounters"
@@ -27,6 +27,7 @@ import { createMonInstance } from "../battle/factory"
 import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroLines, SBIRE_DONE_LINES, SBIRE_NO_TEAM_LINES } from "../data/sbire"
 import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_INTRO_LINES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, ACE_PASS_LINES, ACE_GATE_LINES, buildAceTeam, speciesAtLevel } from "../data/ace"
 import { CAVE_TRADER_ID, CAVE_TRADE_GIVE, CAVE_TRADE_RECEIVE, CAVE_TRADER_OFFER_LINES, CAVE_TRADER_NEED_LINES, CAVE_TRADE_DONE_LINES, CAVE_TRADE_ALREADY_LINES } from "../data/caveTrader"
+import { HH_KID_ID, HH_KID_DAY_LINES, HH_KID_NIGHT_LINES, isHhKidNight } from "../data/hhKid"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
 import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
 
@@ -465,6 +466,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     levelCap: wildLevelCap(badges), // bridage par badges (Route Nord + Grotte)
                     encounterCount: encCount,
                     dayKey: new Date().toISOString().slice(0, 10), // rotation quotidienne des types (hautes herbes)
+                    goshBoost: isHhKidNight(new Date().getHours()) && getPlayerSave().goshHintHeard, // GAMIN : Goshendofy ×2 la nuit
                 })
                 if (wild) {
                     if (typeof window !== "undefined" && encCount < 10) window.localStorage.setItem(ENC_KEY, String(encCount + 1))
@@ -744,6 +746,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 return
             }
             set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: CAVE_TRADER_OFFER_LINES, lineIndex: 0 }, pendingCaveTrade: faukon.uid })
+            return
+        }
+
+        // GAMIN (plaine d'entraînement) : en journée → reviens la nuit ; la nuit (21h-00h) → confidence du
+        // grand frère qui DOUBLE les chances de Goshendofy (flag goshHintHeard, appliqué les nuits suivantes).
+        if (npc.id === HH_KID_ID) {
+            if (isHhKidNight(new Date().getHours())) {
+                markGoshHintHeard()
+                set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: HH_KID_NIGHT_LINES } })
+            } else {
+                set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: HH_KID_DAY_LINES } })
+            }
             return
         }
 

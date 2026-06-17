@@ -14,6 +14,7 @@ import { ACE_TRAINER_ID, ACE_POS, ACE_INTRO_LINES } from "./data/ace"
 import { GEKROC_NPC_ID, GEKROC_MAP_ID, GEKROC_POS, GEKROC_INTRO_LINES } from "./data/gekroc"
 import { HH_TRADER_ID, HH_TRADER_MAP, HH_TRADER_POS, HH_TRADER_OFFER_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_MAP, HH_COLLECTOR_POS, HH_COLLECTOR_INTRO_LINES } from "./data/hauntedNpcs"
 import { CAVE_TRADER_ID, CAVE_TRADER_MAP, CAVE_TRADER_POS, CAVE_TRADER_OFFER_LINES } from "./data/caveTrader"
+import { HH_KID_ID, HH_KID_MAP, HH_KID_POS, HH_KID_DAY_LINES } from "./data/hhKid"
 
 // PANNEAUX-conseils = les ~12 panneaux BIEN ESPACÉS de la Route Nord (le sprite
 // panneau est rendu par le décor). Chaque panneau = un hotspot INVISIBLE qui
@@ -119,6 +120,19 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         initialX: CAVE_TRADER_POS.x,
         initialY: CAVE_TRADER_POS.y,
         dialoguesAfter: CAVE_TRADER_OFFER_LINES,
+    },
+
+    // === PLAINE D'ENTRAÎNEMENT — GAMIN au centre (8,9) : indice Goshendofy à la tombée de la nuit ===
+    {
+        id: HH_KID_ID,
+        name: "GAMIN",
+        mapId: HH_KID_MAP,
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🧒", color: "#7cb342" }, // remplacé par NPC_SPRITES (hh_kid)
+        initialX: HH_KID_POS.x,
+        initialY: HH_KID_POS.y,
+        dialoguesAfter: HH_KID_DAY_LINES,
     },
 
     // === CENDREVILLE — COLLECTIONNEUR DE SPECTRES devant la maison hantée (21,11) : 3 victoires + 3 spectres → CT26 ===

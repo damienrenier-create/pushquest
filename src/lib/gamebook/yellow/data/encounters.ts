@@ -85,6 +85,7 @@ export interface EncounterCtx {
     levelCap?: number          // plafond de niveau (bridé par les badges, cf. wildLevelCap)
     encounterCount?: number    // nb total de sauvages déjà croisés → rampe d'accueil (5+5 premiers)
     dayKey?: string            // "YYYY-MM-DD" → rotation quotidienne des types (hautes herbes). Vide = jour fixe.
+    goshBoost?: boolean         // GAMIN : la nuit (21h-00h) après sa confidence → chances de Goshendofy ×2
 }
 
 /**
@@ -424,8 +425,10 @@ function rollTrainingGrid(tg: TrainingGrid, ctx: EncounterCtx, rng: () => number
     const band = Math.max(0, Math.min(4, sq.rows[1] - ctx.y)) // band 0 = ligne du BAS du carré
     const tier = sq.tier
     // LÉGENDAIRE : gradient bande × tier → + fréquent au bas de la rangée du bas (tier 0).
+    // GAMIN : la nuit (après sa confidence), le dénominateur est divisé par 2 → chances DOUBLÉES.
     if (tg.legendary && tg.legendaryDenomByBand) {
-        const denom = (tg.legendaryDenomByBand[band] ?? 1000) * (tg.legendaryTierMult?.[tier] ?? 1)
+        const boost = ctx.goshBoost ? 0.5 : 1
+        const denom = (tg.legendaryDenomByBand[band] ?? 1000) * (tg.legendaryTierMult?.[tier] ?? 1) * boost
         if (rng() < 1 / denom) return finalizeSpawn(tg.legendary, tg.legendary.levelFixed ?? 50, rng, ctx)
     }
     // DRAGONS RARES : + le dragon pop fort (band/tier hauts), + il est rare. JAMAIS en forme définitive
