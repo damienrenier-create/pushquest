@@ -608,7 +608,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     cerfeuillu: {
         id: "cerfeuillu", dexNo: 42, name: "Silviliane", types: ["PLANTE"],
         baseStats: { hp: 82, atk: 88, def: 74, spe: 96, spc: 92 },
-        learnset: [{ level: 1, moveId: "tempete_verte" }, { level: 1, moveId: "tranche_feuille" }, { level: 1, moveId: "spores_dodo" }, { level: 1, moveId: "focalisation" }],
+        learnset: [{ level: 1, moveId: "tempete_verte" }, { level: 1, moveId: "tranche_feuille" }, { level: 1, moveId: "coup_d_boule" }, { level: 1, moveId: "spores_dodo" }, { level: 1, moveId: "focalisation" }],
         catchRate: 45, baseExp: 210, rarity: "RARE", growthRate: "medium_fast", role: "Plante — sweeper",
         description: "Félin-cerf majestueux paré de fruits et de fleurs.",
         sprite: "/yellow/sprites/dex/cerfeuillu.png",
@@ -883,6 +883,7 @@ export const SPECIES: Record<string, SpeciesData> = {
         learnset: [
             { level: 1, moveId: "vive_attaque" },
             { level: 1, moveId: "fouet_lianes" },
+            { level: 1, moveId: "coup_d_boule" }, // couverture Normal (comme les autres panthères) → loadout Plante/Normal
             { level: 1, moveId: "tranche_feuille" },
             { level: 1, moveId: "etreinte_sylvestre" }, // signature du Druide
             { level: 20, moveId: "mega_sangsue" },
@@ -1514,6 +1515,7 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 1, moveId: "voile_effroi" },
             { level: 23, moveId: "drain_ame" },
             { level: 33, moveId: "malediction" },
+            { level: 36, moveId: "bombe_beurk" }, // couverture POISON → seul moyen de toucher les NORMAL (immunisés au Spectre)
             { level: 40, moveId: "ball_ombre" },
             { level: 46, moveId: "frappe_audela" },
         ],
