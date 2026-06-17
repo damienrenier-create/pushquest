@@ -30,6 +30,7 @@ import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_INTRO_LINES, ACE_DONE_LINES, ACE
 import { CAVE_TRADER_ID, CAVE_TRADE_GIVE, CAVE_TRADE_RECEIVE, CAVE_TRADER_OFFER_LINES, CAVE_TRADER_NEED_LINES, CAVE_TRADE_DONE_LINES, CAVE_TRADE_ALREADY_LINES } from "../data/caveTrader"
 import { HH_KID_ID, HH_KID_DAY_LINES, HH_KID_NIGHT_LINES, isHhKidNight } from "../data/hhKid"
 import { ORCALINE_TRAINER_ID, ORCALINE_INTRO_LINES, ORCALINE_REMATCH_LINES, ORCALINE_DONE_TODAY_LINES } from "../data/orcalineTrainer"
+import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock } from "../data/sylvebarbeBlock"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
 import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
 
@@ -287,7 +288,7 @@ function tryLaunchOrcaline(): ActiveDialogue | null {
 
 // Spawn par défaut : VILLE JAUNE = Viridian City 45×40 (scale natif FireRed),
 // entrée sud (Route 1) centre-bas pour explorer la ville.
-const DEFAULT_SPAWN = { x: 22, y: 38 }
+const DEFAULT_SPAWN = { x: 22, y: 37 } // juste AU-DESSUS du Sylvebarbe endormi qui bouche la sortie sud
 
 export const useGameStore = create<GameStore>((set, get) => ({
     player: createInitialPlayer(YELLOW_ENTRANCE_MAP_ID, DEFAULT_SPAWN.x, DEFAULT_SPAWN.y, "up"),
@@ -329,6 +330,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // PNJ, on tourne sur place (comme un mur). tryMove ne connaît pas les PNJ.
         if ((next.posX !== player.posX || next.posY !== player.posY)
             && findNpcAt(YELLOW_NPCS, next.posX, next.posY, player.mapId)) {
+            set({ player: { ...player, direction: next.direction } })
+            scheduleSave({ ...player, direction: next.direction })
+            return
+        }
+
+        // SYLVEBARBE ENDORMI : bloque la sortie SUD de Ville Jaune tant qu'il dort (réveil = défis du labo).
+        if ((next.posX !== player.posX || next.posY !== player.posY)
+            && player.mapId === SYLVEBARBE_BLOCK_MAP && !getPlayerSave().sylvebarbeAwake
+            && inSylvebarbeBlock(next.posX, next.posY)) {
             set({ player: { ...player, direction: next.direction } })
             scheduleSave({ ...player, direction: next.direction })
             return

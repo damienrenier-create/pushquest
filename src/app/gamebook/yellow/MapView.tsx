@@ -10,6 +10,7 @@
 
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { getPlayer } from "@/lib/gamebook/yellow/store/playerStore"
+import { SYLVEBARBE_BLOCK_MAP, SYLVEBARBE_BLOCK, SYLVEBARBE_SLEEP_SPRITE } from "@/lib/gamebook/yellow/data/sylvebarbeBlock"
 import { YELLOW_NPCS } from "@/lib/gamebook/yellow/npcs"
 import type { YellowBuilding, YellowMapData } from "@/lib/gamebook/yellow/maps"
 import { type TileType, isBlockingTile } from "@/lib/gamebook/mapEngine"
@@ -539,6 +540,22 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId, are
                         }}
                     />
                 ))}
+
+                {/* SYLVEBARBE ENDORMI : bouche la sortie sud de Ville Jaune tant qu'il dort. */}
+                {map.id === SYLVEBARBE_BLOCK_MAP && !getPlayer().sylvebarbeAwake && (
+                    <div
+                        style={{
+                            position: "absolute",
+                            ...screenPos(SYLVEBARBE_BLOCK.x0, SYLVEBARBE_BLOCK.y0, SYLVEBARBE_BLOCK.x1 - SYLVEBARBE_BLOCK.x0 + 1, SYLVEBARBE_BLOCK.y1 - SYLVEBARBE_BLOCK.y0 + 1),
+                            backgroundImage: `url(${SYLVEBARBE_SLEEP_SPRITE}?v=1)`,
+                            backgroundRepeat: "no-repeat",
+                            backgroundSize: "100% 100%",
+                            imageRendering: "pixelated",
+                            zIndex: 2,
+                            pointerEvents: "none",
+                        }}
+                    />
+                )}
 
                 {!hasBgImage && buildings.map((b) => (
                     <BuildingSprite key={b.id} building={b} screenPos={screenPos} />

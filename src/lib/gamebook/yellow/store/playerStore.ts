@@ -96,6 +96,8 @@ interface PlayerState {
     orcalineWins: number
     /** DRESSEUR D'ORCALINE : jour (=creditedThrough) de la dernière victoire → 1 combat gagnant/jour. */
     orcalineDate: string
+    /** SYLVEBARBE ENDORMI : réveillé (true) → ne bloque plus la sortie sud de Ville Jaune. */
+    sylvebarbeAwake: boolean
 }
 
 /** Statistiques PvP du joueur (réputation). */
@@ -114,7 +116,7 @@ export function emptyPvpStats(): PvpStats {
     return { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }
 }
 
-let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "" }
+let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", sylvebarbeAwake: false }
 const listeners = new Set<() => void>()
 
 function emit() { for (const l of listeners) l() }
@@ -153,6 +155,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         goshHintHeard: p.goshHintHeard ?? st.goshHintHeard ?? false,
         orcalineWins: p.orcalineWins ?? st.orcalineWins ?? 0,
         orcalineDate: p.orcalineDate ?? st.orcalineDate ?? "",
+        sylvebarbeAwake: p.sylvebarbeAwake ?? st.sylvebarbeAwake ?? false,
     }
     emit()
 }
@@ -185,6 +188,14 @@ export function markGoshHintHeard() {
     emit()
 }
 
+/** SYLVEBARBE : réveille le colosse (hook à appeler quand les défis du labo seront complétés). Idempotent.
+ *  Tant qu'il dort (false), il bloque la sortie sud de Ville Jaune (cf. data/sylvebarbeBlock). */
+export function markSylvebarbeAwake() {
+    if (st.sylvebarbeAwake) return
+    st = { ...st, sylvebarbeAwake: true }
+    emit()
+}
+
 /** COLLECTIONNEUR DE SPECTRES (maison hantée) : enregistre une victoire + les spectres montrés.
  *  Récompense la CT26 (Frappe d'Au-delà) dès 3 VICTOIRES ET 3 spectres DISTINCTS montrés. */
 export function recordHhCollectorWin(teamSpectreSpecies: string[]): { wins: number; shown: number; rewarded: boolean } {
@@ -206,7 +217,7 @@ export function setChampion() {
 
 /** DEV : remet la progression jaune à zéro pour rejouer l'intro (équipe vidée, introSeen=false). */
 export function resetForIntro() {
-    st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "" }
+    st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", sylvebarbeAwake: false }
     emit()
 }
 
