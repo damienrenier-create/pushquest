@@ -160,6 +160,16 @@ const FEU_PAGES: Page[] = [
     ] },
 ]
 
+// ====== BASES DU COMBAT (affichées pour toutes les arènes) ======
+const BASES_PAGES: Page[] = [
+    { t: "📖 Bases du combat", rows: [
+        ["⭐ STAB (bonus de type)", "Une attaque DU MÊME TYPE que ton Daemon frappe ×1,5 ! (ex. une attaque Plante sur un Daemon Plante.) → privilégie les attaques de TON type."],
+        ["Efficacité des types", "×2 si super efficace, ×0,5 si résisté, ×0 si immunisé (ex. le Spectre ne touche pas le Normal)."],
+        ["Couverture", "Garde 1-2 attaques d'un AUTRE type pour ceux qui résistent ton STAB."],
+        ["Physique ou Spécial ?", "Le TYPE décide : Normal/Combat/Vol/Poison/Sol/Roche/Insecte/Spectre = PHYSIQUE (Atq) ; Feu/Eau/Plante/Élec/Glace/Psy/Dragon = SPÉCIAL (Spé)."],
+    ] },
+]
+
 export default function GuidePanel() {
     const open = useGameStore((s) => s.guideOpen)
     const close = useGameStore((s) => s.closeGuide)
@@ -169,7 +179,7 @@ export default function GuidePanel() {
     const arena = currentArenaMapId(badges)
     const isRock = arena === "yellow_arena_roche"
     const isFeu = arena === "yellow_arena_feu"
-    const pages = isFeu ? FEU_PAGES : isRock ? ROCHE_PAGES : PLANTE_PAGES
+    const pages = [...BASES_PAGES, ...(isFeu ? FEU_PAGES : isRock ? ROCHE_PAGES : PLANTE_PAGES)] // bases du combat (STAB…) en 1re page
     // Remet à la 1re page à l'ouverture (et si on change d'arène).
     useEffect(() => { setPage(0) }, [open, arena])
 
