@@ -998,23 +998,38 @@ function buildMaisonHanteeEdges(): { v: boolean[][]; h: boolean[][] } {
 }
 
 // === HAUTES HERBES DU NORD (plaine d'entraînement de Cendreville) ===
-// 4 carrés d'herbes HAUTES 4×5 (= 4 types) où le NIVEAU est choisi par la LIGNE (N3-6 en bas → N15-18
-// en haut). Allées en herbe BASSE (grass → groundSheet, walkable sans rencontre), bordure de sapins
-// (tree → TreeSprite). Encounters = grassTall (cf. ZONES.yellow_hautes_herbes, grille d'entraînement).
-const HH_W = 27, HH_H = 10
-// 3 carrés 5×5 = 3 PALIERS (gauche→droite), séparés par des allées de 4 cases d'herbe basse.
-const HH_SQUARES: ReadonlyArray<readonly [number, number]> = [[2, 6], [11, 15], [20, 24]]
+// GRILLE 3×3 = 9 carrés d'herbes HAUTES 4×5 (1 type/jour CHACUN, cf. ZONES.yellow_hautes_herbes).
+// NIVEAU = la HAUTEUR : rangée du BAS = faible (N3-18), MILIEU (N18-38), HAUT = fort (N38-50).
+// Allées d'herbe BASSE entre les carrés + couloir d'entrée en bas (grass → walkable sans rencontre).
+// Bordure de SAPINS : tiles "fence" (bloquantes, sans déco) + sprite sapin.png par-dessus (spriteRegions).
+const HH_W = 16, HH_H = 20
+// 9 carrés (4 large × 5 haut) : 3 colonnes A=1-4 · B=6-9 · C=11-14, × 3 rangées BAS=13-17 · MIL=7-11 · HAUT=1-5.
+// Ordre = index 0-8 = slot de type du jour : BAS (g→d), puis MILIEU, puis HAUT.
+const HH_SQUARES: ReadonlyArray<{ cols: readonly [number, number]; rows: readonly [number, number] }> = [
+    { cols: [1, 4], rows: [13, 17] }, { cols: [6, 9], rows: [13, 17] }, { cols: [11, 14], rows: [13, 17] }, // BAS (faible)
+    { cols: [1, 4], rows: [7, 11] }, { cols: [6, 9], rows: [7, 11] }, { cols: [11, 14], rows: [7, 11] },     // MILIEU
+    { cols: [1, 4], rows: [1, 5] }, { cols: [6, 9], rows: [1, 5] }, { cols: [11, 14], rows: [1, 5] },         // HAUT (fort)
+]
+const HH_EXIT_COLS = [7, 8] // trouée sud (sortie vers Cendreville) dans la bordure basse
 function buildHautesHerbes(): TileType[][] {
-    const m: TileType[][] = Array.from({ length: HH_H }, () => Array.from({ length: HH_W }, () => "tree" as TileType))
-    // Rows 2-6 = les 3 carrés (grassTall) séparés par des allées (grass). Row bottom (6) = band 0.
-    for (let y = 2; y <= 6; y++) {
-        for (let x = 2; x <= 24; x++) {
-            m[y][x] = HH_SQUARES.some(([a, b]) => x >= a && x <= b) ? "grassTall" : "grass"
-        }
-    }
-    for (let x = 2; x <= 24; x++) { m[7][x] = "grass"; m[8][x] = "grass" } // couloir bas (herbe basse, walkable)
-    m[9][13] = "grass"; m[9][14] = "grass" // trouée sud (sortie vers Cendreville)
+    const m: TileType[][] = Array.from({ length: HH_H }, () => Array.from({ length: HH_W }, () => "fence" as TileType))
+    // Intérieur (cols 1-14, rows 1-18) = herbe BASSE walkable : allées entre carrés + couloir d'entrée (row 18).
+    for (let y = 1; y <= 18; y++) for (let x = 1; x <= 14; x++) m[y][x] = "grass"
+    // Les 9 carrés = herbe HAUTE (rencontres d'entraînement).
+    for (const sq of HH_SQUARES) for (let y = sq.rows[0]; y <= sq.rows[1]; y++) for (let x = sq.cols[0]; x <= sq.cols[1]; x++) m[y][x] = "grassTall"
+    // Trouée sud (sortie) dans la bordure basse.
+    for (const x of HH_EXIT_COLS) m[HH_H - 1][x] = "grass"
     return m
+}
+const HH_TILES = buildHautesHerbes()
+// Bordure de SAPINS : un sprite sapin.png (32×45, plus haut que large) sur chaque tile "fence" du pourtour,
+// débordant vers le haut (base calée sur la case) → rendu d'une vraie lisière de sapins.
+function buildHautesHerbesSapins(): Array<{ x: number; y: number; w: number; h: number; url: string }> {
+    const out: Array<{ x: number; y: number; w: number; h: number; url: string }> = []
+    for (let y = 0; y < HH_H; y++) for (let x = 0; x < HH_W; x++) {
+        if (HH_TILES[y][x] === "fence") out.push({ x, y: y - 0.4, w: 1, h: 1.4, url: "/yellow/sprites/sapin.png" })
+    }
+    return out
 }
 
 export const YELLOW_MAPS: Record<string, YellowMapData> = {
@@ -1069,8 +1084,8 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
             // MAISON HANTÉE (porte 18-19,10) → intérieur, spawn juste au-dessus de la porte (10,13).
             { x: 18, y: 10, targetMapId: "yellow_maison_hantee", targetSpawnX: 10, targetSpawnY: 13 },
             { x: 19, y: 10, targetMapId: "yellow_maison_hantee", targetSpawnX: 10, targetSpawnY: 13 },
-            // OUVERTURE NORD (row 0, cols 22-26) → PLAINE D'ENTRAÎNEMENT (hautes herbes), spawn couloir bas.
-            ...[22, 23, 24, 25, 26].map((x) => ({ x, y: 0, targetMapId: "yellow_hautes_herbes", targetSpawnX: 13, targetSpawnY: 8 })),
+            // OUVERTURE NORD (row 0, cols 22-26) → PLAINE D'ENTRAÎNEMENT (hautes herbes), spawn couloir bas (7,18).
+            ...[22, 23, 24, 25, 26].map((x) => ({ x, y: 0, targetMapId: "yellow_hautes_herbes", targetSpawnX: 7, targetSpawnY: 18 })),
             // OUVERTURE SUD (cols 20-23, row 36) → LIGUE (1re salle, glace) : gate Dieu Spaghetti tant que
             // TOUS les badges ne sont pas réunis (cf. gameStore). Arrivée porte gauche de la salle de glace.
             ...[20, 21, 22, 23].map((x) => ({ x, y: 36, targetMapId: "yellow_ligue_glace", targetSpawnX: 3, targetSpawnY: 6 })),
@@ -1136,17 +1151,18 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
     yellow_hautes_herbes: {
         id: "yellow_hautes_herbes",
         name: "HAUTES HERBES",
-        tiles: buildHautesHerbes(),
+        tiles: HH_TILES,
         width: HH_W,
         height: HH_H,
-        // ENTRÉE depuis Cendreville (ouverture nord) → spawn couloir bas (13,8). SORTIE = trouée sud (13-14,9).
+        // ENTRÉE depuis Cendreville → spawn couloir bas (7,18). SORTIE = trouée sud (7-8,19).
         exits: [
-            { x: 13, y: 9, targetMapId: "yellow_cendreville", targetSpawnX: 24, targetSpawnY: 1 },
-            { x: 14, y: 9, targetMapId: "yellow_cendreville", targetSpawnX: 24, targetSpawnY: 1 },
+            { x: 7, y: 19, targetMapId: "yellow_cendreville", targetSpawnX: 24, targetSpawnY: 1 },
+            { x: 8, y: 19, targetMapId: "yellow_cendreville", targetSpawnX: 24, targetSpawnY: 1 },
         ],
         // Herbe basse (allées) = sheet 4 variantes 16px gap1 ; herbe HAUTE (carrés) = tuile unique.
         groundSheet: { url: "/yellow/sprites/herbes_2.png", tileSize: 16, gap: 1, count: 4 },
         tallGrassUrl: "/yellow/sprites/herbe_haute_h1.png",
+        spriteRegions: buildHautesHerbesSapins(), // bordure de sapins (1 sprite par tile "fence" du pourtour)
         encountersPaused: false, // rencontres d'entraînement ACTIVES (cf. ZONES.yellow_hautes_herbes)
     },
     yellow_shop: {
