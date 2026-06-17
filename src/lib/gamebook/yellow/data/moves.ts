@@ -12,6 +12,7 @@ export const MOVES: Record<string, MoveData> = {
     coup_d_boule: { id: "coup_d_boule", name: "Coup d'Boule", type: "NORMAL", power: 70, accuracy: 100, pp: 15, effect: { chance: 30, flinch: true }, description: "Peut apeurer." },
     belier: { id: "belier", name: "Bélier", type: "NORMAL", power: 90, accuracy: 85, pp: 20, effect: { recoilPct: 25 }, description: "Puissant, cause du recul." },
     plaquage: { id: "plaquage", name: "Plaquage", type: "NORMAL", power: 85, accuracy: 100, pp: 15, effect: { chance: 30, inflictStatus: "PARALYSIS" }, description: "Le lanceur écrase l'ennemi de tout son poids ; peut paralyser (30%). Apprenable par presque tout le monde." },
+    berceuse: { id: "berceuse", name: "Berceuse", type: "NORMAL", power: 0, accuracy: 55, pp: 15, effect: { inflictStatus: "SLEEP" }, description: "Une mélodie apaisante qui endort la cible (précision faible). Version Normal du sommeil (≠ Spores Dodo, Plante)." },
 
     flammeche: { id: "flammeche", name: "Flammèche", type: "FEU", power: 40, accuracy: 100, pp: 25, effect: { chance: 10, inflictStatus: "BURN" }, description: "Peut brûler." },
     lance_flammes: { id: "lance_flammes", name: "Lance-Flammes", type: "FEU", power: 95, accuracy: 100, pp: 15, effect: { chance: 10, inflictStatus: "BURN" }, description: "Forte, peut brûler." },

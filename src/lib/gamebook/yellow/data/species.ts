@@ -1723,6 +1723,27 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "Arbre-titan millénaire à l'écorce de roche. Immensément lent mais quasi inamovible : ses racines fendent le sol et ses ramures balaient l'ennemi.",
         sprite: "/yellow/sprites/dex/sylvebarbe.png",
     },
+    tonytony: {
+        id: "tonytony", dexNo: 134, name: "Tonytony", types: ["NORMAL"],
+        // Stats calquées sur Leveinard/Chansey Gen 1 (modèle 1 stat Spéciale = 105). PV ÉNORMES + SPÉ solide
+        // = mur spécial absolu ; mais ATQ/DÉF dérisoires → s'effondre face au PHYSIQUE (surtout COMBAT ×2).
+        baseStats: { hp: 250, atk: 5, def: 5, spe: 50, spc: 105 },
+        learnset: [
+            { level: 1, moveId: "charge" },        // Écras'Face (flavor — ATQ 5)
+            { level: 1, moveId: "hurlement" },      // Rugissement : -ATQ (mate les physiques)
+            { level: 12, moveId: "cage_eclair" },   // Thunder Wave : paralysie
+            { level: 18, moveId: "repos" },         // Soft-Boiled : soin 50%
+            { level: 24, moveId: "berceuse" },      // Sing : sommeil (signature)
+            { level: 30, moveId: "souffle_polaire" }, // Ice Beam : moitié BoltBeam (+gel)
+            { level: 38, moveId: "mirage" },        // Minimize : +esquive
+            { level: 44, moveId: "mur_de_fer" },    // Defense Curl : +Défense
+            { level: 48, moveId: "focalisation" },  // (Light Screen→) +Spécial : renforce le mur spé
+            { level: 54, moveId: "fulgurance" },    // Thunderbolt : moitié BoltBeam
+        ],
+        catchRate: 30, baseExp: 220, rarity: "RARE", growthRate: "medium_fast", role: "Normal — œuf-soigneur (mur spécial ; s'effondre au physique)",
+        description: "Petit Daemon-œuf au cœur immense. Encaisse les pires assauts spéciaux sans broncher grâce à ses PV colossaux, mais le moindre coup physique le fait vaciller. Soigne et endort plus qu'il ne frappe.",
+        sprite: "/yellow/sprites/dex/tonytony.png",
+    },
 }
 
 export function getSpecies(id: string): SpeciesData | null {
