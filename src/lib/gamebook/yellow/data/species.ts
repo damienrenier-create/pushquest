@@ -1701,6 +1701,28 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "Petite orque des banquises au souffle glacé. Vive et maligne, elle plonge sous la glace puis jaillit pour figer les dragons d'un Souffle Polaire.",
         sprite: "/yellow/sprites/dex/orcaline.png",
     },
+    sylvebarbe: {
+        id: "sylvebarbe", dexNo: 133, name: "Sylvebarbe", types: ["SOL", "PLANTE"],
+        // BST 490 — COLOSSE-TANK très lent : mur PV/DÉF, SPÉ élevée (tanke l'Eau spéciale + propulse Tempête
+        // Verte) ; ATK pour Faille Sismique (Sol phys). VIT 30 volontairement basse. Contre de Léviathonn
+        // (immunisé Élec via Sol, neutre Eau via Plante, frappe ×2 Sol ET Plante).
+        baseStats: { hp: 130, atk: 95, def: 130, spe: 30, spc: 105 },
+        learnset: [
+            { level: 1, moveId: "spores_dodo" },
+            { level: 1, moveId: "repos" },
+            { level: 1, moveId: "faille_sismique" },
+            { level: 30, moveId: "vampigraine" },
+            { level: 40, moveId: "tempete_verte" },
+            { level: 50, moveId: "plaquage" },
+            { level: 60, moveId: "focalisation" }, // booste le Spécial (+1)
+            { level: 70, moveId: "mirage" },
+            { level: 80, moveId: "ultralaser" },
+            { level: 90, moveId: "lance_soleil" }, // LA plus forte attaque Plante (120, en 2 temps)
+        ],
+        catchRate: 25, baseExp: 220, rarity: "RARE", growthRate: "medium_fast", role: "Sol/Plante — colosse-sylve (mur anti-Eau/Élec)",
+        description: "Arbre-titan millénaire à l'écorce de roche. Immensément lent mais quasi inamovible : ses racines fendent le sol et ses ramures balaient l'ennemi.",
+        sprite: "/yellow/sprites/dex/sylvebarbe.png",
+    },
 }
 
 export function getSpecies(id: string): SpeciesData | null {

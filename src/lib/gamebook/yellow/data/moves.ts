@@ -21,6 +21,8 @@ export const MOVES: Record<string, MoveData> = {
 
     fouet_lianes: { id: "fouet_lianes", name: "Fouet Lianes", type: "PLANTE", power: 45, accuracy: 100, pp: 25, description: "Cingle avec des lianes." },
     tempete_verte: { id: "tempete_verte", name: "Tempête Verte", type: "PLANTE", power: 90, accuracy: 100, pp: 10, description: "Rafale de feuilles." },
+    // LA plus forte attaque Plante : se charge un tour (absorbe la lumière) puis libère un rayon dévastateur.
+    lance_soleil: { id: "lance_soleil", name: "Lance-Soleil", type: "PLANTE", power: 120, accuracy: 100, pp: 10, effect: { twoTurn: true }, description: "Tour 1 : absorbe la lumière. Tour 2 : libère un rayon solaire dévastateur (120). La plus puissante des attaques Plante." },
     vampigraine: { id: "vampigraine", name: "Vampigraine", type: "PLANTE", power: 0, accuracy: 90, pp: 10, effect: { inflictVolatile: "SEEDED" }, description: "Draine des PV chaque tour." },
     mega_sangsue: { id: "mega_sangsue", name: "Méga-Sangsue", type: "PLANTE", power: 40, accuracy: 100, pp: 15, effect: { drainPct: 50 }, description: "Rend 50% des dégâts en PV." },
 
