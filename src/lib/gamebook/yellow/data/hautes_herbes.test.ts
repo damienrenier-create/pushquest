@@ -110,4 +110,13 @@ describe("Hautes herbes — grille 3×3 + rotation quotidienne par type", () => 
         expect(withBoost?.speciesId).toBe("goshendofy")
         expect(noBoost?.speciesId).not.toBe("goshendofy")
     })
+
+    it("Goshendofy CAPTURÉ → ne réapparaît JAMAIS (même au meilleur spot + boost)", () => {
+        // rng quasi-nul = seuil le plus favorable possible (passe le taux ET le tirage légendaire).
+        const caught = rollWildEncounter({ mapId: MAP, x: 2, y: 17, leadLevel: 10, rng: () => 0.0001, goshBoost: true, goshCaught: true, dayKey: DAY })
+        expect(caught?.speciesId).not.toBe("goshendofy")
+        // témoin : sans goshCaught, ce MÊME tirage sort bien Goshendofy.
+        const witness = rollWildEncounter({ mapId: MAP, x: 2, y: 17, leadLevel: 10, rng: () => 0.0001, goshBoost: true, goshCaught: false, dayKey: DAY })
+        expect(witness?.speciesId).toBe("goshendofy")
+    })
 })

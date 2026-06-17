@@ -86,6 +86,7 @@ export interface EncounterCtx {
     encounterCount?: number    // nb total de sauvages déjà croisés → rampe d'accueil (5+5 premiers)
     dayKey?: string            // "YYYY-MM-DD" → rotation quotidienne des types (hautes herbes). Vide = jour fixe.
     goshBoost?: boolean         // GAMIN : la nuit (21h-00h) après sa confidence → chances de Goshendofy ×2
+    goshCaught?: boolean        // Goshendofy déjà capturé sur ce compte → ne réapparaît PLUS JAMAIS
 }
 
 /**
@@ -426,7 +427,8 @@ function rollTrainingGrid(tg: TrainingGrid, ctx: EncounterCtx, rng: () => number
     const tier = sq.tier
     // LÉGENDAIRE : gradient bande × tier → + fréquent au bas de la rangée du bas (tier 0).
     // GAMIN : la nuit (après sa confidence), le dénominateur est divisé par 2 → chances DOUBLÉES.
-    if (tg.legendary && tg.legendaryDenomByBand) {
+    // Une fois Goshendofy CAPTURÉ sur ce compte (goshCaught), il ne réapparaît plus jamais.
+    if (tg.legendary && tg.legendaryDenomByBand && !ctx.goshCaught) {
         const boost = ctx.goshBoost ? 0.5 : 1
         const denom = (tg.legendaryDenomByBand[band] ?? 1000) * (tg.legendaryTierMult?.[tier] ?? 1) * boost
         if (rng() < 1 / denom) return finalizeSpawn(tg.legendary, tg.legendary.levelFixed ?? 50, rng, ctx)
