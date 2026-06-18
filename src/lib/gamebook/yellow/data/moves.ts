@@ -34,7 +34,7 @@ export const MOVES: Record<string, MoveData> = {
 
     etincelle: { id: "etincelle", name: "Étincelle", type: "ELEC", power: 65, accuracy: 100, pp: 20, effect: { chance: 30, inflictStatus: "PARALYSIS" }, description: "Peut paralyser." },
     cage_eclair: { id: "cage_eclair", name: "Cage-Éclair", type: "ELEC", power: 0, accuracy: 100, pp: 20, costPower: 50, effect: { inflictStatus: "PARALYSIS" }, description: "Paralyse à coup sûr." },
-    surtension: { id: "surtension", name: "Surtension", type: "ELEC", power: 20, accuracy: 100, pp: 10, effect: { twoTurn: true, statChanges: [{ target: "target", stat: "spe", stages: -2 }] }, description: "Signature de VOLTA — décharge en 2 temps. Tour 1 : faible (20) mais RALENTIT fort (-2 Vitesse, cumulable). Tour 2 : se libère AUTOMATIQUEMENT, frappe à 60 avec un très haut taux de coup critique." },
+    surtension: { id: "surtension", name: "Surtension", type: "ELEC", power: 40, accuracy: 100, pp: 10, effect: { twoTurn: true, statChanges: [{ target: "target", stat: "spe", stages: -2 }] }, description: "Signature de VOLTA — décharge en 2 temps. Tour 1 : charge (40) qui RALENTIT fort (-2 Vitesse, cumulable). Tour 2 : se libère AUTOMATIQUEMENT, frappe à 100 avec un très haut taux de coup critique." },
     mirage: { id: "mirage", name: "Mirage", type: "NORMAL", power: 0, accuracy: 0, pp: 20, costPower: 50, effect: { statChanges: [{ target: "self", stat: "eva", stages: 2 }] }, description: "Le corps vacille et se dédouble comme un mirage : +2 Esquive (cumulable). Difficile à toucher." },
 
     coup_d_givre: { id: "coup_d_givre", name: "Coup d'Givre", type: "GLACE", power: 65, accuracy: 100, pp: 20, effect: { chance: 10, inflictStatus: "FREEZE" }, description: "Peut geler." },
