@@ -359,9 +359,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
             // RETOUR DYNAMIQUE des intérieurs PARTAGÉS (shop / Centre) : on ressort dans la VILLE
             // d'où l'on vient (Ville Jaune OU Cendreville), pas systématiquement yellow_entrance.
             // interiorReturn a été posé à l'ENTRÉE (cf. plus bas). Scopé aux 2 intérieurs partagés.
+            // ⚠️ UNIQUEMENT pour la PORTE de sortie (returnExit cible YELLOW_ENTRANCE_MAP_ID) : sinon
+            // l'escalier intérieur du Centre (2,6 → labo) se ferait AUSSI rediriger vers la ville
+            // (bug "monter à l'étage = sortir dehors", défis scientifiques inaccessibles).
             const leavingShared = map.id === "yellow_shop" || map.id === "yellow_infirmary"
             const ret = get().interiorReturn
-            if (leavingShared && ret) { targetMapId = ret.mapId; spawnX = ret.x; spawnY = ret.y }
+            if (leavingShared && ret && exit.targetMapId === YELLOW_ENTRANCE_MAP_ID) {
+                targetMapId = ret.mapId; spawnX = ret.x; spawnY = ret.y
+            }
             // GATE GROTTE : interdite tant que le Badge Plante n'est pas gagné → le dieu
             // Spaghetti barre la route et te renvoie au Centre Daemon (comme un K.O.).
             if (targetMapId === "yellow_grotte" && !getPlayerSave().badges.includes("plante")) {
