@@ -80,6 +80,8 @@ interface PlayerState {
     aceDefeatedDate: string
     /** CT CADEAUX possédées (remises par les boss) : enseignables GRATUITEMENT. */
     ownedCts: string[]
+    /** CT « achat unique » déjà achetées (ex. Météores) → retirées du shop définitivement. */
+    boughtCts: string[]
     /** GÉKROC (mini-boss de la Centrale) vaincu OU capturé (one-time) → ne réapparaît plus. */
     gekrocResolved: boolean
     /** COLLECTIONNEUR DE SPECTRES (maison hantée) : espèces SPECTRE distinctes montrées en combat gagné. */
@@ -116,7 +118,7 @@ export function emptyPvpStats(): PvpStats {
     return { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }
 }
 
-let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", sylvebarbeAwake: false }
+let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", sylvebarbeAwake: false }
 const listeners = new Set<() => void>()
 
 function emit() { for (const l of listeners) l() }
@@ -147,6 +149,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         aceWins: p.aceWins ?? st.aceWins ?? 0,
         aceDefeatedDate: p.aceDefeatedDate ?? st.aceDefeatedDate ?? "",
         ownedCts: p.ownedCts ?? st.ownedCts ?? [],
+        boughtCts: p.boughtCts ?? st.boughtCts ?? [],
         gekrocResolved: p.gekrocResolved ?? st.gekrocResolved ?? false,
         hhSpectresShown: p.hhSpectresShown ?? st.hhSpectresShown ?? [],
         hhCollectorWins: p.hhCollectorWins ?? st.hhCollectorWins ?? 0,
@@ -217,7 +220,7 @@ export function setChampion() {
 
 /** DEV : remet la progression jaune à zéro pour rejouer l'intro (équipe vidée, introSeen=false). */
 export function resetForIntro() {
-    st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", sylvebarbeAwake: false }
+    st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", sylvebarbeAwake: false }
     emit()
 }
 
@@ -818,7 +821,7 @@ export function teachCt(uid: string, ctId: string): { ok: boolean; reason?: "int
     if (!ct) return { ok: false, reason: "introuvable" }
     // CT possédée (cadeau) → gratuite. Sinon il faut qu'elle soit en vente (badges).
     const owned = st.ownedCts.includes(ctId)
-    if (!owned && !purchasableCts(st.badges).some((c) => c.id === ctId)) return { ok: false, reason: "locked" }
+    if (!owned && !purchasableCts(st.badges, st.boughtCts).some((c) => c.id === ctId)) return { ok: false, reason: "locked" }
     const pools: ("team" | "pc")[] = ["team", "pc"]
     for (const pool of pools) {
         const arr = st[pool]
@@ -839,7 +842,9 @@ export function teachCt(uid: string, ctId: string): { ok: boolean; reason?: "int
         next[idx] = updated
         // CT cadeau : consommée à l'apprentissage (une seule fois, puis c'est fini).
         const ownedAfter = owned ? st.ownedCts.filter((id) => id !== ctId) : st.ownedCts
-        st = { ...st, reps: st.reps - cost, [pool]: next, ownedCts: ownedAfter }
+        // ACHAT UNIQUE : on enregistre l'achat (retire la CT du shop pour de bon).
+        const boughtAfter = (ct.oneTime && !owned) ? [...st.boughtCts, ctId] : st.boughtCts
+        st = { ...st, reps: st.reps - cost, [pool]: next, ownedCts: ownedAfter, boughtCts: boughtAfter }
         emit()
         return { ok: true, queued: !free }
     }

@@ -33,6 +33,8 @@ export interface CtData {
     /** TYPES SUPPLÉMENTAIRES autorisés à apprendre la CT (en plus du type de l'attaque) — façon Gen 1,
      *  où les grosses TM (Laser Glace, Séisme…) s'apprenaient bien au-delà de leur type. */
     alsoTypes?: PokeType[]
+    /** ACHAT UNIQUE : ne peut être acheté qu'UNE fois dans la partie (cf. boughtCts) → retiré du shop ensuite. */
+    oneTime?: boolean
 }
 
 export const CTS: CtData[] = [
@@ -94,6 +96,8 @@ export const CTS: CtData[] = [
     { id: "ct29", label: "CT29", moveId: "plaquage", price: 650, universal: true },
     // --- CT INSECTE « Boul'Pollen » (85 + drain 50%) : 1re CT Insecte ; aussi pour les Plante (pollen). ---
     { id: "ct30", label: "CT30", moveId: "boul_pollen", price: 550, alsoTypes: ["PLANTE"] },
+    // --- CT NORMAL « Météores » (ne rate JAMAIS) : ACHAT UNIQUE et CHER. Apprenable par tous (Normal). ---
+    { id: "ct31", label: "CT31", moveId: "meteores", price: 1500, universal: true, oneTime: true },
 ]
 
 export function getCt(id: string): CtData | null {
@@ -116,11 +120,12 @@ export function canLearnCt(species: SpeciesData, ct: CtData): boolean {
     return !!ct.alsoTypes?.some((t) => species.types.includes(t)) // types supplémentaires (façon Gen 1)
 }
 
-/** CT effectivement achetables selon les badges possédés. */
-export function purchasableCts(badges: BadgeId[]): CtData[] {
+/** CT effectivement achetables selon les badges possédés (et hors CT « achat unique » déjà achetées). */
+export function purchasableCts(badges: BadgeId[], bought: string[] = []): CtData[] {
     const has3 = (["feu", "plante", "eau"] as BadgeId[]).every((b) => badges.includes(b))
     return CTS.filter((c) => {
         if (c.gift) return false // jamais en vente : obtenue uniquement en cadeau
+        if (c.oneTime && bought.includes(c.id)) return false // achat unique déjà effectué → retirée du shop
         if (c.champion) return has3
         if (c.badge) return badges.includes(c.badge)
         return true

@@ -1162,7 +1162,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 </div>
                                 <div style={{ maxHeight: "55vh", overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
                                     {(() => {
-                                        const purch = purchasableCts(player.badges)
+                                        const purch = purchasableCts(player.badges, player.boughtCts)
                                         const purchIds = new Set(purch.map((c) => c.id))
                                         // CT CADEAUX possédées (trophées de boss, gratuites) en tête de liste.
                                         const gifts = player.ownedCts.map(getCt).filter((c): c is NonNullable<typeof c> => !!c && !purchIds.has(c.id))
@@ -1174,7 +1174,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                                 <button key={ct.id} style={afford ? menuBtnStyle : menuBtnDimStyle} disabled={!afford} onClick={() => setCtPick(ct.id)}>
                                                     <span style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                                                         <span>{ct.label} · {mv?.name}<br /><span style={{ fontSize: 10, opacity: 0.6 }}>{mv?.type}{mv && mv.power > 0 ? ` · Puis ${mv.power}` : " · statut"}{mv && mv.accuracy > 0 ? ` · Préc ${mv.accuracy}` : ""}{mv?.description ? ` — ${mv.description}` : ""}</span></span>
-                                                        <span>{isGift ? "✨ Cadeau" : `${ct.price} reps`}</span>
+                                                        <span>{isGift ? "✨ Cadeau" : `${ct.price} reps${ct.oneTime ? " · unique" : ""}`}</span>
                                                     </span>
                                                 </button>
                                             )
