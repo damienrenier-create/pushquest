@@ -1700,7 +1700,7 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 75, moveId: "repos" },
             { level: 81, moveId: "ultralaser" },
         ],
-        catchRate: 30, baseExp: 210, rarity: "RARE", growthRate: "medium_fast", role: "Glace/Eau — orque polaire (contre des dragons)",
+        catchRate: 30, baseExp: 210, rarity: "RARE", growthRate: "slow", role: "Glace/Eau — orque polaire (contre des dragons)",
         description: "Petite orque des banquises au souffle glacé. Vive et maligne, elle plonge sous la glace puis jaillit pour figer les dragons d'un Souffle Polaire.",
         sprite: "/yellow/sprites/dex/orcaline.png",
     },
