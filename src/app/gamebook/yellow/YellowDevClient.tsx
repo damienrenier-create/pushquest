@@ -382,19 +382,15 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // Si la requête échoue (offline / 403), on affiche quand même le state local.
     void hydrated
 
-    // Équipe entièrement K.O. → renvoi immédiat au Centre Daemon (déjà soignée par
-    // le store de combat). On warp dès que le combat est quitté.
-    // EXCEPTION LIGUE : K.O. dans le gauntlet → on REJOUE la Ligue depuis la 1re salle
-    // (toutes les portes se rescellent, tous les membres du Conseil sont à réaffronter).
+    // Équipe entièrement K.O. → renvoi immédiat au Centre Daemon (déjà soignée par le store de combat).
+    // On warp dès que le combat est quitté. K.O. dans la Ligue → le gauntlet se rescelle (on rejouera
+    // DEPUIS LA 1re SALLE), MAIS on ressort quand même au Centre Daemon : ainsi on peut se soigner et
+    // aller se ré-entraîner entre deux tentatives (la Ligue est sans retour à l'intérieur).
     useEffect(() => {
         if (whiteout && !battle) {
             const aceTaunt = getAceLossTaunt() // lu AVANT clearWhiteout (qui l'efface) — null si défaite hors ACE
-            if (mapPlayer.mapId.startsWith("yellow_ligue_")) {
-                resetLigueProgress()
-                setMap("yellow_ligue_glace", 3, 6)
-            } else {
-                setMap("yellow_infirmary", 4, 3)
-            }
+            if (mapPlayer.mapId.startsWith("yellow_ligue_")) resetLigueProgress()
+            setMap("yellow_infirmary", 4, 3)
             persistYellowSave()
             clearWhiteout()
             if (aceTaunt) showDialogue("y_ace", "ACE", [aceTaunt]) // raillerie d'ACE quand il t'a vaincu

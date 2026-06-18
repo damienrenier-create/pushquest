@@ -19,7 +19,7 @@ import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, resetFleeStreak } from "./battleStore"
 import { getPokedex } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, resetLigueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount } from "./playerStore"
 import { getSpecies } from "../data/species"
 import { persistYellowSave } from "./saveManager"
 import { rollWildEncounter, wildLevelCap, hasEncounters } from "../data/encounters"
@@ -406,7 +406,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     scheduleSave(next)
                     return
                 }
-                // Tous les badges réunis → on entre réellement dans la 1re salle (glace).
+                // Tous les badges réunis → ENTRÉE FRAÎCHE : on rejoue le gauntlet DEPUIS LE DÉBUT.
+                // On rescelle toutes les portes même si on l'avait déjà battue (« si on recommence,
+                // on recommence au début ») et même après une tentative K.O. (entrée par Cendreville).
+                resetLigueProgress()
             }
             // GATE GAUNTLET LIGUE : la porte DROITE d'une salle ne s'ouvre qu'une fois SON adversaire vaincu
             // (point de non-retour : pas de retour par la gauche, aucune infirmerie — potions seulement).
