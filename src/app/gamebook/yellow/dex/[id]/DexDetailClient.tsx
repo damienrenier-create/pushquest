@@ -7,6 +7,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { SPECIES } from "@/lib/gamebook/yellow/data/species"
+import { growthLabel } from "@/lib/gamebook/yellow/data/growthCurve"
 import { MOVES } from "@/lib/gamebook/yellow/data/moves"
 import { moveCategory } from "@/lib/gamebook/yellow/battle/typeChart"
 import {
@@ -87,7 +88,7 @@ export default function DexDetailClient({ id }: { id: string }) {
                     <div style={S.metaCell}><span style={S.metaLbl}>Rareté</span><span style={S.metaVal}>{sp.rarity}</span></div>
                     <div style={S.metaCell}><span style={S.metaLbl}>Capture</span><span style={S.metaVal}>{sp.catchRate}</span></div>
                     <div style={S.metaCell}><span style={S.metaLbl}>Exp. base</span><span style={S.metaVal}>{sp.baseExp}</span></div>
-                    <div style={S.metaCell}><span style={S.metaLbl}>Courbe</span><span style={S.metaVal}>{sp.growthRate ?? "medium_fast"}</span></div>
+                    <div style={S.metaCell}><span style={S.metaLbl}>Courbe</span><span style={S.metaVal}>{growthLabel(sp.id)}</span></div>
                 </div>
 
                 {/* Stats de base */}

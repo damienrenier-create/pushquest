@@ -111,26 +111,51 @@ export function strongestSpeciesOfType(type: PokeType): string {
     return _strongestByType[type]!
 }
 
-/** Texte à l'envers (Eva → avE) — pseudo & surnoms du miroir. */
+/** Texte à l'envers (Eva → avE). Sert à afficher le PSEUDO de l'adversaire à l'envers (pas le Daemon). */
 export function mirrorName(name: string): string {
     return name.split("").reverse().join("")
 }
 
 /**
- * Équipe MIROIR : ordre INVERSÉ, chaque Daemon remplacé par la forme la plus forte de sa
- * FAIBLESSE de type, niveau conservé, surnom à l'envers. (NB : la registry n'expose pas la
- * répartition Saiyan → non répliquée.)
+ * Choisit le contre MIROIR d'un Daemon, selon les règles :
+ *  1. c'est une FAIBLESSE de type (super-efficace ×2+ contre lui) — et NON le « contre parfait »
+ *     systématique (fini le 100 % Glace) ;
+ *  2. de BST ÉQUIVALENT (le plus proche du Daemon d'origine, pas la forme la plus forte) ;
+ *  3. jamais une espèce DÉJÀ prise dans l'équipe (dédup) → si la meilleure est prise, on en prend
+ *     une autre valide. Déterministe (tri par écart de BST puis id). Exclut cachés & exclusifs.
+ *  À défaut de faiblesse libre, on retombe sur le BST le plus proche encore disponible.
+ */
+export function pickMirrorCounter(defenderSpeciesId: string, used: ReadonlySet<string>): string {
+    const def = getSpecies(defenderSpeciesId)
+    if (!def) return defenderSpeciesId
+    const target = bstOf(defenderSpeciesId)
+    const isWeakness = (sp: (typeof SPECIES)[string]) =>
+        Math.max(...sp.types.map((t) => typeEffectiveness(t, def.types))) >= 2
+    const closest = (list: [string, (typeof SPECIES)[string]][]) =>
+        list.sort((a, b) => Math.abs(bstOf(a[0]) - target) - Math.abs(bstOf(b[0]) - target) || a[0].localeCompare(b[0]))
+    const free = Object.entries(SPECIES).filter(
+        ([id, sp]) => !sp.hiddenUntilCaught && !sp.exclusive && !used.has(id),
+    )
+    const weak = closest(free.filter(([, sp]) => isWeakness(sp)))
+    const pick = weak[0] ?? closest(free)[0]
+    return pick ? pick[0] : defenderSpeciesId
+}
+
+/**
+ * Équipe MIROIR : ordre INVERSÉ ; chaque Daemon remplacé par une FAIBLESSE de BST équivalent, sans
+ * doublon (cf. pickMirrorCounter), niveau conservé. Les Daemons gardent leur nom normal — c'est le
+ * PSEUDO de l'adversaire qui s'affiche à l'envers (mirrorName), au niveau du dresseur. (NB : la
+ * registry n'expose pas la répartition Saiyan → non répliquée.)
  */
 export function buildMirrorTeam(player: RegistryPlayer): MonInstance[] {
+    const used = new Set<string>()
     return player.team
         .filter((m) => getSpecies(m.speciesId))
         .slice()
         .reverse()
         .map((m) => {
-            const sp = getSpecies(m.speciesId)!
-            const counterId = strongestSpeciesOfType(bestCounterType(sp.types))
-            const mon = createMonInstance(counterId, m.level, { owned: false })
-            mon.nickname = mirrorName(m.nickname ?? sp.name)
-            return mon
+            const counterId = pickMirrorCounter(m.speciesId, used)
+            used.add(counterId)
+            return createMonInstance(counterId, m.level, { owned: false })
         })
 }

@@ -26,8 +26,10 @@ export const HH_TRADER_NEED_LINES = [
 
 // ── PNJ2 — COLLECTIONNEUR DE SPECTRES (21,11) : bats-le 3× en montrant 3 spectres distincts → CT26 ──
 export const HH_COLLECTOR_ID = "y_hh_collector"
-export const HH_COLLECTOR_MAP = "yellow_cendreville"
-export const HH_COLLECTOR_POS = { x: 21, y: 11 }
+// Déplacé À L'INTÉRIEUR de la maison hantée, au fond du labyrinthe (poche isolée 12,6) : il faut
+// traverser le brouillard + les rencontres spectres pour le trouver → vrai but d'explorer le manoir.
+export const HH_COLLECTOR_MAP = "yellow_maison_hantee"
+export const HH_COLLECTOR_POS = { x: 12, y: 6 }
 export const HH_COLLECTOR_CT = "ct26" // Frappe d'Au-delà (cadeau)
 export const HH_COLLECTOR_WINS_NEEDED = 3
 export const HH_COLLECTOR_SPECTRES_NEEDED = 3

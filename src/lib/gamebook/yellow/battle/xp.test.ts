@@ -48,8 +48,9 @@ function makeMon(level: number, exp: number): MonInstance {
 describe("applyExp (montée de niveau + apprentissage)", () => {
     it("monte de niveau et apprend les attaques du learnset", () => {
         // Cornaissant niv 1 → assez d'XP pour atteindre le niveau 6.
-        const mon = makeMon(1, expForLevel(1))
-        const r = applyExp(mon, expForLevel(6) - expForLevel(1))
+        // XP calculée sur la COURBE de Cornaissant (modeste ×0.90) — cohérence par espèce.
+        const mon = makeMon(1, expForLevel(1, "cornaissant"))
+        const r = applyExp(mon, expForLevel(6, "cornaissant") - expForLevel(1, "cornaissant"))
         expect(mon.level).toBe(6)
         expect(r.fromLevel).toBe(1)
         expect(r.toLevel).toBe(6)
@@ -58,18 +59,18 @@ describe("applyExp (montée de niveau + apprentissage)", () => {
         expect(r.learnedMoveIds).toContain("picpic")
     })
     it("4 slots pleins → les attaques sont MISES EN ATTENTE (pas perdues)", () => {
-        const mon = makeMon(1, expForLevel(1))
+        const mon = makeMon(1, expForLevel(1, "cornaissant"))
         mon.moves = [
             { moveId: "a", pp: 5, ppMax: 5 }, { moveId: "b", pp: 5, ppMax: 5 },
             { moveId: "c", pp: 5, ppMax: 5 }, { moveId: "d", pp: 5, ppMax: 5 },
         ]
-        const r = applyExp(mon, expForLevel(20)) // Cornaissant : picpic(L5) + dard_venin(L14)
+        const r = applyExp(mon, expForLevel(20, "cornaissant")) // Cornaissant : picpic(L5) + dard_venin(L14)
         expect(mon.moves.length).toBe(4)               // toujours 4 slots
         expect(r.pendingMoveIds).toContain("picpic")   // proposées, pas ignorées
         expect(mon.pendingMoves).toContain("dard_venin")
     })
     it("ne fait jamais baisser le niveau", () => {
-        const mon = makeMon(10, expForLevel(10))
+        const mon = makeMon(10, expForLevel(10, "cornaissant"))
         const r = applyExp(mon, 0)
         expect(mon.level).toBe(10)
         expect(r.toLevel).toBe(10)

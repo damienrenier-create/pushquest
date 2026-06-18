@@ -5,7 +5,7 @@
 // de notre niveau), placés sur les cases libres de l'arène — uniquement si on a TOUS les badges.
 
 import { useEffect, useState } from "react"
-import { ARENA_MAPS, ARENA_POSITIONS, rankClosest, hasAllBadges, type ArenaMode, type RegistryPlayer } from "../data/playerArena"
+import { ARENA_MAPS, ARENA_POSITIONS, rankClosest, hasAllBadges, mirrorName, type ArenaMode, type RegistryPlayer } from "../data/playerArena"
 
 export interface ArenaOpponent {
     userId: string
@@ -35,9 +35,10 @@ export function usePlayerArena(mapId: string, badges: readonly string[], myUserI
 
     if (!active || !players) return { mode, opponents: [] }
     const positions = ARENA_POSITIONS[mapId] ?? []
+    // En mode MIROIR, le PSEUDO de l'adversaire s'affiche à l'envers (et NON le nom du Daemon).
     const opponents = rankClosest(players, myUserId, myLevel, positions.length).map((p, i) => ({
         userId: p.userId,
-        nickname: p.nickname,
+        nickname: mode === "mirror" ? mirrorName(p.nickname) : p.nickname,
         x: positions[i][0],
         y: positions[i][1],
         player: p,

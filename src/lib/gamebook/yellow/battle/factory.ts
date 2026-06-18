@@ -57,7 +57,8 @@ export function createMonInstance(speciesId: string, level: number, opts: MakeMo
         level,
         // XP cumulée = plancher du niveau (et NON 0) → la fiche/barre d'XP correspondent
         // au niveau réel dès la création/capture (un niv.20 n'affiche plus « XP : 0 »).
-        exp: expForLevel(level),
+        // Plancher calculé sur la courbe DE L'ESPÈCE (cf. growthCurve.ts).
+        exp: expForLevel(level, speciesId),
         ivs,
         currentHp: 0,
         status: "NONE",

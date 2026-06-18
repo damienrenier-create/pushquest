@@ -115,6 +115,13 @@ export interface SpeciesData {
     learnsAllCts?: boolean
     /** SURPRISE : MASQUÉ du Pokédex (même pas « vu ») tant que NON capturé (ex. Gékroc, Goshendofy). */
     hiddenUntilCaught?: boolean
+    /** EXCLUSIF : Daemon unique/offert (reçu UNE seule fois). Plancher de courbe ×1.10
+     *  (jamais plus rapide à monter ; un exclusif colossal prend quand même ×1.25). Voir growthCurve.ts. */
+    exclusive?: boolean
+    /** COURBE PAR STADE : le palier d'XP suit le BST du STADE COURANT (et non du stade final).
+     *  Réservé aux lignées à très gros écart base→final (ex. lignée golem Mottoche→Mégalithe) :
+     *  on monte vite tant qu'on est petit, le grind n'arrive qu'au sommet. Défaut = BST final. */
+    growthByStage?: boolean
 }
 
 // ============================================================

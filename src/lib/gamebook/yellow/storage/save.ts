@@ -67,7 +67,12 @@ export interface YellowSave {
 /** Un « meilleur moment » d'un combat de la Ligue (best-of affiché au Hall of Fame). Runtime. */
 export interface LeagueHighlight { trainer: string; mon: string; dmg: number; move: string }
 
-export const SAVE_VERSION = 1
+// v2 (2026-06) : NERF ACE — migration one-time qui remet le CLIQUET d'ACE à zéro (acePeakLevel +
+// aceTeamSizePeak) pour les saves existantes, en CONSERVANT aceWins. ACE se recalibrera alors sur
+// l'équipe ACTUELLE du joueur (au lieu d'un pic figé trop haut) → enfin battable. Ne peut que l'adoucir.
+export const SAVE_VERSION = 2
+/** Version à partir de laquelle le cliquet ACE est réinitialisé une fois (cf. coerce). */
+const ACE_RATCHET_RESET_VERSION = 2
 
 export function emptySave(): YellowSave {
     return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false }
@@ -163,6 +168,10 @@ function parsePvpStats(raw: unknown): YellowSave["pvpStats"] {
 export function parseSave(raw: unknown): YellowSave {
     if (!raw || typeof raw !== "object") return emptySave()
     const o = raw as Record<string, unknown>
+    // MIGRATION cliquet ACE (v2) : une save antérieure à v2 → on remet acePeakLevel + aceTeamSizePeak
+    // à leur défaut (recalibration sur l'équipe actuelle). aceWins est conservé (cf. plus bas).
+    const fromVersion = typeof o.version === "number" ? o.version : 0
+    const aceRatchetReset = fromVersion < ACE_RATCHET_RESET_VERSION
     const team = Array.isArray(o.team) ? (o.team as unknown[]).map(parseMon).filter((m): m is MonInstance => m !== null) : []
     const pc = Array.isArray(o.pc) ? (o.pc as unknown[]).map(parseMon).filter((m): m is MonInstance => m !== null) : []
     const dex = (o.pokedex ?? {}) as Record<string, unknown>
@@ -173,7 +182,7 @@ export function parseSave(raw: unknown): YellowSave {
         }
     }
     return {
-        version: typeof o.version === "number" ? o.version : SAVE_VERSION,
+        version: SAVE_VERSION,
         team,
         pc,
         items,
@@ -194,10 +203,11 @@ export function parseSave(raw: unknown): YellowSave {
         sbireDefeatsToday: typeof o.sbireDefeatsToday === "number" ? Math.max(0, Math.floor(o.sbireDefeatsToday)) : 0,
         sbireWinsTotal: typeof o.sbireWinsTotal === "number" ? Math.max(0, Math.floor(o.sbireWinsTotal)) : 0,
         pvpStats: parsePvpStats(o.pvpStats),
-        acePeakLevel: typeof o.acePeakLevel === "number" ? Math.max(0, Math.floor(o.acePeakLevel)) : 0,
+        // NERF ACE (migration v2) : cliquet remis à zéro pour les vieilles saves → recalibrage.
+        acePeakLevel: aceRatchetReset ? 0 : (typeof o.acePeakLevel === "number" ? Math.max(0, Math.floor(o.acePeakLevel)) : 0),
         aceBox: numRec(o.aceBox),
-        aceTeamSizePeak: typeof o.aceTeamSizePeak === "number" ? Math.max(3, Math.min(6, Math.floor(o.aceTeamSizePeak))) : 3,
-        aceWins: typeof o.aceWins === "number" ? Math.max(0, Math.floor(o.aceWins)) : 0,
+        aceTeamSizePeak: aceRatchetReset ? 3 : (typeof o.aceTeamSizePeak === "number" ? Math.max(3, Math.min(6, Math.floor(o.aceTeamSizePeak))) : 3),
+        aceWins: typeof o.aceWins === "number" ? Math.max(0, Math.floor(o.aceWins)) : 0, // CONSERVÉ (progrès Panthéon)
         aceDefeatedDate: typeof o.aceDefeatedDate === "string" ? o.aceDefeatedDate : "",
         ownedCts: strArr(o.ownedCts),
         gekrocResolved: o.gekrocResolved === true,

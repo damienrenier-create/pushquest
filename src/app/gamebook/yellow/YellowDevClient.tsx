@@ -59,7 +59,7 @@ import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
 import { expForLevel } from "@/lib/gamebook/yellow/battle/xp"
 import type { MonInstance } from "@/lib/gamebook/yellow/battle/types"
 import { usePlayerArena, type ArenaOpponent } from "@/lib/gamebook/yellow/multiplayer/usePlayerArena"
-import { buildHubTeam, buildMirrorTeam, mirrorName, type ArenaMode } from "@/lib/gamebook/yellow/data/playerArena"
+import { buildHubTeam, buildMirrorTeam, type ArenaMode } from "@/lib/gamebook/yellow/data/playerArena"
 import ArenaChallengeModal from "./ArenaChallengeModal"
 
 export default function YellowDevClient({ userId = "", isCreator = false, nickname = "" }: { userId?: string; isCreator?: boolean; nickname?: string }) {
@@ -1370,7 +1370,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 const inTeam = player.team.some((m) => m.uid === live.uid)
                 const sp = getSpecies(live.speciesId)
                 const stats = sp ? fullStats(live, sp) : null
-                const toNext = expForLevel(live.level + 1) - Math.max(live.exp, expForLevel(live.level))
+                const toNext = expForLevel(live.level + 1, live.speciesId) - Math.max(live.exp, expForLevel(live.level, live.speciesId))
                 const closeFiche = () => { setSelected(null); setRenaming(false) }
                 // Slide ◀ ▶ / swipe entre les Daemons de la MÊME liste (équipe ou PC).
                 const ficheList = inTeam ? player.team : player.pc
@@ -1415,7 +1415,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             )}
                             <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 6 }}>
                                 {/* plancher du niveau pour les anciens Daemons sauvegardés à exp=0 → cohérent avec le niveau */}
-                                XP cumulée : {Math.max(live.exp, expForLevel(live.level)).toLocaleString("fr-FR")} · niveau suivant dans ~{Math.max(0, toNext).toLocaleString("fr-FR")} XP
+                                XP cumulée : {Math.max(live.exp, expForLevel(live.level, live.speciesId)).toLocaleString("fr-FR")} · niveau suivant dans ~{Math.max(0, toNext).toLocaleString("fr-FR")} XP
                             </div>
                             {(live.capturedLevel != null || live.capturedAt || live.capturedMapId) && (
                                 <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 6 }}>
@@ -1584,7 +1584,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {/* Hall of Fame — sacre du Champion après LE MAÎTRE de la Ligue (après les évolutions) */}
             {arenaFight && !battle && (
                 <ArenaChallengeModal
-                    title={arenaFight.mode === "hub" ? `⚔️ Défi : ${arenaFight.opp.nickname}` : `🪞 Reflet de ${mirrorName(arenaFight.opp.nickname)}`}
+                    title={arenaFight.mode === "hub" ? `⚔️ Défi : ${arenaFight.opp.nickname}` : `🪞 Reflet de ${arenaFight.opp.nickname}`}
                     subtitle={arenaFight.mode === "hub"
                         ? "Son équipe réelle, jouée par l'IA. Entraîne-toi autant que tu veux !"
                         : "Une version inversée, taillée pour TE contrer (faiblesses de type)."}

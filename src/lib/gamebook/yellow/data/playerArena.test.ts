@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest"
 import {
     teamMaxLevel, rankClosest, buildHubTeam, bestCounterType, strongestSpeciesOfType,
-    mirrorName, buildMirrorTeam, ARENA_OPPONENTS, hasAllBadges, ALL_BADGES, ARENA_MAPS, ARENA_POSITIONS,
+    mirrorName, buildMirrorTeam, pickMirrorCounter, ARENA_OPPONENTS, hasAllBadges, ALL_BADGES, ARENA_MAPS, ARENA_POSITIONS,
     type RegistryPlayer,
 } from "./playerArena"
 import { getSpecies } from "./species"
@@ -82,7 +82,7 @@ describe("Arène joueurs — MIROIR (faiblesses)", () => {
         expect(mirrorName("Eva")).toBe("avE")
     })
 
-    it("buildMirrorTeam : ordre inversé + chaque Daemon battu par sa faiblesse + niveau conservé + nom à l'envers", () => {
+    it("buildMirrorTeam : ordre inversé + chaque Daemon battu par sa faiblesse + niveau conservé", () => {
         const p = player("a", 30, [
             { speciesId: "feuillichot", level: 20, nickname: "Vert" },  // PLANTE
             { speciesId: "braisille", level: 25, nickname: null },       // FEU
@@ -91,11 +91,35 @@ describe("Arène joueurs — MIROIR (faiblesses)", () => {
         expect(mir.length).toBe(2)
         // ordre inversé : le 1er miroir contre le DERNIER de l'équipe (braisille = FEU)
         const first = getSpecies(mir[0].speciesId)!
-        expect(typeEffectiveness(first.types[0], ["FEU"])).toBeGreaterThanOrEqual(2)
+        expect(Math.max(...first.types.map((t) => typeEffectiveness(t, ["FEU"])))).toBeGreaterThanOrEqual(2)
         expect(mir[0].level).toBe(25) // niveau conservé
-        // 2e miroir contre feuillichot (PLANTE) + surnom "Vert" → "treV"
+        // 2e miroir contre feuillichot (PLANTE)
         const second = getSpecies(mir[1].speciesId)!
-        expect(typeEffectiveness(second.types[0], ["PLANTE"])).toBeGreaterThanOrEqual(2)
-        expect(mir[1].nickname).toBe("treV")
+        expect(Math.max(...second.types.map((t) => typeEffectiveness(t, ["PLANTE"])))).toBeGreaterThanOrEqual(2)
+        // RÈGLE : on N'inverse PAS le nom du Daemon (c'est le pseudo de l'adversaire qui s'inverse).
+        expect(mir[1].nickname).toBeUndefined()
+    })
+
+    it("buildMirrorTeam : JAMAIS deux fois la même espèce (dédup), même à faiblesse partagée", () => {
+        const p = player("a", 40, [
+            { speciesId: "feuillichot", level: 40, nickname: null }, // PLANTE
+            { speciesId: "florapanthe", level: 40, nickname: null }, // PLANTE
+            { speciesId: "gloutanoir", level: 40, nickname: null },  // PLANTE
+        ])
+        const mir = buildMirrorTeam(p)
+        const ids = mir.map((m) => m.speciesId)
+        expect(ids.length).toBe(3)
+        expect(new Set(ids).size).toBe(3) // tous distincts
+    })
+
+    it("pickMirrorCounter : BST ÉQUIVALENT (plus proche que le contre le plus fort)", () => {
+        const def = "braisille" // FEU, BST faible (bébé)
+        const counter = pickMirrorCounter(def, new Set())
+        const bst = (id: string) => { const b = getSpecies(id)!.baseStats; return b.hp + b.atk + b.def + b.spe + b.spc }
+        const target = bst(def)
+        const strongest = strongestSpeciesOfType(bestCounterType(getSpecies(def)!.types))
+        // le contre choisi est au moins aussi proche en BST que l'ancien « plus fort » — et c'est une faiblesse.
+        expect(Math.abs(bst(counter) - target)).toBeLessThanOrEqual(Math.abs(bst(strongest) - target))
+        expect(Math.max(...getSpecies(counter)!.types.map((t) => typeEffectiveness(t, getSpecies(def)!.types)))).toBeGreaterThanOrEqual(2)
     })
 })

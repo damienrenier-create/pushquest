@@ -654,8 +654,8 @@ export function buySuperPasta(uid: string): { ok: boolean; reason?: "reps" | "in
     if (idx < 0) return { ok: false, reason: "introuvable" }
     const orig = st.team[idx]
     const sp = getSpecies(orig.speciesId)
-    const baseExp = Math.max(orig.exp, expForLevel(orig.level))
-    const effLevel = Math.max(orig.level, levelFromExp(orig.exp))
+    const baseExp = Math.max(orig.exp, expForLevel(orig.level, orig.speciesId))
+    const effLevel = Math.max(orig.level, levelFromExp(orig.exp, orig.speciesId))
     if (effLevel >= MAX_LEVEL) return { ok: false, reason: "max" }
     const target = Math.min(MAX_LEVEL, effLevel + 1)
     const mon: MonInstance = {
@@ -663,7 +663,7 @@ export function buySuperPasta(uid: string): { ok: boolean; reason?: "reps" | "in
         pendingMoves: orig.pendingMoves ? [...orig.pendingMoves] : undefined,
     }
     const hpBefore = sp ? fullStats(orig, sp).hp : orig.currentHp
-    const result = applyExp(mon, Math.max(1, expForLevel(target) - baseExp))
+    const result = applyExp(mon, Math.max(1, expForLevel(target, orig.speciesId) - baseExp))
     const hpAfter = sp ? fullStats(mon, sp).hp : mon.currentHp
     mon.currentHp = Math.min(hpAfter, mon.currentHp + Math.max(0, hpAfter - hpBefore))
     const team = st.team.slice()

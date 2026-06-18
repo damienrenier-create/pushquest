@@ -8,6 +8,7 @@
 import type { MonInstance } from "./types"
 import { getSpecies } from "../data/species"
 import { getMove } from "../data/moves"
+import { growthMult } from "../data/growthCurve"
 
 export const MAX_LEVEL = 100
 
@@ -34,16 +35,22 @@ const EXP_CUM: number[] = (() => {
     return t
 })()
 
-/** XP cumulée nécessaire pour ATTEINDRE un niveau. */
-export function expForLevel(level: number): number {
+/**
+ * XP cumulée nécessaire pour ATTEINDRE un niveau.
+ * Si `speciesId` est fourni, la valeur est multipliée par la courbe de progression de
+ * l'espèce (cf. growthCurve.ts : ×0.80 frêle → ×1.25 colossal). Sans espèce = courbe de
+ * référence (×1.0), compatibilité ascendante stricte.
+ */
+export function expForLevel(level: number, speciesId?: string): number {
     const L = Math.max(1, Math.min(MAX_LEVEL, Math.floor(level)))
-    return EXP_CUM[L]
+    const base = EXP_CUM[L]
+    return speciesId ? Math.round(base * growthMult(speciesId)) : base
 }
 
-/** Niveau correspondant à une XP cumulée. */
-export function levelFromExp(exp: number): number {
+/** Niveau correspondant à une XP cumulée (sur la courbe de l'espèce si fournie). */
+export function levelFromExp(exp: number, speciesId?: string): number {
     let l = 1
-    while (l < MAX_LEVEL && expForLevel(l + 1) <= exp) l++
+    while (l < MAX_LEVEL && expForLevel(l + 1, speciesId) <= exp) l++
     return l
 }
 
@@ -70,9 +77,9 @@ export interface ExpResult {
 export function applyExp(mon: MonInstance, gained: number): ExpResult {
     const sp = getSpecies(mon.speciesId)
     const fromLevel = mon.level
-    const baseExp = Math.max(mon.exp, expForLevel(mon.level))
+    const baseExp = Math.max(mon.exp, expForLevel(mon.level, mon.speciesId))
     const newExp = baseExp + Math.max(0, gained)
-    const toLevel = Math.max(fromLevel, Math.min(MAX_LEVEL, levelFromExp(newExp)))
+    const toLevel = Math.max(fromLevel, Math.min(MAX_LEVEL, levelFromExp(newExp, mon.speciesId)))
 
     mon.exp = newExp
     mon.level = toLevel
