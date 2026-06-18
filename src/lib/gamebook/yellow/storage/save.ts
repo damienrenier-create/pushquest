@@ -52,6 +52,9 @@ export interface YellowSave {
     aceTeamSizePeak: number
     aceWins: number
     aceDefeatedDate: string
+    /** DUELS reflets (Viridian/arène eau) : userId du joueur-IA → date de la DERNIÈRE victoire
+     *  (= creditedThrough). Sert la limite « 1 victoire par joueur-IA et par jour ». */
+    duelWins: Record<string, string>
     /** CT cadeaux possédées (trophées de boss). */
     ownedCts: string[]
     /** GÉKROC (mini-boss de la Centrale) vaincu OU capturé (one-time) → ne réapparaît plus. */
@@ -75,7 +78,7 @@ export const SAVE_VERSION = 2
 const ACE_RATCHET_RESET_VERSION = 2
 
 export function emptySave(): YellowSave {
-    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false }
+    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false }
 }
 
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -158,6 +161,17 @@ function numRec(raw: unknown): Record<string, number> {
     return out
 }
 
+/** Record<string,string> défensif (ex. duelWins : userId → date de la dernière victoire). */
+function strRec(raw: unknown): Record<string, string> {
+    const out: Record<string, string> = {}
+    if (raw && typeof raw === "object") {
+        for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+            if (typeof v === "string") out[k] = v
+        }
+    }
+    return out
+}
+
 function parsePvpStats(raw: unknown): YellowSave["pvpStats"] {
     const o = (raw ?? {}) as Record<string, unknown>
     const n = (v: unknown) => (typeof v === "number" ? Math.max(0, Math.floor(v)) : 0)
@@ -209,6 +223,7 @@ export function parseSave(raw: unknown): YellowSave {
         aceTeamSizePeak: aceRatchetReset ? 3 : (typeof o.aceTeamSizePeak === "number" ? Math.max(3, Math.min(6, Math.floor(o.aceTeamSizePeak))) : 3),
         aceWins: typeof o.aceWins === "number" ? Math.max(0, Math.floor(o.aceWins)) : 0, // CONSERVÉ (progrès Panthéon)
         aceDefeatedDate: typeof o.aceDefeatedDate === "string" ? o.aceDefeatedDate : "",
+        duelWins: strRec(o.duelWins),
         ownedCts: strArr(o.ownedCts),
         gekrocResolved: o.gekrocResolved === true,
         hhSpectresShown: strArr(o.hhSpectresShown),

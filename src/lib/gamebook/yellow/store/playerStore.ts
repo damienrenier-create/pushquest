@@ -78,6 +78,9 @@ interface PlayerState {
     aceWins: number
     /** Jour (= creditedThrough) où ACE a été battu → 1 défaite/jour. */
     aceDefeatedDate: string
+    /** DUELS reflets (Viridian/arène eau) : userId du joueur-IA → jour (=creditedThrough) de la
+     *  dernière victoire → limite « 1 victoire par joueur-IA et par jour ». */
+    duelWins: Record<string, string>
     /** CT CADEAUX possédées (remises par les boss) : enseignables GRATUITEMENT. */
     ownedCts: string[]
     /** CT « achat unique » déjà achetées (ex. Météores) → retirées du shop définitivement. */
@@ -118,7 +121,7 @@ export function emptyPvpStats(): PvpStats {
     return { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }
 }
 
-let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", sylvebarbeAwake: false }
+let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", sylvebarbeAwake: false }
 const listeners = new Set<() => void>()
 
 function emit() { for (const l of listeners) l() }
@@ -148,6 +151,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         aceTeamSizePeak: p.aceTeamSizePeak ?? st.aceTeamSizePeak ?? 3,
         aceWins: p.aceWins ?? st.aceWins ?? 0,
         aceDefeatedDate: p.aceDefeatedDate ?? st.aceDefeatedDate ?? "",
+        duelWins: p.duelWins ?? st.duelWins ?? {},
         ownedCts: p.ownedCts ?? st.ownedCts ?? [],
         boughtCts: p.boughtCts ?? st.boughtCts ?? [],
         gekrocResolved: p.gekrocResolved ?? st.gekrocResolved ?? false,
@@ -220,7 +224,7 @@ export function setChampion() {
 
 /** DEV : remet la progression jaune à zéro pour rejouer l'intro (équipe vidée, introSeen=false). */
 export function resetForIntro() {
-    st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", sylvebarbeAwake: false }
+    st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", sylvebarbeAwake: false }
     emit()
 }
 
@@ -614,6 +618,17 @@ export function recordAceDefeat(playerBestLevel: number, playerLastTypes: PokeTy
     st = { ...st, acePeakLevel: peak, aceBox: box, aceWins: wins, aceDefeatedDate: st.creditedThrough }
     emit()
     return wins
+}
+
+// === DUELS reflets (Viridian = exacts / arène eau = inversés) ===
+/** A-t-on DÉJÀ vaincu ce joueur-IA aujourd'hui ? (limite : 1 victoire par joueur-IA et par jour). */
+export function duelWonToday(userId: string): boolean {
+    return st.creditedThrough !== "" && st.duelWins[userId] === st.creditedThrough
+}
+/** Enregistre une victoire de duel du jour contre ce joueur-IA (verrouille jusqu'à demain). */
+export function recordDuelWin(userId: string): void {
+    st = { ...st, duelWins: { ...st.duelWins, [userId]: st.creditedThrough } }
+    emit()
 }
 
 // === DRESSEUR D'ORCALINE (plaine d'entraînement) ===

@@ -38,11 +38,12 @@ import PosterPanel from "./PosterPanel"
 import { useGameStore, setCurrentNickname } from "@/lib/gamebook/yellow/store/gameStore"
 import { YELLOW_MAPS, CENDREVILLE_SPAWN } from "@/lib/gamebook/yellow/maps"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
-import { useBattle, useEvolutions, clearEvolutions, useChampionRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getGiftCtMove, startTrainerBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, useEvolutions, clearEvolutions, useChampionRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getGiftCtMove, startTrainerBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult } from "@/lib/gamebook/yellow/store/battleStore"
 import { aceLoseLine } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
+import { duelWinLines, duelLossLines, DUEL_NEXUS_BALL_ID, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME } from "@/lib/gamebook/yellow/data/duel"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
-import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin } from "@/lib/gamebook/yellow/store/playerStore"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
@@ -97,6 +98,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const pendingLearn = usePendingLearn()
     const newDexEntry = useNewDexEntry()
     const whiteout = useWhiteout()
+    const duelResult = useDuelResult()
     const sbireWin = useSbireWin()
     const aceWin = useAceWin()
     const badgeAwarded = useBadgeAwarded()
@@ -107,10 +109,14 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const myArenaLevel = player.team.reduce((m, x) => Math.max(m, x.level), 0)
     const { mode: arenaMode, opponents: arenaOpponents } = usePlayerArena(mapPlayer.mapId, player.badges, userId, myArenaLevel)
     const [arenaFight, setArenaFight] = useState<{ opp: ArenaOpponent; mode: ArenaMode; enemy: MonInstance[] } | null>(null)
+    // Adversaire du duel EN COURS (gardé pendant le combat pour appliquer les récompenses à la fin).
+    const duelOppRef = useRef<{ userId: string; nickname: string } | null>(null)
     const handleArenaClick = (uid: string) => {
         if (!arenaMode) return
         const opp = arenaOpponents.find((o) => o.userId === uid)
         if (!opp) return
+        // Limite : 1 victoire par joueur-IA et par jour → déjà battu aujourd'hui = pas de revanche.
+        if (duelWonToday(opp.userId)) { showDialogue("duel_rival", opp.nickname, ["Tu m'as déjà vaincu aujourd'hui. Reviens demain pour ta revanche."]); return }
         const enemy = arenaMode === "hub" ? buildHubTeam(opp.player) : buildMirrorTeam(opp.player)
         setArenaFight({ opp, mode: arenaMode, enemy })
     }
@@ -349,7 +355,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 else {
                     // ARÈNE JOUEUR : A à côté d'un adversaire (≤1 case) → défi (en plus du clic/tap sur le sprite).
                     const opp = arenaMode && arenaOpponents.find((o) => Math.abs(o.x - mapPlayer.posX) + Math.abs(o.y - mapPlayer.posY) <= 1)
-                    if (opp) { const enemy = arenaMode === "hub" ? buildHubTeam(opp.player) : buildMirrorTeam(opp.player); setArenaFight({ opp, mode: arenaMode, enemy }) }
+                    if (opp) {
+                        if (duelWonToday(opp.userId)) showDialogue("duel_rival", opp.nickname, ["Tu m'as déjà vaincu aujourd'hui. Reviens demain pour ta revanche."])
+                        else { const enemy = arenaMode === "hub" ? buildHubTeam(opp.player) : buildMirrorTeam(opp.player); setArenaFight({ opp, mode: arenaMode, enemy }) }
+                    }
                     else pressA()
                 }
             }
@@ -364,7 +373,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         }
         window.addEventListener("keydown", handler)
         return () => window.removeEventListener("keydown", handler)
-    }, [move, pressA, pressB, battle, newDexEntry, evolutions, championRun, arenaFight, pendingLearn, arenaMode, arenaOpponents, mapPlayer])
+    }, [move, pressA, pressB, battle, newDexEntry, evolutions, championRun, arenaFight, pendingLearn, arenaMode, arenaOpponents, mapPlayer, showDialogue])
 
     // Identité (User.id) + carte courante → estampillage ownership/lieu à la capture.
     useEffect(() => { setCurrentPlayerId(userId) }, [userId])
@@ -396,6 +405,32 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             if (aceTaunt) showDialogue("y_ace", "ACE", [aceTaunt]) // raillerie d'ACE quand il t'a vaincu
         }
     }, [whiteout, battle, setMap, mapPlayer.mapId, showDialogue])
+
+    // DUEL reflet terminé (Viridian/arène eau) → récompenses post-combat, une fois le combat quitté
+    // ET les éventuelles évolutions jouées. Victoire : cadeau Dieu des Nouilles + Nexus Ball (+ cadeau
+    // croisé serveur au vrai joueur). Défaite : trashtalk de l'adversaire + 30 énergie « par pitié ».
+    useEffect(() => {
+        if (!duelResult || battle || evolutions.length > 0) return
+        const opp = duelOppRef.current
+        duelOppRef.current = null
+        clearDuelResult()
+        if (!opp) return
+        if (duelResult.won) {
+            recordDuelWin(opp.userId)
+            addItem(DUEL_NEXUS_BALL_ID, 1)
+            persistYellowSave()
+            // Partie C : cadeau croisé au VRAI joueur mirouté (best-effort, non bloquant).
+            fetch("/api/gamebook/yellow/duel-gift", {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ toUserId: opp.userId, fromNickname: nickname }),
+            }).catch(() => {})
+            showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, duelWinLines(opp.nickname))
+        } else {
+            grantReps(DUEL_LOSS_CONSOLE_REPS)
+            persistYellowSave()
+            showDialogue("duel_rival", opp.nickname, duelLossLines(opp.nickname))
+        }
+    }, [duelResult, battle, evolutions, nickname, showDialogue])
 
     // Victoire sur le sbire : on délivre une explication sur l'app, une fois le
     // combat quitté ET l'éventuelle cinématique d'évolution terminée.
@@ -1587,7 +1622,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     accent={arenaFight.mode === "hub" ? "#4ec3ff" : "#c77dff"}
                     enemyTeam={arenaFight.enemy}
                     onFight={() => {
-                        startTrainerBattle(getPlayer().team, arenaFight.enemy, Math.floor(Math.random() * 1e9), { aiLevel: "trainer" })
+                        // DUEL : on retient l'adversaire (récompenses post-combat) + trainerId "duel:<userId>"
+                        // → finishBattle signale l'issue via duelResult.
+                        duelOppRef.current = { userId: arenaFight.opp.userId, nickname: arenaFight.opp.nickname }
+                        startTrainerBattle(getPlayer().team, arenaFight.enemy, Math.floor(Math.random() * 1e9), { trainerId: "duel:" + arenaFight.opp.userId, reward: 0, aiLevel: "trainer" })
                         setArenaFight(null)
                     }}
                     onCancel={() => setArenaFight(null)}

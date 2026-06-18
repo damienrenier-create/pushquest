@@ -100,6 +100,8 @@ interface BattleStoreState {
     chainRematchId: string | null
     /** Au moins un Daemon a une attaque EN ATTENTE d'apprentissage → prompt post-combat (façon Gen 1). */
     pendingLearn: boolean
+    /** DUEL reflet (Viridian/arène eau) terminé : issue à traiter par l'UI (récompenses) ; null sinon. */
+    duelResult: { won: boolean } | null
 }
 
 /** Rôle canonique : A = challenger ("player" canonique), B = défié ("enemy" canonique). */
@@ -121,7 +123,7 @@ interface PvpContext {
     desync: boolean
 }
 
-let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, chainRematchId: null, pendingLearn: false }
+let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, chainRematchId: null, pendingLearn: false, duelResult: null }
 // LIGUE — meilleurs moments du run en cours (best hit par membre du Conseil 4 + Maître), runtime.
 // Upsert par trainerId à chaque victoire de la Ligue ; lus au sacre du Maître pour le Hall of Fame.
 const leagueHighlights: Record<string, LeagueHighlight> = {}
@@ -388,6 +390,9 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                 lines.push(...ORCALINE_BALL_LINES)
             }
             rematchReward = { npcId: ORCALINE_TRAINER_ID, npcName: "DRESSEUR D'ORCALINE", lines }
+        } else if (storeState.trainer.trainerId.startsWith("duel:")) {
+            // DUEL reflet : aucune récompense ici → gérée côté UI (limite 1/jour, Nexus Ball, dialogue
+            // Dieu des Nouilles, cadeau croisé). PAS de markTrainerDefeated (ce n'est pas un dresseur permanent).
         } else {
             markTrainerDefeated(storeState.trainer.trainerId)
             const t = getTrainer(storeState.trainer.trainerId)
@@ -429,6 +434,8 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     if (isLose) healAllTeam()
     // Raillerie d'ACE quand IL gagne (défaite du joueur contre ACE) → affichée à la sortie du combat.
     const aceLossTaunt = (isLose && storeState.trainer?.trainerId === ACE_TRAINER_ID) ? aceWinTaunt() : null
+    // DUEL reflet : signale l'issue (gagné/perdu) → l'UI applique les récompenses post-combat.
+    const duelResult = storeState.trainer?.trainerId?.startsWith("duel:") ? { won: b.outcome === "win" } : null
 
     // 3) Évolutions post-combat (mute l'équipe → re-set pour notifier + Pokédex).
     const team = getPlayer().team
@@ -440,7 +447,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // Un Daemon a-t-il une attaque EN ATTENTE (slots pleins à la montée de niveau / l'évolution) ? → prompt post-combat.
     const pendingLearn = getPlayer().team.some((m) => (m.pendingMoves?.length ?? 0) > 0)
     // Expose les évolutions pour la cinématique post-combat (jouée après "QUITTER").
-    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, chainRematchId, pendingLearn })
+    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, chainRematchId, pendingLearn, duelResult })
 
     // 4) Sauvegarde persistante (DB).
     persistYellowSave()
@@ -525,6 +532,11 @@ export function getSbireRewardMsg(): string | null {
 /** Consommé par la carte une fois la récompense d'ACE affichée. */
 export function clearAceWin() {
     setStore({ ...storeState, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null })
+}
+
+/** Consommé par la carte une fois l'issue du DUEL reflet traitée (récompenses appliquées). */
+export function clearDuelResult() {
+    setStore({ ...storeState, duelResult: null })
 }
 
 /** Message de récompense d'ACE (lu au moment d'afficher le dialogue post-combat). */
@@ -844,6 +856,14 @@ export function useAceWin(): number | null {
         subscribe,
         () => getSnapshot().aceWin,
         () => getSnapshot().aceWin,
+    )
+}
+
+export function useDuelResult(): BattleStoreState["duelResult"] {
+    return useSyncExternalStore(
+        subscribe,
+        () => getSnapshot().duelResult,
+        () => getSnapshot().duelResult,
     )
 }
 
