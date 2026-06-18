@@ -50,7 +50,7 @@ import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { ITEMS, getItem } from "@/lib/gamebook/yellow/data/items"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { moveCategory } from "@/lib/gamebook/yellow/battle/typeChart"
-import { moveCostReps } from "@/lib/gamebook/yellow/data/combatCostConfig"
+import { attackCost, effectiveQuota } from "@/lib/gamebook/yellow/data/combatCostConfig"
 import { SAIYAN_POINT_VALUE } from "@/lib/gamebook/yellow/data/saiyanConfig"
 import { ivTier, ivTotal, ivTierColor } from "@/lib/gamebook/yellow/data/ivConfig"
 import { evTotal, topEvStats, EV_TOTAL_CAP } from "@/lib/gamebook/yellow/data/evConfig"
@@ -1460,7 +1460,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                             <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m?.name ?? mv.moveId} <span style={{ opacity: 0.55 }}>({m?.type ?? "?"}{m && m.power > 0 ? ` · ${m.power}` : ""})</span></span>
                                         </span>
                                         {/* PP masqués côté joueur (illimités tant qu'on a l'énergie) → on n'affiche que le coût en reps. */}
-                                        <span style={{ opacity: 0.7, flexShrink: 0 }}>💪 {moveCostReps(m?.power ?? 0, live.level)}</span>
+                                        <span style={{ opacity: 0.7, flexShrink: 0 }}>💪 {attackCost(m ?? null, live.level, effectiveQuota(player.wildCtx?.quota))}</span>
                                     </div>
                                 )
                             })}

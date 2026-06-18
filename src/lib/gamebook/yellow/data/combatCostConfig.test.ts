@@ -1,34 +1,50 @@
 import { describe, it, expect } from "vitest"
-import { moveCostReps, STRUGGLE_INDEX, STRUGGLE_MOVE_ID } from "./combatCostConfig"
+import { attackCost, effectiveQuota, STRUGGLE_INDEX, STRUGGLE_MOVE_ID, QUOTA_STD } from "./combatCostConfig"
+import { getMove } from "./moves"
 
-describe("moveCostReps (coût = puissance, plafonné par bande de niveau)", () => {
-    it("attaque forte → plus chère qu'une faible (à niveau égal)", () => {
-        expect(moveCostReps(110, 40)).toBeGreaterThan(moveCostReps(40, 40))
+const hydro = getMove("hydrocanon")!   // dégâts, puissance 110
+const seisme = getMove("seisme")!      // dégâts, puissance 100 (= seuil)
+const charge = getMove("charge")!      // dégâts, puissance 40
+const mirage = getMove("mirage")!      // statut game-changer (costPower 50)
+const hurl = getMove("hurlement")!     // statut mineur (costPower 20)
+const sable = getMove("jet_de_sable")! // statut sans costPower → défaut 30
+
+describe("attackCost — coût = 10 × (cp/100) × (quota/150) × (niveau/30)", () => {
+    it("max 10 : puissance ≥100 + quota 150 + niveau ≥30", () => {
+        expect(attackCost(hydro, 30, 150)).toBe(10)
+        expect(attackCost(seisme, 30, 150)).toBe(10)
+        expect(attackCost(hydro, 45, 300)).toBe(10) // plafonné (niv & quota au-delà des seuils)
     })
-    it("plafond d'attaque par bande : Hydrocanon (110) = 5 / 8 / 10", () => {
-        expect(moveCostReps(110, 10)).toBe(5)  // niv ≤15
-        expect(moveCostReps(110, 25)).toBe(8)  // niv 16-30
-        expect(moveCostReps(110, 45)).toBe(10) // niv 31+
+    it("Hydrocanon (niv 30) selon le quota : 150→10, 75→5, 30→2", () => {
+        expect(attackCost(hydro, 30, 150)).toBe(10)
+        expect(attackCost(hydro, 30, 75)).toBe(5)
+        expect(attackCost(hydro, 30, 30)).toBe(2)
     })
-    it("puissance 90 (16-30) = 7 (floor, pas 8)", () => {
-        expect(moveCostReps(90, 25)).toBe(7)
+    it("le NIVEAU du Daemon compte : Hydrocanon quota 150, niv 15 → 5", () => {
+        expect(attackCost(hydro, 15, 150)).toBe(5)
     })
-    it("une attaque faible reste bon marché à tout niveau", () => {
-        expect(moveCostReps(40, 10)).toBe(1)
-        expect(moveCostReps(40, 45)).toBe(1)
+    it("statuts : game-changer (Mirage) max 5 · mineur (Hurlement) max 2 · défaut max 3", () => {
+        expect(attackCost(mirage, 30, 150)).toBe(5)
+        expect(attackCost(hurl, 30, 150)).toBe(2)
+        expect(attackCost(sable, 30, 150)).toBe(3)
     })
-    it("statut (puissance 0) coûte 1 / 2 / 3 selon la bande", () => {
-        expect(moveCostReps(0, 10)).toBe(1)
-        expect(moveCostReps(0, 25)).toBe(2)
-        expect(moveCostReps(0, 45)).toBe(3)
+    it("statut scalé par quota : Mirage niv30 quota 75 → 3, quota 30 → 1", () => {
+        expect(attackCost(mirage, 30, 75)).toBe(3) // 2,5 → arrondi 3
+        expect(attackCost(mirage, 30, 30)).toBe(1)
     })
-    it("toujours >= 1, jamais au-dessus du plafond de bande", () => {
-        expect(moveCostReps(-50, 10)).toBeGreaterThanOrEqual(1)
-        expect(moveCostReps(999, 10)).toBe(5)   // plafonné même pour une puissance énorme
-        expect(moveCostReps(999, 45)).toBe(10)
+    it("plancher 1 ; move absent → 1", () => {
+        expect(attackCost(charge, 1, 30)).toBe(1)
+        expect(attackCost(null, 30, 150)).toBe(1)
     })
-    it("la Charge Désespérée a un index sentinelle hors slots (gratuite)", () => {
+    it("effectiveQuota : indispo / ≤1 → 150 ; valeur plausible conservée", () => {
+        expect(effectiveQuota(undefined)).toBe(150)
+        expect(effectiveQuota(1)).toBe(150)
+        expect(effectiveQuota(30)).toBe(30)
+        expect(effectiveQuota(150)).toBe(150)
+    })
+    it("constantes de secours", () => {
         expect(STRUGGLE_INDEX).toBeLessThan(0)
         expect(STRUGGLE_MOVE_ID).toBe("charge_desesperee")
+        expect(QUOTA_STD).toBe(150)
     })
 })

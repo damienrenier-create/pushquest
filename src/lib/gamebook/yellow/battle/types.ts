@@ -75,6 +75,9 @@ export interface MoveData {
     accuracy: number
     pp: number
     priority?: number
+    /** STATUTS (puissance 0) : « puissance de coût » pour le calcul du prix en reps (palier d'impact).
+     *  Absent → palier par défaut (cf. STATUS_DEFAULT_CP). Ignoré pour les attaques de dégâts (cp = puissance). */
+    costPower?: number
     effect?: MoveEffect
     description?: string
 }

@@ -19,7 +19,7 @@ import { chooseAiAction, type AiLevel } from "./ai"
 import { xpForDefeat, applyExp } from "./xp"
 import { tryCapture } from "./capture"
 import { ballBonusOf, getItem, isGuaranteedBall } from "../data/items"
-import { STRUGGLE_MOVE_ID, STRUGGLE_INDEX, moveCostReps } from "../data/combatCostConfig"
+import { STRUGGLE_MOVE_ID, STRUGGLE_INDEX, attackCost, QUOTA_STD } from "../data/combatCostConfig"
 import { gainEv, signatureStat, EV_YIELD_PER_WIN } from "../data/evConfig"
 import { MISS_CAPTURE_LINES } from "../data/missCaptureLines"
 
@@ -438,7 +438,7 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
 
     // Budget d'énergie de l'ENNEMI (ACE) : il paie son attaque (sauf Charge Désespérée).
     if (side === "enemy" && state.enemyEnergy && !isStruggle) {
-        state.enemyEnergy.spent += moveCostReps(getMove(attacker.moves[moveIndex]?.moveId ?? "")?.power ?? 0, attacker.level)
+        state.enemyEnergy.spent += attackCost(getMove(attacker.moves[moveIndex]?.moveId ?? ""), attacker.level, QUOTA_STD)
     }
 
     // (Pré-checks de statut peur/sommeil/gel/paralysie : faits par l'appelant AVANT performMove,
@@ -907,7 +907,7 @@ export function chooseEnemyAction(state: BattleState, rng: Rng): ResolvedAction 
     // meilleure attaque abordable ; à sec → Charge Désespérée (gratuite).
     if (state.enemyEnergy) {
         const remaining = state.enemyEnergy.cap - state.enemyEnergy.spent
-        const costOf = (i: number) => moveCostReps(getMove(self.moves[i]?.moveId ?? "")?.power ?? 0, self.level)
+        const costOf = (i: number) => attackCost(getMove(self.moves[i]?.moveId ?? ""), self.level, QUOTA_STD)
         if (moveIndex < 0 || costOf(moveIndex) > remaining) {
             let best = -1, bestPow = -1
             self.moves.forEach((slot, i) => {

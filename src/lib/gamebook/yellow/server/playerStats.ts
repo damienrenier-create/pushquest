@@ -73,7 +73,7 @@ export async function getSaiyanWindow(userId: string, since: string): Promise<Sa
 
 /** Contexte neutre (aucun bonus) — repli si on n'a pas de données. */
 export function neutralWildCtx(): WildPlayerCtx {
-    return { pompes: 0, squats: 0, quotaReached: false, overshoot: 0, quotaRatio: 0 }
+    return { pompes: 0, squats: 0, quotaReached: false, overshoot: 0, quotaRatio: 0, quota: 150 }
 }
 
 /**
@@ -112,5 +112,6 @@ export async function getWildPlayerCtx(userId: string): Promise<WildPlayerCtx> {
         quotaReached: total >= quota,
         overshoot: Math.min(1, Math.max(0, (total - quota) / quota)),
         quotaRatio: Math.min(1, Math.max(0, total / quota)),
+        quota, // valeur brute → scale le coût des attaques en combat
     }
 }

@@ -2,31 +2,40 @@
 //
 // Nexus Jaune Éclair — COÛT EN REPS des attaques (config, éditable).
 // Les PP sont illimités : la vraie limite est le portefeuille de reps du joueur.
-// Coût basé sur la PUISSANCE de l'attaque, PLAFONNÉ par la bande de niveau du Daemon
-// (le niveau compte via un PLAFOND, pas un multiplicateur → ne monte plus trop vite) :
-//   bande : niv ≤15 (0) · 16-30 (1) · 31+ (2)
-//   attaque DÉGÂT  : coût = clamp( round((puiss−FLOOR)/DIV), 1, PLAFOND[bande] )
-//   attaque STATUT : coût = STATUT[bande]
-// Calibré : Charge (40) → 1 · Hydrocanon (110) → 5 (niv≤15) / 8 (16-30) / 10 (31+).
-// Statut : 1 (niv≤15) / 2 (16-30) / 3 (31+).
+//
+// FORMULE UNIFIÉE (dégâts ET statuts) :
+//   coût = round( 10 × (cp/100) × (quota/150) × (niveau/30) )   — chaque facteur plafonné à 1, min 1.
+//   cp (« puissance de coût ») = PUISSANCE pour une attaque de dégâts ; PALIER d'impact pour un statut.
+// → Pour atteindre 10 : puissance ≥100 ET quota ≥150 ET niveau ≥30.
+//   Ex. Hydrocanon (110) niv30 : quota 150 → 10 · quota 30 → 2.
+//   Statuts plafonnés par leur cp (move.costPower) : game-changer 50 → coût max 5 ; défaut 30 → 3 ; mineur 20 → 2.
 
-export const MOVE_COST_POWER_FLOOR = 30 // puissance "offerte" avant de payer
-export const MOVE_COST_POWER_DIV = 8    // points de puissance par rep
-export const COST_LEVEL_BANDS = [15, 30] as const   // bornes hautes des bandes 0 et 1
-export const COST_CAP_BY_BAND = [5, 8, 10] as const  // plafond du coût d'une attaque, par bande
-export const STATUS_COST_BY_BAND = [1, 2, 3] as const // coût d'une attaque de statut, par bande
+import type { MoveData } from "../battle/types"
 
-/** Bande de niveau (0 = ≤15, 1 = 16-30, 2 = 31+). */
-function levelBand(level: number): 0 | 1 | 2 {
-    return level <= COST_LEVEL_BANDS[0] ? 0 : level <= COST_LEVEL_BANDS[1] ? 1 : 2
+export const QUOTA_STD = 150        // quota étalon (cible reps IRL de référence)
+export const LEVEL_STD = 30         // niveau étalon du Daemon
+export const MAX_COST = 10          // coût maximum d'une attaque
+export const STATUS_DEFAULT_CP = 30 // cp d'un statut non tagué (palier « notable » → coût max 3)
+
+/** Quota effectif pour le coût : valeur brute si plausible (>1), sinon l'étalon 150 (hors-ligne / indispo). */
+export function effectiveQuota(rawQuota: number | undefined | null): number {
+    return rawQuota && rawQuota > 1 ? rawQuota : QUOTA_STD
 }
 
-/** Coût en reps d'une attaque, selon sa PUISSANCE + le niveau (via plafond/bande). */
-export function moveCostReps(power: number, level: number): number {
-    const band = levelBand(level)
-    if (power <= 0) return STATUS_COST_BY_BAND[band] // attaque de statut
-    const raw = Math.floor((power - MOVE_COST_POWER_FLOOR) / MOVE_COST_POWER_DIV) // floor : puiss 90 → 7 (pas 8)
-    return Math.max(1, Math.min(COST_CAP_BY_BAND[band], raw))
+/** « Puissance de coût » : la puissance (dégâts) ou le palier d'impact (statut, via costPower). */
+function costPowerOf(move: MoveData): number {
+    return move.power > 0 ? move.power : (move.costPower ?? STATUS_DEFAULT_CP)
+}
+
+/** Coût en reps d'une attaque, scalé par le QUOTA IRL du joueur ET le NIVEAU du Daemon (cf. en-tête). */
+export function attackCost(move: MoveData | null, level: number, quota: number): number {
+    if (!move) return 1
+    const cp = costPowerOf(move)
+    const f =
+        Math.min(1, cp / 100) *
+        Math.min(1, Math.max(0, quota) / QUOTA_STD) *
+        Math.min(1, Math.max(0, level) / LEVEL_STD)
+    return Math.max(1, Math.min(MAX_COST, Math.round(MAX_COST * f)))
 }
 
 /** Id de l'attaque de secours gratuite (anti soft-lock : faible + dégâts à soi). */

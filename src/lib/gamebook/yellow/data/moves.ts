@@ -12,7 +12,7 @@ export const MOVES: Record<string, MoveData> = {
     coup_d_boule: { id: "coup_d_boule", name: "Coup d'Boule", type: "NORMAL", power: 70, accuracy: 100, pp: 15, effect: { chance: 30, flinch: true }, description: "Peut apeurer." },
     belier: { id: "belier", name: "Bélier", type: "NORMAL", power: 90, accuracy: 85, pp: 20, effect: { recoilPct: 25 }, description: "Puissant, cause du recul." },
     plaquage: { id: "plaquage", name: "Plaquage", type: "NORMAL", power: 85, accuracy: 100, pp: 15, effect: { chance: 30, inflictStatus: "PARALYSIS" }, description: "Le lanceur écrase l'ennemi de tout son poids ; peut paralyser (30%). Apprenable par presque tout le monde." },
-    berceuse: { id: "berceuse", name: "Berceuse", type: "NORMAL", power: 0, accuracy: 55, pp: 15, effect: { inflictStatus: "SLEEP" }, description: "Une mélodie apaisante qui endort la cible (précision faible). Version Normal du sommeil (≠ Spores Dodo, Plante)." },
+    berceuse: { id: "berceuse", name: "Berceuse", type: "NORMAL", power: 0, accuracy: 55, pp: 15, costPower: 50, effect: { inflictStatus: "SLEEP" }, description: "Une mélodie apaisante qui endort la cible (précision faible). Version Normal du sommeil (≠ Spores Dodo, Plante)." },
     // NE RATE JAMAIS : accuracy 0 → ignore précision/esquive/mirage ; sureHit → touche même une cible sous terre
     // (Tunnel) ou en vol. Le seul coup vraiment infaillible du jeu.
     meteores: { id: "meteores", name: "Météores", type: "NORMAL", power: 60, accuracy: 0, pp: 20, effect: { sureHit: true }, description: "Projette une nuée d'étoiles téléguidées : NE RATE JAMAIS — ni esquive, ni mirage, ni cible sous terre ou en vol n'y échappent." },
@@ -33,9 +33,9 @@ export const MOVES: Record<string, MoveData> = {
     mega_sangsue: { id: "mega_sangsue", name: "Méga-Sangsue", type: "PLANTE", power: 40, accuracy: 100, pp: 15, effect: { drainPct: 50 }, description: "Rend 50% des dégâts en PV." },
 
     etincelle: { id: "etincelle", name: "Étincelle", type: "ELEC", power: 65, accuracy: 100, pp: 20, effect: { chance: 30, inflictStatus: "PARALYSIS" }, description: "Peut paralyser." },
-    cage_eclair: { id: "cage_eclair", name: "Cage-Éclair", type: "ELEC", power: 0, accuracy: 100, pp: 20, effect: { inflictStatus: "PARALYSIS" }, description: "Paralyse à coup sûr." },
+    cage_eclair: { id: "cage_eclair", name: "Cage-Éclair", type: "ELEC", power: 0, accuracy: 100, pp: 20, costPower: 50, effect: { inflictStatus: "PARALYSIS" }, description: "Paralyse à coup sûr." },
     surtension: { id: "surtension", name: "Surtension", type: "ELEC", power: 20, accuracy: 100, pp: 10, effect: { twoTurn: true, statChanges: [{ target: "target", stat: "spe", stages: -2 }] }, description: "Signature de VOLTA — décharge en 2 temps. Tour 1 : faible (20) mais RALENTIT fort (-2 Vitesse, cumulable). Tour 2 : se libère AUTOMATIQUEMENT, frappe à 60 avec un très haut taux de coup critique." },
-    mirage: { id: "mirage", name: "Mirage", type: "NORMAL", power: 0, accuracy: 0, pp: 20, effect: { statChanges: [{ target: "self", stat: "eva", stages: 2 }] }, description: "Le corps vacille et se dédouble comme un mirage : +2 Esquive (cumulable). Difficile à toucher." },
+    mirage: { id: "mirage", name: "Mirage", type: "NORMAL", power: 0, accuracy: 0, pp: 20, costPower: 50, effect: { statChanges: [{ target: "self", stat: "eva", stages: 2 }] }, description: "Le corps vacille et se dédouble comme un mirage : +2 Esquive (cumulable). Difficile à toucher." },
 
     coup_d_givre: { id: "coup_d_givre", name: "Coup d'Givre", type: "GLACE", power: 65, accuracy: 100, pp: 20, effect: { chance: 10, inflictStatus: "FREEZE" }, description: "Peut geler." },
 
@@ -43,7 +43,7 @@ export const MOVES: Record<string, MoveData> = {
     poing_karate: { id: "poing_karate", name: "Poing-Karaté", type: "COMBAT", power: 50, accuracy: 100, pp: 25, effect: { highCrit: true }, description: "Taux de critique élevé." },
 
     dard_venin: { id: "dard_venin", name: "Dard-Venin", type: "POISON", power: 15, accuracy: 100, pp: 35, effect: { chance: 30, inflictStatus: "POISON" }, description: "Peut empoisonner." },
-    toxik: { id: "toxik", name: "Toxik", type: "POISON", power: 0, accuracy: 90, pp: 10, effect: { inflictStatus: "TOXIC" }, description: "Empoisonne gravement." },
+    toxik: { id: "toxik", name: "Toxik", type: "POISON", power: 0, accuracy: 90, pp: 10, costPower: 50, effect: { inflictStatus: "TOXIC" }, description: "Empoisonne gravement." },
 
     jet_de_sable: { id: "jet_de_sable", name: "Jet de Sable", type: "SOL", power: 0, accuracy: 100, pp: 15, effect: { statChanges: [{ target: "target", stat: "acc", stages: -1 }] }, description: "Baisse la Précision adverse." },
     seisme: { id: "seisme", name: "Séisme", type: "SOL", power: 100, accuracy: 100, pp: 10, description: "Secousse dévastatrice." },
@@ -54,7 +54,7 @@ export const MOVES: Record<string, MoveData> = {
 
     choc_mental: { id: "choc_mental", name: "Choc Mental", type: "PSY", power: 50, accuracy: 100, pp: 25, effect: { chance: 10, statChanges: [{ target: "target", stat: "spc", stages: -1 }] }, description: "Peut baisser le Spécial." },
     onde_folie: { id: "onde_folie", name: "Onde Folie", type: "PSY", power: 0, accuracy: 100, pp: 10, effect: { inflictVolatile: "CONFUSION" }, description: "Rend confus." },
-    repos: { id: "repos", name: "Repos", type: "PSY", power: 0, accuracy: 0, pp: 10, effect: { healPct: 50 }, description: "Restaure la moitié des PV." },
+    repos: { id: "repos", name: "Repos", type: "PSY", power: 0, accuracy: 0, pp: 10, costPower: 50, effect: { healPct: 50 }, description: "Restaure la moitié des PV." },
 
     dard_nuee: { id: "dard_nuee", name: "Dard-Nuée", type: "INSECTE", power: 14, accuracy: 85, pp: 20, effect: { multiHit: [2, 5] }, description: "Frappe 2 à 5 fois." },
     // Boul'Pollen : boule de pollen explosive. Le pollen NUTRITIF rend au lanceur 50% des dégâts (drain) —
@@ -68,18 +68,18 @@ export const MOVES: Record<string, MoveData> = {
     draco_souffle: { id: "draco_souffle", name: "Draco-Souffle", type: "DRAGON", power: 60, accuracy: 100, pp: 25, description: "Souffle draconique." },
 
     // Moves de statut purs (boosts/baisses)
-    danse_lames: { id: "danse_lames", name: "Danse-Lames", type: "NORMAL", power: 0, accuracy: 0, pp: 20, effect: { statChanges: [{ target: "self", stat: "atk", stages: 2 }] }, description: "Augmente fortement l'Attaque." },
-    hurlement: { id: "hurlement", name: "Hurlement", type: "NORMAL", power: 0, accuracy: 100, pp: 40, effect: { statChanges: [{ target: "target", stat: "atk", stages: -1 }] }, description: "Baisse l'Attaque adverse." },
-    mur_de_fer: { id: "mur_de_fer", name: "Mur de Fer", type: "NORMAL", power: 0, accuracy: 0, pp: 30, effect: { statChanges: [{ target: "self", stat: "def", stages: 1 }] }, description: "Augmente la Défense." },
+    danse_lames: { id: "danse_lames", name: "Danse-Lames", type: "NORMAL", power: 0, accuracy: 0, pp: 20, costPower: 50, effect: { statChanges: [{ target: "self", stat: "atk", stages: 2 }] }, description: "Augmente fortement l'Attaque." },
+    hurlement: { id: "hurlement", name: "Hurlement", type: "NORMAL", power: 0, accuracy: 100, pp: 40, costPower: 20, effect: { statChanges: [{ target: "target", stat: "atk", stages: -1 }] }, description: "Baisse l'Attaque adverse." },
+    mur_de_fer: { id: "mur_de_fer", name: "Mur de Fer", type: "NORMAL", power: 0, accuracy: 0, pp: 30, costPower: 20, effect: { statChanges: [{ target: "self", stat: "def", stages: 1 }] }, description: "Augmente la Défense." },
 
     // === Ajouts pool maison (20) : moves de rôle + paliers mid/gros par type ===
-    elan: { id: "elan", name: "Élan", type: "NORMAL", power: 0, accuracy: 0, pp: 30, effect: { statChanges: [{ target: "self", stat: "spe", stages: 1 }] }, description: "Augmente la Vitesse." },
+    elan: { id: "elan", name: "Élan", type: "NORMAL", power: 0, accuracy: 0, pp: 30, costPower: 20, effect: { statChanges: [{ target: "self", stat: "spe", stages: 1 }] }, description: "Augmente la Vitesse." },
     focalisation: { id: "focalisation", name: "Focalisation", type: "PSY", power: 0, accuracy: 0, pp: 20, effect: { statChanges: [{ target: "self", stat: "spc", stages: 1 }] }, description: "Augmente le Spécial." },
     flamme_ardente: { id: "flamme_ardente", name: "Flamme Ardente", type: "FEU", power: 65, accuracy: 100, pp: 20, effect: { chance: 10, inflictStatus: "BURN" }, description: "Move Feu intermédiaire ; peut brûler." },
     lame_eau: { id: "lame_eau", name: "Lame d'Eau", type: "EAU", power: 65, accuracy: 100, pp: 20, effect: { chance: 10, statChanges: [{ target: "target", stat: "spe", stages: -1 }] }, description: "Peut baisser la Vitesse." },
     deferlante: { id: "deferlante", name: "Déferlante", type: "EAU", power: 95, accuracy: 100, pp: 10, effect: { chance: 30, statChanges: [{ target: "target", stat: "def", stages: -1 }] }, description: "Signature d'ONDINE : une vague titanesque qui peut briser la garde adverse (-Défense)." },
     tranche_feuille: { id: "tranche_feuille", name: "Tranche-Feuille", type: "PLANTE", power: 55, accuracy: 95, pp: 25, effect: { highCrit: true }, description: "Taux de critique élevé." },
-    spores_dodo: { id: "spores_dodo", name: "Spores Dodo", type: "PLANTE", power: 0, accuracy: 75, pp: 15, effect: { inflictStatus: "SLEEP" }, description: "Endort la cible." },
+    spores_dodo: { id: "spores_dodo", name: "Spores Dodo", type: "PLANTE", power: 0, accuracy: 75, pp: 15, costPower: 50, effect: { inflictStatus: "SLEEP" }, description: "Endort la cible." },
     etreinte_sylvestre: { id: "etreinte_sylvestre", name: "Étreinte Sylvestre", type: "PLANTE", power: 75, accuracy: 100, pp: 10, effect: { drainPct: 50 }, description: "Signature du Druide : des racines enserrent la cible et drainent sa vigueur (rend 50% des dégâts)." },
     fulgurance: { id: "fulgurance", name: "Fulgurance", type: "ELEC", power: 90, accuracy: 100, pp: 15, effect: { chance: 10, inflictStatus: "PARALYSIS" }, description: "Gros move Élec ; peut paralyser." },
     souffle_polaire: { id: "souffle_polaire", name: "Souffle Polaire", type: "GLACE", power: 90, accuracy: 100, pp: 10, effect: { chance: 10, inflictStatus: "FREEZE" }, description: "Gros move Glace ; peut geler." },
@@ -99,13 +99,13 @@ export const MOVES: Record<string, MoveData> = {
     // === Pool SPECTRE étendu (maison hantée) : soin/drain/statut/signature qui manquaient au type ===
     malediction: { id: "malediction", name: "Malédiction", type: "SPECTRE", power: 0, accuracy: 100, pp: 10, effect: { statChanges: [{ target: "self", stat: "def", stages: 1 }, { target: "target", stat: "spe", stages: -1 }] }, description: "Le spectre se barricade (+1 Défense) en jetant un sort qui ralentit la cible (-1 Vitesse)." },
     drain_ame: { id: "drain_ame", name: "Drain d'Âme", type: "SPECTRE", power: 60, accuracy: 100, pp: 10, effect: { drainPct: 50 }, description: "Aspire la force vitale : rend 50% des dégâts en PV." },
-    linceul: { id: "linceul", name: "Linceul", type: "SPECTRE", power: 0, accuracy: 0, pp: 10, effect: { healPct: 50 }, description: "Le spectre se drape dans un linceul régénérant : restaure la moitié des PV." },
+    linceul: { id: "linceul", name: "Linceul", type: "SPECTRE", power: 0, accuracy: 0, pp: 10, costPower: 50, effect: { healPct: 50 }, description: "Le spectre se drape dans un linceul régénérant : restaure la moitié des PV." },
     voile_effroi: { id: "voile_effroi", name: "Voile d'Effroi", type: "SPECTRE", power: 0, accuracy: 100, pp: 15, effect: { statChanges: [{ target: "target", stat: "atk", stages: -1 }, { target: "target", stat: "acc", stages: -1 }] }, description: "La peur fige la cible : -1 Attaque ET -1 Précision." },
     griffe_spectrale: { id: "griffe_spectrale", name: "Griffe Spectrale", type: "SPECTRE", power: 70, accuracy: 100, pp: 15, effect: { highCrit: true }, description: "Lacération d'outre-tombe à fort taux de critique." },
     frappe_audela: { id: "frappe_audela", name: "Frappe de l'Au-delà", type: "SPECTRE", power: 85, accuracy: 100, pp: 10, effect: { chance: 20, statChanges: [{ target: "target", stat: "def", stages: -1 }] }, description: "Gros coup spectral ; peut briser la Défense adverse (-1)." },
     detonation: { id: "detonation", name: "Détonation", type: "SPECTRE", power: 170, accuracy: 100, pp: 5, effect: { selfHpToOne: true }, description: "Déflagration kamikaze : dégâts colossaux, mais l'attaquant se disloque et ne garde plus qu'1 PV (il ne s'auto-K.O. PAS)." },
     lame_roche: { id: "lame_roche", name: "Lame de Roche", type: "ROCHE", power: 90, accuracy: 90, pp: 10, effect: { highCrit: true }, description: "Gros move Roche ; fort taux de critique." },
-    carapace_diamant: { id: "carapace_diamant", name: "Carapace Diamant", type: "ROCHE", power: 0, accuracy: 0, pp: 10, effect: { statChanges: [{ target: "self", stat: "def", stages: 2 }] }, description: "Augmente BEAUCOUP la Défense." },
+    carapace_diamant: { id: "carapace_diamant", name: "Carapace Diamant", type: "ROCHE", power: 0, accuracy: 0, pp: 10, costPower: 50, effect: { statChanges: [{ target: "self", stat: "def", stages: 2 }] }, description: "Augmente BEAUCOUP la Défense." },
     faille_sismique: { id: "faille_sismique", name: "Faille Sismique", type: "SOL", power: 90, accuracy: 100, pp: 10, effect: { statChanges: [{ target: "self", stat: "def", stages: 1 }] }, description: "Signature : faille tellurique puissante (sans effet sur le Vol) qui renforce la Défense du lanceur (+1, cumulable)." },
     pyrotechnie: { id: "pyrotechnie", name: "Pyrotechnie", type: "FEU", power: 70, accuracy: 100, pp: 10, effect: { statChanges: [{ target: "target", stat: "spc", stages: -2 }] }, description: "Signature de PYRA : un feu façonné par l'esprit qui embrase la cible ET pulvérise sa concentration (-2 Spé, cumulable jusqu'à -6). Plus gros débuff du jeu." },
     bombe_beurk: { id: "bombe_beurk", name: "Bombe Beurk", type: "POISON", power: 90, accuracy: 100, pp: 10, effect: { chance: 30, inflictStatus: "POISON" }, description: "Gros move Poison ; peut empoisonner." },

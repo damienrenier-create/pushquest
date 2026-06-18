@@ -22,7 +22,7 @@ import { pickAttackFx, type AttackFxSpec } from "@/lib/gamebook/yellow/data/atta
 import { usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
 import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { TYPE_COLORS } from "../dex/dexShared"
-import { moveCostReps, STRUGGLE_INDEX } from "@/lib/gamebook/yellow/data/combatCostConfig"
+import { attackCost, effectiveQuota, STRUGGLE_INDEX } from "@/lib/gamebook/yellow/data/combatCostConfig"
 
 type Menu = "root" | "moves" | "switch" | "bag" | "confirmRun"
 
@@ -284,7 +284,7 @@ export default function BattleScreen() {
                 options.push({ label: "🏃 FUITE", onSelect: () => setMenu("confirmRun"), disabled: !battle.isWild })
             }
         } else if (menu === "moves") {
-            const costs = player.moves.map((s) => moveCostReps(getMove(s.moveId)?.power ?? 0, player.level))
+            const costs = player.moves.map((s) => attackCost(getMove(s.moveId), player.level, effectiveQuota(repsWallet.wildCtx?.quota)))
             // PvP (user vs user) = énergie ILLIMITÉE pendant le combat : aucune attaque grisée
             // (la déduction de reps est déjà sautée côté store pour le PvP).
             const canUse = (c: number) => battle.pvp || (c <= reps && c <= remainingEnergy)

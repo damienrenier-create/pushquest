@@ -36,7 +36,7 @@ import { toMonInstance, type LeagueHighlight } from "../storage/save"
 import { evolveTeam, type TeamEvolution } from "../progression/evolveTeam"
 import { persistYellowSave, processSaiyanPoints } from "./saveManager"
 import { QUOTA_CAPTURE_BONUS } from "../data/captureConfig"
-import { moveCostReps, STRUGGLE_INDEX } from "../data/combatCostConfig"
+import { attackCost, effectiveQuota, STRUGGLE_INDEX } from "../data/combatCostConfig"
 import { battleEnergyCap } from "../data/badges"
 import { mpLog } from "../multiplayer/mp"
 
@@ -199,7 +199,7 @@ function moveCostRepsForAction(b: BattleState, moveIndex: number): number {
     const me = b.player.team[b.player.activeIndex]
     const slot = me?.moves[moveIndex]
     if (!me || !slot) return 0
-    return moveCostReps(getMove(slot.moveId)?.power ?? 0, me.level)
+    return attackCost(getMove(slot.moveId), me.level, effectiveQuota(getPlayer().wildCtx?.quota))
 }
 
 export function submitPlayerAction(action: PlayerAction) {

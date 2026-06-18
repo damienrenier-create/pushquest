@@ -71,6 +71,7 @@ export interface WildPlayerCtx {
     quotaReached: boolean
     overshoot: number    // 0..1 (dépassement du quota)
     quotaRatio: number   // 0..1 (total du jour / quota, capé) → pilote le plancher d'IV
+    quota?: number       // VALEUR BRUTE du quota du jour (cible reps IRL) → scale le coût des attaques (absent → étalon 150)
 }
 
 export interface EncounterCtx {
