@@ -26,7 +26,7 @@ import { rollWildEncounter, wildLevelCap, hasEncounters } from "../data/encounte
 import { getTrainer, trainerBoost, arenaScaledLevel, type TrainTier } from "../data/trainers"
 import { createMonInstance } from "../battle/factory"
 import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroLines, SBIRE_DONE_LINES, SBIRE_NO_TEAM_LINES } from "../data/sbire"
-import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_INTRO_LINES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, ACE_PASS_LINES, ACE_GATE_LINES, buildAceTeam, speciesAtLevel } from "../data/ace"
+import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_INTRO_LINES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, ACE_PASS_LINES, ACE_GATE_LINES, ACE_PANTHEON_WIN, buildAceTeam, speciesAtLevel } from "../data/ace"
 import { CAVE_TRADER_ID, CAVE_TRADE_GIVE, CAVE_TRADE_RECEIVE, CAVE_TRADER_OFFER_LINES, CAVE_TRADER_NEED_LINES, CAVE_TRADE_DONE_LINES, CAVE_TRADE_ALREADY_LINES } from "../data/caveTrader"
 import { HH_KID_ID, HH_KID_DAY_LINES, HH_KID_NIGHT_LINES, isHhKidNight } from "../data/hhKid"
 import { ORCALINE_TRAINER_ID, ORCALINE_INTRO_LINES, ORCALINE_REMATCH_LINES, ORCALINE_DONE_TODAY_LINES } from "../data/orcalineTrainer"
@@ -254,12 +254,14 @@ function tryLaunchAce(): ActiveDialogue | null {
     if (!team.some((m) => m.currentHp > 0)) {
         return { npcId: ACE_TRAINER_ID, npcName: "ACE", lineIndex: 0, lines: ACE_NO_TEAM_LINES }
     }
-    const best = Math.max(...team.map((m) => m.level))
+    // ACE se cale sur la MOYENNE de l'équipe du joueur (plus sur son meilleur) : un dresseur n'a jamais
+    // toute son équipe au niveau de son plus fort → combat bien plus équitable.
+    const avg = Math.round(team.reduce((s, m) => s + m.level, 0) / Math.max(1, team.length))
     const last = team[team.length - 1]
     const lastTypes = getSpecies(last.speciesId)?.types ?? []
     // CLIQUET : le niveau d'ACE est FIGÉ entre deux défaites (aceBattleLevel). Il ne monte
     // qu'APRÈS sa défaite (recordAceDefeat) — fini la recalibration à chaque rencontre.
-    const built = buildAceTeam({ aceLevel: aceBattleLevel(best), playerLastTypes: lastTypes, hasElecBadge: getPlayerSave().badges.includes("elec") })
+    const built = buildAceTeam({ aceLevel: aceBattleLevel(avg), playerLastTypes: lastTypes, hasElecBadge: getPlayerSave().badges.includes("elec") })
     // Taille d'équipe d'ACE = celle du joueur (min 3 = les 3 panthères), avec cliquet.
     const aceSize = aceTeamSizeFor(team.length)
     // ACE = élite (boss ultime) : ses Daemons sont entraînés comme un joueur assidu.
@@ -522,8 +524,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
             }
             // Pas de Badge Flamme : ACE barre la route. Combat quotidien s'il est dispo,
             // sinon simple rappel du gate (« reviens avec le badge »).
-            // CADEAU : le PANTHÉON est offert à la 12e victoire sur ACE (cf. aceReward) → on annonce le compte à rebours.
-            const aceLeft = 12 - getPlayerSave().aceWins
+            // CADEAU : le PANTHÉON est offert à la 7e victoire sur ACE (cf. aceReward) → on annonce le compte à rebours.
+            const aceLeft = ACE_PANTHEON_WIN - getPlayerSave().aceWins
             const aceGiftLine = aceLeft > 0
                 ? `Au fait… j'ai un CADEAU pour qui me battra ${aceLeft} fois de plus : un PANTHÉON, rien que ça ! 😏`
                 : "Tu m'as déjà arraché mon PANTHÉON… mais reviens te frotter à moi quand tu veux !"

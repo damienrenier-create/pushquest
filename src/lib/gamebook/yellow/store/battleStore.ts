@@ -283,12 +283,12 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     let chainRematchId: string | null = null
     if (b.outcome === "win" && storeState.trainer) {
         if (storeState.trainer.trainerId === ACE_TRAINER_ID) {
-            // ACE : sa défaite ratchete son niveau (+2 sur ton meilleur) + mémorise le contre.
+            // ACE : sa défaite ratchete son niveau (+2 sur ta MOYENNE d'équipe) + mémorise le contre.
             const aceTeam = getPlayer().team
-            const best = Math.max(1, ...aceTeam.map((m) => m.level))
+            const avg = Math.max(1, Math.round(aceTeam.reduce((s, m) => s + m.level, 0) / Math.max(1, aceTeam.length)))
             const aceLast = aceTeam[aceTeam.length - 1]
             const aceLastTypes = aceLast ? (getSpecies(aceLast.speciesId)?.types ?? []) : []
-            const winNum = recordAceDefeat(best, aceLastTypes, aceLast?.level ?? best)
+            const winNum = recordAceDefeat(avg, aceLastTypes, aceLast?.level ?? avg)
             const r = aceReward(winNum)
             if (r.itemId) addItem(r.itemId, 1)
             if (r.reps) grantReps(r.reps)

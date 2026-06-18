@@ -65,8 +65,8 @@ export const ACE_PANTHERS = ["pantheon", "pantheon", "pantheon"]
 export const ACE_PANTHERS_EVOLVED = ["pyropanthe", "voltapanthe", "ombrapanthe"]
 export const ACE_NOUILLON_BASE = "nouillon"   // → vermisaint → divinpate
 export const ACE_FIRE_BASE = "braisille"      // → flamkure → pyrokoss
-export const ACE_LEVEL_OFFSET = 2     // offset FINAL (dès la 4e rencontre) : ton meilleur +2
-export const ACE_EASY_START = -1      // 1re rencontre : ton meilleur -1 (un poil facile)
+export const ACE_LEVEL_OFFSET = 2     // offset FINAL (dès la 4e rencontre) : ta MOYENNE d'équipe +2
+export const ACE_EASY_START = -1      // 1re rencontre : ta moyenne -1 (un poil facile)
 
 /**
  * Offset de niveau d'ACE selon le nb de VICTOIRES (rampe douce, +1/victoire) : -1, 0, +1
@@ -83,9 +83,10 @@ export const ACE_BOX = [
     "zappeureal", "draconarque", "regnantaur", "magmator", "mycedruide",
 ]
 
-/** Niveau-cible des slots fixes : max(pic, meilleur du joueur + 2). Ne régresse jamais. */
-export function aceTargetLevel(acePeak: number, playerBestLevel: number): number {
-    return Math.min(MAX_LEVEL, Math.max(1, acePeak, playerBestLevel + ACE_LEVEL_OFFSET))
+/** Niveau-cible des slots fixes : max(pic, MOYENNE d'équipe du joueur + 2). Ne régresse jamais.
+ *  (Basé sur la moyenne, plus sur le meilleur : un dresseur n'a jamais TOUTE son équipe à son pic.) */
+export function aceTargetLevel(acePeak: number, playerAvgLevel: number): number {
+    return Math.min(MAX_LEVEL, Math.max(1, acePeak, playerAvgLevel + ACE_LEVEL_OFFSET))
 }
 
 /** Meilleur contre de la box face aux types du dernier Daemon joueur. */
@@ -154,11 +155,13 @@ export interface AceReward {
     message: string
 }
 
+/** Nombre de victoires sur ACE qui débloque le cadeau Panthéon (cf. teaser + compte à rebours). */
+export const ACE_PANTHEON_WIN = 7
+
 /** Récompense à la n-ième victoire (1-indexée). */
 export function aceReward(winNumber: number): AceReward {
-    if (winNumber <= 5) return { itemId: "poke_ball", message: "ACE te laisse une Nexus-Ball." }
-    if (winNumber <= 10) return { reps: 100, message: "ACE te file 100 reps pour ta peine." }
-    if (winNumber === 11) return { itemId: "super_ball", message: "ACE t'offre une Super Nexus-Ball !" }
-    if (winNumber === 12) return { gift: "pantheon", message: "ACE te confie un Panthéon ! Élève-le bien." }
+    if (winNumber <= 3) return { itemId: "poke_ball_plus", reps: 100, message: "ACE te file une Nexus-Ball + ET 100 reps !" }
+    if (winNumber <= 6) return { itemId: "super_ball", reps: 150, message: "ACE t'offre une Super Nexus-Ball ET 150 reps !" }
+    if (winNumber === ACE_PANTHEON_WIN) return { gift: "pantheon", message: "ACE te confie un PANTHÉON ! Élève-le bien." }
     return { refund: true, message: "ACE te rembourse l'énergie dépensée ce combat." }
 }

@@ -3,7 +3,7 @@ import { buildAceTeam, bestCounter, aceTargetLevel, aceReward, aceEnergyBudget, 
 import { getSpecies } from "./species"
 
 describe("ACE — scaling + équipe + contre adaptatif", () => {
-    it("niveau-cible = max(pic, meilleur joueur + 2) — ne régresse jamais", () => {
+    it("niveau-cible = max(pic, MOYENNE joueur + 2) — ne régresse jamais", () => {
         expect(aceTargetLevel(0, 10)).toBe(12)
         expect(aceTargetLevel(30, 10)).toBe(30) // pic conservé (ne descend pas)
         expect(aceTargetLevel(20, 25)).toBe(27) // suit le joueur (+2)
@@ -51,9 +51,13 @@ describe("ACE — scaling + équipe + contre adaptatif", () => {
         expect(buildAceTeam({ aceLevel: 50, playerLastTypes: ["EAU"] }).team[0].level).toBe(50)
     })
 
-    it("récompenses + budget énergie (inchangés)", () => {
-        expect(aceReward(1).itemId).toBe("poke_ball")
-        expect(aceReward(12).gift).toBe("pantheon")
+    it("récompenses : 1-3 Ball+ & 100 reps · 4-6 Super Ball & 150 reps · 7 Panthéon · 8+ remboursement", () => {
+        expect(aceReward(1).itemId).toBe("poke_ball_plus")
+        expect(aceReward(3).reps).toBe(100)
+        expect(aceReward(4).itemId).toBe("super_ball")
+        expect(aceReward(6).reps).toBe(150)
+        expect(aceReward(7).gift).toBe("pantheon")
+        expect(aceReward(8).refund).toBe(true)
         expect(aceEnergyBudget(200)).toBe(300)
     })
 })
