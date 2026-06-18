@@ -39,17 +39,31 @@ export function hasAllBadges(badges: readonly string[]): boolean {
 /** Mode d'arène joueur selon la map. */
 export type ArenaMode = "hub" | "mirror"
 export const ARENA_MAPS: Record<string, ArenaMode> = {
-    // Les reflets des autres joueurs (équipe miroir = faiblesses) ROAMENT en VILLE JAUNE : on les
-    // rencontre TÔT, en se baladant, au lieu d'attendre l'arène eau de fin de jeu (déplacée ici).
-    [YELLOW_ENTRANCE_MAP_ID]: "mirror",
-    yellow_arena_elec: "mirror", // reflets : équipes inversées + faiblesses de type (arène fixe, fin de jeu)
+    // VIRIDIAN (Ville Jaune) : on croise les reflets EXACTS des autres joueurs — leurs VRAIES
+    // équipes, jouées par l'IA — en roamant, tôt dans l'aventure.
+    [YELLOW_ENTRANCE_MAP_ID]: "hub",
+    // ARÈNE EAU : une fois ONDINE vaincue, les reflets INVERSÉS (équipe = faiblesses de type,
+    // pseudo à l'envers) y popent — défi miroir de fin de zone.
+    yellow_arena_eau: "mirror",
 }
-/** Maps où les adversaires POPENT sur des cases ALÉATOIRES (re-tirées à chaque entrée) et sans
- *  gate « tous les badges » — façon rencontres sauvages, pour se mesurer aux autres au plus tôt. */
+/** Maps où les adversaires POPENT sur des cases ALÉATOIRES (re-tirées à chaque entrée) — façon
+ *  rencontres, pour se mesurer aux autres au plus tôt. Les arènes fixes utilisent ARENA_POSITIONS. */
 export const ROAMING_ARENA_MAPS: ReadonlySet<string> = new Set([YELLOW_ENTRANCE_MAP_ID])
-/** Cases LIBRES (walkable, hors gardes/boss) où planter les adversaires sur les arènes FIXES. */
+/** Cases LIBRES (walkable, hors gym) où planter les adversaires sur les arènes à placement FIXE. */
 export const ARENA_POSITIONS: Record<string, [number, number][]> = {
-    yellow_arena_elec: [[2, 6], [4, 6], [6, 6], [8, 6], [10, 6], [12, 6]],
+    yellow_arena_eau: [[2, 8], [2, 12], [13, 8], [13, 12], [3, 10], [12, 10]],
+}
+
+/**
+ * L'apparition des reflets est-elle ACTIVE sur cette map pour ce joueur ?
+ *  • Viridian (reflets EXACTS) : tôt — dès le 1er badge.
+ *  • Arène eau (reflets INVERSÉS) : seulement après avoir vaincu ONDINE (badge eau en poche).
+ */
+export function arenaActive(mapId: string, badges: readonly string[]): boolean {
+    if (!ARENA_MAPS[mapId]) return false
+    if (mapId === YELLOW_ENTRANCE_MAP_ID) return badges.length >= 1
+    if (mapId === "yellow_arena_eau") return badges.includes("eau")
+    return hasAllBadges(badges)
 }
 
 /**

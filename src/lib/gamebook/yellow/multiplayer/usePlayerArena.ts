@@ -5,7 +5,7 @@
 // de notre niveau), placés sur les cases libres de l'arène — uniquement si on a TOUS les badges.
 
 import { useEffect, useMemo, useState } from "react"
-import { ARENA_MAPS, ARENA_POSITIONS, ARENA_OPPONENTS, ROAMING_ARENA_MAPS, roamingSpots, rankClosest, hasAllBadges, mirrorName, type ArenaMode, type RegistryPlayer } from "../data/playerArena"
+import { ARENA_MAPS, ARENA_POSITIONS, ARENA_OPPONENTS, ROAMING_ARENA_MAPS, roamingSpots, rankClosest, arenaActive, mirrorName, type ArenaMode, type RegistryPlayer } from "../data/playerArena"
 
 export interface ArenaOpponent {
     userId: string
@@ -21,9 +21,9 @@ export function usePlayerArena(mapId: string, badges: readonly string[], myUserI
 } {
     const mode = ARENA_MAPS[mapId] ?? null
     const roaming = ROAMING_ARENA_MAPS.has(mapId)
-    // ROAMING (Ville Jaune) : accessible TÔT — dès le 1er badge, pas besoin de TOUS les badges.
-    // Arènes FIXES (ex. Tour Hertz) : gate « tous les badges » (contenu de fin de jeu).
-    const active = mode !== null && (roaming ? badges.length >= 1 : hasAllBadges(badges))
+    // Gate par map (cf. arenaActive) : Viridian = reflets EXACTS dès le 1er badge ;
+    // arène eau = reflets INVERSÉS une fois ONDINE vaincue.
+    const active = arenaActive(mapId, badges)
     const [players, setPlayers] = useState<RegistryPlayer[] | null>(null)
 
     useEffect(() => {

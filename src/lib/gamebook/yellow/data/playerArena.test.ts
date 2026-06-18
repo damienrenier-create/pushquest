@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest"
 import {
     teamMaxLevel, rankClosest, buildHubTeam, bestCounterType, strongestSpeciesOfType,
     mirrorName, buildMirrorTeam, pickMirrorCounter, ARENA_OPPONENTS, hasAllBadges, ALL_BADGES, ARENA_MAPS, ARENA_POSITIONS,
-    ROAMING_ARENA_MAPS, roamingSpots, type RegistryPlayer,
+    ROAMING_ARENA_MAPS, roamingSpots, arenaActive, type RegistryPlayer,
 } from "./playerArena"
 import { getSpecies } from "./species"
 import { typeEffectiveness } from "../battle/typeChart"
@@ -43,14 +43,22 @@ describe("Arène joueurs — déblocage & placement", () => {
         expect(ALL_BADGES.length).toBe(5)
     })
 
-    it("placement : arènes FIXES ont assez de cases ; les reflets roament en Ville Jaune", () => {
+    it("placement : Viridian = reflets EXACTS (roaming) ; arène eau = reflets INVERSÉS (fixe)", () => {
         for (const mapId of Object.keys(ARENA_MAPS)) {
             if (ROAMING_ARENA_MAPS.has(mapId)) continue // positions tirées dynamiquement (roamingSpots)
             expect(ARENA_POSITIONS[mapId]?.length, mapId).toBeGreaterThanOrEqual(ARENA_OPPONENTS)
         }
-        expect(ARENA_MAPS[YELLOW_ENTRANCE_MAP_ID]).toBe("mirror")        // reflets en Ville Jaune
-        expect(ROAMING_ARENA_MAPS.has(YELLOW_ENTRANCE_MAP_ID)).toBe(true) // pop aléatoire
-        expect(ARENA_MAPS["yellow_arena_eau"]).toBeUndefined()           // plus d'IA dans l'arène eau
+        expect(ARENA_MAPS[YELLOW_ENTRANCE_MAP_ID]).toBe("hub")           // Viridian : équipes EXACTES
+        expect(ROAMING_ARENA_MAPS.has(YELLOW_ENTRANCE_MAP_ID)).toBe(true) // pop aléatoire en roamant
+        expect(ARENA_MAPS["yellow_arena_eau"]).toBe("mirror")           // arène eau : reflets INVERSÉS
+    })
+
+    it("arenaActive : Viridian dès le 1er badge, arène eau seulement après ONDINE (badge eau)", () => {
+        expect(arenaActive(YELLOW_ENTRANCE_MAP_ID, [])).toBe(false)         // Viridian : pas avant le 1er badge
+        expect(arenaActive(YELLOW_ENTRANCE_MAP_ID, ["plante"])).toBe(true)  // Viridian : dès le 1er badge
+        expect(arenaActive("yellow_arena_eau", ["plante", "roche"])).toBe(false) // eau : pas sans badge eau
+        expect(arenaActive("yellow_arena_eau", ["eau"])).toBe(true)        // eau : après ONDINE
+        expect(arenaActive("yellow_cendreville", ["eau"])).toBe(false)     // Cendreville : hors système
     })
 
     it("roamingSpots : N cases walkable DISTINCTES, dans les bornes, hors murs (déterministe)", () => {
