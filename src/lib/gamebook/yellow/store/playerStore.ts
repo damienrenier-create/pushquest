@@ -249,6 +249,15 @@ export function isTrainerDefeated(trainerId: string): boolean {
     return st.defeatedTrainers.includes(trainerId)
 }
 
+/** LIGUE : réinitialise le gauntlet (oublie toutes les victoires « y_ligue_* ») → toutes les portes se
+ *  rescellent, on doit tout réaffronter depuis la 1re salle. Appelé quand le joueur est K.O. dans la Ligue. */
+export function resetLigueProgress() {
+    const cleaned = st.defeatedTrainers.filter((id) => !id.startsWith("y_ligue_"))
+    if (cleaned.length === st.defeatedTrainers.length) return
+    st = { ...st, defeatedTrainers: cleaned }
+    emit()
+}
+
 /** Marque un dresseur comme RE-battu (rematch / match retour fait, idempotent). */
 export function markTrainerRematched(trainerId: string) {
     if (st.rematchedTrainers.includes(trainerId)) return

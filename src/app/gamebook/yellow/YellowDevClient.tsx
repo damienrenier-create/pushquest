@@ -41,7 +41,7 @@ import { isBlockingTile } from "@/lib/gamebook/mapEngine"
 import { useBattle, useEvolutions, clearEvolutions, useChampionRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getGiftCtMove, startTrainerBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn } from "@/lib/gamebook/yellow/store/battleStore"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
-import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress } from "@/lib/gamebook/yellow/store/playerStore"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
@@ -383,13 +383,20 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
 
     // Équipe entièrement K.O. → renvoi immédiat au Centre Daemon (déjà soignée par
     // le store de combat). On warp dès que le combat est quitté.
+    // EXCEPTION LIGUE : K.O. dans le gauntlet → on REJOUE la Ligue depuis la 1re salle
+    // (toutes les portes se rescellent, tous les membres du Conseil sont à réaffronter).
     useEffect(() => {
         if (whiteout && !battle) {
-            setMap("yellow_infirmary", 4, 3)
+            if (mapPlayer.mapId.startsWith("yellow_ligue_")) {
+                resetLigueProgress()
+                setMap("yellow_ligue_glace", 3, 6)
+            } else {
+                setMap("yellow_infirmary", 4, 3)
+            }
             persistYellowSave()
             clearWhiteout()
         }
-    }, [whiteout, battle, setMap])
+    }, [whiteout, battle, setMap, mapPlayer.mapId])
 
     // Victoire sur le sbire : on délivre une explication sur l'app, une fois le
     // combat quitté ET l'éventuelle cinématique d'évolution terminée.
