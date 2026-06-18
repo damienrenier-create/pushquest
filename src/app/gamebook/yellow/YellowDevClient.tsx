@@ -1160,6 +1160,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 <div style={{ ...menuTitleStyle, display: "flex", justifyContent: "space-between" }}>
                                     <span>🎓 CAPSULES CT</span><span>⚡ {player.reps}</span>
                                 </div>
+                                <div style={{ fontSize: 10, opacity: 0.65, padding: "0 2px 6px" }}>⚠️ Chaque CT ne s&apos;achète qu&apos;une seule fois.</div>
                                 <div style={{ maxHeight: "55vh", overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
                                     {(() => {
                                         const purch = purchasableCts(player.badges, player.boughtCts)
@@ -1174,7 +1175,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                                 <button key={ct.id} style={afford ? menuBtnStyle : menuBtnDimStyle} disabled={!afford} onClick={() => setCtPick(ct.id)}>
                                                     <span style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                                                         <span>{ct.label} · {mv?.name}<br /><span style={{ fontSize: 10, opacity: 0.6 }}>{mv?.type}{mv && mv.power > 0 ? ` · Puis ${mv.power}` : " · statut"}{mv && mv.accuracy > 0 ? ` · Préc ${mv.accuracy}` : ""}{mv?.description ? ` — ${mv.description}` : ""}</span></span>
-                                                        <span>{isGift ? "✨ Cadeau" : `${ct.price} reps${ct.oneTime ? " · unique" : ""}`}</span>
+                                                        <span>{isGift ? "✨ Cadeau" : `${ct.price} reps`}</span>
                                                     </span>
                                                 </button>
                                             )

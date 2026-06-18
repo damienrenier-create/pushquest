@@ -842,8 +842,8 @@ export function teachCt(uid: string, ctId: string): { ok: boolean; reason?: "int
         next[idx] = updated
         // CT cadeau : consommée à l'apprentissage (une seule fois, puis c'est fini).
         const ownedAfter = owned ? st.ownedCts.filter((id) => id !== ctId) : st.ownedCts
-        // ACHAT UNIQUE : on enregistre l'achat (retire la CT du shop pour de bon).
-        const boughtAfter = (ct.oneTime && !owned) ? [...st.boughtCts, ctId] : st.boughtCts
+        // ACHAT UNIQUE (toute CT) : on enregistre l'achat → retirée du shop pour de bon.
+        const boughtAfter = owned ? st.boughtCts : [...st.boughtCts, ctId]
         st = { ...st, reps: st.reps - cost, [pool]: next, ownedCts: ownedAfter, boughtCts: boughtAfter }
         emit()
         return { ok: true, queued: !free }
