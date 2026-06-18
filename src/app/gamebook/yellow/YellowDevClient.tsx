@@ -38,7 +38,8 @@ import PosterPanel from "./PosterPanel"
 import { useGameStore, setCurrentNickname } from "@/lib/gamebook/yellow/store/gameStore"
 import { YELLOW_MAPS, CENDREVILLE_SPAWN } from "@/lib/gamebook/yellow/maps"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
-import { useBattle, useEvolutions, clearEvolutions, useChampionRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getGiftCtMove, startTrainerBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, useEvolutions, clearEvolutions, useChampionRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getGiftCtMove, startTrainerBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn } from "@/lib/gamebook/yellow/store/battleStore"
+import { aceLoseLine } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
 import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress } from "@/lib/gamebook/yellow/store/playerStore"
@@ -387,6 +388,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // (toutes les portes se rescellent, tous les membres du Conseil sont à réaffronter).
     useEffect(() => {
         if (whiteout && !battle) {
+            const aceTaunt = getAceLossTaunt() // lu AVANT clearWhiteout (qui l'efface) — null si défaite hors ACE
             if (mapPlayer.mapId.startsWith("yellow_ligue_")) {
                 resetLigueProgress()
                 setMap("yellow_ligue_glace", 3, 6)
@@ -395,8 +397,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             }
             persistYellowSave()
             clearWhiteout()
+            if (aceTaunt) showDialogue("y_ace", "ACE", [aceTaunt]) // raillerie d'ACE quand il t'a vaincu
         }
-    }, [whiteout, battle, setMap, mapPlayer.mapId])
+    }, [whiteout, battle, setMap, mapPlayer.mapId, showDialogue])
 
     // Victoire sur le sbire : on délivre une explication sur l'app, une fois le
     // combat quitté ET l'éventuelle cinématique d'évolution terminée.
@@ -413,7 +416,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     useEffect(() => {
         if (aceWin !== null && !battle && evolutions.length === 0) {
             const reward = getAceRewardMsg()
-            const lines = ["*ACE s'incline, un sourire en coin.*", "Pas mal. Mais demain je reviens plus fort…", ...(reward ? [reward] : [])]
+            // Concession d'ACE PIOCHÉE AU HASARD (différente à chaque défaite) + le message de récompense.
+            const lines = [aceLoseLine(), ...(reward ? [reward] : [])]
             showDialogue("y_ace", "ACE", lines)
             clearAceWin()
         }

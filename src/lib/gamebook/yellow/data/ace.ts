@@ -25,33 +25,89 @@ export const ACE_TRIGGER_TILES: { x: number; y: number }[] = [
     { x: 0, y: 17 }, { x: 0, y: 18 }, { x: 0, y: 19 },
 ]
 
-export const ACE_INTRO_LINES = [
-    "*Un type nonchalant te barre la route, le regard tourné vers l'ouest.*",
-    "Tiens, encore toi. Moi c'est ACE — et je garde le passage vers CENDREVILLE.",
-    "Cette ville me fascine… mais personne n'y entre sans le Badge Flamme.",
-    "Même moi, je dois d'abord plier l'arène Feu. En attendant : montre-moi si tu montes !",
+// === DIALOGUES (humour noir) — ACE, rival nonchalant/arrogant, tutoie, appelle « rival ». ============
+// INTROS : une PIOCHÉE AU HASARD à chaque rencontre (aceIntro). 1re ligne = didascalie.
+export const ACE_INTRO_VARIANTS: string[][] = [
+    ["*ACE sort une main de sa poche, à peine.*", "« Tiens, encore toi. Toujours vivant ? Touchant. »"],
+    ["*ACE bâille sans cacher sa bouche.*", "« Oh. Toi. La routine reprend, rival. Au moins toi t'es ponctuel. »"],
+    ["*Il fait tourner une Ball sur son doigt, le regard ailleurs.*", "« La vie, c'est ça : tu te lèves, tu te bats, tu perds. Allez, déprimons ensemble. »"],
+    ["*ACE s'adosse au mur le plus proche comme si c'était son lit.*", "« J'allais m'endormir d'ennui. Réveille-moi si tu deviens intéressant. »"],
+    ["*Il claque des doigts mollement, comme une formalité.*", "« Allez, on expédie. J'ai un ennui plus urgent qui m'attend après toi. »"],
+    ["*ACE regarde le ciel, l'air absent.*", "« Un jour, le soleil s'éteindra. Mais bon. D'ici là, j'ai le temps de t'écraser. »"],
+    ["*ACE trace un trait dans la poussière du bout du pied.*", "« Là, c'est toi. Et là… » *il l'efface.* « …c'est toi après. »"],
+    ["*ACE observe une feuille morte tomber, sans bouger.*", "« Elle a fait sa saison, elle. Toi, tu fais quoi, au juste ? »"],
+    ["*ACE retire ses mains des poches, lentement, comme s'il signait un papier.*", "« Bonjour. La Faucheuse m'a demandé de remplir ta fiche d'entrée. Tu permets ? »"],
+    ["*ACE sourit poliment, sans que ça monte jusqu'aux yeux.*", "« Ravi de te revoir, rival. Vraiment. Ce sera bref. Pour toi. »"],
+    ["*ACE incline la tête, presque courtois.*", "« Encore plus fort qu'hier, comme promis. C'est la seule promesse que je tiens. »"],
+    ["*ACE consulte une montre qu'il n'a pas.*", "« Pile à l'heure pour ta correction. La ponctualité, c'est une politesse, non ? »"],
 ]
-// ACE s'écarte quand tu portes le Badge Flamme → accès à CENDREVILLE.
+// Badge Flamme obtenu → ACE s'écarte vers CENDREVILLE + teaser la LIGUE.
 export const ACE_PASS_LINES = [
-    "*ACE s'écarte, un sourire en coin, et te laisse filer vers l'ouest.*",
-    "Le Badge Flamme, hein ? Bien joué. CENDREVILLE est à toi…",
-    "Mais je te lâche pas d'une semelle. À demain, rival.",
+    "*ACE renifle l'air, s'écarte d'un pas, sourire en coin.*",
+    "« Tu pues le roussi. Bon. CENDREVILLE est à toi — profites-en avant qu'elle t'enterre. »",
+    "« Et tout au sud, la LIGUE : le Conseil des 4, le Maître. Tous les badges, ou les portes restent closes comme un caveau. J'y serai. Sur le trône. »",
 ]
-// Tu n'as pas (encore) le Badge Flamme : ACE bloque l'accès à CENDREVILLE.
+// Pas (encore) le Badge Flamme : ACE bloque CENDREVILLE.
 export const ACE_GATE_LINES = [
-    "*ACE te bloque le passage, mains dans les poches.*",
-    "Pas si vite. CENDREVILLE, c'est Badge Flamme obligatoire — la règle, c'est la règle.",
-    "Va calciner la patronne de l'arène Feu, ramène ce badge, et là je m'écarte.",
+    "*ACE s'adosse au panneau, sans bouger d'un poil.*",
+    "« CENDREVILLE ? Son joli petit cimetière… rien là-bas qui vaille de mourir, crois-moi. »",
+    "« Reviens quand tu sentiras le cramé. Va griller PYRA, l'arène Feu. Badge Flamme ou demi-tour, rival. »",
 ]
 export const ACE_DONE_LINES = [
-    "*ACE époussette sa veste.*",
-    "Tu m'as déjà battu aujourd'hui. Je file m'entraîner…",
-    "Reviens demain : je serai plus fort. Promis.",
+    "*ACE bâille, se détourne déjà.*",
+    "« Voilà, t'as eu ta dose. La routine, c'est ça, la vie. »",
+    "« File. Demain je reviens plus fort. Toi, tâche d'être encore là. »",
 ]
 export const ACE_NO_TEAM_LINES = [
-    "*ACE hausse un sourcil.*",
-    "Aucun Daemon en état de combattre ? Reviens quand tu seras prêt.",
+    "*ACE jette un œil à tes Daemons étalés, blasé.*",
+    "« Tu m'amènes des cadavres et tu veux te battre ? Même moi je trouve ça d'un goût douteux. »",
+    "« Va les ressusciter et reviens mourir proprement, rival. »",
 ]
+// Teaser du cadeau Panthéon ({n} = nb de victoires restantes) + ligne d'après-cadeau.
+export const ACE_GIFT_TEASER = "« Encore {n} et je te lègue un Panthéon. Considère ça comme un héritage anticipé. »"
+export const ACE_GIFT_DONE = "« T'as déjà ton Panthéon. J'en ai pas d'autre dans la poche — j'ai l'air d'un fossoyeur ? Reviens te battre quand même : j'aime te voir tomber. »"
+// CLÔTURES DE COMBAT. WIN_TAUNTS = ACE GAGNE (joueur K.O.). LOSE_LINES = ACE PERD (joueur gagne, concession).
+export const ACE_WIN_TAUNTS = [
+    "« T'as donné ton maximum, rival ? Triste. Le néant aussi fait ça. »",
+    "*bâille* « J'ai vu des bougies tenir plus longtemps que ton équipe. »",
+    "« La Faucheuse a déjà tamponné ton dossier. Trois exemplaires. »",
+    "« C'était joli. Comme la poussière qui retombe après une explosion. »",
+    "« Même l'entropie a ralenti pour te regarder couler. Élégant. »",
+    "« Y'a comme un froid soudain. Ah non, c'est juste ton équipe. »",
+    "*regarde le ciel* « Il fait beau pour un naufrage. J'organise une éclaircie pour tes adieux. »",
+    "« “Presque” serré. C'est le mot qu'on grave sur les pierres tombales des seconds. »",
+    "« Poussière tu étais, poussière je t'ai remis. De rien, rival. »",
+    "« J'ai pré-rempli le formulaire de défaite. T'avais qu'à signer. Merci. »",
+    "« Même les étoiles s'éteignent. Toi, un peu plus tôt que prévu. »",
+    "« Reviens quand tu veux. La défaite, elle, attend toujours patiemment. »",
+]
+export const ACE_LOSE_LINES = [
+    "*hausse les épaules* « T'as gagné. L'univers s'éteindra quand même, alors bon. »",
+    "« Battu. Statistiquement, ça devait arriver un siècle ou l'autre. »",
+    "*sort les mains des poches, lentement* « D'accord. Note ça quelque part avant d'oublier. »",
+    "« Tu m'as eu. La météo aussi se trompe parfois, et personne n'en meurt. »",
+    "« Victoire pour toi. La Faucheuse classera mon dossier « report ». »",
+    "*demi-sourire* « T'as gagné une bataille. Le néant, lui, reste invaincu. »",
+    "« Tch. Une poussière dans l'engrenage. Demain je balaie, rival. »",
+    "« Bien joué. Grave-le quelque part : ça brille, j'admets, mais ça ne dure pas. »",
+    "« Mes félicitations, sincères à 4 %. Le reste, c'est l'univers qui te les doit. »",
+    "« Mauvaise météo intérieure. Demain je rapporte le soleil, et l'addition. »",
+    "« Une ligne dans le grand registre des fins. La tienne brillera moins vite que tu crois. »",
+    "« L'entropie m'a juste laissé sortir fumer. Profite de l'éclaircie : je reviens. »",
+]
+
+function acePick<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)] }
+/** Intro PIOCHÉE AU HASARD (différente à chaque rencontre). */
+export function aceIntro(): string[] { return acePick(ACE_INTRO_VARIANTS) }
+/** Raillerie quand ACE GAGNE (le joueur a perdu). */
+export function aceWinTaunt(): string { return acePick(ACE_WIN_TAUNTS) }
+/** Concession quand ACE PERD (le joueur a gagné). */
+export function aceLoseLine(): string { return acePick(ACE_LOSE_LINES) }
+/** Ligne teaser du cadeau selon le nb de victoires : compte à rebours, ou ligne d'après-cadeau. */
+export function aceGiftLine(aceWins: number): string {
+    const left = ACE_PANTHEON_WIN - aceWins
+    return left > 0 ? ACE_GIFT_TEASER.replace("{n}", `${left} victoire${left > 1 ? "s" : ""}`) : ACE_GIFT_DONE
+}
 
 export interface AceMon { speciesId: string; level: number }
 
@@ -158,10 +214,10 @@ export interface AceReward {
 /** Nombre de victoires sur ACE qui débloque le cadeau Panthéon (cf. teaser + compte à rebours). */
 export const ACE_PANTHEON_WIN = 7
 
-/** Récompense à la n-ième victoire (1-indexée). */
+/** Récompense à la n-ième victoire (1-indexée). Messages en humour noir (la concession d'ACE est ajoutée à part). */
 export function aceReward(winNumber: number): AceReward {
-    if (winNumber <= 3) return { itemId: "poke_ball_plus", reps: 100, message: "ACE te file une Nexus-Ball + ET 100 reps !" }
-    if (winNumber <= 6) return { itemId: "super_ball", reps: 150, message: "ACE t'offre une Super Nexus-Ball ET 150 reps !" }
-    if (winNumber === ACE_PANTHEON_WIN) return { gift: "pantheon", message: "ACE te confie un PANTHÉON ! Élève-le bien." }
-    return { refund: true, message: "ACE te rembourse l'énergie dépensée ce combat." }
+    if (winNumber <= 3) return { itemId: "poke_ball_plus", reps: 100, message: "« Tiens : une Nexus-Ball + et 100 reps. De quoi décorer ton caveau jusqu'à ta prochaine défaite. »" }
+    if (winNumber <= 6) return { itemId: "super_ball", reps: 150, message: "« Super Nexus-Ball et 150 reps. Des fleurs sur ta future tombe, rival. Tu t'accroches, c'est touchant. »" }
+    if (winNumber === ACE_PANTHEON_WIN) return { gift: "pantheon", message: "« Sept fois. Sept. Voilà ton Panthéon — fais-le évoluer comme tu veux. Il te survivra, c'est sûr. »" }
+    return { refund: true, message: "« Plus de cadeau, j'ai vidé le caveau. Je te rends ton énergie, c'est tout. Même mon stock a une fin. »" }
 }

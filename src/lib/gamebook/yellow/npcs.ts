@@ -10,7 +10,7 @@ import type { NpcDefinition } from "@/lib/gamebook/npcs"
 import { TRAINERS } from "./data/trainers"
 import { NORTH_SIGN_POSITIONS } from "./maps"
 import { PARK_SIGN_TIPS } from "./data/parkSigns"
-import { ACE_TRAINER_ID, ACE_POS, ACE_INTRO_LINES } from "./data/ace"
+import { ACE_TRAINER_ID, ACE_POS, ACE_INTRO_VARIANTS } from "./data/ace"
 import { GEKROC_NPC_ID, GEKROC_MAP_ID, GEKROC_POS, GEKROC_INTRO_LINES } from "./data/gekroc"
 import { HH_TRADER_ID, HH_TRADER_MAP, HH_TRADER_POS, HH_TRADER_OFFER_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_MAP, HH_COLLECTOR_POS, HH_COLLECTOR_INTRO_LINES } from "./data/hauntedNpcs"
 import { CAVE_TRADER_ID, CAVE_TRADER_MAP, CAVE_TRADER_POS, CAVE_TRADER_OFFER_LINES } from "./data/caveTrader"
@@ -62,7 +62,7 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         sprite: { emoji: "😎", color: "#2b6cb0" }, // placeholder : sprite à venir
         initialX: ACE_POS.x,
         initialY: ACE_POS.y,
-        dialoguesAfter: ACE_INTRO_LINES,
+        dialoguesAfter: ACE_INTRO_VARIANTS[0], // repli statique (l'intro réelle est interceptée + randomisée dans gameStore)
     },
 
     // === CENTRALE — GÉKROC (mini-boss STATIQUE, gardien de la Pierre) en (4,9) ===

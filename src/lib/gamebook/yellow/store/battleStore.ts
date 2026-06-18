@@ -24,7 +24,7 @@ import { getCt } from "../data/cts"
 import { getMove } from "../data/moves"
 import { getSpecies } from "../data/species"
 import { SBIRE_REWARD_REPS, SBIRE_REWARD_BALL_ID } from "../data/sbire"
-import { ACE_TRAINER_ID, aceReward } from "../data/ace"
+import { ACE_TRAINER_ID, aceReward, aceWinTaunt } from "../data/ace"
 import { ORCALINE_TRAINER_ID, ORCALINE_GIFT_SPECIES, ORCALINE_GIFT_LEVEL, ORCALINE_BALL_REWARD_ID, ORCALINE_BALL_AT_LEVEL, ORCALINE_GIFT_LINES, ORCALINE_REMATCH_WIN_LINES, ORCALINE_BALL_LINES } from "../data/orcalineTrainer"
 import { GEKROC_STONE_ITEM } from "../data/gekroc"
 import { HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED } from "../data/hauntedNpcs"
@@ -81,6 +81,8 @@ interface BattleStoreState {
     /** Numéro de victoire sur ACE (1-indexé) → message de récompense post-combat ; null sinon. */
     aceWin: number | null
     aceRewardMsg: string | null
+    /** Raillerie d'ACE quand IL gagne (le joueur a perdu) → affichée à la défaite ; null sinon. */
+    aceLossTaunt: string | null
     /** Badge d'arène gagné ce combat (→ notification post-combat) ; null sinon. */
     badgeAwarded: BadgeId | null
     /** Nom de l'attaque de la CT cadeau remise par le boss (notif) ; null sinon. */
@@ -119,7 +121,7 @@ interface PvpContext {
     desync: boolean
 }
 
-let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, chainRematchId: null, pendingLearn: false }
+let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, chainRematchId: null, pendingLearn: false }
 // LIGUE — meilleurs moments du run en cours (best hit par membre du Conseil 4 + Maître), runtime.
 // Upsert par trainerId à chaque victoire de la Ligue ; lus au sacre du Maître pour le Hall of Fame.
 const leagueHighlights: Record<string, LeagueHighlight> = {}
@@ -174,7 +176,7 @@ export function startWildBattle(playerTeam: MonInstance[], enemyTeam: MonInstanc
     const captureModifier = getPlayer().wildCtx?.quotaReached ? QUOTA_CAPTURE_BONUS : 1
     const battle = createBattle(playerTeam, enemyTeam, { isWild: true, seed, captureModifier, fleeChance: wildFleeChance() })
     syncPokedex(battle) // adversaire "vu" dès la rencontre
-    setStore({ battle, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
+    setStore({ battle, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
 }
 
 export function startTrainerBattle(
@@ -186,7 +188,7 @@ export function startTrainerBattle(
     const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: opts?.aiLevel, enemyEnergyCap: opts?.enemyEnergyCap })
     syncPokedex(battle)
     const trainer = opts?.trainerId ? { trainerId: opts.trainerId, reward: opts.reward ?? 0, isRematch: opts.isRematch ?? false } : null
-    setStore({ battle, evolutions: [], trainer, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
+    setStore({ battle, evolutions: [], trainer, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
 }
 
 /** Énergie de combat : reps déjà dépensés ce combat + plafond (selon badges). */
@@ -425,6 +427,8 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     //       signale un "whiteout" → la carte renverra le joueur au Centre.
     const isLose = b.outcome === "lose"
     if (isLose) healAllTeam()
+    // Raillerie d'ACE quand IL gagne (défaite du joueur contre ACE) → affichée à la sortie du combat.
+    const aceLossTaunt = (isLose && storeState.trainer?.trainerId === ACE_TRAINER_ID) ? aceWinTaunt() : null
 
     // 3) Évolutions post-combat (mute l'équipe → re-set pour notifier + Pokédex).
     const team = getPlayer().team
@@ -436,7 +440,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // Un Daemon a-t-il une attaque EN ATTENTE (slots pleins à la montée de niveau / l'évolution) ? → prompt post-combat.
     const pendingLearn = getPlayer().team.some((m) => (m.pendingMoves?.length ?? 0) > 0)
     // Expose les évolutions pour la cinématique post-combat (jouée après "QUITTER").
-    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, chainRematchId, pendingLearn })
+    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, chainRematchId, pendingLearn })
 
     // 4) Sauvegarde persistante (DB).
     persistYellowSave()
@@ -498,9 +502,14 @@ export function clearPendingLearn() {
     setStore({ pendingLearn: false })
 }
 
-/** Consommé par la carte une fois le joueur renvoyé au Centre. */
+/** Consommé par la carte une fois le joueur renvoyé au Centre (ou redéposé à la Ligue). */
 export function clearWhiteout() {
-    setStore({ ...storeState, whiteout: false })
+    setStore({ ...storeState, whiteout: false, aceLossTaunt: null })
+}
+
+/** Raillerie d'ACE à la défaite du joueur (lue dans l'effet whiteout) ; null si la défaite n'est pas contre ACE. */
+export function getAceLossTaunt(): string | null {
+    return storeState.aceLossTaunt
 }
 
 /** Consommé par la carte une fois l'explication du sbire affichée. */
@@ -515,7 +524,7 @@ export function getSbireRewardMsg(): string | null {
 
 /** Consommé par la carte une fois la récompense d'ACE affichée. */
 export function clearAceWin() {
-    setStore({ ...storeState, aceWin: null, aceRewardMsg: null, badgeAwarded: null, giftCtMove: null })
+    setStore({ ...storeState, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null })
 }
 
 /** Message de récompense d'ACE (lu au moment d'afficher le dialogue post-combat). */
@@ -641,7 +650,7 @@ export function startPvpBattle(battle: BattleState, ctx: Omit<PvpContext, "seq" 
     mpLog("battle", "start", { battleId: ctx.battleId, role: ctx.role, checksum: battleChecksum(battle) })
     setStore({
         battle, evolutions: [], trainer: null, whiteout: false, energySpent: 0,
-        sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null,
+        sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null,
         pvpCtx: { ...ctx, seq: 0, myAction: null, oppAction: null, won: null, desync: false },
     })
 }

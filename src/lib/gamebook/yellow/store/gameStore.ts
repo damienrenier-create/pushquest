@@ -26,7 +26,7 @@ import { rollWildEncounter, wildLevelCap, hasEncounters } from "../data/encounte
 import { getTrainer, trainerBoost, arenaScaledLevel, type TrainTier } from "../data/trainers"
 import { createMonInstance } from "../battle/factory"
 import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroLines, SBIRE_DONE_LINES, SBIRE_NO_TEAM_LINES } from "../data/sbire"
-import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_INTRO_LINES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, ACE_PASS_LINES, ACE_GATE_LINES, ACE_PANTHEON_WIN, buildAceTeam, speciesAtLevel } from "../data/ace"
+import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, ACE_PASS_LINES, ACE_GATE_LINES, aceIntro, aceGiftLine, buildAceTeam, speciesAtLevel } from "../data/ace"
 import { CAVE_TRADER_ID, CAVE_TRADE_GIVE, CAVE_TRADE_RECEIVE, CAVE_TRADER_OFFER_LINES, CAVE_TRADER_NEED_LINES, CAVE_TRADE_DONE_LINES, CAVE_TRADE_ALREADY_LINES } from "../data/caveTrader"
 import { HH_KID_ID, HH_KID_DAY_LINES, HH_KID_NIGHT_LINES, isHhKidNight } from "../data/hhKid"
 import { ORCALINE_TRAINER_ID, ORCALINE_INTRO_LINES, ORCALINE_REMATCH_LINES, ORCALINE_DONE_TODAY_LINES } from "../data/orcalineTrainer"
@@ -524,15 +524,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
             }
             // Pas de Badge Flamme : ACE barre la route. Combat quotidien s'il est dispo,
             // sinon simple rappel du gate (« reviens avec le badge »).
-            // CADEAU : le PANTHÉON est offert à la 7e victoire sur ACE (cf. aceReward) → on annonce le compte à rebours.
-            const aceLeft = ACE_PANTHEON_WIN - getPlayerSave().aceWins
-            const aceGiftLine = aceLeft > 0
-                ? `Au fait… j'ai un CADEAU pour qui me battra ${aceLeft} fois de plus : un PANTHÉON, rien que ça ! 😏`
-                : "Tu m'as déjà arraché mon PANTHÉON… mais reviens te frotter à moi quand tu veux !"
+            // CADEAU : le PANTHÉON est offert à la 7e victoire (cf. aceReward) → teaser/compte à rebours.
+            // Intro PIOCHÉE AU HASARD (différente à chaque rencontre) + ligne cadeau.
             set({
                 dialogue: {
                     npcId: ACE_TRAINER_ID, npcName: "ACE", lineIndex: 0,
-                    lines: aceAvailableToday() ? [...ACE_INTRO_LINES, aceGiftLine] : ACE_GATE_LINES,
+                    lines: aceAvailableToday() ? [...aceIntro(), aceGiftLine(getPlayerSave().aceWins)] : ACE_GATE_LINES,
                 },
                 pendingAce: aceAvailableToday(),
             })
@@ -740,7 +737,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: ACE_DONE_LINES, lineIndex: 0 } })
                 return
             }
-            set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: ACE_INTRO_LINES, lineIndex: 0 }, pendingAce: true })
+            set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: [...aceIntro(), aceGiftLine(getPlayerSave().aceWins)], lineIndex: 0 }, pendingAce: true })
             return
         }
 
