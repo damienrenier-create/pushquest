@@ -4,8 +4,8 @@
 // Charge le registre des dresseurs et renvoie les 6 adversaires à afficher (les plus proches
 // de notre niveau), placés sur les cases libres de l'arène — uniquement si on a TOUS les badges.
 
-import { useEffect, useState } from "react"
-import { ARENA_MAPS, ARENA_POSITIONS, rankClosest, hasAllBadges, mirrorName, type ArenaMode, type RegistryPlayer } from "../data/playerArena"
+import { useEffect, useMemo, useState } from "react"
+import { ARENA_MAPS, ARENA_POSITIONS, ARENA_OPPONENTS, ROAMING_ARENA_MAPS, roamingSpots, rankClosest, hasAllBadges, mirrorName, type ArenaMode, type RegistryPlayer } from "../data/playerArena"
 
 export interface ArenaOpponent {
     userId: string
@@ -20,7 +20,10 @@ export function usePlayerArena(mapId: string, badges: readonly string[], myUserI
     opponents: ArenaOpponent[]
 } {
     const mode = ARENA_MAPS[mapId] ?? null
-    const active = mode !== null && hasAllBadges(badges)
+    const roaming = ROAMING_ARENA_MAPS.has(mapId)
+    // ROAMING (Ville Jaune) : accessible TÔT — dès le 1er badge, pas besoin de TOUS les badges.
+    // Arènes FIXES (ex. Tour Hertz) : gate « tous les badges » (contenu de fin de jeu).
+    const active = mode !== null && (roaming ? badges.length >= 1 : hasAllBadges(badges))
     const [players, setPlayers] = useState<RegistryPlayer[] | null>(null)
 
     useEffect(() => {
@@ -33,8 +36,14 @@ export function usePlayerArena(mapId: string, badges: readonly string[], myUserI
         return () => { cancel = true }
     }, [active, mapId])
 
+    // Positions : ROAMING = cases aléatoires RE-TIRÉES à chaque entrée de map (mapId change → effet
+    // « hasardeux ») ; arène fixe = cases prédéfinies. useMemo → stable tant qu'on reste sur la map.
+    const positions = useMemo<[number, number][]>(
+        () => (!active ? [] : roaming ? roamingSpots(mapId, ARENA_OPPONENTS, Math.random) : ARENA_POSITIONS[mapId] ?? []),
+        [active, roaming, mapId],
+    )
+
     if (!active || !players) return { mode, opponents: [] }
-    const positions = ARENA_POSITIONS[mapId] ?? []
     // En mode MIROIR, le PSEUDO de l'adversaire s'affiche à l'envers (et NON le nom du Daemon).
     const opponents = rankClosest(players, myUserId, myLevel, positions.length).map((p, i) => ({
         userId: p.userId,

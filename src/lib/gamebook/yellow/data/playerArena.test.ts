@@ -2,10 +2,13 @@ import { describe, it, expect } from "vitest"
 import {
     teamMaxLevel, rankClosest, buildHubTeam, bestCounterType, strongestSpeciesOfType,
     mirrorName, buildMirrorTeam, pickMirrorCounter, ARENA_OPPONENTS, hasAllBadges, ALL_BADGES, ARENA_MAPS, ARENA_POSITIONS,
-    type RegistryPlayer,
+    ROAMING_ARENA_MAPS, roamingSpots, type RegistryPlayer,
 } from "./playerArena"
 import { getSpecies } from "./species"
 import { typeEffectiveness } from "../battle/typeChart"
+import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
+import { YELLOW_MAPS } from "../maps"
+import { isBlockingTile } from "../../mapEngine"
 
 function player(userId: string, lvl: number, team: RegistryPlayer["team"] = [{ speciesId: "feuillichot", level: lvl, nickname: null }]): RegistryPlayer {
     return { userId, nickname: userId, team }
@@ -40,12 +43,27 @@ describe("Arène joueurs — déblocage & placement", () => {
         expect(ALL_BADGES.length).toBe(5)
     })
 
-    it("chaque arène a assez de cases libres pour les 6 adversaires", () => {
+    it("placement : arènes FIXES ont assez de cases ; les reflets roament en Ville Jaune", () => {
         for (const mapId of Object.keys(ARENA_MAPS)) {
+            if (ROAMING_ARENA_MAPS.has(mapId)) continue // positions tirées dynamiquement (roamingSpots)
             expect(ARENA_POSITIONS[mapId]?.length, mapId).toBeGreaterThanOrEqual(ARENA_OPPONENTS)
         }
-        expect(ARENA_MAPS["yellow_arena_eau"]).toBe("hub")
-        expect(ARENA_MAPS["yellow_arena_elec"]).toBe("mirror")
+        expect(ARENA_MAPS[YELLOW_ENTRANCE_MAP_ID]).toBe("mirror")        // reflets en Ville Jaune
+        expect(ROAMING_ARENA_MAPS.has(YELLOW_ENTRANCE_MAP_ID)).toBe(true) // pop aléatoire
+        expect(ARENA_MAPS["yellow_arena_eau"]).toBeUndefined()           // plus d'IA dans l'arène eau
+    })
+
+    it("roamingSpots : N cases walkable DISTINCTES, dans les bornes, hors murs (déterministe)", () => {
+        let s = 42
+        const rand = () => { s = (s * 9301 + 49297) % 233280; return s / 233280 } // LCG simple, sûr
+        const spots = roamingSpots(YELLOW_ENTRANCE_MAP_ID, ARENA_OPPONENTS, rand)
+        expect(spots.length).toBe(ARENA_OPPONENTS)
+        expect(new Set(spots.map(([x, y]) => `${x},${y}`)).size).toBe(ARENA_OPPONENTS) // toutes distinctes
+        const m = YELLOW_MAPS[YELLOW_ENTRANCE_MAP_ID]
+        for (const [x, y] of spots) {
+            expect(x >= 0 && x < m.width && y >= 0 && y < m.height, `${x},${y} hors bornes`).toBe(true)
+            expect(isBlockingTile(m.tiles[y][x]), `${x},${y} bloquante`).toBe(false)
+        }
     })
 })
 

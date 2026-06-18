@@ -12,6 +12,9 @@ import { createMonInstance } from "../battle/factory"
 import { getSpecies, SPECIES } from "./species"
 import { POKE_TYPES, type PokeType, type MonInstance } from "../battle/types"
 import { typeEffectiveness } from "../battle/typeChart"
+import { YELLOW_MAPS } from "../maps"
+import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
+import { isBlockingTile } from "../../mapEngine"
 
 /** Un Daemon tel que renvoyé par la registry. */
 export interface RegistryMon { speciesId: string; level: number; nickname: string | null }
@@ -36,13 +39,41 @@ export function hasAllBadges(badges: readonly string[]): boolean {
 /** Mode d'arène joueur selon la map. */
 export type ArenaMode = "hub" | "mirror"
 export const ARENA_MAPS: Record<string, ArenaMode> = {
-    yellow_arena_eau: "hub",     // vraies équipes des autres joueurs, jouées par l'IA
-    yellow_arena_elec: "mirror", // reflets : équipes inversées + faiblesses de type
+    // Les reflets des autres joueurs (équipe miroir = faiblesses) ROAMENT en VILLE JAUNE : on les
+    // rencontre TÔT, en se baladant, au lieu d'attendre l'arène eau de fin de jeu (déplacée ici).
+    [YELLOW_ENTRANCE_MAP_ID]: "mirror",
+    yellow_arena_elec: "mirror", // reflets : équipes inversées + faiblesses de type (arène fixe, fin de jeu)
 }
-/** Cases LIBRES (walkable, hors gardes/boss) où planter les adversaires sur chaque arène. */
+/** Maps où les adversaires POPENT sur des cases ALÉATOIRES (re-tirées à chaque entrée) et sans
+ *  gate « tous les badges » — façon rencontres sauvages, pour se mesurer aux autres au plus tôt. */
+export const ROAMING_ARENA_MAPS: ReadonlySet<string> = new Set([YELLOW_ENTRANCE_MAP_ID])
+/** Cases LIBRES (walkable, hors gardes/boss) où planter les adversaires sur les arènes FIXES. */
 export const ARENA_POSITIONS: Record<string, [number, number][]> = {
-    yellow_arena_eau: [[2, 8], [2, 12], [13, 8], [13, 12], [3, 10], [12, 10]],
     yellow_arena_elec: [[2, 6], [4, 6], [6, 6], [8, 6], [10, 6], [12, 6]],
+}
+
+/**
+ * Cases « libres » d'une map (sol praticable, hors murs/arbres/barrières et hors warps) où faire
+ * pop des adversaires-IA, mélangées et tronquées à `count`. `rand` = source d'aléa (Math.random
+ * côté UI). Déterministe pour un `rand` donné → testable.
+ */
+export function roamingSpots(mapId: string, count: number, rand: () => number): [number, number][] {
+    const m = YELLOW_MAPS[mapId]
+    if (!m) return []
+    const exits = new Set((m.exits ?? []).map((e) => `${e.x},${e.y}`))
+    const spots: [number, number][] = []
+    for (let y = 0; y < m.height; y++) {
+        for (let x = 0; x < m.width; x++) {
+            const t = m.tiles[y]?.[x]
+            if (t && !isBlockingTile(t) && !exits.has(`${x},${y}`)) spots.push([x, y])
+        }
+    }
+    // Fisher-Yates → placement « hasardeux ».
+    for (let i = spots.length - 1; i > 0; i--) {
+        const j = Math.floor(rand() * (i + 1))
+        const tmp = spots[i]; spots[i] = spots[j]; spots[j] = tmp
+    }
+    return spots.slice(0, Math.max(0, count))
 }
 
 /** Niveau "représentatif" d'une équipe = niveau du Daemon le plus haut. */
