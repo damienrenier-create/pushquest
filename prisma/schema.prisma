@@ -321,6 +321,21 @@ model AdvisorQuestion {
   @@index([createdAt])
 }
 
+// Nexus Jaune — CADEAU CROISÉ de duel : quand un joueur bat le reflet d'un autre, ce dernier
+// reçoit une consolation (énergie + rêve du Dieu Spaghetti) à sa PROCHAINE connexion.
+// Pas de @relation (champs userId en String) pour ne pas modifier le modèle User.
+model DuelGift {
+  id           String   @id @default(cuid())
+  toUserId     String   // joueur mirouté qui reçoit la consolation
+  fromUserId   String   // vainqueur (anti-stacking + traçabilité)
+  fromNickname String   // pseudo du vainqueur (pour le rêve du Dieu Spaghetti)
+  energy       Int      @default(30)
+  claimed      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@index([toUserId, claimed])
+}
+
 model UserStatus {
   id        String   @id @default(cuid())
   content   String

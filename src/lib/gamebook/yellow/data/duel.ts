@@ -45,3 +45,20 @@ export function duelLossLines(oppNick: string): string[] {
         "*Avec le plus grand dédain :* …Tiens. 30 énergies. Pour que tu arrêtes de pleurer. Maintenant dégage.",
     ]
 }
+
+// ── CADEAU CROISÉ : à la prochaine connexion du joueur mirouté, le Dieu Spaghetti a « rêvé »
+//    qu'il s'est fait battre → consolation (+énergie). winnerNicks = vainqueurs ; total = énergie cumulée.
+export const DUEL_DREAM_NPC = "spaghetti_dream"
+export const DUEL_DREAM_NAME = "DIEU SPAGHETTI"
+export function duelDreamLines(winnerNicks: string[], totalEnergy: number): string[] {
+    const list = winnerNicks.length
+        ? (winnerNicks.length === 1
+            ? winnerNicks[0]
+            : `${winnerNicks.slice(0, -1).join(", ")} et ${winnerNicks[winnerNicks.length - 1]}`)
+        : "quelqu'un"
+    return [
+        "Bonjour, aventurier… dis-moi, as-tu bien dormi cette nuit ?",
+        `Moi, j'ai fait un drôle de rêve : j'ai vu ${list} te battre en duel. Ça m'a rendu tout triste, tu sais.`,
+        `Du coup… tiens, un petit cadeau pour nous consoler tous les deux : +${totalEnergy} énergie. Allez, garde la tête haute !`,
+    ]
+}

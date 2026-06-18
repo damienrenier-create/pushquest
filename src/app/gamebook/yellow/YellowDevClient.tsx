@@ -41,7 +41,7 @@ import { isBlockingTile } from "@/lib/gamebook/mapEngine"
 import { useBattle, useEvolutions, clearEvolutions, useChampionRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getGiftCtMove, startTrainerBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult } from "@/lib/gamebook/yellow/store/battleStore"
 import { aceLoseLine } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
-import { duelWinLines, duelLossLines, DUEL_NEXUS_BALL_ID, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME } from "@/lib/gamebook/yellow/data/duel"
+import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
 import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin } from "@/lib/gamebook/yellow/store/playerStore"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
@@ -319,6 +319,21 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             }
             // Cadeau du DIEU SPAG crédité au chargement (saveManager) → on affiche son message une fois.
             if (!cancelled) { const gift = consumeGiftMessage(); if (gift) setToast(gift) }
+            // CADEAUX CROISÉS de duel (Partie C) : un autre joueur a battu MON reflet → le Dieu Spaghetti
+            // me console (+énergie) à cette connexion. Énergie appliquée APRÈS loadYellowSave → pas de race.
+            if (!cancelled) {
+                try {
+                    const r = await fetch("/api/gamebook/yellow/duel-gift")
+                    const j = r.ok ? await r.json() : null
+                    const gifts = (j?.gifts ?? []) as { fromNickname: string; energy: number }[]
+                    if (!cancelled && gifts.length > 0) {
+                        const total = gifts.reduce((s, g) => s + (g.energy || 0), 0)
+                        if (total > 0) { grantReps(total); persistYellowSave() }
+                        const nicks = [...new Set(gifts.map((g) => g.fromNickname).filter(Boolean))]
+                        showDialogue(DUEL_DREAM_NPC, DUEL_DREAM_NAME, duelDreamLines(nicks, total))
+                    }
+                } catch { /* neutre (hors-ligne / table absente) */ }
+            }
             // 1re entrée (intro jamais vue + aucune équipe) → cinématique + choix du starter.
             if (!cancelled && !getPlayer().introSeen && getPlayer().team.length === 0) {
                 setShowIntro(true)
