@@ -497,10 +497,10 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
     // --- Move à 2 TOURS (charge → décharge), ex. Surtension de VOLTA ---
     if (move.effect?.twoTurn) {
         if (attacker.chargingMove === (slot?.moveId ?? move.id)) {
-            // PHASE 2 : libération automatique — frappe foudroyante (power 100) à très haut critique.
+            // PHASE 2 : libération automatique — frappe foudroyante (power 100, coup normal).
             attacker.chargingMove = undefined
             events.push({ kind: "message", text: `${displayName(attacker)} libère sa décharge !` })
-            dealMoveDamage(state, side, { ...move, power: 100, effect: { highCrit: true } }, rng, events)
+            dealMoveDamage(state, side, { ...move, power: 100, effect: undefined }, rng, events)
             return
         }
         // PHASE 1 : décharge faible (power du move) + statChanges (ex. -2 Vitesse), puis on CHARGE.
