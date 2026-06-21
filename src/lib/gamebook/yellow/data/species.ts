@@ -1558,16 +1558,20 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     archibouh: {
         id: "archibouh", dexNo: 124, name: "Archibouh", types: ["PSY", "SPECTRE"],
-        baseStats: { hp: 66, atk: 52, def: 52, spe: 108, spc: 118 },
+        baseStats: { hp: 66, atk: 95, def: 52, spe: 108, spc: 118 }, // BST 439 — glass cannon MIXTE frêle (Psy spé + Spectre phys) : seule l'Atq monte (52→95)
         learnset: [
             { level: 1, moveId: "choc_mental" },
             { level: 1, moveId: "ball_ombre" },
             { level: 1, moveId: "ombre_furtive" },
+            { level: 1, moveId: "onde_folie" },
+            { level: 36, moveId: "hypnose" },
             { level: 40, moveId: "vague_mentale" },
+            { level: 42, moveId: "drain_ame" },
             { level: 44, moveId: "focalisation" },
+            { level: 46, moveId: "repos" },
             { level: 48, moveId: "frappe_audela" },
         ],
-        catchRate: 30, baseExp: 150, rarity: "RARE", growthRate: "medium_slow", role: "Psy/Spectre — glass cannon spécial",
+        catchRate: 30, baseExp: 150, rarity: "RARE", growthRate: "medium_slow", role: "Psy/Spectre — glass cannon mixte FRÊLE, disrupteur (sommeil/confusion/drain/Repos)",
         description: "Grand-duc d'outre-tombe : son cri psychique foudroie l'esprit avant que l'ombre n'achève la proie.",
         sprite: "/yellow/sprites/dex/archibouh.png",
     },

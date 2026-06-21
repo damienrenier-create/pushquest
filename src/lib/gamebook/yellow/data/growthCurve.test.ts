@@ -20,8 +20,8 @@ describe("growthCurve — courbe de progression par espèce (BST final + flag ex
         expect(growthInfo("megalithe").mult).toBe(1.25)
         expect(growthInfo("cornaissant").tier).toBe("modeste") // final 426
         expect(growthInfo("cornaissant").mult).toBe(0.9)
-        expect(growthInfo("hibouh").tier).toBe("frele") // final 396
-        expect(growthInfo("hibouh").mult).toBe(0.8)
+        expect(growthInfo("pantheon").tier).toBe("frele") // BST 297, sans évolution liée
+        expect(growthInfo("pantheon").mult).toBe(0.8)
     })
 
     it("lignée golem = courbe PAR STADE : faible monte vite (Mottoche ×0.80), grind au sommet (Mégalithe ×1.25)", () => {
@@ -66,7 +66,7 @@ describe("growthCurve — courbe de progression par espèce (BST final + flag ex
     it("scale bien l'XP NÉCESSAIRE (et NON l'XP gagnée)", () => {
         const base = expForLevel(50) // courbe de référence ×1.0
         expect(expForLevel(50, "megalithe")).toBe(Math.round(base * 1.25)) // colosse = plus d'XP
-        expect(expForLevel(50, "hibouh")).toBe(Math.round(base * 0.8)) // frêle = moins d'XP
+        expect(expForLevel(50, "pantheon")).toBe(Math.round(base * 0.8)) // frêle = moins d'XP
         // niveau 1 = 0 XP quelle que soit la courbe.
         expect(expForLevel(1, "megalithe")).toBe(0)
     })

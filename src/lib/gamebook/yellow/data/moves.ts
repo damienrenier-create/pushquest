@@ -54,6 +54,7 @@ export const MOVES: Record<string, MoveData> = {
 
     choc_mental: { id: "choc_mental", name: "Choc Mental", type: "PSY", power: 50, accuracy: 100, pp: 25, effect: { chance: 10, statChanges: [{ target: "target", stat: "spc", stages: -1 }] }, description: "Peut baisser le Spécial." },
     onde_folie: { id: "onde_folie", name: "Onde Folie", type: "PSY", power: 0, accuracy: 100, pp: 10, effect: { inflictVolatile: "CONFUSION" }, description: "Rend confus." },
+    hypnose: { id: "hypnose", name: "Hypnose", type: "PSY", power: 0, accuracy: 60, pp: 20, costPower: 50, effect: { inflictStatus: "SLEEP" }, description: "Plonge la cible dans un sommeil hypnotique (sommeil de type PSY)." },
     repos: { id: "repos", name: "Repos", type: "PSY", power: 0, accuracy: 0, pp: 10, costPower: 50, effect: { healPct: 50 }, description: "Restaure la moitié des PV." },
 
     dard_nuee: { id: "dard_nuee", name: "Dard-Nuée", type: "INSECTE", power: 14, accuracy: 85, pp: 20, effect: { multiHit: [2, 5] }, description: "Frappe 2 à 5 fois." },

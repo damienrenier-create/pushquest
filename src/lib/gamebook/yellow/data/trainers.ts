@@ -651,11 +651,11 @@ export const TRAINERS: TrainerData[] = [
         id: "y_ligue_1_olga", name: "OLGA", title: "Conseil des 4",
         sprite: { emoji: "❄️", color: "#6cc6e8" },
         mapId: "yellow_ligue_glace", x: 10, y: 2,
-        // Glace/Eau — tanks marins, mur d'endurance d'entrée (Lamantine/Crustabri/Lokhlass).
+        // Glace — mur d'endurance d'entrée : yéti, panthère de givre, orque polaire, ourse, AS Naïadrak.
         team: [
             { speciesId: "yetiroche", level: 52 },
-            { speciesId: "ondaloutre", level: 53 },
-            { speciesId: "crapotaure", level: 54 },
+            { speciesId: "panthegel", level: 53 },
+            { speciesId: "orcaline", level: 54 },
             { speciesId: "auroraur", level: 55 },
             { speciesId: "naiadrak", level: 56 },
         ],
@@ -671,12 +671,13 @@ export const TRAINERS: TrainerData[] = [
         sprite: { emoji: "🥊", color: "#b8702e" },
         mapId: "yellow_ligue_combat", x: 10, y: 2,
         requiresTrainers: ["y_ligue_1_olga"],
-        // Combat/Roche — brutes physiques, attaque brute + défense de pierre.
+        // Combat/Roche — 6 brutes physiques, que des stades FINALS (attaque brute + défense de pierre).
         team: [
-            { speciesId: "octoroc", level: 53 },
-            { speciesId: "frappard", level: 54 },
-            { speciesId: "marteloutan", level: 55 },
-            { speciesId: "hexaroc", level: 55 },
+            { speciesId: "hebulmin", level: 53 },
+            { speciesId: "tauricendre", level: 54 },
+            { speciesId: "enclumind", level: 55 },
+            { speciesId: "magmator", level: 55 },
+            { speciesId: "bouhbou", level: 56 },
             { speciesId: "maitrezenc", level: 57 },
         ],
         reward: 350, aiLevel: "trainer",
@@ -693,9 +694,9 @@ export const TRAINERS: TrainerData[] = [
         requiresTrainers: ["y_ligue_2_aldo"],
         // Spectre/Poison — rapides, esquive, poison, altérations (vitrine des nouveaux spectres).
         team: [
-            { speciesId: "lampignon", level: 54 },
+            { speciesId: "necrolopendre", level: 54 },
             { speciesId: "necrocorbe", level: 55 },
-            { speciesId: "corvenin", level: 55 },
+            { speciesId: "archibouh", level: 55 },
             { speciesId: "brookhante", level: 56 },
             { speciesId: "mycedruide", level: 58 },
         ],
