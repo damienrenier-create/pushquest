@@ -696,7 +696,8 @@ export const TRAINERS: TrainerData[] = [
         team: [
             { speciesId: "necrolopendre", level: 54 },
             { speciesId: "necrocorbe", level: 55 },
-            { speciesId: "archibouh", level: 55 },
+            // Archibouh disrupteur : ouvre sur HYPNOSE (sommeil), puis STAB Psy + drain Spectre + confusion.
+            { speciesId: "archibouh", level: 55, moves: ["hypnose", "vague_mentale", "drain_ame", "onde_folie"], opening: ["hypnose"] },
             { speciesId: "brookhante", level: 56 },
             { speciesId: "mycedruide", level: 58 },
         ],
