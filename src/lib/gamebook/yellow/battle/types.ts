@@ -82,6 +82,10 @@ export interface MoveData {
     id: string
     name: string
     type: PokeType
+    /** OVERRIDE de catégorie (rare) : par défaut la catégorie est déduite du TYPE (strict Gen 1,
+     *  cf. moveCategory). Ce champ force phys/spéc pour une poignée de moves-signature (ex. Crocs de
+     *  Feu / Griffe Draconique = FEU/DRAGON mais PHYSIQUES pour taper sur l'ATQ). Absent = règle Gen 1. */
+    category?: "PHYSICAL" | "SPECIAL"
     /** Puissance de base (0 = move de STATUT, ne fait pas de dégâts directs). */
     power: number
     /** Précision 0..100. 0 = ne rate jamais. */

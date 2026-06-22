@@ -618,7 +618,7 @@ function dealMoveDamage(state: BattleState, side: SideId, move: MoveData, rng: R
     const rawStats = fullStats(attacker, atkSpecies)
     const rawDefStats = fullStats(defender, defSpecies)
     // Gen 1 : catégorie déterminée par le TYPE. Physique → Atq/Déf ; Spécial → Spc/Spc.
-    const isPhysical = moveCategory(move.type) === "PHYSICAL"
+    const isPhysical = (move.category ?? moveCategory(move.type)) === "PHYSICAL"
     const atk = isPhysical
         ? effectiveStat(rawStats.atk, "atk", attacker.stages.atk, attacker.status)
         : effectiveStat(rawStats.spc, "spc", attacker.stages.spc, attacker.status)

@@ -1634,6 +1634,7 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 33, moveId: "belier" },
             { level: 44, moveId: "seisme" },
             { level: 55, moveId: "draco_charge" },
+            { level: 95, moveId: "souffle_primordial" }, // capstone légendaire ultra-tardif (aussi CT-trophée du décuple champion)
         ],
         catchRate: 3, baseExp: 220, rarity: "LEGENDARY", growthRate: "slow", exclusive: true, role: "Légendaire DRAGON — apex des hautes herbes (capture gatée Ball+statut)",
         description: "Dragon primordial qui sommeille, camouflé, dans l'herbe la plus humble — là où nul ne songe à le chercher.",

@@ -66,6 +66,8 @@ export async function POST(req: NextRequest) {
         if (!me) return NextResponse.json({ error: "Forbidden" }, { status: 401 })
 
         await lc.create({ data: { userId: auth.userId, nickname: me.nickname, team: JSON.stringify(team) } })
+        // Nb total de sacres de CE joueur (= nb de lignes) → le client débloque la CT Souffle Primordial à 10.
+        const wins = (await lc.count({ where: { userId: auth.userId } })) as number
 
         // RÉCOMPENSE CROISÉE : tous les AUTRES joueurs ayant une partie Nexus Jaune (ligne GamebookProgress).
         const others = (await (prisma as any).gamebookProgress.findMany({
@@ -84,7 +86,7 @@ export async function POST(req: NextRequest) {
                 data: targets.map((toUserId) => ({ toUserId, fromUserId: auth.userId, fromNickname: me.nickname })),
             })
         }
-        return NextResponse.json({ ok: true, granted: targets.length })
+        return NextResponse.json({ ok: true, granted: targets.length, wins })
     } catch {
         return NextResponse.json({ ok: true, skipped: "no-table" }) // tables pas encore créées → neutre
     }

@@ -122,6 +122,14 @@ export const MOVES: Record<string, MoveData> = {
     eboulis: { id: "eboulis", name: "Éboulis", type: "ROCHE", power: 75, accuracy: 90, pp: 10, effect: { chance: 30, flinch: true }, description: "Peut apeurer." },
     ombre_furtive: { id: "ombre_furtive", name: "Ombre Furtive", type: "SPECTRE", power: 40, accuracy: 100, pp: 30, priority: 1, description: "Frappe en priorité." },
     draco_charge: { id: "draco_charge", name: "Draco-Charge", type: "DRAGON", power: 90, accuracy: 100, pp: 10, description: "Gros move Dragon." },
+    // === Moves-signature (refonte lignées 74-134) ===
+    // Crocs de Feu / Griffe Draconique : FEU & DRAGON sont SPÉCIAUX par type ; on force `category: PHYSICAL`
+    // pour donner un STAB sur l'ATQ aux familles atk-dominantes (Tauricendre/Pyrozly, Dracarlin/Cryotyran).
+    crocs_de_feu: { id: "crocs_de_feu", name: "Crocs de Feu", type: "FEU", category: "PHYSICAL", power: 75, accuracy: 95, pp: 15, effect: { chance: 10, inflictStatus: "BURN" }, description: "Morsure incandescente : STAB Feu PHYSIQUE (frappe sur l'Attaque) ; peut brûler." },
+    griffe_draconique: { id: "griffe_draconique", name: "Griffe Draconique", type: "DRAGON", category: "PHYSICAL", power: 80, accuracy: 100, pp: 15, description: "Lacération draconique : STAB Dragon PHYSIQUE (frappe sur l'Attaque)." },
+    roc_titanesque: { id: "roc_titanesque", name: "Roc Titanesque", type: "ROCHE", power: 120, accuracy: 80, pp: 5, effect: { recoilPct: 33 }, description: "Le colosse projette un bloc titanesque : dégâts énormes mais contrecoup (et précision incertaine)." },
+    blizzard: { id: "blizzard", name: "Blizzard", type: "GLACE", power: 110, accuracy: 70, pp: 5, effect: { chance: 30, inflictStatus: "FREEZE" }, description: "Tempête de glace dévastatrice à la précision incertaine ; gèle souvent (30%)." },
+    souffle_primordial: { id: "souffle_primordial", name: "Souffle Primordial", type: "DRAGON", power: 120, accuracy: 100, pp: 5, description: "Souffle draconique des origines : la plus puissante attaque Dragon. Réservée aux légendes." },
 
     // Attaque de SECOURS gratuite (anti soft-lock) : utilisable quand le joueur n'a
     // plus de reps pour aucune autre attaque. Faible et inflige du recul à soi-même.
