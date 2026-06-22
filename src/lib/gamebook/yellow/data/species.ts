@@ -1026,7 +1026,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     chronorex: {
         id: "chronorex", dexNo: 76, name: "Chronorex", types: ["ROCHE", "VOL"],
         baseStats: { hp: 90, atk: 135, def: 82, spe: 92, spc: 55 },
-        learnset: [{ level: 1, moveId: "morsure" }, { level: 1, moveId: "eboulis" }, { level: 1, moveId: "fonce_bec" }, { level: 1, moveId: "lame_roche" }, { level: 40, moveId: "belier" }, { level: 46, moveId: "pique_fatal" }, { level: 50, moveId: "seisme" }],
+        learnset: [{ level: 1, moveId: "morsure" }, { level: 1, moveId: "eboulis" }, { level: 1, moveId: "fonce_bec" }, { level: 1, moveId: "lame_roche" }, { level: 40, moveId: "belier" }, { level: 44, moveId: "danse_lames" }, { level: 46, moveId: "pique_fatal" }, { level: 50, moveId: "seisme" }, { level: 66, moveId: "vol" }],
         catchRate: 45, baseExp: 210, rarity: "RARE", growthRate: "medium_fast", role: "Roche/Vol — T-Rex (Atk énorme, Vit stagnée)",
         description: "T-Rex au bec de dodo ; le plus ancien des fossiles, à la force titanesque.",
         sprite: "/yellow/sprites/dex/chronorex.png",
@@ -1110,7 +1110,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     megalithe: {
         id: "megalithe", dexNo: 85, name: "Mégalithe", types: ["ROCHE"],
         baseStats: { hp: 140, atk: 100, def: 160, spe: 40, spc: 95 },
-        learnset: [{ level: 1, moveId: "lame_roche" }, { level: 1, moveId: "seisme" }, { level: 1, moveId: "carapace_diamant" }, { level: 1, moveId: "danse_lames" }, { level: 1, moveId: "repos" }, { level: 50, moveId: "belier" }],
+        learnset: [{ level: 1, moveId: "lame_roche" }, { level: 1, moveId: "seisme" }, { level: 1, moveId: "carapace_diamant" }, { level: 1, moveId: "danse_lames" }, { level: 1, moveId: "repos" }, { level: 44, moveId: "tir_boue" }, { level: 50, moveId: "belier" }, { level: 66, moveId: "roc_titanesque" }],
         catchRate: 20, baseExp: 290, rarity: "RARE", growthRate: "medium_fast", growthByStage: true, role: "Roche — méga golem de diamant (mur ultime, set-up)",
         description: "Titan de diamant ; le mur le plus infranchissable connu. Récompense d'un grind héroïque.",
         sprite: "/yellow/sprites/dex/megalithe.png",
@@ -1138,7 +1138,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     torturoche: {
         id: "torturoche", dexNo: 88, name: "Tortoracle", types: ["ROCHE", "PSY"],
         baseStats: { hp: 100, atk: 58, def: 108, spe: 27, spc: 112 },
-        learnset: [{ level: 1, moveId: "vague_mentale" }, { level: 1, moveId: "lame_roche" }, { level: 1, moveId: "eboulis" }, { level: 1, moveId: "choc_mental" }, { level: 40, moveId: "focalisation" }, { level: 44, moveId: "mur_de_fer" }, { level: 48, moveId: "repos" }],
+        learnset: [{ level: 1, moveId: "vague_mentale" }, { level: 1, moveId: "lame_roche" }, { level: 1, moveId: "eboulis" }, { level: 1, moveId: "choc_mental" }, { level: 40, moveId: "focalisation" }, { level: 44, moveId: "mur_de_fer" }, { level: 48, moveId: "repos" }, { level: 54, moveId: "onde_folie" }, { level: 66, moveId: "eveil_divin" }],
         catchRate: 45, baseExp: 200, rarity: "RARE", growthRate: "medium_fast", role: "Roche/Psy — tortue (mur spécial)",
         description: "Tortue ancestrale ; sa carapace de roche abrite un esprit puissant.",
         sprite: "/yellow/sprites/dex/torturoche.png",
@@ -1166,7 +1166,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     yetiroche: {
         id: "yetiroche", dexNo: 91, name: "Yétiroche", types: ["ROCHE", "GLACE"],
         baseStats: { hp: 95, atk: 100, def: 80, spe: 55, spc: 95 },
-        learnset: [{ level: 1, moveId: "souffle_polaire" }, { level: 1, moveId: "lame_roche" }, { level: 1, moveId: "eboulis" }, { level: 1, moveId: "coup_d_givre" }, { level: 40, moveId: "belier" }, { level: 44, moveId: "danse_lames" }],
+        learnset: [{ level: 1, moveId: "souffle_polaire" }, { level: 1, moveId: "lame_roche" }, { level: 1, moveId: "eboulis" }, { level: 1, moveId: "coup_d_givre" }, { level: 40, moveId: "belier" }, { level: 44, moveId: "danse_lames" }, { level: 52, moveId: "carapace_diamant" }, { level: 66, moveId: "blizzard" }],
         catchRate: 45, baseExp: 205, rarity: "RARE", growthRate: "medium_fast", role: "Roche/Glace — yéti (attaquant MIXTE Atk+Spé)",
         description: "Yéti légendaire des sommets ; frappe aussi bien du poing que du souffle glacé.",
         sprite: "/yellow/sprites/dex/yetiroche.png",
@@ -1195,7 +1195,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     crapotaure: {
         id: "crapotaure", dexNo: 94, name: "Crapôtaure", types: ["ROCHE", "EAU"],
         baseStats: { hp: 86, atk: 108, def: 78, spe: 108, spc: 64 },
-        learnset: [{ level: 1, moveId: "lame_roche" }, { level: 1, moveId: "hydrocanon" }, { level: 1, moveId: "lame_eau" }, { level: 1, moveId: "belier" }, { level: 40, moveId: "eboulis" }, { level: 44, moveId: "danse_lames" }],
+        learnset: [{ level: 1, moveId: "lame_roche" }, { level: 1, moveId: "hydrocanon" }, { level: 1, moveId: "lame_eau" }, { level: 1, moveId: "belier" }, { level: 40, moveId: "eboulis" }, { level: 44, moveId: "danse_lames" }, { level: 52, moveId: "tranche" }, { level: 66, moveId: "seisme" }],
         catchRate: 45, baseExp: 200, rarity: "RARE", growthRate: "medium_fast", role: "Roche/Eau — crapaud archer (le + rapide des Roche)",
         description: "Crapaud colossal au grand arc ; ses flèches de roche critent sans relâche.",
         sprite: "/yellow/sprites/dex/crapotaure.png",
@@ -1224,7 +1224,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     necrolopendre: {
         id: "necrolopendre", dexNo: 97, name: "Nécrolopendre", types: ["INSECTE", "SPECTRE"],
         baseStats: { hp: 70, atk: 105, def: 50, spe: 100, spc: 75 },
-        learnset: [{ level: 1, moveId: "ball_ombre" }, { level: 1, moveId: "dard_mortel" }, { level: 1, moveId: "morsure" }, { level: 1, moveId: "ombre_furtive" }, { level: 40, moveId: "dard_nuee" }],
+        learnset: [{ level: 1, moveId: "ball_ombre" }, { level: 1, moveId: "dard_mortel" }, { level: 1, moveId: "morsure" }, { level: 1, moveId: "ombre_furtive" }, { level: 40, moveId: "dard_nuee" }, { level: 46, moveId: "danse_lames" }, { level: 54, moveId: "dard_fatal" }, { level: 66, moveId: "detonation" }],
         catchRate: 45, baseExp: 200, rarity: "RARE", growthRate: "medium_fast", role: "Insecte/Spectre — scolopendre (assassin de verre)",
         description: "Scolopendre spectral interminable ; insaisissable, mais fragile s'il est touché.",
         sprite: "/yellow/sprites/dex/necrolopendre.png",
@@ -1268,6 +1268,7 @@ export const SPECIES: Record<string, SpeciesData> = {
         learnset: [
             { level: 1, moveId: "flamme_ardente" }, { level: 1, moveId: "fonce_bec" }, { level: 1, moveId: "tornade" },
             { level: 38, moveId: "lance_flammes" }, { level: 44, moveId: "pique_fatal" },
+            { level: 48, moveId: "focalisation" }, { level: 66, moveId: "boutefeu" },
         ],
         catchRate: 45, baseExp: 209, rarity: "RARE", growthRate: "medium_fast", role: "Vol/Feu — sweeper rapide",
         description: "Toucan-volcan dont le bec rougeoyant projette des flammes à distance.",
@@ -1307,6 +1308,7 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 1, moveId: "vague_mentale" }, { level: 1, moveId: "lance_flammes" },
             { level: 1, moveId: "flamme_ardente" }, { level: 1, moveId: "onde_folie" },
             { level: 42, moveId: "repos" },
+            { level: 46, moveId: "pyrotechnie" }, { level: 52, moveId: "focalisation" }, { level: 66, moveId: "boutefeu" },
         ],
         catchRate: 45, baseExp: 214, rarity: "RARE", growthRate: "medium_fast", role: "Psy/Feu — vipère psychique (ace)",
         description: "Vipère-braise millénaire ; son esprit brûlant plie la volonté des autres.",
@@ -1333,6 +1335,7 @@ export const SPECIES: Record<string, SpeciesData> = {
         learnset: [
             { level: 1, moveId: "pistolet_a_o" }, { level: 1, moveId: "flammeche" }, { level: 1, moveId: "mur_de_fer" },
             { level: 30, moveId: "lame_eau" }, { level: 36, moveId: "lance_flammes" },
+            { level: 44, moveId: "carapace_diamant" }, { level: 52, moveId: "deferlante" }, { level: 66, moveId: "hydrocanon" },
         ],
         catchRate: 45, baseExp: 205, rarity: "RARE", growthRate: "medium_fast", role: "Feu/Eau — tortue-volcan (mur)",
         description: "Tortue dont la carapace est un volcan miniature crachant lave et vapeur.",
@@ -1359,6 +1362,7 @@ export const SPECIES: Record<string, SpeciesData> = {
         learnset: [
             { level: 1, moveId: "double_pied" }, { level: 1, moveId: "poing_karate" }, { level: 1, moveId: "flammeche" },
             { level: 30, moveId: "flamme_ardente" }, { level: 36, moveId: "crochet_maitre" }, { level: 42, moveId: "belier" },
+            { level: 46, moveId: "danse_lames" }, { level: 54, moveId: "crocs_de_feu" }, { level: 66, moveId: "deluge_crochets" },
         ],
         catchRate: 45, baseExp: 205, rarity: "RARE", growthRate: "medium_fast", role: "Feu/Combat — taureau de cendre (casseur)",
         description: "Taureau colossal aux cornes en fusion ; sa charge fait trembler le sol.",
@@ -1372,7 +1376,8 @@ export const SPECIES: Record<string, SpeciesData> = {
         learnset: [
             { level: 1, moveId: "charge" }, { level: 1, moveId: "flammeche" },
             { level: 12, moveId: "flamme_ardente" }, { level: 24, moveId: "coup_d_boule" },
-            { level: 36, moveId: "lance_flammes" }, { level: 44, moveId: "belier" },
+            { level: 36, moveId: "lance_flammes" }, { level: 40, moveId: "crocs_de_feu" }, { level: 44, moveId: "belier" },
+            { level: 50, moveId: "tranche" }, { level: 54, moveId: "danse_lames" }, { level: 66, moveId: "ultralaser" },
         ],
         catchRate: 60, baseExp: 196, rarity: "RARE", growthRate: "medium_fast", role: "Feu — ours grizzly ardent",
         description: "Grizzly au pelage fumant ; hiberne dans les cratères encore tièdes.",
@@ -1415,6 +1420,7 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 1, moveId: "lame_eau" }, { level: 1, moveId: "etincelle" },
             { level: 1, moveId: "repos" }, { level: 30, moveId: "fulgurance" },
             { level: 44, moveId: "hydrocanon" },
+            { level: 48, moveId: "cage_eclair" }, { level: 54, moveId: "focalisation" }, { level: 66, moveId: "surtension" },
         ],
         catchRate: 30, baseExp: 196, rarity: "RARE", growthRate: "medium_fast", role: "Eau/Élec — colosse abyssal (mur)",
         description: "Colosse des fosses ; sa décharge fait trembler l'océan sur des kilomètres.",
