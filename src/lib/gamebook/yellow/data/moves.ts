@@ -67,6 +67,7 @@ export const MOVES: Record<string, MoveData> = {
     leche: { id: "leche", name: "Léchouille", type: "SPECTRE", power: 30, accuracy: 100, pp: 30, effect: { chance: 30, inflictStatus: "PARALYSIS" }, description: "Peut paralyser." },
 
     draco_souffle: { id: "draco_souffle", name: "Draco-Souffle", type: "DRAGON", power: 60, accuracy: 100, pp: 25, description: "Souffle draconique." },
+    draco_rage: { id: "draco_rage", name: "Draco-Rage", type: "DRAGON", power: 0, accuracy: 100, pp: 10, costPower: 40, effect: { fixedDamage: 40 }, description: "Onde de rage draconique : inflige TOUJOURS 40 PV, quels que soient les stats ou le type de la cible (façon Gen 1)." },
 
     // Moves de statut purs (boosts/baisses)
     danse_lames: { id: "danse_lames", name: "Danse-Lames", type: "NORMAL", power: 0, accuracy: 0, pp: 20, costPower: 50, effect: { statChanges: [{ target: "self", stat: "atk", stages: 2 }] }, description: "Augmente fortement l'Attaque." },

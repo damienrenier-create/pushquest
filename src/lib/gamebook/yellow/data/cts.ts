@@ -106,6 +106,8 @@ export const CTS: CtData[] = [
     { id: "ct34", label: "CT34", moveId: "dard_fatal", price: 420 },
     // Brume Sporale (Plante, anti-set-up) : reset des stats des 2 camps.
     { id: "ct35", label: "CT35", moveId: "brume_sporale", price: 300 },
+    // Draco-Rage (Dragon, dégâts fixes 40 — façon Gen 1) : type-lock DRAGON (seuls les Dragons l'apprennent).
+    { id: "ct36", label: "CT36", moveId: "draco_rage", price: 380 },
 ]
 
 export function getCt(id: string): CtData | null {

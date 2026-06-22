@@ -531,6 +531,20 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
         return
     }
 
+    // --- DÉGÂTS FIXES (ex. Draco-Rage, Gen 1) : inflige TOUJOURS N PV, indépendamment des stats,
+    //     du STAB et du multiplicateur de type. Respecte uniquement l'IMMUNITÉ de type (×0). ---
+    if (move.effect?.fixedDamage) {
+        const eff = typeEffectiveness(move.type, speciesOf(defender).types)
+        if (eff === 0) {
+            events.push({ kind: "message", text: "Ça n'affecte pas l'adversaire…" })
+            return
+        }
+        const dmg = Math.min(move.effect.fixedDamage, active(defSide).currentHp)
+        applyDamage(state, other(side), move.effect.fixedDamage, events)
+        events.push({ kind: "message", text: `${displayName(defender)} encaisse ${dmg} PV de dégâts fixes !` })
+        return
+    }
+
     // Gen 1 : un move sans puissance est un move de STATUT (effet pur).
     if (move.power <= 0) {
         // BRUME SPORALE (façon Buée Noire) : réinitialise TOUS les changements de stats des 2 camps.

@@ -73,6 +73,9 @@ export interface MoveEffect {
     /** HYPNOSE : précision de base FIXE (move.accuracy), INDÉPENDANTE de l'esquive, modulée par le ratio
      *  de Vitesse lanceur/cible (plus rapide → plus précis, plus lent → moins précis). Clampée. */
     speedScaledAcc?: boolean
+    /** DÉGÂTS FIXES (ex. Draco-Rage Gen 1) : inflige toujours exactement N PV, indépendamment des
+     *  stats/STAB/multiplicateur de type (seule l'immunité ×0 l'annule). Le move a power 0. */
+    fixedDamage?: number
 }
 
 export interface MoveData {
