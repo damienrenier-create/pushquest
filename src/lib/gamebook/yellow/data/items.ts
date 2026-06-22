@@ -31,27 +31,27 @@ export interface ItemData {
 export const ITEMS: Record<string, ItemData> = {
     poke_ball: {
         id: "poke_ball", name: "Nexus-Ball", category: "BALL",
-        description: "Ball standard pour capturer un Daemon affaibli.", price: 30, ballBonus: 1,
+        description: "Ball standard pour capturer un Daemon affaibli.", price: 10, ballBonus: 1,
     },
     poke_ball_plus: {
         id: "poke_ball_plus", name: "Nexus-Ball +", category: "BALL",
-        description: "Un cran au-dessus de la Nexus-Ball de base.", price: 45, ballBonus: 1.5,
+        description: "Un cran au-dessus de la Nexus-Ball de base.", price: 15, ballBonus: 1.5,
     },
     super_ball: {
         id: "super_ball", name: "Super Nexus-Ball", category: "BALL",
-        description: "Bon taux de capture.", price: 60, ballBonus: 2,
+        description: "Bon taux de capture.", price: 20, ballBonus: 2,
     },
     super_ball_plus: {
         id: "super_ball_plus", name: "Super Nexus-Ball +", category: "BALL",
-        description: "Très bon taux de capture.", price: 75, ballBonus: 3,
+        description: "Très bon taux de capture.", price: 25, ballBonus: 3,
     },
     hyper_ball: {
         id: "hyper_ball", name: "Hyper Nexus-Ball", category: "BALL",
-        description: "Excellent taux de capture.", price: 100, ballBonus: 4,
+        description: "Excellent taux de capture.", price: 33, ballBonus: 4,
     },
     hyper_ball_plus: {
         id: "hyper_ball_plus", name: "Hyper Nexus-Ball +", category: "BALL",
-        description: "Le summum hors Master — pour les proies les plus coriaces.", price: 150, ballBonus: 5,
+        description: "Le summum hors Master — pour les proies les plus coriaces.", price: 50, ballBonus: 5,
     },
     master_ball: {
         id: "master_ball", name: "Master-Éclair", category: "BALL",
@@ -65,7 +65,7 @@ export const ITEMS: Record<string, ItemData> = {
     },
     potion: {
         id: "potion", name: "Potion", category: "HEAL",
-        description: "Restaure 20 PV à un Daemon.", price: 20, healHp: 20,
+        description: "Restaure 20 PV à un Daemon.", price: 10, healHp: 20,
     },
     super_potion: {
         id: "super_potion", name: "Super Potion", category: "HEAL",
