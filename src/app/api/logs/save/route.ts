@@ -55,8 +55,11 @@ export async function POST(req: Request) {
             const milkaQuota = getDailyTargetForUserOnDate(milka, date);
             const milkaOwn = (milka?.sets || []).filter((s: any) => !s.offeredToUserId).reduce((a: number, s: any) => a + setEffort(s), 0);
             const giftsAll = await (prisma as any).exerciseSet.findMany({ where: { date, offeredToUserId: GIFT_RECIPIENT_ID } });
-            const giftsFromOthers = giftsAll.filter((s: any) => s.userId !== userId).reduce((a: number, s: any) => a + setEffort(s), 0);
-            const maxOfferable = Math.max(0, milkaQuota - milkaOwn - giftsFromOthers);
+            // Les cadeaux s'ACCUMULENT désormais (plusieurs séries/jour, on n'écrase plus le précédent) :
+            // le plafond déduit TOUS les cadeaux déjà offerts aujourd'hui — les miens INCLUS — pour ne jamais
+            // dépasser le quota de Milka.
+            const giftsSoFar = giftsAll.reduce((a: number, s: any) => a + setEffort(s), 0);
+            const maxOfferable = Math.max(0, milkaQuota - milkaOwn - giftsSoFar);
 
             const submissionEffort =
                 (sets.pushups || []).reduce((a: number, r: number) => a + (Number(r) || 0), 0) +
@@ -85,21 +88,21 @@ export async function POST(req: Request) {
         const allXpOld = await calculateAllUsersXP(allUsersOld, badgeOwnershipsOld, undefined, allEvents);
         const oldXp = allXpOld.find(x => x.id === userId);
 
-        // 2. Transaction: delete existing for this date and user, then create new
-        await (prisma as any).$transaction([
-            // delete scopé : ne touche QUE les reps du même type (normales OU offertes), pour ne pas s'écraser mutuellement
-            (prisma as any).exerciseSet.deleteMany({
-                where: { userId, date, offeredToUserId }
-            }),
-            (prisma as any).exerciseSet.createMany({
-                data: [
-                    ...(sets.pushups || []).map((reps: number) => ({ userId, date, exercise: "PUSHUP", reps: Math.min(500, Math.max(0, Number(reps) || 0)), offeredToUserId })),
-                    ...(sets.pullups || []).map((reps: number) => ({ userId, date, exercise: "PULLUP", reps: Math.min(500, Math.max(0, Number(reps) || 0)), offeredToUserId })),
-                    ...(sets.squats || []).map((reps: number) => ({ userId, date, exercise: "SQUAT", reps: Math.min(500, Math.max(0, Number(reps) || 0)), offeredToUserId })),
-                    ...(sets.planks || []).map((reps: number) => ({ userId, date, exercise: "PLANK", reps: Math.min(7200, Math.max(0, Number(reps) || 0)), offeredToUserId })),
-                ]
-            })
-        ]);
+        // 2. Transaction :
+        //   - SAISIE NORMALE : on REMPLACE les reps du jour (le formulaire renvoie toute la journée) → delete+create.
+        //   - CADEAU À MILKA : on AJOUTE (les séries s'accumulent, plusieurs cadeaux/jour) → PAS de delete.
+        const createData = [
+            ...(sets.pushups || []).map((reps: number) => ({ userId, date, exercise: "PUSHUP", reps: Math.min(500, Math.max(0, Number(reps) || 0)), offeredToUserId })),
+            ...(sets.pullups || []).map((reps: number) => ({ userId, date, exercise: "PULLUP", reps: Math.min(500, Math.max(0, Number(reps) || 0)), offeredToUserId })),
+            ...(sets.squats || []).map((reps: number) => ({ userId, date, exercise: "SQUAT", reps: Math.min(500, Math.max(0, Number(reps) || 0)), offeredToUserId })),
+            ...(sets.planks || []).map((reps: number) => ({ userId, date, exercise: "PLANK", reps: Math.min(7200, Math.max(0, Number(reps) || 0)), offeredToUserId })),
+        ];
+        const txOps = [
+            // delete scopé : ne touche QUE les reps du même type (normales OU offertes), pour ne pas s'écraser mutuellement.
+            ...(isGift ? [] : [(prisma as any).exerciseSet.deleteMany({ where: { userId, date, offeredToUserId } })]),
+            (prisma as any).exerciseSet.createMany({ data: createData }),
+        ];
+        await (prisma as any).$transaction(txOps);
 
         // 3. Trigger badge calculation
         await updateBadgesPostSave(userId);
