@@ -1,13 +1,24 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { GIFT_RECIPIENT_ID, isGiftWindowOpen } from "@/lib/gift"
 
 /**
  * GiftRepsCard — Cadeau de naissance : offrir des reps à Milka (12/06 → 12/08).
  * Auto-affiché seulement pendant la fenêtre, et pas pour Milka lui-même.
  * Les reps offertes comptent dans le volume/XP du donneur mais remplissent le quota de Milka.
+ * Les cadeaux s'ACCUMULENT (plusieurs séries/jour) → on liste les séries du jour avec une croix
+ * pour en supprimer une (utile pour nettoyer les doublons).
  */
+type GiftSet = { id: string; exercise: string; reps: number; offeredToUserId: string | null }
+
+const EX: Record<string, { e: string; l: string }> = {
+    PUSHUP: { e: "💪", l: "pompes" },
+    PULLUP: { e: "🦍", l: "tractions" },
+    SQUAT: { e: "🦵", l: "squats" },
+    PLANK: { e: "🛡️", l: "gainage(s)" },
+}
+
 export default function GiftRepsCard({
     currentUserId,
     today,
@@ -20,9 +31,24 @@ export default function GiftRepsCard({
     const [reps, setReps] = useState({ pushups: 0, pullups: 0, squats: 0, planks: 0 })
     const [saving, setSaving] = useState(false)
     const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null)
+    const [giftSets, setGiftSets] = useState<GiftSet[]>([])
+    const [deletingId, setDeletingId] = useState<string | null>(null)
+
+    const windowOpen = isGiftWindowOpen(today) && currentUserId !== GIFT_RECIPIENT_ID
+
+    // Charge les séries-cadeau déjà offertes aujourd'hui (pour les afficher avec une croix).
+    const loadGifts = useCallback(async () => {
+        try {
+            const r = await fetch(`/api/logs/gift?date=${encodeURIComponent(today)}`)
+            const j = r.ok ? await r.json() : null
+            setGiftSets((j?.sets ?? []) as GiftSet[])
+        } catch { /* silencieux */ }
+    }, [today])
+
+    useEffect(() => { if (windowOpen) loadGifts() }, [windowOpen, loadGifts])
 
     // Garde : hors fenêtre, ou bénéficiaire lui-même → ne rien afficher
-    if (!isGiftWindowOpen(today) || currentUserId === GIFT_RECIPIENT_ID) return null
+    if (!windowOpen) return null
 
     const total = reps.pushups + reps.pullups + reps.squats + Math.floor(reps.planks / 5)
 
@@ -49,6 +75,7 @@ export default function GiftRepsCard({
             if (res.ok) {
                 setMsg({ text: "Cadeau offert à Milka 🍼 Merci !", ok: true })
                 setReps({ pushups: 0, pullups: 0, squats: 0, planks: 0 })
+                await loadGifts()
                 onSaved?.()
             } else {
                 setMsg({ text: json?.message || "Erreur lors du cadeau", ok: false })
@@ -57,6 +84,28 @@ export default function GiftRepsCard({
             setMsg({ text: "Erreur réseau", ok: false })
         } finally {
             setSaving(false)
+        }
+    }
+
+    const deleteGift = async (id: string) => {
+        setDeletingId(id)
+        try {
+            const res = await fetch("/api/logs/gift", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id }),
+            })
+            if (res.ok) {
+                setGiftSets((prev) => prev.filter((s) => s.id !== id))
+                setMsg({ text: "Série supprimée.", ok: true })
+                onSaved?.()
+            } else {
+                setMsg({ text: "Suppression impossible", ok: false })
+            }
+        } catch {
+            setMsg({ text: "Erreur réseau", ok: false })
+        } finally {
+            setDeletingId(null)
         }
     }
 
@@ -104,6 +153,29 @@ export default function GiftRepsCard({
             >
                 {saving ? "Envoi..." : `Offrir ${total > 0 ? `${total} reps ` : ""}à Milka 🎁`}
             </button>
+
+            {/* Séries-cadeau déjà offertes aujourd'hui — croix pour en supprimer une (nettoyage des doublons). */}
+            {giftSets.length > 0 && (
+                <div className="pt-2 border-t border-pink-200">
+                    <p className="text-[10px] font-black text-pink-700 uppercase mb-2">Tes cadeaux offerts aujourd&apos;hui</p>
+                    <div className="flex flex-wrap gap-2">
+                        {giftSets.map((s) => {
+                            const ex = EX[s.exercise] ?? { e: "•", l: s.exercise.toLowerCase() }
+                            return (
+                                <span key={s.id} className="relative inline-flex items-center gap-1 bg-white border-2 border-pink-200 rounded-full pl-3 pr-7 py-1 text-xs font-black text-pink-800">
+                                    {ex.e} {s.reps}
+                                    <button
+                                        onClick={() => deleteGift(s.id)}
+                                        disabled={deletingId === s.id}
+                                        title="Supprimer cette série"
+                                        className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-400 hover:bg-red-500 disabled:opacity-50 text-white rounded-full text-[10px] font-black flex items-center justify-center shadow"
+                                    >✕</button>
+                                </span>
+                            )
+                        })}
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
