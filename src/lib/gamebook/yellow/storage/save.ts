@@ -70,6 +70,21 @@ export interface YellowSave {
 /** Un « meilleur moment » d'un combat de la Ligue (best-of affiché au Hall of Fame). Runtime. */
 export interface LeagueHighlight { trainer: string; mon: string; dmg: number; move: string }
 
+/** Un Daemon de l'équipe de champion, figé au sacre (sprite + fiche complète pour la parade du générique). */
+export interface ChampionMon {
+    speciesId: string
+    nickname?: string
+    level: number
+    shiny?: boolean
+    /** Stats finales calculées au sacre (hp/atk/def/spe/spc). */
+    stats: { hp: number; atk: number; def: number; spe: number; spc: number }
+    /** Noms d'affichage des attaques (jusqu'à 4). */
+    moves: string[]
+}
+
+/** Run de champion : l'équipe sacrée + les meilleurs moments de la Ligue. Runtime (déclenche le Hall of Fame). */
+export interface ChampionRun { team: ChampionMon[]; highlights: LeagueHighlight[] }
+
 // v2 (2026-06) : NERF ACE — migration one-time qui remet le CLIQUET d'ACE à zéro (acePeakLevel +
 // aceTeamSizePeak) pour les saves existantes, en CONSERVANT aceWins. ACE se recalibrera alors sur
 // l'équipe ACTUELLE du joueur (au lieu d'un pic figé trop haut) → enfin battable. Ne peut que l'adoucir.

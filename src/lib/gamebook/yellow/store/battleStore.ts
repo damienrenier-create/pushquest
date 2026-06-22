@@ -32,7 +32,8 @@ import type { BadgeId } from "../data/cts"
 import { createMonInstance } from "../battle/factory"
 import { getTrainer } from "../data/trainers"
 import { SBIRE_TRAINER_ID } from "../data/sbire"
-import { toMonInstance, type LeagueHighlight } from "../storage/save"
+import { toMonInstance, type LeagueHighlight, type ChampionRun } from "../storage/save"
+import { fullStats } from "../battle/stats"
 import { evolveTeam, type TeamEvolution } from "../progression/evolveTeam"
 import { persistYellowSave, processSaiyanPoints } from "./saveManager"
 import { QUOTA_CAPTURE_BONUS } from "../data/captureConfig"
@@ -95,7 +96,7 @@ interface BattleStoreState {
      *  proposition de surnom). null sinon. Renseigné en fin de combat, consommé par l'UI. */
     newDexEntry: { speciesId: string; uid: string; level: number } | null
     /** LIGUE : sacre du CHAMPION (après LE MAÎTRE) → Hall of Fame post-combat (équipe + best-of). null sinon. */
-    championRun: { team: { speciesId: string; nickname?: string; level: number }[]; highlights: LeagueHighlight[] } | null
+    championRun: ChampionRun | null
     /** Dresseur dont le REMATCH doit s'enchaîner DIRECTEMENT après cette victoire (ex. VOLTA 2 phases). null sinon. */
     chainRematchId: string | null
     /** Au moins un Daemon a une attaque EN ATTENTE d'apprentissage → prompt post-combat (façon Gen 1). */
@@ -422,7 +423,18 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             setChampion()
             const order = ["y_ligue_1_olga", "y_ligue_2_aldo", "y_ligue_3_agatha", "y_ligue_4_peter", "y_ligue_maitre"]
             championRun = {
-                team: getPlayer().team.map((m) => ({ speciesId: m.speciesId, nickname: m.nickname, level: m.level })),
+                team: getPlayer().team.map((m) => {
+                    const sp = getSpecies(m.speciesId)
+                    const st = sp ? fullStats(m, sp) : { hp: 0, atk: 0, def: 0, spe: 0, spc: 0 }
+                    return {
+                        speciesId: m.speciesId,
+                        nickname: m.nickname,
+                        level: m.level,
+                        shiny: m.shiny,
+                        stats: { hp: st.hp, atk: st.atk, def: st.def, spe: st.spe, spc: st.spc },
+                        moves: m.moves.map((slot) => getMove(slot.moveId)?.name ?? slot.moveId),
+                    }
+                }),
                 highlights: order.map((id) => leagueHighlights[id]).filter((h): h is LeagueHighlight => !!h),
             }
         }
