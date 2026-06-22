@@ -130,6 +130,10 @@ export const MOVES: Record<string, MoveData> = {
     roc_titanesque: { id: "roc_titanesque", name: "Roc Titanesque", type: "ROCHE", power: 120, accuracy: 80, pp: 5, effect: { recoilPct: 33 }, description: "Le colosse projette un bloc titanesque : dégâts énormes mais contrecoup (et précision incertaine)." },
     blizzard: { id: "blizzard", name: "Blizzard", type: "GLACE", power: 110, accuracy: 70, pp: 5, effect: { chance: 30, inflictStatus: "FREEZE" }, description: "Tempête de glace dévastatrice à la précision incertaine ; gèle souvent (30%)." },
     souffle_primordial: { id: "souffle_primordial", name: "Souffle Primordial", type: "DRAGON", power: 120, accuracy: 100, pp: 5, description: "Souffle draconique des origines : la plus puissante attaque Dragon. Réservée aux légendes." },
+    // === Petits moves de caractère (early-game core) ===
+    visee: { id: "visee", name: "Visée", type: "NORMAL", power: 0, accuracy: 0, pp: 20, costPower: 20, effect: { statChanges: [{ target: "self", stat: "acc", stages: 1 }] }, description: "Le Daemon ajuste son tir : augmente sa Précision." },
+    secousse: { id: "secousse", name: "Secousse", type: "SOL", power: 60, accuracy: 100, pp: 20, description: "Une secousse tellurique ébranle la cible." },
+    tison: { id: "tison", name: "Tison", type: "FEU", power: 45, accuracy: 100, pp: 25, effect: { chance: 30, inflictStatus: "BURN" }, description: "Projette une braise : peu puissante mais brûle souvent (30%)." },
 
     // Attaque de SECOURS gratuite (anti soft-lock) : utilisable quand le joueur n'a
     // plus de reps pour aucune autre attaque. Faible et inflige du recul à soi-même.
