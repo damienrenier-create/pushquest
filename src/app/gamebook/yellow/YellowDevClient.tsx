@@ -122,7 +122,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         const enemy = arenaMode === "hub" ? buildHubTeam(opp.player) : buildMirrorTeam(opp.player)
         setArenaFight({ opp, mode: arenaMode, enemy })
     }
-    const [menu, setMenu] = useState<"none" | "pause" | "team" | "pc" | "bag" | "reput" | "moves" | "hof">("none")
+    const [menu, setMenu] = useState<"none" | "pause" | "team" | "bag" | "reput" | "moves" | "hof">("none")
     const ficheTouchX = useRef<number | null>(null) // swipe gauche/droite dans la fiche Daemon
     const [selected, setSelected] = useState<MonInstance | null>(null)
     const [pantheonEvo, setPantheonEvo] = useState<MonInstance | null>(null) // Pierre Gékroc : choix du type pour Panthéon
@@ -584,7 +584,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (libraryOpen) { closeLibrary(); return true }
         if (advisorOpen) { closeAdvisor(); return true }
         if (labOpen) { closeLab(); return true }
-        if (menu === "pc" || pcOpen) { closePc(); setMenu(menu === "pc" ? "pause" : "none"); return true }
+        if (pcOpen) { closePc(); return true }
         if (menu === "team" || menu === "bag" || menu === "reput" || menu === "moves" || menu === "hof") { setMenu("pause"); return true }
         if (menu === "pause") { setMenu("none"); return true }
         return false
@@ -654,7 +654,6 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                         <div style={menuTitleStyle}>MENU</div>
                         <button style={menuBtnStyle} onClick={() => setMenu("team")}>🐾 ÉQUIPE</button>
-                        <button style={menuBtnStyle} onClick={() => setMenu("pc")}>📦 PC (BOÎTES)</button>
                         <button style={menuBtnStyle} onClick={() => setMenu("bag")}>🎒 SAC</button>
                         <button style={menuBtnStyle} onClick={() => router.push("/gamebook/yellow/pokedex")}>📷 POKÉDEX</button>
                         <button style={menuBtnStyle} onClick={() => router.push("/gamebook/yellow/dex")}>📖 DEX (CATALOGUE)</button>
@@ -741,8 +740,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             )}
 
             {/* PC — boîtes : dépôt/retrait entre l'équipe et la réserve.
-                Ouvert via le menu START (menu="pc") OU l'ordinateur du Centre (pcOpen). */}
-            {!battle && (menu === "pc" || pcOpen) && (() => {
+                Accessible UNIQUEMENT via l'ordinateur du Centre Daemon (pcOpen), plus depuis le menu START. */}
+            {!battle && pcOpen && (() => {
                 const BOX_SIZE = 20
                 // Tri de la réserve — sur une COPIE (on ne réordonne jamais player.pc lui-même,
                 // pour garder l'ordre de dépôt réel pour l'option "récemment déposé").
@@ -760,7 +759,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 const boxes = Math.max(1, Math.ceil(sortedPc.length / BOX_SIZE))
                 const box = Math.min(pcBox, boxes - 1)
                 const slice = sortedPc.slice(box * BOX_SIZE, box * BOX_SIZE + BOX_SIZE)
-                const closePcUi = () => { closePc(); setMenu(menu === "pc" ? "pause" : "none") }
+                const closePcUi = () => { closePc() }
                 return (
                     <div style={menuOverlayStyle} onClick={closePcUi}>
                         <div style={{ ...menuBoxStyle, maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
