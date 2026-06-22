@@ -112,6 +112,21 @@ export async function resetYellowChapter(): Promise<void> {
     try { await fetch("/api/gamebook/yellow/save/backup", { method: "POST" }) } catch { /* best-effort */ }
     resetForIntro()
     hydratePokedex({ seen: [], caught: [] })
+    // ÉNERGIE « nouvelle partie » : on re-crédite comme un PREMIER chargement (resetForIntro a remis
+    // welcomeGift/spagGift à false et repsBankedTotal à -1) → cadeaux de bienvenue + reps du jour.
+    claimWelcomeGift() // +100 énergie
+    claimSpagGift()    // +150 énergie
+    try {
+        const r = await fetch("/api/gamebook/yellow/player-stats")
+        if (r.ok) {
+            const j = await r.json()
+            if (j?.ctx) setWildCtx(j.ctx)
+            if (typeof j?.today === "string") creditDailyReps(j.today)
+            if (typeof j?.repsTotalToDate === "number" && typeof j?.repsThroughYesterday === "number") {
+                bankReps(j.repsTotalToDate, j.repsThroughYesterday) // recrédite les reps du jour
+            }
+        }
+    } catch { /* hors-ligne : au moins les cadeaux de bienvenue sont crédités */ }
     persistYellowSave()
 }
 

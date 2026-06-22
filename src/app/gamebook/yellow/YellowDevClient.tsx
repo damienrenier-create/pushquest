@@ -36,7 +36,8 @@ import AdvisorPanel from "./AdvisorPanel"
 import LabPanel from "./LabPanel"
 import ParkSignPanel from "./ParkSignPanel"
 import PosterPanel from "./PosterPanel"
-import { useGameStore, setCurrentNickname } from "@/lib/gamebook/yellow/store/gameStore"
+import { useGameStore, setCurrentNickname, DEFAULT_SPAWN } from "@/lib/gamebook/yellow/store/gameStore"
+import { YELLOW_ENTRANCE_MAP_ID } from "@/lib/gamebook/yellow/featureFlag"
 import { YELLOW_MAPS, CENDREVILLE_SPAWN } from "@/lib/gamebook/yellow/maps"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
 import { useBattle, useEvolutions, clearEvolutions, useChampionRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getGiftCtMove, startTrainerBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult } from "@/lib/gamebook/yellow/store/battleStore"
@@ -665,7 +666,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                         setResetHolding(true)
                                         resetHoldTimer.current = setTimeout(async () => {
                                             resetHoldTimer.current = null; setResetHolding(false)
-                                            await resetYellowChapter() // copie la save dans history AVANT d'effacer
+                                            await resetYellowChapter() // copie la save dans history AVANT d'effacer + recrédite l'énergie
+                                            setMap(YELLOW_ENTRANCE_MAP_ID, DEFAULT_SPAWN.x, DEFAULT_SPAWN.y) // repop au tout début (1re ville), comme une nouvelle partie
                                             setConfirmReset(false); setMenu("none"); setShowIntro(true)
                                         }, 1500)
                                     }}
