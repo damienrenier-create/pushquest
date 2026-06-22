@@ -959,6 +959,7 @@ export const SPECIES: Record<string, SpeciesData> = {
         learnset: [
             { level: 1, moveId: "coup_d_givre" }, { level: 1, moveId: "souffle_polaire" },
             { level: 1, moveId: "vive_attaque" }, { level: 1, moveId: "coup_d_boule" },
+            { level: 20, moveId: "mur_de_fer" }, { level: 40, moveId: "focalisation" }, { level: 55, moveId: "repos" }, { level: 66, moveId: "blizzard" },
         ],
         catchRate: 45, baseExp: 195, rarity: "RARE", growthRate: "medium_fast", role: "Glace — panthère (boss)",
         description: "Panthère de givre au pelage cristallin ; son souffle gèle l'air.",
@@ -970,6 +971,7 @@ export const SPECIES: Record<string, SpeciesData> = {
         learnset: [
             { level: 1, moveId: "flamme_ardente" }, { level: 1, moveId: "lance_flammes" },
             { level: 1, moveId: "vive_attaque" }, { level: 1, moveId: "coup_d_boule" },
+            { level: 40, moveId: "focalisation" }, { level: 52, moveId: "pyrotechnie" }, { level: 66, moveId: "boutefeu" },
         ],
         catchRate: 45, baseExp: 200, rarity: "RARE", growthRate: "medium_fast", role: "Feu — panthère (boss)",
         description: "Panthère de braise ; file plus vite que la flamme qui la couronne.",
@@ -981,6 +983,7 @@ export const SPECIES: Record<string, SpeciesData> = {
         learnset: [
             { level: 1, moveId: "ball_ombre" }, { level: 1, moveId: "leche" },
             { level: 1, moveId: "morsure" }, { level: 1, moveId: "coup_d_boule" },
+            { level: 30, moveId: "griffe_spectrale" }, { level: 45, moveId: "danse_lames" }, { level: 66, moveId: "frappe_audela" },
         ],
         catchRate: 45, baseExp: 200, rarity: "RARE", growthRate: "medium_fast", role: "Spectre (ténèbre) — panthère (boss)",
         description: "Panthère des ténèbres ; surgit de l'ombre avant qu'on la voie.",
@@ -992,6 +995,7 @@ export const SPECIES: Record<string, SpeciesData> = {
         learnset: [
             { level: 1, moveId: "lame_eau" }, { level: 1, moveId: "hydrocanon" },
             { level: 1, moveId: "vive_attaque" }, { level: 1, moveId: "coup_d_boule" },
+            { level: 40, moveId: "deferlante" }, { level: 50, moveId: "focalisation" }, { level: 66, moveId: "repos" },
         ],
         catchRate: 45, baseExp: 195, rarity: "RARE", growthRate: "medium_fast", role: "Eau — panthère (boss)",
         description: "Panthère des torrents ; sa crinière ruisselle d'une eau vive.",
@@ -1003,6 +1007,7 @@ export const SPECIES: Record<string, SpeciesData> = {
         learnset: [
             { level: 1, moveId: "etincelle" }, { level: 1, moveId: "fulgurance" },
             { level: 1, moveId: "cage_eclair" }, { level: 1, moveId: "vive_attaque" },
+            { level: 40, moveId: "focalisation" }, { level: 66, moveId: "ultra_foudre" },
         ],
         catchRate: 45, baseExp: 200, rarity: "RARE", growthRate: "medium_fast", role: "Élec — panthère (boss)",
         description: "Panthère de foudre ; un éclair sur pattes, la plus rapide du donjon.",
@@ -1445,6 +1450,7 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 1, moveId: "charge" }, { level: 1, moveId: "choc_mental" },
             { level: 12, moveId: "etincelle" }, { level: 24, moveId: "focalisation" },
             { level: 36, moveId: "vague_mentale" }, { level: 48, moveId: "fulgurance" },
+            { level: 52, moveId: "onde_folie" }, { level: 70, moveId: "ultra_foudre" },
         ],
         catchRate: 30, baseExp: 200, rarity: "RARE", growthRate: "slow", role: "Psy/Élec — gerbille late-bloomer",
         description: "Petite gerbille électrostatique ; lente à mûrir, mais un canon psychique une fois adulte.",
@@ -1471,6 +1477,7 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 1, moveId: "leche" }, { level: 1, moveId: "mirage" },
             { level: 1, moveId: "ombre_furtive" }, { level: 1, moveId: "vive_attaque" },
             { level: 34, moveId: "fulgurance" }, { level: 40, moveId: "ball_ombre" },
+            { level: 48, moveId: "onde_folie" }, { level: 66, moveId: "frappe_audela" },
         ],
         catchRate: 45, baseExp: 188, rarity: "RARE", growthRate: "medium_fast", role: "Spectre/Élec — félin spectral",
         description: "Félin spectral foudroyant ; frappe depuis les ombres avant que le tonnerre ne gronde.",
@@ -1510,6 +1517,7 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 1, moveId: "etincelle" }, { level: 1, moveId: "mirage" },
             { level: 1, moveId: "hurlement" }, { level: 1, moveId: "flamme_ardente" },
             { level: 40, moveId: "fulgurance" }, { level: 46, moveId: "lance_flammes" },
+            { level: 52, moveId: "focalisation" }, { level: 66, moveId: "boutefeu" },
         ],
         catchRate: 45, baseExp: 196, rarity: "RARE", growthRate: "medium_fast", role: "Feu/Élec — guépard foudre (le + rapide)",
         description: "Le Daemon le plus rapide du Nexus ; un éclair de feu sur quatre pattes.",
@@ -1548,6 +1556,7 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 30, moveId: "ball_ombre" },
             { level: 36, moveId: "crochet_maitre" },
             { level: 42, moveId: "frappe_audela" },
+            { level: 48, moveId: "danse_lames" }, { level: 54, moveId: "seisme" }, { level: 66, moveId: "deluge_crochets" },
         ],
         catchRate: 45, baseExp: 158, rarity: "RARE", growthRate: "medium_slow", role: "Combat/Spectre — wallbreaker lent à priorité",
         description: "Le spectre boudeur a appris à cogner : il frappe fort, encaisse, et passe devant grâce à ses coups furtifs.",
@@ -1582,6 +1591,7 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 36, moveId: "bombe_beurk" }, // couverture POISON → seul moyen de toucher les NORMAL (immunisés au Spectre)
             { level: 40, moveId: "ball_ombre" },
             { level: 46, moveId: "frappe_audela" },
+            { level: 54, moveId: "linceul" }, { level: 66, moveId: "toxik" },
         ],
         catchRate: 45, baseExp: 150, rarity: "RARE", growthRate: "medium_slow", role: "Spectre — mur physique (le vrai tank du roster spectre)",
         description: "Colosse d'outre-tombe : sa carcasse encaisse l'inencaissable et draine la vie de ses assaillants.",
@@ -1631,6 +1641,7 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 44, moveId: "focalisation" },
             { level: 46, moveId: "repos" },
             { level: 48, moveId: "frappe_audela" },
+            { level: 66, moveId: "detonation" },
         ],
         catchRate: 30, baseExp: 150, rarity: "RARE", growthRate: "medium_slow", role: "Psy/Spectre — glass cannon mixte FRÊLE, disrupteur (sommeil/confusion/drain/Repos)",
         description: "Grand-duc d'outre-tombe : son cri psychique foudroie l'esprit avant que l'ombre n'achève la proie.",
@@ -1647,8 +1658,10 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 1, moveId: "charge" },
             { level: 1, moveId: "draco_souffle" },
             { level: 22, moveId: "danse_lames" },
+            { level: 28, moveId: "draco_rage" },
             { level: 33, moveId: "belier" },
             { level: 44, moveId: "seisme" },
+            { level: 48, moveId: "focalisation" },
             { level: 55, moveId: "draco_charge" },
             { level: 95, moveId: "souffle_primordial" }, // capstone légendaire ultra-tardif (aussi CT-trophée du décuple champion)
         ],
@@ -1712,8 +1725,10 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 1, moveId: "draco_charge" },
             { level: 1, moveId: "lance_flammes" },
             { level: 1, moveId: "vive_attaque" },
+            { level: 30, moveId: "crocs_de_feu" },
             { level: 40, moveId: "pique_fatal" },
             { level: 46, moveId: "danse_lames" },
+            { level: 52, moveId: "tranche" }, { level: 66, moveId: "griffe_draconique" },
         ],
         catchRate: 30, baseExp: 250, rarity: "RARE", growthRate: "medium_fast", role: "Feu/Dragon — foudre de guerre ailée",
         description: "Carlin-dragon altier au regard d'acier. Fond du ciel en piqué embrasé avant qu'on ait pu cligner des yeux.",
@@ -1745,6 +1760,7 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 1, moveId: "morsure" },
             { level: 38, moveId: "souffle_polaire" },
             { level: 44, moveId: "draco_charge" },
+            { level: 48, moveId: "danse_lames" }, { level: 54, moveId: "griffe_draconique" }, { level: 66, moveId: "blizzard" },
         ],
         catchRate: 30, baseExp: 250, rarity: "RARE", growthRate: "medium_fast", role: "Dragon/Glace — colosse glaciaire",
         description: "Tyran des banquises hérissé de cristaux. Un rugissement de Cryotyran gèle l'air et fait trembler la roche.",
@@ -1763,6 +1779,7 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 40, moveId: "souffle_polaire" }, // arme principale anti-Goshendofy (Glace, peut geler)
             { level: 51, moveId: "plaquage" },
             { level: 58, moveId: "hydrocanon" },
+            { level: 66, moveId: "blizzard" },
             { level: 75, moveId: "repos" },
             { level: 81, moveId: "ultralaser" },
         ],
@@ -1784,6 +1801,7 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 40, moveId: "tempete_verte" },
             { level: 50, moveId: "plaquage" },
             { level: 60, moveId: "focalisation" }, // booste le Spécial (+1)
+            { level: 66, moveId: "seisme" },
             { level: 70, moveId: "mirage" },
             { level: 80, moveId: "ultralaser" },
             { level: 90, moveId: "lance_soleil" }, // LA plus forte attaque Plante (120, en 2 temps)
@@ -1808,6 +1826,7 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 44, moveId: "mur_de_fer" },    // Defense Curl : +Défense
             { level: 48, moveId: "focalisation" },  // (Light Screen→) +Spécial : renforce le mur spé
             { level: 54, moveId: "fulgurance" },    // Thunderbolt : moitié BoltBeam
+            { level: 60, moveId: "vague_mentale" }, { level: 66, moveId: "eveil_divin" },
         ],
         catchRate: 30, baseExp: 220, rarity: "RARE", growthRate: "medium_fast", exclusive: true, role: "Normal — œuf-soigneur (mur spécial ; s'effondre au physique)",
         description: "Petit Daemon-œuf au cœur immense. Encaisse les pires assauts spéciaux sans broncher grâce à ses PV colossaux, mais le moindre coup physique le fait vaciller. Soigne et endort plus qu'il ne frappe.",
