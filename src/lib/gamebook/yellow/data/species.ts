@@ -928,11 +928,14 @@ export const SPECIES: Record<string, SpeciesData> = {
         learnset: [
             { level: 1, moveId: "vive_attaque" },
             { level: 1, moveId: "fouet_lianes" },
-            { level: 1, moveId: "coup_d_boule" }, // couverture Normal (comme les autres panthères) → loadout Plante/Normal
-            { level: 1, moveId: "tranche_feuille" },
-            { level: 1, moveId: "etreinte_sylvestre" }, // signature du Druide
-            { level: 20, moveId: "mega_sangsue" },
-            { level: 30, moveId: "tempete_verte" },
+            { level: 1, moveId: "coup_d_boule" }, // couverture Normal
+            { level: 20, moveId: "tranche_feuille" },
+            { level: 23, moveId: "vampigraine" },
+            { level: 40, moveId: "belier" },
+            { level: 45, moveId: "focalisation" },
+            { level: 50, moveId: "tempete_verte" },
+            { level: 70, moveId: "lance_soleil" },
+            { level: 80, moveId: "repos" },
         ],
         catchRate: 45, baseExp: 190, rarity: "RARE", growthRate: "medium_fast", role: "Plante — panthère (boss)",
         description: "Panthère sylvestre aux lianes vives ; bondit comme le lierre s'élance.",
