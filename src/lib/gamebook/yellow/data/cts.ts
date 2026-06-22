@@ -97,6 +97,15 @@ export const CTS: CtData[] = [
     { id: "ct30", label: "CT30", moveId: "boul_pollen", price: 390, alsoTypes: ["PLANTE"] },
     // --- CT NORMAL « Météores » (ne rate JAMAIS) : la + chère. Apprenable par tous (Normal). ---
     { id: "ct31", label: "CT31", moveId: "meteores", price: 1050, universal: true },
+    // === 4 nouvelles CT (refonte movesets lignées core) ===
+    // Miasme Corrosif (Poison spé) : STAB spécial pour les Poison ; aussi pour les Spectre spéciaux.
+    { id: "ct32", label: "CT32", moveId: "miasme_corrosif", price: 450, alsoTypes: ["SPECTRE"] },
+    // Vol (2-temps aérien) : pour les Vol ; aussi dragons & oiseaux Normal.
+    { id: "ct33", label: "CT33", moveId: "vol", price: 420, alsoTypes: ["DRAGON", "NORMAL"] },
+    // Dard Fatal (Insecte phys) : STAB Insecte fort, longtemps absent.
+    { id: "ct34", label: "CT34", moveId: "dard_fatal", price: 420 },
+    // Brume Sporale (Plante, anti-set-up) : reset des stats des 2 camps.
+    { id: "ct35", label: "CT35", moveId: "brume_sporale", price: 300 },
 ]
 
 export function getCt(id: string): CtData | null {

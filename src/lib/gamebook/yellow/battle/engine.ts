@@ -466,7 +466,7 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
     // --- TUNNEL : une cible SOUS TERRE (semiInvuln) est INTOUCHABLE → TOUT move la manque (statut compris).
     //     EXCEPTION : un move « coup sûr » (Météores, sureHit) la touche quand même (ignore l'invulnérabilité). ---
     if (defender.semiInvuln && !move.effect?.sureHit) {
-        events.push({ kind: "message", text: `${displayName(defender)} est sous terre : l'attaque le manque !` })
+        events.push({ kind: "message", text: `${displayName(defender)} est hors d'atteinte : l'attaque le manque !` })
         return
     }
 
@@ -485,6 +485,22 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
         attacker.chargingMove = slot?.moveId ?? move.id
         attacker.semiInvuln = true
         events.push({ kind: "message", text: `${displayName(attacker)} creuse un tunnel et disparaît sous terre !` })
+        return
+    }
+
+    // --- VOL (fly) : jumeau de Tunnel, invulnérabilité AÉRIENNE. PHASE 1 = s'envole (INVULNÉRABLE) ;
+    //     PHASE 2 = fond du ciel et frappe (power du move). Météores (sureHit) le touche en vol. ---
+    if (move.effect?.fly) {
+        if (attacker.chargingMove === (slot?.moveId ?? move.id)) {
+            attacker.chargingMove = undefined
+            attacker.semiInvuln = undefined
+            events.push({ kind: "message", text: `${displayName(attacker)} fond depuis le ciel !` })
+            dealMoveDamage(state, side, move, rng, events)
+            return
+        }
+        attacker.chargingMove = slot?.moveId ?? move.id
+        attacker.semiInvuln = true
+        events.push({ kind: "message", text: `${displayName(attacker)} s'envole haut dans le ciel !` })
         return
     }
 
@@ -517,6 +533,13 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
 
     // Gen 1 : un move sans puissance est un move de STATUT (effet pur).
     if (move.power <= 0) {
+        // BRUME SPORALE (façon Buée Noire) : réinitialise TOUS les changements de stats des 2 camps.
+        if (move.effect?.resetStats) {
+            active(state.player).stages = neutralStages()
+            active(state.enemy).stages = neutralStages()
+            events.push({ kind: "message", text: `Un voile de spores dissipe tous les changements de stats !` })
+            return
+        }
         applyStatusMove(state, side, move, events, rng)
         return
     }

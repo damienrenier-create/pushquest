@@ -60,9 +60,14 @@ export interface MoveEffect {
      *  (INVULNÉRABLE, les attaques le MANQUENT), tour 2 = jaillit et frappe (power du move).
      *  Distinct de twoTurn (qui frappe aux 2 tours sans invuln). Ex. « Tunnel » de Gékroc. */
     dig?: boolean
+    /** VOL (fly) : jumeau de dig, mais invulnérabilité AÉRIENNE — tour 1 = s'envole (INVULNÉRABLE, les
+     *  attaques le MANQUENT sauf coup sûr/Météores), tour 2 = fond du ciel et frappe (power du move). */
+    fly?: boolean
     /** COUP SÛR (ex. « Météores ») : ignore l'invulnérabilité (cible sous terre via Tunnel / en vol).
      *  Combiné à accuracy ≤ 0, le move NE RATE JAMAIS — esquive, mirage ET semi-invulnérabilité inclus. */
     sureHit?: boolean
+    /** BRUME SPORALE (façon Buée Noire) : réinitialise TOUS les changements de stats des DEUX camps. */
+    resetStats?: boolean
 }
 
 export interface MoveData {
