@@ -26,6 +26,7 @@ import { usePvpCtx, pvpForfeit } from "@/lib/gamebook/yellow/store/battleStore"
 import EvolutionScreen from "./battle/EvolutionScreen"
 import MoveLearnScreen from "./battle/MoveLearnScreen"
 import HallOfFame from "./HallOfFame"
+import HallOfFameViewer from "./HallOfFameViewer"
 import DexEntryScreen from "./battle/DexEntryScreen"
 import IntroCinematic from "./IntroCinematic"
 import GuidePanel from "./GuidePanel"
@@ -120,7 +121,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         const enemy = arenaMode === "hub" ? buildHubTeam(opp.player) : buildMirrorTeam(opp.player)
         setArenaFight({ opp, mode: arenaMode, enemy })
     }
-    const [menu, setMenu] = useState<"none" | "pause" | "team" | "pc" | "bag" | "reput" | "moves">("none")
+    const [menu, setMenu] = useState<"none" | "pause" | "team" | "pc" | "bag" | "reput" | "moves" | "hof">("none")
     const ficheTouchX = useRef<number | null>(null) // swipe gauche/droite dans la fiche Daemon
     const [selected, setSelected] = useState<MonInstance | null>(null)
     const [pantheonEvo, setPantheonEvo] = useState<MonInstance | null>(null) // Pierre Gékroc : choix du type pour Panthéon
@@ -334,6 +335,23 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     }
                 } catch { /* neutre (hors-ligne / table absente) */ }
             }
+            // LIGUE — RÉCOMPENSE CROISÉE : un autre joueur est devenu Champion → +1/3 de MON quota
+            // énergétique (1 don par sacre, calculé sur MON repsCap). Appliqué après loadYellowSave.
+            if (!cancelled) {
+                try {
+                    const r = await fetch("/api/gamebook/yellow/hall-of-fame/energy")
+                    const j = r.ok ? await r.json() : null
+                    const grants = (j?.grants ?? 0) as number
+                    const champs = (j?.champions ?? []) as string[]
+                    if (!cancelled && grants > 0) {
+                        const per = Math.floor(getPlayer().repsCap / 3)
+                        const got = grantReps(per * grants)
+                        persistYellowSave()
+                        const who = [...new Set(champs.filter(Boolean))].join(", ")
+                        if (got > 0) setToast(`🏛️ ${who || "Un champion"} a vaincu la Ligue ! +${got} énergie pour toi !`)
+                    }
+                } catch { /* neutre (hors-ligne / table absente) */ }
+            }
             // 1re entrée (intro jamais vue + aucune équipe) → cinématique + choix du starter.
             if (!cancelled && !getPlayer().introSeen && getPlayer().team.length === 0) {
                 setShowIntro(true)
@@ -447,6 +465,20 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         }
     }, [duelResult, battle, evolutions, nickname, showDialogue])
 
+    // LIGUE — SACRE : dès que le championRun est posé (victoire sur LE MAÎTRE), on grave l'équipe
+    // au Hall of Fame PARTAGÉ et on récompense tous les autres joueurs (+1/3 de leur quota). Une seule
+    // fois par sacre — la ref se réarme quand le générique se ferme (clearChampion → championRun=null).
+    const champReportedRef = useRef(false)
+    useEffect(() => {
+        if (!championRun) { champReportedRef.current = false; return }
+        if (champReportedRef.current) return
+        champReportedRef.current = true
+        fetch("/api/gamebook/yellow/hall-of-fame", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ team: championRun.team }),
+        }).catch(() => {})
+    }, [championRun])
+
     // Victoire sur le sbire : on délivre une explication sur l'app, une fois le
     // combat quitté ET l'éventuelle cinématique d'évolution terminée.
     useEffect(() => {
@@ -543,7 +575,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (advisorOpen) { closeAdvisor(); return true }
         if (labOpen) { closeLab(); return true }
         if (menu === "pc" || pcOpen) { closePc(); setMenu(menu === "pc" ? "pause" : "none"); return true }
-        if (menu === "team" || menu === "bag" || menu === "reput" || menu === "moves") { setMenu("pause"); return true }
+        if (menu === "team" || menu === "bag" || menu === "reput" || menu === "moves" || menu === "hof") { setMenu("pause"); return true }
         if (menu === "pause") { setMenu("none"); return true }
         return false
     }
@@ -618,6 +650,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         <button style={menuBtnStyle} onClick={() => router.push("/gamebook/yellow/dex")}>📖 DEX (CATALOGUE)</button>
                         <button style={menuBtnStyle} onClick={() => setMenu("moves")}>⚔️ ATTAQUES</button>
                         <button style={menuBtnStyle} onClick={() => setMenu("reput")}>🏆 RÉPUTATION</button>
+                        <button style={menuBtnStyle} onClick={() => setMenu("hof")}>🏛️ HALL OF FAME</button>
                         {confirmReset ? (
                             <>
                                 <div style={{ fontSize: 11, color: "#c83030", fontWeight: 700, textAlign: "center" }}>
@@ -897,6 +930,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
 
             {/* Boutique (vendeur) */}
             {!battle && menu === "moves" && <MovesPanel close={() => setMenu("pause")} />}
+            {!battle && menu === "hof" && <HallOfFameViewer close={() => setMenu("pause")} />}
             <GuidePanel />
             <LibraryPanel />
             <AdvisorPanel />

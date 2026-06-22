@@ -336,6 +336,34 @@ model DuelGift {
   @@index([toUserId, claimed])
 }
 
+// LIGUE — HALL OF FAME partagé : une ligne par sacre de Champion (victoire sur LE MAÎTRE).
+// L'équipe est figée au sacre (JSON : ChampionMon[] = sprite/niveau/stats/moves). Consultable
+// par TOUS les joueurs depuis le menu START. Pas de @relation (userId String) → User intact.
+model LeagueChampion {
+  id        String   @id @default(cuid())
+  userId    String   // vainqueur
+  nickname  String   // pseudo trusté serveur (affiché au Hall of Fame)
+  team      String   // JSON ChampionMon[] (équipe sacrée, gelée)
+  wonAt     DateTime @default(now())
+
+  @@index([wonAt])
+  @@index([userId])
+}
+
+// LIGUE — RÉCOMPENSE CROISÉE : à chaque sacre, TOUS les autres joueurs gagnent 1/3 de leur quota
+// énergétique. Une ligne par bénéficiaire ; le montant (1/3 du repsCap) est calculé CÔTÉ CLIENT au
+// moment de réclamer (le serveur ne connaît pas le cap de chacun). Pas de @relation.
+model LeagueEnergyGrant {
+  id           String   @id @default(cuid())
+  toUserId     String   // bénéficiaire (tout joueur sauf le nouveau champion)
+  fromUserId   String   // nouveau champion (anti-stacking)
+  fromNickname String   // pseudo du champion (notif au bénéficiaire)
+  claimed      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@index([toUserId, claimed])
+}
+
 model UserStatus {
   id        String   @id @default(cuid())
   content   String
