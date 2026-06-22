@@ -10,7 +10,7 @@
 //     Le contre s'aligne sur ton dernier Daemon (mémoire box). Énergie : illimitée (PNJ).
 // L'IA "ace" + le budget d'énergie (1,5× tes reps) sont gérés au moteur/store.
 
-import { getSpecies } from "./species"
+import { getSpecies, SPECIES } from "./species"
 import { typeEffectiveness } from "../battle/typeChart"
 import type { PokeType } from "../battle/types"
 
@@ -157,6 +157,18 @@ export function bestCounter(playerLastTypes: PokeType[]): string {
     return best
 }
 
+/** Remonte une espèce jusqu'à sa SOUCHE (1er stade) — utile pour rétro-évoluer un contre (finale) au bon
+ *  stade selon le niveau d'ACE (sinon une finale apparaissait au niveau d'une souche, ex. dragon stade-3 niv 4). */
+export function baseSpeciesOf(id: string): string {
+    let cur = id
+    for (let g = 0; g < 6; g++) {
+        const parent = Object.values(SPECIES).find((s) => s.evolution?.toId === cur)
+        if (!parent) break
+        cur = parent.id
+    }
+    return cur
+}
+
 /** Espèce au bon STADE d'évolution pour un niveau donné (suit la chaîne par niveau). */
 export function speciesAtLevel(baseId: string, level: number): string {
     let id = baseId
@@ -193,7 +205,9 @@ export function buildAceTeam(i: AceBuildInput): { team: AceMon[]; counterSpecies
         { speciesId: panthers[2], level: L }, // Panthéon → panthère élémentaire si badge Éclair
         { speciesId: speciesAtLevel(ACE_NOUILLON_BASE, L), level: L },
         { speciesId: speciesAtLevel(ACE_FIRE_BASE, L), level: L },
-        { speciesId: counter, level: L }, // contre adaptatif au niveau d'ACE (cliquet)
+        // Contre adaptatif RÉTRO-ÉVOLUÉ au bon stade pour le niveau d'ACE (les ACE_BOX sont des finales :
+        // sans ça, une finale apparaissait au niveau d'une souche, ex. dragon stade-3 au niv 4 après reset).
+        { speciesId: speciesAtLevel(baseSpeciesOf(counter), L), level: L },
     ]
     return { team, counterSpecies: counter }
 }

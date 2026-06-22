@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { buildAceTeam, bestCounter, aceTargetLevel, aceReward, aceEnergyBudget, speciesAtLevel, ACE_PANTHERS, ACE_PANTHERS_EVOLVED, ACE_BOX } from "./ace"
+import { buildAceTeam, bestCounter, aceTargetLevel, aceReward, aceEnergyBudget, speciesAtLevel, baseSpeciesOf, ACE_PANTHERS, ACE_PANTHERS_EVOLVED, ACE_BOX } from "./ace"
 import { getSpecies } from "./species"
 
 describe("ACE — scaling + équipe + contre adaptatif", () => {
@@ -7,6 +7,17 @@ describe("ACE — scaling + équipe + contre adaptatif", () => {
         expect(aceTargetLevel(0, 10)).toBe(12)
         expect(aceTargetLevel(30, 10)).toBe(30) // pic conservé (ne descend pas)
         expect(aceTargetLevel(20, 25)).toBe(27) // suit le joueur (+2)
+    })
+
+    it("À BAS NIVEAU, AUCUN Daemon d'ACE n'est sur-évolué (régression : plus de finale stade-3 au niv 4)", () => {
+        // Après un reset, ACE est à bas niveau : chaque mon (contre inclus) doit être au STADE adapté
+        // au niveau, jamais une finale posée trop tôt.
+        for (const types of [["FEU"], ["EAU"], ["PLANTE"], ["DRAGON"], []] as const) {
+            const { team } = buildAceTeam({ aceLevel: 4, playerLastTypes: [...types] })
+            for (const m of team) {
+                expect(m.speciesId).toBe(speciesAtLevel(baseSpeciesOf(m.speciesId), 4))
+            }
+        }
     })
 
     it("speciesAtLevel suit la chaîne d'évolution", () => {
