@@ -35,7 +35,7 @@ function trainerEnemyTeam(trainerId: string) {
 
 describe("combat de dresseur — enchaînement multi-Daemon", () => {
     it("un joueur surpuissant bat les 2 Daemons du dresseur (les deux finissent K.O.)", () => {
-        const player = [createMonInstance("cerfeuillu", 50), createMonInstance("cailloutchi", 50)]
+        const player = [createMonInstance("cerfeuillu", 50, { moveIds: ["tranche_feuille", "tempete_verte", "coup_d_boule", "mega_sangsue"] }), createMonInstance("cailloutchi", 50)]
         const enemy = trainerEnemyTeam("y_trainer_leo") // rongeur L5 + bulle L6
         const start = createBattle(player, enemy, { isWild: false, seed: 12345 })
 
@@ -50,7 +50,7 @@ describe("combat de dresseur — enchaînement multi-Daemon", () => {
 
     it("est parfaitement déterministe pour une même seed", () => {
         const mk = () => createBattle(
-            [createMonInstance("cerfeuillu", 50), createMonInstance("cailloutchi", 50)],
+            [createMonInstance("cerfeuillu", 50, { moveIds: ["tranche_feuille", "tempete_verte", "coup_d_boule", "mega_sangsue"] }), createMonInstance("cailloutchi", 50)],
             trainerEnemyTeam("y_trainer_leo"),
             { isWild: false, seed: 999 },
         )
@@ -62,7 +62,7 @@ describe("combat de dresseur — enchaînement multi-Daemon", () => {
 
     it("on ne peut ni fuir ni capturer un combat de dresseur", () => {
         const start = createBattle(
-            [createMonInstance("cerfeuillu", 50)],
+            [createMonInstance("cerfeuillu", 50, { moveIds: ["tranche_feuille", "tempete_verte", "coup_d_boule", "mega_sangsue"] })],
             trainerEnemyTeam("y_trainer_mia"),
             { isWild: false, seed: 7 },
         )
@@ -73,9 +73,9 @@ describe("combat de dresseur — enchaînement multi-Daemon", () => {
     })
 
     it("#2 — la fuite suit fleeChance : 100% file, 0% échoue et l'ennemi prend le tour", () => {
-        const sure = createBattle([createMonInstance("rochison", 50)], [createMonInstance("plumiot", 2)], { isWild: true, seed: 1, fleeChance: 100 })
+        const sure = createBattle([createMonInstance("rochison", 50, { moveIds: ["eboulis", "belier", "seisme", "lame_roche"] })], [createMonInstance("plumiot", 2)], { isWild: true, seed: 1, fleeChance: 100 })
         expect(resolveTurn(sure, { kind: "run" }).outcome).toBe("run") // 100% → on file
-        const stuck = createBattle([createMonInstance("rochison", 50)], [createMonInstance("plumiot", 2)], { isWild: true, seed: 1, fleeChance: 0 })
+        const stuck = createBattle([createMonInstance("rochison", 50, { moveIds: ["eboulis", "belier", "seisme", "lame_roche"] })], [createMonInstance("plumiot", 2)], { isWild: true, seed: 1, fleeChance: 0 })
         const after = resolveTurn(stuck, { kind: "run" })
         expect(after.outcome).not.toBe("run")  // 0% → fuite refusée
         expect(after.phase).not.toBe("ended")  // … toujours en combat (l'ennemi a joué)
@@ -92,7 +92,7 @@ describe("combat de dresseur — enchaînement multi-Daemon", () => {
     })
 
     it("partage l'XP : un Daemon ayant combattu puis mis au banc gagne aussi l'XP", () => {
-        const a = createMonInstance("rochison", 50) // tank : survit à tout
+        const a = createMonInstance("rochison", 50, { moveIds: ["eboulis", "belier", "seisme", "lame_roche"] }) // tank : survit à tout
         const b = createMonInstance("plumiot", 5)
         const startExpB = b.exp
         let s = createBattle([a, b], [createMonInstance("plumiot", 2)], { isWild: true, seed: 77 })
@@ -111,7 +111,7 @@ describe("combat de dresseur — enchaînement multi-Daemon", () => {
     })
 
     it("un Daemon mis K.O. pendant le combat ne gagne AUCUN XP (même en ayant participé)", () => {
-        const a = createMonInstance("rochison", 50) // tank : achève le sauvage
+        const a = createMonInstance("rochison", 50, { moveIds: ["eboulis", "belier", "seisme", "lame_roche"] }) // tank : achève le sauvage
         const b = createMonInstance("plumiot", 5)
         b.currentHp = 1 // sera K.O. au premier coup encaissé
         const startExpB = b.exp
@@ -130,7 +130,7 @@ describe("combat de dresseur — enchaînement multi-Daemon", () => {
         // b (lead) achève l'ennemi #1 alors qu'il est DEBOUT → il garde cette XP. Puis il se fait
         // K.O. par l'ennemi #2 → il ne touche RIEN pour #2. a (debout) achève #2 et prend son XP.
         const b = createMonInstance("plumiot", 5)   // lead fragile mais rapide : tue e1 vivant
-        const a = createMonInstance("cerfeuillu", 50) // Plante : résiste à l'Eau, achève e2
+        const a = createMonInstance("cerfeuillu", 50, { moveIds: ["tranche_feuille", "tempete_verte", "coup_d_boule", "mega_sangsue"] }) // Plante : résiste à l'Eau, achève e2
         const e1 = createMonInstance("plumiot", 2); e1.currentHp = 1 // b le one-shot
         const e2 = createMonInstance("razmaree", 15)               // K.O. b, mais perd contre a
         const startExpB = b.exp, startExpA = a.exp
@@ -177,7 +177,7 @@ describe("combat de dresseur — enchaînement multi-Daemon", () => {
     })
 
     it("#10 — combat de Dresseur : KO adverse → fenêtre d'envoi, le Daemon entrant n'agit PAS", () => {
-        const a = createMonInstance("rochison", 50)               // rapide vs plumiot L5, achève e1
+        const a = createMonInstance("rochison", 50, { moveIds: ["eboulis", "belier", "seisme", "lame_roche"] })               // rapide vs plumiot L5, achève e1
         const e1 = createMonInstance("plumiot", 5); e1.currentHp = 1
         const e2 = createMonInstance("razmaree", 50)              // frapperait FORT (eau ×4) s'il agissait
         let s = createBattle([a], [e1, e2], { isWild: false, seed: 321 })
@@ -198,7 +198,7 @@ describe("combat de dresseur — enchaînement multi-Daemon", () => {
 
     it("#3 — partage dégressif : 1er/2e 100%, 3e 60% (mêmes ennemis affrontés)", () => {
         // A, B, C affrontent tous le MÊME ennemi (via switchs) puis A l'achève. Tous survivent.
-        const A = createMonInstance("rochison", 50), B = createMonInstance("rochison", 50), C = createMonInstance("rochison", 50)
+        const A = createMonInstance("rochison", 50, { moveIds: ["eboulis", "belier", "seisme", "lame_roche"] }), B = createMonInstance("rochison", 50, { moveIds: ["eboulis", "belier", "seisme", "lame_roche"] }), C = createMonInstance("rochison", 50, { moveIds: ["eboulis", "belier", "seisme", "lame_roche"] })
         const fA = A.exp, fC = C.exp // même espèce/niveau → même plancher d'XP
         let s = createBattle([A, B, C], [createMonInstance("plumiot", 2)], { isWild: true, seed: 50 })
         s = resolveTurn(s, { kind: "switch", teamIndex: 1 }) // B participe (rang 1)
@@ -215,7 +215,7 @@ describe("combat de dresseur — enchaînement multi-Daemon", () => {
     })
 
     it("ne partage PAS l'XP avec un Daemon n'ayant jamais combattu", () => {
-        const a = createMonInstance("rochison", 50)
+        const a = createMonInstance("rochison", 50, { moveIds: ["eboulis", "belier", "seisme", "lame_roche"] })
         const b = createMonInstance("plumiot", 5) // reste au banc tout le combat
         const startExpB = b.exp
         let s = createBattle([a, b], [createMonInstance("plumiot", 2)], { isWild: true, seed: 78 })
@@ -242,8 +242,8 @@ describe("combat de dresseur — enchaînement multi-Daemon", () => {
 
 describe("fenêtre d'envoi adverse — combat de Dresseur (flow Game Boy)", () => {
     it("le joueur peut CHANGER de Daemon avant l'entrée adverse (sans coup offert)", () => {
-        const a = createMonInstance("rochison", 50)             // achève e1
-        const b = createMonInstance("cerfeuillu", 50)           // remplaçant anticipé
+        const a = createMonInstance("rochison", 50, { moveIds: ["eboulis", "belier", "seisme", "lame_roche"] })             // achève e1
+        const b = createMonInstance("cerfeuillu", 50, { moveIds: ["tranche_feuille", "tempete_verte", "coup_d_boule", "mega_sangsue"] })           // remplaçant anticipé
         const e1 = createMonInstance("plumiot", 5); e1.currentHp = 1
         const e2 = createMonInstance("razmaree", 50)
         let s = createBattle([a, b], [e1, e2], { isWild: false, seed: 321 })
@@ -261,7 +261,7 @@ describe("fenêtre d'envoi adverse — combat de Dresseur (flow Game Boy)", () =
     })
 
     it("combat SAUVAGE : aucune fenêtre d'envoi (KO = fin du combat)", () => {
-        let s = createBattle([createMonInstance("rochison", 50)], [createMonInstance("plumiot", 2)], { isWild: true, seed: 1 })
+        let s = createBattle([createMonInstance("rochison", 50, { moveIds: ["eboulis", "belier", "seisme", "lame_roche"] })], [createMonInstance("plumiot", 2)], { isWild: true, seed: 1 })
         let guard = 0
         while (s.phase !== "ended" && guard < 30) { s = resolveTurn(s, { kind: "move", moveIndex: 0 }); guard++ }
         expect(s.enemySendOut).toBeNull() // jamais de fenêtre en sauvage
@@ -269,7 +269,7 @@ describe("fenêtre d'envoi adverse — combat de Dresseur (flow Game Boy)", () =
     })
 
     it("Dresseur à 1 seul Daemon : KO = victoire directe, sans fenêtre", () => {
-        let s = createBattle([createMonInstance("rochison", 50)], [createMonInstance("plumiot", 2)], { isWild: false, seed: 2 })
+        let s = createBattle([createMonInstance("rochison", 50, { moveIds: ["eboulis", "belier", "seisme", "lame_roche"] })], [createMonInstance("plumiot", 2)], { isWild: false, seed: 2 })
         let guard = 0
         while (s.phase !== "ended" && guard < 30) {
             s = s.enemySendOut ? resolveTurn(s, { kind: "stay" }) : resolveTurn(s, { kind: "move", moveIndex: 0 })
@@ -296,7 +296,7 @@ describe("budget d'énergie de l'ennemi (ACE)", () => {
     })
 
     it("cap 0 : l'ennemi ne peut rien payer → Charge Désespérée, dépense reste 0", () => {
-        const s0 = createBattle([createMonInstance("cerfeuillu", 50)], [createMonInstance("braisille", 8)], { isWild: false, seed: 9, enemyEnergyCap: 0, aiLevel: "ace" })
+        const s0 = createBattle([createMonInstance("cerfeuillu", 50, { moveIds: ["tranche_feuille", "tempete_verte", "coup_d_boule", "mega_sangsue"] })], [createMonInstance("braisille", 8)], { isWild: false, seed: 9, enemyEnergyCap: 0, aiLevel: "ace" })
         const { final } = autoPlay(s0)
         expect(final.phase).toBe("ended")
         expect(final.enemyEnergy!.spent).toBe(0) // toujours à sec → aucune attaque payante
@@ -316,7 +316,7 @@ describe("évolution — apprentissage des attaques du nouveau stade", () => {
 
 describe("objets de combat (X / anti-statut)", () => {
     it("un objet X augmente le palier de stat du Daemon actif (+1)", () => {
-        const s0 = createBattle([createMonInstance("rochison", 50)], [createMonInstance("plumiot", 2)], { isWild: true, seed: 1 })
+        const s0 = createBattle([createMonInstance("rochison", 50, { moveIds: ["eboulis", "belier", "seisme", "lame_roche"] })], [createMonInstance("plumiot", 2)], { isWild: true, seed: 1 })
         expect(s0.player.team[s0.player.activeIndex].stages.atk).toBe(0)
         const s1 = resolveTurn(s0, { kind: "item", itemId: "x_attaque" })
         expect(s1.player.team[s1.player.activeIndex].stages.atk).toBe(1)
@@ -325,14 +325,14 @@ describe("objets de combat (X / anti-statut)", () => {
     })
 
     it("un anti-statut soigne le bon statut", () => {
-        const s0 = createBattle([createMonInstance("rochison", 50)], [createMonInstance("plumiot", 2)], { isWild: true, seed: 1 })
+        const s0 = createBattle([createMonInstance("rochison", 50, { moveIds: ["eboulis", "belier", "seisme", "lame_roche"] })], [createMonInstance("plumiot", 2)], { isWild: true, seed: 1 })
         s0.player.team[s0.player.activeIndex].status = "PARALYSIS"
         const s1 = resolveTurn(s0, { kind: "item", itemId: "anti_para" })
         expect(s1.player.team[s1.player.activeIndex].status).toBe("NONE")
     })
 
     it("Total Soin soigne n'importe quel statut", () => {
-        const s0 = createBattle([createMonInstance("rochison", 50)], [createMonInstance("plumiot", 2)], { isWild: true, seed: 1 })
+        const s0 = createBattle([createMonInstance("rochison", 50, { moveIds: ["eboulis", "belier", "seisme", "lame_roche"] })], [createMonInstance("plumiot", 2)], { isWild: true, seed: 1 })
         s0.player.team[s0.player.activeIndex].status = "BURN"
         const s1 = resolveTurn(s0, { kind: "item", itemId: "total_soin" })
         expect(s1.player.team[s1.player.activeIndex].status).toBe("NONE")
@@ -342,7 +342,7 @@ describe("objets de combat (X / anti-statut)", () => {
 describe("capture ratée — séquence d'échec théâtral (miss + punchline)", () => {
     it("un lancer raté joue l'anim 'miss' + une punchline, PAS l'anim de réussite", () => {
         // Sauvage coriace (haut niveau, PV pleins, Ball de base) → capture quasi impossible.
-        const s = createBattle([createMonInstance("rochison", 50)], [createMonInstance("razmaree", 80)], { isWild: true, seed: 1 })
+        const s = createBattle([createMonInstance("rochison", 50, { moveIds: ["eboulis", "belier", "seisme", "lame_roche"] })], [createMonInstance("razmaree", 80)], { isWild: true, seed: 1 })
         const after = resolveTurn(s, { kind: "ball", itemId: "poke_ball" })
         expect(after.outcome).not.toBe("caught")
         // Anim d'ÉCHEC présente ; anim de RÉUSSITE (secousses + clic) ABSENTE.
@@ -354,7 +354,7 @@ describe("capture ratée — séquence d'échec théâtral (miss + punchline)", 
     })
 
     it("une capture RÉUSSIE garde l'anim classique (result caught), sans 'miss' ni punchline", () => {
-        const s = createBattle([createMonInstance("rochison", 50)], [createMonInstance("plumiot", 2)], { isWild: true, seed: 1 })
+        const s = createBattle([createMonInstance("rochison", 50, { moveIds: ["eboulis", "belier", "seisme", "lame_roche"] })], [createMonInstance("plumiot", 2)], { isWild: true, seed: 1 })
         const after = resolveTurn(s, { kind: "ball", itemId: "master_ball" }) // Master = capture garantie
         expect(after.outcome).toBe("caught")
         expect(after.events.some((e) => e.kind === "ball" && e.action === "result" && e.caught === true)).toBe(true)
@@ -363,7 +363,7 @@ describe("capture ratée — séquence d'échec théâtral (miss + punchline)", 
     })
 
     it("la punchline d'échec est déterministe (même seed → même réplique)", () => {
-        const mk = () => createBattle([createMonInstance("rochison", 50)], [createMonInstance("razmaree", 80)], { isWild: true, seed: 4242 })
+        const mk = () => createBattle([createMonInstance("rochison", 50, { moveIds: ["eboulis", "belier", "seisme", "lame_roche"] })], [createMonInstance("razmaree", 80)], { isWild: true, seed: 4242 })
         const a = resolveTurn(mk(), { kind: "ball", itemId: "poke_ball" })
         const b = resolveTurn(mk(), { kind: "ball", itemId: "poke_ball" })
         const pick = (st: BattleState) => st.events.find((e) => e.kind === "message" && MISS_CAPTURE_LINES.includes(e.text))
