@@ -31,9 +31,24 @@ export function canInflictStatus(
     return !targetTypes.some((t) => immuneTypes.includes(t))
 }
 
-/** Compteur initial d'un statut (sommeil 1..3 tours, toxic palier 1). */
+// SOMMEIL — durée à chaîne dégressive : la cible rate TOUJOURS au moins 1 tour, puis chance
+// CONDITIONNELLE de prolonger à chaque tour suivant (75% → t2, 50% → t3, puis ÷2 : 25, 12.5,
+// 6.25, 3.125, 1.5625). Au plus 8 tours d'incapacité → le 9e tour est TOUJOURS un réveil.
+const SLEEP_CONTINUE = [0.75, 0.5, 0.25, 0.125, 0.0625, 0.03125, 0.015625] as const
+
+/** Nb de tours d'incapacité du sommeil (1..8) selon la chaîne dégressive. */
+export function rollSleepTurns(rng: Rng): number {
+    let turns = 1 // au moins 1 tour
+    for (const p of SLEEP_CONTINUE) {
+        if (rng.next() < p) turns += 1
+        else break
+    }
+    return turns // 1..8
+}
+
+/** Compteur initial d'un statut. Sommeil = tours d'incapacité + 1 (réveille + agit quand il atteint 0). */
 export function initialStatusCounter(status: MajorStatus, rng: Rng): number {
-    if (status === "SLEEP") return rng.int(1, 3)
+    if (status === "SLEEP") return rollSleepTurns(rng) + 1
     if (status === "TOXIC") return 1
     return 0
 }

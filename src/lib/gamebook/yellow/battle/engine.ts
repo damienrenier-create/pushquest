@@ -655,6 +655,14 @@ function applyStatusMove(state: BattleState, side: SideId, move: MoveData, event
         applyHeal(state, side, heal, events)
         events.push({ kind: "message", text: `${displayName(selfMon)} récupère des PV !` })
     }
+    if (fx.restSleep) {
+        // REPOS : le LANCEUR s'endort volontairement pour EXACTEMENT 1 tour (compteur 2 → rate 1 tour,
+        // se réveille et agit au tour suivant). Écrase tout statut existant (on « dort » son mal).
+        selfMon.status = "SLEEP"
+        selfMon.statusCounter = 2
+        events.push({ kind: "status", side, status: "SLEEP" })
+        events.push({ kind: "message", text: `${displayName(selfMon)} s'endort profondément pour récupérer !` })
+    }
     if (fx.statChanges) {
         for (const sc of fx.statChanges) {
             const tgtSide: SideId = sc.target === "self" ? side : other(side)

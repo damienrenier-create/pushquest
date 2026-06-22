@@ -68,6 +68,11 @@ export interface MoveEffect {
     sureHit?: boolean
     /** BRUME SPORALE (façon Buée Noire) : réinitialise TOUS les changements de stats des DEUX camps. */
     resetStats?: boolean
+    /** REPOS : le LANCEUR s'endort volontairement pour EXACTEMENT 1 tour (en plus du soin healPct). */
+    restSleep?: boolean
+    /** HYPNOSE : précision de base FIXE (move.accuracy), INDÉPENDANTE de l'esquive, modulée par le ratio
+     *  de Vitesse lanceur/cible (plus rapide → plus précis, plus lent → moins précis). Clampée. */
+    speedScaledAcc?: boolean
 }
 
 export interface MoveData {
