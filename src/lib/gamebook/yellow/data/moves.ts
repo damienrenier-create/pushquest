@@ -134,7 +134,7 @@ export const MOVES: Record<string, MoveData> = {
     visee: { id: "visee", name: "Visée", type: "NORMAL", power: 0, accuracy: 0, pp: 20, costPower: 20, effect: { statChanges: [{ target: "self", stat: "acc", stages: 1 }] }, description: "Le Daemon ajuste son tir : augmente sa Précision." },
     secousse: { id: "secousse", name: "Secousse", type: "SOL", power: 60, accuracy: 100, pp: 20, description: "Une secousse tellurique ébranle la cible." },
     tison: { id: "tison", name: "Tison", type: "FEU", power: 45, accuracy: 100, pp: 25, effect: { chance: 30, inflictStatus: "BURN" }, description: "Projette une braise : peu puissante mais brûle souvent (30%)." },
-    fouet_de_nouilles: { id: "fouet_de_nouilles", name: "Fouet de Nouilles", type: "NORMAL", power: 50, accuracy: 100, pp: 20, effect: { chance: 30, statChanges: [{ target: "target", stat: "spe", stages: -1 }], alwaysCritForSpecies: ["nouillon", "vermisaint", "divinpate"] }, description: "Cingle l'ennemi de nouilles collantes (peut baisser la Vitesse, 30%). Coup critique SYSTÉMATIQUE pour la lignée Nouillon." },
+    fouet_de_nouilles: { id: "fouet_de_nouilles", name: "Fouet de Nouilles", type: "NORMAL", power: 50, accuracy: 100, pp: 20, effect: { chance: 30, statChanges: [{ target: "target", stat: "spe", stages: -1 }], critChanceForSpecies: { nouillon: 1, vermisaint: 0.8, divinpate: 0.6 } }, description: "Cingle l'ennemi de nouilles collantes (peut baisser la Vitesse, 30%). Critique pour la lignée Nouillon : Nouillon 100%, Vermisaint 80%, Divinpâte 60%." },
 
     // Attaque de SECOURS gratuite (anti soft-lock) : utilisable quand le joueur n'a
     // plus de reps pour aucune autre attaque. Faible et inflige du recul à soi-même.
