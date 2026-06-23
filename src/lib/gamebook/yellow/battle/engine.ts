@@ -627,7 +627,8 @@ function dealMoveDamage(state: BattleState, side: SideId, move: MoveData, rng: R
         : effectiveStat(rawDefStats.spc, "spc", defender.stages.spc, "NONE")
 
     // Crit Gen 1 : probabilité liée à la Vitesse de base de l'attaquant.
-    const isCrit = rng.next() < critProbabilityGen1(atkSpecies.baseStats.spe, move.effect?.highCrit)
+    const forcedCrit = move.effect?.alwaysCritForSpecies?.includes(attacker.speciesId) ?? false
+    const isCrit = forcedCrit || rng.next() < critProbabilityGen1(atkSpecies.baseStats.spe, move.effect?.highCrit)
     const result = computeDamage({
         level: attacker.level,
         power: move.power,

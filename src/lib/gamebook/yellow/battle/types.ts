@@ -76,6 +76,9 @@ export interface MoveEffect {
     /** DÉGÂTS FIXES (ex. Draco-Rage Gen 1) : inflige toujours exactement N PV, indépendamment des
      *  stats/STAB/multiplicateur de type (seule l'immunité ×0 l'annule). Le move a power 0. */
     fixedDamage?: number
+    /** CRITIQUE GARANTI pour certaines espèces (interaction signature) : si l'attaquant est dans cette
+     *  liste de speciesId, le coup est TOUJOURS critique. Ex. Fouet de Nouilles + lignée Nouillon. */
+    alwaysCritForSpecies?: string[]
 }
 
 export interface MoveData {

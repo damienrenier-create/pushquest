@@ -23,7 +23,7 @@ import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTr
 import { getCt } from "../data/cts"
 import { getMove } from "../data/moves"
 import { getSpecies } from "../data/species"
-import { SBIRE_REWARD_REPS, SBIRE_REWARD_BALL_ID } from "../data/sbire"
+import { SBIRE_REWARD_REPS, SBIRE_REWARD_REPS_3, SBIRE_REWARD_REPS_5, SBIRE_REWARD_BALL_ID, SBIRE_REWARD_BALL_ID_4, SBIRE_REWARD_CT_ID, SBIRE_REWARD_CT_FALLBACK_REPS } from "../data/sbire"
 import { ACE_TRAINER_ID, aceReward, aceWinTaunt } from "../data/ace"
 import { ORCALINE_TRAINER_ID, ORCALINE_GIFT_SPECIES, ORCALINE_GIFT_LEVEL, ORCALINE_BALL_REWARD_ID, ORCALINE_BALL_AT_LEVEL, ORCALINE_GIFT_LINES, ORCALINE_REMATCH_WIN_LINES, ORCALINE_BALL_LINES } from "../data/orcalineTrainer"
 import { GEKROC_STONE_ITEM } from "../data/gekroc"
@@ -307,7 +307,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             aceRewardMsg = r.message
         } else if (storeState.trainer.trainerId === SBIRE_TRAINER_ID) {
             sbireWin = recordSbireWin()
-            // Récompense selon la victoire DU JOUR : 1re → énergie, 2e → ball.
+            // Récompense selon la victoire DU JOUR (6 combats) : reps / balls croissantes / CT au 6e.
             const todayWins = getPlayer().sbireDefeatsToday
             if (todayWins === 1) {
                 const added = grantReps(SBIRE_REWARD_REPS)
@@ -315,6 +315,23 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             } else if (todayWins === 2) {
                 addItem(SBIRE_REWARD_BALL_ID, 1)
                 sbireRewardMsg = `🎁 Et prends donc cette Nexus Ball, tu l'as méritée !`
+            } else if (todayWins === 3) {
+                const added = grantReps(SBIRE_REWARD_REPS_3)
+                sbireRewardMsg = `⚡ ${added} d'énergie pour ce combat à trois !`
+            } else if (todayWins === 4) {
+                addItem(SBIRE_REWARD_BALL_ID_4, 1)
+                sbireRewardMsg = `🎁 Une Super Nexus Ball, tu l'as bien gagnée !`
+            } else if (todayWins === 5) {
+                const added = grantReps(SBIRE_REWARD_REPS_5)
+                sbireRewardMsg = `⚡ ${added} d'énergie ! Tu tiens la distance.`
+            } else if (todayWins >= 6) {
+                // Cadeau ULTIME one-time : CT Fouet de Nouilles. Déjà reçue → repli en reps.
+                if (grantCt(SBIRE_REWARD_CT_ID)) {
+                    sbireRewardMsg = `🍝 Relique du dieu Spaghetti : la CT Fouet de Nouilles est à toi !`
+                } else {
+                    const added = grantReps(SBIRE_REWARD_CT_FALLBACK_REPS)
+                    sbireRewardMsg = `🍝 Tu as déjà ma relique — alors prends ${added} d'énergie !`
+                }
             }
         } else if (storeState.trainer.isRematch) {
             // REMATCH gagné : marque le rematch fait + récompense (énergie / CT cadeau).

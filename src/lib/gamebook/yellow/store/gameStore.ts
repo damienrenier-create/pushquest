@@ -184,7 +184,7 @@ function tryLaunchSbire(): ActiveDialogue | null {
     const fightIndex = getPlayerSave().sbireDefeatsToday // 0 → miroir, 1 → faiblesse
     // Le sbire MIROIR ton lead (boosté Saiyan) → on le booste en "elite" pour qu'il
     // soit un vrai rival, pas une version nerfée de toi-même.
-    const enemyTeam = buildSbireTeam(lead, fightIndex).map((m) =>
+    const enemyTeam = buildSbireTeam(team, fightIndex).map((m) =>
         createMonInstance(m.speciesId, m.level, { owned: false, ...trainerBoost(m.speciesId, m.level, "elite") }))
     const seed = Math.floor(Math.random() * 1e9) >>> 0
     startTrainerBattle(team, enemyTeam, seed, { trainerId: SBIRE_TRAINER_ID, reward: 0, aiLevel: "trainer" })

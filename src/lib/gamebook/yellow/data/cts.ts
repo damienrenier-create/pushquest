@@ -111,6 +111,8 @@ export const CTS: CtData[] = [
     // CT-TROPHÉE : Souffle Primordial (Dragon spé, le + puissant). JAMAIS en vente — débloquée
     // UNIQUEMENT pour le DÉCUPLE détenteur de la Ligue (10 victoires, cf. hall-of-fame). Type-lock DRAGON.
     { id: "ct37", label: "CT37", moveId: "souffle_primordial", price: 0, gift: true },
+    // CADEAU du SBIRE (6e combat du jour, UNE seule fois) : Fouet de Nouilles, universel & modeste.
+    { id: "ct38", label: "CT38", moveId: "fouet_de_nouilles", price: 0, gift: true, universal: true },
 ]
 
 export function getCt(id: string): CtData | null {

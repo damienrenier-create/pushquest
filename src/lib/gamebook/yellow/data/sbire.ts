@@ -11,45 +11,71 @@ import { POKE_TYPES, type PokeType, type MonInstance } from "../battle/types"
 import { createMonInstance } from "../battle/factory"
 import { speciesAtLevel } from "./ace"
 
-export const SBIRE_MAX_FIGHTS_PER_DAY = 2
+export const SBIRE_MAX_FIGHTS_PER_DAY = 6
 
 /** Id partagé du combat de sbire (gameStore le lance, battleStore le reconnaît à la fin). */
 export const SBIRE_TRAINER_ID = "y_sbire"
 
-// RÉCOMPENSES (en plus du conseil distillé à chaque victoire) :
-//   1re victoire du jour → de l'énergie (reps)
-//   2e victoire du jour  → une ball
-/** Énergie (reps) offerte à la 1re victoire du jour. */
-export const SBIRE_REWARD_REPS = 50
-/** Objet offert à la 2e victoire du jour. */
-export const SBIRE_REWARD_BALL_ID = "poke_ball"
+// RÉCOMPENSES par n° de victoire du jour (1-indexé), en plus du conseil distillé à chaque victoire :
+//   1 → +50 reps · 2 → Nexus Ball · 3 → +75 reps · 4 → Super Nexus Ball · 5 → +100 reps
+//   6 → CADEAU one-time : CT Fouet de Nouilles (sinon repli en reps si déjà reçue).
+export const SBIRE_REWARD_REPS = 50              // victoire 1
+export const SBIRE_REWARD_REPS_3 = 75            // victoire 3
+export const SBIRE_REWARD_REPS_5 = 100           // victoire 5
+export const SBIRE_REWARD_BALL_ID = "poke_ball"  // victoire 2 (Nexus Ball)
+export const SBIRE_REWARD_BALL_ID_4 = "super_ball" // victoire 4 (Super Nexus Ball)
+export const SBIRE_REWARD_CT_ID = "ct38"         // victoire 6 (Fouet de Nouilles, one-time)
+export const SBIRE_REWARD_CT_FALLBACK_REPS = 120 // victoire 6 si la CT est déjà reçue
 
-/** Un type super-efficace contre les types du lead (repli NORMAL si rien). */
-function counterTypeFor(types: PokeType[]): PokeType {
-    for (const t of POKE_TYPES) {
-        if (typeEffectiveness(t, types) > 1) return t
-    }
-    return "NORMAL"
+/** Petit hash stable (déterministe) d'une chaîne → varie le contre SANS aléatoire (combat 5 == combat 6). */
+function hashStr(s: string): number {
+    let h = 2166136261
+    for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) }
+    return h >>> 0
 }
 
-/** Une espèce (déterministe) du type donné. */
-function speciesOfType(t: PokeType): string {
-    const match = Object.values(SPECIES).find((s) => s.types.includes(t))
-    return match?.id ?? Object.keys(SPECIES)[0]
+/** Espèce-contre, DÉTERMINISTE mais variée par membre : un type super-efficace contre `types`,
+ *  puis une espèce « normale » de ce type (ni légendaire, ni exclusive), choisie par hash de `key`. */
+function counterSpeciesFor(types: PokeType[], key: string): string {
+    const superEff = POKE_TYPES.filter((t) => typeEffectiveness(t, types) > 1)
+    const pool: PokeType[] = superEff.length ? superEff : ["NORMAL"]
+    const t = pool[hashStr(key) % pool.length]
+    const cands = Object.values(SPECIES).filter((s) =>
+        s.types.includes(t) && !(s as { exclusive?: boolean }).exclusive && s.rarity !== "LEGENDARY")
+    if (!cands.length) return Object.keys(SPECIES)[0]
+    return cands[hashStr(key + t) % cands.length].id
+}
+
+/** Miroir d'un membre : même espèce, même niveau (+ offset éventuel). */
+function mirror(m: MonInstance, lvlOffset = 0): MonInstance {
+    return createMonInstance(m.speciesId, Math.max(1, m.level + lvlOffset))
+}
+/** Contre d'un membre : espèce super-efficace au bon STADE pour son niveau (+ offset éventuel). */
+function counter(m: MonInstance, lvlOffset = 0): MonInstance {
+    const lvl = Math.max(1, m.level + lvlOffset)
+    const cId = counterSpeciesFor(getSpecies(m.speciesId)?.types ?? ["NORMAL"], m.speciesId)
+    return createMonInstance(speciesAtLevel(cId, lvl), lvl)
 }
 
 /**
- * Équipe du sbire pour le combat n° fightIndex du jour :
- *   0 → MIROIR (même espèce/niveau que le lead),
- *   1 → FAIBLESSE (espèce d'un type super-efficace contre le lead, même niveau).
+ * Équipe du sbire pour le combat n° fightIndex du jour (0-indexé), calée sur l'ÉQUIPE du joueur :
+ *   0 → MIROIR du lead · 1 → FAIBLESSE du lead
+ *   2 → MIROIR des 3 premiers · 3 → FAIBLESSE des 3 premiers
+ *   4 → MIROIR + FAIBLESSE des 3 derniers (jusqu'à 6 Daemons)
+ *   5 → idem combat 4 mais +2 niveaux par Daemon (rematch corsé → cadeau CT).
  */
-export function buildSbireTeam(lead: MonInstance, fightIndex: number): MonInstance[] {
-    const level = lead.level
-    if (fightIndex <= 0) return [createMonInstance(lead.speciesId, level)]
-    const sp = getSpecies(lead.speciesId)
-    const counter = speciesOfType(counterTypeFor(sp?.types ?? ["NORMAL"]))
-    // Stade d'évolution cohérent avec le niveau (jamais de Braisille niv 20, etc.).
-    return [createMonInstance(speciesAtLevel(counter, level), level)]
+export function buildSbireTeam(team: MonInstance[], fightIndex: number): MonInstance[] {
+    const lead = team[0]
+    const first3 = team.slice(0, 3)
+    const last3 = team.slice(-3)
+    switch (fightIndex) {
+        case 0: return [mirror(lead)]
+        case 1: return [counter(lead)]
+        case 2: return first3.map((m) => mirror(m))
+        case 3: return first3.map((m) => counter(m))
+        case 4: return [...last3.map((m) => mirror(m)), ...last3.map((m) => counter(m))]
+        default: return [...last3.map((m) => mirror(m, 2)), ...last3.map((m) => counter(m, 2))]
+    }
 }
 
 // ============================================================
@@ -57,8 +83,9 @@ export function buildSbireTeam(lead: MonInstance, fightIndex: number): MonInstan
 // ============================================================
 
 /**
- * Répliques AVANT le combat, selon le n° du combat du jour :
- *   index 0 → 1er combat (MIROIR), index 1 → 2e combat (FAIBLESSE).
+ * Répliques AVANT le combat, selon le n° du combat du jour (0-indexé, 6 combats) :
+ *   0 miroir lead · 1 faiblesse lead · 2 miroir 3 premiers · 3 faiblesse 3 premiers
+ *   4 miroir+faiblesse 3 derniers · 5 rematch +2 niveaux (cadeau CT).
  */
 export const SBIRE_INTRO_LINES: string[][] = [
     [
@@ -70,11 +97,27 @@ export const SBIRE_INTRO_LINES: string[][] = [
         "Tu reviens ? Cette fois, je frapperai plus fort.",
         "Prouve-moi que tu sais t'adapter !",
     ],
+    [
+        "Assez joué en solo. Je copie tes TROIS premiers !",
+        "Vois si tu te bats aussi bien… contre toi-même en trio.",
+    ],
+    [
+        "Le dieu Spaghetti m'inspire les FAIBLESSES de ton trio de tête.",
+        "Trois contres taillés sur mesure. Adapte-toi ou tombe !",
+    ],
+    [
+        "Maintenant ton arrière-garde : tes trois derniers, en miroir ET en faiblesse.",
+        "Six Daemons. Le vrai test de profondeur de banc !",
+    ],
+    [
+        "Ultime épreuve. La même meute… mais affûtée de deux niveaux.",
+        "Triomphe et le dieu Spaghetti t'offrira une relique de pâtes !",
+    ],
 ]
 
 /** Répliques quand le sbire a déjà été battu le maximum de fois aujourd'hui. */
 export const SBIRE_DONE_LINES: string[] = [
-    "Pasta ! Tu m'as déjà vaincu deux fois aujourd'hui.",
+    "Pasta ! Tu m'as déjà vaincu six fois aujourd'hui.",
     "Reviens demain, je te testerai encore.",
 ]
 
@@ -202,7 +245,7 @@ export const SBIRE_TIPS: string[][] = [
     ],
     // 20 — Reviens chaque jour
     [
-        "Je t'attends ici deux fois par jour, chaque jour.",
+        "Je t'attends ici six fois par jour, chaque jour.",
         "À chaque passage : de l'XP, de l'expérience de combat… et un nouveau conseil de ma part.",
         "Un sensei, ça s'use à la régularité.",
     ],
