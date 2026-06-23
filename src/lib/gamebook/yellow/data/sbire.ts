@@ -9,7 +9,7 @@ import { SPECIES, getSpecies } from "./species"
 import { typeEffectiveness } from "../battle/typeChart"
 import { POKE_TYPES, type PokeType, type MonInstance } from "../battle/types"
 import { createMonInstance } from "../battle/factory"
-import { speciesAtLevel } from "./ace"
+import { speciesAtLevel, baseSpeciesOf } from "./ace"
 
 export const SBIRE_MAX_FIGHTS_PER_DAY = 6
 
@@ -54,7 +54,9 @@ function mirror(m: MonInstance, lvlOffset = 0): MonInstance {
 function counter(m: MonInstance, lvlOffset = 0): MonInstance {
     const lvl = Math.max(1, m.level + lvlOffset)
     const cId = counterSpeciesFor(getSpecies(m.speciesId)?.types ?? ["NORMAL"], m.speciesId)
-    return createMonInstance(speciesAtLevel(cId, lvl), lvl)
+    // baseSpeciesOf d'abord : counterSpeciesFor peut tirer une espèce déjà évoluée → on redescend à la
+    // souche puis on remonte au bon stade pour le niveau (sinon ex. Fissuralave stade-2 au niveau 11).
+    return createMonInstance(speciesAtLevel(baseSpeciesOf(cId), lvl), lvl)
 }
 
 /**

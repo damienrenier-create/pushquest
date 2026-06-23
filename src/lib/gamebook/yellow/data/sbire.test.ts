@@ -3,6 +3,7 @@ import { buildSbireTeam, sbireExplanation, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TIPS 
 import { createMonInstance } from "../battle/factory"
 import { getSpecies } from "./species"
 import { typeEffectiveness } from "../battle/typeChart"
+import { baseSpeciesOf, speciesAtLevel } from "./ace"
 import type { MonInstance, PokeType } from "../battle/types"
 
 // Équipe de test : 4 Daemons (pour exercer first3 / last3).
@@ -65,6 +66,18 @@ describe("sbire du dieu Spaghetti — 6 combats/jour", () => {
         // Les 3 MIROIRS (indices 0-2) gardent l'espèce exacte (copie de ton équipe, n'évoluent pas) ;
         // les 3 CONTRES (indices 3-5) peuvent franchir un palier d'évo avec +2 niveaux (normal).
         expect(c6.slice(0, 3).map((m) => m.speciesId)).toEqual(c5.slice(0, 3).map((m) => m.speciesId))
+    })
+
+    it("à BAS NIVEAU, aucun Daemon du sbire n'est sur-évolué (régression : plus de Fissuralave niv 11)", () => {
+        const low: MonInstance[] = [
+            createMonInstance("feuillichot", 11), createMonInstance("gouttiny", 11),
+            createMonInstance("braisille", 11), createMonInstance("plumiot", 11),
+        ]
+        for (let fi = 0; fi <= 5; fi++) {
+            for (const m of buildSbireTeam(low, fi)) {
+                expect(m.speciesId).toBe(speciesAtLevel(baseSpeciesOf(m.speciesId), m.level))
+            }
+        }
     })
 
     it("les conseils sont 1-indexés (tableaux de bulles) et cyclent sur le pool", () => {
