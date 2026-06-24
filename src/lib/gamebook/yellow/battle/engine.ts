@@ -725,7 +725,8 @@ function applyVolatile(mon: BattleMon, vol: NonNullable<MoveData["effect"]>["inf
     if (!vol) return
     if (vol === "CONFUSION") {
         if (mon.volatiles.CONFUSION) return
-        mon.volatiles.CONFUSION = rng.int(2, 4)
+        // Compteur 2-5 → 1 à 4 tours EFFECTIFS de confusion (décrément-puis-soin au dernier), façon Gen 1.
+        mon.volatiles.CONFUSION = rng.int(2, 5)
         events.push({ kind: "message", text: `${displayName(named)} est confus !` })
     } else if (vol === "SEEDED") {
         if (mon.volatiles.SEEDED) return
@@ -863,7 +864,9 @@ function doSwitch(state: BattleState, side: SideId, teamIndex: number, events: B
     // UNIQUEMENT pour le Daemon qui quitte le terrain (le lanceur) — pas pour l'adversaire.
     const out = s.team[s.activeIndex]
     out.stages = neutralStages()
-    out.volatiles = {}
+    // La CONFUSION n'est PAS soignée par le changement (choix Sartay, ≠ Gen 1) → on la préserve.
+    const keepConfusion = out.volatiles.CONFUSION
+    out.volatiles = keepConfusion ? { CONFUSION: keepConfusion } : {}
     out.chargingMove = undefined
     out.semiInvuln = undefined // le sortant ressort du tunnel (annule une charge Tunnel en cours)
     s.activeIndex = teamIndex

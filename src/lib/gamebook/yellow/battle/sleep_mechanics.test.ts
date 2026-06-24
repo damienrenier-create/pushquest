@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest"
 import { createBattle, resolveTurn } from "./engine"
 import { createMonInstance } from "./factory"
 import { hitChance } from "./accuracy"
-import { rollSleepTurns, initialStatusCounter } from "./status"
+import { rollSleepTurns, initialStatusCounter, confusionSelfHit } from "./status"
 import { Rng } from "./rng"
 import { getMove } from "../data/moves"
 
@@ -118,5 +118,23 @@ describe("gel — au moins 1 tour garanti", () => {
         const me1 = s.player.team[s.player.activeIndex]
         expect(me1.status).toBe("FREEZE") // toujours gelé après le 1er tour (n'a pas pu dégeler)
         expect(me1.statusCounter).toBe(0) // compteur consommé → 20%/tour de dégel ensuite
+    })
+})
+
+describe("confusion (Onde Folie) — façon Gen 1", () => {
+    it("auto-dégât à ~50% (façon Gen 1)", () => {
+        let hits = 0
+        for (let s = 0; s < 1000; s++) if (confusionSelfHit(new Rng(s * 2654435761))) hits++
+        expect(hits / 1000).toBeGreaterThan(0.44)
+        expect(hits / 1000).toBeLessThan(0.56)
+    })
+
+    it("le CHANGEMENT ne soigne PAS la confusion (≠ Gen 1)", () => {
+        const a = createMonInstance("rochison", 50)
+        const b = createMonInstance("cerfeuillu", 50, { moveIds: ["tranche_feuille"] })
+        let s = createBattle([a, b], [createMonInstance("plumiot", 2)], { isWild: true, seed: 1 })
+        s.player.team[s.player.activeIndex].volatiles.CONFUSION = 3 // a est confus
+        s = resolveTurn(s, { kind: "switch", teamIndex: 1 })        // on le rappelle au banc
+        expect(s.player.team[0].volatiles.CONFUSION).toBe(3)         // …il reste confus (non soigné)
     })
 })

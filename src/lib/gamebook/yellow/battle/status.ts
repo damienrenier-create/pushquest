@@ -98,9 +98,9 @@ export function freezeThaws(rng: Rng): boolean {
     return rng.chance(20)
 }
 
-/** Confusion : 33% de chance de se blesser soi-même. */
+/** Confusion : 50% de chance de se blesser soi-même (façon Gen 1). */
 export function confusionSelfHit(rng: Rng): boolean {
-    return rng.chance(33)
+    return rng.chance(50)
 }
 
 /** Libellé FR d'application d'un statut. */
