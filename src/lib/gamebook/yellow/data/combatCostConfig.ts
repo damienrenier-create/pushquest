@@ -4,16 +4,16 @@
 // Les PP sont illimités : la vraie limite est le portefeuille de reps du joueur.
 //
 // FORMULE UNIFIÉE (dégâts ET statuts) :
-//   coût = round( 10 × (cp/100) × (quota/150) × (niveau/30) )   — chaque facteur plafonné à 1, min 1.
+//   coût = round( 10 × (cp/100) × (quota/150) × (niveau/60) )   — chaque facteur plafonné à 1, min 1.
 //   cp (« puissance de coût ») = PUISSANCE pour une attaque de dégâts ; PALIER d'impact pour un statut.
-// → Pour atteindre 10 : puissance ≥100 ET quota ≥150 ET niveau ≥30.
-//   Ex. Hydrocanon (110) niv30 : quota 150 → 10 · quota 30 → 2.
+// → Pour atteindre 10 : puissance ≥100 ET quota ≥150 ET niveau ≥60.
+//   Ex. Hydrocanon (110) niv60 : quota 150 → 10 · quota 30 → 2 · (à niv 30, c'est la moitié).
 //   Statuts plafonnés par leur cp (move.costPower) : game-changer 50 → coût max 5 ; défaut 30 → 3 ; mineur 20 → 2.
 
 import type { MoveData } from "../battle/types"
 
 export const QUOTA_STD = 150        // quota étalon (cible reps IRL de référence)
-export const LEVEL_STD = 30         // niveau étalon du Daemon
+export const LEVEL_STD = 60         // niveau étalon du Daemon (coût plein à partir de N60)
 export const MAX_COST = 10          // coût maximum d'une attaque
 export const STATUS_DEFAULT_CP = 30 // cp d'un statut non tagué (palier « notable » → coût max 3)
 
