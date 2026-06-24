@@ -770,6 +770,12 @@ function canAct(mon: BattleMon, events: BattleEvent[], rng: Rng): boolean {
         return false
     }
     if (mon.status === "FREEZE") {
+        // 1er tour gelé GARANTI (compteur posé à 1) ; ensuite seulement, 20%/tour de dégel.
+        if (mon.statusCounter > 0) {
+            mon.statusCounter -= 1
+            events.push({ kind: "message", text: `${displayName(mon)} est gelé !` })
+            return false
+        }
         if (Status.freezeThaws(rng)) {
             mon.status = "NONE"
             events.push({ kind: "message", text: `${displayName(mon)} dégèle !` })

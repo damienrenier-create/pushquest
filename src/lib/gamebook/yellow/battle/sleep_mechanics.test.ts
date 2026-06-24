@@ -101,3 +101,22 @@ describe("Repos — soin + auto-sommeil 1 tour", () => {
         expect(me.status).toBe("NONE")
     })
 })
+
+describe("gel — au moins 1 tour garanti", () => {
+    it("initialStatusCounter(FREEZE) = 1 (un tour gelé garanti)", () => {
+        for (let seed = 0; seed < 20; seed++) {
+            expect(initialStatusCounter("FREEZE", new Rng(seed * 7919))).toBe(1)
+        }
+    })
+
+    it("un Daemon fraîchement gelé rate TOUJOURS son 1er tour (pas de dégel immédiat)", () => {
+        const p = createMonInstance("rochison", 50, { moveIds: ["eboulis"] }) // tank → survit à l'ennemi minime
+        let s = createBattle([p], [createMonInstance("plumiot", 2)], { isWild: true, seed: 1 })
+        const me0 = s.player.team[s.player.activeIndex]
+        me0.status = "FREEZE"; me0.statusCounter = 1
+        s = resolveTurn(s, { kind: "move", moveIndex: 0 })
+        const me1 = s.player.team[s.player.activeIndex]
+        expect(me1.status).toBe("FREEZE") // toujours gelé après le 1er tour (n'a pas pu dégeler)
+        expect(me1.statusCounter).toBe(0) // compteur consommé → 20%/tour de dégel ensuite
+    })
+})

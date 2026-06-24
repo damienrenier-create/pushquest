@@ -46,9 +46,11 @@ export function rollSleepTurns(rng: Rng): number {
     return turns // 1..8
 }
 
-/** Compteur initial d'un statut. Sommeil = tours d'incapacité + 1 (réveille + agit quand il atteint 0). */
+/** Compteur initial d'un statut. Sommeil = tours d'incapacité + 1 (réveille + agit quand il atteint 0).
+ *  Gel = 1 tour GARANTI (puis 20%/tour de dégel). */
 export function initialStatusCounter(status: MajorStatus, rng: Rng): number {
     if (status === "SLEEP") return rollSleepTurns(rng) + 1
+    if (status === "FREEZE") return 1 // au moins 1 tour gelé garanti
     if (status === "TOXIC") return 1
     return 0
 }
