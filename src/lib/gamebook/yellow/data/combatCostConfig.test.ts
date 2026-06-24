@@ -37,6 +37,21 @@ describe("attackCost — coût = 10 × (cp/100) × (quota/150) × (niveau/60)", 
         expect(attackCost(charge, 1, 30)).toBe(1)
         expect(attackCost(null, 60, 150)).toBe(1)
     })
+    it("multi-coups : coût sur le nb MOYEN de coups (×3,5 pour 2-5, ×2 pour 2-2)", () => {
+        expect(attackCost(getMove("dard_nuee")!, 60, 150)).toBe(5)       // 14 × 3,5 = 49 → 5
+        expect(attackCost(getMove("deluge_crochets")!, 60, 150)).toBe(7) // 20 × 3,5 = 70 → 7
+        expect(attackCost(getMove("double_pied")!, 60, 150)).toBe(6)     // 30 × 2 = 60 → 6
+    })
+    it("drain : on paie aussi le soin rendu (puissance + puissance × drain%)", () => {
+        expect(attackCost(getMove("mega_sangsue")!, 60, 150)).toBe(6)        // 40 + 20 = 60 → 6
+        expect(attackCost(getMove("drain_ame")!, 60, 150)).toBe(9)          // 60 + 30 = 90 → 9
+        expect(attackCost(getMove("etreinte_sylvestre")!, 60, 150)).toBe(10) // 112,5 → plafond 10
+    })
+    it("sommeil : costPower relevé à 70 (coût 7)", () => {
+        expect(attackCost(getMove("hypnose")!, 60, 150)).toBe(7)
+        expect(attackCost(getMove("spores_dodo")!, 60, 150)).toBe(7)
+        expect(attackCost(getMove("berceuse")!, 60, 150)).toBe(7)
+    })
     it("effectiveQuota : indispo / ≤1 → 150 ; valeur plausible conservée", () => {
         expect(effectiveQuota(undefined)).toBe(150)
         expect(effectiveQuota(1)).toBe(150)

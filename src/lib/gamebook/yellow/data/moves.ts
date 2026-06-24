@@ -12,7 +12,7 @@ export const MOVES: Record<string, MoveData> = {
     coup_d_boule: { id: "coup_d_boule", name: "Coup d'Boule", type: "NORMAL", power: 70, accuracy: 100, pp: 15, effect: { chance: 30, flinch: true }, description: "Peut apeurer." },
     belier: { id: "belier", name: "Bélier", type: "NORMAL", power: 90, accuracy: 85, pp: 20, effect: { recoilPct: 25 }, description: "Puissant, cause du recul." },
     plaquage: { id: "plaquage", name: "Plaquage", type: "NORMAL", power: 85, accuracy: 100, pp: 15, effect: { chance: 30, inflictStatus: "PARALYSIS" }, description: "Le lanceur écrase l'ennemi de tout son poids ; peut paralyser (30%). Apprenable par presque tout le monde." },
-    berceuse: { id: "berceuse", name: "Berceuse", type: "NORMAL", power: 0, accuracy: 55, pp: 15, costPower: 50, effect: { inflictStatus: "SLEEP" }, description: "Une mélodie apaisante qui endort la cible (précision faible). Version Normal du sommeil (≠ Spores Dodo, Plante)." },
+    berceuse: { id: "berceuse", name: "Berceuse", type: "NORMAL", power: 0, accuracy: 55, pp: 15, costPower: 70, effect: { inflictStatus: "SLEEP" }, description: "Une mélodie apaisante qui endort la cible (précision faible). Version Normal du sommeil (≠ Spores Dodo, Plante)." },
     // NE RATE JAMAIS : accuracy 0 → ignore précision/esquive/mirage ; sureHit → touche même une cible sous terre
     // (Tunnel) ou en vol. Le seul coup vraiment infaillible du jeu.
     meteores: { id: "meteores", name: "Météores", type: "NORMAL", power: 60, accuracy: 0, pp: 20, effect: { sureHit: true }, description: "Projette une nuée d'étoiles téléguidées : NE RATE JAMAIS — ni esquive, ni mirage, ni cible sous terre ou en vol n'y échappent." },
@@ -54,7 +54,7 @@ export const MOVES: Record<string, MoveData> = {
 
     choc_mental: { id: "choc_mental", name: "Choc Mental", type: "PSY", power: 50, accuracy: 100, pp: 25, effect: { chance: 10, statChanges: [{ target: "target", stat: "spc", stages: -1 }] }, description: "Peut baisser le Spécial." },
     onde_folie: { id: "onde_folie", name: "Onde Folie", type: "PSY", power: 0, accuracy: 100, pp: 10, effect: { inflictVolatile: "CONFUSION" }, description: "Rend confus." },
-    hypnose: { id: "hypnose", name: "Hypnose", type: "PSY", power: 0, accuracy: 40, pp: 20, costPower: 50, effect: { inflictStatus: "SLEEP", speedScaledAcc: true }, description: "Sommeil hypnotique : 40% de base (ignore l'esquive), d'autant plus sûr que le lanceur est rapide face à la cible." },
+    hypnose: { id: "hypnose", name: "Hypnose", type: "PSY", power: 0, accuracy: 40, pp: 20, costPower: 70, effect: { inflictStatus: "SLEEP", speedScaledAcc: true }, description: "Sommeil hypnotique : 40% de base (ignore l'esquive), d'autant plus sûr que le lanceur est rapide face à la cible." },
     repos: { id: "repos", name: "Repos", type: "PSY", power: 0, accuracy: 0, pp: 10, costPower: 100, effect: { healPct: 50, restSleep: true }, description: "Restaure la moitié des PV mais endort le lanceur 1 tour. Coûte le maximum d'énergie." },
 
     dard_nuee: { id: "dard_nuee", name: "Dard-Nuée", type: "INSECTE", power: 14, accuracy: 85, pp: 20, effect: { multiHit: [2, 5] }, description: "Frappe 2 à 5 fois." },
@@ -82,7 +82,7 @@ export const MOVES: Record<string, MoveData> = {
     deferlante: { id: "deferlante", name: "Déferlante", type: "EAU", power: 95, accuracy: 100, pp: 10, effect: { chance: 30, statChanges: [{ target: "target", stat: "def", stages: -1 }] }, description: "Signature d'ONDINE : une vague titanesque qui peut briser la garde adverse (-Défense)." },
     tranche_feuille: { id: "tranche_feuille", name: "Tranche-Feuille", type: "PLANTE", power: 55, accuracy: 95, pp: 25, effect: { highCrit: true }, description: "Taux de critique élevé." },
     tranche: { id: "tranche", name: "Tranche", type: "NORMAL", power: 90, accuracy: 80, pp: 15, effect: { highCrit: true }, description: "Entaille fauchante : puissante et à fort taux de critique, mais peu précise." },
-    spores_dodo: { id: "spores_dodo", name: "Spores Dodo", type: "PLANTE", power: 0, accuracy: 75, pp: 15, costPower: 50, effect: { inflictStatus: "SLEEP" }, description: "Endort la cible." },
+    spores_dodo: { id: "spores_dodo", name: "Spores Dodo", type: "PLANTE", power: 0, accuracy: 75, pp: 15, costPower: 70, effect: { inflictStatus: "SLEEP" }, description: "Endort la cible." },
     etreinte_sylvestre: { id: "etreinte_sylvestre", name: "Étreinte Sylvestre", type: "PLANTE", power: 75, accuracy: 100, pp: 10, effect: { drainPct: 50 }, description: "Signature du Druide : des racines enserrent la cible et drainent sa vigueur (rend 50% des dégâts)." },
     fulgurance: { id: "fulgurance", name: "Fulgurance", type: "ELEC", power: 90, accuracy: 100, pp: 15, effect: { chance: 10, inflictStatus: "PARALYSIS" }, description: "Gros move Élec ; peut paralyser." },
     souffle_polaire: { id: "souffle_polaire", name: "Souffle Polaire", type: "GLACE", power: 90, accuracy: 100, pp: 10, effect: { chance: 10, inflictStatus: "FREEZE" }, description: "Gros move Glace ; peut geler." },

@@ -5,7 +5,8 @@
 //
 // FORMULE UNIFIÉE (dégâts ET statuts) :
 //   coût = round( 10 × (cp/100) × (quota/150) × (niveau/60) )   — chaque facteur plafonné à 1, min 1.
-//   cp (« puissance de coût ») = PUISSANCE pour une attaque de dégâts ; PALIER d'impact pour un statut.
+//   cp (« puissance de coût ») = pour une attaque de dégâts : PUISSANCE × nb MOYEN de coups (+ valeur du
+//   drain si vol de PV) ; pour un statut : PALIER d'impact (move.costPower).
 // → Pour atteindre 10 : puissance ≥100 ET quota ≥150 ET niveau ≥60.
 //   Ex. Hydrocanon (110) niv60 : quota 150 → 10 · quota 30 → 2 · (à niv 30, c'est la moitié).
 //   Statuts plafonnés par leur cp (move.costPower) : game-changer 50 → coût max 5 ; défaut 30 → 3 ; mineur 20 → 2.
@@ -22,9 +23,20 @@ export function effectiveQuota(rawQuota: number | undefined | null): number {
     return rawQuota && rawQuota > 1 ? rawQuota : QUOTA_STD
 }
 
-/** « Puissance de coût » : la puissance (dégâts) ou le palier d'impact (statut, via costPower). */
+/**
+ * « Puissance de coût » : reflète la VALEUR RÉELLE de l'attaque, pas juste sa puissance de base.
+ * - Attaque de dégâts : puissance × NOMBRE MOYEN de coups (multi-hit) + la valeur du SOIN (drain).
+ * - Statut : palier d'impact (move.costPower, défaut STATUS_DEFAULT_CP).
+ */
 function costPowerOf(move: MoveData): number {
-    return move.power > 0 ? move.power : (move.costPower ?? STATUS_DEFAULT_CP)
+    if (move.power > 0) {
+        const e = move.effect
+        const avgHits = e?.multiHit ? (e.multiHit[0] + e.multiHit[1]) / 2 : 1
+        let cp = move.power * avgHits
+        if (e?.drainPct) cp += (move.power * e.drainPct) / 100 // vol de PV → on paie aussi le soin rendu
+        return cp
+    }
+    return move.costPower ?? STATUS_DEFAULT_CP
 }
 
 /** Coût en reps d'une attaque, scalé par le QUOTA IRL du joueur ET le NIVEAU du Daemon (cf. en-tête). */
