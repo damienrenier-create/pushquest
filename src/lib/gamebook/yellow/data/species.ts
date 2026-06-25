@@ -103,6 +103,10 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 42, moveId: "mur_de_fer" },
             { level: 42, moveId: "repos" },
             { level: 50, moveId: "carapace_diamant" },
+            // Parité starters (learnset only) : comblement du trou offensif niv1→66 via la ligne
+            // glacée (Coup d'Givre 65 → Souffle Polaire 90 → Blizzard 110). Pas de modif de stats.
+            { level: 54, moveId: "souffle_polaire" }, // couverture GLACE (exploite spc 86)
+            { level: 66, moveId: "blizzard" },        // capstone 65+ : gros STAB GLACE
         ],
         catchRate: 45, baseExp: 208, rarity: "RARE", growthRate: "medium_fast", role: "Eau — tank",
         description: "Gardien des marées. Quand il inspire, l'eau baisse à des mètres à la ronde.",
