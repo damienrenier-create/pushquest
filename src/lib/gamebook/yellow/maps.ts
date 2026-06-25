@@ -1032,6 +1032,28 @@ function buildHautesHerbesSapins(): Array<{ x: number; y: number; w: number; h: 
     return out
 }
 
+// === ZONE DE COMBAT (Battle Frontier) — hub + 3 salles, PLACEHOLDERS tile-based (art à swapper) ===
+const ZONE_W = 20, ZONE_H = 14
+function buildZoneCombatCollisions(): TileType[][] {
+    const m = fillRect(ZONE_W, ZONE_H, "grass")
+    for (let x = 0; x < ZONE_W; x++) { m[0][x] = "tree"; m[ZONE_H - 1][x] = "tree" }
+    for (let y = 0; y < ZONE_H; y++) { m[y][0] = "tree"; m[y][ZONE_W - 1] = "tree" }
+    // ouverture NORD (entrée/sortie vers Ville Jaune)
+    m[0][9] = "path"; m[0][10] = "path"; m[1][9] = "path"; m[1][10] = "path"
+    return m
+}
+const ZONE_COMBAT_BUILDINGS: YellowBuilding[] = [
+    { id: "b_combat_tour", x: 2, y: 3, w: 4, h: 4, doorX: 1, doorY: 3, targetMapId: "yellow_combat_tour", targetSpawnX: 4, targetSpawnY: 4, displayName: "TOUR DE COMBAT", kind: "arena" },
+    { id: "b_combat_usine", x: 8, y: 3, w: 4, h: 4, doorX: 1, doorY: 3, targetMapId: "yellow_combat_usine", targetSpawnX: 4, targetSpawnY: 4, displayName: "USINE DE COMBAT", kind: "shop" },
+    { id: "b_combat_dome", x: 14, y: 3, w: 4, h: 4, doorX: 1, doorY: 3, targetMapId: "yellow_combat_dome", targetSpawnX: 4, targetSpawnY: 4, displayName: "DÔME DE COMBAT", kind: "casino" },
+]
+// petite salle intérieure placeholder : pièce 8×6 + porte de sortie en bas-centre.
+function buildZoneRoom(): TileType[][] {
+    const m = fillRoom(8, 6, "path")
+    m[5][4] = "path" // porte (case de sortie)
+    return m
+}
+
 export const YELLOW_MAPS: Record<string, YellowMapData> = {
     [YELLOW_ENTRANCE_MAP_ID]: {
         id: YELLOW_ENTRANCE_MAP_ID,
@@ -1055,6 +1077,11 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
                 targetSpawnX: 23,  // centre de la nouvelle bande sable (cols 22-25)
                 targetSpawnY: 38,  // 1 row au-dessus de la bordure sud (row 39)
             })),
+            // SUD (cols 22-25, row 39) → ZONE DE COMBAT. Gated par le bloc Sylvebarbe (inSylvebarbeBlock,
+            // cols 22-25 rows 38-39) : inatteignable tant que !sylvebarbeAwake → pas de garde à dupliquer.
+            ...[22, 23, 24, 25].map((col) => ({
+                x: col, y: 39, targetMapId: "yellow_zone_combat", targetSpawnX: 10, targetSpawnY: 1,
+            })),
         ],
         backgroundImage: "/yellow/sprites/viridian_full.png",
         backgroundImageWidth: 1360,
@@ -1062,6 +1089,33 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImageTileSize: VIRIDIAN_IMAGE_TILE_SIZE,
         backgroundImageOriginX: VIRIDIAN_ORIGIN_X,
         backgroundImageOriginY: VIRIDIAN_ORIGIN_Y,
+    },
+    yellow_zone_combat: {
+        id: "yellow_zone_combat",
+        name: "ZONE DE COMBAT",
+        tiles: buildZoneCombatCollisions(),
+        width: ZONE_W,
+        height: ZONE_H,
+        buildings: ZONE_COMBAT_BUILDINGS,
+        exits: [
+            ...exitsFromBuildings(ZONE_COMBAT_BUILDINGS),
+            // sortie NORD → retour Ville Jaune (sud, juste au-dessus du bloc Sylvebarbe)
+            ...[9, 10].map((x) => ({ x, y: 0, targetMapId: YELLOW_ENTRANCE_MAP_ID, targetSpawnX: 23, targetSpawnY: 37 })),
+        ],
+        groundTile: "grass",
+        encountersPaused: true, // hub : aucune rencontre sauvage
+    },
+    yellow_combat_tour: {
+        id: "yellow_combat_tour", name: "TOUR DE COMBAT", tiles: buildZoneRoom(), width: 8, height: 6,
+        exits: [{ x: 4, y: 5, targetMapId: "yellow_zone_combat", targetSpawnX: 3, targetSpawnY: 7 }],
+    },
+    yellow_combat_usine: {
+        id: "yellow_combat_usine", name: "USINE DE COMBAT", tiles: buildZoneRoom(), width: 8, height: 6,
+        exits: [{ x: 4, y: 5, targetMapId: "yellow_zone_combat", targetSpawnX: 9, targetSpawnY: 7 }],
+    },
+    yellow_combat_dome: {
+        id: "yellow_combat_dome", name: "DÔME DE COMBAT", tiles: buildZoneRoom(), width: 8, height: 6,
+        exits: [{ x: 4, y: 5, targetMapId: "yellow_zone_combat", targetSpawnX: 15, targetSpawnY: 7 }],
     },
     yellow_cendreville: {
         id: "yellow_cendreville",
