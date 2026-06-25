@@ -158,6 +158,18 @@ export function calculateLevel(xp: number) {
 import { MONTH_MULTIPLIERS } from "./xp-constants";
 export { MONTH_MULTIPLIERS };
 
+// === Anniversaire de Gg (26/06) — Défi "Bats Gg" ===
+// Chaque AUTRE joueur qui fait STRICTEMENT plus de reps que Gg sur un exo gagne 500 XP.
+// Symétriquement, Gg gagne 500 XP par (exo × joueur) qu'il bat. Récurrent chaque année.
+// Exos comptés : pompes / tractions / squats + GAINAGE (PLANK, en secondes : plus de
+// secondes = battu). Indépendant de la validation du quota (pur duel reps/secondes).
+const GG_BDAY_SUFFIX = "-06-26";
+const GG_BDAY_EXOS = ["PUSHUP", "PULLUP", "SQUAT", "PLANK"];
+const GG_BDAY_BONUS = 500;
+function isGgNickname(n: string | undefined | null): boolean {
+    return (n || "").toLowerCase() === "gg";
+}
+
 /**
  * Calculates the XP gain for a specific user on a specific date.
  * Returns a detailed breakdown for transparency.
@@ -237,6 +249,26 @@ export function calculateDailyXPGainForUser(
             if (hoursWithReps.size >= 12) regularityXP += 500;
         }
     }
+
+    // Anniversaire de Gg — Défi "Bats Gg" (hors condition de quota).
+    if (dateISO.endsWith(GG_BDAY_SUFFIX)) {
+        const ggSummary = summaries.find((s: any) => isGgNickname(s.nickname));
+        if (ggSummary) {
+            const iAmGg = user.id === ggSummary.id;
+            for (const exo of GG_BDAY_EXOS) {
+                const ggReps = ggSummary.getDaySum(dateISO, exo);
+                if (iAmGg) {
+                    summaries.forEach((other: any) => {
+                        if (other.id === ggSummary.id) return;
+                        if (ggReps > other.getDaySum(dateISO, exo)) regularityXP += GG_BDAY_BONUS;
+                    });
+                } else if (summary.getDaySum(dateISO, exo) > ggReps) {
+                    regularityXP += GG_BDAY_BONUS;
+                }
+            }
+        }
+    }
+
     totalXP += regularityXP;
 
     // 3. Badges earned on this day
@@ -338,6 +370,9 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
         if (volMonth > maxVolMonth) { maxVolMonth = volMonth; maxVolMonthUser = s.id; }
         if (volYear > maxVolYear) { maxVolYear = volYear; maxVolYearUser = s.id; }
     });
+
+    // Anniversaire de Gg — résumé du fêté (pour le Défi "Bats Gg").
+    const ggSummaryGlobal = summaries.find(s => isGgNickname((s as any).nickname));
 
     // 2. Compute specific XP for each user
     const xpUserMap = new Map();
@@ -443,6 +478,22 @@ export async function calculateAllUsersXP(users: any[], badgesOwnerships: any[],
                     if (hasScale) {
                         regularityXP += 500;
                         totalXP += 500;
+                    }
+                }
+            }
+
+            // Anniversaire de Gg — Défi "Bats Gg" (hors condition de quota).
+            if (d.endsWith(GG_BDAY_SUFFIX) && ggSummaryGlobal) {
+                const iAmGg = u.id === ggSummaryGlobal.id;
+                for (const exo of GG_BDAY_EXOS) {
+                    const ggReps = ggSummaryGlobal.getDaySum(d, exo);
+                    if (iAmGg) {
+                        summaries.forEach(other => {
+                            if (other.id === ggSummaryGlobal.id) return;
+                            if (ggReps > other.getDaySum(d, exo)) { regularityXP += GG_BDAY_BONUS; totalXP += GG_BDAY_BONUS; }
+                        });
+                    } else if (summary.getDaySum(d, exo) > ggReps) {
+                        regularityXP += GG_BDAY_BONUS; totalXP += GG_BDAY_BONUS;
                     }
                 }
             }

@@ -167,8 +167,23 @@ export default function UserProfilePage() {
 
     const hallOfFame = (user.badges || []).filter((b: any) => b.badge.rarity === 'LEGENDARY' || b.badge.rarity === 'EPIC');
 
+    // 🎂 Bannière d'anniversaire — Gg est né le 26/06/1990. Récurrente chaque année, âge calculé.
+    const _bdayNow = new Date();
+    const isGgBirthday = (user.nickname || "").toLowerCase() === "gg" && _bdayNow.getMonth() === 5 && _bdayNow.getDate() === 26;
+    const ggAge = _bdayNow.getFullYear() - 1990;
+
     return (
         <div className="max-w-4xl mx-auto p-4 space-y-8 pb-24 lg:pt-8">
+            {isGgBirthday && (
+                <div className="relative overflow-hidden rounded-[2rem] p-6 sm:p-8 text-center bg-gradient-to-r from-pink-500 via-fuchsia-500 to-amber-400 shadow-2xl">
+                    <div className="absolute inset-0 opacity-20 text-4xl select-none pointer-events-none flex flex-wrap gap-2 p-2 leading-none">🎈🎉🎂🥳🎁🎈🎉🎂🥳🎁🎈🎉🎂🥳🎁</div>
+                    <div className="relative">
+                        <div className="text-4xl sm:text-5xl mb-2">🎂🥳🎉</div>
+                        <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tight drop-shadow">Joyeux anniversaire {user.nickname} !</h2>
+                        <p className="text-white/95 font-black text-xs sm:text-sm mt-2">{ggAge} ans aujourd'hui — toute la PushQuest team te souhaite le meilleur 💪</p>
+                    </div>
+                </div>
+            )}
             {/* Hero Section */}
             {/* ... (keep existing hero code) */}
             <div className="relative overflow-hidden bg-slate-900 border border-slate-800 rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-12 shadow-2xl">

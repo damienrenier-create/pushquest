@@ -694,6 +694,18 @@ export function raiseRepsCap(delta: number) {
     emit()
 }
 
+/**
+ * Cadeau exceptionnel HORS-PLAFOND (ex. anniversaire) : relève le cap de n PUIS crédite n.
+ * Garantit le don intégral — sans relever le cap, le surplus serait re-plafonné (donc effacé)
+ * au prochain bankReps quotidien. Le cap reste relevé (perk durable assumé).
+ */
+export function grantBonusEnergyUncapped(n: number) {
+    const amt = Math.max(0, Math.floor(n))
+    if (amt <= 0) return
+    st = { ...st, repsCap: st.repsCap + amt, reps: st.reps + amt }
+    emit()
+}
+
 /** Soin complet de l'équipe (Centre Daemon) : PV max, statut effacé, PP refaits. */
 export function healAllTeam() {
     st = {

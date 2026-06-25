@@ -45,7 +45,7 @@ import { aceLoseLine } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
-import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt } from "@/lib/gamebook/yellow/store/playerStore"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
@@ -329,10 +329,24 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     const j = r.ok ? await r.json() : null
                     const gifts = (j?.gifts ?? []) as { fromNickname: string; energy: number }[]
                     if (!cancelled && gifts.length > 0) {
-                        const total = gifts.reduce((s, g) => s + (g.energy || 0), 0)
-                        if (total > 0) { grantReps(total); persistYellowSave() }
-                        const nicks = [...new Set(gifts.map((g) => g.fromNickname).filter(Boolean))]
-                        showDialogue(DUEL_DREAM_NPC, DUEL_DREAM_NAME, duelDreamLines(nicks, total))
+                        // 🎂 Cadeau d'anniversaire de Gg (sentinelle) vs cadeaux croisés de duel.
+                        const bday = gifts.filter((g) => g.fromNickname === "__BDAY36__")
+                        const duel = gifts.filter((g) => g.fromNickname !== "__BDAY36__")
+                        const duelTotal = duel.reduce((s, g) => s + (g.energy || 0), 0)
+                        const bdayTotal = bday.reduce((s, g) => s + (g.energy || 0), 0)
+                        if (duelTotal > 0) grantReps(duelTotal)                  // cadeaux de duel : plafonnés (normal)
+                        if (bdayTotal > 0) grantBonusEnergyUncapped(bdayTotal)   // anniv : HORS-plafond garanti
+                        if (duelTotal > 0 || bdayTotal > 0) persistYellowSave()
+                        if (duel.length > 0) {
+                            const nicks = [...new Set(duel.map((g) => g.fromNickname).filter(Boolean))]
+                            showDialogue(DUEL_DREAM_NPC, DUEL_DREAM_NAME, duelDreamLines(nicks, duelTotal))
+                        }
+                        if (bday.length > 0) {
+                            showDialogue(DUEL_DREAM_NPC, "🎂 Joyeux anniversaire !", [
+                                "Le Dieu Spaghetti surgit avec un gâteau de 36 bougies fumantes...",
+                                `« JOYEUX ANNIVERSAIRE, champion ! Pour tes 36 ans, voici +${bdayTotal} énergie (hors plafond). Régale-toi ! »`,
+                            ])
+                        }
                     }
                 } catch { /* neutre (hors-ligne / table absente) */ }
             }

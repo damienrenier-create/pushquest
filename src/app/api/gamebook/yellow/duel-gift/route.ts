@@ -15,10 +15,17 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { isNexusYellowEnabled } from "@/lib/gamebook/yellow/featureFlag"
+import { getTodayISO } from "@/lib/challenge"
 
 export const dynamic = "force-dynamic"
 
 const GIFT_ENERGY = 30
+
+// 🎂 Cadeau d'anniversaire de Gg : +360 énergie pour ses 36 ans, le 26/06, une seule fois.
+// On réutilise la table DuelGift (montant d'énergie fixe + claim côté client) : la sentinelle
+// `fromNickname` ci-dessous signale au client d'afficher un message d'anniversaire au lieu du rêve.
+const BDAY_GIFT_SENTINEL = "__BDAY36__"
+const BDAY_GIFT_ENERGY = 360
 
 async function requireYellow() {
     const session = await getServerSession(authOptions)
@@ -34,6 +41,18 @@ export async function GET() {
     if (!auth.ok) return NextResponse.json({ error: "Forbidden" }, { status: auth.status })
     try {
         const dg = (prisma as any).duelGift // table gated (cf. advisor/), créée par db:push
+
+        // 🎂 Cadeau d'anniversaire de Gg (le 26/06) — créé une seule fois (dedup par sentinelle).
+        try {
+            const me = await prisma.user.findUnique({ where: { id: auth.userId }, select: { nickname: true } })
+            if (me && (me.nickname || "").toLowerCase() === "gg" && getTodayISO().endsWith("-06-26")) {
+                const already = await dg.findFirst({ where: { toUserId: auth.userId, fromNickname: BDAY_GIFT_SENTINEL }, select: { id: true } })
+                if (!already) {
+                    await dg.create({ data: { toUserId: auth.userId, fromUserId: auth.userId, fromNickname: BDAY_GIFT_SENTINEL, energy: BDAY_GIFT_ENERGY } })
+                }
+            }
+        } catch { /* neutre : l'éventuel échec du cadeau ne bloque pas la réclamation normale */ }
+
         const rows = (await dg.findMany({
             where: { toUserId: auth.userId, claimed: false },
             orderBy: { createdAt: "asc" },
