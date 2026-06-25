@@ -1,5 +1,5 @@
 import prisma from "./prisma";
-import { getRequiredRepsForDate, getDailyTargetForUserOnDate, getTodayISO, isLastDayOfMonth, getYesterdayISO } from "./challenge";
+import { getRequiredRepsForDate, getDailyTargetForUserOnDate, getTodayISO, isLastDayOfMonth, is12thOfMonth, isClock300Window, isClock300FinalDay, clock300CanonicalDate, getYesterdayISO } from "./challenge";
 import { MONTH_MULTIPLIERS } from "./xp-constants";
 
 import { BADGE_DEFINITIONS } from "@/config/badges";
@@ -508,10 +508,26 @@ export function getUserSummaries(allUsers: any[], allEvents: any[]) {
             },
             hasSallyUpParticipation: (dateISO: string) => {
                 const sUps = u.sallyUps || [];
-                return sUps.some((s: any) => s.date === dateISO && s.seconds > 0);
+                return sUps.some((s: any) => (s.type ?? "SALLY_UP") === "SALLY_UP" && s.date === dateISO && s.seconds > 0);
             },
             getSallyUpSeconds: (dateISO: string) => {
-                const record = (u.sallyUps || []).find((s: any) => s.date === dateISO);
+                const record = (u.sallyUps || []).find((s: any) => (s.type ?? "SALLY_UP") === "SALLY_UP" && s.date === dateISO);
+                return record ? record.seconds : 0;
+            },
+            hasClockParticipation: (dateISO: string) => {
+                const sUps = u.sallyUps || [];
+                return sUps.some((s: any) => s.type === "CLOCK_PUSHUP" && s.date === dateISO && s.seconds > 0);
+            },
+            getClockSeconds: (dateISO: string) => {
+                const record = (u.sallyUps || []).find((s: any) => s.type === "CLOCK_PUSHUP" && s.date === dateISO);
+                return record ? record.seconds : 0;
+            },
+            hasClock300Participation: (canonDateISO: string) => {
+                const sUps = u.sallyUps || [];
+                return sUps.some((s: any) => s.type === "CLOCK_300" && s.date === canonDateISO && s.seconds > 0);
+            },
+            getClock300Seconds: (canonDateISO: string) => {
+                const record = (u.sallyUps || []).find((s: any) => s.type === "CLOCK_300" && s.date === canonDateISO);
                 return record ? record.seconds : 0;
             },
             hasBalanceTrinity: (dateISO: string, minPct: number, minVol: number) => {
@@ -970,6 +986,57 @@ export async function updateBadgesPostSave(userId: string, precomputedSummaries?
                     }
                 });
             }
+        } else if (def.metricType === "CLOCK_PART") {
+            const today = getTodayISO();
+            if (is12thOfMonth(today)) {
+                for (const s of summaries) {
+                    if (s.hasClockParticipation(today)) await awardMilestone(s.id, def.key, 1);
+                }
+            }
+            continue;
+        } else if (def.metricType === "CLOCK_PODIUM") {
+            const today = getTodayISO();
+            if (is12thOfMonth(today)) {
+                // Le plus RAPIDE (temps le plus bas, > 0) gagne — branche autonome (lower=better,
+                // donc on ne réutilise PAS la machinerie partagée bestValue qui suppose higher=better).
+                let fastestUser: any = null;
+                let fastestVal = 0;
+                summaries.forEach((s: any) => {
+                    const val = s.getClockSeconds(today);
+                    if (val <= 0) return;
+                    if (fastestVal === 0 || val < fastestVal || (val === fastestVal && isBetterTieBreak(s, fastestUser, "totalAll"))) {
+                        fastestVal = val; fastestUser = s;
+                    }
+                });
+                if (fastestUser) await awardMilestone(fastestUser.id, def.key, 1);
+            }
+            continue;
+        } else if (def.metricType === "CLOCK300_PART") {
+            const today = getTodayISO();
+            if (isClock300Window(today)) {
+                const canon = clock300CanonicalDate(parseInt(today.slice(0, 4), 10));
+                for (const s of summaries) {
+                    if (s.hasClock300Participation(canon)) await awardMilestone(s.id, def.key, 1);
+                }
+            }
+            continue;
+        } else if (def.metricType === "CLOCK300_PODIUM") {
+            const today = getTodayISO();
+            // Podium figé le JOUR FINAL (300e jour) : toutes les soumissions de la fenêtre sont rentrées.
+            if (isClock300FinalDay(today)) {
+                const canon = clock300CanonicalDate(parseInt(today.slice(0, 4), 10));
+                let fastestUser: any = null;
+                let fastestVal = 0;
+                summaries.forEach((s: any) => {
+                    const val = s.getClock300Seconds(canon);
+                    if (val <= 0) return;
+                    if (fastestVal === 0 || val < fastestVal || (val === fastestVal && isBetterTieBreak(s, fastestUser, "totalAll"))) {
+                        fastestVal = val; fastestUser = s;
+                    }
+                });
+                if (fastestUser) await awardMilestone(fastestUser.id, def.key, 1);
+            }
+            continue;
         } else if (def.metricType === "FIRST_REACH") {
             const scope = def.exerciseScope === "PUSHUPS" ? "maxSetPushups" : def.exerciseScope === "PULLUPS" ? "maxSetPullups" : def.exerciseScope === "PLANK" ? "maxSetPlanks" : "maxSetSquats";
             summaries.forEach((s: any) => {

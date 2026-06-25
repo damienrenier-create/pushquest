@@ -253,6 +253,18 @@ export const priorityDailyCarousels: DailyCarousel[] = [
                 text: "Participation : +250 XP. Première place du podium : +1000 XP.",
                 cta: "Vise le podium",
             },
+            {
+                emoji: "⏰",
+                title: "Le Défi de l'Horloge, le 12",
+                text: "Le 12 du mois : 1+2+…+12 = 78 pompes le plus vite possible. Le meilleur temps gagne (+250 XP, podium +1000 XP).",
+                cta: "Chrono en main",
+            },
+            {
+                emoji: "⚔️",
+                title: "Le Défi des 300, le 300e jour",
+                text: "Du 24 au 27 octobre : 1+2+…+24 = 300 pompes le plus vite possible. La version ultime (+300 XP, podium +3000 XP).",
+                cta: "Deviens Roi des 300",
+            },
         ],
     },
     {

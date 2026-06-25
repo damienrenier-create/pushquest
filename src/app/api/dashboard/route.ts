@@ -10,7 +10,10 @@ import {
     getDailyTargetForUserOnDate,
     getFineAmountForMonth,
     FINE_START_DATE,
-    isLastDayOfMonth
+    isLastDayOfMonth,
+    is12thOfMonth,
+    isClock300Window,
+    clock300CanonicalDate
 } from "@/lib/challenge";
 import { SPECIAL_DAYS } from "@/config/specialDays";
 import { initBadges, getUserSummaries } from "@/lib/badges";
@@ -607,8 +610,8 @@ export async function GET(req: Request) {
             },
             sallyUp: {
                 enabledForSelectedDate: isLastDayOfMonth(selectedDate),
-                selectedDateReps: (allUsers.find(u => u.id === userId)?.sallyUps || []).find((s: any) => s.date === selectedDate)?.seconds || 0,
-                monthPodium: allUsers.flatMap(u => (u.sallyUps || []).filter((s: any) => s.date.startsWith(today.substring(0, 7))).map((s: any) => ({
+                selectedDateReps: (allUsers.find(u => u.id === userId)?.sallyUps || []).find((s: any) => (s.type ?? "SALLY_UP") === "SALLY_UP" && s.date === selectedDate)?.seconds || 0,
+                monthPodium: allUsers.flatMap(u => (u.sallyUps || []).filter((s: any) => (s.type ?? "SALLY_UP") === "SALLY_UP" && s.date.startsWith(today.substring(0, 7))).map((s: any) => ({
                     nickname: u.nickname,
                     reps: s.seconds,
                     totalPushupsAllTime: (u.sets || []).filter((ss: any) => ss.exercise === "PUSHUP").reduce((sum: number, ss: any) => sum + ss.reps, 0),
@@ -620,6 +623,41 @@ export async function GET(req: Request) {
                     return b.reps - a.reps || b.totalPushupsAllTime - a.totalPushupsAllTime || aTime - bTime;
                 }).slice(0, 3)
             },
+            clockChallenge: {
+                // Défi de l'Horloge — le 12 du mois. Score = TEMPS en secondes, le plus RAPIDE gagne.
+                enabledForSelectedDate: is12thOfMonth(selectedDate),
+                selectedDateSeconds: (allUsers.find(u => u.id === userId)?.sallyUps || []).find((s: any) => s.type === "CLOCK_PUSHUP" && s.date === selectedDate)?.seconds || 0,
+                monthPodium: allUsers.flatMap(u => (u.sallyUps || []).filter((s: any) => s.type === "CLOCK_PUSHUP" && s.date.startsWith(today.substring(0, 7))).map((s: any) => ({
+                    nickname: u.nickname,
+                    seconds: s.seconds,
+                    totalPushupsAllTime: (u.sets || []).filter((ss: any) => ss.exercise === "PUSHUP").reduce((sum: number, ss: any) => sum + ss.reps, 0),
+                    createdAt: s.createdAt
+                }))).sort((a: any, b: any) => {
+                    const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                    const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                    // plus RAPIDE d'abord (secondes ASC) ; égalité → plus de pompes all-time, puis soumission la + tôt
+                    return a.seconds - b.seconds || b.totalPushupsAllTime - a.totalPushupsAllTime || aTime - bTime;
+                }).slice(0, 3)
+            },
+            clock300: (() => {
+                // Défi des 300 — fenêtre jours 297→300 (2026 : 24-27 oct). Toutes les entrées sont
+                // stockées sous la date canonique (jour 300). Score = temps en secondes, le + RAPIDE gagne.
+                const canon = clock300CanonicalDate(parseInt(selectedDate.slice(0, 4), 10));
+                return {
+                    enabledForSelectedDate: isClock300Window(selectedDate),
+                    selectedDateSeconds: (allUsers.find(u => u.id === userId)?.sallyUps || []).find((s: any) => s.type === "CLOCK_300" && s.date === canon)?.seconds || 0,
+                    monthPodium: allUsers.flatMap(u => (u.sallyUps || []).filter((s: any) => s.type === "CLOCK_300" && s.date === canon).map((s: any) => ({
+                        nickname: u.nickname,
+                        seconds: s.seconds,
+                        totalPushupsAllTime: (u.sets || []).filter((ss: any) => ss.exercise === "PUSHUP").reduce((sum: number, ss: any) => sum + ss.reps, 0),
+                        createdAt: s.createdAt
+                    }))).sort((a: any, b: any) => {
+                        const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                        const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                        return a.seconds - b.seconds || b.totalPushupsAllTime - a.totalPushupsAllTime || aTime - bTime;
+                    }).slice(0, 3)
+                };
+            })(),
             graphs: {
                 myDaily: myDaily30,
                 myDaily365: myDaily365

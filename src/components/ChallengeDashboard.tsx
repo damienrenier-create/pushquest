@@ -74,6 +74,16 @@ interface DashboardData {
         selectedDateReps: number
         monthPodium: Array<{ nickname: string; reps: number; totalPushupsAllTime: number }>
     }
+    clockChallenge?: {
+        enabledForSelectedDate: boolean
+        selectedDateSeconds: number
+        monthPodium: Array<{ nickname: string; seconds: number; totalPushupsAllTime: number }>
+    }
+    clock300?: {
+        enabledForSelectedDate: boolean
+        selectedDateSeconds: number
+        monthPodium: Array<{ nickname: string; seconds: number; totalPushupsAllTime: number }>
+    }
     graphs: {
         myDaily: Array<{ date: string; pushups: number; pullups: number; squats: number; total: number }>
         myDaily365?: Array<{ date: string; pushups: number; pullups: number; squats: number; total: number }>
@@ -112,6 +122,8 @@ const DEFAULT_DASHBOARD_DATA: DashboardData = {
         finesList: []
     },
     sallyUp: { enabledForSelectedDate: false, selectedDateReps: 0, monthPodium: [] },
+    clockChallenge: { enabledForSelectedDate: false, selectedDateSeconds: 0, monthPodium: [] },
+    clock300: { enabledForSelectedDate: false, selectedDateSeconds: 0, monthPodium: [] },
     graphs: { myDaily: [] }
 }
 
@@ -135,6 +147,10 @@ export default function ChallengeDashboard() {
         planks: [""],
     })
     const [sallyReps, setSallyReps] = useState<number>(0)
+    const [clockMin, setClockMin] = useState<number>(0)
+    const [clockSec, setClockSec] = useState<number>(0)
+    const [clock300Min, setClock300Min] = useState<number>(0)
+    const [clock300Sec, setClock300Sec] = useState<number>(0)
     const [showHonorPopup, setShowHonorPopup] = useState<{ badge: any; holder: string; recordValue: number; myValue: number; type: string } | null>(null)
     const [honorChecked, setHonorChecked] = useState(false)
     const [graphPeriod, setGraphPeriod] = useState<'30' | '365' | 'all'>('30')
@@ -257,6 +273,12 @@ export default function ChallengeDashboard() {
                 setData(d)
                 setSelectedDate(d.selectedDateISO || getTodayISO())
                 setSallyReps(d.sallyUp?.selectedDateReps || 0)
+                const clockTotal = d.clockChallenge?.selectedDateSeconds || 0
+                setClockMin(Math.floor(clockTotal / 60))
+                setClockSec(clockTotal % 60)
+                const clock300Total = d.clock300?.selectedDateSeconds || 0
+                setClock300Min(Math.floor(clock300Total / 60))
+                setClock300Sec(clock300Total % 60)
 
                 setLocalSets({
                     pushups: d.setsSelected?.pushups?.length > 0 ? d.setsSelected.pushups : [""],
@@ -271,7 +293,7 @@ export default function ChallengeDashboard() {
             setLoading(false)
             fetchStatuses()
         }
-    }, [session?.user, showToast, setData, setSelectedDate, setSallyReps, setLocalSets, fetchStatuses, getTodayISO])
+    }, [session?.user, showToast, setData, setSelectedDate, setSallyReps, setClockMin, setClockSec, setClock300Min, setClock300Sec, setLocalSets, fetchStatuses, getTodayISO])
 
     useEffect(() => {
         const tab = searchParams.get('tab')
@@ -483,6 +505,48 @@ export default function ChallengeDashboard() {
             })
             if (res.ok) {
                 showToast("Sally Up sauvegardé", "success")
+                fetchData(selectedDate)
+            }
+        } catch (err) {
+            showToast("Erreur réseau", "error")
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    const saveClock = async () => {
+        const total = clockMin * 60 + clockSec
+        if (total <= 0) { showToast("Entre ton temps (min + sec)", "error"); return }
+        setSaving(true)
+        try {
+            const res = await fetch("/api/challenge/clock", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ date: selectedDate, seconds: total }),
+            })
+            if (res.ok) {
+                showToast("Temps de l'Horloge sauvegardé", "success")
+                fetchData(selectedDate)
+            }
+        } catch (err) {
+            showToast("Erreur réseau", "error")
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    const saveClock300 = async () => {
+        const total = clock300Min * 60 + clock300Sec
+        if (total <= 0) { showToast("Entre ton temps (min + sec)", "error"); return }
+        setSaving(true)
+        try {
+            const res = await fetch("/api/challenge/clock300", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ date: selectedDate, seconds: total }),
+            })
+            if (res.ok) {
+                showToast("Temps des 300 sauvegardé", "success")
                 fetchData(selectedDate)
             }
         } catch (err) {
@@ -717,6 +781,68 @@ export default function ChallengeDashboard() {
                                         </div>
                                     </div>
                                 )) : <p className="text-center font-black text-yellow-600 text-[10px] uppercase tracking-normal">Pas encore de record</p>}
+                            </div>
+                        </div>
+                    )}
+
+                    {data?.clockChallenge?.enabledForSelectedDate && (
+                        <div className="bg-indigo-50 rounded-3xl p-6 border-2 border-indigo-200 space-y-4">
+                            <div className="flex justify-between items-center text-indigo-800">
+                                <h3 className="font-black uppercase tracking-normal">Défi de l'Horloge ⏰</h3>
+                                <span className="bg-indigo-200 px-3 py-1 rounded-full text-[10px] font-black uppercase">Le 12 du mois</span>
+                            </div>
+                            <p className="text-[11px] font-bold text-indigo-700 leading-snug">1+2+…+12 = 78 pompes le plus vite possible. Encode ton temps (le plus rapide gagne).</p>
+                            <div className="flex gap-3 items-end">
+                                <div className="flex-1">
+                                    <label className="block text-[10px] font-black text-indigo-700 uppercase mb-1 ml-1">Minutes</label>
+                                    <input type="number" min={0} value={clockMin} onChange={(e) => setClockMin(Math.max(0, parseInt(e.target.value) || 0))} className="w-full h-14 bg-white border-2 border-indigo-300 rounded-2xl text-center font-black text-xl outline-none focus:border-indigo-500 text-gray-900" />
+                                </div>
+                                <div className="flex-1">
+                                    <label className="block text-[10px] font-black text-indigo-700 uppercase mb-1 ml-1">Secondes</label>
+                                    <input type="number" min={0} max={59} value={clockSec} onChange={(e) => setClockSec(Math.min(59, Math.max(0, parseInt(e.target.value) || 0)))} className="w-full h-14 bg-white border-2 border-indigo-300 rounded-2xl text-center font-black text-xl outline-none focus:border-indigo-500 text-gray-900" />
+                                </div>
+                                <button onClick={saveClock} className="h-14 px-8 bg-indigo-400 hover:bg-indigo-500 text-indigo-900 font-black rounded-2xl transition-all shadow-md">OK</button>
+                            </div>
+                            <div className="grid grid-cols-1 gap-2 mt-4 pt-4 border-t border-indigo-200">
+                                {(data?.clockChallenge?.monthPodium || []).length > 0 ? data.clockChallenge.monthPodium.map((p: any, i: number) => (
+                                    <div key={i} className="flex justify-between items-center px-4 py-2 bg-white/50 rounded-xl">
+                                        <Link href={`/u/${encodeURIComponent(p?.nickname || '')}`} className="font-bold text-indigo-900 hover:underline">{i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉"} {p?.nickname || 'Anonyme'}</Link>
+                                        <div className="text-right">
+                                            <p className="font-black text-indigo-700 text-sm">{Math.floor((p?.seconds ?? 0) / 60)}:{String((p?.seconds ?? 0) % 60).padStart(2, '0')}</p>
+                                        </div>
+                                    </div>
+                                )) : <p className="text-center font-black text-indigo-600 text-[10px] uppercase tracking-normal">Pas encore de record</p>}
+                            </div>
+                        </div>
+                    )}
+
+                    {data?.clock300?.enabledForSelectedDate && (
+                        <div className="bg-red-50 rounded-3xl p-6 border-2 border-red-200 space-y-4">
+                            <div className="flex justify-between items-center text-red-800">
+                                <h3 className="font-black uppercase tracking-normal">Défi des 300 ⚔️</h3>
+                                <span className="bg-red-200 px-3 py-1 rounded-full text-[10px] font-black uppercase">24-27 octobre</span>
+                            </div>
+                            <p className="text-[11px] font-bold text-red-700 leading-snug">Les 24 Heures de l'Horloge : 1+2+…+24 = <b>300 pompes</b> le plus vite possible. Le meilleur temps gagne.</p>
+                            <div className="flex gap-3 items-end">
+                                <div className="flex-1">
+                                    <label className="block text-[10px] font-black text-red-700 uppercase mb-1 ml-1">Minutes</label>
+                                    <input type="number" min={0} value={clock300Min} onChange={(e) => setClock300Min(Math.max(0, parseInt(e.target.value) || 0))} className="w-full h-14 bg-white border-2 border-red-300 rounded-2xl text-center font-black text-xl outline-none focus:border-red-500 text-gray-900" />
+                                </div>
+                                <div className="flex-1">
+                                    <label className="block text-[10px] font-black text-red-700 uppercase mb-1 ml-1">Secondes</label>
+                                    <input type="number" min={0} max={59} value={clock300Sec} onChange={(e) => setClock300Sec(Math.min(59, Math.max(0, parseInt(e.target.value) || 0)))} className="w-full h-14 bg-white border-2 border-red-300 rounded-2xl text-center font-black text-xl outline-none focus:border-red-500 text-gray-900" />
+                                </div>
+                                <button onClick={saveClock300} className="h-14 px-8 bg-red-400 hover:bg-red-500 text-red-900 font-black rounded-2xl transition-all shadow-md">OK</button>
+                            </div>
+                            <div className="grid grid-cols-1 gap-2 mt-4 pt-4 border-t border-red-200">
+                                {(data?.clock300?.monthPodium || []).length > 0 ? data.clock300.monthPodium.map((p: any, i: number) => (
+                                    <div key={i} className="flex justify-between items-center px-4 py-2 bg-white/50 rounded-xl">
+                                        <Link href={`/u/${encodeURIComponent(p?.nickname || '')}`} className="font-bold text-red-900 hover:underline">{i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉"} {p?.nickname || 'Anonyme'}</Link>
+                                        <div className="text-right">
+                                            <p className="font-black text-red-700 text-sm">{Math.floor((p?.seconds ?? 0) / 60)}:{String((p?.seconds ?? 0) % 60).padStart(2, '0')}</p>
+                                        </div>
+                                    </div>
+                                )) : <p className="text-center font-black text-red-600 text-[10px] uppercase tracking-normal">Pas encore de record</p>}
                             </div>
                         </div>
                     )}

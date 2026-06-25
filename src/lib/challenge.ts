@@ -173,6 +173,42 @@ export function isLastDayOfMonth(dateISO: string): boolean {
 }
 
 /**
+ * Returns true if the given date (YYYY-MM-DD) is the 12th of its month.
+ * Lecture directe du composant jour (anti-fuseau horaire). Sert au Défi de l'Horloge.
+ */
+export function is12thOfMonth(dateISO: string): boolean {
+    return dateISO.slice(8, 10) === "12";
+}
+
+// ============================================================
+// DÉFI DES 300 (Les 24 Heures de l'Horloge)
+// 1+2+…+24 = 300 pompes le plus vite possible, autour du 300e jour de l'année.
+// Fenêtre d'encodage = jours 297→300 (en 2026 : 24-25-26-27 octobre ; s'auto-ajuste
+// les années bissextiles où le 300e jour tombe le 26 oct). Le jour 300 est le jour FINAL.
+// ============================================================
+
+/** Fenêtre d'encodage du Défi des 300 : du jour 297 au jour 300 inclus. */
+export function isClock300Window(dateISO: string): boolean {
+    const doy = getDayOfYear(dateISO);
+    return doy >= 297 && doy <= 300;
+}
+
+/** Jour FINAL du Défi des 300 (le 300e jour de l'année) — c'est là que le podium est figé. */
+export function isClock300FinalDay(dateISO: string): boolean {
+    return getDayOfYear(dateISO) === 300;
+}
+
+/**
+ * Date canonique (ISO) du 300e jour d'une année donnée. Toutes les entrées du Défi des 300
+ * sont stockées sous cette date unique, quel que soit le jour d'encodage dans la fenêtre →
+ * une seule entrée par joueur. Jour 300 = 27 oct (année normale) / 26 oct (année bissextile).
+ */
+export function clock300CanonicalDate(year: number): string {
+    const isLeap = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+    return `${year}-10-${isLeap ? 26 : 27}`;
+}
+
+/**
  * Normalizes a date to ISO string YYYY-MM-DD
  */
 export function formatDateISO(date: Date): string {

@@ -144,6 +144,10 @@ export function getXPForReward(key: string, achievedAt?: Date | string | any): n
             xp = timeBonus + 500;
         } else if (def.key === "sally_participation") xp = 250;
         else if (def.key === "sally_podium_1") xp = 1000;
+        else if (def.key === "clock_participation") xp = 250;
+        else if (def.key === "clock_podium_1") xp = 1000;
+        else if (def.key === "clock300_participation") xp = 300;
+        else if (def.key === "clock300_podium_1") xp = 3000;
         else if (def.key === "solstice_summer") xp = 900;
         else if (def.key === "noel_sapin") xp = 500;
         else if (def.key.includes("equinox") || def.key.includes("solstice")) xp = 250;

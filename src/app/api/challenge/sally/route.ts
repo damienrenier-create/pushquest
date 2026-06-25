@@ -24,16 +24,28 @@ export async function POST(req: Request) {
         }
 
         const userId = session.user.id;
+        const total = Math.max(0, Math.floor(Number(seconds) || 0));
 
-        await prisma.monthlyChallengeEntry.upsert({
-            where: {
-                userId_date_type: { userId, date, type: "SALLY_UP" }
-            },
-            update: { seconds },
-            create: { userId, date, type: "SALLY_UP", seconds }
+        // RÉ-ESSAIS : on garde le MEILLEUR essai (Sally = le PLUS de reps). Un envoi inférieur
+        // n'écrase pas le record.
+        const existing = await prisma.monthlyChallengeEntry.findUnique({
+            where: { userId_date_type: { userId, date, type: "SALLY_UP" } }
         });
 
-        return NextResponse.json({ message: "Performance enregistrée" });
+        if (!existing) {
+            await prisma.monthlyChallengeEntry.create({ data: { userId, date, type: "SALLY_UP", seconds: total } });
+            return NextResponse.json({ message: "Performance enregistrée" });
+        }
+
+        if (total > existing.seconds) {
+            await prisma.monthlyChallengeEntry.update({
+                where: { userId_date_type: { userId, date, type: "SALLY_UP" } },
+                data: { seconds: total }
+            });
+            return NextResponse.json({ message: `Nouveau record : ${total} reps !` });
+        }
+
+        return NextResponse.json({ message: `Ton meilleur reste ${existing.seconds} reps` });
 
     } catch (error) {
         console.error("Save Sally Error:", error);
