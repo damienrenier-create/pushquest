@@ -391,6 +391,7 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 38, moveId: "souffle_polaire" },
             { level: 44, moveId: "repos" },
             { level: 50, moveId: "focalisation" },
+            { level: 66, moveId: "blizzard" },        // capstone 65+ : gros STAB GLACE (spc 100)
         ],
         catchRate: 45, baseExp: 210, rarity: "RARE", growthRate: "medium_fast", role: "Glace — mur",
         description: "Molosse polaire à la cape d'aurore boréale. Majestueux.",
