@@ -1680,6 +1680,17 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 1, moveId: "etincelle" },
             { level: 1, moveId: "tunnel" },
             { level: 1, moveId: "repos" },
+            // Profondeur POST-CAPTURE (niv >35) : le mini-boss N35 reste 100% inchangé (la factory
+            // filtre niv≤35 → toujours ses 4 moves signature). Identité golem SOL/ROCHE/ÉLEC.
+            // PRE-65 = kit SOBRE (≤75 + contrôle) ; POST-65 = les grosses attaques (récompense long terme).
+            { level: 40, moveId: "secousse" },        // STAB SOL modeste (Tunnel reste le gimmick)
+            { level: 48, moveId: "eboulis" },         // couverture ROCHE (peut apeurer)
+            { level: 56, moveId: "cage_eclair" },     // contrôle ÉLEC : paralyse à coup sûr (0 dmg)
+            // — Palier des grosses attaques (post niveau 65) —
+            { level: 66, moveId: "lame_roche" },      // ROCHE 90 (fort crit)
+            { level: 72, moveId: "seisme" },          // STAB SOL lourd (100)
+            { level: 80, moveId: "ultra_foudre" },    // STAB ÉLEC lourd (110)
+            { level: 88, moveId: "roc_titanesque" },  // capstone : nuke ROCHE (120, contrecoup)
         ],
         catchRate: 10, baseExp: 180, rarity: "RARE", growthRate: "medium_fast", exclusive: true,
         role: "Mini-boss SOL/ÉLEC — gardien de la Pierre, apprend TOUTES les CT",
