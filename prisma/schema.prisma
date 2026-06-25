@@ -364,6 +364,21 @@ model LeagueEnergyGrant {
   @@index([toUserId, claimed])
 }
 
+// ZONE DE COMBAT (Battle Frontier) — profil persistant par joueur : solde de Jetons de Combat (JC),
+// meilleurs records de série par salle, symboles obtenus. Sert aussi de base aux leaderboards.
+// Pas de @relation (userId String @unique) → User intact. Additif (db:push). Pattern gaté côté code.
+model FrontierProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  jc          Int      @default(0)    // solde de Jetons de Combat
+  towerBest   Int      @default(0)    // meilleure série Tour
+  factoryBest Int      @default(0)    // meilleure série Usine
+  domeBest    Int      @default(0)    // meilleur résultat Dôme (rounds gagnés)
+  symbols     Json     @default("[]") // symboles de prestige obtenus (cosmétique)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 model UserStatus {
   id        String   @id @default(cuid())
   content   String
