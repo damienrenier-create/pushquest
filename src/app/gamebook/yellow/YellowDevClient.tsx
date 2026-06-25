@@ -49,9 +49,11 @@ import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, grantBonu
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
-import { useRun, startTowerRun, applyWinFromBattle, applyLossFromBattle, endRun } from "@/lib/gamebook/yellow/frontier/runStore"
+import { useRun, startTowerRun, startRun, applyWinFromBattle, applyLossFromBattle, endRun, setDraftedTeam, getDraftedTeam } from "@/lib/gamebook/yellow/frontier/runStore"
 import { postRecordRun } from "@/lib/gamebook/yellow/frontier/frontierApi"
-import type { OpponentSpec, LevelRule } from "@/lib/gamebook/yellow/frontier/engine"
+import { generateRentalPool, buildDraftTeam, type RentalCandidate } from "@/lib/gamebook/yellow/frontier/factory"
+import { resolveFrontierLevel, type OpponentSpec, type LevelRule } from "@/lib/gamebook/yellow/frontier/engine"
+import { Rng } from "@/lib/gamebook/yellow/battle/rng"
 
 // ZONE DE COMBAT — convertit les specs d'adversaires de la série en instances de combat.
 function buildFrontierEnemies(opponent: OpponentSpec[]) {
@@ -112,6 +114,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const run = useRun()
     const frontierResult = useFrontierResult()
     const frontierReportedRef = useRef(false)
+    const [usineDraft, setUsineDraft] = useState<{ levelRule: LevelRule; pool: RentalCandidate[]; picks: string[] } | null>(null)
     const sbireWin = useSbireWin()
     const aceWin = useAceWin()
     const badgeAwarded = useBadgeAwarded()
@@ -585,7 +588,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     useEffect(() => {
         if (!run || run.status !== "active") return
         if (battle || frontierResult || evolutions.length > 0 || dialogue || pendingLearn || newDexEntry) return
-        startTrainerBattle(getPlayer().team, buildFrontierEnemies(run.opponent), Math.floor(Math.random() * 1e9), { trainerId: "frontier:" + run.mode, aiLevel: "trainer" })
+        // FACTORY : on joue l'équipe de LOCATION draftée ; Tour/Dôme : l'équipe réelle du joueur.
+        const myTeam = run.mode === "FACTORY" ? (getDraftedTeam() ?? getPlayer().team) : getPlayer().team
+        startTrainerBattle(myTeam, buildFrontierEnemies(run.opponent), Math.floor(Math.random() * 1e9), { trainerId: "frontier:" + run.mode, aiLevel: "trainer" })
     }, [run, battle, frontierResult, evolutions.length, dialogue, pendingLearn, newDexEntry])
 
     // Revanche d'arène gagnée : dialogue de récompense post-combat (énergie / CT Mirage),
@@ -1008,6 +1013,57 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             </button>
                         ))}
                     </div>
+                    <div style={{ fontSize: 9, opacity: 0.6, marginTop: 6 }}>(marche pour sortir)</div>
+                </div>
+            )}
+            {/* ZONE DE COMBAT — USINE : draft de location (placeholder) dans l'intérieur de l'Usine */}
+            {!battle && !run && mapPlayer.mapId === "yellow_combat_usine" && !dialogue && (
+                <div style={{ position: "absolute", left: "50%", top: 16, transform: "translateX(-50%)", zIndex: 60, background: "#1a1a22ee", color: "#fff", border: "2px solid #6aa0ec", borderRadius: 12, padding: "10px 14px", textAlign: "center", maxWidth: 340 }}>
+                    <div style={{ fontWeight: 800, marginBottom: 6 }}>🏭 USINE DE COMBAT</div>
+                    {!usineDraft ? (
+                        <>
+                            <div style={{ fontSize: 11, opacity: 0.85, marginBottom: 8 }}>Choisis ton mode — tu joueras une équipe de LOCATION :</div>
+                            <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
+                                {(["L50", "L100", "ADAPT"] as LevelRule[]).map((rule) => (
+                                    <button key={rule} onClick={() => {
+                                        const lvl = resolveFrontierLevel(rule, myArenaLevel || 50)
+                                        const pool = generateRentalPool(new Rng(Math.floor(Math.random() * 1e9)), { streak: 1, level: lvl })
+                                        setUsineDraft({ levelRule: rule, pool, picks: [] })
+                                    }} style={{ background: "#6aa0ec", color: "#1a1a22", fontWeight: 800, border: "none", borderRadius: 8, padding: "6px 10px", cursor: "pointer" }}>
+                                        {rule === "L50" ? "Niv 50" : rule === "L100" ? "Niv 100" : "Adaptatif"}
+                                    </button>
+                                ))}
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <div style={{ fontSize: 11, opacity: 0.85, marginBottom: 6 }}>Choisis 3 Daemons ({usineDraft.picks.length}/3) :</div>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 4, justifyContent: "center" }}>
+                                {usineDraft.pool.map((c) => {
+                                    const picked = usineDraft.picks.includes(c.speciesId)
+                                    return (
+                                        <button key={c.speciesId} onClick={() => setUsineDraft((d) => {
+                                            if (!d) return d
+                                            const picks = picked ? d.picks.filter((p) => p !== c.speciesId) : (d.picks.length < 3 ? [...d.picks, c.speciesId] : d.picks)
+                                            return { ...d, picks }
+                                        })} style={{ background: picked ? "#6aa0ec" : "#333", color: picked ? "#1a1a22" : "#fff", border: "none", borderRadius: 7, padding: "4px 8px", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
+                                            {getSpecies(c.speciesId)?.name ?? c.speciesId} <span style={{ opacity: 0.7 }}>N{c.level}</span>
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                            <div style={{ display: "flex", gap: 6, justifyContent: "center", marginTop: 8 }}>
+                                <button disabled={usineDraft.picks.length !== 3} onClick={() => {
+                                    const specs = buildDraftTeam(usineDraft.pool, usineDraft.picks)
+                                    setDraftedTeam(specs.map((o) => createMonInstance(o.speciesId, o.level, { owned: false })))
+                                    frontierReportedRef.current = false
+                                    startRun({ mode: "FACTORY", levelRule: usineDraft.levelRule, playerTopLevel: myArenaLevel || 50, seed: Math.floor(Math.random() * 1e9) })
+                                    setUsineDraft(null)
+                                }} style={{ background: "#6aa0ec", color: "#1a1a22", fontWeight: 800, border: "none", borderRadius: 8, padding: "6px 12px", cursor: usineDraft.picks.length === 3 ? "pointer" : "default", opacity: usineDraft.picks.length === 3 ? 1 : 0.45 }}>Confirmer</button>
+                                <button onClick={() => setUsineDraft(null)} style={{ background: "#555", color: "#fff", fontWeight: 700, border: "none", borderRadius: 8, padding: "6px 10px", cursor: "pointer" }}>Annuler</button>
+                            </div>
+                        </>
+                    )}
                     <div style={{ fontSize: 9, opacity: 0.6, marginTop: 6 }}>(marche pour sortir)</div>
                 </div>
             )}

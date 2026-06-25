@@ -10,8 +10,14 @@ import {
     startFrontierRun, applyFrontierWin, applyFrontierLoss, quitFrontierRun,
 } from "./run"
 import type { FrontierMode, LevelRule } from "./engine"
+import type { MonInstance } from "../battle/types"
 
 let run: FrontierRunState | null = null
+// Équipe de LOCATION jouée à l'Usine (mode FACTORY) : on ne joue PAS l'équipe du joueur.
+// Éphémère (jamais persistée) ; null pour Tour/Dôme (= équipe réelle du joueur).
+let draftedTeam: MonInstance[] | null = null
+export function setDraftedTeam(team: MonInstance[] | null): void { draftedTeam = team }
+export function getDraftedTeam(): MonInstance[] | null { return draftedTeam }
 const listeners = new Set<() => void>()
 function emit() { for (const l of listeners) l() }
 
@@ -58,8 +64,9 @@ export function quitRun(): FrontierRunState | null {
     emit()
     return run
 }
-/** Vide le run courant (après report serveur / sortie de la Zone). */
+/** Vide le run courant + l'équipe de location (après report serveur / sortie de la Zone). */
 export function endRun(): void {
     run = null
+    draftedTeam = null
     emit()
 }
