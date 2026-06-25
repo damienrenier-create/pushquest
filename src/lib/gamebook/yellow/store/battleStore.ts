@@ -27,6 +27,7 @@ import { SBIRE_REWARD_REPS, SBIRE_REWARD_REPS_3, SBIRE_REWARD_REPS_5, SBIRE_REWA
 import { ACE_TRAINER_ID, aceReward, aceWinTaunt } from "../data/ace"
 import { ORCALINE_TRAINER_ID, ORCALINE_GIFT_SPECIES, ORCALINE_GIFT_LEVEL, ORCALINE_BALL_REWARD_ID, ORCALINE_BALL_AT_LEVEL, ORCALINE_GIFT_LINES, ORCALINE_REMATCH_WIN_LINES, ORCALINE_BALL_LINES } from "../data/orcalineTrainer"
 import { GEKROC_STONE_ITEM } from "../data/gekroc"
+import { frontierEnergyRefund } from "../frontier/engine"
 import { HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED } from "../data/hauntedNpcs"
 import type { BadgeId } from "../data/cts"
 import { createMonInstance } from "../battle/factory"
@@ -103,6 +104,8 @@ interface BattleStoreState {
     pendingLearn: boolean
     /** DUEL reflet (Viridian/arène eau) terminé : issue à traiter par l'UI (récompenses) ; null sinon. */
     duelResult: { won: boolean } | null
+    /** ZONE DE COMBAT : combat d'une série Frontier terminé → l'UI enchaîne la vague suivante / clôt la série. */
+    frontierResult: { won: boolean } | null
 }
 
 /** Rôle canonique : A = challenger ("player" canonique), B = défié ("enemy" canonique). */
@@ -124,7 +127,7 @@ interface PvpContext {
     desync: boolean
 }
 
-let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, chainRematchId: null, pendingLearn: false, duelResult: null }
+let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, chainRematchId: null, pendingLearn: false, duelResult: null, frontierResult: null }
 // LIGUE — meilleurs moments du run en cours (best hit par membre du Conseil 4 + Maître), runtime.
 // Upsert par trainerId à chaque victoire de la Ligue ; lus au sacre du Maître pour le Hall of Fame.
 const leagueHighlights: Record<string, LeagueHighlight> = {}
@@ -411,6 +414,14 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
         } else if (storeState.trainer.trainerId.startsWith("duel:")) {
             // DUEL reflet : aucune récompense ici → gérée côté UI (limite 1/jour, Nexus Ball, dialogue
             // Dieu des Nouilles, cadeau croisé). PAS de markTrainerDefeated (ce n'est pas un dresseur permanent).
+        } else if (storeState.trainer.trainerId.startsWith("frontier:")) {
+            // ZONE DE COMBAT : adversaires éphémères (holographes) → aucune récompense dresseur ni
+            // markTrainerDefeated. Les JC + l'enchaînement de vagues sont gérés par le runStore/UI.
+            // Ici on REMBOURSE l'énergie à la VICTOIRE (10→100 % de l'énergie dépensée) ; 0 à la défaite.
+            if (b.outcome === "win") {
+                const refund = frontierEnergyRefund(storeState.energySpent)
+                if (refund > 0) grantReps(refund)
+            }
         } else {
             markTrainerDefeated(storeState.trainer.trainerId)
             const t = getTrainer(storeState.trainer.trainerId)
@@ -465,6 +476,8 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     const aceLossTaunt = (isLose && storeState.trainer?.trainerId === ACE_TRAINER_ID) ? aceWinTaunt() : null
     // DUEL reflet : signale l'issue (gagné/perdu) → l'UI applique les récompenses post-combat.
     const duelResult = storeState.trainer?.trainerId?.startsWith("duel:") ? { won: b.outcome === "win" } : null
+    // ZONE DE COMBAT : issue d'une vague de série → l'UI enchaîne (win) ou clôt la série (lose).
+    const frontierResult = storeState.trainer?.trainerId?.startsWith("frontier:") ? { won: b.outcome === "win" } : null
 
     // 3) Évolutions post-combat (mute l'équipe → re-set pour notifier + Pokédex).
     const team = getPlayer().team
@@ -476,7 +489,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // Un Daemon a-t-il une attaque EN ATTENTE (slots pleins à la montée de niveau / l'évolution) ? → prompt post-combat.
     const pendingLearn = getPlayer().team.some((m) => (m.pendingMoves?.length ?? 0) > 0)
     // Expose les évolutions pour la cinématique post-combat (jouée après "QUITTER").
-    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, chainRematchId, pendingLearn, duelResult })
+    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, chainRematchId, pendingLearn, duelResult, frontierResult })
 
     // 4) Sauvegarde persistante (DB).
     persistYellowSave()
@@ -566,6 +579,10 @@ export function clearAceWin() {
 /** Consommé par la carte une fois l'issue du DUEL reflet traitée (récompenses appliquées). */
 export function clearDuelResult() {
     setStore({ ...storeState, duelResult: null })
+}
+
+export function clearFrontierResult() {
+    setStore({ ...storeState, frontierResult: null })
 }
 
 /** Message de récompense d'ACE (lu au moment d'afficher le dialogue post-combat). */
@@ -893,6 +910,14 @@ export function useDuelResult(): BattleStoreState["duelResult"] {
         subscribe,
         () => getSnapshot().duelResult,
         () => getSnapshot().duelResult,
+    )
+}
+
+export function useFrontierResult(): BattleStoreState["frontierResult"] {
+    return useSyncExternalStore(
+        subscribe,
+        () => getSnapshot().frontierResult,
+        () => getSnapshot().frontierResult,
     )
 }
 
