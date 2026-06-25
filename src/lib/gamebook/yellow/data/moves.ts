@@ -88,6 +88,7 @@ export const MOVES: Record<string, MoveData> = {
     souffle_polaire: { id: "souffle_polaire", name: "Souffle Polaire", type: "GLACE", power: 90, accuracy: 100, pp: 10, effect: { chance: 10, inflictStatus: "FREEZE" }, description: "Gros move Glace ; peut geler." },
     balayage: { id: "balayage", name: "Balayage", type: "COMBAT", power: 60, accuracy: 100, pp: 20, effect: { chance: 10, flinch: true }, description: "Peut apeurer." },
     crochet_maitre: { id: "crochet_maitre", name: "Crochet du Maître", type: "COMBAT", power: 80, accuracy: 90, pp: 10, effect: { highCrit: true }, description: "Crochet à fort taux de critique." },
+    coup_de_boutoir: { id: "coup_de_boutoir", name: "Coup de Boutoir", type: "COMBAT", power: 100, accuracy: 100, pp: 10, effect: { recoilPct: 25 }, description: "Le colosse charge tête baissée comme un bélier dévastateur ; énorme impact, au prix d'un léger contrecoup." },
     // CT28 (Champion) : nouveau move COMBAT multi-coups — frappe 2 à 5 fois (20/coup), distribution uniforme
     // du moteur (≈3,5 coups en moyenne → 40 à 100 dégâts). Distinct du « Crochet du Maître » simple (intact).
     deluge_crochets: { id: "deluge_crochets", name: "Rafale de Crochets", type: "COMBAT", power: 20, accuracy: 95, pp: 10, effect: { multiHit: [2, 5] }, description: "Déluge de crochets : frappe 2 à 5 fois (20 par coup)." },

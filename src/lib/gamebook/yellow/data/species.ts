@@ -628,6 +628,7 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 44, moveId: "seisme" },
             { level: 48, moveId: "mega_sangsue" },
             { level: 54, moveId: "lance_soleil" },
+            { level: 66, moveId: "coup_de_boutoir" }, // capstone 65+ : STAB COMBAT physique (exploite atk 118)
         ],
         catchRate: 45, baseExp: 220, rarity: "RARE", growthRate: "medium_fast", role: "Combat/Plante — tank offensif",
         description: "Ours-druide titanesque au cœur de sève luminescent.",
