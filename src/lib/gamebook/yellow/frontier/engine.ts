@@ -7,6 +7,8 @@
 
 import { SPECIES } from "../data/species"
 import { baseSpeciesOf, speciesAtLevel } from "../data/ace"
+import { typeMultiplier } from "../battle/typeChart"
+import { POKE_TYPES, type PokeType } from "../battle/types"
 import type { Rng } from "../battle/rng"
 
 // ============================================================
@@ -45,11 +47,24 @@ export function resolveFrontierLevel(rule: LevelRule, playerTopLevel: number): n
 // ============================================================
 // Génération d'adversaires (par tier BST, indexée sur la série)
 // ============================================================
-function bstOf(id: string): number {
+export function bstOf(id: string): number {
     const s = SPECIES[id] as any
     if (!s) return 0
     const b = s.baseStats
     return b.hp + b.atk + b.def + b.spe + b.spc
+}
+
+/** Types qui frappent cette espèce en ×2 ou plus (faiblesses), calculés via la vraie table. */
+export function weakTypesOf(speciesId: string): PokeType[] {
+    const s = SPECIES[speciesId] as any
+    if (!s) return []
+    const out: PokeType[] = []
+    for (const atk of POKE_TYPES) {
+        let m = 1
+        for (const d of s.types) m *= typeMultiplier(atk, d as PokeType)
+        if (m >= 2) out.push(atk)
+    }
+    return out
 }
 
 /** Bande de BST autorisée selon la série (la difficulté monte avec le streak). */
@@ -62,7 +77,7 @@ export function bstBandForStreak(streak: number): [number, number] {
 
 // Cache des "formes existant au niveau L" (forme = stade d'évolution atteint à ce niveau).
 const _formsCache = new Map<number, string[]>()
-function formsAtLevel(level: number): string[] {
+export function formsAtLevel(level: number): string[] {
     const hit = _formsCache.get(level)
     if (hit) return hit
     const set = new Set<string>()
