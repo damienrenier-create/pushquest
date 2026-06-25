@@ -49,7 +49,8 @@ import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, grantBonu
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
-import { useRun, startTowerRun, applyWinFromBattle, applyLossFromBattle, endRun, getRun } from "@/lib/gamebook/yellow/frontier/runStore"
+import { useRun, startTowerRun, applyWinFromBattle, applyLossFromBattle, endRun } from "@/lib/gamebook/yellow/frontier/runStore"
+import { postRecordRun } from "@/lib/gamebook/yellow/frontier/frontierApi"
 import type { OpponentSpec, LevelRule } from "@/lib/gamebook/yellow/frontier/engine"
 
 // ZONE DE COMBAT — convertit les specs d'adversaires de la série en instances de combat.
@@ -110,6 +111,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const duelResult = useDuelResult()
     const run = useRun()
     const frontierResult = useFrontierResult()
+    const frontierReportedRef = useRef(false)
     const sbireWin = useSbireWin()
     const aceWin = useAceWin()
     const badgeAwarded = useBadgeAwarded()
@@ -566,9 +568,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (frontierResult.won) {
             applyWinFromBattle(getBattleEnergy().spent)
         } else {
-            const r = getRun()
-            applyLossFromBattle()
-            setToast(`🏯 Série terminée — ${r?.streak ?? 0} victoire(s) · ${r?.jc ?? 0} JC`)
+            const ended = applyLossFromBattle()
+            if (ended && !frontierReportedRef.current) {
+                frontierReportedRef.current = true
+                postRecordRun({ mode: ended.mode, streak: ended.streak, jcEarned: ended.jc }) // persiste JC + record (serveur, neutre si table absente)
+                setToast(`🏯 Série terminée — ${ended.streak} victoire(s) · ${ended.jc} JC enregistrés`)
+            }
             endRun()
         }
         clearFrontierResult()
@@ -997,7 +1002,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     <div style={{ fontSize: 11, opacity: 0.85, marginBottom: 8 }}>Choisis ton mode — série de victoires le plus loin possible :</div>
                     <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
                         {(["L50", "L100", "ADAPT"] as LevelRule[]).map((rule) => (
-                            <button key={rule} onClick={() => startTowerRun({ levelRule: rule, playerTopLevel: myArenaLevel || 50, seed: Math.floor(Math.random() * 1e9) })}
+                            <button key={rule} onClick={() => { frontierReportedRef.current = false; startTowerRun({ levelRule: rule, playerTopLevel: myArenaLevel || 50, seed: Math.floor(Math.random() * 1e9) }) }}
                                 style={{ background: "#e8893a", color: "#1a1a22", fontWeight: 800, border: "none", borderRadius: 8, padding: "6px 10px", cursor: "pointer" }}>
                                 {rule === "L50" ? "Niv 50" : rule === "L100" ? "Niv 100" : "Adaptatif"}
                             </button>
