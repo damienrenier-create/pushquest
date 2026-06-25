@@ -40,7 +40,7 @@ import { useGameStore, setCurrentNickname, DEFAULT_SPAWN } from "@/lib/gamebook/
 import { YELLOW_ENTRANCE_MAP_ID } from "@/lib/gamebook/yellow/featureFlag"
 import { YELLOW_MAPS, CENDREVILLE_SPAWN } from "@/lib/gamebook/yellow/maps"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
-import { useBattle, useEvolutions, clearEvolutions, useChampionRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getGiftCtMove, startTrainerBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, useEvolutions, clearEvolutions, useChampionRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getGiftCtMove, startTrainerBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult, useFrontierResult, clearFrontierResult, getBattleEnergy } from "@/lib/gamebook/yellow/store/battleStore"
 import { aceLoseLine } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
@@ -49,6 +49,13 @@ import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, grantBonu
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
+import { useRun, startTowerRun, applyWinFromBattle, applyLossFromBattle, endRun, getRun } from "@/lib/gamebook/yellow/frontier/runStore"
+import type { OpponentSpec, LevelRule } from "@/lib/gamebook/yellow/frontier/engine"
+
+// ZONE DE COMBAT — convertit les specs d'adversaires de la série en instances de combat.
+function buildFrontierEnemies(opponent: OpponentSpec[]) {
+    return opponent.map((o) => createMonInstance(o.speciesId, o.level, { owned: false }))
+}
 import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { ITEMS, getItem } from "@/lib/gamebook/yellow/data/items"
@@ -101,6 +108,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const newDexEntry = useNewDexEntry()
     const whiteout = useWhiteout()
     const duelResult = useDuelResult()
+    const run = useRun()
+    const frontierResult = useFrontierResult()
     const sbireWin = useSbireWin()
     const aceWin = useAceWin()
     const badgeAwarded = useBadgeAwarded()
@@ -549,6 +558,31 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         }
     }, [chainRematchId, battle, evolutions.length, dialogue, badgeAwarded, launchRematch])
 
+    // ZONE DE COMBAT — ISSUE d'une vague (après que le combat soit quitté + évolutions jouées).
+    // Victoire → on avance la série (JC + remboursement énergie via runStore/battleStore) ; défaite →
+    // fin de série (résumé + clôture). Le lancement de la vague suivante est géré par l'effet ci-dessous.
+    useEffect(() => {
+        if (!frontierResult || battle || evolutions.length > 0) return
+        if (frontierResult.won) {
+            applyWinFromBattle(getBattleEnergy().spent)
+        } else {
+            const r = getRun()
+            applyLossFromBattle()
+            setToast(`🏯 Série terminée — ${r?.streak ?? 0} victoire(s) · ${r?.jc ?? 0} JC`)
+            endRun()
+        }
+        clearFrontierResult()
+    }, [frontierResult, battle, evolutions.length])
+
+    // ZONE DE COMBAT — LANCEMENT de la vague courante : série active + écran libre (pas de combat, ni
+    // issue en attente, ni overlay) → on envoie l'équipe contre `run.opponent`. Gardé pour ne jamais
+    // boucler (un combat en cours ou une issue non traitée bloquent le relancement).
+    useEffect(() => {
+        if (!run || run.status !== "active") return
+        if (battle || frontierResult || evolutions.length > 0 || dialogue || pendingLearn || newDexEntry) return
+        startTrainerBattle(getPlayer().team, buildFrontierEnemies(run.opponent), Math.floor(Math.random() * 1e9), { trainerId: "frontier:" + run.mode, aiLevel: "trainer" })
+    }, [run, battle, frontierResult, evolutions.length, dialogue, pendingLearn, newDexEntry])
+
     // Revanche d'arène gagnée : dialogue de récompense post-combat (énergie / CT Mirage),
     // une fois le combat quitté ET la cinématique d'évolution terminée (même règle que badge/ACE).
     useEffect(() => {
@@ -955,6 +989,29 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {/* Boutique (vendeur) */}
             {!battle && menu === "moves" && <MovesPanel close={() => setMenu("pause")} />}
             {!battle && menu === "hof" && <HallOfFameViewer close={() => setMenu("pause")} />}
+
+            {/* ZONE DE COMBAT — entrée Tour (placeholder, non-bloquant : marche pour sortir) */}
+            {!battle && !run && mapPlayer.mapId === "yellow_combat_tour" && !dialogue && player.team.length > 0 && (
+                <div style={{ position: "absolute", left: "50%", top: 16, transform: "translateX(-50%)", zIndex: 60, background: "#1a1a22ee", color: "#fff", border: "2px solid #e8893a", borderRadius: 12, padding: "10px 14px", textAlign: "center", maxWidth: 300 }}>
+                    <div style={{ fontWeight: 800, marginBottom: 6 }}>🏯 TOUR DE COMBAT</div>
+                    <div style={{ fontSize: 11, opacity: 0.85, marginBottom: 8 }}>Choisis ton mode — série de victoires le plus loin possible :</div>
+                    <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
+                        {(["L50", "L100", "ADAPT"] as LevelRule[]).map((rule) => (
+                            <button key={rule} onClick={() => startTowerRun({ levelRule: rule, playerTopLevel: myArenaLevel || 50, seed: Math.floor(Math.random() * 1e9) })}
+                                style={{ background: "#e8893a", color: "#1a1a22", fontWeight: 800, border: "none", borderRadius: 8, padding: "6px 10px", cursor: "pointer" }}>
+                                {rule === "L50" ? "Niv 50" : rule === "L100" ? "Niv 100" : "Adaptatif"}
+                            </button>
+                        ))}
+                    </div>
+                    <div style={{ fontSize: 9, opacity: 0.6, marginTop: 6 }}>(marche pour sortir)</div>
+                </div>
+            )}
+            {/* ZONE DE COMBAT — HUD de série pendant le run */}
+            {run && run.status === "active" && (
+                <div style={{ position: "absolute", left: 8, top: 8, zIndex: 60, background: "#1a1a22cc", color: "#fff", borderRadius: 8, padding: "4px 8px", fontSize: 11, fontWeight: 700 }}>
+                    🏯 Série {run.streak + 1} · {run.jc} JC{run.isBoss ? " · 👑 BOSS" : ""}
+                </div>
+            )}
             <GuidePanel />
             <LibraryPanel />
             <AdvisorPanel />
