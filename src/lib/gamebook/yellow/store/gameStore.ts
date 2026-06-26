@@ -661,8 +661,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
-        // Terminal du labo : ouvre le menu d'EXPÉRIENCES (défis).
-        if (npc.id === "y_lab_computer") {
+        // Terminal du labo OU le scientifique : ouvrent le menu d'EXPÉRIENCES (défis du labo).
+        if (npc.id === "y_lab_computer" || npc.id === "y_lab_scientist") {
             set({ labOpen: true })
             return
         }

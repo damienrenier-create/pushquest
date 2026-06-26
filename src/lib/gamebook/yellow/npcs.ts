@@ -351,7 +351,7 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         dialoguesAfter: ["*Le terminal d'expériences scientifiques.*"], // repli si non intercepté
     },
     {
-        // Scientifique : remet la récompense d'un défi réussi (intercepté gameStore). (5,3) → (5,4) ↑.
+        // Scientifique : ouvre le menu d'EXPÉRIENCES (défis du labo) — intercepté gameStore. (5,3) → (5,4) ↑.
         id: "y_lab_scientist",
         name: "SCIENTIFIQUE",
         mapId: "yellow_infirmary_2e",
@@ -360,7 +360,7 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         sprite: { emoji: "", color: "#e0f0ff" }, // invisible (le scientifique est dessiné dans le décor)
         initialX: 5,
         initialY: 3,
-        dialoguesAfter: ["*Le scientifique t'observe par-dessus ses lunettes.*", "Reviens quand tu auras accompli ton défi."],
+        dialoguesAfter: ["*Le scientifique ajuste ses lunettes et te montre le terminal d'expériences.*"], // repli si non intercepté
     },
     {
         // ÉMISSAIRE DU DIEU SPAGHETTI : remet la Daemonflûte au nouveau Maître (intercepté gameStore).
