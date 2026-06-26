@@ -52,7 +52,8 @@ import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { useRun, startTowerRun, startRun, applyWinFromBattle, applyLossFromBattle, endRun, setDraftedTeam, getDraftedTeam } from "@/lib/gamebook/yellow/frontier/runStore"
 import { postRecordRun } from "@/lib/gamebook/yellow/frontier/frontierApi"
 import { generateRentalPool, buildDraftTeam, type RentalCandidate } from "@/lib/gamebook/yellow/frontier/factory"
-import { resolveFrontierLevel, type OpponentSpec, type LevelRule } from "@/lib/gamebook/yellow/frontier/engine"
+import { resolveFrontierLevel, JC_PER_WIN, JC_BOSS_MULT, type OpponentSpec, type LevelRule } from "@/lib/gamebook/yellow/frontier/engine"
+import { createDome, advanceDome, playerOpponent, DOME_ROUNDS, type DomeState } from "@/lib/gamebook/yellow/frontier/dome"
 import { Rng } from "@/lib/gamebook/yellow/battle/rng"
 
 // ZONE DE COMBAT — convertit les specs d'adversaires de la série en instances de combat.
@@ -115,6 +116,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const frontierResult = useFrontierResult()
     const frontierReportedRef = useRef(false)
     const [usineDraft, setUsineDraft] = useState<{ levelRule: LevelRule; pool: RentalCandidate[]; picks: string[] } | null>(null)
+    // DÔME (bracket de 8, état local éphémère) : state du tournoi + règle + graine + JC cumulés.
+    const [dome, setDome] = useState<{ state: DomeState; rule: LevelRule; seed: number; jc: number } | null>(null)
     const sbireWin = useSbireWin()
     const aceWin = useAceWin()
     const badgeAwarded = useBadgeAwarded()
@@ -568,6 +571,27 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // fin de série (résumé + clôture). Le lancement de la vague suivante est géré par l'effet ci-dessous.
     useEffect(() => {
         if (!frontierResult || battle || evolutions.length > 0) return
+        // DÔME (bracket) : `run` est null ; on avance le bracket selon l'issue du match du joueur.
+        if (dome && dome.state.status === "active") {
+            const won = frontierResult.won
+            const rng = new Rng((dome.seed ^ ((dome.state.round + 1) * 0x9e3779b1)) >>> 0)
+            const next = advanceDome(dome.state, rng, won)
+            const base = JC_PER_WIN[dome.rule] ?? JC_PER_WIN.L50
+            // JC : base par manche gagnée ; la FINALE (championnat) compte comme un boss (×5).
+            const jc = dome.jc + (won ? (next.status === "won" ? base * JC_BOSS_MULT : base) : 0)
+            if (next.status === "active") {
+                setDome({ ...dome, state: next, jc }) // manche suivante lancée par l'effet dédié
+            } else {
+                const roundsWon = won ? DOME_ROUNDS : dome.state.round // éliminé au round R = R manches gagnées
+                postRecordRun({ mode: "DOME", streak: Math.max(0, roundsWon), jcEarned: jc })
+                setToast(next.status === "won"
+                    ? `🏆 DÔME REMPORTÉ ! ${jc} JC enregistrés.`
+                    : `🏆 Dôme — éliminé en ${["quart", "demi", "finale"][dome.state.round] ?? "manche"}. ${jc} JC enregistrés.`)
+                setDome(null)
+            }
+            clearFrontierResult()
+            return
+        }
         if (frontierResult.won) {
             applyWinFromBattle(getBattleEnergy().spent)
         } else {
@@ -580,7 +604,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             endRun()
         }
         clearFrontierResult()
-    }, [frontierResult, battle, evolutions.length])
+    }, [frontierResult, battle, evolutions.length, dome])
 
     // ZONE DE COMBAT — LANCEMENT de la vague courante : série active + écran libre (pas de combat, ni
     // issue en attente, ni overlay) → on envoie l'équipe contre `run.opponent`. Gardé pour ne jamais
@@ -592,6 +616,16 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         const myTeam = run.mode === "FACTORY" ? (getDraftedTeam() ?? getPlayer().team) : getPlayer().team
         startTrainerBattle(myTeam, buildFrontierEnemies(run.opponent), Math.floor(Math.random() * 1e9), { trainerId: "frontier:" + run.mode, aiLevel: "trainer" })
     }, [run, battle, frontierResult, evolutions.length, dialogue, pendingLearn, newDexEntry])
+
+    // DÔME — lance le match du round courant (TON équipe vs ton adversaire de bracket) tant que le tournoi
+    // est actif et l'écran libre. L'issue est traitée par l'effet de résultat (advanceDome).
+    useEffect(() => {
+        if (!dome || dome.state.status !== "active") return
+        if (battle || frontierResult || evolutions.length > 0 || dialogue || pendingLearn || newDexEntry) return
+        const opp = playerOpponent(dome.state)
+        if (!opp) return
+        startTrainerBattle(getPlayer().team, buildFrontierEnemies(opp.team), Math.floor(Math.random() * 1e9), { trainerId: "frontier:DOME", aiLevel: "trainer" })
+    }, [dome, battle, frontierResult, evolutions.length, dialogue, pendingLearn, newDexEntry])
 
     // Revanche d'arène gagnée : dialogue de récompense post-combat (énergie / CT Mirage),
     // une fois le combat quitté ET la cinématique d'évolution terminée (même règle que badge/ACE).
@@ -1067,10 +1101,36 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     <div style={{ fontSize: 9, opacity: 0.6, marginTop: 6 }}>(marche pour sortir)</div>
                 </div>
             )}
+            {/* ZONE DE COMBAT — DÔME : tournoi à élimination (bracket de 8), TON équipe, 3 manches */}
+            {!battle && !dome && mapPlayer.mapId === "yellow_combat_dome" && !dialogue && player.team.length > 0 && (
+                <div style={{ position: "absolute", left: "50%", top: 16, transform: "translateX(-50%)", zIndex: 60, background: "#1a1a22ee", color: "#fff", border: "2px solid #f1c40f", borderRadius: 12, padding: "10px 14px", textAlign: "center", maxWidth: 320 }}>
+                    <div style={{ fontWeight: 800, marginBottom: 6 }}>🏆 DÔME DE COMBAT</div>
+                    <div style={{ fontSize: 11, opacity: 0.85, marginBottom: 8 }}>Tournoi à élimination (8 dresseurs) — 3 manches d&apos;affilée avec TON équipe. Pas de soin entre les manches !</div>
+                    <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
+                        {(["L50", "L100", "ADAPT"] as LevelRule[]).map((rule) => (
+                            <button key={rule} onClick={() => {
+                                const lvl = resolveFrontierLevel(rule, myArenaLevel || 50)
+                                const seed = Math.floor(Math.random() * 1e9)
+                                const playerTeam = getPlayer().team.map((m) => ({ speciesId: m.speciesId, level: lvl }))
+                                setDome({ state: createDome(new Rng(seed), { level: lvl, streak: 14, playerTeam }), rule, seed, jc: 0 })
+                            }} style={{ background: "#f1c40f", color: "#1a1a22", fontWeight: 800, border: "none", borderRadius: 8, padding: "6px 10px", cursor: "pointer" }}>
+                                {rule === "L50" ? "Niv 50" : rule === "L100" ? "Niv 100" : "Adaptatif"}
+                            </button>
+                        ))}
+                    </div>
+                    <div style={{ fontSize: 9, opacity: 0.6, marginTop: 6 }}>(marche pour sortir)</div>
+                </div>
+            )}
             {/* ZONE DE COMBAT — HUD de série pendant le run */}
             {run && run.status === "active" && (
                 <div style={{ position: "absolute", left: 8, top: 8, zIndex: 60, background: "#1a1a22cc", color: "#fff", borderRadius: 8, padding: "4px 8px", fontSize: 11, fontWeight: 700 }}>
                     🏯 Série {run.streak + 1} · {run.jc} JC{run.isBoss ? " · 👑 BOSS" : ""}
+                </div>
+            )}
+            {/* ZONE DE COMBAT — HUD du Dôme (round courant) */}
+            {dome && dome.state.status === "active" && (
+                <div style={{ position: "absolute", left: 8, top: 8, zIndex: 60, background: "#1a1a22cc", color: "#fff", borderRadius: 8, padding: "4px 8px", fontSize: 11, fontWeight: 700 }}>
+                    🏆 Dôme · {(["Quart", "Demi", "Finale"][dome.state.round]) ?? `Manche ${dome.state.round + 1}`} ({dome.state.round + 1}/{DOME_ROUNDS}) · {dome.jc} JC
                 </div>
             )}
             <GuidePanel />
