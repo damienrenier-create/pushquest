@@ -17,9 +17,9 @@ import {
     type SideId,
 } from "../battle/engine"
 import type { AiLevel } from "../battle/ai"
-import type { MonInstance } from "../battle/types"
+import type { MonInstance, PokeType } from "../battle/types"
 import { markSeen, markCaught, getPokedex } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, recordOrcalineDefeat, orcalineLevelForWins, markSylvebarbeAwake } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, recordOrcalineDefeat, orcalineLevelForWins, markSylvebarbeAwake, addCtDamage } from "./playerStore"
 import { getCt } from "../data/cts"
 import { getMove } from "../data/moves"
 import { getSpecies } from "../data/species"
@@ -487,6 +487,12 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     const duelResult = storeState.trainer?.trainerId?.startsWith("duel:") ? { won: b.outcome === "win" } : null
     // ZONE DE COMBAT : issue d'une vague de série → l'UI enchaîne (win) ou clôt la série (lose).
     const frontierResult = storeState.trainer?.trainerId?.startsWith("frontier:") ? { won: b.outcome === "win" } : null
+
+    // DÉFI CT (labo) : remonte les dégâts par type infligés CE combat vers le défi CT actif
+    // (no-op s'il n'y a pas de défi CT du bon type ; b.dmgByType absent en PvP).
+    if (b.dmgByType) {
+        for (const [type, amount] of Object.entries(b.dmgByType)) addCtDamage(type as PokeType, amount ?? 0)
+    }
 
     // 3) Évolutions post-combat (mute l'équipe → re-set pour notifier + Pokédex).
     const team = getPlayer().team

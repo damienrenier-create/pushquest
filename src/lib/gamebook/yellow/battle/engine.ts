@@ -5,7 +5,7 @@
 // exécution des actions (précision, dégâts, effets) → fin de tour (résiduels) →
 // KO / changement forcé / issue. Produit une FILE D'ÉVÉNEMENTS que l'UI rejoue.
 
-import type { BattleMon, MonInstance, MajorStatus, MoveData, StageKey } from "./types"
+import type { BattleMon, MonInstance, MajorStatus, MoveData, StageKey, PokeType } from "./types"
 import { neutralStages } from "./types"
 import { Rng } from "./rng"
 import { getSpecies } from "../data/species"
@@ -83,6 +83,9 @@ export interface BattleState {
     /** Transitoire : le Daemon JOUEUR a-t-il pu exécuter son action ce tour ? false s'il a été
      *  mis K.O. avant d'agir (adversaire plus rapide) → le store rembourse alors les reps. */
     lastPlayerActed?: boolean
+    /** DÉFI CT (labo) : cumul des dégâts INFLIGÉS PAR LE JOUEUR ce combat, par type d'attaque (PvE solo).
+     *  Lu en fin de combat (finishBattle) pour alimenter le défi. Absent en PvP. */
+    dmgByType?: Partial<Record<PokeType, number>>
 }
 
 export type PlayerAction =
@@ -647,6 +650,12 @@ function dealMoveDamage(state: BattleState, side: SideId, move: MoveData, rng: R
     if (result.damage > (attacker.bestDmg ?? 0)) { attacker.bestDmg = result.damage; attacker.bestDmgMove = move.name }
     // Record de CE COMBAT uniquement (runtime, repart de 0 à chaque combat) → débrief GOAT.
     if (result.damage > (attacker.battleBestDmg ?? 0)) { attacker.battleBestDmg = result.damage; attacker.battleBestDmgMove = move.name }
+    // DÉFI CT (labo) : cumule les dégâts infligés PAR LE JOUEUR, par type d'attaque (PvE solo uniquement).
+    // Placé APRÈS applyDamage → aucun RNG consommé ensuite (isCrit/randomFactor tirés avant) → déterminisme intact.
+    if (!state.pvp && side === "player" && result.damage > 0) {
+        if (!state.dmgByType) state.dmgByType = {}
+        state.dmgByType[move.type] = (state.dmgByType[move.type] ?? 0) + result.damage
+    }
     if (isCrit) events.push({ kind: "message", text: "Coup critique !" })
     const effMsg = effectivenessMessage(eff)
     if (effMsg) events.push({ kind: "message", text: effMsg })
@@ -1228,6 +1237,8 @@ function structuredCloneState(s: BattleState): BattleState {
         // Deep-clone défensif (cohérent avec enemyEnergy) : évite tout partage de référence
         // de l'objet { teamIndex } avec l'état précédent détenu par le store.
         enemySendOut: s.enemySendOut ? { ...s.enemySendOut } : null,
+        // Cumul dégâts/type (défi CT) : copie pour ne pas partager la réf entre tours.
+        dmgByType: s.dmgByType ? { ...s.dmgByType } : undefined,
     }
 }
 
