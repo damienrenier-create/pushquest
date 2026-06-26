@@ -89,11 +89,14 @@ export async function POST(req: NextRequest) {
 
         if (action === "spend") {
             const amount = Math.max(0, Math.floor(Number(body.amount) || 0))
+            const symbol = typeof body.symbol === "string" ? body.symbol : null
             const existing = await fp.findUnique({ where: { userId: auth.userId } })
             const jc = existing?.jc ?? 0
             if (jc < amount) return NextResponse.json({ ok: false, reason: "insufficient", jc })
-            const saved = await fp.update({ where: { userId: auth.userId }, data: { jc: jc - amount } })
-            return NextResponse.json({ ok: true, jc: saved.jc })
+            const symbols = [...pickProfile(existing).symbols]
+            if (symbol && !symbols.includes(symbol)) symbols.push(symbol) // achat d'un symbole de prestige (atomique)
+            const saved = await fp.update({ where: { userId: auth.userId }, data: { jc: jc - amount, ...(symbol ? { symbols } : {}) } })
+            return NextResponse.json({ ok: true, jc: saved.jc, symbols: pickProfile(saved).symbols })
         }
 
         return NextResponse.json({ error: "Bad action" }, { status: 400 })

@@ -37,15 +37,16 @@ export async function postRecordRun(input: { mode: string; streak: number; jcEar
     } catch { return null }
 }
 
-/** Dépense des JC (boutique). Renvoie le succès + le nouveau solde. */
-export async function postSpend(amount: number): Promise<{ ok: boolean; jc: number }> {
+/** Dépense des JC (boutique). `symbol` optionnel = achat d'un symbole de prestige (ajouté atomiquement).
+ *  Renvoie le succès + le nouveau solde (+ la liste des symboles si fournie). */
+export async function postSpend(amount: number, symbol?: string): Promise<{ ok: boolean; jc: number; symbols?: string[] }> {
     try {
         const r = await fetch(BASE, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "spend", amount }),
+            body: JSON.stringify({ action: "spend", amount, ...(symbol ? { symbol } : {}) }),
         })
         const j = await r.json()
-        return { ok: !!j?.ok, jc: typeof j?.jc === "number" ? j.jc : 0 }
+        return { ok: !!j?.ok, jc: typeof j?.jc === "number" ? j.jc : 0, symbols: Array.isArray(j?.symbols) ? j.symbols : undefined }
     } catch { return { ok: false, jc: 0 } }
 }

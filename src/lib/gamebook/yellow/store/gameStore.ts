@@ -73,6 +73,7 @@ interface GameStore {
     libraryOpen: boolean // Registre des Dresseurs (bibliothèque de l'infirmerie)
     advisorOpen: boolean // Conseiller (PNJ à côté du Centre) : questions → base de données
     labOpen: boolean // Terminal d'expériences (labo, étage de l'infirmerie)
+    combatShopOpen: boolean // Boutique de Jetons de Combat (marchand du hub Zone de Combat)
     signOpen: number | null // index du panneau du parc ouvert (pop-up dédié), null = fermé
     posterImage: string | null // poster mural du Centre affiché en overlay (src PNG), null = fermé
     poster2Step: number // compteur de SESSION du poster (12,0) : 0→PNG2 · 1→PNG3 · 2+→Dieu des Pâtes
@@ -108,6 +109,7 @@ interface GameStore {
     closeLibrary: () => void
     closeAdvisor: () => void
     closeLab: () => void
+    closeCombatShop: () => void
     closeSign: () => void
     closePoster: () => void
     /** Affiche un dialogue simple (ex. explication post-combat du sbire). */
@@ -316,6 +318,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     libraryOpen: false,
     advisorOpen: false,
     labOpen: false,
+    combatShopOpen: false,
     signOpen: null,
     posterImage: null,
     poster2Step: 0,
@@ -338,7 +341,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     move: (dir) => {
         const { player, map, dialogue } = get()
         // Mouvement bloqué pendant un dialogue, une boutique, le PC ou un combat.
-        if (dialogue || get().shopOpen || get().pcOpen || get().guideOpen || get().libraryOpen || get().advisorOpen || get().labOpen || get().signOpen !== null) return
+        if (dialogue || get().shopOpen || get().pcOpen || get().guideOpen || get().libraryOpen || get().advisorOpen || get().labOpen || get().combatShopOpen || get().signOpen !== null) return
         if (getBattleSnapshot().battle) return
 
         const next = tryMove(player, dir, map)
@@ -680,6 +683,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
+        // Marchand de Jetons de Combat (hub Zone de Combat) : ouvre la boutique JC.
+        if (npc.id === "y_combat_merchant") {
+            set({ combatShopOpen: true })
+            return
+        }
+
         // Panneau du parc (Route Nord) : chaque panneau ouvre SON pop-up dédié.
         // id = "y_park_sign_<n>" (1-based) → index de sujet 0-based.
         const signMatch = npc.id.match(/^y_park_sign_(\d+)$/)
@@ -1016,6 +1025,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     closeLibrary: () => set({ libraryOpen: false }),
     closeAdvisor: () => set({ advisorOpen: false }),
     closeLab: () => set({ labOpen: false }),
+    closeCombatShop: () => set({ combatShopOpen: false }),
     closeSign: () => set({ signOpen: null }),
     closePoster: () => set({ posterImage: null }),
     closePc: () => set({ pcOpen: false }),

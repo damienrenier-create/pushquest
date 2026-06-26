@@ -123,6 +123,18 @@ export const YELLOW_NPCS: NpcDefinition[] = [
             "🪧 « À l'ÉTAGE du Centre Daemon : gagne des CT pour pas très cher, de l'énergie… et même un DAEMON ! »",
         ],
     },
+    // MARCHAND DE JETONS DE COMBAT (hub de la Zone de Combat) : ouvre la boutique JC (intercepté gameStore).
+    {
+        id: "y_combat_merchant",
+        name: "MARCHAND",
+        mapId: "yellow_zone_combat",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🛒", color: "#f1c40f" }, // repli si le PNG NPC_SPRITES manquait
+        initialX: 10,
+        initialY: 9,
+        dialoguesAfter: ["*Le marchand de Jetons de Combat t'accueille.*"], // repli si non intercepté
+    },
 
     // === CENDREVILLE — TECHNICIEN devant la Centrale (21,18) : indice sur Gékroc + la Pierre d'évolution ===
     {

@@ -34,6 +34,7 @@ import LibraryPanel from "./LibraryPanel"
 import MovesPanel from "./MovesPanel"
 import AdvisorPanel from "./AdvisorPanel"
 import LabPanel from "./LabPanel"
+import CombatShopModal from "./CombatShopModal"
 import ParkSignPanel from "./ParkSignPanel"
 import PosterPanel from "./PosterPanel"
 import { useGameStore, setCurrentNickname, DEFAULT_SPAWN } from "@/lib/gamebook/yellow/store/gameStore"
@@ -96,6 +97,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const closeAdvisor = useGameStore((s) => s.closeAdvisor)
     const labOpen = useGameStore((s) => s.labOpen)
     const closeLab = useGameStore((s) => s.closeLab)
+    const combatShopOpen = useGameStore((s) => s.combatShopOpen)
+    const closeCombatShop = useGameStore((s) => s.closeCombatShop)
     const signOpen = useGameStore((s) => s.signOpen)
     const closeSign = useGameStore((s) => s.closeSign)
     const posterImage = useGameStore((s) => s.posterImage)
@@ -1137,6 +1140,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             <LibraryPanel />
             <AdvisorPanel />
             <LabPanel />
+            {combatShopOpen && <CombatShopModal onClose={closeCombatShop} />}
             <ParkSignPanel />
             <PosterPanel />
             {/* EncounterTransition est désormais rendu DANS BattleScreen (calé sur la scène). */}
