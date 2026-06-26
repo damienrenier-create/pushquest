@@ -115,7 +115,7 @@ export default function LabPanel() {
 
                 {paused ? (
                     <div style={{ padding: 16, fontSize: 12, color: INK, lineHeight: 1.5 }}>
-                        🔒 Le labo est réservé à ta <b>récompense de sacre</b>. Va d'abord récupérer la <b>Daemonflûte</b> auprès de l'émissaire (ici même), puis reviens — les défis rouvriront.
+                        🔒 Le labo est réservé à ta <b>récompense de sacre</b>. Parle d'abord au <b>scientifique</b> pour récupérer la <b>Daemonflûte</b>, puis reviens — les défis rouvriront.
                     </div>
                 ) : (
                     <>
