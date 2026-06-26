@@ -33,6 +33,8 @@ export interface CtData {
     /** TYPES SUPPLÉMENTAIRES autorisés à apprendre la CT (en plus du type de l'attaque) — façon Gen 1,
      *  où les grosses TM (Laser Glace, Séisme…) s'apprenaient bien au-delà de leur type. */
     alsoTypes?: PokeType[]
+    /** EXCLUSIVE AU LABO : jamais en boutique. S'obtient UNIQUEMENT en réussissant le défi CT du labo. */
+    labOnly?: boolean
 }
 // NB : TOUTE CT est un « achat unique » (cf. purchasableCts + boughtCts) — Gen 1, une TM = un usage.
 
@@ -113,6 +115,30 @@ export const CTS: CtData[] = [
     { id: "ct37", label: "CT37", moveId: "souffle_primordial", price: 0, gift: true },
     // CADEAU du SBIRE (6e combat du jour, UNE seule fois) : Fouet de Nouilles, universel & modeste.
     { id: "ct38", label: "CT38", moveId: "fouet_de_nouilles", price: 0, gift: true, universal: true },
+    // CT39 : Coup de Boutoir (COMBAT, type-lock) — palier fort du défi CT Combat du labo.
+    { id: "ct39", label: "CT39", moveId: "coup_de_boutoir", price: 530 },
+
+    // === CT EXCLUSIVES AU LABO (labOnly : jamais en boutique, gagnées seulement au défi CT) ===
+    // Donnent une 2e (voire 3e) CT atteignable aux types qui en manquaient. Seuil = puissance × 100.
+    // -- VOL (en plus de ct33 vol) --
+    { id: "ct40", label: "CT40", moveId: "fonce_bec", price: 0, labOnly: true },        // 75 → 7 500
+    { id: "ct41", label: "CT41", moveId: "pique_fatal", price: 0, labOnly: true },       // 90 → 9 000
+    // -- GLACE (en plus de ct13 souffle_polaire) --
+    { id: "ct42", label: "CT42", moveId: "coup_d_givre", price: 0, labOnly: true },      // 65 → 6 500
+    { id: "ct43", label: "CT43", moveId: "blizzard", price: 0, labOnly: true },          // 110 → 11 000
+    // -- ROCHE (en plus de ct20 lame_roche) --
+    { id: "ct44", label: "CT44", moveId: "eboulis", price: 0, labOnly: true },           // 75 → 7 500
+    { id: "ct45", label: "CT45", moveId: "roc_titanesque", price: 0, labOnly: true },    // 120 → 12 000
+    // -- DRAGON (en plus de ct15 draco_charge) --
+    { id: "ct46", label: "CT46", moveId: "draco_souffle", price: 0, labOnly: true },     // 60 → 6 000
+    { id: "ct47", label: "CT47", moveId: "griffe_draconique", price: 0, labOnly: true }, // 80 (physique) → 8 000
+    // -- POISON (en plus de ct32 miasme_corrosif) --
+    { id: "ct48", label: "CT48", moveId: "crachat_acide", price: 0, labOnly: true },     // 40 → 4 000
+    { id: "ct49", label: "CT49", moveId: "bombe_beurk", price: 0, labOnly: true },       // 90 → 9 000
+    // -- PSY (en plus de ct16 vague_mentale) ; eveil_divin laissé en signature de Divinpâte --
+    { id: "ct50", label: "CT50", moveId: "choc_mental", price: 0, labOnly: true },       // 50 → 5 000
+    // -- SPECTRE (en plus de ct26 frappe_audela 85, un cadeau de boss) : 2e tier distinct --
+    { id: "ct51", label: "CT51", moveId: "griffe_spectrale", price: 0, labOnly: true },  // 70 → 7 000
 ]
 
 export function getCt(id: string): CtData | null {
@@ -141,6 +167,7 @@ export function purchasableCts(badges: BadgeId[], bought: string[] = []): CtData
     const has3 = (["feu", "plante", "eau"] as BadgeId[]).every((b) => badges.includes(b))
     return CTS.filter((c) => {
         if (c.gift) return false // jamais en vente : obtenue uniquement en cadeau
+        if (c.labOnly) return false // exclusive au labo : obtenue uniquement au défi CT, jamais en boutique
         if (bought.includes(c.id)) return false // achat unique déjà effectué → retirée du shop
         if (c.champion) return has3
         if (c.badge) return badges.includes(c.badge)
