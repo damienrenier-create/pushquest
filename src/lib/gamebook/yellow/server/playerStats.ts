@@ -6,6 +6,7 @@
 
 import prisma from "@/lib/prisma"
 import { getTodayISO, getYesterdayISO, getDailyTargetWithModifiers, getDailyTargetForUserOnDate, getDatesInRangeToYesterday } from "@/lib/challenge"
+import { ownQuotaTotal } from "@/lib/quota"
 import type { WildPlayerCtx } from "../data/encounters"
 import type { SaiyanWindow } from "../data/saiyanConfig"
 
@@ -69,6 +70,36 @@ export async function getSaiyanWindow(userId: string, since: string): Promise<Sa
     // ses reps). Joueurs normaux : inchangés (FineRecord + ses exemptions).
     const hadFine = user.isGuest ? missedQuota : !!fine
     return { hadFine, quotaEveryDay }
+}
+
+// ════════════ DÉFIS PHYSIQUES DU LABO (validation serveur, vraies reps) ════════════
+
+/** Total des reps d'un exercice AUJOURD'HUI (reps brutes). Sert au snapshot-delta du défi « 50 pompes/1h ». */
+export async function getTodayExerciseTotal(userId: string, exercise: string): Promise<number> {
+    const date = getTodayISO()
+    const sets = await (prisma as any).exerciseSet.findMany({ where: { userId, date, exercise }, select: { reps: true } })
+    return (sets as { reps: number }[]).reduce((a, s) => a + Math.max(0, s.reps), 0)
+}
+
+/** Plus grosse SÉRIE unique d'un exercice (à vie). Sert au défi « 150 squats en 1 série ». */
+export async function getMaxSingleSet(userId: string, exercise: string): Promise<number> {
+    const agg = await (prisma as any).exerciseSet.aggregate({ _max: { reps: true }, where: { userId, exercise } })
+    return Math.max(0, agg?._max?.reps ?? 0)
+}
+
+/** Progression du quota du jour : effort PROPRE (setEffort, hors reps offertes) vs cible. Défi « quota×2 ». */
+export async function getDayQuotaProgress(userId: string): Promise<{ total: number; quota: number }> {
+    const date = getTodayISO()
+    const [user, sets] = await Promise.all([
+        (prisma as any).user.findUnique({ where: { id: userId } }),
+        (prisma as any).exerciseSet.findMany({ where: { userId, date }, select: { date: true, exercise: true, reps: true, offeredToUserId: true } }),
+    ])
+    const total = ownQuotaTotal((sets ?? []) as { date: string; exercise: string; reps: number; offeredToUserId?: string | null }[], date)
+    let quota = 1
+    if (user) {
+        try { const { target } = await getDailyTargetWithModifiers(user, date, prisma); quota = Math.max(1, target) } catch { /* défaut 1 */ }
+    }
+    return { total, quota }
 }
 
 /** Contexte neutre (aucun bonus) — repli si on n'a pas de données. */
