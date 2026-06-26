@@ -1,0 +1,39 @@
+// src/lib/gamebook/yellow/data/sylvebarbe.ts
+//
+// SYLVEBARBE — colosse sylvestre ENDORMI qui barre la sortie SUD de Ville Jaune (cf. sylvebarbeBlock.ts).
+// Réveillé par la DAEMONFLÛTE (récompense de sacre laissée par le Dieu Spaghetti, récupérée à l'étage
+// du Centre). Une fois battu OU capturé → la voie sud s'ouvre sur la ZONE DE COMBAT (Battle Frontier).
+// Combat UNIQUE, calqué sur le template mini-boss statique data/gekroc.ts.
+
+import { createMonInstance } from "../battle/factory"
+import type { MonInstance } from "../battle/types"
+
+export const SYLVEBARBE_NPC_ID = "y_sylvebarbe"
+export const SYLVEBARBE_MAP_ID = "yellow_entrance"
+export const SYLVEBARBE_POS = { x: 23, y: 38 } // haut du bloc sud (cols 22-25, rows 38-39) ; interpellé depuis (23,37)
+export const SYLVEBARBE_LEVEL = 60             // gardien post-Ligue (Ligue = niv 52-62)
+export const SYLVEBARBE_FLUTE_ITEM = "daemonflute"
+
+export const SYLVEBARBE_INTRO_LINES = [
+    "*Un colosse d'écorce et de mousse ronfle en travers de la route, immense et immobile.*",
+    "Tu portes la Daemonflûte à tes lèvres. Une mélodie cristalline s'élève…",
+    "Les paupières de SYLVEBARBE s'ouvrent dans un craquement de bois millénaire. Il se dresse — furieux d'être réveillé !",
+]
+export const SYLVEBARBE_NO_FLUTE_LINES = [
+    "*SYLVEBARBE dort profondément, bloquant tout le passage sud.*",
+    "Impossible de le réveiller à mains nues… Il te faudrait un instrument. Une flûte, peut-être ?",
+]
+export const SYLVEBARBE_DONE_LINES = [
+    "*L'empreinte de SYLVEBARBE marque encore le sol. La voie vers le sud est libre.*",
+]
+export const SYLVEBARBE_NO_TEAM_LINES = [
+    "Tes Daemons sont tous K.O. !",
+    "Soigne-les au Centre avant d'affronter le gardien endormi.",
+]
+
+/** Instance de combat de SYLVEBARBE : N60, capture DURE (×0.6) mais SANS statut requis (≠ légendaire). */
+export function buildSylvebarbe(): MonInstance {
+    const mon = createMonInstance("sylvebarbe", SYLVEBARBE_LEVEL, { owned: false })
+    Object.assign(mon, { captureMult: 0.6 }) // dur à capturer (cf. engine performCapture), mais pas légendaire
+    return mon
+}
