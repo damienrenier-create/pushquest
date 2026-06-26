@@ -18,6 +18,34 @@ import { CASINO_NUM_CASES, CASINO_MIN_BET, CASINO_MAX_BET, CASINO_WIN_MULT, TONY
 
 const GOLD = "#f1c40f", INK = "#2a1c10", CREAM = "#f4ecd4", DARK = "#cdbb86"
 
+/**
+ * Plan de timing du balayage (COSMÉTIQUE — n'affecte PAS le résultat déterministe). Trois phases :
+ *   RAPIDE (1-4 s, ~40-55 ms = blur) → MOYENNE (3-6 s, 60→170 ms) → LENTE (3-5 s, 170→460 ms, décélère)
+ * puis 0 à 3 SURSAUTS finaux (nudges à pause croissante : « presque arrêté… puis encore une case »).
+ * Construit de sorte que la surbrillance après `delays.length` pas tombe PILE sur `target`.
+ */
+function buildSpinDelays(target: number, n: number): number[] {
+    const rnd = (a: number, b: number) => a + Math.random() * (b - a)
+    const delays: number[] = []
+    let t: number
+    // RAPIDE — blur (~40-55 ms), 1-4 s
+    t = 0; const d1 = rnd(1000, 4000)
+    while (t < d1) { const dl = Math.round(rnd(38, 55)); delays.push(dl); t += dl }
+    // MOYENNE — l'intervalle s'allonge 60 → 170 ms, 3-6 s
+    t = 0; const d2 = rnd(3000, 6000)
+    while (t < d2) { const dl = Math.max(45, Math.round(60 + (t / d2) * 110 + rnd(-8, 8))); delays.push(dl); t += dl }
+    // LENTE — décélération 170 → 460 ms, 3-5 s
+    t = 0; const d3 = rnd(3000, 5000)
+    while (t < d3) { const dl = Math.round(170 + (t / d3) * 290); delays.push(dl); t += dl }
+    // SURSAUTS finaux (0-3) : on aligne la fin de la phase lente sur (target − sursauts) pour qu'ils
+    // terminent EXACTEMENT sur target ; chaque sursaut a une pause croissante (~500 / 730 / 960 ms).
+    const sursauts = Math.floor(rnd(0, 4)) // 0..3
+    const need = (((target - sursauts - delays.length) % n) + n) % n
+    for (let i = 0; i < need; i++) delays.push(Math.round(rnd(420, 500)))
+    for (let i = 0; i < sursauts; i++) delays.push(Math.round(500 + i * 230 + rnd(0, 140)))
+    return delays
+}
+
 export default function CasinoYellowModal({ onClose }: { onClose: () => void }) {
     const player = usePlayer()
     const d = player.labDefi
@@ -51,21 +79,18 @@ export default function CasinoYellowModal({ onClose }: { onClose: () => void }) 
         // la MÊME (même spinIndex tant qu'aucun spin n'est appliqué) au moment de l'atterrissage.
         const target = casinoWinningCase(d.casinoSpinIndex)
         setError(null); setResult(null); setSpinning(true)
-        // ~2 tours complets puis arrivée sur `target`. La surbrillance finale (i = steps) vaut target.
-        const steps = CASINO_NUM_CASES * 2 + target
-        let i = 0
+        // Plan de timing aléatoire (rapide → moyen → lent → sursauts) ; surbrillance finale = target.
+        const delays = buildSpinDelays(target, CASINO_NUM_CASES)
+        let k = 0
         const tick = () => {
-            setHighlight(i % CASINO_NUM_CASES)
-            if (i >= steps) {
-                const r = casinoSpin(payload, Date.now()) // applique : dépense/gain + état casino
+            setHighlight(k % CASINO_NUM_CASES)
+            if (k >= delays.length) {
+                const r = casinoSpin(payload, Date.now()) // applique : dépense/gain + état casino (même winningCase)
                 if (r.ok) { setResult(r); persistYellowSave(); setBets({}) } else { setError(r.reason ?? "Erreur") }
                 setSpinning(false)
                 return
             }
-            const left = steps - i
-            const delay = left > 10 ? 45 : 70 + (10 - left) * 32 // rapide (45 ms) → décélère (~358 ms) sur la fin
-            i++
-            timerRef.current = setTimeout(tick, delay)
+            timerRef.current = setTimeout(tick, delays[k++])
         }
         tick()
     }
