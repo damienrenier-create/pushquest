@@ -658,6 +658,30 @@ export async function GET(req: Request) {
                     }).slice(0, 3)
                 };
             })(),
+            ggBirthday: (() => {
+                // Défi "Bats Gg" (26/06) : qui fait STRICTEMENT plus que Gg sur un exo gagne +500 XP ;
+                // Gg gagne +500 par (exo × joueur) battu. Exos : pompes/tractions/squats + gainage (secondes).
+                const isGg = (n: string | undefined | null) => (n || "").toLowerCase() === "gg";
+                const EXOS = ["PUSHUP", "PULLUP", "SQUAT", "PLANK"];
+                const gg = allUsers.find((u: any) => isGg(u.nickname));
+                const sumExo = (u: any, exo: string) => (u?.sets || []).filter((s: any) => s.date === selectedDate && s.exercise === exo).reduce((a: number, s: any) => a + s.reps, 0);
+                const me = allUsers.find((u: any) => u.id === userId);
+                return {
+                    enabledForSelectedDate: selectedDate.endsWith("-06-26"),
+                    ggNickname: gg?.nickname ?? "Gg",
+                    viewerIsGg: isGg(currentUser?.nickname),
+                    bonus: 500,
+                    perExo: EXOS.map((exo) => {
+                        const ggReps = gg ? sumExo(gg, exo) : 0;
+                        return {
+                            exo,
+                            mine: sumExo(me, exo),
+                            gg: ggReps,
+                            beatsCount: allUsers.filter((u: any) => !isGg(u.nickname) && sumExo(u, exo) < ggReps).length,
+                        };
+                    }),
+                };
+            })(),
             graphs: {
                 myDaily: myDaily30,
                 myDaily365: myDaily365

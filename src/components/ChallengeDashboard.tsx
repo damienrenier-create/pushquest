@@ -84,6 +84,13 @@ interface DashboardData {
         selectedDateSeconds: number
         monthPodium: Array<{ nickname: string; seconds: number; totalPushupsAllTime: number }>
     }
+    ggBirthday?: {
+        enabledForSelectedDate: boolean
+        ggNickname: string
+        viewerIsGg: boolean
+        bonus: number
+        perExo: Array<{ exo: string; mine: number; gg: number; beatsCount: number }>
+    }
     graphs: {
         myDaily: Array<{ date: string; pushups: number; pullups: number; squats: number; total: number }>
         myDaily365?: Array<{ date: string; pushups: number; pullups: number; squats: number; total: number }>
@@ -843,6 +850,44 @@ export default function ChallengeDashboard() {
                                         </div>
                                     </div>
                                 )) : <p className="text-center font-black text-red-600 text-[10px] uppercase tracking-normal">Pas encore de record</p>}
+                            </div>
+                        </div>
+                    )}
+
+                    {data?.ggBirthday?.enabledForSelectedDate && (
+                        <div className="bg-amber-50 rounded-3xl p-6 border-2 border-amber-300 space-y-4">
+                            <div className="flex justify-between items-center text-amber-800">
+                                <h3 className="font-black uppercase tracking-normal">🎂 Défi Bats {data?.ggBirthday?.ggNickname}</h3>
+                                <span className="bg-amber-200 px-3 py-1 rounded-full text-[10px] font-black uppercase">Anniv · 26 juin</span>
+                            </div>
+                            <p className="text-[11px] font-bold text-amber-700 leading-snug">
+                                {data?.ggBirthday?.viewerIsGg
+                                    ? `C'est TON anniversaire ! +${data?.ggBirthday?.bonus ?? 500} XP par exo × joueur que tu bats aujourd'hui.`
+                                    : `Dépasse ${data?.ggBirthday?.ggNickname} sur chaque exo aujourd'hui → +${data?.ggBirthday?.bonus ?? 500} XP par exo (gainage compté en secondes).`}
+                            </p>
+                            <div className="grid grid-cols-1 gap-2">
+                                {(data?.ggBirthday?.perExo || []).map((e: any) => {
+                                    const label = ({ PUSHUP: "Pompes", PULLUP: "Tractions", SQUAT: "Squats", PLANK: "Gainage (s)" } as Record<string, string>)[e.exo] || e.exo
+                                    const bonus = data?.ggBirthday?.bonus ?? 500
+                                    if (data?.ggBirthday?.viewerIsGg) {
+                                        return (
+                                            <div key={e.exo} className="flex justify-between items-center px-4 py-2 bg-white/60 rounded-xl">
+                                                <span className="font-bold text-amber-900">{label}</span>
+                                                <span className="font-black text-amber-700 text-sm">{e.gg} · tu bats {e.beatsCount} → +{e.beatsCount * bonus} XP</span>
+                                            </div>
+                                        )
+                                    }
+                                    const won = e.mine > e.gg
+                                    return (
+                                        <div key={e.exo} className={`flex justify-between items-center px-4 py-2 rounded-xl ${won ? 'bg-green-100' : 'bg-white/60'}`}>
+                                            <span className="font-bold text-amber-900">{label}</span>
+                                            <span className="font-black text-sm">
+                                                <span className="text-amber-900">Toi {e.mine}</span> <span className="text-amber-400">vs</span> <span className="text-amber-700">{data?.ggBirthday?.ggNickname} {e.gg}</span>
+                                                {won ? <span className="text-green-600"> ✅ +{bonus}</span> : <span className="text-amber-600"> ⚔️ +{Math.max(1, e.gg - e.mine + 1)}</span>}
+                                            </span>
+                                        </div>
+                                    )
+                                })}
                             </div>
                         </div>
                     )}
