@@ -862,13 +862,13 @@ export default function ChallengeDashboard() {
                             </div>
                             <p className="text-[11px] font-bold text-amber-700 leading-snug">
                                 {data?.ggBirthday?.viewerIsGg
-                                    ? `C'est TON anniversaire ! +${data?.ggBirthday?.bonus ?? 500} XP par exo × joueur que tu bats aujourd'hui.`
-                                    : `Dépasse ${data?.ggBirthday?.ggNickname} sur chaque exo aujourd'hui → +${data?.ggBirthday?.bonus ?? 500} XP par exo (gainage compté en secondes).`}
+                                    ? `C'est TON anniversaire ! +${data?.ggBirthday?.bonus ?? 100} XP par exo × joueur que tu bats aujourd'hui.`
+                                    : `Dépasse ${data?.ggBirthday?.ggNickname} sur chaque exo aujourd'hui → +${data?.ggBirthday?.bonus ?? 100} XP par exo (gainage compté en secondes).`}
                             </p>
                             <div className="grid grid-cols-1 gap-2">
                                 {(data?.ggBirthday?.perExo || []).map((e: any) => {
                                     const label = ({ PUSHUP: "Pompes", PULLUP: "Tractions", SQUAT: "Squats", PLANK: "Gainage (s)" } as Record<string, string>)[e.exo] || e.exo
-                                    const bonus = data?.ggBirthday?.bonus ?? 500
+                                    const bonus = data?.ggBirthday?.bonus ?? 100
                                     if (data?.ggBirthday?.viewerIsGg) {
                                         return (
                                             <div key={e.exo} className="flex justify-between items-center px-4 py-2 bg-white/60 rounded-xl">

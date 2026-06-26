@@ -670,7 +670,7 @@ export async function GET(req: Request) {
                     enabledForSelectedDate: selectedDate.endsWith("-06-26"),
                     ggNickname: gg?.nickname ?? "Gg",
                     viewerIsGg: isGg(currentUser?.nickname),
-                    bonus: 500,
+                    bonus: 100,
                     perExo: EXOS.map((exo) => {
                         const ggReps = gg ? sumExo(gg, exo) : 0;
                         return {

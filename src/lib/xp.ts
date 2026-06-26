@@ -165,7 +165,7 @@ export { MONTH_MULTIPLIERS };
 // secondes = battu). Indépendant de la validation du quota (pur duel reps/secondes).
 const GG_BDAY_SUFFIX = "-06-26";
 const GG_BDAY_EXOS = ["PUSHUP", "PULLUP", "SQUAT", "PLANK"];
-const GG_BDAY_BONUS = 500;
+const GG_BDAY_BONUS = 100;
 function isGgNickname(n: string | undefined | null): boolean {
     return (n || "").toLowerCase() === "gg";
 }
