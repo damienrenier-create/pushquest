@@ -14,7 +14,8 @@ import { getItem } from "../data/items"
 import { SAIYAN_POINT_VALUE } from "../data/saiyanConfig"
 import { BADGE_REPS_CAP_BONUS } from "../data/badges"
 import { getCt, canLearnCt, purchasableCts, type BadgeId } from "../data/cts"
-import { emptyLabDefi, type LabDefiState } from "../data/labDefis"
+import { emptyLabDefi, casinoWinningCase, CASINO_NUM_CASES, CASINO_MIN_BET, CASINO_MAX_BET, CASINO_WIN_MULT, CASINO_BANKRUPT_STREAK, CASINO_BANKRUPT_COOLDOWN_MS, TONYTONY_TARGET, TONYTONY_LEVEL, TONYTONY_SPECIES, type LabDefiState, type LabActiveDefi } from "../data/labDefis"
+import { createMonInstance } from "../battle/factory"
 import type { StatKey } from "../battle/types"
 import { expForLevel, levelFromExp, applyExp, MAX_LEVEL, type ExpResult } from "../battle/xp"
 import type { WildPlayerCtx } from "../data/encounters"
@@ -478,11 +479,17 @@ export function creditDailyReps(today: string) {
  * jamais perdus, zéro double-crédit (idempotent). 1re fois : pic initialisé au "total
  * d'hier" (le passé est déjà banqué par l'ancien système → pas de crédit rétroactif).
  */
-export function bankReps(totalToDate: number, throughYesterday: number) {
+export function bankReps(totalToDate: number, throughYesterday: number, today?: string) {
     const tot = Math.max(0, Math.floor(totalToDate))
     let banked = st.repsBankedTotal
     if (banked < 0) banked = Math.max(0, Math.floor(throughYesterday)) // init migration / 1re fois
-    const delta = Math.max(0, tot - banked)
+    let delta = Math.max(0, tot - banked)
+    // DÉFI 3 (labo) : « énergies de demain ×N » le jour cible (respecte le plafond repsCap).
+    // Multiplie le DELTA banqué ce jour-là ; le flag reste inerte les autres jours (date ≠ today).
+    const d = st.labDefi
+    if (today && d.tomorrowEnergyMult > 1 && d.tomorrowEnergyDate && today === d.tomorrowEnergyDate) {
+        delta = delta * d.tomorrowEnergyMult
+    }
     st = { ...st, reps: Math.min(st.repsCap, st.reps + delta), repsBankedTotal: Math.max(banked, tot) }
     emit()
 }
@@ -708,6 +715,139 @@ export function grantBonusEnergyUncapped(n: number) {
     if (amt <= 0) return
     st = { ...st, repsCap: st.repsCap + amt, reps: st.reps + amt }
     emit()
+}
+
+// ============================================================
+// DÉFIS DU LABO (étage du Centre) — physiques / CT / casino Tonytony
+// ============================================================
+
+/** Lance un défi physique/CT (remplace l'éventuel défi actif) ; réinitialise le compteur de dégâts CT. */
+export function startLabDefi(active: LabActiveDefi) {
+    st = { ...st, labDefi: { ...st.labDefi, active, ctDamageByType: {} } }
+    emit()
+}
+
+/** Clôt le défi actif (annulation OU récompense remise) et vide le compteur de dégâts CT. */
+export function clearLabDefi() {
+    const d = st.labDefi
+    if (!d.active && Object.keys(d.ctDamageByType).length === 0) return
+    st = { ...st, labDefi: { ...d, active: null, ctDamageByType: {} } }
+    emit()
+}
+
+/** Défi 2 : marque les « 150 squats en 1 série » réussis (one-shot à vie, idempotent). */
+export function markSquat150Done() {
+    if (st.labDefi.squat150Done) return
+    st = { ...st, labDefi: { ...st.labDefi, squat150Done: true } }
+    emit()
+}
+
+/** Accumule des dégâts infligés par le joueur pour le défi CT actif (si le type ciblé correspond). */
+export function addCtDamage(type: PokeType, amount: number) {
+    const d = st.labDefi
+    if (!d.active || d.active.kind !== "ct" || d.active.ctType !== type) return
+    const add = Math.max(0, Math.floor(amount))
+    if (add <= 0) return
+    st = { ...st, labDefi: { ...d, ctDamageByType: { ...d.ctDamageByType, [type]: (d.ctDamageByType[type] ?? 0) + add } } }
+    emit()
+}
+
+/** Dégâts cumulés pour le défi CT actif (0 si aucun défi CT en cours). */
+export function ctDefiProgress(): number {
+    const d = st.labDefi
+    if (!d.active || d.active.kind !== "ct" || !d.active.ctType) return 0
+    return d.ctDamageByType[d.active.ctType] ?? 0
+}
+
+/** Enregistre une CT gagnée au défi CT (pour le plafond 2/type + le seuil ×2), idempotent. */
+export function recordCtEarned(ctId: string) {
+    if (st.labDefi.ctEarned.includes(ctId)) return
+    st = { ...st, labDefi: { ...st.labDefi, ctEarned: [...st.labDefi.ctEarned, ctId] } }
+    emit()
+}
+
+/** Défi 3 : programme le multiplicateur d'énergie pour un jour cible (YYYY-MM-DD). */
+export function setTomorrowEnergyMult(mult: number, date: string) {
+    st = { ...st, labDefi: { ...st.labDefi, tomorrowEnergyMult: Math.max(1, Math.floor(mult)), tomorrowEnergyDate: date } }
+    emit()
+}
+
+// ── Casino pattern (défi Surprise) ──
+export interface CasinoBet { case: number; amount: number }
+export interface CasinoSpinResult {
+    ok: boolean
+    reason?: string
+    winningCase?: number
+    totalBet?: number
+    totalWin?: number
+    bankrupt?: boolean
+    /** Cumul BRUT gagné après ce spin. */
+    totalWon?: number
+    /** Cible Tonytony atteinte (et pas encore réclamé) ? */
+    tonytonyReady?: boolean
+}
+
+/**
+ * SPIN du casino pattern (déterministe : motif fixe). Valide les mises, dépense la mise,
+ * crédite le gain (plafonné par repsCap, normal), accumule le cumul BRUT (non plafonné, vers Tonytony),
+ * gère streak + banqueroute. `nowMs` = horloge fournie par l'appelant (Date.now() côté UI).
+ */
+export function casinoSpin(bets: CasinoBet[], nowMs: number): CasinoSpinResult {
+    const d = st.labDefi
+    if (d.casinoBankruptUntil && new Date(d.casinoBankruptUntil).getTime() > nowMs) {
+        return { ok: false, reason: "Le casino est en banqueroute. Reviens plus tard." }
+    }
+    if (!Array.isArray(bets) || bets.length === 0 || bets.length > CASINO_NUM_CASES) return { ok: false, reason: "Mise invalide." }
+    const seen = new Set<number>()
+    let totalBet = 0
+    for (const b of bets) {
+        if (!Number.isInteger(b.case) || b.case < 0 || b.case >= CASINO_NUM_CASES) return { ok: false, reason: "Case invalide." }
+        if (seen.has(b.case)) return { ok: false, reason: "Doublon de case." }
+        seen.add(b.case)
+        if (!Number.isInteger(b.amount) || b.amount < CASINO_MIN_BET || b.amount > CASINO_MAX_BET) return { ok: false, reason: "Montant invalide." }
+        totalBet += b.amount
+    }
+    if (totalBet > st.reps) return { ok: false, reason: `Pas assez d'énergie (${totalBet} requis, ${st.reps} dispo).` }
+    const winningCase = casinoWinningCase(d.casinoSpinIndex)
+    const winningBet = bets.find((b) => b.case === winningCase)
+    const totalWin = winningBet ? winningBet.amount * CASINO_WIN_MULT : 0
+    let newStreak = totalWin > 0 ? d.casinoWinStreak + 1 : 0
+    let newSpinIndex = d.casinoSpinIndex + 1
+    let bankruptUntil = d.casinoBankruptUntil
+    let bankrupt = false
+    if (newStreak >= CASINO_BANKRUPT_STREAK) {
+        bankrupt = true
+        bankruptUntil = new Date(nowMs + CASINO_BANKRUPT_COOLDOWN_MS).toISOString()
+        newStreak = 0
+        newSpinIndex = 0
+    }
+    const newTotalWon = d.casinoTotalWon + totalWin
+    const newReps = Math.min(st.repsCap, Math.max(0, st.reps - totalBet) + totalWin)
+    st = {
+        ...st,
+        reps: newReps,
+        labDefi: { ...d, casinoSpinIndex: newSpinIndex, casinoWinStreak: newStreak, casinoBankruptUntil: bankruptUntil, casinoTotalWon: newTotalWon },
+    }
+    emit()
+    return { ok: true, winningCase, totalBet, totalWin, bankrupt, totalWon: newTotalWon, tonytonyReady: newTotalWon >= TONYTONY_TARGET && !d.tonytonyClaimed }
+}
+
+/** Cumul brut gagné au casino (vers la cible Tonytony). */
+export function casinoTotalWon(): number { return st.labDefi.casinoTotalWon }
+
+/**
+ * Remet TONYTONY (one-shot) si le cumul casino atteint la cible. Crée l'instance niveau TONYTONY_LEVEL,
+ * l'ajoute (équipe si place, sinon PC) + Pokédex, pose le flag. Renvoie le placement, ou null si
+ * pas éligible (déjà réclamé / cumul insuffisant).
+ */
+export function grantTonytony(): "team" | "pc" | null {
+    const d = st.labDefi
+    if (d.tonytonyClaimed || d.casinoTotalWon < TONYTONY_TARGET) return null
+    const mon = createMonInstance(TONYTONY_SPECIES, TONYTONY_LEVEL, { owned: true })
+    st = { ...st, labDefi: { ...d, tonytonyClaimed: true } } // pose le flag AVANT (anti double-don)
+    const where = addCaught(mon) // gère équipe pleine → PC + estampille l'ownership ; emit()
+    markCaught(TONYTONY_SPECIES) // entrée Pokédex
+    return where
 }
 
 /** Soin complet de l'équipe (Centre Daemon) : PV max, statut effacé, PP refaits. */

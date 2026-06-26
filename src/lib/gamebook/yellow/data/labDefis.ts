@@ -8,6 +8,8 @@
 // Tout vit dans GamebookProgress.flags de la ligne chapterId="yellow" (aucune migration SQL).
 
 import type { PokeType } from "../battle/types"
+import { CTS } from "./cts"
+import { getMove } from "./moves"
 
 /** Type du défi physique/CT « actif » (un seul à la fois). */
 export type LabDefiKind = "pushup1h" | "squat150" | "quota2x" | "ct"
@@ -72,4 +74,95 @@ export function emptyLabDefi(): LabDefiState {
         casinoTotalWon: 0,
         tonytonyClaimed: false,
     }
+}
+
+// ════════════════════════ CATALOGUE DES DÉFIS ════════════════════════
+
+// ───────── Défis PHYSIQUES (vraies reps PushQuest, validés serveur) ─────────
+export interface PhysicalDefi {
+    kind: Exclude<LabDefiKind, "ct">
+    label: string
+    desc: string
+    /** Exercice concerné (PUSHUP/SQUAT) ; absent pour quota2x (tous exercices). */
+    exercise?: "PUSHUP" | "SQUAT"
+    /** Reps à atteindre (défis 1 & 2). */
+    target?: number
+    /** Fenêtre en ms (défi 1 : 1 h). */
+    windowMs?: number
+    /** One-shot À VIE (défi 2). */
+    once?: boolean
+    /** Libellé de la récompense (affichage). */
+    reward: string
+}
+
+export const PHYSICAL_DEFIS: PhysicalDefi[] = [
+    { kind: "pushup1h", label: "50 pompes en 1 heure", desc: "Encode 50 pompes dans l'heure qui suit le lancement.", exercise: "PUSHUP", target: 50, windowMs: 60 * 60 * 1000, reward: "+100 énergie" },
+    { kind: "squat150", label: "150 squats en 1 série", desc: "Réalise UNE seule série de 150 squats (sans limite de temps). Une seule fois à vie.", exercise: "SQUAT", target: 150, once: true, reward: "+100 énergie" },
+    { kind: "quota2x", label: "Double ton quota du jour", desc: "Atteins le double de ton quota quotidien avant minuit.", reward: "Énergies de demain ×3" },
+]
+
+/** Récompense énergie des défis physiques 1 & 2. */
+export const PHYSICAL_ENERGY_REWARD = 100
+/** Multiplicateur du défi 3 (énergies de demain ×3). */
+export const QUOTA2X_MULT = 3
+
+// ───────── Défi CT (infliger puissance×100 dégâts du type → CT) ─────────
+/** CT-trophées exclues du pool de défi (récompenses spéciales, restent exclusives). */
+const CT_DEFI_EXCLUDED = new Set(["ct37", "ct38"]) // Souffle Primordial (10 victoires) + Fouet de Nouilles (sbire)
+
+export interface CtDefiOption {
+    ctId: string
+    type: PokeType
+    moveId: string
+    power: number
+    /** Seuil de base = puissance × 100. */
+    baseThreshold: number
+}
+
+/** Pool du défi CT : toutes les CT offensives (power>0) sauf méga-trophées, avec leur seuil de base. */
+export function ctDefiOptions(): CtDefiOption[] {
+    const out: CtDefiOption[] = []
+    for (const ct of CTS) {
+        if (CT_DEFI_EXCLUDED.has(ct.id)) continue
+        const mv = getMove(ct.moveId)
+        if (!mv || !mv.power || mv.power <= 0) continue
+        out.push({ ctId: ct.id, type: mv.type, moveId: ct.moveId, power: mv.power, baseThreshold: mv.power * 100 })
+    }
+    return out
+}
+
+/** Seuil de dégâts pour gagner une CT, selon le nb DÉJÀ gagnées du MÊME type (0 → base, ≥1 → ×2). */
+export function ctDefiThreshold(power: number, earnedOfType: number): number {
+    return power * 100 * (earnedOfType >= 1 ? 2 : 1)
+}
+
+/** Plafond de CT gagnables PAR TYPE au défi (1re au prix de base, 2e ×2, pas de 3e). */
+export const CT_PER_TYPE_MAX = 2
+
+/** Nb de CT déjà gagnées au défi pour un type donné (depuis la liste des ids gagnés). */
+export function ctEarnedCountByType(ctEarned: string[], type: PokeType): number {
+    const byId = new Map(ctDefiOptions().map((o) => [o.ctId, o.type]))
+    return ctEarned.filter((id) => byId.get(id) === type).length
+}
+
+// ───────── Défi SURPRISE (casino pattern-spin → Tonytony) ─────────
+/** Motif FIXE de la roulette yellow (différent du Ch.1) : winningCase = CASINO_PATTERN[spin % length].
+ *  100 % déterministe → un joueur malin peut le craquer (chance déguisée en jugeote). */
+export const CASINO_PATTERN: number[] = [4, 9, 2, 7, 0, 5, 10, 3, 8, 1, 6, 9, 4, 0, 7, 2, 10, 5, 1, 8]
+export const CASINO_NUM_CASES = 11        // cases 0..10
+export const CASINO_MIN_BET = 10
+export const CASINO_MAX_BET = 50
+export const CASINO_WIN_MULT = 10         // gain = mise × 10 sur la bonne case
+export const CASINO_BANKRUPT_STREAK = 5   // 5 victoires d'affilée → banqueroute (anti-farm)
+export const CASINO_BANKRUPT_COOLDOWN_MS = 24 * 60 * 60 * 1000
+/** Cumul BRUT d'énergie à gagner pour débloquer Tonytony. */
+export const TONYTONY_TARGET = 1000
+/** Niveau de Tonytony à la remise. */
+export const TONYTONY_LEVEL = 15
+export const TONYTONY_SPECIES = "tonytony"
+
+/** Case gagnante pour un index de spin donné (modulo robuste). */
+export function casinoWinningCase(spinIndex: number): number {
+    const n = CASINO_PATTERN.length
+    return CASINO_PATTERN[((spinIndex % n) + n) % n]
 }

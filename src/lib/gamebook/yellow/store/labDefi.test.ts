@@ -1,0 +1,94 @@
+import { describe, it, expect, beforeEach } from "vitest"
+import {
+    hydratePlayer, getPlayer, bankReps, setTomorrowEnergyMult,
+    startLabDefi, addCtDamage, ctDefiProgress, casinoSpin, grantTonytony, recordCtEarned,
+} from "./playerStore"
+import { emptyLabDefi, casinoWinningCase, CASINO_WIN_MULT, CASINO_BANKRUPT_STREAK, TONYTONY_SPECIES, ctEarnedCountByType } from "../data/labDefis"
+
+beforeEach(() => {
+    // État isolé : équipe vide, reps connus, défis vierges.
+    hydratePlayer({ reps: 1000, repsCap: 1000, repsBankedTotal: 0, labDefi: emptyLabDefi() })
+})
+
+describe("défi 3 — bankReps × multiplicateur le jour cible", () => {
+    it("triple le delta le jour cible, ×1 les autres jours, en respectant le plafond", () => {
+        hydratePlayer({ reps: 0, repsCap: 10000, repsBankedTotal: 0, labDefi: emptyLabDefi() })
+        setTomorrowEnergyMult(3, "2026-06-27")
+        // Jour NON cible : ×1
+        bankReps(100, 0, "2026-06-26")
+        expect(getPlayer().reps).toBe(100)
+        // Jour cible : le nouveau delta (50) est ×3
+        bankReps(150, 0, "2026-06-27")
+        expect(getPlayer().reps).toBe(100 + 50 * 3) // 250
+    })
+
+    it("le ×3 reste plafonné par repsCap (choix « respecter le plafond »)", () => {
+        hydratePlayer({ reps: 0, repsCap: 200, repsBankedTotal: 0, labDefi: emptyLabDefi() })
+        setTomorrowEnergyMult(3, "2026-06-27")
+        bankReps(100, 0, "2026-06-27") // 100×3 = 300 mais cap 200
+        expect(getPlayer().reps).toBe(200)
+    })
+})
+
+describe("défi CT — accumulation des dégâts du type ciblé", () => {
+    it("n'accumule que pour le type du défi actif", () => {
+        startLabDefi({ kind: "ct", startedAt: "t", ctType: "FEU", ctThreshold: 9500, ctTargetCtId: "ct08", ctMoveId: "lance_flammes" })
+        addCtDamage("FEU", 300)
+        addCtDamage("EAU", 999) // ignoré (mauvais type)
+        addCtDamage("FEU", 200)
+        expect(ctDefiProgress()).toBe(500)
+    })
+
+    it("recordCtEarned alimente le compteur par type (plafond + ×2)", () => {
+        recordCtEarned("ct08") // FEU
+        recordCtEarned("ct09") // FEU
+        expect(ctEarnedCountByType(getPlayer().labDefi.ctEarned, "FEU")).toBe(2)
+        expect(ctEarnedCountByType(getPlayer().labDefi.ctEarned, "EAU")).toBe(0)
+    })
+})
+
+describe("défi Surprise — casino pattern + Tonytony", () => {
+    it("gagne sur la bonne case et accumule le cumul BRUT", () => {
+        const winCase = casinoWinningCase(0) // motif[0]
+        const r = casinoSpin([{ case: winCase, amount: 50 }], 0)
+        expect(r.ok).toBe(true)
+        expect(r.totalWin).toBe(50 * CASINO_WIN_MULT)
+        expect(r.totalWon).toBe(50 * CASINO_WIN_MULT)
+        // reps : 1000 - 50 (mise) + 500 (gain) plafonné à 1000
+        expect(getPlayer().reps).toBe(1000)
+    })
+
+    it("perd quand la case ne tombe pas et ne crédite rien", () => {
+        const winCase = casinoWinningCase(0)
+        const wrong = (winCase + 1) % 11
+        const r = casinoSpin([{ case: wrong, amount: 30 }], 0)
+        expect(r.ok).toBe(true)
+        expect(r.totalWin).toBe(0)
+        expect(getPlayer().reps).toBe(1000 - 30)
+        expect(getPlayer().labDefi.casinoWinStreak).toBe(0)
+    })
+
+    it("banqueroute après N victoires consécutives", () => {
+        hydratePlayer({ reps: 100000, repsCap: 100000, repsBankedTotal: 0, labDefi: emptyLabDefi() })
+        let last
+        for (let i = 0; i < CASINO_BANKRUPT_STREAK; i++) {
+            const wc = casinoWinningCase(getPlayer().labDefi.casinoSpinIndex)
+            last = casinoSpin([{ case: wc, amount: 10 }], 0)
+        }
+        expect(last?.bankrupt).toBe(true)
+        // Banqueroute → spin refusé tant que le cooldown court
+        const blocked = casinoSpin([{ case: 0, amount: 10 }], 0)
+        expect(blocked.ok).toBe(false)
+    })
+
+    it("grantTonytony remet le Daemon une seule fois une fois la cible atteinte", () => {
+        hydratePlayer({ reps: 0, repsCap: 1000, repsBankedTotal: 0, labDefi: { ...emptyLabDefi(), casinoTotalWon: 1000 } })
+        const where = grantTonytony()
+        expect(where).toBe("team")
+        expect(getPlayer().team.some((m) => m.speciesId === TONYTONY_SPECIES)).toBe(true)
+        expect(getPlayer().labDefi.tonytonyClaimed).toBe(true)
+        // 2e appel : refusé (one-shot)
+        expect(grantTonytony()).toBeNull()
+        expect(getPlayer().team.filter((m) => m.speciesId === TONYTONY_SPECIES).length).toBe(1)
+    })
+})

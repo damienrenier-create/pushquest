@@ -39,7 +39,7 @@ export async function loadYellowSave(): Promise<void> {
             if (typeof j?.today === "string") creditDailyReps(j.today) // tick quotidien (resets)
             // Reps INSTANTANÉES : banque le delta (aujourd'hui en direct + jours non joués).
             if (typeof j?.repsTotalToDate === "number" && typeof j?.repsThroughYesterday === "number") {
-                bankReps(j.repsTotalToDate, j.repsThroughYesterday)
+                bankReps(j.repsTotalToDate, j.repsThroughYesterday, typeof j?.today === "string" ? j.today : undefined)
             }
         }
     } catch { /* neutre si indisponible */ }
@@ -123,7 +123,7 @@ export async function resetYellowChapter(): Promise<void> {
             if (j?.ctx) setWildCtx(j.ctx)
             if (typeof j?.today === "string") creditDailyReps(j.today)
             if (typeof j?.repsTotalToDate === "number" && typeof j?.repsThroughYesterday === "number") {
-                bankReps(j.repsTotalToDate, j.repsThroughYesterday) // recrédite les reps du jour
+                bankReps(j.repsTotalToDate, j.repsThroughYesterday, typeof j?.today === "string" ? j.today : undefined) // recrédite les reps du jour
             }
         }
     } catch { /* hors-ligne : au moins les cadeaux de bienvenue sont crédités */ }
