@@ -12,7 +12,7 @@ import { NORTH_SIGN_POSITIONS } from "./maps"
 import { PARK_SIGN_TIPS } from "./data/parkSigns"
 import { ACE_TRAINER_ID, ACE_POS, ACE_INTRO_VARIANTS } from "./data/ace"
 import { GEKROC_NPC_ID, GEKROC_MAP_ID, GEKROC_POS, GEKROC_INTRO_LINES } from "./data/gekroc"
-import { SYLVEBARBE_NPC_ID, SYLVEBARBE_MAP_ID, SYLVEBARBE_POS, SYLVEBARBE_INTRO_LINES } from "./data/sylvebarbe"
+import { SYLVEBARBE_NPC_ID, SYLVEBARBE_MAP_ID, SYLVEBARBE_POS, SYLVEBARBE_INTRO_LINES, FLUTE_EMISSARY_NPC_ID, FLUTE_EMISSARY_MAP_ID, FLUTE_EMISSARY_POS, FLUTE_GIVE_LINES } from "./data/sylvebarbe"
 import { HH_TRADER_ID, HH_TRADER_MAP, HH_TRADER_POS, HH_TRADER_OFFER_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_MAP, HH_COLLECTOR_POS, HH_COLLECTOR_INTRO_LINES } from "./data/hauntedNpcs"
 import { CAVE_TRADER_ID, CAVE_TRADER_MAP, CAVE_TRADER_POS, CAVE_TRADER_OFFER_LINES } from "./data/caveTrader"
 import { HH_KID_ID, HH_KID_MAP, HH_KID_POS, HH_KID_DAY_LINES } from "./data/hhKid"
@@ -361,6 +361,18 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         initialX: 5,
         initialY: 3,
         dialoguesAfter: ["*Le scientifique t'observe par-dessus ses lunettes.*", "Reviens quand tu auras accompli ton défi."],
+    },
+    {
+        // ÉMISSAIRE DU DIEU SPAGHETTI : remet la Daemonflûte au nouveau Maître (intercepté gameStore).
+        id: FLUTE_EMISSARY_NPC_ID,
+        name: "ÉMISSAIRE",
+        mapId: FLUTE_EMISSARY_MAP_ID,
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🍝", color: "#e0a020" },
+        initialX: FLUTE_EMISSARY_POS.x,
+        initialY: FLUTE_EMISSARY_POS.y,
+        dialoguesAfter: FLUTE_GIVE_LINES,
     },
 
     // === Intérieur ANTRE DU SBIRE (combat dynamique 2×/jour) ===

@@ -37,3 +37,23 @@ export function buildSylvebarbe(): MonInstance {
     Object.assign(mon, { captureMult: 0.6 }) // dur à capturer (cf. engine performCapture), mais pas légendaire
     return mon
 }
+
+// ── ÉMISSAIRE DU DIEU SPAGHETTI (étage du Centre = labo) : remet la Daemonflûte au nouveau Maître ──
+export const FLUTE_EMISSARY_NPC_ID = "y_flute_emissaire"
+export const FLUTE_EMISSARY_MAP_ID = "yellow_infirmary_2e"
+export const FLUTE_EMISSARY_POS = { x: 9, y: 3 }
+export const FLUTE_GIVE_LINES = [
+    "*Un curieux personnage en toge tachée de sauce t'attend près des éprouvettes.*",
+    "« Ah, le nouveau Maître ! Le Dieu Spaghetti m'a chargé de te remettre Sa récompense. »",
+    "Tu reçois la DAEMONFLÛTE !",
+    "« Au sud de la ville dort un colosse de bois. Cette flûte le réveillera… et t'ouvrira la ZONE DE COMBAT. »",
+]
+export const FLUTE_ALREADY_HAVE_LINES = [
+    "« Tu as déjà la Daemonflûte. Va réveiller le gardien endormi, au sud de la ville ! »",
+]
+export const FLUTE_DONE_LINES = [
+    "« Le gardien est réveillé, la Zone de Combat t'est ouverte. Que tes combats soient légendaires, Maître. »",
+]
+export const FLUTE_NOT_CHAMPION_LINES = [
+    "« Cette récompense est réservée au Maître de la Ligue. Reviens quand tu auras vaincu LE MAÎTRE. »",
+]

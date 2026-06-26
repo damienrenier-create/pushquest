@@ -1829,6 +1829,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     // Le générique DEVIENT la transition : on ressort directement à Cendreville (au-dessus du
                     // gate sud, comme la porte droite de la salle du trône) au lieu de rester dans le trône vide.
                     setMap("yellow_cendreville", 21, 32)
+                    // QUÊTE DE LA FLÛTE (déblocage Zone de Combat) : le Maître annonce la récompense du Dieu Spaghetti.
+                    showDialogue("y_ligue_maitre", "LE MAÎTRE", [
+                        "« Félicitations, nouveau Maître ! Tu mérites une récompense à la hauteur de ton exploit. »",
+                        "« Le Dieu Spaghetti t'a laissé une Daemonflûte… mais ce distrait l'a oubliée à l'ÉTAGE du Centre Pokémon ! »",
+                        "« Récupère-la là-haut, puis va réveiller le colosse endormi au SUD de la ville. La ZONE DE COMBAT t'attend, Maître. »",
+                    ])
                 }} />
             )}
 

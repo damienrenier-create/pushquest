@@ -19,7 +19,7 @@ import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, resetFleeStreak } from "./battleStore"
 import { getPokedex } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, resetLigueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, resetLigueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, addItem } from "./playerStore"
 import { getSpecies } from "../data/species"
 import { persistYellowSave } from "./saveManager"
 import { rollWildEncounter, wildLevelCap, hasEncounters } from "../data/encounters"
@@ -32,7 +32,7 @@ import { HH_KID_ID, HH_KID_DAY_LINES, HH_KID_NIGHT_LINES, isHhKidNight } from ".
 import { ORCALINE_TRAINER_ID, ORCALINE_INTRO_LINES, ORCALINE_REMATCH_LINES, ORCALINE_DONE_TODAY_LINES } from "../data/orcalineTrainer"
 import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock } from "../data/sylvebarbeBlock"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
-import { SYLVEBARBE_NPC_ID, SYLVEBARBE_INTRO_LINES, SYLVEBARBE_DONE_LINES, SYLVEBARBE_NO_FLUTE_LINES, SYLVEBARBE_NO_TEAM_LINES, buildSylvebarbe } from "../data/sylvebarbe"
+import { SYLVEBARBE_NPC_ID, SYLVEBARBE_INTRO_LINES, SYLVEBARBE_DONE_LINES, SYLVEBARBE_NO_FLUTE_LINES, SYLVEBARBE_NO_TEAM_LINES, buildSylvebarbe, FLUTE_EMISSARY_NPC_ID, FLUTE_GIVE_LINES, FLUTE_ALREADY_HAVE_LINES, FLUTE_DONE_LINES, FLUTE_NOT_CHAMPION_LINES } from "../data/sylvebarbe"
 import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
 
 export interface ActiveDialogue {
@@ -788,6 +788,26 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 return
             }
             set({ dialogue: { npcId: npc.id, npcName: "SYLVEBARBE", lines: SYLVEBARBE_INTRO_LINES, lineIndex: 0 }, pendingSylvebarbe: true })
+            return
+        }
+
+        // ÉMISSAIRE DU DIEU SPAGHETTI (étage du Centre) : remet la Daemonflûte au nouveau Maître (1×).
+        if (npc.id === FLUTE_EMISSARY_NPC_ID) {
+            const save = getPlayerSave()
+            if (save.sylvebarbeAwake) {
+                set({ dialogue: { npcId: npc.id, npcName: "ÉMISSAIRE", lineIndex: 0, lines: FLUTE_DONE_LINES } })
+                return
+            }
+            if ((save.items["daemonflute"] ?? 0) > 0) {
+                set({ dialogue: { npcId: npc.id, npcName: "ÉMISSAIRE", lineIndex: 0, lines: FLUTE_ALREADY_HAVE_LINES } })
+                return
+            }
+            if (!save.isChampion) {
+                set({ dialogue: { npcId: npc.id, npcName: "ÉMISSAIRE", lineIndex: 0, lines: FLUTE_NOT_CHAMPION_LINES } })
+                return
+            }
+            addItem("daemonflute", 1)
+            set({ dialogue: { npcId: npc.id, npcName: "ÉMISSAIRE", lineIndex: 0, lines: FLUTE_GIVE_LINES } })
             return
         }
 
