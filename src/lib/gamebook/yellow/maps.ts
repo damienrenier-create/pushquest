@@ -1096,6 +1096,10 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         tiles: buildZoneCombatCollisions(),
         width: ZONE_W,
         height: ZONE_H,
+        backgroundImage: "/yellow/sprites/zone_combat.png",
+        backgroundImageWidth: 2464,
+        backgroundImageHeight: 1728,
+        backgroundImageTileSize: 123, // 2464/20 ≈ 123 → l'image remplit la grille 20×14
         buildings: ZONE_COMBAT_BUILDINGS,
         exits: [
             ...exitsFromBuildings(ZONE_COMBAT_BUILDINGS),
@@ -1107,14 +1111,17 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
     },
     yellow_combat_tour: {
         id: "yellow_combat_tour", name: "TOUR DE COMBAT", tiles: buildZoneRoom(), width: 8, height: 6,
+        backgroundImage: "/yellow/sprites/combat_tour.png", backgroundImageWidth: 1200, backgroundImageHeight: 896, backgroundImageTileSize: 150,
         exits: [{ x: 4, y: 5, targetMapId: "yellow_zone_combat", targetSpawnX: 3, targetSpawnY: 7 }],
     },
     yellow_combat_usine: {
         id: "yellow_combat_usine", name: "USINE DE COMBAT", tiles: buildZoneRoom(), width: 8, height: 6,
+        backgroundImage: "/yellow/sprites/combat_usine.png", backgroundImageWidth: 2400, backgroundImageHeight: 1792, backgroundImageTileSize: 300,
         exits: [{ x: 4, y: 5, targetMapId: "yellow_zone_combat", targetSpawnX: 9, targetSpawnY: 7 }],
     },
     yellow_combat_dome: {
         id: "yellow_combat_dome", name: "DÔME DE COMBAT", tiles: buildZoneRoom(), width: 8, height: 6,
+        backgroundImage: "/yellow/sprites/combat_dome.png", backgroundImageWidth: 2400, backgroundImageHeight: 1792, backgroundImageTileSize: 300,
         exits: [{ x: 4, y: 5, targetMapId: "yellow_zone_combat", targetSpawnX: 15, targetSpawnY: 7 }],
     },
     yellow_cendreville: {
