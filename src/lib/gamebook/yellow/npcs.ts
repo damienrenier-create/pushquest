@@ -94,6 +94,35 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         initialY: SYLVEBARBE_POS.y,
         dialoguesAfter: SYLVEBARBE_INTRO_LINES,
     },
+    // PANNEAUX de Ville Jaune (cases non-walkables déjà dessinées dans le décor → NPC invisibles).
+    {
+        id: "y_sign_south",
+        name: "PANNEAU",
+        mapId: "yellow_entrance",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "", color: "#b88a4a" },
+        initialX: 20,
+        initialY: 31,
+        dialoguesAfter: [
+            "🪧 « Le COLOSSE de bois qui barre la route du SUD ne s'éveillera qu'au son d'une FLÛTE MAGIQUE… »",
+            "« …et cette flûte n'est offerte qu'à ceux qui la MÉRITENT. »",
+            "« En attendant, il paraît qu'il y a plein de choses à gagner à l'ÉTAGE du Centre Daemon ! »",
+        ],
+    },
+    {
+        id: "y_sign_center",
+        name: "PANNEAU",
+        mapId: "yellow_entrance",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "", color: "#b88a4a" },
+        initialX: 20,
+        initialY: 16,
+        dialoguesAfter: [
+            "🪧 « À l'ÉTAGE du Centre Daemon : gagne des CT pour pas très cher, de l'énergie… et même un DAEMON ! »",
+        ],
+    },
 
     // === CENDREVILLE — TECHNICIEN devant la Centrale (21,18) : indice sur Gékroc + la Pierre d'évolution ===
     {
