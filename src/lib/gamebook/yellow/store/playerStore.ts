@@ -200,8 +200,8 @@ export function markGoshHintHeard() {
     emit()
 }
 
-/** SYLVEBARBE : réveille le colosse (hook à appeler quand les défis du labo seront complétés). Idempotent.
- *  Tant qu'il dort (false), il bloque la sortie sud de Ville Jaune (cf. data/sylvebarbeBlock). */
+/** SYLVEBARBE : réveille le colosse (appelé par le combat quand on le bat/capture, après l'avoir réveillé
+ *  à la Daemonflûte). Idempotent. Tant qu'il dort (false), il bloque la sortie sud (cf. data/sylvebarbeBlock). */
 export function markSylvebarbeAwake() {
     if (st.sylvebarbeAwake) return
     st = { ...st, sylvebarbeAwake: true }

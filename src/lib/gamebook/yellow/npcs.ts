@@ -351,7 +351,7 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         dialoguesAfter: ["*Le terminal d'expériences scientifiques.*"], // repli si non intercepté
     },
     {
-        // Scientifique : ouvre le menu d'EXPÉRIENCES (défis du labo) — intercepté gameStore. (5,3) → (5,4) ↑.
+        // Scientifique : remet la Daemonflûte au sacre, puis ouvre le menu de défis — intercepté gameStore. (5,3).
         id: "y_lab_scientist",
         name: "SCIENTIFIQUE",
         mapId: "yellow_infirmary_2e",

@@ -125,8 +125,8 @@ export const ITEMS: Record<string, ItemData> = {
         id: "pierre_gekroc", name: "Pierre Gékroc", category: "MISC",
         description: "Pierre d'évolution crépitante, libérée par Gékroc. Permet à Panthéon d'évoluer vers la panthère du type de ton choix.", price: 0,
     },
-    // Objet clé remis par les scientifiques (LABO) : sa mélodie réveille le SYLVEBARBE endormi qui bouche
-    // la sortie sud de Ville Jaune (→ markSylvebarbeAwake). Don + usage à câbler avec le système de défis labo.
+    // Objet clé remis par le SCIENTIFIQUE du labo au sacre (récompense du Dieu Spaghetti) : sa mélodie
+    // réveille le SYLVEBARBE endormi qui bouche la sortie sud de Ville Jaune (combat → markSylvebarbeAwake).
     daemonflute: {
         id: "daemonflute", name: "Daemonflûte", category: "MISC",
         description: "Flûte mystérieuse mise au point au labo. Sa mélodie ancestrale peut tirer un Daemon du plus profond sommeil…", price: 0,

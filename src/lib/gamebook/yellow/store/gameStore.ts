@@ -352,7 +352,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
-        // SYLVEBARBE ENDORMI : bloque la sortie SUD de Ville Jaune tant qu'il dort (réveil = défis du labo).
+        // SYLVEBARBE ENDORMI : bloque la sortie SUD de Ville Jaune tant qu'il dort (réveil = Daemonflûte).
         if ((next.posX !== player.posX || next.posY !== player.posY)
             && player.mapId === SYLVEBARBE_BLOCK_MAP && !getPlayerSave().sylvebarbeAwake
             && inSylvebarbeBlock(next.posX, next.posY)) {
