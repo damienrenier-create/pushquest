@@ -4,7 +4,9 @@
 // Stocké côté DB dans GamebookProgress.flags de la ligne chapterId="yellow"
 // (isolée de l'arc v3 → aucune migration). Versionné pour rester compatible.
 
-import type { MonInstance, StatKey, MajorStatus } from "../battle/types"
+import type { MonInstance, StatKey, MajorStatus, PokeType } from "../battle/types"
+import { POKE_TYPES } from "../battle/types"
+import { emptyLabDefi, type LabDefiState, type LabDefiKind, type LabActiveDefi } from "../data/labDefis"
 
 export interface YellowSave {
     version: number
@@ -67,6 +69,8 @@ export interface YellowSave {
     isChampion: boolean
     /** SYLVEBARBE réveillé/battu (flûte) → sortie sud de Ville Jaune ouverte (accès Zone de Combat). */
     sylvebarbeAwake: boolean
+    /** DÉFIS DU LABO (étage du Centre) : défi actif, flags one-shot, cumul dégâts CT, casino/Tonytony. */
+    labDefi: LabDefiState
 }
 
 /** Un « meilleur moment » d'un combat de la Ligue (best-of affiché au Hall of Fame). Runtime. */
@@ -95,7 +99,7 @@ export const SAVE_VERSION = 2
 const ACE_RATCHET_RESET_VERSION = 2
 
 export function emptySave(): YellowSave {
-    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, sylvebarbeAwake: false }
+    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, sylvebarbeAwake: false, labDefi: emptyLabDefi() }
 }
 
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -195,6 +199,45 @@ function parsePvpStats(raw: unknown): YellowSave["pvpStats"] {
     return { wins: n(o.wins), losses: n(o.losses), forfeits: n(o.forfeits), daemonUse: numRec(o.daemonUse), moveUse: numRec(o.moveUse) }
 }
 
+const LAB_DEFI_KINDS: LabDefiKind[] = ["pushup1h", "squat150", "quota2x", "ct"]
+
+/** Parse défensif de l'état des défis du labo (tolère une vieille save sans `labDefi`). */
+function parseLabDefi(raw: unknown): LabDefiState {
+    const d = emptyLabDefi()
+    if (!raw || typeof raw !== "object") return d
+    const o = raw as Record<string, unknown>
+    const isType = (v: unknown): v is PokeType => typeof v === "string" && (POKE_TYPES as readonly string[]).includes(v)
+    const nz = (v: unknown) => (typeof v === "number" && isFinite(v) ? Math.max(0, Math.floor(v)) : 0)
+    // Défi actif
+    if (o.active && typeof o.active === "object") {
+        const a = o.active as Record<string, unknown>
+        if (LAB_DEFI_KINDS.includes(a.kind as LabDefiKind) && typeof a.startedAt === "string") {
+            const act: LabActiveDefi = { kind: a.kind as LabDefiKind, startedAt: a.startedAt }
+            if (typeof a.startSnapshot === "number" && isFinite(a.startSnapshot)) act.startSnapshot = Math.max(0, Math.floor(a.startSnapshot))
+            if (isType(a.ctType)) act.ctType = a.ctType
+            if (typeof a.ctMoveId === "string") act.ctMoveId = a.ctMoveId
+            if (typeof a.ctThreshold === "number" && isFinite(a.ctThreshold)) act.ctThreshold = Math.max(0, Math.floor(a.ctThreshold))
+            if (typeof a.ctTargetCtId === "string") act.ctTargetCtId = a.ctTargetCtId
+            d.active = act
+        }
+    }
+    d.squat150Done = o.squat150Done === true
+    if (o.ctDamageByType && typeof o.ctDamageByType === "object") {
+        for (const [k, v] of Object.entries(o.ctDamageByType as Record<string, unknown>)) {
+            if (isType(k) && typeof v === "number" && v > 0) d.ctDamageByType[k] = Math.floor(v)
+        }
+    }
+    d.ctEarned = strArr(o.ctEarned)
+    d.tomorrowEnergyMult = typeof o.tomorrowEnergyMult === "number" && o.tomorrowEnergyMult >= 1 ? Math.floor(o.tomorrowEnergyMult) : 1
+    d.tomorrowEnergyDate = typeof o.tomorrowEnergyDate === "string" ? o.tomorrowEnergyDate : ""
+    d.casinoSpinIndex = nz(o.casinoSpinIndex)
+    d.casinoWinStreak = nz(o.casinoWinStreak)
+    d.casinoBankruptUntil = typeof o.casinoBankruptUntil === "string" ? o.casinoBankruptUntil : ""
+    d.casinoTotalWon = nz(o.casinoTotalWon)
+    d.tonytonyClaimed = o.tonytonyClaimed === true
+    return d
+}
+
 /** Parse défensif d'une sauvegarde complète. */
 export function parseSave(raw: unknown): YellowSave {
     if (!raw || typeof raw !== "object") return emptySave()
@@ -247,6 +290,7 @@ export function parseSave(raw: unknown): YellowSave {
         hhCollectorWins: typeof o.hhCollectorWins === "number" ? Math.max(0, Math.floor(o.hhCollectorWins)) : 0,
         isChampion: o.isChampion === true,
         sylvebarbeAwake: o.sylvebarbeAwake === true,
+        labDefi: parseLabDefi(o.labDefi),
     }
 }
 
