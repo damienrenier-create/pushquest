@@ -19,7 +19,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance } from "../battle/types"
 import { markSeen, markCaught, getPokedex } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, recordOrcalineDefeat, orcalineLevelForWins } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, recordOrcalineDefeat, orcalineLevelForWins, markSylvebarbeAwake } from "./playerStore"
 import { getCt } from "../data/cts"
 import { getMove } from "../data/moves"
 import { getSpecies } from "../data/species"
@@ -274,6 +274,15 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
         if (!getPlayer().gekrocResolved) {
             markGekrocResolved()
             addItem(GEKROC_STONE_ITEM, 1)
+        }
+    }
+
+    // 2-ter) SYLVEBARBE (gardien endormi du sud de Ville Jaune) : vaincu OU capturé → réveillé
+    //        (la sortie sud s'ouvre vers la Zone de Combat) et la Daemonflûte est consommée.
+    if (b.isWild && (b.outcome === "win" || b.outcome === "caught") && b.enemy.team.some((e) => e.speciesId === "sylvebarbe")) {
+        if (!getPlayer().sylvebarbeAwake) {
+            markSylvebarbeAwake()
+            consumeItem("daemonflute")
         }
     }
 

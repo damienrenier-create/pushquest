@@ -32,6 +32,7 @@ import { HH_KID_ID, HH_KID_DAY_LINES, HH_KID_NIGHT_LINES, isHhKidNight } from ".
 import { ORCALINE_TRAINER_ID, ORCALINE_INTRO_LINES, ORCALINE_REMATCH_LINES, ORCALINE_DONE_TODAY_LINES } from "../data/orcalineTrainer"
 import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock } from "../data/sylvebarbeBlock"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
+import { SYLVEBARBE_NPC_ID, SYLVEBARBE_INTRO_LINES, SYLVEBARBE_DONE_LINES, SYLVEBARBE_NO_FLUTE_LINES, SYLVEBARBE_NO_TEAM_LINES, buildSylvebarbe } from "../data/sylvebarbe"
 import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
 
 export interface ActiveDialogue {
@@ -87,6 +88,7 @@ interface GameStore {
     pendingAce: boolean // intro d'ACE en cours → combat à la fermeture
     pendingOrcaline: boolean // intro du DRESSEUR D'ORCALINE en cours → combat à la fermeture
     pendingGekroc: boolean // intro de GÉKROC (mini-boss Centrale) en cours → combat à la fermeture
+    pendingSylvebarbe: boolean // intro de SYLVEBARBE (gardien sud Ville Jaune) en cours → combat à la fermeture
     pendingHhTrade: string | null // uid du Brookhanté à échanger (BROCANTEUR maison hantée) → échange à la fermeture
     pendingCaveTrade: string | null // uid du Faukon à échanger (DÉNICHEUR grotte) → échange à la fermeture
     pendingHhCollector: boolean // intro du COLLECTIONNEUR (maison hantée) en cours → combat à la fermeture
@@ -203,6 +205,18 @@ function tryLaunchGekroc(): ActiveDialogue | null {
     return null
 }
 
+// Lance le combat de SYLVEBARBE : gardien endormi wild-style (capturable), instance fixe N60.
+// Renvoie un dialogue (équipe K.O.) ou null si le combat démarre. Résolu (one-time) dans finishBattle.
+function tryLaunchSylvebarbe(): ActiveDialogue | null {
+    const team = getPlayerSave().team
+    if (!team.some((m) => m.currentHp > 0)) {
+        return { npcId: SYLVEBARBE_NPC_ID, npcName: "SYLVEBARBE", lineIndex: 0, lines: SYLVEBARBE_NO_TEAM_LINES }
+    }
+    const seed = Math.floor(Math.random() * 1e9) >>> 0
+    startWildBattle(team, [buildSylvebarbe()], seed)
+    return null
+}
+
 // BROCANTEUR (maison hantée) : échange le Brookhanté (uid) du joueur contre un Roctaur qui, reçu par
 // échange, évolue aussitôt en Rochison (applyTradeEvolution). Renvoie le dialogue de résultat.
 function doHhTrade(brookUid: string): ActiveDialogue | null {
@@ -315,6 +329,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     pendingAce: false,
     pendingOrcaline: false,
     pendingGekroc: false,
+    pendingSylvebarbe: false,
     pendingHhTrade: null,
     pendingCaveTrade: null,
     pendingHhCollector: false,
@@ -566,6 +581,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     set({ dialogue: tryLaunchOrcaline(), pendingOrcaline: false })
                 } else if (get().pendingGekroc) {
                     set({ dialogue: tryLaunchGekroc(), pendingGekroc: false })
+                } else if (get().pendingSylvebarbe) {
+                    set({ dialogue: tryLaunchSylvebarbe(), pendingSylvebarbe: false })
                 } else if (get().pendingHhTrade) {
                     set({ dialogue: doHhTrade(get().pendingHhTrade!), pendingHhTrade: null })
                 } else if (get().pendingCaveTrade) {
@@ -760,6 +777,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
+        // SYLVEBARBE (gardien endormi du sud de Ville Jaune) : combat UNIQUE déclenché par la Daemonflûte.
+        if (npc.id === SYLVEBARBE_NPC_ID) {
+            if (getPlayerSave().sylvebarbeAwake) {
+                set({ dialogue: { npcId: npc.id, npcName: "SYLVEBARBE", lineIndex: 0, lines: SYLVEBARBE_DONE_LINES } })
+                return
+            }
+            if ((getPlayerSave().items["daemonflute"] ?? 0) <= 0) {
+                set({ dialogue: { npcId: npc.id, npcName: "SYLVEBARBE", lineIndex: 0, lines: SYLVEBARBE_NO_FLUTE_LINES } })
+                return
+            }
+            set({ dialogue: { npcId: npc.id, npcName: "SYLVEBARBE", lines: SYLVEBARBE_INTRO_LINES, lineIndex: 0 }, pendingSylvebarbe: true })
+            return
+        }
+
         // BROCANTEUR (maison hantée) : échange Brookhanté → Roctaur (→ Rochison). Répétable.
         if (npc.id === HH_TRADER_ID) {
             const brook = [...getPlayerSave().team, ...getPlayerSave().pc].find((m) => m.speciesId === HH_TRADE_GIVE)
@@ -926,6 +957,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ dialogue: tryLaunchOrcaline(), pendingOrcaline: false })
         } else if (get().pendingGekroc) {
             set({ dialogue: tryLaunchGekroc(), pendingGekroc: false })
+        } else if (get().pendingSylvebarbe) {
+            set({ dialogue: tryLaunchSylvebarbe(), pendingSylvebarbe: false })
         } else if (get().pendingHhTrade) {
             set({ dialogue: doHhTrade(get().pendingHhTrade!), pendingHhTrade: null })
         } else if (get().pendingCaveTrade) {

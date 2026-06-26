@@ -12,6 +12,7 @@ import { NORTH_SIGN_POSITIONS } from "./maps"
 import { PARK_SIGN_TIPS } from "./data/parkSigns"
 import { ACE_TRAINER_ID, ACE_POS, ACE_INTRO_VARIANTS } from "./data/ace"
 import { GEKROC_NPC_ID, GEKROC_MAP_ID, GEKROC_POS, GEKROC_INTRO_LINES } from "./data/gekroc"
+import { SYLVEBARBE_NPC_ID, SYLVEBARBE_MAP_ID, SYLVEBARBE_POS, SYLVEBARBE_INTRO_LINES } from "./data/sylvebarbe"
 import { HH_TRADER_ID, HH_TRADER_MAP, HH_TRADER_POS, HH_TRADER_OFFER_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_MAP, HH_COLLECTOR_POS, HH_COLLECTOR_INTRO_LINES } from "./data/hauntedNpcs"
 import { CAVE_TRADER_ID, CAVE_TRADER_MAP, CAVE_TRADER_POS, CAVE_TRADER_OFFER_LINES } from "./data/caveTrader"
 import { HH_KID_ID, HH_KID_MAP, HH_KID_POS, HH_KID_DAY_LINES } from "./data/hhKid"
@@ -78,6 +79,20 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         initialX: GEKROC_POS.x,
         initialY: GEKROC_POS.y,
         dialoguesAfter: GEKROC_INTRO_LINES,
+    },
+
+    // SYLVEBARBE — gardien endormi du sud de Ville Jaune. Sprite "endormi" déjà rendu dans le décor
+    // (MapView) → NPC invisible, sert uniquement de point d'interaction (interpellé depuis (23,37)).
+    {
+        id: SYLVEBARBE_NPC_ID,
+        name: "SYLVEBARBE",
+        mapId: SYLVEBARBE_MAP_ID,
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "", color: "#5a7d3a" },
+        initialX: SYLVEBARBE_POS.x,
+        initialY: SYLVEBARBE_POS.y,
+        dialoguesAfter: SYLVEBARBE_INTRO_LINES,
     },
 
     // === CENDREVILLE — TECHNICIEN devant la Centrale (21,18) : indice sur Gékroc + la Pierre d'évolution ===
