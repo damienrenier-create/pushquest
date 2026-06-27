@@ -231,6 +231,7 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         initialY: 9,
         dialoguesAfter: [
             "*Panneau du Sanctuaire des Marées.*",
+            "⚡ Le Sanctuaire reste SCELLÉ tant que tu n'as pas vaincu l'arène ÉLECTRIQUE (Badge Éclair).",
             "ARÈNE EAU — Cheffe : ONDINE, Reine des Marées (type EAU).",
             "Bats ses 4 gardes (dans n'importe quel ordre), puis affronte ONDINE.",
             "Récompense : le BADGE EAU — la dernière clé pour entrer à la Ligue !",

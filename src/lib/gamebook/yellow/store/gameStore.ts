@@ -458,6 +458,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 scheduleSave(next)
                 return
             }
+            // GATE ARÈNE EAU : le Sanctuaire des Marées (Cendreville) n'ouvre qu'une fois l'arène
+            // ÉLECTRIQUE vaincue (Badge Éclair). Sinon, message à la porte + on reste sur place.
+            if (targetMapId === "yellow_arena_eau" && !getPlayerSave().badges.includes("elec")) {
+                set({
+                    player: next,
+                    dialogue: {
+                        npcId: "spaghetti_gate", npcName: "SANCTUAIRE DES MARÉES", lineIndex: 0,
+                        lines: [
+                            "*La porte du Sanctuaire est scellée par un sceau crépitant d'électricité.*",
+                            "« Le Sanctuaire des Marées ne s'ouvre qu'à ceux qui ont d'abord dompté la foudre. »",
+                            "Reviens une fois l'arène ÉLECTRIQUE vaincue (Badge Éclair) !",
+                        ],
+                    },
+                })
+                scheduleSave(next)
+                return
+            }
             const newMap = YELLOW_MAPS[targetMapId]
             if (newMap) {
                 // Override de spawn : l'arène Feu (16×16) a son entrée en bas (8,14),
