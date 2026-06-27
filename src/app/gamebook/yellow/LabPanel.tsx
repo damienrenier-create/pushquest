@@ -13,7 +13,7 @@ import { useState } from "react"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import {
     usePlayer, startLabDefi, clearLabDefi, grantReps, grantCt, recordCtEarned,
-    setTomorrowEnergyMult, markSquat150Done, grantTonytony, makeTonytonyShiny, ctDefiProgress,
+    setTomorrowEnergyMult, markSquat150Done, grantTonytony, makeTonytonyShiny, ctDefiProgress, ticketCount,
 } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import {
@@ -25,6 +25,7 @@ import { getCt } from "@/lib/gamebook/yellow/data/cts"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { POKE_TYPES, type PokeType } from "@/lib/gamebook/yellow/battle/types"
 import CasinoYellowModal from "./CasinoYellowModal"
+import DailyTicketModal from "./DailyTicketModal"
 
 const CREAM = "#f4ecd4", INK = "#2a1c10", DARK = "#cdbb86"
 const FLUTE_ITEM = "daemonflute"
@@ -48,6 +49,7 @@ export default function LabPanel() {
     const [tab, setTab] = useState<"phys" | "ct" | "surprise">("phys")
     const [ctType, setCtType] = useState<PokeType | null>(null)
     const [casino, setCasino] = useState(false)
+    const [ticketsOpen, setTicketsOpen] = useState(false)
     const [busy, setBusy] = useState(false)
     const [msg, setMsg] = useState<string | null>(null)
 
@@ -178,6 +180,7 @@ export default function LabPanel() {
                                     {d.tonytonyClaimed && !d.tonytonyShiny && d.casinoTotalWon >= TONYTONY_SHINY_TARGET && <button onClick={claimTonytonyShiny} style={primary}>✨ Rendre ton Tonytony SHINY (5000)</button>}
                                     <button onClick={() => setCasino(true)} style={((!d.tonytonyClaimed && d.casinoTotalWon >= TONYTONY_TARGET) || (d.tonytonyClaimed && !d.tonytonyShiny && d.casinoTotalWon >= TONYTONY_SHINY_TARGET)) ? ghost : primary}>🎰 Jouer à la roulette</button>
                                     <div style={{ fontSize: 10, opacity: 0.7, color: INK, marginTop: 6 }}>🥚 Tonytony : {d.tonytonyClaimed ? "✅" : `${Math.min(d.casinoTotalWon, TONYTONY_TARGET)}/${TONYTONY_TARGET}`} · ✨ Shiny : {d.tonytonyShiny ? "✅" : `${Math.min(d.casinoTotalWon, TONYTONY_SHINY_TARGET)}/${TONYTONY_SHINY_TARGET}`}</div>
+                                    {ticketCount() > 0 && <button onClick={() => setTicketsOpen(true)} style={{ ...primary, marginTop: 8 }}>🎟️ Jouer mes tickets roulette ({ticketCount()})</button>}
                                 </Card>
                             )}
 
@@ -188,6 +191,7 @@ export default function LabPanel() {
                 <button onClick={close} style={closeBtn}>FERMER</button>
             </div>
             {casino && <CasinoYellowModal onClose={() => setCasino(false)} />}
+            {ticketsOpen && <DailyTicketModal onClose={() => { persistYellowSave(); setTicketsOpen(false) }} />}
         </div>
     )
 }
