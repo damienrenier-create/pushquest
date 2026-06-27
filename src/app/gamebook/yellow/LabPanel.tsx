@@ -133,12 +133,14 @@ export default function LabPanel() {
                                     <button onClick={claimPhys} disabled={busy} style={primary}>{busy ? "…" : "Vérifier / Réclamer"}</button>
                                     <button onClick={abandon} disabled={busy} style={ghost}>Abandonner</button>
                                 </ActiveBox>
+                            ) : active?.kind === "ct" ? (
+                                <Hint>⏳ Un <b>défi CT</b> est déjà en cours (un seul défi à la fois). Va à l'onglet <b>💿 CT</b> pour le réclamer ou l'abandonner.</Hint>
                             ) : (
                                 <>
                                     <Hint>Défis sur tes <b>vraies reps PushQuest</b> (vérifiés serveur). Un seul défi à la fois.</Hint>
                                     {PHYSICAL_DEFIS.filter((x) => !(x.kind === "squat150" && d.squat150Done)).map((x) => (
                                         <Card key={x.kind} title={x.label} desc={x.desc} reward={x.reward}>
-                                            <button onClick={() => startPhys(x.kind)} disabled={busy || !!active} style={primary}>{active ? "Défi en cours…" : "Lancer"}</button>
+                                            <button onClick={() => startPhys(x.kind)} disabled={busy} style={primary}>Lancer</button>
                                         </Card>
                                     ))}
                                     {d.squat150Done && <Hint>✅ « 150 squats en 1 série » déjà accompli (à vie).</Hint>}
@@ -152,6 +154,8 @@ export default function LabPanel() {
                                     <button onClick={claimCt} disabled={ctDefiProgress() < (active.ctThreshold ?? Infinity)} style={ctDefiProgress() >= (active.ctThreshold ?? Infinity) ? primary : ghost}>Réclamer la CT</button>
                                     <button onClick={abandon} style={ghost}>Abandonner</button>
                                 </ActiveBox>
+                            ) : active ? (
+                                <Hint>⏳ Un <b>défi physique</b> est déjà en cours (un seul défi à la fois). Va à l'onglet <b>⚡ Physique</b> pour le réclamer ou l'abandonner.</Hint>
                             ) : (
                                 <>
                                     <Hint>Choisis un <b>type</b>, puis une CT. Inflige <b>puissance × 100</b> dégâts de ce type en combat. Max {CT_PER_TYPE_MAX}/type (la 2ᵉ coûte ×2).</Hint>
