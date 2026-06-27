@@ -86,6 +86,8 @@ export interface BattleState {
     /** DÉFI CT (labo) : cumul des dégâts INFLIGÉS PAR LE JOUEUR ce combat, par type d'attaque (PvE solo).
      *  Lu en fin de combat (finishBattle) pour alimenter le défi. Absent en PvP. */
     dmgByType?: Partial<Record<PokeType, number>>
+    /** ZONE DE COMBAT (Frontier) : objets/soins interdits (« pas de potion ») → le SAC est masqué. */
+    noItems?: boolean
 }
 
 export type PlayerAction =
@@ -150,7 +152,7 @@ export function toBattleMon(inst: MonInstance): BattleMon {
 export function createBattle(
     playerTeam: MonInstance[],
     enemyTeam: MonInstance[],
-    opts: { isWild: boolean; seed: number; aiLevel?: AiLevel; captureModifier?: number; pvp?: boolean; enemyEnergyCap?: number; fleeChance?: number },
+    opts: { isWild: boolean; seed: number; aiLevel?: AiLevel; captureModifier?: number; pvp?: boolean; enemyEnergyCap?: number; fleeChance?: number; noItems?: boolean },
 ): BattleState {
     // Le joueur envoie son premier Daemon ENCORE DEBOUT (pas un K.O. en tête de liste).
     const playerStart = playerTeam.findIndex((m) => m.currentHp > 0)
@@ -176,6 +178,7 @@ export function createBattle(
         pvp: opts.pvp ?? false,
         enemyEnergy: opts.enemyEnergyCap != null ? { spent: 0, cap: opts.enemyEnergyCap } : null,
         fleeChance: opts.fleeChance ?? 100,
+        noItems: opts.noItems ?? false,
     }
 }
 

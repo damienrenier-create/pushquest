@@ -191,7 +191,7 @@ export function startTrainerBattle(
     seed: number,
     opts?: { trainerId?: string; reward?: number; aiLevel?: AiLevel; enemyEnergyCap?: number; isRematch?: boolean },
 ) {
-    const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: opts?.aiLevel, enemyEnergyCap: opts?.enemyEnergyCap })
+    const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: opts?.aiLevel, enemyEnergyCap: opts?.enemyEnergyCap, noItems: !!opts?.trainerId?.startsWith("frontier:") })
     syncPokedex(battle)
     const trainer = opts?.trainerId ? { trainerId: opts.trainerId, reward: opts.reward ?? 0, isRematch: opts.isRematch ?? false } : null
     setStore({ battle, evolutions: [], trainer, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })

@@ -276,8 +276,8 @@ export default function BattleScreen() {
     } else if (playbackDone) {
         if (menu === "root") {
             options.push({ label: "⚔️ ATTAQUE", onSelect: () => setMenu("moves") })
-            // En PvP (v1) : ni SAC ni FUITE (move/switch only ; quitter = abandon).
-            if (!battle.pvp) options.push({ label: "🎒 SAC", onSelect: () => setMenu("bag") })
+            // En PvP (v1) : ni SAC ni FUITE. En série Frontier (noItems) : pas de SAC non plus (« pas de potion »).
+            if (!battle.pvp && !battle.noItems) options.push({ label: "🎒 SAC", onSelect: () => setMenu("bag") })
             options.push({ label: "🐾 DAEMON", onSelect: () => setMenu("switch") })
             if (!battle.pvp) {
                 // FUITE → écran de confirmation (évite la fuite accidentelle).
