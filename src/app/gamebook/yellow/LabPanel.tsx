@@ -54,7 +54,8 @@ export default function LabPanel() {
     if (!open) return null
 
     const d = player.labDefi
-    const active = d.active
+    const activePhys = d.activePhys
+    const activeCt = d.activeCt
     const paused = player.isChampion && (player.items[FLUTE_ITEM] ?? 0) <= 0 && !player.sylvebarbeAwake
     const today = player.creditedThrough || new Date().toISOString().slice(0, 10)
 
@@ -67,24 +68,24 @@ export default function LabPanel() {
         setMsg(kind === "pushup1h" ? "⏱️ Chrono lancé : 50 pompes en 1 heure !" : "Défi lancé. Reviens réclamer une fois réussi.")
     }
     const claimPhys = async () => {
-        if (!active) return
+        if (!activePhys) return
         setBusy(true); setMsg(null)
-        const r = await postLabDefiCheck(active.kind, active.startSnapshot, active.startedAt)
+        const r = await postLabDefiCheck(activePhys.kind, activePhys.startSnapshot, activePhys.startedAt)
         setBusy(false)
         if (!r.validated) {
             setMsg(r.expired ? "⏱️ Délai dépassé — défi raté. Relance-le." : "Pas encore réussi. Continue tes reps !")
-            if (r.expired) { clearLabDefi(); persistYellowSave() }
+            if (r.expired) { clearLabDefi("phys"); persistYellowSave() }
             return
         }
-        if (active.kind === "quota2x") {
+        if (activePhys.kind === "quota2x") {
             setTomorrowEnergyMult(QUOTA2X_MULT, addOneDay(today))
             setMsg(`✅ Quota doublé ! Tes énergies de demain seront ×${QUOTA2X_MULT}.`)
         } else {
-            if (active.kind === "squat150") markSquat150Done()
+            if (activePhys.kind === "squat150") markSquat150Done()
             const got = grantReps(PHYSICAL_ENERGY_REWARD)
             setMsg(`✅ Défi réussi ! +${got} énergie.`)
         }
-        clearLabDefi(); persistYellowSave()
+        clearLabDefi("phys"); persistYellowSave()
     }
     const startCt = (ctId: string, type: PokeType, power: number) => {
         const earned = ctEarnedCountByType(d.ctEarned, type)
@@ -94,14 +95,15 @@ export default function LabPanel() {
         setMsg(`Défi CT lancé : inflige ${ctDefiThreshold(power, earned)} dégâts ${type} en combat.`)
     }
     const claimCt = () => {
-        if (!active || active.kind !== "ct" || !active.ctTargetCtId || !active.ctThreshold) return
-        if (ctDefiProgress() < active.ctThreshold) { setMsg(`Pas encore : ${ctDefiProgress()}/${active.ctThreshold} dégâts ${active.ctType}.`); return }
-        grantCt(active.ctTargetCtId); recordCtEarned(active.ctTargetCtId)
-        const move = active.ctMoveId ? getMove(active.ctMoveId)?.name : active.ctTargetCtId
-        clearLabDefi(); persistYellowSave()
+        if (!activeCt || activeCt.kind !== "ct" || !activeCt.ctTargetCtId || !activeCt.ctThreshold) return
+        if (ctDefiProgress() < activeCt.ctThreshold) { setMsg(`Pas encore : ${ctDefiProgress()}/${activeCt.ctThreshold} dégâts ${activeCt.ctType}.`); return }
+        grantCt(activeCt.ctTargetCtId); recordCtEarned(activeCt.ctTargetCtId)
+        const move = activeCt.ctMoveId ? getMove(activeCt.ctMoveId)?.name : activeCt.ctTargetCtId
+        clearLabDefi("ct"); persistYellowSave()
         setMsg(`✅ CT gagnée : ${move} ! Le scientifique te la remet.`)
     }
-    const abandon = () => { clearLabDefi(); persistYellowSave(); setMsg("Défi abandonné.") }
+    const abandonPhys = () => { clearLabDefi("phys"); persistYellowSave(); setMsg("Défi physique abandonné.") }
+    const abandonCt = () => { clearLabDefi("ct"); persistYellowSave(); setMsg("Défi CT abandonné.") }
     const claimTonytony = () => {
         const where = grantTonytony()
         persistYellowSave()
@@ -133,16 +135,14 @@ export default function LabPanel() {
 
                         <div style={{ flex: 1, overflowY: "auto", padding: 12 }}>
                             {/* ─── PHYSIQUE ─── */}
-                            {tab === "phys" && (active?.kind && active.kind !== "ct" ? (
-                                <ActiveBox title={PHYSICAL_DEFIS.find((x) => x.kind === active.kind)?.label ?? "Défi"} desc={PHYSICAL_DEFIS.find((x) => x.kind === active.kind)?.desc ?? ""}>
+                            {tab === "phys" && (activePhys ? (
+                                <ActiveBox title={PHYSICAL_DEFIS.find((x) => x.kind === activePhys.kind)?.label ?? "Défi"} desc={PHYSICAL_DEFIS.find((x) => x.kind === activePhys.kind)?.desc ?? ""}>
                                     <button onClick={claimPhys} disabled={busy} style={primary}>{busy ? "…" : "Vérifier / Réclamer"}</button>
-                                    <button onClick={abandon} disabled={busy} style={ghost}>Abandonner</button>
+                                    <button onClick={abandonPhys} disabled={busy} style={ghost}>Abandonner</button>
                                 </ActiveBox>
-                            ) : active?.kind === "ct" ? (
-                                <Hint>⏳ Un <b>défi CT</b> est déjà en cours (un seul défi à la fois). Va à l'onglet <b>💿 CT</b> pour le réclamer ou l'abandonner.</Hint>
                             ) : (
                                 <>
-                                    <Hint>Défis sur tes <b>vraies reps PushQuest</b> (vérifiés serveur). Un seul défi à la fois.</Hint>
+                                    <Hint>Défis sur tes <b>vraies reps PushQuest</b> (vérifiés serveur). Un seul défi physique à la fois — mais tu peux mener un défi <b>CT</b> et la <b>roulette</b> en parallèle.</Hint>
                                     {PHYSICAL_DEFIS.filter((x) => !(x.kind === "squat150" && d.squat150Done)).map((x) => (
                                         <Card key={x.kind} title={x.label} desc={x.desc} reward={x.reward}>
                                             <button onClick={() => startPhys(x.kind)} disabled={busy} style={primary}>Lancer</button>
@@ -153,17 +153,15 @@ export default function LabPanel() {
                             ))}
 
                             {/* ─── CT ─── */}
-                            {tab === "ct" && (active?.kind === "ct" ? (
-                                <ActiveBox title={`Défi CT — ${active.ctType}`} desc={`Inflige des dégâts ${active.ctType} en combat.`}>
-                                    <div style={{ fontSize: 12, color: INK, margin: "4px 0 8px" }}>Progression : <b>{ctDefiProgress()}</b> / {active.ctThreshold} dégâts</div>
-                                    <button onClick={claimCt} disabled={ctDefiProgress() < (active.ctThreshold ?? Infinity)} style={ctDefiProgress() >= (active.ctThreshold ?? Infinity) ? primary : ghost}>Réclamer la CT</button>
-                                    <button onClick={abandon} style={ghost}>Abandonner</button>
+                            {tab === "ct" && (activeCt ? (
+                                <ActiveBox title={`Défi CT — ${activeCt.ctType}`} desc={`Inflige des dégâts ${activeCt.ctType} en combat.`}>
+                                    <div style={{ fontSize: 12, color: INK, margin: "4px 0 8px" }}>Progression : <b>{ctDefiProgress()}</b> / {activeCt.ctThreshold} dégâts</div>
+                                    <button onClick={claimCt} disabled={ctDefiProgress() < (activeCt.ctThreshold ?? Infinity)} style={ctDefiProgress() >= (activeCt.ctThreshold ?? Infinity) ? primary : ghost}>Réclamer la CT</button>
+                                    <button onClick={abandonCt} style={ghost}>Abandonner</button>
                                 </ActiveBox>
-                            ) : active ? (
-                                <Hint>⏳ Un <b>défi physique</b> est déjà en cours (un seul défi à la fois). Va à l'onglet <b>⚡ Physique</b> pour le réclamer ou l'abandonner.</Hint>
                             ) : (
                                 <>
-                                    <Hint>Choisis un <b>type</b>, puis une CT. Inflige <b>puissance × 100</b> dégâts de ce type en combat. Max {CT_PER_TYPE_MAX}/type (la 2ᵉ coûte ×2).</Hint>
+                                    <Hint>Choisis un <b>type</b>, puis une CT. Inflige <b>puissance × 100</b> dégâts de ce type en combat (indépendant d'un défi physique). Max {CT_PER_TYPE_MAX}/type (la 2ᵉ coûte ×2).</Hint>
                                     <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 4, marginBottom: 10 }}>
                                         {POKE_TYPES.map((t) => (
                                             <button key={t} onClick={() => setCtType(t)} title={t} style={{ ...typeBtn, ...(ctType === t ? typeOn : {}) }}>{TYPE_EMOJI[t]}</button>

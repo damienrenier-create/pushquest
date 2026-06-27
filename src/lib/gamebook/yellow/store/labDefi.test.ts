@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest"
 import {
     hydratePlayer, getPlayer, bankReps, setTomorrowEnergyMult,
-    startLabDefi, addCtDamage, ctDefiProgress, casinoSpin, grantTonytony, recordCtEarned,
+    startLabDefi, clearLabDefi, addCtDamage, ctDefiProgress, casinoSpin, grantTonytony, recordCtEarned,
     casinoTicketSpin, casinoTicketAvailable, consumeDailyTicket, makeTonytonyShiny,
 } from "./playerStore"
 import { createMonInstance } from "../battle/factory"
@@ -29,6 +29,35 @@ describe("défi 3 — bankReps × multiplicateur le jour cible", () => {
         setTomorrowEnergyMult(3, "2026-06-27")
         bankReps(100, 0, "2026-06-27") // 100×3 = 300 mais cap 200
         expect(getPlayer().reps).toBe(200)
+    })
+})
+
+describe("défis en parallèle — 1 physique + 1 CT indépendants", () => {
+    it("un défi physique et un défi CT coexistent ; chacun se clôt sans toucher l'autre", () => {
+        hydratePlayer({ reps: 1000, repsCap: 1000, repsBankedTotal: 0, labDefi: emptyLabDefi() })
+        startLabDefi({ kind: "pushup1h", startedAt: "t", startSnapshot: 0 })
+        startLabDefi({ kind: "ct", startedAt: "t", ctType: "FEU", ctThreshold: 900, ctTargetCtId: "ct08", ctMoveId: "lance_flammes" })
+        expect(getPlayer().labDefi.activePhys?.kind).toBe("pushup1h")
+        expect(getPlayer().labDefi.activeCt?.kind).toBe("ct")
+        // le CT progresse, le physique reste intact
+        addCtDamage("FEU", 500)
+        expect(ctDefiProgress()).toBe(500)
+        expect(getPlayer().labDefi.activePhys?.kind).toBe("pushup1h")
+        // clore le CT ne touche pas le physique (et inversement)
+        clearLabDefi("ct")
+        expect(getPlayer().labDefi.activeCt).toBeNull()
+        expect(getPlayer().labDefi.activePhys?.kind).toBe("pushup1h")
+        expect(ctDefiProgress()).toBe(0) // compteur de dégâts vidé avec le slot CT
+        clearLabDefi("phys")
+        expect(getPlayer().labDefi.activePhys).toBeNull()
+    })
+
+    it("relancer un défi physique ne réinitialise PAS la progression du défi CT", () => {
+        hydratePlayer({ reps: 1000, repsCap: 1000, repsBankedTotal: 0, labDefi: emptyLabDefi() })
+        startLabDefi({ kind: "ct", startedAt: "t", ctType: "EAU", ctThreshold: 900, ctTargetCtId: "ct09", ctMoveId: "surf" })
+        addCtDamage("EAU", 400)
+        startLabDefi({ kind: "quota2x", startedAt: "t" }) // démarre un physique
+        expect(ctDefiProgress()).toBe(400) // le compteur CT survit
     })
 })
 

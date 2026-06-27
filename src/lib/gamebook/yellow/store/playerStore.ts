@@ -721,17 +721,25 @@ export function grantBonusEnergyUncapped(n: number) {
 // DÉFIS DU LABO (étage du Centre) — physiques / CT / casino Tonytony
 // ============================================================
 
-/** Lance un défi physique/CT (remplace l'éventuel défi actif) ; réinitialise le compteur de dégâts CT. */
-export function startLabDefi(active: LabActiveDefi) {
-    st = { ...st, labDefi: { ...st.labDefi, active, ctDamageByType: {} } }
+/** Lance un défi. CT → slot CT indépendant (reset du compteur de dégâts). Physique → slot physique
+ *  (remplace l'éventuel physique en cours). Les deux peuvent être actifs en parallèle. */
+export function startLabDefi(defi: LabActiveDefi) {
+    const d = st.labDefi
+    if (defi.kind === "ct") st = { ...st, labDefi: { ...d, activeCt: defi, ctDamageByType: {} } }
+    else st = { ...st, labDefi: { ...d, activePhys: defi } }
     emit()
 }
 
-/** Clôt le défi actif (annulation OU récompense remise) et vide le compteur de dégâts CT. */
-export function clearLabDefi() {
+/** Clôt UN défi (annulation OU récompense remise). "ct" vide aussi le compteur de dégâts CT. */
+export function clearLabDefi(which: "phys" | "ct") {
     const d = st.labDefi
-    if (!d.active && Object.keys(d.ctDamageByType).length === 0) return
-    st = { ...st, labDefi: { ...d, active: null, ctDamageByType: {} } }
+    if (which === "ct") {
+        if (!d.activeCt && Object.keys(d.ctDamageByType).length === 0) return
+        st = { ...st, labDefi: { ...d, activeCt: null, ctDamageByType: {} } }
+    } else {
+        if (!d.activePhys) return
+        st = { ...st, labDefi: { ...d, activePhys: null } }
+    }
     emit()
 }
 
@@ -745,7 +753,7 @@ export function markSquat150Done() {
 /** Accumule des dégâts infligés par le joueur pour le défi CT actif (si le type ciblé correspond). */
 export function addCtDamage(type: PokeType, amount: number) {
     const d = st.labDefi
-    if (!d.active || d.active.kind !== "ct" || d.active.ctType !== type) return
+    if (!d.activeCt || d.activeCt.kind !== "ct" || d.activeCt.ctType !== type) return
     const add = Math.max(0, Math.floor(amount))
     if (add <= 0) return
     st = { ...st, labDefi: { ...d, ctDamageByType: { ...d.ctDamageByType, [type]: (d.ctDamageByType[type] ?? 0) + add } } }
@@ -755,8 +763,8 @@ export function addCtDamage(type: PokeType, amount: number) {
 /** Dégâts cumulés pour le défi CT actif (0 si aucun défi CT en cours). */
 export function ctDefiProgress(): number {
     const d = st.labDefi
-    if (!d.active || d.active.kind !== "ct" || !d.active.ctType) return 0
-    return d.ctDamageByType[d.active.ctType] ?? 0
+    if (!d.activeCt || d.activeCt.kind !== "ct" || !d.activeCt.ctType) return 0
+    return d.ctDamageByType[d.activeCt.ctType] ?? 0
 }
 
 /** Enregistre une CT gagnée au défi CT (pour le plafond 2/type + le seuil ×2), idempotent. */

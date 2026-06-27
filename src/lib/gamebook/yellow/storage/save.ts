@@ -210,19 +210,23 @@ function parseLabDefi(raw: unknown): LabDefiState {
     const o = raw as Record<string, unknown>
     const isType = (v: unknown): v is PokeType => typeof v === "string" && (POKE_TYPES as readonly string[]).includes(v)
     const nz = (v: unknown) => (typeof v === "number" && isFinite(v) ? Math.max(0, Math.floor(v)) : 0)
-    // Défi actif
-    if (o.active && typeof o.active === "object") {
-        const a = o.active as Record<string, unknown>
-        if (LAB_DEFI_KINDS.includes(a.kind as LabDefiKind) && typeof a.startedAt === "string") {
-            const act: LabActiveDefi = { kind: a.kind as LabDefiKind, startedAt: a.startedAt }
-            if (typeof a.startSnapshot === "number" && isFinite(a.startSnapshot)) act.startSnapshot = Math.max(0, Math.floor(a.startSnapshot))
-            if (isType(a.ctType)) act.ctType = a.ctType
-            if (typeof a.ctMoveId === "string") act.ctMoveId = a.ctMoveId
-            if (typeof a.ctThreshold === "number" && isFinite(a.ctThreshold)) act.ctThreshold = Math.max(0, Math.floor(a.ctThreshold))
-            if (typeof a.ctTargetCtId === "string") act.ctTargetCtId = a.ctTargetCtId
-            d.active = act
-        }
+    // Défis actifs (physique + CT, slots indépendants).
+    const parseActive = (raw: unknown): LabActiveDefi | null => {
+        if (!raw || typeof raw !== "object") return null
+        const a = raw as Record<string, unknown>
+        if (!LAB_DEFI_KINDS.includes(a.kind as LabDefiKind) || typeof a.startedAt !== "string") return null
+        const act: LabActiveDefi = { kind: a.kind as LabDefiKind, startedAt: a.startedAt }
+        if (typeof a.startSnapshot === "number" && isFinite(a.startSnapshot)) act.startSnapshot = Math.max(0, Math.floor(a.startSnapshot))
+        if (isType(a.ctType)) act.ctType = a.ctType
+        if (typeof a.ctMoveId === "string") act.ctMoveId = a.ctMoveId
+        if (typeof a.ctThreshold === "number" && isFinite(a.ctThreshold)) act.ctThreshold = Math.max(0, Math.floor(a.ctThreshold))
+        if (typeof a.ctTargetCtId === "string") act.ctTargetCtId = a.ctTargetCtId
+        return act
     }
+    // MIGRATION : ancienne save = un unique `active` (physique OU CT) → on le route vers le bon slot.
+    const legacy = parseActive(o.active)
+    d.activePhys = parseActive(o.activePhys) ?? (legacy && legacy.kind !== "ct" ? legacy : null)
+    d.activeCt = parseActive(o.activeCt) ?? (legacy && legacy.kind === "ct" ? legacy : null)
     d.squat150Done = o.squat150Done === true
     if (o.ctDamageByType && typeof o.ctDamageByType === "object") {
         for (const [k, v] of Object.entries(o.ctDamageByType as Record<string, unknown>)) {

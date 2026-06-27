@@ -11,7 +11,7 @@ import type { PokeType } from "../battle/types"
 import { CTS } from "./cts"
 import { getMove } from "./moves"
 
-/** Type du défi physique/CT « actif » (un seul à la fois). */
+/** Type du défi physique/CT. Physique : un seul à la fois. CT : slot indépendant (parallèle). */
 export type LabDefiKind = "pushup1h" | "squat150" | "quota2x" | "ct"
 
 /** Défi en cours (physique ou CT) — `null` = aucun défi actif. */
@@ -34,8 +34,10 @@ export interface LabActiveDefi {
 
 /** État persistant de TOUS les défis du labo (groupé dans la save yellow). */
 export interface LabDefiState {
-    /** Défi physique/CT en cours (un seul à la fois). */
-    active: LabActiveDefi | null
+    /** Défi PHYSIQUE en cours (un seul à la fois). */
+    activePhys: LabActiveDefi | null
+    /** Défi CT en cours — INDÉPENDANT du physique (peut tourner en parallèle ; la roulette aussi). */
+    activeCt: LabActiveDefi | null
     /** Défi P2 (150 squats en 1 série) réussi — one-shot À VIE. */
     squat150Done: boolean
     /** Cumul des dégâts infligés PAR LE JOUEUR, par type (alimente le défi CT actif). */
@@ -68,7 +70,8 @@ export interface LabDefiState {
 /** État de défis vierge (nouvelle save / reset). */
 export function emptyLabDefi(): LabDefiState {
     return {
-        active: null,
+        activePhys: null,
+        activeCt: null,
         squat150Done: false,
         ctDamageByType: {},
         ctEarned: [],
