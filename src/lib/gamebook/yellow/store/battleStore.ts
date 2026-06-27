@@ -20,7 +20,7 @@ import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType } from "../battle/types"
 import { markSeen, markCaught, getPokedex } from "./pokedexStore"
 import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, recordOrcalineDefeat, orcalineLevelForWins, markSylvebarbeAwake, addCtDamage, grantRouletteTicket } from "./playerStore"
-import { ARENA_TICKET_VALUE, SBIRE_TICKET_VALUE, SBIRE_TICKET_EVERY, ACE_TICKET_VALUE, ACE_TICKET_WIN_BEFORE, ACE_TICKET_WIN_AFTER } from "../data/labDefis"
+import { ARENA_TICKET_VALUE, SBIRE_TICKET_VALUE, SBIRE_TICKET_EVERY, ACE_TICKET_VALUE, ACE_TICKET_WIN_BEFORE, ACE_TICKET_WIN_AFTER, ACE_TICKET_EARLY_VALUE, ACE_TICKET_WIN_EARLY } from "../data/labDefis"
 import { getCt } from "../data/cts"
 import { getMove } from "../data/moves"
 import { getSpecies } from "../data/species"
@@ -320,10 +320,13 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             if (r.refund) grantReps(storeState.energySpent) // remboursement de l'énergie dépensée
             aceWin = winNum
             aceRewardMsg = r.message
-            // 🎟️ TICKET ACE (50) : 1× avant Panthéon (victoire ACE_TICKET_WIN_BEFORE) + 1× après (ACE_TICKET_WIN_AFTER).
-            if (winNum === ACE_TICKET_WIN_BEFORE || winNum === ACE_TICKET_WIN_AFTER) {
-                grantRouletteTicket(ACE_TICKET_VALUE)
-                aceRewardMsg = `${aceRewardMsg ? aceRewardMsg + " " : ""}🎟️ Et un ticket roulette de ${ACE_TICKET_VALUE} énergies — joue-le à ta prochaine connexion.`
+            // 🎟️ TICKETS ACE : un petit (20) à la 2e victoire ; un gros (50) avant Panthéon (victoire 6) + après (victoire 8).
+            const aceTicket = winNum === ACE_TICKET_WIN_EARLY ? ACE_TICKET_EARLY_VALUE
+                : (winNum === ACE_TICKET_WIN_BEFORE || winNum === ACE_TICKET_WIN_AFTER) ? ACE_TICKET_VALUE
+                : 0
+            if (aceTicket > 0) {
+                grantRouletteTicket(aceTicket)
+                aceRewardMsg = `${aceRewardMsg ? aceRewardMsg + " " : ""}🎟️ Et un ticket roulette de ${aceTicket} énergies — joue-le à ta prochaine connexion.`
             }
         } else if (storeState.trainer.trainerId === SBIRE_TRAINER_ID) {
             sbireWin = recordSbireWin()

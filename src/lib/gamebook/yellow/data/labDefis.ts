@@ -193,10 +193,13 @@ export const ARENA_TICKET_VALUE = 30
 /** Sbire (pâtes) : un ticket de 20, tous les SBIRE_TICKET_EVERY combats cumulés, une fois la CT obtenue. */
 export const SBIRE_TICKET_VALUE = 20
 export const SBIRE_TICKET_EVERY = 6
-/** ACE : un ticket de 50, 1× avant Panthéon (victoire ACE_TICKET_WIN_BEFORE) + 1× après (ACE_TICKET_WIN_AFTER). */
+/** ACE : un petit ticket de 20 à la 2e victoire (accroche), puis un gros de 50 avant Panthéon
+ *  (victoire ACE_TICKET_WIN_BEFORE) + 1× après (ACE_TICKET_WIN_AFTER). */
 export const ACE_TICKET_VALUE = 50
 export const ACE_TICKET_WIN_BEFORE = 6
 export const ACE_TICKET_WIN_AFTER = 8
+export const ACE_TICKET_EARLY_VALUE = 20
+export const ACE_TICKET_WIN_EARLY = 2
 /** Garde-fou : taille max de la file de tickets (pas d'accumulation infinie). */
 export const TICKET_QUEUE_MAX = 30
 
