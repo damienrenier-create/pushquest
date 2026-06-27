@@ -170,6 +170,9 @@ export interface MonInstance {
     /** CHROMATIQUE (shiny) : tiré ~1/512 au spawn sauvage. IV parfaits + **+10% sur chaque stat**
      *  (cf. fullStats — "un peu plus que parfait"). Cosmétique : rendu avec un filtre + ✨. */
     shiny?: boolean
+    /** OBJET TENU (held item) : id d'un objet de data/heldItems.ts. 1 max par Daemon.
+     *  Effets lus par fullStats (stats) et le moteur (dégâts/combat). cf. data/heldItems.ts. */
+    heldItem?: string
     /** Attaques apprises à un niveau alors que les 4 slots étaient pleins :
      *  en attente d'un choix « oublier une capacité » côté UI. Transitoire. */
     pendingMoves?: string[]

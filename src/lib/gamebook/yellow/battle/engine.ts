@@ -12,6 +12,7 @@ import { getSpecies } from "../data/species"
 import { getMove } from "../data/moves"
 import { fullStats, effectiveStat, clampStage } from "./stats"
 import { computeDamage, hasStab, critProbabilityGen1 } from "./damage"
+import { heldOutgoingDmgMult, heldIncomingDmgMult } from "../data/heldItems"
 import { typeEffectiveness, effectivenessMessage, moveCategory } from "./typeChart"
 import * as Status from "./status"
 import { accuracyCheck } from "./accuracy"
@@ -640,6 +641,8 @@ function dealMoveDamage(state: BattleState, side: SideId, move: MoveData, rng: R
     const isCrit = critOverride !== undefined
         ? rng.next() < critOverride
         : rng.next() < critProbabilityGen1(atkSpecies.baseStats.spe, move.effect?.highCrit)
+    // OBJET TENU : boost de type (attaquant) × réduction de dégâts physiques (défenseur, ex. Coquille Tony).
+    const itemMult = heldOutgoingDmgMult(attacker, move.type) * heldIncomingDmgMult(defender, isPhysical)
     const result = computeDamage({
         level: attacker.level,
         power: move.power,
@@ -649,6 +652,7 @@ function dealMoveDamage(state: BattleState, side: SideId, move: MoveData, rng: R
         typeEff: eff,
         isCrit,
         randomFactor: rng.damageFactor(),
+        itemMult,
     })
 
     applyDamage(state, other(side), result.damage, events)

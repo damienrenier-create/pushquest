@@ -7,6 +7,7 @@
 import type { SpeciesData, StatKey, StageKey, MonInstance, MajorStatus } from "./types"
 import { allocatedBonus } from "../data/saiyanConfig"
 import { evStatBonus } from "../data/evConfig"
+import { heldStatMult } from "../data/heldItems"
 
 // ============================================================
 // Stats absolues (hors combat)
@@ -29,7 +30,7 @@ export function computeStat(base: number, iv: number, level: number, ev = 0): nu
 
 /** Les 5 stats absolues : Gen-1 (base+IV) + EV (⌊EV/4⌋, plafonné) + bonus Saiyan (à plat). */
 export function fullStats(
-    inst: Pick<MonInstance, "level" | "ivs" | "allocated" | "ev" | "shiny">,
+    inst: Pick<MonInstance, "level" | "ivs" | "allocated" | "ev" | "shiny"> & { speciesId?: string; heldItem?: string },
     species: SpeciesData,
 ): Record<StatKey, number> {
     const lv = inst.level
@@ -38,12 +39,15 @@ export function fullStats(
     // SHINY = "un peu plus que parfait" : +10% sur CHAQUE stat finale (en plus des IV parfaits posés
     // au spawn). Choix de Sartay (flex assumé pour 7 joueurs) — appliqué ici → propage à maxHpOf + combat.
     const sh = (n: number) => (inst.shiny ? Math.floor(n * 1.1) : n)
+    // OBJET TENU : multiplicateur de stat (signatures, ex. +20% Vit). Respecte le verrou d'espèce.
+    const hm = heldStatMult(inst)
+    const it = (n: number, k: StatKey) => sh(Math.floor(n * (hm[k] ?? 1)))
     return {
-        hp: sh(maxHp(species, lv, inst.ivs.hp, e.hp ?? 0) + allocatedBonus("hp", a.hp ?? 0)),
-        atk: sh(computeStat(species.baseStats.atk, inst.ivs.atk, lv, e.atk ?? 0) + allocatedBonus("atk", a.atk ?? 0)),
-        def: sh(computeStat(species.baseStats.def, inst.ivs.def, lv, e.def ?? 0) + allocatedBonus("def", a.def ?? 0)),
-        spe: sh(computeStat(species.baseStats.spe, inst.ivs.spe, lv, e.spe ?? 0) + allocatedBonus("spe", a.spe ?? 0)),
-        spc: sh(computeStat(species.baseStats.spc, inst.ivs.spc, lv, e.spc ?? 0) + allocatedBonus("spc", a.spc ?? 0)),
+        hp: it(maxHp(species, lv, inst.ivs.hp, e.hp ?? 0) + allocatedBonus("hp", a.hp ?? 0), "hp"),
+        atk: it(computeStat(species.baseStats.atk, inst.ivs.atk, lv, e.atk ?? 0) + allocatedBonus("atk", a.atk ?? 0), "atk"),
+        def: it(computeStat(species.baseStats.def, inst.ivs.def, lv, e.def ?? 0) + allocatedBonus("def", a.def ?? 0), "def"),
+        spe: it(computeStat(species.baseStats.spe, inst.ivs.spe, lv, e.spe ?? 0) + allocatedBonus("spe", a.spe ?? 0), "spe"),
+        spc: it(computeStat(species.baseStats.spc, inst.ivs.spc, lv, e.spc ?? 0) + allocatedBonus("spc", a.spc ?? 0), "spc"),
     }
 }
 

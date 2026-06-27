@@ -18,6 +18,8 @@ export interface DamageInput {
     typeEff: number
     isCrit: boolean
     randomFactor: number   // 0.85..1.00 (Rng.damageFactor())
+    /** Multiplicateur d'OBJET TENU : boost de type (attaquant) × réduction physique (défenseur). Défaut 1. */
+    itemMult?: number
 }
 
 export interface DamageResult {
@@ -45,7 +47,8 @@ export function computeDamage(i: DamageInput): DamageResult {
     const afterCrit = Math.floor(base * (i.isCrit ? CRIT_MULT : 1))
     const afterStab = Math.floor(afterCrit * (i.stab ? STAB_MULT : 1))
     const afterType = Math.floor(afterStab * i.typeEff)
-    const damage = Math.max(1, Math.floor(afterType * i.randomFactor))
+    const afterItem = Math.floor(afterType * (i.itemMult ?? 1))   // objet tenu (boost type / réduction phys)
+    const damage = Math.max(1, Math.floor(afterItem * i.randomFactor))
 
     return { damage, isCrit: i.isCrit, typeEff: i.typeEff, breakdown: { base, afterCrit, afterStab, afterType } }
 }
