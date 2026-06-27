@@ -19,7 +19,7 @@ describe("CT — achat unique (toute CT) + Météores (ct31)", () => {
 
     it("acheter une CT l'enregistre (boughtCts), déduit le prix, puis re-achat impossible", () => {
         const mon = createMonInstance("tonytony", 30, { owned: true })
-        hydratePlayer({ team: [mon], reps: 5000, badges: [], boughtCts: [] })
+        hydratePlayer({ team: [mon], reps: 5000, badges: ["plante", "roche", "feu", "eau"], boughtCts: [] }) // ct31 = minBadges 4
         const price = getCt("ct31")!.price
         const r = teachCt(mon.uid, "ct31")
         expect(r.ok).toBe(true)
