@@ -25,16 +25,14 @@ export default function DailyTicketModal({ today, onClose }: { today: string; on
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current) }, [])
 
-    // Animation "début de combat" : flashs rapides (~1,1 s) puis arrivée sur la roulette.
+    // Animation "début de combat" (~3 s) : une roue de chiffres qui tourne (rappel roulette),
+    // puis un burst doré final avant l'arrivée sur la roulette.
     const startAnim = () => {
         setPhase("anim")
-        let n = 0
-        const flick = () => {
-            setFlash((f) => !f); n++
-            if (n >= 9) { setFlash(false); setPhase("play"); return }
-            timerRef.current = setTimeout(flick, 120)
-        }
-        flick()
+        timerRef.current = setTimeout(() => {
+            setFlash(true) // burst final
+            timerRef.current = setTimeout(() => { setFlash(false); setPhase("play") }, 380)
+        }, 2620)
     }
 
     const pick = (betCase: number) => {
@@ -54,7 +52,26 @@ export default function DailyTicketModal({ today, onClose }: { today: string; on
 
     return (
         <div style={overlay}>
-            {phase === "anim" && <div style={{ position: "absolute", inset: 0, background: flash ? "#fff" : GOLD, zIndex: 1, transition: "background 60ms" }} />}
+            {phase === "anim" && (
+                <div style={animOverlay}>
+                    <style>{`
+                        @keyframes tkSpin { from { transform: rotate(0deg) } to { transform: rotate(1440deg) } }
+                        @keyframes tkCenter { 0%,100% { transform: scale(.9) } 50% { transform: scale(1.14) } }
+                        @keyframes tkGlow { 0%,100% { box-shadow: 0 0 28px 6px rgba(241,196,15,.45) } 50% { box-shadow: 0 0 64px 20px rgba(241,196,15,.95) } }
+                    `}</style>
+                    <div style={{ position: "relative", width: 230, height: 230, borderRadius: "50%", border: `4px solid ${GOLD}`, animation: "tkSpin 3s cubic-bezier(.10,.70,.22,1) forwards, tkGlow 0.7s ease-in-out infinite" }}>
+                        {Array.from({ length: CASINO_NUM_CASES }, (_, i) => {
+                            const ang = (i / CASINO_NUM_CASES) * 2 * Math.PI - Math.PI / 2
+                            const R = 96
+                            return (
+                                <div key={i} style={{ position: "absolute", left: 115 + R * Math.cos(ang), top: 115 + R * Math.sin(ang), transform: "translate(-50%,-50%)", color: i % 2 ? GOLD : "#fff", fontWeight: 900, fontSize: 19, textShadow: "0 1px 3px #000" }}>{i}</div>
+                            )
+                        })}
+                    </div>
+                    <div style={{ position: "absolute", fontSize: 46, animation: "tkCenter 0.5s ease-in-out infinite" }}>🎰</div>
+                    {flash && <div style={{ position: "absolute", inset: 0, background: "#fff" }} />}
+                </div>
+            )}
             <div style={box}>
                 <div style={header}>🎟️ TICKET DU JOUR <span style={{ fontSize: 10, opacity: 0.7, fontWeight: 600 }}>offert par le Dieu Spaghetti</span></div>
                 <div style={{ padding: 14, overflowY: "auto", flex: 1, position: "relative", zIndex: 2 }}>
@@ -65,13 +82,6 @@ export default function DailyTicketModal({ today, onClose }: { today: string; on
                             <p style={{ fontSize: 13, color: INK, lineHeight: 1.5, fontWeight: 600 }}>
                                 « Ah, te voilà, mortel ! Pour bien démarrer ta journée, le Dieu Spaghetti t'offre <b>10 énergies</b> à jouer à la roulette. Tente ta chance… elle sourit aux audacieux ! »
                             </p>
-                        </div>
-                    )}
-
-                    {phase === "anim" && (
-                        <div style={{ textAlign: "center", padding: "24px 0" }}>
-                            <div style={{ fontSize: 44 }}>🎰</div>
-                            <div style={{ fontWeight: 900, color: INK, fontSize: 16, letterSpacing: 1 }}>LA ROULETTE !</div>
                         </div>
                     )}
 
@@ -113,6 +123,7 @@ export default function DailyTicketModal({ today, onClose }: { today: string; on
 }
 
 const overlay: React.CSSProperties = { position: "absolute", inset: 0, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 80, padding: 12 }
+const animOverlay: React.CSSProperties = { position: "absolute", inset: 0, zIndex: 5, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", background: "radial-gradient(circle, #4a3500 0%, #1a1208 65%, #000 100%)" }
 const box: React.CSSProperties = { position: "relative", zIndex: 2, background: CREAM, border: `3px solid ${INK}`, borderRadius: 10, width: "100%", maxWidth: 420, maxHeight: "88%", display: "flex", flexDirection: "column", boxShadow: "0 6px 24px rgba(0,0,0,0.5)", fontFamily: "system-ui, sans-serif" }
 const header: React.CSSProperties = { padding: "10px 12px", borderBottom: `2px solid ${DARK}`, color: INK, fontWeight: 800, fontSize: 14 }
 const caseBtn: React.CSSProperties = { background: "#fff8e8", border: `1px solid ${DARK}`, color: INK, padding: "8px 4px", fontSize: 14, fontWeight: 800, cursor: "pointer", borderRadius: 3, transition: "transform 60ms, box-shadow 60ms" }
