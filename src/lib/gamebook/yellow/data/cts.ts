@@ -35,6 +35,8 @@ export interface CtData {
     alsoTypes?: PokeType[]
     /** EXCLUSIVE AU LABO : jamais en boutique. S'obtient UNIQUEMENT en réussissant le défi CT du labo. */
     labOnly?: boolean
+    /** Nb de badges MINIMUM pour l'acheter (CT fortes débloquées au fil de la progression). 0/absent = dès le départ. */
+    minBadges?: number
 }
 // NB : TOUTE CT est un « achat unique » (cf. purchasableCts + boughtCts) — Gen 1, une TM = un usage.
 
@@ -94,11 +96,11 @@ export const CTS: CtData[] = [
     // --- CT COMBAT (Champion, 3 badges) : « Crochet du Maître » multi-coups (2-5×). Seule CT de type Combat. ---
     { id: "ct28", label: "CT28", moveId: "deluge_crochets", price: 630, champion: true },
     // --- CT NORMAL forte « Plaquage » (Body Slam : 85 + paralysie) : apprenable par TOUT LE MONDE (universal). ---
-    { id: "ct29", label: "CT29", moveId: "plaquage", price: 450, universal: true },
+    { id: "ct29", label: "CT29", moveId: "plaquage", price: 450, universal: true, minBadges: 2 },
     // --- CT INSECTE « Boul'Pollen » (85 + drain 50%) : 1re CT Insecte ; aussi pour les Plante (pollen). ---
     { id: "ct30", label: "CT30", moveId: "boul_pollen", price: 390, alsoTypes: ["PLANTE"] },
     // --- CT NORMAL « Météores » (ne rate JAMAIS) : la + chère. Apprenable par tous (Normal). ---
-    { id: "ct31", label: "CT31", moveId: "meteores", price: 1050, universal: true },
+    { id: "ct31", label: "CT31", moveId: "meteores", price: 1050, universal: true, minBadges: 4 },
     // === 4 nouvelles CT (refonte movesets lignées core) ===
     // Miasme Corrosif (Poison spé) : STAB spécial pour les Poison ; aussi pour les Spectre spéciaux.
     { id: "ct32", label: "CT32", moveId: "miasme_corrosif", price: 450, alsoTypes: ["SPECTRE"] },
@@ -169,6 +171,7 @@ export function purchasableCts(badges: BadgeId[], bought: string[] = []): CtData
         if (c.gift) return false // jamais en vente : obtenue uniquement en cadeau
         if (c.labOnly) return false // exclusive au labo : obtenue uniquement au défi CT, jamais en boutique
         if (bought.includes(c.id)) return false // achat unique déjà effectué → retirée du shop
+        if (c.minBadges && badges.length < c.minBadges) return false // CT forte : débloquée à N badges
         if (c.champion) return has3
         if (c.badge) return badges.includes(c.badge)
         return true
