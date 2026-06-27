@@ -14,7 +14,7 @@ import { getItem } from "../data/items"
 import { SAIYAN_POINT_VALUE } from "../data/saiyanConfig"
 import { BADGE_REPS_CAP_BONUS } from "../data/badges"
 import { getCt, canLearnCt, purchasableCts, type BadgeId } from "../data/cts"
-import { emptyLabDefi, casinoWinningCase, CASINO_NUM_CASES, CASINO_MIN_BET, CASINO_MAX_BET, CASINO_WIN_MULT, CASINO_BANKRUPT_STREAK, CASINO_BANKRUPT_COOLDOWN_MS, TONYTONY_TARGET, TONYTONY_SHINY_TARGET, TONYTONY_LEVEL, TONYTONY_SPECIES, type LabDefiState, type LabActiveDefi } from "../data/labDefis"
+import { emptyLabDefi, casinoWinningCase, CASINO_NUM_CASES, CASINO_MIN_BET, CASINO_MAX_BET, CASINO_WIN_MULT, CASINO_BANKRUPT_STREAK, CASINO_BANKRUPT_COOLDOWN_MS, TONYTONY_TARGET, TONYTONY_SHINY_TARGET, TONYTONY_LEVEL, TONYTONY_SPECIES, DAILY_TICKET_VALUE, TICKET_QUEUE_MAX, clampTicketValue, type LabDefiState, type LabActiveDefi } from "../data/labDefis"
 import { createMonInstance } from "../battle/factory"
 import type { StatKey } from "../battle/types"
 import { expForLevel, levelFromExp, applyExp, MAX_LEVEL, type ExpResult } from "../battle/xp"
@@ -845,36 +845,52 @@ export function casinoSpin(bets: CasinoBet[], nowMs: number): CasinoSpinResult {
 /** Cumul brut gagné au casino (vers la cible Tonytony). */
 export function casinoTotalWon(): number { return st.labDefi.casinoTotalWon }
 
-// ── Ticket roulette quotidien (gratuit) ──
-export interface CasinoTicketResult { winningCase: number; won: boolean; winAmount: number }
+// ── Tickets roulette OCTROYABLES (file FIFO, valeur de mise variable) ──
+export interface CasinoTicketResult { winningCase: number; won: boolean; winAmount: number; betValue: number }
 
-/** Un ticket roulette gratuit est-il disponible aujourd'hui ? (1/jour, `today` = jour serveur). */
-export function casinoTicketAvailable(today: string): boolean {
-    return !!today && st.labDefi.dailyTicketDate !== today
+/** Nb de tickets roulette en attente dans la file. */
+export function ticketCount(): number { return st.labDefi.grantedTickets.length }
+
+/** Valeur de mise du PROCHAIN ticket à jouer (0 si la file est vide). */
+export function peekTicketValue(): number { return st.labDefi.grantedTickets[0] ?? 0 }
+
+/** Octroie un ticket roulette de `value` énergies de mise (borné 10–50 ; file plafonnée à TICKET_QUEUE_MAX). */
+export function grantRouletteTicket(value: number) {
+    const d = st.labDefi
+    if (d.grantedTickets.length >= TICKET_QUEUE_MAX) return
+    st = { ...st, labDefi: { ...d, grantedTickets: [...d.grantedTickets, clampTicketValue(value)] } }
+    emit()
 }
 
-/** Consomme le ticket du jour SANS jouer (le joueur ferme → les 10 offertes sont perdues). */
-export function consumeDailyTicket(today: string) {
-    if (!today || st.labDefi.dailyTicketDate === today) return
-    st = { ...st, labDefi: { ...st.labDefi, dailyTicketDate: today } }
+/** Verse le ticket GRATUIT du jour à la file (1×/jour, `today` = jour serveur). Renvoie true si ajouté.
+ *  File pleine → on NE marque PAS le jour (le ticket gratuit sera versé quand de la place se libère). */
+export function ensureDailyTicket(today: string): boolean {
+    const d = st.labDefi
+    if (!today || d.dailyTicketDate === today) return false
+    if (d.grantedTickets.length >= TICKET_QUEUE_MAX) return false
+    st = { ...st, labDefi: { ...d, dailyTicketDate: today, grantedTickets: [...d.grantedTickets, DAILY_TICKET_VALUE] } }
     emit()
+    return true
 }
 
 /**
- * Spin du TICKET gratuit (10 énergie offertes, mise sur UNE case). Indépendant du casino du labo :
+ * Joue le PROCHAIN ticket de la file (FIFO), mise sur UNE case. Indépendant du casino du labo :
  * ne touche NI le cumul Tonytony, NI la série, NI la banqueroute, NI le motif. 🤫 Le TOUT PREMIER
- * pari du joueur est gagné d'office (case gagnante = sa mise) ; ensuite, aléatoire. Crédite +100 au gain.
+ * pari du joueur est gagné d'office (case gagnante = sa mise) ; ensuite, aléatoire. Gain = mise × 10.
+ * Renvoie un résultat à winningCase=-1/betValue=0 si aucun ticket en attente (no-op).
  */
-export function casinoTicketSpin(betCase: number, today: string): CasinoTicketResult {
+export function playTicketSpin(betCase: number): CasinoTicketResult {
     const d = st.labDefi
+    const betValue = d.grantedTickets[0]
+    if (betValue === undefined) return { winningCase: -1, won: false, winAmount: 0, betValue: 0 }
     const firstBet = !d.casinoFirstBetDone
     const winningCase = firstBet ? betCase : Math.floor(Math.random() * CASINO_NUM_CASES)
     const won = winningCase === betCase
-    const winAmount = won ? CASINO_MIN_BET * CASINO_WIN_MULT : 0
+    const winAmount = won ? betValue * CASINO_WIN_MULT : 0
     const newReps = won ? Math.min(st.repsCap, st.reps + winAmount) : st.reps
-    st = { ...st, reps: newReps, labDefi: { ...d, dailyTicketDate: today, casinoFirstBetDone: true } }
+    st = { ...st, reps: newReps, labDefi: { ...d, grantedTickets: d.grantedTickets.slice(1), casinoFirstBetDone: true } }
     emit()
-    return { winningCase, won, winAmount }
+    return { winningCase, won, winAmount, betValue }
 }
 
 /**

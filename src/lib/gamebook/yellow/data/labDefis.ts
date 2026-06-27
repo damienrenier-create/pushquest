@@ -61,10 +61,13 @@ export interface LabDefiState {
     tonytonyClaimed: boolean
     /** Capstone 5000 : le Tonytony du joueur a été rendu SHINY (one-shot). */
     tonytonyShiny: boolean
-    /** TICKET QUOTIDIEN : dernier jour (YYYY-MM-DD) où le ticket roulette gratuit a été donné/consommé. */
+    /** TICKET QUOTIDIEN : dernier jour (YYYY-MM-DD) où le ticket roulette gratuit a été versé à la file. */
     dailyTicketDate: string
     /** Le TOUT PREMIER pari roulette du joueur a-t-il eu lieu ? (le 1er est gagné d'office — secret). */
     casinoFirstBetDone: boolean
+    /** FILE de tickets roulette en attente (FIFO) : chaque entrée = la VALEUR de mise (10–50) du ticket.
+     *  Le ticket gratuit du jour (valeur 10) + les tickets octroyés par les boss (arène 30 / sbire 20 / ACE 50). */
+    grantedTickets: number[]
 }
 
 /** État de défis vierge (nouvelle save / reset). */
@@ -85,6 +88,7 @@ export function emptyLabDefi(): LabDefiState {
         tonytonyShiny: false,
         dailyTicketDate: "",
         casinoFirstBetDone: false,
+        grantedTickets: [],
     }
 }
 
@@ -179,4 +183,24 @@ export const TONYTONY_SPECIES = "tonytony"
 export function casinoWinningCase(spinIndex: number): number {
     const n = CASINO_PATTERN.length
     return CASINO_PATTERN[((spinIndex % n) + n) % n]
+}
+
+// ───────── Tickets roulette OCTROYABLES (valeur de mise variable) ─────────
+/** Ticket gratuit du jour : mise de base (gain ×10 = 100). */
+export const DAILY_TICKET_VALUE = CASINO_MIN_BET
+/** Boss d'arène : un ticket de 30 (en plus de la CT), à la 1re victoire. */
+export const ARENA_TICKET_VALUE = 30
+/** Sbire (pâtes) : un ticket de 20, tous les SBIRE_TICKET_EVERY combats cumulés, une fois la CT obtenue. */
+export const SBIRE_TICKET_VALUE = 20
+export const SBIRE_TICKET_EVERY = 6
+/** ACE : un ticket de 50, 1× avant Panthéon (victoire ACE_TICKET_WIN_BEFORE) + 1× après (ACE_TICKET_WIN_AFTER). */
+export const ACE_TICKET_VALUE = 50
+export const ACE_TICKET_WIN_BEFORE = 6
+export const ACE_TICKET_WIN_AFTER = 8
+/** Garde-fou : taille max de la file de tickets (pas d'accumulation infinie). */
+export const TICKET_QUEUE_MAX = 30
+
+/** Borne une valeur de ticket dans [CASINO_MIN_BET, CASINO_MAX_BET] (entier). */
+export function clampTicketValue(v: number): number {
+    return Math.max(CASINO_MIN_BET, Math.min(CASINO_MAX_BET, Math.floor(v)))
 }

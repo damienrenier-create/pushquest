@@ -19,7 +19,8 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType } from "../battle/types"
 import { markSeen, markCaught, getPokedex } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, recordOrcalineDefeat, orcalineLevelForWins, markSylvebarbeAwake, addCtDamage } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, recordOrcalineDefeat, orcalineLevelForWins, markSylvebarbeAwake, addCtDamage, grantRouletteTicket } from "./playerStore"
+import { ARENA_TICKET_VALUE, SBIRE_TICKET_VALUE, SBIRE_TICKET_EVERY, ACE_TICKET_VALUE, ACE_TICKET_WIN_BEFORE, ACE_TICKET_WIN_AFTER } from "../data/labDefis"
 import { getCt } from "../data/cts"
 import { getMove } from "../data/moves"
 import { getSpecies } from "../data/species"
@@ -298,6 +299,8 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     let giftCtMove: string | null = null
     let rematchReward: BattleStoreState["rematchReward"] = null
     let chainRematchId: string | null = null
+    // CT du sbire possédée AVANT ce combat ? (le ticket sbire ne tombe qu'APRÈS l'avoir décrochée).
+    const hadSbireCt = getPlayer().ownedCts.includes(SBIRE_REWARD_CT_ID)
     if (b.outcome === "win" && storeState.trainer) {
         if (storeState.trainer.trainerId === ACE_TRAINER_ID) {
             // ACE : sa défaite ratchete son niveau (+2 sur ta MOYENNE d'équipe) + mémorise le contre.
@@ -317,6 +320,11 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             if (r.refund) grantReps(storeState.energySpent) // remboursement de l'énergie dépensée
             aceWin = winNum
             aceRewardMsg = r.message
+            // 🎟️ TICKET ACE (50) : 1× avant Panthéon (victoire ACE_TICKET_WIN_BEFORE) + 1× après (ACE_TICKET_WIN_AFTER).
+            if (winNum === ACE_TICKET_WIN_BEFORE || winNum === ACE_TICKET_WIN_AFTER) {
+                grantRouletteTicket(ACE_TICKET_VALUE)
+                aceRewardMsg = `${aceRewardMsg ? aceRewardMsg + " " : ""}🎟️ Et un ticket roulette de ${ACE_TICKET_VALUE} énergies — joue-le à ta prochaine connexion.`
+            }
         } else if (storeState.trainer.trainerId === SBIRE_TRAINER_ID) {
             sbireWin = recordSbireWin()
             // Récompense selon la victoire DU JOUR (6 combats) : reps / balls croissantes / CT au 6e.
@@ -344,6 +352,11 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                     const added = grantReps(SBIRE_REWARD_CT_FALLBACK_REPS)
                     sbireRewardMsg = `🍝 Tu as déjà ma relique — alors prends ${added} d'énergie !`
                 }
+            }
+            // 🎟️ TICKET sbire (20) : tous les SBIRE_TICKET_EVERY combats cumulés, une fois la CT décrochée.
+            if (hadSbireCt && sbireWin !== null && sbireWin % SBIRE_TICKET_EVERY === 0) {
+                grantRouletteTicket(SBIRE_TICKET_VALUE)
+                sbireRewardMsg = `${sbireRewardMsg ? sbireRewardMsg + " " : ""}🎟️ + un ticket roulette de ${SBIRE_TICKET_VALUE} énergies !`
             }
         } else if (storeState.trainer.isRematch) {
             // REMATCH gagné : marque le rematch fait + récompense (énergie / CT cadeau).
@@ -435,6 +448,8 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             markTrainerDefeated(storeState.trainer.trainerId)
             const t = getTrainer(storeState.trainer.trainerId)
             if (t?.badge && awardBadge(t.badge)) badgeAwarded = t.badge
+            // 🎟️ TICKET arène (30) : à la 1re conquête du badge (en plus de la CT cadeau).
+            if (badgeAwarded) grantRouletteTicket(ARENA_TICKET_VALUE)
             // CT CADEAU remise gratuitement (trophée du boss) + nom pour la notif.
             if (t?.giftCt && grantCt(t.giftCt)) {
                 const mvId = getCt(t.giftCt)?.moveId

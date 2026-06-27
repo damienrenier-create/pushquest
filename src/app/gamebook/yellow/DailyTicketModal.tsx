@@ -2,13 +2,14 @@
 
 // src/app/gamebook/yellow/DailyTicketModal.tsx
 //
-// TICKET ROULETTE QUOTIDIEN — cinématique à la 1re connexion du jour (chapitre 2).
-// Flux : 🍝 intro Dieu Spaghetti → flash "début de combat" → roulette (10 énergie offertes,
-// 1 case) → résultat (🤫 1er pari gagné d'office) → 🍝 invite à l'étage du Centre.
-// Indépendant du casino du labo (ne compte PAS pour Tonytony — cf. casinoTicketSpin).
+// TICKETS ROULETTE — cinématique de la FILE de tickets (chapitre 2).
+// La file contient le ticket GRATUIT du jour (valeur 10) + les tickets octroyés par les boss
+// (arène 30 / sbire 20 / ACE 50). On les joue un par un : 🍝 intro → flash → roulette (1 case,
+// mise = valeur du ticket) → résultat (🤫 1er pari gagné d'office) → ticket suivant ou sortie.
+// Indépendant du casino du labo (ne compte PAS pour Tonytony — cf. playTicketSpin).
 
 import { useState, useRef, useEffect } from "react"
-import { casinoTicketSpin, type CasinoTicketResult } from "@/lib/gamebook/yellow/store/playerStore"
+import { playTicketSpin, peekTicketValue, ticketCount, type CasinoTicketResult } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { CASINO_NUM_CASES } from "@/lib/gamebook/yellow/data/labDefis"
 import { buildSpinDelays } from "./CasinoYellowModal"
@@ -17,37 +18,47 @@ const GOLD = "#f1c40f", INK = "#2a1c10", CREAM = "#f4ecd4", DARK = "#cdbb86"
 
 type Phase = "intro" | "anim" | "play" | "spin" | "result"
 
-export default function DailyTicketModal({ today, onClose }: { today: string; onClose: () => void }) {
+export default function DailyTicketModal({ onClose }: { onClose: () => void }) {
     const [phase, setPhase] = useState<Phase>("intro")
     const [highlight, setHighlight] = useState(-1)
     const [flash, setFlash] = useState(false)
     const [result, setResult] = useState<CasinoTicketResult | null>(null)
+    const [betValue, setBetValue] = useState(() => peekTicketValue()) // mise du ticket courant
+    const [remaining, setRemaining] = useState(0)                     // tickets restants APRÈS le spin courant
+    const [total] = useState(() => ticketCount())                     // total au début (pour l'intro)
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current) }, [])
 
-    // Animation "début de combat" (~3 s) : une roue de chiffres qui tourne (rappel roulette),
-    // puis un burst doré final avant l'arrivée sur la roulette.
+    // Animation "début de combat" (~3 s) : une roue de chiffres qui tourne, puis un burst doré.
     const startAnim = () => {
         setPhase("anim")
         timerRef.current = setTimeout(() => {
-            setFlash(true) // burst final
+            setFlash(true)
             timerRef.current = setTimeout(() => { setFlash(false); setPhase("play") }, 380)
         }, 2620)
     }
 
     const pick = (betCase: number) => {
         if (phase !== "play") return
-        const r = casinoTicketSpin(betCase, today) // applique (rig 1er pari / aléatoire + crédite le gain)
+        const r = playTicketSpin(betCase) // pop le ticket → rig 1er pari / aléatoire + crédite le gain
+        if (r.betValue === 0) { onClose(); return } // file vide (sécurité)
         persistYellowSave()
         setPhase("spin")
         const delays = buildSpinDelays(r.winningCase, CASINO_NUM_CASES)
         let k = 0
         const tick = () => {
             setHighlight(k % CASINO_NUM_CASES)
-            if (k >= delays.length) { setResult(r); setPhase("result"); return }
+            if (k >= delays.length) { setResult(r); setRemaining(ticketCount()); setPhase("result"); return }
             timerRef.current = setTimeout(tick, delays[k++])
         }
         tick()
+    }
+
+    // Ticket suivant de la file (snappy : on saute l'intro, direct sur la roulette).
+    const nextTicket = () => {
+        setBetValue(peekTicketValue())
+        setResult(null); setHighlight(-1); setFlash(false)
+        setPhase("play")
     }
 
     return (
@@ -73,14 +84,14 @@ export default function DailyTicketModal({ today, onClose }: { today: string; on
                 </div>
             )}
             <div style={box}>
-                <div style={header}>🎟️ TICKET DU JOUR <span style={{ fontSize: 10, opacity: 0.7, fontWeight: 600 }}>offert par le Dieu Spaghetti</span></div>
+                <div style={header}>🎟️ TICKETS ROULETTE <span style={{ fontSize: 10, opacity: 0.7, fontWeight: 600 }}>offerts par le Dieu Spaghetti</span></div>
                 <div style={{ padding: 14, overflowY: "auto", flex: 1, position: "relative", zIndex: 2 }}>
 
                     {phase === "intro" && (
                         <div style={{ textAlign: "center" }}>
                             <div style={{ fontSize: 40, marginBottom: 8 }}>🍝</div>
                             <p style={{ fontSize: 13, color: INK, lineHeight: 1.5, fontWeight: 600 }}>
-                                « Ah, te voilà, mortel ! Pour bien démarrer ta journée, le Dieu Spaghetti t'offre <b>10 énergies</b> à jouer à la roulette. Tente ta chance… elle sourit aux audacieux ! »
+                                « Ah, te voilà, mortel ! {total > 1 ? <>Tu as <b>{total} tickets</b> à jouer à la roulette.</> : <>Le Dieu Spaghetti t&apos;offre un tour de roulette.</>} Premier ticket : <b>{betValue} énergies</b> misées (offertes !). Tente ta chance… elle sourit aux audacieux ! »
                             </p>
                         </div>
                     )}
@@ -88,7 +99,7 @@ export default function DailyTicketModal({ today, onClose }: { today: string; on
                     {(phase === "play" || phase === "spin" || phase === "result") && (
                         <>
                             <div style={{ fontSize: 12, color: INK, fontWeight: 700, marginBottom: 8, textAlign: "center" }}>
-                                {phase === "play" ? "Choisis UNE case — 10 énergie offertes !" : phase === "spin" ? "La boule tourne…" : ""}
+                                {phase === "play" ? `Choisis UNE case — ${betValue} énergies offertes !` : phase === "spin" ? "La boule tourne…" : ""}
                             </div>
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 4, marginBottom: 10 }}>
                                 {Array.from({ length: CASINO_NUM_CASES }, (_, i) => {
@@ -103,9 +114,11 @@ export default function DailyTicketModal({ today, onClose }: { today: string; on
                                 <div style={{ padding: 10, borderRadius: 6, background: result.won ? "#eafaef" : "#fbeaea", border: `2px solid ${result.won ? "#4cd964" : "#e74c3c"}`, textAlign: "center" }}>
                                     {result.won
                                         ? <div style={{ fontSize: 13, fontWeight: 800, color: "#1e8449" }}>✅ Case {result.winningCase} ! Tu gagnes <b>+{result.winAmount} énergie</b> !</div>
-                                        : <div style={{ fontSize: 13, fontWeight: 700, color: "#c0392b" }}>Case {result.winningCase}… pas cette fois ! (mais c'était offert 😉)</div>}
+                                        : <div style={{ fontSize: 13, fontWeight: 700, color: "#c0392b" }}>Case {result.winningCase}… pas cette fois ! (mais c&apos;était offert 😉)</div>}
                                     <p style={{ fontSize: 11, color: INK, marginTop: 8, lineHeight: 1.5 }}>
-                                        🍝 « Continue de tenter ta chance à l'<b>étage du Centre Pokémon</b> — les récompenses y sont encore plus belles ! »
+                                        {remaining > 0
+                                            ? <>🎟️ Il te reste <b>{remaining} ticket{remaining > 1 ? "s" : ""}</b> à jouer !</>
+                                            : <>🍝 « Continue de tenter ta chance à l&apos;<b>étage du Centre Pokémon</b> — les récompenses y sont encore plus belles ! »</>}
                                     </p>
                                 </div>
                             )}
@@ -113,9 +126,11 @@ export default function DailyTicketModal({ today, onClose }: { today: string; on
                     )}
                 </div>
                 {(phase === "intro" || phase === "play" || phase === "result") && (
-                    <button onClick={phase === "intro" ? startAnim : onClose} style={phase === "intro" ? primary : closeBtn}>
-                        {phase === "intro" ? "🎰 Tenter ma chance !" : phase === "play" ? "Passer (ticket perdu)" : "FERMER"}
-                    </button>
+                    phase === "result" && remaining > 0
+                        ? <button onClick={nextTicket} style={primary}>🎟️ Ticket suivant ({peekTicketValue()} énergies)</button>
+                        : <button onClick={phase === "intro" ? startAnim : onClose} style={phase === "intro" ? primary : closeBtn}>
+                            {phase === "intro" ? "🎰 Tenter ma chance !" : phase === "play" ? "Plus tard" : "FERMER"}
+                        </button>
                 )}
             </div>
         </div>

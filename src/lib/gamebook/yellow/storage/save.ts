@@ -6,7 +6,7 @@
 
 import type { MonInstance, StatKey, MajorStatus, PokeType } from "../battle/types"
 import { POKE_TYPES } from "../battle/types"
-import { emptyLabDefi, type LabDefiState, type LabDefiKind, type LabActiveDefi } from "../data/labDefis"
+import { emptyLabDefi, clampTicketValue, TICKET_QUEUE_MAX, type LabDefiState, type LabDefiKind, type LabActiveDefi } from "../data/labDefis"
 
 export interface YellowSave {
     version: number
@@ -244,6 +244,12 @@ function parseLabDefi(raw: unknown): LabDefiState {
     d.tonytonyShiny = o.tonytonyShiny === true
     d.dailyTicketDate = typeof o.dailyTicketDate === "string" ? o.dailyTicketDate : ""
     d.casinoFirstBetDone = o.casinoFirstBetDone === true
+    if (Array.isArray(o.grantedTickets)) {
+        d.grantedTickets = (o.grantedTickets as unknown[])
+            .filter((v): v is number => typeof v === "number" && isFinite(v))
+            .map(clampTicketValue)
+            .slice(0, TICKET_QUEUE_MAX)
+    }
     return d
 }
 
