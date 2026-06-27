@@ -62,7 +62,7 @@ export default function DailyTicketModal({ onClose }: { onClose: () => void }) {
     }
 
     return (
-        <div style={overlay}>
+        <div style={overlay} onClick={(e) => e.stopPropagation()}>
             {phase === "anim" && (
                 <div style={animOverlay}>
                     <style>{`
