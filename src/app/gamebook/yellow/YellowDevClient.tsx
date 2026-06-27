@@ -51,7 +51,7 @@ import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, grantBonu
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
-import { useRun, startTowerRun, startRun, applyWinFromBattle, applyLossFromBattle, endRun, setDraftedTeam, getDraftedTeam } from "@/lib/gamebook/yellow/frontier/runStore"
+import { useRun, startTowerRun, startRun, applyWinFromBattle, applyLossFromBattle, quitRun, endRun, setDraftedTeam, getDraftedTeam } from "@/lib/gamebook/yellow/frontier/runStore"
 import { postRecordRun } from "@/lib/gamebook/yellow/frontier/frontierApi"
 import { generateRentalPool, buildDraftTeam, type RentalCandidate } from "@/lib/gamebook/yellow/frontier/factory"
 import { resolveFrontierLevel, JC_PER_WIN, JC_BOSS_MULT, type OpponentSpec, type LevelRule } from "@/lib/gamebook/yellow/frontier/engine"
@@ -124,6 +124,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [dome, setDome] = useState<{ state: DomeState; rule: LevelRule; seed: number; jc: number } | null>(null)
     const [ticketOpen, setTicketOpen] = useState(false) // ticket roulette quotidien (1re connexion du jour)
     const ticketChecked = useRef(false)
+    const [tourChoice, setTourChoice] = useState(false) // pause entre vagues de série (Continuer / Quitter)
     const sbireWin = useSbireWin()
     const aceWin = useAceWin()
     const badgeAwarded = useBadgeAwarded()
@@ -600,6 +601,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         }
         if (frontierResult.won) {
             applyWinFromBattle(getBattleEnergy().spent)
+            setTourChoice(true) // PAUSE entre vagues : le joueur choisit Continuer / Quitter
         } else {
             const ended = applyLossFromBattle()
             if (ended && !frontierReportedRef.current) {
@@ -617,11 +619,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // boucler (un combat en cours ou une issue non traitée bloquent le relancement).
     useEffect(() => {
         if (!run || run.status !== "active") return
+        if (tourChoice) return // pause entre vagues : on attend le choix Continuer/Quitter
         if (battle || frontierResult || evolutions.length > 0 || dialogue || pendingLearn || newDexEntry) return
         // FACTORY : on joue l'équipe de LOCATION draftée ; Tour/Dôme : l'équipe réelle du joueur.
         const myTeam = run.mode === "FACTORY" ? (getDraftedTeam() ?? getPlayer().team) : getPlayer().team
         startTrainerBattle(myTeam, buildFrontierEnemies(run.opponent), Math.floor(Math.random() * 1e9), { trainerId: "frontier:" + run.mode, aiLevel: "trainer" })
-    }, [run, battle, frontierResult, evolutions.length, dialogue, pendingLearn, newDexEntry])
+    }, [run, tourChoice, battle, frontierResult, evolutions.length, dialogue, pendingLearn, newDexEntry])
 
     // DÔME — lance le match du round courant (TON équipe vs ton adversaire de bracket) tant que le tournoi
     // est actif et l'écran libre. L'issue est traitée par l'effet de résultat (advanceDome).
@@ -1059,7 +1062,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     <div style={{ fontSize: 11, opacity: 0.85, marginBottom: 8 }}>Choisis ton mode — série de victoires le plus loin possible :</div>
                     <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
                         {(["L50", "L100", "ADAPT"] as LevelRule[]).map((rule) => (
-                            <button key={rule} onClick={() => { frontierReportedRef.current = false; startTowerRun({ levelRule: rule, playerTopLevel: myArenaLevel || 50, seed: Math.floor(Math.random() * 1e9) }) }}
+                            <button key={rule} onClick={() => { frontierReportedRef.current = false; setTourChoice(false); startTowerRun({ levelRule: rule, playerTopLevel: myArenaLevel || 50, seed: Math.floor(Math.random() * 1e9) }) }}
                                 style={{ background: "#e8893a", color: "#1a1a22", fontWeight: 800, border: "none", borderRadius: 8, padding: "6px 10px", cursor: "pointer" }}>
                                 {rule === "L50" ? "Niv 50" : rule === "L100" ? "Niv 100" : "Adaptatif"}
                             </button>
@@ -1109,6 +1112,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                     const specs = buildDraftTeam(usineDraft.pool, usineDraft.picks)
                                     setDraftedTeam(specs.map((o) => createMonInstance(o.speciesId, o.level, { owned: false })))
                                     frontierReportedRef.current = false
+                                    setTourChoice(false)
                                     startRun({ mode: "FACTORY", levelRule: usineDraft.levelRule, playerTopLevel: myArenaLevel || 50, seed: Math.floor(Math.random() * 1e9) })
                                     setUsineDraft(null)
                                 }} style={{ background: "#6aa0ec", color: "#1a1a22", fontWeight: 800, border: "none", borderRadius: 8, padding: "6px 12px", cursor: usineDraft.picks.length === 3 ? "pointer" : "default", opacity: usineDraft.picks.length === 3 ? 1 : 0.45 }}>Confirmer</button>
@@ -1143,6 +1147,22 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {run && run.status === "active" && (
                 <div style={{ position: "absolute", left: 8, top: 8, zIndex: 60, background: "#1a1a22cc", color: "#fff", borderRadius: 8, padding: "4px 8px", fontSize: 11, fontWeight: 700 }}>
                     🏯 Série {run.streak + 1} · {run.jc} JC{run.isBoss ? " · 👑 BOSS" : ""}
+                </div>
+            )}
+            {/* ZONE DE COMBAT — pause entre vagues : Continuer ou Quitter (en gardant les JC) */}
+            {run && run.status === "active" && tourChoice && (
+                <div style={{ position: "absolute", left: "50%", top: 16, transform: "translateX(-50%)", zIndex: 62, background: "#1a1a22ee", color: "#fff", border: "2px solid #4cd964", borderRadius: 12, padding: "10px 14px", textAlign: "center", maxWidth: 330 }}>
+                    <div style={{ fontWeight: 800, marginBottom: 4 }}>✅ Vague {run.streak} réussie ! +{run.lastReward} JC{run.lastRefund > 0 ? ` · +${run.lastRefund} ⚡` : ""}</div>
+                    <div style={{ fontSize: 11, opacity: 0.85, marginBottom: 8 }}>Cumul : {run.jc} JC · prochaine : vague {run.streak + 1}{run.isBoss ? " 👑 BOSS" : ""}</div>
+                    <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
+                        <button onClick={() => setTourChoice(false)} style={{ background: "#4cd964", color: "#0a2a12", fontWeight: 800, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>Continuer</button>
+                        <button onClick={() => {
+                            const ended = quitRun()
+                            if (ended && !frontierReportedRef.current) { frontierReportedRef.current = true; postRecordRun({ mode: ended.mode, streak: ended.streak, jcEarned: ended.jc }) }
+                            setToast(`🏁 Série quittée — ${ended?.streak ?? 0} victoire(s) · ${ended?.jc ?? 0} JC gardés`)
+                            setTourChoice(false); endRun()
+                        }} style={{ background: "#555", color: "#fff", fontWeight: 700, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>Quitter (garder les JC)</button>
+                    </div>
                 </div>
             )}
             {/* ZONE DE COMBAT — HUD du Dôme (round courant) */}
