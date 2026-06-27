@@ -88,6 +88,8 @@ export interface BattleState {
     dmgByType?: Partial<Record<PokeType, number>>
     /** ZONE DE COMBAT (Frontier) : objets/soins interdits (« pas de potion ») → le SAC est masqué. */
     noItems?: boolean
+    /** Multiplicateur d'XP gagnée (1 = normal ; <1 au Frontier pour limiter le farming). */
+    expMult?: number
 }
 
 export type PlayerAction =
@@ -152,7 +154,7 @@ export function toBattleMon(inst: MonInstance): BattleMon {
 export function createBattle(
     playerTeam: MonInstance[],
     enemyTeam: MonInstance[],
-    opts: { isWild: boolean; seed: number; aiLevel?: AiLevel; captureModifier?: number; pvp?: boolean; enemyEnergyCap?: number; fleeChance?: number; noItems?: boolean },
+    opts: { isWild: boolean; seed: number; aiLevel?: AiLevel; captureModifier?: number; pvp?: boolean; enemyEnergyCap?: number; fleeChance?: number; noItems?: boolean; expMult?: number },
 ): BattleState {
     // Le joueur envoie son premier Daemon ENCORE DEBOUT (pas un K.O. en tête de liste).
     const playerStart = playerTeam.findIndex((m) => m.currentHp > 0)
@@ -179,6 +181,7 @@ export function createBattle(
         enemyEnergy: opts.enemyEnergyCap != null ? { spent: 0, cap: opts.enemyEnergyCap } : null,
         fleeChance: opts.fleeChance ?? 100,
         noItems: opts.noItems ?? false,
+        expMult: opts.expMult ?? 1,
     }
 }
 
@@ -1006,7 +1009,7 @@ function awardExp(state: BattleState, events: BattleEvent[]) {
     const fainted = active(state.enemy)
     const winner = active(state.player)
     const faintedSp = speciesOf(fainted)
-    const gain = xpForDefeat(faintedSp.baseExp, fainted.level, state.isWild)
+    const gain = Math.round(xpForDefeat(faintedSp.baseExp, fainted.level, state.isWild) * (state.expMult ?? 1))
 
     // EV uniquement au Daemon actif s'il est encore debout.
     if (winner.currentHp > 0) gainEv(winner, signatureStat(faintedSp), EV_YIELD_PER_WIN)

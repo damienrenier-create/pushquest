@@ -211,6 +211,9 @@ export function frontierNetEnergyCost(energySpent: number): number {
     return Math.max(0, energySpent) - frontierEnergyRefund(energySpent)
 }
 
+/** Multiplicateur d'XP en Zone de Combat : 1/3 du normal (récompense réduite, anti-farm sans risque). */
+export const FRONTIER_EXP_MULT = 1 / 3
+
 // ============================================================
 // Récompense en Jetons de Combat
 // ============================================================
