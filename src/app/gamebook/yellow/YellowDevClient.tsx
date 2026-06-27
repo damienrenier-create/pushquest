@@ -91,6 +91,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const hydrated = useGameStore((s) => s.hydrated)
     const shopOpen = useGameStore((s) => s.shopOpen)
     const closeShop = useGameStore((s) => s.closeShop)
+    const interiorReturn = useGameStore((s) => s.interiorReturn) // ville d'entrée d'un intérieur partagé (shop/centre)
     const pcOpen = useGameStore((s) => s.pcOpen)
     const closePc = useGameStore((s) => s.closePc)
     // Overlays plein écran gérés côté store (fermés par le bouton B via goBack).
@@ -1399,8 +1400,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         {(() => {
                             const groups: [string, string][] = [["BALL", "🔴 Balls"], ["HEAL", "❤️ Soins"], ["STATUS_HEAL", "💊 Statuts"], ["BOOST", "⬆️ Boosts (combat)"]]
                             const sellable = Object.values(ITEMS).filter((it) => it.price > 0)
+                            // Balls FORTES réservées à la 2e ville (Cendreville). En 1re ville (Ville Jaune), on ne
+                            // vend que les balls de base ; le shop étant partagé, on filtre selon la ville d'entrée.
+                            const SECOND_TOWN_BALLS = new Set(["super_ball_plus", "hyper_ball", "hyper_ball_plus"])
+                            const inSecondTown = interiorReturn?.mapId === "yellow_cendreville"
                             return groups.map(([cat, label]) => {
-                                const list = sellable.filter((it) => it.category === cat)
+                                const list = sellable.filter((it) => it.category === cat && !(cat === "BALL" && !inSecondTown && SECOND_TOWN_BALLS.has(it.id)))
                                 if (!list.length) return null
                                 return (
                                     <div key={cat}>
@@ -1423,6 +1428,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                                 </button>
                                             )
                                         })}
+                                        {cat === "BALL" && !inSecondTown && <div style={{ fontSize: 10, opacity: 0.6, padding: "3px 2px" }}>✨ Des Balls plus puissantes se vendent à Cendreville…</div>}
                                     </div>
                                 )
                             })
