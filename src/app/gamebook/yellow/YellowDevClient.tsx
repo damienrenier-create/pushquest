@@ -35,6 +35,7 @@ import MovesPanel from "./MovesPanel"
 import AdvisorPanel from "./AdvisorPanel"
 import LabPanel from "./LabPanel"
 import CombatShopModal from "./CombatShopModal"
+import DailyTicketModal from "./DailyTicketModal"
 import ParkSignPanel from "./ParkSignPanel"
 import PosterPanel from "./PosterPanel"
 import { useGameStore, setCurrentNickname, DEFAULT_SPAWN } from "@/lib/gamebook/yellow/store/gameStore"
@@ -46,7 +47,7 @@ import { aceLoseLine } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
-import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, casinoTicketAvailable, consumeDailyTicket } from "@/lib/gamebook/yellow/store/playerStore"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
@@ -121,6 +122,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [usineDraft, setUsineDraft] = useState<{ levelRule: LevelRule; pool: RentalCandidate[]; picks: string[] } | null>(null)
     // DÔME (bracket de 8, état local éphémère) : state du tournoi + règle + graine + JC cumulés.
     const [dome, setDome] = useState<{ state: DomeState; rule: LevelRule; seed: number; jc: number } | null>(null)
+    const [ticketOpen, setTicketOpen] = useState(false) // ticket roulette quotidien (1re connexion du jour)
+    const ticketChecked = useRef(false)
     const sbireWin = useSbireWin()
     const aceWin = useAceWin()
     const badgeAwarded = useBadgeAwarded()
@@ -629,6 +632,18 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (!opp) return
         startTrainerBattle(getPlayer().team, buildFrontierEnemies(opp.team), Math.floor(Math.random() * 1e9), { trainerId: "frontier:DOME", aiLevel: "trainer" })
     }, [dome, battle, frontierResult, evolutions.length, dialogue, pendingLearn, newDexEntry])
+
+    // TICKET ROULETTE QUOTIDIEN : à la 1re connexion du jour (chap. 2), une fois l'intro passée et l'écran
+    // libre, on ouvre la cinématique du Dieu Spaghetti (1×/session ; consommé à la fermeture).
+    useEffect(() => {
+        if (ticketChecked.current || !hydrated || ticketOpen) return
+        if (!getPlayer().introSeen) return
+        if (battle || dialogue || evolutions.length > 0 || pendingLearn || newDexEntry || championRun || whiteout) return
+        const today = getPlayer().creditedThrough
+        if (!today) return // jour serveur pas encore connu (player-stats non chargé)
+        ticketChecked.current = true
+        if (casinoTicketAvailable(today)) setTicketOpen(true)
+    }, [hydrated, ticketOpen, battle, dialogue, evolutions.length, pendingLearn, newDexEntry, championRun, whiteout])
 
     // Revanche d'arène gagnée : dialogue de récompense post-combat (énergie / CT Mirage),
     // une fois le combat quitté ET la cinématique d'évolution terminée (même règle que badge/ACE).
@@ -1141,6 +1156,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             <AdvisorPanel />
             <LabPanel />
             {combatShopOpen && <CombatShopModal onClose={closeCombatShop} />}
+            {ticketOpen && <DailyTicketModal today={getPlayer().creditedThrough} onClose={() => { consumeDailyTicket(getPlayer().creditedThrough); persistYellowSave(); setTicketOpen(false) }} />}
             <ParkSignPanel />
             <PosterPanel />
             {/* EncounterTransition est désormais rendu DANS BattleScreen (calé sur la scène). */}

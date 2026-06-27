@@ -24,7 +24,7 @@ const GOLD = "#f1c40f", INK = "#2a1c10", CREAM = "#f4ecd4", DARK = "#cdbb86"
  * puis 0 à 3 SURSAUTS finaux (nudges à pause croissante : « presque arrêté… puis encore une case »).
  * Construit de sorte que la surbrillance après `delays.length` pas tombe PILE sur `target`.
  */
-function buildSpinDelays(target: number, n: number): number[] {
+export function buildSpinDelays(target: number, n: number): number[] {
     const rnd = (a: number, b: number) => a + Math.random() * (b - a)
     const delays: number[] = []
     let t: number
