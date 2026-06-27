@@ -55,8 +55,10 @@ export interface LabDefiState {
     casinoBankruptUntil: string
     /** Cumul BRUT d'énergie gagnée au casino (1000 → débloque Tonytony). NON plafonné (≠ solde reps). */
     casinoTotalWon: number
-    /** Tonytony déjà réclamé (one-shot). */
+    /** Tonytony déjà réclamé (one-shot, palier 1000). */
     tonytonyClaimed: boolean
+    /** Capstone 5000 : le Tonytony du joueur a été rendu SHINY (one-shot). */
+    tonytonyShiny: boolean
     /** TICKET QUOTIDIEN : dernier jour (YYYY-MM-DD) où le ticket roulette gratuit a été donné/consommé. */
     dailyTicketDate: string
     /** Le TOUT PREMIER pari roulette du joueur a-t-il eu lieu ? (le 1er est gagné d'office — secret). */
@@ -77,6 +79,7 @@ export function emptyLabDefi(): LabDefiState {
         casinoBankruptUntil: "",
         casinoTotalWon: 0,
         tonytonyClaimed: false,
+        tonytonyShiny: false,
         dailyTicketDate: "",
         casinoFirstBetDone: false,
     }
@@ -163,6 +166,8 @@ export const CASINO_BANKRUPT_STREAK = 5   // 5 victoires d'affilée → banquero
 export const CASINO_BANKRUPT_COOLDOWN_MS = 24 * 60 * 60 * 1000
 /** Cumul BRUT d'énergie à gagner pour débloquer Tonytony. */
 export const TONYTONY_TARGET = 1000
+/** Capstone 5000 : ton Tonytony devient SHINY (la roulette reste jouable, elle est trop chouette). */
+export const TONYTONY_SHINY_TARGET = 5000
 /** Niveau de Tonytony à la remise. */
 export const TONYTONY_LEVEL = 15
 export const TONYTONY_SPECIES = "tonytony"

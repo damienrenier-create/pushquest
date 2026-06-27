@@ -14,7 +14,7 @@ import { getItem } from "../data/items"
 import { SAIYAN_POINT_VALUE } from "../data/saiyanConfig"
 import { BADGE_REPS_CAP_BONUS } from "../data/badges"
 import { getCt, canLearnCt, purchasableCts, type BadgeId } from "../data/cts"
-import { emptyLabDefi, casinoWinningCase, CASINO_NUM_CASES, CASINO_MIN_BET, CASINO_MAX_BET, CASINO_WIN_MULT, CASINO_BANKRUPT_STREAK, CASINO_BANKRUPT_COOLDOWN_MS, TONYTONY_TARGET, TONYTONY_LEVEL, TONYTONY_SPECIES, type LabDefiState, type LabActiveDefi } from "../data/labDefis"
+import { emptyLabDefi, casinoWinningCase, CASINO_NUM_CASES, CASINO_MIN_BET, CASINO_MAX_BET, CASINO_WIN_MULT, CASINO_BANKRUPT_STREAK, CASINO_BANKRUPT_COOLDOWN_MS, TONYTONY_TARGET, TONYTONY_SHINY_TARGET, TONYTONY_LEVEL, TONYTONY_SPECIES, type LabDefiState, type LabActiveDefi } from "../data/labDefis"
 import { createMonInstance } from "../battle/factory"
 import type { StatKey } from "../battle/types"
 import { expForLevel, levelFromExp, applyExp, MAX_LEVEL, type ExpResult } from "../battle/xp"
@@ -882,6 +882,34 @@ export function grantTonytony(): "team" | "pc" | null {
     const where = addCaught(mon) // gère équipe pleine → PC + estampille l'ownership ; emit()
     markCaught(TONYTONY_SPECIES) // entrée Pokédex
     return where
+}
+
+/**
+ * CAPSTONE 5000 : rend SHINY le Tonytony du joueur (one-shot). Le retrouve dans l'équipe puis le PC ;
+ * s'il n'en a plus (relâché/échangé), en redonne un SHINY. Renvoie où, ou null si pas éligible.
+ */
+export function makeTonytonyShiny(): "team" | "pc" | "new" | null {
+    const d = st.labDefi
+    if (d.tonytonyShiny || d.casinoTotalWon < TONYTONY_SHINY_TARGET) return null
+    const ti = st.team.findIndex((m) => m.speciesId === TONYTONY_SPECIES)
+    if (ti >= 0) {
+        const team = st.team.slice(); team[ti] = { ...team[ti], shiny: true }
+        st = { ...st, team, labDefi: { ...d, tonytonyShiny: true } }
+        emit(); return "team"
+    }
+    const pi = st.pc.findIndex((m) => m.speciesId === TONYTONY_SPECIES)
+    if (pi >= 0) {
+        const pc = st.pc.slice(); pc[pi] = { ...pc[pi], shiny: true }
+        st = { ...st, pc, labDefi: { ...d, tonytonyShiny: true } }
+        emit(); return "pc"
+    }
+    // Plus de Tonytony → on en redonne un SHINY.
+    const mon = createMonInstance(TONYTONY_SPECIES, TONYTONY_LEVEL, { owned: true })
+    mon.shiny = true
+    st = { ...st, labDefi: { ...d, tonytonyShiny: true } }
+    addCaught(mon)
+    markCaught(TONYTONY_SPECIES)
+    return "new"
 }
 
 /** Soin complet de l'équipe (Centre Daemon) : PV max, statut effacé, PP refaits. */

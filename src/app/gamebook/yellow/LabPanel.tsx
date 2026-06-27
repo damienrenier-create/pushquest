@@ -13,12 +13,12 @@ import { useState } from "react"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import {
     usePlayer, startLabDefi, clearLabDefi, grantReps, grantCt, recordCtEarned,
-    setTomorrowEnergyMult, markSquat150Done, grantTonytony, ctDefiProgress,
+    setTomorrowEnergyMult, markSquat150Done, grantTonytony, makeTonytonyShiny, ctDefiProgress,
 } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import {
     PHYSICAL_DEFIS, PHYSICAL_ENERGY_REWARD, QUOTA2X_MULT,
-    ctDefiOptions, ctDefiThreshold, ctEarnedCountByType, CT_PER_TYPE_MAX, TONYTONY_TARGET,
+    ctDefiOptions, ctDefiThreshold, ctEarnedCountByType, CT_PER_TYPE_MAX, TONYTONY_TARGET, TONYTONY_SHINY_TARGET,
 } from "@/lib/gamebook/yellow/data/labDefis"
 import { postLabDefiStart, postLabDefiCheck } from "@/lib/gamebook/yellow/labDefiApi"
 import { getCt } from "@/lib/gamebook/yellow/data/cts"
@@ -107,6 +107,11 @@ export default function LabPanel() {
         persistYellowSave()
         setMsg(where ? `🥚 TONYTONY rejoint ${where === "team" ? "ton équipe" : "ton PC"} !` : "Cumul insuffisant ou déjà obtenu.")
     }
+    const claimTonytonyShiny = () => {
+        const where = makeTonytonyShiny()
+        persistYellowSave()
+        setMsg(where ? "✨ Ton Tonytony est désormais SHINY ! La chance t'a souri." : "Pas encore éligible (5000 requis).")
+    }
 
     return (
         <div onClick={close} style={overlay}>
@@ -170,14 +175,11 @@ export default function LabPanel() {
 
                             {/* ─── SURPRISE ─── */}
                             {tab === "surprise" && (
-                                <Card title="🎰 Roulette dorée → 🥚 Tonytony" desc="Gagne 1000 énergies cumulées au jeu pour décrocher Tonytony, le Daemon porte-bonheur. La chance sourit aux audacieux !" reward={`Cumul : ${d.casinoTotalWon} / ${TONYTONY_TARGET}`}>
-                                    {d.tonytonyClaimed ? (
-                                        <div style={{ fontSize: 12, color: "#1e8449" }}>🥚 Tonytony déjà obtenu. Merci d'avoir joué !</div>
-                                    ) : d.casinoTotalWon >= TONYTONY_TARGET ? (
-                                        <button onClick={claimTonytony} style={primary}>🥚 Réclamer Tonytony</button>
-                                    ) : (
-                                        <button onClick={() => setCasino(true)} style={primary}>🎰 Jouer à la roulette</button>
-                                    )}
+                                <Card title="🎰 Roulette dorée" desc="Tente ta chance — la roulette reste ouverte ! Paliers : 🥚 Tonytony à 1000 · ✨ Tonytony SHINY à 5000." reward={`Cumul gagné : ${d.casinoTotalWon}`}>
+                                    {!d.tonytonyClaimed && d.casinoTotalWon >= TONYTONY_TARGET && <button onClick={claimTonytony} style={primary}>🥚 Réclamer Tonytony (1000)</button>}
+                                    {d.tonytonyClaimed && !d.tonytonyShiny && d.casinoTotalWon >= TONYTONY_SHINY_TARGET && <button onClick={claimTonytonyShiny} style={primary}>✨ Rendre ton Tonytony SHINY (5000)</button>}
+                                    <button onClick={() => setCasino(true)} style={((!d.tonytonyClaimed && d.casinoTotalWon >= TONYTONY_TARGET) || (d.tonytonyClaimed && !d.tonytonyShiny && d.casinoTotalWon >= TONYTONY_SHINY_TARGET)) ? ghost : primary}>🎰 Jouer à la roulette</button>
+                                    <div style={{ fontSize: 10, opacity: 0.7, color: INK, marginTop: 6 }}>🥚 Tonytony : {d.tonytonyClaimed ? "✅" : `${Math.min(d.casinoTotalWon, TONYTONY_TARGET)}/${TONYTONY_TARGET}`} · ✨ Shiny : {d.tonytonyShiny ? "✅" : `${Math.min(d.casinoTotalWon, TONYTONY_SHINY_TARGET)}/${TONYTONY_SHINY_TARGET}`}</div>
                                 </Card>
                             )}
 

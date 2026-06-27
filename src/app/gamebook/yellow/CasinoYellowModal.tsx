@@ -14,7 +14,7 @@
 import { useState, useRef, useEffect } from "react"
 import { usePlayer, casinoSpin, type CasinoBet, type CasinoSpinResult } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
-import { CASINO_NUM_CASES, CASINO_MIN_BET, CASINO_MAX_BET, CASINO_WIN_MULT, TONYTONY_TARGET, casinoWinningCase } from "@/lib/gamebook/yellow/data/labDefis"
+import { CASINO_NUM_CASES, CASINO_MIN_BET, CASINO_MAX_BET, CASINO_WIN_MULT, TONYTONY_TARGET, TONYTONY_SHINY_TARGET, casinoWinningCase } from "@/lib/gamebook/yellow/data/labDefis"
 
 const GOLD = "#f1c40f", INK = "#2a1c10", CREAM = "#f4ecd4", DARK = "#cdbb86"
 
@@ -63,7 +63,11 @@ export default function CasinoYellowModal({ onClose }: { onClose: () => void }) 
     const placed = Object.keys(bets).map(Number)
     const totalBet = Object.values(bets).reduce((a, b) => a + b, 0)
     const canSpin = !spinning && !bankruptActive && placed.length > 0 && totalBet > 0 && totalBet <= player.reps
-    const won = d.casinoTotalWon, pct = Math.min(100, Math.round((won / TONYTONY_TARGET) * 100))
+    const won = d.casinoTotalWon
+    // Palier en cours : 🥚 Tonytony (1000) → ✨ Tonytony shiny (5000) → plus de palier (cumul libre).
+    const nextTarget = !d.tonytonyClaimed ? TONYTONY_TARGET : !d.tonytonyShiny ? TONYTONY_SHINY_TARGET : 0
+    const nextLabel = !d.tonytonyClaimed ? "🥚 Tonytony" : !d.tonytonyShiny ? "✨ Tonytony SHINY" : "Cumul gagné"
+    const pct = nextTarget ? Math.min(100, Math.round((won / nextTarget) * 100)) : 100
 
     const toggle = (c: number) => {
         if (spinning) return
@@ -101,9 +105,9 @@ export default function CasinoYellowModal({ onClose }: { onClose: () => void }) 
                 <div style={header}>🎰 ROULETTE DORÉE <span style={{ fontSize: 10, opacity: 0.7, fontWeight: 600 }}>Labo — défi Surprise</span></div>
                 <div style={{ padding: 12, overflowY: "auto", flex: 1 }}>
                     {/* Progression Tonytony */}
-                    <div style={{ fontSize: 11, color: INK, marginBottom: 4 }}>🥚 Chance accumulée : <b>{won}</b> / {TONYTONY_TARGET}</div>
+                    <div style={{ fontSize: 11, color: INK, marginBottom: 4 }}>{nextLabel} : <b>{won}</b>{nextTarget ? ` / ${nextTarget}` : ""}</div>
                     <div style={{ height: 8, background: DARK, borderRadius: 4, overflow: "hidden", marginBottom: 10 }}>
-                        <div style={{ width: `${pct}%`, height: "100%", background: won >= TONYTONY_TARGET ? "#4cd964" : GOLD }} />
+                        <div style={{ width: `${pct}%`, height: "100%", background: !nextTarget || won >= nextTarget ? "#4cd964" : GOLD }} />
                     </div>
 
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 8, background: "#fff8e8", padding: 6, borderRadius: 4, border: `1px solid ${DARK}` }}>
@@ -157,7 +161,8 @@ export default function CasinoYellowModal({ onClose }: { onClose: () => void }) 
                             ) : (
                                 <div style={{ fontSize: 11, color: "#c0392b" }}>❌ Mise perdue : -{result.totalBet} ⚡. Série remise à 0.</div>
                             )}
-                            {result.tonytonyReady && <div style={{ fontSize: 11, color: "#1e8449", marginTop: 4, fontWeight: 700 }}>🥚 1000 atteint ! Ferme et réclame TONYTONY au labo.</div>}
+                            {!d.tonytonyClaimed && won >= TONYTONY_TARGET && <div style={{ fontSize: 11, color: "#1e8449", marginTop: 4, fontWeight: 700 }}>🥚 1000 atteint ! Ferme et réclame TONYTONY au labo.</div>}
+                            {d.tonytonyClaimed && !d.tonytonyShiny && won >= TONYTONY_SHINY_TARGET && <div style={{ fontSize: 11, color: "#1e8449", marginTop: 4, fontWeight: 700 }}>✨ 5000 atteint ! Ferme et rends ton Tonytony SHINY au labo.</div>}
                         </div>
                     )}
                     {error && <div style={{ marginTop: 8, padding: 6, background: "#fbeaea", color: "#c0392b", fontSize: 10, borderRadius: 3 }}>{error}</div>}

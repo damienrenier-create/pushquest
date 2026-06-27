@@ -2,9 +2,10 @@ import { describe, it, expect, beforeEach } from "vitest"
 import {
     hydratePlayer, getPlayer, bankReps, setTomorrowEnergyMult,
     startLabDefi, addCtDamage, ctDefiProgress, casinoSpin, grantTonytony, recordCtEarned,
-    casinoTicketSpin, casinoTicketAvailable, consumeDailyTicket,
+    casinoTicketSpin, casinoTicketAvailable, consumeDailyTicket, makeTonytonyShiny,
 } from "./playerStore"
-import { emptyLabDefi, casinoWinningCase, CASINO_WIN_MULT, CASINO_MIN_BET, CASINO_BANKRUPT_STREAK, TONYTONY_SPECIES, ctEarnedCountByType } from "../data/labDefis"
+import { createMonInstance } from "../battle/factory"
+import { emptyLabDefi, casinoWinningCase, CASINO_WIN_MULT, CASINO_MIN_BET, CASINO_BANKRUPT_STREAK, TONYTONY_SPECIES, TONYTONY_SHINY_TARGET, ctEarnedCountByType } from "../data/labDefis"
 
 beforeEach(() => {
     // État isolé : équipe vide, reps connus, défis vierges.
@@ -93,6 +94,25 @@ describe("défi Surprise — casino pattern + Tonytony", () => {
         // 2e appel : refusé (one-shot)
         expect(grantTonytony()).toBeNull()
         expect(getPlayer().team.filter((m) => m.speciesId === TONYTONY_SPECIES).length).toBe(1)
+    })
+
+    it("capstone 5000 : le Tonytony existant devient SHINY (one-shot, < 5000 refusé)", () => {
+        const tony = createMonInstance(TONYTONY_SPECIES, 15, { owned: true })
+        hydratePlayer({ reps: 0, repsCap: 1000, repsBankedTotal: 0, team: [tony], labDefi: { ...emptyLabDefi(), casinoTotalWon: 4999, tonytonyClaimed: true } })
+        expect(makeTonytonyShiny()).toBeNull() // < 5000
+        hydratePlayer({ reps: 0, repsCap: 1000, repsBankedTotal: 0, team: [tony], labDefi: { ...emptyLabDefi(), casinoTotalWon: TONYTONY_SHINY_TARGET, tonytonyClaimed: true } })
+        expect(getPlayer().team[0].shiny).toBeFalsy()
+        expect(makeTonytonyShiny()).toBe("team")
+        expect(getPlayer().team[0].shiny).toBe(true)
+        expect(getPlayer().labDefi.tonytonyShiny).toBe(true)
+        expect(makeTonytonyShiny()).toBeNull() // one-shot
+    })
+
+    it("capstone 5000 : redonne un Tonytony SHINY si le joueur n'en a plus", () => {
+        hydratePlayer({ reps: 0, repsCap: 1000, repsBankedTotal: 0, labDefi: { ...emptyLabDefi(), casinoTotalWon: TONYTONY_SHINY_TARGET, tonytonyClaimed: true } })
+        expect(makeTonytonyShiny()).toBe("new")
+        const tony = getPlayer().team.find((m) => m.speciesId === TONYTONY_SPECIES) ?? getPlayer().pc.find((m) => m.speciesId === TONYTONY_SPECIES)
+        expect(tony?.shiny).toBe(true)
     })
 })
 
