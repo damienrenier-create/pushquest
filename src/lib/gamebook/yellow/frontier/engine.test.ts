@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest"
 import { Rng } from "../battle/rng"
 import { SPECIES } from "../data/species"
 import {
-    resolveFrontierLevel, generateFrontierTeam, generateBossTeam, isBossWave,
+    resolveFrontierLevel, generateFrontierTeam, generateBossTeam, generateBossWave, isBossWave,
     frontierRefundPct, frontierEnergyRefund, frontierNetEnergyCost, jcRewardForWin,
     E_REF, BOSS_EVERY,
 } from "./engine"
@@ -99,5 +99,47 @@ describe("Frontier — Jetons de Combat & cadence des boss", () => {
         expect(jcRewardForWin("L100", 1)).toBeGreaterThan(jcRewardForWin("ADAPT", 1))
         expect(jcRewardForWin("ADAPT", 1)).toBeGreaterThan(jcRewardForWin("L50", 1))
         expect(jcRewardForWin("L50", 7)).toBe(jcRewardForWin("L50", 1) * 5) // 7e = boss
+    })
+})
+
+describe("Frontier — Cerveaux thématiques (exclusifs en ace, parcimonie + paliers)", () => {
+    const EXCLUSIVE = ["gekroc", "tonytony", "orcaline", "sylvebarbe", "goshendofy"]
+    const acesAtStreak = (streak: number, tries = 600) => {
+        const found = new Set<string>()
+        for (let s = 0; s < tries; s++) {
+            const bw = generateBossWave(new Rng(s * 7 + 1), streak, 100)
+            if (bw.bossName) found.add(bw.opponent[bw.opponent.length - 1].speciesId) // l'ace est en dernier
+        }
+        return found
+    }
+
+    it("aucun Cerveau thématique avant la série 7", () => {
+        let any = false
+        for (let s = 0; s < 300; s++) if (generateBossWave(new Rng(s + 3), 5, 50).bossName) any = true
+        expect(any).toBe(false)
+    })
+
+    it("série 20 : exclusifs en ace SAUF Goshendofy (réservé à la fin)", () => {
+        const found = acesAtStreak(20)
+        expect(found.size).toBeGreaterThan(0)
+        expect(found.has("goshendofy")).toBe(false)
+        for (const id of found) expect(EXCLUSIVE).toContain(id) // l'ace est bien un exclusif
+    })
+
+    it("série 40 : Goshendofy peut apparaître", () => {
+        expect(acesAtStreak(40, 1200).has("goshendofy")).toBe(true)
+    })
+
+    it("un Cerveau thématique a une équipe complète (ace exclusif + coéquipiers NON exclusifs)", () => {
+        let checked = false
+        for (let s = 0; s < 300 && !checked; s++) {
+            const bw = generateBossWave(new Rng(s * 13 + 2), 20, 100)
+            if (!bw.bossName) continue
+            checked = true
+            expect(bw.opponent.length).toBe(3)
+            const mates = bw.opponent.slice(0, -1)
+            for (const m of mates) expect(EXCLUSIVE).not.toContain(m.speciesId) // coéquipiers = espèces normales
+        }
+        expect(checked).toBe(true)
     })
 })

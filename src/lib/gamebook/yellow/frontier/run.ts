@@ -9,7 +9,7 @@
 import { Rng } from "../battle/rng"
 import {
     type FrontierMode, type LevelRule, type OpponentSpec,
-    resolveFrontierLevel, generateFrontierTeam, generateBossTeam, isBossWave,
+    resolveFrontierLevel, generateFrontierTeam, generateBossWave, isBossWave,
     jcRewardForWin, frontierEnergyRefund, DEFAULT_TEAM_SIZE,
 } from "./engine"
 
@@ -25,6 +25,7 @@ export interface FrontierRunState {
     status: "active" | "ended"
     opponent: OpponentSpec[]  // équipe adverse de la vague COURANTE
     isBoss: boolean           // la vague courante est-elle un boss (Cerveau) ?
+    bossName?: string         // nom du Cerveau thématique (si la vague courante en est un), pour l'annonce UI
     lastReward: number        // JC du dernier combat gagné (feedback UI)
     lastRefund: number        // énergie remboursée au dernier combat (feedback UI)
 }
@@ -39,14 +40,14 @@ function waveRng(seed: number, waveNumber: number): Rng {
     return new Rng(((seed >>> 0) ^ (waveNumber * 2654435761)) >>> 0)
 }
 
-/** Construit l'équipe adverse d'une vague donnée (boss tous les 7). */
-function buildWave(seed: number, waveNumber: number, level: number, size: number): { opponent: OpponentSpec[]; isBoss: boolean } {
+/** Construit l'équipe adverse d'une vague donnée (boss tous les 7 ; Cerveau thématique possible). */
+function buildWave(seed: number, waveNumber: number, level: number, size: number): { opponent: OpponentSpec[]; isBoss: boolean; bossName?: string } {
     const rng = waveRng(seed, waveNumber)
-    const boss = isBossWave(waveNumber)
-    const opponent = boss
-        ? generateBossTeam(rng, waveNumber, level, size)
-        : generateFrontierTeam(rng, { streak: waveNumber, level, size })
-    return { opponent, isBoss: boss }
+    if (isBossWave(waveNumber)) {
+        const bw = generateBossWave(rng, waveNumber, level, size)
+        return { opponent: bw.opponent, isBoss: true, bossName: bw.bossName }
+    }
+    return { opponent: generateFrontierTeam(rng, { streak: waveNumber, level, size }), isBoss: false }
 }
 
 export interface StartRunOpts {
@@ -61,11 +62,11 @@ export interface StartRunOpts {
 export function startFrontierRun(opts: StartRunOpts): FrontierRunState {
     const level = resolveFrontierLevel(opts.levelRule, opts.playerTopLevel)
     const teamSize = opts.teamSize ?? DEFAULT_TEAM_SIZE
-    const { opponent, isBoss } = buildWave(opts.seed, 1, level, teamSize)
+    const { opponent, isBoss, bossName } = buildWave(opts.seed, 1, level, teamSize)
     return {
         mode: opts.mode, levelRule: opts.levelRule, level, seed: opts.seed, teamSize,
         streak: 0, jc: 0, energyRefunded: 0, status: "active",
-        opponent, isBoss, lastReward: 0, lastRefund: 0,
+        opponent, isBoss, bossName, lastReward: 0, lastRefund: 0,
     }
 }
 
@@ -77,13 +78,13 @@ export function applyFrontierWin(s: FrontierRunState, energySpent: number): Fron
     const reward = jcRewardForWin(s.levelRule, winNumber)
     const refund = frontierEnergyRefund(energySpent)
     const nextWave = winNumber + 1
-    const { opponent, isBoss } = buildWave(s.seed, nextWave, s.level, s.teamSize)
+    const { opponent, isBoss, bossName } = buildWave(s.seed, nextWave, s.level, s.teamSize)
     return {
         ...s,
         streak: winNumber,
         jc: s.jc + reward,
         energyRefunded: s.energyRefunded + refund,
-        opponent, isBoss,
+        opponent, isBoss, bossName,
         lastReward: reward, lastRefund: refund,
     }
 }

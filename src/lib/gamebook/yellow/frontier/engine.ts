@@ -131,6 +131,60 @@ export function generateBossTeam(rng: Rng, streak: number, level: number, size =
 }
 
 // ============================================================
+// Cerveaux THÉMATIQUES : un Daemon EXCLUSIF en ace d'une équipe d'identité (avec parcimonie)
+// ============================================================
+export interface ThemedBoss { exclusiveId: string; name: string; themeTypes: PokeType[]; minStreak: number }
+
+// Palier d'apparition calé sur le BST (cf. bstBandForStreak) ; Goshendofy réservé à la toute fin.
+const THEMED_BOSSES: ThemedBoss[] = [
+    { exclusiveId: "gekroc", name: "Cerveau Court-Circuit", themeTypes: ["ELEC", "SOL"], minStreak: 7 },     // BST 410
+    { exclusiveId: "tonytony", name: "Cerveau Inébranlable", themeTypes: ["NORMAL", "PSY"], minStreak: 7 },   // BST 415 (mur)
+    { exclusiveId: "orcaline", name: "Cerveau Polaire", themeTypes: ["GLACE", "EAU"], minStreak: 14 },        // BST 465
+    { exclusiveId: "sylvebarbe", name: "Cerveau Sylvestre", themeTypes: ["PLANTE", "SOL"], minStreak: 14 },   // BST 490
+    { exclusiveId: "goshendofy", name: "Grand Cerveau Draconique", themeTypes: ["DRAGON", "VOL"], minStreak: 35 }, // BST 590 — la toute fin
+]
+/** % des boss qui mettent en vedette un Daemon exclusif (parcimonie : on les découvre peu à peu). */
+export const THEMED_BOSS_CHANCE = 35
+
+export interface BossWave { opponent: OpponentSpec[]; bossName?: string }
+
+/** Équipe d'un Cerveau thématique : l'exclusif en ACE (envoyé en dernier) + coéquipiers DU THÈME,
+ *  au bon stade/niveau, distincts, en privilégiant ceux qui RÉSISTENT à une faiblesse de l'ace. */
+function buildThemedBossTeam(rng: Rng, tb: ThemedBoss, streak: number, level: number, size: number): OpponentSpec[] {
+    const [lo, hi] = bstBandForStreak(streak)
+    const aceWeak = weakTypesOf(tb.exclusiveId)
+    const resistsAceWeak = (id: string): boolean => {
+        const s = SPECIES[id] as any
+        if (!s) return false
+        for (const w of aceWeak) { let m = 1; for (const d of s.types) m *= typeMultiplier(w, d as PokeType); if (m < 1) return true }
+        return false
+    }
+    const inBand = (id: string) => { const b = bstOf(id); return b >= lo - 60 && b <= hi + 60 }
+    const themed = formsAtLevel(level).filter((id) => {
+        const s = SPECIES[id] as any
+        return s && !s.exclusive && id !== tb.exclusiveId && inBand(id) && (s.types as string[]).some((t) => (tb.themeTypes as string[]).includes(t))
+    })
+    const mates: string[] = pickDistinct(rng, themed.filter(resistsAceWeak), size - 1) // priorité : couvre une faiblesse de l'ace
+    if (mates.length < size - 1) mates.push(...pickDistinct(rng, themed.filter((x) => !mates.includes(x)), size - 1 - mates.length))
+    if (mates.length < size - 1) { // filet : n'importe quelle espèce du palier
+        const any = formsAtLevel(level).filter((id) => { const s = SPECIES[id] as any; return s && !s.exclusive && id !== tb.exclusiveId && inBand(id) && !mates.includes(id) })
+        mates.push(...pickDistinct(rng, any, size - 1 - mates.length))
+    }
+    return [...mates.map((speciesId) => ({ speciesId, level })), { speciesId: tb.exclusiveId, level }] // ace en dernier
+}
+
+/** Vague de BOSS : ~THEMED_BOSS_CHANCE % du temps, un Cerveau thématique (ace exclusif éligible selon la série,
+ *  équipe cohérente) ; sinon un boss générique (puissance brute). `bossName` = nom du Cerveau pour l'annonce. */
+export function generateBossWave(rng: Rng, streak: number, level: number, size = DEFAULT_TEAM_SIZE): BossWave {
+    const eligible = THEMED_BOSSES.filter((b) => streak >= b.minStreak && !!(SPECIES[b.exclusiveId]))
+    if (eligible.length > 0 && rng.chance(THEMED_BOSS_CHANCE)) {
+        const tb = eligible[rng.int(0, eligible.length - 1)]
+        return { opponent: buildThemedBossTeam(rng, tb, streak, level, size), bossName: tb.name }
+    }
+    return { opponent: generateBossTeam(rng, streak, level, size) }
+}
+
+// ============================================================
 // Cadence des boss
 // ============================================================
 /** Vrai si la N-ième victoire correspond à un combat de boss (Cerveau). */

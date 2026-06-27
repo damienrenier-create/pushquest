@@ -623,6 +623,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (battle || frontierResult || evolutions.length > 0 || dialogue || pendingLearn || newDexEntry) return
         // FACTORY : on joue l'équipe de LOCATION draftée ; Tour/Dôme : l'équipe réelle du joueur.
         const myTeam = run.mode === "FACTORY" ? (getDraftedTeam() ?? getPlayer().team) : getPlayer().team
+        if (run.isBoss && run.bossName) setToast(`👑 ${run.bossName} entre en scène !`)
         startTrainerBattle(myTeam, buildFrontierEnemies(run.opponent), Math.floor(Math.random() * 1e9), { trainerId: "frontier:" + run.mode, aiLevel: "trainer" })
     }, [run, tourChoice, battle, frontierResult, evolutions.length, dialogue, pendingLearn, newDexEntry])
 
@@ -1153,7 +1154,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {run && run.status === "active" && tourChoice && (
                 <div style={{ position: "absolute", left: "50%", top: 16, transform: "translateX(-50%)", zIndex: 62, background: "#1a1a22ee", color: "#fff", border: "2px solid #4cd964", borderRadius: 12, padding: "10px 14px", textAlign: "center", maxWidth: 330 }}>
                     <div style={{ fontWeight: 800, marginBottom: 4 }}>✅ Vague {run.streak} réussie ! +{run.lastReward} JC{run.lastRefund > 0 ? ` · +${run.lastRefund} ⚡` : ""}</div>
-                    <div style={{ fontSize: 11, opacity: 0.85, marginBottom: 8 }}>Cumul : {run.jc} JC · prochaine : vague {run.streak + 1}{run.isBoss ? " 👑 BOSS" : ""}</div>
+                    <div style={{ fontSize: 11, opacity: 0.85, marginBottom: 8 }}>Cumul : {run.jc} JC · prochaine : vague {run.streak + 1}{run.isBoss ? (run.bossName ? ` · 👑 ${run.bossName} !` : " · 👑 BOSS") : ""}</div>
                     <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
                         <button onClick={() => setTourChoice(false)} style={{ background: "#4cd964", color: "#0a2a12", fontWeight: 800, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>Continuer</button>
                         <button onClick={() => {
