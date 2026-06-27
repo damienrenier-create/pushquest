@@ -5,6 +5,7 @@ import { computeDamage } from "../battle/damage"
 import { getSpecies } from "./species"
 import { heldOutgoingDmgMult, heldIncomingDmgMult } from "./heldItems"
 import { parseSave, toMonInstance } from "../storage/save"
+import { hydratePlayer, getPlayer, equipHeldItem, unequipHeldItem } from "../store/playerStore"
 import type { SpeciesData } from "../battle/types"
 
 const sp = (id: string): SpeciesData => {
@@ -78,5 +79,35 @@ describe("objets tenus — round-trip de save", () => {
         const mon = createMonInstance("rochison", 30)
         const parsed = parseSave({ version: 99, team: [{ ...mon, heldItem: 123 }], pc: [], pokedex: { seen: [], caught: [] } })
         expect(parsed.team[0]?.heldItem).toBeUndefined()
+    })
+})
+
+describe("objets tenus — équipement (sac ↔ Daemon)", () => {
+    it("équipe depuis le sac ; l'ancien objet revient au sac ; retrait OK", () => {
+        hydratePlayer({ team: [createMonInstance("rochison", 30, { owned: true })], items: { galet_poli: 1, restes: 1 } })
+        const uid = getPlayer().team[0].uid
+        expect(equipHeldItem(uid, "restes")).toBe(true)
+        expect(getPlayer().team[0].heldItem).toBe("restes")
+        expect(getPlayer().items.restes).toBe(0)
+        expect(equipHeldItem(uid, "galet_poli")).toBe(true) // remplace → Restes revient au sac
+        expect(getPlayer().team[0].heldItem).toBe("galet_poli")
+        expect(getPlayer().items.restes).toBe(1)
+        expect(getPlayer().items.galet_poli).toBe(0)
+        expect(unequipHeldItem(uid)).toBe(true)
+        expect(getPlayer().team[0].heldItem).toBeUndefined()
+        expect(getPlayer().items.galet_poli).toBe(1)
+    })
+
+    it("refuse une signature sur la mauvaise espèce", () => {
+        hydratePlayer({ team: [createMonInstance("pyrokoss", 30, { owned: true })], items: { galet_poli: 1 } })
+        const uid = getPlayer().team[0].uid
+        expect(equipHeldItem(uid, "galet_poli")).toBe(false) // galet_poli = signature Rochison
+        expect(getPlayer().team[0].heldItem).toBeUndefined()
+        expect(getPlayer().items.galet_poli).toBe(1)
+    })
+
+    it("refuse d'équiper un objet absent du sac", () => {
+        hydratePlayer({ team: [createMonInstance("rochison", 30, { owned: true })], items: {} })
+        expect(equipHeldItem(getPlayer().team[0].uid, "restes")).toBe(false)
     })
 })

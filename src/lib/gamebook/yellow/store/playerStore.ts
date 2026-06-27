@@ -11,6 +11,7 @@ import { getSpecies } from "../data/species"
 import { tradeEvolutionTarget, applyEvolution, type EvolutionResult } from "../battle/evolution"
 import { getMove } from "../data/moves"
 import { getItem } from "../data/items"
+import { isHeldItem, getHeldItem } from "../data/heldItems"
 import { SAIYAN_POINT_VALUE } from "../data/saiyanConfig"
 import { BADGE_REPS_CAP_BONUS } from "../data/badges"
 import { getCt, canLearnCt, purchasableCts, type BadgeId } from "../data/cts"
@@ -1044,6 +1045,33 @@ export function healTeamMember(uid: string, itemId: string): boolean {
     const team = st.team.slice()
     team[idx] = { ...m, currentHp: Math.min(max, m.currentHp + heal) }
     st = { ...st, team, items: { ...st.items, [itemId]: st.items[itemId] - 1 } }
+    emit()
+    return true
+}
+
+/** Équipe un objet tenu (depuis le sac) sur un Daemon (équipe ou PC). L'éventuel objet déjà tenu
+ *  retourne au sac. Refuse si pas en stock, ou si c'est un objet SIGNATURE d'une autre espèce. */
+export function equipHeldItem(uid: string, itemId: string): boolean {
+    if (!isHeldItem(itemId) || (st.items[itemId] ?? 0) <= 0) return false
+    const target = st.team.find((m) => m.uid === uid) ?? st.pc.find((m) => m.uid === uid)
+    if (!target) return false
+    const it = getHeldItem(itemId)
+    if (it?.species && it.species !== target.speciesId) return false // verrou espèce (signature)
+    const items = { ...st.items, [itemId]: st.items[itemId] - 1 }
+    if (target.heldItem) items[target.heldItem] = (items[target.heldItem] ?? 0) + 1 // l'ancien objet revient au sac
+    const apply = (m: MonInstance): MonInstance => (m.uid === uid ? { ...m, heldItem: itemId } : m)
+    st = { ...st, team: st.team.map(apply), pc: st.pc.map(apply), items }
+    emit()
+    return true
+}
+
+/** Retire l'objet tenu d'un Daemon → il retourne au sac. Renvoie false si aucun objet tenu. */
+export function unequipHeldItem(uid: string): boolean {
+    const target = st.team.find((m) => m.uid === uid) ?? st.pc.find((m) => m.uid === uid)
+    if (!target?.heldItem) return false
+    const items = { ...st.items, [target.heldItem]: (st.items[target.heldItem] ?? 0) + 1 }
+    const apply = (m: MonInstance): MonInstance => (m.uid === uid ? { ...m, heldItem: undefined } : m)
+    st = { ...st, team: st.team.map(apply), pc: st.pc.map(apply), items }
     emit()
     return true
 }

@@ -36,6 +36,8 @@ import AdvisorPanel from "./AdvisorPanel"
 import LabPanel from "./LabPanel"
 import CombatShopModal from "./CombatShopModal"
 import DailyTicketModal from "./DailyTicketModal"
+import HeldItemModal from "./HeldItemModal"
+import { getHeldItem } from "@/lib/gamebook/yellow/data/heldItems"
 import ParkSignPanel from "./ParkSignPanel"
 import PosterPanel from "./PosterPanel"
 import { useGameStore, setCurrentNickname, DEFAULT_SPAWN } from "@/lib/gamebook/yellow/store/gameStore"
@@ -125,6 +127,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // DÔME (bracket de 8, état local éphémère) : state du tournoi + règle + graine + JC cumulés.
     const [dome, setDome] = useState<{ state: DomeState; rule: LevelRule; seed: number; jc: number } | null>(null)
     const [ticketOpen, setTicketOpen] = useState(false) // ticket roulette quotidien (1re connexion du jour)
+    const [heldOpen, setHeldOpen] = useState(false) // modale "objet tenu" (depuis la fiche d'un Daemon)
     const ticketChecked = useRef(false)
     const [tourChoice, setTourChoice] = useState(false) // pause entre vagues de série (Continuer / Quitter)
     const [usineCt, setUsineCt] = useState<string[] | null>(null) // CT à choisir (récompense Usine) parmi le vaincu
@@ -693,8 +696,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const goBack = (): boolean => {
         if (posterImage) { closePoster(); return true } // poster mural (Centre) → overlay plein écran
         if (confirmReset) { setConfirmReset(false); return true }
+        if (heldOpen) { setHeldOpen(false); return true } // sous-modale objet tenu (au-dessus de la fiche)
         if (renaming) { setRenaming(false); return true } // annule le renommage, reste sur la fiche
-        if (selected) { setSelected(null); setRenaming(false); return true } // fermer la fiche reset aussi le renommage
+        if (selected) { setSelected(null); setRenaming(false); setHeldOpen(false); return true } // fermer la fiche reset renommage + objet tenu
         // Sous-modals de la BOUTIQUE (rendus au-dessus d'elle) → se ferment avant la boutique.
         if (pantheonEvo) { setPantheonEvo(null); return true }
         if (pastaPick) { setPastaPick(false); return true }
@@ -1909,6 +1913,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                     ))}
                                 </div>
                             )}
+
+                            <button style={{ ...menuBtnStyle, marginTop: 8, width: "100%" }} onClick={() => setHeldOpen(true)}>
+                                🎒 {live.heldItem ? `Objet tenu : ${getHeldItem(live.heldItem)?.name ?? "?"}` : "Objet tenu — aucun"}
+                            </button>
+                            {heldOpen && <HeldItemModal uid={live.uid} onClose={() => setHeldOpen(false)} />}
 
                             {live.speciesId === "pantheon" && (player.items["pierre_gekroc"] ?? 0) > 0 && (
                                 <button style={{ ...menuBtnStyle, marginTop: 8, width: "100%" }} onClick={() => { setPantheonEvo(live); setSelected(null) }}>

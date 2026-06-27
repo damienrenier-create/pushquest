@@ -8,11 +8,12 @@
 // la récompense (énergie/CT) est créditée côté client à la confirmation.
 
 import { useState, useEffect } from "react"
-import { usePlayer, grantReps, grantCt } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, grantReps, grantCt, addItem } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { fetchFrontierProfile, postSpend } from "@/lib/gamebook/yellow/frontier/frontierApi"
 import { getCt } from "@/lib/gamebook/yellow/data/cts"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
+import { HELD_ITEM_LIST, type HeldItemCategory } from "@/lib/gamebook/yellow/data/heldItems"
 
 const INK = "#2a1c10", CREAM = "#f4ecd4", DARK = "#cdbb86"
 
@@ -25,6 +26,12 @@ const SYMBOLS = [
     { id: "sym_dome", emoji: "🏆", label: "Symbole du Dôme" },
 ]
 const SYMBOL_PRICE = 25
+const HELD_GROUPS: { title: string; cat: HeldItemCategory }[] = [
+    { title: "🎨 Objets de type (+10 % dégâts)", cat: "type" },
+    { title: "💊 Soin", cat: "soin" },
+    { title: "⚔️ Combat", cat: "combat" },
+    { title: "⭐ Signatures (Daemon précis)", cat: "signature" },
+]
 
 export default function CombatShopModal({ onClose }: { onClose: () => void }) {
     const player = usePlayer()
@@ -75,6 +82,19 @@ export default function CombatShopModal({ onClose }: { onClose: () => void }) {
                         })}
                     </Section>
 
+                    {HELD_GROUPS.map((g) => {
+                        const items = HELD_ITEM_LIST.filter((it) => it.category === g.cat)
+                        return (
+                            <Section key={g.cat} title={`🎒 ${g.title}`}>
+                                {items.map((it) => {
+                                    const owned = player.items[it.id] ?? 0
+                                    return <Row key={it.id} label={`${it.emoji} ${it.name}${owned > 0 ? ` (×${owned})` : ""}`} desc={it.description} price={it.jcPrice} disabled={busy || (jc ?? 0) < it.jcPrice}
+                                        onBuy={() => spend(it.jcPrice, { grant: () => addItem(it.id, 1), toast: `✅ ${it.name} acheté !` })} />
+                                })}
+                            </Section>
+                        )
+                    })}
+
                     <Section title="🎖️ Symboles de prestige">
                         {symOffer.length === 0 ? <Empty>Tous les symboles obtenus ! 🏅</Empty> : symOffer.map((s) => (
                             <Row key={s.id} label={`${s.emoji} ${s.label}`} price={SYMBOL_PRICE} disabled={busy || (jc ?? 0) < SYMBOL_PRICE}
@@ -94,10 +114,13 @@ export default function CombatShopModal({ onClose }: { onClose: () => void }) {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
     return <div style={{ marginBottom: 12 }}><div style={{ fontSize: 12, fontWeight: 800, color: INK, marginBottom: 6 }}>{title}</div>{children}</div>
 }
-function Row({ label, price, onBuy, disabled }: { label: string; price: number; onBuy: () => void; disabled: boolean }) {
+function Row({ label, desc, price, onBuy, disabled }: { label: string; desc?: string; price: number; onBuy: () => void; disabled: boolean }) {
     return (
         <div style={row}>
-            <span style={{ fontSize: 12, color: INK, fontWeight: 700 }}>{label}</span>
+            <div style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
+                <div style={{ fontSize: 12, color: INK, fontWeight: 700 }}>{label}</div>
+                {desc && <div style={{ fontSize: 10, color: INK, opacity: 0.65, lineHeight: 1.3 }}>{desc}</div>}
+            </div>
             <button onClick={onBuy} disabled={disabled} style={{ ...buyBtn, ...(disabled ? buyOff : {}) }}>{price} 💠</button>
         </div>
     )
