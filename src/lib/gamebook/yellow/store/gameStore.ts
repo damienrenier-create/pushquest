@@ -468,9 +468,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 // posters de Cendreville) ; on l'efface en SORTANT d'un partagé.
                 const enteringShared = targetMapId === "yellow_shop" || targetMapId === "yellow_infirmary"
                 const fromOverworld = map.id === YELLOW_ENTRANCE_MAP_ID || map.id === "yellow_cendreville"
+                // L'escalier INTERNE du Centre (infirmary ↔ 2e étage labo) ne quitte PAS le complexe →
+                // on PRÉSERVE interiorReturn. Sinon, monter à l'étage efface la ville de retour → bug
+                // "sortir du Centre de Cendreville renvoie à Ville Jaune".
+                const stairInfirmary = (map.id === "yellow_infirmary" && targetMapId === "yellow_infirmary_2e")
+                    || (map.id === "yellow_infirmary_2e" && targetMapId === "yellow_infirmary")
                 const interiorReturn = enteringShared && fromOverworld
                     ? { mapId: map.id, x: player.posX, y: player.posY }
-                    : (leavingShared ? null : ret)
+                    : (stairInfirmary ? ret : (leavingShared ? null : ret))
                 set({ map: newMap, player: newPlayer, dialogue: null, interiorReturn })
                 scheduleSave(newPlayer)
                 return
