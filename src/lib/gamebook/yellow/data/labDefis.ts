@@ -57,6 +57,10 @@ export interface LabDefiState {
     casinoTotalWon: number
     /** Tonytony déjà réclamé (one-shot). */
     tonytonyClaimed: boolean
+    /** TICKET QUOTIDIEN : dernier jour (YYYY-MM-DD) où le ticket roulette gratuit a été donné/consommé. */
+    dailyTicketDate: string
+    /** Le TOUT PREMIER pari roulette du joueur a-t-il eu lieu ? (le 1er est gagné d'office — secret). */
+    casinoFirstBetDone: boolean
 }
 
 /** État de défis vierge (nouvelle save / reset). */
@@ -73,6 +77,8 @@ export function emptyLabDefi(): LabDefiState {
         casinoBankruptUntil: "",
         casinoTotalWon: 0,
         tonytonyClaimed: false,
+        dailyTicketDate: "",
+        casinoFirstBetDone: false,
     }
 }
 

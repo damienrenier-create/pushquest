@@ -166,7 +166,7 @@ export default function LabPanel() {
 
                             {/* ─── SURPRISE ─── */}
                             {tab === "surprise" && (
-                                <Card title="🎰 Roulette dorée → 🥚 Tonytony" desc="Gagne 1000 énergies cumulées au jeu pour décrocher Tonytony, le Daemon porte-bonheur. La bonne case suit un motif… à percer." reward={`Cumul : ${d.casinoTotalWon} / ${TONYTONY_TARGET}`}>
+                                <Card title="🎰 Roulette dorée → 🥚 Tonytony" desc="Gagne 1000 énergies cumulées au jeu pour décrocher Tonytony, le Daemon porte-bonheur. La chance sourit aux audacieux !" reward={`Cumul : ${d.casinoTotalWon} / ${TONYTONY_TARGET}`}>
                                     {d.tonytonyClaimed ? (
                                         <div style={{ fontSize: 12, color: "#1e8449" }}>🥚 Tonytony déjà obtenu. Merci d'avoir joué !</div>
                                     ) : d.casinoTotalWon >= TONYTONY_TARGET ? (

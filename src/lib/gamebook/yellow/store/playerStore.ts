@@ -808,7 +808,9 @@ export function casinoSpin(bets: CasinoBet[], nowMs: number): CasinoSpinResult {
         totalBet += b.amount
     }
     if (totalBet > st.reps) return { ok: false, reason: `Pas assez d'énergie (${totalBet} requis, ${st.reps} dispo).` }
-    const winningCase = casinoWinningCase(d.casinoSpinIndex)
+    // 🤫 Le TOUT PREMIER pari du joueur est gagné d'office (la case gagnante = sa 1re mise) ; ensuite, normal.
+    const firstBet = !d.casinoFirstBetDone
+    const winningCase = firstBet ? bets[0].case : casinoWinningCase(d.casinoSpinIndex)
     const winningBet = bets.find((b) => b.case === winningCase)
     const totalWin = winningBet ? winningBet.amount * CASINO_WIN_MULT : 0
     let newStreak = totalWin > 0 ? d.casinoWinStreak + 1 : 0
@@ -826,7 +828,7 @@ export function casinoSpin(bets: CasinoBet[], nowMs: number): CasinoSpinResult {
     st = {
         ...st,
         reps: newReps,
-        labDefi: { ...d, casinoSpinIndex: newSpinIndex, casinoWinStreak: newStreak, casinoBankruptUntil: bankruptUntil, casinoTotalWon: newTotalWon },
+        labDefi: { ...d, casinoSpinIndex: newSpinIndex, casinoWinStreak: newStreak, casinoBankruptUntil: bankruptUntil, casinoTotalWon: newTotalWon, casinoFirstBetDone: true },
     }
     emit()
     return { ok: true, winningCase, totalBet, totalWin, bankrupt, totalWon: newTotalWon, tonytonyReady: newTotalWon >= TONYTONY_TARGET && !d.tonytonyClaimed }
@@ -834,6 +836,38 @@ export function casinoSpin(bets: CasinoBet[], nowMs: number): CasinoSpinResult {
 
 /** Cumul brut gagné au casino (vers la cible Tonytony). */
 export function casinoTotalWon(): number { return st.labDefi.casinoTotalWon }
+
+// ── Ticket roulette quotidien (gratuit) ──
+export interface CasinoTicketResult { winningCase: number; won: boolean; winAmount: number }
+
+/** Un ticket roulette gratuit est-il disponible aujourd'hui ? (1/jour, `today` = jour serveur). */
+export function casinoTicketAvailable(today: string): boolean {
+    return !!today && st.labDefi.dailyTicketDate !== today
+}
+
+/** Consomme le ticket du jour SANS jouer (le joueur ferme → les 10 offertes sont perdues). */
+export function consumeDailyTicket(today: string) {
+    if (!today || st.labDefi.dailyTicketDate === today) return
+    st = { ...st, labDefi: { ...st.labDefi, dailyTicketDate: today } }
+    emit()
+}
+
+/**
+ * Spin du TICKET gratuit (10 énergie offertes, mise sur UNE case). Indépendant du casino du labo :
+ * ne touche NI le cumul Tonytony, NI la série, NI la banqueroute, NI le motif. 🤫 Le TOUT PREMIER
+ * pari du joueur est gagné d'office (case gagnante = sa mise) ; ensuite, aléatoire. Crédite +100 au gain.
+ */
+export function casinoTicketSpin(betCase: number, today: string): CasinoTicketResult {
+    const d = st.labDefi
+    const firstBet = !d.casinoFirstBetDone
+    const winningCase = firstBet ? betCase : Math.floor(Math.random() * CASINO_NUM_CASES)
+    const won = winningCase === betCase
+    const winAmount = won ? CASINO_MIN_BET * CASINO_WIN_MULT : 0
+    const newReps = won ? Math.min(st.repsCap, st.reps + winAmount) : st.reps
+    st = { ...st, reps: newReps, labDefi: { ...d, dailyTicketDate: today, casinoFirstBetDone: true } }
+    emit()
+    return { winningCase, won, winAmount }
+}
 
 /**
  * Remet TONYTONY (one-shot) si le cumul casino atteint la cible. Crée l'instance niveau TONYTONY_LEVEL,

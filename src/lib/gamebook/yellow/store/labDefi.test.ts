@@ -2,8 +2,9 @@ import { describe, it, expect, beforeEach } from "vitest"
 import {
     hydratePlayer, getPlayer, bankReps, setTomorrowEnergyMult,
     startLabDefi, addCtDamage, ctDefiProgress, casinoSpin, grantTonytony, recordCtEarned,
+    casinoTicketSpin, casinoTicketAvailable, consumeDailyTicket,
 } from "./playerStore"
-import { emptyLabDefi, casinoWinningCase, CASINO_WIN_MULT, CASINO_BANKRUPT_STREAK, TONYTONY_SPECIES, ctEarnedCountByType } from "../data/labDefis"
+import { emptyLabDefi, casinoWinningCase, CASINO_WIN_MULT, CASINO_MIN_BET, CASINO_BANKRUPT_STREAK, TONYTONY_SPECIES, ctEarnedCountByType } from "../data/labDefis"
 
 beforeEach(() => {
     // État isolé : équipe vide, reps connus, défis vierges.
@@ -49,6 +50,7 @@ describe("défi CT — accumulation des dégâts du type ciblé", () => {
 
 describe("défi Surprise — casino pattern + Tonytony", () => {
     it("gagne sur la bonne case et accumule le cumul BRUT", () => {
+        hydratePlayer({ reps: 1000, repsCap: 1000, repsBankedTotal: 0, labDefi: { ...emptyLabDefi(), casinoFirstBetDone: true } }) // hors rig 1er pari
         const winCase = casinoWinningCase(0) // motif[0]
         const r = casinoSpin([{ case: winCase, amount: 50 }], 0)
         expect(r.ok).toBe(true)
@@ -59,6 +61,7 @@ describe("défi Surprise — casino pattern + Tonytony", () => {
     })
 
     it("perd quand la case ne tombe pas et ne crédite rien", () => {
+        hydratePlayer({ reps: 1000, repsCap: 1000, repsBankedTotal: 0, labDefi: { ...emptyLabDefi(), casinoFirstBetDone: true } }) // hors rig 1er pari
         const winCase = casinoWinningCase(0)
         const wrong = (winCase + 1) % 11
         const r = casinoSpin([{ case: wrong, amount: 30 }], 0)
@@ -90,5 +93,36 @@ describe("défi Surprise — casino pattern + Tonytony", () => {
         // 2e appel : refusé (one-shot)
         expect(grantTonytony()).toBeNull()
         expect(getPlayer().team.filter((m) => m.speciesId === TONYTONY_SPECIES).length).toBe(1)
+    })
+})
+
+describe("ticket roulette quotidien + dés pipés (1er pari gagné)", () => {
+    beforeEach(() => { hydratePlayer({ reps: 1000, repsCap: 100000, repsBankedTotal: 0, labDefi: emptyLabDefi() }) })
+
+    it("casino labo : le TOUT premier pari est gagné d'office (même sur la mauvaise case)", () => {
+        const winCase = casinoWinningCase(0)
+        const wrong = (winCase + 1) % 11
+        const r = casinoSpin([{ case: wrong, amount: 10 }], 0)
+        expect(r.totalWin).toBeGreaterThan(0)        // gagné malgré la mauvaise case (rig)
+        expect(getPlayer().labDefi.casinoFirstBetDone).toBe(true)
+    })
+
+    it("ticket : disponible 1×/jour, consommable", () => {
+        expect(casinoTicketAvailable("2026-06-27")).toBe(true)
+        consumeDailyTicket("2026-06-27")
+        expect(casinoTicketAvailable("2026-06-27")).toBe(false)
+        expect(casinoTicketAvailable("2026-06-28")).toBe(true) // nouveau jour
+    })
+
+    it("ticket : 1er spin gagné d'office (+100), HORS Tonytony, consomme le ticket", () => {
+        hydratePlayer({ reps: 0, repsCap: 100000, repsBankedTotal: 0, labDefi: emptyLabDefi() })
+        const r = casinoTicketSpin(3, "2026-06-27")
+        expect(r.won).toBe(true)
+        expect(r.winningCase).toBe(3)
+        expect(r.winAmount).toBe(CASINO_MIN_BET * CASINO_WIN_MULT)   // +100
+        expect(getPlayer().reps).toBe(CASINO_MIN_BET * CASINO_WIN_MULT) // crédité au compteur
+        expect(getPlayer().labDefi.casinoTotalWon).toBe(0)           // NE compte PAS pour Tonytony
+        expect(getPlayer().labDefi.casinoWinStreak).toBe(0)          // jamais de série/banqueroute
+        expect(casinoTicketAvailable("2026-06-27")).toBe(false)      // ticket consommé
     })
 })

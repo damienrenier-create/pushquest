@@ -112,7 +112,7 @@ export default function CasinoYellowModal({ onClose }: { onClose: () => void }) 
                         <span>🔥 Série <b style={{ color: d.casinoWinStreak >= 3 ? "#c0392b" : INK }}>{d.casinoWinStreak}</b></span>
                     </div>
                     <div style={{ fontSize: 10, color: INK, opacity: 0.7, marginBottom: 8 }}>
-                        11 cases (0-10). Mise <b>{CASINO_MIN_BET}-{CASINO_MAX_BET}</b>/case. Gain = mise × <b>{CASINO_WIN_MULT}</b>. La bonne case suit un motif… à toi de le percer.
+                        11 cases (0-10). Mise <b>{CASINO_MIN_BET}-{CASINO_MAX_BET}</b>/case. Gain = mise × <b>{CASINO_WIN_MULT}</b> sur la bonne case. Tente ta chance !
                     </div>
 
                     {bankruptActive ? (
