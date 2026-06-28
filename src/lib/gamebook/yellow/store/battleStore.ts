@@ -585,6 +585,25 @@ export function clearPendingLearn() {
     setStore({ pendingLearn: false })
 }
 
+/** #7 — APPRENTISSAGE EN COMBAT : le joueur apprend TOUT DE SUITE une attaque débloquée au
+ *  level-up alors que ses 4 slots étaient pleins (utilisable dès ce combat). `slot` = index de la
+ *  capacité à oublier ; `slot=null` = renoncer. MUTE le Daemon de COMBAT EN PLACE (on ne crée
+ *  PAS de nouveau ref `battle` : sinon BattleScreen rejouerait le playback du tour). La résolution
+ *  est reportée à l'équipe persistante au finishBattle (toMonInstance copie moves + pendingMoves).
+ *  BattleScreen force lui-même son re-render. Sans effet en PvP (apprentissage y reste post-combat). */
+export function resolveBattleLearn(uid: string, moveId: string, slot: number | null) {
+    const b = storeState.battle
+    if (!b || storeState.pvpCtx) return
+    const mon = b.player.team.find((m) => m.uid === uid)
+    if (!mon || !mon.pendingMoves?.includes(moveId)) return
+    mon.pendingMoves = mon.pendingMoves.filter((id) => id !== moveId)
+    if (slot !== null && slot >= 0 && slot < mon.moves.length) {
+        const mv = getMove(moveId)
+        const pp = mv?.pp ?? 5
+        mon.moves[slot] = { moveId, pp, ppMax: pp }
+    }
+}
+
 /** Consommé par la carte une fois le joueur renvoyé au Centre (ou redéposé à la Ligue). */
 export function clearWhiteout() {
     setStore({ ...storeState, whiteout: false, aceLossTaunt: null })

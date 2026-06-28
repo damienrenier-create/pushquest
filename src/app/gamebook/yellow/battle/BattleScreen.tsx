@@ -8,7 +8,7 @@
 // paraissent bien séquentielles (jamais simultanées). Aucune règle recalculée ici.
 
 import { useEffect, useRef, useState } from "react"
-import { useBattle, submitPlayerAction, endBattle, getBattleEnergy, setBattleInputHandler, type BattleInput } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, submitPlayerAction, endBattle, getBattleEnergy, setBattleInputHandler, resolveBattleLearn, type BattleInput } from "@/lib/gamebook/yellow/store/battleStore"
 import { speciesOf, maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
 import type { BattleMon } from "@/lib/gamebook/yellow/battle/types"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
@@ -59,6 +59,11 @@ export default function BattleScreen() {
     const [atkFx, setAtkFx] = useState<{ spec: AttackFxSpec; side: "player" | "enemy"; key: number } | null>(null)
     const atkKeyRef = useRef(0)
     const lastMoveSlotRef = useRef(0) // #3 : mémorise la dernière attaque choisie (rouvre dessus)
+    // #7 — APPRENTISSAGE EN COMBAT : attaques « plus tard » mises en veille pour CE combat (uid:moveId),
+    // + tick local pour forcer un re-render après mutation EN PLACE du Daemon (sans nouveau ref battle).
+    const learnSnooze = useRef<Set<string>>(new Set())
+    const [, setLearnTick] = useState(0)
+    const [learnChoosing, setLearnChoosing] = useState(false)
     const repsWallet = usePlayer()
     const dex = usePokedex() // statut Pokédex (caught) → indicateur en combat sauvage
     const lastBattle = useRef(battle)
@@ -247,6 +252,15 @@ export default function BattleScreen() {
     const showEHp = previewEnemy ? previewEnemy.currentHp : eHp
     const showEMax = previewEnemy ? maxHpOf(previewEnemy) : eMax
 
+    // #7 — APPRENTISSAGE EN COMBAT : à la reprise de la main (menu normal, hors PvP), si l'actif a
+    // débloqué une attaque ce tour mais a 4 slots pleins, on propose de l'apprendre MAINTENANT
+    // (utilisable tout de suite) — sinon « plus tard » (mise en veille → prompt post-combat habituel).
+    const learnMoveId = (playbackDone && !isEnded && !needSwitch && !awaitSendOut && !battle.pvp && menu === "root")
+        ? (player.pendingMoves ?? []).find((id) => !learnSnooze.current.has(`${player.uid}:${id}`))
+        : undefined
+    const learnLater = () => { if (learnMoveId) { learnSnooze.current.add(`${player.uid}:${learnMoveId}`); setLearnChoosing(false); setLearnTick((t) => t + 1) } }
+    const learnForget = (slot: number | null) => { if (learnMoveId) { resolveBattleLearn(player.uid, learnMoveId, slot); setLearnChoosing(false); setLearnTick((t) => t + 1) } }
+
     // L'ennemi est "aspiré" par la ball (lancer/secousses, et capture réussie).
     const enemyHiddenByBall = !!ball && (ball.phase === "throw" || ball.phase === "shake" || (ball.phase === "result" && ball.caught))
 
@@ -359,6 +373,7 @@ export default function BattleScreen() {
     // (Pattern "latest ref" : on garde le handler à jour ; appelé via le wrapper enregistré.)
     // eslint-disable-next-line
     inputRef.current = (a: BattleInput) => {
+        if (learnMoveId) return // #7 : overlay d'apprentissage ouvert → on neutralise le D-pad (choix tactile)
         if (!playbackDone) { if (a === "a" || a === "b") advance(); return }
         if (a === "up" || a === "left") stepCursor(-1)
         else if (a === "down" || a === "right") stepCursor(1)
@@ -454,6 +469,40 @@ export default function BattleScreen() {
                 )}
             </div>
 
+            {/* #7 — APPRENTISSAGE EN COMBAT (slots pleins) : apprendre maintenant / plus tard. */}
+            {learnMoveId && (
+                <div style={LRN.overlay} onClick={(e) => e.stopPropagation()}>
+                    <div style={LRN.box}>
+                        {!learnChoosing ? (
+                            <>
+                                <div style={LRN.title}>{displayName(player)} veut apprendre <b style={{ color: "#f5d020" }}>{getMove(learnMoveId)?.name ?? learnMoveId}</b> !</div>
+                                <div style={LRN.sub}>{(() => { const mv = getMove(learnMoveId); return mv ? `${TYPE_FR[mv.type] ?? mv.type} · puiss. ${mv.power || "—"} · ${mv.pp} PP` : "" })()}</div>
+                                <div style={LRN.sub}>Mais il connaît déjà 4 capacités.</div>
+                                <button style={LRN.primary} onClick={() => setLearnChoosing(true)}>📖 Apprendre maintenant</button>
+                                <button style={LRN.later} onClick={learnLater}>Plus tard ▶ (choix à la fin du combat)</button>
+                            </>
+                        ) : (
+                            <>
+                                <div style={LRN.title}>Oublier quelle capacité ?</div>
+                                <div style={LRN.list}>
+                                    {player.moves.map((m, i) => {
+                                        const mv = getMove(m.moveId)
+                                        return (
+                                            <button key={i} style={LRN.moveBtn} onClick={() => learnForget(i)}>
+                                                <b>{mv?.name ?? m.moveId}</b>
+                                                <span style={LRN.meta}>{(TYPE_FR[mv?.type ?? ""] ?? mv?.type ?? "")}{mv?.power ? ` · ${mv.power}` : ""}</span>
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                                <button style={LRN.giveUp} onClick={() => learnForget(null)}>✋ Renoncer à {getMove(learnMoveId)?.name ?? learnMoveId}</button>
+                                <button style={LRN.later} onClick={() => setLearnChoosing(false)}>← Retour</button>
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
+
             <style jsx>{`
                 @keyframes hitShake {
                     0% { transform: translateX(0); }
@@ -509,6 +558,20 @@ export default function BattleScreen() {
             `}</style>
         </div>
     )
+}
+
+// #7 — styles de l'overlay d'apprentissage en combat (alignés sur MoveLearnScreen post-combat).
+const LRN: Record<string, React.CSSProperties> = {
+    overlay: { position: "absolute", inset: 0, zIndex: 60, background: "rgba(8,6,16,0.86)", display: "flex", alignItems: "center", justifyContent: "center", padding: 14, fontFamily: "'Courier New', monospace", color: "#f8f8e8" },
+    box: { width: "min(380px, 96%)", background: "rgba(20,16,40,0.97)", border: "3px solid #f5d020", borderRadius: 14, padding: "16px 14px", textAlign: "center" },
+    title: { fontSize: 15, fontWeight: 800, marginBottom: 4 },
+    sub: { fontSize: 11, opacity: 0.8, marginBottom: 6 },
+    list: { display: "flex", flexDirection: "column", gap: 6, margin: "10px 0" },
+    moveBtn: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 11px", fontFamily: "inherit", fontSize: 12, color: "#fff", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 8, cursor: "pointer" },
+    meta: { fontSize: 10, opacity: 0.6 },
+    primary: { width: "100%", marginTop: 8, padding: "10px", fontFamily: "inherit", fontSize: 13, fontWeight: 800, color: "#1a1400", background: "#f5d020", border: "none", borderRadius: 8, cursor: "pointer" },
+    giveUp: { width: "100%", marginTop: 4, padding: "9px", fontFamily: "inherit", fontSize: 12, fontWeight: 700, color: "#1a1400", background: "#f5d020", border: "none", borderRadius: 8, cursor: "pointer" },
+    later: { width: "100%", marginTop: 8, padding: "8px", fontFamily: "inherit", fontSize: 11, color: "#fff", background: "transparent", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, cursor: "pointer" },
 }
 
 // ============================================================
@@ -672,7 +735,7 @@ function BallAnim({ phase, shakes, caught }: { phase: "throw" | "shake" | "resul
 }
 
 const S: Record<string, React.CSSProperties> = {
-    root: { width: "100%", maxWidth: 460, margin: "0 auto", fontFamily: "'Courier New', monospace", color: "#1c1408", userSelect: "none" },
+    root: { position: "relative", width: "100%", maxWidth: 460, margin: "0 auto", fontFamily: "'Courier New', monospace", color: "#1c1408", userSelect: "none" },
     scene: { background: "linear-gradient(#9bd0e0 0%, #c8e89c 60%, #a8d878 100%)", border: "3px solid #1c1408", borderRadius: 6, padding: 14, display: "flex", flexDirection: "column", gap: 18, minHeight: 240, position: "relative", overflow: "hidden" },
     enemyRow: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" },
     playerRow: { display: "flex", justifyContent: "space-between", alignItems: "flex-end" },
