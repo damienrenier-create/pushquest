@@ -320,6 +320,23 @@ describe("PvP — changement après KO : CHAQUE joueur choisit (pas d'envoi auto
         expect(s.enemy.team[0].currentHp).toBeGreaterThan(0)
     })
 
+    it("un Daemon ENDORMI n'attaque pas en PvP (pré-check de statut, comme en solo)", () => {
+        const p1 = createMonInstance("rochison", 50, { moveIds: ["eboulis", "belier", "seisme", "lame_roche"] })
+        const e1 = createMonInstance("plumiot", 2) // faible : ne peut pas KO rochison → on isole le skip SOMMEIL
+        const s0 = createBattle([p1], [e1], { isWild: false, seed: 11, pvp: true })
+        s0.player.team[0].status = "SLEEP"
+        s0.player.team[0].statusCounter = 3 // profondément endormi
+        const eHp0 = s0.enemy.team[0].currentHp
+
+        const s = resolveTurnPvp(s0, { kind: "move", moveIndex: 0 }, { kind: "move", moveIndex: 0 })
+
+        // L'endormi N'A PAS frappé → l'ennemi n'a pris aucun dégât (avant le fix il était KO).
+        expect(s.enemy.team[0].currentHp).toBe(eHp0)
+        // Il dort toujours, son compteur a juste décrémenté.
+        expect(s.player.team[0].status).toBe("SLEEP")
+        expect(s.player.team[0].statusCounter).toBe(2)
+    })
+
     it("DOUBLE-KO (récoil) → CHACUN choisit, séquentiellement (player puis enemy, jamais d'auto-switch)", () => {
         const p1 = createMonInstance("rochison", 50, { moveIds: ["eboulis", "belier", "seisme", "lame_roche"] }); p1.currentHp = 1
         const p2 = createMonInstance("razmaree", 50)

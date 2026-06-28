@@ -389,9 +389,13 @@ export function resolveTurnPvp(prev: BattleState, actionA: PlayerAction, actionB
     const order = orderActions(state, toResolved("player", actionA), toResolved("enemy", actionB), rng)
     for (const act of order) {
         if (state.phase === "ended") break
-        if (active(state[act.side]).currentHp <= 0) continue // KO entre-temps → n'agit pas
+        const cur = active(state[act.side])
+        if (cur.currentHp <= 0) continue // KO entre-temps → n'agit pas
         if (act.kind === "switch") doSwitch(state, act.side, act.teamIndex!, events)
-        else if (act.kind === "move") performMove(state, act.side, act.moveIndex!, events, rng)
+        // Pré-check de statut (peur/sommeil/gel/paralysie) AVANT d'agir — IDENTIQUE au solo (resolveTurn).
+        // SANS ça, en PvP un Daemon endormi/gelé/paralysé/apeuré attaquait quand même (bug). canAct
+        // consomme le RNG seedé de la même façon sur les 2 clients → déterminisme/checksum préservés.
+        else if (act.kind === "move" && canAct(cur, events, rng)) performMove(state, act.side, act.moveIndex!, events, rng)
         checkFaints(state, events)
     }
     if (state.phase !== "ended") { endOfTurn(state, events, rng); checkFaints(state, events) }
