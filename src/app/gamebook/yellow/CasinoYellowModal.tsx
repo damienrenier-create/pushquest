@@ -93,7 +93,7 @@ export default function CasinoYellowModal({ onClose }: { onClose: () => void }) 
                 if (!r.ok) { setError(r.reason ?? "Erreur"); setSpinning(false); return }
                 persistYellowSave(); setBets({})
                 // La case gagnante CLIGNOTE ~1 s avant que le résultat s'affiche (on voit où la boule s'arrête).
-                const win = r.winningCase
+                const win = r.winningCase ?? 0 // défini quand r.ok (le type le marque optionnel à cause du chemin d'échec)
                 let blinks = 0
                 const blink = () => {
                     blinks++
