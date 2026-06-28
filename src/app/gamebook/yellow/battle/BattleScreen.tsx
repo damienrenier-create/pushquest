@@ -205,7 +205,10 @@ export default function BattleScreen() {
     // Daemon adverse ont été joués ; on attend la DÉCISION du joueur (RESTER / CHANGER) avant que
     // l'ennemi n'entre. (Double KO : le changement forcé du joueur prime → pas de fenêtre optionnelle.)
     const awaitSendOut = !!battle.enemySendOut && !needSwitch && !isEnded
-    const sendOutName = battle.enemySendOut ? displayName(battle.enemy.team[battle.enemySendOut.teamIndex]) : ""
+    const sendOutMon = battle.enemySendOut ? battle.enemy.team[battle.enemySendOut.teamIndex] : null
+    const sendOutName = sendOutMon ? displayName(sendOutMon) : ""
+    // #4 — Types annoncés dans le bandeau (en plus des chips de la fiche) pour décider rester/changer.
+    const sendOutTypes = sendOutMon ? speciesOf(sendOutMon).types.map((t) => TYPE_FR[t] ?? t).join(" / ") : ""
 
     // --- handlers ---
     // tryAct : n'exécute l'action que si on n'a pas déjà agi pour CET état de combat
@@ -233,6 +236,16 @@ export default function BattleScreen() {
     const pMax = playbackDone ? maxHpOf(player) : (disp?.pMax ?? maxHpOf(player))
     const eHp = playbackDone ? enemy.currentHp : (disp?.e ?? enemy.currentHp)
     const eMax = playbackDone ? maxHpOf(enemy) : (disp?.eMax ?? maxHpOf(enemy))
+
+    // #4 — FENÊTRE D'ENVOI : une fois le playback fini (décision rester/changer), on PRÉVISUALISE
+    // le prochain Daemon adverse (sprite + PV pleins + fiche/chips de type) au lieu du K.O. qui
+    // vient de tomber. Le Daemon n'entre VRAIMENT (switchIn) qu'après le choix du joueur.
+    const sendOutIdx = playbackDone && awaitSendOut && battle.enemySendOut ? battle.enemySendOut.teamIndex : null
+    const previewEnemy = sendOutIdx != null ? battle.enemy.team[sendOutIdx] : null
+    const showEnemy = previewEnemy ?? enemy
+    const showEIdx = sendOutIdx ?? eIdx
+    const showEHp = previewEnemy ? previewEnemy.currentHp : eHp
+    const showEMax = previewEnemy ? maxHpOf(previewEnemy) : eMax
 
     // L'ennemi est "aspiré" par la ball (lancer/secousses, et capture réussie).
     const enemyHiddenByBall = !!ball && (ball.phase === "throw" || ball.phase === "shake" || (ball.phase === "result" && ball.caught))
@@ -367,14 +380,15 @@ export default function BattleScreen() {
                 {/* Sauvage : 1 seul ennemi → le pip d'équipe est inutile. On affiche plutôt le statut
                     Pokédex : pokéball ROUGE = espèce déjà capturée, pokéball grisée = encore à attraper. */}
                 {battle.isWild
-                    ? <WildDexPip caught={dex.caught.includes(enemy.speciesId)} />
-                    : <TeamPips team={battle.enemy.team} activeIdx={eIdx} activeHp={eHp} align="left" />}
+                    ? <WildDexPip caught={dex.caught.includes(showEnemy.speciesId)} />
+                    : <TeamPips team={battle.enemy.team} activeIdx={showEIdx} activeHp={showEHp} align="left" />}
                 <div style={S.enemyRow}>
                     {/* key sur l'uid : au changement de Daemon (switchIn), la barre se REMONTE
-                        nette au lieu d'animer 0%→100% (le "flash plein" perçu à chaque K.O.). */}
-                    <MonInfo key={enemy.uid} mon={enemy} hp={eHp} max={eMax} />
+                        nette au lieu d'animer 0%→100% (le "flash plein" perçu à chaque K.O.).
+                        #4 : pendant la fenêtre d'envoi, on montre le PROCHAIN Daemon (showEnemy). */}
+                    <MonInfo key={showEnemy.uid} mon={showEnemy} hp={showEHp} max={showEMax} />
                     <div style={S.enemySpot}>
-                        {!enemyHiddenByBall && <MonSprite mon={enemy} facing="front" alive={eHp > 0} hitKey={shakeE} />}
+                        {!enemyHiddenByBall && <MonSprite mon={showEnemy} facing="front" alive={showEHp > 0} hitKey={shakeE} />}
                         {ball && <BallAnim phase={ball.phase} shakes={ball.shakes} caught={ball.caught} />}
                     </div>
                 </div>
@@ -413,7 +427,7 @@ export default function BattleScreen() {
                             ) : needSwitch ? (
                                 <span>Choisis un Daemon !</span>
                             ) : awaitSendOut ? (
-                                <span>{menu === "switch" ? "Choisis un Daemon !" : `L'adversaire envoie ${sendOutName} !`}</span>
+                                <span>{menu === "switch" ? "Choisis un Daemon !" : `L'adversaire envoie ${sendOutName} ! [${sendOutTypes}]`}</span>
                             ) : menu === "confirmRun" ? (
                                 <span>Fuir le combat ? (B = annuler)</span>
                             ) : menu === "moves" ? (
