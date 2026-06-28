@@ -30,16 +30,16 @@ export function hitChance(move: MoveData, attacker: BattleMon, defender: BattleM
     if (move.accuracy <= 0) return Infinity
     // HYPNOSE : précision de base FIXE, INDÉPENDANTE de l'esquive, modulée par le ratio de Vitesse
     // lanceur/cible (rapide → +précis, lent → -précis), bornée [SPEED_ACC_MIN, SPEED_ACC_MAX].
+    // OBJET TENU — Poudre Claire (×0.9) / Encens Doux (×0.95) : baisse la précision des attaques visant le porteur.
+    const itemMod = heldEffect(defender)?.incomingAccMult ?? 1
     if (move.effect?.speedScaledAcc) {
         const sCaster = effectiveSpeed(attacker)
         const sTarget = Math.max(1, effectiveSpeed(defender))
-        const scaled = move.accuracy * (sCaster / sTarget)
+        const scaled = move.accuracy * (sCaster / sTarget) * itemMod // l'objet réduit aussi l'Hypnose & co.
         return Math.max(SPEED_ACC_MIN, Math.min(SPEED_ACC_MAX, scaled))
     }
     const accMod = accEvaMultiplier(attacker.stages.acc)
     const evaMod = accEvaMultiplier(-defender.stages.eva)
-    // OBJET TENU — Poudre Claire (×0.9) / Encens Doux (×0.95) : baisse la précision des attaques visant le porteur.
-    const itemMod = heldEffect(defender)?.incomingAccMult ?? 1
     return move.accuracy * accMod * evaMod * itemMod
 }
 

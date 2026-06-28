@@ -7,6 +7,7 @@
 import type { MonInstance, StatKey, MajorStatus, PokeType } from "../battle/types"
 import { POKE_TYPES } from "../battle/types"
 import { emptyLabDefi, clampTicketValue, TICKET_QUEUE_MAX, type LabDefiState, type LabDefiKind, type LabActiveDefi } from "../data/labDefis"
+import { isHeldItem } from "../data/heldItems"
 
 export interface YellowSave {
     version: number
@@ -140,7 +141,7 @@ function parseMon(raw: unknown): MonInstance | null {
         moves,
         owned: o.owned === true,
         shiny: o.shiny === true ? true : undefined,
-        heldItem: typeof o.heldItem === "string" ? o.heldItem : undefined,
+        heldItem: typeof o.heldItem === "string" && isHeldItem(o.heldItem) ? o.heldItem : undefined, // sanitize : ignore un id inconnu/corrompu
         statPoints: typeof o.statPoints === "number" ? Math.max(0, Math.floor(o.statPoints)) : undefined,
         allocated: parseAllocated(o.allocated),
         ev: parseAllocated(o.ev),
