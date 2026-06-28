@@ -54,7 +54,8 @@ import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
 import { ARENA_TICKET_VALUE } from "@/lib/gamebook/yellow/data/labDefis"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
-import { useRun, getRun, startTowerRun, startRun, applyWinFromBattle, applyLossFromBattle, quitRun, endRun, setDraftedTeam, getDraftedTeam } from "@/lib/gamebook/yellow/frontier/runStore"
+import { useRun, getRun, startTowerRun, startRun, applyWinFromBattle, applyLossFromBattle, quitRun, endRun, setDraftedTeam, getDraftedTeam, setRunRaw } from "@/lib/gamebook/yellow/frontier/runStore"
+import type { FrontierRunState } from "@/lib/gamebook/yellow/frontier/run"
 import { postRecordRun } from "@/lib/gamebook/yellow/frontier/frontierApi"
 import { ctRewardOptionsForTeam } from "@/lib/gamebook/yellow/frontier/rewards"
 import { generateRentalPool, buildDraftTeam, type RentalCandidate } from "@/lib/gamebook/yellow/frontier/factory"
@@ -81,6 +82,62 @@ import type { MonInstance } from "@/lib/gamebook/yellow/battle/types"
 import { usePlayerArena, type ArenaOpponent } from "@/lib/gamebook/yellow/multiplayer/usePlayerArena"
 import { buildHubTeam, buildMirrorTeam, type ArenaMode } from "@/lib/gamebook/yellow/data/playerArena"
 import ArenaChallengeModal from "./ArenaChallengeModal"
+
+// ============================================================
+// ZONE DE COMBAT — REPRISE DE SÉRIE au refresh (anti-abandon)
+// ------------------------------------------------------------
+// Le combat #8 (battleStore) EXCLUT volontairement les séries Frontier. On persiste donc ICI la
+// SÉRIE elle-même (Tour/Usine: run + équipe louée ; Dôme: bracket) dans un instantané localStorage
+// dédié, repris au boot. v1 = on ne reprend PAS le combat de vague en cours (on retombe au début de
+// la vague courante via l'effet de lancement) — bien plus sûr. Fail-safe total comme #8.
+type DomeSnap = { state: DomeState; rule: LevelRule; seed: number; jc: number }
+interface FrontierSnap {
+    v: 1
+    ts: number
+    run: FrontierRunState | null
+    draftedTeam: MonInstance[] | null
+    dome: DomeSnap | null
+    tourChoice: boolean
+    usineCt: string[] | null
+}
+const FRONTIER_LS_KEY = "pq_yellow_frontier_v1"
+const FRONTIER_LS_MAX_AGE_MS = 24 * 3600 * 1000
+
+function frontierActive(run: FrontierRunState | null, dome: DomeSnap | null): boolean {
+    return (run?.status === "active") || (dome?.state.status === "active")
+}
+/** Toutes les espèces référencées sont-elles résolubles ? (garde-fou de relecture, comme #8). */
+function frontierSpeciesOk(snap: FrontierSnap): boolean {
+    const ids: string[] = []
+    if (snap.run) ids.push(...snap.run.opponent.map((o) => o.speciesId))
+    if (snap.draftedTeam) ids.push(...snap.draftedTeam.map((m) => m.speciesId))
+    if (snap.dome) for (const e of snap.dome.state.entrants) ids.push(...e.team.map((o) => o.speciesId))
+    return ids.every((id) => !!getSpecies(id))
+}
+function writeFrontierSnap(snap: FrontierSnap): void {
+    if (typeof window === "undefined") return
+    try {
+        if (!frontierActive(snap.run, snap.dome)) { window.localStorage.removeItem(FRONTIER_LS_KEY); return }
+        window.localStorage.setItem(FRONTIER_LS_KEY, JSON.stringify(snap))
+    } catch { /* quota / sérialisation : on ignore */ }
+}
+function clearFrontierSnap(): void {
+    if (typeof window === "undefined") return
+    try { window.localStorage.removeItem(FRONTIER_LS_KEY) } catch { /* ignore */ }
+}
+function readFrontierSnap(): FrontierSnap | null {
+    if (typeof window === "undefined") return null
+    let raw: string | null = null
+    try { raw = window.localStorage.getItem(FRONTIER_LS_KEY) } catch { return null }
+    if (!raw) return null
+    try {
+        const o = JSON.parse(raw) as FrontierSnap
+        if (o.v !== 1) { clearFrontierSnap(); return null }
+        if (typeof o.ts === "number" && Date.now() - o.ts > FRONTIER_LS_MAX_AGE_MS) { clearFrontierSnap(); return null }
+        if (!frontierActive(o.run, o.dome) || !frontierSpeciesOk(o)) { clearFrontierSnap(); return null }
+        return o
+    } catch { clearFrontierSnap(); return null }
+}
 
 export default function YellowDevClient({ userId = "", isCreator = false, nickname = "" }: { userId?: string; isCreator?: boolean; nickname?: string }) {
     const move = useGameStore((s) => s.move)
@@ -124,6 +181,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const run = useRun()
     const frontierResult = useFrontierResult()
     const frontierReportedRef = useRef(false)
+    // #frontier-resume : tant que la reprise au boot n'a pas eu lieu, on N'ÉCRIT PAS l'instantané
+    // (sinon le 1er rendu, état vide, effacerait le snapshot avant qu'on ait pu le relire).
+    const frontierResumedRef = useRef(false)
     const [usineDraft, setUsineDraft] = useState<{ levelRule: LevelRule; pool: RentalCandidate[]; picks: string[] } | null>(null)
     // DÔME (bracket de 8, état local éphémère) : state du tournoi + règle + graine + JC cumulés.
     const [dome, setDome] = useState<{ state: DomeState; rule: LevelRule; seed: number; jc: number } | null>(null)
@@ -339,6 +399,22 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             // #8 — ANTI-FUITE : un combat (dresseur/sauvage) interrompu par un refresh est REPRIS tel
             // quel au lieu de valoir une fuite gratuite. No-op s'il n'y a rien à reprendre.
             if (!cancelled) resumeBattleFromStorage()
+            // ZONE DE COMBAT — reprise d'une SÉRIE Frontier interrompue (Tour/Usine/Dôme) au refresh.
+            // On NE reprend PAS le combat de vague (exclu de #8) : on retombe au début de la vague
+            // courante via les effets de lancement. Toujours marquer la reprise faite (frontierResumedRef)
+            // pour autoriser ensuite l'écriture de l'instantané, même s'il n'y avait rien à reprendre.
+            if (!cancelled) {
+                const fsnap = readFrontierSnap()
+                if (fsnap?.run?.status === "active") {
+                    setRunRaw(fsnap.run)
+                    setDraftedTeam(fsnap.draftedTeam ?? null)
+                    setTourChoice(fsnap.tourChoice)
+                    setUsineCt(fsnap.usineCt)
+                } else if (fsnap?.dome?.state.status === "active") {
+                    setDome(fsnap.dome)
+                }
+                frontierResumedRef.current = true
+            }
             // TÉLÉPORT DEV : ?map=<id> saute direct à une map (ex. yellow_arena_elec) en ignorant
             // les gates (badge, ACE…). Réservé au créateur OU au pseudo whitelisté (Ledé) pour le test.
             const teleportAllowed = isCreator || ["ledé", "lede"].includes(nickname.normalize("NFC").toLowerCase())
@@ -671,6 +747,14 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         healAllTeam() // soin intégral avant chaque match du Dôme (façon Émeraude)
         startTrainerBattle(getPlayer().team, buildFrontierEnemies(opp.team), Math.floor(Math.random() * 1e9), { trainerId: "frontier:DOME", aiLevel: "trainer" })
     }, [dome, battle, frontierResult, evolutions.length, dialogue, pendingLearn, newDexEntry])
+
+    // ZONE DE COMBAT — INSTANTANÉ de la série (anti-abandon au refresh). On (ré)écrit à chaque
+    // changement de run/dome/pause ; n'écrit RIEN tant que la reprise au boot n'a pas eu lieu.
+    // (draftedTeam n'est pas réactif → lu au moment de l'écriture ; il ne change qu'avec le run.)
+    useEffect(() => {
+        if (!frontierResumedRef.current) return
+        writeFrontierSnap({ v: 1, ts: Date.now(), run, draftedTeam: getDraftedTeam(), dome, tourChoice, usineCt })
+    }, [run, dome, tourChoice, usineCt])
 
     // TICKET ROULETTE QUOTIDIEN : à la 1re connexion du jour (chap. 2), une fois l'intro passée et l'écran
     // libre, on ouvre la cinématique du Dieu Spaghetti (1×/session ; consommé à la fermeture).

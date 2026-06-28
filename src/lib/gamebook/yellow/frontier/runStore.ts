@@ -26,6 +26,8 @@ export function subscribeRun(l: () => void): () => void {
     return () => { listeners.delete(l) }
 }
 export function getRun(): FrontierRunState | null { return run }
+/** Réinjecte un run RESTAURÉ (reprise de série après refresh) sans repasser par le réducteur de départ. */
+export function setRunRaw(state: FrontierRunState | null): void { run = state; emit() }
 export function useRun(): FrontierRunState | null {
     return useSyncExternalStore(subscribeRun, getRun, getRun)
 }
