@@ -432,9 +432,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 e.preventDefault()
                 if (inB) { dispatchBattleInput("a") }
                 else {
-                    // ARÈNE JOUEUR : A à côté d'un adversaire (≤1 case) → défi (en plus du clic/tap sur le sprite).
-                    const opp = arenaMode && arenaOpponents.find((o) => Math.abs(o.x - mapPlayer.posX) + Math.abs(o.y - mapPlayer.posY) <= 1)
-                    if (opp) {
+                    // ARÈNE JOUEUR : A près d'un reflet (≤1 case, DIAGONALES incluses) → défie le PLUS PROCHE
+                    // (en plus du clic/tap). Chebyshev ≤1 = les 8 cases autour + la case occupée (avant : 4 cases ortho
+                    // seulement → A ratait souvent les reflets qui errent ; le tactile, lui, ignorait la distance).
+                    const cheb = (o: { x: number; y: number }) => Math.max(Math.abs(o.x - mapPlayer.posX), Math.abs(o.y - mapPlayer.posY))
+                    const opp = arenaMode ? [...arenaOpponents].filter((o) => cheb(o) <= 1).sort((a, b) => cheb(a) - cheb(b))[0] : undefined
+                    if (arenaMode && opp) {
                         if (duelWonToday(opp.userId)) showDialogue("duel_rival", opp.nickname, ["Tu m'as déjà vaincu aujourd'hui. Reviens demain pour ta revanche."])
                         else { const enemy = arenaMode === "hub" ? buildHubTeam(opp.player) : buildMirrorTeam(opp.player); setArenaFight({ opp, mode: arenaMode, enemy }) }
                     }
