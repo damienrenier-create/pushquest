@@ -162,6 +162,64 @@ export function getSnapshot(): BattleStoreState {
     return storeState
 }
 
+// ============================================================
+// #8 — PERSISTANCE DU COMBAT (anti-fuite au refresh)
+// ------------------------------------------------------------
+// Un refresh en plein combat de DRESSEUR ne doit PAS valoir une fuite gratuite (skip d'un boss,
+// PV de l'équipe conservés…). On sérialise le combat dans localStorage à chaque tour ; au
+// chargement on le REPREND tel quel — BattleState est 100% sérialisable (le RNG vit dans `seed`,
+// reconstruit à chaque resolveTurn). Effacé dès la fin du combat. finishBattle ne dépend de
+// storeState que via `trainer` + `energySpent` → ces deux-là suffisent à l'instantané.
+// EXCLUS : PvP (réseau dual-client, désync) et séries Frontier (orchestration de vagues non
+// reprenable ici). FAIL-SAFE : toute relecture invalide efface l'instantané et retombe sur la carte.
+const BATTLE_LS_KEY = "pq_yellow_battle_v1"
+const BATTLE_LS_MAX_AGE_MS = 24 * 3600 * 1000 // au-delà → instantané ignoré (anti-zombie)
+
+function battlePersistable(b: BattleState | null, ctx: TrainerContext | null): boolean {
+    if (!b || b.phase === "ended" || b.pvp) return false
+    if (ctx?.trainerId?.startsWith("frontier:")) return false // série de vagues : pas reprenable ici
+    return true
+}
+
+/** Écrit l'instantané du combat courant (no-op si non reprenable ou hors navigateur). */
+function persistBattleSnapshot(): void {
+    if (typeof window === "undefined") return
+    try {
+        const { battle, trainer, energySpent } = storeState
+        if (!battlePersistable(battle, trainer)) { window.localStorage.removeItem(BATTLE_LS_KEY); return }
+        // events = file de playback UI du DERNIER tour (déjà vue par le joueur) → on la VIDE dans
+        // l'instantané pour reprendre DIRECTEMENT au point de décision (sinon le tour se rejoue).
+        const snap = { ...battle, events: [] }
+        window.localStorage.setItem(BATTLE_LS_KEY, JSON.stringify({ v: 1, ts: Date.now(), battle: snap, trainer, energySpent }))
+    } catch { /* quota / sérialisation : on ignore (au pire = comportement d'avant) */ }
+}
+
+/** Efface l'instantané (fin de combat, sortie, ou relecture invalide). */
+function clearBattleSnapshot(): void {
+    if (typeof window === "undefined") return
+    try { window.localStorage.removeItem(BATTLE_LS_KEY) } catch { /* ignore */ }
+}
+
+/** REPREND un combat sauvegardé après un refresh. Renvoie true si un combat a été restauré.
+ *  À appeler au chargement (après hydratation du joueur). Fail-safe total : efface + ignore si invalide. */
+export function resumeBattleFromStorage(): boolean {
+    if (typeof window === "undefined" || storeState.battle) return false
+    let raw: string | null = null
+    try { raw = window.localStorage.getItem(BATTLE_LS_KEY) } catch { return false }
+    if (!raw) return false
+    try {
+        const o = JSON.parse(raw) as { v?: number; ts?: number; battle?: BattleState; trainer?: TrainerContext | null; energySpent?: number }
+        if (o.v !== 1 || !o.battle) { clearBattleSnapshot(); return false }
+        if (typeof o.ts === "number" && Date.now() - o.ts > BATTLE_LS_MAX_AGE_MS) { clearBattleSnapshot(); return false }
+        const b = o.battle
+        // Validation défensive : combat en cours, équipes saines, espèces résolubles.
+        if (b.phase === "ended" || b.pvp || !b.player?.team?.length || !b.enemy?.team?.length) { clearBattleSnapshot(); return false }
+        for (const m of [...b.player.team, ...b.enemy.team]) if (!getSpecies(m.speciesId)) { clearBattleSnapshot(); return false }
+        setStore({ battle: b, trainer: o.trainer ?? null, energySpent: o.energySpent ?? 0, evolutions: [], whiteout: false, pvpCtx: null })
+        return true
+    } catch { clearBattleSnapshot(); return false }
+}
+
 // --- Pont d'ENTRÉES : la coque GameBoy route ses boutons vers le menu de combat ---
 export type BattleInput = "up" | "down" | "left" | "right" | "a" | "b"
 let battleInputHandler: ((a: BattleInput) => void) | null = null
@@ -184,6 +242,7 @@ export function startWildBattle(playerTeam: MonInstance[], enemyTeam: MonInstanc
     const battle = createBattle(playerTeam, enemyTeam, { isWild: true, seed, captureModifier, fleeChance: wildFleeChance() })
     syncPokedex(battle) // adversaire "vu" dès la rencontre
     setStore({ battle, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
+    persistBattleSnapshot() // #8 : instantané anti-fuite (refresh)
 }
 
 export function startTrainerBattle(
@@ -197,6 +256,7 @@ export function startTrainerBattle(
     syncPokedex(battle)
     const trainer = opts?.trainerId ? { trainerId: opts.trainerId, reward: opts.reward ?? 0, isRematch: opts.isRematch ?? false } : null
     setStore({ battle, evolutions: [], trainer, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
+    persistBattleSnapshot() // #8 : instantané anti-fuite (refresh) — dresseurs reprenables
 }
 
 /** Énergie de combat : reps déjà dépensés ce combat + plafond (selon badges). */
@@ -253,10 +313,12 @@ export function submitPlayerAction(action: PlayerAction) {
     syncPokedex(next) // vu (changement d'adversaire) + capturé le cas échéant
     setStore({ battle: next, evolutions: [], trainer: storeState.trainer, whiteout: false })
     if (next.phase === "ended") finishBattle(next, newEntry)
+    else persistBattleSnapshot() // #8 : on rafraîchit l'instantané anti-fuite tant que le combat dure
 }
 
 /** Fin de combat : resync équipe (XP/PV/niveaux), capture, évolutions, sauvegarde. */
 function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry"] = null) {
+    clearBattleSnapshot() // #8 : combat terminé → plus rien à reprendre
     // #2 : fuite RÉUSSIE → on durcit la prochaine ; tout autre dénouement = engagement → reset.
     if (b.outcome === "run") fleeStreak++
     else fleeStreak = 0
@@ -534,6 +596,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
 
 export function endBattle() {
     // On garde évolutions + whiteout : ils se jouent une fois le combat quitté.
+    clearBattleSnapshot() // #8 : sortie de combat → pas de reprise fantôme
     swapCache = { src: null, out: null }
     setStore({ battle: null, evolutions: storeState.evolutions, trainer: null, whiteout: storeState.whiteout, pvpCtx: null })
 }
@@ -602,6 +665,7 @@ export function resolveBattleLearn(uid: string, moveId: string, slot: number | n
         const pp = mv?.pp ?? 5
         mon.moves[slot] = { moveId, pp, ppMax: pp }
     }
+    persistBattleSnapshot() // #8 : l'attaque apprise survit à un refresh
 }
 
 /** Consommé par la carte une fois le joueur renvoyé au Centre (ou redéposé à la Ligue). */
@@ -757,6 +821,7 @@ export function setPvpSendHandler(fn: ((seq: number, action: PlayerAction, check
 
 /** Démarre un combat PvP (les 2 clients construisent le MÊME état canonique). */
 export function startPvpBattle(battle: BattleState, ctx: Omit<PvpContext, "seq" | "myAction" | "oppAction" | "won" | "desync">) {
+    clearBattleSnapshot() // #8 : le PvP n'est jamais persisté (réseau) → on purge tout reliquat solo
     swapCache = { src: null, out: null }
     // PAS d'objets tenus en PvP : déterminisme dual-client. Les hooks (Vive Griffe/Focus Band/flinch…)
     // consomment du RNG conditionnellement → un objet non synchro entre les 2 clients désyncerait le match.
