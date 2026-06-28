@@ -38,7 +38,7 @@ export default function EncounterTransition() {
             keyRef.current += 1
             setFx({
                 profile, variant, danger,
-                dur: Math.round(profile.durationMs * v.durationScale),
+                dur: Math.round(profile.durationMs * v.durationScale) + 450, // +0,5 s : l'anim de rencontre un peu plus posée
                 count: Math.round(profile.particle.count * v.particleScale),
                 bloom: !!profile.bloom || v.bloom,
                 shake: !!profile.shake || v.shake,

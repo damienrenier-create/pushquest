@@ -64,16 +64,38 @@ export const ETX_PROFILES: Record<string, EtxProfile> = {
         particle: { emoji: "✨", count: 14, motion: "scatter" }, easing: "cubic-bezier(.83,0,.17,1)",
         sfx: "grondement + sting cuivré", bloom: true, shake: true, rays: true, zoom: true, flash: true,
     },
+    // ── Profils type-cohérents (corrigent les incohérences : COMBAT/NORMAL n'ont plus de cailloux, etc.) ──
+    combat_strike: {
+        id: "combat_strike", kind: "circle", durationMs: 750, palette: ["#FF8A4A", "#B02000"],
+        particle: { emoji: "🥊", count: 9, motion: "scatter" }, easing: "cubic-bezier(.7,0,.84,0)",
+        sfx: "impact de poing sec", shake: true,
+    },
+    normal_pop: {
+        id: "normal_pop", kind: "circle", durationMs: 700, palette: ["#EDEDED", "#9AA0A6"],
+        particle: { emoji: "⭐", count: 8, motion: "scatter" }, easing: "cubic-bezier(.34,1.4,.64,1)",
+        sfx: "pop léger + scintillement",
+    },
+    venom_haze: {
+        id: "venom_haze", kind: "fold", durationMs: 800, palette: ["#B05AD0", "#3A1A4A"],
+        particle: { emoji: "☠️", count: 9, motion: "drift" }, easing: "cubic-bezier(.37,0,.63,1)",
+        sfx: "bulles toxiques", bloom: true,
+    },
+    gale_sweep: {
+        id: "gale_sweep", kind: "wipe", durationMs: 750, palette: ["#BFE3FF", "#5A8FD0"],
+        particle: { emoji: "🕊️", count: 9, motion: "drift" }, easing: "cubic-bezier(.25,.46,.45,.94)",
+        sfx: "rafale d'ailes",
+    },
 }
 
 /** type (1er) → profil. Tous les 15 types couverts. */
 export const TYPE_PROFILE: Record<string, string> = {
     PLANTE: "leaf_slide", INSECTE: "leaf_slide",
-    EAU: "tide_wash", VOL: "tide_wash",
+    EAU: "tide_wash",
     FEU: "ember_burst",
     ELEC: "static_glitch",
-    ROCHE: "stone_shatter", SOL: "stone_shatter", COMBAT: "stone_shatter", NORMAL: "stone_shatter",
-    SPECTRE: "spectral_fold", PSY: "spectral_fold", POISON: "spectral_fold",
+    ROCHE: "stone_shatter", SOL: "stone_shatter",
+    COMBAT: "combat_strike", NORMAL: "normal_pop", VOL: "gale_sweep", POISON: "venom_haze",
+    SPECTRE: "spectral_fold", PSY: "spectral_fold",
     GLACE: "frost_bloom",
     DRAGON: "nemesis_iris",
 }
