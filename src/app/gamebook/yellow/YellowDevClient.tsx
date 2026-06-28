@@ -82,6 +82,7 @@ import type { MonInstance } from "@/lib/gamebook/yellow/battle/types"
 import { usePlayerArena, type ArenaOpponent } from "@/lib/gamebook/yellow/multiplayer/usePlayerArena"
 import { buildHubTeam, buildMirrorTeam, type ArenaMode } from "@/lib/gamebook/yellow/data/playerArena"
 import ArenaChallengeModal from "./ArenaChallengeModal"
+import DomeBracket from "./DomeBracket"
 
 // ============================================================
 // ZONE DE COMBAT — REPRISE DE SÉRIE au refresh (anti-abandon)
@@ -191,6 +192,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [heldOpen, setHeldOpen] = useState(false) // modale "objet tenu" (depuis la fiche d'un Daemon)
     const ticketChecked = useRef(false)
     const [tourChoice, setTourChoice] = useState(false) // pause entre vagues de série (Continuer / Quitter)
+    const [domePause, setDomePause] = useState(false) // écran d'intro AVANT chaque match du Dôme (bracket + adversaire)
     const [usineCt, setUsineCt] = useState<string[] | null>(null) // CT à choisir (récompense Usine) parmi le vaincu
     const sbireWin = useSbireWin()
     const aceWin = useAceWin()
@@ -687,7 +689,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             // JC : base par manche gagnée ; la FINALE (championnat) compte comme un boss (×5).
             const jc = dome.jc + (won ? (next.status === "won" ? base * JC_BOSS_MULT : base) : 0)
             if (next.status === "active") {
-                setDome({ ...dome, state: next, jc }) // manche suivante lancée par l'effet dédié
+                setDome({ ...dome, state: next, jc }) // manche suivante : on REPASSE par l'intro (bracket + adversaire)
+                setDomePause(true)
             } else {
                 const roundsWon = won ? DOME_ROUNDS : dome.state.round // éliminé au round R = R manches gagnées
                 postRecordRun({ mode: "DOME", streak: Math.max(0, roundsWon), jcEarned: jc })
@@ -695,6 +698,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     ? `🏆 DÔME REMPORTÉ ! ${jc} JC enregistrés.`
                     : `🏆 Dôme — éliminé en ${["quart", "demi", "finale"][dome.state.round] ?? "manche"}. ${jc} JC enregistrés.`)
                 setDome(null)
+                setDomePause(false)
             }
             clearFrontierResult()
             return
@@ -741,12 +745,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // est actif et l'écran libre. L'issue est traitée par l'effet de résultat (advanceDome).
     useEffect(() => {
         if (!dome || dome.state.status !== "active") return
+        if (domePause) return // écran d'intro affiché : on attend que le joueur clique « Affronter »
         if (battle || frontierResult || evolutions.length > 0 || dialogue || pendingLearn || newDexEntry) return
         const opp = playerOpponent(dome.state)
         if (!opp) return
         healAllTeam() // soin intégral avant chaque match du Dôme (façon Émeraude)
         startTrainerBattle(getPlayer().team, buildFrontierEnemies(opp.team), Math.floor(Math.random() * 1e9), { trainerId: "frontier:DOME", aiLevel: "trainer" })
-    }, [dome, battle, frontierResult, evolutions.length, dialogue, pendingLearn, newDexEntry])
+    }, [dome, domePause, battle, frontierResult, evolutions.length, dialogue, pendingLearn, newDexEntry])
 
     // ZONE DE COMBAT — INSTANTANÉ de la série (anti-abandon au refresh). On (ré)écrit à chaque
     // changement de run/dome/pause ; n'écrit RIEN tant que la reprise au boot n'a pas eu lieu.
@@ -1288,6 +1293,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 const seed = Math.floor(Math.random() * 1e9)
                                 const playerTeam = getPlayer().team.map((m) => ({ speciesId: m.speciesId, level: lvl }))
                                 setDome({ state: createDome(new Rng(seed), { level: lvl, streak: 14, playerTeam }), rule, seed, jc: 0 })
+                                setDomePause(true) // montre le bracket + le 1er adversaire avant de lancer
                             }} style={{ background: "#f1c40f", color: "#1a1a22", fontWeight: 800, border: "none", borderRadius: 8, padding: "6px 10px", cursor: "pointer" }}>
                                 {rule === "L50" ? "Niv 50" : rule === "L100" ? "Niv 100" : "Adaptatif"}
                             </button>
@@ -1330,11 +1336,23 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 </div>
             )}
             {/* ZONE DE COMBAT — HUD du Dôme (round courant) */}
+            {/* HUD compact (toujours visible pendant un Dôme actif) */}
             {dome && dome.state.status === "active" && (
                 <div style={{ position: "absolute", left: 8, top: 8, zIndex: 60, background: "#1a1a22cc", color: "#fff", borderRadius: 8, padding: "4px 8px", fontSize: 11, fontWeight: 700 }}>
                     🏆 Dôme · {(["Quart", "Demi", "Finale"][dome.state.round]) ?? `Manche ${dome.state.round + 1}`} ({dome.state.round + 1}/{DOME_ROUNDS}) · {dome.jc} JC
                 </div>
             )}
+            {/* ÉCRAN D'INTRO avant chaque match du Dôme : bracket du round + adversaire annoncé + bouton Affronter */}
+            {dome && dome.state.status === "active" && domePause && !battle && !frontierResult && evolutions.length === 0 && !dialogue && (() => {
+                const opp = playerOpponent(dome.state)
+                return (
+                    <div style={{ position: "absolute", left: "50%", top: 16, transform: "translateX(-50%)", zIndex: 62, background: "#1a1a22f2", color: "#fff", border: "2px solid #f1c40f", borderRadius: 12, padding: "12px 14px", textAlign: "center", width: "min(340px, 94vw)" }}>
+                        <DomeBracket state={dome.state} />
+                        <div style={{ fontSize: 12, margin: "2px 0 8px" }}>{opp ? <>Ton adversaire : <b style={{ color: "#f1c40f" }}>{opp.name}</b></> : "En attente…"}</div>
+                        <button onClick={() => setDomePause(false)} style={{ background: "#f1c40f", color: "#1a1a22", fontWeight: 800, border: "none", borderRadius: 8, padding: "7px 16px", cursor: "pointer" }}>⚔️ Affronter</button>
+                    </div>
+                )
+            })()}
             <GuidePanel />
             <LibraryPanel />
             <AdvisorPanel />
