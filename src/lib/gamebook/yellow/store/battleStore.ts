@@ -326,7 +326,12 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     else fleeStreak = 0
 
     // 1) Resynchronise l'équipe persistante depuis l'état de combat.
-    setTeam(b.player.team.map(toMonInstance))
+    //    ⚠️ EXCEPTION USINE (frontier:FACTORY) : on a joué une équipe de LOCATION (createMonInstance
+    //    owned:false), PAS la vraie équipe → ne JAMAIS la réécrire dans le save, sinon on remplacerait
+    //    l'équipe réelle du joueur par les Daemons loués (perte de données). L'Usine ne fait rien gagner
+    //    à la vraie équipe (rentals jetables, façon Émeraude).
+    const isFactory = storeState.trainer?.trainerId === "frontier:FACTORY"
+    if (!isFactory) setTeam(b.player.team.map(toMonInstance))
 
     // 2) Capture → ajoute le sauvage à l'équipe/PC.
     if (b.outcome === "caught") {
@@ -582,8 +587,9 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     }
 
     // 3) Évolutions post-combat (mute l'équipe → re-set pour notifier + Pokédex).
+    //    EXCEPTION USINE : on n'a pas touché l'équipe réelle (rentals) → pas d'évolution parasite.
     const team = getPlayer().team
-    const evos = evolveTeam(team)
+    const evos = isFactory ? [] : evolveTeam(team)
     if (evos.length > 0) {
         for (const e of evos) markCaught(e.toId) // la nouvelle forme entre au Pokédex
         setTeam([...team])
