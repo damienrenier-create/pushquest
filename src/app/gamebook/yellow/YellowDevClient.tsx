@@ -60,7 +60,7 @@ import { postRecordRun } from "@/lib/gamebook/yellow/frontier/frontierApi"
 import { ctRewardOptionsForTeam } from "@/lib/gamebook/yellow/frontier/rewards"
 import { generateRentalPool, buildDraftTeam, type RentalCandidate } from "@/lib/gamebook/yellow/frontier/factory"
 import { resolveFrontierLevel, JC_PER_WIN, JC_BOSS_MULT, BOSS_EVERY, type OpponentSpec, type LevelRule } from "@/lib/gamebook/yellow/frontier/engine"
-import { createDome, advanceDome, playerOpponent, DOME_ROUNDS, type DomeState } from "@/lib/gamebook/yellow/frontier/dome"
+import { createDome, advanceDome, playerOpponent, aiLeadIndex, DOME_ROUNDS, type DomeState } from "@/lib/gamebook/yellow/frontier/dome"
 import { Rng } from "@/lib/gamebook/yellow/battle/rng"
 
 // ZONE DE COMBAT — convertit les specs d'adversaires de la série en instances de combat.
@@ -754,7 +754,15 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         // SOIN avant la 1re manche SEULEMENT (round 0) → endurance sur les 3 manches (cf. intro
         // « Pas de soin entre les manches ! »). Les PV se conservent (finishBattle persiste l'équipe).
         if (dome.state.round === 0) healAllTeam()
-        startTrainerBattle(getPlayer().team, buildFrontierEnemies(opp.team), Math.floor(Math.random() * 1e9), { trainerId: "frontier:DOME", aiLevel: "trainer" })
+        // DIFFICULTÉ CROISSANTE : en quart (round 0) l'IA envoie son 1er Daemon ; en demi/finale
+        // (round ≥ 1) elle OUVRE avec son MEILLEUR matchup de type contre ton équipe visible (aiLeadIndex).
+        let oppTeam = opp.team
+        if (dome.state.round >= 1) {
+            const pTeam = getPlayer().team.map((m) => ({ speciesId: m.speciesId, level: m.level }))
+            const lead = aiLeadIndex(opp.team, pTeam)
+            oppTeam = [opp.team[lead], ...opp.team.filter((_, i) => i !== lead)]
+        }
+        startTrainerBattle(getPlayer().team, buildFrontierEnemies(oppTeam), Math.floor(Math.random() * 1e9), { trainerId: "frontier:DOME", aiLevel: "trainer" })
     }, [dome, domePause, battle, frontierResult, evolutions.length, dialogue, pendingLearn, newDexEntry])
 
     // ZONE DE COMBAT — INSTANTANÉ de la série (anti-abandon au refresh). On (ré)écrit à chaque
