@@ -1036,10 +1036,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                             <div>
                                                 <div style={pocketHdrStyle}>🎒 Objets clés</div>
                                                 {keys.map((it) => (
-                                                    <button key={it.id} style={menuBtnDimStyle} disabled>
+                                                    <button key={it.id} style={{ ...menuBtnDimStyle, display: "block", textAlign: "left", height: "auto" }} disabled>
                                                         <span style={{ display: "flex", justifyContent: "space-between" }}>
                                                             <span>{it.name}</span><span>×{player.items[it.id]}</span>
                                                         </span>
+                                                        {it.description && <span style={{ display: "block", fontSize: 10, opacity: 0.65, marginTop: 3, whiteSpace: "normal", lineHeight: 1.3 }}>{it.description}</span>}
                                                     </button>
                                                 ))}
                                             </div>
