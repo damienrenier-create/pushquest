@@ -44,7 +44,7 @@ import { useGameStore, setCurrentNickname, DEFAULT_SPAWN } from "@/lib/gamebook/
 import { YELLOW_ENTRANCE_MAP_ID } from "@/lib/gamebook/yellow/featureFlag"
 import { YELLOW_MAPS, CENDREVILLE_SPAWN } from "@/lib/gamebook/yellow/maps"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
-import { useBattle, useEvolutions, clearEvolutions, useChampionRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getGiftCtMove, startTrainerBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult, useFrontierResult, clearFrontierResult, getBattleEnergy, resumeBattleFromStorage } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, useEvolutions, clearEvolutions, useChampionRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getGiftCtMove, startTrainerBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult, useFrontierResult, clearFrontierResult, getBattleEnergy, resumeBattleFromStorage, useStoneReward, clearStoneReward } from "@/lib/gamebook/yellow/store/battleStore"
 import { aceLoseLine } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
@@ -136,6 +136,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const aceWin = useAceWin()
     const badgeAwarded = useBadgeAwarded()
     const rematchReward = useRematchReward()
+    const stoneReward = useStoneReward()
     const router = useRouter()
     const player = usePlayer()
     // ARÈNES JOUEURS (hub Eau / miroir Élec) — adversaires IA, débloqués quand on a TOUS les badges.
@@ -579,6 +580,15 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         }
     }, [badgeAwarded, battle, evolutions.length, showDialogue])
 
+    // PIERRE GÉKROC : don de la Pierre d'Évolution après avoir battu/capturé Gékroc (Centrale) →
+    // notification claire post-combat (sinon le don, objet "objet clé", passait totalement inaperçu).
+    useEffect(() => {
+        if (stoneReward && !battle && evolutions.length === 0) {
+            showDialogue("y_gekroc", "PIERRE GÉKROC", [stoneReward])
+            clearStoneReward()
+        }
+    }, [stoneReward, battle, evolutions.length, showDialogue])
+
     // BOSS À 2 PHASES (VOLTA) : une fois la notif de badge fermée, on enchaîne DIRECTEMENT son rematch (phase 2).
     useEffect(() => {
         if (chainRematchId && !battle && evolutions.length === 0 && !dialogue && !badgeAwarded) {
@@ -1018,6 +1028,23 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                             </button>
                                         </div>
                                     )}
+                                    {/* 🎒 Poche Objets clés (MISC : Pierre Gékroc, Daemonflûte…) — lecture seule.
+                                        La Pierre Gékroc s'utilise depuis la fiche d'un Panthéon. */}
+                                    {(() => {
+                                        const keys = Object.values(ITEMS).filter((it) => it.category === "MISC" && (player.items[it.id] ?? 0) > 0)
+                                        return keys.length > 0 && (
+                                            <div>
+                                                <div style={pocketHdrStyle}>🎒 Objets clés</div>
+                                                {keys.map((it) => (
+                                                    <button key={it.id} style={menuBtnDimStyle} disabled>
+                                                        <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                                            <span>{it.name}</span><span>×{player.items[it.id]}</span>
+                                                        </span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )
+                                    })()}
                                     {player.ownedCts.length === 0 && player.labDefi.grantedTickets.length === 0 && Object.values(ITEMS).filter((it) => (player.items[it.id] ?? 0) > 0).length === 0 && (
                                         <div style={{ fontSize: 11, opacity: 0.6, padding: 10 }}>Sac vide. Va à la boutique !</div>
                                     )}

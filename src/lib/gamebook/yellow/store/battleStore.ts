@@ -90,6 +90,8 @@ interface BattleStoreState {
     badgeAwarded: BadgeId | null
     /** Nom de l'attaque de la CT cadeau remise par le boss (notif) ; null sinon. */
     giftCtMove: string | null
+    /** Message de don de la Pierre Gékroc (mini-boss Centrale) → notification post-combat ; null sinon. */
+    stoneReward: string | null
     /** Récompense d'un REMATCH de dresseur (dialogue post-combat : énergie / CT Mirage) ; null sinon. */
     rematchReward: { npcId: string; npcName: string; lines: string[] } | null
     /** Contexte d'un combat JOUEUR vs JOUEUR (null = combat solo classique). */
@@ -128,7 +130,7 @@ interface PvpContext {
     desync: boolean
 }
 
-let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, chainRematchId: null, pendingLearn: false, duelResult: null, frontierResult: null }
+let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, chainRematchId: null, pendingLearn: false, duelResult: null, frontierResult: null, stoneReward: null }
 // LIGUE — meilleurs moments du run en cours (best hit par membre du Conseil 4 + Maître), runtime.
 // Upsert par trainerId à chaque victoire de la Ligue ; lus au sacre du Maître pour le Hall of Fame.
 const leagueHighlights: Record<string, LeagueHighlight> = {}
@@ -334,10 +336,14 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
 
     // 2-bis) GÉKROC (mini-boss STATIQUE) : vaincu OU capturé → résolu (one-time, ne réapparaît plus)
     //        et la Pierre Gékroc est libérée (objet → fait évoluer Panthéon, cf. Part B).
+    let stoneReward: string | null = null
     if (b.isWild && (b.outcome === "win" || b.outcome === "caught") && b.enemy.team.some((e) => e.speciesId === "gekroc")) {
         if (!getPlayer().gekrocResolved) {
             markGekrocResolved()
             addItem(GEKROC_STONE_ITEM, 1)
+            // NOTIF : sans ça le don était totalement silencieux (objet MISC, pas affiché par défaut)
+            // → le joueur avait l'impression de ne rien recevoir.
+            stoneReward = "🪨 En s'effondrant, Gékroc libère une PIERRE D'ÉVOLUTION ! Tu obtiens la Pierre Gékroc — utilise-la depuis la fiche d'un Panthéon pour le faire évoluer (choix du type)."
         }
     }
 
@@ -585,7 +591,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // Un Daemon a-t-il une attaque EN ATTENTE (slots pleins à la montée de niveau / l'évolution) ? → prompt post-combat.
     const pendingLearn = getPlayer().team.some((m) => (m.pendingMoves?.length ?? 0) > 0)
     // Expose les évolutions pour la cinématique post-combat (jouée après "QUITTER").
-    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, chainRematchId, pendingLearn, duelResult, frontierResult })
+    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward })
 
     // 4) Sauvegarde persistante (DB).
     persistYellowSave()
@@ -1058,4 +1064,16 @@ export function useRematchReward(): BattleStoreState["rematchReward"] {
         () => getSnapshot().rematchReward,
         () => getSnapshot().rematchReward,
     )
+}
+
+/** Don de la Pierre Gékroc (mini-boss Centrale) → notification post-combat ; null sinon. */
+export function useStoneReward(): string | null {
+    return useSyncExternalStore(
+        subscribe,
+        () => getSnapshot().stoneReward,
+        () => getSnapshot().stoneReward,
+    )
+}
+export function clearStoneReward() {
+    setStore({ stoneReward: null })
 }
