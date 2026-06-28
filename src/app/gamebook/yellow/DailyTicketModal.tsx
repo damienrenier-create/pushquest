@@ -2,30 +2,31 @@
 
 // src/app/gamebook/yellow/DailyTicketModal.tsx
 //
-// TICKETS ROULETTE — cinématique de la FILE de tickets (chapitre 2).
-// La file contient le ticket GRATUIT du jour (valeur 10) + les tickets octroyés par les boss
-// (arène 30 / sbire 20 / ACE 50). On les joue un par un : 🍝 intro → flash → roulette (1 case,
-// mise = valeur du ticket) → résultat (🤫 1er pari gagné d'office) → ticket suivant ou sortie.
-// Indépendant du casino du labo (ne compte PAS pour Tonytony — cf. playTicketSpin).
+// CINÉMATIQUE DE ROULETTE — deux usages via `mode` :
+//   • mode "daily" : le ticket GRATUIT du jour (Dieu Spaghetti), ouvert AUTOMATIQUEMENT à la 1re
+//     connexion du jour (intervention divine). Un seul tour (valeur 10), joué directement.
+//   • mode "lab"   : les tickets OCTROYÉS par les boss (file `grantedTickets`), joués À LA DEMANDE
+//     depuis l'onglet Surprise du labo. Enchaîne toute la file.
+// Indépendant du casino du labo (ne compte PAS pour Tonytony).
 
 import { useState, useRef, useEffect } from "react"
-import { playTicketSpin, peekTicketValue, ticketCount, type CasinoTicketResult } from "@/lib/gamebook/yellow/store/playerStore"
+import { playTicketSpin, playDailyTicketSpin, peekTicketValue, ticketCount, type CasinoTicketResult } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
-import { CASINO_NUM_CASES } from "@/lib/gamebook/yellow/data/labDefis"
+import { CASINO_NUM_CASES, DAILY_TICKET_VALUE } from "@/lib/gamebook/yellow/data/labDefis"
 import { buildSpinDelays } from "./CasinoYellowModal"
 
 const GOLD = "#f1c40f", INK = "#2a1c10", CREAM = "#f4ecd4", DARK = "#cdbb86"
 
 type Phase = "intro" | "anim" | "play" | "spin" | "result"
 
-export default function DailyTicketModal({ onClose }: { onClose: () => void }) {
+export default function DailyTicketModal({ mode, today, onClose }: { mode: "daily" | "lab"; today?: string; onClose: () => void }) {
     const [phase, setPhase] = useState<Phase>("intro")
     const [highlight, setHighlight] = useState(-1)
     const [flash, setFlash] = useState(false)
     const [result, setResult] = useState<CasinoTicketResult | null>(null)
-    const [betValue, setBetValue] = useState(() => peekTicketValue()) // mise du ticket courant
-    const [remaining, setRemaining] = useState(0)                     // tickets restants APRÈS le spin courant
-    const [total] = useState(() => ticketCount())                     // total au début (pour l'intro)
+    const [betValue, setBetValue] = useState(() => (mode === "daily" ? DAILY_TICKET_VALUE : peekTicketValue())) // mise du ticket courant
+    const [remaining, setRemaining] = useState(0)                       // tickets boss restants APRÈS le spin courant
+    const [total] = useState(() => (mode === "daily" ? 1 : ticketCount())) // total au début (pour l'intro)
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current) }, [])
 
@@ -40,26 +41,29 @@ export default function DailyTicketModal({ onClose }: { onClose: () => void }) {
 
     const pick = (betCase: number) => {
         if (phase !== "play") return
-        const r = playTicketSpin(betCase) // pop le ticket → rig 1er pari / aléatoire + crédite le gain
-        if (r.betValue === 0) { onClose(); return } // file vide (sécurité)
+        const r = mode === "daily" ? playDailyTicketSpin(betCase, today ?? "") : playTicketSpin(betCase)
+        if (r.betValue === 0) { onClose(); return } // plus de ticket (sécurité)
         persistYellowSave()
         setPhase("spin")
         const delays = buildSpinDelays(r.winningCase, CASINO_NUM_CASES)
         let k = 0
         const tick = () => {
             setHighlight(k % CASINO_NUM_CASES)
-            if (k >= delays.length) { setResult(r); setRemaining(ticketCount()); setPhase("result"); return }
+            if (k >= delays.length) { setResult(r); setRemaining(mode === "daily" ? 0 : ticketCount()); setPhase("result"); return }
             timerRef.current = setTimeout(tick, delays[k++])
         }
         tick()
     }
 
-    // Ticket suivant de la file (snappy : on saute l'intro, direct sur la roulette).
+    // Ticket de boss suivant (mode "lab" uniquement).
     const nextTicket = () => {
         setBetValue(peekTicketValue())
         setResult(null); setHighlight(-1); setFlash(false)
         setPhase("play")
     }
+
+    const headerLabel = mode === "daily" ? "🎟️ TICKET DU JOUR" : "🎟️ TES TICKETS ROULETTE"
+    const headerSub = mode === "daily" ? "offert par le Dieu Spaghetti" : "Zone de Combat"
 
     return (
         <div style={overlay} onClick={(e) => e.stopPropagation()}>
@@ -84,14 +88,14 @@ export default function DailyTicketModal({ onClose }: { onClose: () => void }) {
                 </div>
             )}
             <div style={box}>
-                <div style={header}>🎟️ TICKETS ROULETTE <span style={{ fontSize: 10, opacity: 0.7, fontWeight: 600 }}>offerts par le Dieu Spaghetti</span></div>
+                <div style={header}>{headerLabel} <span style={{ fontSize: 10, opacity: 0.7, fontWeight: 600 }}>{headerSub}</span></div>
                 <div style={{ padding: 14, overflowY: "auto", flex: 1, position: "relative", zIndex: 2 }}>
 
                     {phase === "intro" && (
                         <div style={{ textAlign: "center" }}>
                             <div style={{ fontSize: 40, marginBottom: 8 }}>🍝</div>
                             <p style={{ fontSize: 13, color: INK, lineHeight: 1.5, fontWeight: 600 }}>
-                                « Ah, te voilà, mortel ! {total > 1 ? <>Tu as <b>{total} tickets</b> à jouer à la roulette.</> : <>Le Dieu Spaghetti t&apos;offre un tour de roulette.</>} Premier ticket : <b>{betValue} énergies</b> misées (offertes !). Tente ta chance… elle sourit aux audacieux ! »
+                                « Ah, te voilà, mortel ! {total > 1 ? <>Tu as <b>{total} tickets</b> à jouer à la roulette.</> : <>Tente ta chance à la roulette.</>} Premier ticket : <b>{betValue} énergies</b> misées (offertes !). La chance sourit aux audacieux ! »
                             </p>
                         </div>
                     )}
@@ -118,7 +122,7 @@ export default function DailyTicketModal({ onClose }: { onClose: () => void }) {
                                     <p style={{ fontSize: 11, color: INK, marginTop: 8, lineHeight: 1.5 }}>
                                         {remaining > 0
                                             ? <>🎟️ Il te reste <b>{remaining} ticket{remaining > 1 ? "s" : ""}</b> à jouer !</>
-                                            : <>🍝 « Continue de tenter ta chance à l&apos;<b>étage du Centre Pokémon</b> — les récompenses y sont encore plus belles ! »</>}
+                                            : <>🍝 « Reviens tenter ta chance — à l&apos;<b>étage du Centre</b> pour tes tickets, ou demain pour le cadeau du jour ! »</>}
                                     </p>
                                 </div>
                             )}

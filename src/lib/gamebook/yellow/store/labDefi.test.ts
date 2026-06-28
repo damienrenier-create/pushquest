@@ -2,10 +2,10 @@ import { describe, it, expect, beforeEach } from "vitest"
 import {
     hydratePlayer, getPlayer, bankReps, setTomorrowEnergyMult,
     startLabDefi, clearLabDefi, addCtDamage, ctDefiProgress, casinoSpin, grantTonytony, recordCtEarned,
-    grantRouletteTicket, ensureDailyTicket, playTicketSpin, ticketCount, peekTicketValue, makeTonytonyShiny,
+    grantRouletteTicket, dailyTicketAvailable, playDailyTicketSpin, playTicketSpin, ticketCount, peekTicketValue, makeTonytonyShiny,
 } from "./playerStore"
 import { createMonInstance } from "../battle/factory"
-import { emptyLabDefi, casinoWinningCase, CASINO_WIN_MULT, CASINO_MIN_BET, CASINO_MAX_BET, CASINO_BANKRUPT_STREAK, TONYTONY_SPECIES, TONYTONY_SHINY_TARGET, TICKET_QUEUE_MAX, ctEarnedCountByType } from "../data/labDefis"
+import { emptyLabDefi, casinoWinningCase, CASINO_WIN_MULT, CASINO_MIN_BET, CASINO_MAX_BET, CASINO_BANKRUPT_STREAK, TONYTONY_SPECIES, TONYTONY_SHINY_TARGET, ctEarnedCountByType } from "../data/labDefis"
 
 beforeEach(() => {
     // État isolé : équipe vide, reps connus, défis vierges.
@@ -156,23 +156,24 @@ describe("tickets roulette : file octroyable + dés pipés (1er pari gagné)", (
         expect(getPlayer().labDefi.casinoFirstBetDone).toBe(true)
     })
 
-    it("ticket gratuit du jour : versé 1×/jour à la file (valeur 10)", () => {
+    it("ticket gratuit du jour : dispo 1×/jour, joué HORS file de boss (valeur 10)", () => {
         hydratePlayer({ reps: 0, repsCap: 100000, repsBankedTotal: 0, labDefi: emptyLabDefi() })
-        expect(ensureDailyTicket("2026-06-27")).toBe(true)
-        expect(ticketCount()).toBe(1)
-        expect(peekTicketValue()).toBe(CASINO_MIN_BET)
-        expect(ensureDailyTicket("2026-06-27")).toBe(false) // même jour → rien
-        expect(ticketCount()).toBe(1)
-        expect(ensureDailyTicket("2026-06-28")).toBe(true)  // nouveau jour
-        expect(ticketCount()).toBe(2)
+        expect(dailyTicketAvailable("2026-06-27")).toBe(true)
+        const r = playDailyTicketSpin(3, "2026-06-27") // 1er pari rig → gagné
+        expect(r.won).toBe(true)
+        expect(r.betValue).toBe(CASINO_MIN_BET)                     // valeur 10
+        expect(r.winAmount).toBe(CASINO_MIN_BET * CASINO_WIN_MULT)  // +100
+        expect(ticketCount()).toBe(0)                              // n'a PAS touché la file de boss
+        expect(dailyTicketAvailable("2026-06-27")).toBe(false)     // consommé ce jour
+        expect(dailyTicketAvailable("2026-06-28")).toBe(true)      // nouveau jour
     })
 
-    it("ticket gratuit : file PLEINE → non versé et jour NON marqué (réessai quand de la place se libère)", () => {
-        const full = Array.from({ length: TICKET_QUEUE_MAX }, () => 20)
-        hydratePlayer({ reps: 0, repsCap: 100000, repsBankedTotal: 0, labDefi: { ...emptyLabDefi(), grantedTickets: full } })
-        expect(ensureDailyTicket("2026-06-27")).toBe(false)
-        expect(getPlayer().labDefi.dailyTicketDate).toBe("") // pas marqué → pas de perte du ticket du jour
-        expect(ticketCount()).toBe(TICKET_QUEUE_MAX)
+    it("ticket quotidien et tickets de boss sont indépendants", () => {
+        hydratePlayer({ reps: 0, repsCap: 100000, repsBankedTotal: 0, labDefi: emptyLabDefi() })
+        grantRouletteTicket(30)                  // ticket de boss → file
+        expect(ticketCount()).toBe(1)
+        playDailyTicketSpin(0, "2026-06-27")     // joue le quotidien
+        expect(ticketCount()).toBe(1)            // la file de boss reste INTACTE
     })
 
     it("grantRouletteTicket : empile une mise bornée 10–50 (FIFO)", () => {

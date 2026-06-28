@@ -846,16 +846,19 @@ export function casinoSpin(bets: CasinoBet[], nowMs: number): CasinoSpinResult {
 /** Cumul brut gagné au casino (vers la cible Tonytony). */
 export function casinoTotalWon(): number { return st.labDefi.casinoTotalWon }
 
-// ── Tickets roulette OCTROYABLES (file FIFO, valeur de mise variable) ──
+// ── Tickets roulette ──
+// Deux sources DISTINCTES : (1) le ticket GRATUIT du jour (Dieu Spaghetti) → cinématique à la connexion,
+// joué directement (gated par dailyTicketDate, HORS file) ; (2) les tickets OCTROYÉS par les boss
+// (file FIFO `grantedTickets`, valeur variable) → joués au LABO + visibles dans le sac.
 export interface CasinoTicketResult { winningCase: number; won: boolean; winAmount: number; betValue: number }
 
-/** Nb de tickets roulette en attente dans la file. */
+/** Nb de tickets de BOSS en attente dans la file (hors ticket gratuit du jour). */
 export function ticketCount(): number { return st.labDefi.grantedTickets.length }
 
-/** Valeur de mise du PROCHAIN ticket à jouer (0 si la file est vide). */
+/** Valeur de mise du PROCHAIN ticket de boss à jouer (0 si la file est vide). */
 export function peekTicketValue(): number { return st.labDefi.grantedTickets[0] ?? 0 }
 
-/** Octroie un ticket roulette de `value` énergies de mise (borné 10–50 ; file plafonnée à TICKET_QUEUE_MAX). */
+/** Octroie un ticket roulette de BOSS de `value` énergies de mise (borné 10–50 ; file plafonnée). */
 export function grantRouletteTicket(value: number) {
     const d = st.labDefi
     if (d.grantedTickets.length >= TICKET_QUEUE_MAX) return
@@ -863,19 +866,28 @@ export function grantRouletteTicket(value: number) {
     emit()
 }
 
-/** Verse le ticket GRATUIT du jour à la file (1×/jour, `today` = jour serveur). Renvoie true si ajouté.
- *  File pleine → on NE marque PAS le jour (le ticket gratuit sera versé quand de la place se libère). */
-export function ensureDailyTicket(today: string): boolean {
+/** Le ticket GRATUIT du jour (Dieu Spaghetti) est-il disponible ? (1×/jour, `today` = jour serveur). */
+export function dailyTicketAvailable(today: string): boolean {
+    return !!today && st.labDefi.dailyTicketDate !== today
+}
+
+/** Joue le ticket GRATUIT du jour (valeur DAILY_TICKET_VALUE), HORS file de boss. Marque le jour
+ *  consommé. 🤫 1er pari du joueur gagné d'office ; ensuite aléatoire. Gain = mise × 10. */
+export function playDailyTicketSpin(betCase: number, today: string): CasinoTicketResult {
     const d = st.labDefi
-    if (!today || d.dailyTicketDate === today) return false
-    if (d.grantedTickets.length >= TICKET_QUEUE_MAX) return false
-    st = { ...st, labDefi: { ...d, dailyTicketDate: today, grantedTickets: [...d.grantedTickets, DAILY_TICKET_VALUE] } }
+    const betValue = DAILY_TICKET_VALUE
+    const firstBet = !d.casinoFirstBetDone
+    const winningCase = firstBet ? betCase : Math.floor(Math.random() * CASINO_NUM_CASES)
+    const won = winningCase === betCase
+    const winAmount = won ? betValue * CASINO_WIN_MULT : 0
+    const newReps = won ? Math.min(st.repsCap, st.reps + winAmount) : st.reps
+    st = { ...st, reps: newReps, labDefi: { ...d, dailyTicketDate: today, casinoFirstBetDone: true } }
     emit()
-    return true
+    return { winningCase, won, winAmount, betValue }
 }
 
 /**
- * Joue le PROCHAIN ticket de la file (FIFO), mise sur UNE case. Indépendant du casino du labo :
+ * Joue le PROCHAIN ticket de BOSS de la file (FIFO), mise sur UNE case. Indépendant du casino du labo :
  * ne touche NI le cumul Tonytony, NI la série, NI la banqueroute, NI le motif. 🤫 Le TOUT PREMIER
  * pari du joueur est gagné d'office (case gagnante = sa mise) ; ensuite, aléatoire. Gain = mise × 10.
  * Renvoie un résultat à winningCase=-1/betValue=0 si aucun ticket en attente (no-op).

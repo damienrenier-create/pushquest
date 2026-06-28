@@ -191,7 +191,7 @@ export default function LabPanel() {
                 <button onClick={close} style={closeBtn}>FERMER</button>
             </div>
             {casino && <CasinoYellowModal onClose={() => setCasino(false)} />}
-            {ticketsOpen && <DailyTicketModal onClose={() => { persistYellowSave(); setTicketsOpen(false) }} />}
+            {ticketsOpen && <DailyTicketModal mode="lab" onClose={() => { persistYellowSave(); setTicketsOpen(false) }} />}
         </div>
     )
 }

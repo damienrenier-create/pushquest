@@ -49,7 +49,7 @@ import { aceLoseLine } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
-import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, ensureDailyTicket, ticketCount } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, dailyTicketAvailable, ticketCount } from "@/lib/gamebook/yellow/store/playerStore"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
 import { ARENA_TICKET_VALUE } from "@/lib/gamebook/yellow/data/labDefis"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
@@ -665,8 +665,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         const today = getPlayer().creditedThrough
         if (!today) return // jour serveur pas encore connu (player-stats non chargé)
         ticketChecked.current = true
-        if (ensureDailyTicket(today)) persistYellowSave() // verse le ticket gratuit du jour à la file
-        if (ticketCount() > 0) setTicketOpen(true)          // tickets en attente (quotidien + octrois boss) → cinématique
+        // SEUL le ticket gratuit du jour (Dieu Spaghetti) ouvre la cinématique à la connexion.
+        // Les tickets de boss restent dans la file → joués à la demande au labo (+ visibles dans le sac).
+        if (dailyTicketAvailable(today)) setTicketOpen(true)
     }, [hydrated, ticketOpen, battle, dialogue, evolutions.length, pendingLearn, newDexEntry, championRun, whiteout])
 
     // Revanche d'arène gagnée : dialogue de récompense post-combat (énergie / CT Mirage),
@@ -999,7 +1000,19 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                             </div>
                                         )
                                     })}
-                                    {player.ownedCts.length === 0 && Object.values(ITEMS).filter((it) => (player.items[it.id] ?? 0) > 0).length === 0 && (
+                                    {/* 🎟️ Poche Tickets roulette (octroyés par les boss) — lecture seule : joués à l'étage du labo. */}
+                                    {player.labDefi.grantedTickets.length > 0 && (
+                                        <div>
+                                            <div style={pocketHdrStyle}>🎟️ Tickets roulette</div>
+                                            <button style={menuBtnDimStyle} disabled>
+                                                <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                                    <span>{player.labDefi.grantedTickets.length} ticket(s) · à jouer au labo</span>
+                                                    <span style={{ fontSize: 10, opacity: 0.7 }}>{player.labDefi.grantedTickets.join(" · ")} ⚡</span>
+                                                </span>
+                                            </button>
+                                        </div>
+                                    )}
+                                    {player.ownedCts.length === 0 && player.labDefi.grantedTickets.length === 0 && Object.values(ITEMS).filter((it) => (player.items[it.id] ?? 0) > 0).length === 0 && (
                                         <div style={{ fontSize: 11, opacity: 0.6, padding: 10 }}>Sac vide. Va à la boutique !</div>
                                     )}
                                 </div>
@@ -1209,7 +1222,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             <AdvisorPanel />
             <LabPanel />
             {combatShopOpen && <CombatShopModal onClose={closeCombatShop} />}
-            {ticketOpen && <DailyTicketModal onClose={() => { persistYellowSave(); setTicketOpen(false) }} />}
+            {ticketOpen && <DailyTicketModal mode="daily" today={getPlayer().creditedThrough} onClose={() => { persistYellowSave(); setTicketOpen(false) }} />}
             <ParkSignPanel />
             <PosterPanel />
             {/* EncounterTransition est désormais rendu DANS BattleScreen (calé sur la scène). */}
