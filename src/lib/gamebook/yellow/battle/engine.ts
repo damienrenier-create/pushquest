@@ -259,7 +259,8 @@ export function resolveTurn(prev: BattleState, playerAction: PlayerAction): Batt
         // Échec : l'ennemi profite du tour (comme une capture ratée).
         events.push({ kind: "message", text: "Impossible de fuir !" })
         const ea = chooseEnemyAction(state, rng)
-        if (active(state.enemy).currentHp > 0 && ea.kind === "move") {
+        // L'ennemi profite du tour — SAUF s'il dort / est gelé / paralysé / apeuré (canAct, comme la boucle normale).
+        if (active(state.enemy).currentHp > 0 && ea.kind === "move" && canAct(active(state.enemy), events, rng)) {
             performMove(state, "enemy", ea.moveIndex!, events, rng)
             checkFaints(state, events)
         }
@@ -277,7 +278,8 @@ export function resolveTurn(prev: BattleState, playerAction: PlayerAction): Batt
         if (state.outcome === "caught") return commit(state, events, rng, prev.turn, false)
         // Capture ratée → l'adversaire prend quand même son tour.
         const ea = chooseEnemyAction(state, rng)
-        if (active(state.enemy).currentHp > 0 && ea.kind === "move") {
+        // L'ennemi profite du tour — SAUF s'il dort / est gelé / paralysé / apeuré (canAct, comme la boucle normale).
+        if (active(state.enemy).currentHp > 0 && ea.kind === "move" && canAct(active(state.enemy), events, rng)) {
             performMove(state, "enemy", ea.moveIndex!, events, rng)
             checkFaints(state, events)
         }
@@ -291,7 +293,8 @@ export function resolveTurn(prev: BattleState, playerAction: PlayerAction): Batt
         const ea = chooseEnemyAction(state, rng)
         if (active(state.enemy).currentHp > 0) {
             if (ea.kind === "switch") doSwitch(state, "enemy", ea.teamIndex!, events)
-            else if (ea.kind === "move") { performMove(state, "enemy", ea.moveIndex!, events, rng); checkFaints(state, events) }
+            // SAUF s'il dort / est gelé / paralysé / apeuré (canAct).
+            else if (ea.kind === "move" && canAct(active(state.enemy), events, rng)) { performMove(state, "enemy", ea.moveIndex!, events, rng); checkFaints(state, events) }
         }
         if (state.phase !== "ended") { endOfTurn(state, events, rng); checkFaints(state, events) }
         return commit(state, events, rng, prev.turn, true)

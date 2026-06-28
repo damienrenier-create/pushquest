@@ -368,6 +368,32 @@ describe("PvP — changement après KO : CHAQUE joueur choisit (pas d'envoi auto
     })
 })
 
+describe("SOMMEIL : personne n'attaque en dormant (tous les chemins)", () => {
+    it("solo — le JOUEUR endormi n'attaque pas (boucle normale)", () => {
+        const p1 = createMonInstance("rochison", 50, { moveIds: ["eboulis", "belier", "seisme", "lame_roche"] })
+        const e1 = createMonInstance("plumiot", 2) // faible : ne KO pas rochison
+        const s0 = createBattle([p1], [e1], { isWild: false, seed: 21 })
+        s0.player.team[0].status = "SLEEP"; s0.player.team[0].statusCounter = 3
+        const eHp0 = s0.enemy.team[0].currentHp
+        const s = resolveTurn(s0, { kind: "move", moveIndex: 0 })
+        expect(s.enemy.team[0].currentHp).toBe(eHp0)        // endormi → n'a pas frappé
+        expect(s.player.team[0].status).toBe("SLEEP")
+        expect(s.player.team[0].statusCounter).toBe(2)
+    })
+
+    it("solo — l'ENNEMI endormi n'attaque pas sur le tour gratuit (objet)", () => {
+        const p1 = createMonInstance("rochison", 50) // PV pleins
+        const e1 = createMonInstance("razmaree", 50)  // assez fort pour blesser SI il agissait
+        const s0 = createBattle([p1], [e1], { isWild: false, seed: 22 })
+        s0.enemy.team[0].status = "SLEEP"; s0.enemy.team[0].statusCounter = 3
+        const pHp0 = s0.player.team[0].currentHp
+        const s = resolveTurn(s0, { kind: "item", itemId: "potion" }) // action non-offensive → tour gratuit ennemi
+        expect(s.player.team[0].currentHp).toBe(pHp0)        // ennemi endormi → aucun dégât subi
+        expect(s.enemy.team[0].status).toBe("SLEEP")
+        expect(s.enemy.team[0].statusCounter).toBe(2)
+    })
+})
+
 describe("budget d'énergie de l'ennemi (ACE)", () => {
     it("sans cap : enemyEnergy = null (solo inchangé)", () => {
         const s = createBattle([createMonInstance("cerfeuillu", 30)], [createMonInstance("razmaree", 30)], { isWild: false, seed: 1 })
