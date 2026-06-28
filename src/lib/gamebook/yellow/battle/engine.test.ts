@@ -284,7 +284,8 @@ describe("PvP — changement après KO : CHAQUE joueur choisit (pas d'envoi auto
     // Régression du bug "en PvP, parfois le Daemon suivant est envoyé automatiquement" : c'était
     // une asymétrie player/enemy dans checkFaints (le camp canonique "enemy" = rôle B était
     // auto-switché alors que "player" = rôle A obtenait un forcedSwitch). Les 2 camps sont des
-    // joueurs → les 2 doivent armer un changement FORCÉ (et NON un auto-switch).
+    // joueurs → les 2 doivent armer un changement FORCÉ (et NON un auto-switch). En DOUBLE-KO, on
+    // arme player puis (après son switch) enemy → chacun choisit, séquentiellement.
 
     it("KO du camp 'enemy' (rôle B) → forcedSwitch='enemy', l'actif K.O. reste en place (pas d'auto-switch)", () => {
         const player = [createMonInstance("rochison", 50, { moveIds: ["eboulis", "belier", "seisme", "lame_roche"] })]
@@ -317,6 +318,36 @@ describe("PvP — changement après KO : CHAQUE joueur choisit (pas d'envoi auto
         expect(s.forcedSwitch).toBe("player")
         expect(s.player.activeIndex).toBe(0)        // l'actif K.O. attend le choix (pas d'auto-switch)
         expect(s.enemy.team[0].currentHp).toBeGreaterThan(0)
+    })
+
+    it("DOUBLE-KO (récoil) → CHACUN choisit, séquentiellement (player puis enemy, jamais d'auto-switch)", () => {
+        const p1 = createMonInstance("rochison", 50, { moveIds: ["eboulis", "belier", "seisme", "lame_roche"] }); p1.currentHp = 1
+        const p2 = createMonInstance("razmaree", 50)
+        const e1 = createMonInstance("plumiot", 2)   // PV pleins : bélier l'achève et le récoil achève rochison (1 PV)
+        const e2 = createMonInstance("razmaree", 50)
+        let s = createBattle([p1, p2], [e1, e2], { isWild: false, seed: 7, pvp: true })
+
+        // rochison (N.50, plus rapide) frappe en bélier : KO de plumiot + récoil → rochison (1 PV) tombe aussi.
+        s = resolveTurnPvp(s, { kind: "move", moveIndex: 1 }, { kind: "move", moveIndex: 0 })
+        // précondition : double-KO réellement obtenu (sinon le setup est à revoir)
+        expect(s.player.team[0].currentHp).toBeLessThanOrEqual(0)
+        expect(s.enemy.team[0].currentHp).toBeLessThanOrEqual(0)
+
+        expect(s.phase).not.toBe("ended")
+        expect(s.forcedSwitch).toBe("player")       // player choisit EN PREMIER
+        expect(s.player.activeIndex).toBe(0)         // aucun auto-switch
+        expect(s.enemy.activeIndex).toBe(0)
+
+        // player choisit → le camp enemy est RÉ-ARMÉ (il choisit à son tour)
+        s = resolveTurnPvp(s, { kind: "switch", teamIndex: 1 }, { kind: "move", moveIndex: 0 })
+        expect(s.forcedSwitch).toBe("enemy")
+        expect(s.player.activeIndex).toBe(1)         // player est entré
+        expect(s.enemy.activeIndex).toBe(0)           // enemy pas encore
+
+        // enemy choisit → fin des changements forcés
+        s = resolveTurnPvp(s, { kind: "move", moveIndex: 0 }, { kind: "switch", teamIndex: 1 })
+        expect(s.forcedSwitch).toBeNull()
+        expect(s.enemy.activeIndex).toBe(1)
     })
 })
 

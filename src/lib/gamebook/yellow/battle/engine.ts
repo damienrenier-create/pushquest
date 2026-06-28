@@ -371,6 +371,10 @@ export function resolveTurnPvp(prev: BattleState, actionA: PlayerAction, actionB
         const act = side === "player" ? actionA : actionB
         if (act.kind === "switch") doSwitch(state, side, act.teamIndex!, events)
         state.forcedSwitch = null
+        // DOUBLE-KO : si l'AUTRE camp est lui aussi K.O. (les deux actifs sont tombés le même tour),
+        // on enchaîne sur SON changement forcé → chacun choisit, l'un après l'autre (player puis enemy).
+        const o = other(side)
+        if (active(state[o]).currentHp <= 0 && hasAlive(state[o])) state.forcedSwitch = o
         return commit(state, events, rng, prev.turn, false)
     }
 
@@ -971,33 +975,34 @@ function checkFaints(state: BattleState, events: BattleEvent[]) {
         events.push({ kind: "end", outcome: "lose" })
         return
     }
-    // L'actif ennemi est K.O. et il lui reste des Daemons → il doit en envoyer un.
+    // ── Changement forcé après KO ──
+    // PvP : les DEUX camps sont des JOUEURS → CHACUN choisit son remplaçant (jamais d'auto-switch :
+    // c'était le bug "le suivant part tout seul" côté défié). On arme UN camp à la fois (player en
+    // PREMIER = ordre fixe, déterministe sur les 2 clients) ; en DOUBLE-KO (les deux actifs tombés le
+    // même tour) le 2e camp est RÉ-ARMÉ juste après le switch du 1er (cf. resolveTurnPvp, bloc forced
+    // -> changements forcés SÉQUENTIELS). Le store ne gère qu'un forced à la fois → cette séquence
+    // réutilise la machinerie existante sans risque de désync (doSwitch ne consomme aucun RNG).
+    if (state.pvp) {
+        if (active(state.player).currentHp <= 0) state.forcedSwitch = "player"
+        else if (active(state.enemy).currentHp <= 0) state.forcedSwitch = "enemy"
+        return
+    }
+    // SOLO / SAUVAGE — l'actif ennemi (IA) est K.O. et il lui reste des Daemons → il doit en envoyer un.
     if (active(state.enemy).currentHp <= 0 && !state.enemySendOut) {
         const enemyIdx = firstAliveIndex(state.enemy)
-        // COMBAT DE DRESSEUR (solo) — flow Game Boy : on N'envoie PAS le suivant tout de suite.
-        // On ANNONCE le prochain Daemon adverse et on laissera le joueur décider de changer
-        // (fenêtre gérée en tête de resolveTurn). EXCEPTION : si le joueur est LUI AUSSI K.O.
-        // (double KO), il devra de toute façon changer → la fenêtre "rester/changer" n'a pas de
-        // sens, on enchaîne directement l'envoi adverse (comportement historique).
-        // SAUVAGE / PvP : pas de fenêtre — on conserve l'auto-switch immédiat.
-        if (state.pvp && active(state.player).currentHp > 0 && enemyIdx >= 0) {
-            // PvP : le camp "enemy" est un VRAI joueur (le défié / rôle B) → il doit CHOISIR son
-            // remplaçant, exactement comme le camp "player". On ARME un changement forcé côté enemy
-            // (toute la plomberie store/UI le route déjà : swapBattle, submitPvpAction, tryResolvePvp,
-            // resolveTurnPvp). Sans ce forced, l'ancien `else` auto-switchait le 1er Daemon vivant du
-            // rôle B → c'est LE bug "le suivant est envoyé tout seul" (asymétrie player/enemy).
-            // EXCEPTION double-KO (player AUSSI K.O.) : la condition `currentHp > 0` est fausse → on
-            // retombe sur l'auto-switch. Volontaire : le store ne gère qu'UN forced à la fois (un 2e
-            // forced simultané risquerait une désync de checksum) → comportement historique conservé.
-            state.forcedSwitch = "enemy"
-        } else if (!state.isWild && !state.pvp && active(state.player).currentHp > 0 && enemyIdx >= 0) {
+        // COMBAT DE DRESSEUR — flow Game Boy : on N'envoie PAS le suivant tout de suite. On ANNONCE le
+        // prochain Daemon adverse et on laisse le joueur décider de changer (fenêtre gérée en tête de
+        // resolveTurn). EXCEPTION : si le joueur est LUI AUSSI K.O. (double KO), il devra de toute façon
+        // changer → la fenêtre "rester/changer" n'a pas de sens, on enchaîne l'envoi (historique).
+        // SAUVAGE : pas de fenêtre — auto-switch immédiat.
+        if (!state.isWild && active(state.player).currentHp > 0 && enemyIdx >= 0) {
             state.enemySendOut = { teamIndex: enemyIdx }
             events.push({ kind: "message", text: `L'adversaire va envoyer ${displayName(state.enemy.team[enemyIdx])} !` })
         } else {
             doSwitch(state, "enemy", enemyIdx, events)
         }
     }
-    // Le joueur doit choisir un remplaçant si son actif est KO
+    // Le joueur doit choisir un remplaçant si son actif est K.O.
     if (active(state.player).currentHp <= 0) {
         state.forcedSwitch = "player"
     }
