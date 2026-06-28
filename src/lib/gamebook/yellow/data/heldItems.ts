@@ -143,3 +143,10 @@ export function heldIncomingDmgMult(inst: MonRef, isPhysical: boolean): number {
     if (isPhysical && it?.physDmgTakenMult !== undefined && applies(it, inst.speciesId)) return it.physDmgTakenMult
     return 1
 }
+
+/** L'objet tenu ACTIF du Daemon (verrou d'espèce respecté), ou undefined. Pour les hooks de combat
+ *  qui lisent un champ d'effet (leftoversFrac, drainDealtFrac, critStage, flinchPct, expMult…). */
+export function heldEffect(inst: MonRef): HeldItemData | undefined {
+    const it = getHeldItem(inst.heldItem)
+    return it && applies(it, inst.speciesId) ? it : undefined
+}

@@ -12,7 +12,7 @@ import { getSpecies } from "../data/species"
 import { getMove } from "../data/moves"
 import { fullStats, effectiveStat, clampStage } from "./stats"
 import { computeDamage, hasStab, critProbabilityGen1 } from "./damage"
-import { heldOutgoingDmgMult, heldIncomingDmgMult } from "../data/heldItems"
+import { heldOutgoingDmgMult, heldIncomingDmgMult, heldEffect } from "../data/heldItems"
 import { typeEffectiveness, effectivenessMessage, moveCategory } from "./typeChart"
 import * as Status from "./status"
 import { accuracyCheck } from "./accuracy"
@@ -424,6 +424,12 @@ function orderActions(
     const pp = actionPriority(state, p)
     const ep = actionPriority(state, e)
     if (pp !== ep) return pp > ep ? [p, e] : [e, p]
+    // OBJET TENU — Vive Griffe : X % d'agir en premier à priorité égale (avant le départage à la vitesse).
+    const pqc = heldEffect(active(state.player))?.quickClawPct ?? 0
+    const eqc = heldEffect(active(state.enemy))?.quickClawPct ?? 0
+    const pProc = pqc > 0 && rng.chance(pqc)
+    const eProc = eqc > 0 && rng.chance(eqc)
+    if (pProc !== eProc) return pProc ? [p, e] : [e, p]
     const ps = effectiveSpeed(active(state.player))
     const es = effectiveSpeed(active(state.enemy))
     if (ps !== es) return ps > es ? [p, e] : [e, p]
@@ -638,9 +644,10 @@ function dealMoveDamage(state: BattleState, side: SideId, move: MoveData, rng: R
 
     // Crit Gen 1 : probabilité liée à la Vitesse de base de l'attaquant.
     const critOverride = move.effect?.critChanceForSpecies?.[attacker.speciesId]
+    const scopeLens = !!heldEffect(attacker)?.critStage // Lentilscope : booste le taux de crit (façon high-crit)
     const isCrit = critOverride !== undefined
         ? rng.next() < critOverride
-        : rng.next() < critProbabilityGen1(atkSpecies.baseStats.spe, move.effect?.highCrit)
+        : rng.next() < critProbabilityGen1(atkSpecies.baseStats.spe, move.effect?.highCrit || scopeLens)
     // OBJET TENU : boost de type (attaquant) × réduction de dégâts physiques (défenseur, ex. Coquille Tony).
     const itemMult = heldOutgoingDmgMult(attacker, move.type) * heldIncomingDmgMult(defender, isPhysical)
     const result = computeDamage({
@@ -655,22 +662,40 @@ function dealMoveDamage(state: BattleState, side: SideId, move: MoveData, rng: R
         itemMult,
     })
 
-    applyDamage(state, other(side), result.damage, events)
+    // OBJET TENU — Bandeau (Focus Band) : depuis PV PLEINS, X % de survivre à 1 PV à un coup fatal.
+    let dealt = result.damage
+    const defHeld = heldEffect(defender)
+    if (defHeld?.survive1hpPct && dealt >= defender.currentHp && defender.currentHp === maxHpOf(defender)
+        && rng.next() < defHeld.survive1hpPct / 100) {
+        dealt = Math.max(1, defender.currentHp - 1)
+        events.push({ kind: "message", text: `${displayName(defender)} s'accroche à 1 PV grâce à son Bandeau !` })
+    }
+    applyDamage(state, other(side), dealt, events)
     // Record À VIE de l'attaquant (flavor affiché dans la fiche, persisté).
-    if (result.damage > (attacker.bestDmg ?? 0)) { attacker.bestDmg = result.damage; attacker.bestDmgMove = move.name }
+    if (dealt > (attacker.bestDmg ?? 0)) { attacker.bestDmg = dealt; attacker.bestDmgMove = move.name }
     // Record de CE COMBAT uniquement (runtime, repart de 0 à chaque combat) → débrief GOAT.
-    if (result.damage > (attacker.battleBestDmg ?? 0)) { attacker.battleBestDmg = result.damage; attacker.battleBestDmgMove = move.name }
+    if (dealt > (attacker.battleBestDmg ?? 0)) { attacker.battleBestDmg = dealt; attacker.battleBestDmgMove = move.name }
     // DÉFI CT (labo) : cumule les dégâts infligés PAR LE JOUEUR, par type d'attaque (PvE solo uniquement).
     // Placé APRÈS applyDamage → aucun RNG consommé ensuite (isCrit/randomFactor tirés avant) → déterminisme intact.
-    if (!state.pvp && side === "player" && result.damage > 0) {
+    if (!state.pvp && side === "player" && dealt > 0) {
         if (!state.dmgByType) state.dmgByType = {}
-        state.dmgByType[move.type] = (state.dmgByType[move.type] ?? 0) + result.damage
+        state.dmgByType[move.type] = (state.dmgByType[move.type] ?? 0) + dealt
+    }
+    // OBJET TENU — Grelot Coque : soigne l'attaquant d'1/8 des dégâts infligés.
+    const atkHeld = heldEffect(attacker)
+    if (atkHeld?.drainDealtFrac && dealt > 0 && attacker.currentHp > 0) {
+        applyHeal(state, side, Math.max(1, Math.floor(dealt / atkHeld.drainDealtFrac)), events)
+    }
+    // OBJET TENU — Roche Royale : X % d'apeurer la cible encore debout (flinch).
+    if (atkHeld?.flinchPct && dealt > 0 && defender.currentHp > 0 && rng.next() < atkHeld.flinchPct / 100) {
+        defender.volatiles.FLINCH = 1
+        events.push({ kind: "message", text: `${displayName(defender)} hésite, intimidé !` })
     }
     if (isCrit) events.push({ kind: "message", text: "Coup critique !" })
     const effMsg = effectivenessMessage(eff)
     if (effMsg) events.push({ kind: "message", text: effMsg })
 
-    return { dealt: result.damage, typeEff: eff }
+    return { dealt, typeEff: eff }
 }
 
 // ============================================================
@@ -758,6 +783,12 @@ function applyVolatile(mon: BattleMon, vol: NonNullable<MoveData["effect"]>["inf
 
 function applyStatChange(state: BattleState, side: SideId, stat: StageKey, delta: number, events: BattleEvent[]) {
     const mon = active(state[side])
+    // OBJET TENU — Herbe Blanche : annule la prochaine BAISSE de stat réelle, puis se consomme.
+    if (delta < 0 && mon.stages[stat] > -6 && heldEffect(mon)?.negateStatDrop) {
+        mon.heldItem = undefined
+        events.push({ kind: "message", text: `${displayName(mon)} : l'Herbe Blanche annule la baisse de ${labelStat(stat)} !` })
+        return
+    }
     const before = mon.stages[stat]
     mon.stages[stat] = clampStage(before + delta)
     const real = mon.stages[stat] - before
@@ -836,6 +867,12 @@ function endOfTurn(state: BattleState, events: BattleEvent[], rng: Rng) {
             applyDamage(state, side, drain, events)
             applyHeal(state, other(side), drain, events)
             events.push({ kind: "message", text: `${displayName(mon)} est vidé de son énergie !` })
+        }
+        // OBJET TENU — Restes : régénère une fraction des PV max en fin de tour.
+        const lefto = heldEffect(mon)?.leftoversFrac
+        if (lefto && mon.currentHp > 0 && mon.currentHp < maxHpOf(mon)) {
+            applyHeal(state, side, Math.max(1, Math.floor(maxHpOf(mon) / lefto)), events)
+            events.push({ kind: "message", text: `${displayName(mon)} récupère des PV grâce à ses Restes.` })
         }
     }
 }
@@ -1028,7 +1065,7 @@ function awardExp(state: BattleState, events: BattleEvent[]) {
         const rank = aliveOrdered.indexOf(mon.uid)
         if (rank < 0) continue // n'a pas affronté cet ennemi, ou KO à l'instant de sa chute → rien
         const share = XP_SHARE_LADDER[rank] ?? 0.1
-        const finalGain = Math.max(1, Math.round(gain * share))
+        const finalGain = Math.max(1, Math.round(gain * share * (heldEffect(mon)?.expMult ?? 1))) // Œuf Chance : +50% XP
         const isActive = mon === winner
         const beforeMax = maxHpOf(mon)
         const res = applyExp(mon, finalGain)

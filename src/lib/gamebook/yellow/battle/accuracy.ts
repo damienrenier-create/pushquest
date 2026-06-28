@@ -8,6 +8,7 @@
 import type { MoveData, BattleMon } from "./types"
 import { accEvaMultiplier, fullStats, effectiveStat } from "./stats"
 import { getSpecies } from "../data/species"
+import { heldEffect } from "../data/heldItems"
 import type { Rng } from "./rng"
 
 // HYPNOSE (speedScaledAcc) : bornes de la précision modulée par la vitesse.
@@ -37,7 +38,9 @@ export function hitChance(move: MoveData, attacker: BattleMon, defender: BattleM
     }
     const accMod = accEvaMultiplier(attacker.stages.acc)
     const evaMod = accEvaMultiplier(-defender.stages.eva)
-    return move.accuracy * accMod * evaMod
+    // OBJET TENU — Poudre Claire (×0.9) / Encens Doux (×0.95) : baisse la précision des attaques visant le porteur.
+    const itemMod = heldEffect(defender)?.incomingAccMult ?? 1
+    return move.accuracy * accMod * evaMod * itemMod
 }
 
 /** Résout le jet de précision. */
