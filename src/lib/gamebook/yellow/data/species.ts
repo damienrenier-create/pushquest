@@ -1686,10 +1686,12 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 1, moveId: "etincelle" },
             { level: 1, moveId: "tunnel" },
             { level: 1, moveId: "repos" },
-            // Profondeur POST-CAPTURE (niv >35) : le mini-boss N35 reste 100% inchangé (la factory
-            // filtre niv≤35 → toujours ses 4 moves signature). Identité golem SOL/ROCHE/ÉLEC.
+            // Petite attaque physique SOL (STAB → exploite l'atk 92), DISPO DÈS N35 : le boss n'est plus
+            // un simple staller. La factory prend les 4 DERNIÈRES attaques ≤ niveau (slice(-4)), donc à
+            // N35 le kit devient [Étincelle, Tunnel, Repos, Secousse] (Vive-Attaque, la plus faible, sort).
+            { level: 1, moveId: "secousse" },         // STAB SOL modeste (60), physique — sert l'atk 92
+            // Profondeur POST-CAPTURE (niv >35). Identité golem SOL/ROCHE/ÉLEC.
             // PRE-65 = kit SOBRE (≤75 + contrôle) ; POST-65 = les grosses attaques (récompense long terme).
-            { level: 40, moveId: "secousse" },        // STAB SOL modeste (Tunnel reste le gimmick)
             { level: 48, moveId: "eboulis" },         // couverture ROCHE (peut apeurer)
             { level: 56, moveId: "cage_eclair" },     // contrôle ÉLEC : paralyse à coup sûr (0 dmg)
             // — Palier des grosses attaques (post niveau 65) —

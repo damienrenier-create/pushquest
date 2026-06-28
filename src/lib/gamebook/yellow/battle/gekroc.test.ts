@@ -41,7 +41,9 @@ describe("GÉKROC — espèce, Tunnel (dig), capture, masquage", () => {
         const g = buildGekroc()
         expect(g.level).toBe(35)
         const ids = g.moves.map((m) => m.moveId).sort()
-        expect(ids).toEqual(["etincelle", "repos", "tunnel", "vive_attaque"])
+        // Le boss N35 a maintenant une vraie attaque physique SOL (Secousse, STAB → atk 92) au lieu
+        // de Vive-Attaque : la factory prend les 4 dernières attaques ≤35 (slice(-4)).
+        expect(ids).toEqual(["etincelle", "repos", "secousse", "tunnel"])
         const cfg = g as unknown as { captureMult?: number; captureRequiresStatus?: boolean }
         expect(cfg.captureMult).toBe(0.6)
         expect(cfg.captureRequiresStatus).toBeFalsy() // ≠ légendaire
