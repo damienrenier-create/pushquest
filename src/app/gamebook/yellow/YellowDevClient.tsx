@@ -59,7 +59,7 @@ import type { FrontierRunState } from "@/lib/gamebook/yellow/frontier/run"
 import { postRecordRun } from "@/lib/gamebook/yellow/frontier/frontierApi"
 import { ctRewardOptionsForTeam } from "@/lib/gamebook/yellow/frontier/rewards"
 import { generateRentalPool, buildDraftTeam, type RentalCandidate } from "@/lib/gamebook/yellow/frontier/factory"
-import { resolveFrontierLevel, JC_PER_WIN, JC_BOSS_MULT, type OpponentSpec, type LevelRule } from "@/lib/gamebook/yellow/frontier/engine"
+import { resolveFrontierLevel, JC_PER_WIN, JC_BOSS_MULT, BOSS_EVERY, type OpponentSpec, type LevelRule } from "@/lib/gamebook/yellow/frontier/engine"
 import { createDome, advanceDome, playerOpponent, DOME_ROUNDS, type DomeState } from "@/lib/gamebook/yellow/frontier/dome"
 import { Rng } from "@/lib/gamebook/yellow/battle/rng"
 
@@ -732,9 +732,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (!run || run.status !== "active") return
         if (tourChoice) return // pause entre vagues : on attend le choix Continuer/Quitter
         if (battle || frontierResult || evolutions.length > 0 || dialogue || pendingLearn || newDexEntry) return
-        // SOIN INTÉGRAL entre chaque vague (règle Tour façon Émeraude) : seule l'équipe RÉELLE (Tour) en a
-        // besoin — l'Usine joue une équipe de location jamais resynchronisée (donc déjà pleine à chaque vague).
-        if (run.mode !== "FACTORY") healAllTeam()
+        // SOIN tous les BOSS_EVERY (7) combats, façon Tour de Combat Émeraude : on soigne au DÉBUT d'un
+        // BLOC de 7 (vagues 1, 8, 15…), PAS entre chaque vague → tenir la distance sur la série EST le défi.
+        // Les PV se conservent d'une vague à l'autre (finishBattle persiste l'équipe). L'Usine (location)
+        // n'est pas soignée ici (équipe fraîche à chaque vague, géré à part).
+        if (run.mode === "TOWER" && run.streak % BOSS_EVERY === 0) healAllTeam()
         // FACTORY : on joue l'équipe de LOCATION draftée ; Tour/Dôme : l'équipe réelle du joueur (soignée ci-dessus).
         const myTeam = run.mode === "FACTORY" ? (getDraftedTeam() ?? getPlayer().team) : getPlayer().team
         if (run.isBoss && run.bossName) setToast(`👑 ${run.bossName} entre en scène !`)
@@ -749,7 +751,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (battle || frontierResult || evolutions.length > 0 || dialogue || pendingLearn || newDexEntry) return
         const opp = playerOpponent(dome.state)
         if (!opp) return
-        healAllTeam() // soin intégral avant chaque match du Dôme (façon Émeraude)
+        // SOIN avant la 1re manche SEULEMENT (round 0) → endurance sur les 3 manches (cf. intro
+        // « Pas de soin entre les manches ! »). Les PV se conservent (finishBattle persiste l'équipe).
+        if (dome.state.round === 0) healAllTeam()
         startTrainerBattle(getPlayer().team, buildFrontierEnemies(opp.team), Math.floor(Math.random() * 1e9), { trainerId: "frontier:DOME", aiLevel: "trainer" })
     }, [dome, domePause, battle, frontierResult, evolutions.length, dialogue, pendingLearn, newDexEntry])
 
@@ -1217,7 +1221,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {!battle && !run && mapPlayer.mapId === "yellow_combat_tour" && !dialogue && player.team.length > 0 && (
                 <div style={{ position: "absolute", left: "50%", top: 16, transform: "translateX(-50%)", zIndex: 60, background: "#1a1a22ee", color: "#fff", border: "2px solid #e8893a", borderRadius: 12, padding: "10px 14px", textAlign: "center", maxWidth: 300 }}>
                     <div style={{ fontWeight: 800, marginBottom: 6 }}>🏯 TOUR DE COMBAT</div>
-                    <div style={{ fontSize: 11, opacity: 0.85, marginBottom: 8 }}>Choisis ton mode — série de victoires le plus loin possible :</div>
+                    <div style={{ fontSize: 11, opacity: 0.85, marginBottom: 8 }}>Série d&apos;endurance avec ton équipe : tiens le plus loin possible. 👑 Boss tous les 7 — et tu n&apos;es soigné QUE tous les 7 combats. Choisis ton mode :</div>
                     <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
                         {(["L50", "L100", "ADAPT"] as LevelRule[]).map((rule) => (
                             <button key={rule} onClick={() => { frontierReportedRef.current = false; setTourChoice(false); setUsineCt(null); startTowerRun({ levelRule: rule, playerTopLevel: myArenaLevel || 50, seed: Math.floor(Math.random() * 1e9) }) }}
