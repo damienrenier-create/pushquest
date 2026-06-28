@@ -276,9 +276,11 @@ export default function BattleScreen() {
     } else if (playbackDone) {
         if (menu === "root") {
             options.push({ label: "⚔️ ATTAQUE", onSelect: () => setMenu("moves") })
+            // DAEMON juste sous ATTAQUE (action SANS coût) → un appui « bas » réflexe tombe sur du sûr,
+            // plus sur le SAC (évite de lancer une Ball payante par mégarde en spammant le bouton).
+            options.push({ label: "🐾 DAEMON", onSelect: () => setMenu("switch") })
             // En PvP (v1) : ni SAC ni FUITE. En série Frontier (noItems) : pas de SAC non plus (« pas de potion »).
             if (!battle.pvp && !battle.noItems) options.push({ label: "🎒 SAC", onSelect: () => setMenu("bag") })
-            options.push({ label: "🐾 DAEMON", onSelect: () => setMenu("switch") })
             if (!battle.pvp) {
                 // FUITE → écran de confirmation (évite la fuite accidentelle).
                 options.push({ label: "🏃 FUITE", onSelect: () => setMenu("confirmRun"), disabled: !battle.isWild })
@@ -502,6 +504,19 @@ export default function BattleScreen() {
 function MonInfo({ mon, self, hp, max }: { mon: BattleMon; self?: boolean; hp: number; max: number }) {
     const pct = Math.max(0, Math.min(100, (hp / max) * 100))
     const col = pct > 50 ? "#48c048" : pct > 20 ? "#f0c040" : "#e04040"
+    // #6 — petite LUEUR discrète de la barre d'XP quand CE Daemon passe un niveau (event moins anodin).
+    const prevRef = useRef<{ uid: string; level: number }>({ uid: mon.uid, level: mon.level })
+    const [xpGlow, setXpGlow] = useState(false)
+    useEffect(() => {
+        const p = prevRef.current
+        prevRef.current = { uid: mon.uid, level: mon.level }
+        if (self && p.uid === mon.uid && mon.level > p.level) {
+            // setState DIFFÉRÉ (hors corps synchrone de l'effet → évite la règle set-state-in-effect).
+            const on = setTimeout(() => setXpGlow(true), 0)
+            const off = setTimeout(() => setXpGlow(false), 850)
+            return () => { clearTimeout(on); clearTimeout(off) }
+        }
+    }, [mon.uid, mon.level, self])
     return (
         <div style={{ ...S.info, alignSelf: self ? "flex-end" : "flex-start" }}>
             <div style={S.infoTop}>
@@ -517,9 +532,9 @@ function MonInfo({ mon, self, hp, max }: { mon: BattleMon; self?: boolean; hp: n
             <div style={S.hpRow}>
                 <span style={S.hpLabel}>PV</span>
                 <div style={S.hpTrack}><div style={{ ...S.hpFill, width: `${pct}%`, background: col }} /></div>
+                {/* Chiffre des PV À CÔTÉ de la barre (et non en dessous) → on comprend tout de suite à quoi il correspond. */}
+                {self && <span style={S.hpNum}>{Math.max(0, Math.round(hp))}/{max}</span>}
             </div>
-            {/* Chiffre des PV ENTRE la barre de PV et la barre d'XP (lisibilité). */}
-            {self && <div style={S.hpNum}>{Math.max(0, Math.round(hp))}/{max}</div>}
             {/* Mini barre d'XP (joueur uniquement) → on voit si le Daemon est proche du niveau suivant. */}
             {self && (() => {
                 const cur = expForLevel(mon.level, mon.speciesId), nxt = expForLevel(mon.level + 1, mon.speciesId)
@@ -529,7 +544,7 @@ function MonInfo({ mon, self, hp, max }: { mon: BattleMon; self?: boolean; hp: n
                 return (
                     <div style={S.xpRow}>
                         <span style={S.xpLabel}>XP</span>
-                        <div style={S.xpTrack}><div style={{ ...S.xpFill, width: `${xpPct}%` }} /></div>
+                        <div style={S.xpTrack}><div style={{ ...S.xpFill, width: `${xpPct}%`, ...(xpGlow ? { background: "#ffd54a", boxShadow: "0 0 6px #ffd54a" } : {}) }} /></div>
                     </div>
                 )
             })()}
@@ -666,11 +681,11 @@ const S: Record<string, React.CSSProperties> = {
     hpLabel: { fontSize: 9, fontWeight: 700, color: "#c89000" },
     hpTrack: { flex: 1, height: 7, background: "#404040", borderRadius: 4, overflow: "hidden", border: "1px solid #1c1408" },
     hpFill: { height: "100%", transition: "width 0.4s ease" },
-    hpNum: { textAlign: "right", fontSize: 10, fontWeight: 700, marginTop: 2 },
+    hpNum: { fontSize: 9, fontWeight: 700, minWidth: 46, textAlign: "right" },
     xpRow: { display: "flex", alignItems: "center", gap: 6, marginTop: 2 },
     xpLabel: { fontSize: 8, fontWeight: 700, color: "#5a9fe0" },
     xpTrack: { flex: 1, height: 4, background: "#404040", borderRadius: 3, overflow: "hidden", border: "1px solid #1c1408" },
-    xpFill: { height: "100%", background: "#4a9fe0", transition: "width 0.4s ease" },
+    xpFill: { height: "100%", background: "#4a9fe0", transition: "width 0.4s ease, background 0.5s ease, box-shadow 0.5s ease" },
     statusTag: { display: "inline-block", marginTop: 3, fontSize: 8, fontWeight: 700, background: "#8868c0", color: "#fff", padding: "1px 5px", borderRadius: 3, letterSpacing: 1 },
     sprite: { width: 72, height: 72, borderRadius: "50%", background: "#ffffff80", border: "3px solid #1c1408", display: "flex", alignItems: "center", justifyContent: "center" },
     spriteBox: { width: 84, height: 84, display: "flex", alignItems: "center", justifyContent: "center" },
