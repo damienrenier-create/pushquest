@@ -49,7 +49,20 @@ export default function DailyTicketModal({ mode, today, onClose }: { mode: "dail
         let k = 0
         const tick = () => {
             setHighlight(k % CASINO_NUM_CASES)
-            if (k >= delays.length) { setResult(r); setRemaining(mode === "daily" ? 0 : ticketCount()); setPhase("result"); return }
+            if (k >= delays.length) {
+                // La case gagnante CLIGNOTE ~1 s avant que le résultat s'affiche.
+                const win = r.winningCase
+                let blinks = 0
+                const blink = () => {
+                    blinks++
+                    setHighlight(blinks % 2 === 1 ? -1 : win)
+                    if (blinks >= 6) { setHighlight(win); setResult(r); setRemaining(mode === "daily" ? 0 : ticketCount()); setPhase("result"); return }
+                    timerRef.current = setTimeout(blink, 170)
+                }
+                setHighlight(win)
+                timerRef.current = setTimeout(blink, 320)
+                return
+            }
             timerRef.current = setTimeout(tick, delays[k++])
         }
         tick()

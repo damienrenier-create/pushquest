@@ -28,14 +28,14 @@ export function buildSpinDelays(target: number, n: number): number[] {
     const rnd = (a: number, b: number) => a + Math.random() * (b - a)
     const delays: number[] = []
     let t: number
-    // RAPIDE — blur (~40-55 ms), 1-4 s
-    t = 0; const d1 = rnd(1000, 4000)
+    // RAPIDE — blur (~40-55 ms), 0,8-2,8 s
+    t = 0; const d1 = rnd(800, 2800)
     while (t < d1) { const dl = Math.round(rnd(38, 55)); delays.push(dl); t += dl }
-    // MOYENNE — l'intervalle s'allonge 60 → 170 ms, 3-6 s
-    t = 0; const d2 = rnd(3000, 6000)
+    // MOYENNE — l'intervalle s'allonge 60 → 170 ms, 2,4-4,5 s
+    t = 0; const d2 = rnd(2400, 4500)
     while (t < d2) { const dl = Math.max(45, Math.round(60 + (t / d2) * 110 + rnd(-8, 8))); delays.push(dl); t += dl }
-    // LENTE — décélération 170 → 460 ms, 3-5 s
-    t = 0; const d3 = rnd(3000, 5000)
+    // LENTE — décélération 170 → 460 ms, 2-3,5 s
+    t = 0; const d3 = rnd(2000, 3500)
     while (t < d3) { const dl = Math.round(170 + (t / d3) * 290); delays.push(dl); t += dl }
     // SURSAUTS finaux (0-3) : on aligne la fin de la phase lente sur (target − sursauts) pour qu'ils
     // terminent EXACTEMENT sur target ; chaque sursaut a une pause croissante (~500 / 730 / 960 ms).
@@ -90,8 +90,19 @@ export default function CasinoYellowModal({ onClose }: { onClose: () => void }) 
             setHighlight(k % CASINO_NUM_CASES)
             if (k >= delays.length) {
                 const r = casinoSpin(payload, Date.now()) // applique : dépense/gain + état casino (même winningCase)
-                if (r.ok) { setResult(r); persistYellowSave(); setBets({}) } else { setError(r.reason ?? "Erreur") }
-                setSpinning(false)
+                if (!r.ok) { setError(r.reason ?? "Erreur"); setSpinning(false); return }
+                persistYellowSave(); setBets({})
+                // La case gagnante CLIGNOTE ~1 s avant que le résultat s'affiche (on voit où la boule s'arrête).
+                const win = r.winningCase
+                let blinks = 0
+                const blink = () => {
+                    blinks++
+                    setHighlight(blinks % 2 === 1 ? -1 : win)
+                    if (blinks >= 6) { setHighlight(win); setResult(r); setSpinning(false); return }
+                    timerRef.current = setTimeout(blink, 170)
+                }
+                setHighlight(win)
+                timerRef.current = setTimeout(blink, 320)
                 return
             }
             timerRef.current = setTimeout(tick, delays[k++])
@@ -128,7 +139,7 @@ export default function CasinoYellowModal({ onClose }: { onClose: () => void }) 
                         <>
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 4, marginBottom: 8 }}>
                                 {Array.from({ length: CASINO_NUM_CASES }, (_, i) => {
-                                    const lit = spinning && highlight === i
+                                    const lit = (spinning && highlight === i) || (!spinning && result?.winningCase === i) // reste allumée à l'atterrissage
                                     return (
                                         <button key={i} onClick={() => toggle(i)} disabled={spinning}
                                             style={{ ...caseBtn, ...(bets[i] !== undefined ? caseOn : {}), ...(lit ? caseLit : {}) }}>{i}</button>
