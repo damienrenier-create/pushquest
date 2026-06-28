@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { createBattle, resolveTurn, chooseEnemyAction, type BattleState } from "./engine"
+import { createBattle, resolveTurn, resolveTurnPvp, chooseEnemyAction, type BattleState } from "./engine"
 import { Rng } from "./rng"
 import { createMonInstance } from "./factory"
 import { applyEvolution } from "./evolution"
@@ -277,6 +277,46 @@ describe("fenêtre d'envoi adverse — combat de Dresseur (flow Game Boy)", () =
         }
         expect(s.outcome).toBe("win")
         expect(s.enemySendOut).toBeNull()
+    })
+})
+
+describe("PvP — changement après KO : CHAQUE joueur choisit (pas d'envoi auto)", () => {
+    // Régression du bug "en PvP, parfois le Daemon suivant est envoyé automatiquement" : c'était
+    // une asymétrie player/enemy dans checkFaints (le camp canonique "enemy" = rôle B était
+    // auto-switché alors que "player" = rôle A obtenait un forcedSwitch). Les 2 camps sont des
+    // joueurs → les 2 doivent armer un changement FORCÉ (et NON un auto-switch).
+
+    it("KO du camp 'enemy' (rôle B) → forcedSwitch='enemy', l'actif K.O. reste en place (pas d'auto-switch)", () => {
+        const player = [createMonInstance("rochison", 50, { moveIds: ["eboulis", "belier", "seisme", "lame_roche"] })]
+        const e1 = createMonInstance("plumiot", 2); e1.currentHp = 1   // sera mis K.O. ce tour
+        const e2 = createMonInstance("razmaree", 50)                   // remplaçant vivant
+        let s = createBattle(player, [e1, e2], { isWild: false, seed: 4242, pvp: true })
+
+        s = resolveTurnPvp(s, { kind: "move", moveIndex: 0 }, { kind: "move", moveIndex: 0 })
+
+        expect(s.phase).not.toBe("ended")          // il reste un Daemon vivant côté enemy
+        expect(s.forcedSwitch).toBe("enemy")       // ← LE FIX : le rôle B doit CHOISIR
+        expect(s.enemy.activeIndex).toBe(0)         // l'actif K.O. n'a PAS été remplacé automatiquement
+        expect(s.player.team[0].currentHp).toBeGreaterThan(0) // single-KO (player intact)
+
+        // Le rôle B choisit ensuite son remplaçant → il entre.
+        s = resolveTurnPvp(s, { kind: "move", moveIndex: 0 }, { kind: "switch", teamIndex: 1 })
+        expect(s.forcedSwitch).toBeNull()
+        expect(s.enemy.activeIndex).toBe(1)
+    })
+
+    it("KO du camp 'player' (rôle A) → forcedSwitch='player' (symétrique)", () => {
+        const p1 = createMonInstance("plumiot", 2); p1.currentHp = 1
+        const p2 = createMonInstance("rochison", 50)
+        const enemy = [createMonInstance("razmaree", 50)] // moves par défaut (slot 0 = attaque offensive)
+        let s = createBattle([p1, p2], enemy, { isWild: false, seed: 4243, pvp: true })
+
+        s = resolveTurnPvp(s, { kind: "move", moveIndex: 0 }, { kind: "move", moveIndex: 0 })
+
+        expect(s.phase).not.toBe("ended")
+        expect(s.forcedSwitch).toBe("player")
+        expect(s.player.activeIndex).toBe(0)        // l'actif K.O. attend le choix (pas d'auto-switch)
+        expect(s.enemy.team[0].currentHp).toBeGreaterThan(0)
     })
 })
 

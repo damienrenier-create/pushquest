@@ -980,7 +980,17 @@ function checkFaints(state: BattleState, events: BattleEvent[]) {
         // (double KO), il devra de toute façon changer → la fenêtre "rester/changer" n'a pas de
         // sens, on enchaîne directement l'envoi adverse (comportement historique).
         // SAUVAGE / PvP : pas de fenêtre — on conserve l'auto-switch immédiat.
-        if (!state.isWild && !state.pvp && active(state.player).currentHp > 0 && enemyIdx >= 0) {
+        if (state.pvp && active(state.player).currentHp > 0 && enemyIdx >= 0) {
+            // PvP : le camp "enemy" est un VRAI joueur (le défié / rôle B) → il doit CHOISIR son
+            // remplaçant, exactement comme le camp "player". On ARME un changement forcé côté enemy
+            // (toute la plomberie store/UI le route déjà : swapBattle, submitPvpAction, tryResolvePvp,
+            // resolveTurnPvp). Sans ce forced, l'ancien `else` auto-switchait le 1er Daemon vivant du
+            // rôle B → c'est LE bug "le suivant est envoyé tout seul" (asymétrie player/enemy).
+            // EXCEPTION double-KO (player AUSSI K.O.) : la condition `currentHp > 0` est fausse → on
+            // retombe sur l'auto-switch. Volontaire : le store ne gère qu'UN forced à la fois (un 2e
+            // forced simultané risquerait une désync de checksum) → comportement historique conservé.
+            state.forcedSwitch = "enemy"
+        } else if (!state.isWild && !state.pvp && active(state.player).currentHp > 0 && enemyIdx >= 0) {
             state.enemySendOut = { teamIndex: enemyIdx }
             events.push({ kind: "message", text: `L'adversaire va envoyer ${displayName(state.enemy.team[enemyIdx])} !` })
         } else {
