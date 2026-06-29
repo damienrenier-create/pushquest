@@ -13,7 +13,6 @@ import { useRouter } from "next/navigation"
 import GameBoyShell from "./GameBoyShell"
 import MapView from "./MapView"
 import BattleScreen from "./battle/BattleScreen"
-import BattleControls, { BATTLE_CONTROLS_HEIGHT } from "./battle/BattleControls"
 import BattleBoundary from "./battle/BattleBoundary"
 import { useCasinoPresence } from "@/lib/gamebook/yellow/multiplayer/useCasinoPresence"
 import { useCasinoChallenge, type BattleStart } from "@/lib/gamebook/yellow/multiplayer/useCasinoChallenge"
@@ -45,6 +44,7 @@ import { YELLOW_ENTRANCE_MAP_ID } from "@/lib/gamebook/yellow/featureFlag"
 import { YELLOW_MAPS, CENDREVILLE_SPAWN } from "@/lib/gamebook/yellow/maps"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
 import { useBattle, useEvolutions, clearEvolutions, useChampionRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getGiftCtMove, startTrainerBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult, useFrontierResult, clearFrontierResult, getBattleEnergy, resumeBattleFromStorage, useStoneReward, clearStoneReward, useJustCaught, clearJustCaught } from "@/lib/gamebook/yellow/store/battleStore"
+import { useEncounterFxActive } from "@/lib/gamebook/yellow/store/encounterFxStore"
 import { aceLoseLine } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
@@ -173,6 +173,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const launchRematch = useGameStore((s) => s.launchRematch)
     const showDialogue = useGameStore((s) => s.showDialogue)
     const battle = useBattle()
+    // Transition de rencontre (écran de chargement) affichée → on neutralise le D-pad.
+    const encounterFx = useEncounterFxActive()
     const evolutions = useEvolutions()
     const championRun = useChampionRun()
     const chainRematchId = useChainRematch()
@@ -508,14 +510,16 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             // reset newDexEntry/evolutions → popup + renommage PERDUS. On neutralise tout input carte.
             if (championRun || arenaFight || pendingLearn || newDexEntry || evolutions.length > 0) { e.preventDefault(); return }
             const inB = !!battle
+            // En combat, menu pause ouvert → le D-pad/A pilotent le menu (tactile), pas le combat.
+            const inBMenu = inB && menu !== "none"
             const k = e.key.toLowerCase()
-            if (e.key === "ArrowUp" || k === "z") { e.preventDefault(); inB ? dispatchBattleInput("up") : move("up") }
-            else if (e.key === "ArrowDown" || k === "s") { e.preventDefault(); inB ? dispatchBattleInput("down") : move("down") }
-            else if (e.key === "ArrowLeft" || k === "q") { e.preventDefault(); inB ? dispatchBattleInput("left") : move("left") }
-            else if (e.key === "ArrowRight" || k === "d") { e.preventDefault(); inB ? dispatchBattleInput("right") : move("right") }
+            if (e.key === "ArrowUp" || k === "z") { e.preventDefault(); inB ? (inBMenu || dispatchBattleInput("up")) : move("up") }
+            else if (e.key === "ArrowDown" || k === "s") { e.preventDefault(); inB ? (inBMenu || dispatchBattleInput("down")) : move("down") }
+            else if (e.key === "ArrowLeft" || k === "q") { e.preventDefault(); inB ? (inBMenu || dispatchBattleInput("left")) : move("left") }
+            else if (e.key === "ArrowRight" || k === "d") { e.preventDefault(); inB ? (inBMenu || dispatchBattleInput("right")) : move("right") }
             else if (e.key === " " || e.key === "Enter" || k === "a") {
                 e.preventDefault()
-                if (inB) { dispatchBattleInput("a") }
+                if (inB) { if (!inBMenu) dispatchBattleInput("a") }
                 else {
                     // ARÈNE JOUEUR : A près d'un reflet (≤1 case, DIAGONALES incluses) → défie le PLUS PROCHE
                     // (en plus du clic/tap). Chebyshev ≤1 = les 8 cases autour + la case occupée (avant : 4 cases ortho
@@ -530,17 +534,18 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 }
             }
             else if (e.key === "Escape" || k === "b" || k === "f") {
+                // En combat avec menu pause ouvert → B referme le menu. Sinon B = combat.
                 // Hors combat : ferme d'abord l'overlay le plus haut (goBack), sinon dialogue (pressB).
-                e.preventDefault(); inB ? dispatchBattleInput("b") : (goBackRef.current() || pressB())
+                e.preventDefault(); inB ? (inBMenu ? goBackRef.current() : dispatchBattleInput("b")) : (goBackRef.current() || pressB())
             }
             else if (e.key === "Tab") {
-                // Start/Select = ouvre/ferme le menu pause (hors combat uniquement).
-                e.preventDefault(); if (!inB) setMenu((m) => (m === "none" ? "pause" : "none"))
+                // Start/Select = ouvre/ferme le menu pause (en combat aussi : viewers sûrs).
+                e.preventDefault(); setMenu((m) => (m === "none" ? "pause" : "none"))
             }
         }
         window.addEventListener("keydown", handler)
         return () => window.removeEventListener("keydown", handler)
-    }, [move, pressA, pressB, battle, newDexEntry, evolutions, championRun, arenaFight, pendingLearn, arenaMode, arenaOpponents, mapPlayer, showDialogue])
+    }, [move, pressA, pressB, battle, menu, newDexEntry, evolutions, championRun, arenaFight, pendingLearn, arenaMode, arenaOpponents, mapPlayer, showDialogue])
 
     // Identité (User.id) + carte courante → estampillage ownership/lieu à la capture.
     useEffect(() => { setCurrentPlayerId(userId) }, [userId])
@@ -880,57 +885,61 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 />
             )}
 
-            {/* En COMBAT : plein écran, SANS la coque Game Boy. La coque enfermait
-                le combat dans l'écran 3:2 et coupait les menus (cf. retour Sartay).
-                Le BattleScreen est entièrement jouable au doigt (boutons d'options
-                tactiles) + clavier (dispatchBattleInput), donc pas besoin du D-pad. */}
-            {battle ? (
-                <div style={battleWrapStyle}>
-                    {/* Error boundary : si le combat plante, on propose "Reprendre"
-                        (endBattle) au lieu d'obliger un hard refresh. */}
+            {/* La coque Game Boy enveloppe TOUJOURS le jeu — exploration ET combat.
+                En combat, l'écran de combat est rendu DANS l'écran (menus façon
+                Gen 1/2) et le D-pad + A/B de la coque pilotent le combat via
+                dispatchBattleInput (le même pont que le clavier). */}
+            <GameBoyShell
+                reps={player.reps}
+                repsCap={player.repsCap}
+                // Pendant l'écran de chargement du combat (transition de rencontre), les
+                // flèches sont neutralisées : pas de curseur/pas fantôme sous le rideau.
+                dpadDisabled={encounterFx}
+                // En combat, START/SELECT ouvre le menu pause (viewers sûrs). Quand ce menu est ouvert,
+                // le D-pad / A pilotent le menu (tactile) → on neutralise l'entrée combat dessous ;
+                // B referme le menu (goBack).
+                onUp={() => { if (encounterFx) return; if (battle) { if (menu === "none") dispatchBattleInput("up"); return } move("up") }}
+                onDown={() => { if (encounterFx) return; if (battle) { if (menu === "none") dispatchBattleInput("down"); return } move("down") }}
+                onLeft={() => { if (encounterFx) return; if (battle) { if (menu === "none") dispatchBattleInput("left"); return } move("left") }}
+                onRight={() => { if (encounterFx) return; if (battle) { if (menu === "none") dispatchBattleInput("right"); return } move("right") }}
+                onA={() => {
+                    if (battle) { if (menu === "none") dispatchBattleInput("a"); return }
+                    // Dans le casino, A face à un autre joueur = le défier.
+                    if (inCasino) {
+                        const target = facingRemote()
+                        if (target) { menuTapGuard.current = Date.now(); setInteractTarget({ userId: target.userId, nickname: target.nickname }); return }
+                    }
+                    pressA()
+                }}
+                onB={() => { if (battle) { if (menu !== "none") { goBack(); return } dispatchBattleInput("b"); return } if (!goBack()) pressB() }}
+                onStart={() => { menuTapGuard.current = Date.now(); setMenu((m) => (m === "none" ? "pause" : "none")) }}
+                onSelect={() => { menuTapGuard.current = Date.now(); setMenu((m) => (m === "none" ? "pause" : "none")) }}
+            >
+                {battle ? (
+                    // Error boundary : si le combat plante, on propose "Reprendre" (endBattle).
                     <BattleBoundary onReset={() => endBattle()}>
                         <BattleScreen />
                     </BattleBoundary>
-                    {/* Boutons (D-pad + A/B) en footer FIXE : ne bougent jamais. */}
-                    <BattleControls />
-                </div>
-            ) : (
-                <GameBoyShell
-                    reps={player.reps}
-                    repsCap={player.repsCap}
-                    onUp={() => move("up")}
-                    onDown={() => move("down")}
-                    onLeft={() => move("left")}
-                    onRight={() => move("right")}
-                    onA={() => {
-                        // Dans le casino, A face à un autre joueur = le défier.
-                        if (inCasino) {
-                            const target = facingRemote()
-                            if (target) { menuTapGuard.current = Date.now(); setInteractTarget({ userId: target.userId, nickname: target.nickname }); return }
-                        }
-                        pressA()
-                    }}
-                    onB={() => { if (!goBack()) pressB() }}
-                    onStart={() => { menuTapGuard.current = Date.now(); setMenu((m) => (m === "none" ? "pause" : "none")) }}
-                    onSelect={() => { menuTapGuard.current = Date.now(); setMenu((m) => (m === "none" ? "pause" : "none")) }}
-                >
+                ) : (
                     <MapView remotePlayers={remotePlayers} chatBubbles={chat.bubbles} myUserId={userId} arenaOpponents={arenaOpponents} onArenaClick={handleArenaClick} />
-                </GameBoyShell>
-            )}
+                )}
+            </GameBoyShell>
 
-            {/* Menu START (pause) */}
-            {!battle && menu === "pause" && (
+            {/* Menu START (pause). En COMBAT : ouvert aussi, mais limité aux viewers SÛRS
+                (Pokédex, Dex, Réputation, Hall of Fame) — pas d'édition d'équipe / d'attaques
+                ni de réinitialisation qui casseraient le combat en cours. */}
+            {menu === "pause" && (
                 <div style={menuOverlayStyle} onClick={() => { if (Date.now() - menuTapGuard.current < 350) return; setMenu("none") }}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                         <div style={menuTitleStyle}>MENU</div>
-                        <button style={menuBtnStyle} onClick={() => setMenu("team")}>🐾 ÉQUIPE</button>
-                        <button style={menuBtnStyle} onClick={() => setMenu("bag")}>🎒 SAC</button>
+                        {!battle && <button style={menuBtnStyle} onClick={() => setMenu("team")}>🐾 ÉQUIPE</button>}
+                        {!battle && <button style={menuBtnStyle} onClick={() => setMenu("bag")}>🎒 SAC</button>}
                         <button style={menuBtnStyle} onClick={() => router.push("/gamebook/yellow/pokedex")}>📷 POKÉDEX</button>
                         <button style={menuBtnStyle} onClick={() => router.push("/gamebook/yellow/dex")}>📖 DEX (CATALOGUE)</button>
-                        <button style={menuBtnStyle} onClick={() => setMenu("moves")}>⚔️ ATTAQUES</button>
+                        {!battle && <button style={menuBtnStyle} onClick={() => setMenu("moves")}>⚔️ ATTAQUES</button>}
                         <button style={menuBtnStyle} onClick={() => setMenu("reput")}>🏆 RÉPUTATION</button>
                         <button style={menuBtnStyle} onClick={() => setMenu("hof")}>🏛️ HALL OF FAME</button>
-                        {confirmReset ? (
+                        {!battle && (confirmReset ? (
                             <>
                                 <div style={{ fontSize: 11, color: "#c83030", fontWeight: 700, textAlign: "center" }}>
                                     Effacer TOUTE ta progression du Chapitre 2 ?<br />(équipe, Pokédex, badges, reps — IRRÉVERSIBLE)<br />
@@ -961,7 +970,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             </>
                         ) : (
                             <button style={menuBtnDimStyle} onClick={() => setConfirmReset(true)}>♻️ RECOMMENCER LE CHAPITRE 2</button>
-                        )}
+                        ))}
                         <button style={menuBtnDimStyle} onClick={() => setMenu("none")}>← FERMER</button>
                     </div>
                 </div>
@@ -1206,8 +1215,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 </div>
             )}
 
-            {/* Réputation PvP (matchs + Daemon fétiche + attaque favorite) */}
-            {!battle && menu === "reput" && (
+            {/* Réputation PvP (matchs + Daemon fétiche + attaque favorite) — viewer sûr, dispo en combat */}
+            {menu === "reput" && (
                 <div style={menuOverlayStyle} onClick={() => setMenu("pause")}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                         <div style={menuTitleStyle}>🏆 RÉPUTATION PvP</div>
@@ -1240,7 +1249,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
 
             {/* Boutique (vendeur) */}
             {!battle && menu === "moves" && <MovesPanel close={() => setMenu("pause")} />}
-            {!battle && menu === "hof" && <HallOfFameViewer close={() => setMenu("pause")} />}
+            {menu === "hof" && <HallOfFameViewer close={() => setMenu("pause")} />}
 
             {/* ZONE DE COMBAT — entrée Tour (placeholder, non-bloquant : marche pour sortir) */}
             {!battle && !run && mapPlayer.mapId === "yellow_combat_tour" && !dialogue && player.team.length > 0 && (
@@ -2184,16 +2193,6 @@ const pageStyle: React.CSSProperties = {
     alignItems: "center",        // bloc compact centré verticalement → boutons dans la zone du pouce, pas de scroll
     justifyContent: "center",    // centrée horizontalement sur grand écran
     padding: 0,
-}
-
-// Combat plein écran (hors coque) : centré, scrollable si le contenu dépasse.
-// paddingBottom réserve la place du footer de contrôles FIXE (sinon il masque
-// les dernières options).
-const battleWrapStyle: React.CSSProperties = {
-    width: "100%", maxWidth: 480, margin: "0 auto",
-    padding: "14px 12px", boxSizing: "border-box",
-    maxHeight: "100dvh", overflowY: "auto",
-    paddingBottom: `calc(${BATTLE_CONTROLS_HEIGHT}px + env(safe-area-inset-bottom, 0px) + 16px)`,
 }
 
 // PvP — bandeau d'attente + bouton/boîte d'abandon (fixés, au-dessus du combat).

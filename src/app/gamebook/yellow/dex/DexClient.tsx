@@ -9,7 +9,6 @@ import { useRouter } from "next/navigation"
 import { SPECIES, DEX_COUNT } from "@/lib/gamebook/yellow/data/species"
 import { POKE_TYPES, type PokeType, type SpeciesData } from "@/lib/gamebook/yellow/battle/types"
 import { TYPE_COLORS, baseStatTotal } from "./dexShared"
-import TypeChip from "./TypeChip"
 
 // Vignette : sprite PNG, repli sur l'initiale si le fichier manque.
 function DexIcon({ sp }: { sp: SpeciesData }) {
@@ -44,7 +43,7 @@ export default function DexClient() {
         <div style={S.root}>
             <div style={S.header}>
                 <div style={S.topRow}>
-                    <button onClick={() => router.back()} style={S.back}>← Retour</button>
+                    <button onClick={() => router.push("/gamebook/yellow")} style={S.back}>← Retour</button>
                     <button onClick={() => router.push("/gamebook/yellow/dex/types")} style={S.chartBtn}>📊 Table des types</button>
                 </div>
                 <h1 style={S.title}>📖 DEX NEXUS</h1>
@@ -83,7 +82,9 @@ export default function DexClient() {
                         <DexIcon sp={sp} />
                         <div style={S.body}>
                             <div style={S.name}>{sp.name.toUpperCase()}</div>
-                            <div style={S.chips}>{sp.types.map((t) => <TypeChip key={t} type={t} />)}</div>
+                            <div style={S.chips}>{sp.types.map((t) => (
+                                <span key={t} style={{ ...S.chip, background: TYPE_COLORS[t] }}>{t}</span>
+                            ))}</div>
                         </div>
                         <div style={S.bst}>
                             <div style={S.bstNum}>{baseStatTotal(sp.baseStats)}</div>

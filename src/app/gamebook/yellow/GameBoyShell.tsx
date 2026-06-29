@@ -19,6 +19,8 @@ export interface GameBoyShellProps {
     /** Reps disponibles (affichés en jauge à côté de POWER). */
     reps?: number
     repsCap?: number
+    /** Neutralise le D-pad (flèches grisées + inertes), ex. pendant l'écran de chargement de combat. */
+    dpadDisabled?: boolean
     onUp?: () => void
     onDown?: () => void
     onLeft?: () => void
@@ -44,6 +46,7 @@ export default function GameBoyShell({
     children,
     reps,
     repsCap,
+    dpadDisabled,
     onUp,
     onDown,
     onLeft,
@@ -112,23 +115,27 @@ export default function GameBoyShell({
                 <div style={dpadContainerStyle}>
                     <button
                         aria-label="Haut"
-                        style={{ ...dpadButtonStyle, ...dpadUpStyle }}
+                        disabled={dpadDisabled}
+                        style={{ ...dpadButtonStyle, ...dpadUpStyle, ...(dpadDisabled ? dpadDisabledStyle : null) }}
                         {...holdHandlers(onUp)}
                     >▲</button>
                     <button
                         aria-label="Gauche"
-                        style={{ ...dpadButtonStyle, ...dpadLeftStyle }}
+                        disabled={dpadDisabled}
+                        style={{ ...dpadButtonStyle, ...dpadLeftStyle, ...(dpadDisabled ? dpadDisabledStyle : null) }}
                         {...holdHandlers(onLeft)}
                     >◀</button>
                     <div style={dpadCenterStyle} />
                     <button
                         aria-label="Droite"
-                        style={{ ...dpadButtonStyle, ...dpadRightStyle }}
+                        disabled={dpadDisabled}
+                        style={{ ...dpadButtonStyle, ...dpadRightStyle, ...(dpadDisabled ? dpadDisabledStyle : null) }}
                         {...holdHandlers(onRight)}
                     >▶</button>
                     <button
                         aria-label="Bas"
-                        style={{ ...dpadButtonStyle, ...dpadDownStyle }}
+                        disabled={dpadDisabled}
+                        style={{ ...dpadButtonStyle, ...dpadDownStyle, ...(dpadDisabled ? dpadDisabledStyle : null) }}
                         {...holdHandlers(onDown)}
                     >▼</button>
                 </div>
@@ -182,8 +189,12 @@ const shellStyle: React.CSSProperties = {
     // scroll, pas de grand vide). Hauteur = contenu naturel.
     boxSizing: "border-box",
     background: `linear-gradient(180deg, ${SHELL_YELLOW} 0%, ${SHELL_YELLOW_DARK} 100%)`,
-    borderRadius: "0 0 36px 0",
-    padding: "6px 8px 12px",
+    // Coins légèrement arrondis pour un rendu plus doux ; le bas-droite garde
+    // son grand arrondi GBC signature (36px).
+    borderRadius: "14px 14px 36px 14px",
+    // Bas plus généreux (28px) → la zone des boutons respire, ratio plus proche
+    // d'une vraie GBC où le bloc commandes occupe une bonne moitié de la coque.
+    padding: "6px 8px 20px",
     boxShadow:
         "inset 0 2px 4px rgba(255,255,255,0.4), " +
         "inset 0 -4px 12px rgba(0,0,0,0.15), " +
@@ -203,7 +214,7 @@ const screenBezelStyle: React.CSSProperties = {
     // Le bas garde ~26px pour loger la rangée POWER + jauge de reps.
     padding: "8px 8px 26px",
     boxShadow: "inset 0 4px 8px rgba(0,0,0,0.4)",
-    marginBottom: 10,
+    marginBottom: 18,
     position: "relative",
 }
 
@@ -283,7 +294,7 @@ const controlsRowStyle: React.CSSProperties = {
     justifyContent: "space-between",
     alignItems: "center",
     padding: "0 8px",
-    marginBottom: 12,    // boutons juste sous l'écran, compact
+    marginBottom: 20,    // espace entre D-pad/A-B et la rangée START/SELECT
 }
 
 // D-pad : taille 144×144 (3×48) au lieu de 120×120 (3×40)
@@ -310,6 +321,11 @@ const dpadButtonStyle: React.CSSProperties = {
         "inset 0 2px 2px rgba(255,255,255,0.2), " +
         "inset 0 -2px 2px rgba(0,0,0,0.4)",
     touchAction: "manipulation",
+}
+
+const dpadDisabledStyle: React.CSSProperties = {
+    opacity: 0.4,
+    cursor: "default",
 }
 
 const dpadUpStyle: React.CSSProperties = {
@@ -387,7 +403,7 @@ const startSelectRowStyle: React.CSSProperties = {
     justifyContent: "center",
     gap: 24,
     transform: "rotate(-12deg)",
-    marginBottom: 12,
+    marginBottom: 18,
 }
 
 const startSelectButtonStyle: React.CSSProperties = {

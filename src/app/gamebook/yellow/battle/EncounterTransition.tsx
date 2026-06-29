@@ -8,6 +8,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useBattle } from "@/lib/gamebook/yellow/store/battleStore"
+import { setEncounterFxActive } from "@/lib/gamebook/yellow/store/encounterFxStore"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { pickTransition, ETX_VARIANTS, type EtxProfile, type EtxVariant } from "@/lib/gamebook/yellow/data/encounterTransitions"
 
@@ -47,6 +48,12 @@ export default function EncounterTransition() {
         }
         wasActive.current = !!battle
     }, [battle])
+
+    // Signale à la coque Game Boy que l'écran de chargement est affiché → D-pad neutralisé.
+    useEffect(() => {
+        setEncounterFxActive(!!fx)
+        return () => setEncounterFxActive(false)
+    }, [fx])
 
     useEffect(() => {
         if (!fx) return

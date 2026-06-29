@@ -249,8 +249,9 @@ export function resolveTurn(prev: BattleState, playerAction: PlayerAction): Batt
             return commit(state, events, rng, prev.turn, /*advance*/ false)
         }
         // Proba de fuite DÉGRESSIVE (anti-spam de rencontres, cf. battleStore). Succès → on file.
+        // (Pas de message intermédiaire « Tu prends la fuite » : l'écran de fin affiche déjà
+        //  « Tu as pris la fuite. » — un seul temps de validation.)
         if (rng.chance(state.fleeChance)) {
-            events.push({ kind: "message", text: "Tu prends la fuite !" })
             state.phase = "ended"
             state.outcome = "run"
             events.push({ kind: "end", outcome: "run" })

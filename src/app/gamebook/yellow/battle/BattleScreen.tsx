@@ -10,7 +10,8 @@
 import { useEffect, useRef, useState } from "react"
 import { useBattle, submitPlayerAction, endBattle, getBattleEnergy, setBattleInputHandler, resolveBattleLearn, type BattleInput } from "@/lib/gamebook/yellow/store/battleStore"
 import { speciesOf, maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
-import type { BattleMon } from "@/lib/gamebook/yellow/battle/types"
+import { isDamaging, type BattleMon, type MoveData } from "@/lib/gamebook/yellow/battle/types"
+import { moveCategory } from "@/lib/gamebook/yellow/battle/typeChart"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { expForLevel } from "@/lib/gamebook/yellow/battle/xp"
 import { ITEMS } from "@/lib/gamebook/yellow/data/items"
@@ -56,6 +57,7 @@ export default function BattleScreen() {
     const [shakeE, setShakeE] = useState(0)
     const [ball, setBall] = useState<{ phase: "throw" | "shake" | "result" | "miss"; shakes: number; caught: boolean } | null>(null)
     const [cursor, setCursor] = useState(0)
+    const selRowRef = useRef<HTMLButtonElement | null>(null) // option focalisée → maintenue visible (scroll auto)
     const [atkFx, setAtkFx] = useState<{ spec: AttackFxSpec; side: "player" | "enemy"; key: number } | null>(null)
     const atkKeyRef = useRef(0)
     const lastMoveSlotRef = useRef(0) // #3 : mémorise la dernière attaque choisie (rouvre dessus)
@@ -171,6 +173,9 @@ export default function BattleScreen() {
         // options dépend de menu/step → on garde ces deps (ajouter `options` relancerait à chaque rendu).
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [menu, step])
+    // Garde l'option sélectionnée VISIBLE dans les listes scrollables (Attaques, Sac…) quand on
+    // navigue à la flèche → jamais d'élément sélectionné hors cadre.
+    useEffect(() => { selRowRef.current?.scrollIntoView({ block: "nearest" }) }, [cursor, menu, step])
 
     // Anti-bug "sprite d'un Daemon K.O. qui revient" (combats multi-Daemon, ex. ACE) :
     // dès que le playback d'un tour est terminé, on resynchronise les index AFFICHÉS sur
@@ -264,17 +269,15 @@ export default function BattleScreen() {
     // L'ennemi est "aspiré" par la ball (lancer/secousses, et capture réussie).
     const enemyHiddenByBall = !!ball && (ball.phase === "throw" || ball.phase === "shake" || (ball.phase === "result" && ball.caught))
 
-    // Énergie = LE MÊME portefeuille de reps que la jauge GameBoy (X/repsCap).
-    // (Le cap d'énergie PAR COMBAT reste géré côté store et affiché dans le menu Attaque.)
+    // Énergie = LE MÊME portefeuille de reps que la jauge GameBoy (affichée SOUS l'écran
+    // par la coque). Le cap d'énergie PAR COMBAT est affiché dans le menu Attaque.
     const reps = repsWallet.reps
-    const repsCap = repsWallet.repsCap
-    const walletPct = Math.max(0, Math.min(100, (reps / Math.max(1, repsCap)) * 100))
 
     // ===== Options du menu courant (liste unifiée pilotable au curseur) =====
     const energy = getBattleEnergy()
     const remainingEnergy = Math.max(0, energy.cap - energy.spent)
     const items = repsWallet.items
-    type Opt = { label: React.ReactNode; onSelect: () => void; disabled?: boolean; right?: string; moveSlot?: number }
+    type Opt = { label: React.ReactNode; onSelect: () => void; disabled?: boolean; right?: string; moveSlot?: number; detail?: string }
     const options: Opt[] = []
     let canBack = false
     if (playbackDone && isEnded) {
@@ -318,16 +321,15 @@ export default function BattleScreen() {
             // (la déduction de reps est déjà sautée côté store pour le PvP).
             const canUse = (c: number) => battle.pvp || (c <= reps && c <= remainingEnergy)
             // À court d'énergie → Charge Désespérée EN PREMIER (ergonomie : plus en 5e position).
-            if (!costs.some(canUse)) options.push({ label: "💥 Charge Désespérée (gratuit)", onSelect: doStruggle })
+            if (!costs.some(canUse)) options.push({ label: "💥 Charge Désespérée (gratuit)", onSelect: doStruggle, detail: "Charge de secours — n'utilise aucune énergie, mais le lanceur subit un léger contrecoup." })
             player.moves.forEach((slot, i) => {
                 const mv = getMove(slot.moveId)
                 options.push({
                     label: `${mv?.name ?? slot.moveId}${battle.pvp ? "" : `  ⚡${costs[i]}`}`,
-                    right: TYPE_FR[mv?.type ?? ""] ?? "",
                     onSelect: () => doMove(i), disabled: !canUse(costs[i]), moveSlot: i,
                 })
             })
-            options.push({ label: "← RETOUR", onSelect: () => setMenu("root") })
+            options.push({ label: "RETOUR", onSelect: () => setMenu("root"), detail: "Revenir au menu de combat sans attaquer." })
             canBack = true
         } else if (menu === "bag") {
             const owned = (id: string) => (items[id] ?? 0) > 0
@@ -342,12 +344,12 @@ export default function BattleScreen() {
                 .forEach((it) => options.push({ label: `${it.name} ×${items[it.id]}`, onSelect: () => doItem(it.id) }))
             if (battle.isWild) Object.values(ITEMS).filter((it) => it.category === "BALL" && owned(it.id))
                 .forEach((b) => options.push({ label: `${b.name} ×${items[b.id]}`, onSelect: () => throwBall(b.id) }))
-            options.push({ label: "← RETOUR", onSelect: () => setMenu("root") })
+            options.push({ label: "RETOUR", onSelect: () => setMenu("root") })
             canBack = true
         } else if (menu === "confirmRun") {
             // "Annuler" en premier → le curseur démarre dessus (défaut sûr : un
             // appui A réflexe annule la fuite au lieu de la confirmer).
-            options.push({ label: "← Annuler", onSelect: () => setMenu("root") })
+            options.push({ label: "❌ Annuler", onSelect: () => setMenu("root") })
             options.push({ label: "🏃 Confirmer la fuite", onSelect: run })
             canBack = true
         } else {
@@ -381,93 +383,131 @@ export default function BattleScreen() {
         else if (a === "b" && canBack) setMenu("root")
     }
 
+    // Option rendue en LIGNE (menu Commandes, Attaque, Sac, Rester/Changer) — curseur ▶ + libellé + type à droite.
+    const renderRow = (o: Opt, i: number) => (
+        <button
+            key={i}
+            ref={i === cursor ? selRowRef : undefined}
+            disabled={o.disabled}
+            style={{ ...(o.disabled ? S.rowDim : S.row), ...(i === cursor ? S.rowFocus : null) }}
+            onClick={(e) => { e.stopPropagation(); setCursor(i); if (!o.disabled) o.onSelect() }}
+        >
+            <span style={{ opacity: i === cursor ? 1 : 0, flexShrink: 0 }}>▶</span>
+            <span style={{ flex: 1, textAlign: "left", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{o.label}</span>
+            {o.right ? <span style={S.rowRight}>{o.right}</span> : null}
+        </button>
+    )
     return (
         <div style={S.root} onClick={waitingForTap ? advance : undefined}>
-            {/* ===== Bandeau énergie (= portefeuille de reps, identique à la coque) ===== */}
-            <div style={S.energyBar}>
-                <span style={{ fontSize: 13 }}>⚡</span>
-                <div style={S.energyTrack}><div style={{ ...S.energyFill, width: `${walletPct}%` }} /></div>
-                <span style={S.energyTxt}>{reps}/{repsCap}</span>
-            </div>
-
-            {/* ===== Scène ===== */}
-            <div style={S.scene}>
-                {/* Sauvage : 1 seul ennemi → le pip d'équipe est inutile. On affiche plutôt le statut
-                    Pokédex : pokéball ROUGE = espèce déjà capturée, pokéball grisée = encore à attraper. */}
-                {battle.isWild
-                    ? <WildDexPip caught={dex.caught.includes(showEnemy.speciesId)} />
-                    : <TeamPips team={battle.enemy.team} activeIdx={showEIdx} activeHp={showEHp} align="left" />}
-                <div style={S.enemyRow}>
-                    {/* key sur l'uid : au changement de Daemon (switchIn), la barre se REMONTE
-                        nette au lieu d'animer 0%→100% (le "flash plein" perçu à chaque K.O.).
+            {/* ===== Champ de bataille (diagonale Gen 1/2 : ennemi haut-gauche, joueur bas-droite) ===== */}
+            <div style={S.field}>
+                {/* Ennemi : fiche + pips/pokéball Pokédex, ancrés en haut-gauche. */}
+                <div style={S.enemySide}>
+                    {battle.isWild
+                        ? <WildDexPip caught={dex.caught.includes(showEnemy.speciesId)} />
+                        : <TeamPips team={battle.enemy.team} activeIdx={showEIdx} activeHp={showEHp} align="left" />}
+                    {/* key sur l'uid : au switchIn, la barre se REMONTE nette (pas de flash 0→100%).
                         #4 : pendant la fenêtre d'envoi, on montre le PROCHAIN Daemon (showEnemy). */}
                     <MonInfo key={showEnemy.uid} mon={showEnemy} hp={showEHp} max={showEMax} />
-                    <div style={S.enemySpot}>
-                        {!enemyHiddenByBall && <MonSprite mon={showEnemy} facing="front" alive={showEHp > 0} hitKey={shakeE} />}
-                        {ball && <BallAnim phase={ball.phase} shakes={ball.shakes} caught={ball.caught} />}
-                    </div>
                 </div>
-                <div style={S.playerRow}>
-                    {/* victory : halo doré pulsé sur le gagnant en PvP, visible le temps du fondu du recap. */}
+                <div style={S.enemySpot}>
+                    {!enemyHiddenByBall && <MonSprite mon={showEnemy} facing="front" alive={showEHp > 0} hitKey={shakeE} />}
+                    {ball && <BallAnim phase={ball.phase} shakes={ball.shakes} caught={ball.caught} />}
+                </div>
+                {/* Joueur : sprite de dos en bas-gauche, fiche + pips en bas-droite. */}
+                <div style={S.playerSpot}>
                     <MonSprite mon={player} facing="back" alive={pHp > 0} hitKey={shakeP} victory={playbackDone && playerWon && battle.pvp} />
-                    <MonInfo key={player.uid} mon={player} self hp={pHp} max={pMax} />
                 </div>
-                <TeamPips team={battle.player.team} activeIdx={pIdx} activeHp={pHp} align="right" />
+                <div style={S.playerSide}>
+                    <MonInfo key={player.uid} mon={player} self hp={pHp} max={pMax} />
+                    {!battle.isWild && <TeamPips team={battle.player.team} activeIdx={pIdx} activeHp={pHp} align="right" />}
+                </div>
                 {atkFx && <AttackFx key={atkFx.key} spec={atkFx.spec} attackerSide={atkFx.side} onDone={() => setAtkFx(null)} />}
-                {/* Transition pré-combat : RENDUE DANS la scène (overflow:hidden) → elle fait
-                    pile la taille du cadre de combat, plus le plein écran. */}
                 <EncounterTransition />
-                {/* PvP : recap "commentateur" RICHE pour les DEUX joueurs (gagnant ET perdant, version
-                    adaptée). Hors PvP : célébration GOAT/FLOP UNIQUEMENT contre les Dresseurs ; en combat
-                    SAUVAGE (KO sauvage, capture, fuite) → fin sobre, juste le message + QUITTER. */}
-                {playbackDone && (battle.pvp
-                    ? (isEnded && <PvpRecap won={playerWon} playerTeam={battle.player.team} enemyTeam={battle.enemy.team} onClose={() => endBattle()} />)
-                    : (playerWon && !battle.isWild && <VictoryCelebration team={battle.player.team} />))}
             </div>
 
-            {/* ===== Boîte du bas : message OU liste d'options (curseur D-pad/A/B + tactile) ===== */}
-            <div style={S.bottom}>
-                {!playbackDone ? (
-                    <div style={S.msgBox} onClick={advance}>
-                        <p style={S.msgText}>{shownMsg}</p>
-                        {waitingForTap && <span style={S.next}>▶</span>}
-                    </div>
-                ) : (
-                    <>
-                        {/* Ligne d'info : TOUJOURS rendue (hauteur réservée) → les
-                            options gardent exactement le même Y d'un menu à l'autre. */}
-                        <div style={S.menuHint}>
-                            {isEnded ? (
-                                <span>{battle.outcome === "win" ? "Tu remportes le combat !" : battle.outcome === "lose" ? "Tous tes Daemons sont K.O…" : battle.outcome === "run" ? "Tu as pris la fuite." : battle.outcome === "enemyfled" ? "Le Daemon a pris la fuite !" : battle.outcome === "caught" ? "Daemon capturé !" : "Fin du combat."}</span>
-                            ) : needSwitch ? (
-                                <span>Choisis un Daemon !</span>
-                            ) : awaitSendOut ? (
-                                <span>{menu === "switch" ? "Choisis un Daemon !" : `L'adversaire envoie ${sendOutName} ! [${sendOutTypes}]`}</span>
-                            ) : menu === "confirmRun" ? (
-                                <span>Fuir le combat ? (B = annuler)</span>
-                            ) : menu === "moves" ? (
-                                battle.pvp
-                                    ? <><span>⚡ ∞ — combat amical</span><span></span></>
-                                    : <><span>⚡ {remainingEnergy}/{energy.cap} ce combat</span><span>💪 {reps}</span></>
-                            ) : <span>&nbsp;</span>}
-                        </div>
-                        <div style={S.optList}>
-                            {options.map((o, i) => (
-                                <button
-                                    key={i}
-                                    style={{ ...(o.disabled ? S.btnDim : S.btn), ...(i === cursor ? S.btnFocus : null) }}
-                                    disabled={o.disabled}
-                                    onClick={() => { setCursor(i); if (!o.disabled) o.onSelect() }}
-                                >
-                                    <span style={{ opacity: i === cursor ? 1 : 0, flexShrink: 0 }}>▶ </span>
-                                    <span style={{ flex: 1, textAlign: "left" }}>{o.label}</span>
-                                    {o.right ? <span style={{ opacity: 0.5, fontWeight: 600, fontSize: 11, marginLeft: 8, flexShrink: 0 }}>{o.right}</span> : null}
-                                </button>
-                            ))}
-                        </div>
-                    </>
-                )}
+            {/* ===== Boîte de dialogue / commandes — RENDUE DANS l'écran (à la Game Boy) ===== */}
+            <div style={S.dialog}>
+                {(() => {
+                    // Message en cours de lecture (coups, annonces) : pleine largeur + ▶ pour avancer.
+                    if (!playbackDone) {
+                        return (
+                            <div style={S.msgBox} onClick={advance}>
+                                <p style={S.msgText}>{shownMsg}</p>
+                                {waitingForTap && <span style={S.next}>▶</span>}
+                            </div>
+                        )
+                    }
+                    // Fin de combat : message + QUITTER.
+                    if (isEnded) {
+                        const txt = battle.outcome === "win" ? "Tu remportes le combat !" : battle.outcome === "lose" ? "Tous tes Daemons sont K.O…" : battle.outcome === "run" ? "Tu as pris la fuite." : battle.outcome === "enemyfled" ? "Le Daemon a pris la fuite !" : battle.outcome === "caught" ? "Daemon capturé !" : "Fin du combat."
+                        return (
+                            <>
+                                <div style={S.msgBox}><p style={S.msgText}>{txt}</p></div>
+                                <div style={S.cmdBox}>{options.map((o, i) => renderRow(o, i))}</div>
+                            </>
+                        )
+                    }
+                    // Sélection d'attaque : liste à GAUCHE + fiche détaillée de l'attaque à DROITE.
+                    if (menu === "moves") {
+                        const sel = options[cursor]
+                        const selMv = sel?.moveSlot != null ? getMove(player.moves[sel.moveSlot]?.moveId ?? "") : undefined
+                        return (
+                            <>
+                                <div style={S.listBox}>{options.map((o, i) => renderRow(o, i))}</div>
+                                <div style={S.detailBox}>
+                                    {selMv ? <MoveDetails mv={selMv} /> : <div style={S.detailHint}>{sel?.detail ?? ""}</div>}
+                                </div>
+                            </>
+                        )
+                    }
+                    // Sac : liste d'objets, pleine largeur.
+                    if (menu === "bag") {
+                        return <div style={S.listBoxWide}>{options.map((o, i) => renderRow(o, i))}</div>
+                    }
+                    // Confirmation de fuite : message + OUI / NON.
+                    if (menu === "confirmRun") {
+                        return (
+                            <>
+                                <div style={S.msgBox}><p style={S.msgText}>Fuir le combat ?</p></div>
+                                <div style={S.cmdBox}>{options.map((o, i) => renderRow(o, i))}</div>
+                            </>
+                        )
+                    }
+                    // Fenêtre d'envoi adverse (Dresseur) : message + RESTER / CHANGER.
+                    if (awaitSendOut && menu !== "switch") {
+                        return (
+                            <>
+                                <div style={S.msgBox}><p style={S.msgText}>L&apos;adversaire envoie {sendOutName} !{sendOutTypes ? ` [${sendOutTypes}]` : ""}</p></div>
+                                <div style={S.cmdBoxTall}>{options.map((o, i) => renderRow(o, i))}</div>
+                            </>
+                        )
+                    }
+                    // Menu racine : « Que doit faire X ? » + commandes 2×2 (ATTAQUE / DAEMON / SAC / FUITE).
+                    return (
+                        <>
+                            <div style={S.msgBox}><p style={S.msgText}>Que doit faire<br />{displayName(player).toUpperCase()} ?</p></div>
+                            <div style={S.cmdBox}>{options.map((o, i) => renderRow(o, i))}</div>
+                        </>
+                    )
+                })()}
             </div>
+
+            {/* ===== Écran d'équipe plein cadre (changement de Daemon, façon Gen 1/2) ===== */}
+            {playbackDone && (menu === "switch" || needSwitch) && (
+                <PartyScreen
+                    team={battle.player.team}
+                    options={options}
+                    cursor={cursor}
+                    onPick={(i) => { setCursor(i); const o = options[i]; if (o && !o.disabled) o.onSelect() }}
+                />
+            )}
+
+            {/* PvP : recap "commentateur" pour les DEUX joueurs. Hors PvP : célébration GOAT/FLOP
+                contre les Dresseurs seulement (combat sauvage → fin sobre). Overlay plein écran. */}
+            {playbackDone && (battle.pvp
+                ? (isEnded && <PvpRecap won={playerWon} playerTeam={battle.player.team} enemyTeam={battle.enemy.team} onClose={() => endBattle()} />)
+                : (playerWon && !battle.isWild && <VictoryCelebration team={battle.player.team} />))}
 
             {/* #7 — APPRENTISSAGE EN COMBAT (slots pleins) : apprendre maintenant / plus tard. */}
             {learnMoveId && (
@@ -504,6 +544,10 @@ export default function BattleScreen() {
             )}
 
             <style jsx>{`
+                @keyframes bobNext {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(2px); }
+                }
                 @keyframes hitShake {
                     0% { transform: translateX(0); }
                     15% { transform: translateX(-6px); }
@@ -658,23 +702,20 @@ function TeamPips({ team, activeIdx, activeHp, align }: { team: BattleMon[]; act
     )
 }
 
-// Indicateur Pokédex en combat SAUVAGE : pokéball ROUGE = espèce déjà capturée,
-// pokéball grisée/transparente = pas encore attrapée (remplace le pip d'équipe à 1, inutile).
+// Indicateur Pokédex en combat SAUVAGE : pip ROUGE/crème = espèce déjà capturée,
+// pip grisé = pas encore attrapée. Réutilise le rendu des pips d'équipe (TeamPips).
 function WildDexPip({ caught }: { caught: boolean }) {
     return (
         <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "0 6px", minHeight: 16 }}
             title={caught ? "Espèce déjà capturée" : "Espèce pas encore capturée"}>
-            <div style={{
-                position: "relative", width: 15, height: 15, borderRadius: "50%",
-                border: "2px solid #1c1408", overflow: "hidden", background: "#f5f5f5",
-                opacity: caught ? 1 : 0.45, filter: caught ? "none" : "grayscale(1)",
+            <span style={{
+                width: 14, height: 14, borderRadius: "50%", border: "2px solid #1c1408",
+                background: caught ? "linear-gradient(#e23c2a 0 50%, #f4ecd4 50% 100%)" : "#9a9a9a",
+                opacity: caught ? 1 : 0.45,
                 boxShadow: caught ? "0 1px 2px rgba(0,0,0,0.35)" : "none",
-            }}>
-                <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "50%", background: caught ? "linear-gradient(#e8503a,#c8301a)" : "#9a9a9a" }} />
-                <div style={{ position: "absolute", top: "calc(50% - 1px)", left: 0, right: 0, height: 2, background: "#1c1408" }} />
-                <div style={{ position: "absolute", top: "calc(50% - 3px)", left: "calc(50% - 3px)", width: 6, height: 6, borderRadius: "50%", background: "#f8f8e8", border: "1px solid #1c1408" }} />
-            </div>
-            <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 0.5, color: caught ? "#1c1408" : "#3a8ee0", opacity: 0.85 }}>
+                flexShrink: 0,
+            }} />
+            <span style={{ fontSize: 9, fontWeight: 800, lineHeight: 1, letterSpacing: 0.5, color: caught ? "#1c1408" : "#3a8ee0", opacity: 0.85 }}>
                 {caught ? "CAPTURÉ" : "NOUVEAU !"}
             </span>
         </div>
@@ -713,6 +754,126 @@ function MonSprite({ mon, facing, alive, hitKey, victory }: { mon: BattleMon; fa
 }
 
 
+// Libellés FR courts pour la fiche d'attaque.
+const STATUS_FR: Record<string, string> = { BURN: "Brûlure", PARALYSIS: "Paralysie", POISON: "Poison", TOXIC: "Poison grave", SLEEP: "Sommeil", FREEZE: "Gel" }
+const VOLATILE_FR: Record<string, string> = { SEEDED: "Vampigraine", CONFUSION: "Confusion" }
+const STAGE_FR: Record<string, string> = { atk: "ATQ", def: "DÉF", spe: "VIT", spc: "SPÉ", acc: "Préc.", eva: "Esq." }
+
+// Résumé EN UNE LIGNE de l'effet d'une attaque (le plus saillant) — null si rien de notable.
+function moveEffectTag(mv: MoveData): string | null {
+    const e = mv.effect
+    if (!e) return null
+    if (e.recoilPct) return `Recul : ${e.recoilPct}% des dégâts subis`
+    if (e.drainPct) return `Vol de PV : ${e.drainPct}%`
+    if (e.healPct) return `Soigne ${e.healPct}% des PV`
+    if (e.fixedDamage) return `Inflige ${e.fixedDamage} PV fixes`
+    if (e.multiHit) { const [a, b] = e.multiHit; return a === b ? `Frappe ${a}×` : `Frappe ${a} à ${b}×` }
+    if (e.inflictStatus) { const s = STATUS_FR[e.inflictStatus] ?? e.inflictStatus; return e.chance && e.chance < 100 ? `${s} (${e.chance}%)` : s }
+    if (e.inflictVolatile) return VOLATILE_FR[e.inflictVolatile] ?? null
+    if (e.flinch) return e.chance ? `Peut apeurer (${e.chance}%)` : "Peut apeurer"
+    if (e.statChanges?.length) {
+        const c = e.statChanges[0]
+        const sign = c.stages > 0 ? `+${c.stages}` : `${c.stages}`
+        return `${sign} ${STAGE_FR[c.stat] ?? c.stat}${c.target === "self" ? "" : " adv."}`
+    }
+    if (e.highCrit) return "Taux de critique élevé"
+    if (e.twoTurn || e.dig || e.fly) return "Charge sur 2 tours"
+    if (e.sureHit) return "Ne rate jamais"
+    return null
+}
+
+// Fiche détaillée d'une attaque (panneau de droite du menu Attaque) — façon « carte » du jeu :
+// type + catégorie, puissance / précision / PP, puis l'effet et un texte de saveur.
+function MoveDetails({ mv }: { mv: MoveData }) {
+    // Badge catégorie IDENTIQUE à la fiche d'équipe (PHYS rouge / SPÉ bleu / STATUT violet).
+    const cat = mv.power <= 0 ? { label: "STATUT", color: "#8868c0" }
+        : (mv.category ?? moveCategory(mv.type)) === "PHYSICAL" ? { label: "PHYS", color: "#c0532a" }
+            : { label: "SPÉ", color: "#3a7ae0" }
+    const tag = moveEffectTag(mv)
+    return (
+        <>
+            <div style={S.detailName}>{mv.name}</div>
+            <div style={S.detailMeta}>
+                <span style={{ ...S.typeChip, background: TYPE_COLORS[mv.type] }}>{TYPE_FR[mv.type] ?? mv.type}</span>
+                <span style={{ ...S.typeChip, background: cat.color }}>{cat.label}</span>
+            </div>
+            <div style={S.detailStats}>
+                <span>{isDamaging(mv) ? `⚡ Puiss. ${mv.power}` : "Statut"}</span>
+                {mv.accuracy > 0 ? <span>🎯 {mv.accuracy}%</span> : <span>🎯 ∞</span>}
+            </div>
+            {tag && <div style={S.detailEffect}>{tag}</div>}
+        </>
+    )
+}
+
+// Petit sprite statique pour la liste d'équipe (sans anim, repli sur l'initiale).
+function PartySprite({ mon }: { mon: BattleMon }) {
+    const sp = speciesOf(mon)
+    const [err, setErr] = useState(false)
+    return (
+        <div style={S.partySprite}>
+            {err
+                ? <span style={{ fontSize: 16, fontWeight: 900 }}>{sp.name[0]}</span>
+                : <img src={sp.sprite} alt="" onError={() => setErr(true)} style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated" }} />}
+        </div>
+    )
+}
+
+// Écran d'équipe plein cadre (façon Gen 1/2) : sprite + nom + niveau + barre de PV par Daemon.
+// Piloté par le même curseur/`options` que le reste du combat (D-pad/A/B + tactile).
+function PartyScreen({ team, options, cursor, onPick }: {
+    team: BattleMon[]
+    options: { onSelect: () => void; disabled?: boolean }[]
+    cursor: number
+    onPick: (i: number) => void
+}) {
+    const hasCancel = options.length > team.length // un « RETOUR » suit la liste
+    // Garde l'option sélectionnée VISIBLE quand on navigue à la flèche (liste scrollable).
+    const selRef = useRef<HTMLButtonElement | null>(null)
+    useEffect(() => { selRef.current?.scrollIntoView({ block: "nearest" }) }, [cursor])
+    return (
+        <div style={S.partyOverlay} onClick={(e) => e.stopPropagation()}>
+            <div style={S.partyList}>
+                {team.map((m, i) => {
+                    const o = options[i]
+                    const ko = m.currentHp <= 0
+                    const max = maxHpOf(m)
+                    const pct = Math.max(0, Math.min(100, (m.currentHp / max) * 100))
+                    const col = pct > 50 ? "#48c048" : pct > 20 ? "#f0c040" : "#e04040"
+                    return (
+                        <button
+                            key={m.uid}
+                            ref={i === cursor ? selRef : undefined}
+                            disabled={o?.disabled}
+                            style={{ ...(o?.disabled ? S.partyRowDim : S.partyRow), ...(i === cursor ? S.partyRowFocus : null) }}
+                            onClick={() => onPick(i)}
+                        >
+                            <span style={{ opacity: i === cursor ? 1 : 0, flexShrink: 0 }}>▶</span>
+                            <PartySprite mon={m} />
+                            <span style={S.partyName}>{displayName(m).toUpperCase()}</span>
+                            <span style={S.partyLvl}>N.{m.level}</span>
+                            <div style={S.partyHpWrap}>
+                                <div style={S.partyHpTrack}><div style={{ ...S.partyHpFill, width: `${pct}%`, background: col }} /></div>
+                                <span style={S.partyHpNum}>{ko ? "K.O." : `${Math.max(0, Math.ceil(m.currentHp))}/${max}`}</span>
+                            </div>
+                        </button>
+                    )
+                })}
+                {hasCancel && (
+                    <button
+                        ref={cursor === team.length ? selRef : undefined}
+                        style={{ ...S.partyRow, ...(cursor === team.length ? S.partyRowFocus : null) }}
+                        onClick={() => onPick(team.length)}
+                    >
+                        <span style={{ opacity: cursor === team.length ? 1 : 0, flexShrink: 0 }}>▶</span>
+                        <span style={S.partyName}>RETOUR</span>
+                    </button>
+                )}
+            </div>
+        </div>
+    )
+}
+
 // ============================================================
 // Styles (GBC-ish, inline pour rester autonome)
 // ============================================================
@@ -734,51 +895,87 @@ function BallAnim({ phase, shakes, caught }: { phase: "throw" | "shake" | "resul
     )
 }
 
+const BORDER = "2px solid #1c1408"
+const PAPER = "#f8f8e8"
+
 const S: Record<string, React.CSSProperties> = {
-    root: { position: "relative", width: "100%", maxWidth: 460, margin: "0 auto", fontFamily: "'Courier New', monospace", color: "#1c1408", userSelect: "none" },
-    scene: { background: "linear-gradient(#9bd0e0 0%, #c8e89c 60%, #a8d878 100%)", border: "3px solid #1c1408", borderRadius: 6, padding: 14, display: "flex", flexDirection: "column", gap: 18, minHeight: 240, position: "relative", overflow: "hidden" },
-    enemyRow: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" },
-    playerRow: { display: "flex", justifyContent: "space-between", alignItems: "flex-end" },
-    energyBar: { display: "flex", alignItems: "center", gap: 8, marginBottom: 8, background: "#1c1408", border: "2px solid #1c1408", borderRadius: 8, padding: "5px 10px" },
-    energyTrack: { flex: 1, height: 12, background: "#3a2c18", borderRadius: 6, overflow: "hidden", border: "1px solid #000" },
-    energyFill: { height: "100%", background: "linear-gradient(90deg,#ffe24a,#ff9500)", transition: "width 0.3s ease" },
-    energyTxt: { fontSize: 11, fontWeight: 700, color: "#f5d020", minWidth: 92, textAlign: "right" },
-    enemySpot: { position: "relative", width: 84, height: 84, display: "flex", alignItems: "center", justifyContent: "center" },
-    ball: { position: "absolute", width: 38, height: 38, borderRadius: "50%", background: "#f5f5f5", border: "2px solid #1c1408", overflow: "hidden", boxShadow: "0 2px 4px rgba(0,0,0,0.35)" },
+    // Remplit l'écran de la coque Game Boy (parent : position relative, overflow hidden, ratio 3:2).
+    root: { position: "absolute", inset: 0, display: "flex", flexDirection: "column", background: PAPER, fontFamily: "'Courier New', monospace", color: "#1c1408", userSelect: "none", overflow: "hidden" },
+
+    // ===== Champ de bataille (60 % du haut) — diagonale Gen 1/2 en positionnement absolu =====
+    field: { position: "relative", flex: 1, minHeight: 0, overflow: "hidden", background: "linear-gradient(#bfe6ef 0%, #dff0d8 58%, #cfe8b0 100%)" },
+    enemySide: { position: "absolute", top: 6, left: 6, maxWidth: "62%", display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2 },
+    enemySpot: { position: "absolute", top: 2, right: 8, width: 78, height: 78, display: "flex", alignItems: "center", justifyContent: "center" },
+    playerSpot: { position: "absolute", left: 6, bottom: 0, width: 84, height: 84, display: "flex", alignItems: "flex-end", justifyContent: "center" },
+    playerSide: { position: "absolute", right: 6, bottom: 6, maxWidth: "62%", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 },
+
+    // ===== Boîte de dialogue / commandes (40 % du bas) =====
+    dialog: { flexShrink: 0, height: "41%", minHeight: 96, display: "flex", gap: 5, padding: 5, boxSizing: "border-box", borderTop: BORDER, background: PAPER },
+    msgBox: { flex: 1, minWidth: 0, background: PAPER, border: BORDER, borderRadius: 4, padding: "8px 10px", display: "flex", flexDirection: "column", justifyContent: "center", position: "relative", cursor: "pointer" },
+    msgText: { fontSize: 13, lineHeight: 1.4, fontWeight: 700, margin: 0 },
+    next: { position: "absolute", bottom: 4, right: 8, fontSize: 12, animation: "bobNext 0.8s ease-in-out infinite" },
+
+    // Boîte de commandes — options EMPILÉES (ATTAQUE / DAEMON / SAC / FUITE ; OUI / NON ; QUITTER).
+    // Même structure/hauteur que la liste d'attaques → pas de débordement vertical de l'écran.
+    cmdBox: { flexShrink: 0, width: "46%", maxWidth: 210, background: PAPER, border: BORDER, borderRadius: 4, padding: 0, display: "flex", flexDirection: "column", justifyContent: "center", gap: 0, overflowY: "auto" },
+    cmdBoxTall: { flexShrink: 0, width: "48%", maxWidth: 220, background: PAPER, border: BORDER, borderRadius: 4, padding: "6px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 2 },
+
+    // Liste d'attaques (gauche) + fiche détaillée de l'attaque sélectionnée (droite).
+    listBox: { flex: 1, minWidth: 0, background: PAPER, border: BORDER, borderRadius: 4, padding: "4px 0 0 0", display: "flex", flexDirection: "column", gap: 0, overflowY: "auto" },
+    detailBox: { flexShrink: 0, width: "38%", maxWidth: 175, background: PAPER, border: BORDER, borderRadius: 4, padding: "6px 8px", display: "flex", flexDirection: "column", gap: 3, overflow: "hidden" },
+    detailName: { fontSize: 12, fontWeight: 800, letterSpacing: 0.3, lineHeight: 1.15 },
+    detailMeta: { display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" },
+    detailStats: { display: "flex", flexWrap: "wrap", gap: "1px 8px", fontSize: 10, fontWeight: 700, marginTop: 1 },
+    detailEffect: { fontSize: 9, fontWeight: 700, color: "#b5532a" },
+    detailHint: { fontSize: 10, fontWeight: 600, opacity: 0.55, margin: "auto", textAlign: "center" },
+    listBoxWide: { flex: 1, minWidth: 0, background: PAPER, border: BORDER, borderRadius: 4, padding: "5px 8px", display: "flex", flexDirection: "column", gap: 1, overflowY: "auto" },
+    row: { display: "flex", alignItems: "center", gap: 4, width: "100%", background: "transparent", border: "none", fontFamily: "inherit", fontSize: 12, fontWeight: 700, color: "#1c1408", cursor: "pointer", padding: "3px 4px", textAlign: "left" },
+    rowDim: { display: "flex", alignItems: "center", gap: 4, width: "100%", background: "transparent", border: "none", fontFamily: "inherit", fontSize: 12, fontWeight: 700, color: "#b0b0a0", padding: "3px 4px", textAlign: "left" },
+    rowFocus: { background: "#f5d020" },
+    rowRight: { marginLeft: 8, flexShrink: 0, fontSize: 10, fontWeight: 600, opacity: 0.55 },
+
+    // ===== Fiches de Daemon (compactes, façon "bracket" GB) =====
+    info: { background: PAPER, border: "2px solid #1c1408", borderRadius: 4, padding: "3px 7px", minWidth: 0 },
+    infoTop: { display: "flex", justifyContent: "space-between", gap: 8, fontSize: 11, fontWeight: 800 },
+    monName: { letterSpacing: 0.5, whiteSpace: "nowrap" },
+    monLvl: { opacity: 0.8, fontSize: 10 },
+    typeRow: { display: "flex", gap: 3, marginTop: 2 },
+    typeChip: { fontSize: 7, fontWeight: 700, color: "#fff", padding: "1px 4px", borderRadius: 2, letterSpacing: 0.3, textShadow: "0 1px 1px rgba(0,0,0,0.45)" },
+    // Chiffre des PV AU-DESSUS de la barre (aligné à droite) → la barre garde toute sa largeur.
+    hpNumRow: { display: "flex", justifyContent: "flex-end", marginTop: 3, lineHeight: 1 },
+    hpRow: { display: "flex", alignItems: "center", gap: 5, marginTop: 3 },
+    hpLabel: { fontSize: 8, fontWeight: 800, color: "#c89000" },
+    hpTrack: { width: 84, height: 6, background: "#404040", borderRadius: 3, overflow: "hidden", border: "1px solid #1c1408" },
+    hpFill: { height: "100%", transition: "width 0.4s ease" },
+    hpNum: { fontSize: 8, fontWeight: 700, minWidth: 42, textAlign: "right" },
+    xpRow: { display: "flex", alignItems: "center", gap: 5, marginTop: 2 },
+    xpLabel: { fontSize: 7, fontWeight: 700, color: "#5a9fe0" },
+    xpTrack: { width: 84, height: 3, background: "#404040", borderRadius: 2, overflow: "hidden", border: "1px solid #1c1408" },
+    xpFill: { height: "100%", background: "#4a9fe0", transition: "width 0.4s ease, background 0.5s ease, box-shadow 0.5s ease" },
+    statusTag: { display: "inline-block", marginTop: 2, fontSize: 7, fontWeight: 700, background: "#8868c0", color: "#fff", padding: "1px 5px", borderRadius: 3, letterSpacing: 1 },
+
+    // Sprites
+    sprite: { width: 64, height: 64, borderRadius: "50%", background: "#ffffff80", border: "3px solid #1c1408", display: "flex", alignItems: "center", justifyContent: "center" },
+    spriteBox: { width: 76, height: 76, display: "flex", alignItems: "center", justifyContent: "center" },
+    spriteGlyph: { fontSize: 30, fontWeight: 900 },
+
+    // Pokéball animée (capture)
+    ball: { position: "absolute", width: 34, height: 34, borderRadius: "50%", background: "#f5f5f5", border: "2px solid #1c1408", overflow: "hidden", boxShadow: "0 2px 4px rgba(0,0,0,0.35)" },
     ballTop: { position: "absolute", top: 0, left: 0, right: 0, height: "50%", background: "linear-gradient(#e8503a,#c8301a)" },
     ballBand: { position: "absolute", top: "calc(50% - 2px)", left: 0, right: 0, height: 4, background: "#1c1408" },
-    ballBtn: { position: "absolute", top: "calc(50% - 5px)", left: "calc(50% - 5px)", width: 10, height: 10, borderRadius: "50%", background: "#f8f8e8", border: "2px solid #1c1408" },
-    info: { background: "#f8f8e8", border: "2px solid #1c1408", borderRadius: 6, padding: "6px 10px", minWidth: 160 },
-    infoTop: { display: "flex", justifyContent: "space-between", gap: 10, fontSize: 12, fontWeight: 700 },
-    monName: { letterSpacing: 1 },
-    monLvl: { opacity: 0.8 },
-    typeRow: { display: "flex", gap: 4, marginTop: 3 },
-    typeChip: { fontSize: 8, fontWeight: 700, color: "#fff", padding: "1px 5px", borderRadius: 3, letterSpacing: 0.5, textShadow: "0 1px 1px rgba(0,0,0,0.45)" },
-    hpNumRow: { display: "flex", justifyContent: "flex-end", marginTop: 4, lineHeight: 1 },
-    hpRow: { display: "flex", alignItems: "center", gap: 6, marginTop: 2 },
-    hpLabel: { fontSize: 9, fontWeight: 700, color: "#c89000" },
-    hpTrack: { flex: 1, height: 7, background: "#404040", borderRadius: 4, overflow: "hidden", border: "1px solid #1c1408" },
-    hpFill: { height: "100%", transition: "width 0.4s ease" },
-    hpNum: { fontSize: 10, fontWeight: 700, color: "#3a2a08" },
-    xpRow: { display: "flex", alignItems: "center", gap: 6, marginTop: 2 },
-    xpLabel: { fontSize: 8, fontWeight: 700, color: "#5a9fe0" },
-    xpTrack: { flex: 1, height: 4, background: "#404040", borderRadius: 3, overflow: "hidden", border: "1px solid #1c1408" },
-    xpFill: { height: "100%", background: "#4a9fe0", transition: "width 0.4s ease, background 0.5s ease, box-shadow 0.5s ease" },
-    statusTag: { display: "inline-block", marginTop: 3, fontSize: 8, fontWeight: 700, background: "#8868c0", color: "#fff", padding: "1px 5px", borderRadius: 3, letterSpacing: 1 },
-    sprite: { width: 72, height: 72, borderRadius: "50%", background: "#ffffff80", border: "3px solid #1c1408", display: "flex", alignItems: "center", justifyContent: "center" },
-    spriteBox: { width: 84, height: 84, display: "flex", alignItems: "center", justifyContent: "center" },
-    spriteGlyph: { fontSize: 34, fontWeight: 900 },
-    // Hauteur réservée pour 4 options + la ligne d'info → la zone du bas ne change
-    // pas de taille selon le menu (pas de "saut" des options entre écrans).
-    bottom: { marginTop: 8, minHeight: 248 },
-    msgBox: { background: "#f8f8e8", border: "3px solid #1c1408", borderRadius: 6, padding: 14, minHeight: 72, display: "flex", flexDirection: "column", justifyContent: "center", cursor: "pointer", position: "relative" },
-    msgText: { fontSize: 14, lineHeight: 1.5, fontWeight: 700, margin: 0 },
-    next: { position: "absolute", bottom: 6, right: 12, fontSize: 12, animation: "none" },
-    menuGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 },
-    optList: { display: "flex", flexDirection: "column", gap: 6 },
-    menuHint: { display: "flex", justifyContent: "space-between", alignItems: "center", minHeight: 18, fontSize: 11, fontWeight: 700, opacity: 0.85, marginBottom: 4, color: "#1c1408" },
-    btn: { background: "#f8f8e8", border: "3px solid #1c1408", borderRadius: 6, padding: "11px 12px", fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer", color: "#1c1408", textAlign: "left", display: "flex", alignItems: "center" },
-    btnDim: { background: "#d8d8c8", border: "3px solid #888", borderRadius: 6, padding: "11px 12px", fontFamily: "inherit", fontSize: 13, fontWeight: 700, color: "#888", textAlign: "left", display: "flex", alignItems: "center" },
-    btnFocus: { background: "#f5d020", borderColor: "#1c1408", boxShadow: "0 0 0 2px #f5d020" },
-    pp: { float: "right", fontSize: 10, opacity: 0.7 },
+    ballBtn: { position: "absolute", top: "calc(50% - 5px)", left: "calc(50% - 5px)", width: 10, height: 10, borderRadius: "50%", background: PAPER, border: "2px solid #1c1408" },
+
+    // ===== Écran d'équipe plein cadre (changement de Daemon) =====
+    partyOverlay: { position: "absolute", inset: 0, zIndex: 50, background: PAPER, display: "flex", flexDirection: "column", fontFamily: "'Courier New', monospace", color: "#1c1408" },
+    partyList: { flex: 1, minHeight: 0, overflowY: "auto", padding: 6, display: "flex", flexDirection: "column", gap: 3 },
+    partyRow: { display: "flex", alignItems: "center", gap: 6, width: "100%", padding: "4px 6px", background: "#fff", border: "2px solid #1c1408", borderRadius: 4, fontFamily: "inherit", color: "#1c1408", textAlign: "left", cursor: "pointer" },
+    partyRowDim: { display: "flex", alignItems: "center", gap: 6, width: "100%", padding: "4px 6px", background: "#eceadd", border: "2px solid #b0b0a0", borderRadius: 4, fontFamily: "inherit", color: "#9a9a88", textAlign: "left", cursor: "default", opacity: 0.85 },
+    partyRowFocus: { background: "#f5d020" },
+    partySprite: { width: 30, height: 30, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" },
+    partyName: { flex: 1, minWidth: 0, fontSize: 12, fontWeight: 800, letterSpacing: 0.5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
+    partyLvl: { fontSize: 10, fontWeight: 700, opacity: 0.8, flexShrink: 0 },
+    partyHpWrap: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, width: 104, flexShrink: 0 },
+    partyHpTrack: { width: "100%", height: 6, background: "#404040", borderRadius: 3, overflow: "hidden", border: "1px solid #1c1408" },
+    partyHpFill: { height: "100%", transition: "width 0.3s ease" },
+    partyHpNum: { fontSize: 9, fontWeight: 700 },
 }

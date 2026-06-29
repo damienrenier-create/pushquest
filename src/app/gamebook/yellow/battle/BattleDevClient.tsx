@@ -61,7 +61,11 @@ export default function BattleDevClient() {
         <div style={S.page}>
             {battle ? (
                 <>
-                    <BattleScreen />
+                    {/* Cadre 3:2 façon écran de la coque Game Boy : BattleScreen se place en
+                        position:absolute/inset:0 et a donc besoin d'un parent positionné + dimensionné. */}
+                    <div style={S.screen}>
+                        <BattleScreen />
+                    </div>
                     <button onClick={() => endBattle()} style={S.quit}>abandonner (dev)</button>
                 </>
             ) : (
@@ -89,6 +93,7 @@ export default function BattleDevClient() {
 
 const S: Record<string, React.CSSProperties> = {
     page: { minHeight: "100dvh", background: "#1a1a1a", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, padding: 16 },
+    screen: { position: "relative", width: "100%", maxWidth: 440, aspectRatio: "3 / 2", overflow: "hidden", border: "4px solid #1a1612", borderRadius: 6, background: "#1a1612" },
     team: { background: "#f8f8e8", color: "#1c1408", border: "2px solid #000", borderRadius: 8, padding: "10px 14px", marginBottom: 18, textAlign: "left" },
     teamRow: { display: "flex", justifyContent: "space-between", gap: 16, fontSize: 13, fontWeight: 700, padding: "2px 0" },
     cta: { background: "#f5d020", border: "3px solid #f8f8e8", borderRadius: 8, padding: "14px 26px", fontFamily: "inherit", fontSize: 15, fontWeight: 900, letterSpacing: 1, cursor: "pointer", color: "#1c1408" },
