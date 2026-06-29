@@ -6,7 +6,7 @@
 
 import type { MonInstance, StatKey, MajorStatus, PokeType } from "../battle/types"
 import { POKE_TYPES } from "../battle/types"
-import { emptyLabDefi, clampTicketValue, TICKET_QUEUE_MAX, type LabDefiState, type LabDefiKind, type LabActiveDefi } from "../data/labDefis"
+import { emptyLabDefi, clampTicketValue, TICKET_QUEUE_MAX, ROULETTE_CLAIMED_MAX, type LabDefiState, type LabDefiKind, type LabActiveDefi } from "../data/labDefis"
 import { isHeldItem } from "../data/heldItems"
 
 export interface YellowSave {
@@ -254,6 +254,7 @@ function parseLabDefi(raw: unknown): LabDefiState {
     }
     d.spagRouletteSeen = o.spagRouletteSeen === true
     d.geneIntroSeen = o.geneIntroSeen === true
+    d.rouletteClaimed = strArr(o.rouletteClaimed).slice(-ROULETTE_CLAIMED_MAX)
     return d
 }
 

@@ -15,7 +15,7 @@ import { isHeldItem, getHeldItem } from "../data/heldItems"
 import { SAIYAN_POINT_VALUE } from "../data/saiyanConfig"
 import { BADGE_REPS_CAP_BONUS } from "../data/badges"
 import { getCt, canLearnCt, purchasableCts, type BadgeId } from "../data/cts"
-import { emptyLabDefi, casinoWinningCase, CASINO_NUM_CASES, CASINO_MIN_BET, CASINO_MAX_BET, CASINO_WIN_MULT, CASINO_BANKRUPT_STREAK, CASINO_BANKRUPT_COOLDOWN_MS, TONYTONY_TARGET, TONYTONY_SHINY_TARGET, TONYTONY_LEVEL, TONYTONY_SPECIES, DAILY_TICKET_VALUE, TICKET_QUEUE_MAX, clampTicketValue, type LabDefiState, type LabActiveDefi } from "../data/labDefis"
+import { emptyLabDefi, casinoWinningCase, CASINO_NUM_CASES, CASINO_MIN_BET, CASINO_MAX_BET, CASINO_WIN_MULT, CASINO_BANKRUPT_STREAK, CASINO_BANKRUPT_COOLDOWN_MS, TONYTONY_TARGET, TONYTONY_SHINY_TARGET, TONYTONY_LEVEL, TONYTONY_SPECIES, DAILY_TICKET_VALUE, TICKET_QUEUE_MAX, ROULETTE_CLAIMED_MAX, clampTicketValue, type LabDefiState, type LabActiveDefi } from "../data/labDefis"
 import { createMonInstance } from "../battle/factory"
 import type { StatKey } from "../battle/types"
 import { expForLevel, levelFromExp, applyExp, MAX_LEVEL, type ExpResult } from "../battle/xp"
@@ -898,6 +898,19 @@ export function markGeneIntroSeen(): void {
     if (st.labDefi.geneIntroSeen) return
     st = { ...st, labDefi: { ...st.labDefi, geneIntroSeen: true } }
     emit()
+}
+
+/** ROULETTE MULTIJOUEUR — réclame le gain d'une manche UNE seule fois (idempotent, anti-double-crédit).
+ *  Renvoie true si c'est la 1re réclamation (le client doit alors créditer ses reps), false si déjà fait.
+ *  Persistant (save) → réconciliation robuste même après refresh / déconnexion en cours de manche. */
+export function markRouletteClaimed(roundId: string): boolean {
+    if (!roundId) return false
+    const d = st.labDefi
+    if (d.rouletteClaimed.includes(roundId)) return false
+    const next = [...d.rouletteClaimed, roundId].slice(-ROULETTE_CLAIMED_MAX)
+    st = { ...st, labDefi: { ...d, rouletteClaimed: next } }
+    emit()
+    return true
 }
 
 /** Joue le ticket GRATUIT du jour (valeur DAILY_TICKET_VALUE), HORS file de boss. Marque le jour

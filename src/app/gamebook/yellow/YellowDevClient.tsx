@@ -85,6 +85,7 @@ import ArenaChallengeModal from "./ArenaChallengeModal"
 import DomeBracket from "./DomeBracket"
 import GeneIntroCarousel from "./GeneIntroCarousel"
 import RouletteCasinoModal from "./roulette/RouletteCasinoModal"
+import RouletteMultiTable from "./roulette/RouletteMultiTable"
 
 // ============================================================
 // ZONE DE COMBAT — REPRISE DE SÉRIE au refresh (anti-abandon)
@@ -193,7 +194,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // DÔME (bracket de 8, état local éphémère) : state du tournoi + règle + graine + JC cumulés.
     const [dome, setDome] = useState<{ state: DomeState; rule: LevelRule; seed: number; jc: number } | null>(null)
     const [ticketOpen, setTicketOpen] = useState(false) // ticket roulette quotidien (1re connexion du jour)
-    const [rouletteOpen, setRouletteOpen] = useState(false) // roulette européenne (bêta, à côté du casino)
+    const [rouletteOpen, setRouletteOpen] = useState(false) // roulette européenne SOLO (bêta, à côté du casino)
+    const [rouletteMpOpen, setRouletteMpOpen] = useState(false) // roulette européenne MULTIJOUEUR (Phase 4)
     const [heldOpen, setHeldOpen] = useState(false) // modale "objet tenu" (depuis la fiche d'un Daemon)
     const [evDetailOpen, setEvDetailOpen] = useState(false) // détail EV (par stat) déplié sur la fiche
     const ticketChecked = useRef(false)
@@ -1416,6 +1418,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 <button onClick={() => setRouletteOpen(true)} style={{ ...chatFabStyle, bottom: 84, fontSize: 22 }} title="Roulette européenne">🎡</button>
             )}
             {rouletteOpen && <RouletteCasinoModal onClose={() => setRouletteOpen(false)} />}
+            {/* Roulette MULTIJOUEUR (Phase 4) — table partagée : tout le monde mise, timer commun, même résultat */}
+            {inCasino && !battle && !showIntro && !chatOpen && !rouletteOpen && !rouletteMpOpen && !!userId && (
+                <button onClick={() => setRouletteMpOpen(true)} style={{ ...chatFabStyle, bottom: 130, fontSize: 20 }} title="Roulette multijoueur">👥</button>
+            )}
+            {rouletteMpOpen && !!userId && <RouletteMultiTable myUserId={userId} onClose={() => setRouletteMpOpen(false)} />}
             {chatOpen && (
                 <div style={menuOverlayStyle} onClick={() => setChatOpen(false)}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>

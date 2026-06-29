@@ -870,3 +870,51 @@ model GamebookProgress {
   @@index([mapId])
   @@index([lastSeen(sort: Desc)])
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// Nexus Jaune Éclair — ROULETTE EUROPÉENNE MULTIJOUEUR (Phase 4)
+// ════════════════════════════════════════════════════════════════════════════
+// Le SERVEUR est autoritatif sur (a) la MANCHE (timer de mise) et (b) le NUMÉRO
+// GAGNANT (RNG seedé serveur, dérivé de l'id de manche → reproductible/auditable) :
+// ainsi TOUT LE MONDE voit le MÊME résultat. Les MISES sont enregistrées pour
+// l'affichage social (« voir les mises des autres ») et le calcul du net par joueur ;
+// les montants sont DÉCLARÉS par le client (même modèle de confiance que le PvP yellow,
+// chapitre créateur-gated). La CUSTODY de l'énergie reste CÔTÉ CLIENT (save
+// GamebookProgress.flags) → ces 2 tables sont 100% ADDITIVES, zéro impact sur le save.
+model RouletteRound {
+  id            String        @id @default(cuid())
+  // OPEN = mises ouvertes ; RESOLVED = numéro tiré, gains figés.
+  status        String        @default("OPEN")
+  startedAt     DateTime      @default(now())
+  // Fin de la fenêtre de mise (startedAt + durée). Au-delà : résolution paresseuse au 1er poll.
+  closesAt      DateTime
+  resolvedAt    DateTime?
+  winningNumber Int? // 0..36 (null tant que non tiré)
+  winningColor  String? // "green" | "red" | "black"
+  seed          Int? // seed serveur utilisé (audit / rejeu)
+  bets          RouletteBet[]
+  createdAt     DateTime      @default(now())
+
+  @@index([status])
+  @@index([closesAt])
+}
+
+model RouletteBet {
+  id        String        @id @default(cuid())
+  roundId   String
+  round     RouletteRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  // userId/nickname en SCALAIRES (pas de relation → User non modifié, migration purement additive).
+  userId    String
+  nickname  String        @default("?")
+  // Toutes les mises du joueur pour la manche, sérialisées : [{ type, numbers, chips, zoneId }].
+  // Une seule ligne par (round, user) ; remplacée à chaque dépôt (le client envoie l'état complet).
+  betsJson  String        @default("[]")
+  staked    Int           @default(0) // somme des chips misés
+  net       Int? // résultat net (gain - mise) une fois la manche résolue ; null avant
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@unique([roundId, userId])
+  @@index([roundId])
+  @@index([userId])
+}

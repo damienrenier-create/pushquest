@@ -72,7 +72,13 @@ export interface LabDefiState {
     spagRouletteSeen: boolean
     /** Carrousel d'explication de la GÉNÉTIQUE (potentiel/IV) déjà vu ? (one-shot, après une 1re capture). */
     geneIntroSeen: boolean
+    /** ROULETTE MULTIJOUEUR : ids des manches dont le gain a DÉJÀ été crédité (anti-double-crédit,
+     *  réconciliation idempotente après refresh/déconnexion). Borné (FIFO, ROULETTE_CLAIMED_MAX). */
+    rouletteClaimed: string[]
 }
+
+/** Garde-fou : taille max de l'historique des manches roulette créditées (anti-gonflement save). */
+export const ROULETTE_CLAIMED_MAX = 80
 
 /** État de défis vierge (nouvelle save / reset). */
 export function emptyLabDefi(): LabDefiState {
@@ -95,6 +101,7 @@ export function emptyLabDefi(): LabDefiState {
         grantedTickets: [],
         spagRouletteSeen: false,
         geneIntroSeen: false,
+        rouletteClaimed: [],
     }
 }
 
