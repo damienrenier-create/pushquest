@@ -55,9 +55,10 @@ const mk = (type: BetType, numbers: number[], chips: number, zoneId: string): Be
 // Paris intérieurs : la couverture vient de la grille (numéros adjacents sur le tapis).
 export const straight = (n: number, chips: number) => mk("STRAIGHT", [n], chips, `straight:${n}`)
 export const split = (ns: [number, number], chips: number) => mk("SPLIT", [...ns].sort((a, b) => a - b), chips, `split:${[...ns].sort((a, b) => a - b).join("-")}`)
-export const street = (ns: number[], chips: number) => mk("STREET", ns, chips, `street:${[...ns].sort((a, b) => a - b).join("-")}`)
-export const corner = (ns: number[], chips: number) => mk("CORNER", ns, chips, `corner:${[...ns].sort((a, b) => a - b).join("-")}`)
-export const sixline = (ns: number[], chips: number) => mk("SIXLINE", ns, chips, `sixline:${[...ns].sort((a, b) => a - b).join("-")}`)
+const sorted = (ns: number[]) => [...ns].sort((a, b) => a - b)
+export const street = (ns: number[], chips: number) => { const s = sorted(ns); return mk("STREET", s, chips, `street:${s.join("-")}`) }
+export const corner = (ns: number[], chips: number) => { const s = sorted(ns); return mk("CORNER", s, chips, `corner:${s.join("-")}`) }
+export const sixline = (ns: number[], chips: number) => { const s = sorted(ns); return mk("SIXLINE", s, chips, `sixline:${s.join("-")}`) }
 
 // Chances extérieures : couverture DÉRIVÉE (jamais saisie à la main → pas d'erreur).
 export const dozen = (d: 1 | 2 | 3, chips: number) => mk("DOZEN", [...DOZENS[d]], chips, `dozen:${d}`)
