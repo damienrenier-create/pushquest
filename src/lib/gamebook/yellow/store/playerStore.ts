@@ -15,7 +15,7 @@ import { isHeldItem, getHeldItem } from "../data/heldItems"
 import { SAIYAN_POINT_VALUE } from "../data/saiyanConfig"
 import { BADGE_REPS_CAP_BONUS } from "../data/badges"
 import { getCt, canLearnCt, purchasableCts, type BadgeId } from "../data/cts"
-import { emptyLabDefi, casinoWinningCase, CASINO_NUM_CASES, CASINO_MIN_BET, CASINO_MAX_BET, CASINO_WIN_MULT, CASINO_BANKRUPT_STREAK, CASINO_BANKRUPT_COOLDOWN_MS, TONYTONY_TARGET, TONYTONY_SHINY_TARGET, TONYTONY_LEVEL, TONYTONY_SPECIES, DAILY_TICKET_VALUE, TICKET_QUEUE_MAX, ROULETTE_CLAIMED_MAX, clampTicketValue, type LabDefiState, type LabActiveDefi } from "../data/labDefis"
+import { emptyLabDefi, casinoWinningCase, CASINO_NUM_CASES, CASINO_MIN_BET, CASINO_MAX_BET, CASINO_WIN_MULT, CASINO_BANKRUPT_STREAK, CASINO_BANKRUPT_COOLDOWN_MS, TONYTONY_TARGET, TONYTONY_SHINY_TARGET, TONYTONY_LEVEL, TONYTONY_SPECIES, DAILY_TICKET_VALUE, TICKET_QUEUE_MAX, ROULETTE_CLAIMED_MAX, BLESSING_QUEUE_MAX, clampTicketValue, type LabDefiState, type LabActiveDefi } from "../data/labDefis"
 import { createMonInstance } from "../battle/factory"
 import type { StatKey } from "../battle/types"
 import { expForLevel, levelFromExp, applyExp, MAX_LEVEL, type ExpResult } from "../battle/xp"
@@ -889,6 +889,57 @@ export function markSpagRouletteSeen(): void {
     if (st.labDefi.spagRouletteSeen) return
     st = { ...st, labDefi: { ...st.labDefi, spagRouletteSeen: true } }
     emit()
+}
+
+// ════════════════ BARMAN (casino) — achat "prix libre" + bénédictions SECRÈTES ════════════════
+/** Prix plancher d'une potion au barman = prix boutique de la Potion de base. */
+export function barmanPotionBasePrice(): number { return getItem("potion")?.price ?? 10 }
+
+/** Achat d'une Potion au barman à PRIX LIBRE (≥ prix de base, payé en reps, surcoût perdu).
+ *  Donne 1 Potion + (secret, jamais affiché) une bénédiction selon le MULTIPLE exact du prix :
+ *  ×2 = esquive ×2 · ×3 = crit garanti · ×4 = chance roulette 25 % · ×5 = gain garanti plafonné. */
+export function buyBarmanPotion(priceReps: number): { ok: boolean; reason?: "min" | "energy" } {
+    const base = barmanPotionBasePrice()
+    const price = Math.floor(priceReps)
+    if (price < base) return { ok: false, reason: "min" }
+    if (st.reps < price) return { ok: false, reason: "energy" }
+    spendReps(price)
+    addItem("potion", 1)
+    const d = st.labDefi
+    const mult = price % base === 0 ? price / base : 0
+    let battle = d.battleBlessings
+    let luck = d.rouletteLuck
+    if (mult === 2) battle = [...battle, "eva" as const].slice(-BLESSING_QUEUE_MAX)
+    else if (mult === 3) battle = [...battle, "crit" as const].slice(-BLESSING_QUEUE_MAX)
+    else if (mult === 4) luck = [...luck, { kind: "luck25" as const, cap: price }].slice(-BLESSING_QUEUE_MAX)
+    else if (mult === 5) luck = [...luck, { kind: "luckMax" as const, cap: price }].slice(-BLESSING_QUEUE_MAX)
+    st = { ...st, labDefi: { ...st.labDefi, barmanPotionsBought: d.barmanPotionsBought + 1, battleBlessings: battle, rouletteLuck: luck } }
+    emit()
+    return { ok: true }
+}
+
+/** Consomme la prochaine bénédiction de COMBAT (à la prise d'une potion en combat). null si aucune. */
+export function consumeBattleBlessing(): "eva" | "crit" | null {
+    const d = st.labDefi
+    if (d.battleBlessings.length === 0) return null
+    const [first, ...rest] = d.battleBlessings
+    st = { ...st, labDefi: { ...d, battleBlessings: rest } }
+    emit()
+    return first
+}
+
+/** Jeton de chance roulette en attente (sans le consommer) — lu avant de parier seul. */
+export function peekRouletteLuck(): { kind: "luck25" | "luckMax"; cap: number } | null {
+    return st.labDefi.rouletteLuck[0] ?? null
+}
+/** Consomme le prochain jeton de chance roulette. null si aucun. */
+export function consumeRouletteLuck(): { kind: "luck25" | "luckMax"; cap: number } | null {
+    const d = st.labDefi
+    if (d.rouletteLuck.length === 0) return null
+    const [first, ...rest] = d.rouletteLuck
+    st = { ...st, labDefi: { ...d, rouletteLuck: rest } }
+    emit()
+    return first
 }
 
 /** Le carrousel d'explication de la génétique a-t-il déjà été montré ? (one-shot, post-capture). */

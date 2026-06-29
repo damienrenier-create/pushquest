@@ -311,6 +311,21 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         ],
     },
 
+    {
+        // BARMAN du casino : guide du bâtiment + vend des Potions "à prix libre" (porte-bonheur…).
+        // On lui parle depuis (10,3)/(11,3) en regardant vers le haut → ouvre BarmanPanel (intercepté
+        // côté UI, tryCasinoObjectA). Le sprite se tient derrière le comptoir en (10,2).
+        id: "y_barman",
+        name: "BARMAN",
+        mapId: "yellow_casino",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🍸", color: "#7a4ec0" },
+        initialX: 10,
+        initialY: 2,
+        dialoguesAfter: ["*Le barman astique un verre.* Qu'est-ce que je te sers ?"],
+    },
+
     // === Intérieur INFIRMERIE ===
     {
         id: "y_medecin",

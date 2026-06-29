@@ -75,7 +75,19 @@ export interface LabDefiState {
     /** ROULETTE MULTIJOUEUR : ids des manches dont le gain a DÉJÀ été crédité (anti-double-crédit,
      *  réconciliation idempotente après refresh/déconnexion). Borné (FIFO, ROULETTE_CLAIMED_MAX). */
     rouletteClaimed: string[]
+    // === BARMAN (casino) — secret, jamais affiché aux joueurs ===
+    /** Nb total de potions achetées au barman (alimente la séquence secrète des jetons invisibles). */
+    barmanPotionsBought: number
+    /** File FIFO de bénédictions de COMBAT à consommer à la prochaine potion bue : "eva" (esquive ×2)
+     *  ou "crit" (prochain coup critique). Bornée. */
+    battleBlessings: ("eva" | "crit")[]
+    /** File FIFO de jetons de CHANCE roulette (si le joueur est SEUL à parier) : "luck25" (25 % de gain
+     *  si mise ≤ cap) / "luckMax" (gain garanti jusqu'à récupérer cap). cap = prix payé pour la potion. */
+    rouletteLuck: Array<{ kind: "luck25" | "luckMax"; cap: number }>
 }
+
+/** Garde-fous (anti-gonflement save) pour les files du barman. */
+export const BLESSING_QUEUE_MAX = 20
 
 /** Garde-fou : taille max de l'historique des manches roulette créditées (anti-gonflement save). */
 export const ROULETTE_CLAIMED_MAX = 80
@@ -102,6 +114,9 @@ export function emptyLabDefi(): LabDefiState {
         spagRouletteSeen: false,
         geneIntroSeen: false,
         rouletteClaimed: [],
+        barmanPotionsBought: 0,
+        battleBlessings: [],
+        rouletteLuck: [],
     }
 }
 

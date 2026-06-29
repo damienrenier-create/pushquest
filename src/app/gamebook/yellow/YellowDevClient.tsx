@@ -88,6 +88,7 @@ import GeneIntroCarousel from "./GeneIntroCarousel"
 import RouletteCasinoModal from "./roulette/RouletteCasinoModal"
 import RouletteMultiTable from "./roulette/RouletteMultiTable"
 import CroupierPanel from "./CroupierPanel"
+import BarmanPanel from "./BarmanPanel"
 
 // ============================================================
 // ZONE DE COMBAT — REPRISE DE SÉRIE au refresh (anti-abandon)
@@ -200,6 +201,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [rouletteOpen, setRouletteOpen] = useState(false) // roulette européenne SOLO (bêta, à côté du casino)
     const [rouletteMpOpen, setRouletteMpOpen] = useState(false) // roulette européenne MULTIJOUEUR (Phase 4)
     const [croupierOpen, setCroupierOpen] = useState(false) // carrousel du croupier (railleries + stats casino)
+    const [barmanOpen, setBarmanOpen] = useState(false) // menu du barman (guide + potions prix-libre)
     const [heldOpen, setHeldOpen] = useState(false) // modale "objet tenu" (depuis la fiche d'un Daemon)
     const [evDetailOpen, setEvDetailOpen] = useState(false) // détail EV (par stat) déplié sur la fiche
     const ticketChecked = useRef(false)
@@ -403,6 +405,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         const fy = mapPlayer.posY + (d === "up" ? -1 : d === "down" ? 1 : 0)
         if (fx >= 3 && fx <= 5 && fy >= 4 && fy <= 5) { menuTapGuard.current = Date.now(); setRouletteMpOpen(true); return true }
         if (fx === 4 && fy === 3) { menuTapGuard.current = Date.now(); setCroupierOpen(true); return true }
+        if (fy === 2 && fx >= 9 && fx <= 12) { menuTapGuard.current = Date.now(); setBarmanOpen(true); return true } // comptoir du barman
         return false
     }, [inCasino, userId, mapPlayer])
 
@@ -1455,6 +1458,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {rouletteMpOpen && !!userId && <RouletteMultiTable myUserId={userId} onClose={() => setRouletteMpOpen(false)} />}
             {/* CROUPIER — carrousel : railleries + numéros chauds/froids + top mises & gains (jour/semaine/ever). */}
             {croupierOpen && !!userId && <CroupierPanel myUserId={userId} close={() => setCroupierOpen(false)} onPlay={() => { setCroupierOpen(false); setRouletteMpOpen(true) }} />}
+            {/* BARMAN — guide du casino + indice jetons + Potions à prix libre (effets secrets). */}
+            {barmanOpen && <BarmanPanel close={() => setBarmanOpen(false)} />}
             {chatOpen && (
                 <div style={menuOverlayStyle} onClick={() => setChatOpen(false)}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>

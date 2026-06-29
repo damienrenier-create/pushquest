@@ -6,7 +6,7 @@
 
 import type { MonInstance, StatKey, MajorStatus, PokeType } from "../battle/types"
 import { POKE_TYPES } from "../battle/types"
-import { emptyLabDefi, clampTicketValue, TICKET_QUEUE_MAX, ROULETTE_CLAIMED_MAX, type LabDefiState, type LabDefiKind, type LabActiveDefi } from "../data/labDefis"
+import { emptyLabDefi, clampTicketValue, TICKET_QUEUE_MAX, ROULETTE_CLAIMED_MAX, BLESSING_QUEUE_MAX, type LabDefiState, type LabDefiKind, type LabActiveDefi } from "../data/labDefis"
 import { isHeldItem } from "../data/heldItems"
 
 export interface YellowSave {
@@ -255,6 +255,15 @@ function parseLabDefi(raw: unknown): LabDefiState {
     d.spagRouletteSeen = o.spagRouletteSeen === true
     d.geneIntroSeen = o.geneIntroSeen === true
     d.rouletteClaimed = strArr(o.rouletteClaimed).slice(-ROULETTE_CLAIMED_MAX)
+    // BARMAN (secret)
+    d.barmanPotionsBought = nz(o.barmanPotionsBought)
+    if (Array.isArray(o.battleBlessings)) d.battleBlessings = (o.battleBlessings as unknown[]).filter((v): v is "eva" | "crit" => v === "eva" || v === "crit").slice(-BLESSING_QUEUE_MAX)
+    if (Array.isArray(o.rouletteLuck)) {
+        d.rouletteLuck = (o.rouletteLuck as unknown[])
+            .filter((v): v is { kind: "luck25" | "luckMax"; cap: number } => !!v && typeof v === "object" && ((v as { kind?: unknown }).kind === "luck25" || (v as { kind?: unknown }).kind === "luckMax") && typeof (v as { cap?: unknown }).cap === "number")
+            .map((v) => ({ kind: v.kind, cap: Math.max(0, Math.floor(v.cap)) }))
+            .slice(-BLESSING_QUEUE_MAX)
+    }
     return d
 }
 

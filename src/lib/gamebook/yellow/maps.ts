@@ -327,6 +327,10 @@ function buildCasinoInterior(): TileType[][] {
     for (let y = 1; y <= 10; y++) for (let x = 1; x <= 20; x++) m[y][x] = "floorTile"
     for (let x = 1; x <= 6; x++) m[1][x] = "shopCounter"   // rangée des machines à sous (haut-gauche)
     for (let x = 9; x <= 12; x++) m[1][x] = "shopCounter"  // comptoir (haut-centre)
+    // BAR (BARMAN) : comptoir x9-12 en y2 + côtés (9,3)(12,3) bloqués. On parle au barman depuis
+    // (10,3)/(11,3) en regardant vers le haut. Le barman se tient derrière, en (10,2).
+    for (let x = 9; x <= 12; x++) m[2][x] = "shopCounter"
+    m[3][9] = "shopCounter"; m[3][12] = "shopCounter"
     // TABLE ROULETTE MULTIJOUEUR : 6 tuiles (x 3-5 × y 4-5), juste sous le croupier (4,3). Bloquée
     // (on ne marche pas dessus) ; on s'en approche + A pour jouer (cf. interaction casino côté UI).
     for (let y = 4; y <= 5; y++) for (let x = 3; x <= 5; x++) m[y][x] = "table"
