@@ -123,6 +123,10 @@ async function resolveRound(roundId: string): Promise<RoundResult | null> {
     if (!round) return null
 
     let winning = round.winningNumber
+    // Nets calculés EN MÉMOIRE quand c'est NOUS qui résolvons (course gagnée) : ils font autorité pour le
+    // RoundResult renvoyé, même si la persistance du net échoue transitoirement (sinon le client lirait
+    // net=null→0 et créditerait 0 gain de façon SILENCIEUSE et DÉFINITIVE — réconciliation idempotente).
+    const computedNet = new Map<string, number>()
     if (round.status === "OPEN") {
         // tirage déterministe à partir du seed SECRET de la manche
         const rng = new Rng((round.seed ?? 1) >>> 0)
@@ -143,7 +147,9 @@ async function resolveRound(roundId: string): Promise<RoundResult | null> {
             // on a gagné la course → on règle les mises (net par joueur)
             for (const row of rows) {
                 const net = resolveSpin(winning, parseBets(row.betsJson)).net
-                await prisma.rouletteBet.update({ where: { id: row.id }, data: { net } }).catch(() => {})
+                computedNet.set(row.id, net) // source de vérité du net renvoyé (indépendante de la persistance)
+                await prisma.rouletteBet.update({ where: { id: row.id }, data: { net } })
+                    .catch((e) => { console.warn("[roulette] échec persistance net", { roundId, betId: row.id, net, e }) })
             }
             void publishRoulette("round:closed", { roundId, winningNumber: winning, winningColor: color })
         } else {
@@ -156,14 +162,16 @@ async function resolveRound(roundId: string): Promise<RoundResult | null> {
 
     const betRows = await prisma.rouletteBet.findMany({
         where: { roundId },
-        select: { userId: true, nickname: true, staked: true, net: true },
+        select: { id: true, userId: true, nickname: true, staked: true, net: true },
     })
     return {
         roundId,
         winningNumber: winning,
         winningColor: colorOf(winning),
         closedAt: (round.resolvedAt ?? new Date()).getTime(),
-        players: betRows.map((b) => ({ userId: b.userId, nickname: b.nickname, staked: b.staked, net: b.net ?? 0 })),
+        // net renvoyé = net calculé en mémoire (course gagnée ici) en priorité, sinon net persisté (course
+        // perdue / déjà résolue par un autre process) → jamais de gain « avalé » par un échec d'UPDATE.
+        players: betRows.map((b) => ({ userId: b.userId, nickname: b.nickname, staked: b.staked, net: computedNet.get(b.id) ?? b.net ?? 0 })),
     }
 }
 
@@ -266,4 +274,29 @@ export async function placeBets(userId: string, nickname: string, roundId: strin
         update: { nickname, betsJson: JSON.stringify(bets), staked, luck: luckJson },
     })
     return { ok: true, staked, roundId }
+}
+
+/**
+ * SOLO "Lancer la balle" : un joueur SEUL à avoir misé peut résoudre SA manche immédiatement, sans
+ * attendre `closesAt`. Sécurité (revue adversariale) :
+ *  - n'accepte JAMAIS de numéro/net/flag depuis le client (seul `roundId` est fourni) ;
+ *  - n'autorise le force-spin QUE si la manche est OPEN et qu'il y a EXACTEMENT 1 parieur = ce user
+ *    (sinon `not_solo` — impossible de fermer la manche d'un autre, ni une manche partagée) ;
+ *  - la résolution passe par `resolveRound` (inchangé) : tirage 100 % seed serveur, rig SECRET re-décidé
+ *    en interne (rows.length===1) et plafonné, updateMany atomique OPEN→RESOLVED (anti double-tirage) ;
+ *  - ne crédite RIEN côté serveur : la custody d'énergie reste cliente + idempotente (markRouletteClaimed).
+ */
+export async function forceResolveSolo(
+    userId: string,
+    roundId: string,
+): Promise<{ status: "ok" | "not_found" | "closed" | "no_bet" | "not_solo"; result?: RoundResult }> {
+    const round = await prisma.rouletteRound.findUnique({ where: { id: roundId }, select: { status: true } })
+    if (!round) return { status: "not_found" }
+    if (round.status !== "OPEN") return { status: "closed" } // déjà résolue (course paresseuse / double-clic)
+    // Re-vérification AUTORISATION : exactement 1 parieur, et c'est bien ce user (jamais un flag client).
+    const rows = await prisma.rouletteBet.findMany({ where: { roundId }, select: { userId: true } })
+    if (rows.length === 0) return { status: "no_bet" }                       // pas de force-spin à vide
+    if (rows.length !== 1 || rows[0].userId !== userId) return { status: "not_solo" } // un autre a misé → on attend le timer
+    const result = await resolveRound(roundId) // re-décide rig + tire via seed + ferme atomiquement
+    return result ? { status: "ok", result } : { status: "not_found" }
 }

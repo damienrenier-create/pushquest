@@ -18,7 +18,10 @@ import RouletteWheel from "./RouletteWheel"
 
 const CHANNEL = "gamebook-yellow_roulette"
 const POLL_MS = 1500
-const CHIPS = [1, 5, 10, 25, 100] as const
+// Mises rapides (toutes ≤ 50). La mise fine se règle au stepper −/+ (1 à 50).
+const CHIPS = [1, 5, 10, 25, 50] as const
+const STAKE_MIN = 1
+const STAKE_MAX = 50
 
 interface PlayerBets { userId: string; nickname: string; staked: number; bets: Bet[]; net: number | null }
 interface RoundResult { roundId: string; winningNumber: number; winningColor: string; closedAt: number; players: Array<{ userId: string; nickname: string; staked: number; net: number }> }
@@ -46,10 +49,12 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
     const [flash, setFlash] = useState<string>("")
     const [now, setNow] = useState<number>(Date.now())
     const [busy, setBusy] = useState(false)
+    const [launching, setLaunching] = useState(false) // "Lancer la balle" (solo) en cours
 
     const offsetRef = useRef(0)          // serverNow - Date.now() (anti dérive d'horloge)
     const prevRoundRef = useRef<string>("")
     const lastSpunRef = useRef<string>("") // dernière manche déjà animée sur la roue
+    const wheelInitRef = useRef(false)     // 1er applyState : on affiche le dernier résultat SANS l'animer
 
     // Horloge locale (countdown fluide).
     useEffect(() => { const t = setInterval(() => setNow(Date.now()), 250); return () => clearInterval(t) }, [])
@@ -80,19 +85,21 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
             }
         }
 
-        // ROUE ANIMÉE : on fait tourner la roue pour la DERNIÈRE manche résolue (résultat partagé). Au 1er
-        // chargement on l'affiche statiquement (spinKey "" = pas d'anim pour un résultat déjà ancien) ;
-        // ensuite chaque NOUVELLE manche résolue déclenche un vrai tour. La bille se pose sur le numéro serveur.
+        // ROUE ANIMÉE : on fait tourner la roue pour la DERNIÈRE manche résolue (résultat partagé). Au TOUT
+        // 1er applyState on affiche le dernier résultat SANS l'animer (spinKey "" = pas de tour pour un
+        // résultat déjà ancien) ; ensuite CHAQUE nouvelle manche résolue déclenche un vrai tour — y compris
+        // le tout 1er résultat d'une table vierge (ex. mon propre "Lancer la balle"). Numéro = seed serveur.
         const latest = data.recentResults[0]
-        if (latest) {
-            if (lastSpunRef.current === "") {
+        if (!wheelInitRef.current) {
+            wheelInitRef.current = true
+            if (latest) {
                 lastSpunRef.current = latest.roundId
                 setSpin({ key: "", winning: latest.winningNumber, color: latest.winningColor, net: null })
-            } else if (latest.roundId !== lastSpunRef.current) {
-                lastSpunRef.current = latest.roundId
-                const mine = latest.players.find((p) => p.userId === myUserId)
-                setSpin({ key: latest.roundId, winning: latest.winningNumber, color: latest.winningColor, net: mine ? mine.net : null })
             }
+        } else if (latest && latest.roundId !== lastSpunRef.current) {
+            lastSpunRef.current = latest.roundId
+            const mine = latest.players.find((p) => p.userId === myUserId)
+            setSpin({ key: latest.roundId, winning: latest.winningNumber, color: latest.winningColor, net: mine ? mine.net : null })
         }
     }, [myUserId])
 
@@ -167,6 +174,29 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
     // Mises agrégées par joueur (affichage social).
     const others = (state?.bets ?? []).filter((b) => b.staked > 0)
     const myLocked = state?.bets.find((b) => b.userId === myUserId)
+    // SOLO : je suis le SEUL parieur de la manche (mise déjà validée) → je peux lancer la balle tout de
+    // suite, sans attendre le timer. Le serveur re-vérifie la soloïté avant de résoudre.
+    const soloLaunch = !!round && locked && others.length === 1 && others[0].userId === myUserId
+
+    // "Lancer la balle" : déclenche la résolution serveur MAINTENANT (le serveur tire via son seed secret).
+    const launchBall = async () => {
+        if (!round || !soloLaunch || launching) return
+        setLaunching(true)
+        setFlash("🎙️ Faites vos jeux… rien ne va plus !")
+        try {
+            const res = await fetch("/api/gamebook/yellow/roulette/resolve", {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ roundId: round.id }),
+            })
+            if (res.ok) {
+                await refetch() // la manche résolue arrive → la roue tourne (applyState) + crédit idempotent
+            } else {
+                const j = await res.json().catch(() => ({}))
+                setFlash(j.error === "not_solo" ? "Un autre joueur a misé — on attend le tirage !" : j.error === "already_resolved" ? "Déjà tiré !" : "Lancement impossible.")
+                refetch()
+            }
+        } catch { setFlash("Réseau indisponible.") } finally { setLaunching(false) }
+    }
 
     return (
         <div style={S.overlay}>
@@ -242,17 +272,34 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
                     ))}
                 </div>
 
-                {/* Jetons + actions */}
-                <div style={S.chipsRow}>
+                {/* Sélecteur de MISE (1→50) : stepper fin + jetons rapides */}
+                <div style={S.stakeRow}>
+                    <span style={S.stakeLabel}>Mise</span>
+                    <button style={S.step} disabled={chip <= STAKE_MIN} onClick={() => setChip((c) => Math.max(STAKE_MIN, c - 1))}>−</button>
+                    <span style={S.stakeVal}>{chip} ⚡</span>
+                    <button style={S.step} disabled={chip >= STAKE_MAX} onClick={() => setChip((c) => Math.min(STAKE_MAX, c + 1))}>+</button>
+                    <div style={{ flex: 1 }} />
                     {CHIPS.map((c) => (
                         <button key={c} onClick={() => setChip(c)} style={{ ...S.chip, ...(chip === c ? S.chipOn : {}) }}>{c}</button>
                     ))}
+                </div>
+                <div style={S.hintLine}>👉 Clique une case pour y poser {chip} ⚡ · re-clique pour empiler · mise sur plusieurs cases à la fois.</div>
+
+                {/* Actions */}
+                <div style={S.chipsRow}>
                     <div style={{ flex: 1 }} />
                     {!locked && <button style={S.ghost} disabled={pendingTotal <= 0} onClick={clearPending}>Effacer</button>}
                     {locked
                         ? <span style={S.lockTag}>✓ Misé : {myLocked?.staked ?? 0} ⚡</span>
                         : <button style={{ ...S.primary, opacity: open && pendingTotal > 0 && !busy ? 1 : 0.4 }} disabled={!open || pendingTotal <= 0 || busy} onClick={validate}>Miser {pendingTotal > 0 ? `${pendingTotal} ⚡` : ""}</button>}
                 </div>
+
+                {/* SOLO : seul parieur → lancer la balle tout de suite (sans attendre le timer) */}
+                {soloLaunch && open && (
+                    <button style={{ ...S.launch, opacity: launching ? 0.5 : 1 }} disabled={launching} onClick={launchBall}>
+                        🎲 {launching ? "La bille roule…" : "Lancer la balle !"}
+                    </button>
+                )}
                 {flash && <div style={S.flash}>{flash}</div>}
 
                 {/* Mises des autres joueurs (en direct) */}
@@ -301,6 +348,12 @@ const S: Record<string, React.CSSProperties> = {
     chipsRow: { display: "flex", alignItems: "center", gap: 5, marginTop: 8, flexWrap: "wrap" },
     chip: { width: 38, height: 34, borderRadius: "50%", border: "2px solid #2f5a40", background: "#15301f", color: "#fff", fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit" },
     chipOn: { background: "#e0c020", color: "#1a1400", borderColor: "#e0c020" },
+    stakeRow: { display: "flex", alignItems: "center", gap: 6, marginTop: 8, flexWrap: "wrap" },
+    stakeLabel: { fontSize: 11, fontWeight: 700, color: "#9fd", opacity: 0.85 },
+    step: { width: 34, height: 34, borderRadius: 8, border: "2px solid #2f5a40", background: "#15301f", color: "#fff", fontWeight: 800, fontSize: 18, cursor: "pointer", fontFamily: "inherit", lineHeight: 1 },
+    stakeVal: { minWidth: 52, textAlign: "center", fontSize: 15, fontWeight: 800, color: "#e0c020" },
+    hintLine: { marginTop: 5, fontSize: 10, opacity: 0.6, lineHeight: 1.4 },
+    launch: { width: "100%", marginTop: 8, padding: "11px 0", background: "#e0502a", color: "#fff", border: "none", borderRadius: 9, fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 0 14px rgba(224,80,42,.4)" },
     ghost: { background: "transparent", color: "#9fd", border: "1px solid #2f5a40", borderRadius: 8, padding: "8px 10px", fontSize: 11, cursor: "pointer", fontFamily: "inherit" },
     primary: { background: "#e0c020", color: "#1a1400", border: "none", borderRadius: 8, padding: "9px 14px", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" },
     lockTag: { background: "#15301f", color: "#7ce0a0", border: "1px solid #2f5a40", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700 },

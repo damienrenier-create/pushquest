@@ -74,6 +74,8 @@ export interface LabDefiState {
     grantedTicketOrigins: string[]
     /** Cinématique roulette du Dieu Spaghetti déjà vue ? (one-shot : un SEUL rappel « la roulette existe »). */
     spagRouletteSeen: boolean
+    /** Cadeau de bienvenue du Dieu Spaghetti (3 tickets roulette "spag") déjà réclamé ? (one-shot à vie). */
+    spagWelcomeGift: boolean
     /** Carrousel d'explication de la GÉNÉTIQUE (potentiel/IV) déjà vu ? (one-shot, après une 1re capture). */
     geneIntroSeen: boolean
     /** ROULETTE MULTIJOUEUR : ids des manches dont le gain a DÉJÀ été crédité (anti-double-crédit,
@@ -171,6 +173,7 @@ export function emptyLabDefi(): LabDefiState {
         grantedTickets: [],
         grantedTicketOrigins: [],
         spagRouletteSeen: false,
+        spagWelcomeGift: false,
         geneIntroSeen: false,
         rouletteClaimed: [],
         barmanPotionsBought: 0,
@@ -280,6 +283,9 @@ export function casinoWinningCase(spinIndex: number): number {
 // ───────── Tickets roulette OCTROYABLES (valeur de mise variable) ─────────
 /** Ticket gratuit du jour : mise de base (gain ×10 = 100). */
 export const DAILY_TICKET_VALUE = CASINO_MIN_BET
+/** Cadeau de bienvenue du Dieu Spaghetti : 3 tickets de mise MAX (origine "spag", à jouer, non rachetables). */
+export const SPAG_GIFT_TICKET_COUNT = 3
+export const SPAG_GIFT_TICKET_VALUE = CASINO_MAX_BET
 /** Boss d'arène : un ticket de 30 (en plus de la CT), à la 1re victoire. */
 export const ARENA_TICKET_VALUE = 30
 /** Sbire (pâtes) : un ticket de 20, tous les SBIRE_TICKET_EVERY combats cumulés, une fois la CT obtenue. */

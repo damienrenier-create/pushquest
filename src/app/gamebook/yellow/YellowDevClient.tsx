@@ -50,7 +50,7 @@ import { aceLoseLine } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
-import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets } from "@/lib/gamebook/yellow/store/playerStore"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
 import { ARENA_TICKET_VALUE } from "@/lib/gamebook/yellow/data/labDefis"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
@@ -878,8 +878,20 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             markSpagRouletteSeen()
             persistYellowSave()
             setTicketOpen(true)
+        } else if (!getPlayer().labDefi.spagWelcomeGift) {
+            // CADEAU DE BIENVENUE (one-shot à vie) : le Dieu Spaghetti offre 3 tickets roulette "spag"
+            // (à JOUER au labo, non rachetables par le barman) + un message d'invitation à les dépenser.
+            const n = claimSpagWelcomeTickets()
+            if (n > 0) {
+                persistYellowSave()
+                showDialogue(DUEL_DREAM_NPC, "✨ Dieu Spaghetti", [
+                    "*Le Dieu Spaghetti se matérialise dans un tourbillon de semoule dorée…*",
+                    `« Mortel ! Pour fêter la grande roulette, je t'offre ${n} JETONS. »`,
+                    "« File les claquer sur la table de la roulette — la fortune sourit aux audacieux ! »",
+                ])
+            }
         }
-    }, [hydrated, ticketOpen, battle, dialogue, evolutions.length, pendingLearn, newDexEntry, championRun, whiteout])
+    }, [hydrated, ticketOpen, battle, dialogue, evolutions.length, pendingLearn, newDexEntry, championRun, whiteout, showDialogue])
 
     // CASINO — jetons cachés au sol : générés 1×/jour à l'entrée (today + bonus quota connus). Idempotent
     // (ensureDailyChips ne régénère pas si déjà fait aujourd'hui). On persiste seulement si génération.
