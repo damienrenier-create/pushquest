@@ -44,12 +44,12 @@ import { useGameStore, setCurrentNickname, DEFAULT_SPAWN } from "@/lib/gamebook/
 import { YELLOW_ENTRANCE_MAP_ID } from "@/lib/gamebook/yellow/featureFlag"
 import { YELLOW_MAPS, CENDREVILLE_SPAWN } from "@/lib/gamebook/yellow/maps"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
-import { useBattle, useEvolutions, clearEvolutions, useChampionRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getGiftCtMove, startTrainerBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult, useFrontierResult, clearFrontierResult, getBattleEnergy, resumeBattleFromStorage, useStoneReward, clearStoneReward } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, useEvolutions, clearEvolutions, useChampionRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getGiftCtMove, startTrainerBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult, useFrontierResult, clearFrontierResult, getBattleEnergy, resumeBattleFromStorage, useStoneReward, clearStoneReward, useJustCaught, clearJustCaught } from "@/lib/gamebook/yellow/store/battleStore"
 import { aceLoseLine } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
-import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, dailyTicketAvailable, ticketCount } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount } from "@/lib/gamebook/yellow/store/playerStore"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
 import { ARENA_TICKET_VALUE } from "@/lib/gamebook/yellow/data/labDefis"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
@@ -83,6 +83,7 @@ import { usePlayerArena, type ArenaOpponent } from "@/lib/gamebook/yellow/multip
 import { buildHubTeam, buildMirrorTeam, type ArenaMode } from "@/lib/gamebook/yellow/data/playerArena"
 import ArenaChallengeModal from "./ArenaChallengeModal"
 import DomeBracket from "./DomeBracket"
+import GeneIntroCarousel from "./GeneIntroCarousel"
 
 // ============================================================
 // ZONE DE COMBAT — REPRISE DE SÉRIE au refresh (anti-abandon)
@@ -199,6 +200,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const badgeAwarded = useBadgeAwarded()
     const rematchReward = useRematchReward()
     const stoneReward = useStoneReward()
+    const justCaught = useJustCaught()
+    const [showGeneIntro, setShowGeneIntro] = useState(false) // carrousel génétique one-shot (post-capture)
     const router = useRouter()
     const player = usePlayer()
     // ARÈNES JOUEURS (hub Eau / miroir Élec) — adversaires IA, débloqués quand on a TOUS les badges.
@@ -667,6 +670,15 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         }
     }, [stoneReward, battle, evolutions.length, showDialogue])
 
+    // CARROUSEL GÉNÉTIQUE (one-shot) : après une capture, une fois l'écran libéré (popup Pokédex /
+    // évolutions / apprentissage passés), le Dieu Spaghetti explique le potentiel/IV. UNE SEULE FOIS.
+    useEffect(() => {
+        if (!justCaught) return
+        if (battle || newDexEntry || evolutions.length > 0 || pendingLearn || dialogue || championRun) return
+        clearJustCaught() // consommé : on ne re-déclenche pas
+        if (!getPlayer().labDefi.geneIntroSeen) setShowGeneIntro(true)
+    }, [justCaught, battle, newDexEntry, evolutions.length, pendingLearn, dialogue, championRun])
+
     // BOSS À 2 PHASES (VOLTA) : une fois la notif de badge fermée, on enchaîne DIRECTEMENT son rematch (phase 2).
     useEffect(() => {
         if (chainRematchId && !battle && evolutions.length === 0 && !dialogue && !badgeAwarded) {
@@ -782,9 +794,14 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         const today = getPlayer().creditedThrough
         if (!today) return // jour serveur pas encore connu (player-stats non chargé)
         ticketChecked.current = true
-        // SEUL le ticket gratuit du jour (Dieu Spaghetti) ouvre la cinématique à la connexion.
-        // Les tickets de boss restent dans la file → joués à la demande au labo (+ visibles dans le sac).
-        if (dailyTicketAvailable(today)) setTicketOpen(true)
+        // ONE-SHOT : la cinématique du Dieu Spaghetti ne s'ouvre qu'UNE SEULE FOIS dans la vie du joueur
+        // — juste un rappel « la roulette existe ». Ensuite on la joue à la demande au labo (tickets de
+        // boss, visibles dans le sac). On marque + persiste DÈS l'ouverture → jamais de re-pop, même au refresh.
+        if (!getPlayer().labDefi.spagRouletteSeen) {
+            markSpagRouletteSeen()
+            persistYellowSave()
+            setTicketOpen(true)
+        }
     }, [hydrated, ticketOpen, battle, dialogue, evolutions.length, pendingLearn, newDexEntry, championRun, whiteout])
 
     // Revanche d'arène gagnée : dialogue de récompense post-combat (énergie / CT Mirage),
@@ -2146,6 +2163,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 même temps : on attend que la file d'évolutions soit vidée). */}
             {!battle && evolutions.length === 0 && newDexEntry && (
                 <DexEntryScreen entry={newDexEntry} onDone={clearNewDexEntry} />
+            )}
+            {/* Carrousel génétique one-shot (Dieu Spaghetti) — après la 1re capture, explique le potentiel/IV. */}
+            {showGeneIntro && (
+                <GeneIntroCarousel onDone={() => { markGeneIntroSeen(); persistYellowSave(); setShowGeneIntro(false) }} />
             )}
 
             {/* Apprentissage d'attaque : plus de pop-up forcé — ça se fait À LA DEMANDE

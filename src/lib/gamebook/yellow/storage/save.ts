@@ -252,6 +252,8 @@ function parseLabDefi(raw: unknown): LabDefiState {
             .map(clampTicketValue)
             .slice(0, TICKET_QUEUE_MAX)
     }
+    d.spagRouletteSeen = o.spagRouletteSeen === true
+    d.geneIntroSeen = o.geneIntroSeen === true
     return d
 }
 

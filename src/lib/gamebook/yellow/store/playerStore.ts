@@ -871,6 +871,24 @@ export function dailyTicketAvailable(today: string): boolean {
     return !!today && st.labDefi.dailyTicketDate !== today
 }
 
+/** La cinématique roulette du Dieu Spaghetti a-t-elle déjà été montrée ? (one-shot). */
+export function spagRouletteSeen(): boolean { return st.labDefi.spagRouletteSeen }
+/** Marque la cinématique roulette comme vue (ne se rouvrira plus jamais à la connexion). */
+export function markSpagRouletteSeen(): void {
+    if (st.labDefi.spagRouletteSeen) return
+    st = { ...st, labDefi: { ...st.labDefi, spagRouletteSeen: true } }
+    emit()
+}
+
+/** Le carrousel d'explication de la génétique a-t-il déjà été montré ? (one-shot, post-capture). */
+export function geneIntroSeen(): boolean { return st.labDefi.geneIntroSeen }
+/** Marque le carrousel génétique comme vu (ne se rejouera plus). */
+export function markGeneIntroSeen(): void {
+    if (st.labDefi.geneIntroSeen) return
+    st = { ...st, labDefi: { ...st.labDefi, geneIntroSeen: true } }
+    emit()
+}
+
 /** Joue le ticket GRATUIT du jour (valeur DAILY_TICKET_VALUE), HORS file de boss. Marque le jour
  *  consommé. 🤫 1er pari du joueur gagné d'office ; ensuite aléatoire. Gain = mise × 10. */
 export function playDailyTicketSpin(betCase: number, today: string): CasinoTicketResult {

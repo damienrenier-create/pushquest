@@ -68,6 +68,10 @@ export interface LabDefiState {
     /** FILE de tickets roulette en attente (FIFO) : chaque entrée = la VALEUR de mise (10–50) du ticket.
      *  Le ticket gratuit du jour (valeur 10) + les tickets octroyés par les boss (arène 30 / sbire 20 / ACE 50). */
     grantedTickets: number[]
+    /** Cinématique roulette du Dieu Spaghetti déjà vue ? (one-shot : un SEUL rappel « la roulette existe »). */
+    spagRouletteSeen: boolean
+    /** Carrousel d'explication de la GÉNÉTIQUE (potentiel/IV) déjà vu ? (one-shot, après une 1re capture). */
+    geneIntroSeen: boolean
 }
 
 /** État de défis vierge (nouvelle save / reset). */
@@ -89,6 +93,8 @@ export function emptyLabDefi(): LabDefiState {
         dailyTicketDate: "",
         casinoFirstBetDone: false,
         grantedTickets: [],
+        spagRouletteSeen: false,
+        geneIntroSeen: false,
     }
 }
 

@@ -109,6 +109,9 @@ interface BattleStoreState {
     duelResult: { won: boolean } | null
     /** ZONE DE COMBAT : combat d'une série Frontier terminé → l'UI enchaîne la vague suivante / clôt la série. */
     frontierResult: { won: boolean } | null
+    /** Un Daemon vient d'être CAPTURÉ (n'importe quelle espèce) → signal transitoire pour l'UI
+     *  (ex. carrousel d'explication de la génétique au 1er usage). Consommé/effacé par l'UI. */
+    justCaught: boolean
 }
 
 /** Rôle canonique : A = challenger ("player" canonique), B = défié ("enemy" canonique). */
@@ -130,7 +133,7 @@ interface PvpContext {
     desync: boolean
 }
 
-let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, chainRematchId: null, pendingLearn: false, duelResult: null, frontierResult: null, stoneReward: null }
+let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, chainRematchId: null, pendingLearn: false, duelResult: null, frontierResult: null, stoneReward: null, justCaught: false }
 // LIGUE — meilleurs moments du run en cours (best hit par membre du Conseil 4 + Maître), runtime.
 // Upsert par trainerId à chaque victoire de la Ligue ; lus au sacre du Maître pour le Hall of Fame.
 const leagueHighlights: Record<string, LeagueHighlight> = {}
@@ -597,7 +600,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // Un Daemon a-t-il une attaque EN ATTENTE (slots pleins à la montée de niveau / l'évolution) ? → prompt post-combat.
     const pendingLearn = getPlayer().team.some((m) => (m.pendingMoves?.length ?? 0) > 0)
     // Expose les évolutions pour la cinématique post-combat (jouée après "QUITTER").
-    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward })
+    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward, justCaught: b.outcome === "caught" })
 
     // 4) Sauvegarde persistante (DB).
     persistYellowSave()
@@ -1082,4 +1085,16 @@ export function useStoneReward(): string | null {
 }
 export function clearStoneReward() {
     setStore({ stoneReward: null })
+}
+
+/** Un Daemon vient d'être capturé (signal transitoire pour l'UI, ex. carrousel génétique). */
+export function useJustCaught(): boolean {
+    return useSyncExternalStore(
+        subscribe,
+        () => getSnapshot().justCaught,
+        () => getSnapshot().justCaught,
+    )
+}
+export function clearJustCaught() {
+    setStore({ justCaught: false })
 }
