@@ -12,7 +12,13 @@
 // Le contenu du jeu (children) est rendu à l'intérieur de l'écran avec
 // image-rendering: pixelated pour le look LCD pixel.
 
-import { useCallback, useRef, useEffect } from "react"
+import { useCallback, useRef, useEffect, useState } from "react"
+
+// Largeur « bureau » de référence de la coque. Sur mobile, la coque est rendue
+// à cette largeur fixe puis mise à l'échelle UNIFORMÉMENT (transform: scale),
+// de sorte que toutes les proportions (écran 3:2, D-pad, A/B…) restent
+// identiques au rendu desktop — la coque rétrécit en bloc au lieu de s'écraser.
+const DESIGN_WIDTH = 480
 
 export interface GameBoyShellProps {
     children: React.ReactNode
@@ -85,8 +91,48 @@ export default function GameBoyShell({
     }), [stopHold])
     useEffect(() => stopHold, [stopHold]) // nettoyage au démontage
 
+    // Mise à l'échelle uniforme : on mesure la largeur dispo (wrapRef) et on
+    // réduit la coque (largeur fixe DESIGN_WIDTH) avec transform: scale. Origine
+    // top-left + marginLeft pour recentrer, et la hauteur du wrapper est calée
+    // sur la hauteur VISUELLE (scalée) → pas de vide ni de scroll horizontal.
+    const wrapRef = useRef<HTMLDivElement>(null)
+    const innerRef = useRef<HTMLDivElement>(null)
+    const [layout, setLayout] = useState<{ scale: number; marginLeft: number; height: number }>({
+        scale: 1,
+        marginLeft: 0,
+        height: 0,
+    })
+    useEffect(() => {
+        const wrap = wrapRef.current
+        const inner = innerRef.current
+        if (!wrap || !inner) return
+        const recompute = () => {
+            const w = wrap.clientWidth
+            const scale = Math.min(1, w / DESIGN_WIDTH)
+            const marginLeft = Math.max(0, (w - DESIGN_WIDTH * scale) / 2)
+            const height = inner.offsetHeight * scale // offsetHeight = hauteur de layout (non affectée par le transform)
+            setLayout({ scale, marginLeft, height })
+        }
+        const ro = new ResizeObserver(recompute)
+        ro.observe(wrap)
+        ro.observe(inner)
+        return () => ro.disconnect()
+    }, [])
+
     return (
-        <div style={shellStyle}>
+        <div ref={wrapRef} style={{ width: "100%", height: layout.height || undefined, overflow: "hidden" }}>
+        <div
+            ref={innerRef}
+            style={{
+                ...shellStyle,
+                width: DESIGN_WIDTH,
+                maxWidth: undefined,
+                margin: 0,
+                marginLeft: layout.marginLeft,
+                transform: `scale(${layout.scale})`,
+                transformOrigin: "top left",
+            }}
+        >
             {/* Écran indenté avec biseau */}
             <div style={screenBezelStyle}>
                 <div style={screenFrameStyle}>
@@ -175,6 +221,7 @@ export default function GameBoyShell({
                     <div key={i} style={speakerDotStyle} />
                 ))}
             </div>
+        </div>
         </div>
     )
 }
