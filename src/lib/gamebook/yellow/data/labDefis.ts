@@ -84,10 +84,27 @@ export interface LabDefiState {
     /** File FIFO de jetons de CHANCE roulette (si le joueur est SEUL à parier) : "luck25" (25 % de gain
      *  si mise ≤ cap) / "luckMax" (gain garanti jusqu'à récupérer cap). cap = prix payé pour la potion. */
     rouletteLuck: Array<{ kind: "luck25" | "luckMax"; cap: number }>
+    /** DÉFIS PHYSIQUES répétables : nb de réussites par défi (clé = kind). Chaque réussite durcit le défi
+     *  (cible ×1,1) et augmente la récompense énergie (×1,05). Ex. pushup1h. */
+    physWins: Record<string, number>
 }
 
 /** Garde-fous (anti-gonflement save) pour les files du barman. */
 export const BLESSING_QUEUE_MAX = 20
+
+// ───────── Montée en difficulté des défis physiques répétables ─────────
+/** Cible ×1,1 par réussite (le défi devient plus dur à chaque fois). */
+export const PHYS_TARGET_GROWTH = 1.1
+/** Récompense énergie ×1,05 par réussite (augmente moins vite que la difficulté). */
+export const PHYS_REWARD_GROWTH = 1.05
+/** Cible scalée selon le nb de réussites (arrondi au supérieur). */
+export function physScaledTarget(base: number, wins: number): number {
+    return Math.ceil(base * Math.pow(PHYS_TARGET_GROWTH, Math.max(0, Math.floor(wins))))
+}
+/** Récompense énergie scalée selon le nb de réussites (arrondi au inférieur). */
+export function physScaledReward(base: number, wins: number): number {
+    return Math.floor(base * Math.pow(PHYS_REWARD_GROWTH, Math.max(0, Math.floor(wins))))
+}
 
 /** Garde-fou : taille max de l'historique des manches roulette créditées (anti-gonflement save). */
 export const ROULETTE_CLAIMED_MAX = 80
@@ -117,6 +134,7 @@ export function emptyLabDefi(): LabDefiState {
         barmanPotionsBought: 0,
         battleBlessings: [],
         rouletteLuck: [],
+        physWins: {},
     }
 }
 

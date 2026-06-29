@@ -17,10 +17,11 @@ export async function postLabDefiStart(kind: string): Promise<LabDefiStartResp> 
     } catch { return { ok: false } }
 }
 
-/** Valide un défi physique côté serveur (vraies reps). */
-export async function postLabDefiCheck(kind: string, startSnapshot?: number, startedAt?: string): Promise<LabDefiCheckResp> {
+/** Valide un défi physique côté serveur (vraies reps). `wins` = nb de réussites déjà obtenues
+ *  pour ce défi → la cible est durcie (×1,1 par réussite) côté serveur. */
+export async function postLabDefiCheck(kind: string, startSnapshot?: number, startedAt?: string, wins = 0): Promise<LabDefiCheckResp> {
     try {
-        const r = await fetch(ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "check", kind, startSnapshot, startedAt }) })
+        const r = await fetch(ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "check", kind, startSnapshot, startedAt, wins }) })
         if (!r.ok) return { ok: false, validated: false }
         return await r.json()
     } catch { return { ok: false, validated: false } }

@@ -14,11 +14,13 @@ import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import {
     usePlayer, startLabDefi, clearLabDefi, grantReps, grantCt, recordCtEarned,
     setTomorrowEnergyMult, markSquat150Done, grantTonytony, makeTonytonyShiny, ctDefiProgress, ticketCount,
+    physWinCount, recordPhysWin,
 } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import {
     PHYSICAL_DEFIS, PHYSICAL_ENERGY_REWARD, QUOTA2X_MULT,
     ctDefiOptions, ctDefiThreshold, ctEarnedCountByType, CT_PER_TYPE_MAX, TONYTONY_TARGET, TONYTONY_SHINY_TARGET,
+    physScaledTarget, physScaledReward,
 } from "@/lib/gamebook/yellow/data/labDefis"
 import { postLabDefiStart, postLabDefiCheck } from "@/lib/gamebook/yellow/labDefiApi"
 import { getCt } from "@/lib/gamebook/yellow/data/cts"
@@ -67,12 +69,14 @@ export default function LabPanel() {
         const resp = await postLabDefiStart(kind)
         startLabDefi({ kind, startedAt: resp.now ?? new Date().toISOString(), startSnapshot: kind === "pushup1h" ? (resp.snapshot ?? 0) : undefined })
         persistYellowSave(); setBusy(false)
-        setMsg(kind === "pushup1h" ? "⏱️ Chrono lancé : 50 pompes en 1 heure !" : "Défi lancé. Reviens réclamer une fois réussi.")
+        const pushTgt = physScaledTarget(PHYSICAL_DEFIS.find((x) => x.kind === "pushup1h")?.target ?? 50, physWinCount("pushup1h"))
+        setMsg(kind === "pushup1h" ? `⏱️ Chrono lancé : ${pushTgt} pompes en 1 heure !` : "Défi lancé. Reviens réclamer une fois réussi.")
     }
     const claimPhys = async () => {
         if (!activePhys) return
         setBusy(true); setMsg(null)
-        const r = await postLabDefiCheck(activePhys.kind, activePhys.startSnapshot, activePhys.startedAt)
+        const wins = physWinCount(activePhys.kind) // durcit la cible (serveur) + scale la récompense
+        const r = await postLabDefiCheck(activePhys.kind, activePhys.startSnapshot, activePhys.startedAt, wins)
         setBusy(false)
         if (!r.validated) {
             setMsg(r.expired ? "⏱️ Délai dépassé — défi raté. Relance-le." : "Pas encore réussi. Continue tes reps !")
@@ -82,10 +86,15 @@ export default function LabPanel() {
         if (activePhys.kind === "quota2x") {
             setTomorrowEnergyMult(QUOTA2X_MULT, addOneDay(today))
             setMsg(`✅ Quota doublé ! Tes énergies de demain seront ×${QUOTA2X_MULT}.`)
-        } else {
-            if (activePhys.kind === "squat150") markSquat150Done()
+        } else if (activePhys.kind === "squat150") {
+            markSquat150Done() // one-shot à vie (pas de scaling)
             const got = grantReps(PHYSICAL_ENERGY_REWARD)
             setMsg(`✅ Défi réussi ! +${got} énergie.`)
+        } else {
+            // pushup1h : défi répétable → récompense scalée (×1,05 par réussite) puis on durcit le suivant.
+            const got = grantReps(physScaledReward(PHYSICAL_ENERGY_REWARD, wins))
+            recordPhysWin(activePhys.kind)
+            setMsg(`✅ Défi réussi ! +${got} énergie. Le prochain sera un cran plus dur. 💪`)
         }
         clearLabDefi("phys"); persistYellowSave()
     }
@@ -145,11 +154,18 @@ export default function LabPanel() {
                             ) : (
                                 <>
                                     <Hint>Défis sur tes <b>vraies reps PushQuest</b> (vérifiés serveur). Un seul défi physique à la fois — mais tu peux mener un défi <b>CT</b> et la <b>roulette</b> en parallèle.</Hint>
-                                    {PHYSICAL_DEFIS.filter((x) => !(x.kind === "squat150" && d.squat150Done)).map((x) => (
-                                        <Card key={x.kind} title={x.label} desc={x.desc} reward={x.reward}>
-                                            <button onClick={() => startPhys(x.kind)} disabled={busy} style={primary}>Lancer</button>
-                                        </Card>
-                                    ))}
+                                    {PHYSICAL_DEFIS.filter((x) => !(x.kind === "squat150" && d.squat150Done)).map((x) => {
+                                        // pushup1h : répétable → on affiche la cible & la récompense SCALÉES selon les réussites.
+                                        const w = physWinCount(x.kind)
+                                        const scaled = x.kind === "pushup1h" && !!x.target
+                                        const title = scaled ? `${physScaledTarget(x.target!, w)} pompes en 1 heure` : x.label
+                                        const reward = scaled ? `+${physScaledReward(PHYSICAL_ENERGY_REWARD, w)} énergie${w > 0 ? ` · palier ${w + 1}` : ""}` : x.reward
+                                        return (
+                                            <Card key={x.kind} title={title} desc={x.desc} reward={reward}>
+                                                <button onClick={() => startPhys(x.kind)} disabled={busy} style={primary}>Lancer</button>
+                                            </Card>
+                                        )
+                                    })}
                                     {d.squat150Done && <Hint>✅ « 150 squats en 1 série » déjà accompli (à vie).</Hint>}
                                 </>
                             ))}

@@ -18,6 +18,7 @@ import { authOptions } from "@/lib/auth"
 import { isNexusYellowEnabled } from "@/lib/gamebook/yellow/featureFlag"
 import { isCreatorAccount } from "@/lib/gamebook/creator"
 import { getTodayExerciseTotal, getMaxSingleSet, getDayQuotaProgress } from "@/lib/gamebook/yellow/server/playerStats"
+import { physScaledTarget } from "@/lib/gamebook/yellow/data/labDefis"
 
 export const dynamic = "force-dynamic"
 
@@ -31,10 +32,11 @@ export async function POST(req: NextRequest) {
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     if (!(await isNexusYellowEnabled(userId))) return NextResponse.json({ error: "Forbidden" }, { status: 404 })
 
-    let body: { action?: string; kind?: string; startSnapshot?: number; startedAt?: string }
+    let body: { action?: string; kind?: string; startSnapshot?: number; startedAt?: string; wins?: number }
     try { body = await req.json() } catch { return NextResponse.json({ error: "Invalid body" }, { status: 400 }) }
     const action = body.action === "check" ? "check" : "start"
     const kind = body.kind ?? ""
+    const wins = Math.max(0, Math.floor(body.wins ?? 0)) // nb de réussites → durcit la cible
     const nowMs = Date.now()
 
     if (action === "start") {
@@ -53,8 +55,9 @@ export async function POST(req: NextRequest) {
         const total = await getTodayExerciseTotal(userId, "PUSHUP")
         const delta = total - Math.max(0, Math.floor(body.startSnapshot ?? 0))
         const inWindow = !Number.isNaN(start) && (nowMs - start) <= PUSHUP_WINDOW_MS
-        const validated = isCreator || (delta >= PUSHUP_TARGET && inWindow)
-        return NextResponse.json({ ok: true, validated, delta, target: PUSHUP_TARGET, inWindow, expired: !inWindow })
+        const target = physScaledTarget(PUSHUP_TARGET, wins) // cible durcie ×1,1 par réussite
+        const validated = isCreator || (delta >= target && inWindow)
+        return NextResponse.json({ ok: true, validated, delta, target, inWindow, expired: !inWindow })
     }
     if (kind === "squat150") {
         const maxSet = await getMaxSingleSet(userId, "SQUAT")

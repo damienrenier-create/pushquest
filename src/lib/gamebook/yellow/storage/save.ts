@@ -264,6 +264,11 @@ function parseLabDefi(raw: unknown): LabDefiState {
             .map((v) => ({ kind: v.kind, cap: Math.max(0, Math.floor(v.cap)) }))
             .slice(-BLESSING_QUEUE_MAX)
     }
+    if (o.physWins && typeof o.physWins === "object") {
+        for (const [k, v] of Object.entries(o.physWins as Record<string, unknown>)) {
+            if (typeof v === "number" && isFinite(v) && v > 0) d.physWins[k] = Math.floor(v)
+        }
+    }
     return d
 }
 

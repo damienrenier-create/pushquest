@@ -751,6 +751,17 @@ export function markSquat150Done() {
     emit()
 }
 
+/** Nb de réussites d'un défi physique répétable (pour scaler cible + récompense). */
+export function physWinCount(kind: string): number {
+    return st.labDefi.physWins[kind] ?? 0
+}
+/** Enregistre une réussite d'un défi physique répétable (durcit le défi + augmente la récompense). */
+export function recordPhysWin(kind: string) {
+    const d = st.labDefi
+    st = { ...st, labDefi: { ...d, physWins: { ...d.physWins, [kind]: (d.physWins[kind] ?? 0) + 1 } } }
+    emit()
+}
+
 /** Accumule des dégâts infligés par le joueur pour le défi CT actif (si le type ciblé correspond). */
 export function addCtDamage(type: PokeType, amount: number) {
     const d = st.labDefi
