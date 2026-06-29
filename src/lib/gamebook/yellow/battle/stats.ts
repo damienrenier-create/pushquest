@@ -30,9 +30,11 @@ export function computeStat(base: number, iv: number, level: number, ev = 0): nu
 
 /** Les 5 stats absolues : Gen-1 (base+IV) + EV (⌊EV/4⌋, plafonné) + bonus Saiyan (à plat). */
 export function fullStats(
-    inst: Pick<MonInstance, "level" | "ivs" | "allocated" | "ev" | "shiny"> & { speciesId?: string; heldItem?: string },
+    inst: Pick<MonInstance, "level" | "ivs" | "allocated" | "ev" | "shiny" | "frozenStats"> & { speciesId?: string; heldItem?: string },
     species: SpeciesData,
 ): Record<StatKey, number> {
+    // STATS FIGÉES (Hall of Fame) : le champion combat avec ses stats EXACTES du sacre — aucun recalcul.
+    if (inst.frozenStats) return { ...inst.frozenStats }
     const lv = inst.level
     const a = inst.allocated ?? {}
     const e = inst.ev ?? {}

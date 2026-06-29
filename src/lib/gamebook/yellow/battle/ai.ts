@@ -7,10 +7,11 @@
 import type { BattleMon } from "./types"
 import { getMove } from "../data/moves"
 import { getSpecies } from "../data/species"
-import { typeEffectiveness } from "./typeChart"
+import { typeEffectiveness, moveCategory } from "./typeChart"
+import { fullStats } from "./stats"
 import type { Rng } from "./rng"
 
-export type AiLevel = "wild" | "trainer" | "ace"
+export type AiLevel = "wild" | "trainer" | "ace" | "hof"
 
 export interface AiChoice {
     kind: "move" | "switch"
@@ -35,6 +36,39 @@ function scoreMoves(self: BattleMon, foe: BattleMon): ScoredMove[] {
         out.push({ index, score, eff, power })
     })
     return out
+}
+
+// ── IA "hof" : dégâts ATTENDUS (STAB + meilleure stat offensive vs la bonne défense) + ouverture statut ──
+interface ScoredHof { index: number; score: number; eff: number }
+function scoreMovesHof(self: BattleMon, foe: BattleMon): ScoredHof[] {
+    const selfSp = getSpecies(self.speciesId)
+    const foeSp = getSpecies(foe.speciesId)
+    const selfTypes = selfSp?.types ?? []
+    const foeTypes = foeSp?.types ?? []
+    const sStats = selfSp ? fullStats(self, selfSp) : null
+    const fStats = foeSp ? fullStats(foe, foeSp) : null
+    const foeFresh = fStats ? foe.currentHp >= fStats.hp : false
+    const out: ScoredHof[] = []
+    self.moves.forEach((slot, index) => {
+        const mv = getMove(slot.moveId)
+        if (!mv || slot.pp <= 0) return
+        const isStatus = mv.power <= 0
+        const eff = isStatus ? 1 : typeEffectiveness(mv.type, foeTypes)
+        let score: number
+        if (isStatus) {
+            // Ouverture : sur une cible FRAÎCHE et SAINE, mener par un statut (sommeil/para…) est fort.
+            const inflicts = mv.effect?.inflictStatus
+            score = inflicts && foe.status === "NONE" && foeFresh ? 80 : 18
+        } else {
+            const stab = selfTypes.includes(mv.type) ? 1.5 : 1
+            const phys = moveCategory(mv.type) === "PHYSICAL"
+            const off = sStats ? (phys ? sStats.atk : sStats.spc) : 1
+            const def = fStats ? (phys ? fStats.def : fStats.spc) : 1
+            score = mv.power * eff * stab * (off / Math.max(1, def))
+        }
+        out.push({ index, score, eff })
+    })
+    return out.length > 0 ? out : [{ index: 0, score: 0, eff: 1 }]
 }
 
 /** Meilleur matchup défensif disponible sur le banc (pour décider d'un switch). */
@@ -62,6 +96,29 @@ export function chooseAiAction(
 ): AiChoice {
     const scored = scoreMoves(self, foe)
     if (scored.length === 0) return { kind: "move", moveIndex: 0 } // Lutte (placeholder)
+
+    // --- "hof" (Hall of Fame) : la plus maligne. Dégâts attendus (STAB + bonne stat), ouverture statut,
+    //     et un switch UNIQUEMENT face à une faiblesse ×4 qu'on ne peut pas punir (sans yo-yo). ---
+    if (level === "hof") {
+        const myTypes = getSpecies(self.speciesId)?.types ?? []
+        const foeTypes = getSpecies(foe.speciesId)?.types ?? []
+        const incomingOnMe = foeTypes.reduce((acc, t) => acc * typeEffectiveness(t, myTypes), 1)
+        const scoredHof = scoreMovesHof(self, foe)
+        const myBestEff = Math.max(0, ...scoredHof.map((s) => s.eff))
+        // Switch seulement si on est ×4 faible ET incapable de frapper en super-efficace, vers un banc
+        // STRICTEMENT plus résistant (anti yo-yo : une fois rentré sur un bon matchup, on cesse de switcher).
+        if (incomingOnMe >= 4 && myBestEff < 2) {
+            const sw = bestSwitchIndex(team, activeIndex, foe)
+            if (sw !== null) {
+                const candTypes = getSpecies(team[sw].speciesId)?.types ?? []
+                const incomingOnCand = foeTypes.reduce((acc, t) => acc * typeEffectiveness(t, candTypes), 1)
+                if (incomingOnCand < incomingOnMe && rng.chance(75)) return { kind: "switch", teamIndex: sw }
+            }
+        }
+        let best = scoredHof[0]
+        for (const s of scoredHof) if (s.score > best.score) best = s
+        return { kind: "move", moveIndex: best.index }
+    }
 
     // --- "ace" : envisage un switch si le matchup actuel est mauvais ---
     if (level === "ace") {

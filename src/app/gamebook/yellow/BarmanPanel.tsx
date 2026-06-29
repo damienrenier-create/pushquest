@@ -5,8 +5,11 @@
 // Le barman suggère seulement que "payer plus porte chance".
 
 import { useState } from "react"
-import { usePlayer, buyBarmanPotion, barmanPotionBasePrice } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, buyBarmanPotion, barmanPotionBasePrice, casinoTicketCount, redeemCasinoTicket, grantRouletteTicket, spendReps, grantReps } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
+
+// Valeurs de ticket casino disponibles à la conversion (reps → ticket). Bornées comme les tickets roulette.
+const TICKET_VALUES = [10, 20, 30, 40, 50]
 
 const BUY_LINES = [
     "*Il te glisse la potion avec un clin d'œil.* À la tienne.",
@@ -18,10 +21,17 @@ const BUY_LINES = [
 export default function BarmanPanel({ close }: { close: () => void }) {
     const player = usePlayer()
     const base = barmanPotionBasePrice()
-    const [tab, setTab] = useState<"bar" | "shop">("bar")
+    const [tab, setTab] = useState<"bar" | "shop" | "caisse">("bar")
     const [price, setPrice] = useState(base)
+    const [sell, setSell] = useState(20) // valeur du ticket à acheter (reps → ticket)
     const [msg, setMsg] = useState<string>("")
     const [tick, setTick] = useState(0)
+
+    // Tickets RACHETABLES (origine casino uniquement) : valeur du prochain rachat + total stocké.
+    const casinoIdx = player.labDefi.grantedTicketOrigins.map((o, i) => (o === "casino" ? i : -1)).filter((i) => i >= 0)
+    const casinoTotal = casinoIdx.reduce((s, i) => s + (player.labDefi.grantedTickets[i] ?? 0), 0)
+    const nextRedeem = casinoIdx.length > 0 ? player.labDefi.grantedTickets[casinoIdx[0]] ?? 0 : 0
+    const nbCasino = casinoTicketCount()
 
     const dec = () => setPrice((p) => Math.max(base, p - base))
     const inc = () => setPrice((p) => Math.min(base * 9, p + base))
@@ -29,6 +39,24 @@ export default function BarmanPanel({ close }: { close: () => void }) {
         const r = buyBarmanPotion(price)
         if (r.ok) { persistYellowSave(); setMsg(BUY_LINES[tick % BUY_LINES.length]); setTick((t) => t + 1) }
         else setMsg(r.reason === "energy" ? "« Pas assez d'énergie, mon grand. »" : `« C'est ${base} ⚡ minimum. »`)
+    }
+    // Convertir des reps en ticket casino (= mettre des reps à l'abri du plafond).
+    const buyTicket = () => {
+        if (player.reps < sell) { setMsg("« Pas assez d'énergie pour ce ticket. »"); return }
+        if (!spendReps(sell)) { setMsg("« Pas assez d'énergie pour ce ticket. »"); return }
+        grantRouletteTicket(sell, "casino")
+        persistYellowSave()
+        setMsg(`« Et voilà un ticket de ${sell} ⚡, bien à l'abri. Joue-le quand tu veux. »`)
+    }
+    // Le barman rachète le prochain ticket casino (1:1). Si le plafond d'énergie est atteint, le surplus est perdu.
+    const redeem = () => {
+        const value = redeemCasinoTicket()
+        if (value <= 0) { setMsg("« Tu n'as aucun ticket du casino à me revendre. »"); return }
+        const credited = grantReps(value)
+        persistYellowSave()
+        setMsg(credited < value
+            ? `« +${credited} ⚡ (plafond atteint, ${value - credited} ⚡ perdus — dépense un peu avant !). »`
+            : `« Et hop, +${credited} ⚡ pour toi. »`)
     }
 
     return (
@@ -39,6 +67,7 @@ export default function BarmanPanel({ close }: { close: () => void }) {
                 <div style={tabs}>
                     <button style={{ ...tabBtn, ...(tab === "bar" ? tabOn : {}) }} onClick={() => setTab("bar")}>💬 Le bar</button>
                     <button style={{ ...tabBtn, ...(tab === "shop" ? tabOn : {}) }} onClick={() => setTab("shop")}>🍶 Potions</button>
+                    <button style={{ ...tabBtn, ...(tab === "caisse" ? tabOn : {}) }} onClick={() => setTab("caisse")}>🎫 Caisse</button>
                 </div>
 
                 {tab === "bar" && (
@@ -74,6 +103,29 @@ export default function BarmanPanel({ close }: { close: () => void }) {
                     </div>
                 )}
 
+                {tab === "caisse" && (
+                    <div style={body}>
+                        <p style={p}>« La caisse du casino. Je convertis ton énergie en <b>tickets</b> — et je rachète ceux que tu as gagnés ici. »</p>
+                        <div style={hint}>💡 Un ticket met ton énergie <b>à l&apos;abri du plafond</b> ({player.repsCap} ⚡). Je ne rachète QUE les tickets gagnés au casino — pas ceux des boss d&apos;arène ni du Dieu Spaghetti.</div>
+
+                        {/* VENTE : reps → ticket casino (stockage hors-plafond) */}
+                        <div style={{ ...freeLine, marginBottom: 6 }}>🎟️ <b>Acheter un ticket</b> (range ton énergie) :</div>
+                        <div style={priceRow}>
+                            <button style={stepBtn} onClick={() => setSell((v) => TICKET_VALUES[Math.max(0, TICKET_VALUES.indexOf(v) - 1)])} disabled={sell <= TICKET_VALUES[0]}>−</button>
+                            <div style={priceBox}>{sell} ⚡</div>
+                            <button style={stepBtn} onClick={() => setSell((v) => TICKET_VALUES[Math.min(TICKET_VALUES.length - 1, TICKET_VALUES.indexOf(v) + 1)])} disabled={sell >= TICKET_VALUES[TICKET_VALUES.length - 1]}>+</button>
+                        </div>
+                        <button style={{ ...buyBtn, opacity: player.reps >= sell ? 1 : 0.4 }} disabled={player.reps < sell} onClick={buyTicket}>Acheter un ticket de {sell} ⚡</button>
+
+                        {/* RACHAT : ticket casino → reps (1:1) */}
+                        <div style={{ ...freeLine, margin: "14px 0 6px" }}>💰 <b>Revendre un ticket casino</b> — tu en as <b>{nbCasino}</b> (total {casinoTotal} ⚡) :</div>
+                        <button style={{ ...sellBtn, opacity: nbCasino > 0 ? 1 : 0.4 }} disabled={nbCasino === 0} onClick={redeem}>
+                            {nbCasino > 0 ? `Revendre le prochain (+${nextRedeem} ⚡)` : "Aucun ticket casino"}
+                        </button>
+                        {msg && <div style={msgS}>{msg}</div>}
+                    </div>
+                )}
+
                 <button style={closeBtn} onClick={close}>← Fermer</button>
             </div>
         </div>
@@ -100,5 +152,6 @@ const stepBtn: React.CSSProperties = { width: 40, height: 40, borderRadius: 8, b
 const priceBox: React.CSSProperties = { minWidth: 120, textAlign: "center", fontSize: 18, fontWeight: 800, color: "#ffd54a" }
 const mult: React.CSSProperties = { fontSize: 11, color: "#9a8", opacity: 0.7 }
 const buyBtn: React.CSSProperties = { width: "100%", padding: "11px 0", background: "#e0c020", color: "#1a1400", border: "none", borderRadius: 9, fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }
+const sellBtn: React.CSSProperties = { width: "100%", padding: "11px 0", background: "#3a7a4e", color: "#fff", border: "none", borderRadius: 9, fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }
 const msgS: React.CSSProperties = { marginTop: 10, fontSize: 12.5, color: "#c9a8ff", textAlign: "center", fontStyle: "italic", lineHeight: 1.5 }
 const closeBtn: React.CSSProperties = { marginTop: 12, width: "100%", padding: "9px 0", background: "rgba(255,255,255,0.1)", color: "#fff", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }

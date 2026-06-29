@@ -150,3 +150,10 @@ export function getMove(id: string): MoveData | null {
 }
 
 export const MOVE_IDS = Object.keys(MOVES)
+
+// Index nom d'affichage → attaque (reverse lookup). Utilisé par le Hall of Fame, qui ne stocke que les
+// NOMS des attaques du champion figé (cf. ChampionMon.moves) et doit les retrouver pour reconstruire un combat.
+const MOVE_BY_NAME: Record<string, MoveData> = Object.fromEntries(Object.values(MOVES).map((m) => [m.name, m]))
+export function getMoveByName(name: string): MoveData | null {
+    return MOVE_BY_NAME[name] ?? null
+}

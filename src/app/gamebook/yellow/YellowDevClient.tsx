@@ -50,7 +50,7 @@ import { aceLoseLine } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
-import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile } from "@/lib/gamebook/yellow/store/playerStore"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
 import { ARENA_TICKET_VALUE } from "@/lib/gamebook/yellow/data/labDefis"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
@@ -409,6 +409,18 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         return false
     }, [inCasino, userId, mapPlayer])
 
+    // A dans le casino SANS cible d'interaction : tente d'abord un PNJ (pressA) ; si aucun dialogue ne
+    // s'ouvre, FOUILLE la case-sol courante (jetons cachés — secret, cf. ensureDailyChips/searchChipTile).
+    const casinoAFallback = useCallback(() => {
+        if (!inCasino || !userId) { pressA(); return }
+        const hadDialogue = !!useGameStore.getState().dialogue
+        pressA()
+        if (hadDialogue || useGameStore.getState().dialogue) return // un PNJ parle / dialogue en cours
+        const got = searchChipTile(mapPlayer.posX, mapPlayer.posY)
+        if (got > 0) { setToast(`🎰 Tu déniches ${got} jeton${got > 1 ? "s" : ""} sous le tapis ! (ticket${got > 1 ? "s" : ""} casino)`); persistYellowSave() }
+        else if (got === 0) setToast("🔎 Rien sous ce tapis…")
+    }, [inCasino, userId, pressA, mapPlayer.posX, mapPlayer.posY])
+
     // Au mount : charge l'état du joueur depuis le serveur (DB Neon).
     // Si le joueur n'a jamais joué, on garde le state par défaut (déjà set
     // côté store) — l'API renvoie les mêmes defaults dans ce cas.
@@ -577,7 +589,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         else { const enemy = arenaMode === "hub" ? buildHubTeam(opp.player) : buildMirrorTeam(opp.player); setArenaFight({ opp, mode: arenaMode, enemy }) }
                     }
                     else if (tryCasinoObjectA()) { /* table roulette / croupier (casino) */ }
-                    else pressA()
+                    else casinoAFallback()
                 }
             }
             else if (e.key === "Escape" || k === "b" || k === "f") {
@@ -592,7 +604,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         }
         window.addEventListener("keydown", handler)
         return () => window.removeEventListener("keydown", handler)
-    }, [move, pressA, pressB, battle, menu, newDexEntry, evolutions, championRun, arenaFight, pendingLearn, arenaMode, arenaOpponents, mapPlayer, showDialogue, tryCasinoObjectA])
+    }, [move, pressA, pressB, battle, menu, newDexEntry, evolutions, championRun, arenaFight, pendingLearn, arenaMode, arenaOpponents, mapPlayer, showDialogue, tryCasinoObjectA, casinoAFallback])
 
     // Identité (User.id) + carte courante → estampillage ownership/lieu à la capture.
     useEffect(() => { setCurrentPlayerId(userId) }, [userId])
@@ -869,6 +881,15 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         }
     }, [hydrated, ticketOpen, battle, dialogue, evolutions.length, pendingLearn, newDexEntry, championRun, whiteout])
 
+    // CASINO — jetons cachés au sol : générés 1×/jour à l'entrée (today + bonus quota connus). Idempotent
+    // (ensureDailyChips ne régénère pas si déjà fait aujourd'hui). On persiste seulement si génération.
+    useEffect(() => {
+        if (!inCasino || !hydrated) return
+        const today = getPlayer().creditedThrough
+        if (!today) return
+        if (ensureDailyChips(today, getPlayer().wildCtx?.quotaReached === true)) persistYellowSave()
+    }, [inCasino, hydrated])
+
     // Revanche d'arène gagnée : dialogue de récompense post-combat (énergie / CT Mirage),
     // une fois le combat quitté ET la cinématique d'évolution terminée (même règle que badge/ACE).
     useEffect(() => {
@@ -969,6 +990,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         const target = facingRemote()
                         if (target) { menuTapGuard.current = Date.now(); setInteractTarget({ userId: target.userId, nickname: target.nickname }); return }
                         if (tryCasinoObjectA()) return
+                        casinoAFallback(); return
                     }
                     pressA()
                 }}
@@ -1311,8 +1333,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
 
             {/* Boutique (vendeur) */}
             {!battle && menu === "moves" && <MovesPanel close={() => setMenu("pause")} />}
-            {menu === "hof" && <HallOfFameViewer close={() => setMenu("pause")} />}
-            {menu === "arena-hof" && <ArenaHallOfFamePanel close={() => setMenu("pause")} />}
+            {menu === "hof" && <HallOfFameViewer close={() => setMenu("pause")} onFight={() => setMenu("none")} />}
+            {menu === "arena-hof" && <ArenaHallOfFamePanel close={() => setMenu("pause")} onFight={() => setMenu("none")} />}
 
             {/* ZONE DE COMBAT — entrée Tour (placeholder, non-bloquant : marche pour sortir) */}
             {!battle && !run && mapPlayer.mapId === "yellow_combat_tour" && !dialogue && player.team.length > 0 && (

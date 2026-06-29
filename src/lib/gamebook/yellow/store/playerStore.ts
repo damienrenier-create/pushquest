@@ -15,7 +15,7 @@ import { isHeldItem, getHeldItem } from "../data/heldItems"
 import { SAIYAN_POINT_VALUE } from "../data/saiyanConfig"
 import { BADGE_REPS_CAP_BONUS } from "../data/badges"
 import { getCt, canLearnCt, purchasableCts, type BadgeId } from "../data/cts"
-import { emptyLabDefi, casinoWinningCase, CASINO_NUM_CASES, CASINO_MIN_BET, CASINO_MAX_BET, CASINO_WIN_MULT, CASINO_BANKRUPT_STREAK, CASINO_BANKRUPT_COOLDOWN_MS, TONYTONY_TARGET, TONYTONY_SHINY_TARGET, TONYTONY_LEVEL, TONYTONY_SPECIES, DAILY_TICKET_VALUE, TICKET_QUEUE_MAX, ROULETTE_CLAIMED_MAX, BLESSING_QUEUE_MAX, clampTicketValue, type LabDefiState, type LabActiveDefi } from "../data/labDefis"
+import { emptyLabDefi, casinoWinningCase, CASINO_NUM_CASES, CASINO_MIN_BET, CASINO_MAX_BET, CASINO_WIN_MULT, CASINO_BANKRUPT_STREAK, CASINO_BANKRUPT_COOLDOWN_MS, TONYTONY_TARGET, TONYTONY_SHINY_TARGET, TONYTONY_LEVEL, TONYTONY_SPECIES, DAILY_TICKET_VALUE, TICKET_QUEUE_MAX, ROULETTE_CLAIMED_MAX, BLESSING_QUEUE_MAX, casinoFloorTiles, isCasinoFloorTile, CHIP_MIN, CHIP_MAX, CHIP_TICKET_VALUE, isSecretChipMilestone, clampTicketValue, type LabDefiState, type LabActiveDefi } from "../data/labDefis"
 import { createMonInstance } from "../battle/factory"
 import type { StatKey } from "../battle/types"
 import { expForLevel, levelFromExp, applyExp, MAX_LEVEL, type ExpResult } from "../battle/xp"
@@ -869,23 +869,40 @@ export function ticketCount(): number { return st.labDefi.grantedTickets.length 
 /** Valeur de mise du PROCHAIN ticket de boss à jouer (0 si la file est vide). */
 export function peekTicketValue(): number { return st.labDefi.grantedTickets[0] ?? 0 }
 
-/** Octroie un ticket roulette de BOSS de `value` énergies de mise (borné 10–50 ; file plafonnée). */
-export function grantRouletteTicket(value: number) {
+/** Octroie un ticket roulette de `value` énergies de mise (borné 10–50 ; file plafonnée).
+ *  `origin` : "boss" (arène/sbire/ACE, défaut) · "spag" (Dieu Spaghetti) · "casino" (trouvé/acheté →
+ *  RACHETABLE par le barman). */
+export function grantRouletteTicket(value: number, origin: "boss" | "spag" | "casino" = "boss") {
     const d = st.labDefi
     if (d.grantedTickets.length >= TICKET_QUEUE_MAX) return
-    st = { ...st, labDefi: { ...d, grantedTickets: [...d.grantedTickets, clampTicketValue(value)] } }
+    st = { ...st, labDefi: { ...d, grantedTickets: [...d.grantedTickets, clampTicketValue(value)], grantedTicketOrigins: [...d.grantedTicketOrigins, origin] } }
     emit()
 }
 
-/** Consomme (retire) le PROCHAIN ticket de boss de la file et renvoie sa valeur (0 si vide).
- *  Sert à créditer une CAISSE de roulette en jetons divisibles (≠ le spin forcé `playTicketSpin`). */
+/** Consomme (retire) le PROCHAIN ticket de la file et renvoie sa valeur (0 si vide). */
 export function consumeTicket(): number {
     const d = st.labDefi
     if (d.grantedTickets.length === 0) return 0
     const [first, ...rest] = d.grantedTickets
-    st = { ...st, labDefi: { ...d, grantedTickets: rest } }
+    st = { ...st, labDefi: { ...d, grantedTickets: rest, grantedTicketOrigins: d.grantedTicketOrigins.slice(1) } }
     emit()
     return first
+}
+
+/** Nb de tickets RACHETABLES (origine casino) en file. */
+export function casinoTicketCount(): number {
+    return st.labDefi.grantedTicketOrigins.filter((o) => o === "casino").length
+}
+/** Le barman RACHÈTE le 1er ticket d'origine casino : le retire de la file et renvoie sa valeur (0 si
+ *  aucun rachetable). Le caller crédite les reps (1:1). */
+export function redeemCasinoTicket(): number {
+    const d = st.labDefi
+    const i = d.grantedTicketOrigins.findIndex((o) => o === "casino")
+    if (i < 0) return 0
+    const value = d.grantedTickets[i]
+    st = { ...st, labDefi: { ...d, grantedTickets: d.grantedTickets.filter((_, j) => j !== i), grantedTicketOrigins: d.grantedTicketOrigins.filter((_, j) => j !== i) } }
+    emit()
+    return value
 }
 
 /** Le ticket GRATUIT du jour (Dieu Spaghetti) est-il disponible ? (1×/jour, `today` = jour serveur). */
@@ -924,9 +941,60 @@ export function buyBarmanPotion(priceReps: number): { ok: boolean; reason?: "min
     else if (mult === 3) battle = [...battle, "crit" as const].slice(-BLESSING_QUEUE_MAX)
     else if (mult === 4) luck = [...luck, { kind: "luck25" as const, cap: price }].slice(-BLESSING_QUEUE_MAX)
     else if (mult === 5) luck = [...luck, { kind: "luckMax" as const, cap: price }].slice(-BLESSING_QUEUE_MAX)
-    st = { ...st, labDefi: { ...st.labDefi, barmanPotionsBought: d.barmanPotionsBought + 1, battleBlessings: battle, rouletteLuck: luck } }
+    // SECRET : tous les N achats cumulés (séquence indevinable), la prochaine fouille devient gagnante.
+    const newCount = d.barmanPotionsBought + 1
+    const blessed = isSecretChipMilestone(newCount) ? true : d.blessedSearch
+    st = { ...st, labDefi: { ...st.labDefi, barmanPotionsBought: newCount, battleBlessings: battle, rouletteLuck: luck, blessedSearch: blessed } }
     emit()
     return { ok: true }
+}
+
+// ════════════════ JETONS INVISIBLES (casino, SECRET) — fouille au sol ════════════════
+/** Génère (1×/jour) les jetons cachés sur des cases-sol aléatoires du casino. `quotaReached` = quota
+ *  journalier déjà validé → +1 case gagnante bonus ce jour-là. Idempotent par `today`. */
+export function ensureDailyChips(today: string, quotaReached: boolean): boolean {
+    if (!today) return false
+    const d = st.labDefi
+    if (d.chipDay === today) return false
+    let n = CHIP_MIN + Math.floor(Math.random() * (CHIP_MAX - CHIP_MIN + 1)) // 1..4 cases gagnantes
+    if (quotaReached) n += 1
+    const pool = casinoFloorTiles()
+    const chips: Array<{ x: number; y: number; count: number }> = []
+    for (let i = 0; i < n && pool.length > 0; i++) {
+        const t = pool.splice(Math.floor(Math.random() * pool.length), 1)[0]
+        chips.push({ x: t.x, y: t.y, count: CHIP_MIN + Math.floor(Math.random() * (CHIP_MAX - CHIP_MIN + 1)) })
+    }
+    st = { ...st, labDefi: { ...d, chipDay: today, chips, chipSearched: [] } }
+    emit()
+    return true
+}
+
+/** Fouille la case-sol (x,y) du casino (1×/case/jour). Renvoie le nb de tickets casino trouvés ; `0` =
+ *  fouille fraîche mais vide ; `-1` = no-op (case hors-sol ou déjà fouillée aujourd'hui). Une case
+ *  gagnante octroie autant de tickets (valeur de base). Si une bénédiction secrète est armée, une case
+ *  VIDE devient gagnante (puis la bénédiction tombe). */
+export function searchChipTile(x: number, y: number): number {
+    const d = st.labDefi
+    if (!isCasinoFloorTile(x, y)) return -1
+    const key = `${x},${y}`
+    if (d.chipSearched.includes(key)) return -1
+    const chip = d.chips.find((c) => c.x === x && c.y === y)
+    let count = chip?.count ?? 0
+    let blessed = d.blessedSearch
+    if (count === 0 && blessed) {
+        count = CHIP_MIN + Math.floor(Math.random() * (CHIP_MAX - CHIP_MIN + 1))
+        blessed = false
+    }
+    const chips = chip ? d.chips.filter((c) => !(c.x === x && c.y === y)) : d.chips
+    st = { ...st, labDefi: { ...d, chips, chipSearched: [...d.chipSearched, key], blessedSearch: blessed } }
+    emit()
+    let granted = 0
+    for (let i = 0; i < count; i++) {
+        const before = st.labDefi.grantedTickets.length
+        grantRouletteTicket(CHIP_TICKET_VALUE, "casino")
+        if (st.labDefi.grantedTickets.length > before) granted++
+    }
+    return granted
 }
 
 /** Consomme la prochaine bénédiction de COMBAT (à la prise d'une potion en combat). null si aucune. */

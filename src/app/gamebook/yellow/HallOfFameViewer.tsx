@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from "react"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
+import { startHofBattle } from "@/lib/gamebook/yellow/store/battleStore"
 import type { ChampionMon } from "@/lib/gamebook/yellow/storage/save"
 
 interface ChampionEntry { nickname: string; wonAt: string; team: ChampionMon[] }
@@ -15,10 +16,17 @@ const STAT_ROWS: { key: keyof ChampionMon["stats"]; label: string }[] = [
     { key: "spe", label: "VIT" }, { key: "spc", label: "SPÉ" },
 ]
 
-export default function HallOfFameViewer({ close }: { close: () => void }) {
+export default function HallOfFameViewer({ close, onFight }: { close: () => void; onFight?: () => void }) {
     const [state, setState] = useState<"loading" | "ok" | "error">("loading")
     const [champions, setChampions] = useState<ChampionEntry[]>([])
     const [openMon, setOpenMon] = useState<ChampionMon | null>(null)
+    const [notice, setNotice] = useState<string>("")
+
+    // Affronter l'équipe figée d'un Champion (combat amical, sans sac, IA maligne). Ferme le Hall si OK.
+    const fight = (label: string, team: ChampionMon[]) => {
+        if (startHofBattle(label, team)) (onFight ?? close)()
+        else setNotice("Soigne ton équipe (au moins 1 Daemon debout) avant d'affronter un Champion !")
+    }
 
     useEffect(() => {
         let cancelled = false
@@ -74,9 +82,13 @@ export default function HallOfFameViewer({ close }: { close: () => void }) {
                                     )
                                 })}
                             </div>
+                            <button style={fightBtn} onClick={() => fight(`Champion · ${c.nickname}`, c.team)}>
+                                ⚔️ Affronter l&apos;équipe de {c.nickname}
+                            </button>
                         </div>
                     ))}
                 </div>
+                {notice && <div style={noticeStyle} onClick={() => setNotice("")}>{notice}</div>}
 
                 <button style={closeBtn} onClick={close}>← FERMER</button>
             </div>
@@ -131,6 +143,8 @@ const monCard: React.CSSProperties = { width: 58, background: "rgba(255,255,255,
 const monImg: React.CSSProperties = { width: 44, height: 44, objectFit: "contain", imageRendering: "pixelated" }
 const monName: React.CSSProperties = { fontSize: 8, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }
 const monLvl: React.CSSProperties = { fontSize: 8, opacity: 0.7 }
+const fightBtn: React.CSSProperties = { marginTop: 8, width: "100%", padding: "8px 0", fontFamily: "inherit", fontSize: 12, fontWeight: 800, color: "#ffd54a", background: "rgba(255,255,255,0.05)", border: "1.5px solid #ffd54a", borderRadius: 8, cursor: "pointer" }
+const noticeStyle: React.CSSProperties = { marginTop: 10, padding: "8px 10px", fontSize: 11.5, textAlign: "center", color: "#ffd54a", background: "rgba(255,213,74,0.1)", border: "1px dashed #ffd54a", borderRadius: 8, cursor: "pointer", lineHeight: 1.5 }
 const closeBtn: React.CSSProperties = { marginTop: 12, padding: "10px 0", fontFamily: "inherit", fontSize: 13, fontWeight: 700, color: "#fff", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 8, cursor: "pointer" }
 
 const detailOverlay: React.CSSProperties = { position: "fixed", inset: 0, zIndex: 9250, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(8,6,18,0.7)" }

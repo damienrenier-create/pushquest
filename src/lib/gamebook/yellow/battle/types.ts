@@ -170,6 +170,9 @@ export interface MonInstance {
     /** CHROMATIQUE (shiny) : tiré ~1/512 au spawn sauvage. IV parfaits + **+10% sur chaque stat**
      *  (cf. fullStats — "un peu plus que parfait"). Cosmétique : rendu avec un filtre + ✨. */
     shiny?: boolean
+    /** STATS FIGÉES (Hall of Fame uniquement) : si présent, fullStats renvoie ces valeurs telles quelles
+     *  (le champion combat avec ses stats exactes du sacre, sans recalcul IV/EV/Saiyan). Jamais persisté. */
+    frozenStats?: Record<StatKey, number>
     /** OBJET TENU (held item) : id d'un objet de data/heldItems.ts. 1 max par Daemon.
      *  Effets lus par fullStats (stats) et le moteur (dégâts/combat). cf. data/heldItems.ts. */
     heldItem?: string

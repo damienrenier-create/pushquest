@@ -252,6 +252,15 @@ function parseLabDefi(raw: unknown): LabDefiState {
             .map(clampTicketValue)
             .slice(0, TICKET_QUEUE_MAX)
     }
+    // Origines des tickets : alignées sur grantedTickets (même longueur). Manquant/incohérent → "boss"
+    // (= non rachetable), pour que les vieux tickets ne deviennent pas rachetables par erreur.
+    {
+        const raw = Array.isArray(o.grantedTicketOrigins) ? (o.grantedTicketOrigins as unknown[]) : []
+        d.grantedTicketOrigins = d.grantedTickets.map((_, i) => {
+            const v = raw[i]
+            return v === "casino" || v === "boss" || v === "spag" ? v : "boss"
+        })
+    }
     d.spagRouletteSeen = o.spagRouletteSeen === true
     d.geneIntroSeen = o.geneIntroSeen === true
     d.rouletteClaimed = strArr(o.rouletteClaimed).slice(-ROULETTE_CLAIMED_MAX)
@@ -269,6 +278,16 @@ function parseLabDefi(raw: unknown): LabDefiState {
             if (typeof v === "number" && isFinite(v) && v > 0) d.physWins[k] = Math.floor(v)
         }
     }
+    // Jetons invisibles (casino)
+    d.chipDay = typeof o.chipDay === "string" ? o.chipDay : ""
+    if (Array.isArray(o.chips)) {
+        d.chips = (o.chips as unknown[])
+            .filter((c): c is { x: number; y: number; count: number } => !!c && typeof c === "object" && typeof (c as { x?: unknown }).x === "number" && typeof (c as { y?: unknown }).y === "number" && typeof (c as { count?: unknown }).count === "number")
+            .map((c) => ({ x: Math.floor(c.x), y: Math.floor(c.y), count: Math.max(1, Math.min(9, Math.floor(c.count))) }))
+            .slice(0, 30)
+    }
+    d.chipSearched = Array.isArray(o.chipSearched) ? (o.chipSearched as unknown[]).filter((v): v is string => typeof v === "string").slice(0, 80) : []
+    d.blessedSearch = o.blessedSearch === true
     return d
 }
 

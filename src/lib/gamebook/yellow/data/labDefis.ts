@@ -68,6 +68,10 @@ export interface LabDefiState {
     /** FILE de tickets roulette en attente (FIFO) : chaque entrée = la VALEUR de mise (10–50) du ticket.
      *  Le ticket gratuit du jour (valeur 10) + les tickets octroyés par les boss (arène 30 / sbire 20 / ACE 50). */
     grantedTickets: number[]
+    /** ORIGINE de chaque ticket (même ordre/longueur que grantedTickets) : "casino" (trouvé au sol /
+     *  acheté au barman → RACHETABLE 1:1) · "boss" (arène/sbire/ACE) · "spag" (Dieu Spaghetti). Seuls
+     *  les "casino" sont rachetables par le barman. Vieilles saves sans origine → traitées "boss". */
+    grantedTicketOrigins: string[]
     /** Cinématique roulette du Dieu Spaghetti déjà vue ? (one-shot : un SEUL rappel « la roulette existe »). */
     spagRouletteSeen: boolean
     /** Carrousel d'explication de la GÉNÉTIQUE (potentiel/IV) déjà vu ? (one-shot, après une 1re capture). */
@@ -87,7 +91,44 @@ export interface LabDefiState {
     /** DÉFIS PHYSIQUES répétables : nb de réussites par défi (clé = kind). Chaque réussite durcit le défi
      *  (cible ×1,1) et augmente la récompense énergie (×1,05). Ex. pushup1h. */
     physWins: Record<string, number>
+    // === JETONS INVISIBLES (casino, SECRET) ===
+    /** Jour (YYYY-MM-DD) de la dernière génération de jetons au sol. */
+    chipDay: string
+    /** Jetons cachés au sol AUJOURD'HUI : { x, y = case du casino, count = 1-4 jetons }. */
+    chips: Array<{ x: number; y: number; count: number }>
+    /** Cases déjà fouillées aujourd'hui ("x,y") — 1 fouille/case/jour. */
+    chipSearched: string[]
+    /** Séquence secrète (potions) → la PROCHAINE fouille sur une case vide est gagnante (1-4 jetons). */
+    blessedSearch: boolean
 }
+
+// ───────── Jetons invisibles : cases fouillables + séquence secrète ─────────
+/** Une case du casino est FOUILLABLE si elle est walkable (sol) — les cases d'interaction (bar 9-12/2-3,
+ *  roulette 3-5/4-5, croupier 4,3, comptoirs/murs) sont bloquées donc auto-exclues. Réplique des
+ *  collisions de buildCasinoInterior (intérieur x1-20 × y1-10 sauf les blocs ci-dessous). */
+export function isCasinoFloorTile(x: number, y: number): boolean {
+    if (x < 1 || x > 20 || y < 1 || y > 10) return false
+    if (y === 1 && ((x >= 1 && x <= 6) || (x >= 9 && x <= 12))) return false // machines à sous + comptoir haut
+    if (y === 2 && x >= 9 && x <= 12) return false                            // comptoir du bar
+    if (y === 3 && (x === 9 || x === 12 || x === 4)) return false             // côtés du bar + croupier (4,3)
+    if (y >= 4 && y <= 5 && x >= 3 && x <= 5) return false                    // table roulette
+    return true
+}
+/** Toutes les cases-sol fouillables du casino (pour la génération quotidienne des jetons). */
+export function casinoFloorTiles(): { x: number; y: number }[] {
+    const out: { x: number; y: number }[] = []
+    for (let y = 1; y <= 10; y++) for (let x = 1; x <= 20; x++) if (isCasinoFloorTile(x, y)) out.push({ x, y })
+    return out
+}
+/** Nb de jetons (tickets casino) dans une case gagnante. */
+export const CHIP_MIN = 1
+export const CHIP_MAX = 4
+/** Valeur de mise d'un jeton trouvé (= ticket casino de base). */
+export const CHIP_TICKET_VALUE = 10
+/** SÉQUENCE SECRÈTE (nb cumulé de potions achetées → la prochaine fouille est gagnante). NE JAMAIS
+ *  divulguer aux joueurs. Espacement irrégulier pour rester indevinable. */
+const SECRET_CHIP_SEQUENCE = new Set([2, 5, 9, 14, 20, 27, 35, 44, 54])
+export function isSecretChipMilestone(potionsBought: number): boolean { return SECRET_CHIP_SEQUENCE.has(potionsBought) }
 
 /** Garde-fous (anti-gonflement save) pour les files du barman. */
 export const BLESSING_QUEUE_MAX = 20
@@ -128,6 +169,7 @@ export function emptyLabDefi(): LabDefiState {
         dailyTicketDate: "",
         casinoFirstBetDone: false,
         grantedTickets: [],
+        grantedTicketOrigins: [],
         spagRouletteSeen: false,
         geneIntroSeen: false,
         rouletteClaimed: [],
@@ -135,6 +177,10 @@ export function emptyLabDefi(): LabDefiState {
         battleBlessings: [],
         rouletteLuck: [],
         physWins: {},
+        chipDay: "",
+        chips: [],
+        chipSearched: [],
+        blessedSearch: false,
     }
 }
 

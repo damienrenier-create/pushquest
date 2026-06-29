@@ -17,14 +17,14 @@ import {
     type SideId,
 } from "../battle/engine"
 import type { AiLevel } from "../battle/ai"
-import type { MonInstance, PokeType } from "../battle/types"
+import type { MonInstance, PokeType, MoveSlot } from "../battle/types"
 import { markSeen, markCaught, getPokedex } from "./pokedexStore"
 import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, recordOrcalineDefeat, orcalineLevelForWins, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, consumeBattleBlessing } from "./playerStore"
 import { getItem } from "../data/items"
 import { reportShiny } from "../shinyGift"
 import { ARENA_TICKET_VALUE, SBIRE_TICKET_VALUE, SBIRE_TICKET_EVERY, ACE_TICKET_VALUE, ACE_TICKET_WIN_BEFORE, ACE_TICKET_WIN_AFTER, ACE_TICKET_EARLY_VALUE, ACE_TICKET_WIN_EARLY } from "../data/labDefis"
 import { getCt } from "../data/cts"
-import { getMove } from "../data/moves"
+import { getMove, getMoveByName } from "../data/moves"
 import { getSpecies } from "../data/species"
 import { SBIRE_REWARD_REPS, SBIRE_REWARD_REPS_3, SBIRE_REWARD_REPS_5, SBIRE_REWARD_BALL_ID, SBIRE_REWARD_BALL_ID_4, SBIRE_REWARD_CT_ID, SBIRE_REWARD_CT_FALLBACK_REPS } from "../data/sbire"
 import { ACE_TRAINER_ID, aceReward, aceWinTaunt } from "../data/ace"
@@ -266,6 +266,48 @@ export function startTrainerBattle(
     const trainer = opts?.trainerId ? { trainerId: opts.trainerId, reward: opts.reward ?? 0, isRematch: opts.isRematch ?? false } : null
     setStore({ battle, evolutions: [], trainer, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
     persistBattleSnapshot() // #8 : instantané anti-fuite (refresh) — dresseurs reprenables
+}
+
+// ════════════════ HALL OF FAME — affronter une équipe de champion FIGÉE ════════════════
+/** Reconstruit un combattant à partir d'un champion figé (ChampionMon) : stats EXACTES du sacre
+ *  (frozenStats → fullStats les renvoie telles quelles) + attaques retrouvées par leur NOM. */
+function championToInstance(m: ChampionMon, idx: number): MonInstance {
+    const moves: MoveSlot[] = m.moves
+        .map((name) => getMoveByName(name))
+        .filter((mv): mv is NonNullable<ReturnType<typeof getMoveByName>> => !!mv)
+        .slice(0, 4)
+        .map((mv) => ({ moveId: mv.id, pp: mv.pp, ppMax: mv.pp }))
+    if (moves.length === 0) moves.push({ moveId: "charge", pp: 35, ppMax: 35 }) // garde-fou : jamais sans attaque
+    return {
+        uid: `hof-${idx}-${m.speciesId}`,
+        speciesId: m.speciesId,
+        nickname: m.nickname,
+        level: m.level,
+        exp: 0,
+        ivs: { hp: 15, atk: 15, def: 15, spe: 15, spc: 15 },
+        currentHp: m.stats.hp,
+        status: "NONE",
+        statusCounter: 0,
+        moves,
+        shiny: m.shiny,
+        frozenStats: { ...m.stats },
+        owned: false,
+    }
+}
+
+/** Lance un combat amical contre l'équipe de champion FIGÉE (Hall of Fame). Sans sac (noItems), IA la plus
+ *  maligne ("hof"), aucune récompense ni XP (challenge pur). `label` identifie le combat (ligue/arène). */
+export function startHofBattle(label: string, champTeam: ChampionMon[]): boolean {
+    const playerTeam = getPlayer().team
+    if (playerTeam.length === 0 || champTeam.length === 0) return false
+    if (!playerTeam.some((m) => m.currentHp > 0)) return false // équipe K.O. → soigne d'abord
+    const enemyTeam = champTeam.map((m, i) => championToInstance(m, i))
+    const seed = (Math.floor(Math.random() * 0x7fffffff) ^ (playerTeam.length * 2654435761)) >>> 0
+    const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: "hof", noItems: true, expMult: 0 })
+    syncPokedex(battle)
+    setStore({ battle, evolutions: [], trainer: { trainerId: `hof:${label}`, reward: 0, isRematch: false }, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
+    persistBattleSnapshot()
+    return true
 }
 
 /** Énergie de combat : reps déjà dépensés ce combat + plafond (selon badges). */
@@ -544,6 +586,9 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                 const refund = frontierEnergyRefund(storeState.energySpent)
                 if (refund > 0) grantReps(refund)
             }
+        } else if (storeState.trainer.trainerId.startsWith("hof:")) {
+            // HALL OF FAME : combat amical contre une équipe figée → AUCUNE récompense, aucun marquage,
+            // aucun badge. Juste l'honneur (et l'énergie déjà dépensée pour attaquer). Rien à faire ici.
         } else {
             markTrainerDefeated(storeState.trainer.trainerId)
             const t = getTrainer(storeState.trainer.trainerId)

@@ -14,6 +14,7 @@ import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { getPusherClient, PUSHER_CLIENT_ENABLED } from "@/lib/pusher-client"
 import { colorOf } from "@/lib/gamebook/yellow/roulette/wheel"
 import { type Bet, PAYOUT, straight, dozen, column, red, black, even, odd, low, high } from "@/lib/gamebook/yellow/roulette/bets"
+import RouletteWheel from "./RouletteWheel"
 
 const CHANNEL = "gamebook-yellow_roulette"
 const POLL_MS = 1500
@@ -41,12 +42,14 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
     const [pending, setPending] = useState<Record<string, Bet>>({})
     const [validatedRound, setValidatedRound] = useState<string | null>(null)
     const [reveal, setReveal] = useState<{ winning: number; color: string; net: number } | null>(null)
+    const [spin, setSpin] = useState<{ key: string; winning: number; color: string; net: number | null } | null>(null)
     const [flash, setFlash] = useState<string>("")
     const [now, setNow] = useState<number>(Date.now())
     const [busy, setBusy] = useState(false)
 
     const offsetRef = useRef(0)          // serverNow - Date.now() (anti dérive d'horloge)
     const prevRoundRef = useRef<string>("")
+    const lastSpunRef = useRef<string>("") // dernière manche déjà animée sur la roue
 
     // Horloge locale (countdown fluide).
     useEffect(() => { const t = setInterval(() => setNow(Date.now()), 250); return () => clearInterval(t) }, [])
@@ -65,7 +68,6 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
         }
 
         // Réconciliation des GAINS : crédite chaque manche résolue où j'ai misé, UNE fois.
-        let shown = false
         for (const r of data.recentResults) {
             const mine = r.players.find((p) => p.userId === myUserId)
             if (!mine) continue
@@ -75,7 +77,21 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
                 // CHANCE potion (secret) : si SEUL sur la manche et gain net, on récupère jusqu'au prix payé.
                 if (r.players.length === 1 && mine.net > 0) decrementRouletteLuck(mine.net)
                 persistYellowSave()
-                if (!shown) { setReveal({ winning: r.winningNumber, color: r.winningColor, net: mine.net }); shown = true }
+            }
+        }
+
+        // ROUE ANIMÉE : on fait tourner la roue pour la DERNIÈRE manche résolue (résultat partagé). Au 1er
+        // chargement on l'affiche statiquement (spinKey "" = pas d'anim pour un résultat déjà ancien) ;
+        // ensuite chaque NOUVELLE manche résolue déclenche un vrai tour. La bille se pose sur le numéro serveur.
+        const latest = data.recentResults[0]
+        if (latest) {
+            if (lastSpunRef.current === "") {
+                lastSpunRef.current = latest.roundId
+                setSpin({ key: "", winning: latest.winningNumber, color: latest.winningColor, net: null })
+            } else if (latest.roundId !== lastSpunRef.current) {
+                lastSpunRef.current = latest.roundId
+                const mine = latest.players.find((p) => p.userId === myUserId)
+                setSpin({ key: latest.roundId, winning: latest.winningNumber, color: latest.winningColor, net: mine ? mine.net : null })
             }
         }
     }, [myUserId])
@@ -169,7 +185,17 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
                     <span style={{ opacity: 0.6, fontSize: 10 }}>#{round ? round.id.slice(-5) : "—"}</span>
                 </div>
 
-                {/* Révélation du dernier résultat partagé */}
+                {/* Roue animée (dopamine) — tourne à chaque manche résolue, se pose sur le numéro serveur.
+                    À l'arrêt (onDone), on dévoile mon gain/perte si j'ai misé sur cette manche. */}
+                {spin && (
+                    <RouletteWheel
+                        winning={spin.winning}
+                        spinKey={spin.key}
+                        onDone={() => { if (spin.net != null) setReveal({ winning: spin.winning, color: spin.color, net: spin.net }) }}
+                    />
+                )}
+
+                {/* Révélation de MON résultat (gain/perte), affichée une fois la bille posée */}
                 {reveal && (
                     <div style={{ ...S.reveal, background: reveal.color === "red" ? "#7a1414" : reveal.color === "black" ? "#1a1a1a" : "#0e5a2a" }}>
                         🎯 {reveal.winning} ({reveal.color === "red" ? "rouge" : reveal.color === "black" ? "noir" : "vert"}) —{" "}
