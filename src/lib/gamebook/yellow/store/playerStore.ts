@@ -866,6 +866,17 @@ export function grantRouletteTicket(value: number) {
     emit()
 }
 
+/** Consomme (retire) le PROCHAIN ticket de boss de la file et renvoie sa valeur (0 si vide).
+ *  Sert à créditer une CAISSE de roulette en jetons divisibles (≠ le spin forcé `playTicketSpin`). */
+export function consumeTicket(): number {
+    const d = st.labDefi
+    if (d.grantedTickets.length === 0) return 0
+    const [first, ...rest] = d.grantedTickets
+    st = { ...st, labDefi: { ...d, grantedTickets: rest } }
+    emit()
+    return first
+}
+
 /** Le ticket GRATUIT du jour (Dieu Spaghetti) est-il disponible ? (1×/jour, `today` = jour serveur). */
 export function dailyTicketAvailable(today: string): boolean {
     return !!today && st.labDefi.dailyTicketDate !== today

@@ -171,7 +171,7 @@ export default function RouletteTable({ initialBalance, onClose }: { initialBala
                 </div>
                 <div style={S.footer}>
                     <button style={S.linkBtn} disabled={spinning} onClick={() => setS(clearAll)}>Tout retirer</button>
-                    <button style={S.linkBtn} disabled={spinning} onClick={() => onClose?.(s.balance)}>Encaisser & quitter ▶</button>
+                    <button style={S.linkBtn} disabled={spinning} onClick={() => onClose?.(clearAll(s).balance)}>Encaisser & quitter ▶</button>
                 </div>
             </div>
 

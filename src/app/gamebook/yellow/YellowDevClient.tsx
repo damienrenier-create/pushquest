@@ -84,6 +84,7 @@ import { buildHubTeam, buildMirrorTeam, type ArenaMode } from "@/lib/gamebook/ye
 import ArenaChallengeModal from "./ArenaChallengeModal"
 import DomeBracket from "./DomeBracket"
 import GeneIntroCarousel from "./GeneIntroCarousel"
+import RouletteCasinoModal from "./roulette/RouletteCasinoModal"
 
 // ============================================================
 // ZONE DE COMBAT — REPRISE DE SÉRIE au refresh (anti-abandon)
@@ -192,6 +193,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // DÔME (bracket de 8, état local éphémère) : state du tournoi + règle + graine + JC cumulés.
     const [dome, setDome] = useState<{ state: DomeState; rule: LevelRule; seed: number; jc: number } | null>(null)
     const [ticketOpen, setTicketOpen] = useState(false) // ticket roulette quotidien (1re connexion du jour)
+    const [rouletteOpen, setRouletteOpen] = useState(false) // roulette européenne (bêta, à côté du casino)
     const [heldOpen, setHeldOpen] = useState(false) // modale "objet tenu" (depuis la fiche d'un Daemon)
     const [evDetailOpen, setEvDetailOpen] = useState(false) // détail EV (par stat) déplié sur la fiche
     const ticketChecked = useRef(false)
@@ -1409,6 +1411,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     {chatUnread > 0 && <span style={chatBadgeStyle}>{chatUnread > 9 ? "9+" : chatUnread}</span>}
                 </button>
             )}
+            {/* Roulette EUROPÉENNE (bêta) — entrée provisoire dans le casino (la table-sur-map via sprite 16×16 viendra ensuite) */}
+            {inCasino && !battle && !showIntro && !chatOpen && !rouletteOpen && (
+                <button onClick={() => setRouletteOpen(true)} style={{ ...chatFabStyle, bottom: 84, fontSize: 22 }} title="Roulette européenne">🎡</button>
+            )}
+            {rouletteOpen && <RouletteCasinoModal onClose={() => setRouletteOpen(false)} />}
             {chatOpen && (
                 <div style={menuOverlayStyle} onClick={() => setChatOpen(false)}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
