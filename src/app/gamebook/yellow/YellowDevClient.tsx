@@ -75,7 +75,7 @@ import { moveCategory } from "@/lib/gamebook/yellow/battle/typeChart"
 import { attackCost, effectiveQuota } from "@/lib/gamebook/yellow/data/combatCostConfig"
 import { SAIYAN_POINT_VALUE } from "@/lib/gamebook/yellow/data/saiyanConfig"
 import { ivTier, ivTotal, ivTierColor } from "@/lib/gamebook/yellow/data/ivConfig"
-import { evTotal, topEvStats, EV_TOTAL_CAP } from "@/lib/gamebook/yellow/data/evConfig"
+import { evTotal, topEvStats, EV_TOTAL_CAP, EV_STAT_CAP, evStatBonus, EV_YIELD_PER_WIN } from "@/lib/gamebook/yellow/data/evConfig"
 import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
 import { expForLevel } from "@/lib/gamebook/yellow/battle/xp"
 import type { MonInstance } from "@/lib/gamebook/yellow/battle/types"
@@ -193,6 +193,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [dome, setDome] = useState<{ state: DomeState; rule: LevelRule; seed: number; jc: number } | null>(null)
     const [ticketOpen, setTicketOpen] = useState(false) // ticket roulette quotidien (1re connexion du jour)
     const [heldOpen, setHeldOpen] = useState(false) // modale "objet tenu" (depuis la fiche d'un Daemon)
+    const [evDetailOpen, setEvDetailOpen] = useState(false) // détail EV (par stat) déplié sur la fiche
     const ticketChecked = useRef(false)
     const [tourChoice, setTourChoice] = useState(false) // pause entre vagues de série (Continuer / Quitter)
     const [domePause, setDomePause] = useState(false) // écran d'intro AVANT chaque match du Dôme (bracket + adversaire)
@@ -1993,10 +1994,34 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             })()}
                             {(() => {
                                 const total = evTotal(live.ev)
+                                const EVK: Array<[string, string]> = [["hp", "PV"], ["atk", "Atq"], ["def", "Déf"], ["spe", "Vit"], ["spc", "Spé"]]
                                 return (
                                     <div style={{ fontSize: 11, marginBottom: 6 }}>
-                                        Expérience de combat : <b>{total}/{EV_TOTAL_CAP}</b>
-                                        <span style={{ opacity: 0.45 }}> (petit bonus passif gagné en combattant)</span>
+                                        <button onClick={() => setEvDetailOpen((o) => !o)}
+                                            style={{ background: "transparent", border: "none", padding: 0, font: "inherit", color: "inherit", cursor: "pointer", textAlign: "left" }}>
+                                            Entraînement (EV) : <b>{total}/{EV_TOTAL_CAP}</b>{total >= EV_TOTAL_CAP ? " 🔒" : ""} <span style={{ opacity: 0.6 }}>{evDetailOpen ? "▾" : "▸"}</span>
+                                        </button>
+                                        {evDetailOpen && (
+                                            <div style={{ marginTop: 4, padding: 8, border: "2px solid #3a8ee0", borderRadius: 6, background: "#eef6ff" }}>
+                                                {EVK.map(([k, lbl]) => {
+                                                    const ev = (live.ev as Record<string, number> | undefined)?.[k] ?? 0
+                                                    const pct = Math.round((ev / EV_STAT_CAP) * 100)
+                                                    const maxed = ev >= EV_STAT_CAP
+                                                    return (
+                                                        <div key={k} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                                                            <span style={{ width: 26, fontSize: 10, fontWeight: 700, color: "#1c4a80" }}>{lbl}</span>
+                                                            <div style={{ flex: 1, height: 7, background: "#cdd9e6", borderRadius: 4, overflow: "hidden" }}>
+                                                                <div style={{ width: `${pct}%`, height: "100%", background: maxed ? "#e0a020" : "#3a8ee0" }} />
+                                                            </div>
+                                                            <span style={{ width: 86, fontSize: 9, textAlign: "right", opacity: 0.85 }}>{ev}/{EV_STAT_CAP} → +{evStatBonus(ev)}{maxed ? " MAX" : ""}</span>
+                                                        </div>
+                                                    )
+                                                })}
+                                                <div style={{ fontSize: 9, opacity: 0.6, marginTop: 5, lineHeight: 1.35 }}>
+                                                    +{EV_YIELD_PER_WIN} EV par victoire, dans la stat-forte du Daemon vaincu. La contribution « +X » s'ajoute dans le calcul de la stat (montée avec le niveau). Plafond {EV_STAT_CAP}/stat, {EV_TOTAL_CAP} au total.
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 )
                             })()}
