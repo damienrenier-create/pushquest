@@ -8,7 +8,7 @@
 //
 // Pas encore : interaction A/B (NPCs, dialogues), START (menu), SELECT.
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import GameBoyShell from "./GameBoyShell"
 import MapView from "./MapView"
@@ -87,6 +87,7 @@ import DomeBracket from "./DomeBracket"
 import GeneIntroCarousel from "./GeneIntroCarousel"
 import RouletteCasinoModal from "./roulette/RouletteCasinoModal"
 import RouletteMultiTable from "./roulette/RouletteMultiTable"
+import CroupierPanel from "./CroupierPanel"
 
 // ============================================================
 // ZONE DE COMBAT — REPRISE DE SÉRIE au refresh (anti-abandon)
@@ -198,6 +199,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [ticketOpen, setTicketOpen] = useState(false) // ticket roulette quotidien (1re connexion du jour)
     const [rouletteOpen, setRouletteOpen] = useState(false) // roulette européenne SOLO (bêta, à côté du casino)
     const [rouletteMpOpen, setRouletteMpOpen] = useState(false) // roulette européenne MULTIJOUEUR (Phase 4)
+    const [croupierOpen, setCroupierOpen] = useState(false) // carrousel du croupier (railleries + stats casino)
     const [heldOpen, setHeldOpen] = useState(false) // modale "objet tenu" (depuis la fiche d'un Daemon)
     const [evDetailOpen, setEvDetailOpen] = useState(false) // détail EV (par stat) déplié sur la fiche
     const ticketChecked = useRef(false)
@@ -392,6 +394,18 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         return remotePlayers.find((p) => p.posX === fx && p.posY === fy) ?? null
     }
 
+    // CASINO : A face à la TABLE ROULETTE (3-5,4-5) → joue ; A face au CROUPIER (4,3) → carrousel.
+    // Le SENS où l'on regarde désambiguïse (table sous le croupier). Renvoie true si géré.
+    const tryCasinoObjectA = useCallback((): boolean => {
+        if (!inCasino || !userId) return false
+        const d = mapPlayer.direction
+        const fx = mapPlayer.posX + (d === "left" ? -1 : d === "right" ? 1 : 0)
+        const fy = mapPlayer.posY + (d === "up" ? -1 : d === "down" ? 1 : 0)
+        if (fx >= 3 && fx <= 5 && fy >= 4 && fy <= 5) { menuTapGuard.current = Date.now(); setRouletteMpOpen(true); return true }
+        if (fx === 4 && fy === 3) { menuTapGuard.current = Date.now(); setCroupierOpen(true); return true }
+        return false
+    }, [inCasino, userId, mapPlayer])
+
     // Au mount : charge l'état du joueur depuis le serveur (DB Neon).
     // Si le joueur n'a jamais joué, on garde le state par défaut (déjà set
     // côté store) — l'API renvoie les mêmes defaults dans ce cas.
@@ -537,6 +551,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         if (duelWonToday(opp.userId)) showDialogue("duel_rival", opp.nickname, ["Tu m'as déjà vaincu aujourd'hui. Reviens demain pour ta revanche."])
                         else { const enemy = arenaMode === "hub" ? buildHubTeam(opp.player) : buildMirrorTeam(opp.player); setArenaFight({ opp, mode: arenaMode, enemy }) }
                     }
+                    else if (tryCasinoObjectA()) { /* table roulette / croupier (casino) */ }
                     else pressA()
                 }
             }
@@ -552,7 +567,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         }
         window.addEventListener("keydown", handler)
         return () => window.removeEventListener("keydown", handler)
-    }, [move, pressA, pressB, battle, menu, newDexEntry, evolutions, championRun, arenaFight, pendingLearn, arenaMode, arenaOpponents, mapPlayer, showDialogue])
+    }, [move, pressA, pressB, battle, menu, newDexEntry, evolutions, championRun, arenaFight, pendingLearn, arenaMode, arenaOpponents, mapPlayer, showDialogue, tryCasinoObjectA])
 
     // Identité (User.id) + carte courante → estampillage ownership/lieu à la capture.
     useEffect(() => { setCurrentPlayerId(userId) }, [userId])
@@ -928,6 +943,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     if (inCasino) {
                         const target = facingRemote()
                         if (target) { menuTapGuard.current = Date.now(); setInteractTarget({ userId: target.userId, nickname: target.nickname }); return }
+                        if (tryCasinoObjectA()) return
                     }
                     pressA()
                 }}
@@ -1435,11 +1451,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 <button onClick={() => setRouletteOpen(true)} style={{ ...chatFabStyle, bottom: 84, fontSize: 22 }} title="Roulette européenne">🎡</button>
             )}
             {rouletteOpen && <RouletteCasinoModal onClose={() => setRouletteOpen(false)} />}
-            {/* Roulette MULTIJOUEUR (Phase 4) — table partagée : tout le monde mise, timer commun, même résultat */}
-            {inCasino && !battle && !showIntro && !chatOpen && !rouletteOpen && !rouletteMpOpen && !!userId && (
-                <button onClick={() => setRouletteMpOpen(true)} style={{ ...chatFabStyle, bottom: 130, fontSize: 20 }} title="Roulette multijoueur">👥</button>
-            )}
+            {/* Roulette MULTIJOUEUR (Phase 4) — ouverte en s'approchant de la TABLE (3-5,4-5) + A (cf. tryCasinoObjectA). */}
             {rouletteMpOpen && !!userId && <RouletteMultiTable myUserId={userId} onClose={() => setRouletteMpOpen(false)} />}
+            {/* CROUPIER — carrousel : railleries + numéros chauds/froids + top mises & gains (jour/semaine/ever). */}
+            {croupierOpen && !!userId && <CroupierPanel myUserId={userId} close={() => setCroupierOpen(false)} onPlay={() => { setCroupierOpen(false); setRouletteMpOpen(true) }} />}
             {chatOpen && (
                 <div style={menuOverlayStyle} onClick={() => setChatOpen(false)}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
