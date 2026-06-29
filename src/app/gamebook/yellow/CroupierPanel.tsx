@@ -77,6 +77,7 @@ export default function CroupierPanel({ myUserId, close, onPlay }: { myUserId: s
                                 <div style={{ fontSize: 40, margin: "4px 0" }}>🎲</div>
                                 <div style={raillerie}>« {RAILLERIES[rail]} »</div>
                                 <div style={{ ...muted, marginTop: 8 }}>{stats.totalSpins} manches jouées sur la table.</div>
+                                <div style={tip}>💻 Psst… si t&apos;es joueur, il y a des <b>défis</b> sur l&apos;ordi du <b>labo</b> (à l&apos;étage du Centre Daemon). Va voir.</div>
                                 <button style={playBtn} onClick={onPlay}>🎡 Jouer à la roulette</button>
                             </div>
                         )}
@@ -131,6 +132,7 @@ const titleStyle: React.CSSProperties = { fontSize: 16, fontWeight: 800, color: 
 const content: React.CSSProperties = { minHeight: 200 }
 const muted: React.CSSProperties = { fontSize: 12, opacity: 0.7, textAlign: "center", lineHeight: 1.6 }
 const raillerie: React.CSSProperties = { fontSize: 14, fontStyle: "italic", lineHeight: 1.5, color: "#e9d9a0", padding: "0 6px" }
+const tip: React.CSSProperties = { fontSize: 12, lineHeight: 1.5, color: "#9fd4ff", background: "rgba(126,180,255,0.1)", border: "1px solid rgba(126,180,255,0.25)", borderRadius: 8, padding: "8px 10px", margin: "10px 4px 0" }
 const playBtn: React.CSSProperties = { marginTop: 14, padding: "11px 18px", background: "#e0c020", color: "#1a1400", border: "none", borderRadius: 9, fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }
 const lbl: React.CSSProperties = { fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, color: "#ffd54a", margin: "10px 0 5px" }
 const chipRow: React.CSSProperties = { display: "flex", flexWrap: "wrap", gap: 6 }

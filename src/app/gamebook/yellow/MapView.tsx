@@ -409,19 +409,15 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId, are
                     )
                 })()}
 
-                {/* TABLE ROULETTE MULTIJOUEUR (casino) : objet 3×2 en (3,4)→(5,5), sous le croupier.
-                    Placeholder feutre + 🎡 tant que le sprite pixel-art n'est pas fourni (remplacer le
-                    contenu par <img src="/yellow/sprites/casino_roulette.png"> à la livraison du sprite). */}
+                {/* TABLE ROULETTE MULTIJOUEUR (casino) : sprite 3×2 en (3,4)→(5,5), sous le croupier.
+                    On s'approche + A face à la table → on joue (cf. tryCasinoObjectA côté client). */}
                 {map.id === "yellow_casino" && (
                     <div style={{
                         position: "absolute", ...screenPos(3, 4, 3, 2), zIndex: 1, pointerEvents: "none",
-                        background: "radial-gradient(circle at 30% 35%, #2a8a4e, #0e3d22)",
-                        border: "2px solid #c9a227", borderRadius: "14%/22%",
-                        boxShadow: "0 3px 10px rgba(0,0,0,.55), inset 0 0 12px rgba(0,0,0,.35)",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                    }}>
-                        <span style={{ fontSize: "min(7vw,44px)", filter: "drop-shadow(0 1px 2px #000)" }}>🎡</span>
-                    </div>
+                        backgroundImage: "url(/yellow/sprites/casino_roulette.png?v=1)",
+                        backgroundRepeat: "no-repeat", backgroundSize: "contain", backgroundPosition: "center",
+                        imageRendering: "pixelated",
+                    }} />
                 )}
 
                 {/* BROUILLARD (manoir hanté, map.darkness) : NOIR sur toute case hors d'un rayon de
