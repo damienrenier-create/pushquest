@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     const userId = (session?.user as { id?: string } | undefined)?.id
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-    let body: { roundId?: unknown; bets?: unknown }
+    let body: { roundId?: unknown; bets?: unknown; luck?: unknown }
     try { body = await req.json() } catch { return NextResponse.json({ error: "Invalid body" }, { status: 400 }) }
     const roundId = typeof body.roundId === "string" ? body.roundId : ""
     if (!roundId) return NextResponse.json({ error: "missing_round" }, { status: 400 })
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     } catch { /* nickname best-effort */ }
 
     try {
-        const res = await placeBets(userId, nickname, roundId, body.bets)
+        const res = await placeBets(userId, nickname, roundId, body.bets, body.luck)
         void publishRoulette("bet:placed", { userId, nickname, staked: res.staked, roundId })
         return NextResponse.json(res)
     } catch (e) {

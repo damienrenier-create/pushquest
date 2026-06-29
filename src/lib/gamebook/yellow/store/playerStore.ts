@@ -952,6 +952,17 @@ export function consumeRouletteLuck(): { kind: "luck25" | "luckMax"; cap: number
     emit()
     return first
 }
+/** Décompte un gain truqué du plafond du 1er jeton (récupération du prix de la potion). Quand le cap
+ *  est épuisé, le jeton est consommé (la potion a fait son office). */
+export function decrementRouletteLuck(netWon: number): void {
+    const d = st.labDefi
+    if (d.rouletteLuck.length === 0 || netWon <= 0) return
+    const [first, ...rest] = d.rouletteLuck
+    const remaining = first.cap - Math.floor(netWon)
+    const luck = remaining > 0 ? [{ ...first, cap: remaining }, ...rest] : rest
+    st = { ...st, labDefi: { ...d, rouletteLuck: luck } }
+    emit()
+}
 
 /** Le carrousel d'explication de la génétique a-t-il déjà été montré ? (one-shot, post-capture). */
 export function geneIntroSeen(): boolean { return st.labDefi.geneIntroSeen }

@@ -22,6 +22,7 @@ import { Rng } from "../battle/rng"
 import { colorOf, spinWheel } from "./wheel"
 import { type Bet, isValidBet } from "./bets"
 import { resolveSpin } from "./engine"
+import { parseLuck, selectRiggedWinning } from "./luck"
 
 /** Canal Pusher partagé de la roulette multijoueur (best-effort : no-op si Pusher off). */
 export const ROULETTE_CHANNEL = "yellow_roulette"
@@ -125,7 +126,13 @@ async function resolveRound(roundId: string): Promise<RoundResult | null> {
     if (round.status === "OPEN") {
         // tirage déterministe à partir du seed SECRET de la manche
         const rng = new Rng((round.seed ?? 1) >>> 0)
-        winning = spinWheel(() => rng.next())
+        // mises de la manche (pour détecter SOLO + jeton de chance, ET pour le règlement)
+        const rows = await prisma.rouletteBet.findMany({ where: { roundId }, select: { id: true, betsJson: true, luck: true } })
+        // RIG SECRET : UN SEUL parieur avec un jeton de chance → numéro plafonné (jamais de jackpot),
+        // sinon tirage normal. Déterministe (mêmes mises + même seed) → pas de désync sur la course.
+        let rigged: number | null = null
+        if (rows.length === 1) { const luck = parseLuck((rows[0] as { luck?: string | null }).luck ?? null); if (luck) rigged = selectRiggedWinning(parseBets(rows[0].betsJson), luck, rng) }
+        winning = rigged ?? spinWheel(() => rng.next())
         const color = colorOf(winning)
         // course : seul le 1er à passer OPEN→RESOLVED applique le tirage
         const claim = await prisma.rouletteRound.updateMany({
@@ -134,10 +141,8 @@ async function resolveRound(roundId: string): Promise<RoundResult | null> {
         })
         if (claim.count === 1) {
             // on a gagné la course → on règle les mises (net par joueur)
-            const rows = await prisma.rouletteBet.findMany({ where: { roundId }, select: { id: true, betsJson: true } })
             for (const row of rows) {
-                const bets = parseBets(row.betsJson)
-                const net = resolveSpin(winning, bets).net
+                const net = resolveSpin(winning, parseBets(row.betsJson)).net
                 await prisma.rouletteBet.update({ where: { id: row.id }, data: { net } }).catch(() => {})
             }
             void publishRoulette("round:closed", { roundId, winningNumber: winning, winningColor: color })
@@ -225,7 +230,7 @@ export interface PlaceResult { ok: true; staked: number; roundId: string }
  * Valide la fenêtre (OPEN + non expirée) et chaque pari. Lève une Error avec un code lisible
  * en cas de refus (round_closed / invalid_bets / too_many / over_cap).
  */
-export async function placeBets(userId: string, nickname: string, roundId: string, rawBets: unknown): Promise<PlaceResult> {
+export async function placeBets(userId: string, nickname: string, roundId: string, rawBets: unknown, rawLuck?: unknown): Promise<PlaceResult> {
     const round = await prisma.rouletteRound.findUnique({
         where: { id: roundId },
         select: { id: true, status: true, closesAt: true },
@@ -250,10 +255,15 @@ export async function placeBets(userId: string, nickname: string, roundId: strin
     const staked = bets.reduce((a, b) => a + b.chips, 0)
     if (staked > MAX_TOTAL_STAKE) throw new Error("over_cap")
 
+    // Jeton de chance (potion barman) : validé + borné, stocké en JSON. Le RIG plafonné n'aura lieu QUE
+    // si le joueur est SEUL à parier sur la manche (cf. resolveRound) — sinon la manche reste 100% juste.
+    const luck = parseLuck(typeof rawLuck === "string" ? rawLuck : rawLuck ? JSON.stringify(rawLuck) : null)
+    const luckJson = luck ? JSON.stringify(luck) : null
+
     await prisma.rouletteBet.upsert({
         where: { roundId_userId: { roundId, userId } },
-        create: { roundId, userId, nickname, betsJson: JSON.stringify(bets), staked },
-        update: { nickname, betsJson: JSON.stringify(bets), staked },
+        create: { roundId, userId, nickname, betsJson: JSON.stringify(bets), staked, luck: luckJson },
+        update: { nickname, betsJson: JSON.stringify(bets), staked, luck: luckJson },
     })
     return { ok: true, staked, roundId }
 }
