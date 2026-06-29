@@ -34,7 +34,7 @@ import type { BadgeId } from "../data/cts"
 import { createMonInstance } from "../battle/factory"
 import { getTrainer } from "../data/trainers"
 import { SBIRE_TRAINER_ID } from "../data/sbire"
-import { toMonInstance, type LeagueHighlight, type ChampionRun } from "../storage/save"
+import { toMonInstance, type LeagueHighlight, type ChampionRun, type ChampionMon } from "../storage/save"
 import { fullStats } from "../battle/stats"
 import { evolveTeam, type TeamEvolution } from "../progression/evolveTeam"
 import { persistYellowSave, processSaiyanPoints } from "./saveManager"
@@ -101,6 +101,8 @@ interface BattleStoreState {
     newDexEntry: { speciesId: string; uid: string; level: number } | null
     /** LIGUE : sacre du CHAMPION (après LE MAÎTRE) → Hall of Fame post-combat (équipe + best-of). null sinon. */
     championRun: ChampionRun | null
+    /** ARÈNE : victoire d'un boss de gym (badge gagné) → Hall of Fame par arène (équipe gelée). null sinon. */
+    arenaRun: { badgeId: BadgeId; team: ChampionMon[] } | null
     /** Dresseur dont le REMATCH doit s'enchaîner DIRECTEMENT après cette victoire (ex. VOLTA 2 phases). null sinon. */
     chainRematchId: string | null
     /** Au moins un Daemon a une attaque EN ATTENTE d'apprentissage → prompt post-combat (façon Gen 1). */
@@ -133,7 +135,7 @@ interface PvpContext {
     desync: boolean
 }
 
-let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, chainRematchId: null, pendingLearn: false, duelResult: null, frontierResult: null, stoneReward: null, justCaught: false }
+let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, arenaRun: null, chainRematchId: null, pendingLearn: false, duelResult: null, frontierResult: null, stoneReward: null, justCaught: false }
 // LIGUE — meilleurs moments du run en cours (best hit par membre du Conseil 4 + Maître), runtime.
 // Upsert par trainerId à chaque victoire de la Ligue ; lus au sacre du Maître pour le Hall of Fame.
 const leagueHighlights: Record<string, LeagueHighlight> = {}
@@ -542,6 +544,22 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
 
     // 2quater) LIGUE : à chaque victoire d'un membre, on retient le MEILLEUR coup du combat (best-of).
     //          Au sacre du MAÎTRE → Champion + Hall of Fame (équipe + best-of des 5 combats).
+    // Équipe GELÉE (ChampionMon[]) au moment d'un sacre — réutilisée par le Hall of Fame Ligue ET Arène.
+    const snapshotTeam = (): ChampionMon[] => getPlayer().team.map((m) => {
+        const sp = getSpecies(m.speciesId)
+        const st = sp ? fullStats(m, sp) : { hp: 0, atk: 0, def: 0, spe: 0, spc: 0 }
+        return {
+            speciesId: m.speciesId,
+            nickname: m.nickname,
+            level: m.level,
+            shiny: m.shiny,
+            stats: { hp: st.hp, atk: st.atk, def: st.def, spe: st.spe, spc: st.spc },
+            moves: m.moves.map((slot) => getMove(slot.moveId)?.name ?? slot.moveId),
+        }
+    })
+    // ARÈNE — Hall of Fame par gym : si un badge vient d'être gagné, on gèle l'équipe victorieuse.
+    const arenaRun: BattleStoreState["arenaRun"] = badgeAwarded ? { badgeId: badgeAwarded, team: snapshotTeam() } : null
+
     let championRun: BattleStoreState["championRun"] = null
     const lid = storeState.trainer?.trainerId
     if (b.outcome === "win" && lid && lid.startsWith("y_ligue_")) {
@@ -555,18 +573,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             setChampion()
             const order = ["y_ligue_1_olga", "y_ligue_2_aldo", "y_ligue_3_agatha", "y_ligue_4_peter", "y_ligue_maitre"]
             championRun = {
-                team: getPlayer().team.map((m) => {
-                    const sp = getSpecies(m.speciesId)
-                    const st = sp ? fullStats(m, sp) : { hp: 0, atk: 0, def: 0, spe: 0, spc: 0 }
-                    return {
-                        speciesId: m.speciesId,
-                        nickname: m.nickname,
-                        level: m.level,
-                        shiny: m.shiny,
-                        stats: { hp: st.hp, atk: st.atk, def: st.def, spe: st.spe, spc: st.spc },
-                        moves: m.moves.map((slot) => getMove(slot.moveId)?.name ?? slot.moveId),
-                    }
-                }),
+                team: snapshotTeam(),
                 highlights: order.map((id) => leagueHighlights[id]).filter((h): h is LeagueHighlight => !!h),
             }
         }
@@ -600,7 +607,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // Un Daemon a-t-il une attaque EN ATTENTE (slots pleins à la montée de niveau / l'évolution) ? → prompt post-combat.
     const pendingLearn = getPlayer().team.some((m) => (m.pendingMoves?.length ?? 0) > 0)
     // Expose les évolutions pour la cinématique post-combat (jouée après "QUITTER").
-    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward, justCaught: b.outcome === "caught" })
+    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, arenaRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward, justCaught: b.outcome === "caught" })
 
     // 4) Sauvegarde persistante (DB).
     persistYellowSave()
@@ -724,7 +731,7 @@ export function getAceRewardMsg(): string | null {
 
 /** Consommé par la carte une fois la notification de badge affichée. */
 export function clearBadgeAwarded() {
-    setStore({ ...storeState, badgeAwarded: null, giftCtMove: null })
+    setStore({ ...storeState, badgeAwarded: null, giftCtMove: null, arenaRun: null })
 }
 
 /** Nom de l'attaque de la CT cadeau remise par le boss (lu à l'affichage). */
@@ -1016,6 +1023,15 @@ export function useChampionRun(): BattleStoreState["championRun"] {
         subscribe,
         () => getSnapshot().championRun,
         () => getSnapshot().championRun,
+    )
+}
+
+/** ARÈNE : victoire de gym à graver au Hall of Fame par arène (équipe gelée + badge), ou null. */
+export function useArenaRun(): BattleStoreState["arenaRun"] {
+    return useSyncExternalStore(
+        subscribe,
+        () => getSnapshot().arenaRun,
+        () => getSnapshot().arenaRun,
     )
 }
 

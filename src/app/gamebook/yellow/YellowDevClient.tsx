@@ -26,6 +26,7 @@ import EvolutionScreen from "./battle/EvolutionScreen"
 import MoveLearnScreen from "./battle/MoveLearnScreen"
 import HallOfFame from "./HallOfFame"
 import HallOfFameViewer from "./HallOfFameViewer"
+import ArenaHallOfFamePanel from "./ArenaHallOfFamePanel"
 import DexEntryScreen from "./battle/DexEntryScreen"
 import IntroCinematic from "./IntroCinematic"
 import GuidePanel from "./GuidePanel"
@@ -43,7 +44,7 @@ import { useGameStore, setCurrentNickname, DEFAULT_SPAWN } from "@/lib/gamebook/
 import { YELLOW_ENTRANCE_MAP_ID } from "@/lib/gamebook/yellow/featureFlag"
 import { YELLOW_MAPS, CENDREVILLE_SPAWN } from "@/lib/gamebook/yellow/maps"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
-import { useBattle, useEvolutions, clearEvolutions, useChampionRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getGiftCtMove, startTrainerBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult, useFrontierResult, clearFrontierResult, getBattleEnergy, resumeBattleFromStorage, useStoneReward, clearStoneReward, useJustCaught, clearJustCaught } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, useEvolutions, clearEvolutions, useChampionRun, useArenaRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getGiftCtMove, startTrainerBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult, useFrontierResult, clearFrontierResult, getBattleEnergy, resumeBattleFromStorage, useStoneReward, clearStoneReward, useJustCaught, clearJustCaught } from "@/lib/gamebook/yellow/store/battleStore"
 import { useEncounterFxActive } from "@/lib/gamebook/yellow/store/encounterFxStore"
 import { aceLoseLine } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
@@ -179,6 +180,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const encounterFx = useEncounterFxActive()
     const evolutions = useEvolutions()
     const championRun = useChampionRun()
+    const arenaRun = useArenaRun()
     const chainRematchId = useChainRematch()
     const pendingLearn = usePendingLearn()
     const newDexEntry = useNewDexEntry()
@@ -226,7 +228,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         const enemy = arenaMode === "hub" ? buildHubTeam(opp.player) : buildMirrorTeam(opp.player)
         setArenaFight({ opp, mode: arenaMode, enemy })
     }
-    const [menu, setMenu] = useState<"none" | "pause" | "team" | "bag" | "reput" | "moves" | "hof">("none")
+    const [menu, setMenu] = useState<"none" | "pause" | "team" | "bag" | "reput" | "moves" | "hof" | "arena-hof">("none")
     const ficheTouchX = useRef<number | null>(null) // swipe gauche/droite dans la fiche Daemon
     const [selected, setSelected] = useState<MonInstance | null>(null)
     const [pantheonEvo, setPantheonEvo] = useState<MonInstance | null>(null) // Pierre Gékroc : choix du type pour Panthéon
@@ -632,6 +634,19 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             .catch(() => {})
     }, [championRun])
 
+    // ARÈNE — CONQUÊTE : dès qu'un badge est gagné (arenaRun posé), on grave l'équipe victorieuse au
+    // Hall of Fame de CETTE arène. Une seule fois (la ref se réarme au clear du badge → arenaRun=null).
+    const arenaReportedRef = useRef(false)
+    useEffect(() => {
+        if (!arenaRun) { arenaReportedRef.current = false; return }
+        if (arenaReportedRef.current) return
+        arenaReportedRef.current = true
+        fetch("/api/gamebook/yellow/arena-champions", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ badgeId: arenaRun.badgeId, team: arenaRun.team }),
+        }).catch(() => {})
+    }, [arenaRun])
+
     // Victoire sur le sbire : on délivre une explication sur l'app, une fois le
     // combat quitté ET l'éventuelle cinématique d'évolution terminée.
     useEffect(() => {
@@ -865,7 +880,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (advisorOpen) { closeAdvisor(); return true }
         if (labOpen) { closeLab(); return true }
         if (pcOpen) { closePc(); return true }
-        if (menu === "team" || menu === "bag" || menu === "reput" || menu === "moves" || menu === "hof") { setMenu("pause"); return true }
+        if (menu === "team" || menu === "bag" || menu === "reput" || menu === "moves" || menu === "hof" || menu === "arena-hof") { setMenu("pause"); return true }
         if (menu === "pause") { setMenu("none"); return true }
         return false
     }
@@ -943,7 +958,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         <button style={menuBtnStyle} onClick={() => router.push("/gamebook/yellow/dex")}>📖 DEX (CATALOGUE)</button>
                         {!battle && <button style={menuBtnStyle} onClick={() => setMenu("moves")}>⚔️ ATTAQUES</button>}
                         <button style={menuBtnStyle} onClick={() => setMenu("reput")}>🏆 RÉPUTATION</button>
-                        <button style={menuBtnStyle} onClick={() => setMenu("hof")}>🏛️ HALL OF FAME</button>
+                        <button style={menuBtnStyle} onClick={() => setMenu("hof")}>🏛️ HALL OF FAME (LIGUE)</button>
+                        <button style={menuBtnStyle} onClick={() => setMenu("arena-hof")}>⚔️ HALL OF FAME (ARÈNES)</button>
                         {!battle && (confirmReset ? (
                             <>
                                 <div style={{ fontSize: 11, color: "#c83030", fontWeight: 700, textAlign: "center" }}>
@@ -1255,6 +1271,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {/* Boutique (vendeur) */}
             {!battle && menu === "moves" && <MovesPanel close={() => setMenu("pause")} />}
             {menu === "hof" && <HallOfFameViewer close={() => setMenu("pause")} />}
+            {menu === "arena-hof" && <ArenaHallOfFamePanel close={() => setMenu("pause")} />}
 
             {/* ZONE DE COMBAT — entrée Tour (placeholder, non-bloquant : marche pour sortir) */}
             {!battle && !run && mapPlayer.mapId === "yellow_combat_tour" && !dialogue && player.team.length > 0 && (

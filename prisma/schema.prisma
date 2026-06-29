@@ -350,6 +350,21 @@ model LeagueChampion {
   @@index([userId])
 }
 
+// ARÈNES — HALL OF FAME PAR GYM : à chaque conquête d'un badge (boss d'arène battu), on grave
+// l'équipe victorieuse pour cette arène. Calqué sur LeagueChampion (+ badgeId). Pas de @relation
+// (userId String) → User intact. 100% ADDITIF (db:push). Pattern gaté côté code (prisma as any).
+model ArenaChampion {
+  id        String   @id @default(cuid())
+  userId    String   // vainqueur
+  nickname  String   // pseudo trusté serveur
+  badgeId   String   // "feu" | "plante" | "eau" | "roche" | "elec" (l'arène conquise)
+  team      String   // JSON ChampionMon[] (équipe gelée au moment de la victoire)
+  wonAt     DateTime @default(now())
+
+  @@index([badgeId, wonAt])
+  @@index([userId, badgeId])
+}
+
 // LIGUE — RÉCOMPENSE CROISÉE : à chaque sacre, TOUS les autres joueurs gagnent 1/3 de leur quota
 // énergétique. Une ligne par bénéficiaire ; le montant (1/3 du repsCap) est calculé CÔTÉ CLIENT au
 // moment de réclamer (le serveur ne connaît pas le cap de chacun). Pas de @relation.
