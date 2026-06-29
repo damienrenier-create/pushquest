@@ -214,6 +214,9 @@ export interface MonInstance {
 export interface BattleMon extends MonInstance {
     stages: StatStages
     volatiles: Partial<Record<VolatileStatus, number>>
+    /** BÉNÉDICTION barman (secret, SOLO) : le PROCHAIN coup de ce Daemon est un COUP CRITIQUE garanti,
+     *  puis le flag est consommé. Posé quand il boit une potion "triple prix". Runtime, non persisté. */
+    nextCritGuaranteed?: boolean
     /** Plus gros coup porté DANS CE COMBAT — runtime, JAMAIS persisté. Repart de 0 à
      *  chaque combat (toBattleMon le laisse undefined) → le débrief GOAT ne reflète QUE
      *  le combat courant, sans traîner les records des combats précédents. À ne pas

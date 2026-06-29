@@ -19,7 +19,8 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType } from "../battle/types"
 import { markSeen, markCaught, getPokedex } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, recordOrcalineDefeat, orcalineLevelForWins, markSylvebarbeAwake, addCtDamage, grantRouletteTicket } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, recordOrcalineDefeat, orcalineLevelForWins, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, consumeBattleBlessing } from "./playerStore"
+import { getItem } from "../data/items"
 import { ARENA_TICKET_VALUE, SBIRE_TICKET_VALUE, SBIRE_TICKET_EVERY, ACE_TICKET_VALUE, ACE_TICKET_WIN_BEFORE, ACE_TICKET_WIN_AFTER, ACE_TICKET_EARLY_VALUE, ACE_TICKET_WIN_EARLY } from "../data/labDefis"
 import { getCt } from "../data/cts"
 import { getMove } from "../data/moves"
@@ -288,6 +289,18 @@ export function submitPlayerAction(action: PlayerAction) {
     if (action.kind === "ball" && !consumeItem(action.itemId)) return
     // Utiliser un objet de soin le consomme aussi.
     if (action.kind === "item" && !consumeItem(action.itemId)) return
+    // BÉNÉDICTION barman (SECRET, solo) : boire une POTION (soin) déclenche l'effet en attente sur le
+    // Daemon ACTIF — esquive ×2 (précision adverse ÷2 via stages.eva) ou crit garanti au prochain coup.
+    if (action.kind === "item" && getItem(action.itemId)?.category === "HEAL") {
+        const bless = consumeBattleBlessing()
+        if (bless) {
+            const m = battle.player.team[battle.player.activeIndex]
+            if (m) {
+                if (bless === "eva") m.stages.eva = Math.max(-6, Math.min(6, (m.stages.eva ?? 0) + 3))
+                else if (bless === "crit") m.nextCritGuaranteed = true
+            }
+        }
+    }
     // Attaque normale : coûte des reps (la Charge Désespérée, index sentinelle, est gratuite).
     let paidMoveCost = 0
     if (action.kind === "move" && action.moveIndex !== STRUGGLE_INDEX) {

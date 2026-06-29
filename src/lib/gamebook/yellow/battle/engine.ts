@@ -657,9 +657,12 @@ function dealMoveDamage(state: BattleState, side: SideId, move: MoveData, rng: R
     // Crit Gen 1 : probabilité liée à la Vitesse de base de l'attaquant.
     const critOverride = move.effect?.critChanceForSpecies?.[attacker.speciesId]
     const scopeLens = !!heldEffect(attacker)?.critStage // Lentilscope : booste le taux de crit (façon high-crit)
-    const isCrit = critOverride !== undefined
+    let isCrit = critOverride !== undefined
         ? rng.next() < critOverride
         : rng.next() < critProbabilityGen1(atkSpecies.baseStats.spe, move.effect?.highCrit || scopeLens)
+    // BÉNÉDICTION barman (potion "triple prix", SOLO) : crit GARANTI au prochain coup, puis consommé.
+    // Le tirage RNG ci-dessus est conservé (déterminisme intact) ; on ne fait que forcer le résultat.
+    if (attacker.nextCritGuaranteed) { isCrit = true; attacker.nextCritGuaranteed = false }
     // OBJET TENU : boost de type (attaquant) × réduction de dégâts physiques (défenseur, ex. Coquille Tony).
     const itemMult = heldOutgoingDmgMult(attacker, move.type) * heldIncomingDmgMult(defender, isPhysical)
     const result = computeDamage({
