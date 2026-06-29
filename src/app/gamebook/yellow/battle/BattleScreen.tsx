@@ -606,11 +606,11 @@ function MonInfo({ mon, self, hp, max }: { mon: BattleMon; self?: boolean; hp: n
                     <span key={t} style={{ ...S.typeChip, background: TYPE_COLORS[t] }}>{TYPE_FR[t] ?? t}</span>
                 ))}
             </div>
+            {/* Chiffre des PV AU-DESSUS de la barre, aligné à droite → la barre garde toute sa largeur. */}
+            {self && <div style={S.hpNumRow}><span style={S.hpNum}>{Math.max(0, Math.round(hp))}/{max} PV</span></div>}
             <div style={S.hpRow}>
                 <span style={S.hpLabel}>PV</span>
                 <div style={S.hpTrack}><div style={{ ...S.hpFill, width: `${pct}%`, background: col }} /></div>
-                {/* Chiffre des PV À CÔTÉ de la barre (et non en dessous) → on comprend tout de suite à quoi il correspond. */}
-                {self && <span style={S.hpNum}>{Math.max(0, Math.round(hp))}/{max}</span>}
             </div>
             {/* Mini barre d'XP (joueur uniquement) → on voit si le Daemon est proche du niveau suivant. */}
             {self && (() => {
@@ -754,11 +754,12 @@ const S: Record<string, React.CSSProperties> = {
     monLvl: { opacity: 0.8 },
     typeRow: { display: "flex", gap: 4, marginTop: 3 },
     typeChip: { fontSize: 8, fontWeight: 700, color: "#fff", padding: "1px 5px", borderRadius: 3, letterSpacing: 0.5, textShadow: "0 1px 1px rgba(0,0,0,0.45)" },
-    hpRow: { display: "flex", alignItems: "center", gap: 6, marginTop: 4 },
+    hpNumRow: { display: "flex", justifyContent: "flex-end", marginTop: 4, lineHeight: 1 },
+    hpRow: { display: "flex", alignItems: "center", gap: 6, marginTop: 2 },
     hpLabel: { fontSize: 9, fontWeight: 700, color: "#c89000" },
     hpTrack: { flex: 1, height: 7, background: "#404040", borderRadius: 4, overflow: "hidden", border: "1px solid #1c1408" },
     hpFill: { height: "100%", transition: "width 0.4s ease" },
-    hpNum: { fontSize: 9, fontWeight: 700, minWidth: 46, textAlign: "right" },
+    hpNum: { fontSize: 10, fontWeight: 700, color: "#3a2a08" },
     xpRow: { display: "flex", alignItems: "center", gap: 6, marginTop: 2 },
     xpLabel: { fontSize: 8, fontWeight: 700, color: "#5a9fe0" },
     xpTrack: { flex: 1, height: 4, background: "#404040", borderRadius: 3, overflow: "hidden", border: "1px solid #1c1408" },
