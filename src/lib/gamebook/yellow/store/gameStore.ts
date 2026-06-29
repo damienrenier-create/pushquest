@@ -23,6 +23,7 @@ import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDe
 import { getSpecies } from "../data/species"
 import { persistYellowSave } from "./saveManager"
 import { rollWildEncounter, wildLevelCap, hasEncounters } from "../data/encounters"
+import { reportShiny } from "../shinyGift"
 import { getTrainer, trainerBoost, arenaScaledLevel, type TrainTier } from "../data/trainers"
 import { createMonInstance } from "../battle/factory"
 import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroLines, SBIRE_DONE_LINES, SBIRE_NO_TEAM_LINES } from "../data/sbire"
@@ -551,6 +552,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     const seed = Math.floor(Math.random() * 1e9) >>> 0
                     set({ encounterCooldown: 1 }) // #7 : la 1re case après ce combat sera sans rencontre
                     startWildBattle(team, [wild], seed)
+                    // ✨ FÊTE SHINY : croiser un shiny offre +50 énergie à TOUS les joueurs (annonce Dieu Spaghetti).
+                    if (wild.shiny) reportShiny("encounter", wild.uid, wild.speciesId)
                 }
             }
         }

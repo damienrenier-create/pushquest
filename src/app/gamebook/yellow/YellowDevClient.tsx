@@ -509,6 +509,28 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     }
                 } catch { /* neutre (hors-ligne / table absente) */ }
             }
+            // ✨ FÊTE SHINY : un joueur a croisé/capturé un shiny → +50 énergie HORS-plafond pour tous,
+            // annoncé par le Dieu Spaghetti à cette connexion (réclamation des dons en attente).
+            if (!cancelled) {
+                try {
+                    const r = await fetch("/api/gamebook/yellow/shiny-gift")
+                    const j = r.ok ? await r.json() : null
+                    const energy = (j?.energy ?? 0) as number
+                    const events = (j?.events ?? []) as { kind: string; speciesId: string; fromNickname: string }[]
+                    if (!cancelled && energy > 0) {
+                        grantBonusEnergyUncapped(energy)
+                        persistYellowSave()
+                        const who = (es: typeof events) => [...new Set(es.map((e) => e.fromNickname).filter(Boolean))].join(", ")
+                        const caps = events.filter((e) => e.kind === "captured")
+                        const encs = events.filter((e) => e.kind === "encounter")
+                        const lines: string[] = ["*Le Dieu Spaghetti apparaît dans une volute de vapeur dorée…*"]
+                        if (encs.length) lines.push(`✨ « Un Daemon SHINY a été aperçu sur le Nexus${who(encs) ? ` (par ${who(encs)})` : ""} ! La chance rayonne. »`)
+                        if (caps.length) lines.push(`🎉 « JOUR DE FÊTE : un shiny a été CAPTURÉ${who(caps) ? ` par ${who(caps)}` : ""} ! »`)
+                        lines.push(`« Je régale toute la communauté : +${energy} énergie (hors plafond) pour toi ! »`)
+                        showDialogue(DUEL_DREAM_NPC, "✨ Dieu Spaghetti", lines)
+                    }
+                } catch { /* neutre (hors-ligne / table absente) */ }
+            }
             // 1re entrée (intro jamais vue + aucune équipe) → cinématique + choix du starter.
             if (!cancelled && !getPlayer().introSeen && getPlayer().team.length === 0) {
                 setShowIntro(true)

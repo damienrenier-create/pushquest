@@ -21,6 +21,7 @@ import type { MonInstance, PokeType } from "../battle/types"
 import { markSeen, markCaught, getPokedex } from "./pokedexStore"
 import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, recordOrcalineDefeat, orcalineLevelForWins, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, consumeBattleBlessing } from "./playerStore"
 import { getItem } from "../data/items"
+import { reportShiny } from "../shinyGift"
 import { ARENA_TICKET_VALUE, SBIRE_TICKET_VALUE, SBIRE_TICKET_EVERY, ACE_TICKET_VALUE, ACE_TICKET_WIN_BEFORE, ACE_TICKET_WIN_AFTER, ACE_TICKET_EARLY_VALUE, ACE_TICKET_WIN_EARLY } from "../data/labDefis"
 import { getCt } from "../data/cts"
 import { getMove } from "../data/moves"
@@ -354,7 +355,11 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // 2) Capture → ajoute le sauvage à l'équipe/PC.
     if (b.outcome === "caught") {
         const wild = b.enemy.team[b.enemy.activeIndex]
-        if (wild) addCaught(toMonInstance(wild), { quotaReached: getPlayer().wildCtx?.quotaReached })
+        if (wild) {
+            addCaught(toMonInstance(wild), { quotaReached: getPlayer().wildCtx?.quotaReached })
+            // ✨ FÊTE SHINY (capture) : +50 énergie de plus pour TOUS les joueurs.
+            if (wild.shiny) reportShiny("captured", wild.uid, wild.speciesId)
+        }
     }
 
     // 2-bis) GÉKROC (mini-boss STATIQUE) : vaincu OU capturé → résolu (one-time, ne réapparaît plus)

@@ -379,6 +379,26 @@ model LeagueEnergyGrant {
   @@index([toUserId, claimed])
 }
 
+// SHINY — FÊTE COMMUNAUTAIRE : quand un joueur CROISE un shiny, tous les joueurs reçoivent +50 énergie
+// (le Dieu Spaghetti l'annonce) ; quand un shiny est CAPTURÉ, +50 de plus pour tous. Un don par
+// bénéficiaire, réclamé au login (hors-plafond). eventKey (kind:uid) = idempotence anti-doublon.
+// Pas de @relation (userId String). Additif (db:push). Pattern gaté côté code.
+model ShinyGift {
+  id           String   @id @default(cuid())
+  toUserId     String   // bénéficiaire (TOUS les joueurs yellow)
+  fromUserId   String   // joueur qui a croisé / capturé le shiny
+  fromNickname String   // pseudo (annonce du Dieu Spaghetti)
+  kind         String   // "encounter" | "captured"
+  speciesId    String   // le shiny concerné (annonce)
+  eventKey     String   // "encounter:<uid>" / "captured:<uid>" → idempotence (1 fête par événement)
+  energy       Int      @default(50)
+  claimed      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@index([toUserId, claimed])
+  @@index([eventKey])
+}
+
 // ZONE DE COMBAT (Battle Frontier) — profil persistant par joueur : solde de Jetons de Combat (JC),
 // meilleurs records de série par salle, symboles obtenus. Sert aussi de base aux leaderboards.
 // Pas de @relation (userId String @unique) → User intact. Additif (db:push). Pattern gaté côté code.
