@@ -38,11 +38,11 @@ export function buildSylvebarbe(): MonInstance {
     return mon
 }
 
-// ── DAEMONFLÛTE : remise par le SCIENTIFIQUE du labo (y_lab_scientist) au nouveau Maître ──
-// Récompense de sacre laissée par le Dieu Spaghetti, oubliée à l'étage du Centre (= le labo).
-// Le scientifique, qui remet déjà les récompenses des défis, la donne (1×) dès que tu es Champion.
+// ── DAEMONFLÛTE : remise par le Prof. CHEN du labo (y_lab_scientist) au nouveau Maître ──
+// L'œuvre d'une vie : CHEN, mélomane, a façonné l'instrument capable de réveiller le colosse endormi.
+// Il l'offre (1×) au vainqueur de la Ligue — l'aboutissement annoncé par son assistant.
 export const FLUTE_GIVE_LINES = [
-    "« Maître ! Le Dieu Spaghetti a laissé un présent pour le vainqueur de la Ligue… et l'a oublié ici même, dans mon labo. »",
-    "Le scientifique te tend un étrange instrument de bois. Tu reçois la DAEMONFLÛTE !",
-    "« Au sud de la ville dort un colosse d'écorce. Cette flûte le réveillera… et t'ouvrira la ZONE DE COMBAT. »",
+    "« Maître ! Tu as vaincu la Ligue… alors mon œuvre te revient. Des années de recherche pour cette unique mélodie. »",
+    "Le Prof. CHEN te tend un instrument de bois finement ouvragé. Tu reçois la DAEMONFLÛTE !",
+    "« Au sud de la ville dort un colosse d'écorce. Cette flûte le réveillera… et t'ouvrira la ZONE DE COMBAT. Va, mélomane d'un jour ! »",
 ]

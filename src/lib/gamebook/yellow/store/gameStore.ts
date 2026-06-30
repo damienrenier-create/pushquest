@@ -34,6 +34,7 @@ import { ORCALINE_TRAINER_ID, ORCALINE_INTRO_LINES, ORCALINE_REMATCH_LINES, ORCA
 import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock } from "../data/sylvebarbeBlock"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
 import { SYLVEBARBE_NPC_ID, SYLVEBARBE_INTRO_LINES, SYLVEBARBE_DONE_LINES, SYLVEBARBE_NO_FLUTE_LINES, SYLVEBARBE_NO_TEAM_LINES, buildSylvebarbe, FLUTE_GIVE_LINES } from "../data/sylvebarbe"
+import { CHEN_LAB_LINES, LAB_ASSISTANT_LINES } from "../data/labDialogues"
 import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
 
 export interface ActiveDialogue {
@@ -695,16 +696,24 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
-        // Scientifique du labo : remet la DAEMONFLÛTE (récompense de sacre laissée par le Dieu Spaghetti,
-        // 1× au nouveau Maître) ; sinon ouvre le menu de défis. C'est lui qui remet TOUTES les récompenses.
+        // Prof. CHEN (chef du labo) : au sacre, remet la DAEMONFLÛTE (1×, son œuvre de mélomane) ; sinon
+        // explique le terminal de défis + ses enjeux et t'invite à revenir après la Ligue. Le TERMINAL (3,3)
+        // reste la machine qui ouvre les défis ; CHEN, lui, te guide.
         if (npc.id === "y_lab_scientist") {
             const save = getPlayerSave()
             if (save.isChampion && (save.items["daemonflute"] ?? 0) <= 0 && !save.sylvebarbeAwake) {
                 addItem("daemonflute", 1)
-                set({ dialogue: { npcId: npc.id, npcName: "SCIENTIFIQUE", lineIndex: 0, lines: FLUTE_GIVE_LINES } })
+                set({ dialogue: { npcId: npc.id, npcName: "Prof. CHEN", lineIndex: 0, lines: FLUTE_GIVE_LINES } })
                 return
             }
-            set({ labOpen: true })
+            set({ dialogue: { npcId: npc.id, npcName: "Prof. CHEN", lineIndex: 0, lines: CHEN_LAB_LINES } })
+            return
+        }
+
+        // Assistant du labo (apprenti du Prof. CHEN) : aiguille vers les récompenses (CT du terminal, CT
+        // UNIQUE du blackjack, œuf-soigneur Tonytony) et révèle le grand projet du chef.
+        if (npc.id === "y_lab_assistant") {
+            set({ dialogue: { npcId: npc.id, npcName: "ASSISTANT", lineIndex: 0, lines: LAB_ASSISTANT_LINES } })
             return
         }
 

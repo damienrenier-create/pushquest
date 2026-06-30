@@ -408,16 +408,28 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         dialoguesAfter: ["*Le terminal d'expériences scientifiques.*"], // repli si non intercepté
     },
     {
-        // Scientifique : remet la Daemonflûte au sacre, puis ouvre le menu de défis — intercepté gameStore. (5,3).
+        // Prof. CHEN (chef du labo) : explique le terminal de défis + remet la Daemonflûte au sacre — intercepté gameStore. (5,3).
         id: "y_lab_scientist",
-        name: "SCIENTIFIQUE",
+        name: "Prof. CHEN",
         mapId: "yellow_infirmary_2e",
         kind: "static",
         interaction: "interactive",
-        sprite: { emoji: "", color: "#e0f0ff" }, // invisible (le scientifique est dessiné dans le décor)
+        sprite: { emoji: "", color: "#e0f0ff" }, // invisible (le Prof. CHEN est dessiné dans le décor)
         initialX: 5,
         initialY: 3,
-        dialoguesAfter: ["*Le scientifique ajuste ses lunettes et te montre le terminal d'expériences.*"], // repli si non intercepté
+        dialoguesAfter: ["*Le Prof. CHEN ajuste ses lunettes et te montre le terminal d'expériences.*"], // repli si non intercepté
+    },
+    {
+        // Assistant du Prof. CHEN : aiguille vers les récompenses (CT terminal / CT blackjack / Tonytony) — intercepté gameStore. (7,6).
+        id: "y_lab_assistant",
+        name: "ASSISTANT",
+        mapId: "yellow_infirmary_2e",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "", color: "#d0e0ff" }, // invisible (l'assistant est dessiné dans le décor à (7,6))
+        initialX: 7,
+        initialY: 6,
+        dialoguesAfter: ["*L'assistant trie des Capsules Techniques en sifflotant.*"], // repli si non intercepté
     },
     // === Intérieur ANTRE DU SBIRE (combat dynamique 2×/jour) ===
     // Interception spéciale dans gameStore.pressA (équipe miroir/faiblesse selon
