@@ -24,10 +24,11 @@ const RING = (() => {
     return `conic-gradient(from ${-POCKET / 2}deg, ${stops.join(", ")})`
 })()
 
-/** Numéro actuellement sous le pointeur (haut) pour une rotation `rot` de la roue. */
-function topNumber(rot: number): number {
-    const norm = (((-rot) % 360) + 360) % 360
-    const j = Math.round(norm / POCKET) % POCKET_COUNT
+/** Numéro de la case située à l'angle-écran `screenAngle` (0 = haut), pour une rotation `wheelRot` de la roue.
+ *  pocketAt(0, rot) = la case sous le pointeur ; pocketAt(θ_bille, rot) = la case sous la BILLE. */
+function pocketAt(screenAngle: number, wheelRot: number): number {
+    const a = (((screenAngle - wheelRot) % 360) + 360) % 360
+    const j = Math.round(a / POCKET) % POCKET_COUNT
     return WHEEL_ORDER[(j + POCKET_COUNT) % POCKET_COUNT]
 }
 
@@ -79,33 +80,40 @@ export default function RouletteWheel({ winning, spinKey, onDone }: {
         setPhase("spin")
 
         // Cible : case `idx` alignée sous le pointeur. R ≡ -idx*POCKET (mod 360), ≥ rotation courante + N tours.
-        // ALÉATOIRE à chaque manche → la roue ne tourne jamais pareil : nb de tours, durée, durée de la
-        // CROISIÈRE (c1) et douceur de la QUEUE (decelK). Croisière longue = reste rapide ; queue haute = fin lente.
-        const spins = 7 + Math.floor(rnd(0, 4))   // 7 à 10 tours complets
-        const DUR = rnd(8200, 11000)              // 8,2 à 11 s
-        const c1 = rnd(0.28, 0.42)                // part du temps à vitesse de croisière (constante)
-        const decelK = rnd(1.1, 1.7)              // douceur de la décélération (plus haut = fin plus lente ; >1.8 ≈ figé)
-        const V = (decelK + 1) / (c1 * decelK + 1) // vitesse de croisière normalisée (eased(1)=1)
+        // ALÉATOIRE à chaque manche → la roue ne tourne jamais pareil. La ROUE se pose à `wheelFrac` du temps,
+        // PUIS seule la BILLE continue (orbite lente jusqu'à se poser dans la case) → vraie phase de suspense.
+        const spins = 7 + Math.floor(rnd(0, 4))   // tours de la ROUE
+        const DUR = rnd(10500, 13500)             // durée totale (rallongée)
+        const wheelFrac = rnd(0.64, 0.74)         // la roue s'arrête à 64-74% du temps ; le reste = BILLE SEULE
+        const c1 = rnd(0.24, 0.34)                // croisière (sur la timeline de la roue)
+        const decelK = rnd(1.2, 1.7)              // douceur de la décélération de la roue
+        const V = (decelK + 1) / (c1 * decelK + 1)
         const startRot = wheelRotRef.current
         const targetMod = (((-idx * POCKET) % 360) + 360) % 360
         const base = startRot + spins * 360
         const endRot = base + ((((targetMod - (base % 360)) % 360) + 360) % 360)
 
-        // Bille : orbite à CONTRESENS et se gare en haut (multiple de 360), décélère avec la roue.
+        // Bille : orbite à CONTRESENS, PLUS de tours, et FINIT après la roue (sa fin = crawl lent dans la case).
+        const ballSpins = 10 + Math.floor(rnd(0, 6)) // 10-15 orbites
         const ballStart = ballRotRef.current
-        const ballEnd = ballStart - (8 + Math.floor(rnd(0, 4))) * 360 - ((((ballStart % 360) + 360) % 360))
+        const ballEnd = ballStart - ballSpins * 360 - ((((ballStart % 360) + 360) % 360))
+        const cb1 = rnd(0.22, 0.30), bK = rnd(1.3, 1.8), Vb = (bK + 1) / (cb1 * bK + 1)
 
         let start = -1
         let lastNum = -1
         const frame = (now: number) => {
             if (start < 0) start = now
             const t = Math.min(1, (now - start) / DUR)
-            const eased = easeRoulette(t, c1, decelK, V) // croisière rapide → décélération progressive → crawl
-            const rot = startRot + (endRot - startRot) * eased
+            // ROUE : boucle toute sa décélération en `wheelFrac` du temps, puis reste figée.
+            const ew = easeRoulette(Math.min(1, t / wheelFrac), c1, decelK, V)
+            const rot = startRot + (endRot - startRot) * ew
             applyWheel(rot)
-            applyBall(ballStart + (ballEnd - ballStart) * eased)
-            // Le centre affiche le numéro sous le pointeur → défile vite puis « clique » de plus en plus lent.
-            const n = topNumber(rot)
+            // BILLE : décélère sur TOUTE la durée → après l'arrêt de la roue, elle orbite seule, de plus en plus lente.
+            const eb = easeRoulette(t, cb1, bK, Vb)
+            const ballRotNow = ballStart + (ballEnd - ballStart) * eb
+            applyBall(ballRotNow)
+            // Le centre suit la BILLE (pas le pointeur) → il ne dévoile le gagnant qu'à l'ATTERRISSAGE de la bille.
+            const n = pocketAt((((ballRotNow % 360) + 360) % 360), rot)
             if (n !== lastNum) { lastNum = n; if (centerEl.current) centerEl.current.textContent = String(n) }
             if (t < 1) { rafRef.current = requestAnimationFrame(frame); return }
             // ARRÊT : on fige EXACTEMENT sur le gagnant + clignotement.

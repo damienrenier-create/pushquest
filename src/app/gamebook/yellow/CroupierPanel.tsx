@@ -8,6 +8,8 @@
 // Données serveur (lecture seule) via /api/gamebook/yellow/roulette/stats.
 
 import { useEffect, useState } from "react"
+import { usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
+import { TONYTONY_TARGET, TONYTONY_SHINY_TARGET } from "@/lib/gamebook/yellow/data/labDefis"
 
 interface Amt { nickname: string; amount: number }
 interface Num { n: number; c: number; color: string }
@@ -34,6 +36,9 @@ const colFr = (c: string) => c === "red" ? "rouge" : c === "black" ? "noir" : "v
 
 export default function CroupierPanel({ myUserId, close, onPlay }: { myUserId: string; close: () => void; onPlay: () => void }) {
     void myUserId
+    const player = usePlayer()
+    const won = player.labDefi.casinoTotalWon // énergie totale gagnée au casino (le croupier en tient le compte)
+    const tonyClaimed = player.labDefi.tonytonyClaimed, tonyShiny = player.labDefi.tonytonyShiny
     const [stats, setStats] = useState<Stats | null>(null)
     const [state, setState] = useState<"loading" | "ok" | "error">("loading")
     const [slide, setSlide] = useState(0)
@@ -77,6 +82,14 @@ export default function CroupierPanel({ myUserId, close, onPlay }: { myUserId: s
                                 <div style={{ fontSize: 40, margin: "4px 0" }}>🎲</div>
                                 <div style={raillerie}>« {RAILLERIES[rail]} »</div>
                                 <div style={{ ...muted, marginTop: 8 }}>{stats.totalSpins} manches jouées sur la table.</div>
+                                <div style={tonyBox}>
+                                    🥚 <b>Quête Tonytony</b> — je tiens le compte de ton <b>énergie gagnée</b> ici : <b style={{ color: "#ffd54a" }}>{won} ⚡</b><br />
+                                    {tonyClaimed ? "🥚 Tonytony : ✅ obtenu" : `🥚 Tonytony : ${Math.min(won, TONYTONY_TARGET)}/${TONYTONY_TARGET}`}
+                                    {" · "}
+                                    {tonyShiny ? "✨ Shiny : ✅" : `✨ Shiny : ${Math.min(won, TONYTONY_SHINY_TARGET)}/${TONYTONY_SHINY_TARGET}`}
+                                    {((!tonyClaimed && won >= TONYTONY_TARGET) || (tonyClaimed && !tonyShiny && won >= TONYTONY_SHINY_TARGET)) &&
+                                        <div style={{ marginTop: 4, color: "#7ce0a0", fontWeight: 700 }}>🎉 Palier atteint — va le réclamer à l&apos;ordi du labo !</div>}
+                                </div>
                                 <div style={tip}>💻 Psst… si t&apos;es joueur, il y a des <b>défis</b> sur l&apos;ordi du <b>labo</b> (à l&apos;étage du Centre Daemon). Va voir.</div>
                                 <button style={playBtn} onClick={onPlay}>🎡 Jouer à la roulette</button>
                             </div>
@@ -133,6 +146,7 @@ const content: React.CSSProperties = { minHeight: 200 }
 const muted: React.CSSProperties = { fontSize: 12, opacity: 0.7, textAlign: "center", lineHeight: 1.6 }
 const raillerie: React.CSSProperties = { fontSize: 14, fontStyle: "italic", lineHeight: 1.5, color: "#e9d9a0", padding: "0 6px" }
 const tip: React.CSSProperties = { fontSize: 12, lineHeight: 1.5, color: "#9fd4ff", background: "rgba(126,180,255,0.1)", border: "1px solid rgba(126,180,255,0.25)", borderRadius: 8, padding: "8px 10px", margin: "10px 4px 0" }
+const tonyBox: React.CSSProperties = { fontSize: 12, lineHeight: 1.6, color: "#f3e0a0", background: "rgba(255,213,74,0.1)", border: "1px solid rgba(255,213,74,0.3)", borderRadius: 8, padding: "9px 11px", margin: "10px 4px 0" }
 const playBtn: React.CSSProperties = { marginTop: 14, padding: "11px 18px", background: "#e0c020", color: "#1a1400", border: "none", borderRadius: 9, fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }
 const lbl: React.CSSProperties = { fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, color: "#ffd54a", margin: "10px 0 5px" }
 const chipRow: React.CSSProperties = { display: "flex", flexWrap: "wrap", gap: 6 }

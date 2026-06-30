@@ -9,7 +9,7 @@
 // résolution via une réconciliation IDEMPOTENTE par manche (markRouletteClaimed) robuste au refresh.
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { usePlayer, grantReps, markRouletteClaimed, peekRouletteLuck, decrementRouletteLuck, fundRouletteBet } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, grantReps, markRouletteClaimed, peekRouletteLuck, decrementRouletteLuck, fundRouletteBet, addCasinoWon } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { getPusherClient, PUSHER_CLIENT_ENABLED } from "@/lib/pusher-client"
 import { colorOf } from "@/lib/gamebook/yellow/roulette/wheel"
@@ -59,9 +59,27 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
     const lastSpunRef = useRef<string>("") // dernière manche déjà animée sur la roue
     const wheelInitRef = useRef(false)     // 1er applyState : on affiche le dernier résultat SANS l'animer
     const launchRef = useRef<HTMLButtonElement>(null) // bouton "Lancer la balle" → scroll auto à l'apparition
+    // CRÉDIT DIFFÉRÉ : gain de la manche EN COURS D'ANIMATION, payé SEULEMENT quand la bille s'arrête
+    // (onDone) — surtout PAS quand le résultat serveur arrive (sinon l'énergie tombe avant la fin du tour).
+    const pendingCreditRef = useRef<{ roundId: string; staked: number; net: number; solo: boolean } | null>(null)
 
     // Horloge locale (countdown fluide).
     useEffect(() => { const t = setInterval(() => setNow(Date.now()), 250); return () => clearInterval(t) }, [])
+
+    // Crédite (UNE fois) le gain en attente. Appelé à l'arrêt de la bille (onDone) ET au démontage (si on
+    // ferme la table en plein spin → on ne perd pas le gain). markRouletteClaimed garantit l'idempotence.
+    const creditPending = useCallback(() => {
+        const pc = pendingCreditRef.current
+        pendingCreditRef.current = null
+        if (!pc || !markRouletteClaimed(pc.roundId)) return
+        const ret = pc.staked + pc.net // mise remboursée + gain net (net<0 = perte déjà actée au débit)
+        if (ret > 0) grantReps(ret)
+        if (pc.net > 0) addCasinoWon(pc.net) // 🥚 le gain net fait progresser la quête Tonytony (compte tenu par le croupier)
+        if (pc.solo && pc.net > 0) decrementRouletteLuck(pc.net) // chance potion (secret) : récup jusqu'au prix payé
+        persistYellowSave()
+    }, [])
+    // Démontage (fermeture de la table) : si un gain attend encore, on le crédite (pas de perte).
+    useEffect(() => () => { creditPending() }, [creditPending])
 
     const applyState = useCallback((data: StatePayload) => {
         offsetRef.current = data.round.serverNow - Date.now()
@@ -76,10 +94,19 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
             setValidatedRound(mine ? data.round.id : null)
         }
 
-        // Réconciliation des GAINS : crédite chaque manche résolue où j'ai misé, UNE fois.
+        // Quelle manche DÉMARRE une animation ce cycle ? (nouvelle manche résolue, hors 1er chargement statique)
+        const latest = data.recentResults[0]
+        const startingSpin = latest && wheelInitRef.current && latest.roundId !== lastSpunRef.current ? latest.roundId : null
+        // Manche dont le crédit est DIFFÉRÉ jusqu'à l'arrêt de la bille (celle qui démarre OU qui anime déjà).
+        const deferId = startingSpin ?? pendingCreditRef.current?.roundId ?? null
+
+        // Réconciliation des GAINS : crédite chaque manche résolue où j'ai misé, UNE fois — SAUF la manche
+        // en cours d'animation (créditée seulement à l'arrêt de la bille, cf. creditPending/onDone). Sans ce
+        // saut, l'énergie tomberait DÈS l'arrivée du résultat serveur, avant la fin du tour (le bug signalé).
         for (const r of data.recentResults) {
             const mine = r.players.find((p) => p.userId === myUserId)
             if (!mine) continue
+            if (r.roundId === deferId) continue // ⏳ crédit différé → onDone
             if (markRouletteClaimed(r.roundId)) {
                 const ret = mine.staked + mine.net      // mise remboursée + gain net (net<0 = perte déjà actée au débit)
                 if (ret > 0) grantReps(ret)
@@ -89,21 +116,21 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
             }
         }
 
-        // ROUE ANIMÉE : on fait tourner la roue pour la DERNIÈRE manche résolue (résultat partagé). Au TOUT
-        // 1er applyState on affiche le dernier résultat SANS l'animer (spinKey "" = pas de tour pour un
-        // résultat déjà ancien) ; ensuite CHAQUE nouvelle manche résolue déclenche un vrai tour — y compris
-        // le tout 1er résultat d'une table vierge (ex. mon propre "Lancer la balle"). Numéro = seed serveur.
-        const latest = data.recentResults[0]
+        // ROUE ANIMÉE : au TOUT 1er applyState on affiche le dernier résultat SANS l'animer (spinKey "") ;
+        // ensuite CHAQUE nouvelle manche résolue déclenche un vrai tour — y compris le tout 1er résultat d'une
+        // table vierge (ex. mon propre "Lancer la balle"). Numéro = seed serveur ; gain crédité à l'arrêt.
         if (!wheelInitRef.current) {
             wheelInitRef.current = true
             if (latest) {
                 lastSpunRef.current = latest.roundId
                 setSpin({ key: "", winning: latest.winningNumber, color: latest.winningColor, net: null })
             }
-        } else if (latest && latest.roundId !== lastSpunRef.current) {
-            lastSpunRef.current = latest.roundId
-            const mine = latest.players.find((p) => p.userId === myUserId)
-            setSpin({ key: latest.roundId, winning: latest.winningNumber, color: latest.winningColor, net: mine ? mine.net : null })
+        } else if (startingSpin) {
+            lastSpunRef.current = startingSpin
+            const mine = latest!.players.find((p) => p.userId === myUserId)
+            // Mémorise le gain à payer À L'ARRÊT de la bille (jamais maintenant).
+            pendingCreditRef.current = mine ? { roundId: startingSpin, staked: mine.staked, net: mine.net, solo: latest!.players.length === 1 } : null
+            setSpin({ key: startingSpin, winning: latest!.winningNumber, color: latest!.winningColor, net: mine ? mine.net : null })
         }
     }, [myUserId])
 
@@ -241,7 +268,7 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
                     <RouletteWheel
                         winning={spin.winning}
                         spinKey={spin.key}
-                        onDone={() => { if (spin.net != null) setReveal({ winning: spin.winning, color: spin.color, net: spin.net }) }}
+                        onDone={() => { creditPending(); if (spin.net != null) setReveal({ winning: spin.winning, color: spin.color, net: spin.net }) }}
                     />
                 )}
 

@@ -857,6 +857,15 @@ export function casinoSpin(bets: CasinoBet[], nowMs: number): CasinoSpinResult {
 /** Cumul brut gagné au casino (vers la cible Tonytony). */
 export function casinoTotalWon(): number { return st.labDefi.casinoTotalWon }
 
+/** Ajoute `n` (gain net > 0) au cumul gagné au casino → FAIT PROGRESSER la quête Tonytony. Utilisé par la
+ *  ROULETTE multijoueur (le croupier en tient le compte) en plus du casino-pattern. Persisté par le caller. */
+export function addCasinoWon(n: number): void {
+    const add = Math.max(0, Math.floor(n))
+    if (add <= 0) return
+    st = { ...st, labDefi: { ...st.labDefi, casinoTotalWon: st.labDefi.casinoTotalWon + add } }
+    emit()
+}
+
 // ── Tickets roulette ──
 // Deux sources DISTINCTES : (1) le ticket GRATUIT du jour (Dieu Spaghetti) → cinématique à la connexion,
 // joué directement (gated par dailyTicketDate, HORS file) ; (2) les tickets OCTROYÉS par les boss
