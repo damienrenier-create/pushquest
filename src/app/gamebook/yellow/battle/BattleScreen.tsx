@@ -11,7 +11,8 @@ import { useEffect, useRef, useState } from "react"
 import { useBattle, submitPlayerAction, endBattle, getBattleEnergy, setBattleInputHandler, resolveBattleLearn, type BattleInput } from "@/lib/gamebook/yellow/store/battleStore"
 import { speciesOf, maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
 import { isDamaging, type BattleMon, type MoveData } from "@/lib/gamebook/yellow/battle/types"
-import { moveCategory } from "@/lib/gamebook/yellow/battle/typeChart"
+import { moveCategory, resolveAdaptiveStab } from "@/lib/gamebook/yellow/battle/typeChart"
+import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { expForLevel } from "@/lib/gamebook/yellow/battle/xp"
 import { ITEMS } from "@/lib/gamebook/yellow/data/items"
@@ -456,7 +457,7 @@ export default function BattleScreen() {
                             <>
                                 <div style={S.listBox}>{options.map((o, i) => renderRow(o, i))}</div>
                                 <div style={S.detailBox}>
-                                    {selMv ? <MoveDetails mv={selMv} /> : <div style={S.detailHint}>{sel?.detail ?? ""}</div>}
+                                    {selMv ? <MoveDetails mv={selMv} mon={player} /> : <div style={S.detailHint}>{sel?.detail ?? ""}</div>}
                                 </div>
                             </>
                         )
@@ -763,6 +764,7 @@ const STAGE_FR: Record<string, string> = { atk: "ATQ", def: "DÉF", spe: "VIT", 
 function moveEffectTag(mv: MoveData): string | null {
     const e = mv.effect
     if (!e) return null
+    if (e.adaptiveStab) return "STAB adaptatif : type & catégorie calés sur ce Daemon (sa meilleure stat)"
     if (e.recoilPct) return `Recul : ${e.recoilPct}% des dégâts subis`
     if (e.drainPct) return `Vol de PV : ${e.drainPct}%`
     if (e.healPct) return `Soigne ${e.healPct}% des PV`
@@ -784,18 +786,29 @@ function moveEffectTag(mv: MoveData): string | null {
 
 // Fiche détaillée d'une attaque (panneau de droite du menu Attaque) — façon « carte » du jeu :
 // type + catégorie, puissance / précision / PP, puis l'effet et un texte de saveur.
-function MoveDetails({ mv }: { mv: MoveData }) {
+function MoveDetails({ mv, mon }: { mv: MoveData; mon: BattleMon }) {
+    // STAB ADAPTATIF (Apothéose) : type & catégorie EFFECTIFS calculés sur le Daemon porteur (et non le
+    // NORMAL/PHYS figé du move stocké) → l'affichage colle à ce que le combat fera vraiment.
+    const adaptive = !!mv.effect?.adaptiveStab && mv.power > 0
+    let dispType = mv.type
+    let isPhys = (mv.category ?? moveCategory(mv.type)) === "PHYSICAL"
+    if (adaptive) {
+        const fs = fullStats(mon, speciesOf(mon))
+        const r = resolveAdaptiveStab(speciesOf(mon).types, fs.atk, fs.spc)
+        dispType = r.type; isPhys = r.isPhysical
+    }
     // Badge catégorie IDENTIQUE à la fiche d'équipe (PHYS rouge / SPÉ bleu / STATUT violet).
     const cat = mv.power <= 0 ? { label: "STATUT", color: "#8868c0" }
-        : (mv.category ?? moveCategory(mv.type)) === "PHYSICAL" ? { label: "PHYS", color: "#c0532a" }
+        : isPhys ? { label: "PHYS", color: "#c0532a" }
             : { label: "SPÉ", color: "#3a7ae0" }
     const tag = moveEffectTag(mv)
     return (
         <>
             <div style={S.detailName}>{mv.name}</div>
             <div style={S.detailMeta}>
-                <span style={{ ...S.typeChip, background: TYPE_COLORS[mv.type] }}>{TYPE_FR[mv.type] ?? mv.type}</span>
+                <span style={{ ...S.typeChip, background: TYPE_COLORS[dispType] }}>{TYPE_FR[dispType] ?? dispType}</span>
                 <span style={{ ...S.typeChip, background: cat.color }}>{cat.label}</span>
+                {adaptive && <span style={{ ...S.typeChip, background: "#7a5cc0" }}>ADAPT.</span>}
             </div>
             <div style={S.detailStats}>
                 <span>{isDamaging(mv) ? `⚡ Puiss. ${mv.power}` : "Statut"}</span>

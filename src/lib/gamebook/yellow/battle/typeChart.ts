@@ -36,6 +36,18 @@ export function moveCategory(type: PokeType): "PHYSICAL" | "SPECIAL" {
     return PHYSICAL_TYPES.has(type) ? "PHYSICAL" : "SPECIAL"
 }
 
+/**
+ * STAB ADAPTATIF (CT « Apothéose »). Résout le TYPE et la CATÉGORIE EFFECTIFS d'une attaque adaptative
+ * pour un Daemon donné : la catégorie suit sa meilleure stat offensive (atk ≥ spc → physique), et le type
+ * devient un de SES types aligné sur cette catégorie (sinon, à défaut, son type principal).
+ * SOURCE DE VÉRITÉ unique partagée par le moteur (dégâts réels) ET l'UI (affichage type/catégorie).
+ */
+export function resolveAdaptiveStab(types: PokeType[], atk: number, spc: number): { type: PokeType; isPhysical: boolean } {
+    const isPhysical = atk >= spc
+    const type = types.find((t) => (moveCategory(t) === "PHYSICAL") === isPhysical) ?? types[0]
+    return { type, isPhysical }
+}
+
 /** Multiplicateur d'un type d'attaque contre UN type de défense. */
 export function typeMultiplier(attack: PokeType, defend: PokeType): number {
     return CHART[attack]?.[defend] ?? 1

@@ -13,7 +13,7 @@ import { getMove } from "../data/moves"
 import { fullStats, effectiveStat, clampStage } from "./stats"
 import { computeDamage, hasStab, critProbabilityGen1 } from "./damage"
 import { heldOutgoingDmgMult, heldIncomingDmgMult, heldEffect } from "../data/heldItems"
-import { typeEffectiveness, effectivenessMessage, moveCategory } from "./typeChart"
+import { typeEffectiveness, effectivenessMessage, moveCategory, resolveAdaptiveStab } from "./typeChart"
 import * as Status from "./status"
 import { accuracyCheck } from "./accuracy"
 import { chooseAiAction, type AiLevel } from "./ai"
@@ -648,8 +648,9 @@ function dealMoveDamage(state: BattleState, side: SideId, move: MoveData, rng: R
     let effType = move.type
     let isPhysical = (move.category ?? moveCategory(move.type)) === "PHYSICAL"
     if (move.effect?.adaptiveStab) {
-        isPhysical = rawStats.atk >= rawStats.spc
-        effType = atkSpecies.types.find((t) => (moveCategory(t) === "PHYSICAL") === isPhysical) ?? atkSpecies.types[0]
+        const adapted = resolveAdaptiveStab(atkSpecies.types, rawStats.atk, rawStats.spc)
+        effType = adapted.type
+        isPhysical = adapted.isPhysical
     }
     const eff = typeEffectiveness(effType, defSpecies.types)
     if (eff === 0) return { dealt: 0, typeEff: 0 }
