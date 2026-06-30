@@ -13,7 +13,7 @@ import { usePlayer, spendReps, grantReps, markRouletteClaimed, peekRouletteLuck,
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { getPusherClient, PUSHER_CLIENT_ENABLED } from "@/lib/pusher-client"
 import { colorOf } from "@/lib/gamebook/yellow/roulette/wheel"
-import { type Bet, PAYOUT, straight, dozen, column, red, black, even, odd, low, high } from "@/lib/gamebook/yellow/roulette/bets"
+import { type Bet, PAYOUT, straight, dozen, column, red, black, even, odd, low, high, minStakeForType, OUTSIDE_MIN_BET } from "@/lib/gamebook/yellow/roulette/bets"
 import RouletteWheel from "./RouletteWheel"
 
 const CHANNEL = "gamebook-yellow_roulette"
@@ -23,7 +23,10 @@ const CHIPS = [1, 5, 10, 25, 50] as const
 const STAKE_MIN = 1
 const STAKE_MAX = 50
 
-interface PlayerBets { userId: string; nickname: string; staked: number; bets: Bet[]; net: number | null }
+// mm:ss pour le compte à rebours de la manche (10 min → "9:32").
+const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`
+
+interface PlayerBets { userId: string; nickname: string; staked: number; bets: Bet[]; net: number | null; ready: boolean }
 interface RoundResult { roundId: string; winningNumber: number; winningColor: string; closedAt: number; players: Array<{ userId: string; nickname: string; staked: number; net: number }> }
 interface StatePayload {
     round: { id: string; status: string; startedAt: number; closesAt: number; serverNow: number; winningNumber: number | null; winningColor: string | null }
@@ -148,6 +151,9 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
     const validate = async () => {
         if (!round || !open || locked || pendingTotal <= 0 || busy) return
         if (player.reps < pendingTotal) { setFlash("Pas assez d'énergie."); return }
+        // MINIMUM DE TABLE par case (style vrai casino) : 5 sur les chances extérieures, 1 sur les pleins.
+        const below = pendingList.find((b) => b.chips < minStakeForType(b.type))
+        if (below) { setFlash(`Mise mini sur cette case : ${minStakeForType(below.type)} ⚡ (chances extérieures = ${OUTSIDE_MIN_BET}).`); return }
         setBusy(true)
         try {
             // Jeton de chance (potion barman) : transmis UNIQUEMENT si le joueur est SEUL à parier sur la
@@ -166,33 +172,40 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
                 refetch()
             } else {
                 const j = await res.json().catch(() => ({}))
-                setFlash(j.error === "round_closed" ? "Trop tard, manche fermée !" : "Mise refusée.")
+                setFlash(j.error === "round_closed" ? "Trop tard — rien ne va plus !" : j.error === "below_min" ? `Mise trop faible sur une case (chances extérieures : ${OUTSIDE_MIN_BET} ⚡ mini).` : "Mise refusée.")
             }
         } catch { setFlash("Réseau indisponible.") } finally { setBusy(false) }
     }
 
-    // Mises agrégées par joueur (affichage social).
+    // Mises agrégées par joueur (affichage social) + état "prêt".
     const others = (state?.bets ?? []).filter((b) => b.staked > 0)
     const myLocked = state?.bets.find((b) => b.userId === myUserId)
-    // SOLO : je suis le SEUL parieur de la manche (mise déjà validée) → je peux lancer la balle tout de
-    // suite, sans attendre le timer. Le serveur re-vérifie la soloïté avant de résoudre.
-    const soloLaunch = !!round && locked && others.length === 1 && others[0].userId === myUserId
+    const totalBettors = others.length
+    const readyCount = others.filter((b) => b.ready).length
+    const isSolo = totalBettors === 1 && others[0]?.userId === myUserId
+    const iAmReady = !!myLocked?.ready
+    // Bouton "Lancer la balle / Je suis prêt" : visible quand j'ai misé, la manche est ouverte, et je ne
+    // me suis pas encore déclaré prêt. En multi : quand TOUS appuient, la roue part (sinon le timer 10 min).
+    const canLaunch = !!round && locked && open && totalBettors >= 1 && !iAmReady
+    const waitingOthers = !!round && locked && open && iAmReady && readyCount < totalBettors
 
-    // "Lancer la balle" : déclenche la résolution serveur MAINTENANT (le serveur tire via son seed secret).
+    // "Lancer la balle" : je me déclare prêt. Le serveur résout dès que TOUS les parieurs sont prêts.
     const launchBall = async () => {
-        if (!round || !soloLaunch || launching) return
+        if (!round || !canLaunch || launching) return
         setLaunching(true)
-        setFlash("🎙️ Faites vos jeux… rien ne va plus !")
+        setFlash(isSolo ? "🎙️ Faites vos jeux… rien ne va plus !" : "🎙️ Tu es prêt — on attend les autres…")
         try {
             const res = await fetch("/api/gamebook/yellow/roulette/resolve", {
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ roundId: round.id }),
             })
+            const j = await res.json().catch(() => ({}))
             if (res.ok) {
-                await refetch() // la manche résolue arrive → la roue tourne (applyState) + crédit idempotent
+                if (j.resolved) setFlash("🎙️ Rien ne va plus !")
+                else setFlash(`En attente des autres joueurs… (${j.ready ?? readyCount}/${j.total ?? totalBettors} prêts)`)
+                await refetch() // résolu → la roue tourne (applyState) ; sinon met à jour les "prêts"
             } else {
-                const j = await res.json().catch(() => ({}))
-                setFlash(j.error === "not_solo" ? "Un autre joueur a misé — on attend le tirage !" : j.error === "already_resolved" ? "Déjà tiré !" : "Lancement impossible.")
+                setFlash(j.error === "already_resolved" ? "Déjà tiré !" : j.error === "no_bet" ? "Mise d'abord !" : "Lancement impossible.")
                 refetch()
             }
         } catch { setFlash("Réseau indisponible.") } finally { setLaunching(false) }
@@ -210,7 +223,7 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
                 <div style={S.bar}>
                     <span>⚡ {player.reps}/{player.repsCap}</span>
                     <span style={{ fontWeight: 800, color: open ? "#7ce0a0" : "#e0a020" }}>
-                        {round ? (open ? `Mises ouvertes — ${remaining}s` : "Tirage…") : "Connexion…"}
+                        {round ? (open ? `Mises ouvertes — ${fmtTime(remaining)}` : "Tirage…") : "Connexion…"}
                     </span>
                     <span style={{ opacity: 0.6, fontSize: 10 }}>#{round ? round.id.slice(-5) : "—"}</span>
                 </div>
@@ -283,7 +296,7 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
                         <button key={c} onClick={() => setChip(c)} style={{ ...S.chip, ...(chip === c ? S.chipOn : {}) }}>{c}</button>
                     ))}
                 </div>
-                <div style={S.hintLine}>👉 Clique une case pour y poser {chip} ⚡ · re-clique pour empiler · mise sur plusieurs cases à la fois.</div>
+                <div style={S.hintLine}>👉 Clique une case pour y poser {chip} ⚡ · re-clique pour empiler · plusieurs cases à la fois · chances extérieures (rouge/noir, pair, douzaine…) = {OUTSIDE_MIN_BET} ⚡ mini.</div>
 
                 {/* Actions */}
                 <div style={S.chipsRow}>
@@ -294,27 +307,30 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
                         : <button style={{ ...S.primary, opacity: open && pendingTotal > 0 && !busy ? 1 : 0.4 }} disabled={!open || pendingTotal <= 0 || busy} onClick={validate}>Miser {pendingTotal > 0 ? `${pendingTotal} ⚡` : ""}</button>}
                 </div>
 
-                {/* SOLO : seul parieur → lancer la balle tout de suite (sans attendre le timer) */}
-                {soloLaunch && open && (
+                {/* "Lancer la balle" : solo = tirage immédiat ; multi = je me déclare prêt, ça part quand TOUS le sont */}
+                {canLaunch && (
                     <button style={{ ...S.launch, opacity: launching ? 0.5 : 1 }} disabled={launching} onClick={launchBall}>
-                        🎲 {launching ? "La bille roule…" : "Lancer la balle !"}
+                        🎲 {launching ? "…" : isSolo ? "Lancer la balle !" : `Je suis prêt ! (${readyCount}/${totalBettors})`}
                     </button>
+                )}
+                {waitingOthers && (
+                    <div style={S.waiting}>⏳ Prêt — en attente des autres joueurs… <b>{readyCount}/{totalBettors}</b></div>
                 )}
                 {flash && <div style={S.flash}>{flash}</div>}
 
-                {/* Mises des autres joueurs (en direct) */}
+                {/* Mises des autres joueurs (en direct) + qui est prêt */}
                 <div style={S.others}>
-                    <div style={S.othersTitle}>Mises de la table ({others.length})</div>
+                    <div style={S.othersTitle}>Mises de la table ({others.length}){totalBettors > 0 ? ` · ${readyCount}/${totalBettors} prêts` : ""}</div>
                     {others.length === 0 && <div style={S.muted}>Personne n'a encore misé sur cette manche.</div>}
                     {others.map((b) => (
                         <div key={b.userId} style={S.otherRow}>
-                            <span style={{ fontWeight: 700, color: b.userId === myUserId ? "#7ce0a0" : "#cfe0f0" }}>{b.nickname}{b.userId === myUserId ? " (toi)" : ""}</span>
+                            <span style={{ fontWeight: 700, color: b.userId === myUserId ? "#7ce0a0" : "#cfe0f0" }}>{b.ready ? "✅ " : ""}{b.nickname}{b.userId === myUserId ? " (toi)" : ""}</span>
                             <span>{b.staked} ⚡ · {b.bets.length} pari{b.bets.length > 1 ? "s" : ""}</span>
                         </div>
                     ))}
                 </div>
 
-                <div style={S.foot}>Le serveur tire le numéro (RNG secret) — tout le monde voit le même résultat. Paye selon la roulette européenne (plein 35:1, …). L'énergie misée est débitée à la validation et le gain crédité au tirage.</div>
+                <div style={S.foot}>Le serveur tire le numéro (RNG secret) — tout le monde voit le même résultat. Dès que TOUS les parieurs appuient sur « Lancer la balle », la roue part (sinon au bout de 10 min). Paye selon la roulette européenne (plein 35:1, …).</div>
             </div>
         </div>
     )
@@ -354,6 +370,7 @@ const S: Record<string, React.CSSProperties> = {
     stakeVal: { minWidth: 52, textAlign: "center", fontSize: 15, fontWeight: 800, color: "#e0c020" },
     hintLine: { marginTop: 5, fontSize: 10, opacity: 0.6, lineHeight: 1.4 },
     launch: { width: "100%", marginTop: 8, padding: "11px 0", background: "#e0502a", color: "#fff", border: "none", borderRadius: 9, fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 0 14px rgba(224,80,42,.4)" },
+    waiting: { width: "100%", marginTop: 8, padding: "10px 0", textAlign: "center", background: "rgba(224,200,32,0.12)", border: "1px dashed #e0c020", borderRadius: 9, fontWeight: 700, fontSize: 12.5, color: "#e0c020" },
     ghost: { background: "transparent", color: "#9fd", border: "1px solid #2f5a40", borderRadius: 8, padding: "8px 10px", fontSize: 11, cursor: "pointer", fontFamily: "inherit" },
     primary: { background: "#e0c020", color: "#1a1400", border: "none", borderRadius: 8, padding: "9px 14px", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" },
     lockTag: { background: "#15301f", color: "#7ce0a0", border: "1px solid #2f5a40", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700 },

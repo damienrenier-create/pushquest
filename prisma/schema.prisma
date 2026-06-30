@@ -947,6 +947,9 @@ model RouletteBet {
   staked    Int           @default(0) // somme des chips misés
   net       Int? // résultat net (gain - mise) une fois la manche résolue ; null avant
   luck      String? // jeton de chance SECRET (potion barman) : JSON {kind,cap} ; rig plafonné si SOLO
+  // "Prêt à lancer" : le joueur a appuyé sur "Lancer la balle". Quand TOUS les parieurs sont prêts, la
+  // manche se résout immédiatement (sans attendre la fenêtre de mise). Réinitialisé si la mise change.
+  ready     Boolean       @default(false)
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 

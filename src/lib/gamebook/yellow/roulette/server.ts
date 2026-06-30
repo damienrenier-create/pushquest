@@ -20,7 +20,7 @@ import prisma from "@/lib/prisma"
 import { getPusher } from "@/lib/pusher"
 import { Rng } from "../battle/rng"
 import { colorOf, spinWheel } from "./wheel"
-import { type Bet, isValidBet } from "./bets"
+import { type Bet, isValidBet, meetsTableMinimum } from "./bets"
 import { resolveSpin } from "./engine"
 import { parseLuck, selectRiggedWinning } from "./luck"
 
@@ -36,8 +36,11 @@ export async function publishRoulette(type: string, data: Record<string, unknown
     }
 }
 
-/** Durée de la fenêtre de mise (ms). 30 s : assez pour miser à plusieurs, assez court pour enchaîner. */
-export const ROUND_MS = 30_000
+/** Durée de la fenêtre de mise (ms). 10 min : large fenêtre pour miser tranquillement à plusieurs ; on
+ *  n'attend pas ce délai en pratique → dès que TOUS les parieurs appuient sur « Lancer la balle » (ou le
+ *  seul parieur en solo), la manche se résout immédiatement (cf. markReadyAndResolve). Le timer n'est que
+ *  le garde-fou maximal si quelqu'un ne se déclare jamais prêt. */
+export const ROUND_MS = 600_000
 /** Nb de manches résolues renvoyées (révélation + réconciliation des gains côté client). */
 export const RECENT_RESULTS = 6
 /** Garde-fous anti-abus sur la charge utile de mises. */
@@ -59,6 +62,7 @@ export interface PublicPlayerBets {
     staked: number
     bets: Bet[]
     net: number | null
+    ready: boolean
 }
 export interface RoundResult {
     roundId: string
@@ -204,11 +208,11 @@ export async function getRouletteState(): Promise<RouletteStatePayload> {
 
     const betRows = await prisma.rouletteBet.findMany({
         where: { roundId: active.id },
-        select: { userId: true, nickname: true, staked: true, net: true, betsJson: true },
+        select: { userId: true, nickname: true, staked: true, net: true, betsJson: true, ready: true },
         orderBy: { updatedAt: "asc" },
     })
     const bets: PublicPlayerBets[] = betRows.map((b) => ({
-        userId: b.userId, nickname: b.nickname, staked: b.staked, net: b.net, bets: parseBets(b.betsJson),
+        userId: b.userId, nickname: b.nickname, staked: b.staked, net: b.net, bets: parseBets(b.betsJson), ready: b.ready,
     }))
 
     const resolved = await prisma.rouletteRound.findMany({
@@ -246,6 +250,12 @@ export async function placeBets(userId: string, nickname: string, roundId: strin
     if (!round || round.status !== "OPEN" || round.closesAt.getTime() <= Date.now()) {
         throw new Error("round_closed")
     }
+    // « RIEN NE VA PLUS » : dès qu'un parieur s'est déclaré PRÊT (séquence de lancement entamée), la mise
+    // est fermée. Cela évite aussi qu'un parieur tardif se glisse entre le clic « Prêt » du SOLO et le
+    // tirage, ce qui annulerait à tort son jeton de chance plafonné (le `ready` du solo est commité AVANT
+    // cette fenêtre → tout placeBets postérieur voit anyReady et est refusé). Race résiduelle négligeable.
+    const anyReady = await prisma.rouletteBet.findFirst({ where: { roundId, ready: true }, select: { id: true } })
+    if (anyReady) throw new Error("round_closed")
     if (!Array.isArray(rawBets)) throw new Error("invalid_bets")
     if (rawBets.length > MAX_BETS_PER_PLAYER) throw new Error("too_many")
 
@@ -258,6 +268,7 @@ export async function placeBets(userId: string, nickname: string, roundId: strin
             zoneId: String(b.zoneId ?? ""),
         }
         if (!isValidBet(bet) || !bet.zoneId) throw new Error("invalid_bets")
+        if (!meetsTableMinimum(bet)) throw new Error("below_min") // chances extérieures : 5 mini / case
         bets.push(bet)
     }
     const staked = bets.reduce((a, b) => a + b.chips, 0)
@@ -271,32 +282,41 @@ export async function placeBets(userId: string, nickname: string, roundId: strin
     await prisma.rouletteBet.upsert({
         where: { roundId_userId: { roundId, userId } },
         create: { roundId, userId, nickname, betsJson: JSON.stringify(bets), staked, luck: luckJson },
-        update: { nickname, betsJson: JSON.stringify(bets), staked, luck: luckJson },
+        // re-mise = je re-compose → je ne suis plus "prêt" (ready repart à false).
+        update: { nickname, betsJson: JSON.stringify(bets), staked, luck: luckJson, ready: false },
     })
     return { ok: true, staked, roundId }
 }
 
 /**
- * SOLO "Lancer la balle" : un joueur SEUL à avoir misé peut résoudre SA manche immédiatement, sans
- * attendre `closesAt`. Sécurité (revue adversariale) :
- *  - n'accepte JAMAIS de numéro/net/flag depuis le client (seul `roundId` est fourni) ;
- *  - n'autorise le force-spin QUE si la manche est OPEN et qu'il y a EXACTEMENT 1 parieur = ce user
- *    (sinon `not_solo` — impossible de fermer la manche d'un autre, ni une manche partagée) ;
+ * "Lancer la balle" : le joueur se déclare PRÊT. Quand TOUS les parieurs de la manche sont prêts (cas
+ * dégénéré : le seul parieur en solo), la manche se résout immédiatement, sans attendre `closesAt`.
+ * Sécurité (revue adversariale) :
+ *  - n'accepte JAMAIS de numéro/net depuis le client (seul `roundId` est fourni) ;
+ *  - ne marque PRÊT que MA propre mise (where userId = ce user) — on ne peut pas « rendre prêt » un autre ;
+ *  - ne résout QUE si la manche est OPEN ET que TOUS les parieurs (≥1) sont prêts → impossible de forcer
+ *    le tirage d'une manche partagée tant que les autres n'ont pas appuyé (on attend, ou le timer 10 min) ;
  *  - la résolution passe par `resolveRound` (inchangé) : tirage 100 % seed serveur, rig SECRET re-décidé
- *    en interne (rows.length===1) et plafonné, updateMany atomique OPEN→RESOLVED (anti double-tirage) ;
+ *    en interne (rows.length===1 → solo seulement) et plafonné, updateMany atomique OPEN→RESOLVED ;
  *  - ne crédite RIEN côté serveur : la custody d'énergie reste cliente + idempotente (markRouletteClaimed).
  */
-export async function forceResolveSolo(
+export async function markReadyAndResolve(
     userId: string,
     roundId: string,
-): Promise<{ status: "ok" | "not_found" | "closed" | "no_bet" | "not_solo"; result?: RoundResult }> {
+): Promise<{ status: "resolved" | "waiting" | "not_found" | "closed" | "no_bet"; result?: RoundResult; ready?: number; total?: number }> {
     const round = await prisma.rouletteRound.findUnique({ where: { id: roundId }, select: { status: true } })
     if (!round) return { status: "not_found" }
-    if (round.status !== "OPEN") return { status: "closed" } // déjà résolue (course paresseuse / double-clic)
-    // Re-vérification AUTORISATION : exactement 1 parieur, et c'est bien ce user (jamais un flag client).
-    const rows = await prisma.rouletteBet.findMany({ where: { roundId }, select: { userId: true } })
-    if (rows.length === 0) return { status: "no_bet" }                       // pas de force-spin à vide
-    if (rows.length !== 1 || rows[0].userId !== userId) return { status: "not_solo" } // un autre a misé → on attend le timer
-    const result = await resolveRound(roundId) // re-décide rig + tire via seed + ferme atomiquement
-    return result ? { status: "ok", result } : { status: "not_found" }
+    if (round.status !== "OPEN") return { status: "closed" } // déjà résolue (timer / un autre vient de lancer)
+    // Marque MA mise comme prête (doit exister). updateMany scoping userId → jamais la mise d'autrui.
+    const mine = await prisma.rouletteBet.updateMany({ where: { roundId, userId }, data: { ready: true } })
+    if (mine.count === 0) return { status: "no_bet" } // je dois avoir misé pour pouvoir lancer
+    // Tous les parieurs sont-ils prêts ?
+    const rows = await prisma.rouletteBet.findMany({ where: { roundId }, select: { ready: true } })
+    const total = rows.length
+    const readyCount = rows.filter((r) => r.ready).length
+    if (total >= 1 && readyCount === total) {
+        const result = await resolveRound(roundId) // re-décide rig (solo only) + tire via seed + ferme atomiquement
+        return result ? { status: "resolved", result, ready: readyCount, total } : { status: "not_found" }
+    }
+    return { status: "waiting", ready: readyCount, total } // on attend les autres (ou le timer)
 }

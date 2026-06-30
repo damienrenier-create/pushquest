@@ -29,6 +29,21 @@ export const INSIDE_SIZE: Partial<Record<BetType, number>> = {
     STRAIGHT: 1, SPLIT: 2, STREET: 3, CORNER: 4, SIXLINE: 6,
 }
 
+// MISE MINIMUM PAR CASE (style vrai casino) : les CHANCES EXTÉRIEURES (rouge/noir/pair/impair/douzaine/
+// colonne/manque/passe), peu risquées, portent le minimum de table sur UNE seule case ; les paris
+// INTÉRIEURS (plein, cheval…), plus risqués, ont un plancher plus bas.
+export const OUTSIDE_MIN_BET = 5
+export const INSIDE_MIN_BET = 1
+/** Un pari INTÉRIEUR (couverture connue dans INSIDE_SIZE) a un plancher bas ; sinon c'est une chance
+ *  extérieure → plancher élevé. */
+export function minStakeForType(type: BetType): number {
+    return INSIDE_SIZE[type] !== undefined ? INSIDE_MIN_BET : OUTSIDE_MIN_BET
+}
+/** Le pari respecte-t-il le minimum de table de sa case ? (chips ≥ minStakeForType). */
+export function meetsTableMinimum(bet: Bet): boolean {
+    return bet.chips >= minStakeForType(bet.type)
+}
+
 export interface Bet {
     type: BetType
     /** Numéros couverts (0..36). Source de vérité pour « le pari touche-t-il ? ». */
