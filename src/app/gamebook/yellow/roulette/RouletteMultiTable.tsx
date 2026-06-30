@@ -9,7 +9,7 @@
 // résolution via une réconciliation IDEMPOTENTE par manche (markRouletteClaimed) robuste au refresh.
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { usePlayer, spendReps, grantReps, markRouletteClaimed, peekRouletteLuck, decrementRouletteLuck } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, grantReps, markRouletteClaimed, peekRouletteLuck, decrementRouletteLuck, fundRouletteBet } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { getPusherClient, PUSHER_CLIENT_ENABLED } from "@/lib/pusher-client"
 import { colorOf } from "@/lib/gamebook/yellow/roulette/wheel"
@@ -148,9 +148,10 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
     }
     const clearPending = () => setPending({})
 
+    const credit = player.labDefi.rouletteCredit
     const validate = async () => {
         if (!round || !open || locked || pendingTotal <= 0 || busy) return
-        if (player.reps < pendingTotal) { setFlash("Pas assez d'énergie."); return }
+        if (credit + player.reps < pendingTotal) { setFlash("Pas assez d'énergie."); return }
         // MINIMUM DE TABLE par case (style vrai casino) : 5 sur les chances extérieures, 1 sur les pleins.
         const below = pendingList.find((b) => b.chips < minStakeForType(b.type))
         if (below) { setFlash(`Mise mini sur cette case : ${minStakeForType(below.type)} ⚡ (chances extérieures = ${OUTSIDE_MIN_BET}).`); return }
@@ -165,7 +166,9 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
                 body: JSON.stringify({ roundId: round.id, bets: pendingList, luck }),
             })
             if (res.ok) {
-                spendReps(pendingTotal)         // débit SEULEMENT après acceptation serveur
+                // débit APRÈS acceptation serveur : crédit roulette OFFERT d'abord, puis reps. Si le solde a
+                // chuté entre-temps (re-vérifié au débit), on n'enregistre PAS la mise comme validée.
+                if (!fundRouletteBet(pendingTotal)) { setFlash("Fonds insuffisants au moment du débit — réessaie."); return }
                 persistYellowSave()
                 setValidatedRound(round.id)
                 setFlash(`Mise validée : ${pendingTotal} ⚡`)
@@ -221,7 +224,7 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
 
                 {/* Bandeau manche + timer */}
                 <div style={S.bar}>
-                    <span>⚡ {player.reps}/{player.repsCap}</span>
+                    <span>⚡ {player.reps}/{player.repsCap}{credit > 0 ? <span style={{ color: "#ffd54a", fontWeight: 800 }}> · 🎁 {credit} crédit</span> : null}</span>
                     <span style={{ fontWeight: 800, color: open ? "#7ce0a0" : "#e0a020" }}>
                         {round ? (open ? `Mises ouvertes — ${fmtTime(remaining)}` : "Tirage…") : "Connexion…"}
                     </span>

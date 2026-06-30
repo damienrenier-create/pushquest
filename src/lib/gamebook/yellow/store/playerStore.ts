@@ -15,7 +15,7 @@ import { isHeldItem, getHeldItem } from "../data/heldItems"
 import { SAIYAN_POINT_VALUE } from "../data/saiyanConfig"
 import { BADGE_REPS_CAP_BONUS } from "../data/badges"
 import { getCt, canLearnCt, purchasableCts, type BadgeId } from "../data/cts"
-import { emptyLabDefi, casinoWinningCase, CASINO_NUM_CASES, CASINO_MIN_BET, CASINO_MAX_BET, CASINO_WIN_MULT, CASINO_BANKRUPT_STREAK, CASINO_BANKRUPT_COOLDOWN_MS, TONYTONY_TARGET, TONYTONY_SHINY_TARGET, TONYTONY_LEVEL, TONYTONY_SPECIES, DAILY_TICKET_VALUE, TICKET_QUEUE_MAX, ROULETTE_CLAIMED_MAX, BLESSING_QUEUE_MAX, casinoFloorTiles, isCasinoFloorTile, CHIP_MIN, CHIP_MAX, CHIP_TICKET_VALUE, isSecretChipMilestone, clampTicketValue, SPAG_GIFT_TICKET_COUNT, SPAG_GIFT_TICKET_VALUE, type LabDefiState, type LabActiveDefi } from "../data/labDefis"
+import { emptyLabDefi, casinoWinningCase, CASINO_NUM_CASES, CASINO_MIN_BET, CASINO_MAX_BET, CASINO_WIN_MULT, CASINO_BANKRUPT_STREAK, CASINO_BANKRUPT_COOLDOWN_MS, TONYTONY_TARGET, TONYTONY_SHINY_TARGET, TONYTONY_LEVEL, TONYTONY_SPECIES, DAILY_TICKET_VALUE, TICKET_QUEUE_MAX, ROULETTE_CLAIMED_MAX, BLESSING_QUEUE_MAX, casinoFloorTiles, isCasinoFloorTile, CHIP_MIN, CHIP_MAX, CHIP_TICKET_VALUE, isSecretChipMilestone, clampTicketValue, SPAG_GIFT_TICKET_COUNT, SPAG_GIFT_TICKET_VALUE, STEP_GIFT_CREDIT, type LabDefiState, type LabActiveDefi } from "../data/labDefis"
 import { createMonInstance } from "../battle/factory"
 import type { StatKey } from "../battle/types"
 import { expForLevel, levelFromExp, applyExp, MAX_LEVEL, type ExpResult } from "../battle/xp"
@@ -935,6 +935,39 @@ export function claimSpagWelcomeTickets(): number {
     }
     emit()
     return granted
+}
+
+// ════════════════ CRÉDIT ROULETTE (énergie offerte, jouable UNIQUEMENT à la table) ════════════════
+/** Solde de crédit roulette (énergie offerte, non encaissable, dépensée avant les reps à la table). */
+export function rouletteCreditBalance(): number { return st.labDefi.rouletteCredit }
+/** Ajoute `n` au crédit roulette. */
+export function grantRouletteCredit(n: number): void {
+    const add = Math.max(0, Math.floor(n))
+    if (add <= 0) return
+    st = { ...st, labDefi: { ...st.labDefi, rouletteCredit: st.labDefi.rouletteCredit + add } }
+    emit()
+}
+/** Finance une mise de roulette : dépense le CRÉDIT d'abord, puis les reps. Renvoie false si fonds
+ *  insuffisants (crédit + reps < montant). Les gains éventuels reviennent en reps (jamais en crédit). */
+export function fundRouletteBet(amount: number): boolean {
+    const a = Math.max(0, Math.floor(amount))
+    const credit = st.labDefi.rouletteCredit
+    if (credit + st.reps < a) return false
+    const fromCredit = Math.min(credit, a)
+    st = { ...st, reps: st.reps - (a - fromCredit), labDefi: { ...st.labDefi, rouletteCredit: credit - fromCredit } }
+    emit()
+    return true
+}
+
+// ÉVÉNEMENT D'UN JOUR (Dieu Spaghetti) : cadeau du 10e pas → crédit roulette (one-shot).
+export function spagStepGiftDone(): boolean { return st.labDefi.spagStepGiftClaimed }
+/** Réclame le cadeau du 10e pas : +STEP_GIFT_CREDIT de crédit roulette. Idempotent (flag d'abord).
+ *  Renvoie le crédit octroyé (0 si déjà réclamé). */
+export function claimSpagStepGift(): number {
+    if (st.labDefi.spagStepGiftClaimed) return 0
+    st = { ...st, labDefi: { ...st.labDefi, spagStepGiftClaimed: true, rouletteCredit: st.labDefi.rouletteCredit + STEP_GIFT_CREDIT } }
+    emit()
+    return STEP_GIFT_CREDIT
 }
 
 // ════════════════ BARMAN (casino) — achat "prix libre" + bénédictions SECRÈTES ════════════════

@@ -263,6 +263,8 @@ function parseLabDefi(raw: unknown): LabDefiState {
     }
     d.spagRouletteSeen = o.spagRouletteSeen === true
     d.spagWelcomeGift = o.spagWelcomeGift === true
+    d.spagStepGiftClaimed = o.spagStepGiftClaimed === true
+    d.rouletteCredit = typeof o.rouletteCredit === "number" && o.rouletteCredit > 0 ? Math.floor(o.rouletteCredit) : 0
     d.geneIntroSeen = o.geneIntroSeen === true
     d.rouletteClaimed = strArr(o.rouletteClaimed).slice(-ROULETTE_CLAIMED_MAX)
     // BARMAN (secret)

@@ -76,6 +76,11 @@ export interface LabDefiState {
     spagRouletteSeen: boolean
     /** Cadeau de bienvenue du Dieu Spaghetti (3 tickets roulette "spag") déjà réclamé ? (one-shot à vie). */
     spagWelcomeGift: boolean
+    /** ÉVÉNEMENT D'UN JOUR (Dieu Spaghetti) : cadeau du 10e pas déjà réclamé ? (one-shot). */
+    spagStepGiftClaimed: boolean
+    /** CRÉDIT ROULETTE : énergie OFFERTE, jouable UNIQUEMENT à la table de roulette (mise par mise, divisible),
+     *  non encaissable. Dépensé AVANT les reps à la validation d'une mise. Les gains, eux, vont aux reps. */
+    rouletteCredit: number
     /** Carrousel d'explication de la GÉNÉTIQUE (potentiel/IV) déjà vu ? (one-shot, après une 1re capture). */
     geneIntroSeen: boolean
     /** ROULETTE MULTIJOUEUR : ids des manches dont le gain a DÉJÀ été crédité (anti-double-crédit,
@@ -174,6 +179,8 @@ export function emptyLabDefi(): LabDefiState {
         grantedTicketOrigins: [],
         spagRouletteSeen: false,
         spagWelcomeGift: false,
+        spagStepGiftClaimed: false,
+        rouletteCredit: 0,
         geneIntroSeen: false,
         rouletteClaimed: [],
         barmanPotionsBought: 0,
@@ -286,6 +293,14 @@ export const DAILY_TICKET_VALUE = CASINO_MIN_BET
 /** Cadeau de bienvenue du Dieu Spaghetti : 3 tickets de mise MAX (origine "spag", à jouer, non rachetables). */
 export const SPAG_GIFT_TICKET_COUNT = 3
 export const SPAG_GIFT_TICKET_VALUE = CASINO_MAX_BET
+
+// ───────── ÉVÉNEMENT D'UN JOUR : le 10e pas (Dieu Spaghetti) ─────────
+/** Jour de l'événement (AAAA-MM-JJ). Le cadeau ne se déclenche QUE ce jour-là. Modifiable pour rejouer l'événement. */
+export const STEP_GIFT_DATE = "2026-06-30"
+/** Nb de pas (déplacements) dans la journée avant le cadeau. */
+export const STEP_GIFT_THRESHOLD = 10
+/** Montant du crédit roulette offert (divisible, jouable mise par mise à la table). */
+export const STEP_GIFT_CREDIT = 10
 /** Boss d'arène : un ticket de 30 (en plus de la CT), à la 1re victoire. */
 export const ARENA_TICKET_VALUE = 30
 /** Sbire (pâtes) : un ticket de 20, tous les SBIRE_TICKET_EVERY combats cumulés, une fois la CT obtenue. */

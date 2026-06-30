@@ -50,9 +50,9 @@ import { aceLoseLine } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
-import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone } from "@/lib/gamebook/yellow/store/playerStore"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
-import { ARENA_TICKET_VALUE } from "@/lib/gamebook/yellow/data/labDefis"
+import { ARENA_TICKET_VALUE, STEP_GIFT_DATE, STEP_GIFT_THRESHOLD } from "@/lib/gamebook/yellow/data/labDefis"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { useRun, getRun, startTowerRun, startRun, applyWinFromBattle, applyLossFromBattle, quitRun, endRun, setDraftedTeam, getDraftedTeam, setRunRaw } from "@/lib/gamebook/yellow/frontier/runStore"
@@ -205,6 +205,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [heldOpen, setHeldOpen] = useState(false) // modale "objet tenu" (depuis la fiche d'un Daemon)
     const [evDetailOpen, setEvDetailOpen] = useState(false) // détail EV (par stat) déplié sur la fiche
     const ticketChecked = useRef(false)
+    const stepCountRef = useRef(0)                                                  // pas du jour (événement 10e pas)
+    const stepPrevPosRef = useRef<{ x: number; y: number; mapId: string } | null>(null)
     const [tourChoice, setTourChoice] = useState(false) // pause entre vagues de série (Continuer / Quitter)
     const [domePause, setDomePause] = useState(false) // écran d'intro AVANT chaque match du Dôme (bracket + adversaire)
     const [usineCt, setUsineCt] = useState<string[] | null>(null) // CT à choisir (récompense Usine) parmi le vaincu
@@ -901,6 +903,30 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (!today) return
         if (ensureDailyChips(today, getPlayer().wildCtx?.quotaReached === true)) persistYellowSave()
     }, [inCasino, hydrated])
+
+    // ÉVÉNEMENT D'UN JOUR (Dieu Spaghetti) : au 10e PAS de la journée — le jour J uniquement — il offre un
+    // CRÉDIT roulette (divisible, à jouer à la table). On compte les pas en surveillant les changements de
+    // position sur une MÊME carte (les téléports ne comptent pas). Crédit one-shot (flag persistant).
+    useEffect(() => {
+        if (!hydrated || battle) return
+        const cur = { x: mapPlayer.posX, y: mapPlayer.posY, mapId: mapPlayer.mapId }
+        const prev = stepPrevPosRef.current
+        stepPrevPosRef.current = cur
+        if (!prev || prev.mapId !== cur.mapId || (prev.x === cur.x && prev.y === cur.y)) return // 1re pos / téléport / immobile
+        stepCountRef.current += 1
+        if (stepCountRef.current < STEP_GIFT_THRESHOLD || spagStepGiftDone()) return
+        if (getPlayer().creditedThrough !== STEP_GIFT_DATE) return // événement d'un seul jour
+        const n = claimSpagStepGift()
+        if (n > 0) {
+            persistYellowSave()
+            showDialogue(DUEL_DREAM_NPC, "✨ Dieu Spaghetti", [
+                "*Le Dieu Spaghetti jaillit du sol dans une gerbe de semoule dorée…*",
+                `« Dix pas, mortel ! Pour fêter ça — aujourd'hui SEULEMENT — voici ${n} crédits de roulette, OFFERTS ! »`,
+                "« La grande ROULETTE t'attend dans le BÂTIMENT MULTIJOUEUR — et grande nouvelle : le BAR est ENFIN OUVERT ! 🍸 »",
+                "« File claquer tes crédits à la table, mise par mise. La fortune sourit aux marcheurs ! »",
+            ])
+        }
+    }, [mapPlayer.posX, mapPlayer.posY, mapPlayer.mapId, hydrated, battle, showDialogue])
 
     // Revanche d'arène gagnée : dialogue de récompense post-combat (énergie / CT Mirage),
     // une fois le combat quitté ET la cinématique d'évolution terminée (même règle que badge/ACE).
