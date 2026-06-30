@@ -15,7 +15,7 @@ import { isHeldItem, getHeldItem } from "../data/heldItems"
 import { SAIYAN_POINT_VALUE } from "../data/saiyanConfig"
 import { BADGE_REPS_CAP_BONUS } from "../data/badges"
 import { getCt, canLearnCt, purchasableCts, type BadgeId } from "../data/cts"
-import { emptyLabDefi, casinoWinningCase, CASINO_NUM_CASES, CASINO_MIN_BET, CASINO_MAX_BET, CASINO_WIN_MULT, CASINO_BANKRUPT_STREAK, CASINO_BANKRUPT_COOLDOWN_MS, TONYTONY_TARGET, TONYTONY_SHINY_TARGET, TONYTONY_LEVEL, TONYTONY_SPECIES, DAILY_TICKET_VALUE, TICKET_QUEUE_MAX, ROULETTE_CLAIMED_MAX, BLESSING_QUEUE_MAX, casinoFloorTiles, isCasinoFloorTile, CHIP_MIN, CHIP_MAX, CHIP_TICKET_VALUE, isSecretChipMilestone, clampTicketValue, SPAG_GIFT_TICKET_COUNT, SPAG_GIFT_TICKET_VALUE, STEP_GIFT_CREDIT, type LabDefiState, type LabActiveDefi } from "../data/labDefis"
+import { emptyLabDefi, casinoWinningCase, CASINO_NUM_CASES, CASINO_MIN_BET, CASINO_MAX_BET, CASINO_WIN_MULT, CASINO_BANKRUPT_STREAK, CASINO_BANKRUPT_COOLDOWN_MS, TONYTONY_TARGET, TONYTONY_SHINY_TARGET, TONYTONY_LEVEL, TONYTONY_SPECIES, DAILY_TICKET_VALUE, TICKET_QUEUE_MAX, ROULETTE_CLAIMED_MAX, BLESSING_QUEUE_MAX, casinoFloorTiles, isCasinoFloorTile, CHIP_MIN, CHIP_MAX, CHIP_TICKET_VALUE, isSecretChipMilestone, clampTicketValue, SPAG_GIFT_TICKET_COUNT, SPAG_GIFT_TICKET_VALUE, STEP_GIFT_CREDIT, BLACKJACK_CT_TARGET, BLACKJACK_CT_ID, type LabDefiState, type LabActiveDefi } from "../data/labDefis"
 import { createMonInstance } from "../battle/factory"
 import type { StatKey } from "../battle/types"
 import { expForLevel, levelFromExp, applyExp, MAX_LEVEL, type ExpResult } from "../battle/xp"
@@ -877,6 +877,19 @@ export function settleBlackjack(payout: number, net: number): void {
     const n = Math.floor(net)
     if (n > 0) st = { ...st, labDefi: { ...st.labDefi, blackjackWon: st.labDefi.blackjackWon + n } }
     emit()
+}
+
+/** Réclame la CT-trophée « Apothéose » dès que le cumul net atteint BLACKJACK_CT_TARGET (one-shot à vie).
+ *  Retourne le NOM de l'attaque débloquée (pour la célébration UI) si le palier vient d'être franchi, sinon null.
+ *  Idempotent : le flag blackjackCtClaimed empêche tout re-don, même si grantCt échoue (CT déjà possédée). */
+export function claimBlackjackCt(): string | null {
+    if (st.labDefi.blackjackCtClaimed) return null
+    if (st.labDefi.blackjackWon < BLACKJACK_CT_TARGET) return null
+    st = { ...st, labDefi: { ...st.labDefi, blackjackCtClaimed: true } }
+    grantCt(BLACKJACK_CT_ID) // emit() interne ; idempotent si déjà possédée
+    const moveName = getMove(getCt(BLACKJACK_CT_ID)?.moveId ?? "")?.name ?? "Apothéose"
+    emit()
+    return moveName
 }
 
 // ── Tickets roulette ──

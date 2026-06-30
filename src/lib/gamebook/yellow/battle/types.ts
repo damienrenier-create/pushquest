@@ -80,6 +80,11 @@ export interface MoveEffect {
      *  la proba de critique vaut la valeur (0..1) au lieu du calcul normal. Ex. Fouet de Nouilles :
      *  Nouillon 1.0, Vermisaint 0.8, Divinpâte 0.6. */
     critChanceForSpecies?: Record<string, number>
+    /** STAB ADAPTATIF (CT signature « Apothéose ») : au lancement, le TYPE devient un type du Daemon
+     *  ET la CATÉGORIE se cale sur sa MEILLEURE stat offensive. Donc toujours STAB, frappant avec la
+     *  bonne stat (ex. un Daemon Feu à grosse Attaque tape Feu… mais en PHYSIQUE). Type stocké = NORMAL
+     *  (→ apprenable par tous) ; le moteur substitue type+catégorie au calcul de dégâts. */
+    adaptiveStab?: boolean
 }
 
 export interface MoveData {

@@ -640,13 +640,19 @@ function dealMoveDamage(state: BattleState, side: SideId, move: MoveData, rng: R
     const atkSpecies = speciesOf(attacker)
     const defSpecies = speciesOf(defender)
 
-    const eff = typeEffectiveness(move.type, defSpecies.types)
-    if (eff === 0) return { dealt: 0, typeEff: 0 }
-
     const rawStats = fullStats(attacker, atkSpecies)
     const rawDefStats = fullStats(defender, defSpecies)
-    // Gen 1 : catégorie déterminée par le TYPE. Physique → Atq/Déf ; Spécial → Spc/Spc.
-    const isPhysical = (move.category ?? moveCategory(move.type)) === "PHYSICAL"
+    // TYPE & CATÉGORIE EFFECTIFS. Défaut : ceux du move (Gen 1 : catégorie par TYPE). STAB ADAPTATIF
+    // (CT « Apothéose ») : le type devient un type du Daemon ALIGNÉ sur sa MEILLEURE stat offensive, et la
+    // catégorie SUIT cette stat → toujours STAB, frappant avec la bonne stat (ex. Feu mais PHYSIQUE).
+    let effType = move.type
+    let isPhysical = (move.category ?? moveCategory(move.type)) === "PHYSICAL"
+    if (move.effect?.adaptiveStab) {
+        isPhysical = rawStats.atk >= rawStats.spc
+        effType = atkSpecies.types.find((t) => (moveCategory(t) === "PHYSICAL") === isPhysical) ?? atkSpecies.types[0]
+    }
+    const eff = typeEffectiveness(effType, defSpecies.types)
+    if (eff === 0) return { dealt: 0, typeEff: 0 }
     const atk = isPhysical
         ? effectiveStat(rawStats.atk, "atk", attacker.stages.atk, attacker.status)
         : effectiveStat(rawStats.spc, "spc", attacker.stages.spc, attacker.status)
@@ -664,13 +670,13 @@ function dealMoveDamage(state: BattleState, side: SideId, move: MoveData, rng: R
     // Le tirage RNG ci-dessus est conservé (déterminisme intact) ; on ne fait que forcer le résultat.
     if (attacker.nextCritGuaranteed) { isCrit = true; attacker.nextCritGuaranteed = false }
     // OBJET TENU : boost de type (attaquant) × réduction de dégâts physiques (défenseur, ex. Coquille Tony).
-    const itemMult = heldOutgoingDmgMult(attacker, move.type) * heldIncomingDmgMult(defender, isPhysical)
+    const itemMult = heldOutgoingDmgMult(attacker, effType) * heldIncomingDmgMult(defender, isPhysical)
     const result = computeDamage({
         level: attacker.level,
         power: move.power,
         attack: atk,
         defense: def,
-        stab: hasStab(move.type, atkSpecies.types),
+        stab: hasStab(effType, atkSpecies.types),
         typeEff: eff,
         isCrit,
         randomFactor: rng.damageFactor(),
@@ -694,7 +700,7 @@ function dealMoveDamage(state: BattleState, side: SideId, move: MoveData, rng: R
     // Placé APRÈS applyDamage → aucun RNG consommé ensuite (isCrit/randomFactor tirés avant) → déterminisme intact.
     if (!state.pvp && side === "player" && dealt > 0) {
         if (!state.dmgByType) state.dmgByType = {}
-        state.dmgByType[move.type] = (state.dmgByType[move.type] ?? 0) + dealt
+        state.dmgByType[effType] = (state.dmgByType[effType] ?? 0) + dealt // effType : prend en compte le STAB adaptatif
     }
     // OBJET TENU — Grelot Coque : soigne l'attaquant d'1/8 des dégâts infligés.
     const atkHeld = heldEffect(attacker)

@@ -5,8 +5,9 @@
 // (→ future CT signature). Moteur pur dans casino/blackjack.ts.
 
 import { useRef, useState } from "react"
-import { usePlayer, spendReps, settleBlackjack } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, spendReps, settleBlackjack, claimBlackjackCt } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
+import { BLACKJACK_CT_TARGET } from "@/lib/gamebook/yellow/data/labDefis"
 import { deal, hit, stand, double, canDouble, handValue, freshShoe, type BJState, type Card } from "@/lib/gamebook/yellow/casino/blackjack"
 
 const BET_MIN = 10, BET_MAX = 50
@@ -25,11 +26,13 @@ export default function BlackjackPanel({ close }: { close: () => void }) {
     const [game, setGame] = useState<BJState | null>(null)
     const [msg, setMsg] = useState("")
     const [busy, setBusy] = useState(false)
+    const [ctWon, setCtWon] = useState<string | null>(null) // nom de la CT-trophée si on vient de la débloquer
     const shoeRef = useRef<Card[]>([])
     const settledRef = useRef(false) // la main courante a-t-elle déjà été réglée ? (anti double-crédit double-clic)
 
     const inHand = !!game && game.phase === "player"
     const won = player.labDefi.blackjackWon
+    const ctClaimed = player.labDefi.blackjackCtClaimed
 
     const resultLine = (s: BJState) =>
         s.outcome === "blackjack" ? `🂡 BLACKJACK ! +${s.net} ⚡ (payé 3:2)`
@@ -42,7 +45,10 @@ export default function BlackjackPanel({ close }: { close: () => void }) {
         shoeRef.current = ns.deck
         if (ns.phase === "done" && !settledRef.current) { // règlement UNE seule fois par main (anti double-clic)
             settledRef.current = true
-            settleBlackjack(ns.payout, ns.net); persistYellowSave(); setMsg(resultLine(ns))
+            settleBlackjack(ns.payout, ns.net)
+            const ctName = claimBlackjackCt() // palier 1000 ⚡ nets → CT « Apothéose » (one-shot, idempotent)
+            persistYellowSave(); setMsg(resultLine(ns))
+            if (ctName) setCtWon(ctName)
         }
     }
 
@@ -53,7 +59,7 @@ export default function BlackjackPanel({ close }: { close: () => void }) {
         if (!spendReps(bet)) { setBusy(false); setMsg("Pas assez d'énergie."); return }
         const shoe = shoeRef.current.length < 24 ? freshShoe(Math.random) : shoeRef.current // re-mélange si sabot bas
         persistYellowSave() // débit de la mise persisté
-        setMsg("")
+        setMsg(""); setCtWon(null) // nettoie la bannière de déblocage CT de la main précédente
         settledRef.current = false // nouvelle main → règlement réarmé
         apply(deal(shoe, bet))
         setBusy(false)
@@ -114,7 +120,20 @@ export default function BlackjackPanel({ close }: { close: () => void }) {
                     </div>
                 )}
 
-                <div style={vip}>🏅 <b>Progression VIP</b> — gains nets cumulés au blackjack : <b style={{ color: "#ffd54a" }}>{won} ⚡</b> <span style={{ opacity: 0.7 }}>(vers une récompense unique… 🤫)</span></div>
+                {ctWon && (
+                    <div style={ctBanner} onClick={() => setCtWon(null)}>
+                        🏆 <b>CT « {ctWon} » DÉBLOQUÉE !</b><br />
+                        <span style={{ fontSize: 11, opacity: 0.9 }}>Attaque ULTIME adaptative (type de ton Daemon + meilleure stat offensive, STAB garanti). Enseigne-la via la CT52.</span>
+                        <div style={{ fontSize: 10, opacity: 0.6, marginTop: 4 }}>(toucher pour fermer)</div>
+                    </div>
+                )}
+
+                <div style={vip}>
+                    🏅 <b>Progression VIP</b> — gains nets cumulés : <b style={{ color: "#ffd54a" }}>{won} ⚡</b>
+                    {ctClaimed
+                        ? <span style={{ color: "#9ff0b8" }}> · CT « Apothéose » obtenue ✓</span>
+                        : <span> · palier <b>{Math.min(won, BLACKJACK_CT_TARGET)}/{BLACKJACK_CT_TARGET} ⚡</b> → CT unique « Apothéose » 🔒</span>}
+                </div>
                 <div style={rulesS}>Le croupier tire jusqu'à 16, reste à 17. Blackjack payé 3:2. Égalité = mise rendue.</div>
                 <button style={closeBtn} onClick={close}>← Quitter la table</button>
             </div>
@@ -141,5 +160,6 @@ const actRow: React.CSSProperties = { display: "flex", gap: 8, marginTop: 12 }
 const actBtn: React.CSSProperties = { flex: 1, padding: "11px 0", background: "#2f7a4a", color: "#fff", border: "none", borderRadius: 9, fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }
 const disBtn: React.CSSProperties = { opacity: 0.4, cursor: "default" }
 const vip: React.CSSProperties = { marginTop: 12, fontSize: 11.5, lineHeight: 1.5, background: "rgba(255,213,74,0.1)", border: "1px dashed #ffd54a", borderRadius: 8, padding: "8px 10px", color: "#f3e0a0" }
+const ctBanner: React.CSSProperties = { marginTop: 12, fontSize: 14, lineHeight: 1.5, textAlign: "center", background: "linear-gradient(135deg,#3a2a00,#6a4f00)", border: "2px solid #ffd54a", borderRadius: 10, padding: "12px 12px", color: "#fff3c4", boxShadow: "0 0 22px rgba(255,213,74,.45)", cursor: "pointer" }
 const rulesS: React.CSSProperties = { marginTop: 8, fontSize: 10, opacity: 0.6, lineHeight: 1.4, textAlign: "center" }
 const closeBtn: React.CSSProperties = { marginTop: 12, width: "100%", padding: "9px 0", background: "rgba(255,255,255,0.1)", color: "#fff", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }

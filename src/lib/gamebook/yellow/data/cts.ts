@@ -141,6 +141,10 @@ export const CTS: CtData[] = [
     { id: "ct50", label: "CT50", moveId: "choc_mental", price: 0, labOnly: true },       // 50 → 5 000
     // -- SPECTRE (en plus de ct26 frappe_audela 85, un cadeau de boss) : 2e tier distinct --
     { id: "ct51", label: "CT51", moveId: "griffe_spectrale", price: 0, labOnly: true },  // 70 → 7 000
+    // CT-TROPHÉE BLACKJACK « Apothéose » : attaque adaptative (type du Daemon + meilleure stat offensive,
+    // STAB garanti). JAMAIS en vente — débloquée UNIQUEMENT à 1000 ⚡ nets gagnés au blackjack (cf. BLACKJACK_CT_TARGET).
+    // universal : enseignable à TOUS (le moteur recale le type/catégorie sur le porteur via adaptiveStab).
+    { id: "ct52", label: "CT52", moveId: "apotheose", price: 0, gift: true, universal: true },
 ]
 
 export function getCt(id: string): CtData | null {

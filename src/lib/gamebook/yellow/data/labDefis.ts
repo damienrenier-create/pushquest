@@ -59,6 +59,8 @@ export interface LabDefiState {
     casinoTotalWon: number
     /** Cumul des GAINS NETS au BLACKJACK (progression VIP → CT signature). NON plafonné. */
     blackjackWon: number
+    /** CT-trophée « Apothéose » (palier 1000 ⚡ nets au blackjack) déjà réclamée ? (one-shot à vie). */
+    blackjackCtClaimed: boolean
     /** Tonytony déjà réclamé (one-shot, palier 1000). */
     tonytonyClaimed: boolean
     /** Capstone 5000 : le Tonytony du joueur a été rendu SHINY (one-shot). */
@@ -174,6 +176,7 @@ export function emptyLabDefi(): LabDefiState {
         casinoBankruptUntil: "",
         casinoTotalWon: 0,
         blackjackWon: 0,
+        blackjackCtClaimed: false,
         tonytonyClaimed: false,
         tonytonyShiny: false,
         dailyTicketDate: "",
@@ -229,7 +232,7 @@ export const QUOTA2X_MULT = 3
 
 // ───────── Défi CT (infliger puissance×100 dégâts du type → CT) ─────────
 /** CT-trophées exclues du pool de défi (récompenses spéciales, restent exclusives). */
-const CT_DEFI_EXCLUDED = new Set(["ct37", "ct38"]) // Souffle Primordial (10 victoires) + Fouet de Nouilles (sbire)
+const CT_DEFI_EXCLUDED = new Set(["ct37", "ct38", "ct52"]) // Souffle Primordial (10 victoires) + Fouet de Nouilles (sbire) + Apothéose (1000 ⚡ blackjack)
 
 export interface CtDefiOption {
     ctId: string
@@ -276,6 +279,11 @@ export const CASINO_MAX_BET = 50
 export const CASINO_WIN_MULT = 10         // gain = mise × 10 sur la bonne case
 export const CASINO_BANKRUPT_STREAK = 5   // 5 victoires d'affilée → banqueroute (anti-farm)
 export const CASINO_BANKRUPT_COOLDOWN_MS = 24 * 60 * 60 * 1000
+/** BLACKJACK : cumul de GAINS NETS pour débloquer la CT-trophée « Apothéose » (one-shot). */
+export const BLACKJACK_CT_TARGET = 1000
+/** Id de la CT-trophée du blackjack (cf. cts.ts → moveId "apotheose"). */
+export const BLACKJACK_CT_ID = "ct52"
+
 /** Cumul BRUT d'énergie à gagner pour débloquer Tonytony. */
 export const TONYTONY_TARGET = 1000
 /** Capstone 5000 : ton Tonytony devient SHINY (la roulette reste jouable, elle est trop chouette). */
