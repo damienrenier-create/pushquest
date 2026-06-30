@@ -47,11 +47,15 @@ describe("ACE — scaling + équipe + contre adaptatif", () => {
         expect(team[5].speciesId).toBe(counterSpecies) // slot 6 = contre adaptatif (au niveau d'ACE)
     })
 
-    it("au BADGE ÉCLAIR, les 3 Panthéon d'ACE évoluent en panthères élémentaires", () => {
-        const evolved = buildAceTeam({ aceLevel: 50, playerLastTypes: ["EAU"], hasElecBadge: true })
-        expect(evolved.team.slice(0, 3).map((m) => m.speciesId)).toEqual(ACE_PANTHERS_EVOLVED)
-        const base = buildAceTeam({ aceLevel: 50, playerLastTypes: ["EAU"] }) // sans badge → Panthéon de base
-        expect(base.team.slice(0, 3).map((m) => m.speciesId)).toEqual(ACE_PANTHERS)
+    it("PALIERS : les Panthéon d'ACE évoluent au fil des badges (0-2→0, 3→1, 4→2, 5→3)", () => {
+        const at = (badgeCount: number) => buildAceTeam({ aceLevel: 50, playerLastTypes: ["EAU"], badgeCount }).team.slice(0, 3).map((m) => m.speciesId)
+        expect(at(0)).toEqual(ACE_PANTHERS)                                            // aucune évoluée
+        expect(at(2)).toEqual(ACE_PANTHERS)                                            // toujours aucune avant 3 badges
+        expect(at(3)).toEqual(["pyropanthe", "pantheon", "pantheon"])                  // 1re évoluée
+        expect(at(4)).toEqual(["pyropanthe", "voltapanthe", "pantheon"])               // 2 évoluées
+        expect(at(5)).toEqual(ACE_PANTHERS_EVOLVED)                                    // les 3
+        // sans badgeCount fourni → 0 évoluée (rétro-compat).
+        expect(buildAceTeam({ aceLevel: 50, playerLastTypes: ["EAU"] }).team.slice(0, 3).map((m) => m.speciesId)).toEqual(ACE_PANTHERS)
     })
 
     it("CLIQUET : buildAceTeam prend le niveau fourni TEL QUEL (aucune recalibration sur le joueur)", () => {

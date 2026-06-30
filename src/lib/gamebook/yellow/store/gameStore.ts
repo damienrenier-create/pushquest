@@ -279,7 +279,7 @@ function tryLaunchAce(): ActiveDialogue | null {
     const lastTypes = getSpecies(last.speciesId)?.types ?? []
     // CLIQUET : le niveau d'ACE est FIGÉ entre deux défaites (aceBattleLevel). Il ne monte
     // qu'APRÈS sa défaite (recordAceDefeat) — fini la recalibration à chaque rencontre.
-    const built = buildAceTeam({ aceLevel: aceBattleLevel(avg), playerLastTypes: lastTypes, hasElecBadge: getPlayerSave().badges.includes("elec") })
+    const built = buildAceTeam({ aceLevel: aceBattleLevel(avg), playerLastTypes: lastTypes, badgeCount: getPlayerSave().badges.length })
     // Taille d'équipe d'ACE = celle du joueur (min 3 = les 3 panthères), avec cliquet.
     const aceSize = aceTeamSizeFor(team.length)
     // ACE = élite (boss ultime) : ses Daemons sont entraînés comme un joueur assidu.

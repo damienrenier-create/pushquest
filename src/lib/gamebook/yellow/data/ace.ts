@@ -116,9 +116,17 @@ export interface AceMon { speciesId: string; level: number }
 // On NE met PLUS les panthères élites (Ombra/Volta/Pyropanthe, BST ~455) : elles étaient
 // 1000x trop fortes dès le 1er combat. Nouillon & la lignée Feu évoluent avec le niveau.
 export const ACE_PANTHERS = ["pantheon", "pantheon", "pantheon"]
-// Au BADGE ÉCLAIR, les 3 Panthéon d'ACE ÉVOLUENT en panthères élémentaires (Feu/Élec/Spectre, BST ~455).
-// Gaté tard → plus le souci "1000x trop fort" du 1er combat : le joueur est déjà costaud à ce stade.
+// Les 3 Panthéon d'ACE ÉVOLUENT PAR PALIERS en panthères élémentaires (Feu/Élec/Spectre, BST ~455), au
+// fil de TES badges : 3 badges → 1 évoluée · 4 → 2 · 5 → les 3. Aucune avant 3 badges → plus de souci
+// "1000x trop fort" en début de partie ; la montée est progressive au lieu d'un saut 0→3 brutal.
 export const ACE_PANTHERS_EVOLVED = ["pyropanthe", "voltapanthe", "ombrapanthe"]
+
+/** Trio de Panthéon d'ACE selon le nb de badges du joueur : les `badgeCount - 2` premières sont évoluées
+ *  (bornées 0..3) — 0-2 badges → aucune, 3 → 1, 4 → 2, 5 → les 3. */
+export function acePanthersFor(badgeCount: number): string[] {
+    const evolved = Math.max(0, Math.min(ACE_PANTHERS_EVOLVED.length, badgeCount - 2))
+    return ACE_PANTHERS.map((base, i) => (i < evolved ? ACE_PANTHERS_EVOLVED[i] : base))
+}
 export const ACE_NOUILLON_BASE = "nouillon"   // → vermisaint → divinpate
 export const ACE_FIRE_BASE = "braisille"      // → flamkure → pyrokoss
 export const ACE_LEVEL_OFFSET = 2     // offset FINAL (dès la 4e rencontre) : ta MOYENNE d'équipe +2
@@ -187,7 +195,7 @@ export interface AceBuildInput {
      *  rencontre (sinon ACE monterait à chaque fois que TON équipe grandit, bug signalé). */
     aceLevel: number
     playerLastTypes: PokeType[]  // types du DERNIER Daemon joueur → choisit le contre adaptatif (slot 6)
-    hasElecBadge?: boolean       // au badge Éclair, les Panthéon d'ACE évoluent en panthères élémentaires
+    badgeCount?: number          // nb de badges du joueur → paliers d'évolution des Panthéon (3→1, 4→2, 5→3)
 }
 
 /**
@@ -198,7 +206,7 @@ export interface AceBuildInput {
 export function buildAceTeam(i: AceBuildInput): { team: AceMon[]; counterSpecies: string } {
     const L = Math.max(1, Math.min(MAX_LEVEL, i.aceLevel))
     const counter = bestCounter(i.playerLastTypes)
-    const panthers = i.hasElecBadge ? ACE_PANTHERS_EVOLVED : ACE_PANTHERS // évoluées une fois le badge Éclair obtenu
+    const panthers = acePanthersFor(i.badgeCount ?? 0) // paliers d'évolution selon le nb de badges (0-2→0, 3→1, 4→2, 5→3)
     const team: AceMon[] = [
         { speciesId: panthers[0], level: L },
         { speciesId: panthers[1], level: L },
