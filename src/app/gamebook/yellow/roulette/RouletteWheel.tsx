@@ -42,10 +42,12 @@ function easeRoulette(t: number, c1: number, k: number, V: number): number {
     return V * c1 + V * (1 - c1) * (1 - Math.pow(1 - tp, k + 1)) / (k + 1) // DÉCÉLÉRATION (v ∝ (1-tp)^k → 0)
 }
 
-export default function RouletteWheel({ winning, spinKey, onDone }: {
+export default function RouletteWheel({ winning, spinKey, onDone, marks }: {
     winning: number | null
     spinKey: string
     onDone?: (n: number) => void
+    /** Numéros MISÉS à surligner sur la roue (n° → couleur du parieur ; `mine` = mes propres mises). */
+    marks?: Record<number, { mine: boolean; color: string }>
 }) {
     const [centerNum, setCenterNum] = useState<number | null>(winning)
     const [phase, setPhase] = useState<"idle" | "spin" | "win">(winning != null ? "win" : "idle")
@@ -85,8 +87,8 @@ export default function RouletteWheel({ winning, spinKey, onDone }: {
         // case, là où elle est (position aléatoire à l'écran). La roue se fige à `wheelFrac` du temps, puis
         // seule la bille continue (orbite lente jusqu'à tomber dans la case) → suspense réaliste.
         const spins = 7 + Math.floor(rnd(0, 4))   // tours de la ROUE (sens horaire)
-        const DUR = rnd(10500, 13500)
-        const wheelFrac = rnd(0.64, 0.74)         // la roue s'arrête à 64-74% du temps ; le reste = BILLE SEULE
+        const DUR = rnd(13000, 16000)             // plus long : la fin doit laisser le temps de stresser
+        const wheelFrac = rnd(0.58, 0.68)         // la roue s'arrête à 58-68% du temps ; le reste = BILLE SEULE (longue)
         const c1 = rnd(0.24, 0.34)
         const decelK = rnd(1.2, 1.7)
         const V = (decelK + 1) / (c1 * decelK + 1)
@@ -99,7 +101,9 @@ export default function RouletteWheel({ winning, spinKey, onDone }: {
         const ballStart = ballRotRef.current
         const ballBase = ballStart - ballSpins * 360
         const ballEnd = ballBase - ((((ballBase - phi) % 360) + 360) % 360) // ≡ phi (mod 360), en contresens
-        const cb1 = rnd(0.22, 0.30), bK = rnd(1.3, 1.8), Vb = (bK + 1) / (cb1 * bK + 1)
+        // bK ÉLEVÉ = queue très traînante : la bille fonce au début puis CRAWLE case par case à la fin
+        // (on a le temps de voir où elle va, surtout vers nos numéros surlignés).
+        const cb1 = rnd(0.18, 0.26), bK = rnd(3.0, 3.8), Vb = (bK + 1) / (cb1 * bK + 1)
 
         let start = -1
         let lastNum = -1
@@ -140,9 +144,13 @@ export default function RouletteWheel({ winning, spinKey, onDone }: {
                 {/* Pas de pointeur fixe : le GAGNANT = la case où la BILLE se pose (n'importe où sur le pourtour). */}
                 {/* Roue (anneau coloré + numéros radiaux) — transform piloté par ref (rAF) */}
                 <div ref={wheelEl} style={{ ...S.wheel, background: RING }}>
-                    {WHEEL_ORDER.map((n, i) => (
-                        <div key={n} style={{ ...S.label, transform: `rotate(${i * POCKET}deg) translateY(-${R_LABEL}px)` }}>{n}</div>
-                    ))}
+                    {WHEEL_ORDER.map((n, i) => {
+                        const mk = marks?.[n] // numéro misé → pastille colorée (la mienne = liseré blanc + halo doré)
+                        const markStyle: React.CSSProperties = mk
+                            ? { background: mk.color, width: 19, height: 19, marginLeft: -9.5, marginTop: -9.5, borderRadius: "50%", border: mk.mine ? "2px solid #fff" : "1px solid rgba(255,255,255,.55)", boxShadow: mk.mine ? "0 0 10px 2px #ffd54a" : "0 0 5px rgba(0,0,0,.5)", zIndex: 2 }
+                            : {}
+                        return <div key={n} style={{ ...S.label, ...markStyle, transform: `rotate(${i * POCKET}deg) translateY(-${R_LABEL}px)` }}>{n}</div>
+                    })}
                 </div>
                 {/* Bille orbitale (brille) — transform piloté par ref (rAF) */}
                 <div ref={ballEl} style={S.ballOrbit}>
@@ -159,6 +167,9 @@ export default function RouletteWheel({ winning, spinKey, onDone }: {
             <div style={{ ...S.caption, opacity: phase === "win" && centerNum != null ? 1 : 0.35 }}>
                 {phase === "spin" ? "🎡 La bille tourne…" : centerNum != null ? `${winCol === "red" ? "🔴 Rouge" : winCol === "black" ? "⚫ Noir" : "🟢 Vert"} · ${centerNum}` : "—"}
             </div>
+            {phase === "spin" && marks && Object.values(marks).some((m) => m.mine) && (
+                <div style={S.markHint}>🎯 Tes numéros misés sont <b>surlignés</b> sur la roue</div>
+            )}
         </div>
     )
 }
@@ -183,4 +194,5 @@ const S: Record<string, React.CSSProperties> = {
     centerSpin: { fontSize: SIZE * 0.16, opacity: 0.85, animation: "pqSpinPulse 0.5s ease-in-out infinite" },
     centerWin: { fontSize: SIZE * 0.24, animation: "pqWinBlink 0.55s ease-in-out 5" },
     caption: { minWidth: 150, textAlign: "center", fontSize: 13, fontWeight: 800, color: "#fff", transition: "opacity .4s" },
+    markHint: { fontSize: 10.5, color: "#ffd54a", textAlign: "center", opacity: 0.9 },
 }

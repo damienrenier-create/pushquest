@@ -58,9 +58,25 @@ function colorForUser(userId: string, myUserId: string): string {
 }
 // Jeton à afficher sur une case (issu du snapshot de la manche en résolution).
 interface ChipView { key: string; color: string; value: number; won: boolean; mine: boolean }
+// Numéro misé à surligner sur la ROUE : sa couleur (du parieur) + `mine` si c'est une de mes mises.
+type NumberMark = { mine: boolean; color: string }
 // Snapshot des mises d'une manche en cours de résolution (figé à l'arrêt des mises).
-interface BetsSnap { roundId: string; winning: number; chipsByZone: Record<string, ChipView[]> }
+interface BetsSnap { roundId: string; winning: number; chipsByZone: Record<string, ChipView[]>; marks: Record<number, NumberMark> }
 type SettlePhase = "" | "lose" | "win" | "coins"
+
+// Numéros COUVERTS par les mises (pour les surligner sur la roue). Mes mises priment (toujours visibles).
+function buildMarks(players: { userId: string; bets: Bet[] }[], myUserId: string): Record<number, NumberMark> {
+    const marks: Record<number, NumberMark> = {}
+    for (const p of players) {
+        const mine = p.userId === myUserId
+        const color = colorForUser(p.userId, myUserId)
+        for (const b of p.bets) for (const n of b.numbers) {
+            const ex = marks[n]
+            if (!ex || (mine && !ex.mine)) marks[n] = { mine, color }
+        }
+    }
+    return marks
+}
 
 // Agrège les mises de plusieurs joueurs en jetons-par-case (un jeton par joueur ayant misé sur la case).
 // `winning` = numéro sorti (null pendant la prise de mises → aucun gagnant marqué).
@@ -214,7 +230,7 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
             // Fige les jetons de la manche (où + combien chacun a misé) pour les afficher pendant le spin,
             // puis la séquence de résolution (perdants effacés → gagnants en surbrillance → pièces → crédit).
             clearSettleTimers(); setHiddenChips(new Set()); setSettlePhase("")
-            const snap = { roundId: startingSpin, winning: latest!.winningNumber, chipsByZone: buildChipsByZone(snapSource, latest!.winningNumber, myUserId) }
+            const snap: BetsSnap = { roundId: startingSpin, winning: latest!.winningNumber, chipsByZone: buildChipsByZone(snapSource, latest!.winningNumber, myUserId), marks: buildMarks(snapSource, myUserId) }
             betsSnapRef.current = snap; setBetsSnap(snap)
         }
 
@@ -386,6 +402,7 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
                     <RouletteWheel
                         winning={spin.winning}
                         spinKey={spin.key}
+                        marks={betsSnap?.marks}
                         onDone={() => startSettlement({ winning: spin.winning, color: spin.color, net: spin.net })}
                     />
                 )}
