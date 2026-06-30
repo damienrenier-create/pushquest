@@ -58,6 +58,7 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
     const prevRoundRef = useRef<string>("")
     const lastSpunRef = useRef<string>("") // dernière manche déjà animée sur la roue
     const wheelInitRef = useRef(false)     // 1er applyState : on affiche le dernier résultat SANS l'animer
+    const launchRef = useRef<HTMLButtonElement>(null) // bouton "Lancer la balle" → scroll auto à l'apparition
 
     // Horloge locale (countdown fluide).
     useEffect(() => { const t = setInterval(() => setNow(Date.now()), 250); return () => clearInterval(t) }, [])
@@ -192,6 +193,9 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
     const canLaunch = !!round && locked && open && totalBettors >= 1 && !iAmReady
     const waitingOthers = !!round && locked && open && iAmReady && readyCount < totalBettors
 
+    // La grande roue pousse le bouton sous le bord visible → on le ramène dans la vue dès qu'il apparaît.
+    useEffect(() => { if (canLaunch) launchRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }) }, [canLaunch])
+
     // "Lancer la balle" : je me déclare prêt. Le serveur résout dès que TOUS les parieurs sont prêts.
     const launchBall = async () => {
         if (!round || !canLaunch || launching) return
@@ -310,15 +314,17 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
                         : <button style={{ ...S.primary, opacity: open && pendingTotal > 0 && !busy ? 1 : 0.4 }} disabled={!open || pendingTotal <= 0 || busy} onClick={validate}>Miser {pendingTotal > 0 ? `${pendingTotal} ⚡` : ""}</button>}
                 </div>
 
-                {/* "Lancer la balle" : solo = tirage immédiat ; multi = je me déclare prêt, ça part quand TOUS le sont */}
-                {canLaunch && (
-                    <button style={{ ...S.launch, opacity: launching ? 0.5 : 1 }} disabled={launching} onClick={launchBall}>
+                {/* "Lancer la balle" : solo = tirage immédiat ; multi = je me déclare prêt, ça part quand TOUS le sont.
+                    Tant qu'on n'a pas misé, un INDICE explique que le bouton apparaîtra ici après la mise. */}
+                {canLaunch ? (
+                    <button ref={launchRef} style={{ ...S.launch, opacity: launching ? 0.5 : 1 }} disabled={launching} onClick={launchBall}>
                         🎲 {launching ? "…" : isSolo ? "Lancer la balle !" : `Je suis prêt ! (${readyCount}/${totalBettors})`}
                     </button>
-                )}
-                {waitingOthers && (
+                ) : waitingOthers ? (
                     <div style={S.waiting}>⏳ Prêt — en attente des autres joueurs… <b>{readyCount}/{totalBettors}</b></div>
-                )}
+                ) : open && !locked ? (
+                    <div style={S.launchHint}>🎲 Mise sur le tapis puis « Miser » — le bouton <b>Lancer la balle</b> apparaîtra ici.</div>
+                ) : null}
                 {flash && <div style={S.flash}>{flash}</div>}
 
                 {/* Mises des autres joueurs (en direct) + qui est prêt */}
@@ -374,6 +380,7 @@ const S: Record<string, React.CSSProperties> = {
     hintLine: { marginTop: 5, fontSize: 10, opacity: 0.6, lineHeight: 1.4 },
     launch: { width: "100%", marginTop: 8, padding: "11px 0", background: "#e0502a", color: "#fff", border: "none", borderRadius: 9, fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 0 14px rgba(224,80,42,.4)" },
     waiting: { width: "100%", marginTop: 8, padding: "10px 0", textAlign: "center", background: "rgba(224,200,32,0.12)", border: "1px dashed #e0c020", borderRadius: 9, fontWeight: 700, fontSize: 12.5, color: "#e0c020" },
+    launchHint: { width: "100%", marginTop: 8, padding: "9px 10px", textAlign: "center", background: "rgba(224,80,42,0.10)", border: "1px dashed #e0502a", borderRadius: 9, fontSize: 11.5, color: "#f0a890", lineHeight: 1.4 },
     ghost: { background: "transparent", color: "#9fd", border: "1px solid #2f5a40", borderRadius: 8, padding: "8px 10px", fontSize: 11, cursor: "pointer", fontFamily: "inherit" },
     primary: { background: "#e0c020", color: "#1a1400", border: "none", borderRadius: 8, padding: "9px 14px", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" },
     lockTag: { background: "#15301f", color: "#7ce0a0", border: "1px solid #2f5a40", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700 },
