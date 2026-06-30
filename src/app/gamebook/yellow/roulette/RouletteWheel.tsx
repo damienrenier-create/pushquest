@@ -16,6 +16,7 @@ const SIZE = 300
 const R_LABEL = SIZE / 2 - 19
 const COL = (c: string) => (c === "green" ? "#0e7a38" : c === "red" ? "#b02828" : "#161616")
 const rnd = (a: number, b: number) => a + Math.random() * (b - a)
+const hexA = (hex: string, a: number) => `rgba(${parseInt(hex.slice(1, 3), 16)},${parseInt(hex.slice(3, 5), 16)},${parseInt(hex.slice(5, 7), 16)},${a})`
 
 // Anneau coloré (37 secteurs), case 0 centrée en haut (sous le pointeur).
 const RING = (() => {
@@ -46,8 +47,8 @@ export default function RouletteWheel({ winning, spinKey, onDone, marks }: {
     winning: number | null
     spinKey: string
     onDone?: (n: number) => void
-    /** Numéros MISÉS à surligner sur la roue (n° → couleur du parieur ; `mine` = mes propres mises). */
-    marks?: Record<number, { mine: boolean; color: string }>
+    /** Numéros MISÉS à surligner (n° → couleur du parieur, `mine`, et `payout` = multiplicateur max). */
+    marks?: Record<number, { mine: boolean; color: string; payout: number }>
 }) {
     const [centerNum, setCenterNum] = useState<number | null>(winning)
     const [phase, setPhase] = useState<"idle" | "spin" | "win">(winning != null ? "win" : "idle")
@@ -145,9 +146,18 @@ export default function RouletteWheel({ winning, spinKey, onDone, marks }: {
                 {/* Roue (anneau coloré + numéros radiaux) — transform piloté par ref (rAF) */}
                 <div ref={wheelEl} style={{ ...S.wheel, background: RING }}>
                     {WHEEL_ORDER.map((n, i) => {
-                        const mk = marks?.[n] // numéro misé → pastille colorée (la mienne = liseré blanc + halo doré)
+                        const mk = marks?.[n] // numéro misé → pastille dont l'INTENSITÉ suit le gain potentiel
+                        // heat 0→1 selon le multiplicateur (1:1 chance simple → 35:1 plein). Gros gain = vif + gros + halo doré.
+                        const heat = mk ? Math.max(0, Math.min(1, (mk.payout - 1) / 34)) : 0
+                        const sz = 14 + Math.round(9 * heat)        // 14 (1:1) → 23 (35:1)
                         const markStyle: React.CSSProperties = mk
-                            ? { background: mk.color, width: 19, height: 19, marginLeft: -9.5, marginTop: -9.5, borderRadius: "50%", border: mk.mine ? "2px solid #fff" : "1px solid rgba(255,255,255,.55)", boxShadow: mk.mine ? "0 0 10px 2px #ffd54a" : "0 0 5px rgba(0,0,0,.5)", zIndex: 2 }
+                            ? {
+                                background: hexA(mk.color, 0.30 + 0.70 * heat), // fond faible pour les petits gains, plein pour les gros
+                                width: sz, height: sz, marginLeft: -sz / 2, marginTop: -sz / 2, borderRadius: "50%",
+                                border: mk.mine ? "2px solid #fff" : heat > 0.45 ? "1.5px solid #ffe9a0" : "1px solid rgba(255,255,255,.4)",
+                                boxShadow: `0 0 ${3 + Math.round(17 * heat)}px ${Math.round(4 * heat)}px rgba(255,213,74,${(0.15 + 0.75 * heat).toFixed(2)})`, // halo doré ∝ gain
+                                fontSize: 10 + Math.round(3 * heat), zIndex: 2 + Math.round(heat * 4),
+                            }
                             : {}
                         return <div key={n} style={{ ...S.label, ...markStyle, transform: `rotate(${i * POCKET}deg) translateY(-${R_LABEL}px)` }}>{n}</div>
                     })}
@@ -168,7 +178,7 @@ export default function RouletteWheel({ winning, spinKey, onDone, marks }: {
                 {phase === "spin" ? "🎡 La bille tourne…" : centerNum != null ? `${winCol === "red" ? "🔴 Rouge" : winCol === "black" ? "⚫ Noir" : "🟢 Vert"} · ${centerNum}` : "—"}
             </div>
             {phase === "spin" && marks && Object.values(marks).some((m) => m.mine) && (
-                <div style={S.markHint}>🎯 Tes numéros misés sont <b>surlignés</b> sur la roue</div>
+                <div style={S.markHint}>🎯 Tes numéros sont <b>surlignés</b> — plus ça brille, plus ça rapporte gros</div>
             )}
         </div>
     )

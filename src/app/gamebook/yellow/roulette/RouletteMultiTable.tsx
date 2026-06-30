@@ -58,21 +58,26 @@ function colorForUser(userId: string, myUserId: string): string {
 }
 // Jeton à afficher sur une case (issu du snapshot de la manche en résolution).
 interface ChipView { key: string; color: string; value: number; won: boolean; mine: boolean }
-// Numéro misé à surligner sur la ROUE : sa couleur (du parieur) + `mine` si c'est une de mes mises.
-type NumberMark = { mine: boolean; color: string }
+// Numéro misé à surligner sur la ROUE : couleur (du parieur), `mine`, et `payout` = MEILLEUR multiplicateur
+// d'un pari qui le couvre (35 plein … 1 chance simple) → pilote l'INTENSITÉ du surlignage (gros gain = vif).
+type NumberMark = { mine: boolean; color: string; payout: number }
 // Snapshot des mises d'une manche en cours de résolution (figé à l'arrêt des mises).
 interface BetsSnap { roundId: string; winning: number; chipsByZone: Record<string, ChipView[]>; marks: Record<number, NumberMark> }
 type SettlePhase = "" | "lose" | "win" | "coins"
 
-// Numéros COUVERTS par les mises (pour les surligner sur la roue). Mes mises priment (toujours visibles).
+// Numéros COUVERTS par les mises (pour les surligner sur la roue). Priorité : MES mises d'abord (toujours
+// visibles), puis — à statut égal — le plus gros payout (le numéro qui peut rapporter le plus l'emporte).
 function buildMarks(players: { userId: string; bets: Bet[] }[], myUserId: string): Record<number, NumberMark> {
     const marks: Record<number, NumberMark> = {}
     for (const p of players) {
         const mine = p.userId === myUserId
         const color = colorForUser(p.userId, myUserId)
-        for (const b of p.bets) for (const n of b.numbers) {
-            const ex = marks[n]
-            if (!ex || (mine && !ex.mine)) marks[n] = { mine, color }
+        for (const b of p.bets) {
+            const pay = PAYOUT[b.type]
+            for (const n of b.numbers) {
+                const ex = marks[n]
+                if (!ex || (mine && !ex.mine) || (mine === ex.mine && pay > ex.payout)) marks[n] = { mine, color, payout: pay }
+            }
         }
     }
     return marks
@@ -120,6 +125,7 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
     const betsSnapRef = useRef<BetsSnap | null>(null) // miroir (lu par la séquence de résolution sans dépendances)
     const [settlePhase, setSettlePhase] = useState<SettlePhase>("") // "" pendant le spin, puis lose→win→coins
     const [hiddenChips, setHiddenChips] = useState<Set<string>>(new Set()) // jetons perdants déjà retirés
+    const [coinFx, setCoinFx] = useState<{ count: number; big: boolean }>({ count: 0, big: false }) // ampleur de la pluie de pièces (∝ ratio gain/mise)
     const liveBetsRef = useRef<{ roundId: string; bets: PlayerBets[] }>({ roundId: "", bets: [] }) // dernières mises de la manche OUVERTE (pour figer le snapshot)
     const settleTimersRef = useRef<number[]>([]) // timers de la séquence (nettoyés au démontage / nouveau spin)
     const clearSettleTimers = () => { settleTimersRef.current.forEach((id) => clearTimeout(id)); settleTimersRef.current = [] }
@@ -166,7 +172,16 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
         acc += 250
         settleTimersRef.current.push(window.setTimeout(() => setSettlePhase("win"), acc)) // gagnants en surbrillance
         acc += anyWinner ? 1000 : 250
-        if ((spinInfo.net ?? 0) > 0) { settleTimersRef.current.push(window.setTimeout(() => setSettlePhase("coins"), acc)); acc += 1100 } // pluie de pièces
+        if ((spinInfo.net ?? 0) > 0) {
+            // SPECTACLE ∝ RATIO gain/mise : un plein (×35) déclenche une avalanche longue ; une chance simple (×1), une poignée.
+            const staked = pendingCreditRef.current?.staked ?? 0
+            const ratio = staked > 0 ? (spinInfo.net as number) / staked : 1
+            const count = Math.max(10, Math.min(80, Math.round(8 + ratio * 1.9)))
+            const big = ratio >= 10
+            const coinsDur = Math.max(1400, Math.min(3400, Math.round(900 + ratio * 60)))
+            settleTimersRef.current.push(window.setTimeout(() => { setCoinFx({ count, big }); setSettlePhase("coins") }, acc))
+            acc += coinsDur
+        }
         settleTimersRef.current.push(window.setTimeout(finish, acc))
     }, [creditPending])
 
@@ -374,7 +389,7 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
         <div style={S.overlay}>
             <div style={S.box}>
                 <style>{"@keyframes rlBlink{0%,100%{box-shadow:0 0 0 2px #fff,0 0 10px 2px #ffd54a;transform:scale(1.18)}50%{box-shadow:0 0 0 1px #fff;transform:scale(1)}}@keyframes rlCoin{0%{transform:translateY(-30px) rotate(0deg);opacity:0}12%{opacity:1}100%{transform:translateY(520px) rotate(220deg);opacity:.15}}"}</style>
-                {settlePhase === "coins" && <CoinRain />}
+                {settlePhase === "coins" && <CoinRain count={coinFx.count} big={coinFx.big} />}
                 <div style={S.head}>
                     <div style={S.title}>🎡 Roulette — Table multijoueur <span style={S.beta}>BÊTA</span></div>
                     <button style={S.x} onClick={onClose}>✕</button>
@@ -529,12 +544,18 @@ function ZoneChips({ chips, hidden, phase }: { chips?: ChipView[]; hidden: Set<s
         </span>
     )
 }
-// Pluie de pièces (récompense) : déclenchée à l'étape "coins" quand j'ai gagné.
-function CoinRain() {
+// Pluie de pièces (récompense) : nombre/taille/durée ∝ ratio gain/mise (gros ratio = avalanche de 💰).
+function CoinRain({ count, big }: { count: number; big: boolean }) {
     return (
         <div style={S.coinRain}>
-            {Array.from({ length: 16 }, (_, i) => (
-                <span key={i} style={{ ...S.coin, left: `${(i * 6.1 + 3) % 100}%`, animationDelay: `${(i % 6) * 80}ms` }}>🪙</span>
+            {Array.from({ length: Math.max(1, count) }, (_, i) => (
+                <span key={i} style={{
+                    ...S.coin,
+                    left: `${(i * 37 + 5) % 100}%`,
+                    fontSize: (big ? 26 : 19) + (i % 3) * 3,
+                    animationDelay: `${(i % 8) * 70}ms`,
+                    animationDuration: `${(0.9 + (i % 5) * 0.12).toFixed(2)}s`,
+                }}>{big && i % 4 === 0 ? "💰" : "🪙"}</span>
             ))}
         </div>
     )
@@ -589,5 +610,3 @@ const S: Record<string, React.CSSProperties> = {
     coinRain: { position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: 50 },
     coin: { position: "absolute", top: -30, fontSize: 22, animation: "rlCoin 1.05s linear forwards" },
 }
-
-void PAYOUT
