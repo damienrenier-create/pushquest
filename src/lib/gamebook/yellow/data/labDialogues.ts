@@ -14,11 +14,14 @@ export const CHEN_LAB_LINES = [
     "« Et quand tu auras vaincu la Ligue, reviens me voir : j'aurai pour toi une pièce unique… le fruit de toute une vie de recherche. »",
 ]
 
-/** L'ASSISTANT du Prof. CHEN (7,6) — guide vers les récompenses du casino et révèle le projet du chef. */
+/** L'ASSISTANT du Prof. CHEN (7,6) — guide vers les récompenses du casino et révèle le projet du chef.
+ *  Explique APOTHÉOSE de façon PÉDAGOGIQUE (3 répliques dédiées : le problème → la solution → l'exemple). */
 export const LAB_ASSISTANT_LINES = [
     "« Salut ! Je suis l'assistant du Prof. CHEN. Tu as repéré le terminal ? On y gagne des CT en infligeant assez de dégâts d'un type donné — de quoi compléter n'importe quel moveset. »",
-    "« Mais la CT la plus folle ne se gagne pas ici… Au CASINO, à la table de BLACKJACK : amasse 1000 d'énergie et tu débloques APOTHÉOSE. »",
-    "« Une attaque qui prend le TYPE de ton Daemon ET frappe sur sa meilleure stat offensive — STAB garanti, physique ou spécial. Du jamais-vu : un Feu costaud en Attaque tape enfin du Feu… au physique ! »",
+    "« Mais la CT la plus folle se gagne au CASINO, à la table de BLACKJACK : amasse 1000 d'énergie et tu débloques APOTHÉOSE. Laisse-moi t'expliquer pourquoi elle change tout… »",
+    "« Souviens-toi : chaque attaque tape soit sur l'ATTAQUE, soit sur le SPÉCIAL — ça dépend de son TYPE. Résultat, un Daemon balèze en Attaque dont les attaques de son type passent par le Spécial… gâche la moitié de sa force. »",
+    "« APOTHÉOSE règle ça : elle prend le TYPE de ton Daemon (donc le bonus de +50 % du même type est TOUJOURS actif) ET elle frappe sur sa MEILLEURE stat — Attaque ou Spécial, la plus haute chez lui. »",
+    "« Exemple concret : un Feu énorme en Attaque mais faible en Spécial. D'habitude ses flammes tapent mou… Avec Apothéose, il crache enfin du Feu à PLEINE puissance, sur son Attaque ! Jamais gâchée, toujours au maximum. »",
     "« Et puis il y a TONYTONY, l'œuf-soigneur. 1000 d'énergie cumulée au casino et il rejoint ton équipe : increvable, il soigne et berce l'adversaire. Un pilier. »",
     "« Le Prof., lui, est un grand mélomane. En ce moment il façonne un instrument censé réveiller le Daemon colossal qui dort au sud de la ville… S'il réussit, ça ouvrira de nouvelles routes ! »",
 ]
