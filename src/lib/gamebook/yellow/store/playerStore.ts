@@ -866,6 +866,19 @@ export function addCasinoWon(n: number): void {
     emit()
 }
 
+// ════════════════ BLACKJACK (casino) — custody : mise (spendReps) + règlement + cumul VIP ════════════════
+/** Cumul des GAINS NETS au blackjack (progression VIP → CT signature). */
+export function blackjackTotalWon(): number { return st.labDefi.blackjackWon }
+/** Règle une main : crédite `payout` (mise remboursée + gain, plafonné repsCap comme d'habitude) et
+ *  accumule le GAIN NET (>0) dans blackjackWon (hors-plafond). La mise a déjà été débitée (spendReps). */
+export function settleBlackjack(payout: number, net: number): void {
+    const pay = Math.max(0, Math.floor(payout))
+    if (pay > 0) grantReps(pay)
+    const n = Math.floor(net)
+    if (n > 0) st = { ...st, labDefi: { ...st.labDefi, blackjackWon: st.labDefi.blackjackWon + n } }
+    emit()
+}
+
 // ── Tickets roulette ──
 // Deux sources DISTINCTES : (1) le ticket GRATUIT du jour (Dieu Spaghetti) → cinématique à la connexion,
 // joué directement (gated par dailyTicketDate, HORS file) ; (2) les tickets OCTROYÉS par les boss

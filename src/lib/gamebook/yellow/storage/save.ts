@@ -242,6 +242,7 @@ function parseLabDefi(raw: unknown): LabDefiState {
     d.casinoWinStreak = nz(o.casinoWinStreak)
     d.casinoBankruptUntil = typeof o.casinoBankruptUntil === "string" ? o.casinoBankruptUntil : ""
     d.casinoTotalWon = nz(o.casinoTotalWon)
+    d.blackjackWon = nz(o.blackjackWon)
     d.tonytonyClaimed = o.tonytonyClaimed === true
     d.tonytonyShiny = o.tonytonyShiny === true
     d.dailyTicketDate = typeof o.dailyTicketDate === "string" ? o.dailyTicketDate : ""

@@ -1,0 +1,145 @@
+"use client"
+
+// BLACKJACK (21) — joué aux PC du casino (haut-gauche). Solo vs croupier, custody CÔTÉ CLIENT : on mise
+// des reps (10-50), on crédite le gain au règlement. Le gain NET cumulé alimente la progression VIP
+// (→ future CT signature). Moteur pur dans casino/blackjack.ts.
+
+import { useRef, useState } from "react"
+import { usePlayer, spendReps, settleBlackjack } from "@/lib/gamebook/yellow/store/playerStore"
+import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
+import { deal, hit, stand, double, canDouble, handValue, freshShoe, type BJState, type Card } from "@/lib/gamebook/yellow/casino/blackjack"
+
+const BET_MIN = 10, BET_MAX = 50
+const RANK_FR = ["", "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "V", "D", "R"]
+const SUIT = ["♠", "♥", "♦", "♣"]
+const isRed = (s: number) => s === 1 || s === 2
+
+function CardView({ c, hidden }: { c?: Card; hidden?: boolean }) {
+    if (hidden || !c) return <div style={{ ...cardBox, ...cardBack }}>🂠</div>
+    return <div style={{ ...cardBox, color: isRed(c.suit) ? "#c0392b" : "#1a1a2e" }}><span>{RANK_FR[c.rank]}</span><span style={{ fontSize: 16 }}>{SUIT[c.suit]}</span></div>
+}
+
+export default function BlackjackPanel({ close }: { close: () => void }) {
+    const player = usePlayer()
+    const [bet, setBet] = useState(10)
+    const [game, setGame] = useState<BJState | null>(null)
+    const [msg, setMsg] = useState("")
+    const [busy, setBusy] = useState(false)
+    const shoeRef = useRef<Card[]>([])
+    const settledRef = useRef(false) // la main courante a-t-elle déjà été réglée ? (anti double-crédit double-clic)
+
+    const inHand = !!game && game.phase === "player"
+    const won = player.labDefi.blackjackWon
+
+    const resultLine = (s: BJState) =>
+        s.outcome === "blackjack" ? `🂡 BLACKJACK ! +${s.net} ⚡ (payé 3:2)`
+        : s.outcome === "win" ? `✅ Gagné ! +${s.net} ⚡`
+        : s.outcome === "push" ? "🤝 Égalité — mise rendue."
+        : `❌ Perdu (${s.bet} ⚡).`
+
+    const apply = (ns: BJState) => {
+        setGame(ns)
+        shoeRef.current = ns.deck
+        if (ns.phase === "done" && !settledRef.current) { // règlement UNE seule fois par main (anti double-clic)
+            settledRef.current = true
+            settleBlackjack(ns.payout, ns.net); persistYellowSave(); setMsg(resultLine(ns))
+        }
+    }
+
+    const startDeal = () => {
+        if (inHand || busy) return
+        if (player.reps < bet) { setMsg("Pas assez d'énergie pour cette mise."); return }
+        setBusy(true)
+        if (!spendReps(bet)) { setBusy(false); setMsg("Pas assez d'énergie."); return }
+        const shoe = shoeRef.current.length < 24 ? freshShoe(Math.random) : shoeRef.current // re-mélange si sabot bas
+        persistYellowSave() // débit de la mise persisté
+        setMsg("")
+        settledRef.current = false // nouvelle main → règlement réarmé
+        apply(deal(shoe, bet))
+        setBusy(false)
+    }
+
+    const onHit = () => { if (inHand) apply(hit(game!)) }
+    const onStand = () => { if (inHand) apply(stand(game!)) }
+    const onDouble = () => {
+        if (!inHand || !canDouble(game!)) return
+        if (player.reps < game!.bet) { setMsg("Pas assez d'énergie pour doubler."); return }
+        if (!spendReps(game!.bet)) return // débit de la mise supplémentaire
+        persistYellowSave()
+        apply(double(game!))
+    }
+
+    const dealerVal = game ? (game.phase === "done" ? handValue(game.dealer) : handValue([game.dealer[0]])) : 0
+    const playerVal = game ? handValue(game.player) : 0
+
+    return (
+        <div style={overlay} onClick={close}>
+            <div style={box} onClick={(e) => e.stopPropagation()}>
+                <div style={head}><span style={title}>🃏 BLACKJACK</span><span style={energy}>⚡ {player.reps}/{player.repsCap}</span></div>
+
+                {/* TABLE */}
+                <div style={felt}>
+                    <div style={rowLbl}>Croupier {game && <b>· {game.phase === "done" ? dealerVal : `${dealerVal}+`}</b>}</div>
+                    <div style={handRow}>
+                        {game ? game.dealer.map((c, i) => <CardView key={i} c={c} hidden={game.phase !== "done" && i === 1} />)
+                            : <><CardView /><CardView /></>}
+                    </div>
+                    <div style={{ ...rowLbl, marginTop: 12 }}>Toi {game && <b>· {playerVal}</b>}</div>
+                    <div style={handRow}>
+                        {game ? game.player.map((c, i) => <CardView key={i} c={c} />) : <><CardView /><CardView /></>}
+                    </div>
+                </div>
+
+                {msg && <div style={msgS}>{msg}</div>}
+
+                {/* CONTRÔLES */}
+                {!inHand ? (
+                    <>
+                        <div style={betRow}>
+                            <span style={{ fontSize: 12, fontWeight: 700, opacity: 0.85 }}>Mise</span>
+                            <button style={step} disabled={bet <= BET_MIN} onClick={() => setBet((b) => Math.max(BET_MIN, b - 5))}>−</button>
+                            <span style={betVal}>{bet} ⚡</span>
+                            <button style={step} disabled={bet >= BET_MAX} onClick={() => setBet((b) => Math.min(BET_MAX, b + 5))}>+</button>
+                            <div style={{ flex: 1 }} />
+                            <button style={{ ...dealBtn, opacity: player.reps >= bet && !busy ? 1 : 0.4 }} disabled={player.reps < bet || busy} onClick={startDeal}>
+                                {game ? "🔄 Rejouer" : "🂠 Distribuer"}
+                            </button>
+                        </div>
+                    </>
+                ) : (
+                    <div style={actRow}>
+                        <button style={actBtn} onClick={onHit}>🂠 Tirer</button>
+                        <button style={actBtn} onClick={onStand}>✋ Rester</button>
+                        <button style={{ ...actBtn, ...(canDouble(game!) && player.reps >= game!.bet ? {} : disBtn) }} disabled={!canDouble(game!) || player.reps < game!.bet} onClick={onDouble}>✕2 Doubler</button>
+                    </div>
+                )}
+
+                <div style={vip}>🏅 <b>Progression VIP</b> — gains nets cumulés au blackjack : <b style={{ color: "#ffd54a" }}>{won} ⚡</b> <span style={{ opacity: 0.7 }}>(vers une récompense unique… 🤫)</span></div>
+                <div style={rulesS}>Le croupier tire jusqu'à 16, reste à 17. Blackjack payé 3:2. Égalité = mise rendue.</div>
+                <button style={closeBtn} onClick={close}>← Quitter la table</button>
+            </div>
+        </div>
+    )
+}
+
+const overlay: React.CSSProperties = { position: "fixed", inset: 0, zIndex: 9300, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(8,6,18,0.85)", fontFamily: "'Courier New', monospace" }
+const box: React.CSSProperties = { width: "min(420px,96vw)", background: "#15241a", border: "2px solid #2f7a4a", borderRadius: 12, padding: 14, color: "#fff", boxShadow: "0 0 30px rgba(47,122,74,.35)" }
+const head: React.CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }
+const title: React.CSSProperties = { fontSize: 17, fontWeight: 800, color: "#9ff0b8" }
+const energy: React.CSSProperties = { fontSize: 12, color: "#ffd54a", fontWeight: 700 }
+const felt: React.CSSProperties = { background: "radial-gradient(circle at 50% 30%, #1d5a38, #103021)", border: "1px solid #2f7a4a", borderRadius: 10, padding: "12px 14px", minHeight: 190 }
+const rowLbl: React.CSSProperties = { fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, color: "#bfe8cf", marginBottom: 4 }
+const handRow: React.CSSProperties = { display: "flex", gap: 6, flexWrap: "wrap", minHeight: 64 }
+const cardBox: React.CSSProperties = { width: 46, height: 62, borderRadius: 6, background: "#f6f3ea", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 18, boxShadow: "0 2px 4px rgba(0,0,0,.4)" }
+const cardBack: React.CSSProperties = { background: "linear-gradient(135deg,#7a1f3a,#3a0f1d)", color: "#e0a0b0", fontSize: 26 }
+const msgS: React.CSSProperties = { marginTop: 10, textAlign: "center", fontSize: 14, fontWeight: 800, color: "#ffd54a" }
+const betRow: React.CSSProperties = { display: "flex", alignItems: "center", gap: 8, marginTop: 12 }
+const step: React.CSSProperties = { width: 34, height: 34, borderRadius: 8, border: "2px solid #2f7a4a", background: "#163d28", color: "#fff", fontWeight: 800, fontSize: 18, cursor: "pointer", fontFamily: "inherit", lineHeight: 1 }
+const betVal: React.CSSProperties = { minWidth: 56, textAlign: "center", fontSize: 16, fontWeight: 800, color: "#ffd54a" }
+const dealBtn: React.CSSProperties = { padding: "10px 18px", background: "#e0c020", color: "#1a1400", border: "none", borderRadius: 9, fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }
+const actRow: React.CSSProperties = { display: "flex", gap: 8, marginTop: 12 }
+const actBtn: React.CSSProperties = { flex: 1, padding: "11px 0", background: "#2f7a4a", color: "#fff", border: "none", borderRadius: 9, fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }
+const disBtn: React.CSSProperties = { opacity: 0.4, cursor: "default" }
+const vip: React.CSSProperties = { marginTop: 12, fontSize: 11.5, lineHeight: 1.5, background: "rgba(255,213,74,0.1)", border: "1px dashed #ffd54a", borderRadius: 8, padding: "8px 10px", color: "#f3e0a0" }
+const rulesS: React.CSSProperties = { marginTop: 8, fontSize: 10, opacity: 0.6, lineHeight: 1.4, textAlign: "center" }
+const closeBtn: React.CSSProperties = { marginTop: 12, width: "100%", padding: "9px 0", background: "rgba(255,255,255,0.1)", color: "#fff", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }

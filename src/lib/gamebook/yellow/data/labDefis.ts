@@ -57,6 +57,8 @@ export interface LabDefiState {
     casinoBankruptUntil: string
     /** Cumul BRUT d'énergie gagnée au casino (1000 → débloque Tonytony). NON plafonné (≠ solde reps). */
     casinoTotalWon: number
+    /** Cumul des GAINS NETS au BLACKJACK (progression VIP → CT signature). NON plafonné. */
+    blackjackWon: number
     /** Tonytony déjà réclamé (one-shot, palier 1000). */
     tonytonyClaimed: boolean
     /** Capstone 5000 : le Tonytony du joueur a été rendu SHINY (one-shot). */
@@ -171,6 +173,7 @@ export function emptyLabDefi(): LabDefiState {
         casinoWinStreak: 0,
         casinoBankruptUntil: "",
         casinoTotalWon: 0,
+        blackjackWon: 0,
         tonytonyClaimed: false,
         tonytonyShiny: false,
         dailyTicketDate: "",
