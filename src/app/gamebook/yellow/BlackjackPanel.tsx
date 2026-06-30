@@ -4,7 +4,7 @@
 // des reps (10-50), on crédite le gain au règlement. Le gain NET cumulé alimente la progression VIP
 // (→ future CT signature). Moteur pur dans casino/blackjack.ts.
 
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { usePlayer, spendReps, settleBlackjack, claimBlackjackCt } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { BLACKJACK_CT_TARGET } from "@/lib/gamebook/yellow/data/labDefis"
@@ -20,6 +20,12 @@ function CardView({ c, hidden }: { c?: Card; hidden?: boolean }) {
     return <div style={{ ...cardBox, color: isRed(c.suit) ? "#c0392b" : "#1a1a2e" }}><span>{RANK_FR[c.rank]}</span><span style={{ fontSize: 16 }}>{SUIT[c.suit]}</span></div>
 }
 
+// Rythme de distribution (croupier qui pose les cartes une à une).
+const DEAL_GAP = 480   // ms entre deux cartes posées
+const HOLE_GAP = 640   // ms avant de retourner la carte cachée du croupier (suspense)
+const END_PAUSE = 360  // ms après la dernière carte avant d'annoncer le résultat
+type RevealStep = { fn: () => void; delay: number }
+
 export default function BlackjackPanel({ close }: { close: () => void }) {
     const player = usePlayer()
     const [bet, setBet] = useState(10)
@@ -27,12 +33,21 @@ export default function BlackjackPanel({ close }: { close: () => void }) {
     const [msg, setMsg] = useState("")
     const [busy, setBusy] = useState(false)
     const [ctWon, setCtWon] = useState<string | null>(null) // nom de la CT-trophée si on vient de la débloquer
+    // Affichage PROGRESSIF (le croupier pose les cartes une à une) : nb de cartes visibles + carte cachée retournée.
+    const [shownP, setShownP] = useState(0)
+    const [shownD, setShownD] = useState(0)
+    const [holeUp, setHoleUp] = useState(false)
+    const [dealing, setDealing] = useState(false) // animation en cours → actions verrouillées
     const shoeRef = useRef<Card[]>([])
     const settledRef = useRef(false) // la main courante a-t-elle déjà été réglée ? (anti double-crédit double-clic)
+    // Miroirs synchrones (les closures des timers + buildSteps lisent l'état courant sans attendre le re-render).
+    const shownPRef = useRef(0), shownDRef = useRef(0), holeUpRef = useRef(false)
+    const gameRef = useRef<BJState | null>(null)
+    const timersRef = useRef<number[]>([])
 
-    const inHand = !!game && game.phase === "player"
     const won = player.labDefi.blackjackWon
     const ctClaimed = player.labDefi.blackjackCtClaimed
+    const inHand = !!game && game.phase === "player" && !dealing // on ne peut agir qu'une fois les cartes posées
 
     const resultLine = (s: BJState) =>
         s.outcome === "blackjack" ? `🂡 BLACKJACK ! +${s.net} ⚡ (payé 3:2)`
@@ -40,20 +55,63 @@ export default function BlackjackPanel({ close }: { close: () => void }) {
         : s.outcome === "push" ? "🤝 Égalité — mise rendue."
         : `❌ Perdu (${s.bet} ⚡).`
 
-    const apply = (ns: BJState) => {
-        setGame(ns)
-        shoeRef.current = ns.deck
-        if (ns.phase === "done" && !settledRef.current) { // règlement UNE seule fois par main (anti double-clic)
-            settledRef.current = true
-            settleBlackjack(ns.payout, ns.net)
-            const ctName = claimBlackjackCt() // palier 1000 ⚡ nets → CT « Apothéose » (one-shot, idempotent)
-            persistYellowSave(); setMsg(resultLine(ns))
-            if (ctName) setCtWon(ctName)
+    // Setters ref+state synchronisés (le ref alimente buildSteps, le state déclenche le rendu).
+    const setP = (n: number) => { shownPRef.current = n; setShownP(n) }
+    const setD = (n: number) => { shownDRef.current = n; setShownD(n) }
+    const setHole = (v: boolean) => { holeUpRef.current = v; setHoleUp(v) }
+    const clearTimers = () => { timersRef.current.forEach((id) => clearTimeout(id)); timersRef.current = [] }
+
+    // Crédite le gain UNE fois (mise déjà débitée), au moment où le résultat est révélé (jamais avant).
+    const settleNow = (s: BJState) => {
+        if (settledRef.current) return
+        settledRef.current = true
+        settleBlackjack(s.payout, s.net)
+        const ctName = claimBlackjackCt() // palier 1000 ⚡ nets → CT « Apothéose » (one-shot, idempotent)
+        persistYellowSave(); setMsg(resultLine(s))
+        if (ctName) setCtWon(ctName)
+    }
+
+    // Construit la séquence de révélations (du visible actuel vers l'état cible).
+    const buildSteps = (cur: { p: number; d: number; hole: boolean }, tgt: { p: number; d: number; hole: boolean }): RevealStep[] => {
+        const steps: RevealStep[] = []
+        if (cur.p === 0 && cur.d === 0) {
+            // Distribution initiale : on alterne joueur / croupier (J, C, J, C…).
+            const rounds = Math.max(tgt.p, tgt.d)
+            for (let i = 0; i < rounds; i++) {
+                if (i < tgt.p) { const n = i + 1; steps.push({ fn: () => setP(n), delay: DEAL_GAP }) }
+                if (i < tgt.d) { const n = i + 1; steps.push({ fn: () => setD(n), delay: DEAL_GAP }) }
+            }
+            if (tgt.hole && !cur.hole) steps.push({ fn: () => setHole(true), delay: HOLE_GAP }) // blackjack naturel → on retourne tout de suite
+        } else {
+            // Coups suivants : d'abord la/les carte(s) joueur (tirer/doubler), puis on retourne la cachée, puis le croupier pioche.
+            for (let p = cur.p + 1; p <= tgt.p; p++) { const n = p; steps.push({ fn: () => setP(n), delay: DEAL_GAP }) }
+            if (tgt.hole && !cur.hole) steps.push({ fn: () => setHole(true), delay: HOLE_GAP })
+            for (let d = cur.d + 1; d <= tgt.d; d++) { const n = d; steps.push({ fn: () => setD(n), delay: DEAL_GAP }) }
         }
+        return steps
+    }
+
+    // Joue la séquence avec des délais cumulés, puis exécute onDone.
+    const runSteps = (steps: RevealStep[], onDone: () => void) => {
+        clearTimers()
+        let acc = 0
+        for (const st of steps) { acc += st.delay; timersRef.current.push(window.setTimeout(st.fn, acc)) }
+        timersRef.current.push(window.setTimeout(onDone, acc + END_PAUSE))
+    }
+
+    const apply = (ns: BJState) => {
+        gameRef.current = ns
+        setGame(ns); shoeRef.current = ns.deck
+        const cur = { p: shownPRef.current, d: shownDRef.current, hole: holeUpRef.current }
+        const tgt = { p: ns.player.length, d: ns.dealer.length, hole: ns.phase === "done" }
+        const steps = buildSteps(cur, tgt)
+        if (steps.length === 0) { if (ns.phase === "done") settleNow(ns); return }
+        setDealing(true)
+        runSteps(steps, () => { setDealing(false); if (ns.phase === "done") settleNow(ns) })
     }
 
     const startDeal = () => {
-        if (inHand || busy) return
+        if (inHand || dealing || busy) return
         if (player.reps < bet) { setMsg("Pas assez d'énergie pour cette mise."); return }
         setBusy(true)
         if (!spendReps(bet)) { setBusy(false); setMsg("Pas assez d'énergie."); return }
@@ -61,45 +119,63 @@ export default function BlackjackPanel({ close }: { close: () => void }) {
         persistYellowSave() // débit de la mise persisté
         setMsg(""); setCtWon(null) // nettoie la bannière de déblocage CT de la main précédente
         settledRef.current = false // nouvelle main → règlement réarmé
+        clearTimers(); setP(0); setD(0); setHole(false) // réinitialise l'affichage progressif
         apply(deal(shoe, bet))
         setBusy(false)
     }
 
-    const onHit = () => { if (inHand) apply(hit(game!)) }
-    const onStand = () => { if (inHand) apply(stand(game!)) }
+    const onHit = () => { if (inHand && !dealing) apply(hit(game!)) }
+    const onStand = () => { if (inHand && !dealing) apply(stand(game!)) }
     const onDouble = () => {
-        if (!inHand || !canDouble(game!)) return
+        if (!inHand || dealing || !canDouble(game!)) return
         if (player.reps < game!.bet) { setMsg("Pas assez d'énergie pour doubler."); return }
         if (!spendReps(game!.bet)) return // débit de la mise supplémentaire
         persistYellowSave()
         apply(double(game!))
     }
 
-    const dealerVal = game ? (game.phase === "done" ? handValue(game.dealer) : handValue([game.dealer[0]])) : 0
-    const playerVal = game ? handValue(game.player) : 0
+    // Sécurité : si on quitte la table pendant l'animation d'une main réglée, on crédite quand même (jamais de gain perdu).
+    useEffect(() => () => {
+        clearTimers()
+        const g = gameRef.current
+        if (g && g.phase === "done" && !settledRef.current) {
+            settledRef.current = true
+            settleBlackjack(g.payout, g.net); claimBlackjackCt(); persistYellowSave()
+        }
+    }, [])
+
+    // Valeurs AFFICHÉES = uniquement les cartes face visible déjà posées (la cachée ne compte pas tant qu'elle n'est pas retournée).
+    const shownDealerCards = game ? game.dealer.slice(0, shownD) : []
+    const dealerFaceUp = holeUp ? shownDealerCards : shownDealerCards.filter((_, i) => i !== 1)
+    const dealerVal = handValue(dealerFaceUp)
+    const dealerHidden = !holeUp && shownD >= 2 // une carte cachée reste à révéler
+    const playerVal = game ? handValue(game.player.slice(0, shownP)) : 0
 
     return (
         <div style={overlay} onClick={close}>
             <div style={box} onClick={(e) => e.stopPropagation()}>
+                <style>{"@keyframes bjDeal{from{opacity:0;transform:translateY(-16px) scale(.9)}to{opacity:1;transform:none}}"}</style>
                 <div style={head}><span style={title}>🃏 BLACKJACK</span><span style={energy}>⚡ {player.reps}/{player.repsCap}</span></div>
 
                 {/* TABLE */}
                 <div style={felt}>
-                    <div style={rowLbl}>Croupier {game && <b>· {game.phase === "done" ? dealerVal : `${dealerVal}+`}</b>}</div>
+                    <div style={rowLbl}>Croupier {game && shownD > 0 && <b>· {dealerVal}{dealerHidden ? "+" : ""}</b>}</div>
                     <div style={handRow}>
-                        {game ? game.dealer.map((c, i) => <CardView key={i} c={c} hidden={game.phase !== "done" && i === 1} />)
+                        {game ? game.dealer.slice(0, shownD).map((c, i) => <CardView key={i} c={c} hidden={i === 1 && !holeUp} />)
                             : <><CardView /><CardView /></>}
                     </div>
-                    <div style={{ ...rowLbl, marginTop: 12 }}>Toi {game && <b>· {playerVal}</b>}</div>
+                    <div style={{ ...rowLbl, marginTop: 12 }}>Toi {game && shownP > 0 && <b>· {playerVal}</b>}</div>
                     <div style={handRow}>
-                        {game ? game.player.map((c, i) => <CardView key={i} c={c} />) : <><CardView /><CardView /></>}
+                        {game ? game.player.slice(0, shownP).map((c, i) => <CardView key={i} c={c} />) : <><CardView /><CardView /></>}
                     </div>
                 </div>
 
                 {msg && <div style={msgS}>{msg}</div>}
 
                 {/* CONTRÔLES */}
-                {!inHand ? (
+                {dealing ? (
+                    <div style={actRow}><button style={{ ...actBtn, ...disBtn }} disabled>🃏 Le croupier distribue…</button></div>
+                ) : !inHand ? (
                     <>
                         <div style={betRow}>
                             <span style={{ fontSize: 12, fontWeight: 700, opacity: 0.85 }}>Mise</span>
@@ -149,7 +225,7 @@ const energy: React.CSSProperties = { fontSize: 12, color: "#ffd54a", fontWeight
 const felt: React.CSSProperties = { background: "radial-gradient(circle at 50% 30%, #1d5a38, #103021)", border: "1px solid #2f7a4a", borderRadius: 10, padding: "12px 14px", minHeight: 190 }
 const rowLbl: React.CSSProperties = { fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, color: "#bfe8cf", marginBottom: 4 }
 const handRow: React.CSSProperties = { display: "flex", gap: 6, flexWrap: "wrap", minHeight: 64 }
-const cardBox: React.CSSProperties = { width: 46, height: 62, borderRadius: 6, background: "#f6f3ea", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 18, boxShadow: "0 2px 4px rgba(0,0,0,.4)" }
+const cardBox: React.CSSProperties = { width: 46, height: 62, borderRadius: 6, background: "#f6f3ea", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 18, boxShadow: "0 2px 4px rgba(0,0,0,.4)", animation: "bjDeal 260ms ease-out" }
 const cardBack: React.CSSProperties = { background: "linear-gradient(135deg,#7a1f3a,#3a0f1d)", color: "#e0a0b0", fontSize: 26 }
 const msgS: React.CSSProperties = { marginTop: 10, textAlign: "center", fontSize: 14, fontWeight: 800, color: "#ffd54a" }
 const betRow: React.CSSProperties = { display: "flex", alignItems: "center", gap: 8, marginTop: 12 }
