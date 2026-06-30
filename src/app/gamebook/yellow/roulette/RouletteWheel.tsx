@@ -68,10 +68,11 @@ export default function RouletteWheel({ winning, spinKey, onDone }: {
         const applyBall = (r: number) => { if (ballEl.current) ballEl.current.style.transform = `rotate(${r}deg)` }
 
         // spinKey vide = affichage STATIQUE (1er chargement : on montre le dernier résultat, sans anim).
+        // La bille repose DANS la case gagnante (roue à 0° → case gagnante à l'angle idx*POCKET).
         if (!spinKey) {
-            const r = -idx * POCKET
-            wheelRotRef.current = r; ballRotRef.current = 0
-            applyWheel(r); applyBall(0)
+            const ballScreen = idx * POCKET
+            wheelRotRef.current = 0; ballRotRef.current = ballScreen
+            applyWheel(0); applyBall(ballScreen)
             if (centerEl.current) centerEl.current.textContent = String(winning)
             setCenterNum(winning); setPhase("win")
             return
@@ -79,24 +80,25 @@ export default function RouletteWheel({ winning, spinKey, onDone }: {
 
         setPhase("spin")
 
-        // Cible : case `idx` alignée sous le pointeur. R ≡ -idx*POCKET (mod 360), ≥ rotation courante + N tours.
-        // ALÉATOIRE à chaque manche → la roue ne tourne jamais pareil. La ROUE se pose à `wheelFrac` du temps,
-        // PUIS seule la BILLE continue (orbite lente jusqu'à se poser dans la case) → vraie phase de suspense.
-        const spins = 7 + Math.floor(rnd(0, 4))   // tours de la ROUE
-        const DUR = rnd(10500, 13500)             // durée totale (rallongée)
+        // La ROUE s'arrête à une ORIENTATION FINALE ALÉATOIRE (pas alignée sur le haut) : la case gagnante
+        // peut finir N'IMPORTE OÙ sur le pourtour. La BILLE (à contresens) vient ensuite se poser DANS cette
+        // case, là où elle est (position aléatoire à l'écran). La roue se fige à `wheelFrac` du temps, puis
+        // seule la bille continue (orbite lente jusqu'à tomber dans la case) → suspense réaliste.
+        const spins = 7 + Math.floor(rnd(0, 4))   // tours de la ROUE (sens horaire)
+        const DUR = rnd(10500, 13500)
         const wheelFrac = rnd(0.64, 0.74)         // la roue s'arrête à 64-74% du temps ; le reste = BILLE SEULE
-        const c1 = rnd(0.24, 0.34)                // croisière (sur la timeline de la roue)
-        const decelK = rnd(1.2, 1.7)              // douceur de la décélération de la roue
+        const c1 = rnd(0.24, 0.34)
+        const decelK = rnd(1.2, 1.7)
         const V = (decelK + 1) / (c1 * decelK + 1)
         const startRot = wheelRotRef.current
-        const targetMod = (((-idx * POCKET) % 360) + 360) % 360
-        const base = startRot + spins * 360
-        const endRot = base + ((((targetMod - (base % 360)) % 360) + 360) % 360)
+        const endRot = startRot + spins * 360 + rnd(0, 360)        // orientation finale ALÉATOIRE
+        const phi = (((idx * POCKET + endRot) % 360) + 360) % 360  // angle-ÉCRAN de la case gagnante à l'arrêt
 
-        // Bille : orbite à CONTRESENS, PLUS de tours, et FINIT après la roue (sa fin = crawl lent dans la case).
-        const ballSpins = 10 + Math.floor(rnd(0, 6)) // 10-15 orbites
+        // Bille : orbite à CONTRESENS (anti-horaire), PLUS de tours, et se pose DANS la case gagnante à `phi`.
+        const ballSpins = 10 + Math.floor(rnd(0, 6))
         const ballStart = ballRotRef.current
-        const ballEnd = ballStart - ballSpins * 360 - ((((ballStart % 360) + 360) % 360))
+        const ballBase = ballStart - ballSpins * 360
+        const ballEnd = ballBase - ((((ballBase - phi) % 360) + 360) % 360) // ≡ phi (mod 360), en contresens
         const cb1 = rnd(0.22, 0.30), bK = rnd(1.3, 1.8), Vb = (bK + 1) / (cb1 * bK + 1)
 
         let start = -1
@@ -135,8 +137,7 @@ export default function RouletteWheel({ winning, spinKey, onDone }: {
         <div style={S.wrap}>
             <style>{KEYFRAMES}</style>
             <div style={{ ...S.stage, ...(phase === "win" ? S.stageWin : {}) }}>
-                {/* Pointeur fixe (haut) */}
-                <div style={S.pointer} />
+                {/* Pas de pointeur fixe : le GAGNANT = la case où la BILLE se pose (n'importe où sur le pourtour). */}
                 {/* Roue (anneau coloré + numéros radiaux) — transform piloté par ref (rAF) */}
                 <div ref={wheelEl} style={{ ...S.wheel, background: RING }}>
                     {WHEEL_ORDER.map((n, i) => (
