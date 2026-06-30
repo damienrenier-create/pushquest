@@ -90,6 +90,7 @@ import RouletteMultiTable from "./roulette/RouletteMultiTable"
 import CroupierPanel from "./CroupierPanel"
 import BarmanPanel from "./BarmanPanel"
 import BlackjackPanel from "./BlackjackPanel"
+import DaemonCreator from "./create/DaemonCreator"
 
 // ============================================================
 // ZONE DE COMBAT — REPRISE DE SÉRIE au refresh (anti-abandon)
@@ -204,6 +205,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [croupierOpen, setCroupierOpen] = useState(false) // carrousel du croupier (railleries + stats casino)
     const [barmanOpen, setBarmanOpen] = useState(false) // menu du barman (guide + potions prix-libre)
     const [blackjackOpen, setBlackjackOpen] = useState(false) // table de blackjack (PC haut-gauche)
+    const [creatorOpen, setCreatorOpen] = useState(false) // TEST : créateur de Daemon (post-Ligue) — réservé à Mools/créateur
     const [heldOpen, setHeldOpen] = useState(false) // modale "objet tenu" (depuis la fiche d'un Daemon)
     const [evDetailOpen, setEvDetailOpen] = useState(false) // détail EV (par stat) déplié sur la fiche
     const ticketChecked = useRef(false)
@@ -1064,6 +1066,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         <button style={menuBtnStyle} onClick={() => setMenu("reput")}>🏆 RÉPUTATION</button>
                         <button style={menuBtnStyle} onClick={() => setMenu("hof")}>🏛️ HALL OF FAME (LIGUE)</button>
                         <button style={menuBtnStyle} onClick={() => setMenu("arena-hof")}>⚔️ HALL OF FAME (ARÈNES)</button>
+                        {(isCreator || nickname.toLowerCase() === "mools") && (
+                            <button style={{ ...menuBtnStyle, borderColor: "#3ad0c0", color: "#3ad0c0" }} onClick={() => { setMenu("none"); setCreatorOpen(true) }}>🧬 CRÉER UN DAEMON (TEST)</button>
+                        )}
                         {!battle && (confirmReset ? (
                             <>
                                 <div style={{ fontSize: 11, color: "#c83030", fontWeight: 700, textAlign: "center" }}>
@@ -1546,6 +1551,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {/* BARMAN — guide du casino + indice jetons + Potions à prix libre (effets secrets). */}
             {barmanOpen && <BarmanPanel close={() => setBarmanOpen(false)} />}
             {blackjackOpen && <BlackjackPanel close={() => setBlackjackOpen(false)} />}
+            {creatorOpen && <DaemonCreator ownerId={userId} nickname={nickname} close={() => setCreatorOpen(false)} />}
             {chatOpen && (
                 <div style={menuOverlayStyle} onClick={() => setChatOpen(false)}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
