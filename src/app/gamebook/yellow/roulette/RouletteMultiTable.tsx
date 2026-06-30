@@ -13,7 +13,7 @@ import { usePlayer, grantReps, markRouletteClaimed, peekRouletteLuck, decrementR
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { getPusherClient, PUSHER_CLIENT_ENABLED } from "@/lib/pusher-client"
 import { colorOf } from "@/lib/gamebook/yellow/roulette/wheel"
-import { type Bet, PAYOUT, straight, dozen, column, red, black, even, odd, low, high, minStakeForType, OUTSIDE_MIN_BET } from "@/lib/gamebook/yellow/roulette/bets"
+import { type Bet, PAYOUT, betWins, straight, dozen, column, red, black, even, odd, low, high, minStakeForType, OUTSIDE_MIN_BET } from "@/lib/gamebook/yellow/roulette/bets"
 import RouletteWheel from "./RouletteWheel"
 
 const CHANNEL = "gamebook-yellow_roulette"
@@ -41,6 +41,41 @@ const GRID_ROWS: number[][] = [
     Array.from({ length: 12 }, (_, c) => 3 * c + 1),
 ]
 
+// UNE COULEUR PAR JOUEUR (jetons sur le tapis). MOI = vert signature ; les autres piochent dans la palette
+// dans l'ordre de la table (stable sur la manche). Le contraste texte (clair/sombre) suit la couleur.
+const ME_COLOR = "#28d07a"
+const PLAYER_PALETTE = ["#e0c020", "#3a9ae0", "#e0683a", "#b06ae0", "#e03a8a", "#3ad0d0", "#a0d020"]
+function darkText(hex: string): boolean { // texte foncé sur jeton clair (jaune/vert), clair sinon
+    const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16)
+    return r * 0.299 + g * 0.587 + b * 0.114 > 150
+}
+// Couleur STABLE par joueur (hash du userId → palette). MOI = vert signature.
+function colorForUser(userId: string, myUserId: string): string {
+    if (userId === myUserId) return ME_COLOR
+    let h = 0
+    for (let i = 0; i < userId.length; i++) h = (h * 31 + userId.charCodeAt(i)) >>> 0
+    return PLAYER_PALETTE[h % PLAYER_PALETTE.length]
+}
+// Jeton à afficher sur une case (issu du snapshot de la manche en résolution).
+interface ChipView { key: string; color: string; value: number; won: boolean; mine: boolean }
+// Snapshot des mises d'une manche en cours de résolution (figé à l'arrêt des mises).
+interface BetsSnap { roundId: string; winning: number; chipsByZone: Record<string, ChipView[]> }
+type SettlePhase = "" | "lose" | "win" | "coins"
+
+// Agrège les mises de plusieurs joueurs en jetons-par-case (un jeton par joueur ayant misé sur la case).
+// `winning` = numéro sorti (null pendant la prise de mises → aucun gagnant marqué).
+function buildChipsByZone(players: { userId: string; bets: Bet[] }[], winning: number | null, myUserId: string): Record<string, ChipView[]> {
+    const map: Record<string, ChipView[]> = {}
+    for (const p of players) {
+        const color = colorForUser(p.userId, myUserId)
+        const mine = p.userId === myUserId
+        for (const b of p.bets) {
+            (map[b.zoneId] ??= []).push({ key: `${p.userId}:${b.zoneId}`, color, value: b.chips, won: winning != null && betWins(b, winning), mine })
+        }
+    }
+    return map
+}
+
 export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: string; onClose: () => void }) {
     const player = usePlayer()
     const [state, setState] = useState<StatePayload | null>(null)
@@ -63,6 +98,16 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
     // (onDone) — surtout PAS quand le résultat serveur arrive (sinon l'énergie tombe avant la fin du tour).
     const pendingCreditRef = useRef<{ roundId: string; staked: number; net: number; solo: boolean } | null>(null)
 
+    // SÉQUENCE DE RÉSOLUTION (après l'arrêt de la bille) : on garde les jetons de la manche à l'écran, on
+    // efface les perdants un par un, on fait clignoter les gagnants, pluie de pièces, PUIS on crédite.
+    const [betsSnap, setBetsSnap] = useState<BetsSnap | null>(null) // mises figées de la manche en résolution
+    const betsSnapRef = useRef<BetsSnap | null>(null) // miroir (lu par la séquence de résolution sans dépendances)
+    const [settlePhase, setSettlePhase] = useState<SettlePhase>("") // "" pendant le spin, puis lose→win→coins
+    const [hiddenChips, setHiddenChips] = useState<Set<string>>(new Set()) // jetons perdants déjà retirés
+    const liveBetsRef = useRef<{ roundId: string; bets: PlayerBets[] }>({ roundId: "", bets: [] }) // dernières mises de la manche OUVERTE (pour figer le snapshot)
+    const settleTimersRef = useRef<number[]>([]) // timers de la séquence (nettoyés au démontage / nouveau spin)
+    const clearSettleTimers = () => { settleTimersRef.current.forEach((id) => clearTimeout(id)); settleTimersRef.current = [] }
+
     // Horloge locale (countdown fluide).
     useEffect(() => { const t = setInterval(() => setNow(Date.now()), 250); return () => clearInterval(t) }, [])
 
@@ -78,8 +123,36 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
         if (pc.solo && pc.net > 0) decrementRouletteLuck(pc.net) // chance potion (secret) : récup jusqu'au prix payé
         persistYellowSave()
     }, [])
-    // Démontage (fermeture de la table) : si un gain attend encore, on le crédite (pas de perte).
-    useEffect(() => () => { creditPending() }, [creditPending])
+    // Démontage (fermeture de la table) : on coupe la séquence en cours et on crédite un éventuel gain en
+    // attente (markRouletteClaimed garantit qu'on ne le verse pas deux fois) → jamais de perte.
+    useEffect(() => () => { clearSettleTimers(); creditPending() }, [creditPending])
+
+    // SÉQUENCE DE RÉSOLUTION (déclenchée à l'arrêt de la bille). Les jetons restent à l'écran, puis :
+    //   1) les PERDANTS s'effacent un par un (on voit clairement les mises perdues) ;
+    //   2) les GAGNANTS clignotent en surbrillance ;
+    //   3) une pluie de PIÈCES tombe (si j'ai gagné) ;
+    //   4) SEULEMENT ALORS on crédite le gain (creditPending) et on dévoile le résultat.
+    const startSettlement = useCallback((spinInfo: { winning: number; color: string; net: number | null }) => {
+        clearSettleTimers()
+        const finish = () => {
+            creditPending() // ⚡ l'énergie n'arrive qu'ICI, tout à la fin (jamais avant)
+            if (spinInfo.net != null) setReveal({ winning: spinInfo.winning, color: spinInfo.color, net: spinInfo.net })
+            betsSnapRef.current = null; setBetsSnap(null); setSettlePhase(""); setHiddenChips(new Set())
+        }
+        const snap = betsSnapRef.current
+        if (!snap) { finish(); return } // pas de jetons à animer (chargement statique) → crédit direct
+        const losers: string[] = []
+        let anyWinner = false
+        for (const chips of Object.values(snap.chipsByZone)) for (const c of chips) { if (c.won) anyWinner = true; else losers.push(c.key) }
+        setSettlePhase("lose")
+        let acc = 0
+        for (const key of losers) { acc += 150; settleTimersRef.current.push(window.setTimeout(() => setHiddenChips((s) => { const n = new Set(s); n.add(key); return n }), acc)) }
+        acc += 250
+        settleTimersRef.current.push(window.setTimeout(() => setSettlePhase("win"), acc)) // gagnants en surbrillance
+        acc += anyWinner ? 1000 : 250
+        if ((spinInfo.net ?? 0) > 0) { settleTimersRef.current.push(window.setTimeout(() => setSettlePhase("coins"), acc)); acc += 1100 } // pluie de pièces
+        settleTimersRef.current.push(window.setTimeout(finish, acc))
+    }, [creditPending])
 
     const applyState = useCallback((data: StatePayload) => {
         offsetRef.current = data.round.serverNow - Date.now()
@@ -99,6 +172,13 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
         const startingSpin = latest && wheelInitRef.current && latest.roundId !== lastSpunRef.current ? latest.roundId : null
         // Manche dont le crédit est DIFFÉRÉ jusqu'à l'arrêt de la bille (celle qui démarre OU qui anime déjà).
         const deferId = startingSpin ?? pendingCreditRef.current?.roundId ?? null
+
+        // SNAPSHOT des mises de la manche qui démarre son tour : on prend les dernières mises connues quand
+        // elle était OUVERTE (liveBetsRef), pour garder les jetons (moi + autres) à l'écran pendant le spin.
+        const snapSource: PlayerBets[] = startingSpin
+            ? (liveBetsRef.current.roundId === startingSpin ? liveBetsRef.current.bets
+                : data.round.id === startingSpin ? data.bets : [])
+            : []
 
         // Réconciliation des GAINS : crédite chaque manche résolue où j'ai misé, UNE fois — SAUF la manche
         // en cours d'animation (créditée seulement à l'arrêt de la bille, cf. creditPending/onDone). Sans ce
@@ -131,7 +211,16 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
             // Mémorise le gain à payer À L'ARRÊT de la bille (jamais maintenant).
             pendingCreditRef.current = mine ? { roundId: startingSpin, staked: mine.staked, net: mine.net, solo: latest!.players.length === 1 } : null
             setSpin({ key: startingSpin, winning: latest!.winningNumber, color: latest!.winningColor, net: mine ? mine.net : null })
+            // Fige les jetons de la manche (où + combien chacun a misé) pour les afficher pendant le spin,
+            // puis la séquence de résolution (perdants effacés → gagnants en surbrillance → pièces → crédit).
+            clearSettleTimers(); setHiddenChips(new Set()); setSettlePhase("")
+            const snap = { roundId: startingSpin, winning: latest!.winningNumber, chipsByZone: buildChipsByZone(snapSource, latest!.winningNumber, myUserId) }
+            betsSnapRef.current = snap; setBetsSnap(snap)
         }
+
+        // Mémorise les mises de la manche OUVERTE courante (source du prochain snapshot). Placé en fin :
+        // le snapshot ci-dessus a déjà lu la valeur de la manche PRÉCÉDENTE.
+        liveBetsRef.current = { roundId: data.round.id, bets: data.bets }
     }, [myUserId])
 
     const refetch = useCallback(async () => {
@@ -165,6 +254,18 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
     const locked = !!round && validatedRound === round.id
     const pendingList = Object.values(pending)
     const pendingTotal = pendingList.reduce((a, b) => a + b.chips, 0)
+
+    // Jetons affichés sur le tapis : pendant le spin/résolution = snapshot figé (moi + autres, gagnants marqués) ;
+    // pendant la prise de mises = mises EN DIRECT (les autres + mes jetons en cours) → on voit où & combien.
+    const displayChips: Record<string, ChipView[]> = betsSnap
+        ? betsSnap.chipsByZone
+        : buildChipsByZone(
+            [
+                ...(state?.bets ?? []).filter((b) => b.userId !== myUserId && b.staked > 0).map((b) => ({ userId: b.userId, bets: b.bets })),
+                { userId: myUserId, bets: pendingList },
+            ],
+            null, myUserId,
+        )
 
     const addBet = (make: (chips: number) => Bet) => {
         if (!open || locked) return
@@ -248,6 +349,8 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
     return (
         <div style={S.overlay}>
             <div style={S.box}>
+                <style>{"@keyframes rlBlink{0%,100%{box-shadow:0 0 0 2px #fff,0 0 10px 2px #ffd54a;transform:scale(1.18)}50%{box-shadow:0 0 0 1px #fff;transform:scale(1)}}@keyframes rlCoin{0%{transform:translateY(-30px) rotate(0deg);opacity:0}12%{opacity:1}100%{transform:translateY(520px) rotate(220deg);opacity:.15}}"}</style>
+                {settlePhase === "coins" && <CoinRain />}
                 <div style={S.head}>
                     <div style={S.title}>🎡 Roulette — Table multijoueur <span style={S.beta}>BÊTA</span></div>
                     <button style={S.x} onClick={onClose}>✕</button>
@@ -268,7 +371,7 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
                     <RouletteWheel
                         winning={spin.winning}
                         spinKey={spin.key}
-                        onDone={() => { creditPending(); if (spin.net != null) setReveal({ winning: spin.winning, color: spin.color, net: spin.net }) }}
+                        onDone={() => startSettlement({ winning: spin.winning, color: spin.color, net: spin.net })}
                     />
                 )}
 
@@ -284,7 +387,7 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
 
                 {/* Tapis : 0 + grille 3×12 */}
                 <div style={S.tapis}>
-                    <button style={{ ...S.cell, ...S.zero, ...chipStyle(pending, "straight:0") }} disabled={!open || locked} onClick={() => addBet((c) => straight(0, c))}>0{chipBadge(pending, "straight:0")}</button>
+                    <button style={{ ...S.cell, ...S.zero, ...chipStyle(pending, "straight:0") }} disabled={!open || locked} onClick={() => addBet((c) => straight(0, c))}>0<ZoneChips chips={displayChips["straight:0"]} hidden={hiddenChips} phase={settlePhase} /></button>
                     <div style={S.grid}>
                         {GRID_ROWS.map((row, ri) => (
                             <div key={ri} style={S.gridRow}>
@@ -293,7 +396,7 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
                                     return (
                                         <button key={n} disabled={!open || locked} onClick={() => addBet((c) => straight(n, c))}
                                             style={{ ...S.cell, background: col === "red" ? "#9c2a2a" : "#222", ...chipStyle(pending, `straight:${n}`) }}>
-                                            {n}{chipBadge(pending, `straight:${n}`)}
+                                            {n}<ZoneChips chips={displayChips[`straight:${n}`]} hidden={hiddenChips} phase={settlePhase} />
                                         </button>
                                     )
                                 })}
@@ -305,17 +408,17 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
                 {/* Paris extérieurs */}
                 <div style={S.outRow}>
                     {([["1-12", () => dozen(1, chip), "dozen:1"], ["13-24", () => dozen(2, chip), "dozen:2"], ["25-36", () => dozen(3, chip), "dozen:3"]] as const).map(([lab, mk, zid]) => (
-                        <button key={zid} style={{ ...S.out, ...chipStyle(pending, zid) }} disabled={!open || locked} onClick={() => addBet(mk)}>{lab}{chipBadge(pending, zid)}</button>
+                        <button key={zid} style={{ ...S.out, ...chipStyle(pending, zid) }} disabled={!open || locked} onClick={() => addBet(mk)}>{lab}<ZoneChips chips={displayChips[zid]} hidden={hiddenChips} phase={settlePhase} /></button>
                     ))}
                 </div>
                 <div style={S.outRow}>
                     {([["C1", () => column(1, chip), "column:1"], ["C2", () => column(2, chip), "column:2"], ["C3", () => column(3, chip), "column:3"]] as const).map(([lab, mk, zid]) => (
-                        <button key={zid} style={{ ...S.out, ...chipStyle(pending, zid) }} disabled={!open || locked} onClick={() => addBet(mk)}>{lab}{chipBadge(pending, zid)}</button>
+                        <button key={zid} style={{ ...S.out, ...chipStyle(pending, zid) }} disabled={!open || locked} onClick={() => addBet(mk)}>{lab}<ZoneChips chips={displayChips[zid]} hidden={hiddenChips} phase={settlePhase} /></button>
                     ))}
                 </div>
                 <div style={S.outRow}>
                     {([["1-18", () => low(chip), "low"], ["Pair", () => even(chip), "even"], ["Rouge", () => red(chip), "red"], ["Noir", () => black(chip), "black"], ["Impair", () => odd(chip), "odd"], ["19-36", () => high(chip), "high"]] as const).map(([lab, mk, zid]) => (
-                        <button key={zid} style={{ ...S.out, fontSize: 10, ...(zid === "red" ? { background: "#9c2a2a" } : zid === "black" ? { background: "#111" } : {}), ...chipStyle(pending, zid) }} disabled={!open || locked} onClick={() => addBet(mk)}>{lab}{chipBadge(pending, zid)}</button>
+                        <button key={zid} style={{ ...S.out, fontSize: 10, ...(zid === "red" ? { background: "#9c2a2a" } : zid === "black" ? { background: "#111" } : {}), ...chipStyle(pending, zid) }} disabled={!open || locked} onClick={() => addBet(mk)}>{lab}<ZoneChips chips={displayChips[zid]} hidden={hiddenChips} phase={settlePhase} /></button>
                     ))}
                 </div>
 
@@ -360,7 +463,10 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
                     {others.length === 0 && <div style={S.muted}>Personne n'a encore misé sur cette manche.</div>}
                     {others.map((b) => (
                         <div key={b.userId} style={S.otherRow}>
-                            <span style={{ fontWeight: 700, color: b.userId === myUserId ? "#7ce0a0" : "#cfe0f0" }}>{b.ready ? "✅ " : ""}{b.nickname}{b.userId === myUserId ? " (toi)" : ""}</span>
+                            <span style={{ display: "flex", alignItems: "center", gap: 5, fontWeight: 700, color: b.userId === myUserId ? "#7ce0a0" : "#cfe0f0" }}>
+                                <span style={{ ...S.legendDot, background: colorForUser(b.userId, myUserId) }} />
+                                {b.ready ? "✅ " : ""}{b.nickname}{b.userId === myUserId ? " (toi)" : ""}
+                            </span>
                             <span>{b.staked} ⚡ · {b.bets.length} pari{b.bets.length > 1 ? "s" : ""}</span>
                         </div>
                     ))}
@@ -375,15 +481,36 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
 function chipStyle(pending: Record<string, Bet>, zoneId: string): React.CSSProperties {
     return pending[zoneId] ? { outline: "2px solid #e0c020", outlineOffset: -2 } : {}
 }
-function chipBadge(pending: Record<string, Bet>, zoneId: string) {
-    const b = pending[zoneId]
-    if (!b) return null
-    return <span style={S.badge}>{b.chips}</span>
+// Jetons posés sur une case : un pastille par joueur (sa COULEUR + la VALEUR misée). Pendant la résolution,
+// les perdants sont déjà retirés (hidden) et les gagnants clignotent (phase win/coins).
+function ZoneChips({ chips, hidden, phase }: { chips?: ChipView[]; hidden: Set<string>; phase: SettlePhase }) {
+    if (!chips || chips.length === 0) return null
+    const vis = chips.filter((c) => !hidden.has(c.key))
+    if (vis.length === 0) return null
+    const lit = phase === "win" || phase === "coins"
+    return (
+        <span style={S.chipStack}>
+            {vis.slice(0, 4).map((c) => (
+                <span key={c.key} style={{ ...S.tableChip, background: c.color, color: darkText(c.color) ? "#1a1400" : "#fff", ...(c.mine ? S.tableChipMine : {}), ...(lit && c.won ? S.tableChipWin : {}) }}>{c.value}</span>
+            ))}
+            {vis.length > 4 && <span style={S.tableChipMore}>+{vis.length - 4}</span>}
+        </span>
+    )
+}
+// Pluie de pièces (récompense) : déclenchée à l'étape "coins" quand j'ai gagné.
+function CoinRain() {
+    return (
+        <div style={S.coinRain}>
+            {Array.from({ length: 16 }, (_, i) => (
+                <span key={i} style={{ ...S.coin, left: `${(i * 6.1 + 3) % 100}%`, animationDelay: `${(i % 6) * 80}ms` }}>🪙</span>
+            ))}
+        </div>
+    )
 }
 
 const S: Record<string, React.CSSProperties> = {
     overlay: { position: "fixed", inset: 0, zIndex: 9500, background: "rgba(4,8,6,0.92)", display: "flex", alignItems: "center", justifyContent: "center", padding: 8, fontFamily: "'Courier New', monospace", color: "#eef" },
-    box: { width: "min(440px, 98vw)", maxHeight: "96vh", overflowY: "auto", background: "#0c1410", border: "2px solid #1c3a28", borderRadius: 14, padding: 12 },
+    box: { position: "relative", width: "min(440px, 98vw)", maxHeight: "96vh", overflowY: "auto", background: "#0c1410", border: "2px solid #1c3a28", borderRadius: 14, padding: 12 },
     head: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
     title: { fontSize: 14, fontWeight: 800 },
     beta: { fontSize: 8, background: "#e0c020", color: "#1a1400", borderRadius: 4, padding: "1px 5px", verticalAlign: "middle" },
@@ -418,6 +545,16 @@ const S: Record<string, React.CSSProperties> = {
     muted: { fontSize: 11, opacity: 0.55 },
     badge: { position: "absolute", top: -6, right: -6, background: "#e0c020", color: "#1a1400", borderRadius: 9, minWidth: 16, height: 16, fontSize: 9, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px" },
     foot: { marginTop: 8, fontSize: 9, opacity: 0.5, lineHeight: 1.4 },
+    // Jetons sur le tapis (un par joueur : sa couleur + sa mise).
+    chipStack: { position: "absolute", left: 0, right: 0, bottom: 1, display: "flex", gap: 1, justifyContent: "center", flexWrap: "wrap", pointerEvents: "none" },
+    tableChip: { minWidth: 12, height: 13, borderRadius: 7, fontSize: 8, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 2px", border: "1px solid rgba(0,0,0,0.45)", lineHeight: 1 },
+    tableChipMine: { outline: "1.5px solid #fff", outlineOffset: -1 },
+    tableChipWin: { animation: "rlBlink 0.5s steps(1,end) infinite", zIndex: 2 },
+    tableChipMore: { fontSize: 8, fontWeight: 800, color: "#fff", lineHeight: 1, alignSelf: "center" },
+    legendDot: { width: 9, height: 9, borderRadius: "50%", border: "1px solid rgba(0,0,0,0.4)", flexShrink: 0 },
+    // Pluie de pièces (récompense, étape finale).
+    coinRain: { position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: 50 },
+    coin: { position: "absolute", top: -30, fontSize: 22, animation: "rlCoin 1.05s linear forwards" },
 }
 
 void PAYOUT
