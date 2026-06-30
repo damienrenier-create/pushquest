@@ -13,6 +13,7 @@ import { speciesOf, maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/en
 import { isDamaging, type BattleMon, type MoveData } from "@/lib/gamebook/yellow/battle/types"
 import { moveCategory, resolveAdaptiveStab } from "@/lib/gamebook/yellow/battle/typeChart"
 import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
+import MoveCompare from "../MoveCompare"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { expForLevel } from "@/lib/gamebook/yellow/battle/xp"
 import { ITEMS } from "@/lib/gamebook/yellow/data/items"
@@ -66,7 +67,6 @@ export default function BattleScreen() {
     // + tick local pour forcer un re-render après mutation EN PLACE du Daemon (sans nouveau ref battle).
     const learnSnooze = useRef<Set<string>>(new Set())
     const [, setLearnTick] = useState(0)
-    const [learnChoosing, setLearnChoosing] = useState(false)
     const repsWallet = usePlayer()
     const dex = usePokedex() // statut Pokédex (caught) → indicateur en combat sauvage
     const lastBattle = useRef(battle)
@@ -264,8 +264,8 @@ export default function BattleScreen() {
     const learnMoveId = (playbackDone && !isEnded && !needSwitch && !awaitSendOut && !battle.pvp && menu === "root")
         ? (player.pendingMoves ?? []).find((id) => !learnSnooze.current.has(`${player.uid}:${id}`))
         : undefined
-    const learnLater = () => { if (learnMoveId) { learnSnooze.current.add(`${player.uid}:${learnMoveId}`); setLearnChoosing(false); setLearnTick((t) => t + 1) } }
-    const learnForget = (slot: number | null) => { if (learnMoveId) { resolveBattleLearn(player.uid, learnMoveId, slot); setLearnChoosing(false); setLearnTick((t) => t + 1) } }
+    const learnLater = () => { if (learnMoveId) { learnSnooze.current.add(`${player.uid}:${learnMoveId}`); setLearnTick((t) => t + 1) } }
+    const learnForget = (slot: number | null) => { if (learnMoveId) { resolveBattleLearn(player.uid, learnMoveId, slot); setLearnTick((t) => t + 1) } }
 
     // L'ennemi est "aspiré" par la ball (lancer/secousses, et capture réussie).
     const enemyHiddenByBall = !!ball && (ball.phase === "throw" || ball.phase === "shake" || (ball.phase === "result" && ball.caught))
@@ -510,36 +510,11 @@ export default function BattleScreen() {
                 ? (isEnded && <PvpRecap won={playerWon} playerTeam={battle.player.team} enemyTeam={battle.enemy.team} onClose={() => endBattle()} />)
                 : (playerWon && !battle.isWild && <VictoryCelebration team={battle.player.team} />))}
 
-            {/* #7 — APPRENTISSAGE EN COMBAT (slots pleins) : apprendre maintenant / plus tard. */}
+            {/* #7 — APPRENTISSAGE EN COMBAT (slots pleins) : tableau comparatif détaillé + choisir / différer. */}
             {learnMoveId && (
                 <div style={LRN.overlay} onClick={(e) => e.stopPropagation()}>
                     <div style={LRN.box}>
-                        {!learnChoosing ? (
-                            <>
-                                <div style={LRN.title}>{displayName(player)} veut apprendre <b style={{ color: "#f5d020" }}>{getMove(learnMoveId)?.name ?? learnMoveId}</b> !</div>
-                                <div style={LRN.sub}>{(() => { const mv = getMove(learnMoveId); return mv ? `${TYPE_FR[mv.type] ?? mv.type} · puiss. ${mv.power || "—"} · ${mv.pp} PP` : "" })()}</div>
-                                <div style={LRN.sub}>Mais il connaît déjà 4 capacités.</div>
-                                <button style={LRN.primary} onClick={() => setLearnChoosing(true)}>📖 Apprendre maintenant</button>
-                                <button style={LRN.later} onClick={learnLater}>Plus tard ▶ (choix à la fin du combat)</button>
-                            </>
-                        ) : (
-                            <>
-                                <div style={LRN.title}>Oublier quelle capacité ?</div>
-                                <div style={LRN.list}>
-                                    {player.moves.map((m, i) => {
-                                        const mv = getMove(m.moveId)
-                                        return (
-                                            <button key={i} style={LRN.moveBtn} onClick={() => learnForget(i)}>
-                                                <b>{mv?.name ?? m.moveId}</b>
-                                                <span style={LRN.meta}>{(TYPE_FR[mv?.type ?? ""] ?? mv?.type ?? "")}{mv?.power ? ` · ${mv.power}` : ""}</span>
-                                            </button>
-                                        )
-                                    })}
-                                </div>
-                                <button style={LRN.giveUp} onClick={() => learnForget(null)}>✋ Renoncer à {getMove(learnMoveId)?.name ?? learnMoveId}</button>
-                                <button style={LRN.later} onClick={() => setLearnChoosing(false)}>← Retour</button>
-                            </>
-                        )}
+                        <MoveCompare mon={player} newMoveId={learnMoveId} onForget={(i) => learnForget(i)} onGiveUp={() => learnForget(null)} onLater={learnLater} />
                     </div>
                 </div>
             )}
