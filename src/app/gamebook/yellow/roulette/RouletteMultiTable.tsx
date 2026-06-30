@@ -167,9 +167,9 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
         let anyWinner = false
         for (const chips of Object.values(snap.chipsByZone)) for (const c of chips) { if (c.won) anyWinner = true; else losers.push(c.key) }
         setSettlePhase("lose")
-        let acc = 0
-        for (const key of losers) { acc += 150; settleTimersRef.current.push(window.setTimeout(() => setHiddenChips((s) => { const n = new Set(s); n.add(key); return n }), acc)) }
-        acc += 250
+        let acc = 550 // pause initiale : on voit d'abord TOUT le tapis + le numéro sorti avant que ça s'efface
+        for (const key of losers) { acc += 480; settleTimersRef.current.push(window.setTimeout(() => setHiddenChips((s) => { const n = new Set(s); n.add(key); return n }), acc)) } // cadence lente
+        acc += 650 // laisse le dernier fondu (transition ~420ms) se terminer + respiration
         settleTimersRef.current.push(window.setTimeout(() => setSettlePhase("win"), acc)) // gagnants en surbrillance
         acc += anyWinner ? 1000 : 250
         if ((spinInfo.net ?? 0) > 0) {
@@ -532,15 +532,16 @@ function chipStyle(pending: Record<string, Bet>, zoneId: string): React.CSSPrope
 // les perdants sont déjà retirés (hidden) et les gagnants clignotent (phase win/coins).
 function ZoneChips({ chips, hidden, phase }: { chips?: ChipView[]; hidden: Set<string>; phase: SettlePhase }) {
     if (!chips || chips.length === 0) return null
-    const vis = chips.filter((c) => !hidden.has(c.key))
-    if (vis.length === 0) return null
     const lit = phase === "win" || phase === "coins"
+    // On garde les jetons dans le DOM : un perdant « effacé » (hidden) FOND progressivement (transition CSS)
+    // au lieu de disparaître d'un coup → la disparition des mises perdues est lente et lisible.
     return (
         <span style={S.chipStack}>
-            {vis.slice(0, 4).map((c) => (
-                <span key={c.key} style={{ ...S.tableChip, background: c.color, color: darkText(c.color) ? "#1a1400" : "#fff", ...(c.mine ? S.tableChipMine : {}), ...(lit && c.won ? S.tableChipWin : {}) }}>{c.value}</span>
-            ))}
-            {vis.length > 4 && <span style={S.tableChipMore}>+{vis.length - 4}</span>}
+            {chips.slice(0, 4).map((c) => {
+                const gone = hidden.has(c.key)
+                return <span key={c.key} style={{ ...S.tableChip, background: c.color, color: darkText(c.color) ? "#1a1400" : "#fff", ...(c.mine ? S.tableChipMine : {}), ...(lit && c.won ? S.tableChipWin : {}), ...(gone ? S.tableChipGone : {}) }}>{c.value}</span>
+            })}
+            {chips.length > 4 && <span style={S.tableChipMore}>+{chips.length - 4}</span>}
         </span>
     )
 }
@@ -600,9 +601,10 @@ const S: Record<string, React.CSSProperties> = {
     foot: { marginTop: 8, fontSize: 9, opacity: 0.5, lineHeight: 1.4 },
     // Jetons sur le tapis (un par joueur : sa couleur + sa mise).
     chipStack: { position: "absolute", left: 0, right: 0, bottom: 1, display: "flex", gap: 1, justifyContent: "center", flexWrap: "wrap", pointerEvents: "none" },
-    tableChip: { minWidth: 12, height: 13, borderRadius: 7, fontSize: 8, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 2px", border: "1px solid rgba(0,0,0,0.45)", lineHeight: 1 },
+    tableChip: { minWidth: 12, height: 13, borderRadius: 7, fontSize: 8, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 2px", border: "1px solid rgba(0,0,0,0.45)", lineHeight: 1, transition: "opacity .42s ease, transform .42s ease" },
     tableChipMine: { outline: "1.5px solid #fff", outlineOffset: -1 },
     tableChipWin: { animation: "rlBlink 0.5s steps(1,end) infinite", zIndex: 2 },
+    tableChipGone: { opacity: 0, transform: "scale(0.2)" }, // perdant effacé : fondu + rétrécit (cf. transition)
     tableChipMore: { fontSize: 8, fontWeight: 800, color: "#fff", lineHeight: 1, alignSelf: "center" },
     legendDot: { width: 9, height: 9, borderRadius: "50%", border: "1px solid rgba(0,0,0,0.4)", flexShrink: 0 },
     convertTickets: { width: "100%", marginBottom: 8, padding: "9px 10px", background: "rgba(255,213,74,0.12)", border: "1px dashed #ffd54a", borderRadius: 9, color: "#ffd54a", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" },
