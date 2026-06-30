@@ -940,6 +940,18 @@ export function redeemCasinoTicket(): number {
     return value
 }
 
+/** CONVERSION TICKETS → CRÉDIT ROULETTE : engage TOUTE la file de tickets (toutes origines) sur la VRAIE
+ *  table de roulette. Chaque ticket apporte sa valeur de mise (10/20/30/50) en crédit divisible (jouable
+ *  case par case, non encaissable). Vide la file et renvoie le total converti (0 si aucun ticket). */
+export function convertAllTicketsToCredit(): number {
+    const d = st.labDefi
+    if (d.grantedTickets.length === 0) return 0
+    const total = d.grantedTickets.reduce((a, b) => a + b, 0)
+    st = { ...st, labDefi: { ...d, grantedTickets: [], grantedTicketOrigins: [], rouletteCredit: d.rouletteCredit + total } }
+    emit()
+    return total
+}
+
 /** Le ticket GRATUIT du jour (Dieu Spaghetti) est-il disponible ? (1×/jour, `today` = jour serveur). */
 export function dailyTicketAvailable(today: string): boolean {
     return !!today && st.labDefi.dailyTicketDate !== today

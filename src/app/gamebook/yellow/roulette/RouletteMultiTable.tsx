@@ -9,7 +9,7 @@
 // résolution via une réconciliation IDEMPOTENTE par manche (markRouletteClaimed) robuste au refresh.
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { usePlayer, grantReps, markRouletteClaimed, peekRouletteLuck, decrementRouletteLuck, fundRouletteBet, addCasinoWon } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, grantReps, markRouletteClaimed, peekRouletteLuck, decrementRouletteLuck, fundRouletteBet, addCasinoWon, convertAllTicketsToCredit } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { getPusherClient, PUSHER_CLIENT_ENABLED } from "@/lib/pusher-client"
 import { colorOf } from "@/lib/gamebook/yellow/roulette/wheel"
@@ -278,6 +278,14 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
     const clearPending = () => setPending({})
 
     const credit = player.labDefi.rouletteCredit
+    // TICKETS TROUVÉS (jetons au sol, cadeaux de boss…) : convertibles en CRÉDIT divisible, jouable ici à la
+    // vraie table (case par case). Chaque ticket apporte sa valeur de mise (10/20/30/50).
+    const tickets = player.labDefi.grantedTickets
+    const ticketTotal = tickets.reduce((a, b) => a + b, 0)
+    const convertTickets = () => {
+        const got = convertAllTicketsToCredit()
+        if (got > 0) { persistYellowSave(); setFlash(`🎟️ ${tickets.length} ticket${tickets.length > 1 ? "s" : ""} convertis → +${got} ⚡ de crédit !`) }
+    }
     const validate = async () => {
         if (!round || !open || locked || pendingTotal <= 0 || busy) return
         if (credit + player.reps < pendingTotal) { setFlash("Pas assez d'énergie."); return }
@@ -364,6 +372,13 @@ export default function RouletteMultiTable({ myUserId, onClose }: { myUserId: st
                     </span>
                     <span style={{ opacity: 0.6, fontSize: 10 }}>#{round ? round.id.slice(-5) : "—"}</span>
                 </div>
+
+                {/* Tickets trouvés → crédit jouable ici (les jetons du sol / cadeaux de boss s'engagent à la vraie table) */}
+                {tickets.length > 0 && (
+                    <button style={S.convertTickets} onClick={convertTickets}>
+                        🎟️ Convertir mes {tickets.length} ticket{tickets.length > 1 ? "s" : ""} → <b>+{ticketTotal} ⚡</b> de crédit
+                    </button>
+                )}
 
                 {/* Roue animée (dopamine) — tourne à chaque manche résolue, se pose sur le numéro serveur.
                     À l'arrêt (onDone), on dévoile mon gain/perte si j'ai misé sur cette manche. */}
@@ -552,6 +567,7 @@ const S: Record<string, React.CSSProperties> = {
     tableChipWin: { animation: "rlBlink 0.5s steps(1,end) infinite", zIndex: 2 },
     tableChipMore: { fontSize: 8, fontWeight: 800, color: "#fff", lineHeight: 1, alignSelf: "center" },
     legendDot: { width: 9, height: 9, borderRadius: "50%", border: "1px solid rgba(0,0,0,0.4)", flexShrink: 0 },
+    convertTickets: { width: "100%", marginBottom: 8, padding: "9px 10px", background: "rgba(255,213,74,0.12)", border: "1px dashed #ffd54a", borderRadius: 9, color: "#ffd54a", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" },
     // Pluie de pièces (récompense, étape finale).
     coinRain: { position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: 50 },
     coin: { position: "absolute", top: -30, fontSize: 22, animation: "rlCoin 1.05s linear forwards" },
