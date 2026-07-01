@@ -276,19 +276,29 @@ export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: s
                                     </span>
                                 </div>
                             })()}
-                            <Hint>Puissance & force plafonnées par niveau (65 tôt → 150 aux ultimes), modulées par ton BST et ton type. ≥1 attaque sur 4 doit être un statut · max {MAX_STAB} STAB · max {MAX_COVERAGE} couverture · pas que des attaques rares.</Hint>
+                            <Hint>Attaques = Normal + tes types (STAB) uniquement. Puissance plafonnée par niveau (45 tôt → 150 aux ultimes). ≥1 attaque sur 4 doit être un statut · max {MAX_STAB} STAB · max {MAX_COVERAGE} couverture (via changement de type) · pas que des attaques rares.</Hint>
                         </>
                     ) : (
                         <>
-                            <div style={S.pickerHead}>
-                                <button style={S.ghost} onClick={() => setPickingSlot(null)}>‹ Retour</button>
-                                <b>Niv {LEARN_LEVELS[pickingSlot]} — attaques accessibles</b>
-                            </div>
-                            <Lbl>⚔️ Offensives ({slotOpts[pickingSlot].offensive.length})</Lbl>
-                            {slotOpts[pickingSlot].offensive.map((id) => { const c = moveCard(id, lts)!; return <FullCard key={id} c={c} sel={learnset[pickingSlot!].moveId === id} onPick={() => { setLearn(pickingSlot!, id); setPickingSlot(null) }} /> })}
-                            <Lbl>📊 Statuts ({slotOpts[pickingSlot].status.length}) — proposés du plus faible au plus fort</Lbl>
-                            {slotOpts[pickingSlot].status.length === 0 && <Hint>Aucun statut à ce niveau (ils se débloquent progressivement).</Hint>}
-                            {slotOpts[pickingSlot].status.map((id) => { const c = moveCard(id, lts)!; return <FullCard key={id} c={c} sel={learnset[pickingSlot!].moveId === id} onPick={() => { setLearn(pickingSlot!, id); setPickingSlot(null) }} /> })}
+                            {(() => {
+                                // Attaques déjà choisies aux AUTRES paliers → retirées des options (pas de doublon).
+                                const otherIds = new Set(learnset.filter((_, j) => j !== pickingSlot).map((l) => l.moveId))
+                                const off = slotOpts[pickingSlot].offensive.filter((id) => !otherIds.has(id))
+                                const sta = slotOpts[pickingSlot].status.filter((id) => !otherIds.has(id))
+                                return (
+                                    <>
+                                        <div style={S.pickerHead}>
+                                            <button style={S.ghost} onClick={() => setPickingSlot(null)}>‹ Retour</button>
+                                            <b>Niv {LEARN_LEVELS[pickingSlot]} — attaques accessibles</b>
+                                        </div>
+                                        <Lbl>⚔️ Offensives ({off.length})</Lbl>
+                                        {off.map((id) => { const c = moveCard(id, lts)!; return <FullCard key={id} c={c} sel={learnset[pickingSlot!].moveId === id} onPick={() => { setLearn(pickingSlot!, id); setPickingSlot(null) }} /> })}
+                                        <Lbl>📊 Statuts ({sta.length}) — proposés du plus faible au plus fort</Lbl>
+                                        {sta.length === 0 && <Hint>Aucun statut dispo à ce niveau (ils se débloquent progressivement).</Hint>}
+                                        {sta.map((id) => { const c = moveCard(id, lts)!; return <FullCard key={id} c={c} sel={learnset[pickingSlot!].moveId === id} onPick={() => { setLearn(pickingSlot!, id); setPickingSlot(null) }} /> })}
+                                    </>
+                                )
+                            })()}
                         </>
                     ))}
 

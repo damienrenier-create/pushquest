@@ -167,14 +167,11 @@ describe("création — correctifs d'équilibrage (audit)", () => {
         }
     })
     it("pool de puissance : refuse un learnset qui bourre des attaques fortes partout", () => {
-        const s = validSpec(); s.bloomer = "late" // budget élevé → plafond de moyenne plus bas encore
-        // On force les 7 slots offensifs sur les attaques EAU/NORMAL les plus puissantes accessibles.
-        const strongPerSlot = LEARN_LEVELS.map((lvl) => {
-            const opts = slotOptions(["EAU"], lvl, 480).offensive.map((id) => getMove(id)!)
-            return opts.sort((a, b) => (b.power || 0) - (a.power || 0))[0]?.id
-        })
+        const s = validSpec(); s.bloomer = "late" // gros budget → plafond de moyenne le plus bas
         s.finalTypes = ["EAU"]; s.finalStats = { hp: 90, atk: 60, def: 90, spe: 90, spc: 120 }
-        s.learnset = LEARN_LEVELS.map((lvl, i) => ({ level: lvl, moveId: strongPerSlot[i] ?? "charge" }))
+        // On remplit les 10 slots avec des attaques P≥80 distinctes (moyenne bien au-dessus du plafond ~66).
+        const strong = Object.values(MOVES).filter((m) => m.power >= 80 && isLearnableMove(m.id)).slice(0, LEARN_LEVELS.length).map((m) => m.id)
+        s.learnset = LEARN_LEVELS.map((lvl, i) => ({ level: lvl, moveId: strong[i] ?? "charge" }))
         expect(validateSpec(s).some((m) => m.includes("Pool de puissance"))).toBe(true)
     })
 })

@@ -90,12 +90,12 @@ export const STALL_BULK_THRESHOLD = 190
 /** Puissance MAX de BASE d'une attaque OFFENSIVE à ce niveau. Seuils CALIBRÉS sur la progression réelle
  *  du dex (hors kit inné) : 65 tôt → 150 aux ultimes. cf. dex-analysis. Modulé ensuite par BST+type. */
 export function maxPowerForLevel(level: number): number {
-    if (level <= 9) return 65
-    if (level <= 18) return 75
-    if (level <= 27) return 90
-    if (level <= 36) return 110
-    if (level <= 45) return 120
-    return 150
+    if (level <= 9) return 45   // niv 5 : attaques BASIQUES (Charge, Griffe…), jamais du P65
+    if (level <= 18) return 60
+    if (level <= 27) return 75
+    if (level <= 36) return 90  // les grosses (P100+) restent réservées à la fin
+    if (level <= 45) return 115
+    return 150                  // ultimes (Ultralaser…) : niv 48-54 seulement
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v))
@@ -119,9 +119,14 @@ export function powerPoolMod(finalBst: number, types: PokeType[]): number {
     const typeMod = clamp((0.25 - strongest) * 0.5, -0.12, 0)                           // type couvrant plus de 25% du dex → nerf ; jamais de BONUS de type
     return clamp(bstMod + typeMod, -0.15, 0.15)
 }
-/** Cap de puissance EFFECTIF pour un slot (base du niveau × modificateur BST+type). */
+/** Puissance d'une attaque BASIQUE toujours accessible (Charge…) : plancher du cap pour ne jamais vider un slot. */
+export const BASIC_MOVE_POWER = 40
+/** Cap de puissance EFFECTIF pour un slot : le plafond du NIVEAU est un plafond dur (jamais dépassé, même à BST
+ *  faible → plus de P70 au niveau 5). La modulation ne fait que le BAISSER (gros BST / type couvrant → nerf),
+ *  sans jamais descendre sous une attaque basique (sinon un slot bas niveau n'aurait aucune option). */
 export function effectiveMaxPower(level: number, finalBst: number, types: PokeType[]): number {
-    return Math.round(maxPowerForLevel(level) * (1 + powerPoolMod(finalBst, types)))
+    const base = maxPowerForLevel(level)
+    return Math.max(Math.min(base, BASIC_MOVE_POWER), Math.min(base, Math.round(base * (1 + powerPoolMod(finalBst, types)))))
 }
 /** Puissance MOYENNE/attaque de la plus forte lignée 3-stades du dex (S-tier, jamais au-dessus). cf. dex-pool.mts. */
 export const AVG_OFF_POWER_BASE = 77
@@ -200,14 +205,14 @@ export function statusTierCapForLevel(level: number): number {
     return 4
 }
 
-// ── COHÉRENCE DE TYPE (dex-like + anti-patch) : STAB + Normal toujours ; couverture = tout SAUF les
-//    types dont on est FAIBLE (on ne « patche » pas sa faiblesse), et bornée à MAX_COVERAGE moves. ──
+// ── COHÉRENCE DE TYPE (dex-like Gen 1) : par MONTÉE DE NIVEAU, un Daemon n'apprend que du NORMAL (universel)
+//    + ses propres STAB (types de la lignée). Pas de couverture off-type aléatoire (fini « Pistolet à O sur un
+//    Normal/Plante »). La SEULE couverture possible vient d'un changement de type : les attaques de l'ancien type
+//    restent au learnset et comptent comme couverture (bornée à MAX_COVERAGE). La couverture THÉMATIQUE élargie
+//    (par nom/anatomie) viendra via un filtre sémantique validé par Sartay. ──
 export function weaknessTypes(types: PokeType[]): PokeType[] { return POKE_TYPES.filter((t) => typeEffectiveness(t, types) >= 2) }
 export function allowedOffensiveTypes(types: PokeType[]): Set<PokeType> {
-    const weak = new Set(weaknessTypes(types))
-    const out = new Set<PokeType>(["NORMAL", ...types])
-    for (const t of POKE_TYPES) if (!weak.has(t)) out.add(t)
-    return out
+    return new Set<PokeType>(["NORMAL", ...types]) // Normal + STAB de la lignée uniquement
 }
 export function isStabMove(id: string, types: PokeType[]): boolean { const m = getMove(id); return !!m && isDamagingMove(m) && types.includes(m.type) }
 export function isCoverageMove(id: string, types: PokeType[]): boolean { const m = getMove(id); return !!m && isDamagingMove(m) && m.type !== "NORMAL" && !types.includes(m.type) }
