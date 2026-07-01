@@ -12,9 +12,10 @@ import { POKE_TYPES, type PokeType, type StatKey } from "@/lib/gamebook/yellow/b
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { TYPE_COLORS } from "../dex/dexShared"
 import {
-    type CustomSpec, type Bloomer, type MoveCardInfo, type CurveShape, type RoleKey,
+    type CustomSpec, type Bloomer, type MoveCardInfo, type CurveShape, type RoleKey, type Attribute,
     BLOOMERS, bloomerBudget, validateSpec, previewLine, ROLES, CURVE_LABEL, CURVE_HINT,
-    slotChoices, suggestLearnset, moveCard, isDamagingMove, moveRarity,
+    slotChoices, suggestLearnset, moveCard, isDamagingMove, moveRarity, attributeMoveIds,
+    ATTRIBUTE_LABEL, MAX_ATTRIBUTES,
     lineTypes, LEARN_LEVELS, STAT_KEYS, STAT_LABEL, MIN_FINAL_STAT, MAX_STAB, MAX_COVERAGE,
     STAT_HARD_CAP, STAT_DEX_MAX, specStatCost, fitStatsToBudget,
 } from "@/lib/gamebook/yellow/create/customSpecies"
@@ -30,6 +31,7 @@ function defaultSpec(): CustomSpec {
         name: "", da: "", daFinal: "", character: "", stages: 3, bloomer: "mid", curve: "linear", role: "equilibre",
         finalTypes: ["NORMAL"], typeChange: undefined,
         finalStats: { ...ROLES.equilibre.profile },
+        attributes: [],
         learnset: [],
     }
 }
@@ -46,16 +48,18 @@ export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: s
     const usedBst = STAT_KEYS.reduce((a, k) => a + spec.finalStats[k], 0) // somme brute (sert à moduler la puissance)
     const cost = specStatCost(spec.finalStats)                            // coût réel (points au-delà du record = ×2) → c'est LUI plafonné
     const lts = useMemo(() => lineTypes(spec), [spec])
-    // Suggestion par défaut VALIDE (slots forcés + cascade). Recalculée quand types/BST changent.
-    const suggested = useMemo(() => suggestLearnset(lts, usedBst, spec.finalTypes), [lts, usedBst, spec.finalTypes])
-    // Learnset EFFECTIF : choix du joueur s'il reste VALIDE pour son slot (slots forcés + cap cascade), sinon la
-    // suggestion. Les options d'un slot dépendent des AUTRES (pool cumulatif) → on valide dans ce contexte.
+    const attrMoves = useMemo(() => attributeMoveIds(spec.attributes), [spec.attributes])
+    // Suggestion par défaut VALIDE (slots forcés + cascade + attributs). Recalculée quand types/BST/attributs changent.
+    const suggested = useMemo(() => suggestLearnset(lts, usedBst, spec.finalTypes, attrMoves), [lts, usedBst, spec.finalTypes, attrMoves])
+    // Learnset EFFECTIF : choix du joueur s'il reste VALIDE (non bloqué) pour son slot, sinon la suggestion.
+    // Les options d'un slot dépendent des AUTRES (pool cumulatif) → on valide dans ce contexte.
     const learnset = useMemo(() => {
         const base = LEARN_LEVELS.map((lvl, i) => ({ level: lvl, moveId: spec.learnset[i]?.moveId || suggested[i].moveId }))
         const specBase = { ...spec, learnset: base }
         return base.map((s, i) => {
             const ch = slotChoices(specBase, i, usedBst)
-            return { level: s.level, moveId: [...ch.offensive, ...ch.status].includes(s.moveId) ? s.moveId : suggested[i].moveId }
+            const opt = [...ch.offensive, ...ch.status].find((o) => o.id === s.moveId)
+            return { level: s.level, moveId: opt && !opt.blocked ? s.moveId : suggested[i].moveId }
         })
     }, [spec, suggested, usedBst])
     // Validation + aperçu sur la spec AVEC le learnset effectif (sinon le bouton Créer reste bloqué
@@ -127,6 +131,25 @@ export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: s
                             <textarea style={S.area} value={spec.daFinal ?? ""} maxLength={220} placeholder="ex. Un grand renard-tonnerre à la fourrure hérissée d'arcs électriques, crocs de foudre." onChange={(e) => patch({ daFinal: e.target.value })} />
                             <Lbl>Caractère / personnalité</Lbl>
                             <input style={S.input} value={spec.character} maxLength={60} placeholder="ex. rusé, joueur, imprévisible" onChange={(e) => patch({ character: e.target.value })} />
+                            <Lbl>Attributs physiques <span style={S.subtle}>(coche max {MAX_ATTRIBUTES} — ils débloquent des attaques hors-type)</span></Lbl>
+                            <div style={S.attrGrid}>
+                                {(Object.keys(ATTRIBUTE_LABEL) as Attribute[]).map((a) => {
+                                    const on = (spec.attributes ?? []).includes(a)
+                                    const full = (spec.attributes ?? []).length >= MAX_ATTRIBUTES
+                                    return (
+                                        <button key={a} disabled={!on && full}
+                                            style={{ ...S.attrChip, ...(on ? S.attrOn : {}), ...(!on && full ? S.attrDisabled : {}) }}
+                                            onClick={() => setSpec((s) => {
+                                                const cur = s.attributes ?? []
+                                                const next = cur.includes(a) ? cur.filter((x) => x !== a) : (cur.length < MAX_ATTRIBUTES ? [...cur, a] : cur)
+                                                return { ...s, attributes: next }
+                                            })}>
+                                            {on ? "☑ " : "☐ "}{ATTRIBUTE_LABEL[a]}
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                            <Hint>Chaque attribut coché justifie une petite liste d&apos;attaques d&apos;un autre type (ailes → Vol, crocs → Feu/Insecte, dard → Poison…). Tu restes limité à {MAX_COVERAGE} attaques de couverture au total.</Hint>
                         </>
                     )}
 
@@ -281,11 +304,11 @@ export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: s
                                             <button style={S.ghost} onClick={() => setPickingSlot(null)}>‹ Retour</button>
                                             <b>{label}</b>
                                         </div>
-                                        {ch.offensive.length > 0 && <Lbl>⚔️ Offensives ({ch.offensive.length})</Lbl>}
-                                        {ch.offensive.map((id) => { const c = moveCard(id, lts)!; return <FullCard key={id} c={c} sel={learnset[pickingSlot!].moveId === id} onPick={() => { setLearn(pickingSlot!, id); setPickingSlot(null) }} /> })}
-                                        {ch.status.length > 0 && <Lbl>📊 Statuts ({ch.status.length}) — du plus faible au plus fort</Lbl>}
+                                        {ch.offensive.length > 0 && <Lbl>⚔️ Offensives ({ch.offensive.filter((o) => !o.blocked).length} dispo)</Lbl>}
+                                        {ch.offensive.map((o) => { const c = moveCard(o.id, lts)!; return <FullCard key={o.id} c={c} sel={learnset[pickingSlot!].moveId === o.id} blocked={o.blocked} onPick={() => { if (o.blocked) return; setLearn(pickingSlot!, o.id); setPickingSlot(null) }} /> })}
+                                        {ch.status.length > 0 && <Lbl>📊 Statuts ({ch.status.filter((o) => !o.blocked).length} dispo) — du plus faible au plus fort</Lbl>}
                                         {ch.offensive.length === 0 && ch.status.length === 0 && <Hint>Aucune attaque disponible pour ce palier (pool épuisé — baisse une autre attaque).</Hint>}
-                                        {ch.status.map((id) => { const c = moveCard(id, lts)!; return <FullCard key={id} c={c} sel={learnset[pickingSlot!].moveId === id} onPick={() => { setLearn(pickingSlot!, id); setPickingSlot(null) }} /> })}
+                                        {ch.status.map((o) => { const c = moveCard(o.id, lts)!; return <FullCard key={o.id} c={c} sel={learnset[pickingSlot!].moveId === o.id} blocked={o.blocked} onPick={() => { if (o.blocked) return; setLearn(pickingSlot!, o.id); setPickingSlot(null) }} /> })}
                                     </>
                                 )
                             })()}
@@ -341,13 +364,16 @@ function MiniCard({ c }: { c: MoveCardInfo }) {
     )
 }
 // Fiche ULTRA-complète (picker) : type, catégorie, puissance, précision, PP, rareté, STAB/couverture, force de statut, effet.
-function FullCard({ c, sel, onPick }: { c: MoveCardInfo; sel?: boolean; onPick: () => void }) {
+// `blocked` : "dup" (déjà prise ailleurs) / "cascade" (trop forte vu le pool restant) → carte GRISÉE non cliquable.
+function FullCard({ c, sel, onPick, blocked }: { c: MoveCardInfo; sel?: boolean; onPick: () => void; blocked?: "dup" | "cascade" | null }) {
     const catCol = c.cat === "STATUT" ? "#8868c0" : c.cat === "PHYS" ? "#c0532a" : "#3a7ae0"
     return (
-        <button style={{ ...S.moveCard, ...(sel ? S.moveCardSel : {}) }} onClick={onPick}>
+        <button disabled={!!blocked} style={{ ...S.moveCard, ...(sel ? S.moveCardSel : {}), ...(blocked ? S.moveCardBlocked : {}) }} onClick={onPick}>
             <div style={S.moveCardHead}>
                 <b style={{ fontSize: 13 }}>{c.name}</b>
-                <span style={{ ...S.rarChip, background: RAR_COL[c.rarity] }}>{c.rarity}</span>
+                {blocked
+                    ? <span style={S.blockedTag}>{blocked === "dup" ? "déjà choisie" : "pool épuisé"}</span>
+                    : <span style={{ ...S.rarChip, background: RAR_COL[c.rarity] }}>{c.rarity}</span>}
             </div>
             <div style={S.moveCardRow}>
                 <span style={{ ...S.chip, background: TYPE_COLORS[c.type], color: "#1a1400" }}>{TYPE_FR[c.type]}</span>
@@ -407,6 +433,12 @@ const S: Record<string, React.CSSProperties> = {
     // Fiche complète d'attaque (picker).
     moveCard: { width: "100%", textAlign: "left", background: "#0e1c20", border: "1px solid #2a5a55", borderRadius: 8, padding: "8px 10px", marginBottom: 6, color: "#fff", cursor: "pointer", fontFamily: "inherit" },
     moveCardSel: { border: `2px solid ${ACCENT}`, background: "rgba(58,208,192,.12)" },
+    moveCardBlocked: { opacity: 0.4, cursor: "not-allowed", filter: "grayscale(0.7)" },
+    blockedTag: { fontSize: 8.5, fontWeight: 800, color: "#fff", background: "#6a6a6a", borderRadius: 4, padding: "2px 6px", textTransform: "uppercase" },
+    attrGrid: { display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 4 },
+    attrChip: { fontSize: 11, fontWeight: 700, padding: "5px 9px", borderRadius: 8, background: "#0e1c20", border: "1px solid #2a5a55", color: "#cfe", cursor: "pointer", fontFamily: "inherit" },
+    attrOn: { background: "rgba(58,208,192,.16)", border: `2px solid ${ACCENT}`, color: "#fff" },
+    attrDisabled: { opacity: 0.4, cursor: "not-allowed" },
     moveCardHead: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 },
     moveCardRow: { display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" },
     rarChip: { fontSize: 8.5, fontWeight: 800, color: "#0a0a0a", borderRadius: 4, padding: "2px 6px", textTransform: "uppercase" },

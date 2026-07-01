@@ -5,6 +5,7 @@ import {
     statusTier, statusTierCapForLevel, allowedOffensiveTypes, weaknessTypes, moveCard, suggestLearnset,
     MAX_STAB, MAX_COVERAGE, MIN_STATUS_RATIO, ROLES, CURVE_RATIOS, powerPoolMod, effectiveMaxPower,
     STAT_HARD_CAP, STAT_DEX_MAX, specStatCost, fitStatsToBudget, STALL_BULK_THRESHOLD, effectivePower, maxAvgOffPower, POWER_AVG_TOLERANCE, hasNoSideEffect,
+    attributeMoveIds, ATTRIBUTE_MOVES, MAX_ATTRIBUTES,
 } from "./customSpecies"
 import { getMove, MOVES } from "../data/moves"
 import { isDamagingMove } from "./customSpecies"
@@ -204,6 +205,29 @@ describe("création — forme de courbe & pool modulé", () => {
             expect(p).toBeGreaterThan(maxPowerForLevel(lvl) * 0.8)
             expect(p).toBeLessThan(maxPowerForLevel(lvl) * 1.2)
         }
+    })
+})
+
+describe("création — attributs anatomiques (couverture hors-type)", () => {
+    it("un attribut débloque ses attaques hors-type", () => {
+        expect(moveOptionsFor(["FEU"], 54, 435).includes("vol")).toBe(false)
+        expect(moveOptionsFor(["FEU"], 54, 435, attributeMoveIds(["ailes"])).includes("vol")).toBe(true)
+    })
+    it("l'attribut prime sur l'anti-patch (débloque même une faiblesse)", () => {
+        expect(moveOptionsFor(["FEU"], 54, 435, attributeMoveIds(["sabots"])).includes("seisme")).toBe(true) // SOL = faiblesse du Feu
+    })
+    it("le cap de puissance du niveau s'applique quand même aux attaques d'attribut", () => {
+        expect(moveOptionsFor(["FEU"], 5, 435, attributeMoveIds(["ailes"])).includes("pique_fatal")).toBe(false) // P90 > cap niv 5
+    })
+    it("chaque type élémentaire est couvert par ≥1 attribut", () => {
+        const covered = new Set<string>()
+        for (const ids of Object.values(ATTRIBUTE_MOVES)) for (const id of ids) { const m = getMove(id); if (m) covered.add(m.type) }
+        for (const t of ["EAU", "ELEC", "GLACE", "VOL", "FEU", "PLANTE", "PSY", "SOL", "COMBAT", "ROCHE", "INSECTE", "POISON", "SPECTRE", "DRAGON"]) expect(covered.has(t)).toBe(true)
+    })
+    it("validateSpec refuse plus de MAX_ATTRIBUTES attributs", () => {
+        const s = validSpec(); s.attributes = ["ailes", "crocs", "dard"]
+        expect(s.attributes.length).toBeGreaterThan(MAX_ATTRIBUTES)
+        expect(validateSpec(s).some((m) => m.includes("Attributs invalides"))).toBe(true)
     })
 })
 

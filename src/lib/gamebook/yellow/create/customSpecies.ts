@@ -228,6 +228,50 @@ export function weaknessTypes(types: PokeType[]): PokeType[] { return POKE_TYPES
 export function allowedOffensiveTypes(types: PokeType[]): Set<PokeType> {
     return new Set<PokeType>(["NORMAL", ...types]) // Normal + STAB de la lignée uniquement
 }
+
+// ── ATTRIBUTS ANATOMIQUES (DA) : le joueur en coche MAX 2 dans le concept → ils JUSTIFIENT des attaques
+//    hors-type précises (couverture thématique). L'attribut PRIME (débloque même un type de faiblesse) ; le
+//    cap MAX_COVERAGE=2 s'applique toujours. Table validée par Sartay (02/07/2026). ──
+export type Attribute =
+    | "ailes" | "bec" | "crocs" | "griffes" | "dard" | "epines" | "antennes" | "sabots" | "cornes"
+    | "bois" | "armes" | "carapace" | "massif" | "muscles" | "jambes" | "queue" | "voix"
+    | "ecailles" | "joues" | "pelage"
+export const MAX_ATTRIBUTES = 2
+export const ATTRIBUTE_LABEL: Record<Attribute, string> = {
+    ailes: "Ailes", bec: "Bec", crocs: "Crocs", griffes: "Griffes", dard: "Dard", epines: "Épines dorsales",
+    antennes: "Antennes", sabots: "Sabots", cornes: "Cornes", bois: "Bois (ramure)", armes: "Armes / Lames",
+    carapace: "Carapace", massif: "Corps massif", muscles: "Muscles", jambes: "Longues jambes", queue: "Queue",
+    voix: "Voix envoûtante", ecailles: "Écailles", joues: "Joues électriques", pelage: "Pelage épais",
+}
+/** Attaques HORS-TYPE que chaque attribut débloque (justifie la couverture). Bypass type + anti-patch (l'attribut prime). */
+export const ATTRIBUTE_MOVES: Record<Attribute, string[]> = {
+    ailes: ["tornade", "pique_fatal", "vol"],
+    bec: ["picpic", "fonce_bec"],
+    crocs: ["crocs_de_feu", "morsure"],
+    griffes: ["griffe_draconique", "griffe_spectrale"],
+    dard: ["dard_venin", "dard_mortel", "dard_fatal"],
+    epines: ["jet_pierres", "dard_nuee"],
+    antennes: ["choc_mental", "vague_mentale"],
+    sabots: ["secousse", "seisme", "tir_boue"],
+    cornes: ["coup_de_boutoir", "eboulis"],
+    bois: ["fouet_lianes", "tranche_feuille"],
+    armes: ["lame_roche", "crochet_maitre"],
+    carapace: ["jet_pierres", "lame_roche", "carapace_diamant"],
+    massif: ["seisme", "roc_titanesque"],
+    muscles: ["poing_karate", "crochet_maitre", "coup_de_boutoir"],
+    jambes: ["double_pied", "balayage"],
+    queue: ["balayage", "secousse"],
+    voix: ["hypnose", "onde_folie"],
+    ecailles: ["pistolet_a_o", "lame_eau", "deferlante"], // EAU
+    joues: ["etincelle", "fulgurance", "cage_eclair"],     // ÉLEC
+    pelage: ["coup_d_givre", "souffle_polaire"],           // GLACE
+}
+/** Ensemble des ids d'attaques débloqués par les attributs choisis (⊆ 2). */
+export function attributeMoveIds(attributes: Attribute[] | undefined): Set<string> {
+    const s = new Set<string>()
+    for (const a of attributes ?? []) for (const id of ATTRIBUTE_MOVES[a] ?? []) s.add(id)
+    return s
+}
 export function isStabMove(id: string, types: PokeType[]): boolean { const m = getMove(id); return !!m && isDamagingMove(m) && types.includes(m.type) }
 export function isCoverageMove(id: string, types: PokeType[]): boolean { const m = getMove(id); return !!m && isDamagingMove(m) && m.type !== "NORMAL" && !types.includes(m.type) }
 
@@ -268,17 +312,18 @@ const MOVE_DENYLIST = new Set(["struggle", "lutte"])
  * apprises par ≥1 espèce (pas de CT-only), cohérentes en type (STAB + Normal + couverture hors faiblesse),
  * offensives sous le cap de puissance du niveau, statuts sous le cap de FORCE du niveau (progression).
  */
-export function moveOptionsFor(lineTypes: PokeType[], level: number, finalBst: number = BASE_FINAL_BST): string[] {
+export function moveOptionsFor(lineTypes: PokeType[], level: number, finalBst: number = BASE_FINAL_BST, extraAllowed: Set<string> = new Set()): string[] {
     const maxP = effectiveMaxPower(level, finalBst, lineTypes) // cap MODULÉ (BST faible → +, type fort → −)
     const statusCap = statusTierCapForLevel(level)
     const allowed = allowedOffensiveTypes(lineTypes)
     const out: string[] = []
     for (const m of Object.values(MOVES)) {
         if (MOVE_DENYLIST.has(m.id)) continue
-        if (!isLearnableMove(m.id)) continue          // pas de CT-only / inexistante
+        const byAttr = extraAllowed.has(m.id)              // débloqué par un attribut → prime (bypass type + CT-only)
+        if (!byAttr && !isLearnableMove(m.id)) continue    // sinon : pas de CT-only / inexistante
         if (isDamagingMove(m)) {
-            if (!allowed.has(m.type)) continue        // cohérence dex-like (anti-patch)
-            if (effectivePower(m) <= maxP) out.push(m.id)
+            if (!byAttr && !allowed.has(m.type)) continue  // cohérence dex-like (Normal + STAB) sauf attribut
+            if (effectivePower(m) <= maxP) out.push(m.id)  // le cap de PUISSANCE du niveau s'applique TOUJOURS
         } else {
             if (statusTier(m) <= statusCap) out.push(m.id) // statut progressif (tout type de statut permis)
         }
@@ -319,22 +364,29 @@ export function slotOffensiveCap(learnset: Array<{ moveId: string }>, i: number,
     return Math.max(BASIC_MOVE_POWER, Math.min(levelCap, prefixCap))
 }
 
-/** Attaques VALIDES pour un slot donné : applique les slots forcés + le cap cascade + exclut les doublons des
- *  autres slots. C'est CE que le picker doit montrer (le reste est invalide pour ce slot). */
-export function slotChoices(spec: CustomSpec, i: number, finalBst: number = STAT_KEYS.reduce((a, k) => a + spec.finalStats[k], 0)): { offensive: string[]; status: string[]; cap: number } {
+/** Une option de slot : l'attaque + POURQUOI elle est bloquée (grisée) le cas échéant.
+ *  `null` = choisissable · "dup" = déjà prise à un autre palier · "cascade" = trop forte vu le pool restant. */
+export type BlockReason = null | "dup" | "cascade"
+export interface SlotOpt { id: string; blocked: BlockReason }
+/** Attaques d'un slot pour le PICKER : les jamais-valides (mauvais type/niveau/catégorie forcée) sont EXCLUES ;
+ *  celles bloquées par des choix précédents (doublon / pool cascade épuisé) sont RENVOYÉES grisées (blocked ≠ null). */
+export function slotChoices(spec: CustomSpec, i: number, finalBst: number = STAT_KEYS.reduce((a, k) => a + spec.finalStats[k], 0)): { offensive: SlotOpt[]; status: SlotOpt[]; cap: number } {
     const types = lineTypes(spec)
     const level = LEARN_LEVELS[i]
     const otherIds = new Set(spec.learnset.filter((_, j) => j !== i).map((l) => l.moveId))
-    const all = moveOptionsFor(types, level, finalBst).filter((id) => !otherIds.has(id))
-    const off = all.filter((id) => isDamagingMove(getMove(id)!))
-    const sta = all.filter((id) => !isDamagingMove(getMove(id)!)).sort((a, b) => statusTier(getMove(a)!) - statusTier(getMove(b)!))
-    if (i === FORCED_BASIC_SLOT) { // slot 1 : offensive BASIQUE (Normal/STAB ≤45 sans effet), pas de statut
+    const all = moveOptionsFor(types, level, finalBst, attributeMoveIds(spec.attributes)) // type/niveau valides (+ attributs)
+    const offIds = all.filter((id) => isDamagingMove(getMove(id)!)).sort((a, b) => effectivePower(getMove(b)!) - effectivePower(getMove(a)!))
+    const staIds = all.filter((id) => !isDamagingMove(getMove(id)!)).sort((a, b) => statusTier(getMove(a)!) - statusTier(getMove(b)!))
+    const tagDup = (id: string): BlockReason => otherIds.has(id) ? "dup" : null
+    if (i === FORCED_BASIC_SLOT) { // slot 1 : offensive BASIQUE (Normal/STAB ≤ cap niv, sans effet), pas de statut
         const cap = maxPowerForLevel(level)
-        return { offensive: off.filter((id) => { const m = getMove(id)!; return hasNoSideEffect(m) && effectivePower(m) <= cap }).sort((a, b) => effectivePower(getMove(b)!) - effectivePower(getMove(a)!)), status: [], cap }
+        const basics = offIds.filter((id) => { const m = getMove(id)!; return hasNoSideEffect(m) && effectivePower(m) <= cap })
+        return { offensive: basics.map((id) => ({ id, blocked: tagDup(id) })), status: [], cap }
     }
-    if (i === FORCED_STATUS_SLOT) return { offensive: [], status: sta, cap: 0 } // slot 2 : statut faible seulement
+    if (i === FORCED_STATUS_SLOT) return { offensive: [], status: staIds.map((id) => ({ id, blocked: tagDup(id) })), cap: 0 } // slot 2 : statut faible
     const cap = slotOffensiveCap(spec.learnset, i, finalBst, types)
-    return { offensive: off.filter((id) => effectivePower(getMove(id)!) <= cap).sort((a, b) => effectivePower(getMove(b)!) - effectivePower(getMove(a)!)), status: sta, cap }
+    const offensive = offIds.map((id) => ({ id, blocked: otherIds.has(id) ? "dup" as const : (effectivePower(getMove(id)!) > cap ? "cascade" as const : null) }))
+    return { offensive, status: staIds.map((id) => ({ id, blocked: tagDup(id) })), cap }
 }
 
 /** Slots de STATUT par défaut : slot 2 (forcé) + 2 autres (milieu/fin) pour tenir le quota 25 %. */
@@ -342,13 +394,13 @@ const DEFAULT_STATUS_SLOTS = [FORCED_STATUS_SLOT, 5, 8]
 
 /** Learnset PAR DÉFAUT valide : slot 1 basique · slot 2 statut faible · 2 autres statuts · le reste offensif en
  *  CASCADE (pool cumulatif partagé). Sans doublon. Point de départ du wizard, toujours conforme à validateSpec. */
-export function suggestLearnset(lineTypes: PokeType[], finalBst: number = BASE_FINAL_BST, finalTypes: PokeType[] = lineTypes): Array<{ level: number; moveId: string }> {
+export function suggestLearnset(lineTypes: PokeType[], finalBst: number = BASE_FINAL_BST, finalTypes: PokeType[] = lineTypes, attrMoves: Set<string> = new Set()): Array<{ level: number; moveId: string }> {
     const types = lineTypes
     const pow = (id: string) => effectivePower(getMove(id)!)
     const isCov = (id: string) => { const m = getMove(id)!; return m.type !== "NORMAL" && !finalTypes.includes(m.type) }
     const used = new Set<string>()
     const chosen: string[] = LEARN_LEVELS.map(() => "")
-    const opts = (i: number) => moveOptionsFor(types, LEARN_LEVELS[i], finalBst).filter((id) => !used.has(id))
+    const opts = (i: number) => moveOptionsFor(types, LEARN_LEVELS[i], finalBst, attrMoves).filter((id) => !used.has(id))
     const take = (id: string) => { if (id) used.add(id); return id }
 
     // Slot 1 (forcé) : attaque BASIQUE (Normal/STAB ≤ cap niv, sans effet).
@@ -389,7 +441,7 @@ export function suggestLearnset(lineTypes: PokeType[], finalBst: number = BASE_F
         if (hi < 0) break
         const cur = pow(chosen[hi])
         used.delete(chosen[hi])
-        const weaker = moveOptionsFor(types, LEARN_LEVELS[hi], finalBst).find((id) => !used.has(id) && isDamagingMove(getMove(id)!) && pow(id) < cur)
+        const weaker = moveOptionsFor(types, LEARN_LEVELS[hi], finalBst, attrMoves).find((id) => !used.has(id) && isDamagingMove(getMove(id)!) && pow(id) < cur)
         if (!weaker) { used.add(chosen[hi]); break }
         chosen[hi] = take(weaker)
     }
@@ -409,6 +461,7 @@ export interface CustomSpec {
     finalTypes: PokeType[]                       // 1 ou 2 types du STADE FINAL
     typeChange?: { atStage: 2 | 3; types: PokeType[] } // 1 changement MAX : les stades < atStage portent ces types
     finalStats: Record<StatKey, number>          // distribution du STADE FINAL (somme ≤ budget)
+    attributes?: Attribute[]                     // MAX 2 attributs anatomiques → débloquent des attaques hors-type
     learnset: Array<{ level: number; moveId: string }> // 1 pick par slot de LEARN_LEVELS
 }
 
@@ -435,6 +488,8 @@ export function validateSpec(spec: CustomSpec): string[] {
     if (!BLOOMERS[spec.bloomer]) e.push("Courbe d'éclosion invalide.")
     if (spec.stages === 3 && !CURVE_RATIOS[spec.curve]) e.push("Forme de courbe invalide.")
     if (!ROLES[spec.role]) e.push("Rôle invalide.")
+    if (spec.attributes && (spec.attributes.length > MAX_ATTRIBUTES || spec.attributes.some((a) => !ATTRIBUTE_MOVES[a])))
+        e.push(`Attributs invalides (max ${MAX_ATTRIBUTES}, valeurs connues).`)
 
     const badType = (ts: PokeType[]) => ts.length < 1 || ts.length > 2 || ts.some((t) => !POKE_TYPES.includes(t)) || (ts.length === 2 && ts[0] === ts[1])
     if (badType(spec.finalTypes)) e.push("Type final invalide (1 ou 2 types distincts).")
@@ -467,9 +522,10 @@ export function validateSpec(spec: CustomSpec): string[] {
             e.push(`Incohérence stat/type : ta plus grosse stat offensive est ${domCat === "PHYSICAL" ? "l'Attaque (types physiques)" : "le Spécial (types spéciaux)"}, mais aucun de tes types (${spec.finalTypes.join("/")}) ne frappe de ce côté → ton STAB serait inexploitable. Choisis un type ${domCat === "PHYSICAL" ? "physique (Normal/Combat/Sol/Roche/Vol…)" : "spécial (Feu/Eau/Élec/Psy/Plante/Glace…)"} ou rééquilibre tes stats.`)
     }
 
-    // Learnset : un pick par slot, attaque ACCESSIBLE pour son niveau, pas de doublon.
+    // Learnset : un pick par slot, attaque ACCESSIBLE pour son niveau (+ attributs), pas de doublon.
     const lts = lineTypes(spec)
     const total = BST(spec.finalStats)
+    const attr = attributeMoveIds(spec.attributes)
     if (spec.learnset.length !== LEARN_LEVELS.length) e.push(`Choisis une attaque pour chacun des ${LEARN_LEVELS.length} paliers.`)
     const seen = new Set<string>()
     spec.learnset.forEach((slot, i) => {
@@ -480,7 +536,7 @@ export function validateSpec(spec: CustomSpec): string[] {
         if (!isLearnableMove(slot.moveId)) { e.push(`« ${mv.name} » ne s'apprend par aucune espèce (CT/inexistante).`); return }
         if (seen.has(slot.moveId)) e.push(`« ${mv.name} » est en double (une attaque ne peut apparaître qu'une fois).`)
         seen.add(slot.moveId)
-        const accessible = moveOptionsFor(lts, lvl, total).includes(slot.moveId) // type + niveau
+        const accessible = moveOptionsFor(lts, lvl, total, attr).includes(slot.moveId) // type + niveau (+ attributs)
         // Slots forcés : 1 = basique (Normal/STAB, sans effet) · 2 = statut faible.
         if (i === FORCED_BASIC_SLOT) {
             if (!accessible || !isDamagingMove(mv) || !hasNoSideEffect(mv)) e.push(`Palier 1 (niv ${lvl}) : doit être une attaque BASIQUE — Normal ou ton type, P≤${maxPowerForLevel(lvl)}, sans effet secondaire.`)
