@@ -15,7 +15,8 @@ import {
     type CustomSpec, type Bloomer, type MoveCardInfo, type CurveShape, type RoleKey,
     BLOOMERS, bloomerBudget, validateSpec, previewLine, ROLES, CURVE_LABEL, CURVE_HINT,
     slotOptions, suggestLearnset, moveCard, isDamagingMove, moveRarity, powerPoolMod,
-    lineTypes, LEARN_LEVELS, STAT_KEYS, STAT_LABEL, MIN_FINAL_STAT, MAX_FINAL_STAT, MAX_STAB, MAX_COVERAGE,
+    lineTypes, LEARN_LEVELS, STAT_KEYS, STAT_LABEL, MIN_FINAL_STAT, MAX_STAB, MAX_COVERAGE,
+    STAT_HARD_CAP, STAT_DEX_MAX, specStatCost, fitStatsToBudget,
 } from "@/lib/gamebook/yellow/create/customSpecies"
 
 const TYPE_FR: Record<PokeType, string> = {
@@ -40,8 +41,10 @@ export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: s
     const [pickingSlot, setPickingSlot] = useState<number | null>(null) // slot dont le sélecteur en fiches est ouvert
 
     const patch = (p: Partial<CustomSpec>) => setSpec((s) => ({ ...s, ...p }))
+    const goStep = (n: number) => { setPickingSlot(null); setStep(n) } // réinitialise le picker à chaque navigation
     const budget = bloomerBudget(spec.bloomer)
-    const usedBst = STAT_KEYS.reduce((a, k) => a + spec.finalStats[k], 0)
+    const usedBst = STAT_KEYS.reduce((a, k) => a + spec.finalStats[k], 0) // somme brute (sert à moduler la puissance)
+    const cost = specStatCost(spec.finalStats)                            // coût réel (points au-delà du record = ×2) → c'est LUI plafonné
     const lts = useMemo(() => lineTypes(spec), [spec])
     // Options ACCESSIBLES par palier (offensives / statuts), recalculées quand types OU BST changent
     // (le BST module la puissance : faible → un peu plus fort · type dominant → nerfé).
@@ -110,7 +113,7 @@ export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: s
                 {/* Fil d'étapes */}
                 <div style={S.steps}>
                     {STEPS.map((label, i) => (
-                        <button key={label} onClick={() => setStep(i)} style={{ ...S.stepChip, ...(i === step ? S.stepOn : {}) }}>{i + 1}. {label}</button>
+                        <button key={label} onClick={() => goStep(i)} style={{ ...S.stepChip, ...(i === step ? S.stepOn : {}) }}>{i + 1}. {label}</button>
                     ))}
                 </div>
 
@@ -132,8 +135,9 @@ export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: s
                         <>
                             <Lbl>Vitesse d'éclosion (rapidité d'évolution ↔ puissance finale)</Lbl>
                             {(Object.keys(BLOOMERS) as Bloomer[]).map((b) => (
-                                <button key={b} style={{ ...S.optWide, ...(spec.bloomer === b ? S.optOn : {}) }} onClick={() => patch({ bloomer: b })}>
-                                    <b>{BLOOMERS[b].label}</b> — budget BST <b>{bloomerBudget(b)}</b>
+                                <button key={b} style={{ ...S.optWide, ...(spec.bloomer === b ? S.optOn : {}) }}
+                                    onClick={() => setSpec((s) => ({ ...s, bloomer: b, finalStats: fitStatsToBudget(s.finalStats, bloomerBudget(b)) }))}>
+                                    <b>{BLOOMERS[b].label}</b> — budget <b>{bloomerBudget(b)}</b>
                                     <div style={S.subtle}>{BLOOMERS[b].hint}</div>
                                 </button>
                             ))}
@@ -152,7 +156,7 @@ export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: s
 
                     {step === 2 && (
                         <>
-                            <Lbl>Type(s) du STADE FINAL (1 ou 2)</Lbl>
+                            <Lbl>Type(s) de la forme finale (stade 3) — choisis-en 1 ou 2</Lbl>
                             <div style={S.typeGrid}>
                                 {POKE_TYPES.map((t) => (
                                     <button key={t} onClick={() => toggleFinalType(t)} style={{ ...S.typeBtn, background: TYPE_COLORS[t], opacity: spec.finalTypes.includes(t) ? 1 : 0.32, outline: spec.finalTypes.includes(t) ? "2px solid #fff" : "none" }}>{TYPE_FR[t]}</button>
@@ -165,12 +169,14 @@ export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: s
                                         <button style={{ ...S.opt, ...(!spec.typeChange ? S.optOn : {}) }} onClick={() => patch({ typeChange: undefined })}>Aucun</button>
                                         {([2, 3] as const).filter((st) => st <= spec.stages).map((st) => (
                                             <button key={st} style={{ ...S.opt, ...(spec.typeChange?.atStage === st ? S.optOn : {}) }}
-                                                onClick={() => patch({ typeChange: { atStage: st, types: spec.typeChange?.types ?? ["NORMAL"] } })}>Au stade {st}</button>
+                                                onClick={() => patch({ typeChange: { atStage: st, types: spec.typeChange?.types ?? ["NORMAL"] } })}>
+                                                Dès le stade {st} {st === spec.stages ? "(final)" : "(intermédiaire)"}
+                                            </button>
                                         ))}
                                     </div>
                                     {spec.typeChange && (
                                         <>
-                                            <Hint>Avant le stade {spec.typeChange.atStage}, ton Daemon portait ces types :</Hint>
+                                            <Hint>Avant le stade {spec.typeChange.atStage}, ton Daemon portait ces types (⚠️ les attaques de ces anciens types comptent comme de la COUVERTURE sur la forme finale) :</Hint>
                                             <div style={S.typeGrid}>
                                                 {POKE_TYPES.map((t) => {
                                                     const on = spec.typeChange!.types.includes(t)
@@ -190,40 +196,42 @@ export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: s
 
                     {step === 3 && (
                         <>
-                            <Lbl>Rôle de combat — il fixe l'identité ET les bornes de chaque stat (chaque choix = un compromis)</Lbl>
+                            <Lbl>Rôle de combat — un GUIDE qui pré-remplit un profil de stats (tu restes libre de t'en écarter)</Lbl>
                             {(Object.keys(ROLES) as RoleKey[]).map((rk) => (
                                 <button key={rk} style={{ ...S.optWide, ...(spec.role === rk ? S.optOn : {}) }}
-                                    onClick={() => patch({ role: rk, finalStats: { ...ROLES[rk].profile } })}>
+                                    onClick={() => patch({ role: rk, finalStats: fitStatsToBudget(ROLES[rk].profile, budget) })}>
                                     <b>{ROLES[rk].label}</b>
                                     <div style={S.subtle}>{ROLES[rk].hint}</div>
                                 </button>
                             ))}
-                            <Hint>Choisir un rôle recharge un profil de stats type. Tu ajustes ensuite à l'étape suivante, dans les bornes du rôle (un attaquant ne peut pas devenir un mur, et inversement).</Hint>
+                            <Hint>Le rôle n'est qu'un point de départ : à l'étape suivante tu redistribues librement, jusqu'au plafond de chaque stat (record du dex +10 %). Passé le record, chaque point coûte double.</Hint>
                         </>
                     )}
 
                     {step === 4 && (() => {
                         const role = ROLES[spec.role]
+                        const over = cost > budget
                         return (
                         <>
-                            <Lbl>Répartis les stats du STADE FINAL — <b style={{ color: usedBst > budget ? "#e0683a" : "#7ce0a0" }}>{usedBst}/{budget}</b> BST · rôle <b>{role.label}</b></Lbl>
+                            <Lbl>Répartis les stats de la forme finale — budget <b style={{ color: over ? "#e0683a" : "#7ce0a0" }}>{cost}/{budget}</b> · rôle guide <b>{role.label}</b> · BST {usedBst}</Lbl>
                             {STAT_KEYS.map((k) => {
                                 const v = spec.finalStats[k]
                                 const cat = k === "atk" ? " (attaques PHYS)" : k === "spc" ? " (attaques SPÉ)" : ""
-                                const lo = Math.max(MIN_FINAL_STAT, role.min[k] ?? MIN_FINAL_STAT)
-                                const hi = Math.min(MAX_FINAL_STAT, role.max[k] ?? MAX_FINAL_STAT)
-                                const bounded = lo > MIN_FINAL_STAT || hi < MAX_FINAL_STAT
+                                const cap = STAT_HARD_CAP[k]
+                                const record = v > STAT_DEX_MAX[k]                              // au-dessus du record du dex → coût double
+                                const suggest = role.profile[k]                                 // repère conseillé (le rôle est un guide)
+                                const canInc = v < cap && specStatCost({ ...spec.finalStats, [k]: Math.min(cap, v + 5) }) <= budget
                                 return (
                                     <div key={k} style={S.statRow}>
-                                        <span style={S.statName}>{STAT_LABEL[k]}<span style={S.subtle}>{cat}{bounded ? ` [${lo}–${hi}]` : ""}</span></span>
-                                        <button style={S.step} disabled={v <= lo} onClick={() => patch({ finalStats: { ...spec.finalStats, [k]: Math.max(lo, v - 5) } })}>−</button>
-                                        <span style={S.statVal}>{v}</span>
-                                        <button style={S.step} disabled={v >= hi || usedBst + 5 > budget} onClick={() => patch({ finalStats: { ...spec.finalStats, [k]: Math.min(hi, v + 5) } })}>+</button>
-                                        <div style={S.bar}><div style={{ ...S.barFill, width: `${(v / MAX_FINAL_STAT) * 100}%`, background: TYPE_COLORS[spec.finalTypes[0]] }} /></div>
+                                        <span style={S.statName}>{STAT_LABEL[k]}<span style={S.subtle}>{cat} · conseillé {suggest}</span></span>
+                                        <button style={S.step} disabled={v <= MIN_FINAL_STAT} onClick={() => patch({ finalStats: { ...spec.finalStats, [k]: Math.max(MIN_FINAL_STAT, v - 5) } })}>−</button>
+                                        <span style={{ ...S.statVal, color: record ? "#e0b020" : undefined }}>{v}{record ? " ★" : ""}</span>
+                                        <button style={S.step} disabled={!canInc} onClick={() => patch({ finalStats: { ...spec.finalStats, [k]: Math.min(cap, v + 5) } })}>+</button>
+                                        <div style={S.bar}><div style={{ ...S.barFill, width: `${(v / cap) * 100}%`, background: record ? "#e0b020" : TYPE_COLORS[spec.finalTypes[0]] }} /></div>
                                     </div>
                                 )
                             })}
-                            <Hint>Astuce : ta meilleure stat offensive décide de ton style. Attaque ↔ types physiques (Normal/Combat/Sol/Roche…), Spécial ↔ types spéciaux (Feu/Eau/Élec/Psy…). Les bornes [min–max] viennent de ton rôle.</Hint>
+                            <Hint>Plafond par stat = record du dex +10 % (★ = tu bats le record → chaque point coûte double). Ta plus grosse stat offensive décide de ton style : Attaque ↔ types physiques (Normal/Combat/Sol/Roche/Vol…), Spécial ↔ types spéciaux (Feu/Eau/Élec/Psy/Plante/Glace…) — sinon ton STAB est gâché.</Hint>
                         </>
                     )})()}
 
@@ -305,9 +313,9 @@ export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: s
 
                 {/* Navigation */}
                 <div style={S.nav}>
-                    <button style={S.ghost} disabled={step === 0} onClick={() => setStep((s) => Math.max(0, s - 1))}>← Précédent</button>
+                    <button style={S.ghost} disabled={step === 0} onClick={() => goStep(Math.max(0, step - 1))}>← Précédent</button>
                     {step < STEPS.length - 1
-                        ? <button style={S.primary} onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}>Suivant →</button>
+                        ? <button style={S.primary} onClick={() => goStep(Math.min(STEPS.length - 1, step + 1))}>Suivant →</button>
                         : <button style={{ ...S.primary, opacity: errors.length ? 0.4 : 1 }} disabled={errors.length > 0} onClick={create}>🧬 Créer mon Daemon !</button>}
                 </div>
             </div>

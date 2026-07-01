@@ -23,8 +23,41 @@ export const STAT_LABEL: Record<StatKey, string> = { hp: "PV", atk: "Attaque", d
 export const BASE_FINAL_BST = 435
 /** Stat minimale par caractéristique sur le stade final (interdit les profils 0/dump total). */
 export const MIN_FINAL_STAT = 15
-/** Stat maximale par caractéristique (anti mono-stat ridicule). */
+/** Stat maximale par caractéristique (échelle d'affichage ; le vrai plafond dur est STAT_HARD_CAP). */
 export const MAX_FINAL_STAT = 160
+
+/** Meilleure stat des FINALES stade-3 NON-LÉGENDAIRES du dex (le « 100 % » : au-delà, chaque point coûte + cher).
+ *  Calculé via dex-caps.mts sur species.ts (à refléter si le dex évolue). */
+export const STAT_DEX_MAX: Record<StatKey, number> = { hp: 120, atk: 135, def: 138, spe: 130, spc: 120 }
+/** Plafond DUR par stat = +10 % au-dessus du record du dex (S-tier autorisé, jamais « au-dessus de tout »). */
+export const STAT_HARD_CAP: Record<StatKey, number> = { hp: 132, atk: 149, def: 152, spe: 143, spc: 132 }
+/** Surcoût de budget par point AU-DESSUS du record du dex (rendement décroissant du min-max). */
+export const OVER_MAX_COST = 2
+/** Coût en budget d'une valeur de stat : 1/point jusqu'au record du dex, puis OVER_MAX_COST/point au-delà. */
+export function statCost(k: StatKey, v: number): number {
+    const dexMax = STAT_DEX_MAX[k]
+    return Math.min(v, dexMax) + Math.max(0, v - dexMax) * OVER_MAX_COST
+}
+/** Coût total (budget) d'une distribution de stats — c'est LUI qui est plafonné par bloomerBudget, pas la somme brute. */
+export function specStatCost(stats: Record<StatKey, number>): number {
+    return STAT_KEYS.reduce((a, k) => a + statCost(k, stats[k] ?? 0), 0)
+}
+/** Met un profil à l'échelle pour tenir dans le budget (pas de 5, borné MIN..cap). Sert au pré-remplissage
+ *  quand on change de rôle/d'éclosion, pour ne jamais partir d'un état « budget dépassé ». */
+export function fitStatsToBudget(stats: Record<StatKey, number>, budget: number): Record<StatKey, number> {
+    const out = {} as Record<StatKey, number>
+    for (const k of STAT_KEYS) out[k] = Math.max(MIN_FINAL_STAT, Math.min(STAT_HARD_CAP[k], Math.round(stats[k] ?? MIN_FINAL_STAT)))
+    if (specStatCost(out) <= budget) return out
+    const factor = budget / specStatCost(out)
+    for (const k of STAT_KEYS) out[k] = Math.max(MIN_FINAL_STAT, Math.min(STAT_HARD_CAP[k], Math.round((out[k] * factor) / 5) * 5))
+    let guard = 0
+    while (specStatCost(out) > budget && guard++ < 60) {                 // l'arrondi peut dépasser : rabote la + grosse stat
+        const k = STAT_KEYS.reduce((a, b) => (out[b] > out[a] ? b : a), STAT_KEYS[0])
+        if (out[k] <= MIN_FINAL_STAT) break
+        out[k] = Math.max(MIN_FINAL_STAT, out[k] - 5)
+    }
+    return out
+}
 
 /** Courbe d'ÉCLOSION : tôt = monte vite mais plafond plus bas · tard = lent mais plafond plus haut (risk/reward). */
 export type Bloomer = "early" | "mid" | "late"
@@ -51,6 +84,8 @@ export const MAX_COVERAGE = 2
 export const MIN_STATUS_RATIO = 0.25
 /** Part minimale d'attaques offensives COMMUNES/RÉPANDUES (anti cherry-pick de raretés). */
 export const MIN_COMMON_RATIO = 0.5
+/** Bulk (PV+Défense) au-delà duquel on interdit le combo SOIN+USURE (anti mur-imbattable). Profil « mur » ≈ 225. */
+export const STALL_BULK_THRESHOLD = 190
 
 /** Puissance MAX de BASE d'une attaque OFFENSIVE à ce niveau. Seuils CALIBRÉS sur la progression réelle
  *  du dex (hors kit inné) : 65 tôt → 150 aux ultimes. cf. dex-analysis. Modulé ensuite par BST+type. */
@@ -81,7 +116,7 @@ export function typeOffensivePct(t: PokeType): number {
 export function powerPoolMod(finalBst: number, types: PokeType[]): number {
     const bstMod = clamp((BASE_FINAL_BST - finalBst) / BASE_FINAL_BST, -0.12, 0.12)     // low BST → +
     const strongest = types.length ? Math.max(...types.map(typeOffensivePct)) : 0
-    const typeMod = clamp((0.25 - strongest) * 0.5, -0.12, 0.05)                        // au-dessus de 25% de couverture → nerf
+    const typeMod = clamp((0.25 - strongest) * 0.5, -0.12, 0)                           // type couvrant plus de 25% du dex → nerf ; jamais de BONUS de type
     return clamp(bstMod + typeMod, -0.15, 0.15)
 }
 /** Cap de puissance EFFECTIF pour un slot (base du niveau × modificateur BST+type). */
@@ -146,7 +181,8 @@ export function statusTier(m: MoveData): 1 | 2 | 3 | 4 {
         if (e.statChanges.length > 1) return 2                   // multi-stat
         return e.statChanges.some((c) => c.target === "self" && c.stages > 0) ? 2 : 1 // +1 soi = 2 · −1 adv = 1
     }
-    return 2 // vampigraine, onde folie, brume sporale…
+    if (e.inflictVolatile === "SEEDED") return 3 // Vampigraine = usure + soin passif, au niveau de Toxik (pas cherry-pickable tôt)
+    return 2 // onde folie, brume sporale…
 }
 /** Palier de force de statut MAX proposable à ce niveau (progression). */
 export function statusTierCapForLevel(level: number): number {
@@ -309,20 +345,33 @@ export function validateSpec(spec: CustomSpec): string[] {
         if (badType(spec.typeChange.types)) e.push("Types pré-changement invalides.")
     }
 
+    // Stats : intégrité (entier ≥ MIN, ≤ cap dur par stat) + budget avec surcoût au-delà du record du dex.
+    // Le RÔLE n'est qu'un GUIDE (pré-remplit un profil) : plus de min/max bloquant, la personnalisation est libre
+    // dans les bornes dures. Le seul verrou anti-god-tier = cap +10 % du record + coût croissant passé ce record.
     const budget = bloomerBudget(spec.bloomer)
-    const total = BST(spec.finalStats)
-    if (total > budget) e.push(`BST trop élevé : ${total} / ${budget} max (courbe ${BLOOMERS[spec.bloomer].label}).`)
-    const role = ROLES[spec.role]
     for (const k of STAT_KEYS) {
         const v = spec.finalStats[k]
-        const lo = Math.max(MIN_FINAL_STAT, role?.min[k] ?? MIN_FINAL_STAT)
-        const hi = Math.min(MAX_FINAL_STAT, role?.max[k] ?? MAX_FINAL_STAT)
-        if (v < lo) e.push(`${STAT_LABEL[k]} trop basse pour un ${role?.label ?? "Daemon"} (min ${lo}).`)
-        if (v > hi) e.push(`${STAT_LABEL[k]} trop haute pour un ${role?.label ?? "Daemon"} (max ${hi}).`)
+        if (typeof v !== "number" || !Number.isInteger(v)) { e.push(`${STAT_LABEL[k]} invalide (doit être un entier).`); continue }
+        if (v < MIN_FINAL_STAT) e.push(`${STAT_LABEL[k]} trop basse (min ${MIN_FINAL_STAT}).`)
+        if (v > STAT_HARD_CAP[k]) e.push(`${STAT_LABEL[k]} plafonnée à ${STAT_HARD_CAP[k]} (record du dex +10 %).`)
+    }
+    const cost = specStatCost(spec.finalStats)
+    if (Number.isFinite(cost) && cost > budget)
+        e.push(`Budget de stats dépassé : ${cost} / ${budget} (les points au-dessus du record du dex coûtent double — courbe ${BLOOMERS[spec.bloomer].label}).`)
+
+    // Cohérence stat ↔ type (anti build-piège) : si une stat offensive DOMINE nettement, au moins un type STAB
+    // doit frapper de ce côté-là (sinon le STAB est inexploitable). Basé sur les VRAIES stats, pas sur le rôle.
+    const atk = spec.finalStats.atk ?? 0, spc = spec.finalStats.spc ?? 0
+    if (Math.abs(atk - spc) >= 25 && !badType(spec.finalTypes)) {
+        const domCat = atk > spc ? "PHYSICAL" : "SPECIAL"
+        const hasMatchingStab = spec.finalTypes.some((t) => moveCategory(t) === domCat)
+        if (!hasMatchingStab)
+            e.push(`Incohérence stat/type : ta plus grosse stat offensive est ${domCat === "PHYSICAL" ? "l'Attaque (types physiques)" : "le Spécial (types spéciaux)"}, mais aucun de tes types (${spec.finalTypes.join("/")}) ne frappe de ce côté → ton STAB serait inexploitable. Choisis un type ${domCat === "PHYSICAL" ? "physique (Normal/Combat/Sol/Roche/Vol…)" : "spécial (Feu/Eau/Élec/Psy/Plante/Glace…)"} ou rééquilibre tes stats.`)
     }
 
     // Learnset : un pick par slot, attaque ACCESSIBLE pour son niveau, pas de doublon.
     const lts = lineTypes(spec)
+    const total = BST(spec.finalStats)
     if (spec.learnset.length !== LEARN_LEVELS.length) e.push(`Choisis une attaque pour chacun des ${LEARN_LEVELS.length} paliers.`)
     const seen = new Set<string>()
     spec.learnset.forEach((slot, i) => {
@@ -342,13 +391,23 @@ export function validateSpec(spec: CustomSpec): string[] {
     const status = moves.filter((m) => !isDamagingMove(m))
     if (moves.length > 0 && status.length / moves.length < MIN_STATUS_RATIO)
         e.push(`Trop peu de statuts : ${status.length}/${moves.length} (min ${Math.ceil(moves.length * MIN_STATUS_RATIO)}, soit 1 sur 4).`)
-    const stab = offensive.filter((m) => lts.includes(m.type)).length
+    // STAB & couverture évalués sur les types du STADE FINAL (pas l'union de la lignée) : sinon un typeChange
+    // ferait passer les attaques du type pré-évolution pour du STAB gratuit alors que le final ne les a plus.
+    const stab = offensive.filter((m) => spec.finalTypes.includes(m.type)).length
     if (stab > MAX_STAB) e.push(`Trop d'attaques STAB : ${stab} (max ${MAX_STAB}).`)
-    const coverage = offensive.filter((m) => m.type !== "NORMAL" && !lts.includes(m.type)).length
+    const coverage = offensive.filter((m) => m.type !== "NORMAL" && !spec.finalTypes.includes(m.type)).length
     if (coverage > MAX_COVERAGE) e.push(`Trop d'attaques de couverture : ${coverage} (max ${MAX_COVERAGE}).`)
     const commonish = offensive.filter((m) => { const r = moveRarity(m.id); return r === "commune" || r === "répandue" }).length
     if (offensive.length > 0 && commonish / offensive.length < MIN_COMMON_RATIO)
         e.push(`Trop d'attaques rares : au moins ${Math.ceil(offensive.length * MIN_COMMON_RATIO)} offensives doivent être communes/répandues (actuel : ${commonish}/${offensive.length}).`)
+
+    // Anti-stall : un Daemon très résistant ne peut PAS cumuler SOIN (Repos/soin %) ET USURE (Toxik/Vampigraine)
+    // — ça crée un mur imbattable. Compromis : sur un gros bulk, choisis de te soigner OU d'user, pas les deux.
+    const hasHeal = moves.some((m) => m.effect?.restSleep || (m.effect?.healPct ?? 0) > 0)
+    const hasWear = moves.some((m) => m.effect?.inflictStatus === "TOXIC" || m.effect?.inflictVolatile === "SEEDED")
+    const bulk = (spec.finalStats.hp ?? 0) + (spec.finalStats.def ?? 0)
+    if (hasHeal && hasWear && bulk >= STALL_BULK_THRESHOLD)
+        e.push(`Combo de stall interdit : avec autant de PV+Défense (${bulk}), tu ne peux pas avoir À LA FOIS une attaque de SOIN et une d'USURE (Toxik/Vampigraine) — mur imbattable. Retire l'une des deux, ou baisse ta bulk.`)
     return e
 }
 
@@ -406,7 +465,8 @@ export function buildCustomSpecies(spec: CustomSpec, ownerId: string): SpeciesDa
             rarity: "RARE",
             growthRate: cfg.growthRate,
             role: roleOf(spec.finalStats, spec.finalTypes),
-            description: spec.da.trim() + (spec.character.trim() ? ` — ${spec.character.trim()}` : ""),
+            description: ((stage === spec.stages && spec.daFinal?.trim()) ? spec.daFinal.trim() : spec.da.trim())
+                + (spec.character.trim() ? ` — ${spec.character.trim()}` : ""),
             sprite: "", // « sprite mystère » : vide → fallback emoji/silhouette ; Sartay branche le vrai sprite ensuite
         })
         void finalBst

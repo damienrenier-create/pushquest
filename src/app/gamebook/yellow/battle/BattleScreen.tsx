@@ -703,6 +703,7 @@ function MonSprite({ mon, facing, alive, hitKey, victory }: { mon: BattleMon; fa
     // `key={hitKey}` force un remount à chaque coup encaissé → l'animation de tremblement rejoue.
     const sp = speciesOf(mon)
     const [err, setErr] = useState(false)
+    const broken = err || !sp.sprite // sprite vide (Daemon custom « mystère ») → silhouette, sans dépendre d'onError
     return (
         // Wrapper keyé sur l'uid : remonte à chaque ENTRÉE de Daemon (combat/switch)
         // → joue l'anim "monEnter" (chute + rebond). Le shake reste sur le div interne.
@@ -710,7 +711,7 @@ function MonSprite({ mon, facing, alive, hitKey, victory }: { mon: BattleMon; fa
             <div
                 key={hitKey}
                 style={{
-                    ...(err ? S.sprite : S.spriteBox),
+                    ...(broken ? S.sprite : S.spriteBox),
                     position: "relative",
                     opacity: alive ? 1 : 0.25,
                     transform: facing === "back" ? "scaleX(-1)" : "none",
@@ -718,12 +719,12 @@ function MonSprite({ mon, facing, alive, hitKey, victory }: { mon: BattleMon; fa
                     animation: victory ? "victoryPulse 1.2s ease-in-out infinite" : hitKey > 0 ? "hitShake 0.3s ease-in-out" : "none",
                 }}
             >
-                {err
+                {broken
                     ? <span style={S.spriteGlyph}>{sp.name[0]}</span>
                     : <img src={sp.sprite} alt={sp.name} onError={() => setErr(true)}
                         style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated", ...(mon.shiny ? { filter: "saturate(1.7) hue-rotate(35deg) drop-shadow(0 0 5px gold)" } : {}) }} />}
                 {/* CHROMATIQUE (shiny) : ✨ scintillantes par-dessus le sprite (le filtre recolore l'image). */}
-                {mon.shiny && !err && <span style={{ position: "absolute", top: -2, right: 0, fontSize: 18, animation: "victoryPulse 1.3s ease-in-out infinite", pointerEvents: "none" }}>✨</span>}
+                {mon.shiny && !broken && <span style={{ position: "absolute", top: -2, right: 0, fontSize: 18, animation: "victoryPulse 1.3s ease-in-out infinite", pointerEvents: "none" }}>✨</span>}
             </div>
         </div>
     )
@@ -798,9 +799,10 @@ function MoveDetails({ mv, mon }: { mv: MoveData; mon: BattleMon }) {
 function PartySprite({ mon }: { mon: BattleMon }) {
     const sp = speciesOf(mon)
     const [err, setErr] = useState(false)
+    const broken = err || !sp.sprite // sprite vide → initiale, sans dépendre d'onError (peu fiable sur src="")
     return (
         <div style={S.partySprite}>
-            {err
+            {broken
                 ? <span style={{ fontSize: 16, fontWeight: 900 }}>{sp.name[0]}</span>
                 : <img src={sp.sprite} alt="" onError={() => setErr(true)} style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated" }} />}
         </div>

@@ -4,6 +4,7 @@ import {
     bloomerBudget, LEARN_LEVELS, STAT_KEYS, lineTypes, typesAtStage, moveRarity, isLearnableMove,
     statusTier, statusTierCapForLevel, allowedOffensiveTypes, weaknessTypes, moveCard, suggestLearnset,
     MAX_STAB, MAX_COVERAGE, MIN_STATUS_RATIO, ROLES, CURVE_RATIOS, powerPoolMod, effectiveMaxPower,
+    STAT_HARD_CAP, STAT_DEX_MAX, specStatCost, fitStatsToBudget, STALL_BULK_THRESHOLD,
 } from "./customSpecies"
 import { getMove, MOVES } from "../data/moves"
 import { isDamagingMove } from "./customSpecies"
@@ -91,31 +92,72 @@ describe("création — validateSpec (règles de composition)", () => {
         s.learnset = [...s.learnset]; s.learnset[1] = { level: 5, moveId: s.learnset[0].moveId }
         expect(validateSpec(s).some((m) => m.includes("en double"))).toBe(true)
     })
-    it("refuse un BST au-dessus du budget", () => {
+    it("refuse un budget dépassé (stats toutes au max)", () => {
         const s = validSpec(); s.finalStats = { hp: 160, atk: 160, def: 160, spe: 160, spc: 160 }
-        expect(validateSpec(s).some((m) => m.includes("BST trop élevé"))).toBe(true)
+        expect(validateSpec(s).some((m) => m.includes("plafonnée") || m.includes("Budget de stats"))).toBe(true)
     })
 })
 
-describe("création — rôles (contraintes de stats)", () => {
-    it("refuse une stat hors des bornes du rôle (attaquant-phys : Spécial plafonné)", () => {
+describe("création — modèle de stats (caps dex +10% · coût croissant · rôles=guides)", () => {
+    it("plafonne chaque stat au record du dex +10%", () => {
+        const s = validSpec(); s.bloomer = "late"; s.finalStats = { ...s.finalStats, atk: STAT_HARD_CAP.atk + 5 }
+        expect(validateSpec(s).some((m) => m.includes("plafonnée"))).toBe(true)
+    })
+    it("un point AU-DESSUS du record du dex coûte double (budget)", () => {
+        // spe AU record (130) : coût = valeur brute. Au-delà : +2 de budget par point.
+        const base = { hp: 60, atk: 60, def: 60, spe: STAT_DEX_MAX.spe, spc: 60 }
+        const over = { ...base, spe: STAT_DEX_MAX.spe + 13 } // 13 points au-delà du record → +26 de coût
+        expect(specStatCost(over)).toBe(specStatCost(base) + 13 * 2)
+    })
+    it("les rôles ne bloquent plus les stats (guides) : un attaquant-phys peut dumper l'Attaque", () => {
         const s = validSpec(); s.role = "attaquant-phys"
-        s.finalStats = { hp: 70, atk: 130, def: 65, spe: 90, spc: 80 } // spc 80 > max 70
-        expect(validateSpec(s).some((m) => m.includes("trop haute"))).toBe(true)
+        s.finalStats = { hp: 90, atk: 30, def: 90, spe: 90, spc: 120 } // atk faible, spc fort — hors du rôle, mais légal
+        s.finalTypes = ["EAU"]; s.learnset = buildValidLearnset(["EAU"]) // type spécial cohérent avec spc dominant
+        expect(validateSpec(s)).toEqual([])
     })
-    it("refuse une stat sous le minimum du rôle (mur : Défense mini)", () => {
-        const s = validSpec(); s.role = "mur"
-        s.finalStats = { hp: 105, atk: 65, def: 60, spe: 45, spc: 160 } // def 60 < min 90
-        expect(validateSpec(s).some((m) => m.includes("trop basse"))).toBe(true)
-    })
-    it("le profil par défaut de chaque rôle respecte ses propres bornes", () => {
+    it("fitStatsToBudget ramène un profil trop lourd sous le budget early", () => {
+        const early = bloomerBudget("early") // 392
         for (const rk of Object.keys(ROLES) as (keyof typeof ROLES)[]) {
-            const r = ROLES[rk]
-            for (const k of STAT_KEYS) {
-                if (r.min[k] != null) expect(r.profile[k]).toBeGreaterThanOrEqual(r.min[k]!)
-                if (r.max[k] != null) expect(r.profile[k]).toBeLessThanOrEqual(r.max[k]!)
-            }
+            const fitted = fitStatsToBudget(ROLES[rk].profile, early)
+            expect(specStatCost(fitted)).toBeLessThanOrEqual(early)
+            for (const k of STAT_KEYS) { expect(fitted[k]).toBeGreaterThanOrEqual(15); expect(fitted[k]).toBeLessThanOrEqual(STAT_HARD_CAP[k]) }
         }
+    })
+})
+
+describe("création — correctifs d'équilibrage (audit)", () => {
+    it("C4 — incohérence stat/type : grosse Attaque + type 100% spécial = refusé", () => {
+        const s = validSpec(); s.finalTypes = ["FEU"] // spécial
+        s.finalStats = { hp: 70, atk: 130, def: 60, spe: 90, spc: 40 } // atk >> spc → dominante physique
+        s.learnset = buildValidLearnset(["FEU"])
+        expect(validateSpec(s).some((m) => m.includes("Incohérence stat/type"))).toBe(true)
+    })
+    it("C4 — cohérent : grosse Attaque + type physique = accepté", () => {
+        const s = validSpec(); s.finalTypes = ["ROCHE"] // physique
+        s.finalStats = { hp: 70, atk: 130, def: 70, spe: 80, spc: 40 }
+        s.learnset = buildValidLearnset(["ROCHE"])
+        expect(validateSpec(s).filter((m) => m.includes("Incohérence stat/type"))).toEqual([])
+    })
+    it("C3 — typeChange : les attaques de l'ancien type comptent comme COUVERTURE sur la finale", () => {
+        // finale PSY, pré-évo FEU : un learnset bourré de FEU dépasse MAX_COVERAGE sur la forme finale.
+        const s = validSpec()
+        s.finalTypes = ["PSY"]; s.typeChange = { atStage: 3, types: ["FEU"] }
+        const feu = Object.values(MOVES).filter((m) => m.type === "FEU" && m.power > 0 && isLearnableMove(m.id)).slice(0, 4).map((m) => m.id)
+        s.learnset = LEARN_LEVELS.map((lvl, i) => ({ level: lvl, moveId: feu[i] ?? "choc_mental" }))
+        expect(validateSpec(s).some((m) => m.includes("couverture"))).toBe(true)
+    })
+    it("C5 — anti-stall : gros bulk + soin + usure = refusé", () => {
+        const s = validSpec(); s.role = "mur"; s.finalTypes = ["POISON"]
+        s.finalStats = { hp: 120, atk: 40, def: 120, spe: 40, spc: 80 } // bulk 240 ≥ seuil
+        expect(s.finalStats.hp + s.finalStats.def).toBeGreaterThanOrEqual(STALL_BULK_THRESHOLD)
+        // learnset : Repos (soin) + Toxik (usure) + Vampigraine (usure) + offensives
+        const off = slotOptions(["POISON"], 54).offensive.filter((id) => moveRarity(id) === "commune" || moveRarity(id) === "répandue")
+        s.learnset = LEARN_LEVELS.map((lvl, i) => ({ level: lvl, moveId: i === 5 ? "repos" : i === 6 ? "toxik" : i === 8 ? "vampigraine" : (off[i] ?? off[0]) }))
+        expect(validateSpec(s).some((m) => m.includes("stall"))).toBe(true)
+    })
+    it("M2 — Vampigraine classée tier 3 (comme Toxik), pas cherry-pickable tôt", () => {
+        expect(statusTier(getMove("vampigraine")!)).toBe(3)
+        expect(statusTier(getMove("toxik")!)).toBe(3)
     })
 })
 
