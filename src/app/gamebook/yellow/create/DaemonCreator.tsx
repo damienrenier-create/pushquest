@@ -10,11 +10,12 @@
 import { useMemo, useState } from "react"
 import { POKE_TYPES, type PokeType, type StatKey } from "@/lib/gamebook/yellow/battle/types"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
+import { registerCustomSpecies } from "@/lib/gamebook/yellow/data/species"
 import { TYPE_COLORS } from "../dex/dexShared"
 import {
     type CustomSpec, type Bloomer, type MoveCardInfo, type CurveShape, type RoleKey, type Attribute,
     BLOOMERS, bloomerBudget, validateSpec, previewLine, ROLES, CURVE_LABEL, CURVE_HINT,
-    slotChoices, suggestLearnset, moveCard, isDamagingMove, moveRarity, attributeMoveIds,
+    slotChoices, suggestLearnset, moveCard, isDamagingMove, moveRarity, attributeMoveIds, buildCustomSpecies,
     ATTRIBUTE_LABEL, MAX_ATTRIBUTES,
     lineTypes, LEARN_LEVELS, STAT_KEYS, STAT_LABEL, MIN_FINAL_STAT, MAX_STAB, MAX_COVERAGE,
     STAT_HARD_CAP, STAT_DEX_MAX, specStatCost, fitStatsToBudget,
@@ -85,6 +86,9 @@ export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: s
         const finalSpec: CustomSpec = effSpec
         const errs = validateSpec(finalSpec)
         if (errs.length) { setStep(STEPS.length - 1); return }
+        // Phase 2 : on ENREGISTRE la lignée au registre runtime → le Daemon devient résolvable en combat
+        // (getSpecies/speciesOf) tout de suite. Persistance DB / instanciation NG+ = étapes suivantes.
+        try { registerCustomSpecies(buildCustomSpecies(finalSpec, ownerId)) } catch { /* lignée invalide déjà bloquée par validateSpec */ }
         const payload = { ownerId, nickname, spec: finalSpec, line: previewLine(finalSpec, ownerId), at: new Date().toISOString() }
         try { window.localStorage.setItem(`pq_daemon_creation_${ownerId}`, JSON.stringify(payload)) } catch { /* quota */ }
         setCreated(JSON.stringify(payload, null, 2))

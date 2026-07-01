@@ -1853,8 +1853,20 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
 }
 
+// ── REGISTRE RUNTIME des Daemons CUSTOM (créés par les joueurs, post-Ligue). Fusionné à la LECTURE seulement :
+//    jamais écrit dans SPECIES, jamais compté dans le dex numéroté. Vide par défaut → zéro impact sur le jeu
+//    existant. Rempli via registerCustomSpecies au chargement de la save (ids préfixés « custom_… », pas de collision). ──
+const CUSTOM_SPECIES = new Map<string, SpeciesData>()
+/** Enregistre une lignée custom (SpeciesData[]) pour qu'elle soit résolvable en combat (getSpecies/speciesOf). */
+export function registerCustomSpecies(chain: SpeciesData[]): void {
+    for (const s of chain) CUSTOM_SPECIES.set(s.id, s)
+}
+export function unregisterCustomSpecies(ids: string[]): void { for (const id of ids) CUSTOM_SPECIES.delete(id) }
+export function isCustomSpeciesId(id: string): boolean { return CUSTOM_SPECIES.has(id) }
+export function customSpeciesCount(): number { return CUSTOM_SPECIES.size }
+
 export function getSpecies(id: string): SpeciesData | null {
-    return SPECIES[id] ?? null
+    return SPECIES[id] ?? CUSTOM_SPECIES.get(id) ?? null // statique d'abord, puis custom runtime
 }
 
 export const SPECIES_IDS = Object.keys(SPECIES)

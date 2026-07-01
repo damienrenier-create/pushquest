@@ -8,6 +8,8 @@ import {
     attributeMoveIds, ATTRIBUTE_MOVES, MAX_ATTRIBUTES,
 } from "./customSpecies"
 import { getMove, MOVES } from "../data/moves"
+import { getSpecies, registerCustomSpecies, isCustomSpeciesId } from "../data/species"
+import { createMonInstance } from "../battle/factory"
 import { isDamagingMove } from "./customSpecies"
 import type { StatKey, PokeType, MoveData } from "../battle/types"
 
@@ -228,6 +230,19 @@ describe("création — attributs anatomiques (couverture hors-type)", () => {
         const s = validSpec(); s.attributes = ["ailes", "crocs", "dard"]
         expect(s.attributes.length).toBeGreaterThan(MAX_ATTRIBUTES)
         expect(validateSpec(s).some((m) => m.includes("Attributs invalides"))).toBe(true)
+    })
+})
+
+describe("création — registre runtime (Phase 2 : jouable en combat)", () => {
+    it("une lignée custom enregistrée est résolue par getSpecies et instanciable", () => {
+        const chain = buildCustomSpecies(validSpec(), "registrytest")
+        expect(getSpecies(chain[2].id)).toBeNull()   // inconnue AVANT enregistrement
+        registerCustomSpecies(chain)
+        expect(getSpecies(chain[2].id)).toBeTruthy()  // résolue APRÈS
+        expect(isCustomSpeciesId(chain[2].id)).toBe(true)
+        const mon = createMonInstance(chain[2].id, 50) // ne throw plus "Espèce inconnue"
+        expect(mon.speciesId).toBe(chain[2].id)
+        expect(mon.moves.length).toBeGreaterThan(0)
     })
 })
 
