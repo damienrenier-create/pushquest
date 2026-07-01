@@ -42,6 +42,7 @@ export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: s
     const [spec, setSpec] = useState<CustomSpec>(defaultSpec)
     const [created, setCreated] = useState<string | null>(null) // JSON soumis (écran de succès)
     const [pickingSlot, setPickingSlot] = useState<number | null>(null) // slot dont le sélecteur en fiches est ouvert
+    const [pickerSort, setPickerSort] = useState<"puissance" | "nom" | "type">("puissance") // tri des attaques (façon dex)
 
     const patch = (p: Partial<CustomSpec>) => setSpec((s) => ({ ...s, ...p }))
     const goStep = (n: number) => { setPickingSlot(null); setStep(n) } // réinitialise le picker à chaque navigation
@@ -302,17 +303,35 @@ export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: s
                                 const label = pickingSlot === 0 ? "Palier 1 — attaque BASIQUE (Normal/STAB, sans effet)"
                                     : pickingSlot === 1 ? "Palier 2 — STATUT faible"
                                         : `Niv ${LEARN_LEVELS[pickingSlot!]} — pool restant : P≤${ch.cap}`
+                                // Tri des offensives (dispo d'abord, puis grisées) selon le tri choisi.
+                                const sortOff = (arr: typeof ch.offensive) => [...arr].sort((a, b) => {
+                                    if (!!a.blocked !== !!b.blocked) return a.blocked ? 1 : -1
+                                    const ma = getMove(a.id)!, mb = getMove(b.id)!
+                                    if (pickerSort === "nom") return ma.name.localeCompare(mb.name, "fr")
+                                    if (pickerSort === "type") return ma.type === mb.type ? (mb.power || 0) - (ma.power || 0) : TYPE_FR[ma.type].localeCompare(TYPE_FR[mb.type], "fr")
+                                    return (mb.power || 0) - (ma.power || 0)
+                                })
+                                const off = sortOff(ch.offensive)
+                                const renderTile = (o: { id: string; blocked: "dup" | "cascade" | null }) => { const c = moveCard(o.id, lts)!; return <FullCard key={o.id} c={c} sel={learnset[pickingSlot!].moveId === o.id} blocked={o.blocked} onPick={() => { if (o.blocked) return; setLearn(pickingSlot!, o.id); setPickingSlot(null) }} /> }
                                 return (
                                     <>
                                         <div style={S.pickerHead}>
                                             <button style={S.ghost} onClick={() => setPickingSlot(null)}>‹ Retour</button>
                                             <b>{label}</b>
                                         </div>
+                                        {off.length > 1 && (
+                                            <div style={S.sortRow}>
+                                                <span style={{ fontSize: 10.5, fontWeight: 700, opacity: 0.7 }}>Trier :</span>
+                                                {([["puissance", "Puissance"], ["nom", "A→Z"], ["type", "Type"]] as const).map(([k, lab]) => (
+                                                    <button key={k} onClick={() => setPickerSort(k)} style={{ ...S.sortChip, ...(pickerSort === k ? S.sortOn : {}) }}>{lab}</button>
+                                                ))}
+                                            </div>
+                                        )}
                                         {ch.offensive.length > 0 && <Lbl>⚔️ Offensives ({ch.offensive.filter((o) => !o.blocked).length} dispo)</Lbl>}
-                                        {ch.offensive.map((o) => { const c = moveCard(o.id, lts)!; return <FullCard key={o.id} c={c} sel={learnset[pickingSlot!].moveId === o.id} blocked={o.blocked} onPick={() => { if (o.blocked) return; setLearn(pickingSlot!, o.id); setPickingSlot(null) }} /> })}
+                                        {off.map(renderTile)}
                                         {ch.status.length > 0 && <Lbl>📊 Statuts ({ch.status.filter((o) => !o.blocked).length} dispo) — du plus faible au plus fort</Lbl>}
                                         {ch.offensive.length === 0 && ch.status.length === 0 && <Hint>Aucune attaque disponible pour ce palier (pool épuisé — baisse une autre attaque).</Hint>}
-                                        {ch.status.map((o) => { const c = moveCard(o.id, lts)!; return <FullCard key={o.id} c={c} sel={learnset[pickingSlot!].moveId === o.id} blocked={o.blocked} onPick={() => { if (o.blocked) return; setLearn(pickingSlot!, o.id); setPickingSlot(null) }} /> })}
+                                        {ch.status.map(renderTile)}
                                     </>
                                 )
                             })()}
@@ -367,98 +386,122 @@ function MiniCard({ c }: { c: MoveCardInfo }) {
         </span>
     )
 }
-// Fiche ULTRA-complète (picker) : type, catégorie, puissance, précision, PP, rareté, STAB/couverture, force de statut, effet.
-// `blocked` : "dup" (déjà prise ailleurs) / "cascade" (trop forte vu le pool restant) → carte GRISÉE non cliquable.
+// Grande TUILE d'attaque (picker) — aérée, infos complètes + descriptif clair pour débutant.
+// `blocked` : "dup" (déjà prise ailleurs) / "cascade" (trop forte vu le pool restant) → tuile GRISÉE non cliquable.
 function FullCard({ c, sel, onPick, blocked }: { c: MoveCardInfo; sel?: boolean; onPick: () => void; blocked?: "dup" | "cascade" | null }) {
     const catCol = c.cat === "STATUT" ? "#8868c0" : c.cat === "PHYS" ? "#c0532a" : "#3a7ae0"
+    const catFull = c.cat === "PHYS" ? "Physique" : c.cat === "SPÉ" ? "Spécial" : "Statut"
+    const desc = getMove(c.id)?.description
     return (
-        <button disabled={!!blocked} style={{ ...S.moveCard, ...(sel ? S.moveCardSel : {}), ...(blocked ? S.moveCardBlocked : {}) }} onClick={onPick}>
-            <div style={S.moveCardHead}>
-                <b style={{ fontSize: 13 }}>{c.name}</b>
+        <button disabled={!!blocked} style={{ ...S.tile, ...(sel ? S.tileSel : {}), ...(blocked ? S.moveCardBlocked : {}) }} onClick={onPick}>
+            <div style={S.tileHead}>
+                <span style={S.tileName}>{c.name}</span>
                 {blocked
                     ? <span style={S.blockedTag}>{blocked === "dup" ? "déjà choisie" : "pool épuisé"}</span>
                     : <span style={{ ...S.rarChip, background: RAR_COL[c.rarity] }}>{c.rarity}</span>}
             </div>
-            <div style={S.moveCardRow}>
-                <span style={{ ...S.chip, background: TYPE_COLORS[c.type], color: "#1a1400" }}>{TYPE_FR[c.type]}</span>
-                <span style={{ ...S.chip, background: catCol }}>{c.cat}</span>
-                {c.cat !== "STATUT" && <span style={S.stat}>⚔ {c.power}</span>}
-                <span style={S.stat}>🎯 {c.accuracy === 0 ? "∞" : `${c.accuracy}%`}</span>
-                <span style={S.stat}>{c.pp} PP</span>
+            <div style={S.tileChips}>
+                <span style={{ ...S.typePill, background: TYPE_COLORS[c.type] }}>{TYPE_FR[c.type]}</span>
+                <span style={{ ...S.catPill, background: catCol }}>{catFull}</span>
                 {c.stab && <span style={S.stabTag}>STAB ×1.5</span>}
                 {c.coverage && <span style={S.covTag}>couverture</span>}
-                {c.statusTier && <span style={S.tierTag}>force {"★".repeat(c.statusTier)}</span>}
+                {c.statusTier ? <span style={S.tierTag}>force {"★".repeat(c.statusTier)}</span> : null}
             </div>
-            {c.effect && <div style={S.moveEffect}>💥 {c.effect}</div>}
+            <div style={S.tileStats}>
+                {c.cat !== "STATUT" && <span style={S.statBox}><b style={S.statBig}>{c.power}</b><span style={S.statLbl}>💥 Puissance</span></span>}
+                <span style={S.statBox}><b style={S.statBig}>{c.accuracy === 0 ? "∞" : `${c.accuracy}%`}</b><span style={S.statLbl}>🎯 Précision</span></span>
+                <span style={S.statBox}><b style={S.statBig}>{c.pp}</b><span style={S.statLbl}>PP</span></span>
+            </div>
+            {c.effect && <div style={S.tileEffect}>⚡ {c.effect}</div>}
+            {desc && <div style={S.tileDesc}>{desc}</div>}
         </button>
     )
 }
 
-const ACCENT = "#3ad0c0"
+// DA lumineuse « Pokédex des attaques » (parchemin crème + encre). cf. MovesPanel.tsx.
+const CREAM = "#f4ecd4", INK = "#2a1c10", DARK = "#cdbb86", CARD = "#fff8e8", CARDALT = "#efe6c8", SELB = "#1b5fa6"
 const S: Record<string, React.CSSProperties> = {
-    overlay: { position: "fixed", inset: 0, zIndex: 9600, background: "rgba(4,10,12,0.92)", display: "flex", alignItems: "center", justifyContent: "center", padding: 8, fontFamily: "'Courier New', monospace", color: "#eef" },
-    box: { width: "min(460px, 98vw)", maxHeight: "96vh", display: "flex", flexDirection: "column", background: "#0b1418", border: `2px solid ${ACCENT}`, borderRadius: 14, padding: 12, boxShadow: "0 0 30px rgba(58,208,192,.25)" },
+    overlay: { position: "fixed", inset: 0, zIndex: 9600, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 8, fontFamily: "system-ui, sans-serif", color: INK },
+    box: { width: "min(460px, 98vw)", maxHeight: "96vh", display: "flex", flexDirection: "column", background: CREAM, border: `3px solid ${INK}`, borderRadius: 12, padding: 12, boxShadow: "0 6px 24px rgba(0,0,0,0.5)" },
     head: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 },
-    h: { fontSize: 16, fontWeight: 800, color: ACCENT },
-    x: { background: "transparent", color: ACCENT, border: `1px solid ${ACCENT}`, borderRadius: 8, width: 28, height: 28, cursor: "pointer", fontFamily: "inherit" },
+    h: { fontSize: 16, fontWeight: 800, color: INK },
+    x: { background: "transparent", color: INK, border: `2px solid ${DARK}`, borderRadius: 8, width: 28, height: 28, cursor: "pointer", fontFamily: "inherit", fontWeight: 800 },
     steps: { display: "flex", gap: 3, flexWrap: "wrap", marginBottom: 8 },
-    stepChip: { fontSize: 9.5, fontWeight: 700, padding: "4px 6px", borderRadius: 6, border: "1px solid #1f4046", background: "#0e1c20", color: "#9fd", cursor: "pointer", fontFamily: "inherit" },
-    stepOn: { background: ACCENT, color: "#04181a", borderColor: ACCENT },
+    stepChip: { fontSize: 9.5, fontWeight: 700, padding: "4px 6px", borderRadius: 6, border: `2px solid ${DARK}`, background: CARD, color: INK, cursor: "pointer", fontFamily: "inherit" },
+    stepOn: { background: INK, color: CREAM, borderColor: INK },
     body: { flex: 1, overflowY: "auto", padding: "4px 2px", minHeight: 180 },
-    lbl: { fontSize: 12, fontWeight: 800, margin: "10px 0 5px", color: "#cfeee9" },
-    hint: { fontSize: 10.5, opacity: 0.7, lineHeight: 1.45, marginTop: 8, background: "rgba(58,208,192,.07)", border: "1px dashed #2a5a55", borderRadius: 8, padding: "6px 8px" },
+    lbl: { fontSize: 12, fontWeight: 800, margin: "10px 0 5px", color: INK },
+    hint: { fontSize: 10.5, opacity: 0.9, lineHeight: 1.45, marginTop: 8, background: CARDALT, border: `1px dashed ${DARK}`, borderRadius: 8, padding: "6px 8px", color: INK },
     subtle: { fontSize: 10, opacity: 0.6, fontWeight: 400 },
-    input: { width: "100%", padding: "9px 10px", background: "#0e1c20", border: "1px solid #2a5a55", borderRadius: 8, color: "#fff", fontFamily: "inherit", fontSize: 13, boxSizing: "border-box" },
-    area: { width: "100%", padding: "9px 10px", background: "#0e1c20", border: "1px solid #2a5a55", borderRadius: 8, color: "#fff", fontFamily: "inherit", fontSize: 12.5, minHeight: 64, resize: "vertical", boxSizing: "border-box" },
+    input: { width: "100%", padding: "9px 10px", background: "#fff", border: `2px solid ${DARK}`, borderRadius: 8, color: INK, fontFamily: "inherit", fontSize: 13, boxSizing: "border-box", outline: "none" },
+    area: { width: "100%", padding: "9px 10px", background: "#fff", border: `2px solid ${DARK}`, borderRadius: 8, color: INK, fontFamily: "inherit", fontSize: 12.5, minHeight: 64, resize: "vertical", boxSizing: "border-box", outline: "none" },
     row: { display: "flex", gap: 6, flexWrap: "wrap" },
-    opt: { flex: 1, minWidth: 70, padding: "10px 6px", background: "#0e1c20", border: "1px solid #2a5a55", borderRadius: 8, color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" },
-    optWide: { width: "100%", textAlign: "left", padding: "10px 12px", background: "#0e1c20", border: "1px solid #2a5a55", borderRadius: 8, color: "#fff", fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", marginBottom: 6 },
-    optOn: { background: "rgba(58,208,192,.18)", borderColor: ACCENT, outline: `1px solid ${ACCENT}` },
+    opt: { flex: 1, minWidth: 70, padding: "10px 6px", background: CARD, border: `2px solid ${DARK}`, borderRadius: 8, color: INK, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" },
+    optWide: { width: "100%", textAlign: "left", padding: "10px 12px", background: CARD, border: `2px solid ${DARK}`, borderRadius: 8, color: INK, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", marginBottom: 6 },
+    optOn: { background: "#fbeecb", borderColor: INK, outline: `1px solid ${INK}` },
     typeGrid: { display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 4 },
     typeBtn: { padding: "7px 2px", borderRadius: 6, border: "none", color: "#1a1400", fontWeight: 800, fontSize: 10, cursor: "pointer", fontFamily: "inherit" },
     statRow: { display: "flex", alignItems: "center", gap: 6, marginBottom: 7 },
-    statName: { width: 92, fontSize: 11.5, fontWeight: 700 },
-    step: { width: 30, height: 30, borderRadius: 7, border: `2px solid ${ACCENT}`, background: "#0e1c20", color: "#fff", fontWeight: 800, fontSize: 16, cursor: "pointer", fontFamily: "inherit", lineHeight: 1 },
-    statVal: { minWidth: 34, textAlign: "center", fontSize: 14, fontWeight: 800, color: ACCENT },
-    bar: { flex: 1, height: 8, background: "#0e1c20", borderRadius: 4, overflow: "hidden" },
+    statName: { width: 92, fontSize: 11.5, fontWeight: 700, color: INK },
+    step: { width: 30, height: 30, borderRadius: 7, border: `2px solid ${INK}`, background: CARD, color: INK, fontWeight: 800, fontSize: 16, cursor: "pointer", fontFamily: "inherit", lineHeight: 1 },
+    statVal: { minWidth: 34, textAlign: "center", fontSize: 14, fontWeight: 800, color: INK },
+    bar: { flex: 1, height: 8, background: CARDALT, borderRadius: 4, overflow: "hidden", border: `1px solid ${DARK}` },
     barFill: { height: "100%", borderRadius: 4 },
     learnRow: { display: "flex", alignItems: "center", gap: 6, marginBottom: 6 },
-    lvlTag: { width: 52, fontSize: 11, fontWeight: 800, color: ACCENT, flexShrink: 0 },
-    select: { flex: 1, padding: "7px 8px", background: "#0e1c20", border: "1px solid #2a5a55", borderRadius: 7, color: "#fff", fontFamily: "inherit", fontSize: 11.5 },
+    lvlTag: { width: 52, fontSize: 11, fontWeight: 800, color: SELB, flexShrink: 0 },
+    select: { flex: 1, padding: "7px 8px", background: "#fff", border: `2px solid ${DARK}`, borderRadius: 7, color: INK, fontFamily: "inherit", fontSize: 11.5 },
     // Composition (résumé des règles en haut de l'étape Attaques).
     compoRow: { display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 8 },
     compoChip: { fontSize: 10, fontWeight: 800, padding: "3px 7px", borderRadius: 6 },
+    // Tri du picker (façon dex des attaques).
+    sortRow: { display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8, alignItems: "center" },
+    sortChip: { background: CARD, border: `2px solid ${DARK}`, borderRadius: 12, padding: "3px 10px", fontSize: 10.5, fontWeight: 700, color: INK, cursor: "pointer", fontFamily: "inherit" },
+    sortOn: { background: INK, color: CREAM, borderColor: INK },
     // Ligne de slot (liste des paliers).
-    slotRow: { width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", marginBottom: 5, background: "#0e1c20", border: "1px solid #2a5a55", borderRadius: 8, color: "#fff", cursor: "pointer", fontFamily: "inherit", textAlign: "left" },
+    slotRow: { width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", marginBottom: 5, background: CARD, border: `2px solid ${DARK}`, borderRadius: 8, color: INK, cursor: "pointer", fontFamily: "inherit", textAlign: "left" },
     mini: { display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" },
-    chipSm: { fontSize: 8.5, fontWeight: 800, color: "#1a1400", borderRadius: 4, padding: "1px 4px" },
+    chipSm: { fontSize: 8.5, fontWeight: 800, color: "#fff", borderRadius: 4, padding: "1px 4px", textShadow: "0 1px 1px rgba(0,0,0,0.3)" },
     // En-tête du picker.
-    pickerHead: { display: "flex", alignItems: "center", gap: 8, marginBottom: 6, fontSize: 12.5 },
+    pickerHead: { display: "flex", alignItems: "center", gap: 8, marginBottom: 6, fontSize: 12.5, color: INK },
     // Fiche complète d'attaque (picker).
-    moveCard: { width: "100%", textAlign: "left", background: "#0e1c20", border: "1px solid #2a5a55", borderRadius: 8, padding: "8px 10px", marginBottom: 6, color: "#fff", cursor: "pointer", fontFamily: "inherit" },
-    moveCardSel: { border: `2px solid ${ACCENT}`, background: "rgba(58,208,192,.12)" },
-    moveCardBlocked: { opacity: 0.4, cursor: "not-allowed", filter: "grayscale(0.7)" },
-    blockedTag: { fontSize: 8.5, fontWeight: 800, color: "#fff", background: "#6a6a6a", borderRadius: 4, padding: "2px 6px", textTransform: "uppercase" },
+    moveCard: { width: "100%", textAlign: "left", background: CARD, border: `2px solid ${DARK}`, borderRadius: 8, padding: "8px 10px", marginBottom: 6, color: INK, cursor: "pointer", fontFamily: "inherit" },
+    moveCardSel: { border: `2px solid ${SELB}`, background: "#dcebfb" },
+    moveCardBlocked: { opacity: 0.45, cursor: "not-allowed", filter: "grayscale(0.6)" },
+    blockedTag: { fontSize: 8.5, fontWeight: 800, color: "#fff", background: "#9a8f78", borderRadius: 4, padding: "2px 6px", textTransform: "uppercase" },
     attrGrid: { display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 4 },
-    attrChip: { fontSize: 11, fontWeight: 700, padding: "5px 9px", borderRadius: 8, background: "#0e1c20", border: "1px solid #2a5a55", color: "#cfe", cursor: "pointer", fontFamily: "inherit" },
-    attrOn: { background: "rgba(58,208,192,.16)", border: `2px solid ${ACCENT}`, color: "#fff" },
+    attrChip: { fontSize: 11, fontWeight: 700, padding: "5px 9px", borderRadius: 8, background: CARD, border: `2px solid ${DARK}`, color: INK, cursor: "pointer", fontFamily: "inherit" },
+    attrOn: { background: "#fbeecb", border: `2px solid ${INK}`, color: INK },
     attrDisabled: { opacity: 0.4, cursor: "not-allowed" },
     moveCardHead: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 },
     moveCardRow: { display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" },
-    rarChip: { fontSize: 8.5, fontWeight: 800, color: "#0a0a0a", borderRadius: 4, padding: "2px 6px", textTransform: "uppercase" },
-    stabTag: { fontSize: 8.5, fontWeight: 800, color: "#1a1400", background: "#7ce0a0", borderRadius: 4, padding: "2px 5px" },
+    rarChip: { fontSize: 8.5, fontWeight: 800, color: "#241a08", borderRadius: 4, padding: "2px 6px", textTransform: "uppercase" },
+    stabTag: { fontSize: 8.5, fontWeight: 800, color: "#123a1c", background: "#a8e0b8", borderRadius: 4, padding: "2px 5px" },
     covTag: { fontSize: 8.5, fontWeight: 800, color: "#fff", background: "#c07a3a", borderRadius: 4, padding: "2px 5px" },
-    tierTag: { fontSize: 8.5, fontWeight: 800, color: "#1a1400", background: "#e0c060", borderRadius: 4, padding: "2px 5px" },
-    moveEffect: { fontSize: 10.5, opacity: 0.8, marginTop: 4 },
-    previewCard: { background: "#0e1c20", border: "1px solid #2a5a55", borderRadius: 8, padding: "7px 9px", marginBottom: 6 },
+    tierTag: { fontSize: 8.5, fontWeight: 800, color: "#3a2e10", background: "#e8cf70", borderRadius: 4, padding: "2px 5px" },
+    moveEffect: { fontSize: 10.5, opacity: 0.85, marginTop: 4, color: INK },
+    // Grande TUILE d'attaque (aérée) — picker façon dex des attaques.
+    tile: { width: "100%", textAlign: "left", background: CARD, border: `2px solid ${DARK}`, borderRadius: 12, padding: "13px 14px", marginBottom: 10, color: INK, cursor: "pointer", fontFamily: "inherit", display: "flex", flexDirection: "column", gap: 9 },
+    tileSel: { border: `3px solid ${SELB}`, background: "#e8f2fd", boxShadow: "0 2px 10px rgba(27,95,166,0.2)" },
+    tileHead: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 },
+    tileName: { fontSize: 17, fontWeight: 800, color: INK, letterSpacing: 0.2 },
+    tileChips: { display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" },
+    typePill: { fontSize: 11, fontWeight: 800, color: "#fff", padding: "3px 11px", borderRadius: 12, letterSpacing: 0.4, textShadow: "0 1px 1px rgba(0,0,0,0.35)" },
+    catPill: { fontSize: 10.5, fontWeight: 800, color: "#fff", padding: "3px 10px", borderRadius: 12, textShadow: "0 1px 1px rgba(0,0,0,0.3)" },
+    tileStats: { display: "flex", gap: 8 },
+    statBox: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 1, background: "#fffdf5", border: `1.5px solid ${DARK}`, borderRadius: 9, padding: "7px 4px" },
+    statBig: { fontSize: 18, fontWeight: 900, color: INK, lineHeight: 1 },
+    statLbl: { fontSize: 9.5, fontWeight: 600, color: INK, opacity: 0.65 },
+    tileEffect: { fontSize: 12, fontWeight: 700, color: "#7a4a10", background: "#f6e9c8", border: `1px solid ${DARK}`, borderRadius: 8, padding: "6px 9px" },
+    tileDesc: { fontSize: 11.5, lineHeight: 1.5, color: INK, opacity: 0.82, fontStyle: "italic" },
+    previewCard: { background: CARD, border: `2px solid ${DARK}`, borderRadius: 8, padding: "7px 9px", marginBottom: 6 },
     previewHead: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "space-between" },
     previewStats: { display: "flex", gap: 8, flexWrap: "wrap", fontSize: 11, marginTop: 4, opacity: 0.9 },
-    miniChip: { fontSize: 9, fontWeight: 800, color: "#1a1400", borderRadius: 4, padding: "1px 5px", marginLeft: 3 },
-    errBox: { background: "rgba(224,104,58,.12)", border: "1px solid #e0683a", borderRadius: 8, padding: "8px 10px", fontSize: 11.5, color: "#f0b090" },
-    okBox: { background: "rgba(124,224,160,.12)", border: "1px solid #7ce0a0", borderRadius: 8, padding: "10px", fontSize: 12.5, color: "#bff0cf", textAlign: "center" },
+    miniChip: { fontSize: 9, fontWeight: 800, color: "#fff", borderRadius: 4, padding: "1px 5px", marginLeft: 3, textShadow: "0 1px 1px rgba(0,0,0,0.3)" },
+    errBox: { background: "#fbe2d8", border: "2px solid #c0392b", borderRadius: 8, padding: "8px 10px", fontSize: 11.5, color: "#8a2418" },
+    okBox: { background: "#dff3e0", border: "2px solid #2e7d32", borderRadius: 8, padding: "10px", fontSize: 12.5, color: "#1f5a24", textAlign: "center" },
     nav: { display: "flex", justifyContent: "space-between", gap: 8, marginTop: 8 },
-    ghost: { padding: "9px 14px", background: "transparent", color: "#9fd", border: "1px solid #2a5a55", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" },
-    primary: { padding: "9px 16px", background: ACCENT, color: "#04181a", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" },
-    p: { fontSize: 12.5, lineHeight: 1.5, margin: "6px 0" },
-    json: { width: "100%", height: 160, background: "#06100f", border: "1px solid #2a5a55", borderRadius: 8, color: "#9fe", fontFamily: "monospace", fontSize: 10, padding: 8, boxSizing: "border-box", marginBottom: 8 },
+    ghost: { padding: "9px 14px", background: "transparent", color: INK, border: `2px solid ${DARK}`, borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" },
+    primary: { padding: "9px 16px", background: INK, color: CREAM, border: "none", borderRadius: 8, fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" },
+    p: { fontSize: 12.5, lineHeight: 1.5, margin: "6px 0", color: INK },
+    json: { width: "100%", height: 160, background: "#fffdf5", border: `2px solid ${DARK}`, borderRadius: 8, color: INK, fontFamily: "monospace", fontSize: 10, padding: 8, boxSizing: "border-box", marginBottom: 8 },
 }
