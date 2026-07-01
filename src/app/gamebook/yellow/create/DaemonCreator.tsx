@@ -14,9 +14,9 @@ import { TYPE_COLORS } from "../dex/dexShared"
 import {
     type CustomSpec, type Bloomer, type MoveCardInfo, type CurveShape, type RoleKey,
     BLOOMERS, bloomerBudget, validateSpec, previewLine, ROLES, CURVE_LABEL, CURVE_HINT,
-    slotOptions, suggestLearnset, moveCard, isDamagingMove, moveRarity, powerPoolMod,
+    slotChoices, suggestLearnset, moveCard, isDamagingMove, moveRarity,
     lineTypes, LEARN_LEVELS, STAT_KEYS, STAT_LABEL, MIN_FINAL_STAT, MAX_STAB, MAX_COVERAGE,
-    STAT_HARD_CAP, STAT_DEX_MAX, specStatCost, fitStatsToBudget, maxAvgOffPower,
+    STAT_HARD_CAP, STAT_DEX_MAX, specStatCost, fitStatsToBudget,
 } from "@/lib/gamebook/yellow/create/customSpecies"
 
 const TYPE_FR: Record<PokeType, string> = {
@@ -46,19 +46,18 @@ export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: s
     const usedBst = STAT_KEYS.reduce((a, k) => a + spec.finalStats[k], 0) // somme brute (sert à moduler la puissance)
     const cost = specStatCost(spec.finalStats)                            // coût réel (points au-delà du record = ×2) → c'est LUI plafonné
     const lts = useMemo(() => lineTypes(spec), [spec])
-    // Options ACCESSIBLES par palier (offensives / statuts), recalculées quand types OU BST changent
-    // (le BST module la puissance : faible → un peu plus fort · type dominant → nerfé).
-    const slotOpts = useMemo(() => LEARN_LEVELS.map((lvl) => slotOptions(lts, lvl, usedBst)), [lts, usedBst])
-    const suggested = useMemo(() => suggestLearnset(lts, usedBst), [lts, usedBst]) // learnset par défaut VALIDE
-    // Learnset EFFECTIF : choix du joueur s'il reste accessible, sinon la suggestion valide.
-    const learnset = useMemo(
-        () => LEARN_LEVELS.map((lvl, i) => {
-            const cur = spec.learnset[i]?.moveId
-            const all = [...slotOpts[i].offensive, ...slotOpts[i].status]
-            return { level: lvl, moveId: cur && all.includes(cur) ? cur! : suggested[i].moveId }
-        }),
-        [spec.learnset, slotOpts, suggested],
-    )
+    // Suggestion par défaut VALIDE (slots forcés + cascade). Recalculée quand types/BST changent.
+    const suggested = useMemo(() => suggestLearnset(lts, usedBst, spec.finalTypes), [lts, usedBst, spec.finalTypes])
+    // Learnset EFFECTIF : choix du joueur s'il reste VALIDE pour son slot (slots forcés + cap cascade), sinon la
+    // suggestion. Les options d'un slot dépendent des AUTRES (pool cumulatif) → on valide dans ce contexte.
+    const learnset = useMemo(() => {
+        const base = LEARN_LEVELS.map((lvl, i) => ({ level: lvl, moveId: spec.learnset[i]?.moveId || suggested[i].moveId }))
+        const specBase = { ...spec, learnset: base }
+        return base.map((s, i) => {
+            const ch = slotChoices(specBase, i, usedBst)
+            return { level: s.level, moveId: [...ch.offensive, ...ch.status].includes(s.moveId) ? s.moveId : suggested[i].moveId }
+        })
+    }, [spec, suggested, usedBst])
     // Validation + aperçu sur la spec AVEC le learnset effectif (sinon le bouton Créer reste bloqué
     // tant que le joueur n'a pas touché l'étape Attaques, alors que les valeurs par défaut sont valides).
     const effSpec = useMemo(() => ({ ...spec, learnset }), [spec, learnset])
@@ -245,14 +244,13 @@ export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: s
                                 const nCov = off.filter((m) => m.type !== "NORMAL" && !spec.finalTypes.includes(m.type)).length
                                 const nCommon = off.filter((m) => ["commune", "répandue"].includes(moveRarity(m.id))).length
                                 const avgPow = off.length ? Math.round(off.reduce((a, m) => a + (m.power > 0 ? m.power : (m.effect?.fixedDamage ?? 0)), 0) / off.length) : 0
-                                const capPow = maxAvgOffPower(usedBst, spec.finalTypes)
                                 const chip = (ok: boolean, txt: string) => <span style={{ ...S.compoChip, background: ok ? "rgba(124,224,160,.15)" : "rgba(224,104,58,.18)", color: ok ? "#7ce0a0" : "#f0a880" }}>{ok ? "✓" : "✗"} {txt}</span>
                                 return <div style={S.compoRow}>
                                     {chip(nStatus >= Math.ceil(mvs.length * 0.25), `${nStatus} statuts (≥${Math.ceil(mvs.length * 0.25)})`)}
                                     {chip(nStab <= MAX_STAB, `${nStab} STAB (≤${MAX_STAB})`)}
                                     {chip(nCov <= MAX_COVERAGE, `${nCov} couv. (≤${MAX_COVERAGE})`)}
                                     {chip(off.length === 0 || nCommon >= Math.ceil(off.length * 0.5), `${nCommon}/${off.length} communes`)}
-                                    {chip(off.length === 0 || avgPow <= capPow, `puissance moy ${avgPow} (≤${capPow})`)}
+                                    <span style={S.compoChip}>puissance moy {avgPow}</span>
                                 </div>
                             })()}
                             <Lbl>Tes {LEARN_LEVELS.length} attaques — touche un palier pour choisir</Lbl>
@@ -266,36 +264,28 @@ export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: s
                                     </button>
                                 )
                             })}
-                            {(() => {
-                                const mod = powerPoolMod(usedBst, lts)
-                                if (Math.abs(mod) < 0.01) return null
-                                const pct = Math.round(mod * 100)
-                                return <div style={{ ...S.compoRow, marginTop: 2 }}>
-                                    <span style={{ ...S.compoChip, background: mod > 0 ? "rgba(124,224,160,.15)" : "rgba(224,104,58,.18)", color: mod > 0 ? "#7ce0a0" : "#f0a880" }}>
-                                        {mod > 0 ? "▲" : "▼"} pool de puissance {pct > 0 ? "+" : ""}{pct}% ({mod > 0 ? "BST modeste / type peu couvrant → compensation" : "gros BST / type déjà dominant → nerf"})
-                                    </span>
-                                </div>
-                            })()}
-                            <Hint>Attaques = Normal + tes types (STAB) uniquement. Puissance plafonnée par niveau (45 tôt → 150 aux ultimes). ≥1 attaque sur 4 doit être un statut · max {MAX_STAB} STAB · max {MAX_COVERAGE} couverture (via changement de type) · pas que des attaques rares.</Hint>
+                            <Hint>Palier 1 = attaque basique · Palier 2 = statut faible · le reste puise dans un POOL de puissance PARTAGÉ : plus une attaque est forte, moins il reste pour les autres. Attaques = Normal + tes types (STAB) uniquement.</Hint>
                         </>
                     ) : (
                         <>
                             {(() => {
-                                // Attaques déjà choisies aux AUTRES paliers → retirées des options (pas de doublon).
-                                const otherIds = new Set(learnset.filter((_, j) => j !== pickingSlot).map((l) => l.moveId))
-                                const off = slotOpts[pickingSlot].offensive.filter((id) => !otherIds.has(id))
-                                const sta = slotOpts[pickingSlot].status.filter((id) => !otherIds.has(id))
+                                // slotChoices applique : slots forcés (1 basique · 2 statut), cap CASCADE (pool restant),
+                                // type (Normal+STAB), niveau, et retire les doublons des autres paliers.
+                                const ch = slotChoices(effSpec, pickingSlot!, usedBst)
+                                const label = pickingSlot === 0 ? "Palier 1 — attaque BASIQUE (Normal/STAB, sans effet)"
+                                    : pickingSlot === 1 ? "Palier 2 — STATUT faible"
+                                        : `Niv ${LEARN_LEVELS[pickingSlot!]} — pool restant : P≤${ch.cap}`
                                 return (
                                     <>
                                         <div style={S.pickerHead}>
                                             <button style={S.ghost} onClick={() => setPickingSlot(null)}>‹ Retour</button>
-                                            <b>Niv {LEARN_LEVELS[pickingSlot]} — attaques accessibles</b>
+                                            <b>{label}</b>
                                         </div>
-                                        <Lbl>⚔️ Offensives ({off.length})</Lbl>
-                                        {off.map((id) => { const c = moveCard(id, lts)!; return <FullCard key={id} c={c} sel={learnset[pickingSlot!].moveId === id} onPick={() => { setLearn(pickingSlot!, id); setPickingSlot(null) }} /> })}
-                                        <Lbl>📊 Statuts ({sta.length}) — proposés du plus faible au plus fort</Lbl>
-                                        {sta.length === 0 && <Hint>Aucun statut dispo à ce niveau (ils se débloquent progressivement).</Hint>}
-                                        {sta.map((id) => { const c = moveCard(id, lts)!; return <FullCard key={id} c={c} sel={learnset[pickingSlot!].moveId === id} onPick={() => { setLearn(pickingSlot!, id); setPickingSlot(null) }} /> })}
+                                        {ch.offensive.length > 0 && <Lbl>⚔️ Offensives ({ch.offensive.length})</Lbl>}
+                                        {ch.offensive.map((id) => { const c = moveCard(id, lts)!; return <FullCard key={id} c={c} sel={learnset[pickingSlot!].moveId === id} onPick={() => { setLearn(pickingSlot!, id); setPickingSlot(null) }} /> })}
+                                        {ch.status.length > 0 && <Lbl>📊 Statuts ({ch.status.length}) — du plus faible au plus fort</Lbl>}
+                                        {ch.offensive.length === 0 && ch.status.length === 0 && <Hint>Aucune attaque disponible pour ce palier (pool épuisé — baisse une autre attaque).</Hint>}
+                                        {ch.status.map((id) => { const c = moveCard(id, lts)!; return <FullCard key={id} c={c} sel={learnset[pickingSlot!].moveId === id} onPick={() => { setLearn(pickingSlot!, id); setPickingSlot(null) }} /> })}
                                     </>
                                 )
                             })()}

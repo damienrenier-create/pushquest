@@ -4,7 +4,7 @@ import {
     bloomerBudget, LEARN_LEVELS, STAT_KEYS, lineTypes, typesAtStage, moveRarity, isLearnableMove,
     statusTier, statusTierCapForLevel, allowedOffensiveTypes, weaknessTypes, moveCard, suggestLearnset,
     MAX_STAB, MAX_COVERAGE, MIN_STATUS_RATIO, ROLES, CURVE_RATIOS, powerPoolMod, effectiveMaxPower,
-    STAT_HARD_CAP, STAT_DEX_MAX, specStatCost, fitStatsToBudget, STALL_BULK_THRESHOLD, maxAvgOffPower,
+    STAT_HARD_CAP, STAT_DEX_MAX, specStatCost, fitStatsToBudget, STALL_BULK_THRESHOLD, effectivePower, maxAvgOffPower, POWER_AVG_TOLERANCE, hasNoSideEffect,
 } from "./customSpecies"
 import { getMove, MOVES } from "../data/moves"
 import { isDamagingMove } from "./customSpecies"
@@ -83,9 +83,9 @@ describe("création — validateSpec (règles de composition)", () => {
     })
     it("refuse une attaque trop puissante pour un bas niveau", () => {
         const s = validSpec()
-        const strong = Object.values(MOVES).find((m) => (m.power > 65) && (m.type === "EAU" || m.type === "NORMAL") && isLearnableMove(m.id))!
-        s.learnset = [...s.learnset]; s.learnset[0] = { level: 5, moveId: strong.id }
-        expect(validateSpec(s).some((m) => m.includes("n'est pas accessible"))).toBe(true)
+        const strong = Object.values(MOVES).find((m) => (m.power > 70) && (m.type === "EAU" || m.type === "NORMAL") && isLearnableMove(m.id))!
+        s.learnset = [...s.learnset]; s.learnset[2] = { level: 12, moveId: strong.id } // slot 3 (niv 12, cap 60)
+        expect(validateSpec(s).some((m) => m.includes("dépasse le pool") || m.includes("n'est pas accessible"))).toBe(true)
     })
     it("refuse un doublon", () => {
         const s = validSpec()
@@ -159,20 +159,26 @@ describe("création — correctifs d'équilibrage (audit)", () => {
         expect(statusTier(getMove("vampigraine")!)).toBe(3)
         expect(statusTier(getMove("toxik")!)).toBe(3)
     })
-    it("pool de puissance : la suggestion respecte le plafond de moyenne (corrélé au dex)", () => {
+    it("pool de puissance : la moyenne de la suggestion reste dans les clous (± tolérance)", () => {
         for (const t of ["FEU", "EAU", "NORMAL", "PSY", "COMBAT"] as PokeType[]) for (const bst of [335, 435, 480]) {
             const off = suggestLearnset([t], bst).map((l) => getMove(l.moveId)!).filter(isDamagingMove)
-            const avg = off.reduce((a, m) => a + (m.power > 0 ? m.power : (m.effect?.fixedDamage ?? 0)), 0) / off.length
-            expect(Math.round(avg)).toBeLessThanOrEqual(maxAvgOffPower(bst, [t]))
+            const avg = Math.round(off.reduce((a, m) => a + effectivePower(m), 0) / off.length)
+            expect(avg).toBeLessThanOrEqual(maxAvgOffPower(bst, [t]) + POWER_AVG_TOLERANCE)
         }
     })
+    it("slots forcés : la suggestion met une attaque basique en slot 1 et un statut en slot 2", () => {
+        const ls = suggestLearnset(["FEU"], 435)
+        const m0 = getMove(ls[0].moveId)!, m1 = getMove(ls[1].moveId)!
+        expect(isDamagingMove(m0)).toBe(true); expect(hasNoSideEffect(m0)).toBe(true); expect(effectivePower(m0)).toBeLessThanOrEqual(45)
+        expect(isDamagingMove(m1)).toBe(false) // statut
+    })
     it("pool de puissance : refuse un learnset qui bourre des attaques fortes partout", () => {
-        const s = validSpec(); s.bloomer = "late" // gros budget → plafond de moyenne le plus bas
+        const s = validSpec(); s.bloomer = "late"
         s.finalTypes = ["EAU"]; s.finalStats = { hp: 90, atk: 60, def: 90, spe: 90, spc: 120 }
-        // On remplit les 10 slots avec des attaques P≥80 distinctes (moyenne bien au-dessus du plafond ~66).
+        // On remplit les 10 slots avec des attaques P≥80 : la cascade cumulative doit en refuser au moins une.
         const strong = Object.values(MOVES).filter((m) => m.power >= 80 && isLearnableMove(m.id)).slice(0, LEARN_LEVELS.length).map((m) => m.id)
         s.learnset = LEARN_LEVELS.map((lvl, i) => ({ level: lvl, moveId: strong[i] ?? "charge" }))
-        expect(validateSpec(s).some((m) => m.includes("Pool de puissance"))).toBe(true)
+        expect(validateSpec(s).some((m) => m.includes("pool de puissance") || m.includes("BASIQUE") || m.includes("n'est pas accessible"))).toBe(true)
     })
 })
 
