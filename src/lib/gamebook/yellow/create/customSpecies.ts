@@ -52,8 +52,8 @@ export const MIN_STATUS_RATIO = 0.25
 /** Part minimale d'attaques offensives COMMUNES/RÉPANDUES (anti cherry-pick de raretés). */
 export const MIN_COMMON_RATIO = 0.5
 
-/** Puissance MAX d'une attaque OFFENSIVE apprenable à ce niveau. Seuils CALIBRÉS sur la progression réelle
- *  du dex (hors kit inné) : 65 tôt → 150 aux ultimes. cf. dex-analysis. */
+/** Puissance MAX de BASE d'une attaque OFFENSIVE à ce niveau. Seuils CALIBRÉS sur la progression réelle
+ *  du dex (hors kit inné) : 65 tôt → 150 aux ultimes. cf. dex-analysis. Modulé ensuite par BST+type. */
 export function maxPowerForLevel(level: number): number {
     if (level <= 9) return 65
     if (level <= 18) return 75
@@ -62,6 +62,53 @@ export function maxPowerForLevel(level: number): number {
     if (level <= 45) return 120
     return 150
 }
+
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v))
+
+// ── POOL DE PUISSANCE MODULÉ (le « compromis ») : BST faible → un peu plus de puissance · type fort → nerf ──
+let _typeScore: Map<PokeType, number> | null = null
+/** Fraction du dex frappée en super-efficace par ce type (utilité offensive ; mémoïsé). */
+export function typeOffensivePct(t: PokeType): number {
+    if (!_typeScore) {
+        _typeScore = new Map()
+        const all = Object.values(SPECIES)
+        for (const ty of POKE_TYPES) { let se = 0; for (const s of all) if (typeEffectiveness(ty, s.types) >= 2) se++; _typeScore.set(ty, se / all.length) }
+    }
+    return _typeScore.get(t) ?? 0
+}
+/** Modificateur de puissance (−15 %..+15 %) : (a) BST sous 435 → bonus · (b) type STAB fort (couvre bien le
+ *  dex) → malus. Un Daemon faible ou d'un type peu utile tape un peu plus fort ; un type dominant est nerfé. */
+export function powerPoolMod(finalBst: number, types: PokeType[]): number {
+    const bstMod = clamp((BASE_FINAL_BST - finalBst) / BASE_FINAL_BST, -0.12, 0.12)     // low BST → +
+    const strongest = types.length ? Math.max(...types.map(typeOffensivePct)) : 0
+    const typeMod = clamp((0.25 - strongest) * 0.5, -0.12, 0.05)                        // au-dessus de 25% de couverture → nerf
+    return clamp(bstMod + typeMod, -0.15, 0.15)
+}
+/** Cap de puissance EFFECTIF pour un slot (base du niveau × modificateur BST+type). */
+export function effectiveMaxPower(level: number, finalBst: number, types: PokeType[]): number {
+    return Math.round(maxPowerForLevel(level) * (1 + powerPoolMod(finalBst, types)))
+}
+
+// ── RÔLE → contraintes de stats (min/max) + distribution suggérée (le joueur choisit sa DIRECTION) ──
+export type RoleKey = "attaquant-phys" | "attaquant-spe" | "rapide" | "mur" | "equilibre"
+export interface RoleCfg { label: string; hint: string; min: Partial<Record<StatKey, number>>; max: Partial<Record<StatKey, number>>; profile: Record<StatKey, number> }
+export const ROLES: Record<RoleKey, RoleCfg> = {
+    "attaquant-phys": { label: "Attaquant physique", hint: "Grosse Attaque, frappe fort au contact", min: { atk: 95 }, max: { spc: 70 }, profile: { hp: 75, atk: 130, def: 70, spe: 90, spc: 50 } },
+    "attaquant-spe": { label: "Attaquant spécial", hint: "Gros Spécial, attaques à distance", min: { spc: 95 }, max: { atk: 70 }, profile: { hp: 75, atk: 50, def: 70, spe: 90, spc: 130 } },
+    "rapide": { label: "Rapide (sweeper)", hint: "Vitesse élevée, frappe en premier", min: { spe: 100 }, max: { hp: 85, def: 85 }, profile: { hp: 70, atk: 100, def: 60, spe: 125, spc: 60 } },
+    "mur": { label: "Mur (défenseur)", hint: "Gros PV/Défense, encaisse et use l'adversaire", min: { hp: 85, def: 90 }, max: { spe: 70 }, profile: { hp: 105, atk: 60, def: 120, spe: 45, spc: 85 } },
+    "equilibre": { label: "Équilibré", hint: "Polyvalent, sans faille marquée", min: {}, max: {}, profile: { hp: 87, atk: 87, def: 87, spe: 87, spc: 87 } },
+}
+
+// ── FORME DE COURBE (2e axe) : comment le BST se répartit entre les stades ──
+export type CurveShape = "linear" | "accel" | "decel"
+export const CURVE_RATIOS: Record<CurveShape, [number, number, number]> = {
+    linear: [0.57, 0.77, 1.0],   // progression régulière (défaut dex)
+    accel: [0.45, 0.68, 1.0],    // pic tardif : faible longtemps, monstre final
+    decel: [0.68, 0.88, 1.0],    // fort tôt : costaud vite, plafonne
+}
+export const CURVE_LABEL: Record<CurveShape, string> = { linear: "Linéaire", accel: "Accélérée (pic tardif)", decel: "Décélérée (fort tôt)" }
+export const CURVE_HINT: Record<CurveShape, string> = { linear: "Les stats montent régulièrement.", accel: "Faible longtemps, mais final surpuissant.", decel: "Costaud dès le début, mais plafonne vite." }
 
 // ── RARETÉ (nb d'espèces qui apprennent l'attaque, calculé sur SPECIES ; mémoïsé) ──
 let _learnCount: Map<string, number> | null = null
@@ -158,8 +205,8 @@ const MOVE_DENYLIST = new Set(["struggle", "lutte"])
  * apprises par ≥1 espèce (pas de CT-only), cohérentes en type (STAB + Normal + couverture hors faiblesse),
  * offensives sous le cap de puissance du niveau, statuts sous le cap de FORCE du niveau (progression).
  */
-export function moveOptionsFor(lineTypes: PokeType[], level: number): string[] {
-    const maxP = maxPowerForLevel(level)
+export function moveOptionsFor(lineTypes: PokeType[], level: number, finalBst: number = BASE_FINAL_BST): string[] {
+    const maxP = effectiveMaxPower(level, finalBst, lineTypes) // cap MODULÉ (BST faible → +, type fort → −)
     const statusCap = statusTierCapForLevel(level)
     const allowed = allowedOffensiveTypes(lineTypes)
     const out: string[] = []
@@ -183,8 +230,8 @@ export function moveOptionsFor(lineTypes: PokeType[], level: number): string[] {
     })
 }
 /** Options SÉPARÉES par nature, pour un picker en fiches (offensives triées par puissance · statuts par force). */
-export function slotOptions(lineTypes: PokeType[], level: number): { offensive: string[]; status: string[] } {
-    const all = moveOptionsFor(lineTypes, level)
+export function slotOptions(lineTypes: PokeType[], level: number, finalBst: number = BASE_FINAL_BST): { offensive: string[]; status: string[] } {
+    const all = moveOptionsFor(lineTypes, level, finalBst)
     return {
         offensive: all.filter((id) => isDamagingMove(getMove(id)!)),
         status: all.filter((id) => !isDamagingMove(getMove(id)!)).sort((a, b) => statusTier(getMove(a)!) - statusTier(getMove(b)!)),
@@ -193,14 +240,25 @@ export function slotOptions(lineTypes: PokeType[], level: number): { offensive: 
 
 /** Learnset PAR DÉFAUT valide (respecte les règles de composition) : 3 statuts en slots mid/late,
  *  offensives communes/STAB ailleurs, sans doublon. Sert de point de départ au wizard. */
-export function suggestLearnset(lineTypes: PokeType[]): Array<{ level: number; moveId: string }> {
+export function suggestLearnset(lineTypes: PokeType[], finalBst: number = BASE_FINAL_BST): Array<{ level: number; moveId: string }> {
     const used = new Set<string>()
-    const pick = (ids: string[]) => { for (const id of ids) if (!used.has(id)) { used.add(id); return id } return ids[0] ?? "" }
+    let coverageUsed = 0
+    const isCov = (id: string) => { const m = getMove(id)!; return m.type !== "NORMAL" && !lineTypes.includes(m.type) }
+    const first = (ids: string[]) => ids.find((id) => !used.has(id))
     return LEARN_LEVELS.map((lvl, i) => {
-        const { offensive, status } = slotOptions(lineTypes, lvl)
-        if (status.length && (i === 3 || i === 6 || i === 8)) return { level: lvl, moveId: pick(status) }
+        const { offensive, status } = slotOptions(lineTypes, lvl, finalBst)
+        if (status.length && (i === 3 || i === 6 || i === 8)) {
+            const id = first(status) ?? status[0] ?? ""
+            used.add(id); return { level: lvl, moveId: id }
+        }
         const common = offensive.filter((id) => { const r = moveRarity(id); return r === "commune" || r === "répandue" })
-        return { level: lvl, moveId: pick(common.length ? common : offensive) }
+        const nonCov = (arr: string[]) => arr.filter((id) => !isCov(id))
+        // Priorité : STAB/NORMAL commun → STAB/NORMAL tout → couverture (si quota MAX_COVERAGE restant) → reste.
+        let id = first(nonCov(common)) ?? first(nonCov(offensive))
+        if (!id && coverageUsed < MAX_COVERAGE) id = first(common.filter(isCov)) ?? first(offensive.filter(isCov))
+        if (!id) id = first(common) ?? first(offensive) ?? offensive[0] ?? ""
+        if (id && isCov(id)) coverageUsed++
+        used.add(id); return { level: lvl, moveId: id }
     })
 }
 
@@ -209,8 +267,11 @@ export interface CustomSpec {
     name: string                 // nom proposé (Sartay peut peaufiner)
     da: string                   // direction artistique : 1-2 phrases (sert au sprite + description)
     character: string            // caractère / personnalité
+    daFinal?: string             // DA du STADE FINAL (en + de celle de la base) — pour le sprite artist
     stages: 1 | 2 | 3
     bloomer: Bloomer
+    curve: CurveShape            // forme de courbe (répartition du BST entre stades)
+    role: RoleKey               // rôle → contraintes min/max de stats
     finalTypes: PokeType[]                       // 1 ou 2 types du STADE FINAL
     typeChange?: { atStage: 2 | 3; types: PokeType[] } // 1 changement MAX : les stades < atStage portent ces types
     finalStats: Record<StatKey, number>          // distribution du STADE FINAL (somme ≤ budget)
@@ -238,6 +299,8 @@ export function validateSpec(spec: CustomSpec): string[] {
     if (spec.da.trim().length < 10) e.push("Décris ton Daemon (direction artistique) en une phrase au moins.")
     if (![1, 2, 3].includes(spec.stages)) e.push("Nombre de stades invalide (1 à 3).")
     if (!BLOOMERS[spec.bloomer]) e.push("Courbe d'éclosion invalide.")
+    if (spec.stages === 3 && !CURVE_RATIOS[spec.curve]) e.push("Forme de courbe invalide.")
+    if (!ROLES[spec.role]) e.push("Rôle invalide.")
 
     const badType = (ts: PokeType[]) => ts.length < 1 || ts.length > 2 || ts.some((t) => !POKE_TYPES.includes(t)) || (ts.length === 2 && ts[0] === ts[1])
     if (badType(spec.finalTypes)) e.push("Type final invalide (1 ou 2 types distincts).")
@@ -249,10 +312,13 @@ export function validateSpec(spec: CustomSpec): string[] {
     const budget = bloomerBudget(spec.bloomer)
     const total = BST(spec.finalStats)
     if (total > budget) e.push(`BST trop élevé : ${total} / ${budget} max (courbe ${BLOOMERS[spec.bloomer].label}).`)
+    const role = ROLES[spec.role]
     for (const k of STAT_KEYS) {
         const v = spec.finalStats[k]
-        if (v < MIN_FINAL_STAT) e.push(`${STAT_LABEL[k]} trop basse (min ${MIN_FINAL_STAT}).`)
-        if (v > MAX_FINAL_STAT) e.push(`${STAT_LABEL[k]} trop haute (max ${MAX_FINAL_STAT}).`)
+        const lo = Math.max(MIN_FINAL_STAT, role?.min[k] ?? MIN_FINAL_STAT)
+        const hi = Math.min(MAX_FINAL_STAT, role?.max[k] ?? MAX_FINAL_STAT)
+        if (v < lo) e.push(`${STAT_LABEL[k]} trop basse pour un ${role?.label ?? "Daemon"} (min ${lo}).`)
+        if (v > hi) e.push(`${STAT_LABEL[k]} trop haute pour un ${role?.label ?? "Daemon"} (max ${hi}).`)
     }
 
     // Learnset : un pick par slot, attaque ACCESSIBLE pour son niveau, pas de doublon.
@@ -267,7 +333,7 @@ export function validateSpec(spec: CustomSpec): string[] {
         if (!isLearnableMove(slot.moveId)) { e.push(`« ${mv.name} » ne s'apprend par aucune espèce (CT/inexistante).`); return }
         if (seen.has(slot.moveId)) e.push(`« ${mv.name} » est en double (une attaque ne peut apparaître qu'une fois).`)
         seen.add(slot.moveId)
-        if (!moveOptionsFor(lts, lvl).includes(slot.moveId)) e.push(`« ${mv.name} » n'est pas accessible au niv ${lvl} (type/puissance/force).`)
+        if (!moveOptionsFor(lts, lvl, total).includes(slot.moveId)) e.push(`« ${mv.name} » n'est pas accessible au niv ${lvl} (type/puissance/force).`)
     })
 
     // Composition du learnset (équilibre) : statuts, STAB, couverture, rareté.
@@ -314,7 +380,8 @@ const ROMAN = ["", "", " II", " III"]
 /** Construit la LIGNÉE complète (SpeciesData[]) à partir de la spec validée. ownerId rend les ids uniques (partage Zone de Combat). */
 export function buildCustomSpecies(spec: CustomSpec, ownerId: string): SpeciesData[] {
     const cfg = BLOOMERS[spec.bloomer]
-    const ratios = STAGE_RATIOS[spec.stages]
+    // 3 stades → forme de courbe choisie ; 1-2 stades → ratios par défaut.
+    const ratios = spec.stages === 3 ? CURVE_RATIOS[spec.curve ?? "linear"] : STAGE_RATIOS[spec.stages]
     const finalBst = BST(spec.finalStats)
     const baseId = `custom_${slug(ownerId)}_${slug(spec.name)}`
     const evoLevels = spec.stages === 3 ? cfg.evo3 : spec.stages === 2 ? cfg.evo2 : []

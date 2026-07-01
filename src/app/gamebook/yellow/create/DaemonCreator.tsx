@@ -12,8 +12,9 @@ import { POKE_TYPES, type PokeType, type StatKey } from "@/lib/gamebook/yellow/b
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { TYPE_COLORS } from "../dex/dexShared"
 import {
-    type CustomSpec, type Bloomer, type MoveCardInfo, BLOOMERS, bloomerBudget, validateSpec, previewLine,
-    slotOptions, suggestLearnset, moveCard, isDamagingMove, moveRarity,
+    type CustomSpec, type Bloomer, type MoveCardInfo, type CurveShape, type RoleKey,
+    BLOOMERS, bloomerBudget, validateSpec, previewLine, ROLES, CURVE_LABEL, CURVE_HINT,
+    slotOptions, suggestLearnset, moveCard, isDamagingMove, moveRarity, powerPoolMod,
     lineTypes, LEARN_LEVELS, STAT_KEYS, STAT_LABEL, MIN_FINAL_STAT, MAX_FINAL_STAT, MAX_STAB, MAX_COVERAGE,
 } from "@/lib/gamebook/yellow/create/customSpecies"
 
@@ -21,13 +22,13 @@ const TYPE_FR: Record<PokeType, string> = {
     NORMAL: "Normal", FEU: "Feu", EAU: "Eau", PLANTE: "Plante", ELEC: "Élec", GLACE: "Glace", COMBAT: "Combat",
     POISON: "Poison", SOL: "Sol", VOL: "Vol", PSY: "Psy", INSECTE: "Insecte", ROCHE: "Roche", SPECTRE: "Spectre", DRAGON: "Dragon",
 }
-const STEPS = ["Concept", "Stades", "Éclosion", "Type(s)", "Stats", "Attaques", "Récap"]
+const STEPS = ["Concept", "Éclosion", "Type(s)", "Rôle", "Stats", "Attaques", "Récap"]
 
 function defaultSpec(): CustomSpec {
     return {
-        name: "", da: "", character: "", stages: 2, bloomer: "mid",
+        name: "", da: "", daFinal: "", character: "", stages: 3, bloomer: "mid", curve: "linear", role: "equilibre",
         finalTypes: ["NORMAL"], typeChange: undefined,
-        finalStats: { hp: 60, atk: 60, def: 60, spe: 60, spc: 60 },
+        finalStats: { ...ROLES.equilibre.profile },
         learnset: [],
     }
 }
@@ -42,9 +43,10 @@ export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: s
     const budget = bloomerBudget(spec.bloomer)
     const usedBst = STAT_KEYS.reduce((a, k) => a + spec.finalStats[k], 0)
     const lts = useMemo(() => lineTypes(spec), [spec])
-    // Options ACCESSIBLES par palier (offensives / statuts), recalculées quand les types changent.
-    const slotOpts = useMemo(() => LEARN_LEVELS.map((lvl) => slotOptions(lts, lvl)), [lts])
-    const suggested = useMemo(() => suggestLearnset(lts), [lts]) // learnset par défaut VALIDE
+    // Options ACCESSIBLES par palier (offensives / statuts), recalculées quand types OU BST changent
+    // (le BST module la puissance : faible → un peu plus fort · type dominant → nerfé).
+    const slotOpts = useMemo(() => LEARN_LEVELS.map((lvl) => slotOptions(lts, lvl, usedBst)), [lts, usedBst])
+    const suggested = useMemo(() => suggestLearnset(lts, usedBst), [lts, usedBst]) // learnset par défaut VALIDE
     // Learnset EFFECTIF : choix du joueur s'il reste accessible, sinon la suggestion valide.
     const learnset = useMemo(
         () => LEARN_LEVELS.map((lvl, i) => {
@@ -117,8 +119,10 @@ export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: s
                         <>
                             <Lbl>Nom de ton Daemon</Lbl>
                             <input style={S.input} value={spec.name} maxLength={18} placeholder="ex. Voltarenard" onChange={(e) => patch({ name: e.target.value })} />
-                            <Lbl>Direction artistique — à quoi il ressemble ? (1-2 phrases, ça servira au sprite)</Lbl>
-                            <textarea style={S.area} value={spec.da} maxLength={220} placeholder="ex. Un renard électrique entouré de petits nuages de fumée magnétiques, l'air malicieux." onChange={(e) => patch({ da: e.target.value })} />
+                            <Lbl>Direction artistique du 1ᵉʳ stade — à quoi il ressemble ? (1-2 phrases, ça servira au sprite)</Lbl>
+                            <textarea style={S.area} value={spec.da} maxLength={220} placeholder="ex. Un bébé renard électrique entouré de petits nuages de fumée magnétiques, l'air malicieux." onChange={(e) => patch({ da: e.target.value })} />
+                            <Lbl>Direction artistique du STADE FINAL <span style={S.subtle}>(optionnel — laisse vide si l'évolution garde le même look en plus grand)</span></Lbl>
+                            <textarea style={S.area} value={spec.daFinal ?? ""} maxLength={220} placeholder="ex. Un grand renard-tonnerre à la fourrure hérissée d'arcs électriques, crocs de foudre." onChange={(e) => patch({ daFinal: e.target.value })} />
                             <Lbl>Caractère / personnalité</Lbl>
                             <input style={S.input} value={spec.character} maxLength={60} placeholder="ex. rusé, joueur, imprévisible" onChange={(e) => patch({ character: e.target.value })} />
                         </>
@@ -126,21 +130,7 @@ export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: s
 
                     {step === 1 && (
                         <>
-                            <Lbl>Combien de stades d'évolution ?</Lbl>
-                            <div style={S.row}>
-                                {[1, 2, 3].map((n) => (
-                                    <button key={n} style={{ ...S.opt, ...(spec.stages === n ? S.optOn : {}) }} onClick={() => patch({ stages: n as 1 | 2 | 3, typeChange: n < (spec.typeChange?.atStage ?? 0) ? undefined : spec.typeChange })}>
-                                        {n} stade{n > 1 ? "s" : ""}
-                                    </button>
-                                ))}
-                            </div>
-                            <Hint>3 stades = base → intermédiaire → final (le plus classique). Plus de stades = plus d'impact mais plus de sprites à dessiner.</Hint>
-                        </>
-                    )}
-
-                    {step === 2 && (
-                        <>
-                            <Lbl>Courbe d'éclosion (vitesse d'évolution ↔ puissance)</Lbl>
+                            <Lbl>Vitesse d'éclosion (rapidité d'évolution ↔ puissance finale)</Lbl>
                             {(Object.keys(BLOOMERS) as Bloomer[]).map((b) => (
                                 <button key={b} style={{ ...S.optWide, ...(spec.bloomer === b ? S.optOn : {}) }} onClick={() => patch({ bloomer: b })}>
                                     <b>{BLOOMERS[b].label}</b> — budget BST <b>{bloomerBudget(b)}</b>
@@ -148,10 +138,19 @@ export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: s
                                 </button>
                             ))}
                             <Hint>Tardive = tu galères longtemps mais ton Daemon final est plus puissant (parfait pour la Zone de Combat). Précoce = fort tout de suite, plafond plus bas.</Hint>
+
+                            <Lbl>Forme de la courbe — comment le BST se répartit entre les 3 stades</Lbl>
+                            {(Object.keys(CURVE_LABEL) as CurveShape[]).map((c) => (
+                                <button key={c} style={{ ...S.optWide, ...(spec.curve === c ? S.optOn : {}) }} onClick={() => patch({ curve: c })}>
+                                    <b>{CURVE_LABEL[c]}</b>
+                                    <div style={S.subtle}>{CURVE_HINT[c]}</div>
+                                </button>
+                            ))}
+                            <Hint>Accélérée = bébé fragile, final surpuissant. Précoce (décélérée) = base déjà solide, gain final plus doux. Linéaire = progression régulière.</Hint>
                         </>
                     )}
 
-                    {step === 3 && (
+                    {step === 2 && (
                         <>
                             <Lbl>Type(s) du STADE FINAL (1 ou 2)</Lbl>
                             <div style={S.typeGrid}>
@@ -189,25 +188,44 @@ export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: s
                         </>
                     )}
 
-                    {step === 4 && (
+                    {step === 3 && (
                         <>
-                            <Lbl>Répartis les stats du STADE FINAL — <b style={{ color: usedBst > budget ? "#e0683a" : "#7ce0a0" }}>{usedBst}/{budget}</b> BST</Lbl>
+                            <Lbl>Rôle de combat — il fixe l'identité ET les bornes de chaque stat (chaque choix = un compromis)</Lbl>
+                            {(Object.keys(ROLES) as RoleKey[]).map((rk) => (
+                                <button key={rk} style={{ ...S.optWide, ...(spec.role === rk ? S.optOn : {}) }}
+                                    onClick={() => patch({ role: rk, finalStats: { ...ROLES[rk].profile } })}>
+                                    <b>{ROLES[rk].label}</b>
+                                    <div style={S.subtle}>{ROLES[rk].hint}</div>
+                                </button>
+                            ))}
+                            <Hint>Choisir un rôle recharge un profil de stats type. Tu ajustes ensuite à l'étape suivante, dans les bornes du rôle (un attaquant ne peut pas devenir un mur, et inversement).</Hint>
+                        </>
+                    )}
+
+                    {step === 4 && (() => {
+                        const role = ROLES[spec.role]
+                        return (
+                        <>
+                            <Lbl>Répartis les stats du STADE FINAL — <b style={{ color: usedBst > budget ? "#e0683a" : "#7ce0a0" }}>{usedBst}/{budget}</b> BST · rôle <b>{role.label}</b></Lbl>
                             {STAT_KEYS.map((k) => {
                                 const v = spec.finalStats[k]
                                 const cat = k === "atk" ? " (attaques PHYS)" : k === "spc" ? " (attaques SPÉ)" : ""
+                                const lo = Math.max(MIN_FINAL_STAT, role.min[k] ?? MIN_FINAL_STAT)
+                                const hi = Math.min(MAX_FINAL_STAT, role.max[k] ?? MAX_FINAL_STAT)
+                                const bounded = lo > MIN_FINAL_STAT || hi < MAX_FINAL_STAT
                                 return (
                                     <div key={k} style={S.statRow}>
-                                        <span style={S.statName}>{STAT_LABEL[k]}<span style={S.subtle}>{cat}</span></span>
-                                        <button style={S.step} disabled={v <= MIN_FINAL_STAT} onClick={() => patch({ finalStats: { ...spec.finalStats, [k]: Math.max(MIN_FINAL_STAT, v - 5) } })}>−</button>
+                                        <span style={S.statName}>{STAT_LABEL[k]}<span style={S.subtle}>{cat}{bounded ? ` [${lo}–${hi}]` : ""}</span></span>
+                                        <button style={S.step} disabled={v <= lo} onClick={() => patch({ finalStats: { ...spec.finalStats, [k]: Math.max(lo, v - 5) } })}>−</button>
                                         <span style={S.statVal}>{v}</span>
-                                        <button style={S.step} disabled={v >= MAX_FINAL_STAT || usedBst + 5 > budget} onClick={() => patch({ finalStats: { ...spec.finalStats, [k]: Math.min(MAX_FINAL_STAT, v + 5) } })}>+</button>
+                                        <button style={S.step} disabled={v >= hi || usedBst + 5 > budget} onClick={() => patch({ finalStats: { ...spec.finalStats, [k]: Math.min(hi, v + 5) } })}>+</button>
                                         <div style={S.bar}><div style={{ ...S.barFill, width: `${(v / MAX_FINAL_STAT) * 100}%`, background: TYPE_COLORS[spec.finalTypes[0]] }} /></div>
                                     </div>
                                 )
                             })}
-                            <Hint>Astuce : ta meilleure stat offensive décide de ton style. Attaque ↔ types physiques (Normal/Combat/Sol/Roche…), Spécial ↔ types spéciaux (Feu/Eau/Élec/Psy…).</Hint>
+                            <Hint>Astuce : ta meilleure stat offensive décide de ton style. Attaque ↔ types physiques (Normal/Combat/Sol/Roche…), Spécial ↔ types spéciaux (Feu/Eau/Élec/Psy…). Les bornes [min–max] viennent de ton rôle.</Hint>
                         </>
-                    )}
+                    )})()}
 
                     {step === 5 && (pickingSlot === null ? (
                         <>
@@ -237,7 +255,17 @@ export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: s
                                     </button>
                                 )
                             })}
-                            <Hint>Puissance & force plafonnées par niveau (65 tôt → 150 aux ultimes). ≥1 attaque sur 4 doit être un statut · max {MAX_STAB} STAB · max {MAX_COVERAGE} couverture · pas que des attaques rares.</Hint>
+                            {(() => {
+                                const mod = powerPoolMod(usedBst, lts)
+                                if (Math.abs(mod) < 0.01) return null
+                                const pct = Math.round(mod * 100)
+                                return <div style={{ ...S.compoRow, marginTop: 2 }}>
+                                    <span style={{ ...S.compoChip, background: mod > 0 ? "rgba(124,224,160,.15)" : "rgba(224,104,58,.18)", color: mod > 0 ? "#7ce0a0" : "#f0a880" }}>
+                                        {mod > 0 ? "▲" : "▼"} pool de puissance {pct > 0 ? "+" : ""}{pct}% ({mod > 0 ? "BST modeste / type peu couvrant → compensation" : "gros BST / type déjà dominant → nerf"})
+                                    </span>
+                                </div>
+                            })()}
+                            <Hint>Puissance & force plafonnées par niveau (65 tôt → 150 aux ultimes), modulées par ton BST et ton type. ≥1 attaque sur 4 doit être un statut · max {MAX_STAB} STAB · max {MAX_COVERAGE} couverture · pas que des attaques rares.</Hint>
                         </>
                     ) : (
                         <>

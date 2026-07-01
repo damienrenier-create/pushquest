@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest"
 import {
     type CustomSpec, validateSpec, buildCustomSpecies, moveOptionsFor, slotOptions, maxPowerForLevel,
     bloomerBudget, LEARN_LEVELS, STAT_KEYS, lineTypes, typesAtStage, moveRarity, isLearnableMove,
-    statusTier, statusTierCapForLevel, allowedOffensiveTypes, weaknessTypes, moveCard,
-    MAX_STAB, MAX_COVERAGE, MIN_STATUS_RATIO,
+    statusTier, statusTierCapForLevel, allowedOffensiveTypes, weaknessTypes, moveCard, suggestLearnset,
+    MAX_STAB, MAX_COVERAGE, MIN_STATUS_RATIO, ROLES, CURVE_RATIOS, powerPoolMod, effectiveMaxPower,
 } from "./customSpecies"
 import { getMove, MOVES } from "../data/moves"
 import { isDamagingMove } from "./customSpecies"
@@ -11,21 +11,14 @@ import type { StatKey, PokeType, MoveData } from "../battle/types"
 
 const bst = (s: Record<StatKey, number>) => STAT_KEYS.reduce((a, k) => a + s[k], 0)
 
-// Construit un learnset VALIDE : 3 statuts (slots mid/late) + 7 offensives (priorité commune/STAB), distinctes.
+// Learnset VALIDE-par-construction = la suggestion du kernel (3 statuts + offensives communes, coverage ≤ cap).
 function buildValidLearnset(types: PokeType[]) {
-    const used = new Set<string>()
-    const pick = (ids: string[]) => { for (const id of ids) if (!used.has(id)) { used.add(id); return id } return ids[0] }
-    return LEARN_LEVELS.map((lvl, i) => {
-        const { offensive, status } = slotOptions(types, lvl)
-        if (status.length && (i === 3 || i === 6 || i === 8)) return { level: lvl, moveId: pick(status) }
-        const common = offensive.filter((id) => { const r = moveRarity(id); return r === "commune" || r === "répandue" })
-        return { level: lvl, moveId: pick(common.length ? common : offensive) }
-    })
+    return suggestLearnset(types)
 }
 function validSpec(): CustomSpec {
     return {
         name: "Aquarenard", da: "un renard d'eau vive aux nageoires de brume", character: "vif et joueur",
-        stages: 3, bloomer: "mid",
+        stages: 3, bloomer: "mid", curve: "linear", role: "equilibre",
         finalTypes: ["EAU"],
         finalStats: { hp: 90, atk: 70, def: 85, spe: 100, spc: 90 }, // 435 = budget mid
         learnset: buildValidLearnset(["EAU"]),
@@ -101,6 +94,53 @@ describe("création — validateSpec (règles de composition)", () => {
     it("refuse un BST au-dessus du budget", () => {
         const s = validSpec(); s.finalStats = { hp: 160, atk: 160, def: 160, spe: 160, spc: 160 }
         expect(validateSpec(s).some((m) => m.includes("BST trop élevé"))).toBe(true)
+    })
+})
+
+describe("création — rôles (contraintes de stats)", () => {
+    it("refuse une stat hors des bornes du rôle (attaquant-phys : Spécial plafonné)", () => {
+        const s = validSpec(); s.role = "attaquant-phys"
+        s.finalStats = { hp: 70, atk: 130, def: 65, spe: 90, spc: 80 } // spc 80 > max 70
+        expect(validateSpec(s).some((m) => m.includes("trop haute"))).toBe(true)
+    })
+    it("refuse une stat sous le minimum du rôle (mur : Défense mini)", () => {
+        const s = validSpec(); s.role = "mur"
+        s.finalStats = { hp: 105, atk: 65, def: 60, spe: 45, spc: 160 } // def 60 < min 90
+        expect(validateSpec(s).some((m) => m.includes("trop basse"))).toBe(true)
+    })
+    it("le profil par défaut de chaque rôle respecte ses propres bornes", () => {
+        for (const rk of Object.keys(ROLES) as (keyof typeof ROLES)[]) {
+            const r = ROLES[rk]
+            for (const k of STAT_KEYS) {
+                if (r.min[k] != null) expect(r.profile[k]).toBeGreaterThanOrEqual(r.min[k]!)
+                if (r.max[k] != null) expect(r.profile[k]).toBeLessThanOrEqual(r.max[k]!)
+            }
+        }
+    })
+})
+
+describe("création — forme de courbe & pool modulé", () => {
+    it("accélérée démarre plus bas que décélérée pour un même stade final", () => {
+        const acc = validSpec(); acc.curve = "accel"
+        const dec = validSpec(); dec.curve = "decel"
+        const baseAcc = buildCustomSpecies(acc, "mools")[0].baseStats
+        const baseDec = buildCustomSpecies(dec, "mools")[0].baseStats
+        const sum = (x: Record<string, number>) => STAT_KEYS.reduce((a, k) => a + x[k], 0)
+        expect(sum(baseAcc)).toBeLessThan(sum(baseDec))
+        expect(CURVE_RATIOS.accel[0]).toBeLessThan(CURVE_RATIOS.decel[0])
+        expect(CURVE_RATIOS.linear[2]).toBe(1) // le stade final = 100% du budget
+    })
+    it("powerPoolMod : BST faible → bonus, BST élevé → malus (clampé)", () => {
+        expect(powerPoolMod(300, ["NORMAL"])).toBeGreaterThan(0)
+        expect(powerPoolMod(480, ["SOL"])).toBeLessThan(0)
+        for (const b of [200, 300, 435, 480]) expect(Math.abs(powerPoolMod(b, ["EAU"]))).toBeLessThanOrEqual(0.15)
+    })
+    it("effectiveMaxPower reste borné autour du cap de base du niveau", () => {
+        for (const lvl of [5, 27, 54]) for (const b of [280, 435, 480]) {
+            const p = effectiveMaxPower(lvl, b, ["FEU"])
+            expect(p).toBeGreaterThan(maxPowerForLevel(lvl) * 0.8)
+            expect(p).toBeLessThan(maxPowerForLevel(lvl) * 1.2)
+        }
     })
 })
 
