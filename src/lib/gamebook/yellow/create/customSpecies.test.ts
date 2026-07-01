@@ -5,7 +5,7 @@ import {
     statusTier, statusTierCapForLevel, allowedOffensiveTypes, weaknessTypes, moveCard, suggestLearnset,
     MAX_STAB, MAX_COVERAGE, MIN_STATUS_RATIO, ROLES, CURVE_RATIOS, powerPoolMod, effectiveMaxPower,
     STAT_HARD_CAP, STAT_DEX_MAX, specStatCost, fitStatsToBudget, STALL_BULK_THRESHOLD, effectivePower, maxAvgOffPower, POWER_AVG_TOLERANCE, hasNoSideEffect,
-    attributeMoveIds, ATTRIBUTE_MOVES, MAX_ATTRIBUTES,
+    attributeMoveIds, ATTRIBUTE_MOVES, MAX_ATTRIBUTES, gatePower,
 } from "./customSpecies"
 import { getMove, MOVES } from "../data/moves"
 import { getSpecies, registerCustomSpecies, isCustomSpeciesId } from "../data/species"
@@ -45,6 +45,15 @@ describe("création — accessibilité des attaques (moveOptionsFor)", () => {
         expect(allowedOffensiveTypes(["FEU"]).has("EAU")).toBe(false) // faiblesse → interdit
         expect(allowedOffensiveTypes(["FEU"]).has("NORMAL")).toBe(true)
         expect(allowedOffensiveTypes(["FEU"]).has("FEU")).toBe(true)
+    })
+    it("gate d'effet : les attaques à effet fort (Météores, priorité) sont gatées plus tard que leur puissance brute", () => {
+        const meteores = getMove("meteores")!
+        expect(gatePower(meteores)).toBeGreaterThan(effectivePower(meteores))         // sureHit → prime
+        expect(gatePower(getMove("vive_attaque")!)).toBeGreaterThan(effectivePower(getMove("vive_attaque")!)) // priorité
+        expect(gatePower(getMove("charge")!)).toBe(effectivePower(getMove("charge")!)) // basique → aucune prime
+        // Météores : refusée avant ~27, dispo au palier 30 (plus « incroyable au niv 18 »).
+        expect(gatePower(meteores)).toBeGreaterThan(maxPowerForLevel(24))
+        expect(gatePower(meteores)).toBeLessThanOrEqual(maxPowerForLevel(30))
     })
     it("statuts proposés PROGRESSIVEMENT (force ≤ cap du niveau)", () => {
         // niv 5-17 : seulement les statuts les plus faibles (tier 1 = débuff adverse −1). Les +2/sommeil/soin arrivent tard.

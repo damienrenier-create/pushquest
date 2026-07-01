@@ -15,7 +15,7 @@ import { TYPE_COLORS } from "../dex/dexShared"
 import {
     type CustomSpec, type Bloomer, type MoveCardInfo, type CurveShape, type RoleKey, type Attribute,
     BLOOMERS, bloomerBudget, validateSpec, previewLine, ROLES, CURVE_LABEL, CURVE_HINT,
-    slotChoices, suggestLearnset, moveCard, isDamagingMove, moveRarity, attributeMoveIds, buildCustomSpecies,
+    slotChoices, suggestLearnset, moveCard, isDamagingMove, moveRarity, attributeMoveIds, buildCustomSpecies, buildNemesis,
     ATTRIBUTE_LABEL, MAX_ATTRIBUTES,
     lineTypes, LEARN_LEVELS, STAT_KEYS, STAT_LABEL, MIN_FINAL_STAT, MAX_STAB, MAX_COVERAGE,
     STAT_HARD_CAP, STAT_DEX_MAX, specStatCost, fitStatsToBudget,
@@ -97,11 +97,23 @@ export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: s
 
     // ───────── Écran de succès ─────────
     if (created) {
+        // Aperçu du NÉMÉSIS : la contre-lignée qu'ACE forgera (remplace Divin Pâte). Calcul hors JSX (données).
+        let nemFinal: { types: PokeType[]; bst: number } | null = null
+        try { const nem = previewLine(buildNemesis(effSpec), "ace"); const f = nem[nem.length - 1]; nemFinal = f ? { types: f.types, bst: f.bst } : null } catch { nemFinal = null }
         return (
             <div style={S.overlay} onClick={close}>
                 <div style={S.box} onClick={(e) => e.stopPropagation()}>
                     <div style={S.h}>🧬 Daemon envoyé au labo !</div>
                     <p style={S.p}>Ton <b>{spec.name}</b> est créé et jouable (sprite mystère ❓ en attendant que Sartay lui donne son vrai visage).</p>
+                    {nemFinal && (
+                        <div style={{ ...S.errBox, background: "#f3e6f6", border: "2px solid #8a4a9a", color: "#4a1c54", marginBottom: 8 }}>
+                            <b>👹 Le Némésis d&apos;ACE</b> — une lignée forgée pour te contrer :
+                            <div style={{ marginTop: 4, fontWeight: 700 }}>
+                                {nemFinal.types.map((t) => <span key={t} style={{ ...S.miniChip, background: TYPE_COLORS[t] }}>{TYPE_FR[t]}</span>)} · BST {nemFinal.bst}
+                            </div>
+                            <div style={{ fontSize: 10.5, opacity: 0.8, marginTop: 3 }}>Bats ACE en 1ʳᵉ ville pour te l&apos;approprier.</div>
+                        </div>
+                    )}
                     <p style={{ ...S.p, fontSize: 11, opacity: 0.7 }}>Phase 2 : sauvegarde en base, New Game+ (6000 ⚡), puis fusion des comptes après avoir battu ta propre équipe.</p>
                     <textarea readOnly value={created} style={S.json} onFocus={(e) => e.currentTarget.select()} />
                     <button style={S.primary} onClick={() => navigator.clipboard?.writeText(created)}>📋 Copier le JSON</button>

@@ -185,6 +185,20 @@ export function moveRarity(id: string): Rarity {
 // ── ATTAQUES OFFENSIVES vs STATUT (Draco-Rage & co : power 0 mais dégâts fixes → offensives) ──
 export function isDamagingMove(m: MoveData): boolean { return m.power > 0 || !!m.effect?.fixedDamage }
 export function effectivePower(m: MoveData): number { return m.power > 0 ? m.power : (m.effect?.fixedDamage ?? 0) }
+/** Puissance de GATE (accessibilité par niveau uniquement) : puissance brute + PRIME pour les effets qui rendent
+ *  une attaque bien plus forte que ses chiffres (ne rate jamais, priorité, gros multi-hit…). → gatées plus tard.
+ *  N'affecte PAS le pool cascade (qui reste sur la puissance réelle). */
+export function gatePower(m: MoveData): number {
+    let p = effectivePower(m)
+    if (m.priority && m.priority > 0) p += 15       // priorité (Vive-Attaque, Ombre Furtive) — niveau move, hors effect
+    const e = m.effect
+    if (e) {
+        if (e.sureHit) p += 20                       // Météores : NE RATE JAMAIS → gate ~niv 30, pas 18
+        if (e.multiHit && e.multiHit[1] >= 5) p += 10 // gros multi-coups
+        if (e.drainPct) p += 10                       // vol de PV (récupération offensive)
+    }
+    return p
+}
 /** Attaque BASIQUE = offensive sans aucun effet secondaire (Charge, Griffe…). Pour le slot 1 forcé. */
 export function hasNoSideEffect(m: MoveData): boolean {
     const e = m.effect
@@ -323,7 +337,7 @@ export function moveOptionsFor(lineTypes: PokeType[], level: number, finalBst: n
         if (!byAttr && !isLearnableMove(m.id)) continue    // sinon : pas de CT-only / inexistante
         if (isDamagingMove(m)) {
             if (!byAttr && !allowed.has(m.type)) continue  // cohérence dex-like (Normal + STAB) sauf attribut
-            if (effectivePower(m) <= maxP) out.push(m.id)  // le cap de PUISSANCE du niveau s'applique TOUJOURS
+            if (gatePower(m) <= maxP) out.push(m.id)        // gate niveau = puissance + prime d'effet (Météores plus tard)
         } else {
             if (statusTier(m) <= statusCap) out.push(m.id) // statut progressif (tout type de statut permis)
         }
@@ -445,6 +459,8 @@ export function suggestLearnset(lineTypes: PokeType[], finalBst: number = BASE_F
         if (!weaker) { used.add(chosen[hi]); break }
         chosen[hi] = take(weaker)
     }
+    // Sécurité : aucun slot vide (types pauvres en attaques accessibles) → 1re option restante, sinon Charge.
+    for (let i = 0; i < chosen.length; i++) if (!chosen[i]) { const id = opts(i)[0] ?? "charge"; used.add(id); chosen[i] = id }
     return LEARN_LEVELS.map((lvl, i) => ({ level: lvl, moveId: chosen[i] }))
 }
 
