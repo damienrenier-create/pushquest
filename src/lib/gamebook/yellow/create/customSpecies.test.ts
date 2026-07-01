@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import {
-    type CustomSpec, validateSpec, buildCustomSpecies, moveOptionsFor, slotOptions, maxPowerForLevel,
+    type CustomSpec, validateSpec, buildCustomSpecies, buildNemesis, moveOptionsFor, slotOptions, maxPowerForLevel,
     bloomerBudget, LEARN_LEVELS, STAT_KEYS, lineTypes, typesAtStage, moveRarity, isLearnableMove,
     statusTier, statusTierCapForLevel, allowedOffensiveTypes, weaknessTypes, moveCard, suggestLearnset,
     MAX_STAB, MAX_COVERAGE, MIN_STATUS_RATIO, ROLES, CURVE_RATIOS, powerPoolMod, effectiveMaxPower,
@@ -230,6 +230,25 @@ describe("création — attributs anatomiques (couverture hors-type)", () => {
         const s = validSpec(); s.attributes = ["ailes", "crocs", "dard"]
         expect(s.attributes.length).toBeGreaterThan(MAX_ATTRIBUTES)
         expect(validateSpec(s).some((m) => m.includes("Attributs invalides"))).toBe(true)
+    })
+})
+
+describe("création — Némésis (contre-lignée d'ACE)", () => {
+    const cases: Array<{ types: PokeType[]; stats: Record<StatKey, number> }> = [
+        { types: ["FEU"], stats: { hp: 70, atk: 130, def: 60, spe: 120, spc: 40 } },       // glass cannon rapide
+        { types: ["EAU"], stats: { hp: 120, atk: 60, def: 120, spe: 45, spc: 90 } },        // mur lent
+        { types: ["PLANTE", "SOL"], stats: { hp: 90, atk: 100, def: 90, spe: 80, spc: 75 } },
+        { types: ["PSY"], stats: { hp: 85, atk: 60, def: 80, spe: 95, spc: 120 } },
+    ]
+    it("génère une lignée VALIDE, super-efficace contre le joueur, à l'archétype inversé", () => {
+        for (const c of cases) {
+            const player: CustomSpec = { ...validSpec(), finalTypes: c.types, finalStats: c.stats }
+            const nem = buildNemesis(player)
+            expect(validateSpec(nem)).toEqual([])                                    // némésis toujours jouable/légal
+            expect(weaknessTypes(c.types).some((t) => nem.finalTypes.includes(t)) || nem.finalTypes.includes("DRAGON")).toBe(true) // le frappe SE
+            if (c.stats.spe >= 100) expect(nem.finalStats.spe).toBeLessThan(c.stats.spe)   // joueur rapide → némésis costaud
+            else expect(nem.finalStats.spe).toBeGreaterThan(c.stats.spe)                   // joueur lent → némésis rapide
+        }
     })
 })
 

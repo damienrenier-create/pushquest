@@ -644,6 +644,34 @@ export function buildCustomSpecies(spec: CustomSpec, ownerId: string): SpeciesDa
     return chain
 }
 
+/** NÉMÉSIS : à partir de la création du JOUEUR, génère une lignée CONTRE (pure, valide) — types super-efficaces
+ *  contre lui + archétype INVERSÉ (joueur rapide/fragile → némésis costaud qui survit et riposte ; joueur lent/mur
+ *  → némésis rapide qui le déborde), catégorie offensive alignée sur le STAB choisi. Deviendra l'équipe d'ACE. */
+export function buildNemesis(player: CustomSpec): CustomSpec {
+    const sum = (s: Record<StatKey, number>) => STAT_KEYS.reduce((a, k) => a + s[k], 0)
+    // 1) Types : ceux qui frappent le joueur en SUPER-EFFICACE (exploitent ses faiblesses). Fallback = Dragon.
+    const weak = weaknessTypes(player.finalTypes)
+    const nemTypes: PokeType[] = (weak.length ? weak.slice(0, 2) : ["DRAGON"])
+    const physSTAB = moveCategory(nemTypes[0]) === "PHYSICAL" // catégorie du STAB principal → oriente l'offense
+    // 2) Archétype INVERSÉ. Joueur rapide (spe ≥ 100) → némésis costaud (bulk < seuil anti-stall) mais lent ;
+    //    joueur lent/mur → némésis rapide qui l'outspeed. Offense sur la stat du STAB (physique/spéciale).
+    const playerFast = (player.finalStats.spe ?? 0) >= 100
+    const spe = playerFast ? 60 : Math.min(STAT_HARD_CAP.spe, Math.max(115, (player.finalStats.spe ?? 0) + 12))
+    const bulk = playerFast ? { hp: 100, def: 82 } : { hp: 72, def: 62 } // hp+def < 190 → pas de blocage anti-stall
+    const off = physSTAB ? { atk: 130, spc: 52 } : { atk: 52, spc: 130 }
+    const raw: Record<StatKey, number> = { hp: bulk.hp, atk: off.atk, def: bulk.def, spe, spc: off.spc }
+    const finalStats = fitStatsToBudget(raw, bloomerBudget(player.bloomer))
+    return {
+        name: player.name ? `Némésis de ${player.name}` : "Némésis",
+        da: `Un Daemon-miroir ténébreux, forgé sur mesure pour anéantir ${player.name || "ta création"} : chaque trait vise ses failles.`,
+        character: "froid, calculateur, obsédé par ta défaite",
+        stages: 3, bloomer: player.bloomer, curve: "linear",
+        role: physSTAB ? "attaquant-phys" : "attaquant-spe",
+        finalTypes: nemTypes, finalStats,
+        learnset: suggestLearnset(nemTypes, sum(finalStats), nemTypes),
+    }
+}
+
 /** Aperçu compact pour l'UI : BST + stats + types par stade, et un libellé de catégorie d'attaque. */
 export interface StagePreview { name: string; types: PokeType[]; baseStats: Record<StatKey, number>; bst: number; evoLevel?: number }
 export function previewLine(spec: CustomSpec, ownerId = "preview"): StagePreview[] {
