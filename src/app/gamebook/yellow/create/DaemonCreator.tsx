@@ -16,7 +16,7 @@ import {
     BLOOMERS, bloomerBudget, validateSpec, previewLine, ROLES, CURVE_LABEL, CURVE_HINT,
     slotOptions, suggestLearnset, moveCard, isDamagingMove, moveRarity, powerPoolMod,
     lineTypes, LEARN_LEVELS, STAT_KEYS, STAT_LABEL, MIN_FINAL_STAT, MAX_STAB, MAX_COVERAGE,
-    STAT_HARD_CAP, STAT_DEX_MAX, specStatCost, fitStatsToBudget,
+    STAT_HARD_CAP, STAT_DEX_MAX, specStatCost, fitStatsToBudget, maxAvgOffPower,
 } from "@/lib/gamebook/yellow/create/customSpecies"
 
 const TYPE_FR: Record<PokeType, string> = {
@@ -241,15 +241,18 @@ export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: s
                                 const mvs = learnset.map((l) => getMove(l.moveId)).filter((m): m is NonNullable<typeof m> => !!m)
                                 const off = mvs.filter(isDamagingMove)
                                 const nStatus = mvs.length - off.length
-                                const nStab = off.filter((m) => lts.includes(m.type)).length
-                                const nCov = off.filter((m) => m.type !== "NORMAL" && !lts.includes(m.type)).length
+                                const nStab = off.filter((m) => spec.finalTypes.includes(m.type)).length
+                                const nCov = off.filter((m) => m.type !== "NORMAL" && !spec.finalTypes.includes(m.type)).length
                                 const nCommon = off.filter((m) => ["commune", "répandue"].includes(moveRarity(m.id))).length
+                                const avgPow = off.length ? Math.round(off.reduce((a, m) => a + (m.power > 0 ? m.power : (m.effect?.fixedDamage ?? 0)), 0) / off.length) : 0
+                                const capPow = maxAvgOffPower(usedBst, spec.finalTypes)
                                 const chip = (ok: boolean, txt: string) => <span style={{ ...S.compoChip, background: ok ? "rgba(124,224,160,.15)" : "rgba(224,104,58,.18)", color: ok ? "#7ce0a0" : "#f0a880" }}>{ok ? "✓" : "✗"} {txt}</span>
                                 return <div style={S.compoRow}>
                                     {chip(nStatus >= Math.ceil(mvs.length * 0.25), `${nStatus} statuts (≥${Math.ceil(mvs.length * 0.25)})`)}
                                     {chip(nStab <= MAX_STAB, `${nStab} STAB (≤${MAX_STAB})`)}
                                     {chip(nCov <= MAX_COVERAGE, `${nCov} couv. (≤${MAX_COVERAGE})`)}
                                     {chip(off.length === 0 || nCommon >= Math.ceil(off.length * 0.5), `${nCommon}/${off.length} communes`)}
+                                    {chip(off.length === 0 || avgPow <= capPow, `puissance moy ${avgPow} (≤${capPow})`)}
                                 </div>
                             })()}
                             <Lbl>Tes {LEARN_LEVELS.length} attaques — touche un palier pour choisir</Lbl>

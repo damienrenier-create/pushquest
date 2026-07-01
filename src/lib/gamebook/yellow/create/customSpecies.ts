@@ -123,6 +123,14 @@ export function powerPoolMod(finalBst: number, types: PokeType[]): number {
 export function effectiveMaxPower(level: number, finalBst: number, types: PokeType[]): number {
     return Math.round(maxPowerForLevel(level) * (1 + powerPoolMod(finalBst, types)))
 }
+/** Puissance MOYENNE/attaque de la plus forte lignée 3-stades du dex (S-tier, jamais au-dessus). cf. dex-pool.mts. */
+export const AVG_OFF_POWER_BASE = 77
+/** Plafond de la MOYENNE de puissance des attaques offensives d'un learnset, calé sur le dex et modulé par le BST/type.
+ *  → corrèle le pool de puissance avec les vraies lignées ; un gros BST ⇒ moyenne plus basse (pas de double bonus) ;
+ *  et pour caser une attaque très forte, il faut des attaques faibles ailleurs (le compromis « Ultralaser »). */
+export function maxAvgOffPower(finalBst: number, types: PokeType[]): number {
+    return Math.round(AVG_OFF_POWER_BASE * (1 + powerPoolMod(finalBst, types)))
+}
 
 // ── RÔLE → contraintes de stats (min/max) + distribution suggérée (le joueur choisit sa DIRECTION) ──
 export type RoleKey = "attaquant-phys" | "attaquant-spe" | "rapide" | "mur" | "equilibre"
@@ -277,25 +285,46 @@ export function slotOptions(lineTypes: PokeType[], level: number, finalBst: numb
 /** Learnset PAR DÉFAUT valide (respecte les règles de composition) : 3 statuts en slots mid/late,
  *  offensives communes/STAB ailleurs, sans doublon. Sert de point de départ au wizard. */
 export function suggestLearnset(lineTypes: PokeType[], finalBst: number = BASE_FINAL_BST): Array<{ level: number; moveId: string }> {
-    const used = new Set<string>()
-    let coverageUsed = 0
+    const capAvg = maxAvgOffPower(finalBst, lineTypes)
+    const pow = (id: string) => effectivePower(getMove(id)!)
     const isCov = (id: string) => { const m = getMove(id)!; return m.type !== "NORMAL" && !lineTypes.includes(m.type) }
-    const first = (ids: string[]) => ids.find((id) => !used.has(id))
-    return LEARN_LEVELS.map((lvl, i) => {
-        const { offensive, status } = slotOptions(lineTypes, lvl, finalBst)
-        if (status.length && (i === 3 || i === 6 || i === 8)) {
-            const id = first(status) ?? status[0] ?? ""
-            used.add(id); return { level: lvl, moveId: id }
-        }
-        const common = offensive.filter((id) => { const r = moveRarity(id); return r === "commune" || r === "répandue" })
-        const nonCov = (arr: string[]) => arr.filter((id) => !isCov(id))
-        // Priorité : STAB/NORMAL commun → STAB/NORMAL tout → couverture (si quota MAX_COVERAGE restant) → reste.
-        let id = first(nonCov(common)) ?? first(nonCov(offensive))
-        if (!id && coverageUsed < MAX_COVERAGE) id = first(common.filter(isCov)) ?? first(offensive.filter(isCov))
-        if (!id) id = first(common) ?? first(offensive) ?? offensive[0] ?? ""
+    const isCommon = (id: string) => { const r = moveRarity(id); return r === "commune" || r === "répandue" }
+    const STATUS_SLOTS = new Set([3, 6, 8])
+    const opts = LEARN_LEVELS.map((lvl) => slotOptions(lineTypes, lvl, finalBst))
+    const used = new Set<string>()
+    const chosen: string[] = LEARN_LEVELS.map(() => "")
+
+    // 1) Statuts progressifs sur les slots mid/late.
+    for (const i of [3, 6, 8]) { const id = opts[i].status.find((x) => !used.has(x)); if (id) { used.add(id); chosen[i] = id } }
+
+    // 2) Offensifs : la plus FORTE commune STAB/NORMAL dispo par slot (couverture ≤ quota) — on optimisera après.
+    let coverageUsed = 0
+    const offIdx = LEARN_LEVELS.map((_, i) => i).filter((i) => !chosen[i])
+    for (const i of offIdx) {
+        const off = opts[i].offensive
+        const common = off.filter(isCommon)
+        const free = (arr: string[]) => arr.filter((id) => !used.has(id))
+        let id = free(common.filter((x) => !isCov(x)))[0] ?? free(off.filter((x) => !isCov(x)))[0]
+        if (!id && coverageUsed < MAX_COVERAGE) id = free(common.filter(isCov))[0] ?? free(off.filter(isCov))[0]
+        if (!id) id = free(off)[0] ?? off[0] ?? ""
         if (id && isCov(id)) coverageUsed++
-        used.add(id); return { level: lvl, moveId: id }
-    })
+        if (id) used.add(id)
+        chosen[i] = id
+    }
+
+    // 3) Réparation : tant que la MOYENNE offensive dépasse le cap, remplace la + forte offensive par une attaque
+    //    plus faible et inutilisée du même slot (STAB/NORMAL prioritaire). Converge (chaque swap baisse la somme).
+    for (let guard = 0; guard < 40; guard++) {
+        const offMoves = offIdx.map((i) => chosen[i]).filter(Boolean)
+        if (!offMoves.length || Math.round(offMoves.reduce((a, id) => a + pow(id), 0) / offMoves.length) <= capAvg) break
+        const i = offIdx.filter((j) => chosen[j]).reduce((a, b) => (pow(chosen[b]) > pow(chosen[a]) ? b : a))
+        const cur = pow(chosen[i])
+        const weaker = opts[i].offensive.filter((id) => !used.has(id) && pow(id) < cur && !isCov(id)).sort((a, b) => pow(b) - pow(a))[0]
+            ?? opts[i].offensive.filter((id) => !used.has(id) && pow(id) < cur).sort((a, b) => pow(b) - pow(a))[0]
+        if (!weaker) break
+        used.delete(chosen[i]); used.add(weaker); chosen[i] = weaker
+    }
+    return LEARN_LEVELS.map((lvl, i) => ({ level: lvl, moveId: chosen[i] }))
 }
 
 // ───────── Spécification saisie par le joueur ─────────
@@ -400,6 +429,15 @@ export function validateSpec(spec: CustomSpec): string[] {
     const commonish = offensive.filter((m) => { const r = moveRarity(m.id); return r === "commune" || r === "répandue" }).length
     if (offensive.length > 0 && commonish / offensive.length < MIN_COMMON_RATIO)
         e.push(`Trop d'attaques rares : au moins ${Math.ceil(offensive.length * MIN_COMMON_RATIO)} offensives doivent être communes/répandues (actuel : ${commonish}/${offensive.length}).`)
+
+    // POOL DE PUISSANCE : la moyenne de puissance des attaques offensives doit rester dans les clous du dex,
+    // modulée par le BST (gros BST → moyenne plus basse). Pour une attaque très forte, il faut compenser ailleurs.
+    if (offensive.length > 0) {
+        const avgPow = Math.round(offensive.reduce((a, m) => a + effectivePower(m), 0) / offensive.length)
+        const capAvg = maxAvgOffPower(total, spec.finalTypes)
+        if (avgPow > capAvg)
+            e.push(`Pool de puissance trop élevé : moyenne ${avgPow}/attaque (max ${capAvg} — plus ton BST est haut, plus le plafond baisse). Pour garder une attaque très forte, prends des attaques plus faibles ailleurs.`)
+    }
 
     // Anti-stall : un Daemon très résistant ne peut PAS cumuler SOIN (Repos/soin %) ET USURE (Toxik/Vampigraine)
     // — ça crée un mur imbattable. Compromis : sur un gros bulk, choisis de te soigner OU d'user, pas les deux.

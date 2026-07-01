@@ -4,7 +4,7 @@ import {
     bloomerBudget, LEARN_LEVELS, STAT_KEYS, lineTypes, typesAtStage, moveRarity, isLearnableMove,
     statusTier, statusTierCapForLevel, allowedOffensiveTypes, weaknessTypes, moveCard, suggestLearnset,
     MAX_STAB, MAX_COVERAGE, MIN_STATUS_RATIO, ROLES, CURVE_RATIOS, powerPoolMod, effectiveMaxPower,
-    STAT_HARD_CAP, STAT_DEX_MAX, specStatCost, fitStatsToBudget, STALL_BULK_THRESHOLD,
+    STAT_HARD_CAP, STAT_DEX_MAX, specStatCost, fitStatsToBudget, STALL_BULK_THRESHOLD, maxAvgOffPower,
 } from "./customSpecies"
 import { getMove, MOVES } from "../data/moves"
 import { isDamagingMove } from "./customSpecies"
@@ -158,6 +158,24 @@ describe("création — correctifs d'équilibrage (audit)", () => {
     it("M2 — Vampigraine classée tier 3 (comme Toxik), pas cherry-pickable tôt", () => {
         expect(statusTier(getMove("vampigraine")!)).toBe(3)
         expect(statusTier(getMove("toxik")!)).toBe(3)
+    })
+    it("pool de puissance : la suggestion respecte le plafond de moyenne (corrélé au dex)", () => {
+        for (const t of ["FEU", "EAU", "NORMAL", "PSY", "COMBAT"] as PokeType[]) for (const bst of [335, 435, 480]) {
+            const off = suggestLearnset([t], bst).map((l) => getMove(l.moveId)!).filter(isDamagingMove)
+            const avg = off.reduce((a, m) => a + (m.power > 0 ? m.power : (m.effect?.fixedDamage ?? 0)), 0) / off.length
+            expect(Math.round(avg)).toBeLessThanOrEqual(maxAvgOffPower(bst, [t]))
+        }
+    })
+    it("pool de puissance : refuse un learnset qui bourre des attaques fortes partout", () => {
+        const s = validSpec(); s.bloomer = "late" // budget élevé → plafond de moyenne plus bas encore
+        // On force les 7 slots offensifs sur les attaques EAU/NORMAL les plus puissantes accessibles.
+        const strongPerSlot = LEARN_LEVELS.map((lvl) => {
+            const opts = slotOptions(["EAU"], lvl, 480).offensive.map((id) => getMove(id)!)
+            return opts.sort((a, b) => (b.power || 0) - (a.power || 0))[0]?.id
+        })
+        s.finalTypes = ["EAU"]; s.finalStats = { hp: 90, atk: 60, def: 90, spe: 90, spc: 120 }
+        s.learnset = LEARN_LEVELS.map((lvl, i) => ({ level: lvl, moveId: strongPerSlot[i] ?? "charge" }))
+        expect(validateSpec(s).some((m) => m.includes("Pool de puissance"))).toBe(true)
     })
 })
 
