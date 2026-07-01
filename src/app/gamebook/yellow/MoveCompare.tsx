@@ -5,6 +5,7 @@
 // utiles (type, catégorie, puissance, précision, PP, STAB, alignement sur la meilleure stat, effet) pour
 // la nouvelle ET les 4 actuelles → on choisit en connaissance de cause. Partagé par les 3 écrans d'apprentissage.
 
+import { useState } from "react"
 import type { MonInstance, MoveData, PokeType } from "@/lib/gamebook/yellow/battle/types"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
@@ -101,27 +102,43 @@ export default function MoveCompare({ mon, newMoveId, onForget, onGiveUp, onLate
     onLater?: () => void
 }) {
     const sp = getSpecies(mon.speciesId)
+    const [confirmSlot, setConfirmSlot] = useState<number | null>(null) // slot en attente de CONFIRMATION (anti-remplacement accidentel)
     if (!sp) return null
     const fs = fullStats(mon, sp)
     const types = sp.types
     const name = mon.nickname ?? sp.name
     const newLine = lineFor(newMoveId, types, fs.atk, fs.spc)
     const newMove = getMove(newMoveId)
+    const oldMove = confirmSlot !== null ? getMove(mon.moves[confirmSlot]?.moveId) : null
 
     return (
         <div>
             <div style={S.title}>{name} veut apprendre <b style={{ color: "#f5d020" }}>{newMove?.name ?? newMoveId}</b> !</div>
             <div style={S.hint}>Ta meilleure stat offensive : <b>{fs.atk >= fs.spc ? `Attaque (${fs.atk})` : `Spécial (${fs.spc})`}</b> — privilégie les attaques de cette catégorie, et le STAB.</div>
             {newLine && <MoveCard line={newLine} isNew />}
-            <div style={S.q}>Oublier quelle capacité ? <span style={{ opacity: 0.6, fontWeight: 400 }}>(compare avant de choisir)</span></div>
+            <div style={S.q}>Oublier quelle capacité ? <span style={{ opacity: 0.6, fontWeight: 400 }}>(touche pour choisir — confirmation demandée)</span></div>
             <div style={S.list}>
                 {mon.moves.map((m, i) => {
                     const line = lineFor(m.moveId, types, fs.atk, fs.spc)
-                    return line ? <MoveCard key={i} line={line} onClick={() => onForget(i)} /> : null
+                    return line ? <MoveCard key={i} line={line} onClick={() => setConfirmSlot(i)} /> : null
                 })}
             </div>
             <button style={S.giveUp} onClick={onGiveUp}>✋ Renoncer à {newMove?.name ?? "cette attaque"}</button>
             {onLater && <button style={S.later} onClick={onLater}>Plus tard ▶ (revoir dans la fiche)</button>}
+
+            {/* CONFIRMATION de remplacement (anti-clic accidentel : rien ne change tant qu'on n'a pas confirmé). */}
+            {confirmSlot !== null && (
+                <div style={S.confirmOverlay} onClick={() => setConfirmSlot(null)}>
+                    <div style={S.confirmBox} onClick={(e) => e.stopPropagation()}>
+                        <div style={S.confirmTxt}>Oublier <b style={{ color: "#f0a850" }}>{oldMove?.name ?? "cette attaque"}</b> pour apprendre <b style={{ color: "#7ce0a0" }}>{newMove?.name ?? "la nouvelle"}</b> ?</div>
+                        <div style={S.confirmWarn}>⚠️ C&apos;est définitif — {oldMove?.name ?? "l'ancienne attaque"} sera perdue.</div>
+                        <div style={S.confirmRow}>
+                            <button style={S.confirmYes} onClick={() => { const s = confirmSlot; setConfirmSlot(null); onForget(s) }}>✓ Confirmer</button>
+                            <button style={S.confirmNo} onClick={() => setConfirmSlot(null)}>✗ Annuler</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
@@ -148,4 +165,11 @@ const S: Record<string, React.CSSProperties> = {
     effect: { opacity: 0.75 },
     giveUp: { width: "100%", marginTop: 12, padding: "9px", fontFamily: "inherit", fontSize: 12, fontWeight: 800, color: "#1a1400", background: "#f5d020", border: "none", borderRadius: 8, cursor: "pointer" },
     later: { width: "100%", marginTop: 8, padding: "8px", fontFamily: "inherit", fontSize: 11, color: "#fff", background: "transparent", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 8, cursor: "pointer" },
+    confirmOverlay: { position: "fixed", inset: 0, zIndex: 9600, background: "rgba(6,4,12,0.8)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 },
+    confirmBox: { width: "min(340px, 92vw)", background: "rgba(24,18,44,0.98)", border: "3px solid #f5d020", borderRadius: 14, padding: "18px 16px", textAlign: "center" },
+    confirmTxt: { fontSize: 13.5, fontWeight: 700, lineHeight: 1.45 },
+    confirmWarn: { fontSize: 10.5, opacity: 0.85, margin: "8px 0 14px", color: "#f0a850" },
+    confirmRow: { display: "flex", gap: 10 },
+    confirmYes: { flex: 1, padding: "11px", fontFamily: "inherit", fontSize: 13, fontWeight: 800, color: "#1a1400", background: "#7ce0a0", border: "none", borderRadius: 8, cursor: "pointer" },
+    confirmNo: { flex: 1, padding: "11px", fontFamily: "inherit", fontSize: 13, fontWeight: 800, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, cursor: "pointer" },
 }

@@ -67,6 +67,18 @@ export default function BattleScreen() {
     // + tick local pour forcer un re-render après mutation EN PLACE du Daemon (sans nouveau ref battle).
     const learnSnooze = useRef<Set<string>>(new Set())
     const [, setLearnTick] = useState(0)
+    // #7 — À CHAQUE NOUVEAU combat : on met en veille les attaques DÉJÀ en attente (débloquées lors d'un combat
+    // PRÉCÉDENT, gérées post-combat/fiche) → l'overlay d'apprentissage en combat ne s'ouvre QUE pour une attaque
+    // débloquée DANS ce combat. Fini le prompt intempestif à chaque rencontre.
+    const hadBattle = useRef(false)
+    useEffect(() => {
+        if (battle && !hadBattle.current) {
+            const s = new Set<string>()
+            for (const m of battle.player.team) for (const id of m.pendingMoves ?? []) s.add(`${m.uid}:${id}`)
+            learnSnooze.current = s
+        }
+        hadBattle.current = !!battle
+    }, [battle])
     const repsWallet = usePlayer()
     const dex = usePokedex() // statut Pokédex (caught) → indicateur en combat sauvage
     const lastBattle = useRef(battle)
@@ -582,8 +594,8 @@ export default function BattleScreen() {
 
 // #7 — styles de l'overlay d'apprentissage en combat (alignés sur MoveLearnScreen post-combat).
 const LRN: Record<string, React.CSSProperties> = {
-    overlay: { position: "absolute", inset: 0, zIndex: 60, background: "rgba(8,6,16,0.86)", display: "flex", alignItems: "center", justifyContent: "center", padding: 14, fontFamily: "'Courier New', monospace", color: "#f8f8e8" },
-    box: { width: "min(380px, 96%)", background: "rgba(20,16,40,0.97)", border: "3px solid #f5d020", borderRadius: 14, padding: "16px 14px", textAlign: "center" },
+    overlay: { position: "fixed", inset: 0, zIndex: 9100, background: "rgba(8,6,16,0.9)", display: "flex", alignItems: "center", justifyContent: "center", padding: 14, fontFamily: "'Courier New', monospace", color: "#f8f8e8" },
+    box: { width: "min(380px, 96vw)", maxHeight: "90dvh", overflowY: "auto", background: "rgba(20,16,40,0.97)", border: "3px solid #f5d020", borderRadius: 14, padding: "16px 14px", textAlign: "center" },
     title: { fontSize: 15, fontWeight: 800, marginBottom: 4 },
     sub: { fontSize: 11, opacity: 0.8, marginBottom: 6 },
     list: { display: "flex", flexDirection: "column", gap: 6, margin: "10px 0" },
