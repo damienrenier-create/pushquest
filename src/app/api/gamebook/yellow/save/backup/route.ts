@@ -10,10 +10,11 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { isNexusYellowEnabled, YELLOW_CHAPTER_ID } from "@/lib/gamebook/yellow/featureFlag"
+import { MAX_HISTORY } from "@/lib/gamebook/yellow/storage/saveGuard"
 
 export const dynamic = "force-dynamic"
 
-const MAX_BACKUPS = 5
+const MAX_BACKUPS = MAX_HISTORY
 
 export async function POST() {
     const session = await getServerSession(authOptions)

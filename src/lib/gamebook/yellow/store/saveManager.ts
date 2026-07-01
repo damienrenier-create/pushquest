@@ -13,6 +13,13 @@ let loaded = false
 let autosaveInit = false
 let timer: ReturnType<typeof setTimeout> | null = null
 
+/** Hydrate les stores (joueur + Pokédex) depuis une save serveur. Réutilisé au chargement ET quand le
+ *  serveur REFUSE un écrasement destructif (409) → on resynchronise sur la vraie save au lieu de l'écraser. */
+function applyServerSave(save: YellowSave): void {
+    hydratePlayer({ team: save.team, pc: save.pc, items: save.items, reps: save.reps, repsCap: save.repsCap, creditedThrough: save.creditedThrough, pastaBoughtToday: save.pastaBoughtToday, pastaDayBonus: save.pastaDayBonus, defeatedTrainers: save.defeatedTrainers, rematchedTrainers: save.rematchedTrainers, badges: save.badges as BadgeId[], introSeen: save.introSeen, sbireDefeatsToday: save.sbireDefeatsToday, sbireWinsTotal: save.sbireWinsTotal, pvpStats: save.pvpStats, acePeakLevel: save.acePeakLevel, aceBox: save.aceBox, aceTeamSizePeak: save.aceTeamSizePeak, aceWins: save.aceWins, aceDefeatedDate: save.aceDefeatedDate, duelWins: save.duelWins, ownedCts: save.ownedCts, boughtCts: save.boughtCts, gekrocResolved: save.gekrocResolved, hhSpectresShown: save.hhSpectresShown, hhCollectorWins: save.hhCollectorWins, isChampion: save.isChampion, sylvebarbeAwake: save.sylvebarbeAwake, repsBankedTotal: save.repsBankedTotal, welcomeGift: save.welcomeGift, spagGift: save.spagGift, pastaGodGift: save.pastaGodGift, labDefi: save.labDefi })
+    hydratePokedex({ seen: save.pokedex.seen, caught: save.pokedex.caught })
+}
+
 /** Charge la sauvegarde serveur → hydrate les stores. À appeler au mount. */
 export async function loadYellowSave(): Promise<void> {
     if (loaded) return // idempotent : déjà chargé (ex. on arrive sur la page Pokédex en nav interne) → on garde l'état mémoire À JOUR au lieu de réécraser avec la DB (qui peut être en retard du débounce).
@@ -21,8 +28,7 @@ export async function loadYellowSave(): Promise<void> {
         if (!r.ok) { loaded = true; return }
         const j = await r.json()
         const save = parseSave(j?.save)
-        hydratePlayer({ team: save.team, pc: save.pc, items: save.items, reps: save.reps, repsCap: save.repsCap, creditedThrough: save.creditedThrough, pastaBoughtToday: save.pastaBoughtToday, pastaDayBonus: save.pastaDayBonus, defeatedTrainers: save.defeatedTrainers, rematchedTrainers: save.rematchedTrainers, badges: save.badges as BadgeId[], introSeen: save.introSeen, sbireDefeatsToday: save.sbireDefeatsToday, sbireWinsTotal: save.sbireWinsTotal, pvpStats: save.pvpStats, acePeakLevel: save.acePeakLevel, aceBox: save.aceBox, aceTeamSizePeak: save.aceTeamSizePeak, aceWins: save.aceWins, aceDefeatedDate: save.aceDefeatedDate, duelWins: save.duelWins, ownedCts: save.ownedCts, boughtCts: save.boughtCts, gekrocResolved: save.gekrocResolved, hhSpectresShown: save.hhSpectresShown, hhCollectorWins: save.hhCollectorWins, isChampion: save.isChampion, sylvebarbeAwake: save.sylvebarbeAwake, repsBankedTotal: save.repsBankedTotal, welcomeGift: save.welcomeGift, spagGift: save.spagGift, pastaGodGift: save.pastaGodGift, labDefi: save.labDefi })
-        hydratePokedex({ seen: save.pokedex.seen, caught: save.pokedex.caught })
+        applyServerSave(save)
         claimWelcomeGift() // cadeau de bienvenue : +100 énergie, une seule fois (à l'arrivée)
         claimSpagGift()    // cadeau du DIEU SPAG : +150 énergie, une seule fois (message toasté côté UI)
     } catch {
@@ -56,7 +62,9 @@ function snapshot(): YellowSave {
     return { version: SAVE_VERSION, team: p.team, pc: p.pc, items: p.items, reps: p.reps, repsCap: p.repsCap, creditedThrough: p.creditedThrough, pastaBoughtToday: p.pastaBoughtToday, pastaDayBonus: p.pastaDayBonus, pokedex: { seen: d.seen, caught: d.caught }, defeatedTrainers: p.defeatedTrainers, rematchedTrainers: p.rematchedTrainers, badges: p.badges, introSeen: p.introSeen, sbireDefeatsToday: p.sbireDefeatsToday, sbireWinsTotal: p.sbireWinsTotal, pvpStats: p.pvpStats, acePeakLevel: p.acePeakLevel, aceBox: p.aceBox, aceTeamSizePeak: p.aceTeamSizePeak, aceWins: p.aceWins, aceDefeatedDate: p.aceDefeatedDate, duelWins: p.duelWins, ownedCts: p.ownedCts, boughtCts: p.boughtCts, gekrocResolved: p.gekrocResolved, hhSpectresShown: p.hhSpectresShown, hhCollectorWins: p.hhCollectorWins, isChampion: p.isChampion, sylvebarbeAwake: p.sylvebarbeAwake, repsBankedTotal: p.repsBankedTotal, welcomeGift: p.welcomeGift, spagGift: p.spagGift, pastaGodGift: p.pastaGodGift, labDefi: p.labDefi }
 }
 
-/** Sauvegarde débouncée (ne fait rien tant que la save initiale n'est pas chargée). */
+/** Sauvegarde débouncée (ne fait rien tant que la save initiale n'est pas chargée).
+ *  Si le serveur REFUSE l'écriture (409 : un autosave vierge allait écraser un compte avancé), on
+ *  RESYNCHRONISE les stores sur la vraie save renvoyée → le joueur récupère son compte, rien n'est perdu. */
 export function persistYellowSave(): void {
     if (!loaded) return
     if (timer) clearTimeout(timer)
@@ -65,8 +73,26 @@ export function persistYellowSave(): void {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ save: snapshot() }),
+        }).then(async (r) => {
+            if (r.status === 409) {
+                try { const j = await r.json(); if (j?.save) applyServerSave(parseSave(j.save)) } catch { /* ignore */ }
+                console.warn("[yellow] Écrasement vierge REFUSÉ par le serveur → save réelle rechargée (compte protégé).")
+            }
         }).catch(() => { /* silencieux */ })
     }, 800)
+}
+
+/** Sauvegarde INTENTIONNELLE immédiate (reset volontaire) : contourne le garde-fou (intentionalReset) et
+ *  n'est PAS débouncée → elle passe avant tout autosave concurrent. */
+async function persistIntentionalReset(): Promise<void> {
+    if (timer) { clearTimeout(timer); timer = null }
+    try {
+        await fetch("/api/gamebook/yellow/save", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ save: snapshot(), intentionalReset: true }),
+        })
+    } catch { /* hors-ligne : réessai au prochain autosave */ }
 }
 
 /**
@@ -127,7 +153,7 @@ export async function resetYellowChapter(): Promise<void> {
             }
         }
     } catch { /* hors-ligne : au moins les cadeaux de bienvenue sont crédités */ }
-    persistYellowSave()
+    await persistIntentionalReset() // reset VOLONTAIRE → contourne le garde-fou anti-écrasement (le backup a déjà été fait)
 }
 
 /** Branche l'auto-sauvegarde sur les deux stores (idempotent). */
