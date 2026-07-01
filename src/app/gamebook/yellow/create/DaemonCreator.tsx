@@ -12,8 +12,9 @@ import { POKE_TYPES, type PokeType, type StatKey } from "@/lib/gamebook/yellow/b
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { TYPE_COLORS } from "../dex/dexShared"
 import {
-    type CustomSpec, type Bloomer, BLOOMERS, bloomerBudget, validateSpec, previewLine, moveOptionsFor,
-    lineTypes, LEARN_LEVELS, STAT_KEYS, STAT_LABEL, MIN_FINAL_STAT, MAX_FINAL_STAT, moveCat,
+    type CustomSpec, type Bloomer, type MoveCardInfo, BLOOMERS, bloomerBudget, validateSpec, previewLine,
+    slotOptions, suggestLearnset, moveCard, isDamagingMove, moveRarity,
+    lineTypes, LEARN_LEVELS, STAT_KEYS, STAT_LABEL, MIN_FINAL_STAT, MAX_FINAL_STAT, MAX_STAB, MAX_COVERAGE,
 } from "@/lib/gamebook/yellow/create/customSpecies"
 
 const TYPE_FR: Record<PokeType, string> = {
@@ -35,21 +36,23 @@ export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: s
     const [step, setStep] = useState(0)
     const [spec, setSpec] = useState<CustomSpec>(defaultSpec)
     const [created, setCreated] = useState<string | null>(null) // JSON soumis (écran de succès)
+    const [pickingSlot, setPickingSlot] = useState<number | null>(null) // slot dont le sélecteur en fiches est ouvert
 
     const patch = (p: Partial<CustomSpec>) => setSpec((s) => ({ ...s, ...p }))
     const budget = bloomerBudget(spec.bloomer)
     const usedBst = STAT_KEYS.reduce((a, k) => a + spec.finalStats[k], 0)
     const lts = useMemo(() => lineTypes(spec), [spec])
-    // Options d'attaque par palier (dépend des types) — recalculé quand les types changent.
-    const slotOptions = useMemo(() => LEARN_LEVELS.map((lvl) => moveOptionsFor(lts, lvl)), [lts])
-    // Learnset EFFECTIF : on garde le choix du joueur s'il est encore valide, sinon on retombe sur la 1re option.
+    // Options ACCESSIBLES par palier (offensives / statuts), recalculées quand les types changent.
+    const slotOpts = useMemo(() => LEARN_LEVELS.map((lvl) => slotOptions(lts, lvl)), [lts])
+    const suggested = useMemo(() => suggestLearnset(lts), [lts]) // learnset par défaut VALIDE
+    // Learnset EFFECTIF : choix du joueur s'il reste accessible, sinon la suggestion valide.
     const learnset = useMemo(
         () => LEARN_LEVELS.map((lvl, i) => {
             const cur = spec.learnset[i]?.moveId
-            const ok = cur && slotOptions[i].includes(cur)
-            return { level: lvl, moveId: ok ? cur! : (slotOptions[i][0] ?? "") }
+            const all = [...slotOpts[i].offensive, ...slotOpts[i].status]
+            return { level: lvl, moveId: cur && all.includes(cur) ? cur! : suggested[i].moveId }
         }),
-        [spec.learnset, slotOptions],
+        [spec.learnset, slotOpts, suggested],
     )
     // Validation + aperçu sur la spec AVEC le learnset effectif (sinon le bouton Créer reste bloqué
     // tant que le joueur n'a pas touché l'étape Attaques, alors que les valeurs par défaut sont valides).
@@ -206,25 +209,49 @@ export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: s
                         </>
                     )}
 
-                    {step === 5 && (
+                    {step === 5 && (pickingSlot === null ? (
                         <>
-                            <Lbl>Attaques apprises (palier tous les 9 niveaux ; puissance plafonnée par niveau)</Lbl>
+                            {(() => {
+                                const mvs = learnset.map((l) => getMove(l.moveId)).filter((m): m is NonNullable<typeof m> => !!m)
+                                const off = mvs.filter(isDamagingMove)
+                                const nStatus = mvs.length - off.length
+                                const nStab = off.filter((m) => lts.includes(m.type)).length
+                                const nCov = off.filter((m) => m.type !== "NORMAL" && !lts.includes(m.type)).length
+                                const nCommon = off.filter((m) => ["commune", "répandue"].includes(moveRarity(m.id))).length
+                                const chip = (ok: boolean, txt: string) => <span style={{ ...S.compoChip, background: ok ? "rgba(124,224,160,.15)" : "rgba(224,104,58,.18)", color: ok ? "#7ce0a0" : "#f0a880" }}>{ok ? "✓" : "✗"} {txt}</span>
+                                return <div style={S.compoRow}>
+                                    {chip(nStatus >= Math.ceil(mvs.length * 0.25), `${nStatus} statuts (≥${Math.ceil(mvs.length * 0.25)})`)}
+                                    {chip(nStab <= MAX_STAB, `${nStab} STAB (≤${MAX_STAB})`)}
+                                    {chip(nCov <= MAX_COVERAGE, `${nCov} couv. (≤${MAX_COVERAGE})`)}
+                                    {chip(off.length === 0 || nCommon >= Math.ceil(off.length * 0.5), `${nCommon}/${off.length} communes`)}
+                                </div>
+                            })()}
+                            <Lbl>Tes {LEARN_LEVELS.length} attaques — touche un palier pour choisir</Lbl>
                             {LEARN_LEVELS.map((lvl, i) => {
-                                const opts = slotOptions[i]
-                                const mv = getMove(learnset[i].moveId)
+                                const c = moveCard(learnset[i].moveId, lts)
                                 return (
-                                    <div key={i} style={S.learnRow}>
-                                        <span style={S.lvlTag}>Niv {lvl}{LEARN_LEVELS.indexOf(lvl) !== i ? " ʙ" : ""}</span>
-                                        <select style={S.select} value={learnset[i].moveId} onChange={(e) => setLearn(i, e.target.value)}>
-                                            {opts.map((id) => { const m = getMove(id)!; return <option key={id} value={id}>{m.name} · {TYPE_FR[m.type]} · {m.power > 0 ? `P${m.power} ${moveCat(m.type)}` : "statut"}</option> })}
-                                        </select>
-                                        {mv && <span style={S.subtle}>{mv.power > 0 ? `${moveCat(mv.type)}` : "📊"}</span>}
-                                    </div>
+                                    <button key={i} style={S.slotRow} onClick={() => setPickingSlot(i)}>
+                                        <span style={S.lvlTag}>Niv {lvl}</span>
+                                        {c ? <MiniCard c={c} /> : <span style={S.subtle}>—</span>}
+                                        <span style={{ ...S.subtle, marginLeft: "auto" }}>Changer ›</span>
+                                    </button>
                                 )
                             })}
-                            <Hint>Niv 5 = tes 2 attaques de départ. La puissance autorisée monte par paliers : ≤50 tôt, ≤75 puis ≤100, et les ultimes après le niv 54.</Hint>
+                            <Hint>Puissance & force plafonnées par niveau (65 tôt → 150 aux ultimes). ≥1 attaque sur 4 doit être un statut · max {MAX_STAB} STAB · max {MAX_COVERAGE} couverture · pas que des attaques rares.</Hint>
                         </>
-                    )}
+                    ) : (
+                        <>
+                            <div style={S.pickerHead}>
+                                <button style={S.ghost} onClick={() => setPickingSlot(null)}>‹ Retour</button>
+                                <b>Niv {LEARN_LEVELS[pickingSlot]} — attaques accessibles</b>
+                            </div>
+                            <Lbl>⚔️ Offensives ({slotOpts[pickingSlot].offensive.length})</Lbl>
+                            {slotOpts[pickingSlot].offensive.map((id) => { const c = moveCard(id, lts)!; return <FullCard key={id} c={c} sel={learnset[pickingSlot!].moveId === id} onPick={() => { setLearn(pickingSlot!, id); setPickingSlot(null) }} /> })}
+                            <Lbl>📊 Statuts ({slotOpts[pickingSlot].status.length}) — proposés du plus faible au plus fort</Lbl>
+                            {slotOpts[pickingSlot].status.length === 0 && <Hint>Aucun statut à ce niveau (ils se débloquent progressivement).</Hint>}
+                            {slotOpts[pickingSlot].status.map((id) => { const c = moveCard(id, lts)!; return <FullCard key={id} c={c} sel={learnset[pickingSlot!].moveId === id} onPick={() => { setLearn(pickingSlot!, id); setPickingSlot(null) }} /> })}
+                        </>
+                    ))}
 
                     {step === 6 && (
                         <>
@@ -263,6 +290,41 @@ export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: s
 function Lbl({ children }: { children: React.ReactNode }) { return <div style={S.lbl}>{children}</div> }
 function Hint({ children }: { children: React.ReactNode }) { return <div style={S.hint}>{children}</div> }
 
+const RAR_COL: Record<string, string> = { commune: "#8a8a8a", "répandue": "#3aa06a", rare: "#3a7ae0", exceptionnelle: "#e0b020" }
+// Fiche compacte (ligne de slot).
+function MiniCard({ c }: { c: MoveCardInfo }) {
+    return (
+        <span style={S.mini}>
+            <span style={{ ...S.chipSm, background: TYPE_COLORS[c.type] }}>{TYPE_FR[c.type]}</span>
+            <b style={{ fontSize: 12 }}>{c.name}</b>
+            <span style={S.subtle}>{c.cat === "STATUT" ? `statut ${"★".repeat(c.statusTier ?? 0)}` : `P${c.power} ${c.cat}`}{c.stab ? " · STAB" : ""}</span>
+        </span>
+    )
+}
+// Fiche ULTRA-complète (picker) : type, catégorie, puissance, précision, PP, rareté, STAB/couverture, force de statut, effet.
+function FullCard({ c, sel, onPick }: { c: MoveCardInfo; sel?: boolean; onPick: () => void }) {
+    const catCol = c.cat === "STATUT" ? "#8868c0" : c.cat === "PHYS" ? "#c0532a" : "#3a7ae0"
+    return (
+        <button style={{ ...S.moveCard, ...(sel ? S.moveCardSel : {}) }} onClick={onPick}>
+            <div style={S.moveCardHead}>
+                <b style={{ fontSize: 13 }}>{c.name}</b>
+                <span style={{ ...S.rarChip, background: RAR_COL[c.rarity] }}>{c.rarity}</span>
+            </div>
+            <div style={S.moveCardRow}>
+                <span style={{ ...S.chip, background: TYPE_COLORS[c.type], color: "#1a1400" }}>{TYPE_FR[c.type]}</span>
+                <span style={{ ...S.chip, background: catCol }}>{c.cat}</span>
+                {c.cat !== "STATUT" && <span style={S.stat}>⚔ {c.power}</span>}
+                <span style={S.stat}>🎯 {c.accuracy === 0 ? "∞" : `${c.accuracy}%`}</span>
+                <span style={S.stat}>{c.pp} PP</span>
+                {c.stab && <span style={S.stabTag}>STAB ×1.5</span>}
+                {c.coverage && <span style={S.covTag}>couverture</span>}
+                {c.statusTier && <span style={S.tierTag}>force {"★".repeat(c.statusTier)}</span>}
+            </div>
+            {c.effect && <div style={S.moveEffect}>💥 {c.effect}</div>}
+        </button>
+    )
+}
+
 const ACCENT = "#3ad0c0"
 const S: Record<string, React.CSSProperties> = {
     overlay: { position: "fixed", inset: 0, zIndex: 9600, background: "rgba(4,10,12,0.92)", display: "flex", alignItems: "center", justifyContent: "center", padding: 8, fontFamily: "'Courier New', monospace", color: "#eef" },
@@ -292,8 +354,27 @@ const S: Record<string, React.CSSProperties> = {
     bar: { flex: 1, height: 8, background: "#0e1c20", borderRadius: 4, overflow: "hidden" },
     barFill: { height: "100%", borderRadius: 4 },
     learnRow: { display: "flex", alignItems: "center", gap: 6, marginBottom: 6 },
-    lvlTag: { width: 52, fontSize: 11, fontWeight: 800, color: ACCENT },
+    lvlTag: { width: 52, fontSize: 11, fontWeight: 800, color: ACCENT, flexShrink: 0 },
     select: { flex: 1, padding: "7px 8px", background: "#0e1c20", border: "1px solid #2a5a55", borderRadius: 7, color: "#fff", fontFamily: "inherit", fontSize: 11.5 },
+    // Composition (résumé des règles en haut de l'étape Attaques).
+    compoRow: { display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 8 },
+    compoChip: { fontSize: 10, fontWeight: 800, padding: "3px 7px", borderRadius: 6 },
+    // Ligne de slot (liste des paliers).
+    slotRow: { width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", marginBottom: 5, background: "#0e1c20", border: "1px solid #2a5a55", borderRadius: 8, color: "#fff", cursor: "pointer", fontFamily: "inherit", textAlign: "left" },
+    mini: { display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" },
+    chipSm: { fontSize: 8.5, fontWeight: 800, color: "#1a1400", borderRadius: 4, padding: "1px 4px" },
+    // En-tête du picker.
+    pickerHead: { display: "flex", alignItems: "center", gap: 8, marginBottom: 6, fontSize: 12.5 },
+    // Fiche complète d'attaque (picker).
+    moveCard: { width: "100%", textAlign: "left", background: "#0e1c20", border: "1px solid #2a5a55", borderRadius: 8, padding: "8px 10px", marginBottom: 6, color: "#fff", cursor: "pointer", fontFamily: "inherit" },
+    moveCardSel: { border: `2px solid ${ACCENT}`, background: "rgba(58,208,192,.12)" },
+    moveCardHead: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 },
+    moveCardRow: { display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" },
+    rarChip: { fontSize: 8.5, fontWeight: 800, color: "#0a0a0a", borderRadius: 4, padding: "2px 6px", textTransform: "uppercase" },
+    stabTag: { fontSize: 8.5, fontWeight: 800, color: "#1a1400", background: "#7ce0a0", borderRadius: 4, padding: "2px 5px" },
+    covTag: { fontSize: 8.5, fontWeight: 800, color: "#fff", background: "#c07a3a", borderRadius: 4, padding: "2px 5px" },
+    tierTag: { fontSize: 8.5, fontWeight: 800, color: "#1a1400", background: "#e0c060", borderRadius: 4, padding: "2px 5px" },
+    moveEffect: { fontSize: 10.5, opacity: 0.8, marginTop: 4 },
     previewCard: { background: "#0e1c20", border: "1px solid #2a5a55", borderRadius: 8, padding: "7px 9px", marginBottom: 6 },
     previewHead: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "space-between" },
     previewStats: { display: "flex", gap: 8, flexWrap: "wrap", fontSize: 11, marginTop: 4, opacity: 0.9 },
