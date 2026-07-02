@@ -7,7 +7,8 @@
 import { useSyncExternalStore } from "react"
 import type { MonInstance, MoveSlot } from "../battle/types"
 import { fullStats } from "../battle/stats"
-import { getSpecies } from "../data/species"
+import { getSpecies, registerCustomSpecies } from "../data/species"
+import { type CustomSpec, type StoredCustomDaemon, buildCustomSpecies } from "../create/customSpecies"
 import { tradeEvolutionTarget, applyEvolution, type EvolutionResult } from "../battle/evolution"
 import { getMove } from "../data/moves"
 import { getItem } from "../data/items"
@@ -108,6 +109,8 @@ interface PlayerState {
     sylvebarbeAwake: boolean
     /** DÉFIS DU LABO (étage du Centre) : défi actif, flags one-shot, cumul dégâts CT, casino/Tonytony. */
     labDefi: LabDefiState
+    /** DAEMONS CUSTOM créés (post-Ligue) — persistés + ré-enregistrés au chargement (Phase 2). */
+    customDaemons: StoredCustomDaemon[]
 }
 
 /** Statistiques PvP du joueur (réputation). */
@@ -126,7 +129,7 @@ export function emptyPvpStats(): PvpStats {
     return { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }
 }
 
-let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", sylvebarbeAwake: false, labDefi: emptyLabDefi() }
+let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", sylvebarbeAwake: false, labDefi: emptyLabDefi(), customDaemons: [] }
 const listeners = new Set<() => void>()
 
 function emit() { for (const l of listeners) l() }
@@ -137,6 +140,19 @@ export function subscribePlayer(l: () => void): () => void {
 }
 
 export function getPlayer(): PlayerState { return st }
+
+/** DAEMON CUSTOM créé : l'enregistre au registre runtime (résolvable en combat) ET le persiste dans la save
+ *  (ré-enregistré au chargement). Idempotent-ish : borne la liste, ignore une spec qui ne se construit pas. */
+export function addCustomDaemon(ownerId: string, spec: CustomSpec): void {
+    try { registerCustomSpecies(buildCustomSpecies(spec, ownerId)) } catch { return } // spec illégale → on n'enregistre rien
+    const MAX = 20
+    st = { ...st, customDaemons: [...st.customDaemons, { ownerId, spec }].slice(-MAX) }
+    emit()
+}
+/** Ré-enregistre au chargement toutes les lignées custom persistées (défensif : une entrée cassée est ignorée). */
+export function reregisterCustomDaemons(): void {
+    for (const d of st.customDaemons) { try { registerCustomSpecies(buildCustomSpecies(d.spec, d.ownerId)) } catch { /* entrée corrompue → ignorée */ } }
+}
 
 export function hydratePlayer(p: Partial<PlayerState>) {
     st = {
@@ -169,6 +185,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         orcalineDate: p.orcalineDate ?? st.orcalineDate ?? "",
         sylvebarbeAwake: p.sylvebarbeAwake ?? st.sylvebarbeAwake ?? false,
         labDefi: p.labDefi ?? st.labDefi ?? emptyLabDefi(),
+        customDaemons: p.customDaemons ?? st.customDaemons ?? [],
     }
     emit()
 }
@@ -230,7 +247,7 @@ export function setChampion() {
 
 /** DEV : remet la progression jaune à zéro pour rejouer l'intro (équipe vidée, introSeen=false). */
 export function resetForIntro() {
-    st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", sylvebarbeAwake: false, labDefi: emptyLabDefi() }
+    st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", sylvebarbeAwake: false, labDefi: emptyLabDefi(), customDaemons: st.customDaemons }
     emit()
 }
 

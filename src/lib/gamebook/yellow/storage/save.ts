@@ -8,6 +8,7 @@ import type { MonInstance, StatKey, MajorStatus, PokeType } from "../battle/type
 import { POKE_TYPES } from "../battle/types"
 import { emptyLabDefi, clampTicketValue, TICKET_QUEUE_MAX, ROULETTE_CLAIMED_MAX, BLESSING_QUEUE_MAX, type LabDefiState, type LabDefiKind, type LabActiveDefi } from "../data/labDefis"
 import { isHeldItem } from "../data/heldItems"
+import { isPlausibleStoredDaemon, type StoredCustomDaemon } from "../create/customSpecies"
 
 export interface YellowSave {
     version: number
@@ -74,6 +75,8 @@ export interface YellowSave {
     sylvebarbeAwake: boolean
     /** DÉFIS DU LABO (étage du Centre) : défi actif, flags one-shot, cumul dégâts CT, casino/Tonytony. */
     labDefi: LabDefiState
+    /** DAEMONS CUSTOM créés (post-Ligue, Phase 2) — persistés pour être ré-enregistrés/joués. Optionnel (anciennes saves). */
+    customDaemons: StoredCustomDaemon[]
 }
 
 /** Un « meilleur moment » d'un combat de la Ligue (best-of affiché au Hall of Fame). Runtime. */
@@ -102,7 +105,7 @@ export const SAVE_VERSION = 2
 const ACE_RATCHET_RESET_VERSION = 2
 
 export function emptySave(): YellowSave {
-    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, sylvebarbeAwake: false, labDefi: emptyLabDefi() }
+    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, sylvebarbeAwake: false, labDefi: emptyLabDefi(), customDaemons: [] }
 }
 
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -350,6 +353,8 @@ export function parseSave(raw: unknown): YellowSave {
         isChampion: o.isChampion === true,
         sylvebarbeAwake: o.sylvebarbeAwake === true,
         labDefi: parseLabDefi(o.labDefi),
+        // Défensif : on ne garde que les entrées custom PLAUSIBLES (une entrée cassée ne bloque pas le chargement).
+        customDaemons: Array.isArray(o.customDaemons) ? o.customDaemons.filter(isPlausibleStoredDaemon) : [],
     }
 }
 

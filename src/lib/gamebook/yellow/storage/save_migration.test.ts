@@ -28,3 +28,22 @@ describe("migration v2 — reset du cliquet ACE", () => {
         expect(s.aceWins).toBe(3)
     })
 })
+
+// Phase 2 — persistance des Daemons custom : le PARSE doit être 100% défensif (une entrée cassée, ou une
+// ancienne save sans le champ, ne doit JAMAIS casser le chargement de la save d'un joueur en prod).
+describe("Phase 2 — parse défensif des customDaemons", () => {
+    it("ancienne save sans le champ → [] (rétro-compat)", () => {
+        expect(parseSave({ version: 2 }).customDaemons).toEqual([])
+        expect(parseSave({}).customDaemons).toEqual([])
+    })
+    it("garde les entrées PLAUSIBLES, filtre les cassées (jamais de crash)", () => {
+        const valid = { ownerId: "mools", spec: { name: "Testomon", finalTypes: ["EAU"], finalStats: { hp: 90, atk: 70, def: 85, spe: 100, spc: 90 }, learnset: [] } }
+        const s = parseSave({ version: 2, customDaemons: [valid, null, 42, { ownerId: "x" }, { spec: {} }, { ownerId: "y", spec: { name: 5 } }] })
+        expect(s.customDaemons).toHaveLength(1)
+        expect(s.customDaemons[0].ownerId).toBe("mools")
+    })
+    it("customDaemons non-tableau → [] (pas de crash)", () => {
+        expect(parseSave({ version: 2, customDaemons: "oops" }).customDaemons).toEqual([])
+        expect(parseSave({ version: 2, customDaemons: { bad: true } }).customDaemons).toEqual([])
+    })
+})

@@ -3,7 +3,7 @@
 // Nexus Jaune Éclair — pont entre les stores (joueur + Pokédex) et l'API de save.
 // Charge au démarrage, puis auto-sauvegarde (débouncé) à chaque changement.
 
-import { getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, bankReps, claimWelcomeGift, claimSpagGift, applySaiyanResults, resetForIntro } from "./playerStore"
+import { getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, bankReps, claimWelcomeGift, claimSpagGift, applySaiyanResults, resetForIntro, reregisterCustomDaemons } from "./playerStore"
 import { getPokedex, hydratePokedex, subscribePokedex } from "./pokedexStore"
 import { parseSave, type YellowSave, SAVE_VERSION } from "../storage/save"
 import type { BadgeId } from "../data/cts"
@@ -16,8 +16,9 @@ let timer: ReturnType<typeof setTimeout> | null = null
 /** Hydrate les stores (joueur + Pokédex) depuis une save serveur. Réutilisé au chargement ET quand le
  *  serveur REFUSE un écrasement destructif (409) → on resynchronise sur la vraie save au lieu de l'écraser. */
 function applyServerSave(save: YellowSave): void {
-    hydratePlayer({ team: save.team, pc: save.pc, items: save.items, reps: save.reps, repsCap: save.repsCap, creditedThrough: save.creditedThrough, pastaBoughtToday: save.pastaBoughtToday, pastaDayBonus: save.pastaDayBonus, defeatedTrainers: save.defeatedTrainers, rematchedTrainers: save.rematchedTrainers, badges: save.badges as BadgeId[], introSeen: save.introSeen, sbireDefeatsToday: save.sbireDefeatsToday, sbireWinsTotal: save.sbireWinsTotal, pvpStats: save.pvpStats, acePeakLevel: save.acePeakLevel, aceBox: save.aceBox, aceTeamSizePeak: save.aceTeamSizePeak, aceWins: save.aceWins, aceDefeatedDate: save.aceDefeatedDate, duelWins: save.duelWins, ownedCts: save.ownedCts, boughtCts: save.boughtCts, gekrocResolved: save.gekrocResolved, hhSpectresShown: save.hhSpectresShown, hhCollectorWins: save.hhCollectorWins, isChampion: save.isChampion, sylvebarbeAwake: save.sylvebarbeAwake, repsBankedTotal: save.repsBankedTotal, welcomeGift: save.welcomeGift, spagGift: save.spagGift, pastaGodGift: save.pastaGodGift, labDefi: save.labDefi })
+    hydratePlayer({ team: save.team, pc: save.pc, items: save.items, reps: save.reps, repsCap: save.repsCap, creditedThrough: save.creditedThrough, pastaBoughtToday: save.pastaBoughtToday, pastaDayBonus: save.pastaDayBonus, defeatedTrainers: save.defeatedTrainers, rematchedTrainers: save.rematchedTrainers, badges: save.badges as BadgeId[], introSeen: save.introSeen, sbireDefeatsToday: save.sbireDefeatsToday, sbireWinsTotal: save.sbireWinsTotal, pvpStats: save.pvpStats, acePeakLevel: save.acePeakLevel, aceBox: save.aceBox, aceTeamSizePeak: save.aceTeamSizePeak, aceWins: save.aceWins, aceDefeatedDate: save.aceDefeatedDate, duelWins: save.duelWins, ownedCts: save.ownedCts, boughtCts: save.boughtCts, gekrocResolved: save.gekrocResolved, hhSpectresShown: save.hhSpectresShown, hhCollectorWins: save.hhCollectorWins, isChampion: save.isChampion, sylvebarbeAwake: save.sylvebarbeAwake, repsBankedTotal: save.repsBankedTotal, welcomeGift: save.welcomeGift, spagGift: save.spagGift, pastaGodGift: save.pastaGodGift, labDefi: save.labDefi, customDaemons: save.customDaemons })
     hydratePokedex({ seen: save.pokedex.seen, caught: save.pokedex.caught })
+    reregisterCustomDaemons() // Phase 2 : rend les Daemons custom résolvables en combat (getSpecies) dès le chargement
 }
 
 /** Charge la sauvegarde serveur → hydrate les stores. À appeler au mount. */
@@ -59,7 +60,7 @@ export async function loadYellowSave(): Promise<void> {
 function snapshot(): YellowSave {
     const p = getPlayer()
     const d = getPokedex()
-    return { version: SAVE_VERSION, team: p.team, pc: p.pc, items: p.items, reps: p.reps, repsCap: p.repsCap, creditedThrough: p.creditedThrough, pastaBoughtToday: p.pastaBoughtToday, pastaDayBonus: p.pastaDayBonus, pokedex: { seen: d.seen, caught: d.caught }, defeatedTrainers: p.defeatedTrainers, rematchedTrainers: p.rematchedTrainers, badges: p.badges, introSeen: p.introSeen, sbireDefeatsToday: p.sbireDefeatsToday, sbireWinsTotal: p.sbireWinsTotal, pvpStats: p.pvpStats, acePeakLevel: p.acePeakLevel, aceBox: p.aceBox, aceTeamSizePeak: p.aceTeamSizePeak, aceWins: p.aceWins, aceDefeatedDate: p.aceDefeatedDate, duelWins: p.duelWins, ownedCts: p.ownedCts, boughtCts: p.boughtCts, gekrocResolved: p.gekrocResolved, hhSpectresShown: p.hhSpectresShown, hhCollectorWins: p.hhCollectorWins, isChampion: p.isChampion, sylvebarbeAwake: p.sylvebarbeAwake, repsBankedTotal: p.repsBankedTotal, welcomeGift: p.welcomeGift, spagGift: p.spagGift, pastaGodGift: p.pastaGodGift, labDefi: p.labDefi }
+    return { version: SAVE_VERSION, team: p.team, pc: p.pc, items: p.items, reps: p.reps, repsCap: p.repsCap, creditedThrough: p.creditedThrough, pastaBoughtToday: p.pastaBoughtToday, pastaDayBonus: p.pastaDayBonus, pokedex: { seen: d.seen, caught: d.caught }, defeatedTrainers: p.defeatedTrainers, rematchedTrainers: p.rematchedTrainers, badges: p.badges, introSeen: p.introSeen, sbireDefeatsToday: p.sbireDefeatsToday, sbireWinsTotal: p.sbireWinsTotal, pvpStats: p.pvpStats, acePeakLevel: p.acePeakLevel, aceBox: p.aceBox, aceTeamSizePeak: p.aceTeamSizePeak, aceWins: p.aceWins, aceDefeatedDate: p.aceDefeatedDate, duelWins: p.duelWins, ownedCts: p.ownedCts, boughtCts: p.boughtCts, gekrocResolved: p.gekrocResolved, hhSpectresShown: p.hhSpectresShown, hhCollectorWins: p.hhCollectorWins, isChampion: p.isChampion, sylvebarbeAwake: p.sylvebarbeAwake, repsBankedTotal: p.repsBankedTotal, welcomeGift: p.welcomeGift, spagGift: p.spagGift, pastaGodGift: p.pastaGodGift, labDefi: p.labDefi, customDaemons: p.customDaemons ?? [] }
 }
 
 /** Sauvegarde débouncée (ne fait rien tant que la save initiale n'est pas chargée).

@@ -515,6 +515,17 @@ export interface CustomSpec {
     learnset: Array<{ level: number; moveId: string }> // 1 pick par slot de LEARN_LEVELS
 }
 
+/** Entrée PERSISTÉE dans la save (Phase 2) : la spec + l'ownerId (pour reconstruire des ids déterministes). */
+export interface StoredCustomDaemon { ownerId: string; spec: CustomSpec }
+/** Validation DÉFENSIVE d'une entrée custom lue de la save (une entrée malformée ne doit jamais casser le chargement). */
+export function isPlausibleStoredDaemon(x: unknown): x is StoredCustomDaemon {
+    if (!x || typeof x !== "object") return false
+    const d = x as { ownerId?: unknown; spec?: unknown }
+    if (typeof d.ownerId !== "string" || !d.spec || typeof d.spec !== "object") return false
+    const s = d.spec as Partial<CustomSpec>
+    return typeof s.name === "string" && Array.isArray(s.finalTypes) && !!s.finalStats && Array.isArray(s.learnset)
+}
+
 /** Types d'un stade donné (1-indexé) compte tenu de l'éventuel changement de type. */
 export function typesAtStage(spec: CustomSpec, stage: number): PokeType[] {
     if (spec.typeChange && stage < spec.typeChange.atStage) return spec.typeChange.types
