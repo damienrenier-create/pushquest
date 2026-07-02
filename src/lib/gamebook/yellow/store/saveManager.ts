@@ -208,7 +208,7 @@ const uniq = (arr: string[]): string[] => [...new Set(arr)]
 /** FUSION de 2 mondes → un seul. `primary` = monde NG+ (timeline gagnante, garde TOUTE sa progression) ;
  *  `secondary` = monde d'origine (ses Daemons — équipe + PC — sont RÉCUPÉRÉS dans le PC fusionné). Pokédex/
  *  badges/CT en union, objets sommés, plafond d'énergie au max. Résultat = un monde LIVE unique (méta NG+ nettoyée). */
-function mergeWorlds(primary: YellowSave, secondary: YellowSave): YellowSave {
+export function mergeWorlds(primary: YellowSave, secondary: YellowSave): YellowSave {
     // Récupère TOUS les Daemons du monde d'origine (équipe + PC) dans le PC fusionné (uid re-préfixés → jamais de collision).
     const reclaimed: MonInstance[] = [...secondary.team, ...secondary.pc].map((m, i) => ({ ...m, uid: `fus${i}-${m.uid}` }))
     const items: Record<string, number> = { ...primary.items }
