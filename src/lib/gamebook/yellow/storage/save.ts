@@ -77,6 +77,16 @@ export interface YellowSave {
     labDefi: LabDefiState
     /** DAEMONS CUSTOM créés (post-Ligue, Phase 2) — persistés pour être ré-enregistrés/joués. Optionnel (anciennes saves). */
     customDaemons: StoredCustomDaemon[]
+    /** NG+ (2 mondes navigables) — monde ACTIF que le joueur contrôle. "live" = partie d'origine (= ces champs
+     *  plats), "ngplus" = New Game+ (= `ngplusWorld`). Défaut "live" (anciennes saves). Les champs plats de haut
+     *  niveau reflètent TOUJOURS le monde LIVE (le garde-fou anti-wipe voit donc toujours la vraie progression). */
+    activeWorld: "live" | "ngplus"
+    /** NG+ — le monde New Game+ COMPLET, sérialisé comme une YellowSave imbriquée (SANS sous-monde : profondeur
+     *  bornée à 1). null tant qu'aucun NG+ n'a été lancé. */
+    ngplusWorld: YellowSave | null
+    /** NG+ — équipe d'origine FIGÉE au lancement du NG+ (façon Hall of Fame, immuable) : c'est l'adversaire du
+     *  combat de fin de Ligue en NG+. null hors NG+. */
+    ngplusOldTeam: ChampionMon[] | null
 }
 
 /** Un « meilleur moment » d'un combat de la Ligue (best-of affiché au Hall of Fame). Runtime. */
@@ -105,7 +115,7 @@ export const SAVE_VERSION = 2
 const ACE_RATCHET_RESET_VERSION = 2
 
 export function emptySave(): YellowSave {
-    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, sylvebarbeAwake: false, labDefi: emptyLabDefi(), customDaemons: [] }
+    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, sylvebarbeAwake: false, labDefi: emptyLabDefi(), customDaemons: [], activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null }
 }
 
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -299,8 +309,39 @@ function parseLabDefi(raw: unknown): LabDefiState {
     return d
 }
 
-/** Parse défensif d'une sauvegarde complète. */
-export function parseSave(raw: unknown): YellowSave {
+/** Parse défensif d'un Daemon de champion figé (ChampionMon) — tolère tout format inconnu. */
+function parseChampionMon(raw: unknown): ChampionMon | null {
+    if (!raw || typeof raw !== "object") return null
+    const o = raw as Record<string, unknown>
+    if (typeof o.speciesId !== "string" || typeof o.level !== "number") return null
+    const s = (o.stats ?? {}) as Record<string, unknown>
+    const num = (v: unknown) => (typeof v === "number" && isFinite(v) ? Math.max(1, Math.floor(v)) : 1)
+    return {
+        speciesId: o.speciesId,
+        nickname: typeof o.nickname === "string" ? o.nickname : undefined,
+        level: Math.max(1, Math.min(100, Math.floor(o.level as number))),
+        shiny: o.shiny === true ? true : undefined,
+        stats: { hp: num(s.hp), atk: num(s.atk), def: num(s.def), spe: num(s.spe), spc: num(s.spc) },
+        moves: Array.isArray(o.moves) ? (o.moves as unknown[]).filter((m): m is string => typeof m === "string").slice(0, 4) : [],
+    }
+}
+
+/** Parse défensif d'une équipe de champion figée (NG+ : ancienne équipe). null si vide/absente. */
+function parseChampionTeam(raw: unknown): ChampionMon[] | null {
+    if (!Array.isArray(raw)) return null
+    const t = (raw as unknown[]).map(parseChampionMon).filter((m): m is ChampionMon => m !== null)
+    return t.length ? t : null
+}
+
+/** Parse défensif du monde NG+ imbriqué (une YellowSave, SANS sous-monde → profondeur bornée à 1). */
+function parseNestedWorld(raw: unknown): YellowSave | null {
+    if (!raw || typeof raw !== "object") return null
+    return parseSave(raw, true)
+}
+
+/** Parse défensif d'une sauvegarde complète. `nested` = on parse un monde NG+ imbriqué → on n'y REparse
+ *  pas de sous-monde (activeWorld forcé "live", ngplusWorld/ngplusOldTeam null) pour borner la récursion. */
+export function parseSave(raw: unknown, nested = false): YellowSave {
     if (!raw || typeof raw !== "object") return emptySave()
     const o = raw as Record<string, unknown>
     // MIGRATION cliquet ACE (v2) : une save antérieure à v2 → on remet acePeakLevel + aceTeamSizePeak
@@ -355,6 +396,10 @@ export function parseSave(raw: unknown): YellowSave {
         labDefi: parseLabDefi(o.labDefi),
         // Défensif : on ne garde que les entrées custom PLAUSIBLES (une entrée cassée ne bloque pas le chargement).
         customDaemons: Array.isArray(o.customDaemons) ? o.customDaemons.filter(isPlausibleStoredDaemon) : [],
+        // NG+ (2 mondes) : un monde imbriqué (`nested`) n'a pas de sous-monde → on borne la récursion à 1 niveau.
+        activeWorld: !nested && o.activeWorld === "ngplus" ? "ngplus" : "live",
+        ngplusWorld: nested ? null : parseNestedWorld(o.ngplusWorld),
+        ngplusOldTeam: nested ? null : parseChampionTeam(o.ngplusOldTeam),
     }
 }
 
