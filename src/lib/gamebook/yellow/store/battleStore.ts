@@ -19,7 +19,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType, MoveSlot } from "../battle/types"
 import { markSeen, markCaught, getPokedex } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, recordOrcalineDefeat, orcalineLevelForWins, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, consumeBattleBlessing, getActiveWorld, getNgplusNemesisSpeciesId } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, recordOrcalineDefeat, orcalineLevelForWins, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, consumeBattleBlessing, getActiveWorld, getNgplusNemesisSpeciesId, incNgplusBattles } from "./playerStore"
 import { getItem } from "../data/items"
 import { reportShiny } from "../shinyGift"
 import { ARENA_TICKET_VALUE, SBIRE_TICKET_VALUE, SBIRE_TICKET_EVERY, ACE_TICKET_VALUE, ACE_TICKET_WIN_BEFORE, ACE_TICKET_WIN_AFTER, ACE_TICKET_EARLY_VALUE, ACE_TICKET_WIN_EARLY } from "../data/labDefis"
@@ -424,6 +424,9 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // #2 : fuite RÉUSSIE → on durcit la prochaine ; tout autre dénouement = engagement → reset.
     if (b.outcome === "run") fleeStreak++
     else fleeStreak = 0
+
+    // NG+ : chaque combat (sauvages inclus) consomme la fenêtre d'abandon (≤ NGPLUS_ABANDON_LIMIT). No-op hors NG+.
+    if (getActiveWorld() === "ngplus") incNgplusBattles()
 
     // 1) Resynchronise l'équipe persistante depuis l'état de combat.
     //    ⚠️ EXCEPTION USINE (frontier:FACTORY) : on a joué une équipe de LOCATION (createMonInstance

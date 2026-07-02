@@ -3,7 +3,7 @@
 // Nexus Jaune Éclair — pont entre les stores (joueur + Pokédex) et l'API de save.
 // Charge au démarrage, puis auto-sauvegarde (débouncé) à chaque changement.
 
-import { getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, bankReps, claimWelcomeGift, claimSpagGift, applySaiyanResults, resetForIntro, reregisterCustomDaemons, getActiveWorld, setActiveWorld, startNgPlusWorld, raiseRepsCap, grantReps } from "./playerStore"
+import { getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, bankReps, claimWelcomeGift, claimSpagGift, applySaiyanResults, resetForIntro, reregisterCustomDaemons, getActiveWorld, setActiveWorld, startNgPlusWorld, raiseRepsCap, grantReps, addItem } from "./playerStore"
 import { getPokedex, hydratePokedex, subscribePokedex } from "./pokedexStore"
 import { parseSave, emptySave, type YellowSave, type ChampionMon, SAVE_VERSION } from "../storage/save"
 import type { StoredCustomDaemon } from "../create/customSpecies"
@@ -35,7 +35,7 @@ function liveWorldOf(save: YellowSave): YellowSave {
 /** Hydrate les stores (joueur + Pokédex) depuis UN monde. `customDaemons` est GLOBAL (partagé entre les
  *  2 mondes) → toujours fourni depuis le haut niveau de la save. */
 function hydrateFromWorld(w: YellowSave, customDaemons: StoredCustomDaemon[]): void {
-    hydratePlayer({ team: w.team, pc: w.pc, items: w.items, reps: w.reps, repsCap: w.repsCap, creditedThrough: w.creditedThrough, pastaBoughtToday: w.pastaBoughtToday, pastaDayBonus: w.pastaDayBonus, defeatedTrainers: w.defeatedTrainers, rematchedTrainers: w.rematchedTrainers, badges: w.badges as BadgeId[], introSeen: w.introSeen, sbireDefeatsToday: w.sbireDefeatsToday, sbireWinsTotal: w.sbireWinsTotal, pvpStats: w.pvpStats, acePeakLevel: w.acePeakLevel, aceBox: w.aceBox, aceTeamSizePeak: w.aceTeamSizePeak, aceWins: w.aceWins, aceDefeatedDate: w.aceDefeatedDate, duelWins: w.duelWins, ownedCts: w.ownedCts, boughtCts: w.boughtCts, gekrocResolved: w.gekrocResolved, hhSpectresShown: w.hhSpectresShown, hhCollectorWins: w.hhCollectorWins, isChampion: w.isChampion, sylvebarbeAwake: w.sylvebarbeAwake, caveTradeDone: w.caveTradeDone, goshHintHeard: w.goshHintHeard, orcalineWins: w.orcalineWins, orcalineDate: w.orcalineDate, repsBankedTotal: w.repsBankedTotal, welcomeGift: w.welcomeGift, spagGift: w.spagGift, pastaGodGift: w.pastaGodGift, labDefi: w.labDefi, customDaemons })
+    hydratePlayer({ team: w.team, pc: w.pc, items: w.items, reps: w.reps, repsCap: w.repsCap, creditedThrough: w.creditedThrough, pastaBoughtToday: w.pastaBoughtToday, pastaDayBonus: w.pastaDayBonus, defeatedTrainers: w.defeatedTrainers, rematchedTrainers: w.rematchedTrainers, badges: w.badges as BadgeId[], introSeen: w.introSeen, sbireDefeatsToday: w.sbireDefeatsToday, sbireWinsTotal: w.sbireWinsTotal, pvpStats: w.pvpStats, acePeakLevel: w.acePeakLevel, aceBox: w.aceBox, aceTeamSizePeak: w.aceTeamSizePeak, aceWins: w.aceWins, aceDefeatedDate: w.aceDefeatedDate, duelWins: w.duelWins, ownedCts: w.ownedCts, boughtCts: w.boughtCts, gekrocResolved: w.gekrocResolved, hhSpectresShown: w.hhSpectresShown, hhCollectorWins: w.hhCollectorWins, isChampion: w.isChampion, sylvebarbeAwake: w.sylvebarbeAwake, caveTradeDone: w.caveTradeDone, goshHintHeard: w.goshHintHeard, orcalineWins: w.orcalineWins, orcalineDate: w.orcalineDate, ngplusBattles: w.ngplusBattles, repsBankedTotal: w.repsBankedTotal, welcomeGift: w.welcomeGift, spagGift: w.spagGift, pastaGodGift: w.pastaGodGift, labDefi: w.labDefi, customDaemons })
     hydratePokedex({ seen: w.pokedex.seen, caught: w.pokedex.caught })
 }
 
@@ -99,7 +99,7 @@ export async function loadYellowSave(): Promise<void> {
 function activeWorldSave(): YellowSave {
     const p = getPlayer()
     const d = getPokedex()
-    return { version: SAVE_VERSION, team: p.team, pc: p.pc, items: p.items, reps: p.reps, repsCap: p.repsCap, creditedThrough: p.creditedThrough, pastaBoughtToday: p.pastaBoughtToday, pastaDayBonus: p.pastaDayBonus, pokedex: { seen: d.seen, caught: d.caught }, defeatedTrainers: p.defeatedTrainers, rematchedTrainers: p.rematchedTrainers, badges: p.badges, introSeen: p.introSeen, sbireDefeatsToday: p.sbireDefeatsToday, sbireWinsTotal: p.sbireWinsTotal, pvpStats: p.pvpStats, acePeakLevel: p.acePeakLevel, aceBox: p.aceBox, aceTeamSizePeak: p.aceTeamSizePeak, aceWins: p.aceWins, aceDefeatedDate: p.aceDefeatedDate, duelWins: p.duelWins, ownedCts: p.ownedCts, boughtCts: p.boughtCts, gekrocResolved: p.gekrocResolved, hhSpectresShown: p.hhSpectresShown, hhCollectorWins: p.hhCollectorWins, isChampion: p.isChampion, sylvebarbeAwake: p.sylvebarbeAwake, caveTradeDone: p.caveTradeDone, goshHintHeard: p.goshHintHeard, orcalineWins: p.orcalineWins, orcalineDate: p.orcalineDate, repsBankedTotal: p.repsBankedTotal, welcomeGift: p.welcomeGift, spagGift: p.spagGift, pastaGodGift: p.pastaGodGift, labDefi: p.labDefi, customDaemons: p.customDaemons ?? [], activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null }
+    return { version: SAVE_VERSION, team: p.team, pc: p.pc, items: p.items, reps: p.reps, repsCap: p.repsCap, creditedThrough: p.creditedThrough, pastaBoughtToday: p.pastaBoughtToday, pastaDayBonus: p.pastaDayBonus, pokedex: { seen: d.seen, caught: d.caught }, defeatedTrainers: p.defeatedTrainers, rematchedTrainers: p.rematchedTrainers, badges: p.badges, introSeen: p.introSeen, sbireDefeatsToday: p.sbireDefeatsToday, sbireWinsTotal: p.sbireWinsTotal, pvpStats: p.pvpStats, acePeakLevel: p.acePeakLevel, aceBox: p.aceBox, aceTeamSizePeak: p.aceTeamSizePeak, aceWins: p.aceWins, aceDefeatedDate: p.aceDefeatedDate, duelWins: p.duelWins, ownedCts: p.ownedCts, boughtCts: p.boughtCts, gekrocResolved: p.gekrocResolved, hhSpectresShown: p.hhSpectresShown, hhCollectorWins: p.hhCollectorWins, isChampion: p.isChampion, sylvebarbeAwake: p.sylvebarbeAwake, caveTradeDone: p.caveTradeDone, goshHintHeard: p.goshHintHeard, orcalineWins: p.orcalineWins, orcalineDate: p.orcalineDate, ngplusBattles: p.ngplusBattles, repsBankedTotal: p.repsBankedTotal, welcomeGift: p.welcomeGift, spagGift: p.spagGift, pastaGodGift: p.pastaGodGift, labDefi: p.labDefi, customDaemons: p.customDaemons ?? [], activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null }
 }
 
 /** FUSION des 2 mondes → une save unique. Les champs PLATS = monde LIVE (toujours, pour le garde-fou
@@ -203,6 +203,36 @@ export async function switchWorld(target: "live" | "ngplus"): Promise<boolean> {
     return true
 }
 
+/** NG+ — fenêtre d'ABANDON : nb de combats max après le lancement du NG+ pour aller rendre le starter à CHEN. */
+export const NGPLUS_ABANDON_LIMIT = 15
+/** Combats restants avant d'être ENGAGÉ (0 hors NG+). */
+export function ngplusBattlesLeft(): number {
+    if (getActiveWorld() !== "ngplus") return 0
+    return Math.max(0, NGPLUS_ABANDON_LIMIT - getPlayer().ngplusBattles)
+}
+/** L'abandon du NG+ est-il encore possible (en NG+ ET dans la fenêtre des 15 combats) ? */
+export function canAbandonNgplus(): boolean {
+    return getActiveWorld() === "ngplus" && getPlayer().ngplusBattles <= NGPLUS_ABANDON_LIMIT
+}
+
+/** NG+ — ABANDON (via le Prof. CHEN, ≤ NGPLUS_ABANDON_LIMIT combats) : le monde NG+ est SUPPRIMÉ (starter +
+ *  6000⚡ perdus À JAMAIS), la partie de champion est restaurée, et CHEN te remet la FLÛTE (accès Sylvebarbe
+ *  → Zone de Combat). Retour au monde unique. false si hors NG+ ou fenêtre dépassée (engagé). */
+export async function abandonNewGamePlus(): Promise<boolean> {
+    if (!canAbandonNgplus()) return false
+    const live = inactiveWorld
+    if (!live) return false
+    // Le monde NG+ actif est JETÉ (pas stashé) → supprimé. On restaure la partie de champion.
+    inactiveWorld = null
+    ngplusOldTeam = null
+    hydrateFromWorld(live, live.customDaemons ?? [])
+    setActiveWorld("live")
+    reregisterCustomDaemons()
+    addItem("daemonflute", 1) // récompense CHEN : la flûte (jamais donnée jusque-là) → Sylvebarbe/Zone de Combat
+    await persistNow()
+    return true
+}
+
 const uniq = (arr: string[]): string[] => [...new Set(arr)]
 
 /** FUSION de 2 mondes → un seul. `primary` = monde NG+ (timeline gagnante, garde TOUTE sa progression) ;
@@ -227,6 +257,7 @@ export function mergeWorlds(primary: YellowSave, secondary: YellowSave): YellowS
         ownedCts: uniq([...primary.ownedCts, ...secondary.ownedCts]),
         boughtCts: uniq([...primary.boughtCts, ...secondary.boughtCts]),
         isChampion: true,
+        ngplusBattles: 0, // compteur d'engagement sans objet après fusion
         // Collapse en UN seul monde.
         activeWorld: "live",
         ngplusWorld: null,
