@@ -39,7 +39,9 @@ function defaultSpec(): CustomSpec {
     }
 }
 
-export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: string; nickname: string; close: () => void }) {
+export default function DaemonCreator({ ownerId, nickname, close, onCreated }: { ownerId: string; nickname: string; close: () => void; onCreated?: (spec: CustomSpec) => void }) {
+    // Mode FORCÉ (post-sacre) : le créateur n'est pas dismissable et lance le New Game+ à la création.
+    const forced = !!onCreated
     const [step, setStep] = useState(0)
     const [spec, setSpec] = useState<CustomSpec>(defaultSpec)
     const [created, setCreated] = useState<string | null>(null) // JSON soumis (écran de succès)
@@ -113,7 +115,7 @@ export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: s
         let nemFinal: { types: PokeType[]; bst: number } | null = null
         try { const nem = previewLine(buildNemesis(effSpec), "ace"); const f = nem[nem.length - 1]; nemFinal = f ? { types: f.types, bst: f.bst } : null } catch { nemFinal = null }
         return (
-            <div style={S.overlay} onClick={close}>
+            <div style={S.overlay} onClick={forced ? undefined : close}>
                 <div style={S.box} onClick={(e) => e.stopPropagation()}>
                     <div style={S.h}>🧬 Daemon envoyé au labo !</div>
                     <p style={S.p}>Ton <b>{spec.name}</b> est créé et jouable (sprite mystère ❓ en attendant que Sartay lui donne son vrai visage).</p>
@@ -127,20 +129,28 @@ export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: s
                         </div>
                     )}
                     <p style={{ ...S.p, fontSize: 11, opacity: 0.7 }}>Phase 2 : sauvegarde en base, New Game+ (6000 ⚡), puis fusion des comptes après avoir battu ta propre équipe.</p>
-                    <textarea readOnly value={created} style={S.json} onFocus={(e) => e.currentTarget.select()} />
-                    <button style={S.primary} onClick={() => navigator.clipboard?.writeText(created)}>📋 Copier le JSON</button>
-                    <button style={S.ghost} onClick={close}>Fermer</button>
+                    {forced ? (
+                        <button style={{ ...S.primary, fontSize: 15, padding: "12px 0", background: "#e0a020", borderColor: "#e0a020" }} onClick={() => onCreated!(effSpec)}>
+                            🚀 COMMENCER TON NEW GAME+
+                        </button>
+                    ) : (
+                        <>
+                            <textarea readOnly value={created} style={S.json} onFocus={(e) => e.currentTarget.select()} />
+                            <button style={S.primary} onClick={() => navigator.clipboard?.writeText(created)}>📋 Copier le JSON</button>
+                            <button style={S.ghost} onClick={close}>Fermer</button>
+                        </>
+                    )}
                 </div>
             </div>
         )
     }
 
     return (
-        <div style={S.overlay} onClick={close}>
+        <div style={S.overlay} onClick={forced ? undefined : close}>
             <div style={S.box} onClick={(e) => e.stopPropagation()}>
                 <div style={S.head}>
-                    <span style={S.h}>🧬 Crée ton Daemon</span>
-                    <button style={S.x} onClick={close}>✕</button>
+                    <span style={S.h}>🧬 {forced ? "Conçois ton Daemon (obligatoire)" : "Crée ton Daemon"}</span>
+                    {!forced && <button style={S.x} onClick={close}>✕</button>}
                 </div>
                 {/* Fil d'étapes */}
                 <div style={S.steps}>

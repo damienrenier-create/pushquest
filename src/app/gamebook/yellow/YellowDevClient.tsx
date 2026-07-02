@@ -50,7 +50,7 @@ import { useEncounterFxActive } from "@/lib/gamebook/yellow/store/encounterFxSto
 import { aceLoseLine } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
-import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter, startNewGamePlus, switchWorld, hasNgPlusWorld, completeNewGamePlus, getNgplusOldTeam } from "@/lib/gamebook/yellow/store/saveManager"
+import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, getNgplusOldTeam } from "@/lib/gamebook/yellow/store/saveManager"
 import { customStarterSpeciesId, type StoredCustomDaemon } from "@/lib/gamebook/yellow/create/customSpecies"
 import { getPlayer, setTeam, usePlayer, useActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone } from "@/lib/gamebook/yellow/store/playerStore"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
@@ -210,6 +210,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [barmanOpen, setBarmanOpen] = useState(false) // menu du barman (guide + potions prix-libre)
     const [blackjackOpen, setBlackjackOpen] = useState(false) // table de blackjack (PC haut-gauche)
     const [creatorOpen, setCreatorOpen] = useState(false) // TEST : créateur de Daemon (post-Ligue) — réservé à Mools/créateur
+    const [forcedCreator, setForcedCreator] = useState(false) // post-sacre : création OBLIGATOIRE qui enchaîne sur le NG+
+    const [pendingForcedCreator, setPendingForcedCreator] = useState(false) // ouvre le créateur forcé après le dialogue-défi
     const [heldOpen, setHeldOpen] = useState(false) // modale "objet tenu" (depuis la fiche d'un Daemon)
     const [evDetailOpen, setEvDetailOpen] = useState(false) // détail EV (par stat) déplié sur la fiche
     const ticketChecked = useRef(false)
@@ -244,7 +246,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         const enemy = arenaMode === "hub" ? buildHubTeam(opp.player) : buildMirrorTeam(opp.player)
         setArenaFight({ opp, mode: arenaMode, enemy })
     }
-    const [menu, setMenu] = useState<"none" | "pause" | "team" | "bag" | "reput" | "moves" | "hof" | "arena-hof" | "ngplus">("none")
+    const [menu, setMenu] = useState<"none" | "pause" | "team" | "bag" | "reput" | "moves" | "hof" | "arena-hof">("none")
     const activeWorld = useActiveWorld() // NG+ : "live" (partie d'origine) ou "ngplus" (New Game+)
     const ficheTouchX = useRef<number | null>(null) // swipe gauche/droite dans la fiche Daemon
     const [selected, setSelected] = useState<MonInstance | null>(null)
@@ -707,6 +709,14 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         }
     }, [ngplusFinalResult, battle, evolutions.length, showDialogue])
 
+    // SACRE run 1 → une fois le dialogue-défi du Dieu des Nouilles refermé, on OUVRE le créateur en mode FORCÉ.
+    useEffect(() => {
+        if (!pendingForcedCreator || dialogue || battle || evolutions.length > 0 || championRun) return
+        setPendingForcedCreator(false)
+        setForcedCreator(true)
+        setCreatorOpen(true)
+    }, [pendingForcedCreator, dialogue, battle, evolutions.length, championRun])
+
     // LIGUE — SACRE : dès que le championRun est posé (victoire sur LE MAÎTRE), on grave l'équipe
     // au Hall of Fame PARTAGÉ et on récompense tous les autres joueurs (+1/3 de leur quota). Une seule
     // fois par sacre — la ref se réarme quand le générique se ferme (clearChampion → championRun=null).
@@ -1011,25 +1021,16 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (!ok) { setToast("New Game+ réservé aux Champions du Nexus."); return }
         setMenu("none")
         setMap(YELLOW_ENTRANCE_MAP_ID, DEFAULT_SPAWN.x, DEFAULT_SPAWN.y) // le NG+ démarre au tout début
-        // Cinématique d'entrée du 2e run : le Dieu des Nouilles explique au joueur ce qui l'attend.
+        // Cinématique d'entrée du 2e run : le Dieu des Nouilles explique le NG+ ET la fenêtre d'abandon.
         showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, [
             `*Un éclair de pâte sacrée. ${stored.spec.name}, ta création, s'éveille à tes côtés — à peine éclos, niveau 5.*`,
-            "« Ainsi, Champion, tu RECOMMENCES — mais tout autre. Ta création pour seul compagnon, 6000 énergies bénies, et un Nexus qui ne t'attendait plus. »",
-            "« Ta gloire d'avant n'est pas perdue : elle t'attend, intacte. Reviens-y quand tu veux — Menu → 🔁 Changer de monde. »",
-            "« Mais prends garde : ACE a forgé une NÉMÉSIS taillée contre ta création. Et au bout du chemin, c'est ta PROPRE ancienne équipe que tu devras terrasser. »",
-            "« Une seconde vie t'est offerte, Maître. Fais-en une légende. 🍝 »",
+            "« Voici ta seconde vie : ta création pour seul allié, 6000 énergies bénies, et un Nexus recommencé de zéro. »",
+            "« Tu hésites ? Tu as 15 COMBATS — pas un de plus — pour renoncer : porte ton starter au Prof. CHEN. Tu perdras ta création ET les 6000⚡ à JAMAIS, mais tu retrouveras ta partie de Champion, la flûte et la Zone de Combat. »",
+            "« Passé ces 15 combats, plus de retour : engagé jusqu'au bout. ACE t'attend avec une NÉMÉSIS forgée contre toi… et au sommet, ta PROPRE ancienne équipe. »",
+            "« Choisis bien, Maître. Fais de cette vie une légende. 🍝 »",
         ])
     }
 
-    // NG+ — bascule entre le monde d'origine et le New Game+ (les deux persistés). Warp vers un hub sûr :
-    // la position de carte est partagée entre les 2 mondes (endpoint /state), on la repose donc à la bascule.
-    const changeWorld = async (target: "live" | "ngplus") => {
-        const ok = await switchWorld(target)
-        if (!ok) return
-        setMenu("none")
-        if (target === "ngplus") { setMap(YELLOW_ENTRANCE_MAP_ID, DEFAULT_SPAWN.x, DEFAULT_SPAWN.y); setToast("🔁 New Game+ — reprise.") }
-        else { setMap("yellow_cendreville", CENDREVILLE_SPAWN.x, CENDREVILLE_SPAWN.y); setToast("🔁 Retour à ta partie d'origine.") }
-    }
 
     // RETOUR : ferme l'overlay le plus "haut" de la pile (fiche → sous-menu → pause).
     // Renvoie true si quelque chose a été fermé → utilisé par le bouton B (B = retour).
@@ -1062,7 +1063,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (advisorOpen) { closeAdvisor(); return true }
         if (labOpen) { closeLab(); return true }
         if (pcOpen) { closePc(); return true }
-        if (menu === "team" || menu === "bag" || menu === "reput" || menu === "moves" || menu === "hof" || menu === "arena-hof" || menu === "ngplus") { setMenu("pause"); return true }
+        if (menu === "team" || menu === "bag" || menu === "reput" || menu === "moves" || menu === "hof" || menu === "arena-hof") { setMenu("pause"); return true }
         if (menu === "pause") { setMenu("none"); return true }
         return false
     }
@@ -1147,22 +1148,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         {(isCreator || nickname.toLowerCase() === "mools") && (
                             <button style={{ ...menuBtnStyle, borderColor: "#3ad0c0", color: "#3ad0c0" }} onClick={() => { setMenu("none"); setCreatorOpen(true) }}>🧬 CRÉER UN DAEMON (TEST)</button>
                         )}
-                        {/* NG+ (2 mondes navigables) : bascule si un NG+ existe, sinon proposition de lancement (Champion + Daemon custom). */}
+                        {/* NG+ ENGAGÉ : le combat final vs ancienne équipe (entrée manuelle + retry). Plus de navigation libre. */}
                         {!battle && activeWorld === "ngplus" && getPlayer().isChampion && (getNgplusOldTeam()?.length ?? 0) > 0 && (
                             <button style={{ ...menuBtnStyle, borderColor: "#c05050", color: "#c05050" }} onClick={() => {
                                 const old = getNgplusOldTeam(); if (!old) return
                                 setMenu("none")
                                 if (!startNgPlusFinalBattle(old)) setToast("Soigne ton équipe au Centre d'abord.")
                             }}>⚔️ AFFRONTER TON ANCIENNE ÉQUIPE</button>
-                        )}
-                        {!battle && activeWorld === "ngplus" && (
-                            <button style={{ ...menuBtnStyle, borderColor: "#e0a020", color: "#e0a020" }} onClick={() => changeWorld("live")}>🔁 RETOUR À TA PARTIE D&apos;ORIGINE</button>
-                        )}
-                        {!battle && activeWorld === "live" && hasNgPlusWorld() && (
-                            <button style={{ ...menuBtnStyle, borderColor: "#e0a020", color: "#e0a020" }} onClick={() => changeWorld("ngplus")}>🔁 REPRENDRE TON NEW GAME+</button>
-                        )}
-                        {!battle && activeWorld === "live" && !hasNgPlusWorld() && getPlayer().isChampion && getPlayer().customDaemons.length > 0 && (
-                            <button style={{ ...menuBtnStyle, borderColor: "#e0a020", color: "#e0a020" }} onClick={() => setMenu("ngplus")}>✨ NEW GAME+ (TON DAEMON)</button>
                         )}
                         {!battle && (confirmReset ? (
                             <>
@@ -1197,26 +1189,6 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             <button style={menuBtnDimStyle} onClick={() => setConfirmReset(true)}>♻️ RECOMMENCER LE CHAPITRE 2</button>
                         ))}
                         <button style={menuBtnDimStyle} onClick={() => setMenu("none")}>← FERMER</button>
-                    </div>
-                </div>
-            )}
-
-            {/* NG+ — choix du Daemon custom qui deviendra ton starter du New Game+ */}
-            {!battle && menu === "ngplus" && (
-                <div style={menuOverlayStyle} onClick={() => setMenu("pause")}>
-                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
-                        <div style={menuTitleStyle}>✨ NEW GAME+</div>
-                        <div style={{ fontSize: 11, textAlign: "center", opacity: 0.85, lineHeight: 1.5, marginBottom: 4 }}>
-                            Recommence une NOUVELLE partie avec ton Daemon créé en starter (niv 5) et <b>6000⚡</b>.<br />
-                            Ta partie de Champion reste intacte — tu pourras y revenir à tout moment (Menu → Changer de monde).<br />
-                            <span style={{ opacity: 0.75 }}>À la fin de la Ligue, tu affronteras ton ANCIENNE équipe.</span>
-                        </div>
-                        {getPlayer().customDaemons.map((d, i) => (
-                            <button key={`${d.ownerId}-${i}`} style={menuBtnStyle} onClick={() => launchNewGamePlus(d)}>
-                                🧬 {d.spec.name} <span style={{ opacity: 0.7, fontSize: 10 }}>({d.spec.finalTypes.join("/")})</span>
-                            </button>
-                        ))}
-                        <button style={menuBtnDimStyle} onClick={() => setMenu("pause")}>← RETOUR</button>
                     </div>
                 </div>
             )}
@@ -1667,7 +1639,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {/* BARMAN — guide du casino + indice jetons + Potions à prix libre (effets secrets). */}
             {barmanOpen && <BarmanPanel close={() => setBarmanOpen(false)} />}
             {blackjackOpen && <BlackjackPanel close={() => setBlackjackOpen(false)} />}
-            {creatorOpen && <DaemonCreator ownerId={userId} nickname={nickname} close={() => setCreatorOpen(false)} />}
+            {creatorOpen && (
+                <DaemonCreator
+                    ownerId={userId} nickname={nickname}
+                    close={() => setCreatorOpen(false)}
+                    onCreated={forcedCreator ? (spec) => { setCreatorOpen(false); setForcedCreator(false); void launchNewGamePlus({ ownerId: userId, spec }) } : undefined}
+                />
+            )}
             {chatOpen && (
                 <div style={menuOverlayStyle} onClick={() => setChatOpen(false)}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
@@ -2443,15 +2421,16 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     // NG+ : au lieu du warp/dialogue habituels, on laisse l'effet dédié lancer le COMBAT DE FIN
                     // DE LIGUE contre l'ancienne équipe (dès le HoF fermé). ngplusFinalPending est déjà armé.
                     if (ngplusFinalPending) { setToast("Un dernier défi t'attend… ton ANCIENNE équipe !"); return }
-                    // Le générique DEVIENT la transition : on ressort directement à Cendreville (au-dessus du
-                    // gate sud, comme la porte droite de la salle du trône) au lieu de rester dans le trône vide.
+                    // SACRE (run 1) : le générique sert de transition → Cendreville, puis le Dieu des Nouilles
+                    // lance LE DÉFI, et on enchaîne sur la CRÉATION OBLIGATOIRE d'un Daemon (→ New Game+).
                     setMap("yellow_cendreville", 21, 32)
-                    // QUÊTE DE LA FLÛTE (déblocage Zone de Combat) : le Maître annonce la récompense du Dieu Spaghetti.
-                    showDialogue("y_ligue_maitre", "LE MAÎTRE", [
-                        "« Félicitations, nouveau Maître ! Tu mérites une récompense à la hauteur de ton exploit. »",
-                        "« Le Dieu Spaghetti t'a laissé une Daemonflûte… mais ce distrait l'a oubliée à l'ÉTAGE du Centre Pokémon ! »",
-                        "« Récupère-la là-haut, puis va réveiller le colosse endormi au SUD de la ville. La ZONE DE COMBAT t'attend, Maître. »",
+                    showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, [
+                        "*Le trône vacillant, une lueur de pâte sacrée descend sur toi.*",
+                        "« CHAMPION ! Tu as tout vaincu… alors je t'offre l'ultime défi : deviens à ton tour CRÉATEUR. »",
+                        "« Conçois de tes mains un Daemon inédit — TON œuvre — et recommence une SECONDE VIE avec lui pour seul allié. »",
+                        "« Ce n'est pas une option : le Nexus l'exige. Lève-toi, et façonne ta création. »",
                     ])
+                    setPendingForcedCreator(true) // ouvre le créateur forcé dès la fin du dialogue
                 }} />
             )}
 
