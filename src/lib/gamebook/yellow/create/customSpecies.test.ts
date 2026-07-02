@@ -6,6 +6,7 @@ import {
     MAX_STAB, MAX_COVERAGE, MIN_STATUS_RATIO, ROLES, CURVE_RATIOS, powerPoolMod, effectiveMaxPower,
     STAT_HARD_CAP, STAT_DEX_MAX, specStatCost, fitStatsToBudget, STALL_BULK_THRESHOLD, effectivePower, maxAvgOffPower, POWER_AVG_TOLERANCE, hasNoSideEffect,
     attributeMoveIds, ATTRIBUTE_MOVES, MAX_ATTRIBUTES, gatePower, TALENTS, TALENT_KEYS, weakestStatKey,
+    ultimatePowerCap, ultimateMoveOptions, ULTIMATE_LEVEL,
 } from "./customSpecies"
 import { getMove, MOVES } from "../data/moves"
 import { getSpecies, registerCustomSpecies, isCustomSpeciesId } from "../data/species"
@@ -303,3 +304,39 @@ describe("création — buildCustomSpecies (inchangé : lignée légale)", () =>
 // garde-fous divers
 void bst; void bloomerBudget; void lineTypes; void MAX_STAB; void MAX_COVERAGE; void MIN_STATUS_RATIO
 type _ = MoveData
+
+describe("Carotte ultime (slot bonus hors pool)", () => {
+    it("cap par vitesse : rapide (≥100)→70, moyen→75, lent (≤60)→80", () => {
+        expect(ultimatePowerCap(120)).toBe(70)
+        expect(ultimatePowerCap(100)).toBe(70)
+        expect(ultimatePowerCap(80)).toBe(75)
+        expect(ultimatePowerCap(61)).toBe(75)
+        expect(ultimatePowerCap(60)).toBe(80)
+        expect(ultimatePowerCap(30)).toBe(80)
+    })
+    it("options = offensives de ton type, P ≤ cap-vitesse, non déjà prises", () => {
+        const s = validSpec() // EAU, spe 100 → cap 70
+        const opts = ultimateMoveOptions(s)
+        expect(opts.length).toBeGreaterThan(0)
+        for (const id of opts) {
+            const m = getMove(id)!
+            expect(isDamagingMove(m)).toBe(true)
+            expect(effectivePower(m)).toBeLessThanOrEqual(70)
+            expect(s.learnset.some((l) => l.moveId === id)).toBe(false)
+        }
+    })
+    it("validateSpec : carotte valide acceptée ; carotte trop forte refusée", () => {
+        const s = validSpec()
+        const good = ultimateMoveOptions(s)[0]
+        expect(validateSpec({ ...s, ultimateMove: good }).filter((e) => e.includes("Carotte"))).toHaveLength(0)
+        const strong = (Object.values(MOVES) as MoveData[]).find((m) => m.type === "EAU" && isDamagingMove(m) && effectivePower(m) > 70)
+        if (strong) expect(validateSpec({ ...s, ultimateMove: strong.id }).some((e) => e.includes("Carotte"))).toBe(true)
+    })
+    it("buildCustomSpecies ajoute la carotte au learnset au niveau ULTIMATE_LEVEL", () => {
+        const s = validSpec()
+        const um = ultimateMoveOptions(s)[0]
+        const chain = buildCustomSpecies({ ...s, ultimateMove: um }, "test")
+        const final = chain[chain.length - 1]
+        expect(final.learnset.some((l) => l.moveId === um && l.level === ULTIMATE_LEVEL)).toBe(true)
+    })
+})

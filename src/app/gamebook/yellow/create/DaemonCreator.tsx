@@ -20,6 +20,7 @@ import {
     ATTRIBUTE_LABEL, MAX_ATTRIBUTES, TALENTS, TALENT_KEYS, MAX_TALENT_REROLLS, weakestStatKey,
     lineTypes, LEARN_LEVELS, STAT_KEYS, STAT_LABEL, MIN_FINAL_STAT, MAX_STAB, MAX_COVERAGE,
     STAT_HARD_CAP, STAT_DEX_MAX, specStatCost, fitStatsToBudget,
+    moveOptionsFor, ultimateMoveOptions, ultimatePowerCap,
 } from "@/lib/gamebook/yellow/create/customSpecies"
 
 const TYPE_FR: Record<PokeType, string> = {
@@ -181,7 +182,17 @@ export default function DaemonCreator({ ownerId, nickname, close, onCreated }: {
                                             onClick={() => setSpec((s) => {
                                                 const cur = s.attributes ?? []
                                                 const next = cur.includes(a) ? cur.filter((x) => x !== a) : (cur.length < MAX_ATTRIBUTES ? [...cur, a] : cur)
-                                                return { ...s, attributes: next }
+                                                // FIX : une attaque débloquée par un attribut RETIRÉ n'est plus de type valide → on la VIDE
+                                                // (le slot retombe sur la suggestion). Sinon elle resterait « fantôme » dans le learnset.
+                                                const ns = { ...s, attributes: next }
+                                                const nTypes = lineTypes(ns)
+                                                const nAttr = attributeMoveIds(next)
+                                                const nBst = STAT_KEYS.reduce((acc, k) => acc + s.finalStats[k], 0)
+                                                const learnset = (s.learnset ?? []).map((slot, i) =>
+                                                    slot?.moveId && !moveOptionsFor(nTypes, LEARN_LEVELS[i], nBst, nAttr).includes(slot.moveId)
+                                                        ? { level: LEARN_LEVELS[i], moveId: "" } : slot)
+                                                const ultimateMove = (s.ultimateMove && ultimateMoveOptions({ ...ns, learnset }).includes(s.ultimateMove)) ? s.ultimateMove : undefined
+                                                return { ...ns, learnset, ultimateMove }
                                             })}>
                                             {on ? "☑ " : "☐ "}{ATTRIBUTE_LABEL[a]}
                                         </button>
@@ -327,6 +338,24 @@ export default function DaemonCreator({ ownerId, nickname, close, onCreated }: {
                                 )
                             })}
                             <Hint>Palier 1 = attaque basique · Palier 2 = statut faible · le reste puise dans un POOL de puissance PARTAGÉ : plus une attaque est forte, moins il reste pour les autres. Attaques = Normal + tes types (STAB) uniquement.</Hint>
+                            {/* CAROTTE ULTIME : 1 attaque BONUS hors pool, plafonnée par la vitesse (rapide 70 · moyen 75 · lent 80). */}
+                            <Lbl>🥕 Carotte ultime <span style={S.subtle}>(optionnel — 1 attaque BONUS hors pool, P≤{ultimatePowerCap(spec.finalStats.spe)} selon ta vitesse)</span></Lbl>
+                            <button style={{ ...S.slotRow, borderColor: "#e0a020" }} onClick={() => setPickingSlot(-1)}>
+                                <span style={{ ...S.lvlTag, background: "#e0a020", color: "#2a1c10" }}>ULTIME</span>
+                                {spec.ultimateMove && moveCard(spec.ultimateMove, lts) ? <MiniCard c={moveCard(spec.ultimateMove, lts)!} /> : <span style={S.subtle}>— (aucune)</span>}
+                                <span style={{ ...S.subtle, marginLeft: "auto" }}>Changer ›</span>
+                            </button>
+                        </>
+                    ) : pickingSlot === -1 ? (
+                        <>
+                            <div style={S.pickerHead}>
+                                <button style={S.ghost} onClick={() => setPickingSlot(null)}>‹ Retour</button>
+                                <b>🥕 Carotte ultime — P≤{ultimatePowerCap(spec.finalStats.spe)}</b>
+                            </div>
+                            <Hint>Une seule attaque BONUS, HORS du pool de puissance. Plafond selon ta vitesse : rapide 70 · moyen 75 · lent 80. Optionnelle — tu peux la retirer.</Hint>
+                            {spec.ultimateMove && <button style={{ ...S.ghost, color: "#c83030", alignSelf: "flex-start" }} onClick={() => { patch({ ultimateMove: undefined }); setPickingSlot(null) }}>✖ Retirer la carotte ultime</button>}
+                            {ultimateMoveOptions(effSpec).map((id) => { const c = moveCard(id, lts)!; return <FullCard key={id} c={c} sel={spec.ultimateMove === id} onPick={() => { patch({ ultimateMove: id }); setPickingSlot(null) }} /> })}
+                            {ultimateMoveOptions(effSpec).length === 0 && <Hint>Aucune attaque éligible (type/puissance). Ajuste tes types/attributs.</Hint>}
                         </>
                     ) : (
                         <>

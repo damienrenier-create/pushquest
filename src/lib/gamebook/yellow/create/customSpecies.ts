@@ -435,6 +435,28 @@ export function slotChoices(spec: CustomSpec, i: number, finalBst: number = STAT
     return { offensive, status: staIds.map((id) => ({ id, blocked: tagDup(id) })), cap }
 }
 
+// ══════ CAROTTE ULTIME ══════
+// Un slot BONUS, HORS du pool de puissance cumulatif : le joueur y apprend UNE attaque puissante, plafonnée
+// par la VITESSE du Daemon (les lents, punis en initiative, frappent plus fort). Respecte le type (Normal+STAB
+// +attributs) mais ignore la cascade ET les quotas de composition. Optionnel. Rangé au niveau ULTIMATE_LEVEL.
+export const ULTIMATE_LEVEL = 60
+/** Plafond de puissance de la carotte ultime selon la vitesse : rapide 70 · moyen 75 · lent 80. */
+export function ultimatePowerCap(spe: number): number {
+    if (spe >= 100) return 70 // rapide
+    if (spe <= 60) return 80  // lent (compense la faible initiative)
+    return 75                 // moyen
+}
+/** Attaques éligibles à la carotte ultime : type valide (Normal/STAB/attributs), offensives, P ≤ cap-vitesse,
+ *  pas déjà dans le learnset. Triées par puissance décroissante. */
+export function ultimateMoveOptions(spec: CustomSpec, finalBst: number = BST(spec.finalStats)): string[] {
+    const types = lineTypes(spec)
+    const cap = ultimatePowerCap(spec.finalStats.spe)
+    const taken = new Set(spec.learnset.map((l) => l.moveId))
+    return moveOptionsFor(types, ULTIMATE_LEVEL, finalBst, attributeMoveIds(spec.attributes))
+        .filter((id) => { const m = getMove(id); return !!m && isDamagingMove(m) && effectivePower(m) <= cap && !taken.has(id) })
+        .sort((a, b) => effectivePower(getMove(b)!) - effectivePower(getMove(a)!))
+}
+
 /** Slots de STATUT par défaut : slot 2 (forcé) + 2 autres (milieu/fin) pour tenir le quota 25 %. */
 const DEFAULT_STATUS_SLOTS = [FORCED_STATUS_SLOT, 5, 8]
 
@@ -513,6 +535,7 @@ export interface CustomSpec {
     secretTalent?: TalentKey                     // talent « pouvoir caché » pioché en fin de création
     talentRerolls?: number                       // nb de relances de talent déjà payées (max MAX_TALENT_REROLLS)
     learnset: Array<{ level: number; moveId: string }> // 1 pick par slot de LEARN_LEVELS
+    ultimateMove?: string                        // « CAROTTE ULTIME » : 1 attaque bonus HORS pool de puissance (cap selon la vitesse). Optionnel.
 }
 
 /** Entrée PERSISTÉE dans la save (Phase 2) : la spec + l'ownerId (pour reconstruire des ids déterministes). */
@@ -606,6 +629,16 @@ export function validateSpec(spec: CustomSpec): string[] {
         } else if (!accessible) e.push(`« ${mv.name} » n'est pas accessible au niv ${lvl} (type/puissance/force).`)
     })
 
+    // CAROTTE ULTIME (optionnelle) : offensive de ton type (Normal/STAB/attribut), P ≤ cap-vitesse, apprenable, non-doublon.
+    if (spec.ultimateMove) {
+        const um = getMove(spec.ultimateMove)
+        const cap = ultimatePowerCap(spec.finalStats.spe)
+        if (!um || !isLearnableMove(spec.ultimateMove)) e.push("Carotte ultime : attaque inconnue ou inapprenable.")
+        else if (spec.learnset.some((l) => l.moveId === spec.ultimateMove)) e.push(`Carotte ultime : « ${um.name} » est déjà dans ton learnset.`)
+        else if (!moveOptionsFor(lts, ULTIMATE_LEVEL, total, attr).includes(spec.ultimateMove) || !isDamagingMove(um) || effectivePower(um) > cap)
+            e.push(`Carotte ultime : attaque offensive de ton type (Normal/STAB/attribut), P≤${cap}.`)
+    }
+
     // Composition du learnset (équilibre) : statuts, STAB, couverture, rareté.
     const moves = spec.learnset.map((s) => getMove(s.moveId)).filter((m): m is MoveData => !!m)
     const offensive = moves.filter(isDamagingMove)
@@ -676,6 +709,10 @@ export function buildCustomSpecies(spec: CustomSpec, ownerId: string): SpeciesDa
     const baseId = `custom_${slug(ownerId)}_${slug(spec.name)}`
     const evoLevels = spec.stages === 3 ? cfg.evo3 : spec.stages === 2 ? cfg.evo2 : []
     const learnset = spec.learnset.map((s) => ({ level: s.level, moveId: s.moveId }))
+    // CAROTTE ULTIME : attaque bonus hors-pool, ajoutée au learnset au niveau ULTIMATE_LEVEL (si valide/apprenable).
+    if (spec.ultimateMove && isLearnableMove(spec.ultimateMove) && !learnset.some((l) => l.moveId === spec.ultimateMove)) {
+        learnset.push({ level: ULTIMATE_LEVEL, moveId: spec.ultimateMove })
+    }
 
     const chain: SpeciesData[] = []
     for (let i = 0; i < spec.stages; i++) {
