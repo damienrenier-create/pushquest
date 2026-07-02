@@ -161,7 +161,13 @@ function tryLaunchTrainer(trainerId: string, isRematch = false): ActiveDialogue 
     // Daemons ÉVOLUENT au stade correspondant à ce niveau (speciesAtLevel enchaîne les évolutions).
     const scaledLvl = trainer.scaleWithBadges ? arenaScaledLevel(getPlayerSave().badges) : null
     // Rematch (match retour) → 2e équipe ; sinon l'équipe de base.
-    const specs = isRematch && trainer.rematch ? trainer.rematch.team : trainer.team
+    let specs = isRematch && trainer.rematch ? trainer.rematch.team : trainer.team
+    // NG+ : LE MAÎTRE **est** ACE (rival en habit de Champion) → « ace nouvelle formule » : sa lignée Divin Pâte
+    // devient le NÉMÉSIS (contre-lignée de ta création), rétro-évolué au bon stade pour le niveau de son slot.
+    if (trainerId === "y_ligue_maitre" && getActiveWorld() === "ngplus") {
+        const nem = getNgplusNemesisSpeciesId()
+        if (nem) specs = specs.map((s) => (s.speciesId === "divinpate" ? { ...s, speciesId: speciesAtLevel(nem, s.level) } : s))
+    }
     const enemyTeam = specs.map((s) => {
         const lvl = scaledLvl ?? s.level
         const speciesId = trainer.scaleWithBadges ? speciesAtLevel(s.speciesId, lvl) : s.speciesId
