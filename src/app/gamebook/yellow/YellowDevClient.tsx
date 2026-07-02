@@ -50,7 +50,7 @@ import { useEncounterFxActive } from "@/lib/gamebook/yellow/store/encounterFxSto
 import { aceLoseLine } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
-import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, getNgplusOldTeam, abandonNewGamePlus } from "@/lib/gamebook/yellow/store/saveManager"
+import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, getNgplusOldTeam, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT } from "@/lib/gamebook/yellow/store/saveManager"
 import { customStarterSpeciesId, type StoredCustomDaemon } from "@/lib/gamebook/yellow/create/customSpecies"
 import { getPlayer, setTeam, usePlayer, useActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone } from "@/lib/gamebook/yellow/store/playerStore"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
@@ -1082,6 +1082,18 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     return (
         <div style={pageStyle}>
             {showIntro && <IntroCinematic onComplete={onIntroComplete} />}
+
+            {/* NG+ — HUD « fenêtre d'abandon » : décompte visible des combats restants avant d'être ENGAGÉ. */}
+            {activeWorld === "ngplus" && player.ngplusBattles <= NGPLUS_ABANDON_LIMIT && !battle && !showIntro && (
+                <div style={{ position: "fixed", top: 6, left: 6, zIndex: 60, background: "#1b1206ee", border: "2px solid #e0a020", color: "#f4d78a", borderRadius: 8, padding: "3px 8px", fontSize: 10.5, fontWeight: 700, fontFamily: "monospace", pointerEvents: "none", lineHeight: 1.35, textAlign: "center", maxWidth: 150 }}>
+                    🔓 NEW GAME+
+                    {NGPLUS_ABANDON_LIMIT - player.ngplusBattles > 0 ? (
+                        <div>Abandon (Prof. CHEN) : <b style={{ color: "#fff" }}>{NGPLUS_ABANDON_LIMIT - player.ngplusBattles}</b> combat{NGPLUS_ABANDON_LIMIT - player.ngplusBattles > 1 ? "s" : ""}</div>
+                    ) : (
+                        <div style={{ color: "#ff8c60" }}>⚠️ DERNIÈRE CHANCE d&apos;abandonner !</div>
+                    )}
+                </div>
+            )}
             {tradeAnim && (
                 <TradeAnimation
                     give={tradeAnim.give}

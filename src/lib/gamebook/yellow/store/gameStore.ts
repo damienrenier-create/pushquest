@@ -547,13 +547,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 // = -1, pour laisser le temps de progresser. Compteur persistant (par appareil).
                 const ENC_KEY = "yellow_wild_enc"
                 const encCount = typeof window !== "undefined" ? (parseInt(window.localStorage.getItem(ENC_KEY) || "0", 10) || 0) : 999
+                // NG+ : DÉMARRAGE MOTIVANT — les 2 premiers sauvages sont TRÈS faibles (starter niv 5 → victoire
+                // quasi certaine), indépendamment de la rampe device-level (qui peut être épuisée). Après → normal.
+                const ngEasyWild = getActiveWorld() === "ngplus" && getPlayerSave().ngplusBattles < 2
                 const wild = rollWildEncounter({
-                    mapId: next.mapId, x: next.posX, y: next.posY, leadLevel: levelBasis,
+                    mapId: next.mapId, x: next.posX, y: next.posY, leadLevel: ngEasyWild ? 3 : levelBasis,
                     weakestTeamLevel: Math.min(...team.map((m) => m.level)), // pour Namicha (Centrale / maison hantée)
                     strongestTeamLevel: Math.max(...team.map((m) => m.level)), // pour Vipember (+5, maison hantée)
-                    player: getPlayerSave().wildCtx ?? undefined,
-                    levelCap: wildLevelCap(badges), // bridage par badges (Route Nord + Grotte)
-                    encounterCount: encCount,
+                    player: ngEasyWild ? undefined : (getPlayerSave().wildCtx ?? undefined), // pas de modulation d'effort sur le démarrage garanti
+                    levelCap: ngEasyWild ? 4 : wildLevelCap(badges), // NG+ : plafond niv 4 sur les 2 premiers → victoire assurée
+                    encounterCount: ngEasyWild ? 0 : encCount, // force la rampe la + douce (-2 niv) au démarrage NG+
                     dayKey: new Date().toISOString().slice(0, 10), // rotation quotidienne des types (hautes herbes)
                     goshBoost: isHhKidNight(new Date().getHours()) && getPlayerSave().goshHintHeard, // GAMIN : Goshendofy ×2 la nuit
                     goshCaught: getPokedex().caught.includes("goshendofy"), // déjà capturé → ne réapparaît plus jamais
