@@ -292,23 +292,54 @@ export function attributeMoveIds(attributes: Attribute[] | undefined): Set<strin
 //    moteur possède déjà (crit, précision, STAB, effets secondaires, recul, drain, dégâts). cf. liste validée v2.
 //    L'effet en combat sera câblé côté moteur à l'instanciation (Phase 2) ; ici : data + choix + coût. ──
 export type TalentKey =
-    | "oeil_lynx" | "coup_sort" | "anti_crit" | "zele" | "acharnement" | "cuir_epais" | "resistant"
-    | "voile" | "sang_froid" | "chanceux" | "endurant" | "sangsue" | "reflexes"
+    // offensif
+    | "coup_sort" | "zele" | "acharnement" | "coup_dur" | "fine_lame" | "poigne_fer" | "affinite_elem" | "frappe_repetee"
+    // défensif
+    | "anti_crit" | "cuir_epais" | "resistant" | "voile" | "anguille" | "chair_coriace" | "volonte_fer"
+    // précision / statut
+    | "oeil_lynx" | "sang_froid" | "chanceux" | "regard_percant" | "corps_sain" | "volonte_vaincre" | "toxine_tenace"
+    // survie
+    | "endurant" | "sangsue" | "instinct_survie" | "coeur_vaillant" | "cuirasse_mentale"
+    // utilitaire
+    | "reflexes" | "main_leste" | "studieux" | "bourreau_travail"
 export interface TalentInfo { label: string; desc: string }
 export const TALENTS: Record<TalentKey, TalentInfo> = {
-    oeil_lynx: { label: "Œil de lynx", desc: "+5 % de précision sur tes attaques." },
-    coup_sort: { label: "Coup du sort", desc: "+5 % de chances de coup critique." },
-    anti_crit: { label: "Sang-froid tactique", desc: "L'adversaire a −5 % de chances de te porter un critique." },
+    // ── Offensif ──
+    coup_sort: { label: "Coup du sort", desc: "Tu portes des coups critiques bien plus souvent (façon Lentilscope)." },
     zele: { label: "Zèle élémentaire", desc: "Bonus STAB porté à ×1,55 (au lieu de ×1,5)." },
     acharnement: { label: "Acharnement", desc: "+5 % de dégâts si la cible est à moins de 25 % de PV." },
-    cuir_epais: { label: "Cuir épais", desc: "−5 % de dégâts subis." },
-    resistant: { label: "Résistant", desc: "−5 % de dégâts sur les coups super-efficaces." },
+    coup_dur: { label: "Talon d'acier", desc: "Tes coups critiques font un peu plus mal (×2,05 au lieu de ×2)." },
+    fine_lame: { label: "Fine lame", desc: "Tes dégâts sont plus réguliers : moins de coups faibles au hasard." },
+    poigne_fer: { label: "Poigne de fer", desc: "+5 % de dégâts sur les coups super-efficaces." },
+    affinite_elem: { label: "Affinité élémentaire", desc: "+5 % de dégâts sur les attaques de ton type principal." },
+    frappe_repetee: { label: "Frappe répétée", desc: "+5 % de chance d'un coup en plus sur les attaques multi-coups." },
+    // ── Défensif ──
+    anti_crit: { label: "Sang-froid tactique", desc: "L'adversaire a −5 % de chances de te porter un critique." },
+    cuir_epais: { label: "Cuir épais", desc: "−5 % de tous les dégâts subis." },
+    resistant: { label: "Résistant", desc: "−5 % de dégâts sur les coups super-efficaces subis." },
     voile: { label: "Voile", desc: "L'adversaire a −5 % de précision contre toi." },
+    anguille: { label: "Anguille", desc: "+5 % d'esquive : les attaques ennemies te ratent plus souvent." },
+    chair_coriace: { label: "Chair coriace", desc: "−5 % de dégâts physiques subis." },
+    volonte_fer: { label: "Volonté de fer", desc: "Annule la 1re baisse de stat du combat (façon Herbe Blanche)." },
+    // ── Précision / statut ──
+    oeil_lynx: { label: "Œil de lynx", desc: "+5 % de précision sur tes attaques." },
     sang_froid: { label: "Nerfs d'acier", desc: "−5 % de chances de subir une altération (para/brûlure/poison/sommeil)." },
     chanceux: { label: "Chanceux", desc: "+5 % de déclenchement des effets secondaires de tes attaques." },
+    regard_percant: { label: "Regard perçant", desc: "+5 % de chances d'apeurer (flinch) la cible après une attaque." },
+    corps_sain: { label: "Corps sain", desc: "−5 % de chances de te faire apeurer (résistance flinch)." },
+    volonte_vaincre: { label: "Volonté de vaincre", desc: "Les baisses de stats que tu subis sont un peu moins fortes." },
+    toxine_tenace: { label: "Toxine tenace", desc: "+5 % de chances d'infliger un statut avec tes attaques d'altération." },
+    // ── Survie ──
     endurant: { label: "Endurant", desc: "Le recul (Bélier, Coup de Boutoir…) te fait un quart de dégâts en moins." },
-    sangsue: { label: "Sangsue", desc: "+5 % de PV rendus par tes attaques qui drainent." },
+    sangsue: { label: "Sangsue", desc: "Tes attaques te rendent un peu de PV (1/20 des dégâts infligés)." },
+    instinct_survie: { label: "Instinct de survie", desc: "+5 % de survivre à 1 PV à un coup fatal (depuis PV pleins)." },
+    coeur_vaillant: { label: "Cœur vaillant", desc: "Régénère 1/20 de tes PV max à la fin de chaque tour." },
+    cuirasse_mentale: { label: "Cuirasse mentale", desc: "Une fois par combat, l'un de tes coups est un critique garanti." },
+    // ── Utilitaire ──
     reflexes: { label: "Réflexes", desc: "+5 % de Vitesse au combat." },
+    main_leste: { label: "Main leste", desc: "+5 % d'agir en premier à priorité égale (façon Vive-Griffe)." },
+    studieux: { label: "Studieux", desc: "+5 % d'XP gagnée à chaque victoire." },
+    bourreau_travail: { label: "Bourreau de travail", desc: "+5 % d'EV (progression de stats) gagnés en combat." },
 }
 export const TALENT_KEYS = Object.keys(TALENTS) as TalentKey[]
 export const MAX_TALENT_REROLLS = 15
@@ -733,6 +764,7 @@ export function buildCustomSpecies(spec: CustomSpec, ownerId: string): SpeciesDa
             rarity: "RARE",
             growthRate: cfg.growthRate,
             role: roleOf(spec.finalStats, spec.finalTypes),
+            secretTalent: spec.secretTalent, // talent secret de la lignée → lu par le moteur (talentEffects)
             description: ((stage === spec.stages && spec.daFinal?.trim()) ? spec.daFinal.trim() : spec.da.trim())
                 + (spec.character.trim() ? ` — ${spec.character.trim()}` : ""),
             sprite: "", // « sprite mystère » : vide → fallback emoji/silhouette ; Sartay branche le vrai sprite ensuite

@@ -137,6 +137,9 @@ export interface SpeciesData {
     growthRate?: "medium_fast" | "fast" | "slow" | "medium_slow"
     /** Rôle de game-design (lisibilité éditoriale, non utilisé par le moteur). */
     role?: string
+    /** TALENT SECRET d'une lignée CUSTOM (créateur de Daemon) : clé de talent lue par le moteur (talentEffects).
+     *  Undefined pour toute espèce standard → aucun effet (le combat existant est strictement inchangé). */
+    secretTalent?: string
     /** GÉKROC : apprend TOUTES les CT, quel que soit le type (couteau-suisse). Défaut : compat normale. */
     learnsAllCts?: boolean
     /** SURPRISE : MASQUÉ du Pokédex (même pas « vu ») tant que NON capturé (ex. Gékroc, Goshendofy). */
@@ -225,6 +228,10 @@ export interface BattleMon extends MonInstance {
     /** BÉNÉDICTION barman (secret, SOLO) : le PROCHAIN coup de ce Daemon est un COUP CRITIQUE garanti,
      *  puis le flag est consommé. Posé quand il boit une potion "triple prix". Runtime, non persisté. */
     nextCritGuaranteed?: boolean
+    /** TALENT Volonté de fer : la 1re baisse de stat du combat a-t-elle déjà été annulée ? (one-shot, runtime, non persisté). */
+    talentStatGuardUsed?: boolean
+    /** TALENT Cuirasse mentale : le crit garanti du combat a-t-il déjà été consommé ? (one-shot, runtime, non persisté). */
+    talentCritUsed?: boolean
     /** Plus gros coup porté DANS CE COMBAT — runtime, JAMAIS persisté. Repart de 0 à
      *  chaque combat (toBattleMon le laisse undefined) → le débrief GOAT ne reflète QUE
      *  le combat courant, sans traîner les records des combats précédents. À ne pas

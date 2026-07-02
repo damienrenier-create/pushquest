@@ -8,6 +8,7 @@ import type { SpeciesData, StatKey, StageKey, MonInstance, MajorStatus } from ".
 import { allocatedBonus } from "../data/saiyanConfig"
 import { evStatBonus } from "../data/evConfig"
 import { heldStatMult } from "../data/heldItems"
+import { talentSpeedMult } from "./talentEffects"
 
 // ============================================================
 // Stats absolues (hors combat)
@@ -42,7 +43,10 @@ export function fullStats(
     // au spawn). Choix de Sartay (flex assumé pour 7 joueurs) — appliqué ici → propage à maxHpOf + combat.
     const sh = (n: number) => (inst.shiny ? Math.floor(n * 1.1) : n)
     // OBJET TENU : multiplicateur de stat (signatures, ex. +20% Vit). Respecte le verrou d'espèce.
-    const hm = heldStatMult(inst)
+    // + TALENT Réflexes : ×Vitesse (folded dans hm.spe).
+    const hm = { ...heldStatMult(inst) }
+    const tsm = talentSpeedMult(inst)
+    if (tsm !== 1) hm.spe = (hm.spe ?? 1) * tsm
     const it = (n: number, k: StatKey) => sh(Math.floor(n * (hm[k] ?? 1)))
     return {
         hp: it(maxHp(species, lv, inst.ivs.hp, e.hp ?? 0) + allocatedBonus("hp", a.hp ?? 0), "hp"),

@@ -9,6 +9,7 @@ import type { MoveData, BattleMon } from "./types"
 import { accEvaMultiplier, fullStats, effectiveStat } from "./stats"
 import { getSpecies } from "../data/species"
 import { heldEffect } from "../data/heldItems"
+import { talentEffect } from "./talentEffects"
 import type { Rng } from "./rng"
 
 // HYPNOSE (speedScaledAcc) : bornes de la précision modulée par la vitesse.
@@ -31,7 +32,10 @@ export function hitChance(move: MoveData, attacker: BattleMon, defender: BattleM
     // HYPNOSE : précision de base FIXE, INDÉPENDANTE de l'esquive, modulée par le ratio de Vitesse
     // lanceur/cible (rapide → +précis, lent → -précis), bornée [SPEED_ACC_MIN, SPEED_ACC_MAX].
     // OBJET TENU — Poudre Claire (×0.9) / Encens Doux (×0.95) : baisse la précision des attaques visant le porteur.
-    const itemMod = heldEffect(defender)?.incomingAccMult ?? 1
+    // + TALENTS : Voile/Anguille (−5 % précision entrante, défenseur) × Œil de lynx (+5 % précision, attaquant).
+    const itemMod = (heldEffect(defender)?.incomingAccMult ?? 1)
+        * (talentEffect(defender)?.incomingAccMult ?? 1)
+        * (talentEffect(attacker)?.accOutMult ?? 1)
     if (move.effect?.speedScaledAcc) {
         const sCaster = effectiveSpeed(attacker)
         const sTarget = Math.max(1, effectiveSpeed(defender))

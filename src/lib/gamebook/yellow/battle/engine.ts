@@ -13,6 +13,7 @@ import { getMove } from "../data/moves"
 import { fullStats, effectiveStat, clampStage } from "./stats"
 import { computeDamage, hasStab, critProbabilityGen1 } from "./damage"
 import { heldOutgoingDmgMult, heldIncomingDmgMult, heldEffect } from "../data/heldItems"
+import { talentEffect, talentOutgoingDmgMult, talentIncomingDmgMult } from "./talentEffects"
 import { typeEffectiveness, effectivenessMessage, moveCategory, resolveAdaptiveStab } from "./typeChart"
 import * as Status from "./status"
 import { accuracyCheck } from "./accuracy"
@@ -436,9 +437,9 @@ function orderActions(
     const pp = actionPriority(state, p)
     const ep = actionPriority(state, e)
     if (pp !== ep) return pp > ep ? [p, e] : [e, p]
-    // OBJET TENU — Vive Griffe : X % d'agir en premier à priorité égale (avant le départage à la vitesse).
-    const pqc = heldEffect(active(state.player))?.quickClawPct ?? 0
-    const eqc = heldEffect(active(state.enemy))?.quickClawPct ?? 0
+    // Vive Griffe (objet) OU talent Main leste : X % d'agir en premier à priorité égale (avant le départage à la vitesse).
+    const pqc = (heldEffect(active(state.player))?.quickClawPct ?? 0) + (talentEffect(active(state.player))?.quickClawPct ?? 0)
+    const eqc = (heldEffect(active(state.enemy))?.quickClawPct ?? 0) + (talentEffect(active(state.enemy))?.quickClawPct ?? 0)
     const pProc = pqc > 0 && rng.chance(pqc)
     const eProc = eqc > 0 && rng.chance(eqc)
     if (pProc !== eProc) return pProc ? [p, e] : [e, p]
@@ -587,7 +588,10 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
     }
 
     // --- Capacité offensive (gère multi-hit) ---
-    const hits = move.effect?.multiHit ? rng.int(move.effect.multiHit[0], move.effect.multiHit[1]) : 1
+    let hits = move.effect?.multiHit ? rng.int(move.effect.multiHit[0], move.effect.multiHit[1]) : 1
+    // TALENT Frappe répétée : +5 % de chance d'un coup SUPPLÉMENTAIRE sur les attaques multi-coups.
+    const mhBonus = talentEffect(active(state[side]))?.multiHitBonus
+    if (move.effect?.multiHit && mhBonus && rng.chance(mhBonus)) hits += 1
     let landed = 0
     let lastEff = 1
     for (let h = 0; h < hits; h++) {
@@ -602,7 +606,9 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
             events.push({ kind: "message", text: `${displayName(attacker)} récupère de l'énergie !` })
         }
         if (move.effect?.recoilPct && res.dealt > 0) {
-            const recoil = Math.max(1, Math.floor((res.dealt * move.effect.recoilPct) / 100))
+            // TALENT Endurant : recul ×0.75 (−¼).
+            const recoilMult = talentEffect(attacker)?.recoilMult ?? 1
+            const recoil = Math.max(1, Math.floor((res.dealt * move.effect.recoilPct / 100) * recoilMult))
             applyDamage(state, side, recoil, events)
             events.push({ kind: "message", text: `${displayName(attacker)} est blessé par le contrecoup !` })
         }
@@ -663,34 +669,44 @@ function dealMoveDamage(state: BattleState, side: SideId, move: MoveData, rng: R
 
     // Crit Gen 1 : probabilité liée à la Vitesse de base de l'attaquant.
     const critOverride = move.effect?.critChanceForSpecies?.[attacker.speciesId]
-    const scopeLens = !!heldEffect(attacker)?.critStage // Lentilscope : booste le taux de crit (façon high-crit)
+    // Lentilscope (objet) OU talent Coup du sort : booste le taux de crit (façon high-crit).
+    const scopeLens = !!heldEffect(attacker)?.critStage || !!talentEffect(attacker)?.critStage
+    const antiCrit = talentEffect(defender)?.incomingCritMult ?? 1 // talent Sang-froid tactique : −5 % de crit subi
     let isCrit = critOverride !== undefined
         ? rng.next() < critOverride
-        : rng.next() < critProbabilityGen1(atkSpecies.baseStats.spe, move.effect?.highCrit || scopeLens)
+        : rng.next() < critProbabilityGen1(atkSpecies.baseStats.spe, move.effect?.highCrit || scopeLens) * antiCrit
     // BÉNÉDICTION barman (potion "triple prix", SOLO) : crit GARANTI au prochain coup, puis consommé.
     // Le tirage RNG ci-dessus est conservé (déterminisme intact) ; on ne fait que forcer le résultat.
     if (attacker.nextCritGuaranteed) { isCrit = true; attacker.nextCritGuaranteed = false }
-    // OBJET TENU : boost de type (attaquant) × réduction de dégâts physiques (défenseur, ex. Coquille Tony).
+    // TALENT Cuirasse mentale : le 1er coup porté du combat est un critique GARANTI, puis consommé.
+    if (talentEffect(attacker)?.guaranteedCritOnce && !attacker.talentCritUsed) { isCrit = true; attacker.talentCritUsed = true }
+    const stab = hasStab(effType, atkSpecies.types)
+    // OBJET TENU + TALENT : boost de type / réduction phys / bonus conditionnels (STAB, low-HP, super-eff, type principal, crit).
+    const tOutCtx = { stab, typeEff: eff, isCrit, moveType: effType, mainType: atkSpecies.types[0], targetHpFrac: defender.currentHp / Math.max(1, maxHpOf(defender)) }
     const itemMult = heldOutgoingDmgMult(attacker, effType) * heldIncomingDmgMult(defender, isPhysical)
+        * talentOutgoingDmgMult(attacker, tOutCtx) * talentIncomingDmgMult(defender, { typeEff: eff, isPhysical })
     const result = computeDamage({
         level: attacker.level,
         power: move.power,
         attack: atk,
         defense: def,
-        stab: hasStab(effType, atkSpecies.types),
+        stab,
         typeEff: eff,
         isCrit,
-        randomFactor: rng.damageFactor(),
+        // TALENT Fine lame : plancher du facteur aléatoire relevé (dégâts plus réguliers). RNG consommé à l'identique.
+        randomFactor: Math.max(talentEffect(attacker)?.minRandom ?? 0, rng.damageFactor()),
         itemMult,
     })
 
     // OBJET TENU — Bandeau (Focus Band) : depuis PV PLEINS, X % de survivre à 1 PV à un coup fatal.
     let dealt = result.damage
     const defHeld = heldEffect(defender)
-    if (defHeld?.survive1hpPct && dealt >= defender.currentHp && defender.currentHp === maxHpOf(defender)
-        && rng.next() < defHeld.survive1hpPct / 100) {
+    // Bandeau (objet) OU talent Instinct de survie : % de survivre à 1 PV depuis PV pleins.
+    const survivePct = (defHeld?.survive1hpPct ?? 0) + (talentEffect(defender)?.survive1hpPct ?? 0)
+    if (survivePct > 0 && dealt >= defender.currentHp && defender.currentHp === maxHpOf(defender)
+        && rng.next() < survivePct / 100) {
         dealt = Math.max(1, defender.currentHp - 1)
-        events.push({ kind: "message", text: `${displayName(defender)} s'accroche à 1 PV grâce à son Bandeau !` })
+        events.push({ kind: "message", text: `${displayName(defender)} s'accroche à 1 PV !` })
     }
     applyDamage(state, other(side), dealt, events)
     // Record À VIE de l'attaquant (flavor affiché dans la fiche, persisté).
@@ -703,13 +719,15 @@ function dealMoveDamage(state: BattleState, side: SideId, move: MoveData, rng: R
         if (!state.dmgByType) state.dmgByType = {}
         state.dmgByType[effType] = (state.dmgByType[effType] ?? 0) + dealt // effType : prend en compte le STAB adaptatif
     }
-    // OBJET TENU — Grelot Coque : soigne l'attaquant d'1/8 des dégâts infligés.
+    // Grelot Coque (objet) OU talent Sangsue : soigne l'attaquant d'une fraction des dégâts infligés.
     const atkHeld = heldEffect(attacker)
-    if (atkHeld?.drainDealtFrac && dealt > 0 && attacker.currentHp > 0) {
-        applyHeal(state, side, Math.max(1, Math.floor(dealt / atkHeld.drainDealtFrac)), events)
+    const drainFrac = atkHeld?.drainDealtFrac ?? talentEffect(attacker)?.drainDealtFrac
+    if (drainFrac && dealt > 0 && attacker.currentHp > 0) {
+        applyHeal(state, side, Math.max(1, Math.floor(dealt / drainFrac)), events)
     }
-    // OBJET TENU — Roche Royale : X % d'apeurer la cible encore debout (flinch).
-    if (atkHeld?.flinchPct && dealt > 0 && defender.currentHp > 0 && rng.next() < atkHeld.flinchPct / 100) {
+    // Roche Royale (objet) + talent Regard perçant : % d'apeurer la cible (flinch), atténué par le talent Corps sain.
+    const flinchPct = ((atkHeld?.flinchPct ?? 0) + (talentEffect(attacker)?.flinchOut ?? 0)) * (talentEffect(defender)?.flinchResistMult ?? 1)
+    if (flinchPct > 0 && dealt > 0 && defender.currentHp > 0 && rng.next() < flinchPct / 100) {
         defender.volatiles.FLINCH = 1
         events.push({ kind: "message", text: `${displayName(defender)} hésite, intimidé !` })
     }
@@ -762,7 +780,9 @@ function applyStatusMove(state: BattleState, side: SideId, move: MoveData, event
 
 function maybeApplySecondary(state: BattleState, side: SideId, move: MoveData, events: BattleEvent[], rng: Rng) {
     const fx = move.effect!
-    const chance = fx.chance ?? 100
+    // TALENTS : Chanceux/Toxine tenace (+5 % chance, attaquant) ; Nerfs d'acier (−5 % si ça inflige un statut, défenseur).
+    let chance = (fx.chance ?? 100) * (talentEffect(active(state[side]))?.statusChanceMult ?? 1)
+    if (fx.inflictStatus) chance *= talentEffect(active(state[other(side)]))?.statusResistMult ?? 1
     if (!rng.chance(chance)) return
     if (fx.inflictStatus) tryInflictStatus(state, other(side), fx.inflictStatus, events, rng)
     if (fx.inflictVolatile) applyVolatile(active(state[other(side)]), fx.inflictVolatile, rng, events, active(state[other(side)]))
@@ -805,14 +825,25 @@ function applyVolatile(mon: BattleMon, vol: NonNullable<MoveData["effect"]>["inf
 
 function applyStatChange(state: BattleState, side: SideId, stat: StageKey, delta: number, events: BattleEvent[]) {
     const mon = active(state[side])
-    // OBJET TENU — Herbe Blanche : annule la prochaine BAISSE de stat réelle, puis se consomme.
-    if (delta < 0 && mon.stages[stat] > -6 && heldEffect(mon)?.negateStatDrop) {
-        mon.heldItem = undefined
-        events.push({ kind: "message", text: `${displayName(mon)} : l'Herbe Blanche annule la baisse de ${labelStat(stat)} !` })
-        return
+    const tal = talentEffect(mon)
+    if (delta < 0 && mon.stages[stat] > -6) {
+        // OBJET TENU — Herbe Blanche : annule la prochaine BAISSE de stat réelle, puis se consomme.
+        if (heldEffect(mon)?.negateStatDrop) {
+            mon.heldItem = undefined
+            events.push({ kind: "message", text: `${displayName(mon)} : l'Herbe Blanche annule la baisse de ${labelStat(stat)} !` })
+            return
+        }
+        // TALENT Volonté de fer : annule la 1re baisse de stat du combat (one-shot, façon Herbe Blanche).
+        if (tal?.negateStatDrop && !mon.talentStatGuardUsed) {
+            mon.talentStatGuardUsed = true
+            events.push({ kind: "message", text: `${displayName(mon)} : sa Volonté de fer annule la baisse de ${labelStat(stat)} !` })
+            return
+        }
     }
+    // TALENT Volonté de vaincre : atténue la magnitude des débuffs subis (marginal en système de crans).
+    const effDelta = (delta < 0 && tal?.statDropMult) ? Math.min(-1, Math.round(delta * tal.statDropMult)) : delta
     const before = mon.stages[stat]
-    mon.stages[stat] = clampStage(before + delta)
+    mon.stages[stat] = clampStage(before + effDelta)
     const real = mon.stages[stat] - before
     if (real === 0) {
         events.push({ kind: "message", text: `${displayName(mon)} : sa stat ne change plus.` })
@@ -890,11 +921,11 @@ function endOfTurn(state: BattleState, events: BattleEvent[], rng: Rng) {
             applyHeal(state, other(side), drain, events)
             events.push({ kind: "message", text: `${displayName(mon)} est vidé de son énergie !` })
         }
-        // OBJET TENU — Restes : régénère une fraction des PV max en fin de tour.
-        const lefto = heldEffect(mon)?.leftoversFrac
+        // Restes (objet) OU talent Cœur vaillant : régénère une fraction des PV max en fin de tour.
+        const lefto = heldEffect(mon)?.leftoversFrac ?? talentEffect(mon)?.leftoversFrac
         if (lefto && mon.currentHp > 0 && mon.currentHp < maxHpOf(mon)) {
             applyHeal(state, side, Math.max(1, Math.floor(maxHpOf(mon) / lefto)), events)
-            events.push({ kind: "message", text: `${displayName(mon)} récupère des PV grâce à ses Restes.` })
+            events.push({ kind: "message", text: `${displayName(mon)} récupère un peu de PV.` })
         }
     }
 }
@@ -1086,7 +1117,7 @@ function awardExp(state: BattleState, events: BattleEvent[]) {
     const gain = Math.round(xpForDefeat(faintedSp.baseExp, fainted.level, state.isWild) * (state.expMult ?? 1))
 
     // EV uniquement au Daemon actif s'il est encore debout.
-    if (winner.currentHp > 0) gainEv(winner, signatureStat(faintedSp), EV_YIELD_PER_WIN)
+    if (winner.currentHp > 0) gainEv(winner, signatureStat(faintedSp), Math.round(EV_YIELD_PER_WIN * (talentEffect(winner)?.evMult ?? 1))) // talent Bourreau de travail : +5 % (marginal en système discret)
 
     // Daemons ayant affronté CET ennemi (pas l'XP d'ennemis jamais vus → évite les évos trop
     // rapides) ET ENCORE DEBOUT, dans l'ordre de participation → pilote le rang du partage.
@@ -1098,7 +1129,7 @@ function awardExp(state: BattleState, events: BattleEvent[]) {
         const rank = aliveOrdered.indexOf(mon.uid)
         if (rank < 0) continue // n'a pas affronté cet ennemi, ou KO à l'instant de sa chute → rien
         const share = XP_SHARE_LADDER[rank] ?? 0.1
-        const finalGain = Math.max(1, Math.round(gain * share * (heldEffect(mon)?.expMult ?? 1))) // Œuf Chance : +50% XP
+        const finalGain = Math.max(1, Math.round(gain * share * (heldEffect(mon)?.expMult ?? 1) * (talentEffect(mon)?.expMult ?? 1))) // Œuf Chance +50% / talent Studieux +5%
         const isActive = mon === winner
         const beforeMax = maxHpOf(mon)
         const res = applyExp(mon, finalGain)
@@ -1132,7 +1163,7 @@ function awardExpPvp(state: BattleState, winnerSide: SideId, events: BattleEvent
     const fainted = active(state[other(winnerSide)])
     const faintedSp = speciesOf(fainted)
     const gain = Math.max(1, Math.floor(xpForDefeat(faintedSp.baseExp, fainted.level, false) * multiplier))
-    gainEv(winner, signatureStat(faintedSp), EV_YIELD_PER_WIN)
+    gainEv(winner, signatureStat(faintedSp), Math.round(EV_YIELD_PER_WIN * (talentEffect(winner)?.evMult ?? 1))) // talent Bourreau de travail : +5 % (marginal en système discret)
     const beforeMax = maxHpOf(winner)
     const res = applyExp(winner, gain)
     events.push({ kind: "message", text: `${displayName(winner)} gagne ${gain} points d'Exp !` })
