@@ -141,6 +141,16 @@ export function subscribePlayer(l: () => void): () => void {
 
 export function getPlayer(): PlayerState { return st }
 
+// NG+ (2 mondes navigables) — monde ACTIF que le joueur contrôle. Runtime ; la sérialisation (stash du
+// monde inactif, fusion des 2 mondes) est gérée par saveManager. Émet pour que l'UI se re-rende à la bascule.
+let activeWorld: "live" | "ngplus" = "live"
+export function getActiveWorld(): "live" | "ngplus" { return activeWorld }
+export function setActiveWorld(w: "live" | "ngplus") { if (w === activeWorld) return; activeWorld = w; emit() }
+/** Hook React : monde actif (re-render à la bascule). */
+export function useActiveWorld(): "live" | "ngplus" {
+    return useSyncExternalStore(subscribePlayer, getActiveWorld, () => "live")
+}
+
 /** DAEMON CUSTOM créé : l'enregistre au registre runtime (résolvable en combat) ET le persiste dans la save
  *  (ré-enregistré au chargement). Idempotent-ish : borne la liste, ignore une spec qui ne se construit pas. */
 export function addCustomDaemon(ownerId: string, spec: CustomSpec): void {
@@ -247,6 +257,7 @@ export function setChampion() {
 
 /** DEV : remet la progression jaune à zéro pour rejouer l'intro (équipe vidée, introSeen=false). */
 export function resetForIntro() {
+    activeWorld = "live" // un reset volontaire repart sur le monde d'origine (le NG+ éventuel est effacé par saveManager)
     st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", sylvebarbeAwake: false, labDefi: emptyLabDefi(), customDaemons: st.customDaemons }
     emit()
 }
