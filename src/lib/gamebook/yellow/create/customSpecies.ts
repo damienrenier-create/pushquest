@@ -295,13 +295,13 @@ export type TalentKey =
     // offensif
     | "coup_sort" | "zele" | "acharnement" | "coup_dur" | "fine_lame" | "poigne_fer" | "affinite_elem" | "frappe_repetee"
     // défensif
-    | "anti_crit" | "cuir_epais" | "resistant" | "voile" | "anguille" | "chair_coriace" | "volonte_fer"
+    | "anti_crit" | "cuir_epais" | "resistant" | "voile" | "chair_coriace" | "volonte_fer"
     // précision / statut
-    | "oeil_lynx" | "sang_froid" | "chanceux" | "regard_percant" | "corps_sain" | "volonte_vaincre" | "toxine_tenace"
+    | "oeil_lynx" | "sang_froid" | "chanceux" | "regard_percant" | "corps_sain"
     // survie
     | "endurant" | "sangsue" | "instinct_survie" | "coeur_vaillant" | "cuirasse_mentale"
     // utilitaire
-    | "reflexes" | "main_leste" | "studieux" | "bourreau_travail"
+    | "reflexes" | "main_leste" | "studieux"
 export interface TalentInfo { label: string; desc: string }
 export const TALENTS: Record<TalentKey, TalentInfo> = {
     // ── Offensif ──
@@ -317,18 +317,15 @@ export const TALENTS: Record<TalentKey, TalentInfo> = {
     anti_crit: { label: "Sang-froid tactique", desc: "L'adversaire a −5 % de chances de te porter un critique." },
     cuir_epais: { label: "Cuir épais", desc: "−5 % de tous les dégâts subis." },
     resistant: { label: "Résistant", desc: "−5 % de dégâts sur les coups super-efficaces subis." },
-    voile: { label: "Voile", desc: "L'adversaire a −5 % de précision contre toi." },
-    anguille: { label: "Anguille", desc: "+5 % d'esquive : les attaques ennemies te ratent plus souvent." },
+    voile: { label: "Voile", desc: "L'adversaire a −5 % de précision contre toi (tu esquives plus souvent)." },
     chair_coriace: { label: "Chair coriace", desc: "−5 % de dégâts physiques subis." },
     volonte_fer: { label: "Volonté de fer", desc: "Annule la 1re baisse de stat du combat (façon Herbe Blanche)." },
     // ── Précision / statut ──
     oeil_lynx: { label: "Œil de lynx", desc: "+5 % de précision sur tes attaques." },
     sang_froid: { label: "Nerfs d'acier", desc: "−5 % de chances de subir une altération (para/brûlure/poison/sommeil)." },
-    chanceux: { label: "Chanceux", desc: "+5 % de déclenchement des effets secondaires de tes attaques." },
+    chanceux: { label: "Chanceux", desc: "+5 % de déclenchement des effets/statuts secondaires de tes attaques." },
     regard_percant: { label: "Regard perçant", desc: "+5 % de chances d'apeurer (flinch) la cible après une attaque." },
     corps_sain: { label: "Corps sain", desc: "−5 % de chances de te faire apeurer (résistance flinch)." },
-    volonte_vaincre: { label: "Volonté de vaincre", desc: "Les baisses de stats que tu subis sont un peu moins fortes." },
-    toxine_tenace: { label: "Toxine tenace", desc: "+5 % de chances d'infliger un statut avec tes attaques d'altération." },
     // ── Survie ──
     endurant: { label: "Endurant", desc: "Le recul (Bélier, Coup de Boutoir…) te fait un quart de dégâts en moins." },
     sangsue: { label: "Sangsue", desc: "Tes attaques te rendent un peu de PV (1/20 des dégâts infligés)." },
@@ -339,7 +336,6 @@ export const TALENTS: Record<TalentKey, TalentInfo> = {
     reflexes: { label: "Réflexes", desc: "+5 % de Vitesse au combat." },
     main_leste: { label: "Main leste", desc: "+5 % d'agir en premier à priorité égale (façon Vive-Griffe)." },
     studieux: { label: "Studieux", desc: "+5 % d'XP gagnée à chaque victoire." },
-    bourreau_travail: { label: "Bourreau de travail", desc: "+5 % d'EV (progression de stats) gagnés en combat." },
 }
 export const TALENT_KEYS = Object.keys(TALENTS) as TalentKey[]
 export const MAX_TALENT_REROLLS = 15

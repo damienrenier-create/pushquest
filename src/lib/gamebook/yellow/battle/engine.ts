@@ -840,10 +840,8 @@ function applyStatChange(state: BattleState, side: SideId, stat: StageKey, delta
             return
         }
     }
-    // TALENT Volonté de vaincre : atténue la magnitude des débuffs subis (marginal en système de crans).
-    const effDelta = (delta < 0 && tal?.statDropMult) ? Math.min(-1, Math.round(delta * tal.statDropMult)) : delta
     const before = mon.stages[stat]
-    mon.stages[stat] = clampStage(before + effDelta)
+    mon.stages[stat] = clampStage(before + delta)
     const real = mon.stages[stat] - before
     if (real === 0) {
         events.push({ kind: "message", text: `${displayName(mon)} : sa stat ne change plus.` })
@@ -1117,7 +1115,7 @@ function awardExp(state: BattleState, events: BattleEvent[]) {
     const gain = Math.round(xpForDefeat(faintedSp.baseExp, fainted.level, state.isWild) * (state.expMult ?? 1))
 
     // EV uniquement au Daemon actif s'il est encore debout.
-    if (winner.currentHp > 0) gainEv(winner, signatureStat(faintedSp), Math.round(EV_YIELD_PER_WIN * (talentEffect(winner)?.evMult ?? 1))) // talent Bourreau de travail : +5 % (marginal en système discret)
+    if (winner.currentHp > 0) gainEv(winner, signatureStat(faintedSp), EV_YIELD_PER_WIN)
 
     // Daemons ayant affronté CET ennemi (pas l'XP d'ennemis jamais vus → évite les évos trop
     // rapides) ET ENCORE DEBOUT, dans l'ordre de participation → pilote le rang du partage.
@@ -1163,7 +1161,7 @@ function awardExpPvp(state: BattleState, winnerSide: SideId, events: BattleEvent
     const fainted = active(state[other(winnerSide)])
     const faintedSp = speciesOf(fainted)
     const gain = Math.max(1, Math.floor(xpForDefeat(faintedSp.baseExp, fainted.level, false) * multiplier))
-    gainEv(winner, signatureStat(faintedSp), Math.round(EV_YIELD_PER_WIN * (talentEffect(winner)?.evMult ?? 1))) // talent Bourreau de travail : +5 % (marginal en système discret)
+    gainEv(winner, signatureStat(faintedSp), EV_YIELD_PER_WIN)
     const beforeMax = maxHpOf(winner)
     const res = applyExp(winner, gain)
     events.push({ kind: "message", text: `${displayName(winner)} gagne ${gain} points d'Exp !` })

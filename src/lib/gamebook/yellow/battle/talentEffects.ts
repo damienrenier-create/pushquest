@@ -26,14 +26,12 @@ export interface TalentEffect {
     statusResistMult?: number  // sang_froid : chance de subir une altération ×0.95
     flinchOut?: number         // regard_percant : % d'apeurer après attaque
     flinchResistMult?: number  // corps_sain : chance d'être apeuré ×0.95
-    statDropMult?: number      // volonte_vaincre : magnitude des débuffs SUBIS ×0.95
     recoilMult?: number        // endurant : recul ×0.75
     drainDealtFrac?: number    // sangsue : soin = dégâts / N à chaque coup
     survive1hpPct?: number     // instinct_survie : % survie à 1 PV (depuis PV pleins)
     leftoversFrac?: number     // coeur_vaillant : soin de fin de tour = PVmax / N
     quickClawPct?: number      // main_leste : % d'agir en premier à priorité égale
     expMult?: number           // studieux : ×XP
-    evMult?: number            // bourreau_travail : ×EV gagnés
     negateStatDrop?: boolean   // volonte_fer : annule la 1re baisse de stat (façon Herbe Blanche)
     speedMult?: number         // reflexes : ×Vitesse (fullStats)
     multiHitBonus?: number     // frappe_repetee : % de coup supplémentaire (multi-hit)
@@ -56,7 +54,6 @@ export const TALENT_EFFECTS: Record<string, TalentEffect> = {
     cuir_epais: { dmgTakenMult: 0.95 },
     resistant: { superEffTakenMult: 0.95 },
     voile: { incomingAccMult: 0.95 },
-    anguille: { incomingAccMult: 0.95 },
     chair_coriace: { physTakenMult: 0.95 },
     volonte_fer: { negateStatDrop: true },
     // précision / statut
@@ -65,8 +62,6 @@ export const TALENT_EFFECTS: Record<string, TalentEffect> = {
     chanceux: { statusChanceMult: 1.05 },
     regard_percant: { flinchOut: 5 },
     corps_sain: { flinchResistMult: 0.95 },
-    volonte_vaincre: { statDropMult: 0.95 },
-    toxine_tenace: { statusChanceMult: 1.05 },
     // survie
     endurant: { recoilMult: 0.75 },
     sangsue: { drainDealtFrac: 20 },
@@ -77,7 +72,6 @@ export const TALENT_EFFECTS: Record<string, TalentEffect> = {
     reflexes: { speedMult: 1.05 },
     main_leste: { quickClawPct: 5 },
     studieux: { expMult: 1.05 },
-    bourreau_travail: { evMult: 1.05 },
 }
 
 type MonRef = { speciesId?: string }
