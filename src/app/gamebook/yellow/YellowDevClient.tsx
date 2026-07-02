@@ -50,7 +50,7 @@ import { useEncounterFxActive } from "@/lib/gamebook/yellow/store/encounterFxSto
 import { aceLoseLine } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
-import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, getNgplusOldTeam } from "@/lib/gamebook/yellow/store/saveManager"
+import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, getNgplusOldTeam, abandonNewGamePlus } from "@/lib/gamebook/yellow/store/saveManager"
 import { customStarterSpeciesId, type StoredCustomDaemon } from "@/lib/gamebook/yellow/create/customSpecies"
 import { getPlayer, setTeam, usePlayer, useActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone } from "@/lib/gamebook/yellow/store/playerStore"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
@@ -178,6 +178,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const posterImage = useGameStore((s) => s.posterImage)
     const closePoster = useGameStore((s) => s.closePoster)
     const dialogue = useGameStore((s) => s.dialogue)
+    const pendingNgplusAbandon = useGameStore((s) => s.pendingNgplusAbandon) // NG+ : offre d'abandon CHEN → confirmation
     const setMap = useGameStore((s) => s.setMap)
     const launchRematch = useGameStore((s) => s.launchRematch)
     const showDialogue = useGameStore((s) => s.showDialogue)
@@ -212,6 +213,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [creatorOpen, setCreatorOpen] = useState(false) // TEST : créateur de Daemon (post-Ligue) — réservé à Mools/créateur
     const [forcedCreator, setForcedCreator] = useState(false) // post-sacre : création OBLIGATOIRE qui enchaîne sur le NG+
     const [pendingForcedCreator, setPendingForcedCreator] = useState(false) // ouvre le créateur forcé après le dialogue-défi
+    const [abandonConfirm, setAbandonConfirm] = useState(false) // overlay de confirmation d'abandon du NG+ (chez CHEN)
     const [heldOpen, setHeldOpen] = useState(false) // modale "objet tenu" (depuis la fiche d'un Daemon)
     const [evDetailOpen, setEvDetailOpen] = useState(false) // détail EV (par stat) déplié sur la fiche
     const ticketChecked = useRef(false)
@@ -716,6 +718,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         setForcedCreator(true)
         setCreatorOpen(true)
     }, [pendingForcedCreator, dialogue, battle, evolutions.length, championRun])
+
+    // NG+ — après l'offre d'abandon de CHEN (dialogue refermé), ouvre l'overlay de CONFIRMATION (action irréversible).
+    useEffect(() => {
+        if (!pendingNgplusAbandon || dialogue || battle) return
+        useGameStore.setState({ pendingNgplusAbandon: false })
+        setAbandonConfirm(true)
+    }, [pendingNgplusAbandon, dialogue, battle])
 
     // LIGUE — SACRE : dès que le championRun est posé (victoire sur LE MAÎTRE), on grave l'équipe
     // au Hall of Fame PARTAGÉ et on récompense tous les autres joueurs (+1/3 de leur quota). Une seule
@@ -1645,6 +1654,31 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     close={() => setCreatorOpen(false)}
                     onCreated={forcedCreator ? (spec) => { setCreatorOpen(false); setForcedCreator(false); void launchNewGamePlus({ ownerId: userId, spec }) } : undefined}
                 />
+            )}
+
+            {/* NG+ — confirmation d'ABANDON (chez le Prof. CHEN) : action IRRÉVERSIBLE (starter + 6000⚡ perdus). */}
+            {abandonConfirm && (
+                <div style={menuOverlayStyle} onClick={() => setAbandonConfirm(false)}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>⚠️ ABANDONNER LE NEW GAME+ ?</div>
+                        <div style={{ fontSize: 11.5, textAlign: "center", lineHeight: 1.6, opacity: 0.9, marginBottom: 4 }}>
+                            Tu rends ton Daemon créé et tes <b>6000⚡</b> — <b style={{ color: "#c83030" }}>perdus À JAMAIS</b>.<br />
+                            En échange, tu récupères ta partie de <b>Champion</b>, la <b>Daemonflûte</b> et l&apos;accès à la <b>Zone de Combat</b>.
+                        </div>
+                        <button style={{ ...menuBtnStyle, borderColor: "#c83030", color: "#c83030" }} onClick={async () => {
+                            const ok = await abandonNewGamePlus()
+                            setAbandonConfirm(false)
+                            if (ok) {
+                                setMap("yellow_cendreville", CENDREVILLE_SPAWN.x, CENDREVILLE_SPAWN.y)
+                                showDialogue("y_lab_scientist", "Prof. CHEN", [
+                                    "*Le Prof. CHEN récupère ton Daemon avec un soupir mélancolique, puis te tend un instrument de bois ouvragé.*",
+                                    "« Décision sage, peut-être. Voici la Daemonflûte — l'œuvre de ma vie. Va réveiller le colosse au SUD : la ZONE DE COMBAT t'attend, Champion. »",
+                                ])
+                            } else setToast("Trop tard : tu es déjà engagé dans le New Game+.")
+                        }}>🔥 OUI, j&apos;abandonne (perte définitive)</button>
+                        <button style={menuBtnDimStyle} onClick={() => setAbandonConfirm(false)}>← NON, je continue mon NG+</button>
+                    </div>
+                </div>
             )}
             {chatOpen && (
                 <div style={menuOverlayStyle} onClick={() => setChatOpen(false)}>

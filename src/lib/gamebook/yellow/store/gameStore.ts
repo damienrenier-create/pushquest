@@ -21,7 +21,7 @@ import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, 
 import { getPokedex } from "./pokedexStore"
 import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, resetLigueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, addItem, getActiveWorld, getNgplusNemesisSpeciesId } from "./playerStore"
 import { getSpecies } from "../data/species"
-import { persistYellowSave } from "./saveManager"
+import { persistYellowSave, canAbandonNgplus } from "./saveManager"
 import { rollWildEncounter, wildLevelCap, hasEncounters } from "../data/encounters"
 import { reportShiny } from "../shinyGift"
 import { getTrainer, trainerBoost, arenaScaledLevel, type TrainTier } from "../data/trainers"
@@ -34,7 +34,7 @@ import { ORCALINE_TRAINER_ID, ORCALINE_INTRO_LINES, ORCALINE_REMATCH_LINES, ORCA
 import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock } from "../data/sylvebarbeBlock"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
 import { SYLVEBARBE_NPC_ID, SYLVEBARBE_INTRO_LINES, SYLVEBARBE_DONE_LINES, SYLVEBARBE_NO_FLUTE_LINES, SYLVEBARBE_NO_TEAM_LINES, buildSylvebarbe, FLUTE_GIVE_LINES } from "../data/sylvebarbe"
-import { CHEN_LAB_LINES, LAB_ASSISTANT_LINES } from "../data/labDialogues"
+import { CHEN_LAB_LINES, LAB_ASSISTANT_LINES, CHEN_ABANDON_OFFER_LINES } from "../data/labDialogues"
 import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
 
 export interface ActiveDialogue {
@@ -89,6 +89,7 @@ interface GameStore {
     pendingRematch: boolean // l'intro en cours est un REMATCH (2e équipe + récompense)
     pendingSbire: boolean // intro du sbire en cours → combat dynamique à la fermeture
     pendingAce: boolean // intro d'ACE en cours → combat à la fermeture
+    pendingNgplusAbandon: boolean // NG+ : offre d'abandon de CHEN en cours → confirmation UI à la fermeture du dialogue
     pendingOrcaline: boolean // intro du DRESSEUR D'ORCALINE en cours → combat à la fermeture
     pendingGekroc: boolean // intro de GÉKROC (mini-boss Centrale) en cours → combat à la fermeture
     pendingSylvebarbe: boolean // intro de SYLVEBARBE (gardien sud Ville Jaune) en cours → combat à la fermeture
@@ -340,6 +341,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     pendingRematch: false,
     pendingSbire: false,
     pendingAce: false,
+    pendingNgplusAbandon: false,
     pendingOrcaline: false,
     pendingGekroc: false,
     pendingSylvebarbe: false,
@@ -708,6 +710,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // explique le terminal de défis + ses enjeux et t'invite à revenir après la Ligue. Le TERMINAL (3,3)
         // reste la machine qui ouvre les défis ; CHEN, lui, te guide.
         if (npc.id === "y_lab_scientist") {
+            // NG+ : dans la fenêtre d'abandon (≤15 combats), CHEN propose de rendre le starter → confirmation côté UI.
+            if (getActiveWorld() === "ngplus" && canAbandonNgplus()) {
+                set({ dialogue: { npcId: npc.id, npcName: "Prof. CHEN", lineIndex: 0, lines: CHEN_ABANDON_OFFER_LINES }, pendingNgplusAbandon: true })
+                return
+            }
             const save = getPlayerSave()
             if (save.isChampion && (save.items["daemonflute"] ?? 0) <= 0 && !save.sylvebarbeAwake) {
                 addItem("daemonflute", 1)

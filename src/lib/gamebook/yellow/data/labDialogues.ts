@@ -14,6 +14,14 @@ export const CHEN_LAB_LINES = [
     "« Et quand tu auras vaincu la Ligue, reviens me voir : j'aurai pour toi une pièce unique… le fruit de toute une vie de recherche. »",
 ]
 
+/** NG+ — le Prof. CHEN propose d'ABANDONNER le New Game+ (fenêtre des 15 combats) : rendre le starter +
+ *  les 6000⚡ (perdus À JAMAIS) contre le retour à la partie de Champion + la flûte + la Zone de Combat. */
+export const CHEN_ABANDON_OFFER_LINES = [
+    "« Ah… toi. La recrue au Daemon si singulier. Ton regard hésite, mélomane d'un jour. »",
+    "« Si ce New Game+ te pèse, je peux tout arrêter : rends-moi ton starter et tes 6000 énergies — perdus À JAMAIS — et je te rends ta vie de Champion, ta Daemonflûte et l'accès à la Zone de Combat. »",
+    "« Mais décide-toi vite : encore quelques combats et il sera trop tard. Alors… tu renonces ? »",
+]
+
 /** L'ASSISTANT du Prof. CHEN (7,6) — guide vers les récompenses du casino et révèle le projet du chef.
  *  Explique APOTHÉOSE de façon PÉDAGOGIQUE (3 répliques dédiées : le problème → la solution → l'exemple). */
 export const LAB_ASSISTANT_LINES = [
