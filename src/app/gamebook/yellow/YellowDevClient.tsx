@@ -45,13 +45,14 @@ import { useGameStore, setCurrentNickname, DEFAULT_SPAWN } from "@/lib/gamebook/
 import { YELLOW_ENTRANCE_MAP_ID } from "@/lib/gamebook/yellow/featureFlag"
 import { YELLOW_MAPS, CENDREVILLE_SPAWN } from "@/lib/gamebook/yellow/maps"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
-import { useBattle, useEvolutions, clearEvolutions, useChampionRun, useArenaRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getGiftCtMove, startTrainerBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult, useFrontierResult, clearFrontierResult, getBattleEnergy, resumeBattleFromStorage, useStoneReward, clearStoneReward, useJustCaught, clearJustCaught } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, useEvolutions, clearEvolutions, useChampionRun, useArenaRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getGiftCtMove, startTrainerBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult, useFrontierResult, clearFrontierResult, getBattleEnergy, resumeBattleFromStorage, useStoneReward, clearStoneReward, useJustCaught, clearJustCaught, freezeTeam } from "@/lib/gamebook/yellow/store/battleStore"
 import { useEncounterFxActive } from "@/lib/gamebook/yellow/store/encounterFxStore"
 import { aceLoseLine } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
-import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter } from "@/lib/gamebook/yellow/store/saveManager"
-import { getPlayer, setTeam, usePlayer, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone } from "@/lib/gamebook/yellow/store/playerStore"
+import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter, startNewGamePlus, switchWorld, hasNgPlusWorld } from "@/lib/gamebook/yellow/store/saveManager"
+import { customStarterSpeciesId, type StoredCustomDaemon } from "@/lib/gamebook/yellow/create/customSpecies"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone } from "@/lib/gamebook/yellow/store/playerStore"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
 import { ARENA_TICKET_VALUE, STEP_GIFT_DATE, STEP_GIFT_THRESHOLD } from "@/lib/gamebook/yellow/data/labDefis"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
@@ -241,7 +242,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         const enemy = arenaMode === "hub" ? buildHubTeam(opp.player) : buildMirrorTeam(opp.player)
         setArenaFight({ opp, mode: arenaMode, enemy })
     }
-    const [menu, setMenu] = useState<"none" | "pause" | "team" | "bag" | "reput" | "moves" | "hof" | "arena-hof">("none")
+    const [menu, setMenu] = useState<"none" | "pause" | "team" | "bag" | "reput" | "moves" | "hof" | "arena-hof" | "ngplus">("none")
+    const activeWorld = useActiveWorld() // NG+ : "live" (partie d'origine) ou "ngplus" (New Game+)
     const ficheTouchX = useRef<number | null>(null) // swipe gauche/droite dans la fiche Daemon
     const [selected, setSelected] = useState<MonInstance | null>(null)
     const [pantheonEvo, setPantheonEvo] = useState<MonInstance | null>(null) // Pierre Gékroc : choix du type pour Panthéon
@@ -966,6 +968,30 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         persistYellowSave()
     }
 
+    // NG+ (2 mondes navigables) — lance un New Game+ avec un Daemon custom en starter (+6000⚡), en GELANT
+    // l'équipe championne actuelle comme adversaire de fin de Ligue. Le monde d'origine reste intact/rejouable.
+    const launchNewGamePlus = async (stored: StoredCustomDaemon) => {
+        let starter
+        try { starter = createMonInstance(customStarterSpeciesId(stored), 5, { owned: true }) }
+        catch { setToast("Ton Daemon custom est introuvable/corrompu — NG+ impossible."); return }
+        const oldTeam = freezeTeam(getPlayer().team)
+        const ok = await startNewGamePlus(starter, oldTeam)
+        if (!ok) { setToast("New Game+ réservé aux Champions du Nexus."); return }
+        setMenu("none")
+        setMap(YELLOW_ENTRANCE_MAP_ID, DEFAULT_SPAWN.x, DEFAULT_SPAWN.y) // le NG+ démarre au tout début
+        setToast(`✨ New Game+ lancé avec ${stored.spec.name} ! 6000⚡. Ta partie d'origine t'attend (Menu → Changer de monde).`)
+    }
+
+    // NG+ — bascule entre le monde d'origine et le New Game+ (les deux persistés). Warp vers un hub sûr :
+    // la position de carte est partagée entre les 2 mondes (endpoint /state), on la repose donc à la bascule.
+    const changeWorld = async (target: "live" | "ngplus") => {
+        const ok = await switchWorld(target)
+        if (!ok) return
+        setMenu("none")
+        if (target === "ngplus") { setMap(YELLOW_ENTRANCE_MAP_ID, DEFAULT_SPAWN.x, DEFAULT_SPAWN.y); setToast("🔁 New Game+ — reprise.") }
+        else { setMap("yellow_cendreville", CENDREVILLE_SPAWN.x, CENDREVILLE_SPAWN.y); setToast("🔁 Retour à ta partie d'origine.") }
+    }
+
     // RETOUR : ferme l'overlay le plus "haut" de la pile (fiche → sous-menu → pause).
     // Renvoie true si quelque chose a été fermé → utilisé par le bouton B (B = retour).
     // Pile de fermeture du bouton B : ferme l'overlay le PLUS HAUT et renvoie true ; false si
@@ -997,7 +1023,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (advisorOpen) { closeAdvisor(); return true }
         if (labOpen) { closeLab(); return true }
         if (pcOpen) { closePc(); return true }
-        if (menu === "team" || menu === "bag" || menu === "reput" || menu === "moves" || menu === "hof" || menu === "arena-hof") { setMenu("pause"); return true }
+        if (menu === "team" || menu === "bag" || menu === "reput" || menu === "moves" || menu === "hof" || menu === "arena-hof" || menu === "ngplus") { setMenu("pause"); return true }
         if (menu === "pause") { setMenu("none"); return true }
         return false
     }
@@ -1082,6 +1108,16 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         {(isCreator || nickname.toLowerCase() === "mools") && (
                             <button style={{ ...menuBtnStyle, borderColor: "#3ad0c0", color: "#3ad0c0" }} onClick={() => { setMenu("none"); setCreatorOpen(true) }}>🧬 CRÉER UN DAEMON (TEST)</button>
                         )}
+                        {/* NG+ (2 mondes navigables) : bascule si un NG+ existe, sinon proposition de lancement (Champion + Daemon custom). */}
+                        {!battle && activeWorld === "ngplus" && (
+                            <button style={{ ...menuBtnStyle, borderColor: "#e0a020", color: "#e0a020" }} onClick={() => changeWorld("live")}>🔁 RETOUR À TA PARTIE D&apos;ORIGINE</button>
+                        )}
+                        {!battle && activeWorld === "live" && hasNgPlusWorld() && (
+                            <button style={{ ...menuBtnStyle, borderColor: "#e0a020", color: "#e0a020" }} onClick={() => changeWorld("ngplus")}>🔁 REPRENDRE TON NEW GAME+</button>
+                        )}
+                        {!battle && activeWorld === "live" && !hasNgPlusWorld() && getPlayer().isChampion && getPlayer().customDaemons.length > 0 && (
+                            <button style={{ ...menuBtnStyle, borderColor: "#e0a020", color: "#e0a020" }} onClick={() => setMenu("ngplus")}>✨ NEW GAME+ (TON DAEMON)</button>
+                        )}
                         {!battle && (confirmReset ? (
                             <>
                                 <div style={{ fontSize: 11, color: "#c83030", fontWeight: 700, textAlign: "center" }}>
@@ -1115,6 +1151,26 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             <button style={menuBtnDimStyle} onClick={() => setConfirmReset(true)}>♻️ RECOMMENCER LE CHAPITRE 2</button>
                         ))}
                         <button style={menuBtnDimStyle} onClick={() => setMenu("none")}>← FERMER</button>
+                    </div>
+                </div>
+            )}
+
+            {/* NG+ — choix du Daemon custom qui deviendra ton starter du New Game+ */}
+            {!battle && menu === "ngplus" && (
+                <div style={menuOverlayStyle} onClick={() => setMenu("pause")}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>✨ NEW GAME+</div>
+                        <div style={{ fontSize: 11, textAlign: "center", opacity: 0.85, lineHeight: 1.5, marginBottom: 4 }}>
+                            Recommence une NOUVELLE partie avec ton Daemon créé en starter (niv 5) et <b>6000⚡</b>.<br />
+                            Ta partie de Champion reste intacte — tu pourras y revenir à tout moment (Menu → Changer de monde).<br />
+                            <span style={{ opacity: 0.75 }}>À la fin de la Ligue, tu affronteras ton ANCIENNE équipe.</span>
+                        </div>
+                        {getPlayer().customDaemons.map((d, i) => (
+                            <button key={`${d.ownerId}-${i}`} style={menuBtnStyle} onClick={() => launchNewGamePlus(d)}>
+                                🧬 {d.spec.name} <span style={{ opacity: 0.7, fontSize: 10 }}>({d.spec.finalTypes.join("/")})</span>
+                            </button>
+                        ))}
+                        <button style={menuBtnDimStyle} onClick={() => setMenu("pause")}>← RETOUR</button>
                     </div>
                 </div>
             )}

@@ -50,9 +50,11 @@ function applyServerSave(save: YellowSave): void {
     reregisterCustomDaemons() // Phase 2 : rend les Daemons custom résolvables en combat (getSpecies) dès le chargement
 }
 
-/** Accès (lecture) pour les fonctions NG+ à venir (Commit 3). */
+/** Accès (lecture) pour les fonctions NG+. */
 export function getInactiveWorld(): YellowSave | null { return inactiveWorld }
 export function getNgplusOldTeam(): ChampionMon[] | null { return ngplusOldTeam }
+/** Un monde NG+ existe-t-il (actif ou stashé) ? → pilote l'affichage « bascule / reprendre » dans le menu. */
+export function hasNgPlusWorld(): boolean { return getActiveWorld() === "ngplus" || inactiveWorld !== null }
 
 /** Charge la sauvegarde serveur → hydrate les stores. À appeler au mount. */
 export async function loadYellowSave(): Promise<void> {

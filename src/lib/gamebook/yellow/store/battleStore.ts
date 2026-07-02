@@ -295,6 +295,23 @@ function championToInstance(m: ChampionMon, idx: number): MonInstance {
     }
 }
 
+/** Gèle une équipe en ChampionMon[] (stats calculées, attaques par nom d'affichage) — même logique que le
+ *  snapshot du Hall of Fame, réutilisable (NG+ : fige l'ANCIENNE équipe comme adversaire de fin de Ligue). */
+export function freezeTeam(team: MonInstance[]): ChampionMon[] {
+    return team.map((m) => {
+        const sp = getSpecies(m.speciesId)
+        const s = sp ? fullStats(m, sp) : { hp: 0, atk: 0, def: 0, spe: 0, spc: 0 }
+        return {
+            speciesId: m.speciesId,
+            nickname: m.nickname,
+            level: m.level,
+            shiny: m.shiny,
+            stats: { hp: s.hp, atk: s.atk, def: s.def, spe: s.spe, spc: s.spc },
+            moves: m.moves.map((slot) => getMove(slot.moveId)?.name ?? slot.moveId),
+        }
+    })
+}
+
 /** Lance un combat amical contre l'équipe de champion FIGÉE (Hall of Fame). Sans sac (noItems), IA la plus
  *  maligne ("hof"), aucune récompense ni XP (challenge pur). `label` identifie le combat (ligue/arène). */
 export function startHofBattle(label: string, champTeam: ChampionMon[]): boolean {
