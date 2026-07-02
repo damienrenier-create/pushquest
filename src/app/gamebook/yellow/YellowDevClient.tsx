@@ -1011,7 +1011,14 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (!ok) { setToast("New Game+ réservé aux Champions du Nexus."); return }
         setMenu("none")
         setMap(YELLOW_ENTRANCE_MAP_ID, DEFAULT_SPAWN.x, DEFAULT_SPAWN.y) // le NG+ démarre au tout début
-        setToast(`✨ New Game+ lancé avec ${stored.spec.name} ! 6000⚡. Ta partie d'origine t'attend (Menu → Changer de monde).`)
+        // Cinématique d'entrée du 2e run : le Dieu des Nouilles explique au joueur ce qui l'attend.
+        showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, [
+            `*Un éclair de pâte sacrée. ${stored.spec.name}, ta création, s'éveille à tes côtés — à peine éclos, niveau 5.*`,
+            "« Ainsi, Champion, tu RECOMMENCES — mais tout autre. Ta création pour seul compagnon, 6000 énergies bénies, et un Nexus qui ne t'attendait plus. »",
+            "« Ta gloire d'avant n'est pas perdue : elle t'attend, intacte. Reviens-y quand tu veux — Menu → 🔁 Changer de monde. »",
+            "« Mais prends garde : ACE a forgé une NÉMÉSIS taillée contre ta création. Et au bout du chemin, c'est ta PROPRE ancienne équipe que tu devras terrasser. »",
+            "« Une seconde vie t'est offerte, Maître. Fais-en une légende. 🍝 »",
+        ])
     }
 
     // NG+ — bascule entre le monde d'origine et le New Game+ (les deux persistés). Warp vers un hub sûr :

@@ -11,7 +11,7 @@ import type { MonInstance } from "../battle/types"
 export const SYLVEBARBE_NPC_ID = "y_sylvebarbe"
 export const SYLVEBARBE_MAP_ID = "yellow_entrance"
 export const SYLVEBARBE_POS = { x: 23, y: 38 } // haut du bloc sud (cols 22-25, rows 38-39) ; interpellé depuis (23,37)
-export const SYLVEBARBE_LEVEL = 60             // gardien post-Ligue (Ligue = niv 52-62)
+export const SYLVEBARBE_LEVEL = 85             // gardien post-Ligue MUSCLÉ (Ligue = niv 52-62) : exige une équipe VRAIMENT forte
 export const SYLVEBARBE_FLUTE_ITEM = "daemonflute"
 
 export const SYLVEBARBE_INTRO_LINES = [
@@ -31,9 +31,11 @@ export const SYLVEBARBE_NO_TEAM_LINES = [
     "Soigne-les au Centre avant d'affronter le gardien endormi.",
 ]
 
-/** Instance de combat de SYLVEBARBE : N60, capture DURE (×0.6) mais SANS statut requis (≠ légendaire). */
+/** Instance de combat de SYLVEBARBE : N85, capture DURE (×0.6) mais SANS statut requis (≠ légendaire).
+ *  Kit EXPLICITE (au niv 85 il n'a pas encore Lance-Soleil, niv 90) : double STAB (Tempête Verte PLANTE spé +
+ *  Faille Sismique SOL phys) + Focalisation (setup +Spé) + Repos (soin) → mur-sweeper redoutable. */
 export function buildSylvebarbe(): MonInstance {
-    const mon = createMonInstance("sylvebarbe", SYLVEBARBE_LEVEL, { owned: false })
+    const mon = createMonInstance("sylvebarbe", SYLVEBARBE_LEVEL, { owned: false, moveIds: ["tempete_verte", "faille_sismique", "focalisation", "repos"] })
     Object.assign(mon, { captureMult: 0.6 }) // dur à capturer (cf. engine performCapture), mais pas légendaire
     return mon
 }
