@@ -16,7 +16,7 @@ import {
     type CustomSpec, type Bloomer, type MoveCardInfo, type CurveShape, type RoleKey, type Attribute,
     BLOOMERS, bloomerBudget, validateSpec, previewLine, ROLES, CURVE_LABEL, CURVE_HINT,
     slotChoices, suggestLearnset, moveCard, isDamagingMove, moveRarity, attributeMoveIds, buildCustomSpecies, buildNemesis,
-    ATTRIBUTE_LABEL, MAX_ATTRIBUTES,
+    ATTRIBUTE_LABEL, MAX_ATTRIBUTES, TALENTS, TALENT_KEYS, MAX_TALENT_REROLLS, weakestStatKey,
     lineTypes, LEARN_LEVELS, STAT_KEYS, STAT_LABEL, MIN_FINAL_STAT, MAX_STAB, MAX_COVERAGE,
     STAT_HARD_CAP, STAT_DEX_MAX, specStatCost, fitStatsToBudget,
 } from "@/lib/gamebook/yellow/create/customSpecies"
@@ -33,6 +33,7 @@ function defaultSpec(): CustomSpec {
         finalTypes: ["NORMAL"], typeChange: undefined,
         finalStats: { ...ROLES.equilibre.profile },
         attributes: [],
+        secretTalent: TALENT_KEYS[Math.floor(Math.random() * TALENT_KEYS.length)], talentRerolls: 0, // talent pioché au hasard
         learnset: [],
     }
 }
@@ -46,6 +47,15 @@ export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: s
 
     const patch = (p: Partial<CustomSpec>) => setSpec((s) => ({ ...s, ...p }))
     const goStep = (n: number) => { setPickingSlot(null); setStep(n) } // réinitialise le picker à chaque navigation
+    // TALENT SECRET : pioché à l'ouverture (defaultSpec). Reroll = paye 1 pt sur la stat la plus faible (max 15).
+    const rerollTalent = () => setSpec((s) => {
+        const rolls = s.talentRerolls ?? 0
+        const k = weakestStatKey(s.finalStats)
+        if (rolls >= MAX_TALENT_REROLLS || s.finalStats[k] <= MIN_FINAL_STAT) return s
+        const others = TALENT_KEYS.filter((x) => x !== s.secretTalent)
+        const next = others[Math.floor(Math.random() * others.length)] ?? s.secretTalent
+        return { ...s, finalStats: { ...s.finalStats, [k]: s.finalStats[k] - 1 }, secretTalent: next, talentRerolls: rolls + 1 }
+    })
     const budget = bloomerBudget(spec.bloomer)
     const usedBst = STAT_KEYS.reduce((a, k) => a + spec.finalStats[k], 0) // somme brute (sert à moduler la puissance)
     const cost = specStatCost(spec.finalStats)                            // coût réel (points au-delà du record = ×2) → c'est LUI plafonné
@@ -363,6 +373,20 @@ export default function DaemonCreator({ ownerId, nickname, close }: { ownerId: s
                                     <div style={S.previewStats}>{STAT_KEYS.map((k) => <span key={k}>{STAT_LABEL[k].slice(0, 3)} <b>{st.baseStats[k]}</b></span>)}</div>
                                 </div>
                             ))}
+                            {spec.secretTalent && (() => {
+                                const rolls = spec.talentRerolls ?? 0
+                                const wk = weakestStatKey(spec.finalStats)
+                                const canRoll = rolls < MAX_TALENT_REROLLS && spec.finalStats[wk] > MIN_FINAL_STAT
+                                return (
+                                    <div style={S.talentBox}>
+                                        <div style={{ fontWeight: 800, fontSize: 12.5 }}>✨ Talent secret : <span style={{ color: "#7a4a10" }}>{TALENTS[spec.secretTalent].label}</span></div>
+                                        <div style={{ ...S.subtle, marginTop: 2 }}>{TALENTS[spec.secretTalent].desc}</div>
+                                        <button style={{ ...S.talentReroll, ...(canRoll ? {} : { opacity: 0.4, cursor: "not-allowed" }) }} disabled={!canRoll} onClick={rerollTalent}>
+                                            🎲 Relancer {canRoll ? `(−1 ${STAT_LABEL[wk]} · ${MAX_TALENT_REROLLS - rolls} restantes)` : "(épuisé)"}
+                                        </button>
+                                    </div>
+                                )
+                            })()}
                             {errors.length > 0 ? (
                                 <div style={S.errBox}>⚠️ À corriger :<ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>{errors.map((e, i) => <li key={i}>{e}</li>)}</ul></div>
                             ) : (
@@ -505,6 +529,8 @@ const S: Record<string, React.CSSProperties> = {
     statLbl: { fontSize: 9.5, fontWeight: 600, color: INK, opacity: 0.65 },
     tileEffect: { fontSize: 12, fontWeight: 700, color: "#7a4a10", background: "#f6e9c8", border: `1px solid ${DARK}`, borderRadius: 8, padding: "6px 9px" },
     tileDesc: { fontSize: 11.5, lineHeight: 1.5, color: INK, opacity: 0.82, fontStyle: "italic" },
+    talentBox: { background: "#f6e9c8", border: `2px solid ${DARK}`, borderRadius: 8, padding: "9px 11px", margin: "8px 0 6px", color: INK },
+    talentReroll: { marginTop: 8, padding: "7px 12px", background: INK, color: CREAM, border: "none", borderRadius: 8, fontSize: 11.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" },
     previewCard: { background: CARD, border: `2px solid ${DARK}`, borderRadius: 8, padding: "7px 9px", marginBottom: 6 },
     previewHead: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "space-between" },
     previewStats: { display: "flex", gap: 8, flexWrap: "wrap", fontSize: 11, marginTop: 4, opacity: 0.9 },

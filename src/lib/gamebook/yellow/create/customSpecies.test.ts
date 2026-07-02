@@ -5,7 +5,7 @@ import {
     statusTier, statusTierCapForLevel, allowedOffensiveTypes, weaknessTypes, moveCard, suggestLearnset,
     MAX_STAB, MAX_COVERAGE, MIN_STATUS_RATIO, ROLES, CURVE_RATIOS, powerPoolMod, effectiveMaxPower,
     STAT_HARD_CAP, STAT_DEX_MAX, specStatCost, fitStatsToBudget, STALL_BULK_THRESHOLD, effectivePower, maxAvgOffPower, POWER_AVG_TOLERANCE, hasNoSideEffect,
-    attributeMoveIds, ATTRIBUTE_MOVES, MAX_ATTRIBUTES, gatePower,
+    attributeMoveIds, ATTRIBUTE_MOVES, MAX_ATTRIBUTES, gatePower, TALENTS, TALENT_KEYS, weakestStatKey,
 } from "./customSpecies"
 import { getMove, MOVES } from "../data/moves"
 import { getSpecies, registerCustomSpecies, isCustomSpeciesId } from "../data/species"
@@ -239,6 +239,17 @@ describe("création — attributs anatomiques (couverture hors-type)", () => {
         const s = validSpec(); s.attributes = ["ailes", "crocs", "dard"]
         expect(s.attributes.length).toBeGreaterThan(MAX_ATTRIBUTES)
         expect(validateSpec(s).some((m) => m.includes("Attributs invalides"))).toBe(true)
+    })
+})
+
+describe("création — talent secret (tirage + reroll)", () => {
+    it("weakestStatKey = la stat la plus faible (la monnaie du reroll)", () => {
+        expect(weakestStatKey({ hp: 90, atk: 40, def: 85, spe: 100, spc: 90 })).toBe("atk")
+        expect(weakestStatKey({ hp: 120, atk: 60, def: 120, spe: 45, spc: 90 })).toBe("spe")
+    })
+    it("chaque talent a un label + une description ; ≥ 10 talents", () => {
+        for (const k of TALENT_KEYS) { expect(TALENTS[k].label).toBeTruthy(); expect(TALENTS[k].desc).toBeTruthy() }
+        expect(TALENT_KEYS.length).toBeGreaterThanOrEqual(10)
     })
 })
 

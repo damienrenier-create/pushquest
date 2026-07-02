@@ -286,6 +286,38 @@ export function attributeMoveIds(attributes: Attribute[] | undefined): Set<strin
     for (const a of attributes ?? []) for (const id of ATTRIBUTE_MOVES[a] ?? []) s.add(id)
     return s
 }
+
+// ── TALENT SECRET (« pouvoir caché ») : le joueur en pioche UN au hasard à la fin de la création ; il peut
+//    RELANCER en payant 1 point sur sa stat la plus faible (max 15). Tous ~5 %, calés sur des mécaniques que le
+//    moteur possède déjà (crit, précision, STAB, effets secondaires, recul, drain, dégâts). cf. liste validée v2.
+//    L'effet en combat sera câblé côté moteur à l'instanciation (Phase 2) ; ici : data + choix + coût. ──
+export type TalentKey =
+    | "oeil_lynx" | "coup_sort" | "anti_crit" | "zele" | "acharnement" | "cuir_epais" | "resistant"
+    | "voile" | "sang_froid" | "chanceux" | "endurant" | "sangsue" | "reflexes"
+export interface TalentInfo { label: string; desc: string }
+export const TALENTS: Record<TalentKey, TalentInfo> = {
+    oeil_lynx: { label: "Œil de lynx", desc: "+5 % de précision sur tes attaques." },
+    coup_sort: { label: "Coup du sort", desc: "+5 % de chances de coup critique." },
+    anti_crit: { label: "Sang-froid tactique", desc: "L'adversaire a −5 % de chances de te porter un critique." },
+    zele: { label: "Zèle élémentaire", desc: "Bonus STAB porté à ×1,55 (au lieu de ×1,5)." },
+    acharnement: { label: "Acharnement", desc: "+5 % de dégâts si la cible est à moins de 25 % de PV." },
+    cuir_epais: { label: "Cuir épais", desc: "−5 % de dégâts subis." },
+    resistant: { label: "Résistant", desc: "−5 % de dégâts sur les coups super-efficaces." },
+    voile: { label: "Voile", desc: "L'adversaire a −5 % de précision contre toi." },
+    sang_froid: { label: "Nerfs d'acier", desc: "−5 % de chances de subir une altération (para/brûlure/poison/sommeil)." },
+    chanceux: { label: "Chanceux", desc: "+5 % de déclenchement des effets secondaires de tes attaques." },
+    endurant: { label: "Endurant", desc: "Le recul (Bélier, Coup de Boutoir…) te fait un quart de dégâts en moins." },
+    sangsue: { label: "Sangsue", desc: "+5 % de PV rendus par tes attaques qui drainent." },
+    reflexes: { label: "Réflexes", desc: "+5 % de Vitesse au combat." },
+}
+export const TALENT_KEYS = Object.keys(TALENTS) as TalentKey[]
+export const MAX_TALENT_REROLLS = 15
+/** Clé de la stat la PLUS FAIBLE (> MIN_FINAL_STAT si possible) — la « monnaie » du reroll de talent. */
+export function weakestStatKey(stats: Record<StatKey, number>): StatKey {
+    const payable = STAT_KEYS.filter((k) => stats[k] > MIN_FINAL_STAT)
+    const pool = payable.length ? payable : STAT_KEYS
+    return pool.reduce((a, k) => (stats[k] < stats[a] ? k : a), pool[0])
+}
 export function isStabMove(id: string, types: PokeType[]): boolean { const m = getMove(id); return !!m && isDamagingMove(m) && types.includes(m.type) }
 export function isCoverageMove(id: string, types: PokeType[]): boolean { const m = getMove(id); return !!m && isDamagingMove(m) && m.type !== "NORMAL" && !types.includes(m.type) }
 
@@ -478,6 +510,8 @@ export interface CustomSpec {
     typeChange?: { atStage: 2 | 3; types: PokeType[] } // 1 changement MAX : les stades < atStage portent ces types
     finalStats: Record<StatKey, number>          // distribution du STADE FINAL (somme ≤ budget)
     attributes?: Attribute[]                     // MAX 2 attributs anatomiques → débloquent des attaques hors-type
+    secretTalent?: TalentKey                     // talent « pouvoir caché » pioché en fin de création
+    talentRerolls?: number                       // nb de relances de talent déjà payées (max MAX_TALENT_REROLLS)
     learnset: Array<{ level: number; moveId: string }> // 1 pick par slot de LEARN_LEVELS
 }
 
