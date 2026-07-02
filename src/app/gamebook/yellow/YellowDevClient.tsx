@@ -45,12 +45,12 @@ import { useGameStore, setCurrentNickname, DEFAULT_SPAWN } from "@/lib/gamebook/
 import { YELLOW_ENTRANCE_MAP_ID } from "@/lib/gamebook/yellow/featureFlag"
 import { YELLOW_MAPS, CENDREVILLE_SPAWN } from "@/lib/gamebook/yellow/maps"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
-import { useBattle, useEvolutions, clearEvolutions, useChampionRun, useArenaRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getGiftCtMove, startTrainerBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult, useFrontierResult, clearFrontierResult, getBattleEnergy, resumeBattleFromStorage, useStoneReward, clearStoneReward, useJustCaught, clearJustCaught, freezeTeam } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, useEvolutions, clearEvolutions, useChampionRun, useArenaRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getGiftCtMove, startTrainerBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult, useFrontierResult, clearFrontierResult, getBattleEnergy, resumeBattleFromStorage, useStoneReward, clearStoneReward, useJustCaught, clearJustCaught, freezeTeam, startNgPlusFinalBattle, useNgplusFinalPending, clearNgplusFinalPending, useNgplusFinalResult, clearNgplusFinalResult } from "@/lib/gamebook/yellow/store/battleStore"
 import { useEncounterFxActive } from "@/lib/gamebook/yellow/store/encounterFxStore"
 import { aceLoseLine } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
-import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter, startNewGamePlus, switchWorld, hasNgPlusWorld } from "@/lib/gamebook/yellow/store/saveManager"
+import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter, startNewGamePlus, switchWorld, hasNgPlusWorld, completeNewGamePlus, getNgplusOldTeam } from "@/lib/gamebook/yellow/store/saveManager"
 import { customStarterSpeciesId, type StoredCustomDaemon } from "@/lib/gamebook/yellow/create/customSpecies"
 import { getPlayer, setTeam, usePlayer, useActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone } from "@/lib/gamebook/yellow/store/playerStore"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
@@ -192,6 +192,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const newDexEntry = useNewDexEntry()
     const whiteout = useWhiteout()
     const duelResult = useDuelResult()
+    const ngplusFinalPending = useNgplusFinalPending() // NG+ : Maître battu en NG+ → combat vs ancienne équipe à lancer
+    const ngplusFinalResult = useNgplusFinalResult()   // NG+ : issue de ce combat (win → clôture)
     const run = useRun()
     const frontierResult = useFrontierResult()
     const frontierReportedRef = useRef(false)
@@ -675,6 +677,34 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         }
     }, [duelResult, battle, evolutions, nickname, showDialogue])
 
+    // NG+ — après le Hall of Fame du sacre NG+ (championRun fermé), lance le COMBAT DE FIN DE LIGUE contre
+    // l'ancienne équipe. Une seule fois (on consomme le flag). Si l'équipe est K.O., on renvoie vers le menu.
+    useEffect(() => {
+        if (!ngplusFinalPending || battle || evolutions.length > 0 || championRun || dialogue) return
+        clearNgplusFinalPending()
+        const old = getNgplusOldTeam()
+        if (!old || old.length === 0) return
+        const ok = startNgPlusFinalBattle(old)
+        if (!ok) setToast("Soigne ton équipe, puis affronte ton ANCIENNE équipe (Menu → ⚔️).")
+    }, [ngplusFinalPending, battle, evolutions.length, championRun, dialogue])
+
+    // NG+ — issue du combat de fin de Ligue vs l'ancienne équipe. Victoire → clôture du NG+ (Commit 6 : HoF/fusion).
+    useEffect(() => {
+        if (!ngplusFinalResult || battle || evolutions.length > 0) return
+        const won = ngplusFinalResult.won
+        clearNgplusFinalResult()
+        if (won) {
+            completeNewGamePlus()
+            showDialogue("y_ligue_maitre", "TON ANCIENNE ÉQUIPE", [
+                "« ... »",
+                "L'équipe que tu avais un jour abandonnée s'incline devant ta création.",
+                "Le cycle est bouclé, Maître. Ta lignée custom règne désormais sur le Nexus. 🍝",
+            ])
+        } else {
+            setToast("Défaite face à ton ancienne équipe… soigne-toi et retente (Menu → ⚔️).")
+        }
+    }, [ngplusFinalResult, battle, evolutions.length, showDialogue])
+
     // LIGUE — SACRE : dès que le championRun est posé (victoire sur LE MAÎTRE), on grave l'équipe
     // au Hall of Fame PARTAGÉ et on récompense tous les autres joueurs (+1/3 de leur quota). Une seule
     // fois par sacre — la ref se réarme quand le générique se ferme (clearChampion → championRun=null).
@@ -1109,6 +1139,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             <button style={{ ...menuBtnStyle, borderColor: "#3ad0c0", color: "#3ad0c0" }} onClick={() => { setMenu("none"); setCreatorOpen(true) }}>🧬 CRÉER UN DAEMON (TEST)</button>
                         )}
                         {/* NG+ (2 mondes navigables) : bascule si un NG+ existe, sinon proposition de lancement (Champion + Daemon custom). */}
+                        {!battle && activeWorld === "ngplus" && getPlayer().isChampion && (getNgplusOldTeam()?.length ?? 0) > 0 && (
+                            <button style={{ ...menuBtnStyle, borderColor: "#c05050", color: "#c05050" }} onClick={() => {
+                                const old = getNgplusOldTeam(); if (!old) return
+                                setMenu("none")
+                                if (!startNgPlusFinalBattle(old)) setToast("Soigne ton équipe au Centre d'abord.")
+                            }}>⚔️ AFFRONTER TON ANCIENNE ÉQUIPE</button>
+                        )}
                         {!battle && activeWorld === "ngplus" && (
                             <button style={{ ...menuBtnStyle, borderColor: "#e0a020", color: "#e0a020" }} onClick={() => changeWorld("live")}>🔁 RETOUR À TA PARTIE D&apos;ORIGINE</button>
                         )}
@@ -2394,6 +2431,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {!battle && evolutions.length === 0 && championRun && (
                 <HallOfFame champion={championRun} onDone={() => {
                     clearChampion()
+                    // NG+ : au lieu du warp/dialogue habituels, on laisse l'effet dédié lancer le COMBAT DE FIN
+                    // DE LIGUE contre l'ancienne équipe (dès le HoF fermé). ngplusFinalPending est déjà armé.
+                    if (ngplusFinalPending) { setToast("Un dernier défi t'attend… ton ANCIENNE équipe !"); return }
                     // Le générique DEVIENT la transition : on ressort directement à Cendreville (au-dessus du
                     // gate sud, comme la porte droite de la salle du trône) au lieu de rester dans le trône vide.
                     setMap("yellow_cendreville", 21, 32)

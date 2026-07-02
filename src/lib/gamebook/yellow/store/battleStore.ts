@@ -19,7 +19,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType, MoveSlot } from "../battle/types"
 import { markSeen, markCaught, getPokedex } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, recordOrcalineDefeat, orcalineLevelForWins, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, consumeBattleBlessing } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, recordOrcalineDefeat, orcalineLevelForWins, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, consumeBattleBlessing, getActiveWorld } from "./playerStore"
 import { getItem } from "../data/items"
 import { reportShiny } from "../shinyGift"
 import { ARENA_TICKET_VALUE, SBIRE_TICKET_VALUE, SBIRE_TICKET_EVERY, ACE_TICKET_VALUE, ACE_TICKET_WIN_BEFORE, ACE_TICKET_WIN_AFTER, ACE_TICKET_EARLY_VALUE, ACE_TICKET_WIN_EARLY } from "../data/labDefis"
@@ -39,7 +39,7 @@ import { SBIRE_TRAINER_ID } from "../data/sbire"
 import { toMonInstance, type LeagueHighlight, type ChampionRun, type ChampionMon } from "../storage/save"
 import { fullStats } from "../battle/stats"
 import { evolveTeam, type TeamEvolution } from "../progression/evolveTeam"
-import { persistYellowSave, processSaiyanPoints } from "./saveManager"
+import { persistYellowSave, processSaiyanPoints, getNgplusOldTeam } from "./saveManager"
 import { QUOTA_CAPTURE_BONUS } from "../data/captureConfig"
 import { attackCost, effectiveQuota, STRUGGLE_INDEX } from "../data/combatCostConfig"
 import { battleEnergyCap } from "../data/badges"
@@ -116,6 +116,11 @@ interface BattleStoreState {
     /** Un Daemon vient d'être CAPTURÉ (n'importe quelle espèce) → signal transitoire pour l'UI
      *  (ex. carrousel d'explication de la génétique au 1er usage). Consommé/effacé par l'UI. */
     justCaught: boolean
+    /** NG+ : le MAÎTRE vient d'être battu EN New Game+ → il reste à affronter l'ancienne équipe (combat de fin
+     *  de Ligue). Posé au sacre NG+, consommé par l'UI (qui lance le combat après le Hall of Fame). */
+    ngplusFinalPending: boolean
+    /** NG+ : issue du combat de fin de Ligue contre l'ancienne équipe (trainerId "ngplus:final"). null sinon. */
+    ngplusFinalResult: { won: boolean } | null
 }
 
 /** Rôle canonique : A = challenger ("player" canonique), B = défié ("enemy" canonique). */
@@ -137,7 +142,7 @@ interface PvpContext {
     desync: boolean
 }
 
-let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, arenaRun: null, chainRematchId: null, pendingLearn: false, duelResult: null, frontierResult: null, stoneReward: null, justCaught: false }
+let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, arenaRun: null, chainRematchId: null, pendingLearn: false, duelResult: null, frontierResult: null, stoneReward: null, justCaught: false, ngplusFinalPending: false, ngplusFinalResult: null }
 // LIGUE — meilleurs moments du run en cours (best hit par membre du Conseil 4 + Maître), runtime.
 // Upsert par trainerId à chaque victoire de la Ligue ; lus au sacre du Maître pour le Hall of Fame.
 const leagueHighlights: Record<string, LeagueHighlight> = {}
@@ -323,6 +328,23 @@ export function startHofBattle(label: string, champTeam: ChampionMon[]): boolean
     const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: "hof", noItems: true, expMult: 0 })
     syncPokedex(battle)
     setStore({ battle, evolutions: [], trainer: { trainerId: `hof:${label}`, reward: 0, isRematch: false }, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
+    persistBattleSnapshot()
+    return true
+}
+
+/** NG+ — COMBAT DE FIN DE LIGUE contre l'ancienne équipe (figée en ChampionMon[]). VRAI combat : XP normale,
+ *  sac autorisé, IA la plus maligne ("hof"). Adversaire owned:false (incapturable, stats gelées). Retourne
+ *  false si l'équipe du joueur est vide/K.O. (soigner d'abord) ou pas d'ancienne équipe. */
+export function startNgPlusFinalBattle(oldTeam: ChampionMon[]): boolean {
+    const playerTeam = getPlayer().team
+    if (playerTeam.length === 0 || oldTeam.length === 0) return false
+    if (!playerTeam.some((m) => m.currentHp > 0)) return false // équipe K.O. → soigne d'abord
+    const enemyTeam = oldTeam.map((m, i) => championToInstance(m, i))
+    const seed = (Math.floor(Math.random() * 0x7fffffff) ^ (playerTeam.length * 40503)) >>> 0
+    // Pas d'expMult:0 → XP NORMALE (choix de Sartay). Pas de noItems → sac autorisé (vrai combat).
+    const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: "hof" })
+    syncPokedex(battle)
+    setStore({ battle, evolutions: [], trainer: { trainerId: "ngplus:final", reward: 0, isRematch: false }, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null, ngplusFinalPending: false })
     persistBattleSnapshot()
     return true
 }
@@ -669,6 +691,10 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     const duelResult = storeState.trainer?.trainerId?.startsWith("duel:") ? { won: b.outcome === "win" } : null
     // ZONE DE COMBAT : issue d'une vague de série → l'UI enchaîne (win) ou clôt la série (lose).
     const frontierResult = storeState.trainer?.trainerId?.startsWith("frontier:") ? { won: b.outcome === "win" } : null
+    // NG+ : sacre du Maître EN New Game+ avec une ancienne équipe à affronter → il reste le combat de fin de Ligue.
+    const ngplusMaitreWin = lid === "y_ligue_maitre" && b.outcome === "win" && getActiveWorld() === "ngplus" && (getNgplusOldTeam()?.length ?? 0) > 0
+    // NG+ : issue du combat de fin de Ligue (vs ancienne équipe). L'UI clôt le NG+ à la victoire.
+    const ngplusFinalResult = storeState.trainer?.trainerId === "ngplus:final" ? { won: b.outcome === "win" } : null
 
     // DÉFI CT (labo) : remonte les dégâts par type infligés CE combat vers le défi CT actif
     // (no-op s'il n'y a pas de défi CT du bon type ; b.dmgByType absent en PvP).
@@ -687,7 +713,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // Un Daemon a-t-il une attaque EN ATTENTE (slots pleins à la montée de niveau / l'évolution) ? → prompt post-combat.
     const pendingLearn = getPlayer().team.some((m) => (m.pendingMoves?.length ?? 0) > 0)
     // Expose les évolutions pour la cinématique post-combat (jouée après "QUITTER").
-    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, arenaRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward, justCaught: b.outcome === "caught" })
+    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, arenaRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward, justCaught: b.outcome === "caught", ngplusFinalPending: storeState.ngplusFinalPending || ngplusMaitreWin, ngplusFinalResult })
 
     // 4) Sauvegarde persistante (DB).
     persistYellowSave()
@@ -798,6 +824,15 @@ export function clearAceWin() {
 /** Consommé par la carte une fois l'issue du DUEL reflet traitée (récompenses appliquées). */
 export function clearDuelResult() {
     setStore({ ...storeState, duelResult: null })
+}
+
+/** NG+ : consommé par l'UI qui lance le combat de fin de Ligue après le Hall of Fame. */
+export function clearNgplusFinalPending() {
+    setStore({ ...storeState, ngplusFinalPending: false })
+}
+/** NG+ : consommé par l'UI une fois l'issue du combat de fin de Ligue traitée (clôture / retry). */
+export function clearNgplusFinalResult() {
+    setStore({ ...storeState, ngplusFinalResult: null })
 }
 
 export function clearFrontierResult() {
@@ -1152,6 +1187,22 @@ export function useFrontierResult(): BattleStoreState["frontierResult"] {
         subscribe,
         () => getSnapshot().frontierResult,
         () => getSnapshot().frontierResult,
+    )
+}
+
+export function useNgplusFinalPending(): boolean {
+    return useSyncExternalStore(
+        subscribe,
+        () => getSnapshot().ngplusFinalPending,
+        () => false,
+    )
+}
+
+export function useNgplusFinalResult(): BattleStoreState["ngplusFinalResult"] {
+    return useSyncExternalStore(
+        subscribe,
+        () => getSnapshot().ngplusFinalResult,
+        () => null,
     )
 }
 
