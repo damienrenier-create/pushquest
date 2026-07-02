@@ -129,6 +129,9 @@ export function acePanthersFor(badgeCount: number): string[] {
 }
 export const ACE_NOUILLON_BASE = "nouillon"   // → vermisaint → divinpate
 export const ACE_FIRE_BASE = "braisille"      // → flamkure → pyrokoss
+// NG+ (2e run) : les 3 Panthéon sont remplacés par ce trio (rétro-évolués au bon stade selon le niveau),
+// et la lignée Nouillon/Divin Pâte est remplacée par le NÉMÉSIS (contre-lignée de ta création).
+export const ACE_NGPLUS_CORE = ["tonytony", "enclumind", "torturoche"]
 export const ACE_LEVEL_OFFSET = 2     // offset FINAL (dès la 4e rencontre) : ta MOYENNE d'équipe +2
 export const ACE_EASY_START = -1      // 1re rencontre : ta moyenne -1 (un poil facile)
 
@@ -196,6 +199,8 @@ export interface AceBuildInput {
     aceLevel: number
     playerLastTypes: PokeType[]  // types du DERNIER Daemon joueur → choisit le contre adaptatif (slot 6)
     badgeCount?: number          // nb de badges du joueur → paliers d'évolution des Panthéon (3→1, 4→2, 5→3)
+    ngplus?: boolean             // 2e run → trio thématisé (tonytony/enclumind/tortoracle) + Némésis à la place de Divin Pâte
+    nemesisSpeciesId?: string    // NG+ : lignée Némésis (stade 1) à fielder à la place de Divin Pâte (fallback Nouillon)
 }
 
 /**
@@ -206,6 +211,19 @@ export interface AceBuildInput {
 export function buildAceTeam(i: AceBuildInput): { team: AceMon[]; counterSpecies: string } {
     const L = Math.max(1, Math.min(MAX_LEVEL, i.aceLevel))
     const counter = bestCounter(i.playerLastTypes)
+    // NG+ (2e run) : trio thématisé (rétro-évolué au bon stade) + NÉMÉSIS à la place de Divin Pâte + Feu + contre.
+    if (i.ngplus) {
+        const team: AceMon[] = [
+            { speciesId: speciesAtLevel(baseSpeciesOf(ACE_NGPLUS_CORE[0]), L), level: L },
+            { speciesId: speciesAtLevel(baseSpeciesOf(ACE_NGPLUS_CORE[1]), L), level: L },
+            { speciesId: speciesAtLevel(baseSpeciesOf(ACE_NGPLUS_CORE[2]), L), level: L },
+            // Némésis (stade 1 déjà = souche) évolué au bon stade ; fallback Nouillon/Divin Pâte si pas de custom.
+            { speciesId: speciesAtLevel(i.nemesisSpeciesId ?? ACE_NOUILLON_BASE, L), level: L },
+            { speciesId: speciesAtLevel(ACE_FIRE_BASE, L), level: L },
+            { speciesId: speciesAtLevel(baseSpeciesOf(counter), L), level: L },
+        ]
+        return { team, counterSpecies: counter }
+    }
     const panthers = acePanthersFor(i.badgeCount ?? 0) // paliers d'évolution selon le nb de badges (0-2→0, 3→1, 4→2, 5→3)
     const team: AceMon[] = [
         { speciesId: panthers[0], level: L },

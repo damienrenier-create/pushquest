@@ -7,8 +7,8 @@
 import { useSyncExternalStore } from "react"
 import type { MonInstance, MoveSlot } from "../battle/types"
 import { fullStats } from "../battle/stats"
-import { getSpecies, registerCustomSpecies } from "../data/species"
-import { type CustomSpec, type StoredCustomDaemon, buildCustomSpecies } from "../create/customSpecies"
+import { getSpecies, registerCustomSpecies, isCustomSpeciesId } from "../data/species"
+import { type CustomSpec, type StoredCustomDaemon, buildCustomSpecies, buildNemesis, customStarterSpeciesId, customLineageBaseId } from "../create/customSpecies"
 import { tradeEvolutionTarget, applyEvolution, type EvolutionResult } from "../battle/evolution"
 import { getMove } from "../data/moves"
 import { getItem } from "../data/items"
@@ -162,6 +162,22 @@ export function addCustomDaemon(ownerId: string, spec: CustomSpec): void {
 /** Ré-enregistre au chargement toutes les lignées custom persistées (défensif : une entrée cassée est ignorée). */
 export function reregisterCustomDaemons(): void {
     for (const d of st.customDaemons) { try { registerCustomSpecies(buildCustomSpecies(d.spec, d.ownerId)) } catch { /* entrée corrompue → ignorée */ } }
+}
+
+/** NG+ — lignée NÉMÉSIS (contre-lignée) du Daemon custom que le joueur JOUE en NG+ : trouve le custom dans
+ *  l'équipe, retrouve sa spec, génère + enregistre son Némésis (déterministe, idempotent), renvoie son
+ *  speciesId de STADE 1 (pour l'équipe d'ACE / le cadeau). null si pas de custom en équipe ou spec introuvable. */
+export function getNgplusNemesisSpeciesId(): string | null {
+    const teamCustom = st.team.find((m) => isCustomSpeciesId(m.speciesId))
+    if (!teamCustom) return null
+    const stored = st.customDaemons.find((d) => teamCustom.speciesId.startsWith(customLineageBaseId(d)))
+    if (!stored) return null
+    try {
+        const nemSpec = buildNemesis(stored.spec)
+        const nemOwner = `nem_${stored.ownerId}`
+        registerCustomSpecies(buildCustomSpecies(nemSpec, nemOwner)) // idempotent (ré-écrit l'entrée du registre)
+        return customStarterSpeciesId({ ownerId: nemOwner, spec: nemSpec })
+    } catch { return null }
 }
 
 export function hydratePlayer(p: Partial<PlayerState>) {

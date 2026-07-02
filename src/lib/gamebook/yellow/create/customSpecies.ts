@@ -705,10 +705,15 @@ export function buildCustomSpecies(spec: CustomSpec, ownerId: string): SpeciesDa
     return chain
 }
 
+/** baseId d'une lignée custom stockée (`custom_${slug(ownerId)}_${slug(name)}`) — préfixe commun à tous ses
+ *  stades (_s1/_s2/_s3). Sert à retrouver la spec depuis un speciesId d'instance (éventuellement évoluée). */
+export function customLineageBaseId(d: StoredCustomDaemon): string {
+    return `custom_${slug(d.ownerId)}_${slug(d.spec.name)}`
+}
 /** speciesId du STADE 1 (starter) d'une lignée custom stockée — pour createMonInstance en NG+.
  *  Déterministe et aligné sur buildCustomSpecies (`custom_${slug(ownerId)}_${slug(name)}_s1`). */
 export function customStarterSpeciesId(d: StoredCustomDaemon): string {
-    return `custom_${slug(d.ownerId)}_${slug(d.spec.name)}_s1`
+    return `${customLineageBaseId(d)}_s1`
 }
 
 /** NÉMÉSIS : à partir de la création du JOUEUR, génère une lignée CONTRE (pure, valide) — types super-efficaces

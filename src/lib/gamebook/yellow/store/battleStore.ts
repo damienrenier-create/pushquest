@@ -19,7 +19,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType, MoveSlot } from "../battle/types"
 import { markSeen, markCaught, getPokedex } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, recordOrcalineDefeat, orcalineLevelForWins, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, consumeBattleBlessing, getActiveWorld } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, recordOrcalineDefeat, orcalineLevelForWins, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, consumeBattleBlessing, getActiveWorld, getNgplusNemesisSpeciesId } from "./playerStore"
 import { getItem } from "../data/items"
 import { reportShiny } from "../shinyGift"
 import { ARENA_TICKET_VALUE, SBIRE_TICKET_VALUE, SBIRE_TICKET_EVERY, ACE_TICKET_VALUE, ACE_TICKET_WIN_BEFORE, ACE_TICKET_WIN_AFTER, ACE_TICKET_EARLY_VALUE, ACE_TICKET_WIN_EARLY } from "../data/labDefis"
@@ -490,14 +490,21 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             const r = aceReward(winNum)
             if (r.itemId) addItem(r.itemId, 1)
             if (r.reps) grantReps(r.reps)
+            let gaveNemesis = false
             if (r.gift === "pantheon") {
                 const lvls = getPlayer().team.map((m) => m.level)
                 const lvl = lvls.length ? Math.min(...lvls) : 5 // niveau du plus faible de l'équipe présente
-                addCaught(createMonInstance("pantheon", lvl, { owned: true }))
+                // NG+ : ACE lègue le NÉMÉSIS (contre-lignée) au lieu du Panthéon. Fallback Panthéon si indisponible.
+                const nem = getActiveWorld() === "ngplus" ? getNgplusNemesisSpeciesId() : null
+                let giftId = "pantheon"
+                if (nem) { try { createMonInstance(nem, lvl, { owned: true }); giftId = nem; gaveNemesis = true } catch { giftId = "pantheon" } }
+                addCaught(createMonInstance(giftId, lvl, { owned: true }))
             }
             if (r.refund) grantReps(storeState.energySpent) // remboursement de l'énergie dépensée
             aceWin = winNum
-            aceRewardMsg = r.message
+            aceRewardMsg = gaveNemesis
+                ? "« Sept fois. Sept. Tu l'as brisé si souvent que je te lègue mon Némésis — ta propre nemesis, forgée contre toi. Ironique, non ? »"
+                : r.message
             // 🎟️ TICKETS ACE : un petit (20) à la 2e victoire ; un gros (50) avant Panthéon (victoire 6) + après (victoire 8).
             const aceTicket = winNum === ACE_TICKET_WIN_EARLY ? ACE_TICKET_EARLY_VALUE
                 : (winNum === ACE_TICKET_WIN_BEFORE || winNum === ACE_TICKET_WIN_AFTER) ? ACE_TICKET_VALUE

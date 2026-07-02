@@ -19,7 +19,7 @@ import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, resetFleeStreak } from "./battleStore"
 import { getPokedex } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, resetLigueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, addItem } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, resetLigueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, addItem, getActiveWorld, getNgplusNemesisSpeciesId } from "./playerStore"
 import { getSpecies } from "../data/species"
 import { persistYellowSave } from "./saveManager"
 import { rollWildEncounter, wildLevelCap, hasEncounters } from "../data/encounters"
@@ -279,7 +279,9 @@ function tryLaunchAce(): ActiveDialogue | null {
     const lastTypes = getSpecies(last.speciesId)?.types ?? []
     // CLIQUET : le niveau d'ACE est FIGÉ entre deux défaites (aceBattleLevel). Il ne monte
     // qu'APRÈS sa défaite (recordAceDefeat) — fini la recalibration à chaque rencontre.
-    const built = buildAceTeam({ aceLevel: aceBattleLevel(avg), playerLastTypes: lastTypes, badgeCount: getPlayerSave().badges.length })
+    // NG+ (2e run) : ACE sort la contre-lignée NÉMÉSIS + trio thématisé (tonytony/enclumind/tortoracle) au lieu du Panthéon.
+    const ngplus = getActiveWorld() === "ngplus"
+    const built = buildAceTeam({ aceLevel: aceBattleLevel(avg), playerLastTypes: lastTypes, badgeCount: getPlayerSave().badges.length, ngplus, nemesisSpeciesId: ngplus ? (getNgplusNemesisSpeciesId() ?? undefined) : undefined })
     // Taille d'équipe d'ACE = celle du joueur (min 3 = les 3 panthères), avec cliquet.
     const aceSize = aceTeamSizeFor(team.length)
     // ACE = élite (boss ultime) : ses Daemons sont entraînés comme un joueur assidu.
