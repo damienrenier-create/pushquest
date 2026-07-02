@@ -17,6 +17,9 @@ export const NGPLUS_START_ENERGY = 6000
 let loaded = false
 let autosaveInit = false
 let timer: ReturnType<typeof setTimeout> | null = null
+// Neutralise l'autosave débouncé pendant une opération volontaire multi-étapes (reset) qui a des `await` :
+// sinon un emit() synchrone arme un timer 800ms qui peut POSTer l'état intermédiaire pendant un fetch → 409/resync.
+let suppressAutosave = false
 
 // NG+ (2 mondes navigables) — le monde ACTIF vit dans les stores (playerStore + pokedexStore). Le monde
 // INACTIF est stashé ici, sérialisé (YellowSave), et fusionné dans snapshot() sans jamais écraser l'actif.
@@ -32,7 +35,7 @@ function liveWorldOf(save: YellowSave): YellowSave {
 /** Hydrate les stores (joueur + Pokédex) depuis UN monde. `customDaemons` est GLOBAL (partagé entre les
  *  2 mondes) → toujours fourni depuis le haut niveau de la save. */
 function hydrateFromWorld(w: YellowSave, customDaemons: StoredCustomDaemon[]): void {
-    hydratePlayer({ team: w.team, pc: w.pc, items: w.items, reps: w.reps, repsCap: w.repsCap, creditedThrough: w.creditedThrough, pastaBoughtToday: w.pastaBoughtToday, pastaDayBonus: w.pastaDayBonus, defeatedTrainers: w.defeatedTrainers, rematchedTrainers: w.rematchedTrainers, badges: w.badges as BadgeId[], introSeen: w.introSeen, sbireDefeatsToday: w.sbireDefeatsToday, sbireWinsTotal: w.sbireWinsTotal, pvpStats: w.pvpStats, acePeakLevel: w.acePeakLevel, aceBox: w.aceBox, aceTeamSizePeak: w.aceTeamSizePeak, aceWins: w.aceWins, aceDefeatedDate: w.aceDefeatedDate, duelWins: w.duelWins, ownedCts: w.ownedCts, boughtCts: w.boughtCts, gekrocResolved: w.gekrocResolved, hhSpectresShown: w.hhSpectresShown, hhCollectorWins: w.hhCollectorWins, isChampion: w.isChampion, sylvebarbeAwake: w.sylvebarbeAwake, repsBankedTotal: w.repsBankedTotal, welcomeGift: w.welcomeGift, spagGift: w.spagGift, pastaGodGift: w.pastaGodGift, labDefi: w.labDefi, customDaemons })
+    hydratePlayer({ team: w.team, pc: w.pc, items: w.items, reps: w.reps, repsCap: w.repsCap, creditedThrough: w.creditedThrough, pastaBoughtToday: w.pastaBoughtToday, pastaDayBonus: w.pastaDayBonus, defeatedTrainers: w.defeatedTrainers, rematchedTrainers: w.rematchedTrainers, badges: w.badges as BadgeId[], introSeen: w.introSeen, sbireDefeatsToday: w.sbireDefeatsToday, sbireWinsTotal: w.sbireWinsTotal, pvpStats: w.pvpStats, acePeakLevel: w.acePeakLevel, aceBox: w.aceBox, aceTeamSizePeak: w.aceTeamSizePeak, aceWins: w.aceWins, aceDefeatedDate: w.aceDefeatedDate, duelWins: w.duelWins, ownedCts: w.ownedCts, boughtCts: w.boughtCts, gekrocResolved: w.gekrocResolved, hhSpectresShown: w.hhSpectresShown, hhCollectorWins: w.hhCollectorWins, isChampion: w.isChampion, sylvebarbeAwake: w.sylvebarbeAwake, caveTradeDone: w.caveTradeDone, goshHintHeard: w.goshHintHeard, orcalineWins: w.orcalineWins, orcalineDate: w.orcalineDate, repsBankedTotal: w.repsBankedTotal, welcomeGift: w.welcomeGift, spagGift: w.spagGift, pastaGodGift: w.pastaGodGift, labDefi: w.labDefi, customDaemons })
     hydratePokedex({ seen: w.pokedex.seen, caught: w.pokedex.caught })
 }
 
@@ -96,7 +99,7 @@ export async function loadYellowSave(): Promise<void> {
 function activeWorldSave(): YellowSave {
     const p = getPlayer()
     const d = getPokedex()
-    return { version: SAVE_VERSION, team: p.team, pc: p.pc, items: p.items, reps: p.reps, repsCap: p.repsCap, creditedThrough: p.creditedThrough, pastaBoughtToday: p.pastaBoughtToday, pastaDayBonus: p.pastaDayBonus, pokedex: { seen: d.seen, caught: d.caught }, defeatedTrainers: p.defeatedTrainers, rematchedTrainers: p.rematchedTrainers, badges: p.badges, introSeen: p.introSeen, sbireDefeatsToday: p.sbireDefeatsToday, sbireWinsTotal: p.sbireWinsTotal, pvpStats: p.pvpStats, acePeakLevel: p.acePeakLevel, aceBox: p.aceBox, aceTeamSizePeak: p.aceTeamSizePeak, aceWins: p.aceWins, aceDefeatedDate: p.aceDefeatedDate, duelWins: p.duelWins, ownedCts: p.ownedCts, boughtCts: p.boughtCts, gekrocResolved: p.gekrocResolved, hhSpectresShown: p.hhSpectresShown, hhCollectorWins: p.hhCollectorWins, isChampion: p.isChampion, sylvebarbeAwake: p.sylvebarbeAwake, repsBankedTotal: p.repsBankedTotal, welcomeGift: p.welcomeGift, spagGift: p.spagGift, pastaGodGift: p.pastaGodGift, labDefi: p.labDefi, customDaemons: p.customDaemons ?? [], activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null }
+    return { version: SAVE_VERSION, team: p.team, pc: p.pc, items: p.items, reps: p.reps, repsCap: p.repsCap, creditedThrough: p.creditedThrough, pastaBoughtToday: p.pastaBoughtToday, pastaDayBonus: p.pastaDayBonus, pokedex: { seen: d.seen, caught: d.caught }, defeatedTrainers: p.defeatedTrainers, rematchedTrainers: p.rematchedTrainers, badges: p.badges, introSeen: p.introSeen, sbireDefeatsToday: p.sbireDefeatsToday, sbireWinsTotal: p.sbireWinsTotal, pvpStats: p.pvpStats, acePeakLevel: p.acePeakLevel, aceBox: p.aceBox, aceTeamSizePeak: p.aceTeamSizePeak, aceWins: p.aceWins, aceDefeatedDate: p.aceDefeatedDate, duelWins: p.duelWins, ownedCts: p.ownedCts, boughtCts: p.boughtCts, gekrocResolved: p.gekrocResolved, hhSpectresShown: p.hhSpectresShown, hhCollectorWins: p.hhCollectorWins, isChampion: p.isChampion, sylvebarbeAwake: p.sylvebarbeAwake, caveTradeDone: p.caveTradeDone, goshHintHeard: p.goshHintHeard, orcalineWins: p.orcalineWins, orcalineDate: p.orcalineDate, repsBankedTotal: p.repsBankedTotal, welcomeGift: p.welcomeGift, spagGift: p.spagGift, pastaGodGift: p.pastaGodGift, labDefi: p.labDefi, customDaemons: p.customDaemons ?? [], activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null }
 }
 
 /** FUSION des 2 mondes → une save unique. Les champs PLATS = monde LIVE (toujours, pour le garde-fou
@@ -117,7 +120,7 @@ function snapshot(): YellowSave {
  *  Si le serveur REFUSE l'écriture (409 : un autosave vierge allait écraser un compte avancé), on
  *  RESYNCHRONISE les stores sur la vraie save renvoyée → le joueur récupère son compte, rien n'est perdu. */
 export function persistYellowSave(): void {
-    if (!loaded) return
+    if (!loaded || suppressAutosave) return
     if (timer) clearTimeout(timer)
     timer = setTimeout(() => {
         fetch("/api/gamebook/yellow/save", {
@@ -200,12 +203,57 @@ export async function switchWorld(target: "live" | "ngplus"): Promise<boolean> {
     return true
 }
 
-/** NG+ — clôt le combat de fin de Ligue (adversaire = ancienne équipe) : consomme l'ancienne équipe figée
- *  (one-time). Les 2 mondes restent navigables. La fusion (transfert entre PC) viendra au Commit 6. */
-export function completeNewGamePlus(): void {
-    if (!ngplusOldTeam) return
+const uniq = (arr: string[]): string[] => [...new Set(arr)]
+
+/** FUSION de 2 mondes → un seul. `primary` = monde NG+ (timeline gagnante, garde TOUTE sa progression) ;
+ *  `secondary` = monde d'origine (ses Daemons — équipe + PC — sont RÉCUPÉRÉS dans le PC fusionné). Pokédex/
+ *  badges/CT en union, objets sommés, plafond d'énergie au max. Résultat = un monde LIVE unique (méta NG+ nettoyée). */
+function mergeWorlds(primary: YellowSave, secondary: YellowSave): YellowSave {
+    // Récupère TOUS les Daemons du monde d'origine (équipe + PC) dans le PC fusionné (uid re-préfixés → jamais de collision).
+    const reclaimed: MonInstance[] = [...secondary.team, ...secondary.pc].map((m, i) => ({ ...m, uid: `fus${i}-${m.uid}` }))
+    const items: Record<string, number> = { ...primary.items }
+    for (const [k, v] of Object.entries(secondary.items)) items[k] = (items[k] ?? 0) + v
+    return {
+        ...primary,
+        pc: [...primary.pc, ...reclaimed],
+        pokedex: {
+            seen: uniq([...primary.pokedex.seen, ...secondary.pokedex.seen]),
+            caught: uniq([...primary.pokedex.caught, ...secondary.pokedex.caught]),
+        },
+        items,
+        repsCap: Math.max(primary.repsCap, secondary.repsCap),
+        repsBankedTotal: Math.max(primary.repsBankedTotal, secondary.repsBankedTotal),
+        badges: uniq([...primary.badges, ...secondary.badges]),
+        ownedCts: uniq([...primary.ownedCts, ...secondary.ownedCts]),
+        boughtCts: uniq([...primary.boughtCts, ...secondary.boughtCts]),
+        isChampion: true,
+        // Collapse en UN seul monde.
+        activeWorld: "live",
+        ngplusWorld: null,
+        ngplusOldTeam: null,
+    }
+}
+
+/** NG+ — VICTOIRE au combat de fin de Ligue → FUSION COMPLÈTE des 2 mondes en un seul (le NG+ absorbe la
+ *  partie d'origine : équipe NG+ conservée, tous les anciens Daemons versés au PC, Pokédex/badges/CT/objets
+ *  fusionnés). Backup de l'état pré-fusion (2 mondes) dans history AVANT d'écrire → réversible. */
+export async function completeNewGamePlus(): Promise<void> {
+    if (getActiveWorld() !== "ngplus") return
+    const secondary = inactiveWorld
+    const primary = activeWorldSave()
+    const merged = secondary
+        ? mergeWorlds(primary, secondary)
+        : { ...primary, activeWorld: "live" as const, ngplusWorld: null, ngplusOldTeam: null }
+    // 1) Applique la fusion côté client (immédiat, l'UI voit le monde fusionné).
+    inactiveWorld = null
     ngplusOldTeam = null
-    persistYellowSave()
+    hydrateFromWorld(merged, merged.customDaemons ?? [])
+    setActiveWorld("live")
+    reregisterCustomDaemons()
+    // 2) Backup de l'état PRÉ-fusion (le serveur a encore les 2 mondes) → réversible, façon récup save.
+    try { await fetch("/api/gamebook/yellow/save/backup", { method: "POST" }) } catch { /* best-effort */ }
+    // 3) Écrit la save fusionnée (flush immédiat).
+    await persistNow()
 }
 
 /**
@@ -246,28 +294,37 @@ export async function processSaiyanPoints(): Promise<void> {
  * la sauvegarde serveur. N'affecte que la ligne GamebookProgress "yellow" du joueur.
  */
 export async function resetYellowChapter(): Promise<void> {
-    // SÉCURITÉ : on copie d'abord la save courante dans `history` (best-effort) → un reset reste
-    // annulable. Si le backup échoue (hors-ligne), on n'empêche PAS le reset volontaire.
-    try { await fetch("/api/gamebook/yellow/save/backup", { method: "POST" }) } catch { /* best-effort */ }
-    inactiveWorld = null; ngplusOldTeam = null // reset volontaire → on efface AUSSI le monde NG+ éventuel
-    resetForIntro()
-    hydratePokedex({ seen: [], caught: [] })
-    // ÉNERGIE « nouvelle partie » : on re-crédite comme un PREMIER chargement (resetForIntro a remis
-    // welcomeGift/spagGift à false et repsBankedTotal à -1) → cadeaux de bienvenue + reps du jour.
-    claimWelcomeGift() // +100 énergie
-    claimSpagGift()    // +150 énergie
+    // Neutralise l'autosave débouncé AVANT tout emit()/await : les resetForIntro/hydrate/claims ci-dessous
+    // émettent → sans ce garde, un timer 800ms POSTerait l'état intermédiaire pendant le fetch player-stats
+    // (409 → resync → reset raté silencieusement). On ne réécrit QUE via persistIntentionalReset (intentionnel).
+    suppressAutosave = true
+    if (timer) { clearTimeout(timer); timer = null }
     try {
-        const r = await fetch("/api/gamebook/yellow/player-stats")
-        if (r.ok) {
-            const j = await r.json()
-            if (j?.ctx) setWildCtx(j.ctx)
-            if (typeof j?.today === "string") creditDailyReps(j.today)
-            if (typeof j?.repsTotalToDate === "number" && typeof j?.repsThroughYesterday === "number") {
-                bankReps(j.repsTotalToDate, j.repsThroughYesterday, typeof j?.today === "string" ? j.today : undefined) // recrédite les reps du jour
+        // SÉCURITÉ : on copie d'abord la save courante dans `history` (best-effort) → un reset reste
+        // annulable. Si le backup échoue (hors-ligne), on n'empêche PAS le reset volontaire.
+        try { await fetch("/api/gamebook/yellow/save/backup", { method: "POST" }) } catch { /* best-effort */ }
+        inactiveWorld = null; ngplusOldTeam = null // reset volontaire → on efface AUSSI le monde NG+ éventuel
+        resetForIntro()
+        hydratePokedex({ seen: [], caught: [] })
+        // ÉNERGIE « nouvelle partie » : on re-crédite comme un PREMIER chargement (resetForIntro a remis
+        // welcomeGift/spagGift à false et repsBankedTotal à -1) → cadeaux de bienvenue + reps du jour.
+        claimWelcomeGift() // +100 énergie
+        claimSpagGift()    // +150 énergie
+        try {
+            const r = await fetch("/api/gamebook/yellow/player-stats")
+            if (r.ok) {
+                const j = await r.json()
+                if (j?.ctx) setWildCtx(j.ctx)
+                if (typeof j?.today === "string") creditDailyReps(j.today)
+                if (typeof j?.repsTotalToDate === "number" && typeof j?.repsThroughYesterday === "number") {
+                    bankReps(j.repsTotalToDate, j.repsThroughYesterday, typeof j?.today === "string" ? j.today : undefined) // recrédite les reps du jour
+                }
             }
-        }
-    } catch { /* hors-ligne : au moins les cadeaux de bienvenue sont crédités */ }
-    await persistIntentionalReset() // reset VOLONTAIRE → contourne le garde-fou anti-écrasement (le backup a déjà été fait)
+        } catch { /* hors-ligne : au moins les cadeaux de bienvenue sont crédités */ }
+        await persistIntentionalReset() // reset VOLONTAIRE → contourne le garde-fou anti-écrasement (le backup a déjà été fait)
+    } finally {
+        suppressAutosave = false // réarme l'autosave normal pour la nouvelle partie
+    }
 }
 
 /** Branche l'auto-sauvegarde sur les deux stores (idempotent). */

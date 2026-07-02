@@ -81,6 +81,25 @@ describe("NG+ — parse défensif des 2 mondes", () => {
         expect(s.ngplusWorld!.ngplusWorld).toBeNull() // pas de sous-sous-monde
         expect(s.ngplusWorld!.activeWorld).toBe("live") // un monde imbriqué est toujours "live"
     })
+    it("champs one-shot/quotidiens (caveTradeDone/goshHintHeard/orcalineWins/orcalineDate) : persistés + défauts", () => {
+        // Défauts pour une vieille save sans ces champs (rétro-compat, pas de crash).
+        const d = parseSave({ version: 2 })
+        expect(d.caveTradeDone).toBe(false)
+        expect(d.goshHintHeard).toBe(false)
+        expect(d.orcalineWins).toBe(0)
+        expect(d.orcalineDate).toBe("")
+        // Valeurs présentes conservées (fini la perte au reload).
+        const s = parseSave({ version: 2, caveTradeDone: true, goshHintHeard: true, orcalineWins: 3, orcalineDate: "2026-07-01" })
+        expect(s.caveTradeDone).toBe(true)
+        expect(s.goshHintHeard).toBe(true)
+        expect(s.orcalineWins).toBe(3)
+        expect(s.orcalineDate).toBe("2026-07-01")
+        // Défensif : types faux → défauts.
+        const bad = parseSave({ version: 2, caveTradeDone: "yes", orcalineWins: "3", orcalineDate: 42 })
+        expect(bad.caveTradeDone).toBe(false)
+        expect(bad.orcalineWins).toBe(0)
+        expect(bad.orcalineDate).toBe("")
+    })
     it("ngplusWorld non-objet → null ; ngplusOldTeam défensif (garde les entrées valides)", () => {
         expect(parseSave({ version: 2, ngplusWorld: "oops" }).ngplusWorld).toBeNull()
         expect(parseSave({ version: 2, ngplusOldTeam: "oops" }).ngplusOldTeam).toBeNull()

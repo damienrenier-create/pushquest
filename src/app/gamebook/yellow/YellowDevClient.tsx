@@ -694,12 +694,14 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         const won = ngplusFinalResult.won
         clearNgplusFinalResult()
         if (won) {
-            completeNewGamePlus()
-            showDialogue("y_ligue_maitre", "TON ANCIENNE ÉQUIPE", [
-                "« ... »",
-                "L'équipe que tu avais un jour abandonnée s'incline devant ta création.",
-                "Le cycle est bouclé, Maître. Ta lignée custom règne désormais sur le Nexus. 🍝",
-            ])
+            // FUSION COMPLÈTE des 2 mondes (async : merge + backup + persist), puis dialogue de clôture.
+            completeNewGamePlus().finally(() => {
+                showDialogue("y_ligue_maitre", "FUSION DES TIMELINES", [
+                    "L'équipe que tu avais un jour abandonnée s'incline devant ta création.",
+                    "En cet instant, tes deux destins n'en font plus qu'UN : tous tes anciens Daemons rejoignent ton PC.",
+                    "Le cycle est bouclé, Maître. Ta lignée custom règne désormais sur le Nexus fusionné. 🍝",
+                ])
+            })
         } else {
             setToast("Défaite face à ton ancienne équipe… soigne-toi et retente (Menu → ⚔️).")
         }

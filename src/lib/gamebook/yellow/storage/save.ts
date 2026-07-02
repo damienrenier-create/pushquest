@@ -73,6 +73,14 @@ export interface YellowSave {
     isChampion: boolean
     /** SYLVEBARBE réveillé/battu (flûte) → sortie sud de Ville Jaune ouverte (accès Zone de Combat). */
     sylvebarbeAwake: boolean
+    /** DÉNICHEUR (grotte Route Nord) : échange UNIQUE Faukon → Blaziper effectué (one-time, anti-duplication). */
+    caveTradeDone: boolean
+    /** GAMIN (plaine d'entraînement) : confidence de nuit entendue → boost Goshendofy ×2 les nuits suivantes. */
+    goshHintHeard: boolean
+    /** DRESSEUR D'ORCALINE (plaine) : nb de victoires (pilote le niveau = 35 + 10×victoires). */
+    orcalineWins: number
+    /** DRESSEUR D'ORCALINE : jour (=creditedThrough) de la dernière victoire → 1 combat gagnant/jour. */
+    orcalineDate: string
     /** DÉFIS DU LABO (étage du Centre) : défi actif, flags one-shot, cumul dégâts CT, casino/Tonytony. */
     labDefi: LabDefiState
     /** DAEMONS CUSTOM créés (post-Ligue, Phase 2) — persistés pour être ré-enregistrés/joués. Optionnel (anciennes saves). */
@@ -115,7 +123,7 @@ export const SAVE_VERSION = 2
 const ACE_RATCHET_RESET_VERSION = 2
 
 export function emptySave(): YellowSave {
-    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, sylvebarbeAwake: false, labDefi: emptyLabDefi(), customDaemons: [], activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null }
+    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, sylvebarbeAwake: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", labDefi: emptyLabDefi(), customDaemons: [], activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null }
 }
 
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -393,6 +401,10 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         hhCollectorWins: typeof o.hhCollectorWins === "number" ? Math.max(0, Math.floor(o.hhCollectorWins)) : 0,
         isChampion: o.isChampion === true,
         sylvebarbeAwake: o.sylvebarbeAwake === true,
+        caveTradeDone: o.caveTradeDone === true,
+        goshHintHeard: o.goshHintHeard === true,
+        orcalineWins: typeof o.orcalineWins === "number" ? Math.max(0, Math.floor(o.orcalineWins)) : 0,
+        orcalineDate: typeof o.orcalineDate === "string" ? o.orcalineDate : "",
         labDefi: parseLabDefi(o.labDefi),
         // Défensif : on ne garde que les entrées custom PLAUSIBLES (une entrée cassée ne bloque pas le chargement).
         customDaemons: Array.isArray(o.customDaemons) ? o.customDaemons.filter(isPlausibleStoredDaemon) : [],
