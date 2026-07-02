@@ -114,7 +114,7 @@ export function typeOffensivePct(t: PokeType): number {
 /** Modificateur de puissance (−15 %..+15 %) : (a) BST sous 435 → bonus · (b) type STAB fort (couvre bien le
  *  dex) → malus. Un Daemon faible ou d'un type peu utile tape un peu plus fort ; un type dominant est nerfé. */
 export function powerPoolMod(finalBst: number, types: PokeType[]): number {
-    const bstMod = clamp((BASE_FINAL_BST - finalBst) / BASE_FINAL_BST, -0.12, 0.12)     // low BST → +
+    const bstMod = clamp((BASE_FINAL_BST - finalBst) / BASE_FINAL_BST, -0.06, 0.06)     // low BST → + (swing réduit de moitié : ±6%)
     const strongest = types.length ? Math.max(...types.map(typeOffensivePct)) : 0
     const typeMod = clamp((0.25 - strongest) * 0.5, -0.12, 0)                           // type couvrant plus de 25% du dex → nerf ; jamais de BONUS de type
     return clamp(bstMod + typeMod, -0.15, 0.15)

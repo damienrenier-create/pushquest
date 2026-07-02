@@ -36,6 +36,7 @@ import AdvisorPanel from "./AdvisorPanel"
 import LabPanel from "./LabPanel"
 import CombatShopModal from "./CombatShopModal"
 import DailyTicketModal from "./DailyTicketModal"
+import DiablesRougesQuiz, { diablesRougesAvailable } from "./DiablesRougesQuiz"
 import HeldItemModal from "./HeldItemModal"
 import { getHeldItem } from "@/lib/gamebook/yellow/data/heldItems"
 import ParkSignPanel from "./ParkSignPanel"
@@ -209,6 +210,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [heldOpen, setHeldOpen] = useState(false) // modale "objet tenu" (depuis la fiche d'un Daemon)
     const [evDetailOpen, setEvDetailOpen] = useState(false) // détail EV (par stat) déplié sur la fiche
     const ticketChecked = useRef(false)
+    const [belgiumOpen, setBelgiumOpen] = useState(false) // événement Diables Rouges (02-07 uniquement)
+    const belgiumChecked = useRef(false)
     const stepCountRef = useRef(0)                                                  // pas du jour (événement 10e pas)
     const stepPrevPosRef = useRef<{ x: number; y: number; mapId: string } | null>(null)
     const [tourChoice, setTourChoice] = useState(false) // pause entre vagues de série (Continuer / Quitter)
@@ -900,6 +903,16 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         }
     }, [hydrated, ticketOpen, battle, dialogue, evolutions.length, pendingLearn, newDexEntry, championRun, whiteout, showDialogue])
 
+    // ÉVÉNEMENT DIABLES ROUGES (02-07) : quiz du score exact → 100 d'énergie casino. 1× (flag localStorage).
+    useEffect(() => {
+        if (belgiumChecked.current || !hydrated || belgiumOpen || ticketOpen) return
+        if (!getPlayer().introSeen) return
+        if (battle || dialogue || evolutions.length > 0 || pendingLearn || newDexEntry || championRun || whiteout) return
+        if (!diablesRougesAvailable(getPlayer().creditedThrough)) return
+        belgiumChecked.current = true
+        setBelgiumOpen(true)
+    }, [hydrated, belgiumOpen, ticketOpen, battle, dialogue, evolutions.length, pendingLearn, newDexEntry, championRun, whiteout])
+
     // CASINO — jetons cachés au sol : générés 1×/jour à l'entrée (today + bonus quota connus). Idempotent
     // (ensureDailyChips ne régénère pas si déjà fait aujourd'hui). On persiste seulement si génération.
     useEffect(() => {
@@ -1528,6 +1541,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             <LabPanel />
             {combatShopOpen && <CombatShopModal onClose={closeCombatShop} />}
             {ticketOpen && <DailyTicketModal mode="daily" today={getPlayer().creditedThrough} onClose={() => { persistYellowSave(); setTicketOpen(false) }} />}
+            {belgiumOpen && <DiablesRougesQuiz onClose={() => setBelgiumOpen(false)} />}
             <ParkSignPanel />
             <PosterPanel />
             {/* EncounterTransition est désormais rendu DANS BattleScreen (calé sur la scène). */}
