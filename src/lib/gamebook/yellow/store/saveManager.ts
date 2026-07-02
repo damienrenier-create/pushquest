@@ -3,12 +3,16 @@
 // Nexus Jaune Éclair — pont entre les stores (joueur + Pokédex) et l'API de save.
 // Charge au démarrage, puis auto-sauvegarde (débouncé) à chaque changement.
 
-import { getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, bankReps, claimWelcomeGift, claimSpagGift, applySaiyanResults, resetForIntro, reregisterCustomDaemons, getActiveWorld, setActiveWorld } from "./playerStore"
+import { getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, bankReps, claimWelcomeGift, claimSpagGift, applySaiyanResults, resetForIntro, reregisterCustomDaemons, getActiveWorld, setActiveWorld, startNgPlusWorld, raiseRepsCap, grantReps } from "./playerStore"
 import { getPokedex, hydratePokedex, subscribePokedex } from "./pokedexStore"
 import { parseSave, emptySave, type YellowSave, type ChampionMon, SAVE_VERSION } from "../storage/save"
 import type { StoredCustomDaemon } from "../create/customSpecies"
+import type { MonInstance } from "../battle/types"
 import type { BadgeId } from "../data/cts"
 import { saiyanPointsForLevels, type SaiyanWindow } from "../data/saiyanConfig"
+
+/** Énergie de départ d'un New Game+ (crédit + plafond). */
+export const NGPLUS_START_ENERGY = 6000
 
 let loaded = false
 let autosaveInit = false
@@ -138,6 +142,68 @@ async function persistIntentionalReset(): Promise<void> {
             body: JSON.stringify({ save: snapshot(), intentionalReset: true }),
         })
     } catch { /* hors-ligne : réessai au prochain autosave */ }
+}
+
+/** Sauvegarde IMMÉDIATE (non débouncée) : annule l'autosave en attente et POSTe tout de suite. Utilisée par
+ *  les transitions NG+ (démarrage / bascule de monde) pour éviter qu'un autosave concurrent parte AVANT. Le
+ *  garde-fou anti-wipe reste actif (les champs plats = monde LIVE inchangés → jamais de fausse régression). */
+async function persistNow(): Promise<void> {
+    if (!loaded) return
+    if (timer) { clearTimeout(timer); timer = null }
+    try {
+        const r = await fetch("/api/gamebook/yellow/save", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ save: snapshot() }),
+        })
+        if (r.status === 409) { try { const j = await r.json(); if (j?.save) applyServerSave(parseSave(j.save)) } catch { /* ignore */ } }
+    } catch { /* hors-ligne : réessai au prochain autosave */ }
+}
+
+/**
+ * NEW GAME+ — démarre un 2e run : le monde LIVE courant est STASHÉ (intact + rejouable via switchWorld),
+ * l'équipe championne est FIGÉE (adversaire de fin de Ligue NG+), et un monde NG+ frais démarre avec le
+ * Daemon custom `starter` en équipe + 6000⚡. Réservé aux champions, hors NG+. Retourne false sinon.
+ */
+export async function startNewGamePlus(starter: MonInstance, oldTeamFrozen: ChampionMon[]): Promise<boolean> {
+    if (getActiveWorld() !== "live") return false // déjà en NG+
+    if (!getPlayer().isChampion) return false      // réservé aux champions
+    // 1) Stash le monde LIVE courant (sérialisé, méta NG+ nettoyées) → devient le monde inactif rejouable.
+    inactiveWorld = liveWorldOf(activeWorldSave())
+    // 2) Fige l'ancienne équipe (adversaire du combat de fin de Ligue NG+).
+    ngplusOldTeam = oldTeamFrozen.length ? oldTeamFrozen : null
+    // 3) Monde NG+ frais dans les stores (starter custom, isChampion=false, customDaemons préservés).
+    startNgPlusWorld(starter)
+    hydratePokedex({ seen: [], caught: [] })
+    setActiveWorld("ngplus")
+    // 4) 6000⚡ de départ + plafond aligné (raiseRepsCap AVANT grantReps → pas de rabotage).
+    raiseRepsCap(NGPLUS_START_ENERGY - 1000) // cap 1000 → 6000
+    grantReps(NGPLUS_START_ENERGY)           // reps → 6000
+    // 5) Flush immédiat (top-level = monde LIVE inchangé → garde-fou OK).
+    await persistNow()
+    return true
+}
+
+/** NG+ — bascule entre le monde LIVE et le monde NG+ (les deux persistés, aucun perdu). false si l'autre
+ *  monde n'existe pas ou si on est déjà dessus. */
+export async function switchWorld(target: "live" | "ngplus"): Promise<boolean> {
+    if (target === getActiveWorld()) return false
+    const otherSave = inactiveWorld
+    if (!otherSave) return false // pas de 2e monde à rejoindre
+    const cds = getPlayer().customDaemons ?? []
+    inactiveWorld = activeWorldSave() // le monde qu'on quitte devient l'inactif
+    hydrateFromWorld(otherSave, cds)  // customDaemons GLOBAL, préservé
+    setActiveWorld(target)
+    reregisterCustomDaemons()
+    await persistNow()
+    return true
+}
+
+/** NG+ — clôt le combat de fin de Ligue (adversaire = ancienne équipe) : consomme l'ancienne équipe figée
+ *  (one-time). Les 2 mondes restent navigables. La fusion (transfert entre PC) viendra au Commit 6. */
+export function completeNewGamePlus(): void {
+    if (!ngplusOldTeam) return
+    ngplusOldTeam = null
+    persistYellowSave()
 }
 
 /**

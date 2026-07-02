@@ -705,6 +705,12 @@ export function buildCustomSpecies(spec: CustomSpec, ownerId: string): SpeciesDa
     return chain
 }
 
+/** speciesId du STADE 1 (starter) d'une lignée custom stockée — pour createMonInstance en NG+.
+ *  Déterministe et aligné sur buildCustomSpecies (`custom_${slug(ownerId)}_${slug(name)}_s1`). */
+export function customStarterSpeciesId(d: StoredCustomDaemon): string {
+    return `custom_${slug(d.ownerId)}_${slug(d.spec.name)}_s1`
+}
+
 /** NÉMÉSIS : à partir de la création du JOUEUR, génère une lignée CONTRE (pure, valide) — types super-efficaces
  *  contre lui + archétype INVERSÉ (joueur rapide/fragile → némésis costaud qui survit et riposte ; joueur lent/mur
  *  → némésis rapide qui le déborde), catégorie offensive alignée sur le STAB choisi. Deviendra l'équipe d'ACE. */

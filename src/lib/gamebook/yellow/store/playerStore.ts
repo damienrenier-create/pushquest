@@ -262,6 +262,15 @@ export function resetForIntro() {
     emit()
 }
 
+/** NG+ : démarre un MONDE NG+ FRAIS dans les stores — comme resetForIntro, MAIS l'intro des 3 starters est
+ *  sautée (introSeen=true) et le Daemon custom est déjà en équipe. isChampion=false (on relève le défi à
+ *  nouveau), customDaemons GLOBAUX préservés, cadeaux de bienvenue neutralisés (l'énergie NG+ est créditée à
+ *  part par saveManager). Le passage activeWorld="ngplus" + l'énergie sont gérés par saveManager.startNewGamePlus. */
+export function startNgPlusWorld(starter: MonInstance) {
+    st = { team: [starter], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: true, spagGift: true, pastaGodGift: true, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: true, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", sylvebarbeAwake: false, labDefi: emptyLabDefi(), customDaemons: st.customDaemons }
+    emit()
+}
+
 // Identité du joueur courant (= User.id) + carte courante : sert à estampiller
 // l'ownership et le lieu de capture (RECO identité/Pokédex). Posés par l'UI au montage.
 let currentPlayerId = ""
