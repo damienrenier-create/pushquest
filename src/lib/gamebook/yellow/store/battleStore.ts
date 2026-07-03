@@ -24,6 +24,7 @@ import { getItem } from "../data/items"
 import { reportShiny } from "../shinyGift"
 import { ARENA_TICKET_VALUE, SBIRE_TICKET_VALUE, SBIRE_TICKET_EVERY, ACE_TICKET_VALUE, ACE_TICKET_WIN_BEFORE, ACE_TICKET_WIN_AFTER, ACE_TICKET_EARLY_VALUE, ACE_TICKET_WIN_EARLY } from "../data/labDefis"
 import { getCt } from "../data/cts"
+import { NGPLUS_BOSS_GIFTS } from "../data/ngplusArenas"
 import { getMove, getMoveByName } from "../data/moves"
 import { getSpecies } from "../data/species"
 import { SBIRE_REWARD_REPS, SBIRE_REWARD_REPS_3, SBIRE_REWARD_REPS_5, SBIRE_REWARD_BALL_ID, SBIRE_REWARD_BALL_ID_4, SBIRE_REWARD_CT_ID, SBIRE_REWARD_CT_FALLBACK_REPS } from "../data/sbire"
@@ -641,16 +642,29 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
         } else {
             markTrainerDefeated(storeState.trainer.trainerId)
             const t = getTrainer(storeState.trainer.trainerId)
+            const inNgplus = getActiveWorld() === "ngplus"
             if (t?.badge && awardBadge(t.badge)) badgeAwarded = t.badge
-            // 🎟️ TICKET arène (30) : à la 1re conquête du badge (en plus de la CT cadeau).
-            if (badgeAwarded) grantRouletteTicket(ARENA_TICKET_VALUE)
+            // 🎟️ TICKET arène (30) : à la 1re conquête du badge (en plus de la CT cadeau). En NG+, le ticket
+            //     est REMPLACÉ par le ticket dédié du boss run 2 (10→50, cf. NGPLUS_BOSS_GIFTS ci-dessous).
+            if (badgeAwarded && !inNgplus) grantRouletteTicket(ARENA_TICKET_VALUE)
             // CT CADEAU remise gratuitement (trophée du boss) + nom pour la notif.
             if (t?.giftCt && grantCt(t.giftCt)) {
                 const mvId = getCt(t.giftCt)?.moveId
                 giftCtMove = mvId ? (getMove(mvId)?.name ?? null) : null
             }
+            // 🎁 RUN 2 (NG+) : le boss d'arène offre en plus sa CT signature EXCLUSIVE (ct53→57, introuvable
+            //     ailleurs) + son ticket roulette dédié (10/20/30/40/50). La signature prime pour la notif.
+            const ngGift = inNgplus ? NGPLUS_BOSS_GIFTS[storeState.trainer.trainerId] : undefined
+            if (ngGift) {
+                if (grantCt(ngGift.ctId)) {
+                    const mvId = getCt(ngGift.ctId)?.moveId
+                    giftCtMove = mvId ? (getMove(mvId)?.name ?? null) : null
+                }
+                grantRouletteTicket(ngGift.ticket, "boss")
+            }
             // BOSS À 2 PHASES (ex. VOLTA) : sa 1re défaite enchaîne DIRECTEMENT sur son rematch (phase 2).
-            if (t?.chainRematch && t.rematch && !storeState.trainer.isRematch) chainRematchId = storeState.trainer.trainerId
+            //     En NG+, les arènes re-typées sont des combats UNIQUES → pas de phase 2.
+            if (t?.chainRematch && t.rematch && !storeState.trainer.isRematch && !inNgplus) chainRematchId = storeState.trainer.trainerId
         }
     }
 

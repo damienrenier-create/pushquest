@@ -232,7 +232,10 @@ export const QUOTA2X_MULT = 3
 
 // ───────── Défi CT (infliger puissance×100 dégâts du type → CT) ─────────
 /** CT-trophées exclues du pool de défi (récompenses spéciales, restent exclusives). */
-const CT_DEFI_EXCLUDED = new Set(["ct37", "ct38", "ct52"]) // Souffle Primordial (10 victoires) + Fouet de Nouilles (sbire) + Apothéose (1000 ⚡ blackjack)
+const CT_DEFI_EXCLUDED = new Set([
+    "ct37", "ct38", "ct52",             // Souffle Primordial (10 victoires) + Fouet de Nouilles (sbire) + Apothéose (1000 ⚡ blackjack)
+    "ct53", "ct54", "ct55", "ct56", "ct57", // signatures EXCLUSIVES au run 2 (boss d'arène NG+) → jamais gagnables au défi CT du labo
+])
 
 export interface CtDefiOption {
     ctId: string

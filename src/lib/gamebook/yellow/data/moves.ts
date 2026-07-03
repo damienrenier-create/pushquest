@@ -144,6 +144,18 @@ export const MOVES: Record<string, MoveData> = {
     // ULTIME (Normal physique) : puissance colossale, mais le contrecoup épuise le lanceur (pas de mécanique
     // de « recharge » dans le moteur → le recul tient lieu de drawback). Apprise très tard (move de prestige).
     ultralaser: { id: "ultralaser", name: "Ultralaser", type: "NORMAL", power: 150, accuracy: 90, pp: 5, effect: { recoilPct: 25 }, description: "Le rayon ultime : des dégâts dévastateurs, mais le contrecoup blesse violemment le lanceur." },
+
+    // === 5 SIGNATURES EXCLUSIVES AU RUN 2 (ct53→ct57 — cadeaux des boss d'arène en New Game+) ===
+    // Serres de l'Aube (Druide/Vol) : 1re PRIORITÉ STAB volante — frappe toujours en premier.
+    serres_aube: { id: "serres_aube", name: "Serres de l'Aube", type: "VOL", power: 80, accuracy: 100, pp: 10, priority: 1, description: "Signature de l'arène volante : un piqué fulgurant qui fend l'air et frappe TOUJOURS en premier (priorité)." },
+    // Onde Cérébrale (Granit/Psy) : chip minime mais TRIPLE affaiblissement garanti (Vit/Précision/Déf).
+    onde_cerebrale: { id: "onde_cerebrale", name: "Onde Cérébrale", type: "PSY", power: 40, accuracy: 100, pp: 15, effect: { statChanges: [{ target: "target", stat: "spe", stages: -1 }, { target: "target", stat: "acc", stages: -1 }, { target: "target", stat: "def", stages: -1 }] }, description: "Onde psychique débilitante : peu de dégâts, mais brouille la cible — Vitesse −1, Précision −1 ET Défense −1 (garanti)." },
+    // Danse du Fauve (Pyra/éclectique) : set-up universel Atq + Vit (façon Danse Draco), apprenable par tous.
+    danse_fauve: { id: "danse_fauve", name: "Danse du Fauve", type: "NORMAL", power: 0, accuracy: 0, pp: 15, costPower: 40, effect: { statChanges: [{ target: "self", stat: "atk", stages: 1 }, { target: "self", stat: "spe", stages: 1 }] }, description: "Transe féline : le Daemon s'échauffe et gagne en furie — Attaque +1 ET Vitesse +1 (cumulable). Le seul set-up mixte apprenable par tous." },
+    // Essaim Vorace (Volta/Insecte) : drain CROISSANT sur coups consécutifs (20→70% des dégâts) + Vitesse +1/coup.
+    essaim_vorace: { id: "essaim_vorace", name: "Essaim Vorace", type: "INSECTE", power: 45, accuracy: 100, pp: 10, effect: { drainPct: 20, escalatingDrain: true, statChanges: [{ target: "self", stat: "spe", stages: 1 }] }, description: "L'essaim s'affame : chaque coup consécutif draine une part CROISSANTE des dégâts (20 → 30 → 40 → 50 → 60 → 70%) ET accélère le lanceur (Vitesse +1). Rater ou changer d'attaque réinitialise la frénésie." },
+    // Frappe Atlas (Ondine/Sol) : dégâts FIXES égaux au niveau du lanceur (façon Frappe Atlas / Seismic Toss Gen 1).
+    frappe_atlas: { id: "frappe_atlas", name: "Frappe Atlas", type: "SOL", power: 0, accuracy: 100, pp: 10, costPower: 45, effect: { fixedDamageLevel: true }, description: "Le titan pèse de tout son poids : inflige TOUJOURS des dégâts égaux à son NIVEAU, quels que soient les stats (seule l'immunité des Vol l'annule)." },
 }
 
 export function getMove(id: string): MoveData | null {

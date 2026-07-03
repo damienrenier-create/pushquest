@@ -76,6 +76,13 @@ export interface MoveEffect {
     /** DÉGÂTS FIXES (ex. Draco-Rage Gen 1) : inflige toujours exactement N PV, indépendamment des
      *  stats/STAB/multiplicateur de type (seule l'immunité ×0 l'annule). Le move a power 0. */
     fixedDamage?: number
+    /** DÉGÂTS FIXES = NIVEAU DU LANCEUR (ex. « Frappe Atlas » / Seismic Toss Gen 1) : inflige toujours
+     *  exactement `attacker.level` PV (seule l'immunité ×0 l'annule). Le move a power 0. */
+    fixedDamageLevel?: boolean
+    /** DRAIN CROISSANT (« Essaim Vorace ») : à chaque coup CONSÉCUTIF réussi, le % de drain grimpe
+     *  (20 → 30 → 40 → 50 → 60 → 70%, plafond). Se réinitialise si l'attaque rate, si le Daemon change
+     *  d'attaque ou se retire. S'appuie sur `drainPct` (base) et le compteur runtime `swarmStacks`. */
+    escalatingDrain?: boolean
     /** CHANCE DE CRITIQUE par espèce (interaction signature) : si l'attaquant est dans cette map,
      *  la proba de critique vaut la valeur (0..1) au lieu du calcul normal. Ex. Fouet de Nouilles :
      *  Nouillon 1.0, Vermisaint 0.8, Divinpâte 0.6. */
@@ -247,6 +254,10 @@ export interface BattleMon extends MonInstance {
     /** TUNNEL (dig) : le Daemon est SOUS TERRE (tour 1 de Tunnel) → les attaques adverses le MANQUENT,
      *  jusqu'à ce qu'il ressorte au tour 2. Posé/levé en même temps que chargingMove. Runtime, non persisté. */
     semiInvuln?: boolean
+    /** ESSAIM VORACE : nb de coups CONSÉCUTIFS réussis d'« Essaim Vorace » (0→5) → pilote le drain croissant
+     *  (20 + 10×stacks, plafond 70%). Réinitialisé à 0 dès qu'un autre move est lancé, qu'il rate ou au switch.
+     *  Runtime, non persisté (toBattleMon le laisse undefined ≡ 0). */
+    swarmStacks?: number
     /** SAUVAGE (Centrale) : le Daemon FUIT (fin de combat, aucune récompense) une fois ce nombre
      *  de tours atteint (ex. Boltah ≤5, Heatah ≤3). Runtime, non persisté. */
     fleeAfterTurns?: number

@@ -145,6 +145,14 @@ export const CTS: CtData[] = [
     // STAB garanti). JAMAIS en vente — débloquée UNIQUEMENT à 1000 ⚡ nets gagnés au blackjack (cf. BLACKJACK_CT_TARGET).
     // universal : enseignable à TOUS (le moteur recale le type/catégorie sur le porteur via adaptiveStab).
     { id: "ct52", label: "CT52", moveId: "apotheose", price: 0, gift: true, universal: true },
+
+    // === CT-CADEAUX EXCLUSIVES AU RUN 2 (New Game+) : offertes par les boss d'arène re-typés, JAMAIS en
+    //     vente ni ailleurs. Seul moyen de les apprendre → valorise le run 2. Octroi = victoire du boss en ngplus. ===
+    { id: "ct53", label: "CT53", moveId: "serres_aube", price: 0, gift: true, alsoTypes: ["DRAGON", "NORMAL"] },   // Druide/Vol
+    { id: "ct54", label: "CT54", moveId: "onde_cerebrale", price: 0, gift: true, alsoTypes: ["SPECTRE"] },        // Granit/Psy
+    { id: "ct55", label: "CT55", moveId: "danse_fauve", price: 0, gift: true, universal: true },                 // Pyra/éclectique (set-up universel)
+    { id: "ct56", label: "CT56", moveId: "essaim_vorace", price: 0, gift: true, alsoTypes: ["SPECTRE"] },         // Volta/Insecte (les spectres l'apprennent aussi)
+    { id: "ct57", label: "CT57", moveId: "frappe_atlas", price: 0, gift: true, alsoTypes: ["ROCHE", "NORMAL"] }, // Ondine/Sol
 ]
 
 export function getCt(id: string): CtData | null {

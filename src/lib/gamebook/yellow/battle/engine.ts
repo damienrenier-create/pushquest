@@ -533,8 +533,12 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
         return
     }
 
+    // --- ESSAIM VORACE : lancer un AUTRE move brise la frénésie (le compteur d'essaim retombe à 0). ---
+    if (!move.effect?.escalatingDrain) attacker.swarmStacks = 0
+
     // --- Précision ---
     if (!accuracyCheck(move, attacker, defender, rng)) {
+        attacker.swarmStacks = 0 // un raté brise aussi la frénésie de l'Essaim Vorace
         events.push({ kind: "message", text: `${displayName(attacker)} rate son attaque !` })
         return
     }
@@ -562,14 +566,16 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
 
     // --- DÉGÂTS FIXES (ex. Draco-Rage, Gen 1) : inflige TOUJOURS N PV, indépendamment des stats,
     //     du STAB et du multiplicateur de type. Respecte uniquement l'IMMUNITÉ de type (×0). ---
-    if (move.effect?.fixedDamage) {
+    if (move.effect?.fixedDamage || move.effect?.fixedDamageLevel) {
         const eff = typeEffectiveness(move.type, speciesOf(defender).types)
         if (eff === 0) {
             events.push({ kind: "message", text: "Ça n'affecte pas l'adversaire…" })
             return
         }
-        const dmg = Math.min(move.effect.fixedDamage, active(defSide).currentHp)
-        applyDamage(state, other(side), move.effect.fixedDamage, events)
+        // Frappe Atlas : dégâts = niveau du lanceur ; sinon dégâts fixes constants (Draco-Rage).
+        const amount = move.effect.fixedDamageLevel ? attacker.level : (move.effect.fixedDamage ?? 0)
+        const dmg = Math.min(amount, active(defSide).currentHp)
+        applyDamage(state, other(side), amount, events)
         events.push({ kind: "message", text: `${displayName(defender)} encaisse ${dmg} PV de dégâts fixes !` })
         return
     }
@@ -601,7 +607,13 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
         if (res.dealt > 0 || res.typeEff > 0) landed++
         // Drain / recul basés sur les dégâts de CE coup.
         if (move.effect?.drainPct && res.dealt > 0) {
-            const heal = Math.max(1, Math.floor((res.dealt * move.effect.drainPct) / 100))
+            // ESSAIM VORACE : drain CROISSANT (20 + 10×coups consécutifs, plafond 70%) piloté par swarmStacks.
+            let pct = move.effect.drainPct
+            if (move.effect.escalatingDrain) {
+                pct = Math.min(70, 20 + (attacker.swarmStacks ?? 0) * 10)
+                attacker.swarmStacks = Math.min((attacker.swarmStacks ?? 0) + 1, 5)
+            }
+            const heal = Math.max(1, Math.floor((res.dealt * pct) / 100))
             applyHeal(state, side, heal, events)
             events.push({ kind: "message", text: `${displayName(attacker)} récupère de l'énergie !` })
         }
@@ -976,6 +988,7 @@ function doSwitch(state: BattleState, side: SideId, teamIndex: number, events: B
     out.volatiles = keepConfusion ? { CONFUSION: keepConfusion } : {}
     out.chargingMove = undefined
     out.semiInvuln = undefined // le sortant ressort du tunnel (annule une charge Tunnel en cours)
+    out.swarmStacks = 0        // se retirer brise la frénésie de l'Essaim Vorace
     s.activeIndex = teamIndex
     const incoming = s.team[teamIndex]
     // Le Daemon entrant a "participé" → il partagera l'XP des futurs K.O. (joueur uniquement).

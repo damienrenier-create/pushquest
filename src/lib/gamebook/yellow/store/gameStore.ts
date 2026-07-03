@@ -25,6 +25,7 @@ import { persistYellowSave, canAbandonNgplus } from "./saveManager"
 import { rollWildEncounter, wildLevelCap, hasEncounters } from "../data/encounters"
 import { reportShiny } from "../shinyGift"
 import { getTrainer, trainerBoost, arenaScaledLevel, type TrainTier } from "../data/trainers"
+import { NGPLUS_ARENA_TEAMS } from "../data/ngplusArenas"
 import { createMonInstance } from "../battle/factory"
 import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroLines, SBIRE_DONE_LINES, SBIRE_NO_TEAM_LINES } from "../data/sbire"
 import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, ACE_PASS_LINES, ACE_GATE_LINES, aceIntro, aceGiftLine, buildAceTeam, speciesAtLevel } from "../data/ace"
@@ -168,6 +169,11 @@ function tryLaunchTrainer(trainerId: string, isRematch = false): ActiveDialogue 
     if (trainerId === "y_ligue_maitre" && getActiveWorld() === "ngplus") {
         const nem = getNgplusNemesisSpeciesId()
         if (nem) specs = specs.map((s) => (s.speciesId === "divinpate" ? { ...s, speciesId: speciesAtLevel(nem, s.level) } : s))
+    }
+    // NG+ : les 5 ARÈNES affichent leurs équipes RUN 2 (espèces inédites / re-typées, cf. ngplusArenas.ts).
+    // Remplace l'équipe (leader ET gardes) tant qu'on est en New Game+. L'AS y porte sa signature exclusive.
+    if (getActiveWorld() === "ngplus" && NGPLUS_ARENA_TEAMS[trainerId]) {
+        specs = NGPLUS_ARENA_TEAMS[trainerId]
     }
     const enemyTeam = specs.map((s) => {
         const lvl = scaledLvl ?? s.level
