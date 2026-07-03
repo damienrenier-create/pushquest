@@ -1707,6 +1707,32 @@ export const SPECIES: Record<string, SpeciesData> = {
         learnsAllCts: true,
         hiddenUntilCaught: true, // SURPRISE : absent du Pokédex tant qu'on ne l'a pas capturé
     },
+    // 🪨🔥 GRÉKRAISE — JUMEAU RUN 2 de Gékroc : mini-boss de la Centrale en New Game+, MÊME créature
+    // (mêmes stats, mêmes attaques, learnsAllCts, capture dure) mais RE-TYPÉE ROCHE/FEU. Masqué du Pokédex.
+    // (Sprite fourni plus tard par Sartay → grekraise.png ; placeholder = celui de Gékroc en attendant.)
+    grekraise: {
+        id: "grekraise", dexNo: 135, name: "Grékraise", types: ["ROCHE", "FEU"],
+        baseStats: { hp: 90, atk: 92, def: 100, spe: 48, spc: 80 }, // identiques à Gékroc (BST 410)
+        learnset: [
+            { level: 1, moveId: "vive_attaque" },
+            { level: 1, moveId: "etincelle" },
+            { level: 1, moveId: "tunnel" },
+            { level: 1, moveId: "repos" },
+            { level: 1, moveId: "secousse" },
+            { level: 48, moveId: "eboulis" },         // ROCHE → STAB désormais
+            { level: 56, moveId: "cage_eclair" },
+            { level: 66, moveId: "lame_roche" },      // ROCHE → STAB
+            { level: 72, moveId: "seisme" },
+            { level: 80, moveId: "ultra_foudre" },
+            { level: 88, moveId: "roc_titanesque" },  // ROCHE → STAB (capstone)
+        ],
+        catchRate: 10, baseExp: 180, rarity: "RARE", growthRate: "medium_fast", exclusive: true,
+        role: "Mini-boss ROCHE/FEU (run 2) — jumeau de Gékroc, apprend TOUTES les CT",
+        description: "Golem fossile jumeau de Gékroc, mais sa pierre couve un cœur de magma. Creuse des galeries brûlantes et s'adapte à tout.",
+        sprite: "/yellow/sprites/dex/gekroc.png", // TODO : remplacer par /yellow/sprites/dex/grekraise.png quand Sartay le fournit
+        learnsAllCts: true,
+        hiddenUntilCaught: true,
+    },
 
     // ===== LIGNÉE CARLIN-DRAGON (Feu/Dragon) — profil "Ptéra" : sprinter fragile (Vit++/Atk++, Déf molle) =====
     carlinou: {

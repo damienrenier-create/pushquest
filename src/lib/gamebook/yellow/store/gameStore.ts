@@ -218,7 +218,7 @@ function tryLaunchGekroc(): ActiveDialogue | null {
         return { npcId: GEKROC_NPC_ID, npcName: "GÉKROC", lineIndex: 0, lines: GEKROC_NO_TEAM_LINES }
     }
     const seed = Math.floor(Math.random() * 1e9) >>> 0
-    startWildBattle(team, [buildGekroc()], seed)
+    startWildBattle(team, [buildGekroc(getActiveWorld() === "ngplus")], seed) // NG+ : Grékraise (Roche/Feu) garde la Pierre
     return null
 }
 
