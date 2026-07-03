@@ -155,6 +155,11 @@ export const CTS: CtData[] = [
     { id: "ct57", label: "CT57", moveId: "frappe_atlas", price: 0, gift: true, alsoTypes: ["ROCHE", "NORMAL"] }, // Ondine/Sol
 ]
 
+/** CT-cadeaux EXCLUSIVES au run 2 (boss d'arène en New Game+). Invariant : JAMAIS obtenables autrement —
+ *  ni en boutique (gift), ni au défi CT du labo (CT_DEFI_EXCLUDED), ni en Zone de Combat/Usine
+ *  (ctRewardOptions). Seul octroi = victoire du boss en ngplus (cf. NGPLUS_BOSS_GIFTS). Source unique. */
+export const NGPLUS_EXCLUSIVE_CT_IDS: readonly string[] = ["ct53", "ct54", "ct55", "ct56", "ct57"]
+
 export function getCt(id: string): CtData | null {
     return CTS.find((c) => c.id === id) ?? null
 }
