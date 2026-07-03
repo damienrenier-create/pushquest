@@ -615,7 +615,9 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             const levelBeaten = orcalineLevelForWins(winsBefore)
             const lines: string[] = []
             if (winsBefore === 0) {
-                addCaught(createMonInstance(ORCALINE_GIFT_SPECIES, ORCALINE_GIFT_LEVEL, { owned: true }))
+                // NG+ : le Dompteur offre un PANTHÉGEL (au lieu d'un Orcaline, désormais sauvage en Grotte). 1re victoire, one-time.
+                const giftSp = getActiveWorld() === "ngplus" ? "panthegel" : ORCALINE_GIFT_SPECIES
+                addCaught(createMonInstance(giftSp, ORCALINE_GIFT_LEVEL, { owned: true }))
                 lines.push(...ORCALINE_GIFT_LINES)
             } else {
                 lines.push(...ORCALINE_REMATCH_WIN_LINES)

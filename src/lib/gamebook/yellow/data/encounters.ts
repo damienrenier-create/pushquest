@@ -13,7 +13,7 @@ import { speciesAtLevel } from "./ace"
 import { getSpecies, SPECIES } from "./species"
 
 // Rareté de base (poids avant modulation).
-const COMMON = 100, UNCOMMON = 45, RARE = 14, VERY_RARE = 5
+const COMMON = 100, UNCOMMON = 45, RARE = 14, VERY_RARE = 5, GIGA_RARE = 2
 
 type PlayerTag = "combat" | "rocheSol" | "elec" | "rare"
 
@@ -40,6 +40,7 @@ interface WildEntry {
     captureMult?: number          // ×<1 → capture PLUS DURE (ex. Thundah, Bélunode)
     captureRequiresStatus?: boolean // capture IMPOSSIBLE sans statut majeur sur la cible (légendaire, ex. Goshendofy)
     captureStatusBypassesBall?: boolean // un statut majeur shunte captureMinBallBonus (Super Ball+ OU statut, ex. Bouh)
+    minLeadLevel?: number         // ne pop QUE si le lead de l'équipe atteint ce niveau (ex. Orcaline run 2 = 35) — sinon poids 0
 }
 
 /** Carré d'herbes hautes (grille 3×3) : rectangle (cols × rows) + tier (0 = rangée BAS … 2 = rangée HAUT,
@@ -88,6 +89,7 @@ export interface EncounterCtx {
     dayKey?: string            // "YYYY-MM-DD" → rotation quotidienne des types (hautes herbes). Vide = jour fixe.
     goshBoost?: boolean         // GAMIN : la nuit (21h-00h) après sa confidence → chances de Goshendofy ×2
     goshCaught?: boolean        // Goshendofy déjà capturé sur ce compte → ne réapparaît PLUS JAMAIS
+    ngplus?: boolean            // NEW GAME+ : bascule sur les pools RUN 2 (NGPLUS_ZONES) pour les zones re-mixées
 }
 
 /**
@@ -292,6 +294,50 @@ const ZONES: Record<string, Zone> = {
     },
 }
 
+// ═══════════════ RENCONTRES DU RUN 2 (New Game+) ═══════════════
+// En NG+, certaines zones sont RE-MIXÉES (espèces late/never rendues catchables tôt, raretés inversées…).
+// Choisi par rollWildEncounter quand ctx.ngplus. Les zones absentes d'ici gardent leur pool run 1.
+// RÈGLE ABSOLUE respectée : que des BASES de lignées (speciesAtLevel spawn le stade naturel du niveau).
+const NGPLUS_ZONES: Record<string, Zone> = {
+    // ROUTE NORD run 2 — « les créatures de donjon remontent en surface » + starters sauvages + panthère ancêtre.
+    yellow_route_nord: {
+        rate: 0.14,
+        pool: [
+            // Communs (conservés)
+            { speciesId: "plumiot", base: COMMON }, { speciesId: "couperin", base: COMMON },
+            { speciesId: "cailloutchi", base: COMMON }, { speciesId: "ruffiant", base: COMMON }, { speciesId: "cornaissant", base: COMMON },
+            // Peu communs — late/never (donjons/jamais sauvages) rendus catchables tôt
+            { speciesId: "blaziper", base: UNCOMMON }, { speciesId: "jerbiwat", base: UNCOMMON },
+            { speciesId: "bouh", base: UNCOMMON }, { speciesId: "glacirex", base: UNCOMMON },
+            // Rares — les 4 starters (jamais sauvages en run 1)
+            { speciesId: "gouttiny", base: RARE, rare: true }, { speciesId: "braisille", base: RARE, rare: true },
+            { speciesId: "fennaise", base: RARE, rare: true }, { speciesId: "feuillichot", base: RARE, rare: true },
+            // Très rare — le bébé-dragon
+            { speciesId: "carlinou", base: VERY_RARE, rare: true },
+            // Giga rare — la pépite dragon + l'ancêtre panthère
+            { speciesId: "draclet", base: GIGA_RARE, rare: true }, { speciesId: "pantheon", base: GIGA_RARE, rare: true },
+        ],
+    },
+    // GROTTE run 2 — Mottoche rétrogradé, la lignée-diamant remonte, Orcaline pépite du lac (gate niveau 35).
+    yellow_grotte: {
+        rate: 0.16, minLevel: 5,
+        pool: [
+            // Communs — rocher + eau (lignée arène eau) + feu
+            { speciesId: "cailloutchi", base: COMMON }, { speciesId: "tetardoc", base: COMMON }, { speciesId: "lavapetit", base: COMMON },
+            // Peu communs
+            { speciesId: "rembodo", base: UNCOMMON }, { speciesId: "limaroche", base: UNCOMMON }, { speciesId: "marmoterre", base: UNCOMMON },
+            { speciesId: "quadroc", base: UNCOMMON }, { speciesId: "loutrille", base: UNCOMMON },
+            { speciesId: "sporbeo", base: UNCOMMON }, { speciesId: "revemante", base: UNCOMMON },
+            // Rare — un spectre + la tortue Feu/Eau
+            { speciesId: "namicha", base: RARE, noEvolve: true }, { speciesId: "braisecaille", base: RARE },
+            // Super rare — Mottoche rétrogradé (180 → 5)
+            { speciesId: "mottoche", base: VERY_RARE },
+            // Giga rare — Orcaline (Glace/Eau), UNIQUEMENT si le lead ≥ 35 (son niveau mini)
+            { speciesId: "orcaline", base: GIGA_RARE, noEvolve: true, rare: true, minLeadLevel: 35 },
+        ],
+    },
+}
+
 export function hasEncounters(mapId: string): boolean {
     return mapId in ZONES
 }
@@ -324,7 +370,8 @@ const intIn = (rng: () => number, min: number, max: number) => min + Math.floor(
  * Le niveau suit le 1er Daemon de l'équipe (rares : +1 à +2).
  */
 export function rollWildEncounter(ctx: EncounterCtx): MonInstance | null {
-    const zone = ZONES[ctx.mapId]
+    // NEW GAME+ : bascule sur le pool RUN 2 si la zone est re-mixée (sinon pool run 1 par défaut).
+    const zone = (ctx.ngplus && NGPLUS_ZONES[ctx.mapId]) || ZONES[ctx.mapId]
     if (!zone) return null
     const rng = ctx.rng ?? Math.random
     if (rng() >= zone.rate) return null
@@ -332,7 +379,9 @@ export function rollWildEncounter(ctx: EncounterCtx): MonInstance | null {
     // GRILLE D'ENTRAÎNEMENT (hautes herbes du nord) : niveau choisi par la LIGNE, type par le CARRÉ.
     if (zone.trainingGrid) return rollTrainingGrid(zone.trainingGrid, ctx, rng)
 
-    const weights = zone.pool.map((e) => entryWeight(e, ctx.mapId, ctx.x, ctx.y, ctx.player))
+    // Poids par entrée ; une entrée `minLeadLevel` non atteinte → poids 0 (invisible tant que l'équipe est trop faible).
+    const weights = zone.pool.map((e) =>
+        (e.minLeadLevel != null && ctx.leadLevel < e.minLeadLevel) ? 0 : entryWeight(e, ctx.mapId, ctx.x, ctx.y, ctx.player))
     const total = weights.reduce((a, w) => a + w, 0)
     if (total <= 0) return null
 

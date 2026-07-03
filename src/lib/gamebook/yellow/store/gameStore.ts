@@ -315,7 +315,9 @@ function tryLaunchOrcaline(): ActiveDialogue | null {
         return { npcId: ORCALINE_TRAINER_ID, npcName: "DRESSEUR D'ORCALINE", lineIndex: 0, lines: ["Tes Daemons sont tous K.O. !", "Soigne-les au Centre avant de m'affronter."] }
     }
     const lvl = orcalineNextLevel()
-    const enemyTeam = [0, 1].map(() => createMonInstance("orcaline", lvl, { owned: false, ...trainerBoost("orcaline", lvl, "guard") }))
+    // NG+ : le « Dompteur » aligne des PANTHÉGEL (Orcaline devient une capture sauvage de la Grotte). Run 1 = Orcaline.
+    const sp = getActiveWorld() === "ngplus" ? "panthegel" : "orcaline"
+    const enemyTeam = [0, 1].map(() => createMonInstance(sp, lvl, { owned: false, ...trainerBoost(sp, lvl, "guard") }))
     const seed = Math.floor(Math.random() * 1e9) >>> 0
     startTrainerBattle(team, enemyTeam, seed, { trainerId: ORCALINE_TRAINER_ID, reward: 0, aiLevel: "trainer" })
     return null
@@ -566,6 +568,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     dayKey: new Date().toISOString().slice(0, 10), // rotation quotidienne des types (hautes herbes)
                     goshBoost: isHhKidNight(new Date().getHours()) && getPlayerSave().goshHintHeard, // GAMIN : Goshendofy ×2 la nuit
                     goshCaught: getPokedex().caught.includes("goshendofy"), // déjà capturé → ne réapparaît plus jamais
+                    ngplus: getActiveWorld() === "ngplus", // NG+ : bascule sur les pools RUN 2 (Route Nord / Grotte re-mixées)
                 })
                 if (wild) {
                     if (typeof window !== "undefined" && encCount < 10) window.localStorage.setItem(ENC_KEY, String(encCount + 1))
