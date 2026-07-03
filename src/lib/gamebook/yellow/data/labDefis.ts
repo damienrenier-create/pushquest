@@ -59,8 +59,10 @@ export interface LabDefiState {
     casinoTotalWon: number
     /** Cumul des GAINS NETS au BLACKJACK (progression VIP → CT signature). NON plafonné. */
     blackjackWon: number
-    /** CT-trophée « Apothéose » (palier 1000 ⚡ nets au blackjack) déjà réclamée ? (one-shot à vie). */
+    /** CT-trophée « Apothéose » (palier 1000 ⚡ nets au blackjack) déjà réclamée ? (one-shot à vie). RUN 1 uniquement. */
     blackjackCtClaimed: boolean
+    /** RUN 2 (NG+) : nb de CT-signatures de boss déjà CHOISIES au blackjack (1 par palier de 500 ⚡ nets, jamais 2× la même). */
+    blackjackNgplusPicks: number
     /** Tonytony déjà réclamé (one-shot, palier 1000). */
     tonytonyClaimed: boolean
     /** Capstone 5000 : le Tonytony du joueur a été rendu SHINY (one-shot). */
@@ -177,6 +179,7 @@ export function emptyLabDefi(): LabDefiState {
         casinoTotalWon: 0,
         blackjackWon: 0,
         blackjackCtClaimed: false,
+        blackjackNgplusPicks: 0,
         tonytonyClaimed: false,
         tonytonyShiny: false,
         dailyTicketDate: "",
@@ -286,6 +289,8 @@ export const CASINO_BANKRUPT_COOLDOWN_MS = 24 * 60 * 60 * 1000
 export const BLACKJACK_CT_TARGET = 1000
 /** Id de la CT-trophée du blackjack (cf. cts.ts → moveId "apotheose"). */
 export const BLACKJACK_CT_ID = "ct52"
+/** RUN 2 (NG+) : palier de gains nets au blackjack qui offre UN choix de CT-signature de boss (ct53-57). */
+export const BLACKJACK_CT_NGPLUS_STEP = 500
 
 /** Cumul BRUT d'énergie à gagner pour débloquer Tonytony. */
 export const TONYTONY_TARGET = 1000
