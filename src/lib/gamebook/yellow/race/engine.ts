@@ -32,6 +32,7 @@ export interface RaceState {
 
 const COUNTDOWN = 3
 const REACH_FRAC = 0.9
+const MAX_RACE_TIME = 240 // s : garde-fou DUR — une course ne peut jamais tourner à l'infini (IA coincée, joueur AFK)
 
 export interface Entrant {
     id: string
@@ -111,7 +112,24 @@ export function stepRace(race: RaceState, playerInput: KartInput, dt: number): v
             r.nextWp = (r.nextWp + 1) % wps.length
         }
     }
-    if (race.racers.every((r) => r.finished)) race.status = "finished"
+    // Fin de course : tout le monde a fini, OU le JOUEUR a fini (arcade : on n'attend pas les IA),
+    // OU garde-fou de temps (empêche toute boucle infinie si une IA reste coincée sur un virage).
+    const player = race.racers.find((r) => r.isPlayer)
+    if (race.racers.every((r) => r.finished) || (player && player.finished) || race.time > MAX_RACE_TIME) {
+        finalizeRace(race)
+    }
+}
+
+/** Clôt la course : les retardataires (non arrivés) sont marqués finis avec un temps SYNTHÉTIQUE
+ *  (temps courant + retard restant) → classés APRÈS les vrais arrivés, ordonnés par avancement. */
+function finalizeRace(race: RaceState): void {
+    const full = race.track.laps * race.track.waypoints.length
+    for (const r of race.racers) {
+        if (r.finished) continue
+        r.finished = true
+        r.finishTime = race.time + Math.max(0, full - progressOf(race, r))
+    }
+    race.status = "finished"
 }
 
 /** Progression cumulée pour le classement (arrivés d'abord — par temps ; sinon par avancement). */

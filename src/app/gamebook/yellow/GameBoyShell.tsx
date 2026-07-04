@@ -14,6 +14,9 @@
 
 import { useCallback, useRef, useEffect, useState } from "react"
 
+/** Boutons de la coque, pour le mode ANALOGIQUE (appui/relâché continu, ex. course). */
+export type GbButton = "up" | "down" | "left" | "right" | "a" | "b" | "select" | "start"
+
 // Largeur « bureau » de référence de la coque. Sur mobile, la coque est rendue
 // à cette largeur fixe puis mise à l'échelle UNIFORMÉMENT (transform: scale),
 // de sorte que toutes les proportions (écran 3:2, D-pad, A/B…) restent
@@ -35,6 +38,10 @@ export interface GameBoyShellProps {
     onB?: () => void
     onStart?: () => void
     onSelect?: () => void
+    /** Mode ANALOGIQUE : si fourni, TOUS les boutons rapportent appui(true)/relâché(false)
+     *  au lieu du mono-appui — pour piloter en temps réel (course). Les callbacks onUp/onA/…
+     *  ci-dessus sont alors ignorés (le parent lit l'état via onHoldChange). */
+    onHoldChange?: (btn: GbButton, pressed: boolean) => void
 }
 
 // Couleurs GBC Dandelion
@@ -61,7 +68,23 @@ export default function GameBoyShell({
     onB,
     onStart,
     onSelect,
+    onHoldChange,
 }: GameBoyShellProps) {
+    // Mode ANALOGIQUE (course) : chaque bouton rapporte appui/relâché en continu.
+    // Actif seulement si onHoldChange est fourni → sinon comportement mono-appui identique.
+    const analog = !!onHoldChange
+    const holdPress = useCallback((btn: GbButton) => ({
+        onPointerDown: (e: React.PointerEvent) => {
+            e.preventDefault()
+            try { (e.currentTarget as Element).setPointerCapture?.(e.pointerId) } catch { /* noop */ }
+            onHoldChange?.(btn, true)
+        },
+        onPointerUp: () => onHoldChange?.(btn, false),
+        onPointerCancel: () => onHoldChange?.(btn, false),
+        // Filet : si le navigateur révoque la capture sans pointerup (geste système, menu contextuel
+        // tactile), on relâche quand même → jamais de bouton « collé » (gaz/braquage bloqué).
+        onLostPointerCapture: () => onHoldChange?.(btn, false),
+    }), [onHoldChange])
     // Pointer Events : UN seul événement par appui (tactile ou souris), non-passif,
     // donc preventDefault() supprime les events souris de compat + le clic fantôme.
     // → fini le double-pas ET le tap-through qui refermait les menus (START).
@@ -163,26 +186,26 @@ export default function GameBoyShell({
                         aria-label="Haut"
                         disabled={dpadDisabled}
                         style={{ ...dpadButtonStyle, ...dpadUpStyle, ...(dpadDisabled ? dpadDisabledStyle : null) }}
-                        {...holdHandlers(onUp)}
+                        {...(analog ? holdPress("up") : holdHandlers(onUp))}
                     >▲</button>
                     <button
                         aria-label="Gauche"
                         disabled={dpadDisabled}
                         style={{ ...dpadButtonStyle, ...dpadLeftStyle, ...(dpadDisabled ? dpadDisabledStyle : null) }}
-                        {...holdHandlers(onLeft)}
+                        {...(analog ? holdPress("left") : holdHandlers(onLeft))}
                     >◀</button>
                     <div style={dpadCenterStyle} />
                     <button
                         aria-label="Droite"
                         disabled={dpadDisabled}
                         style={{ ...dpadButtonStyle, ...dpadRightStyle, ...(dpadDisabled ? dpadDisabledStyle : null) }}
-                        {...holdHandlers(onRight)}
+                        {...(analog ? holdPress("right") : holdHandlers(onRight))}
                     >▶</button>
                     <button
                         aria-label="Bas"
                         disabled={dpadDisabled}
                         style={{ ...dpadButtonStyle, ...dpadDownStyle, ...(dpadDisabled ? dpadDisabledStyle : null) }}
-                        {...holdHandlers(onDown)}
+                        {...(analog ? holdPress("down") : holdHandlers(onDown))}
                     >▼</button>
                 </div>
 
@@ -191,12 +214,12 @@ export default function GameBoyShell({
                     <button
                         aria-label="Bouton B"
                         style={{ ...abButtonStyle, ...bButtonPositionStyle }}
-                        onPointerDown={handlePress(onB)}
+                        {...(analog ? holdPress("b") : { onPointerDown: handlePress(onB) })}
                     >B</button>
                     <button
                         aria-label="Bouton A"
                         style={{ ...abButtonStyle, ...aButtonPositionStyle }}
-                        onPointerDown={handlePress(onA)}
+                        {...(analog ? holdPress("a") : { onPointerDown: handlePress(onA) })}
                     >A</button>
                 </div>
             </div>
@@ -206,12 +229,12 @@ export default function GameBoyShell({
                 <button
                     aria-label="Select"
                     style={startSelectButtonStyle}
-                    onPointerDown={handlePress(onSelect)}
+                    {...(analog ? holdPress("select") : { onPointerDown: handlePress(onSelect) })}
                 >SELECT</button>
                 <button
                     aria-label="Start"
                     style={startSelectButtonStyle}
-                    onPointerDown={handlePress(onStart)}
+                    {...(analog ? holdPress("start") : { onPointerDown: handlePress(onStart) })}
                 >START</button>
             </div>
 

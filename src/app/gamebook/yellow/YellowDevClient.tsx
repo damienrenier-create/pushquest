@@ -10,7 +10,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import GameBoyShell from "./GameBoyShell"
+import GameBoyShell, { type GbButton } from "./GameBoyShell"
 import MapView from "./MapView"
 import BattleScreen from "./battle/BattleScreen"
 import BattleBoundary from "./battle/BattleBoundary"
@@ -94,6 +94,8 @@ import BarmanPanel from "./BarmanPanel"
 import BlackjackPanel from "./BlackjackPanel"
 import PokerPanel from "./PokerPanel"
 import RacePanel from "./RacePanel"
+import RaceView, { type RaceCfg, type RaceInput } from "./RaceView"
+import { type Racer } from "@/lib/gamebook/yellow/race/engine"
 import DaemonCreator from "./create/DaemonCreator"
 
 // ============================================================
@@ -214,6 +216,24 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [blackjackOpen, setBlackjackOpen] = useState(false) // table de blackjack (PC haut-gauche)
     const [pokerOpen, setPokerOpen] = useState(false) // table de poker multijoueur (coin bas-gauche)
     const [kartOpen, setKartOpen] = useState(false) // borne d'arcade Pokémon Kart (PC haut-gauche, hors 1er)
+    // Pokémon Kart : la SÉLECTION/RÉSULTATS sont des overlays (RacePanel) ; la COURSE est rendue DANS
+    // l'écran (RaceView) et pilotée par les VRAIS boutons de la coque (mode analogique, onHoldChange).
+    const [raceCfg, setRaceCfg] = useState<RaceCfg | null>(null)          // course en cours (null = écran de sélection)
+    const [raceResults, setRaceResults] = useState<Racer[] | null>(null)  // classement final (null = pas encore fini)
+    const raceInputRef = useRef<RaceInput>({ up: false, down: false, left: false, right: false, nitro: false })
+    const raceActive = kartOpen && !!raceCfg && !raceResults           // la course tourne dans l'écran (boutons GB = analogiques)
+    const resetRaceInput = () => { raceInputRef.current = { up: false, down: false, left: false, right: false, nitro: false } }
+    // Boutons de la coque → état de pilotage (mode analogique). A=gaz · B=frein · SELECT=nitro · ◀▶=braquer.
+    // START = abandonner la course (retour à l'écran de sélection). ▲▼ inutilisés.
+    const handleRaceHold = (btn: GbButton, pressed: boolean) => {
+        const r = raceInputRef.current
+        if (btn === "left") r.left = pressed
+        else if (btn === "right") r.right = pressed
+        else if (btn === "a") r.up = pressed
+        else if (btn === "b") r.down = pressed
+        else if (btn === "select") r.nitro = pressed
+        else if (btn === "start" && pressed) { resetRaceInput(); setRaceCfg(null) }
+    }
     const [creatorOpen, setCreatorOpen] = useState(false) // TEST : créateur de Daemon (post-Ligue) — réservé à Mools/créateur
     const [forcedCreator, setForcedCreator] = useState(false) // post-sacre : création OBLIGATOIRE qui enchaîne sur le NG+
     const [pendingForcedCreator, setPendingForcedCreator] = useState(false) // ouvre le créateur forcé après le dialogue-défi
@@ -319,7 +339,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [pvpSession, setPvpSession] = useState<BattleStart | null>(null)
     const pvpCtx = usePvpCtx()
     const challenge = useCasinoChallenge({
-        active: inCasino && !battle && !showIntro && !!userId,
+        // Borne Kart ouverte → on ne REÇOIT plus de défi (sinon combat PvP invisible sous la course,
+        // forfait fantôme au démontage). Réciproque : on bloque l'ouverture de la borne si un défi/combat
+        // est en cours (cf. tryCasinoObjectA).
+        active: inCasino && !battle && !showIntro && !!userId && !kartOpen,
         myUserId: userId,
         busy: !!battle || !!pvpSession || tradeBusyRef.current || ctTradeBusyRef.current,
         onStart: (s) => setPvpSession(s),
@@ -428,7 +451,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (fx === 4 && fy === 3) { menuTapGuard.current = Date.now(); setCroupierOpen(true); return true }
         if (fy === 2 && fx >= 9 && fx <= 12) { menuTapGuard.current = Date.now(); setBarmanOpen(true); return true } // comptoir du barman
         if (fy === 1 && fx >= 1 && fx <= 2) { menuTapGuard.current = Date.now(); setBlackjackOpen(true); return true } // 1er PC (tout à gauche) = blackjack
-        if (fy === 1 && fx >= 3 && fx <= 6) { menuTapGuard.current = Date.now(); setKartOpen(true); return true }      // PC suivants = Pokémon Kart
+        if (fy === 1 && fx >= 3 && fx <= 6) {      // PC suivants = Pokémon Kart
+            if (challengeBusyRef.current || pvpSession || battle) return true // défi/combat en cours → on n'ouvre pas la borne (évite le combat invisible sous la course)
+            menuTapGuard.current = Date.now(); setRaceCfg(null); setRaceResults(null); resetRaceInput(); setKartOpen(true); return true
+        }
         if (fx >= 3 && fx <= 5 && fy >= 7 && fy <= 8) { menuTapGuard.current = Date.now(); setPokerOpen(true); return true } // table de poker (sud de la roulette)
         return false
     }, [inCasino, userId, mapPlayer])
@@ -586,6 +612,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             // Ne pas piloter le jeu quand on tape dans un champ (chat, renommage…).
             const t = e.target as HTMLElement | null
             if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return
+            // BORNE KART ouverte (sélection / course / résultats) : on neutralise TOUT input carte/menu
+            // (y compris Entrée/Échap/Tab non interceptés par le listener capture de RaceView) pour ne
+            // pas déplacer le joueur / ouvrir un menu SOUS l'overlay. Le pilotage passe par la coque.
+            if (kartOpen) return
             // Overlays POST-COMBAT (popup 1re capture / cinématique d'évolution) : ils vivent dans
             // battleStore (hors garde de move()) et s'affichent quand battle===null. Sans ça, une
             // flèche déplacerait le joueur SOUS l'overlay → rencontre sauvage → startWildBattle
@@ -628,7 +658,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         }
         window.addEventListener("keydown", handler)
         return () => window.removeEventListener("keydown", handler)
-    }, [move, pressA, pressB, battle, menu, newDexEntry, evolutions, championRun, arenaFight, pendingLearn, arenaMode, arenaOpponents, mapPlayer, showDialogue, tryCasinoObjectA, casinoAFallback])
+    }, [move, pressA, pressB, battle, menu, newDexEntry, evolutions, championRun, arenaFight, pendingLearn, arenaMode, arenaOpponents, mapPlayer, showDialogue, tryCasinoObjectA, casinoAFallback, kartOpen])
 
     // Identité (User.id) + carte courante → estampillage ownership/lieu à la capture.
     useEffect(() => { setCurrentPlayerId(userId) }, [userId])
@@ -1125,14 +1155,21 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 // Pendant l'écran de chargement du combat (transition de rencontre), les
                 // flèches sont neutralisées : pas de curseur/pas fantôme sous le rideau.
                 dpadDisabled={encounterFx}
+                // COURSE (Pokémon Kart) : mode ANALOGIQUE — quand une course tourne dans l'écran, les
+                // boutons pilotent le kart en continu (handleRaceHold : A=gaz, B=frein, SELECT=nitro,
+                // ◀▶=braquer, START=quitter). La coque ignore alors les callbacks mono-appui ci-dessous.
+                // Hors course mais borne ouverte (sélection/résultats), on NEUTRALISE ces callbacks
+                // (`kartOpen`) pour ne pas déplacer le joueur/ouvrir le menu sous l'overlay.
+                onHoldChange={raceActive ? handleRaceHold : undefined}
                 // En combat, START/SELECT ouvre le menu pause (viewers sûrs). Quand ce menu est ouvert,
                 // le D-pad / A pilotent le menu (tactile) → on neutralise l'entrée combat dessous ;
                 // B referme le menu (goBack).
-                onUp={() => { if (encounterFx) return; if (battle) { if (menu === "none") dispatchBattleInput("up"); return } move("up") }}
-                onDown={() => { if (encounterFx) return; if (battle) { if (menu === "none") dispatchBattleInput("down"); return } move("down") }}
-                onLeft={() => { if (encounterFx) return; if (battle) { if (menu === "none") dispatchBattleInput("left"); return } move("left") }}
-                onRight={() => { if (encounterFx) return; if (battle) { if (menu === "none") dispatchBattleInput("right"); return } move("right") }}
+                onUp={() => { if (encounterFx || kartOpen) return; if (battle) { if (menu === "none") dispatchBattleInput("up"); return } move("up") }}
+                onDown={() => { if (encounterFx || kartOpen) return; if (battle) { if (menu === "none") dispatchBattleInput("down"); return } move("down") }}
+                onLeft={() => { if (encounterFx || kartOpen) return; if (battle) { if (menu === "none") dispatchBattleInput("left"); return } move("left") }}
+                onRight={() => { if (encounterFx || kartOpen) return; if (battle) { if (menu === "none") dispatchBattleInput("right"); return } move("right") }}
                 onA={() => {
+                    if (kartOpen) return
                     if (battle) { if (menu === "none") dispatchBattleInput("a"); return }
                     // Dans le casino, A face à un autre joueur = le défier.
                     if (inCasino) {
@@ -1143,11 +1180,14 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     }
                     pressA()
                 }}
-                onB={() => { if (battle) { if (menu !== "none") { goBack(); return } dispatchBattleInput("b"); return } if (!goBack()) pressB() }}
-                onStart={() => { menuTapGuard.current = Date.now(); setMenu((m) => (m === "none" ? "pause" : "none")) }}
-                onSelect={() => { menuTapGuard.current = Date.now(); setMenu((m) => (m === "none" ? "pause" : "none")) }}
+                onB={() => { if (kartOpen) return; if (battle) { if (menu !== "none") { goBack(); return } dispatchBattleInput("b"); return } if (!goBack()) pressB() }}
+                onStart={() => { if (kartOpen) return; menuTapGuard.current = Date.now(); setMenu((m) => (m === "none" ? "pause" : "none")) }}
+                onSelect={() => { if (kartOpen) return; menuTapGuard.current = Date.now(); setMenu((m) => (m === "none" ? "pause" : "none")) }}
             >
-                {battle ? (
+                {kartOpen && raceCfg && !raceResults ? (
+                    // COURSE en cours : rendue DANS l'écran, pilotée par les boutons de la coque.
+                    <RaceView cfg={raceCfg} inputRef={raceInputRef} onFinish={(rk) => { resetRaceInput(); setRaceResults(rk) }} />
+                ) : battle ? (
                     // Error boundary : si le combat plante, on propose "Reprendre" (endBattle).
                     <BattleBoundary onReset={() => endBattle()}>
                         <BattleScreen />
@@ -1667,7 +1707,17 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {barmanOpen && <BarmanPanel close={() => setBarmanOpen(false)} />}
             {blackjackOpen && <BlackjackPanel close={() => setBlackjackOpen(false)} />}
             {pokerOpen && <PokerPanel close={() => setPokerOpen(false)} myUserId={userId} />}
-            {kartOpen && <RacePanel close={() => setKartOpen(false)} />}
+            {/* Pokémon Kart : overlay de SÉLECTION (avant la course) ou de RÉSULTATS (après). Pendant la
+                course (raceActive), aucun overlay → la course est dans l'écran et les boutons la pilotent. */}
+            {kartOpen && !raceActive && (
+                <RacePanel
+                    mode={raceResults ? "results" : "select"}
+                    results={raceResults}
+                    onSelect={(cfg) => { resetRaceInput(); setRaceResults(null); setRaceCfg(cfg) }}
+                    onReplay={() => { setRaceResults(null); setRaceCfg(null) }}
+                    onClose={() => { setKartOpen(false); setRaceCfg(null); setRaceResults(null); resetRaceInput() }}
+                />
+            )}
             {creatorOpen && (
                 <DaemonCreator
                     ownerId={userId} nickname={nickname}
@@ -2149,7 +2199,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             )}
 
             {/* PvP — défi reçu : accepter / refuser */}
-            {challenge.incoming && !battle && (
+            {challenge.incoming && !battle && !kartOpen && (
                 <div style={menuOverlayStyle}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                         <div style={menuTitleStyle}>⚔️ DÉFI</div>

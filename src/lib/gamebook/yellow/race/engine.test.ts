@@ -42,6 +42,34 @@ describe("moteur de course", () => {
         for (let i = 1; i < rk.length; i++) expect(rk[i - 1].finishTime).toBeLessThanOrEqual(rk[i].finishTime)
     })
 
+    it("la course se termine dès que le JOUEUR a fini — les retardataires sont finalisés (pas de boucle infinie)", () => {
+        const ents: Entrant[] = [
+            { id: "player", name: "Toi", base: BAL, isPlayer: true },
+            { id: "ai0", name: "IA0", base: BAL, isPlayer: false },
+            { id: "ai1", name: "IA1", base: BAL, isPlayer: false },
+        ]
+        const race = createRace(getTrack("test_ring"), ents, new Rng(2))
+        const dt = 1 / 60
+        for (let i = 0; i < Math.round(3.1 / dt); i++) stepRace(race, IDLE, dt) // fin du décompte
+        expect(race.status).toBe("racing")
+        // Le joueur franchit la ligne (simulé) → la course DOIT se clore au pas suivant.
+        const player = race.racers.find((r) => r.isPlayer)!
+        player.finished = true
+        player.finishTime = race.time
+        stepRace(race, IDLE, dt)
+        expect(race.status).toBe("finished")
+        for (const r of race.racers) expect(r.finished).toBe(true) // retardataires marqués finis
+    })
+
+    it("garde-fou de temps : la course ne tourne jamais au-delà du plafond (IA coincée)", () => {
+        const race = createRace(getTrack("test_ring"), field(6), new Rng(11))
+        const dt = 1 / 60
+        // On avance jusqu'au plafond dur, quoi qu'il arrive, la course doit être finie.
+        for (let i = 0; i < Math.round(245 / dt) && race.status !== "finished"; i++) stepRace(race, IDLE, dt)
+        expect(race.status).toBe("finished")
+        for (const r of race.racers) expect(r.finished).toBe(true)
+    })
+
     it("un pilote plus RAPIDE (grosse Vitesse) devance un pilote lent, toutes choses égales", () => {
         const ents: Entrant[] = [
             { id: "fast", name: "Rapide", base: { ...BAL, spe: 140 }, isPlayer: false },
