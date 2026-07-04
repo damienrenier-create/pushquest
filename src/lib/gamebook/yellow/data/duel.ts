@@ -6,7 +6,10 @@
 // Règle : 1 victoire par joueur-IA et par jour. Victoire → cadeau du Dieu des Nouilles + Nexus Ball.
 // Défaite → trashtalk monumental de l'adversaire + 30 énergie « par pitié ».
 
-export const DUEL_NEXUS_BALL_ID = "nexus_ball"
+// La « Nexus-Ball » de base a pour id interne "poke_ball" (le jeu renomme la Poké Ball en Nexus-Ball
+// mais garde l'id d'origine). L'ancien id "nexus_ball" était FANTÔME → balles invisibles dans le sac.
+// Migration de récupération dans playerStore.migrateItems (nexus_ball → poke_ball).
+export const DUEL_NEXUS_BALL_ID = "poke_ball"
 export const DUEL_LOSS_CONSOLE_REPS = 30
 export const DUEL_GOD_NPC = "dieu_nouilles"
 export const DUEL_GOD_NAME = "DIEU DES NOUILLES"

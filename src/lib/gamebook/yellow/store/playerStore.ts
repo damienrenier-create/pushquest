@@ -189,9 +189,27 @@ export function getNgplusNemesisSpeciesId(): string | null {
     } catch { return null }
 }
 
+/** Migrations d'items au chargement (idempotentes). Replie les ids FANTÔMES historiques vers l'id
+ *  réel, pour que les objets gagnés avant un correctif redeviennent visibles/utilisables dans le sac
+ *  (le sac n'affiche que les ids définis dans ITEMS). Récupère aussi les balles déjà « perdues ».
+ *  - "nexus_ball" (récompense des duels reflets, id inexistant) → "poke_ball" (la vraie « Nexus-Ball »). */
+const ITEM_ID_MIGRATIONS: Record<string, string> = { nexus_ball: "poke_ball" }
+function migrateItems(items: Record<string, number>): Record<string, number> {
+    let changed = false
+    const out: Record<string, number> = { ...items }
+    for (const [oldId, newId] of Object.entries(ITEM_ID_MIGRATIONS)) {
+        if (!(oldId in out)) continue
+        const n = out[oldId]
+        if (n && n > 0) out[newId] = (out[newId] ?? 0) + n
+        delete out[oldId]
+        changed = true
+    }
+    return changed ? out : items
+}
+
 export function hydratePlayer(p: Partial<PlayerState>) {
     st = {
-        team: p.team ?? [], pc: p.pc ?? [], items: p.items ?? {},
+        team: p.team ?? [], pc: p.pc ?? [], items: migrateItems(p.items ?? {}),
         reps: p.reps ?? st.reps ?? 0, repsCap: p.repsCap ?? st.repsCap ?? 1000, creditedThrough: p.creditedThrough ?? st.creditedThrough ?? "",
         repsBankedTotal: p.repsBankedTotal ?? st.repsBankedTotal ?? -1, welcomeGift: p.welcomeGift ?? st.welcomeGift ?? false,
         spagGift: p.spagGift ?? st.spagGift ?? false,
