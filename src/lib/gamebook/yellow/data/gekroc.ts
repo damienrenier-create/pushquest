@@ -27,14 +27,14 @@ export const GEKROC_NO_TEAM_LINES = [
     "Soigne-les au Centre avant d'affronter le gardien.",
 ]
 
-/** Espèce du mini-boss selon le monde : Gékroc (SOL/ÉLEC) en run 1, son jumeau Grékraise (ROCHE/FEU) en NG+. */
+/** Espèce du mini-boss selon le monde : Gékroc (SOL/ÉLEC) en run 1, son jumeau Gékraise (ROCHE/FEU) en NG+. */
 export const GEKROC_SPECIES = "gekroc"
-export const GREKRAISE_SPECIES = "grekraise"
+export const GEKRAISE_SPECIES = "gekraise"
 
 /** Fabrique l'instance de combat du gardien : N35, capture DURE (×0.6) mais SANS statut requis (≠ légendaire).
  *  En New Game+ (`ngplus`), c'est GRÉKRAISE (ROCHE/FEU) qui garde la Pierre à la place de Gékroc. */
 export function buildGekroc(ngplus = false): MonInstance {
-    const mon = createMonInstance(ngplus ? GREKRAISE_SPECIES : GEKROC_SPECIES, GEKROC_LEVEL, { owned: false })
+    const mon = createMonInstance(ngplus ? GEKRAISE_SPECIES : GEKROC_SPECIES, GEKROC_LEVEL, { owned: false })
     Object.assign(mon, { captureMult: 0.6 }) // dur à capturer (cf. engine performCapture), mais pas légendaire
     return mon
 }

@@ -426,7 +426,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (fx === 4 && fy === 3) { menuTapGuard.current = Date.now(); setCroupierOpen(true); return true }
         if (fy === 2 && fx >= 9 && fx <= 12) { menuTapGuard.current = Date.now(); setBarmanOpen(true); return true } // comptoir du barman
         if (fy === 1 && fx >= 1 && fx <= 6) { menuTapGuard.current = Date.now(); setBlackjackOpen(true); return true } // PC (haut-gauche) = blackjack
-        if (fx >= 3 && fx <= 4 && fy >= 7 && fy <= 8) { menuTapGuard.current = Date.now(); setPokerOpen(true); return true } // table de poker (bas-gauche)
+        if (fx >= 3 && fx <= 5 && fy >= 7 && fy <= 8) { menuTapGuard.current = Date.now(); setPokerOpen(true); return true } // table de poker (sud de la roulette)
         return false
     }, [inCasino, userId, mapPlayer])
 

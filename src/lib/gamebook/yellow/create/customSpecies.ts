@@ -763,7 +763,7 @@ export function buildCustomSpecies(spec: CustomSpec, ownerId: string): SpeciesDa
             secretTalent: spec.secretTalent, // talent secret de la lignée → lu par le moteur (talentEffects)
             description: ((stage === spec.stages && spec.daFinal?.trim()) ? spec.daFinal.trim() : spec.da.trim())
                 + (spec.character.trim() ? ` — ${spec.character.trim()}` : ""),
-            sprite: "", // « sprite mystère » : vide → fallback emoji/silhouette ; Sartay branche le vrai sprite ensuite
+            sprite: "/yellow/sprites/dex/missingno.png", // placeholder MISSINGNO : Sartay génère le vrai sprite après la 1re création (notif Ligue)
         })
         void finalBst
     }

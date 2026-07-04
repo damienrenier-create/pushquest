@@ -450,7 +450,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // 2-bis) GÉKROC (mini-boss STATIQUE) : vaincu OU capturé → résolu (one-time, ne réapparaît plus)
     //        et la Pierre Gékroc est libérée (objet → fait évoluer Panthéon, cf. Part B).
     let stoneReward: string | null = null
-    if (b.isWild && (b.outcome === "win" || b.outcome === "caught") && b.enemy.team.some((e) => e.speciesId === "gekroc" || e.speciesId === "grekraise")) {
+    if (b.isWild && (b.outcome === "win" || b.outcome === "caught") && b.enemy.team.some((e) => e.speciesId === "gekroc" || e.speciesId === "gekraise")) {
         if (!getPlayer().gekrocResolved) {
             markGekrocResolved()
             addItem(GEKROC_STONE_ITEM, 1)

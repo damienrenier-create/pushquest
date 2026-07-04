@@ -334,10 +334,9 @@ function buildCasinoInterior(): TileType[][] {
     // TABLE ROULETTE MULTIJOUEUR : 6 tuiles (x 3-5 × y 4-5), juste sous le croupier (4,3). Bloquée
     // (on ne marche pas dessus) ; on s'en approche + A pour jouer (cf. interaction casino côté UI).
     for (let y = 4; y <= 5; y++) for (let x = 3; x <= 5; x++) m[y][x] = "table"
-    // TABLE DE POKER MULTIJOUEUR (Texas Hold'em) : 2×2 tuiles (x 3-4 × y 7-8), coin bas-gauche libre.
-    // Bloquée ; on s'en approche + A pour rejoindre la table (cf. interaction casino côté UI).
-    // (Placement provisoire — à recaler via ?grid=1 selon l'art casino_interior.png.)
-    for (let y = 7; y <= 8; y++) for (let x = 3; x <= 4; x++) m[y][x] = "table"
+    // TABLE DE POKER MULTIJOUEUR (Texas Hold'em) : 6 tuiles (x 3-5 × y 7-8), AU SUD de la roulette
+    // (sprite ajouté par Sartay). Bloquée ; on s'en approche + A pour rejoindre la table (interaction UI).
+    for (let y = 7; y <= 8; y++) for (let x = 3; x <= 5; x++) m[y][x] = "table"
     m[11][10] = "doorMat"                                   // sortie (porte bas-centre)
     return m
 }
