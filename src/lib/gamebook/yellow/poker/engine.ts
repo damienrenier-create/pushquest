@@ -27,7 +27,9 @@ export interface Seat {
     committed: number      // total engagé dans le POT sur toute la main (base des side-pots)
     betThisRound: number   // engagé dans le TOUR d'enchères courant
     hasActed: boolean      // a agi depuis la dernière relance (clôture du tour)
-    sittingOut: boolean    // assis mais hors main (rejoint à la main suivante)
+    sittingOut: boolean    // hors de la MAIN COURANTE (recalculé à chaque startHand)
+    wantsSitOut?: boolean  // choix VOLONTAIRE de ne pas jouer (persistant, respecté par startHand)
+    leaving?: boolean      // départ demandé → retiré de la table ENTRE deux mains (cf. room.ts)
 }
 
 export interface PotResult { amount: number; winners: number[]; eligible: number[] }
@@ -44,6 +46,7 @@ export interface PokerTable {
     blinds: { sb: number; bb: number }
     handId: number
     results: PotResult[]    // rempli à l'abattage (répartition des pots)
+    showdownOccurred: boolean // true si la main s'est finie sur un ABATTAGE (→ on révèle les mains non couchées)
     log: string[]
 }
 
@@ -58,7 +61,7 @@ export function totalPot(t: PokerTable): number {
 export function createTable(players: Array<{ id: string; name: string; stack: number }>, blinds: { sb: number; bb: number }): PokerTable {
     return {
         seats: players.map((p) => ({ id: p.id, name: p.name, stack: p.stack, hole: [], folded: false, allIn: false, committed: 0, betThisRound: 0, hasActed: false, sittingOut: p.stack <= 0 })),
-        button: 0, community: [], deck: [], phase: "handComplete", currentBet: 0, minRaise: blinds.bb, toAct: -1, blinds, handId: 0, results: [], log: [],
+        button: 0, community: [], deck: [], phase: "handComplete", currentBet: 0, minRaise: blinds.bb, toAct: -1, blinds, handId: 0, results: [], showdownOccurred: false, log: [],
     }
 }
 
@@ -92,8 +95,8 @@ function commit(t: PokerTable, i: number, amount: number): number {
 
 /** Démarre une nouvelle main : bouton tournant, mélange, distribue, poste les blinds, place l'action. */
 export function startHand(t: PokerTable, rng: Rng): void {
-    // Réintègre les assis qui ont du tapis ; sort ceux à 0.
-    for (const s of t.seats) { s.sittingOut = s.stack <= 0; s.hole = []; s.folded = false; s.allIn = false; s.committed = 0; s.betThisRound = 0; s.hasActed = false }
+    // Qui est dans la main : ceux avec du tapis ET qui ne demandent pas volontairement à passer.
+    for (const s of t.seats) { s.sittingOut = !!s.wantsSitOut || s.stack <= 0; s.hole = []; s.folded = false; s.allIn = false; s.committed = 0; s.betThisRound = 0; s.hasActed = false }
     const inHand = inHandSeats(t)
     if (inHand.length < 2) { t.phase = "handComplete"; t.toAct = -1; t.log = ["Pas assez de joueurs."]; return }
 
@@ -102,6 +105,7 @@ export function startHand(t: PokerTable, rng: Rng): void {
     t.deck = shuffledDeck(rng)
     t.community = []
     t.results = []
+    t.showdownOccurred = false
     t.log = []
     t.phase = "preflop"
 
@@ -268,6 +272,7 @@ export function buildPots(t: PokerTable): PotResult[] {
 /** Abattage : évalue les mains, répartit chaque pot entre les meilleurs éligibles (split + chips impairs). */
 export function settleShowdown(t: PokerTable): void {
     t.phase = "showdown"
+    t.showdownOccurred = true
     const ranks: Record<number, HandRank> = {}
     for (const i of t.seats.map((_, i) => i)) if (contesting(t.seats[i])) ranks[i] = evaluateBest([...t.seats[i].hole, ...t.community])
 
