@@ -92,6 +92,7 @@ import RouletteMultiTable from "./roulette/RouletteMultiTable"
 import CroupierPanel from "./CroupierPanel"
 import BarmanPanel from "./BarmanPanel"
 import BlackjackPanel from "./BlackjackPanel"
+import PokerPanel from "./PokerPanel"
 import DaemonCreator from "./create/DaemonCreator"
 
 // ============================================================
@@ -210,6 +211,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [croupierOpen, setCroupierOpen] = useState(false) // carrousel du croupier (railleries + stats casino)
     const [barmanOpen, setBarmanOpen] = useState(false) // menu du barman (guide + potions prix-libre)
     const [blackjackOpen, setBlackjackOpen] = useState(false) // table de blackjack (PC haut-gauche)
+    const [pokerOpen, setPokerOpen] = useState(false) // table de poker multijoueur (coin bas-gauche)
     const [creatorOpen, setCreatorOpen] = useState(false) // TEST : créateur de Daemon (post-Ligue) — réservé à Mools/créateur
     const [forcedCreator, setForcedCreator] = useState(false) // post-sacre : création OBLIGATOIRE qui enchaîne sur le NG+
     const [pendingForcedCreator, setPendingForcedCreator] = useState(false) // ouvre le créateur forcé après le dialogue-défi
@@ -424,6 +426,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (fx === 4 && fy === 3) { menuTapGuard.current = Date.now(); setCroupierOpen(true); return true }
         if (fy === 2 && fx >= 9 && fx <= 12) { menuTapGuard.current = Date.now(); setBarmanOpen(true); return true } // comptoir du barman
         if (fy === 1 && fx >= 1 && fx <= 6) { menuTapGuard.current = Date.now(); setBlackjackOpen(true); return true } // PC (haut-gauche) = blackjack
+        if (fx >= 3 && fx <= 4 && fy >= 7 && fy <= 8) { menuTapGuard.current = Date.now(); setPokerOpen(true); return true } // table de poker (bas-gauche)
         return false
     }, [inCasino, userId, mapPlayer])
 
@@ -1660,6 +1663,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {/* BARMAN — guide du casino + indice jetons + Potions à prix libre (effets secrets). */}
             {barmanOpen && <BarmanPanel close={() => setBarmanOpen(false)} />}
             {blackjackOpen && <BlackjackPanel close={() => setBlackjackOpen(false)} />}
+            {pokerOpen && <PokerPanel close={() => setPokerOpen(false)} myUserId={userId} />}
             {creatorOpen && (
                 <DaemonCreator
                     ownerId={userId} nickname={nickname}
