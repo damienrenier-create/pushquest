@@ -86,6 +86,12 @@ export async function POST(req: NextRequest) {
                 data: targets.map((toUserId) => ({ toUserId, fromUserId: auth.userId, fromNickname: me.nickname })),
             })
         }
+        // NOTIF PushQuest — au 1er sacre seulement (anti-spam sur re-sacre) : annonce sur le Wall, vue par
+        // TOUS les potes ET par Mools/le créateur (→ générer le sprite du Daemon créé). Best-effort, jamais
+        // bloquante (WallMessage est une table standard, non gated). Le prompt sprite privé = toast Nexus.
+        if (wins === 1) {
+            try { await prisma.wallMessage.create({ data: { userId: auth.userId, content: `🏆 ${me.nickname} a terminé la Ligue Jaune Éclair ! 🎉` } }) } catch { /* best-effort */ }
+        }
         return NextResponse.json({ ok: true, granted: targets.length, wins })
     } catch {
         return NextResponse.json({ ok: true, skipped: "no-table" }) // tables pas encore créées → neutre

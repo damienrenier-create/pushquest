@@ -672,6 +672,34 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     useEffect(() => { setCurrentNickname(nickname) }, [nickname]) // whitelist gate ACE → Cendreville
     useEffect(() => { setCurrentMapId(mapPlayer.mapId) }, [mapPlayer.mapId])
 
+    // NOTIF SPRITES (Mools / créateur, dans le Nexus) : à la connexion, on liste les champions RÉCENTS
+    // (Ligue terminée → Daemon créé avec placeholder MissingNo) pas encore vus, et on invite à générer
+    // leur sprite conforme. 100% READ-ONLY (GET hall-of-fame existant), gate Mools/créateur, dédup par
+    // joueur+date en localStorage. Différé de 6 s pour ne pas être écrasé par les toasts de bienvenue.
+    useEffect(() => {
+        if (!(isCreator || nickname.toLowerCase() === "mools")) return
+        let cancelled = false
+        const timer = window.setTimeout(async () => {
+            try {
+                const r = await fetch("/api/gamebook/yellow/hall-of-fame")
+                const j = r.ok ? await r.json() : null
+                const champs = (j?.champions ?? []) as { nickname: string; wonAt: string }[]
+                const now = Date.now()
+                const recent = champs.filter((c) => c.nickname && now - new Date(c.wonAt).getTime() < 5 * 86400000) // < 5 jours
+                const KEY = "yellow_sprite_notif_seen"
+                let seen: string[] = []
+                try { seen = JSON.parse(localStorage.getItem(KEY) ?? "[]") } catch { seen = [] }
+                const fresh = recent.filter((c) => !seen.includes(`${c.nickname}|${c.wonAt}`))
+                if (!cancelled && fresh.length > 0) {
+                    const names = [...new Set(fresh.map((c) => c.nickname))].join(", ")
+                    setToast(`🎨 Sprite à générer : ${names} ${fresh.length > 1 ? "ont" : "a"} terminé la Ligue ! Génère le Daemon conforme (MissingNo en attendant).`)
+                    try { localStorage.setItem(KEY, JSON.stringify([...seen, ...fresh.map((c) => `${c.nickname}|${c.wonAt}`)].slice(-100))) } catch { /* quota */ }
+                }
+            } catch { /* neutre (hors-ligne / table absente) */ }
+        }, 6000)
+        return () => { cancelled = true; window.clearTimeout(timer) }
+    }, [isCreator, nickname])
+
     // Toast éphémère : disparaît tout seul après 2,5 s.
     useEffect(() => {
         if (!toast) return
