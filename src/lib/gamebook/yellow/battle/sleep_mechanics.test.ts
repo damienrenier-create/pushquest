@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest"
 import { createBattle, resolveTurn } from "./engine"
 import { createMonInstance } from "./factory"
 import { hitChance } from "./accuracy"
-import { rollSleepTurns, initialStatusCounter, confusionSelfHit } from "./status"
+import { rollSleepTurns, initialStatusCounter, confusionSelfHit, freezeStayFrozen } from "./status"
 import { Rng } from "./rng"
 import { getMove } from "../data/moves"
 
@@ -102,22 +102,39 @@ describe("Repos — soin + auto-sommeil 1 tour", () => {
     })
 })
 
-describe("gel — au moins 1 tour garanti", () => {
-    it("initialStatusCounter(FREEZE) = 1 (un tour gelé garanti)", () => {
+describe("gel — refonte (proba décroissante + dégel Feu)", () => {
+    it("initialStatusCounter(FREEZE) = 0 (compteur = nb de tours déjà gelés)", () => {
         for (let seed = 0; seed < 20; seed++) {
-            expect(initialStatusCounter("FREEZE", new Rng(seed * 7919))).toBe(1)
+            expect(initialStatusCounter("FREEZE", new Rng(seed * 7919))).toBe(0)
         }
     })
 
-    it("un Daemon fraîchement gelé rate TOUJOURS son 1er tour (pas de dégel immédiat)", () => {
-        const p = createMonInstance("rochison", 50, { moveIds: ["eboulis"] }) // tank → survit à l'ennemi minime
+    it("freezeStayFrozen : 100% au 1er tour, plancher 20% une fois très avancé", () => {
+        for (let s = 0; s < 50; s++) expect(freezeStayFrozen(0, new Rng(s * 40503))).toBe(true) // 1er tour garanti
+        let stay = 0
+        for (let s = 0; s < 3000; s++) if (freezeStayFrozen(50, new Rng(s * 2654435761))) stay++ // ≥8 tours → 20%
+        expect(stay / 3000).toBeGreaterThan(0.15)
+        expect(stay / 3000).toBeLessThan(0.25)
+    })
+
+    it("un Daemon fraîchement gelé rate TOUJOURS son 1er tour (100%) et le compteur monte", () => {
+        const p = createMonInstance("rochison", 50, { moveIds: ["eboulis"] })
         let s = createBattle([p], [createMonInstance("plumiot", 2)], { isWild: true, seed: 1 })
         const me0 = s.player.team[s.player.activeIndex]
-        me0.status = "FREEZE"; me0.statusCounter = 1
+        me0.status = "FREEZE"; me0.statusCounter = 0
         s = resolveTurn(s, { kind: "move", moveIndex: 0 })
         const me1 = s.player.team[s.player.activeIndex]
-        expect(me1.status).toBe("FREEZE") // toujours gelé après le 1er tour (n'a pas pu dégeler)
-        expect(me1.statusCounter).toBe(0) // compteur consommé → 20%/tour de dégel ensuite
+        expect(me1.status).toBe("FREEZE") // 100% → toujours gelé au 1er tour
+        expect(me1.statusCounter).toBe(1) // compteur incrémenté (→ 90% au tour suivant)
+    })
+
+    it("une attaque FEU DÉGÈLE la cible", () => {
+        const atk = createMonInstance("braisille", 12, { moveIds: ["flammeche"] })  // petit feu → ne KO pas le tank
+        let s = createBattle([atk], [createMonInstance("rochison", 60)], { isWild: true, seed: 3 })
+        const foe0 = s.enemy.team[s.enemy.activeIndex]
+        foe0.status = "FREEZE"; foe0.statusCounter = 0
+        s = resolveTurn(s, { kind: "move", moveIndex: 0 })
+        expect(s.enemy.team[s.enemy.activeIndex].status).toBe("NONE") // dégelé par la chaleur
     })
 })
 

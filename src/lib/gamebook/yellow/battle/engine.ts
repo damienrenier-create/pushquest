@@ -605,6 +605,12 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
         const res = dealMoveDamage(state, side, move, rng, events)
         lastEff = res.typeEff
         if (res.dealt > 0 || res.typeEff > 0) landed++
+        // GEL : une attaque de type FEU qui touche DÉGÈLE la cible (façon Gen 1).
+        if (move.type === "FEU" && res.dealt > 0 && active(defSide).status === "FREEZE") {
+            active(defSide).status = "NONE"
+            active(defSide).statusCounter = 0
+            events.push({ kind: "message", text: `${displayName(active(defSide))} est dégelé par la chaleur !` })
+        }
         // Drain / recul basés sur les dégâts de CE coup.
         if (move.effect?.drainPct && res.dealt > 0) {
             // ESSAIM VORACE : drain CROISSANT (20 + 10×coups consécutifs, plafond 70%) piloté par swarmStacks.
@@ -884,13 +890,11 @@ function canAct(mon: BattleMon, events: BattleEvent[], rng: Rng): boolean {
         return false
     }
     if (mon.status === "FREEZE") {
-        // 1er tour gelé GARANTI (compteur posé à 1) ; ensuite seulement, 20%/tour de dégel.
-        if (mon.statusCounter > 0) {
-            mon.statusCounter -= 1
-            events.push({ kind: "message", text: `${displayName(mon)} est gelé !` })
-            return false
-        }
-        if (Status.freezeThaws(rng)) {
+        // Proba de RESTER gelé DÉCROISSANTE : 100% (1er tour) → 90 → 80 … → 20% (plancher). Le compteur =
+        // nb de tours déjà gelé. (Une attaque de type FEU qui touche DÉGÈLE aussi, cf. dealMoveDamage.)
+        const stayFrozen = Status.freezeStayFrozen(mon.statusCounter, rng)
+        mon.statusCounter += 1
+        if (!stayFrozen) {
             mon.status = "NONE"
             events.push({ kind: "message", text: `${displayName(mon)} dégèle !` })
             return true

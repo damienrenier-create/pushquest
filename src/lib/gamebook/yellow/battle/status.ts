@@ -50,7 +50,7 @@ export function rollSleepTurns(rng: Rng): number {
  *  Gel = 1 tour GARANTI (puis 20%/tour de dégel). */
 export function initialStatusCounter(status: MajorStatus, rng: Rng): number {
     if (status === "SLEEP") return rollSleepTurns(rng) + 1
-    if (status === "FREEZE") return 1 // au moins 1 tour gelé garanti
+    if (status === "FREEZE") return 0 // compteur = nb de tours DÉJÀ gelé → pilote la proba décroissante (cf. freezeStayFrozen)
     if (status === "TOXIC") return 1
     return 0
 }
@@ -89,13 +89,13 @@ export function paralysisSkips(rng: Rng): boolean {
 }
 
 /**
- * Gel : 20% de chance de dégeler (et d'agir) à chaque tour.
- * CHOIX DE GAME-DESIGN (assumé) : le strict Gen 1 rend le gel DÉFINITIF (on ne
- * dégèle que si touché par une attaque Feu). On garde un dégel auto 20%/tour
- * (comportement Gen 2+) pour éviter un gel quasi-permanent frustrant en prod.
+ * Gel (refonte Sartay) : la cible RESTE gelée avec une probabilité DÉCROISSANTE selon le nombre de tours
+ * DÉJÀ passés gelée — 100% (1er tour, incapacité garantie), puis 90, 80, 70, 60, 50, 40, 30, 20% ;
+ * PLANCHER à 20% (ne descend jamais en dessous). En plus, une attaque de type FEU qui touche DÉGÈLE
+ * instantanément (géré côté moteur, cf. dealMoveDamage). Renvoie true si la cible reste gelée ce tour.
  */
-export function freezeThaws(rng: Rng): boolean {
-    return rng.chance(20)
+export function freezeStayFrozen(turnsFrozen: number, rng: Rng): boolean {
+    return rng.chance(Math.max(20, 100 - 10 * turnsFrozen))
 }
 
 /** Confusion : 50% de chance de se blesser soi-même (façon Gen 1). */
