@@ -19,10 +19,10 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType, MoveSlot } from "../battle/types"
 import { markSeen, markCaught, getPokedex } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, recordOrcalineDefeat, orcalineLevelForWins, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, consumeBattleBlessing, getActiveWorld, getNgplusNemesisSpeciesId, incNgplusBattles } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, recordOrcalineDefeat, orcalineLevelForWins, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, getNgplusNemesisSpeciesId, incNgplusBattles } from "./playerStore"
 import { getItem } from "../data/items"
 import { reportShiny } from "../shinyGift"
-import { ARENA_TICKET_VALUE, SBIRE_TICKET_VALUE, SBIRE_TICKET_EVERY, ACE_TICKET_VALUE, ACE_TICKET_WIN_BEFORE, ACE_TICKET_WIN_AFTER, ACE_TICKET_EARLY_VALUE, ACE_TICKET_WIN_EARLY } from "../data/labDefis"
+import { ARENA_TICKET_VALUE, SBIRE_TICKET_VALUE, SBIRE_TICKET_EVERY, ACE_TICKET_VALUE, ACE_TICKET_WIN_BEFORE, ACE_TICKET_WIN_AFTER, ACE_TICKET_EARLY_VALUE, ACE_TICKET_WIN_EARLY, LEAGUE_ROULETTE_PER_KO, LEAGUE_AUTOGRAPH_CREDIT } from "../data/labDefis"
 import { getCt } from "../data/cts"
 import { NGPLUS_BOSS_GIFTS } from "../data/ngplusArenas"
 import { getMove, getMoveByName } from "../data/moves"
@@ -697,6 +697,30 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             if (d > best.dmg) best = { dmg: d, mon: m.nickname ?? getSpecies(m.speciesId)?.name ?? m.speciesId, move: (m as { battleBestDmgMove?: string }).battleBestDmgMove ?? "" }
         }
         if (best.dmg > 0) leagueHighlights[lid] = { trainer: getTrainer(lid)?.name ?? "Conseil 4", mon: best.mon, dmg: best.dmg, move: best.move }
+        // 🎰 RÉCOMPENSE ROULETTE (Conseil 4, LES DEUX runs) : chaque membre te file de l'énergie de casino
+        //    selon le nombre de TES Daemons qu'il a mis K.O. — 5 ⚡/K.O., sur un ton de + en + condescendant.
+        //    SANS-FAUTE (0 K.O.) → il te demande un autographe et t'offre 50 ⚡ « c'est tout ce qu'il me reste ».
+        //    (Le MAÎTRE est exclu : son enjeu, c'est le sacre / Hall of Fame, pas des jetons.)
+        if (lid !== "y_ligue_maitre") {
+            const ko = b.player.team.filter((m) => m.currentHp <= 0).length
+            const tName = getTrainer(lid)?.name ?? "Le membre du Conseil"
+            if (ko === 0) {
+                grantRouletteCredit(LEAGUE_AUTOGRAPH_CREDIT)
+                rematchReward = { npcId: lid, npcName: tName, lines: [
+                    "Pas un seul de tes Daemons à terre… je n'en reviens pas.",
+                    `*il sort un carnet écorné* Un autographe, s'il te plaît ? …Merci ! Tiens, ${LEAGUE_AUTOGRAPH_CREDIT} ⚡ à jouer au casino — c'est tout ce qu'il me reste, mais tu l'as bien mérité.`,
+                ] }
+            } else {
+                const credit = ko * LEAGUE_ROULETTE_PER_KO
+                grantRouletteCredit(credit)
+                const taunt = ko <= 2
+                    ? "Pas trop mal… pour un amateur. Tiens, de quoi t'occuper au casino."
+                    : ko <= 4
+                    ? "Oh là là, tu en as bavé, hein ? *soupir condescendant* Prends ces jetons et va jouer, va."
+                    : "Sérieusement, comment as-tu atteint la Ligue ? *rire* Va claquer ça au casino — c'est là, ta vraie place."
+                rematchReward = { npcId: lid, npcName: tName, lines: [taunt, `Il te lâche ${credit} ⚡ à jouer au casino (${ko} Daemon${ko > 1 ? "s" : ""} K.O. × ${LEAGUE_ROULETTE_PER_KO}).`] }
+            }
+        }
         if (lid === "y_ligue_maitre") {
             setChampion()
             const order = ["y_ligue_1_olga", "y_ligue_2_aldo", "y_ligue_3_agatha", "y_ligue_4_peter", "y_ligue_maitre"]

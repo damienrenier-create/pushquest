@@ -291,6 +291,10 @@ export const BLACKJACK_CT_TARGET = 1000
 export const BLACKJACK_CT_ID = "ct52"
 /** RUN 2 (NG+) : palier de gains nets au blackjack qui offre UN choix de CT-signature de boss (ct53-57). */
 export const BLACKJACK_CT_NGPLUS_STEP = 500
+/** LIGUE (Conseil 4, les 2 runs) : énergie de roulette offerte par membre = 5 ⚡ par Daemon du joueur mis K.O. */
+export const LEAGUE_ROULETTE_PER_KO = 5
+/** LIGUE : sans-faute (0 K.O. subi) → il te demande un autographe → 50 ⚡ « c'est tout ce qu'il me reste ». */
+export const LEAGUE_AUTOGRAPH_CREDIT = 50
 
 /** Cumul BRUT d'énergie à gagner pour débloquer Tonytony. */
 export const TONYTONY_TARGET = 1000
