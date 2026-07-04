@@ -93,6 +93,7 @@ import CroupierPanel from "./CroupierPanel"
 import BarmanPanel from "./BarmanPanel"
 import BlackjackPanel from "./BlackjackPanel"
 import PokerPanel from "./PokerPanel"
+import SoloPokerPanel from "./SoloPokerPanel"
 import RacePanel from "./RacePanel"
 import RaceView, { type RaceCfg, type RaceInput } from "./RaceView"
 import { type Racer } from "@/lib/gamebook/yellow/race/engine"
@@ -215,6 +216,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [barmanOpen, setBarmanOpen] = useState(false) // menu du barman (guide + potions prix-libre)
     const [blackjackOpen, setBlackjackOpen] = useState(false) // table de blackjack (PC haut-gauche)
     const [pokerOpen, setPokerOpen] = useState(false) // table de poker multijoueur (coin bas-gauche)
+    const [soloPokerOpen, setSoloPokerOpen] = useState(false) // 1re partie de poker : tuto SOLO local (house-funded)
     const [kartOpen, setKartOpen] = useState(false) // borne d'arcade Pokémon Kart (PC haut-gauche, hors 1er)
     // Pokémon Kart : la SÉLECTION/RÉSULTATS sont des overlays (RacePanel) ; la COURSE est rendue DANS
     // l'écran (RaceView) et pilotée par les VRAIS boutons de la coque (mode analogique, onHoldChange).
@@ -455,7 +457,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             if (challengeBusyRef.current || pvpSession || battle) return true // défi/combat en cours → on n'ouvre pas la borne (évite le combat invisible sous la course)
             menuTapGuard.current = Date.now(); setRaceCfg(null); setRaceResults(null); resetRaceInput(); setKartOpen(true); return true
         }
-        if (fx >= 3 && fx <= 5 && fy >= 7 && fy <= 8) { menuTapGuard.current = Date.now(); setPokerOpen(true); return true } // table de poker (sud de la roulette)
+        if (fx >= 3 && fx <= 5 && fy >= 7 && fy <= 8) { // table de poker (sud de la roulette)
+            menuTapGuard.current = Date.now()
+            // 1re fois → tuto SOLO local (100 ⚡ offerts, house-funded) ; ensuite → vraie table multi.
+            if (getPlayer().pokerFirstGameDone) setPokerOpen(true); else setSoloPokerOpen(true)
+            return true
+        }
         return false
     }, [inCasino, userId, mapPlayer])
 
@@ -1707,6 +1714,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {barmanOpen && <BarmanPanel close={() => setBarmanOpen(false)} />}
             {blackjackOpen && <BlackjackPanel close={() => setBlackjackOpen(false)} />}
             {pokerOpen && <PokerPanel close={() => setPokerOpen(false)} myUserId={userId} />}
+            {/* 1re partie de poker : tuto SOLO local (house-funded). Le flag pokerFirstGameDone est posé
+                à l'encaissement (dans SoloPokerPanel) → les fois suivantes ouvrent la vraie table multi. */}
+            {soloPokerOpen && <SoloPokerPanel myUserId={userId} onDone={() => setSoloPokerOpen(false)} />}
             {/* Pokémon Kart : overlay de SÉLECTION (avant la course) ou de RÉSULTATS (après). Pendant la
                 course (raceActive), aucun overlay → la course est dans l'écran et les boutons la pilotent. */}
             {kartOpen && !raceActive && (
