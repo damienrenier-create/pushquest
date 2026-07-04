@@ -21,6 +21,7 @@ export interface PublicSeat {
     betThisRound: number
     hasActed: boolean
     sittingOut: boolean
+    wantsSitOut: boolean
     holeCount: number
     /** Cartes visibles : présentes UNIQUEMENT pour le viewer lui-même, ou à l'abattage pour les mains non couchées. */
     hole?: Card[]
@@ -58,6 +59,7 @@ export function publicView(t: PokerTable, viewerId?: string): PublicTable {
         seats: t.seats.map((s) => ({
             id: s.id, name: s.name, stack: s.stack, folded: s.folded, allIn: s.allIn,
             committed: s.committed, betThisRound: s.betThisRound, hasActed: s.hasActed, sittingOut: s.sittingOut,
+            wantsSitOut: !!s.wantsSitOut,
             holeCount: s.hole.length,
             hole: (s.id === viewerId || (reveal && !s.folded)) ? [...s.hole] : undefined,
         })),
