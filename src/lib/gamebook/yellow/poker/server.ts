@@ -18,10 +18,10 @@ import { ensureBots, runBots } from "./bots"
 
 export const POKER_TABLE_ID = "yellow_casino_holdem"
 export const POKER_CHANNEL = "gamebook-yellow_poker"
-export const POKER_BLINDS = { sb: 5, bb: 10 }
+export const POKER_BLINDS = { sb: 1, bb: 2 }
 export const POKER_MAX_SEATS = 7
 export const POKER_MIN_PLAYERS = 4 // on comble avec des IA jusqu'à ce total quand les potes manquent
-export const POKER_MIN_BUYIN = 100
+export const POKER_MIN_BUYIN = 20
 export const POKER_MAX_BUYIN = 5000
 
 export async function publishPoker(type: string, data: Record<string, unknown> = {}): Promise<void> {
@@ -39,7 +39,12 @@ async function load(): Promise<{ table: PokerTable; version: number }> {
         row = await prisma.pokerTable.findUnique({ where: { id: POKER_TABLE_ID } })
     }
     if (!row) return { table: createTable([], POKER_BLINDS), version: 0 }
-    return { table: JSON.parse(row.stateJson) as PokerTable, version: row.version }
+    const table = JSON.parse(row.stateJson) as PokerTable
+    // Blindes = règle MAISON : toujours forcées à la valeur courante, même si la table a été
+    // créée avant un changement (sinon l'ancienne valeur reste gravée dans stateJson). Sûr entre
+    // les mains ; les blindes déjà postées d'une main en cours sont dans le pot, non affectées.
+    table.blinds = POKER_BLINDS
+    return { table, version: row.version }
 }
 
 /** Écrit uniquement si la version n'a pas bougé (verrou optimiste). */

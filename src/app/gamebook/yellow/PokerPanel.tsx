@@ -13,7 +13,8 @@ import { CATEGORY_LABEL, evaluateBest } from "@/lib/gamebook/yellow/poker/handEv
 
 const RANK: Record<number, string> = { 11: "V", 12: "D", 13: "R", 14: "A" }
 const rk = (r: number) => RANK[r] ?? String(r)
-const DEFAULT_BUYIN = 500
+const DEFAULT_BUYIN = 40 // 20 grosses blindes (BB=2) — micro-mise adaptée aux blindes 1/2
+const MIN_BUYIN = 20
 
 function CardView({ c, hidden }: { c?: Card; hidden?: boolean }) {
     if (hidden || !c) return <div style={{ ...cardBox, background: "#33405e", color: "#7a8bb0" }}>🂠</div>
@@ -49,7 +50,7 @@ export default function PokerPanel({ close, myUserId }: { close: () => void; myU
     }, [table?.phase, table?.handId]) // eslint-disable-line react-hooks/exhaustive-deps
 
     async function sitDown() {
-        const bi = Math.max(100, Math.min(5000, Math.floor(buyin)))
+        const bi = Math.max(MIN_BUYIN, Math.min(5000, Math.floor(buyin)))
         if (player.reps < bi) return
         spendReps(bi); persistYellowSave()
         const ok = await join(bi)
@@ -75,7 +76,7 @@ export default function PokerPanel({ close, myUserId }: { close: () => void; myU
             <div style={panel}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                     <b>🃏 Poker — Texas Hold'em</b>
-                    <span style={{ fontSize: 11, opacity: 0.8 }}>Blindes {table?.blinds.sb ?? 5}/{table?.blinds.bb ?? 10} · Pot {table?.pot ?? 0} ⚡</span>
+                    <span style={{ fontSize: 11, opacity: 0.8 }}>Blindes {table?.blinds.sb ?? 1}/{table?.blinds.bb ?? 2} · Pot {table?.pot ?? 0} ⚡</span>
                 </div>
 
                 {/* Board */}
@@ -121,8 +122,13 @@ export default function PokerPanel({ close, myUserId }: { close: () => void; myU
                 {!me ? (
                     <div style={controls}>
                         <span style={{ fontSize: 12 }}>Reps : <b>{player.reps} ⚡</b></span>
-                        <input type="number" min={100} max={5000} value={buyin} onChange={(e) => setBuyin(Number(e.target.value))} style={inp} />
-                        <button style={{ ...btn, background: "#4cd964" }} disabled={busy || player.reps < buyin} onClick={sitDown}>S'asseoir ({buyin} ⚡)</button>
+                        <input type="number" min={MIN_BUYIN} max={5000} value={buyin} onChange={(e) => setBuyin(Number(e.target.value))} style={inp} />
+                        <button style={{ ...btn, background: "#4cd964" }} disabled={busy || player.reps < Math.max(MIN_BUYIN, buyin)} onClick={sitDown}>S'asseoir ({Math.max(MIN_BUYIN, buyin || 0)} ⚡)</button>
+                        {player.reps < Math.max(MIN_BUYIN, buyin) && (
+                            <span style={{ fontSize: 10.5, color: "#e0a0a0", width: "100%", textAlign: "center" }}>
+                                Pas assez de reps (min {MIN_BUYIN} ⚡ · tu as {player.reps}).
+                            </span>
+                        )}
                     </div>
                 ) : myTurn ? (
                     <div style={controls}>
