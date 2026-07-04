@@ -51,6 +51,8 @@ export interface YellowSave {
     sbireWinsTotal: number
     /** Réputation PvP : matchs + usages (Daemon fétiche / attaque favorite). */
     pvpStats: { wins: number; losses: number; forfeits: number; daemonUse: Record<string, number>; moveUse: Record<string, number> }
+    /** Statistiques de la PARTIE (per-world → un jeu de stats par run, dont le NG+). */
+    stats: YellowStats
     /** ACE (rival) : pic de niveau (ratchet) + box des contres + défaites + jour. */
     acePeakLevel: number
     aceBox: Record<string, number>
@@ -128,7 +130,7 @@ export const SAVE_VERSION = 2
 const ACE_RATCHET_RESET_VERSION = 2
 
 export function emptySave(): YellowSave {
-    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, sylvebarbeAwake: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", ngplusBattles: 0, labDefi: emptyLabDefi(), customDaemons: [], activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null }
+    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, sylvebarbeAwake: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", ngplusBattles: 0, labDefi: emptyLabDefi(), customDaemons: [], activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null }
 }
 
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -227,6 +229,28 @@ function parsePvpStats(raw: unknown): YellowSave["pvpStats"] {
     const o = (raw ?? {}) as Record<string, unknown>
     const n = (v: unknown) => (typeof v === "number" ? Math.max(0, Math.floor(v)) : 0)
     return { wins: n(o.wins), losses: n(o.losses), forfeits: n(o.forfeits), daemonUse: numRec(o.daemonUse), moveUse: numRec(o.moveUse) }
+}
+
+/** Statistiques de partie (per-world). Compteurs cumulés, affichés dans le menu. */
+export interface YellowStats {
+    battles: number       // combats joués (issue win / lose / caught)
+    wins: number          // combats gagnés
+    steps: number         // pas de déplacement
+    energySpent: number   // reps dépensés (attaques + boutique + casino)
+    xpTotal: number       // XP de combat cumulée gagnée par l'équipe
+    hpDealt: number       // PV totaux infligés en combat
+    potionsUsed: number   // objets de soin / statut consommés
+    ballsUsed: number     // balls lancées
+    teamKos: number       // fois où l'équipe a été mise KO (défaites)
+    heals: number         // soins effectués (Centre / soin d'équipe)
+}
+export function emptyYellowStats(): YellowStats {
+    return { battles: 0, wins: 0, steps: 0, energySpent: 0, xpTotal: 0, hpDealt: 0, potionsUsed: 0, ballsUsed: 0, teamKos: 0, heals: 0 }
+}
+function parseStats(raw: unknown): YellowStats {
+    const o = (raw ?? {}) as Record<string, unknown>
+    const n = (v: unknown) => (typeof v === "number" && isFinite(v) ? Math.max(0, Math.floor(v)) : 0)
+    return { battles: n(o.battles), wins: n(o.wins), steps: n(o.steps), energySpent: n(o.energySpent), xpTotal: n(o.xpTotal), hpDealt: n(o.hpDealt), potionsUsed: n(o.potionsUsed), ballsUsed: n(o.ballsUsed), teamKos: n(o.teamKos), heals: n(o.heals) }
 }
 
 const LAB_DEFI_KINDS: LabDefiKind[] = ["pushup1h", "squat150", "quota2x", "ct"]
@@ -394,6 +418,7 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         sbireDefeatsToday: typeof o.sbireDefeatsToday === "number" ? Math.max(0, Math.floor(o.sbireDefeatsToday)) : 0,
         sbireWinsTotal: typeof o.sbireWinsTotal === "number" ? Math.max(0, Math.floor(o.sbireWinsTotal)) : 0,
         pvpStats: parsePvpStats(o.pvpStats),
+        stats: parseStats(o.stats),
         // NERF ACE (migration v2) : cliquet remis à zéro pour les vieilles saves → recalibrage.
         acePeakLevel: aceRatchetReset ? 0 : (typeof o.acePeakLevel === "number" ? Math.max(0, Math.floor(o.acePeakLevel)) : 0),
         aceBox: numRec(o.aceBox),

@@ -88,6 +88,8 @@ export interface BattleState {
     /** DÉFI CT (labo) : cumul des dégâts INFLIGÉS PAR LE JOUEUR ce combat, par type d'attaque (PvE solo).
      *  Lu en fin de combat (finishBattle) pour alimenter le défi. Absent en PvP. */
     dmgByType?: Partial<Record<PokeType, number>>
+    /** STAT de partie : XP de combat cumulée gagnée par l'équipe ce combat (lue en fin de combat). */
+    xpGained?: number
     /** ZONE DE COMBAT (Frontier) : objets/soins interdits (« pas de potion ») → le SAC est masqué. */
     noItems?: boolean
     /** Multiplicateur d'XP gagnée (1 = normal ; <1 au Frontier pour limiter le farming). */
@@ -1148,6 +1150,7 @@ function awardExp(state: BattleState, events: BattleEvent[]) {
         const isActive = mon === winner
         const beforeMax = maxHpOf(mon)
         const res = applyExp(mon, finalGain)
+        state.xpGained = (state.xpGained ?? 0) + finalGain // STAT de partie : XP cumulée ce combat (lue en fin de combat)
         events.push({ kind: "message", text: `${displayName(mon)} gagne ${finalGain} points d'Exp !` })
         if (res.toLevel > res.fromLevel) {
             const delta = maxHpOf(mon) - beforeMax

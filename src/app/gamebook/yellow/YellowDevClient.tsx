@@ -274,7 +274,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         const enemy = arenaMode === "hub" ? buildHubTeam(opp.player) : buildMirrorTeam(opp.player)
         setArenaFight({ opp, mode: arenaMode, enemy })
     }
-    const [menu, setMenu] = useState<"none" | "pause" | "team" | "bag" | "reput" | "moves" | "hof" | "arena-hof">("none")
+    const [menu, setMenu] = useState<"none" | "pause" | "team" | "bag" | "reput" | "moves" | "hof" | "arena-hof" | "stats">("none")
     const activeWorld = useActiveWorld() // NG+ : "live" (partie d'origine) ou "ngplus" (New Game+)
     const ficheTouchX = useRef<number | null>(null) // swipe gauche/droite dans la fiche Daemon
     const [selected, setSelected] = useState<MonInstance | null>(null)
@@ -1115,7 +1115,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (advisorOpen) { closeAdvisor(); return true }
         if (labOpen) { closeLab(); return true }
         if (pcOpen) { closePc(); return true }
-        if (menu === "team" || menu === "bag" || menu === "reput" || menu === "moves" || menu === "hof" || menu === "arena-hof") { setMenu("pause"); return true }
+        if (menu === "team" || menu === "bag" || menu === "reput" || menu === "moves" || menu === "hof" || menu === "arena-hof" || menu === "stats") { setMenu("pause"); return true }
         if (menu === "pause") { setMenu("none"); return true }
         return false
     }
@@ -1217,6 +1217,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         <button style={menuBtnStyle} onClick={() => router.push("/gamebook/yellow/dex")}>📖 DEX (CATALOGUE)</button>
                         {!battle && <button style={menuBtnStyle} onClick={() => setMenu("moves")}>⚔️ ATTAQUES</button>}
                         <button style={menuBtnStyle} onClick={() => setMenu("reput")}>🏆 RÉPUTATION</button>
+                        <button style={menuBtnStyle} onClick={() => setMenu("stats")}>📊 STATS (cette partie)</button>
                         <button style={menuBtnStyle} onClick={() => setMenu("hof")}>🏛️ HALL OF FAME (LIGUE)</button>
                         <button style={menuBtnStyle} onClick={() => setMenu("arena-hof")}>⚔️ HALL OF FAME (ARÈNES)</button>
                         {(isCreator || nickname.toLowerCase() === "mools") && (
@@ -1530,6 +1531,40 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                     {row("Daemon fétiche", fav ? (getSpecies(fav)?.name ?? fav) : "—")}
                                     {row("Attaque favorite", favMv ? (getMove(favMv)?.name ?? favMv) : "—")}
                                     {total === 0 && <div style={{ fontSize: 11, opacity: 0.6, marginTop: 4 }}>Aucun combat PvP pour l'instant. Défie un joueur au casino !</div>}
+                                </div>
+                            )
+                        })()}
+                        <button style={menuBtnDimStyle} onClick={() => setMenu("pause")}>← RETOUR</button>
+                    </div>
+                </div>
+            )}
+
+            {/* STATS de la partie en cours (per-world : run principal OU NG+). Lues en direct (getPlayer). */}
+            {menu === "stats" && (
+                <div style={menuOverlayStyle} onClick={() => setMenu("pause")}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>📊 STATS — {activeWorld === "ngplus" ? "run NG+" : "run principal"}</div>
+                        {(() => {
+                            const s = getPlayer().stats
+                            const winrate = s.battles > 0 ? Math.round((s.wins / s.battles) * 100) : 0
+                            const row = (label: string, val: React.ReactNode) => (
+                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}><span>{label}</span><b>{val}</b></div>
+                            )
+                            return (
+                                <div style={{ display: "flex", flexDirection: "column", gap: 6, margin: "4px 0 8px" }}>
+                                    {row("Combats joués", s.battles)}
+                                    {row("Victoires", s.wins)}
+                                    {row("% de victoire", `${winrate}%`)}
+                                    {row("Fois équipe K.O.", s.teamKos)}
+                                    <div style={{ height: 1, background: "#00000022", margin: "2px 0" }} />
+                                    {row("Pas parcourus", s.steps.toLocaleString("fr-FR"))}
+                                    {row("Énergie dépensée ⚡", s.energySpent.toLocaleString("fr-FR"))}
+                                    {row("XP cumulée", s.xpTotal.toLocaleString("fr-FR"))}
+                                    {row("PV infligés", s.hpDealt.toLocaleString("fr-FR"))}
+                                    <div style={{ height: 1, background: "#00000022", margin: "2px 0" }} />
+                                    {row("Potions utilisées", s.potionsUsed)}
+                                    {row("Balls lancées", s.ballsUsed)}
+                                    {row("Soins effectués", s.heals)}
                                 </div>
                             )
                         })()}

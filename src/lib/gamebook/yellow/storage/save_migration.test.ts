@@ -114,3 +114,26 @@ describe("NG+ — parse défensif des 2 mondes", () => {
         expect(s.ngplusOldTeam![0].speciesId).toBe("gouttiny_s1")
     })
 })
+
+// Stats de partie + flag poker 1re partie : parse 100% défensif (rétro-compat des vieilles saves prod).
+describe("stats de partie + pokerFirstGameDone — parse défensif", () => {
+    it("save sans stats → tous les compteurs à 0 (rétro-compat)", () => {
+        const s = parseSave({ version: 2 })
+        expect(s.stats).toEqual({ battles: 0, wins: 0, steps: 0, energySpent: 0, xpTotal: 0, hpDealt: 0, potionsUsed: 0, ballsUsed: 0, teamKos: 0, heals: 0 })
+        expect(s.pokerFirstGameDone).toBe(false)
+    })
+    it("stats valides préservées ; négatif/garbage/décimal → normalisés", () => {
+        const s = parseSave({ version: 2, stats: { battles: 12, wins: 7, steps: 3400, energySpent: -5, xpTotal: "x", hpDealt: 999, potionsUsed: 3.7, ballsUsed: 4, teamKos: 1, heals: 2 } })
+        expect(s.stats.battles).toBe(12)
+        expect(s.stats.wins).toBe(7)
+        expect(s.stats.steps).toBe(3400)
+        expect(s.stats.energySpent).toBe(0) // négatif → clamp 0
+        expect(s.stats.xpTotal).toBe(0)     // non-numérique → 0
+        expect(s.stats.potionsUsed).toBe(3) // floor
+        expect(s.stats.hpDealt).toBe(999)
+    })
+    it("pokerFirstGameDone honoré quand présent", () => {
+        expect(parseSave({ version: 2, pokerFirstGameDone: true }).pokerFirstGameDone).toBe(true)
+        expect(parseSave({ version: 2 }).pokerFirstGameDone).toBe(false)
+    })
+})

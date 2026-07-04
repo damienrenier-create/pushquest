@@ -19,7 +19,7 @@ import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, resetFleeStreak } from "./battleStore"
 import { getPokedex } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, resetLigueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, addItem, getActiveWorld, getNgplusNemesisSpeciesId } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, resetLigueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, addItem, getActiveWorld, getNgplusNemesisSpeciesId, bumpStat } from "./playerStore"
 import { getSpecies } from "../data/species"
 import { persistYellowSave, canAbandonNgplus } from "./saveManager"
 import { rollWildEncounter, wildLevelCap, hasEncounters } from "../data/encounters"
@@ -525,6 +525,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         if (moved) {
             // Animation : alterne stepFrame uniquement quand on bouge réellement
             set({ player: next, stepFrame: (get().stepFrame === 0 ? 1 : 0) })
+            bumpStat("steps") // STAT : un pas de déplacement effectif
         } else if (dirChanged) {
             set({ player: next }) // simple rotation face au mur, pas d'anim
         }
