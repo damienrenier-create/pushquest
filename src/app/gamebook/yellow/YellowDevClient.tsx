@@ -93,6 +93,7 @@ import CroupierPanel from "./CroupierPanel"
 import BarmanPanel from "./BarmanPanel"
 import BlackjackPanel from "./BlackjackPanel"
 import PokerPanel from "./PokerPanel"
+import RacePanel from "./RacePanel"
 import DaemonCreator from "./create/DaemonCreator"
 
 // ============================================================
@@ -212,6 +213,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [barmanOpen, setBarmanOpen] = useState(false) // menu du barman (guide + potions prix-libre)
     const [blackjackOpen, setBlackjackOpen] = useState(false) // table de blackjack (PC haut-gauche)
     const [pokerOpen, setPokerOpen] = useState(false) // table de poker multijoueur (coin bas-gauche)
+    const [kartOpen, setKartOpen] = useState(false) // borne d'arcade Pokémon Kart (PC haut-gauche, hors 1er)
     const [creatorOpen, setCreatorOpen] = useState(false) // TEST : créateur de Daemon (post-Ligue) — réservé à Mools/créateur
     const [forcedCreator, setForcedCreator] = useState(false) // post-sacre : création OBLIGATOIRE qui enchaîne sur le NG+
     const [pendingForcedCreator, setPendingForcedCreator] = useState(false) // ouvre le créateur forcé après le dialogue-défi
@@ -425,7 +427,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (fx >= 3 && fx <= 5 && fy >= 4 && fy <= 5) { menuTapGuard.current = Date.now(); setRouletteMpOpen(true); return true }
         if (fx === 4 && fy === 3) { menuTapGuard.current = Date.now(); setCroupierOpen(true); return true }
         if (fy === 2 && fx >= 9 && fx <= 12) { menuTapGuard.current = Date.now(); setBarmanOpen(true); return true } // comptoir du barman
-        if (fy === 1 && fx >= 1 && fx <= 6) { menuTapGuard.current = Date.now(); setBlackjackOpen(true); return true } // PC (haut-gauche) = blackjack
+        if (fy === 1 && fx >= 1 && fx <= 2) { menuTapGuard.current = Date.now(); setBlackjackOpen(true); return true } // 1er PC (tout à gauche) = blackjack
+        if (fy === 1 && fx >= 3 && fx <= 6) { menuTapGuard.current = Date.now(); setKartOpen(true); return true }      // PC suivants = Pokémon Kart
         if (fx >= 3 && fx <= 5 && fy >= 7 && fy <= 8) { menuTapGuard.current = Date.now(); setPokerOpen(true); return true } // table de poker (sud de la roulette)
         return false
     }, [inCasino, userId, mapPlayer])
@@ -1664,6 +1667,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {barmanOpen && <BarmanPanel close={() => setBarmanOpen(false)} />}
             {blackjackOpen && <BlackjackPanel close={() => setBlackjackOpen(false)} />}
             {pokerOpen && <PokerPanel close={() => setPokerOpen(false)} myUserId={userId} />}
+            {kartOpen && <RacePanel close={() => setKartOpen(false)} />}
             {creatorOpen && (
                 <DaemonCreator
                     ownerId={userId} nickname={nickname}
