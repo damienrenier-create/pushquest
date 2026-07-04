@@ -957,3 +957,16 @@ model RouletteBet {
   @@index([roundId])
   @@index([userId])
 }
+
+// Table de poker Texas Hold'em PARTAGÉE du casino (multijoueur temps réel). Une ligne = une table (id fixe).
+// Migration purement ADDITIVE (nouvelle table, aucun modèle existant modifié ; userId côté sièges = dans le JSON).
+model PokerTable {
+  id        String   @id // id fixe de la table (ex. "yellow_casino_holdem")
+  // État moteur COMPLET sérialisé (sièges, DECK + cartes privées SERVEUR-ONLY, community, pot, phase…).
+  // Jamais renvoyé brut au client : le serveur applique publicView() par joueur (anti-triche).
+  stateJson String   @default("{}")
+  // Verrou OPTIMISTE : incrémenté à chaque action → rejette une action concurrente périmée.
+  version   Int      @default(0)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
