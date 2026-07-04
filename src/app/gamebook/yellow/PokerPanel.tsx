@@ -95,7 +95,7 @@ export default function PokerPanel({ close, myUserId }: { close: () => void; myU
                         return (
                             <div key={s.id} style={{ ...seatBox, border: turn ? "2px solid #ffd54a" : "1px solid #ffffff22", opacity: s.folded ? 0.45 : 1 }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontWeight: 700 }}>
-                                    <span>{i === table?.button ? "🔘 " : ""}{s.name}{mine ? " (toi)" : ""}</span>
+                                    <span>{i === table?.button ? "🔘 " : ""}{s.name}{s.bot ? " 🤖" : ""}{mine ? " (toi)" : ""}</span>
                                     <span style={{ color: "#ffd54a" }}>{s.stack} ⚡</span>
                                 </div>
                                 <div style={{ display: "flex", gap: 4, alignItems: "center", marginTop: 3 }}>

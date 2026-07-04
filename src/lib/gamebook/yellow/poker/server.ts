@@ -14,11 +14,13 @@ import { getPusher } from "@/lib/pusher"
 import { Rng, makeSeed } from "../battle/rng"
 import { createTable, act, type PokerTable, type PokerAction } from "./engine"
 import { publicView, joinTable, leaveTable, setSitOut, rebuy, maybeStartHand, type PublicTable } from "./room"
+import { ensureBots, runBots } from "./bots"
 
 export const POKER_TABLE_ID = "yellow_casino_holdem"
 export const POKER_CHANNEL = "gamebook-yellow_poker"
 export const POKER_BLINDS = { sb: 5, bb: 10 }
 export const POKER_MAX_SEATS = 7
+export const POKER_MIN_PLAYERS = 4 // on comble avec des IA jusqu'à ce total quand les potes manquent
 export const POKER_MIN_BUYIN = 100
 export const POKER_MAX_BUYIN = 5000
 
@@ -54,12 +56,14 @@ function shuffleSeed(version: number, handId: number): number {
     return makeSeed(version, handId, Date.now() >>> 0, (Math.random() * 2 ** 31) >>> 0)
 }
 
-/** Applique une mutation sous verrou optimiste (retry), relance la main si demandé, puis diffuse. */
+/** Applique une mutation sous verrou optimiste (retry) : action → (re)peuplement IA → relance → jeu des bots → diffuse. */
 async function mutate(fn: (t: PokerTable) => void, autoStart = false): Promise<PokerTable> {
     for (let attempt = 0; attempt < 6; attempt++) {
         const { table, version } = await load()
         fn(table)
+        ensureBots(table, POKER_MIN_PLAYERS, POKER_MAX_SEATS)                        // comble/retire les IA (entre les mains)
         if (autoStart) maybeStartHand(table, new Rng(shuffleSeed(version, table.handId)))
+        runBots(table, new Rng(shuffleSeed(version, table.handId) ^ 0x9e3779b9))     // les IA jouent leurs tours jusqu'au tour d'un humain
         if (await trySave(table, version)) { void publishPoker("update"); return table }
     }
     throw new Error("poker_version_conflict")

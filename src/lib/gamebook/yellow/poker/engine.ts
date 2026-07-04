@@ -30,6 +30,7 @@ export interface Seat {
     sittingOut: boolean    // hors de la MAIN COURANTE (recalculé à chaque startHand)
     wantsSitOut?: boolean  // choix VOLONTAIRE de ne pas jouer (persistant, respecté par startHand)
     leaving?: boolean      // départ demandé → retiré de la table ENTRE deux mains (cf. room.ts)
+    bot?: boolean          // joueur IA (comble la table à ≥4 ; joue tout seul côté serveur, cf. poker/bots.ts)
 }
 
 export interface PotResult { amount: number; winners: number[]; eligible: number[] }
