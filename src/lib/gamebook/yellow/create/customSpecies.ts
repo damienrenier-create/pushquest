@@ -63,9 +63,9 @@ export function fitStatsToBudget(stats: Record<StatKey, number>, budget: number)
 export type Bloomer = "early" | "mid" | "late"
 export interface BloomerCfg { label: string; hint: string; bstMult: number; growthRate: SpeciesData["growthRate"]; evo3: [number, number]; evo2: [number] }
 export const BLOOMERS: Record<Bloomer, BloomerCfg> = {
-    early: { label: "Éclosion précoce", hint: "Monte VITE, plafond plus bas (−10 % BST)", bstMult: 0.90, growthRate: "medium_fast", evo3: [12, 28], evo2: [16] },
+    early: { label: "Éclosion précoce", hint: "Monte VITE, plafond légèrement plus bas (−5 % BST)", bstMult: 0.95, growthRate: "medium_fast", evo3: [12, 28], evo2: [16] },
     mid: { label: "Éclosion moyenne", hint: "Équilibré (BST de référence)", bstMult: 1.0, growthRate: "medium_slow", evo3: [16, 34], evo2: [22] },
-    late: { label: "Éclosion tardive", hint: "Monte LENTEMENT, plafond plus haut (+12 % BST)", bstMult: 1.12, growthRate: "slow", evo3: [22, 40], evo2: [30] },
+    late: { label: "Éclosion tardive", hint: "Monte LENTEMENT, plafond légèrement plus haut (+5 % BST)", bstMult: 1.05, growthRate: "slow", evo3: [22, 40], evo2: [30] },
 }
 /** Plafond ABSOLU de BST : la plus forte finale NON-LÉGENDAIRE existante (S-tier, jamais « au-dessus de tout »). */
 export const MAX_BUDGET = 480

@@ -420,6 +420,17 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId, are
                     }} />
                 )}
 
+                {/* TABLE DE POKER MULTIJOUEUR (casino) : sprite 3×2 en (3,7)→(5,8), AU SUD de la roulette.
+                    On s'approche + A face à la table → on joue (cf. tryCasinoObjectA côté client). */}
+                {map.id === "yellow_casino" && (
+                    <div style={{
+                        position: "absolute", ...screenPos(3, 7, 3, 2), zIndex: 1, pointerEvents: "none",
+                        backgroundImage: "url(/yellow/sprites/casino_poker.png?v=1)",
+                        backgroundRepeat: "no-repeat", backgroundSize: "contain", backgroundPosition: "center",
+                        imageRendering: "pixelated",
+                    }} />
+                )}
+
                 {/* BROUILLARD (manoir hanté, map.darkness) : NOIR sur toute case hors d'un rayon de
                     2 autour du joueur (Chebyshev ≤ 2 = visible). La case du joueur n'a jamais
                     d'overlay → il reste visible ; le reste est noir et SUIT le joueur. */}

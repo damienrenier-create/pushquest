@@ -129,7 +129,7 @@ describe("création — modèle de stats (caps dex +10% · coût croissant · r�
         expect(validateSpec(s)).toEqual([])
     })
     it("fitStatsToBudget ramène un profil trop lourd sous le budget early", () => {
-        const early = bloomerBudget("early") // 392
+        const early = bloomerBudget("early") // 413 (435 × 0.95)
         for (const rk of Object.keys(ROLES) as (keyof typeof ROLES)[]) {
             const fitted = fitStatsToBudget(ROLES[rk].profile, early)
             expect(specStatCost(fitted)).toBeLessThanOrEqual(early)
