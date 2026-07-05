@@ -29,7 +29,7 @@ import { NGPLUS_ARENA_TEAMS } from "../data/ngplusArenas"
 import { createMonInstance } from "../battle/factory"
 import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroLines, SBIRE_DONE_LINES, SBIRE_NO_TEAM_LINES } from "../data/sbire"
 import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, ACE_PASS_LINES, ACE_GATE_LINES, aceIntro, aceGiftLine, buildAceTeam, speciesAtLevel } from "../data/ace"
-import { CAVE_TRADER_ID, CAVE_TRADE_GIVE_POOL, CAVE_TRADE_RECEIVE, CAVE_TRADER_OFFER_LINES, CAVE_TRADER_NEED_LINES, CAVE_TRADE_DONE_LINES, CAVE_TRADE_ALREADY_LINES } from "../data/caveTrader"
+import { CAVE_TRADER_ID, CAVE_TRADE_GIVE, CAVE_TRADE_RECEIVE, CAVE_TRADER_OFFER_LINES, CAVE_TRADER_NEED_LINES, CAVE_TRADE_DONE_LINES, CAVE_TRADE_ALREADY_LINES } from "../data/caveTrader"
 import { HH_KID_ID, HH_KID_DAY_LINES, HH_KID_NIGHT_LINES, isHhKidNight } from "../data/hhKid"
 import { ORCALINE_TRAINER_ID, ORCALINE_INTRO_LINES, ORCALINE_REMATCH_LINES, ORCALINE_DONE_TODAY_LINES } from "../data/orcalineTrainer"
 import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock } from "../data/sylvebarbeBlock"
@@ -886,14 +886,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
-        // DÉNICHEUR (Route Nord) : échange un COMMUN de base → Bélunode (base lignée Léviathonn). UNE SEULE FOIS.
+        // DÉNICHEUR (Route Nord) : échange un LIMAROCHE (natif de la grotte) → Bélunode (base Léviathonn). UNE SEULE FOIS.
         if (npc.id === CAVE_TRADER_ID) {
             if (getPlayerSave().caveTradeDone) {
                 set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: CAVE_TRADE_ALREADY_LINES } })
                 return
             }
-            // N'importe quel commun de base de la Route Nord fait l'affaire (« un Daemon random et faible »).
-            const give = [...getPlayerSave().team, ...getPlayerSave().pc].find((m) => CAVE_TRADE_GIVE_POOL.includes(m.speciesId))
+            const give = [...getPlayerSave().team, ...getPlayerSave().pc].find((m) => m.speciesId === CAVE_TRADE_GIVE)
             if (!give) {
                 set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: CAVE_TRADER_NEED_LINES } })
                 return
