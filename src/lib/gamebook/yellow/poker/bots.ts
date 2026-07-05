@@ -14,18 +14,18 @@ import { evaluateBest } from "./handEval"
 
 export const BOT_BUYIN = 1000
 
-// ── PERSONNALITÉS D'IA ──────────────────────────────────────────────────────────────────────────
-// Chaque bot a un style FIXE (déterministe par siège). Certains sont plus forts, d'autres exploitables.
+// ── PERSONNALITÉS D'IA = les BOSS de la Ligue & des arènes ────────────────────────────────────────
+// Chaque bot est un boss du jeu qui joue au poker « comme il combat » (style FIXE, déterministe par siège).
 //   tight  : sélection des mains (élevé = se couche + facilement) · aggro : préférence relance/tapis
 //   bluff  : fréquence de bluff sur main faible · skill : discipline (bas = suit trop, « calling station »)
 export interface BotPersona { name: string; tight: number; aggro: number; bluff: number; skill: number }
 const PERSONAS: BotPersona[] = [
-    { name: "Botsaï",      tight: 0.75, aggro: 0.75, bluff: 0.10, skill: 0.90 }, // requin tight-aggressive (FORT)
-    { name: "IA-Roupoker", tight: 0.25, aggro: 0.20, bluff: 0.05, skill: 0.35 }, // calling station large-passif (FAIBLE, exploitable)
-    { name: "Ordibluff",   tight: 0.45, aggro: 0.85, bluff: 0.38, skill: 0.55 }, // maniac bluffeur (imprévisible)
-    { name: "Némébot",     tight: 0.60, aggro: 0.55, bluff: 0.12, skill: 0.95 }, // solide équilibré (FORT)
-    { name: "K.O.-Robot",  tight: 0.35, aggro: 0.80, bluff: 0.22, skill: 0.50 }, // loose-aggressive (spew)
-    { name: "Cartobot",    tight: 0.88, aggro: 0.35, bluff: 0.03, skill: 0.72 }, // rocher ultra-serré passif
+    { name: "Volta",     tight: 0.75, aggro: 0.75, bluff: 0.10, skill: 0.90 }, // arène Élec : requin, frappe fort et vite comme la foudre (FORT)
+    { name: "Ondine",    tight: 0.25, aggro: 0.20, bluff: 0.05, skill: 0.35 }, // arène Eau : suit le courant, paie presque tout (calling station, exploitable)
+    { name: "Agatha",    tight: 0.45, aggro: 0.85, bluff: 0.38, skill: 0.55 }, // Ligue (spectre) : te hante de bluffs, imprévisible
+    { name: "Le Maître", tight: 0.60, aggro: 0.55, bluff: 0.12, skill: 0.95 }, // Ligue : implacable et sans faille, jeu de champion (FORT)
+    { name: "Pyra",      tight: 0.35, aggro: 0.80, bluff: 0.22, skill: 0.50 }, // arène Feu : tête brûlée, mise gros et souvent (loose-aggressive)
+    { name: "Granit",    tight: 0.88, aggro: 0.35, bluff: 0.03, skill: 0.72 }, // arène Roche : un vrai roc, ne joue que du solide, ne bluffe jamais
 ]
 /** Personnalité d'un bot d'après son siège (id "bot_N" → persona fixe ; sinon hash déterministe). */
 export function personaFor(seatId: string): BotPersona {
