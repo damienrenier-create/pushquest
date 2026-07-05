@@ -41,6 +41,7 @@ interface WildEntry {
     captureRequiresStatus?: boolean // capture IMPOSSIBLE sans statut majeur sur la cible (légendaire, ex. Goshendofy)
     captureStatusBypassesBall?: boolean // un statut majeur shunte captureMinBallBonus (Super Ball+ OU statut, ex. Bouh)
     minLeadLevel?: number         // ne pop QUE si le lead de l'équipe atteint ce niveau (ex. Orcaline run 2 = 35) — sinon poids 0
+    catchOnce?: boolean           // UNE SEULE capture sur ce compte (ex. Pyropanthe) → ne repop plus une fois dans le Pokédex
 }
 
 /** Carré d'herbes hautes (grille 3×3) : rectangle (cols × rows) + tier (0 = rangée BAS … 2 = rangée HAUT,
@@ -90,6 +91,7 @@ export interface EncounterCtx {
     goshBoost?: boolean         // GAMIN : la nuit (21h-00h) après sa confidence → chances de Goshendofy ×2
     goshCaught?: boolean        // Goshendofy déjà capturé sur ce compte → ne réapparaît PLUS JAMAIS
     ngplus?: boolean            // NEW GAME+ : bascule sur les pools RUN 2 (NGPLUS_ZONES) pour les zones re-mixées
+    caughtSpecies?: readonly string[] // Pokédex des captures → gate les entrées `catchOnce` (ex. Pyropanthe)
 }
 
 /**
@@ -340,19 +342,37 @@ const NGPLUS_ZONES: Record<string, Zone> = {
     // circuits, la lave a envahi les couloirs. Devient le FOYER des Feu déplacés ici (Braisille/Fennaise de
     // Route Nord, Lavapetit/Braisécaille de la Grotte, Pyrozly/Brasicow de Cendreville). Le gardien de la
     // Pierre est Gékraise (Roche/Feu) en run 2 (cf. gekroc.ts buildGekroc(ngplus)).
+    // Niveaux 100% CONTRÔLÉS (levelFixed/levelRange → aucun scaling du lead), façon Centrale Élec. Les lignées
+    // évolutives « couvent » : 60% base (sous son évo) · 30% mi-évo (sous son évo) · 10% final (N40). Les
+    // 2-stades : 85% base · 15% final au ×1,5 de l'évo (trophées rares). Pyropanthe = 1 SEULE capture (catchOnce).
     yellow_centrale: {
-        rate: 0.16, minLevel: 12,
+        rate: 0.16, minLevel: 12, maxLevel: 25,
         pool: [
-            // Le cœur en fusion (Feu/Élec, EXCLUSIF à la Centrale) + la lave
-            { speciesId: "boltah", base: COMMON },      // Feu/Élec → Heatah → Thundah en montant
-            { speciesId: "lavapetit", base: COMMON },   // Roche/Feu, la lave → Magmator
-            { speciesId: "pyrozly", base: COMMON },     // Feu pur, les cendres
-            // Les feu qui remontent des ateliers
-            { speciesId: "braisille", base: UNCOMMON }, // starter feu → Pyrokoss
-            { speciesId: "fennaise", base: UNCOMMON },  // feu → Loupyre
-            { speciesId: "brasicow", base: UNCOMMON, player: "combat" }, // Feu/Combat → Tauricendre
-            // Rare — la vapeur des circuits noyés
-            { speciesId: "braisecaille", base: RARE },  // Feu/Eau → Caldéront
+            // ── LE RÉACTEUR (lignée Boltah, dominant) : 60% Boltah · 30% Heatah · 10% Thundah ──
+            { speciesId: "boltah", base: 138, levelFixed: 15 }, // reste Boltah (évo 16)
+            { speciesId: "boltah", base: 69, levelFixed: 35 },  // → Heatah (évo Heatah 36)
+            { speciesId: "boltah", base: 23, levelFixed: 40 },  // → Thundah
+            // ── LA LAVE (lignée Lavapetit) ──
+            { speciesId: "lavapetit", base: 33, levelFixed: 16 }, // Lavapetit (évo 17)
+            { speciesId: "lavapetit", base: 17, levelFixed: 36 }, // → Fissuralave (évo 37)
+            { speciesId: "lavapetit", base: 6, levelFixed: 40 },  // → Magmator
+            // ── LE STARTER FEU (lignée Braisille) ──
+            { speciesId: "braisille", base: 27, levelFixed: 15 }, // Braisille (évo 16)
+            { speciesId: "braisille", base: 14, levelFixed: 35 }, // → Flamkure (évo 36)
+            { speciesId: "braisille", base: 5, levelFixed: 40 },  // → Pyrokoss
+            // ── LE RENARD (lignée Fennaise) ──
+            { speciesId: "fennaise", base: 8, levelFixed: 15 },   // Fennaise (évo 16)
+            { speciesId: "fennaise", base: 4, levelFixed: 35 },   // → Pyrenard (évo 36)
+            { speciesId: "fennaise", base: 2, levelFixed: 40 },   // → Loupyre
+            // ── LES CENDRES : Pyrozly (mono-stade) ──
+            { speciesId: "pyrozly", base: 90, levelRange: [15, 25] },
+            // ── 2-STADES RARES (85% base sous l'évo · 15% final au ×1,5) ──
+            { speciesId: "brasicow", base: 4, levelFixed: 29, player: "combat" }, // Brasicow (évo 30)
+            { speciesId: "brasicow", base: 1, levelFixed: 45, player: "combat" }, // → Tauricendre (~1,5×30)
+            { speciesId: "braisecaille", base: 3, levelFixed: 31 },               // Braisécaille (évo 32)
+            { speciesId: "braisecaille", base: 1, levelFixed: 48 },               // → Caldéront (~1,5×32)
+            // ── PÉPITE : Pyropanthe, super-rare, UNE SEULE capture (ne repop plus une fois au Pokédex) ──
+            { speciesId: "pyropanthe", base: 2, levelFixed: 50, noEvolve: true, catchOnce: true, captureMult: 0.5 },
         ],
     },
     // CENDREVILLE run 2 — le feu a migré vers la CENTRALE FEU : la ville-cendre penche désormais
@@ -416,7 +436,9 @@ export function rollWildEncounter(ctx: EncounterCtx): MonInstance | null {
 
     // Poids par entrée ; une entrée `minLeadLevel` non atteinte → poids 0 (invisible tant que l'équipe est trop faible).
     const weights = zone.pool.map((e) =>
-        (e.minLeadLevel != null && ctx.leadLevel < e.minLeadLevel) ? 0 : entryWeight(e, ctx.mapId, ctx.x, ctx.y, ctx.player))
+        (e.minLeadLevel != null && ctx.leadLevel < e.minLeadLevel) ? 0
+        : (e.catchOnce && ctx.caughtSpecies?.includes(e.speciesId)) ? 0 // ex. Pyropanthe déjà capturée → ne repop plus
+        : entryWeight(e, ctx.mapId, ctx.x, ctx.y, ctx.player))
     const total = weights.reduce((a, w) => a + w, 0)
     if (total <= 0) return null
 

@@ -569,6 +569,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     dayKey: new Date().toISOString().slice(0, 10), // rotation quotidienne des types (hautes herbes)
                     goshBoost: isHhKidNight(new Date().getHours()) && getPlayerSave().goshHintHeard, // GAMIN : Goshendofy ×2 la nuit
                     goshCaught: getPokedex().caught.includes("goshendofy"), // déjà capturé → ne réapparaît plus jamais
+                    caughtSpecies: getPokedex().caught, // gate les entrées catchOnce (ex. Pyropanthe : 1 seule capture)
                     ngplus: getActiveWorld() === "ngplus", // NG+ : bascule sur les pools RUN 2 (Route Nord / Grotte re-mixées)
                 })
                 if (wild) {
