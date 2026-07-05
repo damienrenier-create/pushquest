@@ -8,30 +8,42 @@
 //   recave les bots ruinés). Les bots = « la maison » : leurs jetons ne sont pas des reps (house-style).
 
 import { Rng } from "../battle/rng"
-import { act, legalActions, totalPot, type PokerAction, type PokerTable } from "./engine"
+import { act, legalActions, totalPot, type PokerAction, type PokerTable, type BotProfile } from "./engine"
 import { pruneSeats } from "./room"
 import { evaluateBest } from "./handEval"
 
 export const BOT_BUYIN = 1000
 
-// ── PERSONNALITÉS D'IA = les BOSS de la Ligue & des arènes ────────────────────────────────────────
-// Chaque bot est un boss du jeu qui joue au poker « comme il combat » (style FIXE, déterministe par siège).
-//   tight  : sélection des mains (élevé = se couche + facilement) · aggro : préférence relance/tapis
-//   bluff  : fréquence de bluff sur main faible · skill : discipline (bas = suit trop, « calling station »)
-export interface BotPersona { name: string; tight: number; aggro: number; bluff: number; skill: number }
-const PERSONAS: BotPersona[] = [
-    { name: "Volta",     tight: 0.75, aggro: 0.75, bluff: 0.10, skill: 0.90 }, // arène Élec : requin, frappe fort et vite comme la foudre (FORT)
-    { name: "Ondine",    tight: 0.25, aggro: 0.20, bluff: 0.05, skill: 0.35 }, // arène Eau : suit le courant, paie presque tout (calling station, exploitable)
-    { name: "Agatha",    tight: 0.45, aggro: 0.85, bluff: 0.38, skill: 0.55 }, // Ligue (spectre) : te hante de bluffs, imprévisible
-    { name: "Le Maître", tight: 0.60, aggro: 0.55, bluff: 0.12, skill: 0.95 }, // Ligue : implacable et sans faille, jeu de champion (FORT)
-    { name: "Pyra",      tight: 0.35, aggro: 0.80, bluff: 0.22, skill: 0.50 }, // arène Feu : tête brûlée, mise gros et souvent (loose-aggressive)
-    { name: "Granit",    tight: 0.88, aggro: 0.35, bluff: 0.03, skill: 0.72 }, // arène Roche : un vrai roc, ne joue que du solide, ne bluffe jamais
+// ── LES IA = les BOSS de la Ligue & des arènes, chacun avec 2 PERSONNALITÉS ───────────────────────
+// À chaque partie on tire des boss AU HASARD (distincts à la table) et, pour chacun, UNE de ses 2
+// personnalités (tirée au hasard aussi) → chaque table est différente. Le profil est STOCKÉ sur le
+// siège (Seat.persona) → il persiste toute la partie. Ils jouent « comme ils combattent ».
+//   tight : sélection des mains · aggro : préférence relance/tapis · bluff : fréquence de bluff · skill : discipline
+interface PokerBoss { name: string; styles: [BotProfile, BotProfile] }
+const POKER_BOSSES: PokerBoss[] = [
+    // Arènes
+    { name: "Volta",  styles: [{ tight: .75, aggro: .75, bluff: .10, skill: .90 }, { tight: .55, aggro: .90, bluff: .28, skill: .60 }] }, // requin / foudroyant
+    { name: "Pyra",   styles: [{ tight: .35, aggro: .85, bluff: .28, skill: .50 }, { tight: .62, aggro: .55, bluff: .12, skill: .72 }] }, // tête brûlée / posée
+    { name: "Granit", styles: [{ tight: .88, aggro: .35, bluff: .03, skill: .72 }, { tight: .70, aggro: .62, bluff: .08, skill: .85 }] }, // roc / roc-agressif
+    { name: "Ondine", styles: [{ tight: .25, aggro: .20, bluff: .05, skill: .35 }, { tight: .50, aggro: .45, bluff: .16, skill: .60 }] }, // suiveuse / maligne
+    { name: "Druide", styles: [{ tight: .66, aggro: .40, bluff: .08, skill: .80 }, { tight: .42, aggro: .55, bluff: .22, skill: .55 }] }, // patient / joueur
+    // Ligue
+    { name: "Le Maître", styles: [{ tight: .60, aggro: .55, bluff: .12, skill: .95 }, { tight: .72, aggro: .82, bluff: .18, skill: .92 }] }, // solide / redoutable
+    { name: "Agatha", styles: [{ tight: .45, aggro: .85, bluff: .38, skill: .55 }, { tight: .56, aggro: .50, bluff: .26, skill: .76 }] }, // bluffeuse / sournoise
+    { name: "Olga",   styles: [{ tight: .72, aggro: .45, bluff: .06, skill: .82 }, { tight: .50, aggro: .66, bluff: .16, skill: .70 }] }, // glaciale / offensive
+    { name: "Aldo",   styles: [{ tight: .30, aggro: .88, bluff: .20, skill: .50 }, { tight: .48, aggro: .90, bluff: .12, skill: .76 }] }, // bagarreur
+    { name: "Peter",  styles: [{ tight: .55, aggro: .72, bluff: .22, skill: .86 }, { tight: .40, aggro: .60, bluff: .32, skill: .64 }] }, // dragon
 ]
-/** Personnalité d'un bot d'après son siège (id "bot_N" → persona fixe ; sinon hash déterministe). */
-export function personaFor(seatId: string): BotPersona {
-    const m = /^bot_(\d+)$/.exec(seatId)
-    const idx = m ? parseInt(m[1], 10) - 1 : [...seatId].reduce((a, c) => a + c.charCodeAt(0), 0)
-    return PERSONAS[((idx % PERSONAS.length) + PERSONAS.length) % PERSONAS.length]
+const DEFAULT_PROFILE: BotProfile = { tight: .55, aggro: .55, bluff: .12, skill: .70 }
+
+/** Tire un boss ABSENT de la table + UNE de ses 2 personnalités (au hasard si rng, sinon déterministe). */
+function pickBoss(t: PokerTable, rng?: Rng): { name: string; persona: BotProfile } {
+    const used = new Set(t.seats.filter((s) => s.bot && !s.leaving).map((s) => s.name))
+    const avail = POKER_BOSSES.filter((b) => !used.has(b.name))
+    const pool = avail.length ? avail : POKER_BOSSES
+    const boss = pool[rng ? Math.floor(rng.next() * pool.length) : 0]
+    const persona = boss.styles[rng && rng.next() < 0.5 ? 1 : 0]
+    return { name: boss.name, persona }
 }
 
 /** Force de main du bot ∈ [0,1] : préflop = valeur des 2 cartes ; postflop = catégorie de la meilleure main. */
@@ -57,7 +69,7 @@ export function botDecision(t: PokerTable, i: number, rng: Rng): PokerAction {
     const { canCheck, toCall, minRaiseTo, maxRaiseTo } = legalActions(t, i)
     const s = t.seats[i]
     const str = handStrength(t, i)
-    const p = personaFor(s.id)                 // style FIXE du bot (tight/aggro/bluff/skill)
+    const p = s.persona ?? DEFAULT_PROFILE     // style du bot (tiré au hasard à sa création, stocké sur le siège)
     const r = rng.next()
     const canRaise = maxRaiseTo > minRaiseTo
     const raiseTo = (frac: number) => Math.min(maxRaiseTo, minRaiseTo + Math.floor((maxRaiseTo - minRaiseTo) * frac))
@@ -95,7 +107,7 @@ export function runBots(t: PokerTable, rng: Rng): void {
 }
 
 /** Ajuste les bots ENTRE les mains : comble jusqu'à `target` joueurs SI ≥1 humain, retire sinon, recave les ruinés. */
-export function ensureBots(t: PokerTable, target = 4, maxSeats = 7, botBuyin = BOT_BUYIN): void {
+export function ensureBots(t: PokerTable, target = 4, maxSeats = 7, botBuyin = BOT_BUYIN, rng?: Rng): void {
     if (t.phase !== "handComplete") return // ne jamais toucher la table en pleine main
     const humans = t.seats.filter((s) => !s.bot && !s.leaving)
     // Aucun humain → table au repos : on vire tous les bots.
@@ -111,7 +123,8 @@ export function ensureBots(t: PokerTable, target = 4, maxSeats = 7, botBuyin = B
     for (let n = 1; n <= maxSeats && t.seats.filter((s) => s.bot && !s.leaving).length < wanted; n++) {
         const id = `bot_${n}`
         if (t.seats.some((s) => s.id === id && !s.leaving)) continue
-        t.seats.push({ id, name: personaFor(id).name, stack: botBuyin, hole: [], folded: false, allIn: false, committed: 0, betThisRound: 0, hasActed: false, sittingOut: true, wantsSitOut: false, bot: true })
+        const { name, persona } = pickBoss(t, rng) // boss + personnalité tirés au hasard (distincts à la table)
+        t.seats.push({ id, name, persona, stack: botBuyin, hole: [], folded: false, allIn: false, committed: 0, betThisRound: 0, hasActed: false, sittingOut: true, wantsSitOut: false, bot: true })
     }
     pruneSeats(t)
 }

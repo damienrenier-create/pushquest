@@ -79,7 +79,7 @@ export function useLocalPoker(myUserId: string, myName: string): LocalPokerContr
         const bi = Math.max(0, Math.floor(buyin))
         buyinRef.current = bi
         joinTable(t, { id: myUserId, name: myName, buyin: bi })
-        ensureBots(t, SOLO_SEATS, SOLO_SEATS, bi) // bots au MÊME plafond que le joueur (partie juste)
+        ensureBots(t, SOLO_SEATS, SOLO_SEATS, bi, rng()) // bots au MÊME plafond que le joueur + boss/persona au hasard
         maybeStartHand(t, rng())
         sync() // les bots joueront ensuite un par un (botTurn), piloté par le panneau
         return true
@@ -109,7 +109,7 @@ export function useLocalPoker(myUserId: string, myName: string): LocalPokerContr
     const nextHand = useCallback(async (): Promise<void> => {
         const t = tableRef.current; if (!t || t.phase !== "handComplete") { sync(); return }
         const overCap = (mySeat(t)?.stack ?? 0) > FIRST_GAME_CHEAT_CAP // au-dessus du plafond AVANT la donne
-        ensureBots(t, SOLO_SEATS, SOLO_SEATS, buyinRef.current)
+        ensureBots(t, SOLO_SEATS, SOLO_SEATS, buyinRef.current, rng())
         maybeStartHand(t, rng())
         if (overCap) rigWeakHand(t) // SECRET : donne défavorisée, jamais annoncée
         sync()

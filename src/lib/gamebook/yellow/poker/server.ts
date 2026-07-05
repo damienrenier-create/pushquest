@@ -66,7 +66,7 @@ async function mutate(fn: (t: PokerTable) => void, autoStart = false): Promise<P
     for (let attempt = 0; attempt < 6; attempt++) {
         const { table, version } = await load()
         fn(table)
-        ensureBots(table, POKER_MIN_PLAYERS, POKER_MAX_SEATS)                        // comble/retire les IA (entre les mains)
+        ensureBots(table, POKER_MIN_PLAYERS, POKER_MAX_SEATS, undefined, new Rng(shuffleSeed(version, table.handId) ^ 0x51ed270b)) // comble/retire les IA (boss + persona au hasard)
         if (autoStart) maybeStartHand(table, new Rng(shuffleSeed(version, table.handId)))
         runBots(table, new Rng(shuffleSeed(version, table.handId) ^ 0x9e3779b9))     // les IA jouent leurs tours jusqu'au tour d'un humain
         if (await trySave(table, version)) { void publishPoker("update"); return table }

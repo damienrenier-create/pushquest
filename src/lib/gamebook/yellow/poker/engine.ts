@@ -17,6 +17,9 @@ export interface PokerAction {
     to?: number
 }
 
+/** Profil de jeu d'un bot (défini par bots.ts, stocké sur le siège pour persister le style tiré au hasard). */
+export interface BotProfile { tight: number; aggro: number; bluff: number; skill: number }
+
 export interface Seat {
     id: string
     name: string
@@ -30,7 +33,8 @@ export interface Seat {
     sittingOut: boolean    // hors de la MAIN COURANTE (recalculé à chaque startHand)
     wantsSitOut?: boolean  // choix VOLONTAIRE de ne pas jouer (persistant, respecté par startHand)
     leaving?: boolean      // départ demandé → retiré de la table ENTRE deux mains (cf. room.ts)
-    bot?: boolean          // joueur IA (comble la table à ≥4 ; joue tout seul côté serveur, cf. poker/bots.ts)
+    bot?: boolean          // joueur IA (comble la table ; joue tout seul côté serveur, cf. poker/bots.ts)
+    persona?: BotProfile   // BOT : style tiré au hasard à la création (tight/aggro/bluff/skill), persisté
 }
 
 export interface PotResult { amount: number; winners: number[]; eligible: number[] }
