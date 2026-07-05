@@ -38,6 +38,10 @@ export default function DailyPokerPanel({ onDone, myUserId }: { onDone: () => vo
     const maxRaiseTo = me ? me.betThisRound + me.stack : 0
     const handDone = table?.phase === "handComplete"
     const dayOver = phase === "play" && !!table && bossesLeft === 0 // tous les boss ruinés
+    const meRuined = phase === "play" && !!me && me.stack <= 0 && !dayOver // toi ruiné (boss encore là)
+    // On n'encaisse qu'ENTRE les mains (main finie / journée finie) : sinon les jetons déjà dans le pot ne
+    // seraient pas comptés dans les tapis-du-jour des boss (perte conservatrice + faux « boss ruiné »).
+    const canCashOut = handDone || dayOver
 
     useEffect(() => { setRaiseTo(Math.min(maxRaiseTo, Math.max(minRaiseTo, raiseTo || minRaiseTo))) }, [minRaiseTo, maxRaiseTo]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -127,6 +131,8 @@ export default function DailyPokerPanel({ onDone, myUserId }: { onDone: () => vo
 
                         {dayOver ? (
                             <div style={{ ...bustBanner, background: "#2a3d1e" }}>🏆 Tu as ruiné tous les boss du jour ! Encaisse — ils reviennent demain.</div>
+                        ) : meRuined ? (
+                            <div style={{ ...bustBanner, background: "#3a1e1e" }}>💥 Tu es ruiné — encaisse pour régler tes pertes (attends la fin de la main).</div>
                         ) : handDone ? (
                             <div style={{ textAlign: "center", fontSize: 11, opacity: 0.65, marginBottom: 4 }}>main suivante…</div>
                         ) : null}
@@ -147,12 +153,13 @@ export default function DailyPokerPanel({ onDone, myUserId }: { onDone: () => vo
                             </div>
                         ) : (
                             <div style={{ ...controls, opacity: 0.9, fontSize: 12, minHeight: 36, alignItems: "center" }}>
-                                {dayOver ? "" : handDone ? "" : "⏳ les boss réfléchissent…"}
+                                {dayOver || meRuined || handDone ? "" : "⏳ les boss réfléchissent…"}
                             </div>
                         )}
 
                         <div style={{ display: "flex", justifyContent: "center", marginTop: 6 }}>
-                            <button style={{ ...btn, background: "#4cd964", color: "#0a2a12" }} onClick={cashOut}>
+                            <button style={{ ...btn, background: canCashOut ? "#4cd964" : "#334", color: canCashOut ? "#0a2a12" : "#889" }} disabled={!canCashOut} onClick={cashOut}
+                                title={canCashOut ? "" : "Attends la fin de la main pour encaisser"}>
                                 Encaisser et partir ({me?.stack ?? 0} ⚡)
                             </button>
                         </div>

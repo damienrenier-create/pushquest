@@ -1779,12 +1779,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {/* BARMAN — guide du casino + indice jetons + Potions à prix libre (effets secrets). */}
             {barmanOpen && <BarmanPanel close={() => setBarmanOpen(false)} />}
             {blackjackOpen && <BlackjackPanel close={() => setBlackjackOpen(false)} />}
-            {pokerOpen && <PokerPanel close={() => setPokerOpen(false)} myUserId={userId} />}
+            {pokerOpen && !dailyPokerOpen && <PokerPanel close={() => setPokerOpen(false)} myUserId={userId} />}
             {/* 1re partie de poker : tuto SOLO local (house-funded). Le flag pokerFirstGameDone est posé
                 à l'encaissement (dans SoloPokerPanel) → les fois suivantes ouvrent la vraie table multi. */}
             {soloPokerOpen && <SoloPokerPanel myUserId={userId} onDone={() => setSoloPokerOpen(false)} />}
             {/* Cash quotidien SOLO vs les boss (vraies reps). Ouvert quand aucun pote au casino (sinon table multi). */}
-            {dailyPokerOpen && <DailyPokerPanel myUserId={userId} onDone={() => setDailyPokerOpen(false)} />}
+            {dailyPokerOpen && !pokerOpen && !soloPokerOpen && <DailyPokerPanel myUserId={userId} onDone={() => setDailyPokerOpen(false)} />}
             {/* Pokémon Kart : overlay de SÉLECTION (avant la course) ou de RÉSULTATS (après). Pendant la
                 course (raceActive), aucun overlay → la course est dans l'écran et les boutons la pilotent. */}
             {kartOpen && !raceActive && (
