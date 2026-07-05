@@ -4,9 +4,11 @@
 // (non gated), avec recherche + filtre par type. Clic → fiche détaillée.
 // Style natif GBC (cohérent avec /pokedex).
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { SPECIES, DEX_COUNT } from "@/lib/gamebook/yellow/data/species"
+import { visibleDexSpecies } from "@/lib/gamebook/yellow/data/species"
+import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
+import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { POKE_TYPES, type PokeType, type SpeciesData } from "@/lib/gamebook/yellow/battle/types"
 import { TYPE_COLORS, baseStatTotal } from "./dexShared"
 
@@ -25,19 +27,24 @@ function DexIcon({ sp }: { sp: SpeciesData }) {
 
 export default function DexClient() {
     const router = useRouter()
+    const dex = usePokedex()
     const [query, setQuery] = useState("")
     const [typeFilter, setTypeFilter] = useState<PokeType | null>(null)
+    // Hydrate la save (idempotent) : sinon le Pokédex en mémoire est vide → les run-2 restent masqués (défaut sûr).
+    useEffect(() => { void loadYellowSave() }, [])
 
+    // Base VISIBLE : exclut les Daemons run-2 (Gékraise/Ukognos/Merorem) non encore capturés → invisibles hors run 2.
+    const visible = useMemo(() => visibleDexSpecies(dex.caught), [dex.caught])
     const entries = useMemo(() => {
         const q = query.trim().toLowerCase()
-        return Object.values(SPECIES)
+        return visible
             .filter((sp) => {
                 if (typeFilter && !sp.types.includes(typeFilter)) return false
                 if (q && !sp.name.toLowerCase().includes(q) && !String(sp.dexNo).includes(q)) return false
                 return true
             })
             .sort((a, b) => a.dexNo - b.dexNo)
-    }, [query, typeFilter])
+    }, [query, typeFilter, visible])
 
     return (
         <div style={S.root}>
@@ -47,7 +54,7 @@ export default function DexClient() {
                     <button onClick={() => router.push("/gamebook/yellow/dex/types")} style={S.chartBtn}>📊 Table des types</button>
                 </div>
                 <h1 style={S.title}>📖 DEX NEXUS</h1>
-                <div style={S.sub}>{entries.length} / {DEX_COUNT} espèces</div>
+                <div style={S.sub}>{entries.length} / {visible.length} espèces</div>
 
                 <input
                     value={query}

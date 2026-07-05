@@ -16,7 +16,7 @@ import { isHeldItem, getHeldItem } from "../data/heldItems"
 import { SAIYAN_POINT_VALUE } from "../data/saiyanConfig"
 import { BADGE_REPS_CAP_BONUS } from "../data/badges"
 import { getCt, canLearnCt, purchasableCts, NGPLUS_EXCLUSIVE_CT_IDS, type BadgeId } from "../data/cts"
-import { emptyLabDefi, casinoWinningCase, CASINO_NUM_CASES, CASINO_MIN_BET, CASINO_MAX_BET, CASINO_WIN_MULT, CASINO_BANKRUPT_STREAK, CASINO_BANKRUPT_COOLDOWN_MS, TONYTONY_TARGET, TONYTONY_SHINY_TARGET, TONYTONY_LEVEL, TONYTONY_SPECIES, DAILY_TICKET_VALUE, TICKET_QUEUE_MAX, ROULETTE_CLAIMED_MAX, BLESSING_QUEUE_MAX, casinoFloorTiles, isCasinoFloorTile, CHIP_MIN, CHIP_MAX, CHIP_TICKET_VALUE, isSecretChipMilestone, clampTicketValue, SPAG_GIFT_TICKET_COUNT, SPAG_GIFT_TICKET_VALUE, STEP_GIFT_CREDIT, BLACKJACK_CT_TARGET, BLACKJACK_CT_ID, BLACKJACK_CT_NGPLUS_STEP, type LabDefiState, type LabActiveDefi } from "../data/labDefis"
+import { emptyLabDefi, casinoWinningCase, CASINO_NUM_CASES, CASINO_MIN_BET, CASINO_MAX_BET, CASINO_WIN_MULT, CASINO_BANKRUPT_STREAK, CASINO_BANKRUPT_COOLDOWN_MS, TONYTONY_TARGET, TONYTONY_SHINY_TARGET, TONYTONY_LEVEL, TONYTONY_SPECIES, MEROREM_SPECIES, DAILY_TICKET_VALUE, TICKET_QUEUE_MAX, ROULETTE_CLAIMED_MAX, BLESSING_QUEUE_MAX, casinoFloorTiles, isCasinoFloorTile, CHIP_MIN, CHIP_MAX, CHIP_TICKET_VALUE, isSecretChipMilestone, clampTicketValue, SPAG_GIFT_TICKET_COUNT, SPAG_GIFT_TICKET_VALUE, STEP_GIFT_CREDIT, BLACKJACK_CT_TARGET, BLACKJACK_CT_ID, BLACKJACK_CT_NGPLUS_STEP, type LabDefiState, type LabActiveDefi } from "../data/labDefis"
 import { createMonInstance } from "../battle/factory"
 import { emptyYellowStats, type YellowStats } from "../storage/save"
 import type { StatKey } from "../battle/types"
@@ -1351,46 +1351,57 @@ export function playTicketSpin(betCase: number): CasinoTicketResult {
     return { winningCase, won, winAmount, betValue }
 }
 
+/** PILIER DU CASINO selon le monde : Tonytony (run 1) ou son alter-ego MEROREM (run 2). Le cumul casino
+ *  (labDefi, PAR MONDE : remis à zéro en NG+) débloque l'un OU l'autre aux MÊMES paliers (1000 / 5000).
+ *  Source unique partagée par le don, le shiny et l'UI (labo/croupier/roulette) → jamais de nom incohérent. */
+export function casinoPillar(): { species: string; name: string; emoji: string } {
+    return getActiveWorld() === "ngplus"
+        ? { species: MEROREM_SPECIES, name: "Merorem", emoji: "🦠" }
+        : { species: TONYTONY_SPECIES, name: "Tonytony", emoji: "🥚" }
+}
+
 /**
- * Remet TONYTONY (one-shot) si le cumul casino atteint la cible. Crée l'instance niveau TONYTONY_LEVEL,
- * l'ajoute (équipe si place, sinon PC) + Pokédex, pose le flag. Renvoie le placement, ou null si
- * pas éligible (déjà réclamé / cumul insuffisant).
+ * Remet le PILIER du casino (Tonytony run 1 / Merorem run 2, one-shot) si le cumul casino atteint la cible.
+ * Crée l'instance niveau TONYTONY_LEVEL, l'ajoute (équipe si place, sinon PC) + Pokédex, pose le flag.
+ * Renvoie le placement, ou null si pas éligible (déjà réclamé / cumul insuffisant).
  */
 export function grantTonytony(): "team" | "pc" | null {
     const d = st.labDefi
     if (d.tonytonyClaimed || d.casinoTotalWon < TONYTONY_TARGET) return null
-    const mon = createMonInstance(TONYTONY_SPECIES, TONYTONY_LEVEL, { owned: true })
+    const species = casinoPillar().species // run 2 → Merorem, sinon Tonytony
+    const mon = createMonInstance(species, TONYTONY_LEVEL, { owned: true })
     st = { ...st, labDefi: { ...d, tonytonyClaimed: true } } // pose le flag AVANT (anti double-don)
     const where = addCaught(mon) // gère équipe pleine → PC + estampille l'ownership ; emit()
-    markCaught(TONYTONY_SPECIES) // entrée Pokédex
+    markCaught(species) // entrée Pokédex
     return where
 }
 
 /**
- * CAPSTONE 5000 : rend SHINY le Tonytony du joueur (one-shot). Le retrouve dans l'équipe puis le PC ;
- * s'il n'en a plus (relâché/échangé), en redonne un SHINY. Renvoie où, ou null si pas éligible.
+ * CAPSTONE 5000 : rend SHINY le pilier du casino (Tonytony run 1 / Merorem run 2, one-shot). Le retrouve
+ * dans l'équipe puis le PC ; s'il n'en a plus (relâché/échangé), en redonne un SHINY. Renvoie où, ou null.
  */
 export function makeTonytonyShiny(): "team" | "pc" | "new" | null {
     const d = st.labDefi
     if (d.tonytonyShiny || d.casinoTotalWon < TONYTONY_SHINY_TARGET) return null
-    const ti = st.team.findIndex((m) => m.speciesId === TONYTONY_SPECIES)
+    const species = casinoPillar().species // run 2 → Merorem, sinon Tonytony
+    const ti = st.team.findIndex((m) => m.speciesId === species)
     if (ti >= 0) {
         const team = st.team.slice(); team[ti] = { ...team[ti], shiny: true }
         st = { ...st, team, labDefi: { ...d, tonytonyShiny: true } }
         emit(); return "team"
     }
-    const pi = st.pc.findIndex((m) => m.speciesId === TONYTONY_SPECIES)
+    const pi = st.pc.findIndex((m) => m.speciesId === species)
     if (pi >= 0) {
         const pc = st.pc.slice(); pc[pi] = { ...pc[pi], shiny: true }
         st = { ...st, pc, labDefi: { ...d, tonytonyShiny: true } }
         emit(); return "pc"
     }
-    // Plus de Tonytony → on en redonne un SHINY.
-    const mon = createMonInstance(TONYTONY_SPECIES, TONYTONY_LEVEL, { owned: true })
+    // Plus de pilier → on en redonne un SHINY.
+    const mon = createMonInstance(species, TONYTONY_LEVEL, { owned: true })
     mon.shiny = true
     st = { ...st, labDefi: { ...d, tonytonyShiny: true } }
     addCaught(mon)
-    markCaught(TONYTONY_SPECIES)
+    markCaught(species)
     return "new"
 }
 

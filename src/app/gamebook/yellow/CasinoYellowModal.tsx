@@ -12,7 +12,7 @@
 // et la dépense d'énergie ne sont révélés/appliqués QU'À l'atterrissage.
 
 import { useState, useRef, useEffect } from "react"
-import { usePlayer, casinoSpin, type CasinoBet, type CasinoSpinResult } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, casinoSpin, casinoPillar, type CasinoBet, type CasinoSpinResult } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { CASINO_NUM_CASES, CASINO_MIN_BET, CASINO_MAX_BET, CASINO_WIN_MULT, TONYTONY_TARGET, TONYTONY_SHINY_TARGET, casinoWinningCase } from "@/lib/gamebook/yellow/data/labDefis"
 
@@ -64,9 +64,10 @@ export default function CasinoYellowModal({ onClose }: { onClose: () => void }) 
     const totalBet = Object.values(bets).reduce((a, b) => a + b, 0)
     const canSpin = !spinning && !bankruptActive && placed.length > 0 && totalBet > 0 && totalBet <= player.reps
     const won = d.casinoTotalWon
-    // Palier en cours : 🥚 Tonytony (1000) → ✨ Tonytony shiny (5000) → plus de palier (cumul libre).
+    const pillar = casinoPillar() // 🥚 Tonytony (run 1) / 🦠 Merorem (run 2)
+    // Palier en cours : pilier (1000) → pilier shiny (5000) → plus de palier (cumul libre).
     const nextTarget = !d.tonytonyClaimed ? TONYTONY_TARGET : !d.tonytonyShiny ? TONYTONY_SHINY_TARGET : 0
-    const nextLabel = !d.tonytonyClaimed ? "🥚 Tonytony" : !d.tonytonyShiny ? "✨ Tonytony SHINY" : "Cumul gagné"
+    const nextLabel = !d.tonytonyClaimed ? `${pillar.emoji} ${pillar.name}` : !d.tonytonyShiny ? `✨ ${pillar.name} SHINY` : "Cumul gagné"
     const pct = nextTarget ? Math.min(100, Math.round((won / nextTarget) * 100)) : 100
 
     const toggle = (c: number) => {
@@ -172,8 +173,8 @@ export default function CasinoYellowModal({ onClose }: { onClose: () => void }) 
                             ) : (
                                 <div style={{ fontSize: 11, color: "#c0392b" }}>❌ Mise perdue : -{result.totalBet} ⚡. Série remise à 0.</div>
                             )}
-                            {!d.tonytonyClaimed && won >= TONYTONY_TARGET && <div style={{ fontSize: 11, color: "#1e8449", marginTop: 4, fontWeight: 700 }}>🥚 1000 atteint ! Ferme et réclame TONYTONY au labo.</div>}
-                            {d.tonytonyClaimed && !d.tonytonyShiny && won >= TONYTONY_SHINY_TARGET && <div style={{ fontSize: 11, color: "#1e8449", marginTop: 4, fontWeight: 700 }}>✨ 5000 atteint ! Ferme et rends ton Tonytony SHINY au labo.</div>}
+                            {!d.tonytonyClaimed && won >= TONYTONY_TARGET && <div style={{ fontSize: 11, color: "#1e8449", marginTop: 4, fontWeight: 700 }}>{pillar.emoji} 1000 atteint ! Ferme et réclame {pillar.name.toUpperCase()} au labo.</div>}
+                            {d.tonytonyClaimed && !d.tonytonyShiny && won >= TONYTONY_SHINY_TARGET && <div style={{ fontSize: 11, color: "#1e8449", marginTop: 4, fontWeight: 700 }}>✨ 5000 atteint ! Ferme et rends ton {pillar.name} SHINY au labo.</div>}
                         </div>
                     )}
                     {error && <div style={{ marginTop: 8, padding: 6, background: "#fbeaea", color: "#c0392b", fontSize: 10, borderRadius: 3 }}>{error}</div>}

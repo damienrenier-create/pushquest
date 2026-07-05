@@ -5,7 +5,7 @@
 // (seen à la rencontre, caught à la capture/évolution). Sérialisable pour la save.
 
 import { useSyncExternalStore } from "react"
-import { DEX_COUNT } from "../data/species"
+import { visibleDexSpecies } from "../data/species"
 
 export interface PokedexState {
     seen: string[]    // speciesId
@@ -51,7 +51,9 @@ export function hydratePokedex(state: PokedexState) {
 }
 
 export function pokedexCompletion(): { caught: number; total: number; pct: number } {
-    const total = DEX_COUNT
+    // Le total EXCLUT les espèces run-2 non encore capturées (Gékraise/Ukognos/Merorem) → pas de spoiler
+    // « X/137 » avant le run 2. Une fois obtenues, elles rentrent dans le total ET dans les captures.
+    const total = visibleDexSpecies(dex.caught).length
     const caught = dex.caught.length
     return { caught, total, pct: total > 0 ? Math.round((caught / total) * 100) : 0 }
 }

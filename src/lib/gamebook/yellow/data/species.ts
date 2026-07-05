@@ -1700,6 +1700,7 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "Lutin-démon aux flammes violettes, écho féerique et maudit de Goshendofy. Ne se révèle qu'à ceux qui osent recommencer l'aventure.",
         sprite: "/yellow/sprites/dex/ukognos.png",
         hiddenUntilCaught: true, // absent du Pokédex tant qu'on ne l'a pas capturé (comme Goshendofy)
+        runTwoOnly: true, // n'apparaît dans les dex qu'à partir du run 2 (une fois capturé)
     },
     // 🪨⚡ GÉKROC — mini-boss STATIQUE de la Centrale (gardien de la Pierre d'Évolution). Stats moyennes
     // mais COUTEAU-SUISSE : apprend TOUTES les CT (learnsAllCts). Capture dure (catchRate 10) mais ≠ légendaire.
@@ -1756,6 +1757,7 @@ export const SPECIES: Record<string, SpeciesData> = {
         sprite: "/yellow/sprites/dex/gekraise.png", // sprite fourni par Sartay (run 2)
         learnsAllCts: true,
         hiddenUntilCaught: true,
+        runTwoOnly: true, // absent des dex tant que non capturé en run 2 (jumeau NG+ de Gékroc)
     },
 
     // ===== LIGNÉE CARLIN-DRAGON (Feu/Dragon) — profil "Ptéra" : sprinter fragile (Vit++/Atk++, Déf molle) =====
@@ -1901,6 +1903,34 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "Petit Daemon-œuf au cœur immense. Encaisse les pires assauts spéciaux sans broncher grâce à ses PV colossaux, mais le moindre coup physique le fait vaciller. Soigne et endort plus qu'il ne frappe.",
         sprite: "/yellow/sprites/dex/tonytony.png",
     },
+    // 🦠 MEROREM — ALTER-EGO RUN 2 de Tonytony (dexNo 137), Poison/Insecte. Là où Tonytony SOIGNE, lui
+    // PROPAGE la maladie : staller-pestilence qui empile poison grave/paralysie/sommeil/confusion + draine,
+    // et frappe pour de vrai (ATQ 85, STAB physiques Poison/Insecte). Offert au casino en NG+ (1000⚡, SHINY à
+    // 5000), comme Tonytony. Masqué des dex hors run 2 (runTwoOnly). Faible Psy/Feu/Vol/Roche ; résiste Fée.
+    merorem: {
+        id: "merorem", dexNo: 137, name: "Merorem", types: ["POISON", "INSECTE"],
+        baseStats: { hp: 130, atk: 85, def: 100, spe: 40, spc: 90 }, // BST 445 — bruiser-staller lent et malsain
+        learnset: [
+            { level: 1, moveId: "charge" },
+            { level: 1, moveId: "crachat_acide" },   // chip Poison (peut baisser la DÉF)
+            { level: 12, moveId: "toxik" },           // signature : poison GRAVE
+            { level: 18, moveId: "cage_eclair" },     // paralysie garantie
+            { level: 24, moveId: "vampigraine" },     // drain chaque tour (propage)
+            { level: 30, moveId: "onde_folie" },      // confusion
+            { level: 36, moveId: "dard_fatal" },      // STAB Insecte (peut empoisonner)
+            { level: 44, moveId: "berceuse" },        // sommeil
+            { level: 52, moveId: "boul_pollen" },     // Insecte 85 + drain 50%
+            { level: 60, moveId: "bombe_beurk" },     // gros STAB Poison
+            { level: 66, moveId: "repos" },           // auto-soin (le staller se régénère)
+            { level: 90, moveId: "miasme_corrosif" }, // capstone Poison tardif
+        ],
+        catchRate: 30, baseExp: 220, rarity: "RARE", growthRate: "medium_fast", exclusive: true,
+        role: "Poison/Insecte — pestilence (staller à statut, alter-ego de Tonytony, run 2)",
+        description: "Hydre-fléau aux tentacules suintantes. Ne soigne pas : il contamine. Chaque étreinte inocule une nouvelle plaie, et il se repaît de la déchéance qu'il répand.",
+        sprite: "/yellow/sprites/dex/merorem.png",
+        hiddenUntilCaught: true, // absent du Pokédex tant qu'on ne l'a pas capturé
+        runTwoOnly: true,        // n'apparaît dans les dex qu'à partir du run 2 (une fois obtenu au casino NG+)
+    },
 }
 
 // ── REGISTRE RUNTIME des Daemons CUSTOM (créés par les joueurs, post-Ligue). Fusionné à la LECTURE seulement :
@@ -1921,6 +1951,14 @@ export function getSpecies(id: string): SpeciesData | null {
 
 export const SPECIES_IDS = Object.keys(SPECIES)
 export const DEX_COUNT = SPECIES_IDS.length
+
+/** Espèces VISIBLES dans les dex (Pokédex in-game + dex de référence) : toutes SAUF les `runTwoOnly`
+ *  NON encore capturées — celles-ci (Gékraise/Ukognos/Merorem) restent totalement invisibles hors run 2,
+ *  pas même une case « ??? » ni un point de compteur, jusqu'à ce qu'on les obtienne. `caught` = Pokédex du
+ *  monde courant (fusionné après le NG+ → elles restent visibles ensuite). Ordre = ordre d'insertion. */
+export function visibleDexSpecies(caught: readonly string[] = []): SpeciesData[] {
+    return Object.values(SPECIES).filter((sp) => !sp.runTwoOnly || caught.includes(sp.id))
+}
 
 export function speciesByDexNo(dexNo: number): SpeciesData | null {
     return Object.values(SPECIES).find((s) => s.dexNo === dexNo) ?? null

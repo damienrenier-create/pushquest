@@ -8,7 +8,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { usePokedex, pokedexCompletion } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
-import { SPECIES } from "@/lib/gamebook/yellow/data/species"
+import { SPECIES, visibleDexSpecies } from "@/lib/gamebook/yellow/data/species"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { speciesZones } from "@/lib/gamebook/yellow/data/encounters"
 import { YELLOW_MAPS } from "@/lib/gamebook/yellow/maps"
@@ -124,7 +124,8 @@ export default function PokedexClient() {
     // Hydrate la save si on arrive DIRECTEMENT ici (refresh / lien) sans avoir chargé le jeu :
     // sinon le store Pokédex en mémoire est vide → tout en "?". Idempotent (no-op si déjà chargé).
     useEffect(() => { void loadYellowSave() }, [])
-    const entries = Object.values(SPECIES).sort((a, b) => a.dexNo - b.dexNo)
+    // Les Daemons run-2 (runTwoOnly) restent INVISIBLES — pas même une case « ??? » — tant que non capturés.
+    const entries = visibleDexSpecies(dex.caught).sort((a, b) => a.dexNo - b.dexNo)
 
     return (
         <div style={S.root}>

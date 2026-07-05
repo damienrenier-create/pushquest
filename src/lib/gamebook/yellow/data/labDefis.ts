@@ -303,6 +303,8 @@ export const TONYTONY_SHINY_TARGET = 5000
 /** Niveau de Tonytony à la remise. */
 export const TONYTONY_LEVEL = 15
 export const TONYTONY_SPECIES = "tonytony"
+/** RUN 2 : l'alter-ego de Tonytony offert au casino en New Game+ (mêmes paliers 1000/5000), Poison/Insecte. */
+export const MEROREM_SPECIES = "merorem"
 
 /** Case gagnante pour un index de spin donné (modulo robuste). */
 export function casinoWinningCase(spinIndex: number): number {

@@ -8,7 +8,7 @@
 // Données serveur (lecture seule) via /api/gamebook/yellow/roulette/stats.
 
 import { useEffect, useState } from "react"
-import { usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, casinoPillar } from "@/lib/gamebook/yellow/store/playerStore"
 import { TONYTONY_TARGET, TONYTONY_SHINY_TARGET } from "@/lib/gamebook/yellow/data/labDefis"
 
 interface Amt { nickname: string; amount: number }
@@ -39,6 +39,7 @@ export default function CroupierPanel({ myUserId, close, onPlay }: { myUserId: s
     const player = usePlayer()
     const won = player.labDefi.casinoTotalWon // énergie totale gagnée au casino (le croupier en tient le compte)
     const tonyClaimed = player.labDefi.tonytonyClaimed, tonyShiny = player.labDefi.tonytonyShiny
+    const pillar = casinoPillar() // 🥚 Tonytony (run 1) / 🦠 Merorem (run 2)
     const [stats, setStats] = useState<Stats | null>(null)
     const [state, setState] = useState<"loading" | "ok" | "error">("loading")
     const [slide, setSlide] = useState(0)
@@ -83,8 +84,8 @@ export default function CroupierPanel({ myUserId, close, onPlay }: { myUserId: s
                                 <div style={raillerie}>« {RAILLERIES[rail]} »</div>
                                 <div style={{ ...muted, marginTop: 8 }}>{stats.totalSpins} manches jouées sur la table.</div>
                                 <div style={tonyBox}>
-                                    🥚 <b>Quête Tonytony</b> — je tiens le compte de ton <b>énergie gagnée</b> ici : <b style={{ color: "#ffd54a" }}>{won} ⚡</b><br />
-                                    {tonyClaimed ? "🥚 Tonytony : ✅ obtenu" : `🥚 Tonytony : ${Math.min(won, TONYTONY_TARGET)}/${TONYTONY_TARGET}`}
+                                    {pillar.emoji} <b>Quête {pillar.name}</b> — je tiens le compte de ton <b>énergie gagnée</b> ici : <b style={{ color: "#ffd54a" }}>{won} ⚡</b><br />
+                                    {tonyClaimed ? `${pillar.emoji} ${pillar.name} : ✅ obtenu` : `${pillar.emoji} ${pillar.name} : ${Math.min(won, TONYTONY_TARGET)}/${TONYTONY_TARGET}`}
                                     {" · "}
                                     {tonyShiny ? "✨ Shiny : ✅" : `✨ Shiny : ${Math.min(won, TONYTONY_SHINY_TARGET)}/${TONYTONY_SHINY_TARGET}`}
                                     {((!tonyClaimed && won >= TONYTONY_TARGET) || (tonyClaimed && !tonyShiny && won >= TONYTONY_SHINY_TARGET)) &&

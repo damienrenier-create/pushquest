@@ -14,7 +14,7 @@ import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import {
     usePlayer, startLabDefi, clearLabDefi, grantReps, grantCt, recordCtEarned,
     setTomorrowEnergyMult, markSquat150Done, grantTonytony, makeTonytonyShiny, ctDefiProgress, ticketCount,
-    physWinCount, recordPhysWin,
+    physWinCount, recordPhysWin, casinoPillar,
 } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import {
@@ -115,15 +115,16 @@ export default function LabPanel() {
     }
     const abandonPhys = () => { clearLabDefi("phys"); persistYellowSave(); setMsg("Défi physique abandonné.") }
     const abandonCt = () => { clearLabDefi("ct"); persistYellowSave(); setMsg("Défi CT abandonné.") }
+    const pillar = casinoPillar() // 🥚 Tonytony (run 1) / 🦠 Merorem (run 2) — nom & emoji cohérents partout
     const claimTonytony = () => {
         const where = grantTonytony()
         persistYellowSave()
-        setMsg(where ? `🥚 TONYTONY rejoint ${where === "team" ? "ton équipe" : "ton PC"} !` : "Cumul insuffisant ou déjà obtenu.")
+        setMsg(where ? `${pillar.emoji} ${pillar.name.toUpperCase()} rejoint ${where === "team" ? "ton équipe" : "ton PC"} !` : "Cumul insuffisant ou déjà obtenu.")
     }
     const claimTonytonyShiny = () => {
         const where = makeTonytonyShiny()
         persistYellowSave()
-        setMsg(where ? "✨ Ton Tonytony est désormais SHINY ! La chance t'a souri." : "Pas encore éligible (5000 requis).")
+        setMsg(where ? `✨ Ton ${pillar.name} est désormais SHINY ! La chance t'a souri.` : "Pas encore éligible (5000 requis).")
     }
 
     return (
@@ -191,11 +192,11 @@ export default function LabPanel() {
 
                             {/* ─── SURPRISE ─── */}
                             {tab === "surprise" && (
-                                <Card title="🎰 Roulette dorée" desc="Tente ta chance — la roulette reste ouverte ! Paliers : 🥚 Tonytony à 1000 · ✨ Tonytony SHINY à 5000." reward={`Cumul gagné : ${d.casinoTotalWon}`}>
-                                    {!d.tonytonyClaimed && d.casinoTotalWon >= TONYTONY_TARGET && <button onClick={claimTonytony} style={primary}>🥚 Réclamer Tonytony (1000)</button>}
-                                    {d.tonytonyClaimed && !d.tonytonyShiny && d.casinoTotalWon >= TONYTONY_SHINY_TARGET && <button onClick={claimTonytonyShiny} style={primary}>✨ Rendre ton Tonytony SHINY (5000)</button>}
+                                <Card title="🎰 Roulette dorée" desc={`Tente ta chance — la roulette reste ouverte ! Paliers : ${pillar.emoji} ${pillar.name} à 1000 · ✨ ${pillar.name} SHINY à 5000.`} reward={`Cumul gagné : ${d.casinoTotalWon}`}>
+                                    {!d.tonytonyClaimed && d.casinoTotalWon >= TONYTONY_TARGET && <button onClick={claimTonytony} style={primary}>{pillar.emoji} Réclamer {pillar.name} (1000)</button>}
+                                    {d.tonytonyClaimed && !d.tonytonyShiny && d.casinoTotalWon >= TONYTONY_SHINY_TARGET && <button onClick={claimTonytonyShiny} style={primary}>✨ Rendre ton {pillar.name} SHINY (5000)</button>}
                                     <button onClick={() => setCasino(true)} style={((!d.tonytonyClaimed && d.casinoTotalWon >= TONYTONY_TARGET) || (d.tonytonyClaimed && !d.tonytonyShiny && d.casinoTotalWon >= TONYTONY_SHINY_TARGET)) ? ghost : primary}>🎰 Jouer à la roulette</button>
-                                    <div style={{ fontSize: 10, opacity: 0.7, color: INK, marginTop: 6 }}>🥚 Tonytony : {d.tonytonyClaimed ? "✅" : `${Math.min(d.casinoTotalWon, TONYTONY_TARGET)}/${TONYTONY_TARGET}`} · ✨ Shiny : {d.tonytonyShiny ? "✅" : `${Math.min(d.casinoTotalWon, TONYTONY_SHINY_TARGET)}/${TONYTONY_SHINY_TARGET}`}</div>
+                                    <div style={{ fontSize: 10, opacity: 0.7, color: INK, marginTop: 6 }}>{pillar.emoji} {pillar.name} : {d.tonytonyClaimed ? "✅" : `${Math.min(d.casinoTotalWon, TONYTONY_TARGET)}/${TONYTONY_TARGET}`} · ✨ Shiny : {d.tonytonyShiny ? "✅" : `${Math.min(d.casinoTotalWon, TONYTONY_SHINY_TARGET)}/${TONYTONY_SHINY_TARGET}`}</div>
                                     {ticketCount() > 0 && <button onClick={() => setTicketsOpen(true)} style={{ ...primary, marginTop: 8 }}>🎟️ Jouer mes tickets roulette ({ticketCount()})</button>}
                                 </Card>
                             )}

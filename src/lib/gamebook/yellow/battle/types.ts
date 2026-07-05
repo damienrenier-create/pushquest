@@ -151,6 +151,10 @@ export interface SpeciesData {
     learnsAllCts?: boolean
     /** SURPRISE : MASQUÉ du Pokédex (même pas « vu ») tant que NON capturé (ex. Gékroc, Goshendofy). */
     hiddenUntilCaught?: boolean
+    /** RÉSERVÉ AU RUN 2 (New Game+) : ABSENT des dex (Pokédex in-game ET dex de référence) — pas même une
+     *  case « ??? » ni un point dans le compteur — TANT QUE non capturé. N'apparaît qu'une fois obtenu en NG+
+     *  (ex. Gékraise, Ukognos, Merorem). Cf. visibleDexSpecies(). */
+    runTwoOnly?: boolean
     /** EXCLUSIF : Daemon unique/offert (reçu UNE seule fois). Plancher de courbe ×1.10
      *  (jamais plus rapide à monter ; un exclusif colossal prend quand même ×1.25). Voir growthCurve.ts. */
     exclusive?: boolean
