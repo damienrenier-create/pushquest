@@ -77,4 +77,9 @@ describe("Casino world-aware : Tonytony (run 1) / Merorem (run 2)", () => {
         const mer = [...getPlayer().team, ...getPlayer().pc].find((x) => x.speciesId === "merorem")
         expect(mer?.shiny).toBe(true)
     })
+    it("shiny REFUSÉ tant que le pilier de base n'est pas réclamé (5000⚡ mais tonytonyClaimed=false)", () => {
+        setActiveWorld("ngplus")
+        hydratePlayer({ team: [], pc: [], reps: 0, repsCap: 1000, repsBankedTotal: 0, labDefi: { ...emptyLabDefi(), casinoTotalWon: TONYTONY_SHINY_TARGET, tonytonyClaimed: false } })
+        expect(makeTonytonyShiny()).toBeNull() // pas de shiny gratuit sans le don de base (1000⚡)
+    })
 })

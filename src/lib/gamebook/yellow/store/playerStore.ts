@@ -1382,7 +1382,9 @@ export function grantTonytony(): "team" | "pc" | null {
  */
 export function makeTonytonyShiny(): "team" | "pc" | "new" | null {
     const d = st.labDefi
-    if (d.tonytonyShiny || d.casinoTotalWon < TONYTONY_SHINY_TARGET) return null
+    // Invariant : on ne peut rendre shiny QUE si le pilier de base a déjà été réclamé (1000⚡). L'UI le garantit
+    // déjà, mais on le verrouille aussi ici (défense en profondeur : pas de shiny gratuit sans le don de base).
+    if (d.tonytonyShiny || !d.tonytonyClaimed || d.casinoTotalWon < TONYTONY_SHINY_TARGET) return null
     const species = casinoPillar().species // run 2 → Merorem, sinon Tonytony
     const ti = st.team.findIndex((m) => m.speciesId === species)
     if (ti >= 0) {

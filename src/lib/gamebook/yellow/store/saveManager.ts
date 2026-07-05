@@ -243,6 +243,12 @@ export function mergeWorlds(primary: YellowSave, secondary: YellowSave): YellowS
     const reclaimed: MonInstance[] = [...secondary.team, ...secondary.pc].map((m, i) => ({ ...m, uid: `fus${i}-${m.uid}` }))
     const items: Record<string, number> = { ...primary.items }
     for (const [k, v] of Object.entries(secondary.items)) items[k] = (items[k] ?? 0) + v
+    // QUÊTE DU CASINO (pilier Tonytony) : le monde fusionné REDEVIENT "live" → son pilier redevient TONYTONY.
+    // On restaure donc l'état de la quête Tonytony du monde d'origine (secondary). Le MEROREM gagné en NG+ reste
+    // en équipe/PC (fusionné), mais ses flags NG+ (posés sur `tonytonyClaimed`/`tonytonyShiny`, partagés) ne
+    // doivent PAS bloquer la quête Tonytony du monde live — sinon un joueur qui a pris Merorem sans jamais
+    // prendre Tonytony resterait verrouillé hors de Tonytony à jamais après la fusion.
+    const liveCasino = secondary.labDefi ?? primary.labDefi
     return {
         ...primary,
         pc: [...primary.pc, ...reclaimed],
@@ -256,6 +262,7 @@ export function mergeWorlds(primary: YellowSave, secondary: YellowSave): YellowS
         badges: uniq([...primary.badges, ...secondary.badges]),
         ownedCts: uniq([...primary.ownedCts, ...secondary.ownedCts]),
         boughtCts: uniq([...primary.boughtCts, ...secondary.boughtCts]),
+        labDefi: { ...primary.labDefi, casinoTotalWon: liveCasino.casinoTotalWon, tonytonyClaimed: liveCasino.tonytonyClaimed, tonytonyShiny: liveCasino.tonytonyShiny },
         isChampion: true,
         ngplusBattles: 0, // compteur d'engagement sans objet après fusion
         // Collapse en UN seul monde.

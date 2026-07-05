@@ -4,9 +4,11 @@
 // stats de base (barres), défenses (table des types), lignée évolutive, learnset.
 // Style natif GBC (cohérent avec /pokedex et /dex).
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { SPECIES } from "@/lib/gamebook/yellow/data/species"
+import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
+import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { growthLabel } from "@/lib/gamebook/yellow/data/growthCurve"
 import { MOVES } from "@/lib/gamebook/yellow/data/moves"
 import { moveCategory } from "@/lib/gamebook/yellow/battle/typeChart"
@@ -56,8 +58,24 @@ function MatchRow({ title, matches, onPick }: { title: string; matches: TypeMatc
 
 export default function DexDetailClient({ id }: { id: string }) {
     const router = useRouter()
+    const dex = usePokedex()
+    useEffect(() => { void loadYellowSave() }, []) // hydrate le Pokédex (accès direct par URL) ; défaut = masqué
     const sp = SPECIES[id]
     if (!sp) return null
+    // VERROU RUN 2 : une espèce runTwoOnly non capturée reste MASQUÉE même par accès URL direct (/dex/merorem)
+    // → pas de spoiler de son existence/stats/learnset avant de l'avoir obtenue en run 2.
+    if (sp.runTwoOnly && !dex.caught.includes(id)) {
+        return (
+            <div style={S.root}>
+                <div style={{ ...S.wrap, textAlign: "center", padding: 40 }}>
+                    <div style={{ fontSize: 48, marginBottom: 12 }}>❓</div>
+                    <div style={{ fontSize: 14, fontWeight: 900, letterSpacing: 1, marginBottom: 6 }}>DAEMON INCONNU</div>
+                    <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 20 }}>Cette entrée reste scellée… tu la débloqueras en la rencontrant.</div>
+                    <button onClick={() => router.push("/gamebook/yellow/dex")} style={S.back}>← Retour au Dex</button>
+                </div>
+            </div>
+        )
+    }
 
     const bst = baseStatTotal(sp.baseStats)
     const defenses = computeTypeDefenses(sp.types)

@@ -72,3 +72,25 @@ describe("NG+ fusion — mergeWorlds", () => {
         expect(m.isChampion).toBe(true)
     })
 })
+
+// QUÊTE CASINO (pilier Tonytony run 1 / Merorem run 2) : après fusion, le monde redevient "live" (pilier
+// Tonytony) → les flags casino doivent refléter le RUN 1 (secondary), pas l'état Merorem du NG+ (primary),
+// sinon un joueur ayant pris Merorem sans jamais prendre Tonytony resterait verrouillé hors de Tonytony.
+describe("NG+ fusion — quête casino Tonytony/Merorem restaurée depuis le monde live", () => {
+    it("le flag Merorem du NG+ ne bloque PAS Tonytony après fusion (reflète run 1)", () => {
+        const ngMerorem = world({ labDefi: { ...emptySave().labDefi, tonytonyClaimed: true, tonytonyShiny: true, casinoTotalWon: 5000 } })
+        const liveNoTony = world({ labDefi: { ...emptySave().labDefi, tonytonyClaimed: false, tonytonyShiny: false, casinoTotalWon: 200 } })
+        const merged = mergeWorlds(ngMerorem, liveNoTony)
+        expect(merged.labDefi.tonytonyClaimed).toBe(false) // Tonytony réclamable post-fusion
+        expect(merged.labDefi.tonytonyShiny).toBe(false)
+        expect(merged.labDefi.casinoTotalWon).toBe(200)   // cumul de la quête Tonytony (live), pas celui de Merorem
+    })
+    it("conserve le statut Tonytony s'il a été obtenu en run 1", () => {
+        const ng = world({ labDefi: { ...emptySave().labDefi, tonytonyClaimed: true, casinoTotalWon: 3000 } })
+        const live = world({ labDefi: { ...emptySave().labDefi, tonytonyClaimed: true, tonytonyShiny: true, casinoTotalWon: 5000 } })
+        const merged = mergeWorlds(ng, live)
+        expect(merged.labDefi.tonytonyClaimed).toBe(true)
+        expect(merged.labDefi.tonytonyShiny).toBe(true)
+        expect(merged.labDefi.casinoTotalWon).toBe(5000)
+    })
+})
