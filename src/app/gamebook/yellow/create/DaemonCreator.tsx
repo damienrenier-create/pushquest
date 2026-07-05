@@ -25,8 +25,11 @@ import {
 
 const TYPE_FR: Record<PokeType, string> = {
     NORMAL: "Normal", FEU: "Feu", EAU: "Eau", PLANTE: "Plante", ELEC: "Élec", GLACE: "Glace", COMBAT: "Combat",
-    POISON: "Poison", SOL: "Sol", VOL: "Vol", PSY: "Psy", INSECTE: "Insecte", ROCHE: "Roche", SPECTRE: "Spectre", DRAGON: "Dragon",
+    POISON: "Poison", SOL: "Sol", VOL: "Vol", PSY: "Psy", INSECTE: "Insecte", ROCHE: "Roche", SPECTRE: "Spectre", DRAGON: "Dragon", FEE: "Fée",
 }
+// Types PROPOSABLES au joueur dans le créateur. FÉE est EXCLUE : réservée au légendaire Ukognos (run 2) —
+// jamais un starter/Daemon custom Fée.
+const SELECTABLE_TYPES = POKE_TYPES.filter((t) => t !== "FEE")
 const STEPS = ["Concept", "Éclosion", "Type(s)", "Rôle", "Stats", "Attaques", "Récap"]
 
 function defaultSpec(): CustomSpec {
@@ -230,7 +233,7 @@ export default function DaemonCreator({ ownerId, nickname, close, onCreated }: {
                         <>
                             <Lbl>Type(s) de la forme finale (stade 3) — choisis-en 1 ou 2</Lbl>
                             <div style={S.typeGrid}>
-                                {POKE_TYPES.map((t) => (
+                                {SELECTABLE_TYPES.map((t) => (
                                     <button key={t} onClick={() => toggleFinalType(t)} style={{ ...S.typeBtn, background: TYPE_COLORS[t], opacity: spec.finalTypes.includes(t) ? 1 : 0.32, outline: spec.finalTypes.includes(t) ? "2px solid #fff" : "none" }}>{TYPE_FR[t]}</button>
                                 ))}
                             </div>
@@ -250,7 +253,7 @@ export default function DaemonCreator({ ownerId, nickname, close, onCreated }: {
                                         <>
                                             <Hint>Avant le stade {spec.typeChange.atStage}, ton Daemon portait ces types (⚠️ les attaques de ces anciens types comptent comme de la COUVERTURE sur la forme finale) :</Hint>
                                             <div style={S.typeGrid}>
-                                                {POKE_TYPES.map((t) => {
+                                                {SELECTABLE_TYPES.map((t) => {
                                                     const on = spec.typeChange!.types.includes(t)
                                                     return <button key={t} onClick={() => setSpec((s) => {
                                                         let ts = on ? s.typeChange!.types.filter((x) => x !== t) : [...s.typeChange!.types, t]

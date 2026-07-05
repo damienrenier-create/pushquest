@@ -34,7 +34,7 @@ const FLUTE_ITEM = "daemonflute"
 
 const TYPE_EMOJI: Record<string, string> = {
     NORMAL: "⭐", FEU: "🔥", EAU: "💧", PLANTE: "🌿", ELEC: "⚡", GLACE: "🧊", COMBAT: "🥊",
-    POISON: "☠️", SOL: "⛰️", VOL: "🕊️", PSY: "🔮", INSECTE: "🐛", ROCHE: "🪨", SPECTRE: "👻", DRAGON: "🐉",
+    POISON: "☠️", SOL: "⛰️", VOL: "🕊️", PSY: "🔮", INSECTE: "🐛", ROCHE: "🪨", SPECTRE: "👻", DRAGON: "🐉", FEE: "🧚",
 }
 
 /** Demain (YYYY-MM-DD) à partir d'une date ISO du jour (arithmétique UTC, sans dérive de fuseau). */

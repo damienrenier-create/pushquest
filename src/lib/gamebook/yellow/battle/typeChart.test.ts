@@ -40,7 +40,7 @@ describe("moveCategory (catégorie par le TYPE — règle Gen 1)", () => {
         }
     })
     it("types spéciaux", () => {
-        for (const t of ["FEU", "EAU", "PLANTE", "ELEC", "GLACE", "PSY", "DRAGON"] as const) {
+        for (const t of ["FEU", "EAU", "PLANTE", "ELEC", "GLACE", "PSY", "DRAGON", "FEE"] as const) {
             expect(moveCategory(t)).toBe("SPECIAL")
         }
     })

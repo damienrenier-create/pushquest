@@ -30,7 +30,7 @@ import { createMonInstance } from "../battle/factory"
 import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroLines, SBIRE_DONE_LINES, SBIRE_NO_TEAM_LINES } from "../data/sbire"
 import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, ACE_PASS_LINES, ACE_GATE_LINES, aceIntro, aceGiftLine, buildAceTeam, speciesAtLevel } from "../data/ace"
 import { CAVE_TRADER_ID, CAVE_TRADE_GIVE, CAVE_TRADE_RECEIVE, CAVE_TRADER_OFFER_LINES, CAVE_TRADER_NEED_LINES, CAVE_TRADE_DONE_LINES, CAVE_TRADE_ALREADY_LINES } from "../data/caveTrader"
-import { HH_KID_ID, HH_KID_DAY_LINES, HH_KID_NIGHT_LINES, isHhKidNight } from "../data/hhKid"
+import { HH_KID_ID, HH_KID_DAY_LINES, HH_KID_NIGHT_LINES, HH_KID_DAY_LINES_NGPLUS, HH_KID_DAWN_LINES, isHhKidNight, isHhKidDawn } from "../data/hhKid"
 import { ORCALINE_TRAINER_ID, ORCALINE_INTRO_LINES, ORCALINE_REMATCH_LINES, ORCALINE_DONE_TODAY_LINES } from "../data/orcalineTrainer"
 import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock } from "../data/sylvebarbeBlock"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
@@ -567,7 +567,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     levelCap: ngEasyWild ? 4 : wildLevelCap(badges), // NG+ : plafond niv 4 sur les 2 premiers → victoire assurée
                     encounterCount: ngEasyWild ? 0 : encCount, // force la rampe la + douce (-2 niv) au démarrage NG+
                     dayKey: new Date().toISOString().slice(0, 10), // rotation quotidienne des types (hautes herbes)
-                    goshBoost: isHhKidNight(new Date().getHours()) && getPlayerSave().goshHintHeard, // GAMIN : Goshendofy ×2 la nuit
+                    // GAMIN : ×2 le légendaire de la plaine dans SA fenêtre — RUN 1 Goshendofy la NUIT (21h+),
+                    // RUN 2 (NG+) Ukognos à l'AUBE (5h-11h). Gate : confidence entendue (goshHintHeard, par monde).
+                    goshBoost: (getActiveWorld() === "ngplus" ? isHhKidDawn(new Date().getHours()) : isHhKidNight(new Date().getHours())) && getPlayerSave().goshHintHeard,
                     goshCaught: getPokedex().caught.includes("goshendofy"), // déjà capturé → ne réapparaît plus jamais
                     caughtSpecies: getPokedex().caught, // gate les entrées catchOnce (ex. Pyropanthe : 1 seule capture)
                     ngplus: getActiveWorld() === "ngplus", // NG+ : bascule sur les pools RUN 2 (Route Nord / Grotte re-mixées)
@@ -902,14 +904,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
-        // GAMIN (plaine d'entraînement) : en journée → reviens la nuit ; la nuit (21h-00h) → confidence du
-        // grand frère qui DOUBLE les chances de Goshendofy (flag goshHintHeard, appliqué les nuits suivantes).
+        // GAMIN (plaine d'entraînement) : révèle le légendaire de la plaine dans SA fenêtre → DOUBLE ses chances
+        // (flag goshHintHeard, par monde). RUN 1 = Goshendofy la NUIT (21h+) ; RUN 2 (NG+) = Ukognos à l'AUBE (5h-11h).
         if (npc.id === HH_KID_ID) {
-            if (isHhKidNight(new Date().getHours())) {
+            const ng = getActiveWorld() === "ngplus"
+            const inWindow = ng ? isHhKidDawn(new Date().getHours()) : isHhKidNight(new Date().getHours())
+            if (inWindow) {
                 markGoshHintHeard()
-                set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: HH_KID_NIGHT_LINES } })
+                set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: ng ? HH_KID_DAWN_LINES : HH_KID_NIGHT_LINES } })
             } else {
-                set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: HH_KID_DAY_LINES } })
+                set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: ng ? HH_KID_DAY_LINES_NGPLUS : HH_KID_DAY_LINES } })
             }
             return
         }

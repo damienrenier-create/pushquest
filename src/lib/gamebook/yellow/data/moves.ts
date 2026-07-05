@@ -132,6 +132,12 @@ export const MOVES: Record<string, MoveData> = {
     roc_titanesque: { id: "roc_titanesque", name: "Roc Titanesque", type: "ROCHE", power: 120, accuracy: 80, pp: 5, effect: { recoilPct: 33 }, description: "Le colosse projette un bloc titanesque : dégâts énormes mais contrecoup (et précision incertaine)." },
     blizzard: { id: "blizzard", name: "Blizzard", type: "GLACE", power: 110, accuracy: 70, pp: 5, effect: { chance: 30, inflictStatus: "FREEZE" }, description: "Tempête de glace dévastatrice à la précision incertaine ; gèle souvent (30%)." },
     souffle_primordial: { id: "souffle_primordial", name: "Souffle Primordial", type: "DRAGON", power: 120, accuracy: 100, pp: 5, description: "Souffle draconique des origines : la plus puissante attaque Dragon. Réservée aux légendes." },
+
+    // === Type FÉE (SPÉCIAL — 1er type Fée du jeu, porté par le légendaire Ukognos du run 2) ===
+    // Némésis-type du Dragon : super-efficace sur Combat/Dragon, résisté par Feu/Poison.
+    voile_feerique: { id: "voile_feerique", name: "Voile Féerique", type: "FEE", power: 60, accuracy: 100, pp: 20, effect: { chance: 15, inflictStatus: "POISON" }, description: "Nappe de lueurs enchantées : puissance modeste mais 15% d'empoisonner. Couverture utilitaire Fée." },
+    eclat_lunaire: { id: "eclat_lunaire", name: "Éclat Lunaire", type: "FEE", power: 85, accuracy: 100, pp: 15, effect: { chance: 10, statChanges: [{ target: "self", stat: "spc", stages: 1 }] }, description: "Onde féerique scintillante : gros dégâts Spécial + 10% d'élever le Spécial du lanceur (+1, cumulable). STAB signature de la lignée Fée." },
+    cataclysme_lunaire: { id: "cataclysme_lunaire", name: "Cataclysme Lunaire", type: "FEE", power: 115, accuracy: 95, pp: 5, description: "Déchaînement de flammes féeriques : la plus puissante attaque Fée. Réservée aux légendes — l'écho maudit du Souffle Primordial." },
     // === Petits moves de caractère (early-game core) ===
     visee: { id: "visee", name: "Visée", type: "NORMAL", power: 0, accuracy: 0, pp: 20, costPower: 20, effect: { statChanges: [{ target: "self", stat: "acc", stages: 1 }] }, description: "Le Daemon ajuste son tir : augmente sa Précision." },
     secousse: { id: "secousse", name: "Secousse", type: "SOL", power: 60, accuracy: 100, pp: 20, description: "Une secousse tellurique ébranle la cible." },

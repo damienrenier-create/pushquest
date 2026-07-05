@@ -44,7 +44,7 @@ function lastMessageAt(events: readonly { kind: string; text?: string }[], step:
 // Nom FR du type, affiché en clair à DROITE de chaque attaque dans le menu (plus lisible que l'emoji).
 const TYPE_FR: Record<string, string> = {
     NORMAL: "Normal", FEU: "Feu", EAU: "Eau", PLANTE: "Plante", ELEC: "Élec", GLACE: "Glace", COMBAT: "Combat",
-    POISON: "Poison", SOL: "Sol", VOL: "Vol", PSY: "Psy", INSECTE: "Insecte", ROCHE: "Roche", SPECTRE: "Spectre", DRAGON: "Dragon",
+    POISON: "Poison", SOL: "Sol", VOL: "Vol", PSY: "Psy", INSECTE: "Insecte", ROCHE: "Roche", SPECTRE: "Spectre", DRAGON: "Dragon", FEE: "Fée",
 }
 
 export default function BattleScreen() {

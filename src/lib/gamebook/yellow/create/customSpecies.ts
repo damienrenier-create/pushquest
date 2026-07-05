@@ -787,7 +787,8 @@ export function customStarterSpeciesId(d: StoredCustomDaemon): string {
 export function buildNemesis(player: CustomSpec): CustomSpec {
     const sum = (s: Record<StatKey, number>) => STAT_KEYS.reduce((a, k) => a + s[k], 0)
     // 1) Types : ceux qui frappent le joueur en SUPER-EFFICACE (exploitent ses faiblesses). Fallback = Dragon.
-    const weak = weaknessTypes(player.finalTypes)
+    //    FÉE est EXCLUE (réservée au légendaire Ukognos) : la némésis d'ACE ne sera jamais Fée avant qu'on ne le rencontre.
+    const weak = weaknessTypes(player.finalTypes).filter((t) => t !== "FEE")
     const nemTypes: PokeType[] = (weak.length ? weak.slice(0, 2) : ["DRAGON"])
     const physSTAB = moveCategory(nemTypes[0]) === "PHYSICAL" // catégorie du STAB principal → oriente l'offense
     // 2) Archétype INVERSÉ. Joueur rapide (spe ≥ 100) → némésis costaud (bulk < seuil anti-stall) mais lent ;

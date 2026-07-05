@@ -1676,6 +1676,31 @@ export const SPECIES: Record<string, SpeciesData> = {
         sprite: "/yellow/sprites/dex/goshendofy.png",
         hiddenUntilCaught: true, // SURPRISE : absent du Pokédex tant qu'on ne l'a pas capturé
     },
+    // 🧚 UKOGNOS — LÉGENDAIRE mono-FÉE (dexNo 136, 1er Daemon Fée du jeu), alter-ego occulte de Goshendofy
+    // (Dragon, 125) : la némésis-TYPE du colosse draconique (Fée = 2× Dragon + immunité Dragon). Attaquant
+    // SPÉCIAL rapide et TANKY (spe 125 / spc 150 / pv 130 / déf 100), ATQ volontairement molle. En mono-Fée,
+    // UNE SEULE faiblesse (Poison, physique → sur la DÉF). Masqué du Pokédex hors run 2 (hiddenUntilCaught) ;
+    // le pop STATIQUE one-time réservé au NG+ se câble HORS species.ts (garde getActiveWorld()==="ngplus", façon Gékraise).
+    ukognos: {
+        id: "ukognos", dexNo: 136, name: "Ukognos", types: ["FEE"],
+        baseStats: { hp: 130, atk: 50, def: 100, spe: 125, spc: 150 }, // BST 555 — nuke spécial rapide et robuste, ATQ inutile (assumée)
+        learnset: [
+            { level: 1, moveId: "charge" },
+            { level: 1, moveId: "flammeche" },          // flammes violettes = couverture Feu (pur flavor : Ukognos n'est PAS Feu)
+            { level: 12, moveId: "voile_feerique" },
+            { level: 24, moveId: "choc_mental" },        // couverture Psy — frappe le Poison, sa SEULE faiblesse
+            { level: 34, moveId: "lance_flammes" },
+            { level: 44, moveId: "eclat_lunaire" },      // STAB signature Fée
+            { level: 54, moveId: "vague_mentale" },      // gros Psy anti-Poison
+            { level: 65, moveId: "focalisation" },       // set-up SPÉ +1 (comme Goshendofy) → prépare le nuke
+            { level: 90, moveId: "cataclysme_lunaire" }, // capstone Fée ultra-tardif (miroir du souffle_primordial niv 95 de Goshendofy)
+        ],
+        catchRate: 3, baseExp: 220, rarity: "LEGENDARY", growthRate: "slow", exclusive: true,
+        role: "Légendaire FÉE — alter-ego de Goshendofy, révélé au run 2 (némésis-type du Dragon)",
+        description: "Lutin-démon aux flammes violettes, écho féerique et maudit de Goshendofy. Ne se révèle qu'à ceux qui osent recommencer l'aventure.",
+        sprite: "/yellow/sprites/dex/ukognos.png",
+        hiddenUntilCaught: true, // absent du Pokédex tant qu'on ne l'a pas capturé (comme Goshendofy)
+    },
     // 🪨⚡ GÉKROC — mini-boss STATIQUE de la Centrale (gardien de la Pierre d'Évolution). Stats moyennes
     // mais COUTEAU-SUISSE : apprend TOUTES les CT (learnsAllCts). Capture dure (catchRate 10) mais ≠ légendaire.
     gekroc: {

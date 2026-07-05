@@ -534,11 +534,17 @@ function rollTrainingGrid(tg: TrainingGrid, ctx: EncounterCtx, rng: () => number
     const tier = sq.tier
     // LÉGENDAIRE : gradient bande × tier → + fréquent au bas de la rangée du bas (tier 0).
     // GAMIN : la nuit (après sa confidence), le dénominateur est divisé par 2 → chances DOUBLÉES.
-    // Une fois Goshendofy CAPTURÉ sur ce compte (goshCaught), il ne réapparaît plus jamais.
-    if (tg.legendary && tg.legendaryDenomByBand && !ctx.goshCaught) {
-        const boost = ctx.goshBoost ? 0.5 : 1
-        const denom = (tg.legendaryDenomByBand[band] ?? 1000) * (tg.legendaryTierMult?.[tier] ?? 1) * boost
-        if (rng() < 1 / denom) return finalizeSpawn(tg.legendary, tg.legendary.levelFixed ?? 50, rng, ctx)
+    // MIROIR RUN 2 : en NG+, le créneau devient UKOGNOS (Fée, alter-ego de Goshendofy), gaté par le Pokédex
+    // NG+ ; en run 1, Goshendofy, gaté par goshCaught (jamais 2× sur le compte). Même gating de capture dans
+    // les deux cas (Hyper Nexus Ball + statut, ×0.5) : le swap ne touche QUE l'espèce.
+    if (tg.legendary && tg.legendaryDenomByBand) {
+        const leg = ctx.ngplus ? { ...tg.legendary, speciesId: "ukognos" } : tg.legendary
+        const alreadyCaught = ctx.ngplus ? !!ctx.caughtSpecies?.includes("ukognos") : !!ctx.goshCaught
+        if (!alreadyCaught) {
+            const boost = ctx.goshBoost ? 0.5 : 1
+            const denom = (tg.legendaryDenomByBand[band] ?? 1000) * (tg.legendaryTierMult?.[tier] ?? 1) * boost
+            if (rng() < 1 / denom) return finalizeSpawn(leg, leg.levelFixed ?? 50, rng, ctx)
+        }
     }
     // DRAGONS RARES : + le dragon pop fort (band/tier hauts), + il est rare. JAMAIS en forme définitive
     // (on capture une pré-évolution, à faire évoluer soi-même) → nonFinalFormAtLevel recule d'un cran si besoin.
