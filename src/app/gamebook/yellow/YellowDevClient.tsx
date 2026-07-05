@@ -94,6 +94,7 @@ import BarmanPanel from "./BarmanPanel"
 import BlackjackPanel from "./BlackjackPanel"
 import PokerPanel from "./PokerPanel"
 import SoloPokerPanel from "./SoloPokerPanel"
+import DailyPokerPanel from "./DailyPokerPanel"
 import RacePanel from "./RacePanel"
 import RaceView, { type RaceCfg, type RaceInput } from "./RaceView"
 import { type Racer } from "@/lib/gamebook/yellow/race/engine"
@@ -217,6 +218,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [blackjackOpen, setBlackjackOpen] = useState(false) // table de blackjack (PC haut-gauche)
     const [pokerOpen, setPokerOpen] = useState(false) // table de poker multijoueur (coin bas-gauche)
     const [soloPokerOpen, setSoloPokerOpen] = useState(false) // 1re partie de poker : tuto SOLO local (house-funded)
+    const [dailyPokerOpen, setDailyPokerOpen] = useState(false) // cash quotidien SOLO vs les boss (vraies reps)
     const [kartOpen, setKartOpen] = useState(false) // borne d'arcade Pokémon Kart (PC haut-gauche, hors 1er)
     // Pokémon Kart : la SÉLECTION/RÉSULTATS sont des overlays (RacePanel) ; la COURSE est rendue DANS
     // l'écran (RaceView) et pilotée par les VRAIS boutons de la coque (mode analogique, onHoldChange).
@@ -459,8 +461,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         }
         if (fx >= 3 && fx <= 5 && fy >= 7 && fy <= 8) { // table de poker (sud de la roulette)
             menuTapGuard.current = Date.now()
-            // 1re fois → tuto SOLO local (100 ⚡ offerts, house-funded) ; ensuite → vraie table multi.
-            if (getPlayer().pokerFirstGameDone) setPokerOpen(true); else setSoloPokerOpen(true)
+            if (!getPlayer().pokerFirstGameDone) { setSoloPokerOpen(true); return true } // 1re fois : tuto SOLO offert
+            // Ensuite : MULTI si des potes sont au casino, sinon CASH quotidien SOLO vs les boss.
+            if (remotePlayers.length > 0) setPokerOpen(true); else setDailyPokerOpen(true)
             return true
         }
         return false
@@ -1780,6 +1783,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {/* 1re partie de poker : tuto SOLO local (house-funded). Le flag pokerFirstGameDone est posé
                 à l'encaissement (dans SoloPokerPanel) → les fois suivantes ouvrent la vraie table multi. */}
             {soloPokerOpen && <SoloPokerPanel myUserId={userId} onDone={() => setSoloPokerOpen(false)} />}
+            {/* Cash quotidien SOLO vs les boss (vraies reps). Ouvert quand aucun pote au casino (sinon table multi). */}
+            {dailyPokerOpen && <DailyPokerPanel myUserId={userId} onDone={() => setDailyPokerOpen(false)} />}
             {/* Pokémon Kart : overlay de SÉLECTION (avant la course) ou de RÉSULTATS (après). Pendant la
                 course (raceActive), aucun overlay → la course est dans l'écran et les boutons la pilotent. */}
             {kartOpen && !raceActive && (

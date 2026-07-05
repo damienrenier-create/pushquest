@@ -137,3 +137,22 @@ describe("stats de partie + pokerFirstGameDone — parse défensif", () => {
         expect(parseSave({ version: 2 }).pokerFirstGameDone).toBe(false)
     })
 })
+
+// Cash quotidien vs les boss : parse défensif des tapis persistés (rétro-compat).
+describe("cash quotidien — parse défensif (bossStacks / cap / date)", () => {
+    it("save sans les champs → vides (0/{}/'')", () => {
+        const s = parseSave({ version: 2 })
+        expect(s.pokerBossStacks).toEqual({})
+        expect(s.pokerCashCap).toBe(0)
+        expect(s.pokerCashDate).toBe("")
+    })
+    it("valeurs valides préservées ; garbage → normalisé", () => {
+        const s = parseSave({ version: 2, pokerBossStacks: { Volta: 120, Pyra: 0, X: "nope" }, pokerCashCap: 40, pokerCashDate: "2026-07-06" })
+        expect(s.pokerBossStacks.Volta).toBe(120)
+        expect(s.pokerBossStacks.Pyra).toBe(0)      // ruiné
+        expect(s.pokerBossStacks.X ?? 0).toBe(0)    // valeur non-numérique filtrée
+        expect(s.pokerCashCap).toBe(40)
+        expect(s.pokerCashDate).toBe("2026-07-06")
+        expect(parseSave({ version: 2, pokerCashCap: -5 }).pokerCashCap).toBe(0) // négatif → 0
+    })
+})

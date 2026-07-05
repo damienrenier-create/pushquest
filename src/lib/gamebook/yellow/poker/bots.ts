@@ -36,12 +36,20 @@ const POKER_BOSSES: PokerBoss[] = [
 ]
 const DEFAULT_PROFILE: BotProfile = { tight: .55, aggro: .55, bluff: .12, skill: .70 }
 
-/** Tire un boss ABSENT de la table + UNE de ses 2 personnalités (au hasard si rng, sinon déterministe). */
-function pickBoss(t: PokerTable, rng?: Rng): { name: string; persona: BotProfile } {
+/** Noms des boss (pour le cash quotidien : itère dessus pour les tapis persistés). */
+export const POKER_BOSS_NAMES: readonly string[] = POKER_BOSSES.map((b) => b.name)
+
+/** Options de peuplement pour le CASH quotidien : boss ruinés du jour à EXCLURE + tapis PAR boss (persisté,
+ *  cap sur les dons de la maison). Si `bossStackFor` est fourni, les bots ruinés ne sont PAS recavés. */
+export interface EnsureBotsOpts { excludeNames?: readonly string[]; bossStackFor?: (name: string) => number }
+
+/** Tire un boss ABSENT de la table (et hors `excludeNames`, ex. boss ruinés du jour) + UNE de ses 2
+ *  personnalités (au hasard si rng). Renvoie null si aucun boss dispo. */
+function pickBoss(t: PokerTable, rng?: Rng, excludeNames?: readonly string[]): { name: string; persona: BotProfile } | null {
     const used = new Set(t.seats.filter((s) => s.bot && !s.leaving).map((s) => s.name))
-    const avail = POKER_BOSSES.filter((b) => !used.has(b.name))
-    const pool = avail.length ? avail : POKER_BOSSES
-    const boss = pool[rng ? Math.floor(rng.next() * pool.length) : 0]
+    const avail = POKER_BOSSES.filter((b) => !used.has(b.name) && !excludeNames?.includes(b.name))
+    if (!avail.length) return null
+    const boss = avail[rng ? Math.floor(rng.next() * avail.length) : 0]
     const persona = boss.styles[rng && rng.next() < 0.5 ? 1 : 0]
     return { name: boss.name, persona }
 }
@@ -107,15 +115,15 @@ export function runBots(t: PokerTable, rng: Rng): void {
 }
 
 /** Ajuste les bots ENTRE les mains : comble jusqu'à `target` joueurs SI ≥1 humain, retire sinon, recave les ruinés. */
-export function ensureBots(t: PokerTable, target = 4, maxSeats = 7, botBuyin = BOT_BUYIN, rng?: Rng): void {
+export function ensureBots(t: PokerTable, target = 4, maxSeats = 7, botBuyin = BOT_BUYIN, rng?: Rng, opts?: EnsureBotsOpts): void {
     if (t.phase !== "handComplete") return // ne jamais toucher la table en pleine main
     const humans = t.seats.filter((s) => !s.bot && !s.leaving)
-    // Aucun humain → table au repos : on vire tous les bots.
+    // Aucun humain → table au repos : on vire tous les bots (règle d'or : jamais de partie sans joueur).
     if (humans.length === 0) { for (const s of t.seats) if (s.bot) s.leaving = true; pruneSeats(t); return }
 
     const wanted = Math.max(0, Math.min(target, maxSeats) - humans.length)
-    // Recave les bots ruinés (la maison remet du tapis, au MÊME plafond que le buy-in courant).
-    for (const s of t.seats) if (s.bot && s.stack <= 0) s.stack = botBuyin
+    // Recave les bots ruinés — SAUF en cash (bossStackFor présent) : là un boss ruiné PART (géré par l'appelant).
+    if (!opts?.bossStackFor) for (const s of t.seats) if (s.bot && s.stack <= 0) s.stack = botBuyin
     // Trop de bots (assez d'humains) → on en retire.
     const bots = t.seats.filter((s) => s.bot && !s.leaving)
     for (let k = wanted; k < bots.length; k++) bots[k].leaving = true
@@ -123,8 +131,10 @@ export function ensureBots(t: PokerTable, target = 4, maxSeats = 7, botBuyin = B
     for (let n = 1; n <= maxSeats && t.seats.filter((s) => s.bot && !s.leaving).length < wanted; n++) {
         const id = `bot_${n}`
         if (t.seats.some((s) => s.id === id && !s.leaving)) continue
-        const { name, persona } = pickBoss(t, rng) // boss + personnalité tirés au hasard (distincts à la table)
-        t.seats.push({ id, name, persona, stack: botBuyin, hole: [], folded: false, allIn: false, committed: 0, betThisRound: 0, hasActed: false, sittingOut: true, wantsSitOut: false, bot: true })
+        const pick = pickBoss(t, rng, opts?.excludeNames) // boss + persona au hasard (hors ruinés du jour)
+        if (!pick) break // plus aucun boss dispo (tous ruinés / déjà assis)
+        const stack = opts?.bossStackFor ? Math.max(0, Math.floor(opts.bossStackFor(pick.name))) : botBuyin
+        t.seats.push({ id, name: pick.name, persona: pick.persona, stack, hole: [], folded: false, allIn: false, committed: 0, betThisRound: 0, hasActed: false, sittingOut: true, wantsSitOut: false, bot: true })
     }
     pruneSeats(t)
 }

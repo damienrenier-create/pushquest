@@ -28,6 +28,10 @@ export interface YellowSave {
     welcomeGift: boolean
     /** 1re partie de poker (tuto solo house-funded) déjà jouée ? */
     pokerFirstGameDone: boolean
+    /** Cash quotidien vs les boss : tapis du jour de chaque boss (nom → reps), + cap (buy-in 1re partie) + jour. */
+    pokerBossStacks: Record<string, number>
+    pokerCashCap: number
+    pokerCashDate: string
     /** Cadeau du DIEU SPAG (+150 énergie, one-shot événementiel) déjà réclamé ? */
     spagGift: boolean
     /** Cadeau du DIEU DES PÂTES (poster mural du Centre, +100 énergie, one-shot) déjà réclamé ? */
@@ -130,7 +134,7 @@ export const SAVE_VERSION = 2
 const ACE_RATCHET_RESET_VERSION = 2
 
 export function emptySave(): YellowSave {
-    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, sylvebarbeAwake: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", ngplusBattles: 0, labDefi: emptyLabDefi(), customDaemons: [], activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null }
+    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, sylvebarbeAwake: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", ngplusBattles: 0, labDefi: emptyLabDefi(), customDaemons: [], activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null }
 }
 
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -209,6 +213,17 @@ function numRec(raw: unknown): Record<string, number> {
     if (raw && typeof raw === "object") {
         for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
             if (typeof v === "number" && v > 0) out[k] = Math.floor(v)
+        }
+    }
+    return out
+}
+
+/** Comme numRec mais GARDE les 0 (≥ 0) : pour les tapis boss du cash, où 0 = RUINÉ (doit persister). */
+function numRecNonNeg(raw: unknown): Record<string, number> {
+    const out: Record<string, number> = {}
+    if (raw && typeof raw === "object") {
+        for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+            if (typeof v === "number" && isFinite(v) && v >= 0) out[k] = Math.floor(v)
         }
     }
     return out
@@ -406,6 +421,9 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         repsBankedTotal: typeof o.repsBankedTotal === "number" ? Math.floor(o.repsBankedTotal) : -1,
         welcomeGift: o.welcomeGift === true,
         pokerFirstGameDone: o.pokerFirstGameDone === true,
+        pokerBossStacks: numRecNonNeg(o.pokerBossStacks), // garde les 0 (boss ruinés) → ne ressuscitent pas au reload
+        pokerCashCap: typeof o.pokerCashCap === "number" && isFinite(o.pokerCashCap) ? Math.max(0, Math.floor(o.pokerCashCap)) : 0,
+        pokerCashDate: typeof o.pokerCashDate === "string" ? o.pokerCashDate : "",
         spagGift: o.spagGift === true,
         pastaGodGift: o.pastaGodGift === true,
         pastaBoughtToday: typeof o.pastaBoughtToday === "number" ? Math.max(0, Math.floor(o.pastaBoughtToday)) : 0,
