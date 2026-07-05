@@ -306,13 +306,13 @@ const NGPLUS_ZONES: Record<string, Zone> = {
             // Communs (conservés)
             { speciesId: "plumiot", base: COMMON }, { speciesId: "couperin", base: COMMON },
             { speciesId: "cailloutchi", base: COMMON }, { speciesId: "ruffiant", base: COMMON }, { speciesId: "cornaissant", base: COMMON },
-            // Peu communs — late/never (donjons/jamais sauvages) rendus catchables tôt
+            // Peu communs — late/never (donjons/jamais sauvages) rendus catchables tôt + Colibraise (Vol/Feu)
             { speciesId: "blaziper", base: UNCOMMON }, { speciesId: "jerbiwat", base: UNCOMMON },
             { speciesId: "bouh", base: UNCOMMON }, { speciesId: "glacirex", base: UNCOMMON },
-            // Rares — les 4 starters (jamais sauvages en run 1)
-            { speciesId: "gouttiny", base: RARE, rare: true }, { speciesId: "braisille", base: RARE, rare: true },
-            { speciesId: "fennaise", base: RARE, rare: true }, { speciesId: "feuillichot", base: RARE, rare: true },
-            // Très rare — le bébé-dragon
+            { speciesId: "colibraise", base: UNCOMMON },
+            // Rares — les starters Eau & Plante (Braisille/Fennaise déplacés à la CENTRALE FEU run 2)
+            { speciesId: "gouttiny", base: RARE, rare: true }, { speciesId: "feuillichot", base: RARE, rare: true },
+            // Très rare — le bébé-dragon (→ Carlembre → Dracarlin en l'élevant)
             { speciesId: "carlinou", base: VERY_RARE, rare: true },
             // Giga rare — la pépite dragon + l'ancêtre panthère
             { speciesId: "draclet", base: GIGA_RARE, rare: true }, { speciesId: "pantheon", base: GIGA_RARE, rare: true },
@@ -322,18 +322,53 @@ const NGPLUS_ZONES: Record<string, Zone> = {
     yellow_grotte: {
         rate: 0.16, minLevel: 5,
         pool: [
-            // Communs — rocher + eau (lignée arène eau) + feu
-            { speciesId: "cailloutchi", base: COMMON }, { speciesId: "tetardoc", base: COMMON }, { speciesId: "lavapetit", base: COMMON },
+            // Communs — rocher + eau (lignée arène eau) — Lavapetit déplacé à la CENTRALE FEU run 2
+            { speciesId: "cailloutchi", base: COMMON }, { speciesId: "tetardoc", base: COMMON },
             // Peu communs
             { speciesId: "rembodo", base: UNCOMMON }, { speciesId: "limaroche", base: UNCOMMON }, { speciesId: "marmoterre", base: UNCOMMON },
             { speciesId: "quadroc", base: UNCOMMON }, { speciesId: "loutrille", base: UNCOMMON },
             { speciesId: "sporbeo", base: UNCOMMON }, { speciesId: "revemante", base: UNCOMMON },
-            // Rare — un spectre + la tortue Feu/Eau
-            { speciesId: "namicha", base: RARE, noEvolve: true }, { speciesId: "braisecaille", base: RARE },
+            // Rare — un spectre (Braisécaille déplacée à la CENTRALE FEU run 2)
+            { speciesId: "namicha", base: RARE, noEvolve: true },
             // Super rare — Mottoche rétrogradé (180 → 5)
             { speciesId: "mottoche", base: VERY_RARE },
             // Giga rare — Orcaline (Glace/Eau), UNIQUEMENT si le lead ≥ 35 (son niveau mini)
             { speciesId: "orcaline", base: GIGA_RARE, noEvolve: true, rare: true, minLeadLevel: 35 },
+        ],
+    },
+    // CENTRALE FEU run 2 — la Centrale a SURCHAUFFÉ : le cœur Feu/Élec (lignée Boltah) a fait fondre les
+    // circuits, la lave a envahi les couloirs. Devient le FOYER des Feu déplacés ici (Braisille/Fennaise de
+    // Route Nord, Lavapetit/Braisécaille de la Grotte, Pyrozly/Brasicow de Cendreville). Le gardien de la
+    // Pierre est Gékraise (Roche/Feu) en run 2 (cf. gekroc.ts buildGekroc(ngplus)).
+    yellow_centrale: {
+        rate: 0.16, minLevel: 12,
+        pool: [
+            // Le cœur en fusion (Feu/Élec, EXCLUSIF à la Centrale) + la lave
+            { speciesId: "boltah", base: COMMON },      // Feu/Élec → Heatah → Thundah en montant
+            { speciesId: "lavapetit", base: COMMON },   // Roche/Feu, la lave → Magmator
+            { speciesId: "pyrozly", base: COMMON },     // Feu pur, les cendres
+            // Les feu qui remontent des ateliers
+            { speciesId: "braisille", base: UNCOMMON }, // starter feu → Pyrokoss
+            { speciesId: "fennaise", base: UNCOMMON },  // feu → Loupyre
+            { speciesId: "brasicow", base: UNCOMMON, player: "combat" }, // Feu/Combat → Tauricendre
+            // Rare — la vapeur des circuits noyés
+            { speciesId: "braisecaille", base: RARE },  // Feu/Eau → Caldéront
+        ],
+    },
+    // CENDREVILLE run 2 — le feu a migré vers la CENTRALE FEU : la ville-cendre penche désormais
+    // Spectre/Électrik (Pyrozly/Brasicow → Centrale ; Colibraise → Route Nord). Blaziper reste le dernier feu.
+    yellow_cendreville: {
+        rate: 0.15, minLevel: 16,
+        pool: [
+            { speciesId: "blaziper", base: RARE, player: "rare", rare: true }, // Psy/Feu, le dernier feu de la ville
+            // 👻 SPECTRE — la brume de cendre
+            { speciesId: "sporbeo", base: UNCOMMON }, { speciesId: "revemante", base: UNCOMMON },
+            { speciesId: "necarabee", base: RARE },
+            // ⚡ ÉLECTRIK — courts-circuits dans les ruines
+            { speciesId: "electroatiss", base: COMMON, player: "elec" },
+            { speciesId: "couranti", base: UNCOMMON, player: "elec" },
+            { speciesId: "zappeureal", base: RARE, player: "elec" },
+            { speciesId: "oragron", base: VERY_RARE, player: "elec", rare: true }, // Vol/Élec (pépite)
         ],
     },
 }

@@ -29,7 +29,7 @@ import { NGPLUS_ARENA_TEAMS } from "../data/ngplusArenas"
 import { createMonInstance } from "../battle/factory"
 import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroLines, SBIRE_DONE_LINES, SBIRE_NO_TEAM_LINES } from "../data/sbire"
 import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, ACE_PASS_LINES, ACE_GATE_LINES, aceIntro, aceGiftLine, buildAceTeam, speciesAtLevel } from "../data/ace"
-import { CAVE_TRADER_ID, CAVE_TRADE_GIVE, CAVE_TRADE_RECEIVE, CAVE_TRADER_OFFER_LINES, CAVE_TRADER_NEED_LINES, CAVE_TRADE_DONE_LINES, CAVE_TRADE_ALREADY_LINES } from "../data/caveTrader"
+import { CAVE_TRADER_ID, CAVE_TRADE_GIVE_POOL, CAVE_TRADE_RECEIVE, CAVE_TRADER_OFFER_LINES, CAVE_TRADER_NEED_LINES, CAVE_TRADE_DONE_LINES, CAVE_TRADE_ALREADY_LINES } from "../data/caveTrader"
 import { HH_KID_ID, HH_KID_DAY_LINES, HH_KID_NIGHT_LINES, isHhKidNight } from "../data/hhKid"
 import { ORCALINE_TRAINER_ID, ORCALINE_INTRO_LINES, ORCALINE_REMATCH_LINES, ORCALINE_DONE_TODAY_LINES } from "../data/orcalineTrainer"
 import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock } from "../data/sylvebarbeBlock"
@@ -252,14 +252,14 @@ function doHhTrade(brookUid: string): ActiveDialogue | null {
     }
 }
 
-// DÉNICHEUR (grotte) : donne un FAUKON → reçoit un BLAZIPER (base lignée Vipember) au MÊME niveau
-// + MÊMES points Saiyan (récompense de l'investissement). Blaziper évolue ensuite en Vipember.
+// DÉNICHEUR (Route Nord) : donne un COMMUN → reçoit un BÉLUNODE (base lignée Léviathonn) au MÊME niveau
+// + MÊMES points Saiyan (récompense de l'investissement). Bélunode évolue ensuite en Sonarque → Léviathonn.
 function doCaveTrade(giveUid: string): ActiveDialogue | null {
     const owner = [...getPlayerSave().team, ...getPlayerSave().pc].find((m) => m.uid === giveUid)
     if (!owner) return null
-    const blaziper = createMonInstance(CAVE_TRADE_RECEIVE, owner.level, { owned: true })
-    blaziper.statPoints = owner.statPoints ?? 0 // préserve les points Saiyan
-    executeTrade(giveUid, blaziper)             // retire le Faukon, ajoute le Blaziper
+    const received = createMonInstance(CAVE_TRADE_RECEIVE, owner.level, { owned: true })
+    received.statPoints = owner.statPoints ?? 0 // préserve les points Saiyan
+    executeTrade(giveUid, received)             // retire le commun, ajoute le Bélunode
     markCaveTradeDone()                          // échange unique → ne se reproposera plus
     persistYellowSave()
     return { npcId: CAVE_TRADER_ID, npcName: "DÉNICHEUR", lineIndex: 0, lines: CAVE_TRADE_DONE_LINES }
@@ -886,18 +886,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
-        // DÉNICHEUR (grotte) : échange Faukon → Blaziper (base lignée Vipember). UNE SEULE FOIS.
+        // DÉNICHEUR (Route Nord) : échange un COMMUN de base → Bélunode (base lignée Léviathonn). UNE SEULE FOIS.
         if (npc.id === CAVE_TRADER_ID) {
             if (getPlayerSave().caveTradeDone) {
                 set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: CAVE_TRADE_ALREADY_LINES } })
                 return
             }
-            const faukon = [...getPlayerSave().team, ...getPlayerSave().pc].find((m) => m.speciesId === CAVE_TRADE_GIVE)
-            if (!faukon) {
+            // N'importe quel commun de base de la Route Nord fait l'affaire (« un Daemon random et faible »).
+            const give = [...getPlayerSave().team, ...getPlayerSave().pc].find((m) => CAVE_TRADE_GIVE_POOL.includes(m.speciesId))
+            if (!give) {
                 set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: CAVE_TRADER_NEED_LINES } })
                 return
             }
-            set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: CAVE_TRADER_OFFER_LINES, lineIndex: 0 }, pendingCaveTrade: faukon.uid })
+            set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: CAVE_TRADER_OFFER_LINES, lineIndex: 0 }, pendingCaveTrade: give.uid })
             return
         }
 

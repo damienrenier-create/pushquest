@@ -1,29 +1,31 @@
 // src/lib/gamebook/yellow/data/caveTrader.ts
 //
-// PNJ "DÉNICHEUR" devant l'entrée de la grotte (Route Nord). Récompense d'avoir élevé un commun :
-// le joueur DONNE un FAUKON (stade 2 de la lignée Plumiot, commun) → REÇOIT un BLAZIPER (base de la
-// lignée Vipember), au MÊME niveau + MÊMES points Saiyan. À ce niveau, Blaziper évolue ensuite en
-// Vipember (via evolveTeam, en combat) — le joueur peut aussi annuler l'évo avec B s'il préfère.
+// PNJ "DÉNICHEUR" devant l'entrée de la grotte (Route Nord). Récompense d'avoir capturé un commun :
+// le joueur DONNE n'importe quel COMMUN de base de la Route Nord (cf. CAVE_TRADE_GIVE_POOL) → REÇOIT un
+// BÉLUNODE (base de la lignée Léviathonn), au MÊME niveau + MÊMES points Saiyan. Bélunode évolue ensuite
+// en Sonarque (16) puis Léviathonn (34) — le joueur peut annuler l'évo avec B s'il préfère.
 // Échange UNIQUE (flag caveTradeDone dans playerStore) : une fois fait, le PNJ n'a plus rien à offrir.
 
 export const CAVE_TRADER_ID = "y_cave_trader"
 export const CAVE_TRADER_MAP = "yellow_route_nord"
 export const CAVE_TRADER_POS = { x: 13, y: 4 } // à côté de l'entrée de la grotte (12,3), case walkable
-export const CAVE_TRADE_GIVE = "faukon"     // ce que le joueur DONNE
-export const CAVE_TRADE_RECEIVE = "blaziper" // ce qu'il REÇOIT (base de la lignée Vipember)
+// Ce que le joueur DONNE : n'importe quel COMMUN de base de la Route Nord (« un Daemon random et faible »).
+export const CAVE_TRADE_GIVE_POOL = ["plumiot", "couperin", "cailloutchi", "ruffiant", "cornaissant"]
+export const CAVE_TRADE_GIVE = "plumiot"       // représentant par défaut (messages / rétro-compat)
+export const CAVE_TRADE_RECEIVE = "belunode"   // ce qu'il REÇOIT (base de la lignée Léviathonn)
 
 export const CAVE_TRADER_OFFER_LINES = [
-    "Tiens, un FAUKON ! Peu de dresseurs s'acharnent sur cette lignée commune… J'admire ta patience.",
-    "Je te l'échange contre un Daemon RARE — la graine d'un grand : un BLAZIPER. Il paraît chétif, mais élève-le et tu verras éclore sa vraie puissance. Marché conclu ?",
+    "Tiens, un petit commun ! La plupart des dresseurs les relâchent… moi, je collectionne les curiosités.",
+    "Je te l'échange contre un Daemon étrange que j'ai remonté de la grotte : un BÉLUNODE. Un têtard fadasse en apparence… mais élève-le, et tu verras surgir un LÉVIATHON des profondeurs. Marché conclu ?",
 ]
 export const CAVE_TRADER_NEED_LINES = [
-    "Reviens me voir avec un FAUKON (lignée Plumiot) dans ton équipe, et je te révélerai un Daemon rare !",
+    "Reviens me voir avec un petit COMMUN dans ton équipe (Plumiot, Couperin, Cailloutchi…), et je te révélerai une curiosité des profondeurs !",
 ]
 export const CAVE_TRADE_DONE_LINES = [
-    "Marché conclu ! Ton Faukon s'envole vers de nouveaux cieux…",
-    "…et voici ta récompense : un BLAZIPER ! Faiblard à première vue, mais c'est la graine d'un Daemon redoutable. Continue de l'élever — tu ne le regretteras pas. 🔥",
+    "Marché conclu ! Ton petit commun part explorer d'autres horizons…",
+    "…et voici ta curiosité : un BÉLUNODE ! Insignifiant à l'œil nu, mais c'est le nourrisson d'un colosse des abysses. Élève-le — il deviendra un LÉVIATHONN. 🌊",
 ]
 // Après l'échange unique : le DÉNICHEUR n'a plus rien à proposer.
 export const CAVE_TRADE_ALREADY_LINES = [
-    "Je n'ai qu'un seul BLAZIPER à offrir, et il est déjà parti avec toi. Élève-le bien — c'est tout ce que j'avais !",
+    "Je n'avais qu'un seul BÉLUNODE à offrir, et il nage déjà avec toi. Élève-le bien — c'est tout ce que j'avais !",
 ]
