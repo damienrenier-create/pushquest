@@ -772,10 +772,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         const won = ngplusFinalResult.won
         clearNgplusFinalResult()
         if (won) {
+            // SCORE du run NG+ = l'énergie en réserve à la clôture (capturée AVANT la fusion, qui remanie les reps).
+            const ngplusScore = getPlayer().reps
             // FUSION COMPLÈTE des 2 mondes (async : merge + backup + persist), puis dialogue de clôture.
             completeNewGamePlus().finally(() => {
                 showDialogue("y_ligue_maitre", "FUSION DES TIMELINES", [
                     "L'équipe que tu avais un jour abandonnée s'incline devant ta création.",
+                    `Tu boucles cette seconde vie avec ${ngplusScore}⚡ en réserve : voilà TON score, gravé dans le Nexus. Sauras-tu le battre un jour ?`,
                     "En cet instant, tes deux destins n'en font plus qu'UN : tous tes anciens Daemons rejoignent ton PC.",
                     "Le cycle est bouclé, Maître. Ta lignée custom règne désormais sur le Nexus fusionné. 🍝",
                 ])
@@ -1107,7 +1110,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         // Cinématique d'entrée du 2e run : le Dieu des Nouilles explique le NG+ ET la fenêtre d'abandon.
         showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, [
             `*Un éclair de pâte sacrée. ${stored.spec.name}, ta création, s'éveille à tes côtés — à peine éclos, niveau 5.*`,
-            "« Voici ta seconde vie : ta création pour seul allié, 6000 énergies bénies, et un Nexus recommencé de zéro. »",
+            "« Voici ta seconde vie : ta création pour seul allié, 6000 énergies bénies, et un Nexus recommencé de zéro — mais PROFONDÉMENT changé. »",
+            "« Des Daemons jamais vus rôdent sur les routes, les types ont basculé, et des CT INÉDITES t'attendent. Rien ne sera comme avant, Maître. »",
+            "« Ton défi de gloire : rallier la Ligue et la vaincre avec le PLUS d'énergie possible. Ce chiffre sera TON score — la trace que tu graves dans le Nexus. »",
             "« Tu hésites ? Tu as 15 COMBATS — pas un de plus — pour renoncer : porte ton starter au Prof. CHEN. Tu perdras ta création ET les 6000⚡ à JAMAIS, mais tu retrouveras ta partie de Champion, la flûte et la Zone de Combat. »",
             "« Passé ces 15 combats, plus de retour : engagé jusqu'au bout. ACE t'attend avec une NÉMÉSIS forgée contre toi… et au sommet, ta PROPRE ancienne équipe. »",
             "« Choisis bien, Maître. Fais de cette vie une légende. 🍝 »",
@@ -2608,9 +2613,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     setMap("yellow_cendreville", 21, 32)
                     showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, [
                         "*Le trône vacillant, une lueur de pâte sacrée descend sur toi.*",
-                        "« CHAMPION ! Tu as tout vaincu… alors je t'offre l'ultime défi : deviens à ton tour CRÉATEUR. »",
-                        "« Conçois de tes mains un Daemon inédit — TON œuvre — et recommence une SECONDE VIE avec lui pour seul allié. »",
-                        "« Ce n'est pas une option : le Nexus l'exige. Lève-toi, et façonne ta création. »",
+                        "« CHAMPION ! Tu as tout vaincu… mais crois-tu vraiment avoir touché le fond du Nexus ? »",
+                        "« Je t'offre l'ULTIME défi : deviens à ton tour CRÉATEUR. Conçois de tes mains un Daemon INÉDIT — TON œuvre — et recommence une SECONDE VIE avec lui pour seul allié. »",
+                        "« Un Nexus TOUT AUTRE t'attend : des Daemons que nul Champion n'a jamais croisés, des types bouleversés, des CT introuvables ailleurs. Et 6000 énergies bénies pour t'élancer. »",
+                        "« Mais retiens ceci : ces 6000⚡ sont un PRÊT du Nexus. Renonce au second run, et il les REPRENDRA. Va au bout, et elles sont à toi pour toujours. »",
+                        "« Et surtout — un SCORE t'attend : franchis cette seconde Ligue avec le PLUS d'énergie possible. Ce chiffre-là, c'est la vraie mesure d'un Maître. »",
+                        "« Ce n'est pas une option : le Nexus l'exige. Lève-toi, et façonne ta création. 🍝 »",
                     ])
                     setPendingForcedCreator(true) // ouvre le créateur forcé dès la fin du dialogue
                 }} />
