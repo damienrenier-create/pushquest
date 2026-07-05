@@ -62,7 +62,7 @@ export function publicView(t: PokerTable, viewerId?: string): PublicTable {
             committed: s.committed, betThisRound: s.betThisRound, hasActed: s.hasActed, sittingOut: s.sittingOut,
             wantsSitOut: !!s.wantsSitOut,
             bot: !!s.bot,
-            holeCount: s.hole.length,
+            holeCount: s.folded ? 0 : s.hole.length, // un couché ne montre plus de dos de cartes
             hole: (s.id === viewerId || (reveal && !s.folded)) ? [...s.hole] : undefined,
         })),
     }

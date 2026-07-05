@@ -59,14 +59,17 @@ export function useLocalPoker(myUserId: string, myName: string): LocalPokerContr
 
     // SECRET (jamais annoncé) : au-dessus du plafond, on donne au joueur les 2 cartes les + faibles du
     // paquet → main pourrie ; il perd face aux bots et redescend. Ressenti = malchance, aucune triche visible.
-    const rigWeakHand = useCallback((t: PokerTable) => {
+    const rigWeakHand = useCallback((t: PokerTable, r: Rng) => {
         const me = mySeat(t)
-        if (!me || me.hole.length < 2 || t.deck.length < 4) return
+        if (!me || me.hole.length < 2 || t.deck.length < 6) return
         const order = t.deck.map((_, i) => i).sort((a, b) => t.deck[a].rank - t.deck[b].rank)
         const weakIdx = [order[0], order[1]]
         const weak = [t.deck[weakIdx[0]], t.deck[weakIdx[1]]]
         for (const i of [...weakIdx].sort((a, b) => b - a)) t.deck.splice(i, 1)
-        t.deck.push(me.hole[0], me.hole[1])
+        // Le board est tiré du BOUT du paquet (pop). On ENFOUIT donc les bonnes cartes du joueur dans la
+        // moitié BASSE (index proche de 0, tirée en dernier) → elles ne retombent JAMAIS sur le tapis cette
+        // main : le trucage reste totalement invisible (pas de « tell »).
+        for (const c of [me.hole[0], me.hole[1]]) t.deck.splice(Math.floor(r.next() * Math.max(1, Math.floor(t.deck.length * 0.35))), 0, c)
         me.hole = weak
     }, [myUserId]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -111,7 +114,7 @@ export function useLocalPoker(myUserId: string, myName: string): LocalPokerContr
         const overCap = (mySeat(t)?.stack ?? 0) > FIRST_GAME_CHEAT_CAP // au-dessus du plafond AVANT la donne
         ensureBots(t, SOLO_SEATS, SOLO_SEATS, buyinRef.current, rng())
         maybeStartHand(t, rng())
-        if (overCap) rigWeakHand(t) // SECRET : donne défavorisée, jamais annoncée
+        if (overCap) rigWeakHand(t, rng()) // SECRET : donne défavorisée, jamais annoncée
         sync()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sync, rigWeakHand])

@@ -6,7 +6,7 @@
 // ⚠️ À TESTER EN LIVE à plusieurs (le réseau/UI ne se valident qu'avec de vrais joueurs connectés).
 
 import { useEffect, useRef, useState } from "react"
-import { usePlayer, spendReps, grantReps } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, spendReps, grantReps, creditReps } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { useCasinoPoker } from "@/lib/gamebook/yellow/multiplayer/useCasinoPoker"
 import { PokerTableView, POKER_CSS } from "./PokerTableView"
@@ -51,7 +51,7 @@ export default function PokerPanel({ close, myUserId }: { close: () => void; myU
     }
     async function doLeave() {
         const refund = await leave()
-        if (refund > 0) { grantReps(refund); persistYellowSave() }
+        if (refund > 0) { creditReps(refund); persistYellowSave() } // crédit INTÉGRAL (jamais tronqué par le cap)
     }
 
     return (

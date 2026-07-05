@@ -544,6 +544,18 @@ export function grantReps(n: number): number {
     return st.reps - before
 }
 
+/** Crédite INTÉGRALEMENT (cash-out poker) : relève le cap AU MINIMUM nécessaire pour ne JAMAIS tronquer
+ *  (sinon un gros gain repartirait avec moins que sa mise, ou serait rogné au bankReps quotidien). Le cap
+ *  ne bouge que si le crédit le dépasse. Renvoie le montant crédité (= n). */
+export function creditReps(n: number): number {
+    const amt = Math.max(0, Math.floor(n))
+    if (amt <= 0) return 0
+    const newReps = st.reps + amt
+    st = { ...st, reps: newReps, repsCap: Math.max(st.repsCap, newReps) }
+    emit()
+    return amt
+}
+
 /**
  * Tick quotidien (1×/jour) : reset des achats Super Pasta (+3 au prix plancher) et
  * du compteur de combats du sbire. Le CRÉDIT des reps est désormais géré par bankReps.
