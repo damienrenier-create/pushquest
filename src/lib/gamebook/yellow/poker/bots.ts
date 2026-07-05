@@ -13,7 +13,26 @@ import { pruneSeats } from "./room"
 import { evaluateBest } from "./handEval"
 
 export const BOT_BUYIN = 1000
-const BOT_NAMES = ["Botsaï", "IA-Roupoker", "Ordibluff", "Némébot", "K.O.-Robot", "Cartobot"]
+
+// ── PERSONNALITÉS D'IA ──────────────────────────────────────────────────────────────────────────
+// Chaque bot a un style FIXE (déterministe par siège). Certains sont plus forts, d'autres exploitables.
+//   tight  : sélection des mains (élevé = se couche + facilement) · aggro : préférence relance/tapis
+//   bluff  : fréquence de bluff sur main faible · skill : discipline (bas = suit trop, « calling station »)
+export interface BotPersona { name: string; tight: number; aggro: number; bluff: number; skill: number }
+const PERSONAS: BotPersona[] = [
+    { name: "Botsaï",      tight: 0.75, aggro: 0.75, bluff: 0.10, skill: 0.90 }, // requin tight-aggressive (FORT)
+    { name: "IA-Roupoker", tight: 0.25, aggro: 0.20, bluff: 0.05, skill: 0.35 }, // calling station large-passif (FAIBLE, exploitable)
+    { name: "Ordibluff",   tight: 0.45, aggro: 0.85, bluff: 0.38, skill: 0.55 }, // maniac bluffeur (imprévisible)
+    { name: "Némébot",     tight: 0.60, aggro: 0.55, bluff: 0.12, skill: 0.95 }, // solide équilibré (FORT)
+    { name: "K.O.-Robot",  tight: 0.35, aggro: 0.80, bluff: 0.22, skill: 0.50 }, // loose-aggressive (spew)
+    { name: "Cartobot",    tight: 0.88, aggro: 0.35, bluff: 0.03, skill: 0.72 }, // rocher ultra-serré passif
+]
+/** Personnalité d'un bot d'après son siège (id "bot_N" → persona fixe ; sinon hash déterministe). */
+export function personaFor(seatId: string): BotPersona {
+    const m = /^bot_(\d+)$/.exec(seatId)
+    const idx = m ? parseInt(m[1], 10) - 1 : [...seatId].reduce((a, c) => a + c.charCodeAt(0), 0)
+    return PERSONAS[((idx % PERSONAS.length) + PERSONAS.length) % PERSONAS.length]
+}
 
 /** Force de main du bot ∈ [0,1] : préflop = valeur des 2 cartes ; postflop = catégorie de la meilleure main. */
 function handStrength(t: PokerTable, i: number): number {
@@ -38,19 +57,28 @@ export function botDecision(t: PokerTable, i: number, rng: Rng): PokerAction {
     const { canCheck, toCall, minRaiseTo, maxRaiseTo } = legalActions(t, i)
     const s = t.seats[i]
     const str = handStrength(t, i)
+    const p = personaFor(s.id)                 // style FIXE du bot (tight/aggro/bluff/skill)
     const r = rng.next()
     const canRaise = maxRaiseTo > minRaiseTo
     const raiseTo = (frac: number) => Math.min(maxRaiseTo, minRaiseTo + Math.floor((maxRaiseTo - minRaiseTo) * frac))
 
     if (canCheck) {
-        if (str > 0.72 && canRaise && r < 0.6) return { kind: "raise", to: raiseTo(0.45) } // value bet
-        if (str < 0.3 && canRaise && r < 0.12) return { kind: "raise", to: raiseTo(0.3) }  // bluff rare
+        // Value bet : d'autant + probable que la main est forte ET que le bot est agressif.
+        if (str > 0.6 && canRaise && r < p.aggro) return { kind: "raise", to: raiseTo(0.35 + p.aggro * 0.3) }
+        // Bluff : à la fréquence propre du bot, sur main faible.
+        if (str < 0.35 && canRaise && r < p.bluff) return { kind: "raise", to: raiseTo(0.3) }
         return { kind: "check" }
     }
-    // Il y a une mise à suivre.
+    // Face à une mise : seuil de fold modulé par le style. Serré (tight) → se couche +. Peu skillé → respecte
+    // mal les pot-odds et « suit quand même » (calling station).
     const potOdds = toCall / Math.max(1, totalPot(t) + toCall)
-    if (str < 0.22 + potOdds * 0.55 && r < 0.9) return { kind: "fold" }
-    if (str > 0.82 && canRaise && r < 0.55) return { kind: "raise", to: raiseTo(0.55) }     // relance de valeur
+    const foldThreshold = 0.12 + p.tight * 0.22 + potOdds * (0.3 + p.skill * 0.4)
+    if (str < foldThreshold) {
+        if (r > p.skill && str > foldThreshold * 0.55) return { kind: "call" } // erreur de discipline (suit une main marginale)
+        return { kind: "fold" }
+    }
+    // Main jouable : relance de valeur si forte + agressive, sinon suivre (ou tapis si couvert).
+    if (str > 0.7 && canRaise && r < p.aggro * 0.8) return { kind: "raise", to: raiseTo(0.4 + p.aggro * 0.3) }
     return toCall >= s.stack ? { kind: "allin" } : { kind: "call" }
 }
 
@@ -67,23 +95,23 @@ export function runBots(t: PokerTable, rng: Rng): void {
 }
 
 /** Ajuste les bots ENTRE les mains : comble jusqu'à `target` joueurs SI ≥1 humain, retire sinon, recave les ruinés. */
-export function ensureBots(t: PokerTable, target = 4, maxSeats = 7): void {
+export function ensureBots(t: PokerTable, target = 4, maxSeats = 7, botBuyin = BOT_BUYIN): void {
     if (t.phase !== "handComplete") return // ne jamais toucher la table en pleine main
     const humans = t.seats.filter((s) => !s.bot && !s.leaving)
     // Aucun humain → table au repos : on vire tous les bots.
     if (humans.length === 0) { for (const s of t.seats) if (s.bot) s.leaving = true; pruneSeats(t); return }
 
     const wanted = Math.max(0, Math.min(target, maxSeats) - humans.length)
-    // Recave les bots ruinés (la maison remet du tapis).
-    for (const s of t.seats) if (s.bot && s.stack <= 0) s.stack = BOT_BUYIN
+    // Recave les bots ruinés (la maison remet du tapis, au MÊME plafond que le buy-in courant).
+    for (const s of t.seats) if (s.bot && s.stack <= 0) s.stack = botBuyin
     // Trop de bots (assez d'humains) → on en retire.
     const bots = t.seats.filter((s) => s.bot && !s.leaving)
     for (let k = wanted; k < bots.length; k++) bots[k].leaving = true
-    // Pas assez → on en ajoute (ids stables bot_1..bot_N pour persister entre les mains).
+    // Pas assez → on en ajoute (ids stables bot_1..bot_N → persona + persistance entre les mains).
     for (let n = 1; n <= maxSeats && t.seats.filter((s) => s.bot && !s.leaving).length < wanted; n++) {
         const id = `bot_${n}`
         if (t.seats.some((s) => s.id === id && !s.leaving)) continue
-        t.seats.push({ id, name: BOT_NAMES[(n - 1) % BOT_NAMES.length], stack: BOT_BUYIN, hole: [], folded: false, allIn: false, committed: 0, betThisRound: 0, hasActed: false, sittingOut: true, wantsSitOut: false, bot: true })
+        t.seats.push({ id, name: personaFor(id).name, stack: botBuyin, hole: [], folded: false, allIn: false, committed: 0, betThisRound: 0, hasActed: false, sittingOut: true, wantsSitOut: false, bot: true })
     }
     pruneSeats(t)
 }

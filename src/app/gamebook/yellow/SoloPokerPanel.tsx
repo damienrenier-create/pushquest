@@ -24,7 +24,7 @@ function CardView({ c, hidden }: { c?: Card; hidden?: boolean }) {
 
 export default function SoloPokerPanel({ onDone, myUserId }: { onDone: () => void; myUserId: string }) {
     const player = usePlayer()
-    const { table, join, act, nextHand, leave, firstHandDone, cheatNote, settleInfo } = useLocalPoker(myUserId, "Toi")
+    const { table, join, act, nextHand, leave, firstHandDone, settleInfo } = useLocalPoker(myUserId, "Toi")
     const [raiseTo, setRaiseTo] = useState(0)
     const [phase, setPhase] = useState<"intro" | "play" | "done">("intro")
     const nextTimer = useRef<number | null>(null)
@@ -94,7 +94,6 @@ export default function SoloPokerPanel({ onDone, myUserId }: { onDone: () => voi
 
                 {phase === "play" && (
                     <>
-                        {cheatNote && <div style={{ ...banner, background: "#4a1e1e" }}>{cheatNote}</div>}
                         {/* Board */}
                         <div style={{ display: "flex", gap: 5, justifyContent: "center", margin: "10px 0", minHeight: 46 }}>
                             {[0, 1, 2, 3, 4].map((i) => <CardView key={i} c={table?.community[i]} hidden={!table?.community[i]} />)}
@@ -173,8 +172,7 @@ export default function SoloPokerPanel({ onDone, myUserId }: { onDone: () => voi
                         <div style={{ fontSize: 34, margin: "6px 0" }}>{settleInfo.kept > 0 ? "🎉" : "🫥"}</div>
                         <p style={{ margin: "4px 0" }}>Fin de ta première partie !</p>
                         <div style={{ ...banner, background: "#1c2231", textAlign: "left", fontSize: 12 }}>
-                            {settleInfo.cheatTaken > 0 && <div>😈 Triche de la maison (plafond 1000) : <b>−{settleInfo.cheatTaken} ⚡</b></div>}
-                            <div>🏦 La maison reprend son prêt : <b>−{settleInfo.repay} ⚡</b></div>
+                            {settleInfo.repay > 0 && <div>🏦 La maison reprend son prêt : <b>−{settleInfo.repay} ⚡</b></div>}
                             <div style={{ marginTop: 4, color: "#4cd964" }}>💰 Tu encaisses : <b>+{settleInfo.kept} ⚡</b></div>
                         </div>
                         <p style={{ fontSize: 11, opacity: 0.75, margin: "6px 0" }}>Les prochaines parties se jouent à la vraie table, avec tes potes — 100 % aléatoire, sans filet.</p>
