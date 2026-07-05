@@ -2,25 +2,17 @@
 
 // Nexus — Poker Texas Hold'em MULTIJOUEUR (casino). Table partagée temps réel (hook useCasinoPoker).
 // Mise en reps : buy-in débité à l'assise, tapis recrédité au départ (v1 client, groupe de confiance).
+// La VUE DE TABLE (felt, cartes qui flippent, jetons, glow) est partagée avec la 1re partie solo.
 // ⚠️ À TESTER EN LIVE à plusieurs (le réseau/UI ne se valident qu'avec de vrais joueurs connectés).
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { usePlayer, spendReps, grantReps } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { useCasinoPoker } from "@/lib/gamebook/yellow/multiplayer/useCasinoPoker"
-import { SUIT_SYMBOL, type Card } from "@/lib/gamebook/yellow/poker/cards"
-import { CATEGORY_LABEL, evaluateBest } from "@/lib/gamebook/yellow/poker/handEval"
+import { PokerTableView, POKER_CSS } from "./PokerTableView"
 
-const RANK: Record<number, string> = { 11: "V", 12: "D", 13: "R", 14: "A" }
-const rk = (r: number) => RANK[r] ?? String(r)
 const DEFAULT_BUYIN = 40 // 20 grosses blindes (BB=2) — micro-mise adaptée aux blindes 1/2
 const MIN_BUYIN = 20
-
-function CardView({ c, hidden }: { c?: Card; hidden?: boolean }) {
-    if (hidden || !c) return <div style={{ ...cardBox, background: "#33405e", color: "#7a8bb0" }}>🂠</div>
-    const red = c.suit === 1 || c.suit === 2
-    return <div style={{ ...cardBox, color: red ? "#c0392b" : "#1a1a2e" }}><span>{rk(c.rank)}</span><span>{SUIT_SYMBOL[c.suit]}</span></div>
-}
 
 export default function PokerPanel({ close, myUserId }: { close: () => void; myUserId: string }) {
     const player = usePlayer()
@@ -36,6 +28,7 @@ export default function PokerPanel({ close, myUserId }: { close: () => void; myU
     const canCheck = toCall === 0
     const minRaiseTo = table ? table.currentBet + table.minRaise : 0
     const maxRaiseTo = me ? me.betThisRound + me.stack : 0
+    const seatedCount = table?.seats.filter((s) => !s.sittingOut).length ?? 0
 
     useEffect(() => { setRaiseTo(Math.min(maxRaiseTo, Math.max(minRaiseTo, raiseTo || minRaiseTo))) }, [minRaiseTo, maxRaiseTo]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -61,69 +54,23 @@ export default function PokerPanel({ close, myUserId }: { close: () => void; myU
         if (refund > 0) { grantReps(refund); persistYellowSave() }
     }
 
-    // Meilleure main affichée (info locale, à partir de mes cartes + le board).
-    const myHandLabel = useMemo(() => {
-        if (!me?.hole || me.hole.length < 2 || !table) return null
-        const all = [...me.hole, ...table.community]
-        if (all.length < 5) return null
-        return CATEGORY_LABEL[evaluateBest(all).category]
-    }, [me?.hole, table?.community]) // eslint-disable-line react-hooks/exhaustive-deps
-
-    const seatedCount = table?.seats.filter((s) => !s.sittingOut).length ?? 0
-
     return (
         <div style={overlay}>
+            <style>{POKER_CSS}</style>
             <div style={panel}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                     <b>🃏 Poker — Texas Hold'em</b>
-                    <span style={{ fontSize: 11, opacity: 0.8 }}>Blindes {table?.blinds.sb ?? 1}/{table?.blinds.bb ?? 2} · Pot {table?.pot ?? 0} ⚡</span>
+                    <span style={{ fontSize: 11, opacity: 0.8 }}>Blindes {table?.blinds.sb ?? 1}/{table?.blinds.bb ?? 2}</span>
                 </div>
 
-                {/* Board */}
-                <div style={{ display: "flex", gap: 5, justifyContent: "center", margin: "10px 0", minHeight: 46 }}>
-                    {[0, 1, 2, 3, 4].map((i) => <CardView key={i} c={table?.community[i]} hidden={!table?.community[i]} />)}
-                </div>
-                <div style={{ textAlign: "center", fontSize: 11, opacity: 0.8, marginBottom: 6 }}>
-                    {table ? phaseLabel(table.phase) : "Chargement…"}
-                    {myHandLabel ? ` · ta main : ${myHandLabel}` : ""}
-                </div>
-
-                {/* Sièges */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 8 }}>
-                    {(table?.seats ?? []).map((s, i) => {
-                        const mine = s.id === myUserId
-                        const turn = table && table.toAct === i
-                        return (
-                            <div key={s.id} style={{ ...seatBox, border: turn ? "2px solid #ffd54a" : "1px solid #ffffff22", opacity: s.folded ? 0.45 : 1 }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontWeight: 700 }}>
-                                    <span>{i === table?.button ? "🔘 " : ""}{s.name}{s.bot ? " 🤖" : ""}{mine ? " (toi)" : ""}</span>
-                                    <span style={{ color: "#ffd54a" }}>{s.stack} ⚡</span>
-                                </div>
-                                <div style={{ display: "flex", gap: 4, alignItems: "center", marginTop: 3 }}>
-                                    {s.hole && s.hole.length ? s.hole.map((c, k) => <CardView key={k} c={c} />)
-                                        : Array.from({ length: s.holeCount }).map((_, k) => <CardView key={k} hidden />)}
-                                    <span style={{ fontSize: 10, opacity: 0.75, marginLeft: "auto" }}>
-                                        {s.sittingOut ? "assis" : s.allIn ? "ALL-IN" : s.folded ? "couché" : s.betThisRound > 0 ? `mise ${s.betThisRound}` : ""}
-                                    </span>
-                                </div>
-                            </div>
-                        )
-                    })}
-                </div>
-
-                {/* Résultats d'abattage */}
-                {table?.phase === "handComplete" && table.results.length > 0 && (
-                    <div style={{ ...banner, background: "#1e3a24" }}>
-                        {table.results.flatMap((p) => p.winners).map((wi) => table.seats[wi]?.name).filter((n, i, a) => n && a.indexOf(n) === i).join(", ")} remporte(nt) le pot ! <span style={{ opacity: 0.7 }}>(nouvelle main dans 5 s)</span>
-                    </div>
-                )}
+                <PokerTableView table={table} myUserId={myUserId} />
 
                 {/* Contrôles */}
                 {!me ? (
                     <div style={controls}>
                         <span style={{ fontSize: 12 }}>Reps : <b>{player.reps} ⚡</b></span>
                         <input type="number" min={MIN_BUYIN} max={5000} value={buyin} onChange={(e) => setBuyin(Number(e.target.value))} style={inp} />
-                        <button style={{ ...btn, background: "#4cd964" }} disabled={busy || player.reps < Math.max(MIN_BUYIN, buyin)} onClick={sitDown}>S'asseoir ({Math.max(MIN_BUYIN, buyin || 0)} ⚡)</button>
+                        <button style={{ ...bigBtn, background: "#4cd964", color: "#0a2a12" }} disabled={busy || player.reps < Math.max(MIN_BUYIN, buyin)} onClick={sitDown}>S'asseoir ({Math.max(MIN_BUYIN, buyin || 0)} ⚡)</button>
                         {player.reps < Math.max(MIN_BUYIN, buyin) && (
                             <span style={{ fontSize: 10.5, color: "#e0a0a0", width: "100%", textAlign: "center" }}>
                                 Pas assez de reps (min {MIN_BUYIN} ⚡ · tu as {player.reps}).
@@ -132,28 +79,28 @@ export default function PokerPanel({ close, myUserId }: { close: () => void; myU
                     </div>
                 ) : myTurn ? (
                     <div style={controls}>
-                        <button style={{ ...btn, background: "#e0574c" }} disabled={busy} onClick={() => act({ kind: "fold" })}>Se coucher</button>
+                        <button style={{ ...bigBtn, background: "#e0574c" }} disabled={busy} onClick={() => act({ kind: "fold" })}>Se coucher</button>
                         {canCheck
-                            ? <button style={{ ...btn, background: "#6aa0ec" }} disabled={busy} onClick={() => act({ kind: "check" })}>Check</button>
-                            : <button style={{ ...btn, background: "#6aa0ec" }} disabled={busy} onClick={() => act({ kind: "call" })}>Suivre ({Math.min(toCall, me.stack)})</button>}
+                            ? <button style={{ ...bigBtn, background: "#5b8fe0" }} disabled={busy} onClick={() => act({ kind: "check" })}>Check</button>
+                            : <button style={{ ...bigBtn, background: "#5b8fe0" }} disabled={busy} onClick={() => act({ kind: "call" })}>Suivre {Math.min(toCall, me.stack)}</button>}
+                        <button style={{ ...bigBtn, background: "#b07be0" }} disabled={busy} onClick={() => act({ kind: "allin" })}>Tapis ({me.stack})</button>
                         {maxRaiseTo > minRaiseTo && (
-                            <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                                <input type="range" min={minRaiseTo} max={maxRaiseTo} value={raiseTo} onChange={(e) => setRaiseTo(Number(e.target.value))} />
-                                <button style={{ ...btn, background: "#ffd54a", color: "#1a1a22" }} disabled={busy} onClick={() => act({ kind: "raise", to: raiseTo })}>Relancer à {raiseTo}</button>
-                            </span>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", justifyContent: "center", marginTop: 2 }}>
+                                <input type="range" min={minRaiseTo} max={maxRaiseTo} value={raiseTo} onChange={(e) => setRaiseTo(Number(e.target.value))} style={{ flex: 1, maxWidth: 150 }} />
+                                <button style={{ ...bigBtn, background: "#ffd54a", color: "#1a1a22" }} disabled={busy} onClick={() => act({ kind: "raise", to: raiseTo })}>Relancer à {raiseTo}</button>
+                            </div>
                         )}
-                        <button style={{ ...btn, background: "#b07be0" }} disabled={busy} onClick={() => act({ kind: "allin" })}>Tapis ({me.stack})</button>
                     </div>
                 ) : (
-                    <div style={{ ...controls, opacity: 0.85 }}>
-                        <span style={{ fontSize: 12 }}>{seatedCount < 2 ? "En attente d'un 2ᵉ joueur…" : table?.phase === "handComplete" ? "Main terminée." : "En attente des autres…"}</span>
-                        <button style={{ ...btn, background: "#556" }} disabled={busy} onClick={() => sit(!me.wantsSitOut)}>{me.wantsSitOut ? "Revenir" : "Se mettre en pause"}</button>
+                    <div style={{ ...controls, opacity: 0.9, fontSize: 12, minHeight: 38, alignItems: "center" }}>
+                        <span>{seatedCount < 2 ? "⏳ en attente d'un 2ᵉ joueur…" : table?.phase === "handComplete" ? "main terminée." : "⏳ au tour des autres…"}</span>
+                        <button style={{ ...btn, background: "#556" }} disabled={busy} onClick={() => sit(!me.wantsSitOut)}>{me.wantsSitOut ? "Revenir" : "Pause"}</button>
                     </div>
                 )}
 
-                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, gap: 6 }}>
                     <button style={{ ...btn, background: "#334" }} onClick={() => void refresh()}>↻</button>
-                    <button style={{ ...btn, background: "#334" }} onClick={doLeave} disabled={busy}>Quitter la table (récupère {me?.stack ?? 0} ⚡)</button>
+                    <button style={{ ...btn, background: "#334", flex: 1 }} onClick={doLeave} disabled={busy}>Quitter (récupère {me?.stack ?? 0} ⚡)</button>
                     <button style={{ ...btn, background: "#334" }} onClick={close}>Fermer</button>
                 </div>
             </div>
@@ -161,15 +108,9 @@ export default function PokerPanel({ close, myUserId }: { close: () => void; myU
     )
 }
 
-function phaseLabel(p: string): string {
-    return ({ preflop: "Pré-flop", flop: "Flop", turn: "Turn", river: "River", showdown: "Abattage", handComplete: "Fin de main" } as Record<string, string>)[p] ?? p
-}
-
-const overlay: React.CSSProperties = { position: "fixed", inset: 0, background: "#0008", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }
-const panel: React.CSSProperties = { background: "#141822", color: "#fff", borderRadius: 14, padding: 14, width: 380, maxWidth: "94vw", maxHeight: "92vh", overflowY: "auto", boxShadow: "0 10px 40px #000a" }
-const cardBox: React.CSSProperties = { width: 30, height: 42, borderRadius: 5, background: "#fff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, lineHeight: 1 }
-const seatBox: React.CSSProperties = { background: "#1c2231", borderRadius: 8, padding: "5px 7px" }
-const controls: React.CSSProperties = { display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", justifyContent: "center", padding: "8px 0" }
-const btn: React.CSSProperties = { color: "#fff", border: "none", borderRadius: 8, padding: "6px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }
-const inp: React.CSSProperties = { width: 70, padding: "5px 6px", borderRadius: 6, border: "1px solid #445", background: "#0e1119", color: "#fff", fontSize: 12 }
-const banner: React.CSSProperties = { borderRadius: 8, padding: "6px 10px", fontSize: 12, textAlign: "center", marginBottom: 8 }
+const overlay: React.CSSProperties = { position: "fixed", inset: 0, background: "#0009", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }
+const panel: React.CSSProperties = { background: "#141822", color: "#fff", borderRadius: 14, padding: 14, width: 400, maxWidth: "95vw", maxHeight: "94vh", overflowY: "auto", boxShadow: "0 10px 40px #000a" }
+const controls: React.CSSProperties = { display: "flex", flexWrap: "wrap", gap: 7, alignItems: "center", justifyContent: "center", padding: "6px 0" }
+const btn: React.CSSProperties = { color: "#fff", border: "none", borderRadius: 8, padding: "8px 11px", fontSize: 12, fontWeight: 800, cursor: "pointer" }
+const bigBtn: React.CSSProperties = { color: "#fff", border: "none", borderRadius: 11, padding: "12px 16px", fontSize: 14, fontWeight: 800, cursor: "pointer", minWidth: 84, boxShadow: "0 2px 5px #0005" }
+const inp: React.CSSProperties = { width: 70, padding: "7px 6px", borderRadius: 6, border: "1px solid #445", background: "#0e1119", color: "#fff", fontSize: 13 }
