@@ -94,3 +94,16 @@ describe("NG+ fusion — quête casino Tonytony/Merorem restaurée depuis le mon
         expect(merged.labDefi.casinoTotalWon).toBe(5000)
     })
 })
+
+// SCORES RUN 2 : les métriques (chrono/temps de jeu/potions de Ligue) n'ont plus de sens après la fusion
+// (le monde redevient "live") → mergeWorlds les remet à zéro pour ne pas laisser de données NG+ résiduelles.
+describe("NG+ fusion — remise à zéro des métriques de score run 2", () => {
+    it("ngplusStartedAt/playtimeMs/leaguePotions sont vidés à la fusion", () => {
+        const ng = world({ ngplusStartedAt: 123456, playtimeMs: 99999, leaguePotions: 7 })
+        const live = world({ ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0 })
+        const merged = mergeWorlds(ng, live)
+        expect(merged.ngplusStartedAt).toBeUndefined()
+        expect(merged.playtimeMs).toBe(0)
+        expect(merged.leaguePotions).toBe(0)
+    })
+})

@@ -19,7 +19,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType, MoveSlot } from "../battle/types"
 import { markSeen, markCaught, getPokedex } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, recordOrcalineDefeat, orcalineLevelForWins, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, recordOrcalineDefeat, orcalineLevelForWins, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions } from "./playerStore"
 import { getItem } from "../data/items"
 import { reportShiny } from "../shinyGift"
 import { ARENA_TICKET_VALUE, SBIRE_TICKET_VALUE, SBIRE_TICKET_EVERY, ACE_TICKET_VALUE, ACE_TICKET_WIN_BEFORE, ACE_TICKET_WIN_AFTER, ACE_TICKET_EARLY_VALUE, ACE_TICKET_WIN_EARLY, LEAGUE_ROULETTE_PER_KO, LEAGUE_AUTOGRAPH_CREDIT } from "../data/labDefis"
@@ -373,7 +373,7 @@ export function submitPlayerAction(action: PlayerAction) {
     if (action.kind === "ball") bumpStat("ballsUsed") // STAT : ball lancée
     // Utiliser un objet de soin le consomme aussi.
     if (action.kind === "item" && !consumeItem(action.itemId)) return
-    if (action.kind === "item") { const c = getItem(action.itemId)?.category; if (c === "HEAL" || c === "STATUS_HEAL") bumpStat("potionsUsed") } // STAT : potion / soin de statut utilisé en combat
+    if (action.kind === "item") { const c = getItem(action.itemId)?.category; if (c === "HEAL" || c === "STATUS_HEAL") { bumpStat("potionsUsed"); if (storeState.trainer?.trainerId?.startsWith("y_ligue_")) bumpLeaguePotions() } } // STAT : potion/soin ; +leaguePotions si combat de Ligue (malus score maîtrise)
     // BÉNÉDICTION barman (SECRET, solo) : boire une POTION (soin) déclenche l'effet en attente sur le
     // Daemon ACTIF — esquive ×2 (précision adverse ÷2 via stages.eva) ou crit garanti au prochain coup.
     if (action.kind === "item" && getItem(action.itemId)?.category === "HEAL") {

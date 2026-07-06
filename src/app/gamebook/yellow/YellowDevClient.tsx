@@ -52,7 +52,8 @@ import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, getNgplusOldTeam, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT } from "@/lib/gamebook/yellow/store/saveManager"
 import { customStarterSpeciesId, type StoredCustomDaemon } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime } from "@/lib/gamebook/yellow/store/playerStore"
+import { computeRunScores, formatDuration } from "@/lib/gamebook/yellow/score/runScore"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
 import { ARENA_TICKET_VALUE, STEP_GIFT_DATE, STEP_GIFT_THRESHOLD } from "@/lib/gamebook/yellow/data/labDefis"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
@@ -276,7 +277,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         const enemy = arenaMode === "hub" ? buildHubTeam(opp.player) : buildMirrorTeam(opp.player)
         setArenaFight({ opp, mode: arenaMode, enemy })
     }
-    const [menu, setMenu] = useState<"none" | "pause" | "team" | "bag" | "reput" | "moves" | "hof" | "arena-hof" | "stats">("none")
+    const [menu, setMenu] = useState<"none" | "pause" | "team" | "bag" | "reput" | "moves" | "hof" | "arena-hof" | "stats" | "run2scores">("none")
     const activeWorld = useActiveWorld() // NG+ : "live" (partie d'origine) ou "ngplus" (New Game+)
     const ficheTouchX = useRef<number | null>(null) // swipe gauche/droite dans la fiche Daemon
     const [selected, setSelected] = useState<MonInstance | null>(null)
@@ -396,6 +397,21 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     ctTradeBusyRef.current = !!ctTrade.session
 
     const [confirmForfeit, setConfirmForfeit] = useState(false)
+
+    // RUN 2 — accumulateur de TEMPS DE JEU ACTIF (score #2) : ajoute le temps écoulé tant que l'onglet est
+    // VISIBLE (tick 5 s + flush au basculement/démontage). Un onglet caché n'accumule rien (last avance sans bump).
+    useEffect(() => {
+        if (typeof document === "undefined") return
+        let last = Date.now()
+        // Tick (5 s) + démontage : encaisse [last, now] SI on est visible, puis avance last.
+        const bumpVisible = () => { const now = Date.now(); if (document.visibilityState === "visible") bumpPlaytime(now - last); last = now }
+        // Bascule de visibilité : en passant CACHÉ on encaisse le temps visible écoulé ; en passant VISIBLE on
+        // NE compte PAS l'intervalle caché (on repart de now) → le temps hors-app n'est jamais compté.
+        const onVis = () => { const now = Date.now(); if (document.visibilityState === "hidden") bumpPlaytime(now - last); last = now }
+        const id = setInterval(bumpVisible, 5000)
+        document.addEventListener("visibilitychange", onVis)
+        return () => { bumpVisible(); clearInterval(id); document.removeEventListener("visibilitychange", onVis) }
+    }, [])
 
     // Anti-sortie ACCIDENTELLE du Nexus : le bouton RETOUR du navigateur/téléphone déclenche
     // une confirmation au lieu de quitter direct (le joueur voulait souvent juste un "retour"
@@ -1151,7 +1167,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (advisorOpen) { closeAdvisor(); return true }
         if (labOpen) { closeLab(); return true }
         if (pcOpen) { closePc(); return true }
-        if (menu === "team" || menu === "bag" || menu === "reput" || menu === "moves" || menu === "hof" || menu === "arena-hof" || menu === "stats") { setMenu("pause"); return true }
+        if (menu === "team" || menu === "bag" || menu === "reput" || menu === "moves" || menu === "hof" || menu === "arena-hof" || menu === "stats" || menu === "run2scores") { setMenu("pause"); return true }
         if (menu === "pause") { setMenu("none"); return true }
         return false
     }
@@ -1254,6 +1270,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         {!battle && <button style={menuBtnStyle} onClick={() => setMenu("moves")}>⚔️ ATTAQUES</button>}
                         <button style={menuBtnStyle} onClick={() => setMenu("reput")}>🏆 RÉPUTATION</button>
                         <button style={menuBtnStyle} onClick={() => setMenu("stats")}>📊 STATS (cette partie)</button>
+                        {activeWorld === "ngplus" && <button style={menuBtnStyle} onClick={() => setMenu("run2scores")}>🏅 SCORES RUN 2</button>}
                         <button style={menuBtnStyle} onClick={() => setMenu("hof")}>🏛️ HALL OF FAME (LIGUE)</button>
                         <button style={menuBtnStyle} onClick={() => setMenu("arena-hof")}>⚔️ HALL OF FAME (ARÈNES)</button>
                         {(isCreator || nickname.toLowerCase() === "mools") && (
@@ -1601,6 +1618,34 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                     {row("Potions utilisées", s.potionsUsed)}
                                     {row("Balls lancées", s.ballsUsed)}
                                     {row("Soins effectués", s.heals)}
+                                </div>
+                            )
+                        })()}
+                        <button style={menuBtnDimStyle} onClick={() => setMenu("pause")}>← RETOUR</button>
+                    </div>
+                </div>
+            )}
+
+            {/* RUN 2 — les 5 scores (temps réel · temps de jeu · frugalité 6000 · maîtrise · pas), lus en direct. */}
+            {menu === "run2scores" && (
+                <div style={menuOverlayStyle} onClick={() => setMenu("pause")}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>🏅 SCORES — RUN 2</div>
+                        {(() => {
+                            const sc = computeRunScores()
+                            const row = (label: string, val: React.ReactNode, hint: string) => (
+                                <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}><span>{label}</span><b>{val}</b></div>
+                                    <div style={{ fontSize: 9.5, opacity: 0.6, lineHeight: 1.3 }}>{hint}</div>
+                                </div>
+                            )
+                            return (
+                                <div style={{ display: "flex", flexDirection: "column", gap: 8, margin: "4px 0 8px" }}>
+                                    {row("⏱️ Temps réel", formatDuration(sc.realTimeMs), "temps écoulé depuis le début du run 2 — plus bas = mieux")}
+                                    {row("🎮 Temps de jeu", formatDuration(sc.playtimeMs), "temps passé actif dans l'app — plus bas = mieux")}
+                                    {row("🔋 Frugalité", sc.frugality.toLocaleString("fr-FR"), "énergie des 6000 de départ consommée — plus bas = mieux")}
+                                    {row("🏆 Maîtrise", sc.mastery.toLocaleString("fr-FR"), "Σ niveaux équipe + 25×espèces + 100×shiny + 200×inédits − 50×défaites, ×0,99 par potion en Ligue — plus haut = mieux")}
+                                    {row("👟 Pas", sc.steps.toLocaleString("fr-FR"), "nombre de pas — plus bas = mieux")}
                                 </div>
                             )
                         })()}
