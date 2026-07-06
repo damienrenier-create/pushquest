@@ -66,3 +66,31 @@ describe("Orcaline — espèce, escalade du dresseur, Super Méga Nexus-Ball", (
         expect(s.outcome).not.toBe("caught")
     })
 })
+
+describe("Capture — ESCALADE par lancer (l'acharnement paie)", () => {
+    it("un lancer RATÉ incrémente captureAttempts (un réussi le laisse à 0)", () => {
+        const s = goshBattle(0.05)
+        s.enemy.team[s.enemy.activeIndex].status = "SLEEP" // statut requis pour tenter (sinon la Ball ricoche)
+        expect(s.captureAttempts).toBe(0)
+        const after = resolveTurn(s, { kind: "ball", itemId: "hyper_ball_plus" })
+        if (after.outcome === "caught") expect(after.captureAttempts).toBe(0)
+        else expect(after.captureAttempts).toBe(1)
+    })
+
+    it("un gros compteur d'échecs rend la capture quasi-certaine (×(1+0,4×N))", () => {
+        const s = goshBattle(0.05)
+        s.enemy.team[s.enemy.activeIndex].status = "SLEEP"
+        s.captureAttempts = 50 // ×21 sur la valeur → dépasse le plafond → capture garantie
+        const r = resolveTurn(s, { kind: "ball", itemId: "hyper_ball_plus" })
+        expect(r.outcome).toBe("caught")
+    })
+
+    it("un ricochet (Ball trop faible, verrou de bonus) n'incrémente PAS l'escalade", () => {
+        const s = goshBattle(0.05)
+        const wild = s.enemy.team[s.enemy.activeIndex]
+        wild.status = "SLEEP"
+        wild.captureMinBallBonus = 5 // verrou de Ball (posé par le système de rencontre en vrai jeu)
+        const after = resolveTurn(s, { kind: "ball", itemId: "hyper_ball" }) // bonus 4 < 5 → ricoche
+        expect(after.captureAttempts).toBe(0) // ricochet = pas un vrai essai → l'escalade ne bouge pas
+    })
+})

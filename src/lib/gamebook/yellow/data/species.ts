@@ -1671,7 +1671,7 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 55, moveId: "draco_charge" },
             { level: 95, moveId: "souffle_primordial" }, // capstone légendaire ultra-tardif (aussi CT-trophée du décuple champion)
         ],
-        catchRate: 3, baseExp: 220, rarity: "LEGENDARY", growthRate: "slow", exclusive: true, role: "Légendaire DRAGON — apex des hautes herbes (capture gatée Ball+statut)",
+        catchRate: 8, baseExp: 220, rarity: "LEGENDARY", growthRate: "slow", exclusive: true, role: "Légendaire DRAGON — apex des hautes herbes (capture gatée Ball+statut)",
         description: "Dragon primordial qui sommeille, camouflé, dans l'herbe la plus humble — là où nul ne songe à le chercher.",
         sprite: "/yellow/sprites/dex/goshendofy.png",
         hiddenUntilCaught: true, // SURPRISE : absent du Pokédex tant qu'on ne l'a pas capturé
@@ -1695,7 +1695,7 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 65, moveId: "focalisation" },       // set-up SPÉ +1 (comme Goshendofy) → prépare le nuke
             { level: 90, moveId: "cataclysme_lunaire" }, // capstone Fée ultra-tardif (miroir du souffle_primordial niv 95 de Goshendofy)
         ],
-        catchRate: 3, baseExp: 220, rarity: "LEGENDARY", growthRate: "slow", exclusive: true,
+        catchRate: 8, baseExp: 220, rarity: "LEGENDARY", growthRate: "slow", exclusive: true,
         role: "Légendaire FÉE — alter-ego de Goshendofy, révélé au run 2 (némésis-type du Dragon)",
         description: "Lutin-démon aux flammes violettes, écho féerique et maudit de Goshendofy. Ne se révèle qu'à ceux qui osent recommencer l'aventure.",
         sprite: "/yellow/sprites/dex/ukognos.png",

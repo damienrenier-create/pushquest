@@ -20,6 +20,7 @@ import { accuracyCheck } from "./accuracy"
 import { chooseAiAction, type AiLevel } from "./ai"
 import { xpForDefeat, applyExp } from "./xp"
 import { tryCapture } from "./capture"
+import { CAPTURE_ESCALATION_PER_ATTEMPT } from "../data/captureConfig"
 import { ballBonusOf, getItem, isGuaranteedBall } from "../data/items"
 import { STRUGGLE_MOVE_ID, STRUGGLE_INDEX, attackCost, QUOTA_STD } from "../data/combatCostConfig"
 import { gainEv, signatureStat, EV_YIELD_PER_WIN } from "../data/evConfig"
@@ -70,6 +71,9 @@ export interface BattleState {
     seed: number
     /** Bonus situationnel de capture (ex. quota PushQuest atteint). Défaut 1. */
     captureModifier: number
+    /** ESCALADE : nb de lancers de Ball RATÉS sur le sauvage courant → chaque échec augmente la proba du
+     *  prochain lancer (l'acharnement paie, surtout sur les cibles coriaces). Repart à 0 à chaque combat. */
+    captureAttempts: number
     /** uids des Daemons du joueur qui ont COMBATTU (envoyés au moins une fois). */
     participated: string[]
     /** Par ENNEMI (uid) → uids des Daemons joueur qui l'ont AFFRONTÉ. Seuls eux gagnent
@@ -179,6 +183,7 @@ export function createBattle(
         events: [],
         seed: opts.seed >>> 0,
         captureModifier: opts.captureModifier ?? 1,
+        captureAttempts: 0,
         participated: leadUid ? [leadUid] : [],
         participants: enemyLeadUid && leadUid ? { [enemyLeadUid]: [leadUid] } : {},
         pvp: opts.pvp ?? false,
@@ -1251,8 +1256,9 @@ function performCapture(state: BattleState, itemId: string, events: BattleEvent[
         : tryCapture(
             {
                 catchRate: sp.catchRate, currentHp: wild.currentHp, maxHp: maxHpOf(wild), status: wild.status,
-                // captureMult (<1) rend la capture PLUS DURE (ex. Thundah/Bélunode) sans toucher la formule.
-                ballBonus: ballBonusOf(itemId), level: wild.level, extraBonus: state.captureModifier * (wild.captureMult ?? 1),
+                // captureMult (<1) rend la capture PLUS DURE (ex. Thundah/Bélunode). ESCALADE : chaque lancer
+                // raté (captureAttempts) augmente la proba du prochain (×(1 + 0,4×N)) → l'acharnement paie.
+                ballBonus: ballBonusOf(itemId), level: wild.level, extraBonus: state.captureModifier * (wild.captureMult ?? 1) * (1 + CAPTURE_ESCALATION_PER_ATTEMPT * state.captureAttempts),
             },
             rng,
         )
@@ -1276,6 +1282,7 @@ function performCapture(state: BattleState, itemId: string, events: BattleEvent[
         const lines = MISS_CAPTURE_LINES ?? []
         const line = lines.length > 0 ? lines[rng.int(0, lines.length - 1)] : "Raté ! La Ball revient bredouille."
         events.push({ kind: "message", text: line })
+        state.captureAttempts++ // ESCALADE : le prochain lancer sur ce sauvage sera un peu plus sûr.
     }
 }
 

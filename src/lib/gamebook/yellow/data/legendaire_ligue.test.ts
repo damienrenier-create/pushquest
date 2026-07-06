@@ -15,7 +15,7 @@ describe("Goshendofy — légendaire des hautes herbes", () => {
         const bst = Object.values(sp.baseStats).reduce((a, b) => a + b, 0)
         expect(bst).toBe(590)
         expect(sp.growthRate).toBe("slow")
-        expect(sp.catchRate).toBe(3)
+        expect(sp.catchRate).toBe(8) // assoupli (était 3) : + l'escalade par lancer rend la capture atteignable
         expect(sp.rarity).toBe("LEGENDARY")
         expect(sp.evolution).toBeUndefined()
     })

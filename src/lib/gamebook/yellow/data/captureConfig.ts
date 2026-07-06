@@ -27,6 +27,11 @@ export function levelCatchFactor(level: number): number {
 /** Bonus si le joueur a atteint son quota PushQuest du jour (capture facilitée). */
 export const QUOTA_CAPTURE_BONUS = 1.3
 
+/** ESCALADE : chaque lancer de Ball RATÉ sur le sauvage courant augmente la valeur de capture du prochain
+ *  de ce coefficient (×(1 + N×coef)). N=nb d'échecs du combat. L'acharnement paie, surtout sur les coriaces
+ *  (un commun est pris avant que ça ne compte). Repart à 0 à chaque combat. */
+export const CAPTURE_ESCALATION_PER_ATTEMPT = 0.4
+
 /** Statut → multiplicateur (sommeil/gel forts ; para/brûlure/poison moyens). */
 export const STATUS_BONUS: Record<MajorStatus, number> = {
     NONE: 1,

@@ -285,7 +285,7 @@ const ZONES: Record<string, Zone> = {
                 { cols: [11, 14], rows: [1, 5], tier: 2, bands: [[38, 41], [41, 44], [44, 47], [47, 50], [50, 50]] },
             ],
             // Goshendofy : niveau fixe 50 (vrai légendaire), Hyper Nexus Ball (ballBonus≥5) + STATUT requis, capture ×0.5.
-            legendary: { speciesId: "goshendofy", base: 1, levelFixed: 50, noEvolve: true, captureMinBallBonus: 5, captureRequiresStatus: true, captureMult: 0.5 },
+            legendary: { speciesId: "goshendofy", base: 1, levelFixed: 50, noEvolve: true, captureMinBallBonus: 5, captureRequiresStatus: true, captureMult: 0.8 }, // ×0.8 (assoupli) + escalade par lancer ; aussi hérité par Ukognos en NG+
             legendaryDenomByBand: [100, 200, 300, 500, 1000], // band 0 (herbe basse) → band 4
             legendaryTierMult: [1, 4, 8],                     // tier 0 (commun) → tier 2 (quasi introuvable)
             // DRAGONS RARES : croise un dragon (Vol/Dragon, Feu/Dragon, Dragon/Glace) au lieu du type du jour ;
