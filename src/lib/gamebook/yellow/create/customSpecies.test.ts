@@ -299,6 +299,18 @@ describe("création — buildCustomSpecies (inchangé : lignée légale)", () =>
     it("ids uniques par propriétaire", () => {
         expect(buildCustomSpecies(validSpec(), "mools")[0].id).not.toBe(buildCustomSpecies(validSpec(), "franss")[0].id)
     })
+    it("noms par stade : stageNames override le suffixe romain (stade 1 = name, id inchangé)", () => {
+        const base = validSpec() // 3 stades, name "Aquarenard"
+        const auto = buildCustomSpecies(base, "mools")
+        expect(auto.map((s) => s.name)).toEqual([base.name, `${base.name} II`, `${base.name} III`])
+        const named = buildCustomSpecies({ ...base, stageNames: { 2: "Crocodaillus", 3: "Alirocaillus" } }, "mools")
+        expect(named.map((s) => s.name)).toEqual([base.name, "Crocodaillus", "Alirocaillus"])
+        // un stade vide/espaces → repli sur le romain auto
+        const partial = buildCustomSpecies({ ...base, stageNames: { 3: "Final" } }, "mools")
+        expect(partial.map((s) => s.name)).toEqual([base.name, `${base.name} II`, "Final"])
+        // l'id ne dépend QUE du slug de name → identique avec ou sans stageNames
+        expect(named.map((s) => s.id)).toEqual(auto.map((s) => s.id))
+    })
 })
 
 // garde-fous divers

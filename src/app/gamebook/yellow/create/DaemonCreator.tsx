@@ -406,6 +406,28 @@ export default function DaemonCreator({ ownerId, nickname, close, onCreated }: {
 
                     {step === 6 && (
                         <>
+                            <Lbl>Noms de la lignée (modifiable)</Lbl>
+                            {Array.from({ length: spec.stages }, (_, i) => {
+                                const stage = i + 1
+                                const roman = stage === 2 ? " II" : stage === 3 ? " III" : ""
+                                return (
+                                    <div key={stage} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                                        <span style={{ ...S.subtle, minWidth: 62 }}>Stade {stage}</span>
+                                        <input
+                                            style={{ ...S.input, flex: 1, margin: 0 }}
+                                            maxLength={18}
+                                            value={stage === 1 ? spec.name : (spec.stageNames?.[stage] ?? "")}
+                                            placeholder={stage === 1 ? "Nom de base" : `${spec.name || "…"}${roman}`}
+                                            onChange={(e) => {
+                                                const v = e.target.value
+                                                if (stage === 1) patch({ name: v })
+                                                else patch({ stageNames: { ...spec.stageNames, [stage]: v } })
+                                            }}
+                                        />
+                                    </div>
+                                )
+                            })}
+                            <div style={{ ...S.subtle, fontSize: 11, marginBottom: 10 }}>Laisse un stade vide → nom auto ({spec.name || "Nom"} II / III).</div>
                             <Lbl>Récapitulatif de ta lignée</Lbl>
                             {preview.map((st, i) => (
                                 <div key={i} style={S.previewCard}>

@@ -547,7 +547,10 @@ export function suggestLearnset(lineTypes: PokeType[], finalBst: number = BASE_F
 
 // ───────── Spécification saisie par le joueur ─────────
 export interface CustomSpec {
-    name: string                 // nom proposé (Sartay peut peaufiner)
+    name: string                 // nom du STADE 1 (base) — sert aussi de racine à l'id (slug)
+    /** NOMS PERSONNALISÉS par stade (2 et 3), édités au récap. Absent/vide → suffixe romain auto
+     *  (`${name} II`, `${name} III`). Le stade 1 reste `name`. Purement cosmétique (l'id ne dépend que de `name`). */
+    stageNames?: Record<number, string>
     da: string                   // direction artistique : 1-2 phrases (sert au sprite + description)
     character: string            // caractère / personnalité
     daFinal?: string             // DA du STADE FINAL (en + de celle de la base) — pour le sprite artist
@@ -750,7 +753,7 @@ export function buildCustomSpecies(spec: CustomSpec, ownerId: string): SpeciesDa
         const nextId = `${baseId}_s${stage + 1}`
         chain.push({
             id, dexNo: dexNoFor(id),
-            name: `${spec.name}${ROMAN[stage] ?? ""}`,
+            name: spec.stageNames?.[stage]?.trim() || `${spec.name}${ROMAN[stage] ?? ""}`,
             types: [...types],
             baseStats,
             learnset,
