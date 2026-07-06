@@ -1665,7 +1665,7 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 1, moveId: "draco_souffle" },
             { level: 22, moveId: "danse_lames" },
             { level: 28, moveId: "draco_rage" },
-            { level: 33, moveId: "belier" },
+            { level: 33, moveId: "repos" }, // récup : le colosse se régénère (soigne 50% PV, s'endort 1 tour) — remplace Bélier
             { level: 44, moveId: "seisme" },
             { level: 48, moveId: "focalisation" },
             { level: 55, moveId: "draco_charge" },
