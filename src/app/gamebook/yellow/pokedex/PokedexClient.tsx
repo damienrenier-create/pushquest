@@ -7,6 +7,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { usePokedex, pokedexCompletion } from "@/lib/gamebook/yellow/store/pokedexStore"
+import { usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
 import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { SPECIES, visibleDexSpecies } from "@/lib/gamebook/yellow/data/species"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
@@ -119,13 +120,15 @@ function DexDetail({ sp, caught, onClose }: { sp: SpeciesData; caught: boolean; 
 export default function PokedexClient() {
     const router = useRouter()
     const dex = usePokedex()
-    const comp = pokedexCompletion()
+    const player = usePlayer()
+    const comp = pokedexCompletion(player.isChampion)
     const [sel, setSel] = useState<SpeciesData | null>(null)
     // Hydrate la save si on arrive DIRECTEMENT ici (refresh / lien) sans avoir chargé le jeu :
     // sinon le store Pokédex en mémoire est vide → tout en "?". Idempotent (no-op si déjà chargé).
     useEffect(() => { void loadYellowSave() }, [])
-    // Les Daemons run-2 (runTwoOnly) restent INVISIBLES — pas même une case « ??? » — tant que non capturés.
-    const entries = visibleDexSpecies(dex.caught).sort((a, b) => a.dexNo - b.dexNo)
+    // Les run-2 (runTwoOnly) restent INVISIBLES tant que non capturés ; les créations post-Ligue
+    // restent INVISIBLES tant qu'on n'est pas Champion — pas même une case « ??? ».
+    const entries = visibleDexSpecies(dex.caught, player.isChampion).sort((a, b) => a.dexNo - b.dexNo)
 
     return (
         <div style={S.root}>

@@ -1953,6 +1953,111 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "Créature venue d'un autre monde, au sourire troublant. D'un baiser givré elle endort ses proies, puis les foudroie d'une vague mentale. Nul ne sait d'où elle vient — seulement qu'on l'échange, jamais qu'on la capture.",
         sprite: "/yellow/sprites/dex/morrow.png",
     },
+
+    // ============================================================
+    // CRÉATIONS DE JOUEUR CANONISÉES (post-Ligue). Conçues au Créateur de Daemon
+    // après la Ligue, puis intronisées dans le registre officiel. `postLeague: true`
+    // → ABSENTES des dex tant que le joueur n'est pas CHAMPION, puis rejoignent le
+    // dex de TOUT LE MONDE. Non-exclusives → apparaissent aussi en Zone de Combat
+    // (Battle Frontier) comme adversaires/locations. secretTalent conservé (fidèle
+    // à la création d'origine). dexNo 139+.
+    // ============================================================
+
+    // --- Lignée GAVILLUS → CROCODAILLUS → ALIROCAILLUS (Vol/Roche) — création de Sartay ---
+    // Croco-caméléon ailé : sweeper physique ULTRA-rapide (VIT 130 / ATQ 135), fragile en spécial.
+    gavillus: {
+        id: "gavillus", dexNo: 139, name: "Gavillus", types: ["VOL", "ROCHE"],
+        baseStats: { hp: 48, atk: 92, def: 51, spe: 88, spc: 31 }, // BST 310
+        learnset: [
+            { level: 1, moveId: "picpic" },
+            { level: 1, moveId: "jet_de_sable" },
+            { level: 12, moveId: "jet_pierres" },
+            { level: 18, moveId: "malediction" },
+        ],
+        evolution: { toId: "crocodaillus", method: { kind: "LEVEL", level: 22 } },
+        catchRate: 45, baseExp: 70, rarity: "RARE", growthRate: "slow",
+        secretTalent: "affinite_elem", postLeague: true,
+        role: "Vol/Roche — vif (jeune crocodile étrange)",
+        description: "Jeune crocodile à l'allure étrange, déjà d'une intelligence troublante. Des plaques de pierre affleurent sur son dos, de minuscules moignons pointent à ses épaules.",
+        sprite: "/yellow/sprites/dex/gavillus.png",
+    },
+    crocodaillus: {
+        id: "crocodaillus", dexNo: 140, name: "Crocodaillus", types: ["VOL", "ROCHE"],
+        baseStats: { hp: 62, atk: 119, def: 66, spe: 114, spc: 40 }, // BST 401
+        learnset: [
+            { level: 1, moveId: "picpic" },
+            { level: 1, moveId: "jet_pierres" },
+            { level: 1, moveId: "jet_de_sable" },
+            { level: 24, moveId: "vive_attaque" },
+            { level: 30, moveId: "hurlement" },
+            { level: 36, moveId: "mur_de_fer" },
+        ],
+        evolution: { toId: "alirocaillus", method: { kind: "LEVEL", level: 40 } },
+        catchRate: 45, baseExp: 150, rarity: "RARE", growthRate: "slow",
+        secretTalent: "affinite_elem", postLeague: true,
+        role: "Vol/Roche — attaquant rapide",
+        description: "Mi-crocodile, mi-caméléon : ses yeux commencent à pivoter chacun de leur côté, et des ailes à demi formées percent sa carapace de pierre.",
+        sprite: "/yellow/sprites/dex/crocodaillus.png",
+    },
+    alirocaillus: {
+        id: "alirocaillus", dexNo: 141, name: "Alirocaillus", types: ["VOL", "ROCHE"],
+        baseStats: { hp: 70, atk: 135, def: 75, spe: 130, spc: 45 }, // BST 455 — sweeper physique très rapide
+        learnset: [
+            { level: 1, moveId: "jet_pierres" },
+            { level: 1, moveId: "vive_attaque" },
+            { level: 1, moveId: "mur_de_fer" },
+            { level: 42, moveId: "lame_roche" },
+            { level: 48, moveId: "berceuse" },
+            { level: 54, moveId: "vol" },
+            { level: 60, moveId: "meteores" },
+        ],
+        catchRate: 45, baseExp: 210, rarity: "RARE", growthRate: "slow",
+        secretTalent: "affinite_elem", postLeague: true,
+        role: "Vol/Roche — sweeper physique rapide (création canonisée)",
+        description: "Caméléon de pierre aux larges ailes. Son cri porte loin et sa ruse n'a pas d'égale ; il fond du ciel avant qu'on l'ait vu bouger.",
+        sprite: "/yellow/sprites/dex/alirocaillus.png",
+    },
+
+    // --- Lignée GOATINY → MOUFLORAGE (Sol/Élec) — le contre naturel de Gavillus ---
+    // Chèvre-mouflon d'orage : mur-attaquant SPÉCIAL (SPÉ 130). Le Sol l'ancre (résiste Vol+Roche de
+    // Gavillus, immunise à l'Élec) — son arme est l'Élec spécial. Paralyse et débuffe avant de foudroyer.
+    goatiny: {
+        id: "goatiny", dexNo: 142, name: "Goatiny", types: ["SOL", "ELEC"],
+        baseStats: { hp: 62, atk: 32, def: 51, spe: 37, spc: 81 }, // BST 263
+        learnset: [
+            { level: 1, moveId: "etincelle" },
+            { level: 1, moveId: "jet_de_sable" },
+            { level: 12, moveId: "secousse" },
+            { level: 18, moveId: "charge" },
+            { level: 24, moveId: "hurlement" },
+        ],
+        evolution: { toId: "mouflorage", method: { kind: "LEVEL", level: 30 } },
+        catchRate: 45, baseExp: 65, rarity: "RARE", growthRate: "slow",
+        secretTalent: "affinite_elem", postLeague: true,
+        role: "Sol/Élec — chevreau (offensif spécial)",
+        description: "Chevreau des hautes cimes dont le pelage grésille de statique. Ses cornes naissantes crépitent au moindre orage.",
+        sprite: "/yellow/sprites/dex/goatiny.png",
+    },
+    mouflorage: {
+        id: "mouflorage", dexNo: 143, name: "Mouflorage", types: ["SOL", "ELEC"],
+        baseStats: { hp: 100, atk: 52, def: 82, spe: 60, spc: 130 }, // BST 424 — mur-attaquant spécial (paralyse puis foudroie)
+        learnset: [
+            { level: 1, moveId: "etincelle" },
+            { level: 1, moveId: "secousse" },
+            { level: 1, moveId: "hurlement" },
+            { level: 30, moveId: "fulgurance" },
+            { level: 36, moveId: "cage_eclair" },
+            { level: 42, moveId: "tir_boue" },
+            { level: 48, moveId: "repos" },
+            { level: 54, moveId: "seisme" },
+            { level: 60, moveId: "ultra_foudre" },
+        ],
+        catchRate: 45, baseExp: 200, rarity: "RARE", growthRate: "slow",
+        secretTalent: "affinite_elem", postLeague: true,
+        role: "Sol/Élec — mur-attaquant spécial (le contre de Gavillus)",
+        description: "Mouflon d'orage aux cornes-bobines, ancré au roc. Froid et calculateur, il paralyse sa proie et lui vole sa vitesse avant de la foudroyer. On murmure qu'il fut façonné pour terrasser un certain caméléon ailé.",
+        sprite: "/yellow/sprites/dex/mouflorage.png",
+    },
 }
 
 // ── REGISTRE RUNTIME des Daemons CUSTOM (créés par les joueurs, post-Ligue). Fusionné à la LECTURE seulement :
@@ -1974,12 +2079,23 @@ export function getSpecies(id: string): SpeciesData | null {
 export const SPECIES_IDS = Object.keys(SPECIES)
 export const DEX_COUNT = SPECIES_IDS.length
 
-/** Espèces VISIBLES dans les dex (Pokédex in-game + dex de référence) : toutes SAUF les `runTwoOnly`
- *  NON encore capturées — celles-ci (Gékraise/Ukognos/Merorem) restent totalement invisibles hors run 2,
- *  pas même une case « ??? » ni un point de compteur, jusqu'à ce qu'on les obtienne. `caught` = Pokédex du
- *  monde courant (fusionné après le NG+ → elles restent visibles ensuite). Ordre = ordre d'insertion. */
-export function visibleDexSpecies(caught: readonly string[] = []): SpeciesData[] {
-    return Object.values(SPECIES).filter((sp) => !sp.runTwoOnly || caught.includes(sp.id))
+/** Espèces VISIBLES dans les dex (Pokédex in-game + dex de référence). Sont masquées (invisibles :
+ *  pas même une case « ??? » ni un point de compteur) :
+ *   - les `runTwoOnly` (Gékraise/Ukognos/Merorem) NON capturées — révélées seulement au run 2 une fois obtenues ;
+ *   - les `postLeague` (créations canonisées) tant que le joueur n'est pas `isChampion` — révélées après le sacre,
+ *     et dès lors pour TOUT LE MONDE.
+ *  `caught` = Pokédex du monde courant (une espèce possédée reste visible dans tous les cas). Ordre = insertion. */
+/** SOURCE UNIQUE du gate : une espèce est-elle MASQUÉE des dex pour cet état de jeu ?
+ *  (runTwoOnly non capturé, OU postLeague hors Champion et non possédé). Utilisé par visibleDexSpecies
+ *  ET par l'affichage de la chaîne d'évolution (pour ne pas révéler un stade scellé voisin). */
+export function isDexHidden(sp: SpeciesData, caught: readonly string[] = [], isChampion = false): boolean {
+    if (sp.runTwoOnly && !caught.includes(sp.id)) return true
+    if (sp.postLeague && !isChampion && !caught.includes(sp.id)) return true
+    return false
+}
+
+export function visibleDexSpecies(caught: readonly string[] = [], isChampion = false): SpeciesData[] {
+    return Object.values(SPECIES).filter((sp) => !isDexHidden(sp, caught, isChampion))
 }
 
 export function speciesByDexNo(dexNo: number): SpeciesData | null {

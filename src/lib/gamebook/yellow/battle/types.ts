@@ -155,6 +155,12 @@ export interface SpeciesData {
      *  case « ??? » ni un point dans le compteur — TANT QUE non capturé. N'apparaît qu'une fois obtenu en NG+
      *  (ex. Gékraise, Ukognos, Merorem). Cf. visibleDexSpecies(). */
     runTwoOnly?: boolean
+    /** POST-LIGUE : ABSENT des dex (Pokédex in-game ET dex de référence) TANT QUE le joueur n'est pas
+     *  CHAMPION — puis intègre le dex de TOUT LE MONDE (révélation post-sacre). Sert aux créations de
+     *  joueur canonisées (hommage). Contrairement à runTwoOnly, le gate est le statut Champion, pas la
+     *  capture. Cf. visibleDexSpecies(caught, isChampion). N'affecte PAS la Zone de Combat (ces espèces
+     *  non-exclusives y apparaissent normalement comme adversaires/locations). */
+    postLeague?: boolean
     /** EXCLUSIF : Daemon unique/offert (reçu UNE seule fois). Plancher de courbe ×1.10
      *  (jamais plus rapide à monter ; un exclusif colossal prend quand même ×1.25). Voir growthCurve.ts. */
     exclusive?: boolean

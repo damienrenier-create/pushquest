@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { visibleDexSpecies } from "@/lib/gamebook/yellow/data/species"
 import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
+import { usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
 import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { POKE_TYPES, type PokeType, type SpeciesData } from "@/lib/gamebook/yellow/battle/types"
 import { TYPE_COLORS, baseStatTotal } from "./dexShared"
@@ -28,13 +29,15 @@ function DexIcon({ sp }: { sp: SpeciesData }) {
 export default function DexClient() {
     const router = useRouter()
     const dex = usePokedex()
+    const player = usePlayer()
     const [query, setQuery] = useState("")
     const [typeFilter, setTypeFilter] = useState<PokeType | null>(null)
     // Hydrate la save (idempotent) : sinon le Pokédex en mémoire est vide → les run-2 restent masqués (défaut sûr).
     useEffect(() => { void loadYellowSave() }, [])
 
-    // Base VISIBLE : exclut les Daemons run-2 (Gékraise/Ukognos/Merorem) non encore capturés → invisibles hors run 2.
-    const visible = useMemo(() => visibleDexSpecies(dex.caught), [dex.caught])
+    // Base VISIBLE : exclut les run-2 (Gékraise/Ukognos/Merorem) non capturés ET les créations post-Ligue
+    // tant qu'on n'est pas Champion → invisibles avant le sacre, révélées pour tous ensuite.
+    const visible = useMemo(() => visibleDexSpecies(dex.caught, player.isChampion), [dex.caught, player.isChampion])
     const entries = useMemo(() => {
         const q = query.trim().toLowerCase()
         return visible

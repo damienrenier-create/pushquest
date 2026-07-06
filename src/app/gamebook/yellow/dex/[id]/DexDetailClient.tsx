@@ -6,8 +6,9 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { SPECIES } from "@/lib/gamebook/yellow/data/species"
+import { SPECIES, isDexHidden } from "@/lib/gamebook/yellow/data/species"
 import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
+import { usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
 import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { growthLabel } from "@/lib/gamebook/yellow/data/growthCurve"
 import { MOVES } from "@/lib/gamebook/yellow/data/moves"
@@ -59,18 +60,24 @@ function MatchRow({ title, matches, onPick }: { title: string; matches: TypeMatc
 export default function DexDetailClient({ id }: { id: string }) {
     const router = useRouter()
     const dex = usePokedex()
+    const player = usePlayer()
     useEffect(() => { void loadYellowSave() }, []) // hydrate le Pokédex (accès direct par URL) ; défaut = masqué
     const sp = SPECIES[id]
     if (!sp) return null
-    // VERROU RUN 2 : une espèce runTwoOnly non capturée reste MASQUÉE même par accès URL direct (/dex/merorem)
-    // → pas de spoiler de son existence/stats/learnset avant de l'avoir obtenue en run 2.
-    if (sp.runTwoOnly && !dex.caught.includes(id)) {
+    // VERROU : une espèce runTwoOnly non capturée, OU une création post-Ligue tant qu'on n'est pas Champion,
+    // reste MASQUÉE même par accès URL direct (/dex/merorem, /dex/mouflorage) → pas de spoiler de son
+    // existence/stats/learnset avant de l'avoir débloquée.
+    const runTwoLocked = sp.runTwoOnly && !dex.caught.includes(id)
+    const postLeagueLocked = sp.postLeague && !player.isChampion && !dex.caught.includes(id)
+    if (runTwoLocked || postLeagueLocked) {
         return (
             <div style={S.root}>
                 <div style={{ ...S.wrap, textAlign: "center", padding: 40 }}>
                     <div style={{ fontSize: 48, marginBottom: 12 }}>❓</div>
                     <div style={{ fontSize: 14, fontWeight: 900, letterSpacing: 1, marginBottom: 6 }}>DAEMON INCONNU</div>
-                    <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 20 }}>Cette entrée reste scellée… tu la débloqueras en la rencontrant.</div>
+                    <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 20 }}>
+                        {postLeagueLocked ? "Cette entrée ne se révélera qu'une fois la Ligue vaincue." : "Cette entrée reste scellée… tu la débloqueras en la rencontrant."}
+                    </div>
                     <button onClick={() => router.push("/gamebook/yellow/dex")} style={S.back}>← Retour au Dex</button>
                 </div>
             </div>
@@ -147,23 +154,31 @@ export default function DexDetailClient({ id }: { id: string }) {
                     <div style={S.panel}>
                         <div style={S.panelTitle}>ÉVOLUTION</div>
                         <div style={S.evoRow}>
-                            {chain.map((stage, i) => (
-                                <div key={stage.id} style={S.evoItem}>
-                                    {i > 0 && (
-                                        <div style={S.evoArrow}>
-                                            <span style={S.evoArrowTxt}>▶</span>
-                                            <span style={S.evoCond}>{stage.methodLabel}</span>
-                                        </div>
-                                    )}
-                                    <button
-                                        onClick={() => router.push(`/gamebook/yellow/dex/${stage.id}`)}
-                                        style={{ ...S.evoBtn, ...(stage.id === id ? S.evoBtnActive : {}) }}
-                                    >
-                                        <Sprite src={stage.sprite} name={stage.name} size={56} />
-                                        <span style={S.evoName}>{stage.name}</span>
-                                    </button>
-                                </div>
-                            ))}
+                            {chain.map((stage, i) => {
+                                // Un stade VOISIN encore scellé (runTwoOnly/postLeague non débloqué) reste « ??? » :
+                                // pas de spoiler de son nom/sprite même si on possède un autre stade de la lignée.
+                                const sealed = isDexHidden(SPECIES[stage.id], dex.caught, player.isChampion)
+                                return (
+                                    <div key={stage.id} style={S.evoItem}>
+                                        {i > 0 && (
+                                            <div style={S.evoArrow}>
+                                                <span style={S.evoArrowTxt}>▶</span>
+                                                <span style={S.evoCond}>{stage.methodLabel}</span>
+                                            </div>
+                                        )}
+                                        <button
+                                            onClick={() => { if (!sealed) router.push(`/gamebook/yellow/dex/${stage.id}`) }}
+                                            disabled={sealed}
+                                            style={{ ...S.evoBtn, ...(stage.id === id ? S.evoBtnActive : {}) }}
+                                        >
+                                            {sealed
+                                                ? <div style={{ width: 56, height: 56, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, fontWeight: 900, opacity: 0.75 }}>❓</div>
+                                                : <Sprite src={stage.sprite} name={stage.name} size={56} />}
+                                            <span style={S.evoName}>{sealed ? "???" : stage.name}</span>
+                                        </button>
+                                    </div>
+                                )
+                            })}
                         </div>
                     </div>
                 )}
