@@ -234,21 +234,18 @@ function tryLaunchSylvebarbe(): ActiveDialogue | null {
     return null
 }
 
-// BROCANTEUR (maison hantée) : échange le Brookhanté (uid) du joueur contre un Roctaur qui, reçu par
-// échange, évolue aussitôt en Rochison (applyTradeEvolution). Renvoie le dialogue de résultat.
-function doHhTrade(brookUid: string): ActiveDialogue | null {
-    const owner = [...getPlayerSave().team, ...getPlayerSave().pc].find((m) => m.uid === brookUid)
+// BROCANTEUR (maison hantée) : DEMANDE un Roctaur (uid) du joueur et l'échange contre un MORROW (Glace/Psy).
+// Morrow ne trade-évolue pas (applyTradeEvolution = no-op défensif). Renvoie le dialogue de résultat.
+function doHhTrade(giveUid: string): ActiveDialogue | null {
+    const owner = [...getPlayerSave().team, ...getPlayerSave().pc].find((m) => m.uid === giveUid)
     if (!owner) return null
-    const roctaur = createMonInstance(HH_TRADE_RECEIVE, owner.level, { owned: true })
-    executeTrade(brookUid, roctaur)              // retire le Brookhanté, ajoute le Roctaur
-    const evo = applyTradeEvolution(roctaur.uid) // Roctaur → Rochison (évolution par échange)
+    const received = createMonInstance(HH_TRADE_RECEIVE, owner.level, { owned: true }) // Morrow
+    executeTrade(giveUid, received)      // retire le Roctaur, ajoute le Morrow
+    applyTradeEvolution(received.uid)    // Morrow ne trade-évolue pas → no-op (défensif si évolution ajoutée un jour)
     persistYellowSave()
-    const got = evo ? evo.toName : "Roctaur"
     return {
         npcId: HH_TRADER_ID, npcName: "BROCANTEUR", lineIndex: 0,
-        lines: evo
-            ? ["Marché conclu ! Je récupère ton Brookhanté…", `…et sous tes yeux, mon Roctaur se transforme en ${got} ! L'échange a réveillé sa vraie forme. Prends-en soin !`]
-            : ["Marché conclu ! Je récupère ton Brookhanté…", `…et tu reçois mon ${got} ! Prends-en soin.`],
+        lines: ["Marché conclu ! Je récupère ton Roctaur…", "…et tu reçois mon MORROW ! Une créature d'un autre monde, dont le baiser glace le cœur. Prends-en soin."],
     }
 }
 
@@ -878,14 +875,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
-        // BROCANTEUR (maison hantée) : échange Brookhanté → Roctaur (→ Rochison). Répétable.
+        // BROCANTEUR (maison hantée) : DEMANDE un Roctaur → donne un Morrow (Glace/Psy). Répétable.
         if (npc.id === HH_TRADER_ID) {
-            const brook = [...getPlayerSave().team, ...getPlayerSave().pc].find((m) => m.speciesId === HH_TRADE_GIVE)
-            if (!brook) {
+            const give = [...getPlayerSave().team, ...getPlayerSave().pc].find((m) => m.speciesId === HH_TRADE_GIVE)
+            if (!give) {
                 set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: HH_TRADER_NEED_LINES } })
                 return
             }
-            set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: HH_TRADER_OFFER_LINES, lineIndex: 0 }, pendingHhTrade: brook.uid })
+            set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: HH_TRADER_OFFER_LINES, lineIndex: 0 }, pendingHhTrade: give.uid })
             return
         }
 

@@ -1931,6 +1931,28 @@ export const SPECIES: Record<string, SpeciesData> = {
         hiddenUntilCaught: true, // absent du Pokédex tant qu'on ne l'a pas capturé
         runTwoOnly: true,        // n'apparaît dans les dex qu'à partir du run 2 (une fois obtenu au casino NG+)
     },
+    // 💋 MORROW — hommage à Lippoutou/Jynx (dexNo 138), Glace/Psy. Reçu UNIQUEMENT par ÉCHANGE contre un
+    // Roctaur auprès du BROCANTEUR devant la maison hantée (Cendreville). CONTRÔLEUR spécial ultra-rapide
+    // (VIT 125) : endort à l'Hypnose (fiable car rapide), embrouille (Onde Folie/Cérébrale) et grignote
+    // Glace/Psy ; un seul gros coup (Vague Mentale 90). Le Souffle Polaire (Glace 90) reste dispo via CT13.
+    morrow: {
+        id: "morrow", dexNo: 138, name: "Morrow", types: ["GLACE", "PSY"],
+        baseStats: { hp: 85, atk: 30, def: 65, spe: 125, spc: 135 }, // BST 440 — glass-cannon spécial ULTRA-rapide (VIT 125, top 3) ; ATQ dumpée (kit 100 % spécial) → Hypnose fiable
+        learnset: [
+            { level: 1, moveId: "charge" },
+            { level: 1, moveId: "onde_folie" },       // confusion — la charmeuse déboussole
+            { level: 12, moveId: "choc_mental" },     // petit STAB Psy
+            { level: 20, moveId: "hypnose" },          // sommeil hypnotique (Psy, STAB) — fiable car Morrow est rapide (speedScaledAcc)
+            { level: 28, moveId: "coup_d_givre" },     // STAB Glace MODÉRÉ (65, peut geler) — le Souffle Polaire (90) reste dispo en CT13
+            { level: 36, moveId: "focalisation" },     // set-up SPÉ +1
+            { level: 44, moveId: "onde_cerebrale" },   // contrôle : Vit/Préc/Déf −1 garantis (disrupteur)
+            { level: 52, moveId: "vague_mentale" },    // capstone : son SEUL gros coup (Psy 90)
+        ],
+        catchRate: 30, baseExp: 200, rarity: "RARE", growthRate: "medium_fast",
+        role: "Glace/Psy — charmeuse-endormeuse (attaquant spécial rapide, obtenue par échange)",
+        description: "Créature venue d'un autre monde, au sourire troublant. D'un baiser givré elle endort ses proies, puis les foudroie d'une vague mentale. Nul ne sait d'où elle vient — seulement qu'on l'échange, jamais qu'on la capture.",
+        sprite: "/yellow/sprites/dex/morrow.png",
+    },
 }
 
 // ── REGISTRE RUNTIME des Daemons CUSTOM (créés par les joueurs, post-Ligue). Fusionné à la LECTURE seulement :

@@ -1,9 +1,10 @@
 // src/lib/gamebook/yellow/data/hauntedNpcs.ts
 //
 // Les 2 PNJ devant la MAISON HANTÉE (Cendreville).
-//  • PNJ1 = BROCANTEUR : échange un Brookhanté du joueur contre un Roctaur qui, reçu par échange,
-//    évolue aussitôt en ROCHISON (seul moyen d'obtenir rochison). Réutilise executeTrade +
-//    applyTradeEvolution (cf. gameStore). Répétable tant que le joueur a un Brookhanté.
+//  • PNJ1 = BROCANTEUR : DEMANDE un Roctaur du joueur et l'échange contre un MORROW (Glace/Psy, hommage
+//    Lippoutou). Réutilise executeTrade (cf. gameStore). Répétable tant que le joueur a un Roctaur.
+//    NB : Rochison (évo-ÉCHANGE de Roctaur) n'est plus donné ici — il reste obtenable via un ÉCHANGE
+//    ENTRE JOUEURS réels (troquer un Roctaur avec un pote déclenche sa trade-évolution).
 //  • PNJ2 = COLLECTIONNEUR DE SPECTRES : dresseur réaffrontable ; montre-lui 3 Daemons SPECTRE
 //    DIFFÉRENTS au fil de tes combats + bats-le 3× → il offre la CT26 (Frappe d'Au-delà).
 
@@ -13,15 +14,15 @@ import type { MonInstance } from "../battle/types"
 export const HH_TRADER_ID = "y_hh_trader"
 export const HH_TRADER_MAP = "yellow_cendreville"
 export const HH_TRADER_POS = { x: 20, y: 11 }
-export const HH_TRADE_GIVE = "brookhante" // ce que le joueur DONNE
-export const HH_TRADE_RECEIVE = "roctaur" // ce qu'il REÇOIT (évolue en rochison par l'échange)
+export const HH_TRADE_GIVE = "roctaur" // ce que le joueur DONNE
+export const HH_TRADE_RECEIVE = "morrow" // ce qu'il REÇOIT (Morrow — Glace/Psy, ne trade-évolue pas)
 
 export const HH_TRADER_OFFER_LINES = [
-    "Hé, l'ami ! Toi qui hantes la maison… tu n'aurais pas un Brookhanté ?",
-    "Je te file mon Roctaur contre lui. On dit qu'un Daemon qui change de main… révèle parfois une autre forme. Marché conclu ?",
+    "Hé, l'ami ! Tu rôdes près de la maison hantée… tu n'aurais pas un ROCTAUR sous la main ?",
+    "Je te l'échange contre… ÇA. Un MORROW. Une drôle de créature venue d'ailleurs, au baiser à faire frissonner. Marché conclu ?",
 ]
 export const HH_TRADER_NEED_LINES = [
-    "Reviens me voir avec un BROOKHANTÉ et mon Roctaur est à toi !",
+    "Reviens me voir avec un ROCTAUR et mon Morrow est à toi !",
 ]
 
 // ── PNJ2 — COLLECTIONNEUR DE SPECTRES (21,11) : bats-le 3× en montrant 3 spectres distincts → CT26 ──

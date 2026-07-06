@@ -77,6 +77,7 @@ export const DEX_PUNCHLINES: Record<string, string> = {
     florapanthe: "Bondit comme le lierre s'élance. Décore aussi tes murs.",
     panthegel: "Souffle glacé : rafraîchit la pièce, refroidit l'ambiance.",
     ukognos: "Flammes féeriques violettes : joli, tant qu'il ne te vise pas. L'écho maudit d'un vieux dragon.",
+    morrow: "Un baiser, et tu pique un roupillon glacé. Se troque, ne se capture pas.",
     pyropanthe: "File plus vite que la flamme qui la couronne. Frime en feu.",
     ombrapanthe: "Surgit de l'ombre avant qu'on la voie. Maître du jump-scare.",
     aquapanthe: "Crinière ruisselante ; laisse des flaques, jamais d'excuses.",

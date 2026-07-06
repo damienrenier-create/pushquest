@@ -1,10 +1,11 @@
 import { describe, it, expect } from "vitest"
 import { createMonInstance } from "../battle/factory"
 import { hydratePlayer, getPlayer, recordHhCollectorWin, applyTradeEvolution } from "../store/playerStore"
-import { buildHhCollectorTeam, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES } from "./hauntedNpcs"
+import { buildHhCollectorTeam, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_TRADE_GIVE, HH_TRADE_RECEIVE } from "./hauntedNpcs"
 import { getSpecies } from "./species"
+import { getMove } from "./moves"
 
-describe("Maison hantée — PNJ1 BROCANTEUR (échange → rochison)", () => {
+describe("Roctaur → Rochison par échange (désormais via troc entre joueurs réels)", () => {
     it("un Roctaur reçu par échange évolue aussitôt en Rochison", () => {
         const roc = createMonInstance("roctaur", 30, { owned: true })
         hydratePlayer({ team: [roc] })
@@ -12,6 +13,33 @@ describe("Maison hantée — PNJ1 BROCANTEUR (échange → rochison)", () => {
         expect(evo).toBeTruthy()
         expect(evo!.toId).toBe("rochison")
         expect(getPlayer().team[0].speciesId).toBe("rochison")
+    })
+})
+
+describe("Maison hantée — PNJ1 BROCANTEUR : Roctaur → MORROW", () => {
+    it("le BROCANTEUR DEMANDE un Roctaur et donne un Morrow", () => {
+        expect(HH_TRADE_GIVE).toBe("roctaur")
+        expect(HH_TRADE_RECEIVE).toBe("morrow")
+    })
+    it("Morrow ne trade-évolue PAS (l'échange ne le transforme pas)", () => {
+        const m = createMonInstance("morrow", 30, { owned: true })
+        hydratePlayer({ team: [m] })
+        expect(applyTradeEvolution(m.uid)).toBeNull()
+    })
+    it("Morrow : Glace/Psy, dexNo 138, attaquant spécial (SPÉ dominant), BST ≥ 438", () => {
+        const sp = getSpecies("morrow")!
+        expect(sp.types).toEqual(["GLACE", "PSY"])
+        expect(sp.dexNo).toBe(138)
+        const s = sp.baseStats
+        expect(Object.values(s).reduce((a, b) => a + b, 0)).toBeGreaterThanOrEqual(438)
+        expect(s.spc).toBeGreaterThanOrEqual(Math.max(s.hp, s.atk, s.def, s.spe))
+    })
+    it("kit charmeur : Hypnose (sommeil) + STAB Glace ET Psy", () => {
+        const ids = getSpecies("morrow")!.learnset.map((l) => l.moveId)
+        expect(ids).toContain("hypnose")
+        const types = ids.map((id) => getMove(id)?.type)
+        expect(types).toContain("GLACE")
+        expect(types).toContain("PSY")
     })
 })
 
