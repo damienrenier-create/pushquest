@@ -107,3 +107,18 @@ describe("NG+ fusion — remise à zéro des métriques de score run 2", () => {
         expect(merged.leaguePotions).toBe(0)
     })
 })
+
+// RUN 2 NON-REJOUABLE : le flag ngplusUsed (posé au lancement du run 2, porté par le monde NG+ = primary)
+// doit SURVIVRE à la fusion → il reste dans le monde live final et interdit un 2e run 2 (guard startNewGamePlus),
+// sauf reset complet du run 1. À l'inverse, un abandon (qui restaure le monde live stashé, ngplusUsed=false)
+// laisse la porte ouverte à une nouvelle tentative — d'où le verrou uniquement à la COMPLÉTION.
+describe("NG+ fusion — run 2 non-rejouable (ngplusUsed)", () => {
+    it("ngplusUsed=true du monde NG+ est CONSERVÉ après fusion (verrou anti-2e-run)", () => {
+        const ng = world({ ngplusUsed: true })   // monde NG+ (primary) : run 2 lancé
+        const live = world({ ngplusUsed: false }) // monde d'origine stashé
+        expect(mergeWorlds(ng, live).ngplusUsed).toBe(true)
+    })
+    it("une save fraîche/ancienne a ngplusUsed=false (run 2 jamais lancé → autorisé)", () => {
+        expect(emptySave().ngplusUsed).toBe(false)
+    })
+})

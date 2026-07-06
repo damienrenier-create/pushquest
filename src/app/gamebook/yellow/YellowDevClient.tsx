@@ -1115,6 +1115,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // NG+ (2 mondes navigables) — lance un New Game+ avec un Daemon custom en starter (+6000⚡), en GELANT
     // l'équipe championne actuelle comme adversaire de fin de Ligue. Le monde d'origine reste intact/rejouable.
     const launchNewGamePlus = async (stored: StoredCustomDaemon) => {
+        if (getPlayer().ngplusUsed) { setToast("Tu as déjà accompli ta seconde vie. Pour en relancer une, il faut recommencer le run 1 (réinitialiser le chapitre)."); return }
         let starter
         try { starter = createMonInstance(customStarterSpeciesId(stored), 5, { owned: true }) }
         catch { setToast("Ton Daemon custom est introuvable/corrompu — NG+ impossible."); return }
@@ -2653,6 +2654,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     // NG+ : au lieu du warp/dialogue habituels, on laisse l'effet dédié lancer le COMBAT DE FIN
                     // DE LIGUE contre l'ancienne équipe (dès le HoF fermé). ngplusFinalPending est déjà armé.
                     if (ngplusFinalPending) { setToast("Un dernier défi t'attend… ton ANCIENNE équipe !"); return }
+                    // RUN 2 NON-REJOUABLE : un Champion qui a DÉJÀ accompli sa seconde vie ne se voit PAS
+                    // reproposer le créateur forcé → pas de 3e run. (Il faut reset le run 1 pour recommencer.)
+                    if (getPlayer().ngplusUsed) { setToast("Tu es déjà allé au bout de ta seconde vie. 🍝"); return }
                     // SACRE (run 1) : le générique sert de transition → Cendreville, puis le Dieu des Nouilles
                     // lance LE DÉFI, et on enchaîne sur la CRÉATION OBLIGATOIRE d'un Daemon (→ New Game+).
                     setMap("yellow_cendreville", 21, 32)
