@@ -37,6 +37,7 @@ import LabPanel from "./LabPanel"
 import CombatShopModal from "./CombatShopModal"
 import DailyTicketModal from "./DailyTicketModal"
 import DiablesRougesQuiz, { diablesRougesAvailable } from "./DiablesRougesQuiz"
+import GlandEvent, { type GlandScreen, GLAND_EVENT_DATE, GLAND_STEP_INTERVAL, GLAND_ENERGY_STOLEN, GLAND_TICKET_COUNT, GLAND_TICKET_VALUE, glandCartonDone, glandJusticeDone, markGlandCartonDone, markGlandJusticeDone } from "./GlandEvent"
 import HeldItemModal from "./HeldItemModal"
 import { getHeldItem } from "@/lib/gamebook/yellow/data/heldItems"
 import ParkSignPanel from "./ParkSignPanel"
@@ -52,7 +53,7 @@ import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, getNgplusOldTeam, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT } from "@/lib/gamebook/yellow/store/saveManager"
 import { customStarterSpeciesId, type StoredCustomDaemon } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket } from "@/lib/gamebook/yellow/store/playerStore"
 import { computeRunScores, formatDuration } from "@/lib/gamebook/yellow/score/runScore"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
 import { ARENA_TICKET_VALUE, STEP_GIFT_DATE, STEP_GIFT_THRESHOLD } from "@/lib/gamebook/yellow/data/labDefis"
@@ -250,6 +251,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const belgiumChecked = useRef(false)
     const stepCountRef = useRef(0)                                                  // pas du jour (événement 10e pas)
     const stepPrevPosRef = useRef<{ x: number; y: number; mapId: string } | null>(null)
+    const [glandModal, setGlandModal] = useState<GlandScreen | null>(null)          // événement « injustice du gland » (07-07)
+    const glandCartonStepRef = useRef<number | null>(null)                          // pas auquel le carton rouge a été montré
     const [tourChoice, setTourChoice] = useState(false) // pause entre vagues de série (Continuer / Quitter)
     const [domePause, setDomePause] = useState(false) // écran d'intro AVANT chaque match du Dôme (bracket + adversaire)
     const [usineCt, setUsineCt] = useState<string[] | null>(null) // CT à choisir (récompense Usine) parmi le vaincu
@@ -1078,6 +1081,16 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         stepPrevPosRef.current = cur
         if (!prev || prev.mapId !== cur.mapId || (prev.x === cur.x && prev.y === cur.y)) return // 1re pos / téléport / immobile
         stepCountRef.current += 1
+        // ÉVÉNEMENT DU GLAND (07-07 uniquement) : à 14 pas → carton rouge injuste (−14⚡) ; 14 pas plus tard →
+        // le Dieu Spaghetti rétablit la justice (+14 tickets casino). Une modale à la fois (flags localStorage).
+        if (getPlayer().creditedThrough === GLAND_EVENT_DATE && glandModal === null) {
+            if (!glandCartonDone() && stepCountRef.current >= GLAND_STEP_INTERVAL) {
+                glandCartonStepRef.current = stepCountRef.current
+                setGlandModal("carton")
+            } else if (glandCartonDone() && !glandJusticeDone() && stepCountRef.current >= (glandCartonStepRef.current ?? 0) + GLAND_STEP_INTERVAL) {
+                setGlandModal("spag")
+            }
+        }
         if (stepCountRef.current < STEP_GIFT_THRESHOLD || spagStepGiftDone()) return
         if (getPlayer().creditedThrough !== STEP_GIFT_DATE) return // événement d'un seul jour
         const n = claimSpagStepGift()
@@ -1090,7 +1103,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 "« File claquer tes crédits à la table, mise par mise. La fortune sourit aux marcheurs ! »",
             ])
         }
-    }, [mapPlayer.posX, mapPlayer.posY, mapPlayer.mapId, hydrated, battle, showDialogue])
+    }, [mapPlayer.posX, mapPlayer.posY, mapPlayer.mapId, hydrated, battle, showDialogue, glandModal])
 
     // Revanche d'arène gagnée : dialogue de récompense post-combat (énergie / CT Mirage),
     // une fois le combat quitté ET la cinématique d'évolution terminée (même règle que badge/ACE).
@@ -1142,7 +1155,22 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // Pile de fermeture du bouton B : ferme l'overlay le PLUS HAUT et renvoie true ; false si
     // plus rien à fermer (le clavier/onB enchaîne alors sur pressB pour les dialogues).
     // Ordre = du plus superposé au moins superposé (un sous-modal se ferme avant son parent).
+    // ÉVÉNEMENT DU GLAND — avance la modale (bouton OU B) : carton → retire jusqu'à 14⚡ ; spag → offre 14 tickets
+    // casino → trump2 ; trump2 → clôt (justice faite). Effets + flags one-shot ici, l'affichage est dans GlandEvent.
+    const advanceGland = () => {
+        if (glandModal === "carton") {
+            const take = Math.min(GLAND_ENERGY_STOLEN, getPlayer().reps)
+            if (take > 0) spendReps(take)
+            markGlandCartonDone(); persistYellowSave(); setGlandModal(null)
+        } else if (glandModal === "spag") {
+            for (let i = 0; i < GLAND_TICKET_COUNT; i++) grantRouletteTicket(GLAND_TICKET_VALUE, "spag")
+            persistYellowSave(); setGlandModal("trump2")
+        } else if (glandModal === "trump2") {
+            markGlandJusticeDone(); setGlandModal(null)
+        }
+    }
     const goBack = (): boolean => {
+        if (glandModal) { advanceGland(); return true } // l'événement du gland s'avance/se ferme au B
         if (posterImage) { closePoster(); return true } // poster mural (Centre) → overlay plein écran
         if (confirmReset) { setConfirmReset(false); return true }
         if (heldOpen) { setHeldOpen(false); return true } // sous-modale objet tenu (au-dessus de la fiche)
@@ -1230,6 +1258,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 onRight={() => { if (encounterFx || kartOpen) return; if (battle) { if (menu === "none") dispatchBattleInput("right"); return } move("right") }}
                 onA={() => {
                     if (kartOpen) return
+                    if (glandModal) { advanceGland(); return } // événement du gland : A avance aussi la modale
                     if (battle) { if (menu === "none") dispatchBattleInput("a"); return }
                     // Dans le casino, A face à un autre joueur = le défier.
                     if (inCasino) {
@@ -1807,6 +1836,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {combatShopOpen && <CombatShopModal onClose={closeCombatShop} />}
             {ticketOpen && <DailyTicketModal mode="daily" today={getPlayer().creditedThrough} onClose={() => { persistYellowSave(); setTicketOpen(false) }} />}
             {belgiumOpen && <DiablesRougesQuiz onClose={() => setBelgiumOpen(false)} />}
+            {glandModal && <GlandEvent screen={glandModal} onNext={advanceGland} />}
             <ParkSignPanel />
             <PosterPanel />
             {/* EncounterTransition est désormais rendu DANS BattleScreen (calé sur la scène). */}
