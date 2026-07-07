@@ -254,7 +254,7 @@ export function dispatchBattleInput(a: BattleInput) {
 export function startWildBattle(playerTeam: MonInstance[], enemyTeam: MonInstance[], seed: number) {
     // Quota PushQuest du jour atteint → capture facilitée pendant le combat.
     const captureModifier = getPlayer().wildCtx?.quotaReached ? QUOTA_CAPTURE_BONUS : 1
-    const battle = createBattle(playerTeam, enemyTeam, { isWild: true, seed, captureModifier, fleeChance: wildFleeChance() })
+    const battle = createBattle(playerTeam, enemyTeam, { isWild: true, seed, captureModifier, fleeChance: wildFleeChance(), playerBadgeCount: getPlayer().badges.length })
     syncPokedex(battle) // adversaire "vu" dès la rencontre
     setStore({ battle, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
     persistBattleSnapshot() // #8 : instantané anti-fuite (refresh)
@@ -267,7 +267,7 @@ export function startTrainerBattle(
     opts?: { trainerId?: string; reward?: number; aiLevel?: AiLevel; enemyEnergyCap?: number; isRematch?: boolean },
 ) {
     const isFrontier = !!opts?.trainerId?.startsWith("frontier:")
-    const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: opts?.aiLevel, enemyEnergyCap: opts?.enemyEnergyCap, noItems: isFrontier, expMult: isFrontier ? FRONTIER_EXP_MULT : undefined })
+    const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: opts?.aiLevel, enemyEnergyCap: opts?.enemyEnergyCap, noItems: isFrontier, expMult: isFrontier ? FRONTIER_EXP_MULT : undefined, playerBadgeCount: getPlayer().badges.length })
     syncPokedex(battle)
     const trainer = opts?.trainerId ? { trainerId: opts.trainerId, reward: opts.reward ?? 0, isRematch: opts.isRematch ?? false } : null
     setStore({ battle, evolutions: [], trainer, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
@@ -326,7 +326,7 @@ export function startHofBattle(label: string, champTeam: ChampionMon[]): boolean
     if (!playerTeam.some((m) => m.currentHp > 0)) return false // équipe K.O. → soigne d'abord
     const enemyTeam = champTeam.map((m, i) => championToInstance(m, i))
     const seed = (Math.floor(Math.random() * 0x7fffffff) ^ (playerTeam.length * 2654435761)) >>> 0
-    const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: "hof", noItems: true, expMult: 0 })
+    const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: "hof", noItems: true, expMult: 0, playerBadgeCount: getPlayer().badges.length })
     syncPokedex(battle)
     setStore({ battle, evolutions: [], trainer: { trainerId: `hof:${label}`, reward: 0, isRematch: false }, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
     persistBattleSnapshot()
@@ -343,7 +343,7 @@ export function startNgPlusFinalBattle(oldTeam: ChampionMon[]): boolean {
     const enemyTeam = oldTeam.map((m, i) => championToInstance(m, i))
     const seed = (Math.floor(Math.random() * 0x7fffffff) ^ (playerTeam.length * 40503)) >>> 0
     // Pas d'expMult:0 → XP NORMALE (choix de Sartay). Pas de noItems → sac autorisé (vrai combat).
-    const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: "hof" })
+    const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: "hof", playerBadgeCount: getPlayer().badges.length })
     syncPokedex(battle)
     setStore({ battle, evolutions: [], trainer: { trainerId: "ngplus:final", reward: 0, isRematch: false }, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null, ngplusFinalPending: false })
     persistBattleSnapshot()

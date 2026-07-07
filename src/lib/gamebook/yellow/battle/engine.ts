@@ -16,6 +16,7 @@ import { heldOutgoingDmgMult, heldIncomingDmgMult, heldEffect } from "../data/he
 import { talentEffect, talentOutgoingDmgMult, talentIncomingDmgMult } from "./talentEffects"
 import { typeEffectiveness, effectivenessMessage, moveCategory, resolveAdaptiveStab } from "./typeChart"
 import * as Status from "./status"
+import { obedienceCap, disobeyChance } from "./obedience"
 import { accuracyCheck } from "./accuracy"
 import { chooseAiAction, type AiLevel } from "./ai"
 import { xpForDefeat, applyExp } from "./xp"
@@ -98,6 +99,9 @@ export interface BattleState {
     noItems?: boolean
     /** Multiplicateur d'XP gagnée (1 = normal ; <1 au Frontier pour limiter le farming). */
     expMult?: number
+    /** OBÉISSANCE : nb de badges du joueur, injecté par le store à la création (PvE). Pilote le cap de
+     *  niveau au-dessus duquel un Daemon ÉCHANGÉ peut DÉSOBÉIR. Absent → obéissance totale (aucun gate). */
+    playerBadgeCount?: number
 }
 
 export type PlayerAction =
@@ -162,7 +166,7 @@ export function toBattleMon(inst: MonInstance): BattleMon {
 export function createBattle(
     playerTeam: MonInstance[],
     enemyTeam: MonInstance[],
-    opts: { isWild: boolean; seed: number; aiLevel?: AiLevel; captureModifier?: number; pvp?: boolean; enemyEnergyCap?: number; fleeChance?: number; noItems?: boolean; expMult?: number },
+    opts: { isWild: boolean; seed: number; aiLevel?: AiLevel; captureModifier?: number; pvp?: boolean; enemyEnergyCap?: number; fleeChance?: number; noItems?: boolean; expMult?: number; playerBadgeCount?: number },
 ): BattleState {
     // Le joueur envoie son premier Daemon ENCORE DEBOUT (pas un K.O. en tête de liste).
     const playerStart = playerTeam.findIndex((m) => m.currentHp > 0)
@@ -191,6 +195,7 @@ export function createBattle(
         fleeChance: opts.fleeChance ?? 100,
         noItems: opts.noItems ?? false,
         expMult: opts.expMult ?? 1,
+        playerBadgeCount: opts.playerBadgeCount,
     }
 }
 
@@ -341,9 +346,20 @@ export function resolveTurn(prev: BattleState, playerAction: PlayerAction): Batt
         if (act.kind === "switch") {
             doSwitch(state, act.side, act.teamIndex!, events)
         } else if (act.kind === "move") {
+            // OBÉISSANCE (PvE only) : un Daemon ÉCHANGÉ (traded), au-dessus du cap lié aux badges, peut DÉSOBÉIR :
+            // il ignore l'ordre (tour perdu, MAIS énergie remboursée → playerActed reste false, pas de double peine).
+            // RNG seedé ; consommé UNIQUEMENT pour un traded over-cap → resolveTurnPvp intact + RNG inchangé sinon.
+            let disobeyed = false
+            if (!state.pvp && act.side === "player" && cur.traded === true) {
+                const cap = obedienceCap(state.playerBadgeCount ?? 5)
+                if (cur.level > cap && rng.chance(disobeyChance(cur.level, cap))) {
+                    disobeyed = true
+                    events.push({ kind: "message", text: `${displayName(cur)} n'en fait qu'à sa tête et IGNORE ton ordre ! 😾 (pas assez de badges pour le commander)` })
+                }
+            }
             // Pré-check de statut (peur/sommeil/gel/paralysie) AVANT d'agir : si le Daemon ne peut PAS
             // agir, l'attaque N'A PAS LIEU → playerActed reste false → le store rembourse les reps.
-            if (canAct(cur, events, rng)) {
+            if (!disobeyed && canAct(cur, events, rng)) {
                 if (act.side === "player") playerActed = true
                 performMove(state, act.side, act.moveIndex!, events, rng)
             }
