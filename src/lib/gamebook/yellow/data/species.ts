@@ -963,7 +963,7 @@ export const SPECIES: Record<string, SpeciesData> = {
         id: "panthegel", dexNo: 69, name: "Panthégel", types: ["GLACE"],
         baseStats: { hp: 90, atk: 72, def: 90, spe: 82, spc: 105 },
         learnset: [
-            { level: 1, moveId: "coup_d_givre" }, { level: 1, moveId: "souffle_polaire" },
+            { level: 1, moveId: "coup_d_givre" }, { level: 34, moveId: "souffle_polaire" }, // gaté (illégitime au niv 1)
             { level: 1, moveId: "vive_attaque" }, { level: 1, moveId: "coup_d_boule" },
             { level: 20, moveId: "mur_de_fer" }, { level: 40, moveId: "focalisation" }, { level: 55, moveId: "repos" }, { level: 66, moveId: "blizzard" },
         ],
@@ -975,7 +975,7 @@ export const SPECIES: Record<string, SpeciesData> = {
         id: "pyropanthe", dexNo: 70, name: "Pyropanthe", types: ["FEU"],
         baseStats: { hp: 72, atk: 78, def: 62, spe: 118, spc: 121 },
         learnset: [
-            { level: 1, moveId: "flamme_ardente" }, { level: 1, moveId: "lance_flammes" },
+            { level: 1, moveId: "flamme_ardente" }, { level: 36, moveId: "lance_flammes" }, // gaté (illégitime au niv 1)
             { level: 1, moveId: "vive_attaque" }, { level: 1, moveId: "coup_d_boule" },
             { level: 40, moveId: "focalisation" }, { level: 52, moveId: "pyrotechnie" }, { level: 66, moveId: "boutefeu" },
         ],
@@ -987,7 +987,7 @@ export const SPECIES: Record<string, SpeciesData> = {
         id: "ombrapanthe", dexNo: 71, name: "Ombrapanthe", types: ["SPECTRE"],
         baseStats: { hp: 78, atk: 96, def: 70, spe: 113, spc: 98 },
         learnset: [
-            { level: 1, moveId: "ball_ombre" }, { level: 1, moveId: "leche" },
+            { level: 32, moveId: "ball_ombre" }, { level: 1, moveId: "leche" }, // Ball'Ombre gaté (illégitime au niv 1)
             { level: 1, moveId: "morsure" }, { level: 1, moveId: "coup_d_boule" },
             { level: 30, moveId: "griffe_spectrale" }, { level: 45, moveId: "danse_lames" }, { level: 66, moveId: "frappe_audela" },
         ],
@@ -999,7 +999,7 @@ export const SPECIES: Record<string, SpeciesData> = {
         id: "aquapanthe", dexNo: 72, name: "Aquapanthe", types: ["EAU"],
         baseStats: { hp: 102, atk: 76, def: 92, spe: 80, spc: 95 },
         learnset: [
-            { level: 1, moveId: "lame_eau" }, { level: 1, moveId: "hydrocanon" },
+            { level: 1, moveId: "lame_eau" }, { level: 38, moveId: "hydrocanon" }, // Hydrocanon gaté (illégitime au niv 1)
             { level: 1, moveId: "vive_attaque" }, { level: 1, moveId: "coup_d_boule" },
             { level: 40, moveId: "deferlante" }, { level: 50, moveId: "focalisation" }, { level: 66, moveId: "repos" },
         ],
@@ -1011,8 +1011,8 @@ export const SPECIES: Record<string, SpeciesData> = {
         id: "voltapanthe", dexNo: 73, name: "Voltapanthe", types: ["ELEC"],
         baseStats: { hp: 76, atk: 88, def: 64, spe: 122, spc: 102 },
         learnset: [
-            { level: 1, moveId: "etincelle" }, { level: 1, moveId: "fulgurance" },
-            { level: 1, moveId: "cage_eclair" }, { level: 1, moveId: "vive_attaque" },
+            { level: 1, moveId: "etincelle" }, { level: 36, moveId: "fulgurance" }, // gaté (illégitime au niv 1)
+            { level: 26, moveId: "cage_eclair" }, { level: 1, moveId: "vive_attaque" },
             { level: 40, moveId: "focalisation" }, { level: 66, moveId: "ultra_foudre" },
         ],
         catchRate: 45, baseExp: 200, rarity: "RARE", growthRate: "medium_fast", role: "Élec — panthère (boss)",
