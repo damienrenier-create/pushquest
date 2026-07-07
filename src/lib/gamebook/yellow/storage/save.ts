@@ -79,6 +79,13 @@ export interface YellowSave {
     hhCollectorWins: number
     /** LIGUE : le joueur a battu LE MAÎTRE (Champion du Nexus) → débloque le Hall of Fame / post-game. */
     isChampion: boolean
+    /** BAIES (post-Ligue) : le SECRET des baies est-il révélé ? (Druide en run 2, ou assistant du Prof. CHEN)
+     *  → active la récolte sur les arbres de Route Nord & Ville Jaune. Par monde (défaut false). */
+    berrySecretKnown: boolean
+    /** BAIES : jour (YYYY-MM-DD) du suivi de récolte courant. Change de jour → les arbres se réinitialisent. */
+    berryHarvestDay: string
+    /** BAIES : arbres déjà cueillis CE jour (clés "mapId:x:y") → anti-refarm au refresh. Vidé au jour suivant. */
+    berryHarvestPicked: string[]
     /** SYLVEBARBE réveillé/battu (flûte) → sortie sud de Ville Jaune ouverte (accès Zone de Combat). */
     sylvebarbeAwake: boolean
     /** DÉNICHEUR (grotte Route Nord) : échange UNIQUE Faukon → Blaziper effectué (one-time, anti-duplication). */
@@ -144,7 +151,7 @@ export const SAVE_VERSION = 2
 const ACE_RATCHET_RESET_VERSION = 2
 
 export function emptySave(): YellowSave {
-    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, sylvebarbeAwake: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", ngplusBattles: 0, labDefi: emptyLabDefi(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null }
+    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, berrySecretKnown: false, berryHarvestDay: "", berryHarvestPicked: [], sylvebarbeAwake: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", ngplusBattles: 0, labDefi: emptyLabDefi(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null }
 }
 
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -460,6 +467,9 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         hhSpectresShown: strArr(o.hhSpectresShown),
         hhCollectorWins: typeof o.hhCollectorWins === "number" ? Math.max(0, Math.floor(o.hhCollectorWins)) : 0,
         isChampion: o.isChampion === true,
+        berrySecretKnown: o.berrySecretKnown === true,
+        berryHarvestDay: typeof o.berryHarvestDay === "string" ? o.berryHarvestDay : "",
+        berryHarvestPicked: strArr(o.berryHarvestPicked),
         sylvebarbeAwake: o.sylvebarbeAwake === true,
         caveTradeDone: o.caveTradeDone === true,
         goshHintHeard: o.goshHintHeard === true,

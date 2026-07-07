@@ -122,3 +122,20 @@ describe("NG+ fusion — run 2 non-rejouable (ngplusUsed)", () => {
         expect(emptySave().ngplusUsed).toBe(false)
     })
 })
+
+// BAIES (post-Ligue) : la CONNAISSANCE du secret est MONOTONE → union des 2 timelines à la fusion (jamais
+// perdue, ex. secret appris via l'assistant en run 1). L'état de récolte du JOUR repart à zéro (cycle neuf).
+describe("NG+ fusion — baies (secret conservé, récolte du jour réinitialisée)", () => {
+    it("secret des baies = union des 2 mondes (appris en run 1 OU en run 2 → conservé)", () => {
+        expect(mergeWorlds(world({ berrySecretKnown: true }), world({ berrySecretKnown: false })).berrySecretKnown).toBe(true)  // appris en run 2 (primary)
+        expect(mergeWorlds(world({ berrySecretKnown: false }), world({ berrySecretKnown: true })).berrySecretKnown).toBe(true)  // appris en run 1 (secondary) → PAS perdu
+        expect(mergeWorlds(world({ berrySecretKnown: false }), world({ berrySecretKnown: false })).berrySecretKnown).toBe(false) // jamais appris
+    })
+    it("le suivi de récolte du jour repart à zéro après fusion", () => {
+        const ng = world({ berryHarvestDay: "2026-07-07", berryHarvestPicked: ["yellow_route_nord:1:3"] })
+        const live = world({ berryHarvestDay: "2026-07-06", berryHarvestPicked: ["yellow_entrance:18:0"] })
+        const m = mergeWorlds(ng, live)
+        expect(m.berryHarvestDay).toBe("")
+        expect(m.berryHarvestPicked).toEqual([])
+    })
+})

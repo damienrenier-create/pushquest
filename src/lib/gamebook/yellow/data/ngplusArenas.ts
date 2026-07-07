@@ -19,9 +19,11 @@ export const NGPLUS_ARENA_TEAMS: Record<string, TrainerMonSpec[]> = {
     y_arena_g2: [{ speciesId: "colibraise", level: 8 }, { speciesId: "plumiot", level: 9 }],
     y_arena_g3: [{ speciesId: "rembodo", level: 10 }, { speciesId: "cornaissant", level: 8 }],
     y_arena_g4: [{ speciesId: "corvenin", level: 16 }],
+    // 🍒 Ses Daemons TIENNENT des baies (le joueur les voit se déclencher) → à sa défaite, le Druide livre le
+    //    secret des baies (cf. battleStore + data/berryLore). Introduit la récolte du run 2.
     y_arena_druide: [
-        { speciesId: "piouflot", level: 16 },
-        { speciesId: "draclet", level: 16, moves: ["serres_aube", "draco_souffle", "picpic", "charge"], opening: ["serres_aube"] }, // AS
+        { speciesId: "piouflot", level: 16, heldItem: "baie_soin" },
+        { speciesId: "draclet", level: 16, moves: ["serres_aube", "draco_souffle", "picpic", "charge"], opening: ["serres_aube"], heldItem: "baie_fougue" }, // AS
     ],
 
     // ===== ARÈNE ROCHE → PSY (Maître Granit) =====

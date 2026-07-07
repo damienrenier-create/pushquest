@@ -8,8 +8,11 @@
 //
 // Comportement caméra : viewport 10×9, joueur centré, scroll, lock aux bords.
 
+import { useSyncExternalStore } from "react"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
-import { getPlayer } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, subscribePlayer, isBerrySecretKnown, isBerryTreeHarvested } from "@/lib/gamebook/yellow/store/playerStore"
+import { berriesForDay, BERRY_MAP_IDS } from "@/lib/gamebook/yellow/data/berryTrees"
+import { getHeldItem } from "@/lib/gamebook/yellow/data/heldItems"
 import { SYLVEBARBE_BLOCK_MAP, SYLVEBARBE_BLOCK, SYLVEBARBE_SLEEP_SPRITE } from "@/lib/gamebook/yellow/data/sylvebarbeBlock"
 import { YELLOW_NPCS } from "@/lib/gamebook/yellow/npcs"
 import type { YellowBuilding, YellowMapData } from "@/lib/gamebook/yellow/maps"
@@ -358,6 +361,28 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId, are
     const cam = computeCamera(player.posX, player.posY, map)
     const npcsOnMap = YELLOW_NPCS.filter((n) => n.mapId === player.mapId)
     const buildings = map.buildings ?? []
+
+    // Re-render sur changement d'état des baies (récolte sur place OU secret révélé) SANS déplacement : le
+    // gameStore ne bouge pas `player` quand on cueille, donc on s'abonne au playerStore. On surveille À LA FOIS
+    // le nb d'arbres cueillis ET le flag du secret, pour que l'icône apparaisse dès la révélation.
+    useSyncExternalStore(
+        subscribePlayer,
+        () => `${getPlayer().berrySecretKnown ? 1 : 0}:${getPlayer().berryHarvestPicked.length}`,
+        () => "0:0",
+    )
+
+    // 🍒 ARBRES FERTILES (post-Ligue) : baies du jour encore sur pied. Overlay INDÉPENDANT du mode de rendu
+    //    (marche sur les cartes à backgroundImage comme Ville Jaune). Lectures non-réactives : le re-render est
+    //    piloté par le gameStore (déplacement / dialogue), qui accompagne tout changement d'état des baies.
+    const berryTrees: { x: number; y: number; emoji: string }[] =
+        BERRY_MAP_IDS.includes(player.mapId) && isBerrySecretKnown()
+            ? (() => {
+                const day = new Date().toISOString().slice(0, 10)
+                return berriesForDay(player.mapId, day)
+                    .filter((t) => !isBerryTreeHarvested(player.mapId, t.x, t.y, day))
+                    .map((t) => ({ x: t.x, y: t.y, emoji: getHeldItem(t.berryId)?.emoji ?? "🍒" }))
+            })()
+            : []
     // DEBUG : grille de coordonnées (vert = walkable, rouge = bloqué). Activer via ?grid=1.
     const showGrid = !!map.debugGrid
         || (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("grid"))
@@ -541,6 +566,18 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId, are
                         )
                     }),
                 )}
+
+                {/* 🍒 BAIES À RÉCOLTER (post-Ligue) : glinte sur l'arbre porteur du jour (A face à l'arbre pour
+                    cueillir). Overlay au-dessus des tuiles/backgroundImage, sous les PNJ et le joueur. */}
+                {berryTrees.map((t) => (
+                    <div
+                        key={`berry-${t.x}-${t.y}`}
+                        style={{ position: "absolute", ...screenPos(t.x, t.y), zIndex: 2, pointerEvents: "none", display: "flex", alignItems: "flex-start", justifyContent: "center" }}
+                        title="Baie à récolter (A)"
+                    >
+                        <span style={{ marginTop: "-14%", fontSize: "clamp(10px, 2.6dvw, 16px)", filter: "drop-shadow(0 0 2px #fff) drop-shadow(0 1px 1px rgba(0,0,0,0.5))" }}>{t.emoji}</span>
+                    </div>
+                ))}
 
                 {/* Régions sprite (zones clonées au pixel près depuis Viridian, etc.) */}
                 {map.spriteRegions?.map((r, i) => (

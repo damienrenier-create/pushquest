@@ -21,7 +21,10 @@ import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, resetFleeStreak } from "./battleStore"
 import { getPokedex } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, resetLigueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, addItem, getActiveWorld, getNgplusNemesisSpeciesId, bumpStat } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, resetLigueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, addItem, getActiveWorld, getNgplusNemesisSpeciesId, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree } from "./playerStore"
+import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
+import { getHeldItem } from "../data/heldItems"
+import { BERRY_SECRET_LINES_ASSISTANT } from "../data/berryLore"
 import { getSpecies } from "../data/species"
 import { persistYellowSave, canAbandonNgplus } from "./saveManager"
 import { rollWildEncounter, wildLevelCap, hasEncounters } from "../data/encounters"
@@ -672,6 +675,27 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 npc = findNpcAt(YELLOW_NPCS, beyond.x, beyond.y, player.mapId)
             }
         }
+
+        // 🍒 ARBRE FERTILE (post-Ligue) : face à un arbre portant une baie AUJOURD'HUI → A la récolte (→ sac).
+        //    Gate : secret des baies connu (Druide run 2 / assistant CHEN). Cartes : Route Nord & Ville Jaune.
+        if (isBerrySecretKnown() && BERRY_MAP_IDS.includes(player.mapId)) {
+            const front = getFacingTile(player)
+            // Jour recalculé ici (même clé que l'affichage MapView). À la bascule EXACTE de minuit UTC, un A peut
+            // viser la tuile du jour suivant → au pire un no-op (l'icône se corrige au rendu suivant) ou la
+            // récolte d'une VRAIE baie du nouveau jour : jamais de doublon ni de corruption.
+            const day = new Date().toISOString().slice(0, 10)
+            const berryId = berryAtTile(player.mapId, front.x, front.y, day)
+            if (berryId && harvestBerryTree(player.mapId, front.x, front.y, day, berryId)) {
+                const it = getHeldItem(berryId)
+                persistYellowSave()
+                set({ dialogue: { npcId: "berry_tree", npcName: "🌳 Arbre fertile", lineIndex: 0, lines: [
+                    `Tu écartes le feuillage… ${it?.emoji ?? "🍒"} une ${it?.name ?? "baie"} bien mûre atterrit dans ton sac !`,
+                    `${it?.description ?? "Elle se déclenche seule au combat."} Fais-la tenir à un Daemon (fiche → objet tenu).`,
+                ] } })
+                return
+            }
+        }
+
         if (!npc) return
 
         // Ordinateur du Centre : ouvre la boîte PC (rangement des Daemons).
@@ -757,6 +781,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // Assistant du labo (apprenti du Prof. CHEN) : aiguille vers les récompenses (CT du terminal, CT
         // UNIQUE du blackjack, œuf-soigneur Tonytony) et révèle le grand projet du chef.
         if (npc.id === "y_lab_assistant") {
+            // 🍒 Post-Ligue, si le secret des baies n'est pas connu, l'assistant le RÉVÈLE (fallback hors run 2,
+            //    où c'est le Druide, boss arène 1, qui s'en charge) — puis il débloque la récolte.
+            if (getPlayerSave().isChampion && !isBerrySecretKnown()) {
+                setBerrySecretKnown()
+                persistYellowSave()
+                set({ dialogue: { npcId: npc.id, npcName: "ASSISTANT", lineIndex: 0, lines: BERRY_SECRET_LINES_ASSISTANT } })
+                return
+            }
             set({ dialogue: { npcId: npc.id, npcName: "ASSISTANT", lineIndex: 0, lines: LAB_ASSISTANT_LINES } })
             return
         }
