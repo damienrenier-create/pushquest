@@ -11,7 +11,7 @@
 
 import type { PokeType, StatKey } from "../battle/types"
 
-export type HeldItemCategory = "type" | "soin" | "combat" | "signature"
+export type HeldItemCategory = "type" | "soin" | "combat" | "signature" | "baie"
 
 export interface HeldItemData {
     id: string
@@ -49,6 +49,15 @@ export interface HeldItemData {
     negateStatDrop?: boolean
     /** Multiplie l'XP gagnée par le porteur (Œuf Chance = 1.5). */
     expMult?: number
+    // ── BAIES : objets tenus RÉACTIFS & CONSOMMABLES (se retirent au déclenchement, mon.heldItem = undefined) ──
+    /** Baie de soin : à PV < ⅓, restaure cette fraction des PV max (ex. 0.30). */
+    berryHealFrac?: number
+    /** Baies fougue/éclat/vive/roc : à PV < ¼, +1 cran de cette stat (stat modifiable en combat). */
+    berryBoostStat?: "atk" | "def" | "spe" | "spc"
+    /** Baie pure : soigne tout statut majeur dès qu'il est infligé. */
+    berryCureStatus?: boolean
+    /** Baie phénix : survit à 1 PV au lieu de tomber K.O. (une seule fois). */
+    berryRevive?: boolean
 }
 
 // Objet de TYPE : +10 % aux dégâts d'un type. Famille des 15 types existants.
@@ -102,10 +111,22 @@ export const HELD_ITEMS: Record<string, HeldItemData> = {
     carillon_foudre: sig("carillon_foudre", "Carillon Foudre", "🔔", "namizeus", { spc: 1.2 }, "Augmente de 20 % l'Attaque Spé. Réservé à Namizeus.", 22),
     serre_royale: sig("serre_royale", "Serre Royale", "🦅", "aquilothan", { atk: 1.2 }, "Augmente de 20 % l'Attaque. Réservé à Aquilothan.", 22),
     poing_fantome: sig("poing_fantome", "Poing Fantôme", "👊", "bouhbou", { spe: 1.2 }, "Augmente de 20 % la Vitesse. Réservé à Bouhbou."),
+
+    // ───────── BAIES (objets tenus RÉACTIFS & consommables — RÉCOLTÉES sur les arbres post-Ligue, PAS en boutique) ─────────
+    baie_soin: { id: "baie_soin", name: "Baie de Soin", emoji: "🍒", description: "Quand le Daemon tombe sous ⅓ de ses PV, restaure 30 % des PV max. Consommée.", jcPrice: 0, category: "baie", berryHealFrac: 0.30 },
+    baie_pure: { id: "baie_pure", name: "Baie Pure", emoji: "🫧", description: "Soigne automatiquement tout statut majeur (paralysie/sommeil/gel/brûlure/poison) dès qu'il est infligé. Consommée.", jcPrice: 0, category: "baie", berryCureStatus: true },
+    baie_fougue: { id: "baie_fougue", name: "Baie Fougue", emoji: "🔴", description: "Sous ¼ de PV, augmente l'Attaque d'un cran. Consommée.", jcPrice: 0, category: "baie", berryBoostStat: "atk" },
+    baie_eclat: { id: "baie_eclat", name: "Baie Éclat", emoji: "🔵", description: "Sous ¼ de PV, augmente l'Attaque Spé d'un cran. Consommée.", jcPrice: 0, category: "baie", berryBoostStat: "spc" },
+    baie_vive: { id: "baie_vive", name: "Baie Vive", emoji: "🟢", description: "Sous ¼ de PV, augmente la Vitesse d'un cran. Consommée.", jcPrice: 0, category: "baie", berryBoostStat: "spe" },
+    baie_roc: { id: "baie_roc", name: "Baie Roc", emoji: "🟡", description: "Sous ¼ de PV, augmente la Défense d'un cran. Consommée.", jcPrice: 0, category: "baie", berryBoostStat: "def" },
+    baie_phenix: { id: "baie_phenix", name: "Baie Phénix", emoji: "🔥", description: "Une fois : survit à 1 PV au lieu de tomber K.O. Consommée.", jcPrice: 0, category: "baie", berryRevive: true },
 }
 
-/** Liste ordonnée (boutique). */
-export const HELD_ITEM_LIST: HeldItemData[] = Object.values(HELD_ITEMS)
+/** IDs des 7 baies (récompenses d'arbres). */
+export const BERRY_IDS = ["baie_soin", "baie_pure", "baie_fougue", "baie_eclat", "baie_vive", "baie_roc", "baie_phenix"] as const
+
+/** Liste ordonnée (boutique en JC). Les BAIES en sont exclues (récoltées sur les arbres, pas vendues). */
+export const HELD_ITEM_LIST: HeldItemData[] = Object.values(HELD_ITEMS).filter((i) => i.category !== "baie")
 
 export function getHeldItem(id?: string): HeldItemData | undefined {
     return id ? HELD_ITEMS[id] : undefined

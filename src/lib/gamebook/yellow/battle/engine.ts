@@ -17,6 +17,7 @@ import { talentEffect, talentOutgoingDmgMult, talentIncomingDmgMult } from "./ta
 import { typeEffectiveness, effectivenessMessage, moveCategory, resolveAdaptiveStab } from "./typeChart"
 import * as Status from "./status"
 import { obedienceCap, disobeyChance } from "./obedience"
+import { pinchBerry } from "./berries"
 import { accuracyCheck } from "./accuracy"
 import { chooseAiAction, type AiLevel } from "./ai"
 import { xpForDefeat, applyExp } from "./xp"
@@ -846,6 +847,13 @@ function tryInflictStatus(state: BattleState, targetSide: SideId, status: Exclud
     mon.statusCounter = Status.initialStatusCounter(status, rng)
     events.push({ kind: "status", side: targetSide, status })
     events.push({ kind: "message", text: Status.statusApplyMessage(status, displayName(mon)) })
+    // BAIE PURE : neutralise immédiatement le statut qu'on vient d'infliger, puis se consomme.
+    const cure = heldEffect(mon)
+    if (cure?.berryCureStatus) {
+        mon.status = "NONE"; mon.statusCounter = 0
+        mon.heldItem = undefined
+        events.push({ kind: "message", text: `${displayName(mon)} : la ${cure.name} neutralise le statut !` })
+    }
 }
 
 function applyVolatile(mon: BattleMon, vol: NonNullable<MoveData["effect"]>["inflictVolatile"], rng: Rng, events: BattleEvent[], named: BattleMon) {
@@ -976,6 +984,27 @@ function applyDamage(state: BattleState, side: SideId, amount: number, events: B
     const mon = active(state[side])
     mon.currentHp = Math.max(0, mon.currentHp - amount)
     events.push({ kind: "hp", side, hp: mon.currentHp, max: maxHpOf(mon) })
+    triggerPinchBerry(state, side, events) // BAIE : soin/boost quand les PV passent bas (consommée)
+}
+
+// BAIE réactive « pinch » : quand le porteur (encore debout) tombe sous le seuil de PV → soin (⅓) OU +1 stat (¼),
+// puis se consomme. Déterministe (aucun RNG) → identique en PvE et PvP. Le K.O. est géré par la Baie Phénix (checkFaints).
+function triggerPinchBerry(state: BattleState, side: SideId, events: BattleEvent[]) {
+    const mon = active(state[side])
+    if (mon.currentHp <= 0) return
+    const it = heldEffect(mon)
+    if (!it) return
+    const max = maxHpOf(mon)
+    const trig = pinchBerry(it, mon.currentHp / max)
+    if (!trig) return
+    mon.heldItem = undefined // consommée au déclenchement
+    if (trig.kind === "heal") {
+        applyHeal(state, side, Math.max(1, Math.floor(max * trig.frac)), events)
+        events.push({ kind: "message", text: `${displayName(mon)} : la ${it.name} restaure ses PV !` })
+    } else {
+        mon.stages[trig.stat] = clampStage(mon.stages[trig.stat] + 1)
+        events.push({ kind: "message", text: `${displayName(mon)} : la ${it.name} le galvanise !` })
+    }
 }
 
 function applyHeal(state: BattleState, side: SideId, amount: number, events: BattleEvent[]) {
@@ -1041,7 +1070,17 @@ function checkFaints(state: BattleState, events: BattleEvent[]) {
         const s = state[side]
         const mon = active(s)
         if (mon.currentHp <= 0 && !(mon as any).__fainted) {
-            (mon as any).__fainted = true
+            // BAIE PHÉNIX : une seule fois, survit à 1 PV au lieu de tomber K.O.
+            const rev = heldEffect(mon)
+            if (rev?.berryRevive && !(mon as any).__phoenixUsed) {
+                mon.currentHp = 1
+                ;(mon as any).__phoenixUsed = true
+                mon.heldItem = undefined
+                events.push({ kind: "hp", side, hp: 1, max: maxHpOf(mon) })
+                events.push({ kind: "message", text: `${displayName(mon)} : la ${rev.name} le maintient à 1 PV !` })
+                continue
+            }
+            ;(mon as any).__fainted = true
             events.push({ kind: "faint", side, name: displayName(mon) })
             events.push({ kind: "message", text: `${displayName(mon)} est K.O. !` })
             // PvP : le camp ADVERSE (celui dont l'actif vient de KO l'autre) gagne l'XP.

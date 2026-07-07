@@ -185,6 +185,7 @@ function tryLaunchTrainer(trainerId: string, isRematch = false): ActiveDialogue 
         const inst = createMonInstance(speciesId, lvl, { owned: false, moveIds: s.moves, ...trainerBoost(speciesId, lvl, tier) })
         // Opening scripté (boss) → attaché au combattant runtime (consommé par l'IA ennemie).
         if (s.opening?.length) Object.assign(inst, { openingMoves: [...s.opening] })
+        if (s.heldItem) Object.assign(inst, { heldItem: s.heldItem }) // baie/objet tenu imposé par le dresseur
         return inst
     })
     const seed = Math.floor(Math.random() * 1e9) >>> 0

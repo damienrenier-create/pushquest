@@ -22,6 +22,8 @@ export interface TrainerMonSpec {
     /** OPENING SCRIPTÉ : moveIds imposés à ses 1ers tours (ordre), quoi qu'il arrive — priorité
      *  sur l'IA et le budget d'énergie. Ex. un boss qui lance sa signature d'entrée. */
     opening?: string[]
+    /** OBJET TENU imposé (id de data/heldItems.ts) — ex. le boss de l'arène 1 fait tenir des BAIES à ses Daemons. */
+    heldItem?: string
 }
 
 export interface TrainerData {
