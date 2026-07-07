@@ -28,7 +28,7 @@ import { NGPLUS_BOSS_GIFTS } from "../data/ngplusArenas"
 import { getMove, getMoveByName } from "../data/moves"
 import { getSpecies } from "../data/species"
 import { SBIRE_REWARD_REPS, SBIRE_REWARD_REPS_3, SBIRE_REWARD_REPS_5, SBIRE_REWARD_BALL_ID, SBIRE_REWARD_BALL_ID_4, SBIRE_REWARD_CT_ID, SBIRE_REWARD_CT_FALLBACK_REPS } from "../data/sbire"
-import { ACE_TRAINER_ID, aceReward, aceWinTaunt } from "../data/ace"
+import { ACE_TRAINER_ID, aceReward, aceWinTaunt, speciesAtLevel } from "../data/ace"
 import { ORCALINE_TRAINER_ID, ORCALINE_GIFT_SPECIES, ORCALINE_GIFT_LEVEL, ORCALINE_BALL_REWARD_ID, ORCALINE_BALL_AT_LEVEL, ORCALINE_GIFT_LINES, ORCALINE_REMATCH_WIN_LINES, ORCALINE_BALL_LINES } from "../data/orcalineTrainer"
 import { GEKROC_STONE_ITEM } from "../data/gekroc"
 import { frontierEnergyRefund, FRONTIER_EXP_MULT } from "../frontier/engine"
@@ -512,7 +512,8 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                 // NG+ : ACE lègue le NÉMÉSIS (contre-lignée) au lieu du Panthéon. Fallback Panthéon si indisponible.
                 const nem = getActiveWorld() === "ngplus" ? getNgplusNemesisSpeciesId() : null
                 let giftId = "pantheon"
-                if (nem) { try { createMonInstance(nem, lvl, { owned: true }); giftId = nem; gaveNemesis = true } catch { giftId = "pantheon" } }
+                // speciesAtLevel : le némésis est offert au STADE NATUREL de son niveau (jamais une souche à haut niveau).
+                if (nem) { try { const gid = speciesAtLevel(nem, lvl); createMonInstance(gid, lvl, { owned: true }); giftId = gid; gaveNemesis = true } catch { giftId = "pantheon" } }
                 addCaught(createMonInstance(giftId, lvl, { owned: true }))
             }
             if (r.refund) grantReps(storeState.energySpent) // remboursement de l'énergie dépensée

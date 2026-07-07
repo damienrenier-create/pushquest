@@ -7,7 +7,7 @@
 import { useSyncExternalStore } from "react"
 import type { MonInstance, MoveSlot } from "../battle/types"
 import { fullStats } from "../battle/stats"
-import { getSpecies, registerCustomSpecies, isCustomSpeciesId } from "../data/species"
+import { getSpecies, registerCustomSpecies, isCustomSpeciesId, CANONICAL_NEMESIS } from "../data/species"
 import { type CustomSpec, type StoredCustomDaemon, buildCustomSpecies, buildNemesis, customStarterSpeciesId, customLineageBaseId } from "../create/customSpecies"
 import { tradeEvolutionTarget, applyEvolution, type EvolutionResult } from "../battle/evolution"
 import { getMove } from "../data/moves"
@@ -195,6 +195,10 @@ export function reregisterCustomDaemons(): void {
  *  l'équipe, retrouve sa spec, génère + enregistre son Némésis (déterministe, idempotent), renvoie son
  *  speciesId de STADE 1 (pour l'équipe d'ACE / le cadeau). null si pas de custom en équipe ou spec introuvable. */
 export function getNgplusNemesisSpeciesId(): string | null {
+    // 1) STARTER CANONIQUE avec némésis dédié (ex. Gavillus → Goatiny/Mouflorage) : ACE field la contre-lignée
+    //    canonique (id de STADE 1 ; speciesAtLevel l'évolue au bon stade côté équipe d'ACE / cadeau).
+    for (const m of st.team) { const canon = CANONICAL_NEMESIS[m.speciesId]; if (canon) return canon }
+    // 2) Sinon : Daemon CUSTOM (wizard) → némésis auto-généré (buildNemesis, déterministe, idempotent).
     const teamCustom = st.team.find((m) => isCustomSpeciesId(m.speciesId))
     if (!teamCustom) return null
     const stored = st.customDaemons.find((d) => teamCustom.speciesId.startsWith(customLineageBaseId(d)))

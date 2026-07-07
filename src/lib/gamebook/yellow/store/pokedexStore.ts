@@ -50,11 +50,11 @@ export function hydratePokedex(state: PokedexState) {
     emit()
 }
 
-export function pokedexCompletion(isChampion = false): { caught: number; total: number; pct: number } {
-    // Le total EXCLUT les espèces run-2 non capturées (Gékraise/Ukognos/Merorem) ET les espèces
-    // post-Ligue tant qu'on n'est pas Champion → pas de spoiler ni de compteur qui « gonfle » avant
-    // le sacre. Une fois révélées, elles rentrent dans le total (et dans les captures si obtenues).
-    const total = visibleDexSpecies(dex.caught, isChampion).length
+export function pokedexCompletion(isChampion = false, isRun2 = false): { caught: number; total: number; pct: number } {
+    // Le total EXCLUT les espèces run-2 (hors run 2) et post-Ligue (hors Champion) non révélées → pas de
+    // spoiler ni de compteur qui « gonfle » avant l'heure. En run 2 (isRun2), toute la roster étendue est
+    // révélée (le joueur est un ex-champion). Une fois révélées, elles rentrent dans le total.
+    const total = visibleDexSpecies(dex.caught, isChampion, isRun2).length
     const caught = dex.caught.length
     return { caught, total, pct: total > 0 ? Math.round((caught / total) * 100) : 0 }
 }

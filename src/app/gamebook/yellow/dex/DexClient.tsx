@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { visibleDexSpecies } from "@/lib/gamebook/yellow/data/species"
 import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
-import { usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, useActiveWorld } from "@/lib/gamebook/yellow/store/playerStore"
 import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { POKE_TYPES, type PokeType, type SpeciesData } from "@/lib/gamebook/yellow/battle/types"
 import { TYPE_COLORS, baseStatTotal } from "./dexShared"
@@ -35,9 +35,10 @@ export default function DexClient() {
     // Hydrate la save (idempotent) : sinon le Pokédex en mémoire est vide → les run-2 restent masqués (défaut sûr).
     useEffect(() => { void loadYellowSave() }, [])
 
-    // Base VISIBLE : exclut les run-2 (Gékraise/Ukognos/Merorem) non capturés ET les créations post-Ligue
-    // tant qu'on n'est pas Champion → invisibles avant le sacre, révélées pour tous ensuite.
-    const visible = useMemo(() => visibleDexSpecies(dex.caught, player.isChampion), [dex.caught, player.isChampion])
+    // Base VISIBLE : cache les run-2 (hors run 2) et les créations post-Ligue (hors Champion) non révélées.
+    // En run 2, toute la roster étendue (créations canonisées + exclusifs run 2) est révélée.
+    const isRun2 = useActiveWorld() === "ngplus" // hook réactif : re-render au changement de monde
+    const visible = useMemo(() => visibleDexSpecies(dex.caught, player.isChampion, isRun2), [dex.caught, player.isChampion, isRun2])
     const entries = useMemo(() => {
         const q = query.trim().toLowerCase()
         return visible

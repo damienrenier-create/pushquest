@@ -1978,7 +1978,7 @@ export const SPECIES: Record<string, SpeciesData> = {
         catchRate: 45, baseExp: 70, rarity: "RARE", growthRate: "slow",
         secretTalent: "affinite_elem", postLeague: true,
         role: "Vol/Roche — vif (jeune crocodile étrange)",
-        description: "Jeune crocodile à l'allure étrange, déjà d'une intelligence troublante. Des plaques de pierre affleurent sur son dos, de minuscules moignons pointent à ses épaules.",
+        description: "Jeune crocodile à l'allure étrange, déjà d'une intelligence troublante. Des plaques de pierre affleurent sur son dos, de minuscules moignons pointent à ses épaules. — Création originale de Mools ©",
         sprite: "/yellow/sprites/dex/gavillus.png",
     },
     crocodaillus: {
@@ -1996,7 +1996,7 @@ export const SPECIES: Record<string, SpeciesData> = {
         catchRate: 45, baseExp: 150, rarity: "RARE", growthRate: "slow",
         secretTalent: "affinite_elem", postLeague: true,
         role: "Vol/Roche — attaquant rapide",
-        description: "Mi-crocodile, mi-caméléon : ses yeux commencent à pivoter chacun de leur côté, et des ailes à demi formées percent sa carapace de pierre.",
+        description: "Mi-crocodile, mi-caméléon : ses yeux commencent à pivoter chacun de leur côté, et des ailes à demi formées percent sa carapace de pierre. — Création originale de Mools ©",
         sprite: "/yellow/sprites/dex/crocodaillus.png",
     },
     alirocaillus: {
@@ -2014,7 +2014,7 @@ export const SPECIES: Record<string, SpeciesData> = {
         catchRate: 45, baseExp: 210, rarity: "RARE", growthRate: "slow",
         secretTalent: "affinite_elem", postLeague: true,
         role: "Vol/Roche — sweeper physique rapide (création canonisée)",
-        description: "Caméléon de pierre aux larges ailes. Son cri porte loin et sa ruse n'a pas d'égale ; il fond du ciel avant qu'on l'ait vu bouger.",
+        description: "Caméléon de pierre aux larges ailes. Son cri porte loin et sa ruse n'a pas d'égale ; il fond du ciel avant qu'on l'ait vu bouger. — Création originale de Mools ©",
         sprite: "/yellow/sprites/dex/alirocaillus.png",
     },
 
@@ -2035,7 +2035,7 @@ export const SPECIES: Record<string, SpeciesData> = {
         catchRate: 45, baseExp: 65, rarity: "RARE", growthRate: "slow",
         secretTalent: "affinite_elem", postLeague: true,
         role: "Sol/Élec — chevreau (offensif spécial)",
-        description: "Chevreau des hautes cimes dont le pelage grésille de statique. Ses cornes naissantes crépitent au moindre orage.",
+        description: "Chevreau des hautes cimes dont le pelage grésille de statique. Ses cornes naissantes crépitent au moindre orage. — Némésis forgée par Mools pour contrer Gavillus ©",
         sprite: "/yellow/sprites/dex/goatiny.png",
     },
     mouflorage: {
@@ -2055,7 +2055,7 @@ export const SPECIES: Record<string, SpeciesData> = {
         catchRate: 45, baseExp: 200, rarity: "RARE", growthRate: "slow",
         secretTalent: "affinite_elem", postLeague: true,
         role: "Sol/Élec — mur-attaquant spécial (le contre de Gavillus)",
-        description: "Mouflon d'orage aux cornes-bobines, ancré au roc. Froid et calculateur, il paralyse sa proie et lui vole sa vitesse avant de la foudroyer. On murmure qu'il fut façonné pour terrasser un certain caméléon ailé.",
+        description: "Mouflon d'orage aux cornes-bobines, ancré au roc. Froid et calculateur, il paralyse sa proie et lui vole sa vitesse avant de la foudroyer. On murmure qu'il fut façonné pour terrasser un certain caméléon ailé. — Némésis forgée par Mools pour contrer Gavillus ©",
         sprite: "/yellow/sprites/dex/mouflorage.png",
     },
 }
@@ -2085,19 +2085,29 @@ export const DEX_COUNT = SPECIES_IDS.length
  *   - les `postLeague` (créations canonisées) tant que le joueur n'est pas `isChampion` — révélées après le sacre,
  *     et dès lors pour TOUT LE MONDE.
  *  `caught` = Pokédex du monde courant (une espèce possédée reste visible dans tous les cas). Ordre = insertion. */
-/** SOURCE UNIQUE du gate : une espèce est-elle MASQUÉE des dex pour cet état de jeu ?
- *  (runTwoOnly non capturé, OU postLeague hors Champion et non possédé). Utilisé par visibleDexSpecies
- *  ET par l'affichage de la chaîne d'évolution (pour ne pas révéler un stade scellé voisin). */
-export function isDexHidden(sp: SpeciesData, caught: readonly string[] = [], isChampion = false): boolean {
-    if (sp.runTwoOnly && !caught.includes(sp.id)) return true
-    if (sp.postLeague && !isChampion && !caught.includes(sp.id)) return true
+/** SOURCE UNIQUE du gate : une espèce est-elle MASQUÉE des dex pour cet état de jeu ? Utilisé par
+ *  visibleDexSpecies ET par le masquage des stades scellés dans la chaîne d'évolution.
+ *  - `runTwoOnly` (Gékraise/Ukognos/Merorem) : masqués SAUF en run 2 (`isRun2`) ou une fois possédés.
+ *  - `postLeague` (créations canonisées Gavillus/Goatiny) : masquées SAUF si Champion, en run 2 (le joueur
+ *    y est un ex-champion : il a forcément battu la Ligue au run 1), ou une fois possédées. */
+export function isDexHidden(sp: SpeciesData, caught: readonly string[] = [], isChampion = false, isRun2 = false): boolean {
+    if (sp.runTwoOnly && !isRun2 && !caught.includes(sp.id)) return true
+    if (sp.postLeague && !isChampion && !isRun2 && !caught.includes(sp.id)) return true
     return false
 }
 
-export function visibleDexSpecies(caught: readonly string[] = [], isChampion = false): SpeciesData[] {
-    return Object.values(SPECIES).filter((sp) => !isDexHidden(sp, caught, isChampion))
+export function visibleDexSpecies(caught: readonly string[] = [], isChampion = false, isRun2 = false): SpeciesData[] {
+    return Object.values(SPECIES).filter((sp) => !isDexHidden(sp, caught, isChampion, isRun2))
 }
 
 export function speciesByDexNo(dexNo: number): SpeciesData | null {
     return Object.values(SPECIES).find((s) => s.dexNo === dexNo) ?? null
+}
+
+/** NÉMÉSIS CANONIQUE : une lignée-starter CANONISÉE → sa contre-lignée dédiée qu'ACE field en run 2 (au lieu
+ *  d'un némésis auto-généré par buildNemesis). Clé = n'importe quel stade du starter. Ex. Gavillus (création
+ *  du joueur, canonisée) → Goatiny/Mouflorage (Sol/Élec, forgé pour le contrer). Les Daemons CUSTOM (créés au
+ *  wizard) gardent leur némésis auto-généré ; seuls les starters canoniques listés ici ont un contre figé. */
+export const CANONICAL_NEMESIS: Record<string, string> = {
+    gavillus: "goatiny", crocodaillus: "goatiny", alirocaillus: "goatiny",
 }

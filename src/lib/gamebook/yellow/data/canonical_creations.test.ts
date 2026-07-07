@@ -2,8 +2,9 @@
 // Vérifie la forme, le gate Champion (visibleDexSpecies/compteur), l'éligibilité Zone de Combat, et le design
 // du contre (Mouflorage mure Gavillus). Lecture pure des données + stores.
 import { describe, it, expect } from "vitest"
-import { SPECIES, visibleDexSpecies, isDexHidden } from "./species"
+import { SPECIES, visibleDexSpecies, isDexHidden, CANONICAL_NEMESIS } from "./species"
 import { getMove } from "./moves"
+import { speciesAtLevel } from "./ace"
 import { hydratePokedex, pokedexCompletion } from "../store/pokedexStore"
 import { typeEffectiveness, moveCategory } from "../battle/typeChart"
 
@@ -76,6 +77,27 @@ describe("Créations canonisées — lignées Gavillus & Goatiny", () => {
         const before = pokedexCompletion(false).total
         const after = pokedexCompletion(true).total
         expect(after).toBe(before + 5)
+    })
+
+    it("RUN 2 : les créations post-Ligue ET les exclusifs run-2 sont RÉVÉLÉS (le joueur y est ex-champion)", () => {
+        // hors run 2, non-Champion → les postLeague sont masqués
+        for (const id of CANON) expect(isDexHidden(SPECIES[id], [], false, false)).toBe(true)
+        // en run 2 → révélés
+        for (const id of CANON) expect(isDexHidden(SPECIES[id], [], false, true)).toBe(false)
+        // les exclusifs runTwoOnly : cachés hors run 2, révélés en run 2 (même non capturés)
+        expect(isDexHidden(SPECIES.ukognos, [], false, false)).toBe(true)
+        expect(isDexHidden(SPECIES.ukognos, [], false, true)).toBe(false)
+        const run2 = visibleDexSpecies([], false, true).map((s) => s.id)
+        for (const id of [...CANON, "ukognos", "merorem", "gekraise"]) expect(run2).toContain(id)
+    })
+
+    it("NÉMÉSIS CANONIQUE : Gavillus (tous stades) → Goatiny, qu'ACE field au bon stade (Mouflorage en haut niveau)", () => {
+        expect(CANONICAL_NEMESIS.gavillus).toBe("goatiny")
+        expect(CANONICAL_NEMESIS.crocodaillus).toBe("goatiny")
+        expect(CANONICAL_NEMESIS.alirocaillus).toBe("goatiny")
+        // ACE field le némésis via speciesAtLevel → Goatiny bas niveau, Mouflorage dès l'évolution (30)
+        expect(speciesAtLevel("goatiny", 5)).toBe("goatiny")
+        expect(speciesAtLevel("goatiny", 50)).toBe("mouflorage")
     })
 
     it("DESIGN DU CONTRE : Mouflorage (Sol/Élec) mure Gavillus (Vol/Roche)", () => {
