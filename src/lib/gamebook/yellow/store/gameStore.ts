@@ -14,6 +14,8 @@ import { tryMove } from "../engine/movement"
 import { findExitAt } from "../engine/warp"
 import { getNpcInFrontOfPlayer, getFacingTile, getTileInFront, findNpcAt } from "../engine/interaction"
 import { YELLOW_MAPS, currentArenaMapId, CENDREVILLE_SPAWN } from "../maps"
+import { currentGymBadge } from "../data/arenaInfos"
+import type { BadgeId } from "../data/cts"
 import type { YellowMapData } from "../maps"
 import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
@@ -73,6 +75,7 @@ interface GameStore {
     shopOpen: boolean // boutique ouverte (vendeur)
     pcOpen: boolean // boîte PC ouverte (ordinateur du Centre Daemon)
     guideOpen: boolean // guide du Bosquet ouvert (panneau devant le gym)
+    arenaInfoOpen: BadgeId | null // carrousel d'infos stratégiques d'une arène (panneau devant l'entrée)
     libraryOpen: boolean // Registre des Dresseurs (bibliothèque de l'infirmerie)
     advisorOpen: boolean // Conseiller (PNJ à côté du Centre) : questions → base de données
     labOpen: boolean // Terminal d'expériences (labo, étage de l'infirmerie)
@@ -110,6 +113,7 @@ interface GameStore {
     closeShop: () => void
     closePc: () => void
     closeGuide: () => void
+    closeArenaInfo: () => void
     closeLibrary: () => void
     closeAdvisor: () => void
     closeLab: () => void
@@ -331,6 +335,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     shopOpen: false,
     pcOpen: false,
     guideOpen: false,
+    arenaInfoOpen: null,
     libraryOpen: false,
     advisorOpen: false,
     labOpen: false,
@@ -358,7 +363,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     move: (dir) => {
         const { player, map, dialogue } = get()
         // Mouvement bloqué pendant un dialogue, une boutique, le PC ou un combat.
-        if (dialogue || get().shopOpen || get().pcOpen || get().guideOpen || get().libraryOpen || get().advisorOpen || get().labOpen || get().combatShopOpen || get().signOpen !== null) return
+        if (dialogue || get().shopOpen || get().pcOpen || get().guideOpen || get().arenaInfoOpen !== null || get().libraryOpen || get().advisorOpen || get().labOpen || get().combatShopOpen || get().signOpen !== null) return
         if (getBattleSnapshot().battle) return
 
         const next = tryMove(player, dir, map)
@@ -695,9 +700,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
-        // Panneau du Bosquet : ouvre le GUIDE (pop-up riche) au lieu d'un dialogue.
+        // Panneau devant une arène : ouvre le CARROUSEL d'infos stratégiques (auto-calculé, run 1 & 2).
+        // Gym de Ville Jaune = l'arène courante (prochaine non vaincue) ; Cendreville = l'arène Eau.
         if (npc.id === "y_gym_sign") {
-            set({ guideOpen: true })
+            set({ arenaInfoOpen: currentGymBadge(getPlayerSave().badges) })
+            return
+        }
+        if (npc.id === "y_eau_arena_sign") {
+            set({ arenaInfoOpen: "eau" })
             return
         }
 
@@ -1086,6 +1096,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     closeShop: () => set({ shopOpen: false }),
     closeGuide: () => set({ guideOpen: false }),
+    closeArenaInfo: () => set({ arenaInfoOpen: null }),
     closeLibrary: () => set({ libraryOpen: false }),
     closeAdvisor: () => set({ advisorOpen: false }),
     closeLab: () => set({ labOpen: false }),

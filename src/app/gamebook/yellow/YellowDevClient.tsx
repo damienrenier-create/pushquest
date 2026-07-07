@@ -30,6 +30,7 @@ import ArenaHallOfFamePanel from "./ArenaHallOfFamePanel"
 import DexEntryScreen from "./battle/DexEntryScreen"
 import IntroCinematic from "./IntroCinematic"
 import GuidePanel from "./GuidePanel"
+import ArenaInfoPanel from "./ArenaInfoPanel"
 import LibraryPanel from "./LibraryPanel"
 import MovesPanel from "./MovesPanel"
 import AdvisorPanel from "./AdvisorPanel"
@@ -173,6 +174,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // Overlays plein écran gérés côté store (fermés par le bouton B via goBack).
     const guideOpen = useGameStore((s) => s.guideOpen)
     const closeGuide = useGameStore((s) => s.closeGuide)
+    const arenaInfoOpen = useGameStore((s) => s.arenaInfoOpen)
+    const closeArenaInfo = useGameStore((s) => s.closeArenaInfo)
     const libraryOpen = useGameStore((s) => s.libraryOpen)
     const closeLibrary = useGameStore((s) => s.closeLibrary)
     const advisorOpen = useGameStore((s) => s.advisorOpen)
@@ -1192,6 +1195,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (shopOpen) { closeShop(); return true }
         if (signOpen !== null) { closeSign(); return true } // signOpen est un index (0 = 1er panneau)
         if (guideOpen) { closeGuide(); return true }
+        if (arenaInfoOpen) { closeArenaInfo(); return true }
         if (libraryOpen) { closeLibrary(); return true }
         if (advisorOpen) { closeAdvisor(); return true }
         if (labOpen) { closeLab(); return true }
@@ -1830,6 +1834,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 )
             })()}
             <GuidePanel />
+            {arenaInfoOpen && <ArenaInfoPanel badge={arenaInfoOpen} isRun2={activeWorld === "ngplus"} onClose={closeArenaInfo} />}
             <LibraryPanel />
             <AdvisorPanel />
             <LabPanel />
