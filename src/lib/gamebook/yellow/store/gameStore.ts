@@ -38,7 +38,7 @@ import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock } from "../data/sylvebarbeBlock
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
 import { SYLVEBARBE_NPC_ID, SYLVEBARBE_INTRO_LINES, SYLVEBARBE_DONE_LINES, SYLVEBARBE_NO_FLUTE_LINES, SYLVEBARBE_NO_TEAM_LINES, buildSylvebarbe, FLUTE_GIVE_LINES } from "../data/sylvebarbe"
 import { CHEN_LAB_LINES, LAB_ASSISTANT_LINES, CHEN_ABANDON_OFFER_LINES } from "../data/labDialogues"
-import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
+import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADE_RECEIVE_RUN1, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_TRADER_OFFER_LINES_RUN1, HH_TRADER_NEED_LINES_RUN1, HH_TRADER_HAS_MORROW_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
 
 export interface ActiveDialogue {
     npcId: string
@@ -238,18 +238,23 @@ function tryLaunchSylvebarbe(): ActiveDialogue | null {
     return null
 }
 
-// BROCANTEUR (maison hantée) : DEMANDE un Roctaur (uid) du joueur et l'échange contre un MORROW (Glace/Psy).
-// Morrow ne trade-évolue pas (applyTradeEvolution = no-op défensif). Renvoie le dialogue de résultat.
+// BROCANTEUR (maison hantée) : échange le Roctaur (uid) du joueur — WORLD-AWARE. RUN 1 : il revient trade-ÉVOLUÉ
+// en ROCHISON (service d'évolution). RUN 2 : échangé contre un MORROW (Glace/Psy, exclusif run 2). Renvoie le dialogue.
 function doHhTrade(giveUid: string): ActiveDialogue | null {
     const owner = [...getPlayerSave().team, ...getPlayerSave().pc].find((m) => m.uid === giveUid)
     if (!owner) return null
-    const received = createMonInstance(HH_TRADE_RECEIVE, owner.level, { owned: true }) // Morrow
-    executeTrade(giveUid, received)      // retire le Roctaur, ajoute le Morrow
-    applyTradeEvolution(received.uid)    // Morrow ne trade-évolue pas → no-op (défensif si évolution ajoutée un jour)
+    const ngplus = getActiveWorld() === "ngplus"
+    const receiveId = ngplus ? HH_TRADE_RECEIVE : HH_TRADE_RECEIVE_RUN1 // run 2 = Morrow ; run 1 = Rochison (trade-évo)
+    const received = createMonInstance(receiveId, owner.level, { owned: true })
+    if (!ngplus) received.statPoints = owner.statPoints ?? 0 // trade-évo Rochison : préserve les points Saiyan comme un vrai échange
+    executeTrade(giveUid, received)      // retire le Roctaur, ajoute le reçu (Morrow ou Rochison)
+    applyTradeEvolution(received.uid)    // Morrow/Rochison ne trade-évoluent pas plus loin → no-op (défensif)
     persistYellowSave()
     return {
         npcId: HH_TRADER_ID, npcName: "BROCANTEUR", lineIndex: 0,
-        lines: ["Marché conclu ! Je récupère ton Roctaur…", "…et tu reçois mon MORROW ! Une créature d'un autre monde, dont le baiser glace le cœur. Prends-en soin."],
+        lines: ngplus
+            ? ["Marché conclu ! Je récupère ton Roctaur…", "…et tu reçois mon MORROW ! Une créature d'un autre monde, dont le baiser glace le cœur. Prends-en soin."]
+            : ["Marché conclu ! Ton Roctaur file dans mon canal d'échange secret…", "…et il te REVIENT, ÉVOLUÉ en ROCHISON ! La magie de l'échange, l'ami. 🪨"],
     }
 }
 
@@ -885,14 +890,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
-        // BROCANTEUR (maison hantée) : DEMANDE un Roctaur → donne un Morrow (Glace/Psy). Répétable.
+        // BROCANTEUR (maison hantée) : échange un Roctaur — WORLD-AWARE. RUN 1 → ROCHISON (trade-évo) ; RUN 2 → MORROW.
+        // Un joueur possédant DÉJÀ un Morrow (obtenu jadis en run 1) est ÉCARTÉ du service Rochison → il le garde.
         if (npc.id === HH_TRADER_ID) {
-            const give = [...getPlayerSave().team, ...getPlayerSave().pc].find((m) => m.speciesId === HH_TRADE_GIVE)
-            if (!give) {
-                set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: HH_TRADER_NEED_LINES } })
+            const ngplus = getActiveWorld() === "ngplus"
+            if (!ngplus && getPokedex().caught.includes(HH_TRADE_RECEIVE)) {
+                set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: HH_TRADER_HAS_MORROW_LINES } })
                 return
             }
-            set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: HH_TRADER_OFFER_LINES, lineIndex: 0 }, pendingHhTrade: give.uid })
+            const give = [...getPlayerSave().team, ...getPlayerSave().pc].find((m) => m.speciesId === HH_TRADE_GIVE)
+            if (!give) {
+                set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: ngplus ? HH_TRADER_NEED_LINES : HH_TRADER_NEED_LINES_RUN1 } })
+                return
+            }
+            set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: ngplus ? HH_TRADER_OFFER_LINES : HH_TRADER_OFFER_LINES_RUN1, lineIndex: 0 }, pendingHhTrade: give.uid })
             return
         }
 

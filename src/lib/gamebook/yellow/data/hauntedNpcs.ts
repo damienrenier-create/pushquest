@@ -1,10 +1,12 @@
 // src/lib/gamebook/yellow/data/hauntedNpcs.ts
 //
 // Les 2 PNJ devant la MAISON HANTÉE (Cendreville).
-//  • PNJ1 = BROCANTEUR : DEMANDE un Roctaur du joueur et l'échange contre un MORROW (Glace/Psy, hommage
-//    Lippoutou). Réutilise executeTrade (cf. gameStore). Répétable tant que le joueur a un Roctaur.
-//    NB : Rochison (évo-ÉCHANGE de Roctaur) n'est plus donné ici — il reste obtenable via un ÉCHANGE
-//    ENTRE JOUEURS réels (troquer un Roctaur avec un pote déclenche sa trade-évolution).
+//  • PNJ1 = BROCANTEUR : échange un Roctaur du joueur — WORLD-AWARE :
+//     - RUN 1 : le Roctaur revient trade-ÉVOLUÉ en ROCHISON (service d'évolution-échange, comme à l'origine).
+//     - RUN 2 : le Roctaur est échangé contre un MORROW (Glace/Psy, hommage Lippoutou) — Morrow EXCLUSIF au run 2.
+//    Réutilise executeTrade (cf. gameStore). Répétable tant que le joueur a un Roctaur. Un joueur qui possède
+//    DÉJÀ un Morrow (obtenu jadis en run 1) est ÉCARTÉ du service Rochison → il garde son Morrow, et pour obtenir
+//    un Rochison il doit passer par un vrai ÉCHANGE ENTRE JOUEURS (trade-évolution du Roctaur avec un pote).
 //  • PNJ2 = COLLECTIONNEUR DE SPECTRES : dresseur réaffrontable ; montre-lui 3 Daemons SPECTRE
 //    DIFFÉRENTS au fil de tes combats + bats-le 3× → il offre la CT26 (Frappe d'Au-delà).
 
@@ -23,6 +25,20 @@ export const HH_TRADER_OFFER_LINES = [
 ]
 export const HH_TRADER_NEED_LINES = [
     "Reviens me voir avec un ROCTAUR et mon Morrow est à toi !",
+]
+
+// RUN 1 : le BROCANTEUR fait trade-ÉVOLUER ton Roctaur → ROCHISON (au lieu de donner un Morrow, réservé au run 2).
+export const HH_TRADE_RECEIVE_RUN1 = "rochison"
+export const HH_TRADER_OFFER_LINES_RUN1 = [
+    "Hé, l'ami ! Un ROCTAUR ? Confie-le-moi : je le fais passer par un canal d'échange très spécial…",
+    "…et il te reviendra ÉVOLUÉ en ROCHISON ! La magie de l'échange, rien de moins. Marché conclu ?",
+]
+export const HH_TRADER_NEED_LINES_RUN1 = [
+    "Amène-moi un ROCTAUR et je te le fais évoluer en ROCHISON, promis d'outre-tombe !",
+]
+// Un joueur possédant DÉJÀ un Morrow (obtenu jadis) est écarté du service Rochison.
+export const HH_TRADER_HAS_MORROW_LINES = [
+    "Toi… tu as déjà un MORROW ?! Sacré veinard. Entre nous, l'affaire est close — file, et prends-en soin.",
 ]
 
 // ── PNJ2 — COLLECTIONNEUR DE SPECTRES (21,11) : bats-le 3× en montrant 3 spectres distincts → CT26 ──
