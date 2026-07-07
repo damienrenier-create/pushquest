@@ -1425,7 +1425,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.7, margin: "2px 0" }}>ÉQUIPE ({player.team.length}/6)</div>
                             {player.team.map((m) => (
                                 <button key={m.uid} style={{ ...teamRowStyle, cursor: "pointer", border: "none", background: "transparent", width: "100%" }} onClick={() => setSelected(m)}>
-                                    <span style={{ fontWeight: 700, flex: 1, textAlign: "left" }}>{displayName(m)}</span>
+                                    <span style={{ fontWeight: 700, flex: 1, textAlign: "left" }}>{displayName(m)}{m.shiny && <span title="Chromatique (shiny)">{" ✨"}</span>}</span>
                                     <span style={{ opacity: 0.6, fontSize: 10 }}>{getSpecies(m.speciesId)?.types.join("/")}</span>
                                     <span style={{ width: 38, textAlign: "right" }}>N.{m.level}</span>
                                 </button>
@@ -1455,7 +1455,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             {player.pc.length === 0 && <div style={{ fontSize: 11, opacity: 0.6 }}>Aucun Daemon en réserve.</div>}
                             {slice.map((m) => (
                                 <button key={m.uid} style={{ ...teamRowStyle, cursor: "pointer", border: "none", background: "transparent", width: "100%" }} onClick={() => setSelected(m)}>
-                                    <span style={{ fontWeight: 700, flex: 1, textAlign: "left" }}>{displayName(m)}</span>
+                                    <span style={{ fontWeight: 700, flex: 1, textAlign: "left" }}>{displayName(m)}{m.shiny && <span title="Chromatique (shiny)">{" ✨"}</span>}</span>
                                     <span style={{ opacity: 0.6, fontSize: 10 }}>{getSpecies(m.speciesId)?.types.join("/")}</span>
                                     <span style={{ width: 38, textAlign: "right" }}>N.{m.level}</span>
                                 </button>
