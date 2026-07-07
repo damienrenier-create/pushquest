@@ -332,8 +332,9 @@ const NGPLUS_ZONES: Record<string, Zone> = {
             { speciesId: "sporbeo", base: UNCOMMON }, { speciesId: "revemante", base: UNCOMMON },
             // Rare — un spectre (Braisécaille déplacée à la CENTRALE FEU run 2)
             { speciesId: "namicha", base: RARE, noEvolve: true },
-            // Super rare — Mottoche rétrogradé (180 → 5)
-            { speciesId: "mottoche", base: VERY_RARE },
+            // Super rare — Mottoche rétrogradé. TOUJOURS stade 1 (noEvolve) ET à un NIVEAU FIXE 5, indépendant
+            // du niveau du lead (levelFixed → bypass du scaling) : jamais sa lignée évoluée, jamais scalé haut.
+            { speciesId: "mottoche", base: VERY_RARE, noEvolve: true, levelFixed: 5 },
             // Giga rare — Orcaline (Glace/Eau), UNIQUEMENT si le lead ≥ 35 (son niveau mini)
             { speciesId: "orcaline", base: GIGA_RARE, noEvolve: true, rare: true, minLeadLevel: 35 },
         ],

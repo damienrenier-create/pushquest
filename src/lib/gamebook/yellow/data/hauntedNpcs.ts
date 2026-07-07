@@ -21,7 +21,12 @@ export const HH_TRADE_RECEIVE = "morrow" // ce qu'il REÇOIT (Morrow — Glace/P
 
 export const HH_TRADER_OFFER_LINES = [
     "Hé, l'ami ! Tu rôdes près de la maison hantée… tu n'aurais pas un ROCTAUR sous la main ?",
-    "Je te l'échange contre… ÇA. Un MORROW. Une drôle de créature venue d'ailleurs, au baiser à faire frissonner. Marché conclu ?",
+    "Je te l'échange contre… ÇA. Un MORROW. Une drôle de créature venue d'ailleurs, au baiser à faire frissonner.",
+    "J'échange le PREMIER ROCTAUR de ton ÉQUIPE. Marché conclu ?  →  Ⓐ ÉCHANGER · Ⓑ renoncer",
+]
+// Le joueur a renoncé (Ⓑ) : on ne troque RIEN.
+export const HH_TRADER_CANCEL_LINES = [
+    "Comme tu veux, l'ami. Ton Roctaur reste bien au chaud dans ton équipe… reviens si tu changes d'avis. 😏",
 ]
 export const HH_TRADER_NEED_LINES = [
     "Reviens me voir avec un ROCTAUR et mon Morrow est à toi !",
@@ -31,7 +36,8 @@ export const HH_TRADER_NEED_LINES = [
 export const HH_TRADE_RECEIVE_RUN1 = "rochison"
 export const HH_TRADER_OFFER_LINES_RUN1 = [
     "Hé, l'ami ! Un ROCTAUR ? Confie-le-moi : je le fais passer par un canal d'échange très spécial…",
-    "…et il te reviendra ÉVOLUÉ en ROCHISON ! La magie de l'échange, rien de moins. Marché conclu ?",
+    "…et il te reviendra ÉVOLUÉ en ROCHISON ! La magie de l'échange, rien de moins.",
+    "J'évolue le PREMIER ROCTAUR de ton ÉQUIPE (sa brillance et son entraînement sont préservés). Marché conclu ?  →  Ⓐ ÉCHANGER · Ⓑ renoncer",
 ]
 export const HH_TRADER_NEED_LINES_RUN1 = [
     "Amène-moi un ROCTAUR et je te le fais évoluer en ROCHISON, promis d'outre-tombe !",

@@ -379,7 +379,8 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId, are
             ? (() => {
                 const day = new Date().toISOString().slice(0, 10)
                 return berriesForDay(player.mapId, day)
-                    .filter((t) => !isBerryTreeHarvested(player.mapId, t.x, t.y, day))
+                    // Seules ~30% des baies du jour sont VISIBLES ; les autres se trouvent à la touche A.
+                    .filter((t) => t.visible && !isBerryTreeHarvested(player.mapId, t.x, t.y, day))
                     .map((t) => ({ x: t.x, y: t.y, emoji: getHeldItem(t.berryId)?.emoji ?? "🍒" }))
             })()
             : []
@@ -575,7 +576,7 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId, are
                         style={{ position: "absolute", ...screenPos(t.x, t.y), zIndex: 2, pointerEvents: "none", display: "flex", alignItems: "flex-start", justifyContent: "center" }}
                         title="Baie à récolter (A)"
                     >
-                        <span style={{ marginTop: "-14%", fontSize: "clamp(10px, 2.6dvw, 16px)", filter: "drop-shadow(0 0 2px #fff) drop-shadow(0 1px 1px rgba(0,0,0,0.5))" }}>{t.emoji}</span>
+                        <span style={{ marginTop: "-8%", fontSize: "clamp(7px, 1.7dvw, 11px)", opacity: 0.82, filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.4))" }}>{t.emoji}</span>
                     </div>
                 ))}
 

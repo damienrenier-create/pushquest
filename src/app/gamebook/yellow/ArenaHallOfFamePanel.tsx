@@ -7,6 +7,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { startHofBattle } from "@/lib/gamebook/yellow/store/battleStore"
+import { useActiveWorld } from "@/lib/gamebook/yellow/store/playerStore"
 import type { ChampionMon } from "@/lib/gamebook/yellow/storage/save"
 
 interface Entry { nickname: string; badgeId: string; wonAt: string; team: ChampionMon[] }
@@ -51,11 +52,20 @@ export default function ArenaHallOfFamePanel({ close, onFight }: { close: () => 
         return () => { cancelled = true }
     }, [])
 
+    // Le HoF d'arène est PARTAGÉ, mais les arènes du RUN 2 sont re-typées → leurs badges sont préfixés
+    // "ngplus:". On n'affiche QUE le HoF correspondant au monde du spectateur : run 1 → arènes d'origine,
+    // run 2 → arènes re-typées. (Un joueur run 1 ne voit jamais les champions des arènes run 2, et inversement.)
+    const isNgplus = useActiveWorld() === "ngplus"
     const byBadge = useMemo(() => {
         const m: Record<string, Entry[]> = {}
-        for (const e of entries) (m[e.badgeId] ??= []).push(e)
+        for (const e of entries) {
+            const ng = e.badgeId.startsWith("ngplus:")
+            if (ng !== isNgplus) continue
+            const base = ng ? e.badgeId.slice("ngplus:".length) : e.badgeId
+            ;(m[base] ??= []).push(e)
+        }
         return m
-    }, [entries])
+    }, [entries, isNgplus])
 
     // À l'arrivée des données, ouvre par défaut la 1re arène qui a des champions.
     useEffect(() => {
@@ -71,7 +81,7 @@ export default function ArenaHallOfFamePanel({ close, onFight }: { close: () => 
     return (
         <div style={overlay} onClick={close}>
             <div style={box} onClick={(e) => e.stopPropagation()}>
-                <div style={titleStyle}>⚔️ HALL OF FAME DES ARÈNES</div>
+                <div style={titleStyle}>⚔️ HALL OF FAME DES ARÈNES{isNgplus ? " · RUN 2" : ""}</div>
 
                 {/* Onglets des 5 arènes */}
                 <div style={tabsRow}>

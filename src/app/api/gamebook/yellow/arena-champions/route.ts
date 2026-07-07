@@ -17,6 +17,10 @@ import { isNexusYellowEnabled } from "@/lib/gamebook/yellow/featureFlag"
 export const dynamic = "force-dynamic"
 
 const VALID_BADGES = new Set(["feu", "plante", "eau", "roche", "elec"])
+// RUN 2 : arènes re-typées → badge préfixé "ngplus:" (HoF séparé, visible seulement des joueurs run 2).
+function isValidBadge(b: string): boolean {
+    return VALID_BADGES.has(b) || (b.startsWith("ngplus:") && VALID_BADGES.has(b.slice("ngplus:".length)))
+}
 
 async function requireYellow() {
     const session = await getServerSession(authOptions)
@@ -56,7 +60,7 @@ export async function POST(req: NextRequest) {
     let body: { badgeId?: unknown; team?: unknown }
     try { body = await req.json() } catch { return NextResponse.json({ error: "Bad JSON" }, { status: 400 }) }
     const badgeId = typeof body.badgeId === "string" ? body.badgeId : ""
-    if (!VALID_BADGES.has(badgeId)) return NextResponse.json({ error: "Invalid badge" }, { status: 400 })
+    if (!isValidBadge(badgeId)) return NextResponse.json({ error: "Invalid badge" }, { status: 400 })
     const team = Array.isArray(body.team) ? body.team.slice(0, 6) : []
 
     try {

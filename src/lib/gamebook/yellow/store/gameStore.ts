@@ -41,7 +41,7 @@ import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock } from "../data/sylvebarbeBlock
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
 import { SYLVEBARBE_NPC_ID, SYLVEBARBE_INTRO_LINES, SYLVEBARBE_DONE_LINES, SYLVEBARBE_NO_FLUTE_LINES, SYLVEBARBE_NO_TEAM_LINES, buildSylvebarbe, FLUTE_GIVE_LINES } from "../data/sylvebarbe"
 import { CHEN_LAB_LINES, LAB_ASSISTANT_LINES, CHEN_ABANDON_OFFER_LINES } from "../data/labDialogues"
-import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADE_RECEIVE_RUN1, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_TRADER_OFFER_LINES_RUN1, HH_TRADER_NEED_LINES_RUN1, HH_TRADER_HAS_MORROW_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
+import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADE_RECEIVE_RUN1, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_TRADER_OFFER_LINES_RUN1, HH_TRADER_NEED_LINES_RUN1, HH_TRADER_HAS_MORROW_LINES, HH_TRADER_CANCEL_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
 
 export interface ActiveDialogue {
     npcId: string
@@ -250,7 +250,8 @@ function doHhTrade(giveUid: string): ActiveDialogue | null {
     const ngplus = getActiveWorld() === "ngplus"
     const receiveId = ngplus ? HH_TRADE_RECEIVE : HH_TRADE_RECEIVE_RUN1 // run 2 = Morrow ; run 1 = Rochison (trade-évo)
     const received = createMonInstance(receiveId, owner.level, { owned: true })
-    if (!ngplus) received.statPoints = owner.statPoints ?? 0 // trade-évo Rochison : préserve les points Saiyan comme un vrai échange
+    received.statPoints = owner.statPoints ?? 0 // préserve l'investissement Saiyan (Rochison trade-évo ET Morrow)
+    if (owner.shiny) received.shiny = true      // NE JAMAIS détruire un shiny à l'échange (Rochison/Morrow héritent de la brillance)
     executeTrade(giveUid, received)      // retire le Roctaur, ajoute le reçu (Morrow ou Rochison)
     applyTradeEvolution(received.uid)    // Morrow/Rochison ne trade-évoluent pas plus loin → no-op (défensif)
     persistYellowSave()
@@ -931,7 +932,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: HH_TRADER_HAS_MORROW_LINES } })
                 return
             }
-            const give = [...getPlayerSave().team, ...getPlayerSave().pc].find((m) => m.speciesId === HH_TRADE_GIVE)
+            const give = getPlayerSave().team.find((m) => m.speciesId === HH_TRADE_GIVE) // ÉQUIPE uniquement (jamais le PC)
             if (!give) {
                 set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: ngplus ? HH_TRADER_NEED_LINES : HH_TRADER_NEED_LINES_RUN1 } })
                 return
@@ -1100,7 +1101,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
         } else if (get().pendingSylvebarbe) {
             set({ dialogue: tryLaunchSylvebarbe(), pendingSylvebarbe: false })
         } else if (get().pendingHhTrade) {
-            set({ dialogue: doHhTrade(get().pendingHhTrade!), pendingHhTrade: null })
+            // Ⓑ = RENONCER à l'échange (étape de validation) : on ne troque RIEN, le Roctaur reste dans l'équipe.
+            set({ dialogue: { npcId: HH_TRADER_ID, npcName: "BROCANTEUR", lineIndex: 0, lines: HH_TRADER_CANCEL_LINES }, pendingHhTrade: null })
         } else if (get().pendingCaveTrade) {
             set({ dialogue: doCaveTrade(get().pendingCaveTrade!), pendingCaveTrade: null })
         } else if (get().pendingHhCollector) {

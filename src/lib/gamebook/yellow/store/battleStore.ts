@@ -106,7 +106,7 @@ interface BattleStoreState {
     /** LIGUE : sacre du CHAMPION (après LE MAÎTRE) → Hall of Fame post-combat (équipe + best-of). null sinon. */
     championRun: ChampionRun | null
     /** ARÈNE : victoire d'un boss de gym (badge gagné) → Hall of Fame par arène (équipe gelée). null sinon. */
-    arenaRun: { badgeId: BadgeId; team: ChampionMon[] } | null
+    arenaRun: { badgeId: BadgeId; team: ChampionMon[]; ngplus: boolean } | null // ngplus : arène RUN 2 (re-typée) → HoF séparé
     /** Dresseur dont le REMATCH doit s'enchaîner DIRECTEMENT après cette victoire (ex. VOLTA 2 phases). null sinon. */
     chainRematchId: string | null
     /** Au moins un Daemon a une attaque EN ATTENTE d'apprentissage → prompt post-combat (façon Gen 1). */
@@ -662,26 +662,33 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             // 🎟️ TICKET arène (30) : à la 1re conquête du badge (en plus de la CT cadeau). En NG+, le ticket
             //     est REMPLACÉ par le ticket dédié du boss run 2 (10→50, cf. NGPLUS_BOSS_GIFTS ci-dessous).
             if (badgeAwarded && !inNgplus) grantRouletteTicket(ARENA_TICKET_VALUE)
-            // CT CADEAU remise gratuitement (trophée du boss) + nom pour la notif.
-            if (t?.giftCt && grantCt(t.giftCt)) {
+            // CT CADEAU (trophée du boss) — RUN 1 UNIQUEMENT. En RUN 2, le boss ne redonne PAS la CT du run 1
+            // (ça n'a aucun sens : elle est déjà acquise) → il n'offre QUE sa signature exclusive (ci-dessous).
+            if (t?.giftCt && !inNgplus && grantCt(t.giftCt)) {
                 const mvId = getCt(t.giftCt)?.moveId
                 giftCtMove = mvId ? (getMove(mvId)?.name ?? null) : null
             }
-            // 🎁 RUN 2 (NG+) : le boss d'arène offre en plus sa CT signature EXCLUSIVE (ct53→57, introuvable
-            //     ailleurs) + son ticket roulette dédié (10/20/30/40/50). La signature prime pour la notif.
+            // 🎁 RUN 2 (NG+) : le boss offre SA CT signature EXCLUSIVE (ct53→57, introuvable ailleurs) + son ticket
+            //     roulette dédié (10→50), et l'ANNONCE dans un petit dialogue post-combat.
             const ngGift = inNgplus ? NGPLUS_BOSS_GIFTS[storeState.trainer.trainerId] : undefined
+            let ngCtLine: string | null = null
             if (ngGift) {
-                if (grantCt(ngGift.ctId)) {
-                    const mvId = getCt(ngGift.ctId)?.moveId
-                    giftCtMove = mvId ? (getMove(mvId)?.name ?? null) : null
+                const granted = grantCt(ngGift.ctId)
+                const mvId = getCt(ngGift.ctId)?.moveId
+                const mvName = mvId ? (getMove(mvId)?.name ?? null) : null
+                if (granted && mvName) {
+                    giftCtMove = mvName
+                    ngCtLine = `Et pour t'être imposé face à moi : prends ma CT signature, « ${mvName} ». Une EXCLUSIVITÉ du run 2 — personne d'autre ne la possède. Enseigne-la à un Daemon compatible !`
                 }
                 grantRouletteTicket(ngGift.ticket, "boss")
             }
-            // 🍒 RUN 2 — le DRUIDE (boss arène 1) livre le SECRET DES BAIES à sa défaite (1×). Ses Daemons en
-            //    portaient : le joueur les a vues à l'œuvre. Débloque la récolte (Route Nord & Ville Jaune).
-            if (inNgplus && storeState.trainer.trainerId === "y_arena_druide" && !isBerrySecretKnown()) {
-                setBerrySecretKnown()
-                rematchReward = { npcId: "y_arena_druide", npcName: "Druide Sylvain", lines: BERRY_SECRET_LINES_DRUIDE }
+            // 🗣️ RUN 2 — prise de parole post-combat du boss : (Druide, arène 1) le SECRET DES BAIES, PUIS (tous
+            //    les boss) l'annonce de leur CT signature. Réunis en un seul dialogue via rematchReward.
+            if (inNgplus) {
+                const revealBerry = storeState.trainer.trainerId === "y_arena_druide" && !isBerrySecretKnown()
+                if (revealBerry) setBerrySecretKnown()
+                const lines = [...(revealBerry ? BERRY_SECRET_LINES_DRUIDE : []), ...(ngCtLine ? [ngCtLine] : [])]
+                if (lines.length) rematchReward = { npcId: storeState.trainer.trainerId, npcName: t?.name ?? "Boss d'arène", lines }
             }
             // BOSS À 2 PHASES (ex. VOLTA) : sa 1re défaite enchaîne DIRECTEMENT sur son rematch (phase 2).
             //     En NG+, les arènes re-typées sont des combats UNIQUES → pas de phase 2.
@@ -705,7 +712,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
         }
     })
     // ARÈNE — Hall of Fame par gym : si un badge vient d'être gagné, on gèle l'équipe victorieuse.
-    const arenaRun: BattleStoreState["arenaRun"] = badgeAwarded ? { badgeId: badgeAwarded, team: snapshotTeam() } : null
+    const arenaRun: BattleStoreState["arenaRun"] = badgeAwarded ? { badgeId: badgeAwarded, team: snapshotTeam(), ngplus: getActiveWorld() === "ngplus" } : null
 
     let championRun: BattleStoreState["championRun"] = null
     const lid = storeState.trainer?.trainerId

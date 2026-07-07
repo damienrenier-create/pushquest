@@ -11,6 +11,10 @@ import { BERRY_IDS } from "./heldItems"
 /** Nombre d'arbres portant une baie par carte et par jour. */
 export const BERRIES_PER_MAP_PER_DAY = 3
 
+/** % des baies du jour dont l'icône est VISIBLE sur la carte. Le reste (70%) est INVISIBLE : la baie est
+ *  bien là et récoltable (A face à l'arbre), mais sans indice → récompense l'exploration/le tâtonnement. */
+export const BERRY_VISIBLE_PCT = 30
+
 /** Arbres candidats (tuiles `tree`) par carte. 30 par carte, bien répartis. */
 export const BERRY_TREE_SPOTS: Record<string, ReadonlyArray<{ x: number; y: number }>> = {
     yellow_route_nord: [
@@ -48,6 +52,8 @@ export interface BerryTree {
     x: number
     y: number
     berryId: string
+    /** L'icône est-elle affichée sur la carte ? (~30% des baies du jour ; les 70% autres sont récoltables mais invisibles.) */
+    visible: boolean
 }
 
 /** Les BERRIES_PER_MAP_PER_DAY arbres portant une baie ce jour-là sur cette carte (déterministe). `day` = la
@@ -62,7 +68,8 @@ export function berriesForDay(mapId: string, day: string | number): BerryTree[] 
         .slice(0, Math.min(BERRIES_PER_MAP_PER_DAY, spots.length))
     return ranked.map(({ i }) => {
         const berryId = BERRY_IDS[fnv1a(`${mapId}:${day}:${i}:b`) % BERRY_IDS.length]
-        return { x: spots[i].x, y: spots[i].y, berryId }
+        const visible = fnv1a(`${mapId}:${day}:${i}:vis`) % 100 < BERRY_VISIBLE_PCT // ~30% affichées
+        return { x: spots[i].x, y: spots[i].y, berryId, visible }
     })
 }
 

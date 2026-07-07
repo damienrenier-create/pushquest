@@ -855,9 +855,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (!arenaRun) { arenaReportedRef.current = false; return }
         if (arenaReportedRef.current) return
         arenaReportedRef.current = true
+        // RUN 2 : arènes re-typées → HoF SÉPARÉ (badge préfixé "ngplus:") pour ne pas polluer celui du run 1.
+        const badgeId = arenaRun.ngplus ? `ngplus:${arenaRun.badgeId}` : arenaRun.badgeId
         fetch("/api/gamebook/yellow/arena-champions", {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ badgeId: arenaRun.badgeId, team: arenaRun.team }),
+            body: JSON.stringify({ badgeId, team: arenaRun.team }),
         }).catch(() => {})
     }, [arenaRun])
 
