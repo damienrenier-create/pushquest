@@ -136,8 +136,9 @@ const HH_TYPE_POOLS: Record<string, WildEntry[]> = {
     PLANTE: [{ speciesId: "pampousse", base: 100 }, { speciesId: "broussours", base: 45 }, { speciesId: "tamanpousse", base: 14 }],
     FEU: [{ speciesId: "fennaise", base: 100 }, { speciesId: "pyrozly", base: 100 }, { speciesId: "brasicow", base: 45 }, { speciesId: "colibraise", base: 45 }, { speciesId: "lavapetit", base: 45 }, { speciesId: "braisecaille", base: 5 }],
     COMBAT: [{ speciesId: "couperin", base: 100 }, { speciesId: "broussours", base: 60 }, { speciesId: "forgeotin", base: 45 }, { speciesId: "brasicow", base: 45 }],
-    SOL: [{ speciesId: "cailloutchi", base: 100 }, { speciesId: "mottoche", base: 70 }],
-    ROCHE: [{ speciesId: "cailloutchi", base: 100 }, { speciesId: "mottoche", base: 70 }, { speciesId: "lavapetit", base: 45 }, { speciesId: "rembodo", base: 45 }, { speciesId: "limaroche", base: 45 }, { speciesId: "marmoterre", base: 45 }, { speciesId: "tetardoc", base: 30 }],
+    // Mottoche + sa lignée : EXCLUSIVES à la Grotte (« Magicarpe rocheux ») → retirées de la grille d'entraînement.
+    SOL: [{ speciesId: "cailloutchi", base: 100 }],
+    ROCHE: [{ speciesId: "cailloutchi", base: 100 }, { speciesId: "lavapetit", base: 45 }, { speciesId: "rembodo", base: 45 }, { speciesId: "limaroche", base: 45 }, { speciesId: "marmoterre", base: 45 }, { speciesId: "tetardoc", base: 30 }],
     POISON: [{ speciesId: "cornaissant", base: 100 }, { speciesId: "sporbeo", base: 45 }],
     GLACE: [{ speciesId: "auroruff", base: 100 }, { speciesId: "marmoterre", base: 45 }],
     INSECTE: [{ speciesId: "ruffiant", base: 100 }, { speciesId: "revemante", base: 45 }],
