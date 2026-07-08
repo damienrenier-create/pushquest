@@ -15,10 +15,10 @@ export const CHEN_LAB_LINES = [
 ]
 
 /** NG+ — le Prof. CHEN propose d'ABANDONNER le New Game+ (fenêtre des 15 combats) : rendre le starter +
- *  les 6000⚡ (perdus À JAMAIS) contre le retour à la partie de Champion + la flûte + la Zone de Combat. */
+ *  les 10000⚡ (perdus À JAMAIS) contre le retour à la partie de Champion + la flûte + la Zone de Combat. */
 export const CHEN_ABANDON_OFFER_LINES = [
     "« Ah… toi. La recrue au Daemon si singulier. Ton regard hésite, mélomane d'un jour. »",
-    "« Si ce New Game+ te pèse, je peux tout arrêter : rends-moi ton starter et tes 6000 énergies — perdus À JAMAIS — et je te rends ta vie de Champion, ta Daemonflûte et l'accès à la Zone de Combat. »",
+    "« Si ce New Game+ te pèse, je peux tout arrêter : rends-moi ton starter et tes 10000 énergies — perdus À JAMAIS — et je te rends ta vie de Champion, ta Daemonflûte et l'accès à la Zone de Combat. »",
     "« Mais réfléchis bien : tu abandonnerais les Daemons inédits, les CT que personne d'autre ne possède, et surtout la chance de graver ton SCORE au sommet de la Ligue. Rares sont les Maîtres qui reviennent, une fois ce chemin entamé… »",
     "« Décide-toi vite : encore quelques combats et il sera trop tard. Alors… tu renonces ? »",
 ]

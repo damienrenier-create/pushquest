@@ -12,7 +12,7 @@ import type { BadgeId } from "../data/cts"
 import { saiyanPointsForLevels, type SaiyanWindow } from "../data/saiyanConfig"
 
 /** Énergie de départ d'un New Game+ (crédit + plafond). */
-export const NGPLUS_START_ENERGY = 6000
+export const NGPLUS_START_ENERGY = 10000
 
 let loaded = false
 let autosaveInit = false
@@ -167,7 +167,7 @@ async function persistNow(): Promise<void> {
 /**
  * NEW GAME+ — démarre un 2e run : le monde LIVE courant est STASHÉ (intact + rejouable via switchWorld),
  * l'équipe championne est FIGÉE (adversaire de fin de Ligue NG+), et un monde NG+ frais démarre avec le
- * Daemon custom `starter` en équipe + 6000⚡. Réservé aux champions, hors NG+. Retourne false sinon.
+ * Daemon custom `starter` en équipe + 10000⚡. Réservé aux champions, hors NG+. Retourne false sinon.
  */
 export async function startNewGamePlus(starter: MonInstance, oldTeamFrozen: ChampionMon[]): Promise<boolean> {
     if (getActiveWorld() !== "live") return false // déjà en NG+
@@ -181,9 +181,9 @@ export async function startNewGamePlus(starter: MonInstance, oldTeamFrozen: Cham
     startNgPlusWorld(starter)
     hydratePokedex({ seen: [], caught: [] })
     setActiveWorld("ngplus")
-    // 4) 6000⚡ de départ + plafond aligné (raiseRepsCap AVANT grantReps → pas de rabotage).
-    raiseRepsCap(NGPLUS_START_ENERGY - 1000) // cap 1000 → 6000
-    grantReps(NGPLUS_START_ENERGY)           // reps → 6000
+    // 4) 10000⚡ de départ + plafond aligné (raiseRepsCap AVANT grantReps → pas de rabotage).
+    raiseRepsCap(NGPLUS_START_ENERGY - 1000) // cap 1000 → 10000
+    grantReps(NGPLUS_START_ENERGY)           // reps → 10000
     // 5) DAEMONFLÛTE offerte dès le départ du run 2 : le Champion garde son instrument dans le sac
     //    (Sylvebarbe / Zone de Combat accessibles dès le NG+, plus besoin d'abandonner pour l'avoir).
     addItem("daemonflute", 1)
@@ -220,7 +220,7 @@ export function canAbandonNgplus(): boolean {
 }
 
 /** NG+ — ABANDON (via le Prof. CHEN, ≤ NGPLUS_ABANDON_LIMIT combats) : le monde NG+ est SUPPRIMÉ (starter +
- *  6000⚡ perdus À JAMAIS), la partie de champion est restaurée, et CHEN te remet la FLÛTE (accès Sylvebarbe
+ *  10000⚡ perdus À JAMAIS), la partie de champion est restaurée, et CHEN te remet la FLÛTE (accès Sylvebarbe
  *  → Zone de Combat). Retour au monde unique. false si hors NG+ ou fenêtre dépassée (engagé). */
 export async function abandonNewGamePlus(): Promise<boolean> {
     if (!canAbandonNgplus()) return false
