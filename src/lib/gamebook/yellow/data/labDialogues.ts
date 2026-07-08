@@ -35,12 +35,12 @@ export const LAB_ASSISTANT_LINES = [
     "« Le Prof., lui, est un grand mélomane. En ce moment il façonne un instrument censé réveiller le Daemon colossal qui dort au sud de la ville… S'il réussit, ça ouvrira de nouvelles routes ! »",
 ]
 
-/** RUN 2 (NG+) — l'assistant adapte son laïus : au blackjack on gagne les CT-SIGNATURES de boss (pas Apothéose),
- *  et le pilier du casino n'est plus TONYTONY mais son cousin MEROREM (Poison/Insecte). */
+/** RUN 2 (NG+) — l'assistant adapte son laïus : au blackjack on gagne UNE CT du magasin au choix (récompense
+ *  unique, plus Apothéose) ; les signatures de boss se méritent en arène. Le pilier casino est MEROREM (Poison/Insecte). */
 export const LAB_ASSISTANT_LINES_NGPLUS = [
     "« Salut ! L'assistant du Prof. CHEN, toujours au poste. Le terminal, tu connais : inflige assez de dégâts d'un type et tu repars avec une CT. »",
-    "« Mais en NEW GAME+, le vrai trésor est au CASINO : au BLACKJACK, chaque palier de 500 d'énergie NETTE te laisse CHOISIR une CT-SIGNATURE de boss d'arène — des exclusivités du run 2, introuvables ailleurs ! »",
-    "« Un conseil : ces signatures cognent fort quand elles collent au TYPE de ton Daemon. Souviens-toi que chaque attaque tape sur l'ATTAQUE ou le SPÉCIAL selon son type — ne gâche pas ta meilleure stat. »",
+    "« Au CASINO, en NEW GAME+, le BLACKJACK te réserve UNE récompense unique : dès 500 d'énergie NETTE gagnée, tu choisis UNE CT du magasin — une seule pour tout le run, alors choisis bien ! Les CT-signatures des boss, elles, se méritent en terrassant les arènes re-typées. »",
+    "« Un conseil : une CT ne cogne fort que si elle colle au TYPE de ton Daemon. Souviens-toi que chaque attaque tape sur l'ATTAQUE ou le SPÉCIAL selon son type — ne gâche pas ta meilleure stat. »",
     "« Côté pilier, ici ce n'est plus Tonytony mais son cousin MEROREM. 1000 d'énergie cumulée au casino et ce Poison/Insecte increvable rejoint ton équipe — soigneur et coriace, comme l'autre. »",
     "« Le Prof., lui, refaçonne son instrument pour réveiller, encore une fois, le colosse endormi au sud… S'il réussit, de nouvelles routes s'ouvriront à toi, Champion d'un autre monde ! »",
 ]

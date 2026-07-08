@@ -180,6 +180,13 @@ export function canLearnCt(species: SpeciesData, ct: CtData): boolean {
     return !!ct.alsoTypes?.some((t) => species.types.includes(t)) // types supplémentaires (façon Gen 1)
 }
 
+/** Catalogue COMPLET des CT vendables en boutique (tout ce que le magasin peut proposer, badges mis à part) :
+ *  on exclut seulement les cadeaux `gift` (jamais en vente) et les exclusives labo `labOnly`. Sert d'univers
+ *  de choix à la RÉCOMPENSE UNIQUE du blackjack en run 2 (« une CT du magasin au choix, une seule fois »). */
+export function shopCatalogCtIds(): string[] {
+    return CTS.filter((c) => !c.gift && !c.labOnly).map((c) => c.id)
+}
+
 /** CT effectivement achetables selon les badges possédés. TOUTE CT est un ACHAT UNIQUE : une fois achetée
  *  (présente dans `bought`), elle est retirée du shop pour de bon. */
 export function purchasableCts(badges: BadgeId[], bought: string[] = []): CtData[] {

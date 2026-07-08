@@ -15,7 +15,7 @@ import { getItem } from "../data/items"
 import { isHeldItem, getHeldItem } from "../data/heldItems"
 import { SAIYAN_POINT_VALUE } from "../data/saiyanConfig"
 import { BADGE_REPS_CAP_BONUS } from "../data/badges"
-import { getCt, canLearnCt, purchasableCts, NGPLUS_EXCLUSIVE_CT_IDS, type BadgeId } from "../data/cts"
+import { getCt, canLearnCt, purchasableCts, shopCatalogCtIds, type BadgeId } from "../data/cts"
 import { emptyLabDefi, casinoWinningCase, CASINO_NUM_CASES, CASINO_MIN_BET, CASINO_MAX_BET, CASINO_WIN_MULT, CASINO_BANKRUPT_STREAK, CASINO_BANKRUPT_COOLDOWN_MS, TONYTONY_TARGET, TONYTONY_SHINY_TARGET, TONYTONY_LEVEL, TONYTONY_SPECIES, MEROREM_SPECIES, DAILY_TICKET_VALUE, TICKET_QUEUE_MAX, ROULETTE_CLAIMED_MAX, BLESSING_QUEUE_MAX, casinoFloorTiles, isCasinoFloorTile, CHIP_MIN, CHIP_MAX, CHIP_TICKET_VALUE, isSecretChipMilestone, clampTicketValue, SPAG_GIFT_TICKET_COUNT, SPAG_GIFT_TICKET_VALUE, STEP_GIFT_CREDIT, BLACKJACK_CT_TARGET, BLACKJACK_CT_ID, BLACKJACK_CT_NGPLUS_STEP, type LabDefiState, type LabActiveDefi } from "../data/labDefis"
 import { createMonInstance } from "../battle/factory"
 import { emptyYellowStats, type YellowStats } from "../storage/save"
@@ -1104,23 +1104,26 @@ export function claimBlackjackCt(): string | null {
     return moveName
 }
 
-// ── BLACKJACK RUN 2 (NG+) : à CHAQUE palier de 500 ⚡ nets, le joueur CHOISIT une CT-signature de boss
-//    (ct53-57) encore NON possédée — jamais 2× la même. Remplace l'Apothéose (gated ci-dessus). ──
-/** CT-signatures de boss encore non possédées (choix disponibles au blackjack run 2). */
+// ── BLACKJACK RUN 2 (NG+) : récompense UNIQUE. Une fois BLACKJACK_CT_NGPLUS_STEP (500 ⚡) nets gagnés,
+//    le joueur choisit UNE SEULE CT du MAGASIN (catalogue complet, hors cadeaux/labo) encore NON possédée.
+//    Après ce pick, le blackjack ne donne plus AUCUN lot en run 2 (one-shot via blackjackNgplusPicks). ──
+/** CT du magasin encore non possédées (univers de choix de la récompense unique du blackjack run 2). */
 export function blackjackNgplusChoices(): string[] {
-    return NGPLUS_EXCLUSIVE_CT_IDS.filter((id) => !st.ownedCts.includes(id))
+    return shopCatalogCtIds().filter((id) => !st.ownedCts.includes(id))
 }
-/** Nb de picks GAGNÉS (1 par palier de 500 ⚡ nets) encore NON réclamés, ET s'il reste des CT à choisir. */
+/** La récompense UNIQUE est-elle disponible ? (run 2, seuil de 500 ⚡ atteint, JAMAIS encore réclamée, et il
+ *  reste au moins une CT du magasin à prendre). Une seule fois pour tout le run 2. */
 export function blackjackNgplusPickPending(): boolean {
     if (getActiveWorld() !== "ngplus") return false
-    const earned = Math.floor(st.labDefi.blackjackWon / BLACKJACK_CT_NGPLUS_STEP)
-    return earned > st.labDefi.blackjackNgplusPicks && blackjackNgplusChoices().length > 0
+    if (st.labDefi.blackjackNgplusPicks >= 1) return false // déjà réclamée une fois → plus jamais
+    return st.labDefi.blackjackWon >= BLACKJACK_CT_NGPLUS_STEP && blackjackNgplusChoices().length > 0
 }
-/** Réclame un pick : octroie la CT choisie (si éligible) + consomme un palier. Renvoie le nom de l'attaque, sinon null. */
+/** Réclame la récompense unique : octroie la CT du magasin choisie (si éligible) et VERROUILLE tout futur lot
+ *  blackjack du run 2 (picks → 1). Renvoie le nom de l'attaque, sinon null. */
 export function claimBlackjackCtNgplus(ctId: string): string | null {
     if (!blackjackNgplusPickPending()) return null
-    if (!blackjackNgplusChoices().includes(ctId)) return null // must be an un-owned boss CT
-    st = { ...st, labDefi: { ...st.labDefi, blackjackNgplusPicks: st.labDefi.blackjackNgplusPicks + 1 } }
+    if (!blackjackNgplusChoices().includes(ctId)) return null // doit être une CT du magasin non possédée
+    st = { ...st, labDefi: { ...st.labDefi, blackjackNgplusPicks: 1 } } // one-shot : verrouillé définitivement
     grantCt(ctId)
     const moveName = getMove(getCt(ctId)?.moveId ?? "")?.name ?? ctId
     emit()

@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react"
 import { usePlayer, spendReps, settleBlackjack, claimBlackjackCt, getActiveWorld, blackjackNgplusPickPending, blackjackNgplusChoices, claimBlackjackCtNgplus } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { BLACKJACK_CT_TARGET, BLACKJACK_CT_NGPLUS_STEP } from "@/lib/gamebook/yellow/data/labDefis"
-import { getCt, NGPLUS_EXCLUSIVE_CT_IDS } from "@/lib/gamebook/yellow/data/cts"
+import { getCt } from "@/lib/gamebook/yellow/data/cts"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { deal, hit, stand, double, canDouble, handValue, freshShoe, type BJState, type Card } from "@/lib/gamebook/yellow/casino/blackjack"
 
@@ -34,8 +34,7 @@ export default function BlackjackPanel({ close }: { close: () => void }) {
     const [game, setGame] = useState<BJState | null>(null)
     const [msg, setMsg] = useState("")
     const [busy, setBusy] = useState(false)
-    const [ctWon, setCtWon] = useState<string | null>(null) // nom de la CT-trophée si on vient de la débloquer
-    const [ctPick, setCtPick] = useState<string[] | null>(null) // RUN 2 : choix de CT de boss à faire (palier 500 ⚡)
+    const [ctWon, setCtWon] = useState<string | null>(null) // nom de la CT si on vient de la débloquer
     // Affichage PROGRESSIF (le croupier pose les cartes une à une) : nb de cartes visibles + carte cachée retournée.
     const [shownP, setShownP] = useState(0)
     const [shownD, setShownD] = useState(0)
@@ -50,8 +49,10 @@ export default function BlackjackPanel({ close }: { close: () => void }) {
 
     const won = player.labDefi.blackjackWon
     const ctClaimed = player.labDefi.blackjackCtClaimed
-    const ngplus = getActiveWorld() === "ngplus" // RUN 2 : paliers 500 ⚡ → choix de CT de boss
-    const bossOwned = NGPLUS_EXCLUSIVE_CT_IDS.filter((id) => player.ownedCts.includes(id)).length
+    const ngplus = getActiveWorld() === "ngplus" // RUN 2 : récompense UNIQUE = 1 CT du magasin au choix
+    const ngplusRewardTaken = player.labDefi.blackjackNgplusPicks >= 1 // récompense unique déjà réclamée ?
+    // Liste de choix (dérivée en direct de l'état) : affichée dès que la récompense unique est disponible.
+    const ngplusPickList = ngplus && blackjackNgplusPickPending() ? blackjackNgplusChoices() : null
     const inHand = !!game && game.phase === "player" && !dealing // on ne peut agir qu'une fois les cartes posées
 
     const resultLine = (s: BJState) =>
@@ -71,23 +72,20 @@ export default function BlackjackPanel({ close }: { close: () => void }) {
         if (settledRef.current) return
         settledRef.current = true
         settleBlackjack(s.payout, s.net)
-        // RUN 2 (NG+) : chaque palier de 500 ⚡ nets ouvre un CHOIX de CT de boss (jamais 2× la même).
-        // RUN 1 : palier 1000 ⚡ → CT « Apothéose » (one-shot).
-        if (getActiveWorld() === "ngplus") {
-            if (blackjackNgplusPickPending()) setCtPick(blackjackNgplusChoices())
-        } else {
+        // RUN 1 : palier 1000 ⚡ → CT « Apothéose » (one-shot). RUN 2 : la récompense unique (1 CT du magasin)
+        // est dérivée en direct dans le rendu (ngplusPickList) dès que le seuil de 500 ⚡ est franchi.
+        if (getActiveWorld() !== "ngplus") {
             const ctName = claimBlackjackCt()
             if (ctName) setCtWon(ctName)
         }
         persistYellowSave(); setMsg(resultLine(s))
     }
 
-    // RUN 2 : le joueur choisit UNE CT de boss ; s'il reste des paliers, on ré-ouvre avec les choix restants.
+    // RUN 2 : le joueur réclame sa récompense UNIQUE = la CT du magasin choisie. Après ça, plus aucun lot.
     const pickCt = (id: string) => {
         const name = claimBlackjackCtNgplus(id)
         persistYellowSave()
         if (name) setCtWon(name)
-        setCtPick(blackjackNgplusPickPending() ? blackjackNgplusChoices() : null)
     }
 
     // Construit la séquence de révélations (du visible actuel vers l'état cible).
@@ -218,29 +216,33 @@ export default function BlackjackPanel({ close }: { close: () => void }) {
                 {ctWon && (
                     <div style={ctBanner} onClick={() => setCtWon(null)}>
                         🏆 <b>CT « {ctWon} » DÉBLOQUÉE !</b><br />
-                        <span style={{ fontSize: 11, opacity: 0.9 }}>{ngplus ? "Signature exclusive au run 2 — enseigne-la via l'écran des CT." : "Attaque ULTIME adaptative (type de ton Daemon + meilleure stat offensive, STAB garanti). Enseigne-la via la CT52."}</span>
+                        <span style={{ fontSize: 11, opacity: 0.9 }}>{ngplus ? "Ta récompense unique du run 2 — enseigne-la via l'écran des CT." : "Attaque ULTIME adaptative (type de ton Daemon + meilleure stat offensive, STAB garanti). Enseigne-la via la CT52."}</span>
                         <div style={{ fontSize: 10, opacity: 0.6, marginTop: 4 }}>(toucher pour fermer)</div>
                     </div>
                 )}
 
-                {/* RUN 2 : palier de 500 ⚡ franchi → le joueur CHOISIT une CT de boss encore non possédée. */}
-                {ctPick && ctPick.length > 0 && (
+                {/* RUN 2 : récompense UNIQUE — dès 500 ⚡ nets, le joueur choisit UNE CT du magasin (une seule fois). */}
+                {ngplusPickList && ngplusPickList.length > 0 && (
                     <div style={ctBanner}>
-                        🎁 <b>Palier 500 ⚡ — choisis UNE CT de boss :</b>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 5, justifyContent: "center", marginTop: 6 }}>
-                            {ctPick.map((id) => { const mv = getMove(getCt(id)?.moveId ?? ""); return (
+                        🎁 <b>Récompense unique — choisis UNE CT du magasin :</b>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 5, justifyContent: "center", marginTop: 6, maxHeight: 176, overflowY: "auto" }}>
+                            {ngplusPickList.map((id) => { const mv = getMove(getCt(id)?.moveId ?? ""); return (
                                 <button key={id} onClick={() => pickCt(id)}
                                     style={{ background: "#ffd54a", color: "#1a1a22", fontWeight: 800, border: "none", borderRadius: 7, padding: "5px 9px", fontSize: 11, cursor: "pointer" }}>{mv?.name ?? id}</button>
                             ) })}
                         </div>
-                        <div style={{ fontSize: 10, opacity: 0.7, marginTop: 5 }}>(jamais deux fois la même — les autres reviendront aux prochains paliers)</div>
+                        <div style={{ fontSize: 10, opacity: 0.7, marginTop: 5 }}>(⚠️ un seul choix pour tout le run 2 — ensuite le blackjack ne donne plus de lot)</div>
                     </div>
                 )}
 
                 <div style={vip}>
                     🏅 <b>Progression VIP</b> — gains nets cumulés : <b style={{ color: "#ffd54a" }}>{won} ⚡</b>
                     {ngplus
-                        ? <span> · <b style={{ color: "#9ff0b8" }}>{bossOwned}/{NGPLUS_EXCLUSIVE_CT_IDS.length}</b> CT de boss · 1 choix tous les <b>{BLACKJACK_CT_NGPLUS_STEP} ⚡</b> {bossOwned >= NGPLUS_EXCLUSIVE_CT_IDS.length ? "(toutes obtenues ✓)" : `(prochain à ${(Math.floor(won / BLACKJACK_CT_NGPLUS_STEP) + 1) * BLACKJACK_CT_NGPLUS_STEP} ⚡)`}</span>
+                        ? (ngplusRewardTaken
+                            ? <span style={{ color: "#9ff0b8" }}> · récompense unique (1 CT du magasin) obtenue ✓</span>
+                            : won >= BLACKJACK_CT_NGPLUS_STEP
+                                ? <span style={{ color: "#ffd54a" }}> · 🎁 récompense unique DISPO : choisis 1 CT du magasin ci-dessus</span>
+                                : <span> · <b>{Math.min(won, BLACKJACK_CT_NGPLUS_STEP)}/{BLACKJACK_CT_NGPLUS_STEP} ⚡</b> → 1 CT du magasin au choix (unique) 🔒</span>)
                         : ctClaimed
                             ? <span style={{ color: "#9ff0b8" }}> · CT « Apothéose » obtenue ✓</span>
                             : <span> · palier <b>{Math.min(won, BLACKJACK_CT_TARGET)}/{BLACKJACK_CT_TARGET} ⚡</b> → CT unique « Apothéose » 🔒</span>}
