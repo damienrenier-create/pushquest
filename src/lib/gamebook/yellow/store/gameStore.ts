@@ -36,11 +36,11 @@ import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroL
 import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, ACE_PASS_LINES, ACE_GATE_LINES, aceIntro, aceGiftLine, buildAceTeam, speciesAtLevel } from "../data/ace"
 import { CAVE_TRADER_ID, CAVE_TRADE_GIVE, CAVE_TRADE_RECEIVE, CAVE_TRADER_OFFER_LINES, CAVE_TRADER_NEED_LINES, CAVE_TRADE_DONE_LINES, CAVE_TRADE_ALREADY_LINES } from "../data/caveTrader"
 import { HH_KID_ID, HH_KID_DAY_LINES, HH_KID_NIGHT_LINES, HH_KID_DAY_LINES_NGPLUS, HH_KID_DAWN_LINES, isHhKidNight, isHhKidDawn } from "../data/hhKid"
-import { ORCALINE_TRAINER_ID, ORCALINE_INTRO_LINES, ORCALINE_REMATCH_LINES, ORCALINE_DONE_TODAY_LINES } from "../data/orcalineTrainer"
+import { ORCALINE_TRAINER_ID, orcalineTrainerDialogue } from "../data/orcalineTrainer"
 import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock } from "../data/sylvebarbeBlock"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
 import { SYLVEBARBE_NPC_ID, SYLVEBARBE_INTRO_LINES, SYLVEBARBE_DONE_LINES, SYLVEBARBE_NO_FLUTE_LINES, SYLVEBARBE_NO_TEAM_LINES, buildSylvebarbe, FLUTE_GIVE_LINES } from "../data/sylvebarbe"
-import { CHEN_LAB_LINES, LAB_ASSISTANT_LINES, CHEN_ABANDON_OFFER_LINES } from "../data/labDialogues"
+import { CHEN_LAB_LINES, LAB_ASSISTANT_LINES, LAB_ASSISTANT_LINES_NGPLUS, CHEN_ABANDON_OFFER_LINES } from "../data/labDialogues"
 import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADE_RECEIVE_RUN1, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_TRADER_OFFER_LINES_RUN1, HH_TRADER_NEED_LINES_RUN1, HH_TRADER_HAS_MORROW_LINES, HH_TRADER_CANCEL_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
 
 export interface ActiveDialogue {
@@ -343,8 +343,9 @@ function tryLaunchAce(): ActiveDialogue | null {
 // DRESSEUR D'ORCALINE (plaine) : aligne 2 Orcalines de même niveau (35 + 10×victoires, cap 100).
 function tryLaunchOrcaline(): ActiveDialogue | null {
     const team = getPlayerSave().team
+    const dlg = orcalineTrainerDialogue(getActiveWorld() === "ngplus") // run 2 = PANTHÉGEL (dialogues + nom adaptés)
     if (!team.some((m) => m.currentHp > 0)) {
-        return { npcId: ORCALINE_TRAINER_ID, npcName: "DRESSEUR D'ORCALINE", lineIndex: 0, lines: ["Tes Daemons sont tous K.O. !", "Soigne-les au Centre avant de m'affronter."] }
+        return { npcId: ORCALINE_TRAINER_ID, npcName: dlg.name, lineIndex: 0, lines: ["Tes Daemons sont tous K.O. !", "Soigne-les au Centre avant de m'affronter."] }
     }
     const lvl = orcalineNextLevel()
     // NG+ : le « Dompteur » aligne des PANTHÉGEL (Orcaline devient une capture sauvage de la Grotte). Run 1 = Orcaline.
@@ -811,7 +812,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 set({ dialogue: { npcId: npc.id, npcName: "ASSISTANT", lineIndex: 0, lines: BERRY_SECRET_LINES_ASSISTANT } })
                 return
             }
-            set({ dialogue: { npcId: npc.id, npcName: "ASSISTANT", lineIndex: 0, lines: LAB_ASSISTANT_LINES } })
+            const assistantLines = getActiveWorld() === "ngplus" ? LAB_ASSISTANT_LINES_NGPLUS : LAB_ASSISTANT_LINES
+            set({ dialogue: { npcId: npc.id, npcName: "ASSISTANT", lineIndex: 0, lines: assistantLines } })
             return
         }
 
@@ -994,12 +996,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // DRESSEUR D'ORCALINE (plaine) : 1 combat gagnant/jour ; le niveau de ses 2 Orcalines monte de +10
         // à chaque victoire. 1re victoire → cadeau Orcaline (géré dans finishBattle). Combat à la fermeture.
         if (npc.id === ORCALINE_TRAINER_ID) {
+            const dlg = orcalineTrainerDialogue(getActiveWorld() === "ngplus") // run 2 → dialogues/nom Panthégel
             if (!orcalineAvailableToday()) {
-                set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: ORCALINE_DONE_TODAY_LINES } })
+                set({ dialogue: { npcId: npc.id, npcName: dlg.name, lineIndex: 0, lines: dlg.doneToday } })
                 return
             }
-            const lines = orcalineWinsCount() === 0 ? ORCALINE_INTRO_LINES : ORCALINE_REMATCH_LINES
-            set({ dialogue: { npcId: npc.id, npcName: npc.name, lines, lineIndex: 0 }, pendingOrcaline: true })
+            const lines = orcalineWinsCount() === 0 ? dlg.intro : dlg.rematch
+            set({ dialogue: { npcId: npc.id, npcName: dlg.name, lines, lineIndex: 0 }, pendingOrcaline: true })
             return
         }
 

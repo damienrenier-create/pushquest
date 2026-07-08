@@ -46,3 +46,38 @@ export const ORCALINE_BALL_LINES = [
     "Tu mérites ceci — un trésor que je gardais pour un dresseur de ta trempe : la SUPER MÉGA NEXUS-BALL.",
     "On murmure qu'elle seule peut capturer À COUP SÛR le plus insaisissable des légendaires… à condition de l'avoir d'abord bien affaibli. À toi de jouer. 🌊",
 ]
+
+// ═══════════ RUN 2 (NG+) — le Dompteur aligne des PANTHÉGEL (panthères de GLACE) : Orcaline est devenue
+// une capture sauvage de la Grotte. Mêmes règles, dialogues re-flavorés (félins de givre, pas d'orques). ═══════════
+export const ORCALINE_TRAINER_NAME_NGPLUS = "DRESSEUR DE PANTHÉGEL"
+const ORCALINE_INTRO_LINES_NGPLUS = [
+    "Hé, dresseur ! Tu vois mes deux PANTHÉGEL ? Ces félins de givre cherchent un adversaire à leur hauteur.",
+    "On dit qu'elles figent un dragon d'un seul feulement glacé… Tu veux voir ce qu'elles valent ?",
+]
+const ORCALINE_GIFT_LINES_NGPLUS = [
+    "Magnifique combat ! Tu as l'air fort… ET sympa. C'est rare, les deux.",
+    "Tu sais quoi ? Avec toi, une PANTHÉGEL pourrait faire de GRANDES choses. Tiens — prends celle-ci, elle est à toi !",
+    "Reviens quand tu veux : mes panthères seront plus coriaces à chaque fois. Et surtout… viens me raconter vos exploits ! ❄️",
+]
+const ORCALINE_REMATCH_LINES_NGPLUS = [
+    "Te revoilà ! Mes Panthégel ont encore forci depuis la dernière fois…",
+    "Montre-moi jusqu'où vous pouvez aller tous les deux ! On remet ça ?",
+]
+const ORCALINE_DONE_TODAY_LINES_NGPLUS = [
+    "Mes Panthégel récupèrent de votre dernier duel. Reviens demain — elles seront encore plus fortes !",
+]
+const ORCALINE_REMATCH_WIN_LINES_NGPLUS = [
+    "Bien joué ! Mes Panthégel seront encore plus fortes demain. Reviens vite me donner des nouvelles ! ❄️",
+]
+const ORCALINE_BALL_LINES_NGPLUS = [
+    "…Incroyable. Tu viens de vaincre ma Panthégel à son APOGÉE. Personne n'y était jamais arrivé.",
+    "Tu mérites ceci — un trésor que je gardais pour un dresseur de ta trempe : la SUPER MÉGA NEXUS-BALL.",
+    "On murmure qu'elle seule peut capturer À COUP SÛR le plus insaisissable des légendaires… à condition de l'avoir d'abord bien affaibli. À toi de jouer. ❄️",
+]
+
+/** Dialogues + nom du dresseur selon le monde : run 1 = ORCALINE (orques), run 2 = PANTHÉGEL (félins de glace). */
+export function orcalineTrainerDialogue(ngplus: boolean) {
+    return ngplus
+        ? { name: ORCALINE_TRAINER_NAME_NGPLUS, intro: ORCALINE_INTRO_LINES_NGPLUS, gift: ORCALINE_GIFT_LINES_NGPLUS, rematch: ORCALINE_REMATCH_LINES_NGPLUS, doneToday: ORCALINE_DONE_TODAY_LINES_NGPLUS, rematchWin: ORCALINE_REMATCH_WIN_LINES_NGPLUS, ball: ORCALINE_BALL_LINES_NGPLUS }
+        : { name: "DRESSEUR D'ORCALINE", intro: ORCALINE_INTRO_LINES, gift: ORCALINE_GIFT_LINES, rematch: ORCALINE_REMATCH_LINES, doneToday: ORCALINE_DONE_TODAY_LINES, rematchWin: ORCALINE_REMATCH_WIN_LINES, ball: ORCALINE_BALL_LINES }
+}

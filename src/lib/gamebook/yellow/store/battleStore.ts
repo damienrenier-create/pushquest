@@ -30,7 +30,7 @@ import { getMove, getMoveByName } from "../data/moves"
 import { getSpecies } from "../data/species"
 import { SBIRE_REWARD_REPS, SBIRE_REWARD_REPS_3, SBIRE_REWARD_REPS_5, SBIRE_REWARD_BALL_ID, SBIRE_REWARD_BALL_ID_4, SBIRE_REWARD_CT_ID, SBIRE_REWARD_CT_FALLBACK_REPS } from "../data/sbire"
 import { ACE_TRAINER_ID, aceReward, aceWinTaunt, speciesAtLevel } from "../data/ace"
-import { ORCALINE_TRAINER_ID, ORCALINE_GIFT_SPECIES, ORCALINE_GIFT_LEVEL, ORCALINE_BALL_REWARD_ID, ORCALINE_BALL_AT_LEVEL, ORCALINE_GIFT_LINES, ORCALINE_REMATCH_WIN_LINES, ORCALINE_BALL_LINES } from "../data/orcalineTrainer"
+import { ORCALINE_TRAINER_ID, ORCALINE_GIFT_SPECIES, ORCALINE_GIFT_LEVEL, ORCALINE_BALL_REWARD_ID, ORCALINE_BALL_AT_LEVEL, orcalineTrainerDialogue } from "../data/orcalineTrainer"
 import { GEKROC_STONE_ITEM } from "../data/gekroc"
 import { frontierEnergyRefund, FRONTIER_EXP_MULT } from "../frontier/engine"
 import { HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED } from "../data/hauntedNpcs"
@@ -648,20 +648,22 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             // escalade le niveau (+10/victoire). 1re victoire → cadeau Orcaline ; battre le niv 95 → ball.
             const winsBefore = recordOrcalineDefeat()
             const levelBeaten = orcalineLevelForWins(winsBefore)
+            const ngplus = getActiveWorld() === "ngplus"
+            const dlg = orcalineTrainerDialogue(ngplus) // run 2 → dialogues/nom Panthégel
             const lines: string[] = []
             if (winsBefore === 0) {
                 // NG+ : le Dompteur offre un PANTHÉGEL (au lieu d'un Orcaline, désormais sauvage en Grotte). 1re victoire, one-time.
-                const giftSp = getActiveWorld() === "ngplus" ? "panthegel" : ORCALINE_GIFT_SPECIES
+                const giftSp = ngplus ? "panthegel" : ORCALINE_GIFT_SPECIES
                 addCaught(createMonInstance(giftSp, ORCALINE_GIFT_LEVEL, { owned: true }))
-                lines.push(...ORCALINE_GIFT_LINES)
+                lines.push(...dlg.gift)
             } else {
-                lines.push(...ORCALINE_REMATCH_WIN_LINES)
+                lines.push(...dlg.rematchWin)
             }
             if (levelBeaten === ORCALINE_BALL_AT_LEVEL) { // palier 95 battu (une seule fois) → récompense secrète
                 addItem(ORCALINE_BALL_REWARD_ID, 1)
-                lines.push(...ORCALINE_BALL_LINES)
+                lines.push(...dlg.ball)
             }
-            rematchReward = { npcId: ORCALINE_TRAINER_ID, npcName: "DRESSEUR D'ORCALINE", lines }
+            rematchReward = { npcId: ORCALINE_TRAINER_ID, npcName: dlg.name, lines }
         } else if (storeState.trainer.trainerId.startsWith("duel:")) {
             // DUEL reflet : aucune récompense ici → gérée côté UI (limite 1/jour, Nexus Ball, dialogue
             // Dieu des Nouilles, cadeau croisé). PAS de markTrainerDefeated (ce n'est pas un dresseur permanent).
