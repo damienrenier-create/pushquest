@@ -1662,7 +1662,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 </div>
             )}
 
-            {/* RUN 2 — les 5 scores (temps réel · temps de jeu · frugalité 6000 · maîtrise · pas), lus en direct. */}
+            {/* RUN 2 — stats brutes (temps de jeu · énergie consommée · pas) + NOTE GLOBALE /1000, lues en direct. */}
             {menu === "run2scores" && (
                 <div style={menuOverlayStyle} onClick={() => setMenu("pause")}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
@@ -1677,11 +1677,30 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             )
                             return (
                                 <div style={{ display: "flex", flexDirection: "column", gap: 8, margin: "4px 0 8px" }}>
-                                    {row("⏱️ Temps réel", formatDuration(sc.realTimeMs), "temps écoulé depuis le début du run 2 — plus bas = mieux")}
                                     {row("🎮 Temps de jeu", formatDuration(sc.playtimeMs), "temps passé actif dans l'app — plus bas = mieux")}
-                                    {row("🔋 Frugalité", sc.frugality.toLocaleString("fr-FR"), "énergie des 6000 de départ consommée — plus bas = mieux")}
-                                    {row("🏆 Maîtrise", sc.mastery.toLocaleString("fr-FR"), "Σ niveaux équipe + 25×espèces + 100×shiny + 200×inédits − 50×défaites, ×0,99 par potion en Ligue — plus haut = mieux")}
+                                    {row("⚡ Énergie consommée", sc.energyConsumed.toLocaleString("fr-FR"), "énergie totale dépensée (attaques, boutique, casino) — plus bas = mieux")}
                                     {row("👟 Pas", sc.steps.toLocaleString("fr-FR"), "nombre de pas — plus bas = mieux")}
+                                    {/* NOTE GLOBALE /1000 + détail des 5 facteurs */}
+                                    <div style={{ borderTop: "1px solid rgba(255,255,255,0.18)", paddingTop: 8, marginTop: 2 }}>
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 15 }}>
+                                            <b>★ SCORE GLOBAL</b>
+                                            <b style={{ fontSize: 20, color: "#ffe36b" }}>{sc.grade}<span style={{ fontSize: 12, opacity: 0.6 }}> / 1000</span></b>
+                                        </div>
+                                        <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 6 }}>
+                                            {sc.factors.map((f) => (
+                                                <div key={f.key} style={{ fontSize: 11 }}>
+                                                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                                        <span>{f.label}</span>
+                                                        <span style={{ opacity: 0.85 }}><b>{f.points}</b> / {f.max}</span>
+                                                    </div>
+                                                    <div style={{ height: 4, borderRadius: 2, background: "rgba(255,255,255,0.12)", overflow: "hidden", margin: "2px 0 1px" }}>
+                                                        <div style={{ width: `${Math.round(f.ratio * 100)}%`, height: "100%", background: "#ffe36b" }} />
+                                                    </div>
+                                                    <div style={{ fontSize: 9, opacity: 0.55 }}>{f.detail}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
                             )
                         })()}

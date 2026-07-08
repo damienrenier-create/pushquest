@@ -3,50 +3,63 @@ import { hydratePlayer } from "../store/playerStore"
 import { hydratePokedex } from "../store/pokedexStore"
 import { createMonInstance } from "../battle/factory"
 import { emptyYellowStats } from "../storage/save"
+import { visibleDexSpecies, SPECIES_IDS } from "../data/species"
 import { computeRunScores, formatDuration } from "./runScore"
+
+const clamp01 = (x: number) => Math.max(0, Math.min(1, x))
+const pts = (sc: ReturnType<typeof computeRunScores>, key: string) => sc.factors.find((f) => f.key === key)!.points
 
 beforeEach(() => { hydratePokedex({ seen: [], caught: [] }) })
 
-describe("runScore — 5 scores du run 2", () => {
-    it("calcule les 5 scores selon la spec", () => {
-        const started = 1_000_000
-        const now = started + 90_000 // 90 s écoulées
+describe("runScore — stats brutes + note globale /1000 du run 2", () => {
+    it("calcule les stats brutes + les 5 facteurs de la note globale", () => {
         const m1 = createMonInstance("morrow", 50, { owned: true })
         const m2 = createMonInstance("cerfeuillu", 40, { owned: true }); m2.shiny = true
         hydratePlayer({
-            team: [m1, m2], reps: 4500, ngplusStartedAt: started, playtimeMs: 45_000, leaguePotions: 10,
-            stats: { ...emptyYellowStats(), teamKos: 2, steps: 1234 },
+            team: [m1, m2], reps: 4500, playtimeMs: 45_000, leaguePotions: 10,
+            stats: { ...emptyYellowStats(), wins: 90, teamKos: 10, steps: 6000, energySpent: 4000 },
         })
-        hydratePokedex({ seen: [], caught: ["morrow", "cerfeuillu", "ukognos", "gekraise"] }) // 4 espèces, 2 inédites (ukognos+gekraise)
-        const sc = computeRunScores(now)
-
-        expect(sc.realTimeMs).toBe(90_000)
-        expect(sc.playtimeMs).toBe(45_000)
-        expect(sc.frugality).toBe(5500) // 10000 − 4500
-        expect(sc.steps).toBe(1234)
-        // maîtrise : GAINS Σniv 90 + 25×4 + 100×1(shiny) + 200×2(inédits) = 690, × 0.99^10 (potions) × 0.98^2 (2 défaites)
-        const base = 90 + 25 * 4 + 100 * 1 + 200 * 2
-        expect(sc.mastery).toBe(Math.round(base * Math.pow(0.99, 10) * Math.pow(0.98, 2)))
-    })
-
-    it("frugalité bornée [0,10000] : reps ≥ 10000 → 0", () => {
-        hydratePlayer({ team: [], reps: 12000, leaguePotions: 0, stats: { ...emptyYellowStats() } })
-        expect(computeRunScores().frugality).toBe(0)
-    })
-
-    it("maîtrise : défaites = malus MULTIPLICATIF borné (jamais 0 ni négative, même à 100 défaites)", () => {
-        hydratePlayer({ team: [createMonInstance("morrow", 50, { owned: true })], reps: 0, leaguePotions: 0, stats: { ...emptyYellowStats(), teamKos: 100 } })
-        hydratePokedex({ seen: [], caught: ["morrow"] })
-        const base = 50 + 25 * 1 // Σniv 50 + 1 espèce distincte
+        const caught = ["morrow", "cerfeuillu", "ukognos", "gekraise"]
+        hydratePokedex({ seen: [], caught })
         const sc = computeRunScores()
-        expect(sc.mastery).toBeGreaterThan(0)   // fini le −50 fixe qui écrasait le score à 0
-        expect(sc.mastery).toBeLessThan(base)   // les défaites grignotent quand même (borné)
-        expect(sc.mastery).toBe(Math.round(base * Math.pow(0.98, 100)))
+
+        // --- stats brutes ---
+        expect(sc.playtimeMs).toBe(45_000)
+        expect(sc.energyConsumed).toBe(4000)
+        expect(sc.steps).toBe(6000)
+
+        // --- facteurs de la note /1000 ---
+        const dexTotal = visibleDexSpecies(caught, true, true).length
+        expect(pts(sc, "winrate")).toBe(Math.round((90 / 100) * 250))            // 90 V / 100 décisifs → 225
+        expect(pts(sc, "species")).toBe(Math.round(clamp01(4 / dexTotal) * 200)) // 4 espèces / dex visible
+        expect(pts(sc, "levels")).toBe(Math.round((90 / 600) * 150))            // Σ90 / 600 → 23
+        expect(pts(sc, "frugality")).toBe(Math.round((1 - 4000 / 10000) * 200)) // 60% frugal → 120
+        expect(pts(sc, "steps")).toBe(Math.round((1 - 6000 / 30000) * 200))     // 80% → 160
+
+        // la note globale = somme exacte des points de chaque facteur (pas de round divergent)
+        expect(sc.grade).toBe(sc.factors.reduce((s, f) => s + f.points, 0))
     })
 
-    it("temps réel = 0 si le NG+ n'a pas encore été lancé (ngplusStartedAt undefined)", () => {
-        hydratePlayer({ team: [], reps: 0, ngplusStartedAt: undefined, stats: { ...emptyYellowStats() } })
-        expect(computeRunScores().realTimeMs).toBe(0)
+    it("% de victoire = 100% (250 pts) si jamais mis KO", () => {
+        hydratePlayer({ team: [], reps: 0, stats: { ...emptyYellowStats(), wins: 40, teamKos: 0 } })
+        expect(pts(computeRunScores(), "winrate")).toBe(250)
+    })
+
+    it("frugalité : 0 pt si on a consommé ≥ 10000 énergie", () => {
+        hydratePlayer({ team: [], reps: 0, stats: { ...emptyYellowStats(), energySpent: 13000 } })
+        expect(pts(computeRunScores(), "frugality")).toBe(0)
+    })
+
+    it("peu de pas : 0 pt à partir de 30000 pas", () => {
+        hydratePlayer({ team: [], reps: 0, stats: { ...emptyYellowStats(), steps: 31000 } })
+        expect(pts(computeRunScores(), "steps")).toBe(0)
+    })
+
+    it("note plafonnée à 1000 quand tout est au maximum", () => {
+        const team = Array.from({ length: 6 }, () => createMonInstance("morrow", 100, { owned: true }))
+        hydratePlayer({ team, reps: 0, stats: { ...emptyYellowStats(), wins: 100, teamKos: 0, steps: 0, energySpent: 0 } })
+        hydratePokedex({ seen: [], caught: [...SPECIES_IDS] }) // Pokédex complet
+        expect(computeRunScores().grade).toBe(1000)
     })
 
     it("formatDuration : m:ss et h:mm:ss", () => {
