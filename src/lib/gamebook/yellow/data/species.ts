@@ -1685,15 +1685,21 @@ export const SPECIES: Record<string, SpeciesData> = {
         id: "ukognos", dexNo: 136, name: "Ukognos", types: ["FEE"],
         baseStats: { hp: 130, atk: 50, def: 100, spe: 125, spc: 150 }, // BST 555 — nuke spécial rapide et robuste, ATQ inutile (assumée)
         learnset: [
+            // MONO-FÉE strict, attaquant 100% SPÉCIAL. Couvertures TOUTES neutres/résistées vs Poison ET Insecte
+            // (AUCUN Feu ni Psy) → il n'a AUCUN coup super-efficace sur MEROREM (Poison/Insecte) qui le HARD-COUNTER.
+            //   • GLACE (Souffle Polaire) = anti-DRAGON → Ukognos > Goshendofy.
+            //   • ÉLEC (Fulgurance) = couverture Eau/Vol (spéciale, 150 de Spé).
+            //   • SPECTRE de STATUT (Voile d'Effroi) = utilitaire (Spectre offensif serait PHYSIQUE → gâché sur son ATQ 50).
+            // Courbe calquée sur Goshendofy (STAB → setup → STAB → soin → utilitaire → couverture → couverture → capstone).
             { level: 1, moveId: "charge" },
-            { level: 1, moveId: "flammeche" },          // flammes violettes = couverture Feu (pur flavor : Ukognos n'est PAS Feu)
-            { level: 12, moveId: "voile_feerique" },
-            { level: 24, moveId: "choc_mental" },        // couverture Psy — frappe le Poison, sa SEULE faiblesse
-            { level: 34, moveId: "lance_flammes" },
-            { level: 44, moveId: "eclat_lunaire" },      // STAB signature Fée
-            { level: 54, moveId: "vague_mentale" },      // gros Psy anti-Poison
-            { level: 65, moveId: "focalisation" },       // set-up SPÉ +1 (comme Goshendofy) → prépare le nuke
-            { level: 90, moveId: "cataclysme_lunaire" }, // capstone Fée ultra-tardif (miroir du souffle_primordial niv 95 de Goshendofy)
+            { level: 1, moveId: "voile_feerique" },       // STAB Fée d'entrée (miroir Draco-Souffle 60)
+            { level: 22, moveId: "focalisation" },        // set-up SPÉ +1 (miroir Danse-Lames)
+            { level: 28, moveId: "eclat_lunaire" },       // STAB signature Fée 85 +SpA (miroir Draco-Rage)
+            { level: 33, moveId: "repos" },               // auto-soin 50% (miroir Repos)
+            { level: 40, moveId: "voile_effroi" },        // SPECTRE (statut) : terreur -1 Atq/-1 Précision (n'aide PAS vs le Toxik de Merorem)
+            { level: 48, moveId: "souffle_polaire" },     // GLACE 90 : couverture anti-DRAGON (miroir Séisme), neutre vs Merorem
+            { level: 60, moveId: "fulgurance" },          // ÉLEC 90 : couverture Eau/Vol (spéciale), neutre vs Merorem — comble le trou
+            { level: 90, moveId: "cataclysme_lunaire" },  // capstone Fée 115 (miroir Souffle Primordial niv 95)
         ],
         catchRate: 8, baseExp: 220, rarity: "LEGENDARY", growthRate: "slow", exclusive: true,
         role: "Légendaire FÉE — alter-ego de Goshendofy, révélé au run 2 (némésis-type du Dragon)",
@@ -1918,9 +1924,10 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 24, moveId: "vampigraine" },     // drain chaque tour (propage)
             { level: 30, moveId: "onde_folie" },      // confusion
             { level: 36, moveId: "dard_fatal" },      // STAB Insecte (peut empoisonner)
+            { level: 42, moveId: "bombe_beurk" },     // gros STAB Poison (2× vs FÉE/Ukognos) — AVANCÉ 60→42 : Merorem
+                                                       //   peut enfin punir tôt la faiblesse d'Ukognos (dès l'obtention casino)
             { level: 44, moveId: "berceuse" },        // sommeil
             { level: 52, moveId: "boul_pollen" },     // Insecte 85 + drain 50%
-            { level: 60, moveId: "bombe_beurk" },     // gros STAB Poison
             { level: 66, moveId: "repos" },           // auto-soin (le staller se régénère)
             { level: 90, moveId: "miasme_corrosif" }, // capstone Poison tardif
         ],

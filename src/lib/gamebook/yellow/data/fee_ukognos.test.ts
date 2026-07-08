@@ -64,15 +64,26 @@ describe("UKOGNOS — légendaire mono-Fée (dexNo 136)", () => {
         expect(others.every((v) => s.spc >= v)).toBe(true)
         expect(s.spc).toBeGreaterThan(s.atk) // ATQ volontairement molle (pur spécial)
     })
-    it("apprend son STAB Fée signature + le set-up niv 65 + le capstone ultra-tardif niv 90", () => {
+    it("apprend son STAB Fée + set-up Focalisation + auto-soin Repos + capstone niv 90", () => {
         const ids = uko.learnset.map((l) => l.moveId)
-        expect(ids).toContain("eclat_lunaire")
-        expect(uko.learnset.find((l) => l.moveId === "focalisation")?.level).toBe(65) // set-up SPÉ +1
+        expect(ids).toContain("eclat_lunaire")  // STAB signature Fée
+        expect(ids).toContain("focalisation")   // set-up SPÉ +1 (comme Goshendofy)
+        expect(ids).toContain("repos")          // auto-soin (parité Goshendofy)
         expect(uko.learnset.find((l) => l.moveId === "cataclysme_lunaire")?.level).toBe(90) // capstone tardif (miroir Gosh niv 95)
     })
-    it("couverture anti-Poison (sa seule faiblesse) via des attaques Psy", () => {
-        const types = uko.learnset.map((l) => getMove(l.moveId)?.type)
-        expect(types).toContain("PSY")
+    it("AUCUN coup super-efficace vs Poison/Insecte (MEROREM le hard-counter) + couverture GLACE anti-Dragon", () => {
+        // Design : Ukognos n'a AUCUNE couverture qui frappe le Poison OU l'Insecte en super-efficace (pas de Feu,
+        // pas de Psy) → Merorem (Poison/Insecte) le mure et le tue via son Poison (2× vs Fée).
+        for (const l of uko.learnset) {
+            const mv = getMove(l.moveId)
+            if (!mv?.power) continue // ignore les moves de statut (Repos, Focalisation…)
+            expect(typeMultiplier(mv.type, "POISON"), `${mv.id} vs Poison`).toBeLessThanOrEqual(1)
+            expect(typeMultiplier(mv.type, "INSECTE"), `${mv.id} vs Insecte`).toBeLessThanOrEqual(1)
+        }
+        // MAIS il porte une couverture GLACE → 2× vs Dragon (Ukognos > Goshendofy), neutre vs Merorem.
+        const ice = uko.learnset.map((l) => getMove(l.moveId)).find((m) => m?.type === "GLACE")
+        expect(ice, "un move Glace anti-Dragon").toBeTruthy()
+        expect(typeMultiplier("GLACE", "DRAGON")).toBe(2)
     })
 })
 
