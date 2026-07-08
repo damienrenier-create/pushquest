@@ -8,20 +8,21 @@ export interface LabDefiCheckResp { ok: boolean; validated?: boolean; delta?: nu
 
 const ENDPOINT = "/api/gamebook/yellow/lab-defi"
 
-/** Lance un défi physique côté serveur (snapshot pour pushup1h, heure serveur de départ). */
-export async function postLabDefiStart(kind: string): Promise<LabDefiStartResp> {
+/** Lance un défi physique côté serveur (snapshot pour pushup1h, heure serveur de départ).
+ *  `ngplus` : en run 2 le défi "pushup1h" devient SQUATS (le serveur snapshot le bon exercice). */
+export async function postLabDefiStart(kind: string, ngplus = false): Promise<LabDefiStartResp> {
     try {
-        const r = await fetch(ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "start", kind }) })
+        const r = await fetch(ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "start", kind, ngplus }) })
         if (!r.ok) return { ok: false }
         return await r.json()
     } catch { return { ok: false } }
 }
 
-/** Valide un défi physique côté serveur (vraies reps). `wins` = nb de réussites déjà obtenues
- *  pour ce défi → la cible est durcie (×1,1 par réussite) côté serveur. */
-export async function postLabDefiCheck(kind: string, startSnapshot?: number, startedAt?: string, wins = 0): Promise<LabDefiCheckResp> {
+/** Valide un défi physique côté serveur (vraies reps). `wins` = nb de réussites → cible durcie
+ *  (×1,1 run 1 / ×1,2 run 2). `ngplus` : run 2 valide des SQUATS au lieu des pompes. */
+export async function postLabDefiCheck(kind: string, startSnapshot?: number, startedAt?: string, wins = 0, ngplus = false): Promise<LabDefiCheckResp> {
     try {
-        const r = await fetch(ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "check", kind, startSnapshot, startedAt, wins }) })
+        const r = await fetch(ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "check", kind, startSnapshot, startedAt, wins, ngplus }) })
         if (!r.ok) return { ok: false, validated: false }
         return await r.json()
     } catch { return { ok: false, validated: false } }

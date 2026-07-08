@@ -18,7 +18,7 @@ import { authOptions } from "@/lib/auth"
 import { isNexusYellowEnabled } from "@/lib/gamebook/yellow/featureFlag"
 import { isCreatorAccount } from "@/lib/gamebook/creator"
 import { getTodayExerciseTotal, getMaxSingleSet, getDayQuotaProgress } from "@/lib/gamebook/yellow/server/playerStats"
-import { physScaledTarget } from "@/lib/gamebook/yellow/data/labDefis"
+import { physScaledTarget, pushupDefiVariant } from "@/lib/gamebook/yellow/data/labDefis"
 
 export const dynamic = "force-dynamic"
 
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     if (!(await isNexusYellowEnabled(userId))) return NextResponse.json({ error: "Forbidden" }, { status: 404 })
 
-    let body: { action?: string; kind?: string; startSnapshot?: number; startedAt?: string; wins?: number }
+    let body: { action?: string; kind?: string; startSnapshot?: number; startedAt?: string; wins?: number; ngplus?: boolean }
     try { body = await req.json() } catch { return NextResponse.json({ error: "Invalid body" }, { status: 400 }) }
     const action = body.action === "check" ? "check" : "start"
     const kind = body.kind ?? ""
@@ -42,7 +42,8 @@ export async function POST(req: NextRequest) {
     if (action === "start") {
         // Seul "pushup1h" a besoin d'un snapshot (delta anti-ré-encodage). Les autres : juste l'heure serveur.
         if (kind === "pushup1h") {
-            const snapshot = await getTodayExerciseTotal(userId, "PUSHUP")
+            const { exercise } = pushupDefiVariant(!!body.ngplus) // run 1 = PUSHUP · run 2 = SQUAT
+            const snapshot = await getTodayExerciseTotal(userId, exercise)
             return NextResponse.json({ ok: true, snapshot, now: new Date(nowMs).toISOString() })
         }
         return NextResponse.json({ ok: true, now: new Date(nowMs).toISOString() })
@@ -51,11 +52,12 @@ export async function POST(req: NextRequest) {
     // action === "check"
     const isCreator = await isCreatorAccount(userId)
     if (kind === "pushup1h") {
+        const { exercise, growth } = pushupDefiVariant(!!body.ngplus) // run 2 = SQUAT / rampe ×1,2
         const start = body.startedAt ? Date.parse(body.startedAt) : NaN
-        const total = await getTodayExerciseTotal(userId, "PUSHUP")
+        const total = await getTodayExerciseTotal(userId, exercise)
         const delta = total - Math.max(0, Math.floor(body.startSnapshot ?? 0))
         const inWindow = !Number.isNaN(start) && (nowMs - start) <= PUSHUP_WINDOW_MS
-        const target = physScaledTarget(PUSHUP_TARGET, wins) // cible durcie ×1,1 par réussite
+        const target = physScaledTarget(PUSHUP_TARGET, wins, growth) // durcie : run 1 ×1,1 · run 2 ×1,2
         const validated = isCreator || (delta >= target && inWindow)
         return NextResponse.json({ ok: true, validated, delta, target, inWindow, expired: !inWindow })
     }

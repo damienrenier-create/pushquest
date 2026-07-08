@@ -149,11 +149,21 @@ export const BLESSING_QUEUE_MAX = 20
 // ───────── Montée en difficulté des défis physiques répétables ─────────
 /** Cible ×1,1 par réussite (le défi devient plus dur à chaque fois). */
 export const PHYS_TARGET_GROWTH = 1.1
+/** RUN 2 : rampe de difficulté ×1,2 (au lieu de ×1,1) pour le défi répétable — même récompense qu'en run 1. */
+export const PHYS_TARGET_GROWTH_NGPLUS = 1.2
 /** Récompense énergie ×1,05 par réussite (augmente moins vite que la difficulté). */
 export const PHYS_REWARD_GROWTH = 1.05
-/** Cible scalée selon le nb de réussites (arrondi au supérieur). */
-export function physScaledTarget(base: number, wins: number): number {
-    return Math.ceil(base * Math.pow(PHYS_TARGET_GROWTH, Math.max(0, Math.floor(wins))))
+/** Cible scalée selon le nb de réussites (arrondi au supérieur). `growth` par défaut = run 1 (×1,1). */
+export function physScaledTarget(base: number, wins: number, growth: number = PHYS_TARGET_GROWTH): number {
+    return Math.ceil(base * Math.pow(growth, Math.max(0, Math.floor(wins))))
+}
+
+/** DÉFI RÉPÉTABLE "pushup1h" selon le monde : run 1 = POMPES / rampe ×1,1 ; run 2 = SQUATS / rampe ×1,2.
+ *  Le mot d'affichage, l'exercice validé serveur et la rampe changent ; base (50) et récompense inchangées. */
+export function pushupDefiVariant(ngplus: boolean): { exercise: "PUSHUP" | "SQUAT"; word: string; growth: number } {
+    return ngplus
+        ? { exercise: "SQUAT", word: "squats", growth: PHYS_TARGET_GROWTH_NGPLUS }
+        : { exercise: "PUSHUP", word: "pompes", growth: PHYS_TARGET_GROWTH }
 }
 /** Récompense énergie scalée selon le nb de réussites (arrondi au inférieur). */
 export function physScaledReward(base: number, wins: number): number {
