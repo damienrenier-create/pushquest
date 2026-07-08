@@ -24,7 +24,7 @@ import { getItem } from "../data/items"
 import { reportShiny } from "../shinyGift"
 import { ARENA_TICKET_VALUE, SBIRE_TICKET_VALUE, SBIRE_TICKET_EVERY, ACE_TICKET_VALUE, ACE_TICKET_WIN_BEFORE, ACE_TICKET_WIN_AFTER, ACE_TICKET_EARLY_VALUE, ACE_TICKET_WIN_EARLY, LEAGUE_ROULETTE_PER_KO, LEAGUE_AUTOGRAPH_CREDIT } from "../data/labDefis"
 import { getCt } from "../data/cts"
-import { NGPLUS_BOSS_GIFTS } from "../data/ngplusArenas"
+import { NGPLUS_BOSS_GIFTS, arenaRevancheBoost } from "../data/ngplusArenas"
 import { BERRY_SECRET_LINES_DRUIDE } from "../data/berryLore"
 import { getMove, getMoveByName } from "../data/moves"
 import { getSpecies } from "../data/species"
@@ -568,31 +568,53 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             const id = storeState.trainer.trainerId
             const t = getTrainer(id)
             markTrainerRematched(id)
-            const rm = t?.rematch
-            let rewardLine: string
-            const ctIds = rm?.giftCts ?? []
-            if (ctIds.length > 0) {
-                // CT(s) cadeau : on ne nomme que celles RÉELLEMENT ajoutées (grantCt idempotent).
-                const names: string[] = []
-                for (const ctId of ctIds) {
-                    if (!grantCt(ctId)) continue
-                    const mvId = getCt(ctId)?.moveId
+            // RUN 2 — REVANCHE d'arène (équipe run 1 +N) : re-donne la CT CLASSIQUE du run 1 (boss uniquement,
+            // 2e CT de l'arène en run 2) + le ticket d'arène (30). Les gardes : juste l'honneur.
+            const revBoost = getActiveWorld() === "ngplus" ? arenaRevancheBoost(id) : null
+            if (revBoost != null) {
+                // CT « classique » de l'arène : soit un giftCt direct (Druide/Granit/Pyra/Ondine), soit — pour
+                // VOLTA (élec), dont la CT est dans son rematch — la 1re de rematch.giftCts (ct22).
+                const classicCt = t?.giftCt ?? t?.rematch?.giftCts?.[0]
+                const rewardLines: string[] = []
+                if (classicCt) {
+                    const mvId = getCt(classicCt)?.moveId
                     const mv = mvId ? getMove(mvId)?.name : null
-                    if (mv) names.push(mv)
+                    if (mv) {
+                        if (grantCt(classicCt)) { giftCtMove = mv; rewardLines.push(`🎁 ${t?.name ?? "Le boss"} te remet (à nouveau) sa CT classique : « ${mv} » — celle de son arène du premier run !`) }
+                        else rewardLines.push(`Tu possèdes déjà « ${mv} », la CT classique de cette arène. Belle revanche tout de même !`)
+                    }
                 }
-                const plural = names.length > 1
-                rewardLine = names.length
-                    ? `🎁 ${t?.name ?? "Le boss"} te remet ${plural ? "les CT" : "la CT"} « ${names.join(" » et « ")} » ! Cadeau unique — apprends-${plural ? "les" : "la"} à un Daemon compatible.`
-                    : `🎁 ${t?.name ?? "Le boss"} te remet une CT cadeau !`
-            } else if (rm?.reward && rm.reward > 0) {
-                const added = grantReps(rm.reward)
-                rewardLine = added > 0
-                    ? `⚡ +${added} d'énergie pour la revanche !`
-                    : `⚡ Revanche gagnée ! (ta jauge d'énergie déborde déjà)`
+                if (t?.badge) grantRouletteTicket(ARENA_TICKET_VALUE, "boss") // ticket = BOSS uniquement (les gardes : l'honneur)
+                // Boss : réplique de défaite + récompenses. Garde (pas de badge) : message générique, sans récompense.
+                const finalLines = t?.badge ? [...(t?.defeat ?? []), ...rewardLines] : []
+                rematchReward = { npcId: id, npcName: t?.name ?? "DRESSEUR", lines: finalLines.length ? finalLines : ["⚔️ Revanche de l'arène remportée !"] }
             } else {
-                rewardLine = "⚡ Revanche gagnée !"
+                const rm = t?.rematch
+                let rewardLine: string
+                const ctIds = rm?.giftCts ?? []
+                if (ctIds.length > 0) {
+                    // CT(s) cadeau : on ne nomme que celles RÉELLEMENT ajoutées (grantCt idempotent).
+                    const names: string[] = []
+                    for (const ctId of ctIds) {
+                        if (!grantCt(ctId)) continue
+                        const mvId = getCt(ctId)?.moveId
+                        const mv = mvId ? getMove(mvId)?.name : null
+                        if (mv) names.push(mv)
+                    }
+                    const plural = names.length > 1
+                    rewardLine = names.length
+                        ? `🎁 ${t?.name ?? "Le boss"} te remet ${plural ? "les CT" : "la CT"} « ${names.join(" » et « ")} » ! Cadeau unique — apprends-${plural ? "les" : "la"} à un Daemon compatible.`
+                        : `🎁 ${t?.name ?? "Le boss"} te remet une CT cadeau !`
+                } else if (rm?.reward && rm.reward > 0) {
+                    const added = grantReps(rm.reward)
+                    rewardLine = added > 0
+                        ? `⚡ +${added} d'énergie pour la revanche !`
+                        : `⚡ Revanche gagnée ! (ta jauge d'énergie déborde déjà)`
+                } else {
+                    rewardLine = "⚡ Revanche gagnée !"
+                }
+                rematchReward = { npcId: id, npcName: t?.name ?? "DRESSEUR", lines: [...(rm?.defeat ?? []), rewardLine] }
             }
-            rematchReward = { npcId: id, npcName: t?.name ?? "DRESSEUR", lines: [...(rm?.defeat ?? []), rewardLine] }
         } else if (storeState.trainer.trainerId === HH_COLLECTOR_ID) {
             // COLLECTIONNEUR DE SPECTRES : réaffrontable (PAS de markTrainerDefeated). Enregistre la victoire
             // + les spectres montrés (présents dans l'équipe). À 3 victoires ET 3 spectres distincts → CT26.
@@ -672,7 +694,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             //     roulette dédié (10→50), et l'ANNONCE dans un petit dialogue post-combat.
             const ngGift = inNgplus ? NGPLUS_BOSS_GIFTS[storeState.trainer.trainerId] : undefined
             let ngCtLine: string | null = null
-            if (ngGift) {
+            if (ngGift && t?.badge) { // t?.badge : durcissement — le ticket/CT signature = BOSS d'arène uniquement
                 const granted = grantCt(ngGift.ctId)
                 const mvId = getCt(ngGift.ctId)?.moveId
                 const mvName = mvId ? (getMove(mvId)?.name ?? null) : null

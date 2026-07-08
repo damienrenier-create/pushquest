@@ -11,6 +11,32 @@
 // RÈGLE ABSOLUE respectée : aucun Daemon à un niveau non naturel (revalidé par scripts/_resolve_ids).
 
 import type { TrainerMonSpec } from "./trainers"
+import { getTrainer } from "./trainers"
+
+// ── REVANCHE RUN 2 : chaque arène propose, APRÈS son combat re-typé, une REVANCHE = l'arène RUN 1 d'origine
+//    (boss + gardes) re-jouée à +N niveaux (combat SÉPARÉ). Boost par arène (mapId) : 1→+2 … 5→+6. ──
+const ARENA_REVANCHE_BOOST: Record<string, number> = {
+    yellow_arena: 2,        // Plante (Druide Sylvain)
+    yellow_arena_roche: 3,  // Roche (Maître Granit)
+    yellow_arena_feu: 4,    // Feu (Pyra)
+    yellow_arena_elec: 5,   // Élec (Volta)
+    yellow_arena_eau: 6,    // Eau (Ondine)
+}
+
+/** Boost de niveau de la REVANCHE run 2 pour ce dresseur (selon son arène), ou null s'il n'est pas d'une arène. */
+export function arenaRevancheBoost(trainerId: string): number | null {
+    const t = getTrainer(trainerId)
+    if (!t) return null
+    return ARENA_REVANCHE_BOOST[t.mapId] ?? null
+}
+
+/** Réplique(s) d'intro de la revanche run 2 (proposée quand on re-parle à un dresseur d'arène déjà battu). */
+export function arenaRevancheIntro(trainerName: string, isBoss: boolean): string[] {
+    return isBoss
+        ? [`Tu as maîtrisé ma garde re-typée… mais ${trainerName} n'a pas dit son dernier mot.`,
+           "Je te renvoie mon ÉQUIPE D'ORIGINE — celle du premier run — mais aguerrie, montée d'un cran. En garde pour la revanche !"]
+        : ["Une revanche ? Avec plaisir. Mon équipe d'antan a repris du service, en plus fort. En garde !"]
+}
 
 // ── Équipes run 2 par trainerId (leaders + gardes des 5 arènes) ──
 export const NGPLUS_ARENA_TEAMS: Record<string, TrainerMonSpec[]> = {

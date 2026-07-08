@@ -30,7 +30,7 @@ import { persistYellowSave, canAbandonNgplus } from "./saveManager"
 import { rollWildEncounter, wildLevelCap, hasEncounters } from "../data/encounters"
 import { reportShiny } from "../shinyGift"
 import { getTrainer, trainerBoost, arenaScaledLevel, type TrainTier } from "../data/trainers"
-import { NGPLUS_ARENA_TEAMS } from "../data/ngplusArenas"
+import { NGPLUS_ARENA_TEAMS, arenaRevancheBoost, arenaRevancheIntro } from "../data/ngplusArenas"
 import { createMonInstance } from "../battle/factory"
 import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroLines, SBIRE_DONE_LINES, SBIRE_NO_TEAM_LINES } from "../data/sbire"
 import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, ACE_PASS_LINES, ACE_GATE_LINES, aceIntro, aceGiftLine, buildAceTeam, speciesAtLevel } from "../data/ace"
@@ -169,18 +169,39 @@ function tryLaunchTrainer(trainerId: string, isRematch = false): ActiveDialogue 
     // Rival de route (Léo/Mia) : niveau d'un garde de l'arène la plus récemment battue. Leurs
     // Daemons ÉVOLUENT au stade correspondant à ce niveau (speciesAtLevel enchaîne les évolutions).
     const scaledLvl = trainer.scaleWithBadges ? arenaScaledLevel(getPlayerSave().badges) : null
+    const ngplus = getActiveWorld() === "ngplus"
     // Rematch (match retour) → 2e équipe ; sinon l'équipe de base.
     let specs = isRematch && trainer.rematch ? trainer.rematch.team : trainer.team
+    // NG+ REVANCHE (combat SÉPARÉ run 2) : re-parler à un dresseur d'arène déjà battu (isRematch) lance la
+    // REVANCHE = son équipe RUN 1 D'ORIGINE boostée de +N niveaux (garde-fou : évolution au stade naturel du
+    // niveau). Prime sur la sélection rematch/re-typée ci-dessous.
+    const revBoost = ngplus && isRematch ? arenaRevancheBoost(trainerId) : null
+    if (revBoost != null) {
+        specs = trainer.team.map((s) => {
+            const level = Math.min(100, s.level + revBoost)
+            return { ...s, level, speciesId: speciesAtLevel(s.speciesId, level) }
+        })
+    }
     // NG+ : LE MAÎTRE **est** ACE (rival en habit de Champion) → « ace nouvelle formule » : sa lignée Divin Pâte
     // devient le NÉMÉSIS (contre-lignée de ta création), rétro-évolué au bon stade pour le niveau de son slot.
-    if (trainerId === "y_ligue_maitre" && getActiveWorld() === "ngplus") {
+    if (trainerId === "y_ligue_maitre" && ngplus) {
         const nem = getNgplusNemesisSpeciesId()
         if (nem) specs = specs.map((s) => (s.speciesId === "divinpate" ? { ...s, speciesId: speciesAtLevel(nem, s.level) } : s))
     }
-    // NG+ : les 5 ARÈNES affichent leurs équipes RUN 2 (espèces inédites / re-typées, cf. ngplusArenas.ts).
-    // Remplace l'équipe (leader ET gardes) tant qu'on est en New Game+. L'AS y porte sa signature exclusive.
-    if (getActiveWorld() === "ngplus" && NGPLUS_ARENA_TEAMS[trainerId]) {
+    // NG+ : les 5 ARÈNES affichent leurs équipes RUN 2 re-typées — SEULEMENT au 1er combat (PAS la revanche,
+    // qui rejoue l'équipe run 1 d'origine ci-dessus). L'AS y porte sa signature exclusive.
+    if (ngplus && !isRematch && NGPLUS_ARENA_TEAMS[trainerId]) {
         specs = NGPLUS_ARENA_TEAMS[trainerId]
+    }
+    // NG+ LIGUE : durcissement des 5 boss → tous les Daemons +2, l'AVANT-DERNIER +3, le DERNIER +5
+    // (évolution au stade naturel si le boost dépasse le niveau d'évolution).
+    if (ngplus && trainerId.startsWith("y_ligue_")) {
+        const n = specs.length
+        specs = specs.map((s, i) => {
+            const boost = i === n - 1 ? 5 : i === n - 2 ? 3 : 2
+            const level = Math.min(100, s.level + boost)
+            return { ...s, level, speciesId: speciesAtLevel(s.speciesId, level) }
+        })
     }
     const enemyTeam = specs.map((s) => {
         const lvl = scaledLvl ?? s.level
@@ -1034,9 +1055,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 }
             }
             // Boss d'arène — 2e verrou : les gardes (battus) réclament leur REVANCHE.
-            // Tant qu'ils ne sont pas tous RE-battus, le boss renvoie le joueur les affronter
-            // (sans rien dévoiler de SON propre rematch ni des récompenses).
-            if (trainer.requiresRematch && !isTrainerDefeated(trainer.id)) {
+            // Tant qu'ils ne sont pas tous RE-battus, le boss renvoie le joueur les affronter.
+            // EN RUN 2 : verrou DÉSACTIVÉ — l'arène re-typée se boucle sans revanche (la revanche run 2 est un
+            // combat séparé, proposé APRÈS coup, cf. bloc isTrainerDefeated ci-dessous).
+            if (trainer.requiresRematch && !isTrainerDefeated(trainer.id) && getActiveWorld() !== "ngplus") {
                 const restants = trainer.requiresRematch.filter((id) => !isTrainerRematched(id)).length
                 if (restants > 0) {
                     set({
@@ -1053,17 +1075,27 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 }
             }
             if (isTrainerDefeated(trainer.id)) {
+                const inNgplus = getActiveWorld() === "ngplus"
+                // RUN 2 — REVANCHE (combat séparé) : re-parler à un dresseur d'arène déjà battu (re-typé) propose
+                // sa revanche = son équipe RUN 1 d'origine +N. Une seule fois (rematchedTrainers, per-monde).
+                if (inNgplus && arenaRevancheBoost(trainer.id) != null && !isTrainerRematched(trainer.id)) {
+                    set({
+                        dialogue: { npcId: npc.id, npcName: npc.name, lines: arenaRevancheIntro(trainer.name, !!trainer.badge), lineIndex: 0 },
+                        pendingTrainerId: trainer.id, pendingRematch: true,
+                    })
+                    return
+                }
                 const rm = trainer.rematch
-                // REMATCH (match retour) : 2e équipe, dispo une fois le dresseur déjà battu.
-                // (Pour le boss, ses gardes étaient déjà requis en revanche AVANT son 1er combat.)
-                if (rm && !isTrainerRematched(trainer.id)) {
+                // REMATCH RUN 1 (match retour VOLTA / gardes élec) : 2e équipe, une fois le dresseur déjà battu.
+                // Hors NG+ uniquement (en run 2 c'est la revanche ci-dessus qui prend le relais).
+                if (rm && !isTrainerRematched(trainer.id) && !inNgplus) {
                     set({
                         dialogue: { npcId: npc.id, npcName: npc.name, lines: rm.intro ?? trainer.intro, lineIndex: 0 },
                         pendingTrainerId: trainer.id, pendingRematch: true,
                     })
                     return
                 }
-                // Plus de rematch (ou déjà fait) → simple réplique de défaite.
+                // Plus de rematch/revanche (ou déjà fait) → simple réplique de défaite.
                 set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: trainer.defeat, lineIndex: 0 } })
             } else {
                 set({
