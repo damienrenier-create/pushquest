@@ -111,6 +111,31 @@ describe("Hautes herbes — grille 3×3 + rotation quotidienne par type", () => 
         expect(noBoost?.speciesId).not.toBe("goshendofy")
     })
 
+    it("Mottoche : présente au champ d'entraînement en RUN 1, ABSENTE en RUN 2 (exclusive à la Grotte)", () => {
+        const LINE = new Set(["mottoche", "dumotte", "quadroc", "octoroc", "hexaroc", "diamantine"])
+        const rollGrid = (x: number, y: number, n: number, ngplus: boolean, dayKey: string) => {
+            const r = new Rng(123); const rng = () => r.next()
+            const out: MonInstance[] = []
+            for (let i = 0; i < n; i++) { const m = rollWildEncounter({ mapId: MAP, x, y, leadLevel: 10, rng, dayKey, ngplus }); if (m) out.push(m) }
+            return out
+        }
+        // Cherche un jour + un carré dont le type du jour est SOL ou ROCHE (pools contenant Mottoche en run 1).
+        let tested = false
+        for (const day of ["2026-06-15", "2026-06-16", "2026-06-17", "2026-06-18", "2026-06-19", "2026-06-20", "2026-06-21"]) {
+            const types = hautesHerbesTypesForDay(day)
+            const slot = types.findIndex((t) => t === "SOL" || t === "ROCHE")
+            if (slot < 0) continue
+            const [x, y] = SQUARE_BAND0[slot]
+            const run1 = rollGrid(x, y, 600, false, day).filter((m) => LINE.has(m.speciesId))
+            const run2 = rollGrid(x, y, 600, true, day).filter((m) => LINE.has(m.speciesId))
+            expect(run1.length, `RUN 1 — Mottoche doit apparaître (${day}, slot ${slot})`).toBeGreaterThan(0)
+            expect(run2.length, `RUN 2 — Mottoche INTERDITE (${day}, slot ${slot})`).toBe(0)
+            tested = true
+            break
+        }
+        expect(tested, "aucun jour SOL/ROCHE dans l'échantillon").toBe(true)
+    })
+
     it("Goshendofy CAPTURÉ → ne réapparaît JAMAIS (même au meilleur spot + boost)", () => {
         // rng quasi-nul = seuil le plus favorable possible (passe le taux ET le tirage légendaire).
         const caught = rollWildEncounter({ mapId: MAP, x: 2, y: 17, leadLevel: 10, rng: () => 0.0001, goshBoost: true, goshCaught: true, dayKey: DAY })
