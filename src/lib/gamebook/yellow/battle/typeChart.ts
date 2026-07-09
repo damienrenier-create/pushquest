@@ -1,6 +1,6 @@
 // src/lib/gamebook/yellow/battle/typeChart.ts
 //
-// Nexus Jaune Éclair — table d'efficacité des 16 types (Gen 1 + FÉE) + catégorie
+// Nexus Jaune Éclair — table d'efficacité des 17 types (Gen 1 + FÉE + MÉTAL) + catégorie
 // physique/spéciale PAR TYPE (règle Gen 1 : le type du move décide s'il tape en
 // Attaque ou en Spécial). Données pures, data-driven.
 //
@@ -11,27 +11,31 @@ import { POKE_TYPES, type PokeType } from "./types"
 type ChartRow = Partial<Record<PokeType, number>>
 
 const CHART: Record<PokeType, ChartRow> = {
-    NORMAL: { ROCHE: 0.5, SPECTRE: 0 },
-    FEU: { PLANTE: 2, GLACE: 2, INSECTE: 2, FEU: 0.5, EAU: 0.5, ROCHE: 0.5, DRAGON: 0.5 },
+    NORMAL: { ROCHE: 0.5, SPECTRE: 0, METAL: 0.5 },
+    FEU: { PLANTE: 2, GLACE: 2, INSECTE: 2, METAL: 2, FEU: 0.5, EAU: 0.5, ROCHE: 0.5, DRAGON: 0.5 },
     EAU: { FEU: 2, SOL: 2, ROCHE: 2, EAU: 0.5, PLANTE: 0.5, DRAGON: 0.5 },
-    PLANTE: { EAU: 2, SOL: 2, ROCHE: 2, FEU: 0.5, PLANTE: 0.5, POISON: 0.5, VOL: 0.5, INSECTE: 0.5, DRAGON: 0.5 },
+    PLANTE: { EAU: 2, SOL: 2, ROCHE: 2, FEU: 0.5, PLANTE: 0.5, POISON: 0.5, VOL: 0.5, INSECTE: 0.5, DRAGON: 0.5, METAL: 0.5 },
     ELEC: { EAU: 2, VOL: 2, ELEC: 0.5, PLANTE: 0.5, DRAGON: 0.5, SOL: 0 },
-    GLACE: { PLANTE: 2, SOL: 2, VOL: 2, DRAGON: 2, EAU: 0.5, GLACE: 0.5 },
-    COMBAT: { NORMAL: 2, GLACE: 2, ROCHE: 2, POISON: 0.5, VOL: 0.5, PSY: 0.5, INSECTE: 0.5, SPECTRE: 0, FEE: 0.5 },
-    POISON: { PLANTE: 2, INSECTE: 2, POISON: 0.5, SOL: 0.5, ROCHE: 0.5, SPECTRE: 0.5, FEE: 2 },
-    SOL: { FEU: 2, ELEC: 2, POISON: 2, ROCHE: 2, PLANTE: 0.5, INSECTE: 0.5, VOL: 0 },
-    VOL: { PLANTE: 2, COMBAT: 2, INSECTE: 2, ELEC: 0.5, ROCHE: 0.5 },
-    PSY: { COMBAT: 2, POISON: 2, PSY: 0.5 },
-    INSECTE: { PLANTE: 2, PSY: 2, POISON: 2, FEU: 0.5, COMBAT: 0.5, VOL: 0.5, SPECTRE: 0.5, FEE: 0.5 },
-    ROCHE: { FEU: 2, GLACE: 2, VOL: 2, INSECTE: 2, COMBAT: 0.5, SOL: 0.5 },
+    GLACE: { PLANTE: 2, SOL: 2, VOL: 2, DRAGON: 2, EAU: 0.5, GLACE: 0.5, METAL: 0.5 },
+    COMBAT: { NORMAL: 2, GLACE: 2, ROCHE: 2, METAL: 2, POISON: 0.5, VOL: 0.5, PSY: 0.5, INSECTE: 0.5, SPECTRE: 0, FEE: 0.5 },
+    POISON: { PLANTE: 2, INSECTE: 2, POISON: 0.5, SOL: 0.5, ROCHE: 0.5, SPECTRE: 0.5, FEE: 2, METAL: 0 },
+    SOL: { FEU: 2, ELEC: 2, POISON: 2, ROCHE: 2, METAL: 2, PLANTE: 0.5, INSECTE: 0.5, VOL: 0 },
+    VOL: { PLANTE: 2, COMBAT: 2, INSECTE: 2, ELEC: 0.5, ROCHE: 0.5, METAL: 0.5 },
+    PSY: { COMBAT: 2, POISON: 2, PSY: 0.5, METAL: 0.5 },
+    INSECTE: { PLANTE: 2, PSY: 2, POISON: 2, FEU: 0.5, COMBAT: 0.5, VOL: 0.5, SPECTRE: 0.5, FEE: 0.5, METAL: 0.5 },
+    ROCHE: { FEU: 2, GLACE: 2, VOL: 2, INSECTE: 2, COMBAT: 0.5, SOL: 0.5, METAL: 0.5 },
     SPECTRE: { PSY: 2, SPECTRE: 2, NORMAL: 0 },
-    DRAGON: { DRAGON: 2, FEE: 0 },
+    DRAGON: { DRAGON: 2, FEE: 0, METAL: 0.5 },
     // FÉE (spécial) — 1er type Fée du jeu, réservé au légendaire Ukognos (run 2). Némésis-type du Dragon.
-    FEE: { COMBAT: 2, DRAGON: 2, FEU: 0.5, POISON: 0.5 },
+    FEE: { COMBAT: 2, DRAGON: 2, FEU: 0.5, POISON: 0.5, METAL: 0.5 },
+    // MÉTAL (physique) — introduit au run 3 (forteresse de Magnetor). Type TANK : peu de super-efficacité
+    // offensive (Glace/Roche/Fée), mais une DÉFENSE écrasante — résiste 10 types, immunisé au Poison,
+    // faible seulement au Feu/Combat/Sol.
+    METAL: { GLACE: 2, ROCHE: 2, FEE: 2, FEU: 0.5, EAU: 0.5, ELEC: 0.5, METAL: 0.5 },
 }
 
-// Gen 1 : la catégorie d'un move offensif est déterminée par son TYPE.
-const PHYSICAL_TYPES = new Set<PokeType>(["NORMAL", "COMBAT", "VOL", "POISON", "SOL", "ROCHE", "INSECTE", "SPECTRE"])
+// Gen 1 : la catégorie d'un move offensif est déterminée par son TYPE. MÉTAL = physique (frappe à l'ATQ).
+const PHYSICAL_TYPES = new Set<PokeType>(["NORMAL", "COMBAT", "VOL", "POISON", "SOL", "ROCHE", "INSECTE", "SPECTRE", "METAL"])
 
 /** "PHYSICAL" → utilise Attaque/Défense ; "SPECIAL" → utilise Spécial/Spécial. */
 export function moveCategory(type: PokeType): "PHYSICAL" | "SPECIAL" {

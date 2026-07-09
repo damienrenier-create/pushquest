@@ -5,16 +5,17 @@
 //   - 5 stats : HP, Attaque, Défense, Vitesse, SPÉCIAL (unifié, pas de split).
 //   - la catégorie physique/spéciale d'un move dépend de son TYPE (cf. typeChart),
 //     PAS du move → MoveData n'a donc PAS de champ "category".
-//   - 16 types (15 Gen 1 + FÉE, réservée au légendaire Ukognos du run 2), 4 moves max.
+//   - 17 types (15 Gen 1 + FÉE réservée à Ukognos + MÉTAL introduit au run 3, forteresse
+//     de Magnetor), 4 moves max.
 
 // ============================================================
-// Types élémentaires (16 — Gen 1 + FÉE)
+// Types élémentaires (17 — Gen 1 + FÉE + MÉTAL)
 // ============================================================
 
 export const POKE_TYPES = [
     "NORMAL", "FEU", "EAU", "PLANTE", "ELEC", "GLACE",
     "COMBAT", "POISON", "SOL", "VOL", "PSY", "INSECTE",
-    "ROCHE", "SPECTRE", "DRAGON", "FEE",
+    "ROCHE", "SPECTRE", "DRAGON", "FEE", "METAL",
 ] as const
 export type PokeType = (typeof POKE_TYPES)[number]
 

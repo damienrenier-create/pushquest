@@ -35,7 +35,7 @@ describe("typeEffectiveness (double type, multiplicatif)", () => {
 
 describe("moveCategory (catégorie par le TYPE — règle Gen 1)", () => {
     it("types physiques", () => {
-        for (const t of ["NORMAL", "COMBAT", "VOL", "POISON", "SOL", "ROCHE", "INSECTE", "SPECTRE"] as const) {
+        for (const t of ["NORMAL", "COMBAT", "VOL", "POISON", "SOL", "ROCHE", "INSECTE", "SPECTRE", "METAL"] as const) {
             expect(moveCategory(t)).toBe("PHYSICAL")
         }
     })
@@ -43,6 +43,37 @@ describe("moveCategory (catégorie par le TYPE — règle Gen 1)", () => {
         for (const t of ["FEU", "EAU", "PLANTE", "ELEC", "GLACE", "PSY", "DRAGON", "FEE"] as const) {
             expect(moveCategory(t)).toBe("SPECIAL")
         }
+    })
+})
+
+describe("MÉTAL — type forteresse (run 3)", () => {
+    it("offensif : super efficace ×2 contre Glace / Roche / Fée", () => {
+        expect(typeMultiplier("METAL", "GLACE")).toBe(2)
+        expect(typeMultiplier("METAL", "ROCHE")).toBe(2)
+        expect(typeMultiplier("METAL", "FEE")).toBe(2)
+    })
+    it("offensif : peu efficace ×0.5 contre Feu / Eau / Élec / Métal", () => {
+        for (const d of ["FEU", "EAU", "ELEC", "METAL"] as const) expect(typeMultiplier("METAL", d)).toBe(0.5)
+    })
+    it("défensif : faible ×2 au Feu / Combat / Sol seulement", () => {
+        for (const a of ["FEU", "COMBAT", "SOL"] as const) expect(typeMultiplier(a, "METAL")).toBe(2)
+    })
+    it("défensif : immunisé (×0) au Poison", () => {
+        expect(typeMultiplier("POISON", "METAL")).toBe(0)
+    })
+    it("défensif : résiste (×0.5) à une dizaine de types", () => {
+        for (const a of ["NORMAL", "PLANTE", "GLACE", "VOL", "PSY", "INSECTE", "ROCHE", "DRAGON", "FEE", "METAL"] as const) {
+            expect(typeMultiplier(a, "METAL")).toBe(0.5)
+        }
+    })
+    it("défensif : neutre à Eau / Élec / Spectre", () => {
+        for (const a of ["EAU", "ELEC", "SPECTRE"] as const) expect(typeMultiplier(a, "METAL")).toBe(1)
+    })
+    it("Feu/Métal (Magnetor) : double faiblesse au Sol, mais encaisse la Glace", () => {
+        // Feu/Métal contre SOL : SOL×FEU = 2, SOL×METAL = 2 → ×4 (double faiblesse au Sol = son gros trou).
+        expect(typeEffectiveness("SOL", ["FEU", "METAL"])).toBe(4)
+        // Feu/Métal encaisse GLACE : le Feu y est neutre (×1) mais le Métal résiste (×0.5) → ×0.5.
+        expect(typeEffectiveness("GLACE", ["FEU", "METAL"])).toBe(0.5)
     })
 })
 

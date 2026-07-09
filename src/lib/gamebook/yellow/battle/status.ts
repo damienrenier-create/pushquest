@@ -10,8 +10,8 @@ import type { Rng } from "./rng"
 const STATUS_TYPE_IMMUNITY: Partial<Record<Exclude<MajorStatus, "NONE">, PokeType[]>> = {
     BURN: ["FEU"],
     FREEZE: ["GLACE"],
-    POISON: [], // (PLANTE/ACIER seraient immunisés si ces types existaient ici)
-    TOXIC: [],
+    POISON: ["METAL"], // le métal ne rouille pas : MÉTAL immunisé au poison (comme l'Acier)
+    TOXIC: ["METAL"],  // … y compris au poison grave (Toxik)
     PARALYSIS: ["ELEC"],
     SLEEP: [],
 }

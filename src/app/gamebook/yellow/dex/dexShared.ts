@@ -11,14 +11,14 @@ export const TYPE_COLORS: Record<PokeType, string> = {
     NORMAL: "#a8a878", FEU: "#f08030", EAU: "#6890f0", PLANTE: "#78c850",
     ELEC: "#f8d030", GLACE: "#98d8d8", COMBAT: "#c03028", POISON: "#a040a0",
     SOL: "#e0c068", VOL: "#a890f0", PSY: "#f85888", INSECTE: "#a8b820",
-    ROCHE: "#b8a038", SPECTRE: "#705898", DRAGON: "#7038f8", FEE: "#e879c8",
+    ROCHE: "#b8a038", SPECTRE: "#705898", DRAGON: "#7038f8", FEE: "#e879c8", METAL: "#8a97a8",
 }
 
 // Abréviation 3 lettres par type (axes de la table des types).
 export const TYPE_ABBR: Record<PokeType, string> = {
     NORMAL: "NOR", FEU: "FEU", EAU: "EAU", PLANTE: "PLA", ELEC: "ELE",
     GLACE: "GLA", COMBAT: "COM", POISON: "POI", SOL: "SOL", VOL: "VOL",
-    PSY: "PSY", INSECTE: "INS", ROCHE: "ROC", SPECTRE: "SPE", DRAGON: "DRA", FEE: "FEE",
+    PSY: "PSY", INSECTE: "INS", ROCHE: "ROC", SPECTRE: "SPE", DRAGON: "DRA", FEE: "FEE", METAL: "MET",
 }
 
 // Ordre + libellés FR des 5 stats Gen 1.
