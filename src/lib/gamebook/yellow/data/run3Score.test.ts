@@ -32,6 +32,6 @@ describe("RUN 3 — score (Σ niveaux des ennemis vaincus, chacun une fois)", ()
     it("score MAX des 5 boss figés = Σ de tous leurs niveaux (981 sur la curation actuelle)", () => {
         const manual = Object.values(RUN3_BOSS_TEAMS).reduce((a, b) => a + b.team.reduce((s, m) => s + m.level, 0), 0)
         expect(run3BossesMaxScore()).toBe(manual)
-        expect(run3BossesMaxScore()).toBe(981) // Mools101 + Task1 145 + Neuneu187 + Mools263 + Franss285
+        expect(run3BossesMaxScore()).toBe(972) // Mools101 + Task1 145 + Neuneu187 + Embi254 + Franss285
     })
 })

@@ -324,108 +324,108 @@ export const RUN3_BOSS_TEAMS: Record<string, Run3Boss> = {
         ]
     },
     "elec": {
-        "nickname": "Mools",
+        "nickname": "Embi",
         "team": [
             {
-                "speciesId": "vipember",
-                "level": 43,
+                "speciesId": "jerbiwat",
+                "level": 33,
                 "stats": {
-                    "hp": 137,
-                    "atk": 77,
-                    "def": 87,
-                    "spe": 101,
-                    "spc": 133
+                    "hp": 94,
+                    "atk": 45,
+                    "def": 48,
+                    "spe": 89,
+                    "spc": 95
                 },
                 "moves": [
-                    "Lance-Flammes",
-                    "Onde Folie",
-                    "Vague Mentale",
-                    "Repos"
+                    "Charge",
+                    "Choc Mental",
+                    "Étincelle",
+                    "Focalisation"
                 ]
             },
             {
-                "speciesId": "tonytony",
-                "level": 50,
+                "speciesId": "oragron",
+                "level": 53,
                 "stats": {
-                    "hp": 318,
-                    "atk": 18,
-                    "def": 42,
-                    "spe": 77,
-                    "spc": 121
+                    "hp": 164,
+                    "atk": 106,
+                    "def": 106,
+                    "spe": 132,
+                    "spc": 150
                 },
                 "moves": [
-                    "Souffle Polaire",
+                    "Tornade",
                     "Focalisation",
-                    "Mirage",
-                    "Repos"
+                    "Étincelle",
+                    "Lame d'Eau"
                 ]
             },
             {
-                "speciesId": "sylvapuce",
-                "level": 42,
+                "speciesId": "druidours",
+                "level": 45,
                 "stats": {
-                    "hp": 130,
-                    "atk": 80,
-                    "def": 95,
-                    "spe": 80,
-                    "spc": 143
+                    "hp": 155,
+                    "atk": 133,
+                    "def": 106,
+                    "spe": 63,
+                    "spc": 72
                 },
                 "moves": [
-                    "Étreinte Sylvestre",
+                    "Méga-Sangsue",
+                    "Séisme",
                     "Tempête Verte",
-                    "Vampigraine",
-                    "Spores Dodo"
+                    "Crochet du Maître"
                 ]
             },
             {
-                "speciesId": "crapotaure",
+                "speciesId": "hebulmin",
+                "level": 38,
+                "stats": {
+                    "hp": 129,
+                    "atk": 106,
+                    "def": 74,
+                    "spe": 63,
+                    "spc": 72
+                },
+                "moves": [
+                    "Crochet du Maître",
+                    "Étincelle",
+                    "Balayage",
+                    "Fulgurance"
+                ]
+            },
+            {
+                "speciesId": "gloutanoir",
                 "level": 48,
                 "stats": {
-                    "hp": 150,
-                    "atk": 122,
-                    "def": 96,
-                    "spe": 120,
+                    "hp": 167,
+                    "atk": 80,
+                    "def": 103,
+                    "spe": 59,
                     "spc": 116
                 },
                 "moves": [
-                    "Hydrocanon",
-                    "Bélier",
-                    "Éboulis",
-                    "Lame de Roche"
+                    "Morsure",
+                    "Jet de Sable",
+                    "Tempête Verte",
+                    "Tranche"
                 ]
             },
             {
-                "speciesId": "zappeureal",
-                "level": 50,
+                "speciesId": "namizeus",
+                "level": 37,
                 "stats": {
-                    "hp": 150,
-                    "atk": 105,
-                    "def": 86,
-                    "spe": 143,
-                    "spc": 157
+                    "hp": 98,
+                    "atk": 64,
+                    "def": 54,
+                    "spe": 90,
+                    "spc": 78
                 },
                 "moves": [
-                    "Coup d'Boule",
-                    "Fulgurance",
-                    "Cage-Éclair",
-                    "Danse-Lames"
-                ]
-            },
-            {
-                "speciesId": "glaceer",
-                "level": 30,
-                "stats": {
-                    "hp": 83,
-                    "atk": 49,
-                    "def": 57,
-                    "spe": 59,
-                    "spc": 71
-                },
-                "moves": [
-                    "Coup d'Givre",
-                    "Charge",
-                    "Mur de Fer",
-                    "Bélier"
+                    "Léchouille",
+                    "Vive-Attaque",
+                    "Mirage",
+                    "Ombre Furtive"
                 ]
             }
         ]
