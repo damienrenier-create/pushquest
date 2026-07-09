@@ -646,8 +646,12 @@ export function spendReps(n: number): boolean {
     return true
 }
 
-/** Crédite des reps (récompense), plafonné au cap. Renvoie le montant réellement ajouté. */
-export function grantReps(n: number): number {
+/** Crédite des reps (récompense), plafonné au cap. Renvoie le montant réellement ajouté.
+ *  RUN 3 (concours) : l'énergie a une SOURCE UNIQUE (500 de départ + paliers d'arène) → tout crédit est BLOQUÉ
+ *  sauf `force` (utilisé par startRun3, les paliers d'arène, et le remboursement d'une attaque qui n'est jamais
+ *  partie = on rend au joueur SA propre énergie). Casino/ACE/sbire/dresseurs/gauntlet → bloqués en run 3. */
+export function grantReps(n: number, force = false): number {
+    if (activeWorld === "run3" && !force) return 0
     const before = st.reps
     st = { ...st, reps: Math.min(st.repsCap, st.reps + Math.max(0, Math.floor(n))) }
     emit()
@@ -691,6 +695,9 @@ export function creditDailyReps(today: string) {
  * d'hier" (le passé est déjà banqué par l'ancien système → pas de crédit rétroactif).
  */
 export function bankReps(totalToDate: number, throughYesterday: number, today?: string) {
+    // RUN 3 : les vraies pompes ne donnent PAS d'énergie (elles comptent pour les points Saiyan uniquement).
+    // Le high-water mark réel reste porté par les mondes run 1 / run 2 → conservé à la fusion.
+    if (activeWorld === "run3") return
     const tot = Math.max(0, Math.floor(totalToDate))
     let banked = st.repsBankedTotal
     if (banked < 0) banked = Math.max(0, Math.floor(throughYesterday)) // init migration / 1re fois
@@ -965,6 +972,7 @@ export function raiseRepsCap(delta: number) {
  * au prochain bankReps quotidien. Le cap reste relevé (perk durable assumé).
  */
 export function grantBonusEnergyUncapped(n: number) {
+    if (activeWorld === "run3") return // RUN 3 : aucun cadeau d'énergie hors-plafond (source unique)
     const amt = Math.max(0, Math.floor(n))
     if (amt <= 0) return
     st = { ...st, repsCap: st.repsCap + amt, reps: st.reps + amt }

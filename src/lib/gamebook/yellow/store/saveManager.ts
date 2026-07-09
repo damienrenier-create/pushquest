@@ -350,8 +350,8 @@ export async function startRun3(starter: MonInstance): Promise<boolean> {
     setActiveWorld("run3")
     run3Stash = null
     // 3) Énergie de départ : 500 (unique source), plafond large (paliers d'arène jusqu'à 6000 cumulés).
-    raiseRepsCap(RUN3_ENERGY_CAP - 1000) // cap 1000 → 6000
-    grantReps(RUN3_START_ENERGY)         // reps → 500
+    raiseRepsCap(RUN3_ENERGY_CAP - 1000)  // cap 1000 → 6000
+    grantReps(RUN3_START_ENERGY, true)    // reps → 500 (force : seule source autorisée avec les paliers d'arène)
     // 4) Flush immédiat (les champs plats = run 1 inchangés → garde-fou OK).
     await persistNow()
     return true

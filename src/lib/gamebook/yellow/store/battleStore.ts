@@ -404,7 +404,7 @@ export function submitPlayerAction(action: PlayerAction) {
     // #4 : l'attaque n'est jamais partie (Daemon mis K.O. avant d'agir, adversaire plus rapide)
     // → on REMBOURSE les reps. Pas de double peine : on ne paie que les attaques réellement lancées.
     if (paidMoveCost > 0 && next.lastPlayerActed === false) {
-        grantReps(paidMoveCost)
+        grantReps(paidMoveCost, true) // force : on rend au joueur SA propre énergie (attaque non partie) — même en run 3
         storeState = { ...storeState, energySpent: Math.max(0, storeState.energySpent - paidMoveCost) }
     }
     // PREMIÈRE capture de cette espèce ? On le détecte AVANT que syncPokedex ne la marque
