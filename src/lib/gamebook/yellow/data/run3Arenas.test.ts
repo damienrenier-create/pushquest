@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { run3ArenaEnergy, RUN3_ARENA_ENERGY, RUN3_ARENAS, RUN3_ARENA_BADGES, run3ArenaForBoss, pickRun3ArenaBosses, type ArenaChampionRow } from "./run3Arenas"
-import { run3ArenaInfo } from "./arenaInfos"
+import { run3ArenaInfo, arenaInfo } from "./arenaInfos"
 
 const SLOTS = ["feu", "plante", "eau", "roche", "elec"] as const
 
@@ -100,11 +100,12 @@ describe("RUN 3 — analyse d'arène pour le panneau (run3ArenaInfo)", () => {
         expect(info.energyPalier).toBe(1300)
         expect(info.guardRecommend).toContain("GLACE") // Glace/Dragon/Fée frappent Dragon
     })
-    it("arène 5 (eau, gardiens Multi) : pas de faille commune sur les gardiens", () => {
+    it("arène 5 (Multi) : REPREND le thème de l'arène eau du run 2 (au lieu d'un varié sans info)", () => {
         const info = run3ArenaInfo("eau")!
-        expect(info.guardType).toBe("Multi")
-        expect(info.guardTypes).toEqual([])       // varié
-        expect(info.guardRecommend).toEqual([])   // aucune recommandation mono-type
-        expect(Array.isArray(info.bossBestTypes)).toBe(true)
+        const run2 = arenaInfo("eau", true)!
+        expect(info.guardType).toBe("variés (comme le run 2)")
+        expect(info.guardTypes).toEqual(run2.themeTypes) // hérité du run 2
+        expect(info.guardTypes.length).toBeGreaterThan(0) // → vrai conseil, pas vide
+        expect(info.bossPlayer).toBe("Franss")            // boss figé inchangé
     })
 })

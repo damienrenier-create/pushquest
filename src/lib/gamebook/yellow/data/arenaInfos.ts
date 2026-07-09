@@ -123,7 +123,14 @@ export function run3ArenaInfo(badge: BadgeId): Run3ArenaInfo | null {
         return { speciesId: m.speciesId, name: sp?.name ?? m.speciesId, level: m.level, types: sp?.types ?? [], isBoss: i === arr.length - 1 }
     })
     const levels = team.map((m) => m.level)
-    const guardTypes = GUARD_TYPE_MAP[arenaDef.guardType] ?? []
+    // Arène "Multi" (variée) : on REPREND l'arène du RUN 2 (mêmes gardiens variés) → son thème (types de l'ACE
+    // re-typé du run 2) sert de repère pour les conseils, au lieu d'un « varié » sans info.
+    let guardTypeLabel = arenaDef.guardType
+    let guardTypes = GUARD_TYPE_MAP[arenaDef.guardType] ?? []
+    if (arenaDef.guardType === "Multi") {
+        guardTypes = arenaInfo(badge, true)?.themeTypes ?? []
+        guardTypeLabel = "variés (comme le run 2)"
+    }
     const guardRecommend = guardTypes.length ? POKE_TYPES.filter((t) => typeEffectiveness(t, guardTypes) >= 2) : []
     const bossBestTypes = bestOffensiveTypesVs(team)
     const guards = trainersOnMap(BADGE_MAP_ID[badge]).filter((t) => !t.badge)
@@ -134,7 +141,7 @@ export function run3ArenaInfo(badge: BadgeId): Run3ArenaInfo | null {
         bossName: bossData.nickname,
         bossTitle: `Arène ${arenaDef.order} — gardiens ${arenaDef.guardType}`,
         bossPlayer: bossData.nickname,
-        guardType: arenaDef.guardType,
+        guardType: guardTypeLabel,
         guardTypes,
         guardRecommend,
         bossBestTypes,
