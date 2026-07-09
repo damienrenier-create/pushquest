@@ -1,7 +1,25 @@
 import { describe, it, expect } from "vitest"
-import { run3ArenaEnergy, RUN3_ARENA_ENERGY, pickRun3ArenaBosses, type ArenaChampionRow } from "./run3Arenas"
+import { run3ArenaEnergy, RUN3_ARENA_ENERGY, RUN3_ARENAS, RUN3_ARENA_BADGES, run3ArenaForBoss, pickRun3ArenaBosses, type ArenaChampionRow } from "./run3Arenas"
 
 const SLOTS = ["feu", "plante", "eau", "roche", "elec"] as const
+
+describe("RUN 3 — config des 5 arènes (ordre/badge/type)", () => {
+    it("5 arènes dans l'ordre de jeu, badges = slots ArenaChampion, types Ligue", () => {
+        expect(RUN3_ARENAS.map((a) => a.badge)).toEqual(["plante", "roche", "feu", "elec", "eau"])
+        expect(RUN3_ARENA_BADGES).toEqual(["plante", "roche", "feu", "elec", "eau"])
+        expect(RUN3_ARENAS.map((a) => a.guardType)).toEqual(["Glace", "Combat", "Poison/Spectre", "Dragon", "Multi"])
+        expect(RUN3_ARENAS.map((a) => a.order)).toEqual([1, 2, 3, 4, 5])
+    })
+    it("chaque arène connaît son palier d'énergie (cohérent avec RUN3_ARENA_ENERGY)", () => {
+        expect(RUN3_ARENAS.map((a) => a.energy)).toEqual([...RUN3_ARENA_ENERGY])
+        expect(RUN3_ARENAS.map((a) => a.energy)).toEqual([700, 900, 1100, 1300, 1500])
+    })
+    it("run3ArenaForBoss : retrouve l'arène par son boss ; null si inconnu", () => {
+        expect(run3ArenaForBoss("y_feuarena_boss")?.guardType).toBe("Poison/Spectre")
+        expect(run3ArenaForBoss("y_arena_druide")?.energy).toBe(700)
+        expect(run3ArenaForBoss("inconnu")).toBeNull()
+    })
+})
 
 describe("RUN 3 — paliers d'énergie d'arène", () => {
     it("700 → 1500 par arène (index 0..4), 0 hors bornes", () => {

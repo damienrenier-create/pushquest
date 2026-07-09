@@ -18,6 +18,34 @@ export function run3ArenaEnergy(arenaIndex: number): number {
 /** Type dominant des GARDIENS de chaque arène (aperçu de la Ligue de Cendreville). Index = ordre de jeu. */
 export const RUN3_ARENA_GUARD_TYPES = ["Glace", "Combat", "Poison/Spectre", "Dragon", "Multi"] as const
 
+/** Définition d'une arène du run 3 (ordre de jeu = ordre de niveau du run 1). */
+export interface Run3ArenaDef {
+    order: number          // 1..5
+    mapId: string          // carte de l'arène (identique run 1/2)
+    bossTrainerId: string  // dresseur boss (dont on remplace l'équipe par un vrai joueur)
+    badge: string          // slot ArenaChampion (plante|roche|feu|elec|eau) — pour piocher le boss-joueur
+    guardType: string      // type Ligue des gardiens (re-typage run 3)
+    energy: number         // palier d'énergie offert à la victoire
+}
+
+/** Les 5 arènes du run 3, dans l'ORDRE DE JEU (croissant en niveau, comme au run 1). Slots/mapId/badge
+ *  identiques au run 1 ; seul le TYPE des gardiens change (aperçu de la Ligue) et le boss = un vrai joueur. */
+export const RUN3_ARENAS: readonly Run3ArenaDef[] = [
+    { order: 1, mapId: "yellow_arena",       bossTrainerId: "y_arena_druide",   badge: "plante", guardType: "Glace",          energy: 700 },
+    { order: 2, mapId: "yellow_arena_roche", bossTrainerId: "y_rocharena_boss", badge: "roche",  guardType: "Combat",         energy: 900 },
+    { order: 3, mapId: "yellow_arena_feu",   bossTrainerId: "y_feuarena_boss",  badge: "feu",    guardType: "Poison/Spectre", energy: 1100 },
+    { order: 4, mapId: "yellow_arena_elec",  bossTrainerId: "y_elecarena_boss", badge: "elec",   guardType: "Dragon",         energy: 1300 },
+    { order: 5, mapId: "yellow_arena_eau",   bossTrainerId: "y_eauarena_boss",  badge: "eau",    guardType: "Multi",          energy: 1500 },
+] as const
+
+/** Slots badge des 5 arènes dans l'ordre de jeu → à passer à pickRun3ArenaBosses. */
+export const RUN3_ARENA_BADGES: readonly string[] = RUN3_ARENAS.map((a) => a.badge)
+
+/** Def de l'arène run 3 pour un boss d'arène donné (par trainerId), ou null. */
+export function run3ArenaForBoss(bossTrainerId: string): Run3ArenaDef | null {
+    return RUN3_ARENAS.find((a) => a.bossTrainerId === bossTrainerId) ?? null
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // SÉLECTION DES BOSS = équipes gelées de vrais joueurs (table ArenaChampion).
 // ─────────────────────────────────────────────────────────────────────────────
