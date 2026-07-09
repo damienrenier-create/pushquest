@@ -493,6 +493,26 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "Titan de roche en fusion ; son cœur de magma ne s'éteint jamais.",
         sprite: "/yellow/sprites/dex/magmator.png",
     },
+    // STADE 4 (base 4) — évolution SPÉCIALE de Magmator via l'offre du Prof CHEN au labo (run 3).
+    // Perd la Roche au profit du MÉTAL : forteresse Feu/Métal à la Défense colossale, introduite avec le type.
+    // hiddenUntilCaught : SURPRISE — absent du Pokédex tant qu'on n'en a pas obtenu un (comme Gékroc /
+    // Goshendofy). Cf. evolveMagmatorWithChen().
+    magnetor: {
+        id: "magnetor", dexNo: 144, name: "Magnetor", types: ["FEU", "METAL"],
+        baseStats: { hp: 95, atk: 122, def: 142, spe: 50, spc: 96 },
+        learnset: [
+            { level: 1, moveId: "lance_flammes" },   // STAB Feu (spécial)
+            { level: 1, moveId: "tete_de_fer" },      // STAB Métal (physique)
+            { level: 1, moveId: "seisme" },           // couverture Sol
+            { level: 1, moveId: "mur_de_fer" },       // set-up défensif
+            { level: 50, moveId: "carapace_diamant" },// set-up défensif ++
+            { level: 58, moveId: "lame_roche" },      // couverture Roche
+            { level: 68, moveId: "poing_meteore" },   // STAB Métal capstone (90)
+        ],
+        catchRate: 45, baseExp: 280, rarity: "RARE", growthRate: "medium_fast", role: "Feu/Métal — forteresse en fusion", hiddenUntilCaught: true,
+        description: "Magmator dont la roche a mué en un alliage indestructible. Un colosse de métal fondu que rien ne perce.",
+        sprite: "/yellow/sprites/dex/magnetor.png",
+    },
 
     // --- 🍝 Dieu spaghetti (Psy) ---
     nouillon: {

@@ -577,6 +577,35 @@ export function evolvePantheonWithStone(uid: string, targetSpeciesId: string): E
     return res
 }
 
+/**
+ * OFFRE DU PROF CHEN (run 3) : fait évoluer un MAGMATOR (uid) en MAGNETOR (Feu/Métal, forteresse).
+ * Gratuit (le projet du Prof, sans objet). Renvoie le résultat (toast/anim) ou null si l'uid n'est pas
+ * un Magmator de l'équipe/PC. Magnetor entre au Pokédex. La conditionnalité (quand l'offre est proposée,
+ * une seule fois, etc.) est gérée côté UI du labo — cette fonction n'est que le MÉCANISME.
+ */
+export function evolveMagmatorWithChen(uid: string): EvolutionResult | null {
+    const inTeam = st.team.findIndex((m) => m.uid === uid)
+    const where: "team" | "pc" = inTeam >= 0 ? "team" : "pc"
+    const idx = inTeam >= 0 ? inTeam : st.pc.findIndex((m) => m.uid === uid)
+    if (idx < 0) return null
+    const src = (where === "team" ? st.team : st.pc)[idx]
+    if (src.speciesId !== "magmator") return null
+    const clone: MonInstance = { ...src, moves: src.moves.map((m) => ({ ...m })), pendingMoves: src.pendingMoves ? [...src.pendingMoves] : undefined }
+    const fromSp = getSpecies(src.speciesId)
+    const hpBefore = fromSp ? fullStats(src, fromSp).hp : src.currentHp
+    const res = applyEvolution(clone, "magnetor")
+    if (!res) return null
+    // Crédite le delta de PV MAX (Magnetor a + de PV que Magmator) → pas de déficit injustifié.
+    const toSp = getSpecies("magnetor")
+    if (toSp) { const hpAfter = fullStats(clone, toSp).hp; clone.currentHp = Math.min(hpAfter, clone.currentHp + Math.max(0, hpAfter - hpBefore)) }
+    const list = [...(where === "team" ? st.team : st.pc)]
+    list[idx] = clone
+    st = where === "team" ? { ...st, team: list } : { ...st, pc: list }
+    markCaught("magnetor") // Magnetor entre au Pokédex
+    emit()
+    return res
+}
+
 export function addItem(itemId: string, qty = 1) {
     st = { ...st, items: { ...st.items, [itemId]: (st.items[itemId] ?? 0) + qty } }
     emit()
