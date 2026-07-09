@@ -9,7 +9,7 @@
 // Tout est calculé auto par arenaInfo() → correct en run 1 ET run 2 (arènes re-typées).
 
 import { useMemo, useState } from "react"
-import { arenaInfo } from "@/lib/gamebook/yellow/data/arenaInfos"
+import { arenaInfo, run3ArenaInfo, type Run3ArenaInfo } from "@/lib/gamebook/yellow/data/arenaInfos"
 import type { BadgeId } from "@/lib/gamebook/yellow/data/cts"
 import type { PokeType } from "@/lib/gamebook/yellow/battle/types"
 
@@ -39,13 +39,31 @@ function Sprite({ id, name }: { id: string; name: string }) {
     )
 }
 
-export default function ArenaInfoPanel({ badge, isRun2, onClose }: { badge: BadgeId; isRun2: boolean; onClose: () => void }) {
-    const info = useMemo(() => arenaInfo(badge, isRun2), [badge, isRun2])
+export default function ArenaInfoPanel({ badge, isRun2, isRun3, onClose }: { badge: BadgeId; isRun2: boolean; isRun3?: boolean; onClose: () => void }) {
+    const info = useMemo(() => (isRun3 ? run3ArenaInfo(badge) : arenaInfo(badge, isRun2)), [badge, isRun2, isRun3])
     const [page, setPage] = useState(0)
     if (!info) return null
+    const r3 = isRun3 ? (info as Run3ArenaInfo) : null
     const go = (d: number) => setPage((p) => Math.max(0, Math.min(2, p + d)))
 
-    const pageOverview = (
+    const pageOverview = r3 ? (
+        <div style={S.body}>
+            <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 12, color: INK, fontWeight: 700 }}>{r3.bossTitle} <span style={{ color: "#8a4bd0" }}>· RUN 3</span></div>
+                <div style={{ fontSize: 12, color: INK, fontWeight: 700, marginTop: 2 }}>Boss : l'équipe de <b style={{ fontSize: 16 }}>{r3.bossPlayer}</b> 🧑</div>
+                <div style={{ fontSize: 12, color: INK, fontWeight: 700, marginTop: 3 }}>Niveaux <b>{info.levelMin}–{info.levelMax}</b> · victoire → <b style={{ color: "#1e8449" }}>+{r3.energyPalier}⚡</b></div>
+            </div>
+            <div style={S.block}>
+                <div style={{ ...S.blockTitle }}>🛡️ GARDIENS : <span style={{ color: "#8a4bd0" }}>{r3.guardType}</span> {r3.guardTypes.map((t) => <Chip key={t} t={t} />)}</div>
+                <div style={{ ...S.blockTitle, color: "#1e8449", fontSize: 11 }}>⚔️ frappe-les avec</div>
+                <div style={S.chipRow}>{r3.guardRecommend.length ? r3.guardRecommend.map((t) => <Chip key={t} t={t} />) : <span style={S.muted}>Type varié — pas de faille commune.</span>}</div>
+            </div>
+            <div style={S.block}>
+                <div style={{ ...S.blockTitle, color: "#1e8449" }}>⚔️ CONTRE LE BOSS ({r3.bossPlayer}) — types qui touchent le +</div>
+                <div style={S.chipRow}>{r3.bossBestTypes.length ? r3.bossBestTypes.map((t) => <Chip key={t} t={t} />) : <span style={S.muted}>Équipe très variée — prévois de la couverture.</span>}</div>
+            </div>
+        </div>
+    ) : (
         <div style={S.body}>
             <div style={{ textAlign: "center" }}>
                 <div style={{ fontSize: 12, color: INK, fontWeight: 700 }}>{info.bossTitle}</div>
@@ -66,7 +84,7 @@ export default function ArenaInfoPanel({ badge, isRun2, onClose }: { badge: Badg
 
     const pageTeam = (
         <div style={S.body}>
-            <div style={S.blockTitle}>ÉQUIPE DU BOSS ({info.team.length})</div>
+            <div style={S.blockTitle}>{r3 ? `ÉQUIPE FIGÉE DE ${r3.bossPlayer.toUpperCase()} 🧑 (${info.team.length})` : `ÉQUIPE DU BOSS (${info.team.length})`}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {info.team.map((m, i) => (
                     <div key={i} style={{ display: "flex", alignItems: "center", gap: 9, background: m.isBoss ? "#fff3d0" : "#fff8e8", border: `2px solid ${m.isBoss ? GOLD : DARK}`, borderRadius: 8, padding: 6 }}>
@@ -79,11 +97,22 @@ export default function ArenaInfoPanel({ badge, isRun2, onClose }: { badge: Badg
                     </div>
                 ))}
             </div>
-            <div style={{ ...S.muted, marginTop: 6 }}>+ {info.guardCount} gardes à battre avant le boss.</div>
+            <div style={{ ...S.muted, marginTop: 6 }}>{r3 ? `+ ${info.guardCount} gardiens ${r3.guardType} à battre avant le boss.` : `+ ${info.guardCount} gardes à battre avant le boss.`}</div>
         </div>
     )
 
-    const pageStrat = (
+    const pageStrat = r3 ? (
+        <div style={S.body}>
+            <div style={S.blockTitle}>🧠 STRATÉGIE — RUN 3</div>
+            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12.5, color: INK, lineHeight: 1.55, fontWeight: 600 }}>
+                <li>Les <b>gardiens</b> sont de type <b style={{ color: "#8a4bd0" }}>{r3.guardType}</b> : frappe-les avec {r3.guardRecommend.map((t) => TYPE_META[t].fr).join("/") || "de la couverture variée"}.</li>
+                <li>Le <b>boss</b>, c'est l'équipe RÉELLE de <b>{r3.bossPlayer}</b> (variée !) : {r3.bossBestTypes.length ? <>tes meilleures armes = <b>{r3.bossBestTypes.map((t) => TYPE_META[t].fr).join("/")}</b>.</> : <>prévois de la couverture large.</>}</li>
+                <li style={{ color: "#b8860b" }}>⚡ <b>Énergie = ta vie du run.</b> Chaque attaque coûte, et tu n'as QUE tes 500 + les paliers ({r3.energyPalier}⚡ à la victoire ici). Pas de casino, pas de reps : <b>sois efficace, gaspille rien.</b></li>
+                <li>🏆 Chaque Daemon ennemi <b>vaincu</b> ajoute son niveau à ton <b>score</b> (arène + Ligue). Va le plus loin possible avant de tomber à 0⚡.</li>
+                <li>Vise des Daemons <b>niveau ~{info.levelMax}+</b> pour ne pas te faire distancer par ce boss.</li>
+            </ul>
+        </div>
+    ) : (
         <div style={S.body}>
             <div style={S.blockTitle}>🧠 STRATÉGIE</div>
             <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12.5, color: INK, lineHeight: 1.55, fontWeight: 600 }}>

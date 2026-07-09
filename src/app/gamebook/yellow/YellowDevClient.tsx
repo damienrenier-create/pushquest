@@ -1855,7 +1855,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 )
             })()}
             <GuidePanel />
-            {arenaInfoOpen && <ArenaInfoPanel badge={arenaInfoOpen} isRun2={activeWorld === "ngplus"} onClose={closeArenaInfo} />}
+            {arenaInfoOpen && <ArenaInfoPanel badge={arenaInfoOpen} isRun2={activeWorld === "ngplus"} isRun3={activeWorld === "run3"} onClose={closeArenaInfo} />}
             <LibraryPanel />
             <AdvisorPanel />
             <LabPanel />

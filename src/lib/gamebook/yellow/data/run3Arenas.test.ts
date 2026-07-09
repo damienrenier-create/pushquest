@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { run3ArenaEnergy, RUN3_ARENA_ENERGY, RUN3_ARENAS, RUN3_ARENA_BADGES, run3ArenaForBoss, pickRun3ArenaBosses, type ArenaChampionRow } from "./run3Arenas"
+import { run3ArenaInfo } from "./arenaInfos"
 
 const SLOTS = ["feu", "plante", "eau", "roche", "elec"] as const
 
@@ -74,5 +75,36 @@ describe("RUN 3 — sélection des boss (vraies équipes de joueurs)", () => {
         const r1 = pickRun3ArenaBosses(champions, ["feu"], 2)
         const r2 = pickRun3ArenaBosses(champions, ["feu"], 2)
         expect(r1[0]?.nickname).toBe(r2[0]?.nickname)
+    })
+})
+
+describe("RUN 3 — analyse d'arène pour le panneau (run3ArenaInfo)", () => {
+    it("arène 1 (plante) : gardiens GLACE, boss = Mools, palier 700, conseils cohérents", () => {
+        const info = run3ArenaInfo("plante")!
+        expect(info.order).toBe(1)
+        expect(info.guardType).toBe("Glace")
+        expect(info.guardTypes).toEqual(["GLACE"])
+        expect(info.bossPlayer).toBe("Mools")
+        expect(info.energyPalier).toBe(700)
+        // super-efficaces contre Glace : Feu / Combat / Roche / Métal
+        for (const t of ["FEU", "COMBAT", "ROCHE", "METAL"] as const) expect(info.guardRecommend).toContain(t)
+        // équipe du boss résolue (noms + types)
+        expect(info.team.length).toBe(6)
+        expect(info.team.every((m) => m.name.length > 0)).toBe(true)
+        expect(info.team[info.team.length - 1].isBoss).toBe(true)
+    })
+    it("arène 4 (elec) : gardiens DRAGON, boss = Embi, palier 1300", () => {
+        const info = run3ArenaInfo("elec")!
+        expect(info.guardType).toBe("Dragon")
+        expect(info.bossPlayer).toBe("Embi")
+        expect(info.energyPalier).toBe(1300)
+        expect(info.guardRecommend).toContain("GLACE") // Glace/Dragon/Fée frappent Dragon
+    })
+    it("arène 5 (eau, gardiens Multi) : pas de faille commune sur les gardiens", () => {
+        const info = run3ArenaInfo("eau")!
+        expect(info.guardType).toBe("Multi")
+        expect(info.guardTypes).toEqual([])       // varié
+        expect(info.guardRecommend).toEqual([])   // aucune recommandation mono-type
+        expect(Array.isArray(info.bossBestTypes)).toBe(true)
     })
 })
