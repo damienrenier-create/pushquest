@@ -27,9 +27,9 @@ describe("Type FÉE — table des types (némésis du Dragon)", () => {
         expect(typeMultiplier("INSECTE", "FEE")).toBe(0.5)
         expect(typeMultiplier("POISON", "FEE")).toBe(2)
     })
-    it("mono-Fée : UNE SEULE faiblesse dans le roster (Poison)", () => {
+    it("mono-Fée : faible au Poison ET au Métal (Magnetor contre le légendaire Fée)", () => {
         const weaks = POKE_TYPES.filter((t) => typeMultiplier(t, "FEE") === 2)
-        expect(weaks).toEqual(["POISON"])
+        expect([...weaks].sort()).toEqual(["METAL", "POISON"])
     })
     it("FÉE est un type SPÉCIAL (frappe sur le Spécial)", () => {
         expect(moveCategory("FEE")).toBe("SPECIAL")
