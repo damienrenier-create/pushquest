@@ -119,6 +119,7 @@ export const MOVES: Record<string, MoveData> = {
     ultra_foudre: { id: "ultra_foudre", name: "Ultra-Foudre", type: "ELEC", power: 110, accuracy: 80, pp: 5, effect: { chance: 45, inflictStatus: "PARALYSIS" }, description: "Déflagration électrique colossale à la précision incertaine ; paralyse très souvent." },
     carapace_diamant: { id: "carapace_diamant", name: "Carapace Diamant", type: "ROCHE", power: 0, accuracy: 0, pp: 10, costPower: 50, effect: { statChanges: [{ target: "self", stat: "def", stages: 2 }] }, description: "Augmente BEAUCOUP la Défense." },
     // ── MÉTAL (introduit au run 3, STAB de Magnetor) ──
+    griffe_acier: { id: "griffe_acier", name: "Griffe d'Acier", type: "METAL", power: 40, accuracy: 100, pp: 35, description: "Lacère la cible de griffes d'acier tranchant. STAB Métal de départ." },
     tete_de_fer: { id: "tete_de_fer", name: "Tête de Fer", type: "METAL", power: 80, accuracy: 100, pp: 15, effect: { chance: 30, flinch: true }, description: "Charge d'un crâne d'acier ; peut apeurer la cible." },
     poing_meteore: { id: "poing_meteore", name: "Poing Météore", type: "METAL", power: 90, accuracy: 90, pp: 10, effect: { chance: 20, statChanges: [{ target: "self", stat: "atk", stages: 1 }] }, description: "Poing de métal fondu d'une force sidérale ; peut galvaniser l'Attaque du lanceur." },
     faille_sismique: { id: "faille_sismique", name: "Faille Sismique", type: "SOL", power: 90, accuracy: 100, pp: 10, effect: { statChanges: [{ target: "self", stat: "def", stages: 1 }] }, description: "Signature : faille tellurique puissante (sans effet sur le Vol) qui renforce la Défense du lanceur (+1, cumulable)." },
@@ -138,6 +139,7 @@ export const MOVES: Record<string, MoveData> = {
 
     // === Type FÉE (SPÉCIAL — 1er type Fée du jeu, porté par le légendaire Ukognos du run 2) ===
     // Némésis-type du Dragon : super-efficace sur Combat/Dragon, résisté par Feu/Poison.
+    bourrasque_feerique: { id: "bourrasque_feerique", name: "Bourrasque Féerique", type: "FEE", power: 40, accuracy: 100, pp: 30, description: "Un souffle de poussière féerique scintillante. STAB Fée de départ." },
     voile_feerique: { id: "voile_feerique", name: "Voile Féerique", type: "FEE", power: 60, accuracy: 100, pp: 20, effect: { chance: 15, inflictStatus: "POISON" }, description: "Nappe de lueurs enchantées : puissance modeste mais 15% d'empoisonner. Couverture utilitaire Fée." },
     eclat_lunaire: { id: "eclat_lunaire", name: "Éclat Lunaire", type: "FEE", power: 85, accuracy: 100, pp: 15, effect: { chance: 10, statChanges: [{ target: "self", stat: "spc", stages: 1 }] }, description: "Onde féerique scintillante : gros dégâts Spécial + 10% d'élever le Spécial du lanceur (+1, cumulable). STAB signature de la lignée Fée." },
     cataclysme_lunaire: { id: "cataclysme_lunaire", name: "Cataclysme Lunaire", type: "FEE", power: 115, accuracy: 95, pp: 5, description: "Déchaînement de flammes féeriques : la plus puissante attaque Fée. Réservée aux légendes — l'écho maudit du Souffle Primordial." },

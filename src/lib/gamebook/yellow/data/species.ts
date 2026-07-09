@@ -514,6 +514,164 @@ export const SPECIES: Record<string, SpeciesData> = {
         sprite: "/yellow/sprites/dex/magnetor.png",
     },
 
+    // ═══════════════════════════════════════════════════════════════════════════════════════════
+    // STARTERS DU RUN 3 (concours) — 3 lignées AU CHOIX, en triangle Métal › Fée › Combat › Métal.
+    // BST + pools de puissance calqués EXACTEMENT sur les 3 starters run 1 (Eau/Plante/Feu). Learnsets
+    // « propres » (chaque attaque tape sur la stat offensive du Daemon). hiddenUntilCaught : surprise run 3.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════
+
+    // --- Lignée MÉTAL (éléphant-forteresse) : TANK défensif, BST calqués sur l'EAU (Gouttiny) ---
+    elefer: {
+        id: "elefer", dexNo: 145, name: "Éléfer", types: ["METAL"],
+        baseStats: { hp: 46, atk: 52, def: 68, spe: 26, spc: 54 },
+        learnset: [
+            { level: 1, moveId: "charge" },
+            { level: 1, moveId: "mur_de_fer" },
+            { level: 4, moveId: "griffe_acier" },
+            { level: 14, moveId: "carapace_diamant" },
+        ],
+        evolution: { toId: "barrisfer", method: { kind: "LEVEL", level: 16 } },
+        catchRate: 45, baseExp: 64, rarity: "RARE", growthRate: "medium_fast", role: "Starter Métal (run 3) — mur défensif", hiddenUntilCaught: true,
+        description: "Éléphanteau à la peau de fer. Lourdaud et placide, il encaisse tout sans broncher.",
+        sprite: "/yellow/sprites/dex/elefer.png",
+    },
+    barrisfer: {
+        id: "barrisfer", dexNo: 146, name: "Barrisfer", types: ["METAL"],
+        baseStats: { hp: 60, atk: 68, def: 88, spe: 36, spc: 66 },
+        learnset: [
+            { level: 1, moveId: "charge" },
+            { level: 1, moveId: "griffe_acier" },
+            { level: 1, moveId: "mur_de_fer" },
+            { level: 20, moveId: "tete_de_fer" },
+            { level: 28, moveId: "repos" },
+            { level: 36, moveId: "seisme" },
+        ],
+        evolution: { toId: "colosfer", method: { kind: "LEVEL", level: 36 } },
+        catchRate: 45, baseExp: 141, rarity: "RARE", growthRate: "medium_fast", role: "Métal (run 3) — mur défensif", hiddenUntilCaught: true,
+        description: "Éléphant cuirassé aux défenses d'acier. Son barrissement résonne comme un gong de guerre.",
+        sprite: "/yellow/sprites/dex/barrisfer.png",
+    },
+    colosfer: {
+        id: "colosfer", dexNo: 147, name: "Colosfer", types: ["METAL"],
+        baseStats: { hp: 80, atk: 92, def: 118, spe: 44, spc: 90 },
+        learnset: [
+            { level: 1, moveId: "charge" },
+            { level: 1, moveId: "griffe_acier" },
+            { level: 1, moveId: "tete_de_fer" },
+            { level: 1, moveId: "seisme" },
+            { level: 1, moveId: "mur_de_fer" },
+            { level: 42, moveId: "carapace_diamant" },
+            { level: 48, moveId: "repos" },
+            { level: 54, moveId: "coup_de_boutoir" },
+            { level: 66, moveId: "poing_meteore" },
+        ],
+        catchRate: 45, baseExp: 208, rarity: "RARE", growthRate: "medium_fast", role: "Métal (run 3) — forteresse ambulante", hiddenUntilCaught: true,
+        description: "Mammouth-forteresse de métal massif. Rien ne le perce, rien ne le déplace contre son gré.",
+        sprite: "/yellow/sprites/dex/colosfer.png",
+    },
+
+    // --- Lignée FÉE (licorne lunaire) : SWEEPER spécial, BST calqués sur la PLANTE (Feuillichot) ---
+    cornaive: {
+        id: "cornaive", dexNo: 148, name: "Cornaïve", types: ["FEE"],
+        baseStats: { hp: 45, atk: 34, def: 46, spe: 58, spc: 62 },
+        learnset: [
+            { level: 1, moveId: "charge" },
+            { level: 4, moveId: "bourrasque_feerique" },
+            { level: 11, moveId: "onde_folie" },
+        ],
+        evolution: { toId: "astracorne", method: { kind: "LEVEL", level: 16 } },
+        catchRate: 45, baseExp: 64, rarity: "RARE", growthRate: "medium_fast", role: "Starter Fée (run 3) — sweeper spécial", hiddenUntilCaught: true,
+        description: "Pouliche-licorne au pelage scintillant. Naïve, mais sa corne crépite déjà de magie lunaire.",
+        sprite: "/yellow/sprites/dex/cornaive.png",
+    },
+    astracorne: {
+        id: "astracorne", dexNo: 149, name: "Astracorne", types: ["FEE"],
+        baseStats: { hp: 60, atk: 44, def: 58, spe: 76, spc: 84 },
+        learnset: [
+            { level: 1, moveId: "charge" },
+            { level: 1, moveId: "bourrasque_feerique" },
+            { level: 1, moveId: "onde_folie" },
+            { level: 18, moveId: "voile_feerique" },
+            { level: 26, moveId: "focalisation" },
+            { level: 32, moveId: "vague_mentale" },
+        ],
+        evolution: { toId: "lunarque", method: { kind: "LEVEL", level: 32 } },
+        catchRate: 45, baseExp: 141, rarity: "RARE", growthRate: "medium_fast", role: "Fée (run 3) — sweeper spécial", hiddenUntilCaught: true,
+        description: "Licorne à la crinière d'étoiles. Galope sur les rayons de lune, insaisissable.",
+        sprite: "/yellow/sprites/dex/astracorne.png",
+    },
+    lunarque: {
+        id: "lunarque", dexNo: 150, name: "Lunarque", types: ["FEE"],
+        baseStats: { hp: 78, atk: 56, def: 74, spe: 105, spc: 122 },
+        learnset: [
+            { level: 1, moveId: "charge" },
+            { level: 1, moveId: "bourrasque_feerique" },
+            { level: 1, moveId: "voile_feerique" },
+            { level: 1, moveId: "onde_folie" },
+            { level: 38, moveId: "eclat_lunaire" },
+            { level: 46, moveId: "vague_mentale" },
+            { level: 52, moveId: "repos" },
+            { level: 58, moveId: "focalisation" },
+            { level: 66, moveId: "cataclysme_lunaire" },
+        ],
+        catchRate: 45, baseExp: 208, rarity: "RARE", growthRate: "medium_fast", role: "Fée (run 3) — sweeper spécial", hiddenUntilCaught: true,
+        description: "Souveraine lunaire. D'un coup de corne, elle abat un cataclysme d'argent sur ses ennemis.",
+        sprite: "/yellow/sprites/dex/lunarque.png",
+    },
+
+    // --- Lignée COMBAT/INSECTE (coccinelle-boxeuse ♀) : CANON DE VERRE, BST calqués sur le FEU (Braisille) ---
+    coccipoing: {
+        id: "coccipoing", dexNo: 151, name: "Coccipoing", types: ["COMBAT", "INSECTE"],
+        baseStats: { hp: 44, atk: 72, def: 38, spe: 66, spc: 34 },
+        learnset: [
+            { level: 1, moveId: "charge" },
+            { level: 1, moveId: "vive_attaque" },
+            { level: 4, moveId: "double_pied" },
+            { level: 9, moveId: "essaim_vorace" },
+            { level: 15, moveId: "poing_karate" },
+        ],
+        evolution: { toId: "coccombat", method: { kind: "LEVEL", level: 16 } },
+        catchRate: 45, baseExp: 64, rarity: "RARE", growthRate: "medium_fast", role: "Starter Combat/Insecte (run 3) — canon de verre", hiddenUntilCaught: true,
+        description: "Petite coccinelle aux gantelets rouges. Teigneuse malgré sa taille, elle cogne vite et fort.",
+        sprite: "/yellow/sprites/dex/coccipoing.png",
+    },
+    coccombat: {
+        id: "coccombat", dexNo: 152, name: "Coccombat", types: ["COMBAT", "INSECTE"],
+        baseStats: { hp: 56, atk: 96, def: 50, spe: 88, spc: 42 },
+        learnset: [
+            { level: 1, moveId: "charge" },
+            { level: 1, moveId: "vive_attaque" },
+            { level: 1, moveId: "double_pied" },
+            { level: 1, moveId: "essaim_vorace" },
+            { level: 1, moveId: "poing_karate" },
+            { level: 20, moveId: "morsure" },
+            { level: 30, moveId: "dard_mortel" },
+            { level: 36, moveId: "danse_lames" },
+        ],
+        evolution: { toId: "coccimperatrice", method: { kind: "LEVEL", level: 36 } },
+        catchRate: 45, baseExp: 141, rarity: "RARE", growthRate: "medium_fast", role: "Combat/Insecte (run 3) — canon de verre", hiddenUntilCaught: true,
+        description: "A largué ses élytres pour la vitesse. Guerrière déchaînée, elle enchaîne les frappes éclair.",
+        sprite: "/yellow/sprites/dex/coccombat.png",
+    },
+    coccimperatrice: {
+        id: "coccimperatrice", dexNo: 153, name: "Coccimpératrice", types: ["COMBAT", "INSECTE"],
+        baseStats: { hp: 72, atk: 128, def: 66, spe: 124, spc: 56 },
+        learnset: [
+            { level: 1, moveId: "charge" },
+            { level: 1, moveId: "vive_attaque" },
+            { level: 1, moveId: "poing_karate" },
+            { level: 1, moveId: "essaim_vorace" },
+            { level: 1, moveId: "morsure" },
+            { level: 40, moveId: "crochet_maitre" },
+            { level: 48, moveId: "dard_mortel" },
+            { level: 56, moveId: "danse_lames" },
+            { level: 66, moveId: "coup_de_boutoir" },
+        ],
+        catchRate: 45, baseExp: 208, rarity: "RARE", growthRate: "medium_fast", role: "Combat/Insecte (run 3) — canon de verre", hiddenUntilCaught: true,
+        description: "Maîtresse à mains nues, souveraine des pois rouges. Ses frappes foudroyantes brisent les gardes.",
+        sprite: "/yellow/sprites/dex/coccimperatrice.png",
+    },
+
     // --- 🍝 Dieu spaghetti (Psy) ---
     nouillon: {
         id: "nouillon", dexNo: 31, name: "Nouillon", types: ["PSY"],
