@@ -52,7 +52,7 @@ import { useEncounterFxActive } from "@/lib/gamebook/yellow/store/encounterFxSto
 import { aceLoseLine } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
-import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, getNgplusOldTeam, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT } from "@/lib/gamebook/yellow/store/saveManager"
+import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, getNgplusOldTeam, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3 } from "@/lib/gamebook/yellow/store/saveManager"
 import { customStarterSpeciesId, type StoredCustomDaemon } from "@/lib/gamebook/yellow/create/customSpecies"
 import { getPlayer, setTeam, usePlayer, useActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket } from "@/lib/gamebook/yellow/store/playerStore"
 import { computeRunScores, formatDuration } from "@/lib/gamebook/yellow/score/runScore"
@@ -206,6 +206,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const duelResult = useDuelResult()
     const ngplusFinalPending = useNgplusFinalPending() // NG+ : Maître battu en NG+ → combat vs ancienne équipe à lancer
     const ngplusFinalResult = useNgplusFinalResult()   // NG+ : issue de ce combat (win → clôture)
+    // RUN 3 — à la fin du run 2, on propose le CHOIX : fusionner maintenant (finir) OU lancer le run 3.
+    const [run3Offer, setRun3Offer] = useState<{ score: number } | null>(null)
     const run = useRun()
     const frontierResult = useFrontierResult()
     const frontierReportedRef = useRef(false)
@@ -796,15 +798,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (won) {
             // SCORE du run NG+ = l'énergie en réserve à la clôture (capturée AVANT la fusion, qui remanie les reps).
             const ngplusScore = getPlayer().reps
-            // FUSION COMPLÈTE des 2 mondes (async : merge + backup + persist), puis dialogue de clôture.
-            completeNewGamePlus().finally(() => {
-                showDialogue("y_ligue_maitre", "FUSION DES TIMELINES", [
-                    "L'équipe que tu avais un jour abandonnée s'incline devant ta création.",
-                    `Tu boucles cette seconde vie avec ${ngplusScore}⚡ en réserve : voilà TON score, gravé dans le Nexus. Sauras-tu le battre un jour ?`,
-                    "En cet instant, tes deux destins n'en font plus qu'UN : tous tes anciens Daemons rejoignent ton PC.",
-                    "Le cycle est bouclé, Maître. Ta lignée custom règne désormais sur le Nexus fusionné. 🍝",
-                ])
-            })
+            // On NE FUSIONNE PAS tout de suite : on PROPOSE le choix (fusionner OU lancer le run 3). L'overlay
+            // ci-dessous appelle completeNewGamePlus (fusion 2-voies) OU launchRun3 (garde les 3 mondes gelés).
+            setRun3Offer({ score: ngplusScore })
         } else {
             setToast("Défaite face à ton ancienne équipe… soigne-toi et retente (Menu → ⚔️).")
         }
@@ -1132,6 +1128,29 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
 
     // NG+ (2 mondes navigables) — lance un New Game+ avec un Daemon custom en starter (+6000⚡), en GELANT
     // l'équipe championne actuelle comme adversaire de fin de Ligue. Le monde d'origine reste intact/rejouable.
+    // RUN 3 (concours) — lance le 3e run DEPUIS la fin du run 2. Le Daemon custom du run 2 sert de starter
+    // (fraîchement éclos niveau 5). run 1 + run 2 restent GELÉS ; TOUT fusionne à la fin du run 3 (0⚡).
+    const launchRun3 = async () => {
+        const cds = getPlayer().customDaemons
+        const stored = cds[cds.length - 1] // la création du joueur (run 2) → starter du run 3
+        if (!stored) { setToast("Daemon custom introuvable — run 3 impossible."); return }
+        let starter
+        try { starter = createMonInstance(customStarterSpeciesId(stored), 5, { owned: true }) }
+        catch { setToast("Ton Daemon custom est introuvable/corrompu — run 3 impossible."); return }
+        const ok = await startRun3(starter)
+        if (!ok) { setToast("Run 3 réservé au Champion du run 2."); return }
+        setMenu("none")
+        setMap(YELLOW_ENTRANCE_MAP_ID, DEFAULT_SPAWN.x, DEFAULT_SPAWN.y) // le run 3 démarre au tout début
+        showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, [
+            `*Un éclair de pâte incandescente. ${stored.spec.name} renaît à tes côtés, niveau 5 — pour la TROISIÈME vie.*`,
+            "« Voici le CONCOURS ultime. 500 énergies bénies pour commencer — et RIEN d'autre. Pas de casino, pas de reps, pas de cadeaux : chaque attaque puise dans ta réserve. »",
+            "« Bats l'arène 1 et je t'octroie 700⚡. Puis 900, 1100, 1300, 1500 aux suivantes. Va le plus loin possible : la Ligue t'attend au bout. »",
+            "« Ton SCORE = la somme des niveaux de tous les Daemons ennemis que tu terrasses. Quand tu tombes à 0⚡, le concours s'achève. »",
+            "« Et alors seulement — MÉGA-FUSION : ton run 1, ton run 2 ET ce run 3 n'en feront plus qu'un. D'ici là, tes deux vies passées restent gelées. Pas de retour. »",
+            "« Que la légende commence, Maître. 🍝🔥 »",
+        ])
+    }
+
     const launchNewGamePlus = async (stored: StoredCustomDaemon) => {
         if (getPlayer().ngplusUsed) { setToast("Tu as déjà accompli ta seconde vie. Pour en relancer une, il faut recommencer le run 1 (réinitialiser le chapitre)."); return }
         let starter
@@ -1856,6 +1875,37 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             })()}
             <GuidePanel />
             {arenaInfoOpen && <ArenaInfoPanel badge={arenaInfoOpen} isRun2={activeWorld === "ngplus"} isRun3={activeWorld === "run3"} onClose={closeArenaInfo} />}
+
+            {/* RUN 3 — CHOIX à la fin du run 2 : fusionner maintenant (finir) OU lancer le concours (méga-fusion plus tard). */}
+            {run3Offer && (
+                <div style={menuOverlayStyle}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>🔥 UN TROISIÈME DÉFI ?</div>
+                        <div style={{ fontSize: 12.5, lineHeight: 1.5, margin: "2px 0 10px", color: "#eee" }}>
+                            Tu boucles ta seconde vie avec <b style={{ color: "#ffe36b" }}>{run3Offer.score}⚡</b> en réserve. Deux voies s'ouvrent :
+                            <div style={{ margin: "8px 0 0", padding: "8px 10px", background: "rgba(255,255,255,0.06)", borderRadius: 8, fontSize: 12 }}>
+                                🍝 <b>Fusionner</b> : tes Daemons du run 1 rejoignent ton PC, le run 2 devient ton compte. C'est fini.
+                            </div>
+                            <div style={{ margin: "6px 0 0", padding: "8px 10px", background: "rgba(255,120,40,0.12)", borderRadius: 8, fontSize: 12 }}>
+                                🔥 <b>Lancer le RUN 3</b> — le concours ultime (500⚡, source unique). <b style={{ color: "#ff9a5a" }}>⚠️ Ton run 1 ET ton run 2 restent GELÉS</b> : tu récupères TOUT (méga-fusion) seulement à la fin du run 3, à 0⚡. <b>Pas de retour.</b>
+                            </div>
+                        </div>
+                        <button style={menuBtnStyle} onClick={() => { setRun3Offer(null); void launchRun3() }}>🔥 Lancer le RUN 3</button>
+                        <button style={menuBtnDimStyle} onClick={() => {
+                            const score = run3Offer.score
+                            setRun3Offer(null)
+                            completeNewGamePlus().finally(() => {
+                                showDialogue("y_ligue_maitre", "FUSION DES TIMELINES", [
+                                    "L'équipe que tu avais un jour abandonnée s'incline devant ta création.",
+                                    `Tu boucles cette seconde vie avec ${score}⚡ en réserve : voilà TON score, gravé dans le Nexus. Sauras-tu le battre un jour ?`,
+                                    "En cet instant, tes deux destins n'en font plus qu'UN : tous tes anciens Daemons rejoignent ton PC.",
+                                    "Le cycle est bouclé, Maître. Ta lignée custom règne désormais sur le Nexus fusionné. 🍝",
+                                ])
+                            })
+                        }}>🍝 Fusionner maintenant (finir le run 2)</button>
+                    </div>
+                </div>
+            )}
             <LibraryPanel />
             <AdvisorPanel />
             <LabPanel />
