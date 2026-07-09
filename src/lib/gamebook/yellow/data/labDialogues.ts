@@ -39,7 +39,7 @@ export const LAB_ASSISTANT_LINES = [
  *  unique, plus Apothéose) ; les signatures de boss se méritent en arène. Le pilier casino est MEROREM (Poison/Insecte). */
 export const LAB_ASSISTANT_LINES_NGPLUS = [
     "« Salut ! L'assistant du Prof. CHEN, toujours au poste. Le terminal, tu connais : inflige assez de dégâts d'un type et tu repars avec une CT. »",
-    "« Au CASINO, en NEW GAME+, le BLACKJACK te réserve UNE récompense unique : dès 500 d'énergie NETTE gagnée, tu choisis UNE CT du magasin — une seule pour tout le run, alors choisis bien ! Les CT-signatures des boss, elles, se méritent en terrassant les arènes re-typées. »",
+    "« Au CASINO, en NEW GAME+, le BLACKJACK te réserve UNE récompense unique : dès 1000 d'énergie NETTE gagnée, tu choisis N'IMPORTE QUELLE CT — une seule pour tout le run, alors choisis bien ! Seules les signatures des boss t'échappent : celles-là se méritent en terrassant les arènes re-typées. »",
     "« Un conseil : une CT ne cogne fort que si elle colle au TYPE de ton Daemon. Souviens-toi que chaque attaque tape sur l'ATTAQUE ou le SPÉCIAL selon son type — ne gâche pas ta meilleure stat. »",
     "« Côté pilier, ici ce n'est plus Tonytony mais son cousin MEROREM. 1000 d'énergie cumulée au casino et ce Poison/Insecte increvable rejoint ton équipe — soigneur et coriace, comme l'autre. »",
     "« Le Prof., lui, refaçonne son instrument pour réveiller, encore une fois, le colosse endormi au sud… S'il réussit, de nouvelles routes s'ouvriront à toi, Champion d'un autre monde ! »",

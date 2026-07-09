@@ -7,7 +7,7 @@
 import { useEffect, useRef, useState } from "react"
 import { usePlayer, spendReps, settleBlackjack, claimBlackjackCt, getActiveWorld, blackjackNgplusPickPending, blackjackNgplusChoices, claimBlackjackCtNgplus } from "@/lib/gamebook/yellow/store/playerStore"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
-import { BLACKJACK_CT_TARGET, BLACKJACK_CT_NGPLUS_STEP } from "@/lib/gamebook/yellow/data/labDefis"
+import { BLACKJACK_CT_TARGET, BLACKJACK_CT_NGPLUS_TARGET } from "@/lib/gamebook/yellow/data/labDefis"
 import { getCt } from "@/lib/gamebook/yellow/data/cts"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { deal, hit, stand, double, canDouble, handValue, freshShoe, type BJState, type Card } from "@/lib/gamebook/yellow/casino/blackjack"
@@ -221,10 +221,10 @@ export default function BlackjackPanel({ close }: { close: () => void }) {
                     </div>
                 )}
 
-                {/* RUN 2 : récompense UNIQUE — dès 500 ⚡ nets, le joueur choisit UNE CT du magasin (une seule fois). */}
+                {/* RUN 2 : récompense UNIQUE — dès 1000 ⚡ nets, le joueur choisit UNE CT au choix (une seule fois). */}
                 {ngplusPickList && ngplusPickList.length > 0 && (
                     <div style={ctBanner}>
-                        🎁 <b>Récompense unique — choisis UNE CT du magasin :</b>
+                        🎁 <b>Récompense unique — choisis N'IMPORTE QUELLE CT :</b>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 5, justifyContent: "center", marginTop: 6, maxHeight: 176, overflowY: "auto" }}>
                             {ngplusPickList.map((id) => { const mv = getMove(getCt(id)?.moveId ?? ""); return (
                                 <button key={id} onClick={() => pickCt(id)}
@@ -239,10 +239,10 @@ export default function BlackjackPanel({ close }: { close: () => void }) {
                     🏅 <b>Progression VIP</b> — gains nets cumulés : <b style={{ color: "#ffd54a" }}>{won} ⚡</b>
                     {ngplus
                         ? (ngplusRewardTaken
-                            ? <span style={{ color: "#9ff0b8" }}> · récompense unique (1 CT du magasin) obtenue ✓</span>
-                            : won >= BLACKJACK_CT_NGPLUS_STEP
-                                ? <span style={{ color: "#ffd54a" }}> · 🎁 récompense unique DISPO : choisis 1 CT du magasin ci-dessus</span>
-                                : <span> · <b>{Math.min(won, BLACKJACK_CT_NGPLUS_STEP)}/{BLACKJACK_CT_NGPLUS_STEP} ⚡</b> → 1 CT du magasin au choix (unique) 🔒</span>)
+                            ? <span style={{ color: "#9ff0b8" }}> · récompense unique (1 CT au choix) obtenue ✓</span>
+                            : won >= BLACKJACK_CT_NGPLUS_TARGET
+                                ? <span style={{ color: "#ffd54a" }}> · 🎁 récompense unique DISPO : choisis 1 CT ci-dessus</span>
+                                : <span> · <b>{Math.min(won, BLACKJACK_CT_NGPLUS_TARGET)}/{BLACKJACK_CT_NGPLUS_TARGET} ⚡</b> → 1 CT au choix (unique) 🔒</span>)
                         : ctClaimed
                             ? <span style={{ color: "#9ff0b8" }}> · CT « Apothéose » obtenue ✓</span>
                             : <span> · palier <b>{Math.min(won, BLACKJACK_CT_TARGET)}/{BLACKJACK_CT_TARGET} ⚡</b> → CT unique « Apothéose » 🔒</span>}

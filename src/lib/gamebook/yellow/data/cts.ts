@@ -180,11 +180,12 @@ export function canLearnCt(species: SpeciesData, ct: CtData): boolean {
     return !!ct.alsoTypes?.some((t) => species.types.includes(t)) // types supplémentaires (façon Gen 1)
 }
 
-/** Catalogue COMPLET des CT vendables en boutique (tout ce que le magasin peut proposer, badges mis à part) :
- *  on exclut seulement les cadeaux `gift` (jamais en vente) et les exclusives labo `labOnly`. Sert d'univers
- *  de choix à la RÉCOMPENSE UNIQUE du blackjack en run 2 (« une CT du magasin au choix, une seule fois »). */
-export function shopCatalogCtIds(): string[] {
-    return CTS.filter((c) => !c.gift && !c.labOnly).map((c) => c.id)
+/** Univers de choix de la RÉCOMPENSE UNIQUE du blackjack en run 2 : N'IMPORTE QUELLE CT du jeu — magasin
+ *  (universal/badge/champion), cadeaux et exclusives labo confondus, SANS filtre de badge — SAUF les 5
+ *  CT-signatures réservées aux boss d'arène (ct53-57) et la CT-trophée « Apothéose » (ct52, propre au run 1). */
+export function run2BlackjackCtPool(): string[] {
+    const excluded = new Set<string>([...NGPLUS_EXCLUSIVE_CT_IDS, "ct52"]) // signatures de boss + Apothéose
+    return CTS.filter((c) => !excluded.has(c.id)).map((c) => c.id)
 }
 
 /** CT effectivement achetables selon les badges possédés. TOUTE CT est un ACHAT UNIQUE : une fois achetée

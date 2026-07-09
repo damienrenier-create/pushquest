@@ -299,9 +299,9 @@ export const CASINO_BANKRUPT_COOLDOWN_MS = 24 * 60 * 60 * 1000
 export const BLACKJACK_CT_TARGET = 1000
 /** Id de la CT-trophée du blackjack (cf. cts.ts → moveId "apotheose"). */
 export const BLACKJACK_CT_ID = "ct52"
-/** RUN 2 (NG+) : seuil de gains nets au blackjack qui débloque la RÉCOMPENSE UNIQUE = 1 CT du magasin au
- *  choix, UNE SEULE FOIS pour tout le run 2 (après quoi le blackjack ne donne plus aucun lot). */
-export const BLACKJACK_CT_NGPLUS_STEP = 500
+/** RUN 2 (NG+) : seuil de gains nets au blackjack qui débloque la RÉCOMPENSE UNIQUE = 1 CT au choix (n'importe
+ *  laquelle sauf signatures de boss + Apothéose), UNE SEULE FOIS pour tout le run 2 (ensuite plus aucun lot). */
+export const BLACKJACK_CT_NGPLUS_TARGET = 1000
 /** LIGUE (Conseil 4, les 2 runs) : énergie de roulette offerte par membre = 5 ⚡ par Daemon du joueur mis K.O. */
 export const LEAGUE_ROULETTE_PER_KO = 5
 /** LIGUE : sans-faute (0 K.O. subi) → il te demande un autographe → 50 ⚡ « c'est tout ce qu'il me reste ». */
