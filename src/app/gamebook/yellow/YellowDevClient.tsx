@@ -791,9 +791,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (!ok) setToast("Soigne ton équipe, puis affronte ton ANCIENNE équipe (Menu → ⚔️).")
     }, [ngplusFinalPending, battle, evolutions.length, championRun, dialogue])
 
-    // NG+ — issue du combat de fin de Ligue vs l'ancienne équipe. Victoire → clôture du NG+ (Commit 6 : HoF/fusion).
+    // NG+ — issue du combat de fin de Ligue vs l'ancienne équipe. VICTOIRE = le VRAI sacre : le Hall of Fame vient
+    //   d'être armé (championRun) par battleStore → on ATTEND qu'il se referme (championRun null) avant l'offre run 3.
+    //   DÉFAITE = pas Maître (le sacre est différé) → whiteout (déjà géré) + il faut REFAIRE la Ligue.
     useEffect(() => {
-        if (!ngplusFinalResult || battle || evolutions.length > 0) return
+        if (!ngplusFinalResult || battle || evolutions.length > 0 || championRun || dialogue) return
         const won = ngplusFinalResult.won
         clearNgplusFinalResult()
         if (won) {
@@ -803,9 +805,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             // ci-dessous appelle completeNewGamePlus (fusion 2-voies) OU launchRun3 (garde les 3 mondes gelés).
             setRun3Offer({ score: ngplusScore })
         } else {
-            setToast("Défaite face à ton ancienne équipe… soigne-toi et retente (Menu → ⚔️).")
+            // Ton ancien toi t'a battu : tu n'es pas Maître. Il faut REFAIRE la Ligue (rebattre les 5, puis re-affronter
+            // l'ancienne équipe). Le marqueur "Maître battu" a été retiré par battleStore → le combat final n'est plus
+            // accessible tant que tu ne rebats pas le Maître.
+            setToast("Ton ancien toi t'a vaincu — tu n'es pas encore Maître. Refais la Ligue pour retenter !")
         }
-    }, [ngplusFinalResult, battle, evolutions.length, showDialogue])
+    }, [ngplusFinalResult, battle, evolutions.length, championRun, dialogue])
 
     // SACRE run 1 → une fois le dialogue-défi du Dieu des Nouilles refermé, on OUVRE le créateur en mode FORCÉ.
     useEffect(() => {
@@ -1331,8 +1336,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         {(isCreator || nickname.toLowerCase() === "mools") && (
                             <button style={{ ...menuBtnStyle, borderColor: "#3ad0c0", color: "#3ad0c0" }} onClick={() => { setMenu("none"); setCreatorOpen(true) }}>🧬 CRÉER UN DAEMON (TEST)</button>
                         )}
-                        {/* NG+ ENGAGÉ : le combat final vs ancienne équipe (entrée manuelle + retry). Plus de navigation libre. */}
-                        {!battle && activeWorld === "ngplus" && getPlayer().isChampion && (getNgplusOldTeam()?.length ?? 0) > 0 && (
+                        {/* NG+ ENGAGÉ : le combat final vs ancienne équipe. Filet de secours (refresh/redéploiement : le flag
+                            runtime d'auto-relance est perdu) → gaté sur le marqueur PERSISTANT ngplusMaitreBeaten (= Maître
+                            battu, combat de fin en attente), pas sur isChampion (le sacre est justement différé jusqu'ici). */}
+                        {!battle && activeWorld === "ngplus" && getPlayer().ngplusMaitreBeaten && (getNgplusOldTeam()?.length ?? 0) > 0 && (
                             <button style={{ ...menuBtnStyle, borderColor: "#c05050", color: "#c05050" }} onClick={() => {
                                 const old = getNgplusOldTeam(); if (!old) return
                                 setMenu("none")
@@ -2789,8 +2796,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {!battle && evolutions.length === 0 && championRun && (
                 <HallOfFame champion={championRun} onDone={() => {
                     clearChampion()
-                    // NG+ : au lieu du warp/dialogue habituels, on laisse l'effet dédié lancer le COMBAT DE FIN
-                    // DE LIGUE contre l'ancienne équipe (dès le HoF fermé). ngplusFinalPending est déjà armé.
+                    // RUN 2 — VRAI sacre (ce HoF suit la victoire contre l'ANCIENNE équipe) : ngplusFinalResult est encore
+                    //   armé (son effet attend justement la fermeture du HoF). On sort ici → l'effet ouvre l'OFFRE run 3.
+                    if (ngplusFinalResult) return
+                    // (Legacy) NG+ ancien flux : si un combat de fin est encore en attente, laisse l'effet dédié le lancer.
                     if (ngplusFinalPending) { setToast("Un dernier défi t'attend… ton ANCIENNE équipe !"); return }
                     // RUN 2 NON-REJOUABLE : un Champion qui a DÉJÀ accompli sa seconde vie ne se voit PAS
                     // reproposer le créateur forcé → pas de 3e run. (Il faut reset le run 1 pour recommencer.)

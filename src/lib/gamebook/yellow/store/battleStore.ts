@@ -19,7 +19,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType, MoveSlot } from "../battle/types"
 import { markSeen, markCaught, getPokedex } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setBerrySecretKnown, isBerrySecretKnown, recordOrcalineDefeat, orcalineLevelForWins, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, recordOrcalineDefeat, orcalineLevelForWins, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions } from "./playerStore"
 import { getItem } from "../data/items"
 import { reportShiny } from "../shinyGift"
 import { ARENA_TICKET_VALUE, SBIRE_TICKET_VALUE, SBIRE_TICKET_EVERY, ACE_TICKET_VALUE, ACE_TICKET_WIN_BEFORE, ACE_TICKET_WIN_AFTER, ACE_TICKET_EARLY_VALUE, ACE_TICKET_WIN_EARLY, LEAGUE_ROULETTE_PER_KO, LEAGUE_AUTOGRAPH_CREDIT } from "../data/labDefis"
@@ -772,11 +772,20 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             }
         }
         if (lid === "y_ligue_maitre") {
-            setChampion()
-            const order = ["y_ligue_1_olga", "y_ligue_2_aldo", "y_ligue_3_agatha", "y_ligue_4_peter", "y_ligue_maitre"]
-            championRun = {
-                team: snapshotTeam(),
-                highlights: order.map((id) => leagueHighlights[id]).filter((h): h is LeagueHighlight => !!h),
+            // RUN 2 : battre le Maître ne SACRE PAS encore. Le vrai boss final = l'ANCIENNE équipe.
+            //   → auto-soin + marqueur PERSISTANT (survit au refresh), et on enchaîne DIRECT sur ce combat
+            //   (pas de Hall of Fame ici). Le sacre a lieu à la VICTOIRE contre l'ancienne équipe (ngplus:final, plus bas).
+            const ngplusMaitre = getActiveWorld() === "ngplus" && (getNgplusOldTeam()?.length ?? 0) > 0
+            if (ngplusMaitre) {
+                setNgplusMaitreBeaten(true)
+                healAllTeam()
+            } else {
+                setChampion()
+                const order = ["y_ligue_1_olga", "y_ligue_2_aldo", "y_ligue_3_agatha", "y_ligue_4_peter", "y_ligue_maitre"]
+                championRun = {
+                    team: snapshotTeam(),
+                    highlights: order.map((id) => leagueHighlights[id]).filter((h): h is LeagueHighlight => !!h),
+                }
             }
         }
     }
@@ -795,6 +804,20 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     const ngplusMaitreWin = lid === "y_ligue_maitre" && b.outcome === "win" && getActiveWorld() === "ngplus" && (getNgplusOldTeam()?.length ?? 0) > 0
     // NG+ : issue du combat de fin de Ligue (vs ancienne équipe). L'UI clôt le NG+ à la victoire.
     const ngplusFinalResult = storeState.trainer?.trainerId === "ngplus:final" ? { won: b.outcome === "win" } : null
+    // RUN 2 — issue du combat de fin (vs l'ancienne équipe) : on consomme le marqueur « Maître battu » (gagné OU
+    //   perdu). VICTOIRE → SACRE (le vrai Maître) + Hall of Fame MAINTENANT (les highlights des 5 combats de Ligue
+    //   sont conservés dans leagueHighlights). DÉFAITE → pas Maître : marqueur retiré → il devra REFAIRE la Ligue.
+    if (ngplusFinalResult) {
+        setNgplusMaitreBeaten(false)
+        if (ngplusFinalResult.won) {
+            setChampion()
+            const order = ["y_ligue_1_olga", "y_ligue_2_aldo", "y_ligue_3_agatha", "y_ligue_4_peter", "y_ligue_maitre"]
+            championRun = {
+                team: snapshotTeam(),
+                highlights: order.map((id) => leagueHighlights[id]).filter((h): h is LeagueHighlight => !!h),
+            }
+        }
+    }
 
     // DÉFI CT (labo) : remonte les dégâts par type infligés CE combat vers le défi CT actif
     // (no-op s'il n'y a pas de défi CT du bon type ; b.dmgByType absent en PvP).
