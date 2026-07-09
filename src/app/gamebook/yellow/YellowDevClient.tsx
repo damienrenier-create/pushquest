@@ -208,6 +208,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const ngplusFinalResult = useNgplusFinalResult()   // NG+ : issue de ce combat (win → clôture)
     // RUN 3 — à la fin du run 2, on propose le CHOIX : fusionner maintenant (finir) OU lancer le run 3.
     const [run3Offer, setRun3Offer] = useState<{ score: number } | null>(null)
+    const [run3StarterChoice, setRun3StarterChoice] = useState(false) // RUN 3 : choix du starter (les 3 lignées)
     const run = useRun()
     const frontierResult = useFrontierResult()
     const frontierReportedRef = useRef(false)
@@ -1128,21 +1129,20 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
 
     // NG+ (2 mondes navigables) — lance un New Game+ avec un Daemon custom en starter (+6000⚡), en GELANT
     // l'équipe championne actuelle comme adversaire de fin de Ligue. Le monde d'origine reste intact/rejouable.
-    // RUN 3 (concours) — lance le 3e run DEPUIS la fin du run 2. Le Daemon custom du run 2 sert de starter
-    // (fraîchement éclos niveau 5). run 1 + run 2 restent GELÉS ; TOUT fusionne à la fin du run 3 (0⚡).
-    const launchRun3 = async () => {
-        const cds = getPlayer().customDaemons
-        const stored = cds[cds.length - 1] // la création du joueur (run 2) → starter du run 3
-        if (!stored) { setToast("Daemon custom introuvable — run 3 impossible."); return }
+    // RUN 3 (concours) — lance le 3e run DEPUIS la fin du run 2 avec le STARTER CHOISI (l'une des 3 lignées,
+    // fraîchement éclos niveau 5). run 1 + run 2 restent GELÉS ; TOUT fusionne à la fin du run 3 (0⚡).
+    const launchRun3 = async (starterId: string) => {
         let starter
-        try { starter = createMonInstance(customStarterSpeciesId(stored), 5, { owned: true }) }
-        catch { setToast("Ton Daemon custom est introuvable/corrompu — run 3 impossible."); return }
+        try { starter = createMonInstance(starterId, 5, { owned: true }) }
+        catch { setToast("Starter introuvable — run 3 impossible."); return }
         const ok = await startRun3(starter)
         if (!ok) { setToast("Run 3 réservé au Champion du run 2."); return }
+        setRun3StarterChoice(false)
         setMenu("none")
         setMap(YELLOW_ENTRANCE_MAP_ID, DEFAULT_SPAWN.x, DEFAULT_SPAWN.y) // le run 3 démarre au tout début
+        const nm = getSpecies(starterId)?.name ?? "Ton champion"
         showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, [
-            `*Un éclair de pâte incandescente. ${stored.spec.name} renaît à tes côtés, niveau 5 — pour la TROISIÈME vie.*`,
+            `*Un éclair de pâte incandescente. ${nm} s'éveille à tes côtés, niveau 5 — pour la TROISIÈME vie.*`,
             "« Voici le CONCOURS ultime. 500 énergies bénies pour commencer — et RIEN d'autre. Pas de casino, pas de reps, pas de cadeaux : chaque attaque puise dans ta réserve. »",
             "« Bats l'arène 1 et je t'octroie 700⚡. Puis 900, 1100, 1300, 1500 aux suivantes. Va le plus loin possible : la Ligue t'attend au bout. »",
             "« Ton SCORE = la somme des niveaux de tous les Daemons ennemis que tu terrasses. Quand tu tombes à 0⚡, le concours s'achève. »",
@@ -1890,7 +1890,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 🔥 <b>Lancer le RUN 3</b> — le concours ultime (500⚡, source unique). <b style={{ color: "#ff9a5a" }}>⚠️ Ton run 1 ET ton run 2 restent GELÉS</b> : tu récupères TOUT (méga-fusion) seulement à la fin du run 3, à 0⚡. <b>Pas de retour.</b>
                             </div>
                         </div>
-                        <button style={menuBtnStyle} onClick={() => { setRun3Offer(null); void launchRun3() }}>🔥 Lancer le RUN 3</button>
+                        <button style={menuBtnStyle} onClick={() => { setRun3Offer(null); setRun3StarterChoice(true) }}>🔥 Lancer le RUN 3</button>
                         <button style={menuBtnDimStyle} onClick={() => {
                             const score = run3Offer.score
                             setRun3Offer(null)
@@ -1903,6 +1903,38 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 ])
                             })
                         }}>🍝 Fusionner maintenant (finir le run 2)</button>
+                    </div>
+                </div>
+            )}
+
+            {/* RUN 3 — CHOIX DU STARTER : les 3 lignées en triangle (Métal › Fée › Combat › Métal). */}
+            {run3StarterChoice && (
+                <div style={menuOverlayStyle}>
+                    <div style={{ ...menuBoxStyle, maxWidth: 460 }} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>🎯 CHOISIS TON STARTER</div>
+                        <div style={{ fontSize: 11, opacity: 0.85, textAlign: "center", margin: "0 0 8px" }}>
+                            🔩 Métal bat 🧚 Fée · 🧚 Fée bat 🦗 Combat · 🦗 Combat bat 🔩 Métal. Tu démarres à <b>niveau 5</b>, éclos frais.
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                            {[
+                                { id: "elefer", name: "Éléfer", emoji: "🔩", type: "Métal", role: "Mur défensif — increvable, lent, cogne tard", counters: "contre la Fée" },
+                                { id: "cornaive", name: "Cornaïve", emoji: "🧚", type: "Fée", role: "Sweeper spécial — rapide, frappe en Spécial", counters: "contre le Combat" },
+                                { id: "coccipoing", name: "Coccipoing", emoji: "🦗", type: "Combat/Insecte", role: "Canon de verre — brutal & rapide, mais fragile", counters: "contre le Métal" },
+                            ].map((s) => (
+                                <button key={s.id} onClick={() => void launchRun3(s.id)}
+                                    style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.06)", border: "2px solid rgba(255,255,255,0.22)", borderRadius: 10, padding: 8, cursor: "pointer", textAlign: "left", color: "#eee" }}>
+                                    <div style={{ width: 54, height: 54, flex: "none", background: "rgba(0,0,0,0.28)", borderRadius: 8, overflow: "hidden" }}>
+                                        <img src={`/yellow/sprites/dex/${s.id}.png`} alt={s.name} style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated" }} />
+                                    </div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontWeight: 800, fontSize: 15 }}>{s.emoji} {s.name} <span style={{ fontSize: 11, opacity: 0.7 }}>· {s.type}</span></div>
+                                        <div style={{ fontSize: 11, opacity: 0.85 }}>{s.role}</div>
+                                        <div style={{ fontSize: 10, color: "#9ff0b8", marginTop: 1 }}>⚔️ avantagé {s.counters}</div>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                        <button style={menuBtnDimStyle} onClick={() => setRun3StarterChoice(false)}>← Annuler</button>
                     </div>
                 </div>
             )}
