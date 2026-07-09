@@ -11,7 +11,7 @@ import { getSpecies, registerCustomSpecies, isCustomSpeciesId, CANONICAL_NEMESIS
 import { type CustomSpec, type StoredCustomDaemon, buildCustomSpecies, buildNemesis, customStarterSpeciesId, customLineageBaseId } from "../create/customSpecies"
 import { tradeEvolutionTarget, applyEvolution, type EvolutionResult } from "../battle/evolution"
 import { getMove } from "../data/moves"
-import { getItem } from "../data/items"
+import { getItem, MAGNETOR_EVO_ITEM } from "../data/items"
 import { isHeldItem, getHeldItem } from "../data/heldItems"
 import { SAIYAN_POINT_VALUE } from "../data/saiyanConfig"
 import { BADGE_REPS_CAP_BONUS } from "../data/badges"
@@ -578,12 +578,12 @@ export function evolvePantheonWithStone(uid: string, targetSpeciesId: string): E
 }
 
 /**
- * OFFRE DU PROF CHEN (run 3) : fait évoluer un MAGMATOR (uid) en MAGNETOR (Feu/Métal, forteresse).
- * Gratuit (le projet du Prof, sans objet). Renvoie le résultat (toast/anim) ou null si l'uid n'est pas
- * un Magmator de l'équipe/PC. Magnetor entre au Pokédex. La conditionnalité (quand l'offre est proposée,
- * une seule fois, etc.) est gérée côté UI du labo — cette fonction n'est que le MÉCANISME.
+ * NOYAU DE MÉTAL (Prof CHEN, run 3) : fait évoluer un MAGMATOR (uid) en MAGNETOR (Feu/Métal, forteresse).
+ * Consomme l'objet MAGNETOR_EVO_ITEM. Renvoie le résultat (toast/anim) ou null si invalide (pas d'objet,
+ * pas un Magmator, uid introuvable). Magnetor entre au Pokédex. Même patron que la Pierre Gékroc.
  */
 export function evolveMagmatorWithChen(uid: string): EvolutionResult | null {
+    if ((st.items[MAGNETOR_EVO_ITEM] ?? 0) <= 0) return null
     const inTeam = st.team.findIndex((m) => m.uid === uid)
     const where: "team" | "pc" = inTeam >= 0 ? "team" : "pc"
     const idx = inTeam >= 0 ? inTeam : st.pc.findIndex((m) => m.uid === uid)
@@ -600,7 +600,8 @@ export function evolveMagmatorWithChen(uid: string): EvolutionResult | null {
     if (toSp) { const hpAfter = fullStats(clone, toSp).hp; clone.currentHp = Math.min(hpAfter, clone.currentHp + Math.max(0, hpAfter - hpBefore)) }
     const list = [...(where === "team" ? st.team : st.pc)]
     list[idx] = clone
-    st = where === "team" ? { ...st, team: list } : { ...st, pc: list }
+    const items = { ...st.items, [MAGNETOR_EVO_ITEM]: (st.items[MAGNETOR_EVO_ITEM] ?? 0) - 1 } // Noyau consommé
+    st = where === "team" ? { ...st, team: list, items } : { ...st, pc: list, items }
     markCaught("magnetor") // Magnetor entre au Pokédex
     emit()
     return res

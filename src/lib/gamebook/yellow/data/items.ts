@@ -131,7 +131,16 @@ export const ITEMS: Record<string, ItemData> = {
         id: "daemonflute", name: "Daemonflûte", category: "MISC",
         description: "Flûte mystérieuse mise au point au labo. Sa mélodie ancestrale peut tirer un Daemon du plus profond sommeil…", price: 0,
     },
+    // Objet d'ÉVOLUTION (run 3) : le Prof CHEN remet ce Noyau pour faire évoluer Magmator en Magnetor.
+    // Le MOYEN de l'obtenir (Chen le donne) reste à câbler — pas encore distribuable. Cf. evolveMagmatorWithChen().
+    noyau_metal: {
+        id: "noyau_metal", name: "Noyau de Métal", category: "MISC",
+        description: "Alliage expérimental du Prof. Chen. Son cœur métallique transmute la roche de Magmator en un métal vivant — le fait évoluer en Magnetor.", price: 0,
+    },
 }
+
+/** Objet d'évolution Magmator → Magnetor (remis par le Prof CHEN). */
+export const MAGNETOR_EVO_ITEM = "noyau_metal"
 
 export function getItem(id: string): ItemData | null {
     return ITEMS[id] ?? null
