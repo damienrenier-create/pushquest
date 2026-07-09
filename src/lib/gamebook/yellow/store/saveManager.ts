@@ -3,7 +3,7 @@
 // Nexus Jaune Éclair — pont entre les stores (joueur + Pokédex) et l'API de save.
 // Charge au démarrage, puis auto-sauvegarde (débouncé) à chaque changement.
 
-import { getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, bankReps, claimWelcomeGift, claimSpagGift, applySaiyanResults, resetForIntro, reregisterCustomDaemons, getActiveWorld, setActiveWorld, startNgPlusWorld, raiseRepsCap, grantReps, addItem } from "./playerStore"
+import { getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, bankReps, claimWelcomeGift, claimSpagGift, applySaiyanResults, resetForIntro, reregisterCustomDaemons, getActiveWorld, setActiveWorld, startNgPlusWorld, startRun3World, raiseRepsCap, grantReps, addItem } from "./playerStore"
 import { getPokedex, hydratePokedex, subscribePokedex } from "./pokedexStore"
 import { parseSave, emptySave, type YellowSave, type ChampionMon, SAVE_VERSION } from "../storage/save"
 import type { StoredCustomDaemon } from "../create/customSpecies"
@@ -13,6 +13,10 @@ import { saiyanPointsForLevels, type SaiyanWindow } from "../data/saiyanConfig"
 
 /** Énergie de départ d'un New Game+ (crédit + plafond). */
 export const NGPLUS_START_ENERGY = 10000
+/** RUN 3 (concours) — énergie de départ (offerte par le Dieu Spaghetti) + plafond large pour encaisser les
+ *  paliers d'arène (500 + 700 + 900 + 1100 + 1300 + 1500 = 6000 max cumulé). */
+export const RUN3_START_ENERGY = 500
+export const RUN3_ENERGY_CAP = 6000
 
 let loaded = false
 let autosaveInit = false
@@ -21,43 +25,55 @@ let timer: ReturnType<typeof setTimeout> | null = null
 // sinon un emit() synchrone arme un timer 800ms qui peut POSTer l'état intermédiaire pendant un fetch → 409/resync.
 let suppressAutosave = false
 
-// NG+ (2 mondes navigables) — le monde ACTIF vit dans les stores (playerStore + pokedexStore). Le monde
-// INACTIF est stashé ici, sérialisé (YellowSave), et fusionné dans snapshot() sans jamais écraser l'actif.
-// `ngplusOldTeam` = ancienne équipe figée (adversaire du combat de fin de Ligue NG+), globale aux 2 mondes.
-let inactiveWorld: YellowSave | null = null
+// Mondes (jusqu'à 3 : run 1 = live, run 2 = ngplus, run 3 = concours) — le monde ACTIF vit dans les stores
+// (playerStore + pokedexStore). Les mondes INACTIFS sont STASHÉS ici, sérialisés (YellowSave), et réassemblés
+// dans snapshot() sans jamais écraser l'actif. Le slot du monde actif vaut null (il vit dans les stores).
+// `ngplusOldTeam` = ancienne équipe figée (adversaire du combat de fin de Ligue NG+), globale aux mondes.
+let liveStash: YellowSave | null = null      // run 1, stashé quand actif ≠ live
+let ngplusStash: YellowSave | null = null    // run 2, stashé quand actif ≠ ngplus (null si jamais lancé)
+let run3Stash: YellowSave | null = null      // run 3, stashé quand actif ≠ run3 (null si jamais lancé)
 let ngplusOldTeam: ChampionMon[] | null = null
 
-/** Le monde LIVE « nu » (sans les méta NG+) extrait d'une save de haut niveau. */
+/** Un monde « nu » (sans méta multi-mondes), prêt à être stashé ou imbriqué. */
 function liveWorldOf(save: YellowSave): YellowSave {
-    return { ...save, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null }
+    return { ...save, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null }
 }
 
 /** Hydrate les stores (joueur + Pokédex) depuis UN monde. `customDaemons` est GLOBAL (partagé entre les
  *  2 mondes) → toujours fourni depuis le haut niveau de la save. */
 function hydrateFromWorld(w: YellowSave, customDaemons: StoredCustomDaemon[]): void {
-    hydratePlayer({ team: w.team, pc: w.pc, items: w.items, reps: w.reps, repsCap: w.repsCap, creditedThrough: w.creditedThrough, pastaBoughtToday: w.pastaBoughtToday, pastaDayBonus: w.pastaDayBonus, defeatedTrainers: w.defeatedTrainers, rematchedTrainers: w.rematchedTrainers, badges: w.badges as BadgeId[], introSeen: w.introSeen, sbireDefeatsToday: w.sbireDefeatsToday, sbireWinsTotal: w.sbireWinsTotal, pvpStats: w.pvpStats, stats: w.stats, acePeakLevel: w.acePeakLevel, aceBox: w.aceBox, aceTeamSizePeak: w.aceTeamSizePeak, aceWins: w.aceWins, aceDefeatedDate: w.aceDefeatedDate, duelWins: w.duelWins, ownedCts: w.ownedCts, boughtCts: w.boughtCts, gekrocResolved: w.gekrocResolved, hhSpectresShown: w.hhSpectresShown, hhCollectorWins: w.hhCollectorWins, isChampion: w.isChampion, berrySecretKnown: w.berrySecretKnown, berryHarvestDay: w.berryHarvestDay, berryHarvestPicked: w.berryHarvestPicked, sylvebarbeAwake: w.sylvebarbeAwake, caveTradeDone: w.caveTradeDone, goshHintHeard: w.goshHintHeard, orcalineWins: w.orcalineWins, orcalineDate: w.orcalineDate, ngplusBattles: w.ngplusBattles, repsBankedTotal: w.repsBankedTotal, welcomeGift: w.welcomeGift, pokerFirstGameDone: w.pokerFirstGameDone, pokerBossStacks: w.pokerBossStacks, pokerCashCap: w.pokerCashCap, pokerCashDate: w.pokerCashDate, spagGift: w.spagGift, pastaGodGift: w.pastaGodGift, labDefi: w.labDefi, ngplusStartedAt: w.ngplusStartedAt, playtimeMs: w.playtimeMs, leaguePotions: w.leaguePotions, ngplusUsed: w.ngplusUsed, customDaemons })
+    hydratePlayer({ team: w.team, pc: w.pc, items: w.items, reps: w.reps, repsCap: w.repsCap, creditedThrough: w.creditedThrough, pastaBoughtToday: w.pastaBoughtToday, pastaDayBonus: w.pastaDayBonus, defeatedTrainers: w.defeatedTrainers, rematchedTrainers: w.rematchedTrainers, badges: w.badges as BadgeId[], introSeen: w.introSeen, sbireDefeatsToday: w.sbireDefeatsToday, sbireWinsTotal: w.sbireWinsTotal, pvpStats: w.pvpStats, stats: w.stats, acePeakLevel: w.acePeakLevel, aceBox: w.aceBox, aceTeamSizePeak: w.aceTeamSizePeak, aceWins: w.aceWins, aceDefeatedDate: w.aceDefeatedDate, duelWins: w.duelWins, ownedCts: w.ownedCts, boughtCts: w.boughtCts, gekrocResolved: w.gekrocResolved, hhSpectresShown: w.hhSpectresShown, hhCollectorWins: w.hhCollectorWins, isChampion: w.isChampion, berrySecretKnown: w.berrySecretKnown, berryHarvestDay: w.berryHarvestDay, berryHarvestPicked: w.berryHarvestPicked, sylvebarbeAwake: w.sylvebarbeAwake, caveTradeDone: w.caveTradeDone, goshHintHeard: w.goshHintHeard, orcalineWins: w.orcalineWins, orcalineDate: w.orcalineDate, ngplusBattles: w.ngplusBattles, repsBankedTotal: w.repsBankedTotal, welcomeGift: w.welcomeGift, pokerFirstGameDone: w.pokerFirstGameDone, pokerBossStacks: w.pokerBossStacks, pokerCashCap: w.pokerCashCap, pokerCashDate: w.pokerCashDate, spagGift: w.spagGift, pastaGodGift: w.pastaGodGift, labDefi: w.labDefi, ngplusStartedAt: w.ngplusStartedAt, playtimeMs: w.playtimeMs, leaguePotions: w.leaguePotions, ngplusUsed: w.ngplusUsed, run3Used: w.run3Used, customDaemons })
     hydratePokedex({ seen: w.pokedex.seen, caught: w.pokedex.caught })
 }
 
 /** Hydrate les stores depuis une save serveur (multi-mondes). Réutilisé au chargement ET quand le serveur
  *  REFUSE un écrasement destructif (409) → on resynchronise sur la vraie save au lieu de l'écraser.
  *  Choisit le monde ACTIF (live/ngplus), stashe l'INACTIF, et rend le tout sérialisable sans perte. */
-function applyServerSave(save: YellowSave): void {
-    // Monde actif = celui du drapeau serveur (dégradé en "live" si le monde NG+ est absent/corrompu).
-    const aw: "live" | "ngplus" = save.activeWorld === "ngplus" && save.ngplusWorld ? "ngplus" : "live"
+export function applyServerSave(save: YellowSave): void {
+    // Monde actif = drapeau serveur, DÉGRADÉ en "live" si le monde cible est absent/corrompu (anti-écran noir).
+    const aw: "live" | "ngplus" | "run3" =
+        save.activeWorld === "ngplus" && save.ngplusWorld ? "ngplus"
+        : save.activeWorld === "run3" && save.run3World ? "run3"
+        : "live"
     ngplusOldTeam = save.ngplusOldTeam ?? null
-    inactiveWorld = aw === "live" ? (save.ngplusWorld ?? null) : liveWorldOf(save)
-    const activeData = aw === "ngplus" ? save.ngplusWorld! : liveWorldOf(save)
+    // Stashe les mondes NON actifs (le slot du monde actif reste null → il vit dans les stores).
+    // Les champs plats de haut niveau = TOUJOURS le run 1 (garde-fou anti-wipe) → liveWorldOf(save).
+    liveStash = aw === "live" ? null : liveWorldOf(save)
+    ngplusStash = aw === "ngplus" ? null : (save.ngplusWorld ?? null)
+    run3Stash = aw === "run3" ? null : (save.run3World ?? null)
+    const activeData = aw === "ngplus" ? save.ngplusWorld! : aw === "run3" ? save.run3World! : liveWorldOf(save)
     hydrateFromWorld(activeData, save.customDaemons) // customDaemons GLOBAL (haut niveau)
     setActiveWorld(aw)
     reregisterCustomDaemons() // Phase 2 : rend les Daemons custom résolvables en combat (getSpecies) dès le chargement
 }
 
-/** Accès (lecture) pour les fonctions NG+. */
-export function getInactiveWorld(): YellowSave | null { return inactiveWorld }
+/** Accès (lecture) pour les fonctions NG+ / run 3. */
+export function getInactiveWorld(): YellowSave | null { return ngplusStash }
 export function getNgplusOldTeam(): ChampionMon[] | null { return ngplusOldTeam }
-/** Un monde NG+ existe-t-il (actif ou stashé) ? → pilote l'affichage « bascule / reprendre » dans le menu. */
-export function hasNgPlusWorld(): boolean { return getActiveWorld() === "ngplus" || inactiveWorld !== null }
+/** Un monde NG+ (run 2) existe-t-il (actif ou stashé) ? → pilote l'affichage « bascule / reprendre » du menu. */
+export function hasNgPlusWorld(): boolean { return getActiveWorld() === "ngplus" || ngplusStash !== null }
+/** Un monde RUN 3 existe-t-il (actif ou stashé) ? */
+export function hasRun3World(): boolean { return getActiveWorld() === "run3" || run3Stash !== null }
 
 /** Charge la sauvegarde serveur → hydrate les stores. À appeler au mount. */
 export async function loadYellowSave(): Promise<void> {
@@ -99,21 +115,23 @@ export async function loadYellowSave(): Promise<void> {
 function activeWorldSave(): YellowSave {
     const p = getPlayer()
     const d = getPokedex()
-    return { version: SAVE_VERSION, team: p.team, pc: p.pc, items: p.items, reps: p.reps, repsCap: p.repsCap, creditedThrough: p.creditedThrough, pastaBoughtToday: p.pastaBoughtToday, pastaDayBonus: p.pastaDayBonus, pokedex: { seen: d.seen, caught: d.caught }, defeatedTrainers: p.defeatedTrainers, rematchedTrainers: p.rematchedTrainers, badges: p.badges, introSeen: p.introSeen, sbireDefeatsToday: p.sbireDefeatsToday, sbireWinsTotal: p.sbireWinsTotal, pvpStats: p.pvpStats, stats: p.stats, acePeakLevel: p.acePeakLevel, aceBox: p.aceBox, aceTeamSizePeak: p.aceTeamSizePeak, aceWins: p.aceWins, aceDefeatedDate: p.aceDefeatedDate, duelWins: p.duelWins, ownedCts: p.ownedCts, boughtCts: p.boughtCts, gekrocResolved: p.gekrocResolved, hhSpectresShown: p.hhSpectresShown, hhCollectorWins: p.hhCollectorWins, isChampion: p.isChampion, berrySecretKnown: p.berrySecretKnown, berryHarvestDay: p.berryHarvestDay, berryHarvestPicked: p.berryHarvestPicked, sylvebarbeAwake: p.sylvebarbeAwake, caveTradeDone: p.caveTradeDone, goshHintHeard: p.goshHintHeard, orcalineWins: p.orcalineWins, orcalineDate: p.orcalineDate, ngplusBattles: p.ngplusBattles, repsBankedTotal: p.repsBankedTotal, welcomeGift: p.welcomeGift, pokerFirstGameDone: p.pokerFirstGameDone, pokerBossStacks: p.pokerBossStacks, pokerCashCap: p.pokerCashCap, pokerCashDate: p.pokerCashDate, spagGift: p.spagGift, pastaGodGift: p.pastaGodGift, labDefi: p.labDefi, customDaemons: p.customDaemons ?? [], ngplusStartedAt: p.ngplusStartedAt, playtimeMs: p.playtimeMs, leaguePotions: p.leaguePotions, ngplusUsed: p.ngplusUsed, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null }
+    return { version: SAVE_VERSION, team: p.team, pc: p.pc, items: p.items, reps: p.reps, repsCap: p.repsCap, creditedThrough: p.creditedThrough, pastaBoughtToday: p.pastaBoughtToday, pastaDayBonus: p.pastaDayBonus, pokedex: { seen: d.seen, caught: d.caught }, defeatedTrainers: p.defeatedTrainers, rematchedTrainers: p.rematchedTrainers, badges: p.badges, introSeen: p.introSeen, sbireDefeatsToday: p.sbireDefeatsToday, sbireWinsTotal: p.sbireWinsTotal, pvpStats: p.pvpStats, stats: p.stats, acePeakLevel: p.acePeakLevel, aceBox: p.aceBox, aceTeamSizePeak: p.aceTeamSizePeak, aceWins: p.aceWins, aceDefeatedDate: p.aceDefeatedDate, duelWins: p.duelWins, ownedCts: p.ownedCts, boughtCts: p.boughtCts, gekrocResolved: p.gekrocResolved, hhSpectresShown: p.hhSpectresShown, hhCollectorWins: p.hhCollectorWins, isChampion: p.isChampion, berrySecretKnown: p.berrySecretKnown, berryHarvestDay: p.berryHarvestDay, berryHarvestPicked: p.berryHarvestPicked, sylvebarbeAwake: p.sylvebarbeAwake, caveTradeDone: p.caveTradeDone, goshHintHeard: p.goshHintHeard, orcalineWins: p.orcalineWins, orcalineDate: p.orcalineDate, ngplusBattles: p.ngplusBattles, repsBankedTotal: p.repsBankedTotal, welcomeGift: p.welcomeGift, pokerFirstGameDone: p.pokerFirstGameDone, pokerBossStacks: p.pokerBossStacks, pokerCashCap: p.pokerCashCap, pokerCashDate: p.pokerCashDate, spagGift: p.spagGift, pastaGodGift: p.pastaGodGift, labDefi: p.labDefi, customDaemons: p.customDaemons ?? [], ngplusStartedAt: p.ngplusStartedAt, playtimeMs: p.playtimeMs, leaguePotions: p.leaguePotions, ngplusUsed: p.ngplusUsed, run3Used: p.run3Used, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null }
 }
 
-/** FUSION des 2 mondes → une save unique. Les champs PLATS = monde LIVE (toujours, pour le garde-fou
- *  anti-wipe). `ngplusWorld` = monde NG+ imbriqué. `customDaemons` global forcé dans les deux. */
-function snapshot(): YellowSave {
+/** RÉASSEMBLE les 3 mondes → une save unique. Les champs PLATS = monde LIVE/run 1 (TOUJOURS, garde-fou
+ *  anti-wipe). `ngplusWorld` = run 2 imbriqué, `run3World` = run 3 imbriqué. `customDaemons` global partout. */
+export function snapshot(): YellowSave {
     const active = activeWorldSave()
     const cds = getPlayer().customDaemons ?? []
     const aw = getActiveWorld()
-    const live: YellowSave = aw === "live" ? active : (inactiveWorld ?? emptySave())
-    const ngplusRaw: YellowSave | null = aw === "ngplus" ? active : inactiveWorld
-    const ngplusWorld = ngplusRaw
-        ? { ...ngplusRaw, customDaemons: cds, activeWorld: "live" as const, ngplusWorld: null, ngplusOldTeam: null }
-        : null
-    return { ...live, customDaemons: cds, activeWorld: aw, ngplusWorld, ngplusOldTeam }
+    // Chaque monde : actif = les stores, sinon son stash. Normalisé (méta multi-mondes nettoyée, customDaemons global).
+    const norm = (w: YellowSave | null): YellowSave | null =>
+        w ? { ...w, customDaemons: cds, activeWorld: "live" as const, ngplusWorld: null, ngplusOldTeam: null, run3World: null } : null
+    const live = aw === "live" ? active : (liveStash ?? emptySave())
+    const ngplus = aw === "ngplus" ? active : ngplusStash
+    const run3 = aw === "run3" ? active : run3Stash
+    const flat = norm(live)! // run 1 = champs plats de haut niveau (garde-fou), TOUJOURS
+    return { ...flat, customDaemons: cds, activeWorld: aw, ngplusWorld: norm(ngplus), ngplusOldTeam, run3World: norm(run3) }
 }
 
 /** Sauvegarde débouncée (ne fait rien tant que la save initiale n'est pas chargée).
@@ -173,8 +191,8 @@ export async function startNewGamePlus(starter: MonInstance, oldTeamFrozen: Cham
     if (getActiveWorld() !== "live") return false // déjà en NG+
     if (!getPlayer().isChampion) return false      // réservé aux champions
     if (getPlayer().ngplusUsed) return false       // run 2 DÉJÀ accompli (fusionné) → non rejouable sauf reset du run 1
-    // 1) Stash le monde LIVE courant (sérialisé, méta NG+ nettoyées) → devient le monde inactif rejouable.
-    inactiveWorld = liveWorldOf(activeWorldSave())
+    // 1) Stash le monde LIVE courant (run 1) → rejouable via switchWorld.
+    liveStash = liveWorldOf(activeWorldSave())
     // 2) Fige l'ancienne équipe (adversaire du combat de fin de Ligue NG+).
     ngplusOldTeam = oldTeamFrozen.length ? oldTeamFrozen : null
     // 3) Monde NG+ frais dans les stores (starter custom, isChampion=false, customDaemons préservés).
@@ -195,12 +213,16 @@ export async function startNewGamePlus(starter: MonInstance, oldTeamFrozen: Cham
 /** NG+ — bascule entre le monde LIVE et le monde NG+ (les deux persistés, aucun perdu). false si l'autre
  *  monde n'existe pas ou si on est déjà dessus. */
 export async function switchWorld(target: "live" | "ngplus"): Promise<boolean> {
-    if (target === getActiveWorld()) return false
-    const otherSave = inactiveWorld
-    if (!otherSave) return false // pas de 2e monde à rejoindre
+    const cur = getActiveWorld()
+    if (target === cur) return false
+    if (cur !== "live" && cur !== "ngplus") return false // pas de bascule depuis le run 3 (concours engagé)
+    const targetSave = target === "live" ? liveStash : ngplusStash
+    if (!targetSave) return false // le monde cible n'existe pas
     const cds = getPlayer().customDaemons ?? []
-    inactiveWorld = activeWorldSave() // le monde qu'on quitte devient l'inactif
-    hydrateFromWorld(otherSave, cds)  // customDaemons GLOBAL, préservé
+    // Le monde qu'on QUITTE est stashé (run 3 éventuel reste intact dans run3Stash) ; on dé-stashe la cible.
+    if (cur === "live") liveStash = activeWorldSave(); else ngplusStash = activeWorldSave()
+    if (target === "live") liveStash = null; else ngplusStash = null
+    hydrateFromWorld(targetSave, cds) // customDaemons GLOBAL, préservé
     setActiveWorld(target)
     reregisterCustomDaemons()
     await persistNow()
@@ -224,10 +246,11 @@ export function canAbandonNgplus(): boolean {
  *  → Zone de Combat). Retour au monde unique. false si hors NG+ ou fenêtre dépassée (engagé). */
 export async function abandonNewGamePlus(): Promise<boolean> {
     if (!canAbandonNgplus()) return false
-    const live = inactiveWorld
+    const live = liveStash
     if (!live) return false
-    // Le monde NG+ actif est JETÉ (pas stashé) → supprimé. On restaure la partie de champion.
-    inactiveWorld = null
+    // Le monde NG+ actif est JETÉ (pas stashé) → supprimé. On restaure la partie de champion (run 1).
+    liveStash = null
+    ngplusStash = null
     ngplusOldTeam = null
     hydrateFromWorld(live, live.customDaemons ?? [])
     setActiveWorld("live")
@@ -277,10 +300,11 @@ export function mergeWorlds(primary: YellowSave, secondary: YellowSave): YellowS
         ngplusBattles: 0, // compteur d'engagement sans objet après fusion
         // Métriques de score du run 2 : remises à ZÉRO à la fusion (le monde redevient "live" → plus de run 2 en cours).
         ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0,
-        // Collapse en UN seul monde.
+        // Collapse en UN seul monde (les 2 sous-mondes disparaissent).
         activeWorld: "live",
         ngplusWorld: null,
         ngplusOldTeam: null,
+        run3World: null,
     }
 }
 
@@ -289,13 +313,15 @@ export function mergeWorlds(primary: YellowSave, secondary: YellowSave): YellowS
  *  fusionnés). Backup de l'état pré-fusion (2 mondes) dans history AVANT d'écrire → réversible. */
 export async function completeNewGamePlus(): Promise<void> {
     if (getActiveWorld() !== "ngplus") return
-    const secondary = inactiveWorld
-    const primary = activeWorldSave()
+    const secondary = liveStash // run 1
+    const primary = activeWorldSave() // run 2 (timeline gagnante)
     const merged = secondary
         ? mergeWorlds(primary, secondary)
-        : { ...primary, activeWorld: "live" as const, ngplusWorld: null, ngplusOldTeam: null }
+        : { ...primary, activeWorld: "live" as const, ngplusWorld: null, ngplusOldTeam: null, run3World: null }
     // 1) Applique la fusion côté client (immédiat, l'UI voit le monde fusionné).
-    inactiveWorld = null
+    liveStash = null
+    ngplusStash = null
+    run3Stash = null
     ngplusOldTeam = null
     hydrateFromWorld(merged, merged.customDaemons ?? [])
     setActiveWorld("live")
@@ -303,6 +329,52 @@ export async function completeNewGamePlus(): Promise<void> {
     // 2) Backup de l'état PRÉ-fusion (le serveur a encore les 2 mondes) → réversible, façon récup save.
     try { await fetch("/api/gamebook/yellow/save/backup", { method: "POST" }) } catch { /* best-effort */ }
     // 3) Écrit la save fusionnée (flush immédiat).
+    await persistNow()
+}
+
+/**
+ * RUN 3 (concours) — démarre le 3e run DEPUIS le run 2 : le monde run 2 courant est STASHÉ (le run 1 l'est déjà),
+ * et un monde run 3 frais démarre avec le Daemon custom `starter` en équipe + 500⚡ (offerts par le Dieu
+ * Spaghetti). Réservé au Champion du run 2, une seule fois (run3Used). Les 3 mondes coexistent jusqu'à la
+ * fusion finale (completeRun3). Retourne false sinon.
+ */
+export async function startRun3(starter: MonInstance): Promise<boolean> {
+    if (getActiveWorld() !== "ngplus") return false // le run 3 se lance depuis le run 2
+    if (!getPlayer().isChampion) return false        // il faut avoir (re)battu la Ligue en run 2
+    if (getPlayer().run3Used) return false            // run 3 déjà lancé (one-shot)
+    // 1) Stash le run 2 courant (le run 1 est déjà dans liveStash).
+    ngplusStash = liveWorldOf(activeWorldSave())
+    // 2) Monde run 3 frais dans les stores (starter, run3Used=true, customDaemons préservés).
+    startRun3World(starter)
+    hydratePokedex({ seen: [], caught: [] })
+    setActiveWorld("run3")
+    run3Stash = null
+    // 3) Énergie de départ : 500 (unique source), plafond large (paliers d'arène jusqu'à 6000 cumulés).
+    raiseRepsCap(RUN3_ENERGY_CAP - 1000) // cap 1000 → 6000
+    grantReps(RUN3_START_ENERGY)         // reps → 500
+    // 4) Flush immédiat (les champs plats = run 1 inchangés → garde-fou OK).
+    await persistNow()
+    return true
+}
+
+/** RUN 3 — FIN (0 énergie) → FUSION 3-VOIES : run 3 ⊕ run 2 ⊕ run 1 en un seul monde live. run 3 = timeline
+ *  « gagnante » (garde son équipe active) ; run 2 puis run 1 sont absorbés (Daemons versés au PC, Pokédex/
+ *  badges/CT/objets fusionnés). Backup pré-fusion → réversible. */
+export async function completeRun3(): Promise<void> {
+    if (getActiveWorld() !== "run3") return
+    const run3 = activeWorldSave()
+    // Fusion successive : run3 ⊕ run2, puis ⊕ run1 (mergeWorlds garde le primary comme timeline active).
+    const step1 = ngplusStash ? mergeWorlds(run3, ngplusStash) : run3
+    const mergedRaw = liveStash ? mergeWorlds(step1, liveStash) : step1
+    const merged: YellowSave = { ...mergedRaw, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null, ngplusUsed: true, run3Used: true }
+    liveStash = null
+    ngplusStash = null
+    run3Stash = null
+    ngplusOldTeam = null
+    hydrateFromWorld(merged, merged.customDaemons ?? [])
+    setActiveWorld("live")
+    reregisterCustomDaemons()
+    try { await fetch("/api/gamebook/yellow/save/backup", { method: "POST" }) } catch { /* best-effort */ }
     await persistNow()
 }
 
@@ -353,7 +425,7 @@ export async function resetYellowChapter(): Promise<void> {
         // SÉCURITÉ : on copie d'abord la save courante dans `history` (best-effort) → un reset reste
         // annulable. Si le backup échoue (hors-ligne), on n'empêche PAS le reset volontaire.
         try { await fetch("/api/gamebook/yellow/save/backup", { method: "POST" }) } catch { /* best-effort */ }
-        inactiveWorld = null; ngplusOldTeam = null // reset volontaire → on efface AUSSI le monde NG+ éventuel
+        liveStash = null; ngplusStash = null; run3Stash = null; ngplusOldTeam = null // reset volontaire → efface AUSSI les mondes NG+/run 3
         resetForIntro()
         hydratePokedex({ seen: [], caught: [] })
         // ÉNERGIE « nouvelle partie » : on re-crédite comme un PREMIER chargement (resetForIntro a remis

@@ -116,13 +116,19 @@ export interface YellowSave {
     /** NG+ (2 mondes navigables) — monde ACTIF que le joueur contrôle. "live" = partie d'origine (= ces champs
      *  plats), "ngplus" = New Game+ (= `ngplusWorld`). Défaut "live" (anciennes saves). Les champs plats de haut
      *  niveau reflètent TOUJOURS le monde LIVE (le garde-fou anti-wipe voit donc toujours la vraie progression). */
-    activeWorld: "live" | "ngplus"
+    activeWorld: "live" | "ngplus" | "run3"
     /** NG+ — le monde New Game+ COMPLET, sérialisé comme une YellowSave imbriquée (SANS sous-monde : profondeur
      *  bornée à 1). null tant qu'aucun NG+ n'a été lancé. */
     ngplusWorld: YellowSave | null
     /** NG+ — équipe d'origine FIGÉE au lancement du NG+ (façon Hall of Fame, immuable) : c'est l'adversaire du
      *  combat de fin de Ligue en NG+. null hors NG+. */
     ngplusOldTeam: ChampionMon[] | null
+    /** RUN 3 (concours) — le 3e monde COMPLET, sérialisé comme une YellowSave imbriquée (SANS sous-monde :
+     *  profondeur bornée à 1). null tant qu'aucun run 3 n'a été lancé. ADDITIF : les saves 2-mondes existantes
+     *  le lisent à null (aucun effet). */
+    run3World: YellowSave | null
+    /** RUN 3 — le concours a-t-il déjà été LANCÉ ? (jumeau de ngplusUsed). Survit à la fusion. Défaut false. */
+    run3Used: boolean
 }
 
 /** Un « meilleur moment » d'un combat de la Ligue (best-of affiché au Hall of Fame). Runtime. */
@@ -151,7 +157,7 @@ export const SAVE_VERSION = 2
 const ACE_RATCHET_RESET_VERSION = 2
 
 export function emptySave(): YellowSave {
-    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, berrySecretKnown: false, berryHarvestDay: "", berryHarvestPicked: [], sylvebarbeAwake: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", ngplusBattles: 0, labDefi: emptyLabDefi(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null }
+    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, berrySecretKnown: false, berryHarvestDay: "", berryHarvestPicked: [], sylvebarbeAwake: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", ngplusBattles: 0, labDefi: emptyLabDefi(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null, run3Used: false }
 }
 
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -483,10 +489,12 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         playtimeMs: typeof o.playtimeMs === "number" && isFinite(o.playtimeMs) ? Math.max(0, Math.floor(o.playtimeMs)) : 0,
         leaguePotions: typeof o.leaguePotions === "number" && isFinite(o.leaguePotions) ? Math.max(0, Math.floor(o.leaguePotions)) : 0,
         ngplusUsed: o.ngplusUsed === true,
-        // NG+ (2 mondes) : un monde imbriqué (`nested`) n'a pas de sous-monde → on borne la récursion à 1 niveau.
-        activeWorld: !nested && o.activeWorld === "ngplus" ? "ngplus" : "live",
+        // Mondes (jusqu'à 3) : un monde imbriqué (`nested`) n'a AUCUN sous-monde → récursion bornée à 1 niveau.
+        activeWorld: !nested && (o.activeWorld === "ngplus" || o.activeWorld === "run3") ? (o.activeWorld as "ngplus" | "run3") : "live",
         ngplusWorld: nested ? null : parseNestedWorld(o.ngplusWorld),
         ngplusOldTeam: nested ? null : parseChampionTeam(o.ngplusOldTeam),
+        run3World: nested ? null : parseNestedWorld(o.run3World),
+        run3Used: o.run3Used === true,
     }
 }
 
