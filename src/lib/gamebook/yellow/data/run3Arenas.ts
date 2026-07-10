@@ -46,6 +46,16 @@ export function run3ArenaForBoss(bossTrainerId: string): Run3ArenaDef | null {
     return RUN3_ARENAS.find((a) => a.bossTrainerId === bossTrainerId) ?? null
 }
 
+/** Intro AVANT-COMBAT du boss d'arène run 3 : ce n'est PAS le PNJ d'origine (Druide, …) mais l'ÉQUIPE GELÉE
+ *  d'un VRAI joueur, champion de cette arène aux runs précédents. On nomme le champion pour lever l'ambiguïté. */
+export function run3BossIntroLines(nickname: string): string[] {
+    const N = (nickname || "un champion").toUpperCase()
+    return [
+        "Cette arène ne défend plus de badge ordinaire… Un CHAMPION du Nexus y a laissé son équipe en garde !",
+        `Face à toi se dresse la formation LÉGENDAIRE de ${N}, figée au sommet de sa gloire. Terrasse-la pour empocher le palier d'énergie et poursuivre le concours !`,
+    ]
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // SÉLECTION DES BOSS = équipes gelées de vrais joueurs (table ArenaChampion).
 // ─────────────────────────────────────────────────────────────────────────────

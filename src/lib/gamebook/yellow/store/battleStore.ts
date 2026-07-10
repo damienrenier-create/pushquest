@@ -710,10 +710,12 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             }
             // 🎟️ TICKET arène (30) : à la 1re conquête du badge (en plus de la CT cadeau). En NG+, le ticket
             //     est REMPLACÉ par le ticket dédié du boss run 2 (10→50, cf. NGPLUS_BOSS_GIFTS ci-dessous).
-            if (badgeAwarded && !inNgplus) grantRouletteTicket(ARENA_TICKET_VALUE)
+            //     RUN 3 : AUCUN ticket (concours sans casino/roulette) → run 1 uniquement.
+            if (badgeAwarded && getActiveWorld() === "live") grantRouletteTicket(ARENA_TICKET_VALUE)
             // CT CADEAU (trophée du boss) — RUN 1 UNIQUEMENT. En RUN 2, le boss ne redonne PAS la CT du run 1
             // (ça n'a aucun sens : elle est déjà acquise) → il n'offre QUE sa signature exclusive (ci-dessous).
-            if (t?.giftCt && !inNgplus && grantCt(t.giftCt)) {
+            // En RUN 3 : le boss = équipe gelée d'un joueur, AUCUN cadeau (badge + palier d'énergie SEULEMENT).
+            if (t?.giftCt && getActiveWorld() === "live" && grantCt(t.giftCt)) {
                 const mvId = getCt(t.giftCt)?.moveId
                 giftCtMove = mvId ? (getMove(mvId)?.name ?? null) : null
             }

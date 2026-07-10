@@ -20,7 +20,8 @@ import type { YellowMapData } from "../maps"
 import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, startRun3BossBattle, resetFleeStreak } from "./battleStore"
-import { run3ArenaForBoss } from "../data/run3Arenas"
+import { run3ArenaForBoss, run3BossIntroLines } from "../data/run3Arenas"
+import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex } from "./pokedexStore"
 import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, resetLigueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, addItem, getActiveWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
@@ -1110,6 +1111,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     })
                     return
                 }
+            }
+            // RUN 3 : le boss d'arène n'est PAS le PNJ d'origine (Druide, …) mais l'ÉQUIPE GELÉE d'un vrai joueur
+            //   (champion des runs précédents). On reframe l'intro ET le nom → le champion, pas le Druide. Pas de
+            //   revanche en run 3 → une réplique post-victoire si déjà battu.
+            const r3boss = getActiveWorld() === "run3" ? run3ArenaForBoss(trainer.id) : null
+            if (r3boss) {
+                const champName = RUN3_BOSS_TEAMS[r3boss.badge]?.nickname ?? trainer.name
+                if (isTrainerDefeated(trainer.id)) {
+                    set({ dialogue: { npcId: npc.id, npcName: champName, lines: [`L'équipe gelée de ${champName.toUpperCase()} a déjà plié devant toi. Cette arène est conquise, champion du concours !`], lineIndex: 0 } })
+                } else {
+                    set({ dialogue: { npcId: npc.id, npcName: champName, lines: run3BossIntroLines(champName), lineIndex: 0 }, pendingTrainerId: trainer.id, pendingRematch: false })
+                }
+                return
             }
             if (isTrainerDefeated(trainer.id)) {
                 const inNgplus = getActiveWorld() === "ngplus"
