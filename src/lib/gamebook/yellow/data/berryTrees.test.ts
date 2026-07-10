@@ -59,16 +59,14 @@ describe("arbres fertiles (récolte quotidienne de baies)", () => {
         expect(berryAtTile("yellow_cendreville", 21, 0, 7)).toBeNull()
     })
 
-    it("visibilité : déterministe + ~30% des baies affichées (le reste récoltable mais invisible)", () => {
+    it("visibilité : déterministe + 100% des baies du jour affichées (choix Sartay : « on les voit un petit peu »)", () => {
         let visible = 0, total = 0
         for (const id of BERRY_MAP_IDS) {
             for (let d = 0; d < 300; d++) {
                 for (const t of berriesForDay(id, d)) { total++; if (t.visible) visible++ }
             }
         }
-        const pct = (visible / total) * 100
-        expect(pct).toBeGreaterThan(18) // ~30% ± marge d'échantillon
-        expect(pct).toBeLessThan(42)
+        expect(visible).toBe(total) // BERRY_VISIBLE_PCT = 100 → toutes les baies du jour affichent leur icône
         // même (carte, jour) → même visibilité (stable, pas de re-tirage au refresh)
         expect(berriesForDay("yellow_route_nord", 7).map((t) => t.visible))
             .toEqual(berriesForDay("yellow_route_nord", 7).map((t) => t.visible))

@@ -11,9 +11,10 @@ import { BERRY_IDS } from "./heldItems"
 /** Nombre d'arbres portant une baie par carte et par jour. */
 export const BERRIES_PER_MAP_PER_DAY = 3
 
-/** % des baies du jour dont l'icône est VISIBLE sur la carte. Le reste (70%) est INVISIBLE : la baie est
- *  bien là et récoltable (A face à l'arbre), mais sans indice → récompense l'exploration/le tâtonnement. */
-export const BERRY_VISIBLE_PCT = 30
+/** % des baies du jour dont l'icône est VISIBLE sur la carte. Réglé à 100 (choix Sartay 10/07 : « c'est mieux
+ *  quand on les voit un petit peu ») → les 3 baies du jour de chaque carte affichent leur petite icône sur
+ *  l'arbre. Ça reste discret (3 arbres/carte/jour seulement) tout en rendant la récolte trouvable. */
+export const BERRY_VISIBLE_PCT = 100
 
 /** Arbres candidats (tuiles `tree`) par carte. 30 par carte, bien répartis. */
 export const BERRY_TREE_SPOTS: Record<string, ReadonlyArray<{ x: number; y: number }>> = {
@@ -52,7 +53,7 @@ export interface BerryTree {
     x: number
     y: number
     berryId: string
-    /** L'icône est-elle affichée sur la carte ? (~30% des baies du jour ; les 70% autres sont récoltables mais invisibles.) */
+    /** L'icône est-elle affichée sur la carte ? (BERRY_VISIBLE_PCT ; = 100 aujourd'hui → toutes les baies du jour affichent leur icône.) */
     visible: boolean
 }
 
