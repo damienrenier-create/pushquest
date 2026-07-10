@@ -30,7 +30,7 @@ import { persistYellowSave, canAbandonNgplus } from "./saveManager"
 import { rollWildEncounter, wildLevelCap, hasEncounters } from "../data/encounters"
 import { reportShiny } from "../shinyGift"
 import { getTrainer, trainerBoost, arenaScaledLevel, type TrainTier } from "../data/trainers"
-import { NGPLUS_ARENA_TEAMS, arenaRevancheBoost, arenaRevancheIntro } from "../data/ngplusArenas"
+import { NGPLUS_ARENA_TEAMS, RUN3_ARENA_TEAMS, arenaRevancheBoost, arenaRevancheIntro } from "../data/ngplusArenas"
 import { createMonInstance } from "../battle/factory"
 import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroLines, SBIRE_DONE_LINES, SBIRE_NO_TEAM_LINES } from "../data/sbire"
 import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, ACE_PASS_LINES, ACE_GATE_LINES, aceIntro, aceGiftLine, buildAceTeam, speciesAtLevel } from "../data/ace"
@@ -170,6 +170,7 @@ function tryLaunchTrainer(trainerId: string, isRematch = false): ActiveDialogue 
     // Daemons ÉVOLUENT au stade correspondant à ce niveau (speciesAtLevel enchaîne les évolutions).
     const scaledLvl = trainer.scaleWithBadges ? arenaScaledLevel(getPlayerSave().badges) : null
     const ngplus = getActiveWorld() === "ngplus"
+    const run3 = getActiveWorld() === "run3"
     // Rematch (match retour) → 2e équipe ; sinon l'équipe de base.
     let specs = isRematch && trainer.rematch ? trainer.rematch.team : trainer.team
     // NG+ REVANCHE (combat SÉPARÉ run 2) : re-parler à un dresseur d'arène déjà battu (isRematch) lance la
@@ -192,6 +193,12 @@ function tryLaunchTrainer(trainerId: string, isRematch = false): ActiveDialogue 
     // qui rejoue l'équipe run 1 d'origine ci-dessus). L'AS y porte sa signature exclusive.
     if (ngplus && !isRematch && NGPLUS_ARENA_TEAMS[trainerId]) {
         specs = NGPLUS_ARENA_TEAMS[trainerId]
+    }
+    // RUN 3 : les 5 arènes affichent leurs GARDIENS re-typés (aperçu de la Ligue). Combat unique (le run 3 n'a
+    //   pas de revanche). RUN3_ARENA_TEAMS ne couvre QUE g1-g4 → le BOSS garde son équipe tant que les équipes
+    //   de joueur figées ne sont pas injectées (étape suivante).
+    if (run3 && !isRematch && RUN3_ARENA_TEAMS[trainerId]) {
+        specs = RUN3_ARENA_TEAMS[trainerId]
     }
     // NG+ LIGUE : durcissement des 5 boss → tous les Daemons +2, l'AVANT-DERNIER +3, le DERNIER +5
     // (évolution au stade naturel si le boost dépasse le niveau d'évolution).

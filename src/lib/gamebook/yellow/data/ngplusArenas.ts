@@ -107,6 +107,38 @@ export const NGPLUS_ARENA_TEAMS: Record<string, TrainerMonSpec[]> = {
     ],
 }
 
+// ═══════════════ RUN 3 — GARDIENS des 5 arènes RE-TYPÉS (aperçu de la Ligue) ═══════════════
+// Mêmes STRUCTURE + NIVEAUX que les gardiens run 2, mais chaque Daemon devient une espèce du TYPE de l'arène
+// (arène 1 Glace, 2 Combat, 3 Poison/Spectre, 4 Dragon, 5 Multi), à un niveau NATUREL. Seuls les GARDIENS
+// (g1-g4) sont ici : le BOSS de chaque arène = une équipe de JOUEUR figée, injectée séparément (cf. run3Bosses).
+export const RUN3_ARENA_TEAMS: Record<string, TrainerMonSpec[]> = {
+    // ── ARÈNE 1 → GLACE (Auroruff/Glaceer, Marmoterre, Panthégel) ──
+    y_arena_g1: [{ speciesId: "auroruff", level: 7 }, { speciesId: "marmoterre", level: 9 }],
+    y_arena_g2: [{ speciesId: "panthegel", level: 8 }, { speciesId: "auroruff", level: 9 }],
+    y_arena_g3: [{ speciesId: "marmoterre", level: 10 }, { speciesId: "panthegel", level: 8 }],
+    y_arena_g4: [{ speciesId: "glaceer", level: 16 }],
+    // ── ARÈNE 2 → COMBAT (Couperin, Forgeotin, Trolystrik/Brutetrik, Broussours/Sylvours, Brasicow) ──
+    y_rocharena_g1: [{ speciesId: "couperin", level: 14 }, { speciesId: "forgeotin", level: 16 }, { speciesId: "brutetrik", level: 17 }],
+    y_rocharena_g2: [{ speciesId: "trolystrik", level: 5 }, { speciesId: "couperin", level: 7 }, { speciesId: "broussours", level: 9 }, { speciesId: "forgeotin", level: 11 }, { speciesId: "brasicow", level: 13 }],
+    y_rocharena_g3: [{ speciesId: "couperin", level: 15 }, { speciesId: "broussours", level: 15 }, { speciesId: "brutetrik", level: 17 }],
+    y_rocharena_g4: [{ speciesId: "sylvours", level: 18 }, { speciesId: "brutetrik", level: 17 }],
+    // ── ARÈNE 3 → POISON/SPECTRE (Sporbéo/Lampignon, Cornaissant/Corvenin, Hibouh/Chouhante, Revemante/Necarabee, Brook, Namicha) ──
+    y_feuarena_g1: [{ speciesId: "lampignon", level: 20 }, { speciesId: "corvenin", level: 20 }, { speciesId: "hibouh", level: 21 }, { speciesId: "revemante", level: 19 }, { speciesId: "brook", level: 18 }],
+    y_feuarena_g2: [{ speciesId: "chouhante", level: 22 }, { speciesId: "corvenin", level: 24 }, { speciesId: "necarabee", level: 26 }, { speciesId: "lampignon", level: 27 }, { speciesId: "namicha", level: 27 }],
+    y_feuarena_g3: [{ speciesId: "corvenin", level: 28 }, { speciesId: "necarabee", level: 28 }, { speciesId: "chouhante", level: 28 }],
+    y_feuarena_g4: [{ speciesId: "chouhante", level: 29 }],
+    // ── ARÈNE 4 → DRAGON (Draclet/Wyverion, Carlinou/Carlembre/Dracarlin, Glacirex/Cryotyran) ──
+    y_elecarena_g1: [{ speciesId: "draclet", level: 16 }, { speciesId: "carlinou", level: 16 }, { speciesId: "wyverion", level: 30 }, { speciesId: "carlembre", level: 30 }],
+    y_elecarena_g2: [{ speciesId: "draclet", level: 15 }, { speciesId: "carlinou", level: 15 }, { speciesId: "wyverion", level: 25 }, { speciesId: "dracarlin", level: 36 }],
+    y_elecarena_g3: [{ speciesId: "cryotyran", level: 35 }, { speciesId: "wyverion", level: 20 }, { speciesId: "carlembre", level: 28 }, { speciesId: "glacirex", level: 30 }],
+    y_elecarena_g4: [{ speciesId: "wyverion", level: 30 }, { speciesId: "carlembre", level: 32 }, { speciesId: "glacirex", level: 34 }],
+    // ── ARÈNE 5 → MULTI (mélange de FINALS variés, façon gauntlet) ──
+    y_eauarena_g1: [{ speciesId: "maitrezenc", level: 43 }, { speciesId: "mycedruide", level: 43 }, { speciesId: "dracarlin", level: 43 }, { speciesId: "necrocorbe", level: 42 }],
+    y_eauarena_g2: [{ speciesId: "hebulmin", level: 44 }, { speciesId: "cryotyran", level: 45 }, { speciesId: "regnantaur", level: 47 }],
+    y_eauarena_g3: [{ speciesId: "druidours", level: 47 }, { speciesId: "necrolopendre", level: 48 }, { speciesId: "archibouh", level: 49 }],
+    y_eauarena_g4: [{ speciesId: "enclumind", level: 50 }],
+}
+
 // ── Cadeaux des BOSS d'arène en NG+ : CT signature exclusive + ticket roulette dédié (10→50). ──
 export const NGPLUS_BOSS_GIFTS: Record<string, { ctId: string; ticket: number }> = {
     y_arena_druide: { ctId: "ct53", ticket: 10 },   // Vol → Serres de l'Aube
