@@ -54,7 +54,7 @@ import { aceLoseLine } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
 import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/gamebook/yellow/data/labDialogues"
-import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, getNgplusOldTeam, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3 } from "@/lib/gamebook/yellow/store/saveManager"
+import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, getNgplusOldTeam, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3 } from "@/lib/gamebook/yellow/store/saveManager"
 import { customStarterSpeciesId, type StoredCustomDaemon } from "@/lib/gamebook/yellow/create/customSpecies"
 import { getPlayer, setTeam, usePlayer, useActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket } from "@/lib/gamebook/yellow/store/playerStore"
 import { computeRunScores, formatDuration } from "@/lib/gamebook/yellow/score/runScore"
@@ -212,6 +212,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // RUN 3 — à la fin du run 2, on propose le CHOIX : fusionner maintenant (finir) OU lancer le run 3.
     const [run3Offer, setRun3Offer] = useState<{ score: number } | null>(null)
     const [run3StarterChoice, setRun3StarterChoice] = useState(false) // RUN 3 : choix du starter (les 3 lignées)
+    const [run3EndOffer, setRun3EndOffer] = useState<{ score: number } | null>(null) // RUN 3 : fin (0⚡) → méga-fusion forcée
+    const run3EndTriggeredRef = useRef(false) // anti double-déclenchement de completeRun3 (async, bascule activeWorld)
     const run = useRun()
     const frontierResult = useFrontierResult()
     const frontierReportedRef = useRef(false)
@@ -827,6 +829,18 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             setToast("Ton ancien toi t'a vaincu — tu n'es pas encore Maître. Refais la Ligue pour retenter !")
         }
     }, [ngplusFinalResult, battle, evolutions.length, championRun, dialogue])
+
+    // RUN 3 — FIN DU CONCOURS : à 0⚡ (source unique épuisée), le run se termine → MÉGA-FUSION 3-voies (retour
+    //   en live). On attend l'écran LIBRE (fin de combat/cinématique/HoF) pour ne pas déclencher en plein combat
+    //   ou pendant le sacre. Ref anti-double : completeRun3 est async et bascule activeWorld → sans garde l'effet
+    //   pourrait relancer plusieurs fusions. Réarmé quand on n'est plus en run 3.
+    useEffect(() => {
+        if (activeWorld !== "run3") { run3EndTriggeredRef.current = false; return }
+        if (run3EndTriggeredRef.current || player.reps > 0) return
+        if (battle || evolutions.length > 0 || championRun || dialogue || pendingLearn || newDexEntry || run3EndOffer) return
+        run3EndTriggeredRef.current = true
+        setRun3EndOffer({ score: run3Score(player.run3Defeated ?? []) })
+    }, [activeWorld, player.reps, player.run3Defeated, battle, evolutions.length, championRun, dialogue, pendingLearn, newDexEntry, run3EndOffer])
 
     // SACRE run 1 → une fois le dialogue-défi du Dieu des Nouilles refermé, on OUVRE le créateur en mode FORCÉ.
     useEffect(() => {
@@ -1977,6 +1991,36 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 ])
                             })
                         }}>🍝 Fusionner maintenant (finir le run 2)</button>
+                    </div>
+                </div>
+            )}
+
+            {/* RUN 3 — FIN DU CONCOURS (0⚡) : méga-fusion 3-voies FORCÉE (0⚡ n'est pas un choix → un seul bouton). */}
+            {run3EndOffer && (
+                <div style={menuOverlayStyle}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>🏁 CONCOURS TERMINÉ</div>
+                        <div style={{ fontSize: 12.5, lineHeight: 1.5, margin: "2px 0 10px", color: "#eee" }}>
+                            Ton énergie est épuisée — <b style={{ color: "#ff9a5a" }}>0⚡</b>. Le concours s'achève ici.
+                            <div style={{ margin: "8px 0 0", padding: "8px 10px", background: "rgba(255,227,107,0.12)", borderRadius: 8, fontSize: 12 }}>
+                                🏆 Ton score : <b style={{ color: "#ffe36b" }}>{run3EndOffer.score}</b> — gravé dans le Nexus.
+                            </div>
+                            <div style={{ margin: "6px 0 0", padding: "8px 10px", background: "rgba(255,255,255,0.06)", borderRadius: 8, fontSize: 12 }}>
+                                🍝 <b>MÉGA-FUSION</b> : tes trois vies (run 1 + run 2 + run 3) n'en font plus qu'UNE. Ton équipe du concours reste active ; tous tes anciens Daemons rejoignent ton PC.
+                            </div>
+                        </div>
+                        <button style={menuBtnStyle} onClick={() => {
+                            const score = run3EndOffer.score
+                            setRun3EndOffer(null)
+                            completeRun3().finally(() => {
+                                showDialogue("y_ligue_maitre", "🌀 MÉGA-FUSION", [
+                                    "Le concours s'éteint dans un dernier éclat d'énergie…",
+                                    `Ton score final : ${score}. Il rejoint le grand registre du Nexus — sauras-tu le battre un jour ?`,
+                                    "En cet instant, tes TROIS destins fusionnent : run 1, run 2 et run 3 n'en font plus qu'un.",
+                                    "Ton équipe du concours règne désormais sur le Nexus unifié, et tous tes anciens Daemons t'attendent au PC. Le cycle est bouclé, Maître. 🍝",
+                                ])
+                            })
+                        }}>🌀 MÉGA-FUSION</button>
                     </div>
                 </div>
             )}
