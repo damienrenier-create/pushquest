@@ -29,6 +29,7 @@ import HallOfFameViewer from "./HallOfFameViewer"
 import ArenaHallOfFamePanel from "./ArenaHallOfFamePanel"
 import DexEntryScreen from "./battle/DexEntryScreen"
 import IntroCinematic from "./IntroCinematic"
+import Run3IntroCinematic from "./Run3IntroCinematic"
 import GuidePanel from "./GuidePanel"
 import ArenaInfoPanel from "./ArenaInfoPanel"
 import LibraryPanel from "./LibraryPanel"
@@ -1915,36 +1916,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             )}
 
             {/* RUN 3 — CHOIX DU STARTER : les 3 lignées en triangle (Métal › Fée › Combat › Métal). */}
-            {run3StarterChoice && (
-                <div style={menuOverlayStyle}>
-                    <div style={{ ...menuBoxStyle, maxWidth: 460 }} onClick={(e) => e.stopPropagation()}>
-                        <div style={menuTitleStyle}>🎯 CHOISIS TON STARTER</div>
-                        <div style={{ fontSize: 11, opacity: 0.85, textAlign: "center", margin: "0 0 8px" }}>
-                            🔩 Métal bat 🧚 Fée · 🧚 Fée bat 🦗 Combat · 🦗 Combat bat 🔩 Métal. Tu démarres à <b>niveau 5</b>, éclos frais.
-                        </div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                            {[
-                                { id: "elefer", name: "Éléfer", emoji: "🔩", type: "Métal", role: "Mur défensif — increvable, lent, cogne tard", counters: "contre la Fée" },
-                                { id: "cornaive", name: "Cornaïve", emoji: "🧚", type: "Fée", role: "Sweeper spécial — rapide, frappe en Spécial", counters: "contre le Combat" },
-                                { id: "coccipoing", name: "Coccipoing", emoji: "🦗", type: "Combat/Insecte", role: "Canon de verre — brutal & rapide, mais fragile", counters: "contre le Métal" },
-                            ].map((s) => (
-                                <button key={s.id} onClick={() => void launchRun3(s.id)}
-                                    style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.06)", border: "2px solid rgba(255,255,255,0.22)", borderRadius: 10, padding: 8, cursor: "pointer", textAlign: "left", color: "#eee" }}>
-                                    <div style={{ width: 54, height: 54, flex: "none", background: "rgba(0,0,0,0.28)", borderRadius: 8, overflow: "hidden" }}>
-                                        <img src={`/yellow/sprites/dex/${s.id}.png`} alt={s.name} style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated" }} />
-                                    </div>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ fontWeight: 800, fontSize: 15 }}>{s.emoji} {s.name} <span style={{ fontSize: 11, opacity: 0.7 }}>· {s.type}</span></div>
-                                        <div style={{ fontSize: 11, opacity: 0.85 }}>{s.role}</div>
-                                        <div style={{ fontSize: 10, color: "#9ff0b8", marginTop: 1 }}>⚔️ avantagé {s.counters}</div>
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
-                        <button style={menuBtnDimStyle} onClick={() => setRun3StarterChoice(false)}>← Annuler</button>
-                    </div>
-                </div>
-            )}
+            {/* RUN 3 — choix de la lignée via la CINÉMATIQUE (jumelle de l'intro run 1, lisible), dialogues adaptés.
+                Le Dieu Spaghetti présente le concours + le triangle → choix → outro → launchRun3 (règles 500⚡). */}
+            {run3StarterChoice && <Run3IntroCinematic onComplete={(id) => void launchRun3(id)} />}
             <LibraryPanel />
             <AdvisorPanel />
             <LabPanel />
