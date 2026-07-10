@@ -1168,6 +1168,10 @@ export interface CasinoSpinResult {
  * gère streak + banqueroute. `nowMs` = horloge fournie par l'appelant (Date.now() côté UI).
  */
 export function casinoSpin(bets: CasinoBet[], nowMs: number): CasinoSpinResult {
+    // RUN 3 (concours) : le casino est FERMÉ — casinoSpin écrit st.reps DIRECTEMENT (contourne le verrou
+    //   grantReps/creditReps). Sans ce garde, la roulette du labo est un faucet d'énergie infini qui casse
+    //   la « source unique » du concours ET empêche la fin de run (gatée sur reps===0). Cf. tables casino déjà fermées.
+    if (activeWorld === "run3") return { ok: false, reason: "🔒 Casino FERMÉ pendant le CONCOURS (run 3)." }
     const d = st.labDefi
     if (d.casinoBankruptUntil && new Date(d.casinoBankruptUntil).getTime() > nowMs) {
         return { ok: false, reason: "Le casino est en banqueroute. Reviens plus tard." }
@@ -1540,6 +1544,7 @@ export function markRouletteClaimed(roundId: string): boolean {
 /** Joue le ticket GRATUIT du jour (valeur DAILY_TICKET_VALUE), HORS file de boss. Marque le jour
  *  consommé. 🤫 1er pari du joueur gagné d'office ; ensuite aléatoire. Gain = mise × 10. */
 export function playDailyTicketSpin(betCase: number, today: string): CasinoTicketResult {
+    if (activeWorld === "run3") return { winningCase: -1, won: false, winAmount: 0, betValue: 0 } // casino fermé en run 3
     const d = st.labDefi
     const betValue = DAILY_TICKET_VALUE
     const firstBet = !d.casinoFirstBetDone
@@ -1559,6 +1564,7 @@ export function playDailyTicketSpin(betCase: number, today: string): CasinoTicke
  * Renvoie un résultat à winningCase=-1/betValue=0 si aucun ticket en attente (no-op).
  */
 export function playTicketSpin(betCase: number): CasinoTicketResult {
+    if (activeWorld === "run3") return { winningCase: -1, won: false, winAmount: 0, betValue: 0 } // casino fermé en run 3
     const d = st.labDefi
     const betValue = d.grantedTickets[0]
     if (betValue === undefined) return { winningCase: -1, won: false, winAmount: 0, betValue: 0 }

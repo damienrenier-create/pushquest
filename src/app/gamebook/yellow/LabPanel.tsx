@@ -48,7 +48,9 @@ export default function LabPanel() {
     const open = useGameStore((s) => s.labOpen)
     const close = useGameStore((s) => s.closeLab)
     const player = usePlayer()
-    const ngplus = useActiveWorld() === "ngplus" // run 2 : le défi répétable devient SQUATS (rampe ×1,2)
+    const world = useActiveWorld()
+    const ngplus = world === "ngplus" // run 2 : le défi répétable devient SQUATS (rampe ×1,2)
+    const run3 = world === "run3"     // run 3 (concours) : casino/roulette FERMÉS
     const pv = pushupDefiVariant(ngplus)         // { exercise, word: "pompes"|"squats", growth }
     const [tab, setTab] = useState<"phys" | "ct" | "surprise">("phys")
     const [ctType, setCtType] = useState<PokeType | null>(null)
@@ -206,11 +208,15 @@ export default function LabPanel() {
                             {/* ─── SURPRISE ─── */}
                             {tab === "surprise" && (
                                 <Card title="🎰 Roulette dorée" desc={`Tente ta chance — la roulette reste ouverte ! Paliers : ${pillar.emoji} ${pillar.name} à 1000 · ✨ ${pillar.name} SHINY à 5000.`} reward={`Cumul gagné : ${d.casinoTotalWon}`}>
-                                    {!d.tonytonyClaimed && d.casinoTotalWon >= TONYTONY_TARGET && <button onClick={claimTonytony} style={primary}>{pillar.emoji} Réclamer {pillar.name} (1000)</button>}
-                                    {d.tonytonyClaimed && !d.tonytonyShiny && d.casinoTotalWon >= TONYTONY_SHINY_TARGET && <button onClick={claimTonytonyShiny} style={primary}>✨ Rendre ton {pillar.name} SHINY (5000)</button>}
-                                    <button onClick={() => setCasino(true)} style={((!d.tonytonyClaimed && d.casinoTotalWon >= TONYTONY_TARGET) || (d.tonytonyClaimed && !d.tonytonyShiny && d.casinoTotalWon >= TONYTONY_SHINY_TARGET)) ? ghost : primary}>🎰 Jouer à la roulette</button>
-                                    <div style={{ fontSize: 10, opacity: 0.7, color: INK, marginTop: 6 }}>{pillar.emoji} {pillar.name} : {d.tonytonyClaimed ? "✅" : `${Math.min(d.casinoTotalWon, TONYTONY_TARGET)}/${TONYTONY_TARGET}`} · ✨ Shiny : {d.tonytonyShiny ? "✅" : `${Math.min(d.casinoTotalWon, TONYTONY_SHINY_TARGET)}/${TONYTONY_SHINY_TARGET}`}</div>
-                                    {ticketCount() > 0 && <button onClick={() => setTicketsOpen(true)} style={{ ...primary, marginTop: 8 }}>🎟️ Jouer mes tickets roulette ({ticketCount()})</button>}
+                                    {run3 ? (
+                                        <div style={{ fontSize: 11, opacity: 0.8, color: INK, lineHeight: 1.5 }}>🔒 La roulette est <b>fermée pendant le CONCOURS</b> (run 3). Seule source d&apos;énergie : les paliers d&apos;arène.</div>
+                                    ) : (<>
+                                        {!d.tonytonyClaimed && d.casinoTotalWon >= TONYTONY_TARGET && <button onClick={claimTonytony} style={primary}>{pillar.emoji} Réclamer {pillar.name} (1000)</button>}
+                                        {d.tonytonyClaimed && !d.tonytonyShiny && d.casinoTotalWon >= TONYTONY_SHINY_TARGET && <button onClick={claimTonytonyShiny} style={primary}>✨ Rendre ton {pillar.name} SHINY (5000)</button>}
+                                        <button onClick={() => setCasino(true)} style={((!d.tonytonyClaimed && d.casinoTotalWon >= TONYTONY_TARGET) || (d.tonytonyClaimed && !d.tonytonyShiny && d.casinoTotalWon >= TONYTONY_SHINY_TARGET)) ? ghost : primary}>🎰 Jouer à la roulette</button>
+                                        <div style={{ fontSize: 10, opacity: 0.7, color: INK, marginTop: 6 }}>{pillar.emoji} {pillar.name} : {d.tonytonyClaimed ? "✅" : `${Math.min(d.casinoTotalWon, TONYTONY_TARGET)}/${TONYTONY_TARGET}`} · ✨ Shiny : {d.tonytonyShiny ? "✅" : `${Math.min(d.casinoTotalWon, TONYTONY_SHINY_TARGET)}/${TONYTONY_SHINY_TARGET}`}</div>
+                                        {ticketCount() > 0 && <button onClick={() => setTicketsOpen(true)} style={{ ...primary, marginTop: 8 }}>🎟️ Jouer mes tickets roulette ({ticketCount()})</button>}
+                                    </>)}
                                 </Card>
                             )}
 

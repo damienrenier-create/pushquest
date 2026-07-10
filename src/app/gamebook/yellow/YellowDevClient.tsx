@@ -57,7 +57,7 @@ import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_L
 import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/gamebook/yellow/data/labDialogues"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, getNgplusOldTeam, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3 } from "@/lib/gamebook/yellow/store/saveManager"
 import { customStarterSpeciesId, type StoredCustomDaemon } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket } from "@/lib/gamebook/yellow/store/playerStore"
 import { computeRunScores, formatDuration } from "@/lib/gamebook/yellow/score/runScore"
 import { run3Score, run3MaxScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
@@ -610,7 +610,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             }
             // LIGUE — RÉCOMPENSE CROISÉE : un autre joueur est devenu Champion → +1/3 de MON quota
             // énergétique (1 don par sacre, calculé sur MON repsCap). Appliqué après loadYellowSave.
-            if (!cancelled) {
+            // RUN 3 : on NE réclame PAS (le GET marque « claimed » côté serveur mais grantReps est no-op en run 3
+            //   → le don serait DÉTRUIT). On le laisse en attente : il sera appliqué au retour en live (post-fusion).
+            if (!cancelled && getActiveWorld() !== "run3") {
                 try {
                     const r = await fetch("/api/gamebook/yellow/hall-of-fame/energy")
                     const j = r.ok ? await r.json() : null
@@ -627,7 +629,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             }
             // ✨ FÊTE SHINY : un joueur a croisé/capturé un shiny → +50 énergie HORS-plafond pour tous,
             // annoncé par le Dieu Spaghetti à cette connexion (réclamation des dons en attente).
-            if (!cancelled) {
+            // RUN 3 : même logique — on ne réclame pas (sinon le don shiny est consommé serveur mais perdu). En attente.
+            if (!cancelled && getActiveWorld() !== "run3") {
                 try {
                     const r = await fetch("/api/gamebook/yellow/shiny-gift")
                     const j = r.ok ? await r.json() : null
@@ -1083,6 +1086,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // libre, on ouvre la cinématique du Dieu Spaghetti (1×/session ; consommé à la fermeture).
     useEffect(() => {
         if (ticketChecked.current || !hydrated || ticketOpen) return
+        if (getActiveWorld() === "run3") return // RUN 3 : casino/tickets FERMÉS → aucune cinématique ni don de ticket
         if (!getPlayer().introSeen) return
         if (battle || dialogue || evolutions.length > 0 || pendingLearn || newDexEntry || championRun || whiteout) return
         const today = getPlayer().creditedThrough
