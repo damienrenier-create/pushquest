@@ -61,7 +61,9 @@ describe("lignées d'évolution", () => {
         for (const [a, b, c] of LINES) {
             expect(getSpecies(a)!.evolution?.toId, a).toBe(b)
             expect(getSpecies(b)!.evolution?.toId, b).toBe(c)
-            expect(getSpecies(c)!.evolution, c).toBeUndefined()
+            // Aquilothan a un 4e stade POST-GAME : Aquilord, par ÉCHANGE (les autres finales n'évoluent pas).
+            if (c === "aquilothan") expect(getSpecies(c)!.evolution?.toId, c).toBe("aquilord")
+            else expect(getSpecies(c)!.evolution, c).toBeUndefined()
         }
     })
 

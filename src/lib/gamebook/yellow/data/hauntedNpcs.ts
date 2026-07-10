@@ -47,6 +47,30 @@ export const HH_TRADER_HAS_MORROW_LINES = [
     "Toi… tu as déjà un MORROW ?! Sacré veinard. Entre nous, l'affaire est close — file, et prends-en soin.",
 ]
 
+// ── SERVICE PREMIUM (post-game, monde LIVE) — AQUILOTHAN → AQUILORD ──────────────────────────────────
+// Le brocanteur trade-ÉVOLUE ton Aquilothan en AQUILORD via un détour comique : il te refile d'abord son
+// MIMIMOY (créature falote), puis le RÉCLAME aussitôt et te rend l'Aquilord. Le passage du Mimimoy entre tes
+// mains AMORCE son roaming (il pourra ensuite APPARAÎTRE dans la nature, cf. mimimoyReturned).
+export const HH_TRADE_AQUILOTHAN_GIVE = "aquilothan"
+export const HH_TRADE_AQUILOTHAN_RECEIVE = "aquilord"
+export const HH_TRADER_AQUILORD_OFFER_LINES = [
+    "Oh ! Un AQUILOTHAN… quelle prestance ! J'ai justement de quoi lui faire passer un cap.",
+    "Confie-le-moi. En garantie, tiens, prends mon MIMIMOY… ",
+    "Ah, mais — ATTENDS ! C'est MON Mimimoy, ça ! Rends-le-moi, coquin, et prends plutôt CECI en retour.",
+    "J'échange le PREMIER AQUILOTHAN de ton ÉQUIPE contre un AQUILORD (entraînement préservé). Marché conclu ?  →  Ⓐ ÉCHANGER · Ⓑ renoncer",
+]
+export const HH_TRADER_AQUILORD_NEED_LINES = [
+    "Un AQUILOTHAN, et je te le fais passer AQUILORD par la magie de l'échange. Reviens avec, l'ami !",
+]
+export const HH_TRADER_AQUILORD_DONE_LINES = [
+    "Marché conclu ! Ton Aquilothan file dans mon canal d'échange secret…",
+    "…et il te REVIENT, ÉVOLUÉ en AQUILORD ! Seigneur des tempêtes, rien de moins. 🦅",
+    "Ah, et… ce petit MIMIMOY qui a filé entre tes doigts ? Il a pris goût à ta compagnie. Ne sois pas surpris s'il vient te RÔDER autour un de ces jours… 👀",
+]
+export const HH_TRADER_AQUILORD_CANCEL_LINES = [
+    "Comme tu veux ! Garde ton Aquilothan… mais un AQUILORD, ça ne court pas les rues, l'ami. 😏",
+]
+
 // ── PNJ2 — COLLECTIONNEUR DE SPECTRES (21,11) : bats-le 3× en montrant 3 spectres distincts → CT26 ──
 export const HH_COLLECTOR_ID = "y_hh_collector"
 // Déplacé À L'INTÉRIEUR de la maison hantée, au fond du labyrinthe (poche isolée 12,6) : il faut

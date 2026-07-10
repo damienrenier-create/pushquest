@@ -206,6 +206,57 @@ export const SPECIES: Record<string, SpeciesData> = {
         catchRate: 45, baseExp: 210, rarity: "RARE", growthRate: "medium_fast", role: "Vol — sweeper",
         description: "Empereur des cieux. Son envergure projette l'ombre d'un nuage.",
         sprite: "/yellow/sprites/dex/aquilothan.png",
+        // STADE 4 (post-game) : évolue en AQUILORD par ÉCHANGE (joueur↔joueur, ou brocanteur de Cendreville).
+        evolution: { toId: "aquilord", method: { kind: "TRADE" } },
+    },
+    aquilord: {
+        id: "aquilord", dexNo: 154, name: "Aquilord", types: ["NORMAL", "VOL"],
+        // BST 480 (Aquilothan 402 + 78), taillé SPÉCIAL (grosse Spé + Vitesse) pour sublimer ses couvertures
+        // Glace/Feu spéciales. Stade 4 de la lignée Plumiot (Plumiot→Faukon→Aquilothan→Aquilord).
+        baseStats: { hp: 85, atk: 84, def: 78, spe: 115, spc: 118 },
+        // SUPERSET du learnset d'Aquilothan (mêmes moves aux mêmes niveaux) + 4 AJOUTS exclusifs Aquilord :
+        // souffle_polaire (Glace), lance_flammes (Feu), reprise_ailes (soin), ultralaser (capstone). L'évo-échange
+        // conserve les moves choisis ; Aquilord apprend les nouveaux en montant de niveau.
+        learnset: [
+            { level: 1, moveId: "tornade" },
+            { level: 1, moveId: "picpic" },
+            { level: 1, moveId: "belier" },
+            { level: 30, moveId: "elan" },
+            { level: 36, moveId: "fonce_bec" },
+            { level: 40, moveId: "coup_d_boule" },
+            { level: 46, moveId: "meteores" },        // STAB Vol qui ne rate jamais (hérité)
+            { level: 52, moveId: "plaquage" },
+            { level: 58, moveId: "souffle_polaire" }, // + couverture GLACE (spéciale)
+            { level: 62, moveId: "lance_flammes" },   // + couverture FEU (spéciale)
+            { level: 66, moveId: "vol" },
+            { level: 72, moveId: "reprise_ailes" },   // + SOIN (50% PV, sans sommeil)
+            { level: 80, moveId: "ultralaser" },      // + capstone Normal dévastateur
+        ],
+        catchRate: 45, baseExp: 235, rarity: "RARE", growthRate: "medium_fast", role: "Normal/Vol — sweeper spécial polyvalent",
+        description: "Seigneur souverain des tempêtes. Son cri fend les nuages ; glace et flammes obéissent à ses ailes.",
+        sprite: "/yellow/sprites/dex/aquilord.png",
+    },
+    mimimoy: {
+        id: "mimimoy", dexNo: 155, name: "Mimimoy", types: ["NORMAL"],
+        // BST 300 « ultra nul » (l'échange du brocanteur de Cendreville l'exige) : rapide mais fragile et faiblard.
+        // Compensé par un learnset qui apprend TRÈS TARD (niv 80) les plus grosses attaques Normal du jeu.
+        baseStats: { hp: 65, atk: 45, def: 45, spe: 100, spc: 45 },
+        learnset: [
+            { level: 1, moveId: "charge" },
+            { level: 1, moveId: "hurlement" },
+            { level: 8, moveId: "vive_attaque" },
+            { level: 16, moveId: "elan" },
+            { level: 24, moveId: "coup_d_boule" },
+            { level: 34, moveId: "belier" },
+            { level: 46, moveId: "plaquage" },
+            { level: 58, moveId: "reprise_ailes" },   // un petit soin pour survivre
+            { level: 70, moveId: "meteores" },         // gros STAB tardif qui ne rate jamais
+            { level: 80, moveId: "ultralaser" },       // l'apothéose : le rayon ultime, pour compenser son BST nul
+        ],
+        catchRate: 150, baseExp: 90, rarity: "UNCOMMON", growthRate: "medium_fast", role: "Normal — collector rôdeur (ultra faible)",
+        description: "Créature timide et falote au regard perpétuellement inquiet. Insignifiante… mais introuvable, ce qui fait tout son prix.",
+        sprite: "/yellow/sprites/dex/mimimoy.png",
+        hiddenUntilCaught: true, // ne s'affiche au Pokédex qu'une fois capturé (effet surprise du roaming)
     },
 
     // --- Ligne ROCHE/SOL ---

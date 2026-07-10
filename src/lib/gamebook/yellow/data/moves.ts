@@ -155,6 +155,8 @@ export const MOVES: Record<string, MoveData> = {
     // ULTIME (Normal physique) : puissance colossale, mais le contrecoup épuise le lanceur (pas de mécanique
     // de « recharge » dans le moteur → le recul tient lieu de drawback). Apprise très tard (move de prestige).
     ultralaser: { id: "ultralaser", name: "Ultralaser", type: "NORMAL", power: 150, accuracy: 90, pp: 5, effect: { recoilPct: 25 }, description: "Le rayon ultime : des dégâts dévastateurs, mais le contrecoup blesse violemment le lanceur." },
+    // Soin volant (Roost) — Normal pur, SANS sommeil (contrairement à Repos). Signature de soin d'Aquilord.
+    reprise_ailes: { id: "reprise_ailes", name: "Reprise d'Ailes", type: "NORMAL", power: 0, accuracy: 0, pp: 10, costPower: 60, effect: { healPct: 50 }, description: "Le Daemon replie ses ailes et récupère : restaure la moitié de ses PV (sans s'endormir)." },
 
     // === 5 SIGNATURES EXCLUSIVES AU RUN 2 (ct53→ct57 — cadeaux des boss d'arène en New Game+) ===
     // Serres de l'Aube (Druide/Vol) : 1re PRIORITÉ STAB volante — frappe toujours en premier.

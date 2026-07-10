@@ -22,8 +22,8 @@ import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, startRun3BossBattle, resetFleeStreak } from "./battleStore"
 import { run3ArenaForBoss, run3BossIntroLines } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
-import { getPokedex } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, resetLigueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, addItem, getActiveWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen } from "./playerStore"
+import { getPokedex, markCaught } from "./pokedexStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, resetLigueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, addItem, getActiveWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
 import { getHeldItem } from "../data/heldItems"
 import { BERRY_SECRET_LINES_ASSISTANT } from "../data/berryLore"
@@ -44,7 +44,7 @@ import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LI
 import { SYLVEBARBE_NPC_ID, SYLVEBARBE_INTRO_LINES, SYLVEBARBE_DONE_LINES, SYLVEBARBE_NO_FLUTE_LINES, SYLVEBARBE_NO_TEAM_LINES, buildSylvebarbe, FLUTE_GIVE_LINES } from "../data/sylvebarbe"
 import { CHEN_LAB_LINES, LAB_ASSISTANT_LINES, LAB_ASSISTANT_LINES_NGPLUS, LAB_ASSISTANT_LINES_RUN3, CHEN_ABANDON_OFFER_LINES, CHEN_RUN3_TEASER_LINES, CHEN_RUN3_EVOLVE_LINES } from "../data/labDialogues"
 import { MAGNETOR_EVO_ITEM } from "../data/items"
-import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADE_RECEIVE_RUN1, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_TRADER_OFFER_LINES_RUN1, HH_TRADER_NEED_LINES_RUN1, HH_TRADER_HAS_MORROW_LINES, HH_TRADER_CANCEL_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
+import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADE_RECEIVE_RUN1, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_TRADER_OFFER_LINES_RUN1, HH_TRADER_NEED_LINES_RUN1, HH_TRADER_HAS_MORROW_LINES, HH_TRADER_CANCEL_LINES, HH_TRADE_AQUILOTHAN_GIVE, HH_TRADE_AQUILOTHAN_RECEIVE, HH_TRADER_AQUILORD_OFFER_LINES, HH_TRADER_AQUILORD_DONE_LINES, HH_TRADER_AQUILORD_CANCEL_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
 
 export interface ActiveDialogue {
     npcId: string
@@ -103,7 +103,8 @@ interface GameStore {
     pendingOrcaline: boolean // intro du DRESSEUR D'ORCALINE en cours → combat à la fermeture
     pendingGekroc: boolean // intro de GÉKROC (mini-boss Centrale) en cours → combat à la fermeture
     pendingSylvebarbe: boolean // intro de SYLVEBARBE (gardien sud Ville Jaune) en cours → combat à la fermeture
-    pendingHhTrade: string | null // uid du Brookhanté à échanger (BROCANTEUR maison hantée) → échange à la fermeture
+    pendingHhTrade: string | null // uid du Roctaur à échanger (BROCANTEUR maison hantée) → échange à la fermeture
+    pendingAquilordTrade: string | null // uid de l'Aquilothan → Aquilord (BROCANTEUR, service premium live) à la fermeture
     pendingCaveTrade: string | null // uid du Faukon à échanger (DÉNICHEUR grotte) → échange à la fermeture
     pendingHhCollector: boolean // intro du COLLECTIONNEUR (maison hantée) en cours → combat à la fermeture
     encounterCooldown: number // #7 : pas de rencontre sauvage pendant N déplacements (≥1 case libre après un combat)
@@ -300,6 +301,21 @@ function doHhTrade(giveUid: string): ActiveDialogue | null {
     }
 }
 
+// BROCANTEUR — SERVICE PREMIUM (live) : trade-évolue un AQUILOTHAN → AQUILORD (moveset naturel du niveau =
+// Vol+Glace+Feu+Soin), en préservant le niveau + l'investissement Saiyan + la brillance. Le passage narratif
+// du Mimimoy AMORCE son roaming (markMimimoyReturned). Aquilord entre au Pokédex.
+function doAquilordTrade(giveUid: string): ActiveDialogue | null {
+    const owner = [...getPlayerSave().team, ...getPlayerSave().pc].find((m) => m.uid === giveUid)
+    if (!owner) return null
+    // Évo EN PLACE (comme un échange joueur↔joueur) : conserve niveau, IV, MOVES CHOISIS, points Saiyan, brillance
+    //   et surnom. Aquilord apprend simplement SES nouveaux moves (Glace/Feu/soin) en montant de niveau.
+    applyTradeEvolution(giveUid)
+    markCaught(HH_TRADE_AQUILOTHAN_RECEIVE); markCaughtThisRun(HH_TRADE_AQUILOTHAN_RECEIVE) // Aquilord au Pokédex
+    markMimimoyReturned()                            // le Mimimoy passé entre les mains → roaming amorcé (live)
+    persistYellowSave()
+    return { npcId: HH_TRADER_ID, npcName: "BROCANTEUR", lineIndex: 0, lines: HH_TRADER_AQUILORD_DONE_LINES }
+}
+
 // DÉNICHEUR (Route Nord) : donne un COMMUN → reçoit un BÉLUNODE (base lignée Léviathonn) au MÊME niveau
 // + MÊMES points Saiyan (récompense de l'investissement). Bélunode évolue ensuite en Sonarque → Léviathonn.
 function doCaveTrade(giveUid: string): ActiveDialogue | null {
@@ -411,6 +427,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     pendingGekroc: false,
     pendingSylvebarbe: false,
     pendingHhTrade: null,
+    pendingAquilordTrade: null,
     pendingCaveTrade: null,
     pendingHhCollector: false,
     encounterCooldown: 0,
@@ -633,12 +650,25 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     run3: getActiveWorld() === "run3",      // RUN 3 : pools RUN3_ZONES (espèces inédites Route Nord / Grotte)
                 })
                 if (wild) {
+                    // MIMIMOY roaming (monde LIVE, post-quête du brocanteur) : peut REMPLACER cette rencontre.
+                    //   Chance décroissante par apparition (25→20→15→10→5 %, plancher 5 %), MAX 10 apparitions ;
+                    //   une capture stoppe le roaming (goshCaught-like). Compte comme UNE apparition.
+                    let spawn = wild
+                    const p = getPlayerSave()
+                    if (getActiveWorld() === "live" && p.mimimoyReturned && p.mimimoyAppearances < 10 && !getPokedex().caught.includes("mimimoy")) {
+                        const chance = [0.25, 0.20, 0.15, 0.10, 0.05][Math.min(p.mimimoyAppearances, 4)]
+                        if (Math.random() < chance) {
+                            spawn = createMonInstance("mimimoy", Math.max(5, ngEasyWild ? 3 : levelBasis), { owned: false })
+                            bumpMimimoyAppearances()
+                            persistYellowSave()
+                        }
+                    }
                     if (typeof window !== "undefined" && encCount < 10) window.localStorage.setItem(ENC_KEY, String(encCount + 1))
                     const seed = Math.floor(Math.random() * 1e9) >>> 0
                     set({ encounterCooldown: 1 }) // #7 : la 1re case après ce combat sera sans rencontre
-                    startWildBattle(team, [wild], seed)
+                    startWildBattle(team, [spawn], seed)
                     // ✨ FÊTE SHINY : croiser un shiny offre +50 énergie à TOUS les joueurs (annonce Dieu Spaghetti).
-                    if (wild.shiny) reportShiny("encounter", wild.uid, wild.speciesId)
+                    if (spawn.shiny) reportShiny("encounter", spawn.uid, spawn.speciesId)
                 }
             }
         }
@@ -698,6 +728,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     set({ dialogue: tryLaunchSylvebarbe(), pendingSylvebarbe: false })
                 } else if (get().pendingHhTrade) {
                     set({ dialogue: doHhTrade(get().pendingHhTrade!), pendingHhTrade: null })
+                } else if (get().pendingAquilordTrade) {
+                    set({ dialogue: doAquilordTrade(get().pendingAquilordTrade!), pendingAquilordTrade: null })
                 } else if (get().pendingCaveTrade) {
                     set({ dialogue: doCaveTrade(get().pendingCaveTrade!), pendingCaveTrade: null })
                 } else if (get().pendingHhCollector) {
@@ -990,6 +1022,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // Un joueur possédant DÉJÀ un Morrow (obtenu jadis en run 1) est ÉCARTÉ du service Rochison → il le garde.
         if (npc.id === HH_TRADER_ID) {
             const ngplus = getActiveWorld() === "ngplus"
+            // SERVICE PREMIUM (monde LIVE, post-game) : un AQUILOTHAN en équipe → trade-évo en AQUILORD (interlude
+            //   Mimimoy → amorce son roaming). Prioritaire sur le service Roctaur (le joueur l'apporte exprès).
+            if (getActiveWorld() === "live") {
+                const aq = getPlayerSave().team.find((m) => m.speciesId === HH_TRADE_AQUILOTHAN_GIVE)
+                if (aq) {
+                    set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: HH_TRADER_AQUILORD_OFFER_LINES, lineIndex: 0 }, pendingAquilordTrade: aq.uid })
+                    return
+                }
+            }
             if (!ngplus && getPokedex().caught.includes(HH_TRADE_RECEIVE)) {
                 set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: HH_TRADER_HAS_MORROW_LINES } })
                 return
@@ -1191,6 +1232,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
         } else if (get().pendingHhTrade) {
             // Ⓑ = RENONCER à l'échange (étape de validation) : on ne troque RIEN, le Roctaur reste dans l'équipe.
             set({ dialogue: { npcId: HH_TRADER_ID, npcName: "BROCANTEUR", lineIndex: 0, lines: HH_TRADER_CANCEL_LINES }, pendingHhTrade: null })
+        } else if (get().pendingAquilordTrade) {
+            // Ⓑ = RENONCER : l'Aquilothan reste dans l'équipe (pas d'évolution).
+            set({ dialogue: { npcId: HH_TRADER_ID, npcName: "BROCANTEUR", lineIndex: 0, lines: HH_TRADER_AQUILORD_CANCEL_LINES }, pendingAquilordTrade: null })
         } else if (get().pendingCaveTrade) {
             // Ⓑ = RENONCER à l'échange : on ne troque RIEN, le Daemon donné reste dans l'équipe.
             set({ dialogue: { npcId: CAVE_TRADER_ID, npcName: "DÉNICHEUR", lineIndex: 0, lines: caveTradeConfig(getActiveWorld() === "run3").cancel }, pendingCaveTrade: null })
