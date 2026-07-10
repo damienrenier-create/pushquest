@@ -13,6 +13,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { isNexusYellowEnabled, YELLOW_CHAPTER_ID } from "@/lib/gamebook/yellow/featureFlag"
+import { run3MaxScore } from "@/lib/gamebook/yellow/data/run3Score"
 
 export const dynamic = "force-dynamic"
 
@@ -79,7 +80,10 @@ export async function POST(req: NextRequest) {
     let body: { run?: unknown; score?: unknown }
     try { body = await req.json() } catch { return NextResponse.json({ error: "Bad JSON" }, { status: 400 }) }
     const run = typeof body.run === "string" && VALID_RUNS.has(body.run) ? body.run : null
-    const score = typeof body.score === "number" && isFinite(body.score) ? Math.max(0, Math.min(MAX_SCORE, Math.floor(body.score))) : null
+    // Borne PAR RUN (anti-triche : le score vient d'un POST client). run3 = Σ max réellement atteignable (dérivé) +
+    //   marge ; run2 = énergie en réserve, plafonnée par le cap NG+ généreux. Fallback MAX_SCORE si run inconnu.
+    const runCap = run === "run3" ? run3MaxScore() + 200 : run === "run2" ? 20000 : MAX_SCORE
+    const score = typeof body.score === "number" && isFinite(body.score) ? Math.max(0, Math.min(runCap, Math.floor(body.score))) : null
     if (!run || score === null) return NextResponse.json({ error: "Bad params" }, { status: 400 })
 
     try {

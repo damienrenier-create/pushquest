@@ -1755,7 +1755,11 @@ export function equipHeldItem(uid: string, itemId: string): boolean {
     const target = st.team.find((m) => m.uid === uid) ?? st.pc.find((m) => m.uid === uid)
     if (!target) return false
     const it = getHeldItem(itemId)
-    if (it?.species && it.species !== target.speciesId) return false // verrou espèce (signature)
+    // Verrou ESPÈCE (signature) : species peut être un tableau (lignée à stade final ajouté, ex. Aquilothan/Aquilord).
+    if (it?.species) {
+        const ok = Array.isArray(it.species) ? it.species.includes(target.speciesId) : it.species === target.speciesId
+        if (!ok) return false
+    }
     const items = { ...st.items, [itemId]: st.items[itemId] - 1 }
     if (target.heldItem) items[target.heldItem] = (items[target.heldItem] ?? 0) + 1 // l'ancien objet revient au sac
     const apply = (m: MonInstance): MonInstance => (m.uid === uid ? { ...m, heldItem: itemId } : m)

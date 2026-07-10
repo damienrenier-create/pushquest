@@ -581,7 +581,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             if (!cancelled) { const gift = consumeGiftMessage(); if (gift) setToast(gift) }
             // CADEAUX CROISÉS de duel (Partie C) : un autre joueur a battu MON reflet → le Dieu Spaghetti
             // me console (+énergie) à cette connexion. Énergie appliquée APRÈS loadYellowSave → pas de race.
-            if (!cancelled) {
+            // RUN 3 : on ne réclame PAS (le don serait consommé serveur mais grantReps est no-op → perdu). En attente.
+            if (!cancelled && getActiveWorld() !== "run3") {
                 try {
                     const r = await fetch("/api/gamebook/yellow/duel-gift")
                     const j = r.ok ? await r.json() : null
@@ -844,7 +845,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (activeWorld !== "run3") { run3EndTriggeredRef.current = false; return }
         if (run3EndTriggeredRef.current) return
         const beatMaster = player.isChampion // en run 3, devenir Champion = avoir battu LE MAÎTRE
-        if (player.reps > 0 && !beatMaster) return
+        // FIN « énergie » : le concours s'achève dès que le joueur ne peut plus s'offrir LA MOINDRE attaque de son
+        //   équipe (le struggle gratuit reste, mais il ne permet plus de progresser). Évite que reps se fige sur un
+        //   petit positif (< coût min) → le run ne se terminerait jamais avec un simple test reps===0.
+        const quota = effectiveQuota(player.wildCtx?.quota)
+        const moveCosts = player.team.flatMap((m) => m.moves.map((mv) => attackCost(getMove(mv.moveId), m.level, quota)))
+        const minMoveCost = moveCosts.length ? Math.min(...moveCosts) : 1
+        if (player.reps >= minMoveCost && !beatMaster) return
         if (battle || evolutions.length > 0 || championRun || dialogue || pendingLearn || newDexEntry || run3EndOffer) return
         run3EndTriggeredRef.current = true
         setRun3EndOffer({ score: run3Score(player.run3Defeated ?? []), reason: beatMaster ? "master" : "energy" })
@@ -1206,8 +1213,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, [
             `*Un éclair de pâte incandescente. ${nm} s'éveille à tes côtés, niveau 5 — pour la TROISIÈME vie.*`,
             "« Voici le CONCOURS ultime. 500 énergies bénies pour commencer — et RIEN d'autre. Pas de casino, pas de reps, pas de cadeaux : chaque attaque puise dans ta réserve. »",
-            "« Bats l'arène 1 et je t'octroie 700⚡. Puis 900, 1100, 1300, 1500 aux suivantes. Va le plus loin possible : la Ligue t'attend au bout. »",
-            "« Ton SCORE = la somme des niveaux de tous les Daemons ennemis que tu terrasses. Quand tu tombes à 0⚡, le concours s'achève. »",
+            "« À chaque arène vaincue, ta réserve se RECHARGE jusqu'à un plafond croissant : 500, puis 600, 700, 800, et 1000⚡ — jamais au-dessus. Gère chaque goutte. La Ligue t'attend au bout. »",
+            "« Ton SCORE = la somme des niveaux de tous les Daemons ennemis que tu terrasses. Le concours s'achève quand tu tombes à 0⚡ OU quand tu terrasses LE MAÎTRE de la Ligue. »",
             "« Et alors seulement — MÉGA-FUSION : ton run 1, ton run 2 ET ce run 3 n'en feront plus qu'un. D'ici là, tes deux vies passées restent gelées. Pas de retour. »",
             "« Que la légende commence, Maître. 🍝🔥 »",
         ])
@@ -2014,7 +2021,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         <div style={{ fontSize: 12.5, lineHeight: 1.5, margin: "2px 0 10px", color: "#eee" }}>
                             {run3EndOffer.reason === "master"
                                 ? <>Tu as terrassé <b style={{ color: "#ffe36b" }}>LE MAÎTRE</b> de la Ligue à la force de ton concours ! Sacre au sommet — le run 3 s'achève dans la gloire.</>
-                                : <>Ton énergie est épuisée — <b style={{ color: "#ff9a5a" }}>0⚡</b>. Le concours s'achève ici.</>}
+                                : <>Ton énergie est <b style={{ color: "#ff9a5a" }}>épuisée</b> — plus de quoi lancer la moindre attaque. Le concours s'achève ici.</>}
                             <div style={{ margin: "8px 0 0", padding: "8px 10px", background: "rgba(255,227,107,0.12)", borderRadius: 8, fontSize: 12 }}>
                                 🏆 Ton score : <b style={{ color: "#ffe36b" }}>{run3EndOffer.score}</b> — gravé dans le Nexus.
                             </div>
@@ -2897,6 +2904,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {!battle && evolutions.length === 0 && championRun && (
                 <HallOfFame champion={championRun} onDone={() => {
                     clearChampion()
+                    // RUN 3 : le sacre du Maître DÉCLENCHE la fin du concours → l'effet run3End ouvre la méga-fusion
+                    //   une fois championRun=null (clearChampion ci-dessus). Rien d'autre ici (pas de toast run 2).
+                    if (getActiveWorld() === "run3") return
                     // RUN 2 — VRAI sacre (ce HoF suit la victoire contre l'ANCIENNE équipe) : ngplusFinalResult est encore
                     //   armé (son effet attend justement la fermeture du HoF). On sort ici → l'effet ouvre l'OFFRE run 3.
                     if (ngplusFinalResult) return

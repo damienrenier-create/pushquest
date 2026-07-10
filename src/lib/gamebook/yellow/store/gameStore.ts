@@ -1152,9 +1152,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
             }
             // Boss d'arène — 2e verrou : les gardes (battus) réclament leur REVANCHE.
             // Tant qu'ils ne sont pas tous RE-battus, le boss renvoie le joueur les affronter.
-            // EN RUN 2 : verrou DÉSACTIVÉ — l'arène re-typée se boucle sans revanche (la revanche run 2 est un
-            // combat séparé, proposé APRÈS coup, cf. bloc isTrainerDefeated ci-dessous).
-            if (trainer.requiresRematch && !isTrainerDefeated(trainer.id) && getActiveWorld() !== "ngplus") {
+            // RUN 2 & RUN 3 : verrou DÉSACTIVÉ (=== "live" seulement) — le run 2 boucle l'arène re-typée sans
+            //   revanche ; le run 3 reframe le boss en champion figé (pas de revanche = « combat unique »). Sinon
+            //   VOLTA (élec) forcerait 4 revanches + une phase-2 hors-score qui draineraient l'énergie du concours.
+            if (trainer.requiresRematch && !isTrainerDefeated(trainer.id) && getActiveWorld() === "live") {
                 const restants = trainer.requiresRematch.filter((id) => !isTrainerRematched(id)).length
                 if (restants > 0) {
                     set({

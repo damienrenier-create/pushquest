@@ -139,7 +139,10 @@ export default function PokedexClient() {
                 <h1 style={S.title}>📷 POKÉDEX NEXUS</h1>
                 <div style={S.compRow}>
                     <span style={S.compTxt}>{comp.caught}/{comp.total} capturés — {comp.pct}%{(() => {
-                        const nowCount = entries.filter((e) => (player.caughtThisRun ?? []).includes(e.id)).length
+                        // Sous-compteur « ce run » : seulement si le joueur a réellement plusieurs runs (cohérent avec
+                        //   les libellés par entrée) — sinon, en mono-run, tout serait « ce run » sans intérêt.
+                        const multiRun = player.ngplusUsed || player.run3Used
+                        const nowCount = multiRun ? entries.filter((e) => (player.caughtThisRun ?? []).includes(e.id)).length : 0
                         return nowCount > 0 ? <span style={{ color: "#ffcf40" }}> · dont {nowCount} ce run ✨</span> : null
                     })()}</span>
                     <div style={S.compTrack}><div style={{ ...S.compFill, width: `${comp.pct}%` }} /></div>

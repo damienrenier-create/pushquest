@@ -274,6 +274,12 @@ export async function abandonNewGamePlus(): Promise<boolean> {
 }
 
 const uniq = (arr: string[]): string[] => [...new Set(arr)]
+/** Somme deux compteurs {clé→nombre} (fusion des historiques d'usage PvP). */
+const mergeCounts = (a: Record<string, number>, b: Record<string, number>): Record<string, number> => {
+    const m: Record<string, number> = { ...a }
+    for (const [k, v] of Object.entries(b)) m[k] = (m[k] ?? 0) + v
+    return m
+}
 
 /** FUSION de 2 mondes → un seul. `primary` = monde NG+ (timeline gagnante, garde TOUTE sa progression) ;
  *  `secondary` = monde d'origine (ses Daemons — équipe + PC — sont RÉCUPÉRÉS dans le PC fusionné). Pokédex/
@@ -303,7 +309,26 @@ export function mergeWorlds(primary: YellowSave, secondary: YellowSave, tag = "f
         badges: uniq([...primary.badges, ...secondary.badges]),
         ownedCts: uniq([...primary.ownedCts, ...secondary.ownedCts]),
         boughtCts: uniq([...primary.boughtCts, ...secondary.boughtCts]),
-        labDefi: { ...primary.labDefi, casinoTotalWon: liveCasino.casinoTotalWon, tonytonyClaimed: liveCasino.tonytonyClaimed, tonytonyShiny: liveCasino.tonytonyShiny },
+        labDefi: { ...primary.labDefi, casinoTotalWon: liveCasino.casinoTotalWon, tonytonyClaimed: liveCasino.tonytonyClaimed, tonytonyShiny: liveCasino.tonytonyShiny,
+            // One-shots du labo (cinématiques/cadeaux vus une seule fois) : OR — sinon le monde primary NEUF (run3)
+            //   les remettrait à false → cadeaux/cinématiques re-réclamables après la fusion.
+            casinoFirstBetDone: primary.labDefi.casinoFirstBetDone || secondary.labDefi.casinoFirstBetDone,
+            spagRouletteSeen: primary.labDefi.spagRouletteSeen || secondary.labDefi.spagRouletteSeen,
+            spagWelcomeGift: primary.labDefi.spagWelcomeGift || secondary.labDefi.spagWelcomeGift,
+            spagStepGiftClaimed: primary.labDefi.spagStepGiftClaimed || secondary.labDefi.spagStepGiftClaimed,
+            geneIntroSeen: primary.labDefi.geneIntroSeen || secondary.labDefi.geneIntroSeen,
+            squat150Done: primary.labDefi.squat150Done || secondary.labDefi.squat150Done },
+        // Réputation PvP + compteurs sbire/duel : per-monde, mais primary (run3) est NEUF → sans fusion la
+        //   réputation du run 1 serait effacée. On somme les compteurs / union des historiques.
+        pvpStats: {
+            wins: primary.pvpStats.wins + secondary.pvpStats.wins,
+            losses: primary.pvpStats.losses + secondary.pvpStats.losses,
+            forfeits: primary.pvpStats.forfeits + secondary.pvpStats.forfeits,
+            daemonUse: mergeCounts(primary.pvpStats.daemonUse, secondary.pvpStats.daemonUse),
+            moveUse: mergeCounts(primary.pvpStats.moveUse, secondary.pvpStats.moveUse),
+        },
+        sbireWinsTotal: Math.max(primary.sbireWinsTotal, secondary.sbireWinsTotal),
+        duelWins: { ...secondary.duelWins, ...primary.duelWins },
         // BAIES (post-Ligue) : la CONNAISSANCE du secret est monotone → union des 2 timelines (jamais perdue à
         // la fusion, ex. secret appris via l'assistant en run 1). L'état de récolte du JOUR repart à zéro (le
         // monde fusionné redémarre un cycle quotidien neuf).
@@ -367,6 +392,10 @@ export async function completeNewGamePlus(): Promise<void> {
     ngplusStash = null
     run3Stash = null
     ngplusOldTeam = null
+    // suppressAutosave : hydrateFromWorld arme l'autosave débouncé qui pourrait écraser la save PRÉ-fusion avant
+    //   le backup. On le désarme pendant l'opération (comme completeRun3).
+    suppressAutosave = true
+    if (timer) { clearTimeout(timer); timer = null }
     hydrateFromWorld(merged, merged.customDaemons ?? [])
     setActiveWorld("live")
     reregisterCustomDaemons()
@@ -374,6 +403,7 @@ export async function completeNewGamePlus(): Promise<void> {
     try { await fetch("/api/gamebook/yellow/save/backup", { method: "POST" }) } catch { /* best-effort */ }
     // 3) Écrit la save fusionnée (flush immédiat).
     await persistNow()
+    suppressAutosave = false
 }
 
 /**

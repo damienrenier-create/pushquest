@@ -766,8 +766,9 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                 if (lines.length) rematchReward = { npcId: storeState.trainer.trainerId, npcName: t?.name ?? "Boss d'arène", lines }
             }
             // BOSS À 2 PHASES (ex. VOLTA) : sa 1re défaite enchaîne DIRECTEMENT sur son rematch (phase 2).
-            //     En NG+, les arènes re-typées sont des combats UNIQUES → pas de phase 2.
-            if (t?.chainRematch && t.rematch && !storeState.trainer.isRematch && !inNgplus) chainRematchId = storeState.trainer.trainerId
+            //     En NG+ ET en RUN 3, les arènes re-typées / boss figés sont des combats UNIQUES → pas de phase 2
+            //     (sinon VOLTA enchaînerait sur sa vraie phase-2 hors-score qui draine l'énergie du concours).
+            if (t?.chainRematch && t.rematch && !storeState.trainer.isRematch && !inNgplus && getActiveWorld() !== "run3") chainRematchId = storeState.trainer.trainerId
         }
     }
 
