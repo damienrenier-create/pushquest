@@ -91,7 +91,8 @@ export interface EncounterCtx {
     goshBoost?: boolean         // GAMIN : la nuit (21h-00h) après sa confidence → chances de Goshendofy ×2
     goshCaught?: boolean        // Goshendofy déjà capturé sur ce compte → ne réapparaît PLUS JAMAIS
     ngplus?: boolean            // NEW GAME+ : bascule sur les pools RUN 2 (NGPLUS_ZONES) pour les zones re-mixées
-    caughtSpecies?: readonly string[] // Pokédex des captures → gate les entrées `catchOnce` (ex. Pyropanthe)
+    run3?: boolean              // RUN 3 (concours) : bascule sur les pools RUN 3 (RUN3_ZONES) — espèces INÉDITES (chaque run différent)
+    caughtSpecies?: readonly string[] // Pokédex des captures → gate les entrées `catchOnce` (ex. Pyropanthe, Panthéon run 3)
 }
 
 /**
@@ -395,6 +396,46 @@ const NGPLUS_ZONES: Record<string, Zone> = {
     },
 }
 
+// ═══════════════ RENCONTRES DU RUN 3 (concours) ═══════════════
+// Espèces INÉDITES par rapport aux runs 1/2 (« chaque run différent », choix Sartay 10/07). Poids RELATIFS
+// (le pool normalise). Choisi par rollWildEncounter quand ctx.run3. Que des BASES de lignées (speciesAtLevel
+// fait évoluer selon le niveau). Marmoterre est RETIRÉ de la grotte (exclusif au troc Ruffiant→Marmoterre).
+const RUN3_ZONES: Record<string, Zone> = {
+    // ROUTE NORD run 3 — sentier balayé d'un vent glacé, faune inédite. Lavapetit = hook de la quête CHEN
+    // (→ Magmator → Magnetor). Ruffiant = la monnaie du troqueur (→ Marmoterre). Panthéon : 1 capture max.
+    yellow_route_nord: {
+        rate: 0.14,
+        pool: [
+            { speciesId: "plumiot", base: 20 },
+            { speciesId: "tamanpousse", base: 18 }, { speciesId: "limaroche", base: 18 },
+            { speciesId: "tetardoc", base: 18 }, { speciesId: "colibraise", base: 18 },
+            { speciesId: "hibouh", base: 8 }, { speciesId: "pyrozly", base: 7 },
+            { speciesId: "jerbiwat", base: 5 }, { speciesId: "lavapetit", base: 5 },
+            { speciesId: "nouillon", base: 3 }, { speciesId: "piouflot", base: 3 }, { speciesId: "ruffiant", base: 3 },
+            { speciesId: "revemante", base: 2 }, { speciesId: "goatiny", base: 2 }, { speciesId: "gavillus", base: 2 },
+            { speciesId: "auroruff", base: 3 }, // anti-Dragon (remonté)
+            { speciesId: "glacirex", base: 1, rare: true }, // Dragon/Glace, pépite
+            { speciesId: "pantheon", base: 1, rare: true, catchOnce: true }, // 1 capture max (+ don d'ACE)
+        ],
+    },
+    // GROTTE run 3 — galeries hantées : Sporbéo domine, les 3 STARTERS du run 1 en clin d'œil, Orcaline trophée.
+    yellow_grotte: {
+        rate: 0.16, minLevel: 5,
+        pool: [
+            { speciesId: "sporbeo", base: 25 },
+            { speciesId: "cailloutchi", base: 10 }, { speciesId: "cornaissant", base: 10 },
+            { speciesId: "mottoche", base: 5, noEvolve: true, levelFixed: 5 }, // niveau 5 FIXE (fodder)
+            { speciesId: "braisecaille", base: 5 }, { speciesId: "forgeotin", base: 5 }, { speciesId: "brook", base: 5 },
+            // les 3 starters du run 1 (nostalgie, rares)
+            { speciesId: "gouttiny", base: 2, rare: true }, { speciesId: "feuillichot", base: 2, rare: true }, { speciesId: "braisille", base: 2, rare: true },
+            { speciesId: "draclet", base: 1, rare: true },
+            { speciesId: "rembodo", base: 1 }, { speciesId: "belunode", base: 1 }, { speciesId: "namicha", base: 1, noEvolve: true },
+            // trophée de la grotte — Glace/Eau anti-Dragon, UNIQUEMENT si le lead ≥ 35 (son niveau mini)
+            { speciesId: "orcaline", base: 1, noEvolve: true, rare: true, minLeadLevel: 35 },
+        ],
+    },
+}
+
 export function hasEncounters(mapId: string): boolean {
     return mapId in ZONES
 }
@@ -427,8 +468,8 @@ const intIn = (rng: () => number, min: number, max: number) => min + Math.floor(
  * Le niveau suit le 1er Daemon de l'équipe (rares : +1 à +2).
  */
 export function rollWildEncounter(ctx: EncounterCtx): MonInstance | null {
-    // NEW GAME+ : bascule sur le pool RUN 2 si la zone est re-mixée (sinon pool run 1 par défaut).
-    const zone = (ctx.ngplus && NGPLUS_ZONES[ctx.mapId]) || ZONES[ctx.mapId]
+    // Sélection du pool selon le monde : RUN 3 (RUN3_ZONES) > RUN 2 (NGPLUS_ZONES) > run 1 (ZONES par défaut).
+    const zone = (ctx.run3 && RUN3_ZONES[ctx.mapId]) || (ctx.ngplus && NGPLUS_ZONES[ctx.mapId]) || ZONES[ctx.mapId]
     if (!zone) return null
     const rng = ctx.rng ?? Math.random
     if (rng() >= zone.rate) return null
