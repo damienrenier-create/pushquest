@@ -867,7 +867,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         champReportedRef.current = true
         fetch("/api/gamebook/yellow/hall-of-fame", {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ team: championRun.team }),
+            body: JSON.stringify({ team: championRun.team, world: activeWorld }), // world : run 1/2/3 → HoF Ligue séparé
         })
             .then((r) => (r.ok ? r.json() : null))
             .then((j) => {
@@ -887,8 +887,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (!arenaRun) { arenaReportedRef.current = false; return }
         if (arenaReportedRef.current) return
         arenaReportedRef.current = true
-        // RUN 2 : arènes re-typées → HoF SÉPARÉ (badge préfixé "ngplus:") pour ne pas polluer celui du run 1.
-        const badgeId = arenaRun.ngplus ? `ngplus:${arenaRun.badgeId}` : arenaRun.badgeId
+        // RUN 2/3 : arènes re-typées → HoF SÉPARÉ (badge préfixé "ngplus:" / "run3:") pour ne pas polluer le run 1.
+        const badgeId = arenaRun.world === "ngplus" ? `ngplus:${arenaRun.badgeId}` : arenaRun.world === "run3" ? `run3:${arenaRun.badgeId}` : arenaRun.badgeId
         fetch("/api/gamebook/yellow/arena-champions", {
             method: "POST", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ badgeId, team: arenaRun.team }),

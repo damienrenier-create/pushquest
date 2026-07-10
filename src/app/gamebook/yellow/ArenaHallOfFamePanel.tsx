@@ -8,17 +8,32 @@ import { useEffect, useMemo, useState } from "react"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { startHofBattle } from "@/lib/gamebook/yellow/store/battleStore"
 import { useActiveWorld } from "@/lib/gamebook/yellow/store/playerStore"
+import { hasNgPlusWorld, hasRun3World } from "@/lib/gamebook/yellow/store/saveManager"
 import type { ChampionMon } from "@/lib/gamebook/yellow/storage/save"
 
 interface Entry { nickname: string; badgeId: string; wonAt: string; team: ChampionMon[] }
 
-const ARENAS: { id: string; nom: string; boss: string; emoji: string; color: string }[] = [
+type ArenaMeta = { id: string; nom: string; boss: string; emoji: string; color: string }
+const ARENAS: ArenaMeta[] = [
     { id: "plante", nom: "Bosquet Sacré", boss: "Druide Sylvain", emoji: "🌿", color: "#3aa54a" },
     { id: "roche", nom: "Caverne Minière", boss: "Maître Granit", emoji: "🪨", color: "#b08d57" },
     { id: "feu", nom: "La Caldeira", boss: "Pyra", emoji: "🔥", color: "#e0502a" },
     { id: "elec", nom: "Tour Hertz", boss: "Volta", emoji: "⚡", color: "#f6c640" },
     { id: "eau", nom: "Sanctuaire des Marées", boss: "Ondine", emoji: "💧", color: "#3a8ee0" },
 ]
+// RUN 3 : les arènes sont re-typées aux GARDIENS (aperçu de la Ligue) → emojis + noms + couleurs adaptés.
+const ARENAS_RUN3: ArenaMeta[] = [
+    { id: "plante", nom: "Arène Glace", boss: "Champion figé", emoji: "❄️", color: "#7fd4ff" },
+    { id: "roche", nom: "Arène Combat", boss: "Champion figé", emoji: "🥊", color: "#e08030" },
+    { id: "feu", nom: "Arène Spectre", boss: "Champion figé", emoji: "👻", color: "#a060d0" },
+    { id: "elec", nom: "Arène Dragon", boss: "Champion figé", emoji: "🐉", color: "#5a6fe0" },
+    { id: "eau", nom: "Arène Prisme", boss: "Champion figé", emoji: "🌈", color: "#40c0a0" },
+]
+// Runs disponibles au toggle (le VIEWER ne voit que les runs qu'il a atteints — anti-spoiler).
+const WORLD_META: { id: "live" | "ngplus" | "run3"; label: string }[] = [
+    { id: "live", label: "RUN 1" }, { id: "ngplus", label: "RUN 2" }, { id: "run3", label: "RUN 3" },
+]
+const WORLD_PREFIX: Record<string, string> = { live: "", ngplus: "ngplus:", run3: "run3:" }
 
 const STAT_ROWS: { key: keyof ChampionMon["stats"]; label: string }[] = [
     { key: "hp", label: "PV" }, { key: "atk", label: "ATQ" }, { key: "def", label: "DÉF" },
@@ -52,40 +67,59 @@ export default function ArenaHallOfFamePanel({ close, onFight }: { close: () => 
         return () => { cancelled = true }
     }, [])
 
-    // Le HoF d'arène est PARTAGÉ, mais les arènes du RUN 2 sont re-typées → leurs badges sont préfixés
-    // "ngplus:". On n'affiche QUE le HoF correspondant au monde du spectateur : run 1 → arènes d'origine,
-    // run 2 → arènes re-typées. (Un joueur run 1 ne voit jamais les champions des arènes run 2, et inversement.)
-    const isNgplus = useActiveWorld() === "ngplus"
+    // Le HoF d'arène est PARTAGÉ, mais les arènes des RUN 2/3 sont re-typées → badges préfixés "ngplus:"/"run3:".
+    // Un TOGGLE laisse choisir le run à consulter, MAIS uniquement parmi les runs que le spectateur a ATTEINTS
+    // (anti-spoiler : un joueur run 1 ne voit jamais les arènes run 2/3). Défaut = son run courant.
+    const activeWorld = useActiveWorld()
+    const [viewWorld, setViewWorld] = useState<"live" | "ngplus" | "run3">(activeWorld)
+    const arenaList = viewWorld === "run3" ? ARENAS_RUN3 : ARENAS
+    // Runs visibles au toggle : run 1 toujours ; run 2 si atteint ; run 3 si atteint.
+    const availWorlds = WORLD_META.filter((w) => w.id === "live" || (w.id === "ngplus" && hasNgPlusWorld()) || (w.id === "run3" && hasRun3World()))
     const byBadge = useMemo(() => {
         const m: Record<string, Entry[]> = {}
+        const prefix = WORLD_PREFIX[viewWorld]
         for (const e of entries) {
-            const ng = e.badgeId.startsWith("ngplus:")
-            if (ng !== isNgplus) continue
-            const base = ng ? e.badgeId.slice("ngplus:".length) : e.badgeId
+            // Match strict du préfixe du run choisi (run 1 = aucun préfixe ngplus:/run3:).
+            const isThisRun = prefix ? e.badgeId.startsWith(prefix) : (!e.badgeId.startsWith("ngplus:") && !e.badgeId.startsWith("run3:"))
+            if (!isThisRun) continue
+            const base = prefix ? e.badgeId.slice(prefix.length) : e.badgeId
             ;(m[base] ??= []).push(e)
         }
         return m
-    }, [entries, isNgplus])
+    }, [entries, viewWorld])
 
-    // À l'arrivée des données, ouvre par défaut la 1re arène qui a des champions.
+    // À l'arrivée des données OU au changement de run, ouvre la 1re arène qui a des champions.
     useEffect(() => {
         if (state !== "ok") return
-        const first = ARENAS.find((a) => (byBadge[a.id]?.length ?? 0) > 0)
-        if (first) setTab(first.id)
-    }, [state, byBadge])
+        const first = arenaList.find((a) => (byBadge[a.id]?.length ?? 0) > 0)
+        setTab((first ?? arenaList[0]).id)
+    }, [state, byBadge, viewWorld]) // eslint-disable-line react-hooks/exhaustive-deps
 
     const fmtDate = (iso: string) => { try { return new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" }) } catch { return "" } }
-    const arena = ARENAS.find((a) => a.id === tab) ?? ARENAS[0]
+    const arena = arenaList.find((a) => a.id === tab) ?? arenaList[0]
     const list = byBadge[tab] ?? []
+    const worldLabel = WORLD_META.find((w) => w.id === viewWorld)?.label ?? "RUN 1"
 
     return (
         <div style={overlay} onClick={close}>
             <div style={box} onClick={(e) => e.stopPropagation()}>
-                <div style={titleStyle}>⚔️ HALL OF FAME DES ARÈNES{isNgplus ? " · RUN 2" : ""}</div>
+                <div style={titleStyle}>⚔️ HALL OF FAME DES ARÈNES · {worldLabel}</div>
+
+                {/* Toggle de RUN (seulement les runs atteints par le spectateur) */}
+                {availWorlds.length > 1 && (
+                    <div style={runToggleRow}>
+                        {availWorlds.map((w) => (
+                            <button key={w.id} onClick={() => setViewWorld(w.id)}
+                                style={{ ...runToggleBtn, borderColor: viewWorld === w.id ? "#ffd54a" : "rgba(255,255,255,0.15)", background: viewWorld === w.id ? "#ffd54a" : "rgba(255,255,255,0.06)", color: viewWorld === w.id ? "#11121a" : "#fff" }}>
+                                {w.label}
+                            </button>
+                        ))}
+                    </div>
+                )}
 
                 {/* Onglets des 5 arènes */}
                 <div style={tabsRow}>
-                    {ARENAS.map((a) => {
+                    {arenaList.map((a) => {
                         const n = byBadge[a.id]?.length ?? 0
                         const active = a.id === tab
                         return (
@@ -177,6 +211,8 @@ export default function ArenaHallOfFamePanel({ close, onFight }: { close: () => 
 const overlay: React.CSSProperties = { position: "fixed", inset: 0, zIndex: 9200, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(8,6,18,0.82)", fontFamily: "inherit" }
 const box: React.CSSProperties = { width: "min(460px, 96vw)", maxHeight: "90vh", display: "flex", flexDirection: "column", background: "#171430", border: "2px solid #ffd54a", borderRadius: 12, padding: 14, color: "#fff", boxShadow: "0 0 30px rgba(255,213,74,.25)" }
 const titleStyle: React.CSSProperties = { fontSize: 16, fontWeight: 800, color: "#ffd54a", textAlign: "center", letterSpacing: 1, marginBottom: 10 }
+const runToggleRow: React.CSSProperties = { display: "flex", gap: 6, marginBottom: 10, justifyContent: "center" }
+const runToggleBtn: React.CSSProperties = { flex: 1, maxWidth: 110, padding: "5px 0", border: "1.5px solid", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", fontWeight: 800, fontSize: 11, letterSpacing: 0.5 }
 const tabsRow: React.CSSProperties = { display: "flex", gap: 6, marginBottom: 10 }
 const tabBtn: React.CSSProperties = { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 1, border: "2px solid", borderRadius: 8, padding: "6px 0", cursor: "pointer", fontFamily: "inherit", fontWeight: 800 }
 const tabCount: React.CSSProperties = { fontSize: 9, opacity: 0.85 }

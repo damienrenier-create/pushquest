@@ -4,12 +4,19 @@
 // Liste les champions de la Ligue (du plus récent au plus ancien), avec l'équipe gelée
 // au sacre (sprite + niveau + stats + moveset). Lecture seule, données serveur.
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { startHofBattle } from "@/lib/gamebook/yellow/store/battleStore"
+import { useActiveWorld } from "@/lib/gamebook/yellow/store/playerStore"
+import { hasNgPlusWorld, hasRun3World } from "@/lib/gamebook/yellow/store/saveManager"
 import type { ChampionMon } from "@/lib/gamebook/yellow/storage/save"
 
-interface ChampionEntry { nickname: string; wonAt: string; team: ChampionMon[] }
+interface ChampionEntry { nickname: string; wonAt: string; team: ChampionMon[]; world?: string }
+
+// Runs visibles au toggle : le spectateur ne voit QUE les runs qu'il a atteints (anti-spoiler).
+const WORLD_META: { id: "live" | "ngplus" | "run3"; label: string }[] = [
+    { id: "live", label: "RUN 1" }, { id: "ngplus", label: "RUN 2" }, { id: "run3", label: "RUN 3" },
+]
 
 const STAT_ROWS: { key: keyof ChampionMon["stats"]; label: string }[] = [
     { key: "hp", label: "PV" }, { key: "atk", label: "ATQ" }, { key: "def", label: "DÉF" },
@@ -21,6 +28,12 @@ export default function HallOfFameViewer({ close, onFight }: { close: () => void
     const [champions, setChampions] = useState<ChampionEntry[]>([])
     const [openMon, setOpenMon] = useState<ChampionMon | null>(null)
     const [notice, setNotice] = useState<string>("")
+    const activeWorld = useActiveWorld()
+    const [viewWorld, setViewWorld] = useState<"live" | "ngplus" | "run3">(activeWorld)
+    const availWorlds = WORLD_META.filter((w) => w.id === "live" || (w.id === "ngplus" && hasNgPlusWorld()) || (w.id === "run3" && hasRun3World()))
+    // Ne montre que les champions du run choisi (les vieilles lignes sans `world` = run 1).
+    const shown = useMemo(() => champions.filter((c) => (c.world ?? "live") === viewWorld), [champions, viewWorld])
+    const worldLabel = WORLD_META.find((w) => w.id === viewWorld)?.label ?? "RUN 1"
 
     // Affronter l'équipe figée d'un Champion (combat amical, sans sac, IA maligne). Ferme le Hall si OK.
     const fight = (label: string, team: ChampionMon[]) => {
@@ -53,16 +66,28 @@ export default function HallOfFameViewer({ close, onFight }: { close: () => void
     return (
         <div style={overlay} onClick={close}>
             <div style={box} onClick={(e) => e.stopPropagation()}>
-                <div style={titleStyle}>🏛️ HALL OF FAME</div>
+                <div style={titleStyle}>🏛️ HALL OF FAME · {worldLabel}</div>
+
+                {/* Toggle de RUN (uniquement les runs atteints par le spectateur) */}
+                {availWorlds.length > 1 && (
+                    <div style={runToggleRow}>
+                        {availWorlds.map((w) => (
+                            <button key={w.id} onClick={() => setViewWorld(w.id)}
+                                style={{ ...runToggleBtn, borderColor: viewWorld === w.id ? "#ffd54a" : "rgba(255,255,255,0.15)", background: viewWorld === w.id ? "#ffd54a" : "rgba(255,255,255,0.06)", color: viewWorld === w.id ? "#11121a" : "#fff" }}>
+                                {w.label}
+                            </button>
+                        ))}
+                    </div>
+                )}
 
                 {state === "loading" && <div style={muted}>Chargement…</div>}
                 {state === "error" && <div style={muted}>Hall of Fame indisponible (hors-ligne ?).</div>}
-                {state === "ok" && champions.length === 0 && (
-                    <div style={muted}>Aucun champion pour l&apos;instant.<br />Sois le premier à terrasser LE MAÎTRE ! 👑</div>
+                {state === "ok" && shown.length === 0 && (
+                    <div style={muted}>Aucun champion {worldLabel} pour l&apos;instant.<br />Sois le premier à terrasser LE MAÎTRE ! 👑</div>
                 )}
 
                 <div style={scroll}>
-                    {champions.map((c, ci) => (
+                    {shown.map((c, ci) => (
                         <div key={ci} style={champCard}>
                             <div style={champHead}>
                                 <span style={champName}>👑 {c.nickname}</span>
@@ -132,6 +157,8 @@ export default function HallOfFameViewer({ close, onFight }: { close: () => void
 const overlay: React.CSSProperties = { position: "fixed", inset: 0, zIndex: 9200, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(8,6,18,0.82)", fontFamily: "inherit" }
 const box: React.CSSProperties = { width: "min(440px, 96vw)", maxHeight: "90vh", display: "flex", flexDirection: "column", background: "#171430", border: "2px solid #ffd54a", borderRadius: 12, padding: 14, color: "#fff", boxShadow: "0 0 30px rgba(255,213,74,.25)" }
 const titleStyle: React.CSSProperties = { fontSize: 16, fontWeight: 800, color: "#ffd54a", textAlign: "center", letterSpacing: 1, marginBottom: 10 }
+const runToggleRow: React.CSSProperties = { display: "flex", gap: 6, marginBottom: 10, justifyContent: "center" }
+const runToggleBtn: React.CSSProperties = { flex: 1, maxWidth: 110, padding: "5px 0", border: "1.5px solid", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", fontWeight: 800, fontSize: 11, letterSpacing: 0.5 }
 const muted: React.CSSProperties = { fontSize: 12, opacity: 0.7, textAlign: "center", padding: "16px 4px", lineHeight: 1.6 }
 const scroll: React.CSSProperties = { overflowY: "auto", display: "flex", flexDirection: "column", gap: 10 }
 const champCard: React.CSSProperties = { background: "rgba(255,255,255,0.05)", borderRadius: 10, padding: 10 }

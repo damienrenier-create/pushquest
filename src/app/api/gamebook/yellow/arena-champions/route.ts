@@ -17,9 +17,11 @@ import { isNexusYellowEnabled } from "@/lib/gamebook/yellow/featureFlag"
 export const dynamic = "force-dynamic"
 
 const VALID_BADGES = new Set(["feu", "plante", "eau", "roche", "elec"])
-// RUN 2 : arènes re-typées → badge préfixé "ngplus:" (HoF séparé, visible seulement des joueurs run 2).
+// RUN 2/3 : arènes re-typées → badge préfixé "ngplus:" / "run3:" (HoF séparé par run, visible du run concerné).
 function isValidBadge(b: string): boolean {
-    return VALID_BADGES.has(b) || (b.startsWith("ngplus:") && VALID_BADGES.has(b.slice("ngplus:".length)))
+    if (VALID_BADGES.has(b)) return true
+    for (const p of ["ngplus:", "run3:"]) if (b.startsWith(p) && VALID_BADGES.has(b.slice(p.length))) return true
+    return false
 }
 
 async function requireYellow() {

@@ -110,7 +110,7 @@ interface BattleStoreState {
     /** LIGUE : sacre du CHAMPION (après LE MAÎTRE) → Hall of Fame post-combat (équipe + best-of). null sinon. */
     championRun: ChampionRun | null
     /** ARÈNE : victoire d'un boss de gym (badge gagné) → Hall of Fame par arène (équipe gelée). null sinon. */
-    arenaRun: { badgeId: BadgeId; team: ChampionMon[]; ngplus: boolean } | null // ngplus : arène RUN 2 (re-typée) → HoF séparé
+    arenaRun: { badgeId: BadgeId; team: ChampionMon[]; world: "live" | "ngplus" | "run3" } | null // world : run 1/2/3 → HoF séparé (préfixe badge)
     /** Dresseur dont le REMATCH doit s'enchaîner DIRECTEMENT après cette victoire (ex. VOLTA 2 phases). null sinon. */
     chainRematchId: string | null
     /** Au moins un Daemon a une attaque EN ATTENTE d'apprentissage → prompt post-combat (façon Gen 1). */
@@ -786,7 +786,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
         }
     })
     // ARÈNE — Hall of Fame par gym : si un badge vient d'être gagné, on gèle l'équipe victorieuse.
-    const arenaRun: BattleStoreState["arenaRun"] = badgeAwarded ? { badgeId: badgeAwarded, team: snapshotTeam(), ngplus: getActiveWorld() === "ngplus" } : null
+    const arenaRun: BattleStoreState["arenaRun"] = badgeAwarded ? { badgeId: badgeAwarded, team: snapshotTeam(), world: getActiveWorld() } : null
 
     let championRun: BattleStoreState["championRun"] = null
     const lid = storeState.trainer?.trainerId

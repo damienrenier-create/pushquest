@@ -34,13 +34,13 @@ export async function GET() {
         const lc = (prisma as any).leagueChampion // table gated (cf. duel-gift/), créée par db:push
         const rows = (await lc.findMany({
             orderBy: { wonAt: "desc" },
-            take: 50,
-            select: { nickname: true, team: true, wonAt: true },
-        })) as { nickname: string; team: string; wonAt: Date }[]
+            take: 150,
+            select: { nickname: true, team: true, wonAt: true, world: true },
+        })) as { nickname: string; team: string; wonAt: Date; world: string | null }[]
         const champions = rows.map((r) => {
             let team: unknown = []
             try { team = JSON.parse(r.team) } catch { team = [] }
-            return { nickname: r.nickname, wonAt: r.wonAt, team }
+            return { nickname: r.nickname, wonAt: r.wonAt, team, world: r.world ?? "live" } // world : run 1/2/3 (défaut live)
         })
         return NextResponse.json({ ok: true, champions })
     } catch {
@@ -53,10 +53,12 @@ export async function POST(req: NextRequest) {
     const auth = await requireYellow()
     if (!auth.ok) return NextResponse.json({ error: "Forbidden" }, { status: auth.status })
 
-    let body: { team?: unknown }
+    let body: { team?: unknown; world?: unknown }
     try { body = await req.json() } catch { return NextResponse.json({ error: "Bad JSON" }, { status: 400 }) }
     // L'équipe est gelée côté client (ChampionMon[]) ; on la stocke telle quelle (bornée), sans la croire pour autre chose.
     const team = Array.isArray(body.team) ? body.team.slice(0, 6) : []
+    // Run du sacre (whitelist stricte, défaut "live") → HoF Ligue séparé par run.
+    const world = body.world === "ngplus" || body.world === "run3" ? body.world : "live"
 
     try {
         const lc = (prisma as any).leagueChampion // tables gated, créées par db:push
@@ -65,7 +67,7 @@ export async function POST(req: NextRequest) {
         const me = await prisma.user.findUnique({ where: { id: auth.userId }, select: { nickname: true } })
         if (!me) return NextResponse.json({ error: "Forbidden" }, { status: 401 })
 
-        await lc.create({ data: { userId: auth.userId, nickname: me.nickname, team: JSON.stringify(team) } })
+        await lc.create({ data: { userId: auth.userId, nickname: me.nickname, team: JSON.stringify(team), world } })
         // Nb total de sacres de CE joueur (= nb de lignes) → le client débloque la CT Souffle Primordial à 10.
         const wins = (await lc.count({ where: { userId: auth.userId } })) as number
 

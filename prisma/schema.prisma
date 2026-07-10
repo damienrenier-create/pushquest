@@ -344,6 +344,7 @@ model LeagueChampion {
   userId    String   // vainqueur
   nickname  String   // pseudo trusté serveur (affiché au Hall of Fame)
   team      String   // JSON ChampionMon[] (équipe sacrée, gelée)
+  world     String   @default("live") // run du sacre : "live" (run 1) | "ngplus" (run 2) | "run3" — HoF Ligue par run
   wonAt     DateTime @default(now())
 
   @@index([wonAt])
