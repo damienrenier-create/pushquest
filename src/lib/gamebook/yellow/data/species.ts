@@ -2261,6 +2261,13 @@ export function getSpecies(id: string): SpeciesData | null {
     return SPECIES[id] ?? CUSTOM_SPECIES.get(id) ?? null // statique d'abord, puis custom runtime
 }
 
+// RUN 3 — les 10 espèces du run 3 (Magnetor + les 9 starters du triangle) ne sont visibles dans le DEX qu'à
+// partir du run 3 (dex tiéré par run). Marquées runThreeOnly ici, en un seul endroit, pour éviter d'éparpiller
+// le flag dans 10 littéraux. (Le POKÉDEX reste cumulatif — cf. isDexHidden / le caract. global des captures.)
+for (const id of ["magnetor", "elefer", "barrisfer", "colosfer", "cornaive", "astracorne", "lunarque", "coccipoing", "coccombat", "coccimperatrice"]) {
+    if (SPECIES[id]) SPECIES[id].runThreeOnly = true
+}
+
 export const SPECIES_IDS = Object.keys(SPECIES)
 export const DEX_COUNT = SPECIES_IDS.length
 
@@ -2275,14 +2282,18 @@ export const DEX_COUNT = SPECIES_IDS.length
  *  - `runTwoOnly` (Gékraise/Ukognos/Merorem) : masqués SAUF en run 2 (`isRun2`) ou une fois possédés.
  *  - `postLeague` (créations canonisées Gavillus/Goatiny) : masquées SAUF si Champion, en run 2 (le joueur
  *    y est un ex-champion : il a forcément battu la Ligue au run 1), ou une fois possédées. */
-export function isDexHidden(sp: SpeciesData, caught: readonly string[] = [], isChampion = false, isRun2 = false): boolean {
-    if (sp.runTwoOnly && !isRun2 && !caught.includes(sp.id)) return true
-    if (sp.postLeague && !isChampion && !isRun2 && !caught.includes(sp.id)) return true
+export function isDexHidden(sp: SpeciesData, caught: readonly string[] = [], isChampion = false, isRun2 = false, isRun3 = false): boolean {
+    // DEX TIÉRÉ PAR RUN : run 1 → Daemons run 1 ; run 2 → run 1+2 ; run 3 → TOUS. Ne masque que les espèces
+    // d'un tier SUPÉRIEUR et NON CAPTURÉES → pas de spoiler de ce qu'on ne peut pas encore obtenir. Une fois
+    // CAPTURÉE, une espèce reste visible (POKÉDEX cumulatif : le set `caught` est global/persistant).
+    if (sp.runThreeOnly && !isRun3 && !caught.includes(sp.id)) return true    // run-3 : visible dès le run 3 (ou si capturée)
+    if (sp.runTwoOnly && !isRun2 && !isRun3 && !caught.includes(sp.id)) return true  // run-2 : visible en run 2/3 (ou si capturée)
+    if (sp.postLeague && !isChampion && !isRun2 && !isRun3 && !caught.includes(sp.id)) return true
     return false
 }
 
-export function visibleDexSpecies(caught: readonly string[] = [], isChampion = false, isRun2 = false): SpeciesData[] {
-    return Object.values(SPECIES).filter((sp) => !isDexHidden(sp, caught, isChampion, isRun2))
+export function visibleDexSpecies(caught: readonly string[] = [], isChampion = false, isRun2 = false, isRun3 = false): SpeciesData[] {
+    return Object.values(SPECIES).filter((sp) => !isDexHidden(sp, caught, isChampion, isRun2, isRun3))
 }
 
 export function speciesByDexNo(dexNo: number): SpeciesData | null {

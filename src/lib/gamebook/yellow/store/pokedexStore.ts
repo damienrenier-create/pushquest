@@ -5,7 +5,7 @@
 // (seen à la rencontre, caught à la capture/évolution). Sérialisable pour la save.
 
 import { useSyncExternalStore } from "react"
-import { visibleDexSpecies } from "../data/species"
+import { visibleDexSpecies, isDexHidden, getSpecies } from "../data/species"
 
 export interface PokedexState {
     seen: string[]    // speciesId
@@ -50,12 +50,13 @@ export function hydratePokedex(state: PokedexState) {
     emit()
 }
 
-export function pokedexCompletion(isChampion = false, isRun2 = false): { caught: number; total: number; pct: number } {
-    // Le total EXCLUT les espèces run-2 (hors run 2) et post-Ligue (hors Champion) non révélées → pas de
-    // spoiler ni de compteur qui « gonfle » avant l'heure. En run 2 (isRun2), toute la roster étendue est
-    // révélée (le joueur est un ex-champion). Une fois révélées, elles rentrent dans le total.
-    const total = visibleDexSpecies(dex.caught, isChampion, isRun2).length
-    const caught = dex.caught.length
+export function pokedexCompletion(isChampion = false, isRun2 = false, isRun3 = false): { caught: number; total: number; pct: number } {
+    // Le TOTAL suit le tier de la run (run 1 → run 1 ; run 2 → run 1+2 ; run 3 → tous) → pas de spoiler ni de
+    // compteur qui « gonfle » avant l'heure. Le set `caught` est GLOBAL/persistant (grandit d'un run à l'autre),
+    // mais on ne compte QUE les captures visibles dans le tier courant (une capture run-3 ne compte qu'en run 3).
+    const total = visibleDexSpecies(dex.caught, isChampion, isRun2, isRun3).length
+    // captures comptées = celles VISIBLES dans le tier courant (une capture run-3 ne gonfle pas le compteur en run 1)
+    const caught = dex.caught.filter((id) => { const sp = getSpecies(id); return !!sp && !isDexHidden(sp, dex.caught, isChampion, isRun2, isRun3) }).length
     return { caught, total, pct: total > 0 ? Math.round((caught / total) * 100) : 0 }
 }
 

@@ -37,8 +37,9 @@ export default function DexClient() {
 
     // Base VISIBLE : cache les run-2 (hors run 2) et les créations post-Ligue (hors Champion) non révélées.
     // En run 2, toute la roster étendue (créations canonisées + exclusifs run 2) est révélée.
-    const isRun2 = useActiveWorld() === "ngplus" // hook réactif : re-render au changement de monde
-    const visible = useMemo(() => visibleDexSpecies(dex.caught, player.isChampion, isRun2), [dex.caught, player.isChampion, isRun2])
+    const aw = useActiveWorld() // hook réactif : re-render au changement de monde
+    const isRun2 = aw === "ngplus", isRun3 = aw === "run3"
+    const visible = useMemo(() => visibleDexSpecies(dex.caught, player.isChampion, isRun2, isRun3), [dex.caught, player.isChampion, isRun2, isRun3])
     const entries = useMemo(() => {
         const q = query.trim().toLowerCase()
         return visible

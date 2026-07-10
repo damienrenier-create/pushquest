@@ -121,15 +121,16 @@ export default function PokedexClient() {
     const router = useRouter()
     const dex = usePokedex()
     const player = usePlayer()
-    const isRun2 = useActiveWorld() === "ngplus" // hook réactif : re-render au changement de monde
-    const comp = pokedexCompletion(player.isChampion, isRun2)
+    const aw = useActiveWorld() // hook réactif : re-render au changement de monde
+    const isRun2 = aw === "ngplus", isRun3 = aw === "run3"
+    const comp = pokedexCompletion(player.isChampion, isRun2, isRun3)
     const [sel, setSel] = useState<SpeciesData | null>(null)
     // Hydrate la save si on arrive DIRECTEMENT ici (refresh / lien) sans avoir chargé le jeu :
     // sinon le store Pokédex en mémoire est vide → tout en "?". Idempotent (no-op si déjà chargé).
     useEffect(() => { void loadYellowSave() }, [])
     // Les run-2 restent INVISIBLES hors run 2 ; les créations post-Ligue INVISIBLES hors Champion — sauf en
     // run 2 où toute la roster étendue est révélée (le joueur est un ex-champion). Sinon pas même une case « ??? ».
-    const entries = visibleDexSpecies(dex.caught, player.isChampion, isRun2).sort((a, b) => a.dexNo - b.dexNo)
+    const entries = visibleDexSpecies(dex.caught, player.isChampion, isRun2, isRun3).sort((a, b) => a.dexNo - b.dexNo)
 
     return (
         <div style={S.root}>

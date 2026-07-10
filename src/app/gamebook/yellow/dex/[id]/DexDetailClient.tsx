@@ -61,16 +61,18 @@ export default function DexDetailClient({ id }: { id: string }) {
     const router = useRouter()
     const dex = usePokedex()
     const player = usePlayer()
-    const isRun2 = useActiveWorld() === "ngplus" // hook (avant tout early-return) ; en run 2 la roster étendue est révélée
+    const aw = useActiveWorld() // hook (avant tout early-return) ; le dex est tiéré par run
+    const isRun2 = aw === "ngplus", isRun3 = aw === "run3"
     useEffect(() => { void loadYellowSave() }, []) // hydrate le Pokédex (accès direct par URL) ; défaut = masqué
     const sp = SPECIES[id]
     if (!sp) return null
     // VERROU : une espèce runTwoOnly non capturée, OU une création post-Ligue tant qu'on n'est pas Champion,
     // reste MASQUÉE même par accès URL direct (/dex/merorem, /dex/mouflorage) → pas de spoiler de son
     // existence/stats/learnset avant de l'avoir débloquée.
-    const runTwoLocked = sp.runTwoOnly && !isRun2 && !dex.caught.includes(id)
-    const postLeagueLocked = sp.postLeague && !player.isChampion && !isRun2 && !dex.caught.includes(id)
-    if (runTwoLocked || postLeagueLocked) {
+    const runThreeLocked = sp.runThreeOnly && !isRun3 && !dex.caught.includes(id)
+    const runTwoLocked = sp.runTwoOnly && !isRun2 && !isRun3 && !dex.caught.includes(id)
+    const postLeagueLocked = sp.postLeague && !player.isChampion && !isRun2 && !isRun3 && !dex.caught.includes(id)
+    if (runThreeLocked || runTwoLocked || postLeagueLocked) {
         return (
             <div style={S.root}>
                 <div style={{ ...S.wrap, textAlign: "center", padding: 40 }}>
@@ -158,7 +160,7 @@ export default function DexDetailClient({ id }: { id: string }) {
                             {chain.map((stage, i) => {
                                 // Un stade VOISIN encore scellé (runTwoOnly/postLeague non débloqué) reste « ??? » :
                                 // pas de spoiler de son nom/sprite même si on possède un autre stade de la lignée.
-                                const sealed = isDexHidden(SPECIES[stage.id], dex.caught, player.isChampion, isRun2)
+                                const sealed = isDexHidden(SPECIES[stage.id], dex.caught, player.isChampion, isRun2, isRun3)
                                 return (
                                     <div key={stage.id} style={S.evoItem}>
                                         {i > 0 && (

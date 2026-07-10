@@ -156,6 +156,11 @@ export interface SpeciesData {
      *  case « ??? » ni un point dans le compteur — TANT QUE non capturé. N'apparaît qu'une fois obtenu en NG+
      *  (ex. Gékraise, Ukognos, Merorem). Cf. visibleDexSpecies(). */
     runTwoOnly?: boolean
+    /** RÉSERVÉ AU RUN 3 (concours) : ABSENT des dex TANT QU'ON N'EST PAS EN RUN 3. Le DEX (catalogue) est tiéré
+     *  par run — run 1 → Daemons du run 1 ; run 2 → run 1+2 ; run 3 → TOUS. Le tiering l'emporte sur `caught`
+     *  (une espèce run-3 capturée ne s'affiche PAS dans le dex d'un run antérieur). Ex. Magnetor + les 9 starters
+     *  run 3. Le POKÉDEX (captures) reste, lui, cumulatif/persistant d'un run à l'autre. Cf. isDexHidden(). */
+    runThreeOnly?: boolean
     /** POST-LIGUE : ABSENT des dex (Pokédex in-game ET dex de référence) TANT QUE le joueur n'est pas
      *  CHAMPION — puis intègre le dex de TOUT LE MONDE (révélation post-sacre). Sert aux créations de
      *  joueur canonisées (hommage). Contrairement à runTwoOnly, le gate est le statut Champion, pas la
