@@ -27,6 +27,7 @@ import MoveLearnScreen from "./battle/MoveLearnScreen"
 import HallOfFame from "./HallOfFame"
 import HallOfFameViewer from "./HallOfFameViewer"
 import ArenaHallOfFamePanel from "./ArenaHallOfFamePanel"
+import RunScoreboardPanel from "./RunScoreboardPanel"
 import DexEntryScreen from "./battle/DexEntryScreen"
 import IntroCinematic from "./IntroCinematic"
 import Run3IntroCinematic from "./Run3IntroCinematic"
@@ -292,7 +293,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         const enemy = arenaMode === "hub" ? buildHubTeam(opp.player) : buildMirrorTeam(opp.player)
         setArenaFight({ opp, mode: arenaMode, enemy })
     }
-    const [menu, setMenu] = useState<"none" | "pause" | "team" | "bag" | "reput" | "moves" | "hof" | "arena-hof" | "stats" | "run2scores" | "run3scores">("none")
+    const [menu, setMenu] = useState<"none" | "pause" | "team" | "bag" | "reput" | "moves" | "hof" | "arena-hof" | "stats" | "run2scores" | "run3scores" | "leaderboard">("none")
     const activeWorld = useActiveWorld() // NG+ : "live" (partie d'origine) ou "ngplus" (New Game+)
     const ficheTouchX = useRef<number | null>(null) // swipe gauche/droite dans la fiche Daemon
     const [selected, setSelected] = useState<MonInstance | null>(null)
@@ -819,6 +820,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (won) {
             // SCORE du run NG+ = l'énergie en réserve à la clôture (capturée AVANT la fusion, qui remanie les reps).
             const ngplusScore = getPlayer().reps
+            // LEADERBOARD : on remonte le score run 2 (best-effort, une fois — le serveur garde le meilleur).
+            fetch("/api/gamebook/yellow/run-scores", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ run: "run2", score: ngplusScore }) }).catch(() => {})
             // On NE FUSIONNE PAS tout de suite : on PROPOSE le choix (fusionner OU lancer le run 3). L'overlay
             // ci-dessous appelle completeNewGamePlus (fusion 2-voies) OU launchRun3 (garde les 3 mondes gelés).
             setRun3Offer({ score: ngplusScore })
@@ -1274,7 +1277,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (advisorOpen) { closeAdvisor(); return true }
         if (labOpen) { closeLab(); return true }
         if (pcOpen) { closePc(); return true }
-        if (menu === "team" || menu === "bag" || menu === "reput" || menu === "moves" || menu === "hof" || menu === "arena-hof" || menu === "stats" || menu === "run2scores" || menu === "run3scores") { setMenu("pause"); return true }
+        if (menu === "team" || menu === "bag" || menu === "reput" || menu === "moves" || menu === "hof" || menu === "arena-hof" || menu === "stats" || menu === "run2scores" || menu === "run3scores" || menu === "leaderboard") { setMenu("pause"); return true }
         if (menu === "pause") { setMenu("none"); return true }
         return false
     }
@@ -1382,6 +1385,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         {activeWorld === "run3" && <button style={menuBtnStyle} onClick={() => setMenu("run3scores")}>🏆 SCORE RUN 3</button>}
                         <button style={menuBtnStyle} onClick={() => setMenu("hof")}>🏛️ HALL OF FAME (LIGUE)</button>
                         <button style={menuBtnStyle} onClick={() => setMenu("arena-hof")}>⚔️ HALL OF FAME (ARÈNES)</button>
+                        <button style={menuBtnStyle} onClick={() => setMenu("leaderboard")}>📊 CLASSEMENT CONCOURS (run 2/3)</button>
                         {(isCreator || nickname.toLowerCase() === "mools") && (
                             <button style={{ ...menuBtnStyle, borderColor: "#3ad0c0", color: "#3ad0c0" }} onClick={() => { setMenu("none"); setCreatorOpen(true) }}>🧬 CRÉER UN DAEMON (TEST)</button>
                         )}
@@ -1820,6 +1824,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {!battle && menu === "moves" && <MovesPanel close={() => setMenu("pause")} />}
             {menu === "hof" && <HallOfFameViewer close={() => setMenu("pause")} onFight={() => setMenu("none")} />}
             {menu === "arena-hof" && <ArenaHallOfFamePanel close={() => setMenu("pause")} onFight={() => setMenu("none")} />}
+            {menu === "leaderboard" && <RunScoreboardPanel close={() => setMenu("pause")} />}
 
             {/* ZONE DE COMBAT — entrée Tour (placeholder, non-bloquant : marche pour sortir) */}
             {!battle && !run && mapPlayer.mapId === "yellow_combat_tour" && !dialogue && player.team.length > 0 && (
@@ -2012,6 +2017,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         <button style={menuBtnStyle} onClick={() => {
                             const score = run3EndOffer.score
                             setRun3EndOffer(null)
+                            // LEADERBOARD : score run 3 remonté AVANT la fusion (best-effort, une fois).
+                            fetch("/api/gamebook/yellow/run-scores", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ run: "run3", score }) }).catch(() => {})
                             completeRun3().finally(() => {
                                 showDialogue("y_ligue_maitre", "🌀 MÉGA-FUSION", [
                                     "Le concours s'éteint dans un dernier éclat d'énergie…",

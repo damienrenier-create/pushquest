@@ -351,6 +351,21 @@ model LeagueChampion {
   @@index([userId])
 }
 
+// LEADERBOARD des scores de RUN (concours) — partagé, visible des joueurs ayant fini le run 1 (>=5 badges).
+//   run2 = énergie en réserve au re-sacre NG+ ; run3 = Σ des niveaux ennemis vaincus (concours).
+//   Unités différentes → 2 classements distincts. 1 ligne par (userId, run) au mieux (run one-shot).
+model YellowRunScore {
+  id        String   @id @default(cuid())
+  userId    String
+  nickname  String   // pseudo trusté serveur
+  run       String   // "run2" | "run3"
+  score     Int
+  wonAt     DateTime @default(now())
+
+  @@index([run, score])
+  @@index([userId, run])
+}
+
 // ARÈNES — HALL OF FAME PAR GYM : à chaque conquête d'un badge (boss d'arène battu), on grave
 // l'équipe victorieuse pour cette arène. Calqué sur LeagueChampion (+ badgeId). Pas de @relation
 // (userId String) → User intact. 100% ADDITIF (db:push). Pattern gaté côté code (prisma as any).
