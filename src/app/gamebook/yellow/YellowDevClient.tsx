@@ -961,11 +961,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // RUN 3 — TEASER DIEU SPAGHETTI sur LAVAPETIT : pop-up post-combat, une fois l'écran LIBRE (on attend la fin
     // de la popup 1re-capture / cinématique d'évolution / prompt d'apprentissage pour ne rien écraser).
     useEffect(() => {
-        if (lavapetitTeaser && !battle && !newDexEntry && evolutions.length === 0 && !pendingLearn && !dialogue && !championRun) {
+        if (lavapetitTeaser && !battle && !newDexEntry && evolutions.length === 0 && !pendingLearn && !dialogue && !championRun && !run3EndOffer) {
             showDialogue(DUEL_DREAM_NPC, "✨ Dieu Spaghetti", lavapetitTeaser === "caught" ? SPAG_LAVAPETIT_CAUGHT_LINES : SPAG_LAVAPETIT_TEASER_LINES)
             clearLavapetitTeaser()
         }
-    }, [lavapetitTeaser, battle, newDexEntry, evolutions.length, pendingLearn, dialogue, championRun, showDialogue])
+    }, [lavapetitTeaser, battle, newDexEntry, evolutions.length, pendingLearn, dialogue, championRun, run3EndOffer, showDialogue])
 
     // CARROUSEL GÉNÉTIQUE (one-shot) : après une capture, une fois l'écran libéré (popup Pokédex /
     // évolutions / apprentissage passés), le Dieu Spaghetti explique le potentiel/IV. UNE SEULE FOIS.
@@ -1715,7 +1715,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {menu === "stats" && (
                 <div style={menuOverlayStyle} onClick={() => setMenu("pause")}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
-                        <div style={menuTitleStyle}>📊 STATS — {activeWorld === "ngplus" ? "run NG+" : "run principal"}</div>
+                        <div style={menuTitleStyle}>📊 STATS — {activeWorld === "run3" ? "concours (run 3)" : activeWorld === "ngplus" ? "run NG+" : "run principal"}</div>
                         {(() => {
                             const s = getPlayer().stats
                             const winrate = s.battles > 0 ? Math.round((s.wins / s.battles) * 100) : 0
@@ -1814,7 +1814,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                     </div>
                                     <div style={{ fontSize: 12, opacity: 0.9 }}>🗡️ <b>{n}</b> Daemon{n > 1 ? "s" : ""} ennemi{n > 1 ? "s" : ""} vaincu{n > 1 ? "s" : ""} (boss d'arène + Ligue), compté{n > 1 ? "s" : ""} une seule fois.</div>
                                     <div style={{ fontSize: 9.5, opacity: 0.6, lineHeight: 1.4 }}>
-                                        Le score = Σ des niveaux des Daemons ennemis que tu as vaincus. Tout le monde affronte les MÊMES 5 boss figés + la même Ligue → les scores sont comparables. Le run s'arrête à 0⚡ (ou au sacre) : ton score est gravé à cet instant.
+                                        Le score = Σ des niveaux des Daemons ennemis que tu as vaincus. Tout le monde affronte les MÊMES 5 boss figés + la même Ligue → les scores sont comparables. Le concours s'arrête quand ton énergie tombe à 0⚡ : ton score est alors gravé.
                                     </div>
                                 </div>
                             )
@@ -2018,11 +2018,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 🍝 <b>MÉGA-FUSION</b> : tes trois vies (run 1 + run 2 + run 3) n'en font plus qu'UNE. Ton équipe du concours reste active ; tous tes anciens Daemons rejoignent ton PC.
                             </div>
                         </div>
-                        <button style={menuBtnStyle} onClick={() => {
+                        <button style={menuBtnStyle} onClick={async () => {
                             const score = run3EndOffer.score
                             setRun3EndOffer(null)
-                            // LEADERBOARD : score run 3 remonté AVANT la fusion (best-effort, une fois).
-                            fetch("/api/gamebook/yellow/run-scores", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ run: "run3", score }) }).catch(() => {})
+                            // LEADERBOARD : score run 3 remonté AVANT la fusion (irréversible). On ATTEND le POST
+                            //   (avec catch : hors-ligne → on fusionne quand même) pour ne pas perdre le score en silence.
+                            try { await fetch("/api/gamebook/yellow/run-scores", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ run: "run3", score }) }) } catch { /* hors-ligne : score non remonté, la fusion continue */ }
                             completeRun3().finally(() => {
                                 showDialogue("y_ligue_maitre", "🌀 MÉGA-FUSION", [
                                     "Le concours s'éteint dans un dernier éclat d'énergie…",

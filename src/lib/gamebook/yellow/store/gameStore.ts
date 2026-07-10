@@ -658,7 +658,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     //   une capture stoppe le roaming (goshCaught-like). Compte comme UNE apparition.
                     let spawn = wild
                     const p = getPlayerSave()
-                    if (getActiveWorld() === "live" && p.mimimoyReturned && p.mimimoyAppearances < 10 && !getPokedex().caught.includes("mimimoy")) {
+                    // Ne JAMAIS écraser un shiny ni un légendaire/surprise (hiddenUntilCaught : Goshendofy…) par Mimimoy.
+                    const precious = wild.shiny || !!getSpecies(wild.speciesId)?.hiddenUntilCaught
+                    if (!precious && getActiveWorld() === "live" && p.mimimoyReturned && p.mimimoyAppearances < 10 && !getPokedex().caught.includes("mimimoy")) {
                         const chance = [0.25, 0.20, 0.15, 0.10, 0.05][Math.min(p.mimimoyAppearances, 4)]
                         if (Math.random() < chance) {
                             spawn = createMonInstance("mimimoy", Math.max(5, ngEasyWild ? 3 : levelBasis), { owned: false })

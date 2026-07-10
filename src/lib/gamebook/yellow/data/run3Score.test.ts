@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest"
-import { run3Score, bossEnemyKey, leagueEnemyKey, run3BossesMaxScore } from "./run3Score"
+import { run3Score, bossEnemyKey, leagueEnemyKey, run3BossesMaxScore, RUN3_LEAGUE_MAX_SCORE } from "./run3Score"
 import { RUN3_BOSS_TEAMS } from "./run3Bosses"
+import { getTrainer } from "./trainers"
 
 describe("RUN 3 — score (Σ niveaux des ennemis vaincus, chacun une fois)", () => {
     it("somme les niveaux des ennemis distincts", () => {
@@ -33,5 +34,13 @@ describe("RUN 3 — score (Σ niveaux des ennemis vaincus, chacun une fois)", ()
         const manual = Object.values(RUN3_BOSS_TEAMS).reduce((a, b) => a + b.team.reduce((s, m) => s + m.level, 0), 0)
         expect(run3BossesMaxScore()).toBe(manual)
         expect(run3BossesMaxScore()).toBe(972) // Mools101 + Task1 145 + Neuneu187 + Embi254 + Franss285
+    })
+
+    // Verrou anti-drift : RUN3_LEAGUE_MAX_SCORE est figé (1522) mais DOIT rester = Σ réel des 5 équipes de Ligue.
+    // Si un jour les équipes de Ligue changent, ce test échoue → on met à jour la constante (dénominateur du score).
+    it("RUN3_LEAGUE_MAX_SCORE = Σ réel des niveaux des 5 équipes de Ligue", () => {
+        const ids = ["y_ligue_1_olga", "y_ligue_2_aldo", "y_ligue_3_agatha", "y_ligue_4_peter", "y_ligue_maitre"]
+        const sum = ids.reduce((a, id) => a + (getTrainer(id)?.team.reduce((s, m) => s + m.level, 0) ?? 0), 0)
+        expect(sum).toBe(RUN3_LEAGUE_MAX_SCORE)
     })
 })
