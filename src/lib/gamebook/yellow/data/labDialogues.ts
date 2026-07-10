@@ -44,6 +44,18 @@ export const CHEN_RUN3_TEASER_LINES = [
     "« Amène-moi un MAGMATOR — capture un Lavapetit, fais-le évoluer jusqu'au bout, et reviens ! Mais qu'il ait au moins le NIVEAU 50 : en-dessous, le noyau le briserait. Ce jour-là, l'Histoire s'écrira dans MON labo. File ! »",
 ]
 
+/** RUN 3 — DIEU SPAGHETTI : teaser à la 1re RENCONTRE d'un Lavapetit sauvage (rappelle le projet de CHEN →
+ *  Magmator → Magnetor). Voix taquine du Dieu des Nouilles ; lore aligné sur CHEN_RUN3_TEASER_LINES. */
+export const SPAG_LAVAPETIT_TEASER_LINES = [
+    "*Une volute de vapeur al dente se condense au-dessus de toi.* « Psst… ce petit caillou fumant, là — un LAVAPETIT — ce n'est pas n'importe quoi. »",
+    "« C'est LUI que le vieux Prof. CHEN guette, tapi dans son labo de Cendreville. Élève-le en MAGMATOR (niveau 50 !), et son NOYAU DE MÉTAL en fera un MAGNETOR. Une pièce de collection, champion ! »",
+]
+/** RUN 3 — DIEU SPAGHETTI : à la 1re CAPTURE d'un Lavapetit (plus emphatique). */
+export const SPAG_LAVAPETIT_CAUGHT_LINES = [
+    "*Le Dieu Spaghetti applaudit dans un floc de sauce qui mijote.* « Bien JOUÉ ! Tu tiens un LAVAPETIT — la clé du projet secret du Prof. CHEN. »",
+    "« Fais-le grimper jusqu'à MAGMATOR (niveau 50 mini), file à son labo de Cendreville, et son Noyau de Métal le poussera un stade plus loin : MAGNETOR. L'Histoire, je te dis ! »",
+]
+
 /** RUN 3 — Prof. CHEN : ÉVOLUTION (le joueur revient avec un Magmator niv 50+). Le Noyau de Métal transforme
  *  Magmator en MAGNETOR (Feu/Métal). Une fois faite, retombe sur le teaser (qui n'a plus de Magmator à évoluer). */
 export const CHEN_RUN3_EVOLVE_LINES = [

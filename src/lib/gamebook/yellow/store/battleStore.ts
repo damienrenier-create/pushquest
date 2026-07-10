@@ -63,7 +63,7 @@ function syncPokedex(b: BattleState) {
     const caught = b.outcome === "caught"
     // SURPRISE : Gékroc / Goshendofy restent MASQUÉS du Pokédex (même pas « vu ») tant que NON capturés.
     if (caught || !getSpecies(sp)?.hiddenUntilCaught) markSeen(sp)
-    if (caught) markCaught(sp)
+    if (caught) { markCaught(sp); markCaughtThisRun(sp) } // Pokédex GLOBAL + overlay « capturé ce run » (per-monde)
 }
 
 /** Contexte d'un combat de dresseur (récompense + marquage "battu"). */
@@ -99,6 +99,7 @@ interface BattleStoreState {
     giftCtMove: string | null
     /** Message de don de la Pierre Gékroc (mini-boss Centrale) → notification post-combat ; null sinon. */
     stoneReward: string | null
+    lavapetitTeaser: "seen" | "caught" | null // RUN 3 : teaser Dieu Spag Lavapetit à afficher (transitoire)
     /** Récompense d'un REMATCH de dresseur (dialogue post-combat : énergie / CT Mirage) ; null sinon. */
     rematchReward: { npcId: string; npcName: string; lines: string[] } | null
     /** Contexte d'un combat JOUEUR vs JOUEUR (null = combat solo classique). */
@@ -147,7 +148,7 @@ interface PvpContext {
     desync: boolean
 }
 
-let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, arenaRun: null, chainRematchId: null, pendingLearn: false, duelResult: null, frontierResult: null, stoneReward: null, justCaught: false, ngplusFinalPending: false, ngplusFinalResult: null }
+let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, arenaRun: null, chainRematchId: null, pendingLearn: false, duelResult: null, frontierResult: null, stoneReward: null, lavapetitTeaser: null, justCaught: false, ngplusFinalPending: false, ngplusFinalResult: null }
 // LIGUE — meilleurs moments du run en cours (best hit par membre du Conseil 4 + Maître), runtime.
 // Upsert par trainerId à chaque victoire de la Ligue ; lus au sacre du Maître pour le Hall of Fame.
 const leagueHighlights: Record<string, LeagueHighlight> = {}
@@ -499,6 +500,16 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             markSylvebarbeAwake()
             consumeItem("daemonflute")
         }
+    }
+
+    // 2-quater) RUN 3 — TEASER DIEU SPAGHETTI sur LAVAPETIT : à la 1re RENCONTRE (quel que soit l'issue) puis
+    //   à la 1re CAPTURE, le Dieu Spag rappelle que c'est le Daemon qu'étudie CHEN (→ Magmator → Magnetor).
+    //   Flags per-monde one-time. UNIQUEMENT en run 3 (Lavapetit apparaît aussi en run 1/2 sans teaser).
+    let lavapetitTeaser: "seen" | "caught" | null = null
+    if (getActiveWorld() === "run3" && b.isWild && b.enemy.team.some((e) => e.speciesId === "lavapetit")) {
+        const pl = getPlayer()
+        if (b.outcome === "caught" && !pl.run3LavapetitCaught) { markRun3LavapetitCaught(); lavapetitTeaser = "caught" }
+        else if (!pl.run3LavapetitSeen && !pl.run3LavapetitCaught) { markRun3LavapetitSeen(); lavapetitTeaser = "seen" }
     }
 
     // 2bis) Victoire dresseur : marquage "battu" (la monnaie = reps, gagnée hors combat).
@@ -874,13 +885,13 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     const team = getPlayer().team
     const evos = isFactory ? [] : evolveTeam(team)
     if (evos.length > 0) {
-        for (const e of evos) markCaught(e.toId) // la nouvelle forme entre au Pokédex
+        for (const e of evos) { markCaught(e.toId); markCaughtThisRun(e.toId) } // la nouvelle forme entre au Pokédex
         setTeam([...team])
     }
     // Un Daemon a-t-il une attaque EN ATTENTE (slots pleins à la montée de niveau / l'évolution) ? → prompt post-combat.
     const pendingLearn = getPlayer().team.some((m) => (m.pendingMoves?.length ?? 0) > 0)
     // Expose les évolutions pour la cinématique post-combat (jouée après "QUITTER").
-    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, arenaRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward, justCaught: b.outcome === "caught", ngplusFinalPending: storeState.ngplusFinalPending || ngplusMaitreWin, ngplusFinalResult })
+    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, arenaRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward, lavapetitTeaser, justCaught: b.outcome === "caught", ngplusFinalPending: storeState.ngplusFinalPending || ngplusMaitreWin, ngplusFinalResult })
 
     // 4) Sauvegarde persistante (DB).
     persistYellowSave()
@@ -1233,7 +1244,7 @@ function finishPvpBattle(b: BattleState) {
     const team = getPlayer().team
     const evos = evolveTeam(team)
     if (evos.length > 0) {
-        for (const e of evos) markCaught(e.toId)
+        for (const e of evos) { markCaught(e.toId); markCaughtThisRun(e.toId) }
         setTeam([...team])
     }
     // COMBAT AMICAL : après CHAQUE match PvP (gagnant comme perdant) on soigne l'équipe à fond
@@ -1399,6 +1410,18 @@ export function useStoneReward(): string | null {
 }
 export function clearStoneReward() {
     setStore({ stoneReward: null })
+}
+
+/** RUN 3 — teaser Dieu Spag sur Lavapetit à afficher post-combat ('seen'|'caught'), ou null. */
+export function useLavapetitTeaser(): BattleStoreState["lavapetitTeaser"] {
+    return useSyncExternalStore(
+        subscribe,
+        () => getSnapshot().lavapetitTeaser,
+        () => getSnapshot().lavapetitTeaser,
+    )
+}
+export function clearLavapetitTeaser() {
+    setStore({ lavapetitTeaser: null })
 }
 
 /** Un Daemon vient d'être capturé (signal transitoire pour l'UI, ex. carrousel génétique). */

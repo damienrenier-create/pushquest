@@ -138,7 +138,10 @@ export default function PokedexClient() {
                 <button onClick={() => router.back()} style={S.back}>← Retour</button>
                 <h1 style={S.title}>📷 POKÉDEX NEXUS</h1>
                 <div style={S.compRow}>
-                    <span style={S.compTxt}>{comp.caught}/{comp.total} capturés — {comp.pct}%</span>
+                    <span style={S.compTxt}>{comp.caught}/{comp.total} capturés — {comp.pct}%{(() => {
+                        const nowCount = entries.filter((e) => (player.caughtThisRun ?? []).includes(e.id)).length
+                        return nowCount > 0 ? <span style={{ color: "#ffcf40" }}> · dont {nowCount} ce run ✨</span> : null
+                    })()}</span>
                     <div style={S.compTrack}><div style={{ ...S.compFill, width: `${comp.pct}%` }} /></div>
                 </div>
             </div>
@@ -147,21 +150,26 @@ export default function PokedexClient() {
                 {entries.map((sp) => {
                     const caught = dex.caught.includes(sp.id)
                     const seen = caught || dex.seen.includes(sp.id)
+                    // « Capturé CE run » (overlay per-monde) vs « capturé un run précédent » : le Pokédex est
+                    // cumulatif, mais on distingue les captures du run EN COURS (mises en avant).
+                    const caughtNow = caught && (player.caughtThisRun ?? []).includes(sp.id)
                     return (
                         <button
                             key={sp.id}
                             disabled={!seen}
                             onClick={() => seen && setSel(sp)}
-                            style={{ ...S.card, opacity: seen ? 1 : 0.5, cursor: seen ? "pointer" : "default", textAlign: "left" }}
+                            style={{ ...S.card, opacity: seen ? 1 : 0.5, cursor: seen ? "pointer" : "default", textAlign: "left", ...(caughtNow ? { borderColor: "#ffcf40", boxShadow: "0 0 0 1px #ffcf40 inset" } : {}) }}
                         >
                             <div style={S.no}>N°{String(sp.dexNo).padStart(3, "0")}</div>
                             <DexIcon sp={sp} seen={seen} caught={caught} />
                             <div style={S.body}>
                                 <div style={S.name}>{seen ? sp.name.toUpperCase() : "???"}</div>
                                 {seen && <div style={S.types}>{sp.types.join(" / ")}</div>}
-                                <div style={S.state}>{caught ? "✔ Capturé — voir la fiche complète" : seen ? "👁 Vu — fiche partielle" : "Inconnu"}</div>
+                                <div style={{ ...S.state, ...(caughtNow ? { color: "#ffcf40", fontWeight: 700 } : {}) }}>
+                                    {caughtNow ? "✨ Capturé CE RUN — voir la fiche" : caught ? "✔ Capturé (run précédent) — voir la fiche" : seen ? "👁 Vu — fiche partielle" : "Inconnu"}
+                                </div>
                             </div>
-                            <div style={S.tag}>{caught ? "✔" : seen ? "👁" : ""}{seen ? " ▸" : ""}</div>
+                            <div style={{ ...S.tag, ...(caughtNow ? { color: "#ffcf40" } : {}) }}>{caughtNow ? "✨" : caught ? "✔" : seen ? "👁" : ""}{seen ? " ▸" : ""}</div>
                         </button>
                     )
                 })}

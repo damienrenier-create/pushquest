@@ -673,7 +673,7 @@ export function evolvePantheonWithStone(uid: string, targetSpeciesId: string): E
     list[idx] = clone
     const items = { ...st.items, [GEKROC_STONE_ITEM]: (st.items[GEKROC_STONE_ITEM] ?? 0) - 1 }
     st = where === "team" ? { ...st, team: list, items } : { ...st, pc: list, items }
-    markCaught(targetSpeciesId) // la panthère entre au Pokédex
+    markCaught(targetSpeciesId); markCaughtThisRun(targetSpeciesId) // la panthère entre au Pokédex (+ « ce run »)
     emit()
     return res
 }
@@ -704,7 +704,7 @@ export function evolveMagmatorWithChen(uid: string): EvolutionResult | null {
     list[idx] = clone
     const items = { ...st.items, [MAGNETOR_EVO_ITEM]: (st.items[MAGNETOR_EVO_ITEM] ?? 0) - 1 } // Noyau consommé
     st = where === "team" ? { ...st, team: list, items } : { ...st, pc: list, items }
-    markCaught("magnetor") // Magnetor entre au Pokédex
+    markCaught("magnetor"); markCaughtThisRun("magnetor") // Magnetor entre au Pokédex (+ « ce run »)
     emit()
     return res
 }
@@ -1590,7 +1590,7 @@ export function grantTonytony(): "team" | "pc" | null {
     const mon = createMonInstance(species, TONYTONY_LEVEL, { owned: true })
     st = { ...st, labDefi: { ...d, tonytonyClaimed: true } } // pose le flag AVANT (anti double-don)
     const where = addCaught(mon) // gère équipe pleine → PC + estampille l'ownership ; emit()
-    markCaught(species) // entrée Pokédex
+    markCaught(species); markCaughtThisRun(species) // entrée Pokédex (+ « ce run »)
     return where
 }
 
@@ -1621,7 +1621,7 @@ export function makeTonytonyShiny(): "team" | "pc" | "new" | null {
     mon.shiny = true
     st = { ...st, labDefi: { ...d, tonytonyShiny: true } }
     addCaught(mon)
-    markCaught(species)
+    markCaught(species); markCaughtThisRun(species)
     return "new"
 }
 

@@ -48,11 +48,12 @@ import { useGameStore, setCurrentNickname, DEFAULT_SPAWN } from "@/lib/gamebook/
 import { YELLOW_ENTRANCE_MAP_ID } from "@/lib/gamebook/yellow/featureFlag"
 import { YELLOW_MAPS, CENDREVILLE_SPAWN } from "@/lib/gamebook/yellow/maps"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
-import { useBattle, useEvolutions, clearEvolutions, useChampionRun, useArenaRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getGiftCtMove, startTrainerBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult, useFrontierResult, clearFrontierResult, getBattleEnergy, resumeBattleFromStorage, useStoneReward, clearStoneReward, useJustCaught, clearJustCaught, freezeTeam, startNgPlusFinalBattle, useNgplusFinalPending, clearNgplusFinalPending, useNgplusFinalResult, clearNgplusFinalResult } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, useEvolutions, clearEvolutions, useChampionRun, useArenaRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getGiftCtMove, startTrainerBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult, useFrontierResult, clearFrontierResult, getBattleEnergy, resumeBattleFromStorage, useStoneReward, clearStoneReward, useLavapetitTeaser, clearLavapetitTeaser, useJustCaught, clearJustCaught, freezeTeam, startNgPlusFinalBattle, useNgplusFinalPending, clearNgplusFinalPending, useNgplusFinalResult, clearNgplusFinalResult } from "@/lib/gamebook/yellow/store/battleStore"
 import { useEncounterFxActive } from "@/lib/gamebook/yellow/store/encounterFxStore"
 import { aceLoseLine } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
+import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/gamebook/yellow/data/labDialogues"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, getNgplusOldTeam, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3 } from "@/lib/gamebook/yellow/store/saveManager"
 import { customStarterSpeciesId, type StoredCustomDaemon } from "@/lib/gamebook/yellow/create/customSpecies"
 import { getPlayer, setTeam, usePlayer, useActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket } from "@/lib/gamebook/yellow/store/playerStore"
@@ -269,6 +270,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const badgeAwarded = useBadgeAwarded()
     const rematchReward = useRematchReward()
     const stoneReward = useStoneReward()
+    const lavapetitTeaser = useLavapetitTeaser() // RUN 3 : teaser Dieu Spag Lavapetit (post-combat)
     const justCaught = useJustCaught()
     const [showGeneIntro, setShowGeneIntro] = useState(false) // carrousel génétique one-shot (post-capture)
     const router = useRouter()
@@ -935,6 +937,15 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             clearStoneReward()
         }
     }, [stoneReward, battle, evolutions.length, showDialogue])
+
+    // RUN 3 — TEASER DIEU SPAGHETTI sur LAVAPETIT : pop-up post-combat, une fois l'écran LIBRE (on attend la fin
+    // de la popup 1re-capture / cinématique d'évolution / prompt d'apprentissage pour ne rien écraser).
+    useEffect(() => {
+        if (lavapetitTeaser && !battle && !newDexEntry && evolutions.length === 0 && !pendingLearn && !dialogue && !championRun) {
+            showDialogue(DUEL_DREAM_NPC, "✨ Dieu Spaghetti", lavapetitTeaser === "caught" ? SPAG_LAVAPETIT_CAUGHT_LINES : SPAG_LAVAPETIT_TEASER_LINES)
+            clearLavapetitTeaser()
+        }
+    }, [lavapetitTeaser, battle, newDexEntry, evolutions.length, pendingLearn, dialogue, championRun, showDialogue])
 
     // CARROUSEL GÉNÉTIQUE (one-shot) : après une capture, une fois l'écran libéré (popup Pokédex /
     // évolutions / apprentissage passés), le Dieu Spaghetti explique le potentiel/IV. UNE SEULE FOIS.
