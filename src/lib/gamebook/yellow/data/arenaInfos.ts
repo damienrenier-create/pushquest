@@ -7,7 +7,7 @@
 import { trainersOnMap, type TrainerMonSpec } from "./trainers"
 import { NGPLUS_ARENA_TEAMS } from "./ngplusArenas"
 import { RUN3_ARENAS } from "./run3Arenas"
-import { RUN3_BOSS_TEAMS } from "./run3Bosses"
+import { RUN3_BOSS_TEAMS, run3ArenaBossTeam } from "./run3Bosses"
 import { getSpecies } from "./species"
 import { POKE_TYPES, type PokeType } from "../battle/types"
 import { typeEffectiveness } from "../battle/typeChart"
@@ -117,8 +117,10 @@ export function run3ArenaInfo(badge: BadgeId): Run3ArenaInfo | null {
     const bossData = RUN3_BOSS_TEAMS[badge]
     if (!arenaDef || !bossData) return null
 
-    // Équipe figée du boss (ChampionMon[]) → ArenaTeamMon[] (types résolus via l'espèce).
-    const team: ArenaTeamMon[] = bossData.team.map((m, i, arr) => {
+    // Équipe RÉELLEMENT affrontée = l'équipe du boss TRONQUÉE à la taille de l'arène (run3ArenaBossTeam), PAS
+    //   l'équipe entière figée. Le panneau ne doit montrer QUE les Daemons qu'on affrontera.
+    const fielded = run3ArenaBossTeam(badge)
+    const team: ArenaTeamMon[] = fielded.map((m, i, arr) => {
         const sp = getSpecies(m.speciesId)
         return { speciesId: m.speciesId, name: sp?.name ?? m.speciesId, level: m.level, types: sp?.types ?? [], isBoss: i === arr.length - 1 }
     })

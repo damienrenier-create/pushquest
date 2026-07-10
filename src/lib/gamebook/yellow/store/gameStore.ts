@@ -202,7 +202,9 @@ function tryLaunchTrainer(trainerId: string, isRematch = false): ActiveDialogue 
     //   pas de revanche). RUN3_ARENA_TEAMS ne couvre QUE g1-g4 → le BOSS garde son équipe tant que les équipes
     //   de joueur figées ne sont pas injectées (étape suivante).
     if (run3 && !isRematch && RUN3_ARENA_TEAMS[trainerId]) {
-        specs = RUN3_ARENA_TEAMS[trainerId]
+        // speciesAtLevel : force chaque gardien à son STADE NATUREL pour son niveau (jamais un stade-1 à un niveau
+        //   où il devrait avoir évolué — règle « jamais de Daemon à un niveau non naturel »).
+        specs = RUN3_ARENA_TEAMS[trainerId].map((s) => ({ ...s, speciesId: speciesAtLevel(s.speciesId, s.level) }))
     }
     // RUN 3 : le BOSS d'arène = équipe de JOUEUR FIGÉE (tronquée à la taille de l'arène). Combat spécial
     //   (championToInstance, stats gelées) → on court-circuite le fielding TrainerMonSpec ci-dessous.

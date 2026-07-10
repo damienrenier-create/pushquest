@@ -88,8 +88,8 @@ describe("RUN 3 — analyse d'arène pour le panneau (run3ArenaInfo)", () => {
         expect(info.energyPalier).toBe(500)
         // super-efficaces contre Glace : Feu / Combat / Roche / Métal
         for (const t of ["FEU", "COMBAT", "ROCHE", "METAL"] as const) expect(info.guardRecommend).toContain(t)
-        // équipe du boss résolue (noms + types)
-        expect(info.team.length).toBe(6)
+        // équipe RÉELLEMENT affrontée (tronquée à la taille de l'arène : plante = 3), noms résolus + dernier = boss
+        expect(info.team.length).toBe(3)
         expect(info.team.every((m) => m.name.length > 0)).toBe(true)
         expect(info.team[info.team.length - 1].isBoss).toBe(true)
     })
