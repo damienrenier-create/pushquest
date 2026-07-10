@@ -57,6 +57,7 @@ import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, r
 import { customStarterSpeciesId, type StoredCustomDaemon } from "@/lib/gamebook/yellow/create/customSpecies"
 import { getPlayer, setTeam, usePlayer, useActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket } from "@/lib/gamebook/yellow/store/playerStore"
 import { computeRunScores, formatDuration } from "@/lib/gamebook/yellow/score/runScore"
+import { run3Score, run3MaxScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
 import { ARENA_TICKET_VALUE, STEP_GIFT_DATE, STEP_GIFT_THRESHOLD } from "@/lib/gamebook/yellow/data/labDefis"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
@@ -287,7 +288,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         const enemy = arenaMode === "hub" ? buildHubTeam(opp.player) : buildMirrorTeam(opp.player)
         setArenaFight({ opp, mode: arenaMode, enemy })
     }
-    const [menu, setMenu] = useState<"none" | "pause" | "team" | "bag" | "reput" | "moves" | "hof" | "arena-hof" | "stats" | "run2scores">("none")
+    const [menu, setMenu] = useState<"none" | "pause" | "team" | "bag" | "reput" | "moves" | "hof" | "arena-hof" | "stats" | "run2scores" | "run3scores">("none")
     const activeWorld = useActiveWorld() // NG+ : "live" (partie d'origine) ou "ngplus" (New Game+)
     const ficheTouchX = useRef<number | null>(null) // swipe gauche/droite dans la fiche Daemon
     const [selected, setSelected] = useState<MonInstance | null>(null)
@@ -903,19 +904,28 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // Badge d'arène gagné : notification claire (sinon le joueur a l'impression de rien recevoir).
     useEffect(() => {
         if (badgeAwarded && !battle && evolutions.length === 0) {
-            const labels: Record<string, string> = { plante: "FEUILLE", feu: "FLAMME", eau: "GOUTTE", roche: "ROCHE", elec: "ÉCLAIR" }
+            const run3 = activeWorld === "run3"
+            // RUN 3 : les arènes sont re-typées aux GARDIENS (aperçu de la Ligue) → on annonce l'arène par ce type,
+            //   pas par son type du run 1. Et on ne promet NI CT NI ticket (le concours n'a ni boutique ni casino).
+            const labels: Record<string, string> = run3
+                ? { plante: "GLACE", roche: "COMBAT", feu: "SPECTRE", elec: "DRAGON", eau: "PRISME" }
+                : { plante: "FEUILLE", feu: "FLAMME", eau: "GOUTTE", roche: "ROCHE", elec: "ÉCLAIR" }
             const lbl = labels[badgeAwarded] ?? badgeAwarded.toUpperCase()
-            const giftMove = getGiftCtMove()
-            const lines = [
-                `🎖️ Tu obtiens le BADGE ${lbl} !`,
-                "Ton plafond de reps grimpe (+250) et de nouvelles CT s'ouvrent à la boutique.",
-            ]
-            if (giftMove) lines.push(`🎁 Tu reçois la CT « ${giftMove} » ! Apprends-la à un Daemon compatible — cadeau unique.`)
-            lines.push(`🎟️ Et un ticket roulette de ${ARENA_TICKET_VALUE} énergies — joue-le à ta prochaine connexion !`)
+            const lines: string[] = []
+            if (run3) {
+                lines.push(`🎖️ Tu conquiers l'ARÈNE ${lbl} !`)
+                lines.push("Le Dieu Spaghetti te crédite ton PALIER D'ÉNERGIE du concours — file vers l'arène suivante !")
+            } else {
+                const giftMove = getGiftCtMove()
+                lines.push(`🎖️ Tu obtiens le BADGE ${lbl} !`)
+                lines.push("Ton plafond de reps grimpe (+250) et de nouvelles CT s'ouvrent à la boutique.")
+                if (giftMove) lines.push(`🎁 Tu reçois la CT « ${giftMove} » ! Apprends-la à un Daemon compatible — cadeau unique.`)
+                lines.push(`🎟️ Et un ticket roulette de ${ARENA_TICKET_VALUE} énergies — joue-le à ta prochaine connexion !`)
+            }
             showDialogue("y_gym_sign", "ARÈNE", lines)
             clearBadgeAwarded()
         }
-    }, [badgeAwarded, battle, evolutions.length, showDialogue])
+    }, [badgeAwarded, battle, evolutions.length, showDialogue, activeWorld])
 
     // PIERRE GÉKROC : don de la Pierre d'Évolution après avoir battu/capturé Gékroc (Centrale) →
     // notification claire post-combat (sinon le don, objet "objet clé", passait totalement inaperçu).
@@ -1239,7 +1249,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (advisorOpen) { closeAdvisor(); return true }
         if (labOpen) { closeLab(); return true }
         if (pcOpen) { closePc(); return true }
-        if (menu === "team" || menu === "bag" || menu === "reput" || menu === "moves" || menu === "hof" || menu === "arena-hof" || menu === "stats" || menu === "run2scores") { setMenu("pause"); return true }
+        if (menu === "team" || menu === "bag" || menu === "reput" || menu === "moves" || menu === "hof" || menu === "arena-hof" || menu === "stats" || menu === "run2scores" || menu === "run3scores") { setMenu("pause"); return true }
         if (menu === "pause") { setMenu("none"); return true }
         return false
     }
@@ -1344,6 +1354,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         <button style={menuBtnStyle} onClick={() => setMenu("reput")}>🏆 RÉPUTATION</button>
                         <button style={menuBtnStyle} onClick={() => setMenu("stats")}>📊 STATS (cette partie)</button>
                         {activeWorld === "ngplus" && <button style={menuBtnStyle} onClick={() => setMenu("run2scores")}>🏅 SCORES RUN 2</button>}
+                        {activeWorld === "run3" && <button style={menuBtnStyle} onClick={() => setMenu("run3scores")}>🏆 SCORE RUN 3</button>}
                         <button style={menuBtnStyle} onClick={() => setMenu("hof")}>🏛️ HALL OF FAME (LIGUE)</button>
                         <button style={menuBtnStyle} onClick={() => setMenu("arena-hof")}>⚔️ HALL OF FAME (ARÈNES)</button>
                         {(isCreator || nickname.toLowerCase() === "mools") && (
@@ -1739,6 +1750,38 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                                 </div>
                                             ))}
                                         </div>
+                                    </div>
+                                </div>
+                            )
+                        })()}
+                        <button style={menuBtnDimStyle} onClick={() => setMenu("pause")}>← RETOUR</button>
+                    </div>
+                </div>
+            )}
+
+            {/* SCORE RUN 3 (concours) — Σ des niveaux des Daemons ennemis vaincus (boss d'arène + Ligue). */}
+            {menu === "run3scores" && (
+                <div style={menuOverlayStyle} onClick={() => setMenu("pause")}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>🏆 SCORE — RUN 3 (concours)</div>
+                        {(() => {
+                            const defeated = player.run3Defeated ?? []
+                            const score = run3Score(defeated)
+                            const max = run3MaxScore()
+                            const ratio = max > 0 ? Math.min(1, score / max) : 0
+                            const n = defeated.length
+                            return (
+                                <div style={{ display: "flex", flexDirection: "column", gap: 8, margin: "4px 0 8px" }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 15 }}>
+                                        <b>★ SCORE</b>
+                                        <b style={{ fontSize: 22, color: "#ffe36b" }}>{score}<span style={{ fontSize: 12, opacity: 0.6 }}> / {max}</span></b>
+                                    </div>
+                                    <div style={{ height: 6, borderRadius: 3, background: "rgba(255,255,255,0.12)", overflow: "hidden" }}>
+                                        <div style={{ width: `${Math.round(ratio * 100)}%`, height: "100%", background: "#ffe36b" }} />
+                                    </div>
+                                    <div style={{ fontSize: 12, opacity: 0.9 }}>🗡️ <b>{n}</b> Daemon{n > 1 ? "s" : ""} ennemi{n > 1 ? "s" : ""} vaincu{n > 1 ? "s" : ""} (boss d'arène + Ligue), compté{n > 1 ? "s" : ""} une seule fois.</div>
+                                    <div style={{ fontSize: 9.5, opacity: 0.6, lineHeight: 1.4 }}>
+                                        Le score = Σ des niveaux des Daemons ennemis que tu as vaincus. Tout le monde affronte les MÊMES 5 boss figés + la même Ligue → les scores sont comparables. Le run s'arrête à 0⚡ (ou au sacre) : ton score est gravé à cet instant.
                                     </div>
                                 </div>
                             )

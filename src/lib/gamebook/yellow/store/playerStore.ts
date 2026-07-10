@@ -145,6 +145,16 @@ interface PlayerState {
     ngplusMaitreBeaten: boolean
     /** RUN 3 — speciesId de base du starter CHOISI (elefer/cornaive/coccipoing) → sert au counter d'ACE. "" hors run 3. */
     run3StarterBase: string
+    /** RUN 3 — ennemis vaincus (boss + Ligue) pour le SCORE. Per-monde. Défaut []. */
+    run3Defeated: { key: string; level: number }[]
+    /** POKÉDEX — espèces capturées CE run (overlay per-monde par-dessus le Pokédex cumulatif). Défaut []. */
+    caughtThisRun: string[]
+    /** RUN 3 — teaser Dieu Spag Lavapetit vu / capturé (one-time, per-monde). Défaut false. */
+    run3LavapetitSeen: boolean
+    run3LavapetitCaught: boolean
+    /** MIMIMOY (roaming LIVE) — rendu au brocanteur (roaming armé) ? + nb d'apparitions (0..10). Défaut false / 0. */
+    mimimoyReturned: boolean
+    mimimoyAppearances: number
 }
 
 /** Statistiques PvP du joueur (réputation). */
@@ -163,7 +173,7 @@ export function emptyPvpStats(): PvpStats {
     return { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }
 }
 
-let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, berrySecretKnown: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", ngplusBattles: 0, sylvebarbeAwake: false, labDefi: emptyLabDefi(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "" }
+let st: PlayerState = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, berrySecretKnown: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", ngplusBattles: 0, sylvebarbeAwake: false, labDefi: emptyLabDefi(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", run3Defeated: [], caughtThisRun: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0 }
 const listeners = new Set<() => void>()
 
 function emit() { for (const l of listeners) l() }
@@ -210,6 +220,12 @@ export function reregisterCustomDaemons(): void {
 const RUN3_STARTER_COUNTER: Record<string, string> = { elefer: "coccipoing", cornaive: "elefer", coccipoing: "cornaive" }
 export function getRun3AceNemesis(): string | null {
     return RUN3_STARTER_COUNTER[st.run3StarterBase] ?? null
+}
+/** RUN 3 — le 3e starter (NI celui du joueur, NI celui d'ACE) : double-saut du cycle. C'est le cadeau de
+ *  l'ÉLEVEUR. Ex. joueur=elefer → ACE=coccipoing → 3e = cornaive. null hors run 3 / starter inconnu. */
+export function getRun3ThirdStarter(): string | null {
+    const ace = getRun3AceNemesis()
+    return ace ? (RUN3_STARTER_COUNTER[ace] ?? null) : null
 }
 
 /** NG+ — lignée NÉMÉSIS (contre-lignée) du Daemon custom que le joueur JOUE en NG+ : trouve le custom dans
@@ -300,6 +316,12 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         run3Used: p.run3Used ?? st.run3Used ?? false,
         ngplusMaitreBeaten: p.ngplusMaitreBeaten ?? st.ngplusMaitreBeaten ?? false,
         run3StarterBase: p.run3StarterBase ?? st.run3StarterBase ?? "",
+        run3Defeated: p.run3Defeated ?? st.run3Defeated ?? [],
+        caughtThisRun: p.caughtThisRun ?? st.caughtThisRun ?? [],
+        run3LavapetitSeen: p.run3LavapetitSeen ?? st.run3LavapetitSeen ?? false,
+        run3LavapetitCaught: p.run3LavapetitCaught ?? st.run3LavapetitCaught ?? false,
+        mimimoyReturned: p.mimimoyReturned ?? st.mimimoyReturned ?? false,
+        mimimoyAppearances: p.mimimoyAppearances ?? st.mimimoyAppearances ?? 0,
     }
     emit()
 }
@@ -367,6 +389,50 @@ export function setNgplusMaitreBeaten(v: boolean) {
     emit()
 }
 
+/** POKÉDEX — marque une espèce comme capturée CE run (overlay per-monde). Idempotent. Appelé en paire de
+ *  chaque markCaught (le Pokédex global reste inchangé ; ceci distingue « ce run » de « run précédent »). */
+export function markCaughtThisRun(speciesId: string) {
+    if (!speciesId || st.caughtThisRun.includes(speciesId)) return
+    st = { ...st, caughtThisRun: [...st.caughtThisRun, speciesId] }
+    emit()
+}
+
+/** RUN 3 — teaser Dieu Spag Lavapetit : marque la RENCONTRE vue (one-time). Idempotent. */
+export function markRun3LavapetitSeen() {
+    if (st.run3LavapetitSeen) return
+    st = { ...st, run3LavapetitSeen: true }
+    emit()
+}
+/** RUN 3 — teaser Dieu Spag Lavapetit : marque le Lavapetit CAPTURÉ (pose AUSSI seen → pas de re-teaser). */
+export function markRun3LavapetitCaught() {
+    if (st.run3LavapetitCaught) return
+    st = { ...st, run3LavapetitCaught: true, run3LavapetitSeen: true }
+    emit()
+}
+
+/** RUN 3 — crédite des ennemis VAINCUS au score (dédup par clé). Gardé sur le monde run 3 (aucun effet ailleurs). */
+export function addRun3Defeated(entries: { key: string; level: number }[]) {
+    if (activeWorld !== "run3" || entries.length === 0) return
+    const seen = new Set(st.run3Defeated.map((e) => e.key))
+    const add = entries.filter((e) => e.key && !seen.has(e.key))
+    if (add.length === 0) return
+    st = { ...st, run3Defeated: [...st.run3Defeated, ...add.map((e) => ({ key: e.key, level: Math.max(0, Math.floor(e.level)) }))] }
+    emit()
+}
+
+/** MIMIMOY — le joueur a rendu Mimimoy au brocanteur → arme le roaming (monde live). Idempotent. */
+export function markMimimoyReturned() {
+    if (st.mimimoyReturned) return
+    st = { ...st, mimimoyReturned: true }
+    emit()
+}
+/** MIMIMOY — incrémente le compteur d'apparitions du roaming (cap 10 → disparaît ensuite). */
+export function bumpMimimoyAppearances() {
+    if (st.mimimoyAppearances >= 10) return
+    st = { ...st, mimimoyAppearances: st.mimimoyAppearances + 1 }
+    emit()
+}
+
 // === BAIES (post-Ligue) : secret révélé + récolte quotidienne (anti-refarm au refresh). ==================
 
 /** Révèle le SECRET DES BAIES (Druide en run 2, ou assistant du Prof. CHEN) → active la récolte. Idempotent. */
@@ -402,7 +468,7 @@ export function harvestBerryTree(mapId: string, x: number, y: number, day: strin
 /** DEV : remet la progression jaune à zéro pour rejouer l'intro (équipe vidée, introSeen=false). */
 export function resetForIntro() {
     activeWorld = "live" // un reset volontaire repart sur le monde d'origine (le NG+ éventuel est effacé par saveManager)
-    st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, berrySecretKnown: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", ngplusBattles: 0, sylvebarbeAwake: false, labDefi: emptyLabDefi(), customDaemons: st.customDaemons, ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "" }
+    st = { team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, berrySecretKnown: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", ngplusBattles: 0, sylvebarbeAwake: false, labDefi: emptyLabDefi(), customDaemons: st.customDaemons, ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", run3Defeated: [], caughtThisRun: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0 }
     emit()
 }
 
@@ -411,7 +477,7 @@ export function resetForIntro() {
  *  nouveau), customDaemons GLOBAUX préservés, cadeaux de bienvenue neutralisés (l'énergie NG+ est créditée à
  *  part par saveManager). Le passage activeWorld="ngplus" + l'énergie sont gérés par saveManager.startNewGamePlus. */
 export function startNgPlusWorld(starter: MonInstance) {
-    st = { team: [starter], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: true, pokerFirstGameDone: st.pokerFirstGameDone, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: true, pastaGodGift: true, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: true, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, berrySecretKnown: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", ngplusBattles: 0, sylvebarbeAwake: false, labDefi: emptyLabDefi(), customDaemons: st.customDaemons, ngplusStartedAt: Date.now(), playtimeMs: 0, leaguePotions: 0, ngplusUsed: true, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "" }
+    st = { team: [starter], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: true, pokerFirstGameDone: st.pokerFirstGameDone, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: true, pastaGodGift: true, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: true, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, berrySecretKnown: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", ngplusBattles: 0, sylvebarbeAwake: false, labDefi: emptyLabDefi(), customDaemons: st.customDaemons, ngplusStartedAt: Date.now(), playtimeMs: 0, leaguePotions: 0, ngplusUsed: true, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", run3Defeated: [], caughtThisRun: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0 }
     emit()
 }
 
@@ -420,7 +486,7 @@ export function startNgPlusWorld(starter: MonInstance) {
  *  départ (500) + le passage activeWorld="run3" sont gérés par saveManager.startRun3. On réutilise ngplusStartedAt
  *  comme horodatage de départ du run (le run 3 n'a pas de champ dédié). */
 export function startRun3World(starter: MonInstance) {
-    st = { team: [starter], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: true, pokerFirstGameDone: st.pokerFirstGameDone, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: true, pastaGodGift: true, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: true, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, berrySecretKnown: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", ngplusBattles: 0, sylvebarbeAwake: false, labDefi: emptyLabDefi(), customDaemons: st.customDaemons, ngplusStartedAt: Date.now(), playtimeMs: 0, leaguePotions: 0, ngplusUsed: true, run3Used: true, ngplusMaitreBeaten: false, run3StarterBase: starter.speciesId }
+    st = { team: [starter], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: true, pokerFirstGameDone: st.pokerFirstGameDone, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: true, pastaGodGift: true, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: true, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, berrySecretKnown: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", ngplusBattles: 0, sylvebarbeAwake: false, labDefi: emptyLabDefi(), customDaemons: st.customDaemons, ngplusStartedAt: Date.now(), playtimeMs: 0, leaguePotions: 0, ngplusUsed: true, run3Used: true, ngplusMaitreBeaten: false, run3StarterBase: starter.speciesId, run3Defeated: [], caughtThisRun: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0 }
     emit()
 }
 

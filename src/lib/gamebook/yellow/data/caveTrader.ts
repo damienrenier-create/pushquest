@@ -31,3 +31,37 @@ export const CAVE_TRADE_DONE_LINES = [
 export const CAVE_TRADE_ALREADY_LINES = [
     "Je n'avais qu'un seul BÉLUNODE à offrir, et il nage déjà avec toi. Élève-le bien — c'est tout ce que j'avais !",
 ]
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RUN 3 (concours) — le DÉNICHEUR change de marché : il veut un RUFFIANT (grouille dans les hautes herbes du
+// run 3) et cède un MARMOTERRE (qui deviendra un IOROURS, colosse de pierre, au niv 20). Retiré de la grotte
+// du run 3 → cet échange est LA source de Marmoterre. Même mécanique (unique, Ⓐ valider / Ⓑ renoncer).
+// ─────────────────────────────────────────────────────────────────────────────
+export const CAVE_TRADE_GIVE_RUN3 = "ruffiant"      // ce que le joueur DONNE en run 3
+export const CAVE_TRADE_RECEIVE_RUN3 = "marmoterre" // ce qu'il REÇOIT (base de la lignée Iorours)
+
+export const CAVE_TRADER_OFFER_LINES_RUN3 = [
+    "Tiens, un RUFFIANT ! Ces petites fourmis me fascinent — j'en collectionne pour mes fouilles.",
+    "En échange, je te cède une pierre vivante remontée des tréfonds : un MARMOTERRE. Une motte insignifiante… mais élève-la, et tu verras se dresser un IOROURS, un colosse de roc.",
+    "J'échange le PREMIER RUFFIANT de ton ÉQUIPE (son entraînement est préservé). Marché conclu ?  →  Ⓐ ÉCHANGER · Ⓑ renoncer",
+]
+export const CAVE_TRADE_CANCEL_LINES_RUN3 = [
+    "Comme tu veux ! Garde ton Ruffiant… mais si tu changes d'avis, tu sais où me trouver. Ce Marmoterre n'attendra pas éternellement.",
+]
+export const CAVE_TRADER_NEED_LINES_RUN3 = [
+    "Reviens me voir avec un RUFFIANT (ça grouille dans les hautes herbes du concours), et je te céderai une curiosité minérale des profondeurs !",
+]
+export const CAVE_TRADE_DONE_LINES_RUN3 = [
+    "Marché conclu ! Ton Ruffiant part rejoindre ma collection…",
+    "…et voici ta pierre vivante : un MARMOTERRE ! Une motte à l'œil nu, mais c'est le noyau d'un colosse. Élève-le — il deviendra un IOROURS. 🪨",
+]
+export const CAVE_TRADE_ALREADY_LINES_RUN3 = [
+    "Je n'avais qu'un seul MARMOTERRE à offrir, et il roule déjà avec toi. Élève-le bien — c'est tout ce que j'avais !",
+]
+
+/** Config du DÉNICHEUR selon le monde : run 3 = ruffiant→marmoterre, sinon (run 1/2) = limaroche→belunode. */
+export function caveTradeConfig(run3: boolean) {
+    return run3
+        ? { give: CAVE_TRADE_GIVE_RUN3, receive: CAVE_TRADE_RECEIVE_RUN3, offer: CAVE_TRADER_OFFER_LINES_RUN3, need: CAVE_TRADER_NEED_LINES_RUN3, done: CAVE_TRADE_DONE_LINES_RUN3, cancel: CAVE_TRADE_CANCEL_LINES_RUN3, already: CAVE_TRADE_ALREADY_LINES_RUN3 }
+        : { give: CAVE_TRADE_GIVE, receive: CAVE_TRADE_RECEIVE, offer: CAVE_TRADER_OFFER_LINES, need: CAVE_TRADER_NEED_LINES, done: CAVE_TRADE_DONE_LINES, cancel: CAVE_TRADE_CANCEL_LINES, already: CAVE_TRADE_ALREADY_LINES }
+}

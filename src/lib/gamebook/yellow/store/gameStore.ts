@@ -36,7 +36,7 @@ import { NGPLUS_ARENA_TEAMS, RUN3_ARENA_TEAMS, arenaRevancheBoost, arenaRevanche
 import { createMonInstance } from "../battle/factory"
 import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroLines, SBIRE_DONE_LINES, SBIRE_NO_TEAM_LINES } from "../data/sbire"
 import { ACE_TRAINER_ID, ACE_TRIGGER_TILES, ACE_DONE_LINES, ACE_NO_TEAM_LINES, ACE_PASS_LINES, ACE_GATE_LINES, aceIntro, aceGiftLine, buildAceTeam, speciesAtLevel } from "../data/ace"
-import { CAVE_TRADER_ID, CAVE_TRADE_GIVE, CAVE_TRADE_RECEIVE, CAVE_TRADER_OFFER_LINES, CAVE_TRADER_NEED_LINES, CAVE_TRADE_DONE_LINES, CAVE_TRADE_ALREADY_LINES, CAVE_TRADE_CANCEL_LINES } from "../data/caveTrader"
+import { CAVE_TRADER_ID, caveTradeConfig } from "../data/caveTrader"
 import { HH_KID_ID, HH_KID_DAY_LINES, HH_KID_NIGHT_LINES, HH_KID_DAY_LINES_NGPLUS, HH_KID_DAWN_LINES, isHhKidNight, isHhKidDawn } from "../data/hhKid"
 import { ORCALINE_TRAINER_ID, orcalineTrainerDialogue } from "../data/orcalineTrainer"
 import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock } from "../data/sylvebarbeBlock"
@@ -305,12 +305,13 @@ function doHhTrade(giveUid: string): ActiveDialogue | null {
 function doCaveTrade(giveUid: string): ActiveDialogue | null {
     const owner = [...getPlayerSave().team, ...getPlayerSave().pc].find((m) => m.uid === giveUid)
     if (!owner) return null
-    const received = createMonInstance(CAVE_TRADE_RECEIVE, owner.level, { owned: true })
+    const cfg = caveTradeConfig(getActiveWorld() === "run3") // run 3 = ruffiant→marmoterre ; sinon limaroche→belunode
+    const received = createMonInstance(cfg.receive, owner.level, { owned: true })
     received.statPoints = owner.statPoints ?? 0 // préserve les points Saiyan
-    executeTrade(giveUid, received)             // retire le commun, ajoute le Bélunode
-    markCaveTradeDone()                          // échange unique → ne se reproposera plus
+    executeTrade(giveUid, received)             // retire le donné, ajoute le reçu
+    markCaveTradeDone()                          // échange unique (per-monde) → ne se reproposera plus
     persistYellowSave()
-    return { npcId: CAVE_TRADER_ID, npcName: "DÉNICHEUR", lineIndex: 0, lines: CAVE_TRADE_DONE_LINES }
+    return { npcId: CAVE_TRADER_ID, npcName: "DÉNICHEUR", lineIndex: 0, lines: cfg.done }
 }
 
 // COLLECTIONNEUR DE SPECTRES (maison hantée) : combat de dresseur réaffrontable, équipe = 3 spectres au
@@ -999,18 +1000,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
-        // DÉNICHEUR (Route Nord) : échange un LIMAROCHE (natif de la grotte) → Bélunode (base Léviathonn). UNE SEULE FOIS.
+        // DÉNICHEUR (Route Nord) : run 1/2 = LIMAROCHE→Bélunode ; run 3 = RUFFIANT→Marmoterre. UNE SEULE FOIS (per-monde).
         if (npc.id === CAVE_TRADER_ID) {
+            const cfg = caveTradeConfig(getActiveWorld() === "run3")
             if (getPlayerSave().caveTradeDone) {
-                set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: CAVE_TRADE_ALREADY_LINES } })
+                set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: cfg.already } })
                 return
             }
-            const give = [...getPlayerSave().team, ...getPlayerSave().pc].find((m) => m.speciesId === CAVE_TRADE_GIVE)
+            const give = [...getPlayerSave().team, ...getPlayerSave().pc].find((m) => m.speciesId === cfg.give)
             if (!give) {
-                set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: CAVE_TRADER_NEED_LINES } })
+                set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: cfg.need } })
                 return
             }
-            set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: CAVE_TRADER_OFFER_LINES, lineIndex: 0 }, pendingCaveTrade: give.uid })
+            set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: cfg.offer, lineIndex: 0 }, pendingCaveTrade: give.uid })
             return
         }
 
@@ -1187,8 +1189,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
             // Ⓑ = RENONCER à l'échange (étape de validation) : on ne troque RIEN, le Roctaur reste dans l'équipe.
             set({ dialogue: { npcId: HH_TRADER_ID, npcName: "BROCANTEUR", lineIndex: 0, lines: HH_TRADER_CANCEL_LINES }, pendingHhTrade: null })
         } else if (get().pendingCaveTrade) {
-            // Ⓑ = RENONCER à l'échange : on ne troque RIEN, le Limaroche reste dans l'équipe.
-            set({ dialogue: { npcId: CAVE_TRADER_ID, npcName: "DÉNICHEUR", lineIndex: 0, lines: CAVE_TRADE_CANCEL_LINES }, pendingCaveTrade: null })
+            // Ⓑ = RENONCER à l'échange : on ne troque RIEN, le Daemon donné reste dans l'équipe.
+            set({ dialogue: { npcId: CAVE_TRADER_ID, npcName: "DÉNICHEUR", lineIndex: 0, lines: caveTradeConfig(getActiveWorld() === "run3").cancel }, pendingCaveTrade: null })
         } else if (get().pendingHhCollector) {
             set({ dialogue: tryLaunchHhCollector(), pendingHhCollector: false })
         } else {

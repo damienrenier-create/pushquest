@@ -19,7 +19,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType, MoveSlot } from "../battle/types"
 import { markSeen, markCaught, getPokedex } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, recordOrcalineDefeat, orcalineLevelForWins, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, recordOrcalineDefeat, orcalineLevelForWins, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, markCaughtThisRun, markRun3LavapetitSeen, markRun3LavapetitCaught } from "./playerStore"
 import { getItem } from "../data/items"
 import { reportShiny } from "../shinyGift"
 import { ARENA_TICKET_VALUE, SBIRE_TICKET_VALUE, SBIRE_TICKET_EVERY, ACE_TICKET_VALUE, ACE_TICKET_WIN_BEFORE, ACE_TICKET_WIN_AFTER, ACE_TICKET_EARLY_VALUE, ACE_TICKET_WIN_EARLY, LEAGUE_ROULETTE_PER_KO, LEAGUE_AUTOGRAPH_CREDIT } from "../data/labDefis"
@@ -27,6 +27,7 @@ import { getCt } from "../data/cts"
 import { NGPLUS_BOSS_GIFTS, arenaRevancheBoost } from "../data/ngplusArenas"
 import { run3ArenaBossTeam } from "../data/run3Bosses"
 import { run3ArenaForBoss } from "../data/run3Arenas"
+import { bossEnemyKey, leagueEnemyKey } from "../data/run3Score"
 import { BERRY_SECRET_LINES_DRUIDE } from "../data/berryLore"
 import { getMove, getMoveByName } from "../data/moves"
 import { getSpecies } from "../data/species"
@@ -814,6 +815,22 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                     highlights: order.map((id) => leagueHighlights[id]).filter((h): h is LeagueHighlight => !!h),
                 }
             }
+        }
+    }
+
+    // RUN 3 — SCORE du concours : crédite chaque Daemon ENNEMI mis K.O. (boss d'arène + membres de Ligue),
+    //   dédupliqué par clé stable (bossEnemyKey/leagueEnemyKey ↔ index de b.enemy.team). Tourne sur win ET
+    //   lose : le run peut s'arrêter à 0⚡ EN PLEIN combat → on crédite la progression PARTIELLE.
+    if (getActiveWorld() === "run3" && storeState.trainer && !b.isWild) {
+        const tid = storeState.trainer.trainerId
+        const r3 = run3ArenaForBoss(tid)
+        const isLeague = tid.startsWith("y_ligue_")
+        if (r3 || isLeague) {
+            const newly: { key: string; level: number }[] = []
+            b.enemy.team.forEach((e, i) => {
+                if (e.currentHp <= 0) newly.push({ key: r3 ? bossEnemyKey(r3.badge, i) : leagueEnemyKey(tid, i), level: e.level })
+            })
+            if (newly.length) addRun3Defeated(newly)
         }
     }
 

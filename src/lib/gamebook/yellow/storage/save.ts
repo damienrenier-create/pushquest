@@ -137,6 +137,21 @@ export interface YellowSave {
     /** RUN 3 — speciesId de BASE du starter CHOISI (elefer/cornaive/coccipoing). Sert à donner à ACE le starter
      *  qui CONTRE le joueur (triangle Métal›Fée›Combat›Métal) + à résoudre le 3e starter (éleveur). "" hors run 3. */
     run3StarterBase: string
+    /** RUN 3 — ennemis VAINCUS (boss d'arène + Ligue), dédupliqués par clé (cf. bossEnemyKey/leagueEnemyKey),
+     *  pour le SCORE du concours = Σ de leurs niveaux (run3Score). Per-monde (vit dans le monde run 3). Défaut [].
+     *  Type structurel (= Run3DefeatedEnemy) inliné pour éviter tout cycle d'import storage↔data. */
+    run3Defeated: { key: string; level: number }[]
+    /** POKÉDEX — espèces capturées PENDANT le run EN COURS (overlay PER-MONDE par-dessus le Pokédex GLOBAL
+     *  cumulatif) → distingue « capturé ce run » de « capturé un run précédent ». Défaut []. */
+    caughtThisRun: string[]
+    /** RUN 3 — teaser Dieu Spaghetti sur Lavapetit déjà montré (à la rencontre) / Lavapetit déjà capturé ?
+     *  Per-monde, one-time (ne re-teaser jamais). Défaut false. */
+    run3LavapetitSeen: boolean
+    run3LavapetitCaught: boolean
+    /** MIMIMOY (roaming, monde LIVE) — le joueur a-t-il « rendu » Mimimoy au brocanteur (→ roaming armé) ? +
+     *  nombre d'apparitions du roaming (0..10, disparaît ensuite). Défaut false / 0. */
+    mimimoyReturned: boolean
+    mimimoyAppearances: number
 }
 
 /** Un « meilleur moment » d'un combat de la Ligue (best-of affiché au Hall of Fame). Runtime. */
@@ -165,7 +180,7 @@ export const SAVE_VERSION = 2
 const ACE_RATCHET_RESET_VERSION = 2
 
 export function emptySave(): YellowSave {
-    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, berrySecretKnown: false, berryHarvestDay: "", berryHarvestPicked: [], sylvebarbeAwake: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", ngplusBattles: 0, labDefi: emptyLabDefi(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "" }
+    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, berrySecretKnown: false, berryHarvestDay: "", berryHarvestPicked: [], sylvebarbeAwake: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", ngplusBattles: 0, labDefi: emptyLabDefi(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", run3Defeated: [], caughtThisRun: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0 }
 }
 
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -507,6 +522,19 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         // à tous les niveaux ; false par défaut (anciennes saves + monde live/run3 qui ne l'utilisent pas).
         ngplusMaitreBeaten: o.ngplusMaitreBeaten === true,
         run3StarterBase: typeof o.run3StarterBase === "string" ? o.run3StarterBase : "",
+        // RUN 3 — ennemis vaincus (score). Parse défensif (façon chips) : ne garde que les entrées {key,level}
+        // plausibles, dédup non nécessaire ici (addRun3Defeated dédup à l'écriture), borné à 64.
+        run3Defeated: Array.isArray(o.run3Defeated)
+            ? (o.run3Defeated as unknown[])
+                .filter((e): e is { key: string; level: number } => !!e && typeof e === "object" && typeof (e as { key?: unknown }).key === "string" && typeof (e as { level?: unknown }).level === "number")
+                .map((e) => ({ key: e.key, level: Math.max(0, Math.floor(e.level)) }))
+                .slice(0, 64)
+            : [],
+        caughtThisRun: Array.isArray(o.caughtThisRun) ? (o.caughtThisRun as unknown[]).filter((v): v is string => typeof v === "string").slice(0, 300) : [],
+        run3LavapetitSeen: o.run3LavapetitSeen === true,
+        run3LavapetitCaught: o.run3LavapetitCaught === true,
+        mimimoyReturned: o.mimimoyReturned === true,
+        mimimoyAppearances: typeof o.mimimoyAppearances === "number" ? Math.max(0, Math.min(10, Math.floor(o.mimimoyAppearances))) : 0,
     }
 }
 
