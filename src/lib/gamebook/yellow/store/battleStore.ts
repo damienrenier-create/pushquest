@@ -19,7 +19,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType, MoveSlot } from "../battle/types"
 import { markSeen, markCaught, getPokedex } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, recordOrcalineDefeat, orcalineLevelForWins, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, markCaughtThisRun, markRun3LavapetitSeen, markRun3LavapetitCaught } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, recordOrcalineDefeat, orcalineLevelForWins, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, markCaughtThisRun, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter } from "./playerStore"
 import { getItem } from "../data/items"
 import { reportShiny } from "../shinyGift"
 import { ARENA_TICKET_VALUE, SBIRE_TICKET_VALUE, SBIRE_TICKET_EVERY, ACE_TICKET_VALUE, ACE_TICKET_WIN_BEFORE, ACE_TICKET_WIN_AFTER, ACE_TICKET_EARLY_VALUE, ACE_TICKET_WIN_EARLY, LEAGUE_ROULETTE_PER_KO, LEAGUE_AUTOGRAPH_CREDIT } from "../data/labDefis"
@@ -683,12 +683,16 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             const winsBefore = recordOrcalineDefeat()
             const levelBeaten = orcalineLevelForWins(winsBefore)
             const ngplus = getActiveWorld() === "ngplus"
-            const dlg = orcalineTrainerDialogue(ngplus) // run 2 → dialogues/nom Panthégel
+            const run3 = getActiveWorld() === "run3"
+            const dlg = orcalineTrainerDialogue(getActiveWorld()) // run 2 → Panthégel ; run 3 → ÉLEVEUR
             const lines: string[] = []
             if (winsBefore === 0) {
-                // NG+ : le Dompteur offre un PANTHÉGEL (au lieu d'un Orcaline, désormais sauvage en Grotte). 1re victoire, one-time.
-                const giftSp = ngplus ? "panthegel" : ORCALINE_GIFT_SPECIES
-                addCaught(createMonInstance(giftSp, ORCALINE_GIFT_LEVEL, { owned: true }))
+                // NG+ : cadeau PANTHÉGEL. RUN 3 : l'ÉLEVEUR confie le 3e STARTER (ni le joueur ni ACE) au STADE-1
+                //   niveau 15 (prêt à évoluer). Run 1 : Orcaline. Cadeau one-time (winsBefore===0).
+                const giftSp = run3 ? (getRun3ThirdStarter() ?? ORCALINE_GIFT_SPECIES) : ngplus ? "panthegel" : ORCALINE_GIFT_SPECIES
+                const giftLvl = run3 ? 15 : ORCALINE_GIFT_LEVEL
+                addCaught(createMonInstance(giftSp, giftLvl, { owned: true }))
+                markCaught(giftSp); markCaughtThisRun(giftSp) // le cadeau entre au Pokédex (+ « ce run »)
                 lines.push(...dlg.gift)
             } else {
                 lines.push(...dlg.rematchWin)

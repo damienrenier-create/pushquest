@@ -75,9 +75,33 @@ const ORCALINE_BALL_LINES_NGPLUS = [
     "On murmure qu'elle seule peut capturer À COUP SÛR le plus insaisissable des légendaires… à condition de l'avoir d'abord bien affaibli. À toi de jouer. ❄️",
 ]
 
-/** Dialogues + nom du dresseur selon le monde : run 1 = ORCALINE (orques), run 2 = PANTHÉGEL (félins de glace). */
-export function orcalineTrainerDialogue(ngplus: boolean) {
-    return ngplus
-        ? { name: ORCALINE_TRAINER_NAME_NGPLUS, intro: ORCALINE_INTRO_LINES_NGPLUS, gift: ORCALINE_GIFT_LINES_NGPLUS, rematch: ORCALINE_REMATCH_LINES_NGPLUS, doneToday: ORCALINE_DONE_TODAY_LINES_NGPLUS, rematchWin: ORCALINE_REMATCH_WIN_LINES_NGPLUS, ball: ORCALINE_BALL_LINES_NGPLUS }
-        : { name: "DRESSEUR D'ORCALINE", intro: ORCALINE_INTRO_LINES, gift: ORCALINE_GIFT_LINES, rematch: ORCALINE_REMATCH_LINES, doneToday: ORCALINE_DONE_TODAY_LINES, rematchWin: ORCALINE_REMATCH_WIN_LINES, ball: ORCALINE_BALL_LINES }
+// ═══════════ RUN 3 (concours) — le même PNJ devient l'ÉLEVEUR : il élève le 3e starter (ni le tien, ni celui
+// d'ACE) et le CONFIE à la 1re victoire. Le cadeau ne nomme pas d'espèce (elle varie selon le starter choisi). ═══════════
+export const ORCALINE_TRAINER_NAME_RUN3 = "ÉLEVEUR"
+const ORCALINE_INTRO_LINES_RUN3 = [
+    "Salut, concurrent ! Ici je n'aligne pas des trophées : j'ÉLÈVE. Et j'ai sous la main le petit qui te MANQUE.",
+    "Mais je ne le confie pas à n'importe qui. Bats mes deux protégés, et on en reparle. Prêt ?",
+]
+const ORCALINE_GIFT_LINES_RUN3 = [
+    "Superbe ! Tu as la poigne ET le cœur — exactement ce qu'il lui faut.",
+    "Tiens : le TROISIÈME starter du concours, ni le tien ni celui d'ACE. Le pilier qui te manquait. Élève-le bien, il n'attend que toi.",
+    "Reviens mesurer tes progrès quand tu veux : mes protégés seront plus coriaces à chaque fois. 🥚",
+]
+const ORCALINE_REMATCH_LINES_RUN3 = [
+    "Te revoilà ! Mes protégés ont encore forci depuis la dernière fois…",
+    "Montre-moi jusqu'où vous pouvez aller ! On remet ça ?",
+]
+const ORCALINE_DONE_TODAY_LINES_RUN3 = [
+    "Mes protégés récupèrent de votre duel. Reviens demain — ils seront encore plus forts !",
+]
+const ORCALINE_REMATCH_WIN_LINES_RUN3 = [
+    "Bien joué ! Mes protégés seront encore plus forts demain. Reviens vite ! 🥚",
+]
+
+/** Dialogues + nom du dresseur selon le monde : run 1 = ORCALINE (orques), run 2 = PANTHÉGEL (félins de glace),
+ *  run 3 = ÉLEVEUR (confie le 3e starter). */
+export function orcalineTrainerDialogue(world: "live" | "ngplus" | "run3") {
+    if (world === "run3") return { name: ORCALINE_TRAINER_NAME_RUN3, intro: ORCALINE_INTRO_LINES_RUN3, gift: ORCALINE_GIFT_LINES_RUN3, rematch: ORCALINE_REMATCH_LINES_RUN3, doneToday: ORCALINE_DONE_TODAY_LINES_RUN3, rematchWin: ORCALINE_REMATCH_WIN_LINES_RUN3, ball: ORCALINE_BALL_LINES }
+    if (world === "ngplus") return { name: ORCALINE_TRAINER_NAME_NGPLUS, intro: ORCALINE_INTRO_LINES_NGPLUS, gift: ORCALINE_GIFT_LINES_NGPLUS, rematch: ORCALINE_REMATCH_LINES_NGPLUS, doneToday: ORCALINE_DONE_TODAY_LINES_NGPLUS, rematchWin: ORCALINE_REMATCH_WIN_LINES_NGPLUS, ball: ORCALINE_BALL_LINES_NGPLUS }
+    return { name: "DRESSEUR D'ORCALINE", intro: ORCALINE_INTRO_LINES, gift: ORCALINE_GIFT_LINES, rematch: ORCALINE_REMATCH_LINES, doneToday: ORCALINE_DONE_TODAY_LINES, rematchWin: ORCALINE_REMATCH_WIN_LINES, ball: ORCALINE_BALL_LINES }
 }

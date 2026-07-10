@@ -23,7 +23,7 @@ import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, 
 import { run3ArenaForBoss, run3BossIntroLines } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, resetLigueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, addItem, getActiveWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, resetLigueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, addItem, getActiveWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
 import { getHeldItem } from "../data/heldItems"
 import { BERRY_SECRET_LINES_ASSISTANT } from "../data/berryLore"
@@ -363,13 +363,16 @@ function tryLaunchAce(): ActiveDialogue | null {
 // DRESSEUR D'ORCALINE (plaine) : aligne 2 Orcalines de même niveau (35 + 10×victoires, cap 100).
 function tryLaunchOrcaline(): ActiveDialogue | null {
     const team = getPlayerSave().team
-    const dlg = orcalineTrainerDialogue(getActiveWorld() === "ngplus") // run 2 = PANTHÉGEL (dialogues + nom adaptés)
+    const dlg = orcalineTrainerDialogue(getActiveWorld()) // run 2 = PANTHÉGEL, run 3 = ÉLEVEUR (dialogues + nom adaptés)
     if (!team.some((m) => m.currentHp > 0)) {
         return { npcId: ORCALINE_TRAINER_ID, npcName: dlg.name, lineIndex: 0, lines: ["Tes Daemons sont tous K.O. !", "Soigne-les au Centre avant de m'affronter."] }
     }
     const lvl = orcalineNextLevel()
-    // NG+ : le « Dompteur » aligne des PANTHÉGEL (Orcaline devient une capture sauvage de la Grotte). Run 1 = Orcaline.
-    const sp = getActiveWorld() === "ngplus" ? "panthegel" : "orcaline"
+    // NG+ : le « Dompteur » aligne des PANTHÉGEL. RUN 3 : l'ÉLEVEUR aligne le 3e STARTER (celui qu'il va te confier),
+    //   évolué au bon stade pour le niveau (foreshadow du cadeau). Run 1 = Orcaline.
+    const sp = getActiveWorld() === "run3"
+        ? speciesAtLevel(getRun3ThirdStarter() ?? "orcaline", lvl)
+        : getActiveWorld() === "ngplus" ? "panthegel" : "orcaline"
     const enemyTeam = [0, 1].map(() => createMonInstance(sp, lvl, { owned: false, ...trainerBoost(sp, lvl, "guard") }))
     const seed = Math.floor(Math.random() * 1e9) >>> 0
     startTrainerBattle(team, enemyTeam, seed, { trainerId: ORCALINE_TRAINER_ID, reward: 0, aiLevel: "trainer" })
@@ -1033,7 +1036,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // DRESSEUR D'ORCALINE (plaine) : 1 combat gagnant/jour ; le niveau de ses 2 Orcalines monte de +10
         // à chaque victoire. 1re victoire → cadeau Orcaline (géré dans finishBattle). Combat à la fermeture.
         if (npc.id === ORCALINE_TRAINER_ID) {
-            const dlg = orcalineTrainerDialogue(getActiveWorld() === "ngplus") // run 2 → dialogues/nom Panthégel
+            const dlg = orcalineTrainerDialogue(getActiveWorld()) // run 2 → Panthégel ; run 3 → ÉLEVEUR
             if (!orcalineAvailableToday()) {
                 set({ dialogue: { npcId: npc.id, npcName: dlg.name, lineIndex: 0, lines: dlg.doneToday } })
                 return
