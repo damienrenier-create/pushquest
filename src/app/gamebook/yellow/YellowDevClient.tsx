@@ -477,6 +477,18 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         const d = mapPlayer.direction
         const fx = mapPlayer.posX + (d === "left" ? -1 : d === "right" ? 1 : 0)
         const fy = mapPlayer.posY + (d === "up" ? -1 : d === "down" ? 1 : 0)
+        // RUN 3 (concours) : les TABLES du casino (mise = énergie) sont FERMÉES — pas de mise, pas de gain. Le
+        //   kart (course arcade, sans mise) reste ouvert. Le verrou énergie couvre déjà les gains ; ceci évite
+        //   juste d'ouvrir une table inutile.
+        if (activeWorld === "run3") {
+            const onTable =
+                (fx >= 3 && fx <= 5 && fy >= 4 && fy <= 5) || // roulette (multi)
+                (fx === 4 && fy === 3) ||                      // croupier
+                (fy === 2 && fx >= 9 && fx <= 12) ||           // barman (rachat de tickets)
+                (fy === 1 && fx >= 1 && fx <= 2) ||            // blackjack
+                (fx >= 3 && fx <= 5 && fy >= 7 && fy <= 8)     // poker
+            if (onTable) { menuTapGuard.current = Date.now(); setToast("🎰 Casino FERMÉ pendant le CONCOURS — pas de mise ni de gain."); return true }
+        }
         if (fx >= 3 && fx <= 5 && fy >= 4 && fy <= 5) { menuTapGuard.current = Date.now(); setRouletteMpOpen(true); return true }
         if (fx === 4 && fy === 3) { menuTapGuard.current = Date.now(); setCroupierOpen(true); return true }
         if (fy === 2 && fx >= 9 && fx <= 12) { menuTapGuard.current = Date.now(); setBarmanOpen(true); return true } // comptoir du barman
@@ -493,7 +505,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             return true
         }
         return false
-    }, [inCasino, userId, mapPlayer])
+    }, [inCasino, userId, mapPlayer, activeWorld])
 
     // A dans le casino SANS cible d'interaction : tente d'abord un PNJ (pressA) ; si aucun dialogue ne
     // s'ouvre, FOUILLE la case-sol courante (jetons cachés — secret, cf. ensureDailyChips/searchChipTile).
@@ -1938,7 +1950,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 </button>
             )}
             {/* Roulette EUROPÉENNE (bêta) — entrée provisoire dans le casino (la table-sur-map via sprite 16×16 viendra ensuite) */}
-            {inCasino && !battle && !showIntro && !chatOpen && !rouletteOpen && (
+            {inCasino && activeWorld !== "run3" && !battle && !showIntro && !chatOpen && !rouletteOpen && (
                 <button onClick={() => setRouletteOpen(true)} style={{ ...chatFabStyle, bottom: 84, fontSize: 22 }} title="Roulette européenne">🎡</button>
             )}
             {rouletteOpen && <RouletteCasinoModal onClose={() => setRouletteOpen(false)} />}
