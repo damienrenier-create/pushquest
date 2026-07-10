@@ -3,7 +3,7 @@
 // Nexus Jaune Éclair — pont entre les stores (joueur + Pokédex) et l'API de save.
 // Charge au démarrage, puis auto-sauvegarde (débouncé) à chaque changement.
 
-import { getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, bankReps, claimWelcomeGift, claimSpagGift, applySaiyanResults, resetForIntro, reregisterCustomDaemons, getActiveWorld, setActiveWorld, startNgPlusWorld, startRun3World, raiseRepsCap, grantReps, addItem } from "./playerStore"
+import { getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, bankReps, claimWelcomeGift, claimSpagGift, applySaiyanResults, resetForIntro, reregisterCustomDaemons, getActiveWorld, setActiveWorld, startNgPlusWorld, startRun3World, raiseRepsCap, grantReps, addItem, setBerrySecretKnown } from "./playerStore"
 import { getPokedex, hydratePokedex, subscribePokedex } from "./pokedexStore"
 import { parseSave, emptySave, type YellowSave, type ChampionMon, SAVE_VERSION } from "../storage/save"
 import type { StoredCustomDaemon } from "../create/customSpecies"
@@ -71,6 +71,9 @@ export function applyServerSave(save: YellowSave): void {
         seen: [...new Set(pdxWorlds.flatMap((w) => w.pokedex?.seen ?? []))],
         caught: [...new Set(pdxWorlds.flatMap((w) => w.pokedex?.caught ?? []))],
     })
+    // BAIES : le secret des baies est GLOBAL (connaissance acquise « une fois pour toutes ») → OR sur tous les
+    // mondes. Appris en run 1/2 → reste connu en run 2/3. snapshot() le réécrit ensuite dans tous les mondes.
+    if (pdxWorlds.some((w) => w.berrySecretKnown)) setBerrySecretKnown()
     setActiveWorld(aw)
     reregisterCustomDaemons() // Phase 2 : rend les Daemons custom résolvables en combat (getSpecies) dès le chargement
 }
@@ -132,10 +135,11 @@ export function snapshot(): YellowSave {
     const active = activeWorldSave()
     const cds = getPlayer().customDaemons ?? []
     const pdx = getPokedex() // POKÉDEX GLOBAL/cumulatif : le MÊME set est écrit dans TOUS les mondes (jamais divergent)
+    const berryKnown = getPlayer().berrySecretKnown // BAIES : secret GLOBAL — une fois appris, écrit dans TOUS les mondes
     const aw = getActiveWorld()
-    // Chaque monde : actif = les stores, sinon son stash. Normalisé (méta multi-mondes nettoyée, customDaemons + pokédex globaux).
+    // Chaque monde : actif = les stores, sinon son stash. Normalisé (méta multi-mondes nettoyée, customDaemons + pokédex + baies globaux).
     const norm = (w: YellowSave | null): YellowSave | null =>
-        w ? { ...w, pokedex: { seen: [...pdx.seen], caught: [...pdx.caught] }, customDaemons: cds, activeWorld: "live" as const, ngplusWorld: null, ngplusOldTeam: null, run3World: null } : null
+        w ? { ...w, pokedex: { seen: [...pdx.seen], caught: [...pdx.caught] }, berrySecretKnown: w.berrySecretKnown || berryKnown, customDaemons: cds, activeWorld: "live" as const, ngplusWorld: null, ngplusOldTeam: null, run3World: null } : null
     const live = aw === "live" ? active : (liveStash ?? emptySave())
     const ngplus = aw === "ngplus" ? active : ngplusStash
     const run3 = aw === "run3" ? active : run3Stash
@@ -355,6 +359,9 @@ export async function startRun3(starter: MonInstance): Promise<boolean> {
     ngplusStash = liveWorldOf(activeWorldSave())
     // 2) Monde run 3 frais dans les stores (starter, run3Used=true, customDaemons préservés).
     startRun3World(starter)
+    // Baies : le joueur connaît déjà le secret des baies (appris en run 1/2) → récolte dispo dès le run 3.
+    // Ressource NON-énergie précieuse dans un run privé de casino/tickets (soin/boost gratuits au combat).
+    setBerrySecretKnown()
     // POKÉDEX conservé (cumulatif) : les captures run 1+2 restent — pas de reset au lancement du run 3.
     setActiveWorld("run3")
     run3Stash = null

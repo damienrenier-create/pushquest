@@ -13,7 +13,12 @@ export const CAVE_TRADE_RECEIVE = "belunode"   // ce qu'il REÇOIT (base de la l
 
 export const CAVE_TRADER_OFFER_LINES = [
     "Tiens, un LIMAROCHE ! Tu as fouillé la grotte, à ce que je vois… Ces petits fossiles, j'en raffole.",
-    "Je te l'échange contre une curiosité que j'ai remontée des profondeurs : un BÉLUNODE. Un têtard fadasse en apparence… mais élève-le, et tu verras surgir un LÉVIATHON des abysses. Marché conclu ?",
+    "Je te l'échange contre une curiosité que j'ai remontée des profondeurs : un BÉLUNODE. Un têtard fadasse en apparence… mais élève-le, et tu verras surgir un LÉVIATHON des abysses.",
+    "J'échange le PREMIER LIMAROCHE de ton ÉQUIPE (son entraînement est préservé). Marché conclu ?  →  Ⓐ ÉCHANGER · Ⓑ renoncer",
+]
+// Le joueur a renoncé (Ⓑ) : on ne troque RIEN, le Limaroche reste dans l'équipe.
+export const CAVE_TRADE_CANCEL_LINES = [
+    "Comme tu veux ! Garde ton Limaroche… mais si tu changes d'avis, tu sais où me trouver. Ce Bélunode n'attendra pas éternellement.",
 ]
 export const CAVE_TRADER_NEED_LINES = [
     "Reviens me voir avec un LIMAROCHE (ça grouille dans la grotte, juste là), et je te révélerai une curiosité des profondeurs !",
