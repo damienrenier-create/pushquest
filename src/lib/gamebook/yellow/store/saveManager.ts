@@ -278,9 +278,10 @@ const uniq = (arr: string[]): string[] => [...new Set(arr)]
 /** FUSION de 2 mondes → un seul. `primary` = monde NG+ (timeline gagnante, garde TOUTE sa progression) ;
  *  `secondary` = monde d'origine (ses Daemons — équipe + PC — sont RÉCUPÉRÉS dans le PC fusionné). Pokédex/
  *  badges/CT en union, objets sommés, plafond d'énergie au max. Résultat = un monde LIVE unique (méta NG+ nettoyée). */
-export function mergeWorlds(primary: YellowSave, secondary: YellowSave): YellowSave {
-    // Récupère TOUS les Daemons du monde d'origine (équipe + PC) dans le PC fusionné (uid re-préfixés → jamais de collision).
-    const reclaimed: MonInstance[] = [...secondary.team, ...secondary.pc].map((m, i) => ({ ...m, uid: `fus${i}-${m.uid}` }))
+export function mergeWorlds(primary: YellowSave, secondary: YellowSave, tag = "fus"): YellowSave {
+    // Récupère TOUS les Daemons du monde d'origine (équipe + PC) dans le PC fusionné. Le préfixe `tag` est DISTINCT
+    // par appel (fusion 3-voies = 2 merges) → deux ensembles absorbés n'entrent jamais dans le même espace d'uid.
+    const reclaimed: MonInstance[] = [...secondary.team, ...secondary.pc].map((m, i) => ({ ...m, uid: `${tag}${i}-${m.uid}` }))
     const items: Record<string, number> = { ...primary.items }
     for (const [k, v] of Object.entries(secondary.items)) items[k] = (items[k] ?? 0) + v
     // QUÊTE DU CASINO (pilier Tonytony) : le monde fusionné REDEVIENT "live" → son pilier redevient TONYTONY.
@@ -318,6 +319,27 @@ export function mergeWorlds(primary: YellowSave, secondary: YellowSave): YellowS
         // porte (run 1 = secondary), jamais perdue à la fusion.
         mimimoyReturned: primary.mimimoyReturned || secondary.mimimoyReturned,
         mimimoyAppearances: Math.max(primary.mimimoyAppearances, secondary.mimimoyAppearances),
+        // FLAGS ONE-TIME MONOTONES : union/OR — sinon ils prennent la valeur (neuve, vide) du monde primary et
+        //   RÉSOLVENT ces « uniques » à la fusion : Gékroc réapparaîtrait (duplication d'un unique), Sylvebarbe
+        //   re-bloquerait la sortie sud (Zone de Combat re-verrouillée), les dresseurs battus au run 1 mais pas
+        //   au run 3 redeviendraient affrontables (re-farm d'énergie/XP), etc.
+        gekrocResolved: primary.gekrocResolved || secondary.gekrocResolved,
+        sylvebarbeAwake: primary.sylvebarbeAwake || secondary.sylvebarbeAwake,
+        goshHintHeard: primary.goshHintHeard || secondary.goshHintHeard,
+        // caveTradeDone : sémantique PAR MONDE (run 1 = limaroche→belunode ; run 3 = ruffiant→marmoterre). Après
+        //   fusion on est en LIVE → on conserve le statut du troc LIVE = secondary (run 1 dans le merge final).
+        caveTradeDone: secondary.caveTradeDone,
+        defeatedTrainers: uniq([...primary.defeatedTrainers, ...secondary.defeatedTrainers]),
+        rematchedTrainers: uniq([...primary.rematchedTrainers, ...secondary.rematchedTrainers]),
+        hhSpectresShown: uniq([...primary.hhSpectresShown, ...secondary.hhSpectresShown]),
+        hhCollectorWins: Math.max(primary.hhCollectorWins, secondary.hhCollectorWins),
+        orcalineWins: Math.max(primary.orcalineWins, secondary.orcalineWins),
+        // ACE : cliquet + milestone conservés au plus haut (le Panthéon gagné est déjà dans le PC fusionné ; on
+        //   ne perd pas le compteur de victoires ni le pic de niveau/taille).
+        aceWins: Math.max(primary.aceWins, secondary.aceWins),
+        acePeakLevel: Math.max(primary.acePeakLevel, secondary.acePeakLevel),
+        aceTeamSizePeak: Math.max(primary.aceTeamSizePeak, secondary.aceTeamSizePeak),
+        aceBox: { ...secondary.aceBox, ...primary.aceBox },
         isChampion: true,
         ngplusBattles: 0, // compteur d'engagement sans objet après fusion
         // Métriques de score du run 2 : remises à ZÉRO à la fusion (le monde redevient "live" → plus de run 2 en cours).
@@ -389,19 +411,25 @@ export async function startRun3(starter: MonInstance): Promise<boolean> {
 export async function completeRun3(): Promise<void> {
     if (getActiveWorld() !== "run3") return
     const run3 = activeWorldSave()
-    // Fusion successive : run3 ⊕ run2, puis ⊕ run1 (mergeWorlds garde le primary comme timeline active).
-    const step1 = ngplusStash ? mergeWorlds(run3, ngplusStash) : run3
-    const mergedRaw = liveStash ? mergeWorlds(step1, liveStash) : step1
+    // Fusion successive : run3 ⊕ run2, puis ⊕ run1 (mergeWorlds garde le primary comme timeline active). Tags
+    //   d'uid DISTINCTS ("fusR2"/"fusR1") pour les deux mondes absorbés → zéro collision d'uid dans le PC fusionné.
+    const step1 = ngplusStash ? mergeWorlds(run3, ngplusStash, "fusR2") : run3
+    const mergedRaw = liveStash ? mergeWorlds(step1, liveStash, "fusR1") : step1
     const merged: YellowSave = { ...mergedRaw, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null, ngplusUsed: true, run3Used: true, ngplusMaitreBeaten: false, run3StarterBase: "" }
     liveStash = null
     ngplusStash = null
     run3Stash = null
     ngplusOldTeam = null
+    // suppressAutosave : hydrateFromWorld émet et ARMERAIT l'autosave débouncé (800ms) qui pourrait écraser la
+    //   save PRÉ-fusion AVANT que le backup ne la capture. On désarme pendant toute l'opération (backup + write).
+    suppressAutosave = true
+    if (timer) { clearTimeout(timer); timer = null }
     hydrateFromWorld(merged, merged.customDaemons ?? [])
     setActiveWorld("live")
     reregisterCustomDaemons()
     try { await fetch("/api/gamebook/yellow/save/backup", { method: "POST" }) } catch { /* best-effort */ }
     await persistNow()
+    suppressAutosave = false
 }
 
 /**
