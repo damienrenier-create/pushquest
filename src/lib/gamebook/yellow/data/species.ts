@@ -528,8 +528,8 @@ export const SPECIES: Record<string, SpeciesData> = {
         baseStats: { hp: 46, atk: 52, def: 68, spe: 26, spc: 54 },
         learnset: [
             { level: 1, moveId: "charge" },
-            { level: 1, moveId: "mur_de_fer" },
-            { level: 4, moveId: "griffe_acier" },
+            { level: 4, moveId: "griffe_acier" },  // STAB Métal
+            { level: 8, moveId: "mur_de_fer" },     // set-up Déf (décalé de 1→8 : un starter n'a pas 3 moves au niv 5)
             { level: 14, moveId: "carapace_diamant" },
         ],
         evolution: { toId: "barrisfer", method: { kind: "LEVEL", level: 16 } },
@@ -627,8 +627,8 @@ export const SPECIES: Record<string, SpeciesData> = {
         baseStats: { hp: 44, atk: 72, def: 38, spe: 66, spc: 34 },
         learnset: [
             { level: 1, moveId: "charge" },
-            { level: 1, moveId: "vive_attaque" },
             { level: 4, moveId: "double_pied" },
+            { level: 7, moveId: "vive_attaque" }, // décalé de 1→7 : un starter n'a pas 3 moves au niv 5
             { level: 9, moveId: "essaim_vorace" },
             { level: 15, moveId: "poing_karate" },
         ],
