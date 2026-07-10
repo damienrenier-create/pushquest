@@ -44,7 +44,7 @@ import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LI
 import { SYLVEBARBE_NPC_ID, SYLVEBARBE_INTRO_LINES, SYLVEBARBE_DONE_LINES, SYLVEBARBE_NO_FLUTE_LINES, SYLVEBARBE_NO_TEAM_LINES, buildSylvebarbe, FLUTE_GIVE_LINES } from "../data/sylvebarbe"
 import { CHEN_LAB_LINES, LAB_ASSISTANT_LINES, LAB_ASSISTANT_LINES_NGPLUS, LAB_ASSISTANT_LINES_RUN3, CHEN_ABANDON_OFFER_LINES, CHEN_RUN3_TEASER_LINES, CHEN_RUN3_EVOLVE_LINES } from "../data/labDialogues"
 import { MAGNETOR_EVO_ITEM } from "../data/items"
-import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADE_RECEIVE_RUN1, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_TRADER_OFFER_LINES_RUN1, HH_TRADER_NEED_LINES_RUN1, HH_TRADER_HAS_MORROW_LINES, HH_TRADER_CANCEL_LINES, HH_TRADE_AQUILOTHAN_GIVE, HH_TRADE_AQUILOTHAN_RECEIVE, HH_TRADER_AQUILORD_OFFER_LINES, HH_TRADER_AQUILORD_DONE_LINES, HH_TRADER_AQUILORD_CANCEL_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
+import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADE_RECEIVE_RUN1, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_TRADER_OFFER_LINES_RUN1, HH_TRADER_NEED_LINES_RUN1, HH_TRADER_HAS_MORROW_LINES, HH_TRADER_CANCEL_LINES, HH_TRADE_AQUILOTHAN_GIVE, HH_TRADE_AQUILOTHAN_RECEIVE, HH_TRADER_AQUILORD_OFFER_LINES, HH_TRADER_AQUILORD_NEED_LINES, HH_TRADER_AQUILORD_DONE_LINES, HH_TRADER_AQUILORD_CANCEL_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
 
 export interface ActiveDialogue {
     npcId: string
@@ -1020,19 +1020,26 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
-        // BROCANTEUR (maison hantée) : échange un Roctaur — WORLD-AWARE. RUN 1 → ROCHISON (trade-évo) ; RUN 2 → MORROW.
-        // Un joueur possédant DÉJÀ un Morrow (obtenu jadis en run 1) est ÉCARTÉ du service Rochison → il le garde.
+        // BROCANTEUR (maison hantée) — WORLD-AWARE. RUN 1 → Roctaur→ROCHISON (trade-évo) ; RUN 2 → Roctaur→MORROW ;
+        // RUN 3 → PLUS de Roctaur : uniquement le service AQUILOTHAN→AQUILORD. (Post-game live : Aquilord ET Roctaur.)
         if (npc.id === HH_TRADER_ID) {
-            const ngplus = getActiveWorld() === "ngplus"
-            // SERVICE PREMIUM (monde LIVE, post-game) : un AQUILOTHAN en équipe → trade-évo en AQUILORD (interlude
+            const world = getActiveWorld()
+            // SERVICE PREMIUM (post-game : live OU run 3) : un AQUILOTHAN en équipe → trade-évo en AQUILORD (interlude
             //   Mimimoy → amorce son roaming). Prioritaire sur le service Roctaur (le joueur l'apporte exprès).
-            if (getActiveWorld() === "live") {
+            if (world === "live" || world === "run3") {
                 const aq = getPlayerSave().team.find((m) => m.speciesId === HH_TRADE_AQUILOTHAN_GIVE)
                 if (aq) {
                     set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: HH_TRADER_AQUILORD_OFFER_LINES, lineIndex: 0 }, pendingAquilordTrade: aq.uid })
                     return
                 }
             }
+            // RUN 3 : le brocanteur ne fait QUE l'Aquilord (le Roctaur→Rochison n'a aucun sens ici). Sans Aquilothan → invite.
+            if (world === "run3") {
+                set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: HH_TRADER_AQUILORD_NEED_LINES } })
+                return
+            }
+            // RUN 1/2 : service Roctaur (→ Rochison / Morrow).
+            const ngplus = world === "ngplus"
             if (!ngplus && getPokedex().caught.includes(HH_TRADE_RECEIVE)) {
                 set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: HH_TRADER_HAS_MORROW_LINES } })
                 return

@@ -543,7 +543,10 @@ export function hasBadge(id: BadgeId): boolean {
 /** Accorde un badge (idempotent) : augmente aussi le plafond de stockage des reps. */
 export function awardBadge(id: BadgeId): boolean {
     if (st.badges.includes(id)) return false
-    st = { ...st, badges: [...st.badges, id], repsCap: st.repsCap + BADGE_REPS_CAP_BONUS }
+    // RUN 3 : le plafond d'énergie est FIXE (échelle de recharge d'arène : 500→1000, jamais au-dessus) → les
+    //   badges ne le gonflent PAS (sinon la jauge se remplirait au-delà des paliers attendus). Run 1/2 : +250.
+    const capBonus = activeWorld === "run3" ? 0 : BADGE_REPS_CAP_BONUS
+    st = { ...st, badges: [...st.badges, id], repsCap: st.repsCap + capBonus }
     emit()
     return true
 }
