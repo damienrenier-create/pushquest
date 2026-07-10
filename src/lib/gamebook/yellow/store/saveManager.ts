@@ -13,10 +13,10 @@ import { saiyanPointsForLevels, type SaiyanWindow } from "../data/saiyanConfig"
 
 /** Énergie de départ d'un New Game+ (crédit + plafond). */
 export const NGPLUS_START_ENERGY = 10000
-/** RUN 3 (concours) — énergie de départ (offerte par le Dieu Spaghetti) + plafond large pour encaisser les
- *  paliers d'arène (500 + 700 + 900 + 1100 + 1300 + 1500 = 6000 max cumulé). */
+/** RUN 3 (concours) — énergie de DÉPART (500) + plafond = le MAX atteignable de la nouvelle échelle de recharge
+ *  (les arènes RECHARGENT jusqu'à 500/600/700/800/1000, jamais au-dessus → le plafond utile est 1000). */
 export const RUN3_START_ENERGY = 500
-export const RUN3_ENERGY_CAP = 6000
+export const RUN3_ENERGY_CAP = 1000
 
 let loaded = false
 let autosaveInit = false
@@ -374,9 +374,10 @@ export async function startRun3(starter: MonInstance): Promise<boolean> {
     // POKÉDEX conservé (cumulatif) : les captures run 1+2 restent — pas de reset au lancement du run 3.
     setActiveWorld("run3")
     run3Stash = null
-    // 3) Énergie de départ : 500 (unique source), plafond large (paliers d'arène jusqu'à 6000 cumulés).
-    raiseRepsCap(RUN3_ENERGY_CAP - 1000)  // cap 1000 → 6000
-    grantReps(RUN3_START_ENERGY, true)    // reps → 500 (force : seule source autorisée avec les paliers d'arène)
+    // 3) Énergie de départ : 500 (unique source). Le plafond reste 1000 (le max de l'échelle de recharge d'arène) —
+    //    raiseRepsCap(0) = no-op, le repsCap de base (1000) suffit puisque les arènes rechargent JUSQU'À 1000 max.
+    raiseRepsCap(RUN3_ENERGY_CAP - 1000)  // = raiseRepsCap(0) : cap reste 1000
+    grantReps(RUN3_START_ENERGY, true)    // reps → 500 (force : seule source autorisée avec les recharges d'arène)
     // 4) Flush immédiat (les champs plats = run 1 inchangés → garde-fou OK).
     await persistNow()
     return true

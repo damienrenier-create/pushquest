@@ -7,10 +7,13 @@
 //   - À la victoire d'une arène : palier d'ÉNERGIE (700 → 1500), seule source d'énergie du run avec les 500
 //     de départ. Données pures, React-free.
 
-/** Paliers d'énergie offerts à la victoire de chaque arène (index 0 = arène 1 … index 4 = arène 5). */
-export const RUN3_ARENA_ENERGY = [700, 900, 1100, 1300, 1500] as const
+/** PLAFOND de RECHARGE d'énergie à la victoire de chaque arène (index 0 = arène 1 … index 4 = arène 5).
+ *  NOUVELLE RÈGLE (équilibrage) : l'arène ne DONNE PAS un palier additif — elle RECHARGE la réserve JUSQU'À
+ *  ce plafond (jamais au-dessus, jamais en-dessous de la réserve actuelle). Le joueur quitte donc l'arène N
+ *  avec AU PLUS cap[N] : 500 → 500 → 600 → 700 → 800 → 1000. Empêche l'accumulation (700 + reste = trop). */
+export const RUN3_ARENA_ENERGY = [500, 600, 700, 800, 1000] as const
 
-/** Énergie octroyée à la victoire de l'arène `arenaIndex` (0-based). 0 hors bornes. */
+/** Plafond de recharge à la victoire de l'arène `arenaIndex` (0-based). 0 hors bornes. */
 export function run3ArenaEnergy(arenaIndex: number): number {
     return RUN3_ARENA_ENERGY[arenaIndex] ?? 0
 }
@@ -25,17 +28,17 @@ export interface Run3ArenaDef {
     bossTrainerId: string  // dresseur boss (dont on remplace l'équipe par un vrai joueur)
     badge: string          // slot ArenaChampion (plante|roche|feu|elec|eau) — pour piocher le boss-joueur
     guardType: string      // type Ligue des gardiens (re-typage run 3)
-    energy: number         // palier d'énergie offert à la victoire
+    energy: number         // PLAFOND de recharge d'énergie à la victoire (recharge JUSQU'À cette valeur, pas +additif)
 }
 
 /** Les 5 arènes du run 3, dans l'ORDRE DE JEU (croissant en niveau, comme au run 1). Slots/mapId/badge
  *  identiques au run 1 ; seul le TYPE des gardiens change (aperçu de la Ligue) et le boss = un vrai joueur. */
 export const RUN3_ARENAS: readonly Run3ArenaDef[] = [
-    { order: 1, mapId: "yellow_arena",       bossTrainerId: "y_arena_druide",   badge: "plante", guardType: "Glace",          energy: 700 },
-    { order: 2, mapId: "yellow_arena_roche", bossTrainerId: "y_rocharena_boss", badge: "roche",  guardType: "Combat",         energy: 900 },
-    { order: 3, mapId: "yellow_arena_feu",   bossTrainerId: "y_feuarena_boss",  badge: "feu",    guardType: "Poison/Spectre", energy: 1100 },
-    { order: 4, mapId: "yellow_arena_elec",  bossTrainerId: "y_elecarena_boss", badge: "elec",   guardType: "Dragon",         energy: 1300 },
-    { order: 5, mapId: "yellow_arena_eau",   bossTrainerId: "y_eauarena_boss",  badge: "eau",    guardType: "Multi",          energy: 1500 },
+    { order: 1, mapId: "yellow_arena",       bossTrainerId: "y_arena_druide",   badge: "plante", guardType: "Glace",          energy: 500 },
+    { order: 2, mapId: "yellow_arena_roche", bossTrainerId: "y_rocharena_boss", badge: "roche",  guardType: "Combat",         energy: 600 },
+    { order: 3, mapId: "yellow_arena_feu",   bossTrainerId: "y_feuarena_boss",  badge: "feu",    guardType: "Poison/Spectre", energy: 700 },
+    { order: 4, mapId: "yellow_arena_elec",  bossTrainerId: "y_elecarena_boss", badge: "elec",   guardType: "Dragon",         energy: 800 },
+    { order: 5, mapId: "yellow_arena_eau",   bossTrainerId: "y_eauarena_boss",  badge: "eau",    guardType: "Multi",          energy: 1000 },
 ] as const
 
 /** Slots badge des 5 arènes dans l'ordre de jeu → à passer à pickRun3ArenaBosses. */

@@ -721,11 +721,15 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             const t = getTrainer(storeState.trainer.trainerId)
             const inNgplus = getActiveWorld() === "ngplus"
             if (t?.badge && awardBadge(t.badge)) badgeAwarded = t.badge
-            // RUN 3 : chaque arène vaincue verse son PALIER d'énergie (700→1500) — seule source avec les 500 de
-            //   départ. Forcé (le run 3 bloque les gains non-forcés).
+            // RUN 3 : chaque arène vaincue RECHARGE l'énergie JUSQU'À son plafond (500→600→700→800→1000), sans
+            //   jamais dépasser ni réduire la réserve → top-up = max(0, plafond - réserve actuelle). Seule source
+            //   avec les 500 de départ. Forcé (le run 3 bloque les gains non-forcés).
             if (badgeAwarded && getActiveWorld() === "run3") {
                 const r3arena = run3ArenaForBoss(storeState.trainer.trainerId)
-                if (r3arena) grantReps(r3arena.energy, true)
+                if (r3arena) {
+                    const topUp = r3arena.energy - getPlayer().reps
+                    if (topUp > 0) grantReps(topUp, true)
+                }
             }
             // 🎟️ TICKET arène (30) : à la 1re conquête du badge (en plus de la CT cadeau). En NG+, le ticket
             //     est REMPLACÉ par le ticket dédié du boss run 2 (10→50, cf. NGPLUS_BOSS_GIFTS ci-dessous).

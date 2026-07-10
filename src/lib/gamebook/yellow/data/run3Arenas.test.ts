@@ -11,22 +11,22 @@ describe("RUN 3 — config des 5 arènes (ordre/badge/type)", () => {
         expect(RUN3_ARENAS.map((a) => a.guardType)).toEqual(["Glace", "Combat", "Poison/Spectre", "Dragon", "Multi"])
         expect(RUN3_ARENAS.map((a) => a.order)).toEqual([1, 2, 3, 4, 5])
     })
-    it("chaque arène connaît son palier d'énergie (cohérent avec RUN3_ARENA_ENERGY)", () => {
+    it("chaque arène connaît son plafond de recharge (cohérent avec RUN3_ARENA_ENERGY)", () => {
         expect(RUN3_ARENAS.map((a) => a.energy)).toEqual([...RUN3_ARENA_ENERGY])
-        expect(RUN3_ARENAS.map((a) => a.energy)).toEqual([700, 900, 1100, 1300, 1500])
+        expect(RUN3_ARENAS.map((a) => a.energy)).toEqual([500, 600, 700, 800, 1000])
     })
     it("run3ArenaForBoss : retrouve l'arène par son boss ; null si inconnu", () => {
         expect(run3ArenaForBoss("y_feuarena_boss")?.guardType).toBe("Poison/Spectre")
-        expect(run3ArenaForBoss("y_arena_druide")?.energy).toBe(700)
+        expect(run3ArenaForBoss("y_arena_druide")?.energy).toBe(500)
         expect(run3ArenaForBoss("inconnu")).toBeNull()
     })
 })
 
-describe("RUN 3 — paliers d'énergie d'arène", () => {
-    it("700 → 1500 par arène (index 0..4), 0 hors bornes", () => {
-        expect(RUN3_ARENA_ENERGY).toEqual([700, 900, 1100, 1300, 1500])
-        expect(run3ArenaEnergy(0)).toBe(700)
-        expect(run3ArenaEnergy(4)).toBe(1500)
+describe("RUN 3 — plafonds de recharge d'arène", () => {
+    it("500 → 1000 par arène (index 0..4), 0 hors bornes", () => {
+        expect(RUN3_ARENA_ENERGY).toEqual([500, 600, 700, 800, 1000])
+        expect(run3ArenaEnergy(0)).toBe(500)
+        expect(run3ArenaEnergy(4)).toBe(1000)
         expect(run3ArenaEnergy(5)).toBe(0)
         expect(run3ArenaEnergy(-1)).toBe(0)
     })
@@ -79,13 +79,13 @@ describe("RUN 3 — sélection des boss (vraies équipes de joueurs)", () => {
 })
 
 describe("RUN 3 — analyse d'arène pour le panneau (run3ArenaInfo)", () => {
-    it("arène 1 (plante) : gardiens GLACE, boss = Mools, palier 700, conseils cohérents", () => {
+    it("arène 1 (plante) : gardiens GLACE, boss = Mools, recharge 500, conseils cohérents", () => {
         const info = run3ArenaInfo("plante")!
         expect(info.order).toBe(1)
         expect(info.guardType).toBe("Glace")
         expect(info.guardTypes).toEqual(["GLACE"])
         expect(info.bossPlayer).toBe("Mools")
-        expect(info.energyPalier).toBe(700)
+        expect(info.energyPalier).toBe(500)
         // super-efficaces contre Glace : Feu / Combat / Roche / Métal
         for (const t of ["FEU", "COMBAT", "ROCHE", "METAL"] as const) expect(info.guardRecommend).toContain(t)
         // équipe du boss résolue (noms + types)
@@ -93,11 +93,11 @@ describe("RUN 3 — analyse d'arène pour le panneau (run3ArenaInfo)", () => {
         expect(info.team.every((m) => m.name.length > 0)).toBe(true)
         expect(info.team[info.team.length - 1].isBoss).toBe(true)
     })
-    it("arène 4 (elec) : gardiens DRAGON, boss = Embi, palier 1300", () => {
+    it("arène 4 (elec) : gardiens DRAGON, boss = Embi, recharge 800", () => {
         const info = run3ArenaInfo("elec")!
         expect(info.guardType).toBe("Dragon")
         expect(info.bossPlayer).toBe("Embi")
-        expect(info.energyPalier).toBe(1300)
+        expect(info.energyPalier).toBe(800)
         expect(info.guardRecommend).toContain("GLACE") // Glace/Dragon/Fée frappent Dragon
     })
     it("arène 5 (Multi) : REPREND le thème de l'arène eau du run 2 (au lieu d'un varié sans info)", () => {
