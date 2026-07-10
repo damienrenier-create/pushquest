@@ -534,7 +534,8 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             const aceLast = aceTeam[aceTeam.length - 1]
             const aceLastTypes = aceLast ? (getSpecies(aceLast.speciesId)?.types ?? []) : []
             const winNum = recordAceDefeat(avg, aceLastTypes, aceLast?.level ?? avg)
-            const r = aceReward(winNum)
+            const run3 = getActiveWorld() === "run3"
+            const r = aceReward(winNum, run3) // run 3 : Balls + Panthéon oui, reps/refund NON (msg sans promesse d'énergie)
             if (r.itemId) addItem(r.itemId, 1)
             if (r.reps) grantReps(r.reps)
             let gaveNemesis = false
@@ -554,7 +555,9 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                 ? "« Sept fois. Sept. Tu l'as brisé si souvent que je te lègue mon Némésis — ta propre nemesis, forgée contre toi. Ironique, non ? »"
                 : r.message
             // 🎟️ TICKETS ACE : un petit (20) à la 2e victoire ; un gros (50) avant Panthéon (victoire 6) + après (victoire 8).
-            const aceTicket = winNum === ACE_TICKET_WIN_EARLY ? ACE_TICKET_EARLY_VALUE
+            //    RUN 3 : AUCUN ticket (le concours n'a ni casino ni roulette) → on saute tout le bloc (sinon le
+            //    message annoncerait des énergies qui ne tombent jamais, grantRouletteTicket étant déjà no-op en run3).
+            const aceTicket = run3 ? 0 : winNum === ACE_TICKET_WIN_EARLY ? ACE_TICKET_EARLY_VALUE
                 : (winNum === ACE_TICKET_WIN_BEFORE || winNum === ACE_TICKET_WIN_AFTER) ? ACE_TICKET_VALUE
                 : 0
             if (aceTicket > 0) {

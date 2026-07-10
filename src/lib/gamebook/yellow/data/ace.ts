@@ -132,6 +132,11 @@ export const ACE_FIRE_BASE = "braisille"      // → flamkure → pyrokoss
 // NG+ (2e run) : les 3 Panthéon sont remplacés par ce trio (rétro-évolués au bon stade selon le niveau),
 // et la lignée Nouillon/Divin Pâte est remplacée par le NÉMÉSIS (contre-lignée de ta création).
 export const ACE_NGPLUS_CORE = ["tonytony", "enclumind", "torturoche"]
+// RUN 3 (concours) : équipe FIXE d'ACE (6). Le 6e slot = le CONTRE-STARTER (némésis) posé EN TÊTE dans
+// buildAceTeam. Ces 5 sont ordonnés du + fort au + faible → si l'équipe est tronquée à la taille du joueur
+// (aceTeamSizeFor, min 3), ce sont les 2 Panthéon (base) qui sautent en premier, pas les menaces. lavapetit
+// → magmator via speciesAtLevel au niveau d'ACE (forme naturelle). gekraise/orcaline = mono-stade.
+export const ACE_RUN3_TEAM = ["gekraise", "orcaline", "lavapetit", "pantheon", "pantheon"]
 export const ACE_LEVEL_OFFSET = 2     // offset FINAL (dès la 4e rencontre) : ta MOYENNE d'équipe +2
 export const ACE_EASY_START = -1      // 1re rencontre : ta moyenne -1 (un poil facile)
 
@@ -200,7 +205,8 @@ export interface AceBuildInput {
     playerLastTypes: PokeType[]  // types du DERNIER Daemon joueur → choisit le contre adaptatif (slot 6)
     badgeCount?: number          // nb de badges du joueur → paliers d'évolution des Panthéon (3→1, 4→2, 5→3)
     ngplus?: boolean             // 2e run → trio thématisé (tonytony/enclumind/tortoracle) + Némésis à la place de Divin Pâte
-    nemesisSpeciesId?: string    // NG+ : lignée Némésis (stade 1) à fielder à la place de Divin Pâte (fallback Nouillon)
+    run3?: boolean               // 3e run (concours) → équipe FIXE : contre-starter + 2 Panthéon + Lavapetit + Orcaline + Gékraise (aucun contre adaptatif)
+    nemesisSpeciesId?: string    // NG+/run3 : lignée Némésis (stade 1) à fielder — NG+ = à la place de Divin Pâte ; run3 = le contre-STARTER en tête
 }
 
 /**
@@ -211,6 +217,16 @@ export interface AceBuildInput {
 export function buildAceTeam(i: AceBuildInput): { team: AceMon[]; counterSpecies: string } {
     const L = Math.max(1, Math.min(MAX_LEVEL, i.aceLevel))
     const counter = bestCounter(i.playerLastTypes)
+    // RUN 3 (concours) : équipe FIXE — contre-starter (némésis) EN TÊTE + Gékraise + Orcaline + Lavapetit(→Magmator)
+    //   + 2 Panthéon. Chaque espèce au bon STADE pour le niveau d'ACE (speciesAtLevel). Aucun contre adaptatif.
+    if (i.run3) {
+        const nem = i.nemesisSpeciesId ?? ACE_NOUILLON_BASE // fallback défensif si le starter run 3 est inconnu
+        const team: AceMon[] = [
+            { speciesId: speciesAtLevel(nem, L), level: L },
+            ...ACE_RUN3_TEAM.map((id) => ({ speciesId: speciesAtLevel(baseSpeciesOf(id), L), level: L })),
+        ]
+        return { team, counterSpecies: nem }
+    }
     // NG+ (2e run) : trio thématisé (rétro-évolué au bon stade) + NÉMÉSIS à la place de Divin Pâte + Feu + contre.
     if (i.ngplus) {
         const team: AceMon[] = [
@@ -254,10 +270,18 @@ export interface AceReward {
 /** Nombre de victoires sur ACE qui débloque le cadeau Panthéon (cf. teaser + compte à rebours). */
 export const ACE_PANTHEON_WIN = 7
 
-/** Récompense à la n-ième victoire (1-indexée). Messages en humour noir (la concession d'ACE est ajoutée à part). */
-export function aceReward(winNumber: number): AceReward {
-    if (winNumber <= 3) return { itemId: "poke_ball_plus", reps: 100, message: "« Tiens : une Nexus-Ball + et 100 reps. De quoi décorer ton caveau jusqu'à ta prochaine défaite. »" }
-    if (winNumber <= 6) return { itemId: "super_ball", reps: 150, message: "« Super Nexus-Ball et 150 reps. Des fleurs sur ta future tombe, rival. Tu t'accroches, c'est touchant. »" }
+/** Récompense à la n-ième victoire (1-indexée). Messages en humour noir (la concession d'ACE est ajoutée à part).
+ *  RUN 3 (concours) : ACE peut offrir des BALLS et le Panthéon (une espèce), mais JAMAIS de reps/énergie ni de
+ *  remboursement — le run n'a qu'une seule source d'énergie (les paliers d'arène). On retire donc reps/refund. */
+export function aceReward(winNumber: number, run3 = false): AceReward {
+    if (winNumber <= 3) return run3
+        ? { itemId: "poke_ball_plus", message: "« Tiens : une Nexus-Ball +. Pas de reps — ton concours interdit les cadeaux d'énergie. Ramasse toujours un cadavre de plus avec ça. »" }
+        : { itemId: "poke_ball_plus", reps: 100, message: "« Tiens : une Nexus-Ball + et 100 reps. De quoi décorer ton caveau jusqu'à ta prochaine défaite. »" }
+    if (winNumber <= 6) return run3
+        ? { itemId: "super_ball", message: "« Super Nexus-Ball. Rien de plus : ici l'énergie ne tombe pas du ciel, elle se mérite en arène. Contente-toi de la Ball, rival. »" }
+        : { itemId: "super_ball", reps: 150, message: "« Super Nexus-Ball et 150 reps. Des fleurs sur ta future tombe, rival. Tu t'accroches, c'est touchant. »" }
     if (winNumber === ACE_PANTHEON_WIN) return { gift: "pantheon", message: "« Sept fois. Sept. Voilà ton Panthéon — fais-le évoluer comme tu veux. Il te survivra, c'est sûr. »" }
-    return { refund: true, message: "« Plus de cadeau, j'ai vidé le caveau. Je te rends ton énergie, c'est tout. Même mon stock a une fin. »" }
+    return run3
+        ? { message: "« Plus de cadeau. Et pas d'énergie à te rendre — c'est la règle de TON concours, pas la mienne. Reviens quand même : j'aime te voir tomber. »" }
+        : { refund: true, message: "« Plus de cadeau, j'ai vidé le caveau. Je te rends ton énergie, c'est tout. Même mon stock a une fin. »" }
 }

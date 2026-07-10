@@ -346,7 +346,7 @@ function tryLaunchAce(): ActiveDialogue | null {
     // RUN 3 : ACE sort le STARTER qui CONTRE le tien (triangle) comme némésis, rétro-évolué à son niveau.
     const run3 = getActiveWorld() === "run3"
     const nemesisSpeciesId = ngplus ? (getNgplusNemesisSpeciesId() ?? undefined) : run3 ? (getRun3AceNemesis() ?? undefined) : undefined
-    const built = buildAceTeam({ aceLevel: aceBattleLevel(avg), playerLastTypes: lastTypes, badgeCount: getPlayerSave().badges.length, ngplus, nemesisSpeciesId })
+    const built = buildAceTeam({ aceLevel: aceBattleLevel(avg), playerLastTypes: lastTypes, badgeCount: getPlayerSave().badges.length, ngplus, run3, nemesisSpeciesId })
     // Taille d'équipe d'ACE = celle du joueur (min 3 = les 3 panthères), avec cliquet.
     const aceSize = aceTeamSizeFor(team.length)
     // ACE = élite (boss ultime) : ses Daemons sont entraînés comme un joueur assidu.
