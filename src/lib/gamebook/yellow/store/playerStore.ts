@@ -401,7 +401,7 @@ export function resetForIntro() {
  *  nouveau), customDaemons GLOBAUX préservés, cadeaux de bienvenue neutralisés (l'énergie NG+ est créditée à
  *  part par saveManager). Le passage activeWorld="ngplus" + l'énergie sont gérés par saveManager.startNewGamePlus. */
 export function startNgPlusWorld(starter: MonInstance) {
-    st = { team: [starter], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: true, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: true, pastaGodGift: true, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: true, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, berrySecretKnown: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", ngplusBattles: 0, sylvebarbeAwake: false, labDefi: emptyLabDefi(), customDaemons: st.customDaemons, ngplusStartedAt: Date.now(), playtimeMs: 0, leaguePotions: 0, ngplusUsed: true, run3Used: false, ngplusMaitreBeaten: false }
+    st = { team: [starter], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: true, pokerFirstGameDone: st.pokerFirstGameDone, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: true, pastaGodGift: true, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: true, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, berrySecretKnown: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", ngplusBattles: 0, sylvebarbeAwake: false, labDefi: emptyLabDefi(), customDaemons: st.customDaemons, ngplusStartedAt: Date.now(), playtimeMs: 0, leaguePotions: 0, ngplusUsed: true, run3Used: false, ngplusMaitreBeaten: false }
     emit()
 }
 
@@ -410,7 +410,7 @@ export function startNgPlusWorld(starter: MonInstance) {
  *  départ (500) + le passage activeWorld="run3" sont gérés par saveManager.startRun3. On réutilise ngplusStartedAt
  *  comme horodatage de départ du run (le run 3 n'a pas de champ dédié). */
 export function startRun3World(starter: MonInstance) {
-    st = { team: [starter], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: true, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: true, pastaGodGift: true, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: true, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, berrySecretKnown: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", ngplusBattles: 0, sylvebarbeAwake: false, labDefi: emptyLabDefi(), customDaemons: st.customDaemons, ngplusStartedAt: Date.now(), playtimeMs: 0, leaguePotions: 0, ngplusUsed: true, run3Used: true, ngplusMaitreBeaten: false }
+    st = { team: [starter], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: true, pokerFirstGameDone: st.pokerFirstGameDone, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: true, pastaGodGift: true, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: st.wildCtx, introSeen: true, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, berrySecretKnown: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", ngplusBattles: 0, sylvebarbeAwake: false, labDefi: emptyLabDefi(), customDaemons: st.customDaemons, ngplusStartedAt: Date.now(), playtimeMs: 0, leaguePotions: 0, ngplusUsed: true, run3Used: true, ngplusMaitreBeaten: false }
     emit()
 }
 
@@ -675,6 +675,7 @@ export function grantReps(n: number, force = false): number {
  *  (sinon un gros gain repartirait avec moins que sa mise, ou serait rogné au bankReps quotidien). Le cap
  *  ne bouge que si le crédit le dépasse. Renvoie le montant crédité (= n). */
 export function creditReps(n: number): number {
+    if (activeWorld === "run3") return 0 // RUN 3 : aucune énergie reçue (source unique) → bloque le cash-out + le tuto poker (100⚡)
     const amt = Math.max(0, Math.floor(n))
     if (amt <= 0) return 0
     const newReps = st.reps + amt
@@ -1210,6 +1211,7 @@ export function peekTicketValue(): number { return st.labDefi.grantedTickets[0] 
  *  `origin` : "boss" (arène/sbire/ACE, défaut) · "spag" (Dieu Spaghetti) · "casino" (trouvé/acheté →
  *  RACHETABLE par le barman). */
 export function grantRouletteTicket(value: number, origin: "boss" | "spag" | "casino" = "boss") {
+    if (activeWorld === "run3") return // RUN 3 : aucun ticket (casino/boss/spag) — l'énergie a une source unique
     const d = st.labDefi
     if (d.grantedTickets.length >= TICKET_QUEUE_MAX) return
     st = { ...st, labDefi: { ...d, grantedTickets: [...d.grantedTickets, clampTicketValue(value)], grantedTicketOrigins: [...d.grantedTicketOrigins, origin] } }
@@ -1291,6 +1293,7 @@ export function claimSpagWelcomeTickets(): number {
 export function rouletteCreditBalance(): number { return st.labDefi.rouletteCredit }
 /** Ajoute `n` au crédit roulette. */
 export function grantRouletteCredit(n: number): void {
+    if (activeWorld === "run3") return // RUN 3 : aucun crédit roulette (énergie offerte) — source unique
     const add = Math.max(0, Math.floor(n))
     if (add <= 0) return
     st = { ...st, labDefi: { ...st.labDefi, rouletteCredit: st.labDefi.rouletteCredit + add } }

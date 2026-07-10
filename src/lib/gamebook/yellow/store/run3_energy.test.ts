@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest"
-import { hydratePlayer, setActiveWorld, getPlayer, grantReps, bankReps, grantBonusEnergyUncapped, spendReps } from "./playerStore"
+import { hydratePlayer, setActiveWorld, getPlayer, grantReps, bankReps, grantBonusEnergyUncapped, spendReps, creditReps, grantRouletteTicket, grantRouletteCredit, rouletteCreditBalance, peekTicketValue } from "./playerStore"
 
 beforeEach(() => {
     setActiveWorld("live")
@@ -46,5 +46,30 @@ describe("RUN 3 — verrou d'énergie (source unique : 500 + paliers d'arène)",
         setActiveWorld("live")
         bankReps(80, 0, "2026-07-09") // 80 reps réels − 0 banqué = +80
         expect(getPlayer().reps).toBe(180)
+    })
+
+    // --- Fuites corrigées (10/07) : creditReps (cash-out/tuto poker), tickets, crédit roulette ---
+    it("run 3 : creditReps (cash-out / tuto poker 100⚡) = BLOQUÉ", () => {
+        setActiveWorld("run3")
+        expect(creditReps(100)).toBe(0)
+        expect(getPlayer().reps).toBe(100) // inchangé
+    })
+
+    it("live : creditReps crédite toujours (pas de régression poker hors run 3)", () => {
+        setActiveWorld("live")
+        expect(creditReps(100)).toBe(100)
+        expect(getPlayer().reps).toBe(200)
+    })
+
+    it("run 3 : grantRouletteTicket = BLOQUÉ (aucun ticket en file)", () => {
+        setActiveWorld("run3")
+        grantRouletteTicket(50, "casino")
+        expect(peekTicketValue()).toBe(0)
+    })
+
+    it("run 3 : grantRouletteCredit (énergie roulette) = BLOQUÉ", () => {
+        setActiveWorld("run3")
+        grantRouletteCredit(200)
+        expect(rouletteCreditBalance()).toBe(0)
     })
 })

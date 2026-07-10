@@ -2280,6 +2280,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             <span>REVENDRE</span><span>💪 {player.reps}/{player.repsCap}</span>
                         </div>
                         {(() => {
+                            if (activeWorld === "run3") return <div style={{ textAlign: "center", padding: 18, fontSize: 12, opacity: 0.6 }}>Pas de revente pendant le CONCOURS — aucune énergie ne rentre en run 3.</div>
                             const owned = Object.values(ITEMS).filter((it) => it.price > 0 && (player.items[it.id] ?? 0) > 0)
                             if (!owned.length) return <div style={{ textAlign: "center", padding: 18, fontSize: 12, opacity: 0.6 }}>Aucun objet à revendre.</div>
                             return owned.map((it) => {
