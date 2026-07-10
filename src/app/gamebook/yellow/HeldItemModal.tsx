@@ -46,9 +46,10 @@ export default function HeldItemModal({ uid, onClose }: { uid: string; onClose: 
                     {owned.length === 0 ? (
                         <div style={{ fontSize: 11, color: INK, opacity: 0.65, lineHeight: 1.4 }}>Aucun objet tenu en stock. Achètes-en chez le <b>marchand de la Zone de Combat</b> (contre des Jetons de Combat).</div>
                     ) : owned.map(({ it, n }) => {
-                        const locked = !!it.species && it.species !== mon.speciesId
+                        const lockList = it.species ? (Array.isArray(it.species) ? it.species : [it.species]) : []
+                        const locked = lockList.length > 0 && !lockList.includes(mon.speciesId)
                         const isCurrent = mon.heldItem === it.id
-                        const lockName = it.species ? (getSpecies(it.species)?.name ?? it.species) : ""
+                        const lockName = lockList.map((s) => getSpecies(s)?.name ?? s).join(" / ")
                         return (
                             <div key={it.id} style={card}>
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>

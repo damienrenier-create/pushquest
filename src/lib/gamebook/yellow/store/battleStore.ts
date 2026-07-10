@@ -548,6 +548,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                 // speciesAtLevel : le némésis est offert au STADE NATUREL de son niveau (jamais une souche à haut niveau).
                 if (nem) { try { const gid = speciesAtLevel(nem, lvl); createMonInstance(gid, lvl, { owned: true }); giftId = gid; gaveNemesis = true } catch { giftId = "pantheon" } }
                 addCaught(createMonInstance(giftId, lvl, { owned: true }))
+                markCaught(giftId); markCaughtThisRun(giftId) // le cadeau ACE entre au Pokédex (comme le cadeau Orcaline)
             }
             if (r.refund) grantReps(storeState.energySpent) // remboursement de l'énergie dépensée
             aceWin = winNum

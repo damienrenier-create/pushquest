@@ -147,12 +147,14 @@ export default function PokedexClient() {
             </div>
 
             <div style={S.list}>
+                {/* La distinction « ce run / run précédent » n'a de SENS que si le joueur a réellement lancé
+                    un 2e/3e run. Pour un joueur MONO-RUN (run 1 seul), caughtThisRun peut être vide (captures
+                    d'avant la feature) → on n'affiche PAS « (run précédent) » à tort, juste « ✔ Capturé ». */}
                 {entries.map((sp) => {
+                    const multiRun = player.ngplusUsed || player.run3Used
                     const caught = dex.caught.includes(sp.id)
                     const seen = caught || dex.seen.includes(sp.id)
-                    // « Capturé CE run » (overlay per-monde) vs « capturé un run précédent » : le Pokédex est
-                    // cumulatif, mais on distingue les captures du run EN COURS (mises en avant).
-                    const caughtNow = caught && (player.caughtThisRun ?? []).includes(sp.id)
+                    const caughtNow = multiRun && caught && (player.caughtThisRun ?? []).includes(sp.id)
                     return (
                         <button
                             key={sp.id}
@@ -166,7 +168,7 @@ export default function PokedexClient() {
                                 <div style={S.name}>{seen ? sp.name.toUpperCase() : "???"}</div>
                                 {seen && <div style={S.types}>{sp.types.join(" / ")}</div>}
                                 <div style={{ ...S.state, ...(caughtNow ? { color: "#ffcf40", fontWeight: 700 } : {}) }}>
-                                    {caughtNow ? "✨ Capturé CE RUN — voir la fiche" : caught ? "✔ Capturé (run précédent) — voir la fiche" : seen ? "👁 Vu — fiche partielle" : "Inconnu"}
+                                    {caughtNow ? "✨ Capturé CE RUN — voir la fiche" : caught ? (multiRun ? "✔ Capturé (run précédent) — voir la fiche" : "✔ Capturé — voir la fiche") : seen ? "👁 Vu — fiche partielle" : "Inconnu"}
                                 </div>
                             </div>
                             <div style={{ ...S.tag, ...(caughtNow ? { color: "#ffcf40" } : {}) }}>{caughtNow ? "✨" : caught ? "✔" : seen ? "👁" : ""}{seen ? " ▸" : ""}</div>

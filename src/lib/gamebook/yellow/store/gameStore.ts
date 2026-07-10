@@ -326,6 +326,7 @@ function doCaveTrade(giveUid: string): ActiveDialogue | null {
     const cfg = caveTradeConfig(getActiveWorld() === "run3") // run 3 = ruffiant→marmoterre ; sinon limaroche→belunode
     const received = createMonInstance(cfg.receive, owner.level, { owned: true })
     received.statPoints = owner.statPoints ?? 0 // préserve les points Saiyan
+    if (owner.shiny) received.shiny = true       // NE JAMAIS détruire un shiny à l'échange (comme doHhTrade)
     executeTrade(giveUid, received)             // retire le donné, ajoute le reçu
     markCaveTradeDone()                          // échange unique (per-monde) → ne se reproposera plus
     persistYellowSave()

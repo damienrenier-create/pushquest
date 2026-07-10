@@ -20,8 +20,9 @@ export interface HeldItemData {
     description: string
     jcPrice: number
     category: HeldItemCategory
-    /** Verrou ESPÈCE (signature) : l'effet ne s'applique QUE si le porteur est de ce speciesId. */
-    species?: string
+    /** Verrou ESPÈCE (signature) : l'effet ne s'applique QUE si le porteur est de ce speciesId (ou de l'un des
+     *  speciesId si tableau — utile quand une lignée gagne un stade final, ex. Aquilothan→Aquilord). */
+    species?: string | string[]
     // ── Effets passifs ──
     /** +typeBoostPct % de dégâts des attaques de ce type. */
     typeBoost?: PokeType
@@ -66,7 +67,7 @@ function typeItem(id: string, name: string, emoji: string, type: PokeType, price
 }
 
 // Objet SIGNATURE : verrouillé à une espèce. statMult +20 % (sauf Regnantaur 10/10).
-function sig(id: string, name: string, emoji: string, species: string, statMult: Partial<Record<StatKey, number>>, description: string, price = 24): HeldItemData {
+function sig(id: string, name: string, emoji: string, species: string | string[], statMult: Partial<Record<StatKey, number>>, description: string, price = 24): HeldItemData {
     return { id, name, emoji, description, jcPrice: price, category: "signature", species, statMult }
 }
 
@@ -109,7 +110,7 @@ export const HELD_ITEMS: Record<string, HeldItemData> = {
     couronne_reine: sig("couronne_reine", "Couronne de la Reine", "👑", "regnantaur", { atk: 1.1, spc: 1.1 }, "Augmente de 10 % l'Attaque ET l'Attaque Spé. Réservé à Regnantaur.", 26),
     lanterne_ame: sig("lanterne_ame", "Lanterne d'Âme", "🏮", "brookhante", { spc: 1.2 }, "Augmente de 20 % l'Attaque Spé. Réservé à Brookhanté.", 22),
     carillon_foudre: sig("carillon_foudre", "Carillon Foudre", "🔔", "namizeus", { spc: 1.2 }, "Augmente de 20 % l'Attaque Spé. Réservé à Namizeus.", 22),
-    serre_royale: sig("serre_royale", "Serre Royale", "🦅", "aquilothan", { atk: 1.2 }, "Augmente de 20 % l'Attaque. Réservé à Aquilothan.", 22),
+    serre_royale: sig("serre_royale", "Serre Royale", "🦅", ["aquilothan", "aquilord"], { atk: 1.2 }, "Augmente de 20 % l'Attaque. Réservé à la lignée Aquilothan/Aquilord.", 22),
     poing_fantome: sig("poing_fantome", "Poing Fantôme", "👊", "bouhbou", { spe: 1.2 }, "Augmente de 20 % la Vitesse. Réservé à Bouhbou."),
 
     // ───────── BAIES (objets tenus RÉACTIFS & consommables — RÉCOLTÉES sur les arbres post-Ligue, PAS en boutique) ─────────
@@ -139,7 +140,8 @@ export function isHeldItem(id?: string): boolean {
 
 /** L'effet de l'objet s'applique-t-il à ce Daemon ? (respecte le verrou espèce signature). */
 function applies(it: HeldItemData, speciesId: string | undefined): boolean {
-    return !it.species || it.species === speciesId
+    if (!it.species) return true
+    return Array.isArray(it.species) ? (!!speciesId && it.species.includes(speciesId)) : it.species === speciesId
 }
 
 type MonRef = { speciesId?: string; heldItem?: string }
