@@ -35,6 +35,31 @@ export const LAB_ASSISTANT_LINES = [
     "« Le Prof., lui, est un grand mélomane. En ce moment il façonne un instrument censé réveiller le Daemon colossal qui dort au sud de la ville… S'il réussit, ça ouvrira de nouvelles routes ! »",
 ]
 
+/** RUN 3 (concours) — Prof. CHEN : TEASER quand le joueur n'a pas encore de Magmator (niv 50). Son seul rôle en
+ *  run 3 = faire évoluer Magmator en Magnetor via le Noyau de Métal. */
+export const CHEN_RUN3_TEASER_LINES = [
+    "« Toi ?! Justement toi ! Approche — j'allais exploser si je ne le disais à personne. »",
+    "« Toute une vie de recherche, et je crois enfin tenir MA découverte : un NOYAU DE MÉTAL. Un alliage vivant, encore tiède de sa coulée… »",
+    "« Et il ne réagit qu'à UNE créature : la roche en fusion, le magma qui ne s'éteint jamais. MAGMATOR. »",
+    "« Amène-moi un MAGMATOR — capture un Lavapetit, fais-le évoluer jusqu'au bout, et reviens ! Mais qu'il ait au moins le NIVEAU 50 : en-dessous, le noyau le briserait. Ce jour-là, l'Histoire s'écrira dans MON labo. File ! »",
+]
+
+/** RUN 3 — Prof. CHEN : ÉVOLUTION (le joueur revient avec un Magmator niv 50+). Le Noyau de Métal transforme
+ *  Magmator en MAGNETOR (Feu/Métal). Une fois faite, retombe sur le teaser (qui n'a plus de Magmator à évoluer). */
+export const CHEN_RUN3_EVOLVE_LINES = [
+    "« Tu es revenu… et il est LÀ. Ton MAGMATOR, en chair et en lave ! Ne bouge plus — je pose le Noyau de Métal sur son cœur de magma. »",
+    "« *Un éclat aveuglant. La roche en fusion se fige, se plisse, se replie en plaques d'un métal que rien ne semble pouvoir percer.* »",
+    "« Ça… ça MARCHE ! Voici MAGNETOR — la forteresse en fusion ! Feu et Métal, une carapace que rien ne perce, un cœur de lave qui ne s'éteint pas. »",
+    "« Toute une vie de recherche, récompensée en un éclair. Prends-en soin, mélomane — il porte désormais MON nom dans ses veines de métal. »",
+]
+
+/** RUN 3 — l'ASSISTANT : le casino est FERMÉ (pas de CT/pilier à vanter), il pointe vers le projet Magnetor du chef. */
+export const LAB_ASSISTANT_LINES_RUN3 = [
+    "« Salut ! L'assistant du Prof. CHEN. En plein CONCOURS, hein ? Ici oublie le casino et les CT — tout est fermé, c'est l'énergie qui compte, et elle ne se regagne qu'en arène. »",
+    "« Le Prof., lui, ne pense qu'à UNE chose : son NOYAU DE MÉTAL. Il jure qu'il peut pousser un Magmator un stade plus loin. Amène-lui le tien, bien costaud — niveau 50 minimum — et tu verras. »",
+    "« Entre nous, je l'ai jamais vu aussi surexcité. Si ça marche, ce sera le Daemon le plus solide que le Nexus ait jamais porté. »",
+]
+
 /** RUN 2 (NG+) — l'assistant adapte son laïus : au blackjack on gagne UNE CT du magasin au choix (récompense
  *  unique, plus Apothéose) ; les signatures de boss se méritent en arène. Le pilier casino est MEROREM (Poison/Insecte). */
 export const LAB_ASSISTANT_LINES_NGPLUS = [
