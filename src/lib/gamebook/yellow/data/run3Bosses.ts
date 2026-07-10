@@ -548,3 +548,24 @@ export function run3BossFor(badge: string): Run3Boss | null {
 export function run3BossLevelSum(badge: string): number {
     return (RUN3_BOSS_TEAMS[badge]?.team ?? []).reduce((a, m) => a + (m.level ?? 0), 0)
 }
+
+// TAILLE du boss par arène (ordre de jeu) : ramp façon run 1 (arène 1 courte → arène 5 = équipe complète).
+// L'énergie du run 3 est limitée (500 au départ) → un boss de 6 Daemons dès l'arène 1 est infaisable.
+const RUN3_BOSS_SIZE: Record<string, number> = { plante: 3, roche: 4, feu: 4, elec: 5, eau: 6 }
+// Niveau CIBLE par arène (≈ le boss d'origine du run 1/2). On garde les Daemons les plus PROCHES de ce niveau
+// (Sartay : « pas trop faible, se rapprocher le plus possible du boss original ») → ni les plus faibles, ni les plus forts.
+const RUN3_BOSS_TARGET_LVL: Record<string, number> = { plante: 16, roche: 20, feu: 28, elec: 37, eau: 51 }
+
+/** Équipe FIGÉE du boss d'une arène run 3, TRONQUÉE à la taille de l'arène : on garde les N Daemons dont le
+ *  niveau est le plus proche du boss d'origine (calibrage de difficulté), puis on les ordonne par niveau
+ *  croissant (l'ACE/le plus fort en dernier). MÊME résultat pour tous les joueurs → score comparable. */
+export function run3ArenaBossTeam(badge: string): ChampionMon[] {
+    const team = RUN3_BOSS_TEAMS[badge]?.team ?? []
+    if (team.length === 0) return []
+    const n = RUN3_BOSS_SIZE[badge] ?? team.length
+    const target = RUN3_BOSS_TARGET_LVL[badge] ?? 0
+    return [...team]
+        .sort((a, b) => Math.abs((a.level ?? 0) - target) - Math.abs((b.level ?? 0) - target)) // plus proches de la cible d'abord
+        .slice(0, n)
+        .sort((a, b) => (a.level ?? 0) - (b.level ?? 0)) // fielded du plus faible au plus fort
+}

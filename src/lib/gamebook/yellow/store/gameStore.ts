@@ -19,7 +19,8 @@ import type { BadgeId } from "../data/cts"
 import type { YellowMapData } from "../maps"
 import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
-import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, resetFleeStreak } from "./battleStore"
+import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, startRun3BossBattle, resetFleeStreak } from "./battleStore"
+import { run3ArenaForBoss } from "../data/run3Arenas"
 import { getPokedex } from "./pokedexStore"
 import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, resetLigueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, addItem, getActiveWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
@@ -200,6 +201,12 @@ function tryLaunchTrainer(trainerId: string, isRematch = false): ActiveDialogue 
     //   de joueur figées ne sont pas injectées (étape suivante).
     if (run3 && !isRematch && RUN3_ARENA_TEAMS[trainerId]) {
         specs = RUN3_ARENA_TEAMS[trainerId]
+    }
+    // RUN 3 : le BOSS d'arène = équipe de JOUEUR FIGÉE (tronquée à la taille de l'arène). Combat spécial
+    //   (championToInstance, stats gelées) → on court-circuite le fielding TrainerMonSpec ci-dessous.
+    if (run3 && !isRematch) {
+        const r3boss = run3ArenaForBoss(trainerId)
+        if (r3boss && startRun3BossBattle(r3boss.badge, trainerId)) return null
     }
     // NG+ LIGUE : durcissement des 5 boss → tous les Daemons +2, l'AVANT-DERNIER +3, le DERNIER +5
     // (évolution au stade naturel si le boost dépasse le niveau d'évolution).

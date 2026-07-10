@@ -25,6 +25,8 @@ import { reportShiny } from "../shinyGift"
 import { ARENA_TICKET_VALUE, SBIRE_TICKET_VALUE, SBIRE_TICKET_EVERY, ACE_TICKET_VALUE, ACE_TICKET_WIN_BEFORE, ACE_TICKET_WIN_AFTER, ACE_TICKET_EARLY_VALUE, ACE_TICKET_WIN_EARLY, LEAGUE_ROULETTE_PER_KO, LEAGUE_AUTOGRAPH_CREDIT } from "../data/labDefis"
 import { getCt } from "../data/cts"
 import { NGPLUS_BOSS_GIFTS, arenaRevancheBoost } from "../data/ngplusArenas"
+import { run3ArenaBossTeam } from "../data/run3Bosses"
+import { run3ArenaForBoss } from "../data/run3Arenas"
 import { BERRY_SECRET_LINES_DRUIDE } from "../data/berryLore"
 import { getMove, getMoveByName } from "../data/moves"
 import { getSpecies } from "../data/species"
@@ -347,6 +349,23 @@ export function startNgPlusFinalBattle(oldTeam: ChampionMon[]): boolean {
     const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: "hof", playerBadgeCount: getPlayer().badges.length })
     syncPokedex(battle)
     setStore({ battle, evolutions: [], trainer: { trainerId: "ngplus:final", reward: 0, isRematch: false }, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null, ngplusFinalPending: false })
+    persistBattleSnapshot()
+    return true
+}
+
+/** RUN 3 — combat contre le BOSS d'arène = équipe de JOUEUR FIGÉE, tronquée à la taille de l'arène
+ *  (run3ArenaBossTeam). On garde le trainerId du boss (y_arena_druide, …) → finishBattle attribue le badge +
+ *  le palier d'énergie normalement. VRAI combat (XP, sac). false si équipe joueur vide/K.O. ou boss introuvable. */
+export function startRun3BossBattle(badge: string, bossTrainerId: string): boolean {
+    const enemyChamp = run3ArenaBossTeam(badge)
+    if (enemyChamp.length === 0) return false
+    const playerTeam = getPlayer().team
+    if (playerTeam.length === 0 || !playerTeam.some((m) => m.currentHp > 0)) return false // équipe K.O. → soigne d'abord
+    const enemyTeam = enemyChamp.map((m, i) => championToInstance(m, i))
+    const seed = (Math.floor(Math.random() * 0x7fffffff) ^ (playerTeam.length * 2246822519)) >>> 0
+    const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: "hof", playerBadgeCount: getPlayer().badges.length })
+    syncPokedex(battle)
+    setStore({ battle, evolutions: [], trainer: { trainerId: bossTrainerId, reward: 0, isRematch: false }, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
     persistBattleSnapshot()
     return true
 }
@@ -683,6 +702,12 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             const t = getTrainer(storeState.trainer.trainerId)
             const inNgplus = getActiveWorld() === "ngplus"
             if (t?.badge && awardBadge(t.badge)) badgeAwarded = t.badge
+            // RUN 3 : chaque arène vaincue verse son PALIER d'énergie (700→1500) — seule source avec les 500 de
+            //   départ. Forcé (le run 3 bloque les gains non-forcés).
+            if (badgeAwarded && getActiveWorld() === "run3") {
+                const r3arena = run3ArenaForBoss(storeState.trainer.trainerId)
+                if (r3arena) grantReps(r3arena.energy, true)
+            }
             // 🎟️ TICKET arène (30) : à la 1re conquête du badge (en plus de la CT cadeau). En NG+, le ticket
             //     est REMPLACÉ par le ticket dédié du boss run 2 (10→50, cf. NGPLUS_BOSS_GIFTS ci-dessous).
             if (badgeAwarded && !inNgplus) grantRouletteTicket(ARENA_TICKET_VALUE)
