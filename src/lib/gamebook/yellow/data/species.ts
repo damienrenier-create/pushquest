@@ -530,7 +530,8 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 1, moveId: "charge" },
             { level: 4, moveId: "griffe_acier" },  // STAB Métal
             { level: 8, moveId: "mur_de_fer" },     // set-up Déf (décalé de 1→8 : un starter n'a pas 3 moves au niv 5)
-            { level: 14, moveId: "carapace_diamant" },
+            // carapace_diamant (+2 Déf) RETIRÉ de la base : redondant avec mur_de_fer (+1 Déf) et inversé vs la
+            // finale (Colosfer l'apprend à L42, sa vraie place). Une base qui évolue à 16 n'a pas 2 set-up Déf.
         ],
         evolution: { toId: "barrisfer", method: { kind: "LEVEL", level: 16 } },
         catchRate: 45, baseExp: 64, rarity: "RARE", growthRate: "medium_fast", role: "Starter Métal (run 3) — mur défensif", hiddenUntilCaught: true,
