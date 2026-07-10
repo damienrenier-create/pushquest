@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest"
 import { applyServerSave, snapshot, mergeWorlds } from "./saveManager"
 import { getActiveWorld } from "./playerStore"
+import { getPokedex, markCaught } from "./pokedexStore"
 import { emptySave, parseSave, type YellowSave } from "../storage/save"
 import type { MonInstance } from "../battle/types"
 
@@ -106,5 +107,30 @@ describe("run 3 — fusion 3-voies (run3 ⊕ run2 ⊕ run1)", () => {
         expect(merged.ngplusWorld).toBeNull()
         expect(merged.run3World).toBeNull()
         expect(merged.isChampion).toBe(true)
+    })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POKÉDEX GLOBAL — cumulatif d'un run à l'autre (ne se reset JAMAIS sur bascule de monde).
+// ─────────────────────────────────────────────────────────────────────────────
+describe("pokédex global (cumulatif, persiste run→run)", () => {
+    beforeEach(() => { applyServerSave(emptySave()) })
+
+    it("applyServerSave : le pokédex = UNION des pokédex des 3 mondes (migration douce, aucune capture perdue)", () => {
+        const run2 = world({ team: [mon("r2", "razmaree", 50)], pokedex: { seen: ["b"], caught: ["b"] }, ngplusUsed: true })
+        const run3 = world({ team: [mon("r3", "magnetor", 60)], pokedex: { seen: ["c"], caught: ["c"] }, run3Used: true, ngplusUsed: true })
+        const top = world({ team: [mon("r1", "cerfeuillu", 63)], pokedex: { seen: ["a"], caught: ["a"] }, activeWorld: "run3", ngplusWorld: run2, run3World: run3, run3Used: true, ngplusUsed: true })
+        applyServerSave(top)
+        expect(getPokedex().caught.sort()).toEqual(["a", "b", "c"]) // union des 3 mondes divergents
+    })
+
+    it("snapshot : le pokédex global est écrit à l'IDENTIQUE dans TOUS les mondes", () => {
+        const run2 = world({ team: [mon("r2", "razmaree", 50)], pokedex: { seen: [], caught: ["b"] }, ngplusUsed: true })
+        const top = world({ team: [mon("r1", "cerfeuillu", 63)], pokedex: { seen: [], caught: ["a"] }, activeWorld: "live", ngplusWorld: run2, ngplusUsed: true })
+        applyServerSave(top)   // pokédex global = {a, b}
+        markCaught("d")        // nouvelle capture pendant la session
+        const snap = snapshot()
+        expect(snap.pokedex.caught.sort()).toEqual(["a", "b", "d"])              // monde live (champs plats)
+        expect(snap.ngplusWorld?.pokedex.caught.sort()).toEqual(["a", "b", "d"]) // monde run 2 = MÊME set global
     })
 })
