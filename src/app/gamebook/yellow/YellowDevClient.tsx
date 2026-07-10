@@ -213,7 +213,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // RUN 3 — à la fin du run 2, on propose le CHOIX : fusionner maintenant (finir) OU lancer le run 3.
     const [run3Offer, setRun3Offer] = useState<{ score: number } | null>(null)
     const [run3StarterChoice, setRun3StarterChoice] = useState(false) // RUN 3 : choix du starter (les 3 lignées)
-    const [run3EndOffer, setRun3EndOffer] = useState<{ score: number } | null>(null) // RUN 3 : fin (0⚡) → méga-fusion forcée
+    const [run3EndOffer, setRun3EndOffer] = useState<{ score: number; reason: "energy" | "master" } | null>(null) // RUN 3 : fin (0⚡ OU sacre du Maître) → méga-fusion forcée
     const run3EndTriggeredRef = useRef(false) // anti double-déclenchement de completeRun3 (async, bascule activeWorld)
     const run = useRun()
     const frontierResult = useFrontierResult()
@@ -836,17 +836,19 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         }
     }, [ngplusFinalResult, battle, evolutions.length, championRun, dialogue])
 
-    // RUN 3 — FIN DU CONCOURS : à 0⚡ (source unique épuisée), le run se termine → MÉGA-FUSION 3-voies (retour
-    //   en live). On attend l'écran LIBRE (fin de combat/cinématique/HoF) pour ne pas déclencher en plein combat
-    //   ou pendant le sacre. Ref anti-double : completeRun3 est async et bascule activeWorld → sans garde l'effet
-    //   pourrait relancer plusieurs fusions. Réarmé quand on n'est plus en run 3.
+    // RUN 3 — FIN DU CONCOURS : deux conditions (choix Sartay) → MÉGA-FUSION 3-voies (retour en live).
+    //   (a) 0⚡ : la source unique est épuisée. (b) SACRE : le joueur bat LE MAÎTRE de la Ligue (isChampion en
+    //   run 3) → clôture au sommet. On attend l'écran LIBRE (fin de combat/cinématique/HoF — le sacre affiche
+    //   d'abord son Hall of Fame via championRun, qu'on laisse se fermer). Ref anti-double (completeRun3 async).
     useEffect(() => {
         if (activeWorld !== "run3") { run3EndTriggeredRef.current = false; return }
-        if (run3EndTriggeredRef.current || player.reps > 0) return
+        if (run3EndTriggeredRef.current) return
+        const beatMaster = player.isChampion // en run 3, devenir Champion = avoir battu LE MAÎTRE
+        if (player.reps > 0 && !beatMaster) return
         if (battle || evolutions.length > 0 || championRun || dialogue || pendingLearn || newDexEntry || run3EndOffer) return
         run3EndTriggeredRef.current = true
-        setRun3EndOffer({ score: run3Score(player.run3Defeated ?? []) })
-    }, [activeWorld, player.reps, player.run3Defeated, battle, evolutions.length, championRun, dialogue, pendingLearn, newDexEntry, run3EndOffer])
+        setRun3EndOffer({ score: run3Score(player.run3Defeated ?? []), reason: beatMaster ? "master" : "energy" })
+    }, [activeWorld, player.reps, player.isChampion, player.run3Defeated, battle, evolutions.length, championRun, dialogue, pendingLearn, newDexEntry, run3EndOffer])
 
     // SACRE run 1 → une fois le dialogue-défi du Dieu des Nouilles refermé, on OUVRE le créateur en mode FORCÉ.
     useEffect(() => {
@@ -2004,13 +2006,15 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 </div>
             )}
 
-            {/* RUN 3 — FIN DU CONCOURS (0⚡) : méga-fusion 3-voies FORCÉE (0⚡ n'est pas un choix → un seul bouton). */}
+            {/* RUN 3 — FIN DU CONCOURS (0⚡ OU sacre du Maître) : méga-fusion 3-voies FORCÉE (un seul bouton). */}
             {run3EndOffer && (
                 <div style={menuOverlayStyle}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
-                        <div style={menuTitleStyle}>🏁 CONCOURS TERMINÉ</div>
+                        <div style={menuTitleStyle}>{run3EndOffer.reason === "master" ? "👑 CONCOURS REMPORTÉ" : "🏁 CONCOURS TERMINÉ"}</div>
                         <div style={{ fontSize: 12.5, lineHeight: 1.5, margin: "2px 0 10px", color: "#eee" }}>
-                            Ton énergie est épuisée — <b style={{ color: "#ff9a5a" }}>0⚡</b>. Le concours s'achève ici.
+                            {run3EndOffer.reason === "master"
+                                ? <>Tu as terrassé <b style={{ color: "#ffe36b" }}>LE MAÎTRE</b> de la Ligue à la force de ton concours ! Sacre au sommet — le run 3 s'achève dans la gloire.</>
+                                : <>Ton énergie est épuisée — <b style={{ color: "#ff9a5a" }}>0⚡</b>. Le concours s'achève ici.</>}
                             <div style={{ margin: "8px 0 0", padding: "8px 10px", background: "rgba(255,227,107,0.12)", borderRadius: 8, fontSize: 12 }}>
                                 🏆 Ton score : <b style={{ color: "#ffe36b" }}>{run3EndOffer.score}</b> — gravé dans le Nexus.
                             </div>
