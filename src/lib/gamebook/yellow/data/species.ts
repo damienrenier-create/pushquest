@@ -499,15 +499,17 @@ export const SPECIES: Record<string, SpeciesData> = {
     // Goshendofy). Cf. evolveMagmatorWithChen().
     magnetor: {
         id: "magnetor", dexNo: 144, name: "Magnetor", types: ["FEU", "METAL"],
-        baseStats: { hp: 95, atk: 122, def: 142, spe: 50, spc: 96 },
+        // BST 480 (Sartay : on tape dans la Spéciale — c'est un TANK PHYSIQUE Métal, pas un attaquant spécial).
+        baseStats: { hp: 95, atk: 122, def: 142, spe: 50, spc: 71 },
         learnset: [
-            { level: 1, moveId: "lance_flammes" },   // STAB Feu (spécial)
-            { level: 1, moveId: "tete_de_fer" },      // STAB Métal (physique)
+            { level: 1, moveId: "griffe_acier" },     // STAB Métal de départ (40)
+            { level: 1, moveId: "lance_flammes" },    // STAB Feu (spécial, couverture)
             { level: 1, moveId: "seisme" },           // couverture Sol
-            { level: 1, moveId: "mur_de_fer" },       // set-up défensif
-            { level: 50, moveId: "carapace_diamant" },// set-up défensif ++
-            { level: 58, moveId: "lame_roche" },      // couverture Roche
-            { level: 68, moveId: "poing_meteore" },   // STAB Métal capstone (90)
+            { level: 1, moveId: "mur_de_fer" },       // set-up Déf
+            { level: 50, moveId: "tete_de_fer" },     // STAB Métal (80) — dispo dès l'évolution (niv 50)
+            { level: 58, moveId: "carapace_diamant" },// set-up Déf ++
+            { level: 66, moveId: "lame_roche" },      // couverture Roche
+            { level: 73, moveId: "poing_meteore" },   // STAB Métal capstone (90)
         ],
         catchRate: 45, baseExp: 280, rarity: "RARE", growthRate: "medium_fast", role: "Feu/Métal — forteresse en fusion", hiddenUntilCaught: true,
         description: "Magmator dont la roche a mué en un alliage indestructible. Un colosse de métal fondu que rien ne perce.",

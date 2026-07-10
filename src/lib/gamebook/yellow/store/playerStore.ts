@@ -615,6 +615,7 @@ export function evolveMagmatorWithChen(uid: string): EvolutionResult | null {
     if (idx < 0) return null
     const src = (where === "team" ? st.team : st.pc)[idx]
     if (src.speciesId !== "magmator") return null
+    if (src.level < 50) return null // Sartay : l'évo Magmator→Magnetor n'est possible qu'à partir du NIVEAU 50
     const clone: MonInstance = { ...src, moves: src.moves.map((m) => ({ ...m })), pendingMoves: src.pendingMoves ? [...src.pendingMoves] : undefined }
     const fromSp = getSpecies(src.speciesId)
     const hpBefore = fromSp ? fullStats(src, fromSp).hp : src.currentHp
