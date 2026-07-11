@@ -1,8 +1,8 @@
 "use client"
 
 // LEADERBOARD des scores de RUN (concours) — consultable depuis le menu START par les joueurs ayant fini le
-// run 1 (>=5 badges). Deux classements distincts (unités différentes) : RUN 2 (énergie en réserve au sacre)
-// et RUN 3 (Σ des niveaux des Daemons vaincus). Lecture seule, données serveur.
+// run 1 (>=5 badges). Deux classements distincts (unités différentes) : RUN 2 (NOTE GLOBALE /1000 = 5 facteurs :
+// % victoire, Pokédex, niveaux, frugalité, peu de pas) et RUN 3 (Σ des niveaux des Daemons vaincus). Lecture seule.
 
 import { useEffect, useState } from "react"
 
@@ -11,7 +11,7 @@ type Data = { gated?: boolean; run2: ScoreRow[]; run3: ScoreRow[] }
 
 const RUN_META: { id: "run3" | "run2"; label: string; unit: string; hint: string }[] = [
     { id: "run3", label: "🏆 RUN 3", unit: "pts", hint: "Σ des niveaux des Daemons ennemis vaincus (boss + Ligue). Le + haut gagne." },
-    { id: "run2", label: "⚡ RUN 2", unit: "⚡", hint: "Énergie en réserve au re-sacre du New Game+. Le + haut gagne." },
+    { id: "run2", label: "🏅 RUN 2", unit: "/1000", hint: "Note globale /1000 : % victoire, Pokédex, niveaux d'équipe, frugalité (énergie) & peu de pas. Le + haut gagne." },
 ]
 
 export default function RunScoreboardPanel({ close }: { close: () => void }) {
@@ -59,7 +59,7 @@ export default function RunScoreboardPanel({ close }: { close: () => void }) {
                     <div style={muted}>🔒 Le classement des concours se débloque quand tu as conquis les <b>5 arènes du run 1</b>.<br />Termine la Ligue pour y accéder !</div>
                 )}
                 {state === "ok" && !data.gated && list.length === 0 && (
-                    <div style={muted}>Aucun score {meta.label} pour l&apos;instant.<br />Sois le premier à finir ce concours ! {tab === "run3" ? "🏆" : "⚡"}</div>
+                    <div style={muted}>Aucun score {meta.label} pour l&apos;instant.<br />Sois le premier à finir ce concours ! {tab === "run3" ? "🏆" : "🏅"}</div>
                 )}
 
                 {state === "ok" && !data.gated && list.length > 0 && (

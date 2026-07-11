@@ -822,10 +822,14 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         const won = ngplusFinalResult.won
         clearNgplusFinalResult()
         if (won) {
-            // SCORE du run NG+ = l'énergie en réserve à la clôture (capturée AVANT la fusion, qui remanie les reps).
+            // ÉNERGIE en réserve à la clôture (capturée AVANT la fusion, qui remanie les reps) — sert au FLAVOR de
+            // l'offre run 3 (« X⚡ en réserve »), PAS au classement.
             const ngplusScore = getPlayer().reps
-            // LEADERBOARD : on remonte le score run 2 (best-effort, une fois — le serveur garde le meilleur).
-            fetch("/api/gamebook/yellow/run-scores", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ run: "run2", score: ngplusScore }) }).catch(() => {})
+            // LEADERBOARD run 2 : on remonte la NOTE GLOBALE /1000 (5 facteurs : % victoire, Pokédex, Σ niveaux,
+            //   frugalité sur 10000⚡, peu de pas) — surtout PAS l'énergie brute, qui récompensait le grind poker.
+            //   computeRunScores lit l'état run 2 courant (avant fusion). Best-effort (le serveur garde le meilleur).
+            const run2Grade = computeRunScores().grade
+            fetch("/api/gamebook/yellow/run-scores", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ run: "run2", score: run2Grade }) }).catch(() => {})
             // On NE FUSIONNE PAS tout de suite : on PROPOSE le choix (fusionner OU lancer le run 3). L'overlay
             // ci-dessous appelle completeNewGamePlus (fusion 2-voies) OU launchRun3 (garde les 3 mondes gelés).
             setRun3Offer({ score: ngplusScore })

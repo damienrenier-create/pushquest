@@ -1,7 +1,7 @@
 // src/app/api/gamebook/yellow/run-scores/route.ts
 //
 // Nexus Jaune Éclair — LEADERBOARD des scores de RUN (concours), partagé.
-//  POST : un joueur signale son score de run 2 (énergie en réserve au re-sacre) ou run 3 (Σ niveaux vaincus).
+//  POST : un joueur signale son score de run 2 (NOTE GLOBALE /1000, cf. score/runScore) ou run 3 (Σ niveaux vaincus).
 //         On garde le MEILLEUR score par (joueur, run). Pseudo trusté serveur.
 //  GET  : renvoie les classements run2 + run3 — MAIS seulement si le SPECTATEUR a fini le run 1 (>=5 badges).
 //
@@ -81,9 +81,8 @@ export async function POST(req: NextRequest) {
     try { body = await req.json() } catch { return NextResponse.json({ error: "Bad JSON" }, { status: 400 }) }
     const run = typeof body.run === "string" && VALID_RUNS.has(body.run) ? body.run : null
     // Borne PAR RUN (anti-triche : le score vient d'un POST client). run3 = Σ max réellement atteignable (dérivé) +
-    //   marge. run2 = énergie en réserve : borne LARGE (100k) car le repsCap peut être décapé sans plafond via le
-    //   cash-out poker / dons hors-plafond → ne pas tronquer un score légitime. Fallback MAX_SCORE si run inconnu.
-    const runCap = run === "run3" ? run3MaxScore() + 200 : run === "run2" ? 100000 : MAX_SCORE
+    //   marge. run2 = NOTE GLOBALE /1000 (computeRunScores) → plafond STRICT à 1000. Fallback MAX_SCORE si run inconnu.
+    const runCap = run === "run3" ? run3MaxScore() + 200 : run === "run2" ? 1000 : MAX_SCORE
     const score = typeof body.score === "number" && isFinite(body.score) ? Math.max(0, Math.min(runCap, Math.floor(body.score))) : null
     if (!run || score === null) return NextResponse.json({ error: "Bad params" }, { status: 400 })
 
