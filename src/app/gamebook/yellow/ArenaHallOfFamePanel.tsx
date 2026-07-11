@@ -21,6 +21,16 @@ const ARENAS: ArenaMeta[] = [
     { id: "elec", nom: "Tour Hertz", boss: "Volta", emoji: "⚡", color: "#f6c640" },
     { id: "eau", nom: "Sanctuaire des Marées", boss: "Ondine", emoji: "💧", color: "#3a8ee0" },
 ]
+// RUN 2 (NG+) : les arènes gardent leur DOYEN mais changent de TYPE (cf. ngplusArenas.ts) → emoji/nom/couleur
+// alignés sur le NOUVEAU type (Vol / Psy / Cabinet éclectique / Bestioles&Spectres / Gauntlet des finals),
+// pas sur le type d'origine. Slots (id) inchangés : plante→Vol, roche→Psy, feu→Cabinet, elec→Bestioles, eau→Gauntlet.
+const ARENAS_RUN2: ArenaMeta[] = [
+    { id: "plante", nom: "Arène Vol", boss: "Druide Sylvain", emoji: "🕊️", color: "#8fb8e0" },
+    { id: "roche", nom: "Arène Psy", boss: "Maître Granit", emoji: "🔮", color: "#e070b0" },
+    { id: "feu", nom: "Cabinet Inédit", boss: "Pyra", emoji: "🎭", color: "#d59030" },
+    { id: "elec", nom: "Bestioles & Spectres", boss: "Volta", emoji: "🕸️", color: "#93b025" },
+    { id: "eau", nom: "Gauntlet des Finals", boss: "Ondine", emoji: "🏆", color: "#8fb0c8" },
+]
 // RUN 3 : les arènes sont re-typées aux GARDIENS (aperçu de la Ligue) → emojis + noms + couleurs adaptés.
 const ARENAS_RUN3: ArenaMeta[] = [
     { id: "plante", nom: "Arène Glace", boss: "Champion figé", emoji: "❄️", color: "#7fd4ff" },
@@ -72,7 +82,7 @@ export default function ArenaHallOfFamePanel({ close, onFight }: { close: () => 
     // (anti-spoiler : un joueur run 1 ne voit jamais les arènes run 2/3). Défaut = son run courant.
     const activeWorld = useActiveWorld()
     const [viewWorld, setViewWorld] = useState<"live" | "ngplus" | "run3">(activeWorld)
-    const arenaList = viewWorld === "run3" ? ARENAS_RUN3 : ARENAS
+    const arenaList = viewWorld === "run3" ? ARENAS_RUN3 : viewWorld === "ngplus" ? ARENAS_RUN2 : ARENAS
     // Runs visibles au toggle : run 1 toujours ; run 2 si atteint ; run 3 si atteint.
     const availWorlds = WORLD_META.filter((w) => w.id === "live" || (w.id === "ngplus" && hasNgPlusWorld()) || (w.id === "run3" && hasRun3World()))
     const byBadge = useMemo(() => {
