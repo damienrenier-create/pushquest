@@ -97,6 +97,11 @@ export interface MoveEffect {
      *  (façon Reversal). Le moteur substitue la puissance calculée à move.power (cf. dealMoveDamage).
      *  Utilisé par « Patience » (Karmaki) : plus il a encaissé, plus il rend. */
     dynamicPower?: "lowHp"
+    /** MITRA-POING (Focus Punch) : le lanceur CHARGE 1 tour (aucun dégât, vulnérable) ; s'il est TOUCHÉ pendant
+     *  la charge il est DÉCONCENTRÉ et rate ; sinon il libère une frappe COMBAT dévastatrice au tour suivant. */
+    focusCharge?: boolean
+    /** VOL D'ÉCLAT (Wistree) : AVANT les dégâts, transfère TOUS les boosts POSITIFS de la cible vers le lanceur. */
+    stealBoosts?: boolean
 }
 
 export interface MoveData {
@@ -274,6 +279,10 @@ export interface BattleMon extends MonInstance {
     /** TUNNEL (dig) : le Daemon est SOUS TERRE (tour 1 de Tunnel) → les attaques adverses le MANQUENT,
      *  jusqu'à ce qu'il ressorte au tour 2. Posé/levé en même temps que chargingMove. Runtime, non persisté. */
     semiInvuln?: boolean
+    /** MITRA-POING (Focus Punch) : le Daemon CONCENTRE son énergie (tour 1) → il est vulnérable ; `focusBroken`
+     *  passe à true s'il subit des dégâts pendant la charge → il rate au tour 2. Posés/levés avec chargingMove. */
+    focusing?: boolean
+    focusBroken?: boolean
     /** ESSAIM VORACE : nb de coups CONSÉCUTIFS réussis d'« Essaim Vorace » (0→5) → pilote le drain croissant
      *  (20 + 10×stacks, plafond 70%). Réinitialisé à 0 dès qu'un autre move est lancé, qu'il rate ou au switch.
      *  Runtime, non persisté (toBattleMon le laisse undefined ≡ 0). */

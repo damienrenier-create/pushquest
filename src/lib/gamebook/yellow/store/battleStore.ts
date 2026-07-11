@@ -653,31 +653,42 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                 rematchReward = { npcId: id, npcName: t?.name ?? "DRESSEUR", lines: [...(rm?.defeat ?? []), rewardLine] }
             }
         } else if (storeState.trainer.trainerId === HH_COLLECTOR_ID) {
-            // COLLECTIONNEUR DE SPECTRES : réaffrontable (PAS de markTrainerDefeated). Enregistre la victoire
-            // + les spectres montrés (présents dans l'équipe). À 3 victoires ET 3 spectres distincts → CT26.
-            // NB : le collectionneur n'a PAS de badge → on ne peut PAS passer par giftCtMove (affiché seulement
-            // avec un badge). On annonce donc tout (récompense ET progression) via rematchReward, fiable post-combat.
-            const spectres = b.player.team.map((m) => m.speciesId).filter((id) => getSpecies(id)?.types.includes("SPECTRE"))
-            const res = recordHhCollectorWin(spectres)
-            if (res.rewarded) {
-                const mvId = getCt(HH_COLLECTOR_CT)?.moveId
-                const mv = mvId ? getMove(mvId)?.name : null
-                rematchReward = {
-                    npcId: HH_COLLECTOR_ID, npcName: "COLLECTIONNEUR",
-                    lines: [...HH_COLLECTOR_DONE_LINES, mv ? `🎁 Reçois la CT « ${mv} » ! Apprends-la à un Daemon compatible.` : "🎁 Reçois ma CT spectrale !"],
+            // COLLECTIONNEUR : réaffrontable (PAS de markTrainerDefeated). Pas de badge → tout (récompense +
+            // progression) est annoncé via rematchReward, fiable post-combat.
+            if (getActiveWorld() === "run3") {
+                // RUN 3 (Maison COMBAT) : la CT ultime « Mitra-Poing » (ct58) si le joueur a un GAMARUTO en équipe.
+                const hasGamaruto = b.player.team.some((m) => m.speciesId === "gamaruto")
+                const mv = getMove(getCt("ct58")?.moveId ?? "")?.name ?? "Mitra-Poing"
+                if (hasGamaruto && grantCt("ct58")) {
+                    rematchReward = { npcId: HH_COLLECTOR_ID, npcName: "COLLECTIONNEUR", lines: ["Ce GAMARUTO à tes côtés… tu suis la voie du crapaud-ninja !", `🎁 Reçois la CT « ${mv} » — la technique COMBAT ultime. Enseigne-la à un Daemon Combat !`] }
+                } else if (hasGamaruto) {
+                    rematchReward = { npcId: HH_COLLECTOR_ID, npcName: "COLLECTIONNEUR", lines: [`Tu possèdes déjà « ${mv} » — la voie du crapaud n'a plus de secret pour toi. 🐸`] }
+                } else {
+                    rematchReward = { npcId: HH_COLLECTOR_ID, npcName: "COLLECTIONNEUR", lines: ["Reviens avec un GAMARUTO dans ton équipe, et je t'enseignerai la technique Combat ultime…"] }
                 }
             } else {
-                // Feedback de progression IMMÉDIAT (sinon le joueur ignore que sa victoire a compté).
-                const w = Math.min(res.wins, HH_COLLECTOR_WINS_NEEDED)
-                const s = Math.min(res.shown, HH_COLLECTOR_SPECTRES_NEEDED)
-                rematchReward = {
-                    npcId: HH_COLLECTOR_ID, npcName: "COLLECTIONNEUR",
-                    lines: [
-                        `Belle bataille ! Progression : ${w}/${HH_COLLECTOR_WINS_NEEDED} victoires · ${s}/${HH_COLLECTOR_SPECTRES_NEEDED} spectres distincts montrés.`,
-                        res.shown === 0
-                            ? "…mais je n'ai vu AUCUN spectre dans ton équipe ! Reviens avec un Daemon de type SPECTRE à tes côtés."
-                            : "Reviens m'affronter avec d'AUTRES spectres pour compléter ma collection !",
-                    ],
+                // RUN 1/2 : défi SPECTRE → CT26 (montre 3 spectres distincts + bats-le 3×).
+                const spectres = b.player.team.map((m) => m.speciesId).filter((id) => getSpecies(id)?.types.includes("SPECTRE"))
+                const res = recordHhCollectorWin(spectres)
+                if (res.rewarded) {
+                    const mvId = getCt(HH_COLLECTOR_CT)?.moveId
+                    const mv = mvId ? getMove(mvId)?.name : null
+                    rematchReward = {
+                        npcId: HH_COLLECTOR_ID, npcName: "COLLECTIONNEUR",
+                        lines: [...HH_COLLECTOR_DONE_LINES, mv ? `🎁 Reçois la CT « ${mv} » ! Apprends-la à un Daemon compatible.` : "🎁 Reçois ma CT spectrale !"],
+                    }
+                } else {
+                    const w = Math.min(res.wins, HH_COLLECTOR_WINS_NEEDED)
+                    const s = Math.min(res.shown, HH_COLLECTOR_SPECTRES_NEEDED)
+                    rematchReward = {
+                        npcId: HH_COLLECTOR_ID, npcName: "COLLECTIONNEUR",
+                        lines: [
+                            `Belle bataille ! Progression : ${w}/${HH_COLLECTOR_WINS_NEEDED} victoires · ${s}/${HH_COLLECTOR_SPECTRES_NEEDED} spectres distincts montrés.`,
+                            res.shown === 0
+                                ? "…mais je n'ai vu AUCUN spectre dans ton équipe ! Reviens avec un Daemon de type SPECTRE à tes côtés."
+                                : "Reviens m'affronter avec d'AUTRES spectres pour compléter ma collection !",
+                        ],
+                    }
                 }
             }
         } else if (storeState.trainer.trainerId === ORCALINE_TRAINER_ID) {

@@ -93,6 +93,8 @@ export const MOVES: Record<string, MoveData> = {
     // CT28 (Champion) : nouveau move COMBAT multi-coups — frappe 2 à 5 fois (20/coup), distribution uniforme
     // du moteur (≈3,5 coups en moyenne → 40 à 100 dégâts). Distinct du « Crochet du Maître » simple (intact).
     deluge_crochets: { id: "deluge_crochets", name: "Rafale de Crochets", type: "COMBAT", power: 20, accuracy: 95, pp: 10, effect: { multiHit: [2, 5] }, description: "Déluge de crochets : frappe 2 à 5 fois (20 par coup)." },
+    mitra_poing: { id: "mitra_poing", name: "Mitra-Poing", type: "COMBAT", power: 150, accuracy: 100, pp: 5, effect: { focusCharge: true }, description: "La capacité Combat la plus PUISSANTE. Le lanceur concentre son énergie un tour entier : s'il est touché pendant ce temps il est déconcentré et rate ; sinon il libère un coup dévastateur au tour suivant." },
+    vol_d_eclat: { id: "vol_d_eclat", name: "Vol d'Éclat", type: "PLANTE", power: 60, accuracy: 100, pp: 10, effect: { stealBoosts: true }, description: "L'esprit SIPHONNE tous les gains de stats de la cible (elle les perd, le lanceur se les approprie) AVANT de frapper de ses ronces spectrales." },
     crachat_acide: { id: "crachat_acide", name: "Crachat Acide", type: "POISON", power: 40, accuracy: 100, pp: 30, effect: { chance: 10, statChanges: [{ target: "target", stat: "def", stages: -1 }] }, description: "Peut baisser la Défense." },
     tir_boue: { id: "tir_boue", name: "Tir de Boue", type: "SOL", power: 55, accuracy: 95, pp: 15, effect: { chance: 10, statChanges: [{ target: "target", stat: "acc", stages: -1 }] }, description: "Peut baisser la Précision." },
     fonce_bec: { id: "fonce_bec", name: "Fonce-Bec", type: "VOL", power: 75, accuracy: 100, pp: 20, description: "Charge aérienne fiable." },

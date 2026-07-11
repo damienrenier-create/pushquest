@@ -246,7 +246,7 @@ export function resolveTurn(prev: BattleState, playerAction: PlayerAction): Batt
     if (pCharge && state.forcedSwitch !== "player" && playerAction.kind !== "switch") {
         const ci = active(state.player).moves.findIndex((m) => m.moveId === pCharge)
         if (ci >= 0) playerAction = { kind: "move", moveIndex: ci }
-        else { const me = active(state.player); me.chargingMove = undefined; me.semiInvuln = undefined } // soupape : move disparu → on déverrouille (symétrie avec chooseEnemyAction)
+        else { const me = active(state.player); me.chargingMove = undefined; me.semiInvuln = undefined; me.focusing = undefined; me.focusBroken = undefined } // soupape : move disparu → on déverrouille
     }
 
     // --- Cas spécial : changement forcé après KO (pas un vrai tour) ---
@@ -560,6 +560,29 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
     // --- ESSAIM VORACE : lancer un AUTRE move brise la frénésie (le compteur d'essaim retombe à 0). ---
     if (!move.effect?.escalatingDrain) attacker.swarmStacks = 0
 
+    // --- MITRA-POING (Focus Punch) : charge 1 tour SANS dégât (vulnérable), casse si l'attaquant est touché. ---
+    //     Réutilise le verrou `chargingMove` (comme twoTurn/Tunnel) → le joueur libère automatiquement au tour 2.
+    if (move.effect?.focusCharge) {
+        if (attacker.chargingMove === (slot?.moveId ?? move.id)) {
+            attacker.chargingMove = undefined
+            attacker.focusing = undefined
+            if (attacker.focusBroken) { // touché pendant la charge → déconcentré, l'attaque échoue
+                attacker.focusBroken = undefined
+                events.push({ kind: "message", text: `${displayName(attacker)} a été déconcentré : Mitra-Poing échoue !` })
+                return
+            }
+            events.push({ kind: "message", text: `${displayName(attacker)} libère MITRA-POING !` })
+            dealMoveDamage(state, side, { ...move, effect: undefined }, rng, events) // le gros coup (power du move), sans re-charger
+            return
+        }
+        // PHASE 1 : concentration (aucun dégât) → vulnérable + verrouillé jusqu'au tour suivant.
+        attacker.chargingMove = slot?.moveId ?? move.id
+        attacker.focusing = true
+        attacker.focusBroken = undefined
+        events.push({ kind: "message", text: `${displayName(attacker)} concentre toute son énergie… il ne doit surtout pas être touché !` })
+        return
+    }
+
     // --- Précision ---
     if (!accuracyCheck(move, attacker, defender, rng)) {
         attacker.swarmStacks = 0 // un raté brise aussi la frénésie de l'Essaim Vorace
@@ -615,6 +638,15 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
         }
         applyStatusMove(state, side, move, events, rng)
         return
+    }
+
+    // --- VOL D'ÉCLAT (Wistree) : AVANT les dégâts, siphonne les boosts POSITIFS de la cible vers l'attaquant. ---
+    if (move.effect?.stealBoosts) {
+        let any = false
+        for (const k of Object.keys(defender.stages) as (keyof typeof defender.stages)[]) {
+            if (defender.stages[k] > 0) { attacker.stages[k] = clampStage(attacker.stages[k] + defender.stages[k]); defender.stages[k] = 0; any = true }
+        }
+        if (any) events.push({ kind: "message", text: `${displayName(attacker)} SIPHONNE les gains de ${displayName(defender)} !` })
     }
 
     // --- Capacité offensive (gère multi-hit) ---
@@ -963,14 +995,14 @@ function endOfTurn(state: BattleState, events: BattleEvent[], rng: Rng) {
         // Statut résiduel
         const res = Status.residualDamage(mon.status, maxHpOf(mon), displayName(mon), mon.statusCounter)
         if (res.damage > 0) {
-            applyDamage(state, side, res.damage, events)
+            applyDamage(state, side, res.damage, events, /*breaksFocus*/ false)
             if (res.message) events.push({ kind: "message", text: res.message })
             if (mon.status === "TOXIC") mon.statusCounter += 1
         }
         // Vampigraine (SEEDED) : draine vers l'adversaire
         if (mon.volatiles.SEEDED && mon.currentHp > 0) {
             const drain = Math.max(1, Math.floor(maxHpOf(mon) / 8))
-            applyDamage(state, side, drain, events)
+            applyDamage(state, side, drain, events, /*breaksFocus*/ false)
             applyHeal(state, other(side), drain, events)
             events.push({ kind: "message", text: `${displayName(mon)} est vidé de son énergie !` })
         }
@@ -987,10 +1019,14 @@ function endOfTurn(state: BattleState, events: BattleEvent[], rng: Rng) {
 // PV : dégâts / soin (+ événements hp pour l'UI)
 // ============================================================
 
-function applyDamage(state: BattleState, side: SideId, amount: number, events: BattleEvent[]) {
+function applyDamage(state: BattleState, side: SideId, amount: number, events: BattleEvent[], breaksFocus = true) {
     if (amount <= 0) return
     const mon = active(state[side])
     mon.currentHp = Math.max(0, mon.currentHp - amount)
+    // MITRA-POING : être TOUCHÉ pendant la charge → déconcentré (ratera au tour 2). MAIS les résiduels de
+    // fin de tour (brûlure/poison/toxik/Vampigraine) NE sont PAS « être touché » : ils ne cassent pas le focus
+    // (sinon un lanceur empoisonné/brûlé raterait TOUJOURS son Mitra-Poing) → breaksFocus=false pour ces sources.
+    if (breaksFocus && mon.focusing) mon.focusBroken = true
     events.push({ kind: "hp", side, hp: mon.currentHp, max: maxHpOf(mon) })
     triggerPinchBerry(state, side, events) // BAIE : soin/boost quand les PV passent bas (consommée)
 }
@@ -1052,6 +1088,7 @@ function doSwitch(state: BattleState, side: SideId, teamIndex: number, events: B
     out.volatiles = keepConfusion ? { CONFUSION: keepConfusion } : {}
     out.chargingMove = undefined
     out.semiInvuln = undefined // le sortant ressort du tunnel (annule une charge Tunnel en cours)
+    out.focusing = undefined; out.focusBroken = undefined // le switch annule aussi une charge Mitra-Poing
     out.swarmStacks = 0        // se retirer brise la frénésie de l'Essaim Vorace
     s.activeIndex = teamIndex
     const incoming = s.team[teamIndex]
@@ -1150,7 +1187,7 @@ export function chooseEnemyAction(state: BattleState, rng: Rng): ResolvedAction 
     if (self.chargingMove) {
         const ci = self.moves.findIndex((m) => m.moveId === self.chargingMove)
         if (ci >= 0) return { side: "enemy", kind: "move", moveIndex: ci }
-        self.chargingMove = undefined; self.semiInvuln = undefined // sécurité : move perdu → on déverrouille
+        self.chargingMove = undefined; self.semiInvuln = undefined; self.focusing = undefined; self.focusBroken = undefined // sécurité : move perdu → on déverrouille
     }
     // OPENING SCRIPTÉ (boss) : l'attaque imposée passe AVANT l'IA et le budget d'énergie
     // ("quoi qu'il arrive"). Consommée une par une, uniquement quand ce Daemon est actif.

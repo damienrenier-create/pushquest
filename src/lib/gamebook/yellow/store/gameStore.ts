@@ -1133,6 +1133,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
         // COLLECTIONNEUR DE SPECTRES : 3 victoires + 3 spectres distincts → CT26. Réaffrontable jusque-là.
         if (npc.id === HH_COLLECTOR_ID) {
+            // RUN 3 (Maison COMBAT) : le Collectionneur enseigne MITRA-POING (ct58) à qui lui montre un GAMARUTO.
+            if (getActiveWorld() === "run3") {
+                if (getPlayerSave().ownedCts.includes("ct58")) {
+                    set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: ["Tu maîtrises déjà Mitra-Poing, disciple du crapaud. 🐸"] } })
+                    return
+                }
+                const hasGamaruto = getPlayerSave().team.some((m) => m.speciesId === "gamaruto")
+                const lead = hasGamaruto
+                    ? ["Ce GAMARUTO à tes côtés… tu suis la voie du crapaud-ninja !", "Bats-moi et je t'enseignerai la technique COMBAT ultime : MITRA-POING."]
+                    : ["Ce dojo hanté ne récompense que les vrais disciples du crapaud…", "Reviens avec un GAMARUTO dans ton équipe, bats-moi, et MITRA-POING — la technique Combat ultime — sera à toi."]
+                set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: lead, lineIndex: 0 }, pendingHhCollector: true })
+                return
+            }
             if (getPlayerSave().ownedCts.includes(HH_COLLECTOR_CT)) {
                 set({ dialogue: { npcId: npc.id, npcName: npc.name, lineIndex: 0, lines: HH_COLLECTOR_DONE_LINES } })
                 return

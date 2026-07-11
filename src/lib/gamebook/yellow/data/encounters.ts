@@ -425,13 +425,14 @@ const RUN3_ZONES: Record<string, Zone> = {
             { speciesId: "sporbeo", base: 25 },
             { speciesId: "cailloutchi", base: 10 }, { speciesId: "cornaissant", base: 10 },
             { speciesId: "mottoche", base: 5, noEvolve: true, levelFixed: 5 }, // niveau 5 FIXE (fodder)
-            { speciesId: "braisecaille", base: 5 }, { speciesId: "forgeotin", base: 5 }, { speciesId: "brook", base: 5 },
+            { speciesId: "braisecaille", base: 5 }, { speciesId: "brook", base: 5 }, // Forgeotin (Combat) déplacé → Maison Combat run 3
             // les 3 starters du run 1 (nostalgie, rares)
             { speciesId: "gouttiny", base: 2, rare: true }, { speciesId: "feuillichot", base: 2, rare: true }, { speciesId: "braisille", base: 2, rare: true },
             { speciesId: "draclet", base: 1, rare: true },
             { speciesId: "rembodo", base: 1 }, { speciesId: "belunode", base: 1 }, { speciesId: "namicha", base: 1, noEvolve: true },
             // trophée de la grotte — Glace/Eau anti-Dragon, UNIQUEMENT si le lead ≥ 35 (son niveau mini)
             { speciesId: "orcaline", base: 1, noEvolve: true, rare: true, minLeadLevel: 35 },
+            { speciesId: "wistree", base: 2, noEvolve: true, rare: true, captureMult: 0.4 }, // Spectre/Plante rare & mystérieux (voleur d'éclat)
         ],
     },
     // CENTRALE PSY run 3 — DONJON 100% PSY : tout le roster psy (Nouillon/Vermissaint, Limaroche→Escargyle→
@@ -457,6 +458,31 @@ const RUN3_ZONES: Record<string, Zone> = {
             { speciesId: "hypnoppo", base: 12, levelRange: [18, 33] },                         // rare → Téléppo
             { speciesId: "karmaki", base: 12, noEvolve: true, levelRange: [28, 56] },          // rare, grande fourchette (mono)
             { speciesId: "omnhippo", base: 3, noEvolve: true, levelRange: [48, 52], catchOnce: true, captureMult: 0.5 }, // ultra-rare pépite
+        ],
+    },
+    // MAISON HANTÉE run 3 → DONJON 100% COMBAT (« dojo hanté ») : le roster Combat (Bouhbou natif + lignées
+    // Couperin/Broussours/Trolystrik/Forgeotin/Brasicow) + la lignée grenouille-ninja INÉDITE Otama→Gamaruto→
+    // Uzumaro (~18%). Niveaux CONTRÔLÉS (levelRange ; stade via speciesAtLevel sauf noEvolve). Le Collectionneur
+    // (au fond du labyrinthe) offre la CT Mitra-Poing si le joueur a un GAMARUTO en équipe (cf. gameStore).
+    yellow_maison_hantee: {
+        rate: 0.12,
+        pool: [
+            // — ROSTER COMBAT familier —
+            { speciesId: "bouhbou", base: 80, noEvolve: true, levelRange: [24, 32] },        // commun (Combat/Spectre, natif hanté)
+            { speciesId: "couperin", base: 80, levelRange: [15, 25] },                        // commun (base)
+            { speciesId: "couperin", base: 32, levelRange: [30, 35] },                        // peu commun → Frappard
+            { speciesId: "broussours", base: 32, levelRange: [13, 17] },                      // peu commun (base)
+            { speciesId: "trolystrik", base: 30, levelRange: [12, 16] },                      // peu commun (base)
+            { speciesId: "forgeotin", base: 30, levelRange: [13, 17] },                       // peu commun (base, ex-Grotte)
+            { speciesId: "couperin", base: 10, levelRange: [44, 50], captureMult: 0.5 },      // rare → Maîtrezenc
+            { speciesId: "broussours", base: 10, levelRange: [44, 50], captureMult: 0.5 },    // rare → Druidours
+            { speciesId: "trolystrik", base: 10, levelRange: [44, 50], captureMult: 0.5 },    // rare → Hébulmin
+            { speciesId: "forgeotin", base: 10, levelRange: [44, 50], captureMult: 0.4 },     // rare → Enclumind
+            { speciesId: "brasicow", base: 8, levelRange: [42, 48], captureMult: 0.5 },       // rare → Tauricendre
+            // — GRENOUILLE-NINJA inédite (~18% ; Gamaruto findable pour le Collectionneur) —
+            { speciesId: "otama", base: 50, levelRange: [15, 24] },                           // peu commun (base)
+            { speciesId: "gamaruto", base: 20, noEvolve: true, levelRange: [26, 42] },        // uncommon (mid — gate Collectionneur)
+            { speciesId: "uzumaro", base: 6, noEvolve: true, levelRange: [48, 54], captureMult: 0.5 }, // rare pépite (final)
         ],
     },
 }

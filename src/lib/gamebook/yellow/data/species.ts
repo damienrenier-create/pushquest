@@ -2405,6 +2405,95 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "Moine-plante en méditation perpétuelle, flottant en position du lotus, une liane-fleur enroulée sous lui. Il cherche l'équilibre : il annule les excès, draine ce qu'on lui inflige, et rend le karma — plus il a enduré, plus sa Patience frappe fort.",
         sprite: "/yellow/sprites/dex/karmaki.png",
     },
+
+    // ═══════════════ MAISON COMBAT + GROTTE — RUN 3 (dexNo 161-164, espèces INÉDITES) ═══════════════
+    // 🐸 LIGNÉE GRENOUILLE-NINJA Otama → Gamaruto → Uzumaro (COMBAT/EAU) : tank-sétuppeur MIXTE à croissance LENTE
+    //    (très faible tôt, très fort tard). Peu de PV mais gros murs (DÉF/SPÉ) + kit de boosts (esquive/vit/for/spé)
+    //    + baisse de précision + multi-coups. Évos tardives (25/45). Peuple la Maison Hantée re-typée Combat.
+    otama: {
+        id: "otama", dexNo: 161, name: "Otama", types: ["COMBAT", "EAU"],
+        baseStats: { hp: 45, atk: 42, def: 48, spe: 40, spc: 45 }, // BST 220 — têtard frêle (croissance lente)
+        learnset: [
+            { level: 1, moveId: "charge" },
+            { level: 1, moveId: "jet_de_sable" },   // baisse la précision adverse
+            { level: 6, moveId: "mirage" },          // +2 esquive
+            { level: 12, moveId: "poing_karate" },   // STAB Combat (crit)
+            { level: 18, moveId: "pistolet_a_o" },   // STAB Eau
+            { level: 24, moveId: "double_pied" },    // multi-coups ×2
+        ],
+        evolution: { toId: "gamaruto", method: { kind: "LEVEL", level: 25 } },
+        catchRate: 45, baseExp: 60, rarity: "UNCOMMON", growthRate: "slow",
+        role: "Combat/Eau — têtard frêle (base, éclosion tardive)",
+        description: "Petit têtard tout rond au sourire benêt, coiffé d'un origami. Frêle et lent à mûrir, mais on murmure qu'il couve un guerrier des eaux.",
+        sprite: "/yellow/sprites/dex/otama.png",
+    },
+    gamaruto: {
+        id: "gamaruto", dexNo: 162, name: "Gamaruto", types: ["COMBAT", "EAU"],
+        baseStats: { hp: 58, atk: 74, def: 76, spe: 64, spc: 72 }, // BST 344
+        learnset: [
+            { level: 1, moveId: "charge" },
+            { level: 1, moveId: "jet_de_sable" },
+            { level: 1, moveId: "mirage" },
+            { level: 1, moveId: "poing_karate" },
+            { level: 1, moveId: "pistolet_a_o" },
+            { level: 1, moveId: "double_pied" },
+            { level: 25, moveId: "elan" },           // +1 Vitesse
+            { level: 30, moveId: "lame_eau" },        // STAB Eau (peut −Vit)
+            { level: 36, moveId: "mur_de_fer" },      // +1 Défense
+            { level: 42, moveId: "balayage" },        // Combat (peut apeurer)
+        ],
+        evolution: { toId: "uzumaro", method: { kind: "LEVEL", level: 45 } },
+        catchRate: 45, baseExp: 120, rarity: "RARE", growthRate: "slow",
+        role: "Combat/Eau — grenouille-ninja agile (mid)",
+        description: "Grenouille-ninja au regard perçant, un jutsu d'eau au creux de la main. Vive et rusée, elle esquive et harcèle — le stade que le Collectionneur veut voir.",
+        sprite: "/yellow/sprites/dex/gamaruto.png",
+    },
+    uzumaro: {
+        id: "uzumaro", dexNo: 163, name: "Uzumaro", types: ["COMBAT", "EAU"],
+        baseStats: { hp: 68, atk: 112, def: 106, spe: 84, spc: 110 }, // BST 480 — tank-sétuppeur MIXTE (peu de PV, gros murs)
+        learnset: [
+            { level: 1, moveId: "charge" },
+            { level: 1, moveId: "jet_de_sable" },
+            { level: 1, moveId: "mirage" },
+            { level: 1, moveId: "poing_karate" },
+            { level: 1, moveId: "pistolet_a_o" },
+            { level: 1, moveId: "double_pied" },
+            { level: 1, moveId: "elan" },
+            { level: 1, moveId: "lame_eau" },
+            { level: 45, moveId: "crochet_maitre" },   // STAB Combat (crit)
+            { level: 50, moveId: "deferlante" },        // gros STAB Eau (95)
+            { level: 55, moveId: "danse_lames" },       // +2 Attaque
+            { level: 60, moveId: "focalisation" },      // +1 Spé
+            { level: 66, moveId: "deluge_crochets" },   // multi-coups ×2-5 (chance)
+            { level: 72, moveId: "carapace_diamant" },  // +2 Défense
+            { level: 80, moveId: "hydrocanon" },        // capstone Eau (110)
+        ],
+        catchRate: 45, baseExp: 190, rarity: "RARE", growthRate: "slow",
+        role: "Combat/Eau — sage-crapaud tank-sétuppeur mixte (final)",
+        description: "Crapaud-sage massif aux bras croisés, marqué de motifs de guerre. Peu de PV mais une garde de fer : il encaisse en empilant les boosts, puis balaie de ses poings ET de ses raz-de-marée.",
+        sprite: "/yellow/sprites/dex/uzumaro.png",
+    },
+    // 🌳👻 WISTREE — SPECTRE/PLANTE, mono, rare & mystérieux. Rôle INÉDIT : « le Voleur d'Éclat » — il siphonne les
+    //    boosts positifs de la cible (signature Vol d'Éclat) puis frappe. Mur-disrupteur spécial. Spawn rare de la Grotte.
+    wistree: {
+        id: "wistree", dexNo: 164, name: "Wistree", types: ["SPECTRE", "PLANTE"],
+        baseStats: { hp: 90, atk: 73, def: 95, spe: 72, spc: 100 }, // BST 430 — voleur d'éclat MIXTE (Spectre phys + Plante spé)
+        learnset: [
+            { level: 1, moveId: "charge" },
+            { level: 1, moveId: "fouet_lianes" },   // STAB Plante
+            { level: 7, moveId: "malediction" },    // Spectre : +DÉF self / −VIT cible
+            { level: 14, moveId: "onde_folie" },    // confusion
+            { level: 22, moveId: "focalisation" },  // +1 Spé
+            { level: 30, moveId: "ball_ombre" },    // STAB Spectre physique (base ATQ 73) — paie surtout combiné à vol_d_eclat (L48), qui SIPHONNE l'ATQ boostée de l'adversaire
+            { level: 38, moveId: "tempete_verte" }, // gros STAB Plante (90)
+            { level: 48, moveId: "vol_d_eclat" },   // SIGNATURE : vole les boosts adverses
+            { level: 66, moveId: "lance_soleil" },  // capstone Plante (120)
+        ],
+        catchRate: 30, baseExp: 175, rarity: "RARE", growthRate: "medium_fast",
+        role: "Spectre/Plante — voleur d'éclat (mur-disrupteur spécial)",
+        description: "Esprit sylvestre gris et éthéré, couronné de fleurs et de baies, aux yeux luisants. Rare et cryptique, il flotte en silence… puis siphonne la puissance de quiconque ose se renforcer devant lui.",
+        sprite: "/yellow/sprites/dex/wistree.png",
+    },
 }
 
 // ── REGISTRE RUNTIME des Daemons CUSTOM (créés par les joueurs, post-Ligue). Fusionné à la LECTURE seulement :
@@ -2427,7 +2516,8 @@ export function getSpecies(id: string): SpeciesData | null {
 // partir du run 3 (dex tiéré par run). Marquées runThreeOnly ici, en un seul endroit, pour éviter d'éparpiller
 // le flag dans 10 littéraux. (Le POKÉDEX reste cumulatif — cf. isDexHidden / le caract. global des captures.)
 for (const id of ["magnetor", "elefer", "barrisfer", "colosfer", "cornaive", "astracorne", "lunarque", "coccipoing", "coccombat", "coccimperatrice",
-    "hypnoppo", "teleppo", "omnhippo", "karmaki"]) { // + lignée Centrale Psy run 3 (Gékosmic a le flag inline)
+    "hypnoppo", "teleppo", "omnhippo", "karmaki",           // lignée Centrale Psy run 3 (Gékosmic a le flag inline)
+    "otama", "gamaruto", "uzumaro", "wistree"]) {           // Maison Combat (grenouilles) + Grotte (Wistree) run 3
     if (SPECIES[id]) SPECIES[id].runThreeOnly = true
 }
 

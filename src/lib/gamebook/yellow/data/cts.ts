@@ -153,6 +153,9 @@ export const CTS: CtData[] = [
     { id: "ct55", label: "CT55", moveId: "danse_fauve", price: 0, gift: true, universal: true },                 // Pyra/éclectique (set-up universel)
     { id: "ct56", label: "CT56", moveId: "essaim_vorace", price: 0, gift: true, alsoTypes: ["SPECTRE"] },         // Volta/Insecte (les spectres l'apprennent aussi)
     { id: "ct57", label: "CT57", moveId: "frappe_atlas", price: 0, gift: true, alsoTypes: ["ROCHE", "NORMAL"] }, // Ondine/Sol
+    // CT COMBAT SIGNATURE « Mitra-Poing » (Focus Punch, la + puissante) — CADEAU du Collectionneur (Maison Combat
+    //   run 3) si le joueur a un GAMARUTO en équipe. JAMAIS en vente (gift). Type-lock COMBAT (via canLearnCt).
+    { id: "ct58", label: "CT58", moveId: "mitra_poing", price: 0, gift: true },
 ]
 
 /** CT-cadeaux EXCLUSIVES au run 2 (boss d'arène en New Game+). Invariant : JAMAIS obtenables autrement —
@@ -184,7 +187,7 @@ export function canLearnCt(species: SpeciesData, ct: CtData): boolean {
  *  (universal/badge/champion), cadeaux et exclusives labo confondus, SANS filtre de badge — SAUF les 5
  *  CT-signatures réservées aux boss d'arène (ct53-57) et la CT-trophée « Apothéose » (ct52, propre au run 1). */
 export function run2BlackjackCtPool(): string[] {
-    const excluded = new Set<string>([...NGPLUS_EXCLUSIVE_CT_IDS, "ct52"]) // signatures de boss + Apothéose
+    const excluded = new Set<string>([...NGPLUS_EXCLUSIVE_CT_IDS, "ct52", "ct58"]) // signatures de boss + Apothéose + Mitra-Poing (exclusif run 3, Collectionneur/Gamaruto)
     return CTS.filter((c) => !excluded.has(c.id)).map((c) => c.id)
 }
 
