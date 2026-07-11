@@ -31,4 +31,14 @@ describe("Frontier — gate anti-spoiler des exclusivités run 2/3 (hautes sphè
         }
         expect(seen).toBe(true)
     })
+
+    it("Daemons RUN 2 : Gékraise/Merorem (exclusive) débloqués SEULEMENT si run 2 fait + hautes sphères ; Ukognos jamais en adversaire normal ; Morrow déjà éligible", () => {
+        for (const id of ["gekraise", "merorem"]) {
+            expect(frontierEligible(id, 30, false, false), id).toBe(false) // run 2 pas fait → masqué
+            expect(frontierEligible(id, 30, true, false), id).toBe(true)   // run 2 fait + hautes sphères → OK
+            expect(frontierEligible(id, 5, true, false), id).toBe(false)   // streak trop bas
+        }
+        expect(frontierEligible("ukognos", 30, true, false)).toBe(false) // légendaire = Cerveau thématique only, jamais adversaire normal
+        expect(frontierEligible("morrow", 5, false, false)).toBe(true)   // Morrow n'a aucun flag → déjà éligible sans exception
+    })
 })

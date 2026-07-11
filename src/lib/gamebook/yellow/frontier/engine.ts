@@ -91,16 +91,22 @@ export function formsAtLevel(level: number): string[] {
  *  peuvent apparaître comme adversaires — et UNIQUEMENT si le joueur a déjà fait le run correspondant. */
 export const FRONTIER_EXCLUSIVE_MIN_STREAK = 14
 
+/** Daemons RUN 2 « boss-tier » (`exclusive`) DÉBLOQUÉS comme adversaires NORMAUX du frontier une fois le run 2
+ *  fait : Gékraise (gardien Centrale run 2) + Merorem (casino NG+). Exception assumée à `exclusive`. Ukognos
+ *  (légendaire) est traité à part (Cerveau thématique, très hautes sphères) ; Morrow n'a aucun flag → déjà
+ *  éligible sans exception. Leur BST les place naturellement dans la bonne bande (bstBandForStreak). */
+export const FRONTIER_RUN2_UNLOCKS = new Set(["gekraise", "merorem"])
+
 /** Une espèce est-elle tirable comme adversaire du frontier à cette série ? Exclut les `exclusive` (bosses
  *  dédiés / scénario). ANTI-SPOILER : les runTwoOnly/runThreeOnly ne réapparaissent que dans les HAUTES SPHÈRES
- *  (streak ≥ seuil) ET si le run correspondant a été fait (allowRun2/allowRun3). Par défaut → exclues.
- *  NB : la branche allowRun2 est aujourd'hui INERTE — les 3 espèces runTwoOnly (Ukognos/Gékraise/Merorem) sont
- *  aussi `exclusive` (rejetées avant). Ce sont donc surtout les inédits RUN 3 (hippos + Karmaki, non-exclusive)
- *  qui deviennent affrontables ; la branche run 2 reste posée pour un futur Daemon run-2 non-exclusive. */
+ *  (streak ≥ seuil) ET si le run correspondant a été fait (allowRun2/allowRun3). Exception : FRONTIER_RUN2_UNLOCKS
+ *  (Gékraise/Merorem) passent MALGRÉ `exclusive`, gated run 2 + hautes sphères. */
 export function frontierEligible(id: string, streak: number, allowRun2 = false, allowRun3 = false): boolean {
     const s = SPECIES[id] as any
-    if (!s || s.exclusive) return false
+    if (!s) return false
     const highSphere = streak >= FRONTIER_EXCLUSIVE_MIN_STREAK
+    if (FRONTIER_RUN2_UNLOCKS.has(id)) return allowRun2 && highSphere // boss run 2 débloqué → adversaire normal
+    if (s.exclusive) return false
     if (s.runTwoOnly && !(allowRun2 && highSphere)) return false
     if (s.runThreeOnly && !(allowRun3 && highSphere)) return false
     return true
@@ -149,7 +155,7 @@ export function generateBossTeam(rng: Rng, streak: number, level: number, size =
 // ============================================================
 // Cerveaux THÉMATIQUES : un Daemon EXCLUSIF en ace d'une équipe d'identité (avec parcimonie)
 // ============================================================
-export interface ThemedBoss { exclusiveId: string; name: string; themeTypes: PokeType[]; minStreak: number }
+export interface ThemedBoss { exclusiveId: string; name: string; themeTypes: PokeType[]; minStreak: number; requiresRun2?: boolean }
 
 // Palier d'apparition calé sur le BST (cf. bstBandForStreak) ; Goshendofy réservé à la toute fin.
 const THEMED_BOSSES: ThemedBoss[] = [
@@ -157,6 +163,7 @@ const THEMED_BOSSES: ThemedBoss[] = [
     { exclusiveId: "tonytony", name: "Cerveau Inébranlable", themeTypes: ["NORMAL", "PSY"], minStreak: 7 },   // BST 415 (mur)
     { exclusiveId: "orcaline", name: "Cerveau Polaire", themeTypes: ["GLACE", "EAU"], minStreak: 14 },        // BST 465
     { exclusiveId: "sylvebarbe", name: "Cerveau Sylvestre", themeTypes: ["PLANTE", "SOL"], minStreak: 14 },   // BST 490
+    { exclusiveId: "ukognos", name: "Grand Cerveau Astral", themeTypes: ["FEE"], minStreak: 28, requiresRun2: true }, // BST 555 — légendaire run 2, très hautes sphères (gated run 2)
     { exclusiveId: "goshendofy", name: "Grand Cerveau Draconique", themeTypes: ["DRAGON", "VOL"], minStreak: 35 }, // BST 590 — la toute fin
 ]
 /** % des boss qui mettent en vedette un Daemon exclusif (parcimonie : on les découvre peu à peu). */
@@ -192,7 +199,7 @@ function buildThemedBossTeam(rng: Rng, tb: ThemedBoss, streak: number, level: nu
 /** Vague de BOSS : ~THEMED_BOSS_CHANCE % du temps, un Cerveau thématique (ace exclusif éligible selon la série,
  *  équipe cohérente) ; sinon un boss générique (puissance brute). `bossName` = nom du Cerveau pour l'annonce. */
 export function generateBossWave(rng: Rng, streak: number, level: number, size = DEFAULT_TEAM_SIZE, allowRun2 = false, allowRun3 = false): BossWave {
-    const eligible = THEMED_BOSSES.filter((b) => streak >= b.minStreak && !!(SPECIES[b.exclusiveId]))
+    const eligible = THEMED_BOSSES.filter((b) => streak >= b.minStreak && !!(SPECIES[b.exclusiveId]) && (!b.requiresRun2 || allowRun2))
     if (eligible.length > 0 && rng.chance(THEMED_BOSS_CHANCE)) {
         const tb = eligible[rng.int(0, eligible.length - 1)]
         return { opponent: buildThemedBossTeam(rng, tb, streak, level, size, allowRun2, allowRun3), bossName: tb.name }
