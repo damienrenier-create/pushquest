@@ -20,7 +20,7 @@ import type { YellowMapData } from "../maps"
 import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, startRun3BossBattle, resetFleeStreak } from "./battleStore"
-import { run3ArenaForBoss, run3BossIntroLines } from "../data/run3Arenas"
+import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
 import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, resetLigueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, addItem, getActiveWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun } from "./playerStore"
@@ -205,6 +205,13 @@ function tryLaunchTrainer(trainerId: string, isRematch = false): ActiveDialogue 
         // speciesAtLevel : force chaque gardien à son STADE NATUREL pour son niveau (jamais un stade-1 à un niveau
         //   où il devrait avoir évolué — règle « jamais de Daemon à un niveau non naturel »).
         specs = RUN3_ARENA_TEAMS[trainerId].map((s) => ({ ...s, speciesId: speciesAtLevel(s.speciesId, s.level) }))
+    }
+    // RUN 3 : LE MAÎTRE de la Ligue (= ACE en Champion) sort une équipe revisitée (écho de son rival run 3) :
+    //   Gékraise + Orcaline + némésis(contre-starter) + Aquilord + Divinpâte + Mégalithe. Mêmes niveaux → score
+    //   Ligue inchangé. Le némésis est évolué à son stade naturel pour le niveau (jamais une souche à haut niveau).
+    if (run3 && !isRematch && trainerId === "y_ligue_maitre") {
+        const nem = getRun3AceNemesis()
+        if (nem) specs = run3LigueMaitreTeam(speciesAtLevel(nem, 59))
     }
     // RUN 3 : le BOSS d'arène = équipe de JOUEUR FIGÉE (tronquée à la taille de l'arène). Combat spécial
     //   (championToInstance, stats gelées) → on court-circuite le fielding TrainerMonSpec ci-dessous.

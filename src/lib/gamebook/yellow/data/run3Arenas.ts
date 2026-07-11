@@ -49,6 +49,22 @@ export function run3ArenaForBoss(bossTrainerId: string): Run3ArenaDef | null {
     return RUN3_ARENAS.find((a) => a.bossTrainerId === bossTrainerId) ?? null
 }
 
+/** RUN 3 — équipe du MAÎTRE de la Ligue (= ACE en habit de Champion), revisitée pour faire écho à son équipe
+ *  de rival du run 3 : Gékraise + Orcaline + NÉMÉSIS (le contre-starter, seule pièce joueur-dépendante) +
+ *  Aquilord (Aquilothan évolué) + Divinpâte + Mégalithe. MÊMES NIVEAUX que l'original (58/59/59/60/60/62) →
+ *  score de Ligue INCHANGÉ (Σ 358, RUN3_LEAGUE_MAX_SCORE toujours 1522). Le némésis (déjà évolué à son stade
+ *  naturel pour le niveau) est injecté par gameStore. */
+export function run3LigueMaitreTeam(nemesisFinalSpeciesId: string): { speciesId: string; level: number }[] {
+    return [
+        { speciesId: "gekraise", level: 58 },   // ← Pyropanthe
+        { speciesId: "orcaline", level: 59 },    // ← Aquapanthe
+        { speciesId: nemesisFinalSpeciesId, level: 59 }, // ← Voltapanthe (némésis = contre-starter, joueur-dépendant)
+        { speciesId: "aquilord", level: 60 },    // ← Aquilothan (évolué en Aquilord)
+        { speciesId: "divinpate", level: 60 },   // inchangé
+        { speciesId: "megalithe", level: 62 },   // inchangé
+    ]
+}
+
 /** Intro AVANT-COMBAT du boss d'arène run 3 : ce n'est PAS le PNJ d'origine (Druide, …) mais l'ÉQUIPE GELÉE
  *  d'un VRAI joueur, champion de cette arène aux runs précédents. On nomme le champion pour lever l'ambiguïté. */
 export function run3BossIntroLines(nickname: string): string[] {
