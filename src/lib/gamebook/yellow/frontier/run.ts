@@ -28,8 +28,6 @@ export interface FrontierRunState {
     bossName?: string         // nom du Cerveau thématique (si la vague courante en est un), pour l'annonce UI
     lastReward: number        // JC du dernier combat gagné (feedback UI)
     lastRefund: number        // énergie remboursée au dernier combat (feedback UI)
-    allowRun2?: boolean       // le joueur a fait le run 2 → exclusivités run 2 affrontables (hautes sphères)
-    allowRun3?: boolean       // le joueur a fait le run 3 → exclusivités run 3 affrontables (hautes sphères)
 }
 
 /** Numéro de la vague courante (1-indexé) = victoires + 1. */
@@ -43,13 +41,13 @@ function waveRng(seed: number, waveNumber: number): Rng {
 }
 
 /** Construit l'équipe adverse d'une vague donnée (boss tous les 7 ; Cerveau thématique possible). */
-function buildWave(seed: number, waveNumber: number, level: number, size: number, allowRun2 = false, allowRun3 = false): { opponent: OpponentSpec[]; isBoss: boolean; bossName?: string } {
+function buildWave(seed: number, waveNumber: number, level: number, size: number): { opponent: OpponentSpec[]; isBoss: boolean; bossName?: string } {
     const rng = waveRng(seed, waveNumber)
     if (isBossWave(waveNumber)) {
-        const bw = generateBossWave(rng, waveNumber, level, size, allowRun2, allowRun3)
+        const bw = generateBossWave(rng, waveNumber, level, size)
         return { opponent: bw.opponent, isBoss: true, bossName: bw.bossName }
     }
-    return { opponent: generateFrontierTeam(rng, { streak: waveNumber, level, size, allowRun2, allowRun3 }), isBoss: false }
+    return { opponent: generateFrontierTeam(rng, { streak: waveNumber, level, size }), isBoss: false }
 }
 
 export interface StartRunOpts {
@@ -58,20 +56,17 @@ export interface StartRunOpts {
     playerTopLevel: number   // pour le mode ADAPT
     seed: number
     teamSize?: number
-    allowRun2?: boolean      // exclusivités run 2 affrontables (le joueur a fait le run 2) — cf. runStore
-    allowRun3?: boolean      // exclusivités run 3 affrontables (le joueur a fait le run 3) — cf. runStore
 }
 
 /** Démarre une série : résout le niveau, prépare la 1re vague. */
 export function startFrontierRun(opts: StartRunOpts): FrontierRunState {
     const level = resolveFrontierLevel(opts.levelRule, opts.playerTopLevel)
     const teamSize = opts.teamSize ?? DEFAULT_TEAM_SIZE
-    const { opponent, isBoss, bossName } = buildWave(opts.seed, 1, level, teamSize, opts.allowRun2, opts.allowRun3)
+    const { opponent, isBoss, bossName } = buildWave(opts.seed, 1, level, teamSize)
     return {
         mode: opts.mode, levelRule: opts.levelRule, level, seed: opts.seed, teamSize,
         streak: 0, jc: 0, energyRefunded: 0, status: "active",
         opponent, isBoss, bossName, lastReward: 0, lastRefund: 0,
-        allowRun2: opts.allowRun2, allowRun3: opts.allowRun3,
     }
 }
 
@@ -83,7 +78,7 @@ export function applyFrontierWin(s: FrontierRunState, energySpent: number): Fron
     const reward = jcRewardForWin(s.levelRule, winNumber)
     const refund = frontierEnergyRefund(energySpent)
     const nextWave = winNumber + 1
-    const { opponent, isBoss, bossName } = buildWave(s.seed, nextWave, s.level, s.teamSize, s.allowRun2, s.allowRun3)
+    const { opponent, isBoss, bossName } = buildWave(s.seed, nextWave, s.level, s.teamSize)
     return {
         ...s,
         streak: winNumber,

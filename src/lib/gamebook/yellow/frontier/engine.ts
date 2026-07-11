@@ -87,29 +87,24 @@ export function formsAtLevel(level: number): string[] {
     return arr
 }
 
-/** Seuil de série (« hautes sphères ») à partir duquel les Daemons EXCLUSIFS d'un run (runTwoOnly/runThreeOnly)
- *  peuvent apparaître comme adversaires — et UNIQUEMENT si le joueur a déjà fait le run correspondant. */
+/** Seuil de série (« hautes sphères ») à partir duquel les gardiens/boss run 2/3 (FRONTIER_UNLOCKS) apparaissent. */
 export const FRONTIER_EXCLUSIVE_MIN_STREAK = 14
 
-/** Daemons RUN 2 « boss-tier » (`exclusive`) DÉBLOQUÉS comme adversaires NORMAUX du frontier une fois le run 2
- *  fait : Gékraise (gardien Centrale run 2) + Merorem (casino NG+). Exception assumée à `exclusive`. Ukognos
- *  (légendaire) est traité à part (Cerveau thématique, très hautes sphères) ; Morrow n'a aucun flag → déjà
- *  éligible sans exception. Leur BST les place naturellement dans la bonne bande (bstBandForStreak). */
-export const FRONTIER_RUN2_UNLOCKS = new Set(["gekraise", "merorem"])
+/** Daemons « boss-tier » (`exclusive`) rendus affrontables comme adversaires NORMAUX du frontier dans les hautes
+ *  sphères : les GARDIENS Gékraise (Centrale run 2) & Gékosmic (Centrale run 3) + Merorem (casino NG+). Ukognos
+ *  (légendaire) est à part (Cerveau thématique). Morrow n'a aucun flag → déjà éligible. Leur BST les place dans
+ *  la bonne bande (bstBandForStreak). */
+export const FRONTIER_UNLOCKS = new Set(["gekraise", "gekosmic", "merorem"])
 
 /** Une espèce est-elle tirable comme adversaire du frontier à cette série ? Exclut les `exclusive` (bosses
- *  dédiés / scénario). ANTI-SPOILER : les runTwoOnly/runThreeOnly ne réapparaissent que dans les HAUTES SPHÈRES
- *  (streak ≥ seuil) ET si le run correspondant a été fait (allowRun2/allowRun3). Exception : FRONTIER_RUN2_UNLOCKS
- *  (Gékraise/Merorem) passent MALGRÉ `exclusive`, gated run 2 + hautes sphères. */
-export function frontierEligible(id: string, streak: number, allowRun2 = false, allowRun3 = false): boolean {
+ *  dédiés / scénario) SAUF FRONTIER_UNLOCKS (affrontables dans les hautes sphères). Choix Sartay : PLUS
+ *  d'anti-spoiler — les inédits run 2/3 (runTwoOnly/runThreeOnly, NON-`exclusive`) sont visibles par TOUS
+ *  (« montrer ce qu'ils ont raté »), simplement bornés par la bande de BST (les finals = hautes sphères). */
+export function frontierEligible(id: string, streak: number): boolean {
     const s = SPECIES[id] as any
     if (!s) return false
-    const highSphere = streak >= FRONTIER_EXCLUSIVE_MIN_STREAK
-    if (FRONTIER_RUN2_UNLOCKS.has(id)) return allowRun2 && highSphere // boss run 2 débloqué → adversaire normal
-    if (s.exclusive) return false
-    if (s.runTwoOnly && !(allowRun2 && highSphere)) return false
-    if (s.runThreeOnly && !(allowRun3 && highSphere)) return false
-    return true
+    if (FRONTIER_UNLOCKS.has(id)) return streak >= FRONTIER_EXCLUSIVE_MIN_STREAK // gardiens/boss run2/3 : hautes sphères
+    return !s.exclusive // tout le reste (dont runTwoOnly/runThreeOnly) : visible par tous, BST-bandé
 }
 
 function pickDistinct(rng: Rng, pool: string[], n: number): string[] {
@@ -122,7 +117,7 @@ function pickDistinct(rng: Rng, pool: string[], n: number): string[] {
     return out
 }
 
-interface GenOpts { streak: number; level: number; size?: number; boss?: boolean; allowRun2?: boolean; allowRun3?: boolean }
+interface GenOpts { streak: number; level: number; size?: number; boss?: boolean }
 
 /** Génère une équipe adverse déterministe (RNG seedé) : espèces DISTINCTES, au bon stade pour le niveau,
  *  filtrées par la bande de BST de la série. Les Daemons `exclusive` ne sont jamais tirés. */
@@ -132,7 +127,7 @@ export function generateFrontierTeam(rng: Rng, opts: GenOpts): OpponentSpec[] {
     let [lo, hi] = bstBandForStreak(opts.streak)
     if (opts.boss) { lo = Math.max(470, lo); hi = 999 } // boss = haut du panier
 
-    const eligible = formsAtLevel(level).filter((id) => frontierEligible(id, opts.streak, opts.allowRun2, opts.allowRun3))
+    const eligible = formsAtLevel(level).filter((id) => frontierEligible(id, opts.streak))
     let pool = eligible.filter((id) => { const b = bstOf(id); return b >= lo && b <= hi })
 
     // Élargit la bande si trop peu de candidats (garantit toujours assez d'espèces distinctes).
@@ -148,14 +143,14 @@ export function generateFrontierTeam(rng: Rng, opts: GenOpts): OpponentSpec[] {
 }
 
 /** Équipe de boss (Cerveau) : même moteur, bande relevée. */
-export function generateBossTeam(rng: Rng, streak: number, level: number, size = DEFAULT_TEAM_SIZE, allowRun2 = false, allowRun3 = false): OpponentSpec[] {
-    return generateFrontierTeam(rng, { streak, level, size, boss: true, allowRun2, allowRun3 })
+export function generateBossTeam(rng: Rng, streak: number, level: number, size = DEFAULT_TEAM_SIZE): OpponentSpec[] {
+    return generateFrontierTeam(rng, { streak, level, size, boss: true })
 }
 
 // ============================================================
 // Cerveaux THÉMATIQUES : un Daemon EXCLUSIF en ace d'une équipe d'identité (avec parcimonie)
 // ============================================================
-export interface ThemedBoss { exclusiveId: string; name: string; themeTypes: PokeType[]; minStreak: number; requiresRun2?: boolean }
+export interface ThemedBoss { exclusiveId: string; name: string; themeTypes: PokeType[]; minStreak: number }
 
 // Palier d'apparition calé sur le BST (cf. bstBandForStreak) ; Goshendofy réservé à la toute fin.
 const THEMED_BOSSES: ThemedBoss[] = [
@@ -163,7 +158,7 @@ const THEMED_BOSSES: ThemedBoss[] = [
     { exclusiveId: "tonytony", name: "Cerveau Inébranlable", themeTypes: ["NORMAL", "PSY"], minStreak: 7 },   // BST 415 (mur)
     { exclusiveId: "orcaline", name: "Cerveau Polaire", themeTypes: ["GLACE", "EAU"], minStreak: 14 },        // BST 465
     { exclusiveId: "sylvebarbe", name: "Cerveau Sylvestre", themeTypes: ["PLANTE", "SOL"], minStreak: 14 },   // BST 490
-    { exclusiveId: "ukognos", name: "Grand Cerveau Astral", themeTypes: ["FEE"], minStreak: 28, requiresRun2: true }, // BST 555 — légendaire run 2, très hautes sphères (gated run 2)
+    { exclusiveId: "ukognos", name: "Grand Cerveau Astral", themeTypes: ["FEE"], minStreak: 28 }, // BST 555 — légendaire run 2, très hautes sphères (visible par tous)
     { exclusiveId: "goshendofy", name: "Grand Cerveau Draconique", themeTypes: ["DRAGON", "VOL"], minStreak: 35 }, // BST 590 — la toute fin
 ]
 /** % des boss qui mettent en vedette un Daemon exclusif (parcimonie : on les découvre peu à peu). */
@@ -173,7 +168,7 @@ export interface BossWave { opponent: OpponentSpec[]; bossName?: string }
 
 /** Équipe d'un Cerveau thématique : l'exclusif en ACE (envoyé en dernier) + coéquipiers DU THÈME,
  *  au bon stade/niveau, distincts, en privilégiant ceux qui RÉSISTENT à une faiblesse de l'ace. */
-function buildThemedBossTeam(rng: Rng, tb: ThemedBoss, streak: number, level: number, size: number, allowRun2 = false, allowRun3 = false): OpponentSpec[] {
+function buildThemedBossTeam(rng: Rng, tb: ThemedBoss, streak: number, level: number, size: number): OpponentSpec[] {
     const [lo, hi] = bstBandForStreak(streak)
     const aceWeak = weakTypesOf(tb.exclusiveId)
     const resistsAceWeak = (id: string): boolean => {
@@ -185,12 +180,12 @@ function buildThemedBossTeam(rng: Rng, tb: ThemedBoss, streak: number, level: nu
     const inBand = (id: string) => { const b = bstOf(id); return b >= lo - 60 && b <= hi + 60 }
     const themed = formsAtLevel(level).filter((id) => {
         const s = SPECIES[id] as any
-        return frontierEligible(id, streak, allowRun2, allowRun3) && id !== tb.exclusiveId && inBand(id) && (s.types as string[]).some((t) => (tb.themeTypes as string[]).includes(t))
+        return frontierEligible(id, streak) && id !== tb.exclusiveId && inBand(id) && (s.types as string[]).some((t) => (tb.themeTypes as string[]).includes(t))
     })
     const mates: string[] = pickDistinct(rng, themed.filter(resistsAceWeak), size - 1) // priorité : couvre une faiblesse de l'ace
     if (mates.length < size - 1) mates.push(...pickDistinct(rng, themed.filter((x) => !mates.includes(x)), size - 1 - mates.length))
     if (mates.length < size - 1) { // filet : n'importe quelle espèce du palier
-        const any = formsAtLevel(level).filter((id) => frontierEligible(id, streak, allowRun2, allowRun3) && id !== tb.exclusiveId && inBand(id) && !mates.includes(id))
+        const any = formsAtLevel(level).filter((id) => frontierEligible(id, streak) && id !== tb.exclusiveId && inBand(id) && !mates.includes(id))
         mates.push(...pickDistinct(rng, any, size - 1 - mates.length))
     }
     return [...mates.map((speciesId) => ({ speciesId, level })), { speciesId: tb.exclusiveId, level }] // ace en dernier
@@ -198,13 +193,13 @@ function buildThemedBossTeam(rng: Rng, tb: ThemedBoss, streak: number, level: nu
 
 /** Vague de BOSS : ~THEMED_BOSS_CHANCE % du temps, un Cerveau thématique (ace exclusif éligible selon la série,
  *  équipe cohérente) ; sinon un boss générique (puissance brute). `bossName` = nom du Cerveau pour l'annonce. */
-export function generateBossWave(rng: Rng, streak: number, level: number, size = DEFAULT_TEAM_SIZE, allowRun2 = false, allowRun3 = false): BossWave {
-    const eligible = THEMED_BOSSES.filter((b) => streak >= b.minStreak && !!(SPECIES[b.exclusiveId]) && (!b.requiresRun2 || allowRun2))
+export function generateBossWave(rng: Rng, streak: number, level: number, size = DEFAULT_TEAM_SIZE): BossWave {
+    const eligible = THEMED_BOSSES.filter((b) => streak >= b.minStreak && !!(SPECIES[b.exclusiveId]))
     if (eligible.length > 0 && rng.chance(THEMED_BOSS_CHANCE)) {
         const tb = eligible[rng.int(0, eligible.length - 1)]
-        return { opponent: buildThemedBossTeam(rng, tb, streak, level, size, allowRun2, allowRun3), bossName: tb.name }
+        return { opponent: buildThemedBossTeam(rng, tb, streak, level, size), bossName: tb.name }
     }
-    return { opponent: generateBossTeam(rng, streak, level, size, allowRun2, allowRun3) }
+    return { opponent: generateBossTeam(rng, streak, level, size) }
 }
 
 // ============================================================

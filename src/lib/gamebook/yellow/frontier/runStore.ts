@@ -11,7 +11,6 @@ import {
 } from "./run"
 import type { FrontierMode, LevelRule } from "./engine"
 import type { MonInstance } from "../battle/types"
-import { getPlayer } from "../store/playerStore"
 
 let run: FrontierRunState | null = null
 // Équipe de LOCATION jouée à l'Usine (mode FACTORY) : on ne joue PAS l'équipe du joueur.
@@ -37,10 +36,7 @@ export interface StartRunInput { mode: FrontierMode; levelRule: LevelRule; playe
 
 /** Démarre une série (Tour/Usine/Dôme) et la place comme run courant. */
 export function startRun(opts: StartRunInput): FrontierRunState {
-    // ANTI-SPOILER + feature « hautes sphères » : les exclusivités run 2/3 ne sont affrontables que si le
-    // joueur a déjà fait le run correspondant (flags persistants ngplusUsed/run3Used, survivent à la fusion).
-    const p = getPlayer()
-    run = startFrontierRun({ ...opts, allowRun2: p.ngplusUsed, allowRun3: p.run3Used })
+    run = startFrontierRun(opts)
     emit()
     return run
 }

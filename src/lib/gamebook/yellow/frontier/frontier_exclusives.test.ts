@@ -1,44 +1,42 @@
 import { describe, it, expect } from "vitest"
 import { Rng } from "../battle/rng"
-import { generateFrontierTeam, frontierEligible, FRONTIER_EXCLUSIVE_MIN_STREAK } from "./engine"
+import { generateFrontierTeam, frontierEligible, FRONTIER_EXCLUSIVE_MIN_STREAK, FRONTIER_UNLOCKS } from "./engine"
 import { getSpecies } from "../data/species"
 
 const isRun3 = (id: string) => !!getSpecies(id)?.runThreeOnly
-const isRun2 = (id: string) => !!getSpecies(id)?.runTwoOnly
 
-describe("Frontier — gate anti-spoiler des exclusivités run 2/3 (hautes sphères)", () => {
-    it("frontierEligible : gate par run FAIT + streak, exclut les exclusive/gardiens", () => {
+describe("Frontier — exclusivités run 2/3 visibles par TOUS (teaser « ce que tu as raté »), bornées par BST/streak", () => {
+    it("frontierEligible : runX (non-exclusive) partout ; gardiens/boss (FRONTIER_UNLOCKS) en hautes sphères ; exclusive sinon", () => {
         expect(FRONTIER_EXCLUSIVE_MIN_STREAK).toBeGreaterThan(1)
-        expect(frontierEligible("omnhippo", 30, false, false)).toBe(false) // run 3 pas fait → masqué
-        expect(frontierEligible("omnhippo", 30, false, true)).toBe(true)   // run 3 fait + hautes sphères → OK
-        expect(frontierEligible("omnhippo", 5, false, true)).toBe(false)   // run 3 fait mais streak trop bas
-        expect(frontierEligible("gekosmic", 30, false, true)).toBe(false)  // exclusive (gardien) = jamais tiré
-        expect(frontierEligible("cerfeuillu", 3, false, false)).toBe(true) // espèce normale = toujours éligible
-    })
-
-    it("generateFrontierTeam N'INCLUT JAMAIS de runTwoOnly/runThreeOnly sans le run fait (anti-spoiler)", () => {
-        for (let s = 0; s < 60; s++) {
-            const team = generateFrontierTeam(new Rng(s * 7 + 1), { streak: 30, level: 60 }) // pas de allowRun2/3
-            for (const o of team) expect(isRun3(o.speciesId) || isRun2(o.speciesId), o.speciesId).toBe(false)
+        // runTwoOnly/runThreeOnly NON-exclusive (hippos/Karmaki) : visibles à TOUT streak (plus d'anti-spoiler)
+        expect(frontierEligible("omnhippo", 5)).toBe(true)
+        expect(frontierEligible("karmaki", 30)).toBe(true)
+        // gardiens/boss `exclusive` débloqués (Gékraise/Gékosmic/Merorem) : hautes sphères seulement
+        for (const id of ["gekraise", "gekosmic", "merorem"]) {
+            expect(FRONTIER_UNLOCKS.has(id), id).toBe(true)
+            expect(frontierEligible(id, 30), id).toBe(true) // hautes sphères → OK
+            expect(frontierEligible(id, 5), id).toBe(false)  // streak trop bas
         }
+        // Ukognos (légendaire) = Cerveau thématique only, jamais adversaire normal
+        expect(frontierEligible("ukognos", 30)).toBe(false)
+        // espèce normale + Morrow (aucun flag) : toujours éligibles
+        expect(frontierEligible("cerfeuillu", 3)).toBe(true)
+        expect(frontierEligible("morrow", 3)).toBe(true)
     })
 
-    it("generateFrontierTeam PEUT inclure des runThreeOnly avec allowRun3 en hautes sphères", () => {
+    it("generateFrontierTeam PEUT inclure des runThreeOnly (hippos/Karmaki) — visibles par tous", () => {
         let seen = false
-        for (let s = 0; s < 500 && !seen; s++) {
-            const team = generateFrontierTeam(new Rng(s * 13 + 3), { streak: 20, level: 60, allowRun3: true })
+        for (let s = 0; s < 400 && !seen; s++) {
+            const team = generateFrontierTeam(new Rng(s * 13 + 3), { streak: 20, level: 60 })
             if (team.some((o) => isRun3(o.speciesId))) seen = true
         }
         expect(seen).toBe(true)
     })
 
-    it("Daemons RUN 2 : Gékraise/Merorem (exclusive) débloqués SEULEMENT si run 2 fait + hautes sphères ; Ukognos jamais en adversaire normal ; Morrow déjà éligible", () => {
-        for (const id of ["gekraise", "merorem"]) {
-            expect(frontierEligible(id, 30, false, false), id).toBe(false) // run 2 pas fait → masqué
-            expect(frontierEligible(id, 30, true, false), id).toBe(true)   // run 2 fait + hautes sphères → OK
-            expect(frontierEligible(id, 5, true, false), id).toBe(false)   // streak trop bas
+    it("generateFrontierTeam n'inclut JAMAIS un gardien/boss (FRONTIER_UNLOCKS) en BASSE sphère", () => {
+        for (let s = 0; s < 60; s++) {
+            const team = generateFrontierTeam(new Rng(s * 7 + 1), { streak: 3, level: 60 }) // streak bas
+            for (const o of team) expect(FRONTIER_UNLOCKS.has(o.speciesId), o.speciesId).toBe(false)
         }
-        expect(frontierEligible("ukognos", 30, true, false)).toBe(false) // légendaire = Cerveau thématique only, jamais adversaire normal
-        expect(frontierEligible("morrow", 5, false, false)).toBe(true)   // Morrow n'a aucun flag → déjà éligible sans exception
     })
 })

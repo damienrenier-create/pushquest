@@ -14,7 +14,7 @@ export const MAX_SHARED_WEAKNESS = 2      // ≤ 2 membres peuvent partager une 
 
 export interface RentalCandidate { speciesId: string; level: number }
 
-interface PoolOpts { streak: number; level: number; poolSize?: number; allowRun2?: boolean; allowRun3?: boolean }
+interface PoolOpts { streak: number; level: number; poolSize?: number }
 
 /** Génère un POOL de location équilibré : `poolSize` espèces distinctes, au bon stade pour le niveau,
  *  sans qu'aucun type ne soit une faiblesse (×2+) pour plus de MAX_SHARED_WEAKNESS membres. Déterministe. */
@@ -25,7 +25,7 @@ export function generateRentalPool(rng: Rng, opts: PoolOpts): RentalCandidate[] 
 
     // Candidats : formes au niveau visé, hors `exclusive`, dans une bande BST élargie (l'Usine veut de la variété).
     const eligible = formsAtLevel(level).filter((id) => {
-        if (!frontierEligible(id, opts.streak, opts.allowRun2, opts.allowRun3)) return false
+        if (!frontierEligible(id, opts.streak)) return false
         const b = bstOf(id)
         return b >= lo - 80 && b <= hi + 80
     })

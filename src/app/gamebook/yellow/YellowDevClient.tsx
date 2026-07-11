@@ -553,10 +553,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             if (!cancelled) {
                 const fsnap = readFrontierSnap()
                 if (fsnap?.run?.status === "active") {
-                    // Reprise d'une série d'AVANT ce changement (snapshot sans allowRun2/3) : on re-dérive les
-                    // flags depuis la save persistante, sinon les exclusivités hautes sphères manqueraient 1 série.
-                    const rp = getPlayer()
-                    setRunRaw({ ...fsnap.run, allowRun2: fsnap.run.allowRun2 ?? rp.ngplusUsed, allowRun3: fsnap.run.allowRun3 ?? rp.run3Used })
+                    setRunRaw(fsnap.run)
                     setDraftedTeam(fsnap.draftedTeam ?? null)
                     setTourChoice(fsnap.tourChoice)
                     setUsineCt(fsnap.usineCt)
@@ -1925,7 +1922,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 const lvl = resolveFrontierLevel(rule, myArenaLevel || 50)
                                 const seed = Math.floor(Math.random() * 1e9)
                                 const playerTeam = getPlayer().team.map((m) => ({ speciesId: m.speciesId, level: lvl }))
-                                setDome({ state: createDome(new Rng(seed), { level: lvl, streak: 14, playerTeam, allowRun2: getPlayer().ngplusUsed, allowRun3: getPlayer().run3Used }), rule, seed, jc: 0 })
+                                setDome({ state: createDome(new Rng(seed), { level: lvl, streak: 14, playerTeam }), rule, seed, jc: 0 })
                                 setDomePause(true) // montre le bracket + le 1er adversaire avant de lancer
                             }} style={{ background: "#f1c40f", color: "#1a1a22", fontWeight: 800, border: "none", borderRadius: 8, padding: "6px 10px", cursor: "pointer" }}>
                                 {rule === "L50" ? "Niv 50" : rule === "L100" ? "Niv 100" : "Adaptatif"}
