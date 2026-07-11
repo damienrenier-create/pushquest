@@ -31,7 +31,7 @@ function shuffle<T>(rng: Rng, arr: T[]): T[] {
     return a
 }
 
-export interface CreateDomeOpts { level: number; streak: number; playerTeam: OpponentSpec[]; size?: number }
+export interface CreateDomeOpts { level: number; streak: number; playerTeam: OpponentSpec[]; size?: number; allowRun2?: boolean; allowRun3?: boolean }
 
 /** Crée un bracket : le joueur (id 0) + (size-1) IA générées, placés en ordre de bracket aléatoire (seedé). */
 export function createDome(rng: Rng, opts: CreateDomeOpts): DomeState {
@@ -39,7 +39,7 @@ export function createDome(rng: Rng, opts: CreateDomeOpts): DomeState {
     const entrants: DomeEntrant[] = [{ id: 0, name: "Toi", team: opts.playerTeam, isPlayer: true }]
     for (let i = 1; i < size; i++) {
         entrants.push({ id: i, name: HOLO_NAMES[(i - 1) % HOLO_NAMES.length], isPlayer: false,
-            team: generateFrontierTeam(rng, { streak: opts.streak, level: opts.level, size: DEFAULT_TEAM_SIZE }) })
+            team: generateFrontierTeam(rng, { streak: opts.streak, level: opts.level, size: DEFAULT_TEAM_SIZE, allowRun2: opts.allowRun2, allowRun3: opts.allowRun3 }) })
     }
     const alive = shuffle(rng, entrants.map((e) => e.id)) // placement de bracket seedé
     return { level: opts.level, round: 0, entrants, alive, playerId: 0, status: "active" }

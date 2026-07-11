@@ -87,6 +87,25 @@ export function formsAtLevel(level: number): string[] {
     return arr
 }
 
+/** Seuil de série (« hautes sphères ») à partir duquel les Daemons EXCLUSIFS d'un run (runTwoOnly/runThreeOnly)
+ *  peuvent apparaître comme adversaires — et UNIQUEMENT si le joueur a déjà fait le run correspondant. */
+export const FRONTIER_EXCLUSIVE_MIN_STREAK = 14
+
+/** Une espèce est-elle tirable comme adversaire du frontier à cette série ? Exclut les `exclusive` (bosses
+ *  dédiés / scénario). ANTI-SPOILER : les runTwoOnly/runThreeOnly ne réapparaissent que dans les HAUTES SPHÈRES
+ *  (streak ≥ seuil) ET si le run correspondant a été fait (allowRun2/allowRun3). Par défaut → exclues.
+ *  NB : la branche allowRun2 est aujourd'hui INERTE — les 3 espèces runTwoOnly (Ukognos/Gékraise/Merorem) sont
+ *  aussi `exclusive` (rejetées avant). Ce sont donc surtout les inédits RUN 3 (hippos + Karmaki, non-exclusive)
+ *  qui deviennent affrontables ; la branche run 2 reste posée pour un futur Daemon run-2 non-exclusive. */
+export function frontierEligible(id: string, streak: number, allowRun2 = false, allowRun3 = false): boolean {
+    const s = SPECIES[id] as any
+    if (!s || s.exclusive) return false
+    const highSphere = streak >= FRONTIER_EXCLUSIVE_MIN_STREAK
+    if (s.runTwoOnly && !(allowRun2 && highSphere)) return false
+    if (s.runThreeOnly && !(allowRun3 && highSphere)) return false
+    return true
+}
+
 function pickDistinct(rng: Rng, pool: string[], n: number): string[] {
     const arr = [...pool]
     const out: string[] = []
@@ -97,7 +116,7 @@ function pickDistinct(rng: Rng, pool: string[], n: number): string[] {
     return out
 }
 
-interface GenOpts { streak: number; level: number; size?: number; boss?: boolean }
+interface GenOpts { streak: number; level: number; size?: number; boss?: boolean; allowRun2?: boolean; allowRun3?: boolean }
 
 /** Génère une équipe adverse déterministe (RNG seedé) : espèces DISTINCTES, au bon stade pour le niveau,
  *  filtrées par la bande de BST de la série. Les Daemons `exclusive` ne sont jamais tirés. */
@@ -107,10 +126,7 @@ export function generateFrontierTeam(rng: Rng, opts: GenOpts): OpponentSpec[] {
     let [lo, hi] = bstBandForStreak(opts.streak)
     if (opts.boss) { lo = Math.max(470, lo); hi = 999 } // boss = haut du panier
 
-    const eligible = formsAtLevel(level).filter((id) => {
-        const s = SPECIES[id] as any
-        return s && !s.exclusive
-    })
+    const eligible = formsAtLevel(level).filter((id) => frontierEligible(id, opts.streak, opts.allowRun2, opts.allowRun3))
     let pool = eligible.filter((id) => { const b = bstOf(id); return b >= lo && b <= hi })
 
     // Élargit la bande si trop peu de candidats (garantit toujours assez d'espèces distinctes).
@@ -126,8 +142,8 @@ export function generateFrontierTeam(rng: Rng, opts: GenOpts): OpponentSpec[] {
 }
 
 /** Équipe de boss (Cerveau) : même moteur, bande relevée. */
-export function generateBossTeam(rng: Rng, streak: number, level: number, size = DEFAULT_TEAM_SIZE): OpponentSpec[] {
-    return generateFrontierTeam(rng, { streak, level, size, boss: true })
+export function generateBossTeam(rng: Rng, streak: number, level: number, size = DEFAULT_TEAM_SIZE, allowRun2 = false, allowRun3 = false): OpponentSpec[] {
+    return generateFrontierTeam(rng, { streak, level, size, boss: true, allowRun2, allowRun3 })
 }
 
 // ============================================================
@@ -150,7 +166,7 @@ export interface BossWave { opponent: OpponentSpec[]; bossName?: string }
 
 /** Équipe d'un Cerveau thématique : l'exclusif en ACE (envoyé en dernier) + coéquipiers DU THÈME,
  *  au bon stade/niveau, distincts, en privilégiant ceux qui RÉSISTENT à une faiblesse de l'ace. */
-function buildThemedBossTeam(rng: Rng, tb: ThemedBoss, streak: number, level: number, size: number): OpponentSpec[] {
+function buildThemedBossTeam(rng: Rng, tb: ThemedBoss, streak: number, level: number, size: number, allowRun2 = false, allowRun3 = false): OpponentSpec[] {
     const [lo, hi] = bstBandForStreak(streak)
     const aceWeak = weakTypesOf(tb.exclusiveId)
     const resistsAceWeak = (id: string): boolean => {
@@ -162,12 +178,12 @@ function buildThemedBossTeam(rng: Rng, tb: ThemedBoss, streak: number, level: nu
     const inBand = (id: string) => { const b = bstOf(id); return b >= lo - 60 && b <= hi + 60 }
     const themed = formsAtLevel(level).filter((id) => {
         const s = SPECIES[id] as any
-        return s && !s.exclusive && id !== tb.exclusiveId && inBand(id) && (s.types as string[]).some((t) => (tb.themeTypes as string[]).includes(t))
+        return frontierEligible(id, streak, allowRun2, allowRun3) && id !== tb.exclusiveId && inBand(id) && (s.types as string[]).some((t) => (tb.themeTypes as string[]).includes(t))
     })
     const mates: string[] = pickDistinct(rng, themed.filter(resistsAceWeak), size - 1) // priorité : couvre une faiblesse de l'ace
     if (mates.length < size - 1) mates.push(...pickDistinct(rng, themed.filter((x) => !mates.includes(x)), size - 1 - mates.length))
     if (mates.length < size - 1) { // filet : n'importe quelle espèce du palier
-        const any = formsAtLevel(level).filter((id) => { const s = SPECIES[id] as any; return s && !s.exclusive && id !== tb.exclusiveId && inBand(id) && !mates.includes(id) })
+        const any = formsAtLevel(level).filter((id) => frontierEligible(id, streak, allowRun2, allowRun3) && id !== tb.exclusiveId && inBand(id) && !mates.includes(id))
         mates.push(...pickDistinct(rng, any, size - 1 - mates.length))
     }
     return [...mates.map((speciesId) => ({ speciesId, level })), { speciesId: tb.exclusiveId, level }] // ace en dernier
@@ -175,13 +191,13 @@ function buildThemedBossTeam(rng: Rng, tb: ThemedBoss, streak: number, level: nu
 
 /** Vague de BOSS : ~THEMED_BOSS_CHANCE % du temps, un Cerveau thématique (ace exclusif éligible selon la série,
  *  équipe cohérente) ; sinon un boss générique (puissance brute). `bossName` = nom du Cerveau pour l'annonce. */
-export function generateBossWave(rng: Rng, streak: number, level: number, size = DEFAULT_TEAM_SIZE): BossWave {
+export function generateBossWave(rng: Rng, streak: number, level: number, size = DEFAULT_TEAM_SIZE, allowRun2 = false, allowRun3 = false): BossWave {
     const eligible = THEMED_BOSSES.filter((b) => streak >= b.minStreak && !!(SPECIES[b.exclusiveId]))
     if (eligible.length > 0 && rng.chance(THEMED_BOSS_CHANCE)) {
         const tb = eligible[rng.int(0, eligible.length - 1)]
-        return { opponent: buildThemedBossTeam(rng, tb, streak, level, size), bossName: tb.name }
+        return { opponent: buildThemedBossTeam(rng, tb, streak, level, size, allowRun2, allowRun3), bossName: tb.name }
     }
-    return { opponent: generateBossTeam(rng, streak, level, size) }
+    return { opponent: generateBossTeam(rng, streak, level, size, allowRun2, allowRun3) }
 }
 
 // ============================================================

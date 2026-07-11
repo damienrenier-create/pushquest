@@ -7,15 +7,14 @@
 // Aucune dépendance save/UI : tout est testable.
 
 import { Rng } from "../battle/rng"
-import { SPECIES } from "../data/species"
-import { formsAtLevel, bstOf, weakTypesOf, bstBandForStreak, DEFAULT_TEAM_SIZE, type OpponentSpec } from "./engine"
+import { formsAtLevel, bstOf, weakTypesOf, bstBandForStreak, frontierEligible, DEFAULT_TEAM_SIZE, type OpponentSpec } from "./engine"
 
 export const DEFAULT_POOL_SIZE = 6        // 6 Daemons proposés, on en garde 3
 export const MAX_SHARED_WEAKNESS = 2      // ≤ 2 membres peuvent partager une même faiblesse de type
 
 export interface RentalCandidate { speciesId: string; level: number }
 
-interface PoolOpts { streak: number; level: number; poolSize?: number }
+interface PoolOpts { streak: number; level: number; poolSize?: number; allowRun2?: boolean; allowRun3?: boolean }
 
 /** Génère un POOL de location équilibré : `poolSize` espèces distinctes, au bon stade pour le niveau,
  *  sans qu'aucun type ne soit une faiblesse (×2+) pour plus de MAX_SHARED_WEAKNESS membres. Déterministe. */
@@ -26,8 +25,7 @@ export function generateRentalPool(rng: Rng, opts: PoolOpts): RentalCandidate[] 
 
     // Candidats : formes au niveau visé, hors `exclusive`, dans une bande BST élargie (l'Usine veut de la variété).
     const eligible = formsAtLevel(level).filter((id) => {
-        const s = SPECIES[id] as any
-        if (!s || s.exclusive) return false
+        if (!frontierEligible(id, opts.streak, opts.allowRun2, opts.allowRun3)) return false
         const b = bstOf(id)
         return b >= lo - 80 && b <= hi + 80
     })

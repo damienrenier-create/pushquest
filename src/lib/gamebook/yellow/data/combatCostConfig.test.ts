@@ -52,6 +52,13 @@ describe("attackCost — coût = 10 × (cp/100) × (quota/150) × (niveau/60)", 
         expect(attackCost(getMove("spores_dodo")!, 60, 150)).toBe(7)
         expect(attackCost(getMove("berceuse")!, 60, 150)).toBe(7)
     })
+    it("Patience (puissance dynamique) : coût ∝ PV manquants — 40 BP à pleins PV (4) → 150 BP quasi-K.O. (10)", () => {
+        const patience = getMove("patience")!
+        expect(attackCost(patience, 60, 150, 1)).toBe(4)     // PV pleins → 40 BP → 4 reps
+        expect(attackCost(patience, 60, 150, 0.5)).toBe(8)   // 35-69% → 80 BP → 8 reps
+        expect(attackCost(patience, 60, 150, 0.05)).toBe(10) // <10% → 150 BP → plafond 10 reps
+        expect(attackCost(patience, 60, 150)).toBe(4)        // sans hpFrac (ennemi, ne paie pas) → base 40 → 4
+    })
     it("effectiveQuota : indispo / ≤1 → 150 ; valeur plausible conservée", () => {
         expect(effectiveQuota(undefined)).toBe(150)
         expect(effectiveQuota(1)).toBe(150)

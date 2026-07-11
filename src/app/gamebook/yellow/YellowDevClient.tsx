@@ -553,7 +553,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             if (!cancelled) {
                 const fsnap = readFrontierSnap()
                 if (fsnap?.run?.status === "active") {
-                    setRunRaw(fsnap.run)
+                    // Reprise d'une série d'AVANT ce changement (snapshot sans allowRun2/3) : on re-dérive les
+                    // flags depuis la save persistante, sinon les exclusivités hautes sphères manqueraient 1 série.
+                    const rp = getPlayer()
+                    setRunRaw({ ...fsnap.run, allowRun2: fsnap.run.allowRun2 ?? rp.ngplusUsed, allowRun3: fsnap.run.allowRun3 ?? rp.run3Used })
                     setDraftedTeam(fsnap.draftedTeam ?? null)
                     setTourChoice(fsnap.tourChoice)
                     setUsineCt(fsnap.usineCt)
@@ -853,7 +856,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         //   équipe (le struggle gratuit reste, mais il ne permet plus de progresser). Évite que reps se fige sur un
         //   petit positif (< coût min) → le run ne se terminerait jamais avec un simple test reps===0.
         const quota = effectiveQuota(player.wildCtx?.quota)
-        const moveCosts = player.team.flatMap((m) => m.moves.map((mv) => attackCost(getMove(mv.moveId), m.level, quota)))
+        const moveCosts = player.team.flatMap((m) => { const hf = m.currentHp / Math.max(1, maxHpOf(m)); return m.moves.map((mv) => attackCost(getMove(mv.moveId), m.level, quota, hf)) })
         const minMoveCost = moveCosts.length ? Math.min(...moveCosts) : 1
         if (player.reps >= minMoveCost && !beatMaster) return
         if (battle || evolutions.length > 0 || championRun || dialogue || pendingLearn || newDexEntry || run3EndOffer) return
@@ -1922,7 +1925,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 const lvl = resolveFrontierLevel(rule, myArenaLevel || 50)
                                 const seed = Math.floor(Math.random() * 1e9)
                                 const playerTeam = getPlayer().team.map((m) => ({ speciesId: m.speciesId, level: lvl }))
-                                setDome({ state: createDome(new Rng(seed), { level: lvl, streak: 14, playerTeam }), rule, seed, jc: 0 })
+                                setDome({ state: createDome(new Rng(seed), { level: lvl, streak: 14, playerTeam, allowRun2: getPlayer().ngplusUsed, allowRun3: getPlayer().run3Used }), rule, seed, jc: 0 })
                                 setDomePause(true) // montre le bracket + le 1er adversaire avant de lancer
                             }} style={{ background: "#f1c40f", color: "#1a1a22", fontWeight: 800, border: "none", borderRadius: 8, padding: "6px 10px", cursor: "pointer" }}>
                                 {rule === "L50" ? "Niv 50" : rule === "L100" ? "Niv 100" : "Adaptatif"}
@@ -2770,7 +2773,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                             <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m?.name ?? mv.moveId} <span style={{ opacity: 0.55 }}>({m?.type ?? "?"}{m && m.power > 0 ? ` · ${m.power}` : ""})</span></span>
                                         </span>
                                         {/* PP masqués côté joueur (illimités tant qu'on a l'énergie) → on n'affiche que le coût en reps. */}
-                                        <span style={{ opacity: 0.7, flexShrink: 0 }}>💪 {attackCost(m ?? null, live.level, effectiveQuota(player.wildCtx?.quota))}</span>
+                                        <span style={{ opacity: 0.7, flexShrink: 0 }}>💪 {attackCost(m ?? null, live.level, effectiveQuota(player.wildCtx?.quota), live.currentHp / Math.max(1, maxHpOf(live)))}</span>
                                     </div>
                                 )
                             })}

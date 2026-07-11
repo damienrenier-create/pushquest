@@ -11,6 +11,7 @@ import {
     resolveTurn,
     resolveTurnPvp,
     applyForfeitWin,
+    maxHpOf,
     type BattleState,
     type BattleEvent,
     type PlayerAction,
@@ -382,7 +383,8 @@ function moveCostRepsForAction(b: BattleState, moveIndex: number): number {
     const me = b.player.team[b.player.activeIndex]
     const slot = me?.moves[moveIndex]
     if (!me || !slot) return 0
-    return attackCost(getMove(slot.moveId), me.level, effectiveQuota(getPlayer().wildCtx?.quota))
+    const hpFrac = me.currentHp / Math.max(1, maxHpOf(me)) // Patience : coût ∝ puissance réelle (PV bas → plus cher)
+    return attackCost(getMove(slot.moveId), me.level, effectiveQuota(getPlayer().wildCtx?.quota), hpFrac)
 }
 
 export function submitPlayerAction(action: PlayerAction) {

@@ -28,21 +28,35 @@ export function effectiveQuota(rawQuota: number | undefined | null): number {
  * - Attaque de dégâts : puissance × NOMBRE MOYEN de coups (multi-hit) + la valeur du SOIN (drain).
  * - Statut : palier d'impact (move.costPower, défaut STATUS_DEFAULT_CP).
  */
-function costPowerOf(move: MoveData): number {
+/** SOURCE UNIQUE de la courbe de puissance « lowHp » (Patience) : puissance EFFECTIVE selon la fraction de PV
+ *  de l'attaquant. Réutilisée par engine.ts (lowHpPower délègue ici) → dégâts ET coût en reps toujours alignés. */
+export function lowHpPowerFrac(frac: number): number {
+    if (frac >= 0.69) return 40
+    if (frac >= 0.35) return 80
+    if (frac >= 0.20) return 100
+    if (frac >= 0.10) return 130
+    return 150
+}
+
+function costPowerOf(move: MoveData, hpFrac?: number): number {
     if (move.power > 0) {
         const e = move.effect
+        // Puissance dynamique (Patience) : on facture la puissance EFFECTIVE (jusqu'à 150) quand on connaît
+        // les PV de l'attaquant — sinon repli sur la puissance de base (ex. côté ennemi, qui ne paie pas de reps).
+        const base = e?.dynamicPower === "lowHp" && hpFrac !== undefined ? lowHpPowerFrac(hpFrac) : move.power
         const avgHits = e?.multiHit ? (e.multiHit[0] + e.multiHit[1]) / 2 : 1
-        let cp = move.power * avgHits
-        if (e?.drainPct) cp += (move.power * e.drainPct) / 100 // vol de PV → on paie aussi le soin rendu
+        let cp = base * avgHits
+        if (e?.drainPct) cp += (base * e.drainPct) / 100 // vol de PV → on paie aussi le soin rendu
         return cp
     }
     return move.costPower ?? STATUS_DEFAULT_CP
 }
 
-/** Coût en reps d'une attaque, scalé par le QUOTA IRL du joueur ET le NIVEAU du Daemon (cf. en-tête). */
-export function attackCost(move: MoveData | null, level: number, quota: number): number {
+/** Coût en reps d'une attaque, scalé par le QUOTA IRL du joueur ET le NIVEAU du Daemon (cf. en-tête).
+ *  `hpFrac` (optionnel) = fraction de PV de l'attaquant, pour les moves à puissance dynamique (Patience). */
+export function attackCost(move: MoveData | null, level: number, quota: number, hpFrac?: number): number {
     if (!move) return 1
-    const cp = costPowerOf(move)
+    const cp = costPowerOf(move, hpFrac)
     const f =
         Math.min(1, cp / 100) *
         Math.min(1, Math.max(0, quota) / QUOTA_STD) *

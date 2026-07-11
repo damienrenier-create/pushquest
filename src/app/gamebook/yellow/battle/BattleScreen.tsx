@@ -329,7 +329,8 @@ export default function BattleScreen() {
                 options.push({ label: "🏃 FUITE", onSelect: () => setMenu("confirmRun"), disabled: !battle.isWild })
             }
         } else if (menu === "moves") {
-            const costs = player.moves.map((s) => attackCost(getMove(s.moveId), player.level, effectiveQuota(repsWallet.wildCtx?.quota)))
+            const meHpFrac = player.currentHp / Math.max(1, maxHpOf(player)) // Patience : coût dynamique ∝ PV manquants (miroir EXACT du store)
+            const costs = player.moves.map((s) => attackCost(getMove(s.moveId), player.level, effectiveQuota(repsWallet.wildCtx?.quota), meHpFrac))
             // PvP (user vs user) = énergie ILLIMITÉE pendant le combat : aucune attaque grisée
             // (la déduction de reps est déjà sautée côté store pour le PvP).
             const canUse = (c: number) => battle.pvp || (c <= reps && c <= remainingEnergy)

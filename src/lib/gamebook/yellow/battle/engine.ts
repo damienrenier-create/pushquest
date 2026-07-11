@@ -24,7 +24,7 @@ import { xpForDefeat, applyExp } from "./xp"
 import { tryCapture } from "./capture"
 import { CAPTURE_ESCALATION_PER_ATTEMPT } from "../data/captureConfig"
 import { ballBonusOf, getItem, isGuaranteedBall } from "../data/items"
-import { STRUGGLE_MOVE_ID, STRUGGLE_INDEX, attackCost, QUOTA_STD } from "../data/combatCostConfig"
+import { STRUGGLE_MOVE_ID, STRUGGLE_INDEX, attackCost, QUOTA_STD, lowHpPowerFrac } from "../data/combatCostConfig"
 import { gainEv, signatureStat, EV_YIELD_PER_WIN } from "../data/evConfig"
 import { MISS_CAPTURE_LINES } from "../data/missCaptureLines"
 
@@ -682,15 +682,10 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
 
 interface DamageOutcome { dealt: number; typeEff: number }
 
-/** Puissance croissante à BAS PV (façon Reversal) — pour « Patience » (Karmaki). Plus la fraction de PV de
- *  l'attaquant est basse, plus la frappe est forte : le karma rend ce qu'il a encaissé. Paliers prévisibles. */
+/** Puissance croissante à BAS PV (façon Reversal) — pour « Patience » (Karmaki). Délègue à lowHpPowerFrac
+ *  (combatCostConfig = SOURCE UNIQUE de la courbe) → dégâts et coût en reps toujours sur la même table. */
 function lowHpPower(currentHp: number, maxHp: number): number {
-    const frac = currentHp / Math.max(1, maxHp)
-    if (frac >= 0.69) return 40
-    if (frac >= 0.35) return 80
-    if (frac >= 0.20) return 100
-    if (frac >= 0.10) return 130
-    return 150
+    return lowHpPowerFrac(currentHp / Math.max(1, maxHp))
 }
 
 function dealMoveDamage(state: BattleState, side: SideId, move: MoveData, rng: Rng, events: BattleEvent[]): DamageOutcome {
