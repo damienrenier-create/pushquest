@@ -73,6 +73,12 @@ const LIGUE_ROOM_TRAINER: Record<string, string> = {
     yellow_ligue_rival: "y_ligue_maitre",
 }
 
+// GARANTIE DE DÉCOUVERTE — Centrale Psy (run 3) : état TRANSIENT par PASSAGE (non persisté). Tant qu'Hypnoppo
+// ou Karmaki n'est pas CAPTURÉ, on force son apparition ≥1× par passage — mais seulement à partir de la 9e/10e
+// rencontre (pas avant → non « scripté »). Le flag « vu ce passage » coupe le forçage ensuite (aucun spam si
+// le joueur ne capture pas). Le compteur est RÉ-ARMÉ à l'ENTRÉE dans la Centrale (transition de carte, cf. plus bas).
+let run3CentralePity = { count: 0, hSeen: false, kSeen: false }
+
 interface GameStore {
     // === STATE ===
     player: PlayerState
@@ -273,7 +279,7 @@ function tryLaunchGekroc(): ActiveDialogue | null {
         return { npcId: GEKROC_NPC_ID, npcName: "GÉKROC", lineIndex: 0, lines: GEKROC_NO_TEAM_LINES }
     }
     const seed = Math.floor(Math.random() * 1e9) >>> 0
-    startWildBattle(team, [buildGekroc(getActiveWorld() === "ngplus")], seed) // NG+ : Gékraise (Roche/Feu) garde la Pierre
+    startWildBattle(team, [buildGekroc(getActiveWorld())], seed) // gardien selon le monde : Gékroc / Gékraise / Gékosmic
     return null
 }
 
@@ -585,6 +591,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 // pas au spawn générique du gym (7,8) calé sur les arènes 15×10.
                 if (targetMapId === "yellow_arena_feu") { spawnX = 8; spawnY = 14 }
                 const newPlayer = createInitialPlayer(targetMapId, spawnX, spawnY, next.direction)
+                // GARANTIE Centrale Psy (run 3) : une ENTRÉE (transition) dans la Centrale = un NOUVEAU passage →
+                // on ré-arme ICI (pas via un pas dans la ville) pour couvrir l'aller-retour immédiat par la porte.
+                if (getActiveWorld() === "run3" && targetMapId === "yellow_centrale") run3CentralePity = { count: 0, hSeen: false, kSeen: false }
                 // Mémorise l'origine en ENTRANT dans un intérieur partagé (→ retour dynamique +
                 // posters de Cendreville) ; on l'efface en SORTANT d'un partagé.
                 const enteringShared = targetMapId === "yellow_shop" || targetMapId === "yellow_infirmary"
@@ -673,6 +682,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
                             spawn = createMonInstance("mimimoy", Math.max(5, ngEasyWild ? 3 : levelBasis), { owned: false })
                             bumpMimimoyAppearances()
                             persistYellowSave()
+                        }
+                    }
+                    // GARANTIE Centrale Psy (run 3) : compte les rencontres du passage, marque les exclusivités VUES,
+                    // et FORCE une non-capturée/non-vue dès la 9e/10e rencontre (Hypnoppo puis Karmaki). Vu ⇒ stop.
+                    if (getActiveWorld() === "run3" && next.mapId === "yellow_centrale") {
+                        run3CentralePity.count++
+                        if (spawn.speciesId === "hypnoppo") run3CentralePity.hSeen = true
+                        if (spawn.speciesId === "karmaki") run3CentralePity.kSeen = true
+                        const dex = getPokedex().caught
+                        // !precious : ne JAMAIS écraser un shiny naturel (ni une surprise hiddenUntilCaught) par le
+                        // forçage — même garde que le bloc Mimimoy. count++/hSeen/kSeen déjà faits → la garantie n'est
+                        // que RETARDÉE d'une rencontre (le prochain non-précieux ≥9/10 force l'exclusivité).
+                        if (!dex.includes("hypnoppo") && !run3CentralePity.hSeen && !precious && run3CentralePity.count >= 9) {
+                            spawn = createMonInstance("hypnoppo", 9 + Math.floor(Math.random() * 7), { owned: false }); run3CentralePity.hSeen = true
+                        } else if (!dex.includes("karmaki") && !run3CentralePity.kSeen && !precious && run3CentralePity.count >= 10) {
+                            spawn = createMonInstance("karmaki", 38 + Math.floor(Math.random() * 13), { owned: false }); run3CentralePity.kSeen = true
                         }
                     }
                     if (typeof window !== "undefined" && encCount < 10) window.localStorage.setItem(ENC_KEY, String(encCount + 1))

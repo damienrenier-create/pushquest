@@ -682,6 +682,17 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
 
 interface DamageOutcome { dealt: number; typeEff: number }
 
+/** Puissance croissante à BAS PV (façon Reversal) — pour « Patience » (Karmaki). Plus la fraction de PV de
+ *  l'attaquant est basse, plus la frappe est forte : le karma rend ce qu'il a encaissé. Paliers prévisibles. */
+function lowHpPower(currentHp: number, maxHp: number): number {
+    const frac = currentHp / Math.max(1, maxHp)
+    if (frac >= 0.69) return 40
+    if (frac >= 0.35) return 80
+    if (frac >= 0.20) return 100
+    if (frac >= 0.10) return 130
+    return 150
+}
+
 function dealMoveDamage(state: BattleState, side: SideId, move: MoveData, rng: Rng, events: BattleEvent[]): DamageOutcome {
     const attacker = active(state[side])
     const defender = active(state[other(side)])
@@ -727,9 +738,11 @@ function dealMoveDamage(state: BattleState, side: SideId, move: MoveData, rng: R
     const tOutCtx = { stab, typeEff: eff, isCrit, moveType: effType, mainType: atkSpecies.types[0], targetHpFrac: defender.currentHp / Math.max(1, maxHpOf(defender)) }
     const itemMult = heldOutgoingDmgMult(attacker, effType) * heldIncomingDmgMult(defender, isPhysical)
         * talentOutgoingDmgMult(attacker, tOutCtx) * talentIncomingDmgMult(defender, { typeEff: eff, isPhysical })
+    // PATIENCE (Karmaki) : puissance dynamique liée aux PV manquants de l'attaquant (substituée à move.power).
+    const effPower = move.effect?.dynamicPower === "lowHp" ? lowHpPower(attacker.currentHp, maxHpOf(attacker)) : move.power
     const result = computeDamage({
         level: attacker.level,
-        power: move.power,
+        power: effPower,
         attack: atk,
         defense: def,
         stab,

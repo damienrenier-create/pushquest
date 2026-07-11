@@ -93,6 +93,10 @@ export interface MoveEffect {
      *  bonne stat (ex. un Daemon Feu à grosse Attaque tape Feu… mais en PHYSIQUE). Type stocké = NORMAL
      *  (→ apprenable par tous) ; le moteur substitue type+catégorie au calcul de dégâts. */
     adaptiveStab?: boolean
+    /** PUISSANCE DYNAMIQUE : "lowHp" = la puissance CROÎT à mesure que les PV de l'ATTAQUANT baissent
+     *  (façon Reversal). Le moteur substitue la puissance calculée à move.power (cf. dealMoveDamage).
+     *  Utilisé par « Patience » (Karmaki) : plus il a encaissé, plus il rend. */
+    dynamicPower?: "lowHp"
 }
 
 export interface MoveData {

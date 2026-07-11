@@ -27,14 +27,21 @@ export const GEKROC_NO_TEAM_LINES = [
     "Soigne-les au Centre avant d'affronter le gardien.",
 ]
 
-/** Espèce du mini-boss selon le monde : Gékroc (SOL/ÉLEC) en run 1, son jumeau Gékraise (ROCHE/FEU) en NG+. */
+/** Espèce du mini-boss selon le MONDE : Gékroc (SOL/ÉLEC) run 1, jumeau Gékraise (ROCHE/FEU) run 2 (NG+),
+ *  jumeau Gékosmic (ROCHE/PSY) run 3. Même créature re-typée : mêmes stats/niveau/capture, seul le type change. */
 export const GEKROC_SPECIES = "gekroc"
 export const GEKRAISE_SPECIES = "gekraise"
+export const GEKOSMIC_SPECIES = "gekosmic"
+
+/** Espèce du gardien de la Pierre pour le monde actif. */
+export function gekrocSpeciesForWorld(world: "live" | "ngplus" | "run3"): string {
+    return world === "run3" ? GEKOSMIC_SPECIES : world === "ngplus" ? GEKRAISE_SPECIES : GEKROC_SPECIES
+}
 
 /** Fabrique l'instance de combat du gardien : N35, capture DURE (×0.6) mais SANS statut requis (≠ légendaire).
- *  En New Game+ (`ngplus`), c'est GRÉKRAISE (ROCHE/FEU) qui garde la Pierre à la place de Gékroc. */
-export function buildGekroc(ngplus = false): MonInstance {
-    const mon = createMonInstance(ngplus ? GEKRAISE_SPECIES : GEKROC_SPECIES, GEKROC_LEVEL, { owned: false })
+ *  L'espèce dépend du monde (`live`/`ngplus`/`run3`) — cf. gekrocSpeciesForWorld. */
+export function buildGekroc(world: "live" | "ngplus" | "run3" = "live"): MonInstance {
+    const mon = createMonInstance(gekrocSpeciesForWorld(world), GEKROC_LEVEL, { owned: false })
     Object.assign(mon, { captureMult: 0.6 }) // dur à capturer (cf. engine performCapture), mais pas légendaire
     return mon
 }

@@ -98,6 +98,7 @@ export const MOVES: Record<string, MoveData> = {
     fonce_bec: { id: "fonce_bec", name: "Fonce-Bec", type: "VOL", power: 75, accuracy: 100, pp: 20, description: "Charge aérienne fiable." },
     pique_fatal: { id: "pique_fatal", name: "Piqué Fatal", type: "VOL", power: 90, accuracy: 100, pp: 15, effect: { recoilPct: 25 }, description: "Piqué puissant, cause du recul." },
     vague_mentale: { id: "vague_mentale", name: "Vague Mentale", type: "PSY", power: 90, accuracy: 100, pp: 10, effect: { chance: 10, statChanges: [{ target: "target", stat: "spc", stages: -1 }] }, description: "Gros move Psy ; peut baisser le Spécial." },
+    patience: { id: "patience", name: "Patience", type: "PSY", power: 40, accuracy: 100, pp: 5, effect: { dynamicPower: "lowHp" }, description: "Rétribution karmique : plus le lanceur a encaissé de dégâts (PV bas), plus la frappe psychique est puissante (40 à pleins PV → 150 quasi K.O.). Le karma rend ce qu'il a subi." },
     morsure: { id: "morsure", name: "Morsure", type: "INSECTE", power: 60, accuracy: 100, pp: 20, description: "Morsure intermédiaire." },
     dard_mortel: { id: "dard_mortel", name: "Dard Mortel", type: "INSECTE", power: 70, accuracy: 100, pp: 15, description: "Gros move Insecte." },
     ball_ombre: { id: "ball_ombre", name: "Ball'Ombre", type: "SPECTRE", power: 85, accuracy: 100, pp: 15, description: "Grosse attaque spectrale." },

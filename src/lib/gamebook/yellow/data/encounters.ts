@@ -344,7 +344,7 @@ const NGPLUS_ZONES: Record<string, Zone> = {
     // CENTRALE FEU run 2 — la Centrale a SURCHAUFFÉ : le cœur Feu/Élec (lignée Boltah) a fait fondre les
     // circuits, la lave a envahi les couloirs. Devient le FOYER des Feu déplacés ici (Braisille/Fennaise de
     // Route Nord, Lavapetit/Braisécaille de la Grotte, Pyrozly/Brasicow de Cendreville). Le gardien de la
-    // Pierre est Gékraise (Roche/Feu) en run 2 (cf. gekroc.ts buildGekroc(ngplus)).
+    // Pierre est Gékraise (Roche/Feu) en run 2 (cf. gekroc.ts buildGekroc("ngplus")).
     // Niveaux 100% CONTRÔLÉS (levelFixed/levelRange → aucun scaling du lead), façon Centrale Élec. Les lignées
     // évolutives « couvent » : 60% base (sous son évo) · 30% mi-évo (sous son évo) · 10% final (N40). Les
     // 2-stades : 85% base · 15% final au ×1,5 de l'évo (trophées rares). Pyropanthe = 1 SEULE capture (catchOnce).
@@ -432,6 +432,31 @@ const RUN3_ZONES: Record<string, Zone> = {
             { speciesId: "rembodo", base: 1 }, { speciesId: "belunode", base: 1 }, { speciesId: "namicha", base: 1, noEvolve: true },
             // trophée de la grotte — Glace/Eau anti-Dragon, UNIQUEMENT si le lead ≥ 35 (son niveau mini)
             { speciesId: "orcaline", base: 1, noEvolve: true, rare: true, minLeadLevel: 35 },
+        ],
+    },
+    // CENTRALE PSY run 3 — DONJON 100% PSY : tout le roster psy (Nouillon/Vermissaint, Limaroche→Escargyle→
+    // Tortoracle, Blaziper, Jerbiwat, Chouhanté, Regnantaur) + les 4 INÉDITES glissées discrètement (lignée hippo
+    // Hypnoppo→Téléppo→Omnhippo + Karmaki le sage). Niveaux CONTRÔLÉS (levelRange → aucun scaling ; le stade réel
+    // sort via speciesAtLevel sauf noEvolve). La GARANTIE de découverte (forçage Hypnoppo/Karmaki à la ~9-10e
+    // rencontre du passage) est gérée dans gameStore. Gékosmic = gardien STATIQUE (mini-boss NPC 4,9), hors pool.
+    yellow_centrale: {
+        rate: 0.16,
+        pool: [
+            // — POOL PSY (familier, le gros de la population) —
+            { speciesId: "nouillon", base: 90, levelRange: [12, 15] },                        // commun (base <16)
+            { speciesId: "nouillon", base: 40, levelRange: [27, 33] },                         // peu commun → Vermissaint
+            { speciesId: "limaroche", base: 90, levelRange: [12, 15] },                        // commun (base <18)
+            { speciesId: "limaroche", base: 40, levelRange: [28, 34] },                        // peu commun → Escargyle
+            { speciesId: "limaroche", base: 12, levelRange: [46, 50], captureMult: 0.5 },      // rare → Tortoracle
+            { speciesId: "regnantaur", base: 12, noEvolve: true, levelRange: [43, 47], captureMult: 0.4 }, // rare final
+            { speciesId: "blaziper", base: 12, noEvolve: true, levelRange: [12, 16] },         // rare (pas de Flamaspic)
+            { speciesId: "jerbiwat", base: 12, levelRange: [38, 42], captureMult: 0.5 },       // rare standalone
+            { speciesId: "chouhante", base: 12, noEvolve: true, levelRange: [28, 33] },        // rare (pas d'Archibouh)
+            // — INÉDITES (discrètes ~18% ; la garantie assure quand même la découverte d'Hypnoppo/Karmaki) —
+            { speciesId: "hypnoppo", base: 40, levelRange: [7, 15] },                          // peu commun (base <16)
+            { speciesId: "hypnoppo", base: 12, levelRange: [18, 33] },                         // rare → Téléppo
+            { speciesId: "karmaki", base: 12, noEvolve: true, levelRange: [28, 56] },          // rare, grande fourchette (mono)
+            { speciesId: "omnhippo", base: 3, noEvolve: true, levelRange: [48, 52], catchOnce: true, captureMult: 0.5 }, // ultra-rare pépite
         ],
     },
 }

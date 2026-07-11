@@ -2297,6 +2297,114 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "Mouflon d'orage aux cornes-bobines, ancré au roc. Froid et calculateur, il paralyse sa proie et lui vole sa vitesse avant de la foudroyer. On murmure qu'il fut façonné pour terrasser un certain caméléon ailé. — Némésis forgée par Mools pour contrer Gavillus ©",
         sprite: "/yellow/sprites/dex/mouflorage.png",
     },
+
+    // ═══════════════ CENTRALE PSY — RUN 3 (dexNo 156-160, espèces INÉDITES) ═══════════════
+    // 🪨🔮 GÉKOSMIC — 3e jumeau de Gékroc/Gékraise : mini-boss STATIQUE de la Centrale en RUN 3, MÊME créature
+    // (mêmes stats BST 410, learnsAllCts, capture dure) mais RE-TYPÉE ROCHE/PSY. Learnset parallèle à Gékroc,
+    // ses 3 moves ÉLEC échangés en PSY (STAB spécial réel). Masqué du Pokédex tant que non capturé.
+    gekosmic: {
+        id: "gekosmic", dexNo: 156, name: "Gékosmic", types: ["ROCHE", "PSY"],
+        baseStats: { hp: 90, atk: 92, def: 100, spe: 48, spc: 80 }, // identiques à Gékroc/Gékraise (BST 410)
+        learnset: [
+            { level: 1, moveId: "vive_attaque" },
+            { level: 1, moveId: "choc_mental" },     // STAB PSY spécial (⇄ étincelle de Gékroc)
+            { level: 1, moveId: "tunnel" },          // signature dig conservée
+            { level: 1, moveId: "repos" },
+            { level: 1, moveId: "secousse" },        // frappe physique (exploite atk 92)
+            { level: 48, moveId: "eboulis" },        // STAB ROCHE physique
+            { level: 56, moveId: "onde_folie" },     // contrôle PSY (confusion, ⇄ cage_eclair)
+            { level: 66, moveId: "lame_roche" },     // STAB ROCHE
+            { level: 72, moveId: "seisme" },         // couverture SOL lourde
+            { level: 80, moveId: "vague_mentale" },  // gros STAB PSY spécial (⇄ ultra_foudre)
+            { level: 88, moveId: "roc_titanesque" }, // capstone ROCHE
+        ],
+        catchRate: 10, baseExp: 180, rarity: "RARE", growthRate: "medium_fast", exclusive: true,
+        role: "Mini-boss ROCHE/PSY (run 3) — jumeau de Gékroc, apprend TOUTES les CT",
+        description: "Golem fossile jumeau de Gékroc, mais sa pierre irradie une énergie mentale : des éclairs psychiques parcourent sa carapace de roche et cristallisent sa queue. Creuse des galeries fulgurantes et s'adapte à tout.",
+        sprite: "/yellow/sprites/dex/gekosmic.png",
+        learnsAllCts: true,
+        hiddenUntilCaught: true,
+        runThreeOnly: true, // absent des dex tant que non capturé en run 3 (jumeau run-3 de Gékroc)
+    },
+    // 🦛🔮 HYPNOPPO → TÉLÉPPO → OMNHIPPO — lignée mono-PSY inédite du run 3 (l'ENDORMEUR : hypnose → contrôle → sweep).
+    hypnoppo: {
+        id: "hypnoppo", dexNo: 157, name: "Hypnoppo", types: ["PSY"],
+        baseStats: { hp: 70, atk: 32, def: 52, spe: 48, spc: 66 }, // BST 268
+        learnset: [
+            { level: 1, moveId: "charge" },
+            { level: 4, moveId: "vive_attaque" },
+            { level: 7, moveId: "choc_mental" },     // 1er STAB PSY
+            { level: 11, moveId: "hypnose" },        // signature : endort tôt
+            { level: 14, moveId: "visee" },          // fiabilise l'hypnose
+        ],
+        evolution: { toId: "teleppo", method: { kind: "LEVEL", level: 16 } },
+        catchRate: 45, baseExp: 62, rarity: "UNCOMMON", growthRate: "medium_fast",
+        role: "Psy — hippo hypnotiseur frêle (base)",
+        description: "Hippopotame trapu au regard lourd et somnolent. D'un lent battement de paupières, il plonge ses proies dans un demi-sommeil avant même de les toucher. Son vrai pouvoir est mental, pas physique.",
+        sprite: "/yellow/sprites/dex/hypnoppo.png",
+    },
+    teleppo: {
+        id: "teleppo", dexNo: 158, name: "Téléppo", types: ["PSY"],
+        baseStats: { hp: 84, atk: 42, def: 62, spe: 80, spc: 86 }, // BST 354
+        learnset: [
+            { level: 1, moveId: "choc_mental" },
+            { level: 1, moveId: "hypnose" },
+            { level: 1, moveId: "vive_attaque" },
+            { level: 18, moveId: "onde_folie" },     // confusion
+            { level: 22, moveId: "elan" },           // +Vitesse (téléporteur)
+            { level: 26, moveId: "focalisation" },   // +Spé (set-up)
+            { level: 30, moveId: "onde_cerebrale" }, // signature télépathe (débuff)
+        ],
+        evolution: { toId: "omnhippo", method: { kind: "LEVEL", level: 34 } },
+        catchRate: 45, baseExp: 120, rarity: "RARE", growthRate: "medium_fast",
+        role: "Psy — hippo télépathe/téléporteur (mid)",
+        description: "Hippo télépathe dont le troisième œil clignote sans cesse. Il se dématérialise et resurgit à l'autre bout du réacteur en un souffle. Déjà un attaquant spécial, mais bridé tant qu'il n'a pas atteint sa forme ultime.",
+        sprite: "/yellow/sprites/dex/teleppo.png",
+    },
+    omnhippo: {
+        id: "omnhippo", dexNo: 159, name: "Omnhippo", types: ["PSY"],
+        baseStats: { hp: 100, atk: 50, def: 75, spe: 100, spc: 110 }, // BST 435
+        learnset: [
+            { level: 1, moveId: "choc_mental" },
+            { level: 1, moveId: "hypnose" },
+            { level: 1, moveId: "onde_folie" },
+            { level: 1, moveId: "focalisation" },
+            { level: 1, moveId: "onde_cerebrale" },
+            { level: 1, moveId: "vive_attaque" },
+            { level: 38, moveId: "vague_mentale" },  // gros STAB PSY
+            { level: 44, moveId: "repos" },          // soin on-type
+            { level: 52, moveId: "mirage" },         // +2 esquive
+            { level: 66, moveId: "eveil_divin" },    // capstone snowball (+Spé/coup)
+        ],
+        catchRate: 30, baseExp: 180, rarity: "RARE", growthRate: "medium_fast",
+        role: "Psy — sweeper spécial endurant (pépite du couvoir)",
+        description: "Colosse psychique auréolé d'ailes d'énergie, aux yeux multiples ouverts sur tout. Il perçoit chaque pensée du réacteur et frappe avant même que l'adversaire ait décidé d'attaquer : offensive écrasante, mais un mastodonte increvable plutôt qu'un dieu de verre.",
+        sprite: "/yellow/sprites/dex/omnhippo.png",
+    },
+    // 🌿🔮 KARMAKI — moine-plante en méditation (PLANTE/PSY, double STAB spécial). Pivot défensif « de l'Équilibre »
+    // (vampigraine + brume_sporale reset + drain + soin) qui devient le « Sage Karmique » avec focalisation + Patience
+    // (rétribution ∝ PV encaissés). Mono-stade, grande fourchette de niveau en sauvage.
+    karmaki: {
+        id: "karmaki", dexNo: 160, name: "Karmaki", types: ["PLANTE", "PSY"],
+        baseStats: { hp: 103, atk: 50, def: 102, spe: 60, spc: 115 }, // BST 430 — mur-mage patient (ATQ/VIT dumpées)
+        learnset: [
+            { level: 1, moveId: "charge" },
+            { level: 5, moveId: "fouet_lianes" },    // STAB Plante
+            { level: 10, moveId: "choc_mental" },    // STAB Psy
+            { level: 15, moveId: "vampigraine" },    // SEEDED — chip karmique
+            { level: 18, moveId: "mega_sangsue" },   // drain-soin
+            { level: 25, moveId: "brume_sporale" },  // ÉGALISEUR — annule tous les boosts
+            { level: 30, moveId: "tranche_feuille" },// STAB Plante (highCrit)
+            { level: 36, moveId: "vague_mentale" },  // gros STAB Psy
+            { level: 44, moveId: "repos" },          // survie
+            { level: 58, moveId: "focalisation" },   // +Spé (bascule Sage Karmique)
+            { level: 66, moveId: "patience" },       // signature : rétribution ∝ PV encaissés
+        ],
+        catchRate: 45, baseExp: 170, rarity: "RARE", growthRate: "medium_fast",
+        role: "Plante/Psy — moine de l'Équilibre → sage karmique (pivot défensif)",
+        description: "Moine-plante en méditation perpétuelle, flottant en position du lotus, une liane-fleur enroulée sous lui. Il cherche l'équilibre : il annule les excès, draine ce qu'on lui inflige, et rend le karma — plus il a enduré, plus sa Patience frappe fort.",
+        sprite: "/yellow/sprites/dex/karmaki.png",
+    },
 }
 
 // ── REGISTRE RUNTIME des Daemons CUSTOM (créés par les joueurs, post-Ligue). Fusionné à la LECTURE seulement :
@@ -2318,7 +2426,8 @@ export function getSpecies(id: string): SpeciesData | null {
 // RUN 3 — les 10 espèces du run 3 (Magnetor + les 9 starters du triangle) ne sont visibles dans le DEX qu'à
 // partir du run 3 (dex tiéré par run). Marquées runThreeOnly ici, en un seul endroit, pour éviter d'éparpiller
 // le flag dans 10 littéraux. (Le POKÉDEX reste cumulatif — cf. isDexHidden / le caract. global des captures.)
-for (const id of ["magnetor", "elefer", "barrisfer", "colosfer", "cornaive", "astracorne", "lunarque", "coccipoing", "coccombat", "coccimperatrice"]) {
+for (const id of ["magnetor", "elefer", "barrisfer", "colosfer", "cornaive", "astracorne", "lunarque", "coccipoing", "coccombat", "coccimperatrice",
+    "hypnoppo", "teleppo", "omnhippo", "karmaki"]) { // + lignée Centrale Psy run 3 (Gékosmic a le flag inline)
     if (SPECIES[id]) SPECIES[id].runThreeOnly = true
 }
 
