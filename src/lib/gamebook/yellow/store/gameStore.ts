@@ -669,14 +669,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     run3: getActiveWorld() === "run3",      // RUN 3 : pools RUN3_ZONES (espèces inédites Route Nord / Grotte)
                 })
                 if (wild) {
-                    // MIMIMOY roaming (monde LIVE, post-quête du brocanteur) : peut REMPLACER cette rencontre.
-                    //   Chance décroissante par apparition (25→20→15→10→5 %, plancher 5 %), MAX 10 apparitions ;
-                    //   une capture stoppe le roaming (goshCaught-like). Compte comme UNE apparition.
+                    // MIMIMOY roaming (post-quête du brocanteur) : peut REMPLACER cette rencontre. Rôde dans le monde
+                    //   où l'échange l'a armé — l'échange est proposé en LIVE et en RUN 3, donc le pop suit les deux
+                    //   (pas le run 2). Chance décroissante par apparition (25→20→15→10→5 %, plancher 5 %), MAX 10
+                    //   apparitions ; une capture stoppe le roaming (goshCaught-like). Compte comme UNE apparition.
                     let spawn = wild
                     const p = getPlayerSave()
+                    const mimimoyWorld = getActiveWorld() === "live" || getActiveWorld() === "run3"
                     // Ne JAMAIS écraser un shiny ni un légendaire/surprise (hiddenUntilCaught : Goshendofy…) par Mimimoy.
                     const precious = wild.shiny || !!getSpecies(wild.speciesId)?.hiddenUntilCaught
-                    if (!precious && getActiveWorld() === "live" && p.mimimoyReturned && p.mimimoyAppearances < 10 && !getPokedex().caught.includes("mimimoy")) {
+                    if (!precious && mimimoyWorld && p.mimimoyReturned && p.mimimoyAppearances < 10 && !getPokedex().caught.includes("mimimoy")) {
                         const chance = [0.25, 0.20, 0.15, 0.10, 0.05][Math.min(p.mimimoyAppearances, 4)]
                         if (Math.random() < chance) {
                             spawn = createMonInstance("mimimoy", Math.max(5, ngEasyWild ? 3 : levelBasis), { owned: false })
@@ -691,12 +693,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
                         if (spawn.speciesId === "hypnoppo") run3CentralePity.hSeen = true
                         if (spawn.speciesId === "karmaki") run3CentralePity.kSeen = true
                         const dex = getPokedex().caught
-                        // !precious : ne JAMAIS écraser un shiny naturel (ni une surprise hiddenUntilCaught) par le
-                        // forçage — même garde que le bloc Mimimoy. count++/hSeen/kSeen déjà faits → la garantie n'est
-                        // que RETARDÉE d'une rencontre (le prochain non-précieux ≥9/10 force l'exclusivité).
-                        if (!dex.includes("hypnoppo") && !run3CentralePity.hSeen && !precious && run3CentralePity.count >= 9) {
+                        // Garde sur le spawn COURANT (pas le wild d'origine) : si le bloc Mimimoy vient de remplacer la
+                        // rencontre, spawn est un Mimimoy (hiddenUntilCaught) → le forçage ne DOIT PAS l'écraser (sinon
+                        // une apparition Mimimoy déjà consommée serait perdue). count++/hSeen/kSeen déjà faits → la
+                        // garantie n'est que RETARDÉE d'une rencontre (le prochain non-précieux ≥9/10 force l'exclusivité).
+                        const spawnPrecious = spawn.shiny || !!getSpecies(spawn.speciesId)?.hiddenUntilCaught
+                        if (!dex.includes("hypnoppo") && !run3CentralePity.hSeen && !spawnPrecious && run3CentralePity.count >= 9) {
                             spawn = createMonInstance("hypnoppo", 9 + Math.floor(Math.random() * 7), { owned: false }); run3CentralePity.hSeen = true
-                        } else if (!dex.includes("karmaki") && !run3CentralePity.kSeen && !precious && run3CentralePity.count >= 10) {
+                        } else if (!dex.includes("karmaki") && !run3CentralePity.kSeen && !spawnPrecious && run3CentralePity.count >= 10) {
                             spawn = createMonInstance("karmaki", 38 + Math.floor(Math.random() * 13), { owned: false }); run3CentralePity.kSeen = true
                         }
                     }

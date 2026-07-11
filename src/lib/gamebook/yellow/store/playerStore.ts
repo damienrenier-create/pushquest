@@ -568,6 +568,10 @@ export function setTeam(team: MonInstance[]) {
 /** Ajoute un Daemon capturé (équipe si place, sinon PC). */
 export function addCaught(mon: MonInstance, ctx?: { quotaReached?: boolean }): "team" | "pc" {
     const today = new Date().toISOString().slice(0, 10)
+    // EV : plafond modulé débloqué DÈS qu'une Ligue a été battue (live post-Ligue OU run 2/3 en cours).
+    //   isChampion est remis à false au début de chaque run → on OR avec ngplusUsed/run3Used (permanents).
+    //   Estampillé À LA CAPTURE → strictement NON rétroactif (les Daemons déjà en boîte restent à 510).
+    const leagueEverBeaten = st.isChampion || st.ngplusUsed || st.run3Used
     const owned: MonInstance = {
         ...mon, owned: true,
         capturedLevel: mon.capturedLevel ?? mon.level,
@@ -579,6 +583,7 @@ export function addCaught(mon: MonInstance, ctx?: { quotaReached?: boolean }): "
         // Métadonnées de capture (Pokédex enrichi).
         capturedMapId: mon.capturedMapId ?? (currentMapId || undefined),
         capturedQuotaReached: mon.capturedQuotaReached ?? ctx?.quotaReached,
+        evCapBoost: mon.evCapBoost ?? (leagueEverBeaten || undefined),
     }
     if (st.team.length < TEAM_MAX) {
         st = { ...st, team: [...st.team, owned] }

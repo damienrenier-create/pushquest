@@ -221,6 +221,9 @@ export interface MonInstance {
     pendingMoves?: string[]
     /** EXPÉRIENCE DE COMBAT (EV) — effort accumulé par stat au fil des victoires (plafonné, additif). */
     ev?: Partial<Record<StatKey, number>>
+    /** EV : capturé APRÈS la 1ʳᵉ Ligue → plafond d'EV modulé (voir evTotalCap). Estampillé à la capture,
+     *  NON rétroactif : absent sur les Daemons capturés avant le déblocage → plafond de base 510. */
+    evCapBoost?: boolean
     /** ENTRAÎNEMENT SAIYAN — points de stats non encore dépensés (gagnés au level-up). */
     statPoints?: number
     /** ENTRAÎNEMENT SAIYAN — bonus à plat alloués par le joueur, par stat (additif). */

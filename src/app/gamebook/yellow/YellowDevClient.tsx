@@ -85,7 +85,7 @@ import { moveCategory } from "@/lib/gamebook/yellow/battle/typeChart"
 import { attackCost, effectiveQuota } from "@/lib/gamebook/yellow/data/combatCostConfig"
 import { SAIYAN_POINT_VALUE } from "@/lib/gamebook/yellow/data/saiyanConfig"
 import { ivTier, ivTotal, ivTierColor } from "@/lib/gamebook/yellow/data/ivConfig"
-import { evTotal, topEvStats, EV_TOTAL_CAP, EV_STAT_CAP, evStatBonus, EV_YIELD_PER_WIN } from "@/lib/gamebook/yellow/data/evConfig"
+import { evTotal, topEvStats, evTotalCap, EV_TOTAL_CAP, EV_STAT_CAP, evStatBonus, EV_YIELD_PER_WIN } from "@/lib/gamebook/yellow/data/evConfig"
 import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
 import { expForLevel } from "@/lib/gamebook/yellow/battle/xp"
 import type { MonInstance } from "@/lib/gamebook/yellow/battle/types"
@@ -2721,12 +2721,14 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             })()}
                             {(() => {
                                 const total = evTotal(live.ev)
+                                const cap = evTotalCap(live)
+                                const boosted = cap > EV_TOTAL_CAP
                                 const EVK: Array<[string, string]> = [["hp", "PV"], ["atk", "Atq"], ["def", "Déf"], ["spe", "Vit"], ["spc", "Spé"]]
                                 return (
                                     <div style={{ fontSize: 11, marginBottom: 6 }}>
                                         <button onClick={() => setEvDetailOpen((o) => !o)}
                                             style={{ background: "transparent", border: "none", padding: 0, font: "inherit", color: "inherit", cursor: "pointer", textAlign: "left" }}>
-                                            Entraînement (EV) : <b>{total}/{EV_TOTAL_CAP}</b>{total >= EV_TOTAL_CAP ? " 🔒" : ""} <span style={{ opacity: 0.6 }}>{evDetailOpen ? "▾" : "▸"}</span>
+                                            Entraînement (EV) : <b>{total}/{cap}</b>{boosted ? " ✨" : ""}{total >= cap ? " 🔒" : ""} <span style={{ opacity: 0.6 }}>{evDetailOpen ? "▾" : "▸"}</span>
                                         </button>
                                         {evDetailOpen && (
                                             <div style={{ marginTop: 4, padding: 8, border: "2px solid #3a8ee0", borderRadius: 6, background: "#eef6ff" }}>
@@ -2745,7 +2747,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                                     )
                                                 })}
                                                 <div style={{ fontSize: 9, opacity: 0.6, marginTop: 5, lineHeight: 1.35 }}>
-                                                    +{EV_YIELD_PER_WIN} EV par victoire, dans la stat-forte du Daemon vaincu. La contribution « +X » s'ajoute dans le calcul de la stat (montée avec le niveau). Plafond {EV_STAT_CAP}/stat, {EV_TOTAL_CAP} au total.
+                                                    +{EV_YIELD_PER_WIN} EV par victoire, dans la stat-forte du Daemon vaincu. La contribution « +X » s'ajoute dans le calcul de la stat (montée avec le niveau). Plafond {EV_STAT_CAP}/stat, {cap} au total.{boosted ? ` ✨ Plafond relevé (+${cap - EV_TOTAL_CAP}) : capturé après la Ligue, à bas niveau et/ou à fort potentiel génétique.` : ""}
                                                 </div>
                                             </div>
                                         )}
