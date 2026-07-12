@@ -8,7 +8,10 @@
 // la récompense (énergie/CT) est créditée côté client à la confirmation.
 
 import { useState, useEffect } from "react"
-import { usePlayer, grantReps, grantCt, addItem } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, grantReps, grantCt, addItem, addCaught } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPokedex, markCaught } from "@/lib/gamebook/yellow/store/pokedexStore"
+import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
+import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { fetchFrontierProfile, postSpend } from "@/lib/gamebook/yellow/frontier/frontierApi"
 import { getCt } from "@/lib/gamebook/yellow/data/cts"
@@ -17,21 +20,26 @@ import { HELD_ITEM_LIST, type HeldItemCategory } from "@/lib/gamebook/yellow/dat
 
 const INK = "#2a1c10", CREAM = "#f4ecd4", DARK = "#cdbb86"
 
-const ENERGY = [{ amount: 250, price: 5 }, { amount: 600, price: 10 }]
+const ENERGY = [{ amount: 250, price: 40 }, { amount: 600, price: 85 }]
 const CT_LOT = ["ct08", "ct12", "ct14", "ct15", "ct16", "ct24", "ct20", "ct10"] // CT fortes (alternative aux badges)
-const CT_PRICE = 12
+const CT_PRICE = 120
 const SYMBOLS = [
     { id: "sym_tour", emoji: "🏯", label: "Symbole de la Tour" },
     { id: "sym_usine", emoji: "🏭", label: "Symbole de l'Usine" },
     { id: "sym_dome", emoji: "🏆", label: "Symbole du Dôme" },
 ]
-const SYMBOL_PRICE = 25
+const SYMBOL_PRICE = 150
 const HELD_GROUPS: { title: string; cat: HeldItemCategory }[] = [
     { title: "🎨 Objets de type (+10 % dégâts)", cat: "type" },
     { title: "💊 Soin", cat: "soin" },
     { title: "⚔️ Combat", cat: "combat" },
     { title: "⭐ Signatures (Daemon précis)", cat: "signature" },
 ]
+// DAEMONS DE LÉGENDE : les Cerveaux/gardiens uniques (trio Gék + Sylvebarbe) rachetables au marchand si
+// jamais capturés — voie de rattrapage HORS-PRIX (dernier recours du complétionniste). Livrés niv 60.
+const LEGENDARY_LOT = ["gekroc", "gekraise", "gekosmic", "sylvebarbe"]
+const LEGENDARY_PRICE = 1500
+const LEGENDARY_LEVEL = 60
 
 export default function CombatShopModal({ onClose }: { onClose: () => void }) {
     const player = usePlayer()
@@ -59,6 +67,7 @@ export default function CombatShopModal({ onClose }: { onClose: () => void }) {
     const ownedCt = (id: string) => player.ownedCts.includes(id) || player.boughtCts.includes(id)
     const ctOffer = CT_LOT.filter((id) => !ownedCt(id))
     const symOffer = SYMBOLS.filter((s) => !symbols.includes(s.id))
+    const legendaryOffer = LEGENDARY_LOT.filter((id) => !!getSpecies(id) && !getPokedex().caught.includes(id))
 
     return (
         <div onClick={onClose} style={overlay}>
@@ -94,6 +103,15 @@ export default function CombatShopModal({ onClose }: { onClose: () => void }) {
                             </Section>
                         )
                     })}
+
+                    <Section title="🌟 Daemons de légende">
+                        <div style={{ fontSize: 10, opacity: 0.7, color: INK, marginBottom: 6, lineHeight: 1.3 }}>Les gardiens uniques — dernier recours pour compléter ton Pokédex. Prix exorbitant.</div>
+                        {legendaryOffer.length === 0 ? <Empty>Tous les gardiens sont déjà à toi. 🏅</Empty> : legendaryOffer.map((id) => {
+                            const sp = getSpecies(id)
+                            return <Row key={id} label={sp?.name ?? id} desc={`${(sp?.types ?? []).join(" / ")} · niv ${LEGENDARY_LEVEL} · exemplaire unique`} price={LEGENDARY_PRICE} disabled={busy || (jc ?? 0) < LEGENDARY_PRICE}
+                                onBuy={() => spend(LEGENDARY_PRICE, { grant: () => { addCaught(createMonInstance(id, LEGENDARY_LEVEL)); markCaught(id) }, toast: `🌟 ${sp?.name ?? id} rejoint tes rangs !` })} />
+                        })}
+                    </Section>
 
                     <Section title="🎖️ Symboles de prestige">
                         {symOffer.length === 0 ? <Empty>Tous les symboles obtenus ! 🏅</Empty> : symOffer.map((s) => (

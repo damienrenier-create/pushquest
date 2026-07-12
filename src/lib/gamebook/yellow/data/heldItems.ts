@@ -62,12 +62,12 @@ export interface HeldItemData {
 }
 
 // Objet de TYPE : +10 % aux dégâts d'un type. Famille des 15 types existants.
-function typeItem(id: string, name: string, emoji: string, type: PokeType, price = 18): HeldItemData {
+function typeItem(id: string, name: string, emoji: string, type: PokeType, price = 90): HeldItemData {
     return { id, name, emoji, description: `Augmente de 10 % la puissance des attaques ${type}.`, jcPrice: price, category: "type", typeBoost: type, typeBoostPct: 10 }
 }
 
 // Objet SIGNATURE : verrouillé à une espèce. statMult +20 % (sauf Regnantaur 10/10).
-function sig(id: string, name: string, emoji: string, species: string | string[], statMult: Partial<Record<StatKey, number>>, description: string, price = 24): HeldItemData {
+function sig(id: string, name: string, emoji: string, species: string | string[], statMult: Partial<Record<StatKey, number>>, description: string, price = 120): HeldItemData {
     return { id, name, emoji, description, jcPrice: price, category: "signature", species, statMult }
 }
 
@@ -90,19 +90,19 @@ export const HELD_ITEMS: Record<string, HeldItemData> = {
     croc_dragon: typeItem("croc_dragon", "Croc Dragon", "🐉", "DRAGON"),
 
     // ───────── Génériques — soin / combat ─────────
-    restes: { id: "restes", name: "Restes", emoji: "🍖", description: "Restaure 1/16 des PV max du porteur à la fin de chaque tour.", jcPrice: 30, category: "soin", leftoversFrac: 16 },
-    grelot_coque: { id: "grelot_coque", name: "Grelot Coque", emoji: "🐚", description: "Restaure des PV équivalents à 1/8 des dégâts infligés.", jcPrice: 25, category: "soin", drainDealtFrac: 8 },
-    bandeau: { id: "bandeau", name: "Bandeau", emoji: "🎽", description: "10 % de chance de survivre à 1 PV à un coup qui devait l'achever (depuis PV pleins).", jcPrice: 22, category: "combat", survive1hpPct: 10 },
-    lentilscope: { id: "lentilscope", name: "Lentilscope", emoji: "🔍", description: "Augmente d'un cran le taux de coups critiques du porteur.", jcPrice: 28, category: "combat", critStage: 1 },
-    vive_griffe: { id: "vive_griffe", name: "Vive Griffe", emoji: "⚡", description: "20 % de chance d'attaquer en premier (à priorité égale).", jcPrice: 20, category: "combat", quickClawPct: 20 },
-    roche_royale: { id: "roche_royale", name: "Roche Royale", emoji: "👑", description: "10 % de chance d'apeurer la cible avec une attaque offensive.", jcPrice: 22, category: "combat", flinchPct: 10 },
-    poudre_claire: { id: "poudre_claire", name: "Poudre Claire", emoji: "✨", description: "Baisse de 10 % la précision des attaques qui ciblent le porteur.", jcPrice: 28, category: "combat", incomingAccMult: 0.9 },
-    encens_doux: { id: "encens_doux", name: "Encens Doux", emoji: "🌫️", description: "Baisse de 5 % la précision des attaques qui ciblent le porteur.", jcPrice: 12, category: "combat", incomingAccMult: 0.95 },
-    herbe_blanche: { id: "herbe_blanche", name: "Herbe Blanche", emoji: "🌿", description: "Annule la prochaine baisse de stat subie, puis se consomme.", jcPrice: 12, category: "combat", negateStatDrop: true },
-    oeuf_chance: { id: "oeuf_chance", name: "Œuf Chance", emoji: "🥚", description: "Fait gagner 50 % d'XP en plus au porteur.", jcPrice: 25, category: "combat", expMult: 1.5 },
+    restes: { id: "restes", name: "Restes", emoji: "🍖", description: "Restaure 1/16 des PV max du porteur à la fin de chaque tour.", jcPrice: 150, category: "soin", leftoversFrac: 16 },
+    grelot_coque: { id: "grelot_coque", name: "Grelot Coque", emoji: "🐚", description: "Restaure des PV équivalents à 1/8 des dégâts infligés.", jcPrice: 125, category: "soin", drainDealtFrac: 8 },
+    bandeau: { id: "bandeau", name: "Bandeau", emoji: "🎽", description: "10 % de chance de survivre à 1 PV à un coup qui devait l'achever (depuis PV pleins).", jcPrice: 110, category: "combat", survive1hpPct: 10 },
+    lentilscope: { id: "lentilscope", name: "Lentilscope", emoji: "🔍", description: "Augmente d'un cran le taux de coups critiques du porteur.", jcPrice: 140, category: "combat", critStage: 1 },
+    vive_griffe: { id: "vive_griffe", name: "Vive Griffe", emoji: "⚡", description: "20 % de chance d'attaquer en premier (à priorité égale).", jcPrice: 100, category: "combat", quickClawPct: 20 },
+    roche_royale: { id: "roche_royale", name: "Roche Royale", emoji: "👑", description: "10 % de chance d'apeurer la cible avec une attaque offensive.", jcPrice: 110, category: "combat", flinchPct: 10 },
+    poudre_claire: { id: "poudre_claire", name: "Poudre Claire", emoji: "✨", description: "Baisse de 10 % la précision des attaques qui ciblent le porteur.", jcPrice: 140, category: "combat", incomingAccMult: 0.9 },
+    encens_doux: { id: "encens_doux", name: "Encens Doux", emoji: "🌫️", description: "Baisse de 5 % la précision des attaques qui ciblent le porteur.", jcPrice: 60, category: "combat", incomingAccMult: 0.95 },
+    herbe_blanche: { id: "herbe_blanche", name: "Herbe Blanche", emoji: "🌿", description: "Annule la prochaine baisse de stat subie, puis se consomme.", jcPrice: 60, category: "combat", negateStatDrop: true },
+    oeuf_chance: { id: "oeuf_chance", name: "Œuf Chance", emoji: "🥚", description: "Fait gagner 50 % d'XP en plus au porteur.", jcPrice: 125, category: "combat", expMult: 1.5 },
 
     // ───────── Objets SIGNATURE (verrouillés à l'espèce) ─────────
-    coquille_tony: { id: "coquille_tony", name: "Coquille Tony", emoji: "🥚", description: "Réduit de 20 % les dégâts physiques subis. Réservé à Tonytony.", jcPrice: 28, category: "signature", species: "tonytony", physDmgTakenMult: 0.8 },
+    coquille_tony: { id: "coquille_tony", name: "Coquille Tony", emoji: "🥚", description: "Réduit de 20 % les dégâts physiques subis. Réservé à Tonytony.", jcPrice: 140, category: "signature", species: "tonytony", physDmgTakenMult: 0.8 },
     carapace_necro: sig("carapace_necro", "Carapace Nécro", "🛡️", "necrolopendre", { def: 1.2 }, "Augmente de 20 % la Défense. Réservé à Nécrolopendre."),
     sablier_ancien: sig("sablier_ancien", "Sablier Ancien", "⏳", "torturoche", { spe: 1.2 }, "Augmente de 20 % la Vitesse. Réservé à Tortoracle."),
     galet_poli: sig("galet_poli", "Galet Poli", "🪨", "rochison", { spe: 1.2 }, "Augmente de 20 % la Vitesse. Réservé à Rochison."),

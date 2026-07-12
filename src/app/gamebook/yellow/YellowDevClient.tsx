@@ -1026,10 +1026,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             return
         }
         if (frontierResult.won) {
-            // USINE : récompense = choisir une CT parmi les attaques du vaincu (run.opponent = la vague battue,
-            // AVANT applyWin qui prépare la suivante). On filtre celles déjà possédées.
+            // USINE : les JETONS tombent à CHAQUE victoire (applyWin). La CT, elle, n'est offerte QUE lorsqu'on
+            // vient de battre un BOSS (Cerveau, tous les 7) — sinon elle arrivait beaucoup trop vite. curRun =
+            // la vague battue (AVANT applyWin), donc curRun.isBoss = « la vague qu'on vient de gagner était un boss ».
             const curRun = getRun() // run courant (= la vague battue, avant applyWin) — lu hors réactivité (pas de dep)
-            if (curRun?.mode === "FACTORY") {
+            if (curRun?.mode === "FACTORY" && curRun.isBoss) {
                 const opts = ctRewardOptionsForTeam(curRun.opponent).filter((id) => !getPlayer().ownedCts.includes(id) && !getPlayer().boughtCts.includes(id))
                 setUsineCt(opts.length ? opts : null)
             }
@@ -1989,7 +1990,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {/* RUN 3 — CHOIX à la fin du run 2 : fusionner maintenant (finir) OU lancer le concours (méga-fusion plus tard). */}
             {run3Offer && (
                 <div style={menuOverlayStyle}>
-                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                    <div style={{ ...menuBoxStyle, background: "#1c1408", color: "#f5ecd0", border: "3px solid #ffd54a" }} onClick={(e) => e.stopPropagation()}>
                         <div style={menuTitleStyle}>🔥 UN TROISIÈME DÉFI ?</div>
                         <div style={{ fontSize: 12.5, lineHeight: 1.5, margin: "2px 0 10px", color: "#eee" }}>
                             Tu boucles ta seconde vie avec <b style={{ color: "#ffe36b" }}>{run3Offer.score}⚡</b> en réserve. Deux voies s'ouvrent :
@@ -2020,7 +2021,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {/* RUN 3 — FIN DU CONCOURS (0⚡ OU sacre du Maître) : méga-fusion 3-voies FORCÉE (un seul bouton). */}
             {run3EndOffer && (
                 <div style={menuOverlayStyle}>
-                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                    <div style={{ ...menuBoxStyle, background: "#1c1408", color: "#f5ecd0", border: "3px solid #ffd54a" }} onClick={(e) => e.stopPropagation()}>
                         <div style={menuTitleStyle}>{run3EndOffer.reason === "master" ? "👑 CONCOURS REMPORTÉ" : "🏁 CONCOURS TERMINÉ"}</div>
                         <div style={{ fontSize: 12.5, lineHeight: 1.5, margin: "2px 0 10px", color: "#eee" }}>
                             {run3EndOffer.reason === "master"
