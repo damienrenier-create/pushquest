@@ -92,6 +92,8 @@ export interface EncounterCtx {
     goshCaught?: boolean        // Goshendofy déjà capturé sur ce compte → ne réapparaît PLUS JAMAIS
     ngplus?: boolean            // NEW GAME+ : bascule sur les pools RUN 2 (NGPLUS_ZONES) pour les zones re-mixées
     run3?: boolean              // RUN 3 (concours) : bascule sur les pools RUN 3 (RUN3_ZONES) — espèces INÉDITES (chaque run différent)
+    champion?: boolean          // isChampion (LIVE post-Ligue) → active le RATTRAPAGE des inédits run 3 au champ + Grotte
+    run3Used?: boolean          // run 3 déjà fait → rattrapage RARE (sinon ULTRA-RARE : teaser « regarde ce que t'as raté »)
     caughtSpecies?: readonly string[] // Pokédex des captures → gate les entrées `catchOnce` (ex. Pyropanthe, Panthéon run 3)
 }
 
@@ -126,9 +128,10 @@ export function speciesZones(speciesId: string): string[] {
     })
 }
 
-// HAUTES HERBES — 10 types en ROTATION quotidienne. Exclus : Psy/Spectre/Élec (réservés aux bâtiments) ;
+// HAUTES HERBES — 11 types en ROTATION quotidienne. Exclus : Spectre/Élec (réservés aux bâtiments) ;
 // Normal (trop peu d'espèces → plumiot rejoint Vol) ; Dragon (pas de carré, draclet pop rare Route Nord).
-const HAUTES_HERBES_TYPES = ["VOL", "EAU", "PLANTE", "FEU", "COMBAT", "SOL", "ROCHE", "POISON", "GLACE", "INSECTE"] as const
+// PSY ajouté (jour PSY = lignée Nouillon) → sert aussi de porte au rattrapage live d'Hypnoppo/Karmaki (run 3).
+const HAUTES_HERBES_TYPES = ["VOL", "EAU", "PLANTE", "FEU", "COMBAT", "SOL", "ROCHE", "POISON", "GLACE", "INSECTE", "PSY"] as const
 // Pools de BASE par type (formes de base → speciesAtLevel les fait évoluer selon le niveau de la bande).
 // Poids = rareté (commun ~100 · secondaire ~45-70 · rare ~14 · très rare ~5) → les rares restent rares.
 const HH_TYPE_POOLS: Record<string, WildEntry[]> = {
@@ -143,6 +146,33 @@ const HH_TYPE_POOLS: Record<string, WildEntry[]> = {
     POISON: [{ speciesId: "cornaissant", base: 100 }, { speciesId: "sporbeo", base: 45 }],
     GLACE: [{ speciesId: "auroruff", base: 100 }, { speciesId: "marmoterre", base: 45 }],
     INSECTE: [{ speciesId: "ruffiant", base: 100 }, { speciesId: "revemante", base: 45 }],
+    PSY: [{ speciesId: "nouillon", base: 100 }], // jour PSY : lignée Nouillon→Vermisaint→Divinpâte (selon la bande)
+}
+
+// RATTRAPAGE run 3 en LIVE (post-Ligue) — inédits run-3 SAUVAGES rendus attrapables au champ d'entraînement,
+// dans le carré du bon TYPE-du-jour et PLAFONNÉS pour ne jamais dépasser leur forme de base (jamais évolué).
+const RUN3_HH_CATCHUP: { speciesId: string; types: readonly string[]; maxLevel?: number }[] = [
+    { speciesId: "otama", types: ["EAU", "COMBAT"], maxLevel: 24 },  // évo 25 → cap 24
+    { speciesId: "hypnoppo", types: ["PSY"], maxLevel: 15 },          // évo 16 → cap 15
+    { speciesId: "karmaki", types: ["PLANTE", "PSY"] },              // mono → aucun cap
+]
+/** RATTRAPAGE champ : sur un carré du bon type-du-jour et à un niveau ≤ cap, un inédit run-3 remplace la
+ *  rencontre. ULTRA-rare sans run 3 fait (teaser) / rare après (run3Used). LIVE post-Ligue uniquement. */
+function run3LiveCatchupHH(type: string, level: number, ctx: EncounterCtx, rng: () => number): MonInstance | null {
+    if (!ctx.champion) return null // isChampion = false en run 2/3 en cours → pas de doublon (ils popent via RUN3_ZONES)
+    const c = RUN3_HH_CATCHUP.find((e) => e.types.includes(type) && (e.maxLevel == null || level <= e.maxLevel))
+    if (!c) return null
+    const denom = ctx.run3Used ? 16 : 64
+    if (rng() >= 1 / denom) return null
+    return finalizeSpawn({ speciesId: c.speciesId, base: 1, noEvolve: true }, level, rng, ctx)
+}
+/** RATTRAPAGE Grotte (LIVE post-Ligue) : Wistree (Spectre/Plante) rôde, ULTRA-rare / rare selon run3Used. */
+function run3LiveCatchupGrotte(ctx: EncounterCtx, rng: () => number): MonInstance | null {
+    if (!ctx.champion || ctx.run3 || ctx.ngplus || ctx.mapId !== "yellow_grotte") return null
+    const denom = ctx.run3Used ? 30 : 120
+    if (rng() >= 1 / denom) return null
+    const level = Math.max(20, Math.min(ctx.levelCap ?? 60, ctx.leadLevel))
+    return finalizeSpawn({ speciesId: "wistree", base: 1, noEvolve: true }, level, rng, ctx)
 }
 
 const ZONES: Record<string, Zone> = {
@@ -528,6 +558,10 @@ export function rollWildEncounter(ctx: EncounterCtx): MonInstance | null {
     // GRILLE D'ENTRAÎNEMENT (hautes herbes du nord) : niveau choisi par la LIGNE, type par le CARRÉ.
     if (zone.trainingGrid) return rollTrainingGrid(zone.trainingGrid, ctx, rng)
 
+    // RATTRAPAGE run 3 (LIVE post-Ligue) : Wistree rôde dans la Grotte (ultra-rare / rare selon run3Used).
+    const grotteCatch = run3LiveCatchupGrotte(ctx, rng)
+    if (grotteCatch) return grotteCatch
+
     // Poids par entrée ; une entrée `minLeadLevel` non atteinte → poids 0 (invisible tant que l'équipe est trop faible).
     const weights = zone.pool.map((e) =>
         (e.minLeadLevel != null && ctx.leadLevel < e.minLeadLevel) ? 0
@@ -664,6 +698,9 @@ function rollTrainingGrid(tg: TrainingGrid, ctx: EncounterCtx, rng: () => number
     const entry = pool[idx]
     const [lo, hi] = sq.bands[band] ?? [3, 6]
     const level = entry.levelFixed ?? intIn(rng, lo, hi)
+    // RATTRAPAGE run 3 (LIVE post-Ligue) : sur le bon type-du-jour et ≤ cap, un inédit run-3 remplace la rencontre.
+    const catchup = run3LiveCatchupHH(type, level, ctx, rng)
+    if (catchup) return catchup
     return finalizeSpawn(entry, level, rng, ctx)
 }
 

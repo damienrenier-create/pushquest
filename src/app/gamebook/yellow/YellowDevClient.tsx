@@ -58,7 +58,7 @@ import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, getNgplusOldTeam, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3 } from "@/lib/gamebook/yellow/store/saveManager"
 import { customStarterSpeciesId, type StoredCustomDaemon } from "@/lib/gamebook/yellow/create/customSpecies"
 import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket } from "@/lib/gamebook/yellow/store/playerStore"
-import { computeRunScores, formatDuration } from "@/lib/gamebook/yellow/score/runScore"
+import { computeRunScores, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
 import { run3Score, run3MaxScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
 import { ARENA_TICKET_VALUE, STEP_GIFT_DATE, STEP_GIFT_THRESHOLD } from "@/lib/gamebook/yellow/data/labDefis"
@@ -125,6 +125,12 @@ interface FrontierSnap {
     usineCt: string[] | null
 }
 const FRONTIER_LS_KEY = "pq_yellow_frontier_v1"
+// RUN 2 — snapshot des 5 scores figé à la clôture du run 2 (recap perso, relisible après le run 2 / en run 3,
+// alors que l'état live ne les calcule plus). Client-only, zéro impact sur la save serveur.
+const RUN2_SCORES_LS_KEY = "pq_yellow_run2scores_v1"
+function readRun2Snapshot(): RunScores | null {
+    try { const raw = window.localStorage.getItem(RUN2_SCORES_LS_KEY); return raw ? (JSON.parse(raw) as RunScores) : null } catch { return null }
+}
 const FRONTIER_LS_MAX_AGE_MS = 24 * 3600 * 1000
 
 function frontierActive(run: FrontierRunState | null, dome: DomeSnap | null): boolean {
@@ -294,6 +300,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         setArenaFight({ opp, mode: arenaMode, enemy })
     }
     const [menu, setMenu] = useState<"none" | "pause" | "team" | "bag" | "reput" | "moves" | "hof" | "arena-hof" | "stats" | "run2scores" | "run3scores" | "leaderboard">("none")
+    const [run2Snap, setRun2Snap] = useState<RunScores | null>(null)
+    useEffect(() => { setRun2Snap(readRun2Snapshot()) }, [])
     const activeWorld = useActiveWorld() // NG+ : "live" (partie d'origine) ou "ngplus" (New Game+)
     const ficheTouchX = useRef<number | null>(null) // swipe gauche/droite dans la fiche Daemon
     const [selected, setSelected] = useState<MonInstance | null>(null)
@@ -828,7 +836,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             // LEADERBOARD run 2 : on remonte la NOTE GLOBALE /1000 (5 facteurs : % victoire, Pokédex, Σ niveaux,
             //   frugalité sur 10000⚡, peu de pas) — surtout PAS l'énergie brute, qui récompensait le grind poker.
             //   computeRunScores lit l'état run 2 courant (avant fusion). Best-effort (le serveur garde le meilleur).
-            const run2Grade = computeRunScores().grade
+            const run2Sc = computeRunScores()
+            const run2Grade = run2Sc.grade
+            // Recap perso : on FIGE les 5 scores (client) pour pouvoir les rouvrir après le run 2 (le menu ne les
+            //   recalcule plus hors run 2). N'impacte pas le leaderboard serveur (qui ne garde que la note /1000).
+            try { window.localStorage.setItem(RUN2_SCORES_LS_KEY, JSON.stringify(run2Sc)) } catch { /* ignore */ }
+            setRun2Snap(run2Sc)
             fetch("/api/gamebook/yellow/run-scores", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ run: "run2", score: run2Grade }) }).catch(() => {})
             // On NE FUSIONNE PAS tout de suite : on PROPOSE le choix (fusionner OU lancer le run 3). L'overlay
             // ci-dessous appelle completeNewGamePlus (fusion 2-voies) OU launchRun3 (garde les 3 mondes gelés).
@@ -1399,7 +1412,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         {!battle && <button style={menuBtnStyle} onClick={() => setMenu("moves")}>⚔️ ATTAQUES</button>}
                         <button style={menuBtnStyle} onClick={() => setMenu("reput")}>🏆 RÉPUTATION</button>
                         <button style={menuBtnStyle} onClick={() => setMenu("stats")}>📊 STATS (cette partie)</button>
-                        {activeWorld === "ngplus" && <button style={menuBtnStyle} onClick={() => setMenu("run2scores")}>🏅 SCORES RUN 2</button>}
+                        {(activeWorld === "ngplus" || run2Snap) && <button style={menuBtnStyle} onClick={() => setMenu("run2scores")}>🏅 SCORES RUN 2</button>}
                         {activeWorld === "run3" && <button style={menuBtnStyle} onClick={() => setMenu("run3scores")}>🏆 SCORE RUN 3</button>}
                         <button style={menuBtnStyle} onClick={() => setMenu("hof")}>🏛️ HALL OF FAME (LIGUE)</button>
                         <button style={menuBtnStyle} onClick={() => setMenu("arena-hof")}>⚔️ HALL OF FAME (ARÈNES)</button>
@@ -1763,9 +1776,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {menu === "run2scores" && (
                 <div style={menuOverlayStyle} onClick={() => setMenu("pause")}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
-                        <div style={menuTitleStyle}>🏅 SCORES — RUN 2</div>
+                        <div style={menuTitleStyle}>🏅 SCORES — RUN 2{activeWorld !== "ngplus" ? " (figé)" : ""}</div>
                         {(() => {
-                            const sc = computeRunScores()
+                            const sc = activeWorld === "ngplus" ? computeRunScores() : run2Snap
+                            if (!sc) return <div style={{ fontSize: 12, opacity: 0.7, margin: "8px 0" }}>Aucun score run 2 enregistré sur cet appareil.</div>
                             const row = (label: string, val: React.ReactNode, hint: string) => (
                                 <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
                                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}><span>{label}</span><b>{val}</b></div>
