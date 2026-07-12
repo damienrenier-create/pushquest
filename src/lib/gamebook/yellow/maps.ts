@@ -25,6 +25,8 @@ export interface YellowBuilding {
     /** Position de la porte RELATIVE à (x, y) */
     doorX: number
     doorY: number
+    /** Largeur de la porte en cases (défaut 1). ≥2 = porte large (Usine : 2 cases contiguës). */
+    doorW?: number
     /** Map intérieure vers laquelle la porte mène */
     targetMapId: string
     /** Où le joueur réapparaît en entrant dans la map intérieure */
@@ -758,18 +760,16 @@ export function buildingDoorPos(b: YellowBuilding): { x: number; y: number } {
     return { x: b.x + b.doorX, y: b.y + b.doorY }
 }
 
-/** Exits auto-dérivés des buildings (porte = warp vers intérieur). */
+/** Exits auto-dérivés des buildings (porte = warp vers intérieur). Porte large (doorW ≥ 2) → une exit par case. */
 function exitsFromBuildings(buildings: YellowBuilding[]): YellowExit[] {
-    return buildings.map((b) => {
+    const out: YellowExit[] = []
+    for (const b of buildings) {
         const door = buildingDoorPos(b)
-        return {
-            x: door.x,
-            y: door.y,
-            targetMapId: b.targetMapId,
-            targetSpawnX: b.targetSpawnX,
-            targetSpawnY: b.targetSpawnY,
+        for (let i = 0; i < (b.doorW ?? 1); i++) {
+            out.push({ x: door.x + i, y: door.y, targetMapId: b.targetMapId, targetSpawnX: b.targetSpawnX, targetSpawnY: b.targetSpawnY })
         }
-    })
+    }
+    return out
 }
 
 // === Registre ===========================================================
@@ -1046,21 +1046,28 @@ function buildHautesHerbesSapins(): Array<{ x: number; y: number; w: number; h: 
 const ZONE_W = 20, ZONE_H = 14
 function buildZoneCombatCollisions(): TileType[][] {
     const m = fillRect(ZONE_W, ZONE_H, "grass")
+    // Bord d'arbres + 2e rangée d'arbres sur les CÔTÉS (cols 1 & 18 demandées non-walkables).
     for (let x = 0; x < ZONE_W; x++) { m[0][x] = "tree"; m[ZONE_H - 1][x] = "tree" }
-    for (let y = 0; y < ZONE_H; y++) { m[y][0] = "tree"; m[y][ZONE_W - 1] = "tree" }
-    // ouverture NORD (entrée/sortie vers Ville Jaune)
-    m[0][9] = "path"; m[0][10] = "path"; m[1][9] = "path"; m[1][10] = "path"
+    for (let y = 0; y < ZONE_H; y++) { m[y][0] = "tree"; m[y][1] = "tree"; m[y][ZONE_W - 2] = "tree"; m[y][ZONE_W - 1] = "tree" }
+    // BARRIÈRE ligne 12 : mur partout SAUF le passage central (cols 9-10) par lequel on monte du bas vers la place.
+    for (let x = 1; x < ZONE_W - 1; x++) m[12][x] = "tree"
+    m[12][9] = "grass"; m[12][10] = "grass"
+    // OUVERTURE SUD (entrée/sortie vers Ville Jaune) : le joueur ARRIVE et repart par le BAS (cols 9-10).
+    m[ZONE_H - 1][9] = "path"; m[ZONE_H - 1][10] = "path"
+    // DRAPEAUX & décor bloquants (calqués sur l'image de fond).
+    const decor: [number, number][] = [[7, 11], [12, 11], [17, 11], [17, 9], [17, 7], [13, 7], [12, 8], [11, 8], [12, 6], [7, 6], [8, 8], [6, 7], [5, 7], [3, 7], [2, 7], [2, 9], [2, 11]]
+    for (const [x, y] of decor) m[y][x] = "tree"
     return m
 }
 const ZONE_COMBAT_BUILDINGS: YellowBuilding[] = [
-    { id: "b_combat_tour", x: 2, y: 3, w: 4, h: 4, doorX: 1, doorY: 3, targetMapId: "yellow_combat_tour", targetSpawnX: 4, targetSpawnY: 4, displayName: "TOUR DE COMBAT", kind: "arena" },
-    { id: "b_combat_usine", x: 8, y: 3, w: 4, h: 4, doorX: 1, doorY: 3, targetMapId: "yellow_combat_usine", targetSpawnX: 4, targetSpawnY: 4, displayName: "USINE DE COMBAT", kind: "shop" },
-    { id: "b_combat_dome", x: 14, y: 3, w: 4, h: 4, doorX: 1, doorY: 3, targetMapId: "yellow_combat_dome", targetSpawnX: 4, targetSpawnY: 4, displayName: "DÔME DE COMBAT", kind: "casino" },
+    { id: "b_combat_tour", x: 2, y: 3, w: 4, h: 4, doorX: 2, doorY: 4, targetMapId: "yellow_combat_tour", targetSpawnX: 8, targetSpawnY: 9, displayName: "TOUR DE COMBAT", kind: "arena" },                  // porte abs (4,7)
+    { id: "b_combat_usine", x: 8, y: 3, w: 4, h: 4, doorX: 1, doorY: 3, doorW: 2, targetMapId: "yellow_combat_usine", targetSpawnX: 8, targetSpawnY: 9, displayName: "USINE DE COMBAT", kind: "shop" },     // porte abs (9-10,6)
+    { id: "b_combat_dome", x: 14, y: 3, w: 4, h: 4, doorX: 1, doorY: 3, targetMapId: "yellow_combat_dome", targetSpawnX: 8, targetSpawnY: 9, displayName: "DÔME DE COMBAT", kind: "casino" },                // porte abs (15,6)
 ]
-// petite salle intérieure placeholder : pièce 8×6 + porte de sortie en bas-centre.
-function buildZoneRoom(): TileType[][] {
-    const m = fillRoom(8, 6, "path")
-    m[5][4] = "path" // porte (case de sortie)
+// Salle intérieure : pièce W×H (murs périphériques) + porte de sortie en bas-centre. Agrandie ~taille écran.
+function buildZoneRoom(W: number, H: number): TileType[][] {
+    const m = fillRoom(W, H, "path")
+    m[H - 1][Math.floor(W / 2)] = "path" // porte (case de sortie)
     return m
 }
 
@@ -1090,7 +1097,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
             // SUD (cols 22-25, row 39) → ZONE DE COMBAT. Gated par le bloc Sylvebarbe (inSylvebarbeBlock,
             // cols 22-25 rows 38-39) : inatteignable tant que !sylvebarbeAwake → pas de garde à dupliquer.
             ...[22, 23, 24, 25].map((col) => ({
-                x: col, y: 39, targetMapId: "yellow_zone_combat", targetSpawnX: 10, targetSpawnY: 1,
+                x: col, y: 39, targetMapId: "yellow_zone_combat", targetSpawnX: 10, targetSpawnY: 12, // arrivée EN BAS (passage sud)
             })),
         ],
         backgroundImage: "/yellow/sprites/viridian_full.png",
@@ -1113,26 +1120,26 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         buildings: ZONE_COMBAT_BUILDINGS,
         exits: [
             ...exitsFromBuildings(ZONE_COMBAT_BUILDINGS),
-            // sortie NORD → retour Ville Jaune (sud, juste au-dessus du bloc Sylvebarbe)
-            ...[9, 10].map((x) => ({ x, y: 0, targetMapId: YELLOW_ENTRANCE_MAP_ID, targetSpawnX: 23, targetSpawnY: 37 })),
+            // sortie SUD → retour Ville Jaune (cols 9-10, en bas : on repart par où on est arrivé)
+            ...[9, 10].map((x) => ({ x, y: ZONE_H - 1, targetMapId: YELLOW_ENTRANCE_MAP_ID, targetSpawnX: 23, targetSpawnY: 37 })),
         ],
         groundTile: "grass",
         encountersPaused: true, // hub : aucune rencontre sauvage
     },
     yellow_combat_tour: {
-        id: "yellow_combat_tour", name: "TOUR DE COMBAT", tiles: buildZoneRoom(), width: 8, height: 6,
-        backgroundImage: "/yellow/sprites/combat_tour.png", backgroundImageWidth: 1200, backgroundImageHeight: 896, backgroundImageTileSize: 150,
-        exits: [{ x: 4, y: 5, targetMapId: "yellow_zone_combat", targetSpawnX: 3, targetSpawnY: 7 }],
+        id: "yellow_combat_tour", name: "TOUR DE COMBAT", tiles: buildZoneRoom(16, 12), width: 16, height: 12,
+        backgroundImage: "/yellow/sprites/combat_tour.png", backgroundImageWidth: 1200, backgroundImageHeight: 896, backgroundImageTileSize: 75, // 1200/16 = 75 → l'image remplit la pièce 16×12
+        exits: [{ x: 8, y: 11, targetMapId: "yellow_zone_combat", targetSpawnX: 4, targetSpawnY: 8 }],
     },
     yellow_combat_usine: {
-        id: "yellow_combat_usine", name: "USINE DE COMBAT", tiles: buildZoneRoom(), width: 8, height: 6,
-        backgroundImage: "/yellow/sprites/combat_usine.png", backgroundImageWidth: 2400, backgroundImageHeight: 1792, backgroundImageTileSize: 300,
-        exits: [{ x: 4, y: 5, targetMapId: "yellow_zone_combat", targetSpawnX: 9, targetSpawnY: 7 }],
+        id: "yellow_combat_usine", name: "USINE DE COMBAT", tiles: buildZoneRoom(16, 12), width: 16, height: 12,
+        backgroundImage: "/yellow/sprites/combat_usine.png", backgroundImageWidth: 2400, backgroundImageHeight: 1792, backgroundImageTileSize: 150, // 2400/16 = 150
+        exits: [{ x: 8, y: 11, targetMapId: "yellow_zone_combat", targetSpawnX: 10, targetSpawnY: 7 }],
     },
     yellow_combat_dome: {
-        id: "yellow_combat_dome", name: "DÔME DE COMBAT", tiles: buildZoneRoom(), width: 8, height: 6,
-        backgroundImage: "/yellow/sprites/combat_dome.png", backgroundImageWidth: 2400, backgroundImageHeight: 1792, backgroundImageTileSize: 300,
-        exits: [{ x: 4, y: 5, targetMapId: "yellow_zone_combat", targetSpawnX: 15, targetSpawnY: 7 }],
+        id: "yellow_combat_dome", name: "DÔME DE COMBAT", tiles: buildZoneRoom(16, 12), width: 16, height: 12,
+        backgroundImage: "/yellow/sprites/combat_dome.png", backgroundImageWidth: 2400, backgroundImageHeight: 1792, backgroundImageTileSize: 150,
+        exits: [{ x: 8, y: 11, targetMapId: "yellow_zone_combat", targetSpawnX: 15, targetSpawnY: 7 }],
     },
     yellow_cendreville: {
         id: "yellow_cendreville",

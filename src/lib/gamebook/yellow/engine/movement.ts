@@ -25,7 +25,8 @@ function isBuildingWall(buildings: YellowBuilding[] | undefined, x: number, y: n
     for (const b of buildings) {
         const inside = x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h
         if (!inside) continue
-        const isDoor = x === b.x + b.doorX && y === b.y + b.doorY
+        const dw = b.doorW ?? 1 // porte large (ex. Usine 2 cases) : plusieurs tuiles de porte contiguës
+        const isDoor = x >= b.x + b.doorX && x < b.x + b.doorX + dw && y === b.y + b.doorY
         if (!isDoor) return true
     }
     return false
