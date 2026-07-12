@@ -159,7 +159,7 @@ const RUN3_HH_CATCHUP: { speciesId: string; types: readonly string[]; maxLevel?:
 /** RATTRAPAGE champ : sur un carré du bon type-du-jour et à un niveau ≤ cap, un inédit run-3 remplace la
  *  rencontre. ULTRA-rare sans run 3 fait (teaser) / rare après (run3Used). LIVE post-Ligue uniquement. */
 function run3LiveCatchupHH(type: string, level: number, ctx: EncounterCtx, rng: () => number): MonInstance | null {
-    if (!ctx.champion) return null // isChampion = false en run 2/3 en cours → pas de doublon (ils popent via RUN3_ZONES)
+    if (!ctx.champion || ctx.run3 || ctx.ngplus) return null // LIVE (run 1) post-Ligue UNIQUEMENT — jamais en run 2/3 (doublon RUN3_ZONES / pools NG+)
     const c = RUN3_HH_CATCHUP.find((e) => e.types.includes(type) && (e.maxLevel == null || level <= e.maxLevel))
     if (!c) return null
     const denom = ctx.run3Used ? 16 : 64

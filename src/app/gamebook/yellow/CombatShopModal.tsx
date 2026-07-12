@@ -8,7 +8,7 @@
 // la récompense (énergie/CT) est créditée côté client à la confirmation.
 
 import { useState, useEffect } from "react"
-import { usePlayer, grantReps, grantCt, addItem, addCaught } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, grantReps, grantCt, addItem, addCaught, markCaughtThisRun } from "@/lib/gamebook/yellow/store/playerStore"
 import { getPokedex, markCaught } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
@@ -109,7 +109,7 @@ export default function CombatShopModal({ onClose }: { onClose: () => void }) {
                         {legendaryOffer.length === 0 ? <Empty>Tous les gardiens sont déjà à toi. 🏅</Empty> : legendaryOffer.map((id) => {
                             const sp = getSpecies(id)
                             return <Row key={id} label={sp?.name ?? id} desc={`${(sp?.types ?? []).join(" / ")} · niv ${LEGENDARY_LEVEL} · exemplaire unique`} price={LEGENDARY_PRICE} disabled={busy || (jc ?? 0) < LEGENDARY_PRICE}
-                                onBuy={() => spend(LEGENDARY_PRICE, { grant: () => { addCaught(createMonInstance(id, LEGENDARY_LEVEL)); markCaught(id) }, toast: `🌟 ${sp?.name ?? id} rejoint tes rangs !` })} />
+                                onBuy={() => spend(LEGENDARY_PRICE, { grant: () => { addCaught(createMonInstance(id, LEGENDARY_LEVEL)); markCaught(id); markCaughtThisRun(id) }, toast: `🌟 ${sp?.name ?? id} rejoint tes rangs !` })} />
                         })}
                     </Section>
 
