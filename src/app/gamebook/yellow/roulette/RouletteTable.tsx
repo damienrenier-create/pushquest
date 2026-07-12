@@ -150,6 +150,21 @@ export default function RouletteTable({ initialBalance, onClose }: { initialBala
                 {stats.streaks.color && <span>série {stats.streaks.color.value === "red" ? "🔴" : stats.streaks.color.value === "black" ? "⚫" : "🟢"} ×{stats.streaks.color.len}</span>}
             </div>
 
+            {/* ── Historique : 10 derniers numéros / mises / gains ── */}
+            <div style={S.histBox}>
+                <div style={S.histRow}><span style={S.histLbl}>🎯</span>
+                    {s.history.length === 0 ? <span style={S.histEmpty}>—</span> : s.history.slice(0, 10).map((n, i) => (
+                        <span key={i} style={{ ...S.histChip, background: COLOR_BG[colorOf(n)] }}>{n}</span>
+                    ))}
+                </div>
+                <div style={S.histRow}><span style={S.histLbl}>💰</span>
+                    {s.stakeHistory.length === 0 ? <span style={S.histEmpty}>—</span> : s.stakeHistory.slice(0, 10).map((v, i) => <span key={i} style={S.histNum}>{v}</span>)}
+                </div>
+                <div style={S.histRow}><span style={S.histLbl}>📈</span>
+                    {s.netHistory.length === 0 ? <span style={S.histEmpty}>—</span> : s.netHistory.slice(0, 10).map((v, i) => <span key={i} style={{ ...S.histNum, color: v >= 0 ? "#4cd964" : "#e0533a" }}>{v >= 0 ? `+${v}` : v}</span>)}
+                </div>
+            </div>
+
             {/* ── Contrôles GBA ── */}
             <div style={S.pad}>
                 <div style={S.dpad}>
@@ -190,6 +205,12 @@ const S: Record<string, React.CSSProperties> = {
     talk: { marginTop: 10, fontSize: 12, fontStyle: "italic", textAlign: "center", minHeight: 32, color: "#cfe" },
     staked: { textAlign: "center", fontSize: 11, opacity: 0.8, marginTop: 2 },
     statsRow: { display: "flex", flexDirection: "column", gap: 2, fontSize: 10, opacity: 0.85, margin: "8px 0", textAlign: "center" },
+    histBox: { display: "flex", flexDirection: "column", gap: 3, margin: "6px 0", padding: "6px 8px", background: "rgba(255,255,255,0.04)", border: "1px solid #1c3a28", borderRadius: 8 },
+    histRow: { display: "flex", alignItems: "center", gap: 3, minHeight: 18, flexWrap: "nowrap", overflowX: "auto" },
+    histLbl: { fontSize: 11, width: 18, flexShrink: 0, opacity: 0.9 },
+    histChip: { minWidth: 17, height: 17, borderRadius: 4, color: "#fff", fontSize: 9, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, padding: "0 3px" },
+    histNum: { minWidth: 17, fontSize: 10, fontWeight: 700, textAlign: "center", flexShrink: 0, padding: "0 2px" },
+    histEmpty: { fontSize: 10, opacity: 0.4 },
     pad: { display: "flex", flexDirection: "column", gap: 8, marginTop: 6 },
     dpad: { display: "grid", gridTemplateAreas: `". up ." "left . right" ". down ."`, gridTemplateColumns: "40px 40px 40px", gridTemplateRows: "32px 32px 32px", justifyContent: "center", gap: 3 },
     dbtn: { background: "#1c3a28", color: "#fff", border: "1px solid #2f5a40", borderRadius: 6, fontSize: 14, cursor: "pointer" },

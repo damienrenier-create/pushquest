@@ -21,7 +21,7 @@ describe("Zone de Combat — map", () => {
     })
 
     it("portes des 3 salles en exits : tour (4,7) · usine (9,6)+(10,6) · dôme (15,6)", () => {
-        const door = (x: number, y: number) => z.exits.some((e) => e.x === x && e.y === y && e.targetMapId?.startsWith("yellow_combat_"))
+        const door = (x: number, y: number) => (z.exits ?? []).some((e) => e.x === x && e.y === y && e.targetMapId?.startsWith("yellow_combat_"))
         expect(door(4, 7)).toBe(true)
         expect(door(9, 6)).toBe(true)
         expect(door(10, 6)).toBe(true)
@@ -29,7 +29,7 @@ describe("Zone de Combat — map", () => {
     })
 
     it("sortie sud vers Ville Jaune (cols 9-10, ligne 13)", () => {
-        const south = z.exits.filter((e) => e.targetMapId === "yellow_entrance" && e.y === 13)
+        const south = (z.exits ?? []).filter((e) => e.targetMapId === "yellow_entrance" && e.y === 13)
         expect(south.map((e) => e.x).sort((a, b) => a - b)).toEqual([9, 10])
     })
 })

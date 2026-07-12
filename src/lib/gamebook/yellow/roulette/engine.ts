@@ -27,10 +27,14 @@ export interface RouletteState {
     locked: boolean
     /** Numéros sortis (le plus récent en tête) → alimente le tracker de stats. */
     history: number[]
+    /** MISE totale de chaque donne (le plus récent en tête) → « 10 dernières mises ». */
+    stakeHistory: number[]
+    /** GAIN NET de chaque donne (le plus récent en tête) → « 10 derniers gains ». */
+    netHistory: number[]
 }
 
 export function createRouletteState(balance: number, chipValue: ChipValue = 5): RouletteState {
-    return { balance, chipValue, bets: [], placeLog: [], locked: false, history: [] }
+    return { balance, chipValue, bets: [], placeLog: [], locked: false, history: [], stakeHistory: [], netHistory: [] }
 }
 
 /** Total actuellement misé sur le tapis (hors solde). */
@@ -124,6 +128,8 @@ export function settle(s: RouletteState, winning: number): { state: RouletteStat
         placeLog: [],
         locked: false,
         history: [winning, ...s.history].slice(0, HISTORY_MAX),
+        stakeHistory: [r.staked, ...s.stakeHistory].slice(0, HISTORY_MAX),
+        netHistory: [r.net, ...s.netHistory].slice(0, HISTORY_MAX),
     }
     return { state, result, bets: r.results }
 }

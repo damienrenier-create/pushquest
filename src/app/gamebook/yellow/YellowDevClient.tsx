@@ -67,7 +67,7 @@ import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { useRun, getRun, startTowerRun, startRun, applyWinFromBattle, applyLossFromBattle, quitRun, endRun, setDraftedTeam, getDraftedTeam, setRunRaw } from "@/lib/gamebook/yellow/frontier/runStore"
 import type { FrontierRunState } from "@/lib/gamebook/yellow/frontier/run"
 import { postRecordRun } from "@/lib/gamebook/yellow/frontier/frontierApi"
-import { ctRewardOptionsForTeam } from "@/lib/gamebook/yellow/frontier/rewards"
+import { ctRewardOptionsForTeam, opponentMoveIds } from "@/lib/gamebook/yellow/frontier/rewards"
 import { generateRentalPool, buildDraftTeam, type RentalCandidate } from "@/lib/gamebook/yellow/frontier/factory"
 import { resolveFrontierLevel, JC_PER_WIN, JC_BOSS_MULT, BOSS_EVERY, type OpponentSpec, type LevelRule } from "@/lib/gamebook/yellow/frontier/engine"
 import { createDome, advanceDome, playerOpponent, aiLeadIndex, DOME_ROUNDS, type DomeState } from "@/lib/gamebook/yellow/frontier/dome"
@@ -228,6 +228,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // (sinon le 1er rendu, état vide, effacerait le snapshot avant qu'on ait pu le relire).
     const frontierResumedRef = useRef(false)
     const [usineDraft, setUsineDraft] = useState<{ levelRule: LevelRule; pool: RentalCandidate[]; picks: string[] } | null>(null)
+    const [usineCursor, setUsineCursor] = useState(0) // carousel : fiche du Daemon de location affichée
     // DÔME (bracket de 8, état local éphémère) : state du tournoi + règle + graine + JC cumulés.
     const [dome, setDome] = useState<{ state: DomeState; rule: LevelRule; seed: number; jc: number } | null>(null)
     const [ticketOpen, setTicketOpen] = useState(false) // ticket roulette quotidien (1re connexion du jour)
@@ -1887,6 +1888,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                         const lvl = resolveFrontierLevel(rule, myArenaLevel || 50)
                                         const pool = generateRentalPool(new Rng(Math.floor(Math.random() * 1e9)), { streak: 1, level: lvl })
                                         setUsineDraft({ levelRule: rule, pool, picks: [] })
+                                        setUsineCursor(0)
                                     }} style={{ background: "#6aa0ec", color: "#1a1a22", fontWeight: 800, border: "none", borderRadius: 8, padding: "6px 10px", cursor: "pointer" }}>
                                         {rule === "L50" ? "Niv 50" : rule === "L100" ? "Niv 100" : "Adaptatif"}
                                     </button>
@@ -1895,32 +1897,71 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         </>
                     ) : (
                         <>
-                            <div style={{ fontSize: 11, opacity: 0.85, marginBottom: 6 }}>Choisis 3 Daemons ({usineDraft.picks.length}/3) :</div>
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: 4, justifyContent: "center" }}>
-                                {usineDraft.pool.map((c) => {
-                                    const picked = usineDraft.picks.includes(c.speciesId)
-                                    return (
-                                        <button key={c.speciesId} onClick={() => setUsineDraft((d) => {
-                                            if (!d) return d
-                                            const picks = picked ? d.picks.filter((p) => p !== c.speciesId) : (d.picks.length < 3 ? [...d.picks, c.speciesId] : d.picks)
-                                            return { ...d, picks }
-                                        })} style={{ background: picked ? "#6aa0ec" : "#333", color: picked ? "#1a1a22" : "#fff", border: "none", borderRadius: 7, padding: "4px 8px", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
-                                            {getSpecies(c.speciesId)?.name ?? c.speciesId} <span style={{ opacity: 0.7 }}>N{c.level}</span>
-                                        </button>
-                                    )
-                                })}
-                            </div>
-                            <div style={{ display: "flex", gap: 6, justifyContent: "center", marginTop: 8 }}>
-                                <button disabled={usineDraft.picks.length !== 3} onClick={() => {
-                                    const specs = buildDraftTeam(usineDraft.pool, usineDraft.picks)
-                                    setDraftedTeam(specs.map((o) => createMonInstance(o.speciesId, o.level, { owned: false })))
-                                    frontierReportedRef.current = false
-                                    setTourChoice(false); setUsineCt(null)
-                                    startRun({ mode: "FACTORY", levelRule: usineDraft.levelRule, playerTopLevel: myArenaLevel || 50, seed: Math.floor(Math.random() * 1e9) })
-                                    setUsineDraft(null)
-                                }} style={{ background: "#6aa0ec", color: "#1a1a22", fontWeight: 800, border: "none", borderRadius: 8, padding: "6px 12px", cursor: usineDraft.picks.length === 3 ? "pointer" : "default", opacity: usineDraft.picks.length === 3 ? 1 : 0.45 }}>Confirmer</button>
-                                <button onClick={() => setUsineDraft(null)} style={{ background: "#555", color: "#fff", fontWeight: 700, border: "none", borderRadius: 8, padding: "6px 10px", cursor: "pointer" }}>Annuler</button>
-                            </div>
+                            {(() => {
+                                const pool = usineDraft.pool
+                                const cur = Math.max(0, Math.min(pool.length - 1, usineCursor))
+                                const c = pool[cur]
+                                const sp = getSpecies(c.speciesId)
+                                const st = fullStats(createMonInstance(c.speciesId, c.level, { owned: false }), sp!)
+                                const moves = opponentMoveIds(c.speciesId, c.level)
+                                const picked = usineDraft.picks.includes(c.speciesId)
+                                const full = usineDraft.picks.length >= 3
+                                const STATS: [keyof typeof st, string][] = [["hp", "PV"], ["atk", "Atq"], ["def", "Déf"], ["spe", "Vit"], ["spc", "Spé"]]
+                                const toggle = () => setUsineDraft((d) => {
+                                    if (!d) return d
+                                    const has = d.picks.includes(c.speciesId)
+                                    const picks = has ? d.picks.filter((p) => p !== c.speciesId) : (d.picks.length < 3 ? [...d.picks, c.speciesId] : d.picks)
+                                    return { ...d, picks }
+                                })
+                                const navBtn: React.CSSProperties = { background: "#242433", color: "#fff", border: "1px solid #444", borderRadius: 8, width: 26, fontSize: 16, cursor: "pointer", flexShrink: 0, alignSelf: "stretch" }
+                                return (
+                                    <>
+                                        <div style={{ fontSize: 11, opacity: 0.85, marginBottom: 6 }}>Choisis 3 Daemons de location — {usineDraft.picks.length}/3</div>
+                                        <div style={{ display: "flex", alignItems: "stretch", gap: 5 }}>
+                                            <button onClick={() => setUsineCursor((i) => (i - 1 + pool.length) % pool.length)} style={navBtn}>◀</button>
+                                            <div style={{ flex: 1, minWidth: 0, background: "#0f0f18", border: `2px solid ${picked ? "#6aa0ec" : "#333"}`, borderRadius: 10, padding: 8 }}>
+                                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                                    <img src={sp?.sprite ?? `/yellow/sprites/dex/${c.speciesId}.png`} alt={sp?.name ?? c.speciesId} width={46} height={46} style={{ imageRendering: "pixelated" }} />
+                                                    <div style={{ textAlign: "left", flex: 1, minWidth: 0 }}>
+                                                        <div style={{ fontWeight: 800, fontSize: 12.5 }}>{sp?.name ?? c.speciesId} <span style={{ opacity: 0.6, fontWeight: 600, fontSize: 11 }}>N.{c.level}</span></div>
+                                                        <div style={{ fontSize: 9.5, opacity: 0.8 }}>{(sp?.types ?? []).join(" / ")}</div>
+                                                    </div>
+                                                    <div style={{ fontSize: 9, opacity: 0.55 }}>{cur + 1}/{pool.length}</div>
+                                                </div>
+                                                <div style={{ display: "grid", gridTemplateColumns: "auto 1fr 24px", gap: "2px 5px", margin: "7px 0 5px", alignItems: "center" }}>
+                                                    {STATS.flatMap(([k, lbl]) => [
+                                                        <span key={`${k as string}l`} style={{ fontSize: 9, opacity: 0.75, textAlign: "left" }}>{lbl}</span>,
+                                                        <span key={`${k as string}b`} style={{ height: 5, background: "#333", borderRadius: 3, overflow: "hidden" }}><span style={{ display: "block", height: "100%", width: `${Math.min(100, Math.round(st[k] / 200 * 100))}%`, background: "#6aa0ec" }} /></span>,
+                                                        <span key={`${k as string}v`} style={{ fontSize: 9, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{st[k]}</span>,
+                                                    ])}
+                                                </div>
+                                                <div style={{ display: "flex", flexWrap: "wrap", gap: 3, justifyContent: "center" }}>
+                                                    {moves.map((mid) => { const mv = getMove(mid); return <span key={mid} style={{ fontSize: 8.5, background: "#242433", borderRadius: 5, padding: "2px 5px" }}>{mv?.name ?? mid}</span> })}
+                                                </div>
+                                                <button onClick={toggle} disabled={!picked && full} style={{ marginTop: 7, width: "100%", background: picked ? "#e0533a" : "#6aa0ec", color: "#1a1a22", fontWeight: 800, border: "none", borderRadius: 7, padding: "5px", cursor: "pointer", opacity: (!picked && full) ? 0.4 : 1 }}>{picked ? "✓ Retirer" : full ? "Équipe complète" : "Choisir"}</button>
+                                            </div>
+                                            <button onClick={() => setUsineCursor((i) => (i + 1) % pool.length)} style={navBtn}>▶</button>
+                                        </div>
+                                        <div style={{ display: "flex", gap: 4, justifyContent: "center", marginTop: 8 }}>
+                                            {[0, 1, 2].map((i) => {
+                                                const id = usineDraft.picks[i]; const s2 = id ? getSpecies(id) : null
+                                                return <div key={i} style={{ width: 30, height: 30, borderRadius: 6, border: "1px solid #444", background: "#0f0f18", display: "flex", alignItems: "center", justifyContent: "center" }}>{s2 ? <img src={s2.sprite ?? `/yellow/sprites/dex/${id}.png`} alt="" width={26} height={26} style={{ imageRendering: "pixelated" }} /> : <span style={{ opacity: 0.3, fontSize: 16 }}>·</span>}</div>
+                                            })}
+                                        </div>
+                                        <div style={{ display: "flex", gap: 6, justifyContent: "center", marginTop: 8 }}>
+                                            <button disabled={usineDraft.picks.length !== 3} onClick={() => {
+                                                const specs = buildDraftTeam(usineDraft.pool, usineDraft.picks)
+                                                setDraftedTeam(specs.map((o) => createMonInstance(o.speciesId, o.level, { owned: false })))
+                                                frontierReportedRef.current = false
+                                                setTourChoice(false); setUsineCt(null)
+                                                startRun({ mode: "FACTORY", levelRule: usineDraft.levelRule, playerTopLevel: myArenaLevel || 50, seed: Math.floor(Math.random() * 1e9) })
+                                                setUsineDraft(null)
+                                            }} style={{ background: "#6aa0ec", color: "#1a1a22", fontWeight: 800, border: "none", borderRadius: 8, padding: "6px 12px", cursor: usineDraft.picks.length === 3 ? "pointer" : "default", opacity: usineDraft.picks.length === 3 ? 1 : 0.45 }}>Confirmer</button>
+                                            <button onClick={() => setUsineDraft(null)} style={{ background: "#555", color: "#fff", fontWeight: 700, border: "none", borderRadius: 8, padding: "6px 10px", cursor: "pointer" }}>Annuler</button>
+                                        </div>
+                                    </>
+                                )
+                            })()}
                         </>
                     )}
                     <div style={{ fontSize: 9, opacity: 0.6, marginTop: 6 }}>(marche pour sortir)</div>
