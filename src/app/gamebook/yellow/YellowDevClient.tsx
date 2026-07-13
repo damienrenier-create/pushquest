@@ -2984,8 +2984,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         "*Le trône vacillant, une lueur de pâte sacrée descend sur toi.*",
                         "« CHAMPION ! Tu as tout vaincu… mais crois-tu vraiment avoir touché le fond du Nexus ? »",
                         "« Je t'offre l'ULTIME défi : deviens à ton tour CRÉATEUR. Conçois de tes mains un Daemon INÉDIT — TON œuvre — et recommence une SECONDE VIE avec lui pour seul allié. »",
-                        "« Un Nexus TOUT AUTRE t'attend : des Daemons que nul Champion n'a jamais croisés, des types bouleversés, des CT introuvables ailleurs. Et 6000 énergies bénies pour t'élancer. »",
-                        "« Mais retiens ceci : ces 6000⚡ sont un PRÊT du Nexus. Renonce au second run, et il les REPRENDRA. Va au bout, et elles sont à toi pour toujours. »",
+                        "« Un Nexus REVISITÉ t'attend : de nouveaux types, de nouvelles arènes, des CT introuvables ailleurs, et des Daemons que nul Champion n'a jamais croisés. Et 10 000 énergies bénies pour t'élancer. »",
+                        "« Mais retiens ceci : ces 10 000⚡ sont un PRÊT du Nexus. Renonce au second run, et il les REPRENDRA. Va au bout, et elles sont à toi pour toujours. »",
                         "« Et surtout — un SCORE t'attend : franchis cette seconde Ligue avec le PLUS d'énergie possible. Ce chiffre-là, c'est la vraie mesure d'un Maître. »",
                         "« Ce n'est pas une option : le Nexus l'exige. Lève-toi, et façonne ta création. 🍝 »",
                     ])

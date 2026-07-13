@@ -7,8 +7,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { startHofBattle } from "@/lib/gamebook/yellow/store/battleStore"
-import { useActiveWorld } from "@/lib/gamebook/yellow/store/playerStore"
-import { hasNgPlusWorld, hasRun3World } from "@/lib/gamebook/yellow/store/saveManager"
+import { useActiveWorld, usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
 import type { ChampionMon } from "@/lib/gamebook/yellow/storage/save"
 
 interface ChampionEntry { nickname: string; wonAt: string; team: ChampionMon[]; world?: string }
@@ -29,8 +28,11 @@ export default function HallOfFameViewer({ close, onFight }: { close: () => void
     const [openMon, setOpenMon] = useState<ChampionMon | null>(null)
     const [notice, setNotice] = useState<string>("")
     const activeWorld = useActiveWorld()
+    const player = usePlayer()
     const [viewWorld, setViewWorld] = useState<"live" | "ngplus" | "run3">(activeWorld)
-    const availWorlds = WORLD_META.filter((w) => w.id === "live" || (w.id === "ngplus" && hasNgPlusWorld()) || (w.id === "run3" && hasRun3World()))
+    // Runs visibles au toggle : flags PERMANENTS ngplusUsed/run3Used (survivent à la méga-fusion de fin de run 3),
+    // et PAS hasNgPlusWorld/hasRun3World (faux après fusion) → un joueur ayant bouclé les 3 runs garde l'accès.
+    const availWorlds = WORLD_META.filter((w) => w.id === "live" || (w.id === "ngplus" && player.ngplusUsed) || (w.id === "run3" && player.run3Used))
     // Ne montre que les champions du run choisi (les vieilles lignes sans `world` = run 1).
     const shown = useMemo(() => champions.filter((c) => (c.world ?? "live") === viewWorld), [champions, viewWorld])
     const worldLabel = WORLD_META.find((w) => w.id === viewWorld)?.label ?? "RUN 1"

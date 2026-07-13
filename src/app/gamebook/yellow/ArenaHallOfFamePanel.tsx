@@ -7,8 +7,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { startHofBattle } from "@/lib/gamebook/yellow/store/battleStore"
-import { useActiveWorld } from "@/lib/gamebook/yellow/store/playerStore"
-import { hasNgPlusWorld, hasRun3World } from "@/lib/gamebook/yellow/store/saveManager"
+import { useActiveWorld, usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
 import type { ChampionMon } from "@/lib/gamebook/yellow/storage/save"
 
 interface Entry { nickname: string; badgeId: string; wonAt: string; team: ChampionMon[] }
@@ -81,10 +80,13 @@ export default function ArenaHallOfFamePanel({ close, onFight }: { close: () => 
     // Un TOGGLE laisse choisir le run à consulter, MAIS uniquement parmi les runs que le spectateur a ATTEINTS
     // (anti-spoiler : un joueur run 1 ne voit jamais les arènes run 2/3). Défaut = son run courant.
     const activeWorld = useActiveWorld()
+    const player = usePlayer()
     const [viewWorld, setViewWorld] = useState<"live" | "ngplus" | "run3">(activeWorld)
     const arenaList = viewWorld === "run3" ? ARENAS_RUN3 : viewWorld === "ngplus" ? ARENAS_RUN2 : ARENAS
-    // Runs visibles au toggle : run 1 toujours ; run 2 si atteint ; run 3 si atteint.
-    const availWorlds = WORLD_META.filter((w) => w.id === "live" || (w.id === "ngplus" && hasNgPlusWorld()) || (w.id === "run3" && hasRun3World()))
+    // Runs visibles au toggle : run 1 toujours ; run 2/3 si DÉJÀ LANCÉS (flags permanents ngplusUsed/run3Used) —
+    // et PAS hasNgPlusWorld/hasRun3World, qui deviennent faux après la méga-fusion de fin de run 3 (mondes effacés)
+    // → un joueur ayant BOUCLÉ les 3 runs garde bien l'accès aux 3 toggles. Anti-spoiler : un run-1 pur a ces flags faux.
+    const availWorlds = WORLD_META.filter((w) => w.id === "live" || (w.id === "ngplus" && player.ngplusUsed) || (w.id === "run3" && player.run3Used))
     const byBadge = useMemo(() => {
         const m: Record<string, Entry[]> = {}
         const prefix = WORLD_PREFIX[viewWorld]
