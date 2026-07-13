@@ -142,21 +142,29 @@ interface GameStore {
 // dernière position après 3s d'inactivité. Limite drastiquement le trafic Neon.
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 
+/** POST de la position (map/pos/dir) vers le serveur. */
+function postPos(player: PlayerState) {
+    if (typeof window === "undefined") return
+    fetch("/api/gamebook/yellow/state", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mapId: player.mapId, posX: player.posX, posY: player.posY, direction: player.direction }),
+    }).catch((e) => console.warn("[yellow] save failed", e))
+}
+
 function scheduleSave(player: PlayerState) {
     if (typeof window === "undefined") return
     if (saveTimer) clearTimeout(saveTimer)
-    saveTimer = setTimeout(() => {
-        fetch("/api/gamebook/yellow/state", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                mapId: player.mapId,
-                posX: player.posX,
-                posY: player.posY,
-                direction: player.direction,
-            }),
-        }).catch((e) => console.warn("[yellow] save failed", e))
-    }, 3000)
+    saveTimer = setTimeout(() => postPos(player), 3000) // PAS des déplacements → débounce anti-trafic Neon
+}
+
+/** Sauvegarde IMMÉDIATE de la position (transitions de map : rares mais critiques). Évite la DÉSYNC
+ *  position↔flags si le joueur recharge juste après un warp — ex. whiteout Ligue → infirmerie : la
+ *  progression est resettée dans les flags (immédiat), la position DOIT suivre tout de suite, sinon le
+ *  joueur recharge figé dans la salle (position débouncée perdue) alors que sa Ligue est déjà remise à zéro. */
+function saveNow(player: PlayerState) {
+    if (saveTimer) { clearTimeout(saveTimer); saveTimer = null }
+    postPos(player)
 }
 
 // Lance un combat de dresseur. Renvoie un dialogue à afficher (équipe K.O.) ou null
@@ -1319,7 +1327,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
         const player = createInitialPlayer(mapId, spawnX, spawnY)
         set({ map, player, dialogue: null })
-        scheduleSave(player)
+        saveNow(player) // transition de map → persistance IMMÉDIATE (anti-désync position/flags au reload, cf. whiteout Ligue)
     },
 
     launchRematch: (trainerId) => {
