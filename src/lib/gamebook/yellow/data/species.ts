@@ -249,7 +249,7 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 24, moveId: "coup_d_boule" },
             { level: 34, moveId: "belier" },
             { level: 46, moveId: "plaquage" },
-            { level: 58, moveId: "reprise_ailes" },   // un petit soin pour survivre
+            { level: 58, moveId: "repos" },            // petit soin pour survivre (SANS ailes : reprise_ailes = signature Aquilord uniquement)
             { level: 70, moveId: "meteores" },         // gros STAB tardif qui ne rate jamais
             { level: 80, moveId: "ultralaser" },       // l'apothéose : le rayon ultime, pour compenser son BST nul
         ],
