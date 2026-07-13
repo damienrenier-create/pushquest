@@ -28,6 +28,7 @@ export interface FrontierRunState {
     bossName?: string         // nom du Cerveau thématique (si la vague courante en est un), pour l'annonce UI
     lastReward: number        // JC du dernier combat gagné (feedback UI)
     lastRefund: number        // énergie remboursée au dernier combat (feedback UI)
+    recentSpecies?: string[]  // espèces des ~2 DERNIÈRES vagues → évitées à la vague suivante (variété). Optionnel : reprise d'une vieille série sans le champ = neutre.
 }
 
 /** Numéro de la vague courante (1-indexé) = victoires + 1. */
@@ -41,13 +42,13 @@ function waveRng(seed: number, waveNumber: number): Rng {
 }
 
 /** Construit l'équipe adverse d'une vague donnée (boss tous les 7 ; Cerveau thématique possible). */
-function buildWave(seed: number, waveNumber: number, level: number, size: number): { opponent: OpponentSpec[]; isBoss: boolean; bossName?: string } {
+function buildWave(seed: number, waveNumber: number, level: number, size: number, avoid?: readonly string[]): { opponent: OpponentSpec[]; isBoss: boolean; bossName?: string } {
     const rng = waveRng(seed, waveNumber)
     if (isBossWave(waveNumber)) {
-        const bw = generateBossWave(rng, waveNumber, level, size)
+        const bw = generateBossWave(rng, waveNumber, level, size, avoid)
         return { opponent: bw.opponent, isBoss: true, bossName: bw.bossName }
     }
-    return { opponent: generateFrontierTeam(rng, { streak: waveNumber, level, size }), isBoss: false }
+    return { opponent: generateFrontierTeam(rng, { streak: waveNumber, level, size, avoid }), isBoss: false }
 }
 
 export interface StartRunOpts {
@@ -67,6 +68,7 @@ export function startFrontierRun(opts: StartRunOpts): FrontierRunState {
         mode: opts.mode, levelRule: opts.levelRule, level, seed: opts.seed, teamSize,
         streak: 0, jc: 0, energyRefunded: 0, status: "active",
         opponent, isBoss, bossName, lastReward: 0, lastRefund: 0,
+        recentSpecies: opponent.map((o) => o.speciesId),
     }
 }
 
@@ -78,7 +80,8 @@ export function applyFrontierWin(s: FrontierRunState, energySpent: number): Fron
     const reward = jcRewardForWin(s.levelRule, winNumber)
     const refund = frontierEnergyRefund(energySpent)
     const nextWave = winNumber + 1
-    const { opponent, isBoss, bossName } = buildWave(s.seed, nextWave, s.level, s.teamSize)
+    const avoid = s.recentSpecies ?? [] // évite les espèces des ~2 dernières vagues
+    const { opponent, isBoss, bossName } = buildWave(s.seed, nextWave, s.level, s.teamSize, avoid)
     return {
         ...s,
         streak: winNumber,
@@ -86,6 +89,7 @@ export function applyFrontierWin(s: FrontierRunState, energySpent: number): Fron
         energyRefunded: s.energyRefunded + refund,
         opponent, isBoss, bossName,
         lastReward: reward, lastRefund: refund,
+        recentSpecies: [...opponent.map((o) => o.speciesId), ...avoid].slice(0, 6), // 2 vagues × 3
     }
 }
 

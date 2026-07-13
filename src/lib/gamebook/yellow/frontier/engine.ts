@@ -117,7 +117,7 @@ function pickDistinct(rng: Rng, pool: string[], n: number): string[] {
     return out
 }
 
-interface GenOpts { streak: number; level: number; size?: number; boss?: boolean }
+interface GenOpts { streak: number; level: number; size?: number; boss?: boolean; avoid?: readonly string[] }
 
 /** Génère une équipe adverse déterministe (RNG seedé) : espèces DISTINCTES, au bon stade pour le niveau,
  *  filtrées par la bande de BST de la série. Les Daemons `exclusive` ne sont jamais tirés. */
@@ -139,12 +139,19 @@ export function generateFrontierTeam(rng: Rng, opts: GenOpts): OpponentSpec[] {
     }
     if (pool.length < size) pool = eligible // filet ultime
 
+    // VARIÉTÉ : évite de recroiser une espèce des DERNIÈRES vagues — mais seulement si ça laisse assez
+    // d'espèces distinctes (sinon on garde le pool complet plutôt que d'échouer).
+    if (opts.avoid && opts.avoid.length) {
+        const fresh = pool.filter((id) => !opts.avoid!.includes(id))
+        if (fresh.length >= size) pool = fresh
+    }
+
     return pickDistinct(rng, pool, size).map((speciesId) => ({ speciesId, level }))
 }
 
 /** Équipe de boss (Cerveau) : même moteur, bande relevée. */
-export function generateBossTeam(rng: Rng, streak: number, level: number, size = DEFAULT_TEAM_SIZE): OpponentSpec[] {
-    return generateFrontierTeam(rng, { streak, level, size, boss: true })
+export function generateBossTeam(rng: Rng, streak: number, level: number, size = DEFAULT_TEAM_SIZE, avoid?: readonly string[]): OpponentSpec[] {
+    return generateFrontierTeam(rng, { streak, level, size, boss: true, avoid })
 }
 
 // ============================================================
@@ -193,13 +200,13 @@ function buildThemedBossTeam(rng: Rng, tb: ThemedBoss, streak: number, level: nu
 
 /** Vague de BOSS : ~THEMED_BOSS_CHANCE % du temps, un Cerveau thématique (ace exclusif éligible selon la série,
  *  équipe cohérente) ; sinon un boss générique (puissance brute). `bossName` = nom du Cerveau pour l'annonce. */
-export function generateBossWave(rng: Rng, streak: number, level: number, size = DEFAULT_TEAM_SIZE): BossWave {
+export function generateBossWave(rng: Rng, streak: number, level: number, size = DEFAULT_TEAM_SIZE, avoid?: readonly string[]): BossWave {
     const eligible = THEMED_BOSSES.filter((b) => streak >= b.minStreak && !!(SPECIES[b.exclusiveId]))
     if (eligible.length > 0 && rng.chance(THEMED_BOSS_CHANCE)) {
         const tb = eligible[rng.int(0, eligible.length - 1)]
-        return { opponent: buildThemedBossTeam(rng, tb, streak, level, size), bossName: tb.name }
+        return { opponent: buildThemedBossTeam(rng, tb, streak, level, size), bossName: tb.name } // Cerveau thématique : équipe imposée (pas d'avoid)
     }
-    return { opponent: generateBossTeam(rng, streak, level, size) }
+    return { opponent: generateBossTeam(rng, streak, level, size, avoid) }
 }
 
 // ============================================================
