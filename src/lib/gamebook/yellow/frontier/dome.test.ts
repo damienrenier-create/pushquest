@@ -1,8 +1,10 @@
 import { describe, it, expect } from "vitest"
 import { Rng } from "../battle/rng"
 import {
-    createDome, advanceDome, playerOpponent, aiMatchAWins, aiLeadIndex, DOME_SIZE, DOME_TEAM_SIZE,
+    createDome, advanceDome, playerOpponent, aiMatchAWins, aiLeadIndex, generateDomeTrainerTeam, DOME_SIZE, DOME_TEAM_SIZE,
 } from "./dome"
+import { DOME_TRAINERS } from "./domeTrainers"
+import { getSpecies } from "../data/species"
 import type { OpponentSpec as Spec } from "./engine"
 
 const PTEAM: Spec[] = [
@@ -74,5 +76,37 @@ describe("Dôme — heuristiques IA", () => {
         const idx = aiLeadIndex(d.entrants[1].team, PTEAM)
         expect(idx).toBeGreaterThanOrEqual(0)
         expect(idx).toBeLessThan(d.entrants[1].team.length)
+    })
+})
+
+describe("Dôme — équipes thématiques par persona", () => {
+    it("respecte TOUJOURS excludeTypes (Géraldine jamais de Feu) + membre garanti (Naruto/grenouille)", () => {
+        const ger = DOME_TRAINERS.find((t) => t.id === "geraldine")!
+        for (let s = 0; s < 25; s++) {
+            const team = generateDomeTrainerTeam(new Rng(s * 131 + 1), ger, 100, 6, 14)
+            expect(team.length).toBe(6)
+            for (const m of team) expect(getSpecies(m.speciesId)?.types ?? []).not.toContain("FEU")
+        }
+        const naruto = DOME_TRAINERS.find((t) => t.id === "naruto")!
+        expect(generateDomeTrainerTeam(new Rng(42), naruto, 100, 6, 14).some((m) => m.speciesId === "uzumaro")).toBe(true)
+    })
+
+    it("un thème LARGE ne field que son type (Benus = Feu/Élec/Plante) + ace présent (pyropanthe)", () => {
+        const benus = DOME_TRAINERS.find((t) => t.id === "benus")!
+        const team = generateDomeTrainerTeam(new Rng(7), benus, 100, 6, 14)
+        for (const m of team) {
+            const types = getSpecies(m.speciesId)?.types ?? []
+            expect(types.some((ty) => ["FEU", "ELEC", "PLANTE"].includes(ty)), `${m.speciesId} hors thème`).toBe(true)
+        }
+        expect(team.some((m) => m.speciesId === "pyropanthe")).toBe(true) // ace (variante Panthéon) bien inclus
+    })
+
+    it("déterministe (même graine → même équipe) et taille 6 pour les 30 dresseurs", () => {
+        for (const t of DOME_TRAINERS) {
+            const a = generateDomeTrainerTeam(new Rng(99), t, 100, 6, 14)
+            const b = generateDomeTrainerTeam(new Rng(99), t, 100, 6, 14)
+            expect(a.length, t.id).toBe(6)
+            expect(a.map((m) => m.speciesId)).toEqual(b.map((m) => m.speciesId))
+        }
     })
 })

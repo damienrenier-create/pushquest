@@ -8,8 +8,10 @@
 import { Rng } from "../battle/rng"
 import { typeMultiplier } from "../battle/typeChart"
 import { SPECIES } from "../data/species"
-import { bstOf, generateFrontierTeam, type OpponentSpec } from "./engine"
+import { speciesAtLevel } from "../data/ace"
+import { bstOf, generateFrontierTeam, allFrontierForms, frontierEligible, bstBandForStreak, type OpponentSpec } from "./engine"
 import { DOME_TRAINERS } from "./domeTrainers"
+import type { DomeTrainer } from "./domeTypes"
 
 export const DOME_SIZE = 8
 export const DOME_ROUNDS = 3 // 8 → 4 → 2 → 1
@@ -39,6 +41,41 @@ function shuffle<T>(rng: Rng, arr: T[]): T[] {
 
 export interface CreateDomeOpts { level: number; streak: number; playerTeam: OpponentSpec[]; size?: number }
 
+const typesOfSp = (id: string): string[] => (SPECIES[id] as unknown as { types?: string[] })?.types ?? []
+
+/** Génère l'équipe d'un dresseur du Dôme : formes FINALES au niveau, de son THÈME (hors excludeTypes), dans la
+ *  bande de BST de la série, avec ses membres GARANTIS (includeSpecies) + son ACE en dernier — s'ils rentrent
+ *  dans la bande (le bypass total « scriptedAce » + le gating par tier viendront en Phase 2, pour éviter les pics
+ *  avant le gating). Fallback générique si pas de thème (counterPlayer/oddball) ou pool trop maigre. */
+export function generateDomeTrainerTeam(rng: Rng, t: DomeTrainer, level: number, size: number, streak: number): OpponentSpec[] {
+    const [lo, hi] = bstBandForStreak(streak)
+    const inBand = (id: string) => { const b = bstOf(id); return b >= lo - 40 && b <= hi + 40 }
+    const inTheme = (id: string) => t.themeTypes.length === 0 || typesOfSp(id).some((ty) => (t.themeTypes as string[]).includes(ty))
+    const banned = (id: string) => (t.excludeTypes ?? []).some((ex) => typesOfSp(id).includes(ex))
+    const terminal = (id: string) => speciesAtLevel(id, level) === id
+    // « non-banni » = INVARIANT DUR (ex. Géraldine JAMAIS de Feu) ; le THÈME est préféré mais relâché si trop maigre.
+    // allFrontierForms (toutes les espèces) filtré `terminal` → inclut les variantes de Panthéon (pyropanthe…,
+    // évolutions par pierre absentes de formsAtLevel) tout en excluant les stades de base qui évolueraient au niveau.
+    const notBanned = (id: string) => terminal(id) && frontierEligible(id, streak) && !banned(id)
+    const themed = allFrontierForms().filter((id) => notBanned(id) && inTheme(id))
+    const anyOk = allFrontierForms().filter(notBanned)
+    let pool = themed.filter(inBand)                                       // idéal : thème + bande
+    if (pool.length < size) pool = themed                                  // thème hors bande
+    if (pool.length < size) pool = anyOk.filter(inBand)                    // hors thème mais non-banni + bande
+    if (pool.length < size) pool = anyOk                                   // non-banni (exclude toujours respecté)
+    if (pool.length < size) return generateFrontierTeam(rng, { streak, level, size }) // ultime (ne devrait jamais arriver)
+
+    // Membres imposés présents DANS le pool (bande+thème) : garantis + ace ; l'ace est envoyé en DERNIER.
+    const wanted = [...new Set([...(t.includeSpecies ?? []), t.aceSpecies])].filter((id) => pool.includes(id))
+    const ace = pool.includes(t.aceSpecies) ? t.aceSpecies : null
+    const forcedNonAce = wanted.filter((id) => id !== ace)
+    const slots = Math.max(0, size - forcedNonAce.length - (ace ? 1 : 0))
+    const fillers = shuffle(rng, pool.filter((id) => !wanted.includes(id))).slice(0, slots)
+    const ids = [...forcedNonAce, ...fillers]
+    if (ace) ids.push(ace)
+    return ids.slice(0, size).map((speciesId) => ({ speciesId, level }))
+}
+
 /** Crée un bracket : le joueur (id 0) + (size-1) IA générées, placés en ordre de bracket aléatoire (seedé). */
 export function createDome(rng: Rng, opts: CreateDomeOpts): DomeState {
     const size = opts.size ?? DOME_SIZE
@@ -51,7 +88,9 @@ export function createDome(rng: Rng, opts: CreateDomeOpts): DomeState {
             id: i, isPlayer: false,
             name: t?.name ?? HOLO_NAMES[(i - 1) % HOLO_NAMES.length],
             trainerId: t?.id, epithet: t?.epithet, taunt: t?.taunt,
-            team: generateFrontierTeam(rng, { streak: opts.streak, level: opts.level, size: DOME_TEAM_SIZE }),
+            team: t
+                ? generateDomeTrainerTeam(rng, t, opts.level, DOME_TEAM_SIZE, opts.streak)
+                : generateFrontierTeam(rng, { streak: opts.streak, level: opts.level, size: DOME_TEAM_SIZE }),
         })
     }
     const alive = shuffle(rng, entrants.map((e) => e.id)) // placement de bracket seedé
