@@ -69,10 +69,21 @@ export function weakTypesOf(speciesId: string): PokeType[] {
 
 /** Bande de BST autorisée selon la série (la difficulté monte avec le streak). */
 export function bstBandForStreak(streak: number): [number, number] {
-    if (streak <= 6) return [250, 400]
-    if (streak <= 13) return [350, 460]
-    if (streak <= 27) return [400, 520]
-    return [460, 590]
+    // Pente DOUCE + bandes LARGES (span ~180) → pool riche à chaque palier (couplé aux base 1/2, cf. allFrontierForms).
+    if (streak <= 4) return [220, 400]
+    if (streak <= 9) return [270, 450]
+    if (streak <= 16) return [330, 500]
+    if (streak <= 27) return [390, 560]
+    return [450, 620]
+}
+
+// TOUTES les formes (base 1 / base 2 / finale) éligibles au frontier — les stades BAS peuplent les basses
+// bandes de BST, les FINALES les hautes. Fieldées TELLES QUELLES au niveau du frontier (createMonInstance
+// n'évolue pas) → un stade de base à Niv 100 reste ce stade : faible mais VARIÉ. Cache (indépendant du niveau).
+let _allForms: string[] | null = null
+export function allFrontierForms(): string[] {
+    if (!_allForms) _allForms = Object.keys(SPECIES)
+    return _allForms
 }
 
 // Cache des "formes existant au niveau L" (forme = stade d'évolution atteint à ce niveau).
@@ -127,7 +138,8 @@ export function generateFrontierTeam(rng: Rng, opts: GenOpts): OpponentSpec[] {
     let [lo, hi] = bstBandForStreak(opts.streak)
     if (opts.boss) { lo = Math.max(470, lo); hi = 999 } // boss = haut du panier
 
-    const eligible = formsAtLevel(level).filter((id) => frontierEligible(id, opts.streak))
+    // Pool = TOUTES les formes (base 1/2/finale) filtrées par la bande de BST → variété maximale à chaque palier.
+    const eligible = allFrontierForms().filter((id) => frontierEligible(id, opts.streak))
     let pool = eligible.filter((id) => { const b = bstOf(id); return b >= lo && b <= hi })
 
     // Élargit la bande si trop peu de candidats (garantit toujours assez d'espèces distinctes).
