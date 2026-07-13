@@ -5,19 +5,21 @@
 // % victoire, Pokédex, niveaux, frugalité, peu de pas) et RUN 3 (Σ des niveaux des Daemons vaincus). Lecture seule.
 
 import { useEffect, useState } from "react"
+import { type ScoreFactor } from "@/lib/gamebook/yellow/score/runScore"
 
-interface ScoreRow { nickname: string; score: number; wonAt: string }
+interface ScoreRow { nickname: string; score: number; wonAt: string; factors?: ScoreFactor[] | null }
 type Data = { gated?: boolean; run2: ScoreRow[]; run3: ScoreRow[] }
 
 const RUN_META: { id: "run3" | "run2"; label: string; unit: string; hint: string }[] = [
     { id: "run3", label: "🏆 RUN 3", unit: "pts", hint: "Σ des niveaux des Daemons ennemis vaincus (boss + Ligue). Le + haut gagne." },
-    { id: "run2", label: "🏅 RUN 2", unit: "/1000", hint: "Note globale /1000 : % victoire, Pokédex, niveaux d'équipe, frugalité (énergie) & peu de pas. Le + haut gagne." },
+    { id: "run2", label: "🏅 RUN 2", unit: "/1000", hint: "Note globale /1000 : % victoire, Pokédex, niveaux d'équipe, frugalité (énergie) & peu de pas. Clique une entrée pour le détail des 5 axes. Le + haut gagne." },
 ]
 
 export default function RunScoreboardPanel({ close }: { close: () => void }) {
     const [state, setState] = useState<"loading" | "ok" | "error">("loading")
     const [data, setData] = useState<Data>({ run2: [], run3: [] })
     const [tab, setTab] = useState<"run3" | "run2">("run3")
+    const [expanded, setExpanded] = useState<number | null>(null) // RUN 2 : entrée dépliée (détail des 5 axes)
 
     useEffect(() => {
         let cancelled = false
@@ -44,7 +46,7 @@ export default function RunScoreboardPanel({ close }: { close: () => void }) {
 
                 <div style={tabsRow}>
                     {RUN_META.map((m) => (
-                        <button key={m.id} onClick={() => setTab(m.id)}
+                        <button key={m.id} onClick={() => { setTab(m.id); setExpanded(null) }}
                             style={{ ...tabBtn, borderColor: tab === m.id ? "#ffd54a" : "rgba(255,255,255,0.15)", background: tab === m.id ? "#ffd54a" : "rgba(255,255,255,0.06)", color: tab === m.id ? "#11121a" : "#fff" }}>
                             {m.label}
                         </button>
@@ -64,13 +66,37 @@ export default function RunScoreboardPanel({ close }: { close: () => void }) {
 
                 {state === "ok" && !data.gated && list.length > 0 && (
                     <div style={scroll}>
-                        {list.map((r, i) => (
-                            <div key={i} style={{ ...row, background: i < 3 ? "rgba(255,213,74,0.10)" : "rgba(255,255,255,0.05)" }}>
-                                <span style={rank}>{medal(i)}</span>
-                                <span style={name}>{r.nickname}</span>
-                                <span style={score}>{r.score.toLocaleString("fr-FR")} <span style={unit}>{meta.unit}</span></span>
-                            </div>
-                        ))}
+                        {list.map((r, i) => {
+                            const canExpand = tab === "run2" && Array.isArray(r.factors) && r.factors!.length > 0
+                            const open = expanded === i
+                            return (
+                                <div key={i}>
+                                    <div style={{ ...row, background: i < 3 ? "rgba(255,213,74,0.10)" : "rgba(255,255,255,0.05)", cursor: canExpand ? "pointer" : "default" }}
+                                        onClick={() => { if (canExpand) setExpanded(open ? null : i) }}>
+                                        <span style={rank}>{medal(i)}</span>
+                                        <span style={name}>{r.nickname}</span>
+                                        <span style={score}>{r.score.toLocaleString("fr-FR")} <span style={unit}>{meta.unit}</span></span>
+                                        {canExpand && <span style={{ opacity: 0.55, fontSize: 11, marginLeft: 2 }}>{open ? "▾" : "▸"}</span>}
+                                    </div>
+                                    {canExpand && open && (
+                                        <div style={factorsBox}>
+                                            {r.factors!.map((f) => (
+                                                <div key={f.key} style={{ fontSize: 10.5 }}>
+                                                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                                        <span>{f.label}</span>
+                                                        <span style={{ opacity: 0.85 }}><b>{f.points}</b> / {f.max}</span>
+                                                    </div>
+                                                    <div style={{ height: 4, borderRadius: 2, background: "rgba(255,255,255,0.12)", overflow: "hidden", margin: "2px 0 1px" }}>
+                                                        <div style={{ width: `${Math.round((f.ratio ?? 0) * 100)}%`, height: "100%", background: "#ffe36b" }} />
+                                                    </div>
+                                                    <div style={{ fontSize: 8.5, opacity: 0.55 }}>{f.detail}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )
+                        })}
                     </div>
                 )}
 
@@ -89,6 +115,7 @@ const hintStyle: React.CSSProperties = { fontSize: 9.5, opacity: 0.65, textAlign
 const muted: React.CSSProperties = { fontSize: 12, opacity: 0.75, textAlign: "center", padding: "16px 8px", lineHeight: 1.6 }
 const scroll: React.CSSProperties = { overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }
 const row: React.CSSProperties = { display: "flex", alignItems: "center", gap: 8, borderRadius: 8, padding: "8px 10px" }
+const factorsBox: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 3, margin: "1px 0 5px", padding: "7px 10px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8 }
 const rank: React.CSSProperties = { fontSize: 14, fontWeight: 800, width: 30, textAlign: "center" }
 const name: React.CSSProperties = { flex: 1, fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }
 const score: React.CSSProperties = { fontSize: 14, fontWeight: 800, color: "#ffe36b", fontVariantNumeric: "tabular-nums" }

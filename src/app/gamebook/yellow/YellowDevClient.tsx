@@ -843,7 +843,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             //   recalcule plus hors run 2). N'impacte pas le leaderboard serveur (qui ne garde que la note /1000).
             try { window.localStorage.setItem(RUN2_SCORES_LS_KEY, JSON.stringify(run2Sc)) } catch { /* ignore */ }
             setRun2Snap(run2Sc)
-            fetch("/api/gamebook/yellow/run-scores", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ run: "run2", score: run2Grade }) }).catch(() => {})
+            fetch("/api/gamebook/yellow/run-scores", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ run: "run2", score: run2Grade, factors: run2Sc.factors }) }).catch(() => {})
             // On NE FUSIONNE PAS tout de suite : on PROPOSE le choix (fusionner OU lancer le run 3). L'overlay
             // ci-dessous appelle completeNewGamePlus (fusion 2-voies) OU launchRun3 (garde les 3 mondes gelés).
             setRun3Offer({ score: ngplusScore })

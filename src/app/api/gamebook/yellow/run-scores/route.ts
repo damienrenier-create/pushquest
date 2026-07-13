@@ -53,16 +53,16 @@ export async function GET() {
         const rows = (await rs.findMany({
             orderBy: { score: "desc" },
             take: 400,
-            select: { userId: true, nickname: true, run: true, score: true, wonAt: true },
-        })) as { userId: string; nickname: string; run: string; score: number; wonAt: Date }[]
+            select: { userId: true, nickname: true, run: true, score: true, wonAt: true, factors: true },
+        })) as { userId: string; nickname: string; run: string; score: number; wonAt: Date; factors: unknown }[]
         // Dédup serveur : garde le MEILLEUR score par (userId, run) — déjà trié desc, donc le 1er vu gagne.
         const best = (run: string) => {
             const seen = new Set<string>()
-            const out: { nickname: string; score: number; wonAt: Date }[] = []
+            const out: { nickname: string; score: number; wonAt: Date; factors: unknown }[] = []
             for (const r of rows) {
                 if (r.run !== run || seen.has(r.userId)) continue
                 seen.add(r.userId)
-                out.push({ nickname: r.nickname, score: r.score, wonAt: r.wonAt })
+                out.push({ nickname: r.nickname, score: r.score, wonAt: r.wonAt, factors: r.factors ?? null })
             }
             return out
         }
@@ -77,9 +77,11 @@ export async function POST(req: NextRequest) {
     const auth = await requireYellow()
     if (!auth.ok) return NextResponse.json({ error: "Forbidden" }, { status: auth.status })
 
-    let body: { run?: unknown; score?: unknown }
+    let body: { run?: unknown; score?: unknown; factors?: unknown }
     try { body = await req.json() } catch { return NextResponse.json({ error: "Bad JSON" }, { status: 400 }) }
     const run = typeof body.run === "string" && VALID_RUNS.has(body.run) ? body.run : null
+    // RUN 2 : détail des 5 axes (display-only, propre au joueur, gated par auth) → stocké tel quel, borné à 8 entrées.
+    const factors = run === "run2" && Array.isArray(body.factors) ? (body.factors as unknown[]).slice(0, 8) : null
     // Borne PAR RUN (anti-triche : le score vient d'un POST client). run3 = Σ max réellement atteignable (dérivé) +
     //   marge. run2 = NOTE GLOBALE /1000 (computeRunScores) → plafond STRICT à 1000. Fallback MAX_SCORE si run inconnu.
     const runCap = run === "run3" ? run3MaxScore() + 200 : run === "run2" ? 1000 : MAX_SCORE
@@ -93,9 +95,9 @@ export async function POST(req: NextRequest) {
         // Meilleur score par (joueur, run) : on ne crée/màj que si c'est un record.
         const existing = (await rs.findFirst({ where: { userId: auth.userId, run }, select: { id: true, score: true } })) as { id: string; score: number } | null
         if (!existing) {
-            await rs.create({ data: { userId: auth.userId, nickname: me.nickname, run, score } })
+            await rs.create({ data: { userId: auth.userId, nickname: me.nickname, run, score, factors: factors ?? undefined } })
         } else if (score > existing.score) {
-            await rs.update({ where: { id: existing.id }, data: { score, nickname: me.nickname, wonAt: new Date() } })
+            await rs.update({ where: { id: existing.id }, data: { score, nickname: me.nickname, wonAt: new Date(), factors: factors ?? undefined } })
         }
         return NextResponse.json({ ok: true })
     } catch {

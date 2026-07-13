@@ -360,6 +360,7 @@ model YellowRunScore {
   nickname  String   // pseudo trusté serveur
   run       String   // "run2" | "run3"
   score     Int
+  factors   Json?    // RUN 2 : détail des 5 axes (ScoreFactor[]) pour un affichage consultable partout. null = run 3 / ancien score. ADDITIF (db:push).
   wonAt     DateTime @default(now())
 
   @@index([run, score])
