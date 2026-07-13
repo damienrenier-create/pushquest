@@ -156,6 +156,9 @@ export const CTS: CtData[] = [
     // CT COMBAT SIGNATURE « Mitra-Poing » (Focus Punch, la + puissante) — CADEAU du Collectionneur (Maison Combat
     //   run 3) si le joueur a un GAMARUTO en équipe. JAMAIS en vente (gift). Type-lock COMBAT (via canLearnCt).
     { id: "ct58", label: "CT58", moveId: "mitra_poing", price: 0, gift: true },
+    // CT59 : Aromathérapie (utilitaire de SOIN d'équipe) — soigne TOUS les statuts de l'ÉQUIPE entière. Apprenable
+    // par TOUS (universal), comme Repos/ct03. Distincte de Brume Sporale (ct35, reset des stats, inchangée).
+    { id: "ct59", label: "CT59", moveId: "aromatherapie", price: 400, universal: true },
 ]
 
 /** CT-cadeaux EXCLUSIVES au run 2 (boss d'arène en New Game+). Invariant : JAMAIS obtenables autrement —

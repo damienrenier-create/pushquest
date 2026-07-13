@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest"
 import { Rng } from "../battle/rng"
 import {
-    createDome, advanceDome, playerOpponent, aiMatchAWins, aiLeadIndex, DOME_SIZE,
+    createDome, advanceDome, playerOpponent, aiMatchAWins, aiLeadIndex, DOME_SIZE, DOME_TEAM_SIZE,
 } from "./dome"
 import type { OpponentSpec as Spec } from "./engine"
 
@@ -12,12 +12,15 @@ const PTEAM: Spec[] = [
 ]
 
 describe("Dôme — création du bracket", () => {
-    it("8 participants, joueur = id 0, IA avec équipes de 3 au bon niveau", () => {
+    it("8 participants, joueur = id 0, IA avec équipes de 6 (6v6) au bon niveau + vraie identité de dresseur", () => {
         const d = createDome(new Rng(7), { level: 50, streak: 15, playerTeam: PTEAM })
         expect(d.entrants.length).toBe(DOME_SIZE)
         expect(d.entrants[0].isPlayer).toBe(true)
         expect(d.alive.length).toBe(DOME_SIZE)
-        for (const e of d.entrants.slice(1)) { expect(e.team.length).toBe(3); expect(e.team.every(m => m.level === 50)).toBe(true) }
+        for (const e of d.entrants.slice(1)) { expect(e.team.length).toBe(DOME_TEAM_SIZE); expect(e.team.every(m => m.level === 50)).toBe(true) }
+        // vrais noms : les IA portent une identité du pool des 30 (plus de « Spectre A »).
+        for (const e of d.entrants.slice(1)) expect(e.trainerId, "IA sans identité de dresseur").toBeTruthy()
+        expect(new Set(d.entrants.slice(1).map(e => e.trainerId)).size).toBe(DOME_SIZE - 1) // dresseurs DISTINCTS
         expect(d.status).toBe("active")
         expect(playerOpponent(d)).toBeTruthy()
     })

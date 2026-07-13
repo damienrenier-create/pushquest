@@ -8,14 +8,20 @@
 import { Rng } from "../battle/rng"
 import { typeMultiplier } from "../battle/typeChart"
 import { SPECIES } from "../data/species"
-import { bstOf, generateFrontierTeam, DEFAULT_TEAM_SIZE, type OpponentSpec } from "./engine"
+import { bstOf, generateFrontierTeam, type OpponentSpec } from "./engine"
+import { DOME_TRAINERS } from "./domeTrainers"
 
 export const DOME_SIZE = 8
 export const DOME_ROUNDS = 3 // 8 → 4 → 2 → 1
+export const DOME_TEAM_SIZE = 6 // Daemons par équipe dans le Dôme (6v6 — cf. design du Dôme)
 
 const HOLO_NAMES = ["Spectre A", "Spectre B", "Spectre C", "Spectre D", "Spectre E", "Spectre F", "Spectre G"]
 
-export interface DomeEntrant { id: number; name: string; team: OpponentSpec[]; isPlayer: boolean }
+export interface DomeEntrant {
+    id: number; name: string; team: OpponentSpec[]; isPlayer: boolean
+    /** Identité du dresseur (pool des 30) pour l'UI (épithète, taunt) ; absent = joueur / fallback. */
+    trainerId?: string; epithet?: string; taunt?: string
+}
 export interface DomeState {
     level: number
     round: number            // 0 = quart, 1 = demi, 2 = finale
@@ -37,9 +43,16 @@ export interface CreateDomeOpts { level: number; streak: number; playerTeam: Opp
 export function createDome(rng: Rng, opts: CreateDomeOpts): DomeState {
     const size = opts.size ?? DOME_SIZE
     const entrants: DomeEntrant[] = [{ id: 0, name: "Toi", team: opts.playerTeam, isPlayer: true }]
+    // 7 dresseurs DISTINCTS tirés du pool des 30 (Phase 2 : filtre par tier + équipes générées selon leur persona).
+    const roster = shuffle(rng, DOME_TRAINERS).slice(0, size - 1)
     for (let i = 1; i < size; i++) {
-        entrants.push({ id: i, name: HOLO_NAMES[(i - 1) % HOLO_NAMES.length], isPlayer: false,
-            team: generateFrontierTeam(rng, { streak: opts.streak, level: opts.level, size: DEFAULT_TEAM_SIZE }) })
+        const t = roster[i - 1]
+        entrants.push({
+            id: i, isPlayer: false,
+            name: t?.name ?? HOLO_NAMES[(i - 1) % HOLO_NAMES.length],
+            trainerId: t?.id, epithet: t?.epithet, taunt: t?.taunt,
+            team: generateFrontierTeam(rng, { streak: opts.streak, level: opts.level, size: DOME_TEAM_SIZE }),
+        })
     }
     const alive = shuffle(rng, entrants.map((e) => e.id)) // placement de bracket seedé
     return { level: opts.level, round: 0, entrants, alive, playerId: 0, status: "active" }

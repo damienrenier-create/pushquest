@@ -1077,7 +1077,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         // FACTORY : on joue l'équipe de LOCATION draftée ; Tour/Dôme : l'équipe réelle du joueur (soignée ci-dessus).
         const myTeam = run.mode === "FACTORY" ? (getDraftedTeam() ?? getPlayer().team) : getPlayer().team
         if (run.isBoss && run.bossName) setToast(`👑 ${run.bossName} entre en scène !`)
-        startTrainerBattle(myTeam, buildFrontierEnemies(run.opponent), Math.floor(Math.random() * 1e9), { trainerId: "frontier:" + run.mode, aiLevel: "trainer" })
+        // IA graduée dans toute la Zone de Combat : boss/Cerveaux = « hof » (la + maligne : dégâts attendus,
+        // ouverture statut, switch anti-yo-yo), vagues normales = « ace » (switch sur mauvais matchup). Fini le « trainer » basique.
+        startTrainerBattle(myTeam, buildFrontierEnemies(run.opponent), Math.floor(Math.random() * 1e9), { trainerId: "frontier:" + run.mode, aiLevel: run.isBoss ? "hof" : "ace" })
     }, [run, tourChoice, battle, frontierResult, evolutions.length, dialogue, pendingLearn, newDexEntry])
 
     // DÔME — lance le match du round courant (TON équipe vs ton adversaire de bracket) tant que le tournoi
@@ -1088,9 +1090,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (battle || frontierResult || evolutions.length > 0 || dialogue || pendingLearn || newDexEntry) return
         const opp = playerOpponent(dome.state)
         if (!opp) return
-        // SOIN avant la 1re manche SEULEMENT (round 0) → endurance sur les 3 manches (cf. intro
-        // « Pas de soin entre les manches ! »). Les PV se conservent (finishBattle persiste l'équipe).
-        if (dome.state.round === 0) healAllTeam()
+        // SOIN COMPLET avant CHAQUE manche (décision design : le Dôme resoigne entre les matchs → chaque
+        // manche se joue à équipe FRAÎCHE, PV/PP/statuts restaurés). Cf. écran d'intro du Dôme.
+        healAllTeam()
         // DIFFICULTÉ CROISSANTE : en quart (round 0) l'IA envoie son 1er Daemon ; en demi/finale
         // (round ≥ 1) elle OUVRE avec son MEILLEUR matchup de type contre ton équipe visible (aiLeadIndex).
         let oppTeam = opp.team
@@ -1099,7 +1101,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             const lead = aiLeadIndex(opp.team, pTeam)
             oppTeam = [opp.team[lead], ...opp.team.filter((_, i) => i !== lead)]
         }
-        startTrainerBattle(getPlayer().team, buildFrontierEnemies(oppTeam), Math.floor(Math.random() * 1e9), { trainerId: "frontier:DOME", aiLevel: "trainer" })
+        // Dôme : difficulté croissante aussi côté IA — quart = « ace », demi/finale = « hof » (la + maligne).
+        startTrainerBattle(getPlayer().team, buildFrontierEnemies(oppTeam), Math.floor(Math.random() * 1e9), { trainerId: "frontier:DOME", aiLevel: dome.state.round >= 1 ? "hof" : "ace" })
     }, [dome, domePause, battle, frontierResult, evolutions.length, dialogue, pendingLearn, newDexEntry])
 
     // ZONE DE COMBAT — INSTANTANÉ de la série (anti-abandon au refresh). On (ré)écrit à chaque
@@ -1971,7 +1974,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {!battle && !dome && mapPlayer.mapId === "yellow_combat_dome" && !dialogue && player.team.length > 0 && (
                 <div style={{ position: "absolute", left: "50%", top: 16, transform: "translateX(-50%)", zIndex: 60, background: "#1a1a22ee", color: "#fff", border: "2px solid #f1c40f", borderRadius: 12, padding: "10px 14px", textAlign: "center", maxWidth: 320 }}>
                     <div style={{ fontWeight: 800, marginBottom: 6 }}>🏆 DÔME DE COMBAT</div>
-                    <div style={{ fontSize: 11, opacity: 0.85, marginBottom: 8 }}>Tournoi à élimination (8 dresseurs) — 3 manches d&apos;affilée avec TON équipe. Pas de soin entre les manches !</div>
+                    <div style={{ fontSize: 11, opacity: 0.85, marginBottom: 8 }}>Tournoi à élimination — 8 dresseurs, 3 manches <b>6&nbsp;v&nbsp;6</b> avec TON équipe. Équipe <b>soignée à fond</b> entre chaque manche !</div>
                     <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
                         {(["L50", "L100", "ADAPT"] as LevelRule[]).map((rule) => (
                             <button key={rule} onClick={() => {
@@ -2034,7 +2037,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 return (
                     <div style={{ position: "absolute", left: "50%", top: 16, transform: "translateX(-50%)", zIndex: 62, background: "#1a1a22f2", color: "#fff", border: "2px solid #f1c40f", borderRadius: 12, padding: "12px 14px", textAlign: "center", width: "min(340px, 94vw)" }}>
                         <DomeBracket state={dome.state} />
-                        <div style={{ fontSize: 12, margin: "2px 0 8px" }}>{opp ? <>Ton adversaire : <b style={{ color: "#f1c40f" }}>{opp.name}</b></> : "En attente…"}</div>
+                        <div style={{ fontSize: 12, margin: "2px 0 4px" }}>{opp ? <>Ton adversaire : <b style={{ color: "#f1c40f" }}>{opp.name}</b>{opp.epithet ? <span style={{ opacity: 0.7 }}> — « {opp.epithet} »</span> : null}</> : "En attente…"}</div>
+                        {opp?.taunt && <div style={{ fontSize: 11, fontStyle: "italic", opacity: 0.75, margin: "0 0 8px", lineHeight: 1.4 }}>« {opp.taunt} »</div>}
                         <button onClick={() => setDomePause(false)} style={{ background: "#f1c40f", color: "#1a1a22", fontWeight: 800, border: "none", borderRadius: 8, padding: "7px 16px", cursor: "pointer" }}>⚔️ Affronter</button>
                     </div>
                 )

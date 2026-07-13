@@ -130,6 +130,11 @@ function pickDistinct(rng: Rng, pool: string[], n: number): string[] {
 
 interface GenOpts { streak: number; level: number; size?: number; boss?: boolean; avoid?: readonly string[] }
 
+/** Série au-delà de laquelle le pool n'utilise QUE des formes FINALES (évoluées au niveau). En-dessous (bas
+ *  streaks = début de série, faciles), TOUS les stades sont permis → formes faibles + variété maximale. Le Dôme
+ *  (streak 14) et les boss restent donc sur des finales fortes. */
+export const FRONTIER_EVOLVED_MIN_STREAK = 9
+
 /** Génère une équipe adverse déterministe (RNG seedé) : espèces DISTINCTES, au bon stade pour le niveau,
  *  filtrées par la bande de BST de la série. Les Daemons `exclusive` ne sont jamais tirés. */
 export function generateFrontierTeam(rng: Rng, opts: GenOpts): OpponentSpec[] {
@@ -138,8 +143,15 @@ export function generateFrontierTeam(rng: Rng, opts: GenOpts): OpponentSpec[] {
     let [lo, hi] = bstBandForStreak(opts.streak)
     if (opts.boss) { lo = Math.max(470, lo); hi = 999 } // boss = haut du panier
 
-    // Pool = TOUTES les formes (base 1/2/finale) filtrées par la bande de BST → variété maximale à chaque palier.
-    const eligible = allFrontierForms().filter((id) => frontierEligible(id, opts.streak))
+    // STADE d'évolution du pool selon la SÉRIE (découplé du niveau de combat opts.level) :
+    //  • bas streaks (≤ FRONTIER_EVOLVED_MIN_STREAK, hors boss) = TOUS les stades → beaucoup d'espèces, formes
+    //    FAIBLES (base/mid) = approprié à faible difficulté + variété maximale en début de série ;
+    //  • au-delà (Dôme streak 14, Tour/Usine avancées, boss) = FINALES au niveau. Filtre `speciesAtLevel(id)===id`
+    //    = formes terminales (évite le leak d'un stade intermédiaire d'une lignée à double base, ex. golemini→megalithe).
+    const forms = (opts.streak <= FRONTIER_EVOLVED_MIN_STREAK && !opts.boss)
+        ? allFrontierForms()
+        : formsAtLevel(level).filter((id) => speciesAtLevel(id, level) === id)
+    const eligible = forms.filter((id) => frontierEligible(id, opts.streak))
     let pool = eligible.filter((id) => { const b = bstOf(id); return b >= lo && b <= hi })
 
     // Élargit la bande si trop peu de candidats (garantit toujours assez d'espèces distinctes).

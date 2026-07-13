@@ -636,6 +636,15 @@ function performMove(state: BattleState, side: SideId, moveIndex: number, events
             events.push({ kind: "message", text: `Un voile de spores dissipe tous les changements de stats !` })
             return
         }
+        // AROMATHÉRAPIE (façon Glas de Soin) : soigne les statuts majeurs de TOUTE l'équipe du lanceur (banc compris).
+        if (move.effect?.healTeamStatus) {
+            let cured = 0
+            for (const m of state[side].team) {
+                if (m.status !== "NONE") { m.status = "NONE"; m.statusCounter = 0; cured++ }
+            }
+            events.push({ kind: "message", text: cured > 0 ? `Un parfum apaisant dissipe les altérations de toute l'équipe !` : `Un parfum apaisant se répand… mais personne n'était affecté.` })
+            return
+        }
         applyStatusMove(state, side, move, events, rng)
         return
     }

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest"
 import { Rng } from "../battle/rng"
 import { generateFrontierTeam } from "./engine"
 import { startFrontierRun, applyFrontierWin } from "./run"
+import { speciesAtLevel } from "../data/ace"
 import { getSpecies } from "../data/species"
 
 // Zone de Combat — VARIÉTÉ : on évite de recroiser une espèce des ~2 dernières vagues.
@@ -15,13 +16,18 @@ describe("Frontier — anti-répétition", () => {
         }
     })
 
-    it("le pool basse-bande inclut des formes NON-finales (base/mid) → variété enrichie", () => {
-        const seen = new Set<string>()
-        for (let seed = 0; seed < 60; seed++) {
-            for (const o of generateFrontierTeam(new Rng(seed), { streak: 2, level: 100, size: 3 })) seen.add(o.speciesId)
-        }
-        // Une espèce AVEC une évolution = une forme de base/intermédiaire (pas une finale) → désormais tirable.
-        expect([...seen].some((id) => !!getSpecies(id)?.evolution)).toBe(true)
+    it("bas streaks : tous stades (variété + formes faibles) ; hauts streaks : FINALES au niveau", () => {
+        // Bas streak (≤9) : le pool inclut base/mid → variété maximale + formes faibles (approprié en début de série).
+        const low = new Set<string>()
+        for (let seed = 0; seed < 60; seed++) for (const o of generateFrontierTeam(new Rng(seed), { streak: 2, level: 100, size: 3 })) low.add(o.speciesId)
+        expect(low.size).toBeGreaterThanOrEqual(12) // variété restaurée en début de série
+        expect([...low].some((id) => !!getSpecies(id)?.evolution)).toBe(true) // des stades NON-finaux tirables (faibles = voulu)
+
+        // Haut streak (>9) : uniquement des formes terminales au niveau (fini les « équipes nulles » quand ça compte).
+        const high = new Set<string>()
+        for (let seed = 0; seed < 60; seed++) for (const o of generateFrontierTeam(new Rng(seed), { streak: 20, level: 100, size: 3 })) high.add(o.speciesId)
+        expect(high.size).toBeGreaterThanOrEqual(12)
+        for (const id of high) expect(speciesAtLevel(id, 100)).toBe(id)
     })
 
     it("la série mémorise les espèces des 2 dernières vagues (≤ 6)", () => {

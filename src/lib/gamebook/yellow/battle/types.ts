@@ -69,6 +69,9 @@ export interface MoveEffect {
     sureHit?: boolean
     /** BRUME SPORALE (façon Buée Noire) : réinitialise TOUS les changements de stats des DEUX camps. */
     resetStats?: boolean
+    /** AROMATHÉRAPIE (façon Glas de Soin) : soigne TOUS les statuts majeurs de TOUTE l'équipe du LANCEUR
+     *  (banc compris). Ne touche ni les stats, ni le camp adverse. Le move a power 0. */
+    healTeamStatus?: boolean
     /** REPOS : le LANCEUR s'endort volontairement pour EXACTEMENT 1 tour (en plus du soin healPct). */
     restSleep?: boolean
     /** HYPNOSE : précision de base FIXE (move.accuracy), INDÉPENDANTE de l'esquive, modulée par le ratio
