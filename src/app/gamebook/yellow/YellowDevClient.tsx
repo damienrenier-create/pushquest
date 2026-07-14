@@ -646,7 +646,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     const grants = (j?.grants ?? 0) as number
                     const champs = (j?.champions ?? []) as string[]
                     if (!cancelled && grants > 0) {
-                        const per = Math.floor(getPlayer().repsCap / 3)
+                        // +1/3 du quota par sacre, MAIS plafonné à 1000 ⚡/sacre : sinon les joueurs au repsCap
+                        // gonflé (poker/casino) recevaient des milliers d'énergie d'un seul coup (ex. Mools cap 11550 → 3850).
+                        const per = Math.min(1000, Math.floor(getPlayer().repsCap / 3))
                         const got = grantReps(per * grants)
                         persistYellowSave()
                         const who = [...new Set(champs.filter(Boolean))].join(", ")
