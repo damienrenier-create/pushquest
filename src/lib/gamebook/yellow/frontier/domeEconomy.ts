@@ -15,6 +15,13 @@ export const DOME_BLINDS: Record<DomeTier, { min: number; max: number }> = {
 /** Classement final dans le bracket de 8 : 1=1er, 2=2e, 3=demi-finaliste, 4=quart-finaliste ; 0=éliminé/forfait. */
 export type DomePlacement = 1 | 2 | 3 | 4
 
+/** Classement final : victoire → 1er ; sinon éliminé au round `roundLostAt` (0=quart→4e, 1=demi→3e, 2=finale→2e).
+ *  Isolé + testé car il pilote le remboursement d'énergie RÉELLE (le point le plus sensible du Dôme). */
+export function domeFinalPlacement(won: boolean, roundLostAt: number): DomePlacement {
+    if (won) return 1
+    return roundLostAt >= 2 ? 2 : roundLostAt === 1 ? 3 : 4
+}
+
 /** Borne la mise dans les blinds du tier ET la bourse disponible. Renvoie 0 si la bourse ne couvre même pas la
  *  mise MINIMALE du tier → l'appelant EN AVAL doit traiter 0 comme « ne peut pas miser » (interdit l'entrée/le débit). */
 export function clampBet(bet: number, tier: DomeTier, available: number): number {

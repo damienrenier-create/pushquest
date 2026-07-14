@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { DOME_BUDGETS, maxUnlockedTier, roundBudget, distributeDomeTraining } from "./domeBudgets"
-import { DOME_BLINDS, clampBet, sizePct, domeEnergyRefund, domeJcReward } from "./domeEconomy"
+import { DOME_BLINDS, clampBet, sizePct, domeEnergyRefund, domeJcReward, domeFinalPlacement } from "./domeEconomy"
 import { DOME_TIERS } from "./domeTypes"
 
 describe("Dôme — budgets & escalade", () => {
@@ -80,6 +80,20 @@ describe("Dôme — économie poker (faucet-safe)", () => {
         // plus tu mises, plus tu gagnes ; plus le tier est haut, plus tu gagnes
         expect(domeJcReward(300, "MAITRE", 1)).toBeGreaterThan(domeJcReward(100, "MAITRE", 1))
         expect(domeJcReward(100, "MAITRE", 1)).toBeGreaterThan(domeJcReward(100, "BRONZE", 1))
+    })
+
+    it("domeFinalPlacement : victoire→1er, sinon quart(0)→4e / demi(1)→3e / finale(2)→2e ; + faucet-safe de bout en bout", () => {
+        expect(domeFinalPlacement(true, 2)).toBe(1)  // champion
+        expect(domeFinalPlacement(false, 2)).toBe(2) // perd la finale
+        expect(domeFinalPlacement(false, 1)).toBe(3) // éliminé en demi
+        expect(domeFinalPlacement(false, 0)).toBe(4) // éliminé en quart
+        // bout en bout : quel que soit le round/issue, le remboursement ne dépasse JAMAIS la mise (énergie réelle)
+        for (const bet of [1, 30, 150, 300, 500]) {
+            for (const [won, round] of [[true, 2], [false, 2], [false, 1], [false, 0]] as const) {
+                const p = domeFinalPlacement(won, round)
+                expect(domeEnergyRefund(bet, p)).toBeLessThanOrEqual(bet)
+            }
+        }
     })
 
     it("clampBet : borné par les blinds du tier ET la bourse", () => {
