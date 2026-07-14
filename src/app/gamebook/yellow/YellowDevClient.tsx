@@ -73,6 +73,7 @@ import { resolveFrontierLevel, JC_PER_WIN, JC_BOSS_MULT, BOSS_EVERY, type Oppone
 import { createDome, advanceDome, playerOpponent, aiLeadIndex, DOME_ROUNDS, type DomeState } from "@/lib/gamebook/yellow/frontier/dome"
 import { DOME_BUDGETS, DOME_TITLES, maxUnlockedTier } from "@/lib/gamebook/yellow/frontier/domeBudgets"
 import { DOME_TIERS, type DomeTier } from "@/lib/gamebook/yellow/frontier/domeTypes"
+import { DOME_BLINDS, clampBet, domeEnergyRefund, domeJcReward } from "@/lib/gamebook/yellow/frontier/domeEconomy"
 import { Rng } from "@/lib/gamebook/yellow/battle/rng"
 
 // ZONE DE COMBAT — convertit les specs d'adversaires de la série en instances de combat.
@@ -116,7 +117,7 @@ import DaemonCreator from "./create/DaemonCreator"
 // SÉRIE elle-même (Tour/Usine: run + équipe louée ; Dôme: bracket) dans un instantané localStorage
 // dédié, repris au boot. v1 = on ne reprend PAS le combat de vague en cours (on retombe au début de
 // la vague courante via l'effet de lancement) — bien plus sûr. Fail-safe total comme #8.
-type DomeSnap = { state: DomeState; rule: LevelRule; tier: DomeTier; seed: number; jc: number }
+type DomeSnap = { state: DomeState; rule: LevelRule; tier: DomeTier; bet: number; seed: number; jc: number }
 interface FrontierSnap {
     v: 1
     ts: number
@@ -166,6 +167,7 @@ function readFrontierSnap(): FrontierSnap | null {
         const o = JSON.parse(raw) as FrontierSnap
         if (o.v !== 1) { clearFrontierSnap(); return null }
         if (o.dome && !DOME_TIERS.includes(o.dome.tier)) o.dome.tier = "OR" // rétro-compat : vieux snap Dôme sans tier
+        if (o.dome && typeof o.dome.bet !== "number") o.dome.bet = 0 // rétro-compat : vieux snap Dôme sans mise
         if (typeof o.ts === "number" && Date.now() - o.ts > FRONTIER_LS_MAX_AGE_MS) { clearFrontierSnap(); return null }
         if (!frontierActive(o.run, o.dome) || !frontierSpeciesOk(o)) { clearFrontierSnap(); return null }
         return o
@@ -233,7 +235,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [usineDraft, setUsineDraft] = useState<{ levelRule: LevelRule; pool: RentalCandidate[]; picks: string[] } | null>(null)
     const [usineCursor, setUsineCursor] = useState(0) // carousel : fiche du Daemon de location affichée
     // DÔME (bracket de 8, état local éphémère) : state du tournoi + règle + graine + JC cumulés.
-    const [dome, setDome] = useState<{ state: DomeState; rule: LevelRule; tier: DomeTier; seed: number; jc: number } | null>(null)
+    const [dome, setDome] = useState<{ state: DomeState; rule: LevelRule; tier: DomeTier; bet: number; seed: number; jc: number } | null>(null)
+    const [domeSetup, setDomeSetup] = useState<{ tier: DomeTier; bet: number } | null>(null) // écran de MISE avant lancement
     const [ticketOpen, setTicketOpen] = useState(false) // ticket roulette quotidien (1re connexion du jour)
     const [rouletteOpen, setRouletteOpen] = useState(false) // roulette européenne SOLO (bêta, à côté du casino)
     const [rouletteMpOpen, setRouletteMpOpen] = useState(false) // roulette européenne MULTIJOUEUR (Phase 4)
@@ -1024,19 +1027,22 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             const won = frontierResult.won
             const rng = new Rng((dome.seed ^ ((dome.state.round + 1) * 0x9e3779b1)) >>> 0)
             const next = advanceDome(dome.state, rng, won)
-            const base = JC_PER_WIN[dome.rule] ?? JC_PER_WIN.L50
-            // JC : base par manche gagnée ; la FINALE (championnat) compte comme un boss (×5).
-            const jc = dome.jc + (won ? (next.status === "won" ? base * JC_BOSS_MULT : base) : 0)
             if (next.status === "active") {
-                setDome({ ...dome, state: next, jc }) // manche suivante : on REPASSE par l'intro (bracket + adversaire)
+                setDome({ ...dome, state: next }) // manche suivante : on REPASSE par l'intro (bracket + adversaire)
                 setDomePause(true)
             } else {
-                const roundsWon = won ? DOME_ROUNDS : dome.state.round // éliminé au round R = R manches gagnées
-                if (next.status === "won") { recordDomeChampionship(); persistYellowSave() } // titre gagné → débloque le tier suivant + palmarès
-                postRecordRun({ mode: "DOME", streak: Math.max(0, roundsWon), jcEarned: jc })
+                // Classement final dans le bracket de 8 : 1er (titre) / 2e (perd la finale) / demi (round 1) / quart (round 0).
+                const placement: 1 | 2 | 3 | 4 = next.status === "won" ? 1 : (dome.state.round === 2 ? 2 : dome.state.round === 1 ? 3 : 4)
+                const refund = domeEnergyRefund(dome.bet, placement) // ≤ mise (faucet-safe)
+                const jc = domeJcReward(dome.bet, dome.tier, placement) // Jetons ∝ mise
+                if (refund > 0) grantReps(refund)
+                if (next.status === "won") recordDomeChampionship() // titre → débloque le tier suivant + palmarès
+                persistYellowSave()
+                const roundsWon = won ? DOME_ROUNDS : dome.state.round
+                postRecordRun({ mode: "DOME", streak: Math.max(0, roundsWon), jcEarned: jc }) // crédite le JC (serveur)
                 setToast(next.status === "won"
-                    ? `🏆 DÔME REMPORTÉ — titre ${DOME_TITLES[dome.tier]} ! ${jc} JC · ${getPlayer().domeChampionships} titre(s)`
-                    : `🏆 Dôme — éliminé en ${["quart", "demi", "finale"][dome.state.round] ?? "manche"}. ${jc} JC enregistrés.`)
+                    ? `🏆 DÔME REMPORTÉ — titre ${DOME_TITLES[dome.tier]} ! +${jc} 🪙 · ${refund} ⚡ rendus · ${getPlayer().domeChampionships} titre(s)`
+                    : `🏆 Dôme — ${["quart", "demi", "finale"][dome.state.round] ?? "manche"} : +${jc} 🪙 · ${refund} ⚡ rendus.`)
                 setDome(null)
                 setDomePause(false)
             }
@@ -1979,8 +1985,46 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 const champs = player.domeChampionships ?? 0
                 const maxRank = DOME_TIERS.indexOf(maxUnlockedTier(champs))
                 const unlocked = DOME_TIERS.slice(0, maxRank + 1)
+                const box: React.CSSProperties = { position: "absolute", left: "50%", top: 16, transform: "translateX(-50%)", zIndex: 60, background: "#1a1a22ee", color: "#fff", border: "2px solid #f1c40f", borderRadius: 12, padding: "10px 14px", textAlign: "center", maxWidth: 340 }
+                // ÉTAPE 2 — MISE (buy-in poker) pour le tier choisi.
+                if (domeSetup) {
+                    const bud = DOME_BUDGETS[domeSetup.tier]
+                    const bl = DOME_BLINDS[domeSetup.tier]
+                    const avail = Math.floor(player.reps)
+                    const sliderMax = Math.max(bl.min, Math.min(bl.max, avail))
+                    const staked = clampBet(domeSetup.bet, domeSetup.tier, avail)
+                    const canPlay = staked > 0
+                    return (
+                        <div style={box}>
+                            <div style={{ fontWeight: 800, marginBottom: 3 }}>{DOME_TITLES[domeSetup.tier]} · Niv {bud.level}</div>
+                            <div style={{ fontSize: 10, opacity: 0.8, marginBottom: 6 }}>Mise libre (buy-in) : tu la récupères selon ton classement (≤100 %, jamais de profit). Le vrai gain = titre + Jetons.</div>
+                            <div style={{ fontSize: 13, fontWeight: 800, color: "#ffe36b" }}>Mise : {domeSetup.bet} ⚡</div>
+                            <input type="range" min={bl.min} max={sliderMax} value={Math.min(domeSetup.bet, sliderMax)} onChange={(e) => setDomeSetup({ tier: domeSetup.tier, bet: Number(e.target.value) })} style={{ width: "90%", accentColor: "#f1c40f", margin: "4px 0" }} />
+                            <div style={{ fontSize: 9.5, opacity: 0.75, marginBottom: 6 }}>Bourse : {avail} ⚡ · blinds {bl.min}–{bl.max}<br />Si 1er : <b>+{domeJcReward(staked, domeSetup.tier, 1)} 🪙</b> · {domeEnergyRefund(staked, 1)} ⚡ rendus (2e 70 %, demi 50 %, quart 25 %)</div>
+                            <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
+                                <button onClick={() => setDomeSetup(null)} style={{ background: "rgba(255,255,255,.15)", color: "#fff", border: "none", borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 11 }}>← retour</button>
+                                <button disabled={!canPlay} onClick={() => {
+                                    const finalBet = clampBet(domeSetup.bet, domeSetup.tier, Math.floor(getPlayer().reps))
+                                    if (finalBet <= 0) return
+                                    spendReps(finalBet) // BUY-IN : débit de la mise (une seule fois)
+                                    const lvl = bud.level
+                                    const seed = Math.floor(Math.random() * 1e9)
+                                    const rule: LevelRule = lvl <= 50 ? "L50" : "L100"
+                                    const playerTeam = getPlayer().team.map((m) => ({ speciesId: m.speciesId, level: lvl }))
+                                    setDome({ state: createDome(new Rng(seed), { level: lvl, streak: bud.streak, playerTeam }), rule, tier: domeSetup.tier, bet: finalBet, seed, jc: 0 })
+                                    setDomeSetup(null)
+                                    setDomePause(true)
+                                    persistYellowSave()
+                                }} style={{ background: canPlay ? "#f1c40f" : "#7a6a2a", color: "#1a1a22", fontWeight: 800, border: "none", borderRadius: 8, padding: "6px 12px", cursor: canPlay ? "pointer" : "default", fontSize: 12 }}>
+                                    {canPlay ? `⚔️ Lancer (−${staked} ⚡)` : "Pas assez d'énergie"}
+                                </button>
+                            </div>
+                        </div>
+                    )
+                }
+                // ÉTAPE 1 — choix du TIER.
                 return (
-                    <div style={{ position: "absolute", left: "50%", top: 16, transform: "translateX(-50%)", zIndex: 60, background: "#1a1a22ee", color: "#fff", border: "2px solid #f1c40f", borderRadius: 12, padding: "10px 14px", textAlign: "center", maxWidth: 340 }}>
+                    <div style={box}>
                         <div style={{ fontWeight: 800, marginBottom: 3 }}>🏆 DÔME DE COMBAT</div>
                         <div style={{ fontSize: 10, opacity: 0.8, marginBottom: 6 }}>Palmarès : <b>{champs}</b> titre{champs > 1 ? "s" : ""} · rang max <b>{DOME_TITLES[maxUnlockedTier(champs)]}</b></div>
                         <div style={{ fontSize: 10, opacity: 0.8, marginBottom: 8 }}>Tournoi <b>6v6</b>, 3 manches, soin complet entre chaque. Gagne un tier pour débloquer le suivant. Choisis :</div>
@@ -1988,14 +2032,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             {unlocked.map((tier) => {
                                 const bud = DOME_BUDGETS[tier]
                                 return (
-                                    <button key={tier} onClick={() => {
-                                        const lvl = bud.level
-                                        const seed = Math.floor(Math.random() * 1e9)
-                                        const rule: LevelRule = lvl <= 50 ? "L50" : "L100"
-                                        const playerTeam = getPlayer().team.map((m) => ({ speciesId: m.speciesId, level: lvl }))
-                                        setDome({ state: createDome(new Rng(seed), { level: lvl, streak: bud.streak, playerTeam }), rule, tier, seed, jc: 0 })
-                                        setDomePause(true) // montre le bracket + le 1er adversaire avant de lancer
-                                    }} style={{ background: "#f1c40f", color: "#1a1a22", fontWeight: 800, border: "none", borderRadius: 8, padding: "5px 8px", cursor: "pointer", fontSize: 11, lineHeight: 1.15 }}>
+                                    <button key={tier} onClick={() => setDomeSetup({ tier, bet: DOME_BLINDS[tier].min })} style={{ background: "#f1c40f", color: "#1a1a22", fontWeight: 800, border: "none", borderRadius: 8, padding: "5px 8px", cursor: "pointer", fontSize: 11, lineHeight: 1.15 }}>
                                         {DOME_TITLES[tier]}<br /><span style={{ fontSize: 8, opacity: 0.7 }}>Niv {bud.level}</span>
                                     </button>
                                 )
@@ -2042,7 +2079,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {/* HUD compact (toujours visible pendant un Dôme actif) */}
             {dome && dome.state.status === "active" && (
                 <div style={{ position: "absolute", left: 8, top: 8, zIndex: 60, background: "#1a1a22cc", color: "#fff", borderRadius: 8, padding: "4px 8px", fontSize: 11, fontWeight: 700 }}>
-                    🏆 Dôme · {(["Quart", "Demi", "Finale"][dome.state.round]) ?? `Manche ${dome.state.round + 1}`} ({dome.state.round + 1}/{DOME_ROUNDS}) · {dome.jc} JC
+                    🏆 Dôme · {(["Quart", "Demi", "Finale"][dome.state.round]) ?? `Manche ${dome.state.round + 1}`} ({dome.state.round + 1}/{DOME_ROUNDS}) · {DOME_TITLES[dome.tier]} · mise {dome.bet}⚡
                 </div>
             )}
             {/* ÉCRAN D'INTRO avant chaque match du Dôme : bracket du round + adversaire annoncé + bouton Affronter */}
