@@ -2590,21 +2590,23 @@ export const DEX_COUNT = SPECIES_IDS.length
  *  - `runTwoOnly` (Gékraise/Ukognos/Merorem) : masqués SAUF en run 2 (`isRun2`) ou une fois possédés.
  *  - `postLeague` (créations canonisées Gavillus/Goatiny) : masquées SAUF si Champion, en run 2 (le joueur
  *    y est un ex-champion : il a forcément battu la Ligue au run 1), ou une fois possédées. */
-export function isDexHidden(sp: SpeciesData, caught: readonly string[] = [], isChampion = false, isRun2 = false, isRun3 = false, dexFullUnlock = false): boolean {
+export function isDexHidden(sp: SpeciesData, caught: readonly string[] = [], isChampion = false, isRun2 = false, isRun3 = false, dexFullUnlock = false, seen: readonly string[] = []): boolean {
     // POST-RUN 3 (fusion faite → run3Used) : le catalogue est DÉBLOQUÉ À 100% — le joueur a traversé tous les
     // tiers, plus AUCUN masquage. dexFullUnlock court-circuite tout le tiérage ci-dessous.
     if (dexFullUnlock) return false
     // DEX TIÉRÉ PAR RUN : run 1 → Daemons run 1 ; run 2 → run 1+2 ; run 3 → TOUS. Ne masque que les espèces
     // d'un tier SUPÉRIEUR et NON CAPTURÉES → pas de spoiler de ce qu'on ne peut pas encore obtenir. Une fois
     // CAPTURÉE, une espèce reste visible (POKÉDEX cumulatif : le set `caught` est global/persistant).
-    if (sp.runThreeOnly && !isRun3 && !caught.includes(sp.id)) return true    // run-3 : visible dès le run 3 (ou si capturée)
+    // « VU » débloque aussi (règle némésis) : un Daemon run-3 fieldé par l'ACE en run 2 est marqué vu (syncPokedex,
+    // non-hiddenUntilCaught) → sa lignée apparaît dès qu'on l'a AFFRONTÉ. Ce n'est plus un spoiler : on l'a vu.
+    if (sp.runThreeOnly && !isRun3 && !caught.includes(sp.id) && !seen.includes(sp.id)) return true
     if (sp.runTwoOnly && !isRun2 && !isRun3 && !caught.includes(sp.id)) return true  // run-2 : visible en run 2/3 (ou si capturée)
     if (sp.postLeague && !isChampion && !isRun2 && !isRun3 && !caught.includes(sp.id)) return true
     return false
 }
 
-export function visibleDexSpecies(caught: readonly string[] = [], isChampion = false, isRun2 = false, isRun3 = false, dexFullUnlock = false): SpeciesData[] {
-    return Object.values(SPECIES).filter((sp) => !isDexHidden(sp, caught, isChampion, isRun2, isRun3, dexFullUnlock))
+export function visibleDexSpecies(caught: readonly string[] = [], isChampion = false, isRun2 = false, isRun3 = false, dexFullUnlock = false, seen: readonly string[] = []): SpeciesData[] {
+    return Object.values(SPECIES).filter((sp) => !isDexHidden(sp, caught, isChampion, isRun2, isRun3, dexFullUnlock, seen))
 }
 
 export function speciesByDexNo(dexNo: number): SpeciesData | null {

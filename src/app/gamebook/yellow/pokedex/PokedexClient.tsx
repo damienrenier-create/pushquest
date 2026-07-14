@@ -130,7 +130,7 @@ export default function PokedexClient() {
     useEffect(() => { void loadYellowSave() }, [])
     // Les run-2 restent INVISIBLES hors run 2 ; les créations post-Ligue INVISIBLES hors Champion — sauf en
     // run 2 où toute la roster étendue est révélée (le joueur est un ex-champion). Sinon pas même une case « ??? ».
-    const entries = visibleDexSpecies(dex.caught, player.isChampion, isRun2, isRun3, player.run3Used).sort((a, b) => a.dexNo - b.dexNo)
+    const entries = visibleDexSpecies(dex.caught, player.isChampion, isRun2, isRun3, player.run3Used, dex.seen).sort((a, b) => a.dexNo - b.dexNo)
 
     return (
         <div style={S.root}>

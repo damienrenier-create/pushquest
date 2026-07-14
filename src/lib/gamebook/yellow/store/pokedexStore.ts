@@ -55,9 +55,9 @@ export function pokedexCompletion(isChampion = false, isRun2 = false, isRun3 = f
     // compteur qui « gonfle » avant l'heure. Le set `caught` est GLOBAL/persistant (grandit d'un run à l'autre),
     // mais on ne compte QUE les captures visibles dans le tier courant (une capture run-3 ne compte qu'en run 3).
     // dexFullUnlock (post-run 3) : total = catalogue COMPLET, progression mesurée sur les 100%.
-    const total = visibleDexSpecies(dex.caught, isChampion, isRun2, isRun3, dexFullUnlock).length
+    const total = visibleDexSpecies(dex.caught, isChampion, isRun2, isRun3, dexFullUnlock, dex.seen).length
     // captures comptées = celles VISIBLES dans le tier courant (une capture run-3 ne gonfle pas le compteur en run 1)
-    const caught = dex.caught.filter((id) => { const sp = getSpecies(id); return !!sp && !isDexHidden(sp, dex.caught, isChampion, isRun2, isRun3, dexFullUnlock) }).length
+    const caught = dex.caught.filter((id) => { const sp = getSpecies(id); return !!sp && !isDexHidden(sp, dex.caught, isChampion, isRun2, isRun3, dexFullUnlock, dex.seen) }).length
     return { caught, total, pct: total > 0 ? Math.round((caught / total) * 100) : 0 }
 }
 

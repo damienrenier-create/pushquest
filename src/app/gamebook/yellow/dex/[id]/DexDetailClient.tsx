@@ -69,9 +69,11 @@ export default function DexDetailClient({ id }: { id: string }) {
     // VERROU : une espèce runTwoOnly non capturée, OU une création post-Ligue tant qu'on n'est pas Champion,
     // reste MASQUÉE même par accès URL direct (/dex/merorem, /dex/mouflorage) → pas de spoiler de son
     // existence/stats/learnset avant de l'avoir débloquée.
-    const runThreeLocked = sp.runThreeOnly && !isRun3 && !dex.caught.includes(id)
-    const runTwoLocked = sp.runTwoOnly && !isRun2 && !isRun3 && !dex.caught.includes(id)
-    const postLeagueLocked = sp.postLeague && !player.isChampion && !isRun2 && !isRun3 && !dex.caught.includes(id)
+    // Verrous alignés sur isDexHidden : post-run 3 (run3Used) débloque TOUT ; « vu » débloque le run-3 (némésis
+    // affronté). Sinon on ne se révèle qu'en capturant / dans le bon run (pas de spoiler par accès URL direct).
+    const runThreeLocked = sp.runThreeOnly && !isRun3 && !player.run3Used && !dex.caught.includes(id) && !dex.seen.includes(id)
+    const runTwoLocked = sp.runTwoOnly && !isRun2 && !isRun3 && !player.run3Used && !dex.caught.includes(id)
+    const postLeagueLocked = sp.postLeague && !player.isChampion && !isRun2 && !isRun3 && !player.run3Used && !dex.caught.includes(id)
     if (runThreeLocked || runTwoLocked || postLeagueLocked) {
         return (
             <div style={S.root}>
@@ -160,7 +162,7 @@ export default function DexDetailClient({ id }: { id: string }) {
                             {chain.map((stage, i) => {
                                 // Un stade VOISIN encore scellé (runTwoOnly/postLeague non débloqué) reste « ??? » :
                                 // pas de spoiler de son nom/sprite même si on possède un autre stade de la lignée.
-                                const sealed = isDexHidden(SPECIES[stage.id], dex.caught, player.isChampion, isRun2, isRun3, player.run3Used)
+                                const sealed = isDexHidden(SPECIES[stage.id], dex.caught, player.isChampion, isRun2, isRun3, player.run3Used, dex.seen)
                                 return (
                                     <div key={stage.id} style={S.evoItem}>
                                         {i > 0 && (

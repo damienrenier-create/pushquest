@@ -56,3 +56,21 @@ describe("POST-RUN 3 (fusion faite → run3Used) — catalogue débloqué à 100
         expect(isDexHidden(getSpecies("elefer")!, [], false, false, false)).toBe(true) // toujours masqué en run 1
     })
 })
+
+describe("Némésis AFFRONTÉ — une espèce run-3 VUE se révèle (même en run 2)", () => {
+    const uzumaro = getSpecies("uzumaro")! // runThreeOnly, némésis de la lignée Guizer
+    it("uzumaro VU (dans dex.seen) → visible en run 2, même non capturé", () => {
+        // signature : isDexHidden(sp, caught, isChampion, isRun2, isRun3, dexFullUnlock, seen)
+        expect(isDexHidden(uzumaro, [], false, true, false, false, ["uzumaro"])).toBe(false) // vu → révélé
+        expect(isDexHidden(uzumaro, [], false, true, false, false, [])).toBe(true)           // pas vu → masqué
+    })
+    it("visibleDexSpecies inclut le némésis VU en run 2", () => {
+        expect(visibleDexSpecies([], false, true, false, false, ["uzumaro"]).map((s) => s.id)).toContain("uzumaro")
+        expect(visibleDexSpecies([], false, true, false, false, []).map((s) => s.id)).not.toContain("uzumaro")
+    })
+    it("ne révèle QUE l'espèce vue (les autres run-3 non vues restent masquées)", () => {
+        const vis = visibleDexSpecies([], false, true, false, false, ["uzumaro"]).map((s) => s.id)
+        expect(vis).toContain("uzumaro")
+        expect(vis).not.toContain("elefer") // une autre run-3 non vue reste cachée → pas de spoiler
+    })
+})
