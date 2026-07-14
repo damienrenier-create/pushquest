@@ -160,7 +160,7 @@ export default function DexDetailClient({ id }: { id: string }) {
                             {chain.map((stage, i) => {
                                 // Un stade VOISIN encore scellé (runTwoOnly/postLeague non débloqué) reste « ??? » :
                                 // pas de spoiler de son nom/sprite même si on possède un autre stade de la lignée.
-                                const sealed = isDexHidden(SPECIES[stage.id], dex.caught, player.isChampion, isRun2, isRun3)
+                                const sealed = isDexHidden(SPECIES[stage.id], dex.caught, player.isChampion, isRun2, isRun3, player.run3Used)
                                 return (
                                     <div key={stage.id} style={S.evoItem}>
                                         {i > 0 && (

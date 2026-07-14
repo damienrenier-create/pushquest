@@ -39,7 +39,7 @@ export default function DexClient() {
     // En run 2, toute la roster étendue (créations canonisées + exclusifs run 2) est révélée.
     const aw = useActiveWorld() // hook réactif : re-render au changement de monde
     const isRun2 = aw === "ngplus", isRun3 = aw === "run3"
-    const visible = useMemo(() => visibleDexSpecies(dex.caught, player.isChampion, isRun2, isRun3), [dex.caught, player.isChampion, isRun2, isRun3])
+    const visible = useMemo(() => visibleDexSpecies(dex.caught, player.isChampion, isRun2, isRun3, player.run3Used), [dex.caught, player.isChampion, isRun2, isRun3, player.run3Used])
     const entries = useMemo(() => {
         const q = query.trim().toLowerCase()
         return visible
