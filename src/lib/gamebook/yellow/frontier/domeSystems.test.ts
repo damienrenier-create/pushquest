@@ -18,10 +18,9 @@ describe("Dôme — budgets & escalade", () => {
     it("maxUnlockedTier : déblocage par titres", () => {
         expect(maxUnlockedTier(0)).toBe("BRONZE")
         expect(maxUnlockedTier(1)).toBe("ARGENT")
-        expect(maxUnlockedTier(2)).toBe("ARGENT")
-        expect(maxUnlockedTier(3)).toBe("OR")
-        expect(maxUnlockedTier(6)).toBe("DIAMANT")
-        expect(maxUnlockedTier(10)).toBe("MAITRE")
+        expect(maxUnlockedTier(2)).toBe("OR")
+        expect(maxUnlockedTier(3)).toBe("DIAMANT")
+        expect(maxUnlockedTier(4)).toBe("MAITRE")
         expect(maxUnlockedTier(999)).toBe("MAITRE")
     })
 

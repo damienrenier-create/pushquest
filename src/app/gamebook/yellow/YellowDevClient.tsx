@@ -1045,12 +1045,17 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 // `force` : rembourse AUSSI en run3 (symétrique au débit spendReps qui, lui, n'a pas de garde run3).
                 // Faucet-safe garanti (refund ≤ mise déjà débitée). On affiche le montant RÉELLEMENT crédité.
                 const credited = refund > 0 ? grantReps(refund, true) : 0
-                if (next.status === "won") recordDomeChampionship() // titre → débloque le tier suivant + palmarès
+                // Progression (débloque le tier suivant) UNIQUEMENT en gagnant à SON tier-frontière (le + haut débloqué) :
+                // rejouer un tier déjà maîtrisé rapporte JC/⚡ mais AUCUN nouveau titre (gate par compétence, pas par grind).
+                const atFrontier = dome.tier === maxUnlockedTier(getPlayer().domeChampionships)
+                if (next.status === "won" && atFrontier) recordDomeChampionship()
                 persistYellowSave()
                 const roundsWon = won ? DOME_ROUNDS : dome.state.round
                 postRecordRun({ mode: "DOME", streak: Math.max(0, roundsWon), jcEarned: jc }) // crédite le JC (serveur)
                 setToast(next.status === "won"
-                    ? `🏆 DÔME REMPORTÉ — titre ${DOME_TITLES[dome.tier]} ! +${jc} 🪙 · ${credited} ⚡ rendus · ${getPlayer().domeChampionships} titre(s)`
+                    ? (atFrontier
+                        ? `🏆 DÔME REMPORTÉ — nouveau titre ${DOME_TITLES[dome.tier]} ! +${jc} 🪙 · ${credited} ⚡ · ${getPlayer().domeChampionships} tiers vaincus`
+                        : `🏆 ${DOME_TITLES[dome.tier]} remporté ! +${jc} 🪙 · ${credited} ⚡ (déjà maîtrisé — pas de nouveau titre)`)
                     : `🏆 Dôme — ${["quart", "demi", "finale"][dome.state.round] ?? "manche"} : +${jc} 🪙 · ${credited} ⚡ rendus.`)
                 setDome(null)
                 setDomePause(false)
@@ -1996,7 +2001,6 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {!battle && !dome && mapPlayer.mapId === "yellow_combat_dome" && !dialogue && player.team.length > 0 && (() => {
                 const champs = player.domeChampionships ?? 0
                 const maxRank = DOME_TIERS.indexOf(maxUnlockedTier(champs))
-                const unlocked = DOME_TIERS.slice(0, maxRank + 1)
                 const box: React.CSSProperties = { position: "absolute", left: "50%", top: 16, transform: "translateX(-50%)", zIndex: 60, background: "#1a1a22ee", color: "#fff", border: "2px solid #f1c40f", borderRadius: 12, padding: "10px 14px", textAlign: "center", maxWidth: 340 }
                 // ÉTAPE 2 — MISE (buy-in poker) pour le tier choisi.
                 if (domeSetup) {
@@ -2012,7 +2016,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             <div style={{ fontSize: 10, opacity: 0.8, marginBottom: 6 }}>Mise libre (buy-in) : tu la récupères selon ton classement (≤100 %, jamais de profit). Le vrai gain = titre + Jetons.</div>
                             <div style={{ fontSize: 13, fontWeight: 800, color: "#ffe36b" }}>Mise : {domeSetup.bet} ⚡</div>
                             <input type="range" min={bl.min} max={sliderMax} value={Math.min(domeSetup.bet, sliderMax)} onChange={(e) => setDomeSetup({ tier: domeSetup.tier, bet: Number(e.target.value) })} style={{ width: "90%", accentColor: "#f1c40f", margin: "4px 0" }} />
-                            <div style={{ fontSize: 9.5, opacity: 0.75, marginBottom: 6 }}>Bourse : {avail} ⚡ · blinds {bl.min}–{bl.max}<br />Si 1er : <b>+{domeJcReward(staked, domeSetup.tier, 1)} 🪙</b> · {domeEnergyRefund(staked, 1)} ⚡ rendus (2e 70 %, demi 50 %, quart 25 %)</div>
+                            <div style={{ fontSize: 9.5, opacity: 0.82, margin: "2px 0 8px", lineHeight: 1.55 }}>
+                                Bourse {avail} ⚡ · blinds {bl.min}–{bl.max} · <span style={{ opacity: 0.7 }}>gains 🪙/⚡ rendus</span><br />
+                                {([["🥇 1er", 1], ["🥈 2e", 2], ["demi", 3], ["quart", 4]] as [string, 1 | 2 | 3 | 4][]).map(([lbl, p]) => (
+                                    <span key={p} style={{ display: "inline-block", marginRight: 9 }}>{lbl} <b style={{ color: "#ffe36b" }}>{domeJcReward(staked, domeSetup.tier, p)}🪙</b>/<span style={{ color: "#8fd8ff" }}>{domeEnergyRefund(staked, p)}⚡</span></span>
+                                ))}
+                            </div>
                             <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
                                 <button onClick={() => setDomeSetup(null)} style={{ background: "rgba(255,255,255,.15)", color: "#fff", border: "none", borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 11 }}>← retour</button>
                                 <button disabled={!canPlay} onClick={() => {
@@ -2041,14 +2050,16 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 return (
                     <div style={box}>
                         <div style={{ fontWeight: 800, marginBottom: 3 }}>🏆 DÔME DE COMBAT</div>
-                        <div style={{ fontSize: 10, opacity: 0.8, marginBottom: 6 }}>Palmarès : <b>{champs}</b> titre{champs > 1 ? "s" : ""} · rang max <b>{DOME_TITLES[maxUnlockedTier(champs)]}</b></div>
-                        <div style={{ fontSize: 10, opacity: 0.8, marginBottom: 8 }}>Tournoi <b>6v6</b>, 3 manches, soin complet entre chaque. Gagne un tier pour débloquer le suivant. Choisis :</div>
+                        <div style={{ fontSize: 10, opacity: 0.8, marginBottom: 6 }}>Palmarès : <b>{champs}</b> tier{champs > 1 ? "s" : ""} vaincu{champs > 1 ? "s" : ""} · rang max <b>{DOME_TITLES[maxUnlockedTier(champs)]}</b></div>
+                        <div style={{ fontSize: 10, opacity: 0.8, marginBottom: 8 }}>Tournoi <b>6v6</b>, 3 manches, soin complet entre chaque. Bats un tier pour débloquer le suivant :</div>
                         <div style={{ display: "flex", gap: 5, justifyContent: "center", flexWrap: "wrap" }}>
-                            {unlocked.map((tier) => {
+                            {DOME_TIERS.map((tier, i) => {
                                 const bud = DOME_BUDGETS[tier]
+                                const locked = i > maxRank
                                 return (
-                                    <button key={tier} onClick={() => { domeLaunchingRef.current = false; setDomeSetup({ tier, bet: DOME_BLINDS[tier].min }) }} style={{ background: "#f1c40f", color: "#1a1a22", fontWeight: 800, border: "none", borderRadius: 8, padding: "5px 8px", cursor: "pointer", fontSize: 11, lineHeight: 1.15 }}>
-                                        {DOME_TITLES[tier]}<br /><span style={{ fontSize: 8, opacity: 0.7 }}>Niv {bud.level}</span>
+                                    <button key={tier} disabled={locked} onClick={() => { domeLaunchingRef.current = false; setDomeSetup({ tier, bet: DOME_BLINDS[tier].min }) }}
+                                        style={{ background: locked ? "#332e4a" : "#f1c40f", color: locked ? "#8f88b5" : "#1a1a22", fontWeight: 800, border: "none", borderRadius: 8, padding: "5px 8px", cursor: locked ? "not-allowed" : "pointer", fontSize: 11, lineHeight: 1.15, opacity: locked ? 0.7 : 1 }}>
+                                        {locked ? "🔒 " : ""}{DOME_TITLES[tier]}<br /><span style={{ fontSize: 8, opacity: 0.7 }}>{locked ? `bats ${DOME_TITLES[DOME_TIERS[maxRank]]}` : `Niv ${bud.level}`}</span>
                                     </button>
                                 )
                             })}
@@ -2105,7 +2116,20 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         <DomeBracket state={dome.state} />
                         <div style={{ fontSize: 12, margin: "2px 0 4px" }}>{opp ? <>Ton adversaire : <b style={{ color: "#f1c40f" }}>{opp.name}</b>{opp.epithet ? <span style={{ opacity: 0.7 }}> — « {opp.epithet} »</span> : null}</> : "En attente…"}</div>
                         {opp?.taunt && <div style={{ fontSize: 11, fontStyle: "italic", opacity: 0.75, margin: "0 0 8px", lineHeight: 1.4 }}>« {opp.taunt} »</div>}
-                        <button onClick={() => setDomePause(false)} style={{ background: "#f1c40f", color: "#1a1a22", fontWeight: 800, border: "none", borderRadius: 8, padding: "7px 16px", cursor: "pointer" }}>⚔️ Affronter</button>
+                        <div style={{ display: "flex", gap: 8, justifyContent: "center", alignItems: "center" }}>
+                            <button onClick={() => setDomePause(false)} style={{ background: "#f1c40f", color: "#1a1a22", fontWeight: 800, border: "none", borderRadius: 8, padding: "7px 16px", cursor: "pointer" }}>⚔️ Affronter</button>
+                            <button onClick={() => {
+                                if (!window.confirm("Abandonner le tournoi ? Tu récupères ta mise selon ta place ACTUELLE (pas de titre).")) return
+                                const p = domeFinalPlacement(false, dome.state.round) // forfait = éliminé à ce round
+                                const refundF = domeEnergyRefund(dome.bet, p)
+                                const credited = refundF > 0 ? grantReps(refundF, true) : 0
+                                const jcF = domeJcReward(dome.bet, dome.tier, p)
+                                persistYellowSave()
+                                postRecordRun({ mode: "DOME", streak: dome.state.round, jcEarned: jcF })
+                                setToast(`🏳️ Dôme abandonné (${["quart", "demi", "finale"][dome.state.round] ?? "manche"}) : +${jcF} 🪙 · ${credited} ⚡ rendus.`)
+                                setDome(null); setDomePause(false)
+                            }} style={{ background: "rgba(255,255,255,.12)", color: "#e6e0ff", fontWeight: 700, border: "1px solid rgba(255,255,255,.2)", borderRadius: 8, padding: "7px 12px", cursor: "pointer", fontSize: 12 }}>🏳️ Abandonner</button>
+                        </div>
                     </div>
                 )
             })()}
