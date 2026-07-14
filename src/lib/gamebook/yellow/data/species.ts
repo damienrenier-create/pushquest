@@ -2494,6 +2494,60 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "Esprit sylvestre gris et éthéré, couronné de fleurs et de baies, aux yeux luisants. Rare et cryptique, il flotte en silence… puis siphonne la puissance de quiconque ose se renforcer devant lui.",
         sprite: "/yellow/sprites/dex/wistree.png",
     },
+
+    // ═══════════════ LIGNE EAU/GLACE — Guizer → Dalugazer → Moby D (dexNo 165-167, run 3) ═══════════════
+    // CANON d'une CRÉATION de joueur (Task1, post-Ligue) : béluga kawaï → orque albinos ailée « Moby Dick ».
+    // « Ce sont SES Daemons » → TOUT porté FIDÈLEMENT du créateur : stats (BST 200/301/442), learnset PARTAGÉ
+    // (identique aux 3 stades, comme buildCustomSpecies), éclosion tardive (courbe `slow`, évo 22/40) et talent
+    // caché « zèle » (STAB ×1,55). Attaquant SPÉCIAL : les 2 STAB (Eau+Glace) sont spéciaux (SpA 132). Météores/
+    // Dard-Nuée sont physiques (off-stat) mais ce sont ses choix — conservés tels quels. Run 3 + Zone de Combat.
+    guizer: {
+        id: "guizer", dexNo: 165, name: "Guizer", types: ["EAU", "GLACE"],
+        baseStats: { hp: 41, atk: 32, def: 36, spe: 32, spc: 59 }, // BST 200
+        learnset: [
+            { level: 5, moveId: "pistolet_a_o" }, { level: 5, moveId: "hurlement" },
+            { level: 12, moveId: "jet_de_sable" }, { level: 18, moveId: "dard_nuee" },
+            { level: 24, moveId: "coup_d_givre" }, { level: 30, moveId: "onde_folie" },
+            { level: 36, moveId: "meteores" }, { level: 42, moveId: "deferlante" },
+            { level: 48, moveId: "hydrocanon" }, { level: 54, moveId: "souffle_polaire" },
+        ],
+        evolution: { toId: "dalugazer", method: { kind: "LEVEL", level: 22 } },
+        catchRate: 45, baseExp: 90, rarity: "RARE", growthRate: "slow", secretTalent: "zele",
+        role: "Eau/Glace — attaquant spécial (éclosion tardive)",
+        description: "Un petit béluga blanc hyper kawaï. — Colérique et rancunier",
+        sprite: "/yellow/sprites/dex/guizer.png",
+    },
+    dalugazer: {
+        id: "dalugazer", dexNo: 166, name: "Dalugazer", types: ["EAU", "GLACE"],
+        baseStats: { hp: 61, atk: 48, def: 54, spe: 48, spc: 90 }, // BST 301
+        learnset: [
+            { level: 5, moveId: "pistolet_a_o" }, { level: 5, moveId: "hurlement" },
+            { level: 12, moveId: "jet_de_sable" }, { level: 18, moveId: "dard_nuee" },
+            { level: 24, moveId: "coup_d_givre" }, { level: 30, moveId: "onde_folie" },
+            { level: 36, moveId: "meteores" }, { level: 42, moveId: "deferlante" },
+            { level: 48, moveId: "hydrocanon" }, { level: 54, moveId: "souffle_polaire" },
+        ],
+        evolution: { toId: "mobyd", method: { kind: "LEVEL", level: 40 } },
+        catchRate: 45, baseExp: 135, rarity: "RARE", growthRate: "slow", secretTalent: "zele",
+        role: "Eau/Glace — attaquant spécial",
+        description: "Un petit béluga blanc hyper kawaï. — Colérique et rancunier",
+        sprite: "/yellow/sprites/dex/dalugazer.png",
+    },
+    mobyd: {
+        id: "mobyd", dexNo: 167, name: "Moby D", types: ["EAU", "GLACE"],
+        baseStats: { hp: 90, atk: 70, def: 80, spe: 70, spc: 132 }, // BST 442 — attaquant spécial (STAB Eau+Glace = spé)
+        learnset: [
+            { level: 5, moveId: "pistolet_a_o" }, { level: 5, moveId: "hurlement" },
+            { level: 12, moveId: "jet_de_sable" }, { level: 18, moveId: "dard_nuee" },
+            { level: 24, moveId: "coup_d_givre" }, { level: 30, moveId: "onde_folie" },
+            { level: 36, moveId: "meteores" }, { level: 42, moveId: "deferlante" },
+            { level: 48, moveId: "hydrocanon" }, { level: 54, moveId: "souffle_polaire" },
+        ],
+        catchRate: 45, baseExp: 199, rarity: "RARE", growthRate: "slow", secretTalent: "zele",
+        role: "Eau/Glace — attaquant spécial (aura mythique)",
+        description: "Une orque albinos ailée et menaçante, inspirée de Moby Dick. Son aura dégage quelque chose d'oppressant et de mythique. — Colérique et rancunier",
+        sprite: "/yellow/sprites/dex/mobyd.png",
+    },
 }
 
 // ── REGISTRE RUNTIME des Daemons CUSTOM (créés par les joueurs, post-Ligue). Fusionné à la LECTURE seulement :
@@ -2517,7 +2571,8 @@ export function getSpecies(id: string): SpeciesData | null {
 // le flag dans 10 littéraux. (Le POKÉDEX reste cumulatif — cf. isDexHidden / le caract. global des captures.)
 for (const id of ["magnetor", "elefer", "barrisfer", "colosfer", "cornaive", "astracorne", "lunarque", "coccipoing", "coccombat", "coccimperatrice",
     "hypnoppo", "teleppo", "omnhippo", "karmaki",           // lignée Centrale Psy run 3 (Gékosmic a le flag inline)
-    "otama", "gamaruto", "uzumaro", "wistree"]) {           // Maison Combat (grenouilles) + Grotte (Wistree) run 3
+    "otama", "gamaruto", "uzumaro", "wistree",              // Maison Combat (grenouilles) + Grotte (Wistree) run 3
+    "guizer", "dalugazer", "mobyd"]) {                      // création canonisée (Task1) — Grotte/Route Nord run 3
     if (SPECIES[id]) SPECIES[id].runThreeOnly = true
 }
 
