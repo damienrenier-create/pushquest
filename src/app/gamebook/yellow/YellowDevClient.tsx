@@ -244,6 +244,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [dome, setDome] = useState<{ state: DomeState; rule: LevelRule; tier: DomeTier; bet: number; seed: number; jc: number } | null>(null)
     const [domeSetup, setDomeSetup] = useState<{ tier: DomeTier; bet: number } | null>(null) // écran de MISE avant lancement
     const domeLaunchingRef = useRef(false) // anti double-débit de la mise (double-tap mobile)
+    // Quitter la map du Dôme (marcher pour sortir) réinitialise l'écran de mise → on repart du choix de tier au retour.
+    useEffect(() => {
+        if (mapPlayer.mapId !== "yellow_combat_dome" && domeSetup) { setDomeSetup(null); domeLaunchingRef.current = false }
+    }, [mapPlayer.mapId, domeSetup])
     const [ticketOpen, setTicketOpen] = useState(false) // ticket roulette quotidien (1re connexion du jour)
     const [rouletteOpen, setRouletteOpen] = useState(false) // roulette européenne SOLO (bêta, à côté du casino)
     const [rouletteMpOpen, setRouletteMpOpen] = useState(false) // roulette européenne MULTIJOUEUR (Phase 4)
@@ -1048,12 +1052,14 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 // Progression (débloque le tier suivant) UNIQUEMENT en gagnant à SON tier-frontière (le + haut débloqué) :
                 // rejouer un tier déjà maîtrisé rapporte JC/⚡ mais AUCUN nouveau titre (gate par compétence, pas par grind).
                 const atFrontier = dome.tier === maxUnlockedTier(getPlayer().domeChampionships)
-                if (next.status === "won" && atFrontier) recordDomeChampionship()
+                // Nouveau titre : à son tier-frontière ET seulement tant que tous les tiers ne sont pas déjà vaincus (Maître = plafond).
+                const gainedTitle = next.status === "won" && atFrontier && getPlayer().domeChampionships < DOME_TIERS.length
+                if (gainedTitle) recordDomeChampionship()
                 persistYellowSave()
                 const roundsWon = won ? DOME_ROUNDS : dome.state.round
                 postRecordRun({ mode: "DOME", streak: Math.max(0, roundsWon), jcEarned: jc }) // crédite le JC (serveur)
                 setToast(next.status === "won"
-                    ? (atFrontier
+                    ? (gainedTitle
                         ? `🏆 DÔME REMPORTÉ — nouveau titre ${DOME_TITLES[dome.tier]} ! +${jc} 🪙 · ${credited} ⚡ · ${getPlayer().domeChampionships} tiers vaincus`
                         : `🏆 ${DOME_TITLES[dome.tier]} remporté ! +${jc} 🪙 · ${credited} ⚡ (déjà maîtrisé — pas de nouveau titre)`)
                     : `🏆 Dôme — ${["quart", "demi", "finale"][dome.state.round] ?? "manche"} : +${jc} 🪙 · ${credited} ⚡ rendus.`)
@@ -2014,7 +2020,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         <div style={box}>
                             <div style={{ fontWeight: 800, marginBottom: 3 }}>{DOME_TITLES[domeSetup.tier]} · Niv {bud.level}</div>
                             <div style={{ fontSize: 10, opacity: 0.8, marginBottom: 6 }}>Mise libre (buy-in) : tu la récupères selon ton classement (≤100 %, jamais de profit). Le vrai gain = titre + Jetons.</div>
-                            <div style={{ fontSize: 13, fontWeight: 800, color: "#ffe36b" }}>Mise : {domeSetup.bet} ⚡</div>
+                            <div style={{ fontSize: 13, fontWeight: 800, color: "#ffe36b" }}>{canPlay ? `Mise : ${staked} ⚡` : "Bourse insuffisante pour ce tier"}</div>
                             <input type="range" min={bl.min} max={sliderMax} value={Math.min(domeSetup.bet, sliderMax)} onChange={(e) => setDomeSetup({ tier: domeSetup.tier, bet: Number(e.target.value) })} style={{ width: "90%", accentColor: "#f1c40f", margin: "4px 0" }} />
                             <div style={{ fontSize: 9.5, opacity: 0.82, margin: "2px 0 8px", lineHeight: 1.55 }}>
                                 Bourse {avail} ⚡ · blinds {bl.min}–{bl.max} · <span style={{ opacity: 0.7 }}>gains 🪙/⚡ rendus</span><br />
