@@ -50,8 +50,10 @@ function bumpAi(a: AiLevel): AiLevel { return AI_ORDER[Math.min(AI_ORDER.length 
 export function distributeDomeTraining(baseStats: Record<StatKey, number>, evBudget: number, saiyanBudget: number): { ev: Partial<Record<StatKey, number>>; allocated: Partial<Record<StatKey, number>> } {
     const off: StatKey = baseStats.atk >= baseStats.spc ? "atk" : "spc"
     const cap = (n: number) => Math.max(0, Math.min(252, Math.floor(n)))
-    const ev: Partial<Record<StatKey, number>> = { [off]: cap(evBudget / 2), hp: cap(evBudget / 4), def: cap(evBudget / 4) }
-    const allocated: Partial<Record<StatKey, number>> = { [off]: Math.max(0, Math.floor((saiyanBudget * 2) / 3)), hp: Math.max(0, Math.floor(saiyanBudget / 3)) }
+    // Répartition : offensif 40 % · VITESSE 30 % (évite que le joueur outspeed/revenge-kill systématiquement) · PV 20 % · Déf 10 %.
+    const ev: Partial<Record<StatKey, number>> = { [off]: cap(evBudget * 0.4), spe: cap(evBudget * 0.3), hp: cap(evBudget * 0.2), def: cap(evBudget * 0.1) }
+    const s = (f: number) => Math.max(0, Math.floor(saiyanBudget * f))
+    const allocated: Partial<Record<StatKey, number>> = { [off]: s(0.5), spe: s(0.3), hp: s(0.2) }
     return { ev, allocated }
 }
 

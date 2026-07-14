@@ -32,6 +32,7 @@ describe("Dôme — budgets & escalade", () => {
         expect(evTotal).toBeLessThanOrEqual(510)
         for (const v of Object.values(t.ev)) expect(v ?? 0).toBeLessThanOrEqual(252)
         expect(t.ev.atk ?? 0).toBeGreaterThan(0) // EV sur la stat offensive
+        expect(t.ev.spe ?? 0).toBeGreaterThan(0) // EV Vitesse (anti-outspeed)
         expect((t.allocated.atk ?? 0) + (t.allocated.hp ?? 0)).toBeGreaterThan(0) // Saiyan alloué
         const zero = distributeDomeTraining(bs, 0, 0)
         expect(Object.values(zero.ev).reduce((s, v) => s + (v ?? 0), 0)).toBe(0)
@@ -52,19 +53,19 @@ describe("Dôme — budgets & escalade", () => {
 })
 
 describe("Dôme — économie poker (faucet-safe)", () => {
-    it("sizePct : 1⚡→1 % … 500⚡→100 %, monotone", () => {
-        expect(sizePct(1)).toBeCloseTo(1, 5)
+    it("sizePct : plancher ~40 % (petite mise) → 100 % (500⚡), monotone", () => {
+        expect(sizePct(1)).toBeCloseTo(40, 5)
         expect(sizePct(500)).toBeCloseTo(100, 5)
         expect(sizePct(250)).toBeGreaterThan(sizePct(50))
     })
 
-    it("remboursement : jamais > mise (faucet-safe) ; barème 500⚡", () => {
+    it("remboursement : jamais > mise (faucet-safe) ; barème 500⚡ ; petites mises plus à 0", () => {
         expect(domeEnergyRefund(500, 1)).toBe(500) // 100 %
         expect(domeEnergyRefund(500, 2)).toBe(350) // 70 %
         expect(domeEnergyRefund(500, 3)).toBe(250) // 50 % (demi)
         expect(domeEnergyRefund(500, 4)).toBe(125) // 25 % (quart)
         expect(domeEnergyRefund(500, 0)).toBe(0)   // éliminé
-        expect(domeEnergyRefund(1, 1)).toBe(0)     // petite mise → ~0 (1 %)
+        expect(domeEnergyRefund(10, 1)).toBeGreaterThan(0) // petite mise gagnante → rend qqch (plus le piège à 0)
         // INVARIANT dur : on ne rend JAMAIS plus que la mise
         for (const bet of [1, 20, 75, 150, 300, 500, 999]) {
             for (const p of [1, 2, 3, 4] as const) expect(domeEnergyRefund(bet, p)).toBeLessThanOrEqual(bet)

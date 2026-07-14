@@ -9,7 +9,7 @@ import type { DomeTier } from "./domeTypes"
 
 /** Blinds (mise min/max en énergie) par tier — « les blinds montent avec le tier ». */
 export const DOME_BLINDS: Record<DomeTier, { min: number; max: number }> = {
-    BRONZE: { min: 1, max: 25 }, ARGENT: { min: 5, max: 75 }, OR: { min: 15, max: 150 }, DIAMANT: { min: 30, max: 300 }, MAITRE: { min: 50, max: 500 },
+    BRONZE: { min: 5, max: 25 }, ARGENT: { min: 10, max: 75 }, OR: { min: 20, max: 150 }, DIAMANT: { min: 40, max: 300 }, MAITRE: { min: 60, max: 500 },
 }
 
 /** Classement final dans le bracket de 8 : 1=1er, 2=2e, 3=demi-finaliste, 4=quart-finaliste ; 0=éliminé/forfait. */
@@ -31,10 +31,10 @@ export function clampBet(bet: number, tier: DomeTier, available: number): number
     return Math.max(min, Math.min(cap, Math.floor(bet)))
 }
 
-/** % de la mise remboursé selon sa TAILLE : 1⚡→1 % … 500⚡→100 % (linéaire, borné). Plus tu mises, plus la
- *  fraction remboursée est haute (cf. cahier des charges). */
+/** % de la mise remboursé selon sa TAILLE : ~40 % (petite mise) → 100 % (500⚡+), linéaire borné. Aplati (plancher
+ *  40 % au lieu de 1 %) pour que les petites mises ne soient plus un piège à 0 ⚡/0 JC. Modulé ensuite par le classement. */
 export function sizePct(bet: number): number {
-    return Math.max(1, Math.min(100, 1 + (99 * (Math.max(1, bet) - 1)) / 499))
+    return Math.max(40, Math.min(100, 40 + (60 * (Math.max(1, bet) - 1)) / 499))
 }
 
 const RANK_REFUND: Record<DomePlacement, number> = { 1: 1.0, 2: 0.7, 3: 0.5, 4: 0.25 }
