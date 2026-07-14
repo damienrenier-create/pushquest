@@ -156,7 +156,9 @@ export default function PokedexClient() {
                 {entries.map((sp) => {
                     const multiRun = player.ngplusUsed || player.run3Used
                     const caught = dex.caught.includes(sp.id)
-                    const seen = caught || dex.seen.includes(sp.id)
+                    // POST-RUN 3 (run3Used) : catalogue 100% RÉVÉLÉ — même les surprises hiddenUntilCaught
+                    // (Gékroc/Goshendofy/légendaires) montrent leur identité (le joueur a fini le jeu).
+                    const seen = caught || dex.seen.includes(sp.id) || player.run3Used
                     const caughtNow = multiRun && caught && (player.caughtThisRun ?? []).includes(sp.id)
                     return (
                         <button
