@@ -730,6 +730,14 @@ function dexNoFor(id: string): number {
 const slug = (s: string) => s.toLowerCase().normalize("NFD").replace(/[^a-z0-9]+/g, "").slice(0, 16) || "daemon"
 const ROMAN = ["", "", " II", " III"]
 
+/** CRÉATIONS CANONISÉES : une lignée CUSTOM emprunte les sprites de son espèce canonique → le joueur voit ENFIN
+ *  SES vrais sprites au lieu du placeholder MISSINGNO. Clé = lineageBaseId (`custom_${slug(owner)}_${slug(name)}`),
+ *  valeur = chemins de sprite PAR STADE (index 0/1/2). Ajouter une entrée quand on canonise une création. */
+export const CANONIZED_CUSTOM_SPRITES: Record<string, string[]> = {
+    // Guizer (Task1) → sprites canoniques (cf. species.ts, dexNo 165-167).
+    custom_cmq5gbo5g0000g6m_guizer: ["/yellow/sprites/dex/guizer.png", "/yellow/sprites/dex/dalugazer.png", "/yellow/sprites/dex/mobyd.png"],
+}
+
 /** Construit la LIGNÉE complète (SpeciesData[]) à partir de la spec validée. ownerId rend les ids uniques (partage Zone de Combat). */
 export function buildCustomSpecies(spec: CustomSpec, ownerId: string): SpeciesData[] {
     const cfg = BLOOMERS[spec.bloomer]
@@ -766,7 +774,7 @@ export function buildCustomSpecies(spec: CustomSpec, ownerId: string): SpeciesDa
             secretTalent: spec.secretTalent, // talent secret de la lignée → lu par le moteur (talentEffects)
             description: ((stage === spec.stages && spec.daFinal?.trim()) ? spec.daFinal.trim() : spec.da.trim())
                 + (spec.character.trim() ? ` — ${spec.character.trim()}` : ""),
-            sprite: "/yellow/sprites/dex/missingno.png", // placeholder MISSINGNO : Sartay génère le vrai sprite après la 1re création (notif Ligue)
+            sprite: CANONIZED_CUSTOM_SPRITES[baseId]?.[i] ?? "/yellow/sprites/dex/missingno.png", // canonisé → vrais sprites ; sinon placeholder MISSINGNO (jusqu'à l'ajout d'une entrée ci-dessus)
         })
         void finalBst
     }
