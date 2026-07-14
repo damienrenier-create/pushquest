@@ -46,7 +46,8 @@ export function domeEnergyRefund(bet: number, placement: DomePlacement | 0): num
     return Math.min(bet, Math.floor((bet * pct) / 100))
 }
 
-const JC_RATE: Record<DomeTier, number> = { BRONZE: 0.2, ARGENT: 0.35, OR: 0.5, DIAMANT: 0.7, MAITRE: 1.0 }
+// Taux de JC back-loadé : les petits tournois rapportent PEU (anti-farm), la vraie récolte est en haut de tableau.
+const JC_RATE: Record<DomeTier, number> = { BRONZE: 0.05, ARGENT: 0.15, OR: 0.3, DIAMANT: 0.6, MAITRE: 1.0 }
 const RANK_JC: Record<DomePlacement, number> = { 1: 1.0, 2: 0.4, 3: 0.2, 4: 0.05 }
 
 /** Jetons de Combat gagnés = mise × taux du tier × classement (le VRAI profit — plus tu mises, plus tu gagnes). */

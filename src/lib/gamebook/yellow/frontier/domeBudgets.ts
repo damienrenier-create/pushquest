@@ -22,11 +22,13 @@ export interface DomeTierBudget {
 
 /** Table des tiers (pente douce mais nette). EV plafonné à 510 (EV_TOTAL_CAP). */
 export const DOME_BUDGETS: Record<DomeTier, DomeTierBudget> = {
-    BRONZE:  { tier: "BRONZE",  level: 40,  bstBand: [300, 415], evPerMon: 0,   saiyanPerMon: 0,  aiLevel: "wild",    streak: 4,  unlockChampionships: 0 },
-    ARGENT:  { tier: "ARGENT",  level: 52,  bstBand: [360, 435], evPerMon: 128, saiyanPerMon: 6,  aiLevel: "trainer", streak: 9,  unlockChampionships: 1 },
-    OR:      { tier: "OR",      level: 68,  bstBand: [410, 465], evPerMon: 252, saiyanPerMon: 14, aiLevel: "ace",     streak: 16, unlockChampionships: 2 },
-    DIAMANT: { tier: "DIAMANT", level: 85,  bstBand: [445, 500], evPerMon: 384, saiyanPerMon: 24, aiLevel: "hof",     streak: 24, unlockChampionships: 3 },
-    MAITRE:  { tier: "MAITRE",  level: 100, bstBand: [475, 540], evPerMon: 510, saiyanPerMon: 36, aiLevel: "hof",     streak: 30, unlockChampionships: 4 },
+    // POST-LIGUE : même le tier le + FACILE démarre au NIVEAU DU MAÎTRE DE LA LIGUE (~50, jamais en dessous) ;
+    // le + DUR = Niv 100 + EV (510) & Saiyan MAX (la vraie difficulté endgame, réutilisable pour les salles 2/3).
+    BRONZE:  { tier: "BRONZE",  level: 50,  bstBand: [300, 415], evPerMon: 0,   saiyanPerMon: 0,  aiLevel: "wild",    streak: 4,  unlockChampionships: 0 },
+    ARGENT:  { tier: "ARGENT",  level: 62,  bstBand: [360, 435], evPerMon: 128, saiyanPerMon: 12, aiLevel: "trainer", streak: 9,  unlockChampionships: 1 },
+    OR:      { tier: "OR",      level: 75,  bstBand: [410, 465], evPerMon: 252, saiyanPerMon: 30, aiLevel: "ace",     streak: 16, unlockChampionships: 2 },
+    DIAMANT: { tier: "DIAMANT", level: 88,  bstBand: [445, 500], evPerMon: 384, saiyanPerMon: 54, aiLevel: "hof",     streak: 24, unlockChampionships: 3 },
+    MAITRE:  { tier: "MAITRE",  level: 100, bstBand: [475, 540], evPerMon: 510, saiyanPerMon: 80, aiLevel: "hof",     streak: 30, unlockChampionships: 4 },
 }
 
 /** Titre décerné à la victoire d'un tournoi de ce tier (palmarès). */

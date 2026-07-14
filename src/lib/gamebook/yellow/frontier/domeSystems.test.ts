@@ -72,8 +72,8 @@ describe("Dôme — économie poker (faucet-safe)", () => {
     })
 
     it("Jetons ∝ mise et tier ; classement module ; 0 si éliminé", () => {
-        expect(domeJcReward(20, "BRONZE", 1)).toBe(4)
-        expect(domeJcReward(150, "OR", 1)).toBe(75)
+        expect(domeJcReward(20, "BRONZE", 1)).toBe(1)   // back-loadé : Bronze rapporte très peu (20×0.05)
+        expect(domeJcReward(150, "OR", 1)).toBe(45)     // 150×0.3
         expect(domeJcReward(500, "MAITRE", 1)).toBe(500)
         expect(domeJcReward(500, "MAITRE", 2)).toBe(200)
         expect(domeJcReward(500, "MAITRE", 0)).toBe(0)
