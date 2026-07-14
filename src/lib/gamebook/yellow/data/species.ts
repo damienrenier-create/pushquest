@@ -2614,4 +2614,10 @@ export function speciesByDexNo(dexNo: number): SpeciesData | null {
  *  wizard) gardent leur némésis auto-généré ; seuls les starters canoniques listés ici ont un contre figé. */
 export const CANONICAL_NEMESIS: Record<string, string> = {
     gavillus: "goatiny", crocodaillus: "goatiny", alirocaillus: "goatiny",
+    // Guizer (création Task1 canonisée, EAU/GLACE) → lignée OTAMA (Otama→Gamaruto→Uzumaro, COMBAT/EAU) = le
+    // HARD-COUNTER : résiste ses 2 STAB (Eau 0,5× / Glace 0,5×) et le brise en Combat physique (×2 dans sa DÉF 80).
+    guizer: "otama", dalugazer: "otama", mobyd: "otama",
+    // Override CIBLÉ Task1 : son équipe joue encore son Guizer CUSTOM (pas le canonique) → on mappe ses ids custom
+    // pour que SON ACE field bien Uzumaro. (À terme généralisé par le protocole némésis, cf. _nemesis-architect.)
+    custom_cmq5gbo5g0000g6m_guizer_s1: "otama", custom_cmq5gbo5g0000g6m_guizer_s2: "otama", custom_cmq5gbo5g0000g6m_guizer_s3: "otama",
 }
