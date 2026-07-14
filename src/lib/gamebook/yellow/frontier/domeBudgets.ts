@@ -7,6 +7,7 @@
 import type { DomeTier } from "./domeTypes"
 import { DOME_TIERS } from "./domeTypes"
 import type { AiLevel } from "../battle/ai"
+import type { StatKey } from "../battle/types"
 
 export interface DomeTierBudget {
     tier: DomeTier
@@ -42,6 +43,17 @@ export function maxUnlockedTier(championships: number): DomeTier {
 
 const AI_ORDER: readonly AiLevel[] = ["wild", "trainer", "ace", "hof"] as const
 function bumpAi(a: AiLevel): AiLevel { return AI_ORDER[Math.min(AI_ORDER.length - 1, AI_ORDER.indexOf(a) + 1)] }
+
+/** Répartit le budget d'entraînement d'un tier sur les stats d'UN Daemon ennemi (Dôme-only) : EV vers sa
+ *  meilleure stat offensive + PV + Déf (plafond 252/stat, 510 total) ; Saiyan vers l'offensif + PV. Plus le tier
+ *  est haut, plus l'ennemi est entraîné (Bronze = nu, Maître = full). Les nombres sont dans DOME_BUDGETS (à tuner). */
+export function distributeDomeTraining(baseStats: Record<StatKey, number>, evBudget: number, saiyanBudget: number): { ev: Partial<Record<StatKey, number>>; allocated: Partial<Record<StatKey, number>> } {
+    const off: StatKey = baseStats.atk >= baseStats.spc ? "atk" : "spc"
+    const cap = (n: number) => Math.max(0, Math.min(252, Math.floor(n)))
+    const ev: Partial<Record<StatKey, number>> = { [off]: cap(evBudget / 2), hp: cap(evBudget / 4), def: cap(evBudget / 4) }
+    const allocated: Partial<Record<StatKey, number>> = { [off]: Math.max(0, Math.floor((saiyanBudget * 2) / 3)), hp: Math.max(0, Math.floor(saiyanBudget / 3)) }
+    return { ev, allocated }
+}
 
 /** Montée INTRA-bracket : durcit l'adversaire du joueur selon le round atteint (0=quart, 1=demi, 2=finale).
  *  Additif au budget du tier ; la finale relève aussi l'IA d'un cran. Appliqué au SEUL adversaire du joueur. */

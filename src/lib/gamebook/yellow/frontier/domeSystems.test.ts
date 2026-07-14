@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { DOME_BUDGETS, maxUnlockedTier, roundBudget } from "./domeBudgets"
+import { DOME_BUDGETS, maxUnlockedTier, roundBudget, distributeDomeTraining } from "./domeBudgets"
 import { DOME_BLINDS, clampBet, sizePct, domeEnergyRefund, domeJcReward } from "./domeEconomy"
 import { DOME_TIERS } from "./domeTypes"
 
@@ -23,6 +23,19 @@ describe("Dôme — budgets & escalade", () => {
         expect(maxUnlockedTier(6)).toBe("DIAMANT")
         expect(maxUnlockedTier(10)).toBe("MAITRE")
         expect(maxUnlockedTier(999)).toBe("MAITRE")
+    })
+
+    it("distributeDomeTraining : EV plafonné 252/stat & ≤510 total ; budget 0 = aucun entraînement", () => {
+        const bs = { hp: 80, atk: 120, def: 70, spe: 90, spc: 60 } // atk > spc → offensif = atk
+        const t = distributeDomeTraining(bs, 510, 36)
+        const evTotal = Object.values(t.ev).reduce((s, v) => s + (v ?? 0), 0)
+        expect(evTotal).toBeLessThanOrEqual(510)
+        for (const v of Object.values(t.ev)) expect(v ?? 0).toBeLessThanOrEqual(252)
+        expect(t.ev.atk ?? 0).toBeGreaterThan(0) // EV sur la stat offensive
+        expect((t.allocated.atk ?? 0) + (t.allocated.hp ?? 0)).toBeGreaterThan(0) // Saiyan alloué
+        const zero = distributeDomeTraining(bs, 0, 0)
+        expect(Object.values(zero.ev).reduce((s, v) => s + (v ?? 0), 0)).toBe(0)
+        expect(Object.values(zero.allocated).reduce((s, v) => s + (v ?? 0), 0)).toBe(0)
     })
 
     it("roundBudget : la finale (round 2) durcit + relève l'IA ; le quart (0) = base ; EV plafonné 510", () => {

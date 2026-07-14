@@ -71,14 +71,20 @@ import { ctRewardOptionsForTeam, opponentMoveIds } from "@/lib/gamebook/yellow/f
 import { generateRentalPool, buildDraftTeam, type RentalCandidate } from "@/lib/gamebook/yellow/frontier/factory"
 import { resolveFrontierLevel, JC_PER_WIN, JC_BOSS_MULT, BOSS_EVERY, type OpponentSpec, type LevelRule } from "@/lib/gamebook/yellow/frontier/engine"
 import { createDome, advanceDome, playerOpponent, aiLeadIndex, DOME_ROUNDS, type DomeState } from "@/lib/gamebook/yellow/frontier/dome"
-import { DOME_BUDGETS, DOME_TITLES, maxUnlockedTier } from "@/lib/gamebook/yellow/frontier/domeBudgets"
+import { DOME_BUDGETS, DOME_TITLES, maxUnlockedTier, distributeDomeTraining } from "@/lib/gamebook/yellow/frontier/domeBudgets"
 import { DOME_TIERS, type DomeTier } from "@/lib/gamebook/yellow/frontier/domeTypes"
 import { DOME_BLINDS, clampBet, domeEnergyRefund, domeJcReward } from "@/lib/gamebook/yellow/frontier/domeEconomy"
 import { Rng } from "@/lib/gamebook/yellow/battle/rng"
 
-// ZONE DE COMBAT — convertit les specs d'adversaires de la série en instances de combat.
-function buildFrontierEnemies(opponent: OpponentSpec[]) {
-    return opponent.map((o) => createMonInstance(o.speciesId, o.level, { owned: false }))
+// ZONE DE COMBAT — convertit les specs d'adversaires en instances de combat. `training` (Dôme-only) = budget
+// EV/Saiyan du tier appliqué à chaque ennemi (Tour/Usine appellent sans → coquilles nues, inchangées).
+function buildFrontierEnemies(opponent: OpponentSpec[], training?: { ev: number; saiyan: number }) {
+    return opponent.map((o) => {
+        if (!training || (training.ev <= 0 && training.saiyan <= 0)) return createMonInstance(o.speciesId, o.level, { owned: false })
+        const sp = getSpecies(o.speciesId)
+        const t = sp ? distributeDomeTraining(sp.baseStats, training.ev, training.saiyan) : { ev: {}, allocated: {} }
+        return createMonInstance(o.speciesId, o.level, { owned: false, ev: t.ev, allocated: t.allocated })
+    })
 }
 import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
@@ -1112,7 +1118,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             oppTeam = [opp.team[lead], ...opp.team.filter((_, i) => i !== lead)]
         }
         // Dôme : difficulté croissante aussi côté IA — quart = « ace », demi/finale = « hof » (la + maligne).
-        startTrainerBattle(getPlayer().team, buildFrontierEnemies(oppTeam), Math.floor(Math.random() * 1e9), { trainerId: "frontier:DOME", aiLevel: dome.state.round >= 1 ? "hof" : "ace" })
+        // EV/Saiyan des ennemis selon le tier (Bronze nu → Maître full-entraîné) — Dôme-only.
+        const domeTrain = { ev: DOME_BUDGETS[dome.tier].evPerMon, saiyan: DOME_BUDGETS[dome.tier].saiyanPerMon }
+        startTrainerBattle(getPlayer().team, buildFrontierEnemies(oppTeam, domeTrain), Math.floor(Math.random() * 1e9), { trainerId: "frontier:DOME", aiLevel: dome.state.round >= 1 ? "hof" : "ace" })
     }, [dome, domePause, battle, frontierResult, evolutions.length, dialogue, pendingLearn, newDexEntry])
 
     // ZONE DE COMBAT — INSTANTANÉ de la série (anti-abandon au refresh). On (ré)écrit à chaque
