@@ -9,9 +9,10 @@ import { Rng } from "../battle/rng"
 import { typeMultiplier } from "../battle/typeChart"
 import { SPECIES } from "../data/species"
 import { speciesAtLevel } from "../data/ace"
-import { bstOf, generateFrontierTeam, allFrontierForms, frontierEligible, bstBandForStreak, type OpponentSpec } from "./engine"
+import { bstOf, generateFrontierTeam, allFrontierForms, frontierEligible, bstBandForStreak, weakTypesOf, type OpponentSpec } from "./engine"
 import { DOME_TRAINERS } from "./domeTrainers"
 import type { DomeTrainer } from "./domeTypes"
+import type { PokeType } from "../battle/types"
 
 export const DOME_SIZE = 8
 export const DOME_ROUNDS = 3 // 8 → 4 → 2 → 1
@@ -43,11 +44,45 @@ export interface CreateDomeOpts { level: number; streak: number; playerTeam: Opp
 
 const typesOfSp = (id: string): string[] => (SPECIES[id] as unknown as { types?: string[] })?.types ?? []
 
+/** Équipe « anti-joueur » (Guigui/Light/Mools) : choisit des Daemons qui FRAPPENT les faiblesses de l'équipe
+ *  du joueur (weakTypesOf) et RÉSISTENT à ses types offensifs. Formes terminales, dans la bande de BST. Ignore
+ *  le thème (le but est de contrer). L'écart static/adaptive se joue au PILOTAGE d'IA, pas à la construction. */
+function buildCounterTeam(rng: Rng, playerTeam: OpponentSpec[], level: number, size: number, streak: number): OpponentSpec[] {
+    const [lo, hi] = bstBandForStreak(streak)
+    // Menace : combien de Daemons du joueur chaque type frappe en super-efficace.
+    const threat = new Map<string, number>()
+    for (const pm of playerTeam) for (const wt of weakTypesOf(pm.speciesId)) threat.set(wt, (threat.get(wt) ?? 0) + 1)
+    const playerAtkTypes = [...new Set(playerTeam.flatMap((pm) => typesOfSp(pm.speciesId)))]
+    const resistsPlayer = (id: string): number => {
+        let r = 0
+        const dt = typesOfSp(id)
+        for (const at of playerAtkTypes) { let m = 1; for (const d of dt) m *= typeMultiplier(at as PokeType, d as PokeType); if (m < 1) r++ }
+        return r
+    }
+    // Score de contre : frappe leurs faiblesses (offensif) ×2 + résiste à leurs attaques.
+    const counterScore = (id: string) => typesOfSp(id).reduce((s, ty) => s + (threat.get(ty) ?? 0), 0) * 2 + resistsPlayer(id)
+    // allFrontierForms filtré `terminal` (comme generateDomeTrainerTeam) → inclut les évolutions par PIERRE
+    // (pyropanthe…, absentes de formsAtLevel) ; assume des finales fortes même sous leur palier de niveau naturel
+    // (contre-équipe = finales, borné par la bande de BST). Divergence VOULUE avec les vagues génériques.
+    const terminal = (id: string) => speciesAtLevel(id, level) === id
+    let pool = allFrontierForms().filter((id) => terminal(id) && frontierEligible(id, streak) && bstOf(id) >= lo - 40 && bstOf(id) <= hi + 40)
+    if (pool.length < size) pool = allFrontierForms().filter((id) => terminal(id) && frontierEligible(id, streak))
+    // Tri par score de contre décroissant + petit bruit seedé (ne pas être 100 % optimal/prévisible).
+    const ids = pool
+        .map((id) => ({ id, s: counterScore(id) + rng.int(0, 2) }))
+        .sort((a, b) => b.s - a.s)
+        .slice(0, size)
+        .map((x) => x.id)
+    return ids.map((speciesId) => ({ speciesId, level }))
+}
+
 /** Génère l'équipe d'un dresseur du Dôme : formes FINALES au niveau, de son THÈME (hors excludeTypes), dans la
  *  bande de BST de la série, avec ses membres GARANTIS (includeSpecies) + son ACE en dernier — s'ils rentrent
  *  dans la bande (le bypass total « scriptedAce » + le gating par tier viendront en Phase 2, pour éviter les pics
  *  avant le gating). Fallback générique si pas de thème (counterPlayer/oddball) ou pool trop maigre. */
-export function generateDomeTrainerTeam(rng: Rng, t: DomeTrainer, level: number, size: number, streak: number): OpponentSpec[] {
+export function generateDomeTrainerTeam(rng: Rng, t: DomeTrainer, level: number, size: number, streak: number, playerTeam?: OpponentSpec[]): OpponentSpec[] {
+    // Dresseurs « anti-joueur » (counterPlayer : Guigui/Light/Mools) : équipe construite CONTRE la team du joueur (si connue).
+    if (t.constraint.kind === "counterPlayer" && playerTeam && playerTeam.length > 0) return buildCounterTeam(rng, playerTeam, level, size, streak)
     const [lo, hi] = bstBandForStreak(streak)
     const inBand = (id: string) => { const b = bstOf(id); return b >= lo - 40 && b <= hi + 40 }
     const inTheme = (id: string) => t.themeTypes.length === 0 || typesOfSp(id).some((ty) => (t.themeTypes as string[]).includes(ty))
@@ -65,15 +100,18 @@ export function generateDomeTrainerTeam(rng: Rng, t: DomeTrainer, level: number,
     if (pool.length < size) pool = anyOk                                   // non-banni (exclude toujours respecté)
     if (pool.length < size) return generateFrontierTeam(rng, { streak, level, size }) // ultime (ne devrait jamais arriver)
 
-    // Membres imposés présents DANS le pool (bande+thème) : garantis + ace ; l'ace est envoyé en DERNIER.
-    const wanted = [...new Set([...(t.includeSpecies ?? []), t.aceSpecies])].filter((id) => pool.includes(id))
-    const ace = pool.includes(t.aceSpecies) ? t.aceSpecies : null
+    // Membres GARANTIS (includeSpecies + ace signature) : forcés par IDENTITÉ (l'espèce existe & n'est pas d'un
+    // type banni) — ils CONTOURNENT frontierEligible/la bande (scriptedAce). Sinon les aces `exclusive` (orcaline,
+    // sylvebarbe, goshendofy, tonytony…) disparaîtraient de l'équipe. L'ace part en DERNIER ; son slot est réservé
+    // AVANT troncature → il n'est jamais coupé, même si des membres garantis saturent l'équipe.
+    const forcedExists = (id: string) => !!SPECIES[id] && !banned(id)
+    const wanted = [...new Set([...(t.includeSpecies ?? []), t.aceSpecies])].filter(forcedExists)
+    const ace = forcedExists(t.aceSpecies) ? t.aceSpecies : null
     const forcedNonAce = wanted.filter((id) => id !== ace)
-    const slots = Math.max(0, size - forcedNonAce.length - (ace ? 1 : 0))
-    const fillers = shuffle(rng, pool.filter((id) => !wanted.includes(id))).slice(0, slots)
-    const ids = [...forcedNonAce, ...fillers]
-    if (ace) ids.push(ace)
-    return ids.slice(0, size).map((speciesId) => ({ speciesId, level }))
+    const fillers = shuffle(rng, pool.filter((id) => !wanted.includes(id)))
+    const body = [...forcedNonAce, ...fillers].slice(0, size - (ace ? 1 : 0))
+    const ids = ace ? [...body, ace] : body
+    return ids.map((speciesId) => ({ speciesId, level }))
 }
 
 /** Crée un bracket : le joueur (id 0) + (size-1) IA générées, placés en ordre de bracket aléatoire (seedé). */
@@ -89,7 +127,7 @@ export function createDome(rng: Rng, opts: CreateDomeOpts): DomeState {
             name: t?.name ?? HOLO_NAMES[(i - 1) % HOLO_NAMES.length],
             trainerId: t?.id, epithet: t?.epithet, taunt: t?.taunt,
             team: t
-                ? generateDomeTrainerTeam(rng, t, opts.level, DOME_TEAM_SIZE, opts.streak)
+                ? generateDomeTrainerTeam(rng, t, opts.level, DOME_TEAM_SIZE, opts.streak, opts.playerTeam)
                 : generateFrontierTeam(rng, { streak: opts.streak, level: opts.level, size: DOME_TEAM_SIZE }),
         })
     }

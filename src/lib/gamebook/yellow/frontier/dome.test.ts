@@ -109,4 +109,30 @@ describe("Dôme — équipes thématiques par persona", () => {
             expect(a.map((m) => m.speciesId)).toEqual(b.map((m) => m.speciesId))
         }
     })
+
+    it("counterPlayer (Guigui) construit une équipe qui CONTRE le joueur", () => {
+        const guigui = DOME_TRAINERS.find((t) => t.id === "guigui")!
+        // Joueur mono-Feu → l'équipe anti-joueur doit majoritairement frapper le Feu (Eau/Roche/Sol).
+        const playerFire: Spec[] = [{ speciesId: "pyrokoss", level: 100 }, { speciesId: "loupyre", level: 100 }]
+        const team = generateDomeTrainerTeam(new Rng(3), guigui, 100, 6, 14, playerFire)
+        expect(team.length).toBe(6)
+        const antiFire = team.filter((m) => (getSpecies(m.speciesId)?.types ?? []).some((ty) => ["EAU", "ROCHE", "SOL"].includes(ty)))
+        expect(antiFire.length, "l'équipe anti-joueur devrait contrer le Feu").toBeGreaterThanOrEqual(3)
+        // déterministe même avec un playerTeam
+        const again = generateDomeTrainerTeam(new Rng(3), guigui, 100, 6, 14, playerFire)
+        expect(team.map((m) => m.speciesId)).toEqual(again.map((m) => m.speciesId))
+    })
+
+    it("les aces/membres GARANTIS (dont EXCLUSIFS, hors pool) apparaissent bien — scriptedAce honoré", () => {
+        const check = (id: string, mustInclude: string[]) => {
+            const t = DOME_TRAINERS.find((x) => x.id === id)!
+            const team = generateDomeTrainerTeam(new Rng(5), t, 100, 6, 14) // sans playerTeam → chemin thématique (force l'ace)
+            expect(team.length, id).toBe(6)
+            for (const m of mustInclude) expect(team.map((x) => x.speciesId), `${id} doit inclure ${m}`).toContain(m)
+        }
+        check("geraldine", ["orcaline"])   // ace exclusif EAU/GLACE (et jamais de Feu)
+        check("xa", ["sylvebarbe"])         // ace exclusif SOL/PLANTE
+        check("axelle", ["leviathonn", "tonytony"]) // ace + membre garanti, tous deux hors pool éligible
+        check("mools", ["goshendofy"])      // counterPlayer mais sans playerTeam → thème force son légendaire
+    })
 })
