@@ -306,6 +306,7 @@ export function mergeWorlds(primary: YellowSave, secondary: YellowSave, tag = "f
         items,
         repsCap: Math.max(primary.repsCap, secondary.repsCap),
         repsBankedTotal: Math.max(primary.repsBankedTotal, secondary.repsBankedTotal),
+        domeChampionships: Math.max(primary.domeChampionships, secondary.domeChampionships), // titres du Dôme = GLOBAL (max, ne régresse jamais)
         badges: uniq([...primary.badges, ...secondary.badges]),
         ownedCts: uniq([...primary.ownedCts, ...secondary.ownedCts]),
         boughtCts: uniq([...primary.boughtCts, ...secondary.boughtCts]),
