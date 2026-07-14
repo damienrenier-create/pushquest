@@ -57,7 +57,7 @@ import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_L
 import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/gamebook/yellow/data/labDialogues"
 import { loadYellowSave, initAutosave, persistYellowSave, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, getNgplusOldTeam, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3 } from "@/lib/gamebook/yellow/store/saveManager"
 import { customStarterSpeciesId, type StoredCustomDaemon } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship } from "@/lib/gamebook/yellow/store/playerStore"
 import { computeRunScores, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
 import { run3Score, run3MaxScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
@@ -71,6 +71,8 @@ import { ctRewardOptionsForTeam, opponentMoveIds } from "@/lib/gamebook/yellow/f
 import { generateRentalPool, buildDraftTeam, type RentalCandidate } from "@/lib/gamebook/yellow/frontier/factory"
 import { resolveFrontierLevel, JC_PER_WIN, JC_BOSS_MULT, BOSS_EVERY, type OpponentSpec, type LevelRule } from "@/lib/gamebook/yellow/frontier/engine"
 import { createDome, advanceDome, playerOpponent, aiLeadIndex, DOME_ROUNDS, type DomeState } from "@/lib/gamebook/yellow/frontier/dome"
+import { DOME_BUDGETS, DOME_TITLES, maxUnlockedTier } from "@/lib/gamebook/yellow/frontier/domeBudgets"
+import { DOME_TIERS, type DomeTier } from "@/lib/gamebook/yellow/frontier/domeTypes"
 import { Rng } from "@/lib/gamebook/yellow/battle/rng"
 
 // ZONE DE COMBAT — convertit les specs d'adversaires de la série en instances de combat.
@@ -114,7 +116,7 @@ import DaemonCreator from "./create/DaemonCreator"
 // SÉRIE elle-même (Tour/Usine: run + équipe louée ; Dôme: bracket) dans un instantané localStorage
 // dédié, repris au boot. v1 = on ne reprend PAS le combat de vague en cours (on retombe au début de
 // la vague courante via l'effet de lancement) — bien plus sûr. Fail-safe total comme #8.
-type DomeSnap = { state: DomeState; rule: LevelRule; seed: number; jc: number }
+type DomeSnap = { state: DomeState; rule: LevelRule; tier: DomeTier; seed: number; jc: number }
 interface FrontierSnap {
     v: 1
     ts: number
@@ -163,6 +165,7 @@ function readFrontierSnap(): FrontierSnap | null {
     try {
         const o = JSON.parse(raw) as FrontierSnap
         if (o.v !== 1) { clearFrontierSnap(); return null }
+        if (o.dome && !DOME_TIERS.includes(o.dome.tier)) o.dome.tier = "OR" // rétro-compat : vieux snap Dôme sans tier
         if (typeof o.ts === "number" && Date.now() - o.ts > FRONTIER_LS_MAX_AGE_MS) { clearFrontierSnap(); return null }
         if (!frontierActive(o.run, o.dome) || !frontierSpeciesOk(o)) { clearFrontierSnap(); return null }
         return o
@@ -230,7 +233,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [usineDraft, setUsineDraft] = useState<{ levelRule: LevelRule; pool: RentalCandidate[]; picks: string[] } | null>(null)
     const [usineCursor, setUsineCursor] = useState(0) // carousel : fiche du Daemon de location affichée
     // DÔME (bracket de 8, état local éphémère) : state du tournoi + règle + graine + JC cumulés.
-    const [dome, setDome] = useState<{ state: DomeState; rule: LevelRule; seed: number; jc: number } | null>(null)
+    const [dome, setDome] = useState<{ state: DomeState; rule: LevelRule; tier: DomeTier; seed: number; jc: number } | null>(null)
     const [ticketOpen, setTicketOpen] = useState(false) // ticket roulette quotidien (1re connexion du jour)
     const [rouletteOpen, setRouletteOpen] = useState(false) // roulette européenne SOLO (bêta, à côté du casino)
     const [rouletteMpOpen, setRouletteMpOpen] = useState(false) // roulette européenne MULTIJOUEUR (Phase 4)
@@ -1029,9 +1032,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 setDomePause(true)
             } else {
                 const roundsWon = won ? DOME_ROUNDS : dome.state.round // éliminé au round R = R manches gagnées
+                if (next.status === "won") { recordDomeChampionship(); persistYellowSave() } // titre gagné → débloque le tier suivant + palmarès
                 postRecordRun({ mode: "DOME", streak: Math.max(0, roundsWon), jcEarned: jc })
                 setToast(next.status === "won"
-                    ? `🏆 DÔME REMPORTÉ ! ${jc} JC enregistrés.`
+                    ? `🏆 DÔME REMPORTÉ — titre ${DOME_TITLES[dome.tier]} ! ${jc} JC · ${getPlayer().domeChampionships} titre(s)`
                     : `🏆 Dôme — éliminé en ${["quart", "demi", "finale"][dome.state.round] ?? "manche"}. ${jc} JC enregistrés.`)
                 setDome(null)
                 setDomePause(false)
@@ -1971,26 +1975,36 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 </div>
             )}
             {/* ZONE DE COMBAT — DÔME : tournoi à élimination (bracket de 8), TON équipe, 3 manches */}
-            {!battle && !dome && mapPlayer.mapId === "yellow_combat_dome" && !dialogue && player.team.length > 0 && (
-                <div style={{ position: "absolute", left: "50%", top: 16, transform: "translateX(-50%)", zIndex: 60, background: "#1a1a22ee", color: "#fff", border: "2px solid #f1c40f", borderRadius: 12, padding: "10px 14px", textAlign: "center", maxWidth: 320 }}>
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>🏆 DÔME DE COMBAT</div>
-                    <div style={{ fontSize: 11, opacity: 0.85, marginBottom: 8 }}>Tournoi à élimination — 8 dresseurs, 3 manches <b>6&nbsp;v&nbsp;6</b> avec TON équipe. Équipe <b>soignée à fond</b> entre chaque manche !</div>
-                    <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
-                        {(["L50", "L100", "ADAPT"] as LevelRule[]).map((rule) => (
-                            <button key={rule} onClick={() => {
-                                const lvl = resolveFrontierLevel(rule, myArenaLevel || 50)
-                                const seed = Math.floor(Math.random() * 1e9)
-                                const playerTeam = getPlayer().team.map((m) => ({ speciesId: m.speciesId, level: lvl }))
-                                setDome({ state: createDome(new Rng(seed), { level: lvl, streak: 14, playerTeam }), rule, seed, jc: 0 })
-                                setDomePause(true) // montre le bracket + le 1er adversaire avant de lancer
-                            }} style={{ background: "#f1c40f", color: "#1a1a22", fontWeight: 800, border: "none", borderRadius: 8, padding: "6px 10px", cursor: "pointer" }}>
-                                {rule === "L50" ? "Niv 50" : rule === "L100" ? "Niv 100" : "Adaptatif"}
-                            </button>
-                        ))}
+            {!battle && !dome && mapPlayer.mapId === "yellow_combat_dome" && !dialogue && player.team.length > 0 && (() => {
+                const champs = player.domeChampionships ?? 0
+                const maxRank = DOME_TIERS.indexOf(maxUnlockedTier(champs))
+                const unlocked = DOME_TIERS.slice(0, maxRank + 1)
+                return (
+                    <div style={{ position: "absolute", left: "50%", top: 16, transform: "translateX(-50%)", zIndex: 60, background: "#1a1a22ee", color: "#fff", border: "2px solid #f1c40f", borderRadius: 12, padding: "10px 14px", textAlign: "center", maxWidth: 340 }}>
+                        <div style={{ fontWeight: 800, marginBottom: 3 }}>🏆 DÔME DE COMBAT</div>
+                        <div style={{ fontSize: 10, opacity: 0.8, marginBottom: 6 }}>Palmarès : <b>{champs}</b> titre{champs > 1 ? "s" : ""} · rang max <b>{DOME_TITLES[maxUnlockedTier(champs)]}</b></div>
+                        <div style={{ fontSize: 10, opacity: 0.8, marginBottom: 8 }}>Tournoi <b>6v6</b>, 3 manches, soin complet entre chaque. Gagne un tier pour débloquer le suivant. Choisis :</div>
+                        <div style={{ display: "flex", gap: 5, justifyContent: "center", flexWrap: "wrap" }}>
+                            {unlocked.map((tier) => {
+                                const bud = DOME_BUDGETS[tier]
+                                return (
+                                    <button key={tier} onClick={() => {
+                                        const lvl = bud.level
+                                        const seed = Math.floor(Math.random() * 1e9)
+                                        const rule: LevelRule = lvl <= 50 ? "L50" : "L100"
+                                        const playerTeam = getPlayer().team.map((m) => ({ speciesId: m.speciesId, level: lvl }))
+                                        setDome({ state: createDome(new Rng(seed), { level: lvl, streak: bud.streak, playerTeam }), rule, tier, seed, jc: 0 })
+                                        setDomePause(true) // montre le bracket + le 1er adversaire avant de lancer
+                                    }} style={{ background: "#f1c40f", color: "#1a1a22", fontWeight: 800, border: "none", borderRadius: 8, padding: "5px 8px", cursor: "pointer", fontSize: 11, lineHeight: 1.15 }}>
+                                        {DOME_TITLES[tier]}<br /><span style={{ fontSize: 8, opacity: 0.7 }}>Niv {bud.level}</span>
+                                    </button>
+                                )
+                            })}
+                        </div>
+                        <div style={{ fontSize: 9, opacity: 0.6, marginTop: 6 }}>(marche pour sortir)</div>
                     </div>
-                    <div style={{ fontSize: 9, opacity: 0.6, marginTop: 6 }}>(marche pour sortir)</div>
-                </div>
-            )}
+                )
+            })()}
             {/* ZONE DE COMBAT — HUD de série pendant le run */}
             {run && run.status === "active" && (
                 <div style={{ position: "absolute", left: 8, top: 8, zIndex: 60, background: "#1a1a22cc", color: "#fff", borderRadius: 8, padding: "4px 8px", fontSize: 11, fontWeight: 700 }}>
