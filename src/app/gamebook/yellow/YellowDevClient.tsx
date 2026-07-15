@@ -2009,7 +2009,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {!battle && !dome && mapPlayer.mapId === "yellow_combat_dome" && !dialogue && player.team.length > 0 && (() => {
                 const champs = player.domeChampionships ?? 0
                 const maxRank = DOME_TIERS.indexOf(maxUnlockedTier(champs))
-                const box: React.CSSProperties = { position: "absolute", left: "50%", top: 16, transform: "translateX(-50%)", zIndex: 60, background: "#1a1a22ee", color: "#fff", border: "2px solid #f1c40f", borderRadius: 12, padding: "10px 14px", textAlign: "center", maxWidth: 340 }
+                const box: React.CSSProperties = { position: "absolute", left: "50%", top: 14, transform: "translateX(-50%)", zIndex: 60, background: "#1a1a22f2", color: "#fff", border: "3px solid #f1c40f", borderRadius: 14, padding: "18px 22px", textAlign: "center", width: "min(460px, 94vw)", boxShadow: "0 8px 30px #000b" }
                 // ÉTAPE 2 — MISE (buy-in poker) pour le tier choisi.
                 if (domeSetup) {
                     const bud = DOME_BUDGETS[domeSetup.tier]
@@ -2057,17 +2057,18 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 // ÉTAPE 1 — choix du TIER.
                 return (
                     <div style={box}>
-                        <div style={{ fontWeight: 800, marginBottom: 3 }}>🏆 DÔME DE COMBAT</div>
-                        <div style={{ fontSize: 10, opacity: 0.8, marginBottom: 6 }}>Palmarès : <b>{champs}</b> tier{champs > 1 ? "s" : ""} vaincu{champs > 1 ? "s" : ""} · rang max <b>{DOME_TITLES[maxUnlockedTier(champs)]}</b></div>
-                        <div style={{ fontSize: 10, opacity: 0.8, marginBottom: 8 }}>Tournoi <b>6v6</b>, 3 manches, soin complet entre chaque. Bats un tier pour débloquer le suivant :</div>
-                        <div style={{ display: "flex", gap: 5, justifyContent: "center", flexWrap: "wrap" }}>
+                        <div style={{ fontWeight: 800, fontSize: 17, marginBottom: 6 }}>🏆 DÔME DE COMBAT</div>
+                        <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 6 }}>Palmarès : <b>{champs}</b> tier{champs > 1 ? "s" : ""} vaincu{champs > 1 ? "s" : ""} · rang max <b>{DOME_TITLES[maxUnlockedTier(champs)]}</b></div>
+                        <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 12, lineHeight: 1.45 }}>Tournoi <b>6v6</b>, 3 manches, soin complet entre chaque. Gagne le tier <b style={{ color: "#7dffa0" }}>⭐ à battre</b> pour décrocher un titre et débloquer le suivant :</div>
+                        <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
                             {DOME_TIERS.map((tier, i) => {
                                 const bud = DOME_BUDGETS[tier]
                                 const locked = i > maxRank
+                                const frontier = i === maxRank && champs < DOME_TIERS.length // le tier à BATTRE pour un nouveau titre
                                 return (
                                     <button key={tier} disabled={locked} onClick={() => { domeLaunchingRef.current = false; setDomeSetup({ tier, bet: DOME_BLINDS[tier].min }) }}
-                                        style={{ background: locked ? "#332e4a" : "#f1c40f", color: locked ? "#8f88b5" : "#1a1a22", fontWeight: 800, border: "none", borderRadius: 8, padding: "5px 8px", cursor: locked ? "not-allowed" : "pointer", fontSize: 11, lineHeight: 1.15, opacity: locked ? 0.7 : 1 }}>
-                                        {locked ? "🔒 " : ""}{DOME_TITLES[tier]}<br /><span style={{ fontSize: 8, opacity: 0.7 }}>{locked ? `bats ${DOME_TITLES[DOME_TIERS[maxRank]]}` : `Niv ${bud.level}`}</span>
+                                        style={{ background: locked ? "#332e4a" : "#f1c40f", color: locked ? "#8f88b5" : "#1a1a22", fontWeight: 800, border: frontier ? "2px solid #4cd964" : "2px solid transparent", borderRadius: 10, padding: "10px 13px", minWidth: 70, cursor: locked ? "not-allowed" : "pointer", fontSize: 14, lineHeight: 1.3, opacity: locked ? 0.7 : 1, boxShadow: frontier ? "0 0 10px #4cd96488" : "none" }}>
+                                        {frontier ? "⭐ " : ""}{locked ? "🔒 " : ""}{DOME_TITLES[tier]}<br /><span style={{ fontSize: 10, opacity: 0.78 }}>{locked ? `bats ${DOME_TITLES[DOME_TIERS[maxRank]]}` : frontier ? "à battre" : `Niv ${bud.level}`}</span>
                                     </button>
                                 )
                             })}
