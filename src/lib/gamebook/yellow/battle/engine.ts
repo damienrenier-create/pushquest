@@ -747,7 +747,10 @@ function dealMoveDamage(state: BattleState, side: SideId, move: MoveData, rng: R
         effType = adapted.type
         isPhysical = adapted.isPhysical
     }
-    const eff = typeEffectiveness(effType, defSpecies.types)
+    // LUTTE (Charge Désespérée) = TYPELESS : ignore la table des types (jamais ×0/immunité) → un joueur À SEC
+    // peut TOUJOURS conclure un combat, même face à un Spectre (fini le soft-lock « Normal ×0 vs Spectre »
+    // + adversaire qui ne fait que soigner/endormir = combat infini).
+    const eff = move.id === STRUGGLE_MOVE_ID ? 1 : typeEffectiveness(effType, defSpecies.types)
     if (eff === 0) return { dealt: 0, typeEff: 0 }
     const atk = isPhysical
         ? effectiveStat(rawStats.atk, "atk", attacker.stages.atk, attacker.status)

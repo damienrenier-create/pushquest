@@ -701,7 +701,10 @@ export const TRAINERS: TrainerData[] = [
             // Archibouh disrupteur : ouvre sur HYPNOSE (sommeil), puis STAB Psy + drain Spectre + confusion.
             { speciesId: "archibouh", level: 55, moves: ["hypnose", "vague_mentale", "drain_ame", "onde_folie"], opening: ["hypnose"] },
             { speciesId: "brookhante", level: 56 },
-            { speciesId: "mycedruide", level: 58 },
+            // ACE agressif : Vague Mentale (PSY 90 = sa VRAIE menace, sur son gros Spé) + Ball'Ombre (STAB Spectre)
+            // + Méga-Sangsue (drain) + Toxik (poison croissant → PRESSION qui garantit la fin du combat). PAS de soin
+            //   PUR (fini le mur qui stalle à l'infini). Ouvre sur Toxik pour mettre la pression d'entrée.
+            { speciesId: "mycedruide", level: 58, moves: ["vague_mentale", "ball_ombre", "mega_sangsue", "toxik"], opening: ["toxik"] },
         ],
         reward: 400, aiLevel: "trainer",
         intro: [
