@@ -57,7 +57,7 @@ import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_L
 import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/gamebook/yellow/data/labDialogues"
 import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, getNgplusOldTeam, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3 } from "@/lib/gamebook/yellow/store/saveManager"
 import { customStarterSpeciesId, type StoredCustomDaemon } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult } from "@/lib/gamebook/yellow/store/playerStore"
 import { computeRunScores, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
 import { run3Score, run3MaxScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
@@ -1076,6 +1076,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 // Nouveau titre : à son tier-frontière ET seulement tant que tous les tiers ne sont pas déjà vaincus (Maître = plafond).
                 const gainedTitle = next.status === "won" && atFrontier && getPlayer().domeChampionships < DOME_TIERS.length
                 if (gainedTitle) recordDomeChampionship()
+                recordDomeResult(won) // bilan DÔME (tournoi remporté / perdu) — stats Dôme dédiées
                 void persistYellowSaveNow() // IMMÉDIAT (non débouncé) : le titre/JC/⚡ atteint le serveur AVANT que le joueur puisse quitter l'app (fini la perte de palier)
                 const roundsWon = won ? DOME_ROUNDS : dome.state.round
                 postRecordRun({ mode: "DOME", streak: Math.max(0, roundsWon), jcEarned: jc }) // crédite le JC (serveur)
@@ -2114,7 +2115,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 const cur = maxUnlockedTier(champs)
                 const curIdx = DOME_TIERS.indexOf(cur)
                 const nextT = DOME_TIERS[Math.min(DOME_TIERS.length - 1, curIdx + 1)]
-                const pvp = player.pvpStats
+                const dome = player.domeStats ?? { wins: 0, losses: 0, daemonUse: {} as Record<string, number>, moveUse: {} as Record<string, number> }
                 const topN = (rec: Record<string, number>, n: number) => Object.entries(rec ?? {}).sort((a, b) => b[1] - a[1]).slice(0, n)
                 const tierRow = (t: DomeTier) => { const b = DOME_BUDGETS[t]; const bl = DOME_BLINDS[t]; return `${DOME_TITLES[t]} · Niv ${b.level} · EV ${b.evPerMon} · Saiyan ${b.saiyanPerMon} · IA ${b.aiLevel} · mise ${bl.min}-${bl.max}⚡` }
                 return (
@@ -2147,15 +2148,15 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             {domeTab === "stats" && (
                                 <div style={{ fontSize: 11.5, opacity: 0.92, lineHeight: 1.55 }}>
                                     <div style={{ fontWeight: 800, color: "#c9a0ff", marginBottom: 3 }}>🏅 Palmarès</div>
-                                    <div style={{ marginBottom: 10 }}>{champs} tier{champs > 1 ? "s" : ""} vaincu{champs > 1 ? "s" : ""} · rang max <b>{DOME_TITLES[cur]}</b> · PvP {pvp.wins}V / {pvp.losses}D</div>
+                                    <div style={{ marginBottom: 10 }}>{champs} tier{champs > 1 ? "s" : ""} vaincu{champs > 1 ? "s" : ""} · rang max <b>{DOME_TITLES[cur]}</b> · tournois {dome.wins}V / {dome.losses}D</div>
                                     <div style={{ fontWeight: 800, color: "#c9a0ff", marginBottom: 3 }}>🎯 Ton palier & le suivant</div>
                                     <div style={{ marginBottom: 2 }}>▸ {tierRow(cur)}</div>
                                     {curIdx < DOME_TIERS.length - 1 && <div style={{ marginBottom: 10, opacity: 0.72 }}>▸ à venir : {tierRow(nextT)}</div>}
                                     {curIdx >= DOME_TIERS.length - 1 && <div style={{ marginBottom: 10, opacity: 0.72 }}>▸ palier maximal atteint 👑</div>}
-                                    <div style={{ fontWeight: 800, color: "#c9a0ff", marginBottom: 3 }}>🐾 Tes Daemons fétiches</div>
-                                    <div style={{ marginBottom: 10 }}>{topN(pvp.daemonUse, 5).map(([id, n], i) => `${i + 1}. ${getSpecies(id)?.name ?? id} (${n})`).join(" · ") || "—"}</div>
-                                    <div style={{ fontWeight: 800, color: "#c9a0ff", marginBottom: 3 }}>💥 Tes attaques fétiches</div>
-                                    <div style={{ marginBottom: 10 }}>{topN(pvp.moveUse, 5).map(([id, n], i) => `${i + 1}. ${getMove(id)?.name ?? id} (${n})`).join(" · ") || "—"}</div>
+                                    <div style={{ fontWeight: 800, color: "#c9a0ff", marginBottom: 3 }}>🐾 Tes Daemons du Dôme</div>
+                                    <div style={{ marginBottom: 10 }}>{topN(dome.daemonUse, 5).map(([id, n], i) => `${i + 1}. ${getSpecies(id)?.name ?? id} (${n})`).join(" · ") || "— (aucun tournoi joué)"}</div>
+                                    <div style={{ fontWeight: 800, color: "#c9a0ff", marginBottom: 3 }}>💥 Tes attaques du Dôme</div>
+                                    <div style={{ marginBottom: 10 }}>{topN(dome.moveUse, 5).map(([id, n], i) => `${i + 1}. ${getMove(id)?.name ?? id} (${n})`).join(" · ") || "— (aucun tournoi joué)"}</div>
                                     <div style={{ fontSize: 10, opacity: 0.6 }}>Bientôt : leaderboard des autres joueurs · top coups les + forts · top némésis.</div>
                                 </div>
                             )}

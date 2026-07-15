@@ -82,6 +82,7 @@ interface PlayerState {
     sbireWinsTotal: number
     /** Réputation PvP (matchs + usages pour fétiche/favorite). */
     pvpStats: PvpStats
+    domeStats?: DomeStats // stats DÔME UNIQUEMENT (fétiches + bilan tournois) — optionnel, défaut vide
     stats: YellowStats
     /** ACE (rival) — pic de niveau mémorisé (ratchet, ne régresse jamais). */
     acePeakLevel: number
@@ -174,6 +175,16 @@ export interface PvpStats {
 export function emptyPvpStats(): PvpStats {
     return { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }
 }
+
+/** Stats DÔME UNIQUEMENT (≠ pvpStats qui compte TOUS les combats) : Daemons/attaques joués DANS les tournois du
+ *  Dôme + bilan de tournois. Alimenté SEULEMENT pendant un combat trainerId "frontier:DOME". */
+export interface DomeStats {
+    wins: number   // tournois REMPORTÉS
+    losses: number // tournois PERDUS (éliminé avant / finale perdue)
+    daemonUse: Record<string, number> // speciesId → coups joués au Dôme
+    moveUse: Record<string, number>   // moveId → coups joués au Dôme
+}
+export function emptyDomeStats(): DomeStats { return { wins: 0, losses: 0, daemonUse: {}, moveUse: {} } }
 
 let st: PlayerState = { team: [], pc: [], items: {}, domeChampionships: 0, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, defeatedTrainers: [], rematchedTrainers: [], badges: [], wildCtx: null, introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: emptyPvpStats(), stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, berrySecretKnown: false, berryHarvestDay: "", berryHarvestPicked: [], caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", ngplusBattles: 0, sylvebarbeAwake: false, labDefi: emptyLabDefi(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", run3Defeated: [], caughtThisRun: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0 }
 const listeners = new Set<() => void>()
@@ -286,6 +297,7 @@ export function hydratePlayer(p: Partial<PlayerState>) {
         sbireDefeatsToday: p.sbireDefeatsToday ?? st.sbireDefeatsToday ?? 0,
         sbireWinsTotal: p.sbireWinsTotal ?? st.sbireWinsTotal ?? 0,
         pvpStats: p.pvpStats ?? st.pvpStats ?? emptyPvpStats(),
+        domeStats: p.domeStats ?? st.domeStats ?? emptyDomeStats(),
         stats: p.stats ?? st.stats ?? emptyYellowStats(),
         acePeakLevel: p.acePeakLevel ?? st.acePeakLevel ?? 0,
         aceBox: p.aceBox ?? st.aceBox ?? {},
@@ -940,6 +952,22 @@ export function recordPvpUse(speciesId: string, moveId?: string) {
     const daemonUse = { ...s.daemonUse, [speciesId]: (s.daemonUse[speciesId] ?? 0) + 1 }
     const moveUse = moveId ? { ...s.moveUse, [moveId]: (s.moveUse[moveId] ?? 0) + 1 } : s.moveUse
     st = { ...st, pvpStats: { ...s, daemonUse, moveUse } }
+    emit()
+}
+
+/** DÔME UNIQUEMENT — usage d'un Daemon/attaque dans un tournoi du Dôme (appelé par battleStore seulement si
+ *  trainerId "frontier:DOME"). Alimente les « fétiches du Dôme » (≠ pvpStats global). */
+export function recordDomeUse(speciesId: string, moveId?: string) {
+    const s = st.domeStats ?? emptyDomeStats()
+    const daemonUse = { ...s.daemonUse, [speciesId]: (s.daemonUse[speciesId] ?? 0) + 1 }
+    const moveUse = moveId ? { ...s.moveUse, [moveId]: (s.moveUse[moveId] ?? 0) + 1 } : s.moveUse
+    st = { ...st, domeStats: { ...s, daemonUse, moveUse } }
+    emit()
+}
+/** DÔME UNIQUEMENT — issue d'un TOURNOI (win = remporté ; loss = éliminé/finale perdue). */
+export function recordDomeResult(won: boolean) {
+    const s = st.domeStats ?? emptyDomeStats()
+    st = { ...st, domeStats: { ...s, daemonUse: { ...s.daemonUse }, moveUse: { ...s.moveUse }, wins: s.wins + (won ? 1 : 0), losses: s.losses + (won ? 0 : 1) } }
     emit()
 }
 

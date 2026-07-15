@@ -20,7 +20,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType, MoveSlot } from "../battle/types"
 import { markSeen, markCaught, getPokedex } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, recordOrcalineDefeat, orcalineLevelForWins, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, markCaughtThisRun, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordDomeUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, recordOrcalineDefeat, orcalineLevelForWins, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, markCaughtThisRun, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter } from "./playerStore"
 import { getItem } from "../data/items"
 import { reportShiny } from "../shinyGift"
 import { ARENA_TICKET_VALUE, SBIRE_TICKET_VALUE, SBIRE_TICKET_EVERY, ACE_TICKET_VALUE, ACE_TICKET_WIN_BEFORE, ACE_TICKET_WIN_AFTER, ACE_TICKET_EARLY_VALUE, ACE_TICKET_WIN_EARLY, LEAGUE_ROULETTE_PER_KO, LEAGUE_AUTOGRAPH_CREDIT } from "../data/labDefis"
@@ -1196,7 +1196,12 @@ function submitPvpAction(action: PlayerAction) {
     if (action.kind === "move") {
         const t = battle[mySide(ctx)]
         const meMon = t.team[t.activeIndex]
-        if (meMon) recordPvpUse(meMon.speciesId, action.moveIndex >= 0 ? meMon.moves[action.moveIndex]?.moveId : undefined)
+        if (meMon) {
+            const usedMove = action.moveIndex >= 0 ? meMon.moves[action.moveIndex]?.moveId : undefined
+            recordPvpUse(meMon.speciesId, usedMove)
+            // DÔME UNIQUEMENT : double le comptage dans domeStats si ce combat est un tournoi du Dôme.
+            if (storeState.trainer?.trainerId === "frontier:DOME") recordDomeUse(meMon.speciesId, usedMove)
+        }
     }
 
     storeState = { ...storeState, pvpCtx: { ...ctx, myAction: action } }
