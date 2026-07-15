@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { chooseAiAction } from "./ai"
+import { chooseAiAction, chooseReplacementIndex } from "./ai"
 import { toBattleMon } from "./engine"
 import { fullStats } from "./stats"
 import { createMonInstance } from "./factory"
@@ -51,6 +51,60 @@ describe("IA Hall of Fame (\"hof\") — la plus maligne", () => {
             if (c.kind === "switch") safeSwitches++
         }
         expect(safeSwitches).toBe(0)
+    })
+})
+
+describe("chooseReplacementIndex — envoi FORCÉ après KO (fin du ping-pong)", () => {
+    it("envoie le MEILLEUR matchup, pas « le suivant dans la liste »", () => {
+        const foeWater = mon("razmaree", 60, ["hydrocanon"]) // actif joueur : attaquant EAU
+        // Banc IA : index 0 = Magmator (Roche/Feu, ×4 faible à l'Eau = le piège « suivant ») ; index 1 = Cerfeuillu (Plante, résiste).
+        const bad = mon("magmator", 60, ["charge"])
+        const good = mon("cerfeuillu", 60, ["charge"])
+        expect(chooseReplacementIndex([bad, good], foeWater)).toBe(1) // Cerfeuillu (résiste), PAS Magmator en tête
+    })
+
+    it("ignore les Daemons K.O. et garde l'ordre quand le meilleur est déjà en tête", () => {
+        const foeWater = mon("razmaree", 60, ["hydrocanon"])
+        const good = mon("cerfeuillu", 60, ["charge"])
+        const bad = mon("magmator", 60, ["charge"])
+        const ko = mon("rochison", 60, ["charge"]); ko.currentHp = 0 // K.O. → jamais choisi
+        expect(chooseReplacementIndex([good, bad, ko], foeWater)).toBe(0) // le bon est déjà premier
+        expect(chooseReplacementIndex([ko, bad], foeWater)).toBe(1)      // seul vivant pertinent = index 1
+    })
+
+    it("à défense égale, préfère le Daemon qui PUNIT l'adverse (tiebreak offensif)", () => {
+        // Deux Daemons NEUTRES en défense face à un attaquant Normal, mais l'un porte un coup super-efficace.
+        const foeNormal = mon("tonytony", 60, ["charge"]) // Normal (aucune faiblesse exploitée par le banc ci-dessous)
+        const plain = mon("razmaree", 60, ["charge"])       // Eau, coup NORMAL neutre
+        const puncher = mon("maitrezenc", 60, ["coup_de_boutoir"]) // Combat : ×2 sur Normal
+        const idx = chooseReplacementIndex([plain, puncher], foeNormal)
+        expect(idx).toBe(1) // celui qui frappe en super-efficace
+    })
+})
+
+describe("scoreMoves — soin & recul (IA dresseur, anti-gâchis)", () => {
+    it("ne lance PAS Repos à pleine vie, mais le lance à basse vie", () => {
+        const foe = mon("cerfeuillu", 60, ["charge"]) // Plante : résiste l'Eau (pistolet ×0.5)
+        for (let s = 0; s < 30; s++) {
+            const full = mon("razmaree", 60, ["repos", "pistolet_a_o"]) // PV pleins par défaut
+            expect(chooseAiAction(full, foe, [full], 0, "trainer", new Rng(s + 1))).toEqual({ kind: "move", moveIndex: 1 })
+        }
+        for (let s = 0; s < 30; s++) {
+            const hurt = mon("razmaree", 60, ["repos", "pistolet_a_o"]); hurt.currentHp = 1
+            expect(chooseAiAction(hurt, foe, [hurt], 0, "trainer", new Rng(s + 1))).toEqual({ kind: "move", moveIndex: 0 })
+        }
+    })
+
+    it("évite l'attaque à RECUL à basse vie (anti-suicide), mais l'assume à pleine vie", () => {
+        const foe = mon("cerfeuillu", 60, ["charge"]) // Normal neutre dessus
+        for (let s = 0; s < 30; s++) {
+            const full = mon("razmaree", 60, ["belier", "charge"]) // Bélier (recul) 90 vs Charge 40
+            expect(chooseAiAction(full, foe, [full], 0, "trainer", new Rng(s + 1))).toEqual({ kind: "move", moveIndex: 0 })
+        }
+        for (let s = 0; s < 30; s++) {
+            const hurt = mon("razmaree", 60, ["belier", "charge"]); hurt.currentHp = 1
+            expect(chooseAiAction(hurt, foe, [hurt], 0, "trainer", new Rng(s + 1))).toEqual({ kind: "move", moveIndex: 1 })
+        }
     })
 })
 

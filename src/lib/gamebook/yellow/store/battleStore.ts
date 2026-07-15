@@ -118,8 +118,9 @@ interface BattleStoreState {
     pendingLearn: boolean
     /** DUEL reflet (Viridian/arène eau) terminé : issue à traiter par l'UI (récompenses) ; null sinon. */
     duelResult: { won: boolean } | null
-    /** ZONE DE COMBAT : combat d'une série Frontier terminé → l'UI enchaîne la vague suivante / clôt la série. */
-    frontierResult: { won: boolean } | null
+    /** ZONE DE COMBAT : combat d'une série Frontier terminé → l'UI enchaîne la vague suivante / clôt la série.
+     *  `energySpent` = énergie dépensée DANS ce combat (le Dôme diffère son remboursement à la fin du tournoi). */
+    frontierResult: { won: boolean; energySpent: number } | null
     /** Un Daemon vient d'être CAPTURÉ (n'importe quelle espèce) → signal transitoire pour l'UI
      *  (ex. carrousel d'explication de la génétique au 1er usage). Consommé/effacé par l'UI. */
     justCaught: boolean
@@ -723,7 +724,9 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             // ZONE DE COMBAT : adversaires éphémères (holographes) → aucune récompense dresseur ni
             // markTrainerDefeated. Les JC + l'enchaînement de vagues sont gérés par le runStore/UI.
             // Ici on REMBOURSE l'énergie à la VICTOIRE (10→100 % de l'énergie dépensée) ; 0 à la défaite.
-            if (b.outcome === "win") {
+            // EXCEPTION DÔME (frontier:DOME) : le remboursement est DIFFÉRÉ à la FIN du tournoi (après les 3 matchs)
+            //   → l'UI accumule le montant par match gagné et crédite tout d'un coup à la clôture du bracket.
+            if (b.outcome === "win" && storeState.trainer.trainerId !== "frontier:DOME") {
                 const refund = frontierEnergyRefund(storeState.energySpent)
                 if (refund > 0) grantReps(refund)
             }
@@ -880,7 +883,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // DUEL reflet : signale l'issue (gagné/perdu) → l'UI applique les récompenses post-combat.
     const duelResult = storeState.trainer?.trainerId?.startsWith("duel:") ? { won: b.outcome === "win" } : null
     // ZONE DE COMBAT : issue d'une vague de série → l'UI enchaîne (win) ou clôt la série (lose).
-    const frontierResult = storeState.trainer?.trainerId?.startsWith("frontier:") ? { won: b.outcome === "win" } : null
+    const frontierResult = storeState.trainer?.trainerId?.startsWith("frontier:") ? { won: b.outcome === "win", energySpent: storeState.energySpent } : null
     // NG+ : sacre du Maître EN New Game+ avec une ancienne équipe à affronter → il reste le combat de fin de Ligue.
     const ngplusMaitreWin = lid === "y_ligue_maitre" && b.outcome === "win" && getActiveWorld() === "ngplus" && (getNgplusOldTeam()?.length ?? 0) > 0
     // NG+ : issue du combat de fin de Ligue (vs ancienne équipe). L'UI clôt le NG+ à la victoire.

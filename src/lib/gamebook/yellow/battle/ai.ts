@@ -22,7 +22,11 @@ export interface AiChoice {
 interface ScoredMove { index: number; score: number; eff: number; power: number }
 
 function scoreMoves(self: BattleMon, foe: BattleMon): ScoredMove[] {
+    const selfSp = getSpecies(self.speciesId)
     const foeTypes = getSpecies(foe.speciesId)?.types ?? []
+    const maxHp = selfSp ? fullStats(self, selfSp).hp : Math.max(1, self.currentHp)
+    const selfFrac = self.currentHp / Math.max(1, maxHp)
+    const missingFrac = Math.max(0, 1 - selfFrac)
     const out: ScoredMove[] = []
     self.moves.forEach((slot, index) => {
         const mv = getMove(slot.moveId)
@@ -30,9 +34,18 @@ function scoreMoves(self: BattleMon, foe: BattleMon): ScoredMove[] {
         const isStatus = mv.power <= 0
         const eff = isStatus ? 1 : typeEffectiveness(mv.type, foeTypes)
         const power = mv.power || 0
-        // Score : puissance pondérée par l'efficacité ; les coups de statut ont un
-        // score plancher (utile mais pas prioritaire face à un KO).
-        const score = isStatus ? 25 : power * eff
+        let score: number
+        if (isStatus) {
+            // SOIN (Repos/Linceul/Reprise d'Ailes…) : ne vaut RIEN à pleine vie, précieux à basse vie → on
+            // l'échelonne sur les PV MANQUANTS (fini le « Repos en premier alors qu'il a toute sa vie »).
+            if (mv.effect?.healPct) score = mv.effect.healPct * missingFrac
+            else score = 25 // autre statut (para/sommeil/boost…) : score plancher utile
+        } else {
+            score = power * eff
+            // RECUL : à basse vie, un coup à recul risque le SUICIDE → on l'évite fortement SAUF s'il est
+            // super-efficace (kamikaze probablement fatal à l'adversaire, assumé). À vie haute, recul OK (survivable).
+            if (mv.effect?.recoilPct && selfFrac < 0.4 && eff < 2) score *= 0.15
+        }
         out.push({ index, score, eff, power })
     })
     return out
@@ -48,6 +61,8 @@ function scoreMovesHof(self: BattleMon, foe: BattleMon): ScoredHof[] {
     const sStats = selfSp ? fullStats(self, selfSp) : null
     const fStats = foeSp ? fullStats(foe, foeSp) : null
     const foeFresh = fStats ? foe.currentHp >= fStats.hp : false
+    const selfFrac = sStats ? self.currentHp / Math.max(1, sStats.hp) : 1
+    const missingFrac = Math.max(0, 1 - selfFrac)
     const out: ScoredHof[] = []
     self.moves.forEach((slot, index) => {
         const mv = getMove(slot.moveId)
@@ -56,15 +71,18 @@ function scoreMovesHof(self: BattleMon, foe: BattleMon): ScoredHof[] {
         const eff = isStatus ? 1 : typeEffectiveness(mv.type, foeTypes)
         let score: number
         if (isStatus) {
+            // SOIN : inutile à pleine vie, précieux à basse vie → échelonné sur les PV MANQUANTS (anti « Repos à full »).
+            if (mv.effect?.healPct) score = mv.effect.healPct * missingFrac
             // Ouverture : sur une cible FRAÎCHE et SAINE, mener par un statut (sommeil/para…) est fort.
-            const inflicts = mv.effect?.inflictStatus
-            score = inflicts && foe.status === "NONE" && foeFresh ? 80 : 18
+            else { const inflicts = mv.effect?.inflictStatus; score = inflicts && foe.status === "NONE" && foeFresh ? 80 : 18 }
         } else {
             const stab = selfTypes.includes(mv.type) ? 1.5 : 1
             const phys = moveCategory(mv.type) === "PHYSICAL"
             const off = sStats ? (phys ? sStats.atk : sStats.spc) : 1
             const def = fStats ? (phys ? fStats.def : fStats.spc) : 1
             score = mv.power * eff * stab * (off / Math.max(1, def))
+            // RECUL : à basse vie, éviter le suicide SAUF coup super-efficace (kamikaze fatal assumé).
+            if (mv.effect?.recoilPct && selfFrac < 0.4 && eff < 2) score *= 0.15
         }
         out.push({ index, score, eff })
     })
@@ -84,6 +102,35 @@ function bestSwitchIndex(team: BattleMon[], activeIndex: number, foe: BattleMon)
         if (incoming < bestResist) { bestResist = incoming; bestI = i }
     })
     return bestI >= 0 ? bestI : null
+}
+
+/** Choix du REMPLAÇANT à envoyer après un KO (envoi FORCÉ, TOUS niveaux de dresseur). Renvoie l'index du banc
+ *  au MEILLEUR matchup face à l'actif adverse : priorité à ENCAISSER ses types (le remplaçant ne doit pas vouloir
+ *  re-switcher aussitôt → fin du ping-pong « on renvoie le suivant, il fuit, on renvoie le suivant… »), puis à le
+ *  PUNIR (meilleur coup réel). Déterministe (aucun RNG) → sûr côté replay/checksum. -1 si le banc est vide
+ *  (le moteur garantit ≥1 vivant avant l'appel). Remplace l'ancien « firstAliveIndex » (= premier dans la liste). */
+export function chooseReplacementIndex(team: BattleMon[], foe: BattleMon): number {
+    const foeTypes = getSpecies(foe.speciesId)?.types ?? []
+    let bestI = -1
+    let bestScore = -Infinity
+    team.forEach((m, i) => {
+        if (m.currentHp <= 0) return
+        const myTypes = getSpecies(m.speciesId)?.types ?? []
+        // Défensif : produit des efficacités des types adverses SUR MOI (0,25 = grosse résistance … 4 = ×4 faible).
+        const incoming = foeTypes.reduce((acc, t) => acc * typeEffectiveness(t, myTypes), 1)
+        // Offensif : mon meilleur coup RÉEL (PP > 0, à dégâts) contre l'adverse, pondéré STAB × efficacité.
+        let bestOff = 0
+        for (const slot of m.moves) {
+            const mv = getMove(slot.moveId)
+            if (!mv || slot.pp <= 0 || mv.power <= 0) continue
+            const stab = myTypes.includes(mv.type) ? 1.5 : 1
+            bestOff = Math.max(bestOff, mv.power * typeEffectiveness(mv.type, foeTypes) * stab)
+        }
+        // Encaisser PRIME (anti-ping-pong), punir en SECONDAIRE. Magnitudes comparables (def ~25→400, off ~0→300).
+        const score = (1 / Math.max(0.25, incoming)) * 100 + bestOff
+        if (score > bestScore) { bestScore = score; bestI = i }
+    })
+    return bestI
 }
 
 export function chooseAiAction(

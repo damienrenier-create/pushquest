@@ -19,7 +19,7 @@ import * as Status from "./status"
 import { obedienceCap, disobeyChance } from "./obedience"
 import { pinchBerry } from "./berries"
 import { accuracyCheck } from "./accuracy"
-import { chooseAiAction, type AiLevel } from "./ai"
+import { chooseAiAction, chooseReplacementIndex, type AiLevel } from "./ai"
 import { xpForDefeat, applyExp } from "./xp"
 import { tryCapture } from "./capture"
 import { CAPTURE_ESCALATION_PER_ATTEMPT } from "../data/captureConfig"
@@ -1169,7 +1169,9 @@ function checkFaints(state: BattleState, events: BattleEvent[]) {
     }
     // SOLO / SAUVAGE — l'actif ennemi (IA) est K.O. et il lui reste des Daemons → il doit en envoyer un.
     if (active(state.enemy).currentHp <= 0 && !state.enemySendOut) {
-        const enemyIdx = firstAliveIndex(state.enemy)
+        // IA INTELLIGENTE : le remplaçant = MEILLEUR matchup vs l'actif du joueur (encaisse + punit), pas « le
+        // suivant dans la liste ». Corrige le ping-pong (on renvoyait un mauvais matchup qui re-switchait aussitôt).
+        const enemyIdx = state.isWild ? firstAliveIndex(state.enemy) : chooseReplacementIndex(state.enemy.team, active(state.player))
         // COMBAT DE DRESSEUR — flow Game Boy : on N'envoie PAS le suivant tout de suite. On ANNONCE le
         // prochain Daemon adverse et on laisse le joueur décider de changer (fenêtre gérée en tête de
         // resolveTurn). EXCEPTION : si le joueur est LUI AUSSI K.O. (double KO), il devra de toute façon

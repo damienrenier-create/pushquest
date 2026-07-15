@@ -69,7 +69,7 @@ import type { FrontierRunState } from "@/lib/gamebook/yellow/frontier/run"
 import { postRecordRun } from "@/lib/gamebook/yellow/frontier/frontierApi"
 import { ctRewardOptionsForTeam, opponentMoveIds } from "@/lib/gamebook/yellow/frontier/rewards"
 import { generateRentalPool, buildDraftTeam, type RentalCandidate } from "@/lib/gamebook/yellow/frontier/factory"
-import { resolveFrontierLevel, JC_PER_WIN, JC_BOSS_MULT, BOSS_EVERY, type OpponentSpec, type LevelRule } from "@/lib/gamebook/yellow/frontier/engine"
+import { resolveFrontierLevel, JC_PER_WIN, JC_BOSS_MULT, BOSS_EVERY, frontierEnergyRefund, type OpponentSpec, type LevelRule } from "@/lib/gamebook/yellow/frontier/engine"
 import { createDome, advanceDome, playerOpponent, aiLeadIndex, DOME_ROUNDS, type DomeState } from "@/lib/gamebook/yellow/frontier/dome"
 import { DOME_BUDGETS, DOME_TITLES, maxUnlockedTier, distributeDomeTraining, roundBudget } from "@/lib/gamebook/yellow/frontier/domeBudgets"
 import { DOME_TIERS, type DomeTier } from "@/lib/gamebook/yellow/frontier/domeTypes"
@@ -123,7 +123,7 @@ import DaemonCreator from "./create/DaemonCreator"
 // SÉRIE elle-même (Tour/Usine: run + équipe louée ; Dôme: bracket) dans un instantané localStorage
 // dédié, repris au boot. v1 = on ne reprend PAS le combat de vague en cours (on retombe au début de
 // la vague courante via l'effet de lancement) — bien plus sûr. Fail-safe total comme #8.
-type DomeSnap = { state: DomeState; rule: LevelRule; tier: DomeTier; bet: number; seed: number; jc: number }
+type DomeSnap = { state: DomeState; rule: LevelRule; tier: DomeTier; bet: number; seed: number; jc: number; energyAccrued: number }
 interface FrontierSnap {
     v: 1
     ts: number
@@ -174,6 +174,7 @@ function readFrontierSnap(): FrontierSnap | null {
         if (o.v !== 1) { clearFrontierSnap(); return null }
         if (o.dome && !DOME_TIERS.includes(o.dome.tier)) o.dome.tier = "OR" // rétro-compat : vieux snap Dôme sans tier
         if (o.dome && typeof o.dome.bet !== "number") o.dome.bet = 0 // rétro-compat : vieux snap Dôme sans mise
+        if (o.dome && typeof o.dome.energyAccrued !== "number") o.dome.energyAccrued = 0 // rétro-compat : remboursement énergie différé (fin de tournoi)
         if (typeof o.ts === "number" && Date.now() - o.ts > FRONTIER_LS_MAX_AGE_MS) { clearFrontierSnap(); return null }
         if (!frontierActive(o.run, o.dome) || !frontierSpeciesOk(o)) { clearFrontierSnap(); return null }
         return o
@@ -243,7 +244,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [usineDraft, setUsineDraft] = useState<{ levelRule: LevelRule; pool: RentalCandidate[]; picks: string[] } | null>(null)
     const [usineCursor, setUsineCursor] = useState(0) // carousel : fiche du Daemon de location affichée
     // DÔME (bracket de 8, état local éphémère) : state du tournoi + règle + graine + JC cumulés.
-    const [dome, setDome] = useState<{ state: DomeState; rule: LevelRule; tier: DomeTier; bet: number; seed: number; jc: number } | null>(null)
+    const [dome, setDome] = useState<DomeSnap | null>(null)
     const [domeSetup, setDomeSetup] = useState<{ tier: DomeTier; bet: number } | null>(null) // écran de MISE avant lancement
     const domeLaunchingRef = useRef(false) // anti double-débit de la mise (double-tap mobile)
     const [domeRegisterOpen, setDomeRegisterOpen] = useState(false) // le SÉLECTEUR de tier ne s'affiche qu'après « S'inscrire » (via le mage), pas tout seul
@@ -1057,10 +1058,15 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         // DÔME (bracket) : `run` est null ; on avance le bracket selon l'issue du match du joueur.
         if (dome && dome.state.status === "active") {
             const won = frontierResult.won
+            // REMBOURSEMENT ÉNERGIE DIFFÉRÉ (Dôme) : on cumule le remboursement du match (10→100 % de l'énergie
+            //   dépensée, uniquement si gagné — même barème que la Tour) et on ne crédite RIEN entre les matchs.
+            //   Tout est versé d'un coup à la CLÔTURE du bracket (cf. « à la fin du tournoi, pas avant match »).
+            const matchRefund = won ? frontierEnergyRefund(frontierResult.energySpent) : 0
+            const accrued = dome.energyAccrued + matchRefund
             const rng = new Rng((dome.seed ^ ((dome.state.round + 1) * 0x9e3779b1)) >>> 0)
             const next = advanceDome(dome.state, rng, won)
             if (next.status === "active") {
-                setDome({ ...dome, state: next }) // manche suivante : on REPASSE par l'intro (bracket + adversaire)
+                setDome({ ...dome, state: next, energyAccrued: accrued }) // manche suivante : on REPASSE par l'intro (bracket + adversaire)
                 setDomePause(true)
             } else {
                 // Classement final dans le bracket de 8 (helper pur testé) : 1er (titre) / 2e (finale) / demi / quart.
@@ -1070,6 +1076,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 // `force` : rembourse AUSSI en run3 (symétrique au débit spendReps qui, lui, n'a pas de garde run3).
                 // Faucet-safe garanti (refund ≤ mise déjà débitée). On affiche le montant RÉELLEMENT crédité.
                 const credited = refund > 0 ? grantReps(refund, true) : 0
+                // Remboursement DIFFÉRÉ de l'énergie d'attaque : cumulé sur les matchs GAGNÉS du tournoi, versé UNE
+                //   SEULE fois ICI (clôture) au lieu d'après chaque match — cf. « à la fin du tournoi, pas avant match ».
+                const energyBack = accrued > 0 ? grantReps(accrued, true) : 0
+                const totalBack = credited + energyBack // ⚡ total rendu à la clôture (remboursement de mise + énergie d'attaque)
                 // Progression (débloque le tier suivant) UNIQUEMENT en gagnant à SON tier-frontière (le + haut débloqué) :
                 // rejouer un tier déjà maîtrisé rapporte JC/⚡ mais AUCUN nouveau titre (gate par compétence, pas par grind).
                 const atFrontier = dome.tier === maxUnlockedTier(getPlayer().domeChampionships)
@@ -1082,9 +1092,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 postRecordRun({ mode: "DOME", streak: Math.max(0, roundsWon), jcEarned: jc }) // crédite le JC (serveur)
                 setToast(next.status === "won"
                     ? (gainedTitle
-                        ? `🏆 DÔME REMPORTÉ — nouveau titre ${DOME_TITLES[dome.tier]} ! +${jc} 🪙 · ${credited} ⚡ · ${getPlayer().domeChampionships} tiers vaincus`
-                        : `🏆 ${DOME_TITLES[dome.tier]} remporté ! +${jc} 🪙 · ${credited} ⚡ (déjà maîtrisé — pas de nouveau titre)`)
-                    : `🏆 Dôme — ${["quart", "demi", "finale"][dome.state.round] ?? "manche"} : +${jc} 🪙 · ${credited} ⚡ rendus.`)
+                        ? `🏆 DÔME REMPORTÉ — nouveau titre ${DOME_TITLES[dome.tier]} ! +${jc} 🪙 · ${totalBack} ⚡ · ${getPlayer().domeChampionships} tiers vaincus`
+                        : `🏆 ${DOME_TITLES[dome.tier]} remporté ! +${jc} 🪙 · ${totalBack} ⚡ (déjà maîtrisé — pas de nouveau titre)`)
+                    : `🏆 Dôme — ${["quart", "demi", "finale"][dome.state.round] ?? "manche"} : +${jc} 🪙 · ${totalBack} ⚡ rendus.`)
                 setDome(null)
                 setDomePause(false)
             }
@@ -2070,7 +2080,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                     const seed = Math.floor(Math.random() * 1e9)
                                     const rule: LevelRule = lvl <= 50 ? "L50" : "L100"
                                     const playerTeam = getPlayer().team.map((m) => ({ speciesId: m.speciesId, level: lvl }))
-                                    setDome({ state: createDome(new Rng(seed), { level: lvl, streak: bud.streak, playerTeam }), rule, tier: domeSetup.tier, bet: finalBet, seed, jc: 0 })
+                                    setDome({ state: createDome(new Rng(seed), { level: lvl, streak: bud.streak, playerTeam }), rule, tier: domeSetup.tier, bet: finalBet, seed, jc: 0, energyAccrued: 0 })
                                     setDomeSetup(null)
                                     setDomePause(true)
                                     persistYellowSave()
@@ -2220,10 +2230,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 const p = domeFinalPlacement(false, dome.state.round) // forfait = éliminé à ce round
                                 const refundF = domeEnergyRefund(dome.bet, p)
                                 const credited = refundF > 0 ? grantReps(refundF, true) : 0
+                                // Énergie d'attaque cumulée sur les matchs DÉJÀ gagnés : rendue AUSSI à l'abandon (déjà méritée).
+                                const energyBackF = dome.energyAccrued > 0 ? grantReps(dome.energyAccrued, true) : 0
                                 const jcF = domeJcReward(dome.bet, dome.tier, p)
-                                persistYellowSave()
+                                void persistYellowSaveNow() // immédiat (fini la perte de mise/énergie si on quitte vite)
                                 postRecordRun({ mode: "DOME", streak: dome.state.round, jcEarned: jcF })
-                                setToast(`🏳️ Dôme abandonné (${["quart", "demi", "finale"][dome.state.round] ?? "manche"}) : +${jcF} 🪙 · ${credited} ⚡ rendus.`)
+                                setToast(`🏳️ Dôme abandonné (${["quart", "demi", "finale"][dome.state.round] ?? "manche"}) : +${jcF} 🪙 · ${credited + energyBackF} ⚡ rendus.`)
                                 setDome(null); setDomePause(false)
                             }} style={{ background: "rgba(255,255,255,.12)", color: "#e6e0ff", fontWeight: 700, border: "1px solid rgba(255,255,255,.2)", borderRadius: 8, padding: "7px 12px", cursor: "pointer", fontSize: 12 }}>🏳️ Abandonner</button>
                         </div>
