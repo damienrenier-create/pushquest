@@ -92,6 +92,7 @@ interface GameStore {
     advisorOpen: boolean // Conseiller (PNJ à côté du Centre) : questions → base de données
     labOpen: boolean // Terminal d'expériences (labo, étage de l'infirmerie)
     combatShopOpen: boolean // Boutique de Jetons de Combat (marchand du hub Zone de Combat)
+    grottePasseurOpen: boolean // Passeur de la Grotte (Zone de Combat) : paie des JC → téléport Grotte du Nexus
     domeMenuOpen: boolean // carrousel du MAÎTRE DU DÔME (mage central) : S'inscrire / Règles / Stats
     signOpen: number | null // index du panneau du parc ouvert (pop-up dédié), null = fermé
     posterImage: string | null // poster mural du Centre affiché en overlay (src PNG), null = fermé
@@ -132,6 +133,7 @@ interface GameStore {
     closeAdvisor: () => void
     closeLab: () => void
     closeCombatShop: () => void
+    closeGrottePasseur: () => void
     closeDomeMenu: () => void
     closeSign: () => void
     closePoster: () => void
@@ -437,6 +439,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     advisorOpen: false,
     labOpen: false,
     combatShopOpen: false,
+    grottePasseurOpen: false,
     domeMenuOpen: false,
     signOpen: null,
     posterImage: null,
@@ -462,7 +465,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     move: (dir) => {
         const { player, map, dialogue } = get()
         // Mouvement bloqué pendant un dialogue, une boutique, le PC ou un combat.
-        if (dialogue || get().shopOpen || get().pcOpen || get().guideOpen || get().arenaInfoOpen !== null || get().libraryOpen || get().advisorOpen || get().labOpen || get().combatShopOpen || get().domeMenuOpen || get().signOpen !== null) return
+        if (dialogue || get().shopOpen || get().pcOpen || get().guideOpen || get().arenaInfoOpen !== null || get().libraryOpen || get().advisorOpen || get().labOpen || get().combatShopOpen || get().grottePasseurOpen || get().domeMenuOpen || get().signOpen !== null) return
         if (getBattleSnapshot().battle) return
 
         const next = tryMove(player, dir, map)
@@ -953,6 +956,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
+        // Passeur de la Grotte (hub Zone de Combat) : ouvre le panneau de paiement JC → téléport Grotte du Nexus.
+        if (npc.id === "y_grotte_passeur") {
+            set({ grottePasseurOpen: true })
+            return
+        }
+
         // Panneau du parc (Route Nord) : chaque panneau ouvre SON pop-up dédié.
         // id = "y_park_sign_<n>" (1-based) → index de sujet 0-based.
         const signMatch = npc.id.match(/^y_park_sign_(\d+)$/)
@@ -1360,6 +1369,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     closeAdvisor: () => set({ advisorOpen: false }),
     closeLab: () => set({ labOpen: false }),
     closeCombatShop: () => set({ combatShopOpen: false }),
+    closeGrottePasseur: () => set({ grottePasseurOpen: false }),
     closeDomeMenu: () => set({ domeMenuOpen: false }),
     closeSign: () => set({ signOpen: null }),
     closePoster: () => set({ posterImage: null }),

@@ -38,6 +38,7 @@ import MovesPanel from "./MovesPanel"
 import AdvisorPanel from "./AdvisorPanel"
 import LabPanel from "./LabPanel"
 import CombatShopModal from "./CombatShopModal"
+import GrottePasseurModal from "./GrottePasseurModal"
 import DailyTicketModal from "./DailyTicketModal"
 import DiablesRougesQuiz, { diablesRougesAvailable } from "./DiablesRougesQuiz"
 import GlandEvent, { type GlandScreen, GLAND_EVENT_DATE, GLAND_STEP_INTERVAL, GLAND_ENERGY_STOLEN, GLAND_TICKET_COUNT, GLAND_TICKET_VALUE, glandCartonDone, glandJusticeDone, markGlandCartonDone, markGlandJusticeDone } from "./GlandEvent"
@@ -216,6 +217,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const closeLab = useGameStore((s) => s.closeLab)
     const combatShopOpen = useGameStore((s) => s.combatShopOpen)
     const closeCombatShop = useGameStore((s) => s.closeCombatShop)
+    const grottePasseurOpen = useGameStore((s) => s.grottePasseurOpen)
+    const closeGrottePasseur = useGameStore((s) => s.closeGrottePasseur)
     const signOpen = useGameStore((s) => s.signOpen)
     const closeSign = useGameStore((s) => s.closeSign)
     const posterImage = useGameStore((s) => s.posterImage)
@@ -1383,6 +1386,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (arenaInfoOpen) { closeArenaInfo(); return true }
         if (libraryOpen) { closeLibrary(); return true }
         if (advisorOpen) { closeAdvisor(); return true }
+        if (grottePasseurOpen) { closeGrottePasseur(); return true }
         if (labOpen) { closeLab(); return true }
         if (pcOpen) { closePc(); return true }
         if (menu === "team" || menu === "bag" || menu === "reput" || menu === "moves" || menu === "hof" || menu === "arena-hof" || menu === "stats" || menu === "run2scores" || menu === "run3scores" || menu === "leaderboard") { setMenu("pause"); return true }
@@ -1482,6 +1486,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 <div style={menuOverlayStyle} onClick={() => { if (Date.now() - menuTapGuard.current < 350) return; setMenu("none") }}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                         <div style={menuTitleStyle}>MENU</div>
+                        {!battle && mapPlayer.mapId === "yellow_grotte_nexus" && (
+                            <button style={{ ...menuBtnStyle, borderColor: "#c9a26b", color: "#e8c48f" }} onClick={() => { setMenu("none"); setMap("yellow_zone_combat", 12, 10) }}>🕳️ QUITTER LA GROTTE</button>
+                        )}
                         {!battle && <button style={menuBtnStyle} onClick={() => setMenu("team")}>🐾 ÉQUIPE</button>}
                         {!battle && <button style={menuBtnStyle} onClick={() => setMenu("bag")}>🎒 SAC</button>}
                         <button style={menuBtnStyle} onClick={() => router.push("/gamebook/yellow/pokedex")}>📷 POKÉDEX</button>
@@ -2329,6 +2336,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             <AdvisorPanel />
             <LabPanel />
             {combatShopOpen && <CombatShopModal onClose={closeCombatShop} />}
+            {grottePasseurOpen && <GrottePasseurModal onClose={closeGrottePasseur} onEnter={() => { closeGrottePasseur(); setMap("yellow_grotte_nexus", 30, 8) }} />}
             {ticketOpen && <DailyTicketModal mode="daily" today={getPlayer().creditedThrough} onClose={() => { persistYellowSave(); setTicketOpen(false) }} />}
             {belgiumOpen && <DiablesRougesQuiz onClose={() => setBelgiumOpen(false)} />}
             {glandModal && <GlandEvent screen={glandModal} onNext={advanceGland} />}
