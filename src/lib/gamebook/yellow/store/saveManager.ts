@@ -195,6 +195,11 @@ async function persistNow(): Promise<void> {
     } catch { /* hors-ligne : réessai au prochain autosave */ }
 }
 
+/** Sauvegarde IMMÉDIATE exportée (POST tout de suite, non débouncé). À utiliser pour les événements CRITIQUES
+ *  où le débounce de 800 ms de persistYellowSave() perdrait la progression si le joueur quitte l'app juste après
+ *  (ex. TITRE remporté au Dôme : domeChampionships++ doit atteindre le serveur immédiatement). */
+export async function persistYellowSaveNow(): Promise<void> { await persistNow() }
+
 /**
  * NEW GAME+ — démarre un 2e run : le monde LIVE courant est STASHÉ (intact + rejouable via switchWorld),
  * l'équipe championne est FIGÉE (adversaire de fin de Ligue NG+), et un monde NG+ frais démarre avec le
