@@ -12,6 +12,7 @@ import { speciesAtLevel } from "../data/ace"
 import { bstOf, generateFrontierTeam, allFrontierForms, frontierEligible, bstBandForStreak, weakTypesOf, type OpponentSpec } from "./engine"
 import { DOME_TRAINERS } from "./domeTrainers"
 import type { DomeTrainer } from "./domeTypes"
+import { DAN_POOL, type DanTeam } from "./danTeams"
 import type { PokeType } from "../battle/types"
 
 export const DOME_SIZE = 8
@@ -40,7 +41,19 @@ function shuffle<T>(rng: Rng, arr: T[]): T[] {
     return a
 }
 
-export interface CreateDomeOpts { level: number; streak: number; playerTeam: OpponentSpec[]; size?: number }
+export interface CreateDomeOpts {
+    level: number; streak: number; playerTeam: OpponentSpec[]; size?: number
+    /** VOIE DU MAÎTRE : si défini, les adversaires sont des ÉQUIPES DÉSIGNÉES (pool des 12) au lieu du procédural,
+     *  avec la proportion de shiny du grade (none/half/full). undefined = tiers normaux Bronze→Maître. */
+    danShiny?: "none" | "half" | "full"
+}
+
+/** Traduit une équipe désignée en OpponentSpec[] : moveset + objet imposés, niveau du dan, shiny selon le grade
+ *  (half = la 1re moitié de l'équipe ; full = toute l'équipe). L'EV/Saiyan est appliqué EN AVAL (buildFrontierEnemies). */
+export function danTeamToSpecs(team: DanTeam, level: number, shinyMode: "none" | "half" | "full"): OpponentSpec[] {
+    const shinyCount = shinyMode === "full" ? team.mons.length : shinyMode === "half" ? Math.ceil(team.mons.length / 2) : 0
+    return team.mons.map((m, i) => ({ speciesId: m.speciesId, level, moveIds: [...m.moveIds], heldItemId: m.heldItemId, shiny: i < shinyCount }))
+}
 
 const typesOfSp = (id: string): string[] => (SPECIES[id] as unknown as { types?: string[] })?.types ?? []
 
@@ -114,22 +127,42 @@ export function generateDomeTrainerTeam(rng: Rng, t: DomeTrainer, level: number,
     return ids.map((speciesId) => ({ speciesId, level }))
 }
 
-/** Crée un bracket : le joueur (id 0) + (size-1) IA générées, placés en ordre de bracket aléatoire (seedé). */
+/** Surnom d'affichage d'une équipe désignée : le « … » de son identité, sinon le libellé d'archétype. */
+function danNickname(dt: DanTeam): string {
+    const m = dt.identity.match(/«\s*(.+?)\s*»/)
+    return `Maître ${m ? m[1] : dt.archetype.replace(/^T\d+\s*/, "")}`
+}
+
+/** Crée un bracket : le joueur (id 0) + (size-1) IA, placés en ordre de bracket aléatoire (seedé). VOIE DU MAÎTRE
+ *  (opts.danShiny) : les adversaires sont des ÉQUIPES DÉSIGNÉES (pool des 12) ; sinon procédural (pool des 30). */
 export function createDome(rng: Rng, opts: CreateDomeOpts): DomeState {
     const size = opts.size ?? DOME_SIZE
     const entrants: DomeEntrant[] = [{ id: 0, name: "Toi", team: opts.playerTeam, isPlayer: true }]
-    // 7 dresseurs DISTINCTS tirés du pool des 30 (Phase 2 : filtre par tier + équipes générées selon leur persona).
-    const roster = shuffle(rng, DOME_TRAINERS).slice(0, size - 1)
-    for (let i = 1; i < size; i++) {
-        const t = roster[i - 1]
-        entrants.push({
-            id: i, isPlayer: false,
-            name: t?.name ?? HOLO_NAMES[(i - 1) % HOLO_NAMES.length],
-            trainerId: t?.id, epithet: t?.epithet, taunt: t?.taunt,
-            team: t
-                ? generateDomeTrainerTeam(rng, t, opts.level, DOME_TEAM_SIZE, opts.streak, opts.playerTeam)
-                : generateFrontierTeam(rng, { streak: opts.streak, level: opts.level, size: DOME_TEAM_SIZE }),
-        })
+    if (opts.danShiny !== undefined) {
+        // DAN : (size-1) équipes désignées DISTINCTES tirées du pool des 12 (seedé), shiny selon le grade.
+        const picks = shuffle(rng, [...DAN_POOL]).slice(0, size - 1)
+        for (let i = 1; i < size; i++) {
+            const dt = picks[(i - 1) % picks.length]
+            entrants.push({
+                id: i, isPlayer: false,
+                name: danNickname(dt), epithet: dt.archetype.replace(/^T\d+\s*/, ""),
+                team: danTeamToSpecs(dt, opts.level, opts.danShiny),
+            })
+        }
+    } else {
+        // 7 dresseurs DISTINCTS tirés du pool des 30 (équipes générées selon leur persona).
+        const roster = shuffle(rng, DOME_TRAINERS).slice(0, size - 1)
+        for (let i = 1; i < size; i++) {
+            const t = roster[i - 1]
+            entrants.push({
+                id: i, isPlayer: false,
+                name: t?.name ?? HOLO_NAMES[(i - 1) % HOLO_NAMES.length],
+                trainerId: t?.id, epithet: t?.epithet, taunt: t?.taunt,
+                team: t
+                    ? generateDomeTrainerTeam(rng, t, opts.level, DOME_TEAM_SIZE, opts.streak, opts.playerTeam)
+                    : generateFrontierTeam(rng, { streak: opts.streak, level: opts.level, size: DOME_TEAM_SIZE }),
+            })
+        }
     }
     const alive = shuffle(rng, entrants.map((e) => e.id)) // placement de bracket seedé
     return { level: opts.level, round: 0, entrants, alive, playerId: 0, status: "active" }

@@ -7,10 +7,15 @@
 
 import type { PokeType } from "../battle/types"
 
-/** Tiers d'escalade du Dôme (difficulté + budget training croissants). */
-export type DomeTier = "BRONZE" | "ARGENT" | "OR" | "DIAMANT" | "MAITRE"
-export const DOME_TIERS: readonly DomeTier[] = ["BRONZE", "ARGENT", "OR", "DIAMANT", "MAITRE"] as const
-/** Rang d'un tier (0=Bronze … 4=Maître) → comparaisons `minTier ≤ tierCourant`. */
+/** Tiers d'escalade du Dôme (difficulté + budget training croissants). Après Maître : la VOIE DU MAÎTRE — 4 dan
+ *  post-Ligue, tournois à ÉQUIPES DÉSIGNÉES (pool des 12, cf. danTeams.ts), Saiyan/shiny croissants par grade. */
+export type DomeTier = "BRONZE" | "ARGENT" | "OR" | "DIAMANT" | "MAITRE" | "DAN_1" | "DAN_2" | "DAN_3" | "DAN_4"
+export const DOME_TIERS: readonly DomeTier[] = ["BRONZE", "ARGENT", "OR", "DIAMANT", "MAITRE", "DAN_1", "DAN_2", "DAN_3", "DAN_4"] as const
+/** Les 4 grades de la VOIE DU MAÎTRE (portes ouvertes une fois Maître battu). */
+export const DAN_TIERS: readonly DomeTier[] = ["DAN_1", "DAN_2", "DAN_3", "DAN_4"] as const
+/** Vrai si le tier est un dan (équipe DÉSIGNÉE du pool, ≠ génération procédurale des tiers Bronze→Maître). */
+export function isDanTier(t: DomeTier): boolean { return (DAN_TIERS as readonly string[]).includes(t) }
+/** Rang d'un tier (0=Bronze … 8=4e Dan) → comparaisons `minTier ≤ tierCourant`. */
 export function tierRank(t: DomeTier): number { return DOME_TIERS.indexOf(t) }
 
 /** Biais de catégorie de l'ace — garde-fou de cohérence (physique→ATQ, spécial→SpA). */

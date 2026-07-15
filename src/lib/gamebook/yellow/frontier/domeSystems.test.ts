@@ -21,7 +21,12 @@ describe("Dôme — budgets & escalade", () => {
         expect(maxUnlockedTier(2)).toBe("OR")
         expect(maxUnlockedTier(3)).toBe("DIAMANT")
         expect(maxUnlockedTier(4)).toBe("MAITRE")
-        expect(maxUnlockedTier(999)).toBe("MAITRE")
+        // VOIE DU MAÎTRE : les 4 dan se débloquent après Maître (5→8 titres), plafond = 4e Dan.
+        expect(maxUnlockedTier(5)).toBe("DAN_1")
+        expect(maxUnlockedTier(6)).toBe("DAN_2")
+        expect(maxUnlockedTier(7)).toBe("DAN_3")
+        expect(maxUnlockedTier(8)).toBe("DAN_4")
+        expect(maxUnlockedTier(999)).toBe("DAN_4")
     })
 
     it("distributeDomeTraining : EV plafonné 252/stat & ≤510 total ; budget 0 = aucun entraînement", () => {

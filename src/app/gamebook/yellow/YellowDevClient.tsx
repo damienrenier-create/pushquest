@@ -72,7 +72,7 @@ import { generateRentalPool, buildDraftTeam, type RentalCandidate } from "@/lib/
 import { resolveFrontierLevel, JC_PER_WIN, JC_BOSS_MULT, BOSS_EVERY, frontierEnergyRefund, type OpponentSpec, type LevelRule } from "@/lib/gamebook/yellow/frontier/engine"
 import { createDome, advanceDome, playerOpponent, aiLeadIndex, DOME_ROUNDS, type DomeState } from "@/lib/gamebook/yellow/frontier/dome"
 import { DOME_BUDGETS, DOME_TITLES, maxUnlockedTier, distributeDomeTraining, roundBudget } from "@/lib/gamebook/yellow/frontier/domeBudgets"
-import { DOME_TIERS, type DomeTier } from "@/lib/gamebook/yellow/frontier/domeTypes"
+import { DOME_TIERS, isDanTier, type DomeTier } from "@/lib/gamebook/yellow/frontier/domeTypes"
 import { DOME_BLINDS, clampBet, domeEnergyRefund, domeJcReward, domeFinalPlacement } from "@/lib/gamebook/yellow/frontier/domeEconomy"
 import { Rng } from "@/lib/gamebook/yellow/battle/rng"
 
@@ -80,10 +80,18 @@ import { Rng } from "@/lib/gamebook/yellow/battle/rng"
 // EV/Saiyan du tier appliqué à chaque ennemi (Tour/Usine appellent sans → coquilles nues, inchangées).
 function buildFrontierEnemies(opponent: OpponentSpec[], training?: { ev: number; saiyan: number }) {
     return opponent.map((o) => {
-        if (!training || (training.ev <= 0 && training.saiyan <= 0)) return createMonInstance(o.speciesId, o.level, { owned: false })
-        const sp = getSpecies(o.speciesId)
-        const t = sp ? distributeDomeTraining(sp.baseStats, training.ev, training.saiyan) : { ev: {}, allocated: {} }
-        return createMonInstance(o.speciesId, o.level, { owned: false, ev: t.ev, allocated: t.allocated })
+        // Équipes DÉSIGNÉES (Voie du Maître) : moveset/shiny imposés ; sinon undefined → learnset/non-shiny (historique).
+        const base = { owned: false, moveIds: o.moveIds, shiny: o.shiny }
+        let mon: MonInstance
+        if (!training || (training.ev <= 0 && training.saiyan <= 0)) {
+            mon = createMonInstance(o.speciesId, o.level, base)
+        } else {
+            const sp = getSpecies(o.speciesId)
+            const t = sp ? distributeDomeTraining(sp.baseStats, training.ev, training.saiyan) : { ev: {}, allocated: {} }
+            mon = createMonInstance(o.speciesId, o.level, { ...base, ev: t.ev, allocated: t.allocated })
+        }
+        if (o.heldItemId) mon.heldItem = o.heldItemId // objet tenu de l'équipe désignée (posé après création)
+        return mon
     })
 }
 import { maxHpOf, displayName } from "@/lib/gamebook/yellow/battle/engine"
@@ -2080,7 +2088,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                     const seed = Math.floor(Math.random() * 1e9)
                                     const rule: LevelRule = lvl <= 50 ? "L50" : "L100"
                                     const playerTeam = getPlayer().team.map((m) => ({ speciesId: m.speciesId, level: lvl }))
-                                    setDome({ state: createDome(new Rng(seed), { level: lvl, streak: bud.streak, playerTeam }), rule, tier: domeSetup.tier, bet: finalBet, seed, jc: 0, energyAccrued: 0 })
+                                    // VOIE DU MAÎTRE : les dan tirent des ÉQUIPES DÉSIGNÉES (pool des 12) avec le shiny du grade ; sinon procédural.
+                                    const danShiny = isDanTier(domeSetup.tier) ? (bud.shiny ?? "none") : undefined
+                                    setDome({ state: createDome(new Rng(seed), { level: lvl, streak: bud.streak, playerTeam, danShiny }), rule, tier: domeSetup.tier, bet: finalBet, seed, jc: 0, energyAccrued: 0 })
                                     setDomeSetup(null)
                                     setDomePause(true)
                                     persistYellowSave()
@@ -2110,7 +2120,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 return (
                                     <button key={tier} disabled={locked} onClick={() => { domeLaunchingRef.current = false; setDomeSetup({ tier, bet: DOME_BLINDS[tier].min }) }}
                                         style={{ background: locked ? "#332e4a" : "#f1c40f", color: locked ? "#8f88b5" : "#1a1a22", fontWeight: 800, border: frontier ? "2px solid #4cd964" : "2px solid transparent", borderRadius: 10, padding: "10px 13px", minWidth: 70, cursor: locked ? "not-allowed" : "pointer", fontSize: 14, lineHeight: 1.3, opacity: locked ? 0.7 : 1, boxShadow: frontier ? "0 0 10px #4cd96488" : "none" }}>
-                                        {frontier ? "⭐ " : ""}{locked ? "🔒 " : ""}{DOME_TITLES[tier]}<br /><span style={{ fontSize: 10, opacity: 0.78 }}>{locked ? `bats ${DOME_TITLES[DOME_TIERS[maxRank]]}` : frontier ? "à battre" : `Niv ${bud.level}`}</span>
+                                        {frontier ? "⭐ " : ""}{locked ? "🔒 " : ""}{DOME_TITLES[tier]}<br /><span style={{ fontSize: 10, opacity: 0.78 }}>{locked ? `bats ${DOME_TITLES[DOME_TIERS[maxRank]]}` : bud.shiny === "full" ? "✨✨ full shiny" : bud.shiny === "half" ? "✨ mi-shiny" : isDanTier(tier) ? `Saiyan ${bud.saiyanPerMon}` : frontier ? "à battre" : `Niv ${bud.level}`}</span>
                                     </button>
                                 )
                             })}
@@ -2127,7 +2137,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 const nextT = DOME_TIERS[Math.min(DOME_TIERS.length - 1, curIdx + 1)]
                 const dome = player.domeStats ?? { wins: 0, losses: 0, daemonUse: {} as Record<string, number>, moveUse: {} as Record<string, number> }
                 const topN = (rec: Record<string, number>, n: number) => Object.entries(rec ?? {}).sort((a, b) => b[1] - a[1]).slice(0, n)
-                const tierRow = (t: DomeTier) => { const b = DOME_BUDGETS[t]; const bl = DOME_BLINDS[t]; return `${DOME_TITLES[t]} · Niv ${b.level} · EV ${b.evPerMon} · Saiyan ${b.saiyanPerMon} · IA ${b.aiLevel} · mise ${bl.min}-${bl.max}⚡` }
+                const tierRow = (t: DomeTier) => { const b = DOME_BUDGETS[t]; const bl = DOME_BLINDS[t]; return `${DOME_TITLES[t]} · Niv ${b.level} · EV ${b.evPerMon} · Saiyan ${b.saiyanPerMon}${b.shiny && b.shiny !== "none" ? ` · ✨ ${b.shiny === "full" ? "équipe shiny" : "mi-shiny"}` : ""} · IA ${b.aiLevel} · mise ${bl.min}-${bl.max}⚡${isDanTier(t) ? " · 🎴 équipe désignée" : ""}` }
                 return (
                     <div style={{ position: "absolute", inset: 0, zIndex: 70, background: "rgba(10,8,20,.75)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                         <div style={{ width: "min(460px, 94vw)", maxHeight: "88dvh", overflowY: "auto", background: "#1a1a22f2", color: "#fff", border: "3px solid #7c4d9e", borderRadius: 14, padding: "16px 18px", boxShadow: "0 8px 30px #000b" }}>

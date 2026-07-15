@@ -12,12 +12,13 @@ import type { StatKey } from "../battle/types"
 export interface DomeTierBudget {
     tier: DomeTier
     level: number               // niveau de combat des Daemons
-    bstBand: [number, number]   // bande de BST cible (indicatif ; le générateur utilise `streak`)
+    bstBand: [number, number]   // bande de BST cible (indicatif ; le générateur utilise `streak`) — inutilisé pour un dan (équipe désignée)
     evPerMon: number            // budget EV par Daemon (0..510)
     saiyanPerMon: number        // points Saiyan par Daemon
     aiLevel: AiLevel            // plancher de compétence de l'IA
     streak: number              // difficulté passée au générateur (→ bande via bstBandForStreak)
     unlockChampionships: number // nb de titres requis pour débloquer ce tier
+    shiny?: "none" | "half" | "full" // VOIE DU MAÎTRE : proportion de l'équipe adverse en shiny (+10 % toutes stats). Défaut none.
 }
 
 /** Table des tiers (pente douce mais nette). EV plafonné à 510 (EV_TOTAL_CAP). */
@@ -29,11 +30,18 @@ export const DOME_BUDGETS: Record<DomeTier, DomeTierBudget> = {
     OR:      { tier: "OR",      level: 75,  bstBand: [410, 465], evPerMon: 252, saiyanPerMon: 30, aiLevel: "ace",     streak: 16, unlockChampionships: 2 },
     DIAMANT: { tier: "DIAMANT", level: 88,  bstBand: [445, 500], evPerMon: 384, saiyanPerMon: 54, aiLevel: "hof",     streak: 24, unlockChampionships: 3 },
     MAITRE:  { tier: "MAITRE",  level: 100, bstBand: [475, 540], evPerMon: 510, saiyanPerMon: 80, aiLevel: "hof",     streak: 30, unlockChampionships: 4 },
+    // VOIE DU MAÎTRE (post-Maître) — équipes DÉSIGNÉES (pool des 12). Niv 100 & EV MAX partout ; l'escalade se joue
+    // sur les POINTS SAIYAN puis le SHINY (+10 % toutes stats). bstBand/streak inutilisés (pas de génération procédurale).
+    DAN_1: { tier: "DAN_1", level: 100, bstBand: [300, 640], evPerMon: 510, saiyanPerMon: 90,  aiLevel: "hof", streak: 34, unlockChampionships: 5, shiny: "none" },
+    DAN_2: { tier: "DAN_2", level: 100, bstBand: [300, 640], evPerMon: 510, saiyanPerMon: 100, aiLevel: "hof", streak: 38, unlockChampionships: 6, shiny: "none" },
+    DAN_3: { tier: "DAN_3", level: 100, bstBand: [300, 640], evPerMon: 510, saiyanPerMon: 100, aiLevel: "hof", streak: 42, unlockChampionships: 7, shiny: "half" },
+    DAN_4: { tier: "DAN_4", level: 100, bstBand: [300, 640], evPerMon: 510, saiyanPerMon: 100, aiLevel: "hof", streak: 46, unlockChampionships: 8, shiny: "full" },
 }
 
 /** Titre décerné à la victoire d'un tournoi de ce tier (palmarès). */
 export const DOME_TITLES: Record<DomeTier, string> = {
     BRONZE: "🥉 Bronze", ARGENT: "🥈 Argent", OR: "🥇 Or", DIAMANT: "💎 Diamant", MAITRE: "👑 Maître",
+    DAN_1: "🎴 1ᵉʳ Dan", DAN_2: "🎴 2ᵉ Dan", DAN_3: "🎴 3ᵉ Dan", DAN_4: "🎴 4ᵉ Dan",
 }
 
 /** Tier MAXIMUM débloqué selon le nombre de titres déjà gagnés (domeChampionships). */

@@ -1,0 +1,166 @@
+// src/lib/gamebook/yellow/frontier/danTeams.ts
+//
+// VOIE DU MAÎTRE — les 12 équipes DÉSIGNÉES des tournois de dan (post-Maître du Dôme). 72 Daemons finaux
+// DISTINCTS, movesets 100 % LÉGAUX (learnset ou CT via canLearnCt), objets tenus inclus. Généré + audité, puis
+// codifié depuis l'artefact validé (« c'est parfait ! »). PUR (data only) — le niveau, les points Saiyan, l'EV
+// et le shiny sont appliqués EN AVAL par le GRADE du dan (cf. domeBudgets), ce fichier ne fixe QUE la composition.
+// Chaque dan tire ses adversaires dans ce pool ; le grade (1er→4e) = curseur de difficulté (Saiyan/shiny croissants).
+
+export interface DanTeamMon {
+    speciesId: string
+    moveIds: string[]
+    heldItemId?: string
+}
+export interface DanTeam {
+    archetype: string
+    identity: string
+    mons: DanTeamMon[]
+}
+
+/** Les 12 équipes désignées (T01→T12). Réservoir commun à TOUS les grades de dan. */
+export const DAN_POOL: readonly DanTeam[] = [
+    { // T01
+        archetype: "T01 Équilibre bulky-offense",
+        identity: "T01 « Socle sain » — Équilibre bulky-offense. Un backbone dé",
+        mons: [
+        { speciesId: "magnetor", moveIds: ["poing_meteore", "seisme", "lame_roche", "repos"], heldItemId: "restes" },
+        { speciesId: "brookhante", moveIds: ["linceul", "toxik", "malediction", "ball_ombre"], heldItemId: "poudre_claire" },
+        { speciesId: "aquilord", moveIds: ["souffle_polaire", "lance_flammes", "focalisation", "reprise_ailes"], heldItemId: "glaceternel" },
+        { speciesId: "dracarlin", moveIds: ["danse_lames", "crocs_de_feu", "griffe_draconique", "seisme"], heldItemId: "charbon" },
+        { speciesId: "ukognos", moveIds: ["eclat_lunaire", "souffle_polaire", "fulgurance", "focalisation"], heldItemId: "restes" },
+        { speciesId: "gloutanoir", moveIds: ["tempete_verte", "vampigraine", "toxik", "mega_sangsue"], heldItemId: "restes" },
+        ],
+    },
+    { // T02
+        archetype: "T02 Hyper-offense vitesse",
+        identity: "T02 — HYPER-OFFENSE VITESSE « Blitz Éclair ». Six sweepers, ",
+        mons: [
+        { speciesId: "alirocaillus", moveIds: ["lame_roche", "pique_fatal", "seisme", "vive_attaque"], heldItemId: "lentilscope" },
+        { speciesId: "coccimperatrice", moveIds: ["danse_lames", "coup_de_boutoir", "dard_fatal", "vive_attaque"], heldItemId: "ceinture_noire" },
+        { speciesId: "jerbiwat", moveIds: ["focalisation", "vague_mentale", "fulgurance", "vive_attaque"], heldItemId: "aimant" },
+        { speciesId: "thundah", moveIds: ["focalisation", "lance_flammes", "fulgurance", "vive_attaque"], heldItemId: "charbon" },
+        { speciesId: "ombrapanthe", moveIds: ["danse_lames", "ball_ombre", "plaquage", "vive_attaque"], heldItemId: "rune_sort" },
+        { speciesId: "goshendofy", moveIds: ["focalisation", "souffle_primordial", "seisme", "vive_attaque"], heldItemId: "croc_dragon" },
+        ],
+    },
+    { // T03
+        archetype: "T03 Stall / usure",
+        identity: "T03 — STALL / USURE. Double mur sur les deux flancs (physiqu",
+        mons: [
+        { speciesId: "colosfer", moveIds: ["danse_lames", "seisme", "tete_de_fer", "repos"], heldItemId: "restes" },
+        { speciesId: "calderont", moveIds: ["hydrocanon", "lance_flammes", "toxik", "repos"], heldItemId: "restes" },
+        { speciesId: "mycedruide", moveIds: ["toxik", "onde_folie", "mega_sangsue", "repos"], heldItemId: "poudre_claire" },
+        { speciesId: "sylvebarbe", moveIds: ["vampigraine", "spores_dodo", "seisme", "repos"], heldItemId: "restes" },
+        { speciesId: "necrocorbe", moveIds: ["toxik", "vague_mentale", "focalisation", "repos"], heldItemId: "restes" },
+        { speciesId: "tonytony", moveIds: ["cage_eclair", "hurlement", "souffle_polaire", "repos"], heldItemId: "coquille_tony" },
+        ],
+    },
+    { // T04
+        archetype: "T04 Tanks lents-nukers",
+        identity: "T04 — « Le Mur qui Riposte ». Six gros bulks LENTS qui encai",
+        mons: [
+        { speciesId: "megalithe", moveIds: ["roc_titanesque", "seisme", "danse_lames", "repos"], heldItemId: "pierre_dure" },
+        { speciesId: "leviathonn", moveIds: ["hydrocanon", "fulgurance", "souffle_polaire", "repos"], heldItemId: "restes" },
+        { speciesId: "druidours", moveIds: ["coup_de_boutoir", "seisme", "danse_lames", "vampigraine"], heldItemId: "ceinture_noire" },
+        { speciesId: "bouhbou", moveIds: ["ball_ombre", "coup_de_boutoir", "seisme", "danse_lames"], heldItemId: "rune_sort" },
+        { speciesId: "cryotyran", moveIds: ["griffe_draconique", "blizzard", "seisme", "danse_lames"], heldItemId: "glaceternel" },
+        { speciesId: "vipember", moveIds: ["lance_flammes", "vague_mentale", "pyrotechnie", "repos"], heldItemId: "charbon" },
+        ],
+    },
+    { // T05
+        archetype: "T05 Setup-sweep multi",
+        identity: "T05 Setup-Sweep Multi — « six bouées de mise en place ». Cha",
+        mons: [
+        { speciesId: "divinpate", moveIds: ["focalisation", "eveil_divin", "vague_mentale", "meteores"], heldItemId: "cuillere_tordue" },
+        { speciesId: "naiadrak", moveIds: ["focalisation", "hydrocanon", "souffle_polaire", "draco_charge"], heldItemId: "eau_mystique" },
+        { speciesId: "tauricendre", moveIds: ["danse_lames", "crocs_de_feu", "crochet_maitre", "vive_attaque"], heldItemId: "vive_griffe" },
+        { speciesId: "draconarque", moveIds: ["danse_lames", "griffe_draconique", "pique_fatal", "seisme"], heldItemId: "baie_phenix" },
+        { speciesId: "gekroc", moveIds: ["danse_lames", "seisme", "lame_roche", "repos"], heldItemId: "restes" },
+        { speciesId: "uzumaro", moveIds: ["danse_lames", "crochet_maitre", "deferlante", "carapace_diamant"], heldItemId: "ceinture_noire" },
+        ],
+    },
+    { // T06
+        archetype: "T06 Couverture parfaite",
+        identity: "Équipe T06 « Couverture Parfaite » — la casse-tout offensive",
+        mons: [
+        { speciesId: "orcaline", moveIds: ["blizzard", "hydrocanon", "souffle_polaire", "repos"], heldItemId: "glaceternel" },
+        { speciesId: "voltapanthe", moveIds: ["focalisation", "ultra_foudre", "fulgurance", "plaquage"], heldItemId: "aimant" },
+        { speciesId: "toucanyon", moveIds: ["focalisation", "lance_flammes", "pyrotechnie", "pique_fatal"], heldItemId: "charbon" },
+        { speciesId: "maitrezenc", moveIds: ["danse_lames", "crochet_maitre", "seisme", "lame_roche"], heldItemId: "lentilscope" },
+        { speciesId: "rochison", moveIds: ["carapace_diamant", "seisme", "lame_roche", "repos"], heldItemId: "restes" },
+        { speciesId: "omnhippo", moveIds: ["eveil_divin", "vague_mentale", "hypnose", "mirage"], heldItemId: "poudre_claire" },
+        ],
+    },
+    { // T07
+        archetype: "T07 Priorité / revenge",
+        identity: "T07 — PRIORITÉ / REVENGE. Escadron d'offense à priorité mult",
+        mons: [
+        { speciesId: "chronorex", moveIds: ["serres_aube", "lame_roche", "seisme", "danse_lames"], heldItemId: "bec_pointu" },
+        { speciesId: "necrolopendre", moveIds: ["ombre_furtive", "ball_ombre", "dard_fatal", "danse_lames"], heldItemId: "carapace_necro" },
+        { speciesId: "hebulmin", moveIds: ["crochet_maitre", "seisme", "cage_eclair", "vive_attaque"], heldItemId: "restes" },
+        { speciesId: "pyropanthe", moveIds: ["lance_flammes", "pyrotechnie", "vive_attaque", "focalisation"], heldItemId: "charbon" },
+        { speciesId: "wistree", moveIds: ["vol_d_eclat", "tempete_verte", "malediction", "onde_folie"], heldItemId: "poudre_claire" },
+        { speciesId: "aquapanthe", moveIds: ["deferlante", "souffle_polaire", "vive_attaque", "repos"], heldItemId: "eau_mystique" },
+        ],
+    },
+    { // T08
+        archetype: "T08 Noyau Dragon + légendaires",
+        identity: "Les Héritiers du Sang de Dragon — noyau \"mythique\" reconstru",
+        mons: [
+        { speciesId: "morrow", moveIds: ["hypnose", "vague_mentale", "souffle_polaire", "focalisation"], heldItemId: "poudre_claire" },
+        { speciesId: "lunarque", moveIds: ["cataclysme_lunaire", "eclat_lunaire", "vague_mentale", "repos"], heldItemId: "restes" },
+        { speciesId: "mobyd", moveIds: ["deferlante", "hydrocanon", "souffle_polaire", "onde_folie"], heldItemId: "eau_mystique" },
+        { speciesId: "gekosmic", moveIds: ["danse_lames", "lame_roche", "seisme", "griffe_draconique"], heldItemId: "pierre_dure" },
+        { speciesId: "merorem", moveIds: ["toxik", "repos", "bombe_beurk", "boul_pollen"], heldItemId: "grelot_coque" },
+        { speciesId: "namizeus", moveIds: ["fulgurance", "ball_ombre", "ombre_furtive", "mirage"], heldItemId: "aimant" },
+        ],
+    },
+    { // T09
+        archetype: "T09 Statut / disruption",
+        identity: "ÉQUIPE T09 — STATUT / DISRUPTION (« Le Conseil des Endormeur",
+        mons: [
+        { speciesId: "archibouh", moveIds: ["hypnose", "onde_folie", "vague_mentale", "ball_ombre"], heldItemId: "poudre_claire" },
+        { speciesId: "mouflorage", moveIds: ["cage_eclair", "fulgurance", "souffle_polaire", "repos"], heldItemId: "restes" },
+        { speciesId: "gekraise", moveIds: ["lame_roche", "seisme", "plaquage", "onde_folie"], heldItemId: "pierre_dure" },
+        { speciesId: "regnantaur", moveIds: ["dard_fatal", "vague_mentale", "onde_folie", "plaquage"], heldItemId: "couronne_reine" },
+        { speciesId: "torturoche", moveIds: ["eveil_divin", "onde_folie", "lame_roche", "repos"], heldItemId: "cuillere_tordue" },
+        { speciesId: "sylvapuce", moveIds: ["spores_dodo", "vampigraine", "tempete_verte", "mega_sangsue"], heldItemId: "grain_miracle" },
+        ],
+    },
+    { // T10
+        archetype: "T10 Murs-attaquants",
+        identity: "T10 « MURS-ATTAQUANTS » — six murs qui tapent fort, aucun ba",
+        mons: [
+        { speciesId: "razmaree", moveIds: ["hydrocanon", "souffle_polaire", "focalisation", "repos"], heldItemId: "restes" },
+        { speciesId: "karmaki", moveIds: ["vague_mentale", "tempete_verte", "focalisation", "repos"], heldItemId: "cuillere_tordue" },
+        { speciesId: "enclumind", moveIds: ["crochet_maitre", "seisme", "danse_lames", "plaquage"], heldItemId: "ceinture_noire" },
+        { speciesId: "pyrozly", moveIds: ["lance_flammes", "crocs_de_feu", "focalisation", "repos"], heldItemId: "charbon" },
+        { speciesId: "panthegel", moveIds: ["blizzard", "toxik", "focalisation", "repos"], heldItemId: "glaceternel" },
+        { speciesId: "oragron", moveIds: ["ultra_foudre", "lame_eau", "focalisation", "repos"], heldItemId: "aimant" },
+        ],
+    },
+    { // T11
+        archetype: "T11 Anti-méta / weakness-exploit",
+        identity: "T11 - LES BRISEURS (Anti-meta / weakness-exploit). Escouade ",
+        mons: [
+        { speciesId: "auroraur", moveIds: ["souffle_polaire", "focalisation", "repos", "toxik"], heldItemId: "glaceternel" },
+        { speciesId: "zappeureal", moveIds: ["fulgurance", "cage_eclair", "coup_d_boule", "vive_attaque"], heldItemId: "aimant" },
+        { speciesId: "cerfeuillu", moveIds: ["spores_dodo", "brume_sporale", "tempete_verte", "mega_sangsue"], heldItemId: "restes" },
+        { speciesId: "magmator", moveIds: ["lame_roche", "lance_flammes", "seisme", "carapace_diamant"], heldItemId: "pierre_dure" },
+        { speciesId: "crapotaure", moveIds: ["lame_roche", "seisme", "danse_lames", "tranche"], heldItemId: "lentilscope" },
+        { speciesId: "pyrokoss", moveIds: ["lance_flammes", "seisme", "focalisation", "vive_attaque"], heldItemId: "charbon" },
+        ],
+    },
+    { // T12
+        archetype: "T12 APEX légendaire",
+        identity: "APEX T12 « Le Trône Vacant » — la meilleure équipe LÉGALE qu",
+        mons: [
+        { speciesId: "golemini", moveIds: ["danse_lames", "seisme", "lame_roche", "repos"], heldItemId: "restes" },
+        { speciesId: "loupyre", moveIds: ["danse_lames", "apotheose", "crochet_maitre", "belier"], heldItemId: "charbon" },
+        { speciesId: "florapanthe", moveIds: ["tempete_verte", "boul_pollen", "focalisation", "repos"], heldItemId: "grain_miracle" },
+        { speciesId: "aquilothan", moveIds: ["danse_lames", "meteores", "fonce_bec", "seisme"], heldItemId: "serre_royale" },
+        { speciesId: "yetiroche", moveIds: ["souffle_polaire", "lame_roche", "seisme", "carapace_diamant"], heldItemId: "pierre_dure" },
+        { speciesId: "sonarque", moveIds: ["hydrocanon", "fulgurance", "souffle_polaire", "repos"], heldItemId: "eau_mystique" },
+        ],
+    },
+] as const

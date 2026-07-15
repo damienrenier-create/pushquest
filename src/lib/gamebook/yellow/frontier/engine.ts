@@ -18,7 +18,15 @@ export type FrontierMode = "TOWER" | "FACTORY" | "DOME"
 /** Règle de niveau choisie par le joueur (les 3 dispos dans chaque salle). */
 export type LevelRule = "L50" | "L100" | "ADAPT"
 /** Spécification d'un Daemon adverse (le moteur de combat en fera une instance). */
-export interface OpponentSpec { speciesId: string; level: number }
+export interface OpponentSpec {
+    speciesId: string
+    level: number
+    /** VOIE DU MAÎTRE (équipes désignées) : moveset imposé, objet tenu, shiny. Absents = comportement historique
+     *  (attaques du learnset, pas d'objet, non-shiny) → 100 % rétro-compatible pour Tour/Usine/Dôme normal. */
+    moveIds?: string[]
+    heldItemId?: string
+    shiny?: boolean
+}
 
 export const BOSS_EVERY = 7            // un boss (Cerveau) tous les 7 combats (Tour)
 export const DEFAULT_TEAM_SIZE = 3     // équipes de 3 (cohérent ACE/Ligue)
