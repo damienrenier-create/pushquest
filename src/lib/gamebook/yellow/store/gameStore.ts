@@ -92,6 +92,7 @@ interface GameStore {
     advisorOpen: boolean // Conseiller (PNJ à côté du Centre) : questions → base de données
     labOpen: boolean // Terminal d'expériences (labo, étage de l'infirmerie)
     combatShopOpen: boolean // Boutique de Jetons de Combat (marchand du hub Zone de Combat)
+    domeMenuOpen: boolean // carrousel du MAÎTRE DU DÔME (mage central) : S'inscrire / Règles / Stats
     signOpen: number | null // index du panneau du parc ouvert (pop-up dédié), null = fermé
     posterImage: string | null // poster mural du Centre affiché en overlay (src PNG), null = fermé
     poster2Step: number // compteur de SESSION du poster (12,0) : 0→PNG2 · 1→PNG3 · 2+→Dieu des Pâtes
@@ -131,6 +132,7 @@ interface GameStore {
     closeAdvisor: () => void
     closeLab: () => void
     closeCombatShop: () => void
+    closeDomeMenu: () => void
     closeSign: () => void
     closePoster: () => void
     /** Affiche un dialogue simple (ex. explication post-combat du sbire). */
@@ -435,6 +437,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     advisorOpen: false,
     labOpen: false,
     combatShopOpen: false,
+    domeMenuOpen: false,
     signOpen: null,
     posterImage: null,
     poster2Step: 0,
@@ -459,7 +462,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     move: (dir) => {
         const { player, map, dialogue } = get()
         // Mouvement bloqué pendant un dialogue, une boutique, le PC ou un combat.
-        if (dialogue || get().shopOpen || get().pcOpen || get().guideOpen || get().arenaInfoOpen !== null || get().libraryOpen || get().advisorOpen || get().labOpen || get().combatShopOpen || get().signOpen !== null) return
+        if (dialogue || get().shopOpen || get().pcOpen || get().guideOpen || get().arenaInfoOpen !== null || get().libraryOpen || get().advisorOpen || get().labOpen || get().combatShopOpen || get().domeMenuOpen || get().signOpen !== null) return
         if (getBattleSnapshot().battle) return
 
         const next = tryMove(player, dir, map)
@@ -831,6 +834,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // Ordinateur du Centre : ouvre la boîte PC (rangement des Daemons).
         if (npc.id === "y_pc_box") {
             set({ pcOpen: true })
+            return
+        }
+        // MAÎTRE DU DÔME (mage central) : ouvre le carrousel (S'inscrire / Règles / Stats).
+        if (npc.id === "y_dome_maitre") {
+            set({ domeMenuOpen: true })
             return
         }
 
@@ -1352,6 +1360,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     closeAdvisor: () => set({ advisorOpen: false }),
     closeLab: () => set({ labOpen: false }),
     closeCombatShop: () => set({ combatShopOpen: false }),
+    closeDomeMenu: () => set({ domeMenuOpen: false }),
     closeSign: () => set({ signOpen: null }),
     closePoster: () => set({ posterImage: null }),
     closePc: () => set({ pcOpen: false }),

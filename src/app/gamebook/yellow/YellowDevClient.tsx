@@ -192,6 +192,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const interiorReturn = useGameStore((s) => s.interiorReturn) // ville d'entrée d'un intérieur partagé (shop/centre)
     const pcOpen = useGameStore((s) => s.pcOpen)
     const closePc = useGameStore((s) => s.closePc)
+    const domeMenuOpen = useGameStore((s) => s.domeMenuOpen)   // carrousel du Maître du Dôme
+    const closeDomeMenu = useGameStore((s) => s.closeDomeMenu)
     // Overlays plein écran gérés côté store (fermés par le bouton B via goBack).
     const guideOpen = useGameStore((s) => s.guideOpen)
     const closeGuide = useGameStore((s) => s.closeGuide)
@@ -244,10 +246,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [dome, setDome] = useState<{ state: DomeState; rule: LevelRule; tier: DomeTier; bet: number; seed: number; jc: number } | null>(null)
     const [domeSetup, setDomeSetup] = useState<{ tier: DomeTier; bet: number } | null>(null) // écran de MISE avant lancement
     const domeLaunchingRef = useRef(false) // anti double-débit de la mise (double-tap mobile)
-    // Quitter la map du Dôme (marcher pour sortir) réinitialise l'écran de mise → on repart du choix de tier au retour.
+    const [domeRegisterOpen, setDomeRegisterOpen] = useState(false) // le SÉLECTEUR de tier ne s'affiche qu'après « S'inscrire » (via le mage), pas tout seul
+    const [domeTab, setDomeTab] = useState<"inscrire" | "regles" | "stats">("inscrire") // onglet actif du carrousel du mage
+    // Quitter la map du Dôme (marcher pour sortir) réinitialise l'écran de mise + le sélecteur → on repasse par le mage au retour.
     useEffect(() => {
-        if (mapPlayer.mapId !== "yellow_combat_dome" && domeSetup) { setDomeSetup(null); domeLaunchingRef.current = false }
-    }, [mapPlayer.mapId, domeSetup])
+        if (mapPlayer.mapId !== "yellow_combat_dome") { if (domeSetup) setDomeSetup(null); if (domeRegisterOpen) setDomeRegisterOpen(false); domeLaunchingRef.current = false }
+    }, [mapPlayer.mapId, domeSetup, domeRegisterOpen])
     const [ticketOpen, setTicketOpen] = useState(false) // ticket roulette quotidien (1re connexion du jour)
     const [rouletteOpen, setRouletteOpen] = useState(false) // roulette européenne SOLO (bêta, à côté du casino)
     const [rouletteMpOpen, setRouletteMpOpen] = useState(false) // roulette européenne MULTIJOUEUR (Phase 4)
@@ -2006,7 +2010,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 </div>
             )}
             {/* ZONE DE COMBAT — DÔME : tournoi à élimination (bracket de 8), TON équipe, 3 manches */}
-            {!battle && !dome && mapPlayer.mapId === "yellow_combat_dome" && !dialogue && player.team.length > 0 && (() => {
+            {!battle && !dome && mapPlayer.mapId === "yellow_combat_dome" && !dialogue && player.team.length > 0 && domeRegisterOpen && (() => {
                 const champs = player.domeChampionships ?? 0
                 const maxRank = DOME_TIERS.indexOf(maxUnlockedTier(champs))
                 const frontierTier = DOME_TIERS[maxRank] // ton palier = le tier le + haut débloqué (on y REPREND, jamais Bronze)
@@ -2079,7 +2083,63 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 )
                             })}
                         </div>
-                        <div style={{ fontSize: 9, opacity: 0.6, marginTop: 6 }}>(marche pour sortir)</div>
+                        <button onClick={() => setDomeRegisterOpen(false)} style={{ marginTop: 10, background: "rgba(255,255,255,.12)", color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 11 }}>✕ Fermer</button>
+                    </div>
+                )
+            })()}
+            {/* CARROUSEL DU MAÎTRE DU DÔME (mage central) : S'inscrire / Règles / Stats */}
+            {!battle && domeMenuOpen && (() => {
+                const champs = getPlayer().domeChampionships ?? 0
+                const cur = maxUnlockedTier(champs)
+                const curIdx = DOME_TIERS.indexOf(cur)
+                const nextT = DOME_TIERS[Math.min(DOME_TIERS.length - 1, curIdx + 1)]
+                const pvp = player.pvpStats
+                const topN = (rec: Record<string, number>, n: number) => Object.entries(rec ?? {}).sort((a, b) => b[1] - a[1]).slice(0, n)
+                const tierRow = (t: DomeTier) => { const b = DOME_BUDGETS[t]; const bl = DOME_BLINDS[t]; return `${DOME_TITLES[t]} · Niv ${b.level} · EV ${b.evPerMon} · Saiyan ${b.saiyanPerMon} · IA ${b.aiLevel} · mise ${bl.min}-${bl.max}⚡` }
+                return (
+                    <div style={{ position: "absolute", inset: 0, zIndex: 70, background: "rgba(10,8,20,.75)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <div style={{ width: "min(460px, 94vw)", maxHeight: "88dvh", overflowY: "auto", background: "#1a1a22f2", color: "#fff", border: "3px solid #7c4d9e", borderRadius: 14, padding: "16px 18px", boxShadow: "0 8px 30px #000b" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 10 }}>
+                                <img src="/yellow/sprites/npc_dome_mage.png" alt="" style={{ width: 40, height: 40, imageRendering: "pixelated" }} />
+                                <div style={{ fontWeight: 800, fontSize: 16 }}>LE MAÎTRE DU DÔME</div>
+                            </div>
+                            <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+                                {(([["inscrire", "🎟️ S'inscrire"], ["regles", "📜 Règles"], ["stats", "📊 Stats"]]) as [typeof domeTab, string][]).map(([k, lbl]) => (
+                                    <button key={k} onClick={() => setDomeTab(k)} style={{ flex: 1, padding: "8px 4px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 800, background: domeTab === k ? "#7c4d9e" : "#332e4a", color: "#fff" }}>{lbl}</button>
+                                ))}
+                            </div>
+                            {domeTab === "inscrire" && (
+                                <div style={{ textAlign: "center" }}>
+                                    <div style={{ fontSize: 12, opacity: 0.88, marginBottom: 14, lineHeight: 1.55 }}>« Ton palier : <b style={{ color: "#c9a0ff" }}>{DOME_TITLES[cur]}</b>. Prêt à te battre, aspirant ? »<br /><span style={{ fontSize: 10.5, opacity: 0.8 }}>Tu reprends toujours à ton rang — jamais depuis Bronze.</span></div>
+                                    <button onClick={() => { closeDomeMenu(); setDomeRegisterOpen(true) }} style={{ background: "#4cd964", color: "#0a2a12", fontWeight: 800, border: "none", borderRadius: 10, padding: "12px 20px", cursor: "pointer", fontSize: 14, boxShadow: "0 0 10px #4cd96466" }}>▶ S'inscrire au tournoi</button>
+                                </div>
+                            )}
+                            {domeTab === "regles" && (
+                                <div style={{ fontSize: 11.5, opacity: 0.9, lineHeight: 1.6 }}>
+                                    <p style={{ margin: "0 0 8px" }}><b style={{ color: "#c9a0ff" }}>Format :</b> tournoi <b>6v6</b> à élimination (quart → demi → finale). Équipe <b>soignée entre chaque manche</b>.</p>
+                                    <p style={{ margin: "0 0 8px" }}><b style={{ color: "#c9a0ff" }}>Mise :</b> buy-in libre en ⚡. Remboursement selon ton classement (🥇 100 % · 🥈 70 % · demi 50 % · quart 25 %, jamais de profit). Le vrai gain = <b>titre + Jetons</b>.</p>
+                                    <p style={{ margin: "0 0 8px" }}><b style={{ color: "#c9a0ff" }}>Progression :</b> gagne à <b>ton palier ⭐</b> pour un titre + débloquer le tier suivant.</p>
+                                    <p style={{ margin: "0 0 8px" }}><b style={{ color: "#7dffa0" }}>Palier ACQUIS À VIE :</b> un tier débloqué le reste à jamais. Perdre/sortir ne coûte que ta mise, <b>jamais ta progression</b> (≠ Tour de Combat).</p>
+                                    <p style={{ margin: 0 }}><b style={{ color: "#c9a0ff" }}>Pas de limite :</b> réinscris-toi autant que ton énergie le permet.</p>
+                                </div>
+                            )}
+                            {domeTab === "stats" && (
+                                <div style={{ fontSize: 11.5, opacity: 0.92, lineHeight: 1.55 }}>
+                                    <div style={{ fontWeight: 800, color: "#c9a0ff", marginBottom: 3 }}>🏅 Palmarès</div>
+                                    <div style={{ marginBottom: 10 }}>{champs} tier{champs > 1 ? "s" : ""} vaincu{champs > 1 ? "s" : ""} · rang max <b>{DOME_TITLES[cur]}</b> · PvP {pvp.wins}V / {pvp.losses}D</div>
+                                    <div style={{ fontWeight: 800, color: "#c9a0ff", marginBottom: 3 }}>🎯 Ton palier & le suivant</div>
+                                    <div style={{ marginBottom: 2 }}>▸ {tierRow(cur)}</div>
+                                    {curIdx < DOME_TIERS.length - 1 && <div style={{ marginBottom: 10, opacity: 0.72 }}>▸ à venir : {tierRow(nextT)}</div>}
+                                    {curIdx >= DOME_TIERS.length - 1 && <div style={{ marginBottom: 10, opacity: 0.72 }}>▸ palier maximal atteint 👑</div>}
+                                    <div style={{ fontWeight: 800, color: "#c9a0ff", marginBottom: 3 }}>🐾 Tes Daemons fétiches</div>
+                                    <div style={{ marginBottom: 10 }}>{topN(pvp.daemonUse, 5).map(([id, n], i) => `${i + 1}. ${getSpecies(id)?.name ?? id} (${n})`).join(" · ") || "—"}</div>
+                                    <div style={{ fontWeight: 800, color: "#c9a0ff", marginBottom: 3 }}>💥 Tes attaques fétiches</div>
+                                    <div style={{ marginBottom: 10 }}>{topN(pvp.moveUse, 5).map(([id, n], i) => `${i + 1}. ${getMove(id)?.name ?? id} (${n})`).join(" · ") || "—"}</div>
+                                    <div style={{ fontSize: 10, opacity: 0.6 }}>Bientôt : leaderboard des autres joueurs · top coups les + forts · top némésis.</div>
+                                </div>
+                            )}
+                            <button onClick={() => closeDomeMenu()} style={{ marginTop: 12, width: "100%", background: "rgba(255,255,255,.12)", color: "#fff", border: "none", borderRadius: 8, padding: "9px", cursor: "pointer", fontSize: 12 }}>✕ Fermer</button>
+                        </div>
                     </div>
                 )
             })()}

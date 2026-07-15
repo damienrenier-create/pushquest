@@ -52,6 +52,21 @@ export const YELLOW_NPCS: NpcDefinition[] = [
     // v4.y — PNJ "ARCHITECTE" (👷, ex-"professeur" relique du tout début) RETIRÉ :
     // emoji parasite au centre de la ville. À recréer proprement plus tard si besoin.
 
+    // === DÔME DE COMBAT — LE MAÎTRE (mage central) : interaction → carrousel (S'inscrire / Règles / Stats). ===
+    // Posé en plein centre (8,6). Vrai visuel via NPC_SPRITES (npc_dome_mage.png). L'interaction est interceptée
+    // dans gameStore (npc.id === "y_dome_maitre" → domeMenuOpen) → le dialoguesAfter n'est qu'un repli.
+    {
+        id: "y_dome_maitre",
+        name: "MAÎTRE DU DÔME",
+        mapId: "yellow_combat_dome",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🧙", color: "#7c4d9e" },
+        initialX: 8,
+        initialY: 6,
+        dialoguesAfter: ["« Bienvenue au Dôme, aspirant. »"],
+    },
+
     // === VILLE — ACE (rival quotidien, IA "ace", équipe évolutive par joueur) ===
     // Se tient en (0,16) ; interpelle aussi le joueur sur la bande (0,17-19).
     {
