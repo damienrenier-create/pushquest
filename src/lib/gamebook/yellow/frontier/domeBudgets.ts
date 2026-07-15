@@ -29,18 +29,21 @@ export const DOME_BUDGETS: Record<DomeTier, DomeTierBudget> = {
     ARGENT:  { tier: "ARGENT",  level: 62,  bstBand: [360, 435], evPerMon: 128, saiyanPerMon: 12, aiLevel: "trainer", streak: 9,  unlockChampionships: 1 },
     OR:      { tier: "OR",      level: 75,  bstBand: [410, 465], evPerMon: 252, saiyanPerMon: 30, aiLevel: "ace",     streak: 16, unlockChampionships: 2 },
     DIAMANT: { tier: "DIAMANT", level: 88,  bstBand: [445, 500], evPerMon: 384, saiyanPerMon: 54, aiLevel: "hof",     streak: 24, unlockChampionships: 3 },
-    MAITRE:  { tier: "MAITRE",  level: 100, bstBand: [475, 540], evPerMon: 510, saiyanPerMon: 80, aiLevel: "hof",     streak: 30, unlockChampionships: 4 },
+    // PLATINE & MYTHIQUE : deux crans intercalés pour lisser la marche Diamant→Maître (niveau +4 par palier).
+    PLATINE:  { tier: "PLATINE",  level: 92, bstBand: [460, 515], evPerMon: 436, saiyanPerMon: 63, aiLevel: "hof", streak: 27, unlockChampionships: 4 },
+    MYTHIQUE: { tier: "MYTHIQUE", level: 96, bstBand: [468, 525], evPerMon: 488, saiyanPerMon: 71, aiLevel: "hof", streak: 29, unlockChampionships: 5 },
+    MAITRE:  { tier: "MAITRE",  level: 100, bstBand: [475, 540], evPerMon: 510, saiyanPerMon: 80, aiLevel: "hof",     streak: 30, unlockChampionships: 6 },
     // VOIE DU MAÎTRE (post-Maître) — équipes DÉSIGNÉES (pool des 12). Niv 100 & EV MAX partout ; l'escalade se joue
     // sur les POINTS SAIYAN puis le SHINY (+10 % toutes stats). bstBand/streak inutilisés (pas de génération procédurale).
-    DAN_1: { tier: "DAN_1", level: 100, bstBand: [300, 640], evPerMon: 510, saiyanPerMon: 90,  aiLevel: "hof", streak: 34, unlockChampionships: 5, shiny: "none" },
-    DAN_2: { tier: "DAN_2", level: 100, bstBand: [300, 640], evPerMon: 510, saiyanPerMon: 100, aiLevel: "hof", streak: 38, unlockChampionships: 6, shiny: "none" },
-    DAN_3: { tier: "DAN_3", level: 100, bstBand: [300, 640], evPerMon: 510, saiyanPerMon: 100, aiLevel: "hof", streak: 42, unlockChampionships: 7, shiny: "half" },
-    DAN_4: { tier: "DAN_4", level: 100, bstBand: [300, 640], evPerMon: 510, saiyanPerMon: 100, aiLevel: "hof", streak: 46, unlockChampionships: 8, shiny: "full" },
+    DAN_1: { tier: "DAN_1", level: 100, bstBand: [300, 640], evPerMon: 510, saiyanPerMon: 90,  aiLevel: "hof", streak: 34, unlockChampionships: 7,  shiny: "none" },
+    DAN_2: { tier: "DAN_2", level: 100, bstBand: [300, 640], evPerMon: 510, saiyanPerMon: 100, aiLevel: "hof", streak: 38, unlockChampionships: 8,  shiny: "none" },
+    DAN_3: { tier: "DAN_3", level: 100, bstBand: [300, 640], evPerMon: 510, saiyanPerMon: 100, aiLevel: "hof", streak: 42, unlockChampionships: 9,  shiny: "half" },
+    DAN_4: { tier: "DAN_4", level: 100, bstBand: [300, 640], evPerMon: 510, saiyanPerMon: 100, aiLevel: "hof", streak: 46, unlockChampionships: 10, shiny: "full" },
 }
 
 /** Titre décerné à la victoire d'un tournoi de ce tier (palmarès). */
 export const DOME_TITLES: Record<DomeTier, string> = {
-    BRONZE: "🥉 Bronze", ARGENT: "🥈 Argent", OR: "🥇 Or", DIAMANT: "💎 Diamant", MAITRE: "👑 Maître",
+    BRONZE: "🥉 Bronze", ARGENT: "🥈 Argent", OR: "🥇 Or", DIAMANT: "💎 Diamant", PLATINE: "💠 Platine", MYTHIQUE: "🌟 Mythique", MAITRE: "👑 Maître",
     DAN_1: "🎴 1ᵉʳ Dan", DAN_2: "🎴 2ᵉ Dan", DAN_3: "🎴 3ᵉ Dan", DAN_4: "🎴 4ᵉ Dan",
 }
 

@@ -9,7 +9,8 @@ import type { DomeTier } from "./domeTypes"
 
 /** Blinds (mise min/max en énergie) par tier — « les blinds montent avec le tier ». */
 export const DOME_BLINDS: Record<DomeTier, { min: number; max: number }> = {
-    BRONZE: { min: 5, max: 25 }, ARGENT: { min: 10, max: 75 }, OR: { min: 20, max: 150 }, DIAMANT: { min: 40, max: 300 }, MAITRE: { min: 60, max: 500 },
+    BRONZE: { min: 5, max: 25 }, ARGENT: { min: 10, max: 75 }, OR: { min: 20, max: 150 }, DIAMANT: { min: 40, max: 300 },
+    PLATINE: { min: 47, max: 375 }, MYTHIQUE: { min: 53, max: 440 }, MAITRE: { min: 60, max: 500 },
     // VOIE DU MAÎTRE : mises hautes (endgame) — mêmes blinds que Maître.
     DAN_1: { min: 60, max: 500 }, DAN_2: { min: 60, max: 500 }, DAN_3: { min: 60, max: 500 }, DAN_4: { min: 60, max: 500 },
 }
@@ -49,7 +50,7 @@ export function domeEnergyRefund(bet: number, placement: DomePlacement | 0): num
 }
 
 // Taux de JC back-loadé : les petits tournois rapportent PEU (anti-farm), la vraie récolte est en haut de tableau.
-const JC_RATE: Record<DomeTier, number> = { BRONZE: 0.05, ARGENT: 0.15, OR: 0.3, DIAMANT: 0.6, MAITRE: 1.0, DAN_1: 1.1, DAN_2: 1.2, DAN_3: 1.35, DAN_4: 1.5 }
+const JC_RATE: Record<DomeTier, number> = { BRONZE: 0.05, ARGENT: 0.15, OR: 0.3, DIAMANT: 0.6, PLATINE: 0.73, MYTHIQUE: 0.86, MAITRE: 1.0, DAN_1: 1.1, DAN_2: 1.2, DAN_3: 1.35, DAN_4: 1.5 }
 // JC ∝ MATCHS GAGNÉS. Placement 4 = éliminé au 1er tour (le quart, dans un bracket de 8) = 0 victoire → 0 JC :
 // pas de « jeton de VICTOIRE » quand on perd son match d'entrée (l'énergie de mise est rendue à part, elle).
 const RANK_JC: Record<DomePlacement, number> = { 1: 1.0, 2: 0.4, 3: 0.2, 4: 0 }

@@ -20,12 +20,14 @@ describe("Dôme — budgets & escalade", () => {
         expect(maxUnlockedTier(1)).toBe("ARGENT")
         expect(maxUnlockedTier(2)).toBe("OR")
         expect(maxUnlockedTier(3)).toBe("DIAMANT")
-        expect(maxUnlockedTier(4)).toBe("MAITRE")
-        // VOIE DU MAÎTRE : les 4 dan se débloquent après Maître (5→8 titres), plafond = 4e Dan.
-        expect(maxUnlockedTier(5)).toBe("DAN_1")
-        expect(maxUnlockedTier(6)).toBe("DAN_2")
-        expect(maxUnlockedTier(7)).toBe("DAN_3")
-        expect(maxUnlockedTier(8)).toBe("DAN_4")
+        expect(maxUnlockedTier(4)).toBe("PLATINE")   // paliers intercalés Diamant→Maître
+        expect(maxUnlockedTier(5)).toBe("MYTHIQUE")
+        expect(maxUnlockedTier(6)).toBe("MAITRE")
+        // VOIE DU MAÎTRE : les 4 dan se débloquent après Maître (7→10 titres), plafond = 4e Dan.
+        expect(maxUnlockedTier(7)).toBe("DAN_1")
+        expect(maxUnlockedTier(8)).toBe("DAN_2")
+        expect(maxUnlockedTier(9)).toBe("DAN_3")
+        expect(maxUnlockedTier(10)).toBe("DAN_4")
         expect(maxUnlockedTier(999)).toBe("DAN_4")
     })
 

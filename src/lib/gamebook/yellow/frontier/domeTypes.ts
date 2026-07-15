@@ -9,8 +9,8 @@ import type { PokeType } from "../battle/types"
 
 /** Tiers d'escalade du Dôme (difficulté + budget training croissants). Après Maître : la VOIE DU MAÎTRE — 4 dan
  *  post-Ligue, tournois à ÉQUIPES DÉSIGNÉES (pool des 12, cf. danTeams.ts), Saiyan/shiny croissants par grade. */
-export type DomeTier = "BRONZE" | "ARGENT" | "OR" | "DIAMANT" | "MAITRE" | "DAN_1" | "DAN_2" | "DAN_3" | "DAN_4"
-export const DOME_TIERS: readonly DomeTier[] = ["BRONZE", "ARGENT", "OR", "DIAMANT", "MAITRE", "DAN_1", "DAN_2", "DAN_3", "DAN_4"] as const
+export type DomeTier = "BRONZE" | "ARGENT" | "OR" | "DIAMANT" | "PLATINE" | "MYTHIQUE" | "MAITRE" | "DAN_1" | "DAN_2" | "DAN_3" | "DAN_4"
+export const DOME_TIERS: readonly DomeTier[] = ["BRONZE", "ARGENT", "OR", "DIAMANT", "PLATINE", "MYTHIQUE", "MAITRE", "DAN_1", "DAN_2", "DAN_3", "DAN_4"] as const
 /** Les 4 grades de la VOIE DU MAÎTRE (portes ouvertes une fois Maître battu). */
 export const DAN_TIERS: readonly DomeTier[] = ["DAN_1", "DAN_2", "DAN_3", "DAN_4"] as const
 /** Vrai si le tier est un dan (équipe DÉSIGNÉE du pool, ≠ génération procédurale des tiers Bronze→Maître). */
