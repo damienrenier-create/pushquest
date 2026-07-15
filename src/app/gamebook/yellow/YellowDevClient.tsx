@@ -2009,6 +2009,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {!battle && !dome && mapPlayer.mapId === "yellow_combat_dome" && !dialogue && player.team.length > 0 && (() => {
                 const champs = player.domeChampionships ?? 0
                 const maxRank = DOME_TIERS.indexOf(maxUnlockedTier(champs))
+                const frontierTier = DOME_TIERS[maxRank] // ton palier = le tier le + haut débloqué (on y REPREND, jamais Bronze)
                 const box: React.CSSProperties = { position: "absolute", left: "50%", top: 14, transform: "translateX(-50%)", zIndex: 60, background: "#1a1a22f2", color: "#fff", border: "3px solid #f1c40f", borderRadius: 14, padding: "18px 22px", textAlign: "center", width: "min(460px, 94vw)", boxShadow: "0 8px 30px #000b" }
                 // ÉTAPE 2 — MISE (buy-in poker) pour le tier choisi.
                 if (domeSetup) {
@@ -2059,7 +2060,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     <div style={box}>
                         <div style={{ fontWeight: 800, fontSize: 17, marginBottom: 6 }}>🏆 DÔME DE COMBAT</div>
                         <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 6 }}>Palmarès : <b>{champs}</b> tier{champs > 1 ? "s" : ""} vaincu{champs > 1 ? "s" : ""} · rang max <b>{DOME_TITLES[maxUnlockedTier(champs)]}</b></div>
-                        <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 12, lineHeight: 1.45 }}>Tournoi <b>6v6</b>, 3 manches, soin complet entre chaque. Gagne le tier <b style={{ color: "#7dffa0" }}>⭐ à battre</b> pour décrocher un titre et débloquer le suivant :</div>
+                        <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 8, lineHeight: 1.45 }}>Tournoi <b>6v6</b>, 3 manches, soin complet entre chaque. <b style={{ color: "#7dffa0" }}>Ton palier est ACQUIS À VIE</b> : tu reprends toujours à ton rang, jamais depuis Bronze (≠ Tour de Combat, où on perd tout). Gagne le tier <b style={{ color: "#7dffa0" }}>⭐ à battre</b> pour le titre suivant.</div>
+                        <button onClick={() => { domeLaunchingRef.current = false; setDomeSetup({ tier: frontierTier, bet: DOME_BLINDS[frontierTier].min }) }}
+                            style={{ background: "#4cd964", color: "#0a2a12", fontWeight: 800, border: "none", borderRadius: 10, padding: "10px 16px", cursor: "pointer", fontSize: 14, marginBottom: 10, boxShadow: "0 0 10px #4cd96466" }}>
+                            ▶ REPRENDRE À {DOME_TITLES[frontierTier]}
+                        </button>
+                        <div style={{ fontSize: 10, opacity: 0.6, marginBottom: 6 }}>ou choisis un palier :</div>
                         <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
                             {DOME_TIERS.map((tier, i) => {
                                 const bud = DOME_BUDGETS[tier]
