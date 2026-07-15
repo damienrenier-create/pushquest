@@ -101,7 +101,7 @@ export default function DaemonCreator({ ownerId, nickname, close, onCreated }: {
 
     const create = () => {
         // On fige le learnset effectif dans la spec avant validation/soumission.
-        const finalSpec: CustomSpec = effSpec
+        const finalSpec: CustomSpec = { ...effSpec, creatorName: nickname } // WATERMARK : signe la création du pseudo du créateur
         const errs = validateSpec(finalSpec)
         if (errs.length) { setStep(STEPS.length - 1); return }
         // Phase 2 : on ENREGISTRE la lignée (résolvable en combat) ET on la PERSISTE dans la save (ré-enregistrée

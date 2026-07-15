@@ -554,6 +554,7 @@ export interface CustomSpec {
     da: string                   // direction artistique : 1-2 phrases (sert au sprite + description)
     character: string            // caractère / personnalité
     daFinal?: string             // DA du STADE FINAL (en + de celle de la base) — pour le sprite artist
+    creatorName?: string         // WATERMARK : pseudo du créateur, ajouté en fin de description (« 🖋️ Création de X »)
     stages: 1 | 2 | 3
     bloomer: Bloomer
     curve: CurveShape            // forme de courbe (répartition du BST entre stades)
@@ -773,7 +774,8 @@ export function buildCustomSpecies(spec: CustomSpec, ownerId: string): SpeciesDa
             role: roleOf(spec.finalStats, spec.finalTypes),
             secretTalent: spec.secretTalent, // talent secret de la lignée → lu par le moteur (talentEffects)
             description: ((stage === spec.stages && spec.daFinal?.trim()) ? spec.daFinal.trim() : spec.da.trim())
-                + (spec.character.trim() ? ` — ${spec.character.trim()}` : ""),
+                + (spec.character.trim() ? ` — ${spec.character.trim()}` : "")
+                + (spec.creatorName?.trim() ? ` — 🖋️ Création de ${spec.creatorName.trim()}` : ""), // WATERMARK créateur
             sprite: CANONIZED_CUSTOM_SPRITES[baseId]?.[i] ?? "/yellow/sprites/dex/missingno.png", // canonisé → vrais sprites ; sinon placeholder MISSINGNO (jusqu'à l'ajout d'une entrée ci-dessus)
         })
         void finalBst
