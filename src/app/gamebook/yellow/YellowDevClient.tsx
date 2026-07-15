@@ -906,6 +906,21 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         setCreatorOpen(true)
     }, [pendingForcedCreator, dialogue, battle, evolutions.length, championRun])
 
+    // FILET DE SÉCURITÉ (Franss & co.) : les flags pendingForcedCreator/forcedCreator sont LOCAUX (non persistés) →
+    // un Champion qui ferme le wizard / recharge AVANT d'avoir créé son Daemon restait bloqué hors du créateur.
+    // On le RÉ-OUVRE en mode forcé à chaque chargement tant que : isChampion & AUCUN custom & pas encore NG+.
+    // Une fois créé (launchNewGamePlus → ngplusUsed), la condition tombe. Le ref évite de re-popper dans la même
+    // session après une fermeture volontaire (on y revient via le bouton menu 🧬 ou le prochain chargement).
+    const forcedCreatorRecoveredRef = useRef(false)
+    useEffect(() => {
+        if (forcedCreatorRecoveredRef.current || creatorOpen || dialogue || battle || evolutions.length > 0 || championRun) return
+        if (player.isChampion && !player.ngplusUsed && (player.customDaemons?.length ?? 0) === 0) {
+            forcedCreatorRecoveredRef.current = true
+            setForcedCreator(true)
+            setCreatorOpen(true)
+        }
+    }, [player.isChampion, player.ngplusUsed, player.customDaemons, dialogue, battle, evolutions.length, championRun, creatorOpen])
+
     // NG+ — après l'offre d'abandon de CHEN (dialogue refermé), ouvre l'overlay de CONFIRMATION (action irréversible).
     useEffect(() => {
         if (!pendingNgplusAbandon || dialogue || battle) return
@@ -1460,9 +1475,15 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         <button style={menuBtnStyle} onClick={() => setMenu("hof")}>🏛️ HALL OF FAME (LIGUE)</button>
                         <button style={menuBtnStyle} onClick={() => setMenu("arena-hof")}>⚔️ HALL OF FAME (ARÈNES)</button>
                         <button style={menuBtnStyle} onClick={() => setMenu("leaderboard")}>📊 CLASSEMENT CONCOURS (run 2/3)</button>
-                        {(isCreator || nickname.toLowerCase() === "mools") && (
-                            <button style={{ ...menuBtnStyle, borderColor: "#3ad0c0", color: "#3ad0c0" }} onClick={() => { setMenu("none"); setCreatorOpen(true) }}>🧬 CRÉER UN DAEMON (TEST)</button>
-                        )}
+                        {(() => {
+                            // Champion qui n'a pas encore créé son Daemon (Franss & co.) : accès PERMANENT au créateur
+                            // (forcé → enchaîne le NG+ à la création). Le bouton TEST reste dispo pour les devs/Mools.
+                            const eligible = player.isChampion && !player.ngplusUsed && (player.customDaemons?.length ?? 0) === 0
+                            if (!eligible && !isCreator && nickname.toLowerCase() !== "mools") return null
+                            return (
+                                <button style={{ ...menuBtnStyle, borderColor: "#3ad0c0", color: "#3ad0c0" }} onClick={() => { setMenu("none"); setForcedCreator(eligible); setCreatorOpen(true) }}>{eligible ? "🧬 CRÉER TON DAEMON" : "🧬 CRÉER UN DAEMON (TEST)"}</button>
+                            )
+                        })()}
                         {/* NG+ ENGAGÉ : le combat final vs ancienne équipe. Filet de secours (refresh/redéploiement : le flag
                             runtime d'auto-relance est perdu) → gaté sur le marqueur PERSISTANT ngplusMaitreBeaten (= Maître
                             battu, combat de fin en attente), pas sur isChampion (le sacre est justement différé jusqu'ici). */}
