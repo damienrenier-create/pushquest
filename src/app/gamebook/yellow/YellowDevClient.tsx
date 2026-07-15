@@ -3059,7 +3059,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         // DUEL : on retient l'adversaire (récompenses post-combat) + trainerId "duel:<userId>"
                         // → finishBattle signale l'issue via duelResult.
                         duelOppRef.current = { userId: arenaFight.opp.userId, nickname: arenaFight.opp.nickname }
-                        startTrainerBattle(getPlayer().team, arenaFight.enemy, Math.floor(Math.random() * 1e9), { trainerId: "duel:" + arenaFight.opp.userId, reward: 0, aiLevel: "trainer" })
+                        startTrainerBattle(getPlayer().team, arenaFight.enemy, Math.floor(Math.random() * 1e9), { trainerId: "duel:" + arenaFight.opp.userId, reward: 0, aiLevel: "hof" })
                         setArenaFight(null)
                     }}
                     onCancel={() => setArenaFight(null)}

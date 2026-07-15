@@ -39,11 +39,16 @@ export async function GET() {
     const players = (rows as { userId: string; flags: unknown; user: { nickname: string | null; isGuest: boolean } | null }[])
         .map((r) => {
             const s = parseSave(r.flags)
+            // ÉQUIPE COURANTE (pas le run-1 gelé) : le top-level est le monde LIVE ; l'équipe active d'un joueur en
+            // run 2/3 est imbriquée dans ngplusWorld/run3World → on expose le monde ACTIF pour un vrai reflet.
+            const activeTeam = s.activeWorld === "ngplus" && s.ngplusWorld ? s.ngplusWorld.team
+                : s.activeWorld === "run3" && s.run3World ? s.run3World.team
+                : s.team
             return {
                 userId: r.userId,
                 nickname: r.user?.nickname ?? "?",
                 isGuest: r.user?.isGuest === true,
-                team: s.team.map((m) => ({ speciesId: m.speciesId, level: m.level, nickname: m.nickname ?? null })),
+                team: activeTeam.map((m) => ({ speciesId: m.speciesId, level: m.level, nickname: m.nickname ?? null })),
                 dexCaught: s.pokedex.caught.length,
                 badges: s.badges,
                 pvp: { wins: s.pvpStats.wins, losses: s.pvpStats.losses },

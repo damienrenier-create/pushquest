@@ -25,6 +25,8 @@ export interface RegistryPlayer {
     isGuest?: boolean
     team: RegistryMon[]
     badges?: string[]
+    favoriteDaemon?: string // espèce la + jouée (pvpStats.daemonUse) → le miroir MÈNE avec (habitudes)
+    favoriteMove?: string   // attaque la + jouée (réservé à une future couche de mimétisme de moves)
 }
 
 /** Nombre d'adversaires affichés dans une arène (les plus proches de notre niveau). */
@@ -105,15 +107,17 @@ export function rankClosest(players: RegistryPlayer[], myUserId: string, myLevel
         .map((x) => x.p)
 }
 
-/** Équipe HUB : la vraie équipe du joueur (telle quelle), jouée par l'IA. */
+/** Équipe HUB : la vraie équipe du joueur (telle quelle), jouée par l'IA. HABITUDES : on la RÉORDONNE pour
+ *  MENER avec son Daemon fétiche (l'espèce qu'il joue le plus) — son ouvreur signature. */
 export function buildHubTeam(player: RegistryPlayer): MonInstance[] {
-    return player.team
-        .filter((m) => getSpecies(m.speciesId))
-        .map((m) => {
-            const mon = createMonInstance(m.speciesId, m.level, { owned: false })
-            if (m.nickname) mon.nickname = m.nickname
-            return mon
-        })
+    const ordered = player.team.filter((m) => getSpecies(m.speciesId))
+    const fav = player.favoriteDaemon
+    if (fav) { const i = ordered.findIndex((m) => m.speciesId === fav); if (i > 0) ordered.unshift(...ordered.splice(i, 1)) }
+    return ordered.map((m) => {
+        const mon = createMonInstance(m.speciesId, m.level, { owned: false })
+        if (m.nickname) mon.nickname = m.nickname
+        return mon
+    })
 }
 
 /** Le type d'attaque le PLUS efficace contre ces types de défense (la "faiblesse exacte"). Déterministe. */
