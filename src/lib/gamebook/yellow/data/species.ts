@@ -2607,11 +2607,11 @@ export const SPECIES: Record<string, SpeciesData> = {
         // il est immunisé à l'offense de Shady). BST 244 (~= Shady 206, un cran au-dessus car némésis dédié).
         baseStats: { hp: 42, atk: 22, def: 44, spe: 64, spc: 72 }, // BST 244
         learnset: [
-            { level: 5, moveId: "charge" }, { level: 5, moveId: "ombre_furtive" },
+            { level: 5, moveId: "flammeche" }, { level: 5, moveId: "ombre_furtive" },
             { level: 12, moveId: "morsure_sombre" }, { level: 18, moveId: "onde_folie" },
             { level: 24, moveId: "onde_obscure" }, { level: 30, moveId: "vague_mentale" },
             { level: 36, moveId: "hypnose" }, { level: 44, moveId: "linceul" },
-            { level: 52, moveId: "devoreur_ombres" }, { level: 60, moveId: "ball_ombre" },
+            { level: 52, moveId: "devoreur_ombres" }, { level: 60, moveId: "lance_flammes" },
         ],
         evolution: { toId: "ombraxis", method: { kind: "LEVEL", level: 20 } },
         catchRate: 45, baseExp: 68, rarity: "RARE", growthRate: "medium_slow", secretTalent: "reflexes",
@@ -2624,11 +2624,11 @@ export const SPECIES: Record<string, SpeciesData> = {
         // vs Shade (Vit 88) : Vit 96 (outspeed) + Spé 104. BST 350 (~= Shade 307).
         baseStats: { hp: 62, atk: 30, def: 58, spe: 96, spc: 104 }, // BST 350
         learnset: [
-            { level: 5, moveId: "charge" }, { level: 5, moveId: "ombre_furtive" },
+            { level: 5, moveId: "flammeche" }, { level: 5, moveId: "ombre_furtive" },
             { level: 12, moveId: "morsure_sombre" }, { level: 18, moveId: "onde_folie" },
             { level: 24, moveId: "onde_obscure" }, { level: 32, moveId: "vague_mentale" },
             { level: 40, moveId: "hypnose" }, { level: 48, moveId: "linceul" },
-            { level: 56, moveId: "devoreur_ombres" }, { level: 64, moveId: "ball_ombre" },
+            { level: 56, moveId: "devoreur_ombres" }, { level: 64, moveId: "lance_flammes" },
         ],
         evolution: { toId: "ombraroth", method: { kind: "LEVEL", level: 42 } },
         catchRate: 45, baseExp: 141, rarity: "RARE", growthRate: "medium_slow", secretTalent: "reflexes",
@@ -2642,11 +2642,11 @@ export const SPECIES: Record<string, SpeciesData> = {
         // Spé-déf 28). Déf 70/PV 80 suffisent : il n'encaisse QUE la Griffe Spectrale ×1 (le reste = ×0). BST 466.
         baseStats: { hp: 80, atk: 38, def: 70, spe: 138, spc: 140 }, // BST 466
         learnset: [
-            { level: 5, moveId: "charge" }, { level: 5, moveId: "ombre_furtive" },
+            { level: 5, moveId: "flammeche" }, { level: 5, moveId: "ombre_furtive" },
             { level: 12, moveId: "morsure_sombre" }, { level: 18, moveId: "onde_folie" },
             { level: 24, moveId: "onde_obscure" }, { level: 34, moveId: "vague_mentale" },
             { level: 44, moveId: "hypnose" }, { level: 54, moveId: "linceul" },
-            { level: 64, moveId: "devoreur_ombres" }, { level: 74, moveId: "ball_ombre" },
+            { level: 64, moveId: "devoreur_ombres" }, { level: 74, moveId: "lance_flammes" },
         ],
         catchRate: 45, baseExp: 210, rarity: "RARE", growthRate: "medium_slow", secretTalent: "reflexes",
         role: "Ténèbres/Spectre — apex prédateur d'ombres (spécial, ultra-rapide)", hiddenUntilCaught: true,
