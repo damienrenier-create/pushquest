@@ -2707,6 +2707,55 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "L'apex : un colossal condor des ténèbres (condor + ombre), envergure qui avale la lumière, plumage d'obsidienne strié de veines violettes. Son visage disparaît derrière un MASQUE de crânes soudés — trophées de ses proies — d'où percent deux braises pourpres. Faucheuse ailée qui règne sur le ciel : le prédateur né pour chasser les félins qui lévitent. Némésis parfait de Karatame.",
         sprite: "/yellow/sprites/dex/condombre.png",
     },
+    // ── CRÉATION CANONISÉE d'Embi : Bidouzen → Medisciple → Karatame (chat kung-fu psychique). Stats/learnset FIDÈLES
+    //    à ce qu'Embi joue (buildCustomSpecies). NORMAL/PSY → gagne COMBAT au stade 3. Attaquant SPÉCIAL (spc 130). ──
+    bidouzen: {
+        id: "bidouzen", dexNo: 177, name: "Bidouzen", types: ["NORMAL", "PSY"],
+        baseStats: { hp: 43, atk: 28, def: 40, spe: 51, spc: 74 }, // BST 236
+        learnset: [
+            { level: 5, moveId: "charge" }, { level: 5, moveId: "jet_de_sable" },
+            { level: 12, moveId: "balayage" }, { level: 18, moveId: "choc_mental" },
+            { level: 24, moveId: "coup_d_boule" }, { level: 30, moveId: "hurlement" },
+            { level: 36, moveId: "vague_mentale" }, { level: 42, moveId: "coup_de_boutoir" },
+            { level: 48, moveId: "cage_eclair" }, { level: 54, moveId: "eveil_divin" },
+        ],
+        evolution: { toId: "medisciple", method: { kind: "LEVEL", level: 16 } },
+        catchRate: 45, baseExp: 106, rarity: "RARE", growthRate: "medium_slow", secretTalent: "studieux",
+        role: "Normal/Psy — chaton kung-fu (offensif spécial, création)",
+        description: "Un bipède mauve-gris, genre kung-fu panda version chat, malicieux et mystérieux. Ses moustaches frémissent d'une énergie psychique naissante. — 🖋️ Création d'Embi",
+        sprite: "/yellow/sprites/dex/bidouzen.png",
+    },
+    medisciple: {
+        id: "medisciple", dexNo: 178, name: "Medisciple", types: ["NORMAL", "PSY"],
+        baseStats: { hp: 58, atk: 38, def: 54, spe: 69, spc: 100 }, // BST 319
+        learnset: [
+            { level: 5, moveId: "charge" }, { level: 5, moveId: "jet_de_sable" },
+            { level: 12, moveId: "balayage" }, { level: 18, moveId: "choc_mental" },
+            { level: 24, moveId: "coup_d_boule" }, { level: 30, moveId: "hurlement" },
+            { level: 36, moveId: "vague_mentale" }, { level: 42, moveId: "coup_de_boutoir" },
+            { level: 48, moveId: "cage_eclair" }, { level: 54, moveId: "eveil_divin" },
+        ],
+        evolution: { toId: "karatame", method: { kind: "LEVEL", level: 34 } },
+        catchRate: 45, baseExp: 144, rarity: "RARE", growthRate: "medium_slow", secretTalent: "studieux",
+        role: "Normal/Psy — chat-moine studieux (offensif spécial)",
+        description: "Le disciple s'est musclé : un chat-moine en posture de combat, l'aura psychique désormais éveillée autour de ses poings. Méditation et discipline martiale.",
+        sprite: "/yellow/sprites/dex/medisciple.png",
+    },
+    karatame: {
+        id: "karatame", dexNo: 179, name: "Karatame", types: ["PSY", "COMBAT"],
+        baseStats: { hp: 75, atk: 49, def: 70, spe: 90, spc: 130 }, // BST 414
+        learnset: [
+            { level: 5, moveId: "charge" }, { level: 5, moveId: "jet_de_sable" },
+            { level: 12, moveId: "balayage" }, { level: 18, moveId: "choc_mental" },
+            { level: 24, moveId: "coup_d_boule" }, { level: 30, moveId: "hurlement" },
+            { level: 36, moveId: "vague_mentale" }, { level: 42, moveId: "coup_de_boutoir" },
+            { level: 48, moveId: "cage_eclair" }, { level: 54, moveId: "eveil_divin" },
+        ],
+        catchRate: 45, baseExp: 186, rarity: "RARE", growthRate: "medium_slow", secretTalent: "studieux",
+        role: "Psy/Combat — maître du kung-fu psychique (offensif spécial)",
+        description: "Un chat stylé en lévitation, musclé de façon athlétique — genre Beerus en moins maigre. Maître du kung-fu psychique : il frappe l'esprit autant que le corps. — 🖋️ Création d'Embi",
+        sprite: "/yellow/sprites/dex/karatame.png",
+    },
 }
 
 // ── REGISTRE RUNTIME des Daemons CUSTOM (créés par les joueurs, post-Ligue). Fusionné à la LECTURE seulement :
@@ -2734,7 +2783,8 @@ for (const id of ["magnetor", "elefer", "barrisfer", "colosfer", "cornaive", "as
     "guizer", "dalugazer", "mobyd",                        // création canonisée (Task1) — Grotte/Route Nord run 3
     "shady", "shade", "shadow",                            // création canonisée (Franss) — Grotte du Nexus run 3
     "caninombre", "lycanfer", "tenebrir",                   // némésis (loup ténébreux) TÉNÈBRES/SPECTRE de Shady, forgé par ACE
-    "sepulcru", "macabour", "condombre"]) {                 // némésis (vautours des ténèbres) TÉNÈBRES/VOL de Bidouzen, forgé par ACE
+    "sepulcru", "macabour", "condombre",                    // némésis (vautours des ténèbres) TÉNÈBRES/VOL de Bidouzen, forgé par ACE
+    "bidouzen", "medisciple", "karatame"]) {                // création canonisée (Embi) — chat kung-fu psychique NORMAL/PSY→PSY/COMBAT
     if (SPECIES[id]) SPECIES[id].runThreeOnly = true
 }
 
@@ -2793,8 +2843,9 @@ export const CANONICAL_NEMESIS: Record<string, string> = {
     shady: "caninombre", shade: "caninombre", shadow: "caninombre",
     // Override CIBLÉ Franss : son équipe joue son Shady CUSTOM → on mappe ses ids custom pour que SON ACE field Ténèbrir.
     custom_cmpgu4uq5000069d_shady_s1: "caninombre", custom_cmpgu4uq5000069d_shady_s2: "caninombre", custom_cmpgu4uq5000069d_shady_s3: "caninombre",
-    // Bidouzen (création Embi, PSY/COMBAT — NON canonisée) → lignée SÉPULCRU (Sépulcru→Macabour→Condombre, vautours
-    // TÉNÈBRES/VOL) = le HARD-COUNTER : immunisé à ses nukes PSY (×0), plus rapide, et le brise en STAB VOL physique
-    // ×2 sur sa DÉF 70. Seuls ses ids custom existent (pas de forme canonique) → on mappe les 3 stades.
+    // Bidouzen (création Embi, PSY/COMBAT, désormais CANONISÉE) → lignée SÉPULCRU (Sépulcru→Macabour→Condombre,
+    // vautours TÉNÈBRES/VOL) = le HARD-COUNTER : immunisé à ses nukes PSY (×0), plus rapide, et le brise en STAB VOL
+    // physique ×2 sur sa DÉF 70. Formes canoniques + ids custom (l'équipe d'Embi joue son Bidouzen custom → SON ACE field Condombre).
+    bidouzen: "sepulcru", medisciple: "sepulcru", karatame: "sepulcru",
     custom_cmml4dogn00005n1_bidouzen_s1: "sepulcru", custom_cmml4dogn00005n1_bidouzen_s2: "sepulcru", custom_cmml4dogn00005n1_bidouzen_s3: "sepulcru",
 }
