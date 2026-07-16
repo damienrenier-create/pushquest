@@ -737,6 +737,8 @@ const ROMAN = ["", "", " II", " III"]
 export const CANONIZED_CUSTOM_SPRITES: Record<string, string[]> = {
     // Guizer (Task1) → sprites canoniques (cf. species.ts, dexNo 165-167).
     custom_cmq5gbo5g0000g6m_guizer: ["/yellow/sprites/dex/guizer.png", "/yellow/sprites/dex/dalugazer.png", "/yellow/sprites/dex/mobyd.png"],
+    // Shady → Shade → Shadow (Franss) : lignée féline spectrale (NORMAL/SPECTRE).
+    custom_cmpgu4uq5000069d_shady: ["/yellow/sprites/dex/shady.png", "/yellow/sprites/dex/shade.png", "/yellow/sprites/dex/shadow.png"],
 }
 
 /** Construit la LIGNÉE complète (SpeciesData[]) à partir de la spec validée. ownerId rend les ids uniques (partage Zone de Combat). */
