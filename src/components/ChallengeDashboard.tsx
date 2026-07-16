@@ -71,6 +71,7 @@ interface DashboardData {
     }
     sallyUp: {
         enabledForSelectedDate: boolean
+        sallyDate?: string | null // le dernier jour du mois tant qu'il est encodable (visible toute la fenêtre), sinon null
         selectedDateReps: number
         monthPodium: Array<{ nickname: string; reps: number; totalPushupsAllTime: number }>
     }
@@ -136,7 +137,7 @@ const DEFAULT_DASHBOARD_DATA: DashboardData = {
         currentReward: { label: "Encore un effort 😄", min: 0 },
         finesList: []
     },
-    sallyUp: { enabledForSelectedDate: false, selectedDateReps: 0, monthPodium: [] },
+    sallyUp: { enabledForSelectedDate: false, sallyDate: null, selectedDateReps: 0, monthPodium: [] },
     clockChallenge: { enabledForSelectedDate: false, clockDate: null, selectedDateSeconds: 0, monthPodium: [] },
     clock300: { enabledForSelectedDate: false, selectedDateSeconds: 0, monthPodium: [] },
     graphs: { myDaily: [] }
@@ -511,12 +512,15 @@ export default function ChallengeDashboard() {
     }
 
     const saveSally = async () => {
+        // Le défi cible TOUJOURS le dernier jour du mois (sallyDate), quelle que soit la date sélectionnée.
+        const sallyTargetDate = data?.sallyUp?.sallyDate
+        if (!sallyTargetDate) { showToast("Le défi Sally n'est plus encodable.", "error"); return }
         setSaving(true)
         try {
             const res = await fetch("/api/challenge/sally", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ date: selectedDate, seconds: sallyReps }),
+                body: JSON.stringify({ date: sallyTargetDate, seconds: sallyReps }),
             })
             if (res.ok) {
                 showToast("Sally Up sauvegardé", "success")
@@ -789,11 +793,11 @@ export default function ChallengeDashboard() {
                         router={router}
                     />
 
-                    {data?.sallyUp?.enabledForSelectedDate && (
+                    {data?.sallyUp?.sallyDate && (
                         <div className="bg-yellow-50 rounded-3xl p-6 border-2 border-yellow-200 space-y-4">
                             <div className="flex justify-between items-center text-yellow-800">
                                 <h3 className="font-black uppercase tracking-normal">Bring Sally Up 💪</h3>
-                                <span className="bg-yellow-200 px-3 py-1 rounded-full text-[10px] font-black uppercase">Challenge Mensuel</span>
+                                <span className="bg-yellow-200 px-3 py-1 rounded-full text-[10px] font-black uppercase">📅 {data.sallyUp.sallyDate.slice(8, 10)}/{data.sallyUp.sallyDate.slice(5, 7)} · encore qq jours</span>
                             </div>
                             <div className="flex gap-4 items-end">
                                 <div className="flex-1">

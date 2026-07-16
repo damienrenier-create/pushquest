@@ -41,6 +41,9 @@ export async function GET(req: Request) {
         // DÉFI DE L'HORLOGE : le 12 du mois, encodable tant qu'il est dans la fenêtre d'encodage (4 jours) → le
         // défi reste VISIBLE + encodable du 12 au 15, plus seulement le 12 (fini « pas vu passer »). null hors fenêtre.
         const clockDate = getAllowedEncodingDates().find(d => is12thOfMonth(d)) ?? null;
+        // DÉFI DE SALLY (dernier jour du mois) : même logique — visible + encodable tant que le dernier jour est
+        // dans la fenêtre d'encodage (4 jours), plus seulement le jour J. null hors fenêtre.
+        const sallyDate = getAllowedEncodingDates().find(d => isLastDayOfMonth(d)) ?? null;
 
         // ALERTE SPRITES (ADMIN/Sartay uniquement) : lignées CRÉÉES par les joueurs mais PAS ENCORE canonisées
         // (= sprite placeholder MISSINGNO à générer). Surfacé sur le dashboard → Sartay est prévenu au plus tôt
@@ -632,7 +635,8 @@ export async function GET(req: Request) {
             },
             sallyUp: {
                 enabledForSelectedDate: isLastDayOfMonth(selectedDate),
-                selectedDateReps: (allUsers.find(u => u.id === userId)?.sallyUps || []).find((s: any) => (s.type ?? "SALLY_UP") === "SALLY_UP" && s.date === selectedDate)?.seconds || 0,
+                sallyDate, // le dernier jour du mois tant qu'il est encodable (visible toute la fenêtre), sinon null
+                selectedDateReps: (allUsers.find(u => u.id === userId)?.sallyUps || []).find((s: any) => (s.type ?? "SALLY_UP") === "SALLY_UP" && s.date === (sallyDate ?? selectedDate))?.seconds || 0,
                 monthPodium: allUsers.flatMap(u => (u.sallyUps || []).filter((s: any) => (s.type ?? "SALLY_UP") === "SALLY_UP" && s.date.startsWith(today.substring(0, 7))).map((s: any) => ({
                     nickname: u.nickname,
                     reps: s.seconds,
