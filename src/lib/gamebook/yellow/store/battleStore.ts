@@ -420,6 +420,9 @@ export function submitPlayerAction(action: PlayerAction) {
             const cap = battleEnergyCap(getPlayer().badges.length)
             if (storeState.energySpent + cost > cap) return // plus d'énergie ce combat (UI grise déjà)
             if (!spendReps(cost)) return                    // solde global insuffisant
+            // VOLET « reps en Ligue » : si ce combat est un affrontement de Ligue (y_ligue_*), on compte aussi ces
+            //   reps à part (miroir de energySpent : bump ici, pas de dé-bump au refund #4 → cohérent avec energyConsumed).
+            if (storeState.trainer?.trainerId?.startsWith("y_ligue_")) bumpStat("leagueEnergySpent", cost)
             storeState = { ...storeState, energySpent: storeState.energySpent + cost }
             paidMoveCost = cost
         }

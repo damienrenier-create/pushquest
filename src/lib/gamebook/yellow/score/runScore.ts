@@ -45,9 +45,10 @@ export interface ScoreFactor {
 
 export interface RunScores {
     playtimeMs: number       // #2 temps de jeu actif cumulé          (↓ mieux)
-    energyConsumed: number   // #3 énergie consommée = stats.energySpent (↓ mieux)
+    energyConsumed: number   // #3 énergie consommée = reps utilisés sur TOUT le run 2 (rétroactif, depuis le début)
     steps: number            // #4 nombre de pas                       (↓ mieux)
     grade: number            // #5 NOTE GLOBALE /1000                  (↑ mieux)
+    leagueReps: number       // #6 reps dépensés en COMBAT DE LIGUE (nouveau compteur → NON rétroactif : 0 pour qui a déjà entamé la Ligue)
     factors: ScoreFactor[]   // détail des 5 composantes de la note globale
 }
 
@@ -89,7 +90,25 @@ export function computeRunScores(): RunScores {
     ]
     const grade = factors.reduce((s, f) => s + f.points, 0)
 
-    return { playtimeMs, energyConsumed, steps, grade, factors }
+    return { playtimeMs, energyConsumed, steps, grade, leagueReps: stats.leagueEnergySpent, factors }
+}
+
+/** Facteurs envoyés au LEADERBOARD partagé : les 5 axes notés (/1000) + 1 ligne INFO hors-note = le 6e volet
+ *  « reps dépensés en Ligue » (#6). L'info-ligne porte `max: 0` → le panneau du classement la rend en clair
+ *  (valeur brute, sans barre /1000) au lieu d'une composante de la note. Ainsi chaque joueur voit AUSSI ce volet
+ *  chez les autres, sans fausser la note globale. (Le total reps run 2 est déjà visible via l'axe ⚡ Frugalité.) */
+export function leaderboardFactors(sc: RunScores): ScoreFactor[] {
+    return [
+        ...sc.factors,
+        {
+            key: "info:league_reps",
+            label: "🏆 Reps en Ligue",
+            ratio: 0,
+            max: 0, // 0 = ligne d'info (le panneau la rend sans barre ni « /max »)
+            points: sc.leagueReps,
+            detail: `${sc.leagueReps.toLocaleString("fr-FR")} reps dépensés en combats de Ligue`,
+        },
+    ]
 }
 
 /** Formate une durée (ms) en m:ss ou h:mm:ss pour l'affichage. */

@@ -81,16 +81,24 @@ export default function RunScoreboardPanel({ close }: { close: () => void }) {
                                     {canExpand && open && (
                                         <div style={factorsBox}>
                                             {r.factors!.map((f) => (
-                                                <div key={f.key} style={{ fontSize: 10.5 }}>
-                                                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                                f.max <= 0 ? (
+                                                    // Ligne INFO (hors note /1000) — ex. « 🏆 Reps en Ligue » : valeur brute, pas de barre.
+                                                    <div key={f.key} style={{ fontSize: 10.5, display: "flex", justifyContent: "space-between", alignItems: "baseline", opacity: 0.9, borderTop: "1px dashed rgba(255,255,255,0.14)", paddingTop: 4, marginTop: 1 }}>
                                                         <span>{f.label}</span>
-                                                        <span style={{ opacity: 0.85 }}><b>{f.points}</b> / {f.max}</span>
+                                                        <span style={{ opacity: 0.9, fontVariantNumeric: "tabular-nums" }}><b>{(f.points ?? 0).toLocaleString("fr-FR")}</b> <span style={{ fontSize: 8.5, opacity: 0.6 }}>reps</span></span>
                                                     </div>
-                                                    <div style={{ height: 4, borderRadius: 2, background: "rgba(255,255,255,0.12)", overflow: "hidden", margin: "2px 0 1px" }}>
-                                                        <div style={{ width: `${Math.round((f.ratio ?? 0) * 100)}%`, height: "100%", background: "#ffe36b" }} />
+                                                ) : (
+                                                    <div key={f.key} style={{ fontSize: 10.5 }}>
+                                                        <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                                            <span>{f.label}</span>
+                                                            <span style={{ opacity: 0.85 }}><b>{f.points}</b> / {f.max}</span>
+                                                        </div>
+                                                        <div style={{ height: 4, borderRadius: 2, background: "rgba(255,255,255,0.12)", overflow: "hidden", margin: "2px 0 1px" }}>
+                                                            <div style={{ width: `${Math.round((f.ratio ?? 0) * 100)}%`, height: "100%", background: "#ffe36b" }} />
+                                                        </div>
+                                                        <div style={{ fontSize: 8.5, opacity: 0.55 }}>{f.detail}</div>
                                                     </div>
-                                                    <div style={{ fontSize: 8.5, opacity: 0.55 }}>{f.detail}</div>
-                                                </div>
+                                                )
                                             ))}
                                         </div>
                                     )}

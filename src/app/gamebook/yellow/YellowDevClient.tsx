@@ -58,7 +58,7 @@ import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/
 import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, getNgplusOldTeam, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3 } from "@/lib/gamebook/yellow/store/saveManager"
 import { customStarterSpeciesId, type StoredCustomDaemon } from "@/lib/gamebook/yellow/create/customSpecies"
 import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, releaseFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult } from "@/lib/gamebook/yellow/store/playerStore"
-import { computeRunScores, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
+import { computeRunScores, leaderboardFactors, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
 import { run3Score, run3MaxScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
 import { ARENA_TICKET_VALUE, STEP_GIFT_DATE, STEP_GIFT_THRESHOLD } from "@/lib/gamebook/yellow/data/labDefis"
@@ -809,7 +809,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             if (getActiveWorld() !== "ngplus") return // seulement en run 2 (NG+)
             try {
                 const sc = computeRunScores()
-                fetch("/api/gamebook/yellow/run-scores", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ run: "run2", score: sc.grade, factors: sc.factors }) }).catch(() => { /* hors-ligne : silencieux */ })
+                fetch("/api/gamebook/yellow/run-scores", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ run: "run2", score: sc.grade, factors: leaderboardFactors(sc) }) }).catch(() => { /* hors-ligne : silencieux */ })
             } catch { /* état non prêt : on ignore */ }
         }
         postRun2() // à la connexion
@@ -894,7 +894,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             //   recalcule plus hors run 2). N'impacte pas le leaderboard serveur (qui ne garde que la note /1000).
             try { window.localStorage.setItem(RUN2_SCORES_LS_KEY, JSON.stringify(run2Sc)) } catch { /* ignore */ }
             setRun2Snap(run2Sc)
-            fetch("/api/gamebook/yellow/run-scores", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ run: "run2", score: run2Grade, factors: run2Sc.factors }) }).catch(() => {})
+            fetch("/api/gamebook/yellow/run-scores", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ run: "run2", score: run2Grade, factors: leaderboardFactors(run2Sc) }) }).catch(() => {})
             // On NE FUSIONNE PAS tout de suite : on PROPOSE le choix (fusionner OU lancer le run 3). L'overlay
             // ci-dessous appelle completeNewGamePlus (fusion 2-voies) OU launchRun3 (garde les 3 mondes gelés).
             setRun3Offer({ score: ngplusScore })
@@ -1894,7 +1894,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             return (
                                 <div style={{ display: "flex", flexDirection: "column", gap: 8, margin: "4px 0 8px" }}>
                                     {row("🎮 Temps de jeu", formatDuration(sc.playtimeMs), "temps passé actif dans l'app — plus bas = mieux")}
-                                    {row("⚡ Énergie consommée", sc.energyConsumed.toLocaleString("fr-FR"), "énergie totale dépensée (attaques, boutique, casino) — plus bas = mieux")}
+                                    {row("⚡ Reps utilisés (total run 2)", sc.energyConsumed.toLocaleString("fr-FR"), "reps dépensés sur TOUT le run 2 (attaques, boutique, casino) — compté depuis le début")}
+                                    {row("🏆 Reps utilisés (en Ligue)", (sc.leagueReps ?? 0).toLocaleString("fr-FR"), "reps dépensés en combats de Ligue — nouveau compteur (0 si tu avais déjà entamé la Ligue avant l'ajout)")}
                                     {row("👟 Pas", sc.steps.toLocaleString("fr-FR"), "nombre de pas — plus bas = mieux")}
                                     {/* NOTE GLOBALE /1000 + détail des 5 facteurs */}
                                     <div style={{ borderTop: "1px solid rgba(255,255,255,0.18)", paddingTop: 8, marginTop: 2 }}>
