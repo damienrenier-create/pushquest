@@ -105,7 +105,13 @@ interface DashboardData {
     }
 }
 
-function getLocalISO(d: Date = new Date()) {
+// Renvoie une Date dont les composantes LOCALES valent l'heure d'Europe/Paris (le fuseau OFFICIEL du jeu, côté
+// serveur). Indispensable pour que le jour calculé côté client corresponde EXACTEMENT à getAllowedEncodingDates
+// du serveur — sinon un device hors fuseau Paris (ou près de minuit) envoie un jour refusé « Date non autorisée » (403).
+function parisDate(d: Date = new Date()) {
+    return new Date(d.toLocaleString("en-US", { timeZone: "Europe/Paris" }));
+}
+function getLocalISO(d: Date = parisDate()) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
@@ -630,7 +636,7 @@ export default function ChallengeDashboard() {
 
     const allowedDates = []
     for (let i = 0; i < 4; i++) {
-        const d = new Date()
+        const d = parisDate() // base = AUJOURD'HUI à Paris (cohérent avec le serveur), puis on recule de i jours
         d.setDate(d.getDate() - i)
         const iso = getLocalISO(d)
         allowedDates.push({ iso, label: i === 0 ? "Aujourd'hui" : i === 1 ? "Hier" : i === 2 ? "J-2" : "J-3" })
