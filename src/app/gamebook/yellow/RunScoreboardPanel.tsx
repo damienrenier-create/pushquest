@@ -7,7 +7,7 @@
 import { useEffect, useState } from "react"
 import { type ScoreFactor } from "@/lib/gamebook/yellow/score/runScore"
 
-interface ScoreRow { nickname: string; score: number; wonAt: string; factors?: ScoreFactor[] | null }
+interface ScoreRow { nickname: string; score: number; wonAt: string | null; factors?: ScoreFactor[] | null; live?: boolean }
 type Data = { gated?: boolean; run2: ScoreRow[]; run3: ScoreRow[] }
 
 const RUN_META: { id: "run3" | "run2"; label: string; unit: string; hint: string }[] = [
@@ -75,6 +75,8 @@ export default function RunScoreboardPanel({ close }: { close: () => void }) {
                                         onClick={() => { if (canExpand) setExpanded(open ? null : i) }}>
                                         <span style={rank}>{medal(i)}</span>
                                         <span style={name}>{r.nickname}</span>
+                                        <span title={r.live ? "score en direct (joueur encore dans le run)" : "score figé (run terminé)"}
+                                            style={{ fontSize: 8.5, opacity: 0.7, marginRight: 2, whiteSpace: "nowrap" }}>{r.live ? "🟢 live" : "⚪ figé"}</span>
                                         <span style={score}>{r.score.toLocaleString("fr-FR")} <span style={unit}>{meta.unit}</span></span>
                                         {canExpand && <span style={{ opacity: 0.55, fontSize: 11, marginLeft: 2 }}>{open ? "▾" : "▸"}</span>}
                                     </div>

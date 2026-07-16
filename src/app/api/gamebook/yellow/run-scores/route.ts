@@ -18,7 +18,36 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { isNexusYellowEnabled, YELLOW_CHAPTER_ID } from "@/lib/gamebook/yellow/featureFlag"
-import { run3MaxScore } from "@/lib/gamebook/yellow/data/run3Score"
+import { run3Score, run3MaxScore } from "@/lib/gamebook/yellow/data/run3Score"
+import { computeGrade, leagueRepsFactor, type ScoreFactor } from "@/lib/gamebook/yellow/score/runScoreCompute"
+
+const num = (v: unknown): number => (typeof v === "number" && isFinite(v) ? v : 0)
+
+/** Recalcule le score RUN 2 (/1000) + le détail des facteurs d'un joueur DEPUIS le blob de son monde run 2
+ *  (flags.ngplusWorld). Renvoie null si le monde run 2 est absent (joueur pas encore en run 2, ou déjà fusionné). */
+function run2FromWorld(w: unknown): { score: number; factors: ScoreFactor[] } | null {
+    if (!w || typeof w !== "object") return null
+    const world = w as { stats?: Record<string, unknown>; team?: Array<{ level?: unknown }>; pokedex?: { caught?: unknown } }
+    const stats = world.stats ?? {}
+    const team = Array.isArray(world.team) ? world.team : []
+    const caught = Array.isArray(world.pokedex?.caught) ? (world.pokedex!.caught as string[]) : []
+    const teamLevels = team.reduce((s, m) => s + num(m?.level), 0)
+    const { grade, factors } = computeGrade({
+        wins: num(stats.wins), teamKos: num(stats.teamKos), caught, teamLevels,
+        energyConsumed: num(stats.energySpent), steps: num(stats.steps),
+    })
+    return { score: grade, factors: [...factors, leagueRepsFactor(num(stats.leagueEnergySpent))] }
+}
+
+/** Recalcule le score RUN 3 (Σ niveaux des Daemons vaincus) DEPUIS flags.run3World.run3Defeated. null si absent/vide. */
+function run3FromWorld(w: unknown): number | null {
+    if (!w || typeof w !== "object") return null
+    const def = (w as { run3Defeated?: unknown }).run3Defeated
+    if (!Array.isArray(def) || def.length === 0) return null
+    return run3Score(def as Parameters<typeof run3Score>[0])
+}
+
+interface LeaderEntry { nickname: string; score: number; wonAt: Date | null; factors: unknown; live: boolean }
 
 export const dynamic = "force-dynamic"
 
@@ -46,42 +75,64 @@ async function viewerHasFinishedRun1(userId: string): Promise<boolean> {
     } catch { return false }
 }
 
-// GET — classements run2 + run3 (meilleur score par joueur, décroissant). Gaté : ≥5 badges run 1.
+// GET — classements run2 + run3. Gaté : le SPECTATEUR a fini le run 1 (>=5 badges).
+//
+// Modèle « PULL » : on RECALCULE le score de chaque joueur DEPUIS sa save (monde run2 = flags.ngplusWorld, run3 =
+// flags.run3World) → le classement est peuplé et LIVE sans attendre qu'un joueur déclenche un POST. La table poussée
+// `yellowRunScore` sert de FALLBACK pour les joueurs FUSIONNÉS (méga-fusion de fin de run 3 → sous-mondes effacés,
+// score plus recalculable ; leur dernier POST reste la seule trace). Le LIVE (save) a toujours priorité sur la table.
 export async function GET() {
     const auth = await requireYellow()
     if (!auth.ok) return NextResponse.json({ error: "Forbidden" }, { status: auth.status })
     if (!(await viewerHasFinishedRun1(auth.userId))) {
         return NextResponse.json({ ok: true, gated: true, run2: [], run3: [] }) // pas encore ≥5 badges run 1
     }
+
+    const run2Map = new Map<string, LeaderEntry>()
+    const run3Map = new Map<string, LeaderEntry>()
+
+    // 1) PULL — recalcule depuis la save, MAIS uniquement pour le monde ACTIVEMENT joué (flags.activeWorld) → score
+    //    réellement LIVE. On NE recalcule PAS un monde GELÉ : le Pokédex est global-cumulatif (norm() réécrit le
+    //    pokédex de chaque monde stashé avec le pokédex global), donc le score d'un run2 gelé DÉRIVERAIT avec les
+    //    captures faites en run3. Les mondes gelés viennent du FALLBACK table (POST figé à la bascule / clôture).
+    try {
+        const saves = await prisma.gamebookProgress.findMany({
+            where: { chapterId: YELLOW_CHAPTER_ID },
+            select: { userId: true, flags: true, user: { select: { nickname: true } } },
+        })
+        for (const s of saves) {
+            const f = (s.flags ?? {}) as Record<string, unknown>
+            const nickname = s.user?.nickname ?? "?"
+            const world = f.activeWorld // "ngplus" (run2) | "run3" | "live" | undefined
+            if (world === "ngplus") {
+                const r2 = run2FromWorld(f.ngplusWorld)
+                if (r2) run2Map.set(s.userId, { nickname, score: r2.score, wonAt: null, factors: r2.factors, live: true })
+            }
+            if (world === "run3") {
+                const r3 = run3FromWorld(f.run3World)
+                if (r3 !== null) run3Map.set(s.userId, { nickname, score: r3, wonAt: null, factors: null, live: true })
+            }
+        }
+    } catch { /* lecture saves impossible → on s'appuiera sur la table seule */ }
+
+    // 2) FALLBACK — table poussée, seulement pour les joueurs ABSENTS du pull (fusionnés). Ordre wonAt desc → 1re vue = plus récente.
     try {
         const rs = (prisma as any).yellowRunScore // table gated (créée par db:push)
         const rows = (await rs.findMany({
-            orderBy: { wonAt: "desc" }, // récence d'abord → garantit que la ligne COURANTE de chaque joueur (run2) est dans la fenêtre
-            take: 400,
+            orderBy: { wonAt: "desc" }, take: 400,
             select: { userId: true, nickname: true, run: true, score: true, wonAt: true, factors: true },
         })) as { userId: string; nickname: string; run: string; score: number; wonAt: Date; factors: unknown }[]
-        // Dédup serveur (défensif : d'éventuels doublons de POST concurrents passés) — UNE entrée par joueur :
-        //   run2 = score COURANT → on garde la ligne la PLUS RÉCENTE (wonAt desc) ; run3 = score cumulatif → le MAX.
-        //   Puis on classe la liste affichée par score décroissant dans les deux cas.
-        const ranked = (run: "run2" | "run3") => {
-            const forRun = rows.filter((r) => r.run === run)
-            forRun.sort((a, b) => run === "run2"
-                ? new Date(b.wonAt).getTime() - new Date(a.wonAt).getTime() // récence (courant)
-                : b.score - a.score)                                       // max (cumulatif)
-            const seen = new Set<string>()
-            const out: { nickname: string; score: number; wonAt: Date; factors: unknown }[] = []
-            for (const r of forRun) {
-                if (seen.has(r.userId)) continue
-                seen.add(r.userId)
-                out.push({ nickname: r.nickname, score: r.score, wonAt: r.wonAt, factors: r.factors ?? null })
-            }
-            out.sort((a, b) => b.score - a.score) // classement affiché : score décroissant
-            return out
+        for (const r of rows) {
+            const map = r.run === "run2" ? run2Map : r.run === "run3" ? run3Map : null
+            if (!map || map.has(r.userId)) continue // le LIVE prime ; la 1re ligne vue (plus récente) gagne le fallback
+            map.set(r.userId, { nickname: r.nickname, score: r.score, wonAt: r.wonAt, factors: r.factors ?? null, live: false })
         }
-        return NextResponse.json({ ok: true, run2: ranked("run2"), run3: ranked("run3") })
-    } catch {
-        return NextResponse.json({ ok: true, run2: [], run3: [] }) // table pas encore créée → neutre
-    }
+    } catch { /* table pas encore créée → pull seul */ }
+
+    const toList = (m: Map<string, LeaderEntry>) =>
+        [...m.values()].sort((a, b) => b.score - a.score).map((e) => ({ nickname: e.nickname, score: e.score, wonAt: e.wonAt, factors: e.factors, live: e.live }))
+
+    return NextResponse.json({ ok: true, run2: toList(run2Map), run3: toList(run3Map) })
 }
 
 // POST {run, score} — enregistre le score du joueur (garde le meilleur par run).
