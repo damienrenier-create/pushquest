@@ -2653,6 +2653,60 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "L'apex : un loup démoniaque colossal, cornu, zébré de lave, dont le hurlement éteint toute lumière. Plus rapide que sa proie, il consume l'ombre féline avant qu'elle ne se dresse. Némésis parfait de Shadow.",
         sprite: "/yellow/sprites/dex/tenebrir.png",
     },
+    // ── NÉMÉSIS de Bidouzen (création d'Embi, PSY/COMBAT) : les VAUTOURS DES TÉNÈBRES (TÉNÈBRES/VOL). Sweepers
+    //    PHYSIQUES immunisés à l'arme n°1 de Karatame (PSY ×0) et qui le brisent en STAB VOL physique ×2 sur sa DÉF 70.
+    //    Ténèbres = spéciale dans le moteur → sert la DÉFENSE (immunité psy) + le statut ; l'offense passe par VOL. ──
+    sepulcru: {
+        id: "sepulcru", dexNo: 174, name: "Sépulcru", types: ["TENEBRES", "VOL"],
+        // Fragile (peu importe : l'offense psy de Bidouzen ne le touche pas). BST 237.
+        baseStats: { hp: 45, atk: 58, def: 40, spe: 62, spc: 32 }, // BST 237
+        learnset: [
+            { level: 5, moveId: "picpic" }, { level: 5, moveId: "morsure_sombre" },
+            { level: 12, moveId: "tornade" }, { level: 18, moveId: "danse_lames" },
+            { level: 24, moveId: "fonce_bec" }, { level: 30, moveId: "onde_obscure" },
+            { level: 36, moveId: "pique_fatal" }, { level: 44, moveId: "devoreur_ombres" },
+            { level: 52, moveId: "serres_aube" }, { level: 60, moveId: "vol" },
+        ],
+        evolution: { toId: "macabour", method: { kind: "LEVEL", level: 20 } },
+        catchRate: 45, baseExp: 64, rarity: "RARE", growthRate: "medium_slow", secretTalent: "reflexes",
+        role: "Ténèbres/Vol — urubu charognard (némésis de Bidouzen)", hiddenUntilCaught: true,
+        description: "Petit urubu déplumé (sépulcre + cru), duvet gris-cendre et noir de suie, tête chauve et fripée de charognard miniature. Deux grands yeux d'un violet luminescent, trop gros pour son crâne ; il traîne déjà une fine volute d'ombre à ses serres. Forgé par ACE pour fondre sur une certaine ombre féline qui vole trop haut.",
+        sprite: "/yellow/sprites/dex/sepulcru.png",
+    },
+    macabour: {
+        id: "macabour", dexNo: 175, name: "Macabour", types: ["TENEBRES", "VOL"],
+        // Le sweeper monte en régime : Vit qui dépasse Medisciple + ATK physique VOL ×2. BST 328.
+        baseStats: { hp: 62, atk: 88, def: 54, spe: 82, spc: 42 }, // BST 328
+        learnset: [
+            { level: 5, moveId: "picpic" }, { level: 5, moveId: "morsure_sombre" },
+            { level: 12, moveId: "tornade" }, { level: 18, moveId: "danse_lames" },
+            { level: 24, moveId: "fonce_bec" }, { level: 32, moveId: "onde_obscure" },
+            { level: 40, moveId: "pique_fatal" }, { level: 48, moveId: "devoreur_ombres" },
+            { level: 56, moveId: "serres_aube" }, { level: 64, moveId: "vol" },
+        ],
+        evolution: { toId: "condombre", method: { kind: "LEVEL", level: 42 } },
+        catchRate: 45, baseExp: 141, rarity: "RARE", growthRate: "medium_slow", secretTalent: "reflexes",
+        role: "Ténèbres/Vol — vautour macabre (sweeper physique)", hiddenUntilCaught: true,
+        description: "Vautour d'envergure (macabre + vautour), plumage noir-encre aux reflets violacés, large collerette hérissée autour d'un cou nu et gris. Un premier fragment d'os blanchi s'incruste à son poitrail comme une amorce de plastron ; le regard s'est durci en deux fentes pourpres. Il plane bas, patient — la mort qui prend son temps.",
+        sprite: "/yellow/sprites/dex/macabour.png",
+    },
+    condombre: {
+        id: "condombre", dexNo: 176, name: "Condombre", types: ["TENEBRES", "VOL"],
+        // BOURREAU de Karatame (PSY/COMBAT, Vit 90) : Vit 104 (le dépasse) + ATK 122 → STAB VOL physique ×2 sur sa
+        // DÉF 70. Immunisé à ses nukes PSY (×0). Seule ouverture pour Karatame : sa CT cage_éclair (ELEC ×2). BST 424.
+        baseStats: { hp: 78, atk: 122, def: 68, spe: 104, spc: 52 }, // BST 424
+        learnset: [
+            { level: 5, moveId: "picpic" }, { level: 5, moveId: "morsure_sombre" },
+            { level: 12, moveId: "tornade" }, { level: 18, moveId: "danse_lames" },
+            { level: 24, moveId: "fonce_bec" }, { level: 34, moveId: "onde_obscure" },
+            { level: 44, moveId: "pique_fatal" }, { level: 54, moveId: "devoreur_ombres" },
+            { level: 64, moveId: "serres_aube" }, { level: 74, moveId: "vol" },
+        ],
+        catchRate: 45, baseExp: 208, rarity: "RARE", growthRate: "medium_slow", secretTalent: "reflexes",
+        role: "Ténèbres/Vol — apex condor des crânes (bourreau de Karatame)", hiddenUntilCaught: true,
+        description: "L'apex : un colossal condor des ténèbres (condor + ombre), envergure qui avale la lumière, plumage d'obsidienne strié de veines violettes. Son visage disparaît derrière un MASQUE de crânes soudés — trophées de ses proies — d'où percent deux braises pourpres. Faucheuse ailée qui règne sur le ciel : le prédateur né pour chasser les félins qui lévitent. Némésis parfait de Karatame.",
+        sprite: "/yellow/sprites/dex/condombre.png",
+    },
 }
 
 // ── REGISTRE RUNTIME des Daemons CUSTOM (créés par les joueurs, post-Ligue). Fusionné à la LECTURE seulement :
@@ -2679,7 +2733,8 @@ for (const id of ["magnetor", "elefer", "barrisfer", "colosfer", "cornaive", "as
     "otama", "gamaruto", "uzumaro", "wistree",              // Maison Combat (grenouilles) + Grotte (Wistree) run 3
     "guizer", "dalugazer", "mobyd",                        // création canonisée (Task1) — Grotte/Route Nord run 3
     "shady", "shade", "shadow",                            // création canonisée (Franss) — Grotte du Nexus run 3
-    "caninombre", "lycanfer", "tenebrir"]) {                // némésis (loup ténébreux) TÉNÈBRES/SPECTRE de Shady, forgé par ACE
+    "caninombre", "lycanfer", "tenebrir",                   // némésis (loup ténébreux) TÉNÈBRES/SPECTRE de Shady, forgé par ACE
+    "sepulcru", "macabour", "condombre"]) {                 // némésis (vautours des ténèbres) TÉNÈBRES/VOL de Bidouzen, forgé par ACE
     if (SPECIES[id]) SPECIES[id].runThreeOnly = true
 }
 
@@ -2738,4 +2793,8 @@ export const CANONICAL_NEMESIS: Record<string, string> = {
     shady: "caninombre", shade: "caninombre", shadow: "caninombre",
     // Override CIBLÉ Franss : son équipe joue son Shady CUSTOM → on mappe ses ids custom pour que SON ACE field Ténèbrir.
     custom_cmpgu4uq5000069d_shady_s1: "caninombre", custom_cmpgu4uq5000069d_shady_s2: "caninombre", custom_cmpgu4uq5000069d_shady_s3: "caninombre",
+    // Bidouzen (création Embi, PSY/COMBAT — NON canonisée) → lignée SÉPULCRU (Sépulcru→Macabour→Condombre, vautours
+    // TÉNÈBRES/VOL) = le HARD-COUNTER : immunisé à ses nukes PSY (×0), plus rapide, et le brise en STAB VOL physique
+    // ×2 sur sa DÉF 70. Seuls ses ids custom existent (pas de forme canonique) → on mappe les 3 stades.
+    custom_cmml4dogn00005n1_bidouzen_s1: "sepulcru", custom_cmml4dogn00005n1_bidouzen_s2: "sepulcru", custom_cmml4dogn00005n1_bidouzen_s3: "sepulcru",
 }
