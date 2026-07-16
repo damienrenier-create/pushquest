@@ -2314,12 +2314,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         </div>
                         <button style={menuBtnStyle} onClick={() => { setRun3Offer(null); setRun3StarterChoice(true) }}>🔥 Lancer le RUN 3</button>
                         <button style={menuBtnDimStyle} onClick={() => {
-                            const score = run3Offer.score
+                            const { score, bestGrade } = run3Offer
                             setRun3Offer(null)
                             completeNewGamePlus().finally(() => {
                                 showDialogue("y_ligue_maitre", "FUSION DES TIMELINES", [
                                     "L'équipe que tu avais un jour abandonnée s'incline devant ta création.",
-                                    `Tu boucles cette seconde vie avec ${score}⚡ en réserve : voilà TON score, gravé dans le Nexus. Sauras-tu le battre un jour ?`,
+                                    `Tu boucles cette seconde vie avec ${score}⚡ en réserve — un dernier écho de ton périple.`,
+                                    `Ton MEILLEUR score du run 2, ${bestGrade}/1000, est gravé au classement du Nexus. Sauras-tu le battre un jour ?`,
                                     "En cet instant, tes deux destins n'en font plus qu'UN : tous tes anciens Daemons rejoignent ton PC.",
                                     "Le cycle est bouclé, Maître. Ta lignée custom règne désormais sur le Nexus fusionné. 🍝",
                                 ])

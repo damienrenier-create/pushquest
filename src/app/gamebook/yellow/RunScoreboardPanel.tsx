@@ -12,7 +12,7 @@ type Data = { gated?: boolean; run2: ScoreRow[]; run3: ScoreRow[] }
 
 const RUN_META: { id: "run3" | "run2"; label: string; unit: string; hint: string }[] = [
     { id: "run3", label: "🏆 RUN 3", unit: "pts", hint: "Σ des niveaux des Daemons ennemis vaincus (boss + Ligue). Le + haut gagne." },
-    { id: "run2", label: "🏅 RUN 2", unit: "/1000", hint: "Score ACTUEL /1000 (live, mis à jour à chaque connexion) : % victoire, Pokédex, niveaux d'équipe, frugalité (énergie) & peu de pas. Clique une entrée pour le détail des 5 axes. La note évolue tant que le run 2 n'est pas fini." },
+    { id: "run2", label: "🏅 RUN 2", unit: "/1000", hint: "Note /1000 : % victoire, Pokédex, niveaux d'équipe, frugalité (énergie) & peu de pas. Joueurs ENCORE en run 2 = score live (maj à chaque connexion) ; joueurs ayant TERMINÉ = score final figé. Clique une entrée pour le détail des 5 axes." },
 ]
 
 export default function RunScoreboardPanel({ close }: { close: () => void }) {

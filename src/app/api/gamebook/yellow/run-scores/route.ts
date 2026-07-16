@@ -56,22 +56,29 @@ export async function GET() {
     try {
         const rs = (prisma as any).yellowRunScore // table gated (créée par db:push)
         const rows = (await rs.findMany({
-            orderBy: { score: "desc" },
+            orderBy: { wonAt: "desc" }, // récence d'abord → garantit que la ligne COURANTE de chaque joueur (run2) est dans la fenêtre
             take: 400,
             select: { userId: true, nickname: true, run: true, score: true, wonAt: true, factors: true },
         })) as { userId: string; nickname: string; run: string; score: number; wonAt: Date; factors: unknown }[]
-        // Dédup serveur : garde le MEILLEUR score par (userId, run) — déjà trié desc, donc le 1er vu gagne.
-        const best = (run: string) => {
+        // Dédup serveur (défensif : d'éventuels doublons de POST concurrents passés) — UNE entrée par joueur :
+        //   run2 = score COURANT → on garde la ligne la PLUS RÉCENTE (wonAt desc) ; run3 = score cumulatif → le MAX.
+        //   Puis on classe la liste affichée par score décroissant dans les deux cas.
+        const ranked = (run: "run2" | "run3") => {
+            const forRun = rows.filter((r) => r.run === run)
+            forRun.sort((a, b) => run === "run2"
+                ? new Date(b.wonAt).getTime() - new Date(a.wonAt).getTime() // récence (courant)
+                : b.score - a.score)                                       // max (cumulatif)
             const seen = new Set<string>()
             const out: { nickname: string; score: number; wonAt: Date; factors: unknown }[] = []
-            for (const r of rows) {
-                if (r.run !== run || seen.has(r.userId)) continue
+            for (const r of forRun) {
+                if (seen.has(r.userId)) continue
                 seen.add(r.userId)
                 out.push({ nickname: r.nickname, score: r.score, wonAt: r.wonAt, factors: r.factors ?? null })
             }
+            out.sort((a, b) => b.score - a.score) // classement affiché : score décroissant
             return out
         }
-        return NextResponse.json({ ok: true, run2: best("run2"), run3: best("run3") })
+        return NextResponse.json({ ok: true, run2: ranked("run2"), run3: ranked("run3") })
     } catch {
         return NextResponse.json({ ok: true, run2: [], run3: [] }) // table pas encore créée → neutre
     }
@@ -98,11 +105,17 @@ export async function POST(req: NextRequest) {
         const me = await prisma.user.findUnique({ where: { id: auth.userId }, select: { nickname: true } })
         if (!me) return NextResponse.json({ error: "Forbidden" }, { status: 401 })
         // RUN 2 = score COURANT (on écrase toujours, note non monotone) ; RUN 3 = MAX (score cumulatif, jamais de régression).
-        const existing = (await rs.findFirst({ where: { userId: auth.userId, run }, select: { id: true, score: true } })) as { id: string; score: number } | null
-        if (!existing) {
+        // On récupère TOUTES les lignes du joueur (pas findFirst) pour COLLAPSE d'éventuels doublons de POST concurrents
+        // (mount + arrière-plan) → garantit UNE seule ligne par (joueur, run), sans quoi le GET pourrait figer un doublon périmé.
+        const rows = (await rs.findMany({ where: { userId: auth.userId, run }, orderBy: { wonAt: "desc" }, select: { id: true, score: true } })) as { id: string; score: number }[]
+        if (rows.length === 0) {
             await rs.create({ data: { userId: auth.userId, nickname: me.nickname, run, score, factors: factors ?? undefined } })
-        } else if (run === "run3" ? score > existing.score : true) {
-            await rs.update({ where: { id: existing.id }, data: { score, nickname: me.nickname, wonAt: new Date(), factors: factors ?? undefined } })
+        } else {
+            // Ligne conservée : run2 = la PLUS RÉCENTE (rows[0]) ; run3 = celle du MEILLEUR score.
+            const keep = run === "run3" ? rows.reduce((a, b) => (b.score > a.score ? b : a)) : rows[0]
+            const newScore = run === "run3" ? Math.max(keep.score, score) : score // run2 écrase, run3 ne régresse jamais
+            await rs.update({ where: { id: keep.id }, data: { score: newScore, nickname: me.nickname, wonAt: new Date(), factors: factors ?? undefined } })
+            if (rows.length > 1) await rs.deleteMany({ where: { userId: auth.userId, run, id: { not: keep.id } } }) // écrase les doublons
         }
         return NextResponse.json({ ok: true })
     } catch {
