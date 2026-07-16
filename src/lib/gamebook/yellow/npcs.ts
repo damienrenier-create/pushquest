@@ -151,19 +151,6 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         dialoguesAfter: ["*Le marchand de Jetons de Combat t'accueille.*"], // repli si non intercepté
     },
 
-    // === ZONE DE COMBAT — PASSEUR DE LA GROTTE (13,9) : contre des Jetons de Combat, te téléporte dans la
-    //     Grotte du Nexus (casse-tête endgame). L'interaction est interceptée dans gameStore (→ grottePasseurOpen). ===
-    {
-        id: "y_grotte_passeur",
-        name: "PASSEUR DE LA GROTTE",
-        mapId: "yellow_zone_combat",
-        kind: "static",
-        interaction: "interactive",
-        sprite: { emoji: "⛏️", color: "#9b7653" },
-        initialX: 13,
-        initialY: 9,
-        dialoguesAfter: ["« La Grotte du Nexus se mérite… en Jetons de Combat. »"], // repli si non intercepté
-    },
 
     // === CENDREVILLE — TECHNICIEN devant la Centrale (21,18) : indice sur Gékroc + la Pierre d'évolution ===
     {

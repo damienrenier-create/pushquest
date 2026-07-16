@@ -41,7 +41,9 @@ const LEGENDARY_LOT = ["gekroc", "gekraise", "gekosmic", "sylvebarbe"]
 const LEGENDARY_PRICE = 1500
 const LEGENDARY_LEVEL = 60
 
-export default function CombatShopModal({ onClose }: { onClose: () => void }) {
+export const GROTTE_ENTRY_COST = 5 // Jetons de Combat pour entrer dans la Grotte du Nexus (casse-tête)
+
+export default function CombatShopModal({ onClose, onEnterGrotte }: { onClose: () => void; onEnterGrotte?: () => void }) {
     const player = usePlayer()
     const [jc, setJc] = useState<number | null>(null)
     const [symbols, setSymbols] = useState<string[]>([])
@@ -75,6 +77,14 @@ export default function CombatShopModal({ onClose }: { onClose: () => void }) {
                 <div style={header}>🛒 BOUTIQUE DE JETONS <span style={{ fontSize: 10, opacity: 0.7, fontWeight: 600 }}>Zone de Combat</span></div>
                 <div style={{ padding: 12, overflowY: "auto", flex: 1 }}>
                     <div style={bar}>💠 Jetons de Combat : <b>{jc ?? "…"}</b></div>
+
+                    {onEnterGrotte && (
+                        <Section title="🕳️ Grotte du Nexus">
+                            <div style={{ fontSize: 10, opacity: 0.7, color: INK, marginBottom: 6, lineHeight: 1.3 }}>Le casse-tête souterrain (Mt. Moon). Le passage se paie en Jetons de Combat.</div>
+                            <Row label="⛏️ Entrer dans la Grotte" price={GROTTE_ENTRY_COST} disabled={busy || (jc ?? 0) < GROTTE_ENTRY_COST}
+                                onBuy={() => spend(GROTTE_ENTRY_COST, { grant: () => onEnterGrotte(), toast: "🕳️ Tu t'enfonces dans la Grotte du Nexus…" })} />
+                        </Section>
+                    )}
 
                     <Section title="⚡ Recharge d'énergie">
                         {ENERGY.map((e) => (
