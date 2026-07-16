@@ -31,8 +31,8 @@ describe("Type TÉNÈBRES — table Dark de référence", () => {
     })
 })
 
-describe("Némésis Ombraroth (TÉNÈBRES/SPECTRE) — hard-counter de Shadow (NORMAL/SPECTRE)", () => {
-    const shadow = getSpecies("shadow")!, ombra = getSpecies("ombraroth")!
+describe("Némésis Ténèbrir (TÉNÈBRES/SPECTRE) — hard-counter de Shadow (NORMAL/SPECTRE)", () => {
+    const shadow = getSpecies("shadow")!, ombra = getSpecies("tenebrir")!
     it("est IMMUNISÉ à l'offense physique de Shadow (Normal/Combat/priorité = ×0), ne prend que le Spectre ×1", () => {
         expect(typeEffectiveness("NORMAL", ombra.types)).toBe(0)  // dont la priorité Vive-Attaque
         expect(typeEffectiveness("COMBAT", ombra.types)).toBe(0)  // Crochet du Maître
@@ -43,9 +43,9 @@ describe("Némésis Ombraroth (TÉNÈBRES/SPECTRE) — hard-counter de Shadow (N
         expect(shadow.baseStats.spc).toBeLessThanOrEqual(30)          // Spé-déf ~28 = cible molle
         expect(ombra.baseStats.spe).toBeGreaterThan(shadow.baseStats.spe) // 135 > 130 → outspeed
     })
-    it("Shady est bien mappé sur Ombryx dans CANONICAL_NEMESIS (l'ACE de Franss le forge)", async () => {
+    it("Shady est bien mappé sur Caninombre dans CANONICAL_NEMESIS (l'ACE de Franss le forge)", async () => {
         const { CANONICAL_NEMESIS } = await import("../data/species")
-        expect(CANONICAL_NEMESIS["shady"]).toBe("ombryx")
-        expect(CANONICAL_NEMESIS["custom_cmpgu4uq5000069d_shady_s3"]).toBe("ombryx")
+        expect(CANONICAL_NEMESIS["shady"]).toBe("caninombre")
+        expect(CANONICAL_NEMESIS["custom_cmpgu4uq5000069d_shady_s3"]).toBe("caninombre")
     })
 })

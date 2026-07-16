@@ -2597,12 +2597,12 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "Grand félin-fantôme élancé et musclé, nimbé d'une aura d'ombre. Prédateur qui frappe à la vitesse de l'éclair et disparaît.",
         sprite: "/yellow/sprites/dex/shadow.png",
     },
-    // ── NÉMÉSIS de Shady : Ombryx → Ombraxis → Ombraroth (TÉNÈBRES/SPECTRE, attaquant SPÉCIAL). ──
+    // ── NÉMÉSIS de Shady : Caninombre → Lycanfer → Ténèbrir (loup ténébreux TÉNÈBRES/SPECTRE, attaquant SPÉCIAL). ──
     //    Shady (NORMAL/SPECTRE) n'a aucune faiblesse → SEUL le type TÉNÈBRES perce sa moitié Spectre (×2), et un
     //    coup SPÉCIAL frappe sa Spé-déf catastrophique (28). Immunisé à l'offense de Shady (Normal/Combat/priorité
     //    = ×0 via Spectre), plus RAPIDE que Shadow → il le pulvérise avant Danse-Lames. Sprites à générer (Sartay).
-    ombryx: {
-        id: "ombryx", dexNo: 171, name: "Ombryx", types: ["TENEBRES", "SPECTRE"],
+    caninombre: {
+        id: "caninombre", dexNo: 171, name: "Caninombre", types: ["TENEBRES", "SPECTRE"],
         // Conçu pour DÉTRUIRE Shady (Vit 59) : Vit 64 (outspeed) + Spé 72 (le nuke), fragile physiquement (peu importe :
         // il est immunisé à l'offense de Shady). BST 244 (~= Shady 206, un cran au-dessus car némésis dédié).
         baseStats: { hp: 42, atk: 22, def: 44, spe: 64, spc: 72 }, // BST 244
@@ -2613,14 +2613,14 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 36, moveId: "hypnose" }, { level: 44, moveId: "linceul" },
             { level: 52, moveId: "devoreur_ombres" }, { level: 60, moveId: "lance_flammes" },
         ],
-        evolution: { toId: "ombraxis", method: { kind: "LEVEL", level: 20 } },
+        evolution: { toId: "lycanfer", method: { kind: "LEVEL", level: 20 } },
         catchRate: 45, baseExp: 68, rarity: "RARE", growthRate: "medium_slow", secretTalent: "reflexes",
-        role: "Ténèbres/Spectre — attaquant spécial (némésis de Shady)", hiddenUntilCaught: true,
-        description: "Un petit prédateur d'ombres aux yeux vides : il se nourrit des ténèbres qu'il croise. Forgé par ACE pour traquer une certaine ombre féline.",
-        sprite: "/yellow/sprites/dex/missingno.png",
+        role: "Ténèbres/Spectre — louveteau furtif (némésis de Shady)", hiddenUntilCaught: true,
+        description: "Louveteau (lupus + ombre) dont le pelage sombre semble absorber la lumière. Furtif, il se tapit dans les recoins obscurs et n'attaque que par surprise. Forgé par ACE pour traquer une certaine ombre féline.",
+        sprite: "/yellow/sprites/dex/caninombre.png",
     },
-    ombraxis: {
-        id: "ombraxis", dexNo: 172, name: "Ombraxis", types: ["TENEBRES", "SPECTRE"],
+    lycanfer: {
+        id: "lycanfer", dexNo: 172, name: "Lycanfer", types: ["TENEBRES", "SPECTRE"],
         // vs Shade (Vit 88) : Vit 96 (outspeed) + Spé 104. BST 350 (~= Shade 307).
         baseStats: { hp: 62, atk: 30, def: 58, spe: 96, spc: 104 }, // BST 350
         learnset: [
@@ -2630,14 +2630,14 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 40, moveId: "hypnose" }, { level: 48, moveId: "linceul" },
             { level: 56, moveId: "devoreur_ombres" }, { level: 64, moveId: "lance_flammes" },
         ],
-        evolution: { toId: "ombraroth", method: { kind: "LEVEL", level: 42 } },
+        evolution: { toId: "tenebrir", method: { kind: "LEVEL", level: 42 } },
         catchRate: 45, baseExp: 141, rarity: "RARE", growthRate: "medium_slow", secretTalent: "reflexes",
-        role: "Ténèbres/Spectre — prédateur d'ombres (spécial)", hiddenUntilCaught: true,
-        description: "Le dévoreur d'ombres a grandi : une silhouette spectrale et affamée, plus rapide et plus vorace.",
-        sprite: "/yellow/sprites/dex/missingno.png",
+        role: "Ténèbres/Spectre — lycanthrope infernal (spécial)", hiddenUntilCaught: true,
+        description: "Le loup (lycanthrope + enfer) se dresse sur ses pattes arrière, crocs allongés. Une aura rougeoyante émane de sa fourrure : des flammes froides issues des abysses.",
+        sprite: "/yellow/sprites/dex/lycanfer.png",
     },
-    ombraroth: {
-        id: "ombraroth", dexNo: 173, name: "Ombraroth", types: ["TENEBRES", "SPECTRE"],
+    tenebrir: {
+        id: "tenebrir", dexNo: 173, name: "Ténèbrir", types: ["TENEBRES", "SPECTRE"],
         // BOURREAU de Shadow (Vit 130) : Vit 138 (outspeed garanti) + Spé 140 (OHKO au coup Ténèbres ×2 sur sa
         // Spé-déf 28). Déf 70/PV 80 suffisent : il n'encaisse QUE la Griffe Spectrale ×1 (le reste = ×0). BST 466.
         baseStats: { hp: 80, atk: 38, def: 70, spe: 138, spc: 140 }, // BST 466
@@ -2649,9 +2649,9 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 64, moveId: "devoreur_ombres" }, { level: 74, moveId: "lance_flammes" },
         ],
         catchRate: 45, baseExp: 210, rarity: "RARE", growthRate: "medium_slow", secretTalent: "reflexes",
-        role: "Ténèbres/Spectre — apex prédateur d'ombres (spécial, ultra-rapide)", hiddenUntilCaught: true,
-        description: "L'apex des ténèbres : plus rapide que sa proie, il éteint l'ombre féline d'un souffle obscur avant qu'elle ne se dresse. Némésis parfait de Shadow.",
-        sprite: "/yellow/sprites/dex/missingno.png",
+        role: "Ténèbres/Spectre — apex loup infernal (spécial, ultra-rapide)", hiddenUntilCaught: true,
+        description: "L'apex : un loup démoniaque colossal, cornu, zébré de lave, dont le hurlement éteint toute lumière. Plus rapide que sa proie, il consume l'ombre féline avant qu'elle ne se dresse. Némésis parfait de Shadow.",
+        sprite: "/yellow/sprites/dex/tenebrir.png",
     },
 }
 
@@ -2679,7 +2679,7 @@ for (const id of ["magnetor", "elefer", "barrisfer", "colosfer", "cornaive", "as
     "otama", "gamaruto", "uzumaro", "wistree",              // Maison Combat (grenouilles) + Grotte (Wistree) run 3
     "guizer", "dalugazer", "mobyd",                        // création canonisée (Task1) — Grotte/Route Nord run 3
     "shady", "shade", "shadow",                            // création canonisée (Franss) — Grotte du Nexus run 3
-    "ombryx", "ombraxis", "ombraroth"]) {                   // némésis TÉNÈBRES/SPECTRE de Shady (forgé par ACE)
+    "caninombre", "lycanfer", "tenebrir"]) {                // némésis (loup ténébreux) TÉNÈBRES/SPECTRE de Shady, forgé par ACE
     if (SPECIES[id]) SPECIES[id].runThreeOnly = true
 }
 
@@ -2732,10 +2732,10 @@ export const CANONICAL_NEMESIS: Record<string, string> = {
     // Override CIBLÉ Task1 : son équipe joue encore son Guizer CUSTOM (pas le canonique) → on mappe ses ids custom
     // pour que SON ACE field bien Uzumaro. (À terme généralisé par le protocole némésis, cf. _nemesis-architect.)
     custom_cmq5gbo5g0000g6m_guizer_s1: "otama", custom_cmq5gbo5g0000g6m_guizer_s2: "otama", custom_cmq5gbo5g0000g6m_guizer_s3: "otama",
-    // Shady (création Franss canonisée, NORMAL/SPECTRE) → lignée OMBRYX (Ombryx→Ombraxis→Ombraroth, TÉNÈBRES/SPECTRE)
-    // = le HARD-COUNTER : immunisé à toute son offense (Normal/Combat/priorité ×0), plus rapide, et l'OHKO au coup
-    // SPÉCIAL Ténèbres ×2 sur sa Spé-déf 28. Seule réponse possible (Shady n'a aucune faiblesse hors Ténèbres).
-    shady: "ombryx", shade: "ombryx", shadow: "ombryx",
-    // Override CIBLÉ Franss : son équipe joue son Shady CUSTOM → on mappe ses ids custom pour que SON ACE field Ombraroth.
-    custom_cmpgu4uq5000069d_shady_s1: "ombryx", custom_cmpgu4uq5000069d_shady_s2: "ombryx", custom_cmpgu4uq5000069d_shady_s3: "ombryx",
+    // Shady (création Franss canonisée, NORMAL/SPECTRE) → lignée CANINOMBRE (Caninombre→Lycanfer→Ténèbrir, loup
+    // ténébreux TÉNÈBRES/SPECTRE) = le HARD-COUNTER : immunisé à toute son offense (Normal/Combat/priorité ×0), plus
+    // rapide, et l'OHKO au coup SPÉCIAL Ténèbres ×2 sur sa Spé-déf 28. Seule réponse possible (Shady sans faiblesse hors Ténèbres).
+    shady: "caninombre", shade: "caninombre", shadow: "caninombre",
+    // Override CIBLÉ Franss : son équipe joue son Shady CUSTOM → on mappe ses ids custom pour que SON ACE field Ténèbrir.
+    custom_cmpgu4uq5000069d_shady_s1: "caninombre", custom_cmpgu4uq5000069d_shady_s2: "caninombre", custom_cmpgu4uq5000069d_shady_s3: "caninombre",
 }
