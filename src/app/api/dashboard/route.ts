@@ -13,7 +13,8 @@ import {
     isLastDayOfMonth,
     is12thOfMonth,
     isClock300Window,
-    clock300CanonicalDate
+    clock300CanonicalDate,
+    getAllowedEncodingDates
 } from "@/lib/challenge";
 import { SPECIAL_DAYS } from "@/config/specialDays";
 import { initBadges, getUserSummaries } from "@/lib/badges";
@@ -36,6 +37,9 @@ export async function GET(req: Request) {
         const { searchParams } = new URL(req.url);
         const selectedDate = searchParams.get("date") || getTodayISO();
         const today = getTodayISO();
+        // DÉFI DE L'HORLOGE : le 12 du mois, encodable tant qu'il est dans la fenêtre d'encodage (4 jours) → le
+        // défi reste VISIBLE + encodable du 12 au 15, plus seulement le 12 (fini « pas vu passer »). null hors fenêtre.
+        const clockDate = getAllowedEncodingDates().find(d => is12thOfMonth(d)) ?? null;
         const userId = session.user.id;
         const league = (session.user as any).league || "POMPES";
 
@@ -624,9 +628,11 @@ export async function GET(req: Request) {
                 }).slice(0, 3)
             },
             clockChallenge: {
-                // Défi de l'Horloge — le 12 du mois. Score = TEMPS en secondes, le plus RAPIDE gagne.
+                // Défi de l'Horloge — le 12 du mois. Score = TEMPS en secondes, le plus RAPIDE gagne. VISIBLE toute
+                // la fenêtre d'encodage (clockDate = le 12 tant qu'il est encodable) ; le temps affiché/encodé cible CE 12.
                 enabledForSelectedDate: is12thOfMonth(selectedDate),
-                selectedDateSeconds: (allUsers.find(u => u.id === userId)?.sallyUps || []).find((s: any) => s.type === "CLOCK_PUSHUP" && s.date === selectedDate)?.seconds || 0,
+                clockDate,
+                selectedDateSeconds: (allUsers.find(u => u.id === userId)?.sallyUps || []).find((s: any) => s.type === "CLOCK_PUSHUP" && s.date === (clockDate ?? selectedDate))?.seconds || 0,
                 monthPodium: allUsers.flatMap(u => (u.sallyUps || []).filter((s: any) => s.type === "CLOCK_PUSHUP" && s.date.startsWith(today.substring(0, 7))).map((s: any) => ({
                     nickname: u.nickname,
                     seconds: s.seconds,

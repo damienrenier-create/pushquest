@@ -76,6 +76,7 @@ interface DashboardData {
     }
     clockChallenge?: {
         enabledForSelectedDate: boolean
+        clockDate?: string | null // le 12 tant qu'il est dans la fenêtre d'encodage (visible 12→15), sinon null
         selectedDateSeconds: number
         monthPodium: Array<{ nickname: string; seconds: number; totalPushupsAllTime: number }>
     }
@@ -135,7 +136,7 @@ const DEFAULT_DASHBOARD_DATA: DashboardData = {
         finesList: []
     },
     sallyUp: { enabledForSelectedDate: false, selectedDateReps: 0, monthPodium: [] },
-    clockChallenge: { enabledForSelectedDate: false, selectedDateSeconds: 0, monthPodium: [] },
+    clockChallenge: { enabledForSelectedDate: false, clockDate: null, selectedDateSeconds: 0, monthPodium: [] },
     clock300: { enabledForSelectedDate: false, selectedDateSeconds: 0, monthPodium: [] },
     graphs: { myDaily: [] }
 }
@@ -530,12 +531,15 @@ export default function ChallengeDashboard() {
     const saveClock = async () => {
         const total = clockMin * 60 + clockSec
         if (total <= 0) { showToast("Entre ton temps (min + sec)", "error"); return }
+        // Le défi cible TOUJOURS le 12 (clockDate), quelle que soit la date sélectionnée → encodable toute la fenêtre.
+        const clockTargetDate = data?.clockChallenge?.clockDate
+        if (!clockTargetDate) { showToast("Le défi de l'Horloge n'est plus encodable.", "error"); return }
         setSaving(true)
         try {
             const res = await fetch("/api/challenge/clock", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ date: selectedDate, seconds: total }),
+                body: JSON.stringify({ date: clockTargetDate, seconds: total }),
             })
             if (res.ok) {
                 showToast("Temps de l'Horloge sauvegardé", "success")
@@ -798,13 +802,13 @@ export default function ChallengeDashboard() {
                         </div>
                     )}
 
-                    {data?.clockChallenge?.enabledForSelectedDate && (
+                    {data?.clockChallenge?.clockDate && (
                         <div className="bg-indigo-50 rounded-3xl p-6 border-2 border-indigo-200 space-y-4">
                             <div className="flex justify-between items-center text-indigo-800">
                                 <h3 className="font-black uppercase tracking-normal">Défi de l'Horloge ⏰</h3>
-                                <span className="bg-indigo-200 px-3 py-1 rounded-full text-[10px] font-black uppercase">Le 12 du mois</span>
+                                <span className="bg-indigo-200 px-3 py-1 rounded-full text-[10px] font-black uppercase">📅 {data.clockChallenge.clockDate.slice(8, 10)}/{data.clockChallenge.clockDate.slice(5, 7)}</span>
                             </div>
-                            <p className="text-[11px] font-bold text-indigo-700 leading-snug">1+2+…+12 = 78 pompes le plus vite possible. Encode ton temps (le plus rapide gagne).</p>
+                            <p className="text-[11px] font-bold text-indigo-700 leading-snug">1+2+…+12 = 78 pompes le plus vite possible (le plus rapide gagne). Ton chrono du <b>12</b> — encodable encore quelques jours.</p>
                             <div className="flex gap-3 items-end">
                                 <div className="flex-1">
                                     <label className="block text-[10px] font-black text-indigo-700 uppercase mb-1 ml-1">Minutes</label>
