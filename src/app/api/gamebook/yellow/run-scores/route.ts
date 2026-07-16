@@ -2,7 +2,12 @@
 //
 // Nexus Jaune Éclair — LEADERBOARD des scores de RUN (concours), partagé.
 //  POST : un joueur signale son score de run 2 (NOTE GLOBALE /1000, cf. score/runScore) ou run 3 (Σ niveaux vaincus).
-//         On garde le MEILLEUR score par (joueur, run). Pseudo trusté serveur.
+//         - RUN 2 : on garde le DERNIER score (courant). La note /1000 n'est PAS monotone (elle monte avec le
+//           Pokédex/niveaux mais baisse avec l'énergie/pas dépensés) → le classement reflète l'état ACTUEL de
+//           chaque joueur, live à chaque connexion. Le « meilleur du run » reste un stat perso montré au recap
+//           de fin de run 2 (côté client), pas au classement.
+//         - RUN 3 : score monotone (Σ niveaux de Daemons vaincus, cumulatif) → on garde le MAX (jamais de régression).
+//         Pseudo trusté serveur.
 //  GET  : renvoie les classements run2 + run3 — MAIS seulement si le SPECTATEUR a fini le run 1 (>=5 badges).
 //
 // Même pattern gaté que arena-champions/ : (prisma as any).yellowRunScore → COMPILE avant db:push, et les
@@ -92,11 +97,11 @@ export async function POST(req: NextRequest) {
         const rs = (prisma as any).yellowRunScore // table gated, créée par db:push
         const me = await prisma.user.findUnique({ where: { id: auth.userId }, select: { nickname: true } })
         if (!me) return NextResponse.json({ error: "Forbidden" }, { status: 401 })
-        // Meilleur score par (joueur, run) : on ne crée/màj que si c'est un record.
+        // RUN 2 = score COURANT (on écrase toujours, note non monotone) ; RUN 3 = MAX (score cumulatif, jamais de régression).
         const existing = (await rs.findFirst({ where: { userId: auth.userId, run }, select: { id: true, score: true } })) as { id: string; score: number } | null
         if (!existing) {
             await rs.create({ data: { userId: auth.userId, nickname: me.nickname, run, score, factors: factors ?? undefined } })
-        } else if (score > existing.score) {
+        } else if (run === "run3" ? score > existing.score : true) {
             await rs.update({ where: { id: existing.id }, data: { score, nickname: me.nickname, wonAt: new Date(), factors: factors ?? undefined } })
         }
         return NextResponse.json({ ok: true })

@@ -47,8 +47,9 @@ export interface RunScores {
     playtimeMs: number       // #2 temps de jeu actif cumulé          (↓ mieux)
     energyConsumed: number   // #3 énergie consommée = reps utilisés sur TOUT le run 2 (rétroactif, depuis le début)
     steps: number            // #4 nombre de pas                       (↓ mieux)
-    grade: number            // #5 NOTE GLOBALE /1000                  (↑ mieux)
+    grade: number            // #5 NOTE GLOBALE /1000 COURANTE          (↑ mieux)
     leagueReps: number       // #6 reps dépensés en COMBAT DE LIGUE (nouveau compteur → NON rétroactif : 0 pour qui a déjà entamé la Ligue)
+    bestGrade: number        // MEILLEUR grade /1000 atteint pendant le run (pic — la note n'est pas monotone). Montré au recap de fin de run 2.
     factors: ScoreFactor[]   // détail des 5 composantes de la note globale
 }
 
@@ -90,7 +91,8 @@ export function computeRunScores(): RunScores {
     ]
     const grade = factors.reduce((s, f) => s + f.points, 0)
 
-    return { playtimeMs, energyConsumed, steps, grade, leagueReps: stats.leagueEnergySpent, factors }
+    // bestGrade = max(record persisté, grade courant) → toujours cohérent même si le pic n'a pas encore été échantillonné.
+    return { playtimeMs, energyConsumed, steps, grade, leagueReps: stats.leagueEnergySpent, bestGrade: Math.max(stats.run2BestGrade, grade), factors }
 }
 
 /** Facteurs envoyés au LEADERBOARD partagé : les 5 axes notés (/1000) + 1 ligne INFO hors-note = le 6e volet

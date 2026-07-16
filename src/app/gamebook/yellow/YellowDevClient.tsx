@@ -57,7 +57,7 @@ import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_L
 import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/gamebook/yellow/data/labDialogues"
 import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, getNgplusOldTeam, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3 } from "@/lib/gamebook/yellow/store/saveManager"
 import { customStarterSpeciesId, type StoredCustomDaemon } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, releaseFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, releaseFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax } from "@/lib/gamebook/yellow/store/playerStore"
 import { computeRunScores, leaderboardFactors, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
 import { run3Score, run3MaxScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
@@ -239,7 +239,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const ngplusFinalPending = useNgplusFinalPending() // NG+ : Maître battu en NG+ → combat vs ancienne équipe à lancer
     const ngplusFinalResult = useNgplusFinalResult()   // NG+ : issue de ce combat (win → clôture)
     // RUN 3 — à la fin du run 2, on propose le CHOIX : fusionner maintenant (finir) OU lancer le run 3.
-    const [run3Offer, setRun3Offer] = useState<{ score: number } | null>(null)
+    const [run3Offer, setRun3Offer] = useState<{ score: number; bestGrade: number } | null>(null)
     const [run3StarterChoice, setRun3StarterChoice] = useState(false) // RUN 3 : choix du starter (les 3 lignées)
     const [run3EndOffer, setRun3EndOffer] = useState<{ score: number; reason: "energy" | "master" } | null>(null) // RUN 3 : fin (0⚡ OU sacre du Maître) → méga-fusion forcée
     const run3EndTriggeredRef = useRef(false) // anti double-déclenchement de completeRun3 (async, bascule activeWorld)
@@ -805,17 +805,24 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // run2→run3, d'où un classement run 2 vide). N'affecte pas run 3 (POST séparé à la clôture du run 3).
     useEffect(() => {
         if (!hydrated) return
-        const postRun2 = () => {
+        // Échantillonne le score COURANT : retient le PIC (record local, la note n'est pas monotone) puis remonte le
+        // courant au classement. `post` = true seulement aux moments réseau (connexion / arrière-plan) ; l'intervalle
+        // ne fait QUE mettre à jour le record local (pas de réseau toutes les 20 s).
+        const sample = (post: boolean) => {
             if (getActiveWorld() !== "ngplus") return // seulement en run 2 (NG+)
             try {
                 const sc = computeRunScores()
-                fetch("/api/gamebook/yellow/run-scores", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ run: "run2", score: sc.grade, factors: leaderboardFactors(sc) }) }).catch(() => { /* hors-ligne : silencieux */ })
+                if (recordStatMax("run2BestGrade", sc.grade)) persistYellowSave() // nouveau record → on fige tout de suite
+                if (post) {
+                    fetch("/api/gamebook/yellow/run-scores", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ run: "run2", score: sc.grade, factors: leaderboardFactors(sc) }) }).catch(() => { /* hors-ligne : silencieux */ })
+                }
             } catch { /* état non prêt : on ignore */ }
         }
-        postRun2() // à la connexion
-        const onHide = () => { if (document.visibilityState === "hidden") postRun2() } // fin de session (onglet caché/fermé)
+        sample(true) // à la connexion : record + remontée classement
+        const id = window.setInterval(() => sample(false), 20000) // capte les pics en cours de session (local only)
+        const onHide = () => { if (document.visibilityState === "hidden") sample(true) } // fin de session (onglet caché/fermé)
         document.addEventListener("visibilitychange", onHide)
-        return () => document.removeEventListener("visibilitychange", onHide)
+        return () => { window.clearInterval(id); document.removeEventListener("visibilitychange", onHide) }
     }, [hydrated])
 
     // Évite un flash à l'écran avant que l'état serveur soit chargé.
@@ -888,16 +895,18 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             // LEADERBOARD run 2 : on remonte la NOTE GLOBALE /1000 (5 facteurs : % victoire, Pokédex, Σ niveaux,
             //   frugalité sur 10000⚡, peu de pas) — surtout PAS l'énergie brute, qui récompensait le grind poker.
             //   computeRunScores lit l'état run 2 courant (avant fusion). Best-effort (le serveur garde le meilleur).
-            const run2Sc = computeRunScores()
+            // La clôture est un dernier échantillon : on grave le PIC du run avant de figer le recap.
+            recordStatMax("run2BestGrade", computeRunScores().grade)
+            const run2Sc = computeRunScores() // relu APRÈS le record → run2Sc.bestGrade est à jour
             const run2Grade = run2Sc.grade
-            // Recap perso : on FIGE les 5 scores (client) pour pouvoir les rouvrir après le run 2 (le menu ne les
-            //   recalcule plus hors run 2). N'impacte pas le leaderboard serveur (qui ne garde que la note /1000).
+            // Recap perso : on FIGE les scores (client, avec le MEILLEUR du run) pour pouvoir les rouvrir après le run 2
+            //   (le menu ne les recalcule plus hors run 2). N'impacte pas le leaderboard serveur (score COURANT run 2).
             try { window.localStorage.setItem(RUN2_SCORES_LS_KEY, JSON.stringify(run2Sc)) } catch { /* ignore */ }
             setRun2Snap(run2Sc)
             fetch("/api/gamebook/yellow/run-scores", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ run: "run2", score: run2Grade, factors: leaderboardFactors(run2Sc) }) }).catch(() => {})
             // On NE FUSIONNE PAS tout de suite : on PROPOSE le choix (fusionner OU lancer le run 3). L'overlay
             // ci-dessous appelle completeNewGamePlus (fusion 2-voies) OU launchRun3 (garde les 3 mondes gelés).
-            setRun3Offer({ score: ngplusScore })
+            setRun3Offer({ score: ngplusScore, bestGrade: run2Sc.bestGrade })
         } else {
             // Ton ancien toi t'a battu : tu n'es pas Maître. Il faut REFAIRE la Ligue (rebattre les 5, puis re-affronter
             // l'ancienne équipe). Le marqueur "Maître battu" a été retiré par battleStore → le combat final n'est plus
@@ -1897,12 +1906,19 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                     {row("⚡ Reps utilisés (total run 2)", sc.energyConsumed.toLocaleString("fr-FR"), "reps dépensés sur TOUT le run 2 (attaques, boutique, casino) — compté depuis le début")}
                                     {row("🏆 Reps utilisés (en Ligue)", (sc.leagueReps ?? 0).toLocaleString("fr-FR"), "reps dépensés en combats de Ligue — nouveau compteur (0 si tu avais déjà entamé la Ligue avant l'ajout)")}
                                     {row("👟 Pas", sc.steps.toLocaleString("fr-FR"), "nombre de pas — plus bas = mieux")}
-                                    {/* NOTE GLOBALE /1000 + détail des 5 facteurs */}
+                                    {/* NOTE GLOBALE /1000 (courante) + MEILLEUR du run + détail des 5 facteurs */}
                                     <div style={{ borderTop: "1px solid rgba(255,255,255,0.18)", paddingTop: 8, marginTop: 2 }}>
                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 15 }}>
-                                            <b>★ SCORE GLOBAL</b>
+                                            <b>★ SCORE GLOBAL{activeWorld === "ngplus" ? " (actuel)" : ""}</b>
                                             <b style={{ fontSize: 20, color: "#ffe36b" }}>{sc.grade}<span style={{ fontSize: 12, opacity: 0.6 }}> / 1000</span></b>
                                         </div>
+                                        {sc.bestGrade > sc.grade && (
+                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 12, marginTop: 2, opacity: 0.9 }}>
+                                                <span>🏅 Meilleur du run</span>
+                                                <b style={{ color: "#ffe36b" }}>{sc.bestGrade}<span style={{ fontSize: 10, opacity: 0.6 }}> / 1000</span></b>
+                                            </div>
+                                        )}
+                                        <div style={{ fontSize: 9, opacity: 0.55, marginTop: 2 }}>Le classement partagé affiche ton score <b>actuel</b> ; ton <b>meilleur</b> est gravé à la fin du run 2.</div>
                                         <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 6 }}>
                                             {sc.factors.map((f) => (
                                                 <div key={f.key} style={{ fontSize: 11 }}>
@@ -2284,7 +2300,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     <div style={{ ...menuBoxStyle, background: "#1c1408", color: "#f5ecd0", border: "3px solid #ffd54a" }} onClick={(e) => e.stopPropagation()}>
                         <div style={menuTitleStyle}>🔥 UN TROISIÈME DÉFI ?</div>
                         <div style={{ fontSize: 12.5, lineHeight: 1.5, margin: "2px 0 10px", color: "#eee" }}>
-                            Tu boucles ta seconde vie avec <b style={{ color: "#ffe36b" }}>{run3Offer.score}⚡</b> en réserve. Deux voies s'ouvrent :
+                            Tu boucles ta seconde vie avec <b style={{ color: "#ffe36b" }}>{run3Offer.score}⚡</b> en réserve.
+                            <div style={{ margin: "8px 0 2px", padding: "8px 10px", background: "rgba(255,227,107,0.14)", border: "1px solid rgba(255,227,107,0.35)", borderRadius: 8, textAlign: "center" }}>
+                                🏅 Ton <b>MEILLEUR score</b> du run 2 : <b style={{ color: "#ffe36b", fontSize: 18 }}>{run3Offer.bestGrade}</b><span style={{ opacity: 0.6 }}> / 1000</span>
+                            </div>
+                            Deux voies s'ouvrent :
                             <div style={{ margin: "8px 0 0", padding: "8px 10px", background: "rgba(255,255,255,0.06)", borderRadius: 8, fontSize: 12 }}>
                                 🍝 <b>Fusionner</b> : tes Daemons du run 1 rejoignent ton PC, le run 2 devient ton compte. C'est fini.
                             </div>

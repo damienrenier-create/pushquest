@@ -870,6 +870,14 @@ export function bumpStat(key: keyof YellowStats, n = 1) {
     st = { ...st, stats: { ...st.stats, [key]: (st.stats[key] ?? 0) + Math.floor(n) } }
 }
 export function getStats(): YellowStats { return st.stats }
+/** Met à jour un compteur de stats en gardant le MAXIMUM observé (ex. meilleur score /1000 du run 2, car la note
+ *  n'est pas monotone). Comme bumpStat : pas d'emit ; la valeur est embarquée dans la prochaine écriture de save.
+ *  Renvoie true si un nouveau record vient d'être posé (pour déclencher une sauvegarde immédiate au besoin). */
+export function recordStatMax(key: keyof YellowStats, value: number): boolean {
+    if (!Number.isFinite(value) || value <= (st.stats[key] ?? 0)) return false
+    st = { ...st, stats: { ...st.stats, [key]: Math.floor(value) } }
+    return true
+}
 
 /** RUN 2 — incrémente le compteur de potions de Ligue (champ top-level, hors YellowStats). Pas d'emit (comme bumpStat). */
 export function bumpLeaguePotions(n = 1) {
