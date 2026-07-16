@@ -799,6 +799,25 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         return () => clearTimeout(t)
     }, [toast])
 
+    // LEADERBOARD RUN 2 — visibilité LIVE : on remonte le score run 2 (note /1000) à CHAQUE CONNEXION (montage, une
+    // fois hydraté) ET quand l'onglet passe en arrière-plan (≈ fin de session). Le serveur garde le meilleur par joueur
+    // → chaque joueur EN COURS de run 2 apparaît au classement (avant, le score n'était envoyé qu'à la transition
+    // run2→run3, d'où un classement run 2 vide). N'affecte pas run 3 (POST séparé à la clôture du run 3).
+    useEffect(() => {
+        if (!hydrated) return
+        const postRun2 = () => {
+            if (getActiveWorld() !== "ngplus") return // seulement en run 2 (NG+)
+            try {
+                const sc = computeRunScores()
+                fetch("/api/gamebook/yellow/run-scores", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ run: "run2", score: sc.grade, factors: sc.factors }) }).catch(() => { /* hors-ligne : silencieux */ })
+            } catch { /* état non prêt : on ignore */ }
+        }
+        postRun2() // à la connexion
+        const onHide = () => { if (document.visibilityState === "hidden") postRun2() } // fin de session (onglet caché/fermé)
+        document.addEventListener("visibilitychange", onHide)
+        return () => document.removeEventListener("visibilitychange", onHide)
+    }, [hydrated])
+
     // Évite un flash à l'écran avant que l'état serveur soit chargé.
     // Si la requête échoue (offline / 403), on affiche quand même le state local.
     void hydrated
