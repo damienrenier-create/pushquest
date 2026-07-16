@@ -25,7 +25,7 @@ const num = (v: unknown): number => (typeof v === "number" && isFinite(v) ? v : 
 
 /** Recalcule le score RUN 2 (/1000) + le détail des facteurs d'un joueur DEPUIS le blob de son monde run 2
  *  (flags.ngplusWorld). Renvoie null si le monde run 2 est absent (joueur pas encore en run 2, ou déjà fusionné). */
-function run2FromWorld(w: unknown): { score: number; factors: ScoreFactor[] } | null {
+function run2FromWorld(w: unknown): { score: number; factors: ScoreFactor[]; leagueReps: number } | null {
     if (!w || typeof w !== "object") return null
     const world = w as { stats?: Record<string, unknown>; team?: Array<{ level?: unknown }>; pokedex?: { caught?: unknown } }
     const stats = world.stats ?? {}
@@ -36,7 +36,15 @@ function run2FromWorld(w: unknown): { score: number; factors: ScoreFactor[] } | 
         wins: num(stats.wins), teamKos: num(stats.teamKos), caught, teamLevels,
         energyConsumed: num(stats.energySpent), steps: num(stats.steps),
     })
-    return { score: grade, factors: [...factors, leagueRepsFactor(num(stats.leagueEnergySpent))] }
+    const leagueReps = num(stats.leagueEnergySpent)
+    return { score: grade, factors: [...factors, leagueRepsFactor(leagueReps)], leagueReps }
+}
+
+/** Récupère les reps dépensés en Ligue depuis un blob de facteurs stocké (ligne info « info:league_reps »). 0 si absent. */
+function leagueRepsFromFactors(factors: unknown): number {
+    if (!Array.isArray(factors)) return 0
+    const f = factors.find((x) => x && typeof x === "object" && (x as { key?: unknown }).key === "info:league_reps") as { points?: unknown } | undefined
+    return typeof f?.points === "number" ? f.points : 0
 }
 
 /** Recalcule le score RUN 3 (Σ niveaux des Daemons vaincus) DEPUIS flags.run3World.run3Defeated. null si absent/vide. */
@@ -47,7 +55,7 @@ function run3FromWorld(w: unknown): number | null {
     return run3Score(def as Parameters<typeof run3Score>[0])
 }
 
-interface LeaderEntry { nickname: string; score: number; wonAt: Date | null; factors: unknown; live: boolean }
+interface LeaderEntry { nickname: string; score: number; wonAt: Date | null; factors: unknown; live: boolean; leagueReps?: number }
 
 export const dynamic = "force-dynamic"
 
@@ -106,7 +114,7 @@ export async function GET() {
             const world = f.activeWorld // "ngplus" (run2) | "run3" | "live" | undefined
             if (world === "ngplus") {
                 const r2 = run2FromWorld(f.ngplusWorld)
-                if (r2) run2Map.set(s.userId, { nickname, score: r2.score, wonAt: null, factors: r2.factors, live: true })
+                if (r2) run2Map.set(s.userId, { nickname, score: r2.score, wonAt: null, factors: r2.factors, live: true, leagueReps: r2.leagueReps })
             }
             if (world === "run3") {
                 const r3 = run3FromWorld(f.run3World)
@@ -125,12 +133,12 @@ export async function GET() {
         for (const r of rows) {
             const map = r.run === "run2" ? run2Map : r.run === "run3" ? run3Map : null
             if (!map || map.has(r.userId)) continue // le LIVE prime ; la 1re ligne vue (plus récente) gagne le fallback
-            map.set(r.userId, { nickname: r.nickname, score: r.score, wonAt: r.wonAt, factors: r.factors ?? null, live: false })
+            map.set(r.userId, { nickname: r.nickname, score: r.score, wonAt: r.wonAt, factors: r.factors ?? null, live: false, leagueReps: r.run === "run2" ? leagueRepsFromFactors(r.factors) : undefined })
         }
     } catch { /* table pas encore créée → pull seul */ }
 
     const toList = (m: Map<string, LeaderEntry>) =>
-        [...m.values()].sort((a, b) => b.score - a.score).map((e) => ({ nickname: e.nickname, score: e.score, wonAt: e.wonAt, factors: e.factors, live: e.live }))
+        [...m.values()].sort((a, b) => b.score - a.score).map((e) => ({ nickname: e.nickname, score: e.score, wonAt: e.wonAt, factors: e.factors, live: e.live, leagueReps: e.leagueReps }))
 
     return NextResponse.json({ ok: true, run2: toList(run2Map), run3: toList(run3Map) })
 }

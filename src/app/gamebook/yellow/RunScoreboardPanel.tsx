@@ -7,18 +7,20 @@
 import { useEffect, useState } from "react"
 import { type ScoreFactor } from "@/lib/gamebook/yellow/score/runScore"
 
-interface ScoreRow { nickname: string; score: number; wonAt: string | null; factors?: ScoreFactor[] | null; live?: boolean }
+interface ScoreRow { nickname: string; score: number; wonAt: string | null; factors?: ScoreFactor[] | null; live?: boolean; leagueReps?: number }
+type TabId = "run3" | "run2" | "league"
 type Data = { gated?: boolean; run2: ScoreRow[]; run3: ScoreRow[] }
 
-const RUN_META: { id: "run3" | "run2"; label: string; unit: string; hint: string }[] = [
+const RUN_META: { id: TabId; label: string; unit: string; hint: string }[] = [
     { id: "run3", label: "🏆 RUN 3", unit: "pts", hint: "Σ des niveaux des Daemons ennemis vaincus (boss + Ligue). Le + haut gagne." },
     { id: "run2", label: "🏅 RUN 2", unit: "/1000", hint: "Note /1000 : % victoire, Pokédex, niveaux d'équipe, frugalité (énergie) & peu de pas. Joueurs ENCORE en run 2 = score live (maj à chaque connexion) ; joueurs ayant TERMINÉ = score final figé. Clique une entrée pour le détail des 5 axes." },
+    { id: "league", label: "⚡ LIGUE", unit: "reps", hint: "L'ÉCONOME DE LA LIGUE : le moins de reps dépensés en combats DEPUIS ton 1er pas dans la Ligue gagne (moins = mieux). Non classé tant que tu n'y es pas entré." },
 ]
 
 export default function RunScoreboardPanel({ close }: { close: () => void }) {
     const [state, setState] = useState<"loading" | "ok" | "error">("loading")
     const [data, setData] = useState<Data>({ run2: [], run3: [] })
-    const [tab, setTab] = useState<"run3" | "run2">("run3")
+    const [tab, setTab] = useState<TabId>("run3")
     const [expanded, setExpanded] = useState<number | null>(null) // RUN 2 : entrée dépliée (détail des 5 axes)
 
     useEffect(() => {
@@ -36,7 +38,13 @@ export default function RunScoreboardPanel({ close }: { close: () => void }) {
     }, [])
 
     const meta = RUN_META.find((m) => m.id === tab)!
-    const list = tab === "run3" ? data.run3 : data.run2
+    // ⚡ LIGUE : dérivé des entrées run 2 → seulement ceux qui ont dépensé des reps en Ligue (>0 = entré),
+    //   score = reps Ligue, trié ASCENDANT (le plus économe en tête = 🥇).
+    const leagueList: ScoreRow[] = data.run2
+        .filter((r) => (r.leagueReps ?? 0) > 0)
+        .map((r) => ({ ...r, score: r.leagueReps ?? 0 }))
+        .sort((a, b) => a.score - b.score)
+    const list = tab === "run3" ? data.run3 : tab === "league" ? leagueList : data.run2
     const medal = (i: number) => (i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`)
 
     return (
@@ -61,7 +69,9 @@ export default function RunScoreboardPanel({ close }: { close: () => void }) {
                     <div style={muted}>🔒 Le classement des concours se débloque quand tu as conquis les <b>5 arènes du run 1</b>.<br />Termine la Ligue pour y accéder !</div>
                 )}
                 {state === "ok" && !data.gated && list.length === 0 && (
-                    <div style={muted}>Aucun score {meta.label} pour l&apos;instant.<br />Sois le premier à finir ce concours ! {tab === "run3" ? "🏆" : "🏅"}</div>
+                    tab === "league"
+                        ? <div style={muted}>Personne n&apos;a encore livré de combat en Ligue (run 2).<br />Le plus économe en reps prendra la tête ! ⚡</div>
+                        : <div style={muted}>Aucun score {meta.label} pour l&apos;instant.<br />Sois le premier à finir ce concours ! {tab === "run3" ? "🏆" : "🏅"}</div>
                 )}
 
                 {state === "ok" && !data.gated && list.length > 0 && (
