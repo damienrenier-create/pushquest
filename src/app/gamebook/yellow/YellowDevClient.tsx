@@ -58,7 +58,7 @@ import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_L
 import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/gamebook/yellow/data/labDialogues"
 import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, getNgplusOldTeam, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3 } from "@/lib/gamebook/yellow/store/saveManager"
 import { customStarterSpeciesId, type StoredCustomDaemon } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, releaseFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult } from "@/lib/gamebook/yellow/store/playerStore"
 import { computeRunScores, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
 import { run3Score, run3MaxScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
@@ -3129,11 +3129,19 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                             else if (r.reason === "last") setToast("Tu dois garder au moins 1 Daemon !")
                                         }}>📦 Déposer</button>
                                     ) : (
-                                        <button style={{ ...menuBtnStyle, flex: 1 }} onClick={() => {
-                                            const r = withdrawFromPc(live.uid)
-                                            if (r.ok) { setToast(`${displayName(live)} rejoint l'équipe.`); persistYellowSave(); closeFiche() }
-                                            else if (r.reason === "full") setToast("Équipe pleine (6 max).")
-                                        }}>➡️ Équipe</button>
+                                        <>
+                                            <button style={{ ...menuBtnStyle, flex: 1 }} onClick={() => {
+                                                const r = withdrawFromPc(live.uid)
+                                                if (r.ok) { setToast(`${displayName(live)} rejoint l'équipe.`); persistYellowSave(); closeFiche() }
+                                                else if (r.reason === "full") setToast("Équipe pleine (6 max).")
+                                            }}>➡️ Équipe</button>
+                                            {/* RELÂCHER : définitif (irréversible) → confirmation. Seulement depuis le PC (jamais l'équipe). */}
+                                            <button style={{ ...menuBtnStyle, flex: 1, borderColor: "#c05050", color: "#e08888" }} onClick={() => {
+                                                if (!window.confirm(`Relâcher ${displayName(live)} (N.${live.level}) ? Il quittera DÉFINITIVEMENT le jeu — c'est IRRÉVERSIBLE.`)) return
+                                                const r = releaseFromPc(live.uid)
+                                                if (r.ok) { setToast(`${displayName(live)} a été relâché. Adieu ! 🕊️`); persistYellowSave(); closeFiche() }
+                                            }}>🕊️ Relâcher</button>
+                                        </>
                                     ))}
                                 </div>
                             )}

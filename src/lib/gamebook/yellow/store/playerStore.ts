@@ -1745,6 +1745,16 @@ export function withdrawFromPc(uid: string): { ok: boolean; reason?: "introuvabl
     return { ok: true }
 }
 
+/** RELÂCHE définitivement un Daemon de la RÉSERVE (PC) — retiré du jeu, ne revient pas. On ne relâche QUE depuis
+ *  le PC (l'équipe n'est jamais concernée) → aucun risque de se retrouver sans Daemon. */
+export function releaseFromPc(uid: string): { ok: boolean; reason?: "introuvable" } {
+    const idx = st.pc.findIndex((m) => m.uid === uid)
+    if (idx < 0) return { ok: false, reason: "introuvable" }
+    st = { ...st, pc: st.pc.filter((_, i) => i !== idx) }
+    emit()
+    return { ok: true }
+}
+
 /** Échange la position de deux Daemons de l'équipe (réordonnancement manuel). */
 export function swapTeam(uidA: string, uidB: string): boolean {
     if (uidA === uidB) return false
