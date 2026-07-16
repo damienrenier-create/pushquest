@@ -173,9 +173,10 @@ export const MOVES: Record<string, MoveData> = {
     essaim_vorace: { id: "essaim_vorace", name: "Essaim Vorace", type: "INSECTE", power: 45, accuracy: 100, pp: 10, effect: { drainPct: 20, escalatingDrain: true, statChanges: [{ target: "self", stat: "spe", stages: 1 }] }, description: "L'essaim s'affame : chaque coup consécutif draine une part CROISSANTE des dégâts (20 → 30 → 40 → 50 → 60 → 70%) ET accélère le lanceur (Vitesse +1). Rater ou changer d'attaque réinitialise la frénésie." },
     // Frappe Atlas (Ondine/Sol) : dégâts FIXES égaux au niveau du lanceur (façon Frappe Atlas / Seismic Toss Gen 1).
     frappe_atlas: { id: "frappe_atlas", name: "Frappe Atlas", type: "SOL", power: 0, accuracy: 100, pp: 10, costPower: 45, effect: { fixedDamageLevel: true }, description: "Le titan pèse de tout son poids : inflige TOUJOURS des dégâts égaux à son NIVEAU, quels que soient les stats (seule l'immunité des Vol l'annule)." },
-    // TÉNÈBRES (spécial) — introduits avec le type Ténèbres (némésis de Shady). Onde Obscure = STAB fiable (façon
-    // Vibrobscur, peut apeurer) ; Dévoreur d'Ombres = signature du némésis (draine 50% : longévité + usure).
-    onde_obscure: { id: "onde_obscure", name: "Onde Obscure", type: "TENEBRES", power: 85, accuracy: 100, pp: 15, effect: { chance: 20, flinch: true }, description: "Une onde de ténèbres pures submerge la cible : gros dégâts spéciaux, 20% de chance d'apeurer." },
+    // TÉNÈBRES (spécial) — introduits avec le type Ténèbres (némésis de Shady). Courbe : Morsure Sombre (40, tôt)
+    // → Onde Obscure (65, fiable, peut apeurer) → Dévoreur d'Ombres (90, signature : draine 50%, longévité + usure).
+    morsure_sombre: { id: "morsure_sombre", name: "Morsure Sombre", type: "TENEBRES", power: 40, accuracy: 100, pp: 25, description: "Une morsure d'ombre pure qui grignote l'essence de la cible. STAB Ténèbres d'appoint, tôt dans le learnset." },
+    onde_obscure: { id: "onde_obscure", name: "Onde Obscure", type: "TENEBRES", power: 65, accuracy: 100, pp: 15, effect: { chance: 20, flinch: true }, description: "Une onde de ténèbres submerge la cible : bons dégâts spéciaux, 20% de chance d'apeurer." },
     devoreur_ombres: { id: "devoreur_ombres", name: "Dévoreur d'Ombres", type: "TENEBRES", power: 90, accuracy: 100, pp: 10, effect: { drainPct: 50 }, description: "Le prédateur dévore l'ombre de sa proie : gros dégâts Ténèbres et récupère la moitié des dégâts infligés. Signature ténébreuse." },
 }
 

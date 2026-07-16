@@ -2603,13 +2603,15 @@ export const SPECIES: Record<string, SpeciesData> = {
     //    = ×0 via Spectre), plus RAPIDE que Shadow → il le pulvérise avant Danse-Lames. Sprites à générer (Sartay).
     ombryx: {
         id: "ombryx", dexNo: 171, name: "Ombryx", types: ["TENEBRES", "SPECTRE"],
-        baseStats: { hp: 40, atk: 25, def: 40, spe: 63, spc: 68 }, // BST 236
+        // Conçu pour DÉTRUIRE Shady (Vit 59) : Vit 64 (outspeed) + Spé 72 (le nuke), fragile physiquement (peu importe :
+        // il est immunisé à l'offense de Shady). BST 244 (~= Shady 206, un cran au-dessus car némésis dédié).
+        baseStats: { hp: 42, atk: 22, def: 44, spe: 64, spc: 72 }, // BST 244
         learnset: [
             { level: 5, moveId: "charge" }, { level: 5, moveId: "ombre_furtive" },
-            { level: 14, moveId: "onde_folie" }, { level: 20, moveId: "onde_obscure" },
-            { level: 28, moveId: "vague_mentale" }, { level: 36, moveId: "hypnose" },
-            { level: 44, moveId: "linceul" }, { level: 52, moveId: "devoreur_ombres" },
-            { level: 60, moveId: "ball_ombre" },
+            { level: 12, moveId: "morsure_sombre" }, { level: 18, moveId: "onde_folie" },
+            { level: 24, moveId: "onde_obscure" }, { level: 30, moveId: "vague_mentale" },
+            { level: 36, moveId: "hypnose" }, { level: 44, moveId: "linceul" },
+            { level: 52, moveId: "devoreur_ombres" }, { level: 60, moveId: "ball_ombre" },
         ],
         evolution: { toId: "ombraxis", method: { kind: "LEVEL", level: 20 } },
         catchRate: 45, baseExp: 68, rarity: "RARE", growthRate: "medium_slow", secretTalent: "reflexes",
@@ -2619,13 +2621,14 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     ombraxis: {
         id: "ombraxis", dexNo: 172, name: "Ombraxis", types: ["TENEBRES", "SPECTRE"],
-        baseStats: { hp: 60, atk: 35, def: 55, spe: 95, spc: 100 }, // BST 345
+        // vs Shade (Vit 88) : Vit 96 (outspeed) + Spé 104. BST 350 (~= Shade 307).
+        baseStats: { hp: 62, atk: 30, def: 58, spe: 96, spc: 104 }, // BST 350
         learnset: [
             { level: 5, moveId: "charge" }, { level: 5, moveId: "ombre_furtive" },
-            { level: 14, moveId: "onde_folie" }, { level: 20, moveId: "onde_obscure" },
-            { level: 30, moveId: "vague_mentale" }, { level: 40, moveId: "hypnose" },
-            { level: 48, moveId: "linceul" }, { level: 56, moveId: "devoreur_ombres" },
-            { level: 64, moveId: "ball_ombre" },
+            { level: 12, moveId: "morsure_sombre" }, { level: 18, moveId: "onde_folie" },
+            { level: 24, moveId: "onde_obscure" }, { level: 32, moveId: "vague_mentale" },
+            { level: 40, moveId: "hypnose" }, { level: 48, moveId: "linceul" },
+            { level: 56, moveId: "devoreur_ombres" }, { level: 64, moveId: "ball_ombre" },
         ],
         evolution: { toId: "ombraroth", method: { kind: "LEVEL", level: 42 } },
         catchRate: 45, baseExp: 141, rarity: "RARE", growthRate: "medium_slow", secretTalent: "reflexes",
@@ -2635,13 +2638,15 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     ombraroth: {
         id: "ombraroth", dexNo: 173, name: "Ombraroth", types: ["TENEBRES", "SPECTRE"],
-        baseStats: { hp: 78, atk: 45, def: 68, spe: 135, spc: 135 }, // BST 461
+        // BOURREAU de Shadow (Vit 130) : Vit 138 (outspeed garanti) + Spé 140 (OHKO au coup Ténèbres ×2 sur sa
+        // Spé-déf 28). Déf 70/PV 80 suffisent : il n'encaisse QUE la Griffe Spectrale ×1 (le reste = ×0). BST 466.
+        baseStats: { hp: 80, atk: 38, def: 70, spe: 138, spc: 140 }, // BST 466
         learnset: [
             { level: 5, moveId: "charge" }, { level: 5, moveId: "ombre_furtive" },
-            { level: 14, moveId: "onde_folie" }, { level: 20, moveId: "onde_obscure" },
-            { level: 30, moveId: "vague_mentale" }, { level: 42, moveId: "hypnose" },
-            { level: 52, moveId: "linceul" }, { level: 62, moveId: "devoreur_ombres" },
-            { level: 72, moveId: "ball_ombre" },
+            { level: 12, moveId: "morsure_sombre" }, { level: 18, moveId: "onde_folie" },
+            { level: 24, moveId: "onde_obscure" }, { level: 34, moveId: "vague_mentale" },
+            { level: 44, moveId: "hypnose" }, { level: 54, moveId: "linceul" },
+            { level: 64, moveId: "devoreur_ombres" }, { level: 74, moveId: "ball_ombre" },
         ],
         catchRate: 45, baseExp: 210, rarity: "RARE", growthRate: "medium_slow", secretTalent: "reflexes",
         role: "Ténèbres/Spectre — apex prédateur d'ombres (spécial, ultra-rapide)", hiddenUntilCaught: true,
