@@ -86,8 +86,8 @@ export function computeRunScores(): RunScores {
         { key: "winrate", label: "🏆 % de victoire", ratio: winRate, max: W_WINRATE, points: Math.round(winRate * W_WINRATE), detail: `${stats.wins} victoires / ${decisive} combats décisifs` },
         { key: "species", label: "📖 Pokédex", ratio: speciesPct, max: W_SPECIES, points: Math.round(speciesPct * W_SPECIES), detail: `${distinctCaught} / ${dexTotal} espèces` },
         { key: "levels", label: "💪 Niveaux équipe", ratio: levelsPct, max: W_LEVELS, points: Math.round(levelsPct * W_LEVELS), detail: `Σ ${teamLevels} / ${LEVEL_MAX}` },
-        { key: "frugality", label: "⚡ Frugalité", ratio: frugalityPct, max: W_FRUGALITY, points: Math.round(frugalityPct * W_FRUGALITY), detail: `${energyConsumed.toLocaleString("fr-FR")} / ${ENERGY_BUDGET.toLocaleString("fr-FR")} énergie consommée` },
-        { key: "steps", label: "👣 Peu de pas", ratio: stepsPct, max: W_STEPS, points: Math.round(stepsPct * W_STEPS), detail: `${steps.toLocaleString("fr-FR")} / ${STEP_MAX.toLocaleString("fr-FR")} pas` },
+        { key: "frugality", label: "⚡ Frugalité", ratio: frugalityPct, max: W_FRUGALITY, points: Math.round(frugalityPct * W_FRUGALITY), detail: `${energyConsumed.toLocaleString("fr-FR")} / ${ENERGY_BUDGET.toLocaleString("fr-FR")} énergie consommée — moins = mieux` },
+        { key: "steps", label: "👣 Peu de pas", ratio: stepsPct, max: W_STEPS, points: Math.round(stepsPct * W_STEPS), detail: `${steps.toLocaleString("fr-FR")} / ${STEP_MAX.toLocaleString("fr-FR")} pas — moins = mieux` },
     ]
     const grade = factors.reduce((s, f) => s + f.points, 0)
 

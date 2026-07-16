@@ -1919,6 +1919,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                             </div>
                                         )}
                                         <div style={{ fontSize: 9, opacity: 0.55, marginTop: 2 }}>Le classement partagé affiche ton score <b>actuel</b> ; ton <b>meilleur</b> est gravé à la fin du run 2.</div>
+                                        <div style={{ fontSize: 9.5, opacity: 0.7, marginTop: 6, lineHeight: 1.4, background: "rgba(255,255,255,0.05)", borderRadius: 6, padding: "5px 7px" }}>
+                                            <b>Comment se calcule le score ?</b> 5 critères, chacun noté puis pondéré (son poids = le nombre après « / »). On additionne les 5 → note sur <b>1000</b>, plus c&apos;est haut mieux c&apos;est. La barre montre ta part du critère.
+                                        </div>
                                         <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 6 }}>
                                             {sc.factors.map((f) => (
                                                 <div key={f.key} style={{ fontSize: 11 }}>

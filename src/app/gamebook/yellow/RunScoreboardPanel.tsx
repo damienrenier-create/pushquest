@@ -80,6 +80,7 @@ export default function RunScoreboardPanel({ close }: { close: () => void }) {
                                     </div>
                                     {canExpand && open && (
                                         <div style={factorsBox}>
+                                            <div style={{ fontSize: 8.5, opacity: 0.6, lineHeight: 1.4, marginBottom: 2 }}>5 critères pondérés (poids après « / »), additionnés → note /1000.</div>
                                             {r.factors!.map((f) => (
                                                 f.max <= 0 ? (
                                                     // Ligne INFO (hors note /1000) — ex. « 🏆 Reps en Ligue » : valeur brute, pas de barre.
