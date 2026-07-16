@@ -24,6 +24,7 @@ import { getXPForReward } from "@/lib/rewards";
 import { getCompetitiveDangerList } from "@/lib/competitive-danger";
 import { GIFT_RECIPIENT_ID } from "@/lib/gift";
 import { quotaTotalWithGifts, setEffort } from "@/lib/quota";
+import { CANONIZED_CUSTOM_SPRITES } from "@/lib/gamebook/yellow/create/customSpecies";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,22 @@ export async function GET(req: Request) {
         // DÉFI DE L'HORLOGE : le 12 du mois, encodable tant qu'il est dans la fenêtre d'encodage (4 jours) → le
         // défi reste VISIBLE + encodable du 12 au 15, plus seulement le 12 (fini « pas vu passer »). null hors fenêtre.
         const clockDate = getAllowedEncodingDates().find(d => is12thOfMonth(d)) ?? null;
+
+        // ALERTE SPRITES (ADMIN/Sartay uniquement) : lignées CRÉÉES par les joueurs mais PAS ENCORE canonisées
+        // (= sprite placeholder MISSINGNO à générer). Surfacé sur le dashboard → Sartay est prévenu au plus tôt
+        //   (il ouvre le dashboard chaque jour pour ses reps). La requête cross-joueurs ne tourne QUE pour un admin.
+        let spriteAlerts: { nickname: string; name: string; baseId: string }[] = [];
+        if ((session.user as any).isAdmin) {
+            const slugCustom = (s: string) => s.toLowerCase().normalize("NFD").replace(/[^a-z0-9]+/g, "").slice(0, 16) || "daemon";
+            const gbRows = await (prisma as any).gamebookProgress.findMany({ where: { chapterId: "yellow" }, select: { flags: true, user: { select: { nickname: true } } } });
+            for (const r of gbRows) {
+                const customs = ((r.flags?.customDaemons) ?? []) as Array<{ ownerId: string; spec: { name?: string } }>;
+                for (const c of customs) {
+                    const baseId = `custom_${slugCustom(c.ownerId)}_${slugCustom(c.spec?.name ?? "")}`;
+                    if (!CANONIZED_CUSTOM_SPRITES[baseId]) spriteAlerts.push({ nickname: r.user?.nickname ?? "?", name: c.spec?.name ?? "?", baseId });
+                }
+            }
+        }
         const userId = session.user.id;
         const league = (session.user as any).league || "POMPES";
 
@@ -605,6 +622,7 @@ export async function GET(req: Request) {
                     danger: dangerList
                 }
             },
+            spriteAlerts, // ADMIN only : lignées créées sans sprite conforme (à générer) — [] pour les non-admins
             cagnotte: {
                 enabled: today >= FINE_START_DATE,
                 potEur,

@@ -104,6 +104,7 @@ interface DashboardData {
             id: string; totalXP: number; level: number; animal: string; emoji: string; belt: string; xpCurrentLvl: number; xpNextLvl: number; progress: number;
         }
     }
+    spriteAlerts?: Array<{ nickname: string; name: string; baseId: string }> // ADMIN : Daemons créés sans sprite (à générer)
 }
 
 // Renvoie une Date dont les composantes LOCALES valent l'heure d'Europe/Paris (le fuseau OFFICIEL du jeu, côté
@@ -674,6 +675,18 @@ export default function ChallengeDashboard() {
 
     return (
         <div className="max-w-4xl mx-auto p-4 space-y-6 pb-20">
+            {/* ALERTE SPRITES — ADMIN/Sartay uniquement (spriteAlerts n'est rempli côté serveur que pour un admin) :
+                un joueur a fini de créer son Daemon → son sprite est à générer. En haut, visible dès l'ouverture. */}
+            {(data?.spriteAlerts?.length ?? 0) > 0 && (
+                <div className="bg-amber-100 border-2 border-amber-400 rounded-2xl p-4 shadow-sm">
+                    <div className="font-black text-amber-900 text-sm mb-1.5">🎨 Sprite(s) de Daemon à générer</div>
+                    <ul className="text-[12px] font-bold text-amber-800 space-y-1">
+                        {data!.spriteAlerts!.map((a) => (
+                            <li key={a.baseId}>• <b>{a.nickname}</b> a créé « {a.name} » <span className="opacity-50 font-mono text-[10px]">({a.baseId})</span></li>
+                        ))}
+                    </ul>
+                </div>
+            )}
             <FeatureDiscoveryCarousel isGuest={isGuest} />
             <GuestNexusHint isGuest={isGuest} />
             {notification && (
