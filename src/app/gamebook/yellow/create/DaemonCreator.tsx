@@ -25,7 +25,7 @@ import {
 
 const TYPE_FR: Record<PokeType, string> = {
     NORMAL: "Normal", FEU: "Feu", EAU: "Eau", PLANTE: "Plante", ELEC: "Élec", GLACE: "Glace", COMBAT: "Combat",
-    POISON: "Poison", SOL: "Sol", VOL: "Vol", PSY: "Psy", INSECTE: "Insecte", ROCHE: "Roche", SPECTRE: "Spectre", DRAGON: "Dragon", FEE: "Fée", METAL: "Métal",
+    POISON: "Poison", SOL: "Sol", VOL: "Vol", PSY: "Psy", INSECTE: "Insecte", ROCHE: "Roche", SPECTRE: "Spectre", DRAGON: "Dragon", FEE: "Fée", METAL: "Métal", TENEBRES: "Ténèbres",
 }
 // Types PROPOSABLES au joueur dans le créateur. FÉE (Ukognos) et MÉTAL (Magnetor) sont EXCLUS :
 // réservés à leurs porteurs canoniques — jamais un starter/Daemon custom Fée ou Métal.

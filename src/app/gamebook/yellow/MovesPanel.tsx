@@ -19,12 +19,12 @@ const CREAM = "#f4ecd4", INK = "#2a1c10", DARK = "#cdbb86"
 const TYPE_FR: Record<PokeType, string> = {
     NORMAL: "Normal", FEU: "Feu", EAU: "Eau", PLANTE: "Plante", ELEC: "Élec", GLACE: "Glace",
     COMBAT: "Combat", POISON: "Poison", SOL: "Sol", VOL: "Vol", PSY: "Psy", INSECTE: "Insecte",
-    ROCHE: "Roche", SPECTRE: "Spectre", DRAGON: "Dragon", FEE: "Fée", METAL: "Métal",
+    ROCHE: "Roche", SPECTRE: "Spectre", DRAGON: "Dragon", FEE: "Fée", METAL: "Métal", TENEBRES: "Ténèbres",
 }
 const TYPE_COLOR: Record<PokeType, string> = {
     NORMAL: "#9a9a82", FEU: "#e8623a", EAU: "#3a8ee0", PLANTE: "#4caf50", ELEC: "#f5c518", GLACE: "#5fc7d8",
     COMBAT: "#c0392b", POISON: "#9b59b6", SOL: "#caa15a", VOL: "#8eb4e8", PSY: "#e84a8a", INSECTE: "#9abb2a",
-    ROCHE: "#b8a060", SPECTRE: "#6a5acd", DRAGON: "#7b5cd6", FEE: "#d85ab8", METAL: "#8a97a8",
+    ROCHE: "#b8a060", SPECTRE: "#6a5acd", DRAGON: "#7b5cd6", FEE: "#d85ab8", METAL: "#8a97a8", TENEBRES: "#4a4258",
 }
 const STAT_FR: Record<StageKey, string> = { atk: "Attaque", def: "Défense", spe: "Vitesse", spc: "Spécial", acc: "Précision", eva: "Esquive" }
 const STATUS_FR: Record<MajorStatus, string> = { NONE: "", BURN: "Brûlure", POISON: "Poison", TOXIC: "Poison grave", PARALYSIS: "Paralysie", SLEEP: "Sommeil", FREEZE: "Gel" }

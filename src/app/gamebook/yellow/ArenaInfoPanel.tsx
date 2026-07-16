@@ -20,6 +20,7 @@ const TYPE_META: Record<PokeType, { fr: string; color: string }> = {
     VOL: { fr: "Vol", color: "#a890f0" }, PSY: { fr: "Psy", color: "#f85888" }, INSECTE: { fr: "Insecte", color: "#9aa81c" },
     ROCHE: { fr: "Roche", color: "#b09030" }, SPECTRE: { fr: "Spectre", color: "#6a5490" }, DRAGON: { fr: "Dragon", color: "#6a38e8" },
     METAL: { fr: "Métal", color: "#8a97a8" },
+    TENEBRES: { fr: "Ténèbres", color: "#4a4258" },
     FEE: { fr: "Fée", color: "#e888a4" },
 }
 const CREAM = "#f4ecd4", INK = "#2a1c10", DARK = "#cdbb86", GOLD = "#f1c40f"

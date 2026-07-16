@@ -2597,6 +2597,57 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "Grand félin-fantôme élancé et musclé, nimbé d'une aura d'ombre. Prédateur qui frappe à la vitesse de l'éclair et disparaît.",
         sprite: "/yellow/sprites/dex/shadow.png",
     },
+    // ── NÉMÉSIS de Shady : Ombryx → Ombraxis → Ombraroth (TÉNÈBRES/SPECTRE, attaquant SPÉCIAL). ──
+    //    Shady (NORMAL/SPECTRE) n'a aucune faiblesse → SEUL le type TÉNÈBRES perce sa moitié Spectre (×2), et un
+    //    coup SPÉCIAL frappe sa Spé-déf catastrophique (28). Immunisé à l'offense de Shady (Normal/Combat/priorité
+    //    = ×0 via Spectre), plus RAPIDE que Shadow → il le pulvérise avant Danse-Lames. Sprites à générer (Sartay).
+    ombryx: {
+        id: "ombryx", dexNo: 171, name: "Ombryx", types: ["TENEBRES", "SPECTRE"],
+        baseStats: { hp: 40, atk: 25, def: 40, spe: 63, spc: 68 }, // BST 236
+        learnset: [
+            { level: 5, moveId: "charge" }, { level: 5, moveId: "ombre_furtive" },
+            { level: 14, moveId: "onde_folie" }, { level: 20, moveId: "onde_obscure" },
+            { level: 28, moveId: "vague_mentale" }, { level: 36, moveId: "hypnose" },
+            { level: 44, moveId: "linceul" }, { level: 52, moveId: "devoreur_ombres" },
+            { level: 60, moveId: "ball_ombre" },
+        ],
+        evolution: { toId: "ombraxis", method: { kind: "LEVEL", level: 20 } },
+        catchRate: 45, baseExp: 68, rarity: "RARE", growthRate: "medium_slow", secretTalent: "reflexes",
+        role: "Ténèbres/Spectre — attaquant spécial (némésis de Shady)", hiddenUntilCaught: true,
+        description: "Un petit prédateur d'ombres aux yeux vides : il se nourrit des ténèbres qu'il croise. Forgé par ACE pour traquer une certaine ombre féline.",
+        sprite: "/yellow/sprites/dex/missingno.png",
+    },
+    ombraxis: {
+        id: "ombraxis", dexNo: 172, name: "Ombraxis", types: ["TENEBRES", "SPECTRE"],
+        baseStats: { hp: 60, atk: 35, def: 55, spe: 95, spc: 100 }, // BST 345
+        learnset: [
+            { level: 5, moveId: "charge" }, { level: 5, moveId: "ombre_furtive" },
+            { level: 14, moveId: "onde_folie" }, { level: 20, moveId: "onde_obscure" },
+            { level: 30, moveId: "vague_mentale" }, { level: 40, moveId: "hypnose" },
+            { level: 48, moveId: "linceul" }, { level: 56, moveId: "devoreur_ombres" },
+            { level: 64, moveId: "ball_ombre" },
+        ],
+        evolution: { toId: "ombraroth", method: { kind: "LEVEL", level: 42 } },
+        catchRate: 45, baseExp: 141, rarity: "RARE", growthRate: "medium_slow", secretTalent: "reflexes",
+        role: "Ténèbres/Spectre — prédateur d'ombres (spécial)", hiddenUntilCaught: true,
+        description: "Le dévoreur d'ombres a grandi : une silhouette spectrale et affamée, plus rapide et plus vorace.",
+        sprite: "/yellow/sprites/dex/missingno.png",
+    },
+    ombraroth: {
+        id: "ombraroth", dexNo: 173, name: "Ombraroth", types: ["TENEBRES", "SPECTRE"],
+        baseStats: { hp: 78, atk: 45, def: 68, spe: 135, spc: 135 }, // BST 461
+        learnset: [
+            { level: 5, moveId: "charge" }, { level: 5, moveId: "ombre_furtive" },
+            { level: 14, moveId: "onde_folie" }, { level: 20, moveId: "onde_obscure" },
+            { level: 30, moveId: "vague_mentale" }, { level: 42, moveId: "hypnose" },
+            { level: 52, moveId: "linceul" }, { level: 62, moveId: "devoreur_ombres" },
+            { level: 72, moveId: "ball_ombre" },
+        ],
+        catchRate: 45, baseExp: 210, rarity: "RARE", growthRate: "medium_slow", secretTalent: "reflexes",
+        role: "Ténèbres/Spectre — apex prédateur d'ombres (spécial, ultra-rapide)", hiddenUntilCaught: true,
+        description: "L'apex des ténèbres : plus rapide que sa proie, il éteint l'ombre féline d'un souffle obscur avant qu'elle ne se dresse. Némésis parfait de Shadow.",
+        sprite: "/yellow/sprites/dex/missingno.png",
+    },
 }
 
 // ── REGISTRE RUNTIME des Daemons CUSTOM (créés par les joueurs, post-Ligue). Fusionné à la LECTURE seulement :
@@ -2622,7 +2673,8 @@ for (const id of ["magnetor", "elefer", "barrisfer", "colosfer", "cornaive", "as
     "hypnoppo", "teleppo", "omnhippo", "karmaki",           // lignée Centrale Psy run 3 (Gékosmic a le flag inline)
     "otama", "gamaruto", "uzumaro", "wistree",              // Maison Combat (grenouilles) + Grotte (Wistree) run 3
     "guizer", "dalugazer", "mobyd",                        // création canonisée (Task1) — Grotte/Route Nord run 3
-    "shady", "shade", "shadow"]) {                          // création canonisée (Franss) — Grotte du Nexus run 3
+    "shady", "shade", "shadow",                            // création canonisée (Franss) — Grotte du Nexus run 3
+    "ombryx", "ombraxis", "ombraroth"]) {                   // némésis TÉNÈBRES/SPECTRE de Shady (forgé par ACE)
     if (SPECIES[id]) SPECIES[id].runThreeOnly = true
 }
 
@@ -2675,4 +2727,10 @@ export const CANONICAL_NEMESIS: Record<string, string> = {
     // Override CIBLÉ Task1 : son équipe joue encore son Guizer CUSTOM (pas le canonique) → on mappe ses ids custom
     // pour que SON ACE field bien Uzumaro. (À terme généralisé par le protocole némésis, cf. _nemesis-architect.)
     custom_cmq5gbo5g0000g6m_guizer_s1: "otama", custom_cmq5gbo5g0000g6m_guizer_s2: "otama", custom_cmq5gbo5g0000g6m_guizer_s3: "otama",
+    // Shady (création Franss canonisée, NORMAL/SPECTRE) → lignée OMBRYX (Ombryx→Ombraxis→Ombraroth, TÉNÈBRES/SPECTRE)
+    // = le HARD-COUNTER : immunisé à toute son offense (Normal/Combat/priorité ×0), plus rapide, et l'OHKO au coup
+    // SPÉCIAL Ténèbres ×2 sur sa Spé-déf 28. Seule réponse possible (Shady n'a aucune faiblesse hors Ténèbres).
+    shady: "ombryx", shade: "ombryx", shadow: "ombryx",
+    // Override CIBLÉ Franss : son équipe joue son Shady CUSTOM → on mappe ses ids custom pour que SON ACE field Ombraroth.
+    custom_cmpgu4uq5000069d_shady_s1: "ombryx", custom_cmpgu4uq5000069d_shady_s2: "ombryx", custom_cmpgu4uq5000069d_shady_s3: "ombryx",
 }

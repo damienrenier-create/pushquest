@@ -15,7 +15,7 @@
 export const POKE_TYPES = [
     "NORMAL", "FEU", "EAU", "PLANTE", "ELEC", "GLACE",
     "COMBAT", "POISON", "SOL", "VOL", "PSY", "INSECTE",
-    "ROCHE", "SPECTRE", "DRAGON", "FEE", "METAL",
+    "ROCHE", "SPECTRE", "DRAGON", "FEE", "METAL", "TENEBRES",
 ] as const
 export type PokeType = (typeof POKE_TYPES)[number]
 

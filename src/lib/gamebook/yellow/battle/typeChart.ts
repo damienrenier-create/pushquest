@@ -17,21 +17,25 @@ const CHART: Record<PokeType, ChartRow> = {
     PLANTE: { EAU: 2, SOL: 2, ROCHE: 2, FEU: 0.5, PLANTE: 0.5, POISON: 0.5, VOL: 0.5, INSECTE: 0.5, DRAGON: 0.5, METAL: 0.5 },
     ELEC: { EAU: 2, VOL: 2, ELEC: 0.5, PLANTE: 0.5, DRAGON: 0.5, SOL: 0 },
     GLACE: { PLANTE: 2, SOL: 2, VOL: 2, DRAGON: 2, EAU: 0.5, GLACE: 0.5, METAL: 0.5 },
-    COMBAT: { NORMAL: 2, GLACE: 2, ROCHE: 2, METAL: 2, POISON: 0.5, VOL: 0.5, PSY: 0.5, INSECTE: 0.5, SPECTRE: 0, FEE: 0.5 },
+    COMBAT: { NORMAL: 2, GLACE: 2, ROCHE: 2, METAL: 2, POISON: 0.5, VOL: 0.5, PSY: 0.5, INSECTE: 0.5, SPECTRE: 0, FEE: 0.5, TENEBRES: 2 },
     POISON: { PLANTE: 2, INSECTE: 2, POISON: 0.5, SOL: 0.5, ROCHE: 0.5, SPECTRE: 0.5, FEE: 2, METAL: 0 },
     SOL: { FEU: 2, ELEC: 2, POISON: 2, ROCHE: 2, METAL: 2, PLANTE: 0.5, INSECTE: 0.5, VOL: 0 },
     VOL: { PLANTE: 2, COMBAT: 2, INSECTE: 2, ELEC: 0.5, ROCHE: 0.5, METAL: 0.5 },
-    PSY: { COMBAT: 2, POISON: 2, PSY: 0.5, METAL: 0.5 },
-    INSECTE: { PLANTE: 2, PSY: 2, POISON: 2, FEU: 0.5, COMBAT: 0.5, VOL: 0.5, SPECTRE: 0.5, FEE: 0.5, METAL: 0.5 },
+    PSY: { COMBAT: 2, POISON: 2, PSY: 0.5, METAL: 0.5, TENEBRES: 0 }, // TÉNÈBRES immunisé au Psy (Psy ×0)
+    INSECTE: { PLANTE: 2, PSY: 2, POISON: 2, FEU: 0.5, COMBAT: 0.5, VOL: 0.5, SPECTRE: 0.5, FEE: 0.5, METAL: 0.5, TENEBRES: 2 },
     ROCHE: { FEU: 2, GLACE: 2, VOL: 2, INSECTE: 2, COMBAT: 0.5, SOL: 0.5, METAL: 0.5 },
-    SPECTRE: { PSY: 2, SPECTRE: 2, NORMAL: 0 },
+    SPECTRE: { PSY: 2, SPECTRE: 2, NORMAL: 0, TENEBRES: 0.5 }, // Ténèbres résiste au Spectre
     DRAGON: { DRAGON: 2, FEE: 0, METAL: 0.5 },
     // FÉE (spécial) — 1er type Fée du jeu, réservé au légendaire Ukognos (run 2). Némésis-type du Dragon.
-    FEE: { COMBAT: 2, DRAGON: 2, FEU: 0.5, POISON: 0.5, METAL: 0.5 },
+    FEE: { COMBAT: 2, DRAGON: 2, FEU: 0.5, POISON: 0.5, METAL: 0.5, TENEBRES: 2 },
     // MÉTAL (physique) — introduit au run 3 (forteresse de Magnetor). Type TANK : peu de super-efficacité
     // offensive (Glace/Roche/Fée), mais une DÉFENSE écrasante — résiste 10 types, immunisé au Poison,
     // faible seulement au Feu/Combat/Sol.
     METAL: { GLACE: 2, ROCHE: 2, FEE: 2, FEU: 0.5, EAU: 0.5, ELEC: 0.5, METAL: 0.5 },
+    // TÉNÈBRES (spécial) — introduit au run 3 (némésis de Shady : NORMAL/SPECTRE n'avait AUCUNE faiblesse, seul
+    // Ténèbres perce sa moitié Spectre ×2). Vraie table Dark : ×2 Spectre/Psy en attaque ; faible Combat/Insecte/Fée,
+    // résiste Spectre/Ténèbres, IMMUNISÉ au Psy en défense.
+    TENEBRES: { SPECTRE: 2, PSY: 2, COMBAT: 0.5, FEE: 0.5, TENEBRES: 0.5 },
 }
 
 // Gen 1 : la catégorie d'un move offensif est déterminée par son TYPE. MÉTAL = physique (frappe à l'ATQ).
