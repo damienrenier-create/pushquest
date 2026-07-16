@@ -466,6 +466,8 @@ const RUN3_ZONES: Record<string, Zone> = {
             { speciesId: "wistree", base: 2, noEvolve: true, rare: true, captureMult: 0.4 }, // Spectre/Plante rare & mystérieux (voleur d'éclat)
             // lignée EAU/GLACE canonisée (Guizer → Dalugazer → Moby D) — base pilotée par speciesAtLevel (évo 22/40)
             { speciesId: "guizer", base: 4 },
+            // lignée NORMAL/SPECTRE canonisée (Shady → Shade → Shadow, création de Franss) — évo 22/40 via speciesAtLevel
+            { speciesId: "shady", base: 3 },
         ],
     },
     // CENTRALE PSY run 3 — DONJON 100% PSY : tout le roster psy (Nouillon/Vermissaint, Limaroche→Escargyle→

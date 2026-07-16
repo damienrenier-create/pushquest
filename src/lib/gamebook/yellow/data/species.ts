@@ -2548,6 +2548,55 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "Une orque albinos ailée et menaçante, inspirée de Moby Dick. Son aura dégage quelque chose d'oppressant et de mythique. — Colérique et rancunier",
         sprite: "/yellow/sprites/dex/mobyd.png",
     },
+    // ── Shady → Shade → Shadow (création canonisée de FRANSS) : félin spectral, sweeper physique rapide (crit). ──
+    //    Learnset/stats/talent FIDÈLES à sa création. NORMAL/SPECTRE : aucune faiblesse de type (→ némésis TÉNÈBRES).
+    shady: {
+        id: "shady", dexNo: 168, name: "Shady", types: ["NORMAL", "SPECTRE"],
+        baseStats: { hp: 41, atk: 59, def: 34, spe: 59, spc: 13 }, // BST 206
+        learnset: [
+            { level: 5, moveId: "charge" }, { level: 5, moveId: "jet_de_sable" },
+            { level: 12, moveId: "vive_attaque" }, { level: 18, moveId: "ombre_furtive" },
+            { level: 24, moveId: "griffe_spectrale" }, { level: 30, moveId: "danse_lames" },
+            { level: 36, moveId: "crochet_maitre" }, { level: 42, moveId: "tranche" },
+            { level: 48, moveId: "hypnose" }, { level: 54, moveId: "plaquage" },
+        ],
+        evolution: { toId: "shade", method: { kind: "LEVEL", level: 22 } },
+        catchRate: 45, baseExp: 62, rarity: "RARE", growthRate: "slow", secretTalent: "reflexes",
+        role: "Normal/Spectre — sweeper physique rapide (crit)",
+        description: "Petit félin spectral translucide, flammèche fantomatique au bout de la queue. File déjà comme une ombre. — Création de Franss",
+        sprite: "/yellow/sprites/dex/shady.png",
+    },
+    shade: {
+        id: "shade", dexNo: 169, name: "Shade", types: ["NORMAL", "SPECTRE"],
+        baseStats: { hp: 61, atk: 88, def: 51, spe: 88, spc: 19 }, // BST 307
+        learnset: [
+            { level: 5, moveId: "charge" }, { level: 5, moveId: "jet_de_sable" },
+            { level: 12, moveId: "vive_attaque" }, { level: 18, moveId: "ombre_furtive" },
+            { level: 24, moveId: "griffe_spectrale" }, { level: 30, moveId: "danse_lames" },
+            { level: 38, moveId: "crochet_maitre" }, { level: 46, moveId: "tranche" },
+            { level: 54, moveId: "hypnose" }, { level: 62, moveId: "plaquage" },
+        ],
+        evolution: { toId: "shadow", method: { kind: "LEVEL", level: 40 } },
+        catchRate: 45, baseExp: 141, rarity: "RARE", growthRate: "slow", secretTalent: "reflexes",
+        role: "Normal/Spectre — félin spectral hérissé (crit)",
+        description: "Un félin-fantôme adolescent, plus grand et plus vif : ses griffes phosphorescentes crépitent d'énergie spectrale.",
+        sprite: "/yellow/sprites/dex/shade.png",
+    },
+    shadow: {
+        id: "shadow", dexNo: 170, name: "Shadow", types: ["NORMAL", "SPECTRE"],
+        baseStats: { hp: 90, atk: 130, def: 75, spe: 130, spc: 28 }, // BST 453
+        learnset: [
+            { level: 5, moveId: "charge" }, { level: 5, moveId: "jet_de_sable" },
+            { level: 12, moveId: "vive_attaque" }, { level: 18, moveId: "ombre_furtive" },
+            { level: 24, moveId: "griffe_spectrale" }, { level: 30, moveId: "danse_lames" },
+            { level: 40, moveId: "crochet_maitre" }, { level: 50, moveId: "tranche" },
+            { level: 60, moveId: "hypnose" }, { level: 70, moveId: "plaquage" },
+        ],
+        catchRate: 45, baseExp: 208, rarity: "RARE", growthRate: "slow", secretTalent: "reflexes",
+        role: "Normal/Spectre — prédateur spectral ultra-rapide (crit)",
+        description: "Grand félin-fantôme élancé et musclé, nimbé d'une aura d'ombre. Prédateur qui frappe à la vitesse de l'éclair et disparaît.",
+        sprite: "/yellow/sprites/dex/shadow.png",
+    },
 }
 
 // ── REGISTRE RUNTIME des Daemons CUSTOM (créés par les joueurs, post-Ligue). Fusionné à la LECTURE seulement :
@@ -2572,7 +2621,8 @@ export function getSpecies(id: string): SpeciesData | null {
 for (const id of ["magnetor", "elefer", "barrisfer", "colosfer", "cornaive", "astracorne", "lunarque", "coccipoing", "coccombat", "coccimperatrice",
     "hypnoppo", "teleppo", "omnhippo", "karmaki",           // lignée Centrale Psy run 3 (Gékosmic a le flag inline)
     "otama", "gamaruto", "uzumaro", "wistree",              // Maison Combat (grenouilles) + Grotte (Wistree) run 3
-    "guizer", "dalugazer", "mobyd"]) {                      // création canonisée (Task1) — Grotte/Route Nord run 3
+    "guizer", "dalugazer", "mobyd",                        // création canonisée (Task1) — Grotte/Route Nord run 3
+    "shady", "shade", "shadow"]) {                          // création canonisée (Franss) — Grotte du Nexus run 3
     if (SPECIES[id]) SPECIES[id].runThreeOnly = true
 }
 
