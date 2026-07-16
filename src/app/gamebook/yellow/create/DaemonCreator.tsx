@@ -110,6 +110,13 @@ export default function DaemonCreator({ ownerId, nickname, close, onCreated }: {
         persistYellowSave()
         const payload = { ownerId, nickname, spec: finalSpec, line: previewLine(finalSpec, ownerId), at: new Date().toISOString() }
         try { window.localStorage.setItem(`pq_daemon_creation_${ownerId}`, JSON.stringify(payload)) } catch { /* quota */ }
+        // MISE AU COURANT : à une VRAIE création (forced = champion qui crée sa lignée, pas le bouton TEST de
+        // Mools/créateur), on poste sur le Wall → tout le monde (dont Mools/Sartay, pour générer le vrai sprite) est
+        // prévenu. Posté AS le créateur (session). Fire-and-forget, jamais bloquant.
+        if (forced) {
+            const wallMsg = `🧬 J'ai créé mon Daemon « ${finalSpec.name} » ! Sprite mystère ❓ en attendant que Sartay lui donne son visage.`.slice(0, 240)
+            void fetch("/api/wall", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: wallMsg }) }).catch(() => { /* neutre */ })
+        }
         setCreated(JSON.stringify(payload, null, 2))
     }
 
