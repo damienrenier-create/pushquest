@@ -15,12 +15,13 @@ describe("runScore — stats brutes + note globale /1000 du run 2", () => {
     it("calcule les stats brutes + les 5 facteurs de la note globale", () => {
         const m1 = createMonInstance("morrow", 50, { owned: true })
         const m2 = createMonInstance("cerfeuillu", 40, { owned: true }); m2.shiny = true
+        // Le Pokédex du SCORE = captures du RUN COURANT (caughtThisRun), PAS le pokédex global cumulatif.
+        const caught = ["morrow", "cerfeuillu", "ukognos", "gekraise"]
         hydratePlayer({
-            team: [m1, m2], reps: 4500, playtimeMs: 45_000, leaguePotions: 10,
+            team: [m1, m2], reps: 4500, playtimeMs: 45_000, leaguePotions: 10, caughtThisRun: caught,
             stats: { ...emptyYellowStats(), wins: 90, teamKos: 10, steps: 6000, energySpent: 4000 },
         })
-        const caught = ["morrow", "cerfeuillu", "ukognos", "gekraise"]
-        hydratePokedex({ seen: [], caught })
+        hydratePokedex({ seen: [], caught }) // pokédex global (n'entre PLUS dans le score, gardé pour cohérence)
         const sc = computeRunScores()
 
         // --- stats brutes ---
@@ -57,8 +58,8 @@ describe("runScore — stats brutes + note globale /1000 du run 2", () => {
 
     it("note plafonnée à 1000 quand tout est au maximum", () => {
         const team = Array.from({ length: 6 }, () => createMonInstance("morrow", 100, { owned: true }))
-        hydratePlayer({ team, reps: 0, stats: { ...emptyYellowStats(), wins: 100, teamKos: 0, steps: 0, energySpent: 0 } })
-        hydratePokedex({ seen: [], caught: [...SPECIES_IDS] }) // Pokédex complet
+        hydratePlayer({ team, reps: 0, caughtThisRun: [...SPECIES_IDS], stats: { ...emptyYellowStats(), wins: 100, teamKos: 0, steps: 0, energySpent: 0 } })
+        hydratePokedex({ seen: [], caught: [...SPECIES_IDS] }) // Pokédex complet (caughtThisRun = tout capturé CE run)
         expect(computeRunScores().grade).toBe(1000)
     })
 

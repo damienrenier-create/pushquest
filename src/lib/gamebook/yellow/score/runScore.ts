@@ -16,7 +16,6 @@
 //   (Le « temps réel » a été abandonné.)
 
 import { getPlayer, getStats } from "../store/playerStore"
-import { getPokedex } from "../store/pokedexStore"
 import { computeGrade, leagueRepsFactor, type ScoreFactor } from "./runScoreCompute"
 
 export type { ScoreFactor } // ré-exporté : les imports existants (RunScoreboardPanel…) continuent de marcher
@@ -34,7 +33,9 @@ export interface RunScores {
 export function computeRunScores(): RunScores {
     const p = getPlayer()
     const stats = getStats()
-    const caught = getPokedex().caught
+    // Pokédex du SCORE = captures du RUN COURANT uniquement (caughtThisRun), PAS le Pokédex global cumulatif
+    //   (qui inclut le run 1) → un classement run 2 ne doit compter que ce qu'on a capturé EN run 2.
+    const caught = p.caughtThisRun
     const teamLevels = p.team.reduce((s, m) => s + m.level, 0)
     // La note /1000 est calculée par le module PUR (partagé avec le serveur) à partir des entrées brutes.
     const { grade, factors } = computeGrade({

@@ -27,10 +27,12 @@ const num = (v: unknown): number => (typeof v === "number" && isFinite(v) ? v : 
  *  (flags.ngplusWorld). Renvoie null si le monde run 2 est absent (joueur pas encore en run 2, ou déjà fusionné). */
 function run2FromWorld(w: unknown): { score: number; factors: ScoreFactor[]; leagueReps: number } | null {
     if (!w || typeof w !== "object") return null
-    const world = w as { stats?: Record<string, unknown>; team?: Array<{ level?: unknown }>; pokedex?: { caught?: unknown } }
+    const world = w as { stats?: Record<string, unknown>; team?: Array<{ level?: unknown }>; caughtThisRun?: unknown }
     const stats = world.stats ?? {}
     const team = Array.isArray(world.team) ? world.team : []
-    const caught = Array.isArray(world.pokedex?.caught) ? (world.pokedex!.caught as string[]) : []
+    // Pokédex du SCORE = captures du RUN 2 uniquement (caughtThisRun), PAS le pokédex global cumulatif (qui inclut
+    //   le run 1). stats/team sont déjà per-world (run-2-exclusifs). → les 5 facteurs sont 100% run 2.
+    const caught = Array.isArray(world.caughtThisRun) ? (world.caughtThisRun as string[]) : []
     const teamLevels = team.reduce((s, m) => s + num(m?.level), 0)
     const { grade, factors } = computeGrade({
         wins: num(stats.wins), teamKos: num(stats.teamKos), caught, teamLevels,
