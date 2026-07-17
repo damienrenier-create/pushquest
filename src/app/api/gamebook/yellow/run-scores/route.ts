@@ -119,10 +119,12 @@ export async function GET() {
     const run3Map = new Map<string, LeaderEntry>()
     const duelsMap = new Map<string, { nickname: string; wins: number }>() // classement « Duelliste » : reflets battus (cumul cross-run)
 
-    // 1) PULL — recalcule depuis la save, MAIS uniquement pour le monde ACTIVEMENT joué (flags.activeWorld) → score
-    //    réellement LIVE. On NE recalcule PAS un monde GELÉ : le Pokédex est global-cumulatif (norm() réécrit le
-    //    pokédex de chaque monde stashé avec le pokédex global), donc le score d'un run2 gelé DÉRIVERAIT avec les
-    //    captures faites en run3. Les mondes gelés viennent du FALLBACK table (POST figé à la bascule / clôture).
+    // 1) PULL — recalcule depuis la save. RUN 2/3 sont recalculés dès que leur MONDE existe (flags.ngplusWorld /
+    //    flags.run3World), qu'il soit ACTIF ou GELÉ → un joueur qui a FINI son run garde son score FIGÉ visible
+    //    (le point clé : « voir ce qu'ont fait ceux qui ont terminé »). Pas de dérive : run2FromWorld/run3FromWorld
+    //    lisent caughtThisRun/stats/team/run3Defeated (GELÉS au stash), jamais le pokédex global (seul champ que
+    //    norm() réécrit sur les mondes stashés). La table poussée reste un FALLBACK pour les joueurs FUSIONNÉS
+    //    (méga-fusion de fin de run 3 → sous-mondes effacés → plus recalculables).
     try {
         const saves = await prisma.gamebookProgress.findMany({
             where: { chapterId: YELLOW_CHAPTER_ID },
@@ -135,14 +137,12 @@ export async function GET() {
             // RUN 1 = niveau PLAT de la save (toujours présent). Live si le joueur est encore en run 1, sinon figé.
             const r1 = run1FromWorld(f)
             if (r1) run1Map.set(s.userId, { nickname, score: r1.score, wonAt: null, factors: r1.factors, live: world === "live" || world === undefined })
-            if (world === "ngplus") {
-                const r2 = run2FromWorld(f.ngplusWorld)
-                if (r2) run2Map.set(s.userId, { nickname, score: r2.score, wonAt: null, factors: r2.factors, live: true, leagueReps: r2.leagueReps })
-            }
-            if (world === "run3") {
-                const r3 = run3FromWorld(f.run3World)
-                if (r3 !== null) run3Map.set(s.userId, { nickname, score: r3, wonAt: null, factors: null, live: true })
-            }
+            // RUN 2 : dès que le monde run 2 existe (actif OU gelé). Live si activement en run 2, sinon figé (fini).
+            const r2 = run2FromWorld(f.ngplusWorld)
+            if (r2) run2Map.set(s.userId, { nickname, score: r2.score, wonAt: null, factors: r2.factors, live: world === "ngplus", leagueReps: r2.leagueReps })
+            // RUN 3 : dès que le monde run 3 existe (actif OU gelé, avant méga-fusion). Live si activement en run 3.
+            const r3 = run3FromWorld(f.run3World)
+            if (r3 !== null) run3Map.set(s.userId, { nickname, score: r3, wonAt: null, factors: null, live: world === "run3" })
             // Duels : reflets battus = SOMME du compteur sur les 3 mondes (les duels se jouent surtout en run 1/2).
             const dw = (w: unknown) => num((w as { stats?: { duelWinsTotal?: unknown } } | null | undefined)?.stats?.duelWinsTotal)
             const duels = num((f.stats as { duelWinsTotal?: unknown } | undefined)?.duelWinsTotal) + dw(f.ngplusWorld) + dw(f.run3World)
