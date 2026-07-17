@@ -11,6 +11,7 @@
 
 import type { MapData, TileType } from "@/lib/gamebook/mapEngine"
 import { YELLOW_ENTRANCE_MAP_ID } from "./featureFlag"
+import { GROTTE_NEXUS_ART } from "./data/grotteNexusArt"
 
 // === Types yellow-specific ============================================
 
@@ -1073,52 +1074,10 @@ function buildZoneRoom(W: number, H: number): TileType[][] {
 
 // GROTTE DU NEXUS — 1er étage (casse-tête Mt. Moon endgame). Collision v1 AUTO-échantillonnée depuis
 // grotte_casse_tete.png (void + gros rochers bloquants) → à CALER finement en jeu via debugGrid. 49×42.
-const GROTTE_NEXUS_1F_ART: string[] = [
-    ".................................................",
-    ".................................................",
-    ".##############....#############################.",
-    ".#........####....##.............................",
-    ".#...........#...##..............................",
-    ".#...........#..###..............................",
-    ".#...............#...............................",
-    ".#...............#...............................",
-    ".#..............#................................",
-    ".#..............#................................",
-    ".#..............#.........................#......",
-    ".#..............#................................",
-    ".#..............#.........#.....#................",
-    ".#..............#.........#.....#..#.............",
-    ".#..............#....##############..............",
-    ".#..............#...#..#.........................",
-    ".#..............#...#..#.........................",
-    ".#..............#......#..................#......",
-    ".##....................#..................#......",
-    ".##....................#..................#......",
-    ".##..................##.......#...........#......",
-    ".##...........................#.........##.......",
-    ".##........#...........#......#..................",
-    ".####.###..#...........#......#...........#......",
-    ".##.....#..#........#..#....##............#......",
-    ".##.....#..#........#..#..................#......",
-    ".##........############.......#...........#......",
-    ".##........#..................#.........##.......",
-    ".##........#..................#..................",
-    ".##......##...................#...........#......",
-    ".##.........................##............#......",
-    ".##.....................#.................#......",
-    ".#......................#.....#.....#.....#......",
-    ".#......................##.###......#...##.......",
-    ".#......................#...........#............",
-    ".#...............#......#...........#............",
-    ".#...............#......#.........##.............",
-    ".#...............#......#........................",
-    ".#...............#......#........................",
-    ".#............###....###.........................",
-    ".................................................",
-    ".................................................",
-]
-function buildGrotteNexus1F(): TileType[][] {
-    return GROTTE_NEXUS_1F_ART.map((row) => [...row].map((c) => (c === "#" ? "water" : "ground") as TileType))
+// Grille de COLLISION des 3 étages, AUTO-GÉNÉRÉE depuis grotte_casse_tete.png (cf. GROTTE_NEXUS_ART / scripts/_gen-grotte-art.mjs).
+// # = mur (roche/vide) · ~ = eau · . = sol marchable (invisible sous le backgroundImage). À affiner en jeu via debugGrid.
+function buildGrotteNexusFloor(floor: "1F" | "B1F" | "B2F"): TileType[][] {
+    return GROTTE_NEXUS_ART[floor].map((row) => [...row].map((c) => (c === "#" ? "caveWall" : c === "~" ? "water" : "caveFloor") as TileType))
 }
 
 export const YELLOW_MAPS: Record<string, YellowMapData> = {
@@ -1456,22 +1415,60 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImageTileSize: 24,
     },
     // GROTTE DU NEXUS (casse-tête endgame, Mt. Moon 3 étages) — SÉPARÉE de la GROTTE ROCHEUSE. Accès PAYANT en JC
-    // via le passeur (Zone de Combat), sortie par le MENU. v1 = 1er étage en SCAFFOLD (fond via origin, grille à
-    // caler en jeu). RESTE : B1F/B2F + échelles inter-étages + sortie → Nexus 3 + rencontres inédites.
+    // via le passeur (Zone de Combat), sortie par le MENU. Les 3 sections de grotte_casse_tete.png (2352px = 3×49
+    // tuiles) = 1F (originX 0), B1F (784), B2F (1568). ÉCHELLES : même étiquette = 2 bouts. 1/2/3 relient 1F↔B2F
+    // (sautent le B1F), a/b/c/d relient B1F↔B2F, « sortie » (B2F) → Nexus 3. Murs auto-générés + coords d'échelles
+    // lues sur les images de solution → À CALER en jeu (debugGrid). Spawn = 1 tuile sous l'échelle d'arrivée (anti re-trigger).
     yellow_grotte_nexus: {
         id: "yellow_grotte_nexus",
         name: "GROTTE DU NEXUS (1F)",
-        tiles: buildGrotteNexus1F(),
-        width: 49,
-        height: 42,
+        tiles: buildGrotteNexusFloor("1F"),
+        width: 49, height: 42,
         backgroundImage: "/yellow/sprites/grotte_casse_tete.png",
-        backgroundImageWidth: 2352,
-        backgroundImageHeight: 672,
-        backgroundImageTileSize: 16,
-        backgroundImageOriginX: 0,
-        backgroundImageOriginY: 0,
-        debugGrid: true,        // WIP : caler la grille des murs en jeu (à retirer à la livraison)
-        encountersPaused: true, // inédits à câbler
+        backgroundImageWidth: 2352, backgroundImageHeight: 672, backgroundImageTileSize: 16,
+        backgroundImageOriginX: 0, backgroundImageOriginY: 0,
+        debugGrid: true, encountersPaused: true,
+        exits: [
+            { x: 33, y: 17, targetMapId: "yellow_grotte_nexus_b2f", targetSpawnX: 45, targetSpawnY: 10 }, // échelle 1 → B2F
+            { x: 19, y: 14, targetMapId: "yellow_grotte_nexus_b2f", targetSpawnX: 12, targetSpawnY: 19 }, // échelle 2 → B2F
+            { x: 6, y: 6, targetMapId: "yellow_grotte_nexus_b2f", targetSpawnX: 3, targetSpawnY: 9 },     // échelle 3 → B2F
+        ],
+    },
+    yellow_grotte_nexus_b1f: {
+        id: "yellow_grotte_nexus_b1f",
+        name: "GROTTE DU NEXUS (B1F)",
+        tiles: buildGrotteNexusFloor("B1F"),
+        width: 49, height: 42,
+        backgroundImage: "/yellow/sprites/grotte_casse_tete.png",
+        backgroundImageWidth: 2352, backgroundImageHeight: 672, backgroundImageTileSize: 16,
+        backgroundImageOriginX: 784, backgroundImageOriginY: 0,
+        debugGrid: true, encountersPaused: true,
+        exits: [
+            { x: 33, y: 12, targetMapId: "yellow_grotte_nexus_b2f", targetSpawnX: 18, targetSpawnY: 19 }, // a → B2F
+            { x: 19, y: 33, targetMapId: "yellow_grotte_nexus_b2f", targetSpawnX: 21, targetSpawnY: 38 }, // b → B2F
+            { x: 25, y: 23, targetMapId: "yellow_grotte_nexus_b2f", targetSpawnX: 29, targetSpawnY: 38 }, // c → B2F
+            { x: 5, y: 11, targetMapId: "yellow_grotte_nexus_b2f", targetSpawnX: 33, targetSpawnY: 19 },  // d → B2F
+        ],
+    },
+    yellow_grotte_nexus_b2f: {
+        id: "yellow_grotte_nexus_b2f",
+        name: "GROTTE DU NEXUS (B2F)",
+        tiles: buildGrotteNexusFloor("B2F"),
+        width: 49, height: 42,
+        backgroundImage: "/yellow/sprites/grotte_casse_tete.png",
+        backgroundImageWidth: 2352, backgroundImageHeight: 672, backgroundImageTileSize: 16,
+        backgroundImageOriginX: 1568, backgroundImageOriginY: 0,
+        debugGrid: true, encountersPaused: true,
+        exits: [
+            { x: 45, y: 9, targetMapId: "yellow_grotte_nexus", targetSpawnX: 33, targetSpawnY: 18 },      // 1 → 1F
+            { x: 12, y: 18, targetMapId: "yellow_grotte_nexus", targetSpawnX: 19, targetSpawnY: 15 },     // 2 → 1F
+            { x: 3, y: 8, targetMapId: "yellow_grotte_nexus", targetSpawnX: 6, targetSpawnY: 7 },         // 3 → 1F
+            { x: 18, y: 18, targetMapId: "yellow_grotte_nexus_b1f", targetSpawnX: 33, targetSpawnY: 13 }, // a → B1F
+            { x: 21, y: 37, targetMapId: "yellow_grotte_nexus_b1f", targetSpawnX: 19, targetSpawnY: 34 }, // b → B1F
+            { x: 29, y: 37, targetMapId: "yellow_grotte_nexus_b1f", targetSpawnX: 25, targetSpawnY: 24 }, // c → B1F
+            { x: 33, y: 18, targetMapId: "yellow_grotte_nexus_b1f", targetSpawnX: 5, targetSpawnY: 12 },  // d → B1F
+            { x: 37, y: 19, targetMapId: "yellow_zone_combat", targetSpawnX: 10, targetSpawnY: 7 },       // SORTIE → placeholder Zone de Combat (⚠️ retarget vers Nexus 3 quand construit)
+        ],
     },
     yellow_route_nord: {
         id: "yellow_route_nord",

@@ -2375,7 +2375,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             <LibraryPanel />
             <AdvisorPanel />
             <LabPanel />
-            {combatShopOpen && <CombatShopModal onClose={closeCombatShop} onEnterGrotte={() => { closeCombatShop(); setMap("yellow_grotte_nexus", 30, 8) }} />}
+            {combatShopOpen && <CombatShopModal onClose={closeCombatShop} onEnterGrotte={() => { closeCombatShop(); setMap("yellow_grotte_nexus", 18, 40) }} />}
             {ticketOpen && <DailyTicketModal mode="daily" today={getPlayer().creditedThrough} onClose={() => { persistYellowSave(); setTicketOpen(false) }} />}
             {belgiumOpen && <DiablesRougesQuiz onClose={() => setBelgiumOpen(false)} />}
             {glandModal && <GlandEvent screen={glandModal} onNext={advanceGland} />}
