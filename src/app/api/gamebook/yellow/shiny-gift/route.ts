@@ -13,9 +13,11 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { isNexusYellowEnabled, YELLOW_CHAPTER_ID } from "@/lib/gamebook/yellow/featureFlag"
+import { fanOutSponsorGift } from "@/lib/gamebook/yellow/sponsorGift"
 
 export const dynamic = "force-dynamic"
 const SHINY_ENERGY = 50
+const SPONSOR_SHINY_ENERGY = 500 // PARRAINAGE : ×10 de la fête communautaire → grosse prime pour le pote quand on CAPTURE un shiny
 
 async function requireYellow() {
     const session = await getServerSession(authOptions)
@@ -55,6 +57,11 @@ export async function POST(req: NextRequest) {
             await sg.createMany({
                 data: players.map((p) => ({ toUserId: p.userId, fromUserId: auth.userId, fromNickname: me.nickname, kind, speciesId, eventKey, energy: SHINY_ENERGY })),
             })
+        }
+        // PARRAINAGE : un shiny CAPTURÉ par un pote → grosse prime (+500⚡) pour son parrain + ses filleuls.
+        // (En plus de la fête communautaire de 50 ci-dessus.) Idempotent : le POST entier l'est via eventKey (dup).
+        if (kind === "captured") {
+            await fanOutSponsorGift(prisma, auth.userId, me.nickname, "shiny", SPONSOR_SHINY_ENERGY, speciesId)
         }
         return NextResponse.json({ ok: true, granted: players.length })
     } catch {

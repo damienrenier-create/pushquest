@@ -422,6 +422,25 @@ model ShinyGift {
   @@index([eventKey])
 }
 
+// PARRAINAGE — BONUS MUTUELS parrain↔filleul (calqué sur ShinyGift/LeagueEnergyGrant). Quand un pote
+// (parrain OU filleul) accomplit un exploit, l'autre reçoit un don d'énergie réclamé au login :
+//   kind="arena"  → +1/10 de la jauge run 1 du bénéficiaire (montant CALCULÉ au claim, energy=0 ici).
+//   kind="shiny"  → +500⚡ (×10 de la fête communautaire) quand un pote CAPTURE un shiny.
+// Une ligne par bénéficiaire. Pas de @relation (userId String). Additif (db:push). Pattern gaté côté code.
+model SponsorGift {
+  id           String   @id @default(cuid())
+  toUserId     String   // parrain ou filleul bénéficiaire
+  fromUserId   String   // le pote qui a déclenché l'exploit (traçabilité)
+  fromNickname String   // pseudo (annonce du Dieu Spaghetti)
+  kind         String   // "arena" | "shiny"
+  energy       Int      @default(0) // shiny = 500 (fixe) ; arena = 0 → 1/10 du repsCap calculé au claim
+  detail       String?  // badge conquis / speciesId du shiny (pour l'annonce)
+  claimed      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@index([toUserId, claimed])
+}
+
 // ZONE DE COMBAT (Battle Frontier) — profil persistant par joueur : solde de Jetons de Combat (JC),
 // meilleurs records de série par salle, symboles obtenus. Sert aussi de base aux leaderboards.
 // Pas de @relation (userId String @unique) → User intact. Additif (db:push). Pattern gaté côté code.

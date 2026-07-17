@@ -13,6 +13,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { isNexusYellowEnabled } from "@/lib/gamebook/yellow/featureFlag"
+import { fanOutSponsorGift } from "@/lib/gamebook/yellow/sponsorGift"
 
 export const dynamic = "force-dynamic"
 
@@ -69,7 +70,13 @@ export async function POST(req: NextRequest) {
         const ac = (prisma as any).arenaChampion // table gated, créée par db:push
         const me = await prisma.user.findUnique({ where: { id: auth.userId }, select: { nickname: true } })
         if (!me) return NextResponse.json({ error: "Forbidden" }, { status: 401 })
+        // PARRAINAGE : bonus mutuel UNIQUEMENT à la PREMIÈRE conquête de cette arène (pas aux rematches / re-POST).
+        const already = await ac.findFirst({ where: { userId: auth.userId, badgeId }, select: { id: true } })
         await ac.create({ data: { userId: auth.userId, nickname: me.nickname, badgeId, team: JSON.stringify(team) } })
+        if (!already) {
+            // Chaque pote lié (parrain + filleuls) reçoit +1/10 de SA jauge run 1 (calculé au claim → energy=0).
+            await fanOutSponsorGift(prisma, auth.userId, me.nickname, "arena", 0, badgeId)
+        }
         return NextResponse.json({ ok: true })
     } catch {
         return NextResponse.json({ ok: true, skipped: "no-table" }) // table pas encore créée → neutre

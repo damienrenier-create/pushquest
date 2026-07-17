@@ -702,6 +702,33 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     }
                 } catch { /* neutre (hors-ligne / table absente) */ }
             }
+            // PARRAINAGE — BONUS MUTUELS : un pote (parrain/filleul) a conquis une arène ou CAPTURÉ un shiny →
+            // don d'énergie réclamé ici. Arène = 1/10 de MA jauge run 1 (calculé maintenant, plafonné) ; shiny = +500.
+            // RUN 3 : on ne réclame pas (grantBonusEnergyUncapped no-op → don perdu). En attente jusqu'au retour live.
+            if (!cancelled && getActiveWorld() !== "run3") {
+                try {
+                    const r = await fetch("/api/gamebook/yellow/sponsor-gift")
+                    const j = r.ok ? await r.json() : null
+                    const gifts = (j?.gifts ?? []) as { kind: string; energy: number; fromNickname: string }[]
+                    if (!cancelled && gifts.length > 0) {
+                        const arenaUnit = Math.min(1000, Math.floor(getPlayer().repsCap / 10)) // 1/10 de la jauge, plafonné (comme le don de Ligue)
+                        let total = 0
+                        for (const g of gifts) total += g.kind === "arena" ? arenaUnit : (g.energy || 0)
+                        if (total > 0) {
+                            grantBonusEnergyUncapped(total)
+                            persistYellowSave()
+                            const who = [...new Set(gifts.map((g) => g.fromNickname).filter(Boolean))].join(", ")
+                            const arenas = gifts.filter((g) => g.kind === "arena").length
+                            const shinies = gifts.filter((g) => g.kind === "shiny").length
+                            const lines: string[] = ["*Le Dieu Spaghetti se matérialise, tout sourire…*"]
+                            if (arenas > 0) lines.push(`🏟️ « ${who || "Ton pote"} a conquis une arène ! En bon parrainage, tu touches ta part d'énergie. »`)
+                            if (shinies > 0) lines.push(`✨ « ${who || "Ton pote"} a CAPTURÉ un shiny ! La chance se partage : GROSSE prime pour toi ! »`)
+                            lines.push(`« +${total} énergie (hors plafond) créditée. L'entraide, c'est ça le Nexus ! »`)
+                            showDialogue(DUEL_DREAM_NPC, "🎁 Parrainage", lines)
+                        }
+                    }
+                } catch { /* neutre (hors-ligne / table absente) */ }
+            }
             // 1re entrée (intro jamais vue + aucune équipe) → cinématique + choix du starter.
             if (!cancelled && !getPlayer().introSeen && getPlayer().team.length === 0) {
                 setShowIntro(true)

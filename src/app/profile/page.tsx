@@ -219,6 +219,17 @@ export default function ProfilePage() {
                             <div className="flex gap-2 items-center">
                                 <input readOnly value={`${typeof window !== "undefined" ? window.location.origin : ""}/register?parrain=${encodeURIComponent(nickname)}`}
                                     className="flex-1 px-3 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 text-xs sm:text-sm font-mono truncate" />
+                                {/* Partage NATIF (mobile → WhatsApp/SMS…) avec repli sur le presse-papiers. */}
+                                <button type="button"
+                                    onClick={async () => {
+                                        const link = `${window.location.origin}/register?parrain=${encodeURIComponent(nickname)}`
+                                        const shareData = { title: "Rejoins-moi sur PushQuest", text: `Rejoins le Nexus Jaune Éclair avec mon lien de parrainage 🎁 (${nickname}) :`, url: link }
+                                        if (navigator.share) { try { await navigator.share(shareData) } catch { /* annulé */ } }
+                                        else { navigator.clipboard?.writeText(link).then(() => { setCopiedRef(true); setTimeout(() => setCopiedRef(false), 2000) }).catch(() => {}) }
+                                    }}
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-4 rounded-xl transition-all whitespace-nowrap">
+                                    📤 Partager
+                                </button>
                                 <button type="button"
                                     onClick={() => { navigator.clipboard?.writeText(`${window.location.origin}/register?parrain=${encodeURIComponent(nickname)}`).then(() => { setCopiedRef(true); setTimeout(() => setCopiedRef(false), 2000) }).catch(() => {}) }}
                                     className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-xl transition-all whitespace-nowrap">
