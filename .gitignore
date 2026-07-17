@@ -41,6 +41,16 @@ prisma/dev.db
 # cartes debug régénérables (npx tsx scripts/gen-cendreville-map.ts)
 /debug-maps/
 
+# scripts de diagnostic jetables (one-off : dumps prod, audits, générateurs de map…)
+scripts/_*
+/dex-analysis.mts
+/dex-caps.mts
+/dex-pool.mts
+/dex-rules.mts
+/frontier-sim.mts
+/pokedex-gen.mts
+/team-guide-gen.mts
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
