@@ -45,37 +45,51 @@ export interface GradeInputs {
     steps: number
 }
 
-/** Note /1000 + détail des 5 facteurs, à partir d'entrées brutes. Pur (aucun store). */
-export function computeGrade(inp: GradeInputs): { grade: number; factors: ScoreFactor[] } {
+// RUN 1 : la FRUGALITÉ est retirée (l'énergie vient du vrai sport → affichée à part, pas notée). Ses 200 pts sont
+//   reventilés → 4 facteurs (somme 1000). Le run 1 est plus long → plafond de pas plus grand.
+const RUN1_STEP_MAX = 60000
+const W1_WINRATE = 300, W1_SPECIES = 250, W1_LEVELS = 200, W1_STEPS = 250
+
+/** Note /1000 + détail des facteurs, à partir d'entrées brutes. Pur (aucun store).
+ *  `opts.run1` : RUN 1 → pas de frugalité (poids 300/250/200/250, pas /60000, dex = roster run 1). Défaut = run 2. */
+export function computeGrade(inp: GradeInputs, opts?: { run1?: boolean }): { grade: number; factors: ScoreFactor[] } {
+    const run1 = opts?.run1 ?? false
+    const stepMax = run1 ? RUN1_STEP_MAX : STEP_MAX
     // 🏆 % de victoire : victoires décisives / (victoires + défaites d'équipe). 100% si jamais mis KO.
     const decisive = inp.wins + inp.teamKos
     const winRate = decisive > 0 ? inp.wins / decisive : 0
 
-    // 📖 % de complétion du Pokédex. Dénominateur = dex visible en run 2 (tout révélé → ~144), calculé dynamiquement.
-    const dexTotal = visibleDexSpecies(inp.caught, true, true).length
+    // 📖 % de complétion du Pokédex. run 2 = tout révélé (~144) ; run 1 = roster run 1 uniquement (isRun2=false).
+    const dexTotal = visibleDexSpecies(inp.caught, true, !run1).length
     const distinctCaught = new Set(inp.caught).size
     const speciesPct = dexTotal > 0 ? clamp01(distinctCaught / dexTotal) : 0
 
     // 💪 somme des niveaux de l'équipe (sur 600 = 6 × 100).
     const levelsPct = clamp01(inp.teamLevels / LEVEL_MAX)
+    // 👣 peu de pas.
+    const stepsPct = clamp01(1 - inp.steps / stepMax)
 
-    // ⚡ frugalité : moins on consomme d'énergie (sur les 10000 offertes), mieux c'est.
-    const frugalityPct = clamp01(1 - inp.energyConsumed / ENERGY_BUDGET)
-
-    // 👣 peu de pas : plus on est proche de 0 (max 30000), mieux c'est.
-    const stepsPct = clamp01(1 - inp.steps / STEP_MAX)
-
+    const [wWin, wSpe, wLvl, wStep] = run1 ? [W1_WINRATE, W1_SPECIES, W1_LEVELS, W1_STEPS] : [W_WINRATE, W_SPECIES, W_LEVELS, W_STEPS]
     const factors: ScoreFactor[] = [
-        { key: "winrate", label: "🏆 % de victoire", ratio: winRate, max: W_WINRATE, points: Math.round(winRate * W_WINRATE), detail: `${inp.wins} victoires / ${decisive} combats décisifs` },
-        { key: "species", label: "📖 Pokédex", ratio: speciesPct, max: W_SPECIES, points: Math.round(speciesPct * W_SPECIES), detail: `${distinctCaught} / ${dexTotal} espèces` },
-        { key: "levels", label: "💪 Niveaux équipe", ratio: levelsPct, max: W_LEVELS, points: Math.round(levelsPct * W_LEVELS), detail: `Σ ${inp.teamLevels} / ${LEVEL_MAX}` },
-        { key: "frugality", label: "⚡ Frugalité", ratio: frugalityPct, max: W_FRUGALITY, points: Math.round(frugalityPct * W_FRUGALITY), detail: `${inp.energyConsumed.toLocaleString("fr-FR")} / ${ENERGY_BUDGET.toLocaleString("fr-FR")} énergie consommée — moins = mieux` },
-        { key: "steps", label: "👣 Peu de pas", ratio: stepsPct, max: W_STEPS, points: Math.round(stepsPct * W_STEPS), detail: `${inp.steps.toLocaleString("fr-FR")} / ${STEP_MAX.toLocaleString("fr-FR")} pas — moins = mieux` },
+        { key: "winrate", label: "🏆 % de victoire", ratio: winRate, max: wWin, points: Math.round(winRate * wWin), detail: `${inp.wins} victoires / ${decisive} combats décisifs` },
+        { key: "species", label: "📖 Pokédex", ratio: speciesPct, max: wSpe, points: Math.round(speciesPct * wSpe), detail: `${distinctCaught} / ${dexTotal} espèces` },
+        { key: "levels", label: "💪 Niveaux équipe", ratio: levelsPct, max: wLvl, points: Math.round(levelsPct * wLvl), detail: `Σ ${inp.teamLevels} / ${LEVEL_MAX}` },
     ]
+    // ⚡ frugalité : SEULEMENT en run 2 (moins on consomme des 10000 offertes, mieux c'est). Retirée en run 1.
+    if (!run1) {
+        const frugalityPct = clamp01(1 - inp.energyConsumed / ENERGY_BUDGET)
+        factors.push({ key: "frugality", label: "⚡ Frugalité", ratio: frugalityPct, max: W_FRUGALITY, points: Math.round(frugalityPct * W_FRUGALITY), detail: `${inp.energyConsumed.toLocaleString("fr-FR")} / ${ENERGY_BUDGET.toLocaleString("fr-FR")} énergie consommée — moins = mieux` })
+    }
+    factors.push({ key: "steps", label: "👣 Peu de pas", ratio: stepsPct, max: wStep, points: Math.round(stepsPct * wStep), detail: `${inp.steps.toLocaleString("fr-FR")} / ${stepMax.toLocaleString("fr-FR")} pas — moins = mieux` })
     return { grade: factors.reduce((s, f) => s + f.points, 0), factors }
 }
 
 /** Ligne INFO (hors note /1000) « 🏆 Reps en Ligue » (#6) — max:0 = rendue sans barre par les panneaux. */
 export function leagueRepsFactor(leagueReps: number): ScoreFactor {
     return { key: "info:league_reps", label: "🏆 Reps en Ligue", ratio: 0, max: 0, points: leagueReps, detail: `${leagueReps.toLocaleString("fr-FR")} reps dépensés en combats de Ligue` }
+}
+
+/** Ligne INFO (hors note) « ⚡ Énergie consommée » — pour le run 1 (frugalité retirée, énergie affichée à part). */
+export function energyInfoFactor(energyConsumed: number): ScoreFactor {
+    return { key: "info:energy", label: "⚡ Énergie consommée", ratio: 0, max: 0, points: energyConsumed, detail: `${energyConsumed.toLocaleString("fr-FR")} énergie consommée (info, hors note)` }
 }

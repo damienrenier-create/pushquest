@@ -19,7 +19,7 @@ import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { isNexusYellowEnabled, YELLOW_CHAPTER_ID } from "@/lib/gamebook/yellow/featureFlag"
 import { run3Score, run3MaxScore } from "@/lib/gamebook/yellow/data/run3Score"
-import { computeGrade, leagueRepsFactor, type ScoreFactor } from "@/lib/gamebook/yellow/score/runScoreCompute"
+import { computeGrade, leagueRepsFactor, energyInfoFactor, type ScoreFactor } from "@/lib/gamebook/yellow/score/runScoreCompute"
 
 const num = (v: unknown): number => (typeof v === "number" && isFinite(v) ? v : 0)
 
@@ -47,6 +47,22 @@ function leagueRepsFromFactors(factors: unknown): number {
     if (!Array.isArray(factors)) return 0
     const f = factors.find((x) => x && typeof x === "object" && (x as { key?: unknown }).key === "info:league_reps") as { points?: unknown } | undefined
     return typeof f?.points === "number" ? f.points : 0
+}
+
+/** Recalcule le score RUN 1 (/1000, SANS frugalité) DEPUIS le monde run 1 = niveau PLAT de la save (stats/team/
+ *  caughtThisRun). Frozen pour les joueurs en run 2/3 (anti-wipe), live pour les joueurs en run 1. */
+function run1FromWorld(f: Record<string, unknown>): { score: number; factors: ScoreFactor[] } | null {
+    const stats = (f.stats ?? {}) as Record<string, unknown>
+    const team = Array.isArray(f.team) ? (f.team as Array<{ level?: unknown }>) : []
+    // Pokédex run 1 = pokédex GLOBAL (≠ caughtThisRun qui vaut 0 pour les saves d'avant son suivi) : pour un joueur
+    //   ENCORE en run 1 = ses captures run 1 ; pour un gradué (run 2/3) = crédite le dex qu'il a complété au run 1.
+    const caught = Array.isArray((f.pokedex as { caught?: unknown } | undefined)?.caught) ? ((f.pokedex as { caught: string[] }).caught) : []
+    const teamLevels = team.reduce((s, m) => s + num(m?.level), 0)
+    const energyConsumed = num(stats.energySpent)
+    const { grade, factors } = computeGrade({
+        wins: num(stats.wins), teamKos: num(stats.teamKos), caught, teamLevels, energyConsumed, steps: num(stats.steps),
+    }, { run1: true })
+    return { score: grade, factors: [...factors, energyInfoFactor(energyConsumed)] } // énergie = info séparée (hors note)
 }
 
 /** Recalcule le score RUN 3 (Σ niveaux des Daemons vaincus) DEPUIS flags.run3World.run3Defeated. null si absent/vide. */
@@ -95,9 +111,10 @@ export async function GET() {
     const auth = await requireYellow()
     if (!auth.ok) return NextResponse.json({ error: "Forbidden" }, { status: auth.status })
     if (!(await viewerHasFinishedRun1(auth.userId))) {
-        return NextResponse.json({ ok: true, gated: true, run2: [], run3: [], duels: [] }) // pas encore ≥5 badges run 1
+        return NextResponse.json({ ok: true, gated: true, run1: [], run2: [], run3: [], duels: [] }) // pas encore ≥5 badges run 1
     }
 
+    const run1Map = new Map<string, LeaderEntry>()
     const run2Map = new Map<string, LeaderEntry>()
     const run3Map = new Map<string, LeaderEntry>()
     const duelsMap = new Map<string, { nickname: string; wins: number }>() // classement « Duelliste » : reflets battus (cumul cross-run)
@@ -115,6 +132,9 @@ export async function GET() {
             const f = (s.flags ?? {}) as Record<string, unknown>
             const nickname = s.user?.nickname ?? "?"
             const world = f.activeWorld // "ngplus" (run2) | "run3" | "live" | undefined
+            // RUN 1 = niveau PLAT de la save (toujours présent). Live si le joueur est encore en run 1, sinon figé.
+            const r1 = run1FromWorld(f)
+            if (r1) run1Map.set(s.userId, { nickname, score: r1.score, wonAt: null, factors: r1.factors, live: world === "live" || world === undefined })
             if (world === "ngplus") {
                 const r2 = run2FromWorld(f.ngplusWorld)
                 if (r2) run2Map.set(s.userId, { nickname, score: r2.score, wonAt: null, factors: r2.factors, live: true, leagueReps: r2.leagueReps })
@@ -148,7 +168,7 @@ export async function GET() {
         [...m.values()].sort((a, b) => b.score - a.score).map((e) => ({ nickname: e.nickname, score: e.score, wonAt: e.wonAt, factors: e.factors, live: e.live, leagueReps: e.leagueReps }))
     const duels = [...duelsMap.values()].sort((a, b) => b.wins - a.wins)
 
-    return NextResponse.json({ ok: true, run2: toList(run2Map), run3: toList(run3Map), duels })
+    return NextResponse.json({ ok: true, run1: toList(run1Map), run2: toList(run2Map), run3: toList(run3Map), duels })
 }
 
 // POST {run, score} — enregistre le score du joueur (garde le meilleur par run).

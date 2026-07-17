@@ -8,10 +8,11 @@ import { useEffect, useState } from "react"
 import { type ScoreFactor } from "@/lib/gamebook/yellow/score/runScore"
 
 interface ScoreRow { nickname: string; score: number; wonAt: string | null; factors?: ScoreFactor[] | null; live?: boolean; leagueReps?: number }
-type TabId = "run3" | "run2" | "league" | "duels"
-type Data = { gated?: boolean; run2: ScoreRow[]; run3: ScoreRow[]; duels: { nickname: string; wins: number }[] }
+type TabId = "run1" | "run3" | "run2" | "league" | "duels"
+type Data = { gated?: boolean; run1: ScoreRow[]; run2: ScoreRow[]; run3: ScoreRow[]; duels: { nickname: string; wins: number }[] }
 
 const RUN_META: { id: TabId; label: string; unit: string; hint: string }[] = [
+    { id: "run1", label: "🥇 RUN 1", unit: "/1000", hint: "Note /1000 du run 1 : % victoire (300), Pokédex (250), niveaux d'équipe (200) & peu de pas (250). SANS frugalité (l'énergie du run 1 vient du sport → affichée à part, hors note). Clique pour le détail." },
     { id: "run3", label: "🏆 RUN 3", unit: "pts", hint: "Σ des niveaux des Daemons ennemis vaincus (boss + Ligue). Le + haut gagne." },
     { id: "run2", label: "🏅 RUN 2", unit: "/1000", hint: "Note /1000 : % victoire, Pokédex, niveaux d'équipe, frugalité (énergie) & peu de pas. Joueurs ENCORE en run 2 = score live (maj à chaque connexion) ; joueurs ayant TERMINÉ = score final figé. Clique une entrée pour le détail des 5 axes." },
     { id: "league", label: "⚡ LIGUE", unit: "reps", hint: "L'ÉCONOME DE LA LIGUE : le moins de reps dépensés en combats DEPUIS ton 1er pas dans la Ligue gagne (moins = mieux). Non classé tant que tu n'y es pas entré." },
@@ -20,7 +21,7 @@ const RUN_META: { id: TabId; label: string; unit: string; hint: string }[] = [
 
 export default function RunScoreboardPanel({ close }: { close: () => void }) {
     const [state, setState] = useState<"loading" | "ok" | "error">("loading")
-    const [data, setData] = useState<Data>({ run2: [], run3: [], duels: [] })
+    const [data, setData] = useState<Data>({ run1: [], run2: [], run3: [], duels: [] })
     const [tab, setTab] = useState<TabId>("run3")
     const [expanded, setExpanded] = useState<number | null>(null) // RUN 2 : entrée dépliée (détail des 5 axes)
 
@@ -31,7 +32,7 @@ export default function RunScoreboardPanel({ close }: { close: () => void }) {
                 const r = await fetch("/api/gamebook/yellow/run-scores")
                 const j = r.ok ? await r.json() : null
                 if (cancelled) return
-                setData({ gated: j?.gated, run2: j?.run2 ?? [], run3: j?.run3 ?? [], duels: j?.duels ?? [] })
+                setData({ gated: j?.gated, run1: j?.run1 ?? [], run2: j?.run2 ?? [], run3: j?.run3 ?? [], duels: j?.duels ?? [] })
                 setState("ok")
             } catch { if (!cancelled) setState("error") }
         })()
@@ -47,7 +48,7 @@ export default function RunScoreboardPanel({ close }: { close: () => void }) {
         .sort((a, b) => a.score - b.score)
     // ⚔️ DUELS : reflets battus (cumul), déjà trié desc côté serveur → ScoreRow (score = victoires).
     const duelsList: ScoreRow[] = data.duels.map((d) => ({ nickname: d.nickname, score: d.wins, wonAt: null }))
-    const list = tab === "run3" ? data.run3 : tab === "league" ? leagueList : tab === "duels" ? duelsList : data.run2
+    const list = tab === "run1" ? data.run1 : tab === "run3" ? data.run3 : tab === "league" ? leagueList : tab === "duels" ? duelsList : data.run2
     const medal = (i: number) => (i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`)
 
     return (
@@ -82,7 +83,7 @@ export default function RunScoreboardPanel({ close }: { close: () => void }) {
                 {state === "ok" && !data.gated && list.length > 0 && (
                     <div style={scroll}>
                         {list.map((r, i) => {
-                            const canExpand = tab === "run2" && Array.isArray(r.factors) && r.factors!.length > 0
+                            const canExpand = (tab === "run2" || tab === "run1") && Array.isArray(r.factors) && r.factors!.length > 0
                             const open = expanded === i
                             return (
                                 <div key={i}>
@@ -99,7 +100,7 @@ export default function RunScoreboardPanel({ close }: { close: () => void }) {
                                     </div>
                                     {canExpand && open && (
                                         <div style={factorsBox}>
-                                            <div style={{ fontSize: 8.5, opacity: 0.6, lineHeight: 1.4, marginBottom: 2 }}>5 critères pondérés (poids après « / »), additionnés → note /1000.</div>
+                                            <div style={{ fontSize: 8.5, opacity: 0.6, lineHeight: 1.4, marginBottom: 2 }}>Critères pondérés (poids après « / »), additionnés → note /1000.</div>
                                             {r.factors!.map((f) => (
                                                 f.max <= 0 ? (
                                                     // Ligne INFO (hors note /1000) — ex. « 🏆 Reps en Ligue » : valeur brute, pas de barre.
