@@ -857,10 +857,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             recordDuelWin(opp.userId)
             addItem(DUEL_NEXUS_BALL_ID, 1)
             persistYellowSave()
-            // Partie C : cadeau croisé au VRAI joueur mirouté (best-effort, non bloquant).
+            // Partie C : cadeau croisé au VRAI joueur mirouté (best-effort, non bloquant) — il reçoit l'ÉNERGIE
+            //   que le vainqueur a dépensée dans le duel (au lieu d'un montant fixe).
             fetch("/api/gamebook/yellow/duel-gift", {
                 method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ toUserId: opp.userId, fromNickname: nickname }),
+                body: JSON.stringify({ toUserId: opp.userId, fromNickname: nickname, energy: duelResult.energySpent }),
             }).catch(() => {})
             showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, duelWinLines(opp.nickname))
         } else {

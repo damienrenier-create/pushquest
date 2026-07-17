@@ -37,6 +37,7 @@ import { ACE_TRAINER_ID, aceReward, aceWinTaunt, speciesAtLevel } from "../data/
 import { ORCALINE_TRAINER_ID, ORCALINE_GIFT_SPECIES, ORCALINE_GIFT_LEVEL, ORCALINE_BALL_REWARD_ID, ORCALINE_BALL_AT_LEVEL, orcalineTrainerDialogue } from "../data/orcalineTrainer"
 import { GEKROC_STONE_ITEM } from "../data/gekroc"
 import { frontierEnergyRefund, FRONTIER_EXP_MULT } from "../frontier/engine"
+import { DUEL_EXP_MULT } from "../data/duel"
 import { HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED } from "../data/hauntedNpcs"
 import type { BadgeId } from "../data/cts"
 import { createMonInstance } from "../battle/factory"
@@ -116,8 +117,9 @@ interface BattleStoreState {
     chainRematchId: string | null
     /** Au moins un Daemon a une attaque EN ATTENTE d'apprentissage → prompt post-combat (façon Gen 1). */
     pendingLearn: boolean
-    /** DUEL reflet (Viridian/arène eau) terminé : issue à traiter par l'UI (récompenses) ; null sinon. */
-    duelResult: { won: boolean } | null
+    /** DUEL reflet (Viridian/arène eau) terminé : issue à traiter par l'UI (récompenses) ; null sinon.
+     *  `energySpent` = énergie dépensée par le VAINQUEUR dans ce duel → reversée au vrai joueur mirouté (cadeau croisé). */
+    duelResult: { won: boolean; energySpent: number } | null
     /** ZONE DE COMBAT : combat d'une série Frontier terminé → l'UI enchaîne la vague suivante / clôt la série.
      *  `energySpent` = énergie dépensée DANS ce combat (le Dôme diffère son remboursement à la fin du tournoi). */
     frontierResult: { won: boolean; energySpent: number } | null
@@ -274,7 +276,8 @@ export function startTrainerBattle(
     opts?: { trainerId?: string; reward?: number; aiLevel?: AiLevel; enemyEnergyCap?: number; isRematch?: boolean },
 ) {
     const isFrontier = !!opts?.trainerId?.startsWith("frontier:")
-    const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: opts?.aiLevel, enemyEnergyCap: opts?.enemyEnergyCap, noItems: isFrontier, expMult: isFrontier ? FRONTIER_EXP_MULT : undefined, playerBadgeCount: getPlayer().badges.length })
+    const isDuel = !!opts?.trainerId?.startsWith("duel:") // duel-reflet d'un autre joueur → XP DOUBLE
+    const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: opts?.aiLevel, enemyEnergyCap: opts?.enemyEnergyCap, noItems: isFrontier, expMult: isFrontier ? FRONTIER_EXP_MULT : isDuel ? DUEL_EXP_MULT : undefined, playerBadgeCount: getPlayer().badges.length })
     syncPokedex(battle)
     const trainer = opts?.trainerId ? { trainerId: opts.trainerId, reward: opts.reward ?? 0, isRematch: opts.isRematch ?? false } : null
     setStore({ battle, evolutions: [], trainer, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
@@ -884,7 +887,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // Raillerie d'ACE quand IL gagne (défaite du joueur contre ACE) → affichée à la sortie du combat.
     const aceLossTaunt = (isLose && storeState.trainer?.trainerId === ACE_TRAINER_ID) ? aceWinTaunt() : null
     // DUEL reflet : signale l'issue (gagné/perdu) → l'UI applique les récompenses post-combat.
-    const duelResult = storeState.trainer?.trainerId?.startsWith("duel:") ? { won: b.outcome === "win" } : null
+    const duelResult = storeState.trainer?.trainerId?.startsWith("duel:") ? { won: b.outcome === "win", energySpent: storeState.energySpent } : null
     // ZONE DE COMBAT : issue d'une vague de série → l'UI enchaîne (win) ou clôt la série (lose).
     const frontierResult = storeState.trainer?.trainerId?.startsWith("frontier:") ? { won: b.outcome === "win", energySpent: storeState.energySpent } : null
     // NG+ : sacre du Maître EN New Game+ avec une ancienne équipe à affronter → il reste le combat de fin de Ligue.

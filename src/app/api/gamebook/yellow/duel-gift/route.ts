@@ -73,10 +73,16 @@ export async function POST(req: NextRequest) {
     const auth = await requireYellow()
     if (!auth.ok) return NextResponse.json({ error: "Forbidden" }, { status: auth.status })
 
-    let body: { toUserId?: unknown }
+    let body: { toUserId?: unknown; energy?: unknown }
     try { body = await req.json() } catch { return NextResponse.json({ error: "Bad JSON" }, { status: 400 }) }
     const toUserId = typeof body.toUserId === "string" ? body.toUserId : ""
     if (!toUserId || toUserId === auth.userId) return NextResponse.json({ error: "Bad target" }, { status: 400 })
+    // Énergie reversée au joueur mirouté = énergie dépensée par le vainqueur (bornée anti-triche). Fallback = ancien
+    //   montant fixe si le client ne l'envoie pas (rétro-compat). Plancher GIFT_ENERGY pour que ça reste un vrai cadeau.
+    const GIFT_ENERGY_CAP = 3000
+    const energy = typeof body.energy === "number" && isFinite(body.energy)
+        ? Math.max(GIFT_ENERGY, Math.min(GIFT_ENERGY_CAP, Math.floor(body.energy)))
+        : GIFT_ENERGY
 
     try {
         const dg = (prisma as any).duelGift // table gated (cf. advisor/), créée par db:push
@@ -88,7 +94,7 @@ export async function POST(req: NextRequest) {
         // Anti-stacking : un seul cadeau non réclamé de MOI vers cette cible à la fois.
         const existing = await dg.findFirst({ where: { toUserId, fromUserId: auth.userId, claimed: false }, select: { id: true } })
         if (existing) return NextResponse.json({ ok: true, skipped: "exists" })
-        await dg.create({ data: { toUserId, fromUserId: auth.userId, fromNickname: me.nickname, energy: GIFT_ENERGY } })
+        await dg.create({ data: { toUserId, fromUserId: auth.userId, fromNickname: me.nickname, energy } })
         return NextResponse.json({ ok: true })
     } catch {
         return NextResponse.json({ ok: true, skipped: "no-table" }) // table pas encore créée → neutre

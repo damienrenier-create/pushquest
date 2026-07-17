@@ -3,13 +3,14 @@
 // DUELS contre les reflets des autres joueurs (pilotés par l'IA) :
 //   • VIRIDIAN  → reflets EXACTS (vraies équipes), rencontrés en roamant.
 //   • ARÈNE EAU → reflets INVERSÉS (faiblesses), après ONDINE.
-// Règle : 1 victoire par joueur-IA et par jour. Victoire → cadeau du Dieu des Nouilles + Nexus Ball.
+// Règle : 1 victoire par joueur-IA et par jour. Victoire → XP DOUBLE + cadeau du Dieu des Nouilles + HYPER Nexus-Ball,
+// et le VRAI joueur mirouté reçoit (cadeau croisé) l'ÉNERGIE dépensée par le vainqueur dans le duel.
 // Défaite → trashtalk monumental de l'adversaire + 30 énergie « par pitié ».
 
-// La « Nexus-Ball » de base a pour id interne "poke_ball" (le jeu renomme la Poké Ball en Nexus-Ball
-// mais garde l'id d'origine). L'ancien id "nexus_ball" était FANTÔME → balles invisibles dans le sac.
-// Migration de récupération dans playerStore.migrateItems (nexus_ball → poke_ball).
-export const DUEL_NEXUS_BALL_ID = "poke_ball"
+// Récompense = HYPER Nexus-Ball (id "hyper_ball" — meilleur taux de capture). (Avant : "poke_ball" = Nexus-Ball de base.)
+export const DUEL_NEXUS_BALL_ID = "hyper_ball"
+// XP des duels-reflets = DOUBLE de la normale (récompense d'un vrai défi contre un autre joueur).
+export const DUEL_EXP_MULT = 2
 export const DUEL_LOSS_CONSOLE_REPS = 30
 export const DUEL_GOD_NPC = "dieu_nouilles"
 export const DUEL_GOD_NAME = "DIEU DES NOUILLES"
@@ -31,7 +32,7 @@ const WIN_LINES: readonly string[] = [
     "Par tous les coudes de macaronis ! Le reflet de %O n'a pas tenu une louche face à toi.",
 ]
 export function duelWinLines(oppNick: string): string[] {
-    return [fill(pick(WIN_LINES), oppNick), "🎁 Pour ta bravoure, reçois une Nexus Ball !"]
+    return [fill(pick(WIN_LINES), oppNick), "🎁 Pour ta bravoure : XP DOUBLÉE et une HYPER Nexus-Ball ! Ton adversaire, lui, récupère l'énergie que tu as dépensée…"]
 }
 
 // ── DÉFAITE : l'adversaire (reflet) te trashtalk puis te jette 30 énergie « par pitié » ──
