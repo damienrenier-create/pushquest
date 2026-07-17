@@ -119,7 +119,7 @@ export interface YellowSave {
     /** NG+ (2 mondes navigables) — monde ACTIF que le joueur contrôle. "live" = partie d'origine (= ces champs
      *  plats), "ngplus" = New Game+ (= `ngplusWorld`). Défaut "live" (anciennes saves). Les champs plats de haut
      *  niveau reflètent TOUJOURS le monde LIVE (le garde-fou anti-wipe voit donc toujours la vraie progression). */
-    activeWorld: "live" | "ngplus" | "run3"
+    activeWorld: "live" | "ngplus" | "run3" | "replay"
     /** NG+ — le monde New Game+ COMPLET, sérialisé comme une YellowSave imbriquée (SANS sous-monde : profondeur
      *  bornée à 1). null tant qu'aucun NG+ n'a été lancé. */
     ngplusWorld: YellowSave | null
@@ -130,6 +130,14 @@ export interface YellowSave {
      *  profondeur bornée à 1). null tant qu'aucun run 3 n'a été lancé. ADDITIF : les saves 2-mondes existantes
      *  le lisent à null (aucun effet). */
     run3World: YellowSave | null
+    /** REJEU (« run bis / Pseudo² ») — monde de rejeu ISOLÉ (bulle jetable), sérialisé comme une YellowSave
+     *  imbriquée (profondeur bornée à 1). null hors rejeu. Pendant un rejeu, le monde RÉEL (live/ngplus/run3)
+     *  reste stashé et INTACT (les champs plats = toujours le run 1 → garde-fou anti-wipe préservé). ADDITIF. */
+    replayWorld: YellowSave | null
+    /** REJEU — quel run est rejoué : pilote les RÈGLES (énergie…) de la bulle. null hors rejeu. */
+    replayRun: "run1" | "run2" | "run3" | null
+    /** REJEU — monde réel à RESTAURER en sortant du rejeu (celui qui était actif avant). "live" par défaut. null hors rejeu. */
+    replayReturn: "live" | "ngplus" | "run3" | null
     /** RUN 3 — le concours a-t-il déjà été LANCÉ ? (jumeau de ngplusUsed). Survit à la fusion. Défaut false. */
     run3Used: boolean
     /** RUN 2 — le Maître de Ligue vient d'être battu et il RESTE le combat de fin (vs l'ancienne équipe). Marqueur
@@ -183,7 +191,7 @@ export const SAVE_VERSION = 2
 const ACE_RATCHET_RESET_VERSION = 2
 
 export function emptySave(): YellowSave {
-    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, domeChampionships: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, domeStats: { wins: 0, losses: 0, daemonUse: {}, moveUse: {} }, stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, berrySecretKnown: false, berryHarvestDay: "", berryHarvestPicked: [], sylvebarbeAwake: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", ngplusBattles: 0, labDefi: emptyLabDefi(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", run3Defeated: [], caughtThisRun: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0 }
+    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, domeChampionships: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, domeStats: { wins: 0, losses: 0, daemonUse: {}, moveUse: {} }, stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, berrySecretKnown: false, berryHarvestDay: "", berryHarvestPicked: [], sylvebarbeAwake: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", ngplusBattles: 0, labDefi: emptyLabDefi(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null, replayWorld: null, replayRun: null, replayReturn: null, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", run3Defeated: [], caughtThisRun: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0 }
 }
 
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -527,11 +535,15 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         playtimeMs: typeof o.playtimeMs === "number" && isFinite(o.playtimeMs) ? Math.max(0, Math.floor(o.playtimeMs)) : 0,
         leaguePotions: typeof o.leaguePotions === "number" && isFinite(o.leaguePotions) ? Math.max(0, Math.floor(o.leaguePotions)) : 0,
         ngplusUsed: o.ngplusUsed === true,
-        // Mondes (jusqu'à 3) : un monde imbriqué (`nested`) n'a AUCUN sous-monde → récursion bornée à 1 niveau.
-        activeWorld: !nested && (o.activeWorld === "ngplus" || o.activeWorld === "run3") ? (o.activeWorld as "ngplus" | "run3") : "live",
+        // Mondes (jusqu'à 3 + bulle de rejeu) : un monde imbriqué (`nested`) n'a AUCUN sous-monde → récursion bornée à 1 niveau.
+        activeWorld: !nested && (o.activeWorld === "ngplus" || o.activeWorld === "run3" || o.activeWorld === "replay") ? (o.activeWorld as "ngplus" | "run3" | "replay") : "live",
         ngplusWorld: nested ? null : parseNestedWorld(o.ngplusWorld),
         ngplusOldTeam: nested ? null : parseChampionTeam(o.ngplusOldTeam),
         run3World: nested ? null : parseNestedWorld(o.run3World),
+        // REJEU (« run bis ») — bulle isolée + méta. Top-level uniquement (jamais imbriquée → pas de récursion).
+        replayWorld: nested ? null : parseNestedWorld(o.replayWorld),
+        replayRun: !nested && (o.replayRun === "run1" || o.replayRun === "run2" || o.replayRun === "run3") ? (o.replayRun as "run1" | "run2" | "run3") : null,
+        replayReturn: !nested && (o.replayReturn === "ngplus" || o.replayReturn === "run3") ? (o.replayReturn as "ngplus" | "run3") : (!nested && o.activeWorld === "replay" ? "live" : null),
         run3Used: o.run3Used === true,
         // Marqueur run 2 « Maître battu, combat final en attente » : per-monde (vit dans le monde run 2). Parsé
         // à tous les niveaux ; false par défaut (anciennes saves + monde live/run3 qui ne l'utilisent pas).

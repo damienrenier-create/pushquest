@@ -36,7 +36,7 @@ let ngplusOldTeam: ChampionMon[] | null = null
 
 /** Un monde « nu » (sans méta multi-mondes), prêt à être stashé ou imbriqué. */
 function liveWorldOf(save: YellowSave): YellowSave {
-    return { ...save, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null }
+    return { ...save, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null, replayWorld: null, replayRun: null, replayReturn: null }
 }
 
 /** Hydrate les stores (joueur + Pokédex) depuis UN monde. `customDaemons` est GLOBAL (partagé entre les
@@ -126,7 +126,7 @@ export async function loadYellowSave(): Promise<void> {
 function activeWorldSave(): YellowSave {
     const p = getPlayer()
     const d = getPokedex()
-    return { version: SAVE_VERSION, team: p.team, pc: p.pc, items: p.items, reps: p.reps, repsCap: p.repsCap, creditedThrough: p.creditedThrough, pastaBoughtToday: p.pastaBoughtToday, pastaDayBonus: p.pastaDayBonus, domeChampionships: p.domeChampionships, pokedex: { seen: d.seen, caught: d.caught }, defeatedTrainers: p.defeatedTrainers, rematchedTrainers: p.rematchedTrainers, badges: p.badges, introSeen: p.introSeen, sbireDefeatsToday: p.sbireDefeatsToday, sbireWinsTotal: p.sbireWinsTotal, pvpStats: p.pvpStats, domeStats: p.domeStats, stats: p.stats, acePeakLevel: p.acePeakLevel, aceBox: p.aceBox, aceTeamSizePeak: p.aceTeamSizePeak, aceWins: p.aceWins, aceDefeatedDate: p.aceDefeatedDate, duelWins: p.duelWins, ownedCts: p.ownedCts, boughtCts: p.boughtCts, gekrocResolved: p.gekrocResolved, hhSpectresShown: p.hhSpectresShown, hhCollectorWins: p.hhCollectorWins, isChampion: p.isChampion, berrySecretKnown: p.berrySecretKnown, berryHarvestDay: p.berryHarvestDay, berryHarvestPicked: p.berryHarvestPicked, sylvebarbeAwake: p.sylvebarbeAwake, caveTradeDone: p.caveTradeDone, goshHintHeard: p.goshHintHeard, orcalineWins: p.orcalineWins, orcalineDate: p.orcalineDate, ngplusBattles: p.ngplusBattles, repsBankedTotal: p.repsBankedTotal, welcomeGift: p.welcomeGift, pokerFirstGameDone: p.pokerFirstGameDone, pokerBossStacks: p.pokerBossStacks, pokerCashCap: p.pokerCashCap, pokerCashDate: p.pokerCashDate, spagGift: p.spagGift, pastaGodGift: p.pastaGodGift, labDefi: p.labDefi, customDaemons: p.customDaemons ?? [], ngplusStartedAt: p.ngplusStartedAt, playtimeMs: p.playtimeMs, leaguePotions: p.leaguePotions, ngplusUsed: p.ngplusUsed, run3Used: p.run3Used, ngplusMaitreBeaten: p.ngplusMaitreBeaten, run3StarterBase: p.run3StarterBase, run3Defeated: p.run3Defeated, caughtThisRun: p.caughtThisRun, run3LavapetitSeen: p.run3LavapetitSeen, run3LavapetitCaught: p.run3LavapetitCaught, mimimoyReturned: p.mimimoyReturned, mimimoyAppearances: p.mimimoyAppearances, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null }
+    return { version: SAVE_VERSION, team: p.team, pc: p.pc, items: p.items, reps: p.reps, repsCap: p.repsCap, creditedThrough: p.creditedThrough, pastaBoughtToday: p.pastaBoughtToday, pastaDayBonus: p.pastaDayBonus, domeChampionships: p.domeChampionships, pokedex: { seen: d.seen, caught: d.caught }, defeatedTrainers: p.defeatedTrainers, rematchedTrainers: p.rematchedTrainers, badges: p.badges, introSeen: p.introSeen, sbireDefeatsToday: p.sbireDefeatsToday, sbireWinsTotal: p.sbireWinsTotal, pvpStats: p.pvpStats, domeStats: p.domeStats, stats: p.stats, acePeakLevel: p.acePeakLevel, aceBox: p.aceBox, aceTeamSizePeak: p.aceTeamSizePeak, aceWins: p.aceWins, aceDefeatedDate: p.aceDefeatedDate, duelWins: p.duelWins, ownedCts: p.ownedCts, boughtCts: p.boughtCts, gekrocResolved: p.gekrocResolved, hhSpectresShown: p.hhSpectresShown, hhCollectorWins: p.hhCollectorWins, isChampion: p.isChampion, berrySecretKnown: p.berrySecretKnown, berryHarvestDay: p.berryHarvestDay, berryHarvestPicked: p.berryHarvestPicked, sylvebarbeAwake: p.sylvebarbeAwake, caveTradeDone: p.caveTradeDone, goshHintHeard: p.goshHintHeard, orcalineWins: p.orcalineWins, orcalineDate: p.orcalineDate, ngplusBattles: p.ngplusBattles, repsBankedTotal: p.repsBankedTotal, welcomeGift: p.welcomeGift, pokerFirstGameDone: p.pokerFirstGameDone, pokerBossStacks: p.pokerBossStacks, pokerCashCap: p.pokerCashCap, pokerCashDate: p.pokerCashDate, spagGift: p.spagGift, pastaGodGift: p.pastaGodGift, labDefi: p.labDefi, customDaemons: p.customDaemons ?? [], ngplusStartedAt: p.ngplusStartedAt, playtimeMs: p.playtimeMs, leaguePotions: p.leaguePotions, ngplusUsed: p.ngplusUsed, run3Used: p.run3Used, ngplusMaitreBeaten: p.ngplusMaitreBeaten, run3StarterBase: p.run3StarterBase, run3Defeated: p.run3Defeated, caughtThisRun: p.caughtThisRun, run3LavapetitSeen: p.run3LavapetitSeen, run3LavapetitCaught: p.run3LavapetitCaught, mimimoyReturned: p.mimimoyReturned, mimimoyAppearances: p.mimimoyAppearances, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null, replayWorld: null, replayRun: null, replayReturn: null }
 }
 
 /** RÉASSEMBLE les 3 mondes → une save unique. Les champs PLATS = monde LIVE/run 1 (TOUJOURS, garde-fou
@@ -139,7 +139,7 @@ export function snapshot(): YellowSave {
     const aw = getActiveWorld()
     // Chaque monde : actif = les stores, sinon son stash. Normalisé (méta multi-mondes nettoyée, customDaemons + pokédex + baies globaux).
     const norm = (w: YellowSave | null): YellowSave | null =>
-        w ? { ...w, pokedex: { seen: [...pdx.seen], caught: [...pdx.caught] }, berrySecretKnown: w.berrySecretKnown || berryKnown, customDaemons: cds, activeWorld: "live" as const, ngplusWorld: null, ngplusOldTeam: null, run3World: null } : null
+        w ? { ...w, pokedex: { seen: [...pdx.seen], caught: [...pdx.caught] }, berrySecretKnown: w.berrySecretKnown || berryKnown, customDaemons: cds, activeWorld: "live" as const, ngplusWorld: null, ngplusOldTeam: null, run3World: null, replayWorld: null, replayRun: null, replayReturn: null } : null
     const live = aw === "live" ? active : (liveStash ?? emptySave())
     const ngplus = aw === "ngplus" ? active : ngplusStash
     const run3 = aw === "run3" ? active : run3Stash
@@ -456,7 +456,7 @@ export async function completeRun3(): Promise<void> {
     //   d'uid DISTINCTS ("fusR2"/"fusR1") pour les deux mondes absorbés → zéro collision d'uid dans le PC fusionné.
     const step1 = ngplusStash ? mergeWorlds(run3, ngplusStash, "fusR2") : run3
     const mergedRaw = liveStash ? mergeWorlds(step1, liveStash, "fusR1") : step1
-    const merged: YellowSave = { ...mergedRaw, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null, ngplusUsed: true, run3Used: true, ngplusMaitreBeaten: false, run3StarterBase: "" }
+    const merged: YellowSave = { ...mergedRaw, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null, replayWorld: null, replayRun: null, replayReturn: null, ngplusUsed: true, run3Used: true, ngplusMaitreBeaten: false, run3StarterBase: "" }
     liveStash = null
     ngplusStash = null
     run3Stash = null
