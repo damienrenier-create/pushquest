@@ -178,6 +178,7 @@ export const MOVES: Record<string, MoveData> = {
     morsure_sombre: { id: "morsure_sombre", name: "Morsure Sombre", type: "TENEBRES", power: 40, accuracy: 100, pp: 25, description: "Une morsure d'ombre pure qui grignote l'essence de la cible. STAB Ténèbres d'appoint, tôt dans le learnset." },
     onde_obscure: { id: "onde_obscure", name: "Onde Obscure", type: "TENEBRES", power: 65, accuracy: 100, pp: 15, effect: { chance: 20, flinch: true }, description: "Une onde de ténèbres submerge la cible : bons dégâts spéciaux, 20% de chance d'apeurer." },
     devoreur_ombres: { id: "devoreur_ombres", name: "Dévoreur d'Ombres", type: "TENEBRES", power: 90, accuracy: 100, pp: 10, effect: { drainPct: 50 }, description: "Le prédateur dévore l'ombre de sa proie : gros dégâts Ténèbres et récupère la moitié des dégâts infligés. Signature ténébreuse." },
+    reflet_fatal: { id: "reflet_fatal", name: "Reflet Fatal", type: "TENEBRES", power: 85, accuracy: 100, pp: 10, effect: { chance: 20, statChanges: [{ target: "target", stat: "spc", stages: -1 }] }, description: "L'art sombre appris en terrassant le REFLET d'un rival : une onde ténébreuse qui retourne la noirceur de la cible contre elle — bons dégâts + 20 % de baisser son Spécial. CT60, exclusive aux duels." },
 }
 
 export function getMove(id: string): MoveData | null {

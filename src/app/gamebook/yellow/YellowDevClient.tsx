@@ -856,14 +856,20 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (duelResult.won) {
             recordDuelWin(opp.userId)
             addItem(DUEL_NEXUS_BALL_ID, 1)
+            // Remboursement au KO : plus le vainqueur a perdu de Daemons (galère), plus il récupère d'énergie dépensée.
+            const refund = Math.round(duelResult.energySpent * Math.min(6, duelResult.faints) / 6)
+            if (refund > 0) grantReps(refund)
+            // Drop 5 % : CT60 « Reflet Fatal » (inédite, jamais en vente). grantCt renvoie false si déjà possédée.
+            const ctDropped = Math.random() < 0.05 && grantCt("ct60")
+            // Énergie reversée au reflet = énergie dépensée, bornée comme le serveur ([30, 3000]) pour un affichage cohérent.
+            const energyToOpp = Math.max(30, Math.min(3000, Math.floor(duelResult.energySpent)))
             persistYellowSave()
-            // Partie C : cadeau croisé au VRAI joueur mirouté (best-effort, non bloquant) — il reçoit l'ÉNERGIE
-            //   que le vainqueur a dépensée dans le duel (au lieu d'un montant fixe).
+            // Partie C : cadeau croisé au VRAI joueur mirouté (best-effort, non bloquant) — il reçoit l'énergie du vainqueur.
             fetch("/api/gamebook/yellow/duel-gift", {
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ toUserId: opp.userId, fromNickname: nickname, energy: duelResult.energySpent }),
             }).catch(() => {})
-            showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, duelWinLines(opp.nickname))
+            showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, duelWinLines(opp.nickname, { refund, ctDropped, energyToOpp }))
         } else {
             grantReps(DUEL_LOSS_CONSOLE_REPS)
             persistYellowSave()

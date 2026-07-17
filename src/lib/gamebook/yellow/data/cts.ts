@@ -159,6 +159,9 @@ export const CTS: CtData[] = [
     // CT59 : Aromathérapie (utilitaire de SOIN d'équipe) — soigne TOUS les statuts de l'ÉQUIPE entière. Apprenable
     // par TOUS (universal), comme Repos/ct03. Distincte de Brume Sporale (ct35, reset des stats, inchangée).
     { id: "ct59", label: "CT59", moveId: "aromatherapie", price: 400, universal: true },
+    // CT60 : Reflet Fatal (TÉNÈBRES, spécial 85 + 20% -Spé) — comble le SEUL type sans CT (Ténèbres). INÉDITE :
+    //   drop 5% en battant le reflet d'un autre joueur (jamais en vente : gift). Apprenable Ténèbres + Spectre/Psy.
+    { id: "ct60", label: "CT60", moveId: "reflet_fatal", price: 0, gift: true, alsoTypes: ["SPECTRE", "PSY"] },
 ]
 
 /** CT-cadeaux EXCLUSIVES au run 2 (boss d'arène en New Game+). Invariant : JAMAIS obtenables autrement —

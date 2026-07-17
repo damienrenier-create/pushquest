@@ -118,8 +118,9 @@ interface BattleStoreState {
     /** Au moins un Daemon a une attaque EN ATTENTE d'apprentissage → prompt post-combat (façon Gen 1). */
     pendingLearn: boolean
     /** DUEL reflet (Viridian/arène eau) terminé : issue à traiter par l'UI (récompenses) ; null sinon.
-     *  `energySpent` = énergie dépensée par le VAINQUEUR dans ce duel → reversée au vrai joueur mirouté (cadeau croisé). */
-    duelResult: { won: boolean; energySpent: number } | null
+     *  `energySpent` = énergie dépensée par le VAINQUEUR (reversée au joueur mirouté) ; `faints` = nb de SES Daemons
+     *  mis K.O. dans le duel (plus il a galéré → plus il est remboursé). */
+    duelResult: { won: boolean; energySpent: number; faints: number } | null
     /** ZONE DE COMBAT : combat d'une série Frontier terminé → l'UI enchaîne la vague suivante / clôt la série.
      *  `energySpent` = énergie dépensée DANS ce combat (le Dôme diffère son remboursement à la fin du tournoi). */
     frontierResult: { won: boolean; energySpent: number } | null
@@ -887,7 +888,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // Raillerie d'ACE quand IL gagne (défaite du joueur contre ACE) → affichée à la sortie du combat.
     const aceLossTaunt = (isLose && storeState.trainer?.trainerId === ACE_TRAINER_ID) ? aceWinTaunt() : null
     // DUEL reflet : signale l'issue (gagné/perdu) → l'UI applique les récompenses post-combat.
-    const duelResult = storeState.trainer?.trainerId?.startsWith("duel:") ? { won: b.outcome === "win", energySpent: storeState.energySpent } : null
+    const duelResult = storeState.trainer?.trainerId?.startsWith("duel:") ? { won: b.outcome === "win", energySpent: storeState.energySpent, faints: b.player.team.filter((m) => m.currentHp <= 0).length } : null
     // ZONE DE COMBAT : issue d'une vague de série → l'UI enchaîne (win) ou clôt la série (lose).
     const frontierResult = storeState.trainer?.trainerId?.startsWith("frontier:") ? { won: b.outcome === "win", energySpent: storeState.energySpent } : null
     // NG+ : sacre du Maître EN New Game+ avec une ancienne équipe à affronter → il reste le combat de fin de Ligue.

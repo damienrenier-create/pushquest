@@ -20,7 +20,7 @@ describe("Duels reflets — limite 1 victoire par joueur-IA et par jour", () => 
         expect(s.duelWins).toEqual({ x: "2026-06-18" })
     })
     it("dialogues : victoire mentionne la HYPER Nexus-Ball, défaite propose 30 énergie", () => {
-        expect(duelWinLines("Bob").join(" ")).toContain("HYPER Nexus-Ball")
+        expect(duelWinLines("Bob", { refund: 120, ctDropped: true, energyToOpp: 200 }).join(" ")).toContain("HYPER Nexus-Ball")
         expect(duelLossLines("Bob").join(" ")).toContain("30")
     })
 })

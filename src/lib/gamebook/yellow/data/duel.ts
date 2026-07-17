@@ -31,8 +31,16 @@ const WIN_LINES: readonly string[] = [
     "Magnifique ! Tu as essoré le reflet de %O comme une botte de spaghettis. Régale-toi.",
     "Par tous les coudes de macaronis ! Le reflet de %O n'a pas tenu une louche face à toi.",
 ]
-export function duelWinLines(oppNick: string): string[] {
-    return [fill(pick(WIN_LINES), oppNick), "🎁 Pour ta bravoure : XP DOUBLÉE et une HYPER Nexus-Ball ! Ton adversaire, lui, récupère l'énergie que tu as dépensée…"]
+/** Dialogue de victoire DYNAMIQUE : le Dieu annonce chaque récompense réellement obtenue. */
+export function duelWinLines(oppNick: string, r: { refund: number; ctDropped: boolean; energyToOpp: number }): string[] {
+    const gifts = ["✨ XP DOUBLÉE", "🎁 une HYPER Nexus-Ball"]
+    if (r.refund > 0) gifts.push(`⚡ +${r.refund} énergie remboursée (tu as sué pour cette victoire !)`)
+    if (r.ctDropped) gifts.push("🌑 la CT60 « Reflet Fatal » — une relique INÉDITE des ténèbres !")
+    return [
+        fill(pick(WIN_LINES), oppNick),
+        "🎉 Pour ta bravoure : " + gifts.join(" · ") + " !",
+        `Et par équité de la Grande Marmite, le reflet de ${oppNick} récupère ${r.energyToOpp} énergie de ta sueur. Régale-toi, champion !`,
+    ]
 }
 
 // ── DÉFAITE : l'adversaire (reflet) te trashtalk puis te jette 30 énergie « par pitié » ──
