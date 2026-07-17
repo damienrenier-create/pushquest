@@ -8,18 +8,19 @@ import { useEffect, useState } from "react"
 import { type ScoreFactor } from "@/lib/gamebook/yellow/score/runScore"
 
 interface ScoreRow { nickname: string; score: number; wonAt: string | null; factors?: ScoreFactor[] | null; live?: boolean; leagueReps?: number }
-type TabId = "run3" | "run2" | "league"
-type Data = { gated?: boolean; run2: ScoreRow[]; run3: ScoreRow[] }
+type TabId = "run3" | "run2" | "league" | "duels"
+type Data = { gated?: boolean; run2: ScoreRow[]; run3: ScoreRow[]; duels: { nickname: string; wins: number }[] }
 
 const RUN_META: { id: TabId; label: string; unit: string; hint: string }[] = [
     { id: "run3", label: "🏆 RUN 3", unit: "pts", hint: "Σ des niveaux des Daemons ennemis vaincus (boss + Ligue). Le + haut gagne." },
     { id: "run2", label: "🏅 RUN 2", unit: "/1000", hint: "Note /1000 : % victoire, Pokédex, niveaux d'équipe, frugalité (énergie) & peu de pas. Joueurs ENCORE en run 2 = score live (maj à chaque connexion) ; joueurs ayant TERMINÉ = score final figé. Clique une entrée pour le détail des 5 axes." },
     { id: "league", label: "⚡ LIGUE", unit: "reps", hint: "L'ÉCONOME DE LA LIGUE : le moins de reps dépensés en combats DEPUIS ton 1er pas dans la Ligue gagne (moins = mieux). Non classé tant que tu n'y es pas entré." },
+    { id: "duels", label: "⚔️ DUELS", unit: "reflets", hint: "LE DUELLISTE : nombre de reflets d'autres joueurs battus (cumulé sur tous tes runs). Le + haut gagne." },
 ]
 
 export default function RunScoreboardPanel({ close }: { close: () => void }) {
     const [state, setState] = useState<"loading" | "ok" | "error">("loading")
-    const [data, setData] = useState<Data>({ run2: [], run3: [] })
+    const [data, setData] = useState<Data>({ run2: [], run3: [], duels: [] })
     const [tab, setTab] = useState<TabId>("run3")
     const [expanded, setExpanded] = useState<number | null>(null) // RUN 2 : entrée dépliée (détail des 5 axes)
 
@@ -30,7 +31,7 @@ export default function RunScoreboardPanel({ close }: { close: () => void }) {
                 const r = await fetch("/api/gamebook/yellow/run-scores")
                 const j = r.ok ? await r.json() : null
                 if (cancelled) return
-                setData({ gated: j?.gated, run2: j?.run2 ?? [], run3: j?.run3 ?? [] })
+                setData({ gated: j?.gated, run2: j?.run2 ?? [], run3: j?.run3 ?? [], duels: j?.duels ?? [] })
                 setState("ok")
             } catch { if (!cancelled) setState("error") }
         })()
@@ -44,7 +45,9 @@ export default function RunScoreboardPanel({ close }: { close: () => void }) {
         .filter((r) => (r.leagueReps ?? 0) > 0)
         .map((r) => ({ ...r, score: r.leagueReps ?? 0 }))
         .sort((a, b) => a.score - b.score)
-    const list = tab === "run3" ? data.run3 : tab === "league" ? leagueList : data.run2
+    // ⚔️ DUELS : reflets battus (cumul), déjà trié desc côté serveur → ScoreRow (score = victoires).
+    const duelsList: ScoreRow[] = data.duels.map((d) => ({ nickname: d.nickname, score: d.wins, wonAt: null }))
+    const list = tab === "run3" ? data.run3 : tab === "league" ? leagueList : tab === "duels" ? duelsList : data.run2
     const medal = (i: number) => (i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`)
 
     return (
@@ -71,6 +74,8 @@ export default function RunScoreboardPanel({ close }: { close: () => void }) {
                 {state === "ok" && !data.gated && list.length === 0 && (
                     tab === "league"
                         ? <div style={muted}>Personne n&apos;a encore livré de combat en Ligue (run 2).<br />Le plus économe en reps prendra la tête ! ⚡</div>
+                        : tab === "duels"
+                        ? <div style={muted}>Personne n&apos;a encore battu de reflet.<br />Va défier les doubles de tes potes (Viridian / arène eau) ! ⚔️</div>
                         : <div style={muted}>Aucun score {meta.label} pour l&apos;instant.<br />Sois le premier à finir ce concours ! {tab === "run3" ? "🏆" : "🏅"}</div>
                 )}
 
@@ -85,8 +90,10 @@ export default function RunScoreboardPanel({ close }: { close: () => void }) {
                                         onClick={() => { if (canExpand) setExpanded(open ? null : i) }}>
                                         <span style={rank}>{medal(i)}</span>
                                         <span style={name}>{r.nickname}</span>
-                                        <span title={r.live ? "score en direct (joueur encore dans le run)" : "score figé (run terminé)"}
-                                            style={{ fontSize: 8.5, opacity: 0.7, marginRight: 2, whiteSpace: "nowrap" }}>{r.live ? "🟢 live" : "⚪ figé"}</span>
+                                        {r.live !== undefined && (
+                                            <span title={r.live ? "score en direct (joueur encore dans le run)" : "score figé (run terminé)"}
+                                                style={{ fontSize: 8.5, opacity: 0.7, marginRight: 2, whiteSpace: "nowrap" }}>{r.live ? "🟢 live" : "⚪ figé"}</span>
+                                        )}
                                         <span style={score}>{r.score.toLocaleString("fr-FR")} <span style={unit}>{meta.unit}</span></span>
                                         {canExpand && <span style={{ opacity: 0.55, fontSize: 11, marginLeft: 2 }}>{open ? "▾" : "▸"}</span>}
                                     </div>

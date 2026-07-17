@@ -95,11 +95,12 @@ export async function GET() {
     const auth = await requireYellow()
     if (!auth.ok) return NextResponse.json({ error: "Forbidden" }, { status: auth.status })
     if (!(await viewerHasFinishedRun1(auth.userId))) {
-        return NextResponse.json({ ok: true, gated: true, run2: [], run3: [] }) // pas encore ≥5 badges run 1
+        return NextResponse.json({ ok: true, gated: true, run2: [], run3: [], duels: [] }) // pas encore ≥5 badges run 1
     }
 
     const run2Map = new Map<string, LeaderEntry>()
     const run3Map = new Map<string, LeaderEntry>()
+    const duelsMap = new Map<string, { nickname: string; wins: number }>() // classement « Duelliste » : reflets battus (cumul cross-run)
 
     // 1) PULL — recalcule depuis la save, MAIS uniquement pour le monde ACTIVEMENT joué (flags.activeWorld) → score
     //    réellement LIVE. On NE recalcule PAS un monde GELÉ : le Pokédex est global-cumulatif (norm() réécrit le
@@ -122,6 +123,10 @@ export async function GET() {
                 const r3 = run3FromWorld(f.run3World)
                 if (r3 !== null) run3Map.set(s.userId, { nickname, score: r3, wonAt: null, factors: null, live: true })
             }
+            // Duels : reflets battus = SOMME du compteur sur les 3 mondes (les duels se jouent surtout en run 1/2).
+            const dw = (w: unknown) => num((w as { stats?: { duelWinsTotal?: unknown } } | null | undefined)?.stats?.duelWinsTotal)
+            const duels = num((f.stats as { duelWinsTotal?: unknown } | undefined)?.duelWinsTotal) + dw(f.ngplusWorld) + dw(f.run3World)
+            if (duels > 0) duelsMap.set(s.userId, { nickname, wins: duels })
         }
     } catch { /* lecture saves impossible → on s'appuiera sur la table seule */ }
 
@@ -141,8 +146,9 @@ export async function GET() {
 
     const toList = (m: Map<string, LeaderEntry>) =>
         [...m.values()].sort((a, b) => b.score - a.score).map((e) => ({ nickname: e.nickname, score: e.score, wonAt: e.wonAt, factors: e.factors, live: e.live, leagueReps: e.leagueReps }))
+    const duels = [...duelsMap.values()].sort((a, b) => b.wins - a.wins)
 
-    return NextResponse.json({ ok: true, run2: toList(run2Map), run3: toList(run3Map) })
+    return NextResponse.json({ ok: true, run2: toList(run2Map), run3: toList(run3Map), duels })
 }
 
 // POST {run, score} — enregistre le score du joueur (garde le meilleur par run).

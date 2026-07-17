@@ -119,7 +119,7 @@ describe("NG+ — parse défensif des 2 mondes", () => {
 describe("stats de partie + pokerFirstGameDone — parse défensif", () => {
     it("save sans stats → tous les compteurs à 0 (rétro-compat)", () => {
         const s = parseSave({ version: 2 })
-        expect(s.stats).toEqual({ battles: 0, wins: 0, steps: 0, energySpent: 0, xpTotal: 0, hpDealt: 0, potionsUsed: 0, ballsUsed: 0, teamKos: 0, heals: 0, leagueEnergySpent: 0, run2BestGrade: 0 })
+        expect(s.stats).toEqual({ battles: 0, wins: 0, steps: 0, energySpent: 0, xpTotal: 0, hpDealt: 0, potionsUsed: 0, ballsUsed: 0, teamKos: 0, heals: 0, leagueEnergySpent: 0, run2BestGrade: 0, duelWinsTotal: 0 })
         expect(s.pokerFirstGameDone).toBe(false)
     })
     it("stats valides préservées ; négatif/garbage/décimal → normalisés", () => {

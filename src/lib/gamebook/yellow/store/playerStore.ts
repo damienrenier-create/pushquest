@@ -1043,7 +1043,7 @@ export function duelWonToday(userId: string): boolean {
 }
 /** Enregistre une victoire de duel du jour contre ce joueur-IA (verrouille jusqu'à demain). */
 export function recordDuelWin(userId: string): void {
-    st = { ...st, duelWins: { ...st.duelWins, [userId]: st.creditedThrough } }
+    st = { ...st, duelWins: { ...st.duelWins, [userId]: st.creditedThrough }, stats: { ...st.stats, duelWinsTotal: st.stats.duelWinsTotal + 1 } }
     emit()
 }
 
