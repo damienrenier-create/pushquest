@@ -11,12 +11,16 @@ function RegisterForm() {
     const promoCode = searchParams.get("promoCode") || ""
     // Lien d'invitation /register?invite=<code> → crée un compte INVITÉ (hors-concours).
     const invite = searchParams.get("invite") || ""
+    // PARRAINAGE /register?parrain=<pseudo> → le pseudo du parrain (contexte invité + choix du mode de jeu).
+    const parrain = searchParams.get("parrain") || ""
+    const referral = !!(parrain || invite)
 
     const [formData, setFormData] = useState({
         nickname: "",
         email: "",
         code: "",
     })
+    const [gameMode, setGameMode] = useState<"normal" | "easy" | "debutant">("normal")
     const [error, setError] = useState("")
     const [loading, setLoading] = useState(false)
 
@@ -34,6 +38,8 @@ function RegisterForm() {
                     ...formData,
                     promoCode,
                     invite,
+                    parrain,
+                    mode: gameMode,
                 }),
             })
 
@@ -72,11 +78,15 @@ function RegisterForm() {
                             Rejoindre l'équipe
                         </h1>
                         <p className="text-gray-500">Créez votre compte pour commencer</p>
-                        {invite && (
+                        {parrain ? (
+                            <p className="mt-3 inline-block bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full px-3 py-1 text-xs font-semibold">
+                                🎁 Parrainé par <b>{parrain}</b> — accès à Nexus Jaune Éclair (hors-concours)
+                            </p>
+                        ) : invite ? (
                             <p className="mt-3 inline-block bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-3 py-1 text-xs font-semibold">
                                 🎟️ Compte invité — accès à Nexus Jaune Éclair (hors-concours)
                             </p>
-                        )}
+                        ) : null}
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-5">
@@ -122,6 +132,25 @@ function RegisterForm() {
                                 placeholder="•••"
                             />
                         </div>
+
+                        {referral && (
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-700 block">Mode de jeu (Nexus)</label>
+                                <div className="grid gap-2">
+                                    {([
+                                        { id: "normal", emoji: "🏋️", title: "Normal", desc: "Ton énergie = tes vrais reps (pompes/squats)." },
+                                        { id: "easy", emoji: "😌", title: "Facile", desc: "3000 énergie au départ + 1 recharge de 3000 à sec (6000 en tout)." },
+                                        { id: "debutant", emoji: "🐣", title: "Débutant", desc: "1000 énergie qui se recharge 6× quand tu tombes à 0 (6000 en tout)." },
+                                    ] as const).map((m) => (
+                                        <button key={m.id} type="button" onClick={() => setGameMode(m.id)}
+                                            className={`text-left px-4 py-3 rounded-xl border-2 transition-all ${gameMode === m.id ? "border-indigo-500 bg-indigo-50" : "border-gray-200 hover:border-gray-300"}`}>
+                                            <div className="font-semibold text-gray-900 text-sm">{m.emoji} {m.title}</div>
+                                            <div className="text-xs text-gray-500 mt-0.5">{m.desc}</div>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         <button
                             type="submit"

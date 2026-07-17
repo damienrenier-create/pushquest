@@ -8,12 +8,22 @@ export async function POST(req: Request) {
     console.log("[DB_URL_SCHEME]", (process.env.DATABASE_URL || "").split(":")[0]);
     console.log("[DIRECT_URL_SCHEME]", (process.env.DIRECT_URL || "").split(":")[0]);
     try {
-        const { email, code, nickname, promoCode, invite } = await req.json()
+        const { email, code, nickname, promoCode, invite, parrain, mode } = await req.json()
 
         // Compte INVITÉ/AMI : créé via le lien /register?invite=<code>. Joue au
         // Chapitre 2 mais reste hors-concours (cf. isGuest). Code partagé par Sartay.
         const GUEST_INVITE_CODE = process.env.GUEST_INVITE_CODE || "nexus-ami-2026"
-        const isGuest = typeof invite === "string" && invite === GUEST_INVITE_CODE
+
+        // PARRAINAGE : /register?parrain=<pseudo> → le pseudo identifie le PARRAIN. Le filleul est un compte invité.
+        let sponsorId: string | null = null
+        if (typeof parrain === "string" && parrain.trim()) {
+            const sponsor = await prisma.user.findFirst({ where: { nickname: { equals: parrain.trim(), mode: "insensitive" } }, select: { id: true } })
+            sponsorId = sponsor?.id ?? null
+        }
+        const isGuest = (typeof invite === "string" && invite === GUEST_INVITE_CODE) || sponsorId !== null
+
+        // MODE de jeu Nexus (choisi à l'inscription) : "normal" (reps) / "easy" (2×3000) / "debutant" (6×1000).
+        const gameMode = typeof mode === "string" && ["normal", "easy", "debutant"].includes(mode) ? mode : "normal"
 
         if (!email || !code || !nickname) {
             return NextResponse.json(
@@ -62,6 +72,8 @@ export async function POST(req: Request) {
                 nickname,
                 onboardingStartedAt,
                 isGuest,
+                sponsorId,
+                gameMode,
             },
             select: {
                 id: true,

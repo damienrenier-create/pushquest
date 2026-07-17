@@ -57,6 +57,12 @@ model User {
   alterEgoId String?     @unique
   alterEgo   User?       @relation("AlterEgo", fields: [alterEgoId], references: [id])
   originalProfile User?  @relation("AlterEgo")
+  // PARRAINAGE (Nexus) : sponsorId = le parrain (qui a partagé son lien à l'inscription).
+  //   gameMode = mode choisi à l'inscription ("normal" reps / "easy" 2×3000 / "debutant" 6×1000).
+  sponsorId  String?
+  sponsor    User?       @relation("Sponsorship", fields: [sponsorId], references: [id])
+  sponsored  User[]      @relation("Sponsorship")
+  gameMode   String      @default("normal")
   onboardingStartedAt DateTime?
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt

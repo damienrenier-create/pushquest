@@ -13,6 +13,7 @@ export default function ProfilePage() {
     const [nickname, setNickname] = useState("")
     const [loading, setLoading] = useState(false)
     const [message, setMessage] = useState({ text: "", type: "" })
+    const [copiedRef, setCopiedRef] = useState(false)
 
     const [buyoutPaid, setBuyoutPaid] = useState(false)
     const [medicalCerts, setMedicalCerts] = useState<any[]>([])
@@ -207,6 +208,25 @@ export default function ProfilePage() {
                             {loading ? "Enregistrement..." : "Enregistrer"}
                         </button>
                     </form>
+
+                    {/* --- LIEN DE PARRAINAGE (Nexus) --- */}
+                    {nickname && (
+                        <div className="mt-12 pt-8 border-t border-gray-100">
+                            <h2 className="text-xl font-bold text-gray-900 mb-2">🎁 Mon lien de parrainage</h2>
+                            <p className="text-gray-500 text-sm mb-4">
+                                Partage-le : ton filleul te choisit comme parrain sur le Nexus, choisit son mode de jeu, et vous vous entraidez avec des bonus mutuels (arènes, shiny, dépannage d'énergie).
+                            </p>
+                            <div className="flex gap-2 items-center">
+                                <input readOnly value={`${typeof window !== "undefined" ? window.location.origin : ""}/register?parrain=${encodeURIComponent(nickname)}`}
+                                    className="flex-1 px-3 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 text-xs sm:text-sm font-mono truncate" />
+                                <button type="button"
+                                    onClick={() => { navigator.clipboard?.writeText(`${window.location.origin}/register?parrain=${encodeURIComponent(nickname)}`).then(() => { setCopiedRef(true); setTimeout(() => setCopiedRef(false), 2000) }).catch(() => {}) }}
+                                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-xl transition-all whitespace-nowrap">
+                                    {copiedRef ? "✓ Copié" : "Copier"}
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                     {/* --- GESTION DU DÉFI --- */}
                     <div className="mt-12 pt-8 border-t border-gray-100 space-y-8">
