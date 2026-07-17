@@ -18,14 +18,15 @@ function sample(mapId: string, opts: { leadLevel: number; levelCap: number; caug
 describe("Rencontres RUN 3 — pool inédit (RUN3_ZONES)", () => {
     it("Route Nord run 3 : espèces inédites présentes, pool run 1 absent", () => {
         const seen = sample("yellow_route_nord", { leadLevel: 15, levelCap: 30 })
-        for (const id of ["plumiot", "tamanpousse", "colibraise", "hibouh", "lavapetit", "goatiny"]) expect(seen.has(id), id).toBe(true)
-        // aucune espèce du pool run 1 non reprise (couperin/electroatiss/broussours)
-        for (const id of ["couperin", "electroatiss", "broussours"]) expect(seen.has(id), id).toBe(false)
+        for (const id of ["plumiot", "tamanpousse", "colibraise", "hibouh", "lavapetit", "revemante"]) expect(seen.has(id), id).toBe(true)
+        // pool run 1 non repris (couperin/electroatiss/broussours) + CRÉATIONS retirées (→ Grotte du Nexus puzzle)
+        for (const id of ["couperin", "electroatiss", "broussours", "guizer", "gavillus", "goatiny"]) expect(seen.has(id), id).toBe(false)
     })
 
     it("Grotte run 3 : Marmoterre RETIRÉ, starters run 1 présents, mottoche toujours niveau 5", () => {
         const seen = sample("yellow_grotte", { leadLevel: 20, levelCap: 30 })
         expect(seen.has("marmoterre")).toBe(false) // retiré → exclusif au troc Ruffiant→Marmoterre
+        for (const id of ["guizer", "shady"]) expect(seen.has(id), id).toBe(false) // créations retirées → Grotte du Nexus puzzle
         expect(seen.has("sporbeo")).toBe(true)
         expect(seen.has("gouttiny") || seen.has("feuillichot") || seen.has("braisille")).toBe(true) // clin d'œil aux starters run 1
         expect(seen.get("mottoche")).toBe(5) // levelFixed 5 (fodder)

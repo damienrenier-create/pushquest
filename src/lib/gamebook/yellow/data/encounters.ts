@@ -442,9 +442,9 @@ const RUN3_ZONES: Record<string, Zone> = {
             { speciesId: "hibouh", base: 8 }, { speciesId: "pyrozly", base: 7 },
             { speciesId: "jerbiwat", base: 5 }, { speciesId: "lavapetit", base: 5 },
             { speciesId: "nouillon", base: 3 }, { speciesId: "piouflot", base: 3 }, { speciesId: "ruffiant", base: 3 },
-            { speciesId: "revemante", base: 2 }, { speciesId: "goatiny", base: 2 }, { speciesId: "gavillus", base: 2 },
+            { speciesId: "revemante", base: 2 },
             { speciesId: "auroruff", base: 3 }, // anti-Dragon (remonté)
-            { speciesId: "guizer", base: 3 },   // lignée EAU/GLACE canonisée (→ Dalugazer → Moby D), thème glacé
+            // CRÉATIONS (Gavillus/Goatiny/Guizer) RETIRÉES du run 3 → réservées à la Grotte du Nexus (puzzle), à venir.
             { speciesId: "glacirex", base: 1, rare: true }, // Dragon/Glace, pépite
             { speciesId: "pantheon", base: 1, rare: true, catchOnce: true }, // 1 capture max (+ don d'ACE)
         ],
@@ -464,10 +464,7 @@ const RUN3_ZONES: Record<string, Zone> = {
             // trophée de la grotte — Glace/Eau anti-Dragon, UNIQUEMENT si le lead ≥ 35 (son niveau mini)
             { speciesId: "orcaline", base: 1, noEvolve: true, rare: true, minLeadLevel: 35 },
             { speciesId: "wistree", base: 2, noEvolve: true, rare: true, captureMult: 0.4 }, // Spectre/Plante rare & mystérieux (voleur d'éclat)
-            // lignée EAU/GLACE canonisée (Guizer → Dalugazer → Moby D) — base pilotée par speciesAtLevel (évo 22/40)
-            { speciesId: "guizer", base: 4 },
-            // lignée NORMAL/SPECTRE canonisée (Shady → Shade → Shadow, création de Franss) — évo 22/40 via speciesAtLevel
-            { speciesId: "shady", base: 3 },
+            // CRÉATIONS (Guizer & Shady) RETIRÉES du run 3 → réservées à la Grotte du Nexus (puzzle), à venir.
         ],
     },
     // CENTRALE PSY run 3 — DONJON 100% PSY : tout le roster psy (Nouillon/Vermissaint, Limaroche→Escargyle→
@@ -493,10 +490,7 @@ const RUN3_ZONES: Record<string, Zone> = {
             { speciesId: "hypnoppo", base: 12, levelRange: [18, 33] },                         // rare → Téléppo
             { speciesId: "karmaki", base: 12, noEvolve: true, levelRange: [28, 56] },          // rare, grande fourchette (mono)
             { speciesId: "omnhippo", base: 3, noEvolve: true, levelRange: [48, 52], catchOnce: true, captureMult: 0.5 }, // ultra-rare pépite
-            // création canonisée (Embi) — chat kung-fu PSY : maison naturelle = la Centrale PSY. Taux BASELINE (à affiner par Sartay).
-            { speciesId: "bidouzen", base: 25, levelRange: [8, 15] },                          // peu commun (base <16)
-            { speciesId: "bidouzen", base: 10, levelRange: [20, 33] },                         // rare → Medisciple (évo L16)
-            { speciesId: "karatame", base: 3, noEvolve: true, levelRange: [40, 52], captureMult: 0.5 }, // ultra-rare pépite (final)
+            // CRÉATION Bidouzen (Embi) RETIRÉE du run 3 → réservée à la Grotte du Nexus (puzzle), à venir.
         ],
     },
     // MAISON HANTÉE run 3 → DONJON 100% COMBAT (« dojo hanté ») : le roster Combat (Bouhbou natif + lignées
