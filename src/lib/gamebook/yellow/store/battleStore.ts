@@ -848,12 +848,12 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
         }
         if (lid === "y_ligue_maitre") {
             // RUN 2 : battre le Maître ne SACRE PAS encore. Le vrai boss final = l'ANCIENNE équipe.
-            //   → auto-soin + marqueur PERSISTANT (survit au refresh), et on enchaîne DIRECT sur ce combat
-            //   (pas de Hall of Fame ici). Le sacre a lieu à la VICTOIRE contre l'ancienne équipe (ngplus:final, plus bas).
+            //   → marqueur PERSISTANT (survit au refresh), et on enchaîne DIRECT sur ce combat (pas de Hall of Fame ici).
+            //   PAS DE SOIN (choix Sartay) : le « match surprise » contre ton ancienne équipe se joue DANS L'ÉTAT où tu
+            //   sors du combat contre le Maître (blessé/épuisé). Le sacre a lieu à la VICTOIRE (ngplus:final, plus bas).
             const ngplusMaitre = getActiveWorld() === "ngplus" && (getNgplusOldTeam()?.length ?? 0) > 0
             if (ngplusMaitre) {
                 setNgplusMaitreBeaten(true)
-                healAllTeam()
             } else {
                 setChampion()
                 const order = ["y_ligue_1_olga", "y_ligue_2_aldo", "y_ligue_3_agatha", "y_ligue_4_peter", "y_ligue_maitre"]
