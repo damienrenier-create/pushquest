@@ -220,10 +220,9 @@ export async function startNewGamePlus(starter: MonInstance, oldTeamFrozen: Cham
     // 4) 10000⚡ de départ + plafond aligné (raiseRepsCap AVANT grantReps → pas de rabotage).
     raiseRepsCap(NGPLUS_START_ENERGY - 1000) // cap 1000 → 10000
     grantReps(NGPLUS_START_ENERGY)           // reps → 10000
-    // 5) DAEMONFLÛTE offerte dès le départ du run 2 : le Champion garde son instrument dans le sac
-    //    (Sylvebarbe / Zone de Combat accessibles dès le NG+, plus besoin d'abandonner pour l'avoir).
-    addItem("daemonflute", 1)
-    // 6) Flush immédiat (top-level = monde LIVE inchangé → garde-fou OK).
+    // NB : la DAEMONFLÛTE n'est PLUS donnée au départ du run 2. Elle se MÉRITE : le Prof. CHEN la remet quand on
+    //   redevient Champion (Ligue run 2 finie, isChampion=true) → Sylvebarbe / Zone de Combat gagnés, pas offerts.
+    // 5) Flush immédiat (top-level = monde LIVE inchangé → garde-fou OK).
     await persistNow()
     return true
 }
