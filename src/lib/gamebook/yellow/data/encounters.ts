@@ -493,6 +493,10 @@ const RUN3_ZONES: Record<string, Zone> = {
             { speciesId: "hypnoppo", base: 12, levelRange: [18, 33] },                         // rare → Téléppo
             { speciesId: "karmaki", base: 12, noEvolve: true, levelRange: [28, 56] },          // rare, grande fourchette (mono)
             { speciesId: "omnhippo", base: 3, noEvolve: true, levelRange: [48, 52], catchOnce: true, captureMult: 0.5 }, // ultra-rare pépite
+            // création canonisée (Embi) — chat kung-fu PSY : maison naturelle = la Centrale PSY. Taux BASELINE (à affiner par Sartay).
+            { speciesId: "bidouzen", base: 25, levelRange: [8, 15] },                          // peu commun (base <16)
+            { speciesId: "bidouzen", base: 10, levelRange: [20, 33] },                         // rare → Medisciple (évo L16)
+            { speciesId: "karatame", base: 3, noEvolve: true, levelRange: [40, 52], captureMult: 0.5 }, // ultra-rare pépite (final)
         ],
     },
     // MAISON HANTÉE run 3 → DONJON 100% COMBAT (« dojo hanté ») : le roster Combat (Bouhbou natif + lignées
