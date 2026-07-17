@@ -316,14 +316,15 @@ export interface YellowStats {
     leagueEnergySpent: number // reps dépensés en COMBAT DE LIGUE (attaques face à un y_ligue_*) — volet score run 2/3. Non rétroactif (compteur ajouté en cours de route → 0 pour ceux déjà en Ligue).
     run2BestGrade: number     // meilleur SCORE GLOBAL /1000 atteint pendant le run 2 (PIC : la note n'est pas monotone) — montré au recap de fin de run 2. Per-world.
     duelWinsTotal: number     // reflets d'autres joueurs battus (cumul, per-world → SOMMÉ sur les mondes au leaderboard « Duelliste »).
+    modeFillsUsed: number      // PARRAINAGE — modes "easy"/"debutant" : nombre de « remplissages » d'énergie consommés (le crédit de départ compte pour 1). Ignoré en mode "normal" (énergie = vrais reps).
 }
 export function emptyYellowStats(): YellowStats {
-    return { battles: 0, wins: 0, steps: 0, energySpent: 0, xpTotal: 0, hpDealt: 0, potionsUsed: 0, ballsUsed: 0, teamKos: 0, heals: 0, leagueEnergySpent: 0, run2BestGrade: 0, duelWinsTotal: 0 }
+    return { battles: 0, wins: 0, steps: 0, energySpent: 0, xpTotal: 0, hpDealt: 0, potionsUsed: 0, ballsUsed: 0, teamKos: 0, heals: 0, leagueEnergySpent: 0, run2BestGrade: 0, duelWinsTotal: 0, modeFillsUsed: 0 }
 }
 function parseStats(raw: unknown): YellowStats {
     const o = (raw ?? {}) as Record<string, unknown>
     const n = (v: unknown) => (typeof v === "number" && isFinite(v) ? Math.max(0, Math.floor(v)) : 0)
-    return { battles: n(o.battles), wins: n(o.wins), steps: n(o.steps), energySpent: n(o.energySpent), xpTotal: n(o.xpTotal), hpDealt: n(o.hpDealt), potionsUsed: n(o.potionsUsed), ballsUsed: n(o.ballsUsed), teamKos: n(o.teamKos), heals: n(o.heals), leagueEnergySpent: n(o.leagueEnergySpent), run2BestGrade: n(o.run2BestGrade), duelWinsTotal: n(o.duelWinsTotal) }
+    return { battles: n(o.battles), wins: n(o.wins), steps: n(o.steps), energySpent: n(o.energySpent), xpTotal: n(o.xpTotal), hpDealt: n(o.hpDealt), potionsUsed: n(o.potionsUsed), ballsUsed: n(o.ballsUsed), teamKos: n(o.teamKos), heals: n(o.heals), leagueEnergySpent: n(o.leagueEnergySpent), run2BestGrade: n(o.run2BestGrade), duelWinsTotal: n(o.duelWinsTotal), modeFillsUsed: n(o.modeFillsUsed) }
 }
 
 const LAB_DEFI_KINDS: LabDefiKind[] = ["pushup1h", "squat150", "quota2x", "ct"]

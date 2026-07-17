@@ -3,7 +3,7 @@
 // Nexus Jaune Éclair — pont entre les stores (joueur + Pokédex) et l'API de save.
 // Charge au démarrage, puis auto-sauvegarde (débouncé) à chaque changement.
 
-import { getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, bankReps, claimWelcomeGift, claimSpagGift, applySaiyanResults, resetForIntro, reregisterCustomDaemons, getActiveWorld, setActiveWorld, startNgPlusWorld, startRun3World, raiseRepsCap, grantReps, addItem, setBerrySecretKnown } from "./playerStore"
+import { getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, bankReps, claimWelcomeGift, claimSpagGift, applySaiyanResults, resetForIntro, reregisterCustomDaemons, getActiveWorld, setActiveWorld, startNgPlusWorld, startRun3World, raiseRepsCap, grantReps, addItem, setBerrySecretKnown, ensureModeStartGrant } from "./playerStore"
 import { getPokedex, hydratePokedex, subscribePokedex } from "./pokedexStore"
 import { parseSave, emptySave, type YellowSave, type ChampionMon, SAVE_VERSION } from "../storage/save"
 import type { StoredCustomDaemon } from "../create/customSpecies"
@@ -538,6 +538,9 @@ export async function resetYellowChapter(): Promise<void> {
                 }
             }
         } catch { /* hors-ligne : au moins les cadeaux de bienvenue sont crédités */ }
+        // PARRAINAGE easy/debutant : nouvelle partie → recrédite le remplissage d'énergie de DÉPART (resetForIntro
+        // a remis modeFillsUsed à 0). No-op en mode normal.
+        ensureModeStartGrant()
         await persistIntentionalReset() // reset VOLONTAIRE → contourne le garde-fou anti-écrasement (le backup a déjà été fait)
     } finally {
         suppressAutosave = false // réarme l'autosave normal pour la nouvelle partie

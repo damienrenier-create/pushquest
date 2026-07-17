@@ -208,6 +208,59 @@ export function useActiveWorld(): "live" | "ngplus" | "run3" {
     return useSyncExternalStore(subscribePlayer, getActiveWorld, () => "live")
 }
 
+// === PARRAINAGE — MODES DE JEU (énergie) ===
+// Choisi à l'inscription (User.gameMode), transmis par le client APRÈS résolution du compte, AVANT le
+// chargement de la save (sinon bankReps créditerait les vrais reps d'un compte easy/debutant).
+//  - "normal"   : énergie = vrais reps (bankReps) — comportement historique, seuls comptes concernés = les 7 potes.
+//  - "easy"     : 3000 au départ + 1 recharge de 3000 à sec  → 2 remplissages = 6000 en tout.
+//  - "debutant" : 1000 au départ + 5 recharges de 1000 à sec → 6 remplissages = 6000 en tout.
+// La recharge se déclenche quand l'énergie ne suffit plus pour agir (spendReps) ou tombe pile à 0, tant qu'il
+// reste des remplissages (compteur `stats.modeFillsUsed`, persisté). Modes actifs UNIQUEMENT sur le monde live.
+export type GameMode = "normal" | "easy" | "debutant"
+let gameMode: GameMode = "normal"
+export function setGameMode(m: string | null | undefined) { gameMode = m === "easy" || m === "debutant" ? m : "normal" }
+export function getGameMode(): GameMode { return gameMode }
+
+const MODE_CFG: Record<GameMode, { fill: number; maxFills: number }> = {
+    normal: { fill: 0, maxFills: 0 },
+    easy: { fill: 3000, maxFills: 2 },
+    debutant: { fill: 1000, maxFills: 6 },
+}
+/** Remplissages d'énergie restants pour les modes easy/debutant (0 en normal). Pour l'affichage. */
+export function modeFillsRemaining(): number {
+    const cfg = MODE_CFG[gameMode]
+    if (cfg.fill <= 0) return 0
+    return Math.max(0, cfg.maxFills - (st.stats.modeFillsUsed ?? 0))
+}
+/** Montant du remplissage du mode (0 en normal) — pour l'affichage. */
+export function modeFillAmount(): number { return MODE_CFG[gameMode].fill }
+
+// Événement de recharge à consommer par l'UI (toast). Montant du dernier remplissage, ou null.
+let lastModeRecharge: number | null = null
+export function consumeModeRechargeEvent(): number | null { const v = lastModeRecharge; lastModeRecharge = null; return v }
+
+/** easy/debutant, monde live : effectue UN remplissage d'énergie s'il en reste (remonte à `fill`, relève le
+ *  plafond au besoin). Renvoie true si rechargé. No-op en normal / hors live / budget épuisé. */
+function tryModeRecharge(): boolean {
+    if (activeWorld !== "live") return false
+    const cfg = MODE_CFG[gameMode]
+    if (cfg.fill <= 0) return false
+    const used = st.stats.modeFillsUsed ?? 0
+    if (used >= cfg.maxFills) return false
+    st = { ...st, reps: Math.max(st.reps, cfg.fill), repsCap: Math.max(st.repsCap, cfg.fill), stats: { ...st.stats, modeFillsUsed: used + 1 } }
+    lastModeRecharge = cfg.fill
+    emit()
+    return true
+}
+
+/** À l'arrivée (après chargement / nouvelle partie) : crédite le remplissage de DÉPART des modes easy/debutant,
+ *  une seule fois (idempotent via modeFillsUsed>0). No-op en normal ou si déjà démarré. */
+export function ensureModeStartGrant(): void {
+    if (MODE_CFG[gameMode].fill <= 0) return
+    if ((st.stats.modeFillsUsed ?? 0) > 0) return
+    tryModeRecharge()
+}
+
 /** NG+ : incrémente le compteur de combats (fenêtre d'abandon = ≤ NGPLUS_ABANDON_LIMIT). No-op hors NG+. */
 export function incNgplusBattles() {
     if (activeWorld !== "ngplus") return
@@ -758,10 +811,12 @@ export function walletBalance(): number {
 
 /** Dépense des reps (boutique OU attaque). Renvoie false si solde insuffisant. */
 export function spendReps(n: number): boolean {
+    if (st.reps < n) tryModeRecharge()   // PARRAINAGE easy/debutant à sec : recharge avant de refuser l'action
     if (st.reps < n) return false
     st = { ...st, reps: st.reps - Math.floor(n) }
     bumpStat("energySpent", Math.floor(n)) // STAT : énergie dépensée (attaques + boutique + casino)
     emit()
+    if (st.reps <= 0) tryModeRecharge()   // épuisé pile → recharge immédiate pour la prochaine action
     return true
 }
 
@@ -818,6 +873,8 @@ export function bankReps(totalToDate: number, throughYesterday: number, today?: 
     // RUN 3 : les vraies pompes ne donnent PAS d'énergie (elles comptent pour les points Saiyan uniquement).
     // Le high-water mark réel reste porté par les mondes run 1 / run 2 → conservé à la fusion.
     if (activeWorld === "run3") return
+    // PARRAINAGE easy/debutant : énergie DÉCOUPLÉE des vrais reps (pool à remplissages) → pas de crédit reps.
+    if (gameMode !== "normal") return
     const tot = Math.max(0, Math.floor(totalToDate))
     let banked = st.repsBankedTotal
     if (banked < 0) banked = Math.max(0, Math.floor(throughYesterday)) // init migration / 1re fois

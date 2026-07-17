@@ -57,7 +57,7 @@ import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_L
 import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/gamebook/yellow/data/labDialogues"
 import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, getNgplusOldTeam, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3 } from "@/lib/gamebook/yellow/store/saveManager"
 import { customStarterSpeciesId, type StoredCustomDaemon } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, releaseFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, releaseFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent } from "@/lib/gamebook/yellow/store/playerStore"
 import { computeRunScores, leaderboardFactors, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
 import { run3Score, run3MaxScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
@@ -189,7 +189,7 @@ function readFrontierSnap(): FrontierSnap | null {
     } catch { clearFrontierSnap(); return null }
 }
 
-export default function YellowDevClient({ userId = "", isCreator = false, nickname = "" }: { userId?: string; isCreator?: boolean; nickname?: string }) {
+export default function YellowDevClient({ userId = "", isCreator = false, nickname = "", gameMode = "normal" }: { userId?: string; isCreator?: boolean; nickname?: string; gameMode?: string }) {
     const move = useGameStore((s) => s.move)
     const mapPlayer = useGameStore((s) => s.player)
     const pressA = useGameStore((s) => s.pressA)
@@ -340,6 +340,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [showIntro, setShowIntro] = useState(false)
     const [pastaPick, setPastaPick] = useState(false)
     const [toast, setToast] = useState<string | null>(null)
+    // PARRAINAGE (modes easy/debutant) — feedback quand le pool d'énergie se recharge à sec (spendReps).
+    useEffect(() => {
+        const amt = consumeModeRechargeEvent()
+        if (amt) setToast(`🔋 Énergie rechargée : +${amt} ⚡ (mode assisté)`)
+    }, [player.reps, player.stats.modeFillsUsed])
     const [renaming, setRenaming] = useState(false)
     const [renameText, setRenameText] = useState("")
     const [bagItem, setBagItem] = useState<string | null>(null)
@@ -580,7 +585,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     useEffect(() => {
         let cancelled = false
         ; (async () => {
+            // PARRAINAGE — le mode de jeu est fixé AVANT le chargement : sinon bankReps (dans loadYellowSave)
+            // créditerait les vrais reps d'un compte easy/debutant (énergie découplée en modes assistés).
+            setGameMode(gameMode)
             await loadYellowSave()
+            // easy/debutant : crédite le remplissage d'énergie de DÉPART (idempotent — une seule fois par run).
+            if (!cancelled) ensureModeStartGrant()
             initAutosave()
             // #8 — ANTI-FUITE : un combat (dresseur/sauvage) interrompu par un refresh est REPRIS tel
             // quel au lieu de valoir une fuite gratuite. No-op s'il n'y a rien à reprendre.
