@@ -5,7 +5,7 @@
 // de notre niveau), placés sur les cases libres de l'arène — uniquement si on a TOUS les badges.
 
 import { useEffect, useMemo, useState } from "react"
-import { ARENA_MAPS, ARENA_POSITIONS, ARENA_OPPONENTS, ROAMING_ARENA_MAPS, roamingSpots, rankClosest, arenaActive, mirrorName, type ArenaMode, type RegistryPlayer } from "../data/playerArena"
+import { ARENA_MAPS, ARENA_POSITIONS, ARENA_OPPONENTS, ROAMING_ARENA_MAPS, roamingSpots, rankClosest, arenaActive, mirrorName, registerRegistryCustoms, type ArenaMode, type RegistryPlayer } from "../data/playerArena"
 
 export interface ArenaOpponent {
     userId: string
@@ -31,7 +31,14 @@ export function usePlayerArena(mapId: string, badges: readonly string[], myUserI
         let cancel = false
         fetch("/api/gamebook/yellow/registry")
             .then((r) => (r.ok ? r.json() : Promise.reject(new Error("http"))))
-            .then((j) => { if (!cancel) setPlayers((j.players ?? []) as RegistryPlayer[]) })
+            .then((j) => {
+                if (cancel) return
+                const players = (j.players ?? []) as RegistryPlayer[]
+                // Enregistre les Daemons CUSTOM des adversaires AVANT de bâtir les reflets → leur espèce se résout
+                //   (sprite + combat), au lieu d'être jetée (Franss/Shady & co. apparaissent enfin).
+                registerRegistryCustoms(players)
+                setPlayers(players)
+            })
             .catch(() => { if (!cancel) setPlayers([]) })
         return () => { cancel = true }
     }, [active, mapId])

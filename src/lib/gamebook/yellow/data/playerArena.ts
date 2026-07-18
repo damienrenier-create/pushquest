@@ -9,7 +9,8 @@
 // rendu (sprites cliquables) et le combat IA se branchent côté UI.
 
 import { createMonInstance } from "../battle/factory"
-import { getSpecies, SPECIES } from "./species"
+import { getSpecies, SPECIES, registerCustomSpecies } from "./species"
+import { buildCustomSpecies, type StoredCustomDaemon } from "../create/customSpecies"
 import { POKE_TYPES, type PokeType, type MonInstance } from "../battle/types"
 import { typeEffectiveness } from "../battle/typeChart"
 import { YELLOW_MAPS } from "../maps"
@@ -24,9 +25,19 @@ export interface RegistryPlayer {
     nickname: string
     isGuest?: boolean
     team: RegistryMon[]
+    customDaemons?: StoredCustomDaemon[] // specs des Daemons CUSTOM du joueur → à enregistrer pour résoudre son reflet
     badges?: string[]
     favoriteDaemon?: string // espèce la + jouée (pvpStats.daemonUse) → le miroir MÈNE avec (habitudes)
     favoriteMove?: string   // attaque la + jouée (réservé à une future couche de mimétisme de moves)
+}
+
+/** Enregistre les Daemons CUSTOM de tous les joueurs de la registry → getSpecies résout leurs reflets (sprite +
+ *  combat) au lieu de les JETER (buildHubTeam/buildMirrorTeam filtrent les espèces inconnues). Idempotent (ids
+ *  custom_<owner>_... distincts par joueur, ré-enregistrement = même spec). Best-effort (une spec cassée est ignorée). */
+export function registerRegistryCustoms(players: RegistryPlayer[]): void {
+    for (const p of players) for (const d of (p.customDaemons ?? [])) {
+        try { registerCustomSpecies(buildCustomSpecies(d.spec, d.ownerId)) } catch { /* spec illégale → ignorée */ }
+    }
 }
 
 /** Nombre d'adversaires affichés dans une arène (les plus proches de notre niveau). */

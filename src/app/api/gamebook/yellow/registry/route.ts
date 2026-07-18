@@ -49,6 +49,9 @@ export async function GET() {
                 nickname: r.user?.nickname ?? "?",
                 isGuest: r.user?.isGuest === true,
                 team: activeTeam.map((m) => ({ speciesId: m.speciesId, level: m.level, nickname: m.nickname ?? null })),
+                // DAEMONS CUSTOM du joueur (specs) → le SPECTATEUR les enregistre pour RÉSOUDRE l'espèce (sprite +
+                //   combat du reflet) au lieu de la jeter. Sans ça, un Daemon custom/canonisé d'un autre joueur = MISSINGNO.
+                customDaemons: s.customDaemons ?? [],
                 dexCaught: s.pokedex.caught.length,
                 badges: s.badges,
                 pvp: { wins: s.pvpStats.wins, losses: s.pvpStats.losses },
