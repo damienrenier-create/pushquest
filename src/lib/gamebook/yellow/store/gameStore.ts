@@ -189,8 +189,9 @@ function tryLaunchTrainer(trainerId: string, isRematch = false): ActiveDialogue 
     // Rival de route (Léo/Mia) : niveau d'un garde de l'arène la plus récemment battue. Leurs
     // Daemons ÉVOLUENT au stade correspondant à ce niveau (speciesAtLevel enchaîne les évolutions).
     const scaledLvl = trainer.scaleWithBadges ? arenaScaledLevel(getPlayerSave().badges) : null
-    const ngplus = getActiveWorld() === "ngplus"
-    const run3 = getActiveWorld() === "run3"
+    // REJEU : effectiveRunWorld() → un rejeu run 2/3 fielde bien les équipes d'arène re-typées du run rejoué (pas run 1).
+    const ngplus = effectiveRunWorld() === "ngplus"
+    const run3 = effectiveRunWorld() === "run3"
     // Rematch (match retour) → 2e équipe ; sinon l'équipe de base.
     let specs = isRematch && trainer.rematch ? trainer.rematch.team : trainer.team
     // NG+ REVANCHE (combat SÉPARÉ run 2) : re-parler à un dresseur d'arène déjà battu (isRematch) lance la
@@ -673,11 +674,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     dayKey: new Date().toISOString().slice(0, 10), // rotation quotidienne des types (hautes herbes)
                     // GAMIN : ×2 le légendaire de la plaine dans SA fenêtre — RUN 1 Goshendofy la NUIT (21h+),
                     // RUN 2 (NG+) Ukognos à l'AUBE (5h-11h). Gate : confidence entendue (goshHintHeard, par monde).
-                    goshBoost: (getActiveWorld() === "ngplus" ? isHhKidDawn(new Date().getHours()) : isHhKidNight(new Date().getHours())) && getPlayerSave().goshHintHeard,
+                    goshBoost: (effectiveRunWorld() === "ngplus" ? isHhKidDawn(new Date().getHours()) : isHhKidNight(new Date().getHours())) && getPlayerSave().goshHintHeard,
                     goshCaught: getPokedex().caught.includes("goshendofy"), // déjà capturé → ne réapparaît plus jamais
                     caughtSpecies: getPokedex().caught, // gate les entrées catchOnce (ex. Pyropanthe : 1 seule capture)
-                    ngplus: getActiveWorld() === "ngplus", // NG+ : bascule sur les pools RUN 2 (Route Nord / Grotte re-mixées)
-                    run3: getActiveWorld() === "run3",      // RUN 3 : pools RUN3_ZONES (espèces inédites Route Nord / Grotte)
+                    // REJEU : effectiveRunWorld() → un rejeu run 2/3 rencontre bien les espèces EXCLUSIVES du run rejoué (but = compléter le Pokédex).
+                    ngplus: effectiveRunWorld() === "ngplus", // NG+ : bascule sur les pools RUN 2 (Route Nord / Grotte re-mixées)
+                    run3: effectiveRunWorld() === "run3",      // RUN 3 : pools RUN3_ZONES (espèces inédites Route Nord / Grotte)
                     champion: getPlayerSave().isChampion,   // LIVE post-Ligue → rattrapage des inédits run 3 (champ + Grotte)
                     run3Used: getPlayerSave().run3Used,     // run 3 déjà fait → rattrapage RARE (sinon ULTRA-RARE : teaser)
                 })
@@ -688,7 +690,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     //   apparitions ; une capture stoppe le roaming (goshCaught-like). Compte comme UNE apparition.
                     let spawn = wild
                     const p = getPlayerSave()
-                    const mimimoyWorld = getActiveWorld() === "live" || getActiveWorld() === "run3"
+                    const mimimoyWorld = effectiveRunWorld() === "live" || effectiveRunWorld() === "run3"
                     // Ne JAMAIS écraser un shiny ni un légendaire/surprise (hiddenUntilCaught : Goshendofy…) par Mimimoy.
                     const precious = wild.shiny || !!getSpecies(wild.speciesId)?.hiddenUntilCaught
                     if (!precious && mimimoyWorld && p.mimimoyReturned && p.mimimoyAppearances < 10 && !getPokedex().caught.includes("mimimoy")) {
@@ -701,7 +703,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     }
                     // GARANTIE Centrale Psy (run 3) : compte les rencontres du passage, marque les exclusivités VUES,
                     // et FORCE une non-capturée/non-vue dès la 9e/10e rencontre (Hypnoppo puis Karmaki). Vu ⇒ stop.
-                    if (getActiveWorld() === "run3" && next.mapId === "yellow_centrale") {
+                    if (effectiveRunWorld() === "run3" && next.mapId === "yellow_centrale") {
                         run3CentralePity.count++
                         if (spawn.speciesId === "hypnoppo") run3CentralePity.hSeen = true
                         if (spawn.speciesId === "karmaki") run3CentralePity.kSeen = true
@@ -1241,7 +1243,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             // RUN 3 : le boss d'arène n'est PAS le PNJ d'origine (Druide, …) mais l'ÉQUIPE GELÉE d'un vrai joueur
             //   (champion des runs précédents). On reframe l'intro ET le nom → le champion, pas le Druide. Pas de
             //   revanche en run 3 → une réplique post-victoire si déjà battu.
-            const r3boss = getActiveWorld() === "run3" ? run3ArenaForBoss(trainer.id) : null
+            const r3boss = effectiveRunWorld() === "run3" ? run3ArenaForBoss(trainer.id) : null
             if (r3boss) {
                 const champName = RUN3_BOSS_TEAMS[r3boss.badge]?.nickname ?? trainer.name
                 if (isTrainerDefeated(trainer.id)) {

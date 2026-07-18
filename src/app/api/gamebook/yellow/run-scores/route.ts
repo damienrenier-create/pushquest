@@ -235,10 +235,17 @@ export async function POST(req: NextRequest) {
         if (rows.length === 0) {
             await rs.create({ data: { userId: auth.userId, nickname: me.nickname, run, score, factors: factors ?? undefined } })
         } else {
-            // Ligne conservée : note /1000 = la PLUS RÉCENTE (rows[0], écrase) ; run3(bis) = celle du MEILLEUR score.
-            const keep = isRun3Kind(run) ? rows.reduce((a, b) => (b.score > a.score ? b : a)) : rows[0]
-            const newScore = isRun3Kind(run) ? Math.max(keep.score, score) : score // /1000 écrase, run3 ne régresse jamais
-            await rs.update({ where: { id: keep.id }, data: { score: newScore, nickname: me.nickname, wonAt: new Date(), factors: factors ?? undefined } })
+            // MONOTONE (garde le MEILLEUR) pour run3 ET tous les rejeux « ...bis » (une bulle = une tentative TERMINÉE,
+            //   jetée à la sortie → sa ligne de table EST le score, donc un rejeu trivial ne doit pas écraser un bon rejeu).
+            //   Seul le run2 ORIGINAL reste keep-latest (le GET le recalcule EN LIVE depuis ngplusWorld → non destructif).
+            const monotone = isRun3Kind(run) || run.endsWith("bis")
+            const keep = monotone ? rows.reduce((a, b) => (b.score > a.score ? b : a)) : rows[0]
+            const newScore = monotone ? Math.max(keep.score, score) : score
+            // Ne met à jour les facteurs QUE si le nouveau score est retenu (sinon on garderait ceux d'un rejeu perdant).
+            const takeNew = !monotone || score >= keep.score
+            const data: Record<string, unknown> = { score: newScore, nickname: me.nickname, wonAt: new Date() }
+            if (takeNew && factors) data.factors = factors
+            await rs.update({ where: { id: keep.id }, data })
             if (rows.length > 1) await rs.deleteMany({ where: { userId: auth.userId, run, id: { not: keep.id } } }) // écrase les doublons
         }
         return NextResponse.json({ ok: true })

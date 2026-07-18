@@ -459,6 +459,8 @@ export async function startRun3(starter: MonInstance): Promise<boolean> {
 export async function startReplay(run: "run1" | "run2" | "run3", starter: MonInstance | null = null): Promise<boolean> {
     const cur = getActiveWorld()
     if (cur === "replay") return false // déjà en rejeu
+    // run1 : énergie = vrais reps → on REPORTE le pool d'énergie COURANT du joueur dans la bulle (capté AVANT le reset).
+    const carryReps = run === "run1" ? getPlayer().reps : 0
     // 1) Stash le monde réel ACTIF dans son slot canonique (les 2 autres réels sont déjà stashés).
     const activeNude = activeWorldSave()
     if (cur === "live") liveStash = liveWorldOf(activeNude)
@@ -477,7 +479,11 @@ export async function startReplay(run: "run1" | "run2" | "run3", starter: MonIns
     // 3) Énergie de départ selon le run rejoué (mêmes réglages que les vrais starts ; runMode() applique les règles).
     if (run === "run2") { raiseRepsCap(NGPLUS_START_ENERGY - 1000); grantReps(NGPLUS_START_ENERGY) }       // NG+ = 10000
     else if (run === "run3") { raiseRepsCap(RUN3_ENERGY_CAP - 1000); grantReps(RUN3_START_ENERGY, true) }   // run 3 = 500 (source unique)
-    // run1 : énergie = vrais reps (bankReps au prochain player-stats) → rien à créditer ici.
+    else { // run1 : reporte l'énergie réelle (relève le cap au besoin) + cadeaux de bienvenue → jouable dès le départ (sinon 0⚡).
+        if (carryReps > 1000) raiseRepsCap(carryReps - 1000)
+        claimWelcomeGift(); claimSpagGift() // +100 / +150 (une fois par monde : la bulle est neuve)
+        if (carryReps > 0) grantReps(carryReps)
+    }
     // 4) Flush immédiat (les champs plats = run 1 réel inchangés → garde-fou anti-wipe OK).
     await persistNow()
     return true

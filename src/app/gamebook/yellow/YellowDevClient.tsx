@@ -890,6 +890,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // croisé serveur au vrai joueur). Défaite : trashtalk de l'adversaire + 30 énergie « par pitié ».
     useEffect(() => {
         if (!duelResult || battle || evolutions.length > 0) return
+        // REJEU : un duel-reflet joué dans une bulle ne reverse PAS d'énergie au VRAI adversaire (POST duel-gift) et
+        //   ne compte pas — sinon faucet d'énergie inter-comptes + contournement du cap « 1 victoire/jour » (duelWins
+        //   repart à zéro dans la bulle). On clôt le résultat sans aucun effet.
+        if (activeWorld === "replay") { clearDuelResult(); duelOppRef.current = null; return }
         const opp = duelOppRef.current
         duelOppRef.current = null
         clearDuelResult()
@@ -1015,6 +1019,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const forcedCreatorRecoveredRef = useRef(false)
     useEffect(() => {
         if (forcedCreatorRecoveredRef.current || creatorOpen || dialogue || battle || evolutions.length > 0 || championRun) return
+        // REJEU : ne JAMAIS rouvrir le créateur forcé dans une bulle (un rejeu run 1 rend isChampion=true & ngplusUsed=false
+        //   → sinon un Daemon créé fuiterait dans le vrai monde via le Pokédex/customDaemons globaux). Cf. sacre l.3409.
+        if (activeWorld === "replay") return
         if (player.isChampion && !player.ngplusUsed && (player.customDaemons?.length ?? 0) === 0) {
             forcedCreatorRecoveredRef.current = true
             setForcedCreator(true)
@@ -1060,6 +1067,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const arenaReportedRef = useRef(false)
     useEffect(() => {
         if (!arenaRun) { arenaReportedRef.current = false; return }
+        // REJEU : une conquête d'arène « bis » ne se grave PAS au Hall of Fame d'arène RÉEL (partagé) et ne
+        //   déclenche PAS le bonus de parrainage (arena-champions POST → fanOutSponsorGift). Miroir du sacre (l.1040).
+        if (activeWorld === "replay") return
         if (arenaReportedRef.current) return
         arenaReportedRef.current = true
         // RUN 2/3 : arènes re-typées → HoF SÉPARÉ (badge préfixé "ngplus:" / "run3:") pour ne pas polluer le run 1.
@@ -1458,7 +1468,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     method: "POST", headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ run: `${run}bis`, score, factors }),
                 })
-            } catch { /* best-effort : le score² se figera au prochain passage */ }
+            } catch { /* hors-ligne au moment de sortir : le score² de cette tentative n'est pas figé (perdu). Rare — refais un rejeu en ligne. */ }
         }
         await exitReplay()
         setMenu("none")

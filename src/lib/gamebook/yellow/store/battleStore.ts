@@ -748,7 +748,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             // RUN 3 : chaque arène vaincue RECHARGE l'énergie JUSQU'À son plafond (500→600→700→800→1000), sans
             //   jamais dépasser ni réduire la réserve → top-up = max(0, plafond - réserve actuelle). Seule source
             //   avec les 500 de départ. Forcé (le run 3 bloque les gains non-forcés).
-            if (badgeAwarded && getActiveWorld() === "run3") {
+            if (badgeAwarded && effectiveRunWorld() === "run3") { // REJEU run 3 inclus : la recharge d'arène est la SEULE source d'énergie
                 const r3arena = run3ArenaForBoss(storeState.trainer.trainerId)
                 if (r3arena) {
                     const topUp = r3arena.energy - getPlayer().reps
@@ -868,7 +868,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // RUN 3 — SCORE du concours : crédite chaque Daemon ENNEMI mis K.O. (boss d'arène + membres de Ligue),
     //   dédupliqué par clé stable (bossEnemyKey/leagueEnemyKey ↔ index de b.enemy.team). Tourne sur win ET
     //   lose : le run peut s'arrêter à 0⚡ EN PLEIN combat → on crédite la progression PARTIELLE.
-    if (getActiveWorld() === "run3" && storeState.trainer && !b.isWild) {
+    if (effectiveRunWorld() === "run3" && storeState.trainer && !b.isWild) { // REJEU run 3 inclus : score = Σ niveaux vaincus (run3Defeated)
         const tid = storeState.trainer.trainerId
         const r3 = run3ArenaForBoss(tid)
         const isLeague = tid.startsWith("y_ligue_")

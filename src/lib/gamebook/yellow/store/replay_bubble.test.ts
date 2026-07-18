@@ -93,6 +93,13 @@ describe("REJEU — bulle isolée (stash/restore)", () => {
         expect(getPlayer().reps).toBe(before)
     })
 
+    it("run1 replay : la bulle démarre AVEC de l'énergie (report des reps réels + cadeaux), pas à 0", async () => {
+        // Le monde réel a reps=800 (beforeEach) → la bulle run 1 doit être jouable dès le départ (fix revue #3).
+        await startReplay("run1")
+        expect(getActiveWorld()).toBe("replay")
+        expect(getPlayer().reps).toBeGreaterThan(0)
+    })
+
     it("double rejeu impossible : startReplay pendant un rejeu → false", async () => {
         await startReplay("run1")
         const ok = await startReplay("run1")
