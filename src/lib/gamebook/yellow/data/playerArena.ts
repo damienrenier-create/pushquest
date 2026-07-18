@@ -10,7 +10,7 @@
 
 import { createMonInstance } from "../battle/factory"
 import { getSpecies, SPECIES, registerCustomSpecies } from "./species"
-import { buildCustomSpecies, type StoredCustomDaemon } from "../create/customSpecies"
+import { buildCustomSpecies, buildNemesis, type StoredCustomDaemon } from "../create/customSpecies"
 import { POKE_TYPES, type PokeType, type MonInstance } from "../battle/types"
 import { typeEffectiveness } from "../battle/typeChart"
 import { YELLOW_MAPS } from "../maps"
@@ -36,7 +36,12 @@ export interface RegistryPlayer {
  *  custom_<owner>_... distincts par joueur, ré-enregistrement = même spec). Best-effort (une spec cassée est ignorée). */
 export function registerRegistryCustoms(players: RegistryPlayer[]): void {
     for (const p of players) for (const d of (p.customDaemons ?? [])) {
-        try { registerCustomSpecies(buildCustomSpecies(d.spec, d.ownerId)) } catch { /* spec illégale → ignorée */ }
+        try {
+            registerCustomSpecies(buildCustomSpecies(d.spec, d.ownerId))
+            // NÉMÉSIS (contre-lignée d'ACE, déterministe) : owner "nem_<ownerId>" — MÊME id que getNgplusNemesisSpeciesId
+            //   → la némésis d'un autre joueur est visible/résolue elle aussi (voulu : « pareil pour les némésis »).
+            registerCustomSpecies(buildCustomSpecies(buildNemesis(d.spec), `nem_${d.ownerId}`))
+        } catch { /* spec illégale → ignorée */ }
     }
 }
 

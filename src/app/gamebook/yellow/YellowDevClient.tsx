@@ -107,7 +107,7 @@ import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
 import { expForLevel } from "@/lib/gamebook/yellow/battle/xp"
 import type { MonInstance } from "@/lib/gamebook/yellow/battle/types"
 import { usePlayerArena, type ArenaOpponent } from "@/lib/gamebook/yellow/multiplayer/usePlayerArena"
-import { buildHubTeam, buildMirrorTeam, type ArenaMode } from "@/lib/gamebook/yellow/data/playerArena"
+import { buildHubTeam, buildMirrorTeam, registerRegistryCustoms, type ArenaMode } from "@/lib/gamebook/yellow/data/playerArena"
 import ArenaChallengeModal from "./ArenaChallengeModal"
 import DomeBracket from "./DomeBracket"
 import GeneIntroCarousel from "./GeneIntroCarousel"
@@ -595,6 +595,10 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             await loadYellowSave()
             // easy/debutant : crédite le remplissage d'énergie de DÉPART (idempotent — une seule fois par run).
             if (!cancelled) ensureModeStartGrant()
+            // CROSS-JOUEUR : enregistre les Daemons CUSTOM (+ leurs némésis) de TOUS les joueurs → ceux créés par
+            //   d'autres joueurs se résolvent partout (reflets, Hall of Fame, sprites) au lieu de MISSINGNO/équipe
+            //   amputée. « Des Pokémon comme les autres, créés par un autre joueur » (choix Sartay). Non bloquant.
+            fetch("/api/gamebook/yellow/registry").then((r) => (r.ok ? r.json() : null)).then((j) => { if (j?.players) registerRegistryCustoms(j.players) }).catch(() => {})
             initAutosave()
             // #8 — ANTI-FUITE : un combat (dresseur/sauvage) interrompu par un refresh est REPRIS tel
             // quel au lieu de valoir une fuite gratuite. No-op s'il n'y a rien à reprendre.
