@@ -1437,10 +1437,11 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImageWidth: 2352, backgroundImageHeight: 672, backgroundImageTileSize: 16,
         backgroundImageOriginX: 0, backgroundImageOriginY: 0,
         debugGrid: true, encountersPaused: true,
+        // Topologie (Sartay) : 1F ↔ B1F via les échelles 1/2/3 (un trigger par case d'échelle).
         exits: [
-            { x: 33, y: 17, targetMapId: "yellow_grotte_nexus_b2f", targetSpawnX: 45, targetSpawnY: 10 }, // échelle 1 → B2F
-            { x: 19, y: 14, targetMapId: "yellow_grotte_nexus_b2f", targetSpawnX: 12, targetSpawnY: 19 }, // échelle 2 → B2F
-            { x: 6, y: 6, targetMapId: "yellow_grotte_nexus_b2f", targetSpawnX: 3, targetSpawnY: 9 },     // échelle 3 → B2F
+            ...([[5, 7], [6, 7], [5, 8], [6, 8]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_grotte_nexus_b1f", targetSpawnX: 3, targetSpawnY: 4 })),   // échelle 3 → B1F
+            ...([[31, 17], [32, 17]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_grotte_nexus_b1f", targetSpawnX: 43, targetSpawnY: 23 })),              // échelle 1 → B1F
+            // échelle 2 : EN ATTENTE — la position 1F « 19.45 » est hors grille (y max 41), à préciser par Sartay.
         ],
     },
     yellow_grotte_nexus_b1f: {
@@ -1452,11 +1453,16 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImageWidth: 2352, backgroundImageHeight: 672, backgroundImageTileSize: 16,
         backgroundImageOriginX: 784, backgroundImageOriginY: 0,
         debugGrid: true, encountersPaused: true,
+        // B1F = étage pivot : échelles 1/2/3 remontent en 1F, a/b/c/d descendent en B2F, et (45,5) SORT de la grotte.
         exits: [
-            { x: 33, y: 12, targetMapId: "yellow_grotte_nexus_b2f", targetSpawnX: 18, targetSpawnY: 19 }, // a → B2F
-            { x: 19, y: 33, targetMapId: "yellow_grotte_nexus_b2f", targetSpawnX: 21, targetSpawnY: 38 }, // b → B2F
-            { x: 25, y: 23, targetMapId: "yellow_grotte_nexus_b2f", targetSpawnX: 29, targetSpawnY: 38 }, // c → B2F
-            { x: 5, y: 11, targetMapId: "yellow_grotte_nexus_b2f", targetSpawnX: 33, targetSpawnY: 19 },  // d → B2F
+            ...([[3, 3], [3, 4]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_grotte_nexus", targetSpawnX: 6, targetSpawnY: 8 })),          // échelle 3 → 1F
+            ...([[43, 22], [43, 23]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_grotte_nexus", targetSpawnX: 32, targetSpawnY: 17 })),    // échelle 1 → 1F
+            // échelle 2 (25,5) → 1F : EN ATTENTE (destination 1F « 19.45 » hors grille).
+            { x: 17, y: 6, targetMapId: "yellow_grotte_nexus_b2f", targetSpawnX: 31, targetSpawnY: 12 },   // échelle a → B2F
+            { x: 26, y: 37, targetMapId: "yellow_grotte_nexus_b2f", targetSpawnX: 17, targetSpawnY: 32 },  // échelle b → B2F
+            { x: 22, y: 19, targetMapId: "yellow_grotte_nexus_b2f", targetSpawnX: 25, targetSpawnY: 22 },  // échelle c → B2F
+            { x: 39, y: 5, targetMapId: "yellow_grotte_nexus_b2f", targetSpawnX: 5, targetSpawnY: 12 },    // échelle d → B2F
+            { x: 45, y: 5, targetMapId: "yellow_zone_combat", targetSpawnX: 10, targetSpawnY: 7 },         // SORTIE de la grotte (placeholder Zone de Combat → retarget Nexus 3 quand construit)
         ],
     },
     yellow_grotte_nexus_b2f: {
@@ -1468,15 +1474,12 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImageWidth: 2352, backgroundImageHeight: 672, backgroundImageTileSize: 16,
         backgroundImageOriginX: 1568, backgroundImageOriginY: 0,
         debugGrid: true, encountersPaused: true,
+        // B2F = fond de la grotte : a/b/c/d remontent en B1F (un trigger par case d'échelle).
         exits: [
-            { x: 45, y: 9, targetMapId: "yellow_grotte_nexus", targetSpawnX: 33, targetSpawnY: 18 },      // 1 → 1F
-            { x: 12, y: 18, targetMapId: "yellow_grotte_nexus", targetSpawnX: 19, targetSpawnY: 15 },     // 2 → 1F
-            { x: 3, y: 8, targetMapId: "yellow_grotte_nexus", targetSpawnX: 6, targetSpawnY: 7 },         // 3 → 1F
-            { x: 18, y: 18, targetMapId: "yellow_grotte_nexus_b1f", targetSpawnX: 33, targetSpawnY: 13 }, // a → B1F
-            { x: 21, y: 37, targetMapId: "yellow_grotte_nexus_b1f", targetSpawnX: 19, targetSpawnY: 34 }, // b → B1F
-            { x: 29, y: 37, targetMapId: "yellow_grotte_nexus_b1f", targetSpawnX: 25, targetSpawnY: 24 }, // c → B1F
-            { x: 33, y: 18, targetMapId: "yellow_grotte_nexus_b1f", targetSpawnX: 5, targetSpawnY: 12 },  // d → B1F
-            { x: 37, y: 19, targetMapId: "yellow_zone_combat", targetSpawnX: 10, targetSpawnY: 7 },       // SORTIE → placeholder Zone de Combat (⚠️ retarget vers Nexus 3 quand construit)
+            ...([[31, 12], [32, 12]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_grotte_nexus_b1f", targetSpawnX: 17, targetSpawnY: 6 })),                                     // échelle a → B1F
+            ...([[17, 31], [18, 31], [17, 32], [18, 32], [17, 33], [18, 33]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_grotte_nexus_b1f", targetSpawnX: 26, targetSpawnY: 37 })), // échelle b → B1F
+            ...([[25, 22], [26, 22]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_grotte_nexus_b1f", targetSpawnX: 22, targetSpawnY: 19 })),                                     // échelle c → B1F
+            ...([[5, 11], [6, 11], [5, 12], [6, 12]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_grotte_nexus_b1f", targetSpawnX: 39, targetSpawnY: 5 })),                       // échelle d → B1F
         ],
     },
     yellow_route_nord: {
