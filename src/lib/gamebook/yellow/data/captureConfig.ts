@@ -32,6 +32,10 @@ export const QUOTA_CAPTURE_BONUS = 1.3
  *  (un commun est pris avant que ça ne compte). Repart à 0 à chaque combat. */
 export const CAPTURE_ESCALATION_PER_ATTEMPT = 0.4
 
+/** ÉCHEC DE CAPTURE — part des ratés qui jouent l'anim « PRESQUE ! » (la ball accroche, tremble… puis le Daemon
+ *  RESSORT) plutôt que le lancer raté théâtral (ball déviée + trash talk). 0.30 = 30 % wobble / 70 % trash talk. */
+export const CAPTURE_WOBBLE_CHANCE = 0.3
+
 /** Statut → multiplicateur (sommeil/gel forts ; para/brûlure/poison moyens). */
 export const STATUS_BONUS: Record<MajorStatus, number> = {
     NONE: 1,

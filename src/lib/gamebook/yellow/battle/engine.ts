@@ -22,7 +22,7 @@ import { accuracyCheck } from "./accuracy"
 import { chooseAiAction, chooseReplacementIndex, type AiLevel } from "./ai"
 import { xpForDefeat, applyExp } from "./xp"
 import { tryCapture } from "./capture"
-import { CAPTURE_ESCALATION_PER_ATTEMPT } from "../data/captureConfig"
+import { CAPTURE_ESCALATION_PER_ATTEMPT, CAPTURE_WOBBLE_CHANCE } from "../data/captureConfig"
 import { ballBonusOf, getItem, isGuaranteedBall } from "../data/items"
 import { STRUGGLE_MOVE_ID, STRUGGLE_INDEX, attackCost, QUOTA_STD, lowHpPowerFrac } from "../data/combatCostConfig"
 import { gainEv, signatureStat, EV_YIELD_PER_WIN } from "../data/evConfig"
@@ -1385,11 +1385,24 @@ function performCapture(state: BattleState, itemId: string, events: BattleEvent[
         state.outcome = "caught"
         events.push({ kind: "message", text: `Gagné ! ${displayName(wild)} est capturé !` })
         events.push({ kind: "end", outcome: "caught" })
+    } else if (rng.next() < CAPTURE_WOBBLE_CHANCE) {
+        // ÉCHEC « PRESQUE ! » (30%) : la ball accroche, FILE, TREMBLE (≥1 secousse pour le suspense)… puis
+        // s'ouvre → le Daemon RESSORT (result caught:false ré-affiche l'ennemi côté UI). Le classique frustrant.
+        // Tirage sur le RNG seedé → déterministe/rejouable.
+        events.push({ kind: "ball", action: "throw" })
+        events.push({ kind: "ball", action: "shake", shakes: Math.max(1, res.shakes) })
+        events.push({ kind: "ball", action: "result", caught: false })
+        const breakLines = [
+            `Oh non ! ${displayName(wild)} s'est échappé !`,
+            "Presque ! Un dernier soubresaut et il se libère !",
+            "Aaah, si près ! La Ball s'ouvre… il est ressorti !",
+            `Zut ! ${displayName(wild)} a rompu la Ball au dernier moment !`,
+        ]
+        events.push({ kind: "message", text: breakLines[rng.int(0, breakLines.length - 1)] })
+        state.captureAttempts++ // ESCALADE : le prochain lancer sur ce sauvage sera un peu plus sûr.
     } else {
-        // ÉCHEC = lancer RATÉ THÉÂTRAL (et NON l'animation « presque attrapé ») : la ball part
-        // de travers, manque la cible et sort de l'écran (event "miss", joué côté UI), puis une
-        // punchline moqueuse aléatoire. Le Daemon reste visible (on l'a raté, pas effleuré).
-        // Tirage via le RNG seedé → déterministe/rejouable (la capture est wild-only, hors PvP).
+        // ÉCHEC « lancer RATÉ THÉÂTRAL » (70%) : la ball part de travers, manque la cible et sort de l'écran
+        // (event "miss", joué côté UI), puis une punchline moqueuse aléatoire. Le Daemon reste visible.
         events.push({ kind: "ball", action: "miss" })
         // Garde-fou : si la liste n'est pas chargée (module non résolu en dev), on ne plante PAS
         // le tour (sinon la capture ratée ne ferait « rien ») → fallback de secours.
