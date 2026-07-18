@@ -760,6 +760,25 @@ export const TRAINERS: TrainerData[] = [
             "*Il s'incline.* Le Nexus a son nouveau Maître. La couronne est à toi.",
         ],
     },
+    {
+        // TON DOUBLE (run 2, salle dorée) — combat FINAL contre ton ancienne équipe run 1. Le `name` est REMPLACÉ
+        //   à l'exécution par le pseudo du joueur (gameStore) ; l'`team` ci-dessous n'est PAS utilisée : le combat
+        //   passe par startNgPlusFinalBattle (ancienne équipe GELÉE, sans soin). Sprite = joueur + halo mauve (MapView).
+        id: "y_ligue_double", name: "TON REFLET", title: "Ton ancien toi",
+        sprite: { emoji: "🕴️", color: "#8a2be2" },
+        mapId: "yellow_ligue_final", x: 10, y: 2,
+        team: [{ speciesId: "divinpate", level: 60 }], // placeholder (jamais fieldé : cf. startNgPlusFinalBattle)
+        reward: 0, aiLevel: "hof",
+        intro: [
+            "*Sous les projecteurs dorés, une silhouette te fait face — c'est TOI. Ton toi d'avant, auréolé d'une lueur mauve.*",
+            "« Alors c'est là que tu en es… Moi, je suis celui que tu étais avant de tout recommencer. »",
+            "« Le Maître n'était qu'un échauffement. Le VRAI dernier obstacle, c'est ton passé. Prouve que tu es devenu meilleur — DANS L'ÉTAT où tu es, sans répit ! »",
+        ],
+        defeat: [
+            "« …Tu m'as dépassé. Je ne suis plus qu'un souvenir. »",
+            "*Ton reflet s'efface dans une volute mauve. Tu es, enfin, pleinement Maître du Nexus.*",
+        ],
+    },
 ]
 
 const BY_ID = new Map(TRAINERS.map((t) => [t.id, t]))

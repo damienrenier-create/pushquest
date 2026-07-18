@@ -922,31 +922,14 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         }
     }, [duelResult, battle, evolutions, nickname, showDialogue])
 
-    // NG+ — combat de FIN DE LIGUE contre l'ancienne équipe. Le Dieu Spaghetti l'ANNONCE d'abord (match surprise),
-    //   PUIS on lance le combat DANS L'ÉTAT du joueur (aucun soin — cf. battleStore). Le flag est consommé une fois.
-    const ngplusFinalAnnouncedRef = useRef(false)
+    // NG+ (run 2) — Maître vaincu : le combat FINAL vs ton DOUBLE se joue désormais dans la SALLE DORÉE (porte droite
+    //   du trône → yellow_ligue_final, cf. gameStore/maps). On NE lance plus le combat ici : on consomme le flag et on
+    //   guide le joueur vers la porte dorée. (Le combat, sans soin, part de l'interaction avec le double dans la salle.)
     useEffect(() => {
-        if (!ngplusFinalPending) { ngplusFinalAnnouncedRef.current = false; return }
-        if (battle || evolutions.length > 0 || championRun) return
-        const old = getNgplusOldTeam()
-        if (!old || old.length === 0) { clearNgplusFinalPending(); return }
-        // ÉTAPE 1 — annonce du Dieu Spaghetti (le « match surprise »), UNE seule fois, AVANT le combat.
-        if (!ngplusFinalAnnouncedRef.current) {
-            ngplusFinalAnnouncedRef.current = true
-            showDialogue(DUEL_DREAM_NPC, "🍝 Dieu Spaghetti", [
-                "*Tu savoures ta victoire sur le Maître quand une odeur de basilic envahit l'arène…*",
-                "« STOP ! Tu croyais en avoir fini ? Le VRAI test commence maintenant, champion. »",
-                "« J'ai rappelé des limbes ton ANCIENNE équipe — celle qui t'a porté jusqu'ici la toute première fois. »",
-                "« Elle est fraîche, reposée, affamée. Toi, tu sors du combat contre le Maître : blessé, à bout de souffle. »",
-                "« Pas de soin, pas de répit. Affronte ton passé DANS L'ÉTAT où tu es — et prouve qui tu es DEVENU ! »",
-            ])
-            return
-        }
-        // ÉTAPE 2 — annonce refermée : on lance le combat surprise (équipe DANS SON ÉTAT, aucun soin).
-        if (dialogue) return
+        if (!ngplusFinalPending) return
+        if (battle || evolutions.length > 0 || championRun || dialogue) return
         clearNgplusFinalPending()
-        const ok = startNgPlusFinalBattle(old)
-        if (!ok) setToast("Ton équipe est à terre — soigne-la puis affronte ton ANCIENNE équipe (Menu → ⚔️).")
+        setToast("🚪 Le Maître est vaincu… mais la porte DORÉE s'ouvre à droite. Ton ANCIEN TOI t'y attend.")
     }, [ngplusFinalPending, battle, evolutions.length, championRun, dialogue])
 
     // NG+ — issue du combat de fin de Ligue vs l'ancienne équipe. VICTOIRE = le VRAI sacre : le Hall of Fame vient

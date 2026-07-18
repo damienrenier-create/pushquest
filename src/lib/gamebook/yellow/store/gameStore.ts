@@ -19,7 +19,7 @@ import type { BadgeId } from "../data/cts"
 import type { YellowMapData } from "../maps"
 import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
-import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, startRun3BossBattle, resetFleeStreak } from "./battleStore"
+import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, startRun3BossBattle, startNgPlusFinalBattle, resetFleeStreak } from "./battleStore"
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
@@ -28,7 +28,7 @@ import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
 import { getHeldItem } from "../data/heldItems"
 import { BERRY_SECRET_LINES_ASSISTANT } from "../data/berryLore"
 import { getSpecies } from "../data/species"
-import { persistYellowSave, canAbandonNgplus } from "./saveManager"
+import { persistYellowSave, canAbandonNgplus, getNgplusOldTeam } from "./saveManager"
 import { rollWildEncounter, wildLevelCap, hasEncounters } from "../data/encounters"
 import { reportShiny } from "../shinyGift"
 import { getTrainer, trainerBoost, arenaScaledLevel, type TrainTier } from "../data/trainers"
@@ -180,6 +180,17 @@ function tryLaunchTrainer(trainerId: string, isRematch = false): ActiveDialogue 
             npcId: trainerId, npcName: trainer.name, lineIndex: 0,
             lines: ["Tes Daemons sont tous K.O. !", "Soigne-les au Centre avant de te battre."],
         }
+    }
+    // TON DOUBLE (salle dorée, run 2) : combat FINAL contre ton ANCIENNE équipe GELÉE (startNgPlusFinalBattle, SANS
+    //   soin). L'équipe statique du trainer n'est PAS utilisée. Déjà vaincu (isChampion) → réplique, pas de re-combat.
+    if (trainerId === "y_ligue_double") {
+        if (getPlayerSave().isChampion) {
+            return { npcId: trainerId, npcName: currentNickname || trainer.name, lineIndex: 0, lines: trainer.defeat }
+        }
+        if (!startNgPlusFinalBattle(getNgplusOldTeam() ?? [])) {
+            return { npcId: trainerId, npcName: currentNickname || trainer.name, lineIndex: 0, lines: ["*Ton reflet s'estompe dans la lueur mauve… reviens quand tu seras prêt.*"] }
+        }
+        return null
     }
     // Boost "entraînement" : TOUS les dresseurs sont boostés pour ne pas être surclassés
     // par un joueur qui alloue du Saiyan à chaque niveau. Boss d'arène (badge) → "elite" ;
@@ -563,6 +574,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 scheduleSave(next)
                 return
             }
+            // RUN 2 — SALLE DORÉE : LE MAÎTRE vaincu, la porte droite du TRÔNE mène à la salle ULTIME (ton DOUBLE),
+            //   pas à Cendreville. Le Dieu Spaghetti annonce le « match surprise » à l'arrivée (goldenAnnounce).
+            let goldenAnnounce = false
+            if (player.mapId === "yellow_ligue_rival" && getActiveWorld() === "ngplus" && getPlayerSave().ngplusMaitreBeaten) {
+                targetMapId = "yellow_ligue_final"; spawnX = 3; spawnY = 6; goldenAnnounce = true
+            }
+            // SALLE DORÉE — porte droite SCELLÉE tant que TON DOUBLE n'est pas vaincu (= sacre / isChampion).
+            if (player.mapId === "yellow_ligue_final" && !getPlayerSave().isChampion) {
+                set({ player: next, dialogue: { npcId: "y_ligue_double", npcName: "LIGUE", lineIndex: 0, lines: ["La salle est scellée. Tu dois d'abord vaincre ton ANCIEN TOI !"] } })
+                scheduleSave(next)
+                return
+            }
             // GATE HAUTES HERBES : la plaine d'entraînement n'ouvre qu'une fois l'arène ÉLECTRIQUE battue
             // (Daemons costauds, paliers jusqu'à 50). Sinon, message + on reste sur place.
             if (targetMapId === "yellow_hautes_herbes" && !getPlayerSave().badges.includes("elec")) {
@@ -618,7 +641,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 const interiorReturn = enteringShared && fromOverworld
                     ? { mapId: map.id, x: player.posX, y: player.posY }
                     : (stairInfirmary ? ret : (leavingShared ? null : ret))
-                set({ map: newMap, player: newPlayer, dialogue: null, interiorReturn })
+                set({
+                    map: newMap, player: newPlayer, interiorReturn,
+                    // SALLE DORÉE : le Dieu Spaghetti annonce le « match surprise » (pas de soin) à l'entrée.
+                    dialogue: goldenAnnounce ? {
+                        npcId: "spaghetti_gate", npcName: "DIEU SPAGHETTI", lineIndex: 0,
+                        lines: [
+                            "*À peine la porte franchie, une odeur de basilic incandescent envahit la salle dorée…*",
+                            "« STOP ! Tu croyais en avoir fini avec le Maître ? Le VRAI dernier test t'attend ICI. »",
+                            "« J'ai rappelé des limbes ton ANCIENNE équipe — celle de ton tout premier run. Elle est fraîche, reposée. Toi, tu sors du combat contre le Maître : à bout de souffle. »",
+                            "« Pas de soin, pas de répit. Ton REFLET t'attend au fond de la salle. Affronte ton passé DANS L'ÉTAT où tu es — et prouve qui tu es DEVENU ! »",
+                        ],
+                    } : null,
+                })
                 scheduleSave(newPlayer)
                 return
             }
@@ -1277,8 +1312,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 // Plus de rematch/revanche (ou déjà fait) → simple réplique de défaite.
                 set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: trainer.defeat, lineIndex: 0 } })
             } else {
+                // TON DOUBLE : le PNJ porte TON pseudo (comme si tu affrontais ta propre légende).
+                const dispName = trainer.id === "y_ligue_double" ? (currentNickname || npc.name) : npc.name
                 set({
-                    dialogue: { npcId: npc.id, npcName: npc.name, lines: trainer.intro, lineIndex: 0 },
+                    dialogue: { npcId: npc.id, npcName: dispName, lines: trainer.intro, lineIndex: 0 },
                     pendingTrainerId: trainer.id, pendingRematch: false,
                 })
             }

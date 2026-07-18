@@ -1393,6 +1393,15 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         exits: [5, 6, 7].map((y) => ({ x: 19, y, targetMapId: "yellow_cendreville", targetSpawnX: 21, targetSpawnY: 32 })),
         backgroundImage: "/yellow/sprites/ligue_rival.png", backgroundImageWidth: 1408, backgroundImageHeight: 768, backgroundImageTileSize: 64,
     },
+    // ===== SALLE ULTIME DORÉE (RUN 2 uniquement) — combat vs TON DOUBLE (ancienne équipe run 1) =====
+    // Accès : après avoir vaincu LE MAÎTRE (ACE) en run 2, la porte droite du trône mène ICI (cf. gameStore).
+    // Le double (nommé du pseudo du joueur, halo mauve) se tient à la place des maîtres (10,2). Sortie droite
+    // (19,5-7) → Cendreville, SCELLÉE tant que le double n'est pas vaincu (= sacre / isChampion, cf. gameStore).
+    yellow_ligue_final: {
+        id: "yellow_ligue_final", name: "LIGUE — SALLE ULTIME", tiles: buildLigueRoom(), width: 22, height: 12,
+        exits: [5, 6, 7].map((y) => ({ x: 19, y, targetMapId: "yellow_cendreville", targetSpawnX: 21, targetSpawnY: 32 })),
+        backgroundImage: "/yellow/sprites/ligue_final.png", backgroundImageWidth: 1408, backgroundImageHeight: 768, backgroundImageTileSize: 64,
+    },
     // ===== ARÈNE EAU "SANCTUAIRE DES MARÉES" (Cendreville, badge eau) =====
     yellow_arena_eau: {
         id: "yellow_arena_eau", name: "SANCTUAIRE DES MARÉES", tiles: buildAreneEau(), width: 16, height: 16,

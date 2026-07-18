@@ -738,6 +738,25 @@ function NpcSprite({
     screenPos: (x: number, y: number, w?: number, h?: number) => React.CSSProperties
     overrideSprite?: { url: string; frames: number; h?: number }
 }) {
+    // TON DOUBLE (salle dorée, run 2) : rendu SPÉCIAL = le sprite du JOUEUR (de face) nimbé d'un HALO MAUVE
+    //   maléfique (aura radiale + glow violet). C'est « toi » d'avant, corrompu.
+    if (npc.id === "y_ligue_double") {
+        const cell = FIRERED_PLAYER.down[1]
+        return (
+            <div style={{ position: "absolute", ...screenPos(npc.initialX, npc.initialY - (SPRITE_ASPECT_RATIO - 1), 1, SPRITE_ASPECT_RATIO), zIndex: 4, overflow: "visible", pointerEvents: "none" }} title={npc.name}>
+                <div style={{ position: "absolute", inset: "-40% -20%", borderRadius: "50%", background: "radial-gradient(circle, rgba(160,48,224,0.6) 0%, rgba(120,20,190,0.28) 45%, rgba(120,20,190,0) 72%)", filter: "blur(1px)" }} />
+                <div style={{
+                    position: "absolute", inset: 0,
+                    backgroundImage: "url(/yellow/sprites/firered_player_t.png?v=3)",
+                    backgroundRepeat: "no-repeat",
+                    backgroundSize: `${SHEET_COLS * 100}% ${SHEET_ROWS * 100}%`,
+                    backgroundPosition: sheetBgPosition(cell),
+                    imageRendering: "pixelated",
+                    filter: "drop-shadow(0 0 3px #b040ff) drop-shadow(0 0 7px #9020e0)",
+                }} />
+            </div>
+        )
+    }
     const sprite = overrideSprite ?? NPC_SPRITES[npc.id]
     if (!sprite) {
         // PNJ "hotspot" invisible (emoji vide) : interaction sans sprite. Utilisé
