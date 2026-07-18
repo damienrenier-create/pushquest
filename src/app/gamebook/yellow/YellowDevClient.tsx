@@ -55,10 +55,10 @@ import { aceLoseLine } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
 import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_LOSS_CONSOLE_REPS, DUEL_GOD_NPC, DUEL_GOD_NAME, DUEL_DREAM_NPC, DUEL_DREAM_NAME } from "@/lib/gamebook/yellow/data/duel"
 import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/gamebook/yellow/data/labDialogues"
-import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, getNgplusOldTeam, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3 } from "@/lib/gamebook/yellow/store/saveManager"
+import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, getNgplusOldTeam, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay } from "@/lib/gamebook/yellow/store/saveManager"
 import { customStarterSpeciesId, type StoredCustomDaemon } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, releaseFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent } from "@/lib/gamebook/yellow/store/playerStore"
-import { computeRunScores, leaderboardFactors, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, releaseFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun } from "@/lib/gamebook/yellow/store/playerStore"
+import { computeRunScores, computeReplayScore, leaderboardFactors, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
 import { run3Score, run3MaxScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
 import { ARENA_TICKET_VALUE, STEP_GIFT_DATE, STEP_GIFT_THRESHOLD } from "@/lib/gamebook/yellow/data/labDefis"
@@ -355,6 +355,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [ctPick, setCtPick] = useState<string | null>(null)
     // RESET « Recommencer le Nexus » — TRIPLE confirmation : 0 idle · 1 avertissement · 2 « c'est définitif » · 3 maintien 1,5 s.
     const [resetStep, setResetStep] = useState(0)
+    // REJEU (« run bis ») — overlay de lancement (choix du run) + sous-choix du starter (run2 = Daemon custom, run3 = 3 lignées).
+    const [replayMenu, setReplayMenu] = useState(false)
+    const [replayPickRun, setReplayPickRun] = useState<"run2" | "run3" | null>(null)
     // SÉCURITÉ RESET : le « OUI » se fait par MAINTIEN prolongé (1,5s, barre de remplissage), pas par
     // un tap. Empêche l'effacement accidentel par double-A / tap rapide (cf. perte de save de Mools).
     const [resetHolding, setResetHolding] = useState(false)
@@ -1032,6 +1035,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const champReportedRef = useRef(false)
     useEffect(() => {
         if (!championRun) { champReportedRef.current = false; return }
+        // REJEU : un sacre « bis » ne se grave PAS au Hall of Fame réel et ne récompense PAS les autres joueurs
+        //   (+1/3 de quota) → sinon rejouer en boucle = faucet d'énergie communautaire / pollution du HoF.
+        if (activeWorld === "replay") return
         if (champReportedRef.current) return
         champReportedRef.current = true
         fetch("/api/gamebook/yellow/hall-of-fame", {
@@ -1426,6 +1432,39 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         ])
     }
 
+    // REJEU (« run bis ») — lance un rejeu ISOLÉ (bulle jetable, cf. saveManager.startReplay). run1 = intro ;
+    //   run2/run3 = starter fourni. Le VRAI monde reste intact ; le score « Pseudo² » apparaît au classement.
+    const doStartReplay = async (run: "run1" | "run2" | "run3", starter: ReturnType<typeof createMonInstance> | null = null) => {
+        const ok = await startReplay(run, starter)
+        if (!ok) { setToast(run === "run1" ? "Rejeu impossible pour l'instant." : "Il te faut un Daemon de départ."); return }
+        setReplayMenu(false); setReplayPickRun(null); setMenu("none")
+        setMap(YELLOW_ENTRANCE_MAP_ID, DEFAULT_SPAWN.x, DEFAULT_SPAWN.y) // le rejeu démarre au tout début
+        const label = run === "run1" ? "Run 1" : run === "run2" ? "Run 2" : "Run 3"
+        showDialogue(DUEL_GOD_NPC, DUEL_GOD_NAME, [
+            "*Le Dieu Spaghetti claque des doigts. Une bulle dorée t'enveloppe, hors du temps…*",
+            `« REJEU du ${label} ! Une seconde chance : bats ton score et complète ton Pokédex — tout ce que tu captures ici RESTE à jamais dans ta collection. »`,
+            "« Ton VRAI monde t'attend, intact — ceci n'est qu'une bulle. Ton score apparaîtra au classement sous « Pseudo² », à côté de l'ancien. »",
+            "« Sors quand tu veux (Menu → 🚪) : ton score² sera alors figé. Bonne chance, champion ! 🍝 »",
+        ])
+    }
+
+    // REJEU — SORT de la bulle : fige le score « bis » au classement (POST) puis restaure le vrai monde INTACT.
+    const doExitReplay = async () => {
+        const run = getReplayRun()
+        if (run) {
+            try {
+                const { score, factors } = computeReplayScore(run)
+                await fetch("/api/gamebook/yellow/run-scores", {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ run: `${run}bis`, score, factors }),
+                })
+            } catch { /* best-effort : le score² se figera au prochain passage */ }
+        }
+        await exitReplay()
+        setMenu("none")
+        setMap(YELLOW_ENTRANCE_MAP_ID, DEFAULT_SPAWN.x, DEFAULT_SPAWN.y)
+        setToast("🚪 Rejeu terminé — ton score² est figé au classement. De retour dans ton vrai monde !")
+    }
 
     // RETOUR : ferme l'overlay le plus "haut" de la pile (fiche → sous-menu → pause).
     // Renvoie true si quelque chose a été fermé → utilisé par le bouton B (B = retour).
@@ -1450,6 +1489,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (glandModal) { advanceGland(); return true } // l'événement du gland s'avance/se ferme au B
         if (posterImage) { closePoster(); return true } // poster mural (Centre) → overlay plein écran
         if (resetStep > 0) { setResetStep(0); return true }
+        if (replayPickRun) { setReplayPickRun(null); return true }
+        if (replayMenu) { setReplayMenu(false); return true }
         if (heldOpen) { setHeldOpen(false); return true } // sous-modale objet tenu (au-dessus de la fiche)
         if (renaming) { setRenaming(false); return true } // annule le renommage, reste sur la fiche
         if (selected) { setSelected(null); setRenaming(false); setHeldOpen(false); return true } // fermer la fiche reset renommage + objet tenu
@@ -1604,6 +1645,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 setMenu("none")
                                 if (!startNgPlusFinalBattle(old)) setToast("Soigne ton équipe au Centre d'abord.")
                             }}>⚔️ AFFRONTER TON ANCIENNE ÉQUIPE</button>
+                        )}
+                        {/* REJEU (« run bis ») — rejouer un run terminé (bulle isolée) : sortir du rejeu, ou en lancer un. */}
+                        {!battle && activeWorld === "replay" && (
+                            <button style={{ ...menuBtnStyle, borderColor: "#c9a227", color: "#c9a227" }} onClick={doExitReplay}>🚪 SORTIR DU REJEU (figer mon score²)</button>
+                        )}
+                        {!battle && activeWorld !== "replay" && resetStep === 0 && (getPlayer().ngplusUsed || getPlayer().run3Used || player.isChampion) && (
+                            <button style={menuBtnDimStyle} onClick={() => setReplayMenu(true)}>🔁 REJOUER UN RUN</button>
                         )}
                         {!battle && (resetStep === 0 ? (
                             <button style={menuBtnDimStyle} onClick={() => setResetStep(1)}>♻️ RECOMMENCER LE NEXUS</button>
@@ -2451,6 +2499,46 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {/* RUN 3 — choix de la lignée via la CINÉMATIQUE (jumelle de l'intro run 1, lisible), dialogues adaptés.
                 Le Dieu Spaghetti présente le concours + le triangle → choix → outro → launchRun3 (règles 500⚡). */}
             {run3StarterChoice && <Run3IntroCinematic onComplete={(id) => void launchRun3(id)} />}
+
+            {/* REJEU (« run bis ») — LANCEUR : choisir quel run terminé rejouer (bulle isolée, cf. saveManager). */}
+            {replayMenu && (
+                <div style={menuOverlayStyle} onClick={() => setReplayMenu(false)}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>🔁 REJOUER UN RUN</div>
+                        <div style={{ fontSize: 10, opacity: 0.75, textAlign: "center", marginBottom: 8, lineHeight: 1.35 }}>
+                            Rejoue un run terminé dans une BULLE isolée : améliore ton score et complète ton Pokédex. Ton vrai monde reste INTACT ; ton score apparaît au classement sous « {nickname || "Toi"}² ».
+                        </div>
+                        <button style={menuBtnStyle} onClick={() => void doStartReplay("run1")}>🏅 Rejouer le RUN 1</button>
+                        {getPlayer().ngplusUsed && (
+                            <button style={menuBtnStyle} onClick={() => { if ((getPlayer().customDaemons?.length ?? 0) === 0) { setToast("Crée d'abord ton Daemon pour rejouer le run 2."); return } setReplayMenu(false); setReplayPickRun("run2") }}>🏆 Rejouer le RUN 2</button>
+                        )}
+                        {getPlayer().run3Used && (
+                            <button style={menuBtnStyle} onClick={() => { setReplayMenu(false); setReplayPickRun("run3") }}>🔥 Rejouer le RUN 3</button>
+                        )}
+                        <button style={menuBtnDimStyle} onClick={() => setReplayMenu(false)}>← Retour</button>
+                    </div>
+                </div>
+            )}
+            {/* REJEU run 2 — choix du Daemon custom de départ (comme le NG+). */}
+            {replayPickRun === "run2" && (
+                <div style={menuOverlayStyle} onClick={() => setReplayPickRun(null)}>
+                    <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                        <div style={menuTitleStyle}>REJEU RUN 2 — ton starter</div>
+                        {(getPlayer().customDaemons ?? []).map((d, i) => (
+                            <button key={i} style={menuBtnStyle} onClick={() => { let s; try { s = createMonInstance(customStarterSpeciesId(d), 5, { owned: true }) } catch { setToast("Daemon custom corrompu."); return } void doStartReplay("run2", s) }}>⚔️ {d.spec.name}</button>
+                        ))}
+                        <button style={menuBtnDimStyle} onClick={() => setReplayPickRun(null)}>← Retour</button>
+                    </div>
+                </div>
+            )}
+            {/* REJEU run 3 — choix du starter (les 3 lignées) via la cinématique existante. */}
+            {replayPickRun === "run3" && <Run3IntroCinematic onComplete={(id) => { let s; try { s = createMonInstance(id, 5, { owned: true }) } catch { setToast("Starter introuvable."); return } void doStartReplay("run3", s) }} />}
+            {/* REJEU — bannière permanente (rappel : tu es dans une bulle jetable). */}
+            {activeWorld === "replay" && !battle && (
+                <div style={{ position: "absolute", top: 2, left: "50%", transform: "translateX(-50%)", zIndex: 40, background: "#c9a227", color: "#3a2a00", fontSize: 8, fontWeight: 700, padding: "1px 7px", borderRadius: 8, pointerEvents: "none", whiteSpace: "nowrap", opacity: 0.9 }}>
+                    🔁 REJEU · {getReplayRun() === "run3" ? "RUN 3" : getReplayRun() === "run2" ? "RUN 2" : "RUN 1"} bis
+                </div>
+            )}
             <LibraryPanel />
             <AdvisorPanel />
             <LabPanel />
@@ -3313,6 +3401,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {!battle && evolutions.length === 0 && championRun && (
                 <HallOfFame champion={championRun} onDone={() => {
                     clearChampion()
+                    // REJEU (« run bis ») : un sacre dans la bulle = TA fin de rejeu. Pas de créateur, pas de méga-fusion,
+                    //   pas de suite — le joueur sort du rejeu (Menu → 🚪) pour figer son score². (Le HoF réel n'est pas touché.)
+                    if (getActiveWorld() === "replay") { setToast("🏆 Rejeu accompli ! Sors du rejeu (Menu → 🚪) pour figer ton score²."); return }
                     // RUN 3 : le sacre du Maître DÉCLENCHE la fin du concours → l'effet run3End ouvre la méga-fusion
                     //   une fois championRun=null (clearChampion ci-dessus). Rien d'autre ici (pas de toast run 2).
                     if (getActiveWorld() === "run3") return

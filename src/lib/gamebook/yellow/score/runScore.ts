@@ -16,7 +16,8 @@
 //   (Le « temps réel » a été abandonné.)
 
 import { getPlayer, getStats } from "../store/playerStore"
-import { computeGrade, leagueRepsFactor, type ScoreFactor } from "./runScoreCompute"
+import { computeGrade, leagueRepsFactor, energyInfoFactor, type ScoreFactor } from "./runScoreCompute"
+import { run3Score } from "../data/run3Score"
 
 export type { ScoreFactor } // ré-exporté : les imports existants (RunScoreboardPanel…) continuent de marcher
 
@@ -55,6 +56,23 @@ export function computeRunScores(): RunScores {
  *  chez les autres, sans fausser la note globale. (Le total reps run 2 est déjà visible via l'axe ⚡ Frugalité.) */
 export function leaderboardFactors(sc: RunScores): ScoreFactor[] {
     return [...sc.factors, leagueRepsFactor(sc.leagueReps)]
+}
+
+/** REJEU (« run bis ») — score de la BULLE courante (le monde ACTIF est la bulle) selon le run rejoué, pour le FIGER
+ *  au classement à la sortie. run3 = Σ niveaux vaincus ; run2 = note /1000 (+ volet Ligue) ; run1 = note /1000 SANS
+ *  frugalité (+ énergie en info). Le run est passé explicitement (activeWorld="replay" ne dit pas QUEL run). */
+export function computeReplayScore(run: "run1" | "run2" | "run3"): { score: number; factors: ScoreFactor[] } {
+    const p = getPlayer()
+    const stats = getStats()
+    if (run === "run3") return { score: run3Score(p.run3Defeated ?? []), factors: [] }
+    const caught = p.caughtThisRun
+    const teamLevels = p.team.reduce((s, m) => s + m.level, 0)
+    const isRun1 = run === "run1"
+    const { grade, factors } = computeGrade(
+        { wins: stats.wins, teamKos: stats.teamKos, caught, teamLevels, energyConsumed: stats.energySpent, steps: stats.steps },
+        isRun1 ? { run1: true } : undefined,
+    )
+    return { score: grade, factors: isRun1 ? [...factors, energyInfoFactor(stats.energySpent)] : [...factors, leagueRepsFactor(stats.leagueEnergySpent)] }
 }
 
 /** Formate une durée (ms) en m:ss ou h:mm:ss pour l'affichage. */
