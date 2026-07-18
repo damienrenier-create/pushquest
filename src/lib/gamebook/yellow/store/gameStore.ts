@@ -23,7 +23,7 @@ import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, 
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, resetLigueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, addItem, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, resetLigueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, pnj8WinsCount, addItem, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
 import { getHeldItem } from "../data/heldItems"
 import { BERRY_SECRET_LINES_ASSISTANT } from "../data/berryLore"
@@ -42,6 +42,7 @@ import { ORCALINE_TRAINER_ID, orcalineTrainerDialogue } from "../data/orcalineTr
 import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock } from "../data/sylvebarbeBlock"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
 import { SYLVEBARBE_NPC_ID, SYLVEBARBE_INTRO_LINES, SYLVEBARBE_DONE_LINES, SYLVEBARBE_NO_FLUTE_LINES, SYLVEBARBE_NO_TEAM_LINES, buildSylvebarbe, FLUTE_GIVE_LINES } from "../data/sylvebarbe"
+import { PNJ8_NPC_ID, PNJ8_TRAINER_ID, PNJ8_MAP_ID, PNJ8_KICK, buildPnj8Team, inPnj8Block, PNJ8_INTRO_LINES, PNJ8_NO_DOME_LINES, PNJ8_NO_TEAM_LINES, PNJ8_SEAL_LINES } from "../data/pnj8"
 import { CHEN_LAB_LINES, LAB_ASSISTANT_LINES, LAB_ASSISTANT_LINES_NGPLUS, LAB_ASSISTANT_LINES_RUN3, CHEN_ABANDON_OFFER_LINES, CHEN_RUN3_TEASER_LINES, CHEN_RUN3_EVOLVE_LINES } from "../data/labDialogues"
 import { MAGNETOR_EVO_ITEM } from "../data/items"
 import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADE_RECEIVE_RUN1, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_TRADER_OFFER_LINES_RUN1, HH_TRADER_NEED_LINES_RUN1, HH_TRADER_HAS_MORROW_LINES, HH_TRADER_CANCEL_LINES, HH_TRADE_AQUILOTHAN_GIVE, HH_TRADE_AQUILOTHAN_RECEIVE, HH_TRADER_AQUILORD_OFFER_LINES, HH_TRADER_AQUILORD_NEED_LINES, HH_TRADER_AQUILORD_DONE_LINES, HH_TRADER_AQUILORD_CANCEL_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
@@ -110,6 +111,7 @@ interface GameStore {
     pendingOrcaline: boolean // intro du DRESSEUR D'ORCALINE en cours → combat à la fermeture
     pendingGekroc: boolean // intro de GÉKROC (mini-boss Centrale) en cours → combat à la fermeture
     pendingSylvebarbe: boolean // intro de SYLVEBARBE (gardien sud Ville Jaune) en cours → combat à la fermeture
+    pendingPnj8: boolean // intro de PNJ 8 (gardien de la Grotte du Nexus) en cours → combat à la fermeture
     pendingHhTrade: string | null // uid du Roctaur à échanger (BROCANTEUR maison hantée) → échange à la fermeture
     pendingAquilordTrade: string | null // uid de l'Aquilothan → Aquilord (BROCANTEUR, service premium live) à la fermeture
     pendingCaveTrade: string | null // uid du Faukon à échanger (DÉNICHEUR grotte) → échange à la fermeture
@@ -433,6 +435,27 @@ function tryLaunchOrcaline(): ActiveDialogue | null {
     return null
 }
 
+// GARDIEN DE LA GROTTE DU NEXUS (PNJ 8). Nb de victoires MÉMORISÉ à l'entrée de la grotte : le gardien est
+// « battu cette visite » dès que pnj8WinsCount() dépasse ce repère → le blocage (17-19,18) se lève. Ré-armé
+// à chaque nouvelle entrée (setMap) → on le rebat à chaque visite. Runtime-only (non persistant = re-combat au reload).
+// Sentinelle -1 = « pas entré cette session » → JAMAIS cleared (échec SÛR : au pire un combat en trop, jamais un skip).
+// Couvre le reload direct DANS la grotte (setMap non rappelé) : le blocage reste actif tant qu'on n'a pas ré-entré+vaincu.
+let pnj8WinsAtEntry = -1
+const pnj8ClearedThisVisit = (): boolean => pnj8WinsAtEntry >= 0 && pnj8WinsCount() > pnj8WinsAtEntry
+
+// Meute de 5 Gek scalée (+2 niveaux/victoire) + IA « hof » (la plus maligne). Récurrent, sans cap journalier.
+// La GATE « titre Or au Dôme » est vérifiée à l'INTERACTION (sinon renvoi hors grotte) — cf. handler pressA.
+function tryLaunchPnj8(): ActiveDialogue | null {
+    const team = getPlayerSave().team
+    if (!team.some((m) => m.currentHp > 0)) {
+        return { npcId: PNJ8_TRAINER_ID, npcName: "GARDIEN", lineIndex: 0, lines: PNJ8_NO_TEAM_LINES }
+    }
+    const enemyTeam = buildPnj8Team(pnj8WinsCount())
+    const seed = Math.floor(Math.random() * 1e9) >>> 0
+    startTrainerBattle(team, enemyTeam, seed, { trainerId: PNJ8_TRAINER_ID, reward: 0, aiLevel: "hof" })
+    return null
+}
+
 // Spawn par défaut : VILLE JAUNE = Viridian City 45×40 (scale natif FireRed),
 // entrée sud (Route 1) centre-bas pour explorer la ville.
 export const DEFAULT_SPAWN = { x: 22, y: 37 } // juste AU-DESSUS du Sylvebarbe endormi qui bouche la sortie sud
@@ -465,6 +488,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     pendingOrcaline: false,
     pendingGekroc: false,
     pendingSylvebarbe: false,
+    pendingPnj8: false,
     pendingHhTrade: null,
     pendingAquilordTrade: null,
     pendingCaveTrade: null,
@@ -492,6 +516,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
         if ((next.posX !== player.posX || next.posY !== player.posY)
             && player.mapId === SYLVEBARBE_BLOCK_MAP && !getPlayerSave().sylvebarbeAwake
             && inSylvebarbeBlock(next.posX, next.posY)) {
+            set({ player: { ...player, direction: next.direction } })
+            scheduleSave({ ...player, direction: next.direction })
+            return
+        }
+
+        // GARDIEN DE LA GROTTE (PNJ 8) : barre l'accès (17-19,18) tant qu'il n'est pas battu CETTE visite.
+        if ((next.posX !== player.posX || next.posY !== player.posY)
+            && player.mapId === PNJ8_MAP_ID && !pnj8ClearedThisVisit()
+            && inPnj8Block(next.posX, next.posY)) {
             set({ player: { ...player, direction: next.direction } })
             scheduleSave({ ...player, direction: next.direction })
             return
@@ -617,6 +650,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
                         ],
                     },
                 })
+                scheduleSave(next)
+                return
+            }
+            // GARDIEN DE LA GROTTE (PNJ 8) — DESCENTE SCELLÉE : la 1re descente (1F → B1F par une échelle) est
+            // bloquée tant que le gardien n'a pas été vaincu CETTE visite. Verrou ROBUSTE : même si le joueur
+            // contourne physiquement le gardien (collision WIP), il ne peut pas atteindre le casse-tête sans combattre.
+            if (player.mapId === PNJ8_MAP_ID && targetMapId === "yellow_grotte_nexus_b1f" && !pnj8ClearedThisVisit()) {
+                set({ player: next, dialogue: { npcId: PNJ8_NPC_ID, npcName: "GARDIEN", lineIndex: 0, lines: PNJ8_SEAL_LINES } })
                 scheduleSave(next)
                 return
             }
@@ -817,6 +858,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     set({ dialogue: tryLaunchGekroc(), pendingGekroc: false })
                 } else if (get().pendingSylvebarbe) {
                     set({ dialogue: tryLaunchSylvebarbe(), pendingSylvebarbe: false })
+                } else if (get().pendingPnj8) {
+                    set({ dialogue: tryLaunchPnj8(), pendingPnj8: false })
                 } else if (get().pendingHhTrade) {
                     set({ dialogue: doHhTrade(get().pendingHhTrade!), pendingHhTrade: null })
                 } else if (get().pendingAquilordTrade) {
@@ -1114,6 +1157,24 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
+        // PNJ 8 — GARDIEN DE LA GROTTE DU NEXUS : GATE « titre OR au Dôme » (domeChampionships >= 3 = Bronze+Argent+Or).
+        // Sans le titre → refus + RENVOI hors de la grotte (retour Zone de Combat). Avec le titre → combat RÉCURRENT
+        // contre la meute des 5 Gek (scaling +2 niveaux/victoire, IA hof), à rebattre à chaque visite.
+        if (npc.id === PNJ8_NPC_ID) {
+            if (getPlayerSave().domeChampionships < 3) {
+                // Renvoi : on repositionne le joueur hors de la grotte et on affiche le refus par-dessus (comme un K.O.).
+                const kicked = createInitialPlayer(PNJ8_KICK.mapId, PNJ8_KICK.x, PNJ8_KICK.y, "down")
+                set({
+                    map: YELLOW_MAPS[PNJ8_KICK.mapId], player: kicked,
+                    dialogue: { npcId: npc.id, npcName: "GARDIEN", lineIndex: 0, lines: PNJ8_NO_DOME_LINES },
+                })
+                saveNow(kicked) // transition de map → save IMMÉDIAT (anti-désync position/flags au reload, cf. setMap)
+                return
+            }
+            set({ dialogue: { npcId: npc.id, npcName: "GARDIEN", lines: PNJ8_INTRO_LINES, lineIndex: 0 }, pendingPnj8: true })
+            return
+        }
+
         // BROCANTEUR (maison hantée) — WORLD-AWARE. RUN 1 → Roctaur→ROCHISON (trade-évo) ; RUN 2 → Roctaur→MORROW ;
         // RUN 3 → PLUS de Roctaur : uniquement le service AQUILOTHAN→AQUILORD. (Post-game live : Aquilord ET Roctaur.)
         if (npc.id === HH_TRADER_ID) {
@@ -1348,6 +1409,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ dialogue: tryLaunchGekroc(), pendingGekroc: false })
         } else if (get().pendingSylvebarbe) {
             set({ dialogue: tryLaunchSylvebarbe(), pendingSylvebarbe: false })
+        } else if (get().pendingPnj8) {
+            set({ dialogue: tryLaunchPnj8(), pendingPnj8: false })
         } else if (get().pendingHhTrade) {
             // Ⓑ = RENONCER à l'échange (étape de validation) : on ne troque RIEN, le Roctaur reste dans l'équipe.
             set({ dialogue: { npcId: HH_TRADER_ID, npcName: "BROCANTEUR", lineIndex: 0, lines: HH_TRADER_CANCEL_LINES }, pendingHhTrade: null })
@@ -1372,6 +1435,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
             console.warn(`[gameStore] Map inconnue : ${mapId}`)
             return
         }
+        // GARDIEN DE LA GROTTE : entrer dans la grotte (par le passeur → setMap) RÉ-ARME PNJ 8 → il faut le rebattre.
+        // Les échelles intra-grotte passent par la transition inline (findExitAt), PAS setMap → aucun ré-arm parasite.
+        if (mapId === PNJ8_MAP_ID) pnj8WinsAtEntry = pnj8WinsCount()
         const player = createInitialPlayer(mapId, spawnX, spawnY)
         set({ map, player, dialogue: null })
         saveNow(player) // transition de map → persistance IMMÉDIATE (anti-désync position/flags au reload, cf. whiteout Ligue)

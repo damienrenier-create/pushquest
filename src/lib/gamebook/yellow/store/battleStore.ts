@@ -20,7 +20,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType, MoveSlot } from "../battle/types"
 import { markSeen, markCaught, getPokedex } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordDomeUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, recordOrcalineDefeat, orcalineLevelForWins, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, markCaughtThisRun, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordDomeUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, recordOrcalineDefeat, orcalineLevelForWins, recordPnj8Defeat, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, markCaughtThisRun, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter } from "./playerStore"
 import { getItem } from "../data/items"
 import { reportShiny } from "../shinyGift"
 import { ARENA_TICKET_VALUE, SBIRE_TICKET_VALUE, SBIRE_TICKET_EVERY, ACE_TICKET_VALUE, ACE_TICKET_WIN_BEFORE, ACE_TICKET_WIN_AFTER, ACE_TICKET_EARLY_VALUE, ACE_TICKET_WIN_EARLY, LEAGUE_ROULETTE_PER_KO, LEAGUE_AUTOGRAPH_CREDIT } from "../data/labDefis"
@@ -35,6 +35,7 @@ import { getSpecies } from "../data/species"
 import { SBIRE_REWARD_REPS, SBIRE_REWARD_REPS_3, SBIRE_REWARD_REPS_5, SBIRE_REWARD_BALL_ID, SBIRE_REWARD_BALL_ID_4, SBIRE_REWARD_CT_ID, SBIRE_REWARD_CT_FALLBACK_REPS } from "../data/sbire"
 import { ACE_TRAINER_ID, aceReward, aceWinTaunt, speciesAtLevel } from "../data/ace"
 import { ORCALINE_TRAINER_ID, ORCALINE_GIFT_SPECIES, ORCALINE_GIFT_LEVEL, ORCALINE_BALL_REWARD_ID, ORCALINE_BALL_AT_LEVEL, orcalineTrainerDialogue } from "../data/orcalineTrainer"
+import { PNJ8_TRAINER_ID, PNJ8_VICTORY_LINES } from "../data/pnj8"
 import { GEKROC_STONE_ITEM } from "../data/gekroc"
 import { frontierEnergyRefund, FRONTIER_EXP_MULT } from "../frontier/engine"
 import { DUEL_EXP_MULT } from "../data/duel"
@@ -724,6 +725,11 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                 lines.push(...dlg.ball)
             }
             rematchReward = { npcId: ORCALINE_TRAINER_ID, npcName: dlg.name, lines }
+        } else if (storeState.trainer.trainerId === PNJ8_TRAINER_ID) {
+            // GARDIEN DE LA GROTTE (PNJ 8) : ré-affrontable à CHAQUE visite (PAS de markTrainerDefeated, pas de
+            // cap journalier). Incrémente le compteur → ses 5 Gek montent de +2 niveaux (+ Saiyan) au prochain combat.
+            recordPnj8Defeat()
+            rematchReward = { npcId: PNJ8_TRAINER_ID, npcName: "GARDIEN", lines: [...PNJ8_VICTORY_LINES] }
         } else if (storeState.trainer.trainerId.startsWith("duel:")) {
             // DUEL reflet : aucune récompense ici → gérée côté UI (limite 1/jour, Nexus Ball, dialogue
             // Dieu des Nouilles, cadeau croisé). PAS de markTrainerDefeated (ce n'est pas un dresseur permanent).
