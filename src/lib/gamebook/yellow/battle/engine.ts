@@ -919,6 +919,10 @@ function applyVolatile(mon: BattleMon, vol: NonNullable<MoveData["effect"]>["inf
         if (mon.volatiles.SEEDED) return
         mon.volatiles.SEEDED = 1
         events.push({ kind: "message", text: `${displayName(named)} est infecté par des graines !` })
+    } else if (vol === "OSMOSED") {
+        if (mon.volatiles.OSMOSED) return
+        mon.volatiles.OSMOSED = 1
+        events.push({ kind: "message", text: `${displayName(named)} est enveloppé d'une pellicule d'eau parasite !` })
     } else {
         mon.volatiles[vol] = 1
     }
@@ -1017,6 +1021,13 @@ function endOfTurn(state: BattleState, events: BattleEvent[], rng: Rng) {
             applyDamage(state, side, drain, events, /*breaksFocus*/ false)
             applyHeal(state, other(side), drain, events)
             events.push({ kind: "message", text: `${displayName(mon)} est vidé de son énergie !` })
+        }
+        // Osmose (OSMOSED) : jumeau EAU de Vampigraine — la pellicule d'eau siphonne les PV vers l'adversaire.
+        if (mon.volatiles.OSMOSED && mon.currentHp > 0) {
+            const drain = Math.max(1, Math.floor(maxHpOf(mon) / 8))
+            applyDamage(state, side, drain, events, /*breaksFocus*/ false)
+            applyHeal(state, other(side), drain, events)
+            events.push({ kind: "message", text: `L'eau parasite siphonne les PV de ${displayName(mon)} !` })
         }
         // Restes (objet) OU talent Cœur vaillant : régénère une fraction des PV max en fin de tour.
         const lefto = heldEffect(mon)?.leftoversFrac ?? talentEffect(mon)?.leftoversFrac

@@ -28,7 +28,7 @@ const TYPE_COLOR: Record<PokeType, string> = {
 }
 const STAT_FR: Record<StageKey, string> = { atk: "Attaque", def: "Défense", spe: "Vitesse", spc: "Spécial", acc: "Précision", eva: "Esquive" }
 const STATUS_FR: Record<MajorStatus, string> = { NONE: "", BURN: "Brûlure", POISON: "Poison", TOXIC: "Poison grave", PARALYSIS: "Paralysie", SLEEP: "Sommeil", FREEZE: "Gel" }
-const VOL_FR: Record<VolatileStatus, string> = { CONFUSION: "Confusion", SEEDED: "Vampigraine (draine chaque tour)", FLINCH: "Peur", TRAPPED: "Piégé", RECHARGE: "Doit récupérer" }
+const VOL_FR: Record<VolatileStatus, string> = { CONFUSION: "Confusion", SEEDED: "Vampigraine (draine chaque tour)", OSMOSED: "Osmose (draine chaque tour)", FLINCH: "Peur", TRAPPED: "Piégé", RECHARGE: "Doit récupérer" }
 
 // moveId → libellé de CT (ex. "CT02"), pour l'affichage + le tri par n° de CT.
 const CT_BY_MOVE: Record<string, { label: string; num: number }> = {}

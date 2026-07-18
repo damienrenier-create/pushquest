@@ -32,7 +32,7 @@ export type MajorStatus =
 
 // Statuts volatils (peuvent coexister, disparaissent au switch/fin de combat).
 export type VolatileStatus =
-    | "CONFUSION" | "FLINCH" | "SEEDED" | "TRAPPED" | "RECHARGE"
+    | "CONFUSION" | "FLINCH" | "SEEDED" | "OSMOSED" | "TRAPPED" | "RECHARGE"
 
 // ============================================================
 // Données statiques (data/)

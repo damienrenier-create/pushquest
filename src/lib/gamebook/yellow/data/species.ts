@@ -2362,6 +2362,7 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 1, moveId: "tunnel" },
             { level: 1, moveId: "repos" },
             { level: 1, moveId: "secousse" },          // frappe ROCHE/SOL physique
+            { level: 40, moveId: "osmose" },           // signature EAU vicieuse : draine des PV chaque tour (jumeau EAU de Vampigraine)
             { level: 48, moveId: "eboulis" },          // STAB ROCHE physique
             { level: 56, moveId: "lame_eau" },         // EAU spécial moyen
             { level: 66, moveId: "lame_roche" },       // STAB ROCHE
