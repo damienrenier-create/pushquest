@@ -16,19 +16,20 @@ describe("Gékroc / Gékraise / Gékosmic — le gardien de la Pierre selon le m
         expect(getSpecies("gekraise")!.types).toEqual(["ROCHE", "FEU"])
     })
 
-    it("run 3 : buildGekroc('run3') = Gékosmic (ROCHE/PSY), mêmes stats/niveau/capture, learnsAllCts", () => {
+    it("run 3 : buildGekroc('run3') = Gékosmic (ROCHE/PSY), BST 410, learnsAllCts (stats PERSONNALISÉES ≠ Gékroc)", () => {
         const g = buildGekroc("run3")
         expect(g.speciesId).toBe("gekosmic")
         const sp = getSpecies("gekosmic")!
         expect(sp.types).toEqual(["ROCHE", "PSY"])
         expect(sp.learnsAllCts).toBe(true)
-        expect(sp.baseStats).toEqual(getSpecies("gekroc")!.baseStats) // mêmes stats que Gékroc/Gékraise
+        expect(Object.values(sp.baseStats).reduce((a, b) => a + b, 0)).toBe(410) // BST conservé, spread propre (spé++)
+        expect(sp.baseStats).not.toEqual(getSpecies("gekroc")!.baseStats)         // personnalité distincte (plus « mêmes stats »)
         expect(g.level).toBe(35)
         expect((g as { captureMult?: number }).captureMult).toBe(0.6) // capture dure, comme les 2 autres
     })
 
-    it("les 3 jumeaux : BST 410 identique + masqués du Pokédex (hiddenUntilCaught)", () => {
-        for (const id of ["gekroc", "gekraise", "gekosmic"]) {
+    it("les 5 Gek : BST 410 chacun (personnalités distinctes) + masqués du Pokédex (hiddenUntilCaught)", () => {
+        for (const id of ["gekroc", "gekraise", "gekosmic", "geckebre", "geaucke"]) {
             const sp = getSpecies(id)!
             expect(Object.values(sp.baseStats).reduce((a, b) => a + b, 0), id).toBe(410)
             expect(sp.hiddenUntilCaught, id).toBe(true)

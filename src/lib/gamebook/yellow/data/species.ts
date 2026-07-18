@@ -1944,7 +1944,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     // mais COUTEAU-SUISSE : apprend TOUTES les CT (learnsAllCts). Capture dure (catchRate 10) mais ≠ légendaire.
     gekroc: {
         id: "gekroc", dexNo: 126, name: "Gékroc", types: ["SOL", "ELEC"],
-        baseStats: { hp: 90, atk: 92, def: 100, spe: 48, spc: 80 }, // BST 410 — tank physique lent (immunisé ÉLEC via SOL)
+        baseStats: { hp: 70, atk: 55, def: 120, spe: 50, spc: 115 }, // BST 410 — MUR SPÉCIAL (Déf+Spé extrêmes ; riposte ÉLEC, immunisé ÉLEC via SOL)
         learnset: [
             { level: 1, moveId: "vive_attaque" },
             { level: 1, moveId: "etincelle" },
@@ -1975,7 +1975,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     // (mêmes stats, mêmes attaques, learnsAllCts, capture dure) mais RE-TYPÉE ROCHE/FEU. Masqué du Pokédex.
     gekraise: {
         id: "gekraise", dexNo: 135, name: "Gékraise", types: ["ROCHE", "FEU"],
-        baseStats: { hp: 90, atk: 92, def: 100, spe: 48, spc: 80 }, // identiques à Gékroc (BST 410)
+        baseStats: { hp: 110, atk: 125, def: 65, spe: 55, spc: 55 }, // BST 410 — JUGGERNAUT PHYSIQUE (Atk+HP extrêmes ; frappe fort, encaisse mal)
         learnset: [
             { level: 1, moveId: "vive_attaque" },
             { level: 1, moveId: "etincelle" },
@@ -2304,7 +2304,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     // ses 3 moves ÉLEC échangés en PSY (STAB spécial réel). Masqué du Pokédex tant que non capturé.
     gekosmic: {
         id: "gekosmic", dexNo: 156, name: "Gékosmic", types: ["ROCHE", "PSY"],
-        baseStats: { hp: 90, atk: 92, def: 100, spe: 48, spc: 80 }, // identiques à Gékroc/Gékraise (BST 410)
+        baseStats: { hp: 65, atk: 50, def: 55, spe: 115, spc: 125 }, // BST 410 — SWEEPER SPÉCIAL RAPIDE (Spé+Vit extrêmes ; verre-canon psychique)
         learnset: [
             { level: 1, moveId: "vive_attaque" },
             { level: 1, moveId: "choc_mental" },     // STAB PSY spécial (⇄ étincelle de Gékroc)
@@ -2325,6 +2325,56 @@ export const SPECIES: Record<string, SpeciesData> = {
         learnsAllCts: true,
         hiddenUntilCaught: true,
         runThreeOnly: true, // absent des dex tant que non capturé en run 3 (jumeau run-3 de Gékroc)
+    },
+    // 🪨🌑 GÉCKÈBRE — 4e membre de la famille Gek (clone de la GROTTE DU NEXUS). MÊME golem, RE-TYPÉ ROCHE/TÉNÈBRES,
+    //   PERSONNALITÉ = MUR IMMUABLE (def 120, le plus lent). Masqué du dex jusqu'à capture. learnsAllCts.
+    geckebre: {
+        id: "geckebre", dexNo: 180, name: "Géckèbre", types: ["ROCHE", "TENEBRES"],
+        baseStats: { hp: 120, atk: 60, def: 125, spe: 35, spc: 70 }, // BST 410 — MUR PHYSIQUE INCREVABLE (HP+Déf extrêmes, ultra-lent)
+        learnset: [
+            { level: 1, moveId: "vive_attaque" },
+            { level: 1, moveId: "morsure_sombre" },   // STAB TÉNÈBRES physique
+            { level: 1, moveId: "tunnel" },
+            { level: 1, moveId: "repos" },             // mur → auto-soin
+            { level: 1, moveId: "secousse" },
+            { level: 48, moveId: "eboulis" },          // STAB ROCHE physique
+            { level: 56, moveId: "onde_obscure" },     // TÉNÈBRES (peut apeurer)
+            { level: 66, moveId: "lame_roche" },       // STAB ROCHE
+            { level: 72, moveId: "seisme" },
+            { level: 80, moveId: "devoreur_ombres" },  // gros STAB TÉNÈBRES (siphon)
+            { level: 88, moveId: "roc_titanesque" },   // capstone ROCHE
+        ],
+        catchRate: 10, baseExp: 180, rarity: "RARE", growthRate: "medium_fast", exclusive: true,
+        role: "Gek de la Grotte — ROCHE/TÉNÈBRES, mur immuable, apprend TOUTES les CT",
+        description: "Golem fossile jumeau de Gékroc, mais sa pierre a viré à l'obsidienne : un cœur d'ombre bat sous sa carapace impénétrable. Rien ne semble pouvoir l'ébranler.",
+        sprite: "/yellow/sprites/dex/geckebre.png",
+        learnsAllCts: true,
+        hiddenUntilCaught: true,
+    },
+    // 🪨💧 GEAUCKÉ — 5e membre de la famille Gek (clone de la GROTTE DU NEXUS). MÊME golem, RE-TYPÉ ROCHE/EAU,
+    //   PERSONNALITÉ = VIF FRAGILE (vit 95, bulk en retrait). Masqué du dex jusqu'à capture. learnsAllCts.
+    geaucke: {
+        id: "geaucke", dexNo: 181, name: "Geaucké", types: ["ROCHE", "EAU"],
+        baseStats: { hp: 60, atk: 115, def: 55, spe: 125, spc: 55 }, // BST 410 — SPRINTER PHYSIQUE (Vit+Atk extrêmes ; frappe vite, en papier)
+        learnset: [
+            { level: 1, moveId: "vive_attaque" },
+            { level: 1, moveId: "pistolet_a_o" },      // STAB EAU spécial
+            { level: 1, moveId: "tunnel" },
+            { level: 1, moveId: "repos" },
+            { level: 1, moveId: "secousse" },          // frappe ROCHE/SOL physique
+            { level: 48, moveId: "eboulis" },          // STAB ROCHE physique
+            { level: 56, moveId: "lame_eau" },         // EAU spécial moyen
+            { level: 66, moveId: "lame_roche" },       // STAB ROCHE
+            { level: 72, moveId: "seisme" },
+            { level: 80, moveId: "deferlante" },       // gros STAB EAU
+            { level: 88, moveId: "roc_titanesque" },   // capstone ROCHE
+        ],
+        catchRate: 10, baseExp: 180, rarity: "RARE", growthRate: "medium_fast", exclusive: true,
+        role: "Gek de la Grotte — ROCHE/EAU, sprinter fragile, apprend TOUTES les CT",
+        description: "Golem fossile jumeau de Gékroc, mais sa pierre s'est muée en geyser : des jets d'eau propulsent sa carcasse rocheuse à une vitesse stupéfiante. Frappe vite, encaisse mal.",
+        sprite: "/yellow/sprites/dex/geaucke.png",
+        learnsAllCts: true,
+        hiddenUntilCaught: true,
     },
     // 🦛🔮 HYPNOPPO → TÉLÉPPO → OMNHIPPO — lignée mono-PSY inédite du run 3 (l'ENDORMEUR : hypnose → contrôle → sweep).
     hypnoppo: {
