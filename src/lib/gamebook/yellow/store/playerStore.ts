@@ -200,12 +200,40 @@ export function getPlayer(): PlayerState { return st }
 
 // NG+ (2 mondes navigables) — monde ACTIF que le joueur contrôle. Runtime ; la sérialisation (stash du
 // monde inactif, fusion des 2 mondes) est gérée par saveManager. Émet pour que l'UI se re-rende à la bascule.
-let activeWorld: "live" | "ngplus" | "run3" = "live"
-export function getActiveWorld(): "live" | "ngplus" | "run3" { return activeWorld }
-export function setActiveWorld(w: "live" | "ngplus" | "run3") { if (w === activeWorld) return; activeWorld = w; emit() }
+export type WorldId = "live" | "ngplus" | "run3" | "replay"
+let activeWorld: WorldId = "live"
+export function getActiveWorld(): WorldId { return activeWorld }
+export function setActiveWorld(w: WorldId) { if (w === activeWorld) return; activeWorld = w; emit() }
 /** Hook React : monde actif (re-render à la bascule). */
-export function useActiveWorld(): "live" | "ngplus" | "run3" {
+export function useActiveWorld(): WorldId {
     return useSyncExternalStore(subscribePlayer, getActiveWorld, () => "live")
+}
+
+// === REJEU (« run bis ») — contexte de la bulle isolée. `replayRun` pilote les RÈGLES (énergie) du run rejoué ;
+// `replayReturn` = monde réel à réactiver en sortant. Portés ici (état de nav) ; sérialisés par saveManager. ===
+let replayRun: "run1" | "run2" | "run3" | null = null
+let replayReturn: "live" | "ngplus" | "run3" | null = null
+export function getReplayRun(): "run1" | "run2" | "run3" | null { return replayRun }
+export function getReplayReturn(): "live" | "ngplus" | "run3" | null { return replayReturn }
+export function setReplayContext(run: "run1" | "run2" | "run3", ret: "live" | "ngplus" | "run3") { replayRun = run; replayReturn = ret }
+export function clearReplayContext() { replayRun = null; replayReturn = null }
+/** Mode de RÈGLES effectif : hors rejeu = monde actif ; en rejeu = le run rejoué (la bulle suit ses règles d'énergie). */
+function runMode(): "live" | "ngplus" | "run3" {
+    if (activeWorld !== "replay") return activeWorld
+    return replayRun === "run3" ? "run3" : replayRun === "run2" ? "ngplus" : "live"
+}
+/** Monde EFFECTIF (public) : hors rejeu = monde actif ; en rejeu = le run rejoué. Pour tout code qui tague/
+ *  choisit selon le run (Hall of Fame, Gékroc, Orcaline, arène…) et ne doit jamais voir la valeur "replay". */
+export function effectiveRunWorld(): "live" | "ngplus" | "run3" { return runMode() }
+
+/** REJEU — amorce un run FRAIS dans les stores (la bulle). run1 = intro (starter choisi ensuite) ; run2/run3
+ *  exigent un starter. Les flags `used` posés ici vivent dans la bulle (jetée à la sortie) → sans effet sur le réel.
+ *  L'énergie de départ + le passage activeWorld="replay" sont gérés par saveManager.startReplay. */
+export function startReplayWorld(run: "run1" | "run2" | "run3", starter: MonInstance | null): boolean {
+    if (run === "run1") { resetForIntro(); return true }   // fresh run 1 → l'intro choisit le starter
+    if (!starter) return false
+    if (run === "run2") { startNgPlusWorld(starter); return true }
+    startRun3World(starter); return true
 }
 
 // === PARRAINAGE — MODES DE JEU (énergie) ===
@@ -242,7 +270,7 @@ export function consumeModeRechargeEvent(): number | null { const v = lastModeRe
 /** easy/debutant, monde live : effectue UN remplissage d'énergie s'il en reste (remonte à `fill`, relève le
  *  plafond au besoin). Renvoie true si rechargé. No-op en normal / hors live / budget épuisé. */
 function tryModeRecharge(): boolean {
-    if (activeWorld !== "live") return false
+    if (runMode() !== "live") return false
     const cfg = MODE_CFG[gameMode]
     if (cfg.fill <= 0) return false
     const used = st.stats.modeFillsUsed ?? 0
@@ -486,7 +514,7 @@ export function markRun3LavapetitCaught() {
 
 /** RUN 3 — crédite des ennemis VAINCUS au score (dédup par clé). Gardé sur le monde run 3 (aucun effet ailleurs). */
 export function addRun3Defeated(entries: { key: string; level: number }[]) {
-    if (activeWorld !== "run3" || entries.length === 0) return
+    if (runMode() !== "run3" || entries.length === 0) return
     const seen = new Set(st.run3Defeated.map((e) => e.key))
     const add = entries.filter((e) => e.key && !seen.has(e.key))
     if (add.length === 0) return
@@ -619,7 +647,7 @@ export function awardBadge(id: BadgeId): boolean {
     if (st.badges.includes(id)) return false
     // RUN 3 : le plafond d'énergie est FIXE (échelle de recharge d'arène : 500→1000, jamais au-dessus) → les
     //   badges ne le gonflent PAS (sinon la jauge se remplirait au-delà des paliers attendus). Run 1/2 : +250.
-    const capBonus = activeWorld === "run3" ? 0 : BADGE_REPS_CAP_BONUS
+    const capBonus = runMode() === "run3" ? 0 : BADGE_REPS_CAP_BONUS
     st = { ...st, badges: [...st.badges, id], repsCap: st.repsCap + capBonus }
     emit()
     return true
@@ -825,7 +853,7 @@ export function spendReps(n: number): boolean {
  *  sauf `force` (utilisé par startRun3, les paliers d'arène, et le remboursement d'une attaque qui n'est jamais
  *  partie = on rend au joueur SA propre énergie). Casino/ACE/sbire/dresseurs/gauntlet → bloqués en run 3. */
 export function grantReps(n: number, force = false): number {
-    if (activeWorld === "run3" && !force) return 0
+    if (runMode() === "run3" && !force) return 0
     const before = st.reps
     st = { ...st, reps: Math.min(st.repsCap, st.reps + Math.max(0, Math.floor(n))) }
     emit()
@@ -836,7 +864,7 @@ export function grantReps(n: number, force = false): number {
  *  (sinon un gros gain repartirait avec moins que sa mise, ou serait rogné au bankReps quotidien). Le cap
  *  ne bouge que si le crédit le dépasse. Renvoie le montant crédité (= n). */
 export function creditReps(n: number): number {
-    if (activeWorld === "run3") return 0 // RUN 3 : aucune énergie reçue (source unique) → bloque le cash-out + le tuto poker (100⚡)
+    if (runMode() === "run3") return 0 // RUN 3 : aucune énergie reçue (source unique) → bloque le cash-out + le tuto poker (100⚡)
     const amt = Math.max(0, Math.floor(n))
     if (amt <= 0) return 0
     const newReps = st.reps + amt
@@ -871,8 +899,8 @@ export function creditDailyReps(today: string) {
  */
 export function bankReps(totalToDate: number, throughYesterday: number, today?: string) {
     // RUN 3 : les vraies pompes ne donnent PAS d'énergie (elles comptent pour les points Saiyan uniquement).
-    // Le high-water mark réel reste porté par les mondes run 1 / run 2 → conservé à la fusion.
-    if (activeWorld === "run3") return
+    // Le high-water mark réel reste porté par les mondes run 1 / run 2 → conservé à la fusion. (rejeu run 3 idem)
+    if (runMode() === "run3") return
     // PARRAINAGE easy/debutant : énergie DÉCOUPLÉE des vrais reps (pool à remplissages) → pas de crédit reps.
     if (gameMode !== "normal") return
     const tot = Math.max(0, Math.floor(totalToDate))
@@ -1173,7 +1201,7 @@ export function raiseRepsCap(delta: number) {
  * au prochain bankReps quotidien. Le cap reste relevé (perk durable assumé).
  */
 export function grantBonusEnergyUncapped(n: number) {
-    if (activeWorld === "run3") return // RUN 3 : aucun cadeau d'énergie hors-plafond (source unique)
+    if (runMode() === "run3") return // RUN 3 : aucun cadeau d'énergie hors-plafond (source unique)
     const amt = Math.max(0, Math.floor(n))
     if (amt <= 0) return
     st = { ...st, repsCap: st.repsCap + amt, reps: st.reps + amt }
@@ -1278,7 +1306,7 @@ export function casinoSpin(bets: CasinoBet[], nowMs: number): CasinoSpinResult {
     // RUN 3 (concours) : le casino est FERMÉ — casinoSpin écrit st.reps DIRECTEMENT (contourne le verrou
     //   grantReps/creditReps). Sans ce garde, la roulette du labo est un faucet d'énergie infini qui casse
     //   la « source unique » du concours ET empêche la fin de run (gatée sur reps===0). Cf. tables casino déjà fermées.
-    if (activeWorld === "run3") return { ok: false, reason: "🔒 Casino FERMÉ pendant le CONCOURS (run 3)." }
+    if (runMode() === "run3") return { ok: false, reason: "🔒 Casino FERMÉ pendant le CONCOURS (run 3)." }
     const d = st.labDefi
     if (d.casinoBankruptUntil && new Date(d.casinoBankruptUntil).getTime() > nowMs) {
         return { ok: false, reason: "Le casino est en banqueroute. Reviens plus tard." }
@@ -1402,7 +1430,7 @@ export function peekTicketValue(): number { return st.labDefi.grantedTickets[0] 
  *  `origin` : "boss" (arène/sbire/ACE, défaut) · "spag" (Dieu Spaghetti) · "casino" (trouvé/acheté →
  *  RACHETABLE par le barman). */
 export function grantRouletteTicket(value: number, origin: "boss" | "spag" | "casino" = "boss") {
-    if (activeWorld === "run3") return // RUN 3 : aucun ticket (casino/boss/spag) — l'énergie a une source unique
+    if (runMode() === "run3") return // RUN 3 : aucun ticket (casino/boss/spag) — l'énergie a une source unique
     const d = st.labDefi
     if (d.grantedTickets.length >= TICKET_QUEUE_MAX) return
     st = { ...st, labDefi: { ...d, grantedTickets: [...d.grantedTickets, clampTicketValue(value)], grantedTicketOrigins: [...d.grantedTicketOrigins, origin] } }
@@ -1484,7 +1512,7 @@ export function claimSpagWelcomeTickets(): number {
 export function rouletteCreditBalance(): number { return st.labDefi.rouletteCredit }
 /** Ajoute `n` au crédit roulette. */
 export function grantRouletteCredit(n: number): void {
-    if (activeWorld === "run3") return // RUN 3 : aucun crédit roulette (énergie offerte) — source unique
+    if (runMode() === "run3") return // RUN 3 : aucun crédit roulette (énergie offerte) — source unique
     const add = Math.max(0, Math.floor(n))
     if (add <= 0) return
     st = { ...st, labDefi: { ...st.labDefi, rouletteCredit: st.labDefi.rouletteCredit + add } }
@@ -1651,7 +1679,7 @@ export function markRouletteClaimed(roundId: string): boolean {
 /** Joue le ticket GRATUIT du jour (valeur DAILY_TICKET_VALUE), HORS file de boss. Marque le jour
  *  consommé. 🤫 1er pari du joueur gagné d'office ; ensuite aléatoire. Gain = mise × 10. */
 export function playDailyTicketSpin(betCase: number, today: string): CasinoTicketResult {
-    if (activeWorld === "run3") return { winningCase: -1, won: false, winAmount: 0, betValue: 0 } // casino fermé en run 3
+    if (runMode() === "run3") return { winningCase: -1, won: false, winAmount: 0, betValue: 0 } // casino fermé en run 3
     const d = st.labDefi
     const betValue = DAILY_TICKET_VALUE
     const firstBet = !d.casinoFirstBetDone
@@ -1671,7 +1699,7 @@ export function playDailyTicketSpin(betCase: number, today: string): CasinoTicke
  * Renvoie un résultat à winningCase=-1/betValue=0 si aucun ticket en attente (no-op).
  */
 export function playTicketSpin(betCase: number): CasinoTicketResult {
-    if (activeWorld === "run3") return { winningCase: -1, won: false, winAmount: 0, betValue: 0 } // casino fermé en run 3
+    if (runMode() === "run3") return { winningCase: -1, won: false, winAmount: 0, betValue: 0 } // casino fermé en run 3
     const d = st.labDefi
     const betValue = d.grantedTickets[0]
     if (betValue === undefined) return { winningCase: -1, won: false, winAmount: 0, betValue: 0 }

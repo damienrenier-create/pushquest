@@ -3,7 +3,7 @@
 // Nexus Jaune Éclair — pont entre les stores (joueur + Pokédex) et l'API de save.
 // Charge au démarrage, puis auto-sauvegarde (débouncé) à chaque changement.
 
-import { getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, bankReps, claimWelcomeGift, claimSpagGift, applySaiyanResults, resetForIntro, reregisterCustomDaemons, getActiveWorld, setActiveWorld, startNgPlusWorld, startRun3World, raiseRepsCap, grantReps, addItem, setBerrySecretKnown, ensureModeStartGrant } from "./playerStore"
+import { getPlayer, hydratePlayer, subscribePlayer, setWildCtx, creditDailyReps, bankReps, claimWelcomeGift, claimSpagGift, applySaiyanResults, resetForIntro, reregisterCustomDaemons, getActiveWorld, setActiveWorld, startNgPlusWorld, startRun3World, raiseRepsCap, grantReps, addItem, setBerrySecretKnown, ensureModeStartGrant, startReplayWorld, getReplayRun, getReplayReturn, setReplayContext, clearReplayContext } from "./playerStore"
 import { getPokedex, hydratePokedex, subscribePokedex } from "./pokedexStore"
 import { parseSave, emptySave, type YellowSave, type ChampionMon, SAVE_VERSION } from "../storage/save"
 import type { StoredCustomDaemon } from "../create/customSpecies"
@@ -52,21 +52,25 @@ function hydrateFromWorld(w: YellowSave, customDaemons: StoredCustomDaemon[]): v
  *  Choisit le monde ACTIF (live/ngplus), stashe l'INACTIF, et rend le tout sérialisable sans perte. */
 export function applyServerSave(save: YellowSave): void {
     // Monde actif = drapeau serveur, DÉGRADÉ en "live" si le monde cible est absent/corrompu (anti-écran noir).
-    const aw: "live" | "ngplus" | "run3" =
+    // REJEU : "replay" seulement si la bulle existe (sinon dégradé "live" → jamais d'écran noir mid-rejeu corrompu).
+    const aw: "live" | "ngplus" | "run3" | "replay" =
         save.activeWorld === "ngplus" && save.ngplusWorld ? "ngplus"
         : save.activeWorld === "run3" && save.run3World ? "run3"
+        : save.activeWorld === "replay" && save.replayWorld ? "replay"
         : "live"
     ngplusOldTeam = save.ngplusOldTeam ?? null
-    // Stashe les mondes NON actifs (le slot du monde actif reste null → il vit dans les stores).
-    // Les champs plats de haut niveau = TOUJOURS le run 1 (garde-fou anti-wipe) → liveWorldOf(save).
+    // Stashe les mondes NON actifs (le slot du monde actif reste null → il vit dans les stores). Pendant un REJEU,
+    // les 3 mondes réels sont TOUS stashés (la bulle est active) ; les champs plats = TOUJOURS le run 1 (garde-fou).
     liveStash = aw === "live" ? null : liveWorldOf(save)
     ngplusStash = aw === "ngplus" ? null : (save.ngplusWorld ?? null)
     run3Stash = aw === "run3" ? null : (save.run3World ?? null)
-    const activeData = aw === "ngplus" ? save.ngplusWorld! : aw === "run3" ? save.run3World! : liveWorldOf(save)
+    // REJEU : restaure le contexte (quel run rejoué / où revenir), sinon efface tout contexte de rejeu.
+    if (aw === "replay") setReplayContext(save.replayRun ?? "run1", save.replayReturn ?? "live")
+    else clearReplayContext()
+    const activeData = aw === "ngplus" ? save.ngplusWorld! : aw === "run3" ? save.run3World! : aw === "replay" ? save.replayWorld! : liveWorldOf(save)
     hydrateFromWorld(activeData, save.customDaemons) // customDaemons GLOBAL (haut niveau)
-    // POKÉDEX GLOBAL/cumulatif : UNION des pokédex de TOUS les mondes (migration douce des saves qui en avaient
-    // un par monde) → aucune capture perdue. snapshot() ré-écrit ensuite ce set global dans tous les mondes.
-    const pdxWorlds = [liveWorldOf(save), save.ngplusWorld, save.run3World].filter((w): w is YellowSave => !!w)
+    // POKÉDEX GLOBAL/cumulatif : UNION des pokédex de TOUS les mondes (dont la bulle) → aucune capture perdue.
+    const pdxWorlds = [liveWorldOf(save), save.ngplusWorld, save.run3World, save.replayWorld].filter((w): w is YellowSave => !!w)
     hydratePokedex({
         seen: [...new Set(pdxWorlds.flatMap((w) => w.pokedex?.seen ?? []))],
         caught: [...new Set(pdxWorlds.flatMap((w) => w.pokedex?.caught ?? []))],
@@ -140,11 +144,13 @@ export function snapshot(): YellowSave {
     // Chaque monde : actif = les stores, sinon son stash. Normalisé (méta multi-mondes nettoyée, customDaemons + pokédex + baies globaux).
     const norm = (w: YellowSave | null): YellowSave | null =>
         w ? { ...w, pokedex: { seen: [...pdx.seen], caught: [...pdx.caught] }, berrySecretKnown: w.berrySecretKnown || berryKnown, customDaemons: cds, activeWorld: "live" as const, ngplusWorld: null, ngplusOldTeam: null, run3World: null, replayWorld: null, replayRun: null, replayReturn: null } : null
+    // REJEU : la bulle est ACTIVE (dans les stores) → les 3 mondes réels viennent TOUS de leurs stashes.
     const live = aw === "live" ? active : (liveStash ?? emptySave())
     const ngplus = aw === "ngplus" ? active : ngplusStash
     const run3 = aw === "run3" ? active : run3Stash
-    const flat = norm(live)! // run 1 = champs plats de haut niveau (garde-fou), TOUJOURS
-    return { ...flat, customDaemons: cds, activeWorld: aw, ngplusWorld: norm(ngplus), ngplusOldTeam, run3World: norm(run3) }
+    const replay = aw === "replay" ? active : null // la bulle n'existe QUE pendant un rejeu
+    const flat = norm(live)! // run 1 = champs plats de haut niveau (garde-fou), TOUJOURS — même pendant un rejeu (= liveStash)
+    return { ...flat, customDaemons: cds, activeWorld: aw, ngplusWorld: norm(ngplus), ngplusOldTeam, run3World: norm(run3), replayWorld: norm(replay), replayRun: getReplayRun(), replayReturn: getReplayReturn() }
 }
 
 /** Sauvegarde débouncée (ne fait rien tant que la save initiale n'est pas chargée).
@@ -444,6 +450,59 @@ export async function startRun3(starter: MonInstance): Promise<boolean> {
     // 4) Flush immédiat (les champs plats = run 1 inchangés → garde-fou OK).
     await persistNow()
     return true
+}
+
+/** REJEU (« run bis ») — lance un rejeu ISOLÉ du run `run` dans une bulle JETABLE. Le monde réel actif est stashé
+ *  et reste INTACT ; on joue un run frais dans les stores (activeWorld="replay"). run2/run3 exigent un `starter`
+ *  (Daemon custom) ; run1 démarre sur l'intro. Pokédex GLOBAL conservé. false si déjà en rejeu / starter manquant.
+ *  Aucune fusion : sortir du rejeu = exitReplay (jette la bulle, restaure le réel). Ne consomme PAS ngplusUsed/run3Used. */
+export async function startReplay(run: "run1" | "run2" | "run3", starter: MonInstance | null = null): Promise<boolean> {
+    const cur = getActiveWorld()
+    if (cur === "replay") return false // déjà en rejeu
+    // 1) Stash le monde réel ACTIF dans son slot canonique (les 2 autres réels sont déjà stashés).
+    const activeNude = activeWorldSave()
+    if (cur === "live") liveStash = liveWorldOf(activeNude)
+    else if (cur === "ngplus") ngplusStash = activeNude
+    else run3Stash = activeNude
+    // 2) Amorce la bulle : run frais dans les stores. run1 = intro ; run2/run3 = starter requis.
+    if (!startReplayWorld(run, starter)) {
+        // starter manquant → on ANNULE le stash pour ne rien altérer.
+        if (cur === "live") liveStash = null
+        else if (cur === "ngplus") ngplusStash = null
+        else run3Stash = null
+        return false
+    }
+    setReplayContext(run, cur)
+    setActiveWorld("replay")
+    // 3) Énergie de départ selon le run rejoué (mêmes réglages que les vrais starts ; runMode() applique les règles).
+    if (run === "run2") { raiseRepsCap(NGPLUS_START_ENERGY - 1000); grantReps(NGPLUS_START_ENERGY) }       // NG+ = 10000
+    else if (run === "run3") { raiseRepsCap(RUN3_ENERGY_CAP - 1000); grantReps(RUN3_START_ENERGY, true) }   // run 3 = 500 (source unique)
+    // run1 : énergie = vrais reps (bankReps au prochain player-stats) → rien à créditer ici.
+    // 4) Flush immédiat (les champs plats = run 1 réel inchangés → garde-fou anti-wipe OK).
+    await persistNow()
+    return true
+}
+
+/** REJEU — SORT de la bulle : on la JETTE et on restaure le monde réel (`replayReturn`) INTACT depuis son stash.
+ *  Les captures faites pendant le rejeu RESTENT (Pokédex global). No-op hors rejeu. */
+export async function exitReplay(): Promise<void> {
+    if (getActiveWorld() !== "replay") return
+    const ret = getReplayReturn() ?? "live"
+    const stash = ret === "ngplus" ? ngplusStash : ret === "run3" ? run3Stash : liveStash
+    const world = stash ?? liveStash ?? emptySave() // défensif : jamais d'écran noir
+    clearReplayContext()
+    // suppressAutosave : hydrateFromWorld émet et armerait l'autosave débouncé qui pourrait POSTer un état
+    //   intermédiaire → on désarme le temps de restaurer + flusher.
+    suppressAutosave = true
+    if (timer) { clearTimeout(timer); timer = null }
+    hydrateFromWorld(world, getPlayer().customDaemons ?? world.customDaemons ?? [])
+    setActiveWorld(ret)
+    // Le monde restauré vit désormais dans les stores → son slot stash redevient null.
+    if (ret === "live") liveStash = null
+    else if (ret === "ngplus") ngplusStash = null
+    else run3Stash = null
+    suppressAutosave = false
+    await persistNow()
 }
 
 /** RUN 3 — FIN (0 énergie) → FUSION 3-VOIES : run 3 ⊕ run 2 ⊕ run 1 en un seul monde live. run 3 = timeline

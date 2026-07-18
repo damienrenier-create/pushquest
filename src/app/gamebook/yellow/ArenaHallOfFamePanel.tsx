@@ -81,7 +81,7 @@ export default function ArenaHallOfFamePanel({ close, onFight }: { close: () => 
     // (anti-spoiler : un joueur run 1 ne voit jamais les arènes run 2/3). Défaut = son run courant.
     const activeWorld = useActiveWorld()
     const player = usePlayer()
-    const [viewWorld, setViewWorld] = useState<"live" | "ngplus" | "run3">(activeWorld)
+    const [viewWorld, setViewWorld] = useState<"live" | "ngplus" | "run3">(activeWorld === "replay" ? "live" : activeWorld)
     const arenaList = viewWorld === "run3" ? ARENAS_RUN3 : viewWorld === "ngplus" ? ARENAS_RUN2 : ARENAS
     // Runs visibles au toggle : run 1 toujours ; run 2/3 si DÉJÀ LANCÉS (flags permanents ngplusUsed/run3Used) —
     // et PAS hasNgPlusWorld/hasRun3World, qui deviennent faux après la méga-fusion de fin de run 3 (mondes effacés)

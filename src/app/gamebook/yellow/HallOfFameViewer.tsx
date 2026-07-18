@@ -29,7 +29,7 @@ export default function HallOfFameViewer({ close, onFight }: { close: () => void
     const [notice, setNotice] = useState<string>("")
     const activeWorld = useActiveWorld()
     const player = usePlayer()
-    const [viewWorld, setViewWorld] = useState<"live" | "ngplus" | "run3">(activeWorld)
+    const [viewWorld, setViewWorld] = useState<"live" | "ngplus" | "run3">(activeWorld === "replay" ? "live" : activeWorld)
     // Runs visibles au toggle : flags PERMANENTS ngplusUsed/run3Used (survivent à la méga-fusion de fin de run 3),
     // et PAS hasNgPlusWorld/hasRun3World (faux après fusion) → un joueur ayant bouclé les 3 runs garde l'accès.
     const availWorlds = WORLD_META.filter((w) => w.id === "live" || (w.id === "ngplus" && player.ngplusUsed) || (w.id === "run3" && player.run3Used))

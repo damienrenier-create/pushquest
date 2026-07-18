@@ -23,7 +23,7 @@ import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, 
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, resetLigueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, addItem, getActiveWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, resetLigueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, addItem, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
 import { getHeldItem } from "../data/heldItems"
 import { BERRY_SECRET_LINES_ASSISTANT } from "../data/berryLore"
@@ -289,7 +289,7 @@ function tryLaunchGekroc(): ActiveDialogue | null {
         return { npcId: GEKROC_NPC_ID, npcName: "GÉKROC", lineIndex: 0, lines: GEKROC_NO_TEAM_LINES }
     }
     const seed = Math.floor(Math.random() * 1e9) >>> 0
-    startWildBattle(team, [buildGekroc(getActiveWorld())], seed) // gardien selon le monde : Gékroc / Gékraise / Gékosmic
+    startWildBattle(team, [buildGekroc(effectiveRunWorld())], seed) // gardien selon le monde : Gékroc / Gékraise / Gékosmic (rejeu → run rejoué)
     return null
 }
 
@@ -405,7 +405,7 @@ function tryLaunchAce(): ActiveDialogue | null {
 // DRESSEUR D'ORCALINE (plaine) : aligne 2 Orcalines de même niveau (35 + 10×victoires, cap 100).
 function tryLaunchOrcaline(): ActiveDialogue | null {
     const team = getPlayerSave().team
-    const dlg = orcalineTrainerDialogue(getActiveWorld()) // run 2 = PANTHÉGEL, run 3 = ÉLEVEUR (dialogues + nom adaptés)
+    const dlg = orcalineTrainerDialogue(effectiveRunWorld()) // run 2 = PANTHÉGEL, run 3 = ÉLEVEUR (dialogues + nom adaptés ; rejeu → run rejoué)
     if (!team.some((m) => m.currentHp > 0)) {
         return { npcId: ORCALINE_TRAINER_ID, npcName: dlg.name, lineIndex: 0, lines: ["Tes Daemons sont tous K.O. !", "Soigne-les au Centre avant de m'affronter."] }
     }
@@ -1143,7 +1143,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // DRESSEUR D'ORCALINE (plaine) : 1 combat gagnant/jour ; le niveau de ses 2 Orcalines monte de +10
         // à chaque victoire. 1re victoire → cadeau Orcaline (géré dans finishBattle). Combat à la fermeture.
         if (npc.id === ORCALINE_TRAINER_ID) {
-            const dlg = orcalineTrainerDialogue(getActiveWorld()) // run 2 → Panthégel ; run 3 → ÉLEVEUR
+            const dlg = orcalineTrainerDialogue(effectiveRunWorld()) // run 2 → Panthégel ; run 3 → ÉLEVEUR (rejeu → run rejoué)
             if (!orcalineAvailableToday()) {
                 set({ dialogue: { npcId: npc.id, npcName: dlg.name, lineIndex: 0, lines: dlg.doneToday } })
                 return
