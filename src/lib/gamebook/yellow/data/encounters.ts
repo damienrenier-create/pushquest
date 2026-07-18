@@ -440,7 +440,7 @@ const RUN3_ZONES: Record<string, Zone> = {
             { speciesId: "tamanpousse", base: 18 }, { speciesId: "limaroche", base: 18 },
             { speciesId: "tetardoc", base: 18 }, { speciesId: "colibraise", base: 18 },
             { speciesId: "hibouh", base: 8 }, { speciesId: "pyrozly", base: 7 },
-            { speciesId: "jerbiwat", base: 5 }, { speciesId: "lavapetit", base: 5 },
+            { speciesId: "jerbiwat", base: 2 }, { speciesId: "lavapetit", base: 5 }, // Jerbiwat abaissé (~3,8 %→~1,5 %, choix Sartay)
             { speciesId: "nouillon", base: 3 }, { speciesId: "piouflot", base: 3 }, { speciesId: "ruffiant", base: 3 },
             { speciesId: "revemante", base: 2 },
             { speciesId: "auroruff", base: 3 }, // anti-Dragon (remonté)
@@ -483,7 +483,7 @@ const RUN3_ZONES: Record<string, Zone> = {
             { speciesId: "limaroche", base: 12, levelRange: [46, 50], captureMult: 0.5 },      // rare → Tortoracle
             { speciesId: "regnantaur", base: 12, noEvolve: true, levelRange: [43, 47], captureMult: 0.4 }, // rare final
             { speciesId: "blaziper", base: 12, noEvolve: true, levelRange: [12, 16] },         // rare (pas de Flamaspic)
-            { speciesId: "jerbiwat", base: 12, levelRange: [38, 42], captureMult: 0.5 },       // rare standalone
+            { speciesId: "jerbiwat", base: 6, levelRange: [38, 42], captureMult: 0.5 },        // rare standalone (~3,1 %→~1,5 %, choix Sartay)
             { speciesId: "chouhante", base: 12, noEvolve: true, levelRange: [28, 33] },        // rare (pas d'Archibouh)
             // — INÉDITES (discrètes ~18% ; la garantie assure quand même la découverte d'Hypnoppo/Karmaki) —
             { speciesId: "hypnoppo", base: 40, levelRange: [7, 15] },                          // peu commun (base <16)
