@@ -73,12 +73,34 @@ function run3FromWorld(w: unknown): number | null {
     return run3Score(def as Parameters<typeof run3Score>[0])
 }
 
+/** REJEU (« run bis ») — score de la BULLE (`flags.replayWorld`) selon le run rejoué. run2/run3 réutilisent leurs
+ *  scorers (déjà run-scopés) ; run1 utilise caughtThisRun de la bulle (PAS le pokédex global — sinon le score serait
+ *  gonflé par les captures cumulées). Renvoie null si vide/absent. */
+function replayScoreFromBubble(w: unknown, run: string): { score: number; factors: ScoreFactor[] | null; leagueReps?: number } | null {
+    if (!w || typeof w !== "object") return null
+    if (run === "run2") { const r = run2FromWorld(w); return r ? { score: r.score, factors: r.factors, leagueReps: r.leagueReps } : null }
+    if (run === "run3") { const s = run3FromWorld(w); return s === null ? null : { score: s, factors: null } }
+    // run1 : score run-scopé sur caughtThisRun de la bulle.
+    const world = w as { stats?: Record<string, unknown>; team?: Array<{ level?: unknown }>; caughtThisRun?: unknown }
+    const stats = world.stats ?? {}
+    const team = Array.isArray(world.team) ? world.team : []
+    const caught = Array.isArray(world.caughtThisRun) ? (world.caughtThisRun as string[]) : []
+    const teamLevels = team.reduce((s, m) => s + num(m?.level), 0)
+    const energyConsumed = num(stats.energySpent)
+    const { grade, factors } = computeGrade({ wins: num(stats.wins), teamKos: num(stats.teamKos), caught, teamLevels, energyConsumed, steps: num(stats.steps) }, { run1: true })
+    return { score: grade, factors: [...factors, energyInfoFactor(energyConsumed)] }
+}
+
 interface LeaderEntry { nickname: string; score: number; wonAt: Date | null; factors: unknown; live: boolean; leagueReps?: number }
 
 export const dynamic = "force-dynamic"
 
 const MAX_SCORE = 1_000_000
-const VALID_RUNS = new Set(["run2", "run3"])
+// run2/run3 = scores ORIGINAUX figés ; run1bis/run2bis/run3bis = scores FIGÉS d'un REJEU (« Pseudo² »), postés
+// à la sortie de la bulle (le pull ne peut plus les recalculer — la bulle est jetée).
+const VALID_RUNS = new Set(["run2", "run3", "run1bis", "run2bis", "run3bis"])
+const isRun3Kind = (run: string) => run === "run3" || run === "run3bis" // score MONOTONE (Σ niveaux) → on garde le MAX
+const isGradeKind = (run: string) => run === "run2" || run === "run1bis" || run === "run2bis" // note /1000 → détail des axes stocké
 
 async function requireYellow() {
     const session = await getServerSession(authOptions)
@@ -143,6 +165,16 @@ export async function GET() {
             // RUN 3 : dès que le monde run 3 existe (actif OU gelé, avant méga-fusion). Live si activement en run 3.
             const r3 = run3FromWorld(f.run3World)
             if (r3 !== null) run3Map.set(s.userId, { nickname, score: r3, wonAt: null, factors: null, live: world === "run3" })
+            // REJEU (« run bis ») : si le joueur est DANS une bulle de rejeu, on AJOUTE son score « Pseudo² » sous une
+            //   clé distincte (userId:bis) → il COEXISTE avec l'original gelé (déjà pullé ci-dessus depuis les mondes
+            //   réels stashés). Les deux scores s'affichent, comme demandé.
+            if (world === "replay" && f.replayWorld && typeof f.replayRun === "string") {
+                const rb = replayScoreFromBubble(f.replayWorld, f.replayRun)
+                if (rb) {
+                    const target = f.replayRun === "run3" ? run3Map : f.replayRun === "run2" ? run2Map : run1Map
+                    target.set(s.userId + ":bis", { nickname: `${nickname}²`, score: rb.score, wonAt: null, factors: rb.factors, live: true, leagueReps: rb.leagueReps })
+                }
+            }
             // Duels : reflets battus = SOMME du compteur sur les 3 mondes (les duels se jouent surtout en run 1/2).
             const dw = (w: unknown) => num((w as { stats?: { duelWinsTotal?: unknown } } | null | undefined)?.stats?.duelWinsTotal)
             const duels = num((f.stats as { duelWinsTotal?: unknown } | undefined)?.duelWinsTotal) + dw(f.ngplusWorld) + dw(f.run3World)
@@ -158,9 +190,14 @@ export async function GET() {
             select: { userId: true, nickname: true, run: true, score: true, wonAt: true, factors: true },
         })) as { userId: string; nickname: string; run: string; score: number; wonAt: Date; factors: unknown }[]
         for (const r of rows) {
-            const map = r.run === "run2" ? run2Map : r.run === "run3" ? run3Map : null
-            if (!map || map.has(r.userId)) continue // le LIVE prime ; la 1re ligne vue (plus récente) gagne le fallback
-            map.set(r.userId, { nickname: r.nickname, score: r.score, wonAt: r.wonAt, factors: r.factors ?? null, live: false, leagueReps: r.run === "run2" ? leagueRepsFromFactors(r.factors) : undefined })
+            // REJEU : une ligne « <run>bis » = score figé d'un rejeu → clé userId:bis + pseudo² + map du run de BASE.
+            const isBis = r.run.endsWith("bis")
+            const baseRun = isBis ? r.run.slice(0, -3) : r.run // "run2bis" → "run2"
+            const map = baseRun === "run2" ? run2Map : baseRun === "run3" ? run3Map : baseRun === "run1" ? run1Map : null
+            if (!map) continue
+            const key = isBis ? `${r.userId}:bis` : r.userId
+            if (map.has(key)) continue // le LIVE prime ; la 1re ligne vue (plus récente) gagne le fallback
+            map.set(key, { nickname: isBis ? `${r.nickname}²` : r.nickname, score: r.score, wonAt: r.wonAt, factors: r.factors ?? null, live: false, leagueReps: baseRun === "run2" ? leagueRepsFromFactors(r.factors) : undefined })
         }
     } catch { /* table pas encore créée → pull seul */ }
 
@@ -179,11 +216,11 @@ export async function POST(req: NextRequest) {
     let body: { run?: unknown; score?: unknown; factors?: unknown }
     try { body = await req.json() } catch { return NextResponse.json({ error: "Bad JSON" }, { status: 400 }) }
     const run = typeof body.run === "string" && VALID_RUNS.has(body.run) ? body.run : null
-    // RUN 2 : détail des 5 axes (display-only, propre au joueur, gated par auth) → stocké tel quel, borné à 8 entrées.
-    const factors = run === "run2" && Array.isArray(body.factors) ? (body.factors as unknown[]).slice(0, 8) : null
-    // Borne PAR RUN (anti-triche : le score vient d'un POST client). run3 = Σ max réellement atteignable (dérivé) +
-    //   marge. run2 = NOTE GLOBALE /1000 (computeRunScores) → plafond STRICT à 1000. Fallback MAX_SCORE si run inconnu.
-    const runCap = run === "run3" ? run3MaxScore() + 200 : run === "run2" ? 1000 : MAX_SCORE
+    // Note /1000 (run2 + les rejeux run1bis/run2bis) : détail des 5 axes (display-only) stocké tel quel, borné à 8.
+    const factors = run && isGradeKind(run) && Array.isArray(body.factors) ? (body.factors as unknown[]).slice(0, 8) : null
+    // Borne PAR RUN (anti-triche : le score vient d'un POST client). run3(bis) = Σ max atteignable + marge ;
+    //   les notes /1000 → plafond STRICT 1000. Fallback MAX_SCORE si run inconnu.
+    const runCap = !run ? MAX_SCORE : isRun3Kind(run) ? run3MaxScore() + 200 : 1000
     const score = typeof body.score === "number" && isFinite(body.score) ? Math.max(0, Math.min(runCap, Math.floor(body.score))) : null
     if (!run || score === null) return NextResponse.json({ error: "Bad params" }, { status: 400 })
 
@@ -198,9 +235,9 @@ export async function POST(req: NextRequest) {
         if (rows.length === 0) {
             await rs.create({ data: { userId: auth.userId, nickname: me.nickname, run, score, factors: factors ?? undefined } })
         } else {
-            // Ligne conservée : run2 = la PLUS RÉCENTE (rows[0]) ; run3 = celle du MEILLEUR score.
-            const keep = run === "run3" ? rows.reduce((a, b) => (b.score > a.score ? b : a)) : rows[0]
-            const newScore = run === "run3" ? Math.max(keep.score, score) : score // run2 écrase, run3 ne régresse jamais
+            // Ligne conservée : note /1000 = la PLUS RÉCENTE (rows[0], écrase) ; run3(bis) = celle du MEILLEUR score.
+            const keep = isRun3Kind(run) ? rows.reduce((a, b) => (b.score > a.score ? b : a)) : rows[0]
+            const newScore = isRun3Kind(run) ? Math.max(keep.score, score) : score // /1000 écrase, run3 ne régresse jamais
             await rs.update({ where: { id: keep.id }, data: { score: newScore, nickname: me.nickname, wonAt: new Date(), factors: factors ?? undefined } })
             if (rows.length > 1) await rs.deleteMany({ where: { userId: auth.userId, run, id: { not: keep.id } } }) // écrase les doublons
         }
