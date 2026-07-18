@@ -1441,7 +1441,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         exits: [
             ...([[5, 7], [6, 7], [5, 8], [6, 8]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_grotte_nexus_b1f", targetSpawnX: 3, targetSpawnY: 4 })),   // échelle 3 → B1F
             ...([[31, 17], [32, 17]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_grotte_nexus_b1f", targetSpawnX: 43, targetSpawnY: 23 })),              // échelle 1 → B1F
-            // échelle 2 : EN ATTENTE — la position 1F « 19.45 » est hors grille (y max 41), à préciser par Sartay.
+            ...([[19, 15], [20, 15]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_grotte_nexus_b1f", targetSpawnX: 25, targetSpawnY: 5 })),               // échelle 2 → B1F
         ],
     },
     yellow_grotte_nexus_b1f: {
@@ -1457,7 +1457,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         exits: [
             ...([[3, 3], [3, 4]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_grotte_nexus", targetSpawnX: 6, targetSpawnY: 8 })),          // échelle 3 → 1F
             ...([[43, 22], [43, 23]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_grotte_nexus", targetSpawnX: 32, targetSpawnY: 17 })),    // échelle 1 → 1F
-            // échelle 2 (25,5) → 1F : EN ATTENTE (destination 1F « 19.45 » hors grille).
+            { x: 25, y: 5, targetMapId: "yellow_grotte_nexus", targetSpawnX: 20, targetSpawnY: 15 },                                                    // échelle 2 → 1F
             { x: 17, y: 6, targetMapId: "yellow_grotte_nexus_b2f", targetSpawnX: 31, targetSpawnY: 12 },   // échelle a → B2F
             { x: 26, y: 37, targetMapId: "yellow_grotte_nexus_b2f", targetSpawnX: 17, targetSpawnY: 32 },  // échelle b → B2F
             { x: 22, y: 19, targetMapId: "yellow_grotte_nexus_b2f", targetSpawnX: 25, targetSpawnY: 22 },  // échelle c → B2F
