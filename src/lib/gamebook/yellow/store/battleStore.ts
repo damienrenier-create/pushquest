@@ -20,7 +20,7 @@ import {
 import type { AiLevel } from "../battle/ai"
 import type { MonInstance, PokeType, MoveSlot } from "../battle/types"
 import { markSeen, markCaught, getPokedex } from "./pokedexStore"
-import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordDomeUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, markCaughtThisRun, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter } from "./playerStore"
+import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordDomeUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter } from "./playerStore"
 import { getItem } from "../data/items"
 import { reportShiny } from "../shinyGift"
 import { ARENA_TICKET_VALUE, SBIRE_TICKET_VALUE, SBIRE_TICKET_EVERY, ACE_TICKET_VALUE, ACE_TICKET_WIN_BEFORE, ACE_TICKET_WIN_AFTER, ACE_TICKET_EARLY_VALUE, ACE_TICKET_WIN_EARLY, LEAGUE_ROULETTE_PER_KO, LEAGUE_AUTOGRAPH_CREDIT } from "../data/labDefis"
@@ -884,6 +884,11 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
                 if (e.currentHp <= 0) newly.push({ key: r3 ? bossEnemyKey(r3.badge, i) : leagueEnemyKey(tid, i), level: e.level })
             })
             if (newly.length) addRun3Defeated(newly)
+            // SCORE « SURVIVANT » : boss d'arène/Ligue ENTIÈREMENT vaincu (dernier Daemon KO) → relève l'énergie
+            //   (reps) restante à cet instant précis, additionnée arène par arène (1×/arène, cf. dédup par clé).
+            if (b.enemy.team.every((e) => e.currentHp <= 0)) {
+                addRun3EnergySnapshot(r3 ? `arena:${r3.badge}` : `league:${tid}`, getPlayer().reps)
+            }
         }
     }
 

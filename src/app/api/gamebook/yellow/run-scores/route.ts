@@ -18,7 +18,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { isNexusYellowEnabled, YELLOW_CHAPTER_ID } from "@/lib/gamebook/yellow/featureFlag"
-import { run3Score, run3MaxScore } from "@/lib/gamebook/yellow/data/run3Score"
+import { run3Score, run3MaxScore, run3EnergyScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { computeGrade, leagueRepsFactor, type ScoreFactor } from "@/lib/gamebook/yellow/score/runScoreCompute"
 import { badgeInputFromSave, evaluateBadges, BADGES } from "@/lib/gamebook/yellow/data/run1Badges"
 
@@ -71,6 +71,14 @@ function run3FromWorld(w: unknown): number | null {
     const def = (w as { run3Defeated?: unknown }).run3Defeated
     if (!Array.isArray(def) || def.length === 0) return null
     return run3Score(def as Parameters<typeof run3Score>[0])
+}
+
+/** RUN 3 — score « SURVIVANT » (Σ énergie restante par arène) DEPUIS flags.run3World.run3EnergyByArena. null si vide. */
+function run3EnergyFromWorld(w: unknown): number | null {
+    if (!w || typeof w !== "object") return null
+    const by = (w as { run3EnergyByArena?: unknown }).run3EnergyByArena
+    if (!by || typeof by !== "object" || Object.keys(by as object).length === 0) return null
+    return run3EnergyScore(by as Record<string, number>)
 }
 
 /** REJEU (« run bis ») — score de la BULLE (`flags.replayWorld`) selon le run rejoué. run2/run3 réutilisent leurs
@@ -134,6 +142,7 @@ export async function GET() {
     const run1Map = new Map<string, LeaderEntry>()
     const run2Map = new Map<string, LeaderEntry>()
     const run3Map = new Map<string, LeaderEntry>()
+    const run3EnergyMap = new Map<string, LeaderEntry>() // « Survivant » : Σ énergie restante par arène (run 3)
     const duelsMap = new Map<string, { nickname: string; wins: number }>() // classement « Duelliste » : reflets battus (cumul cross-run)
 
     // 1) PULL — recalcule depuis la save. RUN 2/3 sont recalculés dès que leur MONDE existe (flags.ngplusWorld /
@@ -160,6 +169,8 @@ export async function GET() {
             // RUN 3 : dès que le monde run 3 existe (actif OU gelé, avant méga-fusion). Live si activement en run 3.
             const r3 = run3FromWorld(f.run3World)
             if (r3 !== null) run3Map.set(s.userId, { nickname, score: r3, wonAt: null, factors: null, live: world === "run3" })
+            const r3e = run3EnergyFromWorld(f.run3World) // score « Survivant » (énergie conservée)
+            if (r3e !== null) run3EnergyMap.set(s.userId, { nickname, score: r3e, wonAt: null, factors: null, live: world === "run3" })
             // REJEU (« run bis ») : si le joueur est DANS une bulle de rejeu, on AJOUTE son score « Pseudo² » sous une
             //   clé distincte (userId:bis) → il COEXISTE avec l'original gelé (déjà pullé ci-dessus depuis les mondes
             //   réels stashés). Les deux scores s'affichent, comme demandé.
@@ -200,7 +211,7 @@ export async function GET() {
         [...m.values()].sort((a, b) => b.score - a.score).map((e) => ({ nickname: e.nickname, score: e.score, wonAt: e.wonAt, factors: e.factors, live: e.live, leagueReps: e.leagueReps }))
     const duels = [...duelsMap.values()].sort((a, b) => b.wins - a.wins)
 
-    return NextResponse.json({ ok: true, run1: toList(run1Map), run2: toList(run2Map), run3: toList(run3Map), duels })
+    return NextResponse.json({ ok: true, run1: toList(run1Map), run2: toList(run2Map), run3: toList(run3Map), run3energy: toList(run3EnergyMap), duels })
 }
 
 // POST {run, score} — enregistre le score du joueur (garde le meilleur par run).

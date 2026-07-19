@@ -154,6 +154,9 @@ export interface YellowSave {
      *  pour le SCORE du concours = Σ de leurs niveaux (run3Score). Per-monde (vit dans le monde run 3). Défaut [].
      *  Type structurel (= Run3DefeatedEnemy) inliné pour éviter tout cycle d'import storage↔data. */
     run3Defeated: { key: string; level: number }[]
+    /** RUN 3 — score « Survivant » : énergie (reps) restante relevée à la fin de CHAQUE arène/Ligue (clé → snapshot).
+     *  Le score = Σ des valeurs. Per-monde run 3. Défaut {}. */
+    run3EnergyByArena: Record<string, number>
     /** POKÉDEX — espèces capturées PENDANT le run EN COURS (overlay PER-MONDE par-dessus le Pokédex GLOBAL
      *  cumulatif) → distingue « capturé ce run » de « capturé un run précédent ». Défaut []. */
     caughtThisRun: string[]
@@ -193,7 +196,7 @@ export const SAVE_VERSION = 2
 const ACE_RATCHET_RESET_VERSION = 2
 
 export function emptySave(): YellowSave {
-    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, domeChampionships: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, domeStats: { wins: 0, losses: 0, daemonUse: {}, moveUse: {} }, stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, berrySecretKnown: false, berryHarvestDay: "", berryHarvestPicked: [], sylvebarbeAwake: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", pnj5Wins: 0, ngplusBattles: 0, labDefi: emptyLabDefi(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null, replayWorld: null, replayRun: null, replayReturn: null, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", run3Defeated: [], caughtThisRun: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0 }
+    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, domeChampionships: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, domeStats: { wins: 0, losses: 0, daemonUse: {}, moveUse: {} }, stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, berrySecretKnown: false, berryHarvestDay: "", berryHarvestPicked: [], sylvebarbeAwake: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", pnj5Wins: 0, ngplusBattles: 0, labDefi: emptyLabDefi(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null, replayWorld: null, replayRun: null, replayReturn: null, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0 }
 }
 
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -560,6 +563,10 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
                 .map((e) => ({ key: e.key, level: Math.max(0, Math.floor(e.level)) }))
                 .slice(0, 64)
             : [],
+        // RUN 3 — snapshots d'énergie par arène (score Survivant). Parse défensif : objet {clé: nombre≥0}, borné à 32.
+        run3EnergyByArena: (o.run3EnergyByArena && typeof o.run3EnergyByArena === "object" && !Array.isArray(o.run3EnergyByArena))
+            ? Object.fromEntries(Object.entries(o.run3EnergyByArena as Record<string, unknown>).filter(([, v]) => typeof v === "number" && isFinite(v)).map(([k, v]) => [k, Math.max(0, Math.floor(v as number))]).slice(0, 32))
+            : {},
         caughtThisRun: Array.isArray(o.caughtThisRun) ? (o.caughtThisRun as unknown[]).filter((v): v is string => typeof v === "string").slice(0, 300) : [],
         run3LavapetitSeen: o.run3LavapetitSeen === true,
         run3LavapetitCaught: o.run3LavapetitCaught === true,

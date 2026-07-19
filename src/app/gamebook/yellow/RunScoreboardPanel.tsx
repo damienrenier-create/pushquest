@@ -8,12 +8,13 @@ import { useEffect, useState } from "react"
 import { type ScoreFactor } from "@/lib/gamebook/yellow/score/runScore"
 
 interface ScoreRow { nickname: string; score: number; wonAt: string | null; factors?: ScoreFactor[] | null; live?: boolean; leagueReps?: number }
-type TabId = "run1" | "run3" | "run2" | "league" | "duels"
-type Data = { gated?: boolean; run1: ScoreRow[]; run2: ScoreRow[]; run3: ScoreRow[]; duels: { nickname: string; wins: number }[] }
+type TabId = "run1" | "run3" | "run3energy" | "run2" | "league" | "duels"
+type Data = { gated?: boolean; run1: ScoreRow[]; run2: ScoreRow[]; run3: ScoreRow[]; run3energy: ScoreRow[]; duels: { nickname: string; wins: number }[] }
 
 const RUN_META: { id: TabId; label: string; unit: string; hint: string }[] = [
     { id: "run1", label: "🥇 RUN 1", unit: "pts", hint: "DÉCOUVERTE : Σ des points de BADGES (hauts faits) débloqués au run 1. Le + haut gagne. Consulte tes badges dans « 🎖️ TROPHÉES »." },
-    { id: "run3", label: "🏆 RUN 3", unit: "pts", hint: "Σ des niveaux des Daemons ennemis vaincus (boss + Ligue). Le + haut gagne." },
+    { id: "run3", label: "🏆 RUN 3", unit: "pts", hint: "CONQUÉRANT : Σ des niveaux des Daemons ennemis vaincus (boss + Ligue). Le + haut gagne." },
+    { id: "run3energy", label: "🔋 SURVIE", unit: "⚡", hint: "SURVIVANT (run 3) : Σ de l'énergie restante relevée juste après le KO du chef de chaque arène/Ligue. Conserver son énergie = monter — l'OPPOSÉ du score RUN 3 (niveaux vaincus)." },
     { id: "run2", label: "🏅 RUN 2", unit: "/1000", hint: "Note /1000 : % victoire, Pokédex, niveaux d'équipe, frugalité (énergie) & peu de pas. Joueurs ENCORE en run 2 = score live (maj à chaque connexion) ; joueurs ayant TERMINÉ = score final figé. Clique une entrée pour le détail des 5 axes." },
     { id: "league", label: "⚡ LIGUE", unit: "reps", hint: "L'ÉCONOME DE LA LIGUE : le moins de reps dépensés en combats DEPUIS ton 1er pas dans la Ligue gagne (moins = mieux). Non classé tant que tu n'y es pas entré." },
     { id: "duels", label: "⚔️ DUELS", unit: "reflets", hint: "LE DUELLISTE : nombre de reflets d'autres joueurs battus (cumulé sur tous tes runs). Le + haut gagne." },
@@ -21,7 +22,7 @@ const RUN_META: { id: TabId; label: string; unit: string; hint: string }[] = [
 
 export default function RunScoreboardPanel({ close }: { close: () => void }) {
     const [state, setState] = useState<"loading" | "ok" | "error">("loading")
-    const [data, setData] = useState<Data>({ run1: [], run2: [], run3: [], duels: [] })
+    const [data, setData] = useState<Data>({ run1: [], run2: [], run3: [], run3energy: [], duels: [] })
     const [tab, setTab] = useState<TabId>("run3")
     const [expanded, setExpanded] = useState<number | null>(null) // RUN 2 : entrée dépliée (détail des 5 axes)
 
@@ -32,7 +33,7 @@ export default function RunScoreboardPanel({ close }: { close: () => void }) {
                 const r = await fetch("/api/gamebook/yellow/run-scores")
                 const j = r.ok ? await r.json() : null
                 if (cancelled) return
-                setData({ gated: j?.gated, run1: j?.run1 ?? [], run2: j?.run2 ?? [], run3: j?.run3 ?? [], duels: j?.duels ?? [] })
+                setData({ gated: j?.gated, run1: j?.run1 ?? [], run2: j?.run2 ?? [], run3: j?.run3 ?? [], run3energy: j?.run3energy ?? [], duels: j?.duels ?? [] })
                 setState("ok")
             } catch { if (!cancelled) setState("error") }
         })()
@@ -48,7 +49,7 @@ export default function RunScoreboardPanel({ close }: { close: () => void }) {
         .sort((a, b) => a.score - b.score)
     // ⚔️ DUELS : reflets battus (cumul), déjà trié desc côté serveur → ScoreRow (score = victoires).
     const duelsList: ScoreRow[] = data.duels.map((d) => ({ nickname: d.nickname, score: d.wins, wonAt: null }))
-    const list = tab === "run1" ? data.run1 : tab === "run3" ? data.run3 : tab === "league" ? leagueList : tab === "duels" ? duelsList : data.run2
+    const list = tab === "run1" ? data.run1 : tab === "run3" ? data.run3 : tab === "run3energy" ? data.run3energy : tab === "league" ? leagueList : tab === "duels" ? duelsList : data.run2
     const medal = (i: number) => (i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`)
 
     return (

@@ -27,6 +27,14 @@ export function run3Score(defeated: readonly Run3DefeatedEnemy[]): number {
     return sum
 }
 
+/** RUN 3 — score « SURVIVANT » : Σ de l'énergie restante relevée à la fin de chaque arène/Ligue (snapshots
+ *  pris juste après le KO du dernier Daemon du chef). Récompense la conservation d'énergie — l'OPPOSÉ du
+ *  « Conquérant » (Σ niveaux vaincus). Deux podiums, deux stratégies. */
+export function run3EnergyScore(byArena: Record<string, number> | undefined | null): number {
+    if (!byArena || typeof byArena !== "object") return 0
+    return Object.values(byArena).reduce((a, v) => a + (typeof v === "number" && isFinite(v) ? Math.max(0, Math.floor(v)) : 0), 0)
+}
+
 /** Score MAX atteignable en vainquant LES 5 BOSS d'arène en entier (la Ligue s'ajoute au runtime). */
 export function run3BossesMaxScore(): number {
     return Object.values(RUN3_BOSS_TEAMS).reduce((a, b) => a + b.team.reduce((s, m) => s + (m.level ?? 0), 0), 0)
