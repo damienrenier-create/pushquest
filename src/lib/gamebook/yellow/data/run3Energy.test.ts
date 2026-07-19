@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { run3EnergyScore } from "./run3Score"
+import { run3EnergyScore, run3EnergyMaxScore } from "./run3Score"
 import { parseSave, emptySave } from "../storage/save"
 
 describe("RUN 3 — score « Survivant » (énergie conservée)", () => {
@@ -9,6 +9,13 @@ describe("RUN 3 — score « Survivant » (énergie conservée)", () => {
         expect(run3EnergyScore(undefined)).toBe(0)
         expect(run3EnergyScore(null)).toBe(0)
         expect(run3EnergyScore({ a: -5, b: 10, c: NaN as unknown as number })).toBe(10) // ≥0, ignore NaN
+    })
+
+    it("run3EnergyMaxScore borne un score plausible (anti-triche POST)", () => {
+        // 5 arènes + 5 membres de Ligue, chaque snapshot ≤ repsCap (1000) → un score réel reste sous le plafond.
+        const realistic = { "arena:feu": 900, "arena:eau": 950, "arena:plante": 800, "arena:roche": 700, "arena:elec": 600, "league:y_ligue_1": 500, "league:y_ligue_maitre": 400 }
+        expect(run3EnergyScore(realistic)).toBeLessThanOrEqual(run3EnergyMaxScore())
+        expect(run3EnergyMaxScore()).toBeGreaterThan(0)
     })
 
     it("run3EnergyByArena : round-trip save (emptySave / parseSave défensif)", () => {

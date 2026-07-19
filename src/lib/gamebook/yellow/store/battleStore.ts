@@ -473,6 +473,10 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
         if (b.xpGained) bumpStat("xpTotal", b.xpGained)
     }
 
+    // RUN 3 — score « Survivant » : énergie (reps) CONSERVÉE à la fin du combat, relevée AVANT toute recharge
+    //   d'arène. La recharge (plus bas) tope les reps au plafond du palier → snapshoter après mesurerait une
+    //   CONSTANTE (le plafond) au lieu de la frugalité réelle. On fige donc la valeur ici, à la fin du combat.
+    const energyAtKo = getPlayer().reps
     // 1) Resynchronise l'équipe persistante depuis l'état de combat.
     //    ⚠️ EXCEPTION USINE (frontier:FACTORY) : on a joué une équipe de LOCATION (createMonInstance
     //    owned:false), PAS la vraie équipe → ne JAMAIS la réécrire dans le save, sinon on remplacerait
@@ -887,7 +891,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             // SCORE « SURVIVANT » : boss d'arène/Ligue ENTIÈREMENT vaincu (dernier Daemon KO) → relève l'énergie
             //   (reps) restante à cet instant précis, additionnée arène par arène (1×/arène, cf. dédup par clé).
             if (b.enemy.team.every((e) => e.currentHp <= 0)) {
-                addRun3EnergySnapshot(r3 ? `arena:${r3.badge}` : `league:${tid}`, getPlayer().reps)
+                addRun3EnergySnapshot(r3 ? `arena:${r3.badge}` : `league:${tid}`, energyAtKo)
             }
         }
     }

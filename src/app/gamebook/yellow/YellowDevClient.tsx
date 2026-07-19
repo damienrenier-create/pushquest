@@ -60,7 +60,7 @@ import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, 
 import { customStarterSpeciesId, type StoredCustomDaemon } from "@/lib/gamebook/yellow/create/customSpecies"
 import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, releaseFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun } from "@/lib/gamebook/yellow/store/playerStore"
 import { computeRunScores, computeReplayScore, leaderboardFactors, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
-import { run3Score, run3MaxScore } from "@/lib/gamebook/yellow/data/run3Score"
+import { run3Score, run3MaxScore, run3EnergyScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
 import { ARENA_TICKET_VALUE, STEP_GIFT_DATE, STEP_GIFT_THRESHOLD } from "@/lib/gamebook/yellow/data/labDefis"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
@@ -1452,10 +1452,20 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (run) {
             try {
                 const { score, factors } = computeReplayScore(run)
-                await fetch("/api/gamebook/yellow/run-scores", {
+                const posts = [fetch("/api/gamebook/yellow/run-scores", {
                     method: "POST", headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ run: `${run}bis`, score, factors }),
-                })
+                })]
+                // REJEU run 3 : fige AUSSI le score « Survivant² » (énergie), sinon la bulle jetée l'emporte et le
+                //   classement Survie n'aurait jamais la trace du rejeu (symétrie avec le Conquérant² ci-dessus).
+                if (run === "run3") {
+                    const energyScore = run3EnergyScore(getPlayer().run3EnergyByArena)
+                    posts.push(fetch("/api/gamebook/yellow/run-scores", {
+                        method: "POST", headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ run: "run3energybis", score: energyScore }),
+                    }))
+                }
+                await Promise.all(posts)
             } catch { /* hors-ligne au moment de sortir : le score² de cette tentative n'est pas figé (perdu). Rare — refais un rejeu en ligne. */ }
         }
         await exitReplay()
@@ -1696,9 +1706,15 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {/* HUB PALMARÈS — regroupe réputation / stats / trophées / HoF / scores concours.
                Affichage PROGRESSIF : un joueur run 1 ne voit ni « run 2/3 » ni les HoF non débloqués. */}
             {menu === "palmares" && (() => {
-                const hasRun2 = activeWorld === "ngplus" || !!run2Snap || player.ngplusUsed
+                // ⚠️ NE PAS gater sur run2Snap : c'est une clé localStorage GLOBALE (non scopée par compte, jamais
+                //   effacée au reset) → sur un navigateur partagé ou après « recommencer », elle ferait FUITER l'existence
+                //   du run 2/3 à un joueur run 1 (règle anti-spoiler). ngplusUsed (posé au DÉBUT du run 2) suffit et couvre
+                //   100% des cas légitimes de CE compte. run2Snap ne sert plus qu'au CONTENU du panneau run2scores.
+                const hasRun2 = activeWorld === "ngplus" || player.ngplusUsed
                 const hasRun3 = activeWorld === "run3" || player.run3Used
-                const hasArenaHof = (player.badges?.length ?? 0) > 0
+                // badges = monde ACTIF (remis à [] au début d'un run 2/3) → un joueur avancé aurait la HoF Arènes cachée
+                //   en début de run. On élargit à tout état prouvant une conquête d'arène passée (le panneau lit le serveur).
+                const hasArenaHof = (player.badges?.length ?? 0) > 0 || player.isChampion || player.ngplusUsed || player.run3Used
                 const hasLeagueHof = player.isChampion || player.ngplusUsed || player.run3Used
                 return (
                     <div style={menuOverlayStyle} onClick={() => setMenu("pause")}>
@@ -2494,7 +2510,16 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             setRun3EndOffer(null)
                             // LEADERBOARD : score run 3 remonté AVANT la fusion (irréversible). On ATTEND le POST
                             //   (avec catch : hors-ligne → on fusionne quand même) pour ne pas perdre le score en silence.
-                            try { await fetch("/api/gamebook/yellow/run-scores", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ run: "run3", score }) }) } catch { /* hors-ligne : score non remonté, la fusion continue */ }
+            const energyScore = run3EnergyScore(getPlayer().run3EnergyByArena)
+                            try {
+                                // Les DEUX podiums remontés AVANT la fusion (irréversible) : Conquérant (Σ niveaux) ET Survivant
+                                //   (Σ énergie). Sans ça, mergeWorlds vide run3World → le classement « Survie » resterait vide
+                                //   pour tous les finisseurs (le pull ne peut plus recalculer). En parallèle, on continue au catch.
+                                await Promise.all([
+                                    fetch("/api/gamebook/yellow/run-scores", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ run: "run3", score }) }),
+                                    fetch("/api/gamebook/yellow/run-scores", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ run: "run3energy", score: energyScore }) }),
+                                ])
+                            } catch { /* hors-ligne : scores non remontés, la fusion continue */ }
                             completeRun3().finally(() => {
                                 showDialogue("y_ligue_maitre", "🌀 MÉGA-FUSION", [
                                     "Le concours s'éteint dans un dernier éclat d'énergie…",

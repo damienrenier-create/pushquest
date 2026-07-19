@@ -35,6 +35,11 @@ export function run3EnergyScore(byArena: Record<string, number> | undefined | nu
     return Object.values(byArena).reduce((a, v) => a + (typeof v === "number" && isFinite(v) ? Math.max(0, Math.floor(v)) : 0), 0)
 }
 
+/** Plafond ANTI-TRICHE du score « Survivant » (POST client). L'énergie relevée par snapshot est bornée par le
+ *  plafond de stockage (repsCap = 1000), et il y a au plus 10 snapshots distincts (5 arènes + 5 membres de Ligue)
+ *  → majorant sûr et fini de 10×1000. Sert uniquement à borner un score reçu du client (comme run3MaxScore). */
+export function run3EnergyMaxScore(): number { return 10_000 }
+
 /** Score MAX atteignable en vainquant LES 5 BOSS d'arène en entier (la Ligue s'ajoute au runtime). */
 export function run3BossesMaxScore(): number {
     return Object.values(RUN3_BOSS_TEAMS).reduce((a, b) => a + b.team.reduce((s, m) => s + (m.level ?? 0), 0), 0)

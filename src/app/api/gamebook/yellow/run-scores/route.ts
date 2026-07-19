@@ -18,7 +18,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { isNexusYellowEnabled, YELLOW_CHAPTER_ID } from "@/lib/gamebook/yellow/featureFlag"
-import { run3Score, run3MaxScore, run3EnergyScore } from "@/lib/gamebook/yellow/data/run3Score"
+import { run3Score, run3MaxScore, run3EnergyScore, run3EnergyMaxScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { computeGrade, leagueRepsFactor, type ScoreFactor } from "@/lib/gamebook/yellow/score/runScoreCompute"
 import { badgeInputFromSave, evaluateBadges, BADGES } from "@/lib/gamebook/yellow/data/run1Badges"
 
@@ -101,8 +101,9 @@ export const dynamic = "force-dynamic"
 const MAX_SCORE = 1_000_000
 // run2/run3 = scores ORIGINAUX figés ; run1bis/run2bis/run3bis = scores FIGÉS d'un REJEU (« Pseudo² »), postés
 // à la sortie de la bulle (le pull ne peut plus les recalculer — la bulle est jetée).
-const VALID_RUNS = new Set(["run2", "run3", "run1bis", "run2bis", "run3bis"])
+const VALID_RUNS = new Set(["run2", "run3", "run3energy", "run1bis", "run2bis", "run3bis", "run3energybis"])
 const isRun3Kind = (run: string) => run === "run3" || run === "run3bis" // score MONOTONE (Σ niveaux) → on garde le MAX
+const isEnergyKind = (run: string) => run === "run3energy" || run === "run3energybis" // « Survivant » : Σ énergie, MONOTONE (cap propre)
 const isGradeKind = (run: string) => run === "run2" || run === "run1bis" || run === "run2bis" // note /1000 → détail des axes stocké
 
 async function requireYellow() {
@@ -179,6 +180,12 @@ export async function GET() {
                 if (rb) {
                     const target = f.replayRun === "run3" ? run3Map : f.replayRun === "run2" ? run2Map : run1Map
                     target.set(s.userId + ":bis", { nickname: `${nickname}²`, score: rb.score, wonAt: null, factors: rb.factors, live: true, leagueReps: rb.leagueReps })
+                    // REJEU run 3 : le score « Survivant² » de la bulle alimente AUSSI le classement énergie (symétrie
+                    //   avec le Conquérant² ci-dessus). run3EnergyByArena est accumulé dans la bulle (runMode()="run3").
+                    if (f.replayRun === "run3") {
+                        const r3eBis = run3EnergyFromWorld(f.replayWorld)
+                        if (r3eBis !== null) run3EnergyMap.set(s.userId + ":bis", { nickname: `${nickname}²`, score: r3eBis, wonAt: null, factors: null, live: true })
+                    }
                 }
             }
             // Duels : reflets battus = SOMME du compteur sur les 3 mondes (les duels se jouent surtout en run 1/2).
@@ -198,8 +205,8 @@ export async function GET() {
         for (const r of rows) {
             // REJEU : une ligne « <run>bis » = score figé d'un rejeu → clé userId:bis + pseudo² + map du run de BASE.
             const isBis = r.run.endsWith("bis")
-            const baseRun = isBis ? r.run.slice(0, -3) : r.run // "run2bis" → "run2"
-            const map = baseRun === "run2" ? run2Map : baseRun === "run3" ? run3Map : baseRun === "run1" ? run1Map : null
+            const baseRun = isBis ? r.run.slice(0, -3) : r.run // "run2bis" → "run2", "run3energybis" → "run3energy"
+            const map = baseRun === "run2" ? run2Map : baseRun === "run3" ? run3Map : baseRun === "run3energy" ? run3EnergyMap : baseRun === "run1" ? run1Map : null
             if (!map) continue
             const key = isBis ? `${r.userId}:bis` : r.userId
             if (map.has(key)) continue // le LIVE prime ; la 1re ligne vue (plus récente) gagne le fallback
@@ -226,7 +233,7 @@ export async function POST(req: NextRequest) {
     const factors = run && isGradeKind(run) && Array.isArray(body.factors) ? (body.factors as unknown[]).slice(0, 8) : null
     // Borne PAR RUN (anti-triche : le score vient d'un POST client). run3(bis) = Σ max atteignable + marge ;
     //   les notes /1000 → plafond STRICT 1000. Fallback MAX_SCORE si run inconnu.
-    const runCap = !run ? MAX_SCORE : isRun3Kind(run) ? run3MaxScore() + 200 : 1000
+    const runCap = !run ? MAX_SCORE : isEnergyKind(run) ? run3EnergyMaxScore() : isRun3Kind(run) ? run3MaxScore() + 200 : 1000
     const score = typeof body.score === "number" && isFinite(body.score) ? Math.max(0, Math.min(runCap, Math.floor(body.score))) : null
     if (!run || score === null) return NextResponse.json({ error: "Bad params" }, { status: 400 })
 
@@ -244,7 +251,7 @@ export async function POST(req: NextRequest) {
             // MONOTONE (garde le MEILLEUR) pour run3 ET tous les rejeux « ...bis » (une bulle = une tentative TERMINÉE,
             //   jetée à la sortie → sa ligne de table EST le score, donc un rejeu trivial ne doit pas écraser un bon rejeu).
             //   Seul le run2 ORIGINAL reste keep-latest (le GET le recalcule EN LIVE depuis ngplusWorld → non destructif).
-            const monotone = isRun3Kind(run) || run.endsWith("bis")
+            const monotone = isRun3Kind(run) || isEnergyKind(run) || run.endsWith("bis")
             const keep = monotone ? rows.reduce((a, b) => (b.score > a.score ? b : a)) : rows[0]
             const newScore = monotone ? Math.max(keep.score, score) : score
             // Ne met à jour les facteurs QUE si le nouveau score est retenu (sinon on garderait ceux d'un rejeu perdant).
