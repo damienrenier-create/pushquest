@@ -12,7 +12,7 @@ type TabId = "run1" | "run3" | "run2" | "league" | "duels"
 type Data = { gated?: boolean; run1: ScoreRow[]; run2: ScoreRow[]; run3: ScoreRow[]; duels: { nickname: string; wins: number }[] }
 
 const RUN_META: { id: TabId; label: string; unit: string; hint: string }[] = [
-    { id: "run1", label: "🥇 RUN 1", unit: "/1000", hint: "Note /1000 du run 1 : % victoire (300), Pokédex (250), niveaux d'équipe (200) & peu de pas (250). SANS frugalité (l'énergie du run 1 vient du sport → affichée à part, hors note). Clique pour le détail." },
+    { id: "run1", label: "🥇 RUN 1", unit: "pts", hint: "DÉCOUVERTE : Σ des points de BADGES (hauts faits) débloqués au run 1. Le + haut gagne. Consulte tes badges dans « 🎖️ TROPHÉES »." },
     { id: "run3", label: "🏆 RUN 3", unit: "pts", hint: "Σ des niveaux des Daemons ennemis vaincus (boss + Ligue). Le + haut gagne." },
     { id: "run2", label: "🏅 RUN 2", unit: "/1000", hint: "Note /1000 : % victoire, Pokédex, niveaux d'équipe, frugalité (énergie) & peu de pas. Joueurs ENCORE en run 2 = score live (maj à chaque connexion) ; joueurs ayant TERMINÉ = score final figé. Clique une entrée pour le détail des 5 axes." },
     { id: "league", label: "⚡ LIGUE", unit: "reps", hint: "L'ÉCONOME DE LA LIGUE : le moins de reps dépensés en combats DEPUIS ton 1er pas dans la Ligue gagne (moins = mieux). Non classé tant que tu n'y es pas entré." },

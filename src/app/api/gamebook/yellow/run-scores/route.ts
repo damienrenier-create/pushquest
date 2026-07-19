@@ -19,7 +19,15 @@ import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { isNexusYellowEnabled, YELLOW_CHAPTER_ID } from "@/lib/gamebook/yellow/featureFlag"
 import { run3Score, run3MaxScore } from "@/lib/gamebook/yellow/data/run3Score"
-import { computeGrade, leagueRepsFactor, energyInfoFactor, type ScoreFactor } from "@/lib/gamebook/yellow/score/runScoreCompute"
+import { computeGrade, leagueRepsFactor, type ScoreFactor } from "@/lib/gamebook/yellow/score/runScoreCompute"
+import { badgeInputFromSave, evaluateBadges, BADGES } from "@/lib/gamebook/yellow/data/run1Badges"
+
+/** RUN 1 — score = Σ points de BADGES (hauts faits). `caught` : global (crédite le dex run-1 des gradués) ou run-scopé (bulle). */
+function run1BadgeScore(f: Record<string, unknown>, caught?: readonly string[]): { score: number; factors: ScoreFactor[] } {
+    const r = evaluateBadges(badgeInputFromSave(f as Parameters<typeof badgeInputFromSave>[0], caught))
+    const factor: ScoreFactor = { key: "badges", label: "🎖️ Badges", ratio: BADGES.length ? r.earnedCount / BADGES.length : 0, max: 0, points: r.totalPoints, detail: `${r.earnedCount} / ${BADGES.length} badges gagnés` }
+    return { score: r.totalPoints, factors: [factor] }
+}
 
 const num = (v: unknown): number => (typeof v === "number" && isFinite(v) ? v : 0)
 
@@ -52,17 +60,9 @@ function leagueRepsFromFactors(factors: unknown): number {
 /** Recalcule le score RUN 1 (/1000, SANS frugalité) DEPUIS le monde run 1 = niveau PLAT de la save (stats/team/
  *  caughtThisRun). Frozen pour les joueurs en run 2/3 (anti-wipe), live pour les joueurs en run 1. */
 function run1FromWorld(f: Record<string, unknown>): { score: number; factors: ScoreFactor[] } | null {
-    const stats = (f.stats ?? {}) as Record<string, unknown>
-    const team = Array.isArray(f.team) ? (f.team as Array<{ level?: unknown }>) : []
-    // Pokédex run 1 = pokédex GLOBAL (≠ caughtThisRun qui vaut 0 pour les saves d'avant son suivi) : pour un joueur
-    //   ENCORE en run 1 = ses captures run 1 ; pour un gradué (run 2/3) = crédite le dex qu'il a complété au run 1.
-    const caught = Array.isArray((f.pokedex as { caught?: unknown } | undefined)?.caught) ? ((f.pokedex as { caught: string[] }).caught) : []
-    const teamLevels = team.reduce((s, m) => s + num(m?.level), 0)
-    const energyConsumed = num(stats.energySpent)
-    const { grade, factors } = computeGrade({
-        wins: num(stats.wins), teamKos: num(stats.teamKos), caught, teamLevels, energyConsumed, steps: num(stats.steps),
-    }, { run1: true })
-    return { score: grade, factors: [...factors, energyInfoFactor(energyConsumed)] } // énergie = info séparée (hors note)
+    // RUN 1 = DÉCOUVERTE : score = Σ points de BADGES (hauts faits), recalculé LIVE depuis la save. Le pokédex des
+    //   badges = pokédex GLOBAL (pour un gradué run 2/3, crédite ce qu'il a fait au run 1 ; cumulatif assumé).
+    return run1BadgeScore(f)
 }
 
 /** Recalcule le score RUN 3 (Σ niveaux des Daemons vaincus) DEPUIS flags.run3World.run3Defeated. null si absent/vide. */
@@ -80,15 +80,10 @@ function replayScoreFromBubble(w: unknown, run: string): { score: number; factor
     if (!w || typeof w !== "object") return null
     if (run === "run2") { const r = run2FromWorld(w); return r ? { score: r.score, factors: r.factors, leagueReps: r.leagueReps } : null }
     if (run === "run3") { const s = run3FromWorld(w); return s === null ? null : { score: s, factors: null } }
-    // run1 : score run-scopé sur caughtThisRun de la bulle.
-    const world = w as { stats?: Record<string, unknown>; team?: Array<{ level?: unknown }>; caughtThisRun?: unknown }
-    const stats = world.stats ?? {}
-    const team = Array.isArray(world.team) ? world.team : []
+    // run1 (rejeu) : score de BADGES run-scopé sur caughtThisRun de la bulle (pas le pokédex global cumulatif).
+    const world = w as Record<string, unknown>
     const caught = Array.isArray(world.caughtThisRun) ? (world.caughtThisRun as string[]) : []
-    const teamLevels = team.reduce((s, m) => s + num(m?.level), 0)
-    const energyConsumed = num(stats.energySpent)
-    const { grade, factors } = computeGrade({ wins: num(stats.wins), teamKos: num(stats.teamKos), caught, teamLevels, energyConsumed, steps: num(stats.steps) }, { run1: true })
-    return { score: grade, factors: [...factors, energyInfoFactor(energyConsumed)] }
+    return run1BadgeScore(world, caught)
 }
 
 interface LeaderEntry { nickname: string; score: number; wonAt: Date | null; factors: unknown; live: boolean; leagueReps?: number }

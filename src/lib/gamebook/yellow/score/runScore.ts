@@ -16,7 +16,9 @@
 //   (Le « temps réel » a été abandonné.)
 
 import { getPlayer, getStats } from "../store/playerStore"
-import { computeGrade, leagueRepsFactor, energyInfoFactor, type ScoreFactor } from "./runScoreCompute"
+import { computeGrade, leagueRepsFactor, type ScoreFactor } from "./runScoreCompute"
+import { badgeInputFromSave, evaluateBadges, BADGES } from "../data/run1Badges"
+import { getPokedex } from "../store/pokedexStore"
 import { run3Score } from "../data/run3Score"
 
 export type { ScoreFactor } // ré-exporté : les imports existants (RunScoreboardPanel…) continuent de marcher
@@ -65,14 +67,18 @@ export function computeReplayScore(run: "run1" | "run2" | "run3"): { score: numb
     const p = getPlayer()
     const stats = getStats()
     if (run === "run3") return { score: run3Score(p.run3Defeated ?? []), factors: [] }
+    if (run === "run1") {
+        // RUN 1 = DÉCOUVERTE : score = Σ points de BADGES, run-scopé sur caughtThisRun de la bulle (rejeu).
+        const dex = getPokedex()
+        const r = evaluateBadges(badgeInputFromSave({ ...(p as object), pokedex: { caught: dex.caught, seen: dex.seen } } as Parameters<typeof badgeInputFromSave>[0], p.caughtThisRun))
+        return { score: r.totalPoints, factors: [{ key: "badges", label: "🎖️ Badges", ratio: BADGES.length ? r.earnedCount / BADGES.length : 0, max: 0, points: r.totalPoints, detail: `${r.earnedCount} / ${BADGES.length} badges` }] }
+    }
     const caught = p.caughtThisRun
     const teamLevels = p.team.reduce((s, m) => s + m.level, 0)
-    const isRun1 = run === "run1"
     const { grade, factors } = computeGrade(
         { wins: stats.wins, teamKos: stats.teamKos, caught, teamLevels, energyConsumed: stats.energySpent, steps: stats.steps },
-        isRun1 ? { run1: true } : undefined,
     )
-    return { score: grade, factors: isRun1 ? [...factors, energyInfoFactor(stats.energySpent)] : [...factors, leagueRepsFactor(stats.leagueEnergySpent)] }
+    return { score: grade, factors: [...factors, leagueRepsFactor(stats.leagueEnergySpent)] }
 }
 
 /** Formate une durée (ms) en m:ss ou h:mm:ss pour l'affichage. */
