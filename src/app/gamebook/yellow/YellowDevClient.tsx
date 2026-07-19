@@ -331,7 +331,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         const enemy = arenaMode === "hub" ? buildHubTeam(opp.player) : buildMirrorTeam(opp.player)
         setArenaFight({ opp, mode: arenaMode, enemy })
     }
-    const [menu, setMenu] = useState<"none" | "pause" | "team" | "bag" | "reput" | "moves" | "hof" | "arena-hof" | "stats" | "run2scores" | "run3scores" | "leaderboard" | "badges">("none")
+    const [menu, setMenu] = useState<"none" | "pause" | "team" | "bag" | "reput" | "moves" | "hof" | "arena-hof" | "stats" | "run2scores" | "run3scores" | "leaderboard" | "badges" | "palmares">("none")
     const [run2Snap, setRun2Snap] = useState<RunScores | null>(null)
     useEffect(() => { setRun2Snap(readRun2Snapshot()) }, [])
     const activeWorld = useActiveWorld() // NG+ : "live" (partie d'origine) ou "ngplus" (New Game+)
@@ -1513,7 +1513,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (advisorOpen) { closeAdvisor(); return true }
         if (labOpen) { closeLab(); return true }
         if (pcOpen) { closePc(); return true }
-        if (menu === "team" || menu === "bag" || menu === "reput" || menu === "moves" || menu === "hof" || menu === "arena-hof" || menu === "stats" || menu === "run2scores" || menu === "run3scores" || menu === "leaderboard" || menu === "badges") { setMenu("pause"); return true }
+        if (menu === "team" || menu === "bag" || menu === "moves" || menu === "palmares") { setMenu("pause"); return true }
+        if (menu === "reput" || menu === "hof" || menu === "arena-hof" || menu === "stats" || menu === "run2scores" || menu === "run3scores" || menu === "leaderboard" || menu === "badges") { setMenu("palmares"); return true }
         if (menu === "pause") { setMenu("none"); return true }
         return false
     }
@@ -1618,14 +1619,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         <button style={menuBtnStyle} onClick={() => router.push("/gamebook/yellow/pokedex")}>📷 POKÉDEX</button>
                         <button style={menuBtnStyle} onClick={() => router.push("/gamebook/yellow/dex")}>📖 DEX (CATALOGUE)</button>
                         {!battle && <button style={menuBtnStyle} onClick={() => setMenu("moves")}>⚔️ ATTAQUES</button>}
-                        <button style={menuBtnStyle} onClick={() => setMenu("reput")}>🏆 RÉPUTATION</button>
-                        <button style={menuBtnStyle} onClick={() => setMenu("stats")}>📊 STATS (cette partie)</button>
-                        <button style={menuBtnStyle} onClick={() => setMenu("badges")}>🎖️ TROPHÉES (badges)</button>
-                        {(activeWorld === "ngplus" || run2Snap) && <button style={menuBtnStyle} onClick={() => setMenu("run2scores")}>🏅 SCORES RUN 2</button>}
-                        {activeWorld === "run3" && <button style={menuBtnStyle} onClick={() => setMenu("run3scores")}>🏆 SCORE RUN 3</button>}
-                        <button style={menuBtnStyle} onClick={() => setMenu("hof")}>🏛️ HALL OF FAME (LIGUE)</button>
-                        <button style={menuBtnStyle} onClick={() => setMenu("arena-hof")}>⚔️ HALL OF FAME (ARÈNES)</button>
-                        <button style={menuBtnStyle} onClick={() => setMenu("leaderboard")}>📊 CLASSEMENT CONCOURS (run 2/3)</button>
+                        <button style={menuBtnStyle} onClick={() => setMenu("palmares")}>🏆 PALMARÈS</button>
                         {(() => {
                             // Champion qui n'a pas encore créé son Daemon (Franss & co.) : accès PERMANENT au créateur
                             // (forcé → enchaîne le NG+ à la création). Le bouton TEST reste dispo pour les devs/Mools.
@@ -1698,6 +1692,33 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     </div>
                 </div>
             )}
+
+            {/* HUB PALMARÈS — regroupe réputation / stats / trophées / HoF / scores concours.
+               Affichage PROGRESSIF : un joueur run 1 ne voit ni « run 2/3 » ni les HoF non débloqués. */}
+            {menu === "palmares" && (() => {
+                const hasRun2 = activeWorld === "ngplus" || !!run2Snap || player.ngplusUsed
+                const hasRun3 = activeWorld === "run3" || player.run3Used
+                const hasArenaHof = (player.badges?.length ?? 0) > 0
+                const hasLeagueHof = player.isChampion || player.ngplusUsed || player.run3Used
+                return (
+                    <div style={menuOverlayStyle} onClick={() => setMenu("pause")}>
+                        <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                            <div style={menuTitleStyle}>🏆 PALMARÈS</div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 6, margin: "2px 0 6px" }}>
+                                <button style={menuBtnStyle} onClick={() => setMenu("badges")}>🎖️ TROPHÉES (hauts faits)</button>
+                                <button style={menuBtnStyle} onClick={() => setMenu("stats")}>📊 STATS (cette partie)</button>
+                                <button style={menuBtnStyle} onClick={() => setMenu("reput")}>⚔️ RÉPUTATION PvP</button>
+                                {hasArenaHof && <button style={menuBtnStyle} onClick={() => setMenu("arena-hof")}>🏟️ HALL OF FAME (ARÈNES)</button>}
+                                {hasLeagueHof && <button style={menuBtnStyle} onClick={() => setMenu("hof")}>🏛️ HALL OF FAME (LIGUE)</button>}
+                                {hasRun2 && <button style={menuBtnStyle} onClick={() => setMenu("run2scores")}>🏅 SCORES RUN 2</button>}
+                                {hasRun3 && <button style={menuBtnStyle} onClick={() => setMenu("run3scores")}>🏆 SCORE RUN 3</button>}
+                                {(hasRun2 || hasRun3) && <button style={menuBtnStyle} onClick={() => setMenu("leaderboard")}>📊 CLASSEMENT CONCOURS</button>}
+                            </div>
+                            <button style={menuBtnDimStyle} onClick={() => setMenu("pause")}>← RETOUR</button>
+                        </div>
+                    </div>
+                )
+            })()}
 
             {/* Overlay Équipe */}
             {!battle && menu === "team" && (
@@ -1940,7 +1961,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
 
             {/* Réputation PvP (matchs + Daemon fétiche + attaque favorite) — viewer sûr, dispo en combat */}
             {menu === "reput" && (
-                <div style={menuOverlayStyle} onClick={() => setMenu("pause")}>
+                <div style={menuOverlayStyle} onClick={() => setMenu("palmares")}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                         <div style={menuTitleStyle}>🏆 RÉPUTATION PvP</div>
                         {(() => {
@@ -1965,14 +1986,14 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 </div>
                             )
                         })()}
-                        <button style={menuBtnDimStyle} onClick={() => setMenu("pause")}>← RETOUR</button>
+                        <button style={menuBtnDimStyle} onClick={() => setMenu("palmares")}>← RETOUR</button>
                     </div>
                 </div>
             )}
 
             {/* STATS de la partie en cours (per-world : run principal OU NG+). Lues en direct (getPlayer). */}
             {menu === "stats" && (
-                <div style={menuOverlayStyle} onClick={() => setMenu("pause")}>
+                <div style={menuOverlayStyle} onClick={() => setMenu("palmares")}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                         <div style={menuTitleStyle}>📊 STATS — {activeWorld === "run3" ? "concours (run 3)" : activeWorld === "ngplus" ? "run NG+" : "run principal"}</div>
                         {(() => {
@@ -1999,14 +2020,14 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 </div>
                             )
                         })()}
-                        <button style={menuBtnDimStyle} onClick={() => setMenu("pause")}>← RETOUR</button>
+                        <button style={menuBtnDimStyle} onClick={() => setMenu("palmares")}>← RETOUR</button>
                     </div>
                 </div>
             )}
 
             {/* RUN 2 — stats brutes (temps de jeu · énergie consommée · pas) + NOTE GLOBALE /1000, lues en direct. */}
             {menu === "run2scores" && (
-                <div style={menuOverlayStyle} onClick={() => setMenu("pause")}>
+                <div style={menuOverlayStyle} onClick={() => setMenu("palmares")}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                         <div style={menuTitleStyle}>🏅 SCORES — RUN 2{activeWorld !== "ngplus" ? " (figé)" : ""}</div>
                         {(() => {
@@ -2058,14 +2079,14 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 </div>
                             )
                         })()}
-                        <button style={menuBtnDimStyle} onClick={() => setMenu("pause")}>← RETOUR</button>
+                        <button style={menuBtnDimStyle} onClick={() => setMenu("palmares")}>← RETOUR</button>
                     </div>
                 </div>
             )}
 
             {/* SCORE RUN 3 (concours) — Σ des niveaux des Daemons ennemis vaincus (boss d'arène + Ligue). */}
             {menu === "run3scores" && (
-                <div style={menuOverlayStyle} onClick={() => setMenu("pause")}>
+                <div style={menuOverlayStyle} onClick={() => setMenu("palmares")}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                         <div style={menuTitleStyle}>🏆 SCORE — RUN 3 (concours)</div>
                         {(() => {
@@ -2090,17 +2111,17 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 </div>
                             )
                         })()}
-                        <button style={menuBtnDimStyle} onClick={() => setMenu("pause")}>← RETOUR</button>
+                        <button style={menuBtnDimStyle} onClick={() => setMenu("palmares")}>← RETOUR</button>
                     </div>
                 </div>
             )}
 
             {/* Boutique (vendeur) */}
             {!battle && menu === "moves" && <MovesPanel close={() => setMenu("pause")} />}
-            {menu === "hof" && <HallOfFameViewer close={() => setMenu("pause")} onFight={() => setMenu("none")} />}
-            {menu === "arena-hof" && <ArenaHallOfFamePanel close={() => setMenu("pause")} onFight={() => setMenu("none")} />}
-            {menu === "leaderboard" && <RunScoreboardPanel close={() => setMenu("pause")} />}
-            {menu === "badges" && <RunBadgesPanel close={() => setMenu("pause")} />}
+            {menu === "hof" && <HallOfFameViewer close={() => setMenu("palmares")} onFight={() => setMenu("none")} />}
+            {menu === "arena-hof" && <ArenaHallOfFamePanel close={() => setMenu("palmares")} onFight={() => setMenu("none")} />}
+            {menu === "leaderboard" && <RunScoreboardPanel close={() => setMenu("palmares")} />}
+            {menu === "badges" && <RunBadgesPanel close={() => setMenu("palmares")} />}
 
             {/* ZONE DE COMBAT — entrée Tour (placeholder, non-bloquant : marche pour sortir) */}
             {!battle && !run && mapPlayer.mapId === "yellow_combat_tour" && !dialogue && player.team.length > 0 && (
