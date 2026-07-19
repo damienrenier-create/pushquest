@@ -42,7 +42,7 @@ import { ORCALINE_TRAINER_ID, orcalineTrainerDialogue } from "../data/orcalineTr
 import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock } from "../data/sylvebarbeBlock"
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
 import { SYLVEBARBE_NPC_ID, SYLVEBARBE_INTRO_LINES, SYLVEBARBE_DONE_LINES, SYLVEBARBE_NO_FLUTE_LINES, SYLVEBARBE_NO_TEAM_LINES, buildSylvebarbe, FLUTE_GIVE_LINES } from "../data/sylvebarbe"
-import { PNJ5_NPC_ID, PNJ5_TRAINER_ID, PNJ5_MAP_ID, PNJ5_KICK, buildPnj5Team, inPnj5Block, PNJ5_INTRO_LINES, PNJ5_NO_DOME_LINES, PNJ5_NO_TEAM_LINES, PNJ5_SEAL_LINES } from "../data/pnj5"
+import { PNJ5_NPC_ID, PNJ5_TRAINER_ID, PNJ5_MAP_ID, PNJ5_KICK, buildPnj5Team, inPnj5Block, inPnj5Trigger, PNJ5_INTRO_LINES, PNJ5_NO_DOME_LINES, PNJ5_NO_TEAM_LINES, PNJ5_SEAL_LINES } from "../data/pnj5"
 import { CHEN_LAB_LINES, LAB_ASSISTANT_LINES, LAB_ASSISTANT_LINES_NGPLUS, LAB_ASSISTANT_LINES_RUN3, CHEN_ABANDON_OFFER_LINES, CHEN_RUN3_TEASER_LINES, CHEN_RUN3_EVOLVE_LINES } from "../data/labDialogues"
 import { MAGNETOR_EVO_ITEM } from "../data/items"
 import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADE_RECEIVE_RUN1, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_TRADER_OFFER_LINES_RUN1, HH_TRADER_NEED_LINES_RUN1, HH_TRADER_HAS_MORROW_LINES, HH_TRADER_CANCEL_LINES, HH_TRADE_AQUILOTHAN_GIVE, HH_TRADE_AQUILOTHAN_RECEIVE, HH_TRADER_AQUILORD_OFFER_LINES, HH_TRADER_AQUILORD_NEED_LINES, HH_TRADER_AQUILORD_DONE_LINES, HH_TRADER_AQUILORD_CANCEL_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
@@ -521,7 +521,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
-        // GARDIEN DE LA GROTTE (PNJ 5) : barre le passage (18-20,33) tant qu'il n'est pas battu CETTE visite.
+        // GARDIEN DE LA GROTTE (PNJ 5) — INTERCEPTION : marcher sur une CASE-PIÈGE (18,33 / 19,33) LANCE le défi
+        // (gate Or → renvoi hors grotte, sinon combat contre les 5 Gek), tant qu'il n'est pas battu CETTE visite.
+        if ((next.posX !== player.posX || next.posY !== player.posY)
+            && player.mapId === PNJ5_MAP_ID && !pnj5ClearedThisVisit()
+            && inPnj5Trigger(next.posX, next.posY)) {
+            if (getPlayerSave().domeChampionships < 3) {
+                const kicked = createInitialPlayer(PNJ5_KICK.mapId, PNJ5_KICK.x, PNJ5_KICK.y, "down")
+                set({ map: YELLOW_MAPS[PNJ5_KICK.mapId], player: kicked, dialogue: { npcId: PNJ5_NPC_ID, npcName: "GARDIEN", lineIndex: 0, lines: PNJ5_NO_DOME_LINES } })
+                saveNow(kicked) // transition de map → save immédiat (anti-désync)
+                return
+            }
+            // Titre Or OK : on ne bouge pas sur la case-piège, on tourne face au gardien et on enchaîne le combat.
+            set({ player: { ...player, direction: next.direction }, dialogue: { npcId: PNJ5_NPC_ID, npcName: "GARDIEN", lines: PNJ5_INTRO_LINES, lineIndex: 0 }, pendingPnj5: true })
+            return
+        }
+        // GARDIEN DE LA GROTTE (PNJ 5) : le reste du barrage (20,33) bloque simplement le passage tant que non battu.
         if ((next.posX !== player.posX || next.posY !== player.posY)
             && player.mapId === PNJ5_MAP_ID && !pnj5ClearedThisVisit()
             && inPnj5Block(next.posX, next.posY)) {

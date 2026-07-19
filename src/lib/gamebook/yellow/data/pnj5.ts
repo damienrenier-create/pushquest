@@ -16,13 +16,20 @@ export const PNJ5_NPC_ID = "y_pnj5_grotte"
 export const PNJ5_TRAINER_ID = "y_pnj5_grotte"
 export const PNJ5_MAP_ID = "yellow_grotte_nexus"
 export const PNJ5_POS = { x: 17, y: 33 } as const
-/** Cases barrées par le gardien tant qu'il n'est pas battu CETTE visite (il intercepte depuis sa case 17,33). */
+/** Cases-PIÈGES : y marcher LANCE le défi (interception), tant que le gardien n'est pas battu CETTE visite. */
+export const PNJ5_TRIGGER: ReadonlyArray<{ x: number; y: number }> = [
+    { x: 18, y: 33 }, { x: 19, y: 33 },
+]
+/** Barrage complet du couloir (les cases-pièges + la case restante) → aucun passage tant que non battu. */
 export const PNJ5_BLOCK: ReadonlyArray<{ x: number; y: number }> = [
     { x: 18, y: 33 }, { x: 19, y: 33 }, { x: 20, y: 33 },
 ]
 /** Renvoi hors de la grotte (retour Zone de Combat) si le joueur n'a pas le titre Or. */
 export const PNJ5_KICK = { mapId: "yellow_zone_combat", x: 10, y: 7 } as const
 
+export function inPnj5Trigger(x: number, y: number): boolean {
+    return PNJ5_TRIGGER.some((b) => b.x === x && b.y === y)
+}
 export function inPnj5Block(x: number, y: number): boolean {
     return PNJ5_BLOCK.some((b) => b.x === x && b.y === y)
 }

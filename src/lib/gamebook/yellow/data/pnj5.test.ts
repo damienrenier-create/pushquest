@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { buildPnj5Team, pnj5Level, inPnj5Block, PNJ5_BASE_LEVEL } from "./pnj5"
+import { buildPnj5Team, pnj5Level, inPnj5Block, inPnj5Trigger, PNJ5_BASE_LEVEL } from "./pnj5"
 import { getMove } from "./moves"
 
 describe("PNJ 5 — gardien de la Grotte du Nexus (meute des 5 Gek)", () => {
@@ -63,5 +63,12 @@ describe("PNJ 5 — gardien de la Grotte du Nexus (meute des 5 Gek)", () => {
         expect(inPnj5Block(20, 33)).toBe(true)
         expect(inPnj5Block(17, 33)).toBe(false) // case du gardien lui-même (NPC solide)
         expect(inPnj5Block(18, 39)).toBe(false) // spawn d'entrée
+    })
+
+    it("les CASES-PIÈGES (lance le défi) = 18,33 et 19,33 uniquement (20,33 = simple mur)", () => {
+        expect(inPnj5Trigger(18, 33)).toBe(true)
+        expect(inPnj5Trigger(19, 33)).toBe(true)
+        expect(inPnj5Trigger(20, 33)).toBe(false) // barrage, mais pas de déclenchement de combat
+        expect(inPnj5Trigger(17, 33)).toBe(false) // case du gardien
     })
 })

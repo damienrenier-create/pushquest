@@ -715,6 +715,8 @@ const NPC_SPRITES: Record<string, { url: string; frames: number; h?: number } | 
     y_trainer_mia: { url: "/yellow/sprites/npc_mia.png", frames: 1, h: 1.9 },
     // GÉKROC (mini-boss Centrale) sur sa pierre — devient la Pierre seule une fois résolu (override ci-dessous).
     y_gekroc: { url: "/yellow/sprites/gekroc_overworld.png", frames: 1, h: 1.8 },
+    // PNJ 5 — GARDIEN de la Grotte du Nexus (intercepte en 17,33, meute des 5 Gek). Sprite 92×147 → h 1.6.
+    y_pnj5_grotte: { url: "/yellow/sprites/pnj5_grotte.png", frames: 1, h: 1.6 },
     // LIGUE — Conseil des 4 (sprites maison) + LE MAÎTRE (réutilise le sprite ACE existant).
     y_ligue_1_olga: { url: "/yellow/sprites/ligue_olga.png", frames: 1, h: 1.6 },
     y_ligue_2_aldo: { url: "/yellow/sprites/ligue_aldo.png", frames: 1, h: 1.6 },
