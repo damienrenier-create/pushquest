@@ -741,6 +741,8 @@ export const CANONIZED_CUSTOM_SPRITES: Record<string, string[]> = {
     custom_cmpgu4uq5000069d_shady: ["/yellow/sprites/dex/shady.png", "/yellow/sprites/dex/shade.png", "/yellow/sprites/dex/shadow.png"],
     // Bidouzen → Medisciple → Karatame (Embi) : chat kung-fu mauve-gris (NORMAL/PSY → PSY/COMBAT au stade 3).
     custom_cmml4dogn00005n1_bidouzen: ["/yellow/sprites/dex/bidouzen.png", "/yellow/sprites/dex/medisciple.png", "/yellow/sprites/dex/karatame.png"],
+    // Phoéchaud → Phoéchaud II → III (Guillaume) : phénix maudit FEU/SPECTRE, mauve & noir aux flammes spectrales.
+    custom_cmq950jkh000071u_phoechaud: ["/yellow/sprites/dex/phoechaud1.png", "/yellow/sprites/dex/phoechaud2.png", "/yellow/sprites/dex/phoechaud3.png"],
 }
 
 /** Construit la LIGNÉE complète (SpeciesData[]) à partir de la spec validée. ownerId rend les ids uniques (partage Zone de Combat). */
