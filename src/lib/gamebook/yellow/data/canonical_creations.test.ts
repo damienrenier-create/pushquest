@@ -72,11 +72,27 @@ describe("Créations canonisées — lignées Gavillus & Goatiny", () => {
         expect(isDexHidden(SPECIES.feuillichot, [], false)).toBe(false) // une espèce standard n'est jamais scellée
     })
 
-    it("compteur Pokédex : +5 au sacre (les post-Ligue rentrent dans le total), pas avant", () => {
+    it("compteur Pokédex : les post-Ligue rentrent dans le total au sacre, pas avant", () => {
         hydratePokedex({ seen: [], caught: [] })
         const before = pokedexCompletion(false).total
         const after = pokedexCompletion(true).total
-        expect(after).toBe(before + 5)
+        // Saut = nb d'espèces RÉVÉLÉES au sacre (masquées hors Champion → visibles au Champion). Dérivé dynamiquement
+        // via isDexHidden → robuste aux futures canonisations (ne casse plus quand on ajoute des créations postLeague).
+        const revealedAtChamp = Object.values(SPECIES).filter((s) => isDexHidden(s, [], false) && !isDexHidden(s, [], true)).length
+        expect(after).toBe(before + revealedAtChamp)
+        expect(revealedAtChamp).toBeGreaterThanOrEqual(5) // ≥ lignées Gavillus/Goatiny + les créations canonisées
+    })
+
+    it("Phoéchaud (Guillaume) + némésis Léviabysse : runThreeOnly → exclus des totaux Pokédex run 1/2 (anti-inflation score)", () => {
+        for (const id of ["phoechaudi", "phoechaudii", "phoechaudiii", "obscurene", "abyssombre", "leviabysse"]) {
+            expect(SPECIES[id].runThreeOnly, id).toBe(true)
+            expect(isDexHidden(SPECIES[id], [], false, false, false), `${id} run1`).toBe(true) // run 1 → masqué
+            expect(isDexHidden(SPECIES[id], [], true, true, false), `${id} run2`).toBe(true)    // run 2 (champion) → TOUJOURS masqué (runThreeOnly, pas postLeague)
+            expect(isDexHidden(SPECIES[id], [], false, false, true), `${id} run3`).toBe(false)  // run 3 → visible
+        }
+        // némésis branchée : Phoéchaud (canonique) → Obscurène (stade 1 de Léviabysse)
+        expect(CANONICAL_NEMESIS.phoechaudi).toBe("obscurene")
+        expect(CANONICAL_NEMESIS.phoechaudiii).toBe("obscurene")
     })
 
     it("RUN 2 : les créations post-Ligue ET les exclusifs run-2 sont RÉVÉLÉS (le joueur y est ex-champion)", () => {

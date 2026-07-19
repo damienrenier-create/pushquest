@@ -2420,6 +2420,67 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "Chauve-souris supersonique dont les ailes fendent l'air en crépitant d'éclairs. Fulgurante et insaisissable : elle frappe, mord et disparaît avant la moindre riposte.",
         sprite: "/yellow/sprites/dex/supabatchu.png",
     },
+    // 🔥👻 / 🌊🌑 CRÉATIONS CANONISÉES — Phoéchaud (création de GUILLAUME, FEU/SPECTRE) & sa némésis Léviabysse
+    //   (EAU/TÉNÈBRES). Stats/learnsets/sprites finalisés avec Sartay. Léviabysse = HARD-COUNTER de Phoéchaud
+    //   (cf. CANONICAL_NEMESIS) : résiste ses 2 STAB (×0.5), mur spécial (Spé 132), riposte ×2 (Eau/Feu, Ténèbres/Spectre).
+    phoechaudi: {
+        id: "phoechaudi", dexNo: 184, name: "Phoéchaudi", types: ["FEU","SPECTRE"],
+        baseStats: { hp: 48, atk: 19, def: 43, spe: 66, spc: 75 }, // BST 251
+        learnset: [ { level: 5, moveId: "charge" }, { level: 5, moveId: "jet_de_sable" }, { level: 12, moveId: "tison" }, { level: 18, moveId: "flammeche" }, { level: 24, moveId: "drain_ame" }, { level: 30, moveId: "hurlement" }, { level: 36, moveId: "ball_ombre" }, { level: 42, moveId: "lance_flammes" }, { level: 48, moveId: "cage_eclair" }, { level: 54, moveId: "boutefeu" } ],
+        evolution: { toId: "phoechaudii", method: { kind: "LEVEL", level: 22 } },
+        catchRate: 45, baseExp: 113, rarity: "RARE", growthRate: "slow", secretTalent: "sang_froid",
+        role: "FEU/SPECTRE — offensif spécial (création)",
+        description: "Un poussin de phoenix mauve, un peu lugubre (type spectre) — Condescendant — 🖋️ Création de Guillaume",
+        sprite: "/yellow/sprites/dex/phoechaud1.png",
+    },
+    phoechaudii: {
+        id: "phoechaudii", dexNo: 185, name: "Phoéchaudii", types: ["FEU","SPECTRE"],
+        baseStats: { hp: 65, atk: 26, def: 58, spe: 89, spc: 102 }, // BST 340
+        learnset: [ { level: 5, moveId: "charge" }, { level: 5, moveId: "jet_de_sable" }, { level: 12, moveId: "tison" }, { level: 18, moveId: "flammeche" }, { level: 24, moveId: "drain_ame" }, { level: 30, moveId: "hurlement" }, { level: 36, moveId: "ball_ombre" }, { level: 42, moveId: "lance_flammes" }, { level: 48, moveId: "cage_eclair" }, { level: 54, moveId: "boutefeu" } ],
+        evolution: { toId: "phoechaudiii", method: { kind: "LEVEL", level: 40 } },
+        catchRate: 45, baseExp: 153, rarity: "RARE", growthRate: "slow", secretTalent: "sang_froid",
+        role: "FEU/SPECTRE — offensif spécial (création)",
+        description: "Un poussin de phoenix mauve, un peu lugubre (type spectre) — Condescendant — 🖋️ Création de Guillaume",
+        sprite: "/yellow/sprites/dex/phoechaud2.png",
+    },
+    phoechaudiii: {
+        id: "phoechaudiii", dexNo: 186, name: "Phoéchaudiii", types: ["FEU","SPECTRE"],
+        baseStats: { hp: 85, atk: 34, def: 75, spe: 115, spc: 132 }, // BST 441
+        learnset: [ { level: 5, moveId: "charge" }, { level: 5, moveId: "jet_de_sable" }, { level: 12, moveId: "tison" }, { level: 18, moveId: "flammeche" }, { level: 24, moveId: "drain_ame" }, { level: 30, moveId: "hurlement" }, { level: 36, moveId: "ball_ombre" }, { level: 42, moveId: "lance_flammes" }, { level: 48, moveId: "cage_eclair" }, { level: 54, moveId: "boutefeu" } ],
+        catchRate: 45, baseExp: 198, rarity: "RARE", growthRate: "slow", secretTalent: "sang_froid",
+        role: "FEU/SPECTRE — offensif spécial (création)",
+        description: "Un phoenix mauve/noir, avec autour des flammes type spectre. Il doit être lugubre. — Condescendant — 🖋️ Création de Guillaume",
+        sprite: "/yellow/sprites/dex/phoechaud3.png",
+    },
+    obscurene: {
+        id: "obscurene", dexNo: 187, name: "Obscurène", types: ["EAU","TENEBRES"],
+        baseStats: { hp: 63, atk: 23, def: 75, spe: 6, spc: 75 }, // BST 242
+        learnset: [ { level: 5, moveId: "pistolet_a_o" }, { level: 5, moveId: "morsure_sombre" }, { level: 12, moveId: "onde_obscure" }, { level: 18, moveId: "carapace_diamant" }, { level: 24, moveId: "lame_eau" }, { level: 30, moveId: "osmose" }, { level: 36, moveId: "deferlante" }, { level: 42, moveId: "devoreur_ombres" }, { level: 48, moveId: "ultralaser" }, { level: 54, moveId: "hydrocanon" } ],
+        evolution: { toId: "abyssombre", method: { kind: "LEVEL", level: 22 } },
+        catchRate: 45, baseExp: 109, rarity: "RARE", growthRate: "slow", secretTalent: "sang_froid",
+        role: "EAU/TENEBRES — défensif spécial (création)",
+        description: "Une murène des abysses tapie dans l'eau noire, l'œil luisant. — froid, patient, implacable",
+        sprite: "/yellow/sprites/dex/obscurene.png",
+    },
+    abyssombre: {
+        id: "abyssombre", dexNo: 188, name: "Abyssombre", types: ["EAU","TENEBRES"],
+        baseStats: { hp: 85, atk: 31, def: 102, spe: 8, spc: 102 }, // BST 328
+        learnset: [ { level: 5, moveId: "pistolet_a_o" }, { level: 5, moveId: "morsure_sombre" }, { level: 12, moveId: "onde_obscure" }, { level: 18, moveId: "carapace_diamant" }, { level: 24, moveId: "lame_eau" }, { level: 30, moveId: "osmose" }, { level: 36, moveId: "deferlante" }, { level: 42, moveId: "devoreur_ombres" }, { level: 48, moveId: "ultralaser" }, { level: 54, moveId: "hydrocanon" } ],
+        evolution: { toId: "leviabysse", method: { kind: "LEVEL", level: 40 } },
+        catchRate: 45, baseExp: 148, rarity: "RARE", growthRate: "slow", secretTalent: "sang_froid",
+        role: "EAU/TENEBRES — défensif spécial (création)",
+        description: "Une murène des abysses tapie dans l'eau noire, l'œil luisant. — froid, patient, implacable",
+        sprite: "/yellow/sprites/dex/abyssombre.png",
+    },
+    leviabysse: {
+        id: "leviabysse", dexNo: 189, name: "Léviabysse", types: ["EAU","TENEBRES"],
+        baseStats: { hp: 110, atk: 40, def: 132, spe: 10, spc: 132 }, // BST 424
+        learnset: [ { level: 5, moveId: "pistolet_a_o" }, { level: 5, moveId: "morsure_sombre" }, { level: 12, moveId: "onde_obscure" }, { level: 18, moveId: "carapace_diamant" }, { level: 24, moveId: "lame_eau" }, { level: 30, moveId: "osmose" }, { level: 36, moveId: "deferlante" }, { level: 42, moveId: "devoreur_ombres" }, { level: 48, moveId: "ultralaser" }, { level: 54, moveId: "hydrocanon" } ],
+        catchRate: 45, baseExp: 191, rarity: "RARE", growthRate: "slow", secretTalent: "sang_froid",
+        role: "EAU/TENEBRES — défensif spécial (création)",
+        description: "Léviathan des abysses : il noie les flammes et engloutit les âmes. Le chasseur né du phénix maudit. — froid, patient, implacable",
+        sprite: "/yellow/sprites/dex/leviabysse.png",
+    },
     // 🦛🔮 HYPNOPPO → TÉLÉPPO → OMNHIPPO — lignée mono-PSY inédite du run 3 (l'ENDORMEUR : hypnose → contrôle → sweep).
     hypnoppo: {
         id: "hypnoppo", dexNo: 157, name: "Hypnoppo", types: ["PSY"],
@@ -2878,7 +2939,9 @@ for (const id of ["magnetor", "elefer", "barrisfer", "colosfer", "cornaive", "as
     "shady", "shade", "shadow",                            // création canonisée (Franss) — Grotte du Nexus run 3
     "caninombre", "lycanfer", "tenebrir",                   // némésis (loup ténébreux) TÉNÈBRES/SPECTRE de Shady, forgé par ACE
     "sepulcru", "macabour", "condombre",                    // némésis (vautours des ténèbres) TÉNÈBRES/VOL de Bidouzen, forgé par ACE
-    "bidouzen", "medisciple", "karatame"]) {                // création canonisée (Embi) — chat kung-fu psychique NORMAL/PSY→PSY/COMBAT
+    "bidouzen", "medisciple", "karatame",                   // création canonisée (Embi) — chat kung-fu psychique NORMAL/PSY→PSY/COMBAT
+    "phoechaudi", "phoechaudii", "phoechaudiii",            // création canonisée (Guillaume) — phénix maudit FEU/SPECTRE, Grotte run 3
+    "obscurene", "abyssombre", "leviabysse"]) {             // némésis (serpent des abysses) EAU/TÉNÈBRES de Phoéchaud, forgé par ACE
     if (SPECIES[id]) SPECIES[id].runThreeOnly = true
 }
 
@@ -2942,4 +3005,9 @@ export const CANONICAL_NEMESIS: Record<string, string> = {
     // physique ×2 sur sa DÉF 70. Formes canoniques + ids custom (l'équipe d'Embi joue son Bidouzen custom → SON ACE field Condombre).
     bidouzen: "sepulcru", medisciple: "sepulcru", karatame: "sepulcru",
     custom_cmml4dogn00005n1_bidouzen_s1: "sepulcru", custom_cmml4dogn00005n1_bidouzen_s2: "sepulcru", custom_cmml4dogn00005n1_bidouzen_s3: "sepulcru",
+    // Phoéchaud (création GUILLAUME, canonisée, FEU/SPECTRE) → lignée OBSCURÈNE (Obscurène→Abyssombre→Léviabysse,
+    // EAU/TÉNÈBRES) = le HARD-COUNTER : résiste ses 2 STAB (Eau 0,5× Feu / Ténèbres 0,5× Spectre), mur spécial (Spé 132),
+    // riposte ×2 des deux côtés. Formes canoniques + ids custom (l'équipe de Guillaume joue son Phoéchaud custom → SON ACE field Léviabysse).
+    phoechaudi: "obscurene", phoechaudii: "obscurene", phoechaudiii: "obscurene",
+    custom_cmq950jkh000071u_phoechaud_s1: "obscurene", custom_cmq950jkh000071u_phoechaud_s2: "obscurene", custom_cmq950jkh000071u_phoechaud_s3: "obscurene",
 }
