@@ -12,7 +12,7 @@ const pts = (sc: ReturnType<typeof computeRunScores>, key: string) => sc.factors
 beforeEach(() => { hydratePokedex({ seen: [], caught: [] }) })
 
 describe("runScore — stats brutes + note globale /1000 du run 2", () => {
-    it("calcule les stats brutes + les 4 facteurs de la note globale (pas de facteur « pas » en run 2)", () => {
+    it("calcule les stats brutes + les 3 facteurs de PERFORMANCE (ni « pas » ni « frugalité » en run 2)", () => {
         const m1 = createMonInstance("morrow", 50, { owned: true })
         const m2 = createMonInstance("cerfeuillu", 40, { owned: true }); m2.shiny = true
         // Le Pokédex du SCORE = captures du RUN COURANT (caughtThisRun), PAS le pokédex global cumulatif.
@@ -31,24 +31,25 @@ describe("runScore — stats brutes + note globale /1000 du run 2", () => {
 
         // --- facteurs de la note /1000 ---
         const dexTotal = visibleDexSpecies(caught, true, true).length
-        expect(pts(sc, "winrate")).toBe(Math.round((90 / 100) * 300))            // 90 V / 100 décisifs → 270
-        expect(pts(sc, "species")).toBe(Math.round(clamp01(4 / dexTotal) * 250)) // 4 espèces / dex visible
-        expect(pts(sc, "levels")).toBe(Math.round((90 / 600) * 200))            // Σ90 / 600 → 30
-        expect(pts(sc, "frugality")).toBe(Math.round((1 - 4000 / 10000) * 250)) // 60% frugal → 150
+        expect(pts(sc, "winrate")).toBe(Math.round((90 / 100) * 500))            // 90 V / 100 décisifs → 450
+        expect(pts(sc, "species")).toBe(Math.round(clamp01(4 / dexTotal) * 400)) // 4 espèces / dex visible
+        expect(pts(sc, "levels")).toBe(Math.round((90 / 600) * 100))            // Σ90 / 600 → 15
+        expect(sc.factors.find((f) => f.key === "frugality")).toBeUndefined()    // frugalité RETIRÉE de la note run 2
         expect(sc.factors.find((f) => f.key === "steps")).toBeUndefined()        // le facteur « pas » n'existe plus en run 2
 
         // la note globale = somme exacte des points de chaque facteur (pas de round divergent)
         expect(sc.grade).toBe(sc.factors.reduce((s, f) => s + f.points, 0))
     })
 
-    it("% de victoire = 100% (300 pts) si jamais mis KO", () => {
+    it("% de victoire = 100% (500 pts) si jamais mis KO", () => {
         hydratePlayer({ team: [], reps: 0, stats: { ...emptyYellowStats(), wins: 40, teamKos: 0 } })
-        expect(pts(computeRunScores(), "winrate")).toBe(300)
+        expect(pts(computeRunScores(), "winrate")).toBe(500)
     })
 
-    it("frugalité : 0 pt si on a consommé ≥ 10000 énergie", () => {
+    it("l'énergie consommée n'entre PLUS dans le score du run 2 (frugalité retirée)", () => {
+        // Même en ayant grillé énormément d'énergie, aucun facteur « frugality » n'apparaît ni ne pénalise.
         hydratePlayer({ team: [], reps: 0, stats: { ...emptyYellowStats(), energySpent: 13000 } })
-        expect(pts(computeRunScores(), "frugality")).toBe(0)
+        expect(computeRunScores().factors.find((f) => f.key === "frugality")).toBeUndefined()
     })
 
     it("le nombre de pas n'entre PLUS dans le score du run 2 (facteur retiré)", () => {

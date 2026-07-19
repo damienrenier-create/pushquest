@@ -3,17 +3,13 @@
 // Nexus Jaune Éclair — RUN 2 (New Game+) : SCORES relus en direct à chaque ouverture du panneau
 // menu (« 🏅 Scores run 2 »). Pur, React-free.
 //
-//   #2 Temps de jeu       = playtimeMs (temps actif cumulé)             — ↓ mieux (stat brute)
-//   #3 Énergie consommée  = stats.energySpent                          — ↓ mieux (stat brute)
-//   #4 Pas                = stats.steps                                — ↓ mieux (stat brute)
-//   #5 ★ SCORE GLOBAL /1000 = note de synthèse (↑ mieux) = Σ de 5 facteurs normalisés [0,1] × poids :
-//        🏆 % de victoire   = victoires / (victoires + défaites)          × 250
-//        📖 Pokédex         = espèces capturées / total dex (run 2)        × 200
-//        💪 Σ niveaux équipe = Σniveaux / 600                              × 150
-//        ⚡ frugalité        = 1 − énergie consommée / 10000               × 200   (moins on consomme, mieux c'est)
-//        👣 peu de pas       = 1 − pas / 30000                             × 200
-//      → total = 1000 (chaque facteur borné [0,1] AVANT pondération).
-//   (Le « temps réel » a été abandonné.)
+//   Stats brutes affichées (hors note) : temps de jeu (playtimeMs), énergie consommée, pas.
+//   ★ SCORE GLOBAL /1000 = note de synthèse (↑ mieux) = Σ de 3 facteurs normalisés [0,1] × poids :
+//        🏆 % de victoire   = victoires / (victoires + défaites)          × 500
+//        📖 Pokédex         = espèces capturées / total dex (run 2)        × 400
+//        💪 Σ niveaux équipe = Σniveaux / 600                              × 100
+//      → total = 1000 (chaque facteur borné [0,1] AVANT pondération). PERFORMANCE pure : la frugalité (énergie)
+//        et le nombre de pas ont été RETIRÉS de la note (ils restent affichés en info brute). « Temps réel » abandonné.
 
 import { getPlayer, getStats } from "../store/playerStore"
 import { computeGrade, leagueRepsFactor, type ScoreFactor } from "./runScoreCompute"
@@ -52,17 +48,17 @@ export function computeRunScores(): RunScores {
     }
 }
 
-/** Facteurs envoyés au LEADERBOARD partagé : les 5 axes notés (/1000) + 1 ligne INFO hors-note = le 6e volet
- *  « reps dépensés en Ligue » (#6). L'info-ligne porte `max: 0` → le panneau du classement la rend en clair
+/** Facteurs envoyés au LEADERBOARD partagé : les 3 axes notés (/1000) + 1 ligne INFO hors-note = le volet
+ *  « reps dépensés en Ligue ». L'info-ligne porte `max: 0` → le panneau du classement la rend en clair
  *  (valeur brute, sans barre /1000) au lieu d'une composante de la note. Ainsi chaque joueur voit AUSSI ce volet
- *  chez les autres, sans fausser la note globale. (Le total reps run 2 est déjà visible via l'axe ⚡ Frugalité.) */
+ *  chez les autres, sans fausser la note globale. (Le total reps run 2 reste visible en stat brute du panneau.) */
 export function leaderboardFactors(sc: RunScores): ScoreFactor[] {
     return [...sc.factors, leagueRepsFactor(sc.leagueReps)]
 }
 
 /** REJEU (« run bis ») — score de la BULLE courante (le monde ACTIF est la bulle) selon le run rejoué, pour le FIGER
- *  au classement à la sortie. run3 = Σ niveaux vaincus ; run2 = note /1000 (+ volet Ligue) ; run1 = note /1000 SANS
- *  frugalité (+ énergie en info). Le run est passé explicitement (activeWorld="replay" ne dit pas QUEL run). */
+ *  au classement à la sortie. run3 = Σ niveaux vaincus ; run2 = note /1000 PERFORMANCE (+ volet Ligue) ; run1 = Σ
+ *  points de BADGES (run-scopé sur caughtThisRun). Le run est passé explicitement (activeWorld="replay" ne dit pas QUEL run). */
 export function computeReplayScore(run: "run1" | "run2" | "run3"): { score: number; factors: ScoreFactor[] } {
     const p = getPlayer()
     const stats = getStats()

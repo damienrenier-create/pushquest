@@ -948,8 +948,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             // ÉNERGIE en réserve à la clôture (capturée AVANT la fusion, qui remanie les reps) — sert au FLAVOR de
             // l'offre run 3 (« X⚡ en réserve »), PAS au classement.
             const ngplusScore = getPlayer().reps
-            // LEADERBOARD run 2 : on remonte la NOTE GLOBALE /1000 (4 facteurs : % victoire, Pokédex, Σ niveaux,
-            //   frugalité sur 10000⚡ — le « nombre de pas » a été retiré) — surtout PAS l'énergie brute (grind poker).
+            // LEADERBOARD run 2 : on remonte la NOTE GLOBALE /1000 de PERFORMANCE (3 facteurs : % victoire ×500,
+            //   Pokédex ×400, Σ niveaux ×100 — énergie & pas RETIRÉS) — surtout PAS l'énergie brute (grind poker).
             //   computeRunScores lit l'état run 2 courant (avant fusion). Best-effort (le serveur garde le meilleur).
             // La clôture est un dernier échantillon : on grave le PIC du run avant de figer le recap.
             recordStatMax("run2BestGrade", computeRunScores().grade)
@@ -2060,7 +2060,6 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                     {row("🎮 Temps de jeu", formatDuration(sc.playtimeMs), "temps passé actif dans l'app — plus bas = mieux")}
                                     {row("⚡ Reps utilisés (total run 2)", sc.energyConsumed.toLocaleString("fr-FR"), "reps dépensés sur TOUT le run 2 (attaques, boutique, casino) — compté depuis le début")}
                                     {row("🏆 Reps utilisés (en Ligue)", (sc.leagueReps ?? 0).toLocaleString("fr-FR"), "reps dépensés en combats de Ligue — nouveau compteur (0 si tu avais déjà entamé la Ligue avant l'ajout)")}
-                                    {row("👟 Pas", sc.steps.toLocaleString("fr-FR"), "nombre de pas — plus bas = mieux")}
                                     {/* NOTE GLOBALE /1000 (courante) + MEILLEUR du run + détail des facteurs (rendu dynamique) */}
                                     <div style={{ borderTop: "1px solid rgba(255,255,255,0.18)", paddingTop: 8, marginTop: 2 }}>
                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 15 }}>
@@ -2075,7 +2074,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                         )}
                                         <div style={{ fontSize: 9, opacity: 0.55, marginTop: 2 }}>Le classement partagé affiche ton score <b>actuel</b> ; ton <b>meilleur</b> est gravé à la fin du run 2.</div>
                                         <div style={{ fontSize: 9.5, opacity: 0.7, marginTop: 6, lineHeight: 1.4, background: "rgba(255,255,255,0.05)", borderRadius: 6, padding: "5px 7px" }}>
-                                            <b>Comment se calcule le score ?</b> 5 critères, chacun noté puis pondéré (son poids = le nombre après « / »). On additionne les 5 → note sur <b>1000</b>, plus c&apos;est haut mieux c&apos;est. La barre montre ta part du critère.
+                                            <b>Comment se calcule le score ?</b> 3 critères de PERFORMANCE (% victoire, Pokédex, niveaux d&apos;équipe), chacun noté puis pondéré (son poids = le nombre après « / »). On les additionne → note sur <b>1000</b>, plus c&apos;est haut mieux c&apos;est. La barre montre ta part du critère.
                                         </div>
                                         <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 6 }}>
                                             {sc.factors.map((f) => (
