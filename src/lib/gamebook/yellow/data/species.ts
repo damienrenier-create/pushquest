@@ -2377,6 +2377,49 @@ export const SPECIES: Record<string, SpeciesData> = {
         learnsAllCts: true,
         hiddenUntilCaught: true,
     },
+    // 🦇⚡ BATCHU → SUPABATCHU — chauves-souris ÉLECTRIQUES : petits annoyers FULGURANTS & fragiles. BST volontairement
+    //   BAS (sa force = Vitesse + statut, pas les chiffres). Évolution TARDIVE (niv 55) mais courbe RAPIDE (medium_fast).
+    //   Kit : priorité, confusion, paralysie, poison grave, drain de vie. ÉLEC/VOL → IMMUNISÉ SOL (le VOL annule la faiblesse).
+    batchu: {
+        id: "batchu", dexNo: 182, name: "Batchu", types: ["ELEC", "VOL"],
+        baseStats: { hp: 38, atk: 35, def: 32, spe: 90, spc: 50 }, // BST 245 — nabot fulgurant & FRÊLE (annoyer)
+        learnset: [
+            { level: 1, moveId: "vive_attaque" },   // PRIORITÉ (revenge / pioche)
+            { level: 1, moveId: "etincelle" },       // STAB ÉLEC (peut paralyser)
+            { level: 6, moveId: "onde_folie" },      // CONFUSION (rend fou)
+            { level: 12, moveId: "vampelec" },       // signature : DRAIN 50 % (draine la vie)
+            { level: 18, moveId: "toxik" },          // POISON GRAVE (empoisonne)
+            { level: 26, moveId: "cage_eclair" },    // PARALYSIE garantie
+            { level: 34, moveId: "fulgurance" },     // gros STAB ÉLEC (90)
+            { level: 44, moveId: "fonce_bec" },      // STAB VOL (75)
+        ],
+        evolution: { toId: "supabatchu", method: { kind: "LEVEL", level: 55 } },
+        catchRate: 90, baseExp: 55, rarity: "UNCOMMON", growthRate: "medium_fast",
+        role: "ÉLEC/VOL — chauve-souris étincelle, annoyer fulgurant & frêle (base)",
+        description: "Minuscule chauve-souris aux ailes crépitantes de statique. Frêle et nerveuse, elle file en zigzag et harcèle de décharges avant même qu'on la repère.",
+        sprite: "/yellow/sprites/dex/batchu.png",
+    },
+    supabatchu: {
+        id: "supabatchu", dexNo: 183, name: "Supabatchu", types: ["ELEC", "VOL"],
+        baseStats: { hp: 62, atk: 48, def: 58, spe: 140, spc: 112 }, // BST 420 — LE + RAPIDE du jeu (verre-canon annoyer)
+        learnset: [
+            { level: 1, moveId: "vive_attaque" },
+            { level: 1, moveId: "etincelle" },
+            { level: 1, moveId: "onde_folie" },
+            { level: 1, moveId: "vampelec" },
+            { level: 1, moveId: "toxik" },
+            { level: 1, moveId: "cage_eclair" },
+            { level: 1, moveId: "fulgurance" },
+            { level: 1, moveId: "fonce_bec" },
+            { level: 55, moveId: "ultrasons" },      // CONFUSION + −Précision (disrupteur d'entrée d'évo)
+            { level: 64, moveId: "ultra_foudre" },   // gros STAB ÉLEC (110)
+            { level: 74, moveId: "pique_fatal" },    // STAB VOL nuke (90, recul)
+        ],
+        catchRate: 45, baseExp: 158, rarity: "RARE", growthRate: "medium_fast",
+        role: "ÉLEC/VOL — chauve-souris supersonique, LE + rapide du jeu (verre-canon annoyer)",
+        description: "Chauve-souris supersonique dont les ailes fendent l'air en crépitant d'éclairs. La plus rapide créature connue : elle frappe, mord et disparaît avant la moindre riposte.",
+        sprite: "/yellow/sprites/dex/supabatchu.png",
+    },
     // 🦛🔮 HYPNOPPO → TÉLÉPPO → OMNHIPPO — lignée mono-PSY inédite du run 3 (l'ENDORMEUR : hypnose → contrôle → sweep).
     hypnoppo: {
         id: "hypnoppo", dexNo: 157, name: "Hypnoppo", types: ["PSY"],

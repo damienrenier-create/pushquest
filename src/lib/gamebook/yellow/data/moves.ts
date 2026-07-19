@@ -32,6 +32,8 @@ export const MOVES: Record<string, MoveData> = {
     vampigraine: { id: "vampigraine", name: "Vampigraine", type: "PLANTE", power: 0, accuracy: 90, pp: 10, effect: { inflictVolatile: "SEEDED" }, description: "Draine des PV chaque tour." },
     osmose: { id: "osmose", name: "Osmose", type: "EAU", power: 0, accuracy: 90, pp: 10, effect: { inflictVolatile: "OSMOSED" }, description: "Enveloppe la cible d'une pellicule d'eau parasite qui lui siphonne des PV chaque tour (jumeau EAU de Vampigraine)." },
     jet_boueux: { id: "jet_boueux", name: "Jet Boueux", type: "EAU", power: 40, accuracy: 100, pp: 20, effect: { statChanges: [{ target: "target", stat: "spe", stages: -1 }] }, description: "Un jet d'eau boueuse en pleine face : petits dégâts, mais RALENTIT la cible à COUP SÛR (−1 Vitesse). Idéal pour garder l'initiative." },
+    vampelec: { id: "vampelec", name: "Vampélec", type: "ELEC", power: 60, accuracy: 100, pp: 10, effect: { drainPct: 50 }, description: "Morsure électrifiée qui SIPHONNE la vie : dégâts Élec + récupère la moitié des dégâts infligés. Signature des Batchu." },
+    ultrasons: { id: "ultrasons", name: "Ultrasons", type: "NORMAL", power: 0, accuracy: 75, pp: 20, effect: { inflictVolatile: "CONFUSION", statChanges: [{ target: "target", stat: "acc", stages: -1 }] }, description: "Ondes stridentes qui plongent la cible dans la CONFUSION ET brouillent sa Précision (−1)." },
     mega_sangsue: { id: "mega_sangsue", name: "Méga-Sangsue", type: "PLANTE", power: 40, accuracy: 100, pp: 15, effect: { drainPct: 50 }, description: "Rend 50% des dégâts en PV." },
 
     etincelle: { id: "etincelle", name: "Étincelle", type: "ELEC", power: 65, accuracy: 100, pp: 20, effect: { chance: 30, inflictStatus: "PARALYSIS" }, description: "Peut paralyser." },
