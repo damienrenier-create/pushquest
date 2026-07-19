@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { getSpecies, SPECIES_IDS } from "./species"
+import { getSpecies } from "./species"
 import { getMove } from "./moves"
 
 describe("Batchu → Supabatchu — chauves-souris électriques (annoyers fulgurants)", () => {
@@ -12,15 +12,12 @@ describe("Batchu → Supabatchu — chauves-souris électriques (annoyers fulgur
         expect(b.growthRate).toBe("medium_fast")
     })
 
-    it("Supabatchu : dex 183, ÉLEC/VOL, BST 420, LE + rapide du jeu (Vit 140)", () => {
+    it("Supabatchu : dex 183, ÉLEC/VOL, BST 400, très rapide (Vit 120)", () => {
         const s = getSpecies("supabatchu")!
         expect(s.dexNo).toBe(183)
         expect(s.types).toEqual(["ELEC", "VOL"])
-        expect(Object.values(s.baseStats).reduce((a, c) => a + c, 0)).toBe(420)
-        expect(s.baseStats.spe).toBe(140)
-        // Aucun autre Daemon n'est plus rapide → Supabatchu détient le record de Vitesse.
-        const maxSpe = Math.max(...SPECIES_IDS.map((id) => getSpecies(id)!.baseStats.spe))
-        expect(s.baseStats.spe).toBe(maxSpe)
+        expect(Object.values(s.baseStats).reduce((a, c) => a + c, 0)).toBe(400)
+        expect(s.baseStats.spe).toBe(120)
     })
 
     it("kit annoyer : priorité + confusion + paralysie + poison grave + drain (moves réels)", () => {

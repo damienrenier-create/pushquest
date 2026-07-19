@@ -2401,7 +2401,7 @@ export const SPECIES: Record<string, SpeciesData> = {
     },
     supabatchu: {
         id: "supabatchu", dexNo: 183, name: "Supabatchu", types: ["ELEC", "VOL"],
-        baseStats: { hp: 62, atk: 48, def: 58, spe: 140, spc: 112 }, // BST 420 — LE + RAPIDE du jeu (verre-canon annoyer)
+        baseStats: { hp: 62, atk: 48, def: 58, spe: 120, spc: 112 }, // BST 400 — TRÈS rapide (verre-canon annoyer)
         learnset: [
             { level: 1, moveId: "vive_attaque" },
             { level: 1, moveId: "etincelle" },
@@ -2416,8 +2416,8 @@ export const SPECIES: Record<string, SpeciesData> = {
             { level: 74, moveId: "pique_fatal" },    // STAB VOL nuke (90, recul)
         ],
         catchRate: 45, baseExp: 158, rarity: "RARE", growthRate: "medium_fast",
-        role: "ÉLEC/VOL — chauve-souris supersonique, LE + rapide du jeu (verre-canon annoyer)",
-        description: "Chauve-souris supersonique dont les ailes fendent l'air en crépitant d'éclairs. La plus rapide créature connue : elle frappe, mord et disparaît avant la moindre riposte.",
+        role: "ÉLEC/VOL — chauve-souris supersonique, très rapide (verre-canon annoyer)",
+        description: "Chauve-souris supersonique dont les ailes fendent l'air en crépitant d'éclairs. Fulgurante et insaisissable : elle frappe, mord et disparaît avant la moindre riposte.",
         sprite: "/yellow/sprites/dex/supabatchu.png",
     },
     // 🦛🔮 HYPNOPPO → TÉLÉPPO → OMNHIPPO — lignée mono-PSY inédite du run 3 (l'ENDORMEUR : hypnose → contrôle → sweep).
