@@ -2078,7 +2078,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                             <b>Comment se calcule le score ?</b> 3 critères de PERFORMANCE (% victoire, Pokédex, niveaux d&apos;équipe), chacun noté puis pondéré (son poids = le nombre après « / »). On les additionne → note sur <b>1000</b>, plus c&apos;est haut mieux c&apos;est. La barre montre ta part du critère.
                                         </div>
                                         <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 6 }}>
-                                            {sc.factors.map((f) => (
+                                            {/* Masque les axes PÉRIMÉS (frugality/steps) d'un snapshot local figé sous l'ancienne formule. */}
+                                            {sc.factors.filter((f) => f.key !== "frugality" && f.key !== "steps").map((f) => (
                                                 <div key={f.key} style={{ fontSize: 11 }}>
                                                     <div style={{ display: "flex", justifyContent: "space-between" }}>
                                                         <span>{f.label}</span>

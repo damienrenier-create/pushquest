@@ -87,6 +87,26 @@ export function computeGrade(inp: GradeInputs, opts?: { run1?: boolean }): { gra
     return { grade: factors.reduce((s, f) => s + f.points, 0), factors }
 }
 
+/** Poids COURANTS des 3 facteurs notés du run 2 — exposés pour re-noter un score FIGÉ (fallback table) posté sous
+ *  une ANCIENNE formule à partir de ses ratios stockés (le ratio [0,1] d'un facteur est indépendant de la formule). */
+export const RUN2_WEIGHTS: Record<string, number> = { winrate: W_WINRATE, species: W_SPECIES, levels: W_LEVELS }
+
+/** Re-note un score run 2 FIGÉ depuis ses facteurs stockés {key, ratio} sous les poids COURANTS → frozen et live
+ *  sont comparés sur la MÊME échelle (les facteurs périmés « frugality »/« steps » sont ignorés). null si inexploitable. */
+export function regradeRun2FromFactors(factors: unknown): number | null {
+    if (!Array.isArray(factors)) return null
+    let sum = 0, seen = 0
+    for (const f of factors) {
+        if (!f || typeof f !== "object") continue
+        const key = (f as { key?: unknown }).key
+        const ratio = (f as { ratio?: unknown }).ratio
+        if (typeof key === "string" && key in RUN2_WEIGHTS && typeof ratio === "number" && isFinite(ratio)) {
+            sum += clamp01(ratio) * RUN2_WEIGHTS[key]; seen++
+        }
+    }
+    return seen > 0 ? Math.round(sum) : null
+}
+
 /** Ligne INFO (hors note /1000) « 🏆 Reps en Ligue » (#6) — max:0 = rendue sans barre par les panneaux. */
 export function leagueRepsFactor(leagueReps: number): ScoreFactor {
     return { key: "info:league_reps", label: "🏆 Reps en Ligue", ratio: 0, max: 0, points: leagueReps, detail: `${leagueReps.toLocaleString("fr-FR")} reps dépensés en combats de Ligue` }

@@ -24,7 +24,7 @@ export default function RunScoreboardPanel({ close }: { close: () => void }) {
     const [state, setState] = useState<"loading" | "ok" | "error">("loading")
     const [data, setData] = useState<Data>({ run1: [], run2: [], run3: [], run3energy: [], duels: [] })
     const [tab, setTab] = useState<TabId>("run3")
-    const [expanded, setExpanded] = useState<number | null>(null) // RUN 2 : entrée dépliée (détail des 5 axes)
+    const [expanded, setExpanded] = useState<number | null>(null) // RUN 2 : entrée dépliée (détail des 3 axes de performance)
 
     useEffect(() => {
         let cancelled = false
@@ -102,7 +102,8 @@ export default function RunScoreboardPanel({ close }: { close: () => void }) {
                                     {canExpand && open && (
                                         <div style={factorsBox}>
                                             <div style={{ fontSize: 8.5, opacity: 0.6, lineHeight: 1.4, marginBottom: 2 }}>Critères pondérés (poids après « / »), additionnés → note /1000.</div>
-                                            {r.factors!.map((f) => (
+                                            {/* On masque les axes PÉRIMÉS (frugality/steps) d'un score figé posté sous l'ancienne formule. */}
+                                            {r.factors!.filter((f) => f.key !== "frugality" && f.key !== "steps").map((f) => (
                                                 f.max <= 0 ? (
                                                     // Ligne INFO (hors note /1000) — ex. « 🏆 Reps en Ligue » : valeur brute, pas de barre.
                                                     <div key={f.key} style={{ fontSize: 10.5, display: "flex", justifyContent: "space-between", alignItems: "baseline", opacity: 0.9, borderTop: "1px dashed rgba(255,255,255,0.14)", paddingTop: 4, marginTop: 1 }}>

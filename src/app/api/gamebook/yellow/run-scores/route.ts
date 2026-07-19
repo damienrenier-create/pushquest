@@ -19,7 +19,7 @@ import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { isNexusYellowEnabled, YELLOW_CHAPTER_ID } from "@/lib/gamebook/yellow/featureFlag"
 import { run3Score, run3MaxScore, run3EnergyScore, run3EnergyMaxScore } from "@/lib/gamebook/yellow/data/run3Score"
-import { computeGrade, leagueRepsFactor, type ScoreFactor } from "@/lib/gamebook/yellow/score/runScoreCompute"
+import { computeGrade, leagueRepsFactor, regradeRun2FromFactors, type ScoreFactor } from "@/lib/gamebook/yellow/score/runScoreCompute"
 import { badgeInputFromSave, evaluateBadges, BADGES } from "@/lib/gamebook/yellow/data/run1Badges"
 
 /** RUN 1 — score = Σ points de BADGES (hauts faits). `caught` : global (crédite le dex run-1 des gradués) ou run-scopé (bulle). */
@@ -39,7 +39,7 @@ function run2FromWorld(w: unknown): { score: number; factors: ScoreFactor[]; lea
     const stats = world.stats ?? {}
     const team = Array.isArray(world.team) ? world.team : []
     // Pokédex du SCORE = captures du RUN 2 uniquement (caughtThisRun), PAS le pokédex global cumulatif (qui inclut
-    //   le run 1). stats/team sont déjà per-world (run-2-exclusifs). → les 5 facteurs sont 100% run 2.
+    //   le run 1). stats/team sont déjà per-world (run-2-exclusifs). → les 3 facteurs de performance sont 100% run 2.
     const caught = Array.isArray(world.caughtThisRun) ? (world.caughtThisRun as string[]) : []
     const teamLevels = team.reduce((s, m) => s + num(m?.level), 0)
     const { grade, factors } = computeGrade({
@@ -62,7 +62,12 @@ function leagueRepsFromFactors(factors: unknown): number {
 function run1FromWorld(f: Record<string, unknown>): { score: number; factors: ScoreFactor[] } | null {
     // RUN 1 = DÉCOUVERTE : score = Σ points de BADGES (hauts faits), recalculé LIVE depuis la save. Le pokédex des
     //   badges = pokédex GLOBAL (pour un gradué run 2/3, crédite ce qu'il a fait au run 1 ; cumulatif assumé).
-    return run1BadgeScore(f)
+    // Les 2 badges-ÉVÉNEMENTS (leagueSixShiny, mirrorWinHigherLevel) peuvent être gagnés en run 2/3 (re-sacre 6-shiny,
+    //   duel reflet en roamant) → écrits dans le monde imbriqué, pas dans le plat. On les OR sur les 3 mondes (comme
+    //   le compteur duels plus bas), sinon ils n'apparaîtraient au classement qu'après fusion.
+    const orFlag = (k: string) =>
+        f[k] === true || (f.ngplusWorld as Record<string, unknown> | null)?.[k] === true || (f.run3World as Record<string, unknown> | null)?.[k] === true
+    return run1BadgeScore({ ...f, leagueSixShiny: orFlag("leagueSixShiny"), mirrorWinHigherLevel: orFlag("mirrorWinHigherLevel") })
 }
 
 /** Recalcule le score RUN 3 (Σ niveaux des Daemons vaincus) DEPUIS flags.run3World.run3Defeated. null si absent/vide. */
@@ -210,7 +215,10 @@ export async function GET() {
             if (!map) continue
             const key = isBis ? `${r.userId}:bis` : r.userId
             if (map.has(key)) continue // le LIVE prime ; la 1re ligne vue (plus récente) gagne le fallback
-            map.set(key, { nickname: isBis ? `${r.nickname}²` : r.nickname, score: r.score, wonAt: r.wonAt, factors: r.factors ?? null, live: false, leagueReps: baseRun === "run2" ? leagueRepsFromFactors(r.factors) : undefined })
+            // RUN 2 : un score figé posté sous l'ANCIENNE formule (frugalité incluse) est RE-NOTÉ depuis ses ratios
+            //   stockés sous les poids COURANTS → frozen et live comparés sur la même échelle (3 facteurs performance).
+            const score = baseRun === "run2" ? (regradeRun2FromFactors(r.factors) ?? r.score) : r.score
+            map.set(key, { nickname: isBis ? `${r.nickname}²` : r.nickname, score, wonAt: r.wonAt, factors: r.factors ?? null, live: false, leagueReps: baseRun === "run2" ? leagueRepsFromFactors(r.factors) : undefined })
         }
     } catch { /* table pas encore créée → pull seul */ }
 
@@ -229,7 +237,7 @@ export async function POST(req: NextRequest) {
     let body: { run?: unknown; score?: unknown; factors?: unknown }
     try { body = await req.json() } catch { return NextResponse.json({ error: "Bad JSON" }, { status: 400 }) }
     const run = typeof body.run === "string" && VALID_RUNS.has(body.run) ? body.run : null
-    // Note /1000 (run2 + les rejeux run1bis/run2bis) : détail des 5 axes (display-only) stocké tel quel, borné à 8.
+    // Note /1000 (run2 + les rejeux run1bis/run2bis) : détail des axes (display-only) stocké tel quel, borné à 8.
     const factors = run && isGradeKind(run) && Array.isArray(body.factors) ? (body.factors as unknown[]).slice(0, 8) : null
     // Borne PAR RUN (anti-triche : le score vient d'un POST client). run3(bis) = Σ max atteignable + marge ;
     //   les notes /1000 → plafond STRICT 1000. Fallback MAX_SCORE si run inconnu.

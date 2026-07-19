@@ -26,7 +26,7 @@ export interface RunScores {
     grade: number            // #5 NOTE GLOBALE /1000 COURANTE          (↑ mieux)
     leagueReps: number       // #6 reps dépensés en COMBAT DE LIGUE (nouveau compteur → NON rétroactif : 0 pour qui a déjà entamé la Ligue)
     bestGrade: number        // MEILLEUR grade /1000 atteint pendant le run (pic — la note n'est pas monotone). Montré au recap de fin de run 2.
-    factors: ScoreFactor[]   // détail des 5 composantes de la note globale
+    factors: ScoreFactor[]   // détail des composantes notées de la note globale (run 2 = 3 axes de performance)
 }
 
 export function computeRunScores(): RunScores {

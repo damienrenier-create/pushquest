@@ -5,6 +5,7 @@ import { createMonInstance } from "../battle/factory"
 import { emptyYellowStats } from "../storage/save"
 import { visibleDexSpecies, SPECIES_IDS } from "../data/species"
 import { computeRunScores, formatDuration } from "./runScore"
+import { regradeRun2FromFactors } from "./runScoreCompute"
 
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x))
 const pts = (sc: ReturnType<typeof computeRunScores>, key: string) => sc.factors.find((f) => f.key === key)!.points
@@ -63,6 +64,18 @@ describe("runScore — stats brutes + note globale /1000 du run 2", () => {
         hydratePlayer({ team, reps: 0, caughtThisRun: [...SPECIES_IDS], stats: { ...emptyYellowStats(), wins: 100, teamKos: 0, steps: 0, energySpent: 0 } })
         hydratePokedex({ seen: [], caught: [...SPECIES_IDS] }) // Pokédex complet (caughtThisRun = tout capturé CE run)
         expect(computeRunScores().grade).toBe(1000)
+    })
+
+    it("regradeRun2FromFactors : re-note un score figé sous les poids COURANTS, ignore frugality/steps", () => {
+        // Facteurs ANCIENNE formule (le ratio [0,1] est indépendant de la formule) → re-notés 500/400/100.
+        const oldFactors = [
+            { key: "winrate", ratio: 0.9 }, { key: "species", ratio: 0.5 }, { key: "levels", ratio: 0.25 },
+            { key: "frugality", ratio: 0.6 }, { key: "steps", ratio: 0.8 },
+        ]
+        expect(regradeRun2FromFactors(oldFactors)).toBe(675) // 0.9*500 + 0.5*400 + 0.25*100, frugality/steps ignorés
+        expect(regradeRun2FromFactors(null)).toBeNull()
+        expect(regradeRun2FromFactors([])).toBeNull()
+        expect(regradeRun2FromFactors([{ key: "frugality", ratio: 0.9 }])).toBeNull() // aucun axe noté → null (garde r.score)
     })
 
     it("formatDuration : m:ss et h:mm:ss", () => {
