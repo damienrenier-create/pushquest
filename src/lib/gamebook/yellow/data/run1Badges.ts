@@ -14,6 +14,7 @@
 // des champs OPTIONNELS de BadgeInput — le badge reste simplement non-gagné tant qu'ils valent 0/false.
 
 import { getSpecies, visibleDexSpecies } from "./species"
+import type { YellowSave } from "../storage/save"
 
 export type BadgeTier = "bronze" | "silver" | "gold" | "diamond" | "legend"
 export const TIER_POINTS: Record<BadgeTier, number> = { bronze: 5, silver: 15, gold: 30, diamond: 75, legend: 150 }
@@ -146,4 +147,32 @@ export function evaluateBadges(i: BadgeInput): BadgeResult {
 /** Score run 1 (= total des points de badges). Séparé pour l'usage leaderboard. */
 export function badgeScore(i: BadgeInput): number {
     return evaluateBadges(i).totalPoints
+}
+
+/** Construit le BadgeInput depuis une YellowSave (monde run 1). `caught` peut être surchargé (run-scopé : la bulle
+ *  de rejeu ou un run-1 gelé passent caughtThisRun ; sinon le pokédex global sert de défaut). Champs manquants tolérés. */
+export function badgeInputFromSave(s: Partial<YellowSave>, caught?: readonly string[]): BadgeInput {
+    const mons = [...(s.team ?? []), ...(s.pc ?? [])]
+    return {
+        caught: caught ?? s.pokedex?.caught ?? [],
+        seen: s.pokedex?.seen ?? [],
+        mons: mons.map((m) => ({ level: m.level, shiny: m.shiny, speciesId: m.speciesId })),
+        teamSize: (s.team ?? []).length,
+        arenaBadges: (s.badges ?? []).length,
+        isChampion: s.isChampion === true,
+        trainersBeaten: (s.defeatedTrainers ?? []).length,
+        mirrorWins: s.stats?.duelWinsTotal ?? 0,
+        pvpWins: s.pvpStats?.wins ?? 0,
+        aceWins: s.aceWins ?? 0,
+        domeChampionships: s.domeChampionships ?? 0,
+        gekrocResolved: s.gekrocResolved === true,
+        orcalineWins: s.orcalineWins ?? 0,
+        sylvebarbeAwake: s.sylvebarbeAwake === true,
+        pnjTradeDone: s.caveTradeDone === true,
+        hhCollectorWins: s.hhCollectorWins ?? 0,
+        sbireWins: s.sbireWinsTotal ?? 0,
+        hasMasterBall: (s.items?.["master_ball"] ?? 0) > 0,
+        labDefiDone: s.labDefi?.squat150Done === true,
+        berrySecretKnown: s.berrySecretKnown === true,
+    }
 }

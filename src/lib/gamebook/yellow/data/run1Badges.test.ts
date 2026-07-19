@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { BADGES, TIER_POINTS, RUN1_DEX_TOTAL, evaluateBadges, badgeScore, type BadgeInput } from "./run1Badges"
+import { BADGES, TIER_POINTS, RUN1_DEX_TOTAL, evaluateBadges, badgeScore, badgeInputFromSave, type BadgeInput } from "./run1Badges"
 
 const empty: BadgeInput = {
     caught: [], seen: [], mons: [], teamSize: 0, arenaBadges: 0, isChampion: false,
@@ -80,5 +80,28 @@ describe("Badges run 1 — socle", () => {
     it("ids de badges uniques", () => {
         const ids = BADGES.map((b) => b.id)
         expect(new Set(ids).size).toBe(ids.length)
+    })
+
+    it("badgeInputFromSave : mappe une save réelle → badges cohérents", () => {
+        const save = {
+            team: [{ level: 100, shiny: true, speciesId: "nouillon" }, { level: 40, speciesId: "gouttiny" }],
+            pc: [{ level: 30, shiny: true, speciesId: "braisille" }],
+            pokedex: { caught: ["nouillon", "gouttiny", "braisille"], seen: ["gekroc"] },
+            badges: ["feu", "plante", "eau", "elec"], isChampion: true,
+            defeatedTrainers: ["a", "b"], stats: { duelWinsTotal: 2 }, pvpStats: { wins: 1 },
+            aceWins: 7, domeChampionships: 3, gekrocResolved: true, orcalineWins: 1, sylvebarbeAwake: true,
+            caveTradeDone: true, hhCollectorWins: 1, sbireWinsTotal: 1, items: { master_ball: 1 },
+            labDefi: { squat150Done: true }, berrySecretKnown: false,
+        } as unknown as Parameters<typeof badgeInputFromSave>[0]
+        const i = badgeInputFromSave(save)
+        expect(i.mons.filter((m) => m.shiny).length).toBe(2)
+        expect(i.arenaBadges).toBe(4)
+        expect(i.hasMasterBall).toBe(true)
+        const r = evaluateBadges(i)
+        // gros paquet de badges gagnés (champion, arènes, gékroc, dôme or, ace7, master ball, sylvebarbe…)
+        for (const id of ["champion", "gekroc", "dome_gold", "ace7", "masterball", "sylvebarbe", "shiny1", "first_catch"]) {
+            expect(r.badges.find((b) => b.id === id)!.earned, id).toBe(true)
+        }
+        expect(r.totalPoints).toBeGreaterThan(200)
     })
 })
