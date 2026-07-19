@@ -13,8 +13,15 @@
 // INSTRUMENTER (évolutions, échange joueur, shiny échangé, duel niveau-sup, casino/pari, ligue 6-shiny…) sont
 // des champs OPTIONNELS de BadgeInput — le badge reste simplement non-gagné tant qu'ils valent 0/false.
 
-import { getSpecies, visibleDexSpecies } from "./species"
+import { getSpecies, visibleDexSpecies, SPECIES } from "./species"
 import type { YellowSave } from "../storage/save"
+
+/** Toutes les espèces qui SONT une forme évoluée (= cible `evolution.toId` d'une autre espèce). Posséder l'une
+ *  d'elles ⇒ avoir fait évoluer un Daemon. Proxy fidèle pour le badge bronze « évoluer » : capturer une évo à
+ *  l'état sauvage reste marginal en run 1, et le badge ne vaut que 5 pts. Calculé une fois. */
+const EVOLVED_FORMS: ReadonlySet<string> = new Set(
+    Object.values(SPECIES).map((sp) => (sp as { evolution?: { toId?: string } }).evolution?.toId).filter((x): x is string => !!x),
+)
 
 export type BadgeTier = "bronze" | "silver" | "gold" | "diamond" | "legend"
 export const TIER_POINTS: Record<BadgeTier, number> = { bronze: 5, silver: 15, gold: 30, diamond: 75, legend: 150 }
@@ -174,5 +181,13 @@ export function badgeInputFromSave(s: Partial<YellowSave>, caught?: readonly str
         hasMasterBall: (s.items?.["master_ball"] ?? 0) > 0,
         labDefiDone: s.labDefi?.squat150Done === true,
         berrySecretKnown: s.berrySecretKnown === true,
+        // ── compteurs « propres » (Phase 2) ──
+        // Évoluer : DÉRIVÉ (posséder une forme évoluée, team+PC) → pas de nouveau champ save. Casino : DÉRIVÉ de
+        //   labDefi.casinoTotalWon (déjà persisté). Les 2 sont rétro-actifs (créditent l'existant, additif).
+        evolutions: mons.some((m) => EVOLVED_FORMS.has(m.speciesId)) ? 1 : 0,
+        casinoWins: (s.labDefi?.casinoTotalWon ?? 0) > 0 ? 1 : 0,
+        // Ligue 6-shiny & reflet niveau-sup : ÉVÉNEMENTS non reconstituables → champs save posés au moment T.
+        leagueSixShiny: s.leagueSixShiny === true,
+        mirrorWinHigherLevel: s.mirrorWinHigherLevel === true,
     }
 }

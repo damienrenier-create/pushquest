@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { BADGES, TIER_POINTS, RUN1_DEX_TOTAL, evaluateBadges, badgeScore, badgeInputFromSave, type BadgeInput } from "./run1Badges"
+import { SPECIES } from "./species"
 
 const empty: BadgeInput = {
     caught: [], seen: [], mons: [], teamSize: 0, arenaBadges: 0, isChampion: false,
@@ -75,6 +76,33 @@ describe("Badges run 1 — socle", () => {
             expect(state(r, id).earned, id).toBe(false)
         }
         expect(state(evaluateBadges({ ...empty, evolutions: 1 }), "evolve").earned).toBe(true)
+    })
+
+    it("Phase 2 — badgeInputFromSave DÉRIVE évolution (forme évoluée possédée) + casino (casinoTotalWon>0) + lit les 2 flags", () => {
+        const evolvedId = Object.values(SPECIES).map((sp) => (sp as { evolution?: { toId?: string } }).evolution?.toId).find(Boolean)!
+        const save = {
+            team: [{ level: 40, speciesId: evolvedId }],
+            labDefi: { casinoTotalWon: 500 }, leagueSixShiny: true, mirrorWinHigherLevel: true,
+        } as unknown as Parameters<typeof badgeInputFromSave>[0]
+        const i = badgeInputFromSave(save)
+        expect(i.evolutions).toBe(1)            // possède une forme évoluée
+        expect(i.casinoWins).toBe(1)            // casinoTotalWon > 0
+        expect(i.leagueSixShiny).toBe(true)
+        expect(i.mirrorWinHigherLevel).toBe(true)
+        const r = evaluateBadges(i)
+        for (const id of ["evolve", "casino_win", "league_6shiny", "beat_mirror_higher"]) {
+            expect(r.badges.find((b) => b.id === id)!.earned, id).toBe(true)
+        }
+    })
+
+    it("Phase 2 — pas de faux positif : base non-évoluée + casino à 0 ⇒ badges non gagnés", () => {
+        const save = { team: [{ level: 5, speciesId: "gouttiny" }], labDefi: { casinoTotalWon: 0 } } as unknown as Parameters<typeof badgeInputFromSave>[0]
+        const i = badgeInputFromSave(save)
+        expect(i.evolutions).toBe(0)            // gouttiny = base (jamais une cible d'évolution)
+        expect(i.casinoWins).toBe(0)
+        expect(i.leagueSixShiny).toBe(false)    // absent → false
+        expect(state(evaluateBadges(i), "evolve").earned).toBe(false)
+        expect(state(evaluateBadges(i), "casino_win").earned).toBe(false)
     })
 
     it("ids de badges uniques", () => {
