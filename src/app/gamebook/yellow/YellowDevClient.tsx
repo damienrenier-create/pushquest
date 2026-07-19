@@ -28,6 +28,7 @@ import HallOfFame from "./HallOfFame"
 import HallOfFameViewer from "./HallOfFameViewer"
 import ArenaHallOfFamePanel from "./ArenaHallOfFamePanel"
 import RunScoreboardPanel from "./RunScoreboardPanel"
+import RunBadgesPanel from "./RunBadgesPanel"
 import DexEntryScreen from "./battle/DexEntryScreen"
 import IntroCinematic from "./IntroCinematic"
 import Run3IntroCinematic from "./Run3IntroCinematic"
@@ -330,7 +331,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         const enemy = arenaMode === "hub" ? buildHubTeam(opp.player) : buildMirrorTeam(opp.player)
         setArenaFight({ opp, mode: arenaMode, enemy })
     }
-    const [menu, setMenu] = useState<"none" | "pause" | "team" | "bag" | "reput" | "moves" | "hof" | "arena-hof" | "stats" | "run2scores" | "run3scores" | "leaderboard">("none")
+    const [menu, setMenu] = useState<"none" | "pause" | "team" | "bag" | "reput" | "moves" | "hof" | "arena-hof" | "stats" | "run2scores" | "run3scores" | "leaderboard" | "badges">("none")
     const [run2Snap, setRun2Snap] = useState<RunScores | null>(null)
     useEffect(() => { setRun2Snap(readRun2Snapshot()) }, [])
     const activeWorld = useActiveWorld() // NG+ : "live" (partie d'origine) ou "ngplus" (New Game+)
@@ -1512,7 +1513,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (advisorOpen) { closeAdvisor(); return true }
         if (labOpen) { closeLab(); return true }
         if (pcOpen) { closePc(); return true }
-        if (menu === "team" || menu === "bag" || menu === "reput" || menu === "moves" || menu === "hof" || menu === "arena-hof" || menu === "stats" || menu === "run2scores" || menu === "run3scores" || menu === "leaderboard") { setMenu("pause"); return true }
+        if (menu === "team" || menu === "bag" || menu === "reput" || menu === "moves" || menu === "hof" || menu === "arena-hof" || menu === "stats" || menu === "run2scores" || menu === "run3scores" || menu === "leaderboard" || menu === "badges") { setMenu("pause"); return true }
         if (menu === "pause") { setMenu("none"); return true }
         return false
     }
@@ -1619,6 +1620,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         {!battle && <button style={menuBtnStyle} onClick={() => setMenu("moves")}>⚔️ ATTAQUES</button>}
                         <button style={menuBtnStyle} onClick={() => setMenu("reput")}>🏆 RÉPUTATION</button>
                         <button style={menuBtnStyle} onClick={() => setMenu("stats")}>📊 STATS (cette partie)</button>
+                        <button style={menuBtnStyle} onClick={() => setMenu("badges")}>🎖️ TROPHÉES (badges)</button>
                         {(activeWorld === "ngplus" || run2Snap) && <button style={menuBtnStyle} onClick={() => setMenu("run2scores")}>🏅 SCORES RUN 2</button>}
                         {activeWorld === "run3" && <button style={menuBtnStyle} onClick={() => setMenu("run3scores")}>🏆 SCORE RUN 3</button>}
                         <button style={menuBtnStyle} onClick={() => setMenu("hof")}>🏛️ HALL OF FAME (LIGUE)</button>
@@ -2098,6 +2100,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {menu === "hof" && <HallOfFameViewer close={() => setMenu("pause")} onFight={() => setMenu("none")} />}
             {menu === "arena-hof" && <ArenaHallOfFamePanel close={() => setMenu("pause")} onFight={() => setMenu("none")} />}
             {menu === "leaderboard" && <RunScoreboardPanel close={() => setMenu("pause")} />}
+            {menu === "badges" && <RunBadgesPanel close={() => setMenu("pause")} />}
 
             {/* ZONE DE COMBAT — entrée Tour (placeholder, non-bloquant : marche pour sortir) */}
             {!battle && !run && mapPlayer.mapId === "yellow_combat_tour" && !dialogue && player.team.length > 0 && (
