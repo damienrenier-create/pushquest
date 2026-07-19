@@ -17,7 +17,7 @@ import { HH_TRADER_ID, HH_TRADER_MAP, HH_TRADER_POS, HH_TRADER_OFFER_LINES, HH_C
 import { CAVE_TRADER_ID, CAVE_TRADER_MAP, CAVE_TRADER_POS, CAVE_TRADER_OFFER_LINES } from "./data/caveTrader"
 import { HH_KID_ID, HH_KID_MAP, HH_KID_POS, HH_KID_DAY_LINES } from "./data/hhKid"
 import { ORCALINE_TRAINER_ID, ORCALINE_TRAINER_MAP, ORCALINE_TRAINER_POS, ORCALINE_INTRO_LINES } from "./data/orcalineTrainer"
-import { PNJ8_NPC_ID, PNJ8_MAP_ID, PNJ8_POS, PNJ8_INTRO_LINES } from "./data/pnj8"
+import { PNJ5_NPC_ID, PNJ5_MAP_ID, PNJ5_POS, PNJ5_INTRO_LINES } from "./data/pnj5"
 
 // PANNEAUX-conseils = les ~12 panneaux BIEN ESPACÉS de la Route Nord (le sprite
 // panneau est rendu par le décor). Chaque panneau = un hotspot INVISIBLE qui
@@ -110,18 +110,18 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         initialY: SYLVEBARBE_POS.y,
         dialoguesAfter: SYLVEBARBE_INTRO_LINES,
     },
-    // PNJ 8 — GARDIEN DE LA GROTTE DU NEXUS, posé en (16,18). Barre l'accès (17-19,18) tant qu'il n'est pas
-    // battu CETTE visite. GATE titre OR au Dôme (vérifiée à l'interaction dans gameStore) → sinon renvoi hors grotte.
+    // PNJ 5 — GARDIEN DE LA GROTTE DU NEXUS, intercepte en (17,33). Barre le passage (18-20,33) tant qu'il n'est
+    // pas battu CETTE visite. GATE titre OR au Dôme (vérifiée à l'interaction dans gameStore) → sinon renvoi hors grotte.
     {
-        id: PNJ8_NPC_ID,
+        id: PNJ5_NPC_ID,
         name: "GARDIEN",
-        mapId: PNJ8_MAP_ID,
+        mapId: PNJ5_MAP_ID,
         kind: "static",
         interaction: "interactive",
         sprite: { emoji: "🗿", color: "#8a8f98" },
-        initialX: PNJ8_POS.x,
-        initialY: PNJ8_POS.y,
-        dialoguesAfter: PNJ8_INTRO_LINES,
+        initialX: PNJ5_POS.x,
+        initialY: PNJ5_POS.y,
+        dialoguesAfter: PNJ5_INTRO_LINES,
     },
     // PANNEAUX de Ville Jaune (cases non-walkables déjà dessinées dans le décor → NPC invisibles).
     {
