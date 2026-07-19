@@ -947,8 +947,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             // ÉNERGIE en réserve à la clôture (capturée AVANT la fusion, qui remanie les reps) — sert au FLAVOR de
             // l'offre run 3 (« X⚡ en réserve »), PAS au classement.
             const ngplusScore = getPlayer().reps
-            // LEADERBOARD run 2 : on remonte la NOTE GLOBALE /1000 (5 facteurs : % victoire, Pokédex, Σ niveaux,
-            //   frugalité sur 10000⚡, peu de pas) — surtout PAS l'énergie brute, qui récompensait le grind poker.
+            // LEADERBOARD run 2 : on remonte la NOTE GLOBALE /1000 (4 facteurs : % victoire, Pokédex, Σ niveaux,
+            //   frugalité sur 10000⚡ — le « nombre de pas » a été retiré) — surtout PAS l'énergie brute (grind poker).
             //   computeRunScores lit l'état run 2 courant (avant fusion). Best-effort (le serveur garde le meilleur).
             // La clôture est un dernier échantillon : on grave le PIC du run avant de figer le recap.
             recordStatMax("run2BestGrade", computeRunScores().grade)
@@ -2022,7 +2022,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                     {row("⚡ Reps utilisés (total run 2)", sc.energyConsumed.toLocaleString("fr-FR"), "reps dépensés sur TOUT le run 2 (attaques, boutique, casino) — compté depuis le début")}
                                     {row("🏆 Reps utilisés (en Ligue)", (sc.leagueReps ?? 0).toLocaleString("fr-FR"), "reps dépensés en combats de Ligue — nouveau compteur (0 si tu avais déjà entamé la Ligue avant l'ajout)")}
                                     {row("👟 Pas", sc.steps.toLocaleString("fr-FR"), "nombre de pas — plus bas = mieux")}
-                                    {/* NOTE GLOBALE /1000 (courante) + MEILLEUR du run + détail des 5 facteurs */}
+                                    {/* NOTE GLOBALE /1000 (courante) + MEILLEUR du run + détail des facteurs (rendu dynamique) */}
                                     <div style={{ borderTop: "1px solid rgba(255,255,255,0.18)", paddingTop: 8, marginTop: 2 }}>
                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 15 }}>
                                             <b>★ SCORE GLOBAL{activeWorld === "ngplus" ? " (actuel)" : ""}</b>

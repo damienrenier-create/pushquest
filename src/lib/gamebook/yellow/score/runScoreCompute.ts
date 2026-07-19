@@ -6,8 +6,9 @@
 //   - app/api/gamebook/yellow/run-scores (GET) : recalcule le score de CHAQUE joueur DEPUIS sa save (pull),
 //     pour que le classement soit peuplé sans attendre qu'un joueur déclenche un POST.
 //
-// La note = Σ de 5 facteurs normalisés [0,1] × poids (somme 1000) :
-//   🏆 % victoire ×250 · 📖 Pokédex ×200 · 💪 Σ niveaux ×150 · ⚡ frugalité ×200 (moins = mieux) · 👣 peu de pas ×200.
+// La note RUN 2 = Σ de 4 facteurs normalisés [0,1] × poids (somme 1000) :
+//   🏆 % victoire ×300 · 📖 Pokédex ×250 · 💪 Σ niveaux ×200 · ⚡ frugalité ×250 (moins = mieux).
+//   Le « nombre de pas » a été RETIRÉ du run 2 (non pertinent) ; le RUN 1 conserve son propre facteur pas (×250).
 
 import { visibleDexSpecies } from "../data/species"
 
@@ -16,12 +17,12 @@ export const ENERGY_BUDGET = 10000  // énergie offerte au départ du run 2 (NGP
 export const LEVEL_MAX = 600        // Σ niveaux « plein » = 6 × 100
 export const STEP_MAX = 30000       // au-delà → 0 pt sur le facteur « peu de pas »
 
-// Poids des 5 facteurs de la note /1000 (somme = 1000).
-const W_WINRATE = 250
-const W_SPECIES = 200
-const W_LEVELS = 150
-const W_FRUGALITY = 200
-const W_STEPS = 200
+// Poids des 4 facteurs de la note /1000 du RUN 2 (somme = 1000). Le « nombre de pas » a été RETIRÉ (non pertinent) ;
+// ses 200 pts sont reventilés (+50 chacun) sur les 4 autres. (Le run 1 garde SON facteur pas via W1_STEPS.)
+const W_WINRATE = 300
+const W_SPECIES = 250
+const W_LEVELS = 200
+const W_FRUGALITY = 250
 
 const clamp01 = (x: number): number => Math.max(0, Math.min(1, x))
 
@@ -69,7 +70,7 @@ export function computeGrade(inp: GradeInputs, opts?: { run1?: boolean }): { gra
     // 👣 peu de pas.
     const stepsPct = clamp01(1 - inp.steps / stepMax)
 
-    const [wWin, wSpe, wLvl, wStep] = run1 ? [W1_WINRATE, W1_SPECIES, W1_LEVELS, W1_STEPS] : [W_WINRATE, W_SPECIES, W_LEVELS, W_STEPS]
+    const [wWin, wSpe, wLvl] = run1 ? [W1_WINRATE, W1_SPECIES, W1_LEVELS] : [W_WINRATE, W_SPECIES, W_LEVELS]
     const factors: ScoreFactor[] = [
         { key: "winrate", label: "🏆 % de victoire", ratio: winRate, max: wWin, points: Math.round(winRate * wWin), detail: `${inp.wins} victoires / ${decisive} combats décisifs` },
         { key: "species", label: "📖 Pokédex", ratio: speciesPct, max: wSpe, points: Math.round(speciesPct * wSpe), detail: `${distinctCaught} / ${dexTotal} espèces` },
@@ -80,7 +81,10 @@ export function computeGrade(inp: GradeInputs, opts?: { run1?: boolean }): { gra
         const frugalityPct = clamp01(1 - inp.energyConsumed / ENERGY_BUDGET)
         factors.push({ key: "frugality", label: "⚡ Frugalité", ratio: frugalityPct, max: W_FRUGALITY, points: Math.round(frugalityPct * W_FRUGALITY), detail: `${inp.energyConsumed.toLocaleString("fr-FR")} / ${ENERGY_BUDGET.toLocaleString("fr-FR")} énergie consommée — moins = mieux` })
     }
-    factors.push({ key: "steps", label: "👣 Peu de pas", ratio: stepsPct, max: wStep, points: Math.round(stepsPct * wStep), detail: `${inp.steps.toLocaleString("fr-FR")} / ${stepMax.toLocaleString("fr-FR")} pas — moins = mieux` })
+    // 👣 peu de pas : SEULEMENT en run 1 (RETIRÉ du run 2 — métrique non pertinente).
+    if (run1) {
+        factors.push({ key: "steps", label: "👣 Peu de pas", ratio: stepsPct, max: W1_STEPS, points: Math.round(stepsPct * W1_STEPS), detail: `${inp.steps.toLocaleString("fr-FR")} / ${stepMax.toLocaleString("fr-FR")} pas — moins = mieux` })
+    }
     return { grade: factors.reduce((s, f) => s + f.points, 0), factors }
 }
 

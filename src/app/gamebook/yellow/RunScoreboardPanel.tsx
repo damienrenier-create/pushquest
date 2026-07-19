@@ -1,8 +1,8 @@
 "use client"
 
 // LEADERBOARD des scores de RUN (concours) — consultable depuis le menu START par les joueurs ayant fini le
-// run 1 (>=5 badges). Deux classements distincts (unités différentes) : RUN 2 (NOTE GLOBALE /1000 = 5 facteurs :
-// % victoire, Pokédex, niveaux, frugalité, peu de pas) et RUN 3 (Σ des niveaux des Daemons vaincus). Lecture seule.
+// run 1 (>=5 badges). Deux classements distincts (unités différentes) : RUN 2 (NOTE GLOBALE /1000 = 4 facteurs :
+// % victoire, Pokédex, niveaux, frugalité) et RUN 3 (Σ des niveaux des Daemons vaincus). Lecture seule.
 
 import { useEffect, useState } from "react"
 import { type ScoreFactor } from "@/lib/gamebook/yellow/score/runScore"

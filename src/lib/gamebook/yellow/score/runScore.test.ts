@@ -12,7 +12,7 @@ const pts = (sc: ReturnType<typeof computeRunScores>, key: string) => sc.factors
 beforeEach(() => { hydratePokedex({ seen: [], caught: [] }) })
 
 describe("runScore — stats brutes + note globale /1000 du run 2", () => {
-    it("calcule les stats brutes + les 5 facteurs de la note globale", () => {
+    it("calcule les stats brutes + les 4 facteurs de la note globale (pas de facteur « pas » en run 2)", () => {
         const m1 = createMonInstance("morrow", 50, { owned: true })
         const m2 = createMonInstance("cerfeuillu", 40, { owned: true }); m2.shiny = true
         // Le Pokédex du SCORE = captures du RUN COURANT (caughtThisRun), PAS le pokédex global cumulatif.
@@ -31,19 +31,19 @@ describe("runScore — stats brutes + note globale /1000 du run 2", () => {
 
         // --- facteurs de la note /1000 ---
         const dexTotal = visibleDexSpecies(caught, true, true).length
-        expect(pts(sc, "winrate")).toBe(Math.round((90 / 100) * 250))            // 90 V / 100 décisifs → 225
-        expect(pts(sc, "species")).toBe(Math.round(clamp01(4 / dexTotal) * 200)) // 4 espèces / dex visible
-        expect(pts(sc, "levels")).toBe(Math.round((90 / 600) * 150))            // Σ90 / 600 → 23
-        expect(pts(sc, "frugality")).toBe(Math.round((1 - 4000 / 10000) * 200)) // 60% frugal → 120
-        expect(pts(sc, "steps")).toBe(Math.round((1 - 6000 / 30000) * 200))     // 80% → 160
+        expect(pts(sc, "winrate")).toBe(Math.round((90 / 100) * 300))            // 90 V / 100 décisifs → 270
+        expect(pts(sc, "species")).toBe(Math.round(clamp01(4 / dexTotal) * 250)) // 4 espèces / dex visible
+        expect(pts(sc, "levels")).toBe(Math.round((90 / 600) * 200))            // Σ90 / 600 → 30
+        expect(pts(sc, "frugality")).toBe(Math.round((1 - 4000 / 10000) * 250)) // 60% frugal → 150
+        expect(sc.factors.find((f) => f.key === "steps")).toBeUndefined()        // le facteur « pas » n'existe plus en run 2
 
         // la note globale = somme exacte des points de chaque facteur (pas de round divergent)
         expect(sc.grade).toBe(sc.factors.reduce((s, f) => s + f.points, 0))
     })
 
-    it("% de victoire = 100% (250 pts) si jamais mis KO", () => {
+    it("% de victoire = 100% (300 pts) si jamais mis KO", () => {
         hydratePlayer({ team: [], reps: 0, stats: { ...emptyYellowStats(), wins: 40, teamKos: 0 } })
-        expect(pts(computeRunScores(), "winrate")).toBe(250)
+        expect(pts(computeRunScores(), "winrate")).toBe(300)
     })
 
     it("frugalité : 0 pt si on a consommé ≥ 10000 énergie", () => {
@@ -51,9 +51,10 @@ describe("runScore — stats brutes + note globale /1000 du run 2", () => {
         expect(pts(computeRunScores(), "frugality")).toBe(0)
     })
 
-    it("peu de pas : 0 pt à partir de 30000 pas", () => {
+    it("le nombre de pas n'entre PLUS dans le score du run 2 (facteur retiré)", () => {
+        // Même avec un nombre de pas énorme, aucun facteur « pas » n'apparaît (ni ne pénalise) en run 2.
         hydratePlayer({ team: [], reps: 0, stats: { ...emptyYellowStats(), steps: 31000 } })
-        expect(pts(computeRunScores(), "steps")).toBe(0)
+        expect(computeRunScores().factors.find((f) => f.key === "steps")).toBeUndefined()
     })
 
     it("note plafonnée à 1000 quand tout est au maximum", () => {
