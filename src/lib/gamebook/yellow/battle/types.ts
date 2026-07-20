@@ -216,6 +216,13 @@ export interface MonInstance {
     /** STATS FIGÉES (Hall of Fame uniquement) : si présent, fullStats renvoie ces valeurs telles quelles
      *  (le champion combat avec ses stats exactes du sacre, sans recalcul IV/EV/Saiyan). Jamais persisté. */
     frozenStats?: Record<StatKey, number>
+    /** FUSION (Autel de la Chimère) : défense spéciale (SpD) SÉPARÉE de l'attaque spéciale. Un Daemon fusionné
+     *  porte frozenStats.spc = SpA (attaque spé, lue nativement en OFFENSE) et frozenSpd = SpD. Le moteur lit
+     *  frozenSpd en DÉFENSE spéciale s'il est présent, sinon spc → comportement Gen-1 STRICTEMENT inchangé pour
+     *  toute espèce existante (frozenSpd undefined). Jamais persisté (construct de combat éphémère).
+     *  ⚠️ INVARIANT (setter Inc.1) : frozenStats.spc (SpA) ET frozenSpd (SpD) doivent être posés ENSEMBLE — ils
+     *  viennent en PAIRE de computeFusion. Poser l'un sans l'autre = profil incohérent. Utiliser UN seul helper. */
+    frozenSpd?: number
     /** OBJET TENU (held item) : id d'un objet de data/heldItems.ts. 1 max par Daemon.
      *  Effets lus par fullStats (stats) et le moteur (dégâts/combat). cf. data/heldItems.ts. */
     heldItem?: string

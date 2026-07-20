@@ -757,7 +757,8 @@ function dealMoveDamage(state: BattleState, side: SideId, move: MoveData, rng: R
         : effectiveStat(rawStats.spc, "spc", attacker.stages.spc, attacker.status)
     const def = isPhysical
         ? effectiveStat(rawDefStats.def, "def", defender.stages.def, "NONE")
-        : effectiveStat(rawDefStats.spc, "spc", defender.stages.spc, "NONE")
+        // FUSION : un fusionné porte frozenSpd = SpD (défense spé séparée) ; sinon spc → Gen-1 inchangé.
+        : effectiveStat(defender.frozenSpd ?? rawDefStats.spc, "spc", defender.stages.spc, "NONE")
 
     // Crit Gen 1 : probabilité liée à la Vitesse de base de l'attaquant.
     const critOverride = move.effect?.critChanceForSpecies?.[attacker.speciesId]

@@ -79,7 +79,7 @@ function scoreMovesHof(self: BattleMon, foe: BattleMon): ScoredHof[] {
             const stab = selfTypes.includes(mv.type) ? 1.5 : 1
             const phys = moveCategory(mv.type) === "PHYSICAL"
             const off = sStats ? (phys ? sStats.atk : sStats.spc) : 1
-            const def = fStats ? (phys ? fStats.def : fStats.spc) : 1
+            const def = fStats ? (phys ? fStats.def : (foe.frozenSpd ?? fStats.spc)) : 1 // FUSION : SpD séparée si présente
             score = mv.power * eff * stab * (off / Math.max(1, def))
             // RECUL : à basse vie, éviter le suicide SAUF coup super-efficace (kamikaze fatal assumé).
             if (mv.effect?.recoilPct && selfFrac < 0.4 && eff < 2) score *= 0.15
