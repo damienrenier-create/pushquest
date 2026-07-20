@@ -1076,7 +1076,7 @@ function buildZoneRoom(W: number, H: number): TileType[][] {
 function buildAutelChimereRoom(): TileType[][] {
     const m = buildZoneRoom(18, 10)
     for (let y = 4; y <= 5; y++) for (let x = 8; x <= 10; x++) m[y][x] = "tree" // "tree" = case bloquée (invisible sous le backgroundImage)
-    m[0][9] = "path" // PORTE HAUTE marchable (entrée LIGUE DE FUSION) — sinon l'exit (9,0) est sur un mur → venue inaccessible
+    m[0][8] = "path"; m[0][9] = "path" // PORTE HAUTE à double battant (entrée LIGUE DE FUSION), calée sur la porte à dragons du décor
     return m
 }
 
@@ -1168,8 +1168,9 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImage: "/yellow/sprites/fusion_altar.png", backgroundImageWidth: 2752, backgroundImageHeight: 1536, backgroundImageTileSize: 153, // 2752/18 ≈ 153
         exits: [
             { x: 9, y: 9, targetMapId: "yellow_zone_combat", targetSpawnX: 13, targetSpawnY: 10 },
-            // ENTRÉE LIGUE DE FUSION (porte haute, au-delà de l'autel) → 1re salle. Le gameStore réinitialise le
-            // gauntlet à l'entrée (resetFusionLeagueProgress) et lance au palier actif. Art de la porte = à poser.
+            // ENTRÉE LIGUE DE FUSION (porte à dragons du décor, haut-centre = cases 8-9) → 1re salle. Le gameStore
+            // réinitialise le gauntlet à l'entrée (resetFusionLeagueProgress) et lance au palier actif.
+            { x: 8, y: 0, targetMapId: "yellow_fusion_glace", targetSpawnX: 3, targetSpawnY: 6 },
             { x: 9, y: 0, targetMapId: "yellow_fusion_glace", targetSpawnX: 3, targetSpawnY: 6 },
         ],
     },
