@@ -154,6 +154,10 @@ interface PvpContext {
     won: boolean | null
     /** Désynchronisation détectée (checksum divergent) → combat à recharger. */
     desync: boolean
+    /** PvP de FUSION : l'équipe de combat = des fusions ÉPHÉMÈRES, PAS la vraie équipe.
+     *  → à la fin, NE JAMAIS réécrire l'équipe réelle (sinon toMonInstance perd frozenStats/frozenSpd
+     *  ET remplace tes Daemons par les fusions). Même garde que `isFactory` du solo. */
+    ephemeralTeam?: boolean
 }
 
 let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, arenaRun: null, chainRematchId: null, pendingLearn: false, duelResult: null, frontierResult: null, stoneReward: null, lavapetitTeaser: null, justCaught: false, ngplusFinalPending: false, ngplusFinalResult: null }
@@ -1322,12 +1326,17 @@ function finishPvpBattle(b: BattleState) {
     const won = ctx.role === "A" ? b.outcome === "win" : b.outcome === "lose"
     recordPvpResult(won ? "win" : "loss") // réputation
 
-    setTeam(b[side].team.map(toMonInstance))
-    const team = getPlayer().team
-    const evos = evolveTeam(team)
-    if (evos.length > 0) {
-        for (const e of evos) { markCaught(e.toId); markCaughtThisRun(e.toId) }
-        setTeam([...team])
+    // FUSION PvP : équipe de combat éphémère → on ne persiste RIEN (ni stats, ni évolution).
+    // Sinon setTeam(toMonInstance) écraserait la vraie équipe par les fusions (et perdrait frozenSpd).
+    let evos: ReturnType<typeof evolveTeam> = []
+    if (!ctx.ephemeralTeam) {
+        setTeam(b[side].team.map(toMonInstance))
+        const team = getPlayer().team
+        evos = evolveTeam(team)
+        if (evos.length > 0) {
+            for (const e of evos) { markCaught(e.toId); markCaughtThisRun(e.toId) }
+            setTeam([...team])
+        }
     }
     // COMBAT AMICAL : après CHAQUE match PvP (gagnant comme perdant) on soigne l'équipe à fond
     // (PV/statut/PP) → un match casino ne déprime jamais ton équipe PvE. Pas de white-out : tu
@@ -1363,7 +1372,7 @@ export function pvpForfeit(byMe: boolean, deliberate = true) {
     const side = mySide(ctx)
     const ended = applyForfeitWin(battle, side, { multiplier: 1, headline: `${ctx.oppNickname} a abandonné le combat !` })
     recordPvpResult("win") // réputation
-    setTeam(ended[side].team.map(toMonInstance))
+    if (!ctx.ephemeralTeam) setTeam(ended[side].team.map(toMonInstance)) // FUSION : équipe éphémère jamais persistée
     healAllTeam() // combat amical terminé → équipe soignée (cohérent avec finishPvpBattle)
     setStore({ battle: ended, pvpCtx: { ...ctx, won: true } })
     persistYellowSave()

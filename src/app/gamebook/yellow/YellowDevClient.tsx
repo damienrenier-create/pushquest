@@ -19,7 +19,7 @@ import { useCasinoChallenge, type BattleStart } from "@/lib/gamebook/yellow/mult
 import { useCasinoChat } from "@/lib/gamebook/yellow/multiplayer/useCasinoChat"
 import { useCasinoTrade } from "@/lib/gamebook/yellow/multiplayer/useCasinoTrade"
 import { useCasinoCtTrade } from "@/lib/gamebook/yellow/multiplayer/useCasinoCtTrade"
-import { useCasinoBattle } from "@/lib/gamebook/yellow/multiplayer/useCasinoBattle"
+import { useCasinoBattle, type FusionPvpHooks } from "@/lib/gamebook/yellow/multiplayer/useCasinoBattle"
 import TradeAnimation from "./TradeAnimation"
 import { usePvpCtx, pvpForfeit } from "@/lib/gamebook/yellow/store/battleStore"
 import EvolutionScreen from "./battle/EvolutionScreen"
@@ -108,7 +108,7 @@ import { ivTier, ivTotal, ivTierColor } from "@/lib/gamebook/yellow/data/ivConfi
 import { evTotal, topEvStats, evTotalCap, EV_TOTAL_CAP, EV_STAT_CAP, evStatBonus, EV_YIELD_PER_WIN } from "@/lib/gamebook/yellow/data/evConfig"
 import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
 import { expForLevel } from "@/lib/gamebook/yellow/battle/xp"
-import type { MonInstance } from "@/lib/gamebook/yellow/battle/types"
+import type { MonInstance, SpeciesData } from "@/lib/gamebook/yellow/battle/types"
 import { usePlayerArena, type ArenaOpponent } from "@/lib/gamebook/yellow/multiplayer/usePlayerArena"
 import { buildHubTeam, buildMirrorTeam, registerRegistryCustoms, type ArenaMode } from "@/lib/gamebook/yellow/data/playerArena"
 import ArenaChallengeModal from "./ArenaChallengeModal"
@@ -386,8 +386,14 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // Multijoueur casino : présence + déplacements temps réel des autres joueurs.
     // Actif uniquement quand on EST dans le casino, hors combat et hors intro.
     const inCasino = mapPlayer.mapId === "yellow_casino"
+    // Salle de FUSION : présence + défi + combat PvP sur un canal DÉDIÉ `yellow_autel`
+    // (les coordonnées sont propres à une carte → on ne mélange pas les positions casino/salle).
+    const inAutel = mapPlayer.mapId === "yellow_combat_autel"
+    const mpChannel = inAutel ? "yellow_autel" : "yellow_casino"
+    const mpActive = (inCasino || inAutel) && !battle && !showIntro && !!userId
     const remotePlayers = useCasinoPresence({
-        active: inCasino && !battle && !showIntro && !!userId,
+        active: mpActive,
+        channel: mpChannel,
         myUserId: userId,
         posX: mapPlayer.posX,
         posY: mapPlayer.posY,
@@ -419,22 +425,44 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const challengeBusyRef = useRef(false)
     const ctTradeBusyRef = useRef(false)
 
-    // === PvP : défi + combat réseau ===
-    const [pvpSession, setPvpSession] = useState<BattleStart | null>(null)
+    // === PvP : défi + combat réseau (casino = normal · salle de fusion = combat de FUSION) ===
+    const [pvpSession, setPvpSession] = useState<(BattleStart & { fusion?: boolean }) | null>(null)
     const pvpCtx = usePvpCtx()
+    // FUSION : construit MON équipe de fusion (espèces éphémères) depuis le roster persisté.
+    // Filtre les paires dont un parent n'est plus dans l'équipe/la boîte (relâché, etc.).
+    const buildMyFusionTeam = () => {
+        const all = [...player.team, ...player.pc]
+        const byU = (uid: string) => all.find((m) => m.uid === uid)
+        const built = player.fusionRoster
+            .map((p) => { const a = byU(p.a), b = byU(p.b); return a && b && a.uid !== b.uid ? buildFusion(a, b) : null })
+            .filter((x): x is NonNullable<typeof x> => x !== null)
+        return {
+            team: built.map((f) => f.instance),
+            species: built.map((f) => getSpecies(f.speciesId)).filter((s): s is SpeciesData => !!s),
+        }
+    }
+    const fusionHooks: FusionPvpHooks = { buildTeam: buildMyFusionTeam, dispose: (ids) => ids.forEach(disposeFusion) }
+    // Nombre de fusions valides prêtes au combat (roster ↔ Daemons encore présents) → gate des défis.
+    const myFusionCount = player.fusionRoster.filter((p) => {
+        const all = [...player.team, ...player.pc]
+        return !!all.find((m) => m.uid === p.a) && !!all.find((m) => m.uid === p.b) && p.a !== p.b
+    }).length
     const challenge = useCasinoChallenge({
         // Borne Kart ouverte → on ne REÇOIT plus de défi (sinon combat PvP invisible sous la course,
         // forfait fantôme au démontage). Réciproque : on bloque l'ouverture de la borne si un défi/combat
-        // est en cours (cf. tryCasinoObjectA).
-        active: inCasino && !battle && !showIntro && !!userId && !kartOpen,
+        // est en cours (cf. tryCasinoObjectA). Canal = casino OU salle de fusion.
+        active: mpActive && !kartOpen,
+        channel: mpChannel,
         myUserId: userId,
         busy: !!battle || !!pvpSession || tradeBusyRef.current || ctTradeBusyRef.current,
-        onStart: (s) => setPvpSession(s),
+        // La session hérite du contexte de la salle : dans l'Autel → combat de FUSION.
+        onStart: (s) => setPvpSession({ ...s, fusion: inAutel }),
     })
-    const { forfeit: pvpForfeitNow } = useCasinoBattle(pvpSession, userId, (reason) => {
-        setPvpSession(null)
-        setToast(reason)
-    })
+    const { forfeit: pvpForfeitNow } = useCasinoBattle(
+        pvpSession, userId,
+        (reason) => { setPvpSession(null); setToast(reason) },
+        pvpSession?.fusion ? fusionHooks : undefined,
+    )
 
     // === Échange de Daemons (RECO 4) ===
     const [interactTarget, setInteractTarget] = useState<{ userId: string; nickname: string } | null>(null)
@@ -1609,6 +1637,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         if (target) { menuTapGuard.current = Date.now(); setInteractTarget({ userId: target.userId, nickname: target.nickname }); return }
                         if (tryCasinoObjectA()) return
                         casinoAFallback(); return
+                    }
+                    // Salle de FUSION : A face à un autre joueur = le défier en fusion (sinon PNJ/PC via pressA).
+                    if (inAutel) {
+                        const target = facingRemote()
+                        if (target) { menuTapGuard.current = Date.now(); setInteractTarget({ userId: target.userId, nickname: target.nickname }); return }
                     }
                     pressA()
                 }}
@@ -2862,9 +2895,20 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 <div style={menuOverlayStyle} onClick={() => { if (Date.now() - menuTapGuard.current < 350) return; setInteractTarget(null) }}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
                         <div style={menuTitleStyle}>{interactTarget.nickname}</div>
-                        <button style={menuBtnStyle} onClick={() => { challenge.sendChallenge(interactTarget.userId, interactTarget.nickname); setInteractTarget(null) }}>⚔️ Défier en combat</button>
-                        <button style={menuBtnStyle} onClick={() => { setTradePickFor(interactTarget); setInteractTarget(null) }}>🔄 Proposer un échange</button>
-                        <button style={menuBtnStyle} onClick={() => { setCtTradePickFor(interactTarget); setInteractTarget(null) }}>🎴 Échanger une CT</button>
+                        {inAutel ? (
+                            // SALLE DE FUSION : uniquement le défi de FUSION (pas d'échange ici).
+                            myFusionCount > 0 ? (
+                                <button style={menuBtnStyle} onClick={() => { challenge.sendChallenge(interactTarget.userId, interactTarget.nickname); setInteractTarget(null) }}>🧬 Défier en combat de FUSION</button>
+                            ) : (
+                                <div style={{ fontSize: 11, opacity: 0.8, textAlign: "center", margin: "4px 0 10px", lineHeight: 1.4 }}>
+                                    Assemble d&apos;abord une équipe de fusion au 💻 (au moins 1 fusion) pour pouvoir défier.
+                                </div>
+                            )
+                        ) : (<>
+                            <button style={menuBtnStyle} onClick={() => { challenge.sendChallenge(interactTarget.userId, interactTarget.nickname); setInteractTarget(null) }}>⚔️ Défier en combat</button>
+                            <button style={menuBtnStyle} onClick={() => { setTradePickFor(interactTarget); setInteractTarget(null) }}>🔄 Proposer un échange</button>
+                            <button style={menuBtnStyle} onClick={() => { setCtTradePickFor(interactTarget); setInteractTarget(null) }}>🎴 Échanger une CT</button>
+                        </>)}
                         <button style={menuBtnDimStyle} onClick={() => setInteractTarget(null)}>← Annuler</button>
                     </div>
                 </div>
@@ -3282,11 +3326,17 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {challenge.incoming && !battle && !kartOpen && (
                 <div style={menuOverlayStyle}>
                     <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
-                        <div style={menuTitleStyle}>⚔️ DÉFI</div>
+                        <div style={menuTitleStyle}>{inAutel ? "🧬 DÉFI DE FUSION" : "⚔️ DÉFI"}</div>
                         <div style={{ fontSize: 13, fontWeight: 700, textAlign: "center", margin: "4px 0 10px" }}>
-                            {challenge.incoming.fromNickname} te défie en combat !
+                            {challenge.incoming.fromNickname} te défie {inAutel ? "en combat de FUSION" : "en combat"} !
                         </div>
-                        <button style={menuBtnStyle} onClick={() => challenge.respond(true)}>✓ Combattre</button>
+                        {inAutel && myFusionCount === 0 ? (
+                            <div style={{ fontSize: 11, opacity: 0.8, textAlign: "center", margin: "0 0 10px", lineHeight: 1.4 }}>
+                                Tu n&apos;as aucune fusion prête. Assemble une équipe au 💻 avant d&apos;accepter.
+                            </div>
+                        ) : (
+                            <button style={menuBtnStyle} onClick={() => challenge.respond(true)}>✓ Combattre</button>
+                        )}
                         <button style={menuBtnDimStyle} onClick={() => challenge.respond(false)}>✕ Refuser</button>
                     </div>
                 </div>

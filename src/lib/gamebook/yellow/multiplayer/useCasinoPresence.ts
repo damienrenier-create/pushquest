@@ -1,14 +1,18 @@
 "use client"
 
-// Nexus Jaune Éclair — PRÉSENCE TEMPS RÉEL du casino (Phase 1 multijoueur).
+// Nexus Jaune Éclair — PRÉSENCE TEMPS RÉEL (Phase 1 multijoueur).
 //
-// Quand le joueur est dans le casino, ce hook :
-//   - s'abonne au canal Pusher public `gamebook-yellow_casino`
+// Quand le joueur est dans une zone multijoueur (casino, ou salle de fusion), ce hook :
+//   - s'abonne au canal Pusher public `gamebook-<channel>` (défaut `yellow_casino`)
 //   - diffuse sa position à chaque changement de TUILE (throttlé serveur)
 //   - écoute les autres joueurs (move/hello/disconnect) et tient à jour leur liste
 //   - répond à un "hello" par sa propre position (le nouvel arrivant voit tout le monde)
 //   - purge les joueurs muets depuis trop longtemps (filet anti-fantôme)
 //   - signale son départ (disconnect) à la sortie / fermeture d'onglet
+//
+// ⚠️ La présence est per-CANAL : les coordonnées sont propres à une carte, donc chaque
+// zone (casino / salle de fusion) DOIT avoir son propre canal (sinon les positions d'une
+// carte s'affichent sur une autre). D'où la prop `channel`.
 //
 // Réutilise l'infra Pusher existante (canal public + relai serveur). Aucune
 // persistance : la présence est 100% éphémère (rien en base Neon).
@@ -25,7 +29,6 @@ export interface RemotePlayer {
     ts: number
 }
 
-const CHANNEL = "yellow_casino"
 const STALE_MS = 20000   // joueur muet > 20s → retiré
 const SWEEP_MS = 5000
 
@@ -38,33 +41,35 @@ interface MovePayload {
     direction?: string
 }
 
-/** Poste un message de présence (best-effort, jamais bloquant). */
-function postCasino(body: Record<string, unknown>, keepalive = false) {
-    try {
-        void fetch("/api/gamebook/yellow/broadcast", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ channel: CHANNEL, ...body }),
-            keepalive,
-        })
-    } catch {
-        /* silencieux : si le relai échoue, les autres verront au prochain move */
-    }
-}
-
 export function useCasinoPresence(opts: {
     active: boolean
     myUserId: string
     posX: number
     posY: number
     direction: string
+    /** Canal de présence. Défaut `yellow_casino` (casino) ; `yellow_autel` pour la salle de fusion. */
+    channel?: string
 }): RemotePlayer[] {
-    const { active, myUserId, posX, posY, direction } = opts
+    const { active, myUserId, posX, posY, direction, channel = "yellow_casino" } = opts
     const [players, setPlayers] = useState<Record<string, RemotePlayer>>({})
 
     // Position courante accessible dans les callbacks (pour répondre à un "hello").
     const posRef = useRef({ posX, posY, direction })
     posRef.current = { posX, posY, direction }
+
+    /** Poste un message de présence (best-effort, jamais bloquant) sur le canal courant. */
+    const post = useCallback((body: Record<string, unknown>, keepalive = false) => {
+        try {
+            void fetch("/api/gamebook/yellow/broadcast", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ channel, ...body }),
+                keepalive,
+            })
+        } catch {
+            /* silencieux : si le relai échoue, les autres verront au prochain move */
+        }
+    }, [channel])
 
     const upsert = useCallback((p: MovePayload) => {
         if (!p.userId || p.userId === myUserId) return
@@ -82,12 +87,13 @@ export function useCasinoPresence(opts: {
         }))
     }, [myUserId])
 
-    // === Abonnement au canal (monté uniquement quand on est dans le casino) ===
+    // === Abonnement au canal (monté uniquement quand on est dans la zone) ===
     useEffect(() => {
         if (!active || !PUSHER_CLIENT_ENABLED) return
         const client = getPusherClient()
         if (!client) return
-        const channel = client.subscribe(`gamebook-${CHANNEL}`)
+        const channelName = `gamebook-${channel}`
+        const chan = client.subscribe(channelName)
 
         const onMove = (data: MovePayload) => upsert(data)
         const onHello = (data: MovePayload) => {
@@ -95,7 +101,7 @@ export function useCasinoPresence(opts: {
             upsert(data)
             // Quelqu'un arrive : je lui renvoie ma position pour qu'il me voie.
             const { posX, posY, direction } = posRef.current
-            postCasino({ type: "player:move", posX, posY, direction })
+            post({ type: "player:move", posX, posY, direction })
         }
         const onDisconnect = (data: MovePayload) => {
             if (!data.userId) return
@@ -107,31 +113,32 @@ export function useCasinoPresence(opts: {
             })
         }
 
-        channel.bind("player:move", onMove)
-        channel.bind("player:hello", onHello)
-        channel.bind("player:disconnect", onDisconnect)
+        chan.bind("player:move", onMove)
+        chan.bind("player:hello", onHello)
+        chan.bind("player:disconnect", onDisconnect)
 
         // J'annonce mon arrivée + ma position de départ.
-        postCasino({ type: "player:hello", ...posRef.current })
-        postCasino({ type: "player:move", ...posRef.current })
+        post({ type: "player:hello", ...posRef.current })
+        post({ type: "player:move", ...posRef.current })
 
         return () => {
-            postCasino({ type: "player:disconnect" }, true)
-            channel.unbind("player:move", onMove)
-            channel.unbind("player:hello", onHello)
-            channel.unbind("player:disconnect", onDisconnect)
+            post({ type: "player:disconnect" }, true)
+            chan.unbind("player:move", onMove)
+            chan.unbind("player:hello", onHello)
+            chan.unbind("player:disconnect", onDisconnect)
             // ⚠️ #4 — on NE désabonne PAS le canal `yellow_casino` : il est PARTAGÉ avec
             // chat / défi / échange. Un unsubscribe global ici coupait leur réception
             // selon l'ordre de cleanup React. On retire seulement nos handlers.
+            // (Le canal `yellow_autel` n'est utilisé que par présence+défi fusion → même prudence.)
             setPlayers({})
         }
-    }, [active, myUserId, upsert])
+    }, [active, myUserId, upsert, channel, post])
 
     // === Diffusion de MA position à chaque changement de tuile/direction ===
     useEffect(() => {
         if (!active) return
-        postCasino({ type: "player:move", posX, posY, direction })
-    }, [active, posX, posY, direction])
+        post({ type: "player:move", posX, posY, direction })
+    }, [active, posX, posY, direction, post])
 
     // === Purge des joueurs muets + disconnect sur fermeture d'onglet ===
     useEffect(() => {
@@ -152,16 +159,16 @@ export function useCasinoPresence(opts: {
         // (STALE 20 s) quand je reste immobile → fini le clignotement disparition/retour.
         const heartbeat = setInterval(() => {
             const { posX, posY, direction } = posRef.current
-            postCasino({ type: "player:move", posX, posY, direction })
+            post({ type: "player:move", posX, posY, direction })
         }, 10000)
-        const onUnload = () => postCasino({ type: "player:disconnect" }, true)
+        const onUnload = () => post({ type: "player:disconnect" }, true)
         window.addEventListener("beforeunload", onUnload)
         return () => {
             clearInterval(sweep)
             clearInterval(heartbeat)
             window.removeEventListener("beforeunload", onUnload)
         }
-    }, [active])
+    }, [active, post])
 
     return Object.values(players)
 }

@@ -16,18 +16,28 @@ import { useEffect, useRef, useCallback } from "react"
 import { getPusherClient, PUSHER_CLIENT_ENABLED } from "@/lib/pusher-client"
 import { getPlayer } from "@/lib/gamebook/yellow/store/playerStore"
 import { createBattle, type PlayerAction } from "@/lib/gamebook/yellow/battle/engine"
+import { registerCustomSpecies } from "@/lib/gamebook/yellow/data/species"
 import {
     startPvpBattle, setPvpSendHandler, receivePvpAction, pvpForfeit, getSnapshot,
 } from "@/lib/gamebook/yellow/store/battleStore"
-import type { MonInstance } from "@/lib/gamebook/yellow/battle/types"
+import type { MonInstance, SpeciesData } from "@/lib/gamebook/yellow/battle/types"
 import type { BattleStart } from "./useCasinoChallenge"
 import { MP_VERSION, mpLog } from "./mp"
+
+/** PvP de FUSION : l'équipe de combat est constituée de fusions ÉPHÉMÈRES (pas la vraie équipe).
+ *  Le hook demande à l'appelant de CONSTRUIRE mon équipe (enregistre les espèces custom) et de les DÉTRUIRE
+ *  au démontage (miennes + celles de l'adversaire, reçues par le réseau). undefined = combat casino normal. */
+export interface FusionPvpHooks {
+    buildTeam: () => { team: MonInstance[]; species: SpeciesData[] }
+    dispose: (speciesIds: string[]) => void
+}
 
 interface BattleMsg {
     type: string
     userId?: string
     data?: {
         team?: MonInstance[]
+        species?: SpeciesData[] // FUSION : espèces éphémères à enregistrer chez le récepteur (sinon crash render)
         seed?: number
         version?: string
         seq?: number
@@ -55,11 +65,15 @@ export function useCasinoBattle(
     session: BattleStart | null,
     myUserId: string,
     onAbort?: (reason: string) => void,
+    fusion?: FusionPvpHooks,
 ) {
     const startedRef = useRef(false)
     const oppTeamRef = useRef<MonInstance[] | null>(null)
     const seedRef = useRef<number | null>(null)
     const battleIdRef = useRef<string | null>(null)
+    // FUSION dans un REF (callbacks recréés à chaque render côté appelant) → deps d'effet stables.
+    const fusionRef = useRef(fusion)
+    fusionRef.current = fusion
     // ⚠️ onAbort gardé dans un REF. Sinon (callback inline recréé à chaque render côté
     // appelant) l'effet réseau ci-dessous, qui l'a en dépendance, se relancerait à CHAQUE
     // rendu → (1) handshake remis à zéro en boucle (jamais le temps d'aboutir) et (2) quand
@@ -86,15 +100,29 @@ export function useCasinoBattle(
         if (!client) return
 
         const { battleId, role, oppUserId, oppNickname } = session
-        const myTeam = getPlayer().team
+        const fu = fusionRef.current
+        // Équipe : FUSION (construite + espèces éphémères à envoyer) ou l'équipe réelle (casino).
+        let myTeam: MonInstance[]
+        let mySpecies: SpeciesData[] = []
+        const mySpeciesIds: string[] = []
+        const oppSpeciesIds: string[] = []
+        if (fu) {
+            const built = fu.buildTeam()
+            myTeam = built.team
+            mySpecies = built.species
+            for (const s of built.species) mySpeciesIds.push(s.id)
+        } else {
+            myTeam = getPlayer().team
+        }
         if (role === "A") seedRef.current = makeSeed()
-        mpLog("battle", "session", { battleId, role, opp: oppNickname })
+        mpLog("battle", "session", { battleId, role, opp: oppNickname, fusion: !!fu })
 
         const channelName = `gamebook-yellow_battle_${battleId}`
         const channel = client.subscribe(channelName)
 
         const sendHello = () => postBattle(battleId, "battle:hello", {
             team: myTeam,
+            species: fu ? mySpecies : undefined,
             seed: role === "A" ? seedRef.current ?? undefined : undefined,
             version: MP_VERSION,
         })
@@ -108,7 +136,7 @@ export function useCasinoBattle(
             const teamA = role === "A" ? myTeam : opp
             const teamB = role === "A" ? opp : myTeam
             const battle = createBattle(teamA, teamB, { isWild: false, seed, pvp: true })
-            startPvpBattle(battle, { battleId, role, myUserId, oppUserId, oppNickname })
+            startPvpBattle(battle, { battleId, role, myUserId, oppUserId, oppNickname, ephemeralTeam: !!fu })
             setPvpSendHandler((seq, action, checksum) => postBattle(battleId, "battle:action", { seq, action, checksum }))
         }
 
@@ -120,7 +148,19 @@ export function useCasinoBattle(
                 onAbortRef.current?.("Versions du jeu différentes. Rechargez la page des deux côtés, puis réessayez.")
                 return
             }
-            if (d.data?.team) oppTeamRef.current = d.data.team
+            if (d.data?.team) {
+                if (fu && d.data.species) {
+                    // FUSION : l'uid est un compteur LOCAL (pas global) → l'id de fusion adverse peut coïncider avec
+                    // un des miens. On PRÉFIXE l'adversaire ("opp:") pour un espace de noms disjoint : 0 collision,
+                    // et les TYPES sont conservés (envoyés) → dégâts identiques des 2 côtés (déterminisme intact).
+                    const prefixed = d.data.species.map((s) => ({ ...s, id: `opp:${s.id}` }))
+                    registerCustomSpecies(prefixed)
+                    for (const s of prefixed) if (!oppSpeciesIds.includes(s.id)) oppSpeciesIds.push(s.id)
+                    oppTeamRef.current = d.data.team.map((m) => ({ ...m, speciesId: `opp:${m.speciesId}` }))
+                } else {
+                    oppTeamRef.current = d.data.team
+                }
+            }
             if (role === "B" && typeof d.data?.seed === "number") seedRef.current = d.data.seed
             mpLog("hello↙", { from: d.userId, hasTeam: !!d.data?.team, seed: seedRef.current })
             if (!startedRef.current) sendHello() // echo (abonnement tardif éventuel)
@@ -175,6 +215,8 @@ export function useCasinoBattle(
             channel.unbind("battle:action", onAction)
             channel.unbind("battle:forfeit", onForfeit)
             client.unsubscribe(channelName)
+            // FUSION : détruire les espèces éphémères (miennes + celles reçues de l'adversaire, préfixées "opp:").
+            if (fu) fu.dispose([...mySpeciesIds, ...oppSpeciesIds])
         }
     }, [session, myUserId])
 

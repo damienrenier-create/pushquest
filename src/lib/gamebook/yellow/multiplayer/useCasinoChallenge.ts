@@ -1,13 +1,17 @@
 "use client"
 
-// Nexus Jaune Éclair — DÉFIS dans le casino (Phase 2 multijoueur).
+// Nexus Jaune Éclair — DÉFIS multijoueur (Phase 2).
 //
-// Écoute, sur le canal `gamebook-yellow_casino`, les évènements de défi :
+// Écoute, sur le canal de présence (`gamebook-<channel>`, défaut `yellow_casino`),
+// les évènements de défi :
 //   challenge:send     → quelqu'un me défie
 //   challenge:respond  → réponse (accepté/refusé) à MON défi
 //   challenge:cancel   → annulation
 // Machine à états simple : un seul défi sortant ET un seul entrant à la fois.
 // À l'acceptation (des deux côtés), onStart() est appelé pour lancer le combat.
+//
+// ⚠️ Le canal PILOTE la nature du combat : `yellow_casino` = PvP normal, `yellow_autel`
+//   = PvP de FUSION (l'appelant décide quoi construire à partir de la session renvoyée).
 //
 // ⚠️ RISQUE : races de défis (deux défis croisés). v1 : on auto-refuse tout
 //   nouveau défi entrant si on est déjà occupé (sortant en cours / en combat).
@@ -17,7 +21,6 @@ import { getPusherClient, PUSHER_CLIENT_ENABLED } from "@/lib/pusher-client"
 import type { PvpRole } from "@/lib/gamebook/yellow/store/battleStore"
 import { mpLog } from "./mp"
 
-const CHANNEL = "yellow_casino"
 const CHALLENGE_TIMEOUT_MS = 20000
 
 export interface IncomingChallenge { fromUserId: string; fromNickname: string; battleId: string }
@@ -38,23 +41,15 @@ interface ChallengeMsg {
     accepted?: boolean
 }
 
-function post(body: Record<string, unknown>) {
-    try {
-        void fetch("/api/gamebook/yellow/broadcast", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ channel: CHANNEL, ...body }),
-        })
-    } catch { /* best-effort */ }
-}
-
 export function useCasinoChallenge(opts: {
     active: boolean
     myUserId: string
     busy: boolean // déjà en combat → refuser les défis entrants
     onStart: (s: BattleStart) => void
+    /** Canal de défi. Défaut `yellow_casino` (PvP normal) ; `yellow_autel` pour le PvP de fusion. */
+    channel?: string
 }) {
-    const { active, myUserId, busy, onStart } = opts
+    const { active, myUserId, busy, onStart, channel = "yellow_casino" } = opts
     const [incoming, setIncoming] = useState<IncomingChallenge | null>(null)
     const [outgoing, setOutgoing] = useState<OutgoingChallenge | null>(null)
 
@@ -62,6 +57,16 @@ export function useCasinoChallenge(opts: {
     const outgoingRef = useRef<OutgoingChallenge | null>(null); outgoingRef.current = outgoing
     const busyRef = useRef(busy); busyRef.current = busy
     const onStartRef = useRef(onStart); onStartRef.current = onStart
+
+    const post = useCallback((body: Record<string, unknown>) => {
+        try {
+            void fetch("/api/gamebook/yellow/broadcast", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ channel, ...body }),
+            })
+        } catch { /* best-effort */ }
+    }, [channel])
 
     // Envoi d'un défi à un joueur (par son userId).
     const sendChallenge = useCallback((toUserId: string, toNickname: string) => {
@@ -72,14 +77,14 @@ export function useCasinoChallenge(opts: {
         const battleId = `b${Date.now().toString(36)}${Math.floor(Math.random() * 1e9).toString(36)}`
         setOutgoing({ toUserId, toNickname, battleId })
         post({ type: "challenge:send", targetUserId: toUserId, battleId })
-    }, [myUserId])
+    }, [post])
 
     const cancelChallenge = useCallback(() => {
         const o = outgoingRef.current
         if (!o) return
         post({ type: "challenge:cancel", targetUserId: o.toUserId, battleId: o.battleId })
         setOutgoing(null)
-    }, [])
+    }, [post])
 
     const respond = useCallback((accepted: boolean) => {
         setIncoming((cur) => {
@@ -90,7 +95,7 @@ export function useCasinoChallenge(opts: {
             }
             return null
         })
-    }, [])
+    }, [post])
 
     // Abonnement aux évènements de défi (le canal est partagé avec la présence ;
     // on NE désabonne PAS ici, on retire juste nos handlers).
@@ -98,7 +103,7 @@ export function useCasinoChallenge(opts: {
         if (!active || !PUSHER_CLIENT_ENABLED || !myUserId) return
         const client = getPusherClient()
         if (!client) return
-        const channel = client.subscribe(`gamebook-${CHANNEL}`)
+        const chan = client.subscribe(`gamebook-${channel}`)
 
         const onSend = (d: ChallengeMsg) => {
             if (!d.userId || d.userId === myUserId || d.targetUserId !== myUserId || !d.battleId) return
@@ -137,17 +142,17 @@ export function useCasinoChallenge(opts: {
             setIncoming((cur) => (cur && cur.battleId === d.battleId ? null : cur))
         }
 
-        channel.bind("challenge:send", onSend)
-        channel.bind("challenge:respond", onRespond)
-        channel.bind("challenge:cancel", onCancel)
+        chan.bind("challenge:send", onSend)
+        chan.bind("challenge:respond", onRespond)
+        chan.bind("challenge:cancel", onCancel)
         return () => {
-            channel.unbind("challenge:send", onSend)
-            channel.unbind("challenge:respond", onRespond)
-            channel.unbind("challenge:cancel", onCancel)
+            chan.unbind("challenge:send", onSend)
+            chan.unbind("challenge:respond", onRespond)
+            chan.unbind("challenge:cancel", onCancel)
             setIncoming(null)
             setOutgoing(null)
         }
-    }, [active, myUserId])
+    }, [active, myUserId, channel, post])
 
     // Timeout du défi sortant (sans réponse).
     useEffect(() => {
