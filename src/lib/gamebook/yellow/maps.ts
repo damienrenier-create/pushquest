@@ -1076,6 +1076,7 @@ function buildZoneRoom(W: number, H: number): TileType[][] {
 function buildAutelChimereRoom(): TileType[][] {
     const m = buildZoneRoom(18, 10)
     for (let y = 4; y <= 5; y++) for (let x = 8; x <= 10; x++) m[y][x] = "tree" // "tree" = case bloquée (invisible sous le backgroundImage)
+    m[0][9] = "path" // PORTE HAUTE marchable (entrée LIGUE DE FUSION) — sinon l'exit (9,0) est sur un mur → venue inaccessible
     return m
 }
 

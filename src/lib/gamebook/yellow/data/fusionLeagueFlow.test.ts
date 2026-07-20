@@ -6,6 +6,7 @@ import {
 import { getTrainer } from "./trainers"
 import { YELLOW_MAPS } from "../maps"
 import { hydratePlayer, isTrainerDefeated, resetFusionLeagueProgress } from "../store/playerStore"
+import { isBlockingTile } from "@/lib/gamebook/mapEngine"
 
 describe("Ligue de Fusion — flux & intégrité (Inc.C/D)", () => {
     it("mapping dresseur → clé FUSION_LEAGUE (miroir & inconnus = null)", () => {
@@ -66,6 +67,20 @@ describe("Ligue de Fusion — flux & intégrité (Inc.C/D)", () => {
         // chaque salle a une RETRAITE vers l'Autel (jamais bloqué)
         for (const id of ["yellow_fusion_glace", "yellow_fusion_combat", "yellow_fusion_spectre", "yellow_fusion_dragon", "yellow_fusion_maitre"]) {
             expect(YELLOW_MAPS[id].exits?.some((e) => e.x === 2 && e.targetMapId === "yellow_combat_autel"), id).toBe(true)
+        }
+    })
+
+    it("TOUTES les portes de la venue sont sur des tuiles MARCHABLES (régression CRITICAL revue : (9,0) était un mur)", () => {
+        // entrée depuis l'Autel
+        const autel = YELLOW_MAPS["yellow_combat_autel"]
+        const entry = autel.exits!.find((e) => e.targetMapId === "yellow_fusion_glace")!
+        expect(isBlockingTile(autel.tiles[entry.y][entry.x]), "porte d'entrée de l'Autel (sinon Ligue injouable)").toBe(false)
+        // chaque salle de fusion : toutes ses portes (progression + retraite) marchables
+        for (const id of ["yellow_fusion_glace", "yellow_fusion_combat", "yellow_fusion_spectre", "yellow_fusion_dragon", "yellow_fusion_maitre", "yellow_fusion_miroir"]) {
+            const m = YELLOW_MAPS[id]
+            for (const e of m.exits ?? []) {
+                expect(isBlockingTile(m.tiles[e.y][e.x]), `${id} porte (${e.x},${e.y})`).toBe(false)
+            }
         }
     })
 })

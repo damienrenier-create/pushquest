@@ -211,6 +211,10 @@ const BATTLE_LS_MAX_AGE_MS = 24 * 3600 * 1000 // au-delà → instantané ignor�
 function battlePersistable(b: BattleState | null, ctx: TrainerContext | null): boolean {
     if (!b || b.phase === "ended" || b.pvp) return false
     if (ctx?.trainerId?.startsWith("frontier:")) return false // série de vagues : pas reprenable ici
+    // FUSION (Autel + Ligue) : les espèces sont ÉPHÉMÈRES (registre mémoire, perdu au reload) → un instantané ne
+    //   pourrait JAMAIS être repris (getSpecies null → resumeBattleFromStorage l'efface). On ne persiste donc PAS
+    //   (au lieu d'un instantané mort) : un refresh en plein combat de fusion = on refait le combat, sans reliquat.
+    if (isFusionBattleTrainer(ctx?.trainerId)) return false
     return true
 }
 
