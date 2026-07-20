@@ -63,6 +63,13 @@ export const ITEMS: Record<string, ItemData> = {
         id: "super_mega_nexus_ball", name: "Super Méga Nexus-Ball", category: "BALL",
         description: "Ball légendaire. Capture à coup sûr le plus insaisissable des Daemons s'il est suffisamment affaibli.", price: 0, ballBonus: 6,
     },
+    // FUSIO-BALL : le SEUL vecteur pour capturer un Daemon FUSIONNÉ sauvage (Grotte du Nexus). Refusée sur les
+    //   non-fusions (garde dans engine.performCapture). price 0 = hors shop normal → vendue via l'éco Ligue de
+    //   Fusion (1 par complétion, 1000 reps). ballBonus 4 : capture DURE (les fusions ont catchRate 3).
+    fusio_ball: {
+        id: "fusio_ball", name: "Fusio-Ball", category: "BALL",
+        description: "La SEULE Ball capable de capturer un Daemon FUSIONNÉ à l'état sauvage. Sans effet sur les autres Daemons.", price: 0, ballBonus: 4,
+    },
     potion: {
         id: "potion", name: "Potion", category: "HEAL",
         description: "Restaure 20 PV à un Daemon.", price: 10, healHp: 20,

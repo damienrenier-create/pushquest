@@ -23,6 +23,7 @@ import { chooseAiAction, chooseReplacementIndex, type AiLevel } from "./ai"
 import { xpForDefeat, applyExp } from "./xp"
 import { tryCapture } from "./capture"
 import { CAPTURE_ESCALATION_PER_ATTEMPT, CAPTURE_WOBBLE_CHANCE } from "../data/captureConfig"
+import { FUSION_BASE_IDS } from "../data/fusionBaseSpecies"
 import { ballBonusOf, getItem, isGuaranteedBall } from "../data/items"
 import { STRUGGLE_MOVE_ID, STRUGGLE_INDEX, attackCost, QUOTA_STD, lowHpPowerFrac } from "../data/combatCostConfig"
 import { gainEv, signatureStat, EV_YIELD_PER_WIN } from "../data/evConfig"
@@ -1360,6 +1361,20 @@ function performCapture(state: BattleState, itemId: string, events: BattleEvent[
     // de statut et la formule). Hors de ce cas précis, elle se comporte comme une Ball très forte (bonus 6).
     const goshGuaranteed = itemId === "super_mega_nexus_ball" && wild.speciesId === "goshendofy" && wild.currentHp < maxHpOf(wild) * 0.5
     events.push({ kind: "message", text: `Tu lances une ${getItem(itemId)?.name ?? "Ball"} !` })
+    // FUSIO-BALL — verrou EXCLUSIF (placé AVANT toute balle garantie : même la Master ne capture PAS une fusion) :
+    //   (a) une autre Ball sur un Daemon FUSIONNÉ → ricoche ; (b) une Fusio-Ball sur une NON-fusion → sans effet.
+    const isFusion = FUSION_BASE_IDS.includes(wild.speciesId)
+    const isFusioBall = itemId === "fusio_ball"
+    if (isFusion && !isFusioBall) {
+        events.push({ kind: "ball", action: "miss" })
+        events.push({ kind: "message", text: `La Ball GLISSE sur ${displayName(wild)} sans l'accrocher ! Seule une FUSIO-BALL peut capturer une créature fusionnée…` })
+        return
+    }
+    if (!isFusion && isFusioBall) {
+        events.push({ kind: "ball", action: "miss" })
+        events.push({ kind: "message", text: `La Fusio-Ball n'a aucune prise sur ${displayName(wild)} — elle n'agit QUE sur les Daemons fusionnés !` })
+        return
+    }
     // VERROU DE BALL (ex. Zappeuréal = Hyper Ball+) : une Ball trop faible n'accroche JAMAIS — la
     // Master Ball (capture garantie) shunte ce verrou. Lancer raté théâtral + message dédié, le tour
     // est consommé mais aucune capture. Placé AVANT tryCapture → le tirage RNG reste intact pour la suite.
