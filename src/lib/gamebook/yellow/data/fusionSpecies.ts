@@ -25,6 +25,8 @@ export interface FusionParent {
     types: readonly PokeType[]
     stats: Readonly<Record<StatKey, number>>
     level: number
+    moves: readonly string[]   // ids des attaques ACTUELLES du parent (ordre = slots 1..4)
+    heldItem?: string          // objet tenu (id) — le fusionné hérite de ceux de ses parents
 }
 
 /** Bloc de stats « next-gen » du fusionné : la Spéciale unique est scindée en attaque (spcAtk) et défense (spcDef). */
@@ -35,7 +37,16 @@ export interface FusionResult {
     types: PokeType[]
     stats: FusionStats
     level: number
+    moves: string[]            // 2 premières du parent rapide + 2 dernières du lent (dédup, complété à 4)
+    heldItems: string[]        // 0, 1 ou 2 objets tenus hérités des parents (le fusionné peut en tenir DEUX)
     parents: [string, string]
+}
+
+/** Le parent « rapide » puis le « lent » (par vitesse ; égalité départagée par la spc la plus haute → intrinsèque,
+ *  indépendant de l'ordre). MÊME identité pour le split spé ET le moveset → cohérence. */
+export function bySpeed(a: FusionParent, b: FusionParent): [FusionParent, FusionParent] {
+    const aFast = a.stats.spe > b.stats.spe || (a.stats.spe === b.stats.spe && a.stats.spc >= b.stats.spc)
+    return aFast ? [a, b] : [b, a]
 }
 
 // Les 4 stats soumises à la génétique dom/récessif (la spc est traitée à part par le split).
@@ -56,9 +67,26 @@ export function fusionWeights(stats: Readonly<Record<StatKey, number>>): Record<
 export function fuseStats(a: FusionParent, b: FusionParent): FusionStats {
     const wA = fusionWeights(a.stats), wB = fusionWeights(b.stats)
     const s = (k: StatKey) => Math.round(wA[k] * a.stats[k] + wB[k] * b.stats[k])
-    const aFast = a.stats.spe > b.stats.spe || (a.stats.spe === b.stats.spe && a.stats.spc >= b.stats.spc)
-    const [fast, slow] = aFast ? [a, b] : [b, a]
+    const [fast, slow] = bySpeed(a, b)
     return { hp: s("hp"), atk: s("atk"), def: s("def"), spe: s("spe"), spcAtk: fast.stats.spc, spcDef: slow.stats.spc }
+}
+
+/** Moveset : 2 PREMIÈRES attaques du parent le plus RAPIDE + 2 DERNIÈRES du plus LENT. Dédup (pas de doublon) ;
+ *  si le dédup laisse < 4 slots, on complète par les attaques restantes (rapide puis lent) jusqu'à 4 max. */
+export function fuseMoves(a: FusionParent, b: FusionParent): string[] {
+    const [fast, slow] = bySpeed(a, b)
+    const out: string[] = []
+    const add = (id: string) => { if (id && out.length < 4 && !out.includes(id)) out.push(id) }
+    fast.moves.slice(0, 2).forEach(add)
+    slow.moves.slice(-2).forEach(add)
+    fast.moves.forEach(add); slow.moves.forEach(add) // complète si le dédup a laissé < 4
+    return out
+}
+
+/** Objets tenus hérités : le fusionné porte les objets NON VIDES de ses parents (0, 1 ou 2 → il peut en tenir DEUX).
+ *  ⚠️ L'APPLICATION de 2 objets en combat est une capacité moteur à ajouter (Inc.1+) — ici on ne fait que la liste. */
+export function fuseHeldItems(a: FusionParent, b: FusionParent): string[] {
+    return [a.heldItem, b.heldItem].filter((x): x is string => !!x)
 }
 
 /** Table stat-représentative par type = la stat où le type dépasse LE PLUS la moyenne globale du roster (le
@@ -124,6 +152,8 @@ export function computeFusion(a: FusionParent, b: FusionParent): FusionResult {
         types: fuseTypes(a, b, stats),
         stats,
         level: Math.max(a.level, b.level),
+        moves: fuseMoves(a, b),
+        heldItems: fuseHeldItems(a, b),
         parents: [a.name, b.name],
     }
 }
