@@ -9,6 +9,7 @@ import type { MonInstance, MoveSlot } from "../battle/types"
 import { fullStats } from "../battle/stats"
 import { getSpecies, registerCustomSpecies, isCustomSpeciesId, CANONICAL_NEMESIS } from "../data/species"
 import { type CustomSpec, type StoredCustomDaemon, buildCustomSpecies, buildNemesis, customStarterSpeciesId, customLineageBaseId } from "../create/customSpecies"
+import { FUSION_BASE_SPECIES } from "../data/fusionBaseSpecies"
 import { tradeEvolutionTarget, applyEvolution, type EvolutionResult } from "../battle/evolution"
 import { getMove } from "../data/moves"
 import { getItem, MAGNETOR_EVO_ITEM } from "../data/items"
@@ -317,6 +318,10 @@ export function addCustomDaemon(ownerId: string, spec: CustomSpec): void {
 }
 /** Ré-enregistre au chargement toutes les lignées custom persistées (défensif : une entrée cassée est ignorée). */
 export function reregisterCustomDaemons(): void {
+    // FUSIONS DE BASE PERMANENTES (Grotte du Nexus) : enregistrées comme espèces custom → résolvables (getSpecies /
+    //   createMonInstance) pour les rencontres sauvages, MAIS invisibles du Pokédex principal (visibleDexSpecies
+    //   n'itère que SPECIES, jamais le registre custom) → anti-spoiler par construction. Le Fusiodex les listera à part.
+    registerCustomSpecies(FUSION_BASE_SPECIES)
     for (const d of st.customDaemons) { try { registerCustomSpecies(buildCustomSpecies(d.spec, d.ownerId)) } catch { /* entrée corrompue → ignorée */ } }
 }
 

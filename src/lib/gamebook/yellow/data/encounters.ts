@@ -226,6 +226,26 @@ const ZONES: Record<string, Zone> = {
             { speciesId: "draclet", base: VERY_RARE, player: "rare", rare: true },            // la pépite (Vol/Dragon)
         ],
     },
+    // GROTTE DU NEXUS 1F : biotope unique (pour l'instant ; zones/biotopes → pools suivants). Bases niv 5-30
+    //   TOUJOURS en base-1 (noEvolve = grosse exception voulue), Batchu (chauve-souris élec) 15-50, Draclet rare.
+    //   ⚠️ Les FUSIONS (mottelave…) ne sont PAS dans ce pool : elles surgissent UNIQUEMENT via la règle
+    //   « 2 parents consécutifs → fusion GARANTIE » (gameStore), pas au tirage aléatoire. Pas de biomes ici.
+    yellow_grotte_nexus: {
+        rate: 0.14,
+        minLevel: 5, maxLevel: 50,
+        pool: [
+            { speciesId: "mottoche", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+            { speciesId: "lavapetit", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+            { speciesId: "nouillon", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+            { speciesId: "piouflot", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+            { speciesId: "revemante", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+            { speciesId: "sporbeo", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+            { speciesId: "ruffiant", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+            { speciesId: "tetardoc", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+            { speciesId: "batchu", base: COMMON, noEvolve: true, levelRange: [15, 50] },   // chauve-souris élec
+            { speciesId: "draclet", base: RARE, noEvolve: true, levelRange: [5, 30] },     // un peu + rare
+        ],
+    },
     // CENDREVILLE : ville-miroir cendrée, gated par le Badge Flamme (ACE).
     // Faune SPECTRE / FEU / ÉLECTRIK — rend enfin capturables les orphelins Feu.
     yellow_cendreville: {

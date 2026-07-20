@@ -21,6 +21,7 @@ import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, startRun3BossBattle, startNgPlusFinalBattle, startFusionLeagueBattle, resetFleeStreak } from "./battleStore"
 import { buildFusion, disposeFusion, type BuiltFusion } from "../data/fusionMon"
+import { fusionForParents } from "../data/fusionBaseSpecies"
 import { buildFusionLeagueTeam, fusionLeagueKeyForTrainer, activeFusionTier, FUSION_UNLOCK_MARKER } from "../data/fusionLeague"
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
@@ -99,6 +100,11 @@ function disposeFusionLeagueSpecies() {
 // rencontre (pas avant → non « scripté »). Le flag « vu ce passage » coupe le forçage ensuite (aucun spam si
 // le joueur ne capture pas). Le compteur est RÉ-ARMÉ à l'ENTRÉE dans la Centrale (transition de carte, cf. plus bas).
 let run3CentralePity = { count: 0, hSeen: false, kSeen: false }
+
+// GROTTE DU NEXUS 1F — règle de pop des FUSIONS (transient, remis à zéro à l'entrée de la grotte). On mémorise les
+//   2 dernières rencontres ; quand elles forment la paire de parents EXACTE d'une fusion → on l'AMORCE, et le roll
+//   SUIVANT la fait apparaître (garantie). Rareté = combinatoire (2 parents précis coup sur coup).
+let grotteFusionPop: { prev1: string; prev2: string; primed: string } = { prev1: "", prev2: "", primed: "" }
 
 interface GameStore {
     // === STATE ===
@@ -831,7 +837,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // AVEC une zone de rencontres → tout le sol praticable déclenche, façon donjon).
         const onWildTile = map.tiles[next.posY]?.[next.posX]
         const isWildTile = onWildTile === "grassTall"
-            || (onWildTile === "grass" && !!map.backgroundImage && hasEncounters(map.id))
+            || ((onWildTile === "grass" || onWildTile === "caveFloor") && !!map.backgroundImage && hasEncounters(map.id))
         // #7 : juste après un combat, on garantit au moins UNE case sans rencontre (anti-rafale).
         if (moved && get().encounterCooldown > 0) {
             set({ encounterCooldown: get().encounterCooldown - 1 })
@@ -905,6 +911,21 @@ export const useGameStore = create<GameStore>((set, get) => ({
                             spawn = createMonInstance("hypnoppo", 9 + Math.floor(Math.random() * 7), { owned: false }); run3CentralePity.hSeen = true
                         } else if (!dex.includes("karmaki") && !run3CentralePity.kSeen && !spawnPrecious && run3CentralePity.count >= 10) {
                             spawn = createMonInstance("karmaki", 38 + Math.floor(Math.random() * 13), { owned: false }); run3CentralePity.kSeen = true
+                        }
+                    }
+                    // GROTTE DU NEXUS 1F — POP DES FUSIONS : si une fusion est AMORCÉE (les 2 rencontres précédentes
+                    //   étaient sa paire de parents exacte) → elle SE PRODUIT ici (GARANTIE, niv 2-18). Sinon on met à
+                    //   jour l'historique + on amorce si les 2 dernières forment une paire. On respecte les rencontres
+                    //   PRÉCIEUSES (shiny / Mimimoy) : on ne les écrase pas et elles n'entrent pas dans l'historique.
+                    if (next.mapId === "yellow_grotte_nexus") {
+                        const spawnPrecious = spawn.shiny || !!getSpecies(spawn.speciesId)?.hiddenUntilCaught
+                        if (grotteFusionPop.primed && !spawnPrecious) {
+                            spawn = createMonInstance(grotteFusionPop.primed, 2 + Math.floor(Math.random() * 17), { owned: false })
+                            grotteFusionPop = { prev1: "", prev2: "", primed: "" } // consommé (le fusionné n'entre pas dans l'historique)
+                        } else if (!grotteFusionPop.primed && !spawnPrecious) {
+                            grotteFusionPop = { prev1: spawn.speciesId, prev2: grotteFusionPop.prev1, primed: "" }
+                            const fus = fusionForParents(grotteFusionPop.prev1, grotteFusionPop.prev2)
+                            if (fus) grotteFusionPop.primed = fus
                         }
                     }
                     if (typeof window !== "undefined" && encCount < 10) window.localStorage.setItem(ENC_KEY, String(encCount + 1))
@@ -1559,7 +1580,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
         // GARDIEN DE LA GROTTE : entrer dans la grotte (par le passeur → setMap) RÉ-ARME PNJ 5 → il faut le rebattre.
         // Les échelles intra-grotte passent par la transition inline (findExitAt), PAS setMap → aucun ré-arm parasite.
-        if (mapId === PNJ5_MAP_ID) pnj5WinsAtEntry = pnj5WinsCount()
+        if (mapId === PNJ5_MAP_ID) { pnj5WinsAtEntry = pnj5WinsCount(); grotteFusionPop = { prev1: "", prev2: "", primed: "" } } // entrée grotte → reset pop fusions
         const player = createInitialPlayer(mapId, spawnX, spawnY)
         set({ map, player, dialogue: null })
         saveNow(player) // transition de map → persistance IMMÉDIATE (anti-désync position/flags au reload, cf. whiteout Ligue)

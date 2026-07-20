@@ -1515,7 +1515,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImage: "/yellow/sprites/grotte_casse_tete.png",
         backgroundImageWidth: 2352, backgroundImageHeight: 672, backgroundImageTileSize: 16,
         backgroundImageOriginX: 0, backgroundImageOriginY: 0,
-        debugGrid: true, encountersPaused: true,
+        debugGrid: true, // rencontres ACTIVES (zone ZONES.yellow_grotte_nexus) — B1F/B2F restent sans zone → sans rencontre
         // Topologie (Sartay) : 1F ↔ B1F via les échelles 1/2/3 (un trigger par case d'échelle).
         exits: [
             ...([[5, 7], [6, 7], [5, 8], [6, 8]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_grotte_nexus_b1f", targetSpawnX: 3, targetSpawnY: 4 })),   // échelle 3 → B1F

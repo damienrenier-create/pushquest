@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { FUSION_BASE_SPECIES, FUSION_BASE_IDS, FUSION_BASE_PARENTS } from "./fusionBaseSpecies"
-import { SPECIES, getSpecies } from "./species"
+import { SPECIES, getSpecies, registerCustomSpecies } from "./species"
 import { getMove } from "./moves"
 
 describe("Fusions de base — data + learnsets", () => {
@@ -13,7 +13,8 @@ describe("Fusions de base — data + learnsets", () => {
             const bst = s.baseStats.hp + s.baseStats.atk + s.baseStats.def + s.baseStats.spe + s.baseStats.spc
             expect(bst, s.id).toBeGreaterThan(180) // base-1 plausible
             expect(bst, s.id).toBeLessThan(300)
-            expect(s.hiddenUntilCaught).toBe(true) // masquées
+            expect(s.evolution, s.id).toBeUndefined() // base-1 : pas d'évolution (exception voulue)
+            expect(s.dexNo, s.id).toBeGreaterThanOrEqual(500) // plage Fusiodex (hors dex principal)
         }
     })
 
@@ -41,10 +42,13 @@ describe("Fusions de base — data + learnsets", () => {
         }
     })
 
-    it("ANTI-SPOILER : NON enregistrées dans SPECIES → 0 fuite dans le Pokédex/dex", () => {
+    it("ANTI-SPOILER : JAMAIS dans SPECIES (source du Pokédex) → 0 fuite dex, même une fois enregistrées custom en jeu", () => {
+        // Elles sont enregistrées comme espèces CUSTOM en jeu (reregisterCustomDaemons) → getSpecies les résout.
+        // Mais visibleDexSpecies n'itère QUE SPECIES : tant qu'elles n'y sont pas, le Pokédex ne peut PAS les montrer.
+        registerCustomSpecies(FUSION_BASE_SPECIES) // simule l'enregistrement in-game
         for (const s of FUSION_BASE_SPECIES) {
-            expect(SPECIES[s.id], `${s.id} ne doit PAS être dans SPECIES`).toBeUndefined()
-            expect(getSpecies(s.id), `${s.id} non résolvable tant que non enregistrée`).toBeNull()
+            expect(SPECIES[s.id], `${s.id} ne doit JAMAIS être dans SPECIES (source dex)`).toBeUndefined()
+            expect(getSpecies(s.id), `${s.id} résolvable en jeu (custom)`).not.toBeNull() // jouable pour les rencontres
         }
     })
 })

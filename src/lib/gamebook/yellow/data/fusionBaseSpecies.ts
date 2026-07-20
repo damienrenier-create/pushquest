@@ -6,9 +6,11 @@
 // base stats = génétique de fusion appliquée aux BASE stats des parents (Spé collapsée en moyenne SpA/SpD) ;
 // learnset INSPIRÉ des 2 parents puis étendu en STAB jusqu'au haut niveau (pour le jour où elles seront prises).
 //
-// ⚠️ ANTI-SPOILER (Sartay) : ces espèces ne doivent JAMAIS apparaître dans un doc en jeu (Pokédex/Fusiodex) tant
-// qu'elles n'ont pas été APERÇUES ET que le joueur est arrivé au Dôme Fusion. → CE MODULE EST DE LA DATA PURE,
-// PAS ENCORE ENREGISTRÉE dans SPECIES. L'enregistrement + le filtrage dex se feront au chantier Grotte/Fusiodex.
+// ⚠️ ANTI-SPOILER (Sartay) : ces espèces ne doivent JAMAIS apparaître dans un doc en jeu (Pokédex) tant qu'elles
+// n'ont pas été APERÇUES ET que le joueur est arrivé au Dôme Fusion. → Elles sont enregistrées comme espèces
+// CUSTOM (playerStore.reregisterCustomDaemons) : résolvables en jeu (getSpecies/createMonInstance pour les
+// rencontres) MAIS jamais dans SPECIES → visibleDexSpecies (qui n'itère que SPECIES) ne les montre JAMAIS. Le
+// FUSIODEX (à part) les listera, gated (aperçue && arrivé au Dôme).
 
 import type { SpeciesData } from "../battle/types"
 
@@ -25,7 +27,7 @@ export const FUSION_BASE_SPECIES: SpeciesData[] = [
             { level: 52, moveId: "lame_roche" }, { level: 64, moveId: "lance_flammes" }, { level: 78, moveId: "seisme" },
             { level: 92, moveId: "roc_titanesque" },
         ],
-        catchRate: 3, baseExp: 90, rarity: "RARE", growthRate: "medium_fast", hiddenUntilCaught: true,
+        catchRate: 3, baseExp: 90, rarity: "RARE", growthRate: "medium_fast",
         description: "Deux fragments de roche soudés par une veine de lave. Sa carapace fissurée irradie une chaleur sourde.",
         sprite: "/yellow/sprites/dex/mottelave.png",
     },
@@ -39,7 +41,7 @@ export const FUSION_BASE_SPECIES: SpeciesData[] = [
             { level: 28, moveId: "repos" }, { level: 36, moveId: "onde_cerebrale" }, { level: 46, moveId: "deferlante" },
             { level: 58, moveId: "vague_mentale" }, { level: 72, moveId: "eveil_divin" }, { level: 88, moveId: "hydrocanon" },
         ],
-        catchRate: 3, baseExp: 90, rarity: "RARE", growthRate: "medium_fast", hiddenUntilCaught: true,
+        catchRate: 3, baseExp: 90, rarity: "RARE", growthRate: "medium_fast",
         description: "Un ruban de pâte vivante flottant sur l'eau, guidé par un petit esprit d'oisillon. Étrangement serein.",
         sprite: "/yellow/sprites/dex/nouiflot.png",
     },
@@ -53,7 +55,7 @@ export const FUSION_BASE_SPECIES: SpeciesData[] = [
             { level: 30, moveId: "drain_ame" }, { level: 40, moveId: "toxik" }, { level: 50, moveId: "griffe_spectrale" },
             { level: 62, moveId: "miasme_corrosif" }, { level: 76, moveId: "ball_ombre" }, { level: 90, moveId: "bombe_beurk" },
         ],
-        catchRate: 3, baseExp: 90, rarity: "RARE", growthRate: "medium_fast", hiddenUntilCaught: true,
+        catchRate: 3, baseExp: 90, rarity: "RARE", growthRate: "medium_fast",
         description: "Une mante spectrale coiffée d'un chapeau de champignon. Ses spores provoquent des songes toxiques.",
         sprite: "/yellow/sprites/dex/sporemante.png",
     },
@@ -67,7 +69,7 @@ export const FUSION_BASE_SPECIES: SpeciesData[] = [
             { level: 26, moveId: "eboulis" }, { level: 34, moveId: "dard_mortel" }, { level: 44, moveId: "lame_roche" },
             { level: 56, moveId: "dard_fatal" }, { level: 70, moveId: "seisme" }, { level: 84, moveId: "roc_titanesque" },
         ],
-        catchRate: 3, baseExp: 90, rarity: "RARE", growthRate: "medium_fast", hiddenUntilCaught: true,
+        catchRate: 3, baseExp: 90, rarity: "RARE", growthRate: "medium_fast",
         description: "Un têtard à la peau chitineuse, incrusté d'éclats de roche. Rapide malgré sa cuirasse minérale.",
         sprite: "/yellow/sprites/dex/ruffardoc.png",
     },
@@ -81,7 +83,7 @@ export const FUSION_BASE_SPECIES: SpeciesData[] = [
             { level: 28, moveId: "cage_eclair" }, { level: 36, moveId: "griffe_draconique" }, { level: 46, moveId: "fulgurance" },
             { level: 58, moveId: "draco_charge" }, { level: 72, moveId: "ultra_foudre" }, { level: 88, moveId: "souffle_primordial" },
         ],
-        catchRate: 3, baseExp: 90, rarity: "RARE", growthRate: "medium_fast", hiddenUntilCaught: true,
+        catchRate: 3, baseExp: 90, rarity: "RARE", growthRate: "medium_fast",
         description: "Un dragonnet nerveux dont les ailerons crépitent d'arcs électriques. Frappe avant qu'on le voie.",
         sprite: "/yellow/sprites/dex/dractriss.png",
     },
@@ -97,4 +99,13 @@ export const FUSION_BASE_PARENTS: Record<string, [string, string]> = {
     sporemante: ["revemante", "sporbeo"],
     ruffardoc: ["ruffiant", "tetardoc"],
     dractriss: ["draclet", "electroatiss"],
+}
+
+/** La fusion de base dont {a,b} sont les 2 parents (n'importe quel ordre), ou null. Sert à la règle de pop Grotte. */
+export function fusionForParents(a: string, b: string): string | null {
+    for (const fus of Object.keys(FUSION_BASE_PARENTS)) {
+        const [pa, pb] = FUSION_BASE_PARENTS[fus]
+        if ((a === pa && b === pb) || (a === pb && b === pa)) return fus
+    }
+    return null
 }
