@@ -47,6 +47,7 @@ import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LI
 import { SYLVEBARBE_NPC_ID, SYLVEBARBE_INTRO_LINES, SYLVEBARBE_DONE_LINES, SYLVEBARBE_NO_FLUTE_LINES, SYLVEBARBE_NO_TEAM_LINES, buildSylvebarbe, FLUTE_GIVE_LINES } from "../data/sylvebarbe"
 import { PNJ5_NPC_ID, PNJ5_TRAINER_ID, PNJ5_MAP_ID, PNJ5_KICK, buildPnj5Team, inPnj5Block, inPnj5Trigger, PNJ5_INTRO_LINES, PNJ5_NO_DOME_LINES, PNJ5_NO_TEAM_LINES, PNJ5_SEAL_LINES } from "../data/pnj5"
 import { PNJ7_NPC_ID, PNJ7_TRAINER_ID, PNJ7_MAP_ID, PNJ7_NAME, PNJ7_INTRO_LINES, PNJ7_CAROUSEL_LINES, PNJ7_NO_TEAM_LINES, buildPnj7Team, pnj7DayMarker, resetGrotteDemo, takeGrotteDemoSpawn } from "../data/pnj7"
+import { AUTEL_VISITED_MARKER, DOME_SPAGHETTI_LINES } from "../data/fusiodex"
 import { CHEN_LAB_LINES, LAB_ASSISTANT_LINES, LAB_ASSISTANT_LINES_NGPLUS, LAB_ASSISTANT_LINES_RUN3, CHEN_ABANDON_OFFER_LINES, CHEN_RUN3_TEASER_LINES, CHEN_RUN3_EVOLVE_LINES } from "../data/labDialogues"
 import { MAGNETOR_EVO_ITEM } from "../data/items"
 import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADE_RECEIVE_RUN1, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_TRADER_OFFER_LINES_RUN1, HH_TRADER_NEED_LINES_RUN1, HH_TRADER_HAS_MORROW_LINES, HH_TRADER_CANCEL_LINES, HH_TRADE_AQUILOTHAN_GIVE, HH_TRADE_AQUILOTHAN_RECEIVE, HH_TRADER_AQUILORD_OFFER_LINES, HH_TRADER_AQUILORD_NEED_LINES, HH_TRADER_AQUILORD_DONE_LINES, HH_TRADER_AQUILORD_CANCEL_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
@@ -797,6 +798,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 scheduleSave(next)
                 return
             }
+            // PREMIÈRE ARRIVÉE AU DÔME FUSION (Autel) : le Dieu Spaghetti explique le lieu → pose le marker
+            //   autel_visited (débloque le FUSIODEX dans le menu + lève la gate anti-spoiler). One-time.
+            const firstDomeArrival = targetMapId === "yellow_combat_autel" && !isTrainerDefeated(AUTEL_VISITED_MARKER)
+            if (firstDomeArrival) markTrainerDefeated(AUTEL_VISITED_MARKER)
             const newMap = YELLOW_MAPS[targetMapId]
             if (newMap) {
                 // Override de spawn : l'arène Feu (16×16) a son entrée en bas (8,14),
@@ -820,7 +825,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     : (stairInfirmary ? ret : (leavingShared ? null : ret))
                 set({
                     map: newMap, player: newPlayer, interiorReturn,
-                    // SALLE DORÉE : le Dieu Spaghetti annonce le « match surprise » (pas de soin) à l'entrée.
+                    // SALLE DORÉE : annonce du « match surprise » ; sinon 1re ARRIVÉE AU DÔME : explication + Fusiodex.
                     dialogue: goldenAnnounce ? {
                         npcId: "spaghetti_gate", npcName: "DIEU SPAGHETTI", lineIndex: 0,
                         lines: [
@@ -829,6 +834,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                             "« J'ai rappelé des limbes ton ANCIENNE équipe — celle de ton tout premier run. Elle est fraîche, reposée. Toi, tu sors du combat contre le Maître : à bout de souffle. »",
                             "« Pas de soin, pas de répit. Ton REFLET t'attend au fond de la salle. Affronte ton passé DANS L'ÉTAT où tu es — et prouve qui tu es DEVENU ! »",
                         ],
+                    } : firstDomeArrival ? {
+                        npcId: "y_dome_spaghetti", npcName: "DIEU SPAGHETTI", lineIndex: 0, lines: [...DOME_SPAGHETTI_LINES],
                     } : null,
                 })
                 scheduleSave(newPlayer)

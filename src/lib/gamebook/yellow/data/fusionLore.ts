@@ -1,9 +1,7 @@
 // src/lib/gamebook/yellow/data/fusionLore.ts
 //
-// CONTENU (texte) du système de fusion — indépendant de l'infra. Sert :
-//   - FUSION_RULES : les règles claires/précises/exhaustives affichées dans le FUSIODEX (page « Règles »).
-//   - PNJ 7 (gardien de la Grotte 1F) : intro/défaite + carrousel d'info post-combat + relecture.
-// Câblé plus tard (Fusiodex + trainers.ts + gameStore carrousel).
+// CONTENU (texte) du système de fusion — FUSION_RULES : les règles claires/précises/exhaustives affichées
+// dans le FUSIODEX (page « Comment fusionner ? »). Les dialogues de PNJ 7 vivent dans data/pnj7.ts.
 
 /** Les règles de la fusion, exhaustives (Fusiodex → page « Comment fusionner ? »). */
 export const FUSION_RULES: string[] = [
@@ -18,25 +16,4 @@ export const FUSION_RULES: string[] = [
     "⑦ Un parent EN FUSION est indisponible : il ne combat pas et ne peut pas re-fusionner tant qu'il est engagé dans une fusion.",
     "⑧ AUCUN plafond de stats : une fusion peut surpasser ses deux parents. À toi de trouver les meilleures combinaisons.",
     "🐣 À l'état sauvage, deux âmes affines qui surgissent l'une juste après l'autre peuvent fusionner d'elles-mêmes… mais on ne capture une fusion qu'avec une FUSIO-BALL.",
-]
-
-/** PNJ 7 — gardien de la Grotte du Nexus 1F (5 némésis). */
-export const PNJ7_INTRO: string[] = [
-    "« Halte. Peu d'aventuriers s'enfoncent aussi loin dans la Grotte du Nexus… »",
-    "« Je garde ce seuil. Affronte mes CINQ ombres — mes némésis. Survis-y, et je te révélerai ce que cache vraiment cette caverne. »",
-]
-export const PNJ7_DEFEAT: string[] = [
-    "« …Impressionnant. Mes némésis sont à terre. Tu as gagné le droit de savoir. Approche. »",
-]
-/** Carrousel d'info montré à la victoire (et revisitable en re-parlant à PNJ 7). */
-export const PNJ7_CAROUSEL: string[] = [
-    "🔬 « Tout au FOND de cette grotte vit un éminent scientifique. Il mène d'étranges expériences sur la FUSION des Daemons… »",
-    "🌿 « La Grotte regorge de BIOTOPES différents : cavités humides, poches volcaniques, salles de cristal… chacune abrite sa propre faune. »",
-    "✨ « Certains Daemons extrêmement rares ne se terrent QUE dans un biotope unique. Explore, et ouvre l'œil. »",
-    "🧬 « Et parfois… quand deux âmes affines surgissent l'une juste après l'autre, la Grotte les FUSIONNE sous tes yeux. Mais pour capturer pareille chimère, il te faudra une balle très spéciale. »",
-]
-/** Relecture des infos (re-parler à PNJ 7 après l'avoir battu). */
-export const PNJ7_REVISIT: string[] = [
-    "« Tu veux que je te répète ce que cache la Grotte ? Volontiers. »",
-    ...PNJ7_CAROUSEL,
 ]

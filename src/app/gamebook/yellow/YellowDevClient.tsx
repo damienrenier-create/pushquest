@@ -67,6 +67,7 @@ import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/ct
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { computeFusion } from "@/lib/gamebook/yellow/data/fusionSpecies"
 import { buildFusion, disposeFusion, fusionParentFromInstance } from "@/lib/gamebook/yellow/data/fusionMon"
+import { AUTEL_VISITED_MARKER } from "@/lib/gamebook/yellow/data/fusiodex"
 import { useRun, getRun, startTowerRun, startRun, applyWinFromBattle, applyLossFromBattle, quitRun, endRun, setDraftedTeam, getDraftedTeam, setRunRaw } from "@/lib/gamebook/yellow/frontier/runStore"
 import type { FrontierRunState } from "@/lib/gamebook/yellow/frontier/run"
 import { postRecordRun } from "@/lib/gamebook/yellow/frontier/frontierApi"
@@ -1676,6 +1677,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         {!battle && <button style={menuBtnStyle} onClick={() => setMenu("bag")}>🎒 SAC</button>}
                         <button style={menuBtnStyle} onClick={() => router.push("/gamebook/yellow/pokedex")}>📷 POKÉDEX</button>
                         <button style={menuBtnStyle} onClick={() => router.push("/gamebook/yellow/dex")}>📖 DEX (CATALOGUE)</button>
+                        {/* FUSIODEX : débloqué à la 1re arrivée au Dôme Fusion (marker autel_visited). Anti-spoiler :
+                            invisible tant que le joueur n'a pas atteint l'Autel. */}
+                        {player.defeatedTrainers.includes(AUTEL_VISITED_MARKER) && (
+                            <button style={{ ...menuBtnStyle, borderColor: "#b98aff", color: "#d9b8ff" }} onClick={() => router.push("/gamebook/yellow/fusiodex")}>🧬 FUSIODEX</button>
+                        )}
                         {!battle && <button style={menuBtnStyle} onClick={() => setMenu("moves")}>⚔️ ATTAQUES</button>}
                         <button style={menuBtnStyle} onClick={() => setMenu("palmares")}>🏆 PALMARÈS</button>
                         {(() => {
