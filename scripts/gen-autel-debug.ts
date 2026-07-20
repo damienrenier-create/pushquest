@@ -14,15 +14,32 @@ const W = map.width, H = map.height
 const tiles = map.tiles
 
 // PNJ / repères (npcs.ts + maps.ts).
-const NPCS = [{ x: 9, y: 6, label: "AUTEL", color: "#b98ae6" }]
+const NPCS = [
+    { x: 9, y: 6, label: "COMBAT", color: "#b98ae6" },
+    { x: 2, y: 6, label: "PC-G", color: "#3ad0c0" }, { x: 3, y: 6, label: "PC-G", color: "#3ad0c0" },
+    { x: 14, y: 6, label: "PC-D", color: "#3ad0c0" }, { x: 15, y: 6, label: "PC-D", color: "#3ad0c0" },
+]
 const SPAWN = { x: 9, y: 8, label: "spawn" }
-const EXIT = { x: 9, y: 9, label: "↧ hub" }
-const EXIT_LEAGUE = { x: 9, y: 0, label: "↥ LIGUE" }
+const EXITS = [{ x: 8, y: 9, label: "↧ hub" }, { x: 9, y: 9, label: "↧ hub" }]
+const EXIT_LEAGUE = [{ x: 8, y: 1, label: "↥ LIGUE" }, { x: 9, y: 1, label: "↥ LIGUE" }]
 
 const TILE = 48, L = 34, TOP = 32, MARGIN = 10
 const fullW = L + W * TILE + MARGIN, fullH = TOP + H * TILE + MARGIN
 
+// BFS de connectivité depuis le spawn (les PNJ bloquent leur case) → la porte Ligue / hub / PC sont-ils atteignables ?
+function checkReachability() {
+    const npcBlocked = new Set(NPCS.map((n) => `${n.x},${n.y}`))
+    const walkable = (x: number, y: number) => x >= 0 && x < W && y >= 0 && y < H && !isBlockingTile(tiles[y][x]) && !npcBlocked.has(`${x},${y}`)
+    const seen = new Set([`${SPAWN.x},${SPAWN.y}`]); const q: [number, number][] = [[SPAWN.x, SPAWN.y]]
+    while (q.length) { const [x, y] = q.shift()!; for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) { const nx = x + dx, ny = y + dy, k = `${nx},${ny}`; if (!seen.has(k) && walkable(nx, ny)) { seen.add(k); q.push([nx, ny]) } } }
+    const ligue = EXIT_LEAGUE.every((e) => seen.has(`${e.x},${e.y}`))
+    const hub = EXITS.every((e) => seen.has(`${e.x},${e.y}`))
+    const pc = [[2, 7], [3, 7], [14, 7], [15, 7]].every(([x, y]) => seen.has(`${x},${y}`))
+    console.log(`🧭 REACHABILITY depuis spawn (9,8) : Ligue(8,1)(9,1)=${ligue ? "✅" : "❌"} · Hub(8,9)(9,9)=${hub ? "✅" : "❌"} · PC(2,7)(3,7)(14,7)(15,7)=${pc ? "✅" : "❌"}`)
+}
+
 async function main() {
+    checkReachability()
     const s: string[] = [`<svg xmlns="http://www.w3.org/2000/svg" width="${fullW}" height="${fullH}" font-family="monospace">`]
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
         const px = L + x * TILE, py = TOP + y * TILE
@@ -41,8 +58,8 @@ async function main() {
         s.push(`<text x="${L + n.x * TILE + TILE / 2}" y="${TOP + (n.y + 1) * TILE + TILE / 2 + 4}" fill="${n.color}" stroke="#000" stroke-width="0.8" paint-order="stroke" font-size="16" font-weight="bold" text-anchor="middle">▲</text>`) // interaction depuis y+1
     }
     s.push(box(SPAWN.x, SPAWN.y, "#e0b020", SPAWN.label, "★"))
-    s.push(box(EXIT.x, EXIT.y, "#2f7ae0", EXIT.label, "🚪"))
-    s.push(box(EXIT_LEAGUE.x, EXIT_LEAGUE.y, "#ff5cc8", EXIT_LEAGUE.label, "⚔️"))
+    for (const e of EXITS) s.push(box(e.x, e.y, "#2f7ae0", e.label, "🚪"))
+    for (const e of EXIT_LEAGUE) s.push(box(e.x, e.y, "#ff5cc8", e.label, "⚔️"))
     for (let x = 0; x <= W; x++) { const p = L + x * TILE; s.push(`<line x1="${p}" y1="${TOP}" x2="${p}" y2="${TOP + H * TILE}" stroke="#000a" stroke-width="${x % 5 === 0 ? 1.4 : 0.5}"/>`); if (x < W) s.push(`<text x="${p + TILE / 2}" y="${TOP - 8}" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle">${x}</text>`) }
     for (let y = 0; y <= H; y++) { const p = TOP + y * TILE; s.push(`<line x1="${L}" y1="${p}" x2="${L + W * TILE}" y2="${p}" stroke="#000a" stroke-width="${y % 5 === 0 ? 1.4 : 0.5}"/>`); if (y < H) s.push(`<text x="6" y="${p + TILE / 2 + 4}" fill="#fff" font-size="11" font-weight="bold">${y}</text>`) }
     s.push(`<text x="${L}" y="${TOP + H * TILE + 7}" fill="#fff" font-size="10.5" font-weight="bold">AUTEL DE LA CHIMÈRE (yellow_combat_autel) 18x10 — vert=sol · rouge=bloqué · 🧬=PNJ (▲=case interaction) · ★=spawn · 🚪=sortie</text>`)

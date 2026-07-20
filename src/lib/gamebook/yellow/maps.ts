@@ -1073,10 +1073,18 @@ function buildZoneRoom(W: number, H: number): TileType[][] {
 }
 // AUTEL DE LA CHIMÈRE (18×10) : pièce ouverte + collision sur la PLATEFORME centrale (Poké-ball) → on la contourne
 //   et on interagit avec le PNJ posé DEVANT (9,6). Bassins/PC laissés walkables (à affiner en jeu via la debug map).
+// AUTEL DE LA CHIMÈRE (18×10) — collisions calées sur le décor `fusion_altar.png` (grille fournie par Sartay).
+//   L'AUTEL de combat (cases 7-10 × 4-6) reste MARCHABLE : c'est le seul couloir vertical vers la porte haute
+//   (les murs latéraux scellent tout contournement). Le combat de fusion se lance via le PNJ 🧬 `y_autel_chimere`
+//   en (9,6). Portes basses (sortie hub) : (8,9)+(9,9). Entrée LIGUE : (8,1)+(9,1). PC gauche (2-3,6) / droite (14-15,6).
 function buildAutelChimereRoom(): TileType[][] {
-    const m = buildZoneRoom(18, 10)
-    for (let y = 4; y <= 5; y++) for (let x = 8; x <= 10; x++) m[y][x] = "tree" // "tree" = case bloquée (invisible sous le backgroundImage)
-    m[0][8] = "path"; m[0][9] = "path" // PORTE HAUTE à double battant (entrée LIGUE DE FUSION), calée sur la porte à dragons du décor
+    const m = buildZoneRoom(18, 10) // bords = murs ; intérieur = sol ; porte basse (9,9) déjà ouverte
+    const walls: [number, number][] = [
+        [1, 5], [1, 6], [1, 7], [2, 5], [3, 5], [4, 5], [4, 6], [4, 7], [5, 3], [5, 4], [5, 5], [5, 6], [5, 7], [6, 3], [7, 0], [7, 1], [7, 2],
+        [10, 0], [10, 1], [10, 2], [11, 3], [12, 4], [12, 5], [12, 6], [12, 7], [13, 5], [13, 6], [13, 7], [14, 5], [15, 5], [16, 5], [16, 6], [16, 7], [16, 8],
+    ]
+    for (const [x, y] of walls) m[y][x] = "tree"
+    m[9][8] = "path" // 2e porte basse (sortie hub) à côté de (9,9)
     return m
 }
 
@@ -1167,11 +1175,13 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         id: "yellow_combat_autel", name: "AUTEL DE LA CHIMÈRE", tiles: buildAutelChimereRoom(), width: 18, height: 10,
         backgroundImage: "/yellow/sprites/fusion_altar.png", backgroundImageWidth: 2752, backgroundImageHeight: 1536, backgroundImageTileSize: 153, // 2752/18 ≈ 153
         exits: [
+            // SORTIE HUB (Zone de Combat) — double porte basse (8,9)+(9,9).
+            { x: 8, y: 9, targetMapId: "yellow_zone_combat", targetSpawnX: 13, targetSpawnY: 10 },
             { x: 9, y: 9, targetMapId: "yellow_zone_combat", targetSpawnX: 13, targetSpawnY: 10 },
-            // ENTRÉE LIGUE DE FUSION (porte à dragons du décor, haut-centre = cases 8-9) → 1re salle. Le gameStore
-            // réinitialise le gauntlet à l'entrée (resetFusionLeagueProgress) et lance au palier actif.
-            { x: 8, y: 0, targetMapId: "yellow_fusion_glace", targetSpawnX: 3, targetSpawnY: 6 },
-            { x: 9, y: 0, targetMapId: "yellow_fusion_glace", targetSpawnX: 3, targetSpawnY: 6 },
+            // ENTRÉE LIGUE DE FUSION — seuil de la porte à dragons, cases (8,1)+(9,1). Le gameStore gère le gate
+            // d'ouverture (sprite fermé→ouvert) + resetFusionLeagueProgress + lance au palier actif.
+            { x: 8, y: 1, targetMapId: "yellow_fusion_glace", targetSpawnX: 3, targetSpawnY: 6 },
+            { x: 9, y: 1, targetMapId: "yellow_fusion_glace", targetSpawnX: 3, targetSpawnY: 6 },
         ],
     },
     yellow_cendreville: {

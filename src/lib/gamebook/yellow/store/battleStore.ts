@@ -47,7 +47,7 @@ import { SBIRE_TRAINER_ID } from "../data/sbire"
 import { toMonInstance, type LeagueHighlight, type ChampionRun, type ChampionMon } from "../storage/save"
 import { fullStats } from "../battle/stats"
 import { evolveTeam, type TeamEvolution } from "../progression/evolveTeam"
-import { activeFusionTier, FUSION_TIER_MARKER } from "../data/fusionLeague"
+import { activeFusionTier, FUSION_TIER_MARKER, FUSION_UNLOCK_MARKER } from "../data/fusionLeague"
 import { persistYellowSave, processSaiyanPoints, getNgplusOldTeam } from "./saveManager"
 import { QUOTA_CAPTURE_BONUS } from "../data/captureConfig"
 import { attackCost, effectiveQuota, STRUGGLE_INDEX } from "../data/combatCostConfig"
@@ -802,6 +802,8 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
         } else if (storeState.trainer.trainerId.startsWith("fusion:")) {
             // ÉPREUVE DE FUSION (Autel de la Chimère) : combat sandbox → AUCUNE récompense, aucun marquage, aucun
             // badge. L'équipe (le fusionné) n'est pas réécrite (isFactory ci-dessus). L'UI retire l'espèce éphémère.
+            // MAIS gagner une épreuve DÉBLOQUE la Ligue de Fusion (la porte à dragons de l'Autel s'ouvre), one-time.
+            if (b.outcome === "win") markTrainerDefeated(FUSION_UNLOCK_MARKER)
         } else {
             markTrainerDefeated(storeState.trainer.trainerId)
             const t = getTrainer(storeState.trainer.trainerId)

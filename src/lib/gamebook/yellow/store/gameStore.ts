@@ -21,7 +21,7 @@ import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, startRun3BossBattle, startNgPlusFinalBattle, startFusionLeagueBattle, resetFleeStreak } from "./battleStore"
 import { buildFusion, disposeFusion, type BuiltFusion } from "../data/fusionMon"
-import { buildFusionLeagueTeam, fusionLeagueKeyForTrainer, activeFusionTier } from "../data/fusionLeague"
+import { buildFusionLeagueTeam, fusionLeagueKeyForTrainer, activeFusionTier, FUSION_UNLOCK_MARKER } from "../data/fusionLeague"
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
@@ -679,6 +679,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
             // ENTRÉE LIGUE DE FUSION (depuis l'Autel) : roster de fusions REQUIS, puis rescelle le gauntlet
             //   (l'échelle de paliers `fusleague_*` est préservée) + repart sur un registre d'espèces propre.
             if (targetMapId === "yellow_fusion_glace" && player.mapId === "yellow_combat_autel") {
+                // GATE d'OUVERTURE : la porte à dragons reste SCELLÉE (sprite fermé) tant que le joueur n'a pas
+                //   remporté une épreuve de fusion à l'autel (FUSION_UNLOCK_MARKER). C'est le « quand » de la Ligue.
+                if (!isTrainerDefeated(FUSION_UNLOCK_MARKER)) {
+                    set({ player: next, dialogue: { npcId: "y_fusion_gate", npcName: "PORTE DE LA CHIMÈRE", lineIndex: 0, lines: ["*La porte à dragons est scellée par une lueur mauve.*", "« Prouve d'abord ta maîtrise de la fusion : remporte une épreuve à l'autel central. Alors la Ligue s'ouvrira à toi. »"] } })
+                    scheduleSave(next)
+                    return
+                }
                 if (getPlayerSave().fusionRoster.length === 0) {
                     set({ player: next, dialogue: { npcId: "y_fusion_gate", npcName: "AUTEL DE LA CHIMÈRE", lineIndex: 0, lines: ["La Ligue de Fusion exige une équipe de chimères. Assemble-la au 💻 de l'Autel, puis reviens !"] } })
                     scheduleSave(next)
@@ -1030,8 +1037,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ fusionMenuOpen: true })
             return
         }
-        // ORDINATEUR DE FUSION : ouvre l'atelier (assembler l'équipe de 6 fusions + accès boîte/équipe).
-        if (npc.id === "y_autel_pc") {
+        // ORDINATEUR DE FUSION (les 4 hotspots PC gauche+droite) : ouvre l'atelier (équipe de 6 fusions + boîte/équipe).
+        if (npc.id.startsWith("y_autel_pc")) {
             set({ fusionAtelierOpen: true })
             return
         }

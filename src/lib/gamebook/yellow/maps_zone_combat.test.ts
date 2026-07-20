@@ -56,9 +56,22 @@ describe("Autel de la Chimère — salle de fusion", () => {
         expect(blocked(autel, entry!.targetSpawnX, entry!.targetSpawnY)).toBe(false) // spawn (9,8) pas dans un mur
     })
 
-    it("l'autel central est bloqué (on le contourne) mais le PNJ (9,6) et sa case d'interaction (9,7) sont libres", () => {
-        expect(blocked(autel, 9, 4)).toBe(true)  // plateforme Poké-ball bloquée
-        expect(blocked(autel, 9, 6)).toBe(false) // PNJ autel
-        expect(blocked(autel, 9, 7)).toBe(false) // case d'interaction (devant l'autel)
+    it("autel central MARCHABLE (couloir vers la Ligue) · entrée Ligue (8,1)(9,1) · murs du décor · 2e porte hub", () => {
+        // L'autel de combat (7-10 × 4-6) est MARCHABLE : c'est le seul couloir vertical vers la porte haute
+        //   (les parois latérales scellent tout contournement). Combat via le PNJ 🧬 (9,6), interaction depuis (9,7).
+        expect(blocked(autel, 8, 5)).toBe(false)
+        expect(blocked(autel, 9, 4)).toBe(false)
+        expect(blocked(autel, 9, 7)).toBe(false) // devant l'autel
+        // Entrée LIGUE (seuil de la porte à dragons) marchable.
+        expect(blocked(autel, 8, 1)).toBe(false)
+        expect(blocked(autel, 9, 1)).toBe(false)
+        // Murs du décor (encadrement de la porte + parois cascades) bloqués.
+        expect(blocked(autel, 7, 1)).toBe(true)
+        expect(blocked(autel, 10, 1)).toBe(true)
+        expect(blocked(autel, 5, 5)).toBe(true)
+        expect(blocked(autel, 12, 5)).toBe(true)
+        // Double porte basse (sortie hub) : (8,9)+(9,9) ouvertes.
+        expect(blocked(autel, 8, 9)).toBe(false)
+        expect(blocked(autel, 9, 9)).toBe(false)
     })
 })

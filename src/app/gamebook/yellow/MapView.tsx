@@ -11,6 +11,7 @@
 import { useSyncExternalStore } from "react"
 import { useGameStore } from "@/lib/gamebook/yellow/store/gameStore"
 import { getPlayer, subscribePlayer, isBerrySecretKnown, isBerryTreeHarvested } from "@/lib/gamebook/yellow/store/playerStore"
+import { FUSION_UNLOCK_MARKER } from "@/lib/gamebook/yellow/data/fusionLeague"
 import { berriesForDay, BERRY_MAP_IDS } from "@/lib/gamebook/yellow/data/berryTrees"
 import { getHeldItem } from "@/lib/gamebook/yellow/data/heldItems"
 import { SYLVEBARBE_BLOCK_MAP, SYLVEBARBE_BLOCK, SYLVEBARBE_SLEEP_SPRITE } from "@/lib/gamebook/yellow/data/sylvebarbeBlock"
@@ -420,11 +421,16 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId, are
                     const overflowYTiles = imageTilesH - map.height
                     const bgPosX = overflowXTiles > 0 ? (originXTiles / overflowXTiles) * 100 : 0
                     const bgPosY = overflowYTiles > 0 ? (originYTiles / overflowYTiles) * 100 : 0
+                    // AUTEL DE LA CHIMÈRE : la porte à dragons de la Ligue est FERMÉE tant que la Ligue n'est pas
+                    //   débloquée, puis OUVERTE (décor alternatif) une fois une épreuve de fusion remportée.
+                    const bgUrl = (map.id === "yellow_combat_autel" && getPlayer().defeatedTrainers.includes(FUSION_UNLOCK_MARKER))
+                        ? "/yellow/sprites/fusion_altar_open.png"
+                        : map.backgroundImage
                     return (
                         <div style={{
                             position: "absolute",
                             ...screenPos(0, 0, map.width, map.height),
-                            backgroundImage: `url(${map.backgroundImage}?v=2)`,
+                            backgroundImage: `url(${bgUrl}?v=2)`,
                             backgroundRepeat: "no-repeat",
                             backgroundSize: `${bgSizeX}% ${bgSizeY}%`,
                             backgroundPosition: `${bgPosX}% ${bgPosY}%`,

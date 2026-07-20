@@ -535,19 +535,21 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         initialY: 6,
         dialoguesAfter: ["« Pose deux Daemons sur l'autel… et n'en fais plus qu'UN, le temps d'un combat. »"],
     },
-    // === ORDINATEUR de l'Autel (coin bas-gauche, 2,6) : ATELIER DE FUSION (boîte/équipe + les 6 slots de fusion).
-    //     Interaction interceptée dans gameStore (npc.id === "y_autel_pc" → fusionAtelierOpen). ===
-    {
-        id: "y_autel_pc",
+    // === ORDINATEURS DE FUSION (ATELIER) — les 2 PC sont DESSINÉS dans le décor (fusion_altar.png), donc ces PNJ
+    //     sont des HOTSPOTS INVISIBLES (emoji vide). PC GAUCHE = connexion depuis (2,7)+(3,7) → PNJ en (2,6)+(3,6) ;
+    //     PC DROITE = depuis (14,7)+(15,7) → PNJ en (14,6)+(15,6). Interaction interceptée dans gameStore
+    //     (npc.id commence par "y_autel_pc" → fusionAtelierOpen). ===
+    ...([[2, 6], [3, 6], [14, 6], [15, 6]] as const).map(([x, y], i) => ({
+        id: `y_autel_pc${i === 0 ? "" : i + 1}`,
         name: "ORDINATEUR DE FUSION",
         mapId: "yellow_combat_autel",
-        kind: "static",
-        interaction: "interactive",
-        sprite: { emoji: "💻", color: "#3ad0c0" },
-        initialX: 2,
-        initialY: 6,
+        kind: "static" as const,
+        interaction: "interactive" as const,
+        sprite: { emoji: "", color: "#3ad0c0" },
+        initialX: x,
+        initialY: y,
         dialoguesAfter: ["« Assemble ton équipe de fusion sur cet autel-machine. »"],
-    },
+    })),
     // === PANNEAU d'entrée de l'Autel (hub Zone de Combat, en 12,9) : signale l'entrée invisible en (13,9). ===
     {
         id: "y_autel_panneau",

@@ -134,3 +134,12 @@ export function activeFusionTier(isCleared: (marker: string) => boolean): Fusion
 export function isFusionChampion(isCleared: (marker: string) => boolean): boolean {
     return isCleared(FUSION_TIER_MARKER.bronze)
 }
+
+// DÉBLOCAGE de la Ligue de Fusion : la porte à dragons de l'Autel reste SCELLÉE (sprite fermé) tant que le joueur
+//   n'a pas GAGNÉ une épreuve de fusion à l'autel (fusion:TRIAL). À la 1re victoire, on pose ce marqueur (persisté
+//   dans defeatedTrainers, NON purgé par resetFusionLeagueProgress car pas de préfixe y_fusion_) → la porte s'OUVRE
+//   (sprite fusion_altar_open.png) et l'entrée devient franchissable.
+export const FUSION_UNLOCK_MARKER = "fusion_unlocked"
+export function isFusionLeagueUnlocked(isCleared: (marker: string) => boolean): boolean {
+    return isCleared(FUSION_UNLOCK_MARKER)
+}
