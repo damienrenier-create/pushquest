@@ -58,7 +58,7 @@ import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_L
 import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/gamebook/yellow/data/labDialogues"
 import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay } from "@/lib/gamebook/yellow/store/saveManager"
 import { customStarterSpeciesId, type StoredCustomDaemon } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, releaseFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, releaseFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster } from "@/lib/gamebook/yellow/store/playerStore"
 import { computeRunScores, computeReplayScore, leaderboardFactors, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
 import { run3Score, run3MaxScore, run3EnergyScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
@@ -208,6 +208,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const closeDomeMenu = useGameStore((s) => s.closeDomeMenu)
     const fusionMenuOpen = useGameStore((s) => s.fusionMenuOpen) // AUTEL DE LA CHIMÈRE (salle de fusion)
     const closeFusionMenu = useGameStore((s) => s.closeFusionMenu)
+    const fusionAtelierOpen = useGameStore((s) => s.fusionAtelierOpen) // ORDINATEUR DE FUSION (atelier 6 slots)
+    const closeFusionAtelier = useGameStore((s) => s.closeFusionAtelier)
+    const openPc = useGameStore((s) => s.openPc)
     // Overlays plein écran gérés côté store (fermés par le bouton B via goBack).
     const guideOpen = useGameStore((s) => s.guideOpen)
     const closeGuide = useGameStore((s) => s.closeGuide)
@@ -310,10 +313,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [tourChoice, setTourChoice] = useState(false) // pause entre vagues de série (Continuer / Quitter)
     const [domePause, setDomePause] = useState(false) // écran d'intro AVANT chaque match du Dôme (bracket + adversaire)
     const [fusionPick, setFusionPick] = useState<string[]>([]) // AUTEL : uids des 2 Daemons à fusionner (ordre = ①②)
-    const fusionSpeciesRef = useRef<string | null>(null)       // espèce éphémère du fusionné → dispose après combat / nouvelle fusion / unmount
-    // AUTEL : oublie la sélection en quittant la salle ; retire l'espèce éphémère du fusionné au démontage.
+    const fusionSpeciesRef = useRef<string[]>([])              // espèces éphémères des fusionnés (1 épreuve simple, jusqu'à 6 pour un roster) → dispose au prochain combat / unmount
+    const [atelierAdd, setAtelierAdd] = useState<{ a: string; b: string } | null>(null) // ATELIER : brouillon d'ajout (Parent A + Parent B) ; null = vue d'ensemble
+    const [atelierPicking, setAtelierPicking] = useState<"a" | "b" | null>(null)         // quel picker de parent est ouvert
+    // AUTEL : oublie la sélection en quittant la salle ; retire les espèces éphémères au démontage.
     useEffect(() => { if (mapPlayer.mapId !== "yellow_combat_autel" && fusionPick.length) setFusionPick([]) }, [mapPlayer.mapId, fusionPick.length])
-    useEffect(() => () => { if (fusionSpeciesRef.current) disposeFusion(fusionSpeciesRef.current) }, [])
+    useEffect(() => () => { fusionSpeciesRef.current.forEach(disposeFusion) }, [])
     const [usineCt, setUsineCt] = useState<string[] | null>(null) // CT à choisir (récompense Usine) parmi le vaincu
     const sbireWin = useSbireWin()
     const aceWin = useAceWin()
@@ -2401,9 +2406,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 const closeIt = () => { setFusionPick([]); closeFusionMenu() }
                 const launch = () => {
                     if (!ready) return
-                    if (fusionSpeciesRef.current) disposeFusion(fusionSpeciesRef.current) // nettoie une fusion précédente
+                    fusionSpeciesRef.current.forEach(disposeFusion) // nettoie les fusions précédentes
                     const { instance, speciesId, result } = buildFusion(picks[0], picks[1])
-                    fusionSpeciesRef.current = speciesId
+                    fusionSpeciesRef.current = [speciesId]
                     const lvl = result.level
                     // ÉPREUVE : 3 gardiens IA scalés au niveau du fusionné (mur Roche/Feu · nuke Eau · Insecte/Psy).
                     const enemy = [
@@ -2451,6 +2456,102 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             )}
                             <button style={ready ? { ...menuBtnStyle, borderColor: "#7c4fc0", color: "#7c4fc0" } : menuBtnDimStyle} disabled={!ready} onClick={launch}>⚔️ LANCER L&apos;ÉPREUVE</button>
                             <button style={menuBtnDimStyle} onClick={closeIt}>← RETOUR</button>
+                        </div>
+                    </div>
+                )
+            })()}
+            {/* ORDINATEUR DE FUSION — ATELIER : assembler l'équipe de fusion (jusqu'à 6), accès boîte/équipe, combat de test. */}
+            {!battle && fusionAtelierOpen && (() => {
+                const collection = [...player.team, ...player.pc]
+                const byUid = (uid: string) => collection.find((m) => m.uid === uid)
+                const roster = player.fusionRoster
+                const nameOf = (uid: string) => { const m = byUid(uid); return m ? displayName(m) : "?" }
+                const fusionNameOf = (p: { a: string; b: string }) => {
+                    const a = byUid(p.a), b = byUid(p.b)
+                    return a && b ? computeFusion(fusionParentFromInstance(a), fusionParentFromInstance(b)).name : "(invalide)"
+                }
+                const valid = roster.filter((p) => byUid(p.a) && byUid(p.b) && p.a !== p.b)
+                const closeIt = () => { setAtelierAdd(null); setAtelierPicking(null); closeFusionAtelier() }
+                const removeAt = (i: number) => { setFusionRoster(roster.filter((_, j) => j !== i)); persistYellowSave() }
+                const confirmAdd = () => {
+                    const add = atelierAdd
+                    if (!add?.a || !add?.b || add.a === add.b || roster.length >= 6) return
+                    // Dédup EXACTE (même ordre = même espèce éphémère) ; (A,B) et (B,A) restent 2 fusions distinctes.
+                    if (!roster.some((p) => p.a === add.a && p.b === add.b)) { setFusionRoster([...roster, { a: add.a, b: add.b }]); persistYellowSave() }
+                    setAtelierAdd(null); setAtelierPicking(null)
+                }
+                const fight = () => {
+                    if (!valid.length) return
+                    // Disposer les fusions précédentes AVANT de construire : les ids d'espèce sont DÉTERMINISTES
+                    //   (fusion_<uidA>_<uidB>) → si on rejoue le même roster, disposer après effacerait l'espèce
+                    //   qu'on vient de ré-enregistrer → combat planté. (Même ordre que l'épreuve simple.)
+                    fusionSpeciesRef.current.forEach(disposeFusion)
+                    const built = valid.map((p) => buildFusion(byUid(p.a)!, byUid(p.b)!))
+                    fusionSpeciesRef.current = built.map((f) => f.speciesId)
+                    const lvl = Math.max(...built.map((f) => f.result.level))
+                    const pool = ["magmator", "naiadrak", "regnantaur", "draconarque", "auroraur", "coccimperatrice"]
+                    const enemy = built.map((_, i) => createMonInstance(pool[i % pool.length], lvl, { owned: false }))
+                    startFusionTrialBattle(built.map((f) => f.instance), enemy, Math.floor(Math.random() * 0x7fffffff))
+                    closeIt()
+                }
+                const draftA = atelierAdd?.a ? byUid(atelierAdd.a) : null
+                const draftB = atelierAdd?.b ? byUid(atelierAdd.b) : null
+                const draftPreview = draftA && draftB && atelierAdd!.a !== atelierAdd!.b ? computeFusion(fusionParentFromInstance(draftA), fusionParentFromInstance(draftB)) : null
+                return (
+                    <div style={menuOverlayStyle} onClick={closeIt}>
+                        <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                            <div style={menuTitleStyle}>💻 ATELIER DE FUSION</div>
+                            {atelierAdd === null ? (
+                                <>
+                                    <div style={{ fontSize: 11, opacity: 0.7, margin: "0 0 8px" }}>Assemble jusqu&apos;à 6 fusions (2 Daemons chacune) pour la Ligue de Fusion à venir.</div>
+                                    {roster.length === 0 && <div style={{ fontSize: 12, opacity: 0.6, margin: "4px 0" }}>Aucune fusion — ajoute-en une ↓</div>}
+                                    {roster.map((p, i) => (
+                                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, padding: "5px 8px", border: "1px solid #7c4fc0", borderRadius: 7, margin: "3px 0", background: "rgba(124,79,192,0.07)" }}>
+                                            <b style={{ flex: 1, color: valid.includes(p) ? "#7c4fc0" : "#c83030" }}>{i + 1}. {fusionNameOf(p)}</b>
+                                            <span style={{ opacity: 0.6, fontSize: 10 }}>{nameOf(p.a)} + {nameOf(p.b)}</span>
+                                            <button onClick={() => removeAt(i)} style={{ background: "transparent", border: "1px solid #c83030", color: "#c83030", borderRadius: 4, cursor: "pointer", fontSize: 11, padding: "1px 6px" }}>✕</button>
+                                        </div>
+                                    ))}
+                                    {roster.length < 6 && collection.length >= 2 && <button style={{ ...menuBtnStyle, borderColor: "#7c4fc0", color: "#7c4fc0" }} onClick={() => setAtelierAdd({ a: "", b: "" })}>＋ AJOUTER UNE FUSION</button>}
+                                    {collection.length < 2 && <div style={{ fontSize: 11, color: "#c83030", margin: "4px 0" }}>Il te faut au moins 2 Daemons.</div>}
+                                    <button style={menuBtnStyle} onClick={() => openPc()}>📦 BOÎTE / ÉQUIPE (ranger tes Daemons)</button>
+                                    <button style={valid.length ? { ...menuBtnStyle, borderColor: "#c9a227", color: "#c9a227" } : menuBtnDimStyle} disabled={!valid.length} onClick={fight}>⚔️ COMBATTRE avec {valid.length} fusion{valid.length > 1 ? "s" : ""}</button>
+                                    <button style={menuBtnDimStyle} onClick={closeIt}>← RETOUR</button>
+                                </>
+                            ) : (
+                                <>
+                                    <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 6 }}>Choisis les 2 Daemons de cette fusion (Ⓐ + Ⓑ).</div>
+                                    {(["a", "b"] as const).map((which) => {
+                                        const chosen = atelierAdd[which] ? byUid(atelierAdd[which]) : null
+                                        return (
+                                            <button key={which} style={{ ...menuBtnStyle, textAlign: "left", outline: atelierPicking === which ? "2px solid #7c4fc0" : "none" }} onClick={() => setAtelierPicking(atelierPicking === which ? null : which)}>
+                                                {which === "a" ? "Ⓐ" : "Ⓑ"} {chosen ? `${displayName(chosen)} (${getSpecies(chosen.speciesId)?.types.join("/")}, N.${chosen.level})` : "— choisir —"}
+                                            </button>
+                                        )
+                                    })}
+                                    {atelierPicking && (
+                                        <div style={{ maxHeight: 176, overflowY: "auto", border: "1px solid rgba(120,120,120,0.35)", borderRadius: 6, margin: "4px 0", padding: 3 }}>
+                                            {collection.map((m) => {
+                                                const used = atelierAdd[atelierPicking === "a" ? "b" : "a"] === m.uid
+                                                return (
+                                                    <button key={m.uid} disabled={used} style={{ ...(used ? menuBtnDimStyle : menuBtnStyle), textAlign: "left", margin: "2px 0" }}
+                                                        onClick={() => { setAtelierAdd((d) => d ? { ...d, [atelierPicking]: m.uid } : d); setAtelierPicking(null) }}>
+                                                        {displayName(m)} <span style={{ opacity: 0.6, fontSize: 10 }}>{getSpecies(m.speciesId)?.types.join("/")} · N.{m.level}</span>
+                                                    </button>
+                                                )
+                                            })}
+                                        </div>
+                                    )}
+                                    {draftPreview && (
+                                        <div style={{ border: "1px solid #7c4fc0", borderRadius: 8, padding: "7px 10px", margin: "6px 0", background: "rgba(124,79,192,0.08)" }}>
+                                            <div style={{ fontWeight: 800, color: "#7c4fc0" }}>→ {draftPreview.name} <span style={{ fontSize: 11, opacity: 0.8 }}>[{draftPreview.types.join("/")}] N.{draftPreview.level}</span></div>
+                                            <div style={{ fontSize: 10.5, opacity: 0.85, marginTop: 2 }}>PV{draftPreview.stats.hp} · Atk{draftPreview.stats.atk} · Déf{draftPreview.stats.def} · SpA{draftPreview.stats.spcAtk} · SpD{draftPreview.stats.spcDef} · Vit{draftPreview.stats.spe}</div>
+                                        </div>
+                                    )}
+                                    <button style={draftPreview ? { ...menuBtnStyle, borderColor: "#7c4fc0", color: "#7c4fc0" } : menuBtnDimStyle} disabled={!draftPreview} onClick={confirmAdd}>✓ AJOUTER CETTE FUSION</button>
+                                    <button style={menuBtnDimStyle} onClick={() => { setAtelierAdd(null); setAtelierPicking(null) }}>← ANNULER</button>
+                                </>
+                            )}
                         </div>
                     </div>
                 )
