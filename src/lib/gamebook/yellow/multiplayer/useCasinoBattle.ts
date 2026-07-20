@@ -114,6 +114,14 @@ export function useCasinoBattle(
         } else {
             myTeam = getPlayer().team
         }
+        // FUSION : le roster a pu être VIDÉ entre le gate d'envoi/acceptation et ce build (le joueur ouvre
+        // le PC et retire ses fusions pendant l'attente du défi). Sans équipe → createBattle planterait les
+        // 2 clients. On abandonne PROPREMENT au lieu de crasher.
+        if (fu && myTeam.length === 0) {
+            fu.dispose(mySpeciesIds)
+            onAbortRef.current?.("Ton équipe de fusion est vide — assemble au moins une fusion au 💻 avant de combattre.")
+            return
+        }
         if (role === "A") seedRef.current = makeSeed()
         mpLog("battle", "session", { battleId, role, opp: oppNickname, fusion: !!fu })
 
@@ -131,7 +139,7 @@ export function useCasinoBattle(
             if (startedRef.current) return
             const opp = oppTeamRef.current
             const seed = seedRef.current
-            if (!opp || seed == null) return
+            if (!opp || opp.length === 0 || seed == null) return // équipe adverse vide (roster vidé) → on attend/abandonne, pas de combat vide
             startedRef.current = true
             const teamA = role === "A" ? myTeam : opp
             const teamB = role === "A" ? opp : myTeam

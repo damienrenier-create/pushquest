@@ -1248,7 +1248,10 @@ function submitPvpAction(action: PlayerAction) {
     // plafond — toutes les attaques sont jouables sans coût (cohérent avec l'UI canUse=true).
 
     // Stats PvP : Daemon fétiche + attaque favorite (sur les attaques).
-    if (action.kind === "move") {
+    // FUSION : on N'enregistre RIEN — le speciesId est éphémère ("fusion_uidA_uidB", disposé après le
+    // combat), il polluerait pvpStats.daemonUse (persisté) → « fétiche » = id brut affiché/diffusé aux
+    // autres joueurs + croissance non bornée. Comme l'épreuve solo (fusion:TRIAL), le PvP fusion ne compte pas.
+    if (action.kind === "move" && !ctx.ephemeralTeam) {
         const t = battle[mySide(ctx)]
         const meMon = t.team[t.activeIndex]
         if (meMon) {
@@ -1341,7 +1344,9 @@ function finishPvpBattle(b: BattleState) {
     // COMBAT AMICAL : après CHAQUE match PvP (gagnant comme perdant) on soigne l'équipe à fond
     // (PV/statut/PP) → un match casino ne déprime jamais ton équipe PvE. Pas de white-out : tu
     // restes sur place pour enchaîner / faire la revanche.
-    healAllTeam()
+    // FUSION : la vraie équipe n'a PAS combattu (fusions éphémères) → NE PAS la soigner (sinon soin
+    // gratuit à volonté en enchaînant des combats de fusion). Cohérent avec l'épreuve solo (0 soin).
+    if (!ctx.ephemeralTeam) healAllTeam()
     setStore({ battle: b, evolutions: evos, whiteout: false, pvpCtx: { ...ctx, won } })
     persistYellowSave()
     void processSaiyanPoints()
@@ -1373,7 +1378,7 @@ export function pvpForfeit(byMe: boolean, deliberate = true) {
     const ended = applyForfeitWin(battle, side, { multiplier: 1, headline: `${ctx.oppNickname} a abandonné le combat !` })
     recordPvpResult("win") // réputation
     if (!ctx.ephemeralTeam) setTeam(ended[side].team.map(toMonInstance)) // FUSION : équipe éphémère jamais persistée
-    healAllTeam() // combat amical terminé → équipe soignée (cohérent avec finishPvpBattle)
+    if (!ctx.ephemeralTeam) healAllTeam() // combat amical terminé → équipe soignée (FUSION : rien à soigner, elle n'a pas combattu)
     setStore({ battle: ended, pvpCtx: { ...ctx, won: true } })
     persistYellowSave()
     void processSaiyanPoints()
