@@ -351,6 +351,14 @@ export function startHofBattle(label: string, champTeam: ChampionMon[]): boolean
     return true
 }
 
+/** Combat de FUSION où le joueur pilote une équipe ÉPHÉMÈRE (Autel : épreuve `fusion:*` ; Ligue de Fusion `y_fusion_*`).
+ *  → l'équipe RÉELLE n'est jamais réécrite (setTeam/évolution sautés) et une défaite ne provoque PAS de whiteout
+ *  (la vraie équipe n'a pas combattu). NB : `y_fusion_*` passe quand même par markTrainerDefeated (le gating de la
+ *  Ligue), car la branche `fusion:` de finishBattle ne matche QUE le préfixe littéral `fusion:`. */
+export function isFusionBattleTrainer(trainerId?: string): boolean {
+    return trainerId?.startsWith("fusion:") === true || trainerId?.startsWith("y_fusion_") === true
+}
+
 /** ÉPREUVE DE FUSION (Autel de la Chimère) : le joueur PILOTE une équipe FUSIONNÉE éphémère (`fusionTeam`) contre
  *  une équipe IA. Combat SANDBOX : trainerId "fusion:TRIAL" → aucune écriture save (garde no-write-back ci-dessous),
  *  aucune XP, aucune capture, aucun objet. L'UI enregistre l'espèce custom AVANT (buildFusion) et la retire APRÈS
@@ -360,6 +368,19 @@ export function startFusionTrialBattle(fusionTeam: MonInstance[], enemyTeam: Mon
     const battle = createBattle(fusionTeam, enemyTeam, { isWild: false, seed, aiLevel: "hof", noItems: true, expMult: 0, playerBadgeCount: getPlayer().badges.length })
     // Pas de syncPokedex : l'épreuve ne marque AUCUN Pokédex (bac à sable). Le garde interne de syncPokedex couvre les tours suivants.
     setStore({ battle, evolutions: [], trainer: { trainerId: "fusion:TRIAL", reward: 0, isRematch: false }, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
+    persistBattleSnapshot()
+    return true
+}
+
+/** LIGUE DE FUSION : le joueur PILOTE son équipe de fusions (roster) contre l'équipe FUSIONNÉE d'un dresseur
+ *  `y_fusion_*`. IA "hof" (OBLIGATOIRE : les fusions ont une Déf Spé séparée `frozenSpd` que seul le scorer hof lit),
+ *  aucune XP/objet, AUCUN Pokédex (éphémère). Le trainerId `y_fusion_*` déclenche markTrainerDefeated (gating de la
+ *  Ligue), mais isFusionBattleTrainer protège la vraie équipe (0 réécriture) et évite le whiteout. L'appelant
+ *  enregistre/détruit les espèces éphémères (buildFusion/disposeFusion) des DEUX camps. */
+export function startFusionLeagueBattle(fusionTeam: MonInstance[], enemyTeam: MonInstance[], seed: number, trainerId: string): boolean {
+    if (fusionTeam.length === 0 || enemyTeam.length === 0 || !trainerId.startsWith("y_fusion_")) return false
+    const battle = createBattle(fusionTeam, enemyTeam, { isWild: false, seed, aiLevel: "hof", noItems: true, expMult: 0, playerBadgeCount: getPlayer().badges.length })
+    setStore({ battle, evolutions: [], trainer: { trainerId, reward: 0, isRematch: false }, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
     persistBattleSnapshot()
     return true
 }
@@ -486,7 +507,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // ÉPREUVE DE FUSION (bac à sable) : ne compte PAS dans les stats/score (sinon les victoires gonfleraient le
     //   win-ratio run 2), ne soigne pas la vraie équipe, ne téléporte pas (cf. plus bas). N'inclut PAS l'Usine
     //   (frontier:FACTORY garde son comportement historique).
-    const isFusionTrial = storeState.trainer?.trainerId?.startsWith("fusion:") === true
+    const isFusionTrial = isFusionBattleTrainer(storeState.trainer?.trainerId) // fusion:* (Autel) OU y_fusion_* (Ligue) → pas de whiteout
     // STATS de partie (per-world) — hors PvP + hors épreuve de fusion (le PvP a ses propres stats).
     if (!b.pvp && !isFusionTrial) {
         if (b.outcome === "win" || b.outcome === "lose" || b.outcome === "caught") bumpStat("battles")
@@ -505,7 +526,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     //    une équipe qui N'EST PAS la vraie → ne JAMAIS la réécrire dans le save, sinon on remplacerait l'équipe
     //    réelle du joueur par les rentals / le fusionné (perte de données). Ces combats ne font rien gagner à la
     //    vraie équipe (jetables). Nomme `isFactory` par héritage, sémantique = « équipe de combat non persistée ».
-    const isFactory = storeState.trainer?.trainerId === "frontier:FACTORY" || storeState.trainer?.trainerId?.startsWith("fusion:") === true
+    const isFactory = storeState.trainer?.trainerId === "frontier:FACTORY" || isFusionBattleTrainer(storeState.trainer?.trainerId) // équipe pilotée non persistée (location/fusion)
     if (!isFactory) setTeam(b.player.team.map(toMonInstance))
 
     // 2) Capture → ajoute le sauvage à l'équipe/PC.
