@@ -14,6 +14,7 @@ import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
 import { persistYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
 import { fetchFrontierProfile, postSpend } from "@/lib/gamebook/yellow/frontier/frontierApi"
+import { getCurrentNickname } from "@/lib/gamebook/yellow/store/gameStore"
 import { getCt } from "@/lib/gamebook/yellow/data/cts"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { HELD_ITEM_LIST, type HeldItemCategory } from "@/lib/gamebook/yellow/data/heldItems"
@@ -41,7 +42,13 @@ const LEGENDARY_LOT = ["gekroc", "gekraise", "gekosmic", "sylvebarbe"]
 const LEGENDARY_PRICE = 1500
 const LEGENDARY_LEVEL = 60
 
-export const GROTTE_ENTRY_COST = 5 // Jetons de Combat pour entrer dans la Grotte du Nexus (casse-tête)
+// COÛT D'ENTRÉE GROTTE (temporaire, Sartay) : 5 JC pour Mools (testeur), 2000 JC pour tous les autres → on garde
+// la Grotte quasi-fermée au reste du groupe tant que le contenu (fusions sauvages, PNJ 7, biotopes) est en chantier.
+const GROTTE_ENTRY_COST_MOOLS = 5
+const GROTTE_ENTRY_COST_OTHERS = 2000
+function grotteEntryCost(): number {
+    return getCurrentNickname().normalize("NFC").toLowerCase() === "mools" ? GROTTE_ENTRY_COST_MOOLS : GROTTE_ENTRY_COST_OTHERS
+}
 
 export default function CombatShopModal({ onClose, onEnterGrotte }: { onClose: () => void; onEnterGrotte?: () => void }) {
     const player = usePlayer()
@@ -81,8 +88,8 @@ export default function CombatShopModal({ onClose, onEnterGrotte }: { onClose: (
                     {onEnterGrotte && (
                         <Section title="🕳️ Grotte du Nexus">
                             <div style={{ fontSize: 10, opacity: 0.7, color: INK, marginBottom: 6, lineHeight: 1.3 }}>Le casse-tête souterrain (Mt. Moon). Le passage se paie en Jetons de Combat.</div>
-                            <Row label="⛏️ Entrer dans la Grotte" price={GROTTE_ENTRY_COST} disabled={busy || (jc ?? 0) < GROTTE_ENTRY_COST}
-                                onBuy={() => spend(GROTTE_ENTRY_COST, { grant: () => onEnterGrotte(), toast: "🕳️ Tu t'enfonces dans la Grotte du Nexus…" })} />
+                            <Row label="⛏️ Entrer dans la Grotte" price={grotteEntryCost()} disabled={busy || (jc ?? 0) < grotteEntryCost()}
+                                onBuy={() => spend(grotteEntryCost(), { grant: () => onEnterGrotte(), toast: "🕳️ Tu t'enfonces dans la Grotte du Nexus…" })} />
                         </Section>
                     )}
 

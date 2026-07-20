@@ -60,6 +60,7 @@ export interface ActiveDialogue {
 // Cendreville : certains joueurs (ex. « Ledé ») passent ACE même sans le Badge Flamme.
 let currentNickname = ""
 export function setCurrentNickname(n: string) { currentNickname = (n ?? "").trim() }
+export function getCurrentNickname(): string { return currentNickname }
 // Joueurs autorisés à franchir ACE sans le badge ET sans équipe (accès anticipé à Cendreville).
 // Match insensible à la casse et à la forme Unicode ("Ledé" / "Lede" / décomposé → ok).
 const CENDREVILLE_BYPASS = new Set(["ledé", "lede"])
