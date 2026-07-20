@@ -779,6 +779,93 @@ export const TRAINERS: TrainerData[] = [
             "*Ton reflet s'efface dans une volute mauve. Tu es, enfin, pleinement Maître du Nexus.*",
         ],
     },
+    // ===== LIGUE DE FUSION — Autel de la Chimère (Conseil des Chimères + Champion + Miroir) =====
+    // Le joueur PILOTE son roster de FUSIONS ; l'équipe adverse est bâtie à l'exécution (buildFusionLeagueTeam),
+    // donc `team` ci-dessous n'est JAMAIS fieldée (placeholder). aiLevel "hof" OBLIGATOIRE (Déf Spé séparée).
+    // Salles en enfilade `yellow_fusion_*`, gauntlet gated (requiresTrainers), entrée depuis l'Autel. 3 paliers.
+    {
+        id: "y_fusion_1", name: "LORELEI", title: "Conseil des Chimères",
+        sprite: { emoji: "🧊", color: "#5fc4d4" },
+        mapId: "yellow_fusion_glace", x: 10, y: 2,
+        team: [{ speciesId: "morrow", level: 80 }],
+        reward: 0, aiLevel: "hof",
+        intro: [
+            "*L'air se cristallise.* Bienvenue à la Ligue de Fusion, challenger. Je suis LORELEI, gardienne des chimères de GLACE.",
+            "Deux âmes fondues en une seule… mes chimères te figeront avant que tu ne comprennes. Montre-moi les tiennes !",
+        ],
+        defeat: ["Mes chimères de givre… fondues. Passe. Le Conseil t'attend, et l'on ne recule pas ici."],
+    },
+    {
+        id: "y_fusion_2", name: "BRUNO", title: "Conseil des Chimères",
+        sprite: { emoji: "🥊", color: "#c0392b" },
+        mapId: "yellow_fusion_combat", x: 10, y: 2,
+        requiresTrainers: ["y_fusion_1"],
+        team: [{ speciesId: "maitrezenc", level: 80 }],
+        reward: 0, aiLevel: "hof",
+        intro: [
+            "Hi-yah ! LORELEI t'a laissé passer ? Voyons si tu tiens face à la FORCE fusionnée.",
+            "Mes chimères de combat frappent deux fois plus fort qu'un Daemon seul. En garde !",
+        ],
+        defeat: ["Broyé par plus fort que mes colosses… Avance. La sortie est scellée derrière toi."],
+    },
+    {
+        id: "y_fusion_3", name: "AGATHA", title: "Conseil des Chimères",
+        sprite: { emoji: "👻", color: "#6b4e9e" },
+        mapId: "yellow_fusion_spectre", x: 10, y: 2,
+        requiresTrainers: ["y_fusion_2"],
+        team: [{ speciesId: "ombrapanthe", level: 80 }],
+        reward: 0, aiLevel: "hof",
+        intro: [
+            "Hi hi hi… Deux spectres pour le prix d'un. Je suis AGATHA, et mes chimères sont plus rapides que ton ombre.",
+            "Tu ne les verras même pas frapper. Amuse-moi… si tu peux.",
+        ],
+        defeat: ["Pfff… du cran, pour un vivant. File. L'avant-dernier siège est le plus cruel."],
+    },
+    {
+        id: "y_fusion_4", name: "PETER", title: "Conseil des Chimères",
+        sprite: { emoji: "🐉", color: "#6b34ec" },
+        mapId: "yellow_fusion_dragon", x: 10, y: 2,
+        requiresTrainers: ["y_fusion_3"],
+        team: [{ speciesId: "draconarque", level: 80 }],
+        reward: 0, aiLevel: "hof",
+        intro: [
+            "Je suis PETER, dernier du Conseil. Mes chimères DRAGON sont l'apogée de la fusion.",
+            "Deux légendes en une bête. Prie pour que tes fusions tiennent le choc !",
+        ],
+        defeat: ["Mes dragons-chimères, à terre… Impossible. Va. Le Champion des Chimères t'attend."],
+    },
+    {
+        id: "y_fusion_maitre", name: "ACE", title: "Champion des Chimères",
+        sprite: { emoji: "👑", color: "#b06cff" },
+        mapId: "yellow_fusion_maitre", x: 10, y: 2,
+        requiresTrainers: ["y_fusion_4"],
+        team: [{ speciesId: "golemini", level: 80 }],
+        reward: 0, aiLevel: "hof",
+        intro: [
+            "*Sur un trône de lumière mauve.* Te voilà. Le Conseil t'a jugé digne… on verra.",
+            "Je suis ACE, Champion des Chimères. Mon équipe rassemble les six fusions les plus parfaites du Nexus.",
+            "Bats-moi, et il ne te restera qu'un dernier adversaire… le plus terrible de tous.",
+        ],
+        defeat: ["« …Six chimères parfaites, vaincues. Tu es prêt. Mais es-tu prêt à t'affronter TOI-MÊME ? »"],
+    },
+    {
+        // MIROIR (combat FINAL) — l'équipe adverse est le REFLET du roster de fusions DU JOUEUR (bâti à l'exécution,
+        //   PAS via freezeTeam qui perdrait frozenSpd). Nom = pseudo du joueur (gameStore), sprite = halo mauve (MapView).
+        id: "y_fusion_miroir", name: "TON REFLET DE CHIMÈRE", title: "Le Miroir",
+        sprite: { emoji: "🪞", color: "#c98bff" },
+        mapId: "yellow_fusion_miroir", x: 10, y: 2,
+        requiresTrainers: ["y_fusion_maitre"],
+        team: [{ speciesId: "morrow", level: 80 }], // placeholder (jamais fieldé : reflet dynamique du roster)
+        reward: 0, aiLevel: "hof",
+        intro: [
+            "*Dans la lueur mauve de l'Autel, une silhouette te fait face — c'est TOI, tes chimères contre les siennes, identiques.*",
+            "« Je suis ce que tu as créé. Mêmes fusions, même puissance. Le seul moyen de me vaincre… c'est de mieux jouer que toi-même. »",
+        ],
+        defeat: [
+            "« …Tu m'as surpassé. Le titre est à toi. »",
+            "*Ton reflet se dissout dans l'Autel. Tu es, désormais, MAÎTRE DE LA CHIMÈRE.*",
+        ],
+    },
 ]
 
 const BY_ID = new Map(TRAINERS.map((t) => [t.id, t]))

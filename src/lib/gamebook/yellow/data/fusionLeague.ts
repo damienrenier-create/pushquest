@@ -107,3 +107,30 @@ export function disposeFusionLeagueTeam(team: BuiltFusion[]): void {
 export function allFusionLeaguePairs(): FusionPairDef[] {
     return FUSION_LEAGUE.flatMap((t) => t.pairs)
 }
+
+// ==================== FLUX DE LA LIGUE (dresseurs + paliers) ====================
+// Les dresseurs vivent dans data/trainers.ts sous ces ids. `y_fusion_1..4` + `y_fusion_maitre` mappent 1:1 sur
+// FUSION_LEAGUE (dans l'ordre) ; `y_fusion_miroir` est le combat final DYNAMIQUE (reflet du joueur, bâti ailleurs).
+export const FUSION_LEAGUE_ORDER = ["y_fusion_1", "y_fusion_2", "y_fusion_3", "y_fusion_4", "y_fusion_maitre"] as const
+
+/** Clé FUSION_LEAGUE (lorelei…) d'un dresseur `y_fusion_N`/`y_fusion_maitre`. null pour le miroir / un id inconnu. */
+export function fusionLeagueKeyForTrainer(trainerId: string): string | null {
+    const i = FUSION_LEAGUE_ORDER.indexOf(trainerId as (typeof FUSION_LEAGUE_ORDER)[number])
+    return i >= 0 ? FUSION_LEAGUE[i].key : null
+}
+
+// PALIERS EN ÉCHELLE — marqueurs de complétion persistés dans `defeatedTrainers` (per-monde, NON purgés par le
+// reset du gauntlet qui ne vise que `y_fusion_*`). Le palier ACTIF = le 1er non encore complété.
+export const FUSION_TIER_MARKER: Record<FusionTier, string> = {
+    bronze: "fusleague_bronze", argent: "fusleague_argent", or: "fusleague_or",
+}
+/** Palier actif (le plus haut débloqué mais pas encore bouclé). `isCleared(marker)` = a-t-on complété ce palier ? */
+export function activeFusionTier(isCleared: (marker: string) => boolean): FusionTier {
+    if (!isCleared(FUSION_TIER_MARKER.bronze)) return "bronze"
+    if (!isCleared(FUSION_TIER_MARKER.argent)) return "argent"
+    return "or"
+}
+/** A-t-on décroché le titre « Maître de la Chimère » (au moins Bronze bouclé) ? */
+export function isFusionChampion(isCleared: (marker: string) => boolean): boolean {
+    return isCleared(FUSION_TIER_MARKER.bronze)
+}

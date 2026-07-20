@@ -19,11 +19,13 @@ import type { BadgeId } from "../data/cts"
 import type { YellowMapData } from "../maps"
 import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
-import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, startRun3BossBattle, startNgPlusFinalBattle, resetFleeStreak } from "./battleStore"
+import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, startRun3BossBattle, startNgPlusFinalBattle, startFusionLeagueBattle, resetFleeStreak } from "./battleStore"
+import { buildFusion, disposeFusion, type BuiltFusion } from "../data/fusionMon"
+import { buildFusionLeagueTeam, fusionLeagueKeyForTrainer, activeFusionTier } from "../data/fusionLeague"
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, resetLigueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, pnj5WinsCount, addItem, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, pnj5WinsCount, addItem, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
 import { getHeldItem } from "../data/heldItems"
 import { BERRY_SECRET_LINES_ASSISTANT } from "../data/berryLore"
@@ -31,7 +33,7 @@ import { getSpecies } from "../data/species"
 import { persistYellowSave, canAbandonNgplus, getNgplusOldTeam } from "./saveManager"
 import { rollWildEncounter, wildLevelCap, hasEncounters } from "../data/encounters"
 import { reportShiny } from "../shinyGift"
-import { getTrainer, trainerBoost, arenaScaledLevel, type TrainTier } from "../data/trainers"
+import { getTrainer, trainerBoost, arenaScaledLevel, type TrainTier, type TrainerData } from "../data/trainers"
 import { NGPLUS_ARENA_TEAMS, RUN3_ARENA_TEAMS, arenaRevancheBoost, arenaRevancheIntro } from "../data/ngplusArenas"
 import { createMonInstance } from "../battle/factory"
 import { buildSbireTeam, SBIRE_MAX_FIGHTS_PER_DAY, SBIRE_TRAINER_ID, sbireIntroLines, SBIRE_DONE_LINES, SBIRE_NO_TEAM_LINES } from "../data/sbire"
@@ -72,6 +74,23 @@ const LIGUE_ROOM_TRAINER: Record<string, string> = {
     yellow_ligue_spectre: "y_ligue_3_agatha",
     yellow_ligue_dragon: "y_ligue_4_peter",
     yellow_ligue_rival: "y_ligue_maitre",
+}
+
+// LIGUE DE FUSION — même mécanique de porte scellée. La porte de PROGRESSION (→ salle fusion suivante) est
+// bloquée tant que la chimère n'est pas vaincue ; la porte de RETRAITE (→ Autel) reste toujours ouverte.
+const FUSION_ROOM_TRAINER: Record<string, string> = {
+    yellow_fusion_glace: "y_fusion_1",
+    yellow_fusion_combat: "y_fusion_2",
+    yellow_fusion_spectre: "y_fusion_3",
+    yellow_fusion_dragon: "y_fusion_4",
+    yellow_fusion_maitre: "y_fusion_maitre",
+}
+
+// Espèces éphémères du combat de Ligue de Fusion EN COURS (joueur + ennemi) → à détruire au lancement suivant.
+let pendingFusionLeagueSpecies: string[] = []
+function disposeFusionLeagueSpecies() {
+    for (const id of pendingFusionLeagueSpecies) disposeFusion(id)
+    pendingFusionLeagueSpecies = []
 }
 
 // GARANTIE DE DÉCOUVERTE — Centrale Psy (run 3) : état TRANSIENT par PASSAGE (non persisté). Tant qu'Hypnoppo
@@ -178,9 +197,49 @@ function saveNow(player: PlayerState) {
 
 // Lance un combat de dresseur. Renvoie un dialogue à afficher (équipe K.O.) ou null
 // si le combat a bien démarré. L'équipe ennemie est fabriquée à partir du registre.
+/** LIGUE DE FUSION — lance un combat : le joueur PILOTE son roster de fusions ; l'ennemi = équipe fusionnée du
+ *  dresseur (buildFusionLeagueTeam au palier actif), ou le REFLET du roster (miroir). Toutes les espèces éphémères
+ *  sont enregistrées ici et détruites au lancement suivant (disposeFusionLeagueSpecies). */
+function launchFusionLeague(trainerId: string, trainer: TrainerData): ActiveDialogue | null {
+    // ⚠️ Détruire le batch du combat PRÉCÉDENT AVANT de rebâtir : les fusions du joueur ont un id d'espèce
+    //   DÉTERMINISTE (mêmes parents de roster → même `fusion_<uidA>_<uidB>`). Disposer APRÈS le build
+    //   désenregistrerait l'espèce fraîchement construite → speciesOf throw → combat planté (cf. bug atelier).
+    disposeFusionLeagueSpecies()
+    const save = getPlayerSave()
+    const all = [...save.team, ...save.pc]
+    const byU = (uid: string) => all.find((m) => m.uid === uid)
+    const buildRoster = (): BuiltFusion[] => save.fusionRoster
+        .map((p) => { const a = byU(p.a), b = byU(p.b); return a && b && a.uid !== b.uid ? buildFusion(a, b) : null })
+        .filter((x): x is BuiltFusion => x !== null)
+
+    const playerFusions = buildRoster()
+    if (playerFusions.length === 0) {
+        return { npcId: trainerId, npcName: trainer.name, lineIndex: 0, lines: ["Assemble d'abord une équipe de chimères au 💻 de l'Autel avant de m'affronter !"] }
+    }
+
+    let enemyFusions: BuiltFusion[]
+    if (trainerId === "y_fusion_miroir") {
+        // MIROIR : le REFLET du roster (mêmes fusions, instances distinctes → PAS freezeTeam qui perdrait frozenSpd).
+        enemyFusions = buildRoster()
+    } else {
+        const key = fusionLeagueKeyForTrainer(trainerId)
+        if (!key) { playerFusions.forEach((f) => disposeFusion(f.speciesId)); return null }
+        const tier = activeFusionTier((m) => isTrainerDefeated(m))
+        enemyFusions = buildFusionLeagueTeam(key, tier)
+    }
+
+    pendingFusionLeagueSpecies = [...playerFusions, ...enemyFusions].map((f) => f.speciesId)
+    const seed = Math.floor(Math.random() * 1e9) >>> 0
+    startFusionLeagueBattle(playerFusions.map((f) => f.instance), enemyFusions.map((f) => f.instance), seed, trainerId)
+    return null
+}
+
 function tryLaunchTrainer(trainerId: string, isRematch = false): ActiveDialogue | null {
     const trainer = getTrainer(trainerId)
     if (!trainer) return null
+    // LIGUE DE FUSION : le joueur pilote son ROSTER de fusions (pas sa vraie équipe) → branche AVANT le check
+    //   équipe-KO (sa vraie équipe peut être K.O., on joue des chimères éphémères).
+    if (trainerId.startsWith("y_fusion_")) return launchFusionLeague(trainerId, trainer)
     const team = getPlayerSave().team
     if (!team.some((m) => m.currentHp > 0)) {
         return {
@@ -617,6 +676,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 // on recommence au début ») et même après une tentative K.O. (entrée par Cendreville).
                 resetLigueProgress()
             }
+            // ENTRÉE LIGUE DE FUSION (depuis l'Autel) : roster de fusions REQUIS, puis rescelle le gauntlet
+            //   (l'échelle de paliers `fusleague_*` est préservée) + repart sur un registre d'espèces propre.
+            if (targetMapId === "yellow_fusion_glace" && player.mapId === "yellow_combat_autel") {
+                if (getPlayerSave().fusionRoster.length === 0) {
+                    set({ player: next, dialogue: { npcId: "y_fusion_gate", npcName: "AUTEL DE LA CHIMÈRE", lineIndex: 0, lines: ["La Ligue de Fusion exige une équipe de chimères. Assemble-la au 💻 de l'Autel, puis reviens !"] } })
+                    scheduleSave(next)
+                    return
+                }
+                resetFusionLeagueProgress()
+                disposeFusionLeagueSpecies()
+            }
             // GATE GAUNTLET LIGUE : la porte DROITE d'une salle ne s'ouvre qu'une fois SON adversaire vaincu
             // (point de non-retour : pas de retour par la gauche, aucune infirmerie — potions seulement).
             const roomTrainer = LIGUE_ROOM_TRAINER[player.mapId]
@@ -625,6 +695,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 set({
                     player: next,
                     dialogue: { npcId: roomTrainer, npcName: "LIGUE", lineIndex: 0, lines: [`La porte est scellée. Tu dois d'abord vaincre ${tName} pour avancer !`] },
+                })
+                scheduleSave(next)
+                return
+            }
+            // GATE GAUNTLET LIGUE DE FUSION : la porte de PROGRESSION (→ salle fusion suivante) est scellée tant
+            //   que la chimère de la salle n'est pas vaincue. La RETRAITE (→ Autel) reste TOUJOURS ouverte.
+            const fusionRoomTrainer = FUSION_ROOM_TRAINER[player.mapId]
+            if (fusionRoomTrainer && targetMapId.startsWith("yellow_fusion_") && !isTrainerDefeated(fusionRoomTrainer)) {
+                const tName = getTrainer(fusionRoomTrainer)?.name ?? "la chimère"
+                set({
+                    player: next,
+                    dialogue: { npcId: fusionRoomTrainer, npcName: "LIGUE DE FUSION", lineIndex: 0, lines: [`La porte est scellée. Vaincs d'abord ${tName} pour avancer !`] },
                 })
                 scheduleSave(next)
                 return
@@ -1405,8 +1487,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 // Plus de rematch/revanche (ou déjà fait) → simple réplique de défaite.
                 set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: trainer.defeat, lineIndex: 0 } })
             } else {
-                // TON DOUBLE : le PNJ porte TON pseudo (comme si tu affrontais ta propre légende).
-                const dispName = trainer.id === "y_ligue_double" ? (currentNickname || npc.name) : npc.name
+                // TON DOUBLE / TON REFLET DE CHIMÈRE : le PNJ porte TON pseudo (tu affrontes ta propre légende).
+                const dispName = (trainer.id === "y_ligue_double" || trainer.id === "y_fusion_miroir") ? (currentNickname || npc.name) : npc.name
                 set({
                     dialogue: { npcId: npc.id, npcName: dispName, lines: trainer.intro, lineIndex: 0 },
                     pendingTrainerId: trainer.id, pendingRematch: false,

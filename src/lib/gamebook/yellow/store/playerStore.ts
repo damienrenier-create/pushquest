@@ -667,6 +667,15 @@ export function resetLigueProgress() {
     emit()
 }
 
+/** LIGUE DE FUSION : rescelle le gauntlet (oublie les victoires `y_fusion_*`) à chaque nouvelle entrée de palier.
+ *  ⚠️ Ne touche PAS les marqueurs de palier `fusleague_*` (préfixe différent) → l'échelle Bronze/Argent/Or persiste. */
+export function resetFusionLeagueProgress() {
+    const cleaned = st.defeatedTrainers.filter((id) => !id.startsWith("y_fusion_"))
+    if (cleaned.length === st.defeatedTrainers.length) return
+    st = { ...st, defeatedTrainers: cleaned }
+    emit()
+}
+
 /** Marque un dresseur comme RE-battu (rematch / match retour fait, idempotent). */
 export function markTrainerRematched(trainerId: string) {
     if (st.rematchedTrainers.includes(trainerId)) return

@@ -1165,7 +1165,12 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
     yellow_combat_autel: {
         id: "yellow_combat_autel", name: "AUTEL DE LA CHIMÈRE", tiles: buildAutelChimereRoom(), width: 18, height: 10,
         backgroundImage: "/yellow/sprites/fusion_altar.png", backgroundImageWidth: 2752, backgroundImageHeight: 1536, backgroundImageTileSize: 153, // 2752/18 ≈ 153
-        exits: [{ x: 9, y: 9, targetMapId: "yellow_zone_combat", targetSpawnX: 13, targetSpawnY: 10 }],
+        exits: [
+            { x: 9, y: 9, targetMapId: "yellow_zone_combat", targetSpawnX: 13, targetSpawnY: 10 },
+            // ENTRÉE LIGUE DE FUSION (porte haute, au-delà de l'autel) → 1re salle. Le gameStore réinitialise le
+            // gauntlet à l'entrée (resetFusionLeagueProgress) et lance au palier actif. Art de la porte = à poser.
+            { x: 9, y: 0, targetMapId: "yellow_fusion_glace", targetSpawnX: 3, targetSpawnY: 6 },
+        ],
     },
     yellow_cendreville: {
         id: "yellow_cendreville",
@@ -1418,6 +1423,51 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         id: "yellow_ligue_final", name: "LIGUE — SALLE ULTIME", tiles: buildLigueRoom(), width: 22, height: 12,
         exits: [5, 6, 7].map((y) => ({ x: 19, y, targetMapId: "yellow_cendreville", targetSpawnX: 21, targetSpawnY: 32 })),
         backgroundImage: "/yellow/sprites/ligue_final.png", backgroundImageWidth: 1408, backgroundImageHeight: 768, backgroundImageTileSize: 64,
+    },
+    // ===== LIGUE DE FUSION — venue (5 salles Conseil + Champion + Miroir), entrée depuis l'Autel =====
+    // Salles en enfilade (porte DROITE scellée tant que la chimère de la salle n'est pas vaincue, gating gameStore).
+    // Porte GAUCHE (2,6) = RETRAITE → Autel (pas de whiteout en fusion : le joueur peut toujours regrouper son roster).
+    // Salles en TUILES (art de fond à poser plus tard, comme les sprites). PNJ auto-dérivés des TRAINERS.
+    yellow_fusion_glace: {
+        id: "yellow_fusion_glace", name: "LIGUE FUSION — GLACE", tiles: buildLigueRoom(), width: 22, height: 12,
+        exits: [
+            ...[5, 6, 7].map((y) => ({ x: 19, y, targetMapId: "yellow_fusion_combat", targetSpawnX: 3, targetSpawnY: 6 })),
+            { x: 2, y: 6, targetMapId: "yellow_combat_autel", targetSpawnX: 9, targetSpawnY: 8 },
+        ],
+    },
+    yellow_fusion_combat: {
+        id: "yellow_fusion_combat", name: "LIGUE FUSION — COMBAT", tiles: buildLigueRoom(), width: 22, height: 12,
+        exits: [
+            ...[5, 6, 7].map((y) => ({ x: 19, y, targetMapId: "yellow_fusion_spectre", targetSpawnX: 3, targetSpawnY: 6 })),
+            { x: 2, y: 6, targetMapId: "yellow_combat_autel", targetSpawnX: 9, targetSpawnY: 8 },
+        ],
+    },
+    yellow_fusion_spectre: {
+        id: "yellow_fusion_spectre", name: "LIGUE FUSION — SPECTRE", tiles: buildLigueRoom(), width: 22, height: 12,
+        exits: [
+            ...[5, 6, 7].map((y) => ({ x: 19, y, targetMapId: "yellow_fusion_dragon", targetSpawnX: 3, targetSpawnY: 6 })),
+            { x: 2, y: 6, targetMapId: "yellow_combat_autel", targetSpawnX: 9, targetSpawnY: 8 },
+        ],
+    },
+    yellow_fusion_dragon: {
+        id: "yellow_fusion_dragon", name: "LIGUE FUSION — DRAGON", tiles: buildLigueRoom(), width: 22, height: 12,
+        exits: [
+            ...[5, 6, 7].map((y) => ({ x: 19, y, targetMapId: "yellow_fusion_maitre", targetSpawnX: 3, targetSpawnY: 6 })),
+            { x: 2, y: 6, targetMapId: "yellow_combat_autel", targetSpawnX: 9, targetSpawnY: 8 },
+        ],
+    },
+    yellow_fusion_maitre: {
+        id: "yellow_fusion_maitre", name: "LIGUE FUSION — CHAMPION", tiles: buildLigueRoom(), width: 22, height: 12,
+        exits: [
+            ...[5, 6, 7].map((y) => ({ x: 19, y, targetMapId: "yellow_fusion_miroir", targetSpawnX: 3, targetSpawnY: 6 })),
+            { x: 2, y: 6, targetMapId: "yellow_combat_autel", targetSpawnX: 9, targetSpawnY: 8 },
+        ],
+    },
+    yellow_fusion_miroir: {
+        id: "yellow_fusion_miroir", name: "LIGUE FUSION — LE MIROIR", tiles: buildLigueRoom(), width: 22, height: 12,
+        // Porte droite = SORTIE (après avoir vaincu ton reflet) → Autel. Porte gauche = retraite → Autel.
+        exits: [5, 6, 7].map((y) => ({ x: 19, y, targetMapId: "yellow_combat_autel", targetSpawnX: 9, targetSpawnY: 8 }))
+            .concat([{ x: 2, y: 6, targetMapId: "yellow_combat_autel", targetSpawnX: 9, targetSpawnY: 8 }]),
     },
     // ===== ARÈNE EAU "SANCTUAIRE DES MARÉES" (Cendreville, badge eau) =====
     yellow_arena_eau: {
