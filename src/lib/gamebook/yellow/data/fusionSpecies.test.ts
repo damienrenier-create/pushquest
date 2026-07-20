@@ -62,6 +62,15 @@ describe("fusion — types & divers", () => {
         expect(ab).toEqual(ba)
     })
 
+    it("split à VITESSE ÉGALE : spc la plus haute → SpA, indépendant de l'ordre (PvP déterministe)", () => {
+        const A: FusionParent = { name: "Alpha", types: ["FEU"], stats: { hp: 60, atk: 60, def: 60, spe: 80, spc: 50 }, level: 50 }
+        const B: FusionParent = { name: "Beta", types: ["EAU"], stats: { hp: 60, atk: 60, def: 60, spe: 80, spc: 90 }, level: 50 }
+        const ab = fuseStats(A, B), ba = fuseStats(B, A)
+        expect(ab).toEqual(ba)          // même vitesse (80) → l'ordre ne change PLUS rien
+        expect(ab.spcAtk).toBe(90)      // spc la plus haute (B) → SpA
+        expect(ab.spcDef).toBe(50)
+    })
+
     it("niveau = max(parents)", () => {
         expect(computeFusion(P("razmaree", 40), P("divinpate", 71)).level).toBe(71)
     })

@@ -9,7 +9,8 @@
 //   • Stats hp/atk/déf/vit : sur chaque parent, classer ses 4 stats (spc EXCLUE) → 2 hautes DOMINANTES (×0,6),
 //     2 basses RÉCESSIVES (×0,4). fusion[s] = poidsA·A[s] + poidsB·B[s]. Dom+dom = 120 % (peut DÉPASSER les
 //     parents), dom+réc = 100 %, réc+réc = 80 %. Départage déterministe (ordre hp>atk>déf>vit).
-//   • Spéciale : SpA = spc du parent le plus RAPIDE, SpD = spc du plus LENT (valeurs pleines).
+//   • Spéciale : SpA = spc du parent le plus RAPIDE, SpD = spc du plus LENT (valeurs pleines ; à vitesse égale,
+//     la spc la plus haute → SpA, départage intrinsèque → indépendant de l'ordre).
 //   • Niveau = max(parents). Les stats reçues sont les stats FINALES réelles (le module est agnostique base/finale).
 //   • Types : 2 mono → bi-type ; sinon garder les 2 types les plus fidèles aux plus grosses stats (table stat-
 //     représentative par type, DIVERSIFIÉE = 2 dimensions distinctes ; un type spécial matche sur la SpA seule).
@@ -49,11 +50,14 @@ export function fusionWeights(stats: Readonly<Record<StatKey, number>>): Record<
     return w
 }
 
-/** Génétique des 4 stats + split de la Spéciale par la vitesse (rapide → SpA, lent → SpD ; égalité → parent A). */
+/** Génétique des 4 stats + split de la Spéciale par la vitesse (rapide → SpA, lent → SpD). Égalité de vitesse
+ *  départagée par la spc la PLUS HAUTE → SpA : départage INTRINSÈQUE à la paire → fuseStats est totalement
+ *  INDÉPENDANT de l'ordre des parents (important pour le futur PvP déterministe). */
 export function fuseStats(a: FusionParent, b: FusionParent): FusionStats {
     const wA = fusionWeights(a.stats), wB = fusionWeights(b.stats)
     const s = (k: StatKey) => Math.round(wA[k] * a.stats[k] + wB[k] * b.stats[k])
-    const [fast, slow] = a.stats.spe >= b.stats.spe ? [a, b] : [b, a]
+    const aFast = a.stats.spe > b.stats.spe || (a.stats.spe === b.stats.spe && a.stats.spc >= b.stats.spc)
+    const [fast, slow] = aFast ? [a, b] : [b, a]
     return { hp: s("hp"), atk: s("atk"), def: s("def"), spe: s("spe"), spcAtk: fast.stats.spc, spcDef: slow.stats.spc }
 }
 
@@ -88,7 +92,9 @@ function repValue(type: PokeType, fused: FusionStats): number {
 }
 
 /** Typage du fusionné : union dédupliquée des types parents ; si > 2, on garde les 2 les plus fidèles aux plus
- *  grosses stats, en DIVERSIFIANT (2 dimensions de stat distinctes → évite 2 types du même axe, ex. atk+atk). */
+ *  grosses stats, en DIVERSIFIANT (2 dimensions de stat distinctes → évite 2 types du même axe, ex. atk+atk).
+ *  NB : pour cand ≥ 3, types[0] = le type le plus STAT-FIDÈLE (pas forcément le primaire du parent tête) ; sans
+ *  effet gameplay (STAB Gen-1 agnostique à l'ordre), c'est juste l'identité affichée. */
 export function fuseTypes(a: FusionParent, b: FusionParent, fused: FusionStats): PokeType[] {
     const cand = [...new Set([...a.types, ...b.types])]
     if (cand.length <= 2) return cand
