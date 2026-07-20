@@ -94,6 +94,7 @@ interface GameStore {
     labOpen: boolean // Terminal d'expériences (labo, étage de l'infirmerie)
     combatShopOpen: boolean // Boutique de Jetons de Combat (marchand du hub Zone de Combat) — inclut l'entrée Grotte du Nexus
     domeMenuOpen: boolean // carrousel du MAÎTRE DU DÔME (mage central) : S'inscrire / Règles / Stats
+    fusionMenuOpen: boolean // AUTEL DE LA CHIMÈRE : choisir 2 Daemons → fusion → combat-épreuve
     signOpen: number | null // index du panneau du parc ouvert (pop-up dédié), null = fermé
     posterImage: string | null // poster mural du Centre affiché en overlay (src PNG), null = fermé
     poster2Step: number // compteur de SESSION du poster (12,0) : 0→PNG2 · 1→PNG3 · 2+→Dieu des Pâtes
@@ -135,6 +136,7 @@ interface GameStore {
     closeLab: () => void
     closeCombatShop: () => void
     closeDomeMenu: () => void
+    closeFusionMenu: () => void
     closeSign: () => void
     closePoster: () => void
     /** Affiche un dialogue simple (ex. explication post-combat du sbire). */
@@ -473,6 +475,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     labOpen: false,
     combatShopOpen: false,
     domeMenuOpen: false,
+    fusionMenuOpen: false,
     signOpen: null,
     posterImage: null,
     poster2Step: 0,
@@ -498,7 +501,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     move: (dir) => {
         const { player, map, dialogue } = get()
         // Mouvement bloqué pendant un dialogue, une boutique, le PC ou un combat.
-        if (dialogue || get().shopOpen || get().pcOpen || get().guideOpen || get().arenaInfoOpen !== null || get().libraryOpen || get().advisorOpen || get().labOpen || get().combatShopOpen || get().domeMenuOpen || get().signOpen !== null) return
+        if (dialogue || get().shopOpen || get().pcOpen || get().guideOpen || get().arenaInfoOpen !== null || get().libraryOpen || get().advisorOpen || get().labOpen || get().combatShopOpen || get().domeMenuOpen || get().fusionMenuOpen || get().signOpen !== null) return
         if (getBattleSnapshot().battle) return
 
         const next = tryMove(player, dir, map)
@@ -934,6 +937,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // MAÎTRE DU DÔME (mage central) : ouvre le carrousel (S'inscrire / Règles / Stats).
         if (npc.id === "y_dome_maitre") {
             set({ domeMenuOpen: true })
+            return
+        }
+        // AUTEL DE LA CHIMÈRE : ouvre le flux de fusion (choisir 2 Daemons → aperçu → combat-épreuve).
+        if (npc.id === "y_autel_chimere") {
+            set({ fusionMenuOpen: true })
             return
         }
 
@@ -1481,6 +1489,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     closeLab: () => set({ labOpen: false }),
     closeCombatShop: () => set({ combatShopOpen: false }),
     closeDomeMenu: () => set({ domeMenuOpen: false }),
+    closeFusionMenu: () => set({ fusionMenuOpen: false }),
     closeSign: () => set({ signOpen: null }),
     closePoster: () => set({ posterImage: null }),
     closePc: () => set({ pcOpen: false }),

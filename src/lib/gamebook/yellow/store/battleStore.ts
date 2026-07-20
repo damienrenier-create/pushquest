@@ -61,6 +61,8 @@ function enemyActiveSpeciesId(b: BattleState): string | null {
 
 /** Met à jour le Pokédex depuis l'état de combat (vu, et capturé si applicable). */
 function syncPokedex(b: BattleState) {
+    // ÉPREUVE DE FUSION (bac à sable) : les gardiens IA ne sont PAS de vraies rencontres → ne pas polluer le Pokédex « vu ».
+    if (storeState.trainer?.trainerId?.startsWith("fusion:")) return
     const sp = enemyActiveSpeciesId(b)
     if (!sp) return
     const caught = b.outcome === "caught"
@@ -345,6 +347,19 @@ export function startHofBattle(label: string, champTeam: ChampionMon[]): boolean
     return true
 }
 
+/** ÉPREUVE DE FUSION (Autel de la Chimère) : le joueur PILOTE une équipe FUSIONNÉE éphémère (`fusionTeam`) contre
+ *  une équipe IA. Combat SANDBOX : trainerId "fusion:TRIAL" → aucune écriture save (garde no-write-back ci-dessous),
+ *  aucune XP, aucune capture, aucun objet. L'UI enregistre l'espèce custom AVANT (buildFusion) et la retire APRÈS
+ *  (disposeFusion). Les 2 Daemons parents ne sont JAMAIS touchés (ils ne sont pas dans fusionTeam). */
+export function startFusionTrialBattle(fusionTeam: MonInstance[], enemyTeam: MonInstance[], seed: number): boolean {
+    if (fusionTeam.length === 0 || enemyTeam.length === 0) return false
+    const battle = createBattle(fusionTeam, enemyTeam, { isWild: false, seed, aiLevel: "hof", noItems: true, expMult: 0, playerBadgeCount: getPlayer().badges.length })
+    // Pas de syncPokedex : l'épreuve ne marque AUCUN Pokédex (bac à sable). Le garde interne de syncPokedex couvre les tours suivants.
+    setStore({ battle, evolutions: [], trainer: { trainerId: "fusion:TRIAL", reward: 0, isRematch: false }, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, newDexEntry: null })
+    persistBattleSnapshot()
+    return true
+}
+
 /** NG+ — COMBAT DE FIN DE LIGUE contre l'ancienne équipe (figée en ChampionMon[]). VRAI combat : XP normale,
  *  sac autorisé, IA la plus maligne ("hof"). Adversaire owned:false (incapturable, stats gelées). Retourne
  *  false si l'équipe du joueur est vide/K.O. (soigner d'abord) ou pas d'ancienne équipe. */
@@ -464,8 +479,12 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // NG+ : chaque combat (sauvages inclus) consomme la fenêtre d'abandon (≤ NGPLUS_ABANDON_LIMIT). No-op hors NG+.
     if (getActiveWorld() === "ngplus") incNgplusBattles()
 
-    // STATS de partie (per-world) — hors PvP (le PvP a ses propres stats). Un combat « joué » = win/lose/caught.
-    if (!b.pvp) {
+    // ÉPREUVE DE FUSION (bac à sable) : ne compte PAS dans les stats/score (sinon les victoires gonfleraient le
+    //   win-ratio run 2), ne soigne pas la vraie équipe, ne téléporte pas (cf. plus bas). N'inclut PAS l'Usine
+    //   (frontier:FACTORY garde son comportement historique).
+    const isFusionTrial = storeState.trainer?.trainerId?.startsWith("fusion:") === true
+    // STATS de partie (per-world) — hors PvP + hors épreuve de fusion (le PvP a ses propres stats).
+    if (!b.pvp && !isFusionTrial) {
         if (b.outcome === "win" || b.outcome === "lose" || b.outcome === "caught") bumpStat("battles")
         if (b.outcome === "win") bumpStat("wins")
         if (b.outcome === "lose") bumpStat("teamKos")          // équipe mise KO (défaite)
@@ -478,11 +497,11 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     //   CONSTANTE (le plafond) au lieu de la frugalité réelle. On fige donc la valeur ici, à la fin du combat.
     const energyAtKo = getPlayer().reps
     // 1) Resynchronise l'équipe persistante depuis l'état de combat.
-    //    ⚠️ EXCEPTION USINE (frontier:FACTORY) : on a joué une équipe de LOCATION (createMonInstance
-    //    owned:false), PAS la vraie équipe → ne JAMAIS la réécrire dans le save, sinon on remplacerait
-    //    l'équipe réelle du joueur par les Daemons loués (perte de données). L'Usine ne fait rien gagner
-    //    à la vraie équipe (rentals jetables, façon Émeraude).
-    const isFactory = storeState.trainer?.trainerId === "frontier:FACTORY"
+    //    ⚠️ SANDBOX (frontier:FACTORY = équipe de location ; fusion:TRIAL = Daemon FUSIONNÉ éphémère) : on a joué
+    //    une équipe qui N'EST PAS la vraie → ne JAMAIS la réécrire dans le save, sinon on remplacerait l'équipe
+    //    réelle du joueur par les rentals / le fusionné (perte de données). Ces combats ne font rien gagner à la
+    //    vraie équipe (jetables). Nomme `isFactory` par héritage, sémantique = « équipe de combat non persistée ».
+    const isFactory = storeState.trainer?.trainerId === "frontier:FACTORY" || storeState.trainer?.trainerId?.startsWith("fusion:") === true
     if (!isFactory) setTeam(b.player.team.map(toMonInstance))
 
     // 2) Capture → ajoute le sauvage à l'équipe/PC.
@@ -750,6 +769,9 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
         } else if (storeState.trainer.trainerId.startsWith("hof:")) {
             // HALL OF FAME : combat amical contre une équipe figée → AUCUNE récompense, aucun marquage,
             // aucun badge. Juste l'honneur (et l'énergie déjà dépensée pour attaquer). Rien à faire ici.
+        } else if (storeState.trainer.trainerId.startsWith("fusion:")) {
+            // ÉPREUVE DE FUSION (Autel de la Chimère) : combat sandbox → AUCUNE récompense, aucun marquage, aucun
+            // badge. L'équipe (le fusionné) n'est pas réécrite (isFactory ci-dessus). L'UI retire l'espèce éphémère.
         } else {
             markTrainerDefeated(storeState.trainer.trainerId)
             const t = getTrainer(storeState.trainer.trainerId)
@@ -899,7 +921,9 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // 2ter) Défaite (équipe entièrement K.O.) : on soigne tout de suite et on
     //       signale un "whiteout" → la carte renverra le joueur au Centre.
     const isLose = b.outcome === "lose"
-    if (isLose) healAllTeam()
+    // ÉPREUVE DE FUSION : une défaite ne soigne PAS la vraie équipe (elle n'a pas combattu) — sinon soin gratuit
+    //   exploitable — et ne provoque pas de whiteout (on reste dans la salle). La vraie équipe est intacte.
+    if (isLose && !isFusionTrial) healAllTeam()
     // Raillerie d'ACE quand IL gagne (défaite du joueur contre ACE) → affichée à la sortie du combat.
     const aceLossTaunt = (isLose && storeState.trainer?.trainerId === ACE_TRAINER_ID) ? aceWinTaunt() : null
     // DUEL reflet : signale l'issue (gagné/perdu) → l'UI applique les récompenses post-combat.
@@ -944,7 +968,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // Un Daemon a-t-il une attaque EN ATTENTE (slots pleins à la montée de niveau / l'évolution) ? → prompt post-combat.
     const pendingLearn = getPlayer().team.some((m) => (m.pendingMoves?.length ?? 0) > 0)
     // Expose les évolutions pour la cinématique post-combat (jouée après "QUITTER").
-    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, arenaRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward, lavapetitTeaser, justCaught: b.outcome === "caught", ngplusFinalPending: storeState.ngplusFinalPending || ngplusMaitreWin, ngplusFinalResult })
+    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose && !isFusionTrial, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, arenaRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward, lavapetitTeaser, justCaught: b.outcome === "caught", ngplusFinalPending: storeState.ngplusFinalPending || ngplusMaitreWin, ngplusFinalResult })
 
     // 4) Sauvegarde persistante (DB).
     persistYellowSave()

@@ -1071,6 +1071,13 @@ function buildZoneRoom(W: number, H: number): TileType[][] {
     m[H - 1][Math.floor(W / 2)] = "path" // porte (case de sortie)
     return m
 }
+// AUTEL DE LA CHIMÈRE (18×10) : pièce ouverte + collision sur la PLATEFORME centrale (Poké-ball) → on la contourne
+//   et on interagit avec le PNJ posé DEVANT (9,6). Bassins/PC laissés walkables (à affiner en jeu via la debug map).
+function buildAutelChimereRoom(): TileType[][] {
+    const m = buildZoneRoom(18, 10)
+    for (let y = 4; y <= 5; y++) for (let x = 8; x <= 10; x++) m[y][x] = "tree" // "tree" = case bloquée (invisible sous le backgroundImage)
+    return m
+}
 
 // GROTTE DU NEXUS — 1er étage (casse-tête Mt. Moon endgame). Collision v1 AUTO-échantillonnée depuis
 // grotte_casse_tete.png (void + gros rochers bloquants) → à CALER finement en jeu via debugGrid. 49×42.
@@ -1129,6 +1136,9 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         buildings: ZONE_COMBAT_BUILDINGS,
         exits: [
             ...exitsFromBuildings(ZONE_COMBAT_BUILDINGS),
+            // ENTRÉE « AUTEL DE LA CHIMÈRE » (salle de FUSION) : exit brut sur une case walkable OUVERTE (13,9)
+            //   (le hub a un backgroundImage → pas de 4e façade rendue ; panneau PNJ y_autel_panneau en (12,9) pour signaler).
+            { x: 13, y: 9, targetMapId: "yellow_combat_autel", targetSpawnX: 9, targetSpawnY: 8 },
             // sortie SUD → retour Ville Jaune (cols 9-10, en bas : on repart par où on est arrivé)
             ...[9, 10].map((x) => ({ x, y: ZONE_H - 1, targetMapId: YELLOW_ENTRANCE_MAP_ID, targetSpawnX: 23, targetSpawnY: 37 })),
         ],
@@ -1149,6 +1159,13 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         id: "yellow_combat_dome", name: "DÔME DE COMBAT", tiles: buildZoneRoom(16, 12), width: 16, height: 12,
         backgroundImage: "/yellow/sprites/combat_dome.png", backgroundImageWidth: 2400, backgroundImageHeight: 1792, backgroundImageTileSize: 150,
         exits: [{ x: 8, y: 11, targetMapId: "yellow_zone_combat", targetSpawnX: 15, targetSpawnY: 7 }],
+    },
+    // SALLE DE FUSION « Autel de la Chimère » : fusionner 2 Daemons pour un combat-épreuve (cf. data/fusionMon).
+    //   Pièce 18×10 (murs périphériques), sprite plein cadre. PNJ autel DEVANT la plateforme en (9,6), sortie bas-centre (9,9).
+    yellow_combat_autel: {
+        id: "yellow_combat_autel", name: "AUTEL DE LA CHIMÈRE", tiles: buildAutelChimereRoom(), width: 18, height: 10,
+        backgroundImage: "/yellow/sprites/fusion_altar.png", backgroundImageWidth: 2752, backgroundImageHeight: 1536, backgroundImageTileSize: 153, // 2752/18 ≈ 153
+        exits: [{ x: 9, y: 9, targetMapId: "yellow_zone_combat", targetSpawnX: 13, targetSpawnY: 10 }],
     },
     yellow_cendreville: {
         id: "yellow_cendreville",

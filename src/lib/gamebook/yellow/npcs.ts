@@ -522,6 +522,32 @@ export const YELLOW_NPCS: NpcDefinition[] = [
     // === PANNEAUX DE CONSEILS (map Nord) ===
     ...PARK_SIGN_NPCS,
 
+    // === AUTEL DE LA CHIMÈRE (salle de fusion) — DEVANT la plateforme centrale en (9,6). Interaction interceptée dans gameStore
+    //     (npc.id === "y_autel_chimere" → fusionMenuOpen) ; dialoguesAfter = repli. ===
+    {
+        id: "y_autel_chimere",
+        name: "AUTEL DE LA CHIMÈRE",
+        mapId: "yellow_combat_autel",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🧬", color: "#7c4fc0" },
+        initialX: 9,
+        initialY: 6,
+        dialoguesAfter: ["« Pose deux Daemons sur l'autel… et n'en fais plus qu'UN, le temps d'un combat. »"],
+    },
+    // === PANNEAU d'entrée de l'Autel (hub Zone de Combat, en 12,9) : signale l'entrée invisible en (13,9). ===
+    {
+        id: "y_autel_panneau",
+        name: "PANNEAU",
+        mapId: "yellow_zone_combat",
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🪧", color: "#7c4fc0" },
+        initialX: 12,
+        initialY: 9,
+        dialoguesAfter: ["*Tu lis le panneau.*", "🧬 AUTEL DE LA CHIMÈRE", "Entre par la case à l'EST pour fusionner 2 Daemons."],
+    },
+
     // === DRESSEURS (combats) — dérivés de data/trainers.ts ===
     ...TRAINER_NPCS,
 ]

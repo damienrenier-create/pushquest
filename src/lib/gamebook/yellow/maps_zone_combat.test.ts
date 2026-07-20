@@ -33,3 +33,32 @@ describe("Zone de Combat — map", () => {
         expect(south.map((e) => e.x).sort((a, b) => a - b)).toEqual([9, 10])
     })
 })
+
+// AUTEL DE LA CHIMÈRE (salle de fusion) : map + entrée depuis le hub + collisions cohérentes (autel bloqué, PNJ libre).
+describe("Autel de la Chimère — salle de fusion", () => {
+    const z = YELLOW_MAPS["yellow_zone_combat"]
+    const autel = YELLOW_MAPS["yellow_combat_autel"]
+    const blocked = (m: typeof autel, x: number, y: number) => isBlockingTile(m.tiles[y][x])
+
+    it("la map existe (18×10, sprite fusion) + sortie retour vers le hub sur une case walkable", () => {
+        expect(autel).toBeDefined()
+        expect([autel.width, autel.height]).toEqual([18, 10])
+        expect(autel.backgroundImage ?? "").toContain("fusion_altar")
+        const back = (autel.exits ?? []).find((e) => e.targetMapId === "yellow_zone_combat")
+        expect(back).toBeDefined()
+        expect(blocked(autel, back!.x, back!.y)).toBe(false) // case de sortie praticable
+    })
+
+    it("l'entrée depuis le hub cible la salle, sur une case walkable, avec spawn walkable", () => {
+        const entry = (z.exits ?? []).find((e) => e.targetMapId === "yellow_combat_autel")
+        expect(entry).toBeDefined()
+        expect(isBlockingTile(z.tiles[entry!.y][entry!.x])).toBe(false)         // (13,9) accessible dans le hub
+        expect(blocked(autel, entry!.targetSpawnX, entry!.targetSpawnY)).toBe(false) // spawn (9,8) pas dans un mur
+    })
+
+    it("l'autel central est bloqué (on le contourne) mais le PNJ (9,6) et sa case d'interaction (9,7) sont libres", () => {
+        expect(blocked(autel, 9, 4)).toBe(true)  // plateforme Poké-ball bloquée
+        expect(blocked(autel, 9, 6)).toBe(false) // PNJ autel
+        expect(blocked(autel, 9, 7)).toBe(false) // case d'interaction (devant l'autel)
+    })
+})

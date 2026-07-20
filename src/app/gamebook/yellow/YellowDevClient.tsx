@@ -50,7 +50,7 @@ import { useGameStore, setCurrentNickname, DEFAULT_SPAWN } from "@/lib/gamebook/
 import { YELLOW_ENTRANCE_MAP_ID } from "@/lib/gamebook/yellow/featureFlag"
 import { YELLOW_MAPS, CENDREVILLE_SPAWN } from "@/lib/gamebook/yellow/maps"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
-import { useBattle, useEvolutions, clearEvolutions, useChampionRun, useArenaRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getGiftCtMove, startTrainerBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult, useFrontierResult, clearFrontierResult, getBattleEnergy, resumeBattleFromStorage, useStoneReward, clearStoneReward, useLavapetitTeaser, clearLavapetitTeaser, useJustCaught, clearJustCaught, freezeTeam, useNgplusFinalPending, clearNgplusFinalPending, useNgplusFinalResult, clearNgplusFinalResult } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, useEvolutions, clearEvolutions, useChampionRun, useArenaRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getGiftCtMove, startTrainerBattle, startFusionTrialBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult, useFrontierResult, clearFrontierResult, getBattleEnergy, resumeBattleFromStorage, useStoneReward, clearStoneReward, useLavapetitTeaser, clearLavapetitTeaser, useJustCaught, clearJustCaught, freezeTeam, useNgplusFinalPending, clearNgplusFinalPending, useNgplusFinalResult, clearNgplusFinalResult } from "@/lib/gamebook/yellow/store/battleStore"
 import { useEncounterFxActive } from "@/lib/gamebook/yellow/store/encounterFxStore"
 import { aceLoseLine } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
@@ -65,6 +65,8 @@ import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
 import { ARENA_TICKET_VALUE, STEP_GIFT_DATE, STEP_GIFT_THRESHOLD } from "@/lib/gamebook/yellow/data/labDefis"
 import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/cts"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
+import { computeFusion } from "@/lib/gamebook/yellow/data/fusionSpecies"
+import { buildFusion, disposeFusion, fusionParentFromInstance } from "@/lib/gamebook/yellow/data/fusionMon"
 import { useRun, getRun, startTowerRun, startRun, applyWinFromBattle, applyLossFromBattle, quitRun, endRun, setDraftedTeam, getDraftedTeam, setRunRaw } from "@/lib/gamebook/yellow/frontier/runStore"
 import type { FrontierRunState } from "@/lib/gamebook/yellow/frontier/run"
 import { postRecordRun } from "@/lib/gamebook/yellow/frontier/frontierApi"
@@ -204,6 +206,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const closePc = useGameStore((s) => s.closePc)
     const domeMenuOpen = useGameStore((s) => s.domeMenuOpen)   // carrousel du Maître du Dôme
     const closeDomeMenu = useGameStore((s) => s.closeDomeMenu)
+    const fusionMenuOpen = useGameStore((s) => s.fusionMenuOpen) // AUTEL DE LA CHIMÈRE (salle de fusion)
+    const closeFusionMenu = useGameStore((s) => s.closeFusionMenu)
     // Overlays plein écran gérés côté store (fermés par le bouton B via goBack).
     const guideOpen = useGameStore((s) => s.guideOpen)
     const closeGuide = useGameStore((s) => s.closeGuide)
@@ -305,6 +309,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const glandCartonStepRef = useRef<number | null>(null)                          // pas auquel le carton rouge a été montré
     const [tourChoice, setTourChoice] = useState(false) // pause entre vagues de série (Continuer / Quitter)
     const [domePause, setDomePause] = useState(false) // écran d'intro AVANT chaque match du Dôme (bracket + adversaire)
+    const [fusionPick, setFusionPick] = useState<string[]>([]) // AUTEL : uids des 2 Daemons à fusionner (ordre = ①②)
+    const fusionSpeciesRef = useRef<string | null>(null)       // espèce éphémère du fusionné → dispose après combat / nouvelle fusion / unmount
+    // AUTEL : oublie la sélection en quittant la salle ; retire l'espèce éphémère du fusionné au démontage.
+    useEffect(() => { if (mapPlayer.mapId !== "yellow_combat_autel" && fusionPick.length) setFusionPick([]) }, [mapPlayer.mapId, fusionPick.length])
+    useEffect(() => () => { if (fusionSpeciesRef.current) disposeFusion(fusionSpeciesRef.current) }, [])
     const [usineCt, setUsineCt] = useState<string[] | null>(null) // CT à choisir (récompense Usine) parmi le vaincu
     const sbireWin = useSbireWin()
     const aceWin = useAceWin()
@@ -2380,6 +2389,68 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 </div>
                             )}
                             <button onClick={() => closeDomeMenu()} style={{ marginTop: 12, width: "100%", background: "rgba(255,255,255,.12)", color: "#fff", border: "none", borderRadius: 8, padding: "9px", cursor: "pointer", fontSize: 12 }}>✕ Fermer</button>
+                        </div>
+                    </div>
+                )
+            })()}
+            {/* AUTEL DE LA CHIMÈRE — salle de fusion : choisir 2 Daemons → aperçu → combat-épreuve (le joueur PILOTE le fusionné). */}
+            {!battle && fusionMenuOpen && (() => {
+                const picks = fusionPick.map((uid) => player.team.find((m) => m.uid === uid)).filter((m): m is MonInstance => !!m)
+                const ready = picks.length === 2
+                const preview = ready ? computeFusion(fusionParentFromInstance(picks[0]), fusionParentFromInstance(picks[1])) : null
+                const closeIt = () => { setFusionPick([]); closeFusionMenu() }
+                const launch = () => {
+                    if (!ready) return
+                    if (fusionSpeciesRef.current) disposeFusion(fusionSpeciesRef.current) // nettoie une fusion précédente
+                    const { instance, speciesId, result } = buildFusion(picks[0], picks[1])
+                    fusionSpeciesRef.current = speciesId
+                    const lvl = result.level
+                    // ÉPREUVE : 3 gardiens IA scalés au niveau du fusionné (mur Roche/Feu · nuke Eau · Insecte/Psy).
+                    const enemy = [
+                        createMonInstance("magmator", lvl, { owned: false }),
+                        createMonInstance("naiadrak", lvl, { owned: false }),
+                        createMonInstance("regnantaur", lvl, { owned: false }),
+                    ]
+                    startFusionTrialBattle([instance], enemy, Math.floor(Math.random() * 0x7fffffff))
+                    setFusionPick([])
+                    closeFusionMenu()
+                }
+                const row = (label: string, val: React.ReactNode) => (
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}><span>{label}</span><b>{val}</b></div>
+                )
+                return (
+                    <div style={menuOverlayStyle} onClick={closeIt}>
+                        <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                            <div style={menuTitleStyle}>🧬 AUTEL DE LA CHIMÈRE</div>
+                            <div style={{ fontSize: 11, opacity: 0.7, margin: "0 0 8px" }}>Fusionne 2 Daemons le temps d&apos;un combat-épreuve. Tes Daemons ne risquent RIEN (ni XP, ni perte).</div>
+                            {player.team.length < 2 && <div style={{ fontSize: 12, color: "#c83030", marginBottom: 6 }}>Il te faut au moins 2 Daemons dans ton équipe.</div>}
+                            {player.team.map((m) => {
+                                const sp = getSpecies(m.speciesId)
+                                const idx = fusionPick.indexOf(m.uid)
+                                const picked = idx >= 0
+                                const dis = !picked && fusionPick.length >= 2
+                                return (
+                                    <button key={m.uid} disabled={dis}
+                                        style={{ ...(dis ? menuBtnDimStyle : menuBtnStyle), textAlign: "left", outline: picked ? "2px solid #7c4fc0" : "none", borderRadius: picked ? 6 : undefined }}
+                                        onClick={() => setFusionPick((p) => picked ? p.filter((u) => u !== m.uid) : [...p, m.uid])}>
+                                        {picked ? (idx === 0 ? "① " : "② ") : "◦ "}{displayName(m)} <span style={{ opacity: 0.6, fontSize: 10 }}>{sp?.types.join("/")} · N.{m.level}</span>
+                                    </button>
+                                )
+                            })}
+                            {preview && (
+                                <div style={{ border: "1px solid #7c4fc0", borderRadius: 8, padding: "8px 10px", margin: "8px 0", background: "rgba(124,79,192,0.08)" }}>
+                                    <div style={{ fontWeight: 800, color: "#7c4fc0" }}>{preview.name} <span style={{ fontSize: 11, opacity: 0.8 }}>[{preview.types.join("/")}] · N.{preview.level}</span></div>
+                                    <div style={{ margin: "5px 0", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1px 12px" }}>
+                                        {row("PV", preview.stats.hp)}{row("Vitesse", preview.stats.spe)}
+                                        {row("Attaque", preview.stats.atk)}{row("Défense", preview.stats.def)}
+                                        {row("Atq. Spé", preview.stats.spcAtk)}{row("Déf. Spé", preview.stats.spcDef)}
+                                    </div>
+                                    <div style={{ fontSize: 10.5, opacity: 0.85 }}>⚔️ {preview.moves.map((id) => getMove(id)?.name ?? id).join(" · ")}</div>
+                                    {preview.heldItems.length > 0 && <div style={{ fontSize: 10, opacity: 0.7, marginTop: 2 }}>🎒 {preview.heldItems.length} objet(s) hérité(s){preview.heldItems.length > 1 ? " — le 2ᵉ sera actif bientôt" : ""}</div>}
+                                </div>
+                            )}
+                            <button style={ready ? { ...menuBtnStyle, borderColor: "#7c4fc0", color: "#7c4fc0" } : menuBtnDimStyle} disabled={!ready} onClick={launch}>⚔️ LANCER L&apos;ÉPREUVE</button>
+                            <button style={menuBtnDimStyle} onClick={closeIt}>← RETOUR</button>
                         </div>
                     </div>
                 )
