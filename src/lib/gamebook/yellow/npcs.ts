@@ -18,6 +18,7 @@ import { CAVE_TRADER_ID, CAVE_TRADER_MAP, CAVE_TRADER_POS, CAVE_TRADER_OFFER_LIN
 import { HH_KID_ID, HH_KID_MAP, HH_KID_POS, HH_KID_DAY_LINES } from "./data/hhKid"
 import { ORCALINE_TRAINER_ID, ORCALINE_TRAINER_MAP, ORCALINE_TRAINER_POS, ORCALINE_INTRO_LINES } from "./data/orcalineTrainer"
 import { PNJ5_NPC_ID, PNJ5_MAP_ID, PNJ5_POS, PNJ5_INTRO_LINES } from "./data/pnj5"
+import { PNJ7_NPC_ID, PNJ7_MAP_ID, PNJ7_POS, PNJ7_NAME, PNJ7_INTRO_LINES } from "./data/pnj7"
 
 // PANNEAUX-conseils = les ~12 panneaux BIEN ESPACÉS de la Route Nord (le sprite
 // panneau est rendu par le décor). Chaque panneau = un hotspot INVISIBLE qui
@@ -122,6 +123,19 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         initialX: PNJ5_POS.x,
         initialY: PNJ5_POS.y,
         dialoguesAfter: PNJ5_INTRO_LINES,
+    },
+    // PNJ 7 — L'ÉCLAIREUR (Grotte du Nexus 1F, en (27,18)). NPC statique : combat 1×/jour contre ses 5 némésis
+    // (géré dans gameStore) + carrousel d'infos re-consultable. Le comportement complet est côté store (pressA).
+    {
+        id: PNJ7_NPC_ID,
+        name: PNJ7_NAME,
+        mapId: PNJ7_MAP_ID,
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🧭", color: "#7a6a4a" },
+        initialX: PNJ7_POS.x,
+        initialY: PNJ7_POS.y,
+        dialoguesAfter: PNJ7_INTRO_LINES,
     },
     // PANNEAUX de Ville Jaune (cases non-walkables déjà dessinées dans le décor → NPC invisibles).
     {

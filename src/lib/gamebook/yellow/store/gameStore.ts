@@ -21,12 +21,12 @@ import { YELLOW_NPCS } from "../npcs"
 import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, startRun3BossBattle, startNgPlusFinalBattle, startFusionLeagueBattle, resetFleeStreak } from "./battleStore"
 import { buildFusion, disposeFusion, type BuiltFusion } from "../data/fusionMon"
-import { fusionForParents } from "../data/fusionBaseSpecies"
+import { fusionForParents, FUSION_BASE_IDS } from "../data/fusionBaseSpecies"
 import { buildFusionLeagueTeam, fusionLeagueKeyForTrainer, activeFusionTier, FUSION_UNLOCK_MARKER } from "../data/fusionLeague"
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, pnj5WinsCount, addItem, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, markTrainerDefeated, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, pnj5WinsCount, addItem, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
 import { getHeldItem } from "../data/heldItems"
 import { BERRY_SECRET_LINES_ASSISTANT } from "../data/berryLore"
@@ -46,6 +46,7 @@ import { SYLVEBARBE_BLOCK_MAP, inSylvebarbeBlock } from "../data/sylvebarbeBlock
 import { GEKROC_NPC_ID, GEKROC_INTRO_LINES, GEKROC_DONE_LINES, GEKROC_NO_TEAM_LINES, buildGekroc } from "../data/gekroc"
 import { SYLVEBARBE_NPC_ID, SYLVEBARBE_INTRO_LINES, SYLVEBARBE_DONE_LINES, SYLVEBARBE_NO_FLUTE_LINES, SYLVEBARBE_NO_TEAM_LINES, buildSylvebarbe, FLUTE_GIVE_LINES } from "../data/sylvebarbe"
 import { PNJ5_NPC_ID, PNJ5_TRAINER_ID, PNJ5_MAP_ID, PNJ5_KICK, buildPnj5Team, inPnj5Block, inPnj5Trigger, PNJ5_INTRO_LINES, PNJ5_NO_DOME_LINES, PNJ5_NO_TEAM_LINES, PNJ5_SEAL_LINES } from "../data/pnj5"
+import { PNJ7_NPC_ID, PNJ7_TRAINER_ID, PNJ7_MAP_ID, PNJ7_NAME, PNJ7_INTRO_LINES, PNJ7_CAROUSEL_LINES, PNJ7_NO_TEAM_LINES, buildPnj7Team, pnj7DayMarker, resetGrotteDemo, takeGrotteDemoSpawn } from "../data/pnj7"
 import { CHEN_LAB_LINES, LAB_ASSISTANT_LINES, LAB_ASSISTANT_LINES_NGPLUS, LAB_ASSISTANT_LINES_RUN3, CHEN_ABANDON_OFFER_LINES, CHEN_RUN3_TEASER_LINES, CHEN_RUN3_EVOLVE_LINES } from "../data/labDialogues"
 import { MAGNETOR_EVO_ITEM } from "../data/items"
 import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADE_RECEIVE_RUN1, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_TRADER_OFFER_LINES_RUN1, HH_TRADER_NEED_LINES_RUN1, HH_TRADER_HAS_MORROW_LINES, HH_TRADER_CANCEL_LINES, HH_TRADE_AQUILOTHAN_GIVE, HH_TRADE_AQUILOTHAN_RECEIVE, HH_TRADER_AQUILORD_OFFER_LINES, HH_TRADER_AQUILORD_NEED_LINES, HH_TRADER_AQUILORD_DONE_LINES, HH_TRADER_AQUILORD_CANCEL_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
@@ -140,6 +141,7 @@ interface GameStore {
     pendingGekroc: boolean // intro de GÉKROC (mini-boss Centrale) en cours → combat à la fermeture
     pendingSylvebarbe: boolean // intro de SYLVEBARBE (gardien sud Ville Jaune) en cours → combat à la fermeture
     pendingPnj5: boolean // intro de PNJ 5 (gardien de la Grotte du Nexus) en cours → combat à la fermeture
+    pendingPnj7: boolean // intro de PNJ 7 (Éclaireur de la Grotte du Nexus) en cours → combat à la fermeture
     pendingHhTrade: string | null // uid du Roctaur à échanger (BROCANTEUR maison hantée) → échange à la fermeture
     pendingAquilordTrade: string | null // uid de l'Aquilothan → Aquilord (BROCANTEUR, service premium live) à la fermeture
     pendingCaveTrade: string | null // uid du Faukon à échanger (DÉNICHEUR grotte) → échange à la fermeture
@@ -527,6 +529,21 @@ function tryLaunchPnj5(): ActiveDialogue | null {
     return null
 }
 
+// L'ÉCLAIREUR DE LA GROTTE (PNJ 7). Combat 1×/JOUR : le marker `pnj7_<date>` est posé ICI (au lancement) →
+// il vaut victoire OU défaite (on ne peut pas ré-affronter le jour même, même après un whiteout). La démo de pop
+// (2 parents → fusion) est amorcée à la VICTOIRE (battleStore.finishBattle), pas ici.
+function tryLaunchPnj7(): ActiveDialogue | null {
+    const team = getPlayerSave().team
+    if (!team.some((m) => m.currentHp > 0)) {
+        return { npcId: PNJ7_TRAINER_ID, npcName: PNJ7_NAME, lineIndex: 0, lines: PNJ7_NO_TEAM_LINES }
+    }
+    markTrainerDefeated(pnj7DayMarker()) // consomme le combat du jour (win OU lose)
+    const enemyTeam = buildPnj7Team()
+    const seed = Math.floor(Math.random() * 1e9) >>> 0
+    startTrainerBattle(team, enemyTeam, seed, { trainerId: PNJ7_TRAINER_ID, reward: 0, aiLevel: "hof" })
+    return null
+}
+
 // Spawn par défaut : VILLE JAUNE = Viridian City 45×40 (scale natif FireRed),
 // entrée sud (Route 1) centre-bas pour explorer la ville.
 export const DEFAULT_SPAWN = { x: 22, y: 37 } // juste AU-DESSUS du Sylvebarbe endormi qui bouche la sortie sud
@@ -562,6 +579,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     pendingGekroc: false,
     pendingSylvebarbe: false,
     pendingPnj5: false,
+    pendingPnj7: false,
     pendingHhTrade: null,
     pendingAquilordTrade: null,
     pendingCaveTrade: null,
@@ -919,7 +937,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     //   PRÉCIEUSES (shiny / Mimimoy) : on ne les écrase pas et elles n'entrent pas dans l'historique.
                     if (next.mapId === "yellow_grotte_nexus") {
                         const spawnPrecious = spawn.shiny || !!getSpecies(spawn.speciesId)?.hiddenUntilCaught
-                        if (grotteFusionPop.primed && !spawnPrecious) {
+                        // DÉMO PNJ 7 (après sa victoire) : les 3 rencontres suivantes sont SCRIPTÉES = 2 parents puis
+                        //   leur fusion. Prioritaire sur la règle de pop ; jamais sur une rencontre précieuse (shiny/Mimimoy).
+                        const demoId = spawnPrecious ? null : takeGrotteDemoSpawn()
+                        if (demoId) {
+                            const lvl = FUSION_BASE_IDS.includes(demoId) ? 2 + Math.floor(Math.random() * 17) : 8 + Math.floor(Math.random() * 17)
+                            spawn = createMonInstance(demoId, lvl, { owned: false })
+                        } else if (grotteFusionPop.primed && !spawnPrecious) {
                             spawn = createMonInstance(grotteFusionPop.primed, 2 + Math.floor(Math.random() * 17), { owned: false })
                             grotteFusionPop = { prev1: "", prev2: "", primed: "" } // consommé (le fusionné n'entre pas dans l'historique)
                         } else if (!grotteFusionPop.primed && !spawnPrecious) {
@@ -993,6 +1017,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     set({ dialogue: tryLaunchSylvebarbe(), pendingSylvebarbe: false })
                 } else if (get().pendingPnj5) {
                     set({ dialogue: tryLaunchPnj5(), pendingPnj5: false })
+                } else if (get().pendingPnj7) {
+                    set({ dialogue: tryLaunchPnj7(), pendingPnj7: false })
                 } else if (get().pendingHhTrade) {
                     set({ dialogue: doHhTrade(get().pendingHhTrade!), pendingHhTrade: null })
                 } else if (get().pendingAquilordTrade) {
@@ -1317,6 +1343,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ dialogue: { npcId: npc.id, npcName: "GARDIEN", lines: PNJ5_INTRO_LINES, lineIndex: 0 }, pendingPnj5: true })
             return
         }
+        // PNJ 7 — L'ÉCLAIREUR. 1×/JOUR : déjà combattu aujourd'hui → carrousel d'infos seul (re-consultable) ;
+        // sinon → intro puis combat (armé via pendingPnj7, lancé à la fermeture du dialogue).
+        if (npc.id === PNJ7_NPC_ID) {
+            if (isTrainerDefeated(pnj7DayMarker())) {
+                set({ dialogue: { npcId: npc.id, npcName: PNJ7_NAME, lines: PNJ7_CAROUSEL_LINES, lineIndex: 0 } })
+                return
+            }
+            set({ dialogue: { npcId: npc.id, npcName: PNJ7_NAME, lines: PNJ7_INTRO_LINES, lineIndex: 0 }, pendingPnj7: true })
+            return
+        }
 
         // BROCANTEUR (maison hantée) — WORLD-AWARE. RUN 1 → Roctaur→ROCHISON (trade-évo) ; RUN 2 → Roctaur→MORROW ;
         // RUN 3 → PLUS de Roctaur : uniquement le service AQUILOTHAN→AQUILORD. (Post-game live : Aquilord ET Roctaur.)
@@ -1554,6 +1590,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ dialogue: tryLaunchSylvebarbe(), pendingSylvebarbe: false })
         } else if (get().pendingPnj5) {
             set({ dialogue: tryLaunchPnj5(), pendingPnj5: false })
+        } else if (get().pendingPnj7) {
+            set({ dialogue: tryLaunchPnj7(), pendingPnj7: false })
         } else if (get().pendingHhTrade) {
             // Ⓑ = RENONCER à l'échange (étape de validation) : on ne troque RIEN, le Roctaur reste dans l'équipe.
             set({ dialogue: { npcId: HH_TRADER_ID, npcName: "BROCANTEUR", lineIndex: 0, lines: HH_TRADER_CANCEL_LINES }, pendingHhTrade: null })
@@ -1580,7 +1618,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
         // GARDIEN DE LA GROTTE : entrer dans la grotte (par le passeur → setMap) RÉ-ARME PNJ 5 → il faut le rebattre.
         // Les échelles intra-grotte passent par la transition inline (findExitAt), PAS setMap → aucun ré-arm parasite.
-        if (mapId === PNJ5_MAP_ID) { pnj5WinsAtEntry = pnj5WinsCount(); grotteFusionPop = { prev1: "", prev2: "", primed: "" } } // entrée grotte → reset pop fusions
+        if (mapId === PNJ5_MAP_ID) { pnj5WinsAtEntry = pnj5WinsCount(); grotteFusionPop = { prev1: "", prev2: "", primed: "" }; resetGrotteDemo() } // entrée grotte → reset pop fusions + démo PNJ 7
         const player = createInitialPlayer(mapId, spawnX, spawnY)
         set({ map, player, dialogue: null })
         saveNow(player) // transition de map → persistance IMMÉDIATE (anti-désync position/flags au reload, cf. whiteout Ligue)

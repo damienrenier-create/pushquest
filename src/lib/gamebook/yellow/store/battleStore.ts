@@ -36,6 +36,7 @@ import { SBIRE_REWARD_REPS, SBIRE_REWARD_REPS_3, SBIRE_REWARD_REPS_5, SBIRE_REWA
 import { ACE_TRAINER_ID, aceReward, aceWinTaunt, speciesAtLevel } from "../data/ace"
 import { ORCALINE_TRAINER_ID, ORCALINE_GIFT_SPECIES, ORCALINE_GIFT_LEVEL, ORCALINE_BALL_REWARD_ID, ORCALINE_BALL_AT_LEVEL, orcalineTrainerDialogue } from "../data/orcalineTrainer"
 import { PNJ5_TRAINER_ID, PNJ5_VICTORY_LINES } from "../data/pnj5"
+import { PNJ7_TRAINER_ID, PNJ7_NAME, PNJ7_VICTORY_LINES, PNJ7_CAROUSEL_LINES, primeGrotteDemo } from "../data/pnj7"
 import { GEKROC_STONE_ITEM } from "../data/gekroc"
 import { frontierEnergyRefund, FRONTIER_EXP_MULT } from "../frontier/engine"
 import { DUEL_EXP_MULT } from "../data/duel"
@@ -783,6 +784,12 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             // cap journalier). Incrémente le compteur → ses 5 Gek montent de +2 niveaux (+ Saiyan) au prochain combat.
             recordPnj5Defeat()
             rematchReward = { npcId: PNJ5_TRAINER_ID, npcName: "GARDIEN", lines: [...PNJ5_VICTORY_LINES] }
+        } else if (storeState.trainer.trainerId === PNJ7_TRAINER_ID) {
+            // L'ÉCLAIREUR (PNJ 7) : le cap 1×/jour a déjà été posé au LANCEMENT (gameStore.tryLaunchPnj7) → aucun
+            // marker ici. Victoire → amorce la DÉMO (les 3 prochaines rencontres Grotte = 2 parents puis fusion),
+            // puis carrousel d'infos (biotopes + scientifique + secret de la fusion).
+            primeGrotteDemo()
+            rematchReward = { npcId: PNJ7_TRAINER_ID, npcName: PNJ7_NAME, lines: [...PNJ7_VICTORY_LINES, ...PNJ7_CAROUSEL_LINES] }
         } else if (storeState.trainer.trainerId.startsWith("duel:")) {
             // DUEL reflet : aucune récompense ici → gérée côté UI (limite 1/jour, Nexus Ball, dialogue
             // Dieu des Nouilles, cadeau croisé). PAS de markTrainerDefeated (ce n'est pas un dresseur permanent).
