@@ -67,6 +67,7 @@ import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/ct
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { computeFusion } from "@/lib/gamebook/yellow/data/fusionSpecies"
 import { buildFusion, disposeFusion, fusionParentFromInstance } from "@/lib/gamebook/yellow/data/fusionMon"
+import { buildFusionTrialEnemy } from "@/lib/gamebook/yellow/data/fusionTrial"
 import { AUTEL_VISITED_MARKER } from "@/lib/gamebook/yellow/data/fusiodex"
 import { makeCrocavernGift, PNJ6_TRADE_DONE_MARKER, PNJ6_NAME } from "@/lib/gamebook/yellow/data/pnj6"
 import { useRun, getRun, startTowerRun, startRun, applyWinFromBattle, applyLossFromBattle, quitRun, endRun, setDraftedTeam, getDraftedTeam, setRunRaw } from "@/lib/gamebook/yellow/frontier/runStore"
@@ -2474,17 +2475,13 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 const closeIt = () => { setFusionPick([]); closeFusionMenu() }
                 const launch = () => {
                     if (!ready) return
-                    fusionSpeciesRef.current.forEach(disposeFusion) // nettoie les fusions précédentes
+                    fusionSpeciesRef.current.forEach(disposeFusion) // nettoie les fusions précédentes (joueur + ennemi)
                     const { instance, speciesId, result } = buildFusion(picks[0], picks[1])
-                    fusionSpeciesRef.current = [speciesId]
                     const lvl = result.level
-                    // ÉPREUVE : 3 gardiens IA scalés au niveau du fusionné (mur Roche/Feu · nuke Eau · Insecte/Psy).
-                    const enemy = [
-                        createMonInstance("magmator", lvl, { owned: false }),
-                        createMonInstance("naiadrak", lvl, { owned: false }),
-                        createMonInstance("regnantaur", lvl, { owned: false }),
-                    ]
-                    startFusionTrialBattle([instance], enemy, Math.floor(Math.random() * 0x7fffffff))
+                    // ÉPREUVE D'OUVERTURE : vs 2 fusions ennemies (Tonyront EAU/NORMAL · Maîtrelmin COMBAT/ELEC), scalées.
+                    const enemy = buildFusionTrialEnemy(lvl)
+                    fusionSpeciesRef.current = [speciesId, ...enemy.speciesIds] // à disposer au prochain lancement
+                    startFusionTrialBattle([instance], enemy.team, Math.floor(Math.random() * 0x7fffffff))
                     setFusionPick([])
                     closeFusionMenu()
                 }
@@ -2560,11 +2557,11 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     //   qu'on vient de ré-enregistrer → combat planté. (Même ordre que l'épreuve simple.)
                     fusionSpeciesRef.current.forEach(disposeFusion)
                     const built = valid.map((p) => buildFusion(byUid(p.a)!, byUid(p.b)!))
-                    fusionSpeciesRef.current = built.map((f) => f.speciesId)
                     const lvl = Math.max(...built.map((f) => f.result.level))
-                    const pool = ["magmator", "naiadrak", "regnantaur", "draconarque", "auroraur", "coccimperatrice"]
-                    const enemy = built.map((_, i) => createMonInstance(pool[i % pool.length], lvl, { owned: false }))
-                    startFusionTrialBattle(built.map((f) => f.instance), enemy, Math.floor(Math.random() * 0x7fffffff))
+                    // ÉPREUVE D'OUVERTURE : vs les 2 mêmes fusions ennemies que l'épreuve simple (Tonyront · Maîtrelmin).
+                    const enemy = buildFusionTrialEnemy(lvl)
+                    fusionSpeciesRef.current = [...built.map((f) => f.speciesId), ...enemy.speciesIds]
+                    startFusionTrialBattle(built.map((f) => f.instance), enemy.team, Math.floor(Math.random() * 0x7fffffff))
                     closeIt()
                 }
                 const draftA = atelierAdd?.a ? byUid(atelierAdd.a) : null
