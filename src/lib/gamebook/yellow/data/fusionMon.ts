@@ -61,10 +61,11 @@ export interface BuiltFusion { instance: MonInstance; speciesId: string; result:
 /** Construit le Daemon FUSIONNÉ de A (tête/dominant) et B : enregistre l'espèce éphémère + fabrique l'instance de
  *  combat figée (frozenStats = SpA, frozenSpd = SpD, moveset, objet tenu). À DÉTRUIRE après le combat via
  *  disposeFusion(speciesId). Les 2 parents ne sont pas touchés. */
-export function buildFusion(a: MonInstance, b: MonInstance, opts?: { name?: string; moves?: string[] }): BuiltFusion {
+export function buildFusion(a: MonInstance, b: MonInstance, opts?: { name?: string; moves?: string[]; sprite?: string }): BuiltFusion {
     const result = computeFusion(fusionParentFromInstance(a), fusionParentFromInstance(b))
     const id = fusionSpeciesId(a, b)
-    const sprite = getSpecies(a.speciesId)?.sprite ?? "" // sprite du dominant (halo mauve = surcouche UI)
+    // sprite : override CURÉ (les 21 fusions de Ligue, quand les PNG arrivent) sinon le sprite du parent dominant.
+    const sprite = opts?.sprite ?? getSpecies(a.speciesId)?.sprite ?? ""
     // moveset : dérivé du moteur (fusions du joueur) OU curé à la main (opts.moves — les 21 fusions de la Ligue).
     const moves = opts?.moves ?? result.moves
     registerCustomSpecies([buildFusionSpecies(id, result, sprite, opts?.name, opts?.moves)])

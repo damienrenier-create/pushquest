@@ -21,7 +21,9 @@ export const FUSION_TIERS: Record<FusionTier, { level: number; saiyan: number; l
     or: { level: 100, saiyan: 95, label: "Or" },
 }
 
-export interface FusionPairDef { a: string; b: string; name: string; moves?: string[] } // moves = moveset CURÉ (4 attaques) ; sinon dérivé
+// moves = moveset CURÉ (4 attaques) ; sinon dérivé. sprite = PNG dédié de la fusion (à remplir quand les 21
+// sprites arrivent, ex. "/yellow/sprites/dex/fusion/morcaline.png") ; sinon le sprite du parent dominant.
+export interface FusionPairDef { a: string; b: string; name: string; moves?: string[]; sprite?: string }
 export interface FusionLeagueTrainer {
     key: string
     name: string    // nom du dresseur
@@ -98,7 +100,7 @@ export function buildFusionLeagueTeam(trainerKey: string, tier: FusionTier): Bui
     if (!tr) throw new Error(`Ligue Fusion : dresseur inconnu ${trainerKey}`)
     const { level, saiyan } = FUSION_TIERS[tier]
     return tr.pairs.map((p) =>
-        buildFusion(buildParent(p.a, level, saiyan), buildParent(p.b, level, saiyan), { name: p.name, moves: p.moves }),
+        buildFusion(buildParent(p.a, level, saiyan), buildParent(p.b, level, saiyan), { name: p.name, moves: p.moves, sprite: p.sprite }),
     )
 }
 
