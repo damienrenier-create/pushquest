@@ -1375,6 +1375,28 @@ function performCapture(state: BattleState, itemId: string, events: BattleEvent[
         events.push({ kind: "message", text: `La Fusio-Ball n'a aucune prise sur ${displayName(wild)} — elle n'agit QUE sur les Daemons fusionnés !` })
         return
     }
+    // FUSIO-BALL sur une FUSION : capture GARANTIE (comme la Master) UNE FOIS le fusionné suffisamment AFFAIBLI.
+    //   Le SEUIL de PV dépend de sa PUISSANCE (BST) : Ukognofy (BST max ~1710, l'ÉTALON) ne cède qu'au bord du K.O.
+    //   (~10% PV) ; une fusion faible cède dès un peu entamée (~85%). Au-dessus du seuil → la Ball ne prend pas encore.
+    if (isFusioBall) {
+        const fs = wild.frozenStats
+        const bst = fs ? fs.hp + fs.atk + fs.def + fs.spe + fs.spc + (wild.frozenSpd ?? fs.spc)
+            : Object.values(sp.baseStats).reduce((a, b) => a + b, 0)
+        const threshold = Math.max(0.1, Math.min(0.85, 1 - bst / 1900)) // BST↑ → seuil↓ (plus dur)
+        if (wild.currentHp > maxHpOf(wild) * threshold) {
+            events.push({ kind: "ball", action: "miss" })
+            events.push({ kind: "message", text: `${displayName(wild)} est ENCORE trop vigoureux ! Affaiblis-le sous ${Math.round(threshold * 100)}% de ses PV — alors la Fusio-Ball le capturera À COUP SÛR.` })
+            return
+        }
+        events.push({ kind: "ball", action: "throw" })
+        events.push({ kind: "ball", action: "shake", shakes: 3 })
+        events.push({ kind: "ball", action: "result", caught: true })
+        state.phase = "ended"
+        state.outcome = "caught"
+        events.push({ kind: "message", text: `Gagné ! ${displayName(wild)} est capturé par la Fusio-Ball !` })
+        events.push({ kind: "end", outcome: "caught" })
+        return
+    }
     // VERROU DE BALL (ex. Zappeuréal = Hyper Ball+) : une Ball trop faible n'accroche JAMAIS — la
     // Master Ball (capture garantie) shunte ce verrou. Lancer raté théâtral + message dédié, le tour
     // est consommé mais aucune capture. Placé AVANT tryCapture → le tirage RNG reste intact pour la suite.

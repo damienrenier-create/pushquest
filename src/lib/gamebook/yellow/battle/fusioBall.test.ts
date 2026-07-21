@@ -32,17 +32,16 @@ describe("Fusio-Ball — verrou exclusif fusion", () => {
         expect(hasMsg(after, "n'agit QUE sur les Daemons fusionnés")).toBe(true)
     })
 
-    it("Fusio-Ball NON garantie : ricoche sur une fusion à PLEINS PV (règle Grotte), procède une fois affaiblie", () => {
-        // À pleins PV → la règle Grotte (captureRequiresDamage) bloque : il faut d'abord affaiblir.
-        const full = createMonInstance("mottelave", 5); full.captureRequiresDamage = true
+    it("Fusio-Ball : seuil de PV ∝ BST — ricoche tant que trop vigoureux, capture GARANTIE une fois assez affaibli", () => {
+        // À pleins PV → au-dessus du seuil (BST) → la Fusio-Ball ne prend pas encore (« trop vigoureux »).
+        const full = createMonInstance("mottelave", 15)
         const a1 = resolveTurn(createBattle([player()], [full], { isWild: true, seed: 1 }), { kind: "ball", itemId: "fusio_ball" })
         expect(a1.outcome).not.toBe("caught")
-        expect(hasMsg(a1, "pleins PV")).toBe(true)
-        // Affaiblie (1 PV) : la Fusio-Ball procède au calcul (pas de ricochet 100%-PV ni de refus fusion).
-        const weak = createMonInstance("mottelave", 5); weak.captureRequiresDamage = true; weak.currentHp = 1
+        expect(hasMsg(a1, "vigoureux")).toBe(true)
+        // Affaibli (1 PV) → sous le seuil → capture GARANTIE (comme une Master).
+        const weak = createMonInstance("mottelave", 15); weak.currentHp = 1
         const a2 = resolveTurn(createBattle([player()], [weak], { isWild: true, seed: 1 }), { kind: "ball", itemId: "fusio_ball" })
-        expect(hasMsg(a2, "pleins PV")).toBe(false)
-        expect(hasMsg(a2, "Seule une FUSIO-BALL")).toBe(false)
+        expect(a2.outcome).toBe("caught")
     })
 
     it("NON-RÉGRESSION : capture normale (non-fusion, Master-Ball) toujours garantie", () => {
