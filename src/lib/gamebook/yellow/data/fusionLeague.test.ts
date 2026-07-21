@@ -1,9 +1,12 @@
 import { describe, it, expect } from "vitest"
 import {
-    FUSION_LEAGUE, FUSION_TIERS, allFusionLeaguePairs,
+    FUSION_LEAGUE, FUSION_TIERS, FUSION_BOSS_PAIRS, allFusionLeaguePairs,
     buildFusionLeagueTeam, disposeFusionLeagueTeam,
 } from "./fusionLeague"
 import { getSpecies } from "./species"
+import { computeFusion } from "./fusionSpecies"
+import { fusionParentFromInstance } from "./fusionMon"
+import { createMonInstance } from "../battle/factory"
 
 describe("Ligue de Fusion — data", () => {
     it("42 parents, dédup contrôlée : seule la réutilisation ASSUMÉE de Glacyran est tolérée", () => {
@@ -17,6 +20,30 @@ describe("Ligue de Fusion — data", () => {
         const seen = new Set<string>(), dupes = new Set<string>()
         for (const p of parents) { if (seen.has(p)) dupes.add(p); seen.add(p) }
         expect([...dupes].sort()).toEqual(KNOWN_REUSED)
+    })
+
+    it("INVARIANT 1-par-parent : chaque fusion curée (Ligue + boss) prend ≥1 type de CHAQUE parent", () => {
+        for (const p of [...allFusionLeaguePairs(), ...FUSION_BOSS_PAIRS]) {
+            const spA = getSpecies(p.a)!, spB = getSpecies(p.b)!
+            const r = computeFusion(
+                fusionParentFromInstance(createMonInstance(p.a, 100)),
+                fusionParentFromInstance(createMonInstance(p.b, 100)),
+            )
+            expect(r.types.length, `${p.name}: 1-2 types`).toBeGreaterThanOrEqual(1)
+            expect(r.types.length, `${p.name}: 1-2 types`).toBeLessThanOrEqual(2)
+            expect(r.types.some((t) => spA.types.includes(t)), `${p.name}: ≥1 type de ${spA.name}`).toBe(true)
+            expect(r.types.some((t) => spB.types.includes(t)), `${p.name}: ≥1 type de ${spB.name}`).toBe(true)
+        }
+    })
+
+    it("order-independent : chaque fusion curée (Ligue + boss + épreuve) a le MÊME set de types quel que soit l'ordre des parents", () => {
+        const FPI = (id: string) => fusionParentFromInstance(createMonInstance(id, 100))
+        const trial = [{ a: "tonytony", b: "calderont", name: "Tonyront" }, { a: "maitrezenc", b: "hebulmin", name: "Maîtrelmin" }]
+        for (const p of [...allFusionLeaguePairs(), ...FUSION_BOSS_PAIRS, ...trial]) {
+            const ab = computeFusion(FPI(p.a), FPI(p.b)).types
+            const ba = computeFusion(FPI(p.b), FPI(p.a)).types
+            expect([...ab].sort(), `${p.name}: SET ordre-indépendant`).toEqual([...ba].sort())
+        }
     })
 
     it("toutes les espèces parents existent + 21 noms de fusion distincts", () => {

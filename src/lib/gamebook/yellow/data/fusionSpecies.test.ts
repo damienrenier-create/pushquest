@@ -39,17 +39,46 @@ describe("fusion — génétique des stats", () => {
         expect(f.stats.spcDef).toBe(SPECIES["razmaree"].baseStats.spc)
     })
 
-    it("EX.3 Coccimpératrice × Rochison → COMBAT/ROCHE (types DIVERSIFIÉS, pas COMBAT/INSECTE)", () => {
+    it("EX.3 Coccimpératrice × Rochison → COMBAT/ROCHE (1 type de CHAQUE parent, pas 2 du même)", () => {
         const f = computeFusion(P("coccimperatrice"), P("rochison"))
         expect(f.stats).toEqual({ hp: 61, atk: 146, def: 109, spe: 90, spcAtk: 56, spcDef: 52 })
-        // 4 types candidats {COMBAT, INSECTE, ROCHE, SOL} → on garde 2 DIMENSIONS distinctes (atk + déf)
+        // RÈGLE 1-par-parent : Coccimpératrice[COMBAT/INSECTE] apporte son type le + stat-fidèle (COMBAT),
+        //   Rochison[ROCHE/SOL] apporte le sien (ROCHE). Jamais 2 types du même parent (donc pas COMBAT/INSECTE).
         expect(f.types).toEqual(["COMBAT", "ROCHE"])
-        expect(f.types).not.toContain("INSECTE") // sinon 2 types du même axe atk
+        expect(f.types).not.toContain("INSECTE") // ce serait 2 types de Coccimpératrice, 0 de Rochison
         expect(f.stats.atk).toBeGreaterThan(Math.max(128, 115)) // monstre physique au-dessus des parents
     })
 })
 
 describe("fusion — types & divers", () => {
+    it("INVARIANT 1-par-parent : ≥1 type de CHAQUE parent, 1-2 types, jamais vide (tous les cas)", () => {
+        const cases: [PokeType[], PokeType[]][] = [
+            [["FEU"], ["FEU"]],                            // mono identique → mono
+            [["FEU"], ["EAU"]],                            // mono distincts → bi
+            [["FEU"], ["EAU", "GLACE"]],                   // mono + bi
+            [["DRAGON", "GLACE"], ["EAU", "ELEC"]],        // bi/bi disjoints (cas Cryoviathan)
+            [["GLACE", "EAU"], ["DRAGON", "GLACE"]],       // bi/bi, 1 type partagé (cas Glacyran)
+            [["SPECTRE", "ELEC"], ["INSECTE", "SPECTRE"]], // bi/bi, 1 type partagé (cas Nécrozeus)
+        ]
+        for (const [ta, tb] of cases) {
+            const a = mk({ types: ta, moves: [] }), b = mk({ types: tb, moves: [] })
+            const f = fuseTypes(a, b, fuseStats(a, b))
+            expect(f.length, `[${ta}]×[${tb}] : 1-2 types`).toBeGreaterThanOrEqual(1)
+            expect(f.length).toBeLessThanOrEqual(2)
+            expect(f.some((t) => ta.includes(t)), `≥1 type de A [${ta}]`).toBe(true)
+            expect(f.some((t) => tb.includes(t)), `≥1 type de B [${tb}]`).toBe(true)
+        }
+    })
+
+    it("order-independent : le SET de types ne dépend PAS de l'ordre des parents (départage canonique par nom)", () => {
+        // Égalité de repValue sur le 2e type (Plante vs Eau, même déf) → jadis order-dependent, désormais stable.
+        const A: FusionParent = { name: "Alpha", types: ["COMBAT", "PLANTE"], stats: { hp: 50, atk: 90, def: 60, spe: 50, spc: 50 }, level: 50, moves: [] }
+        const B: FusionParent = { name: "Beta", types: ["COMBAT", "EAU"], stats: { hp: 50, atk: 90, def: 60, spe: 50, spc: 50 }, level: 50, moves: [] }
+        const ab = fuseTypes(A, B, fuseStats(A, B))
+        const ba = fuseTypes(B, A, fuseStats(B, A))
+        expect([...ab].sort()).toEqual([...ba].sort()) // même SET quel que soit l'ordre d'appel
+    })
+
     it("2 parents du MÊME type → mono-type (dédup)", () => {
         const f = computeFusion(P("razmaree"), P("naiadrak")) // les deux EAU
         expect(f.types).toEqual(["EAU"])

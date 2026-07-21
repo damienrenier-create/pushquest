@@ -52,9 +52,9 @@ export const FUSION_LEAGUE: FusionLeagueTrainer[] = [
         { a: "bouhbou", b: "karatame", name: "Karabouh", moves: ["eveil_divin", "coup_de_boutoir", "fulgurance", "repos"] },
     ] },
     { key: "agatha", name: "Agatha", theme: "SPECTRE", icon: "👻", pairs: [
-        // Shadopanthe/Nécrozeus = physiques rapides (Spectre+Normal/Insecte physiques). Archibrook/Mycécorbe = spéciaux (Psy).
+        // Shadopanthe = physique (Spectre/Normal). Nécrozeus = mixte Spectre/ÉLEC (Namizeus apporte l'Élec). Archibrook/Mycécorbe = spéciaux (Psy).
         { a: "ombrapanthe", b: "shadow", name: "Shadopanthe", moves: ["ball_ombre", "plaquage", "seisme", "hypnose"] },
-        { a: "namizeus", b: "necrolopendre", name: "Nécrozeus", moves: ["ball_ombre", "dard_fatal", "seisme", "toxik"] },
+        { a: "namizeus", b: "necrolopendre", name: "Nécrozeus", moves: ["ball_ombre", "fulgurance", "seisme", "toxik"] },
         { a: "archibouh", b: "brookhante", name: "Archibrook", moves: ["eveil_divin", "vague_mentale", "onde_obscure", "hypnose"] },
         { a: "mycedruide", b: "necrocorbe", name: "Mycécorbe", moves: ["vague_mentale", "eveil_divin", "toxik", "ball_ombre"] },
     ] },
@@ -62,13 +62,14 @@ export const FUSION_LEAGUE: FusionLeagueTrainer[] = [
         // Physiques (ATK dominante) → couverture physique Vol/Sol/Roche/Feu ; 1 STAB spécial thématique quand pertinent.
         { a: "draconarque", b: "alirocaillus", name: "Draconroc", moves: ["pique_fatal", "lame_roche", "seisme", "danse_lames"] },
         { a: "cryotyran", b: "leviathonn", name: "Cryoviathan", moves: ["deferlante", "draco_charge", "seisme", "repos"] },
-        { a: "dracarlin", b: "chronorex", name: "Dracorex", moves: ["seisme", "lame_roche", "crocs_de_feu", "danse_lames"] },
+        // Dracorex = DRAGON/VOL (Dragon de Dracarlin + Vol de Chronorex) → STAB Vol physique (pique_fatal) + couverture.
+        { a: "dracarlin", b: "chronorex", name: "Dracorex", moves: ["pique_fatal", "seisme", "lame_roche", "danse_lames"] },
     ] },
     { key: "ace", name: "ACE", theme: "-", icon: "👑", pairs: [
         { a: "megalithe", b: "sylvebarbe", name: "Mégasylve", moves: ["seisme", "roc_titanesque", "vampigraine", "repos"] },        // mur Roche/Sol
-        { a: "aquilord", b: "jerbiwat", name: "Aquilwatt", moves: ["eveil_divin", "fulgurance", "vague_mentale", "reprise_ailes"] }, // spécial rapide (Psy)
-        { a: "vipember", b: "toucanyon", name: "Vipécan", moves: ["lance_flammes", "eveil_divin", "fulgurance", "hypnose"] },        // spécial rapide (Feu/Psy)
-        { a: "magmator", b: "rochison", name: "Magmarok", moves: ["roc_titanesque", "seisme", "crocs_de_feu", "danse_lames"] },      // physique Roche
+        { a: "aquilord", b: "jerbiwat", name: "Aquilwatt", moves: ["eveil_divin", "fulgurance", "vague_mentale", "reprise_ailes"] }, // Normal/PSY spé (2 STAB Psy éveil_divin+vague_mentale sur SpA ; fulgurance = couverture Élec ; Normal = typage physique, def only)
+        { a: "vipember", b: "toucanyon", name: "Vipécan", moves: ["lance_flammes", "eveil_divin", "fulgurance", "hypnose"] },        // Feu/VOL spé (STAB Feu ; Vol = typage physique, def only)
+        { a: "magmator", b: "rochison", name: "Magmarok", moves: ["roc_titanesque", "seisme", "crocs_de_feu", "danse_lames"] },      // Roche/SOL physique (2 STAB ; crocs_de_feu = couverture)
         { a: "loupyre", b: "thundah", name: "Thundaloup", moves: ["lance_flammes", "fulgurance", "vive_attaque", "cage_eclair"] },   // Feu/Élec rapide
         { a: "omnhippo", b: "regnantaur", name: "Omnantaur", moves: ["eveil_divin", "vague_mentale", "dard_fatal", "repos"] },        // spécial Psy + Insecte
     ] },

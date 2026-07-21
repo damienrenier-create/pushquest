@@ -12,8 +12,10 @@
 //   • Spéciale : SpA = spc du parent le plus RAPIDE, SpD = spc du plus LENT (valeurs pleines ; à vitesse égale,
 //     la spc la plus haute → SpA, départage intrinsèque → indépendant de l'ordre).
 //   • Niveau = max(parents). Les stats reçues sont les stats FINALES réelles (le module est agnostique base/finale).
-//   • Types : 2 mono → bi-type ; sinon garder les 2 types les plus fidèles aux plus grosses stats (table stat-
-//     représentative par type, DIVERSIFIÉE = 2 dimensions distinctes ; un type spécial matche sur la SpA seule).
+//   • Types (RÈGLE Sartay) : UN type de CHAQUE parent = pour chaque parent, son type le plus fidèle à ses GROSSES
+//     STATS (stat-représentative du type). JAMAIS 2 types d'un parent + 0 de l'autre. Si les deux parents pointent
+//     vers le MÊME type (partagé), on garde ce type commun + le 2e type le plus stat-fidèle du couple (reste bi-type ;
+//     le type partagé représente déjà les DEUX parents). Mono uniquement si aucun autre type dispo.
 //   • Nom : 1re moitié du nom du 1er parent (dominant) + « - » + 2e moitié du 2e.
 
 import { SPECIES } from "./species"
@@ -119,22 +121,28 @@ function repValue(type: PokeType, fused: FusionStats): number {
     return r === "spc" ? fused.spcAtk : fused[r]
 }
 
-/** Typage du fusionné : union dédupliquée des types parents ; si > 2, on garde les 2 les plus fidèles aux plus
- *  grosses stats, en DIVERSIFIANT (2 dimensions de stat distinctes → évite 2 types du même axe, ex. atk+atk).
- *  NB : pour cand ≥ 3, types[0] = le type le plus STAT-FIDÈLE (pas forcément le primaire du parent tête) ; sans
- *  effet gameplay (STAB Gen-1 agnostique à l'ordre), c'est juste l'identité affichée. */
+/** Type le plus fidèle aux GROSSES STATS d'un parent (repValue max sur ses propres types ; égalité → ordre du tableau reçu). */
+function bestType(types: readonly PokeType[], fused: FusionStats): PokeType {
+    const arr = [...new Set(types)]
+    if (arr.length === 0) return "NORMAL" // défensif : un parent a TOUJOURS ≥1 type (garanti par les données) → évite un undefined
+    return arr.reduce((best, t) => (repValue(t, fused) > repValue(best, fused) ? t : best), arr[0])
+}
+
+/** Typage du fusionné (RÈGLE Sartay) : UN type de CHAQUE parent = son type le plus stat-fidèle. JAMAIS 2 types
+ *  d'un parent + 0 de l'autre. Si les deux parents pointent vers le MÊME type S (partagé), on garde S + le 2e type
+ *  le plus stat-fidèle du couple (reste bi-type ; S représente déjà les DEUX parents → aucun parent à 0). Mono
+ *  uniquement si aucun autre type. types[0] = type du parent TÊTE (a) ; ordre cosmétique (STAB agnostique à l'ordre).
+ *  Le SET de types est INDÉPENDANT de l'ordre des parents (PvP déterministe) : dans la branche partagée, les types
+ *  sont départagés (égalités de repValue) via un ordre CANONIQUE des parents (par nom), pas via l'ordre d'appel. */
 export function fuseTypes(a: FusionParent, b: FusionParent, fused: FusionStats): PokeType[] {
-    const cand = [...new Set([...a.types, ...b.types])]
-    if (cand.length <= 2) return cand
-    const rep = typeRepStat()
-    const scored = cand
-        .map((t) => ({ t, rep: rep[t] ?? "atk", val: repValue(t, fused) }))
-        .sort((x, y) => y.val - x.val || cand.indexOf(x.t) - cand.indexOf(y.t))
-    const picked: typeof scored = []
-    const usedReps = new Set<string>()
-    for (const it of scored) { if (picked.length >= 2) break; if (usedReps.has(it.rep)) continue; picked.push(it); usedReps.add(it.rep) }
-    for (const it of scored) { if (picked.length >= 2) break; if (!picked.includes(it)) picked.push(it) } // complète si < 2 dimensions
-    return picked.slice(0, 2).map((it) => it.t)
+    const aType = bestType(a.types, fused)
+    const bType = bestType(b.types, fused)
+    if (aType !== bType) return [aType, bType] // 1 type distinct de chaque parent (SET déjà indépendant de l'ordre)
+    // Type partagé S : S + le meilleur AUTRE type. Parents classés par NOM (canonique) → le départage des égalités de
+    // repValue ne dépend PAS de l'ordre d'appel → SET stable (déterministe pour le PvP + identité Fusiodex).
+    const [p1, p2] = a.name <= b.name ? [a, b] : [b, a]
+    const others = [...new Set([...p1.types, ...p2.types])].filter((t) => t !== aType)
+    return others.length ? [aType, bestType(others, fused)] : [aType]
 }
 
 /** Nom mot-valise : 1re moitié du 1er parent (dominant) + « - » + 2e moitié du 2e. Simple, déterministe, cosmétique. */
