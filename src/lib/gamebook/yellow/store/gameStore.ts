@@ -48,6 +48,8 @@ import { SYLVEBARBE_NPC_ID, SYLVEBARBE_INTRO_LINES, SYLVEBARBE_DONE_LINES, SYLVE
 import { PNJ5_NPC_ID, PNJ5_TRAINER_ID, PNJ5_MAP_ID, PNJ5_KICK, buildPnj5Team, inPnj5Block, inPnj5Trigger, PNJ5_INTRO_LINES, PNJ5_NO_DOME_LINES, PNJ5_NO_TEAM_LINES, PNJ5_SEAL_LINES } from "../data/pnj5"
 import { PNJ7_NPC_ID, PNJ7_TRAINER_ID, PNJ7_MAP_ID, PNJ7_NAME, PNJ7_INTRO_LINES, PNJ7_CAROUSEL_LINES, PNJ7_NO_TEAM_LINES, buildPnj7Team, pnj7DayMarker, resetGrotteDemo, takeGrotteDemoSpawn } from "../data/pnj7"
 import { AUTEL_VISITED_MARKER, DOME_SPAGHETTI_LINES } from "../data/fusiodex"
+import { PNJ6_NPC_ID, PNJ6_TRAINER_ID, PNJ6_NAME, PNJ6_INTRO_LINES, PNJ6_NO_TEAM_LINES, PNJ6_FAREWELL_LINES, PNJ6_TRADE_DONE_MARKER, buildPnj6Team } from "../data/pnj6"
+import { PNJ10_NPC_ID, PNJ10_TRAINER_ID, PNJ10_MAP_ID, PNJ10_NAME, PNJ10_INTRO_LINES, PNJ10_NO_TEAM_LINES, PNJ10_VICTORY_LINES, buildPnj10Team, inPnj10Block, isPnj10ClearedThisVisit, resetPnj10Visit } from "../data/pnj10"
 import { CHEN_LAB_LINES, LAB_ASSISTANT_LINES, LAB_ASSISTANT_LINES_NGPLUS, LAB_ASSISTANT_LINES_RUN3, CHEN_ABANDON_OFFER_LINES, CHEN_RUN3_TEASER_LINES, CHEN_RUN3_EVOLVE_LINES } from "../data/labDialogues"
 import { MAGNETOR_EVO_ITEM } from "../data/items"
 import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADE_RECEIVE_RUN1, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_TRADER_OFFER_LINES_RUN1, HH_TRADER_NEED_LINES_RUN1, HH_TRADER_HAS_MORROW_LINES, HH_TRADER_CANCEL_LINES, HH_TRADE_AQUILOTHAN_GIVE, HH_TRADE_AQUILOTHAN_RECEIVE, HH_TRADER_AQUILORD_OFFER_LINES, HH_TRADER_AQUILORD_NEED_LINES, HH_TRADER_AQUILORD_DONE_LINES, HH_TRADER_AQUILORD_CANCEL_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
@@ -143,6 +145,8 @@ interface GameStore {
     pendingSylvebarbe: boolean // intro de SYLVEBARBE (gardien sud Ville Jaune) en cours → combat à la fermeture
     pendingPnj5: boolean // intro de PNJ 5 (gardien de la Grotte du Nexus) en cours → combat à la fermeture
     pendingPnj7: boolean // intro de PNJ 7 (Éclaireur de la Grotte du Nexus) en cours → combat à la fermeture
+    pendingPnj6: boolean // intro de PNJ 6 (Échangeur de la Grotte du Nexus) en cours → combat à la fermeture
+    pendingPnj10: boolean // intro de PNJ 10 (Sentinelle de la Grotte du Nexus) en cours → combat à la fermeture
     pendingHhTrade: string | null // uid du Roctaur à échanger (BROCANTEUR maison hantée) → échange à la fermeture
     pendingAquilordTrade: string | null // uid de l'Aquilothan → Aquilord (BROCANTEUR, service premium live) à la fermeture
     pendingCaveTrade: string | null // uid du Faukon à échanger (DÉNICHEUR grotte) → échange à la fermeture
@@ -545,6 +549,31 @@ function tryLaunchPnj7(): ActiveDialogue | null {
     return null
 }
 
+// L'ÉCHANGEUR DE LA GROTTE (PNJ 6). Combat RÉPÉTABLE (pas de cap) tant que l'échange Crocavern n'est pas conclu.
+// À la victoire, battleStore émet l'offre d'échange (modale). Aucun marqueur ici — juste le combat.
+function tryLaunchPnj6(): ActiveDialogue | null {
+    const team = getPlayerSave().team
+    if (!team.some((m) => m.currentHp > 0)) {
+        return { npcId: PNJ6_TRAINER_ID, npcName: PNJ6_NAME, lineIndex: 0, lines: PNJ6_NO_TEAM_LINES }
+    }
+    const enemyTeam = buildPnj6Team()
+    const seed = Math.floor(Math.random() * 1e9) >>> 0
+    startTrainerBattle(team, enemyTeam, seed, { trainerId: PNJ6_TRAINER_ID, reward: 0, aiLevel: "hof" })
+    return null
+}
+
+// LA SENTINELLE DE LA GROTTE (PNJ 10). Bloqueur de couloir : re-battu à chaque visite (flag transitoire).
+function tryLaunchPnj10(): ActiveDialogue | null {
+    const team = getPlayerSave().team
+    if (!team.some((m) => m.currentHp > 0)) {
+        return { npcId: PNJ10_TRAINER_ID, npcName: PNJ10_NAME, lineIndex: 0, lines: PNJ10_NO_TEAM_LINES }
+    }
+    const enemyTeam = buildPnj10Team()
+    const seed = Math.floor(Math.random() * 1e9) >>> 0
+    startTrainerBattle(team, enemyTeam, seed, { trainerId: PNJ10_TRAINER_ID, reward: 0, aiLevel: "hof" })
+    return null
+}
+
 // Spawn par défaut : VILLE JAUNE = Viridian City 45×40 (scale natif FireRed),
 // entrée sud (Route 1) centre-bas pour explorer la ville.
 export const DEFAULT_SPAWN = { x: 22, y: 37 } // juste AU-DESSUS du Sylvebarbe endormi qui bouche la sortie sud
@@ -581,6 +610,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     pendingSylvebarbe: false,
     pendingPnj5: false,
     pendingPnj7: false,
+    pendingPnj6: false,
+    pendingPnj10: false,
     pendingHhTrade: null,
     pendingAquilordTrade: null,
     pendingCaveTrade: null,
@@ -634,6 +665,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
             && inPnj5Block(next.posX, next.posY)) {
             set({ player: { ...player, direction: next.direction } })
             scheduleSave({ ...player, direction: next.direction })
+            return
+        }
+        // SENTINELLE (PNJ 10) — INTERCEPTION : marcher sur le couloir (17-19,18) LANCE le combat tant qu'elle n'est
+        // pas vaincue CETTE visite (bloqueur pur, sans gate). On ne bouge pas, on tourne face à elle et on enchaîne.
+        if ((next.posX !== player.posX || next.posY !== player.posY)
+            && player.mapId === PNJ10_MAP_ID && !isPnj10ClearedThisVisit()
+            && inPnj10Block(next.posX, next.posY)) {
+            set({ player: { ...player, direction: next.direction }, dialogue: { npcId: PNJ10_NPC_ID, npcName: PNJ10_NAME, lines: PNJ10_INTRO_LINES, lineIndex: 0 }, pendingPnj10: true })
             return
         }
 
@@ -1026,6 +1065,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     set({ dialogue: tryLaunchPnj5(), pendingPnj5: false })
                 } else if (get().pendingPnj7) {
                     set({ dialogue: tryLaunchPnj7(), pendingPnj7: false })
+                } else if (get().pendingPnj6) {
+                    set({ dialogue: tryLaunchPnj6(), pendingPnj6: false })
+                } else if (get().pendingPnj10) {
+                    set({ dialogue: tryLaunchPnj10(), pendingPnj10: false })
                 } else if (get().pendingHhTrade) {
                     set({ dialogue: doHhTrade(get().pendingHhTrade!), pendingHhTrade: null })
                 } else if (get().pendingAquilordTrade) {
@@ -1360,6 +1403,24 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ dialogue: { npcId: npc.id, npcName: PNJ7_NAME, lines: PNJ7_INTRO_LINES, lineIndex: 0 }, pendingPnj7: true })
             return
         }
+        // PNJ 6 — L'ÉCHANGEUR. Échange déjà conclu → salut (plus de combat). Sinon → intro puis combat répétable.
+        if (npc.id === PNJ6_NPC_ID) {
+            if (isTrainerDefeated(PNJ6_TRADE_DONE_MARKER)) {
+                set({ dialogue: { npcId: npc.id, npcName: PNJ6_NAME, lines: PNJ6_FAREWELL_LINES, lineIndex: 0 } })
+                return
+            }
+            set({ dialogue: { npcId: npc.id, npcName: PNJ6_NAME, lines: PNJ6_INTRO_LINES, lineIndex: 0 }, pendingPnj6: true })
+            return
+        }
+        // PNJ 10 — LA SENTINELLE. Déjà vaincue cette visite → passage libre (salut). Sinon → intro puis combat.
+        if (npc.id === PNJ10_NPC_ID) {
+            if (isPnj10ClearedThisVisit()) {
+                set({ dialogue: { npcId: npc.id, npcName: PNJ10_NAME, lines: PNJ10_VICTORY_LINES, lineIndex: 0 } })
+                return
+            }
+            set({ dialogue: { npcId: npc.id, npcName: PNJ10_NAME, lines: PNJ10_INTRO_LINES, lineIndex: 0 }, pendingPnj10: true })
+            return
+        }
 
         // BROCANTEUR (maison hantée) — WORLD-AWARE. RUN 1 → Roctaur→ROCHISON (trade-évo) ; RUN 2 → Roctaur→MORROW ;
         // RUN 3 → PLUS de Roctaur : uniquement le service AQUILOTHAN→AQUILORD. (Post-game live : Aquilord ET Roctaur.)
@@ -1599,6 +1660,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ dialogue: tryLaunchPnj5(), pendingPnj5: false })
         } else if (get().pendingPnj7) {
             set({ dialogue: tryLaunchPnj7(), pendingPnj7: false })
+        } else if (get().pendingPnj6) {
+            set({ dialogue: tryLaunchPnj6(), pendingPnj6: false })
+        } else if (get().pendingPnj10) {
+            set({ dialogue: tryLaunchPnj10(), pendingPnj10: false })
         } else if (get().pendingHhTrade) {
             // Ⓑ = RENONCER à l'échange (étape de validation) : on ne troque RIEN, le Roctaur reste dans l'équipe.
             set({ dialogue: { npcId: HH_TRADER_ID, npcName: "BROCANTEUR", lineIndex: 0, lines: HH_TRADER_CANCEL_LINES }, pendingHhTrade: null })
@@ -1625,7 +1690,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
         // GARDIEN DE LA GROTTE : entrer dans la grotte (par le passeur → setMap) RÉ-ARME PNJ 5 → il faut le rebattre.
         // Les échelles intra-grotte passent par la transition inline (findExitAt), PAS setMap → aucun ré-arm parasite.
-        if (mapId === PNJ5_MAP_ID) { pnj5WinsAtEntry = pnj5WinsCount(); grotteFusionPop = { prev1: "", prev2: "", primed: "" }; resetGrotteDemo() } // entrée grotte → reset pop fusions + démo PNJ 7
+        if (mapId === PNJ5_MAP_ID) { pnj5WinsAtEntry = pnj5WinsCount(); grotteFusionPop = { prev1: "", prev2: "", primed: "" }; resetGrotteDemo(); resetPnj10Visit() } // entrée grotte → reset pop fusions + démo PNJ 7 + barrage PNJ 10
         const player = createInitialPlayer(mapId, spawnX, spawnY)
         set({ map, player, dialogue: null })
         saveNow(player) // transition de map → persistance IMMÉDIATE (anti-désync position/flags au reload, cf. whiteout Ligue)

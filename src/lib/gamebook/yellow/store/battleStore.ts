@@ -37,6 +37,8 @@ import { ACE_TRAINER_ID, aceReward, aceWinTaunt, speciesAtLevel } from "../data/
 import { ORCALINE_TRAINER_ID, ORCALINE_GIFT_SPECIES, ORCALINE_GIFT_LEVEL, ORCALINE_BALL_REWARD_ID, ORCALINE_BALL_AT_LEVEL, orcalineTrainerDialogue } from "../data/orcalineTrainer"
 import { PNJ5_TRAINER_ID, PNJ5_VICTORY_LINES } from "../data/pnj5"
 import { PNJ7_TRAINER_ID, PNJ7_NAME, PNJ7_VICTORY_LINES, PNJ7_CAROUSEL_LINES, primeGrotteDemo } from "../data/pnj7"
+import { PNJ6_TRAINER_ID, PNJ6_NAME, PNJ6_VICTORY_LINES } from "../data/pnj6"
+import { PNJ10_TRAINER_ID, PNJ10_NAME, PNJ10_VICTORY_LINES, recordPnj10Cleared } from "../data/pnj10"
 import { GEKROC_STONE_ITEM } from "../data/gekroc"
 import { frontierEnergyRefund, FRONTIER_EXP_MULT } from "../frontier/engine"
 import { DUEL_EXP_MULT } from "../data/duel"
@@ -108,6 +110,7 @@ interface BattleStoreState {
     stoneReward: string | null
     lavapetitTeaser: "seen" | "caught" | null // RUN 3 : teaser Dieu Spag Lavapetit à afficher (transitoire)
     fusioBallOffer: boolean // LIGUE DE FUSION : proposer l'achat d'une Fusio-Ball (1000 reps) au sacre (transitoire, non persisté)
+    pnj6TradeOffer: boolean // PNJ 6 (Échangeur Grotte) : proposer l'échange Crocavern ↔ team[0] après victoire (transitoire)
     /** Récompense d'un REMATCH de dresseur (dialogue post-combat : énergie / CT Mirage) ; null sinon. */
     rematchReward: { npcId: string; npcName: string; lines: string[] } | null
     /** Contexte d'un combat JOUEUR vs JOUEUR (null = combat solo classique). */
@@ -163,7 +166,7 @@ interface PvpContext {
     ephemeralTeam?: boolean
 }
 
-let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, arenaRun: null, chainRematchId: null, pendingLearn: false, duelResult: null, frontierResult: null, stoneReward: null, lavapetitTeaser: null, fusioBallOffer: false, justCaught: false, ngplusFinalPending: false, ngplusFinalResult: null }
+let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, arenaRun: null, chainRematchId: null, pendingLearn: false, duelResult: null, frontierResult: null, stoneReward: null, lavapetitTeaser: null, fusioBallOffer: false, pnj6TradeOffer: false, justCaught: false, ngplusFinalPending: false, ngplusFinalResult: null }
 // LIGUE — meilleurs moments du run en cours (best hit par membre du Conseil 4 + Maître), runtime.
 // Upsert par trainerId à chaque victoire de la Ligue ; lus au sacre du Maître pour le Hall of Fame.
 const leagueHighlights: Record<string, LeagueHighlight> = {}
@@ -573,6 +576,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     //   Flags per-monde one-time. UNIQUEMENT en run 3 (Lavapetit apparaît aussi en run 1/2 sans teaser).
     let lavapetitTeaser: "seen" | "caught" | null = null
     let fusioBallOffer = false // posé au sacre de la Ligue de Fusion (offre d'achat Fusio-Ball par le Dieu Spaghetti)
+    let pnj6TradeOffer = false // posé à la victoire sur PNJ 6 (offre d'échange Crocavern ↔ team[0])
     if (getActiveWorld() === "run3" && b.isWild && b.enemy.team.some((e) => e.speciesId === "lavapetit")) {
         const pl = getPlayer()
         if (b.outcome === "caught" && !pl.run3LavapetitCaught) { markRun3LavapetitCaught(); lavapetitTeaser = "caught" }
@@ -792,6 +796,16 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             // puis carrousel d'infos (biotopes + scientifique + secret de la fusion).
             primeGrotteDemo()
             rematchReward = { npcId: PNJ7_TRAINER_ID, npcName: PNJ7_NAME, lines: [...PNJ7_VICTORY_LINES, ...PNJ7_CAROUSEL_LINES] }
+        } else if (storeState.trainer.trainerId === PNJ6_TRAINER_ID) {
+            // L'ÉCHANGEUR (PNJ 6) : victoire → offre d'échange Crocavern ↔ team[0] (modale côté client). RÉPÉTABLE
+            //   tant que l'échange n'est pas conclu — aucun marqueur ici (pnj6_trade_done est posé À L'ÉCHANGE).
+            pnj6TradeOffer = true
+            rematchReward = { npcId: PNJ6_TRAINER_ID, npcName: PNJ6_NAME, lines: [...PNJ6_VICTORY_LINES] }
+        } else if (storeState.trainer.trainerId === PNJ10_TRAINER_ID) {
+            // LA SENTINELLE (PNJ 10) : victoire → couloir ouvert CETTE visite (flag transitoire, ré-armé à l'entrée).
+            //   Ré-affrontable à chaque nouvelle visite (pas de marqueur permanent).
+            recordPnj10Cleared()
+            rematchReward = { npcId: PNJ10_TRAINER_ID, npcName: PNJ10_NAME, lines: [...PNJ10_VICTORY_LINES] }
         } else if (storeState.trainer.trainerId.startsWith("duel:")) {
             // DUEL reflet : aucune récompense ici → gérée côté UI (limite 1/jour, Nexus Ball, dialogue
             // Dieu des Nouilles, cadeau croisé). PAS de markTrainerDefeated (ce n'est pas un dresseur permanent).
@@ -1020,7 +1034,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // Un Daemon a-t-il une attaque EN ATTENTE (slots pleins à la montée de niveau / l'évolution) ? → prompt post-combat.
     const pendingLearn = getPlayer().team.some((m) => (m.pendingMoves?.length ?? 0) > 0)
     // Expose les évolutions pour la cinématique post-combat (jouée après "QUITTER").
-    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose && !isFusionTrial, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, arenaRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward, lavapetitTeaser, fusioBallOffer, justCaught: b.outcome === "caught", ngplusFinalPending: storeState.ngplusFinalPending || ngplusMaitreWin, ngplusFinalResult })
+    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose && !isFusionTrial, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, arenaRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward, lavapetitTeaser, fusioBallOffer, pnj6TradeOffer, justCaught: b.outcome === "caught", ngplusFinalPending: storeState.ngplusFinalPending || ngplusMaitreWin, ngplusFinalResult })
 
     // 4) Sauvegarde persistante (DB).
     persistYellowSave()
@@ -1578,6 +1592,18 @@ export function useFusioBallOffer(): boolean {
 }
 export function clearFusioBallOffer() {
     setStore({ fusioBallOffer: false })
+}
+
+/** PNJ 6 (Échangeur Grotte) — propose-t-il l'échange Crocavern ↔ team[0] (post-victoire, transitoire) ? */
+export function usePnj6TradeOffer(): boolean {
+    return useSyncExternalStore(
+        subscribe,
+        () => getSnapshot().pnj6TradeOffer,
+        () => getSnapshot().pnj6TradeOffer,
+    )
+}
+export function clearPnj6TradeOffer() {
+    setStore({ pnj6TradeOffer: false })
 }
 
 /** Un Daemon vient d'être capturé (signal transitoire pour l'UI, ex. carrousel génétique). */

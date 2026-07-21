@@ -19,6 +19,9 @@ import { HH_KID_ID, HH_KID_MAP, HH_KID_POS, HH_KID_DAY_LINES } from "./data/hhKi
 import { ORCALINE_TRAINER_ID, ORCALINE_TRAINER_MAP, ORCALINE_TRAINER_POS, ORCALINE_INTRO_LINES } from "./data/orcalineTrainer"
 import { PNJ5_NPC_ID, PNJ5_MAP_ID, PNJ5_POS, PNJ5_INTRO_LINES } from "./data/pnj5"
 import { PNJ7_NPC_ID, PNJ7_MAP_ID, PNJ7_POS, PNJ7_NAME, PNJ7_INTRO_LINES } from "./data/pnj7"
+import { PNJ6_NPC_ID, PNJ6_MAP_ID, PNJ6_POS, PNJ6_NAME, PNJ6_INTRO_LINES } from "./data/pnj6"
+import { PNJ10_NPC_ID, PNJ10_MAP_ID, PNJ10_POS, PNJ10_NAME, PNJ10_INTRO_LINES } from "./data/pnj10"
+import { GROTTE_SIGN_NPC_A, GROTTE_SIGN_NPC_B, GROTTE_SIGN_MAP_ID, GROTTE_SIGN_POS_A, GROTTE_SIGN_POS_B, GROTTE_SIGN_LINES } from "./data/grotteSign"
 
 // PANNEAUX-conseils = les ~12 panneaux BIEN ESPACÉS de la Route Nord (le sprite
 // panneau est rendu par le décor). Chaque panneau = un hotspot INVISIBLE qui
@@ -136,6 +139,44 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         initialX: PNJ7_POS.x,
         initialY: PNJ7_POS.y,
         dialoguesAfter: PNJ7_INTRO_LINES,
+    },
+    // PNJ 6 — L'ÉCHANGEUR (Grotte 1F, (5,38), de dos). Combat répétable → échange Crocavern contre team[0].
+    // Comportement complet côté store (pressA + offre d'échange post-combat).
+    {
+        id: PNJ6_NPC_ID,
+        name: PNJ6_NAME,
+        mapId: PNJ6_MAP_ID,
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🤝", color: "#8a6a4a" },
+        initialX: PNJ6_POS.x,
+        initialY: PNJ6_POS.y,
+        dialoguesAfter: PNJ6_INTRO_LINES,
+    },
+    // PNJ 10 — LA SENTINELLE (Grotte 1F, (16,18)). Bloque le couloir (17-19,18). Visuel réel via NPC_SPRITES
+    // (pnj10.png) ; repli emoji. Comportement complet côté store (interception de mouvement + pressA).
+    {
+        id: PNJ10_NPC_ID,
+        name: PNJ10_NAME,
+        mapId: PNJ10_MAP_ID,
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "🛡️", color: "#4a7a9a" },
+        initialX: PNJ10_POS.x,
+        initialY: PNJ10_POS.y,
+        dialoguesAfter: PNJ10_INTRO_LINES,
+    },
+    // PANNEAU D'INFO Grotte 1F — 2 hotspots (19,27)+(20,27), cases-murs déjà dessinées. Carrousel sans spoiler.
+    // (19,27) porte le marqueur visible 🪧 ; (20,27) est un hotspot invisible (emoji vide) mais cliquable.
+    {
+        id: GROTTE_SIGN_NPC_A, name: "PANNEAU", mapId: GROTTE_SIGN_MAP_ID, kind: "static", interaction: "interactive",
+        sprite: { emoji: "🪧", color: "#b8946a" }, initialX: GROTTE_SIGN_POS_A.x, initialY: GROTTE_SIGN_POS_A.y,
+        dialoguesAfter: GROTTE_SIGN_LINES,
+    },
+    {
+        id: GROTTE_SIGN_NPC_B, name: "PANNEAU", mapId: GROTTE_SIGN_MAP_ID, kind: "static", interaction: "interactive",
+        sprite: { emoji: "", color: "#b8946a" }, initialX: GROTTE_SIGN_POS_B.x, initialY: GROTTE_SIGN_POS_B.y,
+        dialoguesAfter: GROTTE_SIGN_LINES,
     },
     // PANNEAUX de Ville Jaune (cases non-walkables déjà dessinées dans le décor → NPC invisibles).
     {

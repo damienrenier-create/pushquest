@@ -2481,6 +2481,24 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "Léviathan des abysses : il noie les flammes et engloutit les âmes. Le chasseur né du phénix maudit. — froid, patient, implacable",
         sprite: "/yellow/sprites/dex/leviabysse.png",
     },
+    // 🐊🪨 CROCAVERN — EXCLUSIF de la Grotte du Nexus (échange PNJ 6 + ultra-rare dans les bancs de sable). Colosse
+    //   ROCHE/PLANTE : lent, défense solide, ATTAQUE monstrueuse. Mono-stade (pas d'évolution). Courbe RAPIDE.
+    //   ROCHE = physique (son arme, ATQ 128) ; PLANTE = spécial → thématique/défensif (Vampigraine, drains).
+    crocavern: {
+        id: "crocavern", dexNo: 190, name: "Crocavern", types: ["ROCHE", "PLANTE"],
+        baseStats: { hp: 90, atk: 128, def: 102, spe: 40, spc: 62 }, // BST 422
+        learnset: [
+            { level: 1, moveId: "charge" }, { level: 1, moveId: "jet_pierres" }, { level: 1, moveId: "vampigraine" },
+            { level: 6, moveId: "eboulis" }, { level: 12, moveId: "mega_sangsue" }, { level: 18, moveId: "carapace_diamant" },
+            { level: 24, moveId: "lame_roche" }, { level: 30, moveId: "danse_lames" }, { level: 36, moveId: "seisme" },
+            { level: 44, moveId: "tranche_feuille" }, { level: 52, moveId: "repos" }, { level: 62, moveId: "roc_titanesque" },
+            { level: 74, moveId: "lance_soleil" },
+        ],
+        catchRate: 5, baseExp: 185, rarity: "RARE", growthRate: "fast", secretTalent: "sang_froid", postLeague: true,
+        role: "ROCHE/PLANTE — colosse physique lent (exclusif Grotte du Nexus)",
+        description: "Un crocodile de pierre moussue, tapi dans les bancs de sable depuis des âges oubliés. Lent, mais d'une force qui fend le roc.",
+        sprite: "/yellow/sprites/dex/crocavern.png",
+    },
     // 🦛🔮 HYPNOPPO → TÉLÉPPO → OMNHIPPO — lignée mono-PSY inédite du run 3 (l'ENDORMEUR : hypnose → contrôle → sweep).
     hypnoppo: {
         id: "hypnoppo", dexNo: 157, name: "Hypnoppo", types: ["PSY"],
