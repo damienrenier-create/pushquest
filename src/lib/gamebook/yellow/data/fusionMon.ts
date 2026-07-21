@@ -45,11 +45,11 @@ export function applyFusionStats(inst: MonInstance, f: FusionResult): void {
 
 /** SpeciesData ÉPHÉMÈRE d'une fusion. baseStats.spc = SpA (fallback d'affichage ; le COMBAT lit frozenStats/frozenSpd,
  *  pas ceci). Masquée du dex. `nameOverride` = nom figé (ex. les 21 noms de la Ligue de Fusion) sinon le portmanteau auto. */
-function buildFusionSpecies(id: string, f: FusionResult, sprite: string, nameOverride?: string): SpeciesData {
+function buildFusionSpecies(id: string, f: FusionResult, sprite: string, nameOverride?: string, movesOverride?: string[]): SpeciesData {
     return {
         id, dexNo: -1, name: nameOverride ?? f.name, types: f.types,
         baseStats: { hp: f.stats.hp, atk: f.stats.atk, def: f.stats.def, spe: f.stats.spe, spc: f.stats.spcAtk },
-        learnset: f.moves.map((moveId) => ({ level: 1, moveId })),
+        learnset: (movesOverride ?? f.moves).map((moveId) => ({ level: 1, moveId })),
         catchRate: 0, baseExp: 0, rarity: "RARE",
         description: `Fusion éphémère de ${f.parents[0]} et ${f.parents[1]}.`,
         sprite, hiddenUntilCaught: true,
@@ -61,12 +61,14 @@ export interface BuiltFusion { instance: MonInstance; speciesId: string; result:
 /** Construit le Daemon FUSIONNÉ de A (tête/dominant) et B : enregistre l'espèce éphémère + fabrique l'instance de
  *  combat figée (frozenStats = SpA, frozenSpd = SpD, moveset, objet tenu). À DÉTRUIRE après le combat via
  *  disposeFusion(speciesId). Les 2 parents ne sont pas touchés. */
-export function buildFusion(a: MonInstance, b: MonInstance, opts?: { name?: string }): BuiltFusion {
+export function buildFusion(a: MonInstance, b: MonInstance, opts?: { name?: string; moves?: string[] }): BuiltFusion {
     const result = computeFusion(fusionParentFromInstance(a), fusionParentFromInstance(b))
     const id = fusionSpeciesId(a, b)
     const sprite = getSpecies(a.speciesId)?.sprite ?? "" // sprite du dominant (halo mauve = surcouche UI)
-    registerCustomSpecies([buildFusionSpecies(id, result, sprite, opts?.name)])
-    const instance = createMonInstance(id, result.level, { moveIds: [...result.moves], owned: false })
+    // moveset : dérivé du moteur (fusions du joueur) OU curé à la main (opts.moves — les 21 fusions de la Ligue).
+    const moves = opts?.moves ?? result.moves
+    registerCustomSpecies([buildFusionSpecies(id, result, sprite, opts?.name, opts?.moves)])
+    const instance = createMonInstance(id, result.level, { moveIds: [...moves], owned: false })
     applyFusionStats(instance, result)
     // Objets tenus : le 1er est appliqué. ⚠️ Le 2e (result.heldItems[1]) attend l'extension moteur « 2 objets »
     //   (le système de combat lit heldItem au singulier). Cf. spec Inc.1.

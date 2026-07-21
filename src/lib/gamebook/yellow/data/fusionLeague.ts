@@ -21,7 +21,7 @@ export const FUSION_TIERS: Record<FusionTier, { level: number; saiyan: number; l
     or: { level: 100, saiyan: 95, label: "Or" },
 }
 
-export interface FusionPairDef { a: string; b: string; name: string }
+export interface FusionPairDef { a: string; b: string; name: string; moves?: string[] } // moves = moveset CURÉ (4 attaques) ; sinon dérivé
 export interface FusionLeagueTrainer {
     key: string
     name: string    // nom du dresseur
@@ -33,35 +33,39 @@ export interface FusionLeagueTrainer {
 /** Les 5 dresseurs (4 Conseil + Champion). 21 fusions, 42 parents tous distincts. */
 export const FUSION_LEAGUE: FusionLeagueTrainer[] = [
     { key: "lorelei", name: "Lorelei", theme: "GLACE", icon: "🧊", pairs: [
-        { a: "morrow", b: "orcaline", name: "Morcaline" },
-        { a: "mobyd", b: "auroraur", name: "Aurobyd" },
-        { a: "panthegel", b: "yetiroche", name: "Panthyéti" },
-        { a: "iorours", b: "glaceer", name: "Glaciours" },
+        // GLACE/EAU = spéciaux. Sweepers spéciaux (SpA) + Repos.
+        { a: "morrow", b: "orcaline", name: "Morcaline", moves: ["blizzard", "deferlante", "vague_mentale", "repos"] },
+        { a: "mobyd", b: "auroraur", name: "Aurobyd", moves: ["deferlante", "blizzard", "fulgurance", "repos"] },
+        { a: "panthegel", b: "yetiroche", name: "Panthyéti", moves: ["blizzard", "lame_roche", "fulgurance", "repos"] },
+        { a: "iorours", b: "glaceer", name: "Glaciours", moves: ["blizzard", "roc_titanesque", "seisme", "repos"] },
     ] },
     { key: "bruno", name: "Bruno", theme: "COMBAT", icon: "🥊", pairs: [
-        { a: "maitrezenc", b: "enclumind", name: "Maîtreclume" },
-        { a: "hebulmin", b: "tauricendre", name: "Hébultaure" },
-        { a: "druidours", b: "uzumaro", name: "Druidumaro" },
-        { a: "bouhbou", b: "karatame", name: "Karabouh" },
+        // COMBAT physique (ATK énorme) → STAB Combat + couverture Sol/Roche/Métal + Danse-Lames. Karabouh = spécial (Psy).
+        { a: "maitrezenc", b: "enclumind", name: "Maîtreclume", moves: ["coup_de_boutoir", "tete_de_fer", "seisme", "danse_lames"] },
+        { a: "hebulmin", b: "tauricendre", name: "Hébultaure", moves: ["coup_de_boutoir", "seisme", "cage_eclair", "danse_lames"] },
+        { a: "druidours", b: "uzumaro", name: "Druidumaro", moves: ["coup_de_boutoir", "seisme", "mega_sangsue", "danse_lames"] },
+        { a: "bouhbou", b: "karatame", name: "Karabouh", moves: ["eveil_divin", "coup_de_boutoir", "fulgurance", "repos"] },
     ] },
     { key: "agatha", name: "Agatha", theme: "SPECTRE", icon: "👻", pairs: [
-        { a: "ombrapanthe", b: "shadow", name: "Shadopanthe" },
-        { a: "namizeus", b: "necrolopendre", name: "Nécrozeus" },
-        { a: "archibouh", b: "brookhante", name: "Archibrook" },
-        { a: "mycedruide", b: "necrocorbe", name: "Mycécorbe" },
+        // Shadopanthe/Nécrozeus = physiques rapides (Spectre+Normal/Insecte physiques). Archibrook/Mycécorbe = spéciaux (Psy).
+        { a: "ombrapanthe", b: "shadow", name: "Shadopanthe", moves: ["ball_ombre", "plaquage", "seisme", "hypnose"] },
+        { a: "namizeus", b: "necrolopendre", name: "Nécrozeus", moves: ["ball_ombre", "dard_fatal", "seisme", "toxik"] },
+        { a: "archibouh", b: "brookhante", name: "Archibrook", moves: ["eveil_divin", "vague_mentale", "onde_obscure", "hypnose"] },
+        { a: "mycedruide", b: "necrocorbe", name: "Mycécorbe", moves: ["vague_mentale", "eveil_divin", "toxik", "ball_ombre"] },
     ] },
     { key: "peter", name: "Peter", theme: "DRAGON", icon: "🐉", pairs: [
-        { a: "draconarque", b: "alirocaillus", name: "Draconroc" },
-        { a: "cryotyran", b: "leviathonn", name: "Cryoviathan" },
-        { a: "dracarlin", b: "crocodaillus", name: "Dracroco" },
+        // Physiques (ATK dominante) → couverture physique Vol/Sol/Roche/Feu ; 1 STAB spécial thématique quand pertinent.
+        { a: "draconarque", b: "alirocaillus", name: "Draconroc", moves: ["pique_fatal", "lame_roche", "seisme", "danse_lames"] },
+        { a: "cryotyran", b: "leviathonn", name: "Cryoviathan", moves: ["deferlante", "draco_charge", "seisme", "repos"] },
+        { a: "dracarlin", b: "crocodaillus", name: "Dracroco", moves: ["seisme", "lame_roche", "crocs_de_feu", "danse_lames"] },
     ] },
     { key: "ace", name: "ACE", theme: "-", icon: "👑", pairs: [
-        { a: "golemini", b: "sylvebarbe", name: "Golésylve" },
-        { a: "aquilord", b: "jerbiwat", name: "Aquilwatt" },
-        { a: "vipember", b: "toucanyon", name: "Vipécan" },
-        { a: "magmator", b: "rochison", name: "Magmarok" },
-        { a: "loupyre", b: "thundah", name: "Thundaloup" },
-        { a: "omnhippo", b: "regnantaur", name: "Omnantaur" },
+        { a: "golemini", b: "sylvebarbe", name: "Golésylve", moves: ["seisme", "roc_titanesque", "vampigraine", "repos"] },        // mur Roche/Sol
+        { a: "aquilord", b: "jerbiwat", name: "Aquilwatt", moves: ["eveil_divin", "fulgurance", "vague_mentale", "reprise_ailes"] }, // spécial rapide (Psy)
+        { a: "vipember", b: "toucanyon", name: "Vipécan", moves: ["lance_flammes", "eveil_divin", "fulgurance", "hypnose"] },        // spécial rapide (Feu/Psy)
+        { a: "magmator", b: "rochison", name: "Magmarok", moves: ["roc_titanesque", "seisme", "crocs_de_feu", "danse_lames"] },      // physique Roche
+        { a: "loupyre", b: "thundah", name: "Thundaloup", moves: ["lance_flammes", "fulgurance", "vive_attaque", "cage_eclair"] },   // Feu/Élec rapide
+        { a: "omnhippo", b: "regnantaur", name: "Omnantaur", moves: ["eveil_divin", "vague_mentale", "dard_fatal", "repos"] },        // spécial Psy + Insecte
     ] },
 ]
 
@@ -94,7 +98,7 @@ export function buildFusionLeagueTeam(trainerKey: string, tier: FusionTier): Bui
     if (!tr) throw new Error(`Ligue Fusion : dresseur inconnu ${trainerKey}`)
     const { level, saiyan } = FUSION_TIERS[tier]
     return tr.pairs.map((p) =>
-        buildFusion(buildParent(p.a, level, saiyan), buildParent(p.b, level, saiyan), { name: p.name }),
+        buildFusion(buildParent(p.a, level, saiyan), buildParent(p.b, level, saiyan), { name: p.name, moves: p.moves }),
     )
 }
 
