@@ -6,12 +6,17 @@ import {
 import { getSpecies } from "./species"
 
 describe("Ligue de Fusion — data", () => {
-    it("42 parents, TOUS uniques (aucun réutilisé dans la Ligue)", () => {
+    it("42 parents, dédup contrôlée : seule la réutilisation ASSUMÉE de Glacyran est tolérée", () => {
         const pairs = allFusionLeaguePairs()
         expect(pairs.length).toBe(21)
         const parents = pairs.flatMap((p) => [p.a, p.b])
         expect(parents.length).toBe(42)
-        expect(new Set(parents).size).toBe(42) // 0 doublon
+        // Exception DÉLIBÉRÉE : aucun final Glace n'étant libre, Glacyran (#4) recompose 2 finals déjà pris
+        //   (Orcaline de #1 + Cryotyran de #14). Le test garde donc contre tout NOUVEAU doublon accidentel.
+        const KNOWN_REUSED = ["cryotyran", "orcaline"]
+        const seen = new Set<string>(), dupes = new Set<string>()
+        for (const p of parents) { if (seen.has(p)) dupes.add(p); seen.add(p) }
+        expect([...dupes].sort()).toEqual(KNOWN_REUSED)
     })
 
     it("toutes les espèces parents existent + 21 noms de fusion distincts", () => {

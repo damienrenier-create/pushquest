@@ -39,7 +39,10 @@ export const FUSION_LEAGUE: FusionLeagueTrainer[] = [
         { a: "morrow", b: "orcaline", name: "Morcaline", moves: ["blizzard", "deferlante", "vague_mentale", "repos"] },
         { a: "mobyd", b: "auroraur", name: "Aurobyd", moves: ["deferlante", "blizzard", "fulgurance", "repos"] },
         { a: "panthegel", b: "yetiroche", name: "Panthyéti", moves: ["blizzard", "lame_roche", "fulgurance", "repos"] },
-        { a: "iorours", b: "glaceer", name: "Glaciours", moves: ["blizzard", "roc_titanesque", "seisme", "repos"] },
+        // #4 : AUCUN final Glace n'est libre (les 7 sont pris en #1-3/#14) → Glacyran RECOMPOSE 2 finals déjà utilisés
+        //   ailleurs (Orcaline de #1 + Cryotyran de #14). Réutilisation ASSUMÉE — parents éphémères, jamais montrés au
+        //   joueur ; les uids d'instance diffèrent → aucun conflit de registre. Cf. l'exception dans fusionLeague.test.ts.
+        { a: "orcaline", b: "cryotyran", name: "Glacyran", moves: ["blizzard", "draco_charge", "fulgurance", "repos"] },
     ] },
     { key: "bruno", name: "Bruno", theme: "COMBAT", icon: "🥊", pairs: [
         // COMBAT physique (ATK énorme) → STAB Combat + couverture Sol/Roche/Métal + Danse-Lames. Karabouh = spécial (Psy).
@@ -59,10 +62,10 @@ export const FUSION_LEAGUE: FusionLeagueTrainer[] = [
         // Physiques (ATK dominante) → couverture physique Vol/Sol/Roche/Feu ; 1 STAB spécial thématique quand pertinent.
         { a: "draconarque", b: "alirocaillus", name: "Draconroc", moves: ["pique_fatal", "lame_roche", "seisme", "danse_lames"] },
         { a: "cryotyran", b: "leviathonn", name: "Cryoviathan", moves: ["deferlante", "draco_charge", "seisme", "repos"] },
-        { a: "dracarlin", b: "crocodaillus", name: "Dracroco", moves: ["seisme", "lame_roche", "crocs_de_feu", "danse_lames"] },
+        { a: "dracarlin", b: "chronorex", name: "Dracorex", moves: ["seisme", "lame_roche", "crocs_de_feu", "danse_lames"] },
     ] },
     { key: "ace", name: "ACE", theme: "-", icon: "👑", pairs: [
-        { a: "golemini", b: "sylvebarbe", name: "Golésylve", moves: ["seisme", "roc_titanesque", "vampigraine", "repos"] },        // mur Roche/Sol
+        { a: "megalithe", b: "sylvebarbe", name: "Mégasylve", moves: ["seisme", "roc_titanesque", "vampigraine", "repos"] },        // mur Roche/Sol
         { a: "aquilord", b: "jerbiwat", name: "Aquilwatt", moves: ["eveil_divin", "fulgurance", "vague_mentale", "reprise_ailes"] }, // spécial rapide (Psy)
         { a: "vipember", b: "toucanyon", name: "Vipécan", moves: ["lance_flammes", "eveil_divin", "fulgurance", "hypnose"] },        // spécial rapide (Feu/Psy)
         { a: "magmator", b: "rochison", name: "Magmarok", moves: ["roc_titanesque", "seisme", "crocs_de_feu", "danse_lames"] },      // physique Roche
