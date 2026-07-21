@@ -58,7 +58,7 @@ import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_L
 import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/gamebook/yellow/data/labDialogues"
 import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay } from "@/lib/gamebook/yellow/store/saveManager"
 import { customStarterSpeciesId, type StoredCustomDaemon } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, releaseFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, releaseFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker } from "@/lib/gamebook/yellow/store/playerStore"
 import { computeRunScores, computeReplayScore, leaderboardFactors, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
 import { run3Score, run3MaxScore, run3EnergyScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
@@ -70,6 +70,7 @@ import { buildFusion, disposeFusion, fusionParentFromInstance } from "@/lib/game
 import { buildFusionTrialEnemy } from "@/lib/gamebook/yellow/data/fusionTrial"
 import { AUTEL_VISITED_MARKER } from "@/lib/gamebook/yellow/data/fusiodex"
 import { makeCrocavernGift, PNJ6_TRADE_DONE_MARKER, PNJ6_NAME } from "@/lib/gamebook/yellow/data/pnj6"
+import { FUSIOBALL_OWED_MARKER, FUSIOBALL_REOFFER_REPS } from "@/lib/gamebook/yellow/data/fusionLeague"
 import { useRun, getRun, startTowerRun, startRun, applyWinFromBattle, applyLossFromBattle, quitRun, endRun, setDraftedTeam, getDraftedTeam, setRunRaw } from "@/lib/gamebook/yellow/frontier/runStore"
 import type { FrontierRunState } from "@/lib/gamebook/yellow/frontier/run"
 import { postRecordRun } from "@/lib/gamebook/yellow/frontier/frontierApi"
@@ -386,6 +387,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [buyConfirm, setBuyConfirm] = useState<{ id: string; name: string; price: number } | null>(null)
     const [fusioBallModal, setFusioBallModal] = useState(false) // offre Fusio-Ball post-sacre (Dieu Spaghetti)
     const fusioBuyingRef = useRef(false) // verrou anti-double-tap sur l'achat (mobile) : 1 débit / 1 balle max
+    const fusioReofferShownRef = useRef(false) // Fusio-Ball : re-proposition montrée UNE fois par session (anti-nag)
     const [pnj6Modal, setPnj6Modal] = useState(false) // offre d'échange PNJ 6 (post-victoire)
     const pnj6TradingRef = useRef(false) // verrou anti-double-tap sur l'échange (IRRÉVERSIBLE) : 1 seul échange
     const [buyQty, setBuyQty] = useState(1)
@@ -1191,10 +1193,22 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     useEffect(() => {
         if (fusioBallOffer && !battle && evolutions.length === 0 && !dialogue && !newDexEntry && !pendingLearn && !championRun) {
             fusioBuyingRef.current = false // ré-arme le verrou d'achat pour cette offre
+            fusioReofferShownRef.current = true // l'offre du sacre COMPTE comme la proposition de cette session
             setFusioBallModal(true)
             clearFusioBallOffer()
         }
     }, [fusioBallOffer, battle, evolutions.length, dialogue, newDexEntry, pendingLearn, championRun])
+
+    // FUSIO-BALL — RE-PROPOSITION : offre EN ATTENTE (non achetée au sacre, marker fusioball_owed) + reps ≥ seuil →
+    //   le Dieu Spaghetti la re-propose, UNE fois par session (anti-nag), une fois l'écran libre.
+    useEffect(() => {
+        if (player.reps >= FUSIOBALL_REOFFER_REPS && player.defeatedTrainers.includes(FUSIOBALL_OWED_MARKER)
+            && !fusioReofferShownRef.current && !fusioBallModal && !battle && evolutions.length === 0 && !dialogue && !newDexEntry && !pendingLearn && !championRun) {
+            fusioReofferShownRef.current = true
+            fusioBuyingRef.current = false
+            setFusioBallModal(true)
+        }
+    }, [player.reps, player.defeatedTrainers, fusioBallModal, battle, evolutions.length, dialogue, newDexEntry, pendingLearn, championRun])
 
     // PNJ 6 — OFFRE D'ÉCHANGE (Crocavern ↔ team[0]) post-victoire : modale une fois l'écran LIBRE (après l'annonce
     // de victoire), comme l'offre Fusio-Ball.
@@ -3201,7 +3215,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                             <button
                                 style={canAfford ? menuBtnStyle : menuBtnDimStyle}
                                 disabled={!canAfford}
-                                onClick={() => { if (fusioBuyingRef.current) return; fusioBuyingRef.current = true; if (spendReps(price)) addItem("fusio_ball", 1); setFusioBallModal(false) }}
+                                onClick={() => { if (fusioBuyingRef.current) return; fusioBuyingRef.current = true; if (spendReps(price)) { addItem("fusio_ball", 1); clearTrainerMarker(FUSIOBALL_OWED_MARKER) } setFusioBallModal(false) }}
                             >✅ Oui, acheter (1000 reps)</button>
                             <button style={menuBtnDimStyle} onClick={() => setFusioBallModal(false)}>❌ Non merci</button>
                         </div>

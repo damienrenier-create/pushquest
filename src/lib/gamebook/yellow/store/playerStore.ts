@@ -683,6 +683,13 @@ export function isTrainerDefeated(trainerId: string): boolean {
     return st.defeatedTrainers.includes(trainerId)
 }
 
+/** Retire un marker de defeatedTrainers (ex. fusioball_owed une fois la Fusio-Ball achetée). Idempotent. */
+export function clearTrainerMarker(marker: string) {
+    if (!st.defeatedTrainers.includes(marker)) return
+    st = { ...st, defeatedTrainers: st.defeatedTrainers.filter((t) => t !== marker) }
+    emit()
+}
+
 /** LIGUE : réinitialise le gauntlet (oublie toutes les victoires « y_ligue_* ») → toutes les portes se
  *  rescellent, on doit tout réaffronter depuis la 1re salle. Appelé quand le joueur est K.O. dans la Ligue. */
 export function resetLigueProgress() {

@@ -32,10 +32,13 @@ describe("Fusio-Ball — verrou exclusif fusion", () => {
         expect(hasMsg(after, "n'agit QUE sur les Daemons fusionnés")).toBe(true)
     })
 
-    it("la Fusio-Ball sur une FUSION → passe le verrou (pas de ricochet dédié, procède au calcul)", () => {
-        const s = createBattle([player()], [createMonInstance("mottelave", 5)], { isWild: true, seed: 1 })
+    it("la Fusio-Ball GARANTIT la capture d'une FUSION (stats Master), même à PLEINS PV (Grotte)", () => {
+        const wild = createMonInstance("mottelave", 5)
+        wild.captureRequiresDamage = true // règle Grotte : la Fusio-Ball GARANTIE la shunte (comme la Master)
+        const s = createBattle([player()], [wild], { isWild: true, seed: 1 })
         const after = resolveTurn(s, { kind: "ball", itemId: "fusio_ball" })
         expect(hasMsg(after, "Seule une FUSIO-BALL")).toBe(false) // pas le message de refus fusion
+        expect(after.outcome).toBe("caught")                       // capture garantie
     })
 
     it("NON-RÉGRESSION : capture normale (non-fusion, Master-Ball) toujours garantie", () => {

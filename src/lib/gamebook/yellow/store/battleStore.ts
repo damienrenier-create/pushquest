@@ -50,7 +50,7 @@ import { SBIRE_TRAINER_ID } from "../data/sbire"
 import { toMonInstance, type LeagueHighlight, type ChampionRun, type ChampionMon } from "../storage/save"
 import { fullStats } from "../battle/stats"
 import { evolveTeam, type TeamEvolution } from "../progression/evolveTeam"
-import { activeFusionTier, FUSION_TIER_MARKER, FUSION_UNLOCK_MARKER } from "../data/fusionLeague"
+import { activeFusionTier, FUSION_TIER_MARKER, FUSION_UNLOCK_MARKER, FUSIOBALL_OWED_MARKER } from "../data/fusionLeague"
 import { persistYellowSave, processSaiyanPoints, getNgplusOldTeam } from "./saveManager"
 import { QUOTA_CAPTURE_BONUS } from "../data/captureConfig"
 import { attackCost, effectiveQuota, STRUGGLE_INDEX } from "../data/combatCostConfig"
@@ -958,9 +958,11 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     //   de défaite du reflet (trainers.ts) fait l'annonce. markTrainerDefeated est idempotent.
     if (b.outcome === "win" && lid === "y_fusion_miroir") {
         markTrainerDefeated(FUSION_TIER_MARKER[activeFusionTier((m) => isTrainerDefeated(m))])
-        // Le Dieu Spaghetti propose une Fusio-Ball (1000 reps) À CHAQUE sacre de la Ligue (offre transitoire,
-        //   consommée côté client). Repose sur l'énergie du joueur au moment de l'offre — décliner ne coûte rien.
+        // Le Dieu Spaghetti propose une Fusio-Ball (1000 reps) au sacre (offre transitoire, modale côté client).
+        //   On pose AUSSI le marker `fusioball_owed` (persistant) : si le joueur ne l'achète pas maintenant (souvent
+        //   < 1000 reps après la Ligue), il la RE-proposera dès que le joueur atteindra 1200 reps. Retiré à l'achat.
         fusioBallOffer = true
+        markTrainerDefeated(FUSIOBALL_OWED_MARKER)
     }
 
     // RUN 3 — SCORE du concours : crédite chaque Daemon ENNEMI mis K.O. (boss d'arène + membres de Ligue),

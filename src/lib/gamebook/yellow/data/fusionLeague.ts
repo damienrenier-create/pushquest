@@ -146,6 +146,12 @@ export function isFusionChampion(isCleared: (marker: string) => boolean): boolea
 //   dans defeatedTrainers, NON purgé par resetFusionLeagueProgress car pas de préfixe y_fusion_) → la porte s'OUVRE
 //   (sprite fusion_altar_open.png) et l'entrée devient franchissable.
 export const FUSION_UNLOCK_MARKER = "fusion_unlocked"
+
+// FUSIO-BALL — offre EN ATTENTE : si le joueur ne l'achète pas au sacre (souvent < 1000 reps après la Ligue), le
+//   marker `fusioball_owed` reste posé (dans defeatedTrainers) → le Dieu Spaghetti la RE-propose dès que le joueur
+//   atteint FUSIOBALL_REOFFER_REPS. Retiré à l'achat. Marker boolean (pas de nouveau champ save).
+export const FUSIOBALL_OWED_MARKER = "fusioball_owed"
+export const FUSIOBALL_REOFFER_REPS = 1200
 export function isFusionLeagueUnlocked(isCleared: (marker: string) => boolean): boolean {
     return isCleared(FUSION_UNLOCK_MARKER)
 }

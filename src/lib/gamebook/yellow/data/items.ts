@@ -68,7 +68,9 @@ export const ITEMS: Record<string, ItemData> = {
     //   Fusion (1 par complétion, 1000 reps). ballBonus 4 : capture DURE (les fusions ont catchRate 3).
     fusio_ball: {
         id: "fusio_ball", name: "Fusio-Ball", category: "BALL",
-        description: "La SEULE Ball capable de capturer un Daemon FUSIONNÉ à l'état sauvage. Sans effet sur les autres Daemons.", price: 0, ballBonus: 4,
+        // Stats MASTER (capture GARANTIE) mais EXCLUSIVE aux fusions (verrou engine.performCapture) : sur un Daemon
+        //   fusionné elle capture à coup sûr (shunte même la règle « pas à pleins PV ») ; sans effet sur les autres.
+        description: "Capture INFAILLIBLE d'un Daemon FUSIONNÉ (même à pleins PV). Rarissime. Sans effet sur les autres Daemons.", price: 0, ballBonus: 255, guaranteed: true,
     },
     potion: {
         id: "potion", name: "Potion", category: "HEAL",
