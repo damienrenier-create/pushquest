@@ -64,7 +64,24 @@ interface TrainingGrid {
     dragonRare?: { bases: readonly string[]; denomByBand: number[]; tierMult: number[] }
 }
 
-interface Zone { rate: number; pool: WildEntry[]; minLevel?: number; maxLevel?: number; trainingGrid?: TrainingGrid }
+/** SOUS-ZONE RECTANGULAIRE (biotope) : dans une map à `rects`, le POOL dépend du rectangle contenant (x,y).
+ *  Hors de tout rectangle → aucune rencontre. Sert aux biotopes de la Grotte du Nexus B1F. Bornes INCLUSIVES. */
+interface RectZone { x1: number; y1: number; x2: number; y2: number; pool: WildEntry[] }
+interface Zone { rate: number; pool: WildEntry[]; minLevel?: number; maxLevel?: number; trainingGrid?: TrainingGrid; rects?: RectZone[] }
+
+/** Le rectangle-biotope contenant (x,y), ou null (hors biotope). Bornes inclusives. */
+function rectAt(rects: RectZone[], x: number, y: number): RectZone | null {
+    return rects.find((r) => x >= r.x1 && x <= r.x2 && y >= r.y1 && y <= r.y2) ?? null
+}
+
+/** Clé du BIOTOPE courant : `mapId` seul si la zone n'a pas de rects (ex. 1F) ; sinon `mapId:<index du rect>`
+ *  (ou `mapId:-1` hors de tout rect). Sert à SCOPER la règle de pop de fusion : une fusion ne s'amorce QUE de
+ *  2 parents consécutifs rencontrés DANS LE MÊME biotope (pas de bleed cross-biotope ni cross-étage). */
+export function biotopeKeyAt(mapId: string, x: number, y: number): string {
+    const zone = ZONES[mapId]
+    if (!zone?.rects) return mapId
+    return mapId + ":" + zone.rects.findIndex((r) => x >= r.x1 && x <= r.x2 && y >= r.y1 && y <= r.y2)
+}
 
 /** Stats PushQuest normalisées 0..1 (sauf quotaReached). Couche méta. */
 export interface WildPlayerCtx {
@@ -119,6 +136,7 @@ export function speciesZones(speciesId: string): string[] {
     return Object.keys(ZONES).filter((mapId) => {
         const z = ZONES[mapId]
         if (z.pool.some((e) => e.speciesId === speciesId)) return true
+        if (z.rects?.some((r) => r.pool.some((e) => e.speciesId === speciesId))) return true // biotopes (Grotte B1F)
         const tg = z.trainingGrid
         if (tg) {
             if (tg.legendary?.speciesId === speciesId) return true
@@ -244,6 +262,69 @@ const ZONES: Record<string, Zone> = {
             { speciesId: "tetardoc", base: COMMON, noEvolve: true, levelRange: [5, 30] },
             { speciesId: "batchu", base: COMMON, noEvolve: true, levelRange: [15, 50] },   // chauve-souris élec
             { speciesId: "draclet", base: RARE, noEvolve: true, levelRange: [5, 30] },     // un peu + rare
+        ],
+    },
+    // GROTTE DU NEXUS B1F — 6 BIOTOPES (rectangles). Le pool dépend du RECTANGLE ; hors biotope → aucune rencontre.
+    //   Base = mêmes taux/niveaux qu'en 1F (COMMON, base-1, niv 5-30). Chaque biotope a UN rare EXCLUSIF « seul lieu
+    //   de pop dans la caverne » à niv 15. Les fusions (paires de parents du biotope) surgissent via la règle de pop
+    //   (gameStore) à niv 15. Bornes rectangulaires INCLUSIVES.
+    yellow_grotte_nexus_b1f: {
+        rate: 0.14,
+        minLevel: 5, maxLevel: 30,
+        pool: [], // inutilisé : les rects fournissent le pool
+        rects: [
+            // « dernier couloir » (16,2→26,5) — OBSCURÈNE exclusif (+ fusion Dractriss via draclet+electroatiss)
+            { x1: 16, y1: 2, x2: 26, y2: 5, pool: [
+                { speciesId: "obscurene", base: RARE, noEvolve: true, levelRange: [15, 15] },
+                { speciesId: "mottoche", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+                { speciesId: "nouillon", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+                { speciesId: "revemante", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+                { speciesId: "ruffiant", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+                { speciesId: "electroatiss", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+                { speciesId: "draclet", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+            ] },
+            // « 2e couloir » (25,36→44,37) — HYPNOPPO exclusif (+ fusion Dractriss)
+            { x1: 25, y1: 36, x2: 44, y2: 37, pool: [
+                { speciesId: "hypnoppo", base: RARE, noEvolve: true, levelRange: [15, 15] },
+                { speciesId: "trolystrik", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+                { speciesId: "draclet", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+                { speciesId: "electroatiss", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+                { speciesId: "cornaissant", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+                { speciesId: "revemante", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+            ] },
+            // « 1er couloir » (41,23→44,35) — WISTREE exclusif (+ fusion Ruffardoc via ruffiant+tetardoc)
+            { x1: 41, y1: 23, x2: 44, y2: 35, pool: [
+                { speciesId: "wistree", base: RARE, noEvolve: true, levelRange: [15, 15] },
+                { speciesId: "ruffiant", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+                { speciesId: "tetardoc", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+                { speciesId: "trolystrik", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+                { speciesId: "electroatiss", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+            ] },
+            // « 3e couloir » (17,4→36,6) — CANINOMBRE exclusif (+ fusion Sporémante via revemante+sporbeo)
+            { x1: 17, y1: 4, x2: 36, y2: 6, pool: [
+                { speciesId: "caninombre", base: RARE, noEvolve: true, levelRange: [15, 15] },
+                { speciesId: "lavapetit", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+                { speciesId: "piouflot", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+                { speciesId: "sporbeo", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+                { speciesId: "revemante", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+            ] },
+            // « 4e couloir » (10,18→23,19) — SHADY exclusif (+ fusion Nouiflot via nouillon+piouflot)
+            { x1: 10, y1: 18, x2: 23, y2: 19, pool: [
+                { speciesId: "shady", base: RARE, noEvolve: true, levelRange: [15, 15] },
+                { speciesId: "mottoche", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+                { speciesId: "nouillon", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+                { speciesId: "piouflot", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+                { speciesId: "tetardoc", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+            ] },
+            // « 5e couloir » (2,5→6,19) — GAVILLUS exclusif (rare) (+ fusion Mottelave via mottoche+lavapetit)
+            { x1: 2, y1: 5, x2: 6, y2: 19, pool: [
+                { speciesId: "gavillus", base: VERY_RARE, noEvolve: true, levelRange: [15, 15] },
+                { speciesId: "mottoche", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+                { speciesId: "lavapetit", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+                { speciesId: "nouillon", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+                { speciesId: "revemante", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+                { speciesId: "ruffiant", base: COMMON, noEvolve: true, levelRange: [5, 30] },
+            ] },
         ],
     },
     // CENDREVILLE : ville-miroir cendrée, gated par le Badge Flamme (ACE).
@@ -585,8 +666,12 @@ export function rollWildEncounter(ctx: EncounterCtx): MonInstance | null {
     const grotteCatch = run3LiveCatchupGrotte(ctx, rng)
     if (grotteCatch) return grotteCatch
 
+    // BIOTOPES (Grotte B1F) : le pool dépend du RECTANGLE contenant (x,y). Hors de tout biotope → aucune rencontre.
+    const pool = zone.rects ? (rectAt(zone.rects, ctx.x, ctx.y)?.pool ?? null) : zone.pool
+    if (!pool) return null
+
     // Poids par entrée ; une entrée `minLeadLevel` non atteinte → poids 0 (invisible tant que l'équipe est trop faible).
-    const weights = zone.pool.map((e) =>
+    const weights = pool.map((e) =>
         (e.minLeadLevel != null && ctx.leadLevel < e.minLeadLevel) ? 0
         : (e.catchOnce && ctx.caughtSpecies?.includes(e.speciesId)) ? 0 // ex. Pyropanthe déjà capturée → ne repop plus
         : entryWeight(e, ctx.mapId, ctx.x, ctx.y, ctx.player))
@@ -595,11 +680,11 @@ export function rollWildEncounter(ctx: EncounterCtx): MonInstance | null {
 
     let r = rng() * total
     let idx = 0
-    for (let i = 0; i < zone.pool.length; i++) {
+    for (let i = 0; i < pool.length; i++) {
         if (r < weights[i]) { idx = i; break }
         r -= weights[i]
     }
-    const entry = zone.pool[idx]
+    const entry = pool[idx]
 
     // Niveau sauvage : 3 BANDES de probabilité calées sur le niveau du LEAD (L).
     //   33% « proche » (90-100% de L) · 33% (66-99% de L) · 34% (33-66% de L).

@@ -1531,7 +1531,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImage: "/yellow/sprites/grotte_casse_tete.png",
         backgroundImageWidth: 2352, backgroundImageHeight: 672, backgroundImageTileSize: 16,
         backgroundImageOriginX: 784, backgroundImageOriginY: 0,
-        debugGrid: true, encountersPaused: true,
+        debugGrid: true, encountersPaused: false, // rencontres ACTIVES par BIOTOPE (cf. ZONES.yellow_grotte_nexus_b1f.rects)
         // B1F = étage pivot : échelles 1/2/3 remontent en 1F, a/b/c/d descendent en B2F, et (45,5) SORT de la grotte.
         exits: [
             ...([[3, 3], [3, 4]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_grotte_nexus", targetSpawnX: 6, targetSpawnY: 8 })),          // échelle 3 → 1F

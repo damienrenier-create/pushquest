@@ -32,7 +32,7 @@ import { getHeldItem } from "../data/heldItems"
 import { BERRY_SECRET_LINES_ASSISTANT } from "../data/berryLore"
 import { getSpecies } from "../data/species"
 import { persistYellowSave, canAbandonNgplus, getNgplusOldTeam } from "./saveManager"
-import { rollWildEncounter, wildLevelCap, hasEncounters } from "../data/encounters"
+import { rollWildEncounter, wildLevelCap, hasEncounters, biotopeKeyAt } from "../data/encounters"
 import { reportShiny } from "../shinyGift"
 import { getTrainer, trainerBoost, arenaScaledLevel, type TrainTier, type TrainerData } from "../data/trainers"
 import { NGPLUS_ARENA_TEAMS, RUN3_ARENA_TEAMS, arenaRevancheBoost, arenaRevancheIntro } from "../data/ngplusArenas"
@@ -108,7 +108,9 @@ let run3CentralePity = { count: 0, hSeen: false, kSeen: false }
 // GROTTE DU NEXUS 1F — règle de pop des FUSIONS (transient, remis à zéro à l'entrée de la grotte). On mémorise les
 //   2 dernières rencontres ; quand elles forment la paire de parents EXACTE d'une fusion → on l'AMORCE, et le roll
 //   SUIVANT la fait apparaître (garantie). Rareté = combinatoire (2 parents précis coup sur coup).
-let grotteFusionPop: { prev1: string; prev2: string; primed: string } = { prev1: "", prev2: "", primed: "" }
+// `zone` = clé du biotope où l'historique a été construit → un changement de biotope/étage RÉINITIALISE prev1/prev2
+//   (une fusion ne s'amorce que de 2 parents consécutifs DU MÊME biotope : pas de bleed cross-biotope/cross-étage).
+let grotteFusionPop: { prev1: string; prev2: string; primed: string; zone: string } = { prev1: "", prev2: "", primed: "", zone: "" }
 
 interface GameStore {
     // === STATE ===
@@ -981,19 +983,27 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     //   étaient sa paire de parents exacte) → elle SE PRODUIT ici (GARANTIE, niv 2-18). Sinon on met à
                     //   jour l'historique + on amorce si les 2 dernières forment une paire. On respecte les rencontres
                     //   PRÉCIEUSES (shiny / Mimimoy) : on ne les écrase pas et elles n'entrent pas dans l'historique.
-                    if (next.mapId === "yellow_grotte_nexus") {
+                    const isGrotte1F = next.mapId === "yellow_grotte_nexus"
+                    const isGrotteB1F = next.mapId === "yellow_grotte_nexus_b1f"
+                    if (isGrotte1F || isGrotteB1F) {
                         const spawnPrecious = spawn.shiny || !!getSpecies(spawn.speciesId)?.hiddenUntilCaught
-                        // DÉMO PNJ 7 (après sa victoire) : les 3 rencontres suivantes sont SCRIPTÉES = 2 parents puis
-                        //   leur fusion. Prioritaire sur la règle de pop ; jamais sur une rencontre précieuse (shiny/Mimimoy).
-                        const demoId = spawnPrecious ? null : takeGrotteDemoSpawn()
+                        // DÉMO PNJ 7 (1F uniquement, après sa victoire) : les 3 rencontres suivantes sont SCRIPTÉES =
+                        //   2 parents puis leur fusion. Prioritaire ; jamais sur une rencontre précieuse (shiny/Mimimoy).
+                        const demoId = isGrotte1F && !spawnPrecious ? takeGrotteDemoSpawn() : null
+                        // Niveau du fusionné : 1F = 2-18 (bébé) ; B1F = 15 fixe (biotopes).
+                        const fusionLevel = isGrotteB1F ? 15 : 2 + Math.floor(Math.random() * 17)
+                        // BIOTOPE COURANT : un changement (autre rectangle B1F, ou changement d'étage 1F↔B1F) réinitialise
+                        //   l'historique → une fusion ne s'amorce QUE de 2 parents consécutifs DU MÊME biotope.
+                        const zoneKey = biotopeKeyAt(next.mapId, next.posX, next.posY)
+                        if (grotteFusionPop.zone !== zoneKey) grotteFusionPop = { prev1: "", prev2: "", primed: "", zone: zoneKey }
                         if (demoId) {
                             const lvl = FUSION_BASE_IDS.includes(demoId) ? 2 + Math.floor(Math.random() * 17) : 8 + Math.floor(Math.random() * 17)
                             spawn = createMonInstance(demoId, lvl, { owned: false })
                         } else if (grotteFusionPop.primed && !spawnPrecious) {
-                            spawn = createMonInstance(grotteFusionPop.primed, 2 + Math.floor(Math.random() * 17), { owned: false })
-                            grotteFusionPop = { prev1: "", prev2: "", primed: "" } // consommé (le fusionné n'entre pas dans l'historique)
+                            spawn = createMonInstance(grotteFusionPop.primed, fusionLevel, { owned: false })
+                            grotteFusionPop = { prev1: "", prev2: "", primed: "", zone: zoneKey } // consommé (le fusionné n'entre pas dans l'historique)
                         } else if (!grotteFusionPop.primed && !spawnPrecious) {
-                            grotteFusionPop = { prev1: spawn.speciesId, prev2: grotteFusionPop.prev1, primed: "" }
+                            grotteFusionPop = { prev1: spawn.speciesId, prev2: grotteFusionPop.prev1, primed: "", zone: zoneKey }
                             const fus = fusionForParents(grotteFusionPop.prev1, grotteFusionPop.prev2)
                             if (fus) grotteFusionPop.primed = fus
                         }
@@ -1690,7 +1700,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
         // GARDIEN DE LA GROTTE : entrer dans la grotte (par le passeur → setMap) RÉ-ARME PNJ 5 → il faut le rebattre.
         // Les échelles intra-grotte passent par la transition inline (findExitAt), PAS setMap → aucun ré-arm parasite.
-        if (mapId === PNJ5_MAP_ID) { pnj5WinsAtEntry = pnj5WinsCount(); grotteFusionPop = { prev1: "", prev2: "", primed: "" }; resetGrotteDemo(); resetPnj10Visit() } // entrée grotte → reset pop fusions + démo PNJ 7 + barrage PNJ 10
+        if (mapId === PNJ5_MAP_ID) { pnj5WinsAtEntry = pnj5WinsCount(); grotteFusionPop = { prev1: "", prev2: "", primed: "", zone: "" }; resetGrotteDemo(); resetPnj10Visit() } // entrée grotte → reset pop fusions + démo PNJ 7 + barrage PNJ 10
         const player = createInitialPlayer(mapId, spawnX, spawnY)
         set({ map, player, dialogue: null })
         saveNow(player) // transition de map → persistance IMMÉDIATE (anti-désync position/flags au reload, cf. whiteout Ligue)
