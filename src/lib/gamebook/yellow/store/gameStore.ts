@@ -48,7 +48,7 @@ import { SYLVEBARBE_NPC_ID, SYLVEBARBE_INTRO_LINES, SYLVEBARBE_DONE_LINES, SYLVE
 import { PNJ5_NPC_ID, PNJ5_TRAINER_ID, PNJ5_MAP_ID, PNJ5_KICK, buildPnj5Team, inPnj5Block, inPnj5Trigger, PNJ5_INTRO_LINES, PNJ5_NO_DOME_LINES, PNJ5_NO_TEAM_LINES, PNJ5_SEAL_LINES } from "../data/pnj5"
 import { PNJ7_NPC_ID, PNJ7_TRAINER_ID, PNJ7_MAP_ID, PNJ7_NAME, PNJ7_INTRO_LINES, PNJ7_CAROUSEL_LINES, PNJ7_NO_TEAM_LINES, buildPnj7Team, pnj7DayMarker, resetGrotteDemo, takeGrotteDemoSpawn } from "../data/pnj7"
 import { AUTEL_VISITED_MARKER, DOME_SPAGHETTI_LINES } from "../data/fusiodex"
-import { PNJ6_NPC_ID, PNJ6_TRAINER_ID, PNJ6_NAME, PNJ6_INTRO_LINES, PNJ6_NO_TEAM_LINES, PNJ6_FAREWELL_LINES, PNJ6_TRADE_DONE_MARKER, buildPnj6Team } from "../data/pnj6"
+import { PNJ6_NPC_ID, PNJ6_TRAINER_ID, PNJ6_NAME, PNJ6_INTRO_LINES, PNJ6_NO_TEAM_LINES, PNJ6_FAREWELL_LINES, PNJ6_ALREADY_TODAY_LINES, PNJ6_TRADE_DONE_MARKER, pnj6DayMarker, buildPnj6Team } from "../data/pnj6"
 import { PNJ10_NPC_ID, PNJ10_TRAINER_ID, PNJ10_MAP_ID, PNJ10_NAME, PNJ10_INTRO_LINES, PNJ10_NO_TEAM_LINES, PNJ10_VICTORY_LINES, buildPnj10Team, inPnj10Block, isPnj10ClearedThisVisit, resetPnj10Visit } from "../data/pnj10"
 import { CHEN_LAB_LINES, LAB_ASSISTANT_LINES, LAB_ASSISTANT_LINES_NGPLUS, LAB_ASSISTANT_LINES_RUN3, CHEN_ABANDON_OFFER_LINES, CHEN_RUN3_TEASER_LINES, CHEN_RUN3_EVOLVE_LINES } from "../data/labDialogues"
 import { MAGNETOR_EVO_ITEM } from "../data/items"
@@ -558,6 +558,7 @@ function tryLaunchPnj6(): ActiveDialogue | null {
     if (!team.some((m) => m.currentHp > 0)) {
         return { npcId: PNJ6_TRAINER_ID, npcName: PNJ6_NAME, lineIndex: 0, lines: PNJ6_NO_TEAM_LINES }
     }
+    setDailyMarker("pnj6_day_", pnj6DayMarker()) // cap 1×/jour (win OU lose) — prefix "pnj6_day_" ≠ "pnj6_trade_done"
     const enemyTeam = buildPnj6Team()
     const seed = Math.floor(Math.random() * 1e9) >>> 0
     startTrainerBattle(team, enemyTeam, seed, { trainerId: PNJ6_TRAINER_ID, reward: 0, aiLevel: "hof" })
@@ -1416,10 +1417,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ dialogue: { npcId: npc.id, npcName: PNJ7_NAME, lines: PNJ7_INTRO_LINES, lineIndex: 0 }, pendingPnj7: true })
             return
         }
-        // PNJ 6 — L'ÉCHANGEUR. Échange déjà conclu → salut (plus de combat). Sinon → intro puis combat répétable.
+        // PNJ 6 — L'ÉCHANGEUR. (1) échange déjà conclu → salut, plus jamais de combat. (2) déjà combattu aujourd'hui →
+        //   reviens demain (cap 1×/jour). (3) sinon → intro puis combat (l'échange n'est proposé qu'à la victoire).
         if (npc.id === PNJ6_NPC_ID) {
             if (isTrainerDefeated(PNJ6_TRADE_DONE_MARKER)) {
                 set({ dialogue: { npcId: npc.id, npcName: PNJ6_NAME, lines: PNJ6_FAREWELL_LINES, lineIndex: 0 } })
+                return
+            }
+            if (isTrainerDefeated(pnj6DayMarker())) {
+                set({ dialogue: { npcId: npc.id, npcName: PNJ6_NAME, lines: PNJ6_ALREADY_TODAY_LINES, lineIndex: 0 } })
                 return
             }
             set({ dialogue: { npcId: npc.id, npcName: PNJ6_NAME, lines: PNJ6_INTRO_LINES, lineIndex: 0 }, pendingPnj6: true })

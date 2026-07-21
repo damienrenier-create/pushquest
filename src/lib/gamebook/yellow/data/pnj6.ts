@@ -20,6 +20,10 @@ export const PNJ6_POS = { x: 5, y: 38 } as const
 export const PNJ6_LEVEL = 70
 /** Marker (defeatedTrainers) : l'échange Crocavern a été conclu → PNJ 6 ne combat/échange plus (per-monde). */
 export const PNJ6_TRADE_DONE_MARKER = "pnj6_trade_done"
+/** Marker du cap JOURNALIER (1 combat/jour max) — borné via setDailyMarker (prefix "pnj6_day_"). */
+export function pnj6DayMarker(): string {
+    return "pnj6_day_" + new Date().toISOString().slice(0, 10)
+}
 /** Niveau du Crocavern reçu par l'échange (Daemon exclusif à élever). */
 export const CROCAVERN_GIFT_LEVEL = 50
 
@@ -61,6 +65,10 @@ export const PNJ6_INTRO_LINES = [
 ]
 export const PNJ6_NO_TEAM_LINES = [
     "« Tes Daemons sont tous à terre. Reviens en état de te battre. »",
+]
+export const PNJ6_ALREADY_TODAY_LINES = [
+    "« On s'est déjà mesurés aujourd'hui, dresseur. Un seul duel par jour — mes némésis ont besoin de repos. »",
+    "« Reviens demain si tu veux ta chance pour le CROCAVERN. »",
 ]
 // Après la victoire → l'offre d'échange (modale). Ces lignes servent d'annonce de victoire (rematchReward).
 export const PNJ6_VICTORY_LINES = [
