@@ -44,6 +44,17 @@ describe("Fusio-Ball — verrou exclusif fusion", () => {
         expect(a2.outcome).toBe("caught")
     })
 
+    it("un STATUT relève le seuil : une fusion capturable à plus haut PV une fois endormie", () => {
+        // Sans statut : à 88% PV (> seuil 85% de Mottelave) → trop vigoureux, pas pris.
+        const awake = createMonInstance("mottelave", 15); awake.currentHp = Math.round(awake.currentHp * 0.88)
+        const a1 = resolveTurn(createBattle([player()], [awake], { isWild: true, seed: 1 }), { kind: "ball", itemId: "fusio_ball" })
+        expect(a1.outcome).not.toBe("caught")
+        // Endormie : seuil ×1,6 (cap 90%) → à 88% PV, capturée.
+        const asleep = createMonInstance("mottelave", 15); asleep.currentHp = Math.round(asleep.currentHp * 0.88); asleep.status = "SLEEP"
+        const a2 = resolveTurn(createBattle([player()], [asleep], { isWild: true, seed: 1 }), { kind: "ball", itemId: "fusio_ball" })
+        expect(a2.outcome).toBe("caught")
+    })
+
     it("NON-RÉGRESSION : capture normale (non-fusion, Master-Ball) toujours garantie", () => {
         const s = createBattle([player()], [createMonInstance("plumiot", 2)], { isWild: true, seed: 1 })
         const after = resolveTurn(s, { kind: "ball", itemId: "master_ball" })

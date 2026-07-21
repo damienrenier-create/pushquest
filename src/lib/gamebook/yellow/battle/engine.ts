@@ -1377,15 +1377,18 @@ function performCapture(state: BattleState, itemId: string, events: BattleEvent[
     }
     // FUSIO-BALL sur une FUSION : capture GARANTIE (comme la Master) UNE FOIS le fusionné suffisamment AFFAIBLI.
     //   Le SEUIL de PV dépend de sa PUISSANCE (BST) : Ukognofy (BST max ~1710, l'ÉTALON) ne cède qu'au bord du K.O.
-    //   (~10% PV) ; une fusion faible cède dès un peu entamée (~85%). Au-dessus du seuil → la Ball ne prend pas encore.
+    //   (~10% PV) ; une fusion faible cède dès un peu entamée (~85%). Un STATUT majeur RELÈVE le seuil (capture plus
+    //   facile) : sommeil/gel ×1,6 ; brûlure/poison/toxik/paralysie ×1,3. Au-dessus du seuil → la Ball ne prend pas.
     if (isFusioBall) {
         const fs = wild.frozenStats
         const bst = fs ? fs.hp + fs.atk + fs.def + fs.spe + fs.spc + (wild.frozenSpd ?? fs.spc)
             : Object.values(sp.baseStats).reduce((a, b) => a + b, 0)
-        const threshold = Math.max(0.1, Math.min(0.85, 1 - bst / 1900)) // BST↑ → seuil↓ (plus dur)
+        const statusMult = (wild.status === "SLEEP" || wild.status === "FREEZE") ? 1.6 : (wild.status !== "NONE") ? 1.3 : 1.0
+        const threshold = Math.min(0.90, Math.max(0.1, Math.min(0.85, 1 - bst / 1900)) * statusMult) // BST↑ → seuil↓ ; statut → seuil↑
         if (wild.currentHp > maxHpOf(wild) * threshold) {
             events.push({ kind: "ball", action: "miss" })
-            events.push({ kind: "message", text: `${displayName(wild)} est ENCORE trop vigoureux ! Affaiblis-le sous ${Math.round(threshold * 100)}% de ses PV — alors la Fusio-Ball le capturera À COUP SÛR.` })
+            const statusHint = wild.status === "NONE" ? " Un STATUT (sommeil/gel surtout) faciliterait la prise." : ""
+            events.push({ kind: "message", text: `${displayName(wild)} est ENCORE trop vigoureux ! Affaiblis-le sous ${Math.round(threshold * 100)}% de ses PV — alors la Fusio-Ball le capturera À COUP SÛR.${statusHint}` })
             return
         }
         events.push({ kind: "ball", action: "throw" })
