@@ -26,7 +26,7 @@ import { buildFusionLeagueTeam, fusionLeagueKeyForTrainer, activeFusionTier, FUS
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
-import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, markTrainerDefeated, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, pnj5WinsCount, addItem, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun } from "./playerStore"
+import { getPlayer as getPlayerSave, healAllTeam, claimPastaGodGift, isTrainerDefeated, markTrainerDefeated, setDailyMarker, isTrainerRematched, resetLigueProgress, resetFusionLeagueProgress, aceBattleLevel, aceTeamSizeFor, aceAvailableToday, grantReps, executeTrade, applyTradeEvolution, markCaveTradeDone, markGoshHintHeard, orcalineNextLevel, orcalineAvailableToday, orcalineWinsCount, pnj5WinsCount, addItem, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, getRun3AceNemesis, getRun3ThirdStarter, bumpStat, isBerrySecretKnown, setBerrySecretKnown, harvestBerryTree, evolveMagmatorWithChen, markMimimoyReturned, bumpMimimoyAppearances, markCaughtThisRun } from "./playerStore"
 import { berryAtTile, BERRY_MAP_IDS } from "../data/berryTrees"
 import { getHeldItem } from "../data/heldItems"
 import { BERRY_SECRET_LINES_ASSISTANT } from "../data/berryLore"
@@ -544,7 +544,7 @@ function tryLaunchPnj7(): ActiveDialogue | null {
     if (!team.some((m) => m.currentHp > 0)) {
         return { npcId: PNJ7_TRAINER_ID, npcName: PNJ7_NAME, lineIndex: 0, lines: PNJ7_NO_TEAM_LINES }
     }
-    markTrainerDefeated(pnj7DayMarker()) // consomme le combat du jour (win OU lose)
+    setDailyMarker("pnj7_", pnj7DayMarker()) // consomme le combat du jour (win OU lose) — marker journalier BORNÉ (1 seul pnj7_)
     const enemyTeam = buildPnj7Team()
     const seed = Math.floor(Math.random() * 1e9) >>> 0
     startTrainerBattle(team, enemyTeam, seed, { trainerId: PNJ7_TRAINER_ID, reward: 0, aiLevel: "hof" })

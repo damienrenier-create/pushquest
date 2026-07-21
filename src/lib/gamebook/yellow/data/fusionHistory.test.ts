@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest"
 import { parseSave, emptySave } from "../storage/save"
-import { recordFusionCreated, getPlayer, resetForIntro } from "../store/playerStore"
+import { recordFusionCreated, getPlayer, resetForIntro, setDailyMarker, markTrainerDefeated } from "../store/playerStore"
 import { historyFusions } from "./fusiodex"
 import { getSpecies } from "./species"
 
@@ -55,6 +55,16 @@ describe("fusionHistory — enregistrement + reconstruction", () => {
         expect(list[0].types.length).toBeGreaterThan(0)
         expect(list[0].parents).toEqual([getSpecies("mottoche")!.name, getSpecies("lavapetit")!.name])
         expect(list[0].bst).toBeGreaterThan(0)
+    })
+
+    it("setDailyMarker : garde AU PLUS UN marker du préfixe (borne le cap journalier PNJ 7)", () => {
+        markTrainerDefeated("y_ligue_1") // un vrai marker (préfixe différent) ne doit pas être touché
+        setDailyMarker("pnj7_", "pnj7_2026-07-19")
+        setDailyMarker("pnj7_", "pnj7_2026-07-20")
+        setDailyMarker("pnj7_", "pnj7_2026-07-21")
+        const dt = getPlayer().defeatedTrainers
+        expect(dt.filter((t) => t.startsWith("pnj7_"))).toEqual(["pnj7_2026-07-21"]) // 1 seul, le dernier
+        expect(dt).toContain("y_ligue_1") // les autres markers intacts
     })
 
     it("historyFusions : CONSERVE une paire non résoluble en placeholder (bst 0), ne la masque pas", () => {

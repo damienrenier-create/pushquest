@@ -670,6 +670,15 @@ export function markTrainerDefeated(trainerId: string) {
     emit()
 }
 
+/** Marker JOURNALIER BORNÉ : retire tous les `<prefix>*` puis pose `marker` → defeatedTrainers garde AU PLUS UN
+ *  marker de ce préfixe (évite l'accumulation d'un marker/jour, ex. cap journalier PNJ 7). Idempotent. */
+export function setDailyMarker(prefix: string, marker: string) {
+    const others = st.defeatedTrainers.filter((t) => !t.startsWith(prefix))
+    if (others.length === st.defeatedTrainers.length - 1 && st.defeatedTrainers.includes(marker)) return // déjà exactement ce marker
+    st = { ...st, defeatedTrainers: [...others, marker] }
+    emit()
+}
+
 export function isTrainerDefeated(trainerId: string): boolean {
     return st.defeatedTrainers.includes(trainerId)
 }
