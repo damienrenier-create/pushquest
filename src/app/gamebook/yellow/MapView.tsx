@@ -748,9 +748,9 @@ function NpcSprite({
     screenPos: (x: number, y: number, w?: number, h?: number) => React.CSSProperties
     overrideSprite?: { url: string; frames: number; h?: number }
 }) {
-    // TON DOUBLE (salle dorée run 2) + TON REFLET DE CHIMÈRE (Ligue de Fusion) : rendu SPÉCIAL = le sprite du
-    //   JOUEUR (de face) nimbé d'un HALO MAUVE (aura radiale + glow violet). C'est « toi », en face de toi.
-    if (npc.id === "y_ligue_double" || npc.id === "y_fusion_miroir") {
+    // TON DOUBLE (salle dorée run 2) : rendu SPÉCIAL = le sprite du JOUEUR (de face) nimbé d'un HALO MAUVE.
+    //   (Le boss de Ligue n'est plus un reflet : c'est le Dieu Spaghetti, rendu via son sprite/emoji normal.)
+    if (npc.id === "y_ligue_double") {
         const cell = FIRERED_PLAYER.down[1]
         return (
             <div style={{ position: "absolute", ...screenPos(npc.initialX, npc.initialY - (SPRITE_ASPECT_RATIO - 1), 1, SPRITE_ASPECT_RATIO), zIndex: 4, overflow: "visible", pointerEvents: "none" }} title={npc.name}>

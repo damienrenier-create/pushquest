@@ -22,7 +22,7 @@ import { YELLOW_ENTRANCE_MAP_ID } from "../featureFlag"
 import { getSnapshot as getBattleSnapshot, startWildBattle, startTrainerBattle, startRun3BossBattle, startNgPlusFinalBattle, startFusionLeagueBattle, resetFleeStreak } from "./battleStore"
 import { buildFusion, disposeFusion, type BuiltFusion } from "../data/fusionMon"
 import { fusionForParents, FUSION_BASE_IDS } from "../data/fusionBaseSpecies"
-import { buildFusionLeagueTeam, fusionLeagueKeyForTrainer, activeFusionTier, FUSION_UNLOCK_MARKER } from "../data/fusionLeague"
+import { buildFusionLeagueTeam, buildFusionBossTeam, fusionLeagueKeyForTrainer, activeFusionTier, FUSION_UNLOCK_MARKER } from "../data/fusionLeague"
 import { run3ArenaForBoss, run3BossIntroLines, run3LigueMaitreTeam } from "../data/run3Arenas"
 import { RUN3_BOSS_TEAMS } from "../data/run3Bosses"
 import { getPokedex, markCaught } from "./pokedexStore"
@@ -235,8 +235,9 @@ function launchFusionLeague(trainerId: string, trainer: TrainerData): ActiveDial
 
     let enemyFusions: BuiltFusion[]
     if (trainerId === "y_fusion_miroir") {
-        // MIROIR : le REFLET du roster (mêmes fusions, instances distinctes → PAS freezeTeam qui perdrait frozenSpd).
-        enemyFusions = buildRoster()
+        // BOSS FINAL — le Dieu Spaghetti forme ULTIME : 3 chimères + UKOGNOFY (Goshendofy+Ukognos), scalé au palier.
+        //   (Remplace l'ancien miroir/reflet du roster.) Fusions FIXES, curées.
+        enemyFusions = buildFusionBossTeam(activeFusionTier((m) => isTrainerDefeated(m)))
     } else {
         const key = fusionLeagueKeyForTrainer(trainerId)
         if (!key) { playerFusions.forEach((f) => disposeFusion(f.speciesId)); return null }
@@ -1639,8 +1640,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 // Plus de rematch/revanche (ou déjà fait) → simple réplique de défaite.
                 set({ dialogue: { npcId: npc.id, npcName: npc.name, lines: trainer.defeat, lineIndex: 0 } })
             } else {
-                // TON DOUBLE / TON REFLET DE CHIMÈRE : le PNJ porte TON pseudo (tu affrontes ta propre légende).
-                const dispName = (trainer.id === "y_ligue_double" || trainer.id === "y_fusion_miroir") ? (currentNickname || npc.name) : npc.name
+                // TON DOUBLE (salle dorée run 2) : le PNJ porte TON pseudo. Le boss de Ligue garde son nom (Dieu Spaghetti).
+                const dispName = (trainer.id === "y_ligue_double") ? (currentNickname || npc.name) : npc.name
                 set({
                     dialogue: { npcId: npc.id, npcName: dispName, lines: trainer.intro, lineIndex: 0 },
                     pendingTrainerId: trainer.id, pendingRematch: false,

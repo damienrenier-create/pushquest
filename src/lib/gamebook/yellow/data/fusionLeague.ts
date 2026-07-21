@@ -104,6 +104,25 @@ export function buildFusionLeagueTeam(trainerKey: string, tier: FusionTier): Bui
     )
 }
 
+// ==================== BOSS FINAL — LE DIEU SPAGHETTI (forme ultime) ====================
+// Remplace le 6e combat (l'ancien MIROIR). Ton guide révélé comme l'adversaire ultime : 3 chimères d'échauffement
+// puis UKOGNOFY (Goshendofy + Ukognos = les 2 légendaires fusionnés, DRAGON/FÉE, BST ~1710). Scalé par palier.
+// Tous les parents sont DISTINCTS (aucun réutilisé de la Ligue). Movesets curés (spécial dominant + STAB).
+export const FUSION_BOSS_PAIRS: FusionPairDef[] = [
+    { a: "divinpate", b: "cerfeuillu", name: "Divinliane", moves: ["eveil_divin", "lance_soleil", "fulgurance", "repos"] },       // PSY/PLANTE — sweeper psy-plante
+    { a: "pyrokoss", b: "razmaree", name: "Pyromarée", moves: ["lance_flammes", "deferlante", "fulgurance", "repos"] },            // FEU/EAU — le paradoxe primordial
+    { a: "zappeureal", b: "naiadrak", name: "Zappadrak", moves: ["ultra_foudre", "deferlante", "blizzard", "cage_eclair"] },       // ELEC/EAU — sweeper rapide (para)
+    { a: "goshendofy", b: "ukognos", name: "Ukognofy", moves: ["souffle_primordial", "cataclysme_lunaire", "fulgurance", "repos"] }, // DRAGON/FÉE — L'ACE ultime
+]
+
+/** Équipe du BOSS FINAL (Dieu Spaghetti ultime) au palier donné. BuiltFusion éphémères à DÉTRUIRE après combat. */
+export function buildFusionBossTeam(tier: FusionTier): BuiltFusion[] {
+    const { level, saiyan } = FUSION_TIERS[tier]
+    return FUSION_BOSS_PAIRS.map((p) =>
+        buildFusion(buildParent(p.a, level, saiyan), buildParent(p.b, level, saiyan), { name: p.name, moves: p.moves }),
+    )
+}
+
 /** Détruit les espèces éphémères d'une équipe de Ligue (fin de combat / démontage). */
 export function disposeFusionLeagueTeam(team: BuiltFusion[]): void {
     for (const f of team) disposeFusion(f.speciesId)

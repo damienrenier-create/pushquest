@@ -849,21 +849,24 @@ export const TRAINERS: TrainerData[] = [
         defeat: ["« …Six chimères parfaites, vaincues. Tu es prêt. Mais es-tu prêt à t'affronter TOI-MÊME ? »"],
     },
     {
-        // MIROIR (combat FINAL) — l'équipe adverse est le REFLET du roster de fusions DU JOUEUR (bâti à l'exécution,
-        //   PAS via freezeTeam qui perdrait frozenSpd). Nom = pseudo du joueur (gameStore), sprite = halo mauve (MapView).
-        id: "y_fusion_miroir", name: "TON REFLET DE CHIMÈRE", title: "Le Miroir",
-        sprite: { emoji: "🪞", color: "#c98bff" },
+        // BOSS FINAL — LE DIEU SPAGHETTI, forme ULTIME (remplace l'ancien miroir/reflet). Équipe FIXE bâtie à
+        //   l'exécution (buildFusionBossTeam, gameStore) : 3 chimères + UKOGNOFY (les 2 légendaires fusionnés).
+        id: "y_fusion_miroir", name: "DIEU SPAGHETTI", title: "Forme Ultime",
+        sprite: { emoji: "🍝", color: "#e8b84a" },
         mapId: "yellow_fusion_miroir", x: 10, y: 2,
         requiresTrainers: ["y_fusion_maitre"],
-        team: [{ speciesId: "morrow", level: 80 }], // placeholder (jamais fieldé : reflet dynamique du roster)
+        team: [{ speciesId: "morrow", level: 80 }], // placeholder (jamais fieldé : équipe dynamique par palier)
         reward: 0, aiLevel: "hof",
         intro: [
-            "*Dans la lueur mauve de l'Autel, une silhouette te fait face — c'est TOI, tes chimères contre les siennes, identiques.*",
-            "« Je suis ce que tu as créé. Mêmes fusions, même puissance. Le seul moyen de me vaincre… c'est de mieux jouer que toi-même. »",
+            "*La porte à dragons franchie, ce n'est pas un reflet qui t'attend… mais une silhouette de semoule dorée que tu connais trop bien.*",
+            "« Ha ha ! Surpris ? Depuis le tout premier jour, jeune Dresseur, je t'ai guidé vers CE moment précis. »",
+            "« Je suis l'ORIGINE de la fusion. Et j'ai gardé pour la fin ma plus belle œuvre : UKOGNOFY — le dragon légendaire et son écho féerique, ne faisant plus qu'UN. »",
+            "« Montre-moi si l'élève a dépassé le maître. EN GARDE ! »",
         ],
         defeat: [
-            "« …Tu m'as surpassé. Le titre est à toi. »",
-            "*Ton reflet se dissout dans l'Autel. Tu es, désormais, MAÎTRE DE LA CHIMÈRE.*",
+            "« …Inouï. Tu as terrassé ma chimère ultime. »",
+            "*Le Dieu Spaghetti s'incline dans un tourbillon de vapeur dorée.*",
+            "« Le titre de MAÎTRE DE LA CHIMÈRE t'appartient, pour de bon. Le Nexus est à toi. »",
         ],
     },
 ]
