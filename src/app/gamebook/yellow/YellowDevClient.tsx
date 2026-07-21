@@ -50,7 +50,7 @@ import { useGameStore, setCurrentNickname, DEFAULT_SPAWN } from "@/lib/gamebook/
 import { YELLOW_ENTRANCE_MAP_ID } from "@/lib/gamebook/yellow/featureFlag"
 import { YELLOW_MAPS, CENDREVILLE_SPAWN } from "@/lib/gamebook/yellow/maps"
 import { isBlockingTile } from "@/lib/gamebook/mapEngine"
-import { useBattle, useEvolutions, clearEvolutions, useChampionRun, useArenaRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getGiftCtMove, startTrainerBattle, startFusionTrialBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult, useFrontierResult, clearFrontierResult, getBattleEnergy, resumeBattleFromStorage, useStoneReward, clearStoneReward, useLavapetitTeaser, clearLavapetitTeaser, useJustCaught, clearJustCaught, freezeTeam, useNgplusFinalPending, clearNgplusFinalPending, useNgplusFinalResult, clearNgplusFinalResult } from "@/lib/gamebook/yellow/store/battleStore"
+import { useBattle, useEvolutions, clearEvolutions, useChampionRun, useArenaRun, clearChampion, useWhiteout, clearWhiteout, useSbireWin, clearSbireWin, useAceWin, clearAceWin, useBadgeAwarded, clearBadgeAwarded, useRematchReward, clearRematchReward, useNewDexEntry, clearNewDexEntry, dispatchBattleInput, endBattle, getSbireRewardMsg, getAceRewardMsg, getAceLossTaunt, getGiftCtMove, startTrainerBattle, startFusionTrialBattle, useChainRematch, clearChainRematch, cancelEvolution, usePendingLearn, clearPendingLearn, useDuelResult, clearDuelResult, useFrontierResult, clearFrontierResult, getBattleEnergy, resumeBattleFromStorage, useStoneReward, clearStoneReward, useLavapetitTeaser, clearLavapetitTeaser, useFusioBallOffer, clearFusioBallOffer, useJustCaught, clearJustCaught, freezeTeam, useNgplusFinalPending, clearNgplusFinalPending, useNgplusFinalResult, clearNgplusFinalResult } from "@/lib/gamebook/yellow/store/battleStore"
 import { useEncounterFxActive } from "@/lib/gamebook/yellow/store/encounterFxStore"
 import { aceLoseLine } from "@/lib/gamebook/yellow/data/ace"
 import { sbireExplanation } from "@/lib/gamebook/yellow/data/sbire"
@@ -58,7 +58,7 @@ import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_L
 import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/gamebook/yellow/data/labDialogues"
 import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay } from "@/lib/gamebook/yellow/store/saveManager"
 import { customStarterSpeciesId, type StoredCustomDaemon } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, releaseFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, releaseFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated } from "@/lib/gamebook/yellow/store/playerStore"
 import { computeRunScores, computeReplayScore, leaderboardFactors, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
 import { run3Score, run3MaxScore, run3EnergyScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
@@ -327,6 +327,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const rematchReward = useRematchReward()
     const stoneReward = useStoneReward()
     const lavapetitTeaser = useLavapetitTeaser() // RUN 3 : teaser Dieu Spag Lavapetit (post-combat)
+    const fusioBallOffer = useFusioBallOffer() // LIGUE DE FUSION : offre Fusio-Ball du Dieu Spaghetti (post-sacre)
     const justCaught = useJustCaught()
     const [showGeneIntro, setShowGeneIntro] = useState(false) // carrousel génétique one-shot (post-capture)
     const router = useRouter()
@@ -380,6 +381,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const resetHoldTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
     useEffect(() => () => { if (resetHoldTimer.current) clearTimeout(resetHoldTimer.current) }, [])
     const [buyConfirm, setBuyConfirm] = useState<{ id: string; name: string; price: number } | null>(null)
+    const [fusioBallModal, setFusioBallModal] = useState(false) // offre Fusio-Ball post-sacre (Dieu Spaghetti)
+    const fusioBuyingRef = useRef(false) // verrou anti-double-tap sur l'achat (mobile) : 1 débit / 1 balle max
     const [buyQty, setBuyQty] = useState(1)
     const [sellMode, setSellMode] = useState(false)
     const [swapPick, setSwapPick] = useState<string | null>(null) // uid du Daemon "à déplacer"
@@ -1178,6 +1181,16 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         }
     }, [lavapetitTeaser, battle, newDexEntry, evolutions.length, pendingLearn, dialogue, championRun, run3EndOffer, showDialogue])
 
+    // LIGUE DE FUSION — OFFRE FUSIO-BALL (Dieu Spaghetti) au sacre : modale d'achat post-combat, une fois l'écran
+    // LIBRE (après l'annonce de victoire du reflet + toute cinématique) pour ne rien écraser.
+    useEffect(() => {
+        if (fusioBallOffer && !battle && evolutions.length === 0 && !dialogue && !newDexEntry && !pendingLearn && !championRun) {
+            fusioBuyingRef.current = false // ré-arme le verrou d'achat pour cette offre
+            setFusioBallModal(true)
+            clearFusioBallOffer()
+        }
+    }, [fusioBallOffer, battle, evolutions.length, dialogue, newDexEntry, pendingLearn, championRun])
+
     // CARROUSEL GÉNÉTIQUE (one-shot) : après une capture, une fois l'écran libéré (popup Pokédex /
     // évolutions / apprentissage passés), le Dieu Spaghetti explique le potentiel/IV. UNE SEULE FOIS.
     useEffect(() => {
@@ -1546,6 +1559,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (heldOpen) { setHeldOpen(false); return true } // sous-modale objet tenu (au-dessus de la fiche)
         if (renaming) { setRenaming(false); return true } // annule le renommage, reste sur la fiche
         if (selected) { setSelected(null); setRenaming(false); setHeldOpen(false); return true } // fermer la fiche reset renommage + objet tenu
+        if (fusioBallModal) { setFusioBallModal(false); return true } // offre Fusio-Ball post-sacre (décliner)
         // Sous-modals de la BOUTIQUE (rendus au-dessus d'elle) → se ferment avant la boutique.
         if (pantheonEvo) { setPantheonEvo(null); return true }
         if (pastaPick) { setPastaPick(false); return true }
@@ -2516,7 +2530,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     const add = atelierAdd
                     if (!add?.a || !add?.b || add.a === add.b || roster.length >= 6) return
                     // Dédup EXACTE (même ordre = même espèce éphémère) ; (A,B) et (B,A) restent 2 fusions distinctes.
-                    if (!roster.some((p) => p.a === add.a && p.b === add.b)) { setFusionRoster([...roster, { a: add.a, b: add.b }]); persistYellowSave() }
+                    if (!roster.some((p) => p.a === add.a && p.b === add.b)) {
+                        setFusionRoster([...roster, { a: add.a, b: add.b }])
+                        const ma = byUid(add.a), mb = byUid(add.b) // uid → instance → speciesId (stable) pour le journal Fusiodex
+                        if (ma && mb) recordFusionCreated(ma.speciesId, mb.speciesId)
+                        persistYellowSave()
+                    }
                     setAtelierAdd(null); setAtelierPicking(null)
                 }
                 const fight = () => {
@@ -3148,6 +3167,31 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                 onClick={() => { if (spendReps(total)) addItem(buyConfirm.id, buyQty); setBuyConfirm(null) }}
                             >✅ Acheter</button>
                             <button style={menuBtnDimStyle} onClick={() => setBuyConfirm(null)}>← Annuler</button>
+                        </div>
+                    </div>
+                )
+            })()}
+
+            {/* LIGUE DE FUSION — offre Fusio-Ball du Dieu Spaghetti au sacre (autonome, hors boutique). 1000 reps. */}
+            {fusioBallModal && (() => {
+                const price = 1000
+                const canAfford = player.reps >= price
+                return (
+                    <div style={{ ...menuOverlayStyle, zIndex: 9500 }} onClick={() => setFusioBallModal(false)}>
+                        <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
+                            <div style={menuTitleStyle}>✨ Dieu Spaghetti</div>
+                            <div style={{ textAlign: "center", margin: "8px 0", fontSize: 13, lineHeight: 1.5 }}>
+                                « Maître de la Chimère ! Pour capturer les Daemons fusionnés à l&apos;état sauvage, il te faut une <b>FUSIO-BALL</b>. Je t&apos;en cède une pour <b>1000 reps</b>. Marché conclu ? »
+                            </div>
+                            <div style={{ textAlign: "center", marginBottom: 10, fontSize: 13, color: canAfford ? "inherit" : "#c0392b" }}>
+                                💪 {player.reps}/{player.repsCap}{canAfford ? "" : " — insuffisant"}
+                            </div>
+                            <button
+                                style={canAfford ? menuBtnStyle : menuBtnDimStyle}
+                                disabled={!canAfford}
+                                onClick={() => { if (fusioBuyingRef.current) return; fusioBuyingRef.current = true; if (spendReps(price)) addItem("fusio_ball", 1); setFusioBallModal(false) }}
+                            >✅ Oui, acheter (1000 reps)</button>
+                            <button style={menuBtnDimStyle} onClick={() => setFusioBallModal(false)}>❌ Non merci</button>
                         </div>
                     </div>
                 )

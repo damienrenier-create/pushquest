@@ -9,15 +9,11 @@ import { useRouter } from "next/navigation"
 import { usePlayer } from "@/lib/gamebook/yellow/store/playerStore"
 import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { loadYellowSave } from "@/lib/gamebook/yellow/store/saveManager"
-import { getSpecies } from "@/lib/gamebook/yellow/data/species"
-import { buildFusion } from "@/lib/gamebook/yellow/data/fusionMon"
-import { officialFusions, officialFusionProgress, FUSION_RULES, AUTEL_VISITED_MARKER } from "@/lib/gamebook/yellow/data/fusiodex"
-import type { StatKey } from "@/lib/gamebook/yellow/battle/types"
+import { officialFusions, officialFusionProgress, historyFusions, FUSION_RULES, AUTEL_VISITED_MARKER } from "@/lib/gamebook/yellow/data/fusiodex"
 
 type Tab = "rules" | "official" | "mine"
-const STAT_LABELS: [StatKey, string][] = [["hp", "PV"], ["atk", "Atq"], ["def", "Déf"], ["spe", "Vit"], ["spc", "Spé"]]
-
-interface CreatedFusion { name: string; types: string[]; bst: number; stats: Record<StatKey, number>; parents: [string, string]; sprite?: string }
+// Le fusionné a une Spéciale SCINDÉE (SpA du parent rapide, SpD du lent) → 6 stats affichées.
+const STAT_LABELS = [["hp", "PV"], ["atk", "Atq"], ["def", "Déf"], ["spe", "Vit"], ["spcAtk", "SpA"], ["spcDef", "SpD"]] as const
 
 function FusionSprite({ src, size = 56 }: { src?: string; size?: number }) {
     const [err, setErr] = useState(false)
@@ -40,25 +36,9 @@ export default function FusiodexClient() {
     const official = officialFusions(dex.seen)
     const prog = officialFusionProgress(dex.seen)
 
-    // MES FUSIONS : résout le roster d'Autel (paires de Daemons) en chimères affichables (mêmes helpers que l'Atelier).
-    const created = useMemo<CreatedFusion[]>(() => {
-        const all = [...player.team, ...player.pc]
-        const byU = (uid: string) => all.find((m) => m.uid === uid)
-        return player.fusionRoster
-            .map((p): CreatedFusion | null => {
-                const a = byU(p.a), b = byU(p.b)
-                if (!a || !b || a.uid === b.uid) return null
-                const f = buildFusion(a, b)
-                const sp = getSpecies(f.speciesId)
-                if (!sp) return null
-                const bst = Object.values(sp.baseStats).reduce((x, y) => x + y, 0)
-                return {
-                    name: sp.name, types: sp.types, bst, stats: sp.baseStats, sprite: sp.sprite,
-                    parents: [getSpecies(a.speciesId)?.name ?? a.speciesId, getSpecies(b.speciesId)?.name ?? b.speciesId],
-                }
-            })
-            .filter((x): x is CreatedFusion => x !== null)
-    }, [player.fusionRoster, player.team, player.pc])
+    // MES FUSIONS : le JOURNAL PERMANENT de toutes les fusions créées (persisté, survit à la fusion des mondes).
+    //   Reconstruit nom+types+stats depuis la paire de speciesId (module pur, aucune instance de combat requise).
+    const created = useMemo(() => historyFusions(player.fusionHistory), [player.fusionHistory])
 
     return (
         <div style={S.root}>
@@ -105,24 +85,31 @@ export default function FusiodexClient() {
                 </div>
             ) : (
                 <div style={S.list}>
-                    <div style={S.hint}>Les chimères que TU as assemblées sur l'Autel. Modifie ton roster au 💻 de l'Autel de la Chimère.</div>
+                    <div style={S.hint}>Le JOURNAL de toutes les chimères que tu as assemblées à l'Autel — conservé à jamais, même après avoir défait la paire.</div>
                     {created.length === 0 ? (
                         <div style={S.locked}>
                             <div style={{ fontSize: 34, marginBottom: 8 }}>🛠️</div>
                             <div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.5 }}>Tu n'as pas encore assemblé de fusion. Dépose deux Daemons sur l'Autel de la Chimère pour créer ta première chimère de combat !</div>
                         </div>
-                    ) : created.map((f, i) => (
-                        <div key={i} style={S.card}>
-                            <FusionSprite src={f.sprite} />
+                    ) : created.map((f) => (
+                        <div key={f.key} style={S.card}>
+                            <FusionSprite />
                             <div style={S.body}>
                                 <div style={S.name}>{f.name.toUpperCase()}</div>
-                                <div style={S.types}>{f.types.join(" / ")} · Total {f.bst}</div>
-                                <div style={S.desc}>{f.parents[0]} × {f.parents[1]}</div>
-                                <div style={S.statRow}>
-                                    {STAT_LABELS.map(([k, lbl]) => (
-                                        <span key={k} style={S.statChip}><b>{lbl}</b> {f.stats[k]}</span>
-                                    ))}
-                                </div>
+                                {f.bst > 0 ? (
+                                    <>
+                                        <div style={S.types}>{f.types.join(" / ")} · Total {f.bst}</div>
+                                        <div style={S.desc}>{f.parents[0]} × {f.parents[1]}</div>
+                                        <div style={S.statRow}>
+                                            {STAT_LABELS.map(([k, lbl]) => (
+                                                <span key={k} style={S.statChip}><b>{lbl}</b> {f.stats[k]}</span>
+                                            ))}
+                                        </div>
+                                    </>
+                                ) : (
+                                    // Placeholder : une des espèces parentes n'existe plus (lignée custom évincée).
+                                    <div style={S.desc}>{f.parents[0]} × {f.parents[1]} — chimère archivée</div>
+                                )}
                             </div>
                         </div>
                     ))}

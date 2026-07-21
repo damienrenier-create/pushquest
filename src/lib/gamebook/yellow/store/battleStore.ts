@@ -107,6 +107,7 @@ interface BattleStoreState {
     /** Message de don de la Pierre Gékroc (mini-boss Centrale) → notification post-combat ; null sinon. */
     stoneReward: string | null
     lavapetitTeaser: "seen" | "caught" | null // RUN 3 : teaser Dieu Spag Lavapetit à afficher (transitoire)
+    fusioBallOffer: boolean // LIGUE DE FUSION : proposer l'achat d'une Fusio-Ball (1000 reps) au sacre (transitoire, non persisté)
     /** Récompense d'un REMATCH de dresseur (dialogue post-combat : énergie / CT Mirage) ; null sinon. */
     rematchReward: { npcId: string; npcName: string; lines: string[] } | null
     /** Contexte d'un combat JOUEUR vs JOUEUR (null = combat solo classique). */
@@ -162,7 +163,7 @@ interface PvpContext {
     ephemeralTeam?: boolean
 }
 
-let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, arenaRun: null, chainRematchId: null, pendingLearn: false, duelResult: null, frontierResult: null, stoneReward: null, lavapetitTeaser: null, justCaught: false, ngplusFinalPending: false, ngplusFinalResult: null }
+let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, arenaRun: null, chainRematchId: null, pendingLearn: false, duelResult: null, frontierResult: null, stoneReward: null, lavapetitTeaser: null, fusioBallOffer: false, justCaught: false, ngplusFinalPending: false, ngplusFinalResult: null }
 // LIGUE — meilleurs moments du run en cours (best hit par membre du Conseil 4 + Maître), runtime.
 // Upsert par trainerId à chaque victoire de la Ligue ; lus au sacre du Maître pour le Hall of Fame.
 const leagueHighlights: Record<string, LeagueHighlight> = {}
@@ -571,6 +572,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     //   à la 1re CAPTURE, le Dieu Spag rappelle que c'est le Daemon qu'étudie CHEN (→ Magmator → Magnetor).
     //   Flags per-monde one-time. UNIQUEMENT en run 3 (Lavapetit apparaît aussi en run 1/2 sans teaser).
     let lavapetitTeaser: "seen" | "caught" | null = null
+    let fusioBallOffer = false // posé au sacre de la Ligue de Fusion (offre d'achat Fusio-Ball par le Dieu Spaghetti)
     if (getActiveWorld() === "run3" && b.isWild && b.enemy.team.some((e) => e.speciesId === "lavapetit")) {
         const pl = getPlayer()
         if (b.outcome === "caught" && !pl.run3LavapetitCaught) { markRun3LavapetitCaught(); lavapetitTeaser = "caught" }
@@ -942,6 +944,9 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     //   de défaite du reflet (trainers.ts) fait l'annonce. markTrainerDefeated est idempotent.
     if (b.outcome === "win" && lid === "y_fusion_miroir") {
         markTrainerDefeated(FUSION_TIER_MARKER[activeFusionTier((m) => isTrainerDefeated(m))])
+        // Le Dieu Spaghetti propose une Fusio-Ball (1000 reps) À CHAQUE sacre de la Ligue (offre transitoire,
+        //   consommée côté client). Repose sur l'énergie du joueur au moment de l'offre — décliner ne coûte rien.
+        fusioBallOffer = true
     }
 
     // RUN 3 — SCORE du concours : crédite chaque Daemon ENNEMI mis K.O. (boss d'arène + membres de Ligue),
@@ -1015,7 +1020,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // Un Daemon a-t-il une attaque EN ATTENTE (slots pleins à la montée de niveau / l'évolution) ? → prompt post-combat.
     const pendingLearn = getPlayer().team.some((m) => (m.pendingMoves?.length ?? 0) > 0)
     // Expose les évolutions pour la cinématique post-combat (jouée après "QUITTER").
-    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose && !isFusionTrial, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, arenaRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward, lavapetitTeaser, justCaught: b.outcome === "caught", ngplusFinalPending: storeState.ngplusFinalPending || ngplusMaitreWin, ngplusFinalResult })
+    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose && !isFusionTrial, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, arenaRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward, lavapetitTeaser, fusioBallOffer, justCaught: b.outcome === "caught", ngplusFinalPending: storeState.ngplusFinalPending || ngplusMaitreWin, ngplusFinalResult })
 
     // 4) Sauvegarde persistante (DB).
     persistYellowSave()
@@ -1561,6 +1566,18 @@ export function useLavapetitTeaser(): BattleStoreState["lavapetitTeaser"] {
 }
 export function clearLavapetitTeaser() {
     setStore({ lavapetitTeaser: null })
+}
+
+/** LIGUE DE FUSION — le Dieu Spaghetti propose-t-il l'achat d'une Fusio-Ball (post-sacre, transitoire) ? */
+export function useFusioBallOffer(): boolean {
+    return useSyncExternalStore(
+        subscribe,
+        () => getSnapshot().fusioBallOffer,
+        () => getSnapshot().fusioBallOffer,
+    )
+}
+export function clearFusioBallOffer() {
+    setStore({ fusioBallOffer: false })
 }
 
 /** Un Daemon vient d'être capturé (signal transitoire pour l'UI, ex. carrousel génétique). */

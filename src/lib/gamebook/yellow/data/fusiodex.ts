@@ -9,9 +9,11 @@
 // AUTEL_VISITED_MARKER (arrivé au Dôme) ; (b) une fusion officielle NON aperçue ne révèle ni nom, ni sprite, ni
 // type (rendue « ??? » côté UI). Les fusions n'étant pas dans SPECIES, le Pokédex principal ne les voit jamais.
 
-import type { PokeType } from "../battle/types"
+import type { PokeType, SpeciesData } from "../battle/types"
 import { FUSION_BASE_SPECIES } from "./fusionBaseSpecies"
 import { FUSION_RULES } from "./fusionLore"
+import { computeFusion, type FusionParent, type FusionStats } from "./fusionSpecies"
+import { getSpecies } from "./species"
 
 export { FUSION_RULES }
 
@@ -56,4 +58,45 @@ export function officialFusionProgress(seenIds: string[]): { seen: number; total
     const total = FUSION_BASE_SPECIES.length
     const seen = FUSION_BASE_SPECIES.filter((s) => seenIds.includes(s.id)).length
     return { seen, total }
+}
+
+// ── HISTORIQUE « Mes fusions » : reconstruit nom+types+stats depuis une simple paire de speciesId, SANS instance
+//    de combat (module pur fusionSpecies). L'ORDRE compte (a = tête/dominant → moitié du nom + ordre des types). ──
+
+/** FusionParent à partir d'une ESPÈCE seule : level/moves sont des placeholders (sans effet sur nom/types). */
+function fusionParentFromSpecies(sp: SpeciesData): FusionParent {
+    return { name: sp.name, types: sp.types, stats: sp.baseStats, level: 1, moves: sp.learnset.map((l) => l.moveId) }
+}
+
+export interface HistoryFusionEntry {
+    key: string
+    name: string
+    types: string[]
+    parents: [string, string]
+    stats: FusionStats // la Spéciale du fusionné est scindée (spcAtk/spcDef)
+    bst: number
+}
+
+const EMPTY_FUSION_STATS: FusionStats = { hp: 0, atk: 0, def: 0, spe: 0, spcAtk: 0, spcDef: 0 }
+
+/** Reconstruit l'affichage de chaque fusion de l'historique (paires {a,b} = speciesId, a=tête). Dédup par paire.
+ *  Une paire dont une espèce n'est plus résoluble (ex. lignée custom évincée) est CONSERVÉE avec un libellé neutre
+ *  (bst=0 → l'UI la rend en placeholder) plutôt que masquée — le journal reste « à jamais ». Stats = BASE de la fusion. */
+export function historyFusions(history: { a: string; b: string }[]): HistoryFusionEntry[] {
+    const out: HistoryFusionEntry[] = []
+    const seen = new Set<string>()
+    for (const { a, b } of history) {
+        const key = `${a}|${b}`
+        if (seen.has(key)) continue
+        seen.add(key)
+        const spA = getSpecies(a), spB = getSpecies(b)
+        if (!spA || !spB) {
+            out.push({ key, name: "Fusion oubliée", types: [], parents: [spA?.name ?? a, spB?.name ?? b], stats: EMPTY_FUSION_STATS, bst: 0 })
+            continue
+        }
+        const res = computeFusion(fusionParentFromSpecies(spA), fusionParentFromSpecies(spB))
+        const bst = (Object.values(res.stats) as number[]).reduce((x, y) => x + y, 0)
+        out.push({ key, name: res.name, types: [...res.types], parents: [spA.name, spB.name], stats: res.stats, bst })
+    }
+    return out
 }

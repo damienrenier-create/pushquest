@@ -167,6 +167,9 @@ export interface YellowSave {
     /** ATELIER DE FUSION (salle de l'Autel) — jusqu'à 6 paires {uid parent A, uid parent B} = l'équipe de fusion
      *  du joueur (réutilisée pour la Ligue de Fusion + le futur PvP « dépôt »). Per-monde (uids du monde courant). Défaut []. */
     fusionRoster: { a: string; b: string }[]
+    /** FUSIODEX — journal PERMANENT de toutes les fusions créées (speciesId des 2 parents, a=tête). Non plafonné à 6
+     *  (contrairement au roster) ; union monotone à la fusion des mondes. Défaut []. */
+    fusionHistory: { a: string; b: string }[]
     /** RUN 3 — teaser Dieu Spaghetti sur Lavapetit déjà montré (à la rencontre) / Lavapetit déjà capturé ?
      *  Per-monde, one-time (ne re-teaser jamais). Défaut false. */
     run3LavapetitSeen: boolean
@@ -203,7 +206,7 @@ export const SAVE_VERSION = 2
 const ACE_RATCHET_RESET_VERSION = 2
 
 export function emptySave(): YellowSave {
-    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, domeChampionships: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, domeStats: { wins: 0, losses: 0, daemonUse: {}, moveUse: {} }, stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, berryHarvestDay: "", berryHarvestPicked: [], sylvebarbeAwake: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", pnj5Wins: 0, ngplusBattles: 0, labDefi: emptyLabDefi(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null, replayWorld: null, replayRun: null, replayReturn: null, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], fusionRoster: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0 }
+    return { version: SAVE_VERSION, team: [], pc: [], items: {}, reps: 0, repsCap: 1000, creditedThrough: "", repsBankedTotal: -1, welcomeGift: false, pokerFirstGameDone: false, pokerBossStacks: {}, pokerCashCap: 0, pokerCashDate: "", spagGift: false, pastaGodGift: false, pastaBoughtToday: 0, pastaDayBonus: 0, domeChampionships: 0, pokedex: { seen: [], caught: [] }, defeatedTrainers: [], rematchedTrainers: [], badges: [], introSeen: false, sbireDefeatsToday: 0, sbireWinsTotal: 0, pvpStats: { wins: 0, losses: 0, forfeits: 0, daemonUse: {}, moveUse: {} }, domeStats: { wins: 0, losses: 0, daemonUse: {}, moveUse: {} }, stats: emptyYellowStats(), acePeakLevel: 0, aceBox: {}, aceTeamSizePeak: 3, aceWins: 0, aceDefeatedDate: "", duelWins: {}, ownedCts: [], boughtCts: [], gekrocResolved: false, hhSpectresShown: [], hhCollectorWins: 0, isChampion: false, leagueSixShiny: false, mirrorWinHigherLevel: false, berrySecretKnown: false, berryHarvestDay: "", berryHarvestPicked: [], sylvebarbeAwake: false, caveTradeDone: false, goshHintHeard: false, orcalineWins: 0, orcalineDate: "", pnj5Wins: 0, ngplusBattles: 0, labDefi: emptyLabDefi(), customDaemons: [], ngplusStartedAt: undefined, playtimeMs: 0, leaguePotions: 0, ngplusUsed: false, activeWorld: "live", ngplusWorld: null, ngplusOldTeam: null, run3World: null, replayWorld: null, replayRun: null, replayReturn: null, run3Used: false, ngplusMaitreBeaten: false, run3StarterBase: "", run3Defeated: [], run3EnergyByArena: {}, caughtThisRun: [], fusionRoster: [], fusionHistory: [], run3LavapetitSeen: false, run3LavapetitCaught: false, mimimoyReturned: false, mimimoyAppearances: 0 }
 }
 
 const STAT_KEYS: StatKey[] = ["hp", "atk", "def", "spe", "spc"]
@@ -579,6 +582,9 @@ export function parseSave(raw: unknown, nested = false): YellowSave {
         caughtThisRun: Array.isArray(o.caughtThisRun) ? (o.caughtThisRun as unknown[]).filter((v): v is string => typeof v === "string").slice(0, 300) : [],
         fusionRoster: Array.isArray(o.fusionRoster)
             ? (o.fusionRoster as unknown[]).filter((v): v is { a: string; b: string } => !!v && typeof v === "object" && typeof (v as { a?: unknown }).a === "string" && typeof (v as { b?: unknown }).b === "string").map((v) => ({ a: v.a, b: v.b })).slice(0, 6)
+            : [],
+        fusionHistory: Array.isArray(o.fusionHistory)
+            ? (o.fusionHistory as unknown[]).filter((v): v is { a: string; b: string } => !!v && typeof v === "object" && typeof (v as { a?: unknown }).a === "string" && typeof (v as { b?: unknown }).b === "string").map((v) => ({ a: v.a, b: v.b })).slice(-200) // garde les 200 PLUS RÉCENTES (cohérent avec recordFusionCreated/mergeWorlds)
             : [],
         run3LavapetitSeen: o.run3LavapetitSeen === true,
         run3LavapetitCaught: o.run3LavapetitCaught === true,
