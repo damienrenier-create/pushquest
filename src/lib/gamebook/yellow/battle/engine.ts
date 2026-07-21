@@ -1392,6 +1392,13 @@ function performCapture(state: BattleState, itemId: string, events: BattleEvent[
         events.push({ kind: "message", text: `${displayName(wild)} dévie la Ball d'un revers ! Il faudra l'affaiblir par un STATUT avant d'espérer le capturer…` })
         return
     }
+    // VERROU DE PV PLEINS (Grotte du Nexus) : aucune capture tant que la cible est à PLEINS PV — il faut d'abord
+    // l'affaiblir. La Master Ball shunte. Placé AVANT tryCapture (le tour est consommé, aucune capture).
+    if (wild.captureRequiresDamage && wild.currentHp >= maxHpOf(wild) && !isGuaranteedBall(itemId)) {
+        events.push({ kind: "ball", action: "miss" })
+        events.push({ kind: "message", text: `${displayName(wild)} est bien trop FRAIS ! Dans cette grotte, aucun Daemon ne se laisse capturer à pleins PV — affaiblis-le d'abord.` })
+        return
+    }
     const res = isGuaranteedBall(itemId) || goshGuaranteed
         ? { caught: true, shakes: 3, value: Infinity }
         : tryCapture(

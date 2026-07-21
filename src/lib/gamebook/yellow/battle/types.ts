@@ -265,6 +265,9 @@ export interface MonInstance {
     capturedMapId?: string
     /** Quota du jour atteint au moment de la capture (génétique bonifiée). */
     capturedQuotaReached?: boolean
+    /** SAUVAGE (Grotte du Nexus) : capture IMPOSSIBLE tant que le Daemon est à PLEINS PV — il faut d'abord
+     *  l'affaiblir. La Master Ball shunte. Posé sur le spawn (gameStore), lu dans engine.performCapture. Runtime. */
+    captureRequiresDamage?: boolean
 }
 
 export interface BattleMon extends MonInstance {

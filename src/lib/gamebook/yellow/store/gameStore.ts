@@ -1009,6 +1009,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
                         }
                     }
                     if (typeof window !== "undefined" && encCount < 10) window.localStorage.setItem(ENC_KEY, String(encCount + 1))
+                    // GROTTE DU NEXUS (tous les étages puzzle) : aucune capture tant que le sauvage est à PLEINS PV
+                    //   → il faut d'abord l'affaiblir (règle affichée sur le panneau d'info). Cf. engine.performCapture.
+                    if (next.mapId.startsWith("yellow_grotte_nexus")) spawn.captureRequiresDamage = true
                     const seed = Math.floor(Math.random() * 1e9) >>> 0
                     set({ encounterCooldown: 1 }) // #7 : la 1re case après ce combat sera sans rencontre
                     startWildBattle(team, [spawn], seed)

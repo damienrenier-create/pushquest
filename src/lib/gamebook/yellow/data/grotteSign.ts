@@ -14,6 +14,8 @@ export const GROTTE_SIGN_LINES = [
     "🪧 « BIENVENUE DANS LA GROTTE DU NEXUS. Pensez à l'imperméable : ici, il pleut… de l'intérieur. »",
     "🪧 « L'humidité y est telle qu'on jurerait que même les Daemons de pierre prennent des bains. »",
     "🪧 « Les créatures d'ici suivent une horloge interne : certaines ne sortent qu'au grand JOUR, d'autres seulement la NUIT. Revenez à différentes heures ! »",
+    "🪧 « RÈGLE DE LA GROTTE : aucun Daemon ne se laisse capturer à PLEINS PV. Affaiblissez-le d'abord — pas de prise facile ici ! »",
+    "🪧 « Et méfiance : certains Daemons ne se capturent qu'avec des BALLS SPÉCIALES. Sans la bonne Ball, inutile d'essayer. »",
     "🪧 « Tout au fond vivrait un drôle de personnage, aux occupations… singulières. Nous n'en dirons pas plus. »",
     "🪧 « Cette caverne est d'une ancienneté vertigineuse. On y croiserait, dit-on, des Daemons d'autres temps. »",
 ]
