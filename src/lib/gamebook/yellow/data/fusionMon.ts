@@ -46,11 +46,15 @@ export function applyFusionStats(inst: MonInstance, f: FusionResult): void {
 /** SpeciesData ÉPHÉMÈRE d'une fusion. baseStats.spc = SpA (fallback d'affichage ; le COMBAT lit frozenStats/frozenSpd,
  *  pas ceci). Masquée du dex. `nameOverride` = nom figé (ex. les 21 noms de la Ligue de Fusion) sinon le portmanteau auto. */
 function buildFusionSpecies(id: string, f: FusionResult, sprite: string, nameOverride?: string, movesOverride?: string[]): SpeciesData {
+    // TAUX DE CAPTURE ∝ 1/BST : la Fusio-Ball (non garantie) est redoutable sur une fusion FAIBLE (BST bas → catchRate
+    //   haut), ardue sur une fusion très PUISSANTE (BST énorme → catchRate ~3, ex. Ukognofy ~1710 → 3). Clamp 3..60.
+    const bst = f.stats.hp + f.stats.atk + f.stats.def + f.stats.spe + f.stats.spcAtk + f.stats.spcDef
+    const catchRate = Math.max(3, Math.min(60, Math.round((1900 - bst) / 40)))
     return {
         id, dexNo: -1, name: nameOverride ?? f.name, types: f.types,
         baseStats: { hp: f.stats.hp, atk: f.stats.atk, def: f.stats.def, spe: f.stats.spe, spc: f.stats.spcAtk },
         learnset: (movesOverride ?? f.moves).map((moveId) => ({ level: 1, moveId })),
-        catchRate: 0, baseExp: 0, rarity: "RARE",
+        catchRate, baseExp: 0, rarity: "RARE",
         description: `Fusion éphémère de ${f.parents[0]} et ${f.parents[1]}.`,
         sprite, hiddenUntilCaught: true,
     }
