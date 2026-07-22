@@ -13,6 +13,15 @@ import { buildFusion, type BuiltFusion } from "./fusionMon"
 import { fusionSpritePath } from "./fusionSprite"
 
 export const UKOGNOFY_LEVEL = 100
+/** Map de la CHAMBRE du légendaire (décor salle_ukognofy.png). Atteinte via une échelle interne de la Grotte
+ *  quand les 6 conditions sont réunies (cf. gameStore). Ukognofy y est affronté à l'arrivée. */
+export const UKOGNOFY_CHAMBER_MAP = "yellow_ukognofy_chamber"
+
+/** Condition NUIT : heure RÉELLE locale entre 21h et 3h du matin. */
+export function isUkognofyNight(now = new Date()): boolean {
+    const h = now.getHours()
+    return h >= 21 || h < 3
+}
 /** Markers (defeatedTrainers) : capture + les 3 échecs. Boolean, bornés → pas de nouveau champ save. */
 export const UKOGNOFY_CAUGHT_MARKER = "ukognofy_caught"
 export const UKOGNOFY_FAIL_MARKERS = ["ukognofy_fail_1", "ukognofy_fail_2", "ukognofy_fail_3"] as const

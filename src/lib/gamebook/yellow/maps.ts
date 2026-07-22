@@ -1088,6 +1088,16 @@ function buildAutelChimereRoom(): TileType[][] {
     return m
 }
 
+// CHAMBRE DU LÉGENDAIRE ULTIME (14×14) — décor salle_ukognofy.png. Ukognofy est DESSINÉ au centre (bloc solide) ;
+//   le joueur arrive par l'entrée basse et l'affronte à l'arrivée (cf. gameStore). Piliers latéraux décoratifs.
+//   Collisions à affiner en jeu via debugGrid si besoin (le combat se lance à l'entrée → peu critique).
+function buildUkognofyChamber(): TileType[][] {
+    const m = buildZoneRoom(14, 14) // bords = murs ; sol intérieur ; porte basse (7,13) ouverte
+    for (let y = 4; y <= 7; y++) for (let x = 5; x <= 8; x++) m[y][x] = "tree" // Ukognofy central (décor) — solide
+    for (const [x, y] of [[2, 5], [2, 6], [11, 5], [11, 6]] as const) m[y][x] = "tree" // 2 piliers latéraux
+    return m
+}
+
 // GROTTE DU NEXUS — 1er étage (casse-tête Mt. Moon endgame). Collision v1 AUTO-échantillonnée depuis
 // grotte_casse_tete.png (void + gros rochers bloquants) → à CALER finement en jeu via debugGrid. 49×42.
 // Grille de COLLISION des 3 étages, AUTO-GÉNÉRÉE depuis grotte_casse_tete.png (cf. GROTTE_NEXUS_ART / scripts/_gen-grotte-art.mjs).
@@ -1182,6 +1192,16 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
             // d'ouverture (sprite fermé→ouvert) + resetFusionLeagueProgress + lance au palier actif.
             { x: 8, y: 1, targetMapId: "yellow_fusion_glace", targetSpawnX: 3, targetSpawnY: 6 },
             { x: 9, y: 1, targetMapId: "yellow_fusion_glace", targetSpawnX: 3, targetSpawnY: 6 },
+        ],
+    },
+    // CHAMBRE DU LÉGENDAIRE ULTIME (Ukognofy) — atteinte via une échelle interne de la Grotte, la nuit, avec un
+    //   Daemon niv 100, après une fusion sauvage vue sans croiser de sauvage depuis (Repousse). Combat à l'arrivée.
+    yellow_ukognofy_chamber: {
+        id: "yellow_ukognofy_chamber", name: "SANCTUAIRE", tiles: buildUkognofyChamber(), width: 14, height: 14,
+        backgroundImage: "/yellow/sprites/salle_ukognofy.png", backgroundImageWidth: 2120, backgroundImageHeight: 2016, backgroundImageTileSize: 151,
+        debugGrid: true, // collisions à affiner en jeu si besoin
+        exits: [
+            { x: 7, y: 13, targetMapId: "yellow_grotte_nexus", targetSpawnX: 18, targetSpawnY: 39 }, // sortie basse → entrée Grotte 1F
         ],
     },
     yellow_cendreville: {
