@@ -67,6 +67,7 @@ import { purchasableCts, getCt, canLearnCt } from "@/lib/gamebook/yellow/data/ct
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { computeFusion } from "@/lib/gamebook/yellow/data/fusionSpecies"
 import { buildFusion, disposeFusion, fusionParentFromInstance } from "@/lib/gamebook/yellow/data/fusionMon"
+import { officialFusionForParents } from "@/lib/gamebook/yellow/data/officialFusions"
 import { buildFusionTrialEnemy } from "@/lib/gamebook/yellow/data/fusionTrial"
 import { AUTEL_VISITED_MARKER } from "@/lib/gamebook/yellow/data/fusiodex"
 import { makeCrocavernGift, PNJ6_TRADE_DONE_MARKER, PNJ6_NAME } from "@/lib/gamebook/yellow/data/pnj6"
@@ -2555,7 +2556,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 const nameOf = (uid: string) => { const m = byUid(uid); return m ? displayName(m) : "?" }
                 const fusionNameOf = (p: { a: string; b: string }) => {
                     const a = byUid(p.a), b = byUid(p.b)
-                    return a && b ? computeFusion(fusionParentFromInstance(a), fusionParentFromInstance(b)).name : "(invalide)"
+                    if (!a || !b) return "(invalide)"
+                    // Affiche le NOM OFFICIEL si la paire matche une fusion connue (sinon le mot-valise dérivé).
+                    return officialFusionForParents(a.speciesId, b.speciesId)?.name ?? computeFusion(fusionParentFromInstance(a), fusionParentFromInstance(b)).name
                 }
                 const valid = dedupFusions(roster)
                 const closeIt = () => { setAtelierAdd(null); setAtelierPicking(null); closeFusionAtelier() }
@@ -2589,6 +2592,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 const draftA = atelierAdd?.a ? byUid(atelierAdd.a) : null
                 const draftB = atelierAdd?.b ? byUid(atelierAdd.b) : null
                 const draftPreview = draftA && draftB && atelierAdd!.a !== atelierAdd!.b ? computeFusion(fusionParentFromInstance(draftA), fusionParentFromInstance(draftB)) : null
+                const draftName = draftPreview ? (officialFusionForParents(draftA!.speciesId, draftB!.speciesId)?.name ?? draftPreview.name) : ""
                 return (
                     <div style={menuOverlayStyle} onClick={closeIt}>
                         <div style={menuBoxStyle} onClick={(e) => e.stopPropagation()}>
@@ -2637,7 +2641,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                     )}
                                     {draftPreview && (
                                         <div style={{ border: "1px solid #7c4fc0", borderRadius: 8, padding: "7px 10px", margin: "6px 0", background: "rgba(124,79,192,0.08)" }}>
-                                            <div style={{ fontWeight: 800, color: "#7c4fc0" }}>→ {draftPreview.name} <span style={{ fontSize: 11, opacity: 0.8 }}>[{draftPreview.types.join("/")}] N.{draftPreview.level}</span></div>
+                                            <div style={{ fontWeight: 800, color: "#7c4fc0" }}>→ {draftName} <span style={{ fontSize: 11, opacity: 0.8 }}>[{draftPreview.types.join("/")}] N.{draftPreview.level}</span></div>
                                             <div style={{ fontSize: 10.5, opacity: 0.85, marginTop: 2 }}>PV{draftPreview.stats.hp} · Atk{draftPreview.stats.atk} · Déf{draftPreview.stats.def} · SpA{draftPreview.stats.spcAtk} · SpD{draftPreview.stats.spcDef} · Vit{draftPreview.stats.spe}</div>
                                         </div>
                                     )}

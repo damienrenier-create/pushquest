@@ -12,6 +12,8 @@
 
 import { computeFusion, type FusionParent, type FusionResult } from "./fusionSpecies"
 import { getSpecies, registerCustomSpecies, unregisterCustomSpecies } from "./species"
+import { officialFusionForParents } from "./officialFusions"
+import { MISSINGNO_SPRITE } from "./fusionSprite"
 import { createMonInstance } from "../battle/factory"
 import { fullStats } from "../battle/stats"
 import type { MonInstance, SpeciesData } from "../battle/types"
@@ -68,11 +70,15 @@ export interface BuiltFusion { instance: MonInstance; speciesId: string; result:
 export function buildFusion(a: MonInstance, b: MonInstance, opts?: { name?: string; moves?: string[]; sprite?: string }): BuiltFusion {
     const result = computeFusion(fusionParentFromInstance(a), fusionParentFromInstance(b))
     const id = fusionSpeciesId(a, b)
-    // sprite : override CURÉ (les 21 fusions de Ligue, quand les PNG arrivent) sinon le sprite du parent dominant.
-    const sprite = opts?.sprite ?? getSpecies(a.speciesId)?.sprite ?? ""
-    // moveset : dérivé du moteur (fusions du joueur) OU curé à la main (opts.moves — les 21 fusions de la Ligue).
+    // Fusion JOUEUR (aucun override curé) : reconnaît une fusion OFFICIELLE (même paire de parents, ordre indifférent)
+    //   → reprend son NOM + SPRITE dédiés. Sinon le sprite = MissingNo (JAMAIS celui d'un parent). Les fusions curées
+    //   (Ligue/boss/épreuve) passent leurs opts → la reconnaissance est court-circuitée.
+    const official = opts?.name ? null : officialFusionForParents(a.speciesId, b.speciesId)
+    const name = opts?.name ?? official?.name
+    const sprite = opts?.sprite ?? official?.sprite ?? MISSINGNO_SPRITE
+    // moveset : dérivé du moteur (fusions du joueur) OU curé à la main (opts.moves — les fusions de la Ligue).
     const moves = opts?.moves ?? result.moves
-    registerCustomSpecies([buildFusionSpecies(id, result, sprite, opts?.name, opts?.moves)])
+    registerCustomSpecies([buildFusionSpecies(id, result, sprite, name, opts?.moves)])
     const instance = createMonInstance(id, result.level, { moveIds: [...moves], owned: false })
     applyFusionStats(instance, result)
     // Objets tenus : le 1er est appliqué. ⚠️ Le 2e (result.heldItems[1]) attend l'extension moteur « 2 objets »

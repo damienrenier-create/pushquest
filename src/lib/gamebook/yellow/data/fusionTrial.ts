@@ -9,10 +9,12 @@
 
 import { createMonInstance } from "../battle/factory"
 import { buildFusion } from "./fusionMon"
+import { fusionSpritePath } from "./fusionSprite"
 import type { MonInstance } from "../battle/types"
 
-interface TrialFusion { a: string; b: string; name: string; moves: string[] }
-const TRIAL_ENEMY: readonly TrialFusion[] = [
+export interface TrialFusion { a: string; b: string; name: string; moves: string[] }
+/** Les 2 fusions de l'épreuve d'ouverture (aussi lues par le registre des fusions officielles). */
+export const FUSION_TRIAL_PAIRS: readonly TrialFusion[] = [
     // Tonyront [EAU/NORMAL] — attaquant SPÉCIAL encaisseur (spa élevé, def/spd hauts) : STAB Eau + couverture spé + Repos.
     { a: "tonytony", b: "calderont", name: "Tonyront", moves: ["deferlante", "blizzard", "fulgurance", "repos"] },
     // Maîtrelmin [COMBAT/ELEC] — attaquant PHYSIQUE (atk énorme) : STAB Combat + Séisme + Cage-Éclair (para) + Danse-Lames.
@@ -22,10 +24,10 @@ const TRIAL_ENEMY: readonly TrialFusion[] = [
 /** Les 2 fusions ennemies de l'épreuve, scalées au `level` donné (celui de la fusion du joueur). Renvoie
  *  {team, speciesIds} — les speciesIds éphémères sont à DÉTRUIRE (disposeFusion) après le combat. */
 export function buildFusionTrialEnemy(level: number): { team: MonInstance[]; speciesIds: string[] } {
-    const built = TRIAL_ENEMY.map((t) => buildFusion(
+    const built = FUSION_TRIAL_PAIRS.map((t) => buildFusion(
         createMonInstance(t.a, level, { owned: false }),
         createMonInstance(t.b, level, { owned: false }),
-        { name: t.name, moves: t.moves },
+        { name: t.name, moves: t.moves, sprite: fusionSpritePath(t.name) },
     ))
     return { team: built.map((b) => b.instance), speciesIds: built.map((b) => b.speciesId) }
 }

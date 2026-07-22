@@ -13,6 +13,7 @@ import { getSpecies } from "./species"
 import { signatureStat } from "./evConfig"
 import { createMonInstance } from "../battle/factory"
 import { buildFusion, disposeFusion, type BuiltFusion } from "./fusionMon"
+import { fusionSpritePath } from "./fusionSprite"
 
 export type FusionTier = "bronze" | "argent" | "or"
 export const FUSION_TIERS: Record<FusionTier, { level: number; saiyan: number; label: string }> = {
@@ -104,7 +105,7 @@ export function buildFusionLeagueTeam(trainerKey: string, tier: FusionTier): Bui
     if (!tr) throw new Error(`Ligue Fusion : dresseur inconnu ${trainerKey}`)
     const { level, saiyan } = FUSION_TIERS[tier]
     return tr.pairs.map((p) =>
-        buildFusion(buildParent(p.a, level, saiyan), buildParent(p.b, level, saiyan), { name: p.name, moves: p.moves, sprite: p.sprite }),
+        buildFusion(buildParent(p.a, level, saiyan), buildParent(p.b, level, saiyan), { name: p.name, moves: p.moves, sprite: p.sprite ?? fusionSpritePath(p.name) }),
     )
 }
 
@@ -123,7 +124,7 @@ export const FUSION_BOSS_PAIRS: FusionPairDef[] = [
 export function buildFusionBossTeam(tier: FusionTier): BuiltFusion[] {
     const { level, saiyan } = FUSION_TIERS[tier]
     return FUSION_BOSS_PAIRS.map((p) =>
-        buildFusion(buildParent(p.a, level, saiyan), buildParent(p.b, level, saiyan), { name: p.name, moves: p.moves }),
+        buildFusion(buildParent(p.a, level, saiyan), buildParent(p.b, level, saiyan), { name: p.name, moves: p.moves, sprite: p.sprite ?? fusionSpritePath(p.name) }),
     )
 }
 
