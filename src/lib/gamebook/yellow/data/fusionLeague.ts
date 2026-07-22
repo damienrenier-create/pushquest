@@ -67,7 +67,7 @@ export const FUSION_LEAGUE: FusionLeagueTrainer[] = [
     ] },
     { key: "ace", name: "ACE", theme: "-", icon: "👑", pairs: [
         { a: "megalithe", b: "sylvebarbe", name: "Mégasylve", moves: ["seisme", "roc_titanesque", "vampigraine", "repos"] },        // mur Roche/Sol
-        { a: "aquilord", b: "jerbiwat", name: "Aquilwatt", moves: ["eveil_divin", "fulgurance", "vague_mentale", "reprise_ailes"] }, // Normal/PSY spé (2 STAB Psy éveil_divin+vague_mentale sur SpA ; fulgurance = couverture Élec ; Normal = typage physique, def only)
+        { a: "aquilord", b: "jerbiwat", name: "Aquilwatt", moves: ["eveil_divin", "fulgurance", "vague_mentale", "reprise_ailes"] }, // Vol/ÉLEC spé (STAB Élec fulgurance ; Vol = typage physique + reprise_ailes ; Psy éveil_divin/vague_mentale = couverture)
         { a: "vipember", b: "toucanyon", name: "Vipécan", moves: ["lance_flammes", "eveil_divin", "fulgurance", "hypnose"] },        // Feu/VOL spé (STAB Feu ; Vol = typage physique, def only)
         { a: "magmator", b: "rochison", name: "Magmarok", moves: ["roc_titanesque", "seisme", "crocs_de_feu", "danse_lames"] },      // Roche/SOL physique (2 STAB ; crocs_de_feu = couverture)
         { a: "loupyre", b: "thundah", name: "Thundaloup", moves: ["lance_flammes", "fulgurance", "vive_attaque", "cage_eclair"] },   // Feu/Élec rapide

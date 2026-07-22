@@ -210,7 +210,7 @@ export const SPECIES: Record<string, SpeciesData> = {
         evolution: { toId: "aquilord", method: { kind: "TRADE" } },
     },
     aquilord: {
-        id: "aquilord", dexNo: 154, name: "Aquilord", types: ["NORMAL", "VOL"],
+        id: "aquilord", dexNo: 154, name: "Aquilord", types: ["VOL", "NORMAL"], // aigle → VOL primaire (fait aussi d'Aquilwatt un Vol/Élec)
         // BST 480 (Aquilothan 402 + 78), taillé SPÉCIAL (grosse Spé + Vitesse) pour sublimer ses couvertures
         // Glace/Feu spéciales. Stade 4 de la lignée Plumiot (Plumiot→Faukon→Aquilothan→Aquilord).
         baseStats: { hp: 85, atk: 84, def: 78, spe: 115, spc: 118 },
