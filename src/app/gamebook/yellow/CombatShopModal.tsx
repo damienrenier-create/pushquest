@@ -8,7 +8,7 @@
 // la récompense (énergie/CT) est créditée côté client à la confirmation.
 
 import { useState, useEffect } from "react"
-import { usePlayer, grantReps, grantCt, addItem, addCaught, markCaughtThisRun } from "@/lib/gamebook/yellow/store/playerStore"
+import { usePlayer, grantReps, grantCt, addItem, addCaught, markCaughtThisRun, spendReps } from "@/lib/gamebook/yellow/store/playerStore"
 import { getPokedex, markCaught } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { createMonInstance } from "@/lib/gamebook/yellow/battle/factory"
 import { getSpecies } from "@/lib/gamebook/yellow/data/species"
@@ -100,6 +100,15 @@ export default function CombatShopModal({ onClose, onEnterGrotte }: { onClose: (
                         ))}
                     </Section>
 
+                    {/* REPOUSSE — débloquée après avoir battu l'AVENTURIER (PNJ 3, Grotte B2F) : son frère marchand les vend. Payé en ÉNERGIE. */}
+                    {player.defeatedTrainers.includes("y_pnj3_grotte_b2f") && (
+                        <Section title="🧴 Repousses (de mon frère l'Aventurier)">
+                            <div style={{ fontSize: 10, opacity: 0.7, color: INK, marginBottom: 6, lineHeight: 1.3 }}>Éloigne les Daemons sauvages 30 pas — à utiliser hors combat. Payé en énergie.</div>
+                            <Row label={`🧴 Repousse${(player.items["repousse"] ?? 0) > 0 ? ` (×${player.items["repousse"]})` : ""}`} price={100} currency="⚡" disabled={busy || player.reps < 100}
+                                onBuy={() => { if (spendReps(100)) { addItem("repousse", 1); persistYellowSave(); setMsg("✅ Repousse achetée ! (dans le sac → Exploration)") } else { setMsg("Pas assez d'énergie (100 requis).") } }} />
+                        </Section>
+                    )}
+
                     <Section title="💿 CT rares">
                         {ctOffer.length === 0 ? <Empty>Tu possèdes déjà toutes les CT du lot.</Empty> : ctOffer.map((id) => {
                             const ct = getCt(id); const mv = ct ? getMove(ct.moveId) : null
@@ -149,14 +158,14 @@ export default function CombatShopModal({ onClose, onEnterGrotte }: { onClose: (
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
     return <div style={{ marginBottom: 12 }}><div style={{ fontSize: 12, fontWeight: 800, color: INK, marginBottom: 6 }}>{title}</div>{children}</div>
 }
-function Row({ label, desc, price, onBuy, disabled }: { label: string; desc?: string; price: number; onBuy: () => void; disabled: boolean }) {
+function Row({ label, desc, price, onBuy, disabled, currency = "💠" }: { label: string; desc?: string; price: number; onBuy: () => void; disabled: boolean; currency?: string }) {
     return (
         <div style={row}>
             <div style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
                 <div style={{ fontSize: 12, color: INK, fontWeight: 700 }}>{label}</div>
                 {desc && <div style={{ fontSize: 10, color: INK, opacity: 0.65, lineHeight: 1.3 }}>{desc}</div>}
             </div>
-            <button onClick={onBuy} disabled={disabled} style={{ ...buyBtn, ...(disabled ? buyOff : {}) }}>{price} 💠</button>
+            <button onClick={onBuy} disabled={disabled} style={{ ...buyBtn, ...(disabled ? buyOff : {}) }}>{price} {currency}</button>
         </div>
     )
 }

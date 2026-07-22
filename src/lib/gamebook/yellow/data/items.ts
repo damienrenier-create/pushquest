@@ -26,6 +26,8 @@ export interface ItemData {
     /** BOOST (objet X) : stat boostée + nombre de crans (appliqué en combat). */
     boostStat?: "atk" | "def" | "spe" | "spc"
     boostStages?: number
+    /** REPOUSSE (MISC, s'utilise HORS combat) : nombre de pas sans rencontre sauvage. */
+    repelSteps?: number
 }
 
 export const ITEMS: Record<string, ItemData> = {
@@ -134,6 +136,12 @@ export const ITEMS: Record<string, ItemData> = {
     pierre_gekroc: {
         id: "pierre_gekroc", name: "Pierre Gékroc", category: "MISC",
         description: "Pierre d'évolution crépitante, libérée par Gékroc. Permet à Panthéon d'évoluer vers la panthère du type de ton choix.", price: 0,
+    },
+    // REPOUSSE — objet d'EXPLORATION (s'utilise HORS combat) : éloigne les Daemons sauvages 30 pas.
+    //   Vendue par le FRÈRE de l'AVENTURIER (Zone de Combat), une fois PNJ 3 (Grotte B2F) vaincu.
+    repousse: {
+        id: "repousse", name: "Repousse", category: "MISC",
+        description: "Éloigne les Daemons sauvages pendant 30 pas. À utiliser hors combat.", price: 100, repelSteps: 30,
     },
     // Objet clé remis par le SCIENTIFIQUE du labo au sacre (récompense du Dieu Spaghetti) : sa mélodie
     // réveille le SYLVEBARBE endormi qui bouche la sortie sud de Ville Jaune (combat → markSylvebarbeAwake).

@@ -199,6 +199,8 @@ function readFrontierSnap(): FrontierSnap | null {
 
 export default function YellowDevClient({ userId = "", isCreator = false, nickname = "", gameMode = "normal" }: { userId?: string; isCreator?: boolean; nickname?: string; gameMode?: string }) {
     const move = useGameStore((s) => s.move)
+    const activateRepel = useGameStore((s) => s.activateRepel)
+    const repelSteps = useGameStore((s) => s.repelSteps) // REPOUSSE : pas restants (HUD + garde anti-double)
     const mapPlayer = useGameStore((s) => s.player)
     const pressA = useGameStore((s) => s.pressA)
     const pressB = useGameStore((s) => s.pressB)
@@ -2021,10 +2023,30 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                             </button>
                                         </div>
                                     )}
+                                    {/* 🧴 Poche Exploration : Repousse (s'utilise HORS combat → N pas sans rencontre). */}
+                                    {(() => {
+                                        const repels = Object.values(ITEMS).filter((it) => it.repelSteps && (player.items[it.id] ?? 0) > 0)
+                                        return repels.length > 0 && (
+                                            <div>
+                                                <div style={pocketHdrStyle}>🧴 Exploration</div>
+                                                {repels.map((it) => (
+                                                    <button key={it.id} style={{ ...menuBtnStyle, display: "block", textAlign: "left", height: "auto" }} onClick={() => {
+                                                        if (repelSteps > 0) { setToast("Une Repousse agit déjà !"); return }
+                                                        if (consumeItem(it.id)) { activateRepel(it.repelSteps ?? 30); persistYellowSave(); setToast(`${it.name} ! Aucun Daemon sauvage pendant ${it.repelSteps} pas.`); setMenu("none"); setBagItem(null) }
+                                                    }}>
+                                                        <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                                            <span>{it.name} · Utiliser ▸</span><span>×{player.items[it.id]}</span>
+                                                        </span>
+                                                        {it.description && <span style={{ display: "block", fontSize: 10, opacity: 0.65, marginTop: 3, whiteSpace: "normal", lineHeight: 1.3 }}>{it.description}</span>}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )
+                                    })()}
                                     {/* 🎒 Poche Objets clés (MISC : Pierre Gékroc, Daemonflûte…) — lecture seule.
                                         La Pierre Gékroc s'utilise depuis la fiche d'un Panthéon. */}
                                     {(() => {
-                                        const keys = Object.values(ITEMS).filter((it) => it.category === "MISC" && (player.items[it.id] ?? 0) > 0)
+                                        const keys = Object.values(ITEMS).filter((it) => it.category === "MISC" && !it.repelSteps && (player.items[it.id] ?? 0) > 0)
                                         return keys.length > 0 && (
                                             <div>
                                                 <div style={pocketHdrStyle}>🎒 Objets clés</div>
@@ -2657,6 +2679,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {run && run.status === "active" && (
                 <div style={{ position: "absolute", left: 8, top: 8, zIndex: 60, background: "#1a1a22cc", color: "#fff", borderRadius: 8, padding: "4px 8px", fontSize: 11, fontWeight: 700 }}>
                     🏯 Série {run.streak + 1} · {run.jc} JC{run.isBoss ? " · 👑 BOSS" : ""}
+                </div>
+            )}
+            {/* HUD REPOUSSE — pas restants sans rencontre sauvage (top-center, hors combat). */}
+            {!battle && repelSteps > 0 && (
+                <div style={{ position: "absolute", left: "50%", top: 8, transform: "translateX(-50%)", zIndex: 60, background: "#2a2140ee", color: "#e6d2ff", border: "1px solid #8a5ae0", borderRadius: 999, padding: "4px 12px", fontSize: 11, fontWeight: 800, letterSpacing: 0.5, boxShadow: "0 2px 10px rgba(0,0,0,0.35)" }}>
+                    🧴 Repousse · {repelSteps} pas
                 </div>
             )}
             {/* ZONE DE COMBAT — pause entre vagues : Continuer ou Quitter (en gardant les JC) */}

@@ -154,8 +154,11 @@ interface GameStore {
     pendingCaveTrade: string | null // uid du Faukon à échanger (DÉNICHEUR grotte) → échange à la fermeture
     pendingHhCollector: boolean // intro du COLLECTIONNEUR (maison hantée) en cours → combat à la fermeture
     encounterCooldown: number // #7 : pas de rencontre sauvage pendant N déplacements (≥1 case libre après un combat)
+    repelSteps: number // REPOUSSE (objet, hors combat) : pas restants sans rencontre sauvage (affiché en HUD)
 
     // === ACTIONS ===
+    /** Active une Repousse : N pas sans rencontre sauvage (transitoire, non persisté). */
+    activateRepel: (steps: number) => void
     move: (dir: Direction) => void
     pressA: () => void
     pressB: () => void
@@ -621,6 +624,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     pendingCaveTrade: null,
     pendingHhCollector: false,
     encounterCooldown: 0,
+    repelSteps: 0,
+    activateRepel: (steps) => set({ repelSteps: Math.max(0, Math.floor(steps)) }),
 
     move: (dir) => {
         const { player, map, dialogue } = get()
@@ -678,6 +683,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
             && inPnj10Block(next.posX, next.posY)) {
             set({ player: { ...player, direction: next.direction }, dialogue: { npcId: PNJ10_NPC_ID, npcName: PNJ10_NAME, lines: PNJ10_INTRO_LINES, lineIndex: 0 }, pendingPnj10: true })
             return
+        }
+        // AVENTURIER (PNJ 3) — bloque le couloir (14,9)/(15,9) de la Grotte B2F tant qu'il n'est pas VAINCU (permanent,
+        //   defeatedTrainers). Marcher dessus → face à lui + son intro → combat (flux dresseur standard = pendingTrainerId).
+        if ((next.posX !== player.posX || next.posY !== player.posY)
+            && player.mapId === "yellow_grotte_nexus_b2f" && next.posY === 9 && (next.posX === 14 || next.posX === 15)
+            && !isTrainerDefeated("y_pnj3_grotte_b2f")) {
+            const tr = getTrainer("y_pnj3_grotte_b2f")
+            if (tr) {
+                set({ player: { ...player, direction: next.direction }, dialogue: { npcId: tr.id, npcName: tr.name, lines: tr.intro, lineIndex: 0 }, pendingTrainerId: tr.id })
+                return
+            }
         }
 
         // Le joueur vient-il d'atterrir sur une case warp ? (porte de bâtiment
@@ -909,6 +925,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // #7 : juste après un combat, on garantit au moins UNE case sans rencontre (anti-rafale).
         if (moved && get().encounterCooldown > 0) {
             set({ encounterCooldown: get().encounterCooldown - 1 })
+        } else if (moved && get().repelSteps > 0) {
+            set({ repelSteps: get().repelSteps - 1 }) // REPOUSSE active : ce pas est protégé (pas de rencontre) → on décompte
         } else if (moved && isWildTile && !map.encountersPaused) {
             const team = getPlayerSave().team
             const lead = team.find((m) => m.currentHp > 0)

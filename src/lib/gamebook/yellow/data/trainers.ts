@@ -231,6 +231,69 @@ export const TRAINERS: TrainerData[] = [
         ],
     },
 
+    // === GROTTE DU NEXUS B2F — l'aventurier BLOQUEUR (13,9, de profil) : barre le couloir (14,9)/(15,9) tant qu'il
+    //   n'est pas VAINCU ; à la défaite, révèle les REPOUSSE (vendues par son frère en Zone de Combat) ===
+    {
+        id: "y_pnj3_grotte_b2f",
+        name: "AVENTURIER",
+        title: "Aventurier rusé",
+        sprite: { emoji: "🧗", color: "#b5793a" }, // fallback ; PNG dédié (de profil) via MapView NPC_SPRITES
+        mapId: "yellow_grotte_nexus_b2f",
+        x: 13,
+        y: 9,
+        team: [
+            { speciesId: "colosfer", level: 85 },
+            { speciesId: "lunarque", level: 85 },
+            { speciesId: "coccimperatrice", level: 85 },
+            { speciesId: "cerfeuillu", level: 85 },
+            { speciesId: "razmaree", level: 85 },
+            { speciesId: "pyrokoss", level: 85 },
+        ],
+        reward: 1300,
+        aiLevel: "ace",
+        training: "elite",
+        intro: [
+            "*Un aventurier balèze te barre le couloir, bras croisés.*",
+            "On ne passe pas sans se mesurer à moi ! En garde !",
+        ],
+        defeat: [
+            "*Il s'écarte du passage en riant.*",
+            "Beau combat ! Tu veux mon secret pour n'avoir QUE des Daemons costauds ?",
+            "Les REPOUSSE ! Elles chassent les Daemons sauvages faiblards. Mon FRÈRE en vend dans la ZONE DE COMBAT — dis-lui que tu viens de ma part !",
+        ],
+    },
+
+    // === GROTTE DU NEXUS B2F — l'explorateur chanceux (25,8) : 3e indice — il a APERÇU le légendaire (Repousse + nuit + échelle) ===
+    {
+        id: "y_pnj4_grotte_b2f",
+        name: "EXPLORATEUR",
+        title: "Explorateur fiévreux",
+        sprite: { emoji: "🔥", color: "#d9542a" }, // équipe 100 % Feu ; emoji fallback (pas de PNG fourni)
+        mapId: "yellow_grotte_nexus_b2f",
+        x: 25,
+        y: 8,
+        team: [
+            { speciesId: "gekraise", level: 75 },
+            { speciesId: "magnetor", level: 80 },
+            { speciesId: "phoechaudiii", level: 85 },
+            { speciesId: "dracarlin", level: 90 },
+            { speciesId: "pyrozly", level: 95 },
+            { speciesId: "thundah", level: 100 },
+        ],
+        reward: 1500,
+        aiLevel: "ace",
+        training: "elite",
+        intro: [
+            "*Un explorateur au regard fiévreux serre son sac contre lui.*",
+            "Toi aussi tu cherches quelque chose ici ?! Prouve-moi ta force d'abord !",
+        ],
+        defeat: [
+            "*Il baisse la voix, encore secoué.*",
+            "Écoute… l'autre nuit, je suis tombé sur un Daemon que je n'avais JAMAIS vu. Une créature… indescriptible. Je n'ai pas osé m'approcher.",
+            "J'utilisais des Repousses, en pleine nuit. J'ai descendu une échelle — je ne sais même plus laquelle — et il était LÀ, devant moi.",
+        ],
+    },
+
     // === ARÈNE PLANTE — "Bosquet Sacré" : 4 gardes + le Druide (boss, badge Feuille) ===
     // NB : les anciens chefs Feu/Eau + Champion seront recréés quand on ajoutera
     // les arènes suivantes (modèle "1 arène, PNJ qui changent par badge").

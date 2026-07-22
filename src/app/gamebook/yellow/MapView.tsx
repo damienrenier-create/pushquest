@@ -673,6 +673,8 @@ const NPC_SPRITES: Record<string, { url: string; frames: number; h?: number } | 
     y_pnj10_grotte: { url: "/yellow/sprites/pnj10.png", frames: 1, h: 1.9 },
     // PNJ 1 — Spéléologue égaré de la Grotte du Nexus B2F (teaser du légendaire nocturne).
     y_pnj1_grotte_b2f: { url: "/yellow/sprites/pnj1_grotte_b2f.png", frames: 1, h: 1.9 },
+    // PNJ 3 — Aventurier bloqueur de la Grotte B2F (de profil, barre le couloir jusqu'à sa défaite).
+    y_pnj3_grotte_b2f: { url: "/yellow/sprites/pnj3_grotte_b2f.png", frames: 1, h: 1.9 },
     y_vendeur: { url: "/yellow/sprites/npc_clerk_color.png?v=3", frames: 6 },
     y_croupier: { url: "/yellow/sprites/kris_color.png?v=3", frames: 6 },
     // Marchand de Jetons de Combat (hub de la Zone de Combat).
