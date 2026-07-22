@@ -440,24 +440,31 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const [pvpSession, setPvpSession] = useState<(BattleStart & { fusion?: boolean }) | null>(null)
     const pvpCtx = usePvpCtx()
     // FUSION : construit MON équipe de fusion (espèces éphémères) depuis le roster persisté.
-    // Filtre les paires dont un parent n'est plus dans l'équipe/la boîte (relâché, etc.).
+    // Paires de fusion VALIDES + DÉDUPLIQUÉES : on écarte celles dont un parent n'est plus dans l'équipe/la boîte
+    //   (relâché…) OU qui réutilisent un Daemon (uid) déjà engagé dans une fusion précédente. RÈGLE : un Daemon ne
+    //   peut alimenter qu'UNE seule fusion à la fois (on ne fusionne pas 2× le même Ukognos). 1re occurrence gagne.
+    const dedupFusions = (roster: { a: string; b: string }[]): { a: string; b: string }[] => {
+        const all = [...player.team, ...player.pc]
+        const has = (uid: string) => all.some((m) => m.uid === uid)
+        const seen = new Set<string>(), out: { a: string; b: string }[] = []
+        for (const p of roster) {
+            if (!has(p.a) || !has(p.b) || p.a === p.b || seen.has(p.a) || seen.has(p.b)) continue
+            seen.add(p.a); seen.add(p.b); out.push(p)
+        }
+        return out
+    }
     const buildMyFusionTeam = () => {
         const all = [...player.team, ...player.pc]
-        const byU = (uid: string) => all.find((m) => m.uid === uid)
-        const built = player.fusionRoster
-            .map((p) => { const a = byU(p.a), b = byU(p.b); return a && b && a.uid !== b.uid ? buildFusion(a, b) : null })
-            .filter((x): x is NonNullable<typeof x> => x !== null)
+        const byU = (uid: string) => all.find((m) => m.uid === uid)!
+        const built = dedupFusions(player.fusionRoster).map((p) => buildFusion(byU(p.a), byU(p.b)))
         return {
             team: built.map((f) => f.instance),
             species: built.map((f) => getSpecies(f.speciesId)).filter((s): s is SpeciesData => !!s),
         }
     }
     const fusionHooks: FusionPvpHooks = { buildTeam: buildMyFusionTeam, dispose: (ids) => ids.forEach(disposeFusion) }
-    // Nombre de fusions valides prêtes au combat (roster ↔ Daemons encore présents) → gate des défis.
-    const myFusionCount = player.fusionRoster.filter((p) => {
-        const all = [...player.team, ...player.pc]
-        return !!all.find((m) => m.uid === p.a) && !!all.find((m) => m.uid === p.b) && p.a !== p.b
-    }).length
+    // Nombre de fusions valides prêtes au combat (roster ↔ Daemons présents, déduplié par uid) → gate des défis.
+    const myFusionCount = dedupFusions(player.fusionRoster).length
     const challenge = useCasinoChallenge({
         // Borne Kart ouverte → on ne REÇOIT plus de défi (sinon combat PvP invisible sous la course,
         // forfait fantôme au démontage). Réciproque : on bloque l'ouverture de la borne si un défi/combat
@@ -2544,17 +2551,18 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 const collection = [...player.team, ...player.pc]
                 const byUid = (uid: string) => collection.find((m) => m.uid === uid)
                 const roster = player.fusionRoster
+                const rosterUids = new Set(roster.flatMap((p) => [p.a, p.b])) // uids DÉJÀ engagés → interdits dans une autre fusion
                 const nameOf = (uid: string) => { const m = byUid(uid); return m ? displayName(m) : "?" }
                 const fusionNameOf = (p: { a: string; b: string }) => {
                     const a = byUid(p.a), b = byUid(p.b)
                     return a && b ? computeFusion(fusionParentFromInstance(a), fusionParentFromInstance(b)).name : "(invalide)"
                 }
-                const valid = roster.filter((p) => byUid(p.a) && byUid(p.b) && p.a !== p.b)
+                const valid = dedupFusions(roster)
                 const closeIt = () => { setAtelierAdd(null); setAtelierPicking(null); closeFusionAtelier() }
                 const removeAt = (i: number) => { setFusionRoster(roster.filter((_, j) => j !== i)); persistYellowSave() }
                 const confirmAdd = () => {
                     const add = atelierAdd
-                    if (!add?.a || !add?.b || add.a === add.b || roster.length >= 6) return
+                    if (!add?.a || !add?.b || add.a === add.b || rosterUids.has(add.a) || rosterUids.has(add.b) || roster.length >= 6) return
                     // Dédup EXACTE (même ordre = même espèce éphémère) ; (A,B) et (B,A) restent 2 fusions distinctes.
                     if (!roster.some((p) => p.a === add.a && p.b === add.b)) {
                         setFusionRoster([...roster, { a: add.a, b: add.b }])
@@ -2616,11 +2624,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                     {atelierPicking && (
                                         <div style={{ maxHeight: 176, overflowY: "auto", border: "1px solid rgba(120,120,120,0.35)", borderRadius: 6, margin: "4px 0", padding: 3 }}>
                                             {collection.map((m) => {
-                                                const used = atelierAdd[atelierPicking === "a" ? "b" : "a"] === m.uid
+                                                const committed = rosterUids.has(m.uid) // déjà engagé dans une autre fusion → indispo
+                                                const used = committed || atelierAdd[atelierPicking === "a" ? "b" : "a"] === m.uid
                                                 return (
                                                     <button key={m.uid} disabled={used} style={{ ...(used ? menuBtnDimStyle : menuBtnStyle), textAlign: "left", margin: "2px 0" }}
                                                         onClick={() => { setAtelierAdd((d) => d ? { ...d, [atelierPicking]: m.uid } : d); setAtelierPicking(null) }}>
-                                                        {displayName(m)} <span style={{ opacity: 0.6, fontSize: 10 }}>{getSpecies(m.speciesId)?.types.join("/")} · N.{m.level}</span>
+                                                        {displayName(m)} <span style={{ opacity: 0.6, fontSize: 10 }}>{getSpecies(m.speciesId)?.types.join("/")} · N.{m.level}{committed ? " · déjà en fusion" : ""}</span>
                                                     </button>
                                                 )
                                             })}
