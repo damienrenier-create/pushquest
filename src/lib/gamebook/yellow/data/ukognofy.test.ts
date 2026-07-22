@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest"
-import { buildUkognofy, ukognofyFailCount, isUkognofyGone, nextUkognofyFailMarker, isUkognofyNight, UKOGNOFY_ID, UKOGNOFY_CAUGHT_MARKER, UKOGNOFY_FAIL_MARKERS } from "./ukognofy"
+import { buildUkognofy, ukognofyFailCount, isUkognofyGone, nextUkognofyFailMarker, isUkognofyNight, UKOGNOFY_ID, UKOGNOFY_CAUGHT_MARKER, UKOGNOFY_FAIL_MARKERS, ukognofyRemainingTries, ukognofyWarnLines, UKOGNOFY_NPC_ID, UKOGNOFY_NPC_POS, UKOGNOFY_CHAMBER_MAP } from "./ukognofy"
 import { getSpecies } from "./species"
 import { getMove } from "./moves"
+import { YELLOW_NPCS } from "../npcs"
 
 describe("Ukognofy — légendaire (Goshendofy+Ukognos)", () => {
     it("buildUkognofy : espèce PERMANENTE ukognofy, DRAGON/FÉE niv 100, moveset d'ace", () => {
@@ -51,5 +52,31 @@ describe("Ukognofy — légendaire (Goshendofy+Ukognos)", () => {
     it("capture → disparaît aussi (même sans 3 échecs)", () => {
         const set = new Set<string>([UKOGNOFY_CAUGHT_MARKER])
         expect(isUkognofyGone((m) => set.has(m))).toBe(true)
+    })
+
+    it("tentatives restantes : 3 → 2 → 1 → 0 au fil des échecs", () => {
+        const set = new Set<string>()
+        const isDef = (m: string) => set.has(m)
+        expect(ukognofyRemainingTries(isDef)).toBe(3)
+        set.add(UKOGNOFY_FAIL_MARKERS[0]); expect(ukognofyRemainingTries(isDef)).toBe(2)
+        set.add(UKOGNOFY_FAIL_MARKERS[1]); expect(ukognofyRemainingTries(isDef)).toBe(1)
+        set.add(UKOGNOFY_FAIL_MARKERS[2]); expect(ukognofyRemainingTries(isDef)).toBe(0)
+    })
+
+    it("avertissement 2ᵉ visite : accorde le pluriel et cite le nombre de tentatives", () => {
+        expect(ukognofyWarnLines(2).some((l) => l.includes("2 tentatives"))).toBe(true)
+        expect(ukognofyWarnLines(1).some((l) => l.includes("1 tentative") && !l.includes("1 tentatives"))).toBe(true)
+        // le choix APPROCHER / RESSORTIR est explicite
+        const warn = ukognofyWarnLines(2).join(" ")
+        expect(warn.includes("APPROCHE") && warn.includes("RESSORS")).toBe(true)
+    })
+
+    it("PNJ de la chambre (bump-to-fight 2ᵉ visite) enregistré sur la map du sanctuaire", () => {
+        const npc = YELLOW_NPCS.find((n) => n.id === UKOGNOFY_NPC_ID)
+        expect(npc, "PNJ Ukognofy absent de YELLOW_NPCS").toBeTruthy()
+        expect(npc!.mapId).toBe(UKOGNOFY_CHAMBER_MAP)
+        expect(npc!.interaction).toBe("interactive")
+        expect(npc!.initialX).toBe(UKOGNOFY_NPC_POS.x)
+        expect(npc!.initialY).toBe(UKOGNOFY_NPC_POS.y)
     })
 })

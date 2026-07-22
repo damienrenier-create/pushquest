@@ -13,6 +13,7 @@ import { PARK_SIGN_TIPS } from "./data/parkSigns"
 import { ACE_TRAINER_ID, ACE_POS, ACE_INTRO_VARIANTS } from "./data/ace"
 import { GEKROC_NPC_ID, GEKROC_MAP_ID, GEKROC_POS, GEKROC_INTRO_LINES } from "./data/gekroc"
 import { SYLVEBARBE_NPC_ID, SYLVEBARBE_MAP_ID, SYLVEBARBE_POS, SYLVEBARBE_INTRO_LINES } from "./data/sylvebarbe"
+import { UKOGNOFY_NPC_ID, UKOGNOFY_NPC_POS, UKOGNOFY_CHAMBER_MAP, UKOGNOFY_INTRO_LINES } from "./data/ukognofy"
 import { HH_TRADER_ID, HH_TRADER_MAP, HH_TRADER_POS, HH_TRADER_OFFER_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_MAP, HH_COLLECTOR_POS, HH_COLLECTOR_INTRO_LINES } from "./data/hauntedNpcs"
 import { CAVE_TRADER_ID, CAVE_TRADER_MAP, CAVE_TRADER_POS, CAVE_TRADER_OFFER_LINES } from "./data/caveTrader"
 import { HH_KID_ID, HH_KID_MAP, HH_KID_POS, HH_KID_DAY_LINES } from "./data/hhKid"
@@ -113,6 +114,20 @@ export const YELLOW_NPCS: NpcDefinition[] = [
         initialX: SYLVEBARBE_POS.x,
         initialY: SYLVEBARBE_POS.y,
         dialoguesAfter: SYLVEBARBE_INTRO_LINES,
+    },
+    // UKOGNOFY — point d'interaction du légendaire ultime dans sa chambre (bas-centre du bloc central). Sprite
+    // invisible : le décor salle_ukognofy.png montre déjà la bête. Sert au « bump-to-fight » de la 2ᵉ visite (le
+    // gameStore intercepte l'id → avertissement/combat ; à la 1ʳᵉ visite le combat démarre auto à l'arrivée).
+    {
+        id: UKOGNOFY_NPC_ID,
+        name: "UKOGNOFY",
+        mapId: UKOGNOFY_CHAMBER_MAP,
+        kind: "static",
+        interaction: "interactive",
+        sprite: { emoji: "", color: "#b06bd6" },
+        initialX: UKOGNOFY_NPC_POS.x,
+        initialY: UKOGNOFY_NPC_POS.y,
+        dialoguesAfter: UKOGNOFY_INTRO_LINES,
     },
     // PNJ 5 — GARDIEN DE LA GROTTE DU NEXUS, intercepte en (17,33). Barre le passage (18-20,33) tant qu'il n'est
     // pas battu CETTE visite. GATE titre OR au Dôme (vérifiée à l'interaction dans gameStore) → sinon renvoi hors grotte.

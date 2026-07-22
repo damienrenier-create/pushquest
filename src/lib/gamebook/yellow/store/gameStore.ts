@@ -50,7 +50,7 @@ import { PNJ7_NPC_ID, PNJ7_TRAINER_ID, PNJ7_MAP_ID, PNJ7_NAME, PNJ7_INTRO_LINES,
 import { AUTEL_VISITED_MARKER, DOME_SPAGHETTI_LINES } from "../data/fusiodex"
 import { PNJ6_NPC_ID, PNJ6_TRAINER_ID, PNJ6_NAME, PNJ6_INTRO_LINES, PNJ6_NO_TEAM_LINES, PNJ6_FAREWELL_LINES, PNJ6_ALREADY_TODAY_LINES, PNJ6_TRADE_DONE_MARKER, pnj6DayMarker, buildPnj6Team } from "../data/pnj6"
 import { PNJ10_NPC_ID, PNJ10_TRAINER_ID, PNJ10_MAP_ID, PNJ10_NAME, PNJ10_INTRO_LINES, PNJ10_NO_TEAM_LINES, PNJ10_VICTORY_LINES, buildPnj10Team, inPnj10Block, isPnj10ClearedThisVisit, resetPnj10Visit } from "../data/pnj10"
-import { buildUkognofy, isUkognofyGone, isUkognofyNight, UKOGNOFY_CHAMBER_MAP } from "../data/ukognofy"
+import { buildUkognofy, isUkognofyGone, isUkognofyNight, UKOGNOFY_CHAMBER_MAP, UKOGNOFY_NPC_ID, ukognofyFailCount, ukognofyRemainingTries, ukognofyWarnLines, UKOGNOFY_INTRO_LINES, UKOGNOFY_NO_TEAM_LINES, UKOGNOFY_VOLATILISED_LINES, UKOGNOFY_GONE_LINES } from "../data/ukognofy"
 import { CHEN_LAB_LINES, LAB_ASSISTANT_LINES, LAB_ASSISTANT_LINES_NGPLUS, LAB_ASSISTANT_LINES_RUN3, CHEN_ABANDON_OFFER_LINES, CHEN_RUN3_TEASER_LINES, CHEN_RUN3_EVOLVE_LINES } from "../data/labDialogues"
 import { MAGNETOR_EVO_ITEM } from "../data/items"
 import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADE_RECEIVE_RUN1, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_TRADER_OFFER_LINES_RUN1, HH_TRADER_NEED_LINES_RUN1, HH_TRADER_HAS_MORROW_LINES, HH_TRADER_CANCEL_LINES, HH_TRADE_AQUILOTHAN_GIVE, HH_TRADE_AQUILOTHAN_RECEIVE, HH_TRADER_AQUILORD_OFFER_LINES, HH_TRADER_AQUILORD_NEED_LINES, HH_TRADER_AQUILORD_DONE_LINES, HH_TRADER_AQUILORD_CANCEL_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
@@ -116,6 +116,10 @@ let grotteFusionPop: { prev1: string; prev2: string; primed: string; zone: strin
 //   sauvage (⇒ il faut un Repousse de la fusion jusqu'à l'échelle). Réinitialisée par tout `setMap` hors chambre
 //   (entrée Grotte, QUITTER, warp dev) ET par toute transition marchée hors Grotte/chambre.
 let ukognofyChainArmed = false
+// UKOGNOFY — « déjà affronté CETTE visite » (transient, remis à false à chaque arrivée dans la chambre). Garantit
+//   UNE SEULE rencontre par venue : après le combat, ré-approcher le PNJ ne relance rien (il faut ressortir et
+//   refaire la chaîne). Empêche de brûler les 3 tentatives en une seule visite.
+let ukognofyChamberFought = false
 
 interface GameStore {
     // === STATE ===
@@ -150,6 +154,7 @@ interface GameStore {
     pendingOrcaline: boolean // intro du DRESSEUR D'ORCALINE en cours → combat à la fermeture
     pendingGekroc: boolean // intro de GÉKROC (mini-boss Centrale) en cours → combat à la fermeture
     pendingSylvebarbe: boolean // intro de SYLVEBARBE (gardien sud Ville Jaune) en cours → combat à la fermeture
+    pendingUkognofy: boolean // intro d'UKOGNOFY (bump chambre, 2ᵉ visite+) en cours → combat à la fermeture
     pendingPnj5: boolean // intro de PNJ 5 (gardien de la Grotte du Nexus) en cours → combat à la fermeture
     pendingPnj7: boolean // intro de PNJ 7 (Éclaireur de la Grotte du Nexus) en cours → combat à la fermeture
     pendingPnj6: boolean // intro de PNJ 6 (Échangeur de la Grotte du Nexus) en cours → combat à la fermeture
@@ -408,6 +413,20 @@ function tryLaunchSylvebarbe(): ActiveDialogue | null {
     return null
 }
 
+// Lance le combat d'UKOGNOFY (légendaire ultime) depuis le PNJ de la chambre (2ᵉ visite+, « bump-to-fight »).
+// Renvoie un dialogue (équipe K.O.) ou null si le combat démarre. Marque `ukognofyChamberFought` → 1 seule
+// rencontre par visite. La résolution (capture / échec) est posée dans finishBattle (markers).
+function tryLaunchUkognofy(): ActiveDialogue | null {
+    const team = getPlayerSave().team
+    if (!team.some((m) => m.currentHp > 0)) {
+        return { npcId: UKOGNOFY_NPC_ID, npcName: "UKOGNOFY", lineIndex: 0, lines: UKOGNOFY_NO_TEAM_LINES }
+    }
+    ukognofyChamberFought = true
+    const seed = Math.floor(Math.random() * 1e9) >>> 0
+    startWildBattle(team, [buildUkognofy().instance], seed)
+    return null
+}
+
 // BROCANTEUR (maison hantée) : échange le Roctaur (uid) du joueur — WORLD-AWARE. RUN 1 : il revient trade-ÉVOLUÉ
 // en ROCHISON (service d'évolution). RUN 2 : échangé contre un MORROW (Glace/Psy, exclusif run 2). Renvoie le dialogue.
 function doHhTrade(giveUid: string): ActiveDialogue | null {
@@ -620,6 +639,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     pendingOrcaline: false,
     pendingGekroc: false,
     pendingSylvebarbe: false,
+    pendingUkognofy: false,
     pendingPnj5: false,
     pendingPnj7: false,
     pendingPnj6: false,
@@ -865,13 +885,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
             // UKOGNOFY — les 6 conditions réunies + échelle INTERNE de la Grotte (targetMapId reste yellow_grotte_nexus*
             //   → exclut d'office l'échelle de SORTIE et celle du DÔME, qui pointent hors Grotte) → la descente mène à
             //   la CHAMBRE du légendaire au lieu de l'étage. Consomme la chaîne.
-            //   • `team.some(currentHp > 0)` : redirect ⟺ le combat démarrera (l.914) — jamais de chambre « à vide ».
-            //   • `items["fusio_ball"] > 0` : FILET anti-gâchis — sans Fusio-Ball la capture est mécaniquement
-            //     impossible ; on ne détourne donc PAS (sinon une des 3 chances serait brûlée sans aucun recours).
+            //   • `team.some(currentHp > 0)` : redirect ⟺ une rencontre pourra avoir lieu — jamais de chambre « à vide ».
+            //   STRICT (choix de Sartay) : PAS de garde Fusio-Ball → sans Ball la 1ʳᵉ rencontre brûle quand même une
+            //   tentative. Le filet arrive à la 2ᵉ visite : avertissement + demi-tour possible (cf. arrivée + PNJ Ukognofy).
             if (targetMapId.startsWith("yellow_grotte_nexus") && ukognofyChainArmed && isUkognofyNight()
                 && getPlayerSave().team.some((m) => m.level >= 100)
                 && getPlayerSave().team.some((m) => m.currentHp > 0)
-                && (getPlayerSave().items["fusio_ball"] ?? 0) > 0
                 && !isUkognofyGone(isTrainerDefeated)) {
                 targetMapId = UKOGNOFY_CHAMBER_MAP; spawnX = 7; spawnY = 12; ukognofyChainArmed = false
             }
@@ -902,6 +921,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 const interiorReturn = enteringShared && fromOverworld
                     ? { mapId: map.id, x: player.posX, y: player.posY }
                     : (stairInfirmary ? ret : (leavingShared ? null : ret))
+                // UKOGNOFY — arrivée dans la CHAMBRE : UNE rencontre par visite. 1ʳᵉ visite (0 échec) = EMBUSCADE
+                //   (combat auto, strict). 2ᵉ visite+ (déjà ≥1 échec) = AVERTISSEMENT + demi-tour : pas d'auto-start,
+                //   le joueur APPROCHE le PNJ pour combattre (pressA) ou RESSORT par l'échelle sans risquer de tentative.
+                const enteringUkognofyChamber = targetMapId === UKOGNOFY_CHAMBER_MAP
+                if (enteringUkognofyChamber) ukognofyChamberFought = false // reset par visite
+                const ukognofyFails = enteringUkognofyChamber ? ukognofyFailCount(isTrainerDefeated) : 0
+                const ukognofyAutoAmbush = enteringUkognofyChamber && !isUkognofyGone(isTrainerDefeated)
+                    && ukognofyFails === 0 && getPlayerSave().team.some((m) => m.currentHp > 0)
+                const ukognofyWarn = enteringUkognofyChamber && !isUkognofyGone(isTrainerDefeated) && ukognofyFails >= 1
                 set({
                     map: newMap, player: newPlayer, interiorReturn,
                     // SALLE DORÉE : annonce du « match surprise » ; sinon 1re ARRIVÉE AU DÔME : explication + Fusiodex.
@@ -915,10 +943,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
                         ],
                     } : firstDomeArrival ? {
                         npcId: "y_dome_spaghetti", npcName: "DIEU SPAGHETTI", lineIndex: 0, lines: [...DOME_SPAGHETTI_LINES],
+                    } : ukognofyWarn ? {
+                        // 2ᵉ visite+ : avertissement d'enjeu + rappel du choix APPROCHER / RESSORTIR (pas de combat auto).
+                        npcId: UKOGNOFY_NPC_ID, npcName: "UKOGNOFY", lineIndex: 0, lines: ukognofyWarnLines(ukognofyRemainingTries(isTrainerDefeated)),
                     } : null,
                 })
-                // UKOGNOFY — à l'arrivée dans la CHAMBRE : le légendaire ultime surgit (combat immédiat, Fusio-Ball).
-                if (targetMapId === UKOGNOFY_CHAMBER_MAP && !isUkognofyGone(isTrainerDefeated) && getPlayerSave().team.some((m) => m.currentHp > 0)) {
+                // UKOGNOFY — 1ʳᵉ visite (0 échec) : EMBUSCADE, le légendaire surgit immédiatement (strict, Fusio-Ball).
+                //   Aux visites suivantes, PAS d'auto-start : le combat se déclenche en approchant le PNJ (cf. pressA).
+                if (ukognofyAutoAmbush) {
+                    ukognofyChamberFought = true
                     startWildBattle(getPlayerSave().team, [buildUkognofy().instance], Math.floor(Math.random() * 1e9) >>> 0)
                 }
                 scheduleSave(newPlayer)
@@ -1120,6 +1153,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     set({ dialogue: tryLaunchGekroc(), pendingGekroc: false })
                 } else if (get().pendingSylvebarbe) {
                     set({ dialogue: tryLaunchSylvebarbe(), pendingSylvebarbe: false })
+                } else if (get().pendingUkognofy) {
+                    set({ dialogue: tryLaunchUkognofy(), pendingUkognofy: false })
                 } else if (get().pendingPnj5) {
                     set({ dialogue: tryLaunchPnj5(), pendingPnj5: false })
                 } else if (get().pendingPnj7) {
@@ -1435,6 +1470,26 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return
         }
 
+        // UKOGNOFY — PNJ de la chambre (2ᵉ visite+, « bump-to-fight »). APPROCHER + A = ENGAGER le combat (l'approche
+        //   vaut engagement, comme un défi de dresseur). Le demi-tour = NE PAS approcher, ressortir par l'échelle.
+        //   Gardes : disparu à jamais / déjà affronté cette visite / équipe K.O. (aucune tentative brûlée dans ces cas).
+        if (npc.id === UKOGNOFY_NPC_ID) {
+            if (isUkognofyGone(isTrainerDefeated)) {
+                set({ dialogue: { npcId: npc.id, npcName: "UKOGNOFY", lineIndex: 0, lines: UKOGNOFY_GONE_LINES } })
+                return
+            }
+            if (ukognofyChamberFought) {
+                set({ dialogue: { npcId: npc.id, npcName: "UKOGNOFY", lineIndex: 0, lines: UKOGNOFY_VOLATILISED_LINES } })
+                return
+            }
+            if (!getPlayerSave().team.some((m) => m.currentHp > 0)) {
+                set({ dialogue: { npcId: npc.id, npcName: "UKOGNOFY", lineIndex: 0, lines: UKOGNOFY_NO_TEAM_LINES } })
+                return
+            }
+            set({ dialogue: { npcId: npc.id, npcName: "UKOGNOFY", lines: UKOGNOFY_INTRO_LINES, lineIndex: 0 }, pendingUkognofy: true })
+            return
+        }
+
         // PNJ 5 — GARDIEN DE LA GROTTE DU NEXUS : GATE « titre OR au Dôme » (domeChampionships >= 3 = Bronze+Argent+Or).
         // Sans le titre → refus + RENVOI hors de la grotte (retour Zone de Combat). Avec le titre → combat RÉCURRENT
         // contre la meute des 5 Gek (scaling +2 niveaux/victoire, IA hof), à rebattre à chaque visite.
@@ -1720,6 +1775,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
             set({ dialogue: tryLaunchGekroc(), pendingGekroc: false })
         } else if (get().pendingSylvebarbe) {
             set({ dialogue: tryLaunchSylvebarbe(), pendingSylvebarbe: false })
+        } else if (get().pendingUkognofy) {
+            // Ⓑ pendant l'intro d'Ukognofy : l'approche vaut engagement → le combat se lance quand même (comme un défi).
+            set({ dialogue: tryLaunchUkognofy(), pendingUkognofy: false })
         } else if (get().pendingPnj5) {
             set({ dialogue: tryLaunchPnj5(), pendingPnj5: false })
         } else if (get().pendingPnj7) {
@@ -1774,8 +1832,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
     },
 
     hydrate: (loaded) => {
-        const map = YELLOW_MAPS[loaded.mapId] ?? YELLOW_MAPS[YELLOW_ENTRANCE_MAP_ID]
-        set({ player: loaded, map, hydrated: true })
+        // SANCTUAIRE d'Ukognofy : atteignable UNIQUEMENT via la chaîne live (ce n'est pas un lieu de repos). Si la
+        //   save y pointe (reload alors qu'on était dans la chambre), on ré-émerge à l'entrée de la Grotte 1F — sinon
+        //   le flag transient « déjà affronté cette visite » se réinitialiserait et on pourrait re-combattre le
+        //   légendaire sans refaire la chaîne. Additif, aucune perte de progression (équipe/objets/markers intacts).
+        const safe = loaded.mapId === UKOGNOFY_CHAMBER_MAP
+            ? { ...loaded, mapId: "yellow_grotte_nexus", posX: 18, posY: 39 }
+            : loaded
+        const map = YELLOW_MAPS[safe.mapId] ?? YELLOW_MAPS[YELLOW_ENTRANCE_MAP_ID]
+        set({ player: safe, map, hydrated: true })
     },
 
     closeShop: () => set({ shopOpen: false }),

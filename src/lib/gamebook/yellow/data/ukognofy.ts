@@ -23,6 +23,38 @@ export const UKOGNOFY_MOVES = ["souffle_primordial", "cataclysme_lunaire", "fulg
  *  quand les 6 conditions sont réunies (cf. gameStore). Ukognofy y est affronté à l'arrivée. */
 export const UKOGNOFY_CHAMBER_MAP = "yellow_ukognofy_chamber"
 
+/** PNJ d'INTERACTION d'Ukognofy dans la chambre (bas-centre du bloc central, sprite invisible : le décor
+ *  salle_ukognofy.png montre déjà le légendaire). Sert de point de combat « bump-to-fight » à partir de la
+ *  2ᵉ visite : le joueur s'en APPROCHE pour l'affronter, ou RESSORT par l'échelle (demi-tour, sans risquer
+ *  une tentative). À la 1ʳᵉ visite, le combat démarre automatiquement à l'arrivée (embuscade). */
+export const UKOGNOFY_NPC_ID = "y_ukognofy"
+export const UKOGNOFY_NPC_POS = { x: 7, y: 7 } as const
+
+/** AVERTISSEMENT à l'arrivée (2ᵉ visite et +) : rappelle l'enjeu (disparition définitive) + le choix
+ *  APPROCHER / RESSORTIR. `remaining` = tentatives restantes. */
+export function ukognofyWarnLines(remaining: number): string[] {
+    const t = `${remaining} tentative${remaining > 1 ? "s" : ""}`
+    return [
+        "*Le sanctuaire vibre encore. UKOGNOFY est toujours là, tapi au centre.*",
+        `« Tu l'as déjà défié. Il ne te reste que ${t} avant qu'il ne s'évanouisse À JAMAIS. »`,
+        "APPROCHE-toi de lui pour l'affronter — ou RESSORS par l'échelle pour ne PAS risquer une tentative.",
+    ]
+}
+/** Intro au moment où le joueur BUMPE Ukognofy (2ᵉ visite +) : l'approche VAUT engagement (le combat suit). */
+export const UKOGNOFY_INTRO_LINES = [
+    "*Tu t'avances vers lui. UKOGNOFY déploie ses ailes de flammes féeriques…*",
+    "Le mythe des mythes te toise. Il n'y aura pas de retour en arrière — le combat commence !",
+]
+/** Équipe entièrement K.O. → pas de combat possible. */
+export const UKOGNOFY_NO_TEAM_LINES = ["*Toute ton équipe est K.O. Impossible d'affronter UKOGNOFY dans cet état.*"]
+/** Ukognofy déjà affronté CETTE visite (une seule rencontre par venue) → il faut ressortir et refaire le chemin. */
+export const UKOGNOFY_VOLATILISED_LINES = [
+    "*L'air garde la trace de son passage… mais UKOGNOFY s'est volatilisé.*",
+    "Il te faudra ressortir et retrouver le chemin du sanctuaire pour retenter ta chance.",
+]
+/** Ukognofy a DISPARU à jamais (capturé ou 3 échecs) — défensif (le détour vers la chambre est déjà gated). */
+export const UKOGNOFY_GONE_LINES = ["*Le sanctuaire est silencieux. UKOGNOFY a disparu à jamais.*"]
+
 /** Espèce PERMANENTE d'Ukognofy (enregistrée custom → résolvable, hors Pokédex principal). baseStats = profil
  *  légendaire « collapsé » (Spé unique) de l'exemplaire capturé ; la Spé scindée du fusionné vit dans frozenStats
  *  côté rencontre. hiddenUntilCaught (anti-spoiler) ; catchRate 3 (légendaire, mais capture régie par la Fusio-Ball). */
@@ -68,6 +100,10 @@ export function buildUkognofy(): { instance: MonInstance; speciesId: string } {
 /** Nombre d'échecs enregistrés (0..3). */
 export function ukognofyFailCount(isDefeated: (m: string) => boolean): number {
     return UKOGNOFY_FAIL_MARKERS.filter((m) => isDefeated(m)).length
+}
+/** Tentatives RESTANTES avant disparition définitive (3 - échecs). */
+export function ukognofyRemainingTries(isDefeated: (m: string) => boolean): number {
+    return Math.max(0, UKOGNOFY_MAX_FAILS - ukognofyFailCount(isDefeated))
 }
 /** Ukognofy a-t-il DISPARU à jamais (capturé OU 3 rencontres sans capture) ? → ne repop plus. */
 export function isUkognofyGone(isDefeated: (m: string) => boolean): boolean {
