@@ -10,6 +10,7 @@
 
 import { createMonInstance } from "../battle/factory"
 import { buildFusion, type BuiltFusion } from "./fusionMon"
+import { fusionSpritePath } from "./fusionSprite"
 
 export const UKOGNOFY_LEVEL = 100
 /** Markers (defeatedTrainers) : capture + les 3 échecs. Boolean, bornés → pas de nouveau champ save. */
@@ -22,7 +23,7 @@ export function buildUkognofy(): BuiltFusion {
     return buildFusion(
         createMonInstance("goshendofy", UKOGNOFY_LEVEL, { owned: false }),
         createMonInstance("ukognos", UKOGNOFY_LEVEL, { owned: false }),
-        { name: "Ukognofy", moves: ["souffle_primordial", "cataclysme_lunaire", "fulgurance", "repos"] },
+        { name: "Ukognofy", moves: ["souffle_primordial", "cataclysme_lunaire", "fulgurance", "repos"], sprite: fusionSpritePath("Ukognofy") },
     )
 }
 

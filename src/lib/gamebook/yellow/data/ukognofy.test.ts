@@ -8,6 +8,7 @@ describe("Ukognofy — légendaire (Goshendofy+Ukognos)", () => {
         const f = buildUkognofy()
         const sp = getSpecies(f.speciesId)!
         expect(sp.name).toBe("Ukognofy")
+        expect(sp.sprite).toBe("/yellow/sprites/dex/fusion/ukognofy.png") // sprite dédié, PAS MissingNo
         expect(sp.types.sort()).toEqual(["DRAGON", "FEE"])
         expect(f.instance.level).toBe(100)
         expect(f.instance.moves).toHaveLength(4)
