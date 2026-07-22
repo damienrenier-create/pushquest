@@ -169,6 +169,68 @@ export const TRAINERS: TrainerData[] = [
         ],
     },
 
+    // === GROTTE DU NEXUS B2F — le spéléologue égaré (35,7) : teaser du légendaire nocturne à la défaite ===
+    {
+        id: "y_pnj1_grotte_b2f",
+        name: "SPÉLÉOLOGUE",
+        title: "Spéléologue égaré",
+        sprite: { emoji: "🔦", color: "#8a6d3b" }, // fallback ; PNG dédié via MapView NPC_SPRITES
+        mapId: "yellow_grotte_nexus_b2f",
+        x: 35,
+        y: 7,
+        team: [
+            { speciesId: "supabatchu", level: 75 },
+            { speciesId: "karatame", level: 80 },
+            { speciesId: "tenebrir", level: 75 },
+            { speciesId: "omnhippo", level: 80 },
+            { speciesId: "alirocaillus", level: 75 },
+            { speciesId: "mouflorage", level: 80 },
+        ],
+        reward: 1000,
+        aiLevel: "ace",
+        training: "elite", // EV + Saiyan → vrai défi de fin de jeu à niv 75-80
+        intro: [
+            "*Une lampe frontale vacille dans le noir.*",
+            "Cette grotte est vraiment… BIZARRE ! On dirait que les échelles BOUGENT…",
+            "Je me suis perdu tant de fois ! Tiens — un combat me changera les idées !",
+        ],
+        defeat: [
+            "*Il rajuste sa lampe, pensif.*",
+            "Tu es sacrément doué… Écoute, je vais te confier une rumeur.",
+            "On dit qu'un Daemon LÉGENDAIRE rôderait dans cette grotte… mais qu'on ne peut l'apercevoir que la NUIT.",
+        ],
+    },
+
+    // === GROTTE DU NEXUS B2F — l'ermite entraîneur (30,28) : 2e indice du légendaire (« il faut un niv 100 ») ===
+    {
+        id: "y_pnj2_grotte_b2f",
+        name: "ERMITE",
+        title: "Ermite entraîneur",
+        sprite: { emoji: "🧙", color: "#7a5ac0" }, // fallback (sprite PNG à câbler plus tard si fourni)
+        mapId: "yellow_grotte_nexus_b2f",
+        x: 30,
+        y: 28,
+        team: [
+            { speciesId: "karmaki", level: 80 },
+            { speciesId: "shade", level: 80 },
+            { speciesId: "merorem", level: 85 },
+            { speciesId: "goshendofy", level: 90 },
+            { speciesId: "ukognos", level: 90 },
+        ],
+        reward: 1200,
+        aiLevel: "ace",
+        training: "elite",
+        intro: [
+            "*Un ermite se dresse, une canne à la main.*",
+            "En garde, jeune padawan !",
+        ],
+        defeat: [
+            "*Il s'incline, un sourire malicieux aux lèvres.*",
+            "Il ne me reste qu'UNE place dans mon équipe… et elle est réservée au Daemon le plus légendaire de tous.",
+            "On dit que pour le trouver, il faut posséder un Daemon de NIVEAU 100 ! Alors je m'entraîne…",
+        ],
+    },
+
     // === ARÈNE PLANTE — "Bosquet Sacré" : 4 gardes + le Druide (boss, badge Feuille) ===
     // NB : les anciens chefs Feu/Eau + Champion seront recréés quand on ajoutera
     // les arènes suivantes (modèle "1 arène, PNJ qui changent par badge").

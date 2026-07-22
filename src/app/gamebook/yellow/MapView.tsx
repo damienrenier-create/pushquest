@@ -671,6 +671,8 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId, are
 const NPC_SPRITES: Record<string, { url: string; frames: number; h?: number } | null> = {
     // PNJ 10 — Sentinelle de la Grotte du Nexus (bloqueur de couloir), portrait entier fourni.
     y_pnj10_grotte: { url: "/yellow/sprites/pnj10.png", frames: 1, h: 1.9 },
+    // PNJ 1 — Spéléologue égaré de la Grotte du Nexus B2F (teaser du légendaire nocturne).
+    y_pnj1_grotte_b2f: { url: "/yellow/sprites/pnj1_grotte_b2f.png", frames: 1, h: 1.9 },
     y_vendeur: { url: "/yellow/sprites/npc_clerk_color.png?v=3", frames: 6 },
     y_croupier: { url: "/yellow/sprites/kris_color.png?v=3", frames: 6 },
     // Marchand de Jetons de Combat (hub de la Zone de Combat).
