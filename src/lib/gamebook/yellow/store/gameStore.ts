@@ -113,7 +113,8 @@ let run3CentralePity = { count: 0, hSeen: false, kSeen: false }
 //   (une fusion ne s'amorce que de 2 parents consécutifs DU MÊME biotope : pas de bleed cross-biotope/cross-étage).
 let grotteFusionPop: { prev1: string; prev2: string; primed: string; zone: string } = { prev1: "", prev2: "", primed: "", zone: "" }
 // UKOGNOFY — « chaîne » de rencontre (transitoire) : ARMÉE en croisant une FUSION sauvage, CASSÉE par tout autre
-//   sauvage (⇒ il faut un Repousse de la fusion jusqu'à l'échelle). Réinitialisée à l'entrée/sortie de la Grotte.
+//   sauvage (⇒ il faut un Repousse de la fusion jusqu'à l'échelle). Réinitialisée par tout `setMap` hors chambre
+//   (entrée Grotte, QUITTER, warp dev) ET par toute transition marchée hors Grotte/chambre.
 let ukognofyChainArmed = false
 
 interface GameStore {
@@ -864,8 +865,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
             // UKOGNOFY — les 6 conditions réunies + échelle INTERNE de la Grotte (targetMapId reste yellow_grotte_nexus*
             //   → exclut d'office l'échelle de SORTIE et celle du DÔME, qui pointent hors Grotte) → la descente mène à
             //   la CHAMBRE du légendaire au lieu de l'étage. Consomme la chaîne.
+            //   • `team.some(currentHp > 0)` : redirect ⟺ le combat démarrera (l.914) — jamais de chambre « à vide ».
+            //   • `items["fusio_ball"] > 0` : FILET anti-gâchis — sans Fusio-Ball la capture est mécaniquement
+            //     impossible ; on ne détourne donc PAS (sinon une des 3 chances serait brûlée sans aucun recours).
             if (targetMapId.startsWith("yellow_grotte_nexus") && ukognofyChainArmed && isUkognofyNight()
-                && getPlayerSave().team.some((m) => m.level >= 100) && !isUkognofyGone(isTrainerDefeated)) {
+                && getPlayerSave().team.some((m) => m.level >= 100)
+                && getPlayerSave().team.some((m) => m.currentHp > 0)
+                && (getPlayerSave().items["fusio_ball"] ?? 0) > 0
+                && !isUkognofyGone(isTrainerDefeated)) {
                 targetMapId = UKOGNOFY_CHAMBER_MAP; spawnX = 7; spawnY = 12; ukognofyChainArmed = false
             }
             // La chaîne se réinitialise dès qu'on QUITTE la Grotte (destination hors Grotte et hors chambre).
@@ -1747,7 +1754,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
         // GARDIEN DE LA GROTTE : entrer dans la grotte (par le passeur → setMap) RÉ-ARME PNJ 5 → il faut le rebattre.
         // Les échelles intra-grotte passent par la transition inline (findExitAt), PAS setMap → aucun ré-arm parasite.
-        if (mapId === PNJ5_MAP_ID) { pnj5WinsAtEntry = pnj5WinsCount(); grotteFusionPop = { prev1: "", prev2: "", primed: "", zone: "" }; resetGrotteDemo(); resetPnj10Visit(); ukognofyChainArmed = false } // entrée grotte → reset pop fusions + démo PNJ 7 + barrage PNJ 10 + chaîne Ukognofy
+        if (mapId === PNJ5_MAP_ID) { pnj5WinsAtEntry = pnj5WinsCount(); grotteFusionPop = { prev1: "", prev2: "", primed: "", zone: "" }; resetGrotteDemo(); resetPnj10Visit() } // entrée grotte → reset pop fusions + démo PNJ 7 + barrage PNJ 10
+        // Tout setMap hors chambre CASSE la chaîne Ukognofy (couvre « QUITTER LA GROTTE » et les warps dev B1F/B2F ;
+        // la redirection légitime vers la chambre ne passe JAMAIS par setMap mais par la transition inline `move`).
+        if (mapId !== UKOGNOFY_CHAMBER_MAP) ukognofyChainArmed = false
         const player = createInitialPlayer(mapId, spawnX, spawnY)
         set({ map, player, dialogue: null })
         saveNow(player) // transition de map → persistance IMMÉDIATE (anti-désync position/flags au reload, cf. whiteout Ligue)
