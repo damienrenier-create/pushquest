@@ -50,6 +50,7 @@ import { PNJ7_NPC_ID, PNJ7_TRAINER_ID, PNJ7_MAP_ID, PNJ7_NAME, PNJ7_INTRO_LINES,
 import { AUTEL_VISITED_MARKER, DOME_SPAGHETTI_LINES } from "../data/fusiodex"
 import { PNJ6_NPC_ID, PNJ6_TRAINER_ID, PNJ6_NAME, PNJ6_INTRO_LINES, PNJ6_NO_TEAM_LINES, PNJ6_FAREWELL_LINES, PNJ6_ALREADY_TODAY_LINES, PNJ6_TRADE_DONE_MARKER, pnj6DayMarker, buildPnj6Team } from "../data/pnj6"
 import { PNJ10_NPC_ID, PNJ10_TRAINER_ID, PNJ10_MAP_ID, PNJ10_NAME, PNJ10_INTRO_LINES, PNJ10_NO_TEAM_LINES, PNJ10_VICTORY_LINES, buildPnj10Team, inPnj10Block, isPnj10ClearedThisVisit, resetPnj10Visit } from "../data/pnj10"
+import { buildUkognofy, isUkognofyGone, isUkognofyNight, UKOGNOFY_CHAMBER_MAP } from "../data/ukognofy"
 import { CHEN_LAB_LINES, LAB_ASSISTANT_LINES, LAB_ASSISTANT_LINES_NGPLUS, LAB_ASSISTANT_LINES_RUN3, CHEN_ABANDON_OFFER_LINES, CHEN_RUN3_TEASER_LINES, CHEN_RUN3_EVOLVE_LINES } from "../data/labDialogues"
 import { MAGNETOR_EVO_ITEM } from "../data/items"
 import { HH_TRADER_ID, HH_TRADE_GIVE, HH_TRADE_RECEIVE, HH_TRADE_RECEIVE_RUN1, HH_TRADER_OFFER_LINES, HH_TRADER_NEED_LINES, HH_TRADER_OFFER_LINES_RUN1, HH_TRADER_NEED_LINES_RUN1, HH_TRADER_HAS_MORROW_LINES, HH_TRADER_CANCEL_LINES, HH_TRADE_AQUILOTHAN_GIVE, HH_TRADE_AQUILOTHAN_RECEIVE, HH_TRADER_AQUILORD_OFFER_LINES, HH_TRADER_AQUILORD_NEED_LINES, HH_TRADER_AQUILORD_DONE_LINES, HH_TRADER_AQUILORD_CANCEL_LINES, HH_COLLECTOR_ID, HH_COLLECTOR_CT, HH_COLLECTOR_INTRO_LINES, HH_COLLECTOR_REMINDER_LINES, HH_COLLECTOR_DONE_LINES, HH_COLLECTOR_NO_TEAM_LINES, HH_COLLECTOR_WINS_NEEDED, HH_COLLECTOR_SPECTRES_NEEDED, buildHhCollectorTeam } from "../data/hauntedNpcs"
@@ -111,6 +112,9 @@ let run3CentralePity = { count: 0, hSeen: false, kSeen: false }
 // `zone` = clé du biotope où l'historique a été construit → un changement de biotope/étage RÉINITIALISE prev1/prev2
 //   (une fusion ne s'amorce que de 2 parents consécutifs DU MÊME biotope : pas de bleed cross-biotope/cross-étage).
 let grotteFusionPop: { prev1: string; prev2: string; primed: string; zone: string } = { prev1: "", prev2: "", primed: "", zone: "" }
+// UKOGNOFY — « chaîne » de rencontre (transitoire) : ARMÉE en croisant une FUSION sauvage, CASSÉE par tout autre
+//   sauvage (⇒ il faut un Repousse de la fusion jusqu'à l'échelle). Réinitialisée à l'entrée/sortie de la Grotte.
+let ukognofyChainArmed = false
 
 interface GameStore {
     // === STATE ===
@@ -857,6 +861,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 scheduleSave(next)
                 return
             }
+            // UKOGNOFY — les 6 conditions réunies + échelle INTERNE de la Grotte (targetMapId reste yellow_grotte_nexus*
+            //   → exclut d'office l'échelle de SORTIE et celle du DÔME, qui pointent hors Grotte) → la descente mène à
+            //   la CHAMBRE du légendaire au lieu de l'étage. Consomme la chaîne.
+            if (targetMapId.startsWith("yellow_grotte_nexus") && ukognofyChainArmed && isUkognofyNight()
+                && getPlayerSave().team.some((m) => m.level >= 100) && !isUkognofyGone(isTrainerDefeated)) {
+                targetMapId = UKOGNOFY_CHAMBER_MAP; spawnX = 7; spawnY = 12; ukognofyChainArmed = false
+            }
+            // La chaîne se réinitialise dès qu'on QUITTE la Grotte (destination hors Grotte et hors chambre).
+            if (!targetMapId.startsWith("yellow_grotte_nexus") && targetMapId !== UKOGNOFY_CHAMBER_MAP) ukognofyChainArmed = false
             // PREMIÈRE ARRIVÉE AU DÔME FUSION (Autel) : le Dieu Spaghetti explique le lieu → pose le marker
             //   autel_visited (débloque le FUSIODEX dans le menu + lève la gate anti-spoiler). One-time.
             const firstDomeArrival = targetMapId === "yellow_combat_autel" && !isTrainerDefeated(AUTEL_VISITED_MARKER)
@@ -897,6 +910,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
                         npcId: "y_dome_spaghetti", npcName: "DIEU SPAGHETTI", lineIndex: 0, lines: [...DOME_SPAGHETTI_LINES],
                     } : null,
                 })
+                // UKOGNOFY — à l'arrivée dans la CHAMBRE : le légendaire ultime surgit (combat immédiat, Fusio-Ball).
+                if (targetMapId === UKOGNOFY_CHAMBER_MAP && !isUkognofyGone(isTrainerDefeated) && getPlayerSave().team.some((m) => m.currentHp > 0)) {
+                    startWildBattle(getPlayerSave().team, [buildUkognofy().instance], Math.floor(Math.random() * 1e9) >>> 0)
+                }
                 scheduleSave(newPlayer)
                 return
             }
@@ -1034,6 +1051,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     if (next.mapId.startsWith("yellow_grotte_nexus")) spawn.captureRequiresDamage = true
                     const seed = Math.floor(Math.random() * 1e9) >>> 0
                     set({ encounterCooldown: 1 }) // #7 : la 1re case après ce combat sera sans rencontre
+                    // UKOGNOFY chain (cond. 3+4) : croiser une FUSION sauvage l'ARME ; tout AUTRE sauvage la CASSE.
+                    ukognofyChainArmed = FUSION_BASE_IDS.includes(spawn.speciesId)
                     startWildBattle(team, [spawn], seed)
                     // ✨ FÊTE SHINY : croiser un shiny offre +50 énergie à TOUS les joueurs (annonce Dieu Spaghetti).
                     if (spawn.shiny) reportShiny("encounter", spawn.uid, spawn.speciesId)
@@ -1728,7 +1747,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
         // GARDIEN DE LA GROTTE : entrer dans la grotte (par le passeur → setMap) RÉ-ARME PNJ 5 → il faut le rebattre.
         // Les échelles intra-grotte passent par la transition inline (findExitAt), PAS setMap → aucun ré-arm parasite.
-        if (mapId === PNJ5_MAP_ID) { pnj5WinsAtEntry = pnj5WinsCount(); grotteFusionPop = { prev1: "", prev2: "", primed: "", zone: "" }; resetGrotteDemo(); resetPnj10Visit() } // entrée grotte → reset pop fusions + démo PNJ 7 + barrage PNJ 10
+        if (mapId === PNJ5_MAP_ID) { pnj5WinsAtEntry = pnj5WinsCount(); grotteFusionPop = { prev1: "", prev2: "", primed: "", zone: "" }; resetGrotteDemo(); resetPnj10Visit(); ukognofyChainArmed = false } // entrée grotte → reset pop fusions + démo PNJ 7 + barrage PNJ 10 + chaîne Ukognofy
         const player = createInitialPlayer(mapId, spawnX, spawnY)
         set({ map, player, dialogue: null })
         saveNow(player) // transition de map → persistance IMMÉDIATE (anti-désync position/flags au reload, cf. whiteout Ligue)

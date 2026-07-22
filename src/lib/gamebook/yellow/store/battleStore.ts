@@ -22,6 +22,7 @@ import type { MonInstance, PokeType, MoveSlot } from "../battle/types"
 import { markSeen, markCaught, getPokedex } from "./pokedexStore"
 import { getPlayer, setTeam, addCaught, consumeItem, markTrainerDefeated, isTrainerDefeated, markTrainerRematched, healAllTeam, spendReps, awardBadge, recordSbireWin, grantReps, addItem, recordPvpResult, recordPvpUse, recordDomeUse, recordAceDefeat, grantCt, markGekrocResolved, recordHhCollectorWin, setChampion, setNgplusMaitreBeaten, setBerrySecretKnown, isBerrySecretKnown, recordOrcalineDefeat, orcalineLevelForWins, recordPnj5Defeat, markSylvebarbeAwake, addCtDamage, grantRouletteTicket, grantRouletteCredit, consumeBattleBlessing, getActiveWorld, effectiveRunWorld, getNgplusNemesisSpeciesId, incNgplusBattles, bumpStat, bumpLeaguePotions, addRun3Defeated, addRun3EnergySnapshot, markCaughtThisRun, markRun3LavapetitSeen, markRun3LavapetitCaught, getRun3ThirdStarter } from "./playerStore"
 import { getItem } from "../data/items"
+import { UKOGNOFY_CAUGHT_MARKER, nextUkognofyFailMarker } from "../data/ukognofy"
 import { reportShiny } from "../shinyGift"
 import { ARENA_TICKET_VALUE, SBIRE_TICKET_VALUE, SBIRE_TICKET_EVERY, ACE_TICKET_VALUE, ACE_TICKET_WIN_BEFORE, ACE_TICKET_WIN_AFTER, ACE_TICKET_EARLY_VALUE, ACE_TICKET_WIN_EARLY, LEAGUE_ROULETTE_PER_KO, LEAGUE_AUTOGRAPH_CREDIT } from "../data/labDefis"
 import { getCt } from "../data/cts"
@@ -569,6 +570,13 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             markSylvebarbeAwake()
             consumeItem("daemonflute")
         }
+    }
+
+    // 2-quater) UKOGNOFY (LÉGENDAIRE ULTIME, chambre cachée) : CAPTURÉ → marker « caught » (disparu à jamais) ;
+    //           toute AUTRE issue (KO/défaite/fuite) = 1 ÉCHEC. Au 3e échec → disparu à jamais (isUkognofyGone).
+    if (b.isWild && b.enemy.team.some((e) => e.speciesId === "ukognofy")) {
+        if (b.outcome === "caught") markTrainerDefeated(UKOGNOFY_CAUGHT_MARKER)
+        else { const fm = nextUkognofyFailMarker(isTrainerDefeated); if (fm) markTrainerDefeated(fm) }
     }
 
     // 2-quater) RUN 3 — TEASER DIEU SPAGHETTI sur LAVAPETIT : à la 1re RENCONTRE (quel que soit l'issue) puis

@@ -1363,9 +1363,9 @@ function performCapture(state: BattleState, itemId: string, events: BattleEvent[
     events.push({ kind: "message", text: `Tu lances une ${getItem(itemId)?.name ?? "Ball"} !` })
     // FUSIO-BALL — verrou EXCLUSIF (placé AVANT toute balle garantie : même la Master ne capture PAS une fusion) :
     //   (a) une autre Ball sur un Daemon FUSIONNÉ → ricoche ; (b) une Fusio-Ball sur une NON-fusion → sans effet.
-    // « fusion » = une des 5 fusions de base (espèces stables) OU une fusion ÉPHÉMÈRE (id `fusion_<uid>_<uid>`,
-    //   ex. Ukognofy quand il popera en sauvage). Aucun autre Daemon ne porte ce préfixe.
-    const isFusion = FUSION_BASE_IDS.includes(wild.speciesId) || wild.speciesId.startsWith("fusion_")
+    // « fusion » = une des 5 fusions de base (espèces stables), le LÉGENDAIRE Ukognofy (espèce permanente dédiée),
+    //   OU une fusion ÉPHÉMÈRE (id `fusion_<uid>_<uid>`). Aucun autre Daemon n'est concerné.
+    const isFusion = FUSION_BASE_IDS.includes(wild.speciesId) || wild.speciesId === "ukognofy" || wild.speciesId.startsWith("fusion_")
     const isFusioBall = itemId === "fusio_ball"
     if (isFusion && !isFusioBall) {
         events.push({ kind: "ball", action: "miss" })

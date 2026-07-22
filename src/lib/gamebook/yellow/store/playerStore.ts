@@ -10,6 +10,7 @@ import { fullStats } from "../battle/stats"
 import { getSpecies, registerCustomSpecies, isCustomSpeciesId, CANONICAL_NEMESIS } from "../data/species"
 import { type CustomSpec, type StoredCustomDaemon, buildCustomSpecies, buildNemesis, customStarterSpeciesId, customLineageBaseId } from "../create/customSpecies"
 import { FUSION_BASE_SPECIES } from "../data/fusionBaseSpecies"
+import { UKOGNOFY_SPECIES } from "../data/ukognofy"
 import { tradeEvolutionTarget, applyEvolution, type EvolutionResult } from "../battle/evolution"
 import { getMove } from "../data/moves"
 import { getItem, MAGNETOR_EVO_ITEM } from "../data/items"
@@ -323,6 +324,7 @@ export function reregisterCustomDaemons(): void {
     //   createMonInstance) pour les rencontres sauvages, MAIS invisibles du Pokédex principal (visibleDexSpecies
     //   n'itère que SPECIES, jamais le registre custom) → anti-spoiler par construction. Le Fusiodex les listera à part.
     registerCustomSpecies(FUSION_BASE_SPECIES)
+    registerCustomSpecies([UKOGNOFY_SPECIES]) // légendaire ultime : espèce permanente (capture keepable, hors dex principal)
     for (const d of st.customDaemons) { try { registerCustomSpecies(buildCustomSpecies(d.spec, d.ownerId)) } catch { /* entrée corrompue → ignorée */ } }
 }
 
