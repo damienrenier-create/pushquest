@@ -69,7 +69,7 @@ export const FUSION_LEAGUE: FusionLeagueTrainer[] = [
         { a: "megalithe", b: "sylvebarbe", name: "Mégasylve", moves: ["seisme", "roc_titanesque", "vampigraine", "repos"] },        // mur Roche/Sol
         { a: "aquilord", b: "jerbiwat", name: "Aquilwatt", moves: ["eveil_divin", "fulgurance", "vague_mentale", "reprise_ailes"] }, // Vol/ÉLEC spé (STAB Élec fulgurance ; Vol = typage physique + reprise_ailes ; Psy éveil_divin/vague_mentale = couverture)
         { a: "vipember", b: "toucanyon", name: "Vipécan", moves: ["lance_flammes", "eveil_divin", "fulgurance", "hypnose"] },        // Feu/VOL spé (STAB Feu ; Vol = typage physique, def only)
-        { a: "magmator", b: "rochison", name: "Rockator", moves: ["roc_titanesque", "seisme", "crocs_de_feu", "danse_lames"] },      // ex-Magmarok, renommé : Roche/SOL (plus de Feu). 2 STAB physiques ; crocs_de_feu = simple couverture
+        { a: "magnetor", b: "rochison", name: "Rockator", moves: ["roc_titanesque", "tete_de_fer", "seisme", "danse_lames"] },     // ex-Magmarok → MÉTAL/ROCHE (Magnetor=Métal + Rochison=Roche). Juggernaut physique : 2 STAB (Roche+Métal) + séisme couverture + danse-lames
         { a: "loupyre", b: "thundah", name: "Thundaloup", moves: ["lance_flammes", "fulgurance", "vive_attaque", "cage_eclair"] },   // Feu/Élec rapide
         { a: "omnhippo", b: "regnantaur", name: "Omnantaur", moves: ["eveil_divin", "vague_mentale", "dard_fatal", "repos"] },        // spécial Psy + Insecte
     ] },
