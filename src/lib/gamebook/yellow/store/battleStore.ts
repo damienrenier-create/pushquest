@@ -446,7 +446,11 @@ function moveCostRepsForAction(b: BattleState, moveIndex: number): number {
 
 export function submitPlayerAction(action: PlayerAction) {
     const battle = storeState.battle
-    if (!battle) return
+    // Défense-en-profondeur : après la fin d'un combat, storeState.battle reste l'objet ENDED (non null) → sans le
+    //   garde `phase === "ended"`, une soumission d'action re-déclencherait finishBattle (double XP/badge, et surtout
+    //   une 2ᵉ tentative Ukognofy consommée à tort). Aucun chemin UI ne le fait aujourd'hui (fin de combat → seule
+    //   l'option QUITTER), mais on ferme la porte à toute future coque d'entrée. Pur early-return, save-safe.
+    if (!battle || battle.phase === "ended") return
     // Combat PvP : chemin réseau dédié (pas d'IA, résolution dual-déterministe).
     if (storeState.pvpCtx) { submitPvpAction(action); return }
     // Lancer une Ball consomme l'objet de l'inventaire (réussite ou non).
