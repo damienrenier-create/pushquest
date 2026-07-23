@@ -735,6 +735,12 @@ const NPC_SPRITES: Record<string, { url: string; frames: number; h?: number } | 
     y_ligue_3_agatha: { url: "/yellow/sprites/ligue_agatha.png", frames: 1, h: 1.6 },
     y_ligue_4_peter: { url: "/yellow/sprites/ligue_peter.png", frames: 1, h: 1.6 },
     y_ligue_maitre: { url: "/yellow/sprites/npc_ace.png", frames: 1, h: 2.0 },
+    // LIGUE DE FUSION — réutilise les sprites des Conseillers / du Maître de la vraie Ligue (mapping type 1:1).
+    y_fusion_1: { url: "/yellow/sprites/ligue_olga.png", frames: 1, h: 1.6 },     // salle Glace
+    y_fusion_2: { url: "/yellow/sprites/ligue_aldo.png", frames: 1, h: 1.6 },     // salle Combat
+    y_fusion_3: { url: "/yellow/sprites/ligue_agatha.png", frames: 1, h: 1.6 },   // salle Spectre
+    y_fusion_4: { url: "/yellow/sprites/ligue_peter.png", frames: 1, h: 1.6 },    // salle Dragon
+    y_fusion_maitre: { url: "/yellow/sprites/npc_ace.png", frames: 1, h: 2.0 },   // Champion
     // ARÈNE EAU — Conseil des marées (gauche 1/2, droite 1/2) + ONDINE.
     y_eauarena_g1: { url: "/yellow/sprites/eau_g1.png", frames: 1, h: 1.9 },
     y_eauarena_g2: { url: "/yellow/sprites/eau_g2.png", frames: 1, h: 1.9 },
