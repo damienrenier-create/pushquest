@@ -114,14 +114,7 @@ export const FUSION_BASE_SPECIES: SpeciesData[] = [
         description: "Fusion exclusive du couloir d'Hypnoppo : un dragon onirique qui endort ses proies.",
         sprite: "/yellow/sprites/dex/missingno.png", hiddenUntilCaught: true,
     },
-    {   // Sylvaroc = wistree + tetardoc (zone B1F-3)
-        id: "sylvaroc", dexNo: 513, name: "Sylvaroc", types: ["PLANTE", "ROCHE"],
-        baseStats: { hp: 72, atk: 25, def: 38, spe: 33, spc: 47 }, // BST 215
-        learnset: [{ level: 1, moveId: "fouet_lianes" }, { level: 1, moveId: "jet_pierres" }, { level: 16, moveId: "eboulis" }, { level: 30, moveId: "mega_sangsue" }, { level: 46, moveId: "lame_roche" }, { level: 84, moveId: "roc_titanesque" }],
-        catchRate: 42, baseExp: 90, rarity: "RARE", growthRate: "medium_fast",
-        description: "Fusion exclusive du couloir de Wistree : un arbre-têtard fossilisé aux racines de pierre.",
-        sprite: "/yellow/sprites/dex/missingno.png", hiddenUntilCaught: true,
-    },
+    // (Sylvaroc = wistree + tetardoc, ex zone B1F-3 : ABANDONNÉ 23/07 — biotope Wistree sans exclusive.)
     {   // Nécrospore = caninombre + sporbeo (zone B1F-4)
         id: "necrospore", dexNo: 514, name: "Nécrospore", types: ["SPECTRE", "POISON"],
         baseStats: { hp: 77, atk: 20, def: 33, spe: 38, spc: 47 }, // BST 215
@@ -170,7 +163,7 @@ export const FUSION_BASE_PARENTS: Record<string, [string, string]> = {
     voltaile: ["batchu", "draclet"],           // 1F
     abyssvolt: ["obscurene", "electroatiss"],  // B1F-1
     oniridrak: ["hypnoppo", "draclet"],        // B1F-2
-    sylvaroc: ["wistree", "tetardoc"],         // B1F-3
+    // (sylvaroc = wistree + tetardoc, ex B1F-3 : ABANDONNÉ 23/07)
     necrospore: ["caninombre", "sporbeo"],     // B1F-4
     ombrepsy: ["shady", "nouillon"],           // B1F-5
     rocaptere: ["gavillus", "lavapetit"],      // B1F-6

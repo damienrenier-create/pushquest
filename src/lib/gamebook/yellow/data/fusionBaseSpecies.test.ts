@@ -4,9 +4,9 @@ import { SPECIES, getSpecies, registerCustomSpecies } from "./species"
 import { getMove } from "./moves"
 
 describe("Fusions de base — data + learnsets", () => {
-    it("13 fusions (5 de base + 8 exclusives de zone), ids uniques, types valides, base stats plausibles", () => {
-        expect(FUSION_BASE_SPECIES.length).toBe(13) // 5 de base (Grotte 1F/B1F fusion-pop) + 8 exclusives de zone
-        expect(new Set(FUSION_BASE_IDS).size).toBe(13)
+    it("12 fusions (5 de base + 7 exclusives de zone), ids uniques, types valides, base stats plausibles", () => {
+        expect(FUSION_BASE_SPECIES.length).toBe(12) // 5 de base (Grotte 1F/B1F fusion-pop) + 7 exclusives de zone (Sylvaroc abandonné 23/07)
+        expect(new Set(FUSION_BASE_IDS).size).toBe(12)
         for (const s of FUSION_BASE_SPECIES) {
             expect(s.types.length, s.id).toBe(2)
             expect(new Set(s.types).size).toBe(2) // 2 types distincts
