@@ -2531,6 +2531,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     if (!ready) return
                     fusionSpeciesRef.current.forEach(disposeFusion) // nettoie les fusions précédentes (joueur + ennemi)
                     const { instance, speciesId, result } = buildFusion(picks[0], picks[1])
+                    recordFusionCreated(picks[0].speciesId, picks[1].speciesId); persistYellowSave() // journalise dans « Mes fusions » (Fusiodex) — l'épreuve EST une chimère assemblée à l'Autel (dédup idempotent)
                     const lvl = result.level
                     // ÉPREUVE D'OUVERTURE : vs 2 fusions ennemies (Tonyront EAU/NORMAL · Maîtrelmin COMBAT/ELEC), scalées.
                     const enemy = buildFusionTrialEnemy(lvl)

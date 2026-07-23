@@ -485,6 +485,7 @@ export async function startReplay(run: "run1" | "run2" | "run3", starter: MonIns
     }
     setReplayContext(run, cur)
     setActiveWorld("replay")
+    reregisterCustomDaemons() // rend les Daemons custom résolvables en combat dans la bulle de rejeu (aligne les 6 chemins d'hydratation)
     // 3) Énergie de départ selon le run rejoué (mêmes réglages que les vrais starts ; runMode() applique les règles).
     if (run === "run2") { raiseRepsCap(NGPLUS_START_ENERGY - 1000); grantReps(NGPLUS_START_ENERGY) }       // NG+ = 10000
     else if (run === "run3") { raiseRepsCap(RUN3_ENERGY_CAP - 1000); grantReps(RUN3_START_ENERGY, true) }   // run 3 = 500 (source unique)
@@ -511,6 +512,7 @@ export async function exitReplay(): Promise<void> {
     suppressAutosave = true
     if (timer) { clearTimeout(timer); timer = null }
     hydrateFromWorld(world, getPlayer().customDaemons ?? world.customDaemons ?? [])
+    reregisterCustomDaemons() // rend les Daemons custom résolvables en combat après restauration (aligne les 6 chemins d'hydratation)
     setActiveWorld(ret)
     // Le monde restauré vit désormais dans les stores → son slot stash redevient null.
     if (ret === "live") liveStash = null

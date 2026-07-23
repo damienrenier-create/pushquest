@@ -723,7 +723,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
         // Le joueur vient-il d'atterrir sur une case warp ? (porte de bâtiment
         // ou doorMat de sortie). Si oui : transition de map immédiate.
-        const exit = findExitAt(map, next.posX, next.posY)
+        // ⚠️ UNIQUEMENT sur un PAS EFFECTIF (next != player) : sinon, stationner SUR une case-exit et pousser vers
+        //   un mur (tryMove renvoie la même position) re-déclencherait le warp → ping-pong entre étages quand le
+        //   spawn d'arrivée tombe sur la case-échelle de retour (les 14 échelles de la Grotte du Nexus).
+        const exit = (next.posX !== player.posX || next.posY !== player.posY) ? findExitAt(map, next.posX, next.posY) : null
         if (exit) {
             // Le GYM se réorganise selon les badges : la porte mène à l'arène courante.
             let targetMapId = exit.targetMapId === "yellow_arena"

@@ -289,8 +289,9 @@ export const TRAINERS: TrainerData[] = [
         ],
         defeat: [
             "*Il baisse la voix, encore secoué.*",
-            "Écoute… l'autre nuit, je suis tombé sur un Daemon que je n'avais JAMAIS vu. Une créature… indescriptible. Je n'ai pas osé m'approcher.",
-            "J'utilisais des Repousses, en pleine nuit. J'ai descendu une échelle — je ne sais même plus laquelle — et il était LÀ, devant moi.",
+            "Écoute… l'autre nuit, je venais JUSTE de croiser une créature à DEUX TÊTES — une de ces bêtes FUSIONNÉES qui rôdent dans les galeries.",
+            "J'ai aussitôt posé une Repousse pour ne plus tomber sur AUCUN autre sauvage, et dans la foulée j'ai descendu une échelle… et IL était là, devant moi. Un Daemon que je n'avais JAMAIS vu. Indescriptible.",
+            "Tout ça en pleine NUIT, bien sûr. Le jour, tu peux toujours chercher…",
         ],
     },
 
