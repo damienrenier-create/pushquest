@@ -314,6 +314,9 @@ export interface BattleMon extends MonInstance {
     captureMinBallBonus?: number
     /** SAUVAGE : multiplie la valeur de capture (×<1 = plus dur, ex. Thundah/Bélunode). Runtime. */
     captureMult?: number
+    /** SAUVAGE : message de RAILLERIE affiché au 1er lancer de Ball (ex. créations finales niv 75 de la Grotte du
+     *  Nexus : « tu ne pensais pas l'attraper aussi facilement ? »). Runtime, non persisté. */
+    captureTaunt?: string
     /** SAUVAGE : capture IMPOSSIBLE tant que le Daemon n'a pas de STATUT majeur (para/sommeil/poison/
      *  brûlure/gel) — hommage légendaire Gen1 (ex. Goshendofy). La Master Ball shunte. Runtime. */
     captureRequiresStatus?: boolean

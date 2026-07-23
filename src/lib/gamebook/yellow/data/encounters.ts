@@ -38,6 +38,7 @@ interface WildEntry {
     fleeMaxTurns?: number         // fuit AU PLUS TARD après ce nb de tours (ex. Boltah 5, Heatah 3) — tiré dans [⌈max/2⌉, max]
     captureMinBallBonus?: number  // capture IMPOSSIBLE si ballBonus de la Ball < cette valeur (ex. Zappeuréal = Hyper Ball+ → 4)
     captureMult?: number          // ×<1 → capture PLUS DURE (ex. Thundah, Bélunode)
+    captureTaunt?: string         // message de RAILLERIE au 1er lancer (créations finales niv 75 de la Grotte du Nexus)
     captureRequiresStatus?: boolean // capture IMPOSSIBLE sans statut majeur sur la cible (légendaire, ex. Goshendofy)
     captureStatusBypassesBall?: boolean // un statut majeur shunte captureMinBallBonus (Super Ball+ OU statut, ex. Bouh)
     minLeadLevel?: number         // ne pop QUE si le lead de l'équipe atteint ce niveau (ex. Orcaline run 2 = 35) — sinon poids 0
@@ -193,6 +194,15 @@ function run3LiveCatchupGrotte(ctx: EncounterCtx, rng: () => number): MonInstanc
     return finalizeSpawn({ speciesId: "wistree", base: 1, noEvolve: true }, level, rng, ctx)
 }
 
+// GROTTE DU NEXUS B2F — les FORMES FINALES des créations CANONISÉES des joueurs + leurs NÉMÉSIS, qui rôdent au fond
+//   de la caverne à niv 75. Elles poppent « parfois » (VERY_RARE) et sont TRÈS dures à capturer (captureMult 0.45,
+//   difficulté ≈ Sylvebarbe) avec une RAILLERIE au 1er lancer de Ball. Formes finales → noEvolve.
+const NEXUS_FINAL_TAUNT = "Ce sont des créatures rares et fougueuses… tu ne pensais tout de même pas l'attraper aussi facilement ?"
+const NEXUS_POWERFUL_FINALS: WildEntry[] = [
+    "alirocaillus", "mouflorage", "mobyd", "phoechaudiii", "karatame", "shadow", // créations finales (Gavillus/Goatiny/Guizer/Phoéchaud/Bidouzen/Shady)
+    "tenebrir", "condombre", "leviabysse", "uzumaro",                            // némésis finales (loup / vautour / serpent des abysses / ninja)
+].map((speciesId) => ({ speciesId, base: VERY_RARE, noEvolve: true, levelFixed: 75, captureMult: 0.45, captureTaunt: NEXUS_FINAL_TAUNT }))
+
 const ZONES: Record<string, Zone> = {
     yellow_route_nord: {
         rate: 0.14,
@@ -325,6 +335,35 @@ const ZONES: Record<string, Zone> = {
                 { speciesId: "revemante", base: COMMON, noEvolve: true, levelRange: [5, 30] },
                 { speciesId: "ruffiant", base: COMMON, noEvolve: true, levelRange: [5, 30] },
             ] },
+        ],
+    },
+    // GROTTE DU NEXUS B2F — LE SANCTUAIRE DES CRÉATIONS (le fond de la caverne, aux portes d'Ukognofy). UN seul grand
+    //   biotope (pas de rects). Deux tiers :
+    //   • BASE catchable (niv ~25) : Goatiny/Guizer/Bidouzen — les 3 créations « réservées à la Grotte du Nexus »
+    //     enfin posées, en base-1 (à faire évoluer soi-même).
+    //   • PUISSANT (niv 75) : les FORMES FINALES des créations canonisées + leurs NÉMÉSIS (NEXUS_POWERFUL_FINALS),
+    //     TRÈS dures à capturer + raillerie au 1er lancer. Poppent « parfois » (VERY_RARE).
+    //   Fodder base-1 (niv 20-40) incluant les parents de fusion (Dractriss draclet+electroatiss · Nouiflot
+    //     nouillon+piouflot) → la CHAÎNE UKOGNOFY est armable ici (croiser une fusion → Repousse → échelle).
+    yellow_grotte_nexus_b2f: {
+        rate: 0.14,
+        minLevel: 20, maxLevel: 40,
+        pool: [
+            // FODDER (base-1, niv 20-40) — dont les parents de fusion pour la chaîne Ukognofy.
+            { speciesId: "mottoche", base: COMMON, noEvolve: true, levelRange: [20, 40] },
+            { speciesId: "nouillon", base: COMMON, noEvolve: true, levelRange: [20, 40] },
+            { speciesId: "piouflot", base: COMMON, noEvolve: true, levelRange: [20, 40] },
+            { speciesId: "tetardoc", base: COMMON, noEvolve: true, levelRange: [20, 40] },
+            { speciesId: "electroatiss", base: COMMON, noEvolve: true, levelRange: [20, 40] },
+            { speciesId: "draclet", base: COMMON, noEvolve: true, levelRange: [20, 40] },
+            { speciesId: "ruffiant", base: COMMON, noEvolve: true, levelRange: [20, 40] },
+            { speciesId: "revemante", base: COMMON, noEvolve: true, levelRange: [20, 40] },
+            // BASE CRÉATIONS catchables (niv ~25, base-1) — à faire évoluer soi-même.
+            { speciesId: "goatiny", base: RARE, noEvolve: true, levelRange: [23, 27] },   // → Mouflorage (Sol/Élec)
+            { speciesId: "guizer", base: RARE, noEvolve: true, levelRange: [23, 27] },    // → Dalugazer → Moby D (Eau/Glace)
+            { speciesId: "bidouzen", base: RARE, noEvolve: true, levelRange: [23, 27] },  // → Medisciple → Karatame (Psy/Combat)
+            // PUISSANTS niv 75 (formes finales + némésis, TRÈS dur à capturer + raillerie).
+            ...NEXUS_POWERFUL_FINALS,
         ],
     },
     // CENDREVILLE : ville-miroir cendrée, gated par le Badge Flamme (ACE).
@@ -854,6 +893,7 @@ function finalizeSpawn(entry: WildEntry, level: number, rng: () => number, ctx: 
     }
     if (entry.captureMinBallBonus != null) battleCfg.captureMinBallBonus = entry.captureMinBallBonus
     if (entry.captureMult != null) battleCfg.captureMult = entry.captureMult
+    if (entry.captureTaunt) battleCfg.captureTaunt = entry.captureTaunt
     if (entry.captureRequiresStatus) battleCfg.captureRequiresStatus = true
     if (entry.captureStatusBypassesBall) battleCfg.captureStatusBypassesBall = true
     Object.assign(mon, battleCfg)

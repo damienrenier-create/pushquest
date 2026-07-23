@@ -100,6 +100,8 @@ export interface BattleState {
     /** XP de combat gagnée PAR uid de combattant (cumul ce combat). Sert à la LIGUE DE FUSION : chaque fusionné
      *  reverse la MOITIÉ de son XP à ses 2 parents (finishBattle). Cumule à travers les tours (clone par valeur). */
     xpByUid?: Record<string, number>
+    /** Le message de raillerie de capture (wild.captureTaunt) a-t-il déjà été affiché ce combat ? → une seule fois. */
+    captureTauntShown?: boolean
     /** ZONE DE COMBAT (Frontier) : objets/soins interdits (« pas de potion ») → le SAC est masqué. */
     noItems?: boolean
     /** Multiplicateur d'XP gagnée (1 = normal ; <1 au Frontier pour limiter le farming). */
@@ -1370,6 +1372,9 @@ function performCapture(state: BattleState, itemId: string, events: BattleEvent[
     // de statut et la formule). Hors de ce cas précis, elle se comporte comme une Ball très forte (bonus 6).
     const goshGuaranteed = itemId === "super_mega_nexus_ball" && wild.speciesId === "goshendofy" && wild.currentHp < maxHpOf(wild) * 0.5
     events.push({ kind: "message", text: `Tu lances une ${getItem(itemId)?.name ?? "Ball"} !` })
+    // RAILLERIE (créations finales niv 75 de la Grotte du Nexus) : au 1er lancer, la bête toise le dresseur. Une
+    //   seule fois par combat (flag captureTauntShown). Purement flavor → n'affecte pas les chances de capture.
+    if (wild.captureTaunt && !state.captureTauntShown) { events.push({ kind: "message", text: wild.captureTaunt }); state.captureTauntShown = true }
     // FUSIO-BALL — verrou EXCLUSIF (placé AVANT toute balle garantie : même la Master ne capture PAS une fusion) :
     //   (a) une autre Ball sur un Daemon FUSIONNÉ → ricoche ; (b) une Fusio-Ball sur une NON-fusion → sans effet.
     // « fusion » = une des 5 fusions de base (espèces stables), le LÉGENDAIRE Ukognofy (espèce permanente dédiée),

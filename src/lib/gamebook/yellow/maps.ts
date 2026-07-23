@@ -1578,7 +1578,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
         backgroundImage: "/yellow/sprites/grotte_casse_tete.png",
         backgroundImageWidth: 2352, backgroundImageHeight: 672, backgroundImageTileSize: 16,
         backgroundImageOriginX: 1568, backgroundImageOriginY: 0,
-        debugGrid: true, encountersPaused: true,
+        debugGrid: true, encountersPaused: false, // rencontres ACTIVES (cf. ZONES.yellow_grotte_nexus_b2f) : créations catchables + finales puissantes niv 75
         // B2F = fond de la grotte : a/b/c/d remontent en B1F (un trigger par case d'échelle).
         exits: [
             ...([[31, 12], [32, 12]] as const).map(([x, y]) => ({ x, y, targetMapId: "yellow_grotte_nexus_b1f", targetSpawnX: 17, targetSpawnY: 6 })),                                     // échelle a → B1F
