@@ -42,7 +42,7 @@ export function creditFusionParents(
             if (edited.has(puid)) continue // déjà crédité ce combat (invariant Atelier : 1 Daemon = 1 seule fusion) → jamais 2×
             const orig = findParent(puid)
             if (!orig) continue // parent relâché/échangé depuis l'assemblage → on saute
-            const clone: MonInstance = { ...orig, moves: orig.moves.map((x) => ({ ...x })) } // clone défensif (applyExp mute l'instance + pousse dans moves)
+            const clone: MonInstance = { ...orig, moves: orig.moves.map((x) => ({ ...x })), pendingMoves: orig.pendingMoves ? [...orig.pendingMoves] : undefined } // clone défensif (applyExp mute l'instance + pousse dans moves/pendingMoves) — idiome maison playerStore
             const beforeMax = maxHpOf(clone)
             const res = applyExp(clone, half)
             if (res.toLevel > res.fromLevel) {

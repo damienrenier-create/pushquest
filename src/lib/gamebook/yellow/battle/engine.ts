@@ -1266,7 +1266,8 @@ function awardExp(state: BattleState, events: BattleEvent[]) {
     const fainted = active(state.enemy)
     const winner = active(state.player)
     const faintedSp = speciesOf(fainted)
-    const gain = Math.round(xpForDefeat(faintedSp.baseExp, fainted.level, state.isWild) * (state.expMult ?? 1))
+    const rawXp = xpForDefeat(faintedSp.baseExp, fainted.level, state.isWild) // XP « pleine » AVANT expMult — sert au reversement aux parents (Ligue Fusion) où expMult=0
+    const gain = Math.round(rawXp * (state.expMult ?? 1))
 
     // EV uniquement au Daemon actif s'il est encore debout.
     if (winner.currentHp > 0) gainEv(winner, signatureStat(faintedSp), EV_YIELD_PER_WIN)
@@ -1286,7 +1287,11 @@ function awardExp(state: BattleState, events: BattleEvent[]) {
         const beforeMax = maxHpOf(mon)
         const res = applyExp(mon, finalGain)
         state.xpGained = (state.xpGained ?? 0) + finalGain // STAT de partie : XP cumulée ce combat (lue en fin de combat)
-        state.xpByUid = state.xpByUid ?? {}; state.xpByUid[mon.uid] = (state.xpByUid[mon.uid] ?? 0) + finalGain // XP par combattant → parents (Ligue Fusion)
+        // XP INTENTIONNELLE (indépendante de expMult, =0 en combat de fusion) → reversée aux PARENTS en Ligue Fusion.
+        //   Sans ça, xpByUid s'aplatirait à ~1/KO (expMult 0 × baseExp 0) et les parents ne monteraient JAMAIS.
+        //   N'est LU que par creditFusionParents (combats y_fusion_*) → inerte pour tous les autres combats.
+        const intendedXp = Math.max(1, Math.round(rawXp * share * (heldEffect(mon)?.expMult ?? 1) * (talentEffect(mon)?.expMult ?? 1)))
+        state.xpByUid = state.xpByUid ?? {}; state.xpByUid[mon.uid] = (state.xpByUid[mon.uid] ?? 0) + intendedXp
         events.push({ kind: "message", text: `${displayName(mon)} gagne ${finalGain} points d'Exp !` })
         if (res.toLevel > res.fromLevel) {
             const delta = maxHpOf(mon) - beforeMax

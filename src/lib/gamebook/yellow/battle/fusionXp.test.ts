@@ -3,6 +3,7 @@ import { createMonInstance } from "./factory"
 import { buildFusion, disposeFusion } from "../data/fusionMon"
 import { creditFusionParents } from "./fusionXp"
 import { maxHpOf } from "./engine"
+import { getSpecies } from "../data/species"
 
 type P = { uid: string; fusionParents?: [string, string] }
 
@@ -12,6 +13,16 @@ describe("Ligue Fusion — reversement d'XP aux parents (option A)", () => {
         const b = createMonInstance("bouhbou", 40)
         const f = buildFusion(a, b)
         expect(f.instance.fusionParents).toEqual([a.uid, b.uid])
+        disposeFusion(f.speciesId)
+    })
+
+    it("HIGH-fix : l'espèce de fusion a un baseExp RÉEL (∝ BST, plafonné 250) → l'XP reversée n'est plus inerte", () => {
+        const a = createMonInstance("jerbiwat", 60)
+        const b = createMonInstance("bouhbou", 60)
+        const f = buildFusion(a, b)
+        const sp = getSpecies(f.speciesId)!
+        expect(sp.baseExp).toBeGreaterThan(50) // ≠ 0 → xpForDefeat rend une vraie XP (sinon rawXp=1, parents ~jamais)
+        expect(sp.baseExp).toBeLessThanOrEqual(250) // plafonné (anti-XP délirante des fusions-boss)
         disposeFusion(f.speciesId)
     })
 

@@ -1211,13 +1211,15 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     // LIGUE DE FUSION — OFFRE FUSIO-BALL (Dieu Spaghetti) au sacre : modale d'achat post-combat, une fois l'écran
     // LIBRE (après l'annonce de victoire du reflet + toute cinématique) pour ne rien écraser.
     useEffect(() => {
-        if (fusioBallOffer && !battle && evolutions.length === 0 && !dialogue && !newDexEntry && !pendingLearn && !championRun) {
+        // !fusionParentReward : au sacre, le message « parents entraînés » et cette offre partent dans le MÊME flush ;
+        //   sans ce gate, le modal (zIndex 9500) recouvrirait le message avant lecture. On attend qu'il soit consommé.
+        if (fusioBallOffer && !battle && evolutions.length === 0 && !dialogue && !newDexEntry && !pendingLearn && !championRun && !fusionParentReward) {
             fusioBuyingRef.current = false // ré-arme le verrou d'achat pour cette offre
             fusioReofferShownRef.current = true // l'offre du sacre COMPTE comme la proposition de cette session
             setFusioBallModal(true)
             clearFusioBallOffer()
         }
-    }, [fusioBallOffer, battle, evolutions.length, dialogue, newDexEntry, pendingLearn, championRun])
+    }, [fusioBallOffer, battle, evolutions.length, dialogue, newDexEntry, pendingLearn, championRun, fusionParentReward])
 
     // FUSIO-BALL — RE-PROPOSITION : offre EN ATTENTE (non achetée au sacre, marker fusioball_owed) + reps ≥ seuil →
     //   le Dieu Spaghetti la re-propose, UNE fois par session (anti-nag), une fois l'écran libre.

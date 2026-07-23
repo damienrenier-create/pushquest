@@ -56,7 +56,10 @@ function buildFusionSpecies(id: string, f: FusionResult, sprite: string, nameOve
         id, dexNo: -1, name: nameOverride ?? f.name, types: f.types,
         baseStats: { hp: f.stats.hp, atk: f.stats.atk, def: f.stats.def, spe: f.stats.spe, spc: f.stats.spcAtk },
         learnset: (movesOverride ?? f.moves).map((moveId) => ({ level: 1, moveId })),
-        catchRate, baseExp: 0, rarity: "RARE",
+        // baseExp ∝ BST, PLAFONNÉ à 250 (≈ un final costaud) : sert au REVERSEMENT d'XP aux parents en Ligue de Fusion
+        //   (rawXp dans awardExp). Le cap évite qu'une fusion-boss (BST énorme, ex. Ukognofy 1710) ne donne une XP
+        //   délirante. N'affecte pas le fusionné éphémère lui-même (expMult=0 en combat de fusion → 0 level-up réel).
+        catchRate, baseExp: Math.min(250, Math.max(1, Math.round(bst * 0.4))), rarity: "RARE",
         description: `Fusion éphémère de ${f.parents[0]} et ${f.parents[1]}.`,
         sprite, hiddenUntilCaught: true,
     }
