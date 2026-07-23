@@ -87,6 +87,73 @@ export const FUSION_BASE_SPECIES: SpeciesData[] = [
         description: "Un dragonnet nerveux dont les ailerons crépitent d'arcs électriques. Frappe avant qu'on le voie.",
         sprite: "/yellow/sprites/dex/dractriss.png",
     },
+
+    // ═══════ 8 FUSIONS EXCLUSIVES DE ZONE (Grotte du Nexus) — 1 par zone (parent = l'espèce exclusive de la zone) ═══════
+    //   Stats auto-normalisées (BST ~215), learnset dérivé du moveset fusionné. Sprites MissingNo (placeholders à générer).
+    {   // Voltaile = batchu + draclet (zone 1F)
+        id: "voltaile", dexNo: 510, name: "Voltaile", types: ["ELEC", "VOL"],
+        baseStats: { hp: 76, atk: 32, def: 24, spe: 48, spc: 35 }, // BST 215
+        learnset: [{ level: 1, moveId: "etincelle" }, { level: 1, moveId: "picpic" }, { level: 12, moveId: "tornade" }, { level: 22, moveId: "cage_eclair" }, { level: 34, moveId: "fonce_bec" }, { level: 48, moveId: "fulgurance" }, { level: 64, moveId: "pique_fatal" }, { level: 84, moveId: "ultra_foudre" }],
+        catchRate: 42, baseExp: 90, rarity: "RARE", growthRate: "medium_fast",
+        description: "Fusion exclusive du 1er étage : la chauve-souris électrique et le dragonnet volant réunis.",
+        sprite: "/yellow/sprites/dex/missingno.png", hiddenUntilCaught: true,
+    },
+    {   // Abyssvolt = obscurene + electroatiss (zone B1F-1)
+        id: "abyssvolt", dexNo: 511, name: "Abyssvolt", types: ["EAU", "ELEC"],
+        baseStats: { hp: 82, atk: 22, def: 40, spe: 32, spc: 38 }, // BST 214
+        learnset: [{ level: 1, moveId: "pistolet_a_o" }, { level: 1, moveId: "etincelle" }, { level: 12, moveId: "lame_eau" }, { level: 24, moveId: "cage_eclair" }, { level: 38, moveId: "deferlante" }, { level: 52, moveId: "fulgurance" }, { level: 68, moveId: "hydrocanon" }, { level: 84, moveId: "ultra_foudre" }],
+        catchRate: 42, baseExp: 90, rarity: "RARE", growthRate: "medium_fast",
+        description: "Fusion exclusive du couloir d'Obscurène : un serpent abyssal chargé d'électricité statique.",
+        sprite: "/yellow/sprites/dex/missingno.png", hiddenUntilCaught: true,
+    },
+    {   // Oniridrak = hypnoppo + draclet (zone B1F-2)
+        id: "oniridrak", dexNo: 512, name: "Oniridrak", types: ["PSY", "DRAGON"],
+        baseStats: { hp: 86, atk: 31, def: 34, spe: 28, spc: 35 }, // BST 214
+        learnset: [{ level: 1, moveId: "choc_mental" }, { level: 1, moveId: "draco_souffle" }, { level: 14, moveId: "draco_charge" }, { level: 28, moveId: "vague_mentale" }, { level: 44, moveId: "griffe_draconique" }, { level: 60, moveId: "eveil_divin" }, { level: 84, moveId: "repos" }],
+        catchRate: 42, baseExp: 90, rarity: "RARE", growthRate: "medium_fast",
+        description: "Fusion exclusive du couloir d'Hypnoppo : un dragon onirique qui endort ses proies.",
+        sprite: "/yellow/sprites/dex/missingno.png", hiddenUntilCaught: true,
+    },
+    {   // Sylvaroc = wistree + tetardoc (zone B1F-3)
+        id: "sylvaroc", dexNo: 513, name: "Sylvaroc", types: ["PLANTE", "ROCHE"],
+        baseStats: { hp: 72, atk: 25, def: 38, spe: 33, spc: 47 }, // BST 215
+        learnset: [{ level: 1, moveId: "fouet_lianes" }, { level: 1, moveId: "jet_pierres" }, { level: 16, moveId: "eboulis" }, { level: 30, moveId: "mega_sangsue" }, { level: 46, moveId: "lame_roche" }, { level: 84, moveId: "roc_titanesque" }],
+        catchRate: 42, baseExp: 90, rarity: "RARE", growthRate: "medium_fast",
+        description: "Fusion exclusive du couloir de Wistree : un arbre-têtard fossilisé aux racines de pierre.",
+        sprite: "/yellow/sprites/dex/missingno.png", hiddenUntilCaught: true,
+    },
+    {   // Nécrospore = caninombre + sporbeo (zone B1F-4)
+        id: "necrospore", dexNo: 514, name: "Nécrospore", types: ["SPECTRE", "POISON"],
+        baseStats: { hp: 77, atk: 20, def: 33, spe: 38, spc: 47 }, // BST 215
+        learnset: [{ level: 1, moveId: "ombre_furtive" }, { level: 1, moveId: "dard_venin" }, { level: 14, moveId: "crachat_acide" }, { level: 28, moveId: "griffe_spectrale" }, { level: 44, moveId: "bombe_beurk" }, { level: 60, moveId: "ball_ombre" }, { level: 84, moveId: "miasme_corrosif" }],
+        catchRate: 42, baseExp: 90, rarity: "RARE", growthRate: "medium_fast",
+        description: "Fusion exclusive du couloir de Caninombre : un spectre-champignon aux spores nécrosantes.",
+        sprite: "/yellow/sprites/dex/missingno.png", hiddenUntilCaught: true,
+    },
+    {   // Ombrepsy = shady + nouillon (zone B1F-5)
+        id: "ombrepsy", dexNo: 515, name: "Ombrepsy", types: ["NORMAL", "PSY"],
+        baseStats: { hp: 90, atk: 29, def: 38, spe: 41, spc: 18 }, // BST 216
+        learnset: [{ level: 1, moveId: "charge" }, { level: 1, moveId: "choc_mental" }, { level: 14, moveId: "vive_attaque" }, { level: 28, moveId: "vague_mentale" }, { level: 46, moveId: "coup_de_boutoir" }, { level: 84, moveId: "eveil_divin" }],
+        catchRate: 42, baseExp: 90, rarity: "RARE", growthRate: "medium_fast",
+        description: "Fusion exclusive du couloir de Shady : une ombre-nouille aux pouvoirs psychiques troubles.",
+        sprite: "/yellow/sprites/dex/missingno.png", hiddenUntilCaught: true,
+    },
+    {   // Rocaptère = gavillus + lavapetit (zone B1F-6)
+        id: "rocaptere", dexNo: 516, name: "Rocaptère", types: ["ROCHE", "VOL"],
+        baseStats: { hp: 74, atk: 47, def: 39, spe: 31, spc: 24 }, // BST 215
+        learnset: [{ level: 1, moveId: "jet_pierres" }, { level: 1, moveId: "picpic" }, { level: 14, moveId: "tornade" }, { level: 28, moveId: "eboulis" }, { level: 44, moveId: "fonce_bec" }, { level: 60, moveId: "lame_roche" }, { level: 84, moveId: "roc_titanesque" }],
+        catchRate: 42, baseExp: 90, rarity: "RARE", growthRate: "medium_fast",
+        description: "Fusion exclusive du couloir de Gavillus : un ptérosaure de roche magmatique.",
+        sprite: "/yellow/sprites/dex/missingno.png", hiddenUntilCaught: true,
+    },
+    {   // Givrasol = goatiny + guizer (zone B2F)
+        id: "givrasol", dexNo: 517, name: "Givrasol", types: ["SOL", "GLACE"],
+        baseStats: { hp: 82, atk: 20, def: 39, spe: 21, spc: 52 }, // BST 214
+        learnset: [{ level: 1, moveId: "secousse" }, { level: 1, moveId: "coup_d_givre" }, { level: 16, moveId: "tir_boue" }, { level: 30, moveId: "souffle_polaire" }, { level: 46, moveId: "seisme" }, { level: 84, moveId: "blizzard" }],
+        catchRate: 42, baseExp: 90, rarity: "RARE", growthRate: "medium_fast",
+        description: "Fusion exclusive du Sanctuaire B2F : un béhémoth de sol gelé né de deux créations.",
+        sprite: "/yellow/sprites/dex/missingno.png", hiddenUntilCaught: true,
+    },
 ]
 
 /** Ids des 5 fusions de base (utile pour les pools/pop de la Grotte + le Fusiodex). */
@@ -99,6 +166,15 @@ export const FUSION_BASE_PARENTS: Record<string, [string, string]> = {
     sporemante: ["revemante", "sporbeo"],
     ruffardoc: ["ruffiant", "tetardoc"],
     dractriss: ["draclet", "electroatiss"],
+    // Fusions EXCLUSIVES de zone (Grotte du Nexus) — le parent gauche est l'espèce exclusive de la zone → garantit l'exclusivité.
+    voltaile: ["batchu", "draclet"],           // 1F
+    abyssvolt: ["obscurene", "electroatiss"],  // B1F-1
+    oniridrak: ["hypnoppo", "draclet"],        // B1F-2
+    sylvaroc: ["wistree", "tetardoc"],         // B1F-3
+    necrospore: ["caninombre", "sporbeo"],     // B1F-4
+    ombrepsy: ["shady", "nouillon"],           // B1F-5
+    rocaptere: ["gavillus", "lavapetit"],      // B1F-6
+    givrasol: ["goatiny", "guizer"],           // B2F
 }
 
 /** La fusion de base dont {a,b} sont les 2 parents (n'importe quel ordre), ou null. Sert à la règle de pop Grotte. */
