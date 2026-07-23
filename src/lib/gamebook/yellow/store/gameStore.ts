@@ -1022,6 +1022,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     run3: effectiveRunWorld() === "run3",      // RUN 3 : pools RUN3_ZONES (espèces inédites Route Nord / Grotte)
                     champion: getPlayerSave().isChampion,   // LIVE post-Ligue → rattrapage des inédits run 3 (champ + Grotte)
                     run3Used: getPlayerSave().run3Used,     // run 3 déjà fait → rattrapage RARE (sinon ULTRA-RARE : teaser)
+                    fusionLeagueWon: isTrainerDefeated("y_fusion_maitre") || isTrainerDefeated("y_fusion_miroir"), // débloque les CRÉATURES ANCIENNES B2F
                 })
                 if (wild) {
                     // MIMIMOY roaming (post-quête du brocanteur) : peut REMPLACER cette rencontre. Rôde dans le monde

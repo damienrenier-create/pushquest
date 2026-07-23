@@ -9,6 +9,7 @@
 // Pur (aucune date / aucun serveur) → vit dans le moteur déterministe.
 
 import type { MonInstance, StatKey, SpeciesData } from "../battle/types"
+import { getSpecies } from "./species"
 
 /** EV gagné par victoire, versé dans la stat-signature de l'adversaire vaincu. */
 export const EV_YIELD_PER_WIN = 3
@@ -31,6 +32,14 @@ const IV_SUM_MAX = 75 // 5 stats × 15
  * Max = ⌊510 × 1.10⌋ = 561. Le cap PAR STAT (252) reste inchangé.
  */
 export function evTotalCap(mon: MonInstance): number {
+    // GROS LATE BLOOMER (créatures anciennes B2F) : règle d'EV intrinsèque et DURCIE, prioritaire sur le boost
+    //   post-Ligue standard. Capturé TÔT (niv 5) → plafond +20 % (612) ; capturé TARD (niv 90) → −20 % (408).
+    //   Interpolé linéairement sur la plage de pop 5→90 (0 % au milieu, ~niv 47).
+    if (getSpecies(mon.speciesId)?.lateBloomerEv) {
+        const cl = Math.max(5, Math.min(90, mon.capturedLevel ?? mon.level))
+        const factor = 0.20 - 0.40 * (cl - 5) / 85 // +0.20 @niv5 → −0.20 @niv90
+        return Math.floor(EV_TOTAL_CAP * (1 + factor))
+    }
     if (!mon.evCapBoost) return EV_TOTAL_CAP
     const ivSum = STAT_KEYS.reduce((a, k) => a + Math.max(0, mon.ivs?.[k] ?? 0), 0)
     const genetic = EV_CAP_GENETIC_MAX * Math.min(1, ivSum / IV_SUM_MAX)

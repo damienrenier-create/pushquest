@@ -173,6 +173,10 @@ export interface SpeciesData {
      *  (une espèce run-3 capturée ne s'affiche PAS dans le dex d'un run antérieur). Ex. Magnetor + les 9 starters
      *  run 3. Le POKÉDEX (captures) reste, lui, cumulatif/persistant d'un run à l'autre. Cf. isDexHidden(). */
     runThreeOnly?: boolean
+    /** GROS LATE BLOOMER (créatures très anciennes de la Grotte du Nexus B2F) : règle d'EV SPÉCIALE et durcie —
+     *  capturé TÔT (bas niveau) → plafond d'EV +20 % ; capturé TARD (haut niveau) → −20 %. Interpolé sur la plage
+     *  de pop (niv 5→90). Intrinsèque à l'espèce (indépendant de evCapBoost). Cf. evConfig.evTotalCap. */
+    lateBloomerEv?: boolean
     /** POST-LIGUE : ABSENT des dex (Pokédex in-game ET dex de référence) TANT QUE le joueur n'est pas
      *  CHAMPION — puis intègre le dex de TOUT LE MONDE (révélation post-sacre). Sert aux créations de
      *  joueur canonisées (hommage). Contrairement à runTwoOnly, le gate est le statut Champion, pas la

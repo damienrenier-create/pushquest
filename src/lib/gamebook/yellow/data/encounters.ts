@@ -42,6 +42,7 @@ interface WildEntry {
     captureRequiresStatus?: boolean // capture IMPOSSIBLE sans statut majeur sur la cible (légendaire, ex. Goshendofy)
     captureStatusBypassesBall?: boolean // un statut majeur shunte captureMinBallBonus (Super Ball+ OU statut, ex. Bouh)
     minLeadLevel?: number         // ne pop QUE si le lead de l'équipe atteint ce niveau (ex. Orcaline run 2 = 35) — sinon poids 0
+    requiresFusionLeague?: boolean // ne pop QU'APRÈS la 1re victoire à la Ligue de Fusion (créatures anciennes B2F) — sinon poids 0
     catchOnce?: boolean           // UNE SEULE capture sur ce compte (ex. Pyropanthe) → ne repop plus une fois dans le Pokédex
 }
 
@@ -113,6 +114,7 @@ export interface EncounterCtx {
     champion?: boolean          // isChampion (LIVE post-Ligue) → active le RATTRAPAGE des inédits run 3 au champ + Grotte
     run3Used?: boolean          // run 3 déjà fait → rattrapage RARE (sinon ULTRA-RARE : teaser « regarde ce que t'as raté »)
     caughtSpecies?: readonly string[] // Pokédex des captures → gate les entrées `catchOnce` (ex. Pyropanthe, Panthéon run 3)
+    fusionLeagueWon?: boolean   // le joueur a-t-il déjà vaincu la Ligue de Fusion ? → débloque les créatures anciennes B2F (requiresFusionLeague)
 }
 
 /**
@@ -364,6 +366,15 @@ const ZONES: Record<string, Zone> = {
             { speciesId: "bidouzen", base: RARE, noEvolve: true, levelRange: [23, 27] },  // → Medisciple → Karatame (Psy/Combat)
             // PUISSANTS niv 75 (formes finales + némésis, TRÈS dur à capturer + raillerie).
             ...NEXUS_POWERFUL_FINALS,
+            // CRÉATURES TRÈS ANCIENNES (9 inédites) — DÉBLOQUÉES après la 1re victoire à la LIGUE DE FUSION
+            //   (requiresFusionLeague). Pop niv 5-90 : la lignée ÉVOLUE avec le niveau (speciesAtLevel) → base à
+            //   bas niveau, finale à haut niveau. Gros LATE BLOOMERS (courbe slow) → capture TÔT = +20 % EV (lateBloomerEv).
+            { speciesId: "rosdrakis", base: RARE, levelRange: [5, 90], requiresFusionLeague: true },   // → Dracosidhe (Dragon/Fée, sweeper spé)
+            { speciesId: "archeoptix", base: RARE, levelRange: [5, 90], requiresFusionLeague: true },  // → Ptérosidhe (Vol/Fée, rapide phys)
+            { speciesId: "toxyrm", base: RARE, levelRange: [5, 90], requiresFusionLeague: true },      // → Wyvortal (Fée/Poison, mur)
+            { speciesId: "fulguror", base: RARE, levelRange: [5, 90], requiresFusionLeague: true },    // Électrik (canon de verre spé)
+            { speciesId: "rocosaure", base: RARE, levelRange: [5, 90], requiresFusionLeague: true },   // Roche (mur physique)
+            { speciesId: "givroptere", base: RARE, levelRange: [5, 90], requiresFusionLeague: true },  // Vol/Glace (équilibré)
         ],
     },
     // CENDREVILLE : ville-miroir cendrée, gated par le Badge Flamme (ACE).
@@ -713,6 +724,7 @@ export function rollWildEncounter(ctx: EncounterCtx): MonInstance | null {
     const weights = pool.map((e) =>
         (e.minLeadLevel != null && ctx.leadLevel < e.minLeadLevel) ? 0
         : (e.catchOnce && ctx.caughtSpecies?.includes(e.speciesId)) ? 0 // ex. Pyropanthe déjà capturée → ne repop plus
+        : (e.requiresFusionLeague && !ctx.fusionLeagueWon) ? 0 // créatures anciennes B2F : verrouillées avant la 1re victoire Ligue Fusion
         : entryWeight(e, ctx.mapId, ctx.x, ctx.y, ctx.player))
     const total = weights.reduce((a, w) => a + w, 0)
     if (total <= 0) return null

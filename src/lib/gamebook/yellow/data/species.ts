@@ -2929,6 +2929,145 @@ export const SPECIES: Record<string, SpeciesData> = {
         description: "Un chat stylé en lévitation, musclé de façon athlétique — genre Beerus en moins maigre. Maître du kung-fu psychique : il frappe l'esprit autant que le corps. — 🖋️ Création d'Embi",
         sprite: "/yellow/sprites/dex/karatame.png",
     },
+
+    // ═══════════════ GROS LATE BLOOMERS — créatures TRÈS ANCIENNES de la Grotte du Nexus B2F (dexNo 191-199) ═══════════════
+    // Pop niv 5-90, courbe SLOW (montée lente), règle d'EV durcie (lateBloomerEv : capturé tôt +20 % / tard −20 %).
+    // Chaque lignée a un RÔLE distinct. Poppent après la 1re victoire à la Ligue de Fusion (gate côté encounters/gameStore).
+
+    // ── Dragon/Fée (2 st.) — SWEEPER SPÉCIAL (Dragon ET Fée = spécial) ──
+    rosdrakis: {
+        id: "rosdrakis", dexNo: 191, name: "Rosdrakis", types: ["DRAGON", "FEE"],
+        baseStats: { hp: 45, atk: 38, def: 42, spe: 55, spc: 70 }, // BST 250
+        learnset: [
+            { level: 5, moveId: "charge" }, { level: 5, moveId: "draco_souffle" },
+            { level: 12, moveId: "bourrasque_feerique" }, { level: 20, moveId: "vive_attaque" }, { level: 28, moveId: "draco_charge" },
+        ],
+        evolution: { toId: "dracosidhe", method: { kind: "LEVEL", level: 34 } },
+        catchRate: 30, baseExp: 113, rarity: "RARE", growthRate: "slow", lateBloomerEv: true,
+        role: "Dragon/Fée — dragonnet rose des origines (sweeper spécial en devenir)",
+        description: "Un petit dragon rose recroquevillé, aux écailles féeriques. On dit qu'il dort depuis des ères, attendant de renaître en colosse.",
+        sprite: "/yellow/sprites/dex/rosdrakis.png",
+    },
+    dracosidhe: {
+        id: "dracosidhe", dexNo: 192, name: "Dracosidhe", types: ["DRAGON", "FEE"],
+        baseStats: { hp: 72, atk: 60, def: 68, spe: 105, spc: 127 }, // BST 432 — sweeper spécial rapide
+        learnset: [
+            { level: 5, moveId: "charge" }, { level: 5, moveId: "draco_souffle" },
+            { level: 12, moveId: "bourrasque_feerique" }, { level: 20, moveId: "draco_charge" },
+            { level: 30, moveId: "eclat_lunaire" }, { level: 42, moveId: "griffe_draconique" },
+            { level: 54, moveId: "repos" }, { level: 68, moveId: "cataclysme_lunaire" },
+        ],
+        catchRate: 20, baseExp: 194, rarity: "RARE", growthRate: "slow", lateBloomerEv: true,
+        role: "Dragon/Fée — dragon-fée primordial (sweeper spécial : gros Spécial + Vitesse)",
+        description: "Le dragon des origines déployé : une crête épineuse magenta, des ailes de flammes féeriques. Sa puissance spéciale fend le ciel comme aux premiers âges.",
+        sprite: "/yellow/sprites/dex/dracosidhe.png",
+    },
+
+    // ── Vol/Fée (2 st.) — ATTAQUANT PHYSIQUE RAPIDE (Vol = physique) ──
+    archeoptix: {
+        id: "archeoptix", dexNo: 193, name: "Archéoptix", types: ["VOL", "FEE"],
+        baseStats: { hp: 45, atk: 60, def: 40, spe: 70, spc: 35 }, // BST 250
+        learnset: [
+            { level: 5, moveId: "picpic" }, { level: 5, moveId: "charge" },
+            { level: 12, moveId: "tornade" }, { level: 20, moveId: "bourrasque_feerique" }, { level: 28, moveId: "fonce_bec" },
+        ],
+        evolution: { toId: "pterosidhe", method: { kind: "LEVEL", level: 34 } },
+        catchRate: 30, baseExp: 113, rarity: "RARE", growthRate: "slow", lateBloomerEv: true,
+        role: "Vol/Fée — archæoptéryx ancestral (attaquant physique rapide en devenir)",
+        description: "Un oiseau-dinosaure à plumes bleues et griffes rouges, tout droit sorti de l'aube du monde. Vif et curieux, il connaît des chemins de vent oubliés.",
+        sprite: "/yellow/sprites/dex/archeoptix.png",
+    },
+    pterosidhe: {
+        id: "pterosidhe", dexNo: 194, name: "Ptérosidhe", types: ["VOL", "FEE"],
+        baseStats: { hp: 70, atk: 110, def: 62, spe: 118, spc: 72 }, // BST 432 — attaquant physique très rapide
+        learnset: [
+            { level: 5, moveId: "picpic" }, { level: 5, moveId: "tornade" },
+            { level: 16, moveId: "fonce_bec" }, { level: 24, moveId: "vive_attaque" },
+            { level: 34, moveId: "bourrasque_feerique" }, { level: 44, moveId: "pique_fatal" },
+            { level: 56, moveId: "danse_lames" }, { level: 70, moveId: "serres_aube" },
+        ],
+        catchRate: 20, baseExp: 194, rarity: "RARE", growthRate: "slow", lateBloomerEv: true,
+        role: "Vol/Fée — ptérosaure féerique (attaquant physique rapide : gros Attaque + Vitesse)",
+        description: "Le seigneur des cieux anciens : une envergure immense, un vol silencieux et fulgurant. Il fond sur sa proie avant même qu'elle l'entende.",
+        sprite: "/yellow/sprites/dex/pterosidhe.png",
+    },
+
+    // ── Électrik (1 st.) — CANON DE VERRE SPÉCIAL (Élec = spécial) ──
+    fulguror: {
+        id: "fulguror", dexNo: 195, name: "Fulguror", types: ["ELEC"],
+        baseStats: { hp: 60, atk: 50, def: 50, spe: 120, spc: 150 }, // BST 430 — canon de verre spécial
+        learnset: [
+            { level: 5, moveId: "etincelle" }, { level: 5, moveId: "charge" },
+            { level: 14, moveId: "cage_eclair" }, { level: 24, moveId: "vive_attaque" },
+            { level: 36, moveId: "fulgurance" }, { level: 50, moveId: "morsure" },
+            { level: 68, moveId: "ultra_foudre" },
+        ],
+        catchRate: 25, baseExp: 194, rarity: "RARE", growthRate: "slow", lateBloomerEv: true,
+        role: "Électrik — dino-foudre ancestral (canon de verre spécial : Spécial + Vitesse énormes, fragile)",
+        description: "Un dinosaure jaune parcouru d'arcs électriques. Rapide et surpuissant, mais son corps fossile est fragile — il frappe le premier ou meurt.",
+        sprite: "/yellow/sprites/dex/fulguror.png",
+    },
+
+    // ── Roche (1 st.) — MUR PHYSIQUE (Roche = physique) ──
+    rocosaure: {
+        id: "rocosaure", dexNo: 196, name: "Rocosaure", types: ["ROCHE"],
+        baseStats: { hp: 100, atk: 100, def: 120, spe: 45, spc: 75 }, // BST 440 — mur physique lourd
+        learnset: [
+            { level: 5, moveId: "charge" }, { level: 5, moveId: "jet_pierres" },
+            { level: 14, moveId: "morsure" }, { level: 24, moveId: "eboulis" },
+            { level: 34, moveId: "mur_de_fer" }, { level: 46, moveId: "lame_roche" },
+            { level: 60, moveId: "seisme" }, { level: 78, moveId: "roc_titanesque" },
+        ],
+        catchRate: 25, baseExp: 198, rarity: "RARE", growthRate: "slow", lateBloomerEv: true,
+        role: "Roche — colosse fossile (mur physique : Défense + PV énormes, lent, tape fort)",
+        description: "Un titan brun-roche cuirassé d'écailles millénaires, hérissé de pointes. Lent et immuable comme la montagne, il encaisse tout et riposte comme un séisme.",
+        sprite: "/yellow/sprites/dex/rocosaure.png",
+    },
+
+    // ── Vol/Glace (1 st.) — ÉQUILIBRÉ / POLYVALENT ──
+    givroptere: {
+        id: "givroptere", dexNo: 197, name: "Givroptère", types: ["VOL", "GLACE"],
+        baseStats: { hp: 85, atk: 88, def: 82, spe: 92, spc: 88 }, // BST 435 — équilibré (touche-à-tout)
+        learnset: [
+            { level: 5, moveId: "picpic" }, { level: 5, moveId: "coup_d_givre" },
+            { level: 14, moveId: "tornade" }, { level: 24, moveId: "souffle_polaire" },
+            { level: 36, moveId: "fonce_bec" }, { level: 48, moveId: "danse_lames" },
+            { level: 62, moveId: "blizzard" }, { level: 78, moveId: "pique_fatal" },
+        ],
+        catchRate: 25, baseExp: 196, rarity: "RARE", growthRate: "slow", lateBloomerEv: true,
+        role: "Vol/Glace — ptérosaure des glaces (équilibré : stats homogènes, offensif phys ET spé)",
+        description: "Un ptérosaure spectral aux ailes de givre, blanc comme le blizzard éternel. Ni le plus fort ni le plus rapide, mais bon en tout — un survivant des âges gelés.",
+        sprite: "/yellow/sprites/dex/givroptere.png",
+    },
+
+    // ── Fée/Poison (2 st.) — MUR DÉFENSIF / STALLER (Poison = physique, Fée = spécial) ──
+    toxyrm: {
+        id: "toxyrm", dexNo: 198, name: "Toxyrm", types: ["FEE", "POISON"],
+        baseStats: { hp: 60, atk: 45, def: 58, spe: 40, spc: 52 }, // BST 255
+        learnset: [
+            { level: 5, moveId: "dard_venin" }, { level: 5, moveId: "charge" },
+            { level: 12, moveId: "crachat_acide" }, { level: 20, moveId: "bourrasque_feerique" }, { level: 28, moveId: "morsure" },
+        ],
+        evolution: { toId: "wyvortal", method: { kind: "LEVEL", level: 34 } },
+        catchRate: 30, baseExp: 115, rarity: "RARE", growthRate: "slow", lateBloomerEv: true,
+        role: "Fée/Poison — wyverne toxique naissante (mur défensif en devenir)",
+        description: "Un petit saurien à tête mauve et ventre crème, aux glandes déjà venimeuses. Trapu et boudeur, il tient bon là où d'autres cèdent.",
+        sprite: "/yellow/sprites/dex/toxyrm.png",
+    },
+    wyvortal: {
+        id: "wyvortal", dexNo: 199, name: "Wyvortal", types: ["FEE", "POISON"],
+        baseStats: { hp: 100, atk: 72, def: 105, spe: 60, spc: 95 }, // BST 432 — mur défensif / staller
+        learnset: [
+            { level: 5, moveId: "dard_venin" }, { level: 5, moveId: "crachat_acide" },
+            { level: 16, moveId: "bourrasque_feerique" }, { level: 24, moveId: "toxik" },
+            { level: 34, moveId: "bombe_beurk" }, { level: 46, moveId: "eclat_lunaire" },
+            { level: 60, moveId: "repos" }, { level: 74, moveId: "miasme_corrosif" },
+        ],
+        catchRate: 20, baseExp: 194, rarity: "RARE", growthRate: "slow", lateBloomerEv: true,
+        role: "Fée/Poison — wyverne-fée toxique (mur défensif/staller : Défense + PV, Toxik + Repos)",
+        description: "Une wyverne mauve et corail aux ailes membraneuses, exhalant des vapeurs féeriques toxiques. Patiente et increvable, elle use l'adversaire par le poison.",
+        sprite: "/yellow/sprites/dex/wyvortal.png",
+    },
 }
 
 // ── REGISTRE RUNTIME des Daemons CUSTOM (créés par les joueurs, post-Ligue). Fusionné à la LECTURE seulement :
@@ -2961,6 +3100,12 @@ for (const id of ["magnetor", "elefer", "barrisfer", "colosfer", "cornaive", "as
     "phoechaudi", "phoechaudii", "phoechaudiii",            // création canonisée (Guillaume) — phénix maudit FEU/SPECTRE, Grotte run 3
     "obscurene", "abyssombre", "leviabysse"]) {             // némésis (serpent des abysses) EAU/TÉNÈBRES de Phoéchaud, forgé par ACE
     if (SPECIES[id]) SPECIES[id].runThreeOnly = true
+}
+
+// GROS LATE BLOOMERS de la Grotte du Nexus B2F (créatures très anciennes) : ENDGAME (post-Ligue Fusion) → marquées
+//   postLeague pour être exclues du dex run 1 (révélées au sacre, comme les créations canonisées).
+for (const id of ["rosdrakis", "dracosidhe", "archeoptix", "pterosidhe", "fulguror", "rocosaure", "givroptere", "toxyrm", "wyvortal"]) {
+    if (SPECIES[id]) SPECIES[id].postLeague = true
 }
 
 export const SPECIES_IDS = Object.keys(SPECIES)
