@@ -58,7 +58,7 @@ import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_L
 import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/gamebook/yellow/data/labDialogues"
 import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay } from "@/lib/gamebook/yellow/store/saveManager"
 import { customStarterSpeciesId, type StoredCustomDaemon } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, releaseFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, releaseFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker } from "@/lib/gamebook/yellow/store/playerStore"
 import { computeRunScores, computeReplayScore, leaderboardFactors, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
 import { run3Score, run3MaxScore, run3EnergyScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
@@ -350,8 +350,16 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (!arenaMode) return
         const opp = arenaOpponents.find((o) => o.userId === uid)
         if (!opp) return
-        // Limite : 1 victoire par joueur-IA et par jour → déjà battu aujourd'hui = pas de revanche.
-        if (duelWonToday(opp.userId)) { showDialogue("duel_rival", opp.nickname, ["Tu m'as déjà vaincu aujourd'hui. Reviens demain pour ta revanche."]); return }
+        // RUN 3 — limite DURCIE : 1 SEUL match miroir par jour (défaite comprise), consommé au LANCEMENT (anti-farm
+        //   du double-XP). Ailleurs (run 1/2) : 1 victoire par reflet et par jour (retry jusqu'à la victoire).
+        const run3Mirror = getActiveWorld() === "run3" && arenaMode === "mirror"
+        if (run3Mirror ? duelPlayedToday() : duelWonToday(opp.userId)) {
+            showDialogue("duel_rival", opp.nickname, run3Mirror
+                ? ["Tu as déjà disputé ton match miroir aujourd'hui. En RUN 3, c'est UN SEUL par jour — victoire OU défaite. Reviens demain."]
+                : ["Tu m'as déjà vaincu aujourd'hui. Reviens demain pour ta revanche."])
+            return
+        }
+        if (run3Mirror) recordDuelMatch() // consommé DÈS le lancement → une défaite compte aussi
         const enemy = arenaMode === "hub" ? buildHubTeam(opp.player) : buildMirrorTeam(opp.player)
         setArenaFight({ opp, mode: arenaMode, enemy })
     }
@@ -847,10 +855,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     // seulement → A ratait souvent les reflets qui errent ; le tactile, lui, ignorait la distance).
                     const cheb = (o: { x: number; y: number }) => Math.max(Math.abs(o.x - mapPlayer.posX), Math.abs(o.y - mapPlayer.posY))
                     const opp = arenaMode ? [...arenaOpponents].filter((o) => cheb(o) <= 1).sort((a, b) => cheb(a) - cheb(b))[0] : undefined
-                    if (arenaMode && opp) {
-                        if (duelWonToday(opp.userId)) showDialogue("duel_rival", opp.nickname, ["Tu m'as déjà vaincu aujourd'hui. Reviens demain pour ta revanche."])
-                        else { const enemy = arenaMode === "hub" ? buildHubTeam(opp.player) : buildMirrorTeam(opp.player); setArenaFight({ opp, mode: arenaMode, enemy }) }
-                    }
+                    if (arenaMode && opp) handleArenaClick(opp.userId) // même gate/lancement que le clic (dont la limite run 3 : 1 match miroir/jour)
                     else if (tryCasinoObjectA()) { /* table roulette / croupier (casino) */ }
                     else casinoAFallback()
                 }

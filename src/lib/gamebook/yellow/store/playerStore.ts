@@ -1222,6 +1222,21 @@ export function recordDuelWin(userId: string): void {
     emit()
 }
 
+// RUN 3 — limite DURCIE des duels-reflets : 1 SEUL match miroir par jour (défaite comprise), au lieu de « 1 victoire
+//   par reflet/jour ». La règle du double-XP reste marrante mais devient non-farmable en run 3. Réutilise duelWins
+//   avec une CLÉ RÉSERVÉE (`__daily__`, jamais un vrai userId) → aucune migration de save, aucun impact leaderboard
+//   (duelWinsTotal non touché). Le match est consommé au LANCEMENT → une défaite compte aussi.
+const DUEL_DAILY_KEY = "__daily__"
+/** RUN 3 : a-t-on déjà JOUÉ un match miroir aujourd'hui (victoire OU défaite) ? */
+export function duelPlayedToday(): boolean {
+    return st.creditedThrough !== "" && st.duelWins[DUEL_DAILY_KEY] === st.creditedThrough
+}
+/** RUN 3 : marque le match miroir du jour comme JOUÉ (au lancement) → verrouille jusqu'à demain, issue indifférente. */
+export function recordDuelMatch(): void {
+    st = { ...st, duelWins: { ...st.duelWins, [DUEL_DAILY_KEY]: st.creditedThrough } }
+    emit()
+}
+
 // === DRESSEUR D'ORCALINE (plaine d'entraînement) ===
 /** Niveau des Orcalines du dresseur pour un nombre de victoires donné : 35, +10 par victoire (cap 100). */
 export function orcalineLevelForWins(wins: number): number {
