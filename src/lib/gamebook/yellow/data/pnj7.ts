@@ -57,10 +57,12 @@ export function buildPnj7Team(): MonInstance[] {
 
 // ── DÉMO DE POP (transitoire, non persistée) : file des 3 prochaines rencontres scriptées après sa victoire. ──
 let demoQueue: string[] = []
-/** Après la victoire : amorce la démo = 2 parents (aléatoires parmi les 5 paires) puis leur fusion. */
+/** Après la victoire : amorce la démo = 2 parents (aléatoires parmi les 5 fusions de BASE) puis leur fusion. On
+ *  N'utilise QUE les 5 de base : leurs parents sont 1F-natifs/communs → la démo ne fait JAMAIS fuiter en 1F une
+ *  espèce/fusion EXCLUSIVE d'un autre étage (ex. obscurène/Abyssvolt, propres à B1F-1). */
 export function primeGrotteDemo(): void {
-    const fusions = Object.keys(FUSION_BASE_PARENTS)
-    const fus = fusions[Math.floor(Math.random() * fusions.length)]
+    const base = ["mottelave", "nouiflot", "sporemante", "ruffardoc", "dractriss"] as const
+    const fus = base[Math.floor(Math.random() * base.length)]
     const [a, b] = FUSION_BASE_PARENTS[fus]
     demoQueue = [a, b, fus]
 }

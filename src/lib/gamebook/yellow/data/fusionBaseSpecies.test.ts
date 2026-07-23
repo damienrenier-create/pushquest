@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { FUSION_BASE_SPECIES, FUSION_BASE_IDS, FUSION_BASE_PARENTS } from "./fusionBaseSpecies"
+import { FUSION_BASE_SPECIES, FUSION_BASE_IDS, FUSION_BASE_PARENTS, fusionForParents } from "./fusionBaseSpecies"
 import { SPECIES, getSpecies, registerCustomSpecies } from "./species"
 import { getMove } from "./moves"
 
@@ -34,7 +34,15 @@ describe("Fusions de base — data + learnsets", () => {
         }
     })
 
-    it("parents référencés existent, et forment bien les 5 paires", () => {
+    it("fusionForParents résout les paires exclusives de zone (ordre indifférent) → la règle de pop les trouvera", () => {
+        expect(fusionForParents("goatiny", "guizer")).toBe("givrasol")     // B2F (audit : le pop tourne maintenant en B2F)
+        expect(fusionForParents("guizer", "goatiny")).toBe("givrasol")     // ordre indifférent
+        expect(fusionForParents("batchu", "draclet")).toBe("voltaile")     // 1F
+        expect(fusionForParents("obscurene", "electroatiss")).toBe("abyssvolt") // B1F-1
+        expect(fusionForParents("draclet", "electroatiss")).toBe("dractriss")   // paire de BASE distincte (pas de collision avec Voltaile/Oniridrak)
+    })
+
+    it("parents référencés existent, et forment bien les paires", () => {
         expect(Object.keys(FUSION_BASE_PARENTS).sort()).toEqual([...FUSION_BASE_IDS].sort())
         for (const [fus, [a, b]] of Object.entries(FUSION_BASE_PARENTS)) {
             expect(SPECIES[a], `parent ${a} de ${fus}`).toBeDefined()

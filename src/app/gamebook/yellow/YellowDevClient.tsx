@@ -58,7 +58,7 @@ import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_L
 import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/gamebook/yellow/data/labDialogues"
 import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay } from "@/lib/gamebook/yellow/store/saveManager"
 import { customStarterSpeciesId, type StoredCustomDaemon } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, releaseFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, releaseFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker } from "@/lib/gamebook/yellow/store/playerStore"
 import { computeRunScores, computeReplayScore, leaderboardFactors, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
 import { run3Score, run3MaxScore, run3EnergyScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
@@ -350,16 +350,18 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
         if (!arenaMode) return
         const opp = arenaOpponents.find((o) => o.userId === uid)
         if (!opp) return
-        // RUN 3 — limite DURCIE : 1 SEUL match miroir par jour (défaite comprise), consommé au LANCEMENT (anti-farm
-        //   du double-XP). Ailleurs (run 1/2) : 1 victoire par reflet et par jour (retry jusqu'à la victoire).
-        const run3Mirror = getActiveWorld() === "run3" && arenaMode === "mirror"
-        if (run3Mirror ? duelPlayedToday() : duelWonToday(opp.userId)) {
-            showDialogue("duel_rival", opp.nickname, run3Mirror
-                ? ["Tu as déjà disputé ton match miroir aujourd'hui. En RUN 3, c'est UN SEUL par jour — victoire OU défaite. Reviens demain."]
+        // RUN 3 — limite DURCIE anti-farm du double-XP : 1 SEUL match de REFLET par jour (défaite comprise), pour
+        //   LES DEUX modes de reflet (hub Viridian « exacts » ET miroir eau « inversés » donnent tous deux le
+        //   double-XP). effectiveRunWorld() couvre aussi le REJEU de run 3. Ailleurs (run 1/2) : 1 victoire par
+        //   reflet et par jour (retry jusqu'à la victoire). ⚠️ La consommation se fait au VRAI lancement du combat
+        //   (onFight de la modale), PAS ici — sinon ouvrir l'aperçu pour scouter puis annuler gâcherait la journée.
+        const run3Reflect = effectiveRunWorld() === "run3"
+        if (run3Reflect ? duelPlayedToday() : duelWonToday(opp.userId)) {
+            showDialogue("duel_rival", opp.nickname, run3Reflect
+                ? ["Tu as déjà disputé ton reflet aujourd'hui. En RUN 3, c'est UN SEUL par jour — victoire OU défaite. Reviens demain."]
                 : ["Tu m'as déjà vaincu aujourd'hui. Reviens demain pour ta revanche."])
             return
         }
-        if (run3Mirror) recordDuelMatch() // consommé DÈS le lancement → une défaite compte aussi
         const enemy = arenaMode === "hub" ? buildHubTeam(opp.player) : buildMirrorTeam(opp.player)
         setArenaFight({ opp, mode: arenaMode, enemy })
     }
@@ -3815,6 +3817,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     onFight={() => {
                         // DUEL : on retient l'adversaire (récompenses post-combat) + trainerId "duel:<userId>"
                         // → finishBattle signale l'issue via duelResult.
+                        // RUN 3 : on CONSOMME le match du jour ICI (vrai lancement) → une défaite compte, mais scouter
+                        //   puis Annuler ne coûte rien. Verrou lu par duelPlayedToday() au prochain handleArenaClick.
+                        if (effectiveRunWorld() === "run3") recordDuelMatch()
                         duelOppRef.current = { userId: arenaFight.opp.userId, nickname: arenaFight.opp.nickname }
                         startTrainerBattle(getPlayer().team, arenaFight.enemy, Math.floor(Math.random() * 1e9), { trainerId: "duel:" + arenaFight.opp.userId, reward: 0, aiLevel: "hof" })
                         setArenaFight(null)

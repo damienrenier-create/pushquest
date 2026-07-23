@@ -1066,13 +1066,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     //   PRÉCIEUSES (shiny / Mimimoy) : on ne les écrase pas et elles n'entrent pas dans l'historique.
                     const isGrotte1F = next.mapId === "yellow_grotte_nexus"
                     const isGrotteB1F = next.mapId === "yellow_grotte_nexus_b1f"
-                    if (isGrotte1F || isGrotteB1F) {
+                    const isGrotteB2F = next.mapId === "yellow_grotte_nexus_b2f" // le pop de fusion tourne AUSSI en B2F (Givrasol + chaîne Ukognofy)
+                    if (isGrotte1F || isGrotteB1F || isGrotteB2F) {
                         const spawnPrecious = spawn.shiny || !!getSpecies(spawn.speciesId)?.hiddenUntilCaught
                         // DÉMO PNJ 7 (1F uniquement, après sa victoire) : les 3 rencontres suivantes sont SCRIPTÉES =
                         //   2 parents puis leur fusion. Prioritaire ; jamais sur une rencontre précieuse (shiny/Mimimoy).
                         const demoId = isGrotte1F && !spawnPrecious ? takeGrotteDemoSpawn() : null
-                        // Niveau du fusionné : 1F = 2-18 (bébé) ; B1F = 15 fixe (biotopes).
-                        const fusionLevel = isGrotteB1F ? 15 : 2 + Math.floor(Math.random() * 17)
+                        // Niveau du fusionné : 1F = 2-18 (bébé) ; B1F = 15 fixe (biotopes) ; B2F = 20-40 (fond, cf. fodder B2F).
+                        const fusionLevel = isGrotteB1F ? 15 : isGrotteB2F ? 20 + Math.floor(Math.random() * 21) : 2 + Math.floor(Math.random() * 17)
                         // BIOTOPE COURANT : un changement (autre rectangle B1F, ou changement d'étage 1F↔B1F) réinitialise
                         //   l'historique → une fusion ne s'amorce QUE de 2 parents consécutifs DU MÊME biotope.
                         const zoneKey = biotopeKeyAt(next.mapId, next.posX, next.posY)
