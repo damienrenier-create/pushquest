@@ -50,6 +50,8 @@ import { getTrainer } from "../data/trainers"
 import { SBIRE_TRAINER_ID } from "../data/sbire"
 import { toMonInstance, type LeagueHighlight, type ChampionRun, type ChampionMon } from "../storage/save"
 import { fullStats } from "../battle/stats"
+import { creditFusionParents } from "../battle/fusionXp"
+import { setTeamAndPc } from "./playerStore"
 import { evolveTeam, type TeamEvolution } from "../progression/evolveTeam"
 import { activeFusionTier, FUSION_TIER_MARKER, FUSION_UNLOCK_MARKER, FUSIOBALL_OWED_MARKER } from "../data/fusionLeague"
 import { persistYellowSave, processSaiyanPoints, getNgplusOldTeam } from "./saveManager"
@@ -111,6 +113,7 @@ interface BattleStoreState {
     stoneReward: string | null
     lavapetitTeaser: "seen" | "caught" | null // RUN 3 : teaser Dieu Spag Lavapetit à afficher (transitoire)
     fusioBallOffer: boolean // LIGUE DE FUSION : proposer l'achat d'une Fusio-Ball (1000 reps) au sacre (transitoire, non persisté)
+    fusionParentReward: string | null // LIGUE DE FUSION : message « XP reversée aux parents » à afficher en fin de combat (transitoire)
     pnj6TradeOffer: boolean // PNJ 6 (Échangeur Grotte) : proposer l'échange Crocavern ↔ team[0] après victoire (transitoire)
     /** Récompense d'un REMATCH de dresseur (dialogue post-combat : énergie / CT Mirage) ; null sinon. */
     rematchReward: { npcId: string; npcName: string; lines: string[] } | null
@@ -167,7 +170,7 @@ interface PvpContext {
     ephemeralTeam?: boolean
 }
 
-let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, arenaRun: null, chainRematchId: null, pendingLearn: false, duelResult: null, frontierResult: null, stoneReward: null, lavapetitTeaser: null, fusioBallOffer: false, pnj6TradeOffer: false, justCaught: false, ngplusFinalPending: false, ngplusFinalResult: null }
+let storeState: BattleStoreState = { battle: null, evolutions: [], trainer: null, whiteout: false, energySpent: 0, sbireWin: null, sbireRewardMsg: null, aceWin: null, aceRewardMsg: null, aceLossTaunt: null, badgeAwarded: null, giftCtMove: null, rematchReward: null, pvpCtx: null, newDexEntry: null, championRun: null, arenaRun: null, chainRematchId: null, pendingLearn: false, duelResult: null, frontierResult: null, stoneReward: null, lavapetitTeaser: null, fusioBallOffer: false, fusionParentReward: null, pnj6TradeOffer: false, justCaught: false, ngplusFinalPending: false, ngplusFinalResult: null }
 // LIGUE — meilleurs moments du run en cours (best hit par membre du Conseil 4 + Maître), runtime.
 // Upsert par trainerId à chaque victoire de la Ligue ; lus au sacre du Maître pour le Hall of Fame.
 const leagueHighlights: Record<string, LeagueHighlight> = {}
@@ -370,6 +373,12 @@ export function isFusionBattleTrainer(trainerId?: string): boolean {
     return trainerId?.startsWith("fusion:") === true || trainerId?.startsWith("y_fusion_") === true
 }
 
+/** LIGUE DE FUSION seule (salles y_fusion_*) — EXCLUT l'épreuve de l'Autel (fusion:TRIAL) et le PvP. Sert au reversement
+ *  d'XP aux parents : seuls les combats de la VENUE de la Ligue font progresser les vrais Daemons du joueur. */
+export function isFusionLeagueTrainer(trainerId?: string): boolean {
+    return trainerId?.startsWith("y_fusion_") === true
+}
+
 /** ÉPREUVE DE FUSION (Autel de la Chimère) : le joueur PILOTE une équipe FUSIONNÉE éphémère (`fusionTeam`) contre
  *  une équipe IA. Combat SANDBOX : trainerId "fusion:TRIAL" → aucune écriture save (garde no-write-back ci-dessous),
  *  aucune XP, aucune capture, aucun objet. L'UI enregistre l'espèce custom AVANT (buildFusion) et la retire APRÈS
@@ -543,6 +552,22 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     //    vraie équipe (jetables). Nomme `isFactory` par héritage, sémantique = « équipe de combat non persistée ».
     const isFactory = storeState.trainer?.trainerId === "frontier:FACTORY" || isFusionBattleTrainer(storeState.trainer?.trainerId) // équipe pilotée non persistée (location/fusion)
     if (!isFactory) setTeam(b.player.team.map(toMonInstance))
+
+    // LIGUE DE FUSION — chaque fusionné reverse la MOITIÉ de son XP de combat à ses 2 PARENTS (vrais Daemons du
+    //   roster), OPTION A : CHAQUE parent reçoit cette moitié (le duo progresse comme un Daemon normal). Applique
+    //   aussi level-ups + apprentissages, gagne le delta de PV au level-up, puis persiste équipe + boîte. Se joue à
+    //   la fin de CHAQUE combat de Ligue (KO du fusionné inclus) → cumulé sur la venue. Scopé y_fusion_* (pas l'Autel/PvP).
+    let fusionParentReward: string | null = null
+    if (isFusionLeagueTrainer(storeState.trainer?.trainerId)) {
+        const team = getPlayer().team, pc = getPlayer().pc
+        const { edited, grew } = creditFusionParents(b.player.team, b.xpByUid, (uid) => team.find((m) => m.uid === uid) ?? pc.find((m) => m.uid === uid))
+        if (edited.size > 0) {
+            setTeamAndPc(team.map((m) => edited.get(m.uid) ?? m), pc.map((m) => edited.get(m.uid) ?? m))
+            fusionParentReward = grew.length
+                ? `Tes fusionnés ont entraîné leurs parents ! ${grew.join(" · ")}`
+                : `Tes fusionnés ont transmis de l'expérience à leurs parents.`
+        }
+    }
 
     // 2) Capture → ajoute le sauvage à l'équipe/PC.
     if (b.outcome === "caught") {
@@ -1048,7 +1073,7 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     // Un Daemon a-t-il une attaque EN ATTENTE (slots pleins à la montée de niveau / l'évolution) ? → prompt post-combat.
     const pendingLearn = getPlayer().team.some((m) => (m.pendingMoves?.length ?? 0) > 0)
     // Expose les évolutions pour la cinématique post-combat (jouée après "QUITTER").
-    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose && !isFusionTrial, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, arenaRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward, lavapetitTeaser, fusioBallOffer, pnj6TradeOffer, justCaught: b.outcome === "caught", ngplusFinalPending: storeState.ngplusFinalPending || ngplusMaitreWin, ngplusFinalResult })
+    setStore({ battle: b, evolutions: evos, trainer: null, whiteout: isLose && !isFusionTrial, sbireWin, sbireRewardMsg, aceWin, aceRewardMsg, aceLossTaunt, badgeAwarded, giftCtMove, rematchReward, newDexEntry, championRun, arenaRun, chainRematchId, pendingLearn, duelResult, frontierResult, stoneReward, lavapetitTeaser, fusioBallOffer, fusionParentReward, pnj6TradeOffer, justCaught: b.outcome === "caught", ngplusFinalPending: storeState.ngplusFinalPending || ngplusMaitreWin, ngplusFinalResult })
 
     // 4) Sauvegarde persistante (DB).
     persistYellowSave()
@@ -1606,6 +1631,18 @@ export function useFusioBallOffer(): boolean {
 }
 export function clearFusioBallOffer() {
     setStore({ fusioBallOffer: false })
+}
+
+/** LIGUE DE FUSION — message « XP reversée aux parents » à afficher en fin de combat (transitoire), ou null. */
+export function useFusionParentReward(): string | null {
+    return useSyncExternalStore(
+        subscribe,
+        () => getSnapshot().fusionParentReward,
+        () => getSnapshot().fusionParentReward,
+    )
+}
+export function clearFusionParentReward() {
+    setStore({ fusionParentReward: null })
 }
 
 /** PNJ 6 (Échangeur Grotte) — propose-t-il l'échange Crocavern ↔ team[0] (post-victoire, transitoire) ? */

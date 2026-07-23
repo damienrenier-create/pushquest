@@ -81,6 +81,7 @@ export function buildFusion(a: MonInstance, b: MonInstance, opts?: { name?: stri
     registerCustomSpecies([buildFusionSpecies(id, result, sprite, name, opts?.moves)])
     const instance = createMonInstance(id, result.level, { moveIds: [...moves], owned: false })
     applyFusionStats(instance, result)
+    instance.fusionParents = [a.uid, b.uid] // Ligue Fusion : à la fin du combat, chaque parent reçoit la moitié de l'XP du fusionné
     // Objets tenus : le 1er est appliqué. ⚠️ Le 2e (result.heldItems[1]) attend l'extension moteur « 2 objets »
     //   (le système de combat lit heldItem au singulier). Cf. spec Inc.1.
     if (result.heldItems[0]) instance.heldItem = result.heldItems[0]

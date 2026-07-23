@@ -97,6 +97,9 @@ export interface BattleState {
     dmgByType?: Partial<Record<PokeType, number>>
     /** STAT de partie : XP de combat cumulée gagnée par l'équipe ce combat (lue en fin de combat). */
     xpGained?: number
+    /** XP de combat gagnée PAR uid de combattant (cumul ce combat). Sert à la LIGUE DE FUSION : chaque fusionné
+     *  reverse la MOITIÉ de son XP à ses 2 parents (finishBattle). Cumule à travers les tours (clone par valeur). */
+    xpByUid?: Record<string, number>
     /** ZONE DE COMBAT (Frontier) : objets/soins interdits (« pas de potion ») → le SAC est masqué. */
     noItems?: boolean
     /** Multiplicateur d'XP gagnée (1 = normal ; <1 au Frontier pour limiter le farming). */
@@ -1283,6 +1286,7 @@ function awardExp(state: BattleState, events: BattleEvent[]) {
         const beforeMax = maxHpOf(mon)
         const res = applyExp(mon, finalGain)
         state.xpGained = (state.xpGained ?? 0) + finalGain // STAT de partie : XP cumulée ce combat (lue en fin de combat)
+        state.xpByUid = state.xpByUid ?? {}; state.xpByUid[mon.uid] = (state.xpByUid[mon.uid] ?? 0) + finalGain // XP par combattant → parents (Ligue Fusion)
         events.push({ kind: "message", text: `${displayName(mon)} gagne ${finalGain} points d'Exp !` })
         if (res.toLevel > res.fromLevel) {
             const delta = maxHpOf(mon) - beforeMax
@@ -1563,6 +1567,8 @@ function structuredCloneState(s: BattleState): BattleState {
         enemySendOut: s.enemySendOut ? { ...s.enemySendOut } : null,
         // Cumul dégâts/type (défi CT) : copie pour ne pas partager la réf entre tours.
         dmgByType: s.dmgByType ? { ...s.dmgByType } : undefined,
+        // Cumul XP par uid (Ligue Fusion → parents) : copie par valeur (comme xpGained) pour cumuler à travers les tours.
+        xpByUid: s.xpByUid ? { ...s.xpByUid } : undefined,
     }
 }
 

@@ -223,6 +223,9 @@ export interface MonInstance {
      *  ⚠️ INVARIANT (setter Inc.1) : frozenStats.spc (SpA) ET frozenSpd (SpD) doivent être posés ENSEMBLE — ils
      *  viennent en PAIRE de computeFusion. Poser l'un sans l'autre = profil incohérent. Utiliser UN seul helper. */
     frozenSpd?: number
+    /** LIGUE DE FUSION : uids des 2 PARENTS d'un fusionné éphémère → à la fin d'un combat de Ligue, chaque parent
+     *  reçoit la MOITIÉ de l'XP gagnée par le fusionné (cf. finishBattle). Transient (jamais persisté). */
+    fusionParents?: [string, string]
     /** OBJET TENU (held item) : id d'un objet de data/heldItems.ts. 1 max par Daemon.
      *  Effets lus par fullStats (stats) et le moteur (dégâts/combat). cf. data/heldItems.ts. */
     heldItem?: string

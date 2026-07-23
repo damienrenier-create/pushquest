@@ -751,6 +751,12 @@ export function setTeam(team: MonInstance[]) {
     emit()
 }
 
+/** Remplace équipe ET boîte en une écriture (ex. Ligue Fusion : l'XP des parents peut toucher des Daemons de la boîte). */
+export function setTeamAndPc(team: MonInstance[], pc: MonInstance[]) {
+    st = { ...st, team, pc }
+    emit()
+}
+
 /** Ajoute un Daemon capturé (équipe si place, sinon PC). */
 export function addCaught(mon: MonInstance, ctx?: { quotaReached?: boolean }): "team" | "pc" {
     const today = new Date().toISOString().slice(0, 10)
