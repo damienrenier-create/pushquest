@@ -2009,6 +2009,25 @@ export function healTeamMember(uid: string, itemId: string): boolean {
     return true
 }
 
+/** RAPPEL (hors combat) : ranime un Daemon K.O. de l'équipe à une fraction de ses PV max. Renvoie false si inutile. */
+export function reviveTeamMember(uid: string, itemId: string): boolean {
+    const item = getItem(itemId)
+    if (!item || item.category !== "REVIVE") return false
+    if ((st.items[itemId] ?? 0) <= 0) return false
+    const idx = st.team.findIndex((m) => m.uid === uid)
+    if (idx < 0) return false
+    const m = st.team[idx]
+    if (m.currentHp > 0) return false // pas K.O. → un Rappel n'a aucun effet
+    const sp = getSpecies(m.speciesId)
+    const max = sp ? fullStats(m, sp).hp : 1
+    const team = st.team.slice()
+    team[idx] = { ...m, currentHp: Math.max(1, Math.floor(max * (item.reviveFrac ?? 0.1))) }
+    st = { ...st, team, items: { ...st.items, [itemId]: st.items[itemId] - 1 } }
+    bumpStat("heals")
+    emit()
+    return true
+}
+
 /** Équipe un objet tenu (depuis le sac) sur un Daemon (équipe ou PC). L'éventuel objet déjà tenu
  *  retourne au sac. Refuse si pas en stock, ou si c'est un objet SIGNATURE d'une autre espèce. */
 export function equipHeldItem(uid: string, itemId: string): boolean {

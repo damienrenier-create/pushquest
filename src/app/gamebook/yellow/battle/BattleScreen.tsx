@@ -27,7 +27,7 @@ import { usePokedex } from "@/lib/gamebook/yellow/store/pokedexStore"
 import { TYPE_COLORS } from "../dex/dexShared"
 import { attackCost, effectiveQuota, STRUGGLE_INDEX } from "@/lib/gamebook/yellow/data/combatCostConfig"
 
-type Menu = "root" | "moves" | "switch" | "bag" | "confirmRun"
+type Menu = "root" | "moves" | "switch" | "bag" | "confirmRun" | "reviveTarget"
 
 interface DispHp { p: number; pMax: number; e: number; eMax: number }
 
@@ -51,6 +51,7 @@ export default function BattleScreen() {
     const battle = useBattle()
     const [step, setStep] = useState(0)
     const [menu, setMenu] = useState<Menu>("root")
+    const [reviveItemId, setReviveItemId] = useState<string | null>(null) // RAPPEL : objet en attente d'une cible K.O.
     const [disp, setDisp] = useState<DispHp | null>(null)
     // Index du Daemon AFFICHÉ par côté pendant le playback (suit les switchIn) → on ne
     // montre pas le Daemon suivant avant son annonce / on garde le bon sprite & barre.
@@ -250,6 +251,7 @@ export default function BattleScreen() {
     const doStay = () => tryAct(() => { submitPlayerAction({ kind: "stay" }); setMenu("root") })
     const throwBall = (itemId: string) => tryAct(() => { submitPlayerAction({ kind: "ball", itemId }); setMenu("root") })
     const doItem = (itemId: string) => tryAct(() => { submitPlayerAction({ kind: "item", itemId }); setMenu("root") })
+    const doRevive = (itemId: string, targetIndex: number) => tryAct(() => { submitPlayerAction({ kind: "item", itemId, targetIndex }); setReviveItemId(null); setMenu("root") })
     const run = () => tryAct(() => submitPlayerAction({ kind: "run" }))
 
     // Pendant le playback (animations de coups), on suit `disp` pour animer les barres.
@@ -356,6 +358,9 @@ export default function BattleScreen() {
             // Objets X (boost de stat)
             Object.values(ITEMS).filter((it) => it.category === "BOOST" && owned(it.id))
                 .forEach((it) => options.push({ label: `${it.name} ×${items[it.id]}`, onSelect: () => doItem(it.id) }))
+            // Rappel (revive) → choisir un Daemon K.O. à ranimer (désactivé si aucun K.O. dans l'équipe)
+            Object.values(ITEMS).filter((it) => it.category === "REVIVE" && owned(it.id))
+                .forEach((it) => options.push({ label: `${it.name} ×${items[it.id]}`, onSelect: () => { setReviveItemId(it.id); setMenu("reviveTarget") }, disabled: !battle.player.team.some((m) => m.currentHp <= 0) }))
             if (battle.isWild) Object.values(ITEMS).filter((it) => it.category === "BALL" && owned(it.id))
                 .forEach((b) => options.push({ label: `${b.name} ×${items[b.id]}`, onSelect: () => throwBall(b.id) }))
             options.push({ label: "RETOUR", onSelect: () => setMenu("root") })
@@ -365,6 +370,14 @@ export default function BattleScreen() {
             // appui A réflexe annule la fuite au lieu de la confirmer).
             options.push({ label: "❌ Annuler", onSelect: () => setMenu("root") })
             options.push({ label: "🏃 Confirmer la fuite", onSelect: run })
+            canBack = true
+        } else if (menu === "reviveTarget") {
+            // RAPPEL : choisir un Daemon K.O. à ranimer (les VIVANTS sont grisés).
+            battle.player.team.forEach((m, i) => options.push({
+                label: `${displayName(m)} N.${m.level} — ${m.currentHp <= 0 ? "K.O." : m.currentHp + "/" + maxHpOf(m) + " PV"}`,
+                onSelect: () => { if (reviveItemId) doRevive(reviveItemId, i) }, disabled: m.currentHp > 0,
+            }))
+            options.push({ label: "← RETOUR", onSelect: () => { setReviveItemId(null); setMenu("bag") } })
             canBack = true
         } else {
             battle.player.team.forEach((m, i) => options.push({
@@ -477,6 +490,10 @@ export default function BattleScreen() {
                     }
                     // Sac : liste d'objets, pleine largeur.
                     if (menu === "bag") {
+                        return <div style={S.listBoxWide}>{options.map((o, i) => renderRow(o, i))}</div>
+                    }
+                    // RAPPEL : choix du Daemon K.O. à ranimer, liste pleine largeur (comme le sac).
+                    if (menu === "reviveTarget") {
                         return <div style={S.listBoxWide}>{options.map((o, i) => renderRow(o, i))}</div>
                     }
                     // Confirmation de fuite : message + OUI / NON.

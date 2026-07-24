@@ -58,7 +58,7 @@ import { duelWinLines, duelLossLines, duelDreamLines, DUEL_NEXUS_BALL_ID, DUEL_L
 import { SPAG_LAVAPETIT_TEASER_LINES, SPAG_LAVAPETIT_CAUGHT_LINES } from "@/lib/gamebook/yellow/data/labDialogues"
 import { loadYellowSave, initAutosave, persistYellowSave, persistYellowSaveNow, processSaiyanPoints, resetYellowChapter, startNewGamePlus, completeNewGamePlus, abandonNewGamePlus, NGPLUS_ABANDON_LIMIT, startRun3, completeRun3, startReplay, exitReplay } from "@/lib/gamebook/yellow/store/saveManager"
 import { customStarterSpeciesId, type StoredCustomDaemon } from "@/lib/gamebook/yellow/create/customSpecies"
-import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, releaseFromPc, renameDaemon, healTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker } from "@/lib/gamebook/yellow/store/playerStore"
+import { getPlayer, setTeam, usePlayer, useActiveWorld, getActiveWorld, effectiveRunWorld, addItem, spendReps, grantReps, grantBonusEnergyUncapped, consumeItem, setCurrentPlayerId, setCurrentMapId, executeTrade, tradeCt, applyTradeEvolution, markIntroSeen, superPastaPrice, buySuperPasta, depositToPc, withdrawFromPc, releaseFromPc, renameDaemon, healTeamMember, reviveTeamMember, healAllTeam, allocateStatPoint, teachCt, swapTeam, favoriteDaemon, favoriteMove, resolveLearn, consumeGiftMessage, reorderMove, evolvePantheonWithStone, resetLigueProgress, duelWonToday, recordDuelWin, duelPlayedToday, recordDuelMatch, recordMirrorWinHigherLevel, grantCt, markSpagRouletteSeen, markGeneIntroSeen, ticketCount, ensureDailyChips, searchChipTile, claimSpagWelcomeTickets, claimSpagStepGift, spagStepGiftDone, bumpPlaytime, grantRouletteTicket, recordDomeChampionship, recordDomeResult, recordStatMax, setGameMode, ensureModeStartGrant, consumeModeRechargeEvent, getReplayRun, setFusionRoster, recordFusionCreated, markTrainerDefeated, clearTrainerMarker } from "@/lib/gamebook/yellow/store/playerStore"
 import { computeRunScores, computeReplayScore, leaderboardFactors, formatDuration, type RunScores } from "@/lib/gamebook/yellow/score/runScore"
 import { run3Score, run3MaxScore, run3EnergyScore } from "@/lib/gamebook/yellow/data/run3Score"
 import { PANTHEON_STONE_EVOS } from "@/lib/gamebook/yellow/data/gekroc"
@@ -2015,19 +2015,22 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                             })}
                                         </>
                                     )}
-                                    {/* ❤️ Poche Soins */}
+                                    {/* ❤️ Poche Soins (PV, statut, RAPPEL) */}
                                     {(() => {
-                                        const heals = Object.values(ITEMS).filter((it) => (it.category === "HEAL" || it.category === "STATUS_HEAL") && (player.items[it.id] ?? 0) > 0)
+                                        const heals = Object.values(ITEMS).filter((it) => (it.category === "HEAL" || it.category === "STATUS_HEAL" || it.category === "REVIVE") && (player.items[it.id] ?? 0) > 0)
                                         return heals.length > 0 && (
                                             <>
                                                 <div style={pocketHdrStyle}>❤️ Soins</div>
-                                                {heals.map((it) => (
-                                                    <button key={it.id} style={it.category === "HEAL" ? menuBtnStyle : menuBtnDimStyle} disabled={it.category !== "HEAL"} onClick={() => it.category === "HEAL" && setBagItem(it.id)}>
-                                                        <span style={{ display: "flex", justifyContent: "space-between" }}>
-                                                            <span>{it.name}{it.category === "STATUS_HEAL" ? " (en combat)" : ""}</span><span>×{player.items[it.id]}</span>
-                                                        </span>
-                                                    </button>
-                                                ))}
+                                                {heals.map((it) => {
+                                                    const usable = it.category === "HEAL" || it.category === "REVIVE" // STATUS_HEAL = combat uniquement
+                                                    return (
+                                                        <button key={it.id} style={usable ? menuBtnStyle : menuBtnDimStyle} disabled={!usable} onClick={() => usable && setBagItem(it.id)}>
+                                                            <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                                                <span>{it.name}{it.category === "STATUS_HEAL" ? " (en combat)" : ""}</span><span>×{player.items[it.id]}</span>
+                                                            </span>
+                                                        </button>
+                                                    )
+                                                })}
                                             </>
                                         )
                                     })()}
@@ -2125,32 +2128,36 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         ) : (
                             <>
                                 <div style={menuTitleStyle}>{getItem(bagItem)?.name} — SUR QUI ?</div>
-                                {player.team.map((m) => {
-                                    const sp = getSpecies(m.speciesId)
-                                    const max = sp ? fullStats(m, sp).hp : m.currentHp
-                                    const ko = m.currentHp <= 0
-                                    const full = m.currentHp >= max
-                                    const dis = ko || full
-                                    return (
-                                        <button
-                                            key={m.uid}
-                                            style={dis ? menuBtnDimStyle : menuBtnStyle}
-                                            disabled={dis}
-                                            onClick={() => {
-                                                if (healTeamMember(m.uid, bagItem)) {
-                                                    setToast(`${displayName(m)} récupère des PV !`)
-                                                    persistYellowSave()
-                                                }
-                                                setBagItem(null)
-                                            }}
-                                        >
-                                            <span style={{ display: "flex", justifyContent: "space-between" }}>
-                                                <span>{displayName(m)}{ko ? " (K.O.)" : ""}</span>
-                                                <span>{m.currentHp}/{max}</span>
-                                            </span>
-                                        </button>
-                                    )
-                                })}
+                                {(() => {
+                                    const isRevive = getItem(bagItem)?.category === "REVIVE"
+                                    return player.team.map((m) => {
+                                        const sp = getSpecies(m.speciesId)
+                                        const max = sp ? fullStats(m, sp).hp : m.currentHp
+                                        const ko = m.currentHp <= 0
+                                        const full = m.currentHp >= max
+                                        const dis = isRevive ? !ko : (ko || full) // RAPPEL : seuls les K.O. ; soin : ni K.O. ni pleins
+                                        return (
+                                            <button
+                                                key={m.uid}
+                                                style={dis ? menuBtnDimStyle : menuBtnStyle}
+                                                disabled={dis}
+                                                onClick={() => {
+                                                    if (isRevive) {
+                                                        if (reviveTeamMember(m.uid, bagItem)) { setToast(`${displayName(m)} est ranimé !`); persistYellowSave() }
+                                                    } else if (healTeamMember(m.uid, bagItem)) {
+                                                        setToast(`${displayName(m)} récupère des PV !`); persistYellowSave()
+                                                    }
+                                                    setBagItem(null)
+                                                }}
+                                            >
+                                                <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                                    <span>{displayName(m)}{ko ? " (K.O.)" : ""}</span>
+                                                    <span>{m.currentHp}/{max}</span>
+                                                </span>
+                                            </button>
+                                        )
+                                    })
+                                })()}
                                 <button style={menuBtnDimStyle} onClick={() => setBagItem(null)}>← RETOUR</button>
                             </>
                         )}

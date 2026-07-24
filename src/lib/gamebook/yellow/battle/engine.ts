@@ -115,7 +115,7 @@ export type PlayerAction =
     | { kind: "move"; moveIndex: number }
     | { kind: "switch"; teamIndex: number }
     | { kind: "ball"; itemId: string }
-    | { kind: "item"; itemId: string }
+    | { kind: "item"; itemId: string; targetIndex?: number } // targetIndex : RAPPEL vise un Daemon K.O. PRÉCIS de l'équipe
     | { kind: "run" }
     /** Fenêtre d'envoi adverse (combat de Dresseur) : GARDER son Daemon face à l'envoi ennemi. */
     | { kind: "stay" }
@@ -310,7 +310,7 @@ export function resolveTurn(prev: BattleState, playerAction: PlayerAction): Batt
 
     // --- Utiliser un objet de soin (consomme le tour ; l'adversaire agit ensuite) ---
     if (playerAction.kind === "item") {
-        applyItem(state, playerAction.itemId, events)
+        applyItem(state, playerAction.itemId, events, playerAction.targetIndex)
         const ea = chooseEnemyAction(state, rng)
         if (active(state.enemy).currentHp > 0) {
             if (ea.kind === "switch") doSwitch(state, "enemy", ea.teamIndex!, events)
@@ -1489,11 +1489,20 @@ function performCapture(state: BattleState, itemId: string, events: BattleEvent[
 }
 
 /** Utilise un objet de soin sur le Daemon actif du joueur (consomme le tour). */
-function applyItem(state: BattleState, itemId: string, events: BattleEvent[]) {
+function applyItem(state: BattleState, itemId: string, events: BattleEvent[], targetIndex?: number) {
     const it = getItem(itemId)
     const mon = active(state.player)
     events.push({ kind: "message", text: `Tu utilises ${it?.name ?? "un objet"} !` })
     if (!it) { events.push({ kind: "message", text: "Mais ça n'a aucun effet…" }); return }
+
+    // RAPPEL : ranime un Daemon K.O. PRÉCIS de l'équipe (targetIndex, PAS l'actif) à une fraction de ses PV max.
+    if (it.category === "REVIVE") {
+        const tgt = targetIndex != null ? state.player.team[targetIndex] : undefined
+        if (!tgt || tgt.currentHp > 0) { events.push({ kind: "message", text: "Mais ça n'a aucun effet…" }); return }
+        tgt.currentHp = Math.max(1, Math.floor(maxHpOf(tgt) * (it.reviveFrac ?? 0.1)))
+        events.push({ kind: "message", text: `${displayName(tgt)} est ranimé !` })
+        return
+    }
 
     // Soin de PV
     if (it.category === "HEAL") {

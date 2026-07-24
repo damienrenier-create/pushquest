@@ -91,6 +91,26 @@ describe("combat de dresseur — enchaînement multi-Daemon", () => {
         expect(after.turn).toBe(start.turn + 1)    // le tour est bien passé
     })
 
+    it("un RAPPEL ranime un Daemon K.O. au banc à 1/10 de ses PV (et consomme le tour)", () => {
+        const a = createMonInstance("rochison", 50, { moveIds: ["eboulis", "belier", "seisme", "lame_roche"] }) // tank actif : survit au sauvage
+        const b = createMonInstance("plumiot", 30)
+        const bMax = b.currentHp // créé à PV pleins → = PV max
+        b.currentHp = 0 // K.O. au banc
+        const start = createBattle([a, b], [createMonInstance("plumiot", 2)], { isWild: true, seed: 9 })
+        const after = resolveTurn(start, { kind: "item", itemId: "rappel", targetIndex: 1 })
+        expect(after.player.team[1].currentHp).toBe(Math.max(1, Math.floor(bMax * 0.1))) // 1/10 des PV max
+        expect(after.turn).toBe(start.turn + 1) // le RAPPEL consomme le tour
+    })
+
+    it("un RAPPEL sur un Daemon NON K.O. n'a aucun effet", () => {
+        const a = createMonInstance("rochison", 50, { moveIds: ["eboulis", "belier", "seisme", "lame_roche"] })
+        const b = createMonInstance("plumiot", 30) // vivant
+        const bHp = b.currentHp
+        const start = createBattle([a, b], [createMonInstance("plumiot", 2)], { isWild: true, seed: 9 })
+        const after = resolveTurn(start, { kind: "item", itemId: "rappel", targetIndex: 1 })
+        expect(after.player.team[1].currentHp).toBe(bHp) // inchangé (pas K.O. → aucun effet)
+    })
+
     it("partage l'XP : un Daemon ayant combattu puis mis au banc gagne aussi l'XP", () => {
         const a = createMonInstance("rochison", 50, { moveIds: ["eboulis", "belier", "seisme", "lame_roche"] }) // tank : survit à tout
         const b = createMonInstance("plumiot", 5)

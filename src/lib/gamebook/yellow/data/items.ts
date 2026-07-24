@@ -3,7 +3,7 @@
 // Nexus Jaune Éclair — objets : Balls (capture) + soins. Data-driven.
 // L'achat/coût se paie en ÉNERGIE PushQuest (reps) → couche meta (hors moteur).
 
-export type ItemCategory = "BALL" | "HEAL" | "STATUS_HEAL" | "BOOST" | "MISC"
+export type ItemCategory = "BALL" | "HEAL" | "STATUS_HEAL" | "BOOST" | "MISC" | "REVIVE"
 
 /** Statuts majeurs gérés (aligné sur MajorStatus). "ALL" = tous. */
 export type CurableStatus = "ALL" | "BURN" | "POISON" | "TOXIC" | "PARALYSIS" | "SLEEP" | "FREEZE"
@@ -21,6 +21,8 @@ export interface ItemData {
     guaranteed?: boolean
     /** Pour les soins : PV restaurés (0 = full). */
     healHp?: number
+    /** REVIVE (Rappel) : ranime un Daemon K.O. en lui rendant cette FRACTION de ses PV max (ex. 0.1 = 1/10). */
+    reviveFrac?: number
     /** STATUS_HEAL : statuts guéris. */
     cures?: CurableStatus[]
     /** BOOST (objet X) : stat boostée + nombre de crans (appliqué en combat). */
@@ -159,6 +161,11 @@ export const ITEMS: Record<string, ItemData> = {
     torche_3: {
         id: "torche_3", name: "Torche-tempête", category: "MISC",
         description: "Éclaire un rayon de 4 cases dans le noir, pendant 600 pas.", price: 0, torchRadius: 4, torchSteps: 600,
+    },
+    // RAPPEL (revive) — ranime UN Daemon K.O. et lui rend 1/10 de ses PV. Utilisable EN COMBAT et hors combat.
+    rappel: {
+        id: "rappel", name: "Rappel", category: "REVIVE",
+        description: "Ranime un Daemon K.O. et lui rend 1/10 de ses PV. En combat ou hors combat.", price: 0, reviveFrac: 0.1,
     },
     // Objet clé remis par le SCIENTIFIQUE du labo au sacre (récompense du Dieu Spaghetti) : sa mélodie
     // réveille le SYLVEBARBE endormi qui bouche la sortie sud de Ville Jaune (combat → markSylvebarbeAwake).
