@@ -91,6 +91,16 @@ export default function CombatShopModal({ onClose, onEnterGrotte }: { onClose: (
                             <div style={{ fontSize: 10, opacity: 0.7, color: INK, marginBottom: 6, lineHeight: 1.3 }}>Je suis le SEUL passage vers la Grotte du Nexus — et donc vers l'ultime épreuve : la LIGUE ULTIME. Le casse-tête souterrain (Mt. Moon) se paie en Jetons de Combat.</div>
                             <Row label="⛏️ Entrer dans la Grotte" price={grotteEntryCost()} disabled={busy || (jc ?? 0) < grotteEntryCost()}
                                 onBuy={() => spend(grotteEntryCost(), { grant: () => onEnterGrotte(), toast: "🕳️ Tu t'enfonces dans la Grotte du Nexus…" })} />
+                            {/* OUTILS DE GROTTE (juste sous l'entrée) : torches (JC — la Grotte est dans le noir) + repousse (énergie). */}
+                            <div style={{ fontSize: 10, opacity: 0.7, color: INK, margin: "10px 0 4px", lineHeight: 1.3 }}>🔦 Lampes torches — la Grotte est plongée dans le noir (à allumer depuis le sac) :</div>
+                            {TORCHES.map(({ id, jc: cost }) => {
+                                const it = ITEMS[id]
+                                return <Row key={id} label={`${it.name}${(player.items[id] ?? 0) > 0 ? ` (×${player.items[id]})` : ""}`} desc={`Rayon ${it.torchRadius} cases · ${it.torchSteps} pas`} price={cost} disabled={busy || (jc ?? 0) < cost}
+                                    onBuy={() => spend(cost, { grant: () => addItem(id, 1), toast: `🔦 ${it.name} achetée ! (sac → 🔦 Lampes torches)` })} />
+                            })}
+                            <div style={{ fontSize: 10, opacity: 0.7, color: INK, margin: "10px 0 4px", lineHeight: 1.3 }}>🧴 Repousse — éloigne les Daemons sauvages 30 pas (payée en énergie) :</div>
+                            <Row label={`🧴 Repousse${(player.items["repousse"] ?? 0) > 0 ? ` (×${player.items["repousse"]})` : ""}`} price={100} currency="⚡" disabled={busy || player.reps < 100}
+                                onBuy={() => { if (spendReps(100)) { addItem("repousse", 1); persistYellowSave(); setMsg("✅ Repousse achetée ! (sac → Exploration)") } else { setMsg("Pas assez d'énergie (100 requis).") } }} />
                         </Section>
                     )}
 
@@ -100,26 +110,6 @@ export default function CombatShopModal({ onClose, onEnterGrotte }: { onClose: (
                                 onBuy={() => spend(e.price, { grant: () => grantReps(e.amount), toast: `✅ +${e.amount} énergie !` })} />
                         ))}
                     </Section>
-
-                    {/* REPOUSSE — débloquée après avoir battu l'AVENTURIER (PNJ 3, Grotte B2F) : son frère marchand les vend. Payé en ÉNERGIE. */}
-                    {player.defeatedTrainers.includes("y_pnj3_grotte_b2f") && (
-                        <Section title="🧴 Repousses (de mon frère l'Aventurier)">
-                            <div style={{ fontSize: 10, opacity: 0.7, color: INK, marginBottom: 6, lineHeight: 1.3 }}>Éloigne les Daemons sauvages 30 pas — à utiliser hors combat. Payé en énergie.</div>
-                            <Row label={`🧴 Repousse${(player.items["repousse"] ?? 0) > 0 ? ` (×${player.items["repousse"]})` : ""}`} price={100} currency="⚡" disabled={busy || player.reps < 100}
-                                onBuy={() => { if (spendReps(100)) { addItem("repousse", 1); persistYellowSave(); setMsg("✅ Repousse achetée ! (dans le sac → Exploration)") } else { setMsg("Pas assez d'énergie (100 requis).") } }} />
-                        </Section>
-                    )}
-
-                    {onEnterGrotte && (
-                        <Section title="🔦 Lampes torches (Grotte du Nexus)">
-                            <div style={{ fontSize: 10, opacity: 0.7, color: INK, marginBottom: 6, lineHeight: 1.3 }}>La Grotte est plongée dans le noir. Ces torches éclairent plus ou moins loin, plus ou moins longtemps — allumées depuis le sac.</div>
-                            {TORCHES.map(({ id, jc: cost }) => {
-                                const it = ITEMS[id]
-                                return <Row key={id} label={`${it.name}${(player.items[id] ?? 0) > 0 ? ` (×${player.items[id]})` : ""}`} desc={`Rayon ${it.torchRadius} cases · ${it.torchSteps} pas`} price={cost} disabled={busy || (jc ?? 0) < cost}
-                                    onBuy={() => spend(cost, { grant: () => addItem(id, 1), toast: `🔦 ${it.name} achetée ! (sac → 🔦 Lampes torches)` })} />
-                            })}
-                        </Section>
-                    )}
 
                     <Section title="💿 CT rares">
                         {ctOffer.length === 0 ? <Empty>Tu possèdes déjà toutes les CT du lot.</Empty> : ctOffer.map((id) => {
