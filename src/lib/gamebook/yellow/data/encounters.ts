@@ -205,6 +205,29 @@ const NEXUS_POWERFUL_FINALS: WildEntry[] = [
     "tenebrir", "condombre", "leviabysse", "uzumaro",                            // némésis finales (loup / vautour / serpent des abysses / ninja)
 ].map((speciesId) => ({ speciesId, base: VERY_RARE, noEvolve: true, levelFixed: 75, captureMult: 0.45, captureTaunt: NEXUS_FINAL_TAUNT }))
 
+// GROTTE DU NEXUS — « ÉCHOS ANCIENS » : des Daemons FINAUX d'une puissance rare rôdent PARFOIS au fond de la caverne,
+//   à HAUT NIVEAU (50-90), 1-2 par TYPE (complète les types absents des finales niv 75 ci-dessus). GIGA-rares
+//   (base 1 ≈ ~0,1 %/rencontre chacun, ~1,6 % agrégé), DURS à capturer (captureMult 0.4). Formes finales →
+//   noEvolve + levelFixed. 100 % attaques EXISTANTES. Choix Sartay : ROCHE=Rochison, PSY=lignée hippo (Omnhippo).
+const NEXUS_ECHO_TAUNT = "Une créature étonnamment puissante rôde dans ces profondeurs… tu ne la captureras pas si aisément."
+const NEXUS_HIGH_LEVEL_ECHOES: WildEntry[] = ([
+    ["aquilord", 75],    // NORMAL/VOL
+    ["maitrezenc", 55],  // COMBAT pur
+    ["toucanyon", 65],   // VOL/FEU
+    ["necrocorbe", 55],  // VOL/POISON
+    ["rochison", 55],    // ROCHE/SOL
+    ["regnantaur", 60],  // INSECTE/PSY
+    ["ombrapanthe", 65], // SPECTRE
+    ["dracarlin", 85],   // FEU/DRAGON
+    ["aquapanthe", 60],  // EAU
+    ["florapanthe", 60], // PLANTE
+    ["voltapanthe", 65], // ELEC
+    ["cryotyran", 90],   // DRAGON/GLACE
+    ["omnhippo", 60],    // PSY (lignée hippo — choix Sartay ; NB: normalement runThreeOnly → ici catchable en Grotte)
+    ["vipember", 70],    // PSY/FEU
+    // (MÉTAL laissé de côté : les 2 seuls finaux — colosfer/magnetor — sont cachés ET runThreeOnly.)
+] as [string, number][]).map(([speciesId, levelFixed]) => ({ speciesId, base: 1, noEvolve: true, levelFixed, captureMult: 0.4, captureTaunt: NEXUS_ECHO_TAUNT }))
+
 const ZONES: Record<string, Zone> = {
     yellow_route_nord: {
         rate: 0.14,
@@ -366,6 +389,8 @@ const ZONES: Record<string, Zone> = {
             { speciesId: "bidouzen", base: RARE, noEvolve: true, levelRange: [23, 27] },  // → Medisciple → Karatame (Psy/Combat)
             // PUISSANTS niv 75 (formes finales + némésis, TRÈS dur à capturer + raillerie).
             ...NEXUS_POWERFUL_FINALS,
+            // ÉCHOS ANCIENS — finaux haut niveau (50-90), 1-2 par TYPE, GIGA-rares (cf. NEXUS_HIGH_LEVEL_ECHOES).
+            ...NEXUS_HIGH_LEVEL_ECHOES,
             // CRÉATURES TRÈS ANCIENNES (9 inédites) — DÉBLOQUÉES après la 1re victoire à la LIGUE DE FUSION
             //   (requiresFusionLeague). Pop niv 5-90 : la lignée ÉVOLUE avec le niveau (speciesAtLevel) → base à
             //   bas niveau, finale à haut niveau. Gros LATE BLOOMERS (courbe slow) → capture TÔT = +20 % EV (lateBloomerEv).
