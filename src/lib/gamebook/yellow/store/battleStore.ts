@@ -551,7 +551,10 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
     //    réelle du joueur par les rentals / le fusionné (perte de données). Ces combats ne font rien gagner à la
     //    vraie équipe (jetables). Nomme `isFactory` par héritage, sémantique = « équipe de combat non persistée ».
     const isFactory = storeState.trainer?.trainerId === "frontier:FACTORY" || isFusionBattleTrainer(storeState.trainer?.trainerId) // équipe pilotée non persistée (location/fusion)
-    if (!isFactory) setTeam(b.player.team.map(toMonInstance))
+    // PNJ-JOUEUR RUN 2 : on n'écrit l'équipe (donc l'XP ×2 des KO) dans la save QUE si VICTOIRE. Une DÉFAITE ne garde
+    //   RIEN → tue le farm du ×2 XP par défaite volontaire (le combat reste retentable, mais un échec ne rapporte aucune XP).
+    const isRun2GhostLoss = storeState.trainer?.trainerId?.startsWith("run2ghost:") === true && b.outcome !== "win"
+    if (!isFactory && !isRun2GhostLoss) setTeam(b.player.team.map(toMonInstance))
 
     // LIGUE DE FUSION — chaque fusionné reverse la MOITIÉ de son XP de combat à ses 2 PARENTS (vrais Daemons du
     //   roster), OPTION A : CHAQUE parent reçoit cette moitié (le duo progresse comme un Daemon normal). Applique

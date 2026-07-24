@@ -362,7 +362,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                 return
             }
             if (!getPlayer().team.some((m) => m.currentHp > 0)) { showDialogue("run2ghost", ghost.nickname, ["Ton équipe est K.O. ! Soigne-toi avant d'affronter un champion du RUN 2."]); return }
-            setGhostFight({ ghost, enemy: ghost.team.map((m, i) => championToInstance(m, i)) })
+            // Filtre les espèces non résolues (custom d'un autre joueur non enregistré) + garde try/catch (données gelées
+            //   d'un autre client) → jamais de crash « pépin » (comme les reflets qui filtrent getSpecies).
+            let enemy: MonInstance[] = []
+            try { enemy = ghost.team.filter((m) => getSpecies(m.speciesId)).map((m, i) => championToInstance(m, i)) } catch { enemy = [] }
+            if (enemy.length === 0) { showDialogue("run2ghost", ghost.nickname, [`L'équipe de ${ghost.nickname} n'a pas pu être chargée (Daemons custom non résolus). Réessaie plus tard.`]); return }
+            setGhostFight({ ghost, enemy })
             return
         }
         if (!arenaMode) return
