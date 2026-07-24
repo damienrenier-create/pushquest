@@ -358,6 +358,11 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId, are
 }) {
     const player = useGameStore((s) => s.player)
     const map = useGameStore((s) => s.map)
+    const torchSteps = useGameStore((s) => s.torchSteps)
+    const torchRadius = useGameStore((s) => s.torchRadius)
+    // BROUILLARD : rayon de vision de base de la map (true = 2 legacy · nombre = rayon), élargi par une lampe torche active.
+    const darkBase = map.darkness === true ? 2 : (typeof map.darkness === "number" ? map.darkness : 0)
+    const visionRadius = torchSteps > 0 ? Math.max(darkBase, torchRadius) : darkBase
 
     const cam = computeCamera(player.posX, player.posY, map)
     const npcsOnMap = YELLOW_NPCS.filter((n) => n.mapId === player.mapId)
@@ -463,13 +468,14 @@ export default function MapView({ remotePlayers = [], chatBubbles, myUserId, are
                     }} />
                 )}
 
-                {/* BROUILLARD (manoir hanté, map.darkness) : NOIR sur toute case hors d'un rayon de
-                    2 autour du joueur (Chebyshev ≤ 2 = visible). La case du joueur n'a jamais
-                    d'overlay → il reste visible ; le reste est noir et SUIT le joueur. */}
-                {map.darkness && map.tiles.flatMap((row, y) =>
+                {/* BROUILLARD (map.darkness) : NOIR sur toute case hors du rayon de vision (Chebyshev ≤ visionRadius).
+                    visionRadius = rayon de base de la map, élargi par une lampe torche active. La case du joueur
+                    n'a jamais d'overlay → il reste visible ; le reste est noir et SUIT le joueur. */}
+                {!!map.darkness && map.tiles.flatMap((row, y) =>
                     row.map((_t, x) => {
                         const d = Math.max(Math.abs(x - player.posX), Math.abs(y - player.posY))
-                        if (d <= 2) return null
+                        if (d <= visionRadius) return null
+                        if (x < cam.x - 1 || x > cam.x + 10 || y < cam.y - 1 || y > cam.y + 9) return null // hors viewport 10×9 → inutile de darkener (perf sur grande map ex. Grotte 49×42)
                         return (
                             <div
                                 key={`dark-${x}-${y}`}

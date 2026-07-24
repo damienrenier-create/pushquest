@@ -17,10 +17,13 @@ import { fetchFrontierProfile, postSpend } from "@/lib/gamebook/yellow/frontier/
 import { getCt } from "@/lib/gamebook/yellow/data/cts"
 import { getMove } from "@/lib/gamebook/yellow/data/moves"
 import { HELD_ITEM_LIST, type HeldItemCategory } from "@/lib/gamebook/yellow/data/heldItems"
+import { ITEMS } from "@/lib/gamebook/yellow/data/items"
 
 const INK = "#2a1c10", CREAM = "#f4ecd4", DARK = "#cdbb86"
 
 const ENERGY = [{ amount: 250, price: 40 }, { amount: 600, price: 85 }]
+// LAMPES TORCHES (Grotte du Nexus) — payées en JC, prix CROISSANTS avec le rayon/l'autonomie (cf. data/items.ts).
+const TORCHES: { id: string; jc: number }[] = [{ id: "torche_1", jc: 40 }, { id: "torche_2", jc: 100 }, { id: "torche_3", jc: 250 }]
 const CT_LOT = ["ct08", "ct12", "ct14", "ct15", "ct16", "ct24", "ct20", "ct10"] // CT fortes (alternative aux badges)
 const CT_PRICE = 120
 const SYMBOLS = [
@@ -104,6 +107,17 @@ export default function CombatShopModal({ onClose, onEnterGrotte }: { onClose: (
                             <div style={{ fontSize: 10, opacity: 0.7, color: INK, marginBottom: 6, lineHeight: 1.3 }}>Éloigne les Daemons sauvages 30 pas — à utiliser hors combat. Payé en énergie.</div>
                             <Row label={`🧴 Repousse${(player.items["repousse"] ?? 0) > 0 ? ` (×${player.items["repousse"]})` : ""}`} price={100} currency="⚡" disabled={busy || player.reps < 100}
                                 onBuy={() => { if (spendReps(100)) { addItem("repousse", 1); persistYellowSave(); setMsg("✅ Repousse achetée ! (dans le sac → Exploration)") } else { setMsg("Pas assez d'énergie (100 requis).") } }} />
+                        </Section>
+                    )}
+
+                    {onEnterGrotte && (
+                        <Section title="🔦 Lampes torches (Grotte du Nexus)">
+                            <div style={{ fontSize: 10, opacity: 0.7, color: INK, marginBottom: 6, lineHeight: 1.3 }}>La Grotte est plongée dans le noir. Ces torches éclairent plus ou moins loin, plus ou moins longtemps — allumées depuis le sac.</div>
+                            {TORCHES.map(({ id, jc: cost }) => {
+                                const it = ITEMS[id]
+                                return <Row key={id} label={`${it.name}${(player.items[id] ?? 0) > 0 ? ` (×${player.items[id]})` : ""}`} desc={`Rayon ${it.torchRadius} cases · ${it.torchSteps} pas`} price={cost} disabled={busy || (jc ?? 0) < cost}
+                                    onBuy={() => spend(cost, { grant: () => addItem(id, 1), toast: `🔦 ${it.name} achetée ! (sac → 🔦 Lampes torches)` })} />
+                            })}
                         </Section>
                     )}
 

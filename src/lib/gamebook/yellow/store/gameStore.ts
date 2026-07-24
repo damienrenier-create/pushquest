@@ -166,10 +166,14 @@ interface GameStore {
     pendingHhCollector: boolean // intro du COLLECTIONNEUR (maison hantée) en cours → combat à la fermeture
     encounterCooldown: number // #7 : pas de rencontre sauvage pendant N déplacements (≥1 case libre après un combat)
     repelSteps: number // REPOUSSE (objet, hors combat) : pas restants sans rencontre sauvage (affiché en HUD)
+    torchSteps: number // LAMPE TORCHE : pas d'autonomie restants (0 = éteinte). Décrémente sur les maps SOMBRES (HUD)
+    torchRadius: number // LAMPE TORCHE : rayon éclairé tant que torchSteps > 0 (sinon on retombe au rayon de base de la map)
 
     // === ACTIONS ===
     /** Active une Repousse : N pas sans rencontre sauvage (transitoire, non persisté). */
     activateRepel: (steps: number) => void
+    /** Allume une lampe torche : rayon éclairé + autonomie en pas (dans les maps sombres). Remplace la torche active. */
+    activateTorch: (radius: number, steps: number) => void
     move: (dir: Direction) => void
     pressA: () => void
     pressB: () => void
@@ -665,7 +669,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     pendingHhCollector: false,
     encounterCooldown: 0,
     repelSteps: 0,
+    torchSteps: 0,
+    torchRadius: 0,
     activateRepel: (steps) => set({ repelSteps: Math.max(0, Math.floor(steps)) }),
+    activateTorch: (radius, steps) => set({ torchRadius: Math.max(0, Math.floor(radius)), torchSteps: Math.max(0, Math.floor(steps)) }),
 
     move: (dir) => {
         const { player, map, dialogue } = get()
@@ -997,6 +1004,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
         const onWildTile = map.tiles[next.posY]?.[next.posX]
         const isWildTile = onWildTile === "grassTall"
             || ((onWildTile === "grass" || onWildTile === "caveFloor") && !!map.backgroundImage && hasEncounters(map.id))
+        // LAMPE TORCHE : chaque pas EFFECTIF sur une map SOMBRE consomme 1 pas d'autonomie (indépendant des rencontres).
+        if (moved && !!map.darkness && get().torchSteps > 0) set({ torchSteps: get().torchSteps - 1 })
         // #7 : juste après un combat, on garantit au moins UNE case sans rencontre (anti-rafale).
         if (moved && get().encounterCooldown > 0) {
             set({ encounterCooldown: get().encounterCooldown - 1 })

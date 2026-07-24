@@ -28,6 +28,9 @@ export interface ItemData {
     boostStages?: number
     /** REPOUSSE (MISC, s'utilise HORS combat) : nombre de pas sans rencontre sauvage. */
     repelSteps?: number
+    /** LAMPE TORCHE (MISC, s'utilise HORS combat) : dans une map SOMBRE, étend le rayon de vision (cases) pour torchSteps pas. */
+    torchRadius?: number
+    torchSteps?: number
 }
 
 export const ITEMS: Record<string, ItemData> = {
@@ -142,6 +145,20 @@ export const ITEMS: Record<string, ItemData> = {
     repousse: {
         id: "repousse", name: "Repousse", category: "MISC",
         description: "Éloigne les Daemons sauvages pendant 30 pas. À utiliser hors combat.", price: 100, repelSteps: 30,
+    },
+    // LAMPES TORCHES — s'achètent en Jetons de Combat chez le marchand (Zone de Combat). Dans la Grotte du Nexus
+    //   (plongée dans le noir), elles élargissent le rayon de vision, plus ou moins loin et plus ou moins longtemps.
+    torche_1: {
+        id: "torche_1", name: "Torche vacillante", category: "MISC",
+        description: "Éclaire un rayon de 2 cases dans le noir, pendant 150 pas.", price: 0, torchRadius: 2, torchSteps: 150,
+    },
+    torche_2: {
+        id: "torche_2", name: "Torche solide", category: "MISC",
+        description: "Éclaire un rayon de 3 cases dans le noir, pendant 300 pas.", price: 0, torchRadius: 3, torchSteps: 300,
+    },
+    torche_3: {
+        id: "torche_3", name: "Torche-tempête", category: "MISC",
+        description: "Éclaire un rayon de 4 cases dans le noir, pendant 600 pas.", price: 0, torchRadius: 4, torchSteps: 600,
     },
     // Objet clé remis par le SCIENTIFIQUE du labo au sacre (récompense du Dieu Spaghetti) : sa mélodie
     // réveille le SYLVEBARBE endormi qui bouche la sortie sud de Ville Jaune (combat → markSylvebarbeAwake).

@@ -72,9 +72,10 @@ export interface YellowMapData extends MapData {
     debugGrid?: boolean
     /** WIP : met en pause les rencontres sauvages sur cette map (le temps de caler la grille). */
     encountersPaused?: boolean
-    /** BROUILLARD (manoir hanté) : on ne voit qu'un rayon de 1 case autour du joueur, le reste
-     *  est noir et la zone éclairée SUIT le joueur (les cases se révèlent quand on arrive à côté). */
-    darkness?: boolean
+    /** BROUILLARD : on ne voit qu'un petit rayon autour du joueur, le reste est noir et la zone éclairée SUIT le
+     *  joueur. `true` = rayon 2 (manoir hanté, legacy) ; un NOMBRE = rayon de base (ex. 1 = Grotte, plus sombre).
+     *  Une LAMPE TORCHE active (gameStore.torchSteps/torchRadius) élargit ce rayon temporairement. Lu par MapView. */
+    darkness?: boolean | number
     /** LABYRINTHE INVISIBLE (manoir hanté) : murs sur les ARÊTES entre cases. Les cases restent
      *  praticables/visibles, mais une arête barrée empêche la transition case→voisine (on tourne
      *  sur place comme un mur). v[y][x] = mur entre (x,y) et (x+1,y) ; h[y][x] = mur entre (x,y) et
@@ -1537,6 +1538,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
     yellow_grotte_nexus: {
         id: "yellow_grotte_nexus",
         name: "GROTTE DU NEXUS (1F)",
+        darkness: 1, // Grotte plongée dans le noir (rayon de base 1) — les lampes torches (marchand, JC) élargissent la vision
         tiles: buildGrotteNexusFloor("1F"),
         width: 49, height: 42,
         backgroundImage: "/yellow/sprites/grotte_casse_tete.png",
@@ -1559,6 +1561,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
     yellow_grotte_nexus_b1f: {
         id: "yellow_grotte_nexus_b1f",
         name: "GROTTE DU NEXUS (B1F)",
+        darkness: 1, // sombre (rayon de base 1) — cf. lampes torches
         tiles: buildGrotteNexusFloor("B1F"),
         width: 49, height: 42,
         backgroundImage: "/yellow/sprites/grotte_casse_tete.png",
@@ -1580,6 +1583,7 @@ export const YELLOW_MAPS: Record<string, YellowMapData> = {
     yellow_grotte_nexus_b2f: {
         id: "yellow_grotte_nexus_b2f",
         name: "GROTTE DU NEXUS (B2F)",
+        darkness: 1, // sombre (rayon de base 1) — cf. lampes torches
         tiles: buildGrotteNexusFloor("B2F"),
         width: 49, height: 42,
         backgroundImage: "/yellow/sprites/grotte_casse_tete.png",

@@ -201,6 +201,8 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const move = useGameStore((s) => s.move)
     const activateRepel = useGameStore((s) => s.activateRepel)
     const repelSteps = useGameStore((s) => s.repelSteps) // REPOUSSE : pas restants (HUD + garde anti-double)
+    const activateTorch = useGameStore((s) => s.activateTorch)
+    const torchSteps = useGameStore((s) => s.torchSteps) // LAMPE TORCHE : pas d'autonomie restants (HUD + sac)
     const mapPlayer = useGameStore((s) => s.player)
     const pressA = useGameStore((s) => s.pressA)
     const pressB = useGameStore((s) => s.pressB)
@@ -2077,10 +2079,29 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                                             </div>
                                         )
                                     })()}
+                                    {/* 🔦 Poche Lampes torches : s'allument HORS combat (éclairent la Grotte du Nexus, allumer une neuve remplace l'active). */}
+                                    {(() => {
+                                        const torches = Object.values(ITEMS).filter((it) => it.torchRadius && (player.items[it.id] ?? 0) > 0)
+                                        return torches.length > 0 && (
+                                            <div>
+                                                <div style={pocketHdrStyle}>🔦 Lampes torches{torchSteps > 0 ? ` · allumée (${torchSteps} pas)` : ""}</div>
+                                                {torches.map((it) => (
+                                                    <button key={it.id} style={{ ...menuBtnStyle, display: "block", textAlign: "left", height: "auto" }} onClick={() => {
+                                                        if (consumeItem(it.id)) { activateTorch(it.torchRadius ?? 2, it.torchSteps ?? 150); persistYellowSave(); setToast(`${it.name} allumée ! Vision élargie pendant ${it.torchSteps} pas.`); setMenu("none"); setBagItem(null) }
+                                                    }}>
+                                                        <span style={{ display: "flex", justifyContent: "space-between" }}>
+                                                            <span>{it.name} · Allumer ▸</span><span>×{player.items[it.id]}</span>
+                                                        </span>
+                                                        {it.description && <span style={{ display: "block", fontSize: 10, opacity: 0.65, marginTop: 3, whiteSpace: "normal", lineHeight: 1.3 }}>{it.description}</span>}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )
+                                    })()}
                                     {/* 🎒 Poche Objets clés (MISC : Pierre Gékroc, Daemonflûte…) — lecture seule.
                                         La Pierre Gékroc s'utilise depuis la fiche d'un Panthéon. */}
                                     {(() => {
-                                        const keys = Object.values(ITEMS).filter((it) => it.category === "MISC" && !it.repelSteps && (player.items[it.id] ?? 0) > 0)
+                                        const keys = Object.values(ITEMS).filter((it) => it.category === "MISC" && !it.repelSteps && !it.torchRadius && (player.items[it.id] ?? 0) > 0)
                                         return keys.length > 0 && (
                                             <div>
                                                 <div style={pocketHdrStyle}>🎒 Objets clés</div>
@@ -2720,6 +2741,12 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
             {!battle && repelSteps > 0 && (
                 <div style={{ position: "absolute", left: "50%", top: 8, transform: "translateX(-50%)", zIndex: 60, background: "#2a2140ee", color: "#e6d2ff", border: "1px solid #8a5ae0", borderRadius: 999, padding: "4px 12px", fontSize: 11, fontWeight: 800, letterSpacing: 0.5, boxShadow: "0 2px 10px rgba(0,0,0,0.35)" }}>
                     🧴 Repousse · {repelSteps} pas
+                </div>
+            )}
+            {/* HUD LAMPE TORCHE — pas d'autonomie restants (top-center, sous la repousse si les deux sont actives). */}
+            {!battle && torchSteps > 0 && (
+                <div style={{ position: "absolute", left: "50%", top: repelSteps > 0 ? 34 : 8, transform: "translateX(-50%)", zIndex: 60, background: "#3a2a10ee", color: "#ffdf9e", border: "1px solid #e0a13a", borderRadius: 999, padding: "4px 12px", fontSize: 11, fontWeight: 800, letterSpacing: 0.5, boxShadow: "0 2px 10px rgba(0,0,0,0.35)" }}>
+                    🔦 Torche · {torchSteps} pas
                 </div>
             )}
             {/* ZONE DE COMBAT — pause entre vagues : Continuer ou Quitter (en gardant les JC) */}
