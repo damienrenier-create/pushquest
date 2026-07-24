@@ -298,7 +298,7 @@ export function startTrainerBattle(
     opts?: { trainerId?: string; reward?: number; aiLevel?: AiLevel; enemyEnergyCap?: number; isRematch?: boolean },
 ) {
     const isFrontier = !!opts?.trainerId?.startsWith("frontier:")
-    const isDuel = !!opts?.trainerId?.startsWith("duel:") // duel-reflet d'un autre joueur → XP DOUBLE
+    const isDuel = !!opts?.trainerId?.startsWith("duel:") || !!opts?.trainerId?.startsWith("run2ghost:") // reflet / PNJ run-2 d'un autre joueur → XP DOUBLE
     const battle = createBattle(playerTeam, enemyTeam, { isWild: false, seed, aiLevel: opts?.aiLevel, enemyEnergyCap: opts?.enemyEnergyCap, noItems: isFrontier, expMult: isFrontier ? FRONTIER_EXP_MULT : isDuel ? DUEL_EXP_MULT : undefined, playerBadgeCount: getPlayer().badges.length })
     syncPokedex(battle)
     const trainer = opts?.trainerId ? { trainerId: opts.trainerId, reward: opts.reward ?? 0, isRematch: opts.isRematch ?? false } : null
@@ -309,7 +309,7 @@ export function startTrainerBattle(
 // ════════════════ HALL OF FAME — affronter une équipe de champion FIGÉE ════════════════
 /** Reconstruit un combattant à partir d'un champion figé (ChampionMon) : stats EXACTES du sacre
  *  (frozenStats → fullStats les renvoie telles quelles) + attaques retrouvées par leur NOM. */
-function championToInstance(m: ChampionMon, idx: number): MonInstance {
+export function championToInstance(m: ChampionMon, idx: number): MonInstance {
     const moves: MoveSlot[] = m.moves
         .map((name) => getMoveByName(name))
         .filter((mv): mv is NonNullable<ReturnType<typeof getMoveByName>> => !!mv)
@@ -864,6 +864,12 @@ function finishBattle(b: BattleState, newDexEntry: BattleStoreState["newDexEntry
             // badge. L'équipe (le fusionné) n'est pas réécrite (isFactory ci-dessus). L'UI retire l'espèce éphémère.
             // MAIS gagner une épreuve DÉBLOQUE la Ligue de Fusion (la porte à dragons de l'Autel s'ouvre), one-time.
             if (b.outcome === "win") markTrainerDefeated(FUSION_UNLOCK_MARKER)
+        } else if (storeState.trainer.trainerId.startsWith("run2ghost:")) {
+            // PNJ-JOUEUR RUN 2 (Grotte 1F, équipe run-2 GELÉE d'un autre joueur) : VICTOIRE unique → marque vaincu
+            //   (le PNJ disparaît) + OFFRE un RAPPEL. XP doublée (cf. isDuel). Défaite → non marqué (retentable).
+            markTrainerDefeated(storeState.trainer.trainerId)
+            addItem("rappel", 1)
+            rematchReward = { npcId: storeState.trainer.trainerId, npcName: "🔁 RAPPEL", lines: ["Beau combat ! Cet adversaire t'a laissé un RAPPEL.", "Il ranime un Daemon K.O. — dans le sac (→ Soins) ou en plein combat."] }
         } else {
             markTrainerDefeated(storeState.trainer.trainerId)
             const t = getTrainer(storeState.trainer.trainerId)

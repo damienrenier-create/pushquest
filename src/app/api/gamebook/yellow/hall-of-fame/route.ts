@@ -35,12 +35,12 @@ export async function GET() {
         const rows = (await lc.findMany({
             orderBy: { wonAt: "desc" },
             take: 150,
-            select: { nickname: true, team: true, wonAt: true, world: true },
-        })) as { nickname: string; team: string; wonAt: Date; world: string | null }[]
+            select: { userId: true, nickname: true, team: true, wonAt: true, world: true },
+        })) as { userId: string; nickname: string; team: string; wonAt: Date; world: string | null }[]
         const champions = rows.map((r) => {
             let team: unknown = []
             try { team = JSON.parse(r.team) } catch { team = [] }
-            return { nickname: r.nickname, wonAt: r.wonAt, team, world: r.world ?? "live" } // world : run 1/2/3 (défaut live)
+            return { userId: r.userId, nickname: r.nickname, wonAt: r.wonAt, team, world: r.world ?? "live" } // world : run 1/2/3 (défaut live)
         })
         return NextResponse.json({ ok: true, champions })
     } catch {

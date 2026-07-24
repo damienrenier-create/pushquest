@@ -21,7 +21,7 @@ import { useCasinoTrade } from "@/lib/gamebook/yellow/multiplayer/useCasinoTrade
 import { useCasinoCtTrade } from "@/lib/gamebook/yellow/multiplayer/useCasinoCtTrade"
 import { useCasinoBattle, type FusionPvpHooks } from "@/lib/gamebook/yellow/multiplayer/useCasinoBattle"
 import TradeAnimation from "./TradeAnimation"
-import { usePvpCtx, pvpForfeit } from "@/lib/gamebook/yellow/store/battleStore"
+import { usePvpCtx, pvpForfeit, championToInstance } from "@/lib/gamebook/yellow/store/battleStore"
 import EvolutionScreen from "./battle/EvolutionScreen"
 import MoveLearnScreen from "./battle/MoveLearnScreen"
 import HallOfFame from "./HallOfFame"
@@ -115,6 +115,7 @@ import { fullStats } from "@/lib/gamebook/yellow/battle/stats"
 import { expForLevel } from "@/lib/gamebook/yellow/battle/xp"
 import type { MonInstance, SpeciesData } from "@/lib/gamebook/yellow/battle/types"
 import { usePlayerArena, type ArenaOpponent } from "@/lib/gamebook/yellow/multiplayer/usePlayerArena"
+import { useRun2Ghosts, RUN2_GHOST_TRAINER_PREFIX, type Run2Ghost } from "@/lib/gamebook/yellow/multiplayer/useRun2Ghosts"
 import { buildHubTeam, buildMirrorTeam, registerRegistryCustoms, type ArenaMode } from "@/lib/gamebook/yellow/data/playerArena"
 import ArenaChallengeModal from "./ArenaChallengeModal"
 import DomeBracket from "./DomeBracket"
@@ -347,9 +348,23 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
     const myArenaLevel = player.team.reduce((m, x) => Math.max(m, x.level), 0)
     const { mode: arenaMode, opponents: arenaOpponents } = usePlayerArena(mapPlayer.mapId, player.badges, userId, myArenaLevel)
     const [arenaFight, setArenaFight] = useState<{ opp: ArenaOpponent; mode: ArenaMode; enemy: MonInstance[] } | null>(null)
+    const run2Ghosts = useRun2Ghosts(mapPlayer.mapId, userId) // PNJ-joueurs = équipes run-2 gelées d'autres joueurs (Grotte 1F)
+    const visibleGhosts = run2Ghosts.filter((g) => !player.defeatedTrainers.includes(RUN2_GHOST_TRAINER_PREFIX + g.userId)) // les déjà-vaincus disparaissent
+    const [ghostFight, setGhostFight] = useState<{ ghost: Run2Ghost; enemy: MonInstance[] } | null>(null)
     // Adversaire du duel EN COURS (gardé pendant le combat pour appliquer les récompenses à la fin).
     const duelOppRef = useRef<{ userId: string; nickname: string } | null>(null)
     const handleArenaClick = (uid: string) => {
+        // PNJ-JOUEUR RUN 2 (Grotte 1F) : combat vs l'équipe run-2 GELÉE d'un autre joueur (traité AVANT le check arène).
+        const ghost = run2Ghosts.find((g) => g.userId === uid)
+        if (ghost) {
+            if (player.defeatedTrainers.includes(RUN2_GHOST_TRAINER_PREFIX + uid)) {
+                showDialogue("run2ghost", ghost.nickname, [`Tu as déjà vaincu l'équipe RUN 2 de ${ghost.nickname}. Un seul combat par PNJ !`])
+                return
+            }
+            if (!getPlayer().team.some((m) => m.currentHp > 0)) { showDialogue("run2ghost", ghost.nickname, ["Ton équipe est K.O. ! Soigne-toi avant d'affronter un champion du RUN 2."]); return }
+            setGhostFight({ ghost, enemy: ghost.team.map((m, i) => championToInstance(m, i)) })
+            return
+        }
         if (!arenaMode) return
         const opp = arenaOpponents.find((o) => o.userId === uid)
         if (!opp) return
@@ -859,8 +874,9 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                     // (en plus du clic/tap). Chebyshev ≤1 = les 8 cases autour + la case occupée (avant : 4 cases ortho
                     // seulement → A ratait souvent les reflets qui errent ; le tactile, lui, ignorait la distance).
                     const cheb = (o: { x: number; y: number }) => Math.max(Math.abs(o.x - mapPlayer.posX), Math.abs(o.y - mapPlayer.posY))
-                    const opp = arenaMode ? [...arenaOpponents].filter((o) => cheb(o) <= 1).sort((a, b) => cheb(a) - cheb(b))[0] : undefined
-                    if (arenaMode && opp) handleArenaClick(opp.userId) // même gate/lancement que le clic (dont la limite run 3 : 1 match miroir/jour)
+                    // Reflets d'arène OU PNJ-joueurs run 2 (Grotte 1F) : A près (≤1 case) → défie le plus proche (comme le clic/tap).
+                    const opp = [...arenaOpponents, ...visibleGhosts].filter((o) => cheb(o) <= 1).sort((a, b) => cheb(a) - cheb(b))[0]
+                    if (opp) handleArenaClick(opp.userId) // même gate/lancement que le clic (dont la limite run 3 : 1 match miroir/jour)
                     else if (tryCasinoObjectA()) { /* table roulette / croupier (casino) */ }
                     else casinoAFallback()
                 }
@@ -1739,7 +1755,7 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         <BattleScreen />
                     </BattleBoundary>
                 ) : (
-                    <MapView remotePlayers={remotePlayers} chatBubbles={chat.bubbles} myUserId={userId} arenaOpponents={arenaOpponents} onArenaClick={handleArenaClick} />
+                    <MapView remotePlayers={remotePlayers} chatBubbles={chat.bubbles} myUserId={userId} arenaOpponents={[...arenaOpponents, ...visibleGhosts]} onArenaClick={handleArenaClick} />
                 )}
             </GameBoyShell>
 
@@ -3874,6 +3890,20 @@ export default function YellowDevClient({ userId = "", isCreator = false, nickna
                         setArenaFight(null)
                     }}
                     onCancel={() => setArenaFight(null)}
+                />
+            )}
+
+            {ghostFight && !battle && (
+                <ArenaChallengeModal
+                    title={`⚔️ Équipe RUN 2 de ${ghostFight.ghost.nickname}`}
+                    subtitle="L'équipe GELÉE avec laquelle il a battu la Ligue du RUN 2. XP DOUBLÉE — victoire = un RAPPEL. Combat UNIQUE !"
+                    accent="#e0a13a"
+                    enemyTeam={ghostFight.enemy}
+                    onFight={() => {
+                        startTrainerBattle(getPlayer().team, ghostFight.enemy, Math.floor(Math.random() * 1e9), { trainerId: RUN2_GHOST_TRAINER_PREFIX + ghostFight.ghost.userId, reward: 0, aiLevel: "hof" })
+                        setGhostFight(null)
+                    }}
+                    onCancel={() => setGhostFight(null)}
                 />
             )}
 
